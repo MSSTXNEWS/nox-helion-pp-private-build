@@ -1,0 +1,121 @@
+{
+  "schema": "nox.maya_build_readiness.v1",
+  "checked_at_utc": "2026-11-16T02:06:11.238494+00:00",
+  "status": "BUILD_NEEDED_NO_OFFICIAL_RELEASE_BINARY",
+  "source_commit": "c81fab6c9d63cf69b928f92460e0a662b28aa9ec",
+  "release": {
+    "tag": "v1.1.65",
+    "published_at": "2026-11-16T00:04:28Z",
+    "target_commitish": "c81fab6c9d63cf69b928f92460e0a662b28aa9ec",
+    "url": "https://github.com/mw00/project-maya/releases/tag/v1.1.65",
+    "api_url": "https://api.github.com/repos/mw00/project-maya/releases/tags/v1.1.65",
+    "asset_count": 0,
+    "assets": []
+  },
+  "other_releases_checked_no_assets": [
+    "v1.1.64",
+    "v1.1.63",
+    "v1.1.62",
+    "v1.1.61"
+  ],
+  "findings": [
+    "Official v1.1.65 GitHub release has zero uploaded assets. GitHub source archives are not compiled binaries.",
+    "CMakeLists.txt prebuilt comment is not proof of an available release binary; maya.py checks nvcc and compiles maya-ds4.",
+    "docs/DOCKER.md says no official Maya Docker image exists.",
+    "V100 requires CUDA toolkit 12.x, CMAKE_CUDA_ARCHITECTURES=70; CUDA 13 is not a Volta build path.",
+    "Documented CUDA12.9 driver requirement >=575 is satisfied by the parent-reported native driver580.178.04; runtime execution is untested.",
+    "No binary downloaded, installed, compiled or executed in this audit."
+  ],
+  "build_profile": {
+    "toolkit": "12.9.1",
+    "cmake_min": "3.24",
+    "target": "maya-ds4",
+    "cuda_architectures": "70",
+    "build_tests": false,
+    "portable_cpu": true,
+    "cpu_requires": "x86_64 AVX2 for portable recipe",
+    "llama_cpp_commit": "3cf03257f219afbe7334045ff7c6a06ac68c627d",
+    "additional_host_dependencies": [
+      "CUDA-compatible g++",
+      "CMake >=3.24",
+      "Ninja or Make",
+      "Python >=3.10",
+      "pinned llama.cpp sources"
+    ],
+    "suggested_jobs": 2,
+    "suggested_jobs_reason": "Maya documents 2-4 GB RAM per nvcc compile job; limit resource contention with current chat."
+  },
+  "cuda_components": [
+    {
+      "component": "cuda_nvcc",
+      "version": "12.9.86",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvcc/linux-x86_64/cuda_nvcc-linux-x86_64-12.9.86-archive.tar.xz",
+      "bytes": 81100244,
+      "sha256": "7a1a5b652e5ef85c82b721d10672fc9a2dbaab44e9bd3c65a69517bf53998c35",
+      "downloaded": false
+    },
+    {
+      "component": "cuda_cudart",
+      "version": "12.9.79",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/linux-x86_64/cuda_cudart-linux-x86_64-12.9.79-archive.tar.xz",
+      "bytes": 1514676,
+      "sha256": "1f6ad42d4f530b24bfa35894ccf6b7209d2354f59101fd62ec4a6192a184ce99",
+      "downloaded": false
+    },
+    {
+      "component": "cuda_cccl",
+      "version": "12.9.27",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cccl/linux-x86_64/cuda_cccl-linux-x86_64-12.9.27-archive.tar.xz",
+      "bytes": 997888,
+      "sha256": "8b1a5095669e94f2f9afd7715533314d418179e9452be61e2fde4c82a3e542aa",
+      "downloaded": false
+    },
+    {
+      "component": "cuda_profiler_api",
+      "version": "12.9.79",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_profiler_api/linux-x86_64/cuda_profiler_api-linux-x86_64-12.9.79-archive.tar.xz",
+      "bytes": 16316,
+      "sha256": "8c50636bfb97e9420905aa795b9fa6e3ad0b30ec6a6c8b0b8db519beb9241ce6",
+      "downloaded": false
+    },
+    {
+      "component": "cuda_nvtx",
+      "version": "12.9.79",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvtx/linux-x86_64/cuda_nvtx-linux-x86_64-12.9.79-archive.tar.xz",
+      "bytes": 64496,
+      "sha256": "819bc39192955e6ba2067de39b85f30e157de462945e54b12bfdeda429d793fb",
+      "downloaded": false
+    },
+    {
+      "component": "libcublas",
+      "version": "12.9.1.4",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/libcublas/linux-x86_64/libcublas-linux-x86_64-12.9.1.4-archive.tar.xz",
+      "bytes": 933611504,
+      "sha256": "546addc4a9d82b8f23aa9ba9274b6bc0429a63008a31c759884ac24880796057",
+      "downloaded": false
+    }
+  ],
+  "cuda_manifest_url": "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.9.1.json",
+  "cuda_component_bytes_total": 1017305124,
+  "cuda_components_except_cublas_bytes": 83693620,
+  "runtime_dependency_inference": [
+    "NVIDIA host driver/libcuda",
+    "CUDA12 cudart",
+    "CUDA12 cuBLAS plus transitively required cuBLASLt",
+    "host libc/libstdc++ and build-linked system libraries; exact ELF NEEDED list requires an actual binary",
+    "Python packages from setup.py: numpy,jinja2,regex,pyyaml,tqdm,requests,pillow,psutil,jsonschema>=4.18,<5",
+    "pinned llama.cpp gguf-py and Maya server/pack-builder source files"
+  ],
+  "runtime_note": "A separately built compatible maya-ds4 binary can be served without nvcc, using serve/server.py and an existing pack/config. maya.sh/setup still checks build tools. No runnable binary exists in this kit.",
+  "storage_note": "No full toolkit or Docker build cache was downloaded. libcublas archive alone exceeds the task500MB limit. Existing CUDA libraries/headers need a native read-only inventory before selecting downloads.",
+  "source_sha256": {
+    "README.md": "43577e03f2cb4c192fa624597278b0c82efa2527844890a843e0bf1b74268c5b",
+    "CMakeLists.txt": "80054ee7fccba9be34a1c0dca074967736d0b1a008e038c1333d78f81752e46c",
+    "setup.py": "9a1d52c90573d6e100eb33f32a1f6be8078432874fca5bc53d34c612494d98af",
+    "maya.py": "89e264eddf4fd0f308e558c5d173f662bd37a6797511c50873d5ea87a1de1da4",
+    "docs/DOCKER.md": "c098f064b5373a0120a8d97fa3ae68cad7e36f23f14c398807833f13a6a87e17",
+    "docs/SETUP.md": "26b541fae2a9cd16f63e4cec806c0d0b4179ce3f0526d96a5894c1951882571d",
+    "docker/Dockerfile": "4e2292c4cb56b4d8c4c31d2d0027dce92f52961c0d9fa892208127a98fe48578",
+    "docker/build.sh": "34eec7008c57687206e1689554a58c90baa278b6cfe3e41e0425d1957bf8584a"
+  }
+}

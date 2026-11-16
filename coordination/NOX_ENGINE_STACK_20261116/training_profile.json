@@ -1,0 +1,83 @@
+{
+  "schema": "NOX_TRAINING_PROFILE_CANDIDATE_V1",
+  "status": "NOT_INSTALLED_NOT_TRAINED",
+  "date": "2026-11-16",
+  "roles": {
+    "active_chat_model": {
+      "model": "DeepSeek-V4.1-Flash-1017",
+      "quant": "GSQ-RCO IQ2_XXS",
+      "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+      "runtime": "maya-candidate",
+      "promoted": false
+    },
+    "trainable_student": {
+      "model": "Qwen/Qwen3.5-9B",
+      "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "role": "helper_only_not_chat_substitution",
+      "format": "HF safetensors",
+      "downloaded": false
+    }
+  },
+  "precision": {
+    "load_in_4bit": true,
+    "quant_type": "nf4",
+    "double_quantization": true,
+    "compute_dtype": "float16",
+    "bf16": false,
+    "tf32": false,
+    "lora_parameters": "float32",
+    "optimizer_states": "float32"
+  },
+  "lora": {
+    "r": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules_candidate": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "target_guard": "Resolve exact text-layer paths/classes on the pinned model. Freeze vision/embeddings/lm_head by default; reject unmatched tensors."
+  },
+  "training": {
+    "microbatch": 1,
+    "initial_sequence_length": 512,
+    "gradient_accumulation_steps": 8,
+    "gradient_checkpointing": true,
+    "use_cache": false,
+    "learning_rate": 0.00005,
+    "optimizer": "AdamW",
+    "minimum_actual_optimizer_steps": 5
+  },
+  "resource_admission": {
+    "existing_scheduler_only": true,
+    "initial_gpu_count": 1,
+    "min_measured_gpu_headroom_gib": 4,
+    "chat_priority": true,
+    "train_hold_respected": true,
+    "teacher_student_overlap_allowed": false,
+    "require_current_telemetry": true
+  },
+  "acceptance": [
+    "finite loss and gradients",
+    "actual non-skipped optimizer steps",
+    "parameter delta and checkpoint hashes",
+    "reload parity",
+    "held-out before/after with matched decoding budget",
+    "no critical regressions",
+    "base/tokenizer/dataset provenance"
+  ],
+  "deepseek_direct_lora": {
+    "status": "EXPERIMENTAL_FULL_MODEL_NOT_VALIDATED_ON_V100",
+    "reference": "https://github.com/unslothai/unsloth/pull/17625",
+    "separate_environment": true
+  },
+  "old_adapters": {
+    "cross_architecture_merge_allowed": false,
+    "transfer": "verified examples and distillation"
+  }
+}

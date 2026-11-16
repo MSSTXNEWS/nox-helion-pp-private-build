@@ -1,0 +1,110 @@
+{
+  "schema": "NOX_BENCHMARK_SNAPSHOT_V1",
+  "date": "2026-11-16",
+  "model": "DeepSeek-V4.1-Flash-1017",
+  "nox_measured": false,
+  "measurements": [
+    {
+      "benchmark": "WebDev Arena",
+      "model_label": "DeepSeek-V4.1-Flash-20261017 (Max)",
+      "score": 1664,
+      "uncertainty": "+/-7",
+      "rank": 18,
+      "votes": 14108,
+      "page_date": "2026-11-11",
+      "source": "https://arena.ai/leaderboard/code/webdev",
+      "kind": "human preference in Arena harness"
+    },
+    {
+      "benchmark": "DeepSWE v1.1",
+      "score": 77,
+      "unit": "percent",
+      "harness": "Mini-SWE-V2",
+      "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "kind": "model author report"
+    },
+    {
+      "benchmark": "NL2Repo-Bench",
+      "score": 68.2,
+      "unit": "percent",
+      "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "kind": "model author report"
+    },
+    {
+      "benchmark": "Terminal-Bench 4.0",
+      "score": 42.3,
+      "unit": "percent",
+      "harness": "Claude Code",
+      "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "kind": "model author report"
+    },
+    {
+      "benchmark": "Terminal-Bench 4.0",
+      "score": 33.8,
+      "unit": "percent",
+      "harness": "Artificial Analysis, Max",
+      "source": "https://artificialanalysis.ai/models/comparisons/deepseek-v4-1-flash-1017-vs-gpt-6-astra",
+      "kind": "evaluator measurement"
+    },
+    {
+      "benchmark": "AA Intelligence Index v5.0.1",
+      "score": 33,
+      "comparison": {
+        "model": "GPT-6 Astra (Max)",
+        "score": 57
+      },
+      "source": "https://artificialanalysis.ai/models/comparisons/deepseek-v4-1-flash-1017-vs-gpt-6-astra",
+      "kind": "evaluator measurement"
+    },
+    {
+      "benchmark": "AIME25",
+      "base": 100,
+      "IQ2_XXS": 100,
+      "unit": "percent",
+      "effort": 50,
+      "source": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+      "kind": "quantizer measurement"
+    },
+    {
+      "benchmark": "GPQA-Diamond",
+      "base": 90.91,
+      "IQ2_XXS": 90.91,
+      "unit": "percent",
+      "effort": 50,
+      "source": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+      "kind": "quantizer measurement"
+    },
+    {
+      "benchmark": "LiveCodeBench v6",
+      "base": 89.71,
+      "IQ2_XXS": 89.71,
+      "unit": "percent",
+      "effort": 50,
+      "source": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+      "kind": "quantizer measurement"
+    }
+  ],
+  "method_sources": {
+    "memory": [
+      "https://github.com/xiaowu0162/LongMemEval-V2",
+      "https://snap-research.github.io/locomo/"
+    ]
+  },
+  "review_sources": [
+    {
+      "url": "https://www.reddit.com/r/LocalLLaMA/comments/1xd3p2e/deepseek_v411017_doing_okay_on_rdna23_ddr4/",
+      "summary": "Single user's strong quality impression with variable 3-19 tokens/s, average around 9, on different hardware and quantization."
+    },
+    {
+      "url": "https://www.reddit.com/r/LocalLLaMA/comments/1xdkvmi/how_i_tried_to_like_deepseekv41flash1017_only_to/",
+      "summary": "Single user's positive research impression plus persistent CPU-feature mistake and preference for Qwen in some uses."
+    }
+  ],
+  "limits": [
+    "No public exact full NOX build evaluation found.",
+    "No confirmed Text Arena 1017 row: do not reuse 20260910 score.",
+    "No universal validated wow or consciousness benchmark identified.",
+    "No conversion from Arena or benchmark percent to subjective 9/10.",
+    "Different evaluation harnesses and reasoning budgets are kept separate."
+  ]
+}

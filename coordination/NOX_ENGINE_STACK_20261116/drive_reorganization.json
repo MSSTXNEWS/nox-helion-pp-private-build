@@ -1,0 +1,2372 @@
+{
+  "created_at": "2026-11-16T01:53:52.920Z",
+  "source_plan": "/workspace/scratch/f9bc2028661c/nox-drive-move-plan.json",
+  "canonical_root": "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v",
+  "authorization": "User explicitly requested consolidate NOX material into a single Google Drive folder and systematize",
+  "scope": "Only the 29 planned metadata parent moves; no permissions, content, names, deletion, or new folders",
+  "destination_metadata": {
+    "1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-": {
+      "id": "1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-",
+      "title": "05_КОНТЕКСТ_И_МАТЕРИАЛЫ",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-",
+      "display_url": "https://drive.google.com/drive/folders/1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    },
+    "1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6": {
+      "id": "1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6",
+      "title": "99_КАТАЛОГИ_И_УЧЕТ",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6",
+      "display_url": "https://drive.google.com/drive/folders/1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    },
+    "1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC": {
+      "id": "1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC",
+      "title": "90_АРХИВ_ПРОЕКТА",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC",
+      "display_url": "https://drive.google.com/drive/folders/1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    },
+    "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8": {
+      "id": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "title": "90_ИСТОРИЧЕСКИЕ_ИССЛЕДОВАНИЯ",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "display_url": "https://drive.google.com/drive/folders/1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    },
+    "1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum": {
+      "id": "1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum",
+      "title": "00_ТЗ_И_РЕГЛАМЕНТЫ",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum",
+      "display_url": "https://drive.google.com/drive/folders/1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    },
+    "1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8": {
+      "id": "1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8",
+      "title": "04_ДИЗАЙН_И_ИНТЕРФЕЙСЫ",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8",
+      "display_url": "https://drive.google.com/drive/folders/1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    },
+    "13qreXhhImGi2gAnBOvbDoF6Y6Tv-0JvK": {
+      "id": "13qreXhhImGi2gAnBOvbDoF6Y6Tv-0JvK",
+      "title": "00_СТРАТЕГИЯ_И_СРАВНЕНИЕ",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/13qreXhhImGi2gAnBOvbDoF6Y6Tv-0JvK",
+      "display_url": "https://drive.google.com/drive/folders/13qreXhhImGi2gAnBOvbDoF6Y6Tv-0JvK",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    },
+    "1mBEVhwQFNpHz_pOCtE-t5sLikMwKj5QI": {
+      "id": "1mBEVhwQFNpHz_pOCtE-t5sLikMwKj5QI",
+      "title": "01_ДВИЖКИ_И_ОПТИМИЗАЦИЯ",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/1mBEVhwQFNpHz_pOCtE-t5sLikMwKj5QI",
+      "display_url": "https://drive.google.com/drive/folders/1mBEVhwQFNpHz_pOCtE-t5sLikMwKj5QI",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    },
+    "1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR": {
+      "id": "1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR",
+      "title": "06_ПАКЕТЫ_И_ЭКСПОРТЫ",
+      "mime_type": "application/vnd.google-apps.folder",
+      "size": null,
+      "url": "https://drive.google.com/drive/folders/1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR",
+      "display_url": "https://drive.google.com/drive/folders/1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR",
+      "file_or_folder": "folder",
+      "created_time": null,
+      "modified_time": null,
+      "parent_ids": [
+        "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+      ],
+      "drive_id": null,
+      "current_user_can_share": null,
+      "has_augmented_permissions": null,
+      "shared": false,
+      "permissions": null,
+      "source_visibility_status": "not_shared"
+    }
+  },
+  "entries": [
+    {
+      "id": "14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8",
+      "title": "NOX_V35_CHAT_HISTORICAL_LINKS_20261113",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-",
+      "before": {
+        "id": "14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8",
+        "title": "NOX_V35_CHAT_HISTORICAL_LINKS_20261113",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "started_at": "2026-11-16T01:54:33.054Z",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8",
+        "title": "NOX_V35_CHAT_HISTORICAL_LINKS_20261113",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8/edit?usp=drivesdk",
+        "parent_ids": [
+          "1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8",
+        "title": "NOX_V35_CHAT_HISTORICAL_LINKS_20261113",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/14sqow2XN0sJlOaeWfYuu9V-swodIf1vAvHZBXsPvwo8/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "verified_at": "2026-11-16T01:54:34.564Z"
+    },
+    {
+      "id": "1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw",
+      "planned_title": "NOX_V35_SOURCE_REGISTRY_JSON_20261113",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6",
+      "started_at": "2026-11-16T01:54:54.732Z",
+      "before": {
+        "id": "1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw",
+        "title": "NOX_V35_SOURCE_REGISTRY_JSON_20261113",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX_V35_SOURCE_REGISTRY_JSON_20261113",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw",
+        "title": "NOX_V35_SOURCE_REGISTRY_JSON_20261113",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw/edit?usp=drivesdk",
+        "parent_ids": [
+          "1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw",
+        "title": "NOX_V35_SOURCE_REGISTRY_JSON_20261113",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1eZntkp90Y387AB0g77L3VeMcQoYbIWn8ZxnkIErWEDw/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:54:56.453Z"
+    },
+    {
+      "id": "1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+      "planned_title": "NOX36_BACKUP_20261112",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC",
+      "started_at": "2026-11-16T01:54:57.137Z",
+      "before": {
+        "id": "1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+        "title": "NOX36_BACKUP_20261112",
+        "mime_type": "application/vnd.google-apps.folder",
+        "size": null,
+        "url": "https://drive.google.com/drive/folders/1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+        "display_url": "https://drive.google.com/drive/folders/1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+        "file_or_folder": "folder",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX36_BACKUP_20261112",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+        "title": "NOX36_BACKUP_20261112",
+        "mime_type": "application/vnd.google-apps.folder",
+        "url": "https://drive.google.com/drive/folders/1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+        "parent_ids": [
+          "1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+        "title": "NOX36_BACKUP_20261112",
+        "mime_type": "application/vnd.google-apps.folder",
+        "size": null,
+        "url": "https://drive.google.com/drive/folders/1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+        "display_url": "https://drive.google.com/drive/folders/1OZy6n3SO9yOm-erJQxulyJuMtWeDOyIg",
+        "file_or_folder": "folder",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:54:58.695Z"
+    },
+    {
+      "id": "1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I",
+      "planned_title": "NOX HELION · Анализ недостающего",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:54:59.384Z",
+      "before": {
+        "id": "1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I",
+        "title": "NOX HELION · Анализ недостающего",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Анализ недостающего",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I",
+        "title": "NOX HELION · Анализ недостающего",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I",
+        "title": "NOX HELION · Анализ недостающего",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1idhmMT0UT4IyQMXgEwmh5WU00DnepDaU8facZSPFc2I/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:00.905Z"
+    },
+    {
+      "id": "1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY",
+      "planned_title": "NOX HELION · Углублённая концепция: человек + хищник",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:01.592Z",
+      "before": {
+        "id": "1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY",
+        "title": "NOX HELION · Углублённая концепция: человек + хищник",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Углублённая концепция: человек + хищник",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY",
+        "title": "NOX HELION · Углублённая концепция: человек + хищник",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY",
+        "title": "NOX HELION · Углублённая концепция: человек + хищник",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1CHfmc_Hf3fKLCZ7lZkEL-2negOGX4NJYehlttgusJNY/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:04.878Z"
+    },
+    {
+      "id": "1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA",
+      "planned_title": "NOX HELION · Чего не хватает для супер WOW",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:05.578Z",
+      "before": {
+        "id": "1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA",
+        "title": "NOX HELION · Чего не хватает для супер WOW",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Чего не хватает для супер WOW",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA",
+        "title": "NOX HELION · Чего не хватает для супер WOW",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA",
+        "title": "NOX HELION · Чего не хватает для супер WOW",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1uUvPiUYl-nmce1MPtsU1aqrc5ThbrE3PW8WEb68VSEA/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:07.048Z"
+    },
+    {
+      "id": "1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik",
+      "planned_title": "NOX HELION · Полный WOW комплект",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:07.732Z",
+      "before": {
+        "id": "1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik",
+        "title": "NOX HELION · Полный WOW комплект",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Полный WOW комплект",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik",
+        "title": "NOX HELION · Полный WOW комплект",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik",
+        "title": "NOX HELION · Полный WOW комплект",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1vPWmZlPDoT-gTGYNyZdzgeyzd2GpmNxWg9mjmzXA2Ik/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:09.094Z"
+    },
+    {
+      "id": "1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs",
+      "planned_title": "NOX HELION · Итоговый скелет + исходники",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:09.783Z",
+      "before": {
+        "id": "1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs",
+        "title": "NOX HELION · Итоговый скелет + исходники",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Итоговый скелет + исходники",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs",
+        "title": "NOX HELION · Итоговый скелет + исходники",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs",
+        "title": "NOX HELION · Итоговый скелет + исходники",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1yn3IIDt3jcUIpLGTzd15nxct6KXAW67TWc5KlZUTOXs/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:11.521Z"
+    },
+    {
+      "id": "1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg",
+      "planned_title": "NOX HELION · Дополнения к скелету",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:12.208Z",
+      "before": {
+        "id": "1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg",
+        "title": "NOX HELION · Дополнения к скелету",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Дополнения к скелету",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg",
+        "title": "NOX HELION · Дополнения к скелету",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg",
+        "title": "NOX HELION · Дополнения к скелету",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1ifzAlBZ-EOI1zNQSThCC2Kgyo9US8iuzPVi1UyB6pKg/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:13.765Z"
+    },
+    {
+      "id": "1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo",
+      "planned_title": "NOX HELION · 50 улучшений скелета",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:14.465Z",
+      "before": {
+        "id": "1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo",
+        "title": "NOX HELION · 50 улучшений скелета",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · 50 улучшений скелета",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo",
+        "title": "NOX HELION · 50 улучшений скелета",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo",
+        "title": "NOX HELION · 50 улучшений скелета",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:15.933Z"
+    },
+    {
+      "id": "15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo",
+      "planned_title": "NOX HELION · Скелет нейронки",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:16.650Z",
+      "before": {
+        "id": "15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo",
+        "title": "NOX HELION · Скелет нейронки",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Скелет нейронки",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo",
+        "title": "NOX HELION · Скелет нейронки",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo",
+        "title": "NOX HELION · Скелет нейронки",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/15LQgdRiVydI-1aOs3cjx9hDghpNLHQ4JB-j9qmNx9Mo/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:18.014Z"
+    },
+    {
+      "id": "1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0",
+      "planned_title": "NOX HELION · Зародыш для GPU-дистилляции",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:18.729Z",
+      "before": {
+        "id": "1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0",
+        "title": "NOX HELION · Зародыш для GPU-дистилляции",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Зародыш для GPU-дистилляции",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0",
+        "title": "NOX HELION · Зародыш для GPU-дистилляции",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0",
+        "title": "NOX HELION · Зародыш для GPU-дистилляции",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1LXPT8_Tw8Ax-MRxif2lTb4PrBbUo6-jFAJt7N3GFax0/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:20.121Z"
+    },
+    {
+      "id": "17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY",
+      "planned_title": "NOX HELION · Полный список требований",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum",
+      "started_at": "2026-11-16T01:55:20.836Z",
+      "before": {
+        "id": "17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY",
+        "title": "NOX HELION · Полный список требований",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Полный список требований",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY",
+        "title": "NOX HELION · Полный список требований",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY/edit?usp=drivesdk",
+        "parent_ids": [
+          "1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY",
+        "title": "NOX HELION · Полный список требований",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/17DjzjuShfY6HmJuoYLKqGdYepR0UUecmsPIkDUeWYOY/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:22.393Z"
+    },
+    {
+      "id": "1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0",
+      "planned_title": "NOX HELION · Ядро зародыша",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:23.117Z",
+      "before": {
+        "id": "1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0",
+        "title": "NOX HELION · Ядро зародыша",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Ядро зародыша",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0",
+        "title": "NOX HELION · Ядро зародыша",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0",
+        "title": "NOX HELION · Ядро зародыша",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1WIxqkL5WcavGNTBoG-U_OlsHMn0Ss8_Zgh3P-Gcg2G0/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:24.489Z"
+    },
+    {
+      "id": "1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno",
+      "planned_title": "NOX HELION · Зародыш · PRIME FULL",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:25.212Z",
+      "before": {
+        "id": "1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno",
+        "title": "NOX HELION · Зародыш · PRIME FULL",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Зародыш · PRIME FULL",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno",
+        "title": "NOX HELION · Зародыш · PRIME FULL",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno",
+        "title": "NOX HELION · Зародыш · PRIME FULL",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1K_jqUR3TD-RCi_r5H2tvWJxt4OEMMVc2EAk-Ec9Rqno/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:26.694Z"
+    },
+    {
+      "id": "1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y",
+      "planned_title": "NOX HELION · Зародыш · Таблица супер-нейронки",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:27.416Z",
+      "before": {
+        "id": "1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y",
+        "title": "NOX HELION · Зародыш · Таблица супер-нейронки",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Зародыш · Таблица супер-нейронки",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y",
+        "title": "NOX HELION · Зародыш · Таблица супер-нейронки",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y",
+        "title": "NOX HELION · Зародыш · Таблица супер-нейронки",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1FEy0E5-Bduq5-hkk1slygFKXU12-ltLt9Tw45zHpM-Y/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:28.963Z"
+    },
+    {
+      "id": "1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc",
+      "planned_title": "NOX HELION · Зародыш vs Развитие",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:29.685Z",
+      "before": {
+        "id": "1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc",
+        "title": "NOX HELION · Зародыш vs Развитие",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Зародыш vs Развитие",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc",
+        "title": "NOX HELION · Зародыш vs Развитие",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc",
+        "title": "NOX HELION · Зародыш vs Развитие",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1tgGTq18wF9c_P9gepar1GvMu1cbjUF-cz-ho5hBn_Xc/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:31.144Z"
+    },
+    {
+      "id": "1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0",
+      "planned_title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ V2 · ПОЛНЫЙ",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:31.881Z",
+      "before": {
+        "id": "1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0",
+        "title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ V2 · ПОЛНЫЙ",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ V2 · ПОЛНЫЙ",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0",
+        "title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ V2 · ПОЛНЫЙ",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0",
+        "title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ V2 · ПОЛНЫЙ",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1g-1PIhkNLR89sV9pnRR17HkwdqzcszjzhNAsSKQ_rU0/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:33.546Z"
+    },
+    {
+      "id": "1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo",
+      "planned_title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ · ПОЛНЫЙ СПИСОК",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:34.270Z",
+      "before": {
+        "id": "1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo",
+        "title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ · ПОЛНЫЙ СПИСОК",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ · ПОЛНЫЙ СПИСОК",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo",
+        "title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ · ПОЛНЫЙ СПИСОК",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo",
+        "title": "NOX HELION · МЕГА-КОНЦЕПЦИЯ · ПОЛНЫЙ СПИСОК",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1ySrqF0ZM3s2KjBGoHUq_3KcZcRN1prHNNd2xvWhMkOo/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:36.171Z"
+    },
+    {
+      "id": "1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc",
+      "planned_title": "NOX HELION · WOW 50 · Когнитивные",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:36.911Z",
+      "before": {
+        "id": "1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc",
+        "title": "NOX HELION · WOW 50 · Когнитивные",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · WOW 50 · Когнитивные",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc",
+        "title": "NOX HELION · WOW 50 · Когнитивные",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc",
+        "title": "NOX HELION · WOW 50 · Когнитивные",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:38.250Z"
+    },
+    {
+      "id": "1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ",
+      "planned_title": "NOX HELION · Человечная концепция",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:38.981Z",
+      "before": {
+        "id": "1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ",
+        "title": "NOX HELION · Человечная концепция",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Человечная концепция",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ",
+        "title": "NOX HELION · Человечная концепция",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ",
+        "title": "NOX HELION · Человечная концепция",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1l78m_lNYBmeAxpJpoLVLOqFRC9QzHRrlfS9pZibszgQ/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:41.044Z"
+    },
+    {
+      "id": "1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI",
+      "planned_title": "NOX HELION · Мегамозг · Концепция",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:41.768Z",
+      "before": {
+        "id": "1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI",
+        "title": "NOX HELION · Мегамозг · Концепция",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Мегамозг · Концепция",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI",
+        "title": "NOX HELION · Мегамозг · Концепция",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI",
+        "title": "NOX HELION · Мегамозг · Концепция",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1Ulz8NUGU-GXwverVYkys96Boz7v6Ir0i1_uE1MARaLI/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:43.136Z"
+    },
+    {
+      "id": "1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8",
+      "planned_title": "NOX HELION · Супер-нейронка и зародыш",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:43.867Z",
+      "before": {
+        "id": "1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8",
+        "title": "NOX HELION · Супер-нейронка и зародыш",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · Супер-нейронка и зародыш",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8",
+        "title": "NOX HELION · Супер-нейронка и зародыш",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8",
+        "title": "NOX HELION · Супер-нейронка и зародыш",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1fYKaLgqAeHLxeaysNy6XMSG2oOSMmTZCuyGdcZvkjh8/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:45.194Z"
+    },
+    {
+      "id": "10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA",
+      "planned_title": "NOX HELION · WOW 50 · Ощущение живого ИИ",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:45.925Z",
+      "before": {
+        "id": "10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA",
+        "title": "NOX HELION · WOW 50 · Ощущение живого ИИ",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION · WOW 50 · Ощущение живого ИИ",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA",
+        "title": "NOX HELION · WOW 50 · Ощущение живого ИИ",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA",
+        "title": "NOX HELION · WOW 50 · Ощущение живого ИИ",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/10BCiLe47u6yu_1CzHL_1Rf-_ICd416jLGEqw97a8SLA/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:47.349Z"
+    },
+    {
+      "id": "1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs",
+      "planned_title": "NOX HELION — Система агрессивного поглощения учителей",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8",
+      "started_at": "2026-11-16T01:55:48.093Z",
+      "before": {
+        "id": "1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs",
+        "title": "NOX HELION — Система агрессивного поглощения учителей",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX HELION — Система агрессивного поглощения учителей",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs",
+        "title": "NOX HELION — Система агрессивного поглощения учителей",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs/edit?usp=drivesdk",
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs",
+        "title": "NOX HELION — Система агрессивного поглощения учителей",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/1YH1I0bfFgzrWl-GWRJZ1QMLekPSZVANIDRzCqbj1ACs/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:49.542Z"
+    },
+    {
+      "id": "1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+      "planned_title": "NOX_HELION",
+      "source_parents": [
+        "0AALAbHbBiWEAUk9PVA"
+      ],
+      "destination": "1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8",
+      "started_at": "2026-11-16T01:55:50.294Z",
+      "before": {
+        "id": "1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+        "title": "NOX_HELION",
+        "mime_type": "application/vnd.google-apps.folder",
+        "size": null,
+        "url": "https://drive.google.com/drive/folders/1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+        "display_url": "https://drive.google.com/drive/folders/1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+        "file_or_folder": "folder",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "0AALAbHbBiWEAUk9PVA"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX_HELION",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+        "title": "NOX_HELION",
+        "mime_type": "application/vnd.google-apps.folder",
+        "url": "https://drive.google.com/drive/folders/1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+        "parent_ids": [
+          "1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+        "title": "NOX_HELION",
+        "mime_type": "application/vnd.google-apps.folder",
+        "size": null,
+        "url": "https://drive.google.com/drive/folders/1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+        "display_url": "https://drive.google.com/drive/folders/1GaMmsslHVufGSCnbwWRdcsYHnhlc1o9q",
+        "file_or_folder": "folder",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:51.639Z"
+    },
+    {
+      "id": "12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0",
+      "planned_title": "NOX — Модели, движки и план ускорения",
+      "source_parents": [
+        "1qYf9_jD9-2AYuurZpGPqwtt8uXW7NXh-"
+      ],
+      "destination": "13qreXhhImGi2gAnBOvbDoF6Y6Tv-0JvK",
+      "started_at": "2026-11-16T01:55:52.393Z",
+      "before": {
+        "id": "12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0",
+        "title": "NOX — Модели, движки и план ускорения (10.11.2026)",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1qYf9_jD9-2AYuurZpGPqwtt8uXW7NXh-"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX — Модели, движки и план ускорения (10.11.2026)",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0",
+        "title": "NOX — Модели, движки и план ускорения (10.11.2026)",
+        "mime_type": "application/vnd.google-apps.document",
+        "url": "https://docs.google.com/document/d/12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0/edit?usp=drivesdk",
+        "parent_ids": [
+          "13qreXhhImGi2gAnBOvbDoF6Y6Tv-0JvK"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0",
+        "title": "NOX — Модели, движки и план ускорения (10.11.2026)",
+        "mime_type": "application/vnd.google-apps.document",
+        "size": null,
+        "url": "https://docs.google.com/document/d/12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0/edit?usp=drivesdk",
+        "display_url": "https://docs.google.com/document/d/12SIMZNChehhT2ZIN61H6UdZIcEej2ZAD4GAqt9WjMW0/edit?usp=drivesdk",
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "13qreXhhImGi2gAnBOvbDoF6Y6Tv-0JvK"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:54.228Z"
+    },
+    {
+      "id": "1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+      "planned_title": "NOX_ENGINES_15_20261105",
+      "source_parents": [
+        "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+      ],
+      "destination": "1mBEVhwQFNpHz_pOCtE-t5sLikMwKj5QI",
+      "started_at": "2026-11-16T01:55:54.978Z",
+      "before": {
+        "id": "1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+        "title": "NOX_ENGINES_15_20261105",
+        "mime_type": "application/vnd.google-apps.folder",
+        "size": null,
+        "url": "https://drive.google.com/drive/folders/1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+        "display_url": "https://drive.google.com/drive/folders/1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+        "file_or_folder": "folder",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX_ENGINES_15_20261105",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+        "title": "NOX_ENGINES_15_20261105",
+        "mime_type": "application/vnd.google-apps.folder",
+        "url": "https://drive.google.com/drive/folders/1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+        "parent_ids": [
+          "1mBEVhwQFNpHz_pOCtE-t5sLikMwKj5QI"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+        "title": "NOX_ENGINES_15_20261105",
+        "mime_type": "application/vnd.google-apps.folder",
+        "size": null,
+        "url": "https://drive.google.com/drive/folders/1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+        "display_url": "https://drive.google.com/drive/folders/1BNtxFaFRoC9nPWZsK_Yohv_qPr3sDwKc",
+        "file_or_folder": "folder",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1mBEVhwQFNpHz_pOCtE-t5sLikMwKj5QI"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:56.537Z"
+    },
+    {
+      "id": "180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+      "planned_title": "NOX MASTER CATALOG",
+      "source_parents": [
+        "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+      ],
+      "destination": "1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR",
+      "started_at": "2026-11-16T01:55:57.288Z",
+      "before": {
+        "id": "180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+        "title": "NOX MASTER CATALOG",
+        "mime_type": "application/vnd.google-apps.folder",
+        "size": null,
+        "url": "https://drive.google.com/drive/folders/180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+        "display_url": "https://drive.google.com/drive/folders/180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+        "file_or_folder": "folder",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "title": "NOX MASTER CATALOG",
+      "update_result": {
+        "success": true,
+        "accepted_input": null,
+        "id": "180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+        "title": "NOX MASTER CATALOG",
+        "mime_type": "application/vnd.google-apps.folder",
+        "url": "https://drive.google.com/drive/folders/180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+        "parent_ids": [
+          "1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR"
+        ],
+        "modified_time": null,
+        "size": null
+      },
+      "after": {
+        "id": "180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+        "title": "NOX MASTER CATALOG",
+        "mime_type": "application/vnd.google-apps.folder",
+        "size": null,
+        "url": "https://drive.google.com/drive/folders/180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+        "display_url": "https://drive.google.com/drive/folders/180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+        "file_or_folder": "folder",
+        "created_time": null,
+        "modified_time": null,
+        "parent_ids": [
+          "1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": false,
+        "permissions": null,
+        "source_visibility_status": "not_shared"
+      },
+      "status": "MOVED_VERIFIED",
+      "checked_at": "2026-11-16T01:55:59.117Z"
+    }
+  ],
+  "status": "COMPLETED_VERIFIED",
+  "intermediate_ancestor": {
+    "id": "13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w",
+    "title": "07_МОДЕЛИ_ОБУЧЕНИЕ_И_ПОДГРУЗКА",
+    "mime_type": "application/vnd.google-apps.folder",
+    "size": null,
+    "url": "https://drive.google.com/drive/folders/13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w",
+    "display_url": "https://drive.google.com/drive/folders/13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w",
+    "file_or_folder": "folder",
+    "created_time": null,
+    "modified_time": null,
+    "parent_ids": [
+      "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+    ],
+    "drive_id": null,
+    "current_user_can_share": null,
+    "has_augmented_permissions": null,
+    "shared": false,
+    "permissions": null,
+    "source_visibility_status": "not_shared"
+  },
+  "moves_completed_at": "2026-11-16T01:55:59.910Z",
+  "completed_at": "2026-11-16T01:56:27.515Z",
+  "root_search": {
+    "query": "'root' in parents and trashed = false and (name contains 'NOX' or name contains 'HELION')",
+    "returned_count": 1,
+    "result": {
+      "results": [
+        {
+          "url": "https://drive.google.com/drive/folders/1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v",
+          "title": "NOX HELION EXPRESS INTEGRATOR",
+          "id": "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:47:42.572Z",
+          "updated_at": "2026-11-03T11:47:42.572Z",
+          "viewedByMeTime": "2026-11-05T22:48:51.028Z",
+          "display_title": "NOX HELION EXPRESS INTEGRATOR",
+          "display_url": "https://drive.google.com/drive/folders/1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v",
+          "parent_ids": [
+            "0AALAbHbBiWEAUk9PVA"
+          ],
+          "shared": false
+        }
+      ]
+    },
+    "scope_note": "This is a root-level NOX/HELION name query, not an exhaustive audit of all Drive files."
+  },
+  "canonical_root_listing": {
+    "query": "'1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v' in parents and trashed = false",
+    "returned_count": 13,
+    "result": {
+      "results": [
+        {
+          "url": "https://drive.google.com/drive/folders/13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w",
+          "title": "07_МОДЕЛИ_ОБУЧЕНИЕ_И_ПОДГРУЗКА",
+          "id": "13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-16T01:44:36.472Z",
+          "updated_at": "2026-11-16T01:44:36.472Z",
+          "viewedByMeTime": null,
+          "display_title": "07_МОДЕЛИ_ОБУЧЕНИЕ_И_ПОДГРУЗКА",
+          "display_url": "https://drive.google.com/drive/folders/13O72EDwJJ-oRS9mNkR62iYhY42YHFu5w",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://docs.google.com/document/d/1UwL7WKEdp8SvQ_GSgrENC4oSC2lj2Oh_X49Aq_ubWzY/edit?usp=drivesdk",
+          "title": "ИНСТРУКЦИЯ ДЛЯ ДРУГОГО ИИ · ПОДКЛЮЧЕНИЕ И УПРАВЛЕНИЕ NOX HELION · ПОРТЫ · СЕРВЕР · 2026-11-14",
+          "id": "1UwL7WKEdp8SvQ_GSgrENC4oSC2lj2Oh_X49Aq_ubWzY",
+          "mime_type": "application/vnd.google-apps.document",
+          "size": "9167",
+          "file_or_folder": "file",
+          "created_at": "2026-11-14T11:20:25.845Z",
+          "updated_at": "2026-11-14T11:20:28.026Z",
+          "viewedByMeTime": "2026-11-14T11:20:28.026Z",
+          "display_title": "ИНСТРУКЦИЯ ДЛЯ ДРУГОГО ИИ · ПОДКЛЮЧЕНИЕ И УПРАВЛЕНИЕ NOX HELION · ПОРТЫ · СЕРВЕР · 2026-11-14",
+          "display_url": "https://docs.google.com/document/d/1UwL7WKEdp8SvQ_GSgrENC4oSC2lj2Oh_X49Aq_ubWzY/edit?usp=drivesdk",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1LqUj69xXto7lg8bJvn_pLfQiIZ_rL1Kx",
+          "title": "NOX_V18_WOW_RECOVERY_20261110",
+          "id": "1LqUj69xXto7lg8bJvn_pLfQiIZ_rL1Kx",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-10T03:32:44.005Z",
+          "updated_at": "2026-11-10T03:32:44.005Z",
+          "viewedByMeTime": null,
+          "display_title": "NOX_V18_WOW_RECOVERY_20261110",
+          "display_url": "https://drive.google.com/drive/folders/1LqUj69xXto7lg8bJvn_pLfQiIZ_rL1Kx",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://docs.google.com/document/d/1bP1sQLOA1TQrg6plLmZlbjGeSbd1cuaDqirjyyzbiwk/edit?usp=drivesdk",
+          "title": "00_НАЧАТЬ_ЗДЕСЬ · NOX HELION EXPRESS INTEGRATOR · ГЛАВНЫЙ КАТАЛОГ",
+          "id": "1bP1sQLOA1TQrg6plLmZlbjGeSbd1cuaDqirjyyzbiwk",
+          "mime_type": "application/vnd.google-apps.document",
+          "size": "7617",
+          "file_or_folder": "file",
+          "created_at": "2026-11-03T11:48:18.800Z",
+          "updated_at": "2026-11-04T18:05:57.770Z",
+          "viewedByMeTime": "2026-11-04T18:05:57.770Z",
+          "display_title": "00_НАЧАТЬ_ЗДЕСЬ · NOX HELION EXPRESS INTEGRATOR · ГЛАВНЫЙ КАТАЛОГ",
+          "display_url": "https://docs.google.com/document/d/1bP1sQLOA1TQrg6plLmZlbjGeSbd1cuaDqirjyyzbiwk/edit?usp=drivesdk",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6",
+          "title": "99_КАТАЛОГИ_И_УЧЕТ",
+          "id": "1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:17.827Z",
+          "updated_at": "2026-11-03T11:48:17.827Z",
+          "viewedByMeTime": null,
+          "display_title": "99_КАТАЛОГИ_И_УЧЕТ",
+          "display_url": "https://drive.google.com/drive/folders/1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC",
+          "title": "90_АРХИВ_ПРОЕКТА",
+          "id": "1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:16.580Z",
+          "updated_at": "2026-11-03T11:48:16.580Z",
+          "viewedByMeTime": null,
+          "display_title": "90_АРХИВ_ПРОЕКТА",
+          "display_url": "https://drive.google.com/drive/folders/1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR",
+          "title": "06_ПАКЕТЫ_И_ЭКСПОРТЫ",
+          "id": "1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:15.557Z",
+          "updated_at": "2026-11-03T11:48:15.557Z",
+          "viewedByMeTime": null,
+          "display_title": "06_ПАКЕТЫ_И_ЭКСПОРТЫ",
+          "display_url": "https://drive.google.com/drive/folders/1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-",
+          "title": "05_КОНТЕКСТ_И_МАТЕРИАЛЫ",
+          "id": "1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:14.621Z",
+          "updated_at": "2026-11-03T11:48:14.621Z",
+          "viewedByMeTime": null,
+          "display_title": "05_КОНТЕКСТ_И_МАТЕРИАЛЫ",
+          "display_url": "https://drive.google.com/drive/folders/1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8",
+          "title": "04_ДИЗАЙН_И_ИНТЕРФЕЙСЫ",
+          "id": "1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:13.087Z",
+          "updated_at": "2026-11-03T11:48:13.087Z",
+          "viewedByMeTime": null,
+          "display_title": "04_ДИЗАЙН_И_ИНТЕРФЕЙСЫ",
+          "display_url": "https://drive.google.com/drive/folders/1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1qYf9_jD9-2AYuurZpGPqwtt8uXW7NXh-",
+          "title": "03_РАЗРАБОТКА_И_СБОРКИ",
+          "id": "1qYf9_jD9-2AYuurZpGPqwtt8uXW7NXh-",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:12.169Z",
+          "updated_at": "2026-11-03T11:48:12.169Z",
+          "viewedByMeTime": null,
+          "display_title": "03_РАЗРАБОТКА_И_СБОРКИ",
+          "display_url": "https://drive.google.com/drive/folders/1qYf9_jD9-2AYuurZpGPqwtt8uXW7NXh-",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1tAU3D0S4_NrYbWXo13gREqctQQEjA_vR",
+          "title": "02_ЖУРНАЛЫ_И_ПАТЧИ",
+          "id": "1tAU3D0S4_NrYbWXo13gREqctQQEjA_vR",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:11.251Z",
+          "updated_at": "2026-11-03T11:48:11.251Z",
+          "viewedByMeTime": null,
+          "display_title": "02_ЖУРНАЛЫ_И_ПАТЧИ",
+          "display_url": "https://drive.google.com/drive/folders/1tAU3D0S4_NrYbWXo13gREqctQQEjA_vR",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1JwxWFB8czl6hEdIlmd9lRl_UX6raRmbh",
+          "title": "01_ШАБЛОНЫ",
+          "id": "1JwxWFB8czl6hEdIlmd9lRl_UX6raRmbh",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:10.001Z",
+          "updated_at": "2026-11-03T11:48:10.001Z",
+          "viewedByMeTime": null,
+          "display_title": "01_ШАБЛОНЫ",
+          "display_url": "https://drive.google.com/drive/folders/1JwxWFB8czl6hEdIlmd9lRl_UX6raRmbh",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        },
+        {
+          "url": "https://drive.google.com/drive/folders/1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum",
+          "title": "00_ТЗ_И_РЕГЛАМЕНТЫ",
+          "id": "1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum",
+          "mime_type": "application/vnd.google-apps.folder",
+          "size": null,
+          "file_or_folder": "folder",
+          "created_at": "2026-11-03T11:48:09.104Z",
+          "updated_at": "2026-11-03T11:48:09.104Z",
+          "viewedByMeTime": null,
+          "display_title": "00_ТЗ_И_РЕГЛАМЕНТЫ",
+          "display_url": "https://drive.google.com/drive/folders/1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum",
+          "parent_ids": [
+            "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v"
+          ],
+          "shared": false
+        }
+      ]
+    }
+  },
+  "summary": {
+    "planned": 29,
+    "moved_verified": 29,
+    "already_destination_verified": 0,
+    "skipped": 0,
+    "failed": 0,
+    "all_readback_private": true,
+    "destination_counts": {
+      "1YWBt38sLZghziGLUWdjXd6TCmlOq3i6-": 1,
+      "1RV4EiwQ48QBsBiX_FUlqveULWRpVKyC6": 1,
+      "1KYN8OeHh9aMJmr-EWkrsPQaLLQHttCFC": 1,
+      "1J8ML9Kdk5qWgrj7WmTHiCMMXoeh6zAU8": 21,
+      "1p208pX06HWmLjwCoWPcRb5k0AQ6UKkum": 1,
+      "1c79qEf32KTF9e3RRGLg8eOCQ5bOUnNu8": 1,
+      "13qreXhhImGi2gAnBOvbDoF6Y6Tv-0JvK": 1,
+      "1mBEVhwQFNpHz_pOCtE-t5sLikMwKj5QI": 1,
+      "1CK8B-KOasziDFMvcamt8vuNQxpjpmTuR": 1
+    }
+  }
+}

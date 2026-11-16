@@ -1,0 +1,84 @@
+{
+  "source": "https://huggingface.co/api/models/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/tree/65d53bc8be65123e255ff02f3ded958b6dbf54fd?recursive=true&expand=false",
+  "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+  "files": [
+    {
+      "type": "file",
+      "oid": "23c7db1a295adbe444d533ccdad92c26bd0789d0",
+      "size": 5780704,
+      "lfs": {
+        "oid": "f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9",
+        "size": 5780704,
+        "pointerSize": 132
+      },
+      "xetHash": "77a27aa5973e323b75225bfdf085724ab38bb6f2efde16de952d7b85a6eda704",
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf"
+    },
+    {
+      "type": "file",
+      "oid": "9f19f6e68a49c44baab72875e175a564d5008ece",
+      "size": 39535781184,
+      "lfs": {
+        "oid": "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3",
+        "size": 39535781184,
+        "pointerSize": 136
+      },
+      "xetHash": "90236d301b7eda9259462711bd51085083a1bc095d3fa3389a365da3c71a3642",
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf"
+    },
+    {
+      "type": "file",
+      "oid": "88c19362cd63a6f9a76138c51ffa08f161d8d882",
+      "size": 39736712000,
+      "lfs": {
+        "oid": "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48",
+        "size": 39736712000,
+        "pointerSize": 136
+      },
+      "xetHash": "e1441d896365b86765925feebbc631bee8cf56dcb56eaf22b54cb2a5f00f8988",
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf"
+    },
+    {
+      "type": "file",
+      "oid": "ef36567fc197305b56c4aedd4880ea210bb0d658",
+      "size": 39036908384,
+      "lfs": {
+        "oid": "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0",
+        "size": 39036908384,
+        "pointerSize": 136
+      },
+      "xetHash": "b9648b6fa59816703fee719db32d07f16d9a9f322051b268ece5acd69b2c31ad",
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf"
+    },
+    {
+      "type": "file",
+      "oid": "5e2eae8b12d79b5237d377b3aa495a8d3623e69a",
+      "size": 19923784832,
+      "lfs": {
+        "oid": "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1",
+        "size": 19923784832,
+        "pointerSize": 136
+      },
+      "xetHash": "d8d413bef51befad1cbf081b172f9c1491bc3cb89aa68741bf5dcc7722302ecc",
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf"
+    },
+    {
+      "type": "file",
+      "oid": "5d69f2f301edd0d9cf123a201faf89a053d17a38",
+      "size": 110595290816,
+      "lfs": {
+        "oid": "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3",
+        "size": 110595290816,
+        "pointerSize": 137
+      },
+      "xetHash": "9733bb481b0a25ec3430fa11c9ca8de9afe79c1d42a520f88c3d70fa82a59cbc",
+      "path": "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf"
+    },
+    {
+      "type": "file",
+      "oid": "bed955632f598c09993d54b93f62efae1a14662b",
+      "size": 34821,
+      "path": "tensor-allocation/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS.rco-allocation.txt"
+    }
+  ]
+}

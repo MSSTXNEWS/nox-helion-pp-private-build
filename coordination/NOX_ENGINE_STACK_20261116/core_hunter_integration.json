@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_EXISTING_CORE_INTEGRATION_MAP_V1",
+  "date": "2026-11-16",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_commit": "32e4c72b12d5dbfc5595111b123403ac846b4877",
+  "status": "SOURCE_AUDITED_NATIVE_WIRING_NOT_CONFIRMED",
+  "single_identity": true,
+  "single_s03": true,
+  "existing_scheduler_only": true,
+  "components": [
+    {
+      "role": "hunter",
+      "path": "nox_runpod/teacher_mesh/autonomous_hunt_v27.py",
+      "entrypoints": [
+        "HuntDirector.tick",
+        "NativeCallbacks"
+      ],
+      "gap": "Instantiate real NativeCallbacks and wire existing queue/trainer/admission; source-only candidate."
+    },
+    {
+      "role": "cognitive_overlay",
+      "path": "nox_runpod/teacher_mesh/cognitive_overlay.py",
+      "entrypoints": [
+        "CognitiveOverlay.prepare",
+        "CognitiveOverlay.respond",
+        "CognitiveOverlay.save_approved_event",
+        "functional_self_model"
+      ],
+      "gap": "Bind live evidence and truthful capabilities."
+    },
+    {
+      "role": "memory_model_adapters",
+      "path": "nox_runpod/teacher_mesh/s03_callback_adapter.py",
+      "entrypoints": [
+        "CallbackS03Adapter",
+        "CallbackNOXModelAdapter"
+      ],
+      "gap": "Provide actual search_fn/capabilities_fn/append_fn/generate_fn."
+    },
+    {
+      "role": "s03_gateway",
+      "path": "nox-control/owner_s03_gateway.py",
+      "entrypoints": [
+        "recall",
+        "index_batch",
+        "sync",
+        "verify_success",
+        "resource_admission"
+      ],
+      "canonical_db": "/root/nox/kb/knowledge.sqlite"
+    },
+    {
+      "role": "dispatcher",
+      "path": "nox-control/owner_dispatcher_mentor.py",
+      "entrypoints": [
+        "transform_dispatcher"
+      ],
+      "native_path": "/root/nox/scripts/nox_dispatcher_t855u.py"
+    },
+    {
+      "role": "scheduler",
+      "path": "nox-control/owner_native_repair.py",
+      "entrypoints": [
+        "patch_scheduler",
+        "resource_budget"
+      ],
+      "native_path": "/root/nox/scripts/nox_priority_scheduler.py"
+    },
+    {
+      "role": "legacy_trainer",
+      "path": "nox-control/hybrid_training_entry.py",
+      "status": "OLD_35B_ONLY_NOT_NEW_DEEPSEEK_TRAINER",
+      "gap": "Separate active_chat_model and trainable_student revisions and immutable lineage before new trainer."
+    }
+  ],
+  "retirement": {
+    "mandatory": true,
+    "gate": "Verified new inference through NOX/S03, actual endpoint cutover and stopped old process",
+    "delete_scope": "Identified obsolete model working files and incompatible unused adapters",
+    "preserve": [
+      "S03",
+      "core memory provenance",
+      "history",
+      "verified skills",
+      "training data needed for transfer"
+    ]
+  },
+  "source_storage": "Source code remains in the repository; this bundle carries pinned source references and integration contracts."
+}
