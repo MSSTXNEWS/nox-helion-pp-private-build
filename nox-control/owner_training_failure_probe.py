@@ -43,6 +43,12 @@ PATTERNS={
  'CUDA_ASSERT':r'device-side assert triggered',
  'DISK_FULL':r'No space left on device|Disk quota exceeded',
  'CUDA_KERNEL_UNAVAILABLE':r'no kernel image|invalid device function|CUDA error',
+ 'NATIVE_ABORT':r'Aborted|SIGABRT|terminate called|Fatal Python error',
+ 'NATIVE_SEGFAULT':r'Segmentation fault|SIGSEGV',
+ 'THREAD_RESOURCE_EXHAUSTED':r'pthread_create|can.t start new thread|Resource temporarily unavailable|ThreadPoolBuildError|thread pool',
+ 'RUST_PANIC':r'PanicException|panicked at|pyo3_runtime',
+ 'CPP_ALLOCATION_FAILURE':r'std::bad_alloc|std::system_error|bad allocation',
+ 'PYTHON_EXIT':r'SystemExit|KeyboardInterrupt',
 }
 
 
@@ -73,6 +79,14 @@ def project_log(raw):
         if reasons:row['technical_patterns']=reasons
         exceptions=[name for name in CLASSES if re.search(r'\b'+name+r'\b',line)]
         if exceptions:row['exception_classes']=sorted(exceptions)
+        terminal=re.match(r'^(?:[A-Za-z_][A-Za-z0-9_]*\.)*([A-Za-z_][A-Za-z0-9_]{0,63}(?:Error|Exception)):',line.strip())
+        if terminal:row['terminal_exception_class']=terminal[1]
+        frame=re.search(r'File "([^"\n]+\.py)", line (\d+), in ([A-Za-z_][A-Za-z0-9_]{0,63}|<module>)',line)
+        if frame:
+            known={'hybrid_training_entry.py','train_qlora_35b_t866u.py','sft_trainer.py','sft_config.py',
+                   'trainer.py','training_args.py','arrow_dataset.py','arrow_writer.py','tokenization_utils_base.py'}
+            basename=Path(frame[1]).name
+            if basename in known:row['known_code_frame']={'file':basename,'line':int(frame[2]),'function':frame[3]}
         if re.search(r'trainer api (?:sftconfig|legacy) (?:TypeError|FAIL):',line):
             for pattern,kind in (
                 (r"unexpected keyword argument ['\"]([A-Za-z_][A-Za-z0-9_]{0,63})['\"]",'UNEXPECTED_KEYWORD'),
@@ -116,13 +130,27 @@ def main():
     result={'schema':'NOX_OWNER_TRAINING_FAILURE_PROBE_V1','request':request,'source_sha':source,
             'failed_request':FAILED_REQUEST,'mutations':False,'private_training_text_exported':False,
             'service':helper.service_state(SERVICE),'progress':helper.progress(),'gpu':helper.gpu(),'health':helper.health(),
-            'logs':[],'output_files':[],'cgroup':{}}
+            'logs':[],'output_files':[],'cgroup':{},'supervisor_exits':[]}
     for channel in ('stdout','stderr'):
         rc,text=helper.command(['supervisorctl','tail',SERVICE,channel],15)
         result['logs'].append({'source':'supervisorctl:'+channel,'rc':rc,**project_log(text[-131072:])})
     for path in log_paths():
         try:result['logs'].append({'source':str(path),**project_log(read(path,131072,tail=True))})
         except FileNotFoundError:result['logs'].append({'source':str(path),'present':False})
+    for path in ('/var/log/supervisor/supervisord.log','/var/log/supervisord.log','/tmp/supervisord.log'):
+        try:
+            tail=read(path,262144,tail=True).decode(errors='replace')
+            rows=[]
+            for line in tail.splitlines():
+                if SERVICE not in line:continue
+                stamp=re.match(r'\d{4}-\d\d-\d\d \d\d:\d\d:\d\d',line)
+                status=re.search(r'exit status (\d{1,3})',line)
+                signal=re.search(r'(?:terminated by|signal) (SIG[A-Z0-9]{2,12})',line)
+                if status or signal:rows.append({'timestamp':stamp[0] if stamp else None,
+                    'exit_status':int(status[1]) if status else None,'signal':signal[1] if signal else None})
+            result['supervisor_exits'].append({'source':path,'events':rows[-16:]})
+        except FileNotFoundError:pass
+        except (OSError,RuntimeError):result['supervisor_exits'].append({'source':path,'events':[],'state':'UNAVAILABLE_SAFE_READ'})
     for name in ('memory.current','memory.max','memory.peak','memory.events','cpu.max'):
         try:
             value=Path('/sys/fs/cgroup',name).read_text().strip()

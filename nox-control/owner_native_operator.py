@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_training_failure_probe.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_remaining_verification.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -102,6 +102,7 @@ def run_native(action,request_id):
                      'nox-control/owner_task_plans.py','nox-control/owner_task_lifecycle.py',
                      'nox-control/owner_task_lifecycle.json','nox-control/owner_senior_gateway.py',
                      'nox-control/owner_storage_reclaim.py','nox-control/owner_browser_diagnostic.py',
+                     'nox-control/owner_storage_remaining_audit.py',
                      'nox-control/owner_s03_diagnostic.py','nox-control/owner_ram_duplicate_reclaim.py',
                      'nox-control/owner_browser_qa_entry.py',
                      'nox-control/owner_s03_prepare_entry.py','nox-control/owner_s03_gateway.py',
