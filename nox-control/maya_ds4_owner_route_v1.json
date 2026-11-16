@@ -1,0 +1,21 @@
+{
+  "schema": "NOX_MAYA_DS4_OWNER_ROUTE_V1",
+  "enabled": false,
+  "provider": "maya_ds4",
+  "api_url": "http://127.0.0.1:8080/v1/chat/completions",
+  "models_url": "http://127.0.0.1:8080/v1/models",
+  "model": "deepseek-v4.1-flash",
+  "owner_stop": true,
+  "lease_valid": false,
+  "lease_expires_epoch": 0,
+  "resources_reserved": false,
+  "model_pack_verified": false,
+  "model_pack_dir": "",
+  "model_pack_receipt_sha256": "",
+  "manager_python": "",
+  "manager_python_sha256": "",
+  "manager_cwd": "",
+  "server_config_path": "",
+  "server_config_sha256": "",
+  "server_module_sha256": ""
+}
