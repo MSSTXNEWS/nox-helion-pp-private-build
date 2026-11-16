@@ -1268,11 +1268,11 @@ test('V178 V135 cancellation uses only V112 authenticated cookie-scoped STOP',()
   assert(route.includes('if key is None or key not in active:'));
   assert(route.includes('active[key].set()'));
   assert(route.includes("'gpu_stop_verified':False"));
-  const request=JS.indexOf("nativePost('/api/nox/stop',{},stopAbort.signal)");
+  const request=JS.indexOf("nativePost('/api/nox/stop',{},c.signal)");
   const abort=JS.indexOf('upstreamAbort.abort()',request);
   assert(request>=0&&abort>request,'signal same-session STOP before aborting the stream');
   assert(JS.includes("credentials:'same-origin',cache:'no-store',signal"));
-  assert(JS.includes('if(modelRequestStarted&&!modelStreamDone)'),
+  assert(JS.includes('if(modelStarted&&!streamDone)'),
     'do not send STOP after normal native stream completion');
 });
 
