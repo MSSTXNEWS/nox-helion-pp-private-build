@@ -151,6 +151,10 @@ async def _model_events(client, url, payload):
                         if value is not None:
                             if not isinstance(value,str):raise ValueError(field)
                             call[field]+=value
+                            # Model-supplied SSE identifiers are untrusted. A long ID
+                            # must never reach the native tool dispatcher or S03.
+                            if len(call[field])>160:
+                                raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
                     function=fragment.get('function') or {}
                     if not isinstance(function,dict):raise ValueError('function')
                     for field in ('name','arguments'):
