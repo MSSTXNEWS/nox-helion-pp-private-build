@@ -22,7 +22,7 @@ REQUIRED_CHECKS = {
     'emotion': {'appropriate', 'non_manipulative'},
     'forgetting': {'retention'},
 }
-POLICY_KEYS = {'max_quality_drop_pp', 'max_ttft_p95_increase_pct', 'min_tps_ratio', 'max_vram_bytes', 'max_logit_abs_delta'}
+POLICY_KEYS = {'max_quality_drop_pp', 'max_ttft_p95_increase_pct', 'min_tps_ratio', 'max_vram_bytes', 'max_logit_abs_delta', 'min_case_tps_ratio'}
 HEX = set('0123456789abcdef')
 
 
@@ -132,6 +132,7 @@ def evaluate(reference, candidate, train_manifest, policy):
     require(isinstance(policy, dict) and POLICY_KEYS <= policy.keys(), 'owner-approved numerical policy missing')
     require(all(finite(policy[k]) for k in POLICY_KEYS), 'invalid numerical policy')
     require(policy['min_tps_ratio'] > 0, 'min_tps_ratio must be positive')
+    require(policy['min_case_tps_ratio'] > 0, 'min_case_tps_ratio must be positive')
     require(policy['max_vram_bytes'] > 0, 'max_vram_bytes must be positive')
     ref_pass = sum(all(x['checks'][k] for k in REQUIRED_CHECKS[x['category']]) for x in r.values())
     can_pass = sum(all(x['checks'][k] for k in REQUIRED_CHECKS[x['category']]) for x in c.values())
@@ -142,6 +143,11 @@ def evaluate(reference, candidate, train_manifest, policy):
     p95_ref = percentile95([x['ttft_ms'] for x in r.values()])
     p95_can = percentile95([x['ttft_ms'] for x in c.values()])
     tps_ratio = statistics.median(x['decode_tps'] for x in c.values()) / statistics.median(x['decode_tps'] for x in r.values())
+    # A median-only throughput gate hides a severe RU/ES/code/memory category slowdown.
+    case_tps_ratios = {cid: c[cid]['decode_tps'] / r[cid]['decode_tps'] for cid in r}
+    worst_case_tps_ratio = min(case_tps_ratios.values())
+    slow_case_ids = sorted(cid for cid, ratio in case_tps_ratios.items()
+                           if ratio < policy['min_case_tps_ratio'])
     vram_max = max(x['peak_vram_bytes'] for x in c.values())
     deltas = [x.get('max_logit_abs_delta') for x in c.values()]
     require(all(finite(x) for x in deltas), 'candidate measured logit delta missing')
@@ -150,6 +156,7 @@ def evaluate(reference, candidate, train_manifest, policy):
         'critical_regression': not regressions,
         'ttft_p95': (p95_can / p95_ref - 1) * 100 <= policy['max_ttft_p95_increase_pct'],
         'tokens_per_sec': tps_ratio >= policy['min_tps_ratio'],
+        'per_case_tokens_per_sec': not slow_case_ids,
         'vram': vram_max <= policy['max_vram_bytes'],
         'logit_max_abs_delta': max(deltas) <= policy['max_logit_abs_delta'],
     }
@@ -165,7 +172,8 @@ def evaluate(reference, candidate, train_manifest, policy):
         'regression_case_ids': regressions,
         'quality_drop_pp': quality_drop_pp,
         'ttft_p95_reference_ms': p95_ref, 'ttft_p95_candidate_ms': p95_can,
-        'median_tps_ratio': tps_ratio, 'candidate_max_vram_bytes': vram_max,
+        'median_tps_ratio': tps_ratio, 'worst_case_tps_ratio': worst_case_tps_ratio,
+        'slow_case_ids': slow_case_ids, 'candidate_max_vram_bytes': vram_max,
         'candidate_max_logit_abs_delta': max(deltas), 'policy_checks': tests,
     }
 
@@ -195,7 +203,8 @@ def selftest():
         return {'run': meta, 'cases': cases}
     a, b = make_run('adapter'), make_run('merged')
     pol = dict(max_quality_drop_pp=0, max_ttft_p95_increase_pct=0,
-               min_tps_ratio=1, max_vram_bytes=1000, max_logit_abs_delta=.02)
+               min_tps_ratio=1, min_case_tps_ratio=1, max_vram_bytes=1000,
+               max_logit_abs_delta=.02)
     result = evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
     assert result['source_consistency'] == 'PASS' and result['native_verified'] is False
     # Empty train evidence must never pass as proof of separation.
@@ -257,7 +266,21 @@ def selftest():
     try: evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
     except ValueError as exc: assert 'logit delta' in str(exc)
     else: raise AssertionError('missing logit metric not detected')
-    print('SELFTEST 14/14 PASS (synthetic fixtures only; native HOLD)')
+    # A one-case 25->1 TPS collapse is invisible to the existing seven-case median.
+    # The owner must explicitly supply the per-case threshold; no native scores are inferred.
+    slow_code = make_run('merged')
+    slow_code['cases'][0]['decode_tps'] = 1
+    slow_result = evaluate(a, slow_code,
+                           {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
+    assert slow_result['median_tps_ratio'] == 1
+    assert slow_result['worst_case_tps_ratio'] == 1 / 25
+    assert slow_result['source_consistency'] == 'FAIL'
+    assert slow_result['slow_case_ids'] == ['t0']
+    slow_code['cases'][0]['decode_tps'] = 25
+    recovered = evaluate(a, slow_code,
+                         {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
+    assert recovered['source_consistency'] == 'PASS' and not recovered['slow_case_ids']
+    print('SELFTEST 16/16 PASS (synthetic fixtures only; native HOLD)')
 
 
 def main():
