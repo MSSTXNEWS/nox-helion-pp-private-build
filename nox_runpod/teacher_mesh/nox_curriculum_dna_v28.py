@@ -66,6 +66,15 @@ def build_curriculum(records:list[dict], policy:dict, *, now:datetime|None=None)
     total_budget=policy.get("max_proposals",3)
     if type(total_budget) is not int or not 1<=total_budget<=5:
         return {"schema":SCHEMA,"state":"HOLD_CURRICULUM_BUDGET","proposals":[]}
+    # The signed priority policy is a safety-critical input, not model text.
+    # A malformed mapping/value must HOLD rather than crash the entire
+    # owner-owned curriculum tick (or silently coerce True/"2" to priority).
+    importance_by_domain=policy.get("domain_importance",{})
+    if (not isinstance(importance_by_domain,dict) or
+            any(domain not in DOMAINS or type(value) not in (int,float) or
+                not math.isfinite(value) or not 0<=value<=3
+                for domain,value in importance_by_domain.items())):
+        return {"schema":SCHEMA,"state":"HOLD_OWNER_DOMAIN_IMPORTANCE_POLICY","proposals":[]}
     # Only owner-pinned original S03/benchmark error receipts may become
     # measured learning gaps. Record-provided independent_replay/heldout flags
     # and a syntactically valid digest alone do not prove native provenance.
@@ -88,8 +97,7 @@ def build_curriculum(records:list[dict], policy:dict, *, now:datetime|None=None)
         score=r["correct"]/r["total"]
         # Deficiency estimate with sample caution; no novelty without evidence.
         uncertainty=min(0.2,1/sqrt(r["total"]))
-        importance=float(policy.get("domain_importance",{}).get(domain,1.0))
-        if not math.isfinite(importance) or not 0<=importance<=3:continue
+        importance=importance_by_domain.get(domain,1.0)
         severity=round((1-score)*(1-uncertainty)*importance,6)
         if severity<=0.05:continue
         strategy=METHODS[domain]

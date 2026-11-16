@@ -137,6 +137,37 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(out["state"],"CURRICULUM_PROPOSED_NOT_TRAINED")
         self.assertEqual(out["evaluation_records_accepted"],1)
         self.assertEqual([x["domain"] for x in out["proposals"]],["coding"])
+    def test_invalid_owner_domain_priority_map_holds_without_crashing(self):
+        # Before the fix, .get on None/list/string threw AttributeError.
+        for invalid in (None, [], "corrupted", 1):
+            with self.subTest(priority_map=repr(invalid)):
+                p=curriculum_policy();p["domain_importance"]=invalid
+                out=build_curriculum([bench("reasoning",correct=10)],p,now=NOW)
+                self.assertEqual(out["state"],"HOLD_OWNER_DOMAIN_IMPORTANCE_POLICY")
+                self.assertEqual(out["proposals"],[])
+
+    def test_invalid_owner_domain_priority_values_fail_closed(self):
+        # Owner policy, not a model-generated coercible string or boolean.
+        for invalid in (None, True, "1.2", float("nan"), float("inf"), -1, 4, []):
+            with self.subTest(priority=repr(invalid)):
+                p=curriculum_policy()
+                p["domain_importance"]={"reasoning":invalid}
+                out=build_curriculum([bench("reasoning",correct=10)],p,now=NOW)
+                self.assertEqual(out["state"],"HOLD_OWNER_DOMAIN_IMPORTANCE_POLICY")
+                self.assertEqual(out["proposals"],[])
+
+    def test_owner_priority_typo_holds_but_valid_finite_priority_works(self):
+        p=curriculum_policy()
+        p["domain_importance"]={"resoning":2.0}
+        self.assertEqual(build_curriculum([bench("reasoning",correct=10)],p,now=NOW)["state"],
+                         "HOLD_OWNER_DOMAIN_IMPORTANCE_POLICY")
+        p["domain_importance"]={"reasoning":2.0}
+        out=build_curriculum([bench("reasoning",correct=10)],p,now=NOW)
+        self.assertEqual(out["state"],"CURRICULUM_PROPOSED_NOT_TRAINED")
+        self.assertEqual(len(out["proposals"]),1)
+        self.assertEqual(out["proposals"][0]["domain"],"reasoning")
+        self.assertEqual(out["proposals"][0]["optimizer_steps_verified"],0)
+
     def test_owner_native_stop_blocks_curriculum(self):
         p=curriculum_policy();p["stop_requested"]=True
         self.assertEqual(build_curriculum([bench("instruction")],p,now=NOW)["state"],"HOLD_NATIVE_STOP")
