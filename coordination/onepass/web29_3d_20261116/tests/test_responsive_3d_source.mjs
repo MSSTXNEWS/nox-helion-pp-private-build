@@ -23,7 +23,7 @@ test('preserve earlier reduced-motion and original D02 source locks',()=>{
 test('stage asset pin tracks the exact reviewed CSS source',()=>{
  const bytes=Buffer.from(css);
  const blob=createHash('sha1').update('blob '+bytes.length+'\0').update(bytes).digest('hex');
- assert.equal(blob,'8f9fe785d74eccba2b30fe247de750698b11857c');
+ assert.equal(blob,'3a4514e05948cf2f886d9dcd27027ad67d154c35');
  assert.ok(stage.includes(blob));
 });
 
@@ -48,4 +48,20 @@ test('short landscape tablet CSS keeps message stream and command dock visible',
  assert.ok(css.includes('grid-template-rows:minmax(0,1fr) 56px!important'));
  assert.ok(css.includes('height:56px!important;min-height:0!important;max-height:56px!important'));
  assert.ok(css.includes('flex:1 1 0!important;min-height:0!important;overflow:auto!important'));
+});
+
+
+test('short 400px landscape tablet keeps all panels and command area on screen',()=>{
+ assert.ok(css.includes('@media (min-width:761px) and (max-width:1199px) and (min-height:400px) and (max-height:419px)'));
+ assert.ok(css.includes('height:max(230px,calc(100dvh - 170px))!important'));
+ assert.ok(css.includes('grid-template-rows:minmax(0,1fr) 40px!important'));
+ assert.ok(css.includes('height:40px!important;min-height:0!important;max-height:40px!important'));
+ assert.ok(css.includes('@media (min-width:960px) and (max-width:1199px) and (min-height:400px) and (max-height:419px)'));
+ assert.ok(css.includes('height:max(220px,calc(100dvh - 180px))!important'));
+});
+
+test('1200-1399px compact desktop removes remaining 5-40px overflow',()=>{
+ assert.ok(css.includes('@media (min-width:1200px) and (max-width:1399px) and (min-height:400px) and (max-height:600px)'));
+ assert.ok(css.includes('height:max(200px,calc(100dvh - 180px))!important'));
+ assert.ok(stage.includes('3a4514e05948cf2f886d9dcd27027ad67d154c35'));
 });
