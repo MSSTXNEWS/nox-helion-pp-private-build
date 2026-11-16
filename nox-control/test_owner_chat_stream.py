@@ -108,6 +108,55 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[1]['messages'][-2]['tool_calls'][0]['id'],'call_fixture')
         self.assertEqual(payload['_agent_final'],'323')
 
+    async def test_untrusted_model_tool_id_overflow_never_dispatches_or_saves(self):
+        # A tool-call ID may be streamed incrementally by Maya/llama.cpp.
+        # The limit is cumulative, not a per-frame cap.
+        cases=(
+            [frame(calls=[{'index':0,'id':'x'*161,'type':'function',
+                           'function':{'name':'calculate','arguments':'{}'}}])],
+            [frame(calls=[{'index':0,'id':'x'*100,'type':'function',
+                           'function':{'name':'calculate','arguments':'{}'}}]),
+             frame(calls=[{'index':0,'id':'y'*61}])],
+        )
+        for fragments in cases:
+            with self.subTest(frames=len(fragments)):
+                chunks=Chunks([*fragments,frame(finish='tool_calls'),
+                               b'data: [DONE]\n\n'])
+                _,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Compute'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_TOOL_CALL_ID_SIZE',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
+    async def test_model_tool_call_id_at_limit_preserves_native_roundtrip(self):
+        valid_id='c'*160
+        first=Chunks([frame(calls=[{'index':0,'id':valid_id,
+                                   'type':'function','function':{
+                                       'name':'calculate','arguments':'{}'}}]),
+                      frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+        second=Chunks([frame('ok'),frame(finish='stop'),
+                       b'data: [DONE]\n\n'])
+        requests,factory=self.transport([first,second])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Compute'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Compute',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('[DONE]',wire)
+        self.assertEqual(self.dispatched,[('calculate',{})])
+        self.assertEqual(requests[1]['messages'][-1]['tool_call_id'],valid_id)
+        self.assertEqual(payload['_agent_final'],'ok')
+        self.assertTrue(first.closed)
+        self.assertTrue(second.closed)
+
     async def test_confirmation_stops_before_model_and_preserves_real_marker(self):
         native=self.native([{'name':'run_admin','arguments':{'action':'pause'}}],
                            {'ok':False,'needs_confirmation':True,'text':'Confirm pause'})
