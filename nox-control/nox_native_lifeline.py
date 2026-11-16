@@ -97,13 +97,29 @@ def atomic(path, obj):
             os.unlink(tmp)
 
 def read_state(path):
+    # Missing state is a first-install bootstrap. Existing unreadable state must
+    # HOLD; resetting its retry history could silently reopen the start budget.
     try:
-        if path.is_symlink() or path.stat().st_size > 262144:
-            return {}
-        obj = json.loads(path.read_text(encoding="utf-8"))
-        return obj if isinstance(obj, dict) else {}
-    except (ValueError, OSError, UnicodeError):
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except FileNotFoundError:
         return {}
+    except OSError as exc:
+        raise ValueError("HOLD_STATE_ACCESS") from exc
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 262144:
+            raise ValueError("HOLD_STATE_FILE")
+        with os.fdopen(fd, "r", encoding="utf-8") as stream:
+            fd = -1
+            obj = json.load(stream)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("HOLD_STATE_CORRUPT") from exc
+    finally:
+        if fd >= 0:
+            os.close(fd)
+    if not isinstance(obj, dict) or ("services" in obj and not isinstance(obj["services"], dict)):
+        raise ValueError("HOLD_STATE_STRUCTURE")
+    return obj
 
 def stopped():
     if any(Path(name).exists() or Path(name).is_symlink() for name in STOP_FILES):
@@ -160,7 +176,11 @@ def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn
         if not isinstance(row, dict):
             row = records[name] = {}
         attempts = row.get("attempts", [])
-        attempts = [x for x in attempts if type(x) in (int,float) and 0 <= now-x < 86400] if isinstance(attempts,list) else []
+        if not isinstance(attempts, list) or any(
+            type(x) not in (int, float) or not 0 <= x <= now for x in attempts
+        ) or attempts != sorted(attempts):
+            raise ValueError("HOLD_REPAIR_HISTORY_CORRUPT")
+        attempts = [x for x in attempts if now - x < 86400]
         row["attempts"] = attempts
         previous = int(row.get("failures", 0))
         bad = current.get("state") in REPAIRABLE
@@ -175,6 +195,8 @@ def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn
                 action = "owner_authorization_required"
             elif len(attempts) >= policy["daily_limit"]:
                 action = "daily_repair_budget_exhausted"
+            elif sum(now - x < 3600 for x in attempts) >= 2:
+                action = "hourly_repair_budget_exhausted"
             elif attempts and now - attempts[-1] < policy["cooldown_seconds"]:
                 action = "repair_cooldown"
             elif dry_run:
@@ -182,21 +204,30 @@ def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn
             elif stop_fn():
                 action = "stop_or_maintenance_lock"
             else:
-                # Persist the attempt BEFORE action: after crash, no blind replay.
-                attempts.append(now)
-                row["attempts"] = attempts
-                atomic(state["_path"], {k:v for k,v in state.items() if k!="_path"})
-                outcome = status_fn(name, "start")
-                verified = status_fn(name, "status")
-                if outcome.get("rc") == 0 and verified.get("state") == "RUNNING" and verified.get("pid"):
-                    row["failures"] = 0
-                    action = "started_verified"
+                # The first STOPPED sample is not a lease on service state.
+                # Recheck immediately before admitting any original Supervisor start.
+                fresh = status_fn(name, "status")
+                if fresh.get("state") not in REPAIRABLE or fresh.get("pid"):
+                    action = "service_changed_before_start_hold"
+                elif stop_fn():
+                    action = "stop_or_maintenance_lock"
                 else:
-                    action = "start_failed_hold"
+                    # Persist attempt BEFORE action; a crash must not replay it.
+                    attempts.append(now)
+                    row["attempts"] = attempts
+                    atomic(state["_path"], {k:v for k,v in state.items() if k!="_path"})
+                    outcome = status_fn(name, "start")
+                    verified = status_fn(name, "status")
+                    if outcome.get("rc") == 0 and verified.get("state") == "RUNNING" and verified.get("pid"):
+                        row["failures"] = 0
+                        action = "started_verified"
+                    else:
+                        action = "start_failed_hold"
         event = {"name": name, "service_state": current.get("state", "UNKNOWN"),
                  "action": action, "attempts_24h": len(row["attempts"])}
         if action in ("owner_investigation_required", "owner_authorization_required",
-                      "daily_repair_budget_exhausted", "start_failed_hold"):
+                      "daily_repair_budget_exhausted", "hourly_repair_budget_exhausted",
+                      "service_changed_before_start_hold", "start_failed_hold"):
             event["question"] = ("Check trusted supervisor journal / exact service command and "
                                  "approve a bounded recovery after preserving STOP and checkpoints.")
         observed.append(event)

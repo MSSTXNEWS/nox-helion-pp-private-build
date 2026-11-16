@@ -1,0 +1,69 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_UNIVERSAL_V09",
+  "instructions_version": "0.0.6",
+  "slot": "1A",
+  "at_utc": "2026-11-16T13:04:52Z",
+  "at_msk": "2026-11-16 16:04:52+03:00",
+  "source_head_before": "8f553d3e56ab7699c52d4e098e5fd69f6d515298",
+  "source_head_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "source_blob_preimage": "f8018b5c935efa112ab1aff3b6cbda3a4f61cae1",
+  "test_blob_preimage": "273f454a26650952dd3b44bac88af805d716abb9",
+  "task_outcomes": [
+    {
+      "task_id": "S1-06",
+      "status": "SOURCE_PATCHED_CI_PENDING",
+      "scope": "Existing original lifeline retry budget and fresh prestart check",
+      "native_readback": false
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD",
+      "reason": "Fresh owner V51 workflow not dispatched: browser connector wallet negative; GitHub connector GET-only for Actions.",
+      "native_readback": false
+    },
+    {
+      "task_id": "S2-02",
+      "status": "HOLD",
+      "reason": "Independent checkpoint25 optimizer/scaler/RNG/offsite restore requires owner native lease/STOP.",
+      "native_readback": false
+    },
+    {
+      "task_id": "S2-08",
+      "status": "HOLD",
+      "reason": "No current authorized Hunter owner source/S03 write+readback/recall callback.",
+      "native_readback": false
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD",
+      "reason": "No new owner-authenticated original Resonance SSE E2E or TTFT p50/p95.",
+      "native_readback": false
+    }
+  ],
+  "WEIGHTS": {
+    "new_successful_optimizer_updates": 0,
+    "historical_checkpoint": "Qwen3.5-9B checkpoint25",
+    "offsite_restore": "HOLD"
+  },
+  "KNOWLEDGE": {
+    "new_verified_jobs": 0,
+    "s03_write_readback_recall": "HOLD"
+  },
+  "DISPATCHER_RESOURCES": {
+    "last_known_native_run": 43846952110,
+    "current_pid": null,
+    "current_stop": null,
+    "owner_lease": null,
+    "both_gpu": null,
+    "cgroup": null,
+    "ssd": null,
+    "downloads_bytes": 0,
+    "deleted_bytes": 0,
+    "live_restarts": 0
+  },
+  "root_cause_error_id": "NOX-P0-LIFELINE-RETRY-HISTORY-RESET-AND-DOUBLE-START-20261116",
+  "source_tests": "PENDING_EXACT_SHA_CI",
+  "live_install": "HOLD",
+  "rollback": "Exact parent commit/preimage; no native writes",
+  "one_next_action": "Owner-approved original V51 read-only on current HEAD; only source guarded recovery remains until native restore and lock."
+}

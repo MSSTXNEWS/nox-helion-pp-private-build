@@ -147,5 +147,59 @@ class LifelineTests(unittest.TestCase):
             self.assertEqual(result["results"][0]["action"],"would_start")
             self.assertFalse(Path(d,"state.json").exists())
 
+
+    def test_missing_state_bootstraps_but_corrupt_existing_state_holds(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "state.json"
+            self.assertEqual(lifeline.read_state(f), {})
+            f.write_text("{", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "HOLD_STATE_CORRUPT"):
+                lifeline.read_state(f)
+            f.write_text('{"services":[]}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "HOLD_STATE_STRUCTURE"):
+                lifeline.read_state(f)
+
+    def test_repair_history_corruption_never_resets_attempts(self):
+        with tempfile.TemporaryDirectory() as d:
+            s = self.state(d)
+            s["services"] = {"nox-dispatcher-t855u": {"attempts": ["bad"], "failures": 2}}
+            def fn(name, command="status"):
+                if command == "start":
+                    raise AssertionError("unexpected Supervisor start")
+                return {"state": "STOPPED", "pid": None}
+            with self.assertRaisesRegex(ValueError, "HOLD_REPAIR_HISTORY_CORRUPT"):
+                lifeline.tick(policy(), s, now=100, status_fn=fn, stop_fn=lambda: False)
+
+    def test_two_retries_in_rolling_hour_even_when_daily_policy_three(self):
+        with tempfile.TemporaryDirectory() as d:
+            s = self.state(d)
+            p = policy()
+            p["daily_limit"] = 3
+            s["services"] = {"nox-dispatcher-t855u": {"attempts": [100, 200], "failures": 2}}
+            commands = []
+            def fn(name, command="status"):
+                commands.append(command)
+                return {"state": "STOPPED", "pid": None}
+            result = lifeline.tick(p, s, now=300, status_fn=fn, stop_fn=lambda: False)
+            self.assertEqual(result["results"][0]["action"], "hourly_repair_budget_exhausted")
+            self.assertNotIn("start", commands)
+
+    def test_service_recovers_during_admission_no_second_start(self):
+        with tempfile.TemporaryDirectory() as d:
+            s = self.state(d)
+            s["services"] = {"nox-dispatcher-t855u": {"attempts": [], "failures": 2}}
+            commands = []
+            def fn(name, command="status"):
+                commands.append(command)
+                if command == "start":
+                    raise AssertionError("double-start must not be attempted")
+                if len(commands) == 1:
+                    return {"state": "STOPPED", "pid": None}
+                return {"state": "RUNNING", "pid": 456}
+            result = lifeline.tick(policy(), s, now=300, status_fn=fn, stop_fn=lambda: False)
+            self.assertEqual(result["results"][0]["action"], "service_changed_before_start_hold")
+            self.assertEqual(commands, ["status", "status"])
+            self.assertFalse(Path(d, "state.json").exists())
+
 if __name__=="__main__":
     unittest.main()
