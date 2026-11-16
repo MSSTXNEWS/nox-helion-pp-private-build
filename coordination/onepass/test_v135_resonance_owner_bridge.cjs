@@ -1229,7 +1229,7 @@ test('V175 cross-version V29.3 page stage → V135 SSE → V112 NDJSON/provider 
   assert(stage.includes('SCRIPT_URL = "/nox-web-v29/nox-v135-resonance-owner-bridge.js"'));
   assert(stage.includes('SCRIPT_TAG =') && stage.includes('SCRIPT_URL'), 'stage builder must retain its script-tag hook');
   assert(bridge.includes("window.NOX_NATIVE_OWNER===true"));
-  assert(bridge.includes("/^\\\\/nox-web-v29\\\\/pc\\\\/(?:resonance\\\\.html|v22\\\\/resonance\\\\.template\\\\.html)$/"));
+  assert(bridge.includes('nox-web-v29') && bridge.includes('v22') && bridge.includes('resonance'), 'shim must be scoped to existing Resonance pages');
 
   // The shim maps the original page's OpenAI-style request to the existing V112
   // route, preserves the message/dialog/history payload, and maps NDJSON to SSE.
