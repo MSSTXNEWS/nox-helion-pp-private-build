@@ -155,47 +155,15 @@ for exe in candidates:
     if len(checked)>=3:break
 print('NATIVE_P0_DEEP_INVENTORY_COMPLETE=true')
 
-def supervisor_projection(rc, output):
-    # Bounded read-only critical NOX status, including Supervisor exit code 3.
-    if rc not in (0, 3):
-        return {'state':'HOLD_SUPERVISOR_COMMAND','services':[]}
-    lines=output.splitlines()
-    if not 1 <= len(lines) <= 40:
-        return {'state':'HOLD_SUPERVISOR_BOUNDS','services':[]}
-    wanted={'nox-train-volta-t866u','nox-chat-8081','nox-dispatcher-t855u',
-            'nox-priority-scheduler','nox-selfheal'}
-    services=[]
-    seen=set()
-    for line in lines:
-        if len(line)>512:
-            return {'state':'HOLD_SUPERVISOR_ROW_BOUNDS','services':[]}
-        match=re.match(r'^([A-Za-z0-9_.:@-]{1,80})\s+(RUNNING|STARTING|STOPPED|FATAL|BACKOFF|EXITED|STOPPING|UNKNOWN)(?:\s|$)',line)
-        if match is None:
-            return {'state':'HOLD_SUPERVISOR_SCHEMA','services':[]}
-        name,status=match.group(1),match.group(2)
-        if name not in wanted:
-            continue
-        if name in seen:
-            return {'state':'HOLD_SUPERVISOR_DUPLICATE','services':[]}
-        seen.add(name)
-        pid=None
-        if status=='RUNNING':
-            m=re.search(r'\bpid\s+([1-9][0-9]{0,9})(?:,|\s|$)',line[match.end():])
-            if m is None:
-                return {'state':'HOLD_SUPERVISOR_PID','services':[]}
-            pid=int(m.group(1))
-        services.append({'service':name,'status':status,'pid':pid})
-    if not services:
-        return {'state':'HOLD_SUPERVISOR_NO_CORE','services':[]}
-    # rc=0 and a single RUNNING row do not prove all five NOX services exist.
-    healthy=(rc==0 and seen==wanted and all(x['status']=='RUNNING' for x in services))
-    return {'state':'OBSERVED_ALL_RUNNING' if healthy else 'OBSERVED_PARTIAL',
-            'supervisor_rc':rc,'all_running_verified':healthy,'services':services}
 rc,out=call(['supervisorctl','status'])
-projection=json.dumps(supervisor_projection(rc,out),sort_keys=True,separators=(',',':'))
-# V51 manual owner workflow already forwards NATIVE_P0_*; never expose raw command/args.
-print('NATIVE_P0_SUPERVISOR_STATUS='+projection if len(projection)<=730
-      else 'NATIVE_P0_SUPERVISOR_STATUS=HOLD_OUTPUT_BUDGET')
+if rc==0:
+    known=[]
+    for row in out.splitlines()[:40]:
+        fields=row.strip().split()
+        if len(fields)>1 and re.fullmatch('[A-Za-z0-9_.:@-]{1,80}',fields[0]):
+            known.append({'service':fields[0],'status':fields[1]})
+    print('NATIVE_SUPERVISOR_STATUS='+json.dumps(known,sort_keys=True))
+else: print('NATIVE_SUPERVISOR_STATUS=HOLD_NOT_AVAILABLE')
 # Detect project artifacts by count only; never copy secrets, content or paths.
 for label,root in [('workspace', '/workspace'),('nox_home', '/root')]:
     dirs=0
