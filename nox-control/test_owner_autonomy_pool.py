@@ -198,4 +198,28 @@ class PoolTests(unittest.TestCase):
         with self.assertRaisesRegex(pool.AutoHold,'DUPLICATE_NATIVE_PROCESS'):
             pool.verify_distinct_native_processes(rows,requested=3)
 
+    def test_claim_is_not_execution(self):
+        n=self._native_claim_mock()
+        n.s03_readback.side_effect=lambda tid,jid:{
+            'native_verified':True,'task_id':tid,'job_id':jid,
+            'receipt_sha256':'b'*64,'task_note':'ADMITTED_NOT_EXECUTED'}
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(1)},
+                                 allowed_handlers={'owner_component'})
+        out=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['jobs_started'],1)
+        self.assertEqual(out['jobs_completed_verified'],0)
+        self.assertEqual(out['receipts'][0]['execution_evidence'],'ADMITTED_NOT_EXECUTED')
+
+    def test_execution_requires_verified_terminal_result(self):
+        self.assertEqual(pool.classify_native_job_proof({}),'EXECUTION_UNVERIFIED')
+        self.assertEqual(pool.classify_native_job_proof({'terminal_state':'COMPLETED',
+            'result_sha256':'c'*64}),'EXECUTION_UNVERIFIED')
+        self.assertEqual(pool.classify_native_job_proof({'terminal_state':'COMPLETED',
+            'execution_verified':True,'result_sha256':'BAD'}),'EXECUTION_UNVERIFIED')
+        self.assertEqual(pool.classify_native_job_proof({'terminal_state':'COMPLETED',
+            'execution_verified':True,'result_sha256':'c'*64}),'DONE_NATIVE')
+        self.assertEqual(pool.classify_native_job_proof({'terminal_state':'COMPLETED',
+            'execution_verified':True,'result_sha256':'c'*64,
+            'task_note':'ADMITTED_NOT_EXECUTED'}),'ADMITTED_NOT_EXECUTED')
+
 if __name__=='__main__':unittest.main()

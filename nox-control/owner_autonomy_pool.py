@@ -236,6 +236,22 @@ def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
     return selected
 
 
+
+def classify_native_job_proof(proof):
+    """Do not confuse an S03 admission receipt with execution of the task.
+
+    Exact native terminal proof is additive to, not a replacement for, the
+    existing signed task/job/S03 SHA validation. Missing fields mean UNKNOWN.
+    """
+    if proof.get('task_note') == 'ADMITTED_NOT_EXECUTED':
+        return 'ADMITTED_NOT_EXECUTED'
+    result_sha = proof.get('result_sha256')
+    if (proof.get('terminal_state') == 'COMPLETED'
+        and proof.get('execution_verified') is True
+        and isinstance(result_sha, str) and SHA.fullmatch(result_sha)):
+        return 'DONE_NATIVE'
+    return 'EXECUTION_UNVERIFIED'
+
 def verify_distinct_native_processes(rows, *, requested, instance_id=60509551):
     """An agent ID/thread ID is NOT proof of an OS subexecutor process."""
     if type(requested) is not int or not 1 <= requested <= 6:
@@ -325,8 +341,11 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
             or SHA.fullmatch(proof['receipt_sha256']) is None):
             return {'state':'HOLD_S03_NATIVE_READBACK','jobs_started':len(receipts),'possible_unverified_claim':task['id'],'receipts':receipts}
         seen_job_ids.add(str(job_id))
+        execution_evidence = classify_native_job_proof(proof)
         receipts.append({'task_id':task['id'],'job_id':job_id,'pid_count':len(workers),
-                         's03_sha256':proof['receipt_sha256']})
+                         's03_sha256':proof['receipt_sha256'],
+                         'execution_evidence':execution_evidence})
     return {'state':'NATIVE_QUEUE_READBACK_VERIFIED' if receipts else 'NATIVE_POOL_READY_IDLE',
-            'jobs_started':len(receipts),
+            'jobs_started':len(receipts),  # legacy counter: CLAIMS, not executed jobs
+            'jobs_completed_verified':sum(r['execution_evidence']=='DONE_NATIVE' for r in receipts),
             'active_subexecutor_processes':len(workers),'receipts':receipts}
