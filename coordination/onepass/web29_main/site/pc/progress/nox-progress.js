@@ -35,7 +35,7 @@ function expireNative(data){
 }
 const safeURL=(s,origin='https://local.invalid')=>{try{if(typeof s!=='string'||s.length>700||s.startsWith('//'))return null;const u=new URL(s,origin);return ((u.protocol==='https:'&&!u.username&&!u.password)||(s.startsWith('/')&&u.origin===origin))?u.href:null;}catch{return null;}};
 function proofValid(e){const p=e.proof||{};if(!SHA.test(p.receipt_sha256||''))return false;
- if(e.kind==='weights')return Number.isSafeInteger(p.step_before)&&p.step_before>=0&&Number.isSafeInteger(p.step_after)&&p.step_after>p.step_before&&SHA.test(p.tensor_before||'')&&SHA.test(p.tensor_after||'')&&p.tensor_before!==p.tensor_after&&SHA.test(p.checkpoint_sha256||'');
+ if(e.kind==='weights')return Number.isSafeInteger(p.step_before)&&p.step_before>=0&&Number.isSafeInteger(p.step_after)&&p.step_after>p.step_before&&Number.isSafeInteger(p.successful_optimizer_updates)&&p.successful_optimizer_updates>0&&p.successful_optimizer_updates<=p.step_after-p.step_before&&SHA.test(p.tensor_before||'')&&SHA.test(p.tensor_after||'')&&p.tensor_before!==p.tensor_after&&SHA.test(p.checkpoint_sha256||'');
  if(e.kind==='knowledge')return Number.isSafeInteger(p.records_added)&&p.records_added>=0&&SHA.test(p.s03_readback_sha256||'');
  return p.independent_test_passed===true&&/^[a-f0-9]{40,64}$/.test(p.deployed_sha||'');}
 function normalize(raw){if(!raw||raw.schema!=='NOX_EVOLUTION_V1'||!['native','source_snapshot'].includes(raw.mode)||!Array.isArray(raw.events)||raw.events.length>5000)throw Error('HOLD_PROGRESS_SCHEMA');

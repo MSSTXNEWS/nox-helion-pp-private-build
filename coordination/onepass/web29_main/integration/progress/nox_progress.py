@@ -43,6 +43,16 @@ def encode(o): return json.dumps(o,ensure_ascii=False,sort_keys=True,separators=
 def digest(o): return hashlib.sha256(encode(o).encode()).hexdigest()
 def integer(n): return type(n) is int and 0<=n<=10**12
 
+def successful_weight_updates(proof):
+    """Only independently verified successful optimizer updates count, not global_step."""
+    if not isinstance(proof,Mapping):return None
+    a,b=proof.get('step_before'),proof.get('step_after')
+    n=proof.get('successful_optimizer_updates')
+    skipped=proof.get('skipped_optimizer_updates')
+    if not (integer(a) and integer(b) and b>a and integer(n) and 0<n<=b-a):return None
+    if skipped is not None and not integer(skipped):return None
+    return n
+
 def clean_event(raw:Mapping, *, now:datetime):
     if not isinstance(raw,Mapping): raise ValueError('INVALID_EVENT')
     e={k:raw.get(k) for k in ('id','kind','subject_key','at','title','summary','detail','state','evidence','tags','sources','proof')}
@@ -73,7 +83,9 @@ def clean_event(raw:Mapping, *, now:datetime):
             a,b=p.get('step_before'),p.get('step_after');x,y=p.get('tensor_before'),p.get('tensor_after')
             if not(integer(a) and integer(b) and b>a): raise ValueError('REAL_STEPS_REQUIRED')
             if not(all(isinstance(v,str) and SHA.fullmatch(v) for v in (x,y,p.get('checkpoint_sha256'))) and x!=y): raise ValueError('TENSOR_CHANGE_REQUIRED')
-            e['delta']=b-a
+            successful=successful_weight_updates(p)
+            if successful is None: raise ValueError('SUCCESSFUL_OPTIMIZER_UPDATES_REQUIRED')
+            e['delta']=successful
         elif e['kind']=='knowledge':
             if not integer(p.get('records_added')) or not isinstance(p.get('s03_readback_sha256'),str) or not SHA.fullmatch(p['s03_readback_sha256']): raise ValueError('S03_READBACK_REQUIRED')
             e['delta']=p['records_added']
@@ -86,10 +98,12 @@ def summarize(events, coverage, start, end):
     groups={}
     for kind in KINDS:
         rows=[e for e in events if e['kind']==kind and start<=stamp(e['at'])<end]
-        verified=[e for e in rows if e['evidence']=='native' and e['state']=='verified']
+        verified=[e for e in rows if e['evidence']=='native' and e['state']=='verified'
+                  and (kind!='weights' or successful_weight_updates(e.get('proof')) is not None)]
         covered=kind in coverage
         # Partial positive evidence is a lower bound, not a complete count.
-        value=sum(e['delta'] or 0 for e in verified) if (verified or covered) else None
+        value=sum((successful_weight_updates(e['proof']) if kind=='weights' else (e.get('delta') or 0))
+                  for e in verified) if (verified or covered) else None
         failed=sum(e['state']=='failed' for e in rows)
         state='failed' if failed else ('blocked' if any(e['state']=='blocked' for e in rows) else ('active' if any(e['state']=='active' for e in rows) else ('verified' if verified else ('source' if rows else 'unknown'))))
         count_text='нет подтверждённых данных' if value is None else (str(value) if covered else 'не менее '+str(value))
@@ -203,10 +217,17 @@ class ProgressJournal:
                       'end':iso(h+timedelta(hours=1)),'closed':False,'groups':groups,
                       'readback_verified':False,'readback_state':'HOUR_NOT_CLOSED'}
             cards.append(card)
+        # Fresh API snapshot time cannot relabel old GPU samples as live.
+        sample=telemetry if isinstance(telemetry,Mapping) else {}
+        try:
+            observed=stamp(sample.get('observed_at_utc'))
+            sample_fresh=0 <= (now-observed).total_seconds() <= 120
+        except (ValueError,TypeError,OverflowError,AttributeError):
+            sample_fresh=False
         metrics={}
         for k in ('ttft_ms','tokens_per_second','gpu0_percent','gpu1_percent','ram_percent'):
-            v=(telemetry or {}).get(k)
-            metrics[k]=v if type(v) in (float,int) and math.isfinite(v) and v>=0 and ('percent' not in k or v<=100) else None
+            v=sample.get(k)
+            metrics[k]=v if sample_fresh and type(v) in (float,int) and math.isfinite(v) and v>=0 and ('percent' not in k or v<=100) else None
         return {'schema':SCHEMA,'mode':'native','generated_at':iso(now),'window_start':iso(start),'timezone':'Europe/Moscow','groups':summarize(events,all_coverage,start,end),'metrics':metrics,'hours':list(reversed(cards)),'events':events,'truncated':False,
                 'hourly_readback':{'expected_closed':expected_closed,'persisted_verified':verified_closed,
                                    'complete':expected_closed==verified_closed}}

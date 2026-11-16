@@ -1,0 +1,95 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3C_RELAY_RECEIPT_V5",
+  "instructions_version": "0.0.6",
+  "slot": "3C",
+  "recorded_at_utc": "2026-11-16T06:53:07.750Z",
+  "recorded_at_msk": "2026-11-16 09:53:07 Europe/Moscow",
+  "source_head_before": "94066557771bb92fcea3cbf0ec07b001b908939d",
+  "scope": "SOURCE_ONLY_NOT_NATIVE_DEPLOYED",
+  "source_fix": "Count verified successful_optimizer_updates rather than global_step delta; reject zero/missing/overcount successful proof and downgrade old receipts; refuse stale/unstamped GPU/TTFT samples from becoming current merely because API response was generated now.",
+  "changed_paths": [
+    "coordination/onepass/web29_main/integration/progress/nox_progress.py",
+    "coordination/onepass/web29_main/test_nox_progress_hourly_v3c.py",
+    "coordination/onepass/web29_main/site/pc/progress/nox-progress.js",
+    "coordination/onepass/web29_main/test_nox_progress_frontend_v3c.cjs"
+  ],
+  "original_blobs": [
+    "4c479ec77042ac5f1e42b63de2ad9377f6aa8f79",
+    "2e44d9ccd75efd79ac708bb0387e973a7e579a69",
+    "ebb6421d6593be32e6754eee4a74378152be9808",
+    "851d112f23896e140496f26918076c3e868bd565"
+  ],
+  "tests_added": [
+    "Python optimizer success/skip/zero/overcount and aggregation",
+    "Python telemetry freshness/expired/future/unstamped/invalid percent",
+    "Node invalid native zero-success receipt downgrades from verified to unknown"
+  ],
+  "five_tasks": [
+    {
+      "n": 1,
+      "state": "DONE_SOURCE",
+      "detail": "Existing authorized evolution API preserved, proof strengthened"
+    },
+    {
+      "n": 2,
+      "state": "DONE_SOURCE_EXISTING;HOLD_NATIVE",
+      "detail": "Three groups kept, no new native callbacks bound"
+    },
+    {
+      "n": 3,
+      "state": "DONE_SOURCE_EXISTING;HOLD_S03_NATIVE",
+      "detail": "Hourly cards/time/evidence retained; real S03 hour readback not rechecked"
+    },
+    {
+      "n": 4,
+      "state": "DONE_SOURCE_PATCH",
+      "detail": "Metric freshness and true successful step counters added with regression tests; three columns/filters/colors kept"
+    },
+    {
+      "n": 5,
+      "state": "SOURCE_TEST_ADDED;HOLD_LIVE",
+      "detail": "Full OneHost owner-auth/browser/STOP/rollback unavailable; no native deploy"
+    }
+  ],
+  "relay_control": [
+    {
+      "lane": "WEIGHTS",
+      "state": "HISTORICAL_NATIVE_8_SUCCESSFUL_UPDATES_CURRENT_HOLD",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758",
+      "student": "Qwen3.5-9B",
+      "verified_total": 8,
+      "successful_updates_this_run": 0,
+      "checkpoint8_manifest_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+      "offsite_restore_verified": false,
+      "train_hold": "HOLD_MEDIA_HANDBACK_FILE_CHANGED"
+    },
+    {
+      "lane": "KNOWLEDGE",
+      "state": "HOLD_NATIVE_HUNTER_FULL_RECALL",
+      "historical_native_review_receipts": 3,
+      "new_s03_writes_this_run": 0
+    },
+    {
+      "lane": "DISPATCHER+RESOURCES",
+      "state": "HISTORICAL_NATIVE_CURRENT_RESOURCE_HOLD",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814277490",
+      "last_dispatcher_pid": 724331,
+      "last_observed_utc": "2026-11-16T06:05:00Z",
+      "current_worker_pids": null,
+      "current_gpu_cpu_ram_ssd_temp": null,
+      "current_STOP": null,
+      "current_lease": null,
+      "native_jobs_this_run": 0,
+      "restarts_this_run": 0
+    }
+  ],
+  "safety": {
+    "web_deployed": false,
+    "OneHost_modified": false,
+    "weights_modified": false,
+    "S03_modified": false,
+    "deleted_files": 0,
+    "original_D02_14_worlds_unchanged": true
+  },
+  "next_ready_action": "Complete targeted source CI; existing authorized OneHost get preimage/STOP/writer lease/independent recovery, stage ONLY original progress module with native callbacks proving successful_optimizer_updates and observed_at_utc; verify owner 401/200 and S03 persisted hourly recall. Never blind resume on HOLD_MEDIA_HANDBACK_FILE_CHANGED."
+}

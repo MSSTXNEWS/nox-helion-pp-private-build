@@ -70,6 +70,36 @@ class S03HoursTest(unittest.TestCase):
     self.assertEqual(x['hourly_readback']['persisted_verified'],1)
     self.assertEqual(x['hours'][1]['groups']['knowledge']['value'],2)
     self.assertEqual(x['hours'][1]['groups']['knowledge']['summary'],'Знания: не менее 2 новых записей S03')
+  def test_only_successful_optimizer_updates_count(self):
+    proof={'receipt_sha256':'a'*64,'step_before':5,'step_after':8,
+           'tensor_before':'b'*64,'tensor_after':'c'*64,'checkpoint_sha256':'d'*64}
+    event={'id':'train-1','kind':'weights','subject_key':'train-1',
+           'at':'2026-11-16T02:25:00Z','title':'Native training','summary':'Test',
+           'detail':'Native checkpoint','state':'verified','evidence':'native',
+           'tags':['optimizer'],'sources':[],'proof':proof}
+    for count in (None,0,4):
+      invalid={**event,'proof':{**proof,'successful_optimizer_updates':count}}
+      with self.assertRaisesRegex(ValueError,'SUCCESSFUL_OPTIMIZER_UPDATES_REQUIRED'):
+        self.j.record(OWNER,invalid,now=NOW)
+    self.j.record(OWNER,{**event,'proof':{**proof,'successful_optimizer_updates':2,
+                                        'skipped_optimizer_updates':1}},now=NOW)
+    snap=self.j.snapshot(OWNER,NOW,2)
+    self.assertEqual(snap['groups']['weights']['value'],2)
+    self.assertEqual(snap['events'][0]['delta'],2)
+
+  def test_stale_or_unstamped_telemetry_never_becomes_live(self):
+    values={'ttft_ms':280,'gpu0_percent':45,'gpu1_percent':101}
+    self.assertIsNone(self.j.snapshot(OWNER,NOW,2,telemetry=values)['metrics']['ttft_ms'])
+    stale={**values,'observed_at_utc':mod.iso(NOW-timedelta(minutes=4))}
+    self.assertIsNone(self.j.snapshot(OWNER,NOW,2,telemetry=stale)['metrics']['gpu0_percent'])
+    future={**values,'observed_at_utc':mod.iso(NOW+timedelta(minutes=1))}
+    self.assertIsNone(self.j.snapshot(OWNER,NOW,2,telemetry=future)['metrics']['ttft_ms'])
+    fresh={**values,'observed_at_utc':mod.iso(NOW-timedelta(seconds=40))}
+    metrics=self.j.snapshot(OWNER,NOW,2,telemetry=fresh)['metrics']
+    self.assertEqual(metrics['ttft_ms'],280)
+    self.assertEqual(metrics['gpu0_percent'],45)
+    self.assertIsNone(metrics['gpu1_percent'])
+
   def test_no_implicit_owner_write_on_snapshot(self):
     self.j.snapshot(OWNER,NOW,4)
     with sqlite3.connect(self.path) as db:

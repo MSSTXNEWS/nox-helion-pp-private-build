@@ -27,11 +27,14 @@ const stale=normalize({...data,generated_at:'2020-01-01T00:00:00Z',metrics:{ttft
 assert.equal(stale.liveFresh,false);assert.equal(stale.metrics.ttft_ms,null);
 assert.equal(nativeFresh({...data,generated_at:liveStamp},Date.parse(liveStamp)+121000),false);
 
-const weightProof={receipt_sha256:A,step_before:3,step_after:6,tensor_before:'b'.repeat(64),tensor_after:'c'.repeat(64),checkpoint_sha256:'d'.repeat(64)};
+const weightProof={receipt_sha256:A,step_before:3,step_after:6,successful_optimizer_updates:2,tensor_before:'b'.repeat(64),tensor_after:'c'.repeat(64),checkpoint_sha256:'d'.repeat(64)};
 const verifiedWeights=normalize({...data,generated_at:liveStamp,metrics:{ttft_ms:300,gpu0_percent:40},
  events:[{id:'native-weight',kind:'weights',state:'verified',evidence:'native',at:liveStamp,title:'Checkpoint',proof:weightProof}],
- groups:{weights:{value:3,complete:false}}});
-assert.equal(nativeGroupValue(verifiedWeights,'weights'),3); // fresh evidenced value
+ groups:{weights:{value:2,complete:false}}});
+assert.equal(nativeGroupValue(verifiedWeights,'weights'),2);
+const skippedOnly=normalize({...data,generated_at:liveStamp,events:[{...verifiedWeights.events[0],proof:{...weightProof,successful_optimizer_updates:0}}],groups:{weights:{value:3,complete:false}}});
+assert.equal(skippedOnly.events[0].state,'unknown');
+assert.equal(nativeGroupValue(skippedOnly,'weights'),null); // fresh evidenced value
 assert.equal(nativeGroupValue(normalize({...data,generated_at:'2020-01-01T00:00:00Z',events:verifiedWeights.events,groups:verifiedWeights.groups}),'weights'),null); // stale is unknown
 assert.equal(nativeGroupValue({...verifiedWeights,events:[]},'weights'),null); // unauthenticated aggregate alone
 assert.equal(nativeGroupValue({...verifiedWeights,groups:{weights:{value:0,complete:true}},events:[]},'weights'),0); // legitimate zero
