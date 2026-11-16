@@ -209,18 +209,29 @@ class V112Tests(unittest.TestCase):
         self.assertTrue(data['native_p02_bound'])
         # Fixture DB contains s03_items, but no semantic recall callback is wired.
         self.assertTrue(data['native_s03_table_available'])
+        self.assertFalse(data['native_semantic_retrieval_callback_configured'])
         self.assertFalse(data['native_semantic_retrieval_bound'])
         self.assertFalse(data['native_cognitive_memory_bound'])
         self.assertTrue(data['native_dialogs_ready'])
         self.assertTrue(self.client.get('/api/ui/memory/dialogs/status',cookies=self.cookie)
                         .json()['persistent_threads'])
 
-        # A trusted semantic retrieval callback is reported only after it is wired.
-        self.trusted['_s03_recall']=lambda **kwargs:[]
-        wired=self.client.get('/api/nox/status',cookies=self.cookie).json()
-        self.assertTrue(wired['native_s03_table_available'])
-        self.assertTrue(wired['native_semantic_retrieval_bound'])
-        self.assertTrue(wired['native_cognitive_memory_bound'])
+        # A callback may be configured without being invoked by V112's prompt path.
+        calls=[]
+        self.trusted['_s03_recall']=lambda **kwargs:calls.append(kwargs) or []
+        configured=self.client.get('/api/nox/status',cookies=self.cookie).json()
+        self.assertTrue(configured['native_s03_table_available'])
+        self.assertTrue(configured['native_semantic_retrieval_callback_configured'])
+        self.assertFalse(configured['native_semantic_retrieval_bound'])
+        self.assertFalse(configured['native_cognitive_memory_bound'])
+
+        # V112 uses durable dialog context and does not call the semantic hook.
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                  json={'message':'status contract test','history':[]})
+        self.assertEqual(response.status_code,200,response.text[:300])
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1]['type'],'done')
+        self.assertEqual(calls,[])
 
     def test_stream_s03_and_owner_thread_roundtrip(self):
         create=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
