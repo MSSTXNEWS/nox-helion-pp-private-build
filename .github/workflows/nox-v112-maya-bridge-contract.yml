@@ -29,9 +29,10 @@ jobs:
       - name: Compile and run existing V112 plus Maya API contract fixtures
         run: |
           set -euo pipefail
-          python -m py_compile nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py nox_runpod/teacher_mesh/v112/tests/test_maya_existing_bridge_contract.py
+          python -m py_compile nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py nox_runpod/teacher_mesh/v112/tests/test_maya_existing_bridge_contract.py nox_runpod/teacher_mesh/v112/tests/test_v123_scoped_stop_async.py
           python -m unittest -v nox_runpod.teacher_mesh.v112.tests.test_maya_existing_bridge_contract
           python -m unittest -v nox_runpod.teacher_mesh.v112.tests.test_native_bridge
+          python -m unittest -v nox_runpod.teacher_mesh.v112.tests.test_v123_scoped_stop_async
       - name: Report scope without implying Maya runtime
         run: |
           echo 'NOX_V112_MAYA_BRIDGE_CONTRACT_SOURCE_TESTED=true'
