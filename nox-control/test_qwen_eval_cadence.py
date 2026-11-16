@@ -29,7 +29,8 @@ def isolated_decision():
 class EvaluationCadenceTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.due, cls.tree = isolated_decision()
+        fn, cls.tree = isolated_decision()
+        cls.due = staticmethod(fn)
 
     def test_every_five_successful_updates_has_fresh_holdout(self):
         for step in range(6, 31):
