@@ -34,6 +34,11 @@ def group_hash(row):
 def question_sha256(value):
     """Canonical exact-prompt fingerprint (not a semantic equivalence proof)."""
     need(type(value) is str and 0 < len(value) < 2_000_000,'INVALID_QUESTION_TEXT')
+    # Reject Unicode format controls (Cf) before hashing: zero-width joiners,
+    # soft hyphen and bidi overrides can make visually identical questions hash
+    # differently, defeating an exact-text sealed holdout. Never log raw text.
+    need(not any(unicodedata.category(ch) == 'Cf' for ch in value),
+         'UNSAFE_QUESTION_FORMAT_CONTROL')
     canonical=' '.join(unicodedata.normalize('NFKC',value).casefold().split())
     need(bool(canonical) and canonical!='-','UNRESOLVED_QUESTION')
     return hashlib.sha256(canonical.encode('utf-8')).hexdigest()

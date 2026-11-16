@@ -84,4 +84,22 @@ class SourceGateTests(unittest.TestCase):
         self.sample['input']=123
         with self.assertRaises(g.Hold):self.check()
 
+    def test_36_zero_width_space_cannot_bypass_question_holdout(self):
+        self.holdout_questions.add(g.question_sha256(self.sample['input']))
+        self.sample['input']='Write\u200b a pure function'
+        with self.assertRaisesRegex(g.Hold,'UNSAFE_QUESTION_FORMAT_CONTROL'):self.check()
+    def test_37_zero_width_joiner_cannot_bypass_question_holdout(self):
+        self.holdout_questions.add(g.question_sha256(self.sample['input']))
+        self.sample['input']='Write a pure\u200d function'
+        with self.assertRaisesRegex(g.Hold,'UNSAFE_QUESTION_FORMAT_CONTROL'):self.check()
+    def test_38_bidi_override_cannot_bypass_question_holdout(self):
+        self.sample['input']='Write a \u202epure function'
+        with self.assertRaisesRegex(g.Hold,'UNSAFE_QUESTION_FORMAT_CONTROL'):self.check()
+    def test_39_soft_hyphen_cannot_bypass_question_holdout(self):
+        self.sample['input']='Write a p\u00adure function'
+        with self.assertRaisesRegex(g.Hold,'UNSAFE_QUESTION_FORMAT_CONTROL'):self.check()
+    def test_40_clean_unicode_question_still_accepted(self):
+        self.sample['input']='Напиши  чистую функцию'
+        self.assertEqual(self.check()['reviewed_rows'],1)
+
 if __name__=='__main__':unittest.main()
