@@ -39,9 +39,15 @@ OWNER_STOP_PATHS = (
 
 
 def assert_owner_stop_clear():
-    """An owner's manual STOP blocks irreversible cold eviction."""
+    """Owner STOP and the independent MODEL_UPDATE flag fence all cold writes.
+
+    The maintenance flag may exist independently of manual STOP, including as
+    a dangling symlink. This is NOT an owner lease or permission to clear it.
+    """
     if any(path.exists() or path.is_symlink() for path in OWNER_STOP_PATHS):
         raise RuntimeError('HOLD_OWNER_STOP')
+    if OWNER_MODEL_UPDATE_FLAG.exists() or OWNER_MODEL_UPDATE_FLAG.is_symlink():
+        raise RuntimeError('HOLD_OWNER_MODEL_UPDATE')
 
 
 def plain_path(value, must_exist=True):
