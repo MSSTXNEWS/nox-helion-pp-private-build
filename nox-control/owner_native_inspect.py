@@ -937,8 +937,8 @@ def maya_elf_linkage_readback(root=None):
     if cp.returncode != 0:
         result['state'] = 'HOLD_READELF_FAILED'
         return result
-    needed = re.findall(r'\\(NEEDED\\).*?\\[([^\\]]+)\\]', cp.stdout)
-    paths = re.findall(r'\\((?:RPATH|RUNPATH)\\).*?\\[([^\\]]*)\\]', cp.stdout)
+    needed = re.findall(r'\(NEEDED\).*?\[([^\]]+)\]', cp.stdout)
+    paths = re.findall(r'\((?:RPATH|RUNPATH)\).*?\[([^\]]*)\]', cp.stdout)
     result['needed_sonames'] = needed[:128]
     result['rpath'] = paths[:8]
     result['cuda_driver_needed'] = any(x.startswith('libcuda.so') for x in needed)
