@@ -16,7 +16,23 @@
     "ssd_seekable_native_verified": false,
     "owner_stop_lease_fresh": false,
     "independent_s03_restore": false,
-    "native_python_gpu_import_sm70": false
+    "native_python_gpu_import_sm70": false,
+    "latest_native_readonly_at_utc": "2026-11-16T19:31:00Z",
+    "native_inspect_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43939988374",
+    "native_owner_stop": "PRESENT_READ_ONLY",
+    "native_maintenance": "PRESENT_READ_ONLY",
+    "native_primary_supervisor_states": "FIVE_STOPPED_READ_ONLY",
+    "native_8081_listener_inodes": 0,
+    "native_gpu_vram_mib": [
+      0,
+      0
+    ],
+    "native_root_free_bytes": 43158650880,
+    "native_root_total_bytes": 183609851904,
+    "native_external_mount": "NOT_DETECTED_IN_ALLOWLISTED_MOUNT_PATHS",
+    "native_rclone_remote_count": 0,
+    "native_writer_lease": "UNKNOWN",
+    "native_seekable_external_storage": "NOT_PROVEN"
   },
   "requirements": {
     "D1": {
@@ -35,7 +51,8 @@
       ],
       "engram_copies": 1,
       "full_sha_validation_native": "HOLD",
-      "seekable_placement_native": "HOLD"
+      "seekable_placement_native": "HOLD",
+      "deficit_to_current_root_free_bytes": 205675607040
     },
     "D2": {
       "kind": "REUSE",
@@ -66,7 +83,10 @@
       "maya_historical_binary_bytes": 71289520,
       "full_binary_sha_native_this_run": null,
       "current_build": "UNKNOWN",
-      "real_TP2_inference": "HOLD"
+      "real_TP2_inference": "HOLD",
+      "latest_read_only_binary_sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+      "latest_read_only_binary_bytes": 71289520,
+      "binary_status": "LIVE_READ_ONLY_SHA_VERIFIED_NOT_EXECUTED"
     },
     "D5": {
       "kind": "CONDITIONAL",
@@ -129,7 +149,7 @@
     {
       "task_id": "V13-01",
       "status": "HOLD_NATIVE",
-      "reason": "No fresh owner STOP/lease, dual PID/start ticks + GPU readback"
+      "reason": "Owner STOP + 5 Supervisor STOPPED, zero 8081 listener and GPU VRAM confirmed at 19:31Z; lease, independent process sweep and CUTOVER authorization remain HOLD"
     },
     {
       "task_id": "V13-02",
