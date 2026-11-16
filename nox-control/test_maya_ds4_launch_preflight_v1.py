@@ -433,7 +433,7 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
         self.assertEqual(got["protocol"], "Maya stdin/stdout engine protocol; not an HTTP endpoint")
         self.assertIn("HOLD", got["kv_cache_fit"])
         self.assertIn("HOLD", got["runtime_fit"])
-        self.assertIn("file-backed CPU-lane", got["expert_mapping"])
+        self.assertIn("CPU-lane experts read in-place", got["expert_mapping"])
         self.assertNotIn("--mmap-experts", got["argv"])
         self.assertFalse(got["measured"])
 
