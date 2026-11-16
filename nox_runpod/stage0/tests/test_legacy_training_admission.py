@@ -63,12 +63,19 @@ class AdmissionTests(unittest.TestCase):
     def test_valid_pinned_trainable_manifest_passes(self):
         self.assertIsNone(admission_hold_reason(self.authorized_env(), []))
 
+    def test_deepseek_manifest_cannot_authorize_legacy_a40_base(self):
+        env = self.authorized_env()
+        self.assertEqual(
+            admission_hold_reason(env, [], expected_target="NOX_9B_UNIFIED"),
+            "TARGET_NOT_AUTHORIZED",
+        )
+
     def test_legacy_trainer_checks_gate_before_cuda_optimizer_or_checkpoint(self):
         stage0 = Path(__file__).resolve().parents[1]
         source = (stage0 / "a40_full_parameter_distill_cycle.py").read_text(encoding="utf-8")
         self.assertNotIn("STATE.mkdir(parents=True,exist_ok=True)\nDEST.mkdir", source)
         main = source[source.index("def main():"):]
-        gate = main.index("admission_hold_reason")
+        gate = main.index('admission_hold_reason(expected_target="NOX_9B_UNIFIED")')
         for forbidden in ("import torch", "torch.optim.Adafactor", "loss.backward()", "opt.step()", "save_pretrained"):
             self.assertLess(gate, main.index(forbidden))
 
