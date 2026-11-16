@@ -46,6 +46,19 @@ class MountInventoryTests(unittest.TestCase):
         rows=['1 0 8:1 / / rw - ext4 /dev/sda rw']+['x']*4096
         result=audit._mount_inventory_from_text('\n'.join(rows),lambda p:Stat())
         self.assertTrue(result['truncated'])
+    def test_worker_dispatch_includes_mount_inventory(self):
+        original=audit.mount_inventory
+        try:
+            def fake_mount_inventory(): return {'mountinfo_readable':True,'mounts':[]}
+            fake_mount_inventory.__name__='mount_inventory'
+            audit.mount_inventory=fake_mount_inventory
+            row=audit.worker(6)
+        finally:
+            audit.mount_inventory=original
+        self.assertEqual(row['section'],'mount_inventory')
+        self.assertEqual(row['result']['mountinfo_readable'],True)
+        source=SOURCE.read_text()
+        self.assertIn('pool.map(worker,range(7))',source)
     def test_source_is_safe_read_only_probe(self):
         names=audit.mount_inventory.__code__.co_names
         self.assertFalse(any(word in names for word in ('unlink','remove','Popen')))
