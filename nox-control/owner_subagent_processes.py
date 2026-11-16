@@ -192,6 +192,7 @@ class Subagents:
         outcomes = {}
         active = set()
         active_roles = {}  # Job ID must remain bound to its assigned OS worker role.
+        active_started = {}  # Preserve original deadline for each in-flight job.
         busy_roles = set()
         while remaining or active:
             # Re-check gates before *each* dispatch, not only at batch start.
@@ -207,6 +208,7 @@ class Subagents:
                     progressed = True
                     continue
                 self.inboxes[t['subagent']].put(t)
+                active_started[tid] = time.monotonic()
                 busy_roles.add(t['subagent'])
                 active.add(tid)
                 active_roles[tid] = t['subagent']
@@ -216,7 +218,8 @@ class Subagents:
                 # A blocking result read must not mask a manual owner STOP or
                 # a revoked writer lease for up to the model timeout (300s).
                 # Poll only the existing IPC outbox; never add another daemon.
-                deadline = time.monotonic() + self.timeout + 5
+                # Unrelated fast responses may never extend a stalled job.
+                deadline = min(active_started[job] + self.timeout + 5 for job in active)
                 while True:
                     if not admitted():
                         raise GateError('HOLD_OWNER_GATE_CHANGED')
@@ -225,6 +228,8 @@ class Subagents:
                         raise GateError('HOLD_SUBAGENT_TIMEOUT')
                     try:
                         event = self.outbox.get(timeout=min(remaining_wait, 0.25))
+                        if time.monotonic() >= deadline:
+                            raise GateError('HOLD_SUBAGENT_TIMEOUT')
                         break
                     except queue.Empty:
                         continue
@@ -239,6 +244,7 @@ class Subagents:
                     raise GateError('HOLD_SUBAGENT_RESULT_IDENTITY')
                 outcomes[tid] = event
                 active.remove(tid)
+                del active_started[tid]
                 del active_roles[tid]
                 busy_roles.remove(role)
             elif not progressed and remaining:
