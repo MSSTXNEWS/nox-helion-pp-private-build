@@ -103,10 +103,17 @@ def v13_wheelhouse_admission(record):
         return 'HOLD_WHEELHOUSE_CP311_PYTHON_ABI_MISMATCH'
     if runtime.get('platform') != 'linux-x86_64':
         return 'HOLD_WHEELHOUSE_LINUX_X86_64_PLATFORM_MISMATCH'
+    # A CP311 cache tag alone is not enough: it can disagree with the
+    # interpreter's actual version. Reject contradictory or missing evidence
+    # rather than labelling a potentially CP312 process a candidate.
+    python_version = runtime.get('python_version')
+    if not isinstance(python_version, str) or re.fullmatch(r'3\\.11\\.\\d+', python_version) is None:
+        return 'HOLD_WHEELHOUSE_CP311_VERSION_MISMATCH'
     version = record.get('torch')
     if not isinstance(version, str) or not version:
         return 'HOLD_WHEELHOUSE_TORCH_BUILD_UNKNOWN'
-    if not version.endswith('+cu126'):
+    # A forged package label such as "unknown+cu126" is not a PyTorch build.
+    if re.fullmatch(r'[1-9]\\d*\\.\\d+\\.\\d+\\+cu126', version) is None:
         return 'HOLD_WHEELHOUSE_CU126_TORCH_BUILD_MISMATCH'
     return 'SOURCE_ONLY_WHEELHOUSE_ABI_CANDIDATE_NATIVE_SM70_HOLD'
 
