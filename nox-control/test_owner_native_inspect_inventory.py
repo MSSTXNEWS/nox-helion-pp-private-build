@@ -72,6 +72,30 @@ class MemoryInventoryTests(unittest.TestCase):
             self.assertEqual(len(result['memory_files']),1)
             self.assertEqual(result['health']['8080']['status'],200)
 
+    def test_qwen_receipt_is_bounded_metadata_only(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            run=root/'lora'/'qwen35_9b'/'6907283384'
+            run.mkdir(parents=True)
+            (run/'owner_progress.json').write_text(
+                '{"state":"LOADING","global_step":0,"optimizer_steps_verified":false,'
+                '"training_private_corpus":"DO_NOT_EXPORT_THIS_TEXT"}')
+            with mock.patch.object(inspector,'ROOT',root):
+                rows=inspector.qwen_training_readback()
+            self.assertEqual(len(rows),3)
+            progress=next(x for x in rows if x.get('receipt')=='owner_progress.json')
+            self.assertEqual(progress['fields']['global_step'],0)
+            self.assertIs(progress['fields']['optimizer_steps_verified'],False)
+            self.assertNotIn('training_private_corpus',str(rows))
+            self.assertEqual(len([x for x in rows if x['state']=='NOT_OBSERVED']),2)
+
+    def test_qwen_missing_run_does_not_claim_zero_optimizer_steps(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.object(inspector,'ROOT',Path(temp)):
+                rows=inspector.qwen_training_readback()
+            self.assertEqual(rows[0]['state'],'RUN_DIRECTORY_NOT_OBSERVED')
+            self.assertNotIn('global_step',str(rows))
+
 
 if __name__=='__main__':
     unittest.main()
