@@ -76,7 +76,11 @@ def verify_inputs(student:Path,data:Path,output:Path,native:dict,*,resume:bool=F
         'maya_owner_request_id')
     if any(manifest.get(key)!=maya_lineage.get(key) for key in lineage_keys):
         raise RuntimeError('HOLD_MAYA_DATASET_LINEAGE_MISMATCH')
-    if manifest.get('schema')!='NOX_V135_VERIFIED_TEACHER_DISTILL_CORPUS_V1':
+    if (manifest.get('schema')!='NOX_V135_VERIFIED_TEACHER_DISTILL_CORPUS_V1'
+            or manifest.get('synthetic_teacher_output') is not True
+            or manifest.get('maya_single_teacher') is not True
+            or manifest.get('teacher_model_id')!='deepseek-v4.1-flash'
+            or manifest.get('teacher_model_revision')!='65d53bc8be65123e255ff02f3ded958b6dbf54fd'):
         raise RuntimeError('HOLD_CORPUS_MANIFEST')
     if (manifest.get('source_groups_disjoint') is not True or
         manifest.get('train_rows',0)<300 or manifest.get('holdout_rows',0)<30):
@@ -93,7 +97,10 @@ def verify_inputs(student:Path,data:Path,output:Path,native:dict,*,resume:bool=F
                 except (ValueError,UnicodeError) as ex: raise RuntimeError('HOLD_DATASET_ROW_JSON') from ex
                 if (not isinstance(row,dict)
                         or row.get('teacher_model_sha256')!=maya_lineage['maya_model_manifest_sha256']
-                        or row.get('teacher_role')!='deepseek-reasoning'):
+                        or row.get('teacher_role')!='deepseek-reasoning'
+                        or row.get('synthetic_teacher_output') is not True
+                        or row.get('teacher_model_id')!='deepseek-v4.1-flash'
+                        or row.get('teacher_model_revision')!='65d53bc8be65123e255ff02f3ded958b6dbf54fd'):
                     raise RuntimeError('HOLD_DATASET_TEACHER_IDENTITY')
     for name in ('config.json','tokenizer_config.json'):
         p=student/name
