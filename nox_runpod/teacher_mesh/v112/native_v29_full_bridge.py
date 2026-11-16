@@ -522,15 +522,19 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             base={}
         model=_model_name(base)
         s03_table_available=_s03_ready()
-        semantic_retrieval_bound=bool(
-            s03_table_available and callable(trusted.get('_s03_recall')))
+        semantic_retrieval_callback_configured=callable(trusted.get('_s03_recall'))
+        # V112 currently loads durable dialog pairs via _dialog_context. It
+        # does not invoke _s03_recall or add semantic results to the prompt.
+        semantic_retrieval_bound=False
         return JSONResponse({
            **base, 'backend':'EXISTING_NATIVE_ONEHOST',
            'native_p02_bound':bool(model and callable(trusted['_proxy_completion'])),
            'primary_model':model or None,
            'native_s03_table_available':s03_table_available,
+           'native_semantic_retrieval_callback_configured':semantic_retrieval_callback_configured,
            'native_semantic_retrieval_bound':semantic_retrieval_bound,
-           'native_cognitive_memory_bound':semantic_retrieval_bound,
+           'native_cognitive_memory_bound':bool(
+               s03_table_available and semantic_retrieval_bound),
            'native_dialogs_ready':_schema_ready(),
         },headers={'Cache-Control':'no-store'})
 
