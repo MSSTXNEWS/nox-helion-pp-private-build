@@ -1,0 +1,115 @@
+{
+  "schema": "NOX_RELAY_V10_FIVE_TASKID_V1",
+  "instructions_version": "0.0.6",
+  "slot": "3C",
+  "run_utc": "2026-11-16T18:46:50.179Z",
+  "run_msk": "2026-11-16T21:46:50+03:00",
+  "mode": "SOURCE_FIX_AND_READONLY_PRIOR_EVIDENCE",
+  "site": "Vast.ai #60509551",
+  "user_priority": "OWNER_MODEL_REPLACEMENT_V10",
+  "source_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_original_blob": "6477ee5fba77e579abb0275b307abcffff252f77",
+  "source_patch_commit": "e464195e5ad4d9c4ea18cb0b559bca2aaada3de2",
+  "source_blob": "3055404c371fba77d028c170ab48238725c4fe9d",
+  "test_patch_commit": "c39ffcfcef7403dc2d67ac83dfbf5cadc7c83b3f",
+  "test_blob": "a34a97309d36b83a836efa22e5f3b690ab846130",
+  "test": {
+    "github_workflow_run_id": 43931635781,
+    "github_job_id": 133525297200,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43931635781",
+    "status": "SOURCE_CI_SUCCESS",
+    "mentor_tests": 18,
+    "mentor_skipped_native_fixture": 4,
+    "tests_added": 2,
+    "local_isolated_function_tests": 4,
+    "full_native_e2e": false
+  },
+  "root_cause": "Existing owner_dispatcher_mentor.component_validation classified six configured runner slots as six native OS workers and a historical adapter global_step as current training evidence, without PID+start_ticks or fresh successful optimizer updates.",
+  "fix": "Fail closed to explicit HOLD for config-only dispatcher workers and historical training receipt; retain existing bounded component validator and other branches. No new dispatcher, scheduler or trainer.",
+  "rollback": "GitHub exact blob CAS to source_original_blob after latest HEAD comparison; no native rollback, not installed.",
+  "outcomes": [
+    {
+      "task_id": "S1-03",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "source_result": "config workers=6 no longer verifies native PID+start_ticks; explicit HOLD",
+      "native_pid_start_ticks": null,
+      "native_owner_claim": null
+    },
+    {
+      "task_id": "S2-05",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "source_result": "global_step=25 receipt no longer establishes fresh successful optimizer update or independent restore",
+      "new_successful_optimizer_updates": 0,
+      "active_training_pid": null
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD_FRESH_NATIVE",
+      "reason": "No fresh owner-auth STOP/lease/PID readback executed in this slot; last evidence is historical 2026-11-16T17:54:57Z",
+      "prior_native_job_id": 133495640855
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_INDEPENDENT_RESTORE",
+      "reason": "No independent S03/Genesis/checkpoint+optimizer/scaler/RNG recovery receipt"
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "reason": "Full unique DeepSeek GGUF 248834257920 B plus reserve lacks confirmed seekable owner storage; no server rclone auth proven"
+    }
+  ],
+  "native": {
+    "source_installed": false,
+    "installed": false,
+    "live_verified": false,
+    "current_stop": "UNKNOWN_CURRENT_LAST_OBSERVED_OWNER_STOP_MAINTENANCE",
+    "current_lease": null,
+    "current_serving_model": null,
+    "latest_owner_snapshot_utc": "2026-11-16T17:54:57Z",
+    "latest_owner_snapshot_job_id": 133495640855,
+    "latest_snapshot_supervisor_stopped": 5,
+    "latest_snapshot_gpu0_mib": 0,
+    "latest_snapshot_gpu1_mib": 0,
+    "latest_snapshot_ssd_free_bytes": 43158749184,
+    "latest_snapshot_rclone_remotes": 0,
+    "not_current_measurement": true
+  },
+  "weights": {
+    "active_model": "UNKNOWN",
+    "deepseek_role": "CANDIDATE_NOT_INSTALLED",
+    "qwen35_9b_role": "STUDENT_NOT_PRIMARY",
+    "successful_updates_new": 0,
+    "checkpoint25": "HISTORICAL_NOT_RESTORED",
+    "optimizer_scaler_rng_restored": false
+  },
+  "knowledge": {
+    "new_hunter_verified_sources": 0,
+    "s03_write_readback_recall_verified": 0
+  },
+  "dispatcher_resources": {
+    "new_native_os_runners_verified": 0,
+    "latest_claim": null,
+    "new_terminal_jobs": 0,
+    "new_bytes_downloaded": 0,
+    "new_bytes_deleted": 0,
+    "native_restarts": 0
+  },
+  "untouched": [
+    "S03",
+    "Genesis",
+    "D02",
+    "14 worlds",
+    "owner STOP",
+    "scheduler",
+    "trainer",
+    "weights",
+    "automations"
+  ],
+  "next_owner_action": "Fresh authenticated native read-only inventory STOP/lease/PID/start_ticks and independent restore; verify seekable capacity and owner storage before downloading complete DeepSeek shards or Maya inference. Do not reset STOP or resume Qwen.",
+  "evidence": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/e464195e5ad4d9c4ea18cb0b559bca2aaada3de2",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/c39ffcfcef7403dc2d67ac83dfbf5cadc7c83b3f",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43931635781"
+  ]
+}
