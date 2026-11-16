@@ -69,8 +69,19 @@ def encoded(value):
 
 def plain(path):
     path = Path(path).absolute()
+    # Path.is_symlink() may silently return False on ELOOP/EACCES on newer
+    # Python versions. Never treat unreadable S03 ancestry as a safe path.
     for item in (*reversed(path.parents),path):
-        if item.is_symlink(): hold('HOLD_S03_SYMLINK')
+        try:
+            info = os.lstat(item)
+        except FileNotFoundError:
+            # The output leaf (and a not-yet-created output directory) may
+            # legitimately be absent; other failures are not absence.
+            continue
+        except OSError:
+            hold('HOLD_S03_PATH_UNREADABLE')
+        if stat.S_ISLNK(info.st_mode):
+            hold('HOLD_S03_SYMLINK')
     return path
 
 
