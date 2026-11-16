@@ -125,6 +125,73 @@ class ColdTests(unittest.TestCase):
             self.assertEqual((Path(ram_dir)/'model.gguf').read_bytes(),self.src.read_bytes())
             self.assertEqual(list(Path(ram_dir).glob('.nox-load-*')),[])
 
+    def test_owner_stop_paths_cover_existing_onehost_variants(self):
+        names={str(p) for p in cold.OWNER_STOP_PATHS}
+        self.assertTrue({'/root/nox/STOP','/root/nox/STOP.flag',
+                         '/root/nox/stop.flag','/root/nox/.stop',
+                         '/root/nox/program/STOP','/root/nox/state/STOP',
+                         '/root/nox/state/STOP.flag','/workspace/NOX_STOP'} <= names)
+
+    def test_ram_load_owner_stop_blocks_metadata_request(self):
+        if not Path('/dev/shm').is_dir():
+            self.skipTest('tmpfs unavailable')
+        with tempfile.TemporaryDirectory(prefix='nox-ram-owner-stop-',dir='/dev/shm') as ram_dir:
+            args=cold.parser().parse_args([
+                'load','--remote','fixture:cold/model.gguf','--ram-dir',ram_dir,
+                '--sha256',cold.sha256(self.src),'--reserve-gib','1','--timeout','5'])
+            stop=self.root/'STOP.flag';stop.touch()
+            with patch.object(cold,'OWNER_STOP_PATHS',(stop,)), patch.object(
+                    cold,'command') as cmd, self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+                cold.load(args)
+            cmd.assert_not_called()
+            self.assertEqual(list(Path(ram_dir).iterdir()),[])
+
+    def test_ram_load_stop_during_copy_never_publishes(self):
+        if not Path('/dev/shm').is_dir():
+            self.skipTest('tmpfs unavailable')
+        with tempfile.TemporaryDirectory(prefix='nox-ram-owner-stop-',dir='/dev/shm') as ram_dir:
+            remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+            remote.parent.mkdir(parents=True,exist_ok=True)
+            remote.write_bytes(self.src.read_bytes())
+            args=cold.parser().parse_args([
+                'load','--remote','fixture:cold/model.gguf','--ram-dir',ram_dir,
+                '--sha256',cold.sha256(self.src),'--reserve-gib','1','--timeout','5'])
+            stop=self.root/'STOP.flag'
+            original=cold.command
+            def stop_after_copy(argv,timeout=3600):
+                result=original(argv,timeout)
+                if argv[1]=='copyto':stop.touch()
+                return result
+            with patch.object(cold,'OWNER_STOP_PATHS',(stop,)), patch.object(
+                    cold,'command',side_effect=stop_after_copy), patch.object(
+                    cold,'memory_budget',return_value=self.src.stat().st_size+1), self.assertRaisesRegex(
+                    RuntimeError,'HOLD_OWNER_STOP'):
+                cold.load(args)
+            self.assertFalse((Path(ram_dir)/'model.gguf').exists())
+            self.assertEqual(list(Path(ram_dir).glob('.nox-load-*')),[])
+
+    def test_ram_load_stop_after_fsync_never_publishes(self):
+        if not Path('/dev/shm').is_dir():
+            self.skipTest('tmpfs unavailable')
+        with tempfile.TemporaryDirectory(prefix='nox-ram-owner-stop-',dir='/dev/shm') as ram_dir:
+            remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+            remote.parent.mkdir(parents=True,exist_ok=True)
+            remote.write_bytes(self.src.read_bytes())
+            args=cold.parser().parse_args([
+                'load','--remote','fixture:cold/model.gguf','--ram-dir',ram_dir,
+                '--sha256',cold.sha256(self.src),'--reserve-gib','1','--timeout','5'])
+            stop=self.root/'STOP.flag'
+            original=os.fsync
+            def stop_after_fsync(fd):
+                result=original(fd);stop.touch();return result
+            with patch.object(cold,'OWNER_STOP_PATHS',(stop,)), patch.object(
+                    cold.os,'fsync',side_effect=stop_after_fsync), patch.object(
+                    cold,'memory_budget',side_effect=[self.src.stat().st_size+1,1]), self.assertRaisesRegex(
+                    RuntimeError,'HOLD_OWNER_STOP'):
+                cold.load(args)
+            self.assertFalse((Path(ram_dir)/'model.gguf').exists())
+            self.assertEqual(list(Path(ram_dir).glob('.nox-load-*')),[])
+
     def test_symlink_source_rejected(self):
         p=self.root/'link.gguf';p.symlink_to(self.src)
         with self.assertRaises(ValueError):cold.assert_model(p)

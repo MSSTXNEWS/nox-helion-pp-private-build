@@ -31,7 +31,9 @@ ALLOWED_SUFFIX = {'.safetensors', '.gguf', '.bin', '.pt', '.pth'}
 SHA = re.compile(r'^[0-9a-f]{64}$')
 OWNER_STOP_PATHS = (
     Path('/root/nox/STOP'), Path('/root/nox/STOP.flag'),
-    Path('/root/nox/state/STOP'), Path('/root/nox/state/STOP.flag'),
+    Path('/root/nox/stop.flag'), Path('/root/nox/.stop'),
+    Path('/root/nox/program/STOP'), Path('/root/nox/state/STOP'),
+    Path('/root/nox/state/STOP.flag'), Path('/workspace/NOX_STOP'),
 )
 
 
@@ -597,6 +599,9 @@ def configure_pc(root=Path('/root/nox')):
 
 
 def load(a):
+    # RAM hydration is background work: the owner's STOP wins even before
+    # the metadata rclone request. A STOP must never publish new RAM weights.
+    assert_owner_stop_clear()
     remote=assert_remote(a.remote)
     if not SHA.fullmatch(a.sha256):
         raise ValueError('HOLD_EXPECTED_SHA_REQUIRED')
@@ -611,6 +616,7 @@ def load(a):
     if type(size) is not int or size<=0 or meta.get('count')!=1:
         raise ValueError('HOLD_REMOTE_NOT_ONE_FILE')
     with maintenance_lock(dest_dir):
+        assert_owner_stop_clear()
         if memory_budget(dest_dir,a.reserve_gib)<size:
             raise RuntimeError('HOLD_RAM_RESERVE')
         dest=dest_dir/name
@@ -622,12 +628,14 @@ def load(a):
             command(['rclone','copyto',remote,str(temp),'--transfers','1','--multi-thread-streams','1'],a.timeout)
             if temp.stat().st_size!=size or sha256(temp)!=a.sha256:
                 raise RuntimeError('HOLD_RAM_SHA_MISMATCH')
+            assert_owner_stop_clear()  # Stop may be raised during remote transfer.
             # A concurrent chat/trainer may consume RAM during the transfer.
             # Recheck actual cgroup+tmpfs headroom before publishing the model.
             if memory_budget(dest_dir,a.reserve_gib) < 0:
                 raise RuntimeError('HOLD_RAM_RESERVE_AFTER_COPY')
             with temp.open('rb') as f:
                 os.fsync(f.fileno())
+            assert_owner_stop_clear()  # Final gate immediately before publication.
             os.link(temp,dest)  # Atomic no-replace publication, not destructive rename.
             print(json.dumps({'ram_model':str(dest),'bytes':size,'sha256':a.sha256}))
         finally:
