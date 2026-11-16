@@ -117,6 +117,32 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertEqual(PLAN.evaluate_source_plan(verified_files=wrong_size, **base)["state"],
                          "HOLD_SIZE_OR_SHA256_UNVERIFIED")
 
+    def test_unknown_stop_or_malformed_native_attestations_hold_without_exception(self):
+        common = dict(stop_present=False, gpu_ids=(0, 1), tp=2,
+                      max_context=4096, reserve_mib=1024,
+                      verified_files=complete_rows(),
+                      tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"))
+        for unknown_stop in (None, "", 0, [], {}):
+            with self.subTest(owner_stop=repr(unknown_stop)):
+                self.assertEqual(PLAN.evaluate_source_plan(
+                    **{**common, "stop_present": unknown_stop})["state"],
+                    "HOLD_OWNER_STOP")
+        for gpu in (None, "01", (False, True), [0, "1"], {"a": 0}):
+            with self.subTest(gpu_ids=repr(gpu)):
+                self.assertEqual(PLAN.evaluate_source_plan(
+                    **{**common, "gpu_ids": gpu})["state"],
+                    "HOLD_TWO_V100_TP2_REQUIRED")
+        for tensors in (None, "IQ2_XXS", ({"bad": 1},), (1, "IQ2_XXS")):
+            with self.subTest(tensor_types=repr(tensors)):
+                self.assertEqual(PLAN.evaluate_source_plan(
+                    **{**common, "tensor_types": tensors})["state"],
+                    "HOLD_UNCONFIRMED_TENSOR_KERNEL")
+        invalid = complete_rows()
+        invalid[0]["path"] = []
+        self.assertEqual(PLAN.evaluate_source_plan(
+            **{**common, "verified_files": invalid})["state"],
+            "HOLD_ALL_FIVE_SHARDS_AND_ENGRAM_REQUIRED")
+
     def test_unconfirmed_fp8_is_rejected(self):
         got = PLAN.evaluate_source_plan(
             stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
