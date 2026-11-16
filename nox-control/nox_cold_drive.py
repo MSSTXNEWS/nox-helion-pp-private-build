@@ -5,17 +5,19 @@ Batch transfers use at most six OS processes. Deletion is serial and opt-in.
 """
 from __future__ import annotations
 import argparse
+import base64
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import contextmanager
 import hashlib
 import json
 import math
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import selectors
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -219,6 +221,8 @@ def assert_not_open(source):
 
 
 def evict_verified(row, active_manifest):
+    if str(row.get('destination', '')).startswith('nox_pc:'):
+        raise RuntimeError('HOLD_PC_ONLY_COPY_NEVER_AUTHORIZES_EVICTION')
     if not active_manifest:
         raise ValueError('HOLD_ACTIVE_MANIFEST_REQUIRED')
     src = assert_model(row['source'])
@@ -306,6 +310,84 @@ def memory_budget(dest_dir, reserve_gib):
     return min(available,shutil.disk_usage(dest_dir).free)-reserve_gib*GIB
 
 
+def pc_link_target(link):
+    """Resolve the owner-created reverse SSH link without shell execution."""
+    if (not isinstance(link, dict) or link.get('schema') != 'NOX_PC_LINK_V1'
+            or link.get('instance_id') != 60509551 or link.get('reverse_host') != '127.0.0.1'
+            or type(link.get('reverse_port')) is not int or link['reverse_port'] != 46051):
+        raise ValueError('HOLD_PC_LINK_IDENTITY')
+    user = link.get('pc_user')
+    if (not isinstance(user, str) or not re.fullmatch(r'[A-Za-z0-9_.@\\ -]{1,128}', user)
+            or user != user.strip() or user.startswith('-')):
+        raise ValueError('HOLD_PC_LINK_USER')
+    location = link.get('backup_root')
+    if not isinstance(location, str) or any(ord(c) < 32 for c in location):
+        raise ValueError('HOLD_PC_BACKUP_ROOT')
+    path = PureWindowsPath(location)
+    if (not path.is_absolute() or not re.fullmatch(r'[A-Za-z]:', path.drive)
+            or '..' in path.parts or any(c in location for c in '?*<>|"#')):
+        raise ValueError('HOLD_PC_BACKUP_ROOT')
+    raw = link.get('pc_host_key', '')
+    if not isinstance(raw, str) or not re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/]+={0,2}', raw):
+        raise ValueError('HOLD_PC_HOST_KEY')
+    try:
+        decoded = base64.b64decode(raw.split()[1], validate=True)
+        algorithm_size = struct.unpack('>I', decoded[:4])[0]
+        key_size = struct.unpack('>I', decoded[4+algorithm_size:8+algorithm_size])[0]
+        if decoded[4:4+algorithm_size] != b'ssh-ed25519' or key_size != 32 or len(decoded) != 8+algorithm_size+key_size:
+            raise ValueError('invalid key')
+    except Exception:
+        raise ValueError('HOLD_PC_HOST_KEY') from None
+    fingerprint = 'SHA256:'+base64.b64encode(hashlib.sha256(decoded).digest()).decode().rstrip('=')
+    if link.get('pc_host_key_sha256') != fingerprint:
+        raise ValueError('HOLD_PC_HOST_KEY_FINGERPRINT')
+    return {'user':user, 'host_key':raw, 'fingerprint':fingerprint,
+            'remote_root':'nox_pc:/'+path.as_posix().rstrip('/'),
+            'backup_root':str(path)}
+
+
+def configure_pc(root=Path('/root/nox')):
+    """Bind the existing SFTP backend to the persistent owner's PC link.
+
+    Writes only a dedicated local config and known_hosts entry. It neither
+    opens a shell nor claims connectivity/readback. Every subsequent transfer
+    authenticates the pinned host key; load retains its normal RAM/SHA gates.
+    """
+    root = plain_path(root)
+    folder = plain_path(root/'state/pc_shell')
+    connection = plain_path(folder/'connection.json')
+    key = plain_path(folder/'operator_ed25519')
+    for path in (connection, key):
+        if not path.is_file() or stat.S_IMODE(path.stat().st_mode) != 0o600:
+            raise ValueError('HOLD_PC_LINK_PRIVATE_FILE_MODE')
+    if connection.stat().st_size > 32000:
+        raise ValueError('HOLD_PC_LINK_METADATA_SIZE')
+    target = pc_link_target(json.loads(connection.read_text()))
+    known = plain_path(folder/'rclone_known_hosts', False)
+    config = plain_path(root/'state/cold_pc.conf', False)
+    payloads = {
+        known:'[127.0.0.1]:46051 '+target['host_key']+'\n',
+        config:('[nox_pc]\ntype = sftp\nhost = 127.0.0.1\nport = 46051\nuser = '+target['user']+
+                '\nkey_file = '+str(key)+'\nknown_hosts_file = '+str(known)+
+                '\nshell_type = none\ndisable_hashcheck = true\n'),
+    }
+    for path, text in payloads.items():
+        fd, tmp = tempfile.mkstemp(prefix='.pc-target-', dir=path.parent)
+        try:
+            os.fchmod(fd, 0o600)
+            with os.fdopen(fd, 'w') as stream:
+                stream.write(text); stream.flush(); os.fsync(stream.fileno())
+            os.replace(tmp, path)
+        finally:
+            if os.path.exists(tmp): os.unlink(tmp)
+    return {'schema':'NOX_PC_COLD_TARGET_V1', 'configured':True, 'connectivity_verified':False,
+            'server_readback_verified':False, 'eviction_allowed':False,
+            'config':str(config), 'remote_root':target['remote_root'],
+            'backup_remote_root':target['remote_root']+'/BACKUPS',
+            'warm_remote_root':target['remote_root']+'/WARM',
+            'note':'PC link must be live; full SHA readback and cgroup/RAM reserve are still required.'}
+
+
 def load(a):
     remote=assert_remote(a.remote)
     if not SHA.fullmatch(a.sha256):
@@ -357,6 +439,7 @@ def parser():
     q=sp.add_parser('load'); q.add_argument('--remote',required=True)
     q.add_argument('--ram-dir',default='/dev/shm/nox_models'); q.add_argument('--sha256',required=True)
     q.add_argument('--reserve-gib',type=int,default=12); q.add_argument('--timeout',type=int,default=3600)
+    sp.add_parser('configure-pc', help='Configure the authenticated existing PC reverse link as a pinned SFTP target')
     return p
 
 
@@ -364,10 +447,13 @@ def main(argv=None):
     p=parser(); a=p.parse_args(argv)
     if a.action=='load' and a.reserve_gib<1:
         p.error('RAM reserve must be positive')
-    if a.timeout<1:
+    if hasattr(a, 'timeout') and a.timeout<1:
         p.error('Timeout must be positive')
     try:
-        {'upload':upload,'batch':batch,'load':load}[a.action](a)
+        if a.action == 'configure-pc':
+            print(json.dumps(configure_pc(), ensure_ascii=False))
+        else:
+            {'upload':upload,'batch':batch,'load':load}[a.action](a)
     except Exception as ex:
         msg=str(ex)
         code=msg if re.fullmatch(r'HOLD_[A-Z0-9_]+',msg) else 'HOLD_'+type(ex).__name__.upper()

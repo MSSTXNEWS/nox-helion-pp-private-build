@@ -10,7 +10,7 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import shutil
 import sqlite3
@@ -26,9 +26,9 @@ GIB = 1024 ** 3
 SESSION = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$')
 SHA = re.compile(r'^[a-f0-9]{64}$')
 SKIP_DIRS = {'.git', '.cache', '.venv', 'venv', 'node_modules', '__pycache__',
-             'pc_exports', '.ssh', 'credentials', 'secrets', 'tmp', 'temp',
+             'pc_exports', 'pc_shell', '.ssh', 'credentials', 'secrets', 'tmp', 'temp',
              'offload', 'offload_weights', 'wandb', 'hf_cache', 'pip_cache'}
-SECRET_NAMES = re.compile(r'(^\.env($|\.)|(^|[_.-])(credential|credentials|secret|secrets|token|tokens|password|private_key|api_key|cookie|cookies)([_.-]|$)|^(id_rsa|id_ed25519|rclone\.conf|cold_drive\.conf|vast_api_key)(?:$|\.))', re.I)
+SECRET_NAMES = re.compile(r'(^\.env($|\.)|(^|[_.-])(credential|credentials|secret|secrets|token|tokens|password|private_key|api_key|cookie|cookies)([_.-]|$)|^(id_rsa|id_ed25519|operator_ed25519|pc_shell|rclone\.conf|cold_drive\.conf|cold_pc\.conf|vast_api_key)(?:$|\.))', re.I)
 SECRET_TEXT = re.compile(rb'(?i)(?:api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|password|client_secret)[\"\x27\s]*[:=][\"\x27\s]*(?:bearer\s+)?[A-Za-z0-9_./+\-=]{20,}')
 TEXT_SUFFIX = {'.json', '.jsonl', '.yaml', '.yml', '.toml', '.ini', '.conf', '.txt', '.log', '.py', '.sh', '.ps1', '.md', '.csv', '.tsv'}
 BINARY_SUFFIX = {'.gguf', '.safetensors', '.bin', '.pt', '.pth', '.zip', '.gz', '.tar', '.zst', '.parquet', '.arrow', '.npy', '.npz'}
@@ -384,6 +384,107 @@ def validate_receipt(manifest, receipt, manifest_sha):
     return remote
 
 
+def validate_pc_receipt(manifest, receipt, manifest_sha):
+    """PC-only evidence cannot satisfy the separate PC+Drive deletion gate."""
+    if (receipt.get('schema') != 'NOX_PC_OVERFLOW_V1' or receipt.get('session') != manifest['session']
+            or receipt.get('manifest_sha256') != manifest_sha
+            or receipt.get('pc_verified') is not True or receipt.get('drive_verified') is not False
+            or receipt.get('server_sources_retained') is not True):
+        fail('PC_OVERFLOW_RECEIPT_SCHEMA')
+    target = receipt.get('pc_backup_root')
+    if not isinstance(target, str) or any(ord(c) < 32 for c in target):
+        fail('PC_OVERFLOW_BACKUP_ROOT')
+    windows = PureWindowsPath(target)
+    if (not windows.is_absolute() or not re.fullmatch('[A-Za-z]:', windows.drive)
+            or '..' in windows.parts or any(c in target for c in '?*<>|"')):
+        fail('PC_OVERFLOW_BACKUP_ROOT')
+    relative = 'BACKUPS/'+manifest['session']+'/data'
+    if receipt.get('pc_session_rel') != relative:
+        fail('PC_OVERFLOW_SESSION_SCOPE')
+    rows = receipt.get('files')
+    if not isinstance(rows, list) or len(rows) != len(manifest['files']) or any(not isinstance(row, dict) for row in rows):
+        fail('PC_OVERFLOW_RECEIPT_INCOMPLETE')
+    by_path = {row.get('source_rel'):row for row in rows}
+    if len(by_path) != len(rows):
+        fail('PC_OVERFLOW_RECEIPT_DUPLICATE')
+    for original in manifest['files']:
+        row = by_path.get(original['source_rel'], {})
+        if row.get('bytes') != original['bytes'] or row.get('local_sha256') != original['sha256']:
+            fail('PC_OVERFLOW_LOCAL_SHA_MISMATCH')
+        if row.get('drive_sha256') not in (None, ''):
+            fail('PC_OVERFLOW_MUST_NOT_CLAIM_DRIVE_COPY')
+    return windows, relative
+
+
+def backup_role(relative):
+    """Keep canonical weights, optimizer checkpoints and caches distinguishable."""
+    path = PurePosixPath(relative)
+    if 'merged_hf' in path.parts and path.parts[0] == 'progress_pull_t784u':
+        return 'canonical_trainable_base'
+    if any(re.fullmatch(r'checkpoint-\d+', part) for part in path.parts):
+        return 'optimizer_checkpoint_component'
+    if path.parts[0] == 'lora':
+        return 'adapter_or_training_lineage'
+    if path.suffix.lower() == '.gguf':
+        return 'inference_model'
+    if path.suffix.lower() == '.safetensors':
+        return 'model_weight_component'
+    return 'project_backup'
+
+
+def _register_pc_locked(root, session):
+    """Persist local full-readback evidence even when Drive is unavailable.
+
+    This is an authenticated owner-PC receipt, not a claim that the server has
+    already read the PC through the permanent reverse tunnel. It provides no
+    eviction path, and retains all canonical/training source files.
+    """
+    stage = stage_dir(root, session)
+    manifest_file = plain_source(root, 'state/pc_exports/'+session+'/manifest.json')
+    manifest = validate_manifest(json.loads(manifest_file.read_text()), root, session)
+    receipt_path = plain_source(root, 'state/pc_exports/'+session+'/pc_verified.json')
+    receipt = json.loads(receipt_path.read_text())
+    windows, relative = validate_pc_receipt(manifest, receipt, sha256(manifest_file))
+    catalog_path = plain_source(root, 'state/pc_overflow_catalog.json')
+    if catalog_path.exists():
+        catalog = json.loads(catalog_path.read_text())
+        if catalog.get('schema') != 'NOX_PC_OVERFLOW_CATALOG_V1' or not isinstance(catalog.get('sessions'), dict):
+            fail('PC_OVERFLOW_CATALOG_SCHEMA')
+    else:
+        catalog = {'schema':'NOX_PC_OVERFLOW_CATALOG_V1', 'sessions':{}}
+    item = {'session':session, 'manifest_sha256':sha256(manifest_file),
+            'pc_receipt_sha256':sha256(receipt_path), 'pc_backup_root':str(windows),
+            'pc_session_rel':relative, 'verified_at':time.time(), 'pc_verified':True,
+            'server_readback_verified':False, 'drive_verified':False,
+            'eviction_allowed':False, 'server_sources_retained':True,
+            'total_bytes':manifest['total_bytes'], 'models':[]}
+    for row in manifest['files']:
+        role = backup_role(row['restore_rel'])
+        if role != 'project_backup':
+            item['models'].append({'restore_rel':row['restore_rel'], 'pc_relative_path':relative+'/'+row['source_rel'],
+                                   'bytes':row['bytes'], 'sha256':row['sha256'], 'role':role,
+                                   'resume_or_promotion_verified':False})
+    old = catalog['sessions'].get(session)
+    if old and (old.get('manifest_sha256') != item['manifest_sha256']
+                or old.get('pc_backup_root') != item['pc_backup_root']):
+        fail('PC_OVERFLOW_SESSION_IDENTITY_CHANGED')
+    catalog['sessions'][session] = item
+    atomic_json(catalog_path, catalog)
+    result = {'schema':'NOX_PC_OVERFLOW_RESULT_V1', 'session':session,
+              'pc_verified':True, 'drive_verified':False, 'server_readback_verified':False,
+              'eviction_allowed':False, 'evicted':[], 'server_sources_retained':True,
+              'catalog':str(catalog_path), 'total_bytes':manifest['total_bytes'],
+              'note':'Drive remains pending; PC receipt alone never authorizes source deletion.'}
+    atomic_json(stage/'pc_result.json', result)
+    return result
+
+
+def register_pc(root, session):
+    import nox_cold_drive as cold
+    with cold.maintenance_lock(root/'state/cold_drive_receipts'):
+        return _register_pc_locked(root, session)
+
+
 def finalize(root, session, evict=False):
     stage = stage_dir(root, session)
     manifest_file = plain_source(root, 'state/pc_exports/'+session+'/manifest.json')
@@ -428,6 +529,19 @@ def finalize(root, session, evict=False):
             except (RuntimeError, ValueError, FileNotFoundError) as e:
                 held.append({'path':row['restore_rel'], 'reason':str(e)})
     atomic_json(root/'state/cold_drive_catalog.json', catalog)
+    with cold.maintenance_lock(root/'state/cold_drive_receipts'):
+        pc_catalog_path = plain_source(root, 'state/pc_overflow_catalog.json')
+        if pc_catalog_path.is_file():
+            pc_catalog = json.loads(pc_catalog_path.read_text())
+            entry = (pc_catalog.get('sessions') or {}).get(session)
+            if (pc_catalog.get('schema') != 'NOX_PC_OVERFLOW_CATALOG_V1'
+                    or (entry and entry.get('manifest_sha256') != sha256(manifest_file))):
+                fail('PC_OVERFLOW_CATALOG_IDENTITY_CHANGED')
+            if entry:
+                entry.update(drive_verified=True, drive_remote=remote,
+                             drive_finalize_at=time.time(), server_sources_retained=not bool(removed),
+                             eviction_requested=bool(evict), evicted_count=len(removed))
+                atomic_json(pc_catalog_path, pc_catalog)
     result = {'schema_version':1, 'session':session, 'copies_verified':True,
               'evicted':removed, 'held':held, 'catalog':str(root/'state/cold_drive_catalog.json'),
               'disk_free_bytes':shutil.disk_usage(root).free}
@@ -438,7 +552,7 @@ def finalize(root, session, evict=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
-    for cmd in ('plan','finalize'):
+    for cmd in ('plan','register-pc','finalize'):
         p = sub.add_parser(cmd); p.add_argument('--session', required=True)
         if cmd == 'finalize':
             p.add_argument('--evict-inactive-gguf', action='store_true')
@@ -448,6 +562,8 @@ def main():
         print(json.dumps({'session':a.session, 'files':len(obj['files']),
                           'bytes':obj['total_bytes'], 'sqlite_databases':obj['sqlite_databases'],
                           'omitted':len(obj['omitted'])}))
+    elif a.command == 'register-pc':
+        print(json.dumps(register_pc(ROOT, a.session)))
     else:
         print(json.dumps(finalize(ROOT, a.session, a.evict_inactive_gguf)))
 
