@@ -13,8 +13,6 @@ STATE=ROOT/"dispatcher/a40_full_parameter"
 BASE=ROOT/"models/NOX_9B_UNIFIED"
 MEMORY=ROOT/"memory/NOX_UNIFIED_S03/unified_nox_knowledge.sqlite3"
 DEST=pathlib.Path("/opt/nox_full_parameter_A40")
-STATE.mkdir(parents=True,exist_ok=True)
-DEST.mkdir(parents=True,exist_ok=True)
 def utc():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def write(name,obj):
  path=STATE/name;tmp=path.with_suffix(path.suffix+".tmp")
@@ -107,6 +105,14 @@ def main():
  if a.steps<1 or a.steps>500:raise RuntimeError("STEPS_OUT_OF_BOUNDS")
  if not a.cycle.replace("_","").isalnum() or len(a.cycle)>50:raise RuntimeError("INVALID_CYCLE_ID")
  if not (0<a.lr<=5e-5):raise RuntimeError("UNSAFE_LEARNING_RATE")
+ # STOP/HOLD must exit before directory creation, CUDA/model load, optimizer, or checkpoint writes.
+ from training_admission import admission_hold_reason
+ hold=admission_hold_reason()
+ if hold:
+  print(json.dumps({"status":"HOLD","stage":"TRAINING_ADMISSION","reason":hold},ensure_ascii=False),flush=True)
+  return
+ STATE.mkdir(parents=True,exist_ok=True)
+ DEST.mkdir(parents=True,exist_ok=True)
  lk=(STATE/"trainer.lock").open("a+")
  try:fcntl.flock(lk,fcntl.LOCK_EX|fcntl.LOCK_NB)
  except BlockingIOError:print("NOX_FULL_PARAMETER_TRAINER_ALREADY_RUNNING",flush=True);return
