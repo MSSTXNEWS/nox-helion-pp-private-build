@@ -65,6 +65,18 @@ class ScopeTests(unittest.TestCase):
         self.assertIn('HOLD_STREAM_ONLY_MOTION_PREFERENCE_NOT_APPLIED', core.browser_run.__code__.co_consts)
         self.assertEqual(core.EXPECTED, ','.join(map(str, range(1, 41))))
 
+    def test_stream_only_dialog_click_is_single_fresh_pointer_gated(self):
+        core, _, _, _ = installed()
+        code = core.browser_run.__code__
+        self.assertIn('pointer_at_click', code.co_consts)
+        self.assertIn('physical_pointer_click', code.co_consts)
+        self.assertIn('HOLD_QA_DIALOG_POINTER_OCCLUDED', code.co_consts)
+        self.assertIn('HOLD_OWNER_STOP', code.co_consts)
+        self.assertIn('mouse', code.co_names)
+        self.assertIn('click', code.co_names)
+        self.assertNotIn('click_error_projection', code.co_names)
+        self.assertIn('title=>[...document.querySelectorAll', code.co_consts)
+
     def test_one_proper_prefix_remains_two_parts_not_strict_acceptance(self):
         core, _, release, _ = installed()
         value = observation([66])

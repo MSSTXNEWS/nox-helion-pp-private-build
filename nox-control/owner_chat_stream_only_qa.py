@@ -146,6 +146,23 @@ def rewrite_browser(body):
     body = replace_once(body, "            report['actual_native_backend']=True\n",
         "            report['actual_native_backend']=True\n"
         "            report['owner_auth_verified']={'anonymous_status':401,'login_status':200,'session_status':200}\n")
+    # In the stream-only QA, Playwright locator auto-wait could stall before any
+    # native POST, despite the measured owner hit target already being visible.
+    # Use exactly one physical click after a fresh, privacy-safe hit test; the
+    # original aria-current wait below must still prove target selection.
+    body = replace_between(body,
+        "            report['browser_stage']='QA_DIALOG_CLICK'\n",
+        '            await page.wait_for_function("title=>',
+        "            report['browser_stage']='QA_DIALOG_CLICK'\n"
+        "            control=await target.first.evaluate(CONTROL_JS)\n"
+        "            report['qa_dialog_controls']['pointer_at_click']=control\n"
+        "            if (not control['in_view'] or not control['pointer_hit_own_button']\n"
+        "                    or control['rail_collapsed'] or control['rail_pointer_events']=='none'):\n"
+        "                raise RuntimeError('HOLD_QA_DIALOG_POINTER_OCCLUDED')\n"
+        "            if stop_present():\n"
+        "                raise RuntimeError('HOLD_OWNER_STOP')\n"
+        "            await page.mouse.click(control['x'],control['y'])\n"
+        "            report['qa_dialog_controls']['physical_pointer_click']=True\n")
     body = replace_between(body,
         "            report['browser_stage']='QA_EMPTY_SCREENSHOT'\n",
         "            if stop_present():\n                raise RuntimeError('HOLD_OWNER_STOP')\n            idle_slots()\n",
