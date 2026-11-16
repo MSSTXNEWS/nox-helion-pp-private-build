@@ -101,6 +101,22 @@ def emit(data):
     print("NOX_MAINT_LIFELINE=" + json.dumps(data, sort_keys=True,
                                             ensure_ascii=False, separators=(",", ":")), flush=True)
 
+def validate_baseline(baseline):
+    if not isinstance(baseline, dict) or set(baseline) != set(REQUIRED):
+        fail("CRITICAL_SERVICE_INVENTORY")
+    for name in REQUIRED:
+        status = baseline[name]
+        if not isinstance(status, dict):
+            fail("CRITICAL_SERVICE_INVALID")
+        state, pid = status.get("state"), status.get("pid")
+        if state == "RUNNING" and type(pid) is int and pid > 0:
+            continue
+        if state in ("STOPPED", "EXITED") and pid is None:
+            continue
+        fail("CRITICAL_SERVICE_IDENTITY_UNSAFE")
+    return baseline
+
+
 def main():
     sha = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
@@ -112,8 +128,11 @@ def main():
         fail("SUPERVISOR_MISSING")
     # No interaction with trainer, chat port or memory.
     baseline = {name: info(name) for name in REQUIRED}
-    if any(v["state"] != "RUNNING" or not v["pid"] for v in baseline.values()):
-        fail("CRITICAL_SERVICE_NOT_RUNNING")
+    # Installation starts with a *disabled* observer. Permit a known stopped
+    # service so the observer can be staged during an outage. Unknown/FATAL or
+    # contradictory RUNNING/PID evidence still block writes. The original
+    # service state must remain byte-for-byte identical after the install.
+    validate_baseline(baseline)
     script = bytes_checked("nox_native_lifeline.py")
     policy = bytes_checked("lifeline.example.json")
     config = bytes_checked("nox-lifeline-guard.conf")
