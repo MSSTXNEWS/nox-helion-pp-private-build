@@ -3,6 +3,9 @@ on:
   push:
     branches: [fix/nox-v135-resonance-native-stream-20261115, feature/nox-v38-synaptic-brain-20261114]
     paths:
+      - 'nox-control/owner_chat_stream_only_qa.py'
+      - 'nox-control/owner_browser_stream_only_entry.py'
+      - 'nox-control/test_owner_chat_stream_only_qa.py'
       - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
       - 'coordination/onepass/nox-v137-owner-self-status.js'
       - 'nox_runpod/teacher_mesh/v137/**'
@@ -13,6 +16,9 @@ on:
       - '.github/workflows/nox-v135-resonance-owner-source-ci.yml'
   pull_request:
     paths:
+      - 'nox-control/owner_chat_stream_only_qa.py'
+      - 'nox-control/owner_browser_stream_only_entry.py'
+      - 'nox-control/test_owner_chat_stream_only_qa.py'
       - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
       - 'coordination/onepass/nox-v137-owner-self-status.js'
       - 'nox_runpod/teacher_mesh/v137/**'
@@ -44,6 +50,10 @@ jobs:
         run: |
           set -euo pipefail
           node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: Stream-only original owner browser source QA (no native commands)
+        run: |
+          set -euo pipefail
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_chat_stream_only_qa
       - name: Byte-level ZIP no-loss and SHA-pinned rollback fixtures
         run: |
           set -euo pipefail
