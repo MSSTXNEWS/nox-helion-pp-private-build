@@ -346,7 +346,10 @@ def fresh_manifest(path, source):
 
 
 def assert_not_open(source):
-    target, proc = str(source), Path('/proc')
+    """Fail closed on open file descriptors OR mapped inodes, including alias paths."""
+    info = source.stat()
+    target = (info.st_dev, info.st_ino)
+    proc = Path('/proc')
     if not proc.is_dir():
         raise RuntimeError('HOLD_NATIVE_PROCESS_INSPECTION_UNAVAILABLE')
     for pid in proc.iterdir():
@@ -355,19 +358,26 @@ def assert_not_open(source):
         try:
             for link in (pid/'fd').iterdir():
                 try:
-                    if os.readlink(link).removesuffix(' (deleted)') == target:
+                    fd_info = link.stat()  # Follow /proc fd to the actual inode, not its display path.
+                    if stat.S_ISREG(fd_info.st_mode) and (fd_info.st_dev, fd_info.st_ino) == target:
                         raise RuntimeError('HOLD_MODEL_OPEN_BY_PROCESS')
-                except FileNotFoundError:
-                    pass
+                except (FileNotFoundError, ProcessLookupError):
+                    continue
             for line in (pid/'maps').read_text(errors='replace').splitlines():
                 fields = line.split(maxsplit=5)
-                if len(fields)==6 and fields[-1].removesuffix(' (deleted)')==target:
+                if len(fields) < 5 or not fields[4].isdigit() or int(fields[4]) == 0:
+                    continue
+                try:
+                    major, minor = fields[3].split(':', 1)
+                    dev = os.makedev(int(major, 16), int(minor, 16))
+                except (ValueError, OverflowError):
+                    raise RuntimeError('HOLD_PROCESS_MAPS_INODE_UNREADABLE') from None
+                if (dev, int(fields[4])) == target:
                     raise RuntimeError('HOLD_MODEL_MEMORY_MAPPED')
-        except (FileNotFoundError,ProcessLookupError):
+        except (FileNotFoundError, ProcessLookupError):
             continue
         except PermissionError:
             raise RuntimeError('HOLD_PROCESS_SCAN_PERMISSION') from None
-
 
 
 def independent_restore(row, restore_test_dir, timeout=3600):

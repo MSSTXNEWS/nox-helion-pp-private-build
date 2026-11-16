@@ -193,6 +193,24 @@ class ColdTests(unittest.TestCase):
         self.assertTrue(self.src.exists())
     def test_open_file_blocks_eviction(self):
         with self.src.open('rb'),self.assertRaises(RuntimeError):cold.assert_not_open(self.src)
+    def test_open_hardlink_alias_blocks_eviction_by_inode(self):
+        alias = self.root/'other-name.gguf'
+        os.link(self.src, alias)
+        with alias.open('rb'), self.assertRaisesRegex(RuntimeError, 'HOLD_MODEL_OPEN_BY_PROCESS'):
+            cold.assert_not_open(self.src)
+
+    def test_mapped_hardlink_alias_blocks_eviction_by_inode(self):
+        import mmap
+        alias = self.root/'mapped-alias.gguf'
+        os.link(self.src, alias)
+        with alias.open('rb') as stream:
+            mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
+        try:
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_MODEL_MEMORY_MAPPED'):
+                cold.assert_not_open(self.src)
+        finally:
+            mapped.close()
+
     def test_verified_fixture_eviction_record(self):
         row=cold.copy_verified(self.job)
         with patch.object(cold,'assert_not_open'), patch.object(cold,'independent_restore',return_value=True):
