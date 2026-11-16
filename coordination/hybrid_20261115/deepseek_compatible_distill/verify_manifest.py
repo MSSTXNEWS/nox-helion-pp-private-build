@@ -5,6 +5,7 @@ This file does not download weights, inspect host paths, or start training.
 from __future__ import annotations
 import hashlib
 import json
+import math
 import re
 
 SCHEMA = "NOX_DEEPSEEK_TEACHER_STUDENT_SOURCE_MANIFEST_V1"
@@ -205,14 +206,15 @@ def validate(manifest: dict) -> dict:
             or evaluation.get("holdout_sha256") != holdout_sha):
         blockers.append("EVAL_HOLDOUT_HASH_MISMATCH")
     for key in ("baseline_student_sha256", "candidate_adapter_sha256",
-                "fixed_ru_es_case_set_sha256"):
+                "fixed_ru_es_case_set_sha256", "evaluation_report_sha256",
+                "evaluator_source_sha256"):
         value = evaluation.get(key)
         if not isinstance(value, str) or not HEX64.fullmatch(value):
             blockers.append("EVAL_ARTIFACT_HASH_MISSING")
     threshold = evaluation.get("minimum_improvement_threshold")
     metrics = evaluation.get("before_after_metrics")
-    if (type(threshold) not in {int, float} or threshold <= 0
-            or not isinstance(metrics, dict)):
+    if (type(threshold) not in {int, float} or not math.isfinite(threshold)
+            or threshold <= 0 or not isinstance(metrics, dict)):
         blockers.append("RU_ES_BASELINE_METRICS_MISSING")
     else:
         for language in ("ru", "es"):
@@ -220,6 +222,8 @@ def validate(manifest: dict) -> dict:
             if (not isinstance(pair, dict)
                     or type(pair.get("baseline")) not in {int, float}
                     or type(pair.get("candidate")) not in {int, float}
+                    or not math.isfinite(pair["baseline"])
+                    or not math.isfinite(pair["candidate"])
                     or not 0.0 <= pair["baseline"] <= 1.0
                     or not 0.0 <= pair["candidate"] <= 1.0):
                 blockers.append("RU_ES_BASELINE_METRICS_MISSING")
