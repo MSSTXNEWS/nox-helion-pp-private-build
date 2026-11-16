@@ -170,6 +170,7 @@ def release_hold_and_start_trainer():
  hold_sha=None
  attempts=STATE/'train_volta_t866u.attempts'
  prior_attempts=None
+ attempts_written=False
  require_stage_admission()  # immediately before TRAIN_HOLD can be released
  try:
   if hold.is_file() and not hold.is_symlink():
@@ -183,20 +184,23 @@ def release_hold_and_start_trainer():
    hold_sha=digest(prior)
    archived=STATE/('TRAIN_HOLD.resumed_by_owner_'+REQUEST)
    if archived.exists() or archived.is_symlink():raise RuntimeError('HOLD_TRAIN_HOLD_ARCHIVE_COLLISION')
+   require_stage_admission()  # immediately before archiving TRAIN_HOLD
    hold.rename(archived)
   if attempts.exists():
    prior_attempts=backup(attempts)
   require_stage_admission()
   atomic(attempts,b'0\\n')
+  attempts_written=True
   require_stage_admission()  # last fence immediately before supervisor start
  except BaseException:
-  if prior_attempts is None:
-   try:
-    if attempts.is_symlink() or attempts.is_file():attempts.unlink()
-   except FileNotFoundError:
-    pass
-  else:
-   atomic(attempts,prior_attempts)
+  if attempts_written:
+   if prior_attempts is None:
+    try:
+     if attempts.is_symlink() or attempts.is_file():attempts.unlink()
+    except FileNotFoundError:
+     pass
+   else:
+    atomic(attempts,prior_attempts)
   _restore_train_hold(hold,archived,hold_identity,hold_sha)
   raise
  return command(['supervisorctl','start','nox-train-volta-t866u'],40)
