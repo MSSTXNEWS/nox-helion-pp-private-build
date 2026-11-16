@@ -95,5 +95,14 @@
     "current_leases": "UNKNOWN"
   },
   "rollback": "GitHub exact CAS rollback of modified two source/test blobs only after fresh HEAD; native rollback unnecessary because not installed.",
-  "next": "Fresh owner-native STOP/MAINTENANCE/lease, independently verified storage and restore; then original Range claims and SHA, Maya CUDA inference, original single Resonance SSE/STOP/S03 RU/ES p50/p95. No Qwen restart."
+  "next": "Fresh owner-native STOP/MAINTENANCE/lease, independently verified storage and restore; then original Range claims and SHA, Maya CUDA inference, original single Resonance SSE/STOP/S03 RU/ES p50/p95. No Qwen restart.",
+  "latest_branch_reconciliation": {
+    "observed_head": "1a7823680ea893ad2516a2cee502389c39227dcb",
+    "concurrent_code_blob": "ffa46b0f6e7ed9fed00e622449b07e3f756466fc",
+    "concurrent_test_blob": "cc16cc8ce5070d89b342ddf6c1b4316c2165c8ac",
+    "exact_regression_signatures_in_latest_code_and_test": "BOTH_PRESENT_AT_READBACK",
+    "latest_concurrent_changes_CI": "NOT_CLAIMED",
+    "tested_exact_commit": "0716001d023bc97b537ff01f73b97b5345f6e670",
+    "reason": "Other workers changed original two files after this source test. No force/reset; source fix and test signatures survived in readback."
+  }
 }
