@@ -247,7 +247,10 @@
             first_visible_token_ms:firstVisibleMs,
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
-          event({type:'error',error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150)});
+          event({type:'error',
+            error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+            // HTTP cancellation is confirmed; GPU/native execution is not.
+            gpu_stop_verified:false});
         }finally{
           signal?.removeEventListener?.('abort',onAbort);
           if(!closed){closed=true;try{controller.close();}catch{}}

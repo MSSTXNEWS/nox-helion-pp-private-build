@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -26,7 +26,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       onHistory?.();
       if(stallHistoryBody)return new Response(new ReadableStream({start(){}}));
       return Response.json({status:'READY',dialog_id:id,messages:[
-        {role:'user',exchange_id:historyExchangeId,content:prompt,ts:'2026-11-15T00:00:00Z'},
+        {role:'user',exchange_id:historyExchangeId,content:expectedQuestion,ts:'2026-11-15T00:00:00Z'},
         {role:'assistant',exchange_id:historyExchangeId,content:reply,ts:'2026-11-15T00:00:01Z'}, ...historyTail]});
     }
     if(u.pathname==='/api/ui/memory/dialogs/update'){
@@ -37,7 +37,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
     }
     if(u.pathname==='/api/nox/chat/stream'){
       const b=JSON.parse(opts.body);
-      assert.equal(b.message,prompt);
+      assert.equal(b.message,expectedQuestion);
       assert.equal(b.dialog_id,id);
       assert.deepEqual(b.history,[]);
       assert.equal(opts.credentials,'same-origin');
@@ -1122,6 +1122,98 @@ test('V172 aborts stalled non-2xx owner error bodies on create, model and S03',a
     if(stage==='create')assert.equal(calls.includes('/api/nox/chat/stream'),false);
     if(stage==='history')assert(calls.includes('/api/ui/memory/dialogs/history'));
   }
+});
+
+
+test('V174 owner SSE preserves RU and ES prompts through verified terminal receipts',async()=>{
+  for(const [question,reply] of [
+    ['Какой следующий шаг по NOX?','Сначала проверить память и ответить по-русски.'],
+    ['¿Cuál es el siguiente paso de NOX?','Primero comprobar la memoria y responder en español.']
+  ]){
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+      undefined,false,6,undefined,'verified-exchange-01',[],false,false,question);
+    const response=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:question,dialog_id:id,request_id:'v174-ru-es'})});
+    assert.equal(response.headers.get('content-type'),'text/event-stream');
+    const reader=response.body.getReader(),decoder=new TextDecoder();
+    const first=await reader.read();
+    const meta=JSON.parse(decoder.decode(first.value).slice(6).trim());
+    assert.equal(meta.type,'meta');
+    const initial=await Promise.race([
+      reader.read(),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V174_BUFFERED_DELTA')),90))
+    ]);
+    const firstEvent=JSON.parse(decoder.decode(initial.value).slice(6).trim());
+    assert.equal(firstEvent.type,'token');
+    assert(reply.startsWith(firstEvent.t));
+    const frames=[firstEvent];
+    for(;;){
+      const chunk=await reader.read();
+      if(chunk.done)break;
+      frames.push(JSON.parse(decoder.decode(chunk.value).slice(6).trim()));
+    }
+    assert.equal(frames.filter(x=>x.type==='done').length,1);
+    assert.equal(frames.at(-1).type,'done','terminal success must be the final event');
+    const done=frames.at(-1);
+    assert.equal(done.saved,true);
+    assert.equal(done.s03_integrated,true);
+    assert.equal(done.history_persisted,true);
+    assert.notEqual(done.gpu_stop_verified,true);
+    assert.equal(frames.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+    assert(f.calls.some(x=>x.path==='/api/nox/chat/stream'));
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+    assert.equal(f.calls.some(x=>x.path==='/api/nox/stop'),false);
+  }
+});
+
+test('V174 abort before model headers cancels the same POST and keeps GPU stop unverified',async()=>{
+  const calls=[],caller=new AbortController();
+  let modelSignal=null;
+  const native=async(path,opts={})=>{
+    const u=new URL(String(path),'https://nox.local');
+    calls.push({path:u.pathname+u.search,method:opts.method||'GET',signal:opts.signal});
+    if(u.pathname==='/api/ui/memory/dialogs/history')
+      return Response.json({status:'READY',dialog_id:id,messages:[]});
+    if(u.pathname==='/api/nox/chat/stream'){
+      modelSignal=opts.signal;
+      return new Promise(()=>{}); // fetch hangs before response headers
+    }
+    return new Response('UNEXPECTED_ROUTE',{status:404});
+  };
+  const window={NOX_NATIVE_OWNER:true,fetch:native};
+  const pathname='/nox-web-v29/pc/resonance.html';
+  const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
+  vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+    TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+  const response=await window.fetch('/api/nox/chat',{method:'POST',signal:caller.signal,
+    body:JSON.stringify({message:'Отмени до HTTP headers',dialog_id:id,request_id:'v174-stop-before-headers'})});
+  const reader=response.body.getReader(),decoder=new TextDecoder();
+  const first=await reader.read();
+  assert.equal(JSON.parse(decoder.decode(first.value).slice(6).trim()).type,'meta');
+  for(let i=0;i<40&&!modelSignal;i++)await new Promise(resolve=>setTimeout(resolve,0));
+  assert(modelSignal,'the original native stream request must be pending before abort');
+  caller.abort();
+  let rest='',frames=[];
+  for(;;){
+    const chunk=await Promise.race([reader.read(),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V174_STOP_BEFORE_HEADERS')),500))]);
+    if(chunk.done)break;
+    rest+=decoder.decode(chunk.value,{stream:true});
+    let boundary;
+    while((boundary=rest.indexOf('\\n\\n'))>=0){
+      const raw=rest.slice(0,boundary);rest=rest.slice(boundary+2);
+      if(raw.startsWith('data: '))frames.push(JSON.parse(raw.slice(6)));
+    }
+  }
+  assert.equal(frames.filter(x=>x.type==='done').length,0);
+  assert.equal(frames.filter(x=>x.type==='error').length,1);
+  const stopped=frames.at(-1);
+  assert.equal(stopped.error,'STREAM_STOP_REQUESTED');
+  assert.equal(stopped.gpu_stop_verified,false);
+  assert.equal(modelSignal.aborted,true);
+  assert.equal(calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert.equal(calls.some(x=>x.path==='/api/nox/stop'),false);
+  assert.equal(calls.some(x=>x.path==='/api/ui/memory/dialogs/history'),false);
 });
 
 test('V173 legacy RU ES first meaningful delta precedes delayed native done, S03 verified',async()=>{
