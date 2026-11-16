@@ -29,7 +29,7 @@ OWNER_ID = 340718567
 WORKFLOW = '.github/workflows/nox-v61-encrypted-checkpoint-export.yml'
 REPOSITORY = Path(__file__).resolve().parents[1]
 AUTH_PREFIX_SHA = '095508ea245b95ac9d1623c5919de551a5c67ec47e2f561a4b3eafad800d6728'
-SSH_HELPER_SHA = '0d38365146c6e580dbcdc04f4b7c9a973bacd2713adcbff4cf39eb334765969b'
+SSH_HELPER_SHA = 'f7d0492155133ae0d5606cf663df1bd55a8a31f9966f632dd5f781d5fc429f0e'
 HOST_PIN = 'SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 CORE_SHA = 'e9a78cd60c5cada7d9f3df5ce82c872bd11b805e8d31aee4707983a94d01c353'
 PUBLIC_SHA = 'd96382c13bd039dcd85551c36b68bebde4e5b7d93d4a711b30ce75c05d93dc32'
@@ -73,7 +73,7 @@ def authentication_namespace():
     core.require(core.digest(prefix.encode()) == AUTH_PREFIX_SHA, 'AUTH_PREFIX_PIN')
     helper = REPOSITORY / 'nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py'
     core.require(core.digest(helper.read_bytes()) == SSH_HELPER_SHA, 'SSH_HELPER_PIN')
-    ns = {'__file__': str(path), 'sys': sys, 'Path': Path, 'os': os, 'ipaddress': ipaddress,
+    ns = {'__file__': str(path), 'sys': sys, 'Path': Path, 'os': os, 're': re, 'ipaddress': ipaddress,
           'socket': socket, 'subprocess': subprocess, 'json': json, 'time': time,
           'INSTANCE': core.INSTANCE, 'PIN': HOST_PIN, 'MASTER': None}
     # Exact prefix ends before payload selection. Only this added return is new.

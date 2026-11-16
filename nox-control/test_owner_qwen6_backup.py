@@ -235,6 +235,7 @@ class TransportScopeTests(unittest.TestCase):
         self.assertEqual(ns['PIN'], runner.HOST_PIN)
         self.assertIsNone(ns['MASTER'])
         self.assertNotIn('payload', ns['run_native'].__code__.co_names)
+        self.assertIs(ns['run_native'].__globals__.get('re'), runner.re)
 
     def test_push_never_authorizes_export_even_as_owner(self):
         with tempfile.TemporaryDirectory() as temporary:
