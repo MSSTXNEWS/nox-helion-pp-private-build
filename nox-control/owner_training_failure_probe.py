@@ -15,7 +15,8 @@ except NameError:BUNDLE={}
 ROOT=Path('/root/nox');STATE=ROOT/'state';OUTPUT=ROOT/'lora/qlora_t866u/runs_owner_hybrid'
 SERVICE='nox-train-volta-t866u'
 HELPER_SHA='b3d1887b92cb805076301f6631e56b6e42c48e7dae02d62f2a272c10669644e0'
-FAILED_REQUEST='6905113544';FAILED_SOURCE='4c1de82ab1e3307de63a7b60639497841cda6d41'
+FAILED_REQUEST='6905505383';FAILED_SOURCE='e5ff890d7424eb2abaa2e8d6188ca03759d4dc68'
+FAILED_RECEIPT_SHA='250ad99af3269cf8bd7856a63696cbd410a7caf2a5a7a451106bc44f8fe7cd5b'
 CLASSES={'RuntimeError','ValueError','TypeError','ImportError','ModuleNotFoundError','AttributeError',
          'KeyError','IndexError','OSError','MemoryError','OutOfMemoryError','NotImplementedError','AssertionError'}
 PATTERNS={
@@ -31,7 +32,15 @@ PATTERNS={
  'DEVICE_MAP_COMPUTED':r'device_map placement',
  'DEVICE_DISPATCH_BEGAN':r'dispatch devices=',
  'ADAPTER_TARGETS_SELECTED':r'lora target modules=',
- 'TRAINER_CONSTRUCTED':r'trainer api \d+ ok',
+ 'TRAINER_CONSTRUCTED':r'trainer api (?:\d+|sftconfig|legacy) ok',
+ 'ISINSTANCE_CLASS_ARGUMENT':r'isinstance\(\) arg 2 must be a type',
+ 'ISSUBCLASS_CLASS_ARGUMENT':r'issubclass\(\) arg [12] must be a class',
+ 'NONE_NOT_ITERABLE':r'argument of type .NoneType. is not iterable',
+ 'NONE_NO_LENGTH':r'object of type .NoneType. has no len',
+ 'CONFIG_OUTPUT_TYPE':r'args.*SFTConfig|SFTConfig.*instance',
+ 'GRADSCALER_MISSING':r'HOLD_FP16_GRADSCALER_NOT_PRESENT',
+ 'TOKENIZER_PAD_MISSING':r'pad_token.*(?:not set|None|missing)',
+ 'CUDA_ASSERT':r'device-side assert triggered',
  'DISK_FULL':r'No space left on device|Disk quota exceeded',
  'CUDA_KERNEL_UNAVAILABLE':r'no kernel image|invalid device function|CUDA error',
 }
@@ -64,6 +73,13 @@ def project_log(raw):
         if reasons:row['technical_patterns']=reasons
         exceptions=[name for name in CLASSES if re.search(r'\b'+name+r'\b',line)]
         if exceptions:row['exception_classes']=sorted(exceptions)
+        if re.search(r'trainer api (?:sftconfig|legacy) (?:TypeError|FAIL):',line):
+            for pattern,kind in (
+                (r"unexpected keyword argument ['\"]([A-Za-z_][A-Za-z0-9_]{0,63})['\"]",'UNEXPECTED_KEYWORD'),
+                (r"missing .* required .* argument: ['\"]([A-Za-z_][A-Za-z0-9_]{0,63})['\"]",'MISSING_ARGUMENT'),
+                (r"has no attribute ['\"]([A-Za-z_][A-Za-z0-9_]{0,63})['\"]",'MISSING_ATTRIBUTE')):
+                match=re.search(pattern,line)
+                if match:row['constructor_error']={'kind':kind,'identifier':match[1]}
         counts=re.search(r'lora target modules=(\d+) skipped_offloaded=(\d+)',line)
         if counts:row.update(adapter_target_modules=int(counts[1]),skipped_offloaded=int(counts[2]))
         load=re.search(r'Loading checkpoint shards.*?(\d+)/(\d+)',line)
@@ -91,9 +107,11 @@ def main():
     raw=base64.b64decode(BUNDLE.get('owner_native_repair.py',''),validate=True)
     if digest(raw)!=HELPER_SHA:fail('HOLD_TRAIN_PROBE_HELPER_PIN')
     helper=types.ModuleType('owner_train_probe_helper');exec(compile(raw,'<pinned-native-helper>','exec'),helper.__dict__)
-    previous=json.loads(read(STATE/('owner_maintenance_'+FAILED_REQUEST+'.json'),2*1024*1024))
-    if (previous.get('source_sha')!=FAILED_SOURCE or previous.get('state')!='HOLD_TRAINING_RESUME'
-            or previous.get('error')!='HOLD_TRAINER_EXITED_WITHOUT_OPTIMIZER_PROOF'):
+    previous_raw=read(STATE/('owner_maintenance_'+FAILED_REQUEST+'.json'),2*1024*1024)
+    previous=json.loads(previous_raw)
+    if (digest(previous_raw)!=FAILED_RECEIPT_SHA or previous.get('source_sha')!=FAILED_SOURCE
+            or previous.get('state')!='HOLD_TRAINING_CONFIG_RECOVERY'
+            or previous.get('error')!='HOLD_RECOVERY_TRAINER_EXITED_WITHOUT_PROOF'):
         fail('HOLD_TRAIN_PROBE_FAILED_RECEIPT_CHANGED')
     result={'schema':'NOX_OWNER_TRAINING_FAILURE_PROBE_V1','request':request,'source_sha':source,
             'failed_request':FAILED_REQUEST,'mutations':False,'private_training_text_exported':False,
