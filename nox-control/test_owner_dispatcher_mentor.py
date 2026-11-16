@@ -178,6 +178,35 @@ class MentorTests(unittest.TestCase):
             receipt.write_text('{}')
             self.assertIsNone(mentor.verify_success(task, evidence))
 
+    def test_worker_count_config_is_not_six_native_pids(self):
+        """Configured concurrency is not evidence of OS process identity."""
+        task = {'id': 'owner.dispatcher', 'handler': 'owner_component_validate',
+                'params': {'component': 'dispatcher_workers'}}
+        with patch.object(mentor, 'read_json', return_value={
+                'workers': 6, 'min_workers': 6, 'max_workers': 6}):
+            outcome = mentor.component_validation(task)
+            self.assertIsNone(outcome['verification'])
+            self.assertEqual(outcome['state'], 'HOLD_WORKERS_PID_STARTTICKS_UNVERIFIED')
+            verified, result = mentor.handle_component_validation(task)
+            self.assertFalse(verified)
+            self.assertEqual(result, 'HOLD_WORKERS_PID_STARTTICKS_UNVERIFIED')
+            self.assertIsNone(mentor.verify_success(task))
+
+    def test_historical_step_receipt_is_not_live_optimizer_update(self):
+        """Do not publish previous global_step as new successful training."""
+        task = {'id': 'owner.training_stack', 'handler': 'owner_component_validate',
+                'params': {'component': 'training_checkpoint'}}
+        old_receipt = {'state': 'VERIFIED_BOUNDED_ADAPTER_UPDATE',
+                       'adapter_delta_verified': True, 'global_step': 25}
+        with patch.object(mentor, 'read_json', return_value=old_receipt):
+            outcome = mentor.component_validation(task)
+            self.assertIsNone(outcome['verification'])
+            self.assertEqual(outcome['state'], 'HOLD_FRESH_OPTIMIZER_RESTORE_UNVERIFIED')
+            verified, result = mentor.handle_component_validation(task)
+            self.assertFalse(verified)
+            self.assertEqual(result, 'HOLD_FRESH_OPTIMIZER_RESTORE_UNVERIFIED')
+            self.assertIsNone(mentor.verify_success(task))
+
     def test_secret_redaction_is_not_the_broken_native_capture_group(self):
         output = mentor.redact('api_key="example-secret-value" Bearer abcdef123456 hf_abcdefghijklmnop')
         self.assertNotIn('example-secret-value', output)
