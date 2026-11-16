@@ -1216,6 +1216,68 @@ test('V174 abort before model headers cancels the same POST and keeps GPU stop u
   assert.equal(calls.some(x=>x.path==='/api/ui/memory/dialogs/history'),false);
 });
 
+
+test('V175 cross-version V29.3 page stage → V135 SSE → V112 NDJSON/provider contract',()=>{
+  const bridge=fs.readFileSync(file,'utf8');
+  const stage=fs.readFileSync('coordination/onepass/v135_resonance_owner_stage.py','utf8');
+  const native=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py','utf8');
+  const crossTest=fs.readFileSync('coordination/onepass/test_v135_resonance_owner_bridge.cjs','utf8');
+
+  // The V29.3 archive builder inserts the V135 owner shim only in the two
+  // existing Resonance pages; this fixture does not claim a live page install.
+  assert(stage.includes('PAGES = ("site/pc/resonance.html", "site/pc/v22/resonance.template.html")'));
+  assert(stage.includes('SCRIPT_URL = "/nox-web-v29/nox-v135-resonance-owner-bridge.js"'));
+  assert(stage.includes('SCRIPT_TAG =') && stage.includes('SCRIPT_URL'), 'stage builder must retain its script-tag hook');
+  assert(bridge.includes("window.NOX_NATIVE_OWNER===true"));
+  assert(bridge.includes('nox-web-v29') && bridge.includes('v22') && bridge.includes('resonance'), 'shim must be scoped to existing Resonance pages');
+
+  // The shim maps the original page's OpenAI-style request to the existing V112
+  // route, preserves the message/dialog/history payload, and maps NDJSON to SSE.
+  assert(bridge.includes("url.pathname==='/api/nox/chat'&&method==='POST'"));
+  assert(bridge.includes("nativePost('/api/nox/chat/stream',{"));
+  assert(bridge.includes("message:data.message,dialog_id:id,task:'general',history:[]"));
+  assert(bridge.includes("event({type:'token',t:parts[index]})"));
+  assert(bridge.includes("event({type:'done',status:'done',saved:true,s03_integrated:true"));
+  assert(bridge.includes("error:nativeSignal.aborted?'STREAM_STOP_REQUESTED'"));
+  assert(bridge.includes("gpu_stop_verified:false"));
+  assert(!bridge.includes("gpu_stop_verified:true"));
+
+  const routeStart=native.indexOf("@app.post('/api/nox/chat/stream')");
+  const stopStart=native.indexOf("@app.post('/api/nox/stop')",routeStart);
+  assert(routeStart>=0&&stopStart>routeStart,'the existing V112 routes must be present');
+  const route=native.slice(routeStart,stopStart);
+  const recallStart=native.indexOf('def _s03_prompt_context(');
+  const recallEnd=native.indexOf('\ndef ',recallStart+4);
+  const recall=native.slice(recallStart,recallEnd);
+  assert(recallStart>=0&&recall.includes("callback = trusted.get('s03_recall')")&&
+    recall.includes("callback = trusted.get('recall')")&&
+    recall.includes("owner_scope=row.get('owner_scope',metadata.get('owner_scope'))")&&
+    recall.includes("owner_scope!=OWNER"),
+    'V112 must retrieve bounded S03 context and reject foreign owner scope');
+  assert(route.includes('memory_message=await asyncio.wait_for('));
+  assert(route.includes("payload={'messages':[memory_message]+history+[{'role':'user','content':question}]"),
+    'retrieved S03 context must enter the same provider message list');
+  assert(route.includes("wire=await trusted['_proxy_completion'](payload)"));
+  assert(route.includes("media_type='application/x-ndjson'"));
+  assert(route.includes("if kind=='delta':"));
+  assert(route.includes("if kind=='done':complete=True"));
+  const readback=route.indexOf("_readback,question,answer,started");
+  const save=route.indexOf("_save_exchange,dialog_id,question,answer");
+  const done=route.indexOf("yield _jsonl({'type':'done'");
+  assert(readback>=0&&save>readback&&done>save,
+    'V112 must verify fresh S03 and persist the dialog before NDJSON done');
+
+  const stop=native.slice(stopStart);
+  assert(stop.includes("'gpu_stop_verified':False"));
+  assert(!stop.includes("'gpu_stop_verified':True"));
+
+  // These executable tests exercise the browser shim using the actual source
+  // files while keeping owner cookies, GPU, S03 production DB and server offline.
+  assert(crossTest.includes("V174 owner SSE preserves RU and ES prompts"));
+  assert(crossTest.includes("V174 abort before model headers cancels the same POST"));
+  assert(crossTest.includes("V135 SSE user cancel aborts the SAME native stream"));
+});
+
 test('V173 legacy RU ES first meaningful delta precedes delayed native done, S03 verified',async()=>{
   for(const [reply,firstDeltaAt] of [
     ['Привет, NOX — я отвечаю по-русски.',6],
