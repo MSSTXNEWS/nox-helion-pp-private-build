@@ -165,7 +165,8 @@ def main():
                     and job.get('generation_verified') is False and job.get('outputs') == []
                     and not job.get('cancel_requested') and not job.get('prompt_id'), 'OLD_JOB_SCOPE')
             previous.append(job)
-        require({job['request']['kind'] for job in previous} == {'image', 'video'}, 'TWO_JOB_KINDS')
+        require(all(runtime.validate_request(job['request']) == job['request'] for job in previous),
+                'ORIGINAL_REQUEST_NORMALIZATION')
         require(not any(path.is_symlink() for path in (LINK, *LINK.parents)), 'LINK_SYMLINK')
         LINK.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
         sync_parent(LINK.parent)
