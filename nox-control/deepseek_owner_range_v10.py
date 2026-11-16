@@ -50,6 +50,14 @@ PINNED_FILE_FACTS = {
         "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3"
     )
 }
+COLDPACK_PROGRESS_SHA256 = "e8dfbfc7f2c1b946d0ca0e88ff7e90673739d059a4a4b2f1eea6b7bd4fbe1469"
+COLDPACK_PROGRESS_MAX_BYTES = 1024 * 1024
+COLDPACK_SOURCE_MANIFEST_SHA256 = "827231efd30e56cf838762403206baef50ea620f2fc5d914056e8c18011313f0"
+COLDPACK_FOLDER = "/NOX_SYSTEM_KIT_20261116/DeepSeek_V4.1_Flash_1017_COLDPACK"
+COLDPACK_EXPECTED_FILES = {
+    name: fact for name, fact in PINNED_FILE_FACTS.items()
+    if name != "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf"
+}
 
 class Hold(RuntimeError): pass
 
@@ -142,6 +150,126 @@ def load_manifest(raw):
             a.get('target')=='DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf' and
             a.get('duplicate_bytes') is False,'HOLD_SHARED_ENGRAM_ALIAS')
     return by
+
+
+def _validate_coldpack_progress(raw):
+    """Validate the immutable v57 coldpack receipt against all covered pins.
+
+    The receipt is a Library inventory, not permission to transfer. It proves
+    completed durable parts only for the five files it actually covers.
+    """
+    require(isinstance(raw, (bytes, bytearray)) and
+            0 < len(raw) <= COLDPACK_PROGRESS_MAX_BYTES,
+            'HOLD_COLDPACK_PROGRESS_REQUIRED')
+    require(hashlib.sha256(raw).hexdigest() == COLDPACK_PROGRESS_SHA256,
+            'HOLD_COLDPACK_PROGRESS_UNVERIFIED')
+    try:
+        progress = json.loads(raw, object_pairs_hook=_strict_manifest_pairs,
+                              parse_constant=_reject_manifest_nonfinite)
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise Hold('HOLD_COLDPACK_PROGRESS_INVALID') from exc
+    require(isinstance(progress, dict) and
+            progress.get('schema') == 'NOX_DEEPSEEK_COLDPACK_PROGRESS_V1' and
+            progress.get('revision') == REVISION and
+            progress.get('source_manifest_sha256') == COLDPACK_SOURCE_MANIFEST_SHA256 and
+            progress.get('expected_total_bytes') == 248828477216 and
+            progress.get('native_ready') is False and
+            progress.get('seekable_placement_verified') is False,
+            'HOLD_COLDPACK_PROGRESS_IDENTITY')
+    rows = progress.get('files')
+    require(isinstance(rows, list) and len(rows) == len(COLDPACK_EXPECTED_FILES),
+            'HOLD_COLDPACK_PROGRESS_COUNT')
+    by = {}
+    for row in rows:
+        require(isinstance(row, dict), 'HOLD_COLDPACK_PROGRESS_ROW')
+        name = row.get('path')
+        require(name in COLDPACK_EXPECTED_FILES and name not in by,
+                'HOLD_COLDPACK_PROGRESS_PATH')
+        size, sha = COLDPACK_EXPECTED_FILES[name]
+        url = f'https://huggingface.co/{REPO}/resolve/{REVISION}/{name}'
+        count = math.ceil(size / 100_000_000)
+        require(row.get('bytes') == size and row.get('sha256') == sha and
+                row.get('url') == url and
+                isinstance(row.get('parts'), list) and len(row['parts']) == count,
+                'HOLD_COLDPACK_PROGRESS_FILE_IDENTITY')
+        total = 0
+        all_saved = True
+        for index, part in enumerate(row['parts'], 1):
+            amount = min(100_000_000, size - (index - 1) * 100_000_000)
+            part_name = f'{name}.part{index:04d}'
+            require(isinstance(part, dict) and part.get('file') == part_name and
+                    part.get('index') == index and
+                    part.get('offset') == (index - 1) * 100_000_000 and
+                    part.get('bytes') == amount,
+                    'HOLD_COLDPACK_PART_IDENTITY')
+            state = part.get('state')
+            if state == 'MISSING':
+                require(part.get('sha256') is None and part.get('remote') is None,
+                        'HOLD_COLDPACK_MISSING_PART_IDENTITY')
+                all_saved = False
+            elif state == 'SAVED_METADATA_VERIFIED':
+                remote = part.get('remote')
+                require(isinstance(part.get('sha256'), str) and SHA.fullmatch(part['sha256']) and
+                        isinstance(remote, dict) and remote.get('name') == part_name and
+                        remote.get('path') == f'{COLDPACK_FOLDER}/{part_name}' and
+                        remote.get('size_bytes') == amount and
+                        isinstance(remote.get('library_file_id'), str) and
+                        isinstance(remote.get('file_id'), str),
+                        'HOLD_COLDPACK_SAVED_PART_IDENTITY')
+            else:
+                raise Hold('HOLD_COLDPACK_PART_STATE')
+            total += amount
+        require(total == size, 'HOLD_COLDPACK_PART_TOTAL')
+        complete = (all_saved and row.get('whole_sha256_verified') is True and
+                    row.get('hashed_prefix_bytes') == size and
+                    row.get('observed_prefix_sha256') == sha)
+        if all_saved:
+            require(complete, 'HOLD_COLDPACK_WHOLE_FILE_UNVERIFIED')
+        by[name] = 'COMPLETE' if complete else 'INCOMPLETE'
+    require(set(by) == set(COLDPACK_EXPECTED_FILES),
+            'HOLD_COLDPACK_PROGRESS_COVERAGE')
+    return by
+
+
+def reject_completed_coldpack_duplicate(name, progress_raw):
+    """Reject a stale-manifest retry when v57 already proves this file saved."""
+    states = _validate_coldpack_progress(progress_raw)
+    if states.get(name) == 'COMPLETE':
+        raise Hold('HOLD_COLDPACK_ALREADY_COMPLETE')
+    return states.get(name, 'UNCOVERED')
+
+
+def read_coldpack_progress_file(path):
+    """Bounded no-follow read of the pinned progress receipt supplied by owner."""
+    path = Path(path)
+    before = regular(path)
+    require(before.st_size <= COLDPACK_PROGRESS_MAX_BYTES,
+            'HOLD_COLDPACK_PROGRESS_LIMIT')
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError as exc:
+        raise Hold('HOLD_COLDPACK_PROGRESS_UNREADABLE') from exc
+    try:
+        opened = os.fstat(fd)
+        require(stat.S_ISREG(opened.st_mode) and opened.st_uid == os.geteuid() and
+                opened.st_nlink == 1 and
+                (opened.st_dev, opened.st_ino, opened.st_size) ==
+                (before.st_dev, before.st_ino, before.st_size),
+                'HOLD_COLDPACK_PROGRESS_RACE')
+        data = bytearray()
+        while len(data) <= COLDPACK_PROGRESS_MAX_BYTES:
+            chunk = os.read(fd, min(65536, COLDPACK_PROGRESS_MAX_BYTES + 1 - len(data)))
+            if not chunk:
+                break
+            data.extend(chunk)
+        after = os.fstat(fd)
+        require((after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns) ==
+                (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns) and
+                len(data) == opened.st_size and len(data) <= COLDPACK_PROGRESS_MAX_BYTES,
+                'HOLD_COLDPACK_PROGRESS_RACE')
+        return bytes(data)
+    finally:
+        os.close(fd)
 
 def stop(root):
     """Fail closed when an owner STOP flag is present OR unreadable.
@@ -390,7 +518,8 @@ def finalize_complete_partial(row, partial, final, destination, root, lease_file
     atomic_receipt(destination/(row['path']+'.verified.json'),receipt)
     return {'state':'VERIFIED_FINAL','file':row['path'],'new_bytes':new_bytes,'sha256':actual}
 
-def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=urlopen):
+def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=urlopen,
+                 progress_raw=None):
     """One bounded transfer. Require correct 206 Content-Range even at offset zero.
     Final path is published only after full SHA. Partial is left untouched on HOLD."""
     require(1<=limit<=MAX_RANGE,'HOLD_RANGE_BUDGET')
@@ -398,6 +527,9 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
     destination=Path(destination);root=Path(root)
     require(destination.is_dir() and not destination.is_symlink(),'HOLD_SEEKABLE_STORAGE_MISSING')
     name=row['path'];require(FILE.fullmatch(name),'HOLD_UNEXPECTED_FILE')
+    # Never let an older Drive manifest authorize a second transfer for any
+    # file proven complete by the immutable Library progress receipt.
+    reject_completed_coldpack_duplicate(name, progress_raw)
     stop(root);lease(lease_file,request,time.time(),root)
     fd=os.open(destination/'.nox-deepseek-owner.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
     partial_guard_fd=None
@@ -520,6 +652,8 @@ def main():
     ap.add_argument('destination',type=Path)
     ap.add_argument('--inventory',action='store_true')
     ap.add_argument('--download',default='')
+    ap.add_argument('--coldpack-progress',type=Path,
+                    help='Owner-supplied exact Library progress v57 receipt; required for transfer')
     ap.add_argument('--lease',type=Path)
     ap.add_argument('--request',default='')
     ap.add_argument('--max-range-mib',type=int,default=256)
@@ -528,9 +662,11 @@ def main():
     if a.inventory:
         print(json.dumps({'status':'READ_ONLY','files':inventory(by,a.destination)},ensure_ascii=False));return
     require(a.download in by,'HOLD_FILE_NOT_IN_MANIFEST')
-    require(a.lease is not None and a.request,'HOLD_OWNER_LEASE_REQUIRED')
+    require(a.lease is not None and a.request and a.coldpack_progress is not None,
+            'HOLD_OWNER_LEASE_OR_COLDPACK_PROGRESS_REQUIRED')
+    progress_raw=read_coldpack_progress_file(a.coldpack_progress)
     result=download_one(by[a.download],a.destination,Path('/root/nox'),a.lease,a.request,
-                        a.max_range_mib*1024**2)
+                        a.max_range_mib*1024**2,progress_raw=progress_raw)
     print(json.dumps(result,ensure_ascii=False))
 
 if __name__=='__main__':
