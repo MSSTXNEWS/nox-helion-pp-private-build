@@ -32,7 +32,7 @@ def _public_url(url: str) -> str:
     if (parsed.scheme != "https" or parsed.username or parsed.password
             or parsed.port not in (None, 443)
             or not (host == "huggingface.co" or host.endswith(".huggingface.co")
-                    or host.endswith(".hf.co")):
+                    or host.endswith(".hf.co"))):
         raise ProbeHold("PUBLIC_HF_REDIRECT_SCOPE")
     return url
 
