@@ -70,22 +70,22 @@ jobs:
           audit = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(audit)
           remote_python = (
-              "import json, os\\nfrom pathlib import Path\\n"
-              + "MODEL_ROOT=" + repr(audit.MODEL_ROOT) + "\\n"
-              + "MODEL_MANIFEST_REVISION=" + repr(audit.MODEL_MANIFEST_REVISION) + "\\n"
-              + "PINNED_MODEL_FILES=" + repr(audit.PINNED_MODEL_FILES) + "\\n"
+              "import json, os\nfrom pathlib import Path\n"
+              + "MODEL_ROOT=" + repr(audit.MODEL_ROOT) + "\n"
+              + "MODEL_MANIFEST_REVISION=" + repr(audit.MODEL_MANIFEST_REVISION) + "\n"
+              + "PINNED_MODEL_FILES=" + repr(audit.PINNED_MODEL_FILES) + "\n"
               + inspect.getsource(audit.pinned_model_paths)
-              + "\\nresult=pinned_model_paths()\\n"
-              + "print('NATIVE_PINNED_MODEL_PATH_STATUS='+result['status'])\\n"
-              + "print('NATIVE_PINNED_MODEL_ROOT='+result.get('root',''))\\n"
-              + "print('NATIVE_PINNED_MODEL_REVISION='+result['manifest_revision'])\\n"
-              + "for row in result['files']:\\n"
-              + " print('NATIVE_DEEPSEEK_PATH='+json.dumps(row,separators=(',',':')))\\n"
-              + "print('NATIVE_READ_ONLY_COMPLETE=true')\\n"
+              + "\nresult=pinned_model_paths()\n"
+              + "print('NATIVE_PINNED_MODEL_PATH_STATUS='+result['status'])\n"
+              + "print('NATIVE_PINNED_MODEL_ROOT='+result.get('root',''))\n"
+              + "print('NATIVE_PINNED_MODEL_REVISION='+result['manifest_revision'])\n"
+              + "for row in result['files']:\n"
+              + " print('NATIVE_DEEPSEEK_PATH='+json.dumps(row,separators=(',',':')))\n"
+              + "print('NATIVE_READ_ONLY_COMPLETE=true')\n"
           )
           connection.REMOTE = (
-              "set -euo pipefail\\npython3 - <<'PYREMOTE'\\n"
-              + remote_python + "PYREMOTE\\n"
+              "set -euo pipefail\npython3 - <<'PYREMOTE'\n"
+              + remote_python + "PYREMOTE\n"
           )
           raise SystemExit(0 if connection.probe() else 2)
           PY
