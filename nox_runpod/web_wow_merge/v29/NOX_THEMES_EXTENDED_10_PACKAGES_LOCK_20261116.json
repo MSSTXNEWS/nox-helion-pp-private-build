@@ -1,0 +1,76 @@
+{
+  "packages": [
+    {
+      "name": "fluid-bg",
+      "version": "0.4.0",
+      "sha256": "6cd5bd8e13e145dac0178820d4afdb655b654c5050f613fa0e417729e2302cf6",
+      "bytes": 292192,
+      "license": "MIT"
+    },
+    {
+      "name": "fluid-core",
+      "version": "0.4.0",
+      "sha256": "e0b6b3a27f8606728b4f608f40465e63514481a3bf430f85d8b53879591f3eec",
+      "bytes": 33889,
+      "license": "MIT"
+    },
+    {
+      "name": "maath",
+      "version": "0.10.8",
+      "sha256": "18f03b8de32be2d4f3c180a49671196155bf01ffd8481b089240cb34b0c2017c",
+      "bytes": 38594,
+      "license": "MIT"
+    },
+    {
+      "name": "@tsparticles/engine",
+      "version": "4.6.0",
+      "sha256": "a450cb2e5a27367a10a60c41db8d008430db0d25bf347537c0cc065d5a6770cd",
+      "bytes": 207887,
+      "license": "MIT"
+    },
+    {
+      "name": "@tsparticles/preset-fire",
+      "version": "4.6.0",
+      "sha256": "eb8c93f1bcf6f379495e1c5b8778f8582ab265ba501c0a3f64ea419bda917a76",
+      "bytes": 138211,
+      "license": "MIT"
+    },
+    {
+      "name": "@tsparticles/preset-firefly",
+      "version": "4.6.0",
+      "sha256": "693c54f672a2c73449a421ba48800b77149ff5c9f7b400bbe6cb3806fdd753c5",
+      "bytes": 141312,
+      "license": "MIT"
+    },
+    {
+      "name": "@tsparticles/preset-hyperspace",
+      "version": "4.6.0",
+      "sha256": "1fff527d3a6e7b16000123438c788609dc5d00e4e349573ae235515857166d52",
+      "bytes": 144043,
+      "license": "MIT"
+    },
+    {
+      "name": "@tsparticles/preset-links",
+      "version": "4.6.0",
+      "sha256": "7623fe1d0cbf98cbed1355104df1b05114ca627349f18976e8a5766e774fb918",
+      "bytes": 143988,
+      "license": "MIT"
+    },
+    {
+      "name": "@tsparticles/preset-stars",
+      "version": "4.6.0",
+      "sha256": "71e809cb55279192cef2c96072b33b8bc46d15ff9951984a50df36a699aa7c63",
+      "bytes": 128948,
+      "license": "MIT"
+    },
+    {
+      "name": "@tsparticles/slim",
+      "version": "4.6.0",
+      "sha256": "e5db86d61f6a979fae6a634b2301bca84054b09beb15df0277d19593acce8c9d",
+      "bytes": 190340,
+      "license": "MIT"
+    }
+  ],
+  "licenseReviewRequired": true,
+  "source": "npm tarballs in Vercel sandbox; production not installed"
+}
