@@ -243,6 +243,50 @@ def training():
                                          for p in sorted(base.glob('*.safetensors'))[:50] if p.is_file() and not p.is_symlink()]})
         except (OSError,ValueError,TypeError):rows.append({'record':'trainable_hf_base','metadata_error':True})
     rows.append(hf_metadata_probe(base))
+    rows.extend(qwen_training_readback())
+    return rows
+
+def qwen_training_readback():
+    """Read bounded receipts of the EXISTING Qwen student; never infer updates.
+
+    No corpus text, optimizer tensors, arbitrary logs or other model paths are
+    opened. A Supervisor EXITED/FATAL line is not a terminal-result receipt.
+    """
+    base=ROOT/'lora'/'qwen35_9b'
+    if base.is_symlink() or not base.is_dir():
+        return [{'record':'qwen35_student','state':'RUN_DIRECTORY_NOT_OBSERVED'}]
+    runs=[p for p in base.glob('[0-9]*') if p.is_dir() and not p.is_symlink()]
+    rows=[]
+    for directory in sorted(runs)[-3:]:
+        for name in ('owner_progress.json','owner_last_result.json','owner_acceptance.json'):
+            path=directory/name
+            row={'record':'qwen35_student','run':directory.name,'receipt':name}
+            if path.is_symlink() or not path.is_file():
+                row['state']='NOT_OBSERVED';rows.append(row);continue
+            try:
+                st=path.stat()
+                if st.st_size>200000:
+                    row['state']='SIZE_HOLD';rows.append(row);continue
+                raw=path.read_bytes()
+                row.update(bytes=len(raw),mtime=st.st_mtime,sha256=hashlib.sha256(raw).hexdigest())
+                data=json.loads(raw)
+                if not isinstance(data,dict):
+                    row['state']='UNEXPECTED_FORMAT';rows.append(row);continue
+                keys=('schema','state','status','phase','request','training_started',
+                      'optimizer_steps_verified','successful_optimizer_steps',
+                      'successful_updates','global_step','step','loss',
+                      'checkpoint_verified','error','reason','finished_at','updated_at')
+                fields={}
+                for key in keys:
+                    if key not in data:continue
+                    value=data[key]
+                    if isinstance(value,(str,int,float,bool)) or value is None:
+                        fields[key]=redact(value)[:240] if isinstance(value,str) else value
+                row.update(state='METADATA_READ_ONLY',fields=fields)
+            except (OSError,ValueError,TypeError):
+                row['state']='READ_OR_PARSE_HOLD'
+            rows.append(row)
+    if not rows:return [{'record':'qwen35_student','state':'NO_RUN_RECEIPTS_OBSERVED'}]
     return rows
 
 def supervisor_config():
