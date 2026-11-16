@@ -24,15 +24,18 @@
   ],
   "tests": {
     "new_regressions": 4,
-    "scope": "SOURCE_UNIT_TESTS_CI_PENDING",
+    "scope": "SOURCE_GITHUB_ACTIONS_SUCCESS_70_OF_70",
     "replay_command": "python -m unittest nox-control/test_nox_cold_drive.py",
-    "native_installed": false
+    "native_installed": false,
+    "source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43855160189",
+    "source_ci_job_id": 133257434939,
+    "unit_test_result": "70/70 PASS"
   },
   "tasks": [
     {
       "n": 1,
       "status": "SOURCE_PRIOR_NATIVE_HOLD",
-      "details": "Starter 4/4 and wheelhouse 39/39 older metadata; Qwen, DeepSeek on-host locations/sha and server Drive OAuth unconfirmed"
+      "details": "Current Drive metadata readback for starter and wheelhouse manifest IDs/sizes/times; earlier 4/4 and 39/39 parts only. Full SHA, Qwen/DeepSeek host placements and server Drive OAuth remain HOLD."
     },
     {
       "n": 2,
@@ -53,7 +56,7 @@
     },
     {
       "n": 5,
-      "status": "SOURCE_PATCH_CI_PENDING_NATIVE_HOLD",
+      "status": "SOURCE_TESTED_70_OF_70_NATIVE_HOLD",
       "deleted_files": 0,
       "freed_bytes": 0,
       "details": "RAM-cache STOP safety patched; no physical cleanup/after-delete chat probe"
@@ -77,5 +80,27 @@
     "current_lease": null,
     "restarts": 0
   },
-  "next_step": "Owner-authorized OneHost read-only STOP/lease/Drive OAuth/restore check; after native fence use latest source guard, then per-file download or exact SHA eligible cleanup."
+  "next_step": "Owner-authorized OneHost read-only STOP/lease/Drive OAuth/restore check; after native fence use latest source guard, then per-file download or exact SHA eligible cleanup.",
+  "drive_metadata_readback": {
+    "starter_manifest": {
+      "id": "1h479rBz2iQwAzfmEyfSNAFAct2J6B0kg",
+      "bytes": 1072,
+      "modified_utc": "2026-11-16T02:34:38.664Z"
+    },
+    "wheelhouse_manifest": {
+      "id": "1oxmS0ZiboacyGmHG_OJ49FyoouNVjGRf",
+      "bytes": 7754,
+      "modified_utc": "2026-11-16T02:39:47.354Z"
+    },
+    "live_server_oauth": "NOT_VERIFIED",
+    "full_content_shas": "NOT_REHASHED"
+  },
+  "source_commit": "b0469cf8c498b0b64c637b49abe6318362aaa40e",
+  "native_facts": {
+    "gpu_pid_lease_stop": "NOT_MEASURED_THIS_SLOT",
+    "downloaded_bytes": 0,
+    "deleted_files": 0,
+    "freed_bytes": 0,
+    "restarts": 0
+  }
 }
