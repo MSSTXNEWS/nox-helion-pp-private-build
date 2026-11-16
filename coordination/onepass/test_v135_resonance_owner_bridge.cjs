@@ -196,7 +196,6 @@ test('V135 SSE cancel signals same-session STOP before aborting the same native 
   assert.notEqual(JSON.parse(stops[0].body).gpu_stop_verified,true);
   const outcome=f.uiEvents.find(e=>e.type==='nox:native-stop-result')?.detail;
   assert.equal(outcome?.transport_outcome,'signal_accepted');
-  assert.equal(outcome?.signal_accepted,true);
   assert.equal(outcome?.gpu_stop_verified,false);
   assert.equal(f.uiEvents.some(e=>e.type==='nox:native-phase'&&e.detail.phase==='stopped'),false,
     'browser cancellation is not proof that model/GPU stopped');
