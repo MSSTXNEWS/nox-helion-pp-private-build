@@ -64,6 +64,43 @@ def text(path, limit=20000):
         f.seek(max(0, p.stat().st_size-limit))
         return f.read(limit).decode(errors='replace')
 
+def storage_mount_metadata(mountinfo=None, statvfs=None):
+    """Bounded, read-only mount inventory; not a seek/write/owner-lease proof."""
+    if statvfs is None:
+        statvfs = os.statvfs
+    if mountinfo is None:
+        try:
+            mountinfo = Path('/proc/self/mountinfo').read_text(encoding='utf-8')[:500000]
+        except OSError:
+            return {'status':'UNKNOWN_MOUNTINFO','scope':'ALLOWLISTED_ONLY','mounts':[]}
+    roots = ('/', '/data', '/workspace', '/mnt', '/models', '/root/nox')
+    candidates = []
+    for line in mountinfo.splitlines()[:1024]:
+        if ' - ' not in line:
+            continue
+        left, right = line.split(' - ', 1)
+        fields, suffix = left.split(), right.split()
+        if len(fields) < 5 or not suffix:
+            continue
+        mount = re.sub(r'\\([0-7]{3})', lambda m:chr(int(m.group(1),8)), fields[4])
+        if mount not in roots and not any(mount.startswith(root + '/') for root in roots[1:]):
+            continue
+        fstype = suffix[0]
+        if fstype in ('proc','sysfs','tmpfs','devtmpfs','devpts','cgroup','cgroup2','mqueue','securityfs'):
+            continue
+        try:
+            v = statvfs(mount)
+            if v.f_blocks <= 0:
+                continue
+            candidates.append({'path':mount,'filesystem':fstype,'total_bytes':v.f_blocks*v.f_frsize,
+                               'free_bytes':v.f_bavail*v.f_frsize})
+        except (OSError, ValueError):
+            candidates.append({'path':mount,'filesystem':fstype,'status':'UNKNOWN_STATVFS'})
+        if len(candidates) >= 24:
+            break
+    return {'status':'READ_ONLY_MOUNT_METADATA','scope':'ALLOWLISTED_ONLY_NOT_EXHAUSTIVE',
+            'seekability':'NOT_TESTED','write_access':'NOT_TESTED','mounts':candidates}
+
 def hardware():
     out = {}
     for label, query in (('gpu','index,uuid,name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu'),('apps','pid,gpu_uuid,used_gpu_memory')):
@@ -72,6 +109,7 @@ def hardware():
         out[label] = {'rc':rc, 'rows':s.splitlines()[:40]}
     out['cgroup'] = {n:text('/sys/fs/cgroup/'+n, 6000) for n in ('memory.max','memory.high','memory.current','memory.stat','memory.events','cpu.max','cpu.stat')}
     out['disk'] = {p:dict(zip(('total','used','free'),shutil.disk_usage(p))) for p in ('/root/nox','/dev/shm') if Path(p).exists()}
+    out['mounts'] = storage_mount_metadata()
     out['cpu_affinity'] = len(os.sched_getaffinity(0))
     return out
 
