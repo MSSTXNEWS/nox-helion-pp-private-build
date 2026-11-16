@@ -231,5 +231,42 @@ class NightlyCorpusTests(unittest.TestCase):
                          [r["split"] for r in changed["accepted"]])
 
 
+
+    def test_owner_threeway_export_verifies_in_existing_2d_gate(self):
+        data,policy=self._approved_threeway()
+        candidate=c.build_owner_pinned_threeway_sft(data,policy)
+        with tempfile.TemporaryDirectory(prefix="nox_owner_threeway_",dir="/tmp/nox") as root:
+            result=c.export_owner_pinned_threeway(root,candidate)
+            self.assertEqual(result["status"],"THREEWAY_SOURCE_CORPUS_EXPORTED_NOT_TRAINED")
+            self.assertEqual(result["counts"],{"train":1,"dev":1,"holdout":1})
+            self.assertEqual(result["optimizer_updates_verified"],0)
+            self.assertFalse(result["native_queue_modified"])
+            verified=a.verify_corpus(result["path"])
+            self.assertEqual(verified["state"],"VERIFIED_SOURCE_CORPUS")
+            self.assertEqual(verified["counts"],result["counts"])
+            manifest=json.loads((Path(result["path"])/"manifest.json").read_text())
+            self.assertFalse(manifest["owner_corpus_identity_native_verified"])
+            self.assertFalse(manifest["new_deepseek_distillation_claimed"])
+            self.assertEqual(c.export_owner_pinned_threeway(root,candidate)["status"],
+                             "HOLD_ALREADY_EXPORTED")
+
+    def test_threeway_export_rejects_tampering_and_source_overlap(self):
+        import copy
+        data,policy=self._approved_threeway()
+        candidate=c.build_owner_pinned_threeway_sft(data,policy)
+        with tempfile.TemporaryDirectory(prefix="nox_owner_threeway_",dir="/tmp/nox") as root:
+            forged=copy.deepcopy(candidate)
+            forged["accepted"][0]["sft"]["completion"][0]["content"]="unreviewed new answer"
+            self.assertEqual(c.export_owner_pinned_threeway(root,forged)["status"],
+                             "HOLD_ROW_CONTENT_FINGERPRINT")
+            crossed=copy.deepcopy(candidate)
+            crossed["accepted"][1]["source_group_sha256"]=crossed["accepted"][0]["source_group_sha256"]
+            self.assertEqual(c.export_owner_pinned_threeway(root,crossed)["status"],
+                             "HOLD_SOURCE_GROUP_OVERLAP")
+            malformed=copy.deepcopy(candidate)
+            malformed["accepted"][2]["sft"]={"prompt":[],"completion":[]}
+            self.assertEqual(c.export_owner_pinned_threeway(root,malformed)["status"],
+                             "HOLD_INVALID_SFT_SHAPE")
+
 if __name__=="__main__":
     unittest.main()

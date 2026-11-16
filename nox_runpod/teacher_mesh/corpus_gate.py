@@ -305,3 +305,149 @@ def export_versioned(local_output_root:str, corpus:dict) -> dict:
     except Exception:
         # Deliberately leave temp artifacts in place on failure for inspection.
         return {"status":"HOLD_EXPORT_FAILED_TEMP_PRESERVED"}
+
+
+def export_owner_pinned_threeway(local_output_root: str, corpus: dict) -> dict:
+    """Immutable source-only handoff from owner-pinned V28 candidates to 2D.
+
+    No queue/S03/model writes. Native caller must independently verify provenance
+    and admission. This is deliberately separate from the legacy two-way export.
+    """
+    def hold(reason):
+        return {"status":reason,"native_queue_modified":False,
+                "optimizer_updates_verified":0}
+
+    if (not isinstance(corpus,dict)
+            or corpus.get("status")!="OWNER_PINNED_THREEWAY_CANDIDATES_NOT_TRAINED"
+            or corpus.get("native_queue_modified") is not False
+            or corpus.get("optimizer_updates_verified") != 0):
+        return hold("HOLD_NOT_OWNER_PINNED_CANDIDATES")
+    rows=corpus.get("accepted")
+    splits=("train","dev","holdout")
+    if (not isinstance(rows,list) or not 3<=len(rows)<=MAX_EXAMPLES
+            or any(type(corpus.get(k)) is not int or corpus[k]<1 for k in splits)
+            or sum(corpus[k] for k in splits)!=len(rows)):
+        return hold("HOLD_THREEWAY_ROW_COUNTS")
+
+    grouped={k:[] for k in splits}
+    groups={k:set() for k in splits}
+    seen_prompts,seen_answers=set(),set()
+    sha_pattern=re.compile(r"^[a-f0-9]{64}$")
+    proof=[]
+    for row in rows:
+        if not isinstance(row,dict):
+            return hold("HOLD_MALFORMED_CANDIDATE_ROW")
+        try:
+            part=row["split"]
+            if part not in grouped:
+                return hold("HOLD_UNKNOWN_SPLIT")
+            for field in ("source_group_sha256","source_receipt_sha256",
+                          "privacy_receipt_sha256","prompt_sha256","answer_sha256"):
+                if (not isinstance(row[field],str)
+                        or not sha_pattern.fullmatch(row[field])):
+                    return hold("HOLD_MALFORMED_PROVENANCE")
+            if (not isinstance(row["task_id"],str) or not row["task_id"].strip()
+                    or not isinstance(row["teacher_model"],str) or not row["teacher_model"].strip()
+                    or row["license"] not in SAFE_LICENSES):
+                return hold("HOLD_LICENSE_OR_TASK_PROVENANCE")
+            sft=row["sft"]
+            if not isinstance(sft,dict) or set(sft)!={"prompt","completion"}:
+                return hold("HOLD_INVALID_SFT_SHAPE")
+            values=[]
+            for field,role in (("prompt","user"),("completion","assistant")):
+                messages=sft[field]
+                if (not isinstance(messages,list) or len(messages)!=1
+                        or not isinstance(messages[0],dict)
+                        or set(messages[0])!={"role","content"}
+                        or messages[0]["role"]!=role
+                        or not isinstance(messages[0]["content"],str)
+                        or not messages[0]["content"].strip()):
+                    return hold("HOLD_INVALID_SFT_SHAPE")
+                values.append(messages[0]["content"])
+            prompt,answer=values
+            if any(unicodedata.category(ch)=="Cf" for ch in prompt+answer):
+                return hold("HOLD_UNICODE_FORMAT_CONTROL")
+            prompt_sha,answer_sha=canonical_hash(prompt),canonical_hash(answer)
+            if (prompt_sha!=row["prompt_sha256"]
+                    or answer_sha!=row["answer_sha256"]):
+                return hold("HOLD_ROW_CONTENT_FINGERPRINT")
+            if prompt_sha in seen_prompts or answer_sha in seen_answers:
+                return hold("HOLD_CROSS_SPLIT_DUPLICATE")
+            seen_prompts.add(prompt_sha);seen_answers.add(answer_sha)
+            groups[part].add(row["source_group_sha256"])
+            grouped[part].append(row)
+            proof.append({"part":part,"task_id":row["task_id"],
+                          "group":row["source_group_sha256"],
+                          "source":row["source_receipt_sha256"],
+                          "privacy":row["privacy_receipt_sha256"],
+                          "prompt_sha256":prompt_sha,"answer_sha256":answer_sha})
+        except (KeyError,TypeError,ValueError,AttributeError):
+            return hold("HOLD_MALFORMED_CANDIDATE_ROW")
+    if any(len(grouped[k])!=corpus[k] for k in splits):
+        return hold("HOLD_THREEWAY_ROW_COUNTS")
+    if any(groups[a]&groups[b] for a,b in
+           (("train","dev"),("train","holdout"),("dev","holdout"))):
+        return hold("HOLD_SOURCE_GROUP_OVERLAP")
+
+    try:
+        root=Path(local_output_root)
+        if not root.is_absolute() or root.is_symlink():
+            return hold("HOLD_OUTPUT_PATH")
+        resolved=root.resolve(strict=False)
+        if (not any(a==resolved or a in resolved.parents for a in LOCAL_ROOTS)
+                or "/workspace" in str(resolved)):
+            return hold("HOLD_OUTPUT_NOT_LOCAL")
+        resolved.mkdir(parents=True,exist_ok=True,mode=0o700)
+        os.chmod(resolved,0o700)
+        identity=json.dumps(sorted(proof,key=lambda x:(x["part"],x["source"],x["task_id"])),
+                            ensure_ascii=False,sort_keys=True,separators=(",",":")).encode()
+        key=hashlib.sha256(identity).hexdigest()[:20]
+        dest=resolved/("owner-threeway-"+key)
+        if dest.exists():
+            return hold("HOLD_ALREADY_EXPORTED")
+        temp=Path(tempfile.mkdtemp(prefix=".nox_threeway_",dir=resolved))
+        try:
+            checksums={}
+            for part in splits:
+                target=temp/(part+".jsonl")
+                with target.open("x",encoding="utf-8") as out:
+                    for row in sorted(grouped[part],
+                                      key=lambda x:(x["source_receipt_sha256"],x["task_id"])):
+                        out.write(json.dumps(row["sft"],ensure_ascii=False,sort_keys=True,
+                                             allow_nan=False)+"\n")
+                    out.flush();os.fsync(out.fileno())
+                os.chmod(target,0o600)
+                checksums[part+".jsonl_sha256"]=hashlib.sha256(target.read_bytes()).hexdigest()
+            manifest={
+                "schema":"nox-teacher-owner-threeway-sft-v2",
+                "status":"REVIEWED_NOT_OPTIMIZER_TRAINED",
+                "counts":{k:len(grouped[k]) for k in splits},
+                "splitting":"OWNER_RECEIPT_SOURCE_GROUP_DISJOINT_SHA256",
+                "source_group_shas_by_split":{k:sorted(groups[k]) for k in splits},
+                "source_receipts":sorted(proof,key=lambda x:(x["part"],x["source"],x["task_id"])),
+                "response_only_loss_required":True,
+                "owner_corpus_identity_native_verified":False,
+                "native_queue_modified":False,
+                "optimizer_updates_verified":0,
+                "teacher_weights_copied":False,
+                "new_deepseek_distillation_claimed":False,
+                **checksums,
+            }
+            mf=temp/"manifest.json"
+            with mf.open("x",encoding="utf-8") as out:
+                json.dump(manifest,out,ensure_ascii=False,sort_keys=True,
+                          allow_nan=False,indent=2)
+                out.write("\n");out.flush();os.fsync(out.fileno())
+            os.chmod(mf,0o600)
+            if dest.exists():
+                return hold("HOLD_ALREADY_EXPORTED")
+            os.rename(temp,dest)
+            return {"status":"THREEWAY_SOURCE_CORPUS_EXPORTED_NOT_TRAINED",
+                    "path":str(dest),"counts":manifest["counts"],
+                    "manifest_sha256":hashlib.sha256((dest/"manifest.json").read_bytes()).hexdigest(),
+                    "native_queue_modified":False,"optimizer_updates_verified":0}
+        except (OSError,TypeError,ValueError):
+            # Preserve partially written TEMP for explicit inspection; never delete data blindly.
+            return hold("HOLD_EXPORT_FAILED_TEMP_PRESERVED")
+    except (OSError,TypeError,ValueError):
+        return hold("HOLD_OUTPUT_PATH")
