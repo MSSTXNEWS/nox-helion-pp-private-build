@@ -1,0 +1,31 @@
+name: NOX DeepSeek manifest identity fixtures
+on:
+  pull_request:
+    paths:
+      - "nox-control/test_deepseek_manifest_identity_regressions.py"
+      - ".github/workflows/nox-deepseek-manifest-identity.yml"
+  push:
+    branches:
+      - "codex/nox-02aa-manifest-identity-regressions-20261116"
+    paths:
+      - "nox-control/test_deepseek_manifest_identity_regressions.py"
+      - ".github/workflows/nox-deepseek-manifest-identity.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile source and regression fixtures
+        run: |
+          python -m py_compile nox-control/deepseek_owner_range_v10.py nox-control/test_deepseek_manifest_identity_regressions.py
+          python -m unittest -v nox-control/test_deepseek_manifest_identity_regressions.py
+      - name: Mark runtime boundary
+        run: echo "SOURCE TESTS ONLY. No Drive, OneHost, model download, GPU, or service actions."
