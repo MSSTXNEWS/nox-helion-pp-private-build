@@ -21,6 +21,34 @@ def policy(*, enabled=True, restart=True):
     })
 
 class LifelineTests(unittest.TestCase):
+    def test_policy_json_duplicate_keys_and_nonfinite_are_rejected(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "owner-policy.json"
+            original = json.dumps(policy(enabled=False, restart=False))
+            path.write_text(original, encoding="utf-8")
+            self.assertFalse(lifeline.policy_load(path)["enabled"])
+            for bad in (
+                original.replace('"enabled": false',
+                                 '"enabled": false, "enabled": true', 1),
+                original.replace('"restart": false',
+                                 '"restart": false, "restart": true', 1),
+                original.replace('"daily_limit": 2',
+                                 '"daily_limit": 2, "daily_limit": 0', 1),
+                original.replace('"poll_seconds": 60',
+                                 '"poll_seconds": NaN', 1),
+                original.replace('"poll_seconds": 60',
+                                 '"poll_seconds": Infinity', 1),
+                original.replace('"poll_seconds": 60',
+                                 '"poll_seconds": 1e309', 1),
+            ):
+                with self.subTest(bad=bad):
+                    self.assertNotEqual(bad, original)
+                    path.write_text(bad, encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "HOLD_POLICY_CORRUPT"):
+                        lifeline.policy_load(path)
+                    self.assertEqual(path.read_text(encoding="utf-8"), bad)
+
     def state(self, directory):
         return {"_path": Path(directory) / "state.json", "services": {}}
 
