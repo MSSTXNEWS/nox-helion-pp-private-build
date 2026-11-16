@@ -1,0 +1,70 @@
+{
+  "schema": "NOX_AUTO_2C_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "utc": "2026-11-16T14:09:53.599Z",
+  "msk": "2026-11-16 17:09:53",
+  "slot": "2C",
+  "instance": "Vast.ai #60509551",
+  "source_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "latest_authorized_native_readback": "NOT_OBTAINED_THIS_RUN",
+  "source_commits": [
+    "5252fea4280bc6a7e81679bf6c31225bf681395e",
+    "509568591ca838a944781ed1cc06080291ee6800"
+  ],
+  "source_preimage_blob": "93350ee3b056ded82284cbe3f1a3e180b600327b",
+  "source_after_blob": "dbb835e773658163f2cb72e507b83ceb03e53a1d",
+  "test_preimage_blob": "85536346b5f5d240bfd07c7459b4b4abd7fee944",
+  "test_after_blob": "de8d539a2b3706cafb4aa129db706b63fbb86c98",
+  "source_ci": {
+    "workflow": "NOX V38.1 source acceptance",
+    "run_id": 43882506281,
+    "job_id": 133351816448,
+    "conclusion": "success",
+    "scope": "Python compileall + existing V38 tests including two new regressions; not native OneHost"
+  },
+  "root_cause": "WarmS03Cache keyed same tenant/principal/chat, S03 revision, prompt, limit only. Owner could switch persona or RU/ES while native revision stayed fixed; different native recall views erroneously reused. Existing C02 filter could then omit valid new-persona records; direct cache consumers might see stale view.",
+  "fix": "Include language, persona_enabled and selected persona ID in the original cache key, retaining original first three scope fields for revoke/invalidate. No new database, scheduler, trainer, handler or disk cache.",
+  "rollback": "Revert exactly commits 5252fea and 5095685 under current source preimage CAS; no native deployment occurred.",
+  "task_outcomes": [
+    {
+      "task_id": "S2-09",
+      "state": "SOURCE_TESTED",
+      "evidence": "Existing V38 C02 M0–M7 warm S03 cache + 2 regressions, exact CI success",
+      "native": "HOLD_NOT_INSTALLED"
+    },
+    {
+      "task_id": "S2-07",
+      "state": "SOURCE_VERIFIED_NATIVE_HOLD",
+      "evidence": "Pinned DeepSeek manifest blob 0608cdcacb1573835e4edc194c8ee63d4877180b, total 248834257920 B, metadata 5780704 B, missing five unique GGUF 248828477216 B, shared Engram one copy",
+      "native": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT"
+    },
+    {
+      "task_id": "S1-01",
+      "state": "HOLD",
+      "evidence": "Owner STOP/lease, 5 Supervisor, 8081 PID+startticks and 2 GPU current readback absent",
+      "native": "NO_NEW_JOB_ID"
+    },
+    {
+      "task_id": "S2-08",
+      "state": "HOLD",
+      "evidence": "No new signed native Hunter→licensed source→S03 write/readback/recall job",
+      "native": "NO_NEW_JOB_ID"
+    },
+    {
+      "task_id": "S3-05",
+      "state": "HOLD",
+      "evidence": "No authenticated original S03 write→service restart→recall test; healthy chat unmodified",
+      "native": "NO_NEW_JOB_ID"
+    }
+  ],
+  "controls": {
+    "WEIGHTS": "Historical checkpoint25 not reverified in this run; no new verified successful optimizer updates, no new tensor SHA or independent optimizer/scaler/RNG restore. V10 prioritizes Maya+DeepSeek cutover.",
+    "KNOWLEDGE": "No native Hunter or skills S03 writes/readback/recall; source tests do not alter weights.",
+    "DISPATCHER_RESOURCES": "No fresh native STOP/lease, owner 3 worker PIDs/job IDs, CPU/RAM/2 GPU/VRAM/SSD/shm, downloads speed or daemon heartbeat. No native restart/pause/stops; downloaded_bytes=0, deleted_bytes=0, freed_bytes=0."
+  },
+  "next_owner": "original OneHost authorized S1-01 read-only STOP/lease + PID/startticks/5 Supervisor/8081 listener/GPU/SSD/S03 restore, then exact single-writer deployment and native recall; P0 storage auth/seekable placement for 248828477216 B missing DeepSeek",
+  "production_deployed": false,
+  "weights_changed_verified": false,
+  "s03_modified_native": false,
+  "schedules_changed": false
+}
