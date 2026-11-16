@@ -776,6 +776,49 @@ class ColdTests(unittest.TestCase):
 
 
 
+class ColdPathPreflightFailClosedRegressions(unittest.TestCase):
+    """Read-only path inspection must never reinterpret EACCES/ELOOP as absent."""
+
+    def test_unreadable_existing_parent_blocks_new_atomic_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            blocked = root / 'blocked'
+            blocked.mkdir()
+            output = blocked / 'receipt.json'
+            original = os.lstat
+
+            def lstat(path):
+                if str(path) == str(blocked):
+                    raise PermissionError(13, 'denied')
+                return original(path)
+
+            with patch.object(cold.os, 'lstat', side_effect=lstat), \
+                 self.assertRaisesRegex(ValueError, 'HOLD_PATH_UNREADABLE'):
+                cold.atomic_json(output, {'model': 'untrusted'})
+            self.assertFalse(output.exists())
+
+    def test_looping_leaf_metadata_never_means_missing_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / 'receipt.json'
+            original = os.lstat
+
+            def lstat(path):
+                if str(path) == str(output):
+                    raise OSError(40, 'too many symbolic links')
+                return original(path)
+
+            with patch.object(cold.os, 'lstat', side_effect=lstat), \
+                 self.assertRaisesRegex(ValueError, 'HOLD_PATH_UNREADABLE'):
+                cold.plain_path(output, must_exist=False)
+            self.assertFalse(output.exists())
+
+    def test_absent_nested_receipt_directory_remains_creatable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / 'new' / 'nested' / 'receipt.json'
+            cold.atomic_json(output, {'sha_verified': False})
+            self.assertEqual(json.loads(output.read_text()), {'sha_verified': False})
+
+
 class ColdOwnerMaintenanceGateRegressions(unittest.TestCase):
     def test_unreadable_owner_control_holds_before_rclone(self):
         with patch.object(cold, 'OWNER_STOP_PATHS', (Path('/invalid/STOP'),)), \
