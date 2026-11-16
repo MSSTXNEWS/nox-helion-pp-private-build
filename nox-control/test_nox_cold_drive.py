@@ -221,7 +221,16 @@ class ColdTests(unittest.TestCase):
         m=self.root/'batch.json';m.write_text(json.dumps({'files':files}))
         args=cold.parser().parse_args(['batch','--manifest',str(m),'--remote','fixture:cold',
                                       '--receipt-dir',str(self.receipts),'--workers','6'])
-        with contextlib.redirect_stdout(io.StringIO()):cold.batch(args)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                cold.batch(args)
+        except RuntimeError:
+            summary_path = self.receipts/'last-batch.json'
+            summary = json.loads(summary_path.read_text()) if summary_path.exists() else {}
+            self.fail('Six-process fixture transfer incomplete: ' + json.dumps({
+                'requested': summary.get('requested'), 'copies_verified': summary.get('copies_verified'),
+                'error_types': [e.get('error') for e in summary.get('errors', [])]
+            }))
         summary=json.loads((self.receipts/'last-batch.json').read_text())
         rows=[json.loads(Path(p).read_text()) for p in summary['receipts']]
         pids=sorted({r['worker_pid'] for r in rows})
