@@ -19,6 +19,7 @@ MAX_RANGE = 256 * 1024**2
 CHUNK = 1024**2
 STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/STOP", "state/STOP.flag", "state/OWNER_MAINTENANCE.flag")
 SHA = re.compile(r"[a-f0-9]{64}\Z")
+MAX_MANIFEST_BYTES = 131072
 FILE = re.compile(r"(?:DeepSeek-V4\.1-Flash-1017-GSQ-RCO-IQ2_XXS-0000[1-5]-of-00006|DeepSeek-V4\.1-Flash-Engram-IQ4_NL)\.gguf\Z")
 
 # Immutable owner-reviewed LFS identities, pinned independently of input manifest.
@@ -111,7 +112,7 @@ def _reject_lease_nonfinite(value):
 
 
 def load_manifest(raw):
-    require(isinstance(raw, (str, bytes, bytearray)) and len(raw) <= 131072,
+    require(isinstance(raw, (str, bytes, bytearray)) and len(raw) <= MAX_MANIFEST_BYTES,
             'HOLD_MANIFEST_LIMIT')
     try:
         m = json.loads(raw, object_pairs_hook=_strict_manifest_pairs,
@@ -142,6 +143,39 @@ def load_manifest(raw):
             a.get('target')=='DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf' and
             a.get('duplicate_bytes') is False,'HOLD_SHARED_ENGRAM_ALIAS')
     return by
+
+def load_manifest_from_path(path):
+    """Bounded, no-follow manifest read before parsing any untrusted CLI file.
+
+    Loading Path.read_bytes() before load_manifest()'s 128KiB gate could allocate
+    arbitrarily large memory or follow a raced symlink/FIFO. Bind validation to
+    the opened regular owner-owned inode, then recheck pathname identity.
+    This is read-only source admission, not a native writer lease.
+    """
+    path = Path(path)
+    observed = regular(path)
+    require(observed.st_size <= MAX_MANIFEST_BYTES, 'HOLD_MANIFEST_LIMIT')
+    fd = None
+    identity = lambda st: (st.st_dev, st.st_ino, st.st_size, st.st_uid,
+                           st.st_nlink, st.st_mtime_ns, st.st_ctime_ns)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+        opened = os.fstat(fd)
+        require(stat.S_ISREG(opened.st_mode) and opened.st_uid == os.geteuid()
+                and opened.st_nlink == 1 and identity(opened) == identity(observed),
+                'HOLD_MANIFEST_CHANGED')
+        raw = os.read(fd, MAX_MANIFEST_BYTES + 1)
+        require(len(raw) == opened.st_size and len(raw) <= MAX_MANIFEST_BYTES
+                and identity(os.fstat(fd)) == identity(opened)
+                and identity(regular(path)) == identity(opened),
+                'HOLD_MANIFEST_CHANGED')
+    except OSError as exc:
+        raise Hold('HOLD_MANIFEST_UNREADABLE') from exc
+    finally:
+        if fd is not None:
+            os.close(fd)
+    return load_manifest(raw)
+
 
 def stop(root):
     """Fail closed when an owner STOP flag is present OR unreadable.
@@ -593,7 +627,7 @@ def main():
     ap.add_argument('--request',default='')
     ap.add_argument('--max-range-mib',type=int,default=256)
     a=ap.parse_args()
-    by=load_manifest(a.manifest.read_bytes())
+    by=load_manifest_from_path(a.manifest)
     if a.inventory:
         print(json.dumps({'status':'READ_ONLY','files':inventory(by,a.destination)},ensure_ascii=False));return
     require(a.download in by,'HOLD_FILE_NOT_IN_MANIFEST')
