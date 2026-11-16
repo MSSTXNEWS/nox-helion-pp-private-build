@@ -1352,3 +1352,8 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 
 ### V14 · AUTO A2 · SOURCE CLAIM · 2026-11-16T23:04:00.740Z
 - TaskID `V14-2-11` (manifest verification / bounded input read). Source-only reservation by PROCESS 2, exact preimage `nox-control/deepseek_owner_range_v10.py` blob `d29913a57b7a43826ee9907f51d716e2b0177fe8`; test blob `77914c993bf658f239e5272d7d755a84ae4acf6f`. GitHub blob CAS for edits; **NO native writer lease or OneHost claim**. Aim: prevent unbounded/no-follow-unsafe CLI manifest read before existing 128KiB validation; bounded offline regression; no downloads, services or STOP mutations. Release this source reservation on result; if preimages drift, HOLD instead of overwrite. 
+
+
+### 2026-11-16 23:01 UTC / 2026-11-17 02:01 МСК · V14-5-07 · A5 SOURCE CLAIM · instructions_version 0.0.6
+- **TaskID:** `V14-5-07` (original NOX WEB29 Resonance progress dock), **SOURCE-ONLY claim**, NOT Vast native lease/authorization. Current preimage `coordination/onepass/web29_main/site/nox-evolution-dock.js` Git blob `243fb3a8615ba81b6af52cd3632deb0ac9acbf4d`; branch HEAD observed `ffb59283c97c4be80747045987706dc8502a5810`.
+- **Planned bounded scope:** repair only an independently reproducible late-mount of `#chatForm` after DOMContentLoaded, keep existing original composer/STOP/routes/D02/14 worlds intact; add targeted regression in existing source tests. Native serving SHA/owner STOP/lease currently UNKNOWN; no deployment/restart/media/model/S03 mutation authorized. On changed SHA or someone else's claim, re-read and HOLD.
