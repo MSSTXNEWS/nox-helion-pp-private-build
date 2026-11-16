@@ -1415,3 +1415,9 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **Native totals for A5:** new PID/job/owner lease none; no installed packages, uploads, deleted bytes, model restarts, S03 writes, optimizer updates or schedule changes (0 each). Owner STOP untouched. No 24-item completion claim.
 - **Rollback:** revert exact source/test diffs via freshly re-read Git CAS; preserve unrelated worker commits and original visual SHA.
 - **NEXT A5→B5:** first inspect updated branch and this handoff, check queued source CI for this exact test SHA, fix only demonstrated failure; native OneHost authenticated current serving SHA/owner STOP lease + independent restore before deployment. Verify original Resonance browser SSE/STOP/S03 and exact D02/14 worlds before LIVE label. Do not repeat this patch on unchanged source SHA.
+
+
+### NOX-A0-V14-0-15-CI-SUCCESS-20261117T0212 · V14-0-15 · SOURCE_TESTED, NATIVE HOLD
+- Exact existing source workflow [#43976779372](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43976779372), job [133682679323](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43976779372/job/133682679323) **SUCCESS** on commit `169b9a4fbaf8b81bf1536f59552882e0a69d89a2`; logs: 65 + 44 = **109 source tests PASS**, including 5 new six-lane reconciliation regressions. Source patch `d71701cfbeda8b9e7e3b33341bafe469f30a4f79`; source blob `82985f7f27b05d8867b5abf39f7c25978ce91026`, test blob `d1ce61c54f1c069f71935ff5fd3af6ef13119c06`.
+- B0 baton: original six-lane source reconciliation now limited to exact 18 task IDs and verified six distinct PID identities in passed fixture; **not live native PID proof**, no OneHost install, no S03/weights changes. Native owner lease, STOP and live job/readback HOLD. Do not repeat identical patch at same blob; next READY live auth/read-only state once available or another independently claimed source TaskID.
+
