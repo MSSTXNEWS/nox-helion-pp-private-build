@@ -23,7 +23,7 @@
   const ctx=canvas.getContext('2d',{alpha:true});if(!ctx)return;
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   let width=1,height=1,phase='connecting',busy=0,last=0,frame=0,started=performance.now();
-  const labels={connecting:'Проверяю связь…',idle:'На связи · готов к задачам',working:'Выполняю фоновые задачи',waiting:'Обрабатываю запрос',speaking:'Передаю ответ',offline:'Связь временно недоступна',error:'Нужна проверка результата',stopped:'Ответ остановлен'};
+  const labels={connecting:'Проверяю связь…',idle:'На связи · готов к задачам',working:'Выполняю фоновые задачи',waiting:'Обрабатываю запрос',speaking:'Передаю ответ',offline:'Связь временно недоступна',error:'Нужна проверка результата',stopped:'Ответ остановлен',updating:'Модель обновляется · владелец остановил NOX',maintenance_unknown:'Обслуживание · STOP требует проверки'};
   function set(next){phase=next;box.dataset.phase=next;label.textContent=labels[next]||labels.idle;if(reduced.matches)draw(performance.now());}
   function resize(){const r=box.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,1.5);width=r.width;height=r.height;canvas.width=Math.max(1,Math.round(width*ratio));canvas.height=Math.max(1,Math.round(height*ratio));ctx.setTransform(ratio,0,0,ratio,0,0);draw(performance.now());}
   function draw(now){
@@ -58,7 +58,10 @@
   function tick(now){frame=0;if(document.hidden||reduced.matches)return;const interval=phase==='waiting'||phase==='speaking'?33:66;if(now-last>=interval){last=now;draw(now);}frame=requestAnimationFrame(tick);}
   function resume(){if(!frame&&!document.hidden&&!reduced.matches)frame=requestAnimationFrame(tick);else if(reduced.matches)draw(performance.now());}
   window.addEventListener('nox:native-phase',event=>{const next=event.detail?.phase;if(Object.hasOwn(labels,next))set(next);});
-  window.addEventListener('nox:workers',event=>{const value=event.detail||{};busy=Number(value.busy)||0;if(phase==='waiting'||phase==='speaking')return;set(value.online?(busy?'working':'idle'):'offline');});
+  window.addEventListener('nox:workers',event=>{const value=event.detail||{};busy=Number(value.busy)||0;
+   if(value.state==='MODEL_UPDATE'){set('updating');return;}
+   if(value.state==='HOLD_MAINTENANCE_UNKNOWN'){set('maintenance_unknown');return;}
+   if(phase==='waiting'||phase==='speaking')return;set(value.online?(busy?'working':'idle'):'offline');});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&frame){cancelAnimationFrame(frame);frame=0;}else resume();});
   reduced.addEventListener?.('change',()=>{if(frame){cancelAnimationFrame(frame);frame=0;}resume();});
   new ResizeObserver(resize).observe(box);resize();resume();
