@@ -311,7 +311,7 @@ def verify_existing_receipt(path, row):
             type(doc.get('bytes')) is int and doc['bytes'] == row['bytes'] and
             doc.get('sha256') == row['sha256'] and
             isinstance(doc.get('request'), str) and
-            re.fullmatch(r'\\d{1,20}', doc['request']) and
+            re.fullmatch(r'\d{1,20}', doc['request']) and
             type(doc.get('new_bytes')) is int and
             0 <= doc['new_bytes'] <= row['bytes'] and
             type(doc.get('at_unix')) in (int, float) and
