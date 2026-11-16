@@ -201,5 +201,44 @@ class LifelineTests(unittest.TestCase):
             self.assertEqual(commands, ["status", "status"])
             self.assertFalse(Path(d, "state.json").exists())
 
+
+    def test_nonzero_supervisorctl_status_cannot_start_any_service(self):
+        with tempfile.TemporaryDirectory() as d:
+            s = self.state(d)
+            observed = []
+            def native(argv, **kwargs):
+                observed.append(argv)
+                return type("Result", (), {"returncode": 1,
+                    "stdout": "nox-dispatcher-t855u STOPPED Not started\\n"})()
+            with patch.object(lifeline.subprocess, "run", side_effect=native):
+                for n in range(4):
+                    result = lifeline.tick(policy(), s, now=100+n,
+                        status_fn=lifeline.supervise, stop_fn=lambda: False)
+            self.assertEqual(result["results"][0]["action"], "owner_investigation_required")
+            self.assertTrue(observed)
+            self.assertTrue(all(cmd[1] == "status" for cmd in observed))
+
+    def test_nonzero_status_running_output_is_not_health_proof(self):
+        with patch.object(lifeline.subprocess, "run") as run:
+            run.return_value.returncode = 2
+            run.return_value.stdout = "nox-dispatcher-t855u RUNNING pid 123, uptime 0:00:10\\n"
+            observed = lifeline.supervise("nox-dispatcher-t855u")
+            self.assertEqual(observed, {"state": "UNKNOWN", "pid": None, "rc": 2})
+
+    def test_exit_with_pid_does_not_authorize_duplicate_start(self):
+        with tempfile.TemporaryDirectory() as d:
+            s = self.state(d)
+            seen = []
+            def native(argv, **kwargs):
+                seen.append(argv)
+                return type("Result", (), {"returncode": 0,
+                    "stdout": "nox-dispatcher-t855u EXITED pid 7637, uptime 0:01:00\\n"})()
+            with patch.object(lifeline.subprocess, "run", side_effect=native):
+                for n in range(4):
+                    result = lifeline.tick(policy(), s, now=100+n,
+                        status_fn=lifeline.supervise, stop_fn=lambda: False)
+            self.assertEqual(result["results"][0]["action"], "owner_investigation_required")
+            self.assertTrue(all(cmd[1] == "status" for cmd in seen))
+
 if __name__=="__main__":
     unittest.main()

@@ -152,6 +152,10 @@ def supervise(name, command="status"):
         return {"state": "UNKNOWN", "pid": None, "rc": 124}
     if command == "start":
         return {"rc": p.returncode}
+    # supervisorctl may include stale status-like stdout on a failed command.
+    # Never infer a repairable or healthy state from a nonzero status exit code.
+    if p.returncode != 0:
+        return {"state": "UNKNOWN", "pid": None, "rc": p.returncode}
     # Treat unknown output, group names, errors, and missing pid as UNKNOWN.
     first = p.stdout.strip().splitlines()
     match = STATUS.match(first[0]) if len(first) == 1 else None
@@ -161,6 +165,10 @@ def supervise(name, command="status"):
     pid = int(match[3]) if match[3] else None
     if state == "RUNNING" and not pid:
         state = "UNKNOWN"
+    # STOPPED/EXITED with an attached PID is contradictory evidence; a live
+    # detached listener must not be started over by this health guard.
+    if state in REPAIRABLE and pid is not None:
+        state, pid = "UNKNOWN", None
     return {"state": state, "pid": pid, "rc": p.returncode}
 
 def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn=stopped):
