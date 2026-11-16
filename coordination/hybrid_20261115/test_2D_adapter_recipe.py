@@ -246,7 +246,7 @@ class ForgeRecipeTest(unittest.TestCase):
                          "HOLD_CORPUS_OWNER_GROUPS")
 
     def test_owner_hash_canonical_whitespace_matches_v28(self):
-        raw="  Mixed   spaces\\t  and\\nlines  "
+        raw="  Mixed   spaces\t  and\nlines  "
         self.assertEqual(recipe._source_row_sha256(raw),
                          hashlib.sha256("mixed spaces and lines".encode()).hexdigest())
 
