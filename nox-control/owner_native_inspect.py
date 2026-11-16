@@ -963,6 +963,6 @@ if __name__=='__main__':
     owner_component_readback()
     print('NOX_MAINT_SAFETY=' + json.dumps(owner_safety_snapshot(), separators=(',', ':'), allow_nan=False), flush=True)
     print('NOX_MAINT_MAYA_P0=' + json.dumps(maya_p0_binary_readback(), separators=(',', ':'), allow_nan=False), flush=True)
-    print('NOX_MAINT_MAYA_ELF_LINKAGE=' + json.dumps(read_elf_linkage(ROOT / MAYA_P0_BINARY_REL, MAYA_P0_BINARY_SHA256, maya_p0_binary_readback), separators=(',', ':'), allow_nan=False), flush=True)
+    print('NOX_MAINT_MAYA_ELF_LINKAGE=' + json.dumps(maya_elf_linkage_readback(), separators=(',', ':'), allow_nan=False), flush=True)
     bounded_capacity_readback()
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
