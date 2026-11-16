@@ -10,9 +10,42 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_held_media_smoke_entry.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_held_media_recover.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
+
+SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_qwen_held_media_smoke_entry.py':(
+        'owner_qwen_held_media_smoke.py','owner_media_acceptance_entry.py',
+        'owner_qwen_revision_install.py','owner_native_repair.py','owner_download_status_entry.py'),
+    'nox-control/owner_qwen_transport_install_entry.py':(
+        'owner_qwen_revision_install.py','qwen_student_training_entry_revision.py',
+        'owner_qwen_transport_revision_install.py','qwen_student_training_entry_transport_candidate.py',
+        'owner_qwen_execution_revision.py','owner_qwen_revision_guard.py','owner_qwen_revision_status.py',
+        'owner_qwen_revision_media_handoff.py','owner_qwen_revision_media_guard.py',
+        'owner_qwen_revision_handback_retry.py','owner_hermes_revision_hydrate.py',
+        'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
+}
+SCOPED_REPAIR_EXTRA_PATHS={
+    'nox-control/owner_qwen_transport_install_entry.py':(
+        'nox-control/owner_qwen_transport_revision_install.py',
+        'nox-control/qwen_student_training_entry_transport_candidate.py'),
+}
+
+def repair_bundle_paths(action,entrypoint,paths):
+    if action!='repair' or entrypoint not in SCOPED_REPAIR_BUNDLES:return paths
+    selected=SCOPED_REPAIR_BUNDLES[entrypoint]
+    if len(set(selected))!=len(selected):raise RuntimeError('HOLD_SCOPED_BUNDLE_DUPLICATE_ALLOWLIST')
+    found={}
+    for path in (*paths,*SCOPED_REPAIR_EXTRA_PATHS.get(entrypoint,())):
+        name=Path(path).name
+        if name not in selected:continue
+        if name in found:raise RuntimeError('HOLD_SCOPED_BUNDLE_DUPLICATE_SOURCE')
+        found[name]=path
+    if set(found)!=set(selected):raise RuntimeError('HOLD_SCOPED_BUNDLE_MISSING_SOURCE')
+    result=tuple(found[name] for name in selected)
+    if any(not Path(path).is_file() for path in result):raise RuntimeError('HOLD_SCOPED_BUNDLE_MISSING_FILE')
+    return result
 
 def authorize_event(action):
     e=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
@@ -111,7 +144,7 @@ def run_native(action,request_id):
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     elif action in ('stage','repair'):
         assets={}
-        for path in ('nox-control/nox_cold_drive.py','nox-control/owner_native_audit.py',
+        for path in repair_bundle_paths(action,FILES[action],('nox-control/nox_cold_drive.py','nox-control/owner_native_audit.py',
                      'nox-control/owner_native_inspect.py','nox-control/hybrid_training_entry.py',
                      'nox-control/owner_capacity_probe.py','nox-control/owner_component_tasks.py',
                      'nox-control/owner_dispatcher_mentor.py','nox-control/nox_pc_export.py',
@@ -220,7 +253,7 @@ def run_native(action,request_id):
                      'nox-control/owner_media_inbox_fair_entry.py',
                      'nox-control/owner_qwen_handback_retry.py',
                      'nox-control/owner_subagent_instruction_truth.py',
-                     'coordination/NOX_STORAGE_STREAMING_20261115/download_manifest.json'):
+                     'coordination/NOX_STORAGE_STREAMING_20261115/download_manifest.json')):
             p=Path(path)
             if p.is_file():assets[p.name]=base64.b64encode(p.read_bytes()).decode('ascii')
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
