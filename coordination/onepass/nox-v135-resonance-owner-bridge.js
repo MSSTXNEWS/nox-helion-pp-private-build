@@ -90,6 +90,24 @@
       done.dialog_id===id&&typeof done.exchange_id==='string'&&
       done.exchange_id.length>=6&&done.exchange_id.length<=160;
   }
+  // A stopped browser generation must not remain stuck forever in a native
+  // stream reader whose transport ignores fetch/AbortController cancellation.
+  // This only cancels the SAME request's reader; it never issues a global STOP.
+  async function readNativeOrAbort(reader,signal) {
+    if(!signal)return reader.read();
+    if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
+    let onAbort;
+    const aborted=new Promise((_,reject)=>{
+      onAbort=()=>{
+        try{Promise.resolve(reader.cancel('STREAM_STOP_REQUESTED')).catch(()=>{});}catch{}
+        reject(Error('STREAM_STOP_REQUESTED'));
+      };
+      signal.addEventListener('abort',onAbort,{once:true});
+      if(signal.aborted)onAbort();
+    });
+    try{return await Promise.race([reader.read(),aborted]);}
+    finally{signal.removeEventListener('abort',onAbort);}
+  }
   async function consume(response,emit,signal) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response));
     const reader=response.body.getReader(),decoder=new TextDecoder();
@@ -136,7 +154,7 @@
     try{
       for(;;){
         if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
-        const chunk=await reader.read();
+        const chunk=await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
         // A transport read may coalesce MANY valid short NDJSON frames.
@@ -151,7 +169,14 @@
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
       return {answer,receipt:done};
-    }finally{try{await reader.cancel();}catch{}}
+    }finally{
+      try{
+        const cancelling=reader.cancel('STREAM_CLOSED');
+        // A buggy native reader may never settle cancellation after abort.
+        if(signal?.aborted)cancelling.catch(()=>{});
+        else await cancelling;
+      }catch{}
+    }
   }
   function sseChat(data,signal) {
     let closed=false;const started=performance.now();

@@ -732,3 +732,56 @@ test('V164 S03 readback must bind BOTH saved rows to the native receipt exchange
     assert(!f.calls.some(x=>x.path==='/api/nox/stop'),'do not send global STOP');
   }
 });
+
+test('V165 abort dislodges stalled native stream and never reports S03 done',async()=>{
+  let upstreamCancelled=false;const calls=[];
+  const old=async (path,opts={})=>{
+    const url=new URL(String(path),'https://nox.local');
+    calls.push({path:url.pathname,signal:opts.signal});
+    if(url.pathname==='/api/nox/chat/stream'){
+      // Native transport deliberately ignores fetch AbortSignal: the source
+      // emits its first genuine delta but NEVER closes or produces [done].
+      return new Response(new ReadableStream({
+        start(ctrl){
+          for(const x of [
+            {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+            {type:'start',model:'NOX HELION'},
+            {type:'delta',text:'Настоящий ответ продолжится'}
+          ])ctrl.enqueue(new TextEncoder().encode(JSON.stringify(x)+'\n'));
+        },
+        cancel(){upstreamCancelled=true;}
+      }),{headers:{'content-type':'application/x-ndjson'}});
+    }
+    return new Response('NOT_NATIVE_ROUTE',{status:404});
+  };
+  const window={NOX_NATIVE_OWNER:true,fetch:old};
+  const location={pathname:'/nox-web-v29/pc/resonance.html',
+    href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+  vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+    TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+  const controller=new AbortController();
+  const response=await window.fetch('/api/nox/chat',{method:'POST',
+    signal:controller.signal,
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v165-stalled-native'})});
+  const reader=response.body.getReader(),decoder=new TextDecoder();
+  const meta=JSON.parse(decoder.decode((await reader.read()).value).slice(6).trim());
+  const token=JSON.parse(decoder.decode((await reader.read()).value).slice(6).trim());
+  assert.equal(meta.type,'meta');
+  assert.equal(token.type,'token');
+  assert(token.t.length>0,'first real model delta must be visible');
+  controller.abort();
+  const next=await Promise.race([
+    reader.read(),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),400))
+  ]);
+  assert.notEqual(next.timeout,true,'STOP must unblock a hung native read');
+  assert.equal(next.done,false,'an abort must emit a truthful error, not done');
+  const stopped=JSON.parse(decoder.decode(next.value).slice(6).trim());
+  assert.equal(stopped.type,'error');
+  assert.equal(stopped.error,'STREAM_STOP_REQUESTED');
+  assert.equal(upstreamCancelled,true,'only this native reader is cancelled');
+  assert.equal(calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+  assert.equal(calls.some(c=>c.path==='/api/nox/stop'),false,
+    'must not send unsafe global GPU STOP');
+  assert.equal(calls.some(c=>c.path==='/api/ui/memory/dialogs/history'),false,
+    'no S03 success readback for a cancelled generation');
+});
