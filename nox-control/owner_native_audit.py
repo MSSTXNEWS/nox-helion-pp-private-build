@@ -79,30 +79,74 @@ def packages():
             except ValueError:found[p]={'status':'INVALID_OUTPUT'}
     return found
 
+# Exact immutable DeepSeek pins mirrored from v51/hf_range_probe.py.
+# The offline source test asserts these rows remain identical to that manifest.
+MODEL_ROOT='/root/nox/models'
+PINNED_MODEL_FILES=(
+ ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf',5780704,'f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9'),
+ ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf',39535781184,'25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3'),
+ ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf',39736712000,'8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48'),
+ ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf',39036908384,'9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0'),
+ ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf',19923784832,'7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1'),
+ ('DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf',110595290816,'3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3'),
+)
+
+def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
+    """Metadata-only, no-follow stat for the six immutable targets under one root."""
+    root_path=Path(root)
+    if not root_path.is_absolute():
+        return {'status':'HOLD_MODEL_ROOT_NOT_ABSOLUTE','files':[]}
+    root_parts=root_path.parts
+    ancestors=[]; current=Path(root_path.anchor)
+    for part in root_parts[1:]:
+        current=current/part
+        ancestors.append(current)
+    try:
+        for ancestor in ancestors:
+            mode=lstat(str(ancestor)).st_mode
+            if __import__('stat').S_ISLNK(mode):
+                return {'status':'HOLD_MODEL_PATH_SYMLINK','files':[]}
+            if ancestor!=root_path and not __import__('stat').S_ISDIR(mode):
+                return {'status':'HOLD_MODEL_ROOT_COMPONENT_TYPE','files':[]}
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        return {'status':'HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper(),'files':[]}
+    results=[]
+    for name,expected_bytes,sha256 in PINNED_MODEL_FILES:
+        if (not name or Path(name).name!=name or '/' in name or '\\\\' in name
+                or name in ('.','..')):
+            return {'status':'HOLD_MODEL_PATH_ESCAPE','files':[]}
+        target=root_path/name
+        path=str(target)
+        row={'path':path,'exists':False,'type':'missing','bytes':None,
+             'expected_bytes':expected_bytes,'sha_status':'NOT_CHECKED'}
+        try:
+            mode=lstat(path).st_mode
+            statmod=__import__('stat')
+            if statmod.S_ISLNK(mode):
+                row.update({'type':'symlink','path_status':'HOLD_MODEL_PATH_SYMLINK'})
+                results.append(row)
+                continue
+            if statmod.S_ISREG(mode):
+                row.update({'exists':True,'type':'regular','bytes':lstat(path).st_size,
+                            'size_status':'MATCH' if lstat(path).st_size==expected_bytes else 'MISMATCH'})
+            elif statmod.S_ISDIR(mode):
+                row.update({'exists':True,'type':'directory','bytes':None})
+            else:
+                row.update({'exists':True,'type':'other','bytes':None})
+            results.append(row)
+        except FileNotFoundError:
+            results.append(row)
+        except OSError as exc:
+            row.update({'type':'unknown','path_status':'HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper()})
+            results.append(row)
+    status='HOLD_MODEL_PATH_SYMLINK' if any(x.get('path_status')=='HOLD_MODEL_PATH_SYMLINK' for x in results) else 'OK'
+    return {'status':status,'root':str(root_path),'manifest_revision':'65d53bc8be65123e255ff02f3ded958b6dbf54fd',
+            'files':results}
+
 def models():
-    result=[]; deadline=time.monotonic()+25
-    for root in ROOTS:
-        if not Path(root).is_dir():continue
-        base_depth=len(Path(root).parts)
-        for directory,dirs,files in os.walk(root,followlinks=False):
-            dirs[:]=[x for x in dirs if x not in ('.git','node_modules','.venv','venv','site-packages','__pycache__') and not Path(directory,x).is_symlink()]
-            if len(Path(directory).parts)-base_depth>=7:dirs[:]=[]
-            for name in files:
-                if time.monotonic()>deadline or len(result)>=180:return {'files':result,'truncated':True}
-                p=Path(directory,name)
-                if p.is_symlink():continue
-                if p.suffix.lower() in ('.gguf','.safetensors') or name in ('config.json','trainer_state.json','adapter_config.json','rclone.conf'):
-                    try:
-                        s=p.stat(); row={'path':str(p),'bytes':s.st_size,'mtime':int(s.st_mtime)}
-                        if name=='rclone.conf':row={'rclone_config_present':True};result.append(row);continue
-                        if name in ('config.json','adapter_config.json','trainer_state.json') and s.st_size<2_000_000:
-                            d=json.loads(p.read_text())
-                            for key in ('model_type','architectures','global_step','base_model_name_or_path','peft_type','r'):
-                                if key in d and isinstance(d[key],(str,int,list,type(None))):row[key]=d[key]
-                            if name=='trainer_state.json':row['log_entries']=len(d.get('log_history',[]))
-                        result.append(row)
-                    except (OSError,ValueError,TypeError):pass
-    return {'files':result,'truncated':False}
+    return {'pinned_model_paths':pinned_model_paths()}
 
 def storage():
     rc=shutil.which('rclone')
