@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 import subprocess
 import sys
 import tempfile
@@ -839,6 +840,32 @@ class DeepSeekStorageAdmissionRegressions(unittest.TestCase):
                     cold.deepseek_storage_admission(self.manifest(),tmp,verify_full=True)
                 digest.assert_not_called()
 
+
+
+    def test_disk_free_cannot_authorize_unverified_owner_quota(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(cold, 'OWNER_STOP_PATHS', ()), \
+             patch.object(cold.shutil, 'disk_usage',
+                          return_value=SimpleNamespace(free=500*cold.GIB)):
+            result = cold.deepseek_storage_admission(self.manifest(), tmp)
+        self.assertTrue(result['filesystem_capacity_candidate'])
+        self.assertFalse(result['capacity_admitted'])
+        self.assertEqual(result['owner_quota_free_bytes'], None)
+        self.assertEqual(result['quota_status'],
+                         'UNKNOWN_OWNER_NATIVE_QUOTA_READBACK_REQUIRED')
+        self.assertEqual(result['state'], 'HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT')
+        self.assertEqual(result['downloads_started'], 0)
+
+    def test_readonly_mount_rejects_capacity_even_if_disk_usage_reports_free(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(cold, 'OWNER_STOP_PATHS', ()), \
+             patch.object(cold.os, 'statvfs',
+                          return_value=SimpleNamespace(f_flag=getattr(os, 'ST_RDONLY', 1))), \
+             patch.object(cold.shutil, 'disk_usage',
+                          return_value=SimpleNamespace(free=500*cold.GIB)):
+            result = cold.deepseek_storage_admission(self.manifest(), tmp)
+        self.assertTrue(result['filesystem_readonly'])
+        self.assertFalse(result['filesystem_capacity_candidate'])
+        self.assertFalse(result['capacity_admitted'])
+        self.assertEqual(result['state'], 'HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT')
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

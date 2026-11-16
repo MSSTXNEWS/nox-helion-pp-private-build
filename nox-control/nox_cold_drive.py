@@ -747,6 +747,9 @@ def deepseek_storage_admission(manifest, root, verify_full=False, reserve_bytes=
     if not root.is_dir():
         raise ValueError('HOLD_DEEPSEEK_SEEKABLE_ROOT')
     filesystem = root.stat().st_dev
+    # statvfs/disk_usage is only a filesystem-wide estimate. It does NOT
+    # prove the owner's actual write quota, IAM, or one-native-writer lease.
+    mount_readonly = bool(os.statvfs(root).f_flag & getattr(os, 'ST_RDONLY', 1))
     free = shutil.disk_usage(root).free
     unverified = verified = 0
     files = {}
@@ -785,14 +788,23 @@ def deepseek_storage_admission(manifest, root, verify_full=False, reserve_bytes=
                                  (target.stat().st_dev, target.stat().st_ino))
         except (OSError,RuntimeError):
             shared_alias = False
-    capacity = free >= unverified+reserve_bytes
-    full = capacity and verified == DEEPSEEK_TOTAL_BYTES and shared_alias
+    filesystem_capacity_candidate = (not mount_readonly and
+                                     free >= unverified + reserve_bytes)
+    # This source-only inspector has no owner-auth quota/lease attestation.
+    # Never promote a statvfs free-space estimate into admission to transfer.
+    capacity = False
+    full = (filesystem_capacity_candidate and
+            verified == DEEPSEEK_TOTAL_BYTES and shared_alias)
     return {'schema':'NOX_DEEPSEEK_STORAGE_READONLY_V1',
             'state':'LOCAL_ONLY_SEEKABLE_SHA_CANDIDATE' if full else 'HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT',
             'unique_file_count':6,'unique_bytes':DEEPSEEK_TOTAL_BYTES,
             'metadata_only_bytes':5780704,'unverified_bytes':unverified,
             'sha256_verified_bytes':verified,'ssd_free_bytes':free,
             'ssd_reserve_bytes':reserve_bytes,'capacity_admitted':capacity,
+            'filesystem_capacity_candidate':filesystem_capacity_candidate,
+            'filesystem_readonly':mount_readonly,
+            'owner_quota_free_bytes':None,
+            'quota_status':'UNKNOWN_OWNER_NATIVE_QUOTA_READBACK_REQUIRED',
             'engram_alias_same_data':shared_alias,'files':files,
             'owner_stop_observed':owner_stop_observed,
             'owner_maintenance_flag_observed':maintenance_observed,
