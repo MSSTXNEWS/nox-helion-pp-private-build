@@ -502,8 +502,13 @@ def _overlay_v122_owner_ui(raw: bytes, *, expected_sha: str = _V122_FROZEN_NOX_U
     return source.encode('utf-8')
 
 
-async def _next_native_chunk_or_stop(iterator, cancel: asyncio.Event):
-    """Race the next real model token against scoped STOP, with no busy-wait.
+async def _wait_for_owner_stop(stop_clear):
+    while stop_clear():
+        await asyncio.sleep(.05)
+
+
+async def _next_native_chunk_or_stop(iterator, cancel: asyncio.Event, stop_clear=None):
+    """Race the next real model token against scoped and global STOP gates.
 
     Stops the *HTTP stream* even when the upstream model has not emitted its
     next token. This is NOT proof that GPU compute has ceased: that requires
@@ -511,11 +516,25 @@ async def _next_native_chunk_or_stop(iterator, cancel: asyncio.Event):
     """
     if cancel.is_set():
         return ('stop', None)
+    if stop_clear is not None and not stop_clear():
+        return ('owner_stop', None)
     next_task = asyncio.create_task(anext(iterator))
     stop_task = asyncio.create_task(cancel.wait())
+    owner_stop_task=(asyncio.create_task(_wait_for_owner_stop(stop_clear))
+                     if stop_clear is not None else None)
+    pending={next_task,stop_task}
+    if owner_stop_task is not None:pending.add(owner_stop_task)
     try:
         finished, _ = await asyncio.wait(
-            {next_task, stop_task}, return_when=asyncio.FIRST_COMPLETED)
+            pending, return_when=asyncio.FIRST_COMPLETED)
+        if owner_stop_task is not None and owner_stop_task in finished:
+            next_task.cancel()
+            try:
+                await asyncio.wait_for(next_task, timeout=0.5)
+            except (asyncio.CancelledError, asyncio.TimeoutError,
+                    StopAsyncIteration):
+                pass
+            return ('owner_stop', None)
         if stop_task in finished or cancel.is_set():
             next_task.cancel()
             try:
@@ -534,7 +553,10 @@ async def _next_native_chunk_or_stop(iterator, cancel: asyncio.Event):
         # caller cannot aclose() the still-running native stream.
         next_task.cancel()
         stop_task.cancel()
-        await asyncio.gather(next_task, stop_task, return_exceptions=True)
+        tasks=[next_task,stop_task]
+        if owner_stop_task is not None:
+            owner_stop_task.cancel();tasks.append(owner_stop_task)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class _OwnerStatic(StaticFiles):
@@ -840,9 +862,13 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 decoder=codecs.getincrementaldecoder('utf8')('strict')
                 upstream=wire.body_iterator.__aiter__()
                 while True:
-                    event,chunk=await _next_native_chunk_or_stop(upstream,cancel)
+                    event,chunk=await _next_native_chunk_or_stop(
+                        upstream,cancel,lambda:_stop_clear(trusted))
                     if event=='stop':
                         yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                        return
+                    if event=='owner_stop':
+                        yield _jsonl({'type':'error','error':'HOLD_OWNER_STOP'})
                         return
                     if event=='eof':
                         break

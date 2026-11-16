@@ -481,6 +481,31 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(len(self.recall_calls),before)
         self.assertEqual(self.calls,[])
 
+    def test_global_stop_cancels_inflight_stream_before_first_delta(self):
+        import asyncio
+        state={'provider_started':False}
+        self.record=False
+        self.trusted['stop_active']=lambda:state['provider_started']
+        with sqlite3.connect(self.db) as db:
+            before=db.execute('SELECT COUNT(*) FROM s03_items').fetchone()[0]
+        async def pending_provider(payload):
+            state['provider_started']=True
+            async def chunks():
+                await asyncio.sleep(.25)
+                yield 'data: '+json.dumps({'choices':[{'delta':{'content':'must be stopped'}}]})+'\n\n'
+                yield 'data: [DONE]\n\n'
+            return StreamingResponse(chunks(),media_type='text/event-stream')
+        self.trusted['_proxy_completion']=pending_provider
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                  json={'message':'Check global STOP while awaiting a token'})
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_OWNER_STOP'})
+        self.assertFalse(any(frame.get('type') in ('delta','done') or frame.get('saved')
+                             for frame in frames))
+        with sqlite3.connect(self.db) as db:
+            after=db.execute('SELECT COUNT(*) FROM s03_items').fetchone()[0]
+        self.assertEqual(after,before)
+
     def test_s03_recall_missing_fails_closed_before_provider(self):
         self.trusted.pop('recall')
         response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
