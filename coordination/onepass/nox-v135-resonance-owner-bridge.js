@@ -1,8 +1,3 @@
-/* NOX V135 — owner-scoped compatibility for the ORIGINAL V24/V22 Resonance.
- * Repairs the missing /api/nox/chat SSE wiring, dialog create/list/history
- * against existing V112 OneHost/S03. Never adds a server, model or database.
- * No fake success: completion requires native done + persisted S03 readback.
- */
 (() => {
   'use strict';
   const here=location.pathname;
@@ -14,11 +9,7 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
-  // Limit event count for huge upstream chunks; preserve every codepoint.
   function livePieces(text) {
-    // The bytes and persisted upstream answer are unchanged. Without
-    // Intl.Segmenter, emit the complete native delta: codepoint splitting
-    // can tear ZWJ emoji/combining clusters into visibly broken tokens.
     const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
       ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
       : [text];
@@ -86,7 +77,6 @@
   async function checkHistory(id,prompt,answer,exchangeId,signal) {
     const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
     if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
-    // Check exact S03 exchange; newer saved rows may occupy the tail.
     const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
     if(pair.length!==2||pair[0].role!=='user'||pair[1].role!=='assistant'||
        pair[0].content!==prompt||pair[1].content!==answer||
@@ -98,7 +88,6 @@
       done.dialog_id===id&&typeof done.exchange_id==='string'&&
       done.exchange_id.length>=6&&done.exchange_id.length<=160;
   }
-  // A stopped browser generation must not remain stuck forever in a native
   async function readNativeOrAbort(reader,signal) {
     if(!signal)return reader.read();
     if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
@@ -124,8 +113,6 @@
       let e;
       try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
       if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
-      // Native done is terminal. Never accept extra protocol frames as
-      // a successful persisted exchange (blank lines remain permitted).
       if(doneSeen){
         if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
         throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
@@ -147,14 +134,11 @@
           ?e.model.replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,96)||'UNKNOWN'
           :'UNKNOWN';
       } else if(e.type==='preparing') {
-        // Original V112 emits one preparing frame before its native start.
-        // A repeated/late preparation is an invalid wire sequence, even if
         if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
         if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
         preparingSeen=true;
       } else {
         // Fail closed: an unrecognized native frame cannot precede a
-        // trustworthy terminal receipt or persisted S03 history readback.
         throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
       }
     };
@@ -170,8 +154,6 @@
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
         }
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
-        // Native done terminates the protocol, even if HTTP keepalive has no EOF.
-        // Validate all same-chunk trailing frames before trusting the receipt.
         if(doneSeen){
           if(buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
           break;
@@ -182,13 +164,11 @@
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
       return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
     }finally{
-      // Never let a stuck native cancellation suppress exact S03 readback.
       try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
     }
   }
   function sseChat(data,signal) {
     let closed=false;const started=performance.now();let firstVisibleMs=null;
-    // Abort is scoped to this generation, never global /api/nox/stop.
     const upstreamAbort=new AbortController();
     const onAbort=()=>upstreamAbort.abort();
     if(signal?.aborted)upstreamAbort.abort();
@@ -221,11 +201,7 @@
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              // Bound visual pacing to 8 actual frames per incoming native chunk.
-              // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
-                // Browsers with suspended rAF (including headless/hidden tabs)
-                // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
                   let settled=false;
                   const finish=()=>{if(!settled){settled=true;resolve();}};
@@ -295,7 +271,6 @@
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
       await checkHistory(id,data.message,answer,receipt.exchange_id,signal);
-      // S03 readback must never produce a persisted-success response.
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       return responseJSON({answer,model:nativeModel,model_identity_verified:false,dialog_id:id,
         exchange_id:receipt.exchange_id,history_persisted:true,s03_integrated:true});
@@ -353,7 +328,6 @@
     const url=samePath(input);
     if(!url)return nativeFetch(input,init);
     const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
-    // and fetch(new Request(url, init)); never bypass the scoped S03 gate.
     if(input instanceof Request&&!init?.body){
       const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
         (url.pathname==='/api/nox/history'&&method==='GET')||

@@ -11,7 +11,7 @@
     {
       "path": "coordination/onepass/nox-v135-resonance-owner-bridge.js",
       "before": "266b698914f3721d616a0cb48e45c97264d355ff",
-      "after": "6b888c9649887fe2544709f22b390003ff72b5f3"
+      "after": "2d7fd90519cf2a5cbeab28d48fa490fb67991b4e"
     },
     {
       "path": "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
@@ -19,7 +19,7 @@
       "after": "7376eb8ea8b1358f5cc12c32bba357a90e46b613"
     }
   ],
-  "tests": "V170 delayed two-native-frame regression plus existing V154/V155 cross-delta Unicode safety, exact SHA CI pending",
+  "tests": "First V135 exact SHA CI 43835090607 FAIL HOLD_OWNER_BRIDGE_BOUNDS (20439 bytes); reduced comments only, code logic unchanged; recheck pending next CI.",
   "tasks": [
     {
       "n": 1,
@@ -90,5 +90,13 @@
   "native_commands_write_count": 0,
   "original_web_changed": false,
   "weights_switched": false,
-  "next": "Complete exact SHA CI, then bound original owner-auth live browser SSE/STOP/S03 and RU/ES p50/p95 under source pin/lease/rollback; do not promote from source tests."
+  "next": "Complete exact SHA CI, then bound original owner-auth live browser SSE/STOP/S03 and RU/ES p50/p95 under source pin/lease/rollback; do not promote from source tests.",
+  "first_ci_failure": {
+    "run_id": 43835090607,
+    "reason": "HOLD_OWNER_BRIDGE_BOUNDS",
+    "size_before": 20439,
+    "max_allowed": 20000,
+    "action": "Remove only redundant comments, retain fixed 20000 byte staging ceiling",
+    "size_after": 18548
+  }
 }
