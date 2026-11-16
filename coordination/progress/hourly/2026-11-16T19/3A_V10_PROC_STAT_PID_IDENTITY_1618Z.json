@@ -1,0 +1,90 @@
+{
+  "schema": "NOX_UNIVERSAL_3A_V10_PID_IDENTITY_SOURCE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3A",
+  "at_utc": "2026-11-16T16:18:44Z",
+  "at_msk": "2026-11-16T19:18:44+03:00",
+  "source_head_observed_before_receipt": "69ef78c24e3e9b701a8d57b34a073a49ccc19a07",
+  "native_owner_instance": 60509551,
+  "source_changes": {
+    "task_id": "S1-03",
+    "scope": "SOURCE_ONLY_NOT_INSTALLED",
+    "root_cause": "The original OneHost read-only inspector processes() split /proc/PID/stat at the FIRST ') ' although Linux comm can contain that substring; malformed field alignment made valid PID/start_ticks absent from a process inventory. The already separate owner_safety_snapshot uses rsplit correctly.",
+    "before_blob_sha1": "418b93fc46eb561f37de785b2f9698edd1cf8162",
+    "after_blob_sha1": "7b69acaab914c446bc35c4760573c67114b2d6de",
+    "regression_before_blob_sha1": "9ad63edc82968a4b6e44b05505e04485030f6c0c",
+    "regression_after_blob_sha1": "7fd533254a3889b32dd68fa5ff57a854ca643124",
+    "commits": [
+      "3631f88fd6fa92fd68c1d23a33aea1355d39dbf7",
+      "6a27266246cba6140eac84d356511c1b492c18d4"
+    ],
+    "test": "test_process_stat_uses_final_comm_delimiter_for_pid_identity",
+    "test_result": "PASS",
+    "ci_run": 43906051646,
+    "ci_job": 133435048327,
+    "regression_behavior": "Synthetic comm 'nox) worker' with actual ppid=1 and start_ticks=987654 now parsed correctly; old split interpreted state=worker), ppid=S and skipped the process.",
+    "readback": "GitHub source+test current blob SHA matched; CI 18 safety / 7 inventory / 10 privacy tests PASS",
+    "rollback": "Revert only the exact source and test blobs using GitHub per-path CAS after rereading latest HEAD. No server rollback needed because no installation."
+  },
+  "tasks": [
+    {
+      "id": "S1-03",
+      "outcome": "SOURCE_TESTED_NATIVE_HOLD",
+      "evidence": "CI 43906051646 PASS, current source/test Git blob SHA readback; no native writer lease claim"
+    },
+    {
+      "id": "S1-01",
+      "outcome": "HOLD_FRESH_OWNER_NATIVE_AUTH",
+      "evidence": "Last authenticated owner inspect 2026-11-16T15:59:58Z, GitHub Actions 43887943803 job 133422195964; newer 16:13:31Z SSH TCP banners via 43905088148 NOT native authentication"
+    },
+    {
+      "id": "S1-07",
+      "outcome": "HOLD_OFFSITE_RESTORE_UNVERIFIED",
+      "evidence": "Unique S03/Genesis/checkpoint+optimizer/scaler/RNG independently restorable offsite backup not proven; no destructive operations admitted"
+    },
+    {
+      "id": "S2-07",
+      "outcome": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "evidence": "Model unique=248834257920 B; internal total SSD=183609851904 B and last free=43158855680 B; no owner-authorized random-access mount with reserve verified"
+    },
+    {
+      "id": "S3-01",
+      "outcome": "HOLD_ACTUAL_LIVE_UI_UNKNOWN",
+      "evidence": "Last owner inspect: five critical Supervisor STOPPED, :8081 no listener, HTTP 8080..8082 unavailable under deliberate OWNER_MODEL_UPDATE; cannot assume actual served UI from source archive"
+    }
+  ],
+  "weights": {
+    "new_successful_optimizer_updates": 0,
+    "checkpoint_restore_verified": false,
+    "historical_qwen_successful_updates": 55,
+    "deepseek_trained_or_promoted": false
+  },
+  "knowledge": {
+    "hunter_verified_source_to_s03_write_readback_recall": 0,
+    "s03_native_jobs_done": 0
+  },
+  "dispatcher_resources": {
+    "native_pid_start_ticks_new": null,
+    "owner_writer_lease_current": null,
+    "three_native_worker_pids_verified": false,
+    "last_owner_native_utc": "2026-11-16T15:59:58Z",
+    "last_owner_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803/job/133422195964",
+    "owner_stop_last_observed": "PRESENT_OWNER_MODEL_UPDATE",
+    "gpu_mib_last_observed": [
+      0,
+      0
+    ],
+    "ssd_total_bytes_last_observed": 183609851904,
+    "ssd_free_bytes_last_observed": 43158855680,
+    "bytes_downloaded_this_slot": 0,
+    "bytes_deleted_this_slot": 0,
+    "restarts_this_slot": 0,
+    "site_deploys_this_slot": 0
+  },
+  "changed_source_files": [
+    "nox-control/owner_native_inspect.py",
+    "nox-control/test_owner_native_inspect_inventory.py"
+  ],
+  "protected": "D02/14 worlds, S03/Genesis, unique checkpoints, owner STOP/leases and runtime remain untouched",
+  "next_ready": "Owner-authorized independently recoverable offsite S03/checkpoint evidence plus verified seekable storage >=248834257920 B+reserve and one native lease, then bounded pinned-shard download and Maya actual inference/one original UI SSE/S03/RU-ES E2E; source inspector change may be staged only under exact owner preimage+rollback."
+}
