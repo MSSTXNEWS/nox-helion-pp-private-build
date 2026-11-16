@@ -35,13 +35,21 @@
     }
   ],
   "WEIGHTS": {
-    "status": "PREVIOUS_NATIVE_8_SUCCESSFUL_UPDATES_THIS_SLOT_0",
+    "status": "EIGHT_PROVED_PRIOR_UPDATES_TRAINER_RESUMED_AT_0615_UTC_LIVE_NOW_UNKNOWN",
     "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758",
     "checkpoint8_files": 10,
     "checkpoint8_bytes": 519884896,
     "manifest_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
     "independent_offsite_restore": false,
-    "latest_train_status": "FATAL/TRAIN_HOLD"
+    "latest_train_status": "FATAL/TRAIN_HOLD",
+    "trainer_resumed_native_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43815393580",
+    "trainer_service_state_at_0615_utc": "RUNNING",
+    "resumed_task_state": "done",
+    "owner_handback_request_stage": "RESUMED",
+    "start_command_issued": true,
+    "new_successful_optimizer_updates_after_resume_verified": false,
+    "checkpoint6_and_checkpoint8_SHA_verified": true,
+    "current_live_status": "UNKNOWN_AFTER_2026-11-16T06:15:54Z"
   },
   "KNOWLEDGE": {
     "status": "HOLD_HUNTER_LICENSED_SOURCE_S03_RECALL",
@@ -58,10 +66,21 @@
     "ssd_free_last_observed": 12220051456,
     "restarts": 0,
     "downloaded_bytes": 0,
-    "deleted_bytes": 0
+    "deleted_bytes": 0,
+    "latest_maintenance_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43815393580",
+    "latest_dispatcher_pid_at_0615utc": 746352,
+    "latest_http_health_at_0615utc": {
+      "8080": 200,
+      "8081": 200,
+      "8082": 200
+    },
+    "native_writer_lease_current": "UNKNOWN",
+    "worker_pids_current": null,
+    "current_gpu_or_ssd": "UNKNOWN",
+    "restarts_this_slot": 0
   },
   "cleanup": "HOLD_NEW_MODEL_NOT_ACCEPTED_OFFSITE_RESTORE_UNKNOWN",
-  "next": "Original owner-auth browser target preimage + STOP/lease/offsite restore; safe deploy and paired real RU/ES SSE/STOP/S03 TTFT p50/p95; owner train resume separate 2D.",
+  "next": "Run original owner-auth current browser SSE/STOP/S03 RU/ES metrics using latest source. WEIGHTS: confirm post-06:15 successful updates via native receipt, not RUNNING alone; full DeepSeek still 4 mandatory files missing in cold storage. Keep one owner training writer, no redundant restart.",
   "source_initial_commit": "15bff616e2b08696fbe9f14b0d722bccceb9bc3c",
   "source_final_commit": "690fc0a2a9de3b997dbcf992498983316ff08ec5",
   "source_final_blob_sha": "266b698914f3721d616a0cb48e45c97264d355ff",
@@ -89,5 +108,17 @@
     }
   },
   "native_changes_this_slot": false,
-  "owner_runtime_current_status": "HOLD_NO_FRESH_OWNER_AUTH_BROWSER_OR_LEASE"
+  "owner_runtime_current_status": "HOLD_NO_FRESH_OWNER_AUTH_BROWSER_OR_LEASE",
+  "downloads_historical_cross_slot": {
+    "source": "https://app.notion.com/p/40cacc184a9f81248703e3840d4c2422",
+    "last_canonical_memory_asof_utc": "2026-11-16T06:24:39Z",
+    "deepseek_shard": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+    "verified_bytes": 19923784832,
+    "full_file_sha256": "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1",
+    "remaining_required_files": 4,
+    "remaining_required_bytes": 228904692384,
+    "location": "Library cold-storage parts, not native OneHost full serving placement",
+    "source_scope": "canonical-memory-reported; not redownloaded by this 3B run",
+    "new_bytes_this_3b_run": 0
+  }
 }
