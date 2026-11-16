@@ -122,6 +122,13 @@ class OwnerSafetyReadOnlyTests(unittest.TestCase):
 
 
 class MayaP0BinaryReadOnlyTests(unittest.TestCase):
+    def test_pin_is_original_owner_build_receipt_full_sha256(self):
+        # Independent pinned build receipt 6906295096, validated by native
+        # owner read-only #43887208632; neither result proves inference.
+        self.assertEqual(len(INSPECT.MAYA_P0_BINARY_SHA256),64)
+        self.assertEqual(INSPECT.MAYA_P0_BINARY_SHA256,
+                         '3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20')
+
     def setUp(self):
         import hashlib
         self.tmp = tempfile.TemporaryDirectory()

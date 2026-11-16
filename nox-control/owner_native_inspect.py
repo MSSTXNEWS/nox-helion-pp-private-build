@@ -846,7 +846,7 @@ def owner_safety_snapshot():
             'admission': 'READ_ONLY_NO_RESTART_NO_DELETE_NO_TRAINER'}
 
 MAYA_P0_BINARY_REL = 'engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4'
-MAYA_P0_BINARY_SHA256 = '3783980bb65861de36fe4d93b8e6bbd6a631207677bcabf330bf7830c21b20'
+MAYA_P0_BINARY_SHA256 = '3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20'
 
 def maya_p0_binary_readback(root=None, expected_sha256=None):
     """Read-only SHA/ELF pin of original Maya; NEVER packs or runs model."""
