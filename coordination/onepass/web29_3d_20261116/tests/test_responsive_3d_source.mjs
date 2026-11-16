@@ -42,9 +42,10 @@ test('short desktop keeps all three original panels and a scrollable conversatio
  assert.match(css,/flex:1 1 0!important;min-height:0!important;overflow:auto!important/);
 });
 
-test('short 761–1199px landscape retains all panels and readable tokens without document overflow',()=>{
- assert.match(css,/@media \\(min-width:761px\\) and \\(max-width:1199px\\) and \\(min-height:420px\\) and \\(max-height:540px\\)/);
- assert.match(css,/height:max\\(220px,calc\\(100dvh - 183px\\)\\)!important/);
- assert.match(css,/grid-template-rows:minmax\\(0,1fr\\) 56px!important/);
- assert.match(css,/max-height:56px!important;[\\s\\S]*overflow-y:auto!important/);
+test('short landscape tablet CSS keeps message stream and command dock visible',()=>{
+ assert.ok(css.includes('@media (min-width:761px) and (max-width:1199px) and (min-height:420px) and (max-height:540px)'));
+ assert.ok(css.includes('height:max(220px,calc(100dvh - 183px))!important'));
+ assert.ok(css.includes('grid-template-rows:minmax(0,1fr) 56px!important'));
+ assert.ok(css.includes('height:56px!important;min-height:0!important;max-height:56px!important'));
+ assert.ok(css.includes('flex:1 1 0!important;min-height:0!important;overflow:auto!important'));
 });

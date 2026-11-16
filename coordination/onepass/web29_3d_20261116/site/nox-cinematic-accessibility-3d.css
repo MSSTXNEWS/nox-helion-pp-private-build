@@ -85,7 +85,6 @@ html:root:root[data-nox-cinema="still"] body:is([data-page],.helion-home)
  }
 }
 
-
 /* Compact landscape tablet: keep the original history/conversation/telemetry
  * visible within the viewport. Previously the hard 260px+135px rows
  * overflowed a 480px-high window, obscuring telemetry and causing page scroll.
