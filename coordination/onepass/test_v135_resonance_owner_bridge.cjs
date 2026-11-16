@@ -868,3 +868,81 @@ test('V166 JSON provenance: relay returns actual native-reported label but not v
   assert.equal(data.history_persisted,true);
   assert(f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')));
 });
+
+
+test('V167 done on an open native keepalive completes JSON and SSE with S03 proof',async()=>{
+  for(const streamed of [false,true]){
+    let cancelled=0,reads=0;
+    const q='V167 ответ без EOF',a='Живой ответ',exchange='v167-keepalive-001';
+    const native=async path=>{
+      const u=new URL(String(path),'https://nox.local');
+      if(u.pathname==='/api/ui/memory/dialogs/create')return Response.json({dialog_id:id});
+      if(u.pathname==='/api/ui/memory/dialogs/history'){
+        reads++;
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',content:q,exchange_id:exchange},
+          {role:'assistant',content:a,exchange_id:exchange}]});
+      }
+      if(u.pathname==='/api/nox/chat/stream'){
+        const frames=[{type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+          {type:'start',model:'NOX HELION'},{type:'delta',text:a},
+          {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:exchange}];
+        return new Response(new ReadableStream({
+          start(c){c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));},
+          cancel(){cancelled++;}
+        }),{headers:{'content-type':'application/x-ndjson'}});
+      }
+      return new Response('NO_NATIVE_ROUTE',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:native};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const data={message:q,...(streamed?{dialog_id:id,request_id:'v167'}:{})};
+    const res=await Promise.race([w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(data)}),
+      new Promise((_,rej)=>setTimeout(()=>rej(Error('HOLD_NATIVE_EOF')),1500))]);
+    if(streamed){
+      const frames=await Promise.race([events(res),
+        new Promise((_,rej)=>setTimeout(()=>rej(Error('HOLD_SSE_EOF')),1500))]);
+      assert(frames.some(x=>x.type==='token'&&x.t.trim()));
+      assert.equal(frames.filter(x=>x.type==='done').length,1);
+      assert.equal(frames.find(x=>x.type==='done').history_persisted,true);
+    }else{
+      assert.equal(res.status,200);
+      assert.equal((await res.json()).history_persisted,true);
+    }
+    assert.equal(reads,1);
+    assert.equal(cancelled,1);
+  }
+});
+
+test('V167 same-chunk native frames after done remain fail-closed',async()=>{
+  let readback=0;
+  const native=async path=>{
+    const u=new URL(String(path),'https://nox.local');
+    if(u.pathname==='/api/ui/memory/dialogs/create')return Response.json({dialog_id:id});
+    if(u.pathname==='/api/ui/memory/dialogs/history'){
+      readback++;return Response.json({status:'READY',dialog_id:id,messages:[]});
+    }
+    if(u.pathname==='/api/nox/chat/stream'){
+      const frames=[{type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+        {type:'start',model:'NOX HELION'},{type:'delta',text:'Ответ'},
+        {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:'v167-duplicate'},
+        {type:'delta',text:'FORGED'}];
+      return new Response(new ReadableStream({start(c){
+        c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
+      }}),{headers:{'content-type':'application/x-ndjson'}});
+    }
+    return new Response('NO_NATIVE_ROUTE',{status:404});
+  };
+  const w={NOX_NATIVE_OWNER:true,fetch:native};
+  const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+    href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+  vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+  const r=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify({message:'V167'})});
+  assert.equal(r.status,503);
+  assert.match((await r.json()).error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
+  assert.equal(readback,0);
+});

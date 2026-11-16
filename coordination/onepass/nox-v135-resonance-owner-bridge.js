@@ -161,18 +161,20 @@
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
         }
         if(buf.length>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
+        // Native done terminates the protocol, even if HTTP keepalive has no EOF.
+        // Validate all same-chunk trailing frames before trusting the receipt.
+        if(doneSeen){
+          if(buf.trim())throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
+          break;
+        }
       }
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
       return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
     }finally{
-      try{
-        const cancelling=reader.cancel('STREAM_CLOSED');
-        // A buggy native reader may never settle cancellation after abort.
-        if(signal?.aborted)cancelling.catch(()=>{});
-        else await cancelling;
-      }catch{}
+      // Never let a stuck native cancellation suppress exact S03 readback.
+      try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
     }
   }
   function sseChat(data,signal) {
