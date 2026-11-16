@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from .zero3_fullbase_plan import fullbase_admission,zero3_cpu_config,sha256_manifest,STOP_PATHS
 from .curate_teacher_distillation import _file_sha
 from .verified_resume import admit_resume
+from .maya_acceptance_gate import verify_maya_admission
 
 INSTANCE=60509551
 SIGN_ENV='NOX_EXISTING_ONEHOST_OWNER_HMAC'
@@ -211,6 +212,9 @@ def run(args)->dict:
     approval=_json(Path(args.approval),3000)
     signed_secret=os.environ.get(SIGN_ENV,'').encode('utf8')
     verify_owner(native,approval,signed_secret)
+    # This exact accepted E2E receipt and live p0.training lease gate precede
+    # input staging, GPU framework import, tokenizer access and model loading.
+    maya_lineage=verify_maya_admission(native)
     student=Path(args.student).resolve()
     corpus_dir=Path(args.dataset).resolve()
     out=Path(args.output).resolve()
@@ -302,6 +306,7 @@ def run(args)->dict:
         raise RuntimeError('HOLD_STOP_BEFORE_RECEIPT')
     receipt={
         'schema':'NOX_V135_NATIVE_BASE_WEIGHT_OPTIMIZER_LOCAL_RECEIPT_V1',
+        **maya_lineage,
         'student_original_sha256':native['student_base_sha256'],
         'train_sha256':manifest['train_sha256'],
         'holdout_sha256':manifest['holdout_sha256'],
