@@ -975,28 +975,9 @@ def maya_dependency_path_readback(linkage=None):
     names = ('libcuda.so.1','libcudart.so.12','libcublas.so.12','libcublasLt.so.12')
     cache = {name:[] for name in names}
     for line in cp.stdout.splitlines():
-        match = re.match(r'\\s*(\\S+)\\s+\\([^)]*\\)\\s+=>\\s+(\\S+)\\s*    f=(hardware,processes,training,controls,chat_storage,receipts)[i]
-    try: return {'section':f.__name__,'worker_pid':os.getpid(),'result':f()}
-    except Exception as e: return {'section':f.__name__,'worker_pid':os.getpid(),'error':type(e).__name__}
-
-if __name__=='__main__':
-    with ProcessPoolExecutor(max_workers=6) as pool:
-        for row in pool.map(worker,range(6)):
-            # Each source record has its own bounded line; a long controller must
-            # not hide all controls behind the transport's per-line safety cap.
-            items=[dict(row,result=[item]) for item in row.get('result',[])] if row['section']=='controls' and isinstance(row.get('result'),list) else [row]
-            for item in items:
-                print('NOX_MAINT_INSPECT='+json.dumps(item,separators=(',',':')),flush=True)
-    owner_component_readback()
-    print('NOX_MAINT_SAFETY=' + json.dumps(owner_safety_snapshot(), separators=(',', ':'), allow_nan=False), flush=True)
-    print('NOX_MAINT_MAYA_P0=' + json.dumps(maya_p0_binary_readback(), separators=(',', ':'), allow_nan=False), flush=True)
-    print('NOX_MAINT_MAYA_ELF_LINKAGE=' + json.dumps(maya_elf_linkage_readback(), separators=(',', ':'), allow_nan=False), flush=True)
-    print('NOX_MAINT_MAYA_DEPENDENCIES=' + json.dumps(maya_dependency_path_readback(), separators=(',', ':'), allow_nan=False), flush=True)
-    bounded_capacity_readback()
-    print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
-, line)
-        if match and match.group(1) in cache:
-            cache[match.group(1)].append(match.group(2))
+        fields = line.split()
+        if len(fields) >= 4 and fields[0] in cache and fields[-2] == '=>':
+            cache[fields[0]].append(fields[-1])
     rpaths = [x for x in linkage.get('rpath',[]) if isinstance(x,str)]
     for name in names:
         paths = list(dict.fromkeys(cache[name] + [str(Path(base) / name) for base in rpaths]))
@@ -1036,5 +1017,6 @@ if __name__=='__main__':
     print('NOX_MAINT_SAFETY=' + json.dumps(owner_safety_snapshot(), separators=(',', ':'), allow_nan=False), flush=True)
     print('NOX_MAINT_MAYA_P0=' + json.dumps(maya_p0_binary_readback(), separators=(',', ':'), allow_nan=False), flush=True)
     print('NOX_MAINT_MAYA_ELF_LINKAGE=' + json.dumps(maya_elf_linkage_readback(), separators=(',', ':'), allow_nan=False), flush=True)
+    print('NOX_MAINT_MAYA_DEPENDENCIES=' + json.dumps(maya_dependency_path_readback(), separators=(',', ':'), allow_nan=False), flush=True)
     bounded_capacity_readback()
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
