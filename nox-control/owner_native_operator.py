@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_media_prepare_entry.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_aux_audit_entry.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -99,6 +99,9 @@ def run_native(action,request_id):
                      'nox-control/owner_chat_source_patch.py','nox-control/owner_chat_stream.py',
                      'nox-control/owner_chat_ui.py','nox-control/owner-chat-ui.js','nox-control/owner-presence.js',
                      'nox-control/owner_event_outbox.py','nox-control/owner_chat_browser_qa.py',
+                     'nox-control/owner_task_plans.py','nox-control/owner_task_lifecycle.py',
+                     'nox-control/owner_task_lifecycle.json','nox-control/owner_senior_gateway.py',
+                     'nox-control/owner_storage_reclaim.py','nox-control/owner_browser_diagnostic.py',
                      'nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py',
                      'nox_runpod/teacher_mesh/v137/owner_self_observation.py',
                      'coordination/onepass/nox-v135-resonance-owner-bridge.js',
