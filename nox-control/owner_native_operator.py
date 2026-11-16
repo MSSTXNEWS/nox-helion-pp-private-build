@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_log_selected_size_probe_v2.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_browser_runtime_repair_entry.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
@@ -127,6 +127,7 @@ def run_native(action,request_id):
                      'nox-control/owner_builder_drive_public_proof.json',
                      'nox-control/owner_log_selected_size_probe.py','nox-control/owner_log_space_probe.py',
                      'nox-control/owner_browser_runtime_inspect.py',
+                     'nox-control/owner_browser_stream_only_entry.py',
                      'nox-control/owner_training_status_entry.py','nox-control/owner_training_status_binding.py',
                      'nox-control/owner_training_amp_calibration.py','nox-control/owner_training_scaler_probe.py',
                      'nox-control/owner_training_placement_recovery.py','nox-control/owner_training_restore_preflight.py',
