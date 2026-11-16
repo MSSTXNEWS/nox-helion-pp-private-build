@@ -441,4 +441,76 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertEqual(partial.read_bytes(),self.content)
         self.assertFalse((self.dst/self.name).exists())
 
+    def test_stale_manifest_cannot_redownload_verified_coldpack_shard(self):
+        name=m.COLDPACK_COMPLETED_FILE
+        files=[
+            {'path':path,'bytes':size,'sha256':sha,
+             'url':f'https://huggingface.co/{m.REPO}/resolve/{m.REVISION}/{path}',
+             'download_state':'NOT_DOWNLOADED'}
+            for path,(size,sha) in m.PINNED_FILE_FACTS.items()
+        ]
+        manifest={'schema':'NOX_MODEL_DOWNLOAD_MANIFEST_V1','repository':m.REPO,
+                  'revision':m.REVISION,'files':files,
+                  'total_unique_gguf_bytes':248834257920,
+                  'alias':{'path':'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf',
+                           'target':'DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf',
+                           'duplicate_bytes':False}}
+        # The Drive manifest's stale NOT_DOWNLOADED field does not override the
+        # newer, exact progress receipt: 200 parts and the pinned whole-file SHA.
+        by=m.load_manifest(json.dumps(manifest).encode())
+        parts=[]
+        for index in range(1,201):
+            n=f'{name}.part{index:04d}'
+            size=100_000_000 if index<200 else 23_784_832
+            parts.append({'file':n,'index':index,'offset':(index-1)*100_000_000,
+                          'bytes':size,'state':'SAVED_METADATA_VERIFIED',
+                          'remote':{'name':n,'size_bytes':size}})
+        row=next(x for x in files if x['path']==name)
+        progress={'schema':'NOX_DEEPSEEK_COLDPACK_PROGRESS_V1','revision':m.REVISION,
+                  'native_ready':False,'seekable_placement_verified':False,
+                  'files':[{'path':name,'bytes':row['bytes'],'sha256':row['sha256'],
+                            'whole_sha256_verified':True,'parts':parts}]}
+        raw=json.dumps(progress,separators=(',',':')).encode()
+        with patch.object(m,'COLDPACK_PROGRESS_SHA256',hashlib.sha256(raw).hexdigest()), patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'HOLD_COLDPACK_ALREADY_COMPLETE'):
+                m.download_one(by[name],self.dst,self.root,self.lease,self.request,
+                               opener=lambda *a,**k:self.fail('duplicate network transfer'),
+                               progress_raw=raw)
+        self.assertFalse((self.dst/(name+'.part')).exists())
+        self.assertFalse((self.dst/name).exists())
+
+    def test_completed_coldpack_shard_requires_pinned_progress_before_network(self):
+        row=(m.COLDPACK_COMPLETED_FILE,)+m.PINNED_FILE_FACTS[m.COLDPACK_COMPLETED_FILE]
+        name,size,digest=row
+        target={'path':name,'bytes':size,'sha256':digest,
+                'url':f'https://huggingface.co/{m.REPO}/resolve/{m.REVISION}/{name}'}
+        with self.assertRaisesRegex(m.Hold,'HOLD_COLDPACK_PROGRESS_REQUIRED'):
+            m.download_one(target,self.dst,self.root,self.lease,self.request,
+                           opener=lambda *a,**k:self.fail('network without progress'))
+        self.assertFalse((self.dst/(name+'.part')).exists())
+
+    def test_modified_coldpack_progress_pin_fails_closed(self):
+        name=m.COLDPACK_COMPLETED_FILE
+        size,digest=m.PINNED_FILE_FACTS[name]
+        target={'path':name,'bytes':size,'sha256':digest,
+                'url':f'https://huggingface.co/{m.REPO}/resolve/{m.REVISION}/{name}'}
+        with self.assertRaisesRegex(m.Hold,'HOLD_COLDPACK_PROGRESS_UNVERIFIED'):
+            m.download_one(target,self.dst,self.root,self.lease,self.request,
+                           opener=lambda *a,**k:self.fail('network on unpinned progress'),
+                           progress_raw=b'{}')
+        self.assertFalse((self.dst/(name+'.part')).exists())
+
+    def test_coldpack_progress_file_read_is_bounded_and_no_follow(self):
+        progress=self.dst/'progress.json'
+        progress.write_bytes(b'{}')
+        self.assertEqual(m.read_coldpack_progress_file(progress),b'{}')
+        link=self.dst/'progress-link.json'
+        link.symlink_to(progress)
+        with self.assertRaisesRegex(m.Hold,'SYMLINK_PATH'):
+            m.read_coldpack_progress_file(link)
+        with patch.object(m,'COLDPACK_PROGRESS_MAX_BYTES',1):
+            with self.assertRaisesRegex(m.Hold,'PROGRESS_LIMIT'):
+                m.read_coldpack_progress_file(progress)
+
 if __name__=='__main__':unittest.main()
+
