@@ -305,6 +305,36 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertEqual(PLAN.evaluate_source_plan(gpu_ids=(0, 1), tp=2, max_context=65536,
                          reserve_mib=0, **common)["state"], "HOLD_POSITIVE_MEMORY_RESERVE_REQUIRED")
 
+    def test_hash_reader_rejects_symlinks_even_with_identical_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "part.gguf"
+            path.write_bytes(b"safe-original")
+            self.assertEqual(PLAN._sha256_file(path),
+                             hashlib.sha256(b"safe-original").hexdigest())
+            link = Path(tmp) / "alias.gguf"
+            link.symlink_to(path)
+            with self.assertRaises(OSError):
+                PLAN._sha256_file(link)
+
+    def test_hash_reader_holds_when_name_replaced_during_read(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "part.gguf"
+            replacement = Path(tmp) / "replacement.gguf"
+            path.write_bytes(b"same-content")
+            replacement.write_bytes(b"same-content")
+            original_fstat = os.fstat
+            calls = [0]
+            def replace_on_second_fstat(fd):
+                calls[0] += 1
+                if calls[0] == 2:
+                    os.replace(replacement, path)
+                return original_fstat(fd)
+            with patch.object(PLAN.os, "fstat", side_effect=replace_on_second_fstat):
+                with self.assertRaises(OSError):
+                    PLAN._sha256_file(path)
+            self.assertEqual(calls[0], 2)
+
     def test_pinned_maya_source_contract(self):
         packer = maya_source("tools/ds4/pack_gguf.py")
         iq = maya_source("src/ds4/ds4_iq.cu")

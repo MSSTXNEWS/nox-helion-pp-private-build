@@ -46,11 +46,29 @@ def _path_has_symlink_component(path: Path) -> bool:
 
 
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for block in iter(lambda: source.read(8 * 1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+    """Hash an open, regular inode; HOLD on symlink swaps or in-place mutation."""
+    flags = (os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) |
+             getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+    fd = os.open(path, flags)
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode):
+            raise OSError("HOLD_PACKER_MODEL_INPUT_NOT_REGULAR")
+        digest = hashlib.sha256()
+        with os.fdopen(fd, "rb", closefd=False) as source:
+            for block in iter(lambda: source.read(8 * 1024 * 1024), b""):
+                digest.update(block)
+        after = os.fstat(fd)
+        at_name = path.lstat()
+        keys = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        identity = lambda row: tuple(getattr(row, key) for key in keys)
+        if (not stat.S_ISREG(at_name.st_mode) or identity(before) != identity(after)
+                or identity(before) != identity(at_name)
+                or _path_has_symlink_component(path.parent)):
+            raise OSError("HOLD_PACKER_MODEL_CHANGED_DURING_HASH")
+        return digest.hexdigest()
+    finally:
+        os.close(fd)
 
 
 def observe_packer_output(model_file_paths):
