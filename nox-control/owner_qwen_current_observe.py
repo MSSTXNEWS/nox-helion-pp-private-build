@@ -11,7 +11,7 @@ except NameError:
     BUNDLE = {}
 
 ENTRY = 'owner_qwen_window_observe_entry.py'
-ENTRY_SHA = '3955572f13d6c53727b85a6ca41287b3648cb21332268bbd783e3629c390e32d'
+ENTRY_SHA = '3bfc67e5a88657400c27b09f8802f46ea8b1fe1c8c6f80b35295f074c240d962'
 WINDOW_CONTEXT = {
     'request': '6908281920',
     'source_sha': '35931438c591a9bb5a649e851f155c4313f28562',
