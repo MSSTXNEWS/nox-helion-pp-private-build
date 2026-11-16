@@ -139,6 +139,27 @@ class DeepSeekP0Offline(unittest.TestCase):
     def test_manifest_revision_fail_closed(self):
         bad={'schema':'NOX_MODEL_DOWNLOAD_MANIFEST_V1','repository':m.REPO,'revision':'main','files':[]}
         with self.assertRaisesRegex(m.Hold,'MANIFEST_REVISION'):m.load_manifest(json.dumps(bad).encode())
+    def test_rebalanced_tampered_manifest_holds(self):
+        """Pin every digest and size: a valid total and revision do not certify shards."""
+        files=[{'path':name,'bytes':size,'sha256':sha,
+                'url':f'https://huggingface.co/{m.REPO}/resolve/{m.REVISION}/{name}'}
+               for name,(size,sha) in m.PINNED_FILE_FACTS.items()]
+        manifest={'schema':'NOX_MODEL_DOWNLOAD_MANIFEST_V1',
+                  'repository':m.REPO,'revision':m.REVISION,'files':files,
+                  'total_unique_gguf_bytes':248834257920,
+                  'alias':{'path':'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf',
+                           'target':'DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf',
+                           'duplicate_bytes':False}}
+        self.assertEqual(len(m.load_manifest(json.dumps(manifest).encode())),6)
+        files[1]['sha256']='0'*64
+        with self.assertRaisesRegex(m.Hold,'HOLD_MANIFEST_FILE_IDENTITY'):
+            m.load_manifest(json.dumps(manifest).encode())
+        files[1]['sha256']=m.PINNED_FILE_FACTS[files[1]['path']][1]
+        files[1]['bytes']+=1
+        files[2]['bytes']-=1
+        with self.assertRaisesRegex(m.Hold,'HOLD_MANIFEST_FILE_IDENTITY'):
+            m.load_manifest(json.dumps(manifest).encode())
+
     def test_manifest_sum_matches_engine_p0(self):
         # Actual immutable manifest is fetched from engine stage branch by release controller.
         self.assertEqual(sum([5780704,39535781184,39736712000,39036908384,19923784832,110595290816]),
