@@ -7,6 +7,8 @@ on:
       - 'nox-control/owner_native_inspect.py'
       - 'coordination/progress/hourly/nox_auto_2a_hf_metadata_test.py'
       - 'nox-control/test_owner_training_config_preflight.py'
+      - 'nox-control/test_owner_native_inspect_inventory.py'
+      - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
       - '.github/workflows/nox-hybrid-2a-source-acceptance.yml'
   workflow_dispatch:
 jobs:
@@ -26,3 +28,8 @@ jobs:
 
       - name: Exact 2A safetensors metadata layout test
         run: python coordination/progress/hourly/nox_auto_2a_hf_metadata_test.py
+      - name: Existing native-inspector Qwen receipt integrity and privacy SOURCE regressions
+        run: |
+          python -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_inventory.py nox-control/test_owner_native_inspect_receipt_privacy.py
+          python -m unittest discover -s nox-control -p test_owner_native_inspect_inventory.py -v
+          python -m unittest discover -s nox-control -p test_owner_native_inspect_receipt_privacy.py -v
