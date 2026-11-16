@@ -73,7 +73,7 @@ class ProgressEvidenceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
             proc=root/'proc/4711';proc.mkdir(parents=True)
-            (proc/'stat').write_text('4711 (nox dispatcher) S '+' '.join(['0']*19+['321']+['0']*6))
+            (proc/'stat').write_text('4711 (nox dispatcher) S '+' '.join(['0']*18+['321']+['0']*6))
             row={'status':'running','owner_claim':{'pid':4711,'nonce':'a'*24},
                  'progress':{'metric':'completed_items','current':7,'source_receipt_sha256':'a'*64}}
             snap=mod._progress_snapshot({'tasks':{'x':row}},root/'proc',100)
@@ -99,7 +99,7 @@ class ProgressEvidenceTests(unittest.TestCase):
     def test_real_readback_previous_snapshot_progress_but_no_verified_native(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);proc=root/'proc/4711';proc.mkdir(parents=True)
-            (proc/'stat').write_text('4711 (worker) S '+' '.join(['0']*19+['321']+['0']*6))
+            (proc/'stat').write_text('4711 (worker) S '+' '.join(['0']*18+['321']+['0']*6))
             state=root/'state/dispatcher';state.mkdir(parents=True)
             components=root/'state/owner_components';components.mkdir()
             row={'status':'running','owner_claim':{'pid':4711,'nonce':'a'*24},
