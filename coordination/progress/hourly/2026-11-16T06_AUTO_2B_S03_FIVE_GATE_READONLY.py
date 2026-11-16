@@ -127,7 +127,7 @@ def inspect(path: Path, *, fixture=False):
                     valid_shape += int(shape_ok)
                     valid_hash += int(hash_ok)
                     valid_both += int(shape_ok and hash_ok)
-            identity_ok = len(active_models) == 1 and all(
+            identity_ok = vector_scan_complete and len(active_models) == 1 and all(
                 len(model) == 64 and all(c in '0123456789abcdef' for c in model)
                 for model in active_models
             )
@@ -146,7 +146,8 @@ def inspect(path: Path, *, fixture=False):
                                 vector_scan_complete=vector_scan_complete,
                                 vector_orphans=vector_orphans, valid_shape=valid_shape,
                                 valid_content_sha=valid_hash, valid_shape_and_content=valid_both,
-                                observed_coverage_percent=round(100 * valid_both / eligible, 2) if eligible else None,
+                                observed_coverage_percent=(round(100 * valid_both / eligible, 2)
+                                                           if eligible and vector_scan_complete else None),
                                 distinct_vector_model_ids=len(active_models),
                                 active_model_sha_identity_valid=identity_ok))
             origins = db.execute('SELECT count(*) FROM nox_s03_origins').fetchone()[0] if 'nox_s03_origins' in names else 0

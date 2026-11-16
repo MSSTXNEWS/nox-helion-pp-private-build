@@ -12,7 +12,7 @@
     "coordination/progress/hourly/2026-11-16T06_AUTO_2B_S03_FIVE_GATE_READONLY.py",
     "coordination/progress/hourly/20261116_0820_AUTO_2B_S03_ACL_SCAN_GUARD_V06.json"
   ],
-  "source_test": "9/9 isolated Python synthetic ACL/scan helpers PASS; source anchor checks PASS; full-module selftest/CI pending",
+  "source_test": "9/9 locally executed synthetic Python sidecar ACL and scan-completeness helper tests; source anchors and GitHub readback PASS; full updated script selftest/CI HOLD",
   "native_access": "READ_ONLY_EVIDENCE_PREVIOUS_RUN; NO_NEW_WRITER_LEASE_OR_READBACK",
   "five_tasks": [
     "1 DONE_SOURCE, HOLD_LIVE: main SQLite + WAL/SHM symlink/ACL/owner pre-open fail-closed, actual /root/nox/kb path not mounted",
@@ -62,5 +62,6 @@
   "deleted": [],
   "freed_bytes": 0,
   "lesson": "Never return a source-side memory privacy/coverage DONE on incomplete bounded scans or unsecured live WAL sidecars.",
-  "next_action": "Execute already-approved exact-HEAD owner V51 READ-ONLY S03 main+WAL/SHM ACL/FTS/vector and owner callback readback; native writes only after separate single-writer lease and independently tested restore."
+  "next_action": "Execute already-approved exact-HEAD owner V51 READ-ONLY S03 main+WAL/SHM ACL/FTS/vector and owner callback readback; native writes only after separate single-writer lease and independently tested restore.",
+  "correction": "Fail-closed observed vector coverage percent and model identity on incomplete scan; never show numerical metric from truncated rows."
 }
