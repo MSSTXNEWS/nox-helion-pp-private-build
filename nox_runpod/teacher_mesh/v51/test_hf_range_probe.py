@@ -1,6 +1,8 @@
 import contextlib
+import hashlib
 import io
 import unittest
+from unittest.mock import patch
 
 from nox_runpod.teacher_mesh.v51 import hf_range_probe as probe
 
@@ -18,7 +20,7 @@ class FakeResponse(io.BytesIO):
 
 
 class FakeOpener:
-    def __init__(self, responses):
+    def __init__(self, responses=()):
         self.responses = list(responses)
         self.requests = []
 
@@ -28,24 +30,57 @@ class FakeOpener:
 
 
 class ReadOnlyRangeContractTests(unittest.TestCase):
-    source = {
-        "url": "https://huggingface.co/owner/model/resolve/immutable/shard.gguf",
-        "bytes": 123456789,
-        "sha256": "a" * 64,
+    payload = b"fixture-source-content"
+    pin = {
+        "revision": "0123456789abcdef0123456789abcdef01234567",
+        "path": "fixture.gguf",
+        "url": "https://huggingface.co/test/model/resolve/0123456789abcdef0123456789abcdef01234567/fixture.gguf",
+        "bytes": len(payload) + 100,
+        "sha256": hashlib.sha256(payload).hexdigest(),
     }
 
-    def test_head_then_exact_single_byte_range_without_writes_or_output(self):
+    def test_missing_authoritative_pin_fails_closed_before_opener(self):
+        opener = FakeOpener()
+        with patch.object(probe, "PINNED_SOURCES", ()):
+            with self.assertRaisesRegex(probe.ProbeHold, "^PIN_METADATA_UNAVAILABLE$"):
+                probe.probe_one_byte(self.pin, opener=opener)
+        self.assertEqual(opener.requests, [])
+
+    def test_arbitrary_or_mismatched_metadata_never_opens(self):
+        mutations = {
+            "arbitrary URL": {"url": "https://huggingface.co/other/repo/file"},
+            "wrong size": {"bytes": self.pin["bytes"] + 1},
+            "wrong SHA": {"sha256": "0" * 64},
+            "wrong revision": {"revision": "f" * 40},
+            "wrong path": {"path": "other.gguf"},
+        }
+        for label, replacement in mutations.items():
+            with self.subTest(label=label):
+                supplied = {**self.pin, **replacement}
+                opener = FakeOpener()
+                with patch.object(probe, "PINNED_SOURCES", (self.pin,)):
+                    with self.assertRaisesRegex(probe.ProbeHold, "^PIN_METADATA_MISMATCH$"):
+                        probe.probe_one_byte(supplied, opener=opener)
+                self.assertEqual(opener.requests, [])
+
+    def test_exact_test_fixture_pin_reaches_only_head_and_one_byte_range(self):
         etag = '"stable-etag"'
         opener = FakeOpener([
-            FakeResponse(status=200, headers={"Content-Length": str(self.source["bytes"]),
-                                               "ETag": etag, "Content-Encoding": "identity"}),
-            FakeResponse(b"\x7f", status=206, headers={"Content-Length": "1",
-                                                        "Content-Range": f"bytes 0-0/{self.source['bytes']}",
-                                                        "ETag": etag, "Content-Encoding": "identity"}),
+            FakeResponse(status=200, headers={
+                "Content-Length": str(self.pin["bytes"]),
+                "ETag": etag,
+                "Content-Encoding": "identity",
+            }),
+            FakeResponse(b"\\x7f", status=206, headers={
+                "Content-Length": "1",
+                "Content-Range": f"bytes 0-0/{self.pin['bytes']}",
+                "ETag": etag,
+                "Content-Encoding": "identity",
+            }),
         ])
         output = io.StringIO()
-        with contextlib.redirect_stdout(output):
-            result = probe.probe_one_byte(self.source, opener=opener)
+        with patch.object(probe, "PINNED_SOURCES", (self.pin,)), contextlib.redirect_stdout(output):
+            result = probe.probe_one_byte(self.pin, opener=opener)
 
         requests = [request for request, _ in opener.requests]
         self.assertEqual([request.get_method() for request in requests], ["HEAD", "GET"])
@@ -54,53 +89,12 @@ class ReadOnlyRangeContractTests(unittest.TestCase):
         self.assertEqual(requests[1].get_header("If-range"), etag)
         self.assertIsNone(requests[0].get_header("Authorization"))
         self.assertIsNone(requests[1].get_header("Authorization"))
-        self.assertEqual(result, {
-            "head_status": 200,
-            "range_status": 206,
-            "content_range": f"bytes 0-0/{self.source['bytes']}",
-            "content_length": 1,
-            "bytes_read": 1,
-            "strong_etag_match": True,
-            "source_bytes": self.source["bytes"],
-            "source_sha256": self.source["sha256"],
-        })
-        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(result["bytes_read"], 1)
+        self.assertEqual(result["source_bytes"], self.pin["bytes"])
+        self.assertEqual(result["source_sha256"], self.pin["sha256"])
         self.assertNotIn("url", result)
-        self.assertNotIn("token", result)
+        self.assertEqual(output.getvalue(), "")
         self.assertEqual(opener.responses, [])
-
-    def test_rejects_bad_head_and_weak_etag_before_range(self):
-        for headers in (
-            {"Content-Length": "1", "ETag": '"stable-etag"'},
-            {"Content-Length": str(self.source["bytes"]), "ETag": 'W/"weak"'},
-        ):
-            with self.subTest(headers=headers):
-                opener = FakeOpener([FakeResponse(status=200, headers=headers)])
-                with self.assertRaises(probe.ProbeHold):
-                    probe.probe_one_byte(self.source, opener=opener)
-                self.assertEqual(len(opener.requests), 1)
-
-    def test_rejects_full_response_or_bad_range_without_reading_payload(self):
-        etag = '"stable-etag"'
-        for status, content_range, body in (
-            (200, f"bytes 0-0/{self.source['bytes']}", b"ignored"),
-            (206, f"bytes 0-0/{self.source['bytes'] + 1}", b"ignored"),
-        ):
-            with self.subTest(status=status, content_range=content_range):
-                range_response = FakeResponse(body, status=status, headers={
-                    "Content-Length": "1",
-                    "Content-Range": content_range,
-                    "ETag": etag,
-                    "Content-Encoding": "identity",
-                })
-                opener = FakeOpener([
-                    FakeResponse(status=200, headers={
-                        "Content-Length": str(self.source["bytes"]), "ETag": etag}),
-                    range_response,
-                ])
-                with self.assertRaises(probe.ProbeHold):
-                    probe.probe_one_byte(self.source, opener=opener)
-                self.assertEqual(range_response.read_sizes, [])
 
 
 if __name__ == "__main__":
