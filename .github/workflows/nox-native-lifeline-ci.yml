@@ -13,6 +13,10 @@ on:
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
+      - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_inspect_safety.py'
+      - 'nox-control/test_owner_native_inspect_inventory.py'
+      - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
       - '.github/workflows/nox-native-lifeline-ci.yml'
   push:
     paths:
@@ -27,6 +31,10 @@ on:
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
+      - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_inspect_safety.py'
+      - 'nox-control/test_owner_native_inspect_inventory.py'
+      - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
       - '.github/workflows/nox-native-lifeline-ci.yml'
   workflow_dispatch:
 permissions:
@@ -49,5 +57,11 @@ jobs:
         run: python3 -m unittest discover -s nox-control -p 'test_nox_neuro_evolution_ingress.py' -v
       - name: Bounded owner native installation gate
         run: python3 -m unittest discover -s nox-control -p 'test_owner_native_lifeline.py' -v
+      - name: Owner OneHost STOP lease and 8081 listener identity read-only gates
+        run: |
+          python3 -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_safety.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_safety.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_inventory.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_receipt_privacy.py' -v
       - name: Existing mentor Supervisor recovery safety gates (source only)
         run: python3 -m unittest discover -s nox-control -p 'test_owner_dispatcher_mentor.py' -v
