@@ -360,9 +360,75 @@ class TestSafeGPUControl(unittest.TestCase):
           stop_state=cb('stopped',False),restore=cb('restore',True),
           start_existing=cb('start',True),
           readback=cb('readback',{'gpu_id':1,'native_owner':'OneHost',
-                                 'owned_process_running':True,'manual_stop_latched':False}))
+                                 'owned_process_running':True,'manual_stop_latched':False,
+                                 'onehost_gpu_lease':True,'stop_active':False,
+                                 'pid':123,'start_ticks':4567,
+                                 'heartbeat_fresh_after_restart':True,
+                                 'new_successful_optimizer_updates_after_restart':1}))
         self.assertEqual(r['state'],'NATIVE_OWNER_PROCESS_RECOVERED')
-        self.assertEqual(events,['auth','stopped','restore','stopped','start','readback'])
+        self.assertEqual(r['pid'],123)
+        self.assertEqual(events,['auth','stopped','restore','stopped','start','readback','stopped'])
+
+    def test_recovered_running_flag_not_progress_and_stale_pid_not_proof(self):
+        self.inv['unexpected_owner_process_failure']={'1':True}
+        self.inv['restart_attempts']={'1':0}
+        self.inv['seconds_since_restart']={'1':75}
+        self.inv['checkpoint_optimizer_restorable']=True
+        self.inv['offsite_restore_verified']=True
+        plan=plan_gpu_recovery(self.inv,1)
+        good={'gpu_id':1,'native_owner':'OneHost','owned_process_running':True,
+              'manual_stop_latched':False,'onehost_gpu_lease':True,
+              'stop_active':False,'pid':123,'start_ticks':4567,
+              'heartbeat_fresh_after_restart':True,
+              'new_successful_optimizer_updates_after_restart':1}
+        cases=[
+            (dict(good,pid=0),'HOLD_RECOVERY_READBACK'),
+            (dict(good,pid=True),'HOLD_RECOVERY_READBACK'),
+            (dict(good,start_ticks='4567'),'HOLD_RECOVERY_READBACK'),
+            (dict(good,gpu_id=True),'HOLD_RECOVERY_READBACK'),
+            (dict(good,heartbeat_fresh_after_restart=False),'HOLD_RECOVERY_READBACK'),
+            (dict(good,onehost_gpu_lease=None),'HOLD_RECOVERY_READBACK'),
+            (dict(good,stop_active=True),'HOLD_RECOVERY_READBACK'),
+            (dict(good,new_successful_optimizer_updates_after_restart=0),
+             'HOLD_RECOVERY_NO_NEW_USEFUL_PROGRESS'),
+            (dict(good,new_successful_optimizer_updates_after_restart=True),
+             'HOLD_RECOVERY_NO_NEW_USEFUL_PROGRESS'),
+            (dict(good,new_successful_optimizer_updates_after_restart='1'),
+             'HOLD_RECOVERY_NO_NEW_USEFUL_PROGRESS'),
+        ]
+        for evidence,want in cases:
+            with self.subTest(evidence=evidence):
+                out=execute_gpu_recovery(plan,authorize=lambda p:True,
+                      stop_state=lambda p:False,restore=lambda p:True,
+                      start_existing=lambda p:True,readback=lambda p:evidence)
+                self.assertEqual(out['state'],want)
+                self.assertEqual(out['performed'],'UNKNOWN')
+        state={'reads':0}
+        def stop_late(p):
+            state['reads']+=1
+            return state['reads']>=3
+        out=execute_gpu_recovery(plan,authorize=lambda p:True,
+              stop_state=stop_late,restore=lambda p:True,
+              start_existing=lambda p:True,readback=lambda p:good)
+        self.assertEqual(out['state'],'HOLD_RECOVERY_STOP_AFTER_READBACK')
+
+    def test_gpu0_recovery_needs_new_completed_job_not_weight_step(self):
+        self.inv['unexpected_owner_process_failure']={'0':True}
+        self.inv['restart_attempts']={'0':0}
+        self.inv['seconds_since_restart']={'0':75}
+        self.inv['s03_restorable']=True
+        plan=plan_gpu_recovery(self.inv,0)
+        evidence={'gpu_id':0,'native_owner':'OneHost','owned_process_running':True,
+                  'manual_stop_latched':False,'onehost_gpu_lease':True,
+                  'stop_active':False,'pid':88,'start_ticks':999,
+                  'heartbeat_fresh_after_restart':True,
+                  'new_successful_optimizer_updates_after_restart':1}
+        run=lambda:execute_gpu_recovery(plan,authorize=lambda p:True,
+                  stop_state=lambda p:False,restore=lambda p:True,
+                  start_existing=lambda p:True,readback=lambda p:evidence)
+        self.assertEqual(run()['state'],'HOLD_RECOVERY_NO_NEW_USEFUL_PROGRESS')
+        evidence['new_completed_job_after_restart']=True
+        self.assertEqual(run()['state'],'NATIVE_OWNER_PROCESS_RECOVERED')
     def test_unknown_owner_or_sensors_never_stop_or_restart(self):
         self.inv['gpus'][1]['native_owner']='UNKNOWN'
         self.assertEqual(plan_gpu_stop(self.inv,1)['state'],'HOLD_UNOWNED_GPU_PROCESS')
