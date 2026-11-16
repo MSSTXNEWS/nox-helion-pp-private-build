@@ -1,6 +1,7 @@
 """Offline/synthetic and immutable-source checks; no model, CUDA, or inference."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import hashlib
 import importlib.util
 from pathlib import Path
@@ -23,6 +24,10 @@ PROFILE_SPEC = importlib.util.spec_from_file_location(
     "maya_ds4_v100_launch_profile_v1", HERE / "maya_ds4_v100_launch_profile_v1.py")
 PROFILE = importlib.util.module_from_spec(PROFILE_SPEC)
 PROFILE_SPEC.loader.exec_module(PROFILE)
+MEMORY_SPEC = importlib.util.spec_from_file_location(
+    "maya_runtime_memory_budget_v1", HERE / "maya_runtime_memory_budget_v1.py")
+MEMORY = importlib.util.module_from_spec(MEMORY_SPEC)
+MEMORY_SPEC.loader.exec_module(MEMORY)
 BINARY_OK = {
     "state": "BINARY_BUILD_ATTESTED_SOURCE_ONLY",
     "binary_identity": {"st_dev": 1, "st_ino": 2, "st_size": 3,
@@ -45,6 +50,36 @@ def complete_rows():
     return [{"path": name, "bytes": PLAN.PINNED_FILE_FACTS[name][0],
              "sha256": PLAN.PINNED_FILE_FACTS[name][1], "sha_verified": True}
             for name in PLAN.EXPECTED_FILES]
+
+
+def synthetic_memory_inputs():
+    now = datetime.now(timezone.utc)
+    stamp = now.isoformat()
+    gib = 1024 ** 3
+    observation = {
+        "readback_id": "fixture-owner-native-001",
+        "gpus": [
+            {"id": 0, "name": MEMORY.GPU_NAME, "total_bytes": 32 * gib,
+             "free_bytes": 24 * gib, "captured_at": stamp, "source": "nvidia-smi"},
+            {"id": 1, "name": MEMORY.GPU_NAME, "total_bytes": 32 * gib,
+             "free_bytes": 24 * gib, "captured_at": stamp, "source": "nvidia-smi"},
+        ],
+        "cgroup": {"current_bytes": 16 * gib, "max_bytes": 48 * gib,
+                   "captured_at": stamp, "source": "cgroup-v2"},
+    }
+    budget = {
+        "gpu_ids": [0, 1],
+        "context_tokens": 4096,
+        "model_resident_bytes_by_gpu": [4 * gib, 4 * gib],
+        "activation_bytes_by_gpu": [2 * gib, 2 * gib],
+        "kv_cache_bytes_by_gpu": [8 * gib, 8 * gib],
+        "gpu_reserve_bytes_by_gpu": [3 * gib, 3 * gib],
+        "host_model_resident_bytes": 8 * gib,
+        "host_activation_bytes": 1 * gib,
+        "host_kv_cache_bytes": 0,
+        "host_reserve_bytes": 4 * gib,
+    }
+    return observation, budget
 
 
 def synthetic_tensor_roles():
@@ -139,6 +174,27 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
         self.assertFalse(got["libraries"]["libcublasLt.so.12"]["present"])
 
 
+    def test_profile_holds_without_runtime_memory_observation(self):
+        checked = {
+            "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
+            "packer_output_dir": "/synthetic/model/maya-ds4",
+        }
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value=BINARY_OK), \
+                patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+                tensor_role_inventory=synthetic_tensor_roles(),
+            )
+        self.assertEqual(got["state"], "HOLD_RUNTIME_MEMORY_TELEMETRY")
+        self.assertFalse(got["launchable"])
+
 class MayaLaunchPlanTests(unittest.TestCase):
 
     def test_iq2_xxs_embedding_and_router_are_rejected(self):
@@ -198,7 +254,9 @@ class MayaLaunchPlanTests(unittest.TestCase):
                 gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
-                model_file_paths=["synthetic"] * 6)
+                model_file_paths=["synthetic"] * 6,
+                runtime_observation=synthetic_memory_inputs()[0],
+                runtime_budget=synthetic_memory_inputs()[1])
         self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
         self.assertFalse(got["launchable"])
         argv = got["argv"]
@@ -214,8 +272,8 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertNotIn("--mmap-experts", argv)
         self.assertEqual(got["expert_mapping"],
                          "GGUF hot experts in VRAM cache; CPU-lane experts read in-place from model files")
-        self.assertEqual(got["kv_cache_fit"], "HOLD_LIVE_VRAM_AND_RAM_READBACK_REQUIRED")
-        self.assertEqual(got["runtime_fit"], "HOLD_LIVE_FREE_MEMORY_PREFLIGHT_REQUIRED")
+        self.assertEqual(got["kv_cache_fit"], "SOURCE_ONLY_MEMORY_BUDGET_FIT_NOT_RUNTIME_VERIFIED")
+        self.assertEqual(got["runtime_fit"], "SOURCE_ONLY_MEMORY_BUDGET_FIT_NOT_RUNTIME_VERIFIED")
         self.assertEqual(got["context_tokens"], 4096)
         self.assertEqual(got["vram_reserve_mib"], 3072)
 
@@ -493,6 +551,8 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
+                runtime_observation=synthetic_memory_inputs()[0],
+                runtime_budget=synthetic_memory_inputs()[1],
             )
         self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
         self.assertFalse(got["launchable"])
@@ -502,8 +562,8 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             "--dspark", "none", "--parallel", "1", "--serve",
         ])
         self.assertEqual(got["protocol"], "Maya stdin/stdout engine protocol; not an HTTP endpoint")
-        self.assertIn("HOLD", got["kv_cache_fit"])
-        self.assertIn("HOLD", got["runtime_fit"])
+        self.assertIn("SOURCE_ONLY", got["kv_cache_fit"])
+        self.assertIn("SOURCE_ONLY", got["runtime_fit"])
         self.assertIn("CPU-lane experts read in-place", got["expert_mapping"])
         self.assertNotIn("--mmap-experts", got["argv"])
         self.assertFalse(got["measured"])
@@ -604,6 +664,8 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                 tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
                 tensor_role_inventory=synthetic_tensor_roles(),
+                runtime_observation=synthetic_memory_inputs()[0],
+                runtime_budget=synthetic_memory_inputs()[1],
             )
         self.assertEqual(ready["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
         self.assertFalse(ready["launchable"])
