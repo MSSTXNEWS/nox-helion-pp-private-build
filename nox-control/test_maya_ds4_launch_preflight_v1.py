@@ -181,7 +181,9 @@ class MayaLaunchPlanTests(unittest.TestCase):
             "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
             "packer_output_dir": "/synthetic/model/maya-ds4",
         }
-        with patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value={"state": "BINARY_BUILD_ATTESTED_SOURCE_ONLY"}), \
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
