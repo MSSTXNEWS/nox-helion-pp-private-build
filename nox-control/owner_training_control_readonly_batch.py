@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run two pinned, read-only observations in one owner maintenance session."""
+"""Run three pinned, read-only observations in one owner maintenance session."""
 import base64
 import contextlib
 import hashlib
@@ -21,7 +21,14 @@ SOURCES = (
     ('owner_admin_control_structure_probe.py',
      '9ba93c23b7ead795ae94f44d704970d904ccce119b27262557d54d5538965ca3',
      'admin_delegated_control_structure'),
+    ('owner_qwen_public_memfd_access_probe.py',
+     '6f1286678d653af5a0f0aecedccf66b08639659df6213ff7b2f2cf8f48cfd473',
+     'qwen_public_memfd_access_probe'),
 )
+
+
+class Deadline(BaseException):
+    pass
 
 
 def main():
@@ -29,7 +36,7 @@ def main():
     previous = signal.getsignal(signal.SIGALRM)
 
     def expired(*_):
-        raise TimeoutError('read-only observation deadline')
+        raise Deadline()
 
     for name, pin, kind in SOURCES:
         started = time.monotonic()
@@ -59,7 +66,7 @@ def main():
             record = json.loads(lines[0])
             if record.get('kind') != kind or not isinstance(record.get('data'), dict):
                 raise ValueError('record scope')
-        except Exception as exc:
+        except (Exception, Deadline) as exc:
             code = 2
             record = {'kind': kind, 'data': {'state': 'READ_ONLY_OBSERVATION_UNAVAILABLE',
                       'reason': type(exc).__name__.upper(), 'read_only': True}}

@@ -15,8 +15,9 @@ FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_qwen_public_memfd_access_probe.py':(),
     'nox-control/owner_training_control_readonly_batch.py':(
-        'owner_qwen_transport_budget_observe.py','owner_admin_control_structure_probe.py'),
+        'owner_qwen_transport_budget_observe.py','owner_admin_control_structure_probe.py','owner_qwen_public_memfd_access_probe.py'),
     'nox-control/owner_qwen_transport_budget_observe.py':(),
     'nox-control/owner_admin_control_structure_probe.py':(),
     'nox-control/owner_qwen_transport_budget_finalize_6914959637.py':(),
@@ -65,7 +66,7 @@ SCOPED_REPAIR_BUNDLES={
 }
 SCOPED_REPAIR_EXTRA_PATHS={
     'nox-control/owner_training_control_readonly_batch.py':(
-        'nox-control/owner_qwen_transport_budget_observe.py','nox-control/owner_admin_control_structure_probe.py'),
+        'nox-control/owner_qwen_transport_budget_observe.py','nox-control/owner_admin_control_structure_probe.py','nox-control/owner_qwen_public_memfd_access_probe.py'),
     'nox-control/owner_chat_action_routing_install.py':(
         'nox-control/owner_chat_stream_action_routing.py',),
     'nox-control/owner_chat_stream_asset_install_v2.py':(
