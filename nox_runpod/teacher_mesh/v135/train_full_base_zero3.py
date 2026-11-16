@@ -55,7 +55,7 @@ def verify_owner(native:dict,approval:dict,secret:bytes,now:int|None=None)->dict
         raise RuntimeError('HOLD_LIVE_RESOURCE_ADMISSION')
     return plan
 
-def verify_inputs(student:Path,data:Path,output:Path,native:dict,*,resume:bool=False)->dict:
+def verify_inputs(student:Path,data:Path,output:Path,native:dict,*,resume:bool=False,maya_lineage:dict|None=None)->dict:
     if student.is_symlink() or data.is_symlink() or not student.is_dir() or not data.is_dir():
         raise RuntimeError('HOLD_ORIGINAL_HF_OR_CORPUS_MISSING')
     if (output.is_symlink() or student==output or student in output.parents or data in output.parents
@@ -63,7 +63,19 @@ def verify_inputs(student:Path,data:Path,output:Path,native:dict,*,resume:bool=F
         raise RuntimeError('HOLD_OUTPUT_COLLISION')
     if not output.parent.is_dir() or output.parent.is_symlink():
         raise RuntimeError('HOLD_CHECKPOINT_PARENT')
-    manifest=_json(data/'manifest.json')
+    manifest_path=data/'manifest.json'
+    manifest=_json(manifest_path)
+    manifest_sha=_file_sha(manifest_path)
+    if not _SHA.fullmatch(str(native.get('dataset_manifest_sha256'))) or manifest_sha!=native.get('dataset_manifest_sha256'):
+        raise RuntimeError('HOLD_NATIVE_DATASET_MANIFEST_SHA')
+    if not isinstance(maya_lineage,dict):
+        raise RuntimeError('HOLD_MAYA_DATASET_LINEAGE')
+    lineage_keys=('maya_readiness_receipt_sha256','maya_model_id','maya_source_revision',
+        'maya_model_manifest_sha256','maya_model_pack_receipt_sha256','maya_binary_sha256',
+        'maya_chat_receipt_sha256','maya_cancel_receipt_sha256','maya_s03_receipt_sha256',
+        'maya_owner_request_id')
+    if any(manifest.get(key)!=maya_lineage.get(key) for key in lineage_keys):
+        raise RuntimeError('HOLD_MAYA_DATASET_LINEAGE_MISMATCH')
     if manifest.get('schema')!='NOX_V135_VERIFIED_TEACHER_DISTILL_CORPUS_V1':
         raise RuntimeError('HOLD_CORPUS_MANIFEST')
     if (manifest.get('source_groups_disjoint') is not True or
@@ -75,6 +87,14 @@ def verify_inputs(student:Path,data:Path,output:Path,native:dict,*,resume:bool=F
             raise RuntimeError('HOLD_DATASET_SHA')
         if _file_sha(p)!=native.get(part+'_dataset_sha256'):
             raise RuntimeError('HOLD_NATIVE_DATASET_PIN')
+        with p.open('rt',encoding='utf8') as rows:
+            for line in rows:
+                try: row=json.loads(line)
+                except (ValueError,UnicodeError) as ex: raise RuntimeError('HOLD_DATASET_ROW_JSON') from ex
+                if (not isinstance(row,dict)
+                        or row.get('teacher_model_sha256')!=maya_lineage['maya_model_manifest_sha256']
+                        or row.get('teacher_role')!='deepseek-reasoning'):
+                    raise RuntimeError('HOLD_DATASET_TEACHER_IDENTITY')
     for name in ('config.json','tokenizer_config.json'):
         p=student/name
         if not p.is_file() or p.is_symlink():raise RuntimeError('HOLD_HF_MODEL_CONFIG')
@@ -219,7 +239,7 @@ def run(args)->dict:
     corpus_dir=Path(args.dataset).resolve()
     out=Path(args.output).resolve()
     resume_path=Path(args.resume_checkpoint).absolute() if getattr(args,'resume_checkpoint',None) else None
-    manifest=verify_inputs(student,corpus_dir,out,native,resume=resume_path is not None)
+    manifest=verify_inputs(student,corpus_dir,out,native,resume=resume_path is not None,maya_lineage=maya_lineage)
     config=zero3_cpu_config(micro_batch=1,grad_accum=args.accum,learning_rate=float(args.lr))
     resumed=admit_resume(out,resume_path,native,max_steps=args.max_steps,expected_config=config) if resume_path else None
     if os.environ.get('CUDA_VISIBLE_DEVICES')!='1':
@@ -308,6 +328,7 @@ def run(args)->dict:
         'schema':'NOX_V135_NATIVE_BASE_WEIGHT_OPTIMIZER_LOCAL_RECEIPT_V1',
         **maya_lineage,
         'student_original_sha256':native['student_base_sha256'],
+        'dataset_manifest_sha256':_file_sha(corpus_dir/'manifest.json'),
         'train_sha256':manifest['train_sha256'],
         'holdout_sha256':manifest['holdout_sha256'],
         'optimizer_steps_actual':steps,'trainer_global_step':result.global_step,
