@@ -547,7 +547,7 @@ class DeepSeekP0Offline(unittest.TestCase):
         def swap(path,flags,*args,**kwargs):
             if Path(path)==final and not hit:
                 self.assertTrue(flags & os.O_NONBLOCK)
-                final.unlink();final.mkfifo();hit.append(True)
+                final.unlink();os.mkfifo(final);hit.append(True)
             return opened(path,flags,*args,**kwargs)
         with patch.object(m.os,'open',side_effect=swap),patch.object(m,'RESERVE',0):
             with self.assertRaisesRegex(m.Hold,'HOLD_HASH_FILE_UNSAFE'):
@@ -564,7 +564,7 @@ class DeepSeekP0Offline(unittest.TestCase):
         def swap(path,flags,*args,**kwargs):
             if Path(path)==part and (flags & os.O_ACCMODE)==os.O_RDONLY and not hit:
                 self.assertTrue(flags & os.O_NONBLOCK)
-                part.unlink();part.mkfifo();hit.append(True)
+                part.unlink();os.mkfifo(part);hit.append(True)
             return opened(path,flags,*args,**kwargs)
         with patch.object(m.os,'open',side_effect=swap),patch.object(m,'RESERVE',0):
             with self.assertRaisesRegex(m.Hold,'HOLD_PARTIAL_PREIMAGE_CHANGED'):
@@ -581,7 +581,7 @@ class DeepSeekP0Offline(unittest.TestCase):
         def swap(path,flags,*args,**kwargs):
             if Path(path)==part and (flags & os.O_ACCMODE)==os.O_WRONLY and not hit:
                 self.assertTrue(flags & os.O_NONBLOCK)
-                part.unlink();part.mkfifo();hit.append(True)
+                part.unlink();os.mkfifo(part);hit.append(True)
             return opened(path,flags,*args,**kwargs)
         with patch.object(m.os,'open',side_effect=swap),patch.object(m,'RESERVE',0):
             with self.assertRaisesRegex(m.Hold,'HOLD_PARTIAL_APPEND_OPEN_RACE'):
@@ -600,7 +600,7 @@ class DeepSeekP0Offline(unittest.TestCase):
                 counts.append(flags)
                 if len(counts)==3:
                     self.assertTrue(flags & os.O_NONBLOCK)
-                    part.unlink();part.mkfifo()
+                    part.unlink();os.mkfifo(part)
             return opened(path,flags,*args,**kwargs)
         with patch.object(m.os,'open',side_effect=swap),patch.object(m,'RESERVE',0):
             with self.assertRaisesRegex(m.Hold,'HOLD_PARTIAL_CHANGED_BEFORE_FSYNC'):
