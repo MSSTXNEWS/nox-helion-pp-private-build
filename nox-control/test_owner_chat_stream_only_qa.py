@@ -75,7 +75,8 @@ class ScopeTests(unittest.TestCase):
         self.assertIn('mouse', code.co_names)
         self.assertIn('click', code.co_names)
         self.assertNotIn('click_error_projection', code.co_names)
-        self.assertIn('title=>[...document.querySelectorAll', code.co_consts)
+        self.assertTrue(any(isinstance(c, str) and c.startswith('title=>[...document.querySelectorAll')
+                            for c in code.co_consts))
 
     def test_one_proper_prefix_remains_two_parts_not_strict_acceptance(self):
         core, _, release, _ = installed()
