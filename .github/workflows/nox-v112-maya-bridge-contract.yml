@@ -1,5 +1,11 @@
 name: NOX V112 Maya existing bridge RU ES SSE STOP S03 source contract
 on:
+  push:
+    branches:
+      - codex/nox-maya-existing-bridge-contract-20261116
+    paths:
+      - 'nox_runpod/teacher_mesh/v112/**'
+      - '.github/workflows/nox-v112-maya-bridge-contract.yml'
   pull_request:
     paths:
       - 'nox_runpod/teacher_mesh/v112/**'
