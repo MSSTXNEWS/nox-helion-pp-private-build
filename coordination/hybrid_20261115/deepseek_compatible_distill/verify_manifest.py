@@ -10,7 +10,7 @@ import re
 SCHEMA = "NOX_DEEPSEEK_TEACHER_STUDENT_SOURCE_MANIFEST_V1"
 HEX64 = re.compile(r"^[a-f0-9]{64}$")
 HEX40 = re.compile(r"^[a-f0-9]{40}$")
-SENSITIVE_PATTERN = re.compile(r"(?i)\\b(?:bearer\\s+[a-z0-9._-]{12,}|(?:api[_-]?key|token|password|secret)\\s*[:=]\\s*[^\\s,]{8,}|gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}")
+SENSITIVE_PATTERN = re.compile(r"(?i)\b(?:bearer\s+[a-z0-9._-]{12,}|(?:api[_-]?key|token|password|secret)\s*[:=]\s*[^\s,]{8,}|gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 
 
 def canonical_sha256(value: dict) -> str:
