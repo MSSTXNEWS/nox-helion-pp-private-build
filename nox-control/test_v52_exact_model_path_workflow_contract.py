@@ -38,7 +38,9 @@ class V52ExactModelPathWorkflowContractTests(unittest.TestCase):
         attrs={n.attr for n in ast.walk(node) if isinstance(n,ast.Attribute)}
         self.assertIn('lstat',names)
         self.assertFalse(attrs & {'read_text','read_bytes','open','unlink','remove','rename','replace'})
-        self.assertFalse(names & {'hashlib','sha256','unlink','remove'})
+        self.assertFalse(names & {'hashlib','unlink','remove'})
+        self.assertNotIn('hashlib',attrs)
+        self.assertNotIn('sha256(',ast.unparse(node))
         self.assertEqual(len(audit.PINNED_MODEL_FILES),6)
 
     def test_reported_targets_match_all_six_immutable_manifest_rows(self):
@@ -64,7 +66,7 @@ class V52ExactModelPathWorkflowContractTests(unittest.TestCase):
         text=WORKFLOW.read_text()
         self.assertIn('source-contract:',text)
         self.assertIn('github.event_name == \'push\' || github.event_name == \'pull_request\'',text)
-        self.assertIn('python3 -m unittest -v nox-control/test_v52_exact_model_path_workflow_contract.py',text)
+        self.assertIn('python3 -m unittest -v test_v52_exact_model_path_workflow_contract',text)
         self.assertIn("github.event_name == 'workflow_dispatch'",text)
         self.assertIn("inputs.allow_native == 'YES'",text)
 
