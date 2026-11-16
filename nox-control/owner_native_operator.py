@@ -10,11 +10,12 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_workspace_browser_acceptance_v2.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_successor_entry_v2.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_qwen_successor_entry_v2.py':('owner_qwen_successor_install_v2.py','owner_qwen_execution_successor.py','qwen_student_training_entry_successor.py','owner_qwen_successor_guard.py','owner_qwen_successor_status.py','owner_qwen_successor_media_handoff.py','owner_qwen_successor_media_guard.py','owner_qwen_successor_handback_retry.py','owner_qwen_successor_hermes_hydrate.py','owner_qwen_successor_watch.py','owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py',),
     'nox-control/owner_workspace_browser_acceptance_v2.py':('owner_workspace_browser_acceptance.py','owner_chat_page_diagnose.py','owner_browser_stream_only_entry.py','owner_chat_browser_qa.py'),
     'nox-control/owner_qwen_successor_entry.py':('owner_qwen_successor_install.py','owner_qwen_execution_successor.py','qwen_student_training_entry_successor.py','owner_qwen_successor_guard.py','owner_qwen_successor_status.py','owner_qwen_successor_media_handoff.py','owner_qwen_successor_media_guard.py','owner_qwen_successor_handback_retry.py','owner_qwen_successor_hermes_hydrate.py','owner_qwen_successor_watch.py','owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py',),
     'nox-control/owner_workspace_browser_acceptance.py':(
@@ -73,6 +74,7 @@ SCOPED_REPAIR_BUNDLES={
         'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
 }
 SCOPED_REPAIR_EXTRA_PATHS={
+    'nox-control/owner_qwen_successor_entry_v2.py':('nox-control/owner_qwen_successor_install_v2.py','nox-control/owner_qwen_execution_successor.py','nox-control/qwen_student_training_entry_successor.py','nox-control/owner_qwen_successor_guard.py','nox-control/owner_qwen_successor_status.py','nox-control/owner_qwen_successor_media_handoff.py','nox-control/owner_qwen_successor_media_guard.py','nox-control/owner_qwen_successor_handback_retry.py','nox-control/owner_qwen_successor_hermes_hydrate.py','nox-control/owner_qwen_successor_watch.py',),
     'nox-control/owner_workspace_browser_acceptance_v2.py':('nox-control/owner_workspace_browser_acceptance.py','nox-control/owner_chat_page_diagnose.py'),
     'nox-control/owner_qwen_successor_entry.py':('nox-control/owner_qwen_successor_install.py','nox-control/owner_qwen_execution_successor.py','nox-control/qwen_student_training_entry_successor.py','nox-control/owner_qwen_successor_guard.py','nox-control/owner_qwen_successor_status.py','nox-control/owner_qwen_successor_media_handoff.py','nox-control/owner_qwen_successor_media_guard.py','nox-control/owner_qwen_successor_handback_retry.py','nox-control/owner_qwen_successor_hermes_hydrate.py','nox-control/owner_qwen_successor_watch.py',),
     'nox-control/owner_workspace_browser_acceptance.py':('nox-control/owner_chat_page_diagnose.py',),
