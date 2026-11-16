@@ -299,5 +299,37 @@ class LifelineTests(unittest.TestCase):
             self.assertEqual(status, {"state": "UNKNOWN", "pid": None, "rc": 1})
 
 
+    def test_owner_canonical_state_stop_fences_and_dangling_link(self):
+        # The read-only owner inspector recognizes both state-level STOP aliases.
+        self.assertIn("/root/nox/state/STOP", lifeline.STOP_FILES)
+        self.assertIn("/root/nox/state/STOP.flag", lifeline.STOP_FILES)
+        self.assertIn("/root/nox/state/OWNER_MAINTENANCE.flag", lifeline.STOP_FILES)
+        with tempfile.TemporaryDirectory() as d:
+            stop = Path(d) / "STOP.flag"
+            with patch.object(lifeline, "STOP_FILES", (str(stop),)):
+                stop.write_text("owner STOP", encoding="utf-8")
+                self.assertTrue(lifeline.stopped())
+                state = self.state(d)
+                status_commands = []
+                def status(name, command="status"):
+                    status_commands.append(command)
+                    if command == "start":
+                        raise AssertionError("owner STOP must prevent restart")
+                    return {"state": "STOPPED", "pid": None, "rc": 0}
+                for tick in range(3):
+                    observed = lifeline.tick(policy(), state, now=100+tick,
+                        status_fn=status, stop_fn=lifeline.stopped)
+                self.assertEqual(observed["results"][0]["action"], "stop_or_maintenance_lock")
+                self.assertNotIn("start", status_commands)
+                stop.unlink()
+                stop.symlink_to(Path(d) / "missing")
+                self.assertTrue(lifeline.stopped())
+
+    def test_unreadable_owner_stop_path_fails_closed(self):
+        with patch.object(lifeline, "STOP_FILES", ("/root/nox/state/STOP.flag",)):
+            with patch.object(lifeline.os, "lstat", side_effect=PermissionError("denied")):
+                self.assertTrue(lifeline.stopped())
+
+
 if __name__=="__main__":
     unittest.main()
