@@ -844,11 +844,14 @@ test('V166 native provenance: model is PENDING until a meaningful upstream SSE d
   assert.equal(pending.answer_source,'NATIVE_PENDING');
   assert.equal(pending.model_label,'UNKNOWN');
   assert.equal(pending.model_identity_verified,false);
-  const firstLive=frames.findIndex(e=>e.type==='meta'&&e.answer_source==='LIVE_NOX');
-  const firstText=frames.findIndex(e=>e.type==='token'&&e.t.trim());
-  assert(firstLive>0&&firstLive<firstText,'native label must follow a real meaningful model delta, before first meaningful visual token');
-  assert.equal(frames[firstLive].model_label,'NOX HELION');
-  assert.equal(frames[firstLive].model_identity_verified,false,'native label alone is not a weights manifest SHA');
+  // Keep the original one-meta -> token stream ordering for existing WEB29 clients.
+  // Native provenance is attached to the first REAL token, never advertised at request time.
+  assert.equal(frames.filter(e=>e.type==='meta').length,1);
+  const firstToken=frames.find(e=>e.type==='token'&&e.t.trim());
+  assert(firstToken,'a meaningful native delta must reach the browser');
+  assert.equal(firstToken.answer_source,'LIVE_NOX');
+  assert.equal(firstToken.model_label,'NOX HELION');
+  assert.equal(firstToken.model_identity_verified,false,'the model label is not a verified manifest SHA');
   assert.equal(frames.filter(e=>e.type==='done').length,1);
   assert.equal(frames.find(e=>e.type==='done').history_persisted,true);
 });

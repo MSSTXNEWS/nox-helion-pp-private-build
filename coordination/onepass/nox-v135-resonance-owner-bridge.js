@@ -223,12 +223,16 @@
           // bounded native answer until done instead of corrupting visual tokens.
           const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
           const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
-          let trailing='';
+          let trailing='',nativeModelConfirmed='UNKNOWN',nativeDeltaConfirmed=false,nativeModelNotified=false;
           const emitPieces=async t=>{
             const parts=livePieces(t);
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-              event({type:'token',t:parts[index]});
+              const nativeProvenance=nativeDeltaConfirmed&&!nativeModelNotified;
+              event({type:'token',t:parts[index],...(nativeProvenance?{
+                answer_source:'LIVE_NOX',model_label:nativeModelConfirmed,
+                model_identity_verified:false}:{} )});
+              if(nativeProvenance)nativeModelNotified=true;
               // Bound visual pacing to 8 actual frames per incoming native chunk.
               // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
@@ -250,8 +254,10 @@
             const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
             trailing=glyphs.pop()||'';
             if(glyphs.length)await emitPieces(glyphs.join(''));
-          },nativeSignal,model=>event({type:'meta',dialog_id:id,
-            model_label:model,answer_source:'LIVE_NOX',model_identity_verified:false}));
+          },nativeSignal,model=>{
+            nativeModelConfirmed=model;
+            nativeDeltaConfirmed=true;
+          });
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
