@@ -55,6 +55,14 @@ jobs:
           PY
           python -m unittest -v nox_runpod.teacher_mesh.v130.tests.test_owner_s03_fact_write
           python -m unittest -v nox_runpod.teacher_mesh.v130.tests.test_install_native_owner_fact
+      - name: Original WEB29 3C persisted-hour and stale-metric regression (SOURCE ONLY)
+        run: |
+          set -euo pipefail
+          python -m py_compile coordination/onepass/web29_main/integration/progress/nox_progress.py
+          python coordination/onepass/web29_main/test_nox_progress_hourly_v3c.py
+          node --check coordination/onepass/web29_main/site/pc/progress/nox-progress.js
+          node coordination/onepass/web29_main/test_nox_progress_frontend_v3c.cjs
+
       - name: No server or weight action in this workflow
         run: |
           echo 'NOX_ONEPASS_SOURCE_ONLY=true'
