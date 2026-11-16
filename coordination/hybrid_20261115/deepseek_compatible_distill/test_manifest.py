@@ -194,6 +194,25 @@ class DistillationManifestTest(unittest.TestCase):
         }
         self.assertNotIn("CHECKPOINT_RESTORE_RECEIPT_INVALID", validate(changed)["blockers"])
 
+    def test_manifest_ci_is_source_only_and_cannot_launch_training_or_gpu(self):
+        workflow_path = Path(__file__).resolve().parents[3] / ".github" / "workflows" / "nox-deepseek-distill-source-gate.yml"
+        workflow = workflow_path.read_text(encoding="utf-8")
+        lowered = workflow.lower()
+        self.assertIn("permissions:\\n  contents: read", workflow)
+        self.assertIn('runs-on: ubuntu-latest', workflow)
+        self.assertNotIn("workflow_dispatch:", workflow)
+        self.assertIn('python -m unittest discover -s coordination/hybrid_20261115/deepseek_compatible_distill', workflow)
+        self.assertIn('python coordination/hybrid_20261115/deepseek_compatible_distill/verify_manifest.py', workflow)
+        forbidden = (
+            "ssh ", "nvidia-smi", "torchrun", "accelerate launch", "trainer.train",
+            "optimizer.step", "save_pretrained", "/dev/nvidia", "curl ", "wget ",
+        )
+        for command in forbidden:
+            self.assertNotIn(command, lowered)
+        result = validate(MANIFEST)
+        self.assertEqual(result["state"], "HOLD")
+        self.assertFalse(result["training_started"])
+
     def test_training_flag_never_clears_other_gates(self):
         changed = copy.deepcopy(MANIFEST)
         changed["training_enabled"] = True
