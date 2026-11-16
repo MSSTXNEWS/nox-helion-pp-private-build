@@ -63,7 +63,8 @@ class OwnerUiV122Tests(unittest.TestCase):
                       "'native_s03_table_available':s03_table_available",
                       "'native_semantic_retrieval_callback_configured':semantic_retrieval_callback_configured",
                       "'native_semantic_retrieval_bound':semantic_retrieval_bound",
-                      "'native_cognitive_memory_bound':bool(\\n               s03_table_available and semantic_retrieval_bound)",
+                      "'native_cognitive_memory_bound':bool(",
+                      "s03_table_available and semantic_retrieval_bound)",
                       "'native_dialogs_ready':_schema_ready()"):
             self.assertIn(field,bridge)
 
