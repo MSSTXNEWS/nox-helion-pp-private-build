@@ -123,6 +123,14 @@ async def browser_operation(core, report, directory, available):
 
 def rewrite_browser(body):
     body = replace_once(body,
+        "                                         base_url=base,service_workers='block',accept_downloads=False)",
+        "                                         base_url=base,service_workers='block',accept_downloads=False,reduced_motion='reduce')")
+    body = replace_once(body,
+        "            before=await page.evaluate(SNAPSHOT_JS)\n            report['graphics_before']=before\n",
+        "            before=await page.evaluate(SNAPSHOT_JS)\n            report['graphics_before']=before\n"
+        "            if before.get('motion_preference_reduced') is not True:\n"
+        "                raise RuntimeError('HOLD_STREAM_ONLY_MOTION_PREFERENCE_NOT_APPLIED')\n")
+    body = replace_once(body,
         "    network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None\n",
         "    network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None;native_admitted=0\n")
     body = replace_once(body, "            async def guard(route):\n",
@@ -193,6 +201,7 @@ def install(core, raw, transport, transport_raw, release, release_raw):
     release.install(core, raw, transport, transport_raw)
     require(core.progressive_stream_valid is original_gate, 'STRICT_GATE_CHANGED')
     core.SNAPSHOT_JS = replace_once(core.SNAPSHOT_JS, '   answer_characters:q.answer.length,',
+        "   motion_preference_reduced:window.matchMedia('(prefers-reduced-motion: reduce)').matches,\n"
         '   answer_characters:q.answer.length,answer_normalized_characters:normalize(q.answer).length,')
     core.stop_present = lambda: stop_present(core.ROOT)
     core._nox_stream_only_viewport = lambda page, report: fixed_viewport(core, transport, page, report)
@@ -232,7 +241,7 @@ def main(core):
         affinity = sorted(os.sched_getaffinity(0))
         if len(affinity) > 2:
             os.sched_setaffinity(0, set(affinity[:2]))
-        report = {'schema': SCHEMA, 'scope': 'AUTHENTICATED_NATIVE_ENDPOINT_VISIBLE_PARTIALS_S03_ONLY',
+        report = {'schema': SCHEMA, 'scope': 'AUTHENTICATED_NATIVE_ENDPOINT_VISIBLE_PARTIALS_S03_REDUCED_MOTION_ONLY',
             'request': request, 'source_sha': source, 'started_at': time.time(), 'state': 'RUNNING',
             'actual_native_backend': False, 'authenticated_native_endpoint_stream_verified': False,
             'upstream_model_inference_verified': False, 'upstream_model_request_bound': False,
@@ -244,7 +253,8 @@ def main(core):
             'session_stop_requested_for_own_pending_stream': False,
             'fixture_number_count': 40, 'maximum_new_dialogs': 1, 'maximum_native_posts': 1,
             'browser_endpoint_protocol': 'NDJSON', 'upstream_SSE_binding_verified': False,
-            'artifacts': [], 'rendering_mode': 'CPU_SWIFTSHADER_STREAM_ONLY',
+            'artifacts': [], 'rendering_mode': 'CPU_SWIFTSHADER_STREAM_ONLY_REDUCED_MOTION',
+            'browser_motion_preference': 'reduce', 'normal_animation_evaluated': False,
             'diagnostics_content': 'COUNTS_PUBLIC_NUMBERS_HASHES_AND_SAFE_ROUTE_CATEGORIES'}
         try:
             asyncio.run(asyncio.wait_for(browser_operation(core, report, directory, available), timeout=TOTAL_TIMEOUT))

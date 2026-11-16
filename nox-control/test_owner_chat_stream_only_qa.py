@@ -60,6 +60,9 @@ class ScopeTests(unittest.TestCase):
         self.assertIn('native_admitted', guard.co_freevars)
         self.assertIn('duplicate_qa_generation', guard.co_consts)
         self.assertIn('answer_normalized_characters:normalize(q.answer).length', core.SNAPSHOT_JS)
+        self.assertIn("window.matchMedia('(prefers-reduced-motion: reduce)').matches", core.SNAPSHOT_JS)
+        self.assertIn('reduce', core.browser_run.__code__.co_consts)
+        self.assertIn('HOLD_STREAM_ONLY_MOTION_PREFERENCE_NOT_APPLIED', core.browser_run.__code__.co_consts)
         self.assertEqual(core.EXPECTED, ','.join(map(str, range(1, 41))))
 
     def test_one_proper_prefix_remains_two_parts_not_strict_acceptance(self):
