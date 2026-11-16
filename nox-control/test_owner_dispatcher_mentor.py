@@ -25,6 +25,22 @@ FIXTURE = Path('/tmp/nox_native_sources/nox_dispatcher_t855u.py')
 
 
 class MentorTests(unittest.TestCase):
+    def test_stop_active_fails_closed_on_state_aliases_and_dangling_flags(self):
+        """Mirror canonical owner state STOP aliases; a broken symlink is still STOP."""
+        with tempfile.TemporaryDirectory() as directory, patch.object(mentor, 'ROOT', Path(directory)):
+            root = Path(directory)
+            for name in ('state/STOP', 'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag'):
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with self.subTest(alias=name, kind='file'):
+                    target.write_text('OWNER_MODEL_UPDATE')
+                    self.assertTrue(mentor.stop_active())
+                    target.unlink()
+                with self.subTest(alias=name, kind='dangling_symlink'):
+                    target.symlink_to(root / 'nonexistent_STOP_target')
+                    self.assertTrue(mentor.stop_active())
+                    target.unlink()
+
     def test_no_generated_commands_or_arbitrary_service_actions(self):
         for advice in ({'action': 'shell', 'reason_code': 'fix', 'service': None},
                        {'action': 'restart_service', 'reason_code': 'fix', 'service': 'nox-train-volta-t866u'},
