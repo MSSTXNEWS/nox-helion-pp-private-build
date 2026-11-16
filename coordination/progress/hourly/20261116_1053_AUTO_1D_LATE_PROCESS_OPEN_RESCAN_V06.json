@@ -1,0 +1,90 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_1D_LATE_OPEN_RESCAN",
+  "instructions_version": "0.0.6",
+  "slot": "1D",
+  "observation_utc": "2026-11-16T07:53:08Z",
+  "observation_msk": "2026-11-16T10:53:08+03:00",
+  "source_head_before": "dd96921a5d3b4c3b11a8060600df7e25d68dd309",
+  "patch_commit": "2b72261a2821443a4bcf8a64420fb81e6bc788d4",
+  "source_blob_before": "8a3accce6e13fb339d7611f2658915c6bcbf20fe",
+  "source_blob_after": "3c475a79d0f8dfc8511a147105b8741c8cdd9538",
+  "test_blob_before": "e3c9f2627181a7bd2f9732bbe763ec41121b08d8",
+  "test_blob_after": "b86a0eac98b02f39b549ed2770a94c5ecc72a775",
+  "error_id": "NOX-P0-1D-LATE-PROCESS-OPEN-BETWEEN-SCAN-AND-EVICTION-20261116",
+  "root_cause": "Previously a serving process could open or mmap the exact inode after the first /proc scan and before unlink while fresh manifest/disk checks ran.",
+  "patch": "Re-check /proc fd + mmap immediately before the last owner STOP gate and unlink. This narrows the race, but does not replace the still-required controller native cleanup lease.",
+  "five_tasks": [
+    {
+      "id": 1,
+      "status": "SOURCE_PRIOR_ONLY_AND_NATIVE_HOLD",
+      "evidence": "Prior 4/4 starter and 39/39 wheelhouse metadata; pinned Qwen3.5-9B student kept, DeepSeek first completed 19923784832 B in prior native receipt. No fresh full server path/SHA or Drive OAuth authentication in this slot."
+    },
+    {
+      "id": 2,
+      "status": "HOLD_NATIVE",
+      "evidence": "No current attested independent S03/config/checkpoint/optimizer full offsite restore, STOP/lease or safe reserved capacity."
+    },
+    {
+      "id": 3,
+      "status": "HOLD_NATIVE",
+      "evidence": "No single artifact claim and safe placement for remaining DeepSeek files; 0 bytes newly downloaded this slot. Prior four missing total 228904692384 bytes (not remeasured)."
+    },
+    {
+      "id": 4,
+      "status": "SOURCE_DONE",
+      "evidence": "Two extra regression tests, exact inode rescan immediately before unlink; exact native-eligible cleanup allowlist remains empty."
+    },
+    {
+      "id": 5,
+      "status": "HOLD_NATIVE",
+      "evidence": "0 files deleted, 0 bytes freed; current chat/S03 continuation after deletion not applicable; production model/S03 untouched."
+    }
+  ],
+  "cleanup": {
+    "allowlist": [],
+    "files_deleted": 0,
+    "freed_bytes": 0,
+    "downloaded_bytes": 0,
+    "native_restore_proof": false,
+    "cleanup_lease_verified": false
+  },
+  "WEIGHTS": {
+    "status": "HISTORICAL_NATIVE_ONLY",
+    "prior_qwen_successful_optimizer_updates": 8,
+    "new_updates_verified": null,
+    "latest_current_PID": null,
+    "loss_gradients_overflow": null,
+    "checkpoint_optimizer_scaler_rng_current_sha": null,
+    "offsite_restore": "HOLD",
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43815393580"
+  },
+  "KNOWLEDGE": {
+    "status": "HOLD_NATIVE",
+    "hunter_source_s03_write_readback_recall_verified": false,
+    "weight_updates_from_s03": false
+  },
+  "DISPATCHER_RESOURCES": {
+    "status": "HOLD_CURRENT_READBACK",
+    "prior_dispatcher_pid": 746352,
+    "current_three_native_worker_PIDs": null,
+    "current_STOP_GPU_CPU_cgroup_RAM_SSD_VRAM": null,
+    "restarts_this_slot": 0,
+    "no_competing_trainer_started": true
+  },
+  "tests": {
+    "scope": "SOURCE_ONLY_SYNTHETIC_COLD_BACKUP_AND_RACE_FIXTURE",
+    "added": 2,
+    "total_passed": 64,
+    "total_run": 64,
+    "result": "PASS",
+    "ci_job_id": 133162849705,
+    "workflow_id": 43826921940,
+    "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43826921940",
+    "exact_source_sha": "2b72261a2821443a4bcf8a64420fb81e6bc788d4",
+    "native_install": "NOT_PERFORMED",
+    "remote_file_sha_recheck": "NOT_PERFORMED"
+  },
+  "native_side_effects": "NONE",
+  "lesson": "A single pre-unlink process scan leaves a time window for a newly opened serving file. Keep the second scan, native controller lease/fencing, STOP, independent SHA restore and active-manifest gates; source CI is not a live deletion receipt.",
+  "next": "Owner-native READ ONLY: verify Drive OAuth and current OneHost free SSD/cgroup/GPU/STOP/download claims + independent full S03 checkpoint/optimizer restore; then exact per-file allowlist and only lease-protected CLEANUP_ON_READY or one missing shard transfer."
+}
