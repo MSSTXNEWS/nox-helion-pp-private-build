@@ -143,7 +143,11 @@ def service_state(service):
         return {'state': 'UNKNOWN', 'pid': None}
     try:
         result = subprocess.run(['supervisorctl', 'status', service], capture_output=True, text=True, timeout=4)
+        if result.returncode != 0 or len(result.stdout.strip().splitlines()) != 1:
+            return {'state': 'UNKNOWN', 'pid': None}
         match = re.match(r'^' + re.escape(service) + r'\s+([A-Z]+)(?:\s+pid\s+(\d+))?', result.stdout.strip())
+        if match and ((match[1] == 'RUNNING' and not match[2]) or (match[1] in ('STOPPED', 'EXITED') and match[2])):
+            return {'state': 'UNKNOWN', 'pid': None}
         return {'state': match[1] if match and match[1] in SERVICE_STATES else 'UNKNOWN', 'pid': int(match[2]) if match and match[2] else None}
     except (OSError, subprocess.TimeoutExpired):
         return {'state': 'UNKNOWN', 'pid': None}
@@ -310,10 +314,13 @@ def on_failure(task, error):
                     result['state'] = 'READ_ONLY_RETRY_SCHEDULED'
                 elif advice['action'] == 'restart_service' and service == advice['service']:
                     before = service_state(service)
-                    if before['state'] not in ('STOPPED', 'EXITED', 'FATAL', 'BACKOFF'):
+                    if before['state'] not in ('STOPPED', 'EXITED') or before['pid'] is not None:
                         result['state'] = 'BLOCKED_SERVICE_STATE_NOT_REPAIRABLE'
+                    elif stop_active() or service_state(service) != before:
+                        result['state'] = 'BLOCKED_OWNER_STOP_OR_SERVICE_CHANGED'
                     else:
-                        repair = subprocess.run(['supervisorctl', 'restart', service], capture_output=True, text=True, timeout=12)
+                        # Only start the stopped whitelisted dependency; never restart a live PID.
+                        repair = subprocess.run(['supervisorctl', 'start', service], capture_output=True, text=True, timeout=12)
                         after = service_state(service)
                         result['verification'] = {'service': service, 'before': before, 'after': after, 'command_rc': repair.returncode}
                         if repair.returncode == 0 and after['state'] == 'RUNNING' and after['pid']:

@@ -32,6 +32,55 @@ class MentorTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 mentor.validate_advice(advice, ['nox-priority-scheduler'])
 
+    def test_supervisor_status_rejects_error_multiline_or_bad_pid(self):
+        from types import SimpleNamespace
+        service = 'nox-priority-scheduler'
+        cases = [
+            (1, service + ' STOPPED Not started', 'UNKNOWN'),
+            (0, service + ' STOPPED pid 123', 'UNKNOWN'),
+            (0, service + ' RUNNING no-pid', 'UNKNOWN'),
+            (0, service + ' STOPPED Not started' + chr(10) + service + ' RUNNING pid 123', 'UNKNOWN'),
+            (0, service + ' STOPPED Not started', 'STOPPED'),
+            (0, service + ' RUNNING pid 123 uptime 0:01', 'RUNNING'),
+        ]
+        for rc, output, wanted in cases:
+            with self.subTest(rc=rc, output=output):
+                completed = SimpleNamespace(returncode=rc, stdout=output)
+                with patch.object(mentor.subprocess, 'run', return_value=completed):
+                    self.assertEqual(mentor.service_state(service)['state'], wanted)
+
+    def test_senior_recovery_refuses_fatal_even_when_suggested(self):
+        config = {'model': 'senior', 'config_sha256': 'a' * 64}
+        advice = {'action': 'restart_service', 'reason_code': 'failed',
+                  'service': 'nox-priority-scheduler'}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(mentor, 'ROOT', Path(directory)), patch.object(mentor, 'stop_active', return_value=False):
+                with patch.object(mentor, 'discover_senior', return_value=config), patch.object(mentor, 'consult', return_value=advice):
+                    with patch.object(mentor, 'service_state', return_value={'state': 'FATAL', 'pid': None}):
+                        with patch.object(mentor.subprocess, 'run') as command:
+                            task = {'id': 'mentor-fatal-gate', 'handler': 'ensure_scheduler', 'retries': 0}
+                            result = mentor.on_failure(task, 'fatal')
+                            self.assertEqual(result['state'], 'BLOCKED_SERVICE_STATE_NOT_REPAIRABLE')
+                            self.assertEqual(task['status'], 'blocked')
+                            command.assert_not_called()
+
+    def test_senior_recovery_rechecks_stopped_identity_before_start(self):
+        config = {'model': 'senior', 'config_sha256': 'a' * 64}
+        advice = {'action': 'restart_service', 'reason_code': 'failed',
+                  'service': 'nox-priority-scheduler'}
+        stopped = {'state': 'STOPPED', 'pid': None}
+        running = {'state': 'RUNNING', 'pid': 123}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(mentor, 'ROOT', Path(directory)), patch.object(mentor, 'stop_active', return_value=False):
+                with patch.object(mentor, 'discover_senior', return_value=config), patch.object(mentor, 'consult', return_value=advice):
+                    with patch.object(mentor, 'service_state', side_effect=[stopped, stopped, running]):
+                        with patch.object(mentor.subprocess, 'run') as command:
+                            task = {'id': 'mentor-race-gate', 'handler': 'ensure_scheduler', 'retries': 0}
+                            result = mentor.on_failure(task, 'failed')
+                            self.assertEqual(result['state'], 'BLOCKED_OWNER_STOP_OR_SERVICE_CHANGED')
+                            self.assertEqual(task['status'], 'blocked')
+                            command.assert_not_called()
+
     def test_no_senior_config_means_explicit_block_and_no_fake_consult(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'consult') as call:
             task = {'id': 'fixture', 'handler': 'verify_q4', 'retries': 1, 'max_retries': 3}
