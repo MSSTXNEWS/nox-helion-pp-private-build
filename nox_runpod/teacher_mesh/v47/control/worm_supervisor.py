@@ -74,6 +74,21 @@ def audit_process_progress(current, previous, *, now_unix: int, grace_seconds: i
                 or old["metric"] != sample["metric"]):
             report["holds"].append({"id": identity, "reason": "NEW_PROCESS_BASELINE"})
             continue
+        # A cached observation cannot diagnose a *current* stall. Match each
+        # exact revision, when emitted, to avoid mistaking a model upgrade for
+        # zero progress on the previous training run.
+        if now_unix - sample["observed_unix"] > max(120, grace_seconds // 3):
+            report["holds"].append({"id": identity, "reason": "STALE_NATIVE_PROGRESS_READBACK"})
+            continue
+        rev_new, rev_old = sample.get("revision_sha256"), old.get("revision_sha256")
+        if rev_new is not None or rev_old is not None:
+            if not (isinstance(rev_new, str) and SHA.fullmatch(rev_new)
+                    and isinstance(rev_old, str) and SHA.fullmatch(rev_old)):
+                report["holds"].append({"id": identity, "reason": "HOLD_PROGRESS_REVISION_PROOF"})
+                continue
+            if rev_new != rev_old:
+                report["holds"].append({"id": identity, "reason": "NEW_WORK_REVISION_BASELINE"})
+                continue
         elapsed = sample["observed_unix"] - old["observed_unix"]
         if elapsed <= 0 or sample["counter"] < old["counter"]:
             report["holds"].append({"id": identity, "reason": "HOLD_STALE_OR_RESET_COUNTER"})
