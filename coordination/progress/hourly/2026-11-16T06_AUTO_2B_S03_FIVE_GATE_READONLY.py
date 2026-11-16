@@ -17,6 +17,28 @@ import urllib.parse
 
 CANONICAL = Path('/root/nox/kb/knowledge.sqlite')
 EXPECTED_VECTOR_DIM = 1024
+AUDIT_ROW_LIMIT = 20000
+
+
+def sidecar_safety(path: Path, info):
+    """Metadata-only WAL/SHM privacy; do not open, copy or print sidecars."""
+    private, present = True, 0
+    for suffix in ('-wal', '-shm'):
+        sidecar = path.with_name(path.name + suffix)
+        if sidecar.is_symlink():
+            return False, present
+        try:
+            st = sidecar.stat()
+        except FileNotFoundError:
+            continue
+        present += 1
+        if (not stat.S_ISREG(st.st_mode)
+                or stat.S_IMODE(st.st_mode) & 0o077
+                or st.st_uid != info.st_uid):
+            private = False
+    return private, present
+
+
 # Coverage derives from fresh canonical DB rows, never a historical fixed vector goal.
 
 
@@ -35,10 +57,17 @@ def inspect(path: Path, *, fixture=False):
             raise ValueError('HOLD_SYMLINK_DB_PATH')
     try:
         info = path.stat()
-        if not stat.S_ISREG(info.st_mode) or info.st_size > 512 * 1024**2:
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 16 * 1024**3:
             raise ValueError('HOLD_S03_FILE_TYPE_OR_SIZE')
     except FileNotFoundError:
         return [gate(i, 'HOLD', 'CANONICAL_DB_NOT_ACCESSIBLE') for i in range(1, 6)]
+    # The main-file mode alone cannot protect newer S03 writes in the live WAL.
+    db_private = (stat.S_IMODE(info.st_mode) & 0o077) == 0
+    sidecars_private, sidecars_present = sidecar_safety(path, info)
+    if not db_private or not sidecars_private:
+        return [gate(i, 'HOLD', 'CANONICAL_DB_OR_WAL_SHM_ACL_UNSAFE',
+                     db_private=db_private, sidecars_private=sidecars_private,
+                     sidecars_present=sidecars_present) for i in range(1, 6)]
     uri = 'file:' + urllib.parse.quote(str(path.resolve()), safe='/') + '?mode=ro'
     db = sqlite3.connect(uri, uri=True, timeout=.2)
     try:
@@ -79,6 +108,9 @@ def inspect(path: Path, *, fixture=False):
             valid_shape = valid_hash = valid_both = vectors = 0
             active_models = set()
             vector_orphans = 0
+            total_vector_rows = (int(db.execute('SELECT count(*) FROM nox_s03_vectors').fetchone()[0])
+                                 if 'nox_s03_vectors' in names else 0)
+            vector_scan_complete = total_vector_rows <= AUDIT_ROW_LIMIT
             if 'nox_s03_vectors' in names:
                 vector_orphans = db.execute(
                     'SELECT count(*) FROM nox_s03_vectors v '
@@ -102,6 +134,7 @@ def inspect(path: Path, *, fixture=False):
             complete = bool(
                 fts_ok and items > 0 and eligible > 0 and fts_rows == items
                 and fts_bad == 0 and fts_orphans == 0
+                and vector_scan_complete and vectors == total_vector_rows
                 and vectors == eligible == valid_both and vector_orphans == 0
                 and identity_ok
             )
@@ -109,7 +142,9 @@ def inspect(path: Path, *, fixture=False):
                                 'CURRENT_CANONICAL_VECTOR_AND_FTS_COVERAGE' if complete else 'LIVE_VECTOR_FTS_COVERAGE_INCOMPLETE',
                                 fts5=fts_ok, items=items, eligible_nonblank_items=eligible,
                                 fts_rows=fts_rows, fts_mismatched_or_missing=fts_bad, fts_orphans=fts_orphans,
-                                vector_rows=vectors, vector_orphans=vector_orphans, valid_shape=valid_shape,
+                                vector_rows=vectors, vector_total_rows=total_vector_rows,
+                                vector_scan_complete=vector_scan_complete,
+                                vector_orphans=vector_orphans, valid_shape=valid_shape,
                                 valid_content_sha=valid_hash, valid_shape_and_content=valid_both,
                                 observed_coverage_percent=round(100 * valid_both / eligible, 2) if eligible else None,
                                 distinct_vector_model_ids=len(active_models),
@@ -117,6 +152,7 @@ def inspect(path: Path, *, fixture=False):
             origins = db.execute('SELECT count(*) FROM nox_s03_origins').fetchone()[0] if 'nox_s03_origins' in names else 0
             imported = 0
             unscoped_imports = 0
+            persona_scan_complete = items <= AUDIT_ROW_LIMIT
             for (meta,) in db.execute('SELECT meta FROM s03_items LIMIT 20001'):
                 try:
                     value = json.loads(meta) if isinstance(meta, str) else {}
@@ -126,9 +162,10 @@ def inspect(path: Path, *, fixture=False):
                     imported += 1
                     if not isinstance(value.get('persona_id'), str) or not value['persona_id']:
                         unscoped_imports += 1
-            results.append(gate(4, 'HOLD' if unscoped_imports else 'DONE_SOURCE',
+            results.append(gate(4, 'HOLD' if unscoped_imports or not persona_scan_complete else 'DONE_SOURCE',
                                 'IMPORTED_PERSONA_SCOPE_MISSING_FAIL_CLOSED' if unscoped_imports else 'METADATA_PERSONA_CHECK_ONLY_NOT_ACL_E2E',
                                 imported_history_items=imported, imported_without_persona_scope=unscoped_imports,
+                                persona_scan_complete=persona_scan_complete,
                                 provenance_origin_links=origins, provenance_payload_exported=False))
         else:
             results += [gate(3, 'HOLD', 'NO_FTS_OR_VECTOR_SCHEMA'), gate(4, 'HOLD', 'NO_ORIGIN_PERSONA_SCHEMA')]
@@ -176,6 +213,18 @@ def selftest():
         bad_fts = inspect(path, fixture=True)
         assert bad_fts[2]['fts_mismatched_or_missing'] == 1 and bad_fts[2]['state'] == 'HOLD'
         assert 'MISMATCH_SYNTHETIC' not in json.dumps(bad_fts)
+        wal = path.with_name(path.name + '-wal')
+        wal.write_bytes(b'SYNTHETIC_NO_REAL_S03')
+        wal.chmod(0o644)
+        unsafe = inspect(path, fixture=True)
+        assert len(unsafe) == 5 and all(x['state'] == 'HOLD' for x in unsafe)
+        assert unsafe[0]['reason'] == 'CANONICAL_DB_OR_WAL_SHM_ACL_UNSAFE'
+        wal.chmod(0o600)
+        assert sidecar_safety(path, path.stat()) == (True, 1)
+        wal.unlink()
+        wal.symlink_to(path)
+        assert sidecar_safety(path, path.stat())[0] is False
+        wal.unlink()
         try:
             inspect(Path(temp) / 'other.sqlite')
         except ValueError as exc:
