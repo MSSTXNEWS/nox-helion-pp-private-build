@@ -10,11 +10,13 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_transport_rollback_entry.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_chat_stream_asset_install_v2.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_chat_stream_asset_install_v2.py':(
+        'nox-v135-resonance-owner-bridge-coalesced.js','owner_media_acceptance_entry.py','owner_native_repair.py'),
     'nox-control/owner_qwen_transport_rollback_entry.py':(
         'owner_qwen_transport_rollback.py','owner_qwen_transport_revision_install.py',
         'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py',
@@ -52,6 +54,8 @@ SCOPED_REPAIR_BUNDLES={
         'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
 }
 SCOPED_REPAIR_EXTRA_PATHS={
+    'nox-control/owner_chat_stream_asset_install_v2.py':(
+        'coordination/onepass/nox-v135-resonance-owner-bridge-coalesced.js',),
     'nox-control/owner_qwen_transport_rollback_entry.py':(
         'nox-control/owner_qwen_transport_rollback.py','nox-control/owner_qwen_transport_revision_install.py',
         'nox-control/owner_qwen_transport_failed_diagnostic.json'),
