@@ -23,10 +23,18 @@ class PinnedModelInventoryAdmissionTest(unittest.TestCase):
 
     def test_missing_files_are_not_claimed_verified(self):
         row = audit.pinned_model_paths(str(self.root))
-        self.assertEqual(row["status"], "OK")  # Metadata-only, not installed.
+        self.assertEqual(row["status"], "HOLD_MODEL_FILES_MISSING")  # No files: not admitted.
         self.assertEqual(len(row["files"]), len(audit.PINNED_MODEL_FILES))
         self.assertTrue(all(f["sha_status"] == "NOT_CHECKED" for f in row["files"]))
         self.assertTrue(all(f["type"] == "missing" for f in row["files"]))
+
+    def test_nonexistent_model_root_is_not_reported_ok(self):
+        absent = self.root / "not_created"
+        row = audit.pinned_model_paths(str(absent))
+        self.assertEqual(row["status"], "HOLD_MODEL_FILES_MISSING")
+        self.assertEqual(len(row["files"]), len(audit.PINNED_MODEL_FILES))
+        self.assertTrue(all(f["type"] == "missing" for f in row["files"]))
+        self.assertTrue(all(f["sha_status"] == "NOT_CHECKED" for f in row["files"]))
 
     def test_permission_denied_target_fails_closed(self):
         denied = str(self.root / audit.PINNED_MODEL_FILES[1][0])
