@@ -166,6 +166,49 @@ class PoolTests(unittest.TestCase):
             'native_verified':True,'task_id':tid,'job_id':jid,'receipt_sha256':'b'*64}
         return n
 
+    def test_post_s03_readback_stop_revocation_preserves_claim_and_holds(self):
+        n=self._native_claim_mock()
+        def s03_then_stop(tid, jid):
+            n.stop_active.return_value=True
+            return {'task_id':tid,'job_id':jid,'native_verified':True,
+                    'receipt_sha256':'b'*64}
+        n.s03_readback.side_effect=s03_then_stop
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},
+                                 allowed_handlers={'owner_component'})
+        out=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'HOLD_STOP_OR_LEASE_CHANGED')
+        self.assertEqual(out['jobs_started'],1)
+        self.assertEqual(out['receipts'][0]['task_id'],'job.00000')
+        self.assertEqual(n.native_queue_claim.call_count,1)
+
+    def test_post_s03_readback_lease_revocation_preserves_claim(self):
+        n=self._native_claim_mock()
+        def s03_then_revoke(tid, jid):
+            n.writer_lease.return_value=False
+            return {'task_id':tid,'job_id':jid,'native_verified':True,
+                    'receipt_sha256':'b'*64}
+        n.s03_readback.side_effect=s03_then_revoke
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},
+                                 allowed_handlers={'owner_component'})
+        out=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'HOLD_STOP_OR_LEASE_CHANGED')
+        self.assertEqual(out['jobs_started'],1)
+        self.assertEqual(n.native_queue_claim.call_count,1)
+
+    def test_post_s03_readback_owner_probe_failure_fails_closed(self):
+        n=self._native_claim_mock()
+        def s03_then_fault(tid, jid):
+            n.owner_allowed.side_effect=OSError('owner auth readback unavailable')
+            return {'task_id':tid,'job_id':jid,'native_verified':True,
+                    'receipt_sha256':'b'*64}
+        n.s03_readback.side_effect=s03_then_fault
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},
+                                 allowed_handlers={'owner_component'})
+        out=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'HOLD_OWNER_GATE_READBACK')
+        self.assertEqual(out['jobs_started'],1)
+        self.assertEqual(n.native_queue_claim.call_count,1)
+
     def test_ambiguous_s03_exception_retains_claim_id(self):
         n=self._native_claim_mock()
         n.s03_readback.side_effect=RuntimeError('native S03 unavailable')
