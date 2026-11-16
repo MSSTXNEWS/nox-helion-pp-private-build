@@ -122,6 +122,9 @@ def _s03_prompt_context(trusted, request, question, limit=6):
         # record into the owner default persona's prompt.
         if row.get('persona_id') is not None or metadata.get('persona_id') is not None:
             continue
+        owner_scope=row.get('owner_scope',metadata.get('owner_scope'))
+        if owner_scope is not None and owner_scope!=OWNER:
+            continue
         scope_keys=('tenant','principal','chat_id')
         scoped=any(row.get(key) is not None or metadata.get(key) is not None
                    for key in scope_keys)
@@ -160,6 +163,20 @@ def _s03_prompt_context(trusted, request, question, limit=6):
         content_sha=metadata.get('source_sha256')
         if isinstance(content_sha,str) and re.fullmatch(r'[a-fA-F0-9]{64}',content_sha):
             source['content_sha256']=content_sha.lower()
+        fact_key=metadata.get('fact_key')
+        if (metadata.get('schema')=='NOX_OWNER_CONFIRMED_FACT_V1'
+                and owner_scope==OWNER and isinstance(fact_key,str)
+                and re.fullmatch(r'[A-Za-z0-9._:-]{1,128}',fact_key)
+                and isinstance(source_ref,str)
+                and provenance=='OWNER-CONFIRMED:'+source_ref
+                and isinstance(content_sha,str)
+                and re.fullmatch(r'[a-fA-F0-9]{64}',content_sha)
+                and hashlib.sha256(body.encode('utf-8')).hexdigest()==content_sha.lower()):
+            # Preserve the native writer contract without claiming that a
+            # source fixture or metadata tag proves live authentication.
+            source['writer_contract']='NOX_OWNER_CONFIRMED_FACT_V1'
+            source['fact_key']=fact_key
+            source['source_integrity']='CONTENT_SHA256_MATCH'
         entry={'source':source,'text':text}
         size=len(json.dumps(entry,ensure_ascii=False,separators=(',',':')))
         if total+size>5600: break
