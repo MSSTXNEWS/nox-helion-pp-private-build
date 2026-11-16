@@ -167,7 +167,13 @@
     cancel.addEventListener('click',async()=>{if(job&&running){cancel.disabled=true;try{show(await api('/api/ui/media/jobs/'+job.id+'/cancel',{}));}catch(e){status.textContent=e.message;cancel.disabled=false;}}});
     async function refresh(){
       if(document.visibilityState==='hidden')return;
-      try{const value=await api('/api/ui/executors');chips.replaceChildren();label.textContent=value.state==='OBSERVED'?'Исполнители':'Состояние обновляется';
+      try{const value=await api('/api/ui/executors');chips.replaceChildren();
+        if(value.state==='MODEL_UPDATE'||value.state==='HOLD_MAINTENANCE_UNKNOWN'){
+          label.textContent=value.state==='MODEL_UPDATE'?'Модель обновляется · владелец остановил NOX':'Обслуживание · статус STOP не подтверждён';
+          window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0,state:value.state}}));
+          return;
+        }
+        label.textContent=value.state==='OBSERVED'?'Исполнители · по файлу статуса':'Состояние обновляется';
         window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:value.state==='OBSERVED',busy:(value.workers||[]).filter(x=>x.status==='busy').length}}));
         for(const [index,worker] of (value.workers||[]).entries()){
           const known=value.state==='OBSERVED',busy=worker.status==='busy';const chip=E('span',String(index+1)+' · '+(known?(busy?'работает':'свободен'):'нет свежих данных'),'nox-live-chip');chip.dataset.state=known&&busy?'busy':'idle';chip.title=worker.task_id||worker.id;chips.append(chip);
