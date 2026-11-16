@@ -336,6 +336,9 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     stop(root);lease(lease_file,request,time.time(),root)
                     chunk=response.read(min(CHUNK,end-offset+1-wrote))
                     require(chunk,'HOLD_EARLY_EOF')
+                    # Blocking network I/O may outlive an owner STOP or lease
+                    # revocation. Do not append a chunk after either occurs.
+                    stop(root);lease(lease_file,request,time.time(),root)
                     output.write(chunk);wrote+=len(chunk)
                 output.flush();os.fsync(output.fileno())
         # Never acknowledge a partial Range after owner STOP, lease expiry or inode swap.
