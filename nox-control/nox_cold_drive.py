@@ -622,6 +622,10 @@ def load(a):
             command(['rclone','copyto',remote,str(temp),'--transfers','1','--multi-thread-streams','1'],a.timeout)
             if temp.stat().st_size!=size or sha256(temp)!=a.sha256:
                 raise RuntimeError('HOLD_RAM_SHA_MISMATCH')
+            # A concurrent chat/trainer may consume RAM during the transfer.
+            # Recheck actual cgroup+tmpfs headroom before publishing the model.
+            if memory_budget(dest_dir,a.reserve_gib) < 0:
+                raise RuntimeError('HOLD_RAM_RESERVE_AFTER_COPY')
             with temp.open('rb') as f:
                 os.fsync(f.fileno())
             os.link(temp,dest)  # Atomic no-replace publication, not destructive rename.
