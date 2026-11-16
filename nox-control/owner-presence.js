@@ -23,7 +23,7 @@
   const ctx=canvas.getContext('2d',{alpha:true});if(!ctx)return;
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   let width=1,height=1,phase='connecting',busy=0,last=0,frame=0,started=performance.now();
-  const labels={connecting:'Проверяю связь…',idle:'На связи · готов к задачам',working:'Выполняю фоновые задачи',waiting:'Обрабатываю запрос',speaking:'Передаю ответ',offline:'Связь временно недоступна',error:'Нужна проверка результата',stopped:'Ответ остановлен',updating:'Модель обновляется · владелец остановил NOX',maintenance_unknown:'Обслуживание · STOP требует проверки'};
+  const labels={connecting:'Проверяю связь…',idle:'На связи · готов к задачам',working:'Выполняю фоновые задачи',waiting:'Обрабатываю запрос',speaking:'Передаю ответ',offline:'Связь временно недоступна',error:'Нужна проверка результата',stopped:'Ответ остановлен',updating:'Модель обновляется · состояние процессов требует проверки',maintenance_unknown:'Обслуживание · STOP требует проверки'};
   function set(next){phase=next;box.dataset.phase=next;label.textContent=labels[next]||labels.idle;if(reduced.matches)draw(performance.now());}
   function resize(){const r=box.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,1.5);width=r.width;height=r.height;canvas.width=Math.max(1,Math.round(width*ratio));canvas.height=Math.max(1,Math.round(height*ratio));ctx.setTransform(ratio,0,0,ratio,0,0);draw(performance.now());}
   function draw(now){
