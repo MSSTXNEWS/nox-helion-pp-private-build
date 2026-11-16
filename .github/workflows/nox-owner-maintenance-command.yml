@@ -26,7 +26,7 @@ jobs:
           python3 - <<'PY'
           import json,os,re
           e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
-          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline)',e['comment']['body'])
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|deploy_ready)',e['comment']['body'])
           assert m, 'Invalid bounded maintenance command'
           assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
           assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
@@ -45,9 +45,32 @@ jobs:
           import os,py_compile
           from pathlib import Path
           a=os.environ['NOX_ACTION']
-          assert a in ('audit','inspect','stage','repair','lifeline')
+          assert a in ('audit','inspect','stage','repair','lifeline','deploy_ready')
           py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
           py_compile.compile('nox-control/owner_native_'+a+'.py',doraise=True)
+          PY
+      - name: Pin integrated Maya and DeepSeek sources before owner credentials
+        if: steps.request.outputs.action == 'deploy_ready'
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, subprocess
+          from pathlib import Path
+          sha=os.environ['NOX_PINNED_SOURCE_SHA']
+          if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:
+              raise SystemExit('HOLD_CHECKOUT_MISMATCH')
+          expected={
+              'nox-control/deepseek_owner_range_v10.py':'1e70aee30e28d907925bb2d128b23816e14d41ff',
+              'nox-control/maya_ds4_v100_launch_profile_v1.py':'ad4defe7dc90b414762ca7cb52ab995a7035486b',
+              'nox-control/maya_launch_preflight_v1.py':'1132ef99d0687274138f5930a285abc855688045',
+          }
+          for name,want in expected.items():
+              raw=Path(name).read_bytes()
+              got=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\\0'+raw).hexdigest()
+              if got!=want: raise SystemExit('HOLD_INTEGRATION_SOURCE_PIN_'+name.replace('/','_').replace('.','_'))
+              compile(raw,name,'exec')
+          print('NOX_DEPLOY_SOURCE_PIN=VERIFIED')
           PY
       - name: Execute only this owner-approved original-instance operation
         env:
