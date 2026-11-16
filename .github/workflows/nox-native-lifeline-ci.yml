@@ -17,6 +17,8 @@ on:
       - 'nox-control/test_owner_native_inspect_safety.py'
       - 'nox-control/test_owner_native_inspect_inventory.py'
       - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
+      - 'nox-control/owner_native_audit.py'
+      - 'nox-control/test_owner_native_audit_mount_inventory.py'
       - '.github/workflows/nox-native-lifeline-ci.yml'
   push:
     paths:
@@ -35,6 +37,8 @@ on:
       - 'nox-control/test_owner_native_inspect_safety.py'
       - 'nox-control/test_owner_native_inspect_inventory.py'
       - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
+      - 'nox-control/owner_native_audit.py'
+      - 'nox-control/test_owner_native_audit_mount_inventory.py'
       - '.github/workflows/nox-native-lifeline-ci.yml'
   workflow_dispatch:
 permissions:
@@ -57,6 +61,10 @@ jobs:
         run: python3 -m unittest discover -s nox-control -p 'test_nox_neuro_evolution_ingress.py' -v
       - name: Bounded owner native installation gate
         run: python3 -m unittest discover -s nox-control -p 'test_owner_native_lifeline.py' -v
+      - name: Bounded Linux mountinfo storage inventory tests
+        run: |
+          python3 -m py_compile nox-control/owner_native_audit.py nox-control/test_owner_native_audit_mount_inventory.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_audit_mount_inventory.py' -v
       - name: Owner OneHost STOP lease and 8081 listener identity read-only gates
         run: |
           python3 -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_safety.py
