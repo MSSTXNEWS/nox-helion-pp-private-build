@@ -220,7 +220,41 @@ def assert_not_open(source):
             raise RuntimeError('HOLD_PROCESS_SCAN_PERMISSION') from None
 
 
-def evict_verified(row, active_manifest):
+
+def independent_restore(row, restore_test_dir, timeout=3600):
+    """Full offsite recovery into an isolated mount; remote SHA alone is not proof."""
+    if not restore_test_dir:
+        raise RuntimeError('HOLD_INDEPENDENT_RESTORE_REQUIRED')
+    source = assert_model(row['source'])
+    root = plain_path(restore_test_dir)
+    if not root.is_dir():
+        raise ValueError('HOLD_RESTORE_TEST_DIR_REQUIRED')
+    if root.stat().st_dev == source.stat().st_dev:
+        raise ValueError('HOLD_RESTORE_NOT_INDEPENDENT_FILESYSTEM')
+    remote = assert_remote(row['destination'])
+    if remote.startswith('nox_pc:'):
+        raise RuntimeError('HOLD_PC_ONLY_COPY_NEVER_AUTHORIZES_EVICTION')
+    size, expected = row.get('size'), row.get('sha256')
+    if type(size) is not int or size <= 0 or not isinstance(expected, str) or not SHA.fullmatch(expected):
+        raise ValueError('HOLD_RESTORE_RECEIPT_SCHEMA')
+    if root.is_relative_to(Path('/dev/shm')):
+        if memory_budget(root, 12) < size:
+            raise RuntimeError('HOLD_RESTORE_RAM_RESERVE')
+    elif shutil.disk_usage(root).free < size + 12 * GIB:
+        raise RuntimeError('HOLD_RESTORE_DISK_RESERVE')
+    fd, temp = tempfile.mkstemp(prefix='.nox-independent-restore-', dir=root)
+    os.close(fd)
+    try:
+        command(['rclone', 'copyto', remote, temp, '--transfers', '1',
+                 '--multi-thread-streams', '1', '--retries', '2'], timeout)
+        if Path(temp).stat().st_size != size or sha256(temp) != expected:
+            raise RuntimeError('HOLD_INDEPENDENT_RESTORE_SHA_MISMATCH')
+    finally:
+        Path(temp).unlink(missing_ok=True)
+    return True
+
+
+def evict_verified(row, active_manifest, restore_test_dir=None, timeout=3600):
     if str(row.get('destination', '')).startswith('nox_pc:'):
         raise RuntimeError('HOLD_PC_ONLY_COPY_NEVER_AUTHORIZES_EVICTION')
     if not active_manifest:
@@ -229,13 +263,17 @@ def evict_verified(row, active_manifest):
     fresh_manifest(active_manifest, src)
     if identity(src)!=row['identity'] or sha256(src)!=row['sha256']:
         raise RuntimeError('HOLD_SOURCE_CHANGED_BEFORE_EVICTION')
+    independent_restore(row, restore_test_dir, timeout)
+    if identity(src)!=row['identity'] or sha256(src)!=row['sha256']:
+        raise RuntimeError('HOLD_SOURCE_CHANGED_AFTER_RESTORE')
     assert_not_open(src)
     fresh_manifest(active_manifest, src)
     if identity(src)!=row['identity']:
         raise RuntimeError('HOLD_SOURCE_CHANGED_BEFORE_UNLINK')
     before, allocated = shutil.disk_usage(src.parent).free, src.stat().st_blocks*512
     src.unlink()  # One exact verified regular file; never recursive deletion.
-    row.update(source_deleted=True, source_logical_bytes_removed=row['size'],
+    row.update(independent_restore_verified=True, source_deleted=True,
+               source_logical_bytes_removed=row['size'],
                source_allocated_bytes=allocated,
                observed_free_bytes_delta=shutil.disk_usage(src.parent).free-before)
     atomic_json(Path(row['receipt']), {k:v for k,v in row.items() if k!='receipt'})
@@ -245,11 +283,13 @@ def evict_verified(row, active_manifest):
 def upload(a):
     if a.evict and not a.active_manifest:
         raise ValueError('HOLD_ACTIVE_MANIFEST_REQUIRED')
+    if a.evict and not a.restore_test_dir:
+        raise RuntimeError('HOLD_INDEPENDENT_RESTORE_REQUIRED')
     with maintenance_lock(a.receipt_dir):
         row=copy_verified({'source':a.file,'remote':a.remote,'receipt_dir':a.receipt_dir,
                            'timeout':a.timeout,'sha256':a.sha256})
         if a.evict:
-            evict_verified(row,a.active_manifest)
+            evict_verified(row,a.active_manifest,a.restore_test_dir,a.timeout)
         print(json.dumps(row,ensure_ascii=False))
 
 
@@ -270,6 +310,8 @@ def batch(a):
         raise ValueError('HOLD_DUPLICATE_BATCH_SOURCE')
     if a.evict and not a.active_manifest:
         raise ValueError('HOLD_ACTIVE_MANIFEST_REQUIRED')
+    if a.evict and not a.restore_test_dir:
+        raise RuntimeError('HOLD_INDEPENDENT_RESTORE_REQUIRED')
     with maintenance_lock(a.receipt_dir):
         done, errors = [], []
         with ProcessPoolExecutor(max_workers=a.workers) as pool:
@@ -286,7 +328,7 @@ def batch(a):
             raise RuntimeError('HOLD_BATCH_INCOMPLETE_SOURCES_RETAINED')
         if a.evict:
             for row in done:
-                evict_verified(row,a.active_manifest)
+                evict_verified(row,a.active_manifest,a.restore_test_dir,a.timeout)
                 summary['sources_deleted']+=1
                 atomic_json(Path(a.receipt_dir)/'last-batch.json',summary)
         print(json.dumps(summary,ensure_ascii=False))
@@ -431,6 +473,7 @@ def parser():
         q.add_argument('--remote',required=True)
         q.add_argument('--receipt-dir',default='./cold_receipts')
         q.add_argument('--active-manifest'); q.add_argument('--evict',action='store_true')
+        q.add_argument('--restore-test-dir', help='Independent filesystem for full offsite restore (required for eviction)')
         q.add_argument('--timeout',type=int,default=3600)
         if name=='upload':
             q.add_argument('--sha256')

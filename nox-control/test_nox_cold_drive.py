@@ -156,10 +156,48 @@ class ColdTests(unittest.TestCase):
         with self.src.open('rb'),self.assertRaises(RuntimeError):cold.assert_not_open(self.src)
     def test_verified_fixture_eviction_record(self):
         row=cold.copy_verified(self.job)
-        with patch.object(cold,'assert_not_open'):
-            result=cold.evict_verified(row,self.manifest())
+        with patch.object(cold,'assert_not_open'), patch.object(cold,'independent_restore',return_value=True):
+            result=cold.evict_verified(row,self.manifest(),str(self.root/'separate-mount'))
         self.assertFalse(self.src.exists());self.assertTrue(result['source_deleted'])
         self.assertEqual(result['source_logical_bytes_removed'],row['size'])
+    def test_evict_without_independent_restore_never_unlinks(self):
+        row=cold.copy_verified(self.job)
+        with patch.object(cold,'assert_not_open'), self.assertRaisesRegex(RuntimeError,'HOLD_INDEPENDENT_RESTORE_REQUIRED'):
+            cold.evict_verified(row,self.manifest())
+        self.assertTrue(self.src.exists())
+
+    def test_same_filesystem_is_not_independent_restore(self):
+        row=cold.copy_verified(self.job)
+        with self.assertRaisesRegex(ValueError,'HOLD_RESTORE_NOT_INDEPENDENT_FILESYSTEM'):
+            cold.independent_restore(row,self.root,10)
+        self.assertTrue(self.src.exists())
+
+    def test_full_independent_tmpfs_restore_sha_and_cleanup(self):
+        if not Path('/dev/shm').is_dir():
+            self.skipTest('no tmpfs available')
+        with tempfile.TemporaryDirectory(prefix='nox-restore-test-',dir='/dev/shm') as restored:
+            if Path(restored).stat().st_dev == self.src.stat().st_dev:
+                self.skipTest('test host has no separate mount')
+            row=cold.copy_verified(self.job)
+            with patch.object(cold,'memory_budget',return_value=10**7):
+                self.assertTrue(cold.independent_restore(row,restored,10))
+            self.assertEqual(list(Path(restored).iterdir()),[])
+        self.assertTrue(self.src.exists())
+
+    def test_corrupt_offsite_restoration_never_passes(self):
+        if not Path('/dev/shm').is_dir():
+            self.skipTest('no tmpfs available')
+        with tempfile.TemporaryDirectory(prefix='nox-restore-test-',dir='/dev/shm') as restored:
+            if Path(restored).stat().st_dev == self.src.stat().st_dev:
+                self.skipTest('test host has no separate mount')
+            row=cold.copy_verified(self.job)
+            remote_file=Path(os.environ['TEST_REMOTE'])/row['destination'].split(':',1)[1]
+            remote_file.write_bytes(b'Z'+remote_file.read_bytes()[1:])
+            with patch.object(cold,'memory_budget',return_value=10**7), self.assertRaisesRegex(RuntimeError,'HOLD_INDEPENDENT_RESTORE_SHA_MISMATCH'):
+                cold.independent_restore(row,restored,10)
+            self.assertEqual(list(Path(restored).iterdir()),[])
+        self.assertTrue(self.src.exists())
+
     def test_storage_lock_excludes_second_writer(self):
         with cold.maintenance_lock(self.receipts),self.assertRaises(RuntimeError):
             with cold.maintenance_lock(self.receipts):pass
@@ -199,7 +237,8 @@ class ColdTests(unittest.TestCase):
             p=self.root/name;p.write_bytes(b'bytes');files.append({'path':str(p),'sha256':cold.sha256(p)})
         m=self.root/'batch.json';m.write_text(json.dumps({'files':files}))
         args=cold.parser().parse_args(['batch','--manifest',str(m),'--remote','fixture:cold',
-                                      '--receipt-dir',str(self.receipts),'--evict','--active-manifest',self.manifest()])
+                                      '--receipt-dir',str(self.receipts),'--evict','--active-manifest',self.manifest(),
+                                      '--restore-test-dir',str(self.root)])
         with patch.dict(os.environ,{'FAIL_NAME':'fail.gguf'}),self.assertRaises(RuntimeError):cold.batch(args)
         self.assertTrue(all(Path(x['path']).exists() for x in files))
         self.assertEqual(json.loads((self.receipts/'last-batch.json').read_text())['sources_deleted'],0)
