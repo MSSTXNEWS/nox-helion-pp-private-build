@@ -16,7 +16,7 @@ REPO = "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
 RESERVE = 16 * 1024**3
 MAX_RANGE = 256 * 1024**2
 CHUNK = 1024**2
-STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/STOP")
+STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/STOP", "state/STOP.flag")
 SHA = re.compile(r"[a-f0-9]{64}\Z")
 FILE = re.compile(r"(?:DeepSeek-V4\.1-Flash-1017-GSQ-RCO-IQ2_XXS-0000[1-5]-of-00006|DeepSeek-V4\.1-Flash-Engram-IQ4_NL)\.gguf\Z")
 
@@ -126,6 +126,54 @@ def inventory(manifest,target):
                      'verified':bool(a and a.st_size==row['bytes'] and digest(p)==row['sha256'])})
     return rows
 
+
+def finalize_complete_partial(row, partial, final, destination, root, lease_file, request, new_bytes, expected):
+    """After a crash or final Range, publish only an intact complete .part.
+
+    This path never requests more network bytes. Partial and final remain
+    protected by the original OneHost owner lease and download flock.
+    """
+    observed=regular(partial)
+    require((observed.st_dev, observed.st_ino, observed.st_size)==expected and
+            observed.st_size==row['bytes'], 'HOLD_PARTIAL_LENGTH_RACE')
+    stop(root);lease(lease_file,request,time.time(),root)
+    actual=digest(partial)
+    stop(root);lease(lease_file,request,time.time(),root)
+    after=regular(partial)
+    require((after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns)==
+            (observed.st_dev,observed.st_ino,observed.st_size,observed.st_mtime_ns,observed.st_ctime_ns),
+            'HOLD_PARTIAL_CHANGED_DURING_HASH')
+    require(actual==row['sha256'],'HOLD_FINAL_SHA_MISMATCH')
+    # A complete pre-existing partial may have been staged by a prior process.
+    # Ensure its contents reach storage before adding its final directory name.
+    syncfd=os.open(partial,os.O_RDONLY|os.O_NOFOLLOW)
+    try:
+        synced=os.fstat(syncfd)
+        require((synced.st_dev,synced.st_ino,synced.st_size)==expected,
+                'HOLD_PARTIAL_CHANGED_BEFORE_FSYNC')
+        os.fsync(syncfd)
+    finally:
+        os.close(syncfd)
+    stop(root);lease(lease_file,request,time.time(),root)
+    require(not final.exists() and not final.is_symlink(),'HOLD_FINAL_RACE')
+    try:
+        os.link(partial,final,follow_symlinks=False)
+    except FileExistsError:
+        raise Hold('HOLD_FINAL_RACE')
+    published=os.stat(final,follow_symlinks=False)
+    require(stat.S_ISREG(published.st_mode) and published.st_uid==os.geteuid() and
+            (published.st_dev,published.st_ino,published.st_size)==
+            (after.st_dev,after.st_ino,after.st_size),'HOLD_PUBLISHED_INODE_MISMATCH')
+    os.unlink(partial)
+    dfd=os.open(destination,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+    try: os.fsync(dfd)
+    finally: os.close(dfd)
+    stop(root);lease(lease_file,request,time.time(),root)
+    receipt={'schema':'NOX_DEEPSEEK_RANGE_RECEIPT_V10','request':request,'file':row['path'],
+             'bytes':row['bytes'],'sha256':actual,'new_bytes':new_bytes,'at_unix':time.time()}
+    atomic_receipt(destination/(row['path']+'.verified.json'),receipt)
+    return {'state':'VERIFIED_FINAL','file':row['path'],'new_bytes':new_bytes,'sha256':actual}
+
 def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=urlopen):
     """One bounded transfer. Require correct 206 Content-Range even at offset zero.
     Final path is published only after full SHA. Partial is left untouched on HOLD."""
@@ -161,12 +209,18 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     (partial_stat.st_dev,partial_stat.st_ino,partial_stat.st_size),
                     'HOLD_PARTIAL_PREIMAGE_CHANGED')
         offset=partial_stat.st_size if partial_stat else 0
-        require(offset<row['bytes'],'HOLD_PARTIAL_AT_OR_ABOVE_TOTAL')
+        require(offset<=row['bytes'],'HOLD_PARTIAL_ABOVE_TOTAL')
         with tempfile.TemporaryFile(dir=destination) as probe:
             probe.write(b'NOX-P0-seek'); probe.flush(); os.fsync(probe.fileno())
             require(os.pread(probe.fileno(),8,4)==b'P0-seek','HOLD_STORAGE_NOT_SEEKABLE')
         free=os.statvfs(destination).f_bavail*os.statvfs(destination).f_frsize
         require(free>=row['bytes']-offset+RESERVE,'HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT')
+        if offset==row['bytes']:
+            # Fully downloaded .part from a prior crash: validate and publish
+            # without a redundant HTTP request or duplicate GGUF allocation.
+            return finalize_complete_partial(row,partial,final,destination,root,lease_file,request,
+                                             new_bytes=0,
+                                             expected=(admitted.st_dev,admitted.st_ino,offset))
         end=min(row['bytes']-1,offset+limit-1)
         request_url=Request(row['url'],headers={'Range':f'bytes={offset}-{end}',
                             'Accept-Encoding':'identity','User-Agent':'NOX-Owner-P0-Range-V10'})
@@ -208,31 +262,8 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                 (opened.st_dev,opened.st_ino,end+1),'HOLD_PARTIAL_LENGTH_RACE')
         if end+1!=row['bytes']:
             return {'state':'PARTIAL_SHA_PENDING','file':name,'new_bytes':wrote,'part_bytes':end+1}
-        actual=digest(partial)
-        require(actual==row['sha256'],'HOLD_FINAL_SHA_MISMATCH')
-        stop(root);lease(lease_file,request,time.time(),root)
-        require(not final.exists(),'HOLD_FINAL_RACE')
-        # os.replace would silently overwrite another writer's newly published
-        # final between exists() and rename; hard-link creation is atomic
-        # NOREPLACE and preserves the verified .part on a collision.
-        try:
-            os.link(partial,final,follow_symlinks=False)
-        except FileExistsError:
-            raise Hold('HOLD_FINAL_RACE')
-        published=os.stat(final,follow_symlinks=False)
-        require(stat.S_ISREG(published.st_mode) and published.st_uid==os.geteuid() and
-                (published.st_dev,published.st_ino,published.st_size)==
-                (after.st_dev,after.st_ino,after.st_size),
-                'HOLD_PUBLISHED_INODE_MISMATCH')
-        os.unlink(partial)
-        # Persist the directory entry before writing a successful receipt.
-        dfd=os.open(destination,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
-        try: os.fsync(dfd)
-        finally: os.close(dfd)
-        receipt={'schema':'NOX_DEEPSEEK_RANGE_RECEIPT_V10','request':request,'file':name,
-                 'bytes':row['bytes'],'sha256':actual,'new_bytes':wrote,'at_unix':time.time()}
-        atomic_receipt(destination/(name+'.verified.json'),receipt)
-        return {'state':'VERIFIED_FINAL','file':name,'new_bytes':wrote,'sha256':actual}
+        return finalize_complete_partial(row,partial,final,destination,root,lease_file,request,
+                                         new_bytes=wrote,expected=(opened.st_dev,opened.st_ino,end+1))
     finally:
         if partial_guard_fd is not None: os.close(partial_guard_fd)
         os.close(fd)

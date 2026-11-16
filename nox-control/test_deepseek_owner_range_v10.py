@@ -208,4 +208,42 @@ class DeepSeekP0Offline(unittest.TestCase):
             for fd in old_fds:os.close(fd)
         self.assertTrue(swapped)
 
+
+    def test_complete_partial_after_crash_publishes_without_network_or_double_copy(self):
+        partial=self.dst/(self.name+'.part')
+        partial.write_bytes(self.content)
+        with patch.object(m,'RESERVE',0):
+            result=self.do(opener=lambda *a,**kw:self.fail('must not redownload a complete partial'))
+        self.assertEqual((result['state'],result['new_bytes']),('VERIFIED_FINAL',0))
+        self.assertEqual((self.dst/self.name).read_bytes(),self.content)
+        self.assertFalse(partial.exists())
+        self.assertEqual(json.loads((self.dst/(self.name+'.verified.json')).read_text())['new_bytes'],0)
+
+    def test_corrupt_complete_partial_fails_without_network_or_publishing(self):
+        partial=self.dst/(self.name+'.part')
+        partial.write_bytes(b'X'*len(self.content))
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'FINAL_SHA_MISMATCH'):
+                self.do(opener=lambda *a,**kw:self.fail('must not fetch a corrupt full partial'))
+        self.assertEqual(partial.read_bytes(),b'X'*len(self.content))
+        self.assertFalse((self.dst/self.name).exists())
+
+    def test_oversized_partial_is_protected_without_network(self):
+        partial=self.dst/(self.name+'.part')
+        partial.write_bytes(self.content+b'extra')
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'PARTIAL_ABOVE_TOTAL'):
+                self.do(opener=lambda *a,**kw:self.fail('must not fetch oversized partial'))
+        self.assertEqual(partial.read_bytes(),self.content+b'extra')
+
+    def test_owner_state_stop_flag_blocks_full_partial_promotion(self):
+        partial=self.dst/(self.name+'.part')
+        partial.write_bytes(self.content)
+        (self.root/'state/STOP.flag').touch()
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):
+                self.do(opener=lambda *a,**kw:self.fail('STOP must stop the network'))
+        self.assertEqual(partial.read_bytes(),self.content)
+        self.assertFalse((self.dst/self.name).exists())
+
 if __name__=='__main__':unittest.main()
