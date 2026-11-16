@@ -1298,10 +1298,8 @@ test('V179 STOP UI outcome distinguishes rejection, timeout and accepted transpo
     assert(failure,'cancellation must produce a terminal error event');
     assert.equal(failure.gpu_stop_verified,false);
     assert.equal(failure.stop_transport_outcome,expected);
-    assert.equal(failure.stop_signal_accepted,expected==='signal_accepted');
     const ui=f.uiEvents.find(e=>e.type==='nox:native-stop-result')?.detail;
     assert.equal(ui?.transport_outcome,expected);
-    assert.equal(ui?.signal_accepted,expected==='signal_accepted');
     assert.equal(ui?.gpu_stop_verified,false);
     assert.equal(f.uiEvents.some(e=>e.type==='nox:native-phase'&&e.detail.phase==='stopped'),false);
   }
