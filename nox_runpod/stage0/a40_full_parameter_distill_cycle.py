@@ -107,7 +107,7 @@ def main():
  if not (0<a.lr<=5e-5):raise RuntimeError("UNSAFE_LEARNING_RATE")
  # STOP/HOLD must exit before directory creation, CUDA/model load, optimizer, or checkpoint writes.
  from training_admission import admission_hold_reason
- hold=admission_hold_reason()
+ hold=admission_hold_reason(expected_target="NOX_9B_UNIFIED")
  if hold:
   print(json.dumps({"status":"HOLD","stage":"TRAINING_ADMISSION","reason":hold},ensure_ascii=False),flush=True)
   return
