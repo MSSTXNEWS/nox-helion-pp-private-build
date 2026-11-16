@@ -15,7 +15,6 @@ import time
 from datetime import datetime, timezone
 
 NVIDIA_SMI = "/usr/bin/nvidia-smi"
-GPU_IDS = (0, 1)
 MIN_GPU_TOTAL_BYTES = 30 * 1024 ** 3
 MAX_QUERY_SECONDS = 10.0
 UUID_PATTERN = re.compile(r"GPU-[0-9A-Fa-f-]{8,}\\Z")
@@ -76,7 +75,7 @@ def collect_two_v100_topology() -> dict:
 
     devices = []
     try:
-        for row in rows:
+        for visible_id, row in enumerate(rows):
             index_text, uuid, name, cc_text, total_text, free_text = row
             if not index_text.isdigit():
                 return _hold("HOLD_NATIVE_GPU_INVENTORY_MALFORMED")
@@ -97,7 +96,7 @@ def collect_two_v100_topology() -> dict:
                     or free_bytes > total_bytes):
                 return _hold("HOLD_NATIVE_GPU_VRAM", gpu_index=index)
             devices.append({
-                "visible_id": index,
+                "visible_id": visible_id,
                 "nvidia_smi_index": index,
                 "uuid": uuid,
                 "name": name,
@@ -108,11 +107,13 @@ def collect_two_v100_topology() -> dict:
     except (TypeError, ValueError, OverflowError):
         return _hold("HOLD_NATIVE_GPU_INVENTORY_MALFORMED")
 
-    ids = tuple(sorted(row["visible_id"] for row in devices))
+    ids = tuple(row["visible_id"] for row in devices)
+    host_indices = tuple(row["nvidia_smi_index"] for row in devices)
     uuids = tuple(row["uuid"] for row in devices)
-    if ids != GPU_IDS or len(set(uuids)) != 2:
+    if ids != (0, 1) or len(set(host_indices)) != 2 or len(set(uuids)) != 2:
         return _hold("HOLD_NATIVE_GPU_TOPOLOGY",
                      visible_ids=list(ids),
+                     nvidia_smi_indices=list(host_indices),
                      unique_uuid_count=len(set(uuids)))
     if devices[0]["total_bytes"] != devices[1]["total_bytes"]:
         return _hold("HOLD_NATIVE_GPU_MEMORY_ASYMMETRY",
@@ -125,7 +126,9 @@ def collect_two_v100_topology() -> dict:
         "query_elapsed_ns": elapsed_ns,
         "fresh": True,
         "visible_ids": list(ids),
+        "nvidia_smi_indices": list(host_indices),
         "device_uuids": list(uuids),
+        "visibility_binding": "CUDA_VISIBLE_DEVICES is pinned to this ordered UUID list; Maya --gpus uses visible ordinals",
         "devices": devices,
         "native_gpu_readback_verified": True,
         "launchable": False,
