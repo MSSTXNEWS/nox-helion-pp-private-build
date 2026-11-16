@@ -135,6 +135,44 @@ class TestRealSubagentProcesses(unittest.TestCase):
                           authorize=lambda: True, lease_current=lease)
         self.assertEqual(leases, [])
 
+    def test_inflight_deadline_cannot_be_extended_by_other_worker_results(self):
+        # Pure in-memory regression: a fast result cannot mask a stale job.
+        from types import SimpleNamespace
+        from queue import Queue
+        from unittest.mock import patch
+        import owner_subagent_processes as module
+
+        class Clock:
+            t = 0.0
+            def monotonic(self):
+                return self.t
+
+        clock = Clock()
+
+        class ScriptedOutbox:
+            calls = 0
+            def get(self, timeout):
+                self.calls += 1
+                if self.calls == 1:
+                    clock.t = 5.0
+                    return {'kind': 'RESULT', 'role': 'infra', 'pid': 810,
+                            'id': 'job-0', 'state': 'CANDIDATE_NOT_APPLIED'}
+                clock.t = 8.0
+                return {'kind': 'RESULT', 'role': 'brain', 'pid': 811,
+                        'id': 'job-1', 'state': 'CANDIDATE_NOT_APPLIED'}
+
+        candidate = Subagents.__new__(Subagents)
+        candidate.roles = ['infra', 'brain', 'web']
+        candidate.timeout = 1
+        candidate.inboxes = {role: Queue() for role in candidate.roles}
+        candidate.outbox = ScriptedOutbox()
+        candidate.processes = {role: SimpleNamespace(pid=810+i)
+                               for i, role in enumerate(candidate.roles)}
+        with patch.object(module.time, 'monotonic', clock.monotonic):
+            with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TIMEOUT'):
+                candidate.run(batch(2), stop_active=lambda: False,
+                              authorize=lambda: True, lease_current=lambda: True)
+
     def test_external_model_url_rejected(self):
         from owner_subagent_processes import _model_reply
         with self.assertRaisesRegex(GateError, 'HOLD_NONLOCAL'):
