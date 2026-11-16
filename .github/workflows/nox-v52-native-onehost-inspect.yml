@@ -39,7 +39,8 @@ jobs:
       - name: Run V52 exact model path source contract
         run: |
           python3 -m py_compile nox-control/owner_native_audit.py nox-control/test_v52_exact_model_path_workflow_contract.py nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py
-          python3 -m unittest -v nox-control/test_v52_exact_model_path_workflow_contract.py
+          cd nox-control
+          python3 -m unittest -v test_v52_exact_model_path_workflow_contract
       - name: Mark source-only boundary
         run: echo "SOURCE_TESTED_ONLY=true; no native dispatch, model files, STOP, or services touched"
   native-inspect:
