@@ -248,5 +248,21 @@
     "native_claim_ids": []
   },
   "next": "Owner-native read-only STOP/lease + independent restore; approved >=248834257920B+reserve seekable storage, then isolated Python/GPU SM70 smoke before original OneHost CUTOVER.",
-  "head_at_preparation": "bf8fad7bd57dd1c635349bdbfe755b4b1a97c3f2"
+  "head_at_preparation": "bf8fad7bd57dd1c635349bdbfe755b4b1a97c3f2",
+  "storage_provider_policy": {
+    "status": "SOURCE_DOCS_VERIFIED_NATIVE_HOLD",
+    "checked_date_utc": "2026-11-16",
+    "official_sources": [
+      "https://github.com/vast-ai/docs/blob/main/guides/instances/storage/types.mdx",
+      "https://github.com/vast-ai/docs/blob/main/guides/instances/storage/volumes.mdx",
+      "https://github.com/vast-ai/docs/blob/main/guides/instances/storage/cloud-sync.mdx"
+    ],
+    "finding": "Vast container disk allocation is fixed after instance creation. Local volumes are fixed-size and physical-host-tied; documented allocation/mount is at instance creation. No evidence for non-disruptive live attachment to existing #60509551. Cloud Sync is a file-transfer mechanism, not proof of an authenticated seekable persistent mount.",
+    "owner_admission": "HOLD until existing OneHost has an independently evidenced durable seekable storage path with quota >=248834257920 bytes plus reserve and real random read/write under authorized owner access. No destructive migration, new instance, volume rental, cloud OAuth, or download automatically authorized by this metadata.",
+    "cleanup_cannot_solve": "Total root allocation 183609851904 bytes is 65224406016 bytes smaller than 248834257920-byte model even if empty. Root free in latest native read-only 43158585344 bytes; current missing five need 248828477216 bytes before reserve.",
+    "last_native_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43939988374",
+    "last_native_observed_at_utc": "2026-11-16T20:09:37Z",
+    "no_native_changes": true,
+    "no_new_downloads": true
+  }
 }
