@@ -136,7 +136,7 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
         if native_state == "RUNNING":
             beat = status.get("heartbeat_unix")
             if (type(now_unix) is not int or type(beat) is not int
-                    or beat > now_unix + 30 or now_unix - beat > heartbeat_s):
+                    or beat <= 0 or beat > now_unix + 30 or now_unix - beat > heartbeat_s):
                 out["stale_heartbeat_holds"].append(tid)
                 out["rejected"].append({"task_id": tid, "reason": "HEARTBEAT_STALE_OR_UNKNOWN"})
                 continue
@@ -324,6 +324,23 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
         self.assertEqual(r["rejected"][0]["reason"], "UNSERIALIZABLE_OR_NONFINITE_EVENT")
         self.assertFalse(r["native_pass"])
+
+    def test_nonpositive_heartbeat_is_not_fresh(self):
+        # Nonpositive epoch is not a heartbeat even if a synthetic observation
+        # starts soon after epoch zero (and is therefore within 600 seconds).
+        for beat in (0, -1):
+            with self.subTest(heartbeat=beat):
+                def mutation(d):
+                    d["statuses"]["NOX-V46-01"].update(
+                        state="RUNNING", heartbeat_unix=beat)
+                    d["queues"]["native/001"]["state"] = "running"
+                    d["events"]["native/001"]["state"] = "running"
+                    d["s03"]["native/001"]["event_sha256"] = digest(
+                        d["events"]["native/001"])
+                out = self.check(mutation, now_unix=100)
+                self.assertEqual(out["crosschecked_queue_s03_pairs"], 0)
+                self.assertEqual(out["stale_heartbeat_holds"], ["NOX-V46-01"])
+                self.assertFalse(out["native_pass"])
 
     def test_empty_is_unknown(self):
         r = self.check(lambda d: (d["statuses"].clear(),d["queues"].clear(),d["s03"].clear(),d["events"].clear()))
