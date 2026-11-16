@@ -5,6 +5,11 @@ on:
     paths:
       - .github/workflows/nox-v61-encrypted-checkpoint-export.yml
       - nox_runpod/teacher_mesh/v61/checkpoint_backup.py
+      - nox-control/owner_qwen6_backup_stream.py
+      - nox-control/owner_qwen6_backup_runner.py
+      - nox-control/owner_qwen6_backup_local.py
+      - nox-control/owner_qwen6_backup_public.json
+      - nox-control/test_owner_qwen6_backup.py
   workflow_dispatch:
     inputs:
       allow_native:
@@ -13,14 +18,41 @@ on:
         required: true
         options: ['NO', 'YES']
         default: 'NO'
+      checkpoint_scope:
+        description: 'LEGACY preserves the original V61 operation; QWEN6 exports only the accepted six-update checkpoint'
+        type: choice
+        required: true
+        options: ['LEGACY', 'QWEN6']
+        default: 'LEGACY'
+      source_sha:
+        description: 'For QWEN6 only: exact reviewed 40-character commit, equal to the selected workflow ref HEAD'
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
 concurrency:
   group: nox-v61-vast60509551-checkpoint-export
   cancel-in-progress: false
 jobs:
+  source-only:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate bounded Qwen6 source only, without credentials or native access
+        run: |
+          if ! /usr/bin/python3 -c 'import cryptography'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-cryptography
+          fi
+          /usr/bin/python3 -m py_compile nox-control/owner_qwen6_backup_stream.py nox-control/owner_qwen6_backup_runner.py nox-control/owner_qwen6_backup_local.py
+          /usr/bin/python3 -m unittest discover -s nox-control -p test_owner_qwen6_backup.py
   export:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.actor == 'MSSTXNEWS') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (!inputs.checkpoint_scope || inputs.checkpoint_scope == 'LEGACY') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -77,3 +109,94 @@ jobs:
           echo "NOX_TRAINING_NOT_INTERRUPTED=true"
           echo "NOX_SOURCE_CHECKPOINTS_NOT_DELETED=true"
           echo "NOX_OFFSITE_OWNER_KEY_RESTORE_NEEDS_VERIFICATION=true"
+  qwen6-export:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && inputs.checkpoint_scope == 'QWEN6' && github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate reviewed Qwen6 source before native credentials are provided
+        run: |
+          if ! /usr/bin/python3 -c 'import cryptography'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-cryptography
+          fi
+          /usr/bin/python3 -m py_compile nox-control/owner_qwen6_backup_stream.py nox-control/owner_qwen6_backup_runner.py nox-control/owner_qwen6_backup_local.py
+          /usr/bin/python3 -m unittest discover -s nox-control -p test_owner_qwen6_backup.py
+      - name: Export exact checkpoint6 as ciphertext only through pinned owner SSH
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: /usr/bin/python3 nox-control/owner_qwen6_backup_runner.py --native
+      - name: Upload encrypted part 0
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN6_CIPHER_${{ github.run_id }}_PART_000
+          path: artifacts/qwen6-checkpoint-backup/qwen6-cipher.part000
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN6_CIPHER_${{ github.run_id }}_PART_001
+          path: artifacts/qwen6-checkpoint-backup/qwen6-cipher.part001
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN6_CIPHER_${{ github.run_id }}_PART_002
+          path: artifacts/qwen6-checkpoint-backup/qwen6-cipher.part002
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN6_CIPHER_${{ github.run_id }}_PART_003
+          path: artifacts/qwen6-checkpoint-backup/qwen6-cipher.part003
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 4
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN6_CIPHER_${{ github.run_id }}_PART_004
+          path: artifacts/qwen6-checkpoint-backup/qwen6-cipher.part004
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 5
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN6_CIPHER_${{ github.run_id }}_PART_005
+          path: artifacts/qwen6-checkpoint-backup/qwen6-cipher.part005
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 6
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN6_CIPHER_${{ github.run_id }}_PART_006
+          path: artifacts/qwen6-checkpoint-backup/qwen6-cipher.part006
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload checksum receipt only
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN6_CIPHER_${{ github.run_id }}_RECEIPT
+          path: artifacts/qwen6-checkpoint-backup/QWEN6_CIPHER_RECEIPT.json
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Always verify removal of this job's temporary native SSH key
+        if: always()
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: /usr/bin/python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
