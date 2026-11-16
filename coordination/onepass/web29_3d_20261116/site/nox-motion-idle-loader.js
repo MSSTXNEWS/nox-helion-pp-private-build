@@ -85,7 +85,20 @@
       fallbackHandle = setTimeout(admit, 1400);
     }
   }
-  on(window, 'nox-chat-activity', e => {chatBusy = e.detail?.active !== false; if (chatBusy) cancel(); else {stopped = false; schedule();}});
+  on(window, 'nox-chat-activity', e => {
+    const active = e.detail?.active !== false;
+    if (active) {
+      // Only a NEW busy->idle generation can resume decoration after STOP.
+      // Duplicate 'active' events during the aborted generation keep STOP.
+      if (!chatBusy && stopped) stopped = false;
+      chatBusy = true;
+      cancel();
+    } else {
+      chatBusy = false;
+      // The aborted stream's final idle event cannot undo STOP.
+      schedule();
+    }
+  });
   on(window, 'nox-voice-activity', e => {voiceBusy = e.detail?.active !== false; if (voiceBusy) cancel(); else schedule();});
   on(window, 'nox-media-activity', e => {mediaBusy = e.detail?.active !== false; if (mediaBusy) cancel(); else schedule();});
   on(window, 'nox-runtime-observed', e => {

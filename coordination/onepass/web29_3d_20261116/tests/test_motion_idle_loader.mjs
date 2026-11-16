@@ -92,7 +92,11 @@ test('page hiding and STOP cancel idle callbacks; next chat idle is explicit', (
   assert.equal(h.injected.length,0);
   h.document.hidden=false;h.document.emit('visibilitychange');
   h.window.emit('nox-stop-requested');h.flush();assert.equal(h.injected.length,0);
-  h.window.emit('nox-chat-activity',{active:false});h.flush();assert.equal(h.injected.length,1);
+  h.window.emit('nox-chat-activity',{active:false});h.flush();
+  assert.equal(h.injected.length,0);
+  h.window.emit('nox-chat-activity',{active:true});
+  h.window.emit('nox-chat-activity',{active:false});h.flush();
+  assert.equal(h.injected.length,1);
 });
 test('load gate waits for existing page load event and never delays it', () => {
   const h = harness({ready:'loading'});
@@ -191,6 +195,10 @@ test('STOP and pagehide abort only decorative in-flight work; BFCache resume is 
   assert.equal(h.diag().inFlight,false);
   h.window.emit('nox-chat-activity',{active:false});
   h.flush();
+  assert.equal(h.injected.length,1);
+  h.window.emit('nox-chat-activity',{active:true});
+  h.window.emit('nox-chat-activity',{active:false});
+  h.flush();
   const second=h.injected[1];
   h.window.dispatchEvent({type:'pagehide',persisted:true});
   assert.equal(second.removed,true);
@@ -199,4 +207,23 @@ test('STOP and pagehide abort only decorative in-flight work; BFCache resume is 
   assert.equal(h.injected.length,3);
   h.injected[2].emit('load');
   assert.equal(h.diag().loaded,true);
+});
+
+test('STOP suppresses trailing aborted inactivity and duplicate active events', () => {
+  const h=harness({nativeOwner:true});
+  h.window.emit('nox-runtime-observed',{known:true,busy:false});
+  h.flush();
+  assert.equal(h.injected.length,1);
+  h.window.emit('nox-chat-activity',{active:true});
+  h.window.emit('nox-stop-requested');
+  h.window.emit('nox-chat-activity',{active:true}); // duplicated active in old abort
+  h.window.emit('nox-chat-activity',{active:false}); // finally after abort
+  h.flush();
+  assert.equal(h.injected.length,1);
+  assert.equal(h.diag().stopped,true);
+  h.window.emit('nox-chat-activity',{active:true}); // genuinely new request
+  assert.equal(h.diag().stopped,false);
+  h.window.emit('nox-chat-activity',{active:false});
+  h.flush();
+  assert.equal(h.injected.length,2);
 });
