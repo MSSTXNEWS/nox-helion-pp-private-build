@@ -770,13 +770,22 @@ test('V165 abort dislodges stalled native stream and never reports S03 done',asy
   assert.equal(token.type,'token');
   assert(token.t.length>0,'first real model delta must be visible');
   controller.abort();
-  const next=await Promise.race([
-    reader.read(),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),400))
-  ]);
-  assert.notEqual(next.timeout,true,'STOP must unblock a hung native read');
-  assert.equal(next.done,false,'an abort must emit a truthful error, not done');
-  const stopped=JSON.parse(decoder.decode(next.value).slice(6).trim());
-  assert.equal(stopped.type,'error');
+  // V139's optional transport patch may already have enqueued several
+  // genuine visual token pieces BEFORE STOP. Drain those buffered pieces,
+  // but demand a bounded terminal abort error, never a forged S03 done.
+  let stopped=null;
+  for(let n=0;n<64;n++){
+    const next=await Promise.race([
+      reader.read(),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),400))
+    ]);
+    assert.notEqual(next.timeout,true,'STOP must unblock a hung native read');
+    assert.equal(next.done,false,'STOP must report the reason, not an S03 done');
+    const frame=JSON.parse(decoder.decode(next.value).slice(6).trim());
+    assert.notEqual(frame.type,'done','aborted generation cannot be committed');
+    if(frame.type==='error'){stopped=frame;break;}
+    assert.equal(frame.type,'token','only prebuffered genuine tokens may precede STOP');
+  }
+  assert(stopped,'bounded STOP must eventually return a terminal abort error');
   assert.equal(stopped.error,'STREAM_STOP_REQUESTED');
   assert.equal(upstreamCancelled,true,'only this native reader is cancelled');
   assert.equal(calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
