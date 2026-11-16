@@ -105,6 +105,12 @@ class ScopeTests(unittest.TestCase):
 
 
 class ViewportTests(unittest.IsolatedAsyncioTestCase):
+    def page(self):
+        return types.SimpleNamespace(evaluate=AsyncMock(return_value={'width': 1440, 'height': 1000}),
+            _nox_transport_cdp=types.SimpleNamespace(send=AsyncMock(return_value={
+                'cssLayoutViewport': {'clientWidth': 1440, 'clientHeight': 1000},
+                'cssVisualViewport': {'clientWidth': 1440, 'clientHeight': 1000}})))
+
     async def test_single_fixed_viewport_is_verified_without_resize_or_screenshot(self):
         core, transport, _, _ = installed()
         page = types.SimpleNamespace(evaluate=AsyncMock(return_value={'width': 1440, 'height': 1000}),
@@ -119,6 +125,53 @@ class ViewportTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(RuntimeError, 'FIXED_VIEWPORT'):
                 await scope.fixed_viewport(core, transport, page, {})
         self.assertEqual(page._nox_transport_cdp.send.await_args.args, ('Page.getLayoutMetrics',))
+
+    async def test_diagnostic_dom_timeout_does_not_invent_viewport_or_stream_acceptance(self):
+        core, transport, _, _ = installed(); page = self.page(); report = {}
+        page.evaluate.side_effect = TimeoutError()
+        with patch.object(core, 'stop_present', return_value=False):
+            await scope.fixed_viewport(core, transport, page, report)
+        record = report['fixed_viewport_diagnostic']
+        self.assertEqual(record['reason'], 'FIXED_VIEWPORT_DOM_TIMEOUT')
+        self.assertFalse(record['verified'])
+        self.assertNotIn('fixed_viewport_proof', report)
+        self.assertNotIn('stream_only_acceptance_verified', report)
+        page._nox_transport_cdp.send.assert_not_awaited()
+
+    async def test_cdp_timeout_preserves_dom_measurement_and_distinct_stage(self):
+        core, transport, _, _ = installed(); page = self.page(); report = {}
+        page._nox_transport_cdp.send.side_effect = TimeoutError()
+        with patch.object(core, 'stop_present', return_value=False):
+            await scope.fixed_viewport(core, transport, page, report)
+        record = report['fixed_viewport_diagnostic']
+        self.assertEqual(record['reason'], 'FIXED_VIEWPORT_CDP_TIMEOUT')
+        self.assertEqual([x['state'] for x in record['samples']], ['OBSERVED', 'TIMEOUT'])
+        self.assertFalse(record['verified'])
+
+    async def test_measured_dom_mismatch_stops_even_if_cdp_would_timeout(self):
+        core, transport, _, _ = installed(); page = self.page()
+        page.evaluate.return_value = {'width': 1280, 'height': 720}
+        page._nox_transport_cdp.send.side_effect = TimeoutError()
+        with patch.object(core, 'stop_present', return_value=False), self.assertRaisesRegex(RuntimeError, 'FIXED_VIEWPORT'):
+            await scope.fixed_viewport(core, transport, page, {})
+        page._nox_transport_cdp.send.assert_not_awaited()
+
+    async def test_diagnostic_cancellation_and_owner_stop_never_become_soft_timeouts(self):
+        core, transport, _, _ = installed(); page = self.page()
+        page.evaluate.side_effect = asyncio.CancelledError()
+        with patch.object(core, 'stop_present', return_value=False), self.assertRaises(asyncio.CancelledError):
+            await scope.fixed_viewport(core, transport, page, {})
+        page.evaluate.side_effect = TimeoutError()
+        with patch.object(core, 'stop_present', side_effect=[False, True]), self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP'):
+            await scope.fixed_viewport(core, transport, page, {})
+
+    async def test_operation_timeout_is_not_outer_deadline(self):
+        core = types.SimpleNamespace(browser_run=AsyncMock(side_effect=TimeoutError()))
+        with self.assertRaisesRegex(RuntimeError, 'BROWSER_OPERATION_TIMEOUT'):
+            await scope.browser_operation(core, {}, None, {})
+        core.browser_run.side_effect = asyncio.CancelledError()
+        with self.assertRaises(asyncio.CancelledError):
+            await scope.browser_operation(core, {}, None, {})
 
 
 class EntryTests(unittest.TestCase):

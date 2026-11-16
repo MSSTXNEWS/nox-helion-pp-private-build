@@ -71,13 +71,54 @@ def two_parts_observed(release, value):
 
 
 async def fixed_viewport(core, transport, page, report):
+    """Bounded supplemental geometry evidence, independent of stream acceptance.
+
+    A missing diagnostic sample cannot establish a layout failure. A measured
+    mismatch still stops this fixed-viewport run. Cancellation and owner STOP
+    always propagate; neither is converted into a diagnostic timeout.
+    """
+    record = {'state': 'OBSERVING', 'stage': 'DOM', 'verified': False,
+              'per_sample_timeout_seconds': 2, 'timeout_blocks_stream_test': False,
+              'samples': []}
+    report['fixed_viewport_diagnostic'] = record
+    values = {}
+    operations = (('DOM', lambda: page.evaluate(transport.VIEWPORT_JS)),
+                  ('CDP', lambda: page._nox_transport_cdp.send('Page.getLayoutMetrics')))
+    for stage, operation in operations:
+        if core.stop_present():
+            raise RuntimeError('HOLD_OWNER_STOP')
+        record['stage'] = stage
+        started = time.monotonic()
+        try:
+            values[stage] = await asyncio.wait_for(operation(), timeout=2)
+        except TimeoutError:
+            record['samples'].append({'stage': stage, 'state': 'TIMEOUT',
+                'elapsed_ms': round((time.monotonic()-started)*1000, 3)})
+            record.update(state='DIAGNOSTIC_TIMEOUT', reason='FIXED_VIEWPORT_' + stage + '_TIMEOUT')
+            if core.stop_present():
+                raise RuntimeError('HOLD_OWNER_STOP')
+            return
+        record['samples'].append({'stage': stage, 'state': 'OBSERVED',
+            'elapsed_ms': round((time.monotonic()-started)*1000, 3)})
+        if stage == 'DOM':
+            require(isinstance(values[stage], dict)
+                    and values[stage].get('width') == 1440 and values[stage].get('height') == 1000,
+                    'FIXED_VIEWPORT')
     if core.stop_present():
         raise RuntimeError('HOLD_OWNER_STOP')
-    dom = await asyncio.wait_for(page.evaluate(transport.VIEWPORT_JS), timeout=2)
-    metrics = await asyncio.wait_for(page._nox_transport_cdp.send('Page.getLayoutMetrics'), timeout=2)
-    proof = transport.viewport_projection(dom, metrics, {'width': 1440, 'height': 1000})
+    proof = transport.viewport_projection(values['DOM'], values['CDP'], {'width': 1440, 'height': 1000})
     report['fixed_viewport_proof'] = proof
+    record.update(state='VERIFIED' if proof['matches'] is True else 'MISMATCH',
+                  verified=proof['matches'] is True)
     require(proof['matches'] is True, 'FIXED_VIEWPORT')
+
+
+async def browser_operation(core, report, directory, available):
+    """Keep an inner operation timeout distinct from the outer 140s deadline."""
+    try:
+        return await core.browser_run(report, directory, available)
+    except TimeoutError as exc:
+        raise RuntimeError('HOLD_STREAM_ONLY_BROWSER_OPERATION_TIMEOUT') from exc
 
 
 def rewrite_browser(body):
@@ -206,7 +247,7 @@ def main(core):
             'artifacts': [], 'rendering_mode': 'CPU_SWIFTSHADER_STREAM_ONLY',
             'diagnostics_content': 'COUNTS_PUBLIC_NUMBERS_HASHES_AND_SAFE_ROUTE_CATEGORIES'}
         try:
-            asyncio.run(asyncio.wait_for(core.browser_run(report, directory, available), timeout=TOTAL_TIMEOUT))
+            asyncio.run(asyncio.wait_for(browser_operation(core, report, directory, available), timeout=TOTAL_TIMEOUT))
             require(report.get('stream_only_acceptance_verified') is True, 'ACCEPTANCE_MISSING')
             report['state'] = 'STREAM_ONLY_ACCEPTED'
         except BaseException as exc:
