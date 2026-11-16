@@ -107,3 +107,36 @@ html:root:root[data-nox-cinema="still"] body:is([data-page],.helion-home)
   flex:1 1 0!important;min-height:0!important;overflow:auto!important;
  }
 }
+
+/* 3D short landscape: preserve existing three panels and keep command rail
+ * visible in 400-419px-high tablet and 400-600px compact desktop windows.
+ * This is geometry only; original D02/14 worlds and Motion/STOP untouched. */
+@media (min-width:761px) and (max-width:1199px) and (min-height:400px) and (max-height:419px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(230px,calc(100dvh - 170px))!important;
+  min-height:0!important;
+  grid-template-rows:minmax(0,1fr) 40px!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel,
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  height:40px!important;min-height:0!important;max-height:40px!important;
+  overflow-y:auto!important;
+ }
+ html body.chat-workspace-v2 .chat-conversation #messages{
+  flex:1 1 0!important;min-height:0!important;overflow:auto!important;
+ }
+}
+@media (min-width:960px) and (max-width:1199px) and (min-height:400px) and (max-height:419px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(220px,calc(100dvh - 180px))!important;
+ }
+}
+@media (min-width:1200px) and (max-width:1399px) and (min-height:400px) and (max-height:600px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(200px,calc(100dvh - 180px))!important;
+  min-height:0!important;
+ }
+}
