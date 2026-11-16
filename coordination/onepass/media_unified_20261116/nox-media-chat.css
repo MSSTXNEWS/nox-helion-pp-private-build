@@ -1,0 +1,16 @@
+/* NOX media in Resonance: additive cinematic obsidian/amber controls. */
+.nox-media-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:8px 12px;margin:8px 0 4px;border:1px solid rgba(211,166,92,.25);background:linear-gradient(135deg,rgba(17,17,20,.98),rgba(39,30,22,.9));border-radius:14px;color:#d7c3a0;box-shadow:0 7px 24px #0005;font:12px 'Segoe UI',sans-serif}
+.nox-media-brand{font-weight:700;letter-spacing:.11em;font-size:10px;color:#d8a761;margin-right:5px}
+.nox-media-toolbar button,.nox-media-actions button{font:inherit;border:1px solid #6b5134;border-radius:8px;background:#161411;color:#e6d0ab;padding:6px 11px;cursor:pointer}
+.nox-media-toolbar button:hover,.nox-media-actions button:hover{border-color:#d1a564;background:#2a2118}
+.nox-media-toolbar button[aria-pressed=true]{background:linear-gradient(150deg,#7e5725,#433018);border-color:#d9ac66;color:#fff5df;box-shadow:inset 0 1px 1px #ffe1a440}
+.nox-media-engine{margin-left:auto;font-size:11px;opacity:.83;max-width:300px;overflow-wrap:anywhere}
+.nox-media-result{box-sizing:border-box;margin:16px 6px;padding:14px 16px;max-width:min(740px,96%);border:1px solid #745837aa;border-radius:15px;background:linear-gradient(160deg,#171615f5,#0b0c10f5);box-shadow:0 14px 30px #0009;color:#efddc1;font:13px 'Segoe UI',sans-serif}
+.nox-media-result-header{display:flex;flex-direction:column;gap:5px}.nox-media-result-header strong{color:#e7b56f;letter-spacing:.08em}.nox-media-result-header small{color:#c3b9ae;overflow-wrap:anywhere;font:12px 'Segoe UI',sans-serif}
+.nox-media-status{color:#c6ad89;overflow-wrap:anywhere;font-size:12px;min-height:18px}
+.nox-media-output{display:flex;flex-wrap:wrap;gap:12px}.nox-media-output-item{display:flex;flex-direction:column;align-items:start;gap:7px;max-width:100%}
+.nox-media-preview{display:block;max-width:100%;max-height:560px;object-fit:contain;border:1px solid #49423a;border-radius:10px;background:#070809}
+.nox-media-download{color:#ffc57c!important;text-decoration:underline!important;font-size:12px}
+.nox-media-actions button{border-color:#b57553;color:#ffa489}.nox-media-actions button:disabled{opacity:.55;cursor:default}
+@media(max-width:650px){.nox-media-toolbar{padding:8px;gap:5px}.nox-media-brand{width:100%}.nox-media-engine{width:100%;max-width:none;margin-left:0}.nox-media-toolbar button{flex:1;padding:8px}.nox-media-result{margin:9px 0;padding:12px}}
+@media(prefers-reduced-motion:reduce){.nox-media-toolbar *,.nox-media-result *{animation:none!important;transition:none!important}}
