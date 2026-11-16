@@ -87,6 +87,8 @@ class AdmissionTests(unittest.TestCase):
         stage0 = Path(__file__).resolve().parents[1]
         source = (stage0 / "a40_full_parameter_distill_cycle.py").read_text(encoding="utf-8")
         self.assertNotIn("STATE.mkdir(parents=True,exist_ok=True)\nDEST.mkdir", source)
+        self.assertIn('base.name!="NOX_9B_UNIFIED"', source)
+        self.assertIn('base.is_symlink()', source)
         main = source[source.index("def main():"):]
         gate = main.index('admission_hold_reason(expected_target="NOX_9B_UNIFIED")')
         for forbidden in ("import torch", "torch.optim.Adafactor", "loss.backward()", "opt.step()", "save_pretrained"):
