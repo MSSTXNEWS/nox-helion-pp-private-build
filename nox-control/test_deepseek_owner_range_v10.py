@@ -20,7 +20,56 @@ class Response:
     def __exit__(self,*args):pass
 
 class DeepSeekP0Offline(unittest.TestCase):
+    @classmethod
+    def coldpack_fixture(cls):
+        files=[]
+        # v57 covers 00005, 00002-00004 and shared Engram; 00001 is outside
+        # this coldpack receipt and remains governed by the native final-file check.
+        covered=[name for name in m.PINNED_FILE_FACTS
+                 if name != 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf']
+        for name in covered:
+            size,sha=m.PINNED_FILE_FACTS[name]
+            count=(size+99_999_999)//100_000_000
+            complete=name.endswith('00005-of-00006.gguf')
+            parts=[]
+            for i in range(count):
+                amount=min(100_000_000,size-i*100_000_000)
+                part_name=f'{name}.part{i+1:04d}'
+                remote=({
+                    'file_id':f'file-fixture-{name[-9:]}-{i+1}',
+                    'library_file_id':f'libfile-fixture-{name[-9:]}-{i+1}',
+                    'name':part_name,
+                    'path':f'{m.COLDPACK_FOLDER}/{part_name}',
+                    'size_bytes':amount,
+                } if complete else None)
+                parts.append({
+                    'bytes':amount,'download_errors':[],'file':part_name,
+                    'index':i+1,'offset':i*100_000_000,'remote':remote,
+                    'sha256':('a'*64 if complete else None),
+                    'state':('SAVED_METADATA_VERIFIED' if complete else 'MISSING'),
+                })
+            files.append({
+                'bytes':size,'etag':None,'hashed_prefix_bytes':(size if complete else 0),
+                'observed_prefix_sha256':(sha if complete else None),'parts':parts,
+                'path':name,'sha256':sha,
+                'url':f'https://huggingface.co/{m.REPO}/resolve/{m.REVISION}/{name}',
+                'whole_sha256_verified':complete,
+            })
+        doc={
+            'schema':'NOX_DEEPSEEK_COLDPACK_PROGRESS_V1',
+            'revision':m.REVISION,
+            'source_manifest_sha256':m.COLDPACK_SOURCE_MANIFEST_SHA256,
+            'expected_total_bytes':248828477216,
+            'native_ready':False,'seekable_placement_verified':False,
+            'files':files,
+        }
+        return json.dumps(doc,separators=(',',':')).encode()
+
     def setUp(self):
+        self.progress_raw=self.coldpack_fixture()
+        progress_hash=hashlib.sha256(self.progress_raw).hexdigest()
+        progress_pin=patch.object(m,'COLDPACK_PROGRESS_SHA256',progress_hash)
+        progress_pin.start();self.addCleanup(progress_pin.stop)
         # Tiny synthetic GGUF fixtures do not occupy the real 248.8GB target.
         volume_fixture=patch.object(m,'MIN_MODEL_VOLUME_BYTES',0)
         volume_fixture.start();self.addCleanup(volume_fixture.stop)
@@ -42,7 +91,45 @@ class DeepSeekP0Offline(unittest.TestCase):
         return Response(self.content[start:end+1],start,len(self.content),self.url)
     def do(self,row=None,limit=m.MAX_RANGE,opener=None):
         return m.download_one(row or self.row,self.dst,self.root,self.lease,
-                              self.request,limit=limit,opener=opener or self.opener)
+                              self.request,limit=limit,opener=opener or self.opener,
+                              progress_raw=self.progress_raw)
+
+    def test_v57_receipt_blocks_stale_not_downloaded_manifest_row(self):
+        # A stale transport manifest cannot override the verified Library receipt.
+        stale={'path':'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf',
+               'state':'NOT_DOWNLOADED'}
+        self.assertEqual(stale['state'],'NOT_DOWNLOADED')
+        row=dict(self.row,path=stale['path'])
+        with self.assertRaisesRegex(m.Hold,'HOLD_COLDPACK_ALREADY_COMPLETE'):
+            m.download_one(row,self.dst,self.root,self.lease,self.request,
+                           progress_raw=self.progress_raw,
+                           opener=lambda *a,**k:self.fail('complete coldpack file must not fetch'))
+
+    def test_v57_exposes_complete_incomplete_and_uncovered_pinned_artifacts(self):
+        states=m._validate_coldpack_progress(self.progress_raw)
+        self.assertEqual(states['DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf'],
+                         'COMPLETE')
+        for name in (
+            'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf',
+            'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf',
+            'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf',
+            'DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf',
+        ):
+            with self.subTest(file=name):
+                self.assertEqual(states[name],'INCOMPLETE')
+        self.assertEqual(m.reject_completed_coldpack_duplicate(
+            'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf',
+            self.progress_raw),'INCOMPLETE')
+        self.assertEqual(m.reject_completed_coldpack_duplicate(
+            'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf',
+            self.progress_raw),'UNCOVERED')
+
+    def test_v57_receipt_mismatch_holds_before_network(self):
+        bad=self.progress_raw+b' '
+        with self.assertRaisesRegex(m.Hold,'HOLD_COLDPACK_PROGRESS_UNVERIFIED'):
+            m.download_one(self.row,self.dst,self.root,self.lease,self.request,
+                           progress_raw=bad,
+                           opener=lambda *a,**k:self.fail('mismatched receipt must not fetch'))
     def test_two_ranges_resume_to_sha_verified_final(self):
         with patch.object(m,'RESERVE',0):
             a=self.do(limit=6);b=self.do(limit=10)
