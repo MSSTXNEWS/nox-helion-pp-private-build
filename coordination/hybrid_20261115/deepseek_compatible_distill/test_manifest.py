@@ -1,5 +1,6 @@
 """Pure source checks only; no network, GPU, checkpoint, or host access."""
 import copy
+import hashlib
 import json
 import unittest
 from pathlib import Path
@@ -43,6 +44,39 @@ class DistillationManifestTest(unittest.TestCase):
         changed["teacher"]["inference_only"] = False
         result = validate(changed)
         self.assertIn("GGUF_TEACHER_IS_INFERENCE_ONLY", result["blockers"])
+
+    def test_ru_es_scorer_is_pinned_source_only_and_not_promotable(self):
+        scorer = MANIFEST["evaluation"]["scoring_harness"]
+        source = Path(__file__).with_name("score_ru_es_holdout.py").read_bytes()
+        self.assertEqual(scorer["source_sha256"], hashlib.sha256(source).hexdigest())
+        self.assertEqual(scorer["status"], "SOURCE_TESTED_NOT_RUN")
+        self.assertFalse(scorer["training_started"])
+        self.assertFalse(scorer["promotion_authorized"])
+        changed = copy.deepcopy(MANIFEST)
+        changed["evaluation"]["scoring_harness"]["source_sha256"] = "0" * 64
+        self.assertIn("QUALITY_SCORER_SOURCE_SHA256_MISMATCH", validate(changed)["blockers"])
+
+    def test_evaluation_cannot_be_accepted_without_paired_scorer_receipt(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["evaluation"].update({
+            "status": "VERIFIED_IMPROVEMENT",
+            "quality_reviewed": True,
+            "frozen_holdout_same_for_baseline_and_candidate": True,
+            "holdout_sha256": "a" * 64,
+            "fixed_ru_es_case_set_sha256": "b" * 64,
+            "baseline_student_sha256": "c" * 64,
+            "candidate_adapter_sha256": "d" * 64,
+            "evaluator_source_sha256": "e" * 64,
+            "evaluation_report_sha256": "f" * 64,
+            "minimum_improvement_threshold": 0.01,
+            "before_after_metrics": {
+                "ru": {"baseline": 0.7, "candidate": 0.8},
+                "es": {"baseline": 0.7, "candidate": 0.8},
+            },
+        })
+        blockers = validate(changed)["blockers"]
+        self.assertIn("QUALITY_SCORER_REPORT_NOT_ACCEPTED", blockers)
+        self.assertIn("QUALITY_SCORER_REPORT_BINDING_MISMATCH", blockers)
 
     def test_student_cannot_alias_teacher_or_quantized_repo(self):
         changed = copy.deepcopy(MANIFEST)
@@ -282,3 +316,4 @@ class DistillationManifestTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
