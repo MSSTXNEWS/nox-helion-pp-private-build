@@ -14,6 +14,7 @@ INSTANCE = 60509551
 REVISION = "65d53bc8be65123e255ff02f3ded958b6dbf54fd"
 REPO = "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
 RESERVE = 16 * 1024**3
+MIN_MODEL_VOLUME_BYTES = 248834257920  # Six unique GGUF files; shared Engram counted once.
 MAX_RANGE = 256 * 1024**2
 CHUNK = 1024**2
 STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/STOP", "state/STOP.flag", "state/OWNER_MAINTENANCE.flag")
@@ -213,8 +214,14 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
         with tempfile.TemporaryFile(dir=destination) as probe:
             probe.write(b'NOX-P0-seek'); probe.flush(); os.fsync(probe.fileno())
             require(os.pread(probe.fileno(),8,4)==b'P0-seek','HOLD_STORAGE_NOT_SEEKABLE')
-        free=os.statvfs(destination).f_bavail*os.statvfs(destination).f_frsize
+        vfs=os.statvfs(destination)
+        free=vfs.f_bavail*vfs.f_frsize
         require(free>=row['bytes']-offset+RESERVE,'HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT')
+        # Per-shard free space alone is misleading: a 183GB internal SSD can
+        # accept one shard yet can never contain the immutable 248.8GB model.
+        # This is a necessary source gate, NOT owner quota/lease admission.
+        require(vfs.f_blocks*vfs.f_frsize>=MIN_MODEL_VOLUME_BYTES+RESERVE,
+                'HOLD_STORAGE_TOTAL_CAPACITY')
         if offset==row['bytes']:
             # Fully downloaded .part from a prior crash: validate and publish
             # without a redundant HTTP request or duplicate GGUF allocation.
