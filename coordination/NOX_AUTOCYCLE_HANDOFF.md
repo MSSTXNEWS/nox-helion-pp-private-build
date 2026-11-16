@@ -691,3 +691,8 @@ One next action → AUTO 2C: bind original owner-native queue_readback and s03_r
 - KNOWLEDGE: no Hunter source→S03 write→independent recall proof; three native review S03 receipts are not knowledge learning.
 - DISPATCHER+RESOURCES: original pool has 3 OS workers, director, 6 in-process threads; current user STOP/writer-lease state and GPU/SSD/RAM are not newly verified by 1C. No native writes from 1C, no cleanup/restart.
 - One next action: owner-signed original queue/S03/STOP/lease/heartbeat readback and reconcile `ADMITTED_NOT_EXECUTED` with task_verified; deploy source improvement only after owner fencing and rollback.
+
+### AUTO 1A · 2026-11-16 08:00 MSK · V51 complete critical-service health, SOURCE only
+- Accepted HEAD f6baef2ecb7e0f5c5867981ac129c098eb2e6180; exact V51 source defect: supervisor rc0 with a single RUNNING row was falsely reported OBSERVED_ALL_RUNNING; repeated critical service rows were not rejected. Added five-distinct-service guard, duplicate rejection, regression cases, and bound exact V51 tests into existing owner-only V51 workflow. No new service, model, scheduler, S03 or WEB source.
+- Source-only; GitHub CAS commit and source readback required. No new SSH, STOP, native restart/upgrade, model download or deletion. Owner-native live status after patch HOLD; historical Qwen6 proof from #43806455891 is not new training this run.
+- error_id NOX-P0-V51-INCOMPLETE-SUPERVISOR-HEALTH-FALSE-PASS-20261116; receipt coordination/progress/hourly/20261116_0800_AUTO_1A_V51_COMPLETE_STATUS_GUARD_V06.json. Next: manually authorized existing V51 read-only original OneHost at current SHA, then native repair only with STOP/lease/restore.

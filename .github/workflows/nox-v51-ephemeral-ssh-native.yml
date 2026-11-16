@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v131/vast_no_billing_inventory.py
-          python3 -m unittest -q nox_runpod.teacher_mesh.v131.tests.test_v131_inventory nox_runpod.teacher_mesh.v50.tests.test_documented_vast_list nox_runpod.teacher_mesh.v104.test_one_model_thinking_benchmark nox_runpod.teacher_mesh.v112.tests.test_owner_status_readonly
+          python3 -m unittest -q nox_runpod.teacher_mesh.v131.tests.test_v131_inventory nox_runpod.teacher_mesh.v50.tests.test_documented_vast_list nox_runpod.teacher_mesh.v104.test_one_model_thinking_benchmark nox_runpod.teacher_mesh.v112.tests.test_owner_status_readonly nox_runpod.teacher_mesh.v50.tests.test_v51_native_safety_readonly
       - name: Official owner-scoped v1 read-only instance ownership and status
         run: |
           set -euo pipefail

@@ -165,6 +165,7 @@ def supervisor_projection(rc, output):
     wanted={'nox-train-volta-t866u','nox-chat-8081','nox-dispatcher-t855u',
             'nox-priority-scheduler','nox-selfheal'}
     services=[]
+    seen=set()
     for line in lines:
         if len(line)>512:
             return {'state':'HOLD_SUPERVISOR_ROW_BOUNDS','services':[]}
@@ -174,6 +175,9 @@ def supervisor_projection(rc, output):
         name,status=match.group(1),match.group(2)
         if name not in wanted:
             continue
+        if name in seen:
+            return {'state':'HOLD_SUPERVISOR_DUPLICATE','services':[]}
+        seen.add(name)
         pid=None
         if status=='RUNNING':
             m=re.search(r'\bpid\s+([1-9][0-9]{0,9})(?:,|\s|$)',line[match.end():])
@@ -183,7 +187,8 @@ def supervisor_projection(rc, output):
         services.append({'service':name,'status':status,'pid':pid})
     if not services:
         return {'state':'HOLD_SUPERVISOR_NO_CORE','services':[]}
-    healthy=rc==0 and all(x['status']=='RUNNING' for x in services)
+    # rc=0 and a single RUNNING row do not prove all five NOX services exist.
+    healthy=(rc==0 and seen==wanted and all(x['status']=='RUNNING' for x in services))
     return {'state':'OBSERVED_ALL_RUNNING' if healthy else 'OBSERVED_PARTIAL',
             'supervisor_rc':rc,'all_running_verified':healthy,'services':services}
 rc,out=call(['supervisorctl','status'])

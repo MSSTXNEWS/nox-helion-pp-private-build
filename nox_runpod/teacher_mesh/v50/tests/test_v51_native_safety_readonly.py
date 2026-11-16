@@ -67,8 +67,22 @@ class ReadOnlySafety(unittest.TestCase):
 
     def test_supervisor_zero_and_partial_starting(self):
         parse=context['supervisor_projection']
-        self.assertEqual(parse(0,'nox-selfheal RUNNING pid 498241, uptime 1 hour\n')['state'],'OBSERVED_ALL_RUNNING')
+        one='nox-selfheal RUNNING pid 498241, uptime 1 hour\n'
+        self.assertEqual(parse(0,one)['state'],'OBSERVED_PARTIAL')
+        self.assertFalse(parse(0,one)['all_running_verified'])
+        all_five=''.join(f'{name} RUNNING pid {100+i}, uptime 1 hour\n'
+                         for i,name in enumerate(('nox-dispatcher-t855u','nox-priority-scheduler',
+                              'nox-selfheal','nox-train-volta-t866u','nox-chat-8081')))
+        self.assertEqual(parse(0,all_five)['state'],'OBSERVED_ALL_RUNNING')
+        self.assertTrue(parse(0,all_five)['all_running_verified'])
         self.assertFalse(parse(3,'nox-train-volta-t866u STARTING\n')['all_running_verified'])
+
+    def test_supervisor_duplicate_no_false_full_health(self):
+        parse=context['supervisor_projection']
+        one='nox-selfheal RUNNING pid 999, uptime 1 hour\n'
+        result=parse(0,one+one)
+        self.assertEqual(result['state'],'HOLD_SUPERVISOR_DUPLICATE')
+        self.assertEqual(result['services'],[])
 
     def test_supervisor_rejects_ambiguous_or_unbounded_rows(self):
         parse=context['supervisor_projection']
