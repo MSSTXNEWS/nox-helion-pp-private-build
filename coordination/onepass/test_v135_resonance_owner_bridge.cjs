@@ -9,7 +9,7 @@ const V112=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,onStop){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,onStop,onModel){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -48,6 +48,8 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       assert.equal(b.dialog_id,id);
       assert.deepEqual(b.history,[]);
       assert.equal(opts.credentials,'same-origin');
+      const intercepted=onModel?.(calls,opts);
+      if(intercepted)return intercepted;
       const bytes=new TextEncoder();
       const stream=new ReadableStream({async start(ctrl){
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'})+'\n'));
@@ -1274,7 +1276,7 @@ test('V179 STOP UI outcome distinguishes rejection, timeout and accepted transpo
         ?new Promise(()=>{})
         :Response.json({status:'STOP_REQUESTED',stream_cancellation_signalled:true,gpu_stop_verified:false});
     const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
-      undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,onStop);
+      undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,onStop,()=>new Promise(()=>{}));
     const response=await f.fetch('/api/nox/chat',{method:'POST',signal:caller.signal,
       body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v179-'+expected})});
     const reader=response.body.getReader(),decoder=new TextDecoder();
