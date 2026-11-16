@@ -536,4 +536,75 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertEqual(partial.read_bytes(),self.content)
         self.assertFalse((self.dst/self.name).exists())
 
+
+    def test_raced_fifo_in_existing_final_hash_fails_without_blocking(self):
+        """A metadata-valid GGUF changed to a FIFO must never stall the SHA scan."""
+        import os
+        final=self.dst/self.name
+        final.write_bytes(self.content)
+        opened=os.open
+        hit=[]
+        def swap(path,flags,*args,**kwargs):
+            if Path(path)==final and not hit:
+                self.assertTrue(flags & os.O_NONBLOCK)
+                final.unlink();final.mkfifo();hit.append(True)
+            return opened(path,flags,*args,**kwargs)
+        with patch.object(m.os,'open',side_effect=swap),patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'HOLD_HASH_FILE_UNSAFE'):
+                self.do(opener=lambda *a,**k:self.fail('existing verified file must not fetch'))
+        self.assertTrue(hit)
+
+    def test_raced_fifo_in_partial_guard_fails_before_network(self):
+        """O_NOFOLLOW alone leaves O_RDONLY FIFO opens blocking indefinitely."""
+        import os
+        part=self.dst/(self.name+'.part')
+        part.write_bytes(self.content[:3])
+        opened=os.open
+        hit=[]
+        def swap(path,flags,*args,**kwargs):
+            if Path(path)==part and (flags & os.O_ACCMODE)==os.O_RDONLY and not hit:
+                self.assertTrue(flags & os.O_NONBLOCK)
+                part.unlink();part.mkfifo();hit.append(True)
+            return opened(path,flags,*args,**kwargs)
+        with patch.object(m.os,'open',side_effect=swap),patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'HOLD_PARTIAL_PREIMAGE_CHANGED'):
+                self.do(opener=lambda *a,**k:self.fail('no download after guard swap'))
+        self.assertTrue(hit)
+
+    def test_raced_fifo_in_partial_append_is_bounded_hold(self):
+        """A FIFO swapped during HTTP read may block an O_WRONLY append without O_NONBLOCK."""
+        import os
+        part=self.dst/(self.name+'.part')
+        part.write_bytes(self.content[:3])
+        opened=os.open
+        hit=[]
+        def swap(path,flags,*args,**kwargs):
+            if Path(path)==part and (flags & os.O_ACCMODE)==os.O_WRONLY and not hit:
+                self.assertTrue(flags & os.O_NONBLOCK)
+                part.unlink();part.mkfifo();hit.append(True)
+            return opened(path,flags,*args,**kwargs)
+        with patch.object(m.os,'open',side_effect=swap),patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'HOLD_PARTIAL_APPEND_OPEN_RACE'):
+                self.do()
+        self.assertTrue(hit)
+
+    def test_raced_fifo_before_partial_fsync_cannot_stall(self):
+        """The final fsync open also needs O_NONBLOCK after read/hash verification."""
+        import os
+        part=self.dst/(self.name+'.part')
+        part.write_bytes(self.content)
+        opened=os.open
+        counts=[]
+        def swap(path,flags,*args,**kwargs):
+            if Path(path)==part and (flags & os.O_ACCMODE)==os.O_RDONLY:
+                counts.append(flags)
+                if len(counts)==3:
+                    self.assertTrue(flags & os.O_NONBLOCK)
+                    part.unlink();part.mkfifo()
+            return opened(path,flags,*args,**kwargs)
+        with patch.object(m.os,'open',side_effect=swap),patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'HOLD_PARTIAL_CHANGED_BEFORE_FSYNC'):
+                self.do(opener=lambda *a,**k:self.fail('complete partial never fetches'))
+        self.assertEqual(len(counts),3)
+
 if __name__=='__main__':unittest.main()
