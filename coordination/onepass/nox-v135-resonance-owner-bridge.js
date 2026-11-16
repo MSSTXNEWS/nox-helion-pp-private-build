@@ -169,15 +169,33 @@
     }
   }
   function sseChat(data,signal) {
-    let closed=false;const started=performance.now();let firstVisibleMs=null;
+    let closed=false,finished=false,cancelRequested=false,modelRequestStarted=false,modelStreamDone=false,stopPromise=null;
+    const started=performance.now();let firstVisibleMs=null;
     const upstreamAbort=new AbortController();
-    const onAbort=()=>upstreamAbort.abort();
-    if(signal?.aborted)upstreamAbort.abort();
+    const stopThenAbort=()=>{
+      if(finished)return Promise.resolve();
+      cancelRequested=true;
+      if(stopPromise)return stopPromise;
+      stopPromise=(async()=>{
+        try{
+          if(modelRequestStarted&&!modelStreamDone){
+            const stopAbort=new AbortController();
+            const timer=setTimeout(()=>stopAbort.abort(),1000);
+            try{await nativePost('/api/nox/stop',{},stopAbort.signal);}catch{}
+            finally{if(typeof clearTimeout==='function')clearTimeout(timer);}
+          }
+        }finally{upstreamAbort.abort();}
+      })();
+      return stopPromise;
+    };
+    const onAbort=()=>{void stopThenAbort();};
+    if(signal?.aborted)onAbort();
     else signal?.addEventListener?.('abort',onAbort,{once:true});
     const nativeSignal=upstreamAbort.signal;
     const body=new ReadableStream({
       async start(controller){
         const event=payload=>{
+          if(closed||(cancelRequested&&payload.type!=='error'))return;
           if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
             firstVisibleMs=Math.round(performance.now()-started);
           const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
@@ -191,6 +209,7 @@
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
             answer_source:'NATIVE_PENDING',model_identity_verified:false});
+          modelRequestStarted=true;
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
@@ -235,6 +254,7 @@
             trailing=glyphs.pop()||'';
             if(glyphs.length)await emitPieces(glyphs.join(''));
           },nativeSignal);
+          modelStreamDone=true;
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
@@ -248,20 +268,22 @@
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
           event({type:'error',
-            error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+            error:(nativeSignal.aborted||cancelRequested)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
             // HTTP cancellation is confirmed; GPU/native execution is not.
             gpu_stop_verified:false});
         }finally{
+          finished=true;
           signal?.removeEventListener?.('abort',onAbort);
           if(!closed){closed=true;try{controller.close();}catch{}}
         }
       },
       cancel(){
         closed=true;
-        upstreamAbort.abort();
+        const stopping=stopThenAbort();
         if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
           window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));
         signal?.removeEventListener?.('abort',onAbort);
+        return stopping;
       }
     });
     return responseJSONStream(body);
