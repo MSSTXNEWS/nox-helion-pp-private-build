@@ -67,8 +67,9 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         return {"state": "HOLD_MAYA_BINARY_CHANGED_AFTER_PREFLIGHT", "launchable": False}
 
     memory = runtime_memory_budget.evaluate_memory_budget(runtime_observation, runtime_budget)
-    if memory.get("state") != "SOURCE_ONLY_MEMORY_BUDGET_FIT_NOT_RUNTIME_VERIFIED":
-        return {"state": memory.get("state", "HOLD_RUNTIME_MEMORY_UNKNOWN"),
+    if memory.get("admission_state") != "PASS_VERIFIED_RUNTIME_MEMORY":
+        return {"state": memory.get("state", "HOLD_UNVERIFIED_PROVENANCE"),
+                "admission_state": "HOLD_UNVERIFIED_PROVENANCE",
                 "launchable": False, "runtime_memory": memory}
 
     pack_dir = checked["packer_output_dir"]

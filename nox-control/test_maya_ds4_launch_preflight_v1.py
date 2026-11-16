@@ -245,6 +245,7 @@ class MayaLaunchPlanTests(unittest.TestCase):
             "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
             "packer_output_dir": "/synthetic/model/maya-ds4",
         }
+        observation, budget = synthetic_memory_inputs()
         with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
                           return_value=BINARY_OK), \
                 patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
@@ -256,28 +257,14 @@ class MayaLaunchPlanTests(unittest.TestCase):
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
-                runtime_observation=synthetic_memory_inputs()[0],
-                runtime_budget=synthetic_memory_inputs()[1])
-        self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+                runtime_observation=observation,
+                runtime_budget=budget)
+        self.assertEqual(got["state"], "HOLD_UNVERIFIED_PROVENANCE")
+        self.assertEqual(got["runtime_memory"]["admission_state"], "HOLD_UNVERIFIED_PROVENANCE")
+        self.assertEqual(got["runtime_memory"]["arithmetic_state"], "WITHIN_REPORTED_CAPACITY")
         self.assertFalse(got["launchable"])
-        argv = got["argv"]
-        self.assertIn("--pack", argv)
-        self.assertIn("--gpus", argv)
-        self.assertIn("--tp", argv)
-        self.assertIn("--max-context", argv)
-        self.assertIn("--reserve-mib", argv)
-        self.assertIn("--expert-profile", argv)
-        self.assertIn("--dspark", argv)
-        self.assertIn("--parallel", argv)
-        self.assertIn("--serve", argv)
-        self.assertNotIn("--mmap-experts", argv)
-        self.assertEqual(got["expert_mapping"],
-                         "GGUF hot experts in VRAM cache; CPU-lane experts read in-place from model files")
-        self.assertEqual(got["kv_cache_fit"], "SOURCE_ONLY_MEMORY_BUDGET_FIT_NOT_RUNTIME_VERIFIED")
-        self.assertEqual(got["runtime_fit"], "SOURCE_ONLY_MEMORY_BUDGET_FIT_NOT_RUNTIME_VERIFIED")
-        self.assertEqual(got["context_tokens"], 4096)
-        self.assertEqual(got["vram_reserve_mib"], 3072)
-
+        self.assertNotIn("argv", got)
+        self.assertFalse(got["runtime_memory"]["telemetry_authenticated"])
     def test_v100_profile_holds_unknown_stop_before_preflight(self):
         with patch.object(PROFILE.preflight, "evaluate_source_plan") as evaluate:
             got = PROFILE.build_source_plan(
@@ -541,6 +528,7 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
             "packer_output_dir": "/synthetic/model/maya-ds4",
         }
+        observation, budget = synthetic_memory_inputs()
         with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
                           return_value=BINARY_OK), \
                 patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
@@ -552,23 +540,15 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
-                runtime_observation=synthetic_memory_inputs()[0],
-                runtime_budget=synthetic_memory_inputs()[1],
+                runtime_observation=observation,
+                runtime_budget=budget,
             )
-        self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+        self.assertEqual(got["state"], "HOLD_UNVERIFIED_PROVENANCE")
+        self.assertEqual(got["runtime_memory"]["admission_state"], "HOLD_UNVERIFIED_PROVENANCE")
+        self.assertEqual(got["runtime_memory"]["arithmetic_state"], "WITHIN_REPORTED_CAPACITY")
         self.assertFalse(got["launchable"])
-        self.assertEqual(got["argv"][1:], [
-            "--pack", "/synthetic/model/maya-ds4", "--gpus", "0,1", "--tp", "2",
-            "--max-context", "4096", "--reserve-mib", "3072", "--expert-profile", "none",
-            "--dspark", "none", "--parallel", "1", "--serve",
-        ])
-        self.assertEqual(got["protocol"], "Maya stdin/stdout engine protocol; not an HTTP endpoint")
-        self.assertIn("SOURCE_ONLY", got["kv_cache_fit"])
-        self.assertIn("SOURCE_ONLY", got["runtime_fit"])
-        self.assertIn("CPU-lane experts read in-place", got["expert_mapping"])
-        self.assertNotIn("--mmap-experts", got["argv"])
-        self.assertFalse(got["measured"])
-
+        self.assertNotIn("argv", got)
+        self.assertFalse(got["runtime_memory"]["telemetry_authenticated"])
     def test_profile_holds_without_local_sm70_binary_attestation(self):
         with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
                           return_value={"state": "HOLD_MAYA_CMAKE_CUDA_ARCHITECTURES"}) as attest, \
@@ -668,8 +648,11 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                 runtime_observation=synthetic_memory_inputs()[0],
                 runtime_budget=synthetic_memory_inputs()[1],
             )
-        self.assertEqual(ready["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+        self.assertEqual(ready["state"], "HOLD_UNVERIFIED_PROVENANCE")
+        self.assertEqual(ready["admission_state"], "HOLD_UNVERIFIED_PROVENANCE")
+        self.assertEqual(ready["runtime_memory"]["admission_state"], "HOLD_UNVERIFIED_PROVENANCE")
         self.assertFalse(ready["launchable"])
+        self.assertNotIn("argv", ready)
 
 
 if __name__ == "__main__":
