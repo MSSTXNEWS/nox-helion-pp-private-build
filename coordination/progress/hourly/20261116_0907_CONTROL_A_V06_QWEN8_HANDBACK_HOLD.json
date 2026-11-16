@@ -1,0 +1,177 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_CONTROL_A_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "run_id": "NOX_CONTROL_A_20261116T06Z_QWEN8_HANDBACK",
+  "observed_at_utc": "2026-11-16T06:09:09.853Z",
+  "observed_at_msk": "2026-11-16T09:09:09.853+03:00",
+  "reported_utc_hour": "2026-11-16T06Z",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "pr": 256,
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_head_before_report": "ae4b1577fd4bf8a860f51ddcfaa4207988b38cc3",
+  "source_scope": "READ_ONLY_GITHUB_AND_OWNER_NATIVE_LOG_RECONCILIATION_WITH_CREATE_ONLY_REPORT",
+  "previous_control_a": {
+    "at_msk": "2026-11-16T08:13:06+03:00",
+    "source_report_commit": "bd49bf756efabfb18983f560cc158c0cbef0f776",
+    "historical_verified_qwen_successful_updates": 6
+  },
+  "status": "SOURCE_RECEIPT_SAVED_NATIVE_READONLY_RECONCILED_TRAINING_HOLD",
+  "tasks": [
+    {
+      "id": 1,
+      "status": "DONE_SCHEDULE_METADATA_ONLY",
+      "enabled_slots": 12,
+      "total_slots": 12,
+      "slots": {
+        "1A": "in_progress (scheduler snapshot; source fix V51 GPU PID JSON 31/31 prior CI; live absent)",
+        "1B": "completed SOURCE 55/55; no native",
+        "1C": "completed SOURCE 73/73; claim receipt != terminal execution",
+        "1D": "completed SOURCE 58/58; cold eviction STOP guard, 0 bytes deleted",
+        "2A": "completed SOURCE verified 16/16; lineage correction",
+        "2B": "completed SOURCE 9/9 local; WAL ACL; live absent",
+        "2C": "completed SOURCE 103/103; native admission absent",
+        "2D": "in_progress scheduler snapshot; previous Qwen6, now separate owner-native Qwen8 evidence",
+        "3A": "completed SOURCE WEB29 mount; live absent",
+        "3B": "completed SOURCE SSE done keepalive fix; live absent",
+        "3C": "completed SOURCE async owner ACL fix; live absent",
+        "3D": "in_progress scheduler snapshot; animations source; live absent"
+      },
+      "live_execution_for_all": "NOT_PROVEN",
+      "no_new_automations": true
+    },
+    {
+      "id": 2,
+      "status": "DONE_HISTORICAL_NATIVE_LOG_READBACK_NOT_DIRECT_NEW_SSH",
+      "owner_native_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814277490",
+      "at_utc": "2026-11-16T06:05:02Z",
+      "instance_id": 60509551,
+      "services": {
+        "dispatcher": {
+          "state": "RUNNING",
+          "pid": 724331
+        },
+        "trainer": {
+          "state": "FATAL",
+          "pid": null
+        },
+        "media": {
+          "state": "RUNNING",
+          "pid": 447681
+        }
+      },
+      "chat_http_latest": {
+        "status": "HTTP200_3_PORTS_AT_2026-11-16T05:59Z",
+        "ports": [
+          8080,
+          8081,
+          8082
+        ],
+        "chat_pid": 7637,
+        "chat_pid_start_ticks": "149189867"
+      },
+      "gpu0": "NO_FRESH_DATA",
+      "gpu1": "NO_FRESH_DATA",
+      "ram_cgroup": "NO_FRESH_DATA",
+      "ssd_bytes_last_guard_sample_at_0559_utc": 12220051456,
+      "current_ssd": "NO_FRESH_DATA",
+      "current_stop": "GLOBAL_STOP_ABSENT_AT_0559Z_OWNER_TRAIN_HOLD_PRESENT_AT_0605Z",
+      "current_owner_lease": "NO_INDEPENDENT_EVIDENCE"
+    },
+    {
+      "id": 3,
+      "status": "HOLD_NATIVE_HANDOFF_CHANGED_WITH_BLOCKED_CLAIM",
+      "new_confirmed_error": "HOLD_MEDIA_HANDBACK_FILE_CHANGED",
+      "task_id": "owner.qwen.resume (native task ID exact not in bounded log)",
+      "claim_owner_pid": 724331,
+      "claim_sha256": "7715a84b52b7e90e2490ec66e960295f460f7769a1171902f5df67521bad11d1",
+      "retry_count": 1,
+      "task_state": "blocked",
+      "media_job_id": "943c960553eb5f6cf13702455d06a5d8",
+      "media_job_state": "COMPLETED",
+      "repair_attempted": false,
+      "reason": "A referenced handback file has changed; original claim must be reconciled by exact preimage, token and native owner lease before any retry; not safe to force resume"
+    },
+    {
+      "id": 4,
+      "status": "HOLD_TRAINING_RESUME",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758",
+      "student": "Qwen3.5-9B",
+      "current_trainer_state_at_0605Z": "FATAL",
+      "active_train_process_at_0605Z": "NONE_REPORTED",
+      "run_admission_request": "6908281920",
+      "base_source_sha": "35931438c591a9bb5a649e851f155c4313f28562",
+      "successful_optimizer_updates_verified": 8,
+      "previous_verified": 6,
+      "delta_verified_same_training_lineage": 2,
+      "attempted_steps": 8,
+      "skipped_steps": 0,
+      "manifest_checkpoint8_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+      "checkpoint8_files": 10,
+      "checkpoint8_bytes_hashed_and_verified": 519884896,
+      "terminal_receipt_sha256": "8cda027082b101cd14474edf5ef8432dc2263d5b29314a4563805c4af0a3665e",
+      "final_adapter_tensor_sha256": "2d83465f71095e0b94d2eb115390fddd85f2ad350d66172c8565e41cf054113e",
+      "local_reload_verified": true,
+      "offsite_independent_restore": "NOT_PROVEN",
+      "latest_loss_at_step8": "NO_DATA",
+      "historical_holdout_at_step6": 1.3033105581998825,
+      "new_quality_delta": "NO_DATA",
+      "training_restart_this_control_a": false
+    },
+    {
+      "id": 5,
+      "status": "DONE_REPORT_ONLY",
+      "code_fix_this_control_a": false,
+      "rationale": "Confirmed handback state requires current native lease and exact preimage; ongoing other owner claim, do not create duplicate handlers or overwrite another slot's source. Save original root-cause/lesson and next action.",
+      "source_ci_this_control_a": "NOT_RUN",
+      "source_changes_this_control_a": "NONE",
+      "production_mutations_this_control_a": "NONE",
+      "restarts_this_control_a": 0,
+      "deleted_files_this_control_a": 0,
+      "freed_bytes_this_control_a": 0
+    }
+  ],
+  "groups": {
+    "SELF_IMPROVEMENT": {
+      "state": "SOURCE_TESTED_BY_OTHER_SLOTS_LIVE_DEPLOY_NOT_VERIFIED",
+      "source_head": "ae4b1577fd4bf8a860f51ddcfaa4207988b38cc3",
+      "source_diff_from_previous_control": "30 commits observed at intermediate d83c511; later HEAD moved during audit, exact count to final SHA not recalculated",
+      "live_model_ttft": "NO_FRESH_DATA",
+      "tokens_per_sec": "NO_FRESH_DATA",
+      "quality_delta": "NO_FRESH_DATA"
+    },
+    "KNOWLEDGE": {
+      "state": "HOLD_NOT_A_NEW_HUNTER_S03_RECALL",
+      "verified_new_source_records": "NO_DATA",
+      "s03_revision": "NO_DATA",
+      "verified_new_recall": "NO_DATA",
+      "review_history": "3 previous candidate_not_applied receipts, not new knowledge"
+    },
+    "WEIGHTS": {
+      "state": "NATIVE_CHECKPOINT8_VERIFIED_HISTORIC_OWNER_RUN_TRAINER_NOW_HOLD",
+      "successful_steps_previous": 6,
+      "successful_steps_now": 8,
+      "delta": 2,
+      "checkpoint_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+      "full_local_sha256_check": true,
+      "local_reload_verified": true,
+      "independent_offsite_restore": "HOLD",
+      "latest_loss": "NO_DATA"
+    }
+  },
+  "error_id": "NOX-CONTROL-A-20261116T06Z-MEDIA-HANDBACK-FILE-CHANGED",
+  "root_cause": "Native resume task reports HOLD_MEDIA_HANDBACK_FILE_CHANGED for a queued handback; exact producer/consumer preimage mismatch not yet diagnosed, so cause beyond change detection remains unproven.",
+  "lesson": "Never replay a blocked native claim, clear owner STOP, or claim resumed training from a terminal receipt. Local checkpoint SHA and local reload do not prove external restore.",
+  "one_next_action": "Current native owner compares exact handback request/yield/config SHA and claim token under STOP/fencing, validates checkpoint8 independent restore, reconciles existing blocked job, then runs exactly one guarded resume with new optimizer update proof.",
+  "retry_condition": "Confirmed current owner-native lease, exact handback preimage/claim readback, unchanged identity 60509551, STOP owner semantics and complete offsite restore+free GPU1 budget.",
+  "safety": {
+    "new_native_ops": 0,
+    "new_schedulers": 0,
+    "new_training_writers": 0,
+    "model_promotions": 0,
+    "cleanup_deleted_bytes": 0,
+    "web29_unmodified": true,
+    "s03_unmodified": true,
+    "owner_stop_unmodified": true,
+    "notes": "No secrets copied"
+  }
+}
