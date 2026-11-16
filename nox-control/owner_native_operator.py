@@ -10,11 +10,12 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_workspace_browser_acceptance_v6.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_emergency_model_reset.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_emergency_model_reset.py':(),
     'nox-control/owner_workspace_browser_acceptance_v6.py':('owner_workspace_browser_acceptance_v5.py','owner_workspace_browser_acceptance_v2.py','owner_workspace_browser_acceptance.py','owner_chat_page_diagnose.py','owner_browser_stream_only_entry.py','owner_chat_browser_qa.py'),
     'nox-control/owner_qwen_successor_checkpoint_proof_v2.py':(),
     'nox-control/owner_workspace_browser_acceptance_v5.py':('owner_workspace_browser_acceptance_v2.py','owner_workspace_browser_acceptance.py','owner_chat_page_diagnose.py','owner_browser_stream_only_entry.py','owner_chat_browser_qa.py'),
