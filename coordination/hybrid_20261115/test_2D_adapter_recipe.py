@@ -111,7 +111,7 @@ class ForgeRecipeTest(unittest.TestCase):
             ("expert_target_parameters", 3, "HOLD_EXPERT_TARGETS"),
             ("expert_target_parameters", [None], "HOLD_EXPERT_TARGETS"),
             ("corpus_dir", None, "HOLD_NONLOCAL_CORPUS"),
-            ("corpus_dir", "\\x00bad", "HOLD_NONLOCAL_CORPUS"),
+            ("corpus_dir", "\x00bad", "HOLD_NONLOCAL_CORPUS"),
         ]
         for key,value,expected in cases:
             with self.subTest(key=key,value=repr(value)):
@@ -119,9 +119,9 @@ class ForgeRecipeTest(unittest.TestCase):
                     recipe.plan_adapter(**(self.kwargs|{key:value}))["state"],expected)
 
     def test_format_control_in_prompt_or_completion_is_not_a_clean_holdout(self):
-        self._rewrite([self._row("Привет\\u200b мир")],[self._row("Hello")])
+        self._rewrite([self._row("Привет\u200b мир")],[self._row("Hello")])
         self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"HOLD_CORPUS_JSONL_FORMAT")
-        self._rewrite([self._row("Привет","ES\\u200b answer")],[self._row("Hello")])
+        self._rewrite([self._row("Привет","ES\u200b answer")],[self._row("Hello")])
         self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"HOLD_CORPUS_JSONL_FORMAT")
 
     def _rewrite(self,train,holdout,counts=None):
