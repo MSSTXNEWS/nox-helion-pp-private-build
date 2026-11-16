@@ -6,6 +6,8 @@ on:
       - 'nox-control/test_nox_native_lifeline.py'
       - 'nox-control/nox_agent.py'
       - 'nox-control/test_nox_agent_status.py'
+      - 'nox-control/nox_neuro_evolution_ingress.py'
+      - 'nox-control/test_nox_neuro_evolution_ingress.py'
       - '.github/workflows/nox-native-lifeline-ci.yml'
   push:
     paths:
@@ -13,6 +15,8 @@ on:
       - 'nox-control/test_nox_native_lifeline.py'
       - 'nox-control/nox_agent.py'
       - 'nox-control/test_nox_agent_status.py'
+      - 'nox-control/nox_neuro_evolution_ingress.py'
+      - 'nox-control/test_nox_neuro_evolution_ingress.py'
       - '.github/workflows/nox-native-lifeline-ci.yml'
   workflow_dispatch:
 permissions:
@@ -26,8 +30,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Source syntax
-        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py
+        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py
       - name: Independent lifeline unit and failure tests
         run: python3 -m unittest discover -s nox-control -p 'test_nox_native_lifeline.py' -v
       - name: Native NOX status truthfulness tests
         run: python3 -m unittest discover -s nox-control -p 'test_nox_agent_status.py' -v
+      - name: Verified neural experience-to-training data gate
+        run: python3 -m unittest discover -s nox-control -p 'test_nox_neuro_evolution_ingress.py' -v
