@@ -1,0 +1,99 @@
+"""Regression: owner-native inspection must never publish private S03/task payloads.
+
+Synthetic, local-only tests. No OneHost access, model load, credentials, or cleanup.
+"""
+import contextlib
+import importlib.util
+import io
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+SPEC = importlib.util.spec_from_file_location(
+    "nox_inspect_privacy_under_test", Path(__file__).with_name("owner_native_inspect.py"))
+INSPECT = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(INSPECT)
+
+
+class ReceiptPrivacyTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / "state/owner_components").mkdir(parents=True)
+        (self.root / "state/dispatcher").mkdir(parents=True)
+        self.scope = patch.object(INSPECT, "ROOT", self.root)
+        self.scope.start()
+
+    def tearDown(self):
+        self.scope.stop()
+        self.tmp.cleanup()
+
+    def test_receipt_summarizes_without_secrets(self):
+        p = self.root / "state/owner_maintenance_001.json"
+        p.write_text(json.dumps({"schema": "NOX_SAFE", "state": "PASS",
+                                 "successful_optimizer_steps": 6,
+                                 "secret": "DO_NOT_PUBLISH_THIS_SECRET",
+                                 "result": {"message": "private owner conversation"}}))
+        data = INSPECT.receipts()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["evidence"]["fields"]["successful_optimizer_steps"], 6)
+        self.assertEqual(data[0]["evidence"]["fields"]["state"], "PASS")
+        self.assertNotIn("private owner conversation", str(data))
+        self.assertNotIn("DO_NOT_PUBLISH_THIS_SECRET", str(data))
+        self.assertIn("sha256", data[0]["evidence"])
+
+    def test_queue_withholds_results_and_claim_text(self):
+        task = {"id": "owner.review.abc123", "status": "blocked",
+                "result_state": "HOLD_RESOURCE", "retries": 1,
+                "claimed_by": "confidential@example.test",
+                "result": {"private": "OWNER_PROMPT_DO_NOT_PRINT"}}
+        queue = self.root / "state/dispatcher/state.json"
+        queue.write_text(json.dumps({"tasks": {"owner.review.abc123": task}}))
+        evidence = self.root / "state/owner_components/owner.memory.json"
+        evidence.write_text(json.dumps({"schema": "S03_STATUS_V1", "status": "HOLD",
+                                        "secret": "S03_PRIVATE_TOKEN_DO_NOT_PRINT"}))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            INSPECT.owner_component_readback()
+        text = buf.getvalue()
+        self.assertIn("OWNER_TASK_STATUS_ONLY_NO_RESULTS", text)
+        self.assertIn("owner.review.abc123", text)
+        self.assertIn("result_payload_withheld", text)
+        for forbidden in ("OWNER_PROMPT_DO_NOT_PRINT", "confidential@example.test",
+                          "S03_PRIVATE_TOKEN_DO_NOT_PRINT"):
+            self.assertNotIn(forbidden, text)
+
+    def test_symlink_never_follows_owner_receipt(self):
+        secret = self.root / "secret.txt"
+        secret.write_text("PRIVATE_FILE")
+        link = self.root / "state/owner_maintenance_002.json"
+        link.symlink_to(secret)
+        self.assertEqual(INSPECT.bounded_receipt_meta(link)["state"], "HOLD_SYMLINK")
+
+    def test_duplicate_keys_and_invalid_json_fail_closed(self):
+        p = self.root / "state/owner_maintenance_003.json"
+        p.write_text('{"state":"PASS","state":"HOLD"}')
+        self.assertEqual(INSPECT.bounded_receipt_meta(p)["state"], "HOLD_INVALID_JSON")
+        p.write_text('{"state":NaN}')
+        self.assertEqual(INSPECT.bounded_receipt_meta(p)["state"], "HOLD_INVALID_JSON")
+        p.write_text("[1,2,3]")
+        self.assertEqual(INSPECT.bounded_receipt_meta(p)["state"], "HOLD_INVALID_OBJECT")
+
+    def test_file_bound_and_non_regular_fail_closed(self):
+        p = self.root / "state/owner_maintenance_004.json"
+        p.write_bytes(b"x" * 100001)
+        self.assertEqual(INSPECT.bounded_receipt_meta(p)["state"], "HOLD_FILE_BOUND")
+
+    def test_reject_untrusted_status_strings_and_bool_retry(self):
+        bad = {"id": "owner.review.abc123", "status": "password=SECRET",
+               "result_state": "HOLD_SAFE", "retries": True}
+        row = INSPECT.safe_owner_task(bad)
+        self.assertNotIn("status", row)
+        self.assertNotIn("retries", row)
+        self.assertEqual(row["result_state"], "HOLD_SAFE")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
