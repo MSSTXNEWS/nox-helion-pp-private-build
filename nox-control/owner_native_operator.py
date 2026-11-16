@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_transport_failure_diagnose.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_browser_normal_motion_entry.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
@@ -55,14 +55,23 @@ SCOPED_REPAIR_EXTRA_PATHS={
         'nox-control/qwen_student_training_entry_transport_candidate.py'),
 }
 
+FROZEN_BROWSER_DEPENDENCIES={
+    'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
+    'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
+}
+FROZEN_BROWSER_ENTRIES=('nox-control/owner_browser_normal_motion_entry.py',
+                        'nox-control/owner_browser_asset_identity_entry.py')
+
 def repair_bundle_paths(action,entrypoint,paths):
     if action!='repair' or entrypoint not in SCOPED_REPAIR_BUNDLES:return paths
     selected=SCOPED_REPAIR_BUNDLES[entrypoint]
     if len(set(selected))!=len(selected):raise RuntimeError('HOLD_SCOPED_BUNDLE_DUPLICATE_ALLOWLIST')
+    overrides=FROZEN_BROWSER_DEPENDENCIES if entrypoint in FROZEN_BROWSER_ENTRIES else {}
+    if not set(overrides).issubset(selected):raise RuntimeError('HOLD_SCOPED_BUNDLE_FROZEN_SCOPE')
     found={}
-    for path in (*paths,*SCOPED_REPAIR_EXTRA_PATHS.get(entrypoint,())):
+    for path in (*paths,*SCOPED_REPAIR_EXTRA_PATHS.get(entrypoint,()),*overrides.values()):
         name=Path(path).name
-        if name not in selected:continue
+        if name not in selected or name in overrides and path!=overrides[name]:continue
         if name in found:raise RuntimeError('HOLD_SCOPED_BUNDLE_DUPLICATE_SOURCE')
         found[name]=path
     if set(found)!=set(selected):raise RuntimeError('HOLD_SCOPED_BUNDLE_MISSING_SOURCE')
