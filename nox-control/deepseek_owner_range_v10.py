@@ -170,8 +170,37 @@ def lease(path,request,now,root):
             'HOLD_LEASE_ORIGIN')
     st=regular(path)
     require(st.st_size<=8192 and not (st.st_mode & 0o077),'HOLD_LEASE_PERMISSIONS')
+    # Bind the lease read to the very inode that passed the owner/permission
+    # check. Path.read_bytes() could follow an attacker-swapped symlink.
+    # O_NONBLOCK avoids hanging if a race replaces the lease with a FIFO.
+    def lease_identity(s):
+        return (s.st_dev, s.st_ino, s.st_size, s.st_mode, s.st_uid,
+                s.st_nlink, s.st_mtime_ns, s.st_ctime_ns)
+    fd = None
     try:
-        d=json.loads(path.read_bytes(),object_pairs_hook=_strict_lease_pairs,
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC |
+                     os.O_NONBLOCK)
+        opened = os.fstat(fd)
+        require(stat.S_ISREG(opened.st_mode) and opened.st_uid == os.geteuid()
+                and opened.st_nlink == 1 and
+                lease_identity(opened) == lease_identity(st),
+                'HOLD_LEASE_FILE_CHANGED')
+        raw = os.read(fd, 8193)
+        after = os.fstat(fd)
+        require(len(raw) == opened.st_size and len(raw) <= 8192 and
+                lease_identity(after) == lease_identity(opened),
+                'HOLD_LEASE_FILE_CHANGED')
+        # A renamed/revoked lease is not valid just because the old fd stayed
+        # readable. The existing OneHost writer remains the only lease issuer.
+        require(lease_identity(regular(path)) == lease_identity(opened),
+                'HOLD_LEASE_FILE_CHANGED')
+    except OSError as exc:
+        raise Hold('HOLD_LEASE_UNREADABLE') from exc
+    finally:
+        if fd is not None:
+            os.close(fd)
+    try:
+        d=json.loads(raw,object_pairs_hook=_strict_lease_pairs,
                      parse_constant=_reject_lease_nonfinite)
     except (ValueError, UnicodeError, TypeError) as exc:
         raise Hold('HOLD_LEASE_INVALID_JSON') from exc

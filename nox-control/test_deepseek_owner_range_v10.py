@@ -170,6 +170,44 @@ class DeepSeekP0Offline(unittest.TestCase):
         with patch.object(m,'RESERVE',0):
             self.assertEqual(self.do(limit=6)['state'],'PARTIAL_SHA_PENDING')
 
+    def test_lease_symlink_swap_during_open_is_never_followed(self):
+        # The lstat precheck cannot authorize a different file opened later.
+        forged=self.root/'state/forged.json'
+        forged.write_bytes(self.lease.read_bytes());forged.chmod(0o600)
+        real_open=m.os.open
+        def swapped(path, flags, *args, **kwargs):
+            if Path(path)==self.lease:
+                self.lease.unlink()
+                self.lease.symlink_to(forged)
+            return real_open(path,flags,*args,**kwargs)
+        with patch.object(m.os,'open',side_effect=swapped):
+            with self.assertRaisesRegex(m.Hold,'HOLD_LEASE_UNREADABLE'):
+                m.lease(self.lease,self.request,time.time(),self.root)
+        self.assertTrue(self.lease.is_symlink())
+        self.assertEqual(forged.read_bytes(),forged.read_bytes())
+
+    def test_lease_replaced_during_fd_read_holds_even_with_valid_json(self):
+        successor=self.root/'state/dispatcher/successor.json'
+        successor.write_bytes(self.lease.read_bytes());successor.chmod(0o600)
+        real_read=m.os.read
+        def replaced(fd, size):
+            raw=real_read(fd,size)
+            successor.replace(self.lease)
+            return raw
+        with patch.object(m.os,'read',side_effect=replaced):
+            with self.assertRaisesRegex(m.Hold,'HOLD_LEASE_FILE_CHANGED'):
+                m.lease(self.lease,self.request,time.time(),self.root)
+
+    def test_lease_mutated_in_place_during_fd_read_holds(self):
+        real_read=m.os.read
+        def mutated(fd,size):
+            raw=real_read(fd,size)
+            self.lease.write_bytes(b'{}')
+            return raw
+        with patch.object(m.os,'read',side_effect=mutated):
+            with self.assertRaisesRegex(m.Hold,'HOLD_LEASE_FILE_CHANGED'):
+                m.lease(self.lease,self.request,time.time(),self.root)
+
     def test_invalid_http_content_length_holds_before_partial_write(self):
         for malformed in ('NaN','+16','1.0','not-a-number','9'*200,''):
             with self.subTest(header=malformed[:20]):
