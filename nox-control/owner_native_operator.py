@@ -163,6 +163,42 @@ def authorize_event(action):
     if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
     return c['id']
 
+MAX_SSH_AUTH_ATTEMPTS = 4
+SSH_AUTH_TIMEOUT_SECONDS = 25
+
+
+def ssh_failure_diagnostic(stderr='', returncode=None, timed_out=False, timeout_s=SSH_AUTH_TIMEOUT_SECONDS):
+    """Return a bounded diagnostic; never return or log raw SSH output."""
+    message = str(stderr or '').lower()
+    if timed_out:
+        category, errname, retryable = 'SSH_COMMAND_TIMEOUT', 'ETIMEDOUT', True
+    elif 'permission denied' in message or 'authentication failed' in message:
+        category, errname, retryable = 'SSH_AUTH_DENIED', 'EACCES', False
+    elif ('host key verification failed' in message or
+          'remote host identification has changed' in message):
+        category, errname, retryable = 'SSH_HOST_KEY_REJECTED', 'EKEYREJECTED', False
+    elif 'connection timed out' in message or 'operation timed out' in message:
+        category, errname, retryable = 'SSH_CONNECT_TIMEOUT', 'ETIMEDOUT', True
+    elif 'connection refused' in message:
+        category, errname, retryable = 'SSH_CONNECTION_REFUSED', 'ECONNREFUSED', True
+    elif 'no route to host' in message:
+        category, errname, retryable = 'SSH_HOST_UNREACHABLE', 'EHOSTUNREACH', True
+    elif 'network is unreachable' in message:
+        category, errname, retryable = 'SSH_NETWORK_UNREACHABLE', 'ENETUNREACH', True
+    elif 'connection reset' in message:
+        category, errname, retryable = 'SSH_CONNECTION_RESET', 'ECONNRESET', True
+    else:
+        category, errname, retryable = 'SSH_EXIT_NONZERO', None, True
+    return {'category':category, 'errno':errname, 'timeout_s':int(timeout_s),
+            'returncode':returncode if type(returncode) is int and -255 <= returncode <= 255 else None,
+            'retryable':retryable}
+
+
+def ssh_should_retry(diagnostic, attempt, max_attempts=MAX_SSH_AUTH_ATTEMPTS):
+    return (type(attempt) is int and 1 <= attempt < max_attempts
+            and diagnostic.get('retryable') is True)
+
+
 def run_native(action,request_id):
     global MASTER
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -219,17 +255,27 @@ def run_native(action,request_id):
          '-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile='+str(known),'-o','ControlPath='+str(sock)]
     host='root@'+ip
     # Authenticate the persistent connection, not a disposable 'true' session.
-    # Retry only before any payload has been sent.
-    for attempt in range(8):
+    # Retry only before any payload has been sent. Deterministic auth/pin failures
+    # stop immediately; transient transport failures get at most four attempts.
+    for attempt in range(MAX_SSH_AUTH_ATTEMPTS):
         try:
-            r=subprocess.run(common+['-o','ControlMaster=yes','-o','ControlPersist=90','-N','-f',host],capture_output=True,text=True,timeout=25)
-        except subprocess.TimeoutExpired:r=None
-        if r is not None and r.returncode==0 and sock.exists():
-            MASTER=common+['-O','exit',host]
+            r=subprocess.run(common+['-o','ControlMaster=yes','-o','ControlPersist=90','-N','-f',host],capture_output=True,text=True,timeout=SSH_AUTH_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            r=None
+            diagnostic=ssh_failure_diagnostic(timed_out=True)
+        else:
+            if r is not None and r.returncode==0 and sock.exists():
+                MASTER=common+['-O','exit',host]
+                break
+            diagnostic=ssh_failure_diagnostic(stderr=r.stderr if r is not None else '',
+                                               returncode=r.returncode if r is not None else None)
+        print('NOX_MAINT_SSH_DIAGNOSTIC='+json.dumps(
+            {'attempt':attempt+1,**diagnostic},separators=(',',':'),sort_keys=True),flush=True)
+        if not ssh_should_retry(diagnostic,attempt+1):
             break
         print('NOX_MAINT_AUTH_ATTEMPT='+str(attempt+1)+'_RETRY',flush=True)
         time.sleep(5)
-    else:raise RuntimeError('HOLD_SSH_AUTHENTICATION')
+    if MASTER is None:raise RuntimeError('HOLD_SSH_AUTHENTICATION')
     check=subprocess.run(common+['-O','check',host],capture_output=True,text=True,timeout=8)
     if check.returncode:raise RuntimeError('HOLD_SSH_MASTER_NOT_ALIVE')
     print('NOX_MAINT_AUTHENTICATED_INSTANCE=60509551',flush=True)
