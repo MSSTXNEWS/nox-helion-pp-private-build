@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import time
 import types
 
 try:BUNDLE=__NOX_BUNDLE_JSON__
@@ -73,7 +74,7 @@ def project_log(raw):
     for line in text.splitlines()[-4000:]:
         row={}
         marker=re.search(r'NOX_HYBRID_FAILURE=([A-Za-z0-9_]+)',line)
-        if marker and (marker[1] in CLASSES or re.fullmatch('HOLD_[A-Z0-9_]+',marker[1])):
+        if marker and re.fullmatch('[A-Za-z_][A-Za-z0-9_]{0,95}',marker[1]):
             row['hybrid_failure']=marker[1]
         reasons=[name for name,pattern in PATTERNS.items() if re.search(pattern,line,re.I)]
         if reasons:row['technical_patterns']=reasons
@@ -113,6 +114,47 @@ def log_paths():
         if candidate.parent==ROOT/'logs' and re.fullmatch(r'[A-Za-z0-9_.-]*t866u[A-Za-z0-9_.-]*',candidate.name):
             paths.add(candidate)
     return sorted(paths)
+
+
+def corpus_projection():
+    path=OUTPUT/'training_text.jsonl'
+    if any(p.is_symlink() for p in (*path.parents,path)):fail('HOLD_CORPUS_PROBE_SYMLINK')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    result={'raw_text_exported':False,'mutations':False,'physical_lines':0,'valid_text_records':0,
+            'unicode_splitline_records':0,'old_reader_failure_reproduced':False}
+    h=hashlib.sha256();deadline=time.monotonic()+35
+    with os.fdopen(fd,'rb') as stream:
+        before=os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size!=305243573:fail('HOLD_CORPUS_PROBE_SCOPE')
+        while True:
+            if time.monotonic()>deadline:fail('HOLD_CORPUS_PROBE_TIME_BUDGET')
+            raw=stream.readline(8*1024*1024+1)
+            if not raw:break
+            if len(raw)>8*1024*1024:fail('HOLD_CORPUS_PROBE_ROW_BUDGET')
+            h.update(raw);result['physical_lines']+=1
+            try:
+                line=raw.decode('utf8');value=json.loads(line)
+            except (UnicodeError,json.JSONDecodeError) as exc:
+                result['physical_line_failure_class']=type(exc).__name__;break
+            if not isinstance(value,dict) or set(value)!={'text'} or not isinstance(value['text'],str):
+                result['physical_line_schema_verified']=False;break
+            result['valid_text_records']+=1
+            pieces=line.splitlines()
+            if len(pieces)>1:
+                result['unicode_splitline_records']+=1
+                if not result['old_reader_failure_reproduced']:
+                    for piece in pieces:
+                        try:json.loads(piece)
+                        except json.JSONDecodeError:
+                            result['old_reader_failure_reproduced']=True
+                            result['old_reader_failure_class']='JSONDecodeError';break
+        after=os.fstat(stream.fileno());named=path.stat(follow_symlinks=False)
+        fields=('st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns')
+        if any(getattr(before,k)!=getattr(after,k) or getattr(after,k)!=getattr(named,k) for k in fields):
+            fail('HOLD_CORPUS_PROBE_IDENTITY_CHANGED')
+        result.update(bytes=before.st_size,full_sha256=h.hexdigest(),
+            full_corpus_sha_verified=h.hexdigest()=='31b0d6983d6bb6e40d05ffca505b4b1d68c9e9212648cd9cd270dedafd79fc1d')
+    return result
 
 
 def main():
@@ -173,6 +215,10 @@ def main():
             data==('OWNER_HYBRID_FAILED request='+FAILED_REQUEST+'\n').encode()}
     fs=os.statvfs(OUTPUT if OUTPUT.is_dir() else ROOT)
     result['output_disk_free_bytes']=fs.f_bavail*fs.f_frsize
+    try:result['frozen_corpus_projection']=corpus_projection()
+    except Exception as exc:
+        reason=str(exc);result['frozen_corpus_projection']={'state':'UNKNOWN',
+            'reason':reason if re.fullmatch('HOLD_[A-Z0-9_]+',reason) else type(exc).__name__}
     emit('training_failure_diagnostic',result)
     print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True);return 0
 
