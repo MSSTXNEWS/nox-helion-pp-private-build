@@ -5,7 +5,7 @@
   "source_head_before": "b55322c2f5628a7c49a5005e3cbdb0895d368a81",
   "source_blob_before": "3d7678bffc5e164c9293cbde7324735a44d56e67",
   "test_blob_before": "dcc4d4b0f7a27dcc0cfd82abe4491c0bdf63f4b9",
-  "source_scope": "SOURCE_PATCH_CI_PENDING_NOT_NATIVE_DEPLOYED",
+  "source_scope": "SOURCE_TESTED_NOT_NATIVE_DEPLOYED",
   "fix": "Bound scoped STOP against a native POST that never resolves even after its AbortSignal, and against stalled native S03 GET. Expose measured first_visible_token_ms of real model text, not fake model TTFT. No global STOP.",
   "tasks": [
     {
@@ -15,7 +15,7 @@
     },
     {
       "id": 2,
-      "status": "SOURCE_PATCHED",
+      "status": "SOURCE_TESTED",
       "reason": "Native stream unchanged, first visible real token timestamp added; not a live RU/ES benchmark"
     },
     {
@@ -25,7 +25,7 @@
     },
     {
       "id": 4,
-      "status": "SOURCE_PATCHED",
+      "status": "SOURCE_TESTED",
       "reason": "STOP abort fence on pending native POST with SSE and JSON regression tests"
     },
     {
@@ -61,5 +61,33 @@
     "deleted_bytes": 0
   },
   "cleanup": "HOLD_NEW_MODEL_NOT_ACCEPTED_OFFSITE_RESTORE_UNKNOWN",
-  "next": "Exact SHA CI and original owner-native preimage/STOP/lease/restore; then real browser SSE/STOP/S03 RU/ES p50/p95. Trainer restart owned by 2D/control A."
+  "next": "Original owner-auth browser target preimage + STOP/lease/offsite restore; safe deploy and paired real RU/ES SSE/STOP/S03 TTFT p50/p95; owner train resume separate 2D.",
+  "source_initial_commit": "15bff616e2b08696fbe9f14b0d722bccceb9bc3c",
+  "source_final_commit": "690fc0a2a9de3b997dbcf992498983316ff08ec5",
+  "source_final_blob_sha": "266b698914f3721d616a0cb48e45c97264d355ff",
+  "test_blob_sha": "32f738229c5329273252535b8e687de4937e5958",
+  "owner_bridge_bytes": 19941,
+  "source_ci": {
+    "v135": {
+      "run_id": 43817312319,
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43817312319",
+      "head_sha": "690fc0a2a9de3b997dbcf992498983316ff08ec5",
+      "conclusion": "SUCCESS",
+      "node_tests": "35/35",
+      "python_stage_tests": "6/6",
+      "ci_guard_tests": "8/8",
+      "pack_sha256": "894929eb9ea91c60dd2ced991db6bd55e3775d44ad0135c1741070576b2b5062",
+      "native_live": false
+    },
+    "v139": {
+      "run_id": 43817312485,
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43817312485",
+      "head_sha": "690fc0a2a9de3b997dbcf992498983316ff08ec5",
+      "conclusion": "SUCCESS",
+      "merged_source_only": true,
+      "native_live": false
+    }
+  },
+  "native_changes_this_slot": false,
+  "owner_runtime_current_status": "HOLD_NO_FRESH_OWNER_AUTH_BROWSER_OR_LEASE"
 }
