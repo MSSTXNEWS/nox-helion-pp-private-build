@@ -26,7 +26,7 @@ function harness({reduced = false, ready = 'complete', existing = false, origin 
   document.body = {dataset: {trainingActive:'false'}};
   document.activeElement = {closest:()=>false};
   document.currentScript = {src: 'https://nox.test/nox-motion-idle-loader.js'};
-  document.createElement = () => Object.assign(new Target(), {dataset: {}});
+  document.createElement = () => Object.assign(new Target(), {dataset: {}, remove() {this.removed = true;}});
   document.head = {appendChild: el => injected.push(el)};
   window.NoxWorkspace = {settings: {mode:'BALANCED', motion:'system'}};
   if (nativeOwner) window.NOX_NATIVE_OWNER = true;
@@ -144,4 +144,59 @@ test('reduced-motion CSS wins against original contrast and live shorthand', () 
   assert.match(css,/html:root:root:root:root body:is/);
   assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
   assert.doesNotMatch(css,/not\(\[data-theme="contrast"\]\)/);
+});
+
+test('native chat interrupts in-flight decorative fetch without stale completion', () => {
+  const h=harness({nativeOwner:true});
+  h.window.emit('nox-runtime-observed',{known:true,busy:false});
+  h.flush();
+  assert.equal(h.diag().inFlight,true);
+  const old=h.injected[0];
+  h.window.emit('nox-chat-activity',{active:true});
+  assert.equal(old.removed,true);
+  assert.equal(h.diag().started,false);
+  assert.equal(h.diag().inFlight,false);
+  old.emit('load');old.emit('error');
+  assert.equal(h.diag().loaded,false);
+  assert.equal(h.diag().failed,false);
+  h.window.emit('nox-chat-activity',{active:false});
+  h.flush();
+  assert.equal(h.injected.length,2);
+  assert.equal(h.diag().attempts,2);
+  h.injected[1].emit('load');
+  assert.equal(h.diag().loaded,true);
+});
+
+test('quiet runtime/settings notifications never cancel already admitted download', () => {
+  const h=harness({nativeOwner:true});
+  h.window.emit('nox-runtime-observed',{known:true,busy:false});
+  h.flush();
+  const old=h.injected[0];
+  h.window.emit('nox-settings');
+  h.window.emit('nox-runtime-observed',{known:true,busy:false});
+  assert.equal(old.removed,undefined);
+  assert.equal(h.diag().inFlight,true);
+  assert.equal(h.diag().attempts,1);
+  old.emit('load');
+  assert.equal(h.diag().loaded,true);
+  assert.equal(h.diag().inFlight,false);
+});
+
+test('STOP and pagehide abort only decorative in-flight work; BFCache resume is safe', () => {
+  const h=harness();
+  h.flush();
+  const first=h.injected[0];
+  h.window.emit('nox-stop-requested');
+  assert.equal(first.removed,true);
+  assert.equal(h.diag().inFlight,false);
+  h.window.emit('nox-chat-activity',{active:false});
+  h.flush();
+  const second=h.injected[1];
+  h.window.dispatchEvent({type:'pagehide',persisted:true});
+  assert.equal(second.removed,true);
+  h.window.dispatchEvent({type:'pageshow',persisted:true});
+  h.flush();
+  assert.equal(h.injected.length,3);
+  h.injected[2].emit('load');
+  assert.equal(h.diag().loaded,true);
 });
