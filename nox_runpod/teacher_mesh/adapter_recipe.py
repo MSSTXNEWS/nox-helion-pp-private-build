@@ -69,7 +69,7 @@ def _source_row_sha256(value:str)->str:
     """Match the original V28 canonical_hash used for owner-pinned row proofs."""
     normalized=unicodedata.normalize("NFKC",value.strip().casefold())
     normalized="".join(ch for ch in normalized if unicodedata.category(ch)!="Cf")
-    return sha256(re.sub(r"\\s+"," ",normalized).encode("utf-8")).hexdigest()
+    return sha256(re.sub(r"\s+"," ",normalized).encode("utf-8")).hexdigest()
 
 def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]|None,
                          owner_proofs:list[dict]|None=None)->dict:
