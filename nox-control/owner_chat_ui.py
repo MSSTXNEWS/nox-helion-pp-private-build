@@ -1,6 +1,6 @@
 """Activate the existing graphical Resonance for authenticated NOX owners."""
 from __future__ import annotations
-import asyncio,json,re,stat,time
+import asyncio,json,os,re,stat,time
 from pathlib import Path
 from fastapi import Request
 from fastapi.responses import JSONResponse,RedirectResponse
@@ -35,15 +35,34 @@ def decorate_html(raw,path):
 def owner_maintenance_gate():
     """Read-only, fail-closed owner maintenance indicator; never grants a lease."""
     parent = ROOT / 'state'
+    # A missing/unreadable state directory is UNKNOWN, not an absent owner STOP.
+    # Anchor the marker lookup to one non-symlink directory FD.
     try:
-        if not stat.S_ISDIR(parent.lstat().st_mode):
-            return 'UNKNOWN'
-        flag = (parent / 'OWNER_MAINTENANCE.flag').lstat()
-    except FileNotFoundError:
-        return 'ABSENT'
+        fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     except OSError:
         return 'UNKNOWN'
-    return 'PRESENT' if stat.S_ISREG(flag.st_mode) else 'UNKNOWN'
+    try:
+        opened = os.fstat(fd)
+        if not stat.S_ISDIR(opened.st_mode):
+            return 'UNKNOWN'
+        try:
+            flag = os.stat('OWNER_MAINTENANCE.flag', dir_fd=fd, follow_symlinks=False)
+        except FileNotFoundError:
+            status = 'ABSENT'
+        except OSError:
+            return 'UNKNOWN'
+        else:
+            status = 'PRESENT' if stat.S_ISREG(flag.st_mode) else 'UNKNOWN'
+        # A swapped directory must not be classified using stale evidence.
+        try:
+            current = parent.lstat()
+        except OSError:
+            return 'UNKNOWN'
+        if (current.st_dev, current.st_ino) != (opened.st_dev, opened.st_ino):
+            return 'UNKNOWN'
+        return status
+    finally:
+        os.close(fd)
 
 
 def workers():
