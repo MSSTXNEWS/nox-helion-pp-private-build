@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from test_maya_binary_attestation_v1 import MayaBinaryAttestationTests  # noqa: F401
+
 HERE = Path(__file__).parent
 PLAN_SPEC = importlib.util.spec_from_file_location(
     "maya_launch_preflight_v1", HERE / "maya_launch_preflight_v1.py")
@@ -21,6 +23,11 @@ PROFILE_SPEC = importlib.util.spec_from_file_location(
     "maya_ds4_v100_launch_profile_v1", HERE / "maya_ds4_v100_launch_profile_v1.py")
 PROFILE = importlib.util.module_from_spec(PROFILE_SPEC)
 PROFILE_SPEC.loader.exec_module(PROFILE)
+BINARY_OK = {
+    "state": "BINARY_BUILD_ATTESTED_SOURCE_ONLY",
+    "binary_identity": {"st_dev": 1, "st_ino": 2, "st_size": 3,
+                        "st_mtime_ns": 4, "st_ctime_ns": 5},
+}
 
 MAYA_BASE = "https://raw.githubusercontent.com/mw00/project-maya/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/"
 
@@ -181,7 +188,10 @@ class MayaLaunchPlanTests(unittest.TestCase):
             "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
             "packer_output_dir": "/synthetic/model/maya-ds4",
         }
-        with patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value=BINARY_OK), \
+                patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
@@ -472,7 +482,10 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
             "packer_output_dir": "/synthetic/model/maya-ds4",
         }
-        with patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value=BINARY_OK), \
+                patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
@@ -494,6 +507,47 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
         self.assertIn("CPU-lane experts read in-place", got["expert_mapping"])
         self.assertNotIn("--mmap-experts", got["argv"])
         self.assertFalse(got["measured"])
+
+    def test_profile_holds_without_local_sm70_binary_attestation(self):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value={"state": "HOLD_MAYA_CMAKE_CUDA_ARCHITECTURES"}) as attest, \
+                patch.object(PROFILE.preflight, "evaluate_source_plan") as run:
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+                tensor_role_inventory=synthetic_tensor_roles(),
+            )
+        self.assertEqual(got["state"], "HOLD_MAYA_CMAKE_CUDA_ARCHITECTURES")
+        self.assertFalse(got["launchable"])
+        attest.assert_called_once_with(PROFILE.MAYA_BINARY, PROFILE.MAYA_BINARY_SHA256)
+        run.assert_not_called()
+
+    def test_profile_holds_if_binary_path_changes_during_model_preflight(self):
+        checked = {
+            "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
+            "packer_output_dir": "/synthetic/model/maya-ds4",
+        }
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value=BINARY_OK), \
+                patch.object(PROFILE.binary_attestation, "binary_identity_matches",
+                             return_value=False) as same_file, \
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+                tensor_role_inventory=synthetic_tensor_roles(),
+            )
+        self.assertEqual(got["state"], "HOLD_MAYA_BINARY_CHANGED_AFTER_PREFLIGHT")
+        self.assertFalse(got["launchable"])
+        same_file.assert_called_once_with(PROFILE.MAYA_BINARY, BINARY_OK["binary_identity"])
 
     def test_profile_stop_and_unknown_stop_block_before_preflight(self):
         for stop in (True, None, 0, "unknown"):
@@ -528,7 +582,10 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             "model_dir": "/synthetic/model",
             "output_dir": "/synthetic/model/maya-ds4",
         }
-        with patch.object(PROFILE.preflight, "observe_packer_output", return_value=packed):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value=BINARY_OK), \
+                patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
+                patch.object(PROFILE.preflight, "observe_packer_output", return_value=packed):
             missing = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
