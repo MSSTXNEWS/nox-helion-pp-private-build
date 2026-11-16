@@ -516,6 +516,16 @@ def migrate_history(request,db=DB,legacy_root=None):
             if columns(source,'nox_v29_dialogs')!=['dialog_id','owner','title','archived','revision','created_at','updated_at']:
                 hold('HOLD_S03_DIALOG_OWNER_SCHEMA_CHANGED')
             rows=[dict(row) for row in source.execute('SELECT m.*,d.owner AS dialog_owner,d.archived AS dialog_archived FROM nox_v29_dialog_messages m JOIN nox_v29_dialogs d ON d.dialog_id=m.dialog_id ORDER BY m.row_id LIMIT ?', (MAX_IMPORT_RECORDS+1,))]
+        # The original history reader has no per-caller owner ACL in this
+        # import route. Never silently merge different dialogue owners into
+        # the one shared M1 retrieval index. Preserve source snapshots for
+        # explicit owner-scoped recovery instead of exposing mixed histories.
+        if rows:
+            owners = {row.get('dialog_owner') for row in rows}
+            if (len(owners) != 1 or any(not isinstance(owner,str)
+                    or not owner.strip() or len(owner) > 256
+                    or any(ord(ch) < 32 for ch in owner) for owner in owners)):
+                hold('HOLD_S03_DIALOG_OWNER_SCOPE')
         summary['CANONICAL_DIALOGS']=import_records(target,rows,'CANONICAL_DIALOGS',snapshots['CANONICAL']['sha256'])
         target.execute('INSERT OR REPLACE INTO nox_s03_gateway_meta VALUES(?,?)',('history_migration',encoded({'request':str(request),'summary':summary,'snapshot_manifest_sha256':file_sha(folder/'manifest.json')}).decode()))
     return {'state':'HISTORICAL_RECORDS_IMPORTED','sources':summary,'snapshot_manifest_sha256':file_sha(folder/'manifest.json'),
