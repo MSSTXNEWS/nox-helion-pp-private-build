@@ -1,0 +1,318 @@
+{
+  "schema": "NOX_DEEPSEEK_TEACHER_STUDENT_SOURCE_MANIFEST_V1",
+  "instructions_version": "0.0.6",
+  "status": "SOURCE_CANDIDATE_ONLY",
+  "training_enabled": false,
+  "purpose": "Prepare a reversible, source-verified teacher-response distillation candidate without launching a trainer.",
+  "method": {
+    "name": "response_level_distillation_sft",
+    "teacher_role": "GGUF inference and teacher-response generation only",
+    "student_role": "HF safetensors Llama student; LoRA SFT in FP16",
+    "gguf_direct_weight_training": false,
+    "logit_distillation": false,
+    "loss_mask": "assistant_completion_only",
+    "recipe_source": "nox_runpod/teacher_mesh/adapter_recipe.py",
+    "recipe_defaults_unbenchmarked": true,
+    "lora": {
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ],
+      "rank": 32,
+      "alpha": 64,
+      "dropout": 0.05,
+      "learning_rate": 8e-05,
+      "max_steps": 500,
+      "precision": "fp16",
+      "sequence_length": null,
+      "micro_batch_size": null
+    },
+    "runtime_memory_fit": "UNKNOWN_REQUIRES_OWNER_NATIVE_PREFLIGHT",
+    "gpu_architecture": "V100_SM70",
+    "bf16_allowed": false
+  },
+  "teacher": {
+    "model_id": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "quantization_source_id": "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+    "quantization_source_revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "quantization": "IQ2_XXS",
+    "format": "GGUF",
+    "license": "MIT",
+    "license_source": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+    "revision_verified_against_hf_api": true,
+    "training_target": false,
+    "required_unique_bytes": 248834257920,
+    "reported_missing_payload_bytes": 248828477216,
+    "reported_missing_payloads": 5,
+    "local_presence": "NOT_REVERIFIED_BY_THIS_SOURCE_CHANGE",
+    "artifacts": [
+      {
+        "name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+        "role": "metadata_only_backbone_shard",
+        "bytes": 5780704,
+        "sha256": "f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9",
+        "reported_missing": false,
+        "local_sha256_verified": false
+      },
+      {
+        "name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+        "role": "backbone",
+        "bytes": 39535781184,
+        "sha256": "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3",
+        "reported_missing": true,
+        "local_sha256_verified": false
+      },
+      {
+        "name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+        "role": "backbone",
+        "bytes": 39736712000,
+        "sha256": "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48",
+        "reported_missing": true,
+        "local_sha256_verified": false
+      },
+      {
+        "name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+        "role": "backbone",
+        "bytes": 39036908384,
+        "sha256": "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0",
+        "reported_missing": true,
+        "local_sha256_verified": false
+      },
+      {
+        "name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+        "role": "backbone",
+        "bytes": 19923784832,
+        "sha256": "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1",
+        "reported_missing": true,
+        "local_sha256_verified": false
+      },
+      {
+        "name": "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
+        "role": "shared_engram",
+        "bytes": 110595290816,
+        "sha256": "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3",
+        "reported_missing": true,
+        "local_sha256_verified": false,
+        "deduplicate_by_sha256": true
+      }
+    ],
+    "unused_for_text_only_candidate": [
+      {
+        "name": "mmproj-DeepSeek-V4.1-Flash-1017-BF16.gguf",
+        "reason": "This candidate is text-only; vision projector is not part of student training."
+      }
+    ],
+    "inference_only": true
+  },
+  "student": {
+    "model_id": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+    "revision": "6a6f4aa4197940add57724a7707d069478df56b1",
+    "revision_source": "https://huggingface.co/api/models/deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+    "gated": false,
+    "architecture": "LlamaForCausalLM",
+    "model_type": "llama",
+    "format": "safetensors",
+    "expected_weight_bytes": 16060556354,
+    "weight_shards": [
+      {
+        "name": "model-00001-of-000002.safetensors",
+        "bytes": 8667826246,
+        "sha256": "7e6b24744354ef4ba547547cc758339090f46ba2da917845cfc69f7d4ded9edb"
+      },
+      {
+        "name": "model-00002-of-000002.safetensors",
+        "bytes": 7392730108,
+        "sha256": "19fb83b79bd0d06d49b7cf6f86b83f5183cd292aa2c028d633ca4fceac1ae742"
+      }
+    ],
+    "metadata_blobs": {
+      "config.json": {
+        "git_blob_sha1": "cccf055d6f8f210387a248c91dc40e0c7a4bafab",
+        "bytes": 826,
+        "runtime_sha256": null
+      },
+      "model.safetensors.index.json": {
+        "git_blob_sha1": "a280ed71c93ae808a4fde848adcbee94fe5ee3d4",
+        "bytes": 24240,
+        "runtime_sha256": null
+      },
+      "tokenizer.json": {
+        "git_blob_sha1": "e9c8e7a2359b81191c8021d0f3c5f28c67f20962",
+        "bytes": 9084480,
+        "runtime_sha256": null
+      },
+      "tokenizer_config.json": {
+        "git_blob_sha1": "9967ff32d94b21c94dc7e2b3bcbea295a46cde50",
+        "bytes": 3071,
+        "runtime_sha256": null
+      }
+    },
+    "repository_license_tag": "MIT",
+    "license_lineage": "Llama-3.1",
+    "license_review_required": true,
+    "license_conflict_note": "The pinned repository LICENSE is MIT, while the official model card says the distilled model derives from Llama 3.1 and is originally licensed under the Llama 3.1 license. Treat this as unresolved; do not redistribute until reviewed.",
+    "model_card_source": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+    "license_file_source": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-8B/resolve/6a6f4aa4197940add57724a7707d069478df56b1/LICENSE",
+    "local_weight_readback": false,
+    "architecture_load_tested": false,
+    "memory_fit_tested": false,
+    "training_target": true,
+    "config_sha256": null,
+    "tokenizer_sha256": null,
+    "weight_manifest_sha256": null
+  },
+  "corpus": {
+    "status": "NOT_PREPARED",
+    "provenance_required": true,
+    "source_license_reviewed": false,
+    "teacher_revision_and_artifact_hash_per_record": true,
+    "generator_code_sha_per_record": true,
+    "prompt_completion_sha_per_record": true,
+    "privacy_and_consent_receipt_per_record": true,
+    "splitting": "OWNER_SOURCE_GROUP_DISJOINT",
+    "splits": {
+      "train": {
+        "count": null,
+        "sha256": null
+      },
+      "dev": {
+        "count": null,
+        "sha256": null
+      },
+      "holdout": {
+        "count": null,
+        "sha256": null,
+        "frozen_before_training": true,
+        "used_for_gradient_updates": false,
+        "example_hashes": [],
+        "membership_complete": false
+      }
+    },
+    "exact_prompt_overlap_check": true,
+    "duplicate_completion_check": true,
+    "semantic_holdout_review": "REQUIRED",
+    "actual_records_in_repository": false,
+    "actual_training_corpus_records_in_repository": false,
+    "staged_examples_count": 1,
+    "staged_pairs": [
+      {
+        "id": "session-route-correction-20261116-01",
+        "status": "STAGED",
+        "split_assignment": "train_candidate",
+        "excluded_from": "dev,holdout",
+        "prompt": "проверь память/маршруты",
+        "completion": "Проверил канонический контекст: указанный авторизованный маршрут к Vast.ai #60509551 — существующий OneHost GitHub Actions V51 bridge. Это подтверждает маршрут через bridge, но не подтверждает наличие активного входа или сессии в веб-интерфейсе Vast.ai; статус UI-аутентификации не проверялся. Использовать только существующий owner-auth bridge и сохранять STOP; не обходить аварийный gate.",
+        "source": {
+          "type": "session_and_canonical_memory_context",
+          "description": "Пользовательская коррекция в этой сессии; parent-provided verified canonical overview identifies existing owner-auth V51 bridge to Vast.ai instance #60509551.",
+          "durable_source_uri": null,
+          "source_uri_status": "not supplied in task context",
+          "verified_claim": "existing owner-auth GitHub Actions V51 bridge routes to Vast.ai #60509551",
+          "unverified_claim": "Vast.ai web UI login/session state"
+        },
+        "safety": {
+          "contains_credentials": false,
+          "contains_personal_data": false,
+          "claims_consciousness": false,
+          "stop_gate": "PRESERVE"
+        },
+        "prompt_sha256": "0f6c2f6fc1a15d296b98d215881ee988a0401bdde2ab38cf34a85474ea76a2f5",
+        "completion_sha256": "5fa92a5e43c8cb7b50405b10ecfb90f8ba9f515c7fc55da10667ceb1d041e299",
+        "pair_sha256": "5fe912ec7a914f546df97df0f3c5cc6ef0b87d60c5bd974923644028c32c1168"
+      }
+    ]
+  },
+  "checkpoint": {
+    "required_files": [
+      "trainer_state.json",
+      "optimizer.pt",
+      "scheduler.pt",
+      "rng_state.pth",
+      "scaler.pt",
+      "adapter_config.json",
+      "adapter_model.safetensors"
+    ],
+    "bind_to": [
+      "student_model_id",
+      "student_revision",
+      "config_sha256",
+      "tokenizer_sha256",
+      "weight_manifest_sha256",
+      "corpus_train_sha256",
+      "corpus_dev_sha256",
+      "corpus_frozen_holdout_sha256",
+      "trainer_source_sha256",
+      "optimizer_config_sha256"
+    ],
+    "atomic_publish": true,
+    "per_file_sha256_readback": true,
+    "independent_restore_tested": false,
+    "optimizer_scaler_rng_restore_required": true
+  },
+  "evaluation": {
+    "status": "NOT_RUN",
+    "frozen_holdout_same_for_baseline_and_candidate": true,
+    "baseline_student_sha256": null,
+    "candidate_adapter_sha256": null,
+    "fixed_ru_es_case_set_sha256": null,
+    "before_after_metrics": null,
+    "minimum_improvement_threshold": null,
+    "quality_reviewed": false,
+    "latency_and_memory_benchmarked": false,
+    "scoring_harness": {
+      "schema": "NOX_RU_ES_PAIRED_HOLDOUT_SCORE_V1",
+      "path": "score_ru_es_holdout.py",
+      "source_sha256": "75205e75507af6642f0b87fe6e5a378dd8f310730c9321187afc0ba1d6aef490",
+      "status": "SOURCE_TESTED_NOT_RUN",
+      "training_started": false,
+      "promotion_authorized": false,
+      "paired_same_dataset_required": true,
+      "required_languages": [
+        "ru",
+        "es"
+      ],
+      "refusal_positive_and_negative_per_language": true,
+      "safety_case_per_language": true,
+      "bootstrap_iterations": 5000,
+      "dataset_sha256": null,
+      "baseline_model_sha256": null,
+      "candidate_model_sha256": null,
+      "evaluator_sha256": null,
+      "baseline_scores_sha256": null,
+      "candidate_scores_sha256": null,
+      "report_sha256": null,
+      "ru_es_metrics": null,
+      "numeric_improvement_gate": null
+    }
+  },
+  "native_gates": {
+    "existing_onehost_owner_lease": false,
+    "owner_stop_admission": false,
+    "two_v100_resource_readback": false,
+    "ssd_capacity_and_storage_auth": false,
+    "teacher_gguf_local_sha_readback": false,
+    "student_hf_local_sha_readback": false,
+    "student_load_and_training_preflight": false,
+    "license_review": false,
+    "independent_checkpoint_restore": false,
+    "frozen_holdout_eval": false
+  },
+  "protected_state": [
+    "S03 databases, backups, history, and Genesis",
+    "Qwen checkpoint 25 and any associated optimizer, scheduler, scaler, RNG, or adapter state",
+    "Qwen55 source-prepared package and any extant checkpoint copies",
+    "historical 35B checkpoint 5 backup",
+    "all unique model and teacher files until dependency and recovery proof"
+  ],
+  "no_side_effects": {
+    "downloaded_bytes": 0,
+    "training_updates": 0,
+    "checkpoint_mutations": 0,
+    "gpu_jobs_started": 0
+  }
+}
