@@ -303,4 +303,55 @@ class MediaInstallTests(unittest.TestCase):
                 marker.unlink()
 
 
+    def test_v13_state_stop_flag_and_maintenance_marker_block_media(self):
+        # These marker aliases existed in the owner/lifeline contract but
+        # were missing from the direct media start admission path.
+        for name, symlink in (('state/STOP.flag', False),
+                              ('state/OWNER_MAINTENANCE.flag', False),
+                              ('state/STOP.flag', True)):
+            with self.subTest(marker=name, symlink=symlink):
+                marker = self.root / name
+                marker.parent.mkdir(parents=True, exist_ok=True)
+                if symlink:
+                    marker.symlink_to(self.root / 'absent-owner-target')
+                else:
+                    marker.write_text('OWNER')
+                self.assertTrue(m.v13_owner_stop_present())
+                with mock.patch.object(m, 'gpu_lease') as lease:
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_MEDIA_OWNER_STOP_PRESENT'):
+                        m.start_engine({'engine_root': str(self.root / 'media')})
+                    lease.assert_not_called()
+                marker.unlink()
+
+    def test_v13_held_maintenance_lease_blocks_even_without_marker(self):
+        import fcntl
+        import os
+        lease = self.root / 'state/owner_maintenance.lock'
+        lease.parent.mkdir(parents=True, exist_ok=True)
+        with open(lease, 'w') as held:
+            fcntl.flock(held.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.assertTrue(m.v13_owner_stop_present())
+            with mock.patch.object(m, 'gpu_lease') as gpu:
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_MEDIA_OWNER_STOP_PRESENT'):
+                    m.start_engine({'engine_root': str(self.root / 'media')})
+                gpu.assert_not_called()
+            fcntl.flock(held.fileno(), fcntl.LOCK_UN)
+
+    def test_v13_late_owner_stop_after_locks_prevents_service_action(self):
+        # A new STOP appearing while waiting on GPU1/engine locks must
+        # prevent chat health probes and any Supervisor start attempt.
+        with mock.patch.object(m, 'v13_owner_stop_present', side_effect=[False, True]) as stop, \
+             mock.patch.object(m, 'lock', return_value=contextlib.nullcontext()) as engine_lock, \
+             mock.patch.object(m, 'gpu_lease', return_value=contextlib.nullcontext()) as gpu, \
+             mock.patch.object(m, 'health_chat') as chat_health, \
+             mock.patch.object(m, 'service_status') as supervisor:
+            with self.assertRaisesRegex(RuntimeError, 'HOLD_MEDIA_OWNER_STOP_PRESENT'):
+                m.start_engine({'engine_root': str(self.root / 'media')})
+            self.assertEqual(stop.call_count, 2)
+            engine_lock.assert_called_once_with('media.lock')
+            gpu.assert_called_once()
+            chat_health.assert_not_called()
+            supervisor.assert_not_called()
+
+
 if __name__=='__main__': unittest.main()
