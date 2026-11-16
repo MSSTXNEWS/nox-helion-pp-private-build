@@ -26,3 +26,11 @@
 - Do not infer actual training, live usage, installed assets, GPU progress, or production quality from ZIP CRC or offline DOM.
 
 **Next authorized action:** At the precise serving target SHA, use only the existing owner-controlled OneHost deploy path to prove current preimage and independent restorable backup, then stage this additive overlay with rollback; run authenticated browser `/nox-web-v29/` stream, STOP, S03, voice, CINEMA and Reduced Motion E2E before promotion. No destructive cleanup.
+
+## Incremental 3D runtime-gate repair · 2026-11-16 · NOX_WEB_WEIGHTS_V06
+
+This source revision fixes a real accessibility and performance race found against the pinned original. The old CSS did not beat the original WEB29 live `!important` shorthand for all themes; real local Chromium computed-style verification confirmed the failure before repair. The stronger reduced-motion rule now covers live/still/contrast/default without touching D02 WebGL shaders, orbit data or model endpoints. Browser fixture check: **48/48 cases** across 320/390/800/1024/1440/1920 px, two themes, two modes, two OS motion states. This is **LOCAL CHROMIUM**, not authenticated OneHost acceptance.
+
+The optional Motion.js loader now respects the original `nox-runtime-observed`/media/typing/training activity, fails closed while a native owner runtime is unknown or busy, and does not force `requestIdleCallback` to run after four seconds of sustained token rendering. Existing original chat, voice, STOP, vendor libraries and themes remain. Deterministic Node test assertions are under `tests/test_motion_idle_loader.mjs` and the original WEB29 ZIP/shader/orbit SHA was checked unchanged.
+
+**Artifact divergence:** The older 161332-byte private overlay ZIP is a previous source stage and was not silently overwritten by this incremental Git commit. The repaired JS/CSS and tests here are the current source candidate; rebuild/stage only via existing exact-preimage authorised owner deploy with rollback. Owner authenticated streaming/S03/STOP/browser latency, production rendering and real GPU/weight training remain **HOLD**, not PASS.
