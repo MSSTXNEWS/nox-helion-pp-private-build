@@ -43,6 +43,24 @@ class InstallerTests(unittest.TestCase):
         n.BUNDLE["nox_native_lifeline.py"]["sha256"]="0"*64
         with self.assertRaisesRegex(RuntimeError,"HOLD_LIFELINE_BUNDLE_DIGEST"):
             n.bytes_checked("nox_native_lifeline.py")
+    def test_observer_can_stage_during_known_outage_without_restarting_anything(self):
+        sample = {name: {"state": "RUNNING", "pid": 100 + i}
+                  for i, name in enumerate(n.REQUIRED)}
+        sample["nox-selfheal"] = {"state": "STOPPED", "pid": None}
+        self.assertEqual(n.validate_baseline(sample), sample)
+        self.assertEqual(sample["nox-selfheal"]["state"], "STOPPED")
+
+    def test_observer_fails_closed_on_unknown_fatal_or_contradictory_service(self):
+        good = {name: {"state": "RUNNING", "pid": 100 + i}
+                for i, name in enumerate(n.REQUIRED)}
+        for state, pid in (("UNKNOWN", None), ("FATAL", None),
+                           ("STOPPED", 999), ("RUNNING", None)):
+            snapshot = {k: dict(v) for k, v in good.items()}
+            snapshot["nox-priority-scheduler"] = {"state": state, "pid": pid}
+            with self.subTest(state=state, pid=pid):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_LIFELINE_CRITICAL_SERVICE_IDENTITY_UNSAFE"):
+                    n.validate_baseline(snapshot)
+
     def test_wrong_supervisor_identity_rejected(self):
         with patch.object(n,"call",return_value=SimpleNamespace(stdout="evil RUNNING pid 1\n",returncode=0)):
             self.assertEqual(n.info("nox-dispatcher-t855u")["state"],"UNKNOWN")
