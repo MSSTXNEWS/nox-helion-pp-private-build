@@ -84,3 +84,27 @@ html:root:root[data-nox-cinema="still"] body:is([data-page],.helion-home)
   flex:1 1 0!important;min-height:0!important;overflow:auto!important;
  }
 }
+
+
+/* Compact landscape tablet: keep the original history/conversation/telemetry
+ * visible within the viewport. Previously the hard 260px+135px rows
+ * overflowed a 480px-high window, obscuring telemetry and causing page scroll.
+ * Only geometry changes; original cinematic D02 and token rendering stay put. */
+@media (min-width:761px) and (max-width:1199px) and (min-height:420px) and (max-height:540px){
+ html body.chat-workspace-v2 .chat-layout{
+  height:max(220px,calc(100dvh - 183px))!important;
+  min-height:0!important;
+  grid-template-rows:minmax(0,1fr) 56px!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel,
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  height:56px!important;min-height:0!important;max-height:56px!important;
+  overflow-y:auto!important;
+ }
+ html body.chat-workspace-v2 .chat-conversation #messages{
+  flex:1 1 0!important;min-height:0!important;overflow:auto!important;
+ }
+}

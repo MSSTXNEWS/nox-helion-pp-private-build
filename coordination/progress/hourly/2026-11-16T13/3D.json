@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3D_RELAY_RECEIPT_V8",
+  "instructions_version": "0.0.6",
+  "slot": "3D",
+  "recorded_at_utc": "2026-11-16T10:40:00Z",
+  "recorded_at_msk": "2026-11-16T13:40:00+03:00",
+  "source_head_before": "378c5ac551c7e3e7f68edca8856c69e19a808fe8",
+  "source_tree_before": "e51d7e0add7865c17b97395cffa186759ad68a51",
+  "source_kind": "SOURCE_PATCH_AND_OFFLINE_CHROMIUM_ONLY;NATIVE_ONEHOST_E2E_HOLD",
+  "root_cause": "WEB29 761–1199px landscape (480px high) reserved 260px+135px grid rows, leaving its telemetry bottom at 537/547px and pushing the original command dock below the viewport (document scrollHeight 590/600px).",
+  "fix": "Add isolated 761–1199 width / 420–540 height override to cap layout height by visual viewport, retain original two-column history/chat plus scrollable 56px telemetry row and independent scrollable messages; preserve original asset and 3D idle/STOP logic.",
+  "changed_files": [
+    "coordination/onepass/web29_3d_20261116/site/nox-cinematic-accessibility-3d.css",
+    "coordination/onepass/web29_3d_20261116/integration/stage_original_3d.py",
+    "coordination/onepass/web29_3d_20261116/tests/test_responsive_3d_source.mjs"
+  ],
+  "old_css_blob": "1e55b7ad84c4d05d91350d4c75f2f436c53895bc",
+  "new_css_blob_expected": "8f9fe785d74eccba2b30fe247de750698b11857c",
+  "canonical_primary_sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+  "previous_candidate_sha256": "3733dbe4068b1c71263d315f5fb9323fcd1ac0b3ef434a27a3a45b18207fa921",
+  "original_source_locks": {
+    "shader_sha256": "124a5d341059eb1070adcf58640657aa471ea4888e4409101503ecaa9337f952",
+    "orbit14_sha256": "3aced1774354b6212b665ef40514e78fb7660a3319fd346c4b12bbf277a39d38",
+    "verified_previous_zip": "YES; NO ZIP REBUILD THIS RUN"
+  },
+  "offline_browser": {
+    "method": "Real Chromium Playwright set_content: original archived chat.html with original 9 stylesheets in exact order; scripts removed for offline geometry; no OneHost HTTP/SSE",
+    "viewports_checked": 14,
+    "critical_800x480": {
+      "doc_scrollHeight_before": 590,
+      "after": 480,
+      "telemetry_bottom_before_px": 537,
+      "after_px": 94,
+      "message_viewport_before_px": 138,
+      "composer_bottom_after_px": 346
+    },
+    "critical_1024x480": {
+      "doc_scrollHeight_before": 600,
+      "after": 480,
+      "telemetry_bottom_before_px": 547,
+      "after_px": 424,
+      "composer_bottom_after_px": 356
+    },
+    "non_target_1024x600_unchanged": true,
+    "non_target_1400x480_unchanged": true,
+    "mobile_320_390_760_unchanged": true,
+    "horizontal_overflow": false,
+    "live_ttft_ms": null
+  },
+  "tasks": [
+    {
+      "number": 1,
+      "status": "DONE_SOURCE_PRESERVATION",
+      "evidence": "Primary SHA pinned; 1212 original archive paths and D02/orbit SHA checked on prior candidate; no original file modified in source archive."
+    },
+    {
+      "number": 2,
+      "status": "SOURCE_PRESERVED",
+      "evidence": "No Motion.js/STOP/render changes; existing idle loader unchanged; geometry removes viewport-induced command scrolling in compact tablet."
+    },
+    {
+      "number": 3,
+      "status": "DONE_SOURCE_PATCH",
+      "evidence": "Fix 761–1199px and 420–540px viewport: document fits 480px, telemetry visible, message stream stays scrollable; mobile/wide rules unchanged."
+    },
+    {
+      "number": 4,
+      "status": "DONE_OFFLINE_CHROMIUM_HOLD_NATIVE",
+      "evidence": "14 offline viewport comparisons; no authenticated OneHost HTTP, genuine SSE, TTFT, p50/p95 or live visual acceptance."
+    },
+    {
+      "number": 5,
+      "status": "SOURCE_INTEGRATED_IN_PR_HOLD_ONEHOST",
+      "evidence": "Exact CSS source + stage SHA pin + source regression in same CAS commit; native deployment is not claimed."
+    }
+  ],
+  "WEIGHTS": {
+    "state": "HOLD_FRESH_NATIVE",
+    "student": "Qwen3.5-9B",
+    "primary_candidate": "DeepSeek V4.1 Flash 1017 IQ2_XXS",
+    "historical_verified_successful_updates": 25,
+    "checkpoint25_manifest_sha256": "ba101a2c7125e352cfd17319d8ff8b228b6b43ef9490c99788928c4275fc2dbf",
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43828903713",
+    "last_observed_training_supervisor": "FATAL",
+    "last_observed_guard_reason": "EVALUATION_STALE",
+    "current_pid": null,
+    "current_successful_updates": null,
+    "new_updates_this_slot": 0,
+    "checkpoint_reload_current": null,
+    "offsite_restore_verified": false
+  },
+  "KNOWLEDGE": {
+    "state": "HOLD_HUNTER_SOURCE_S03_RECALL",
+    "new_verified_native_job_ids": [],
+    "new_verified_full_cycles": 0
+  },
+  "DISPATCHER+RESOURCES": {
+    "state": "HOLD_FRESH_NATIVE_SNAPSHOT",
+    "last_observed_dispatcher_pid": 876007,
+    "last_observed_utc": "2026-11-16T08:50:03Z",
+    "current_worker_pids": null,
+    "owner_stop_current": null,
+    "lease_current": null,
+    "current_cpu_gpu_ram_ssd": null,
+    "downloads_this_slot_bytes": 0,
+    "restarts_this_slot": 0,
+    "deleted_bytes": 0
+  },
+  "cleanup": {
+    "state": "HOLD_NOT_ELIGIBLE",
+    "deleted_files": 0,
+    "freed_bytes": 0,
+    "reason": "DeepSeek full active replacement, restore and cleanup writer lease not proven"
+  },
+  "native_actions": {
+    "server": false,
+    "weights": false,
+    "S03": false,
+    "training_restart": false,
+    "STOP": false
+  },
+  "next_action": "Owner-authenticated original OneHost: read current WEB29 preimage, STOP, lease, backup+rollback; install exact reviewed 3A/3D source; measure real browser E2E SSE/STOP/S03 p50/p95, then resume independent training checks."
+}
