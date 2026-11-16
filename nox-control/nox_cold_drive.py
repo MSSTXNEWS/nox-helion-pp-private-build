@@ -11,6 +11,7 @@ from contextlib import contextmanager
 import hashlib
 import json
 import math
+import multiprocessing
 import os
 from pathlib import Path, PureWindowsPath
 import re
@@ -314,7 +315,7 @@ def batch(a):
         raise RuntimeError('HOLD_INDEPENDENT_RESTORE_REQUIRED')
     with maintenance_lock(a.receipt_dir):
         done, errors = [], []
-        with ProcessPoolExecutor(max_workers=a.workers) as pool:
+        with ProcessPoolExecutor(max_workers=a.workers, mp_context=multiprocessing.get_context('spawn')) as pool:
             pending={pool.submit(copy_verified,j):j for j in jobs}
             for future in as_completed(pending):
                 try:
