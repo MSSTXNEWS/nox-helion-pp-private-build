@@ -37,10 +37,19 @@ class DiagnosticHold(RuntimeError):
 
 def plain(path):
     path = Path(path)
-    if not path.is_absolute() or not path.is_relative_to(ROOT):
+    # Path.is_relative_to() is lexical: /root/nox/../secret still matches.
+    if '..' in path.parts or not path.is_absolute() or not path.is_relative_to(ROOT):
         raise DiagnosticHold('HOLD_S03_PATH_SCOPE')
     for part in (*reversed(path.parents), path):
-        if part.is_symlink():
+        try:
+            mode = os.lstat(part).st_mode
+        except FileNotFoundError:
+            # A missing destination is handled by its read/open caller.
+            break
+        except OSError:
+            # Path.is_symlink() may silently return False on EACCES/ELOOP.
+            raise DiagnosticHold('HOLD_S03_PATH_UNREADABLE') from None
+        if stat.S_ISLNK(mode):
             raise DiagnosticHold('HOLD_S03_SYMLINK')
     return path
 
@@ -171,11 +180,17 @@ def embedding_probe():
     started = time.monotonic()
     try:
         health, _ = local_json('/health', timeout=2)
+        if health != 200:
+            raise DiagnosticHold('HOLD_EMBEDDING_HEALTH_HTTP')
         result['health_http'] = health
         code, models = local_json('/v1/models', timeout=2)
+        if code != 200 or not isinstance(models, dict):
+            raise DiagnosticHold('HOLD_EMBEDDING_MODELS_HTTP')
         ids = [r.get('id') for r in models.get('data', []) if isinstance(r, dict) and isinstance(r.get('id'), str)]
         result.update(model_http=code, model_count=len(ids), model_id_contains_bge=any('bge' in value.lower() for value in ids))
         code, response = local_json('/v1/embeddings', {'model': 'bge-m3', 'input': PUBLIC_FIXTURES}, timeout=5)
+        if code != 200 or not isinstance(response, dict):
+            raise DiagnosticHold('HOLD_EMBEDDING_BATCH_HTTP')
         rows = response.get('data')
         if not isinstance(rows, list) or len(rows) != len(PUBLIC_FIXTURES):
             raise DiagnosticHold('HOLD_EMBEDDING_BATCH_SHAPE')
