@@ -41,6 +41,19 @@
       "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf"
     }
   ],
+  "range_mount": {
+    "module": "nox-control/deepseek_owner_range_mount_v10.py",
+    "runtime_prerequisites": [
+      "Linux with an available FUSE device/kernel interface",
+      "fusepy installed in the owner process Python environment",
+      "the active OneHost owner lease for p0.model_download"
+    ],
+    "mount_mode": "read-only",
+    "cache": "bounded in-process RAM LRU, default 4 GiB",
+    "owner_stop_gate": "checked at mount start and every direct-I/O read",
+    "persistent_disk_fallback": "nox-control/deepseek_owner_range_v10.py with its SHA-verified final files and receipts",
+    "full_sha_for_remote_ranges": "not claimed; exact Range, length, strong ETag, HTTPS and immutable source pins are enforced"
+  },
   "alias": {
     "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf",
     "target": "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
