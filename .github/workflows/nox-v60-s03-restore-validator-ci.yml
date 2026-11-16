@@ -1,0 +1,40 @@
+name: NOX V60 S03 encrypted backup restore validator
+on:
+  push:
+    branches: [codex/nox-v60-s03-restore-validator-20261116]
+    paths:
+      - nox_runpod/teacher_mesh/v60/encrypted_backup.py
+      - nox_runpod/teacher_mesh/v60/restore_validator.py
+      - nox_runpod/teacher_mesh/v60/tests/test_restore_validator.py
+      - .github/workflows/nox-v60-s03-restore-validator-ci.yml
+  pull_request:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - nox_runpod/teacher_mesh/v60/encrypted_backup.py
+      - nox_runpod/teacher_mesh/v60/restore_validator.py
+      - nox_runpod/teacher_mesh/v60/tests/test_restore_validator.py
+      - .github/workflows/nox-v60-s03-restore-validator-ci.yml
+permissions:
+  contents: read
+jobs:
+  source-restore-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile and run synthetic-only tests
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v60/encrypted_backup.py nox_runpod/teacher_mesh/v60/restore_validator.py nox_runpod/teacher_mesh/v60/tests/test_restore_validator.py
+          python -m unittest -v nox_runpod.teacher_mesh.v60.tests.test_restore_validator
+      - name: Assert no real key, SSH, production DB or restore
+        run: |
+          echo "NOX_V60_OWNER_KEY_USED=false"
+          echo "NOX_V60_REAL_ARCHIVE_DOWNLOADED=false"
+          echo "NOX_V60_PRODUCTION_WRITES=0"
+          echo "NOX_V60_SYNTHETIC_FIXTURES_ONLY=true"
