@@ -341,8 +341,9 @@ def deletion_kind(path):
         match = re.fullmatch(r'.+\.log\.(\d+)(?:\.(?:gz|xz|zst))?', path.name)
         if match and int(match[1]) >= 3 and not LOG_PROTECTED.search(path.name):
             return 'OLD_DEBUG_LOG_ROTATION', 3 * 86400
-    if (path.parent == ROOT or path.is_relative_to(ROOT / 'logs') or path.is_relative_to(ROOT / 'tmp')) and re.fullmatch(r'core(?:\.\d+)?', path.name):
-        return 'INACTIVE_ELF_CORE', 86400
+    # Core dumps are snapshots of arbitrary process memory and can contain
+    # credentials, S03 plaintext, prompts, or unsaved state; never reclaim them
+    # through the generic ephemeral-file path without content-specific review.
     return None
 
 
@@ -370,9 +371,6 @@ def qualify(path, info, now, usage):
     safetensors_header = len(head) >= 9 and 8 <= int.from_bytes(head[:8], 'little') <= 16 * 1024 * 1024 and head[8:9] == b'{'
     if head.startswith((b'GGUF', b'\x80\x02', b'\x80\x03', b'\x80\x04', b'\x80\x05')) or safetensors_header:
         return None, 'MODEL_OR_SERIALIZED_STATE_HEADER'
-    if kind[0] == 'INACTIVE_ELF_CORE':
-        if len(head) < 18 or head[:4] != b'\x7fELF' or head[5] not in (1, 2) or int.from_bytes(head[16:18], 'little' if head[5] == 1 else 'big') != 4:
-            return None, 'NOT_ELF_CORE'
     return {'path': str(path), 'category': kind[0], 'minimum_age_seconds': kind[1],
             'identity': identity(info), 'allocated_bytes': info.st_blocks * 512,
             'prefix_sha256': digest_bytes(head), 'path_id': digest_bytes(str(path).encode())[:20]}, None
