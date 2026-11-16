@@ -95,6 +95,7 @@ def verify_maya_admission(native: dict, *, now: int | None = None) -> dict:
         raise RuntimeError("HOLD_MAYA_READINESS_SHA")
     expected = {
         "schema": "NOX_MAYA_CHAT_ACCEPTANCE_V1",
+        "state": "ACCEPTED",
         "model_id": MODEL_ID,
         "source_revision": SOURCE_REVISION,
         "maya_commit": MAYA_COMMIT,
