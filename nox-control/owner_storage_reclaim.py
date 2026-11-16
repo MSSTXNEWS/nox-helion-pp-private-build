@@ -55,7 +55,6 @@ WEIGHT_SUFFIX = {'.gguf', '.safetensors', '.pt', '.pth', '.bin', '.ckpt', '.onnx
 PROTECTED_WORDS = {'s03', 'memory', 'memories', 'checkpoints', 'checkpoint', 'ckpt', 'lora',
                    'training', 'weights', 'models', 'scripts', 'source', 'src', 'pc_shell',
                    'credentials', 'secrets', 'backup', 'backups', 'distill', 'datasets'}
-LOG_PROTECTED = re.compile(r'(?i)(?:journal|audit|memory|s03|dialog|train|checkpoint|owner|receipt|distill|learn|event|report)')
 
 
 class StorageHold(RuntimeError):
@@ -342,14 +341,8 @@ def deletion_kind(path):
         if relative.parts and relative.parts[0] == 'wheels' and path.suffix == '.whl':
             return 'PIP_WHEEL_CACHE', 86400
         return None
-    log_root = ROOT / 'logs'
-    system_log = Path('/var/log/supervisor')
-    if path.is_relative_to(log_root) or (path.is_relative_to(system_log) and path.name.lower().startswith(('nox-', 'nox_'))):
-        match = re.fullmatch(r'.+\.log\.(\d+)(?:\.(?:gz|xz|zst))?', path.name)
-        if match and int(match[1]) >= 3 and not LOG_PROTECTED.search(path.name):
-            return 'OLD_DEBUG_LOG_ROTATION', 3 * 86400
-    if (path.parent == ROOT or path.is_relative_to(ROOT / 'logs') or path.is_relative_to(ROOT / 'tmp')) and re.fullmatch(r'core(?:\.\d+)?', path.name):
-        return 'INACTIVE_ELF_CORE', 86400
+    # Non-cache logs and core dumps can contain unique user or diagnostic data.
+    # Without trusted full-file backup/restore evidence, keep them out of RECLAIM.
     return None
 
 
@@ -377,9 +370,6 @@ def qualify(path, info, now, usage):
     safetensors_header = len(head) >= 9 and 8 <= int.from_bytes(head[:8], 'little') <= 16 * 1024 * 1024 and head[8:9] == b'{'
     if head.startswith((b'GGUF', b'\x80\x02', b'\x80\x03', b'\x80\x04', b'\x80\x05')) or safetensors_header:
         return None, 'MODEL_OR_SERIALIZED_STATE_HEADER'
-    if kind[0] == 'INACTIVE_ELF_CORE':
-        if len(head) < 18 or head[:4] != b'\x7fELF' or head[5] not in (1, 2) or int.from_bytes(head[16:18], 'little' if head[5] == 1 else 'big') != 4:
-            return None, 'NOT_ELF_CORE'
     return {'path': str(path), 'category': kind[0], 'minimum_age_seconds': kind[1],
             'identity': identity(info), 'allocated_bytes': info.st_blocks * 512,
             'prefix_sha256': digest_bytes(head), 'path_id': digest_bytes(str(path).encode())[:20]}, None
