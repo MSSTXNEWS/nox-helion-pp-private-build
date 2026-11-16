@@ -202,15 +202,159 @@ def recall_projection(rows):
 
 
 SMOKE=r'''
-import contextlib,hashlib,json,os,pathlib,sys
+import contextlib,hashlib,json,os,pathlib,re,struct,sys,time
 sys.path.insert(0,'/root/nox/scripts')
+def safe_error(exc):
+    text=str(exc)
+    return text if re.fullmatch('HOLD_[A-Z0-9_]+',text) else type(exc).__name__
+def counts(rows):
+    return {name:sum(isinstance(row,dict) and row.get('how')==name for row in rows)
+            for name in ('semantic','hybrid','fts','like','pin','recent')}
+query='Как NOX сохраняет историю разговоров и воспоминания?'
+observed={}
 with open(os.devnull,'w') as sink,contextlib.redirect_stdout(sink),contextlib.redirect_stderr(sink):
     import chat_proxy
-    assert chat_proxy.s03_recall.__module__=='owner_s03_gateway'
-    assert chat_proxy.s03_fmt.__module__=='owner_s03_gateway'
-    rows=chat_proxy.s03_recall('Как NOX сохраняет историю разговоров и воспоминания?',k=6)
-print(json.dumps({'chat_alias_bound':True,'rows':len(rows),'semantic_matches':sum(row.get('how') in ('semantic','hybrid') for row in rows),'pin_count':sum(row.get('how')=='pin' for row in rows),'private_text_exported':False}))
+    observed['recall_alias_bound']=getattr(chat_proxy.s03_recall,'__module__',None)=='owner_s03_gateway'
+    observed['formatter_alias_bound']=getattr(chat_proxy.s03_fmt,'__module__',None)=='owner_s03_gateway'
+    observed['chat_alias_bound']=observed['recall_alias_bound'] and observed['formatter_alias_bound']
+    started=time.monotonic();rows=chat_proxy.s03_recall(query,k=6)
+    observed.update(rows=len(rows),recall_ms=round((time.monotonic()-started)*1000,3),methods=counts(rows),
+        semantic_matches=sum(row.get('how') in ('semantic','hybrid') for row in rows),
+        pin_count=sum(row.get('how')=='pin' for row in rows),private_text_exported=False)
+    if not observed['semantic_matches']:
+        import owner_s03_gateway as gateway
+        diagnostic={};identity=None;vector=None
+        try:
+            started=time.monotonic();identity=gateway.model_identity()
+            diagnostic['identity_ms']=round((time.monotonic()-started)*1000,3)
+            with gateway.connection(gateway.DB,seconds=1) as conn:
+                diagnostic['matching_index_rows']=conn.execute('SELECT count(*) FROM nox_s03_vectors WHERE model_identity=?',(identity,)).fetchone()[0]
+        except Exception as exc:diagnostic['identity_error']=safe_error(exc)
+        try:
+            started=time.monotonic();vector=gateway.embed([query],timeout=.65)[0]
+            diagnostic['embedding_ms']=round((time.monotonic()-started)*1000,3)
+            diagnostic['embedding_dimensions']=len(vector)
+        except Exception as exc:diagnostic['embedding_error']=safe_error(exc)
+        if identity is not None and vector is not None:
+            try:
+                started=time.monotonic()
+                direct=gateway.recall(query,k=6,embedder=lambda *a,**kw:[vector],identity_fn=lambda:identity)
+                diagnostic['direct_methods']=counts(direct)
+                diagnostic['direct_ms']=round((time.monotonic()-started)*1000,3)
+            except Exception as exc:diagnostic['direct_error']=safe_error(exc)
+            try:
+                scored=0;above=0;maximum=-1.0;started=time.monotonic()
+                with gateway.connection(gateway.DB,seconds=1) as conn:
+                    for row in conn.execute('SELECT embedding,dimensions FROM nox_s03_vectors WHERE model_identity=? LIMIT 20000',(identity,)):
+                        if time.monotonic()-started>.55:break
+                        if row['dimensions']!=gateway.DIMENSIONS or len(row['embedding'])!=4*gateway.DIMENSIONS:continue
+                        score=sum(a*b for a,b in zip(vector,struct.unpack('<'+str(gateway.DIMENSIONS)+'f',row['embedding'])))
+                        scored+=1;above+=score>=.2;maximum=max(maximum,score)
+                diagnostic.update(scored_vectors=scored,above_threshold=above,max_score=round(maximum,6))
+            except Exception as exc:diagnostic['score_error']=safe_error(exc)
+        observed['diagnostic']=diagnostic
+print(json.dumps(observed))
 '''
+
+
+def smoke_projection(value):
+    """Only numeric observations and fixed error codes leave the private probe."""
+    if not isinstance(value,dict):fail('HOLD_S03_SMOKE_SCHEMA')
+    result={}
+    for key in ('chat_alias_bound','recall_alias_bound','formatter_alias_bound','private_text_exported'):
+        if type(value.get(key)) is bool:result[key]=value[key]
+    for key in ('rows','semantic_matches','pin_count'):
+        if type(value.get(key)) is int and 0<=value[key]<=100:result[key]=value[key]
+    if type(value.get('recall_ms')) in (int,float) and 0<=value['recall_ms']<=15000:result['recall_ms']=value['recall_ms']
+    def methods(source):
+        return {key:source[key] for key in ('semantic','hybrid','fts','like','pin','recent')
+                if isinstance(source,dict) and type(source.get(key)) is int and 0<=source[key]<=100}
+    result['methods']=methods(value.get('methods'))
+    diagnostic=value.get('diagnostic') or {};clean={}
+    for key in ('identity_error','embedding_error','direct_error','score_error'):
+        if isinstance(diagnostic.get(key),str) and re.fullmatch('(?:HOLD_[A-Z0-9_]{1,90}|[A-Za-z_]{1,100})',diagnostic[key]):clean[key]=diagnostic[key]
+    for key in ('identity_ms','embedding_ms','embedding_dimensions','matching_index_rows','direct_ms',
+                'scored_vectors','above_threshold','max_score'):
+        if type(diagnostic.get(key)) in (int,float) and -1<=diagnostic[key]<=100000:clean[key]=diagnostic[key]
+    if 'direct_methods' in diagnostic:clean['direct_methods']=methods(diagnostic['direct_methods'])
+    if clean:result['diagnostic']=clean
+    return result
+
+
+READ_ONLY_DIAGNOSTIC=r'''
+import base64,contextlib,hashlib,json,os,re,struct,sys,time,types
+payload=json.loads(sys.stdin.buffer.read(262144))
+raw=base64.b64decode(payload['gateway'],validate=True)
+if hashlib.sha256(raw).hexdigest()!=sys.argv[1]:raise RuntimeError('HOLD_S03_DIAGNOSTIC_SOURCE')
+def error(exc):
+    text=str(exc)
+    return text if re.fullmatch('HOLD_[A-Z0-9_]+',text) else type(exc).__name__
+def counts(rows):
+    return {name:sum(isinstance(row,dict) and row.get('how')==name for row in rows)
+            for name in ('semantic','hybrid','fts','like','pin','recent')}
+query='Как NOX сохраняет историю разговоров и воспоминания?'
+observed={'private_text_exported':False};diagnostic={};identity=None;vector=None
+with open(os.devnull,'w') as sink,contextlib.redirect_stdout(sink),contextlib.redirect_stderr(sink):
+    gateway=types.ModuleType('owner_s03_diagnostic_candidate')
+    gateway.__file__='/root/nox/scripts/owner_s03_gateway.py'
+    sys.modules[gateway.__name__]=gateway
+    exec(compile(raw,'<pinned-read-only-gateway>', 'exec'),gateway.__dict__)
+    try:
+        started=time.monotonic();rows=gateway.recall(query,k=6)
+        observed.update(rows=len(rows),recall_ms=round((time.monotonic()-started)*1000,3),methods=counts(rows),
+            semantic_matches=sum(row.get('how') in ('semantic','hybrid') for row in rows),
+            pin_count=sum(row.get('how')=='pin' for row in rows))
+    except Exception as exc:diagnostic['direct_error']=error(exc)
+    try:
+        started=time.monotonic();identity=gateway.model_identity()
+        diagnostic['identity_ms']=round((time.monotonic()-started)*1000,3)
+        with gateway.connection(gateway.DB,seconds=1) as conn:
+            diagnostic['matching_index_rows']=conn.execute('SELECT count(*) FROM nox_s03_vectors WHERE model_identity=?',(identity,)).fetchone()[0]
+    except Exception as exc:diagnostic['identity_error']=error(exc)
+    try:
+        started=time.monotonic();vector=gateway.embed([query],timeout=.65)[0]
+        diagnostic['embedding_ms']=round((time.monotonic()-started)*1000,3)
+        diagnostic['embedding_dimensions']=len(vector)
+    except Exception as exc:diagnostic['embedding_error']=error(exc)
+    if identity is not None and vector is not None:
+        try:
+            started=time.monotonic()
+            direct=gateway.recall(query,k=6,embedder=lambda *a,**kw:[vector],identity_fn=lambda:identity)
+            diagnostic['direct_methods']=counts(direct)
+            diagnostic['direct_ms']=round((time.monotonic()-started)*1000,3)
+        except Exception as exc:diagnostic['direct_error']=error(exc)
+        try:
+            scored=0;above=0;maximum=-1.0;started=time.monotonic()
+            with gateway.connection(gateway.DB,seconds=1) as conn:
+                for row in conn.execute('SELECT embedding,dimensions FROM nox_s03_vectors WHERE model_identity=? LIMIT 20000',(identity,)):
+                    if time.monotonic()-started>.55:break
+                    if row['dimensions']!=gateway.DIMENSIONS or len(row['embedding'])!=4*gateway.DIMENSIONS:continue
+                    score=sum(a*b for a,b in zip(vector,struct.unpack('<'+str(gateway.DIMENSIONS)+'f',row['embedding'])))
+                    scored+=1;above+=score>=.2;maximum=max(maximum,score)
+            diagnostic.update(scored_vectors=scored,above_threshold=above,max_score=round(maximum,6))
+        except Exception as exc:diagnostic['score_error']=error(exc)
+observed['diagnostic']=diagnostic
+print(json.dumps(observed))
+'''
+
+
+def read_only_probe():
+    """Diagnose the frozen candidate against existing DB/BGE without activation."""
+    request=os.environ.get('NOX_OWNER_REQUEST_ID','');source=os.environ.get('NOX_OWNER_SOURCE_SHA','')
+    if not request.isdigit() or not re.fullmatch('[a-f0-9]{40}',source):fail('HOLD_S03_DIAGNOSTIC_OWNER_CONTEXT')
+    candidate=bundle('owner_s03_gateway.py',GATEWAY_SHA)
+    # Only the supplied, verified bytes execute. Installed modules, live S03
+    # aliases, controller configuration and canonical tables remain unchanged.
+    check=subprocess.run([PYTHON,'-I','-c',READ_ONLY_DIAGNOSTIC,GATEWAY_SHA],
+        input=json.dumps({'gateway':base64.b64encode(candidate).decode()}).encode(),
+        capture_output=True,timeout=12)
+    if check.returncode or len(check.stdout)>16000:fail('HOLD_S03_READ_ONLY_DIAGNOSTIC_CHILD')
+    value={'schema':'NOX_OWNER_S03_RECALL_DIAGNOSTIC_V1','request':request,'source_sha':source,
+           'candidate_gateway_sha256':GATEWAY_SHA,'live_sources_changed':False,'canonical_index_written':False,
+           'services_restarted':False,'alias_check':'PRIOR_NATIVE_RC_ZERO_NOT_REPEATED',
+           'observation':smoke_projection(json.loads(check.stdout))}
+    emit('s03_recall_diagnostic',value)
+    return value
 
 
 def main():
@@ -312,10 +456,10 @@ def main():
         finally:senior._unlock(senior_lock)
         check=subprocess.run([PYTHON,'-I','-c',SMOKE],capture_output=True,timeout=15)
         if check.returncode or len(check.stdout)>16000:fail('HOLD_S03_PROXY_IMPORT_SMOKE')
-        smoke=json.loads(check.stdout)
+        smoke=smoke_projection(json.loads(check.stdout))
+        event('s03_proxy_source_smoke',smoke)
         if smoke.get('chat_alias_bound') is not True or smoke.get('semantic_matches',0)<1 or smoke.get('pin_count',99)>2:
             fail('HOLD_S03_PROXY_MEMORY_ALIAS')
-        event('s03_proxy_source_smoke',smoke)
         if not slots_idle():fail('HOLD_S03_NEW_OWNER_GENERATION')
         stop('nox-proxy');proxy_stopped=True
         start('nox-proxy');proxy_stopped=False;record['proxy_restarted']=True
