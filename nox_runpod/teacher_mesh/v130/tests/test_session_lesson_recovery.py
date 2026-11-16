@@ -21,6 +21,21 @@ class SessionLessonRecoveryTests(unittest.TestCase):
         self.assertEqual(lesson["source_sha256"], hashlib.sha256(lesson["content"].encode()).hexdigest())
         self.assertIn("SOURCE_TESTED", lesson["content"])
         self.assertIn("LIVE_VERIFIED", lesson["content"])
+        pair = lesson["training_pair_ref"]
+        self.assertEqual(pair["id"], "session-route-correction-20261116-01")
+        self.assertEqual(pair["relationship"], "RELATED_CONTEXT_NOT_IDENTICAL_TEXT")
+        self.assertEqual(pair["prompt_sha256"], hashlib.sha256(pair["prompt"].encode()).hexdigest())
+        self.assertEqual(pair["completion_sha256"], hashlib.sha256(pair["completion"].encode()).hexdigest())
+        pair_for_hash = {key: value for key, value in pair.items()
+                         if key not in ("manifest_path", "relationship", "pair_sha256")}
+        pair_hash = hashlib.sha256(json.dumps(pair_for_hash, ensure_ascii=False,
+            sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        self.assertEqual(pair_hash, pair["pair_sha256"])
+        self.assertEqual(pair_hash, "5fe912ec7a914f546df97df0f3c5cc6ef0b87d60c5bd974923644028c32c1168")
+        self.assertIn(pair["id"], lesson["source_ref"])
+        self.assertIn(pair_hash, lesson["source_ref"])
+        self.assertNotEqual(lesson["content"], pair["completion"])
+        self.assertNotEqual(lesson["source_sha256"], pair["completion_sha256"])
         data = api._validate(lesson)
 
         with tempfile.TemporaryDirectory() as tmp:
