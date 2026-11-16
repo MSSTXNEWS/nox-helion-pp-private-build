@@ -840,6 +840,61 @@ def owner_safety_snapshot():
             'dispatcher_heartbeat_files': heartbeat,
             'admission': 'READ_ONLY_NO_RESTART_NO_DELETE_NO_TRAINER'}
 
+MAYA_P0_BINARY_REL = 'engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4'
+MAYA_P0_BINARY_SHA256 = '3783980bb65861de36fe4d93b8e6bbd6a631207677bcabf330bf7830c21b20'
+
+def maya_p0_binary_readback(root=None, expected_sha256=None):
+    """Read-only SHA/ELF pin of original Maya; NEVER packs or runs model."""
+    root = ROOT if root is None else Path(root)
+    expected = MAYA_P0_BINARY_SHA256 if expected_sha256 is None else expected_sha256
+    path = root / MAYA_P0_BINARY_REL
+    result = {'schema':'NOX_MAYA_P0_BINARY_READONLY_V1', 'path':str(path),
+              'pinned_sha256':expected, 'observed_sha256':None,
+              'state':'HOLD_UNKNOWN', 'cuda124_runtime':'NOT_TESTED',
+              'sm70_kernel':'NOT_TESTED', 'model_pack':'NOT_TESTED',
+              'real_inference':'NOT_TESTED', 'native_model_promotion':False}
+    try:
+        # Refuse symlinks in the absolute owner path, including ancestors.
+        for parent in (root, *tuple(path.parents)[:-1]):
+            if not parent.is_relative_to(root):
+                continue
+            if not stat.S_ISDIR(parent.lstat().st_mode):
+                result['state']='HOLD_UNSAFE_PARENT'; return result
+        if stat.S_ISLNK(path.lstat().st_mode):
+            result['state']='HOLD_SYMLINK_BINARY'; return result
+        fd = os.open(path, os.O_RDONLY | getattr(os,'O_NOFOLLOW',0))
+        try:
+            before = os.fstat(fd)
+            if not stat.S_ISREG(before.st_mode) or not (before.st_mode & 0o111):
+                result['state']='HOLD_NOT_EXECUTABLE_REGULAR'; return result
+            if not 64 <= before.st_size <= 1024**3:
+                result['state']='HOLD_BINARY_SIZE'; return result
+            digest = hashlib.sha256()
+            with os.fdopen(fd,'rb',closefd=False) as stream:
+                first = stream.read(64)
+                digest.update(first)
+                if (first[:4] != b'\\x7fELF' or first[4] != 2 or first[5] != 1
+                        or int.from_bytes(first[18:20],'little') != 62):
+                    result['state']='HOLD_NOT_LINUX_X86_64_ELF'; return result
+                while block := stream.read(8*1024*1024):
+                    digest.update(block)
+            after = os.fstat(fd)
+            identity = lambda s:(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+            if identity(before) != identity(after):
+                result['state']='HOLD_BINARY_CHANGED_DURING_READ'; return result
+            result['bytes']=before.st_size
+            result['observed_sha256']=digest.hexdigest()
+            result['state']=('SHA_PIN_MATCH_ELF_ONLY' if result['observed_sha256']==expected
+                              else 'HOLD_BINARY_SHA_MISMATCH')
+            return result
+        finally:
+            os.close(fd)
+    except FileNotFoundError:
+        result['state']='HOLD_BINARY_NOT_PRESENT'
+    except (OSError, ValueError):
+        result['state']='HOLD_BINARY_IO_OR_PATH'
+    return result
+
 def worker(i):
     f=(hardware,processes,training,controls,chat_storage,receipts)[i]
     try: return {'section':f.__name__,'worker_pid':os.getpid(),'result':f()}
@@ -855,5 +910,6 @@ if __name__=='__main__':
                 print('NOX_MAINT_INSPECT='+json.dumps(item,separators=(',',':')),flush=True)
     owner_component_readback()
     print('NOX_MAINT_SAFETY=' + json.dumps(owner_safety_snapshot(), separators=(',', ':'), allow_nan=False), flush=True)
+    print('NOX_MAINT_MAYA_P0=' + json.dumps(maya_p0_binary_readback(), separators=(',', ':'), allow_nan=False), flush=True)
     bounded_capacity_readback()
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)

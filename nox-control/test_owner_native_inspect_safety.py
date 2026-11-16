@@ -106,5 +106,64 @@ class OwnerSafetyReadOnlyTests(unittest.TestCase):
         self.assertFalse(snapshot["listener_8081"]["complete_pid_map"])
 
 
+class MayaP0BinaryReadOnlyTests(unittest.TestCase):
+    def setUp(self):
+        import hashlib
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)/'nox'
+        self.path = self.root/INSPECT.MAYA_P0_BINARY_REL
+        self.path.parent.mkdir(parents=True)
+        self.elf = b'\\x7fELF'+bytes([2,1])+b'\\x00'*12+(62).to_bytes(2,'little')+b'\\x00'*44
+        self.path.write_bytes(self.elf)
+        self.path.chmod(0o700)
+        self.good_sha = hashlib.sha256(self.elf).hexdigest()
+
+    def test_pin_sha_and_elf_not_cuda_or_inference(self):
+        result = INSPECT.maya_p0_binary_readback(self.root,self.good_sha)
+        self.assertEqual(result['state'],'SHA_PIN_MATCH_ELF_ONLY')
+        self.assertEqual(result['cuda124_runtime'],'NOT_TESTED')
+        self.assertEqual(result['model_pack'],'NOT_TESTED')
+        self.assertFalse(result['native_model_promotion'])
+
+    def test_wrong_sha_is_hold(self):
+        self.assertEqual(INSPECT.maya_p0_binary_readback(self.root)['state'],
+                         'HOLD_BINARY_SHA_MISMATCH')
+
+    def test_missing_binary_is_hold(self):
+        self.path.unlink()
+        self.assertEqual(INSPECT.maya_p0_binary_readback(self.root)['state'],
+                         'HOLD_BINARY_NOT_PRESENT')
+
+    def test_symlink_binary_is_hold(self):
+        self.path.unlink()
+        self.path.symlink_to('/etc/passwd')
+        self.assertEqual(INSPECT.maya_p0_binary_readback(self.root)['state'],
+                         'HOLD_SYMLINK_BINARY')
+
+    def test_bad_elf_is_hold(self):
+        self.path.write_bytes(b'x'*70)
+        self.assertEqual(INSPECT.maya_p0_binary_readback(self.root)['state'],
+                         'HOLD_NOT_LINUX_X86_64_ELF')
+
+    def test_nonexecutable_is_hold(self):
+        self.path.chmod(0o600)
+        self.assertEqual(INSPECT.maya_p0_binary_readback(self.root)['state'],
+                         'HOLD_NOT_EXECUTABLE_REGULAR')
+
+    def test_sparse_oversize_is_hold_without_hashing(self):
+        with self.path.open('r+b') as stream:
+            stream.truncate(1024**3+1)
+        self.assertEqual(INSPECT.maya_p0_binary_readback(self.root)['state'],
+                         'HOLD_BINARY_SIZE')
+
+    def test_symlink_parent_is_hold(self):
+        parent=self.root/'engine_builds'
+        real=self.root/'engine_builds.real'
+        parent.rename(real)
+        parent.symlink_to(real,target_is_directory=True)
+        self.assertEqual(INSPECT.maya_p0_binary_readback(self.root)['state'],
+                         'HOLD_UNSAFE_PARENT')
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -1,0 +1,71 @@
+{
+  "schema": "NOX_RELAY_V10_FIVE_TASK_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2A",
+  "at_utc": "2026-11-16T14:18:48.519Z",
+  "at_msk": "2026-11-16T17:18:48.519+03:00",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_head_before": "64d280df821d09d685b7b05887a5db57c8ef76fe",
+  "source_head_after": "COMMIT_CARRYING_THIS_RECEIPT",
+  "source_preimages": {
+    "nox-control/owner_native_inspect.py": "964fe6bef1cdb69bc86ecda19addcf4d982b8e06",
+    "nox-control/test_owner_native_inspect_safety.py": "849846f8355a5496692c322a02a69788bdf6cecb"
+  },
+  "historical_native": {
+    "run_id": 43881016385,
+    "readback_utc": "2026-11-16T13:59:30Z",
+    "instance": 60509551,
+    "supervisor_chat": "STOPPED",
+    "supervisor_dispatcher": "STOPPED",
+    "trainer": "FATAL",
+    "port_8081": "URLError",
+    "gpu_used_mib": [
+      0,
+      0
+    ],
+    "ssd_free_bytes": 43158925312,
+    "owner_stop": "UNKNOWN",
+    "writer_lease": "UNKNOWN"
+  },
+  "tasks": [
+    {
+      "id": "P0-2A-MAYA-ELF-SHA",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "evidence": "New SHA256/ELF/x86_64 read-only probe; native Maya binary not yet inspected"
+    },
+    {
+      "id": "P0-2A-PARSER-CUDA124",
+      "status": "HOLD",
+      "reason": "Actual native Maya --version/pack parser and CUDA12.4 sm70 runtime not executed; SHA pin alone cannot prove this"
+    },
+    {
+      "id": "P0-2A-NODUP-PACK",
+      "status": "HOLD",
+      "reason": "Full DeepSeek pinned manifest shards and Engram placement not verified native; pack cannot be safely attempted"
+    },
+    {
+      "id": "P0-2A-2XV100-ADMISSION",
+      "status": "HOLD",
+      "reason": "Historical GPUs 2xV100 free but only 43.16GB SSD and owner STOP/lease unresolved; model unique bytes 248834257920"
+    },
+    {
+      "id": "P0-2A-INFERENCE-TTFT",
+      "status": "HOLD",
+      "reason": "Chat 8081 down during latest owner readback, no native full-model load, model SSE or TTFT"
+    }
+  ],
+  "local_regression": "8/8 standalone synthetic tests PASS before commit",
+  "ci": "PENDING",
+  "native_install": false,
+  "new_optimizer_updates": 0,
+  "downloaded_bytes": 0,
+  "deleted_bytes": 0,
+  "new_native_claims": 0,
+  "changes": [
+    "nox-control/owner_native_inspect.py",
+    "nox-control/test_owner_native_inspect_safety.py",
+    "coordination/progress/hourly/20261116_1713_AUTO_2A_MAYA_P0_SHA_PIN_V10.json"
+  ],
+  "next": "Native V51 owner-authorised READ-ONLY with new inspector: inspect pinned Maya ELF SHA, manual STOP and lease, real GGUF shard inventory/seekable capacity; no blind service restart or pack."
+}
