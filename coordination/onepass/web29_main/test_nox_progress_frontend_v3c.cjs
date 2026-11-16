@@ -27,6 +27,21 @@ const stale=normalize({...data,generated_at:'2020-01-01T00:00:00Z',metrics:{ttft
 assert.equal(stale.liveFresh,false);assert.equal(stale.metrics.ttft_ms,null);
 assert.equal(nativeFresh({...data,generated_at:liveStamp},Date.parse(liveStamp)+121000),false);
 
+// V14-5-10: native RUNNING is only a live task indication while the owner feed is fresh.
+// A stale snapshot or a lost API refresh must fail closed without rewriting historical PASS.
+const nativeActive={id:'task-running',kind:'self_improvement',state:'active',
+ evidence:'native',at:liveStamp,title:'Task in flight',summary:'owner readback pending'};
+const liveActive=normalize({...data,generated_at:liveStamp,events:[nativeActive]});
+assert.equal(liveActive.events[0].state,'active','fresh native in-flight state remains visible');
+const staleActive=normalize({...data,generated_at:'2020-01-01T00:00:00Z',events:[nativeActive]});
+assert.equal(staleActive.events[0].state,'unknown','stale native task must not display RUNNING');
+const offlineActive=expireNative(liveActive);
+assert.equal(offlineActive.liveFresh,false);
+assert.equal(offlineActive.events[0].state,'unknown','lost owner feed clears RUNNING appearance');
+assert.equal(liveActive.events[0].state,'active','expiration must not mutate earlier readback');
+assert.match(content,/state\.data=expireNative\(state\.data\);renderMetrics\(\);renderEvents\(\);renderHours\(\)/,
+ 'offline fallback must re-render task and hour cards, not just GPU metrics');
+
 const weightProof={receipt_sha256:A,step_before:3,step_after:6,successful_optimizer_updates:2,tensor_before:'b'.repeat(64),tensor_after:'c'.repeat(64),checkpoint_sha256:'d'.repeat(64)};
 const verifiedWeights=normalize({...data,generated_at:liveStamp,metrics:{ttft_ms:300,gpu0_percent:40},
  events:[{id:'native-weight',kind:'weights',state:'verified',evidence:'native',at:liveStamp,title:'Checkpoint',proof:weightProof}],
@@ -53,6 +68,8 @@ assert.equal(disconnected.metrics.ttft_ms,null);
 assert.equal(disconnected.metrics.gpu0_percent,null);
 assert.equal(nativeGroupValue(disconnected,'weights'),null);
 assert.equal(verifiedWeights.metrics.ttft_ms,300); // historical object never modified
+assert.equal(expireNative(verifiedWeights).events[0].state,'verified',
+ 'historical SHA-gated PASS must survive transient disconnect');
 assert.match(content,/if\(e\.status===401\|\|e\.status===403\).*detailBody.*replaceChildren/); // revoke owner details
 
 const forgedAggregate=normalize({...data,generated_at:liveStamp,events:verifiedWeights.events,
