@@ -63,6 +63,12 @@ jobs:
           node --check coordination/onepass/web29_main/site/pc/progress/nox-progress.js
           node coordination/onepass/web29_main/test_nox_progress_frontend_v3c.cjs
 
+      - name: Original WEB29 3D idle Motion / contrast reduced-motion source acceptance
+        run: |
+          set -euo pipefail
+          node --check coordination/onepass/web29_3d_20261116/site/nox-motion-idle-loader.js
+          node --test coordination/onepass/web29_3d_20261116/tests/test_motion_idle_loader.mjs
+
       - name: No server or weight action in this workflow
         run: |
           echo 'NOX_ONEPASS_SOURCE_ONLY=true'
