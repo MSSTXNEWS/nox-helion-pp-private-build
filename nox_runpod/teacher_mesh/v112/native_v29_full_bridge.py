@@ -358,6 +358,40 @@ def _overlay_v122_owner_ui(raw: bytes, *, expected_sha: str = _V122_FROZEN_NOX_U
     return source.encode('utf-8')
 
 
+async def _next_native_completion_or_stop(provider, payload, cancel: asyncio.Event):
+    """Race provider setup (including HTTP headers) against scoped STOP.
+
+    A provider may wait for upstream response headers before returning its
+    StreamingResponse. Keep STOP and browser disconnect responsive during that
+    setup phase too. Cancelling this task closes the provider's pending request;
+    it does not prove that native GPU work has stopped.
+    """
+    if cancel.is_set():
+        return ('stop', None)
+    completion_task = asyncio.ensure_future(provider(payload))
+    stop_task = asyncio.create_task(cancel.wait())
+    try:
+        finished, _ = await asyncio.wait(
+            {completion_task, stop_task}, return_when=asyncio.FIRST_COMPLETED)
+        # If the provider is already done in the same loop turn, return its
+        # response so the caller's finally block can close its body iterator.
+        if completion_task in finished:
+            return ('completion', await completion_task)
+        if stop_task in finished or cancel.is_set():
+            completion_task.cancel()
+            try:
+                await asyncio.wait_for(completion_task, timeout=0.5)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+            return ('stop', None)
+        return ('completion', await completion_task)
+    finally:
+        if not completion_task.done():
+            completion_task.cancel()
+        stop_task.cancel()
+        await asyncio.gather(completion_task, stop_task, return_exceptions=True)
+
+
 async def _next_native_chunk_or_stop(iterator, cancel: asyncio.Event):
     """Race the next real model token against scoped STOP, with no busy-wait.
 
@@ -654,7 +688,11 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             wire=None;buffer='';answer='';complete=False
             try:
                 yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM'})
-                wire=await trusted['_proxy_completion'](payload)
+                provider_event,wire=await _next_native_completion_or_stop(
+                    trusted['_proxy_completion'],payload,cancel)
+                if provider_event=='stop' or cancel.is_set():
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                    return
                 if not hasattr(wire,'body_iterator'):
                     yield _jsonl({'type':'error','error':'HOLD_NATIVE_STREAM_MISSING'})
                     return
