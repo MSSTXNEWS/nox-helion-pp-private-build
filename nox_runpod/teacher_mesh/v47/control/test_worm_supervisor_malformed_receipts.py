@@ -98,6 +98,27 @@ class ProgressStallTests(unittest.TestCase):
         missing = worm.audit_process_progress({"trainer": sample}, {}, now_unix=4000)
         self.assertEqual(missing["holds"][0]["reason"], "NEED_TWO_NATIVE_SAMPLES")
 
+    def test_stale_snapshot_cannot_claim_the_trainer_stalled(self):
+        before = {"trainer": self.sample(25, 1000)}
+        now = {"trainer": self.sample(25, 2900)}
+        result = worm.audit_process_progress(now, before, now_unix=4000)
+        self.assertEqual(result["suspected_stalls"], [])
+        self.assertEqual(result["holds"][0]["reason"], "STALE_NATIVE_PROGRESS_READBACK")
+
+    def test_model_revision_change_requires_fresh_baseline(self):
+        before = self.sample(25, 1000)
+        before["revision_sha256"] = "a" * 64
+        now = self.sample(25, 4000)
+        now["revision_sha256"] = "b" * 64
+        result = worm.audit_process_progress({"trainer": now}, {"trainer": before},
+                                             now_unix=4000)
+        self.assertEqual(result["holds"][0]["reason"], "NEW_WORK_REVISION_BASELINE")
+        self.assertEqual(result["suspected_stalls"], [])
+        del now["revision_sha256"]
+        result = worm.audit_process_progress({"trainer": now}, {"trainer": before},
+                                             now_unix=4000)
+        self.assertEqual(result["holds"][0]["reason"], "HOLD_PROGRESS_REVISION_PROOF")
+
     def test_queue_audit_emits_stall_report_without_mutating_queue(self):
         observed = observations("RUNNING")
         observed["process_progress_previous"] = {"trainer": self.sample(25, 1000)}
