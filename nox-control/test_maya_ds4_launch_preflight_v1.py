@@ -472,7 +472,9 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
             "packer_output_dir": "/synthetic/model/maya-ds4",
         }
-        with patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value={"state": "BINARY_BUILD_ATTESTED_SOURCE_ONLY"}), \
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
@@ -494,6 +496,24 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
         self.assertIn("CPU-lane experts read in-place", got["expert_mapping"])
         self.assertNotIn("--mmap-experts", got["argv"])
         self.assertFalse(got["measured"])
+
+    def test_profile_holds_without_local_sm70_binary_attestation(self):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value={"state": "HOLD_MAYA_CMAKE_CUDA_ARCHITECTURES"}) as attest, \
+                patch.object(PROFILE.preflight, "evaluate_source_plan") as run:
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+                tensor_role_inventory=synthetic_tensor_roles(),
+            )
+        self.assertEqual(got["state"], "HOLD_MAYA_CMAKE_CUDA_ARCHITECTURES")
+        self.assertFalse(got["launchable"])
+        attest.assert_called_once_with(PROFILE.MAYA_BINARY, PROFILE.MAYA_BINARY_SHA256)
+        run.assert_not_called()
 
     def test_profile_stop_and_unknown_stop_block_before_preflight(self):
         for stop in (True, None, 0, "unknown"):
@@ -528,7 +548,9 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             "model_dir": "/synthetic/model",
             "output_dir": "/synthetic/model/maya-ds4",
         }
-        with patch.object(PROFILE.preflight, "observe_packer_output", return_value=packed):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value={"state": "BINARY_BUILD_ATTESTED_SOURCE_ONLY"}), \
+                patch.object(PROFILE.preflight, "observe_packer_output", return_value=packed):
             missing = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
