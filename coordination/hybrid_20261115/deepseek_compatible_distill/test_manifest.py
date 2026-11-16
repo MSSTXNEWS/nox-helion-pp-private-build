@@ -1,0 +1,74 @@
+"""Pure source checks only; no network, GPU, checkpoint, or host access."""
+import copy
+import json
+import unittest
+from pathlib import Path
+
+from verify_manifest import validate
+
+MANIFEST = json.loads(Path(__file__).with_name("manifest.v1.json").read_text(encoding="utf-8"))
+
+
+class DistillationManifestTest(unittest.TestCase):
+    def test_current_candidate_is_pinned_and_fail_closed(self):
+        result = validate(MANIFEST)
+        self.assertEqual(result["state"], "HOLD")
+        self.assertFalse(result["training_started"])
+        self.assertIn("STUDENT_LICENSE_REVIEW_REQUIRED", result["blockers"])
+        self.assertIn("CORPUS_NOT_VERIFIED", result["blockers"])
+        self.assertIn("OWNER_LEASE_NOT_VERIFIED", result["blockers"])
+        self.assertIn("CHECKPOINT_RESTORE_NOT_TESTED", result["blockers"])
+
+    def test_exact_teacher_payload_total_matches_reported_missing_bytes(self):
+        artifacts = MANIFEST["teacher"]["artifacts"]
+        self.assertEqual(sum(a["bytes"] for a in artifacts), 248834257920)
+        missing = [a for a in artifacts if a["reported_missing"]]
+        self.assertEqual(len(missing), 5)
+        self.assertEqual(sum(a["bytes"] for a in missing), 248828477216)
+
+    def test_student_is_non_qwen_pinned_hf_safetensors(self):
+        student = MANIFEST["student"]
+        self.assertEqual(student["model_id"], "deepseek-ai/DeepSeek-R1-Distill-Llama-8B")
+        self.assertEqual(student["revision"], "6a6f4aa4197940add57724a7707d069478df56b1")
+        self.assertEqual(student["architecture"], "LlamaForCausalLM")
+        self.assertEqual(sum(x["bytes"] for x in student["weight_shards"]),
+                         student["expected_weight_bytes"])
+        self.assertNotIn("Qwen", student["model_id"])
+
+    def test_gguf_cannot_become_trainable_target(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["teacher"]["training_target"] = True
+        changed["method"]["gguf_direct_weight_training"] = True
+        result = validate(changed)
+        self.assertIn("GGUF_TEACHER_IS_INFERENCE_ONLY", result["blockers"])
+        self.assertIn("GGUF_DIRECT_TRAINING_FORBIDDEN", result["blockers"])
+
+    def test_moving_hf_revision_is_rejected(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["student"]["revision"] = "main"
+        self.assertIn("STUDENT_REVISION_UNPINNED", validate(changed)["blockers"])
+
+    def test_license_gate_cannot_be_bypassed_by_repo_mit_tag(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["student"]["license_review_required"] = False
+        changed["native_gates"]["license_review"] = True
+        # The source manifest still records Llama 3.1 lineage; the verifier requires
+        # an explicit resolution state to remove this hold.
+        self.assertIn("STUDENT_LICENSE_REVIEW_REQUIRED", validate(changed)["blockers"])
+
+    def test_holdout_must_remain_frozen_and_hash_pinned(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["corpus"]["splits"]["holdout"]["frozen_before_training"] = False
+        changed["corpus"]["splits"]["holdout"]["sha256"] = "a" * 64
+        self.assertIn("HOLDOUT_NOT_FROZEN", validate(changed)["blockers"])
+
+    def test_training_flag_never_clears_other_gates(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["training_enabled"] = True
+        result = validate(changed)
+        self.assertIn("TRAINING_MUST_REMAIN_DISABLED", result["blockers"])
+        self.assertEqual(result["state"], "HOLD")
+
+
+if __name__ == "__main__":
+    unittest.main()
