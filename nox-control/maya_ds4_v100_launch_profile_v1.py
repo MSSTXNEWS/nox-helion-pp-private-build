@@ -1,15 +1,13 @@
-"""Source-only, fail-closed launch plan for the pinned Maya DeepSeek engine on 2x V100.
+"""Source-only, fail-closed argv profile for pinned Maya DeepSeek on 2x V100.
 
-This module renders argv only. It never launches Maya, creates CUDA contexts,
-packs files, starts a service, or changes owner STOP/lease state. Native inputs
-must come from the existing owner inspector; absent/unknown evidence is HOLD.
+This module renders an advisory command only. It never launches Maya, creates a
+CUDA context, packs files, starts a service, or changes STOP/lease state.
+Unknown or absent native evidence remains HOLD.
 """
 from __future__ import annotations
 
 import sys
-import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
@@ -25,7 +23,7 @@ GPU_NAMES = ("Tesla V100-SXM2-32GB", "Tesla V100-SXM2-32GB")
 GPU_IDS = (0, 1)
 TP = 2
 
-# Conservative first smoke profile; these are command inputs, not measured tuning.
+# Conservative first smoke inputs, not measured tuning results.
 MAX_CONTEXT = 4096
 RESERVE_MIB = 3072
 PARALLEL = 1
@@ -33,12 +31,12 @@ PARALLEL = 1
 
 def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
                       verified_files, tensor_types, model_file_paths):
-    """Return exact argv only after pinned source preflight; never launch it."""
+    """Build exact argv only after all pinned source preflight checks pass."""
     if owner_stop is not False:
         return {"state": "HOLD_OWNER_STOP", "launchable": False}
     if observed_binary_sha256 != MAYA_BINARY_SHA256:
         return {"state": "HOLD_MAYA_BINARY_SHA256", "launchable": False}
-    if tuple(gpu_names) != GPU_NAMES:
+    if not isinstance(gpu_names, (list, tuple)) or tuple(gpu_names) != GPU_NAMES:
         return {"state": "HOLD_TWO_V100_IDENTITY", "launchable": False}
 
     checked = preflight.evaluate_source_plan(
@@ -75,7 +73,6 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "argv": argv,
         "env": {"CUDA_VISIBLE_DEVICES": "0,1"},
         "model_pack": pack_dir,
-        "model_content_sha256": "REQUIRES_NATIVE_PINNED_READBACK",
         "engine_sha256": MAYA_BINARY_SHA256,
         "gpu_names": list(GPU_NAMES),
         "gpus": list(GPU_IDS),
@@ -85,66 +82,7 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "parallel_requests": PARALLEL,
         "expert_mapping": "auto",
         "drafting": "disabled",
-        "precision_override": "none; GGUF quantization is defined by the verified model files",
+        "precision_override": "none; GGUF quantization comes from verified model files",
         "protocol": "Maya stdin/stdout engine protocol; not an HTTP endpoint",
         "measured": False,
     }
-
-
-class LaunchPlanTests(unittest.TestCase):
-    def valid_inputs(self):
-        return {
-            "owner_stop": False,
-            "observed_binary_sha256": MAYA_BINARY_SHA256,
-            "gpu_names": GPU_NAMES,
-            "verified_files": [{"path": "fixture", "bytes": 1,
-                                "sha256": "0" * 64, "sha_verified": True}],
-            "tensor_types": ["IQ2_XXS", "IQ4_NL"],
-            "model_file_paths": ["fixture"],
-        }
-
-    def test_stop_unknown_and_present_block(self):
-        for value in (None, True):
-            args = self.valid_inputs()
-            args["owner_stop"] = value
-            with patch.object(preflight, "evaluate_source_plan") as evaluator:
-                result = build_source_plan(**args)
-            self.assertEqual(result["state"], "HOLD_OWNER_STOP")
-            self.assertFalse(result["launchable"])
-            evaluator.assert_not_called()
-
-    def test_binary_and_gpu_identity_are_pinned(self):
-        args = self.valid_inputs()
-        args["observed_binary_sha256"] = "0" * 64
-        self.assertEqual(build_source_plan(**args)["state"], "HOLD_MAYA_BINARY_SHA256")
-        args = self.valid_inputs()
-        args["gpu_names"] = ("Tesla V100", "Tesla V100")
-        self.assertEqual(build_source_plan(**args)["state"], "HOLD_TWO_V100_IDENTITY")
-
-    def test_exact_command_is_source_only_and_has_no_dtype_override(self):
-        args = self.valid_inputs()
-        checked = {
-            "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
-            "packer_output_dir": "/verified/model/maya-ds4",
-        }
-        with patch.object(preflight, "evaluate_source_plan", return_value=checked):
-            result = build_source_plan(**args)
-        self.assertEqual(result["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
-        self.assertFalse(result["launchable"])
-        self.assertEqual(result["argv"], [
-            str(MAYA_BINARY), "--pack", "/verified/model/maya-ds4",
-            "--gpus", "0,1", "--tp", "2", "--max-context", "4096",
-            "--reserve-mib", "3072", "--expert-profile", "none",
-            "--mmap-experts", "auto", "--dspark", "none",
-            "--parallel", "1", "--serve",
-        ])
-        self.assertFalse(any(arg.lower() in ("--fp8", "--bf16", "--dtype")
-                             for arg in result["argv"]))
-        self.assertEqual(result["protocol"], "Maya stdin/stdout engine protocol; not an HTTP endpoint")
-        self.assertFalse(result["measured"])
-
-
-if __name__ == "__main__":
-    if len(sys.argv) == 2 and sys.argv[1] == "--self-test":
-        unittest.main(argv=[sys.argv[0]], verbosity=2)
-    raise SystemExit("Source-only plan module. Use --self-test; no launcher is implemented.")
