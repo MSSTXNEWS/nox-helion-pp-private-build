@@ -64,14 +64,16 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
     }
     return new Response('NOT_NATIVE_ROUTE',{status:404});
   };
-  const window={NOX_NATIVE_OWNER:owner,fetch:old};
+  const uiEvents=[];
+  const window={NOX_NATIVE_OWNER:owner,fetch:old,dispatchEvent:event=>{uiEvents.push(event);return true;}};
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
-  const context={window,location,URL,Request,Response,ReadableStream,
+  function CustomEvent(type,init){this.type=type;this.detail=init?.detail||{};}
+  const context={window,location,URL,Request,Response,ReadableStream,CustomEvent,
     TextDecoder,TextEncoder,AbortController,performance,console,setTimeout,clearTimeout,
     requestAnimationFrame:raf};
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
   vm.runInNewContext(JS,context,{filename:file});
-  return {fetch:(...args)=>window.fetch(...args),calls,window};
+  return {fetch:(...args)=>window.fetch(...args),calls,window,uiEvents};
 }
 async function events(response){
   const rd=response.body.getReader(),decoder=new TextDecoder();let buf='',seen=[];
@@ -192,6 +194,12 @@ test('V135 SSE cancel signals same-session STOP before aborting the same native 
   assert(f.calls.indexOf(stops[0])>f.calls.indexOf(calls[0]));
   assert(sawLiveModelSignal,'scoped STOP must reach V112 before the stream is aborted');
   assert.notEqual(JSON.parse(stops[0].body).gpu_stop_verified,true);
+  const outcome=f.uiEvents.find(e=>e.type==='nox:native-stop-result')?.detail;
+  assert.equal(outcome?.transport_outcome,'signal_accepted');
+  assert.equal(outcome?.signal_accepted,true);
+  assert.equal(outcome?.gpu_stop_verified,false);
+  assert.equal(f.uiEvents.some(e=>e.type==='nox:native-phase'&&e.detail.phase==='stopped'),false,
+    'browser cancellation is not proof that model/GPU stopped');
 });
 test('V135 already-aborted caller never starts a native inference',async()=>{
   const f=fake(),abort=new AbortController();
@@ -1256,6 +1264,47 @@ test('V174 abort before model headers cancels the same POST and keeps GPU stop u
   assert.equal(calls.indexOf(stopCalls[0])>calls.findIndex(x=>x.path==='/api/nox/chat/stream'),true);
   assert.equal(stopCalls[0].credentials,'same-origin');
   assert.equal(calls.some(x=>x.path==='/api/ui/memory/dialogs/history'),false);
+});
+
+test('V179 STOP UI outcome distinguishes rejection, timeout and accepted transport',async()=>{
+  for(const expected of ['rejected','timeout','signal_accepted']){
+    const caller=new AbortController();
+    const onStop=()=>expected==='rejected'
+      ?Response.json({status:'HOLD',reason:'NO_ACTIVE_SESSION_STREAM'},{status:409})
+      :expected==='timeout'
+        ?new Promise(()=>{})
+        :Response.json({status:'STOP_REQUESTED',stream_cancellation_signalled:true,gpu_stop_verified:false});
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+      undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,onStop);
+    const response=await f.fetch('/api/nox/chat',{method:'POST',signal:caller.signal,
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v179-'+expected})});
+    const reader=response.body.getReader(),decoder=new TextDecoder();
+    const first=await reader.read();
+    assert.equal(JSON.parse(decoder.decode(first.value).slice(6).trim()).type,'meta');
+    caller.abort();
+    let raw='',frames=[];
+    for(;;){
+      const chunk=await Promise.race([reader.read(),
+        new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V179_STOP_OUTCOME')),2500))]);
+      if(chunk.done)break;
+      raw+=decoder.decode(chunk.value,{stream:true});
+      let boundary;
+      while((boundary=raw.indexOf('\\n\\n'))>=0){
+        const item=raw.slice(0,boundary);raw=raw.slice(boundary+2);
+        if(item.startsWith('data: '))frames.push(JSON.parse(item.slice(6)));
+      }
+    }
+    const failure=frames.find(e=>e.type==='error');
+    assert(failure,'cancellation must produce a terminal error event');
+    assert.equal(failure.gpu_stop_verified,false);
+    assert.equal(failure.stop_transport_outcome,expected);
+    assert.equal(failure.stop_signal_accepted,expected==='signal_accepted');
+    const ui=f.uiEvents.find(e=>e.type==='nox:native-stop-result')?.detail;
+    assert.equal(ui?.transport_outcome,expected);
+    assert.equal(ui?.signal_accepted,expected==='signal_accepted');
+    assert.equal(ui?.gpu_stop_verified,false);
+    assert.equal(f.uiEvents.some(e=>e.type==='nox:native-phase'&&e.detail.phase==='stopped'),false);
+  }
 });
 
 test('V178 V135 cancellation uses only V112 authenticated cookie-scoped STOP',()=>{
