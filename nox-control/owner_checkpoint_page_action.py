@@ -11,7 +11,7 @@ ENTRY_SHA='133e49867e5b97493d6bc3047b1b45ec993b42f3772a6e1cde3e6b605a268d95'
 ACTION='page'
 TRANSFER_ID='6cd298dabe632e4fadd3a39442b328a0'
 MANIFEST_SHA='7a367c32efad33b09b4f19b26866fd57262ad4914e1afa32b1815774a0923270'
-PAGE_INDICES=(1,2)
+PAGE_INDICES=(3,4)
 
 def main():
     raw=base64.b64decode(BUNDLE.get('owner_checkpoint_backup_deflated_entry.py',''),validate=True)
