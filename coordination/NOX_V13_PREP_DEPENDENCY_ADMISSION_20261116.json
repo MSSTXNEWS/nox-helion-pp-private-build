@@ -199,7 +199,23 @@
         ]
       ],
       "historical_total_bytes": 16766066457,
-      "current_native_hashes": "UNKNOWN"
+      "current_native_hashes": "UNKNOWN",
+      "media_owner_stop_admission": {
+        "status": "SOURCE_TESTED_NATIVE_INSTALL_HOLD",
+        "source_path": "nox-control/owner_media_install.py",
+        "source_commit": "a98186c65495fe75fc54db3d27f4dadd38c4ac22",
+        "source_blob": "970b7a315c07bc09f1dea3607e22f975feaf9714",
+        "regression_path": "nox-control/test_owner_media_install.py",
+        "test_commit": "9854b13eb889d46b030cf6728df097411e80d51e",
+        "test_blob": "46bf234f3e90be8541ccf7622778dad810e004c2",
+        "ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43952659869",
+        "test_scope": "21/21 focused offline media tests PASS",
+        "new_guards": ["state/STOP.flag", "state/OWNER_MAINTENANCE.flag", "owner_maintenance.lock flock", "recheck after engine/GPU lock acquisition"],
+        "native_install": false,
+        "gpu_test": "NOT_RUN",
+        "model_generation": "NOT_RUN",
+        "rollback_source_blob": "9e1aaf8ee0b7e3e0cff84c8500b0943e62d43c1e"
+      }
     },
     "D7": {
       "kind": "CONDITIONAL",
