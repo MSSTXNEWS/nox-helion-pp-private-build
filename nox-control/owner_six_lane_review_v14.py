@@ -47,6 +47,12 @@ REVIEW_TASKS = {
  ),
 }
 
+# Only tasks in this exact source-reviewed DAG belong to this reviewer.
+REVIEW_IDS = frozenset(
+    "V14-" + role + "-" + str(index)
+    for role in ROLES for index in range(1, len(REVIEW_TASKS[role]) + 1)
+)
+
 def make_review_batch():
     """Typed DAG for the existing owner_subagent_processes.Subagents IPC pool."""
     tasks = []
@@ -160,13 +166,20 @@ def coordinator_reconcile(review, native_receipts):
         return {"state": "HOLD_NO_SIX_REVIEW", "done": 0}
     if not isinstance(native_receipts, (list, tuple)):
         return {"state": "HOLD_NATIVE_RECEIPTS", "done": 0}
+    pids = review.get("pids")
+    if (review.get("actual_processes") != len(ROLES)
+        or review.get("tasks_reviewed") != len(REVIEW_IDS)
+        or not isinstance(pids, Mapping) or set(pids) != set(ROLES)
+        or len(set(pids.values())) != len(ROLES)
+        or any(type(pid) is not int or pid < 2 for pid in pids.values())):
+        return {"state": "HOLD_REVIEW_IDENTITY", "done": 0}
     approved = []
     seen = set()
     for row in native_receipts:
         if not isinstance(row, Mapping):
             continue
         task_id, sha = row.get("task_id"), row.get("result_sha256")
-        if (not isinstance(task_id, str) or not task_id.startswith("V14-")
+        if (not isinstance(task_id, str) or task_id not in REVIEW_IDS
             or task_id in seen or not isinstance(sha, str) or len(sha) != 64
             or any(c not in "0123456789abcdef" for c in sha)
             or row.get("native_verified") is not True
