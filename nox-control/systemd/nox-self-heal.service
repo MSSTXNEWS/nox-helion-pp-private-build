@@ -10,7 +10,6 @@ User=root
 ExecStart=/usr/bin/python3 /opt/nox/nox-control/nox_self_heal.py --policy /etc/nox/repair-policy.json --state /var/lib/nox/repair-state.json
 Restart=always
 RestartSec=10
-RuntimeMaxSec=900
 TimeoutStopSec=10
 NoNewPrivileges=true
 PrivateTmp=true
