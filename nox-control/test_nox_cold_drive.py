@@ -256,7 +256,13 @@ class ColdTests(unittest.TestCase):
         self.assertEqual(json.loads((self.receipts/'last-batch.json').read_text())['sources_deleted'],0)
 
 
+    def stage_range(self):
+        remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+        remote.parent.mkdir(parents=True,exist_ok=True)
+        remote.write_bytes(self.src.read_bytes())
+
     def test_verified_range_uses_exact_block_not_entire_model(self):
+        self.stage_range()
         body=self.src.read_bytes()
         selected=body[111:111+512]
         got=cold.read_verified_range(
@@ -267,6 +273,7 @@ class ColdTests(unittest.TestCase):
         self.assertTrue(self.src.exists())
 
     def test_verified_range_block_hash_rejects_corruption(self):
+        self.stage_range()
         body=self.src.read_bytes()
         with patch.dict(os.environ,{'TEST_CORRUPT':'1'}),self.assertRaisesRegex(
                 RuntimeError,'HOLD_RANGE_SHA_MISMATCH'):
@@ -274,6 +281,7 @@ class ColdTests(unittest.TestCase):
                                      hashlib.sha256(body[:100]).hexdigest(),stop_probe=lambda:False)
 
     def test_verified_range_overfetch_never_publishes(self):
+        self.stage_range()
         body=self.src.read_bytes()
         with patch.dict(os.environ,{'TEST_IGNORE_RANGE':'1'}),self.assertRaisesRegex(
                 RuntimeError,'HOLD_RANGE_OVERSIZE'):
@@ -281,6 +289,7 @@ class ColdTests(unittest.TestCase):
                                      hashlib.sha256(body[100:200]).hexdigest(),stop_probe=lambda:False)
 
     def test_verified_range_network_failure_and_timeout(self):
+        self.stage_range()
         body=self.src.read_bytes()
         hashpart=hashlib.sha256(body[:100]).hexdigest()
         with patch.dict(os.environ,{'TEST_CAT_FAILURE':'1'}),self.assertRaisesRegex(
@@ -293,6 +302,7 @@ class ColdTests(unittest.TestCase):
                                      timeout=.25,stop_probe=lambda:False)
 
     def test_verified_range_stop_and_bounds_before_network(self):
+        self.stage_range()
         body=self.src.read_bytes()
         hashpart=hashlib.sha256(body[:100]).hexdigest()
         with patch.object(cold,'command') as cmd,self.assertRaisesRegex(
@@ -309,6 +319,7 @@ class ColdTests(unittest.TestCase):
             cmd.assert_not_called()
 
     def test_verified_range_object_size_changed(self):
+        self.stage_range()
         body=self.src.read_bytes()
         with self.assertRaisesRegex(RuntimeError,'HOLD_RANGE_OBJECT_SIZE_CHANGED'):
             cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body)+1,
