@@ -813,4 +813,63 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertEqual(bytes(sink.data),b'ab')
         self.assertEqual(checks['count'],3)
 
+
+    def test_cli_manifest_bounded_read_uses_pinned_six_file_identities(self):
+        manifest = {
+            'schema': 'NOX_MODEL_DOWNLOAD_MANIFEST_V1',
+            'repository': m.REPO, 'revision': m.REVISION,
+            'total_unique_gguf_bytes': 248834257920,
+            'files': [
+                {'path': name, 'bytes': size, 'sha256': sha,
+                 'url': f'https://huggingface.co/{m.REPO}/resolve/{m.REVISION}/{name}'}
+                for name, (size, sha) in m.PINNED_FILE_FACTS.items()
+            ],
+            'alias': {'path': 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf',
+                      'target': 'DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf',
+                      'duplicate_bytes': False}
+        }
+        manifest_path = self.root / 'pinned-manifest.json'
+        manifest_path.write_text(json.dumps(manifest))
+        rows = m.load_manifest_from_path(manifest_path)
+        self.assertEqual(set(rows), set(m.PINNED_FILE_FACTS))
+        self.assertFalse(any((self.root / name).exists() for name in rows))
+
+    def test_cli_manifest_oversize_fails_before_any_read(self):
+        path = self.root / 'oversize-manifest.json'
+        path.write_bytes(b'{' + b' ' * m.MAX_MANIFEST_BYTES)
+        with patch.object(m.os, 'read', side_effect=AssertionError('unbounded read')):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_MANIFEST_LIMIT'):
+                m.load_manifest_from_path(path)
+
+    def test_cli_manifest_symlink_and_fifo_fail_without_follow_or_block(self):
+        import os
+        original = self.root / 'original.json'
+        original.write_bytes(b'{}')
+        alias = self.root / 'manifest-link.json'
+        alias.symlink_to(original)
+        with self.assertRaisesRegex(m.Hold, 'HOLD_SYMLINK_PATH'):
+            m.load_manifest_from_path(alias)
+        fifo = self.root / 'manifest-fifo.json'
+        os.mkfifo(fifo)
+        with self.assertRaisesRegex(m.Hold, 'HOLD_NONREGULAR_OR_UNOWNED_FILE'):
+            m.load_manifest_from_path(fifo)
+
+    def test_cli_manifest_inode_swap_between_stat_and_open_is_rejected(self):
+        import os
+        original = self.root / 'manifest.json'
+        replacement = self.root / 'replacement.json'
+        original.write_bytes(b'{}')
+        replacement.write_bytes(b'{}')
+        real_open = os.open
+        switched = [False]
+        def open_after_swap(path, flags, *args, **kwargs):
+            if Path(path) == original and not switched[0]:
+                switched[0] = True
+                os.replace(replacement, original)
+            return real_open(path, flags, *args, **kwargs)
+        with patch.object(m.os, 'open', side_effect=open_after_swap):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_MANIFEST_CHANGED'):
+                m.load_manifest_from_path(original)
+        self.assertTrue(switched[0])
+
 if __name__=='__main__':unittest.main()
