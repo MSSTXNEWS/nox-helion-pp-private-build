@@ -114,7 +114,7 @@ class ReadOnlySafety(unittest.TestCase):
             260,'HOLD_CGROUP_OOM_LOG_BUDGET'))['verified'],True)
 
     def test_gpu_and_oom_evidence_never_use_unparseable_prefix_slices(self):
-        self.assertIn('bounded_native_json(\\n    gpu_pid_map',code)
+        self.assertIn('bounded_native_json(\n    gpu_pid_map',code)
         self.assertIn('HOLD_GPU_PID_LOG_BUDGET',code)
         self.assertNotIn("separators=(',',':'))[:740]",code)
 
