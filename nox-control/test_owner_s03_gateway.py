@@ -54,6 +54,7 @@ class GatewayTests(unittest.TestCase):
         # The canonical manual eighth STOP flag must block S03 indexing.
         # A dangling symlink is still a deliberate STOP, never "not observed".
         flag=self.root/'state/STOP.flag'
+        flag.parent.mkdir(parents=True,exist_ok=True)
         for style in ('regular','dangling_symlink'):
             with self.subTest(style=style):
                 if style=='regular':
