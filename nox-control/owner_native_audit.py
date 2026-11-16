@@ -89,13 +89,39 @@ def supervisor():
         if rows:break
     return {'available':True,'results':results}
 
+def v13_wheelhouse_admission(record):
+    """Metadata-only ABI gate for the Drive CP311/cu126 wheelhouse, never an installer.
+
+    A matching wheel tag is not a GPU smoke, driver test, license approval, or
+    native installation receipt. Incompatible installed Python environments
+    must not be modified to make a source check pass.
+    """
+    if not isinstance(record, dict) or not isinstance(record.get('_runtime'), dict):
+        return 'HOLD_WHEELHOUSE_RUNTIME_ABI_UNKNOWN'
+    runtime = record['_runtime']
+    if runtime.get('python_abi') != 'cpython-311':
+        return 'HOLD_WHEELHOUSE_CP311_PYTHON_ABI_MISMATCH'
+    if runtime.get('platform') != 'linux-x86_64':
+        return 'HOLD_WHEELHOUSE_LINUX_X86_64_PLATFORM_MISMATCH'
+    version = record.get('torch')
+    if not isinstance(version, str) or not version:
+        return 'HOLD_WHEELHOUSE_TORCH_BUILD_UNKNOWN'
+    if not version.endswith('+cu126'):
+        return 'HOLD_WHEELHOUSE_CU126_TORCH_BUILD_MISMATCH'
+    return 'SOURCE_ONLY_WHEELHOUSE_ABI_CANDIDATE_NATIVE_SM70_HOLD'
+
+
 def packages():
-    code="import importlib.metadata as m,json; names=['torch','transformers','accelerate','datasets','deepspeed','safetensors','peft','bitsandbytes','trl','psutil','nvidia-ml-py']; d={};\nfor n in names:\n try:d[n]=m.version(n)\n except m.PackageNotFoundError:d[n]=None\nprint(json.dumps(d))"
+    code="import importlib.metadata as m,json,sys,sysconfig; names=['torch','transformers','accelerate','datasets','deepspeed','safetensors','peft','bitsandbytes','trl','psutil','nvidia-ml-py','diffusers','opencv-python','imageio-ffmpeg']; d={'_runtime':{'python_abi':sys.implementation.cache_tag,'python_version':'.'.join(map(str,sys.version_info[:3])),'platform':sysconfig.get_platform()}};\nfor n in names:\n try:d[n]=m.version(n)\n except m.PackageNotFoundError:d[n]=None\nprint(json.dumps(d))"
     found={}
-    for p in ('/opt/venv/bin/python','/root/nox/.venv/bin/python','/usr/bin/python3'):
+    for p in ('/root/venv_volta/bin/python','/opt/venv/bin/python','/root/nox/.venv/bin/python','/usr/bin/python3'):
         if Path(p).is_file():
             rc,out=run([p,'-c',code])
-            try:found[p]=json.loads(out) if rc==0 else {'status':'IMPORT_FAILED'}
+            try:
+                row=json.loads(out) if rc==0 else {'status':'IMPORT_FAILED'}
+                if isinstance(row,dict) and rc==0:
+                    row['_wheelhouse_candidate']=v13_wheelhouse_admission(row)
+                found[p]=row
             except ValueError:found[p]={'status':'INVALID_OUTPUT'}
     return found
 
