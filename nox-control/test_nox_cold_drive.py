@@ -42,7 +42,8 @@ elif cmd=='cat':
     sys.stdout.buffer.write(b)
     if os.environ.get('TEST_CAT_FAILURE'):sys.exit(5)
 elif cmd=='size':
-    p=loc(args[1]);print(json.dumps({'bytes':p.stat().st_size,'count':1}))
+    item=next((v for v in args[1:] if not v.startswith('--')),None)
+    p=loc(item);print(json.dumps({'bytes':p.stat().st_size,'count':1}))
 else:sys.exit(12)
 '''
 
