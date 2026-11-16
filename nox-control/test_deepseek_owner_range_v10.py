@@ -98,6 +98,58 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertEqual(receipt.read_bytes(),old)
         self.assertFalse(list(self.dst.glob('.nox-ds-v10-*')))
 
+    def test_reused_final_rejects_wrong_or_ambiguous_receipt_without_network(self):
+        # The final weight may be sound while an existing metadata receipt is
+        # damaged/forged. Existence alone cannot certify its provenance.
+        final=self.dst/self.name; final.write_bytes(self.content)
+        receipt=self.dst/(self.name+'.verified.json')
+        doc={'schema':'NOX_DEEPSEEK_RANGE_RECEIPT_V10','request':self.request,
+             'file':self.name,'bytes':self.row['bytes'],
+             'sha256':self.row['sha256'],'new_bytes':0,'at_unix':time.time()}
+        good=json.dumps(doc)
+        cases=[
+            ('wrong_sha', json.dumps(dict(doc,sha256='0'*64)), 'HOLD_RECEIPT_IDENTITY'),
+            ('wrong_file', json.dumps(dict(doc,file='unexpected.gguf')), 'HOLD_RECEIPT_IDENTITY'),
+            ('wrong_bytes', json.dumps(dict(doc,bytes=len(self.content)+1)), 'HOLD_RECEIPT_IDENTITY'),
+            ('bool_bytes', json.dumps(dict(doc,bytes=True)), 'HOLD_RECEIPT_IDENTITY'),
+            ('missing_schema', json.dumps(dict(doc,schema='WRONG')), 'HOLD_RECEIPT_IDENTITY'),
+            ('invalid_request', json.dumps(dict(doc,request='other-owner')), 'HOLD_RECEIPT_IDENTITY'),
+            ('duplicate_key', good[:-1]+', "sha256":"'+doc['sha256']+'"}', 'HOLD_RECEIPT_DUPLICATE_KEY'),
+            ('nonfinite', good[:-1]+', "extension":NaN}', 'HOLD_RECEIPT_NONFINITE'),
+            ('infinite_float', good.replace('"at_unix": '+str(doc['at_unix']), '"at_unix": 1e999'),
+             'HOLD_RECEIPT_IDENTITY'),
+            ('truncated', good[:-1], 'HOLD_RECEIPT_INVALID_JSON'),
+            ('oversized', good[:-1]+', "extra":"'+('X'*8192)+'"}', 'HOLD_RECEIPT_SIZE'),
+        ]
+        for name,wire,reason in cases:
+            with self.subTest(case=name):
+                receipt.write_bytes(wire.encode())
+                with self.assertRaisesRegex(m.Hold,reason):
+                    self.do(opener=lambda *a,**k:self.fail('network on ambiguous receipt'))
+                self.assertEqual(final.read_bytes(),self.content)
+                self.assertEqual(receipt.read_bytes(),wire.encode())
+
+    def test_reused_final_receipt_fifo_swap_cannot_hang(self):
+        import os
+        final=self.dst/self.name; final.write_bytes(self.content)
+        receipt=self.dst/(self.name+'.verified.json')
+        receipt.write_text(json.dumps({
+            'schema':'NOX_DEEPSEEK_RANGE_RECEIPT_V10','request':self.request,
+            'file':self.name,'bytes':self.row['bytes'],
+            'sha256':self.row['sha256'],'new_bytes':0,'at_unix':time.time()}))
+        real_open=os.open
+        swapped=[]
+        def race(path,flags,*args,**kwargs):
+            if Path(path)==receipt and not swapped:
+                self.assertTrue(flags & os.O_NONBLOCK)
+                receipt.unlink();os.mkfifo(receipt);swapped.append(True)
+            return real_open(path,flags,*args,**kwargs)
+        with patch.object(m.os,'open',side_effect=race):
+            with self.assertRaisesRegex(m.Hold,'HOLD_RECEIPT_CHANGED'):
+                self.do(opener=lambda *a,**k:self.fail('no network after receipt race'))
+        self.assertTrue(swapped)
+        self.assertEqual(final.read_bytes(),self.content)
+
     def test_reused_final_dangling_receipt_is_never_replaced(self):
         final=self.dst/self.name;final.write_bytes(self.content)
         receipt=self.dst/(self.name+'.verified.json')
