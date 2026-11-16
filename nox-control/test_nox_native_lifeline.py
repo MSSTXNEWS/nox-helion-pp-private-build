@@ -274,6 +274,43 @@ class LifelineTests(unittest.TestCase):
                 lifeline.read_state(path)
             self.assertEqual(path.read_text(encoding="utf-8"), raw)
 
+    def test_ambiguous_persisted_attempts_never_erase_repair_budget(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "state.json"
+            payloads = (
+                '{"services":{},"services":{"nox-dispatcher-t855u":{"attempts":[1]}}}',
+                '{"services":{"nox-dispatcher-t855u":{"attempts":[1],"attempts":[]}}}',
+                '{"services":{"nox-dispatcher-t855u":{"attempts":[NaN]}}}',
+                '{"services":{"nox-dispatcher-t855u":{"failures":Infinity}}}',
+            )
+            for raw in payloads:
+                with self.subTest(raw=raw):
+                    path.write_text(raw, encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "HOLD_STATE_CORRUPT"):
+                        lifeline.read_state(path)
+                    self.assertEqual(path.read_text(encoding="utf-8"), raw)
+
+    def test_all_histories_preflight_before_any_service_start(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = policy()
+            p["services"].append({"name": "nox-priority-scheduler", "restart": True})
+            for bad in (-1, True, 3.2, "2", 1001):
+                with self.subTest(failures=bad):
+                    state = self.state(d)
+                    state["services"] = {
+                        "nox-dispatcher-t855u": {"attempts": [], "failures": 3},
+                        "nox-priority-scheduler": {"attempts": [], "failures": bad},
+                    }
+                    commands = []
+                    def observer(name, command="status"):
+                        commands.append((name, command))
+                        return {"state": "STOPPED", "pid": None, "rc": 0}
+                    with self.assertRaisesRegex(ValueError, "HOLD_REPAIR_HISTORY_CORRUPT"):
+                        lifeline.tick(p, state, now=1000, status_fn=observer,
+                                      stop_fn=lambda: False)
+                    self.assertEqual(commands, [])
+                    self.assertEqual(state["services"]["nox-dispatcher-t855u"]["failures"], 3)
+
     def test_corrupt_in_memory_repair_ledger_is_not_reset_or_restarted(self):
         with tempfile.TemporaryDirectory() as d:
             for value in (None, ["damaged"]):

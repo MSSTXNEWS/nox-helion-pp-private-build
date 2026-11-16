@@ -97,6 +97,20 @@ def atomic(path, obj):
         if os.path.exists(tmp):
             os.unlink(tmp)
 
+def _unique_state_pairs(pairs):
+    """A duplicate persisted key can erase a previous repair attempt."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("HOLD_STATE_DUPLICATE_KEY")
+        result[key] = value
+    return result
+
+
+def _reject_state_nonfinite(value):
+    raise ValueError("HOLD_STATE_NONFINITE")
+
+
 def read_state(path):
     # Missing state is a first-install bootstrap. Existing unreadable state must
     # HOLD; resetting its retry history could silently reopen the start budget.
@@ -116,8 +130,9 @@ def read_state(path):
             raise ValueError("HOLD_STATE_PERMISSIONS")
         with os.fdopen(fd, "r", encoding="utf-8") as stream:
             fd = -1
-            obj = json.load(stream)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            obj = json.load(stream, object_pairs_hook=_unique_state_pairs,
+                            parse_constant=_reject_state_nonfinite)
+    except (OSError, UnicodeError, ValueError) as exc:
         raise ValueError("HOLD_STATE_CORRUPT") from exc
     finally:
         if fd >= 0:
@@ -191,12 +206,27 @@ def supervise(name, command="status"):
         state, pid = "UNKNOWN", None
     return {"state": state, "pid": pid, "rc": p.returncode}
 
+def _check_all_repair_histories(records, now):
+    """Fail before touching ANY service if even a later service ledger is corrupt."""
+    if not isinstance(records, dict):
+        raise ValueError("HOLD_REPAIR_HISTORY_CORRUPT")
+    for name, row in records.items():
+        if not isinstance(name, str) or not isinstance(row, dict):
+            raise ValueError("HOLD_REPAIR_HISTORY_CORRUPT")
+        attempts = row.get("attempts", [])
+        failures = row.get("failures", 0)
+        if (not isinstance(attempts, list) or
+            any(type(x) not in (int, float) or not 0 <= x <= now for x in attempts) or
+            attempts != sorted(attempts) or
+            type(failures) is not int or not 0 <= failures <= 1000):
+            raise ValueError("HOLD_REPAIR_HISTORY_CORRUPT")
+
+
 def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn=stopped):
     now = time.time() if now is None else now
     observed = []
     records = state.setdefault("services", {})
-    if not isinstance(records, dict):
-        raise ValueError("HOLD_REPAIR_HISTORY_CORRUPT")
+    _check_all_repair_histories(records, now)
     for spec in policy["services"]:
         name = spec["name"]
         current = status_fn(name, "status")
@@ -210,7 +240,7 @@ def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn
             raise ValueError("HOLD_REPAIR_HISTORY_CORRUPT")
         attempts = [x for x in attempts if now - x < 86400]
         row["attempts"] = attempts
-        previous = int(row.get("failures", 0))
+        previous = row.get("failures", 0)
         bad = current.get("state") in REPAIRABLE
         row["failures"] = min(previous + 1, 1000) if bad else 0
         action = "observed_healthy" if current.get("state") == "RUNNING" else "observation_only"
