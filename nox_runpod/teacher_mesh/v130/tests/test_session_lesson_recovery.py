@@ -28,6 +28,9 @@ class SessionLessonRecoveryTests(unittest.TestCase):
             source = root / "synthetic-source.sqlite"
             clone = root / "disposable-clone.sqlite"
             stop = root / "STOP"
+            self.assertTrue(source.resolve().is_relative_to(root.resolve()))
+            self.assertTrue(clone.resolve().is_relative_to(root.resolve()))
+            self.assertTrue(stop.resolve().is_relative_to(root.resolve()))
             with sqlite3.connect(source) as db:
                 db.execute("CREATE TABLE s03_items(id TEXT PRIMARY KEY,segment TEXT,text TEXT,provenance TEXT,sha256 TEXT,meta TEXT,ts TEXT)")
             source_before = hashlib.sha256(source.read_bytes()).hexdigest()
