@@ -183,6 +183,7 @@ def validate_baseline(baseline):
 
 
 def main():
+    global OWNER_LOCK_FD
     sha = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
     if not AUDIT_SHA.fullmatch(sha) or not request.isdigit():
