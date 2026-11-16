@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2B_GATEWAY_IDENTITY_PIN_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "2B",
+  "stream": "2/3",
+  "observation_time_msk": "2026-11-16T12:20:52+03:00",
+  "observation_time_utc": "2026-11-16T09:20:52Z",
+  "head_before": "35f5cdbeea46c3f94191551a97bc905869a923a5",
+  "source_patch_commit": "099c46b0a6bd70f3d9865515f910fc9bb66e624e",
+  "source_path": "coordination/progress/hourly/2026-11-16T06_AUTO_2B_S03_FIVE_GATE_READONLY.py",
+  "source_blob_before": "0c7de831ca75537853d95a9aa8367f6edbfb34df",
+  "source_blob_after": "cb4036ba3d35f49e4cdad55b41667eb635676b40",
+  "base_dependency_path": "nox-control/owner_s03_gateway.py",
+  "base_dependency_blob": "b2ec720822b1b8e89238f5c1959436cbb5590706",
+  "error_id": "NOX-P1-S03-ARBITRARY-64HEX-MODEL-IDENTITY-FALSE-COVERAGE-20261116",
+  "cause": "Existing read-only gate3 accepted any single 64-hex model_identity and complete content/shape coverage as DONE_SOURCE without checking the original S03 gateway's pinned BGE model content/protocol/dimensions or prior verified model attestation.",
+  "fixed": "Compare vector model identity to exact original gateway content_identity digest and require consistent gateway model_content_identity/model_file_stat entries incl recorded full_file_hash_verified and pinned bytes. Keep native model artifact verification false; no second index/database.",
+  "safety": "The native model file itself was not rehashed in this run. DB attestation consistency does not replace live model bytes, writer lease, STOP, ACL, checkpoint or offsite restore.",
+  "source_tests": {
+    "isolated_exact_helper_reproduction": "6/6 PASS normal Python and 6/6 PASS python -O; 6 adversarial metadata cases, PUBLIC SYNTHETIC ONLY",
+    "contract_static_cases": "3/3 pass",
+    "patched_source_readback": "PASS",
+    "patched_script_full_selftest": "NOT_RUN",
+    "general_ci_exact_commit": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43839746296",
+    "general_ci_scope": "SUCCESS SOURCE suite; not evidence patched script selftest or live OneHost",
+    "native_e2e": "NOT_RUN"
+  },
+  "tasks": [
+    {
+      "n": 1,
+      "state": "HOLD_NATIVE",
+      "detail": "No current authorized /root/nox/kb/knowledge.sqlite quick_check, inode/WAL/SHM ACL, PersonaID readback"
+    },
+    {
+      "n": 2,
+      "state": "HOLD_NATIVE",
+      "detail": "No current owner_s03_gateway -> CallbackS03Adapter -> CognitiveOverlay -> actual generator callback receipt"
+    },
+    {
+      "n": 3,
+      "state": "DONE_SOURCE_LIMITED",
+      "detail": "Prevent false DONE for arbitrary vector model ID; pinned original BGE identity and consistency of persisted gateway metadata; no current FTS/BGE counts/latency measured"
+    },
+    {
+      "n": 4,
+      "state": "HOLD_NATIVE",
+      "detail": "Earlier imported PersonaID/malformed-metadata source gate retained; no factual Genesis/provenance live readback"
+    },
+    {
+      "n": 5,
+      "state": "HOLD_NATIVE",
+      "detail": "No controlled write->reload/restart->recall ACL or independent verified restore"
+    }
+  ],
+  "WEIGHTS": {
+    "state": "HOLD_CURRENT",
+    "last_documented_student": "Qwen3.5-9B",
+    "last_reported_updates_historical": 8,
+    "successful_updates_new_verified": 0,
+    "checkpoint8_sha_historical": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+    "current_pid": null,
+    "current_loss": null,
+    "current_gradients": null,
+    "current_checkpoint_restore_verified": false,
+    "primary_candidate": "DeepSeek-V4.1-Flash-1017 GSQ-RCO IQ2_XXS",
+    "model_download_bytes_new": 0
+  },
+  "KNOWLEDGE": {
+    "state": "HOLD_CURRENT_NATIVE",
+    "current_vector_count": null,
+    "current_fts_coverage": null,
+    "recall_latency_p95_ms": null,
+    "persona_acl_live_verified": false,
+    "hunter_s03_readback_verified": false,
+    "s03_records_changed_by_slot": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "state": "HOLD_CURRENT_NATIVE",
+    "GPU0": null,
+    "GPU1": null,
+    "RAM": null,
+    "SSD": null,
+    "CPU_quota": null,
+    "current_dispatcher_pid": null,
+    "worker_pids": null,
+    "current_stop": null,
+    "writer_lease": null,
+    "restarts": 0,
+    "downloads": 0,
+    "deleted_bytes": 0
+  },
+  "production_deployed": false,
+  "native_modified": false,
+  "original_WEB29_modified": false,
+  "original_S03_modified": false,
+  "owner_stop_reset": false,
+  "next_action": "On exact latest HEAD run existing owner-authorized V51 read-only original OneHost S03 + gateway content identity/model artifact + ACL/FTS/Persona callbacks with STOP/lease receipt. Only after restore and writer fence do live repairs.",
+  "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/099c46b0a6bd70f3d9865515f910fc9bb66e624e"
+}
