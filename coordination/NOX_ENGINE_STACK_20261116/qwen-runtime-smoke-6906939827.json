@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_QWEN_RUNTIME_SMOKE_OWNER_RECEIPT_V1",
+  "request": "6906939827",
+  "source_sha": "f6e8173b3f11e156e7a661470353d8f8fd38780e",
+  "smoke_source_sha256": "3d92e3dd0a50bf928dbd2f10f562a65ad2e590915d0e3d564a748cabadc950c1",
+  "started_at": 1794801888.4048018,
+  "initial_hold": {
+    "present": true,
+    "kind": "OWNER_HYBRID_FAILED",
+    "request": "6906626126",
+    "sha256": "5e42cb8f5e86562ce338a0791a2332f0e86c28672cdf239b0adff17e9c559cd7",
+    "bytes": 39,
+    "mtime_ns": 1794800818291540000,
+    "preserved": true
+  },
+  "training_started": false,
+  "weights_changed": false,
+  "services_modified": false,
+  "exit_code": 0,
+  "native_proof": {
+    "fp16_matmul_backward": true,
+    "full_model_loaded": false,
+    "gpu": {
+      "existing_compute_residents": [
+        {
+          "pid": 3986161,
+          "used_mib": 470
+        }
+      ],
+      "free_mib_before": 32021,
+      "physical_gpu": 1,
+      "scope": "TINY_DIAGNOSTIC_5_PERCENT_ALLOCATOR_CAP_NOT_FULL_MODEL_ADMISSION"
+    },
+    "hold_preserved_sha256": "5e42cb8f5e86562ce338a0791a2332f0e86c28672cdf239b0adff17e9c559cd7",
+    "initial_trainer_state": "FATAL",
+    "install_performed": false,
+    "manual_stop_cleared": false,
+    "memfd": {
+      "bytes": 96,
+      "full_model_loaded": false,
+      "safetensors_version": "0.8.0",
+      "state": "REAL_SAFETENSORS_MEMFD_READ_AND_SEAL_VERIFIED",
+      "tensor_exact": true,
+      "writes_rejected": true
+    },
+    "nf4_input_backward": true,
+    "optimizer_updates_proven": false,
+    "peak_gpu_reserved_bytes": 23068672,
+    "peft_builtin_class_imported": "LoraConfig",
+    "pid": 626376,
+    "qwen_builtin_class_imported": "Qwen3_5ForConditionalGeneration",
+    "runtime": {
+      "device_capability": [
+        7,
+        0
+      ],
+      "optional_fast_kernels_present": [],
+      "packages": {
+        "accelerate": "1.15.0",
+        "bitsandbytes": "0.50.2",
+        "peft": "0.21.3",
+        "safetensors": "0.8.0",
+        "tokenizers": "0.23.3",
+        "transformers": "5.23.0"
+      },
+      "python_version": [
+        3,
+        12,
+        16
+      ],
+      "torch_arch_list": [
+        "sm_50",
+        "sm_60",
+        "sm_70",
+        "sm_75",
+        "sm_80",
+        "sm_86",
+        "sm_90"
+      ],
+      "torch_cuda": "12.4",
+      "torch_version": "2.6.0+cu124"
+    },
+    "schema": "NOX_QWEN35_RUNTIME_SMOKE_V1",
+    "services_modified": false,
+    "source_sha256": "3d92e3dd0a50bf928dbd2f10f562a65ad2e590915d0e3d564a748cabadc950c1",
+    "state": "NATIVE_RUNTIME_SMOKE_PASSED",
+    "time": 1794801893.7841032
+  },
+  "hold_unchanged": true,
+  "state": "NATIVE_RUNTIME_SMOKE_PASSED",
+  "finished_at": 1794801895.3287628,
+  "evidence": {
+    "workflow_run_id": 43801797035,
+    "workflow_job_id": 133083549756,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43801797035",
+    "remote_exit_code": 0,
+    "workflow_conclusion": "success"
+  }
+}

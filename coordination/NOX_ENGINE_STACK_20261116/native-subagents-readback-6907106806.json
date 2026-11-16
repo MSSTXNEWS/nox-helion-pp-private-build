@@ -1,0 +1,200 @@
+{
+  "schema": "NOX_NATIVE_SUBAGENT_READBACK_V1",
+  "read_only": true,
+  "initial_request": "6906985850",
+  "initial_source": "41fbe63b5e57b1172956f8264c403aefa338aa6d",
+  "observed_at": 1794802433.924463,
+  "state": "OBSERVED_NOT_RUNTIME_ACCEPTED",
+  "source_pins": {
+    "owner_subagent_processes.py": {
+      "sha256": "117842bc8f0f9adf825213403ebcd2139f80db692d4589ac05b3359381551164",
+      "expected": "117842bc8f0f9adf825213403ebcd2139f80db692d4589ac05b3359381551164",
+      "matches": true
+    },
+    "owner_autonomy_pool.py": {
+      "sha256": "8e14f7f7909cefb38686420638621ebf0903e337070ad95d733d86632064ef95",
+      "expected": "8e14f7f7909cefb38686420638621ebf0903e337070ad95d733d86632064ef95",
+      "matches": true
+    },
+    "owner_subagent_dispatcher.py": {
+      "sha256": "28f2e21786cef4fb4a2627ac810789dc1b5b65c8196712c19eb5d8398d70b800",
+      "expected": "28f2e21786cef4fb4a2627ac810789dc1b5b65c8196712c19eb5d8398d70b800",
+      "matches": true
+    },
+    "nox_dispatcher_t855u.py": {
+      "sha256": "66afe5e6aa5e3a333c21a86c6aee942c3afd0bf9be007d14f9288a4740281e32",
+      "expected": "66afe5e6aa5e3a333c21a86c6aee942c3afd0bf9be007d14f9288a4740281e32",
+      "matches": true
+    },
+    "s03_memory.py": {
+      "sha256": "3ebdc3585f32bafbd0e1210ceee286b174a657c37696e16fce9fcafb57c43e10",
+      "expected": "3ebdc3585f32bafbd0e1210ceee286b174a657c37696e16fce9fcafb57c43e10",
+      "matches": true
+    }
+  },
+  "remember_function_source": "def remember(text: str, segment: str = \"M1\", provenance: str = \"chat\",\n             salience: float = 0.5, meta: Optional[dict] = None, db: Path = DB) -> dict:\n    if segment not in SEGMENTS:\n        raise ValueError(f\"bad segment {segment}\")\n    text = (text or \"\").strip()\n    if not text:\n        return {}\n    h = sha(segment + \"|\" + text)\n    con = init_db(db)\n    existing = con.execute(\"SELECT id FROM s03_items WHERE sha256=?\", (h,)).fetchone()\n    if existing:\n        rec = {\"id\": existing[\"id\"], \"sha256\": h, \"dedup\": True}\n        con.close()\n        return rec\n    iid = \"S03-\" + uuid.uuid4().hex[:16]\n    ts = now_iso()\n    con.execute(\n        \"INSERT INTO s03_items(id,segment,text,provenance,sha256,salience,ts,meta) VALUES(?,?,?,?,?,?,?,?)\",\n        (iid, segment, text[:8000], provenance, h, float(salience), ts,\n         json.dumps(meta or {}, ensure_ascii=False)),\n    )\n    try:\n        con.execute(\"INSERT INTO s03_fts(id,text,segment) VALUES(?,?,?)\", (iid, text[:8000], segment))\n    except sqlite3.Error:\n        pass\n    con.commit(); con.close()\n    return {\"id\": iid, \"segment\": segment, \"sha256\": h, \"ts\": ts, \"dedup\": False}",
+  "config_sha256": "803eb3f0d08f9b139313af00b8d5eea407a85de6422a0dba8c796cb4dbed5eff",
+  "policy_sha256": "84780aaf911a229a654995f38972cdad5d99c72ab38842f76f787ec280acb46f",
+  "tasks": [
+    {
+      "id": "owner.native.v06.memory.84780aaf911a",
+      "status": "blocked",
+      "claim": null,
+      "note": "WAIT_S03_ADMISSION_READBACK",
+      "s03_records": [
+        {
+          "s03_item_id": "S03-fdba9601c77541b7",
+          "task_id": "owner.native.v06.memory.84780aaf911a",
+          "job_id": "nox-native-c47baa93f3c3c6f0a2cfdbb6",
+          "phase": "QUEUE_ADMITTED_NOT_EXECUTED",
+          "segment": "M2",
+          "stored_sha256": "6fb855be46755243f696652721ebf8f82b42b392a9dda8c3c542b929daea26ce",
+          "computed_text_sha256": "a0e59fd20edac84ab9fdbbf28a2ae8d352614ec735ac6716d20fcc2df944a020",
+          "computed_segment_text_sha256": "6fb855be46755243f696652721ebf8f82b42b392a9dda8c3c542b929daea26ce",
+          "plain_hash_matches": false,
+          "segment_hash_matches": true,
+          "expected_text_matches": true,
+          "provenance_matches": true,
+          "meta_receipt_matches": true,
+          "text_or_private_meta_exported": false
+        }
+      ]
+    },
+    {
+      "id": "owner.native.v06.runtime.84780aaf911a",
+      "status": "blocked",
+      "claim": null,
+      "note": "WAIT_S03_ADMISSION_READBACK",
+      "s03_records": [
+        {
+          "s03_item_id": "S03-571049691ccb4428",
+          "task_id": "owner.native.v06.runtime.84780aaf911a",
+          "job_id": "nox-native-669b4b9208bf0019aa4d89a9",
+          "phase": "QUEUE_ADMITTED_NOT_EXECUTED",
+          "segment": "M2",
+          "stored_sha256": "48b0eb6873a50e26e39c4d56af590b9ccbb0054436979b5632d6c0f28ae67ece",
+          "computed_text_sha256": "0840b9a146c98176893f908164528d06ae78257f6e39cc0d8eaedc8ca644b37f",
+          "computed_segment_text_sha256": "48b0eb6873a50e26e39c4d56af590b9ccbb0054436979b5632d6c0f28ae67ece",
+          "plain_hash_matches": false,
+          "segment_hash_matches": true,
+          "expected_text_matches": true,
+          "provenance_matches": true,
+          "meta_receipt_matches": true,
+          "text_or_private_meta_exported": false
+        }
+      ]
+    },
+    {
+      "id": "owner.native.v06.weights.84780aaf911a",
+      "status": "blocked",
+      "claim": null,
+      "note": "WAIT_S03_ADMISSION_READBACK",
+      "s03_records": [
+        {
+          "s03_item_id": "S03-7301ffbc0df54ae0",
+          "task_id": "owner.native.v06.weights.84780aaf911a",
+          "job_id": "nox-native-6f63e763762d185cf2768fa9",
+          "phase": "QUEUE_ADMITTED_NOT_EXECUTED",
+          "segment": "M2",
+          "stored_sha256": "005c08364163875d32cdedc3c65f63fc9f321d4d947b8e2e67438fa8a3ddd1c8",
+          "computed_text_sha256": "5dbff1929c076beeadd1e2d347571bce3f5edc43b382372282d6e2e2dda5a398",
+          "computed_segment_text_sha256": "005c08364163875d32cdedc3c65f63fc9f321d4d947b8e2e67438fa8a3ddd1c8",
+          "plain_hash_matches": false,
+          "segment_hash_matches": true,
+          "expected_text_matches": true,
+          "provenance_matches": true,
+          "meta_receipt_matches": true,
+          "text_or_private_meta_exported": false
+        }
+      ]
+    }
+  ],
+  "all_tasks_done": false,
+  "native_subexecutors": {
+    "director": {
+      "pid": 628762,
+      "ppid": 115,
+      "process_starttime": 159476590
+    },
+    "last_admission": {
+      "active_subexecutor_processes": 3,
+      "jobs_started": 0,
+      "state": "NATIVE_QUEUE_IDLE"
+    },
+    "mode": "NORMAL",
+    "observed_at": 1794802433.6575267,
+    "same_model_shared": true,
+    "target": 3,
+    "thread_runner_count": 6,
+    "workers": [
+      {
+        "current_task": null,
+        "heartbeat_at": 1794802430.080043,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 628943,
+        "ppid": 628762,
+        "process_starttime": 159477827,
+        "role": "runtime",
+        "state": "RUNNING"
+      },
+      {
+        "current_task": null,
+        "heartbeat_at": 1794802430.112067,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 628944,
+        "ppid": 628762,
+        "process_starttime": 159477827,
+        "role": "memory",
+        "state": "RUNNING"
+      },
+      {
+        "current_task": null,
+        "heartbeat_at": 1794802430.113422,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 628945,
+        "ppid": 628762,
+        "process_starttime": 159477827,
+        "role": "weights",
+        "state": "RUNNING"
+      }
+    ]
+  },
+  "legacy_thread_runner_count": 6,
+  "install_receipt": {
+    "state": "HOLD",
+    "error": "HOLD_NATIVE_REVIEW_TASK_BLOCKED",
+    "source_installed": true,
+    "dispatcher_after_sha256": "66afe5e6aa5e3a333c21a86c6aee942c3afd0bf9be007d14f9288a4740281e32",
+    "active_model_before": {
+      "pid": 7637,
+      "starttime": 149189867
+    },
+    "legacy_training_hold_after": {
+      "bytes": 39,
+      "classification": "OWNER_HYBRID_FAILED",
+      "mtime_ns": 1794800818291540000,
+      "path": "/root/nox/state/TRAIN_HOLD.flag",
+      "present": true,
+      "request": "6906626126",
+      "sha256": "5e42cb8f5e86562ce338a0791a2332f0e86c28672cdf239b0adff17e9c559cd7"
+    }
+  },
+  "health": {
+    "8080": 200,
+    "8081": 200,
+    "8082": 200
+  },
+  "evidence": {
+    "workflow_run_id": 43802737144,
+    "workflow_job_id": 133086515576,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43802737144",
+    "workflow_conclusion": "success",
+    "scope": "READ_ONLY_DIAGNOSIS_NOT_NATIVE_JOB_COMPLETION"
+  }
+}

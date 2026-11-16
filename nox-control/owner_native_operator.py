@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_smoke_entry.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_install_entry.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -93,6 +93,9 @@ def run_native(action,request_id):
         for path in ('nox-control/nox_cold_drive.py','nox-control/owner_native_audit.py',
                      'nox-control/owner_native_inspect.py','nox-control/hybrid_training_entry.py',
                      'nox-control/owner_qwen_runtime_smoke.py',
+                     'nox-control/qwen_student_training_entry.py','nox-control/owner_qwen_training_contract.py',
+                     'nox-control/owner_qwen_memfd.py','nox-control/owner_qwen_corpus.py',
+                     'nox-control/qwen35_9b_manifest.json',
                      'nox-control/owner_capacity_probe.py','nox-control/owner_component_tasks.py',
                      'nox-control/owner_dispatcher_mentor.py','nox-control/nox_pc_export.py',
                      'nox-control/owner_chat_probe.py','nox-control/owner_native_repair.py',

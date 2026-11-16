@@ -1,0 +1,66 @@
+{
+  "schema": "NOX_NATIVE_SUBAGENT_INSTALL_RECEIPT_V1",
+  "request": "6906985850",
+  "source_sha": "41fbe63b5e57b1172956f8264c403aefa338aa6d",
+  "started_at": 1794802036.6773634,
+  "state": "HOLD",
+  "policy_sha256": "84780aaf911a229a654995f38972cdad5d99c72ab38842f76f787ec280acb46f",
+  "policy_bytes": 17375,
+  "source_pins": {
+    "owner_subagent_processes.py": "117842bc8f0f9adf825213403ebcd2139f80db692d4589ac05b3359381551164",
+    "owner_autonomy_pool.py": "8e14f7f7909cefb38686420638621ebf0903e337070ad95d733d86632064ef95",
+    "owner_subagent_dispatcher.py": "28f2e21786cef4fb4a2627ac810789dc1b5b65c8196712c19eb5d8398d70b800"
+  },
+  "dispatcher_before_sha256": "a4097dae395f4289a7c67faa0047c0027dc128a9607f3f8189b4270bc5f7426b",
+  "dispatcher_after_sha256": "66afe5e6aa5e3a333c21a86c6aee942c3afd0bf9be007d14f9288a4740281e32",
+  "active_model_before": {
+    "pid": 7637,
+    "starttime": 149189867
+  },
+  "chat_health_before": {
+    "8080": 200,
+    "8081": 200,
+    "8082": 200
+  },
+  "training_started": false,
+  "legacy_training_hold_before": {
+    "path": "/root/nox/state/TRAIN_HOLD.flag",
+    "present": true,
+    "bytes": 39,
+    "mtime_ns": 1794800818291540000,
+    "sha256": "5e42cb8f5e86562ce338a0791a2332f0e86c28672cdf239b0adff17e9c559cd7",
+    "classification": "OWNER_HYBRID_FAILED",
+    "request": "6906626126"
+  },
+  "weights_changed": false,
+  "global_stop_cleared": false,
+  "new_daemon": false,
+  "original_dispatcher_thread_runners": 6,
+  "native_subexecutor_target": 3,
+  "task_holds": [
+    {
+      "id": "owner.native.v06.memory.84780aaf911a",
+      "status": "blocked",
+      "note": "WAIT_S03_ADMISSION_READBACK"
+    }
+  ],
+  "error": "HOLD_NATIVE_REVIEW_TASK_BLOCKED",
+  "source_installed": true,
+  "legacy_training_hold_after": {
+    "path": "/root/nox/state/TRAIN_HOLD.flag",
+    "present": true,
+    "bytes": 39,
+    "mtime_ns": 1794800818291540000,
+    "sha256": "5e42cb8f5e86562ce338a0791a2332f0e86c28672cdf239b0adff17e9c559cd7",
+    "classification": "OWNER_HYBRID_FAILED",
+    "request": "6906626126"
+  },
+  "receipt_path": "/root/nox/state/owner_native_subagents_install_6906985850.json",
+  "evidence": {
+    "workflow_run_id": 43802047594,
+    "workflow_job_id": 133084345133,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43802047594",
+    "remote_exit_code": 2,
+    "workflow_conclusion": "failure"
+  }
+}
