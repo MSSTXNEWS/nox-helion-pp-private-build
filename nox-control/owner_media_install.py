@@ -668,7 +668,8 @@ def v13_owner_stop_present():
     """
     markers = [ROOT / part for part in (
         'STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
-        'state/STOP', 'state/MEDIA_STOP.flag')]
+        'state/STOP', 'state/STOP.flag', 'state/MEDIA_STOP.flag',
+        'state/OWNER_MAINTENANCE.flag')]
     markers.append(Path('/workspace/NOX_STOP'))
     for marker in markers:
         try:
@@ -678,7 +679,23 @@ def v13_owner_stop_present():
             continue
         except OSError:
             return True
-    return False
+    # A held owner maintenance flock is a veto even when its marker is
+    # temporarily absent. Never create, modify, or clear that lease.
+    lease = ROOT / 'state/owner_maintenance.lock'
+    try:
+        fd = os.open(lease, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            return False
+        except OSError:
+            return True
+    finally:
+        os.close(fd)
 
 
 def start_engine(config):
@@ -687,6 +704,9 @@ def start_engine(config):
     if v13_owner_stop_present():
         fail('HOLD_MEDIA_OWNER_STOP_PRESENT')
     with lock('media.lock'),gpu_lease():
+        # Recheck after acquiring the GPU/engine locks; an owner STOP may
+        # arrive between the initial read and the first service operation.
+        if v13_owner_stop_present(): fail('HOLD_MEDIA_OWNER_STOP_PRESENT')
         if not plain(ROOT/'state/TRAIN_HOLD.flag').is_file(): fail('HOLD_MEDIA_TRAINING_MUST_YIELD')
         health_chat()
         current = service_status()
