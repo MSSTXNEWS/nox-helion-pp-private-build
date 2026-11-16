@@ -214,6 +214,26 @@ class ColdTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'HOLD_MODEL_MEMORY_MAPPED'):
             cold.assert_not_open(self.src, self.root/'proc')
 
+    def test_late_process_open_blocks_eviction_on_second_scan(self):
+        row=cold.copy_verified(self.job)
+        with patch.object(cold,'independent_restore',return_value=True), patch.object(
+                cold,'assert_not_open',side_effect=[
+                    None, RuntimeError('HOLD_MODEL_OPEN_BY_PROCESS')]) as scan:
+            with self.assertRaisesRegex(RuntimeError,'HOLD_MODEL_OPEN_BY_PROCESS'):
+                cold.evict_verified(row,self.manifest(),str(self.root/'separate-mount'))
+        self.assertEqual(scan.call_count,2)
+        self.assertTrue(self.src.exists())
+        self.assertFalse(row['source_deleted'])
+
+    def test_successful_fixture_eviction_requires_two_open_scans(self):
+        row=cold.copy_verified(self.job)
+        with patch.object(cold,'independent_restore',return_value=True), patch.object(
+                cold,'assert_not_open') as scan:
+            result=cold.evict_verified(row,self.manifest(),str(self.root/'separate-mount'))
+        self.assertEqual(scan.call_count,2)
+        self.assertTrue(result['source_deleted'])
+        self.assertFalse(self.src.exists())
+
     def test_verified_fixture_eviction_record(self):
         row=cold.copy_verified(self.job)
         with patch.object(cold,'assert_not_open'), patch.object(cold,'independent_restore',return_value=True):

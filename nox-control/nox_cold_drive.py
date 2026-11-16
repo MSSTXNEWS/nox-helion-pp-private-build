@@ -432,6 +432,10 @@ def evict_verified(row, active_manifest, restore_test_dir=None, timeout=3600):
     if identity(src)!=row['identity']:
         raise RuntimeError('HOLD_SOURCE_CHANGED_BEFORE_UNLINK')
     before, allocated = shutil.disk_usage(src.parent).free, src.stat().st_blocks*512
+    # A serving process can open/mmap the model after the earlier scan and
+    # manifest read. Reinspect immediately before irreversible unlink.
+    # This narrows the TOCTOU window; the native controller lease is still mandatory.
+    assert_not_open(src)
     assert_owner_stop_clear()  # Last check; native single-writer lease remains mandatory.
     src.unlink()  # One exact verified regular file; never recursive deletion.
     row.update(independent_restore_verified=True, source_deleted=True,
