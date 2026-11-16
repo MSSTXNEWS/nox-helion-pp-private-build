@@ -19,6 +19,7 @@ class SessionLessonRecoveryTests(unittest.TestCase):
     def test_lesson_import_survives_disposable_clone_restart_and_deduplicates(self):
         lesson = json.loads(FIXTURE.read_text(encoding="utf-8"))
         self.assertEqual(lesson["source_sha256"], hashlib.sha256(lesson["content"].encode()).hexdigest())
+        self.assertEqual(lesson["source_sha256"], "35d188218086cc837778f9d8190e85c7690d6d26366c2559ef85e80a419ef88a")
         self.assertIn("SOURCE_TESTED", lesson["content"])
         self.assertIn("LIVE_VERIFIED", lesson["content"])
         pair = lesson["training_pair_ref"]
