@@ -74,24 +74,24 @@ class MemoryInventoryTests(unittest.TestCase):
 
     def test_process_stat_uses_final_comm_delimiter_for_pid_identity(self):
         # Linux /proc/PID/stat encloses comm in parentheses; comm itself may
-        # contain `) `. The first delimiter corrupts start_ticks and ppid.
+        # contain ") ". The first delimiter corrupts start_ticks and ppid.
         with tempfile.TemporaryDirectory() as temp:
-            proc=Path(temp)
-            worker=proc/'432'
+            proc = Path(temp)
+            worker = proc / '432'
             worker.mkdir()
-            (worker/'cmdline').write_bytes(b'/usr/bin/python3\\0nox-worker.py\\0')
-            (worker/'stat').write_text(
-                '432 (nox) worker) S 1 ' + ' '.join(['0']*17+['987654'])+'\\n')
-            (worker/'environ').write_bytes(b'PROC_NAME=nox-worker\\0')
-            (worker/'status').write_text('NSpid:\\t432\\nVmRSS:\\t10 kB\\nThreads:\\t1\\n')
-            with mock.patch.object(inspector,'PROC',proc), \\
-                 mock.patch.object(inspector,'run',return_value=(0,'')):
-                rows=inspector.processes()
-            result=next(x for x in rows if x.get('pid')==432)
-            self.assertEqual(result['state'],'S')
-            self.assertEqual(result['ppid'],1)
-            self.assertEqual(result['starttime'],'987654')
-            self.assertEqual(result['namespace_pids'],[432])
+            (worker / 'cmdline').write_bytes(b'/usr/bin/python3\0nox-worker.py\0')
+            (worker / 'stat').write_text(
+                '432 (nox) worker) S 1 ' + ' '.join(['0'] * 17 + ['987654']) + '\n')
+            (worker / 'environ').write_bytes(b'PROC_NAME=nox-worker\0')
+            (worker / 'status').write_text('NSpid:\t432\nVmRSS:\t10 kB\nThreads:\t1\n')
+            with mock.patch.object(inspector, 'PROC', proc):
+                with mock.patch.object(inspector, 'run', return_value=(0, '')):
+                    rows = inspector.processes()
+            result = next(x for x in rows if x.get('pid') == 432)
+            self.assertEqual(result['state'], 'S')
+            self.assertEqual(result['ppid'], 1)
+            self.assertEqual(result['starttime'], '987654')
+            self.assertEqual(result['namespace_pids'], [432])
 
     def test_qwen_receipt_is_bounded_metadata_only(self):
         with tempfile.TemporaryDirectory() as temp:
