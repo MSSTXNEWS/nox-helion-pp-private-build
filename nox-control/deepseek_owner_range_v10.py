@@ -230,12 +230,25 @@ def digest(path):
     return h.hexdigest()
 
 def atomic_receipt(path,obj):
+    """Publish one immutable SHA receipt; never replace an earlier owner record.
+
+    os.replace() could silently destroy the previous verification evidence
+    on a conflicting replay. The same-directory hard link is atomic,
+    non-clobbering and durable after fsync; failed publication keeps the
+    existing receipt and removes only our private temporary file.
+    """
     fd,tmp=tempfile.mkstemp(prefix='.nox-ds-v10-',dir=path.parent)
     try:
         with os.fdopen(fd,'wb') as f:
             os.fchmod(f.fileno(),0o600)
             f.write(canonical(obj)); f.flush(); os.fsync(f.fileno())
-        os.replace(tmp,path)
+        try:
+            os.link(tmp,path,follow_symlinks=False)
+        except FileExistsError as exc:
+            raise Hold('HOLD_RECEIPT_ALREADY_EXISTS') from exc
+        dfd=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+        try: os.fsync(dfd)
+        finally: os.close(dfd)
     finally:
         if os.path.exists(tmp): os.unlink(tmp)
 
