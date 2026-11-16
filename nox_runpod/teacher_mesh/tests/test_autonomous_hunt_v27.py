@@ -262,5 +262,50 @@ class TestAutonomy(unittest.TestCase):
         self.assertEqual(result["model_download"],"HOLD_DOWNLOAD_NOT_VERIFIED")
         self.assertEqual(result["training_weight_updates_verified"],0)
 
+    def test_chat_becomes_busy_after_worm_quota_claim_blocks_enqueue(self):
+        h=NativeHarness(); original=h.callbacks()
+        def claim(scope,action,key):
+            accepted=h.claim(scope,action,key)
+            if action=="worm_create":h.current_state["chat_busy"]=True
+            return accepted
+        c=NativeCallbacks(**{**vars(original),"quota_claim":claim})
+        r=HuntDirector(c).tick("owner",now=NOW)
+        self.assertEqual(r["reason"],"STOP_BEFORE_WORM")
+        self.assertFalse(h.created or h.downloads or h.training_jobs)
+
+    def test_trainer_begins_after_model_claim_blocks_staging(self):
+        h=NativeHarness(); original=h.callbacks()
+        def claim(scope,action,key):
+            accepted=h.claim(scope,action,key)
+            if action=="model_download":h.current_state["trainer_running"]=True
+            return accepted
+        c=NativeCallbacks(**{**vars(original),"quota_claim":claim})
+        r=HuntDirector(c).tick("owner",now=NOW)
+        self.assertEqual(r["reason"],"STOP_BEFORE_MODEL_DOWNLOAD")
+        self.assertFalse(h.downloads or h.training_jobs)
+
+    def test_resource_drops_after_training_claim_blocks_trainer(self):
+        h=NativeHarness(); original=h.callbacks()
+        def claim(scope,action,key):
+            accepted=h.claim(scope,action,key)
+            if action=="gpu_train":h.current_state["gpu"]["free_vram_mb"]=0
+            return accepted
+        c=NativeCallbacks(**{**vars(original),"quota_claim":claim})
+        r=HuntDirector(c).tick("owner",now=NOW)
+        self.assertEqual(r["reason"],"STOP_BEFORE_TRAIN")
+        self.assertFalse(h.training_jobs)
+
+    def test_safe70_trip_after_model_claim_blocks_staging(self):
+        h=NativeHarness(); original=h.callbacks()
+        def claim(scope,action,key):
+            accepted=h.claim(scope,action,key)
+            if action=="model_download":
+                h.current_state["gpu"]["samples_hotspot_ge70"]=3
+            return accepted
+        c=NativeCallbacks(**{**vars(original),"quota_claim":claim})
+        r=HuntDirector(c).tick("owner",now=NOW)
+        self.assertEqual(r["reason"],"STOP_BEFORE_MODEL_DOWNLOAD")
+        self.assertFalse(h.downloads)
+
 if __name__=="__main__":
     unittest.main()

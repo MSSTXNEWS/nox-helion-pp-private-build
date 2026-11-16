@@ -124,12 +124,41 @@ class HuntDirector:
         return {"level":level,"score":score,"hours_since_verified_learning":round(hours,2),
                 "literal_emotion":False}
 
-    def _guard_side_effect(self, scope, policy):
+    @staticmethod
+    def _gpu_admission_live(state, policy):
+        """Recheck current owner capacity; native OneHost owns atomic fencing."""
+        gpu=state.get("gpu")
+        if (state.get("trainer_running") is not False or not isinstance(gpu,dict)
+                or gpu.get("chat_gpu_busy") is not False
+                or gpu.get("telemetry_verified") is not True
+                or gpu.get("gpu_owner")!="NOX"):
+            return False
+        if gpu.get("local_windows_gpu") is True:
+            samples=gpu.get("samples_hotspot_ge70")
+            if (gpu.get("hotspot_valid") is not True
+                    or gpu.get("power_sensor_valid") is not True
+                    or gpu.get("safe70_active") is not True
+                    or type(samples) is not int or not 0<=samples<3):
+                return False
+        metrics=(gpu.get("free_disk_gb"),gpu.get("free_vram_mb"),
+                 policy.get("min_free_disk_gb",25),
+                 policy.get("min_free_vram_mb",2048))
+        if any(type(x) not in (int,float) or not math.isfinite(x) or x<0
+               for x in metrics):
+            return False
+        disk,vram,min_disk,min_vram=metrics
+        return disk>=min_disk and vram>=min_vram
+
+    def _guard_side_effect(self, scope, policy, *, gpu_side_effect=False):
         if not self._stop_ok():return False
         try:
             head=self.c.source_head()
             current=self.c.signed_policy(scope)
-            return head==policy["source_head"] and current==policy
+            fresh=self._state(scope)
+            return (head==policy["source_head"] and current==policy
+                    and fresh is not None and fresh.get("chat_busy") is False
+                    and (not gpu_side_effect
+                         or self._gpu_admission_live(fresh,policy)))
         except Exception:return False
 
     def _claim(self, scope, action, key, policy):
@@ -238,7 +267,7 @@ class HuntDirector:
             if isinstance(candidate,dict) and self._eligible_model(candidate,policy):
                 key="model-"+candidate["model_id"]+"@"+candidate["revision"]
                 if self._claim(scope,"model_download",key,policy):
-                    if not self._guard_side_effect(scope,policy):return self._hold("STOP_BEFORE_MODEL_DOWNLOAD")
+                    if not self._guard_side_effect(scope,policy,gpu_side_effect=True):return self._hold("STOP_BEFORE_MODEL_DOWNLOAD")
                     try:download=self.c.stage_model_existing(scope,dict(candidate,staging_only=True))
                     except Exception:download=None
                     response["model_download"]=(
@@ -248,7 +277,7 @@ class HuntDirector:
                         and 0<download["bytes"]<=candidate["max_bytes"] and
                         isinstance(download.get("sha256"),str)
                         and SHA_RE.fullmatch(download["sha256"]) and
-                        self._guard_side_effect(scope,policy)
+                        self._guard_side_effect(scope,policy,gpu_side_effect=True)
                         else "HOLD_DOWNLOAD_NOT_VERIFIED")
         # A model download alone is NOT learning. Only call the installed
         # trainer if a separate vetted training dataset & holdout exist.
@@ -258,7 +287,7 @@ class HuntDirector:
             if isinstance(train,dict) and self._eligible_train(train,state,policy):
                 key="train-"+train["dataset_sha256"]+"@"+train["student_sha256"]
                 if self._claim(scope,"gpu_train",key,policy):
-                    if not self._guard_side_effect(scope,policy):return self._hold("STOP_BEFORE_TRAIN")
+                    if not self._guard_side_effect(scope,policy,gpu_side_effect=True):return self._hold("STOP_BEFORE_TRAIN")
                     try:started=self.c.launch_existing_trainer(scope,dict(train,
                         staging_only=True,no_auto_promotion=True,fail_closed_stop=True))
                     except Exception:started=None
@@ -267,7 +296,7 @@ class HuntDirector:
                         if isinstance(started,dict)
                         and started.get("accepted_by_existing_trainer") is True
                         and isinstance(started.get("job_id"),str) and len(started["job_id"])>=8
-                        and self._guard_side_effect(scope,policy)
+                        and self._guard_side_effect(scope,policy,gpu_side_effect=True)
                         else "HOLD_TRAINER_NOT_ACCEPTED_OR_REVOKED")
         return response
 
