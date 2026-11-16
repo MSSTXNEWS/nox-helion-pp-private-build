@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot native audit. Six OS workers, no daemon, no mutation or credentials output."""
+"""One-shot native audit. Seven bounded OS workers, no daemon, no mutation or credentials output."""
 from __future__ import annotations
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -119,16 +119,65 @@ def storage():
     return {'rclone_present':True,'list_rc':status,'remotes':names,'checks':checks,
             'known_config_present':{x:Path(x).is_file() for x in ('/root/.config/rclone/rclone.conf','/root/nox/rclone.conf')}}
 
+# Read only the current Linux mount namespace. Device source strings are intentionally
+# omitted because they can contain remote paths or credentials. statvfs reads metadata only.
+BLOCK_FILESYSTEMS={'ext2','ext3','ext4','xfs','btrfs','zfs','vfat','exfat','ntfs'}
+def _unescape_mountinfo(value):
+    return re.sub(r'\\([0-7]{3})',lambda m:chr(int(m.group(1),8)),value)
+
+def _mount_inventory_from_text(text,statvfs=os.statvfs):
+    rows=[]; seen=set(); eligible=0
+    lines=text.splitlines()
+    truncated=len(lines)>4096
+    for line in lines[:4096]:
+        try:
+            before,after=line.split(' - ',1)
+            left=before.split(); right=after.split()
+            if len(left)<6 or len(right)<3:continue
+            fstype=right[0]
+            if fstype not in BLOCK_FILESYSTEMS:continue
+            mountpoint=_unescape_mountinfo(left[4])
+            dev=left[2]
+            if mountpoint in seen or not SAFE.fullmatch(mountpoint) or not re.fullmatch(r'\d+:\d+',dev):continue
+            eligible+=1
+            if len(rows)>=512:
+                truncated=True
+                continue
+            try:
+                st=statvfs(mountpoint)
+                block_size=st.f_frsize or st.f_bsize
+                total=int(st.f_blocks)*int(block_size)
+                available=int(st.f_bavail)*int(block_size)
+            except (OSError,AttributeError,TypeError,ValueError):
+                total=None; available=None
+            seen.add(mountpoint)
+            rows.append({'mountpoint':mountpoint,'filesystem':fstype,'device_major_minor':dev,
+                         'total_bytes':total,'available_bytes':available})
+        except (ValueError,IndexError):continue
+    rows.sort(key=lambda r:(r['mountpoint'],r['filesystem'],r['device_major_minor']))
+    return {'scope':'current_process_mount_namespace_only','provider_disk_visibility':'not_established',
+            'mountinfo_readable':True,'data_mount_present':any(r['mountpoint']=='/data' for r in rows),
+            'eligible_block_mount_count':eligible,'truncated':truncated,'mounts':rows}
+
+def mount_inventory():
+    try:
+        text=Path('/proc/self/mountinfo').read_text()
+    except OSError as e:
+        return {'scope':'current_process_mount_namespace_only','mountinfo_readable':False,
+                'error':type(e).__name__,'mounts':[]}
+    return _mount_inventory_from_text(text)
+
 def worker(i):
     try:
-        functions=(hardware,process_rows,supervisor,packages,models,storage)
+        functions=(hardware,process_rows,supervisor,packages,models,storage,mount_inventory)
         return {'section':functions[i].__name__,'worker_pid':os.getpid(),'result':functions[i]()}
     except Exception as e:return {'section':str(i),'worker_pid':os.getpid(),'error':type(e).__name__}
 
 def main():
-    with ProcessPoolExecutor(max_workers=6) as pool:
+    with ProcessPoolExecutor(max_workers=7) as pool:
         for row in pool.map(worker,range(6)):
             # One JSON record per bounded result item; never dump env/config secrets.
             print('NOX_MAINT_AUDIT='+json.dumps(row,separators=(',',':')),flush=True)
     print('NOX_MAINT_AUDIT_COMPLETE=true',flush=True)
 if __name__=='__main__':main()
+
