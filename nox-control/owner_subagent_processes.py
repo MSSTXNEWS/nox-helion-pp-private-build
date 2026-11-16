@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import multiprocessing as mp
 import os
+import signal
 import queue
 import re
 import time
@@ -76,7 +77,7 @@ def validate(batch):
     return indexed
 
 
-def _model_reply(task, url, timeout):
+def _model_reply(task, url, timeout, return_metadata=False):
     """Fixed request to one owner-approved local existing model; NO tool calls."""
     from urllib.parse import urlparse
     parsed = urlparse(url)
@@ -84,7 +85,7 @@ def _model_reply(task, url, timeout):
         raise GateError('HOLD_NONLOCAL_OR_UNREVIEWED_MODEL_URL')
     if not parsed.port or parsed.port < 1 or parsed.port > 65535:
         raise GateError('HOLD_MODEL_PORT')
-    payload = {'model': 'nox', 'stream': False, 'temperature': 0.2, 'max_tokens': 512,
+    payload = {'model': 'nox', 'stream': False, 'temperature': 0.2, 'max_tokens': 256,
                'messages': [
                    {'role': 'system', 'content': 'You are an isolated NOX technical subagent. You may only analyze this task and return evidence-based suggestions. Do not claim to have run tools or changed code. No shell, credentials, network or privileged actions. Respond concisely in Russian.'},
                    {'role': 'user', 'content': task['task']}]}
@@ -103,26 +104,60 @@ def _model_reply(task, url, timeout):
     if len(body)>MAX_OUTPUT_BYTES:
         raise GateError('HOLD_MODEL_RESPONSE_SIZE')
     try:
-        answer = json.loads(body)['choices'][0]['message']['content']
+        value = json.loads(body)
+        answer = value['choices'][0]['message']['content']
     except (ValueError,KeyError,IndexError,TypeError) as exc:
         raise GateError('HOLD_MODEL_RESPONSE_SCHEMA') from exc
     if not isinstance(answer,str) or not answer.strip():
         raise GateError('HOLD_EMPTY_CANDIDATE')
-    return answer
+    if not return_metadata:
+        return answer
+    usage = value.get('usage') if isinstance(value.get('usage'), dict) else {}
+    return answer, {'endpoint': url, 'model': value.get('model'),
+                    'usage_counts': {key: usage[field] for key, field in (
+                        ('input', 'prompt_tokens'), ('output', 'completion_tokens'), ('total', 'total_tokens'))
+                        if type(usage.get(field)) is int and usage[field] >= 0},
+                    'finish_reason': value['choices'][0].get('finish_reason'),
+                    'weights_identity_verified': False}
 
 
 def _worker(role, inbox, outbox, local_model_url, timeout):
     # These are CPU/IPC subagent processes; the existing NOX model stays on GPU0.
     os.environ['CUDA_VISIBLE_DEVICES'] = ''
+    parent = os.getppid()
+    # Linux parent-death signal closes the HTTP client even while inference is
+    # blocked; a crashed director cannot leave orphan workers using its slot.
+    import ctypes
+    if ctypes.CDLL(None, use_errno=True).prctl(1, signal.SIGTERM, 0, 0, 0) != 0:
+        return
+    if os.getppid() != parent:
+        return
     outbox.put({'kind':'READY','role':role,'pid':os.getpid()})
+    last_heartbeat = time.monotonic()
     while True:
-        item = inbox.get()
+        if os.getppid() != parent:
+            return  # Never leave orphan model clients after director death.
+        try:
+            item = inbox.get(timeout=1)
+        except queue.Empty:
+            if time.monotonic()-last_heartbeat >= 5:
+                outbox.put({'kind':'HEARTBEAT','role':role,'pid':os.getpid(),
+                            'at':time.time()})
+                last_heartbeat = time.monotonic()
+            continue
         if item is None:
             return
         started = time.monotonic()
         try:
-            result = _model_reply(item,local_model_url,timeout)
-            out = {'state':'CANDIDATE_NOT_APPLIED','answer':result}
+            proof = None
+            request = item
+            if '_native_context' in item:
+                from owner_subagent_dispatcher import worker_input
+                request, proof = worker_input(item)
+            result, model = _model_reply(request,local_model_url,timeout,return_metadata=True)
+            out = {'state':'CANDIDATE_NOT_APPLIED','answer':result,'model_response':model}
+            if proof is not None:
+                out['native_observation'] = proof
         except Exception as exc:
             out = {'state':str(exc) if isinstance(exc,GateError) else 'HOLD_SUBAGENT_EXCEPTION'}
         outbox.put({'kind':'RESULT','role':role,'pid':os.getpid(),
@@ -142,6 +177,9 @@ class Subagents:
         self.outbox = self.ctx.Queue()
         self.inboxes = {r:self.ctx.Queue() for r in roles}
         self.processes = {}
+        self.active = {}
+        self.heartbeats = {}
+        self.started = {}
 
     def __enter__(self):
         try:
@@ -161,18 +199,60 @@ class Subagents:
                     if not all(p.is_alive() for p in self.processes.values()):
                         raise GateError('HOLD_SUBAGENT_PROCESS_EXIT')
                     continue
+                if (msg.get('kind') == 'HEARTBEAT' and msg.get('role') in confirmed
+                        and msg.get('pid') == confirmed[msg['role']]):
+                    self.heartbeats[msg['role']] = time.time()
+                    continue
                 if msg.get('kind')!='READY' or msg.get('role') not in self.processes:
                     raise GateError('HOLD_SUBAGENT_READY_SCHEMA')
                 role = msg['role']
                 if role in confirmed or msg['pid'] != self.processes[role].pid:
                     raise GateError('HOLD_SUBAGENT_PID_MISMATCH')
                 confirmed[role] = msg['pid']
+                self.heartbeats[role] = time.time()
             if len(set(confirmed.values())) != len(self.roles):
                 raise GateError('HOLD_SUBAGENT_NONUNIQUE_PID')
             return self
         except BaseException:
             self.__exit__(None,None,None)
             raise
+
+    def submit(self, task):
+        """Private director IPC. The authoritative claim remains in its queue."""
+        role = task.get('subagent')
+        if role not in self.processes or not self.processes[role].is_alive():
+            raise GateError('HOLD_SUBAGENT_PROCESS_EXIT')
+        if role in self.active or not TASK_ID.fullmatch(str(task.get('id', ''))):
+            raise GateError('HOLD_SUBAGENT_ROLE_BUSY_OR_TASK_ID')
+        self.active[role] = task['id']
+        self.started[role] = time.monotonic()
+        self.inboxes[role].put(task)
+
+    def poll(self, timeout=0.2):
+        """Bounded receive lets the owner recheck STOP/lease every 200 ms."""
+        if not all(p.is_alive() for p in self.processes.values()):
+            raise GateError('HOLD_SUBAGENT_PROCESS_EXIT')
+        if any(time.monotonic()-started > self.timeout+10 for started in self.started.values()):
+            raise GateError('HOLD_SUBAGENT_TIMEOUT')
+        try:
+            event = self.outbox.get(timeout=timeout)
+        except queue.Empty:
+            return None
+        role = event.get('role')
+        if role not in self.processes or event.get('pid') != self.processes[role].pid:
+            raise GateError('HOLD_SUBAGENT_RESULT_IDENTITY')
+        if event.get('kind') == 'HEARTBEAT':
+            at = event.get('at')
+            if not isinstance(at, (int, float)) or at > time.time()+1:
+                raise GateError('HOLD_SUBAGENT_HEARTBEAT_SCHEMA')
+            self.heartbeats[role] = at
+            return None
+        self.heartbeats[role] = time.time()
+        if event.get('kind') != 'RESULT' or event.get('id') != self.active.get(role):
+            raise GateError('HOLD_SUBAGENT_RESULT_IDENTITY')
+        del self.active[role]
+        self.started.pop(role, None)
+        return event
 
     def run(self,batch, *, stop_active, authorize, lease_current):
         """One request, any task count; only candidates, not queue/S03 commits."""
@@ -205,16 +285,20 @@ class Subagents:
                     del remaining[tid]
                     progressed = True
                     continue
-                self.inboxes[t['subagent']].put(t)
+                self.submit(t)
                 busy_roles.add(t['subagent'])
                 active.add(tid)
                 del remaining[tid]
                 progressed = True
             if active:
                 try:
-                    event = self.outbox.get(timeout=self.timeout+5)
-                except queue.Empty as exc:
-                    raise GateError('HOLD_SUBAGENT_TIMEOUT') from exc
+                    event = self.poll(timeout=0.2)
+                except queue.Empty:
+                    event = None
+                if event is None:
+                    continue
+                if not admitted():
+                    raise GateError('HOLD_OWNER_GATE_CHANGED')
                 tid = event.get('id')
                 role = event.get('role')
                 if event.get('kind')!='RESULT' or tid not in active or role not in busy_roles or event.get('pid')!=self.processes[role].pid:
@@ -224,6 +308,8 @@ class Subagents:
                 busy_roles.remove(role)
             elif not progressed and remaining:
                 raise GateError('HOLD_SUBAGENT_DISPATCH_DEADLOCK')
+        if not admitted():
+            raise GateError('HOLD_OWNER_GATE_CHANGED')
         return {'schema': 'NOX_SUBAGENT_SOURCE_CANDIDATES_V1', 'processes': {r:p.pid for r,p in self.processes.items()},
                 'task_count': len(tasks), 'results': outcomes, 'live_onehost_deployed': False,
                 'queue_committed': False, 'model_weights_changed': False}
@@ -232,13 +318,19 @@ class Subagents:
         for box in self.inboxes.values():
             try: box.put_nowait(None)
             except Exception: pass
+        deadline = time.monotonic()+1
         for p in self.processes.values():
-            p.join(timeout=2)
+            p.join(timeout=max(0, deadline-time.monotonic()))
+        for p in self.processes.values():
             if p.is_alive():
                 p.terminate()
-                p.join(timeout=2)
+        deadline = time.monotonic()+2
+        for p in self.processes.values():
+            p.join(timeout=max(0, deadline-time.monotonic()))
         for q in [*self.inboxes.values(),self.outbox]:
             q.close()
+        self.active.clear()
+        self.started.clear()
 
 
 if __name__=='__main__':

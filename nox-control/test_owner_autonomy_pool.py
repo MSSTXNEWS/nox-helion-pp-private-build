@@ -104,15 +104,15 @@ class PoolTests(unittest.TestCase):
             self.assertEqual(len(set(observed)),count)
             self.assertTrue(all(p.exitcode==0 for p in processes))
 
-    def test_idle_still_opens_three_or_six_os_processes(self):
+    def test_idle_does_not_start_processes_for_pid_count(self):
         n=Mock();n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True
         for mode,count in [('NORMAL',3),('FORSAZH',6)]:
             n.process_readback.return_value=[{'pid':20+i,'process_starttime':100+i,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'} for i in range(count)]
             result=pool.admit_native_tick(n,tasks=[],status={},mode=mode,memory_ratio=.5)
-            self.assertEqual(result['state'],'NATIVE_POOL_READY_IDLE')
+            self.assertEqual(result['state'],'NATIVE_QUEUE_IDLE')
             self.assertEqual(result['active_subexecutor_processes'],count)
-            n.ensure_processes.assert_called_with(count)
+            n.ensure_processes.assert_not_called()
 
     def test_empty_queue_still_keeps_default_pool(self):
         n=Mock();n.read_reviewed_catalog.return_value={'schema':pool.SCHEMA,'tasks':[]}
@@ -125,8 +125,9 @@ class PoolTests(unittest.TestCase):
         n.process_readback.return_value=[{'pid':60+i,'process_starttime':100+i,'native_pid_verified':True,
             'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'} for i in range(3)]
         r=pool.tick_existing_dispatcher({'_nox_owner_autonomy_native':n},{},mode='NORMAL')
-        self.assertEqual(r['state'],'NATIVE_POOL_READY_IDLE')
+        self.assertEqual(r['state'],'NATIVE_QUEUE_IDLE')
         self.assertEqual(r['active_subexecutor_processes'],3)
+        n.ensure_processes.assert_not_called()
 
     def test_native_gates_hold_or_verified(self):
         task=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},allowed_handlers={'owner_component'})

@@ -2,6 +2,7 @@
 import json
 import os
 import threading
+import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -55,6 +56,12 @@ class TestRealSubagentProcesses(unittest.TestCase):
                 self.assertTrue(all(row['state'] == 'CANDIDATE_NOT_APPLIED'
                                     for row in out['results'].values()))
                 self.assertFalse(out['live_onehost_deployed'])
+                following = batch(3)
+                for task in following['tasks']:
+                    task['id'] = 'following-'+task['id']
+                again = pool.run(following, stop_active=lambda: False,
+                                 authorize=lambda: True, lease_current=lambda: True)
+                self.assertEqual(again['processes'], out['processes'])
         finally:
             server.shutdown()
             server.server_close()
@@ -74,6 +81,36 @@ class TestRealSubagentProcesses(unittest.TestCase):
         from owner_subagent_processes import _model_reply
         with self.assertRaisesRegex(GateError, 'HOLD_NONLOCAL'):
             _model_reply({'task': 'x'}, 'https://example.com/v1/chat/completions', 1)
+
+    def test_stop_interrupts_slow_model_wait_and_closes_owned_children(self):
+        started = threading.Event()
+        stop = threading.Event()
+        class Slow(StubModel):
+            def do_POST(self):
+                started.set()
+                stop.wait(5)
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Slow)
+        server.daemon_threads = True
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        def request_stop():
+            if started.wait(4):
+                stop.set()
+        trigger = threading.Thread(target=request_stop, daemon=True)
+        trigger.start()
+        try:
+            begin = time.monotonic()
+            with Subagents(['infra', 'brain', 'web'],
+                           model_url=f'http://127.0.0.1:{server.server_port}/v1/chat/completions', timeout=15) as pool:
+                children = list(pool.processes.values())
+                with self.assertRaisesRegex(GateError, 'OWNER_GATE_CHANGED'):
+                    pool.run(batch(1), stop_active=stop.is_set,
+                             authorize=lambda: True, lease_current=lambda: True)
+            self.assertLess(time.monotonic()-begin, 4)
+            self.assertTrue(all(not child.is_alive() for child in children))
+        finally:
+            server.shutdown()
+            server.server_close()
 
 
 if __name__ == '__main__':

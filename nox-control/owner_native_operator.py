@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_checkpoint_calibration_entry.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_subagent_install_entry.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -129,6 +129,9 @@ def run_native(action,request_id):
                      'nox-control/owner_media_fixture_transport.py','nox-control/owner_media_fixture_public_key.json',
                      'nox-control/owner_drive_ram_prepare.py','nox-control/owner_drive_ram_bridge.py',
                      'nox-control/owner_drive_ram_assets.json','nox-control/owner_drive_ram_envelope.json',
+                     'nox-control/owner_subagent_processes.py','nox-control/owner_autonomy_pool.py',
+                     'nox-control/owner_subagent_dispatcher.py',
+                     'coordination/NOX_PRIME_SIX_RELAY_20261115.md',
                      'nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py',
                      'nox_runpod/teacher_mesh/v137/owner_self_observation.py',
                      'coordination/onepass/nox-v135-resonance-owner-bridge.js',

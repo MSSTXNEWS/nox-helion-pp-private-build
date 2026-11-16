@@ -274,7 +274,12 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
         return {'state':'HOLD_OWNER_STOP_OR_WRITER_LEASE','jobs_started':0}
     ready=choose_ready(tasks,status=status,mode=mode,memory_ratio=memory_ratio,
                        cpu_pressure=cpu_pressure,gpu_available=gpu_available)
-    # Keep a fixed pool of actual OS workers ready even if the queue is idle.
+    if not ready:
+        # Reuse workers that have done real work; never start idle processes
+        # merely to make the requested PID count appear in a status report.
+        rows=native.process_readback()
+        return {'state':'NATIVE_QUEUE_IDLE', 'jobs_started':0,
+                'active_subexecutor_processes':len(rows) if isinstance(rows,list) else 0}
     # Resource pressure can temporarily reduce the target; do not fake workers.
     target=MODES[mode]
     if memory_ratio>=.95:target=0
