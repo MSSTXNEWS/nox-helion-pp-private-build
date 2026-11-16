@@ -14,11 +14,8 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
-  // Only split ACTUAL upstream model deltas. Never invent text or report done
-  // before a native S03 receipt. A single late native delta still starts late.
   // Limit event count for huge upstream chunks; preserve every codepoint.
   function livePieces(text) {
-    // Keep complex emoji and combining accents intact at each visual token edge.
     // The bytes and persisted upstream answer are unchanged. Without
     // Intl.Segmenter, emit the complete native delta: codepoint splitting
     // can tear ZWJ emoji/combining clusters into visibly broken tokens.
@@ -92,8 +89,6 @@
       done.exchange_id.length>=6&&done.exchange_id.length<=160;
   }
   // A stopped browser generation must not remain stuck forever in a native
-  // stream reader whose transport ignores fetch/AbortController cancellation.
-  // This only cancels the SAME request's reader; it never issues a global STOP.
   async function readNativeOrAbort(reader,signal) {
     if(!signal)return reader.read();
     if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
@@ -130,9 +125,6 @@
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
         if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
         answer+=e.text;
-        // A chat is not LIVE merely because a browser requested a connection.
-        // Report actual upstream activity only on the first meaningful delta;
-        // native start.model is a reported label, NOT a verified weights SHA.
         if(!sourceAnnounced&&e.text.trim()){
           sourceAnnounced=true;
           if(onMeaningfulDelta)onMeaningfulDelta(nativeModel);
@@ -152,10 +144,7 @@
       } else if(e.type==='preparing') {
         // Original V112 emits one preparing frame before its native start.
         // A repeated/late preparation is an invalid wire sequence, even if
-        // a forged done would otherwise match a healthy S03 history fixture.
         if(preparingSeen||startSeen)throw Error('HOLD_NATIVE_PREPARING_ORDER');
-        // The original V112 OneHost always advertises this exact native mode.
-        // A mismatched or absent mode cannot support a persisted-S03 receipt.
         if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
         preparingSeen=true;
       } else {
@@ -193,7 +182,6 @@
   }
   function sseChat(data,signal) {
     let closed=false;const started=performance.now();
-    // Downstream reader cancellation must cancel the EXISTING native request.
     // Abort is scoped to this generation, never global /api/nox/stop.
     const upstreamAbort=new AbortController();
     const onAbort=()=>upstreamAbort.abort();
@@ -217,10 +205,6 @@
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
-          // A native NDJSON frame may end MID-grapheme (ZWJ/combining mark).
-          // Keep one trailing grapheme until the next frame establishes its edge.
-          // Without a segmenter no safe incremental edge is known: buffer the
-          // bounded native answer until done instead of corrupting visual tokens.
           const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
           const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
           let trailing='',nativeModelConfirmed='UNKNOWN',nativeDeltaConfirmed=false,nativeModelNotified=false;
@@ -233,11 +217,8 @@
                 answer_source:'LIVE_NOX',model_label:nativeModelConfirmed,
                 model_identity_verified:false}:{} )});
               if(nativeProvenance)nativeModelNotified=true;
-              // Bound visual pacing to 8 actual frames per incoming native chunk.
               // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
-                // Browsers with suspended rAF (including headless/hidden tabs)
-                // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
                   let settled=false;
                   const finish=()=>{if(!settled){settled=true;resolve();}};
@@ -296,7 +277,6 @@
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
       await checkHistory(id,data.message,answer,receipt.exchange_id,signal);
-      // JSON clients also have a cancellation boundary: a late abort during
       // S03 readback must never produce a persisted-success response.
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
       return responseJSON({answer,model:nativeModel,model_identity_verified:false,dialog_id:id,
@@ -355,8 +335,6 @@
     const url=samePath(input);
     if(!url)return nativeFetch(input,init);
     const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
-    // Request objects carry their POST body and AbortSignal on input, not init.
-    // The original V24/V22 owner routes must work for both fetch(url, init)
     // and fetch(new Request(url, init)); never bypass the scoped S03 gate.
     if(input instanceof Request&&!init?.body){
       const bridged=(url.pathname==='/api/nox/chat'&&method==='POST'&&!url.search)||
