@@ -1,0 +1,121 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "DUTY_2",
+  "run_utc": "2026-11-16T17:31:04.298Z",
+  "run_msk": "2026-11-16T20:31:04.298+03:00",
+  "instance_id": 60509551,
+  "priority": "NOX_MODEL_REPLACEMENT_V10",
+  "scope": "SOURCE_ONLY; no native write",
+  "source": {
+    "branch": "feature/nox-v38-synaptic-brain-20261114",
+    "commit": "1cb62bec16ae1ed79b3af891efe6093dc9922d69",
+    "preimage_head": "ef97ccb5b31d49cba747a8c30a75fb7f91ca6617",
+    "branch_cas": true,
+    "changes": [
+      {
+        "path": "nox-control/deepseek_owner_range_v10.py",
+        "preimage_blob": "d6d006460cf5d6191871037eed6d1246b9ae478b",
+        "postimage_blob": "8fba8a65aea4a96233aa306a3d90cffd852ca94e"
+      },
+      {
+        "path": "nox-control/test_deepseek_owner_range_v10.py",
+        "preimage_blob": "b32cfeeb3e60bf139124e1b4a26d53069cb9e5dd",
+        "postimage_blob": "a5a2b2fdf4436aa4153eab0477934302c5bed46f"
+      }
+    ]
+  },
+  "root_cause": "OneHost DeepSeek owner downloader checked lease path with lstat then reopened using Path.read_bytes(), admitting a symlink/path replacement race and potentially stale/replaced owner grant under concurrent revoke.",
+  "fix": "Lease file is opened with O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC, bounded fd read, pre/open/post and pathname inode/size/time comparison. Invalid metadata or race is HOLD; no new lease issuer, downloader, scheduler or backend.",
+  "regression": {
+    "new_tests": 3,
+    "tests": [
+      "symlink swapped during open",
+      "valid JSON lease pathname replaced during fd read",
+      "lease modified in place during fd read"
+    ],
+    "source_ci_run": 43918629597,
+    "source_ci_job": 133479525464,
+    "source_ci_status": "SUCCESS",
+    "suites": {
+      "DeepSeek_range": 45,
+      "Maya_compat": 4,
+      "Maya_preflight": 16,
+      "Maya_launch": 16
+    },
+    "scope": "SOURCE_TESTED_NOT_NATIVE_INSTALLED"
+  },
+  "tasks": [
+    {
+      "task_id": "S2-07/LEASE_FD_PREIMAGE",
+      "status": "SOURCE_TESTED",
+      "native_install": false,
+      "native_claim_id": null
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD_FRESH_NATIVE",
+      "reason": "Last owner-native evidence at 2026-11-16T16:48:21Z; no newer authorized snapshot obtained"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_OWNER_WRITER_LEASE",
+      "reason": "No verified new owner writer lease or 3 native worker OS PIDs"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_OFFSITE_RESTORE",
+      "reason": "Independent S03, Genesis, checkpoint/optimizer/scaler/RNG recovery is unverified"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD_DEEPSEEK_MAYA_INFERENCE",
+      "reason": "Model not complete/seekably placed; existing Maya identity alone not live inference"
+    }
+  ],
+  "last_native_observation": {
+    "utc": "2026-11-16T16:48:21Z",
+    "workflow_run": 43887943803,
+    "job_id": 133453659138,
+    "owner_stop": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "supervisor_five": "STOPPED",
+    "web_http_8080_8081_8082": "URLError",
+    "gpu_vram_mib": [
+      0,
+      0
+    ],
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158790144,
+    "rclone_remotes": [],
+    "s03_files_present": true,
+    "s03_recall": "UNTESTED",
+    "writer_lease": "UNKNOWN"
+  },
+  "weight_model": {
+    "deepseek_complete": false,
+    "verified_native_model_switch": false,
+    "required_unique_bytes": 248834257920,
+    "missing_unique_native_shards": "UNKNOWN/UNVERIFIED",
+    "old_nox36_preserved": true,
+    "optimizer_updates_new": 0
+  },
+  "knowledge": {
+    "new_hunter_s03_recall": 0
+  },
+  "server_ops": {
+    "new_native_pids": [],
+    "downloaded_bytes": 0,
+    "deleted_files": 0,
+    "deleted_bytes": 0,
+    "restarts": 0
+  },
+  "cleanup": "HOLD_NEW_MODEL_NOT_DEPLOYED",
+  "rollback": "If required, revert the exact source/test Git blobs by owner CAS after HEAD reconciliation; native rollback N/A",
+  "next_ready": "Owner-auth fresh read-only STOP/lease/actual web route; owner-approved seekable ≥248834257920 B + reserve and independent restore; only then bounded missing shards transfer, Maya inference and existing HTTP/SSE adapter acceptance.",
+  "sources": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/1cb62bec16ae1ed79b3af891efe6093dc9922d69",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43918629597",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803/job/133453659138"
+  ]
+}
