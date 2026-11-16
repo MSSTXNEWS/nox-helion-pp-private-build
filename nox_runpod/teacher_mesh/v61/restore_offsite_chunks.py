@@ -15,6 +15,68 @@ import zipfile
 EXPECTED_SHA = "389a1378990a8cc55be09edc7dddecea746ba144ff82011ad71812d1fd9bd6b6"
 EXPECTED_BYTES = 265876084
 NAME = "NOX_V61_ENCRYPTED_CHECKPOINT_OPTIMIZER_20261114.tar.age"
+INDEX_MAX_BYTES = 64 * 1024
+
+
+def _valid_sha(value: object) -> bool:
+    return (isinstance(value, str) and len(value) == 64
+            and all(c in "0123456789abcdef" for c in value))
+
+
+def _unique_object(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError("HOLD_INDEX_DUPLICATE_KEY")
+        obj[key] = value
+    return obj
+
+
+def _reject_constant(_value):
+    raise ValueError("HOLD_INDEX_NONFINITE")
+
+
+def _read_index(archive: zipfile.ZipFile, expected_sha: str, expected_bytes: int) -> dict:
+    """Bound decompression before JSON parsing; validate all four typed entries."""
+    info = archive.getinfo("NOX_V61_CHUNK_INDEX.json")
+    if not 0 < info.file_size <= INDEX_MAX_BYTES:
+        raise ValueError("HOLD_INDEX_SIZE")
+    with archive.open(info) as source:
+        raw = source.read(INDEX_MAX_BYTES + 1)
+    if len(raw) != info.file_size or len(raw) > INDEX_MAX_BYTES:
+        raise ValueError("HOLD_INDEX_SIZE")
+    try:
+        index = json.loads(raw, object_pairs_hook=_unique_object,
+                           parse_constant=_reject_constant)
+    except (UnicodeError, ValueError, RecursionError) as exc:
+        raise ValueError("HOLD_INDEX_JSON") from exc
+    if not isinstance(index, dict):
+        raise ValueError("HOLD_INDEX_OBJECT")
+    if index.get("schema") != "NOX_V61_ENCRYPTED_CHUNKS_V1":
+        raise ValueError("HOLD_CHUNK_SCHEMA")
+    if type(index.get("part_count")) is not int or index["part_count"] != 4:
+        raise ValueError("HOLD_PART_COUNT")
+    if (type(index.get("ciphertext_total_bytes")) is not int
+            or index["ciphertext_total_bytes"] != expected_bytes):
+        raise ValueError("HOLD_TOTAL_BYTES")
+    if index.get("ciphertext_sha256") != expected_sha:
+        raise ValueError("HOLD_SOURCE_SHA")
+    parts = index.get("parts")
+    if not isinstance(parts, list) or len(parts) != 4:
+        raise ValueError("HOLD_INDEX_PARTS")
+    for i, entry in enumerate(parts, 1):
+        if not isinstance(entry, dict):
+            raise ValueError("HOLD_INDEX_ENTRY")
+        if (type(entry.get("part")) is not int or entry["part"] != i
+                or entry.get("file") != f"NOX_V61_CIPHER.part{i:02d}"):
+            raise ValueError("HOLD_INDEX_ORDER")
+        if (type(entry.get("size_bytes")) is not int
+                or not 0 <= entry["size_bytes"] <= expected_bytes
+                or not _valid_sha(entry.get("sha256"))):
+            raise ValueError("HOLD_INDEX_ENTRY")
+    if sum(entry["size_bytes"] for entry in parts) != expected_bytes:
+        raise ValueError("HOLD_INDEX_SIZE_SUM")
+    return index
 
 def _sha(path: Path) -> str:
     h=hashlib.sha256()
@@ -32,7 +94,7 @@ def restore(directory: Path, output: Path, *, expected_sha: str = EXPECTED_SHA,
     """
     directory=Path(directory)
     output=Path(output)
-    if len(expected_sha)!=64 or type(expected_bytes) is not int or expected_bytes<=0:
+    if not _valid_sha(expected_sha) or type(expected_bytes) is not int or expected_bytes<=0:
         raise ValueError("HOLD_PINNED_MANIFEST")
     if output.is_symlink():
         raise ValueError("HOLD_OUTPUT_SYMLINK")
@@ -61,22 +123,12 @@ def restore(directory: Path, output: Path, *, expected_sha: str = EXPECTED_SHA,
                     part_name=f"NOX_V61_CIPHER.part{i:02d}"
                     if len(names)!=2 or set(names)!={part_name,"NOX_V61_CHUNK_INDEX.json"}:
                         raise ValueError("HOLD_ARCHIVE_MEMBERS")
-                    index=json.loads(z.read("NOX_V61_CHUNK_INDEX.json"))
+                    index=_read_index(z, expected_sha, expected_bytes)
                     if reference_index is None:
                         reference_index=index
-                        if index.get("schema")!="NOX_V61_ENCRYPTED_CHUNKS_V1":
-                            raise ValueError("HOLD_CHUNK_SCHEMA")
-                        if index.get("part_count")!=4:
-                            raise ValueError("HOLD_PART_COUNT")
-                        if index.get("ciphertext_total_bytes")!=expected_bytes:
-                            raise ValueError("HOLD_TOTAL_BYTES")
-                        if index.get("ciphertext_sha256")!=expected_sha:
-                            raise ValueError("HOLD_SOURCE_SHA")
                     elif index!=reference_index:
                         raise ValueError("HOLD_INDEX_CONFLICT")
                     entry=index["parts"][i-1]
-                    if entry["part"]!=i or entry["file"]!=part_name:
-                        raise ValueError("HOLD_INDEX_ORDER")
                     part_hash=hashlib.sha256()
                     part_bytes=0
                     with z.open(part_name) as source:
@@ -85,6 +137,8 @@ def restore(directory: Path, output: Path, *, expected_sha: str = EXPECTED_SHA,
                             if not buf:break
                             part_bytes+=len(buf)
                             total+=len(buf)
+                            if part_bytes>entry["size_bytes"]:
+                                raise ValueError("HOLD_PART_SHA_MISMATCH")
                             if total>expected_bytes:
                                 raise ValueError("HOLD_SIZE_OVERFLOW")
                             part_hash.update(buf)
