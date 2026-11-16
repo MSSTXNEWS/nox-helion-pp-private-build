@@ -6,6 +6,7 @@ SSH owner-maintenance transport. No weight/S03/chat/trainer mutations.
 """
 from __future__ import annotations
 import base64
+import fcntl
 import hashlib
 import json
 import os
@@ -27,6 +28,10 @@ SCRIPT = ROOT / "scripts/nox_native_lifeline.py"
 POLICY = Path("/etc/nox/lifeline.json")
 CONFIG = Path("/etc/supervisor/conf.d/nox-lifeline-guard.conf")
 GUARD = "nox-lifeline-guard"
+OWNER_STOP = ROOT / "STOP"
+OWNER_MAINTENANCE = ROOT / "state/OWNER_MAINTENANCE.flag"
+OWNER_MAINTENANCE_LOCK = ROOT / "state/owner_maintenance.lock"
+OWNER_LOCK_FD = None
 REQUIRED = ("nox-dispatcher-t855u", "nox-priority-scheduler",
             "nox-selfheal", "nox-gpu-watchdog-t865u")
 AUDIT_SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -66,6 +71,52 @@ def protect_path(path):
     for p in (path, *path.parents):
         if p.is_symlink():
             fail("PATH_SYMLINK")
+
+def require_owner_fence():
+    # This installation is only for a deliberately fenced handoff. Never
+    # create, remove, rename, or rewrite either owner flag.
+    for label, path in (("STOP", OWNER_STOP), ("MAINTENANCE", OWNER_MAINTENANCE)):
+        protect_path(path)
+        try:
+            mode = path.lstat().st_mode
+        except OSError:
+            fail("OWNER_" + label + "_NOT_PRESENT")
+        if not stat.S_ISREG(mode):
+            fail("OWNER_" + label + "_UNSAFE")
+
+
+def acquire_owner_maintenance_lock(path=None):
+    # Match the existing native operator flock contract; file existence alone
+    # is not a lease. Hold EX|NB from admission through the whole installation.
+    path = OWNER_MAINTENANCE_LOCK if path is None else Path(path)
+    protect_path(path)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0))
+    except FileNotFoundError:
+        fail("OWNER_MAINTENANCE_LOCK_MISSING")
+    except OSError:
+        fail("OWNER_MAINTENANCE_LOCK_UNSAFE")
+    try:
+        metadata = os.fstat(fd)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            fail("OWNER_MAINTENANCE_LOCK_UNSAFE")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            fail("OWNER_MAINTENANCE_BUSY")
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def release_owner_maintenance_lock():
+    global OWNER_LOCK_FD
+    if OWNER_LOCK_FD is not None:
+        fd, OWNER_LOCK_FD = OWNER_LOCK_FD, None
+        os.close(fd)
+
 
 def bytes_checked(name):
     value = BUNDLE.get(name)
@@ -140,6 +191,8 @@ def main():
         fail("HOST_IDENTITY")
     if not (Path("/etc/supervisor/conf.d").is_dir()):
         fail("SUPERVISOR_MISSING")
+    require_owner_fence()
+    OWNER_LOCK_FD = acquire_owner_maintenance_lock()
     # No interaction with trainer, chat port or memory.
     baseline = {name: info(name) for name in REQUIRED}
     # Installation starts with a *disabled* observer. Permit a known stopped
@@ -209,6 +262,8 @@ def main():
         readiness = "RUNNING_READ_ONLY_VERIFIED"
     emit({"state": readiness, "host_instance": 60509551, "request": request,
           "source_sha": sha, "original_services_preserved": True,
+          "owner_stop_preserved": True, "owner_maintenance_preserved": True,
+          "maintenance_lock": "EXCLUSIVE_HELD_THROUGH_INSTALL",
           "guard_pid": active["pid"], "guard_policy_enabled": False,
           "written_files": len(changes),
           "script_sha256": hashlib.sha256(script).hexdigest(),
@@ -225,3 +280,8 @@ if __name__ == "__main__":
             code = "HOLD_LIFELINE_" + type(exc).__name__.upper()
         emit({"state": "HOLD", "reason": code, "no_original_services_changed": True})
         sys.exit(2)
+    finally:
+        try:
+            release_owner_maintenance_lock()
+        except OSError:
+            pass
