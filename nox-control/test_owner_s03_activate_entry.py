@@ -110,5 +110,42 @@ class ActivationTests(unittest.TestCase):
             self.assertNotIn('PRIVATE_SENTINEL',json.dumps(result))
             emit.assert_called_once()
 
+    def test_identity_probe_distinguishes_stat_drift_without_relabelling(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);db=root/'fixture.sqlite';model=root/'model.gguf';model.write_bytes(b'synthetic model')
+            info=model.stat();old=[info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns-1]
+            record={'model_id':'bge-m3','dimensions':2,'device':old[0],'inode':old[1],
+                    'bytes':old[2],'mtime_ns':old[3],'ctime_ns':old[4]}
+            old_identity=a.digest(json.dumps(record,sort_keys=True,separators=(',',':')).encode())
+            with sqlite3.connect(db) as connection:
+                connection.execute('CREATE TABLE nox_s03_vectors(model_identity TEXT)')
+                connection.execute('INSERT INTO nox_s03_vectors VALUES(?)',(old_identity,))
+                connection.execute('CREATE TABLE nox_s03_gateway_meta(key TEXT,value TEXT)')
+                connection.execute('INSERT INTO nox_s03_gateway_meta VALUES(?,?)',('model_file_stat',json.dumps(old)))
+            before=db.read_bytes()
+            candidate=('import contextlib,hashlib,json,pathlib,sqlite3\nDIMENSIONS=2\nDB='+repr(str(db))+'\n'
+                       'MODEL=pathlib.Path('+repr(str(model))+')\n_model_cache={"id":"bge-m3"}\n'
+                       'def digest(raw): return hashlib.sha256(raw).hexdigest()\n'
+                       'def encoded(value): return json.dumps(value,sort_keys=True,separators=(",",":")).encode()\n'
+                       'def regular(path): return pathlib.Path(path).stat()\n'
+                       'def file_sha(path): return digest(pathlib.Path(path).read_bytes())\n'
+                       '@contextlib.contextmanager\ndef connection(path,seconds=1):\n'
+                       ' c=sqlite3.connect("file:"+path+"?mode=ro",uri=True);c.row_factory=sqlite3.Row\n'
+                       ' try: yield c\n finally: c.close()\n'
+                       'def model_identity():\n s=regular(MODEL)\n'
+                       ' return digest(encoded({"model_id":"bge-m3","dimensions":2,"device":s.st_dev,"inode":s.st_ino,"bytes":s.st_size,"mtime_ns":s.st_mtime_ns,"ctime_ns":s.st_ctime_ns}))\n').encode()
+            with patch.dict(os.environ,{'NOX_OWNER_REQUEST_ID':'123','NOX_OWNER_SOURCE_SHA':'b'*40},clear=True), \
+                 patch.object(a,'PYTHON',sys.executable),patch.object(a,'GATEWAY_SHA',a.digest(candidate)), \
+                 patch.object(a,'BUNDLE',{'owner_s03_gateway.py':base64.b64encode(candidate).decode()}),patch.object(a,'emit'):
+                result=a.identity_only_probe()
+            self.assertEqual(before,db.read_bytes())
+            observed=result['observation']
+            self.assertEqual(observed['changed_stat_fields'],['ctime_ns'])
+            self.assertTrue(observed['stored_stat_current_api_matches_index'])
+            self.assertNotEqual(observed['current_model_identity'],old_identity)
+            self.assertFalse(observed['vectors_relabelled']);self.assertFalse(observed['old_content_sha256_known'])
+            changed=json.loads(json.dumps(observed));changed['indexed_identity_groups'][0]['model_identity']='PRIVATE_SENTINEL'
+            with self.assertRaisesRegex(RuntimeError,'DIAGNOSTIC_GROUPS'):a.identity_projection(changed)
+
 
 if __name__=='__main__':unittest.main()

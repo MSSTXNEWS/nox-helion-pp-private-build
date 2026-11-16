@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_media_acceptance_entry.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_ready_followup.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -106,6 +106,7 @@ def run_native(action,request_id):
                      'nox-control/owner_browser_qa_entry.py',
                      'nox-control/owner_s03_prepare_entry.py','nox-control/owner_s03_gateway.py',
                      'nox-control/owner_s03_activate_entry.py','nox-control/owner_adapter_lineage_audit.py',
+                     'nox-control/owner_download_status_entry.py','nox-control/owner_download_status.py',
                      'nox-control/owner_drive_ram_prepare.py','nox-control/owner_drive_ram_bridge.py',
                      'nox-control/owner_drive_ram_assets.json','nox-control/owner_drive_ram_envelope.json',
                      'nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py',

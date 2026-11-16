@@ -357,6 +357,112 @@ def read_only_probe():
     return value
 
 
+IDENTITY_DIAGNOSTIC=r'''
+import base64,contextlib,hashlib,json,os,pathlib,sys,time,types
+payload=json.loads(sys.stdin.buffer.read(262144));raw=base64.b64decode(payload['gateway'],validate=True)
+if hashlib.sha256(raw).hexdigest()!=sys.argv[1]:raise RuntimeError('HOLD_S03_DIAGNOSTIC_SOURCE')
+with open(os.devnull,'w') as sink,contextlib.redirect_stdout(sink),contextlib.redirect_stderr(sink):
+    gateway=types.ModuleType('owner_s03_identity_candidate');gateway.__file__='/root/nox/scripts/owner_s03_gateway.py'
+    sys.modules[gateway.__name__]=gateway;exec(compile(raw,'<pinned-read-only-gateway>','exec'),gateway.__dict__)
+    identity=gateway.model_identity();model=gateway.regular(gateway.MODEL)
+    stat_values=[model.st_dev,model.st_ino,model.st_size,model.st_mtime_ns,model.st_ctime_ns]
+    identifier=gateway._model_cache['id']
+    with gateway.connection(gateway.DB,seconds=1) as conn:
+        groups=[dict(row) for row in conn.execute('SELECT model_identity,count(*) AS rows FROM nox_s03_vectors GROUP BY model_identity LIMIT 16')]
+        record=conn.execute('SELECT value FROM nox_s03_gateway_meta WHERE key=?',('model_file_stat',)).fetchone()
+    stored=json.loads(record[0]) if record else None
+    result={'current_model_identity':identity,'current_model_file_stat':stat_values,
+            'api_model_id_sha256':hashlib.sha256(identifier.encode()).hexdigest(),
+            'indexed_identity_groups':groups,'stored_model_file_stat':stored,
+            'model_content_sha256_now':gateway.file_sha(gateway.MODEL),
+            'old_content_sha256_known':False,'vectors_relabelled':False,'vectors_recomputed':False}
+    after=gateway.regular(gateway.MODEL)
+    if stat_values!=[after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns]:
+        raise RuntimeError('HOLD_S03_IDENTITY_MODEL_CHANGED')
+    if isinstance(stored,list) and len(stored)==5 and all(type(v) is int and v>=0 for v in stored):
+        def reconstructed(alias,values):
+            return gateway.digest(gateway.encoded({'model_id':alias,'dimensions':gateway.DIMENSIONS,
+                'device':values[0],'inode':values[1],'bytes':values[2],'mtime_ns':values[3],'ctime_ns':values[4]}))
+        old=reconstructed(identifier,stored)
+        result['stored_stat_current_api_identity']=old
+        result['stored_stat_current_api_matches_index']=any(row['model_identity']==old for row in groups)
+        result['changed_stat_fields']=[name for name,before,after in zip(('device','inode','bytes','mtime_ns','ctime_ns'),stored,stat_values) if before!=after]
+        aliases={'SHORT_BGE_NAME':'bge-m3','MODEL_FILENAME':gateway.MODEL.name,'MODEL_ABSOLUTE_PATH':str(gateway.MODEL)}
+        result['known_alias_matches']={label:sum(row['rows'] for row in groups if row['model_identity']==reconstructed(alias,stored))
+                                       for label,alias in aliases.items()}
+    matches=[]
+    for proc in pathlib.Path('/proc').iterdir():
+        if not proc.name.isdigit():continue
+        try:
+            argv=(proc/'cmdline').read_bytes().split(b'\0')
+            if str(gateway.MODEL).encode() not in argv:continue
+            fields=(proc/'stat').read_text().rsplit(') ',1)[1].split()
+            if fields[0] not in ('Z','X'):matches.append({'pid':int(proc.name),'start_ticks':fields[19]})
+        except (OSError,IndexError):pass
+        if len(matches)>4:raise RuntimeError('HOLD_S03_BGE_PROCESS_COUNT')
+    result['model_processes']=matches
+print(json.dumps(result))
+'''
+
+
+def identity_projection(data):
+    if not isinstance(data,dict):fail('HOLD_S03_IDENTITY_DIAGNOSTIC_SCHEMA')
+    allowed={'current_model_identity','current_model_file_stat','api_model_id_sha256','indexed_identity_groups',
+             'stored_model_file_stat','model_content_sha256_now','old_content_sha256_known','vectors_relabelled',
+             'vectors_recomputed','stored_stat_current_api_identity','stored_stat_current_api_matches_index',
+             'changed_stat_fields','known_alias_matches','model_processes'}
+    if set(data)-allowed:fail('HOLD_S03_IDENTITY_DIAGNOSTIC_FIELDS')
+    for key in ('current_model_identity','api_model_id_sha256','model_content_sha256_now'):
+        if not isinstance(data.get(key),str) or not re.fullmatch('[0-9a-f]{64}',data[key]):fail('HOLD_S03_IDENTITY_DIAGNOSTIC_HASH')
+    for key in ('current_model_file_stat','stored_model_file_stat'):
+        value=data.get(key)
+        if key=='stored_model_file_stat' and value is None:continue
+        if not isinstance(value,list) or len(value)!=5 or any(type(item) is not int or item<0 for item in value):
+            fail('HOLD_S03_IDENTITY_DIAGNOSTIC_STAT')
+    groups=data.get('indexed_identity_groups')
+    if (not isinstance(groups,list) or len(groups)>16 or any(not isinstance(row,dict)
+            or set(row)!={'model_identity','rows'} or not isinstance(row['model_identity'],str)
+            or not re.fullmatch('[0-9a-f]{64}',row['model_identity'])
+            or type(row['rows']) is not int or not 0<=row['rows']<=20000 for row in groups)):
+        fail('HOLD_S03_IDENTITY_DIAGNOSTIC_GROUPS')
+    if any(data.get(key) is not False for key in ('old_content_sha256_known','vectors_relabelled','vectors_recomputed')):
+        fail('HOLD_S03_IDENTITY_DIAGNOSTIC_SCOPE')
+    if data.get('stored_model_file_stat') is not None:
+        if (not isinstance(data.get('stored_stat_current_api_identity'),str)
+                or not re.fullmatch('[0-9a-f]{64}',data['stored_stat_current_api_identity'])
+                or type(data.get('stored_stat_current_api_matches_index')) is not bool
+                or not isinstance(data.get('changed_stat_fields'),list)
+                or any(key not in ('device','inode','bytes','mtime_ns','ctime_ns') for key in data['changed_stat_fields'])):
+            fail('HOLD_S03_IDENTITY_DIAGNOSTIC_RECONSTRUCTION')
+        aliases=data.get('known_alias_matches')
+        if (not isinstance(aliases,dict) or set(aliases)!={'SHORT_BGE_NAME','MODEL_FILENAME','MODEL_ABSOLUTE_PATH'}
+                or any(type(value) is not int or not 0<=value<=20000 for value in aliases.values())):
+            fail('HOLD_S03_IDENTITY_DIAGNOSTIC_ALIAS')
+    processes=data.get('model_processes')
+    if (not isinstance(processes,list) or len(processes)>4 or any(not isinstance(row,dict)
+            or set(row)!={'pid','start_ticks'} or type(row['pid']) is not int or row['pid']<1
+            or not isinstance(row['start_ticks'],str) or not row['start_ticks'].isdigit() for row in processes)):
+        fail('HOLD_S03_IDENTITY_DIAGNOSTIC_PROCESS')
+    return data
+
+
+def identity_only_probe():
+    """Compare stored identity metadata without altering vectors or source."""
+    request=os.environ.get('NOX_OWNER_REQUEST_ID','');source=os.environ.get('NOX_OWNER_SOURCE_SHA','')
+    if not request.isdigit() or not re.fullmatch('[a-f0-9]{40}',source):fail('HOLD_S03_DIAGNOSTIC_OWNER_CONTEXT')
+    candidate=bundle('owner_s03_gateway.py',GATEWAY_SHA)
+    check=subprocess.run([PYTHON,'-I','-c',IDENTITY_DIAGNOSTIC,GATEWAY_SHA],
+        input=json.dumps({'gateway':base64.b64encode(candidate).decode()}).encode(),
+        capture_output=True,timeout=15)
+    if check.returncode or len(check.stdout)>16000:fail('HOLD_S03_IDENTITY_DIAGNOSTIC_CHILD')
+    data=identity_projection(json.loads(check.stdout))
+    value={'schema':'NOX_OWNER_S03_IDENTITY_DIAGNOSTIC_V1','request':request,'source_sha':source,
+           'candidate_gateway_sha256':GATEWAY_SHA,'private_text_exported':False,
+           'live_sources_changed':False,'canonical_index_written':False,'observation':data}
+    emit('s03_identity_diagnostic',value)
+    return value
+
+
 def main():
     request=os.environ.get('NOX_OWNER_REQUEST_ID','');source=os.environ.get('NOX_OWNER_SOURCE_SHA','')
     prepare_request=os.environ.get('NOX_S03_PREPARE_REQUEST','');prepare_sha=os.environ.get('NOX_S03_PREPARE_SHA256','')

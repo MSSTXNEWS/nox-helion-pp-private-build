@@ -41,6 +41,12 @@ class BrowserQaTests(unittest.TestCase):
         self.assertEqual(QA.safe_error(RuntimeError('password=opaque credential')), 'RuntimeError')
         self.assertEqual(QA.safe_error(RuntimeError('HOLD_OWNER_STOP')), 'HOLD_OWNER_STOP')
 
+    def test_click_diagnostic_exports_only_fixed_boolean_flags(self):
+        value=QA.click_error_projection(RuntimeError('owner private title: element is not stable; another node intercepts pointer events'))
+        self.assertEqual(set(value),{'not_stable','not_visible','outside_viewport','pointer_intercepted','detached'})
+        self.assertTrue(value['not_stable']);self.assertTrue(value['pointer_intercepted'])
+        self.assertTrue(all(type(flag) is bool for flag in value.values()))
+
     def test_screenshot_private_creation_and_no_overwrite(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'image.png'

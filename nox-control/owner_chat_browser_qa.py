@@ -274,6 +274,32 @@ SNAPSHOT_JS = r"""() => {
    video_button:!![...document.querySelectorAll('.nox-live-btn')].find(x=>x.textContent==='Видео')};
 }"""
 
+CONTROL_JS = r"""el => {
+ const button=el.closest('button')||el,rail=document.getElementById('v24Rail');
+ const box=button.getBoundingClientRect(),style=getComputedStyle(button);
+ const rs=rail?getComputedStyle(rail):null,rb=rail?.getBoundingClientRect();
+ const x=box.x+box.width/2,y=box.y+box.height/2;
+ const inView=x>0&&x<innerWidth&&y>0&&y<innerHeight;
+ const hit=inView?document.elementFromPoint(x,y):null;
+ const known=new Set(['v24Rail','nativeChats','v24Cursor','noxCoreEntry','n25Menu','v24System','messages','chatForm']);
+ return {x,y,width:box.width,height:box.height,in_view:inView,
+   pointer_hit_own_button:!!hit&&(hit===button||button.contains(hit)),
+   hit_tag:hit?.tagName||null,hit_known_id:hit?(known.has(hit.id)?hit.id:'OTHER'):null,
+   hit_in_other_dialog:!!hit&&!!hit.closest('#nativeChats')&&!button.contains(hit),
+   hit_in_header:!!hit&&!!hit.closest('header'),
+   target_pointer_events:style.pointerEvents,rail_present:!!rail,
+   rail_collapsed:rail?.dataset.collapsed==='true',rail_width:rb?.width||0,
+   rail_opacity:rs?Number(rs.opacity):null,rail_pointer_events:rs?.pointerEvents||null};
+}"""
+
+
+def click_error_projection(exc):
+    message=str(exc).casefold()
+    return {name:needle in message for name,needle in (
+        ('not_stable','not stable'),('not_visible','not visible'),
+        ('outside_viewport','outside of the viewport'),
+        ('pointer_intercepted','intercepts pointer events'),('detached','detached'))}
+
 
 async def json_response(response, limit=200000):
     if response.status!=200:
@@ -393,23 +419,37 @@ async def browser_run(report, directory, available):
             if (not before or before['build']!=BUILD or not all(before.get(k) for k in ('native_owner','v135','v137','owner_live','prompt_visible'))):
                 raise RuntimeError('HOLD_GRAPHICAL_MODULES_NOT_ACTIVE')
             report['browser_stage']='QA_DIALOG_LIST'
-            target=page.locator('#nativeChats').get_by_text(title,exact=True)
+            target=page.locator('#nativeChats button[role="listitem"]').filter(has=page.get_by_text(title,exact=True))
             report['qa_dialog_controls']={'list_count':await page.locator('#nativeChats').count(),
                 'title_count':await target.count(),'rail_toggle_count':await page.locator('[data-action="toggle-rail"]').count()}
             await target.first.wait_for(state='attached',timeout=10000)
             if not await target.count():
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_LISTED')
-            box=await target.first.bounding_box()
-            report['qa_dialog_controls']['bounding_box']=box
-            # CSS-translated closed rails still satisfy Playwright is_visible;
-            # their text remains outside the viewport and cannot receive clicks.
-            hidden_horizontally=bool(box and not 0 < box['x']+box['width']/2 < 1440)
-            if not await target.first.is_visible() or hidden_horizontally:
+            control=await target.first.evaluate(CONTROL_JS)
+            report['qa_dialog_controls']['before']=control
+            # A collapsed rail can retain descendants' layout boxes despite
+            # opacity:0 and pointer-events:none. Inspect the actual rail state.
+            if (control['rail_collapsed'] or control['rail_width']<2
+                    or control['rail_opacity']==0 or control['rail_pointer_events']=='none'):
                 report['browser_stage']='QA_RAIL_OPEN'
                 await page.locator('[data-action="toggle-rail"]').first.click()
+                await page.wait_for_function("document.getElementById('v24Rail')?.dataset.collapsed!=='true' && Number(getComputedStyle(document.getElementById('v24Rail')).opacity)>.95",timeout=5000)
             report['browser_stage']='QA_DIALOG_CLICK'
-            await target.first.scroll_into_view_if_needed()
-            await target.first.click()
+            await target.first.evaluate("el=>el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'})")
+            try:
+                await target.first.click(timeout=3500)
+            except Exception as exc:
+                report['qa_dialog_controls']['click_wait']=click_error_projection(exc)
+                control=await target.first.evaluate(CONTROL_JS)
+                report['qa_dialog_controls']['after_wait']=control
+                if not control['in_view'] or not control['pointer_hit_own_button']:
+                    raise RuntimeError('HOLD_QA_DIALOG_POINTER_OCCLUDED') from None
+                # Decorative motion can prevent Playwright's stable-box check.
+                # A real pointer click is allowed only after a fresh hit test
+                # proves that the intended synthetic dialog owns that point.
+                await page.mouse.click(control['x'],control['y'])
+                report['qa_dialog_controls']['physical_pointer_click']=True
+            await page.wait_for_function("title=>[...document.querySelectorAll('#nativeChats button[role=listitem]')].some(b=>b.getAttribute('aria-current')==='true'&&b.querySelector('.t')?.textContent===title)",arg=title,timeout=7000)
             report['browser_stage']='QA_DIALOG_HISTORY'
             await page.wait_for_timeout(350)
             initial=await json_response(await context.request.get(

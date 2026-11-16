@@ -33,6 +33,41 @@
     const reports=E('details',undefined,'nox-owner-reports'),reportTitle=E('summary','Отчёты NOX'),reportList=E('div');
     reports.append(reportTitle,reportList);strip.after(reports);
     const reportStyle=E('style');reportStyle.textContent='.nox-owner-reports{margin:0 12px 10px;color:#cbd7e3;font:12px system-ui}.nox-owner-reports summary{padding:8px;cursor:pointer;color:#d8bc87}.nox-owner-report{border-left:2px solid #a3824e;background:#111b25b8;border-radius:0 9px 9px 0;padding:11px 13px;margin:7px 0;line-height:1.55}.nox-owner-report p{margin:5px 0}.nox-owner-report small{color:#90a2b5}';document.head.append(reportStyle);
+    const inventory=E('details',undefined,'nox-owner-reports'),inventoryTitle=E('summary','Загрузки · проверяю файлы'),inventoryBody=E('div');
+    inventory.dataset.noxDownloadInventory='1';inventory.append(inventoryTitle,inventoryBody);reports.before(inventory);
+    let downloadsBusy=false;
+    const size=value=>(Number(value)/1073741824).toLocaleString(undefined,{maximumFractionDigits:2})+' ГиБ';
+    async function refreshDownloads(){
+      if(downloadsBusy||document.hidden)return;downloadsBusy=true;
+      try{
+        const [filesResult,engineResult]=await Promise.allSettled([api('/api/ui/downloads'),api('/api/ui/media')]);
+        if(filesResult.status!=='fulfilled')throw Error('UNAVAILABLE');
+        const value=filesResult.value,media=value.media,drive=value.drive_adapters;
+        if(value.schema!=='NOX_OWNER_DOWNLOAD_INVENTORY_V1'||!media||!drive||!Array.isArray(media.assets)||!Array.isArray(drive.assets))throw Error('UNVERIFIED');
+        const age=Date.now()/1000-Number(value.observed_at);
+        if(!Number.isFinite(age)||age < -5||age>45)throw Error('STALE');
+        const total=media.selected_files+drive.selected_files,verified=media.verified_files+drive.verified_files;
+        inventoryTitle.textContent='Загрузки · проверено '+verified+'/'+total+' файлов';inventoryBody.replaceChildren();
+        const caps=engineResult.status==='fulfilled'&&engineResult.value.schema==='NOX_OWNER_MEDIA_V1'?engineResult.value:null;
+        for(const [kind,label] of [['image','Фото · SDXL-Lightning'],['video','Видео · Wan2.1']]){
+          const rows=media.assets.filter(row=>row.kind===kind),ready=rows.filter(row=>row.state==='SHA_VERIFIED_CURRENT_FILE').length;
+          const card=E('article',undefined,'nox-owner-report');card.append(E('b',label));
+          card.append(E('p','Файлы: '+ready+'/'+rows.length+' проверены · '+size(rows.reduce((n,row)=>n+row.verified_bytes,0))));
+          const engine=ready===rows.length&&rows.length>0&&caps?.[kind]===true;
+          card.append(E('p',engine?'Движок доступен для генерации.':caps?'Движок сейчас недоступен.':'Доступность движка пока не подтверждена.'));
+          const proof=media.generation_acceptance?.[kind];card.append(E('p',proof?.verified===true?'Пробная генерация, декодирование и выдача файла подтверждены.':'Пробная генерация пока не подтверждена.'));
+          inventoryBody.append(card);
+        }
+        const adapters=E('article',undefined,'nox-owner-report');adapters.append(E('b','Адаптеры 3t724u · RAM'));
+        adapters.append(E('p',drive.verified_files+'/'+drive.selected_files+' проверены · '+size(drive.verified_bytes)));
+        adapters.append(E('p','Перенос не выполняет слияние весов. Включение этих обновлений в текущую модель пока не подтверждено.'));
+        adapters.append(E('small','RAM — временная копия; состояние долговременного резерва проверяется отдельно.'));inventoryBody.append(adapters);
+        const stamp=new Date(Number(value.observed_at)*1000),verification=verified>0?'Для отмеченных файлов полный SHA проверен при переносе; сейчас сверены идентификаторы.':'Файлы пока не подтверждены квитанциями и текущей проверкой.';
+        inventoryBody.append(E('small','Проверено на сервере: '+stamp.toLocaleString()+'. '+verification));
+      }catch{inventoryTitle.textContent='Загрузки · нет свежего подтверждения';inventoryBody.replaceChildren(E('p','Текущее состояние файлов недоступно. Проверка продолжится.'));}
+      finally{downloadsBusy=false;}
+    }
+    void refreshDownloads();setInterval(()=>void refreshDownloads(),20000);
     let eventCursor=null,eventsBusy=false,eventCount=0;
     try{const n=Number(localStorage.getItem('nox.owner.events.cursor'));if(Number.isSafeInteger(n)&&n>0)eventCursor=n;}catch{}
     async function refreshEvents(){

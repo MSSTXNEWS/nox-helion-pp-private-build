@@ -641,7 +641,9 @@ def main():
 
 if __name__ == '__main__':
     try:
-        raise SystemExit(main())
+        exit_code = main()
+        print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
+        raise SystemExit(exit_code)
     except Exception as exc:
         emit('media_acceptance', {'state': 'BLOCKED', 'reason': safe_error(exc), 'training_started': False})
         raise SystemExit(1)

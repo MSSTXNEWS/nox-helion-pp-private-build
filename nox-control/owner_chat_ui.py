@@ -65,4 +65,9 @@ def register_owner_chat_ui(app,trusted):
     async def owner_executors(request:Request):
         if not check(request):return reject()
         return JSONResponse(await asyncio.to_thread(workers),headers={'Cache-Control':'no-store'})
+    @app.get('/api/ui/downloads')
+    async def owner_downloads(request:Request):
+        if not check(request):return reject()
+        from owner_download_status import snapshot
+        return JSONResponse(await asyncio.to_thread(snapshot),headers={'Cache-Control':'no-store'})
     return {'home':DEST,'build':BUILD,'authentication':'EXISTING_OWNER_SESSION'}
