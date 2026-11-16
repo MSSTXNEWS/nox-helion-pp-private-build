@@ -25,6 +25,7 @@ import tarfile
 import time
 
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as conn
+from nox_runpod.teacher_mesh.v60.restore_validator import verify_plaintext_tar
 
 RUN = Path(os.environ.get("RUNNER_TEMP","/tmp")) / "nox-v60-critical"
 FINAL = Path("NOX_V60_S03_GENESIS_WEB_20261114.tar.age")
@@ -180,27 +181,9 @@ def restore_test(encrypted: Path, test_identity: Path) -> dict:
                      capture_output=True,timeout=90)
     if p.returncode!=0:
         raise RuntimeError('HOLD_TEST_AGE_DECRYPTION')
-    with tarfile.open(fileobj=io.BytesIO(p.stdout),mode='r:gz') as tar:
-        m=tar.extractfile('RESTORE_MANIFEST.json')
-        if m is None:raise RuntimeError('HOLD_MISSING_INNER_MANIFEST')
-        manifest=json.loads(m.read(200000))
-        if manifest.get('schema')!='NOX_V60_CRITICAL_BACKUP_MANIFEST_V1':
-            raise RuntimeError('HOLD_BAD_RESTORE_MANIFEST')
-        files=manifest.get('files',[])
-        if not isinstance(files,list) or len(files)!=7:
-            raise RuntimeError('HOLD_WRONG_RESTORE_FILE_COUNT')
-        for record in files:
-            arc=record['path']
-            member=tar.getmember(arc)
-            raw=tar.extractfile(member)
-            if raw is None:raise RuntimeError('HOLD_MISSING_RESTORE_MEMBER')
-            h=hashlib.sha256()
-            length=0
-            for b in iter(lambda:raw.read(1024*1024),b''):
-                h.update(b);length+=len(b)
-            if h.hexdigest()!=record['sha256'] or length!=record['size_bytes']:
-                raise RuntimeError('HOLD_RESTORED_HASH_MISMATCH')
-        return {'verified_files':len(files),'restored_plain_sha256':hashlib.sha256(p.stdout).hexdigest()}
+    # Strict member coverage, path/type checks, pinned per-file SHA and SQLite
+    # integrity run in-memory; no archive extraction or production DB writes.
+    return verify_plaintext_tar(p.stdout)
 
 
 def run() -> None:
