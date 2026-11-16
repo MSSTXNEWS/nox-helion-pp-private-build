@@ -110,7 +110,6 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "model_pack": pack_dir,
         "server_config": server_config,
         "server_manager": manager,
-        "protocol": "Project Maya official OpenAI-compatible serve.server on loopback; engine uses Maya's native stdin/stdout protocol",
         "model_content_sha256": "REQUIRES_NATIVE_PINNED_READBACK",
         "engine_sha256": MAYA_BINARY_SHA256,
         "gpu_names": list(GPU_NAMES),
@@ -122,7 +121,7 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "expert_mapping": "auto",
         "drafting": "disabled",
         "precision_override": "none; GGUF quantization is defined by the verified model files",
-        "protocol": "Maya stdin/stdout engine protocol; not an HTTP endpoint",
+        "protocol": "Project Maya official OpenAI-compatible serve.server on loopback; engine uses Maya native stdin/stdout protocol",
         "measured": False,
     }
 
@@ -176,7 +175,7 @@ class LaunchPlanTests(unittest.TestCase):
         ])
         self.assertFalse(any(arg.lower() in ("--fp8", "--bf16", "--dtype")
                              for arg in result["argv"]))
-        self.assertEqual(result["protocol"], "Maya stdin/stdout engine protocol; not an HTTP endpoint")
+        self.assertEqual(result["protocol"], "Project Maya official OpenAI-compatible serve.server on loopback; engine uses Maya native stdin/stdout protocol")
         self.assertFalse(result["measured"])
 
 
