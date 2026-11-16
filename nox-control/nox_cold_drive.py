@@ -243,7 +243,17 @@ def read_verified_range(remote, offset, length, object_size, block_sha256, timeo
                 if count > length:
                     raise RuntimeError('HOLD_RANGE_OVERSIZE')
                 chunks.append(data)
-        if proc.wait(timeout=max(0.01, deadline - time.monotonic())) != 0 or count != length:
+        while proc.poll() is None:
+            if stop_probe():
+                raise RuntimeError('HOLD_OWNER_STOP')
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError('HOLD_RANGE_TIMEOUT')
+            try:
+                proc.wait(timeout=min(0.2, remaining))
+            except subprocess.TimeoutExpired:
+                pass
+        if proc.returncode != 0 or count != length:
             raise RuntimeError('HOLD_RANGE_INCOMPLETE')
         if stop_probe():
             raise RuntimeError('HOLD_OWNER_STOP')

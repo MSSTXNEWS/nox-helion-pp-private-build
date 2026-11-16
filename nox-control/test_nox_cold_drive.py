@@ -40,6 +40,12 @@ elif cmd=='cat':
         b=b[off:off+cnt]
     if os.environ.get('TEST_STDERR'):sys.stderr.write('e'*200000)
     sys.stdout.buffer.write(b)
+    if os.environ.get('TEST_CLOSE_STDOUT_THEN_STALL'):
+        sys.stdout.flush()
+        sys.stdout.close()
+        if os.environ.get('TEST_EOF_MARKER'):
+            Path(os.environ['TEST_EOF_MARKER']).write_text('eof')
+        time.sleep(5)
     if os.environ.get('TEST_CAT_FAILURE'):sys.exit(5)
 elif cmd=='size':
     if os.environ.get('TEST_STALL_SIZE'):time.sleep(5)
@@ -430,6 +436,34 @@ class ColdTests(unittest.TestCase):
             cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),
                 hashlib.sha256(body[:100]).hexdigest(),timeout=.25,stop_probe=lambda:False)
         self.assertLess(time.monotonic()-start,2.5)
+
+    def test_verified_range_stop_after_eof_before_child_exit(self):
+        self.stage_range()
+        body=self.src.read_bytes()
+        marker=self.root/'cat-stdout-closed'
+        started=time.monotonic()
+        with patch.dict(os.environ, {
+            'TEST_CLOSE_STDOUT_THEN_STALL':'1',
+            'TEST_EOF_MARKER':str(marker),
+        }), self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),
+                hashlib.sha256(body[:100]).hexdigest(),timeout=4,
+                stop_probe=lambda:marker.exists())
+        self.assertTrue(marker.exists())
+        self.assertLess(time.monotonic()-started,2.5)
+        self.assertTrue(self.src.exists())
+
+    def test_verified_range_timeout_after_eof_before_child_exit(self):
+        self.stage_range()
+        body=self.src.read_bytes()
+        started=time.monotonic()
+        with patch.dict(os.environ, {'TEST_CLOSE_STDOUT_THEN_STALL':'1'}), \
+             self.assertRaisesRegex(RuntimeError,'HOLD_RANGE_TIMEOUT'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),
+                hashlib.sha256(body[:100]).hexdigest(),timeout=.35,
+                stop_probe=lambda:False)
+        self.assertLess(time.monotonic()-started,2.5)
+        self.assertTrue(self.src.exists())
 
     def test_verified_range_object_size_changed(self):
         self.stage_range()
