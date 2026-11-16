@@ -290,8 +290,49 @@ def reserve_incident(incident):
         return True
 
 
+def recover_fixed_stopped_service(task, handler, category, incident):
+    """Restart only a whitelisted service that is confirmed stopped, then retry its task.
+
+    The dispatcher never resumes through STOP/maintenance, never restarts a live
+    PID, and treats Supervisor RUNNING as process-start evidence only.
+    """
+    service = FIXED_SERVICE_HANDLERS.get(handler)
+    if service is None or category != 'service_unavailable':
+        return None
+    if stop_active():
+        return {'state': 'BLOCKED_OWNER_STOP', 'service': service}
+    before = service_state(service)
+    if before.get('state') not in ('STOPPED', 'EXITED') or before.get('pid') is not None:
+        return None
+    if not reserve_incident(incident):
+        return {'state': 'BLOCKED_DUPLICATE_OR_RECOVERY_BUDGET', 'service': service}
+    if stop_active() or service_state(service) != before:
+        return {'state': 'BLOCKED_OWNER_STOP_OR_SERVICE_CHANGED', 'service': service}
+    try:
+        repair = subprocess.run(['supervisorctl', 'start', service],
+                                capture_output=True, text=True, timeout=12)
+        after = service_state(service)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {'state': 'BLOCKED_REPAIR_' + type(exc).__name__, 'service': service}
+    if stop_active():
+        return {'state': 'BLOCKED_OWNER_STOP_AFTER_START', 'service': service,
+                'performed': 'UNKNOWN'}
+    if (repair.returncode == 0 and after.get('state') == 'RUNNING'
+            and type(after.get('pid')) is int and after['pid'] > 0):
+        task['status'] = 'pending'
+        task['next_try'] = time.time() + 15
+        return {'state': 'PROCESS_START_RETRY_SCHEDULED', 'service': service,
+                'performed': True, 'verified_fix': False,
+                'verification': {'before': before, 'after': after,
+                                 'command_rc': repair.returncode}}
+    return {'state': 'BLOCKED_REPAIR_NOT_VERIFIED', 'service': service,
+            'performed': 'UNKNOWN',
+            'verification': {'before': before, 'after': after,
+                             'command_rc': repair.returncode}}
+
+
 def on_failure(task, error):
-    """Inline callback after dispatcher locks release. Never marks a task done."""
+    """Retry known stopped owner services deterministically; escalate everything else."""
     handler = str(task.get('handler') or '')
     category = error_category(error)
     incident = digest({'task': task.get('id'), 'handler': handler, 'category': category})
@@ -305,53 +346,58 @@ def on_failure(task, error):
     elif int(task.get('retries') or 0) >= min(3, max(1, int(task.get('max_retries') or 3))):
         result['state'] = 'BLOCKED_RETRY_BUDGET_EXHAUSTED'
     else:
-        config = discover_senior()
-        if config is None:
-            result['state'] = 'BLOCKED_SENIOR_NOT_CONFIGURED'
-        elif not reserve_incident(incident):
-            result['state'] = 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET'
-        elif not _ADVISOR_SLOT.acquire(timeout=2):
-            result['state'] = 'BLOCKED_SENIOR_BUSY'
+        automatic = recover_fixed_stopped_service(task, handler, category, incident)
+        if automatic is not None:
+            result.update(automatic)
         else:
-            try:
-                service = FIXED_SERVICE_HANDLERS.get(handler)
-                context = {'handler': handler, 'error_category': category,
-                           'retries': int(task.get('retries') or 0), 'allowed_services': [service] if service else [],
-                           'read_only_retry_allowed': handler in READ_ONLY_RETRY_HANDLERS,
-                           'observed_service': service_state(service) if service else None}
-                advice = consult(config, context)
-                result.update(senior_model=config['model'], senior_config_sha256=config['config_sha256'], advice=advice)
-                append_json(ROOT / 'memory/dispatcher_mentor/quarantine.jsonl',
-                            {'kind': 'unverified_senior_advice', 'incident': incident, 'advice': advice, 'accepted': False, 'at': timestamp()})
-                if stop_active():
-                    result['state'] = 'BLOCKED_OWNER_STOP'
-                elif advice['action'] == 'retry_task' and handler in READ_ONLY_RETRY_HANDLERS:
-                    task['status'] = 'pending'
-                    task['next_try'] = time.time() + 30
-                    result['state'] = 'READ_ONLY_RETRY_SCHEDULED'
-                elif advice['action'] == 'restart_service' and service == advice['service']:
-                    before = service_state(service)
-                    if before['state'] not in ('STOPPED', 'EXITED') or before['pid'] is not None:
-                        result['state'] = 'BLOCKED_SERVICE_STATE_NOT_REPAIRABLE'
-                    elif stop_active() or service_state(service) != before:
-                        result['state'] = 'BLOCKED_OWNER_STOP_OR_SERVICE_CHANGED'
-                    else:
-                        # Only start the stopped whitelisted dependency; never restart a live PID.
-                        repair = subprocess.run(['supervisorctl', 'start', service], capture_output=True, text=True, timeout=12)
-                        after = service_state(service)
-                        result['verification'] = {'service': service, 'before': before, 'after': after, 'command_rc': repair.returncode}
-                        if repair.returncode == 0 and after['state'] == 'RUNNING' and after['pid']:
-                            task['status'] = 'pending'
-                            task['next_try'] = time.time() + 15
-                            result.update(state='VERIFIED_SERVICE_REPAIR_RETRY_SCHEDULED', verified_fix=True)
+            config = discover_senior()
+            if config is None:
+                result['state'] = 'BLOCKED_SENIOR_NOT_CONFIGURED'
+            elif not reserve_incident(incident):
+                result['state'] = 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET'
+            elif not _ADVISOR_SLOT.acquire(timeout=2):
+                result['state'] = 'BLOCKED_SENIOR_BUSY'
+            else:
+                try:
+                    service = FIXED_SERVICE_HANDLERS.get(handler)
+                    context = {'handler': handler, 'error_category': category,
+                               'retries': int(task.get('retries') or 0), 'allowed_services': [service] if service else [],
+                               'read_only_retry_allowed': handler in READ_ONLY_RETRY_HANDLERS,
+                               'observed_service': service_state(service) if service else None}
+                    advice = consult(config, context)
+                    result.update(senior_model=config['model'], senior_config_sha256=config['config_sha256'], advice=advice)
+                    append_json(ROOT / 'memory/dispatcher_mentor/quarantine.jsonl',
+                                {'kind': 'unverified_senior_advice', 'incident': incident, 'advice': advice, 'accepted': False, 'at': timestamp()})
+                    if stop_active():
+                        result['state'] = 'BLOCKED_OWNER_STOP'
+                    elif advice['action'] == 'retry_task' and handler in READ_ONLY_RETRY_HANDLERS:
+                        task['status'] = 'pending'
+                        task['next_try'] = time.time() + 30
+                        result['state'] = 'READ_ONLY_RETRY_SCHEDULED'
+                    elif advice['action'] == 'restart_service' and service == advice['service']:
+                        before = service_state(service)
+                        if before['state'] not in ('STOPPED', 'EXITED') or before['pid'] is not None:
+                            result['state'] = 'BLOCKED_SERVICE_STATE_NOT_REPAIRABLE'
+                        elif stop_active() or service_state(service) != before:
+                            result['state'] = 'BLOCKED_OWNER_STOP_OR_SERVICE_CHANGED'
                         else:
-                            result['state'] = 'BLOCKED_REPAIR_NOT_VERIFIED'
-                else:
-                    result['state'] = 'BLOCKED_ESCALATED'
-            except Exception as exc:
-                result['state'] = 'BLOCKED_SENIOR_OR_REPAIR_' + type(exc).__name__
-            finally:
-                _ADVISOR_SLOT.release()
+                            repair = subprocess.run(['supervisorctl', 'start', service], capture_output=True, text=True, timeout=12)
+                            after = service_state(service)
+                            result['verification'] = {'service': service, 'before': before, 'after': after, 'command_rc': repair.returncode}
+                            if stop_active():
+                                result['state'] = 'BLOCKED_OWNER_STOP_AFTER_START'
+                            elif repair.returncode == 0 and after['state'] == 'RUNNING' and type(after.get('pid')) is int and after['pid'] > 0:
+                                task['status'] = 'pending'
+                                task['next_try'] = time.time() + 15
+                                result.update(state='PROCESS_START_RETRY_SCHEDULED', performed=True, verified_fix=False)
+                            else:
+                                result['state'] = 'BLOCKED_REPAIR_NOT_VERIFIED'
+                    else:
+                        result['state'] = 'BLOCKED_ESCALATED'
+                except Exception as exc:
+                    result['state'] = 'BLOCKED_SENIOR_OR_REPAIR_' + type(exc).__name__
+                finally:
+                    _ADVISOR_SLOT.release()
     task['mentor'] = result
     journal('resolution', task_id=task.get('id'), **result, accepted=False)
     return result
