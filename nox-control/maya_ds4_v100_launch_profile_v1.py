@@ -60,6 +60,9 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
     if checked.get("state") != "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE":
         return {"state": checked.get("state", "HOLD_PREFLIGHT_UNKNOWN"),
                 "launchable": False}
+    if not binary_attestation.binary_identity_matches(
+            MAYA_BINARY, attested.get("binary_identity")):
+        return {"state": "HOLD_MAYA_BINARY_CHANGED_AFTER_PREFLIGHT", "launchable": False}
 
     pack_dir = checked["packer_output_dir"]
     argv = [
