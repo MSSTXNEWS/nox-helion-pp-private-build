@@ -38,15 +38,17 @@ def complete_rows():
 
 def synthetic_tensor_roles():
     # GGUF-order dimensions; synthetic metadata only, never weight bytes.
-    return [
-        {"name": "token_embd.weight", "dtype": "Q5_K", "dims": [5120, 32000]},
-        {"name": "blk.0.ffn_gate_inp.weight", "dtype": "Q8_0", "dims": [5120, 384]},
-        {"name": "blk.0.ffn_gate_exps.weight", "dtype": "IQ2_XXS", "dims": [5120, 384]},
-        {"name": "blk.0.ffn_up_exps.weight", "dtype": "IQ2_XXS", "dims": [5120, 384]},
-        {"name": "blk.0.ffn_down_exps.weight", "dtype": "IQ2_XXS", "dims": [384, 5120]},
-        {"name": "blk.0.engram_embd.weight", "dtype": "IQ4_NL", "dims": [512, 1000]},
-    ]
-
+    rows = [{"name": "token_embd.weight", "dtype": "Q5_K", "dims": [5120, 32000]}]
+    for layer in range(40):
+        rows.extend([
+            {"name": f"blk.{layer}.ffn_gate_inp.weight", "dtype": "Q8_0", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.exp_probs_b.bias", "dtype": "F32", "dims": [384]},
+            {"name": f"blk.{layer}.ffn_gate_exps.weight", "dtype": "IQ2_XXS", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.ffn_up_exps.weight", "dtype": "IQ2_XXS", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.ffn_down_exps.weight", "dtype": "IQ2_XXS", "dims": [384, 5120]},
+        ])
+    rows.append({"name": "blk.2.engram_embd.weight", "dtype": "IQ4_NL", "dims": [512, 1000]})
+    return rows
 
 class MayaLinkageReadOnlyTests(unittest.TestCase):
     def test_readelf_reports_dynamic_needs_without_running_maya(self):
@@ -130,11 +132,11 @@ class MayaLaunchPlanTests(unittest.TestCase):
 
     def test_iq2_xxs_embedding_and_router_are_rejected(self):
         roles = synthetic_tensor_roles()
-        roles[0]["dtype"] = "IQ2_XXS"
+        next(row for row in roles if row["name"] == "token_embd.weight")["dtype"] = "IQ2_XXS"
         self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
                          "HOLD_UNSUPPORTED_ROLE_DTYPE")
         roles = synthetic_tensor_roles()
-        roles[1]["dtype"] = "IQ2_XXS"
+        next(row for row in roles if row["name"] == "blk.0.ffn_gate_inp.weight")["dtype"] = "IQ2_XXS"
         got = PLAN.validate_tensor_role_inventory(roles)
         self.assertEqual(got["state"], "HOLD_UNSUPPORTED_ROLE_DTYPE")
         self.assertEqual(got["role"], "router")
@@ -142,12 +144,12 @@ class MayaLaunchPlanTests(unittest.TestCase):
     def test_iq2_xxs_expert_gate_up_down_and_iq4_nl_engram_are_allowed(self):
         got = PLAN.validate_tensor_role_inventory(synthetic_tensor_roles())
         self.assertEqual(got["state"], "ROLE_DTYPE_METADATA_PASS")
-        self.assertEqual(got["roles_checked"]["routed_expert_layers"], 1)
+        self.assertEqual(got["roles_checked"]["routed_expert_layers"], 40)
         self.assertEqual(got["roles_checked"]["engram_tables"], 1)
 
     def test_expert_and_engram_roles_fail_closed_on_mismatch_or_bad_blocks(self):
         roles = synthetic_tensor_roles()
-        roles[2]["dtype"] = "IQ3_XXS"
+        next(row for row in roles if row["name"] == "blk.0.ffn_gate_exps.weight")["dtype"] = "IQ3_XXS"
         self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
                          "HOLD_UNSUPPORTED_ROLE_DTYPE")
         roles = synthetic_tensor_roles()
