@@ -5,6 +5,9 @@ on:
     paths:
       - 'nox-control/owner_storage_reclaim.py'
       - 'nox-control/test_owner_storage_reclaim.py'
+      - 'nox-control/owner_native_audit.py'
+      - 'nox-control/test_owner_native_audit_model_paths.py'
+      - 'nox_runpod/teacher_mesh/v51/hf_range_probe.py'
       - '.github/workflows/nox-owner-storage-reclaim-source-ci.yml'
   pull_request:
     paths:
@@ -24,8 +27,8 @@ jobs:
           python-version: '3.11'
       - name: Compile and run bounded source tests
         run: |
-          python -m py_compile nox-control/owner_storage_reclaim.py nox-control/test_owner_storage_reclaim.py
+          python -m py_compile nox-control/owner_storage_reclaim.py nox-control/test_owner_storage_reclaim.py nox-control/owner_native_audit.py nox-control/test_owner_native_audit_model_paths.py
           cd nox-control
-          python -m unittest -v test_owner_storage_reclaim
+          python -m unittest -v test_owner_storage_reclaim test_owner_native_audit_model_paths
       - name: Mark runtime boundary
         run: echo 'SOURCE TESTS ONLY. No native files, models, STOP, backups, or services touched.'
