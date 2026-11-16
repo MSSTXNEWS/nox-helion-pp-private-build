@@ -71,9 +71,27 @@ def regular(path: Path, allow_missing=False):
 def canonical(d):
     return json.dumps(d,sort_keys=True,separators=(',', ':'),allow_nan=False).encode()
 
+def _strict_manifest_pairs(pairs):
+    """Reject ambiguous JSON keys at every level, including shard and alias rows."""
+    result = {}
+    for key, value in pairs:
+        require(key not in result, 'HOLD_MANIFEST_DUPLICATE_KEY')
+        result[key] = value
+    return result
+
+
+def _reject_manifest_nonfinite(value):
+    raise Hold('HOLD_MANIFEST_NONFINITE_JSON')
+
+
 def load_manifest(raw):
-    require(len(raw)<=131072, 'HOLD_MANIFEST_LIMIT')
-    m=json.loads(raw)
+    require(isinstance(raw, (str, bytes, bytearray)) and len(raw) <= 131072,
+            'HOLD_MANIFEST_LIMIT')
+    try:
+        m = json.loads(raw, object_pairs_hook=_strict_manifest_pairs,
+                       parse_constant=_reject_manifest_nonfinite)
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise Hold('HOLD_MANIFEST_INVALID_JSON') from exc
     require(isinstance(m,dict) and m.get('schema')=='NOX_MODEL_DOWNLOAD_MANIFEST_V1','HOLD_MANIFEST_SCHEMA')
     require(m.get('repository')==REPO and m.get('revision')==REVISION,'HOLD_MANIFEST_REVISION')
     rows=m.get('files')

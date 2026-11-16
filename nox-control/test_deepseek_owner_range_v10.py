@@ -160,6 +160,42 @@ class DeepSeekP0Offline(unittest.TestCase):
         with self.assertRaisesRegex(m.Hold,'HOLD_MANIFEST_FILE_IDENTITY'):
             m.load_manifest(json.dumps(manifest).encode())
 
+    def test_manifest_rejects_duplicate_keys_nonfinite_and_malformed_json(self):
+        """An ambiguous manifest must fail before any network or owner admission."""
+        files = [
+            {'path': name, 'bytes': size, 'sha256': sha,
+             'url': f'https://huggingface.co/{m.REPO}/resolve/{m.REVISION}/{name}'}
+            for name, (size, sha) in m.PINNED_FILE_FACTS.items()
+        ]
+        manifest = {
+            'schema': 'NOX_MODEL_DOWNLOAD_MANIFEST_V1',
+            'repository': m.REPO, 'revision': m.REVISION,
+            'files': files, 'total_unique_gguf_bytes': 248834257920,
+            'alias': {
+                'path': 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf',
+                'target': 'DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf',
+                'duplicate_bytes': False,
+            },
+        }
+        good = json.dumps(manifest)
+        self.assertEqual(len(m.load_manifest(good)), 6)
+        ambiguous = (
+            (good.replace('{"schema":', '{"revision": "main", "schema":', 1),
+             'HOLD_MANIFEST_DUPLICATE_KEY'),
+            (good.replace('"bytes": 5780704', '"bytes": 1, "bytes": 5780704', 1),
+             'HOLD_MANIFEST_DUPLICATE_KEY'),
+            (good.replace('"duplicate_bytes": false',
+                          '"duplicate_bytes": true, "duplicate_bytes": false', 1),
+             'HOLD_MANIFEST_DUPLICATE_KEY'),
+            (good[:-1] + ', "extension": NaN}', 'HOLD_MANIFEST_NONFINITE_JSON'),
+            (good[:-1] + ', "extension": Infinity}', 'HOLD_MANIFEST_NONFINITE_JSON'),
+            (good[:-1], 'HOLD_MANIFEST_INVALID_JSON'),
+        )
+        for payload, reason in ambiguous:
+            with self.subTest(reason=reason, payload_tail=payload[-55:]):
+                with self.assertRaisesRegex(m.Hold, reason):
+                    m.load_manifest(payload.encode('utf-8'))
+
     def test_manifest_sum_matches_engine_p0(self):
         # Actual immutable manifest is fetched from engine stage branch by release controller.
         self.assertEqual(sum([5780704,39535781184,39736712000,39036908384,19923784832,110595290816]),
