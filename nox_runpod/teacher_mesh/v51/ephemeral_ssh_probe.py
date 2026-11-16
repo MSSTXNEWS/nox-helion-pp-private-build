@@ -156,7 +156,7 @@ for exe in candidates:
 print('NATIVE_P0_DEEP_INVENTORY_COMPLETE=true')
 
 def supervisor_projection(rc, output):
-    """Bounded read-only critical NOX status, including Supervisor exit code 3."""
+    # Bounded read-only critical NOX status, including Supervisor exit code 3.
     if rc not in (0, 3):
         return {'state':'HOLD_SUPERVISOR_COMMAND','services':[]}
     lines=output.splitlines()
