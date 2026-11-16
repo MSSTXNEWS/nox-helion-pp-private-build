@@ -13,7 +13,7 @@ import time
 import urllib.request
 from urllib.parse import urlsplit
 
-UNIT_PATTERN = re.compile(r"^nox-[a-z0-9][a-z0-9_.@-]{0,79}\\.service$")
+UNIT_PATTERN = re.compile(r"^nox-[a-z0-9][a-z0-9_.@-]{0,79}\.service$")
 
 def load(path):
     try:
