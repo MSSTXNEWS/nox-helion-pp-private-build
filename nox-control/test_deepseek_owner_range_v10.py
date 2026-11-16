@@ -52,6 +52,33 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertFalse((self.dst/(self.name+'.part')).exists())
         receipt=json.loads((self.dst/(self.name+'.verified.json')).read_text())
         self.assertEqual(receipt['sha256'],self.row['sha256'])
+    def test_verified_receipt_publish_never_clobbers_previous_owner_evidence(self):
+        # A previous transaction's immutable evidence must survive a retry.
+        receipt=self.dst/(self.name+'.verified.json')
+        original=b'PRIOR-OWNER-SHA-RECEIPT'
+        receipt.write_bytes(original)
+        with self.assertRaisesRegex(m.Hold,'HOLD_RECEIPT_ALREADY_EXISTS'):
+            m.atomic_receipt(receipt,{'schema':'new','sha256':self.row['sha256']})
+        self.assertEqual(receipt.read_bytes(),original)
+        self.assertFalse(list(self.dst.glob('.nox-ds-v10-*')))
+        # Even a dangling target link is occupied and must not be replaced.
+        receipt.unlink()
+        receipt.symlink_to(self.dst/'nonexistent-owner-receipt')
+        with self.assertRaisesRegex(m.Hold,'HOLD_RECEIPT_ALREADY_EXISTS'):
+            m.atomic_receipt(receipt,{'schema':'new'})
+        self.assertTrue(receipt.is_symlink())
+        self.assertFalse(list(self.dst.glob('.nox-ds-v10-*')))
+
+    def test_verified_receipt_new_publish_is_durable_and_unique(self):
+        receipt=self.dst/(self.name+'.verified.json')
+        document={'schema':'NOX_DEEPSEEK_RANGE_RECEIPT_V10','sha256':self.row['sha256']}
+        m.atomic_receipt(receipt,document)
+        self.assertEqual(json.loads(receipt.read_text()),document)
+        self.assertFalse(list(self.dst.glob('.nox-ds-v10-*')))
+        with self.assertRaisesRegex(m.Hold,'HOLD_RECEIPT_ALREADY_EXISTS'):
+            m.atomic_receipt(receipt,document)
+        self.assertEqual(json.loads(receipt.read_text()),document)
+
     def test_complete_verified_file_does_not_download(self):
         (self.dst/self.name).write_bytes(self.content)
         self.assertEqual(self.do(opener=lambda *a,**k:self.fail('network used'))['new_bytes'],0)
