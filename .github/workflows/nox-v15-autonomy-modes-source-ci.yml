@@ -1,4 +1,4 @@
-name: NOX V15 autonomy NORMAL 2 FORSAZH 6 source acceptance
+name: NOX V15 autonomy NORMAL 3 FORSAZH 6 source acceptance
 on:
   push:
     paths:
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Compile and test two/six worker admission and STOP-safe staging
+      - name: Compile and test three/six worker admission and STOP-safe staging
         run: |
           python3 -m py_compile nox-control/owner_autonomy_pool.py nox-control/owner_autonomy_mode_stage_v15.py
           PYTHONPATH=nox-control python3 -m unittest -v test_owner_autonomy_pool test_owner_autonomy_mode_stage_v15
@@ -33,7 +33,7 @@ jobs:
           sys.path.insert(0, 'nox-control')
           import owner_autonomy_pool as p
           import owner_autonomy_mode_stage_v15 as m
-          assert p.MODES == {'NORMAL':2,'FORSAZH':6}
-          assert (m.NORMAL,m.FORSAZH)==(2,6)
+          assert p.MODES == {'NORMAL':3,'FORSAZH':6}
+          assert (m.NORMAL,m.FORSAZH)==(3,6)
           print('MODE_V15_SOURCE_TESTED_ONLY; NO_NATIVE_SERVICES_STARTED')
           PY
