@@ -357,5 +357,22 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertIn("64K", setup)
 
 
+    def test_pinned_maya_cuda_architecture_and_volta_kernel_gates(self):
+        cmake = maya_source("CMakeLists.txt")
+        ds4_kernels = maya_source("src/ds4/ds4_kernels.cu")
+        # Maya has a newer default; V100 builds must set -DCMAKE_CUDA_ARCHITECTURES=70.
+        self.assertIn('find_package(CUDAToolkit REQUIRED)', cmake)
+        self.assertIn('set(CMAKE_CUDA_ARCHITECTURES 120 CACHE STRING "CUDA architectures" FORCE)', cmake)
+        self.assertIn('if(_base LESS 60)', cmake)
+        self.assertIn('Volta (sm_70: GLM, maya-ds4 and maya-mm3 run on V100s)', cmake)
+        self.assertIn('add_executable(maya-ds4', cmake)
+        self.assertNotIn('set_target_properties(maya-ds4 PROPERTIES CUDA_ARCHITECTURES', cmake)
+        # BF16 GGUF values are converted from bits in software on the DS4 path;
+        # SM80-only MMA is gated, so SM70 does not require BF16 tensor cores.
+        self.assertIn('bf16f(uint16_t b) { return __uint_as_float((uint32_t) b << 16); }', ds4_kernels)
+        self.assertNotIn('__nv_bfloat16', ds4_kernels)
+        self.assertNotIn('__nv_fp8', ds4_kernels)
+        self.assertIn('#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800\\n    asm volatile("mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32', ds4_kernels)
+
 if __name__ == "__main__":
     unittest.main()
