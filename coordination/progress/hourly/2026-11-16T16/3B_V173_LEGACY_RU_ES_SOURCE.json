@@ -13,14 +13,14 @@
   "scope": "SOURCE_PATCH_ONLY",
   "root_cause": "Legacy browsers lacking Intl.Segmenter streamed only ASCII prefixes; pure Cyrillic RU and Spanish inverted punctuation could be buffered until native done, inflating first meaningful token latency.",
   "fix": "Extend safe codepoint prefix whitelist to BMP Cyrillic, Latin extended, inverted Spanish punctuation and common typography. Preserve one-codepoint lookahead; non-whitelisted combining marks, ZWJ and emoji remain buffered to avoid splitting grapheme clusters.",
-  "proof": "Bounded no-eval deterministic segment simulation checked Russian, Spanish and emoji/combining boundaries. Added Node VM delayed native fixture before done; CI exact SHA pending until workflow finishes.",
+  "proof": "V135 exact-commit CI 40/40 Node PASS; V139 accelerated integration exact-commit SUCCESS, 9/9 source hash checks. Neither test establishes server deployment.",
   "rollback": "CAS revert only bridge and test blobs to preimages; no native changes, no deploy, no S03/data/weights change.",
   "task_outcomes": [
     {
       "task_id": "S3-04-LEGACY-RU-ES-FIRST-DELTA",
-      "state": "SOURCE_PATCH_CI_PENDING",
+      "state": "SOURCE_TESTED",
       "native_claim": null,
-      "proof": "legacy fallback early authentic RU/ES Unicode token and complete S03 test added"
+      "proof": "V135 exact-commit CI 40/40 Node PASS, V139 merged source CI SUCCESS, 9/9 source members SHA PASS; old-browser RU/ES token before delayed done, verified S03 in isolated fixture"
     },
     {
       "task_id": "P0-ENGINE-MAYA-STDIO-ADAPTER",
@@ -81,5 +81,22 @@
     "STOP",
     "schedules"
   ],
-  "next": "Resolve owner-native P0 seekable storage and complete DeepSeek before model cutover. Independently stage V173 only after exact preimage and authorised owner lease/rollback; run native RU/ES streamed token/STOP/S03 before/after latency."
+  "next": "Resolve owner-native P0 seekable storage and complete DeepSeek before model cutover. Independently stage V173 only after exact preimage and authorised owner lease/rollback; run native RU/ES streamed token/STOP/S03 before/after latency.",
+  "source_ci": {
+    "commit": "0d7e2ae25442907959d39831083965bf755524ab",
+    "v135": {
+      "run": 43878212575,
+      "status": "SUCCESS",
+      "node_tests_pass": 40,
+      "node_tests_fail": 0
+    },
+    "v139": {
+      "run": 43878212243,
+      "status": "SUCCESS",
+      "sha_members_pass": "9/9",
+      "source_zip_sha256": "d98f56e87bc7df4a6080ef817b1dfd638a655f74e5576e027f923e2d64cbf72b"
+    }
+  },
+  "source_blob_after": "f1623225f0304190fbbd88dcc34d2e06a34fdf85",
+  "test_blob_after": "a1ab8472e3f9b110cfb32ec7058b841210551f0b"
 }
