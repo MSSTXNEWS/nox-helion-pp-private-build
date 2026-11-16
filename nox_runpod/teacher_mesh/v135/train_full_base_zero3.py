@@ -280,10 +280,32 @@ def run(args)->dict:
                     callbacks=[_stop_callback(TrainerCallback,Path(args.stop_file))])
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_AFTER_MODEL_LOAD')
-    before=trainer.evaluate(metric_key_prefix='holdout_before')
+    # Trainer restores model/optimizer/scaler/RNG and trainer_state before
+    # on_train_begin. Capture the baseline there so resumed runs compare the
+    # restored checkpoint against its own pre-update quality, not the base model.
+    before={}
+    expected_start_step=resumed['start_step'] if resumed else 0
+    class _HoldoutBaselineCallback(TrainerCallback):
+        def on_train_begin(self,args,state,control,**kwargs):
+            if before:
+                raise RuntimeError('HOLD_HOLDOUT_BASELINE_DUPLICATE')
+            if _stop_active(Path(args.stop_file)):
+                raise RuntimeError('HOLD_STOP_BEFORE_HOLDOUT_BASELINE')
+            if type(getattr(state,'global_step',None)) is not int or state.global_step!=expected_start_step:
+                raise RuntimeError('HOLD_RESUME_STEP_NOT_RESTORED_BEFORE_HOLDOUT')
+            metrics=trainer.evaluate(metric_key_prefix='holdout_before')
+            if not isinstance(metrics,Mapping):
+                raise RuntimeError('HOLD_HOLDOUT_BASELINE_INVALID')
+            before.update(metrics)
+            if _stop_active(Path(args.stop_file)):
+                raise RuntimeError('HOLD_STOP_AFTER_HOLDOUT_BASELINE')
+            return control
+    trainer.add_callback(_HoldoutBaselineCallback())
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_BEFORE_TRAIN')
     result=trainer.train(resume_from_checkpoint=resumed['checkpoint'] if resumed else None)
+    if not before:
+        raise RuntimeError('HOLD_HOLDOUT_BASELINE_NOT_CAPTURED')
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_AFTER_TRAIN')
     steps=trainer.state.global_step
