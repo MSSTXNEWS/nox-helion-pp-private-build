@@ -63,6 +63,52 @@ class ExistingExecutorClaimsTests(unittest.TestCase):
         ])
         self.assertEqual(result["state"], "UNAVAILABLE")
 
+    def test_model_update_flag_suppresses_stale_busy_claims(self):
+        rows = [{"id": "nox-agent-01", "status": "busy",
+                 "current_task": {"id": "S2-07"}}]
+        flag = self.root / "state/OWNER_MAINTENANCE.flag"
+        flag.write_text("owner maintenance")
+        result = self.snapshot(rows)
+        self.assertEqual(result["state"], "MODEL_UPDATE")
+        self.assertEqual(result["owner_maintenance"], "PRESENT")
+        self.assertEqual(result["workers"], [])
+        self.assertIsNone(result["observed_at"])
+        flag.unlink()
+        resumed_read_only = ui.workers()
+        self.assertEqual(resumed_read_only["state"], "OBSERVED")
+        self.assertEqual(resumed_read_only["owner_maintenance"], "ABSENT")
+
+    def test_model_update_flag_overrides_invalid_busy_claim(self):
+        (self.root / "state/OWNER_MAINTENANCE.flag").touch()
+        result = self.snapshot([{"id": "nox-agent-01", "status": "busy",
+                                "current_task": {}}])
+        self.assertEqual(result["state"], "MODEL_UPDATE")
+        self.assertEqual(result["workers"], [])
+
+    def test_symlinked_maintenance_flag_fails_closed(self):
+        target = self.root / "other"
+        target.write_text("not an owner maintenance flag")
+        (self.root / "state/OWNER_MAINTENANCE.flag").symlink_to(target)
+        result = self.snapshot([{"id": "nox-agent-01", "status": "idle"}])
+        self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
+        self.assertEqual(result["owner_maintenance"], "UNKNOWN")
+        self.assertEqual(result["workers"], [])
+
+    def test_nonregular_maintenance_flag_fails_closed(self):
+        (self.root / "state/OWNER_MAINTENANCE.flag").mkdir()
+        result = self.snapshot([{"id": "nox-agent-01", "status": "idle"}])
+        self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
+        self.assertEqual(result["workers"], [])
+
+    def test_owner_scripts_present_maintenance_without_claims(self):
+        script = Path(__file__).with_name("owner-chat-ui.js").read_text()
+        presence = Path(__file__).with_name("owner-presence.js").read_text()
+        self.assertIn("value.state==='MODEL_UPDATE'", script)
+        self.assertIn("busy:0,state:value.state", script)
+        self.assertIn("state==='MODEL_UPDATE'", presence)
+        self.assertIn("set('updating')", presence)
+
+
 
 if __name__ == "__main__":
     unittest.main()
