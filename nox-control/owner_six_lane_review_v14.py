@@ -173,14 +173,13 @@ def coordinator_reconcile(review, native_receipts):
         or len(set(pids.values())) != len(ROLES)
         or any(type(pid) is not int or pid < 2 for pid in pids.values())):
         return {"state": "HOLD_REVIEW_IDENTITY", "done": 0}
-    approved = []
-    seen = set()
+    verified = set()
     for row in native_receipts:
         if not isinstance(row, Mapping):
             continue
         task_id, sha = row.get("task_id"), row.get("result_sha256")
         if (not isinstance(task_id, str) or task_id not in REVIEW_IDS
-            or task_id in seen or not isinstance(sha, str) or len(sha) != 64
+            or not isinstance(sha, str) or len(sha) != 64
             or any(c not in "0123456789abcdef" for c in sha)
             or row.get("native_verified") is not True
             or row.get("terminal_state") != "COMPLETED"
@@ -188,10 +187,25 @@ def coordinator_reconcile(review, native_receipts):
             or row.get("installed_and_readback") is not True
             or row.get("rollback_verified") is not True):
             continue
-        seen.add(task_id)
-        approved.append(task_id)
-    return {"state": "NATIVE_EVIDENCE_READBACK" if approved else "HOLD_NO_NATIVE_COMPLETIONS",
-            "done": len(approved), "task_ids": approved}
+        verified.add(task_id)
+    # Role tasks form an ordered three-stage DAG. A proven stage 3 receipt
+    # without verified stages 1 and 2 must never count as completed release work.
+    approved, blocked = [], []
+    for role in ROLES:
+        dependencies_verified = True
+        for index in range(1, len(REVIEW_TASKS[role]) + 1):
+            task_id = "V14-" + role + "-" + str(index)
+            if task_id not in verified:
+                dependencies_verified = False
+            elif dependencies_verified:
+                approved.append(task_id)
+            else:
+                blocked.append(task_id)
+    return {"state": ("NATIVE_EVIDENCE_READBACK" if approved else
+                       "HOLD_DEPENDENCY_READBACK" if blocked else
+                       "HOLD_NO_NATIVE_COMPLETIONS"),
+            "done": len(approved), "task_ids": approved,
+            "blocked_dependency_ids": blocked}
 
 if __name__ == "__main__":
     print("NOX_V14_SOURCE_ONLY_NOT_INSTALLED_OR_STARTED")
