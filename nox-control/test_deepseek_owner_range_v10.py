@@ -82,6 +82,31 @@ class DeepSeekP0Offline(unittest.TestCase):
     def test_complete_verified_file_does_not_download(self):
         (self.dst/self.name).write_bytes(self.content)
         self.assertEqual(self.do(opener=lambda *a,**k:self.fail('network used'))['new_bytes'],0)
+    def test_reused_complete_final_recovers_missing_receipt_without_download(self):
+        # A crash after final link, before receipt publication, must not lose
+        # durable SHA evidence or redownload any of the existing GGUF.
+        final=self.dst/self.name;final.write_bytes(self.content)
+        receipt=self.dst/(self.name+'.verified.json')
+        result=self.do(opener=lambda *a,**k:self.fail('unexpected HTTP'))
+        self.assertEqual((result['state'],result['new_bytes']),('REUSED_SHA_VERIFIED',0))
+        recorded=json.loads(receipt.read_text())
+        self.assertEqual((recorded['file'],recorded['sha256'],recorded['new_bytes']),
+                         (self.name,self.row['sha256'],0))
+        self.assertIs(recorded['recovered_existing'],True)
+        old=receipt.read_bytes()
+        self.assertEqual(self.do(opener=lambda *a,**k:self.fail('unexpected HTTP'))['new_bytes'],0)
+        self.assertEqual(receipt.read_bytes(),old)
+        self.assertFalse(list(self.dst.glob('.nox-ds-v10-*')))
+
+    def test_reused_final_dangling_receipt_is_never_replaced(self):
+        final=self.dst/self.name;final.write_bytes(self.content)
+        receipt=self.dst/(self.name+'.verified.json')
+        receipt.symlink_to(self.dst/'missing-owner-receipt')
+        with self.assertRaisesRegex(m.Hold,'HOLD_SYMLINK_PATH'):
+            self.do(opener=lambda *a,**k:self.fail('unexpected HTTP'))
+        self.assertTrue(receipt.is_symlink())
+        self.assertFalse(list(self.dst.glob('.nox-ds-v10-*')))
+
     def test_existing_corrupt_complete_file_never_overwritten(self):
         (self.dst/self.name).write_bytes(b'X'*len(self.content))
         with self.assertRaisesRegex(m.Hold,'EXISTING_FINAL_UNVERIFIED'):self.do()
