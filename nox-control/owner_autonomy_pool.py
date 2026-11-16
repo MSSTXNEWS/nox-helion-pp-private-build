@@ -242,7 +242,7 @@ def verify_distinct_native_processes(rows, *, requested, instance_id=60509551):
         raise AutoHold('HOLD_OS_PROCESS_TARGET')
     if not isinstance(rows, list) or len(rows)<requested:
         raise AutoHold('HOLD_OS_PROCESSES_NOT_LAUNCHED')
-    live=[];seen=set()
+    live=[];seen=set();seen_pids=set()
     for row in rows:
         if not isinstance(row, Mapping): continue
         pid=row.get('pid');start=row.get('process_starttime')
@@ -250,8 +250,8 @@ def verify_distinct_native_processes(rows, *, requested, instance_id=60509551):
             or row.get('native_pid_verified') is not True or row.get('state')!='RUNNING'
             or type(pid) is not int or pid<=1 or type(start) is not int or start<=0):continue
         identity=(pid,start)
-        if identity in seen:raise AutoHold('HOLD_DUPLICATE_NATIVE_PROCESS')
-        seen.add(identity);live.append(row)
+        if identity in seen or pid in seen_pids:raise AutoHold('HOLD_DUPLICATE_NATIVE_PROCESS')
+        seen.add(identity);seen_pids.add(pid);live.append(row)
     if len(live)!=requested:
         raise AutoHold('HOLD_UNVERIFIED_OS_PROCESS_COUNT')
     return live
@@ -287,9 +287,9 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
         return {'state':'HOLD_NATIVE_PROCESS_START','jobs_started':0}
     try:workers=verify_distinct_native_processes(native.process_readback(),requested=target,instance_id=instance_id)
     except AutoHold as e:return {'state':str(e),'jobs_started':0}
-    receipts=[]
+    receipts=[];seen_job_ids=set()
     for task in ready:
-        if (native.stop_active() is not False or native.writer_lease() is not True):
+        if (native.owner_allowed() is not True or native.stop_active() is not False or native.writer_lease() is not True):
             return {'state':'HOLD_STOP_OR_LEASE_CHANGED','jobs_started':len(receipts),'receipts':receipts}
         try:
             # Each task is claimed once, never replay unknown outcomes.
@@ -297,19 +297,35 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
             if duplicate is not False:
                 return {'state':'HOLD_DUPLICATE_OR_UNKNOWN_TASK',
                         'jobs_started':len(receipts),'receipts':receipts}
+            # Owner scope, STOP and lease can change during duplicate lookup.
+            if (native.owner_allowed() is not True or native.stop_active() is not False
+                or native.writer_lease() is not True):
+                return {'state':'HOLD_STOP_OR_LEASE_CHANGED','jobs_started':len(receipts),'receipts':receipts}
             result=native.native_queue_claim(task,owner_pids=[x['pid'] for x in workers])
         except Exception:
             return {'state':'UNKNOWN_NATIVE_CLAIM','jobs_started':len(receipts),'receipts':receipts}
         # Never retry a claim after ambiguous result; demand durable readback.
-        if not isinstance(result,Mapping) or not result.get('job_id'):
-            return {'state':'UNKNOWN_NATIVE_CLAIM','jobs_started':len(receipts),'receipts':receipts}
-        proof=native.s03_readback(task['id'],result['job_id'])
+        job_id=result.get('job_id') if isinstance(result,Mapping) else None
+        # A native claim may exist even if its returned ID is invalid or repeated.
+        # Preserve the task ID for exact readback; never enqueue it again blindly.
+        if type(job_id) not in (str,int) or ID.fullmatch(str(job_id)) is None:
+            return {'state':'UNKNOWN_NATIVE_CLAIM','jobs_started':len(receipts),
+                    'possible_unverified_claim':task['id'],'receipts':receipts}
+        if str(job_id) in seen_job_ids:
+            return {'state':'HOLD_NATIVE_JOB_ID_COLLISION','jobs_started':len(receipts),
+                    'possible_unverified_claim':task['id'],'receipts':receipts}
+        try:
+            proof=native.s03_readback(task['id'],job_id)
+        except Exception:
+            return {'state':'HOLD_S03_NATIVE_READBACK','jobs_started':len(receipts),
+                    'possible_unverified_claim':task['id'],'receipts':receipts}
         if (not isinstance(proof,Mapping) or proof.get('native_verified') is not True
             or proof.get('task_id')!=task['id'] or proof.get('job_id')!=result['job_id']
             or not isinstance(proof.get('receipt_sha256'),str)
             or SHA.fullmatch(proof['receipt_sha256']) is None):
             return {'state':'HOLD_S03_NATIVE_READBACK','jobs_started':len(receipts),'possible_unverified_claim':task['id'],'receipts':receipts}
-        receipts.append({'task_id':task['id'],'job_id':result['job_id'],'pid_count':len(workers),
+        seen_job_ids.add(str(job_id))
+        receipts.append({'task_id':task['id'],'job_id':job_id,'pid_count':len(workers),
                          's03_sha256':proof['receipt_sha256']})
     return {'state':'NATIVE_QUEUE_READBACK_VERIFIED' if receipts else 'NATIVE_POOL_READY_IDLE',
             'jobs_started':len(receipts),

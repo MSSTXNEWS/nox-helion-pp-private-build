@@ -142,4 +142,59 @@ class PoolTests(unittest.TestCase):
         n.stop_active.return_value=True
         self.assertEqual(pool.admit_native_tick(n,tasks=task,status={},mode='NORMAL',memory_ratio=.5)['jobs_started'],0)
 
+
+    def _native_claim_mock(self):
+        n=Mock()
+        n.owner_allowed.return_value=True
+        n.stop_active.return_value=False
+        n.writer_lease.return_value=True
+        n.ensure_processes.return_value=True
+        n.native_duplicate_check.return_value=False
+        n.process_readback.return_value=[
+            {'pid':500+i,'process_starttime':1000+i,'native_pid_verified':True,
+             'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'}
+            for i in range(3)]
+        n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'native-'+task['id']}
+        n.s03_readback.side_effect=lambda tid,jid:{
+            'native_verified':True,'task_id':tid,'job_id':jid,'receipt_sha256':'b'*64}
+        return n
+
+    def test_ambiguous_s03_exception_retains_claim_id(self):
+        n=self._native_claim_mock()
+        n.s03_readback.side_effect=RuntimeError('native S03 unavailable')
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},
+                                 allowed_handlers={'owner_component'})
+        out=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'HOLD_S03_NATIVE_READBACK')
+        self.assertEqual(out['possible_unverified_claim'],'job.00000')
+        self.assertEqual(out['jobs_started'],0)
+        self.assertEqual(n.native_queue_claim.call_count,1)
+
+    def test_duplicate_native_job_id_fails_closed(self):
+        n=self._native_claim_mock()
+        n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'SAME-JOB'}
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},
+                                 allowed_handlers={'owner_component'})
+        out=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'HOLD_NATIVE_JOB_ID_COLLISION')
+        self.assertEqual(out['jobs_started'],1)
+        self.assertEqual(out['possible_unverified_claim'],'job.00001')
+        self.assertEqual(n.native_queue_claim.call_count,2)
+
+    def test_owner_scope_revoked_during_duplicate_lookup(self):
+        n=self._native_claim_mock()
+        n.owner_allowed.side_effect=[True,True,False]
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(1)},
+                                 allowed_handlers={'owner_component'})
+        out=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'HOLD_STOP_OR_LEASE_CHANGED')
+        n.native_queue_claim.assert_not_called()
+
+    def test_reused_pid_with_different_starttime_not_extra_worker(self):
+        rows=[{'pid':777,'process_starttime':100+i,'native_pid_verified':True,
+               'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'}
+              for i in range(3)]
+        with self.assertRaisesRegex(pool.AutoHold,'DUPLICATE_NATIVE_PROCESS'):
+            pool.verify_distinct_native_processes(rows,requested=3)
+
 if __name__=='__main__':unittest.main()

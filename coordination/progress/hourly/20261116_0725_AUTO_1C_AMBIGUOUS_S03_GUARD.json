@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_1C_V1",
+  "instructions_version": "0.0.6",
+  "slot": "1C",
+  "utc": "2026-11-16T04:25:00Z",
+  "msk": "2026-11-16T07:25:00+03:00",
+  "sha_before": "59ec895f6c70984f96d5b574adb3e1a6bf8fcb76",
+  "sha_after": "COMMIT_CARRYING_THIS_RECORD",
+  "error_id": "NOX-P0-AUTOPOOL-AMBIGUOUS-S03-CLAIM-ID-20261116",
+  "task_results": [
+    "1 HOLD: no current owner STOP/lease/claim readback",
+    "2 SOURCE: existing pool guarded, no competing daemon",
+    "3 HISTORICAL_NATIVE: three PIDs observed, not revalidated",
+    "4 SOURCE: unique job_id, owner gate and ambiguous readback guarded",
+    "5 HOLD: no live bounded job + new S03 terminal receipt"
+  ],
+  "weights": "NO_NEW_SUCCESSFUL_UPDATES_PROVEN",
+  "knowledge": "NO_NEW_HUNTER_S03_RECALL_PROVEN",
+  "dispatcher_resources": "HISTORICAL_DIRECTOR_628762_WORKERS_628943_628944_628945;STOP_LEASE_GPU_RAM_NOT_FRESH",
+  "tests": "FOUR_NEW_UNIT_REGRESSIONS_PENDING_EXACT_SHA_CI",
+  "native_writes": 0,
+  "cleanup_deleted": [],
+  "freed_bytes_verified": 0,
+  "next_action": "Owner-only current queue/S03/STOP/lease readback, then one bounded claim if safely admitted."
+}
