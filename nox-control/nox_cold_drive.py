@@ -122,6 +122,57 @@ def stream_sha256(remote, size, timeout=3600):
 
 
 MAX_VERIFIED_RANGE_BYTES = 1024 * 1024
+MAX_RANGE_METADATA_BYTES = 64 * 1024
+
+
+def _range_size_with_stop(remote, deadline, stop_probe):
+    """Bounded metadata read sharing the range deadline and owner STOP."""
+    proc = subprocess.Popen(
+        ['rclone', 'size', '--json', remote],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    payload = bytearray()
+    try:
+        with selectors.DefaultSelector() as sel:
+            sel.register(proc.stdout, selectors.EVENT_READ)
+            while sel.get_map():
+                if stop_probe():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError('HOLD_RANGE_TIMEOUT')
+                for key, _ in sel.select(min(0.2, remaining)):
+                    chunk = os.read(key.fd, min(4096, MAX_RANGE_METADATA_BYTES + 1 - len(payload)))
+                    if not chunk:
+                        sel.unregister(key.fileobj)
+                        continue
+                    payload.extend(chunk)
+                    if len(payload) > MAX_RANGE_METADATA_BYTES:
+                        raise RuntimeError('HOLD_RANGE_METADATA_OVERSIZE')
+        while proc.poll() is None:
+            if stop_probe():
+                raise RuntimeError('HOLD_OWNER_STOP')
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError('HOLD_RANGE_TIMEOUT')
+            try:
+                proc.wait(timeout=min(0.2, remaining))
+            except subprocess.TimeoutExpired:
+                pass
+        if proc.returncode != 0:
+            raise RuntimeError('HOLD_RANGE_METADATA_INCOMPLETE')
+        try:
+            result = json.loads(payload)
+        except (ValueError, UnicodeDecodeError):
+            raise RuntimeError('HOLD_RANGE_METADATA_INVALID') from None
+        if (not isinstance(result, dict) or type(result.get('count')) is not int
+                or type(result.get('bytes')) is not int):
+            raise RuntimeError('HOLD_RANGE_METADATA_INVALID')
+        return result
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait()
+        proc.stdout.close()
 
 
 def read_verified_range(remote, offset, length, object_size, block_sha256, timeout=30, stop_probe=None):
@@ -150,10 +201,14 @@ def read_verified_range(remote, offset, length, object_size, block_sha256, timeo
             Path('/root/nox/state/STOP'), Path('/root/nox/state/STOP.flag')))
     if stop_probe():
         raise RuntimeError('HOLD_OWNER_STOP')
-    meta = json.loads(command(['rclone', 'size', '--json', remote], min(timeout, 10)))
-    if meta.get('count') != 1 or meta.get('bytes') != object_size:
-        raise RuntimeError('HOLD_RANGE_OBJECT_SIZE_CHANGED')
     deadline = time.monotonic() + timeout
+    meta = _range_size_with_stop(remote, deadline, stop_probe)
+    if meta['count'] != 1 or meta['bytes'] != object_size:
+        raise RuntimeError('HOLD_RANGE_OBJECT_SIZE_CHANGED')
+    if stop_probe():
+        raise RuntimeError('HOLD_OWNER_STOP')
+    if deadline - time.monotonic() <= 0:
+        raise RuntimeError('HOLD_RANGE_TIMEOUT')
     proc = subprocess.Popen(
         ['rclone', 'cat', remote, '--offset', str(offset), '--count', str(length),
          '--retries', '2', '--low-level-retries', '2'],
@@ -180,6 +235,8 @@ def read_verified_range(remote, offset, length, object_size, block_sha256, timeo
                 chunks.append(data)
         if proc.wait(timeout=max(0.01, deadline - time.monotonic())) != 0 or count != length:
             raise RuntimeError('HOLD_RANGE_INCOMPLETE')
+        if stop_probe():
+            raise RuntimeError('HOLD_OWNER_STOP')
         data = b''.join(chunks)
         if hashlib.sha256(data).hexdigest() != block_sha256:
             raise RuntimeError('HOLD_RANGE_SHA_MISMATCH')

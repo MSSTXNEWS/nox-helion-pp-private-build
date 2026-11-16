@@ -42,6 +42,9 @@ elif cmd=='cat':
     sys.stdout.buffer.write(b)
     if os.environ.get('TEST_CAT_FAILURE'):sys.exit(5)
 elif cmd=='size':
+    if os.environ.get('TEST_STALL_SIZE'):time.sleep(5)
+    if os.environ.get('TEST_SIZE_FLOOD'):sys.stdout.write('X'*70000);sys.exit(0)
+    if os.environ.get('TEST_SIZE_FAILURE'):sys.exit(9)
     item=next((v for v in args[1:] if not v.startswith('--')),None)
     p=loc(item);print(json.dumps({'bytes':p.stat().st_size,'count':1}))
 else:sys.exit(12)
@@ -344,6 +347,47 @@ class ColdTests(unittest.TestCase):
                 cold.read_verified_range('fixture:cold/model.gguf',offset,length,len(body),
                                          hashpart,stop_probe=lambda:False)
             cmd.assert_not_called()
+
+    def test_verified_range_metadata_obeys_owner_stop_during_stall(self):
+        self.stage_range()
+        body=self.src.read_bytes()
+        checks=[0]
+        def probe():
+            checks[0] += 1
+            return checks[0] >= 4
+        start=time.monotonic()
+        with patch.dict(os.environ,{'TEST_STALL_SIZE':'1'}), self.assertRaisesRegex(
+                RuntimeError,'HOLD_OWNER_STOP'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),
+                hashlib.sha256(body[:100]).hexdigest(),timeout=5,stop_probe=probe)
+        self.assertLess(time.monotonic()-start,2.5)
+
+    def test_verified_range_metadata_is_capped_without_disk_spool(self):
+        self.stage_range()
+        body=self.src.read_bytes()
+        with patch.dict(os.environ,{'TEST_SIZE_FLOOD':'1'}), self.assertRaisesRegex(
+                RuntimeError,'HOLD_RANGE_METADATA_OVERSIZE'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),
+                hashlib.sha256(body[:100]).hexdigest(),timeout=5,stop_probe=lambda:False)
+        self.assertTrue(self.src.exists())
+
+    def test_verified_range_metadata_failure_no_false_pass(self):
+        self.stage_range()
+        body=self.src.read_bytes()
+        with patch.dict(os.environ,{'TEST_SIZE_FAILURE':'1'}), self.assertRaisesRegex(
+                RuntimeError,'HOLD_RANGE_METADATA_INCOMPLETE'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),
+                hashlib.sha256(body[:100]).hexdigest(),timeout=5,stop_probe=lambda:False)
+
+    def test_verified_range_metadata_respects_total_deadline(self):
+        self.stage_range()
+        body=self.src.read_bytes()
+        start=time.monotonic()
+        with patch.dict(os.environ,{'TEST_STALL_SIZE':'1'}), self.assertRaisesRegex(
+                RuntimeError,'HOLD_RANGE_TIMEOUT'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),
+                hashlib.sha256(body[:100]).hexdigest(),timeout=.25,stop_probe=lambda:False)
+        self.assertLess(time.monotonic()-start,2.5)
 
     def test_verified_range_object_size_changed(self):
         self.stage_range()
