@@ -1,0 +1,69 @@
+/* NOX WEB V10 · agreed cinematic glass world · shared on every route. */
+:root{--nox-v10-glass:rgba(7,12,19,.22);--nox-v10-glass-strong:rgba(7,12,19,.34);--nox-v10-edge:rgba(231,198,158,.29);--nox-v10-light:rgba(241,232,214,.12)}
+html{scroll-behavior:smooth}
+body.nox-shared-glass{isolation:isolate!important;position:relative;min-height:100dvh;color:#f3eee8;background:#040608!important;background-image:none!important;overflow-x:clip}
+body.nox-shared-glass::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:-3;background:radial-gradient(ellipse at 50% 47%,rgba(86,52,26,.28),transparent 48%),radial-gradient(ellipse at 70% 74%,rgba(28,54,73,.22),transparent 55%),#030509;animation:nox-v10-light-breath 20s ease-in-out infinite alternate}
+@keyframes nox-v10-light-breath{from{filter:hue-rotate(0deg) brightness(.82)}to{filter:hue-rotate(14deg) brightness(1.28)}}
+body.nox-shared-glass>.nox-context-eclipse{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:-2!important;pointer-events:none!important;opacity:1!important;filter:none!important;mask:none!important}
+/* One shared miniature HOME route row. No list box, no collapsed menu and no second heading for internal pages. */
+.nox-shared-header-v10{position:sticky;top:0;z-index:10050;display:flex;align-items:center;gap:clamp(6px,1.5vw,18px);width:100%;max-width:100vw;min-height:64px;padding:5px clamp(10px,1.7vw,26px);background:linear-gradient(175deg,rgba(17,23,32,.38),rgba(6,11,17,.13));border-bottom:1px solid var(--nox-v10-edge);box-shadow:inset 0 1px rgba(255,255,255,.16),0 10px 25px rgba(0,0,0,.18);backdrop-filter:blur(15px) saturate(135%)}
+.nox-shared-signature-v10{flex:0 0 auto;display:flex;gap:7px;align-items:center;min-width:69px;font:800 clamp(12px,1.1vw,16px)/1 Tektur,system-ui,sans-serif;letter-spacing:.12em;color:#eed7b0;text-decoration:none}
+.nox-signature-eclipse-v10{font-size:24px;line-height:1;background:radial-gradient(circle,#090c10 20%,#e9ac65 54%,transparent 71%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 9px rgba(234,168,96,.5))}
+.nox-shared-links-v10{display:flex;align-items:center;justify-content:space-between;flex:1 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:rgba(244,199,139,.4) transparent;gap:clamp(4px,.45vw,10px);padding:3px 1px;white-space:nowrap}
+.nox-shared-links-v10 a{display:flex;align-items:center;justify-content:center;flex:1 0 auto;min-width:56px;max-width:113px;min-height:50px;gap:4px;flex-direction:column;border:1px solid transparent;border-radius:11px;color:#cbbca8;text-decoration:none;font:600 9px/1.1 Tektur,system-ui,sans-serif;letter-spacing:.035em;transition:background-color .2s,border-color .2s,box-shadow .2s,transform .2s}
+.nox-shared-links-v10 a svg{width:20px;height:20px;color:var(--nox-master-accent,#eabb79);filter:drop-shadow(0 0 5px rgba(230,159,88,.16))}
+.nox-shared-links-v10 a:hover,.nox-shared-links-v10 a[aria-current=page]{background:rgba(214,171,115,.11);border-color:rgba(242,185,117,.29);color:#fff7ee;box-shadow:inset 0 1px rgba(255,255,255,.14),0 0 17px rgba(222,167,97,.14)}
+.nox-shared-links-v10 a:focus-visible,.nox-shared-signature-v10:focus-visible{outline:2px solid #ffe2a9;outline-offset:2px}
+body.nox-shared-ui-ready-v10>.shell>.sidebar{display:none!important}
+body.nox-shared-ui-ready-v10 .nox-v9-nav,body.nox-shared-ui-ready-v10 .nox-master-floating-dock{display:none!important}
+/* HOME keeps its original 14 objects, stage and large action buttons. Only miniature header is global. */
+body.helion-home .nox-shared-header-v10{flex:0 0 auto}
+body.helion-home .helion-stage{background-color:transparent!important;background-image:none!important}
+body.helion-home .helion-deck{background-color:transparent!important;background-image:none!important}
+/* Transparent, readable glass — panels overlay ONE continuous animated NOX scene. */
+html:not([data-theme=contrast]) body.nox-shared-glass :is(.shell,.main,.nx-main,.nx-col,.nx-grow,.nx-top,.nox-master-wrap,.nox-master-section,.nox-master-grid,.nox-v9-libgrid,.instrument-workspace,.workspace-flow,.chat-layout,.training-workspace,.model-workspace,.nox-v9-layer-notice){background-color:transparent!important;background-image:none!important}
+html:not([data-theme=contrast]) body.nox-shared-glass :is(.panel,.banner,.card,.cards>.panel,.ws-card,.ws-panel,.ws-metric,.memory-record,.instrument-panel,.instrument-chart-layer,.instrument-data-surface,.instrument-command-panel,.instrument-quality-surface,.instrument-passport,.nox-master-hero,.nox-master-preview,.nox-master-tile,.nox-master-warning,.nox-v9-libcard,.nox-master-row,.nx-glass,.nx-card,.nx-panel,.nx-item,.nx-toolbar,.nx-dialog,.msg,.message-board,.history-item,.chat-conversation,.chat-history-panel,.chat-telemetry-panel,.chat-command-dock,.nox-function-catalog,.nox-flow-board,.nox-console-pane){background:linear-gradient(148deg,rgba(220,236,255,.068),rgba(13,21,29,.23) 40%,rgba(3,9,17,.35))!important;background-color:var(--nox-v10-glass)!important;border-color:var(--nox-v10-edge)!important;backdrop-filter:blur(9px) saturate(140%);-webkit-backdrop-filter:blur(9px) saturate(140%);box-shadow:inset 0 1px var(--nox-v10-light),inset 0 0 18px rgba(214,182,150,.025),0 14px 35px rgba(0,0,0,.22)!important}
+html:not([data-theme=contrast]) body.nox-shared-glass :is(.nox-master-hero,.nox-master-preview,.nox-master-tile,.nox-v9-libcard,.nx-glass,.panel,.ws-card){border-radius:clamp(10px,1vw,18px)}
+html:not([data-theme=contrast]) body.nox-shared-glass :is(.nox-master-tile,.nox-v9-libcard,.nx-glass,.panel,.ws-card):hover{border-color:rgba(242,205,153,.44)!important;box-shadow:inset 0 1px rgba(255,255,255,.24),0 12px 37px rgba(0,0,0,.3),0 0 21px rgba(226,172,96,.10)!important}
+/* Only the buttons and plates vary by theme; the same background stays visible. */
+html:not([data-theme=contrast]) body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nox-wow-choice,.nx-btn,.nox-visual-choice):not(.stop):not([data-action=stop]){background:linear-gradient(145deg,rgba(var(--nox-master-rgb,232,184,120),.22),rgba(220,228,237,.07) 33%,rgba(5,10,17,.30))!important;border:1px solid rgba(var(--nox-master-rgb,232,184,120),.35)!important;backdrop-filter:blur(13px) saturate(135%);-webkit-backdrop-filter:blur(13px) saturate(135%);box-shadow:inset 0 1px rgba(255,255,255,.20),0 6px 14px rgba(0,0,0,.18)}
+html:not([data-theme=contrast]) body.nox-shared-glass :is(input,textarea,.text-input,.field){background:rgba(5,10,17,.48)!important;border-color:rgba(207,185,154,.43)!important;backdrop-filter:blur(8px)}
+html:not([data-theme=contrast]) body.nox-shared-glass :is(.nox-master-preview,.message-board,.chat-conversation){min-width:0}
+body.nox-shared-glass .nox-master-wrap,body.nox-shared-glass .main{position:relative;z-index:1}
+body.nox-shared-glass .nx-main{position:relative;z-index:1;min-height:0;flex:1 1 auto}
+body.nox-shared-glass :is(.nx-top,.top,.hud-top,.nox-master-hero){color:#f0e7dc}
+/* Transparent glass does not hide STOP or readouts. */
+body.nox-shared-glass :is(.stop,#nx-stop,#stopButton,[data-action=stop]){background:rgba(125,23,20,.38)!important;color:#ffe2d7!important;border:1px solid rgba(251,100,83,.8)!important}
+body.nox-shared-glass [disabled]{cursor:not-allowed}
+/* Keep scroll and accessibility behavior stable. */
+@media(max-width:800px){.nox-shared-header-v10{min-height:57px;gap:7px;padding:4px 8px}.nox-shared-links-v10 a{font-size:9px;min-width:57px;min-height:45px}.nox-shared-signature-v10{min-width:51px}.nox-shared-links-v10 a svg{width:18px;height:18px}}
+@media(max-width:390px){.nox-shared-header-v10{min-height:53px}.nox-shared-signature-v10{min-width:43px}.nox-signature-text-v10{display:none}.nox-shared-links-v10 a{min-width:55px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}body.nox-shared-glass::before{animation:none!important}.nox-shared-links-v10 a{transition:none!important}.nox-shared-header-v10{backdrop-filter:none}}
+/* V10 QA corrections: header uses border-box on legacy PC pages; never grows beyond viewport. */
+html:has(body.nox-shared-glass){max-width:100vw;overflow-x:clip}
+.nox-shared-header-v10,.nox-shared-header-v10 *{box-sizing:border-box}
+.nox-shared-header-v10{width:100%;max-width:100vw;min-width:0}
+.nox-shared-links-v10{max-width:100%;min-width:0}
+html:not([data-theme=contrast]) body.nox-shared-glass :is(.panel,.banner,.card,.ws-card,.ws-panel,.ws-metric,.memory-record,.instrument-panel,.instrument-chart-layer,.instrument-data-surface,.instrument-command-panel,.instrument-quality-surface,.instrument-passport,.nox-master-hero,.nox-master-preview,.nox-master-tile,.nox-master-warning,.nox-v9-libcard,.nox-master-row,.nx-glass,.nx-card,.nx-panel,.nx-item,.nx-toolbar,.nx-dialog,.msg,.message-board,.history-item,.chat-conversation,.chat-history-panel,.chat-telemetry-panel,.chat-command-dock,.nox-function-catalog,.nox-flow-board,.nox-console-pane){backdrop-filter:blur(9px) saturate(140%)!important;-webkit-backdrop-filter:blur(9px) saturate(140%)!important}
+
+/* The direct constructor shortcut is now available in the unified top bar. */
+body.nox-shared-ui-ready-v10 #noxWorldsControl{display:none!important}
+
+/* V11 canonical correction: never show a second navigation beneath the single shared HOME header. */
+body.nox-shared-ui-ready-v10 :is(.home-primary-navigation,.nox-master-bar.nox-master-floating-dock){display:none!important}
+body.nox-shared-ui-ready-v10 .nox-shared-catalog-v11{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:65px;min-height:52px;border:1px solid rgba(223,178,106,.33);border-radius:10px;background:rgba(14,18,26,.24);color:#ead6b5;cursor:pointer;font:600 9px/1.1 Tektur,system-ui,sans-serif;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+body.nox-shared-ui-ready-v10 .nox-shared-catalog-v11:focus-visible{outline:2px solid #ffde9e;outline-offset:2px}
+body.nox-shared-ui-ready-v10 .nox-shared-catalog-v11:is(:hover,:focus-visible){background:rgba(192,138,75,.16);box-shadow:0 0 20px rgba(224,172,106,.16)}
+/* Shared living scene stays visible through glass, with no opaque backgrounds on nested PC panels. */
+html:not([data-theme=contrast]) body.nox-shared-glass :is(.nx-glass,.nx-panel,.nx-card,.nx-top,.nx-col,.panel,.nox-master-hero,.nox-master-preview,.nox-master-tile,.nox-v7-scene,.nox-v9-libcard,.nox-v9-layer-notice,.nox-master-warning){background-color:rgba(10,16,25,.26)!important;background-image:linear-gradient(138deg,rgba(247,230,201,.073),rgba(11,18,29,.11) 56%,rgba(3,10,17,.23))!important;backdrop-filter:blur(12px) saturate(125%)!important;-webkit-backdrop-filter:blur(12px) saturate(125%)!important}
+html:not([data-theme=contrast]) body.nox-shared-glass .nox-master-grid{background:transparent!important}
+/* Alternative worlds are visible on the existing NOX canvas instead of being alpha-buried. */
+body.nox-shared-glass > #noxCinematicWorldCanvas{opacity:.84!important;position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;pointer-events:none!important;z-index:-1!important}
+body.helion-home #noxCinematicWorldCanvas{opacity:1!important}
+html[data-nox-demo-mode=ECO] body.nox-shared-glass > #noxCinematicWorldCanvas{opacity:.55!important}
+/* Keep text and controls readable on true glass while leaving original STOP prominent. */
+body.nox-shared-glass .nox-shared-header-v10{background:linear-gradient(145deg,rgba(13,20,29,.35),rgba(3,8,14,.2))!important}
+body.nox-shared-glass :is(.nox-master-tile,.nox-v7-scene,.nox-visual-choice,.nx-btn,.nox-master-action){transition:transform .2s,border-color .2s,box-shadow .2s}
+body.nox-shared-glass :is(.nox-master-tile,.nox-v7-scene,.nox-visual-choice,.nx-btn,.nox-master-action):focus-visible{outline:2px solid #ffdea1!important;outline-offset:3px}
+@media(max-width:600px){body.nox-shared-glass .nox-shared-catalog-v11{min-width:52px;min-height:45px;font-size:8px}.nox-shared-catalog-v11 svg{width:16px;height:16px}}
+@media(prefers-reduced-motion:reduce){body.nox-shared-glass :is(.nox-master-tile,.nox-v7-scene,.nox-visual-choice,.nx-btn,.nox-master-action){transition:none!important;animation:none!important}}
