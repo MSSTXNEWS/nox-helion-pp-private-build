@@ -205,6 +205,13 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
     selected=[];blocked=[]
     gpu_slots=min(1,budget_gpu);cpu_slots=min(8,budget_cpu)
     for t in sorted(working['tasks'],key=lambda t:_priority(t,progress)):
+        # If the user is speaking/typing or gave a new task, only small
+        # existing CORE/MEMORY/SKILLS/WEB_QA CPU observations may be proposed.
+        # Never spend the last chat-attention slot on teacher/train prep.
+        if (background.get('yield_background') is True
+            and (t['lane'] in ('FORGE','TEACHERS')
+                 or t['resource']=='GPU1_EXCLUSIVE')):
+            continue
         id=t['task_id']; reasons=[]
         if id in blocked_native or id in existing or _valid_completion(completed.get(id),id):continue
         for dep in t['depends_on']:
