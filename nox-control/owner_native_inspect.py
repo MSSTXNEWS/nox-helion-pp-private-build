@@ -521,6 +521,56 @@ print('NOX_SFTCONFIG_SIGNATURE=' + json.dumps({
     return parse_sftconfig_signature_probe(rc, output)
 
 
+
+def installed_package_versions_readback(py):
+    """Inspect metadata only in a trusted, isolated pinned venv; never import torch."""
+    status = pinned_python_path_status(py)
+    result = {'record': 'installed_package_versions', 'python': str(py),
+              'status': status, 'rc': None, 'versions': {},
+              'cuda_context_created': False, 'trainer_started': False}
+    if status != 'PINNED_NATIVE_PYTHON_TRUSTED':
+        return result
+    # The child checks actual version and sys.prefix, not only symlink ownership.
+    code = """
+import importlib.metadata as m, json, os, sys
+if sys.version_info[:2] != (3, 12) or os.path.realpath(sys.prefix) != '/root/venv_volta':
+    raise SystemExit('HOLD_PINNED_VENV_RUNTIME_IDENTITY')
+names = ['torch','transformers','accelerate','datasets','safetensors','peft',
+         'bitsandbytes','trl','deepspeed','psutil','nvidia-ml-py','sqlite-vec',
+         'playwright','pytest','ruff']
+versions = {}
+for name in names:
+    try:
+        versions[name] = m.version(name)
+    except m.PackageNotFoundError:
+        versions[name] = None
+print(json.dumps(versions, separators=(',', ':')))
+"""
+    rc, output = run([str(py), '-I', '-c', code], timeout=20)
+    result['rc'] = rc
+    if rc != 0 or len(output) > 16384:
+        result['status'] = 'HOLD_PACKAGE_METADATA_PROBE_FAILED'
+        return result
+    try:
+        versions = json.loads(output)
+    except (TypeError, ValueError):
+        result['status'] = 'HOLD_PACKAGE_METADATA_INVALID'
+        return result
+    names = ('torch','transformers','accelerate','datasets','safetensors',
+             'peft','bitsandbytes','trl','deepspeed','psutil','nvidia-ml-py',
+             'sqlite-vec','playwright','pytest','ruff')
+    if (not isinstance(versions, dict) or set(versions) != set(names) or
+            any(v is not None and
+                (not isinstance(v, str) or len(v) > 128 or
+                 not re.fullmatch(r'[0-9A-Za-z.+_!\\-]+', v))
+                for v in versions.values())):
+        result['status'] = 'HOLD_PACKAGE_METADATA_INVALID'
+        return result
+    result['status'] = 'READ_ONLY_VERSION_METADATA'
+    result['versions'] = versions
+    return result
+
+
 def controls():
     configs=supervisor_config()
     names=['train_qlora_35b_t866u.py','run_train_volta_t866u.sh',
@@ -563,15 +613,11 @@ def controls():
         body=p.read_bytes();source=body.decode(errors='replace');safe=redact(source)
         rows.append({'record':'extension_source','path':str(p),'sha256':hashlib.sha256(body).hexdigest(),
                      'bytes':len(body),'source_redacted':safe!=source,'source':safe})
-    # Inventory package metadata without importing Torch or creating a CUDA context.
+    # Inventory package metadata only through the pinned interpreter fence.
+    # A symlink's is_file() is NOT authorization to execute it.
     py=Path('/root/venv_volta/bin/python')
-    if py.is_file():
-        code="import importlib.metadata as m,json; names=['torch','transformers','accelerate','datasets','safetensors','peft','bitsandbytes','trl','deepspeed','psutil','nvidia-ml-py','sqlite-vec','playwright','pytest','ruff']; d={};\nfor n in names:\n try:d[n]=m.version(n)\n except m.PackageNotFoundError:d[n]=None\nprint(json.dumps(d))"
-        rc,output=run([str(py),'-c',code],20)
-        try:versions=json.loads(output) if rc==0 else {}
-        except ValueError:versions={}
-        rows.append({'record':'installed_package_versions','python':str(py),'rc':rc,'versions':versions})
-        rows.append(pinned_sftconfig_signature_probe(py))
+    rows.append(installed_package_versions_readback(py))
+    rows.append(pinned_sftconfig_signature_probe(py))
     # Only filenames and selected nonsecret routing fields, never credentials.
     routes=[]
     for p in sorted((ROOT/'config').glob('*.json'))[:120]:
