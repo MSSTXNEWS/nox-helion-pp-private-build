@@ -113,6 +113,8 @@ class DeepSeekOwnerRangeFS(Operations):
         self.owner_root = Path(owner_root)
         self.lease_path = Path(lease_path)
         self.request_id = request_id
+        self.lease_fingerprint = None
+        self.lease_document = None
         self.destination = Path(destination)
         self.cache_bytes_limit = cache_bytes
         self.cache = OrderedDict()
@@ -163,7 +165,17 @@ class DeepSeekOwnerRangeFS(Operations):
 
     def guard(self):
         owner.stop(self.owner_root)
-        owner.lease(self.lease_path, self.request_id, time.time(), self.owner_root)
+        current = owner.lease(self.lease_path, self.request_id, time.time(), self.owner_root)
+        identity = hashlib.sha256(owner.canonical({
+            "lease_path": str(self.lease_path),
+            "lease": current,
+        })).hexdigest()
+        if self.lease_fingerprint is None:
+            self.lease_fingerprint = identity
+            self.lease_document = current
+        else:
+            owner.require(identity == self.lease_fingerprint, "HOLD_OWNER_LEASE_BINDING_CHANGED")
+        return current
 
     def runtime_guard(self):
         try:
@@ -174,7 +186,8 @@ class DeepSeekOwnerRangeFS(Operations):
     def _receipt_path(self, row, etag):
         identity = "\0".join((
             owner.REPO, owner.REVISION, row["path"], str(row["bytes"]),
-            row["sha256"], row["url"], etag,
+            row["sha256"], row["url"], etag, self.request_id,
+            self.lease_fingerprint,
         )).encode()
         key = hashlib.sha256(identity).hexdigest()
         return self.receipt_dir / (key + ".json")
@@ -210,6 +223,8 @@ class DeepSeekOwnerRangeFS(Operations):
             "verified_sha256": row["sha256"],
             "url": row["url"],
             "etag": etag,
+            "request_id": self.request_id,
+            "lease_identity_sha256": self.lease_fingerprint,
         }
         owner.require(isinstance(doc, dict) and
                       all(doc.get(key) == value for key, value in expected.items()),
@@ -228,6 +243,8 @@ class DeepSeekOwnerRangeFS(Operations):
             "verified_sha256": row["sha256"],
             "url": row["url"],
             "etag": etag,
+            "request_id": self.request_id,
+            "lease_identity_sha256": self.lease_fingerprint,
             "method": method,
             "verified_at_unix": time.time(),
         })
@@ -295,6 +312,7 @@ class DeepSeekOwnerRangeFS(Operations):
         except owner.Hold:
             if not self._receipt_matches(receipt, row, etag):
                 raise
+        self.guard()
         self.sha_verified.add(name)
 
     def _verify_local_source(self, name, row, path, before, etag):
@@ -334,6 +352,7 @@ class DeepSeekOwnerRangeFS(Operations):
                         raise
             self.local[name] = {"fd": fd, "identity": _identity(after), "blocks": blocks}
             keep_fd = True
+            self.guard()
             self.sha_verified.add(name)
         finally:
             if not keep_fd:
