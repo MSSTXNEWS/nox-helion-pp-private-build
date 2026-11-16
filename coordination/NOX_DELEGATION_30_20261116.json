@@ -1,33 +1,33 @@
 {
-  "schema": "NOX_OWNER_DELEGATE_30_V1",
+  "schema": "NOX_OWNER_DELEGATE_BATCH_V2",
   "instructions_version": "0.0.6",
   "date": "2026-11-16",
   "instance_id": 60509551,
   "source_pr": 256,
   "source_ref": "feature/nox-v38-synaptic-brain-20261114",
   "base_head_at_preparation": "12558768c71ab87fc35d2575a855ce93de37d183",
-  "goal": "3 native virtual subexecutors + NOX itself share 30 bounded tasks; no new workers, trainer, backend, S03 or chat",
+  "goal": "One shared NOX model/director + three distinct OS subagent processes with independent PID and context; arbitrary count of typed tasks accepted in one request (30 is only the current backlog).",
   "canonical_web": "WEB29_MAIN_D02_14_WORLDS",
   "plan_status": "SOURCE_PREPARED_NOT_NATIVE_REGISTERED",
   "roles": [
     {
       "id": "NOX",
-      "type": "existing_model_director",
+      "type": "shared_single_model_coordinator",
       "task_count": 6
     },
     {
       "id": "SUBAGENT_INFRA",
-      "type": "existing_native_worker_slot",
+      "type": "dedicated_os_subagent_process",
       "task_count": 8
     },
     {
       "id": "SUBAGENT_BRAIN",
-      "type": "existing_native_worker_slot",
+      "type": "dedicated_os_subagent_process",
       "task_count": 8
     },
     {
       "id": "SUBAGENT_WEB29",
-      "type": "existing_native_worker_slot",
+      "type": "dedicated_os_subagent_process",
       "task_count": 8
     }
   ],
@@ -46,17 +46,17 @@
     "backup_restore_for_mutations",
     "native_job_id_and_S03_readback"
   ],
-  "security": "Data-only plan. Native queue accepts only reviewed typed handler intents; never execute task text as code. Do not auto-register all 30 or create 30 OS processes. No deletion of unique models/checkpoints/S03/GENESIS. Old unused artifacts only after independent restore and referenced path check.",
+  "security": "Three real separately spawned CPU/IPC subagent processes call only EXISTING single local NOX model; no duplicated model/GPU trainer/S03/backend. All model replies remain CANDIDATE_NOT_APPLIED pending authorized existing dispatcher validation. STOP and fresh owner writer lease checked on each dispatch. Do not clear STOP or delete protected assets.",
   "source_of_truth": [
     "coordination/NOX_AUTOCYCLE_ERRORS.jsonl",
     "coordination/NOX_AUTOCYCLE_HANDOFF.md",
     "coordination/NOX_PRIME_6_RELAY_RECEIPTS.jsonl"
   ],
   "next_steps": [
-    "Do not pretend source file is native queue",
-    "Review mapping to existing queue handlers and signed owner native API",
-    "Enqueue at most 3 safe tasks after STOP+lease+readback",
-    "Record one unique job_id and S03 receipt per task; leave unadmitted tasks PREPARED_NOT_NATIVE_ENQUEUED"
+    "Integrate owner_subagent_processes into existing ONEHOST dispatcher under source SHA + owner ACL; do not create another daemon or scheduler",
+    "Owner-native verify three unique child PIDs, six native worker status, local model IPC and cgroup headroom",
+    "Only then map 30 existing backlog entries to reviewed typed tasks and submit in one batch; future batches may contain any resource-admitted number",
+    "Persist signed native job IDs, status and S03 receipt for actual changes; candidates are never automatic PASS"
   ],
   "tasks": [
     {
@@ -459,5 +459,12 @@
       "native_job_id": null,
       "s03_receipt_sha256": null
     }
-  ]
+  ],
+  "subagent_process_count": 3,
+  "one_real_process_per_subagent": true,
+  "task_count_limit": "NO_FIXED_30_OR_60_LIMIT__BOUND_BY_MEMORY_CPU_STOP_LEASE",
+  "source_process_adapter": "nox-control/owner_subagent_processes.py",
+  "source_regression": "nox-control/test_owner_subagent_processes.py",
+  "process_readback_state": "SOURCE_TESTED_3_UNIQUE_PIDS__NATIVE_ONEHOST_NOT_INSTALLED",
+  "previous_fixed_batch_manifest": "NOX_OWNER_DELEGATE_30_V1"
 }
