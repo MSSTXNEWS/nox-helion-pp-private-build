@@ -82,6 +82,7 @@ def packages():
 # Exact immutable DeepSeek pins mirrored from v51/hf_range_probe.py.
 # The offline source test asserts these rows remain identical to that manifest.
 MODEL_ROOT='/root/nox/models'
+MODEL_MANIFEST_REVISION='65d53bc8be65123e255ff02f3ded958b6dbf54fd'
 PINNED_MODEL_FILES=(
  ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf',5780704,'f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9'),
  ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf',39535781184,'25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3'),
@@ -95,7 +96,7 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
     """Metadata-only, no-follow stat for the six immutable targets under one root."""
     root_path=Path(root)
     if not root_path.is_absolute():
-        return {'status':'HOLD_MODEL_ROOT_NOT_ABSOLUTE','files':[]}
+        return {'status':'HOLD_MODEL_ROOT_NOT_ABSOLUTE','root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,'files':[]}
     root_parts=root_path.parts
     ancestors=[]; current=Path(root_path.anchor)
     for part in root_parts[1:]:
@@ -105,13 +106,13 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
         for ancestor in ancestors:
             mode=lstat(str(ancestor)).st_mode
             if __import__('stat').S_ISLNK(mode):
-                return {'status':'HOLD_MODEL_PATH_SYMLINK','root':str(root_path),
+                return {'status':'HOLD_MODEL_PATH_SYMLINK','root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
                         'files':[{'path':str(root_path/name),'exists':None,'type':'blocked',
                                   'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
                                   'path_status':'HOLD_MODEL_PATH_SYMLINK'}
                                  for name,size,_ in PINNED_MODEL_FILES]}
             if ancestor!=root_path and not __import__('stat').S_ISDIR(mode):
-                return {'status':'HOLD_MODEL_ROOT_COMPONENT_TYPE','root':str(root_path),
+                return {'status':'HOLD_MODEL_ROOT_COMPONENT_TYPE','root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
                         'files':[{'path':str(root_path/name),'exists':None,'type':'blocked',
                                   'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
                                   'path_status':'HOLD_MODEL_ROOT_COMPONENT_TYPE'}
@@ -120,7 +121,7 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
         pass
     except OSError as exc:
         status='HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper()
-        return {'status':status,'root':str(root_path),
+        return {'status':status,'root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
                 'files':[{'path':str(root_path/name),'exists':None,'type':'unknown',
                           'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
                           'path_status':status} for name,size,_ in PINNED_MODEL_FILES]}
@@ -155,7 +156,7 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
             row.update({'type':'unknown','path_status':'HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper()})
             results.append(row)
     status='HOLD_MODEL_PATH_SYMLINK' if any(x.get('path_status')=='HOLD_MODEL_PATH_SYMLINK' for x in results) else 'OK'
-    return {'status':status,'root':str(root_path),'manifest_revision':'65d53bc8be65123e255ff02f3ded958b6dbf54fd',
+    return {'status':status,'root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
             'files':results}
 
 def models():
