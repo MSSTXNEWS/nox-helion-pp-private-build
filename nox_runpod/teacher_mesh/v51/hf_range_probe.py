@@ -1,9 +1,7 @@
-"""Sanitized, read-only HEAD + exactly one-byte Range probe for pinned HF sources.
+"""Sanitized, read-only HEAD + one-byte Range probe for immutable HF pins.
 
-No complete DeepSeek URL/revision/path/size/SHA allowlist is checked in on this
-branch, so the production allowlist is intentionally empty and network access
-fails closed with PIN_METADATA_UNAVAILABLE. Offline tests may inject a synthetic
-fixture pin; that is not a model pin and cannot enable a production request.
+The production allowlist below is taken from Hugging Face's expanded repository
+tree API at the exact immutable revision. No user supplied metadata is trusted.
 """
 from __future__ import annotations
 
@@ -19,11 +17,34 @@ class ProbeHold(RuntimeError):
 
 _SHA256 = re.compile(r"[a-f0-9]{64}")
 _PIN_FIELDS = ("revision", "path", "url", "bytes", "sha256")
+_REVISION = "65d53bc8be65123e255ff02f3ded958b6dbf54fd"
+_REPO = "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
 
-# No complete trusted per-file allowlist is checked in. Do not populate from
-# caller input, environment variables, an unverified Library item, or runtime
-# network metadata.
-PINNED_SOURCES = ()
+
+def _pin(path: str, size: int, sha256: str) -> dict:
+    return {
+        "revision": _REVISION,
+        "path": path,
+        "url": f"https://huggingface.co/{_REPO}/resolve/{_REVISION}/{path}",
+        "bytes": size,
+        "sha256": sha256,
+    }
+
+
+# Hugging Face API tree metadata (expand=true) at _REVISION.
+# Shard 00005 is included once, unchanged, to anchor the existing coldpack file.
+PINNED_SOURCES = (
+    _pin("DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+         39535781184, "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3"),
+    _pin("DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+         39736712000, "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48"),
+    _pin("DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+         39036908384, "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0"),
+    _pin("DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+         19923784832, "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1"),
+    _pin("DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
+         110595290816, "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3"),
+)
 
 
 def _public_url(url: str) -> str:
@@ -44,8 +65,6 @@ class _Redirect(urllib.request.HTTPRedirectHandler):
 
 
 def _resolve_pin(supplied: dict) -> dict:
-    if not PINNED_SOURCES:
-        raise ProbeHold("PIN_METADATA_UNAVAILABLE")
     if not isinstance(supplied, dict):
         raise ProbeHold("PIN_METADATA_MISMATCH")
     matches = []
