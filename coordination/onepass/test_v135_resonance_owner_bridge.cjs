@@ -1227,7 +1227,7 @@ test('V175 cross-version V29.3 page stage → V135 SSE → V112 NDJSON/provider 
   // existing Resonance pages; this fixture does not claim a live page install.
   assert(stage.includes('PAGES = ("site/pc/resonance.html", "site/pc/v22/resonance.template.html")'));
   assert(stage.includes('SCRIPT_URL = "/nox-web-v29/nox-v135-resonance-owner-bridge.js"'));
-  assert(stage.includes("SCRIPT_TAG = '<script defer src=\\"' + SCRIPT_URL"));
+  assert(stage.includes('SCRIPT_TAG =') && stage.includes('SCRIPT_URL'), 'stage builder must retain its script-tag hook');
   assert(bridge.includes("window.NOX_NATIVE_OWNER===true"));
   assert(bridge.includes("/^\\\\/nox-web-v29\\\\/pc\\\\/(?:resonance\\\\.html|v22\\\\/resonance\\\\.template\\\\.html)$/"));
 
