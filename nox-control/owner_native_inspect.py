@@ -747,7 +747,7 @@ def owner_safety_snapshot():
     """Read-only owner/8081 admission evidence; NEVER interpret a flag absence as a lease."""
     root = ROOT
     stop_names = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
-                  'state/STOP')
+                  'state/STOP', 'state/STOP.flag')
     paths = [root / name for name in stop_names] + [Path('/workspace/NOX_STOP'),
                                                     root / 'state/TRAIN_HOLD.flag',
                                                     root / 'state/TRAIN_PAUSE_REQUEST.flag']
@@ -762,7 +762,9 @@ def owner_safety_snapshot():
         except OSError:
             return 'UNKNOWN'
     flags = {str(path): kind(path) for path in paths}
-    manual_flags = [flags[str(p)] for p in paths[:7]]
+    # Include every canonical STOP alias (including /state/STOP.flag),
+    # and the independent /workspace/NOX_STOP path; training flags follow.
+    manual_flags = [flags[str(p)] for p in paths[:len(stop_names) + 1]]
     owner_stop = ('PRESENT' if 'PRESENT' in manual_flags
                   else 'HOLD_UNSAFE_FLAG' if any(x != 'ABSENT' for x in manual_flags)
                   else 'NOT_OBSERVED_NOT_AUTHORIZATION')

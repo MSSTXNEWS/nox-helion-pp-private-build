@@ -90,6 +90,23 @@ class OwnerSafetyReadOnlyTests(unittest.TestCase):
                          "HOLD_SYMLINK")
         self.assertEqual(snapshot["manual_stop"], "HOLD_UNSAFE_FLAG")
 
+    def test_state_stop_flag_is_full_manual_stop_alias(self):
+        # The original eight-path NOX STOP set includes state/STOP.flag.
+        # It must be read as a manual owner fence, not as TRAIN_HOLD.
+        flag = self.root / "state" / "STOP.flag"
+        flag.parent.mkdir(parents=True, exist_ok=True)
+        flag.write_text("OWNER STOP\\n")
+        snap = INSPECT.owner_safety_snapshot()
+        self.assertEqual(snap["stop_flags"][str(flag)], "PRESENT")
+        self.assertEqual(snap["manual_stop"], "PRESENT")
+        self.assertEqual(snap["writer_lease"], "UNKNOWN_NO_OWNER_CAS_READBACK")
+        flag.unlink()
+        flag.symlink_to(self.root / "owner-unknown-target")
+        snap = INSPECT.owner_safety_snapshot()
+        self.assertEqual(snap["stop_flags"][str(flag)], "HOLD_SYMLINK")
+        self.assertEqual(snap["manual_stop"], "HOLD_UNSAFE_FLAG")
+        self.assertEqual(snap["admission"], "READ_ONLY_NO_RESTART_NO_DELETE_NO_TRAINER")
+
     def test_owner_model_update_maintenance_flag_is_visible_not_a_lease(self):
         # Real 2026-11-16 owner stop used this distinct flag.
         flag = self.root / "state" / "OWNER_MAINTENANCE.flag"
