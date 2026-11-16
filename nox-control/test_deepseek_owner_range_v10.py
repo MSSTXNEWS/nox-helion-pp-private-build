@@ -58,6 +58,20 @@ class DeepSeekP0Offline(unittest.TestCase):
     def test_existing_corrupt_complete_file_never_overwritten(self):
         (self.dst/self.name).write_bytes(b'X'*len(self.content))
         with self.assertRaisesRegex(m.Hold,'EXISTING_FINAL_UNVERIFIED'):self.do()
+    def test_owner_stop_inventory_is_metadata_only_and_never_claims_sha(self):
+        # A size match (even for a corrupt GGUF) is not a verified digest.
+        # Read-only owner maintenance must never trigger a 110GB SHA scan.
+        final=self.dst/self.name
+        final.write_bytes(b'X'*len(self.content))
+        (self.root/'STOP').touch()
+        with patch.object(m,'digest',side_effect=AssertionError('unleased SHA scan')):
+            rows=m.inventory({self.name:self.row},self.dst)
+        self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0]['present_bytes'],len(self.content))
+        self.assertTrue(rows[0]['metadata_complete'])
+        self.assertFalse(rows[0]['verified'])
+        self.assertEqual(rows[0]['verification_scope'],'SHA_UNCHECKED')
+
     def test_owner_stop_prevents_transfer(self):
         (self.root/'STOP').touch()
         with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):self.do()
