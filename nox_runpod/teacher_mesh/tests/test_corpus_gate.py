@@ -214,6 +214,22 @@ class NightlyCorpusTests(unittest.TestCase):
         result=c.build_owner_pinned_threeway_sft(data,policy)
         self.assertEqual(result["rejected"]["UNPINNED_REVIEWED_PAYLOAD"],1)
 
+    def test_owner_pinned_task_and_grade_receipt_not_replayable(self):
+        # The same answer must not acquire a new job ID, a fabricated higher
+        # independent grade or altered evaluator evidence under the old receipt.
+        for field,value in (
+            ("task_id","forgedtask99999"),
+            ("quality_score",0.99),
+            ("review_evidence","Substituted evaluator receipt"),
+        ):
+            data,policy=self._approved_threeway()
+            self.assertEqual(c.build_owner_pinned_threeway_sft(data,policy)["status"],
+                             "OWNER_PINNED_THREEWAY_CANDIDATES_NOT_TRAINED")
+            data[0][field]=value
+            result=c.build_owner_pinned_threeway_sft(data,policy)
+            self.assertEqual(result["status"],"HOLD_THREEWAY_SOURCE_COVERAGE",field)
+            self.assertEqual(result["rejected"]["UNPINNED_REVIEWED_PAYLOAD"],1,field)
+
     def test_owner_content_privacy_binding_required(self):
         data,policy=self._approved_threeway()
         for key in ("approved_content_sha_by_source_receipt",

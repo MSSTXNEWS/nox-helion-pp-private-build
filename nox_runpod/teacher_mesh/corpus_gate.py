@@ -36,11 +36,13 @@ def canonical_hash(text: str) -> str:
 def reviewed_payload_sha256(record: dict) -> str:
     """Exact sample attestation supplied independently by the existing owner callback.
 
-    Bind rights, teacher identity and actual training text to one source receipt.
-    No teacher or downloaded page may calculate its own trusted policy map.
+    Bind the original task/job, independently reviewed quality evidence, rights,
+    teacher identity and training text to one owner-pinned source receipt.
+    This changes the digest contract: old owner approval hashes must be reissued
+    by the authenticated owner after review, never guessed from teacher output.
     """
-    fields=("prompt","completion","teacher_model","model_card_url",
-            "source_kind","license")
+    fields=("task_id","prompt","completion","teacher_model","model_card_url",
+            "source_kind","license","quality_score","review_evidence")
     payload={key:record[key] for key in fields}
     encoded=json.dumps(payload,ensure_ascii=False,sort_keys=True,
                        separators=(",",":")).encode("utf-8")
