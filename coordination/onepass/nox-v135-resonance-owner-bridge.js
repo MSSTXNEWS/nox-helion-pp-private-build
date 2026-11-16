@@ -104,11 +104,11 @@
     try{return await Promise.race([reader.read(),aborted]);}
     finally{signal.removeEventListener('abort',onAbort);}
   }
-  async function consume(response,emit,signal,onMeaningfulDelta) {
+  async function consume(response,emit,signal) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response));
     const reader=response.body.getReader(),decoder=new TextDecoder();
     let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
-    let nativeModel='UNKNOWN',sourceAnnounced=false;
+    let nativeModel='UNKNOWN';
     const line=async str=>{
       if(!str.trim())return;
       let e;
@@ -124,12 +124,7 @@
       if(e.type==='delta'){
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
         if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
-        answer+=e.text;
-        if(!sourceAnnounced&&e.text.trim()){
-          sourceAnnounced=true;
-          if(onMeaningfulDelta)onMeaningfulDelta(nativeModel);
-        }
-        await emit(e.text);
+        answer+=e.text;await emit(e.text);
       } else if(e.type==='done') {
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
         if(doneSeen)throw Error('HOLD_DUPLICATE_DONE');
@@ -170,7 +165,7 @@
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
-      return {answer,receipt:done,nativeModel};
+      return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
     }finally{
       try{
         const cancelling=reader.cancel('STREAM_CLOSED');
@@ -207,18 +202,17 @@
           },nativeSignal);
           const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
           const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
-          let trailing='',nativeModelConfirmed='UNKNOWN',nativeDeltaConfirmed=false,nativeModelNotified=false;
+          let trailing='';
           const emitPieces=async t=>{
             const parts=livePieces(t);
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
-              const nativeProvenance=nativeDeltaConfirmed&&!nativeModelNotified;
-              event({type:'token',t:parts[index],...(nativeProvenance?{
-                answer_source:'LIVE_NOX',model_label:nativeModelConfirmed,
-                model_identity_verified:false}:{} )});
-              if(nativeProvenance)nativeModelNotified=true;
+              event({type:'token',t:parts[index]});
+              // Bound visual pacing to 8 actual frames per incoming native chunk.
               // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
+                // Browsers with suspended rAF (including headless/hidden tabs)
+                // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
                   let settled=false;
                   const finish=()=>{if(!settled){settled=true;resolve();}};
@@ -235,10 +229,7 @@
             const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
             trailing=glyphs.pop()||'';
             if(glyphs.length)await emitPieces(glyphs.join(''));
-          },nativeSignal,model=>{
-            nativeModelConfirmed=model;
-            nativeDeltaConfirmed=true;
-          });
+          },nativeSignal);
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
@@ -246,6 +237,8 @@
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'done',status:'done',saved:true,s03_integrated:true,
             history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
+            model_label:receipt.native_model_label||'UNKNOWN',
+            model_identity_verified:false,answer_source:'LIVE_NOX',
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
           event({type:'error',error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150)});
