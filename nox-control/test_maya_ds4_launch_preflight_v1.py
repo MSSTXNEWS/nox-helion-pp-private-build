@@ -69,6 +69,47 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
         self.assertEqual(got["state"], "HOLD_BINARY_PIN")
         run.assert_not_called()
 
+    def test_ldconfig_cache_paths_are_stat_only(self):
+        import tempfile
+        names = ("libcuda.so.1", "libcudart.so.12", "libcublas.so.12", "libcublasLt.so.12")
+        with tempfile.TemporaryDirectory() as temp:
+            lines = []
+            for name in names:
+                path = Path(temp) / name
+                path.write_bytes(b"synthetic-link-target")
+                lines.append(f"\\t{name} (libc6,x86-64) => {path}")
+            cp = type("Completed", (), {"returncode": 0, "stdout": "\\n".join(lines)})()
+            with patch.object(INSPECT.shutil, "which", return_value="/sbin/ldconfig"), \\
+                 patch.object(INSPECT.subprocess, "run", return_value=cp) as run:
+                got = INSPECT.maya_dependency_path_readback({
+                    "state": "ELF_LINKAGE_READ_ONLY", "rpath": []})
+        self.assertEqual(got["state"], "AVAILABLE_PATHS_ONLY")
+        self.assertEqual(got["cuda_toolkit_path_version_hint"], "UNKNOWN")
+        self.assertEqual(got["runtime_abi"], "NOT_TESTED")
+        self.assertFalse(got["maya_executable_invoked"])
+        self.assertFalse(got["cuda_context_created"])
+        self.assertTrue(all(row["present"] for row in got["libraries"].values()))
+        self.assertEqual(run.call_args.args[0], ["/sbin/ldconfig", "-p"])
+        self.assertFalse(run.call_args.kwargs["shell"])
+
+    def test_missing_cublaslt_path_is_hold(self):
+        import tempfile
+        names = ("libcuda.so.1", "libcudart.so.12", "libcublas.so.12")
+        with tempfile.TemporaryDirectory() as temp:
+            lines = []
+            for name in names:
+                path = Path(temp) / name
+                path.write_bytes(b"synthetic-link-target")
+                lines.append(f"\\t{name} (libc6,x86-64) => {path}")
+            cp = type("Completed", (), {"returncode": 0, "stdout": "\\n".join(lines)})()
+            with patch.object(INSPECT.shutil, "which", return_value="/sbin/ldconfig"), \\
+                 patch.object(INSPECT.subprocess, "run", return_value=cp):
+                got = INSPECT.maya_dependency_path_readback({
+                    "state": "ELF_LINKAGE_READ_ONLY", "rpath": []})
+        self.assertEqual(got["state"], "HOLD_REQUIRED_LIBRARY_PATH_MISSING")
+        self.assertFalse(got["libraries"]["libcublasLt.so.12"]["present")
+
+
 
 class MayaLaunchPlanTests(unittest.TestCase):
     def test_stop_blocks_launch_even_with_complete_inputs(self):
