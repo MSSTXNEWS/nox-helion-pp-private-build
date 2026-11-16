@@ -6,8 +6,8 @@
   "at_utc": "2026-11-16T06:02:01.177Z",
   "at_msk": "2026-11-16T09:02:01+03:00",
   "source_head_before": "2345aa75ebd1f958a86a59ac887cd3761f630287",
-  "source_head_after": "COMMIT_CARRYING_THIS_RECEIPT",
-  "scope": "SOURCE_PATCHED_LOCAL_CONTRACT_TESTED_NATIVE_HOLD",
+  "source_head_after": "c247ced12b97c7f7cec6b5fd1e15b03a6ef899c7",
+  "scope": "SOURCE_TESTED_31_OF_31_GITHUB_CI; NATIVE_HOLD",
   "error_id": "NOX-P0-V51-GPU-PID-JSON-SILENT-TRUNCATION-20261116",
   "five_tasks": [
     {
@@ -27,12 +27,12 @@
     },
     {
       "id": 4,
-      "state": "DONE_SOURCE_REPAIR_NATIVE_HOLD",
+      "state": "DONE_SOURCE_TESTED_NATIVE_HOLD",
       "evidence": "V51 native GPU PID map and OOM receipts cannot be left malformed by fixed-length slicing; new complete JSON-or-explicit-HOLD contract + regressions; no live service modified"
     },
     {
       "id": 5,
-      "state": "DONE_GITHUB_CAS_SOURCE_NATIVE_HOLD",
+      "state": "DONE_SOURCE_CAS_READBACK_NATIVE_HOLD",
       "evidence": "Single CAS commit of source, tests, errors, handoff and receipts; native readback not available"
     }
   ],
@@ -40,8 +40,11 @@
     "preimage": "exact SOURCE+TEST blob read at PR HEAD",
     "local_contract_test": "4/4 representative bounded JSON checks PASS",
     "added_repository_tests": 2,
-    "exact_source_CI": "PENDING",
-    "native": "NO_NEW_SESSION_OR_DEPLOY"
+    "exact_source_CI": "SUCCESS_43814234984_PYTHON_31_OF_31",
+    "native": "NO_NEW_SESSION_OR_DEPLOY",
+    "regression_fix_commit": "55f1b85cb86e08687a85be6cce5548987efecdae",
+    "regression_original_failure": "43814063448_FALSE_NEGATIVE_ESCAPED_NEWLINE_FIXED",
+    "source_ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814234984"
   },
   "WEIGHTS": {
     "status": "HISTORICAL_QWEN_SIX_UPDATES_ONLY",
@@ -69,6 +72,6 @@
     "deleted_bytes": 0
   },
   "root_cause": "bounded native output used raw JSON prefix slicing, so sufficiently large GPU PID inventory silently became invalid JSON",
-  "lesson": "Emit complete bounded machine-readable evidence or explicit HOLD; never truncate JSON after serialization; neither PID nor telemetry implies optimizer work.",
+  "lesson": "Emit complete bounded machine-readable evidence or explicit HOLD; never truncate JSON after serialization; neither PID nor telemetry implies optimizer work. Initial CI assertion used a double-escaped Python newline, yielding a test-only false negative; corrected and exact CI 31/31 passed.",
   "next_action": "Owner-authorized read-only V51 at exact updated SHA: native STOP/lease, complete Supervisor, ports/model, cgroup, both V100, SSD, OOM; then only fenced reversible live repair and offsite restore."
 }
