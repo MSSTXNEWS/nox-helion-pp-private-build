@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_maya_build.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_night_runtime_probe.py'}
 MASTER=None
 
 def authorize_event(action):
