@@ -1,0 +1,33 @@
+{
+  "schema": "NOX_CONTROL_B_QWEN_CHECKPOINT_NOLOSS_V1",
+  "instructions_version": "0.0.6",
+  "observed_at": "2026-11-16",
+  "input_head": "0231da878a1f55a44541a39d3bab4d3b8b94e64e",
+  "affected_sources": [
+    "nox-control/qwen_student_training_entry.py",
+    "nox-control/test_qwen_eval_cadence.py"
+  ],
+  "root_cause": "Automatic prune_checkpoints() unlinked locally verified historical optimizer/RNG checkpoints before independent offsite restore or a dedicated cleanup owner lease; local SHA alone does not authorize destructive deletion.",
+  "correction": "Make trainer pruning a read-only plan and retain every checkpoint; allow existing separately authorized cleanup to delete exact allowlisted files only after independent restore, STOP, lease and dependency checks.",
+  "native_change_this_commit": false,
+  "source_status": "SOURCE_PATCHED_CI_PENDING",
+  "native_last_observed": {
+    "vast_instance": 60509551,
+    "training": "FATAL_EVALUATION_STALE_AT_CHECKPOINT25",
+    "checkpoint_successful_updates": 25,
+    "trainer_resume": "HOLD",
+    "chat_model": "NOX36",
+    "server_drive_oauth": "UNVERIFIED",
+    "new_DeepSeek": "NOT_DEPLOYED",
+    "cleanup": "HOLD_NEW_MODEL_NOT_DEPLOYED"
+  },
+  "execution_effects": {
+    "trainer_restarted": false,
+    "weights_changed": false,
+    "server_files_deleted": 0,
+    "source_files_changed": 2,
+    "source_tests_added": 4,
+    "live_s03_readback": false
+  },
+  "followup": "Inspect post-push exact CI, owner-native STOP/Supervisor/checkpoint/independent restore; never auto-resume checkpoint25 under changed source lineage. This correction does not install on OneHost."
+}

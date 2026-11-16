@@ -410,11 +410,11 @@ def save_checkpoint(output, model, optimizer, scheduler, scaler, state, lineage,
 
 
 def prune_checkpoints(output, lineage):
-    """Delete only registered, fully reverified new-student checkpoints.
+    """Plan only: an online trainer cannot certify independent offsite restore.
 
-    Keep latest, previous, best evaluated and the independently accepted
-    checkpoint. An unregistered directory, modified file or foreign lineage
-    is never deleted. This scope cannot reach old 35B, corpus or S03 paths.
+    Preserve latest, previous, best evaluated and accepted checkpoint; do not
+    delete even older locally hashed optimizer/RNG snapshots here. The existing
+    native owner cleanup writer handles proof-gated deletion separately.
     """
     output = check_path(output)
     if (not output.is_relative_to(ROOT / "lora/qwen35_9b")
@@ -451,39 +451,20 @@ def prune_checkpoints(output, lineage):
         if accepted_path.parent != output or not CHECKPOINT_NAME.fullmatch(accepted_path.name):
             raise Hold("HOLD_CHECKPOINT_RETENTION_ACCEPTANCE_SCOPE")
         keep.add(accepted_path.name)
-    deletion_plan = []
-    for row in active:
-        if row["directory"] in keep:
-            continue
-        path = check_path(output / row["directory"])
-        manifest_path = path / "checkpoint_manifest.json"
-        if sha256_file(manifest_path) != row["manifest_sha256"]:
-            raise Hold("HOLD_CHECKPOINT_RETENTION_MANIFEST_CHANGED")
-        record = read_json(manifest_path)
-        files = record.get("files_sha256", {})
-        if (record.get("schema") != "NOX_QWEN35_9B_CHECKPOINT_V1"
-                or record.get("directory") != row["directory"]
-                or record.get("lineage_sha256") != canonical_sha(lineage)
-                or not files or any(Path(n).name != n or n in (".", "..") for n in files)
-                or set(p.name for p in path.iterdir()) != set(files) | {"checkpoint_manifest.json"}):
-            raise Hold("HOLD_CHECKPOINT_RETENTION_UNOWNED_CONTENT")
-        if sum((path / n).stat().st_size for n in files) > 2 * GIB:
-            raise Hold("HOLD_CHECKPOINT_RETENTION_BYTE_BOUND")
-        for name, expected in files.items():
-            if sha256_file(path / name) != expected:
-                raise Hold("HOLD_CHECKPOINT_RETENTION_FILE_CHANGED")
-        deletion_plan.append((row, path, files))
-    # Complete all verification before deleting any selected directory.
-    for row, path, files in deletion_plan:
-        for name in files:
-            (path / name).unlink()
-        (path / "checkpoint_manifest.json").unlink()
-        path.rmdir()
-        row["retained"] = False
-        row["deleted_after_verified_replacement_at"] = time.time()
-    if deletion_plan:
-        atomic_json(ledger_path, ledger)
-    return {"retained": sorted(keep), "deleted_verified_own_checkpoints": len(deletion_plan)}
+    # The trainer can verify local files but cannot attest an independent
+    # offsite restore or a cleanup writer lease. An owner acceptance receipt
+    # alone is not recovery proof. Never unlink unique optimizer/RNG history
+    # from the online trainer merely to reclaim disk.
+    # Only the EXISTING owner cleanup handler may remove exact allowlisted
+    # files after its own verified backup/restore and single-writer checks.
+    pending = sorted(r["directory"] for r in active if r["directory"] not in keep)
+    return {
+        "retained": sorted(r["directory"] for r in active),
+        "deleted_verified_own_checkpoints": 0,
+        "pending_external_cleanup": pending,
+        "cleanup_hold": ("HOLD_INDEPENDENT_RESTORE_AND_SINGLE_CLEANUP_WRITER"
+                         if pending else None),
+    }
 
 
 def load_checkpoint(output, model, optimizer, scheduler, scaler, lineage, torch):
