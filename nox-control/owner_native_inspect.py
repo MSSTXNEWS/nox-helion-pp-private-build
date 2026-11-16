@@ -2,7 +2,7 @@
 """Six bounded read-only probes of existing NOX, without env/credential dumps."""
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-import configparser, hashlib, json, os, re, shlex, shutil, subprocess, time, urllib.request
+import configparser, hashlib, json, os, re, shlex, shutil, stat, subprocess, time, urllib.request
 ROOT = Path('/root/nox')
 PROC = Path('/proc')
 SECRET = re.compile(r'(?i)(?:Bearer\s+\S+|(?:hf_|ghp_|github_pat_)[A-Za-z0-9_]{12,}|(?:password|secret|api_key|access_key|authorization|token)\s*[:=]\s*[\"\'][^\"\']{12,})')
@@ -464,31 +464,115 @@ def chat_storage():
     except Exception as exc:out['model_slots_error']=type(exc).__name__
     return out
 
-def receipts():
-    rows=[]
-    for p in sorted((ROOT/'state').glob('owner_maintenance_*.json'))[-8:]:
+
+# Native maintenance receipts and queue task.result may hold owner-private text.
+# Print only bounded, validated status metadata (not raw JSON or messages).
+PUBLIC_STATUS_CODE = re.compile(r'^[A-Za-z][A-Za-z0-9_:-]{0,95}$')
+PUBLIC_TASK_ID = re.compile(r'^owner\.[A-Za-z0-9_.:-]{1,95}$')
+PUBLIC_EVIDENCE_NUMBERS = frozenset((
+    'successful_optimizer_steps', 'attempted_steps', 'skipped_steps',
+    'verified_files', 'verified_bytes', 'training_started',
+    'optimizer_steps_verified', 'native_verified', 'source_sha_verified'))
+
+
+def bounded_receipt_meta(path, limit=100000):
+    """Read-only file identity plus approved status codes; never export raw payload."""
+    path = Path(path)
+    try:
+        if any(p.is_symlink() for p in (path, *path.parents)):
+            return {'state': 'HOLD_SYMLINK'}
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as stream:
+            before = os.fstat(stream.fileno())
+            if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
+                return {'state': 'HOLD_FILE_BOUND'}
+            raw = stream.read(limit + 1)
+            after = os.fstat(stream.fileno())
+            stamp = lambda st: (st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size)
+            if len(raw) > limit or len(raw) != before.st_size or stamp(before) != stamp(after):
+                return {'state': 'HOLD_FILE_CHANGED'}
+        def no_duplicates(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError('duplicate JSON key')
+                result[key] = value
+            return result
         try:
-            d=json.loads(p.read_text());rows.append({'path':str(p),'data':d})
-        except (OSError,ValueError):pass
+            obj = json.loads(raw, object_pairs_hook=no_duplicates,
+                             parse_constant=lambda value: (_ for _ in ()).throw(ValueError('nonfinite JSON')))
+        except (ValueError, UnicodeDecodeError, TypeError):
+            return {'state': 'HOLD_INVALID_JSON'}
+        if not isinstance(obj, dict):
+            return {'state': 'HOLD_INVALID_OBJECT'}
+        fields = {}
+        for key in ('schema', 'state', 'status', 'kind', 'result_state'):
+            value = obj.get(key)
+            if isinstance(value, str) and PUBLIC_STATUS_CODE.fullmatch(value):
+                fields[key] = value
+        for key in PUBLIC_EVIDENCE_NUMBERS:
+            value = obj.get(key)
+            if type(value) is bool or (type(value) is int and 0 <= value <= 10 ** 15):
+                fields[key] = value
+        return {'state': 'READ_ONLY_METADATA', 'bytes': len(raw),
+                'sha256': hashlib.sha256(raw).hexdigest(), 'fields': fields}
+    except (OSError, ValueError):
+        return {'state': 'HOLD_READ_FAILED'}
+
+
+def safe_owner_task(task):
+    """A task result may contain private conversation content; withhold it."""
+    if not isinstance(task, dict):
+        return {'state': 'HOLD_INVALID_TASK'}
+    fields = {}
+    task_id = task.get('id')
+    if isinstance(task_id, str) and PUBLIC_TASK_ID.fullmatch(task_id):
+        fields['id'] = task_id
+    for key in ('status', 'result_state'):
+        value = task.get(key)
+        if isinstance(value, str) and PUBLIC_STATUS_CODE.fullmatch(value):
+            fields[key] = value
+    for key in ('retries', 'finished_at', 'owner_claim_epoch'):
+        value = task.get(key)
+        if type(value) is int and 0 <= value <= 10 ** 15:
+            fields[key] = value
+    fields['result_payload_withheld'] = 'result' in task
+    return fields
+
+
+def receipts():
+    rows = []
+    for p in sorted((ROOT / 'state').glob('owner_maintenance_*.json'))[-8:]:
+        rows.append({'path': str(p), 'evidence': bounded_receipt_meta(p)})
     return rows
 
+
 def owner_component_readback():
-    rows=[]
-    for name in ('owner.training_stack','owner.dispatcher','owner.chat','owner.memory','owner.storage','owner.downloads'):
-        p=ROOT/'state/owner_components'/(name+'.json')
-        if p.is_file() and not p.is_symlink() and p.stat().st_size<100000:
-            try:rows.append({'path':str(p),'receipt':json.loads(p.read_text())})
-            except (OSError,ValueError):pass
-    queue=ROOT/'state/dispatcher/state.json'
-    tasks=[]
-    if queue.is_file() and not queue.is_symlink() and queue.stat().st_size<3000000:
+    rows = []
+    for name in ('owner.training_stack', 'owner.dispatcher', 'owner.chat',
+                 'owner.memory', 'owner.storage', 'owner.downloads'):
+        p = ROOT / 'state/owner_components' / (name + '.json')
+        if p.exists() or p.is_symlink():
+            rows.append({'component': name, 'evidence': bounded_receipt_meta(p)})
+    queue = ROOT / 'state/dispatcher/state.json'
+    tasks = []
+    queue_scope = 'HOLD_NOT_READ'
+    if queue.is_file() and not queue.is_symlink() and queue.stat().st_size < 3000000:
         try:
-            state=json.loads(queue.read_text())
-            tasks=[{key:value for key,value in task.items() if key in
-                    ('id','status','retries','claimed_by','owner_claim','owner_claim_epoch','finished_at','result')}
-                   for name,task in state.get('tasks',{}).items() if name.startswith('owner.')]
-        except (OSError,ValueError,TypeError):pass
-    print('NOX_MAINT_COMPONENTS='+json.dumps({'receipts':rows,'tasks':tasks},separators=(',',':')),flush=True)
+            with queue.open('rb') as stream:
+                raw = stream.read(3000001)
+            state = json.loads(raw)
+            if isinstance(state, dict) and isinstance(state.get('tasks'), dict):
+                tasks = [safe_owner_task(dict(task, id=task.get('id', name)))
+                         for name, task in state['tasks'].items()
+                         if isinstance(name, str) and name.startswith('owner.')
+                         and isinstance(task, dict)][:512]
+                queue_scope = 'OWNER_TASK_STATUS_ONLY_NO_RESULTS'
+        except (OSError, ValueError, TypeError):
+            queue_scope = 'HOLD_INVALID_QUEUE'
+    print('NOX_MAINT_COMPONENTS=' + json.dumps(
+        {'receipts': rows, 'tasks': tasks, 'queue_scope': queue_scope},
+        separators=(',', ':'), allow_nan=False), flush=True)
 
 def bounded_capacity_readback():
     probe=ROOT/'scripts/owner_capacity_probe.py'
