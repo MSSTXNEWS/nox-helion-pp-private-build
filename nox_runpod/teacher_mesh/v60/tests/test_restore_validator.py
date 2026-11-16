@@ -1,6 +1,7 @@
 """Synthetic V60 archive validation. No key, age, SSH, OneHost or production DB."""
 from __future__ import annotations
 
+import gzip
 import hashlib
 import io
 import json
@@ -25,7 +26,13 @@ def sqlite_image(corrupt: bool = False) -> bytes:
         connection.close()
 
 
-def plaintext_tar(*, corrupt_db: bool = False, traversal_manifest: bool = False) -> bytes:
+def plaintext_tar(
+    *,
+    corrupt_db: bool = False,
+    traversal_manifest: bool = False,
+    duplicate_member: bool = False,
+    omit_member: bool = False,
+) -> bytes:
     rows = {}
     for name in validator.EXPECTED_FILES:
         rows[name] = sqlite_image(corrupt_db) if name.endswith(".sqlite3") else b"synthetic fixture bytes"
@@ -45,9 +52,18 @@ def plaintext_tar(*, corrupt_db: bool = False, traversal_manifest: bool = False)
         "files": records,
     }
     result = io.BytesIO()
+    missing_name = sorted(rows)[0]
     with tarfile.open(fileobj=result, mode="w:gz") as archive:
         for name, data in sorted(rows.items()):
+            if omit_member and name == missing_name:
+                continue
             info = tarfile.TarInfo(name)
+            info.size = len(data)
+            info.mtime = 0
+            archive.addfile(info, io.BytesIO(data))
+        if duplicate_member:
+            data = rows[missing_name]
+            info = tarfile.TarInfo(missing_name)
             info.size = len(data)
             info.mtime = 0
             archive.addfile(info, io.BytesIO(data))
@@ -56,6 +72,13 @@ def plaintext_tar(*, corrupt_db: bool = False, traversal_manifest: bool = False)
         info.size = len(encoded)
         info.mtime = 0
         archive.addfile(info, io.BytesIO(encoded))
+    return result.getvalue()
+
+
+def gzip_bomb(expanded_bytes: int = 8192) -> bytes:
+    result = io.BytesIO()
+    with gzip.GzipFile(fileobj=result, mode="wb", mtime=0) as stream:
+        stream.write(bytes(expanded_bytes))
     return result.getvalue()
 
 
@@ -147,6 +170,61 @@ class V60RestoreValidatorTests(unittest.TestCase):
         self.assertTrue(seen)
         self.assertEqual(set(seen), {":memory:"})
         self.assertEqual(result["production_writes"], 0)
+
+
+    def test_tar_gzip_expansion_limit_stops_before_member_scan(self):
+        bomb = gzip_bomb(8192)
+        with patch.object(validator, "MAX_TAR_EXPANDED_BYTES", 4096):
+            with patch.object(validator, "MAX_TAR_COMPRESSION_RATIO", 10**9):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_TAR_EXPANDED_SIZE"):
+                    validator.verify_plaintext_tar(bomb)
+
+    def test_tar_gzip_compression_ratio_limit_fails_closed(self):
+        with patch.object(validator, "MAX_TAR_COMPRESSION_RATIO", 1):
+            with patch.object(validator, "MAX_TAR_RATIO_FLOOR_BYTES", 0):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_TAR_EXPANSION_RATIO"):
+                    validator.verify_plaintext_tar(plaintext_tar())
+
+    def test_duplicate_tar_member_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError, "HOLD_TAR_MEMBER_COUNT_OR_DUPLICATE"):
+            validator.verify_plaintext_tar(plaintext_tar(duplicate_member=True))
+
+    def test_missing_tar_member_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError, "HOLD_TAR_MEMBER_COVERAGE"):
+            validator.verify_plaintext_tar(plaintext_tar(omit_member=True))
+
+    def test_inner_hash_mismatch_never_calls_decryptor(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext)
+        calls = []
+        with self.assertRaisesRegex(RuntimeError, "HOLD_INNER_CIPHERTEXT_SHA256"):
+            validator.verify_offsite_candidate(
+                raw,
+                decryptor=lambda value: calls.append(value) or b"",
+                expected_outer_bytes=len(raw),
+                expected_outer_sha256=hashlib.sha256(raw).hexdigest(),
+                expected_ciphertext_sha256="0" * 64,
+            )
+        self.assertEqual(calls, [])
+
+    def test_synthetic_decryptor_failure_fails_closed(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext)
+        calls = []
+
+        def failing_decryptor(value):
+            calls.append(value)
+            raise ValueError("synthetic decrypt failure")
+
+        with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_DECRYPTION_FAILED"):
+            validator.verify_offsite_candidate(
+                raw,
+                decryptor=failing_decryptor,
+                expected_outer_bytes=len(raw),
+                expected_outer_sha256=hashlib.sha256(raw).hexdigest(),
+                expected_ciphertext_sha256=hashlib.sha256(ciphertext).hexdigest(),
+            )
+        self.assertEqual(calls, [ciphertext])
 
 
 if __name__ == "__main__":
