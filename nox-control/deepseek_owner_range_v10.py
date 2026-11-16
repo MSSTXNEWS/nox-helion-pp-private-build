@@ -129,8 +129,19 @@ def load_manifest(raw):
     return by
 
 def stop(root):
-    require(not any((root/p).exists() or (root/p).is_symlink() for p in STOP_NAMES),'HOLD_OWNER_STOP')
-    require(not (Path('/workspace/NOX_STOP').exists() or Path('/workspace/NOX_STOP').is_symlink()),'HOLD_OWNER_STOP')
+    """Fail closed when an owner STOP flag is present OR unreadable.
+
+    Path.exists()/is_symlink() may not distinguish an inaccessible STOP from
+    a missing one. Do not authorize a model Range write on ambiguous access.
+    """
+    for flag in (*(root / name for name in STOP_NAMES), Path('/workspace/NOX_STOP')):
+        try:
+            os.lstat(flag)  # lstat also detects dangling STOP symlinks
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise Hold('HOLD_OWNER_STOP_UNREADABLE') from exc
+        raise Hold('HOLD_OWNER_STOP')
 
 def lease(path,request,now,root):
     # Only existing OneHost is authorised to issue this lease. This script cannot create one.
