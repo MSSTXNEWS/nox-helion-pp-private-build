@@ -12,7 +12,7 @@
   "task_outcomes": [
     {
       "task_id": "S1-06",
-      "status": "SOURCE_PATCH_PENDING_CI",
+      "status": "SOURCE_TESTED",
       "claim": "SOURCE_CAS_ONLY_NO_NATIVE_LEASE",
       "evidence": "Malformed Supervisor STOPPED pid unknown previously parsed as repairable STOPPED; patched to UNKNOWN; two regression cases."
     },
@@ -41,7 +41,24 @@
       "evidence": "248828477216 missing DeepSeek bytes; no verified owner-auth seekable storage"
     }
   ],
-  "tests": "Two regression cases added; full source CI not yet confirmed",
+  "tests": {
+    "scope": "GitHub source regression only, not native deployment",
+    "run_id": 43921842367,
+    "job_id": 133490872053,
+    "conclusion": "SUCCESS",
+    "commit_sha": "9755dcc061c4aab3123a92b90c4b310ad586e0e2",
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43921842367",
+    "checks": [
+      "source syntax",
+      "lifeline unit and failure",
+      "native status source truthfulness",
+      "verified experience ingress",
+      "read-only native installation gates",
+      "mountinfo inventory",
+      "owner STOP/lease/8081",
+      "mentor Supervisor"
+    ]
+  },
   "native": {
     "installed": false,
     "owner_lease": "UNKNOWN",
@@ -61,5 +78,6 @@
   "source_patch_commit": "955f82373a6d307b0d8b93ad3dfd2b5fba807828",
   "test_patch_commit": "9755dcc061c4aab3123a92b90c4b310ad586e0e2",
   "test_blob_sha": "d440a10d8dcfce4b3018c779a9b31f5462f697e4",
-  "source_prepared_commit_unpublished": "645b4a9ed8fc1fd9bffe8dc1eb430f5000930a9b"
+  "source_prepared_commit_unpublished": "645b4a9ed8fc1fd9bffe8dc1eb430f5000930a9b",
+  "verified_at_utc": "2026-11-16T17:49:49.624Z"
 }
