@@ -15,7 +15,7 @@ import stat
 import tempfile
 
 BUNDLE = __NOX_BUNDLE_JSON__
-ENVELOPE_SHA256 = '__NOX_DRIVE_ENVELOPE_SHA256__'
+ENVELOPE_SHA256 = '36c5ec5dc1f7e0067e262810f4c0c970088daeb6ee9619ca46f9fd471d04d84f'
 SCRIPTS = Path('/root/nox/scripts')
 PINS = {
     'owner_drive_ram_prepare.py': 'dadd732db4db231be625a72606f85509c1c9b3fc519c1f71d7a11c99ca48ce43',
