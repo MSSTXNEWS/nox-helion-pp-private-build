@@ -5,6 +5,11 @@ import re
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+import urllib.error
+import io
+from contextlib import redirect_stdout
+from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as probe
 from nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe import REMOTE
 
 code=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
@@ -175,7 +180,7 @@ class ReadOnlySafety(unittest.TestCase):
         line='LISTEN 0 128 127.0.0.1:8081 0.0.0.0:* users:(("llama-server",pid=7637,fd=12))\n'
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'7637';p.mkdir()
-            (p/'stat').write_text('7637 (llama-server) S '+' '.join(['0']*19+['123456']+['0']*10))
+            (p/'stat').write_text('7637 (llama-server) S '+' '.join(['0']*18+['123456']+['0']*10))
             (p/'comm').write_text('llama-server\n')
             x=context['chat_listener_projection'](status,lambda _: (0,line),Path(d))
         self.assertEqual(x['status'],'CHAT_UNMANAGED_LISTENER_OBSERVED')
@@ -201,5 +206,124 @@ class ReadOnlySafety(unittest.TestCase):
         self.assertIn('chat_listener_projection(supervisor_projection(rc,out),call,Path',REMOTE)
         self.assertIn('"NATIVE_P0_"',workflow)
         self.assertNotIn('supervisorctl restart',REMOTE)
+
+
+    def test_readonly_metadata_429_then_success_respects_retry_after(self):
+        response=MagicMock()
+        response.__enter__.return_value.read.return_value=b'{"instances":[]}'
+        error=urllib.error.HTTPError(
+            probe.LIST_API,429,"rate limited",{"Retry-After":"3"},None)
+        with patch.object(probe.urllib.request,"urlopen",side_effect=[error,response]) as urlopen, \
+             patch.object(probe.time,"sleep") as sleep:
+            result=probe.api("GET","/instances/","test-key")
+        self.assertEqual(result,{"instances":[]})
+        self.assertEqual(urlopen.call_count,2)
+        sleep.assert_called_once_with(3.0)
+
+    def test_readonly_metadata_429_exhausts_after_two_retries(self):
+        errors=[urllib.error.HTTPError(
+            probe.LIST_API,429,"rate limited",{},None) for _ in range(3)]
+        with patch.object(probe.urllib.request,"urlopen",side_effect=errors) as urlopen, \
+             patch.object(probe.time,"sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError,"HOLD_VAST_API_HTTP_429"):
+                probe.api("GET","/instances/","test-key")
+        self.assertEqual(urlopen.call_count,3)
+        self.assertEqual([c.args[0] for c in sleep.call_args_list],[1.0,2.0])
+
+    def test_mutating_429_and_transient_5xx_are_not_retried(self):
+        mutation=urllib.error.HTTPError(
+            probe.API+"/instances/60509551/ssh/",429,"rate limited",{},None)
+        with patch.object(probe.urllib.request,"urlopen",side_effect=mutation) as urlopen, \
+             patch.object(probe.time,"sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError,"HOLD_VAST_API_HTTP_429"):
+                probe.api("POST","/instances/60509551/ssh/","test-key",{"public_key":"ssh-ed25519 test"})
+        self.assertEqual(urlopen.call_count,1)
+        sleep.assert_not_called()
+        server_error=urllib.error.HTTPError(
+            probe.LIST_API,503,"unavailable",{},None)
+        with patch.object(probe.urllib.request,"urlopen",side_effect=server_error) as urlopen, \
+             patch.object(probe.time,"sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError,"HOLD_VAST_API_HTTP_503"):
+                probe.api("GET","/instances/","test-key")
+        self.assertEqual(urlopen.call_count,1)
+        sleep.assert_not_called()
+
+    def test_429_retry_after_over_cap_fails_closed_without_retry(self):
+        error=urllib.error.HTTPError(
+            probe.LIST_API,429,"rate limited",{"Retry-After":"31"},None)
+        with patch.object(probe.urllib.request,"urlopen",side_effect=error) as urlopen, \
+             patch.object(probe.time,"sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError,"RETRY_AFTER_TOO_LONG"):
+                probe.api("GET","/instances/","test-key")
+        self.assertEqual(urlopen.call_count,1)
+        sleep.assert_not_called()
+
+
+    def test_attach_post_429_is_never_replayed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            record=Path(tmp)/"cleanup.json"
+            record.write_text(json.dumps({"public":"ssh-ed25519 AAAA KEY","key_id":None}))
+            output=io.StringIO()
+            with patch.object(probe,"TRACK",record), \
+                 patch.object(probe,"api",side_effect=RuntimeError("HOLD_VAST_API_HTTP_429")) as post, \
+                 patch.object(probe,"reconcile_attach_after_429",return_value=73) as reconcile, \
+                 redirect_stdout(output):
+                self.assertEqual(probe.attach_ephemeral_key("API-TOKEN-SECRET","ssh-ed25519 AAAA KEY"),[73])
+            self.assertEqual(post.call_count,1)
+            post.assert_called_once_with("POST","/instances/60509551/ssh/","API-TOKEN-SECRET",
+                                        {"ssh_key":"ssh-ed25519 AAAA KEY"})
+            reconcile.assert_called_once_with("API-TOKEN-SECRET","ssh-ed25519 AAAA KEY")
+            self.assertNotIn("API-TOKEN-SECRET",output.getvalue())
+            self.assertNotIn("ssh-ed25519 AAAA KEY",output.getvalue())
+            self.assertEqual(json.loads(record.read_text())["attach_state"],"ATTACHED_VERIFIED")
+
+    def test_cleanup_keeps_receipt_when_ambiguous_attach_is_not_visible_yet(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            record=Path(tmp)/"cleanup.json"
+            record.write_text(json.dumps({
+                "public":"ssh-ed25519 AAAA PUBLIC", "key_id":None,
+                "attach_state":"ATTACH_AMBIGUOUS_HTTP_429"}))
+            output=io.StringIO()
+            with patch.object(probe,"TRACK",record), \
+                 patch.dict(probe.os.environ,{"NOX2":"TOKEN-SECRET"}), \
+                 patch.object(probe,"match",return_value=[]), \
+                 redirect_stdout(output):
+                self.assertFalse(probe.cleanup())
+            self.assertTrue(record.exists())
+            self.assertIn("TEMP_SSH_CLEANUP=HOLD_ATTACH_STATE_UNRESOLVED",output.getvalue())
+            self.assertNotIn("TOKEN-SECRET",output.getvalue())
+            self.assertNotIn("ssh-ed25519",output.getvalue())
+
+    def test_attach_429_reconciles_exact_public_key_once(self):
+        with patch.object(probe,"match",return_value=[73]) as lookup:
+            key_id=probe.reconcile_attach_after_429("NOX2-SECRET","ssh-ed25519 AAAA GENERATED")
+        self.assertEqual(key_id,73)
+        lookup.assert_called_once_with("NOX2-SECRET","ssh-ed25519 AAAA GENERATED")
+
+    def test_attach_429_unmatched_key_holds_without_post_retry_or_key_output(self):
+        secret="ssh-ed25519 AAAA GENERATED-SECRET"
+        with patch.object(probe,"match",return_value=[]) as lookup:
+            with self.assertRaisesRegex(RuntimeError,"RECONCILE_ABSENT") as caught:
+                probe.reconcile_attach_after_429("API-TOKEN-SECRET",secret)
+        lookup.assert_called_once_with("API-TOKEN-SECRET",secret)
+        self.assertNotIn(secret,str(caught.exception))
+        self.assertNotIn("API-TOKEN-SECRET",str(caught.exception))
+
+    def test_attach_429_missing_list_endpoint_holds_with_safe_method_path_status(self):
+        with patch.object(probe,"match",side_effect=RuntimeError("HOLD_VAST_API_HTTP_404")) as lookup:
+            with self.assertRaisesRegex(RuntimeError,"GET_INSTANCE_SSH_HTTP_404") as caught:
+                probe.reconcile_attach_after_429("API-TOKEN-SECRET","ssh-ed25519 AAAA SECRET")
+        lookup.assert_called_once()
+        self.assertNotIn("SECRET",str(caught.exception))
+        self.assertNotIn("API-TOKEN-SECRET",str(caught.exception))
+
+    def test_attach_reconcile_sanitizes_unexpected_exception_text(self):
+        with patch.object(probe,"match",side_effect=RuntimeError("secret key and token leaked")) as lookup:
+            with self.assertRaisesRegex(RuntimeError,"GET_INSTANCE_SSH_RECONCILE_FAILED") as caught:
+                probe.reconcile_attach_after_429("TOKEN-SECRET","ssh-ed25519 AAAA KEY-SECRET")
+        lookup.assert_called_once()
+        self.assertNotIn("secret",str(caught.exception).lower())
+        self.assertNotIn("TOKEN-SECRET",str(caught.exception))
+        self.assertNotIn("KEY-SECRET",str(caught.exception))
 
 if __name__=='__main__':unittest.main()

@@ -15,6 +15,8 @@ import re
 import subprocess
 import sys
 import time
+import email.utils
+from datetime import datetime, timezone
 import urllib.error
 import urllib.request
 
@@ -360,6 +362,39 @@ PYREMOTE
 """
 
 
+_MAX_RETRY_AFTER_SECONDS = 30
+
+def _retry_after_seconds(exc: urllib.error.HTTPError, retry_index: int) -> float:
+    """Return a bounded delay; an invalid/too-long server delay fails closed."""
+    headers = getattr(exc, "headers", None)
+    value = headers.get("Retry-After") if headers is not None else None
+    if value is None:
+        return float(2 ** retry_index)
+    raw = str(value).strip()
+    try:
+        delay = float(raw)
+    except (TypeError, ValueError):
+        try:
+            when = email.utils.parsedate_to_datetime(raw)
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            delay = (when - datetime.now(timezone.utc)).total_seconds()
+        except (TypeError, ValueError, OverflowError):
+            raise RuntimeError("HOLD_VAST_API_HTTP_429_RETRY_AFTER_INVALID") from None
+    if delay < 0:
+        delay = 0.0
+    if delay > _MAX_RETRY_AFTER_SECONDS:
+        raise RuntimeError("HOLD_VAST_API_HTTP_429_RETRY_AFTER_TOO_LONG") from None
+    return delay
+
+
+def _retryable_read_only_metadata(method: str, path: str, data: dict | None) -> bool:
+    # Exact allowlist: account instance listing and this instance's SSH-key metadata.
+    return (method == "GET" and data is None and
+            (path == "/instances/" or
+             path == f"/instances/{INSTANCE}/ssh/"))
+
+
 def api(method: str, path: str, key: str, data: dict | None = None):
     if not key:
         raise RuntimeError("HOLD_NOX2_MISSING")
@@ -369,16 +404,71 @@ def api(method: str, path: str, key: str, data: dict | None = None):
         raw = json.dumps(data, separators=(",", ":")).encode()
         headers["Content-Type"] = "application/json"
     endpoint = LIST_API if method == "GET" and path == "/instances/" else API + path
-    request = urllib.request.Request(endpoint, headers=headers, data=raw, method=method)
-    try:
-        with urllib.request.urlopen(request, timeout=22) as response:
-            body = response.read(250000)
-        value = json.loads(body)
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError("HOLD_VAST_API_HTTP_" + str(exc.code)) from None
+    retryable = _retryable_read_only_metadata(method, path, data)
+    for retry_index in range(3):
+        request = urllib.request.Request(endpoint, headers=headers, data=raw, method=method)
+        try:
+            with urllib.request.urlopen(request, timeout=22) as response:
+                body = response.read(250000)
+            value = json.loads(body)
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429 and retryable and retry_index < 2:
+                time.sleep(_retry_after_seconds(exc, retry_index))
+                continue
+            raise RuntimeError("HOLD_VAST_API_HTTP_" + str(exc.code)) from None
     if isinstance(value, dict) and value.get("success") is False:
         raise RuntimeError("HOLD_VAST_API_REJECTED_" + method)
     return value
+
+
+
+def attach_ephemeral_key(key: str, public: str) -> list[int]:
+    """Issue one POST; on ambiguous 429, use only one safe GET reconciliation."""
+    try:
+        api("POST", f"/instances/{INSTANCE}/ssh/", key, {"ssh_key": public})
+        TRACK.write_text(json.dumps({
+            "public": public, "key_id": None,
+            "attach_state": "ATTACH_ACCEPTED_UNVERIFIED"}))
+        print("VAST_EPHEMERAL_PUBLIC_KEY_ATTACH_ACCEPTED=true")
+        return []
+    except RuntimeError as exc:
+        if str(exc) != "HOLD_VAST_API_HTTP_429":
+            raise
+        TRACK.write_text(json.dumps({
+            "public": public, "key_id": None,
+            "attach_state": "ATTACH_AMBIGUOUS_HTTP_429"}))
+        key_id = reconcile_attach_after_429(key, public)
+        TRACK.write_text(json.dumps({
+            "public": public, "key_id": key_id,
+            "attach_state": "ATTACHED_VERIFIED"}))
+        print("VAST_EPHEMERAL_ATTACH_429_RECONCILED_BY_READ=true")
+        return [key_id]
+
+
+def reconcile_attach_after_429(key: str, public: str) -> int:
+    """Read-only confirmation after an ambiguous attach; never repeats POST."""
+    try:
+        ids = match(key, public)
+    except RuntimeError as exc:
+        # Keep the precise HTTP status and the fixed GET resource in a safe code.
+        status = re.fullmatch(r"HOLD_VAST_API_HTTP_([0-9]{3})", str(exc))
+        if status:
+            raise RuntimeError(
+                "HOLD_VAST_API_GET_INSTANCE_SSH_HTTP_" + status.group(1)
+            ) from None
+        raise RuntimeError(
+            "HOLD_VAST_API_GET_INSTANCE_SSH_RECONCILE_FAILED"
+        ) from None
+    if not ids:
+        raise RuntimeError(
+            "HOLD_VAST_API_POST_INSTANCE_SSH_HTTP_429_RECONCILE_ABSENT"
+        )
+    if len(ids) != 1:
+        raise RuntimeError(
+            "HOLD_VAST_API_POST_INSTANCE_SSH_HTTP_429_RECONCILE_AMBIGUOUS"
+        )
+    return ids[0]
 
 
 def keys(key: str) -> list[dict]:
@@ -414,8 +504,13 @@ def cleanup() -> bool:
         print("TEMP_SSH_CLEANUP=HOLD_BAD_RECORD")
         return False
     ids = match(key, pub)
-    # If attach was accepted and the key is missing already, cleanup succeeded.
+    # A 429 POST has an ambiguous outcome; absence from one read is not proof
+    # that a delayed attach cannot appear. Keep its receipt for later recovery.
     if not ids:
+        if record.get("attach_state") in (
+                "ATTACH_AMBIGUOUS_HTTP_429", "ATTACH_ACCEPTED_UNVERIFIED"):
+            print("TEMP_SSH_CLEANUP=HOLD_ATTACH_STATE_UNRESOLVED")
+            return False
         print("TEMP_SSH_CLEANUP=ALREADY_ABSENT")
         TRACK.unlink(missing_ok=True)
         return True
@@ -518,17 +613,20 @@ def probe() -> bool:
     # Record BEFORE the attach attempt so cleanup can recover an uncertain POST.
     TRACK.write_text(json.dumps({"public": public, "key_id": None}))
     TRACK.chmod(0o600)
-    api("POST", f"/instances/{INSTANCE}/ssh/", key, {"ssh_key": public})
-    print("VAST_EPHEMERAL_PUBLIC_KEY_ATTACH_ACCEPTED=true")
-    found = []
+    # 429 can be ambiguous: reconcile exactly once through GET; never retry POST.
+    found = attach_ephemeral_key(key, public)
     for attempt in range(6):
+        if found:
+            break
         found = match(key, public)
         if found:
             break
         time.sleep(1.5)
     if len(found) != 1:
         raise RuntimeError("HOLD_EPHEMERAL_ATTACHED_KEY_ID_NOT_DISCOVERED")
-    TRACK.write_text(json.dumps({"public":public,"key_id":found[0]}))
+    TRACK.write_text(json.dumps({
+        "public": public, "key_id": found[0],
+        "attach_state": "ATTACHED_VERIFIED"}))
     print("VAST_EPHEMERAL_KEY_MATCHED_BY_EXACT_PUBLIC_KEY=true")
     print("VAST_INSTANCE_RUNNING_PRESERVED=true")
     cmd = ["ssh","-vv","-T","-i",str(KEY),"-p",str(port),
