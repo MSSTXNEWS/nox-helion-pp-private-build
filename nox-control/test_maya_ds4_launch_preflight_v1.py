@@ -17,6 +17,10 @@ INSPECT_SPEC = importlib.util.spec_from_file_location(
     "owner_native_inspect_linkage_test", HERE / "owner_native_inspect.py")
 INSPECT = importlib.util.module_from_spec(INSPECT_SPEC)
 INSPECT_SPEC.loader.exec_module(INSPECT)
+PROFILE_SPEC = importlib.util.spec_from_file_location(
+    "maya_ds4_v100_launch_profile_v1", HERE / "maya_ds4_v100_launch_profile_v1.py")
+PROFILE = importlib.util.module_from_spec(PROFILE_SPEC)
+PROFILE_SPEC.loader.exec_module(PROFILE)
 
 MAYA_BASE = "https://raw.githubusercontent.com/mw00/project-maya/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/"
 
@@ -35,6 +39,20 @@ def complete_rows():
              "sha256": PLAN.PINNED_FILE_FACTS[name][1], "sha_verified": True}
             for name in PLAN.EXPECTED_FILES]
 
+
+def synthetic_tensor_roles():
+    # GGUF-order dimensions; synthetic metadata only, never weight bytes.
+    rows = [{"name": "token_embd.weight", "dtype": "Q5_K", "dims": [5120, 32000]}]
+    for layer in range(40):
+        rows.extend([
+            {"name": f"blk.{layer}.ffn_gate_inp.weight", "dtype": "Q8_0", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.exp_probs_b.bias", "dtype": "F32", "dims": [384]},
+            {"name": f"blk.{layer}.ffn_gate_exps.weight", "dtype": "IQ2_XXS", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.ffn_up_exps.weight", "dtype": "IQ2_XXS", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.ffn_down_exps.weight", "dtype": "IQ2_XXS", "dims": [384, 5120]},
+        ])
+    rows.append({"name": "blk.2.engram_embd.weight", "dtype": "IQ4_NL", "dims": [512, 1000]})
+    return rows
 
 class MayaLinkageReadOnlyTests(unittest.TestCase):
     def test_readelf_reports_dynamic_needs_without_running_maya(self):
@@ -115,6 +133,95 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
 
 
 class MayaLaunchPlanTests(unittest.TestCase):
+
+    def test_iq2_xxs_embedding_and_router_are_rejected(self):
+        roles = synthetic_tensor_roles()
+        next(row for row in roles if row["name"] == "token_embd.weight")["dtype"] = "IQ2_XXS"
+        self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
+                         "HOLD_UNSUPPORTED_ROLE_DTYPE")
+        roles = synthetic_tensor_roles()
+        next(row for row in roles if row["name"] == "blk.0.ffn_gate_inp.weight")["dtype"] = "IQ2_XXS"
+        got = PLAN.validate_tensor_role_inventory(roles)
+        self.assertEqual(got["state"], "HOLD_UNSUPPORTED_ROLE_DTYPE")
+        self.assertEqual(got["role"], "router")
+
+    def test_iq2_xxs_expert_gate_up_down_and_iq4_nl_engram_are_allowed(self):
+        got = PLAN.validate_tensor_role_inventory(synthetic_tensor_roles())
+        self.assertEqual(got["state"], "ROLE_DTYPE_METADATA_PASS")
+        self.assertEqual(got["roles_checked"]["routed_expert_layers"], 40)
+        self.assertEqual(got["roles_checked"]["engram_tables"], 1)
+
+    def test_expert_and_engram_roles_fail_closed_on_mismatch_or_bad_blocks(self):
+        roles = synthetic_tensor_roles()
+        next(row for row in roles if row["name"] == "blk.0.ffn_gate_exps.weight")["dtype"] = "IQ3_XXS"
+        self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
+                         "HOLD_UNSUPPORTED_ROLE_DTYPE")
+        roles = synthetic_tensor_roles()
+        roles[-1]["dims"][0] = 510
+        self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
+                         "HOLD_ENGRAM_IQ4_NL_BLOCK_ALIGNMENT")
+        roles = synthetic_tensor_roles()
+        roles[-1]["dtype"] = "IQ2_XXS"
+        self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
+                         "HOLD_UNSUPPORTED_ROLE_DTYPE")
+
+    def test_successful_source_plan_requires_role_metadata(self):
+        with patch.object(PLAN, "observe_packer_output", return_value={
+                "state": "PACKER_OUTPUT_ABSENT_VERIFIED",
+                "model_dir": "/synthetic/model", "output_dir": "/synthetic/model/maya-ds4"}):
+            got = PLAN.evaluate_source_plan(
+                stop_present=False, gpu_ids=(0, 1), tp=2, max_context=4096,
+                reserve_mib=1024, verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6)
+        self.assertEqual(got["state"], "HOLD_TENSOR_ROLE_INVENTORY_REQUIRED")
+        self.assertFalse(got["launchable"])
+    def test_v100_profile_uses_supported_cli_and_omits_ineffective_gguf_mmap_flag(self):
+        fake_preflight = {
+            "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
+            "packer_output_dir": "/synthetic/model/maya-ds4",
+        }
+        with patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight):
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6)
+        self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+        self.assertFalse(got["launchable"])
+        argv = got["argv"]
+        self.assertIn("--pack", argv)
+        self.assertIn("--gpus", argv)
+        self.assertIn("--tp", argv)
+        self.assertIn("--max-context", argv)
+        self.assertIn("--reserve-mib", argv)
+        self.assertIn("--expert-profile", argv)
+        self.assertIn("--dspark", argv)
+        self.assertIn("--parallel", argv)
+        self.assertIn("--serve", argv)
+        self.assertNotIn("--mmap-experts", argv)
+        self.assertEqual(got["expert_mapping"],
+                         "GGUF hot experts in VRAM cache; CPU-lane experts read in-place from model files")
+        self.assertEqual(got["kv_cache_fit"], "HOLD_LIVE_VRAM_AND_RAM_READBACK_REQUIRED")
+        self.assertEqual(got["runtime_fit"], "HOLD_LIVE_FREE_MEMORY_PREFLIGHT_REQUIRED")
+        self.assertEqual(got["context_tokens"], 4096)
+        self.assertEqual(got["vram_reserve_mib"], 3072)
+
+    def test_v100_profile_holds_unknown_stop_before_preflight(self):
+        with patch.object(PROFILE.preflight, "evaluate_source_plan") as evaluate:
+            got = PROFILE.build_source_plan(
+                owner_stop=None,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6)
+        self.assertEqual(got["state"], "HOLD_OWNER_STOP")
+        self.assertFalse(got["launchable"])
+        evaluate.assert_not_called()
+
     def test_stop_blocks_launch_even_with_complete_inputs(self):
         got = PLAN.evaluate_source_plan(
             stop_present=True, gpu_ids=(0, 1), tp=2, max_context=65536,
@@ -132,6 +239,7 @@ class MayaLaunchPlanTests(unittest.TestCase):
                 stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
                 reserve_mib=1024, verified_files=complete_rows(),
                 tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
+                tensor_role_inventory=synthetic_tensor_roles(),
                 model_file_paths=["synthetic"] * 6)
         self.assertEqual(got["state"], "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE")
         self.assertFalse(got["launchable"])
@@ -142,7 +250,8 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertEqual(got["packer_output_dir"], "/synthetic/model/maya-ds4")
         self.assertTrue(got["packer_non_clobber_precondition"])
         self.assertEqual(got["model_content_sha256"], "VERIFIED_AGAINST_PINNED_FACTS")
-        self.assertEqual(got["model_tensor_inventory"], "NOT_TESTED_BY_SOURCE_PREFLIGHT")
+        self.assertEqual(got["model_tensor_inventory"], "ROLE_DTYPE_CHECKED_FOR_SUPPLIED_METADATA_ONLY")
+        self.assertEqual(got["role_dtype_gate"]["state"], "ROLE_DTYPE_METADATA_PASS")
         self.assertEqual(got["runtime_abi"], "NOT_TESTED")
         self.assertEqual(got["sm70_execution"], "NOT_TESTED")
         self.assertEqual(got["runtime_compatibility"], "NOT_TESTED")
@@ -357,5 +466,92 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertIn("64K", setup)
 
 
+class MayaLaunchProfileCliContractTests(unittest.TestCase):
+    def test_profile_uses_only_pinned_maya_cli_and_keeps_live_fit_on_hold(self):
+        checked = {
+            "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
+            "packer_output_dir": "/synthetic/model/maya-ds4",
+        }
+        with patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+            )
+        self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+        self.assertFalse(got["launchable"])
+        self.assertEqual(got["argv"][1:], [
+            "--pack", "/synthetic/model/maya-ds4", "--gpus", "0,1", "--tp", "2",
+            "--max-context", "4096", "--reserve-mib", "3072", "--expert-profile", "none",
+            "--dspark", "none", "--parallel", "1", "--serve",
+        ])
+        self.assertEqual(got["protocol"], "Maya stdin/stdout engine protocol; not an HTTP endpoint")
+        self.assertIn("HOLD", got["kv_cache_fit"])
+        self.assertIn("HOLD", got["runtime_fit"])
+        self.assertIn("CPU-lane experts read in-place", got["expert_mapping"])
+        self.assertNotIn("--mmap-experts", got["argv"])
+        self.assertFalse(got["measured"])
+
+    def test_profile_stop_and_unknown_stop_block_before_preflight(self):
+        for stop in (True, None, 0, "unknown"):
+            with self.subTest(owner_stop=repr(stop)):
+                with patch.object(PROFILE.preflight, "evaluate_source_plan") as run:
+                    got = PROFILE.build_source_plan(
+                        owner_stop=stop,
+                        observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                        gpu_names=PROFILE.GPU_NAMES,
+                        verified_files=complete_rows(),
+                        tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                        model_file_paths=["synthetic"] * 6,
+                    )
+                self.assertEqual(got["state"], "HOLD_OWNER_STOP")
+                self.assertFalse(got["launchable"])
+                run.assert_not_called()
+
+    def test_pinned_maya_source_exposes_supported_cli_and_gguf_mapping_contract(self):
+        main = maya_source("src/ds4/ds4_main.cpp")
+        model = maya_source("src/ds4/ds4_model.cu")
+        for option in ("--gpus", "--tp", "--max-context", "--reserve-mib",
+                       "--cpu-threads", "--prefill-chunk", "--mmap-experts", "--parallel",
+                       "--serve"):
+            self.assertIn(option, main)
+        self.assertIn("if (pk.gguf) file_experts = true;", model)
+        self.assertIn("file_experts", model)
+
+
+    def test_integrated_profile_forwards_role_map_and_holds_when_missing(self):
+        packed = {
+            "state": "PACKER_OUTPUT_ABSENT_VERIFIED",
+            "model_dir": "/synthetic/model",
+            "output_dir": "/synthetic/model/maya-ds4",
+        }
+        with patch.object(PROFILE.preflight, "observe_packer_output", return_value=packed):
+            missing = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+            )
+            self.assertEqual(missing["state"], "HOLD_TENSOR_ROLE_INVENTORY_REQUIRED")
+            self.assertFalse(missing["launchable"])
+            ready = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+                tensor_role_inventory=synthetic_tensor_roles(),
+            )
+        self.assertEqual(ready["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+        self.assertFalse(ready["launchable"])
+
+
 if __name__ == "__main__":
     unittest.main()
+
