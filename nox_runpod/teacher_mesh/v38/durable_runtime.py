@@ -36,6 +36,17 @@ def native_query_plan(prompt: str) -> dict[str, Any]:
         variants.append('S03 M1 M3 M7 autobiography verified past conversation Genesis event ' + q[:240])
     if any(w in low for w in ('умеешь','навык','задач','трен','обуч','поглот','learn','skill','trainer')):
         variants.append('S03 M2 M4 M7 verified skill checkpoint optimizer capabilities ' + q[:240])
+    # Route questions about the active model transition and learning history to
+    # the same verified M0-M7 S03 index; do not infer progress from the prompt.
+    if any(w in low for w in ('maya','deepseek','переход модели','смена модели',
+                              'model transition','model migration','самоулучш',
+                              'self-improv','optimizer','оптимизатор','обучен',
+                              'training','weights','веса','checkpoint','чекпоинт',
+                              'distill','дистилл')):
+        variants.append('NOX verified Maya DeepSeek model transition integration '
+                        'self-improvement history M4 skill memory M7 autobiography '
+                        'optimizer updates changed weights checkpoints source receipts '
+                        + q[:240])
     if any(w in low for w in ('люблю','предпоч','интерес','личност','эмоц','чувств','persona','prefer')):
         variants.append('S03 M5 M6 preferences owner consent persona mood interaction ' + q[:240])
     return {'queries': variants[:4], 'segments': list(SEGMENTS), 'strategy':'indexed_multi_session_temporal_source_graph',
