@@ -116,6 +116,12 @@ class DeepSeekOwnerRangeFS(Operations):
         owner.stop(self.owner_root)
         owner.lease(self.lease_path, self.request_id, time.time(), self.owner_root)
 
+    def runtime_guard(self):
+        try:
+            self.guard()
+        except Exception as exc:
+            raise FuseOSError(errno.EIO) from exc
+
     def _open_and_hash_local(self, name, row, path, before):
         owner.require(before.st_size == row["bytes"], "HOLD_LOCAL_FALLBACK_SIZE")
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
@@ -200,7 +206,7 @@ class DeepSeekOwnerRangeFS(Operations):
         name = path.lstrip("/")
         if "/" in name or name not in self.names:
             raise FuseOSError(errno.ENOENT)
-        self.guard()
+        self.runtime_guard()
         return 0
 
     def read(self, path, size, offset, fh):
@@ -211,7 +217,7 @@ class DeepSeekOwnerRangeFS(Operations):
             raise FuseOSError(errno.ENOENT)
         target = self._resolve(name)
         row = self.manifest[target]
-        self.guard()
+        self.runtime_guard()
         if offset >= row["bytes"] or size == 0:
             return b""
         end = min(row["bytes"], offset + size)
@@ -227,11 +233,11 @@ class DeepSeekOwnerRangeFS(Operations):
                 raise FuseOSError(errno.EIO)
             output.extend(block[within:within + take])
             cursor += take
-        self.guard()
+        self.runtime_guard()
         return bytes(output)
 
     def _block(self, name, index):
-        self.guard()
+        self.runtime_guard()
         key = (name, index)
         with self.cache_lock:
             cached = self.cache.get(key)
@@ -264,7 +270,7 @@ class DeepSeekOwnerRangeFS(Operations):
                 "User-Agent": "NOX-Owner-Range-V10",
             }
             request = urllib.request.Request(row["url"], headers=headers)
-            self.guard()
+            self.runtime_guard()
             try:
                 with self.opener.open(request, timeout=NETWORK_TIMEOUT) as response:
                     owner.require(response.status == 206, "HOLD_RANGE_STATUS")
@@ -278,7 +284,7 @@ class DeepSeekOwnerRangeFS(Operations):
                     owner.require(response.headers.get("ETag") == self.remote[name]["etag"],
                                   "HOLD_RANGE_ETAG_CHANGED")
                     block = _read_exact(response, length)
-                self.guard()
+                self.runtime_guard()
             except Exception as exc:
                 raise FuseOSError(errno.EIO) from exc
 
@@ -322,6 +328,13 @@ def main():
         parser.error("mountpoint must be absolute and contain no symlinked components")
     if not mountpoint.is_dir() or any(mountpoint.iterdir()):
         parser.error("mountpoint must be an existing empty directory")
+    destination = Path(args.destination).expanduser()
+    if (
+        not destination.is_absolute()
+        or any(part.is_symlink() for part in (destination, *destination.parents))
+        or not destination.is_dir()
+    ):
+        parser.error("destination must be an existing absolute directory without symlinked path components")
     if os.path.ismount(mountpoint):
         parser.error("mountpoint is already mounted")
 
