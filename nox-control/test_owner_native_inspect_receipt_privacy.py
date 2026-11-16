@@ -160,5 +160,35 @@ class ReceiptPrivacyTests(unittest.TestCase):
             self.assertNotIn(key, fields)
 
 
+    def test_pinned_sftconfig_signature_rejects_ambiguous_duplicate_fields(self):
+        # The exact native TRL constructor must never be declared compatible
+        # from a JSON report with duplicate keys, even if the values match.
+        valid = (
+            '{"schema":"NOX_SFTCONFIG_NATIVE_SIGNATURE_V1",'
+            '"trl_version":"1.18.0",'
+            '"missing_required_kwargs":[],'
+            '"save_safetensors_parameter":false}'
+        )
+        prefix = "NOX_SFTCONFIG_SIGNATURE="
+        good = INSPECT.parse_sftconfig_signature_probe(0, prefix + valid)
+        self.assertEqual(good["status"], "LEGACY_TRUE_REQUIRES_SAFE_OMISSION")
+        for bad in (
+            valid[:-1] + ',"save_safetensors_parameter":true}',
+            valid[:-1] + ',"save_safetensors_parameter":false}',
+            valid[:-1] + ',"trl_version":"1.18.0"}',
+            valid[:-1] + ',"missing_required_kwargs":[]}',
+            valid[:-1] + ',"schema":"NOX_SFTCONFIG_NATIVE_SIGNATURE_V1"}',
+            valid.replace('"missing_required_kwargs":[]',
+                          '"missing_required_kwargs":[NaN]'),
+            valid.replace('"missing_required_kwargs":[]',
+                          '"missing_required_kwargs":[Infinity]'),
+        ):
+            with self.subTest(case=bad[-70:]):
+                result = INSPECT.parse_sftconfig_signature_probe(0, prefix + bad)
+                self.assertEqual(result["status"], "HOLD_NATIVE_TRL_SIGNATURE_SCHEMA")
+                self.assertNotIn("trl_version", result)
+                self.assertEqual(result["optimizer_updates"], 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -1,0 +1,72 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2A_STRICT_TRL_SIGNATURE_V1",
+  "instructions_version": "0.0.6",
+  "slot": "2A",
+  "at_utc": "2026-11-16T12:40:00Z",
+  "at_msk": "2026-11-16T15:40:00+03:00",
+  "head_before": "01a96850b8fd2b01b0f8eac7a1e28d0c2f1e386e",
+  "head_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "root_cause": "The original read-only pinned TRL SFTConfig signature interpreter used permissive json.loads. Duplicate keys could silently alter a reported constructor capability and incorrectly admit legacy save_safetensors compatibility.",
+  "changed_paths": [
+    "nox-control/owner_native_inspect.py",
+    "nox-control/test_owner_native_inspect_receipt_privacy.py",
+    "coordination/progress/hourly/20261116_1540_AUTO_2A_STRICT_TRL_SIGNATURE_V06.json"
+  ],
+  "task_outcomes": [
+    {
+      "id": 1,
+      "state": "HOLD_NATIVE",
+      "evidence": "Current active chat GGUF PID/content SHA and tokenizer exact live readback not obtained; no blind chat promotion"
+    },
+    {
+      "id": 2,
+      "state": "PRIOR_NATIVE_ONLY",
+      "evidence": "Pinned Qwen3.5-9B c202236235762e1c871ad0ccb60c8ee5ba337b9a was previously reported as 16 files / 19,329,393,661 bytes; no new download or current shard digest"
+    },
+    {
+      "id": 3,
+      "state": "SOURCE_PRESERVED",
+      "evidence": "Separate Qwen student path and optimizer/checkpoint lineage retained; old 35B trainer/adapter not reused"
+    },
+    {
+      "id": 4,
+      "state": "SOURCE_PATCHED_TEST_PENDING",
+      "evidence": "Reject duplicate keys and nonfinite values in native SFTConfig signature report; new positive/negative regression exercises interpreter, not actual pinned OneHost API"
+    },
+    {
+      "id": 5,
+      "state": "HOLD_NATIVE",
+      "evidence": "One trainer 2D source route retained; live student/preflight/restored optimizer and offsite checkpoint not admitted without owner STOP/lease"
+    }
+  ],
+  "tests": {
+    "structural_precommit": "REPLACEMENT_ANCHOR_UNIQUE_AND_TEST_INSERTION_VERIFIED",
+    "python_ci": "PENDING_EXACT_SHA_WORKFLOW",
+    "native_pinned_trl": "NOT_EXECUTED"
+  },
+  "WEIGHTS": {
+    "historical_verified_successful_updates": 25,
+    "new_verified_updates_this_slot": 0,
+    "checkpoint25": "HISTORICAL_OWNER_ONLY",
+    "live_trainer_pid": null,
+    "offsite_restore_verified": false
+  },
+  "KNOWLEDGE": {
+    "verified_new_hunter_source_s03_write_recall": false,
+    "s03_written_by_2A": false
+  },
+  "DISPATCHER+RESOURCES": {
+    "current_native_pids": null,
+    "resource_current": null,
+    "stop_current": null,
+    "writer_lease_current": null,
+    "downloaded_bytes": 0,
+    "restarts": 0,
+    "deleted_bytes": 0,
+    "historical_native_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110"
+  },
+  "native_effects": "NONE",
+  "source_scope": "ORIGINAL_ONEHOST_INSPECTOR_ONLY",
+  "lesson": "A native package signature must not be promoted from ambiguous JSON; source CI does not prove pinned API runtime or live trainer updates.",
+  "next_ready": "Obtain fresh read-only owner OneHost active GGUF PID/full SHA and pinned TRL signature result, checkpoint25 optimizer/scaler/RNG + offsite restore and STOP/writer lease before 2D training admission."
+}

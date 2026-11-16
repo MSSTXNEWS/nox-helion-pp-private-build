@@ -364,7 +364,20 @@ def parse_sftconfig_signature_probe(rc, output):
     if len(matches) != 1 or len(matches[0]) > 4096:
         return dict(result, status='HOLD_NATIVE_TRL_SIGNATURE_OUTPUT')
     try:
-        data = json.loads(matches[0])
+        # GitHub/owner-native receipts are evidence, not trusted constructor
+        # capabilities. Duplicate keys can silently replace a safe capability
+        # with its opposite in Python's permissive json.loads().
+        def reject_duplicate_fields(pairs):
+            out = {}
+            for key, value in pairs:
+                if key in out:
+                    raise ValueError('SFTCONFIG_DUPLICATE_SIGNATURE_FIELD')
+                out[key] = value
+            return out
+        def reject_nonfinite(_value):
+            raise ValueError('SFTCONFIG_NONFINITE_SIGNATURE_FIELD')
+        data = json.loads(matches[0], object_pairs_hook=reject_duplicate_fields,
+                          parse_constant=reject_nonfinite)
         if (not isinstance(data, dict) or
                 set(data) != {'schema', 'trl_version', 'missing_required_kwargs',
                               'save_safetensors_parameter'} or
