@@ -81,6 +81,28 @@ class MentorTests(unittest.TestCase):
                             self.assertEqual(task['status'], 'blocked')
                             command.assert_not_called()
 
+    def test_recovery_budget_corrupt_existing_ledger_fails_closed(self):
+        incident = 'a' * 64
+        with tempfile.TemporaryDirectory() as directory, patch.object(mentor, 'ROOT', Path(directory)):
+            path = Path(directory) / 'memory/dispatcher_mentor/incidents' / (incident + '.json')
+            path.parent.mkdir(parents=True)
+            corrupted = [
+                '{incomplete',
+                '[]',
+                json.dumps({'incident': incident, 'attempts': -1, 'last_attempt': 0}),
+                json.dumps({'incident': 'b' * 64, 'attempts': 0, 'last_attempt': 0}),
+                json.dumps({'incident': incident, 'attempts': 0, 'last_attempt': 'oops'}),
+                json.dumps({'incident': incident, 'attempts': 0, 'last_attempt': float('nan')}),
+            ]
+            for content in corrupted:
+                with self.subTest(content=content):
+                    path.write_text(content)
+                    self.assertFalse(mentor.reserve_incident(incident))
+                    self.assertEqual(path.read_text(), content)
+            path.unlink()
+            self.assertTrue(mentor.reserve_incident(incident))
+            self.assertFalse(mentor.reserve_incident(incident))
+
     def test_no_senior_config_means_explicit_block_and_no_fake_consult(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'consult') as call:
             task = {'id': 'fixture', 'handler': 'verify_q4', 'retries': 1, 'max_retries': 3}
