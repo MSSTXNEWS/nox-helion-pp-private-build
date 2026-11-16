@@ -1,0 +1,69 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2D_RESULT",
+  "instructions_version": "0.0.6",
+  "slot": "2D",
+  "stream": "2/3",
+  "at_utc": "2026-11-16T06:01:04.715Z",
+  "source_head_before": "030949248984382e8dbfe833c59955f3f36c1289",
+  "source_head_after": "COMMIT_CONTAINING_THIS_RECEIPT",
+  "source_preimage_blobs": {
+    "nox_runpod/teacher_mesh/adapter_recipe.py": "a1bcdf423b6df96024b8bbb7d1ba54ff44db498d",
+    "coordination/hybrid_20261115/test_2D_adapter_recipe.py": "aa0669b1de4e603ea1860149a78faca4487313d9"
+  },
+  "error_id": "NOX-P1-2D-FORGE-PREFLIGHT-TYPE-AND-UNICODE-CONTROL-BYPASS-20261116",
+  "root_cause": "Adapter recipe preflight used range comparisons and regex membership on untrusted field types, which could throw before a safe HOLD; zero-width format controls gave train/holdout prompt fingerprints different identities.",
+  "changed": [
+    "nox_runpod/teacher_mesh/adapter_recipe.py",
+    "coordination/hybrid_20261115/test_2D_adapter_recipe.py",
+    "coordination/progress/hourly/20261116_AUTO_2D_FORGE_INPUT_CONTRACT_V06.json"
+  ],
+  "tasks": [
+    {
+      "n": 1,
+      "status": "HOLD_FRESH_NATIVE",
+      "evidence": "Previous pinned Qwen3.5-9B c202236235762e1c871ad0ccb60c8ee5ba337b9a 16-file native receipt and train/holdout 119+16; new dev, independent RU/ES/code lineage and current OneHost readback not proven."
+    },
+    {
+      "n": 2,
+      "status": "HOLD_OWNER_LEASE",
+      "evidence": "No fresh authenticated GPU0/GPU1/STOP/writer lease/cgroup/CP311-cu126/SSD + independent offsite S03+optimizer restore for this slot."
+    },
+    {
+      "n": 3,
+      "status": "SOURCE_PATCHED_NATIVE_HOLD",
+      "evidence": "Bound typed adapter preflight and reject Unicode Cf in JSONL; no native optimizer updates this slot. Previous accepted 6 successful/0 skipped not repeated."
+    },
+    {
+      "n": 4,
+      "status": "HOLD_OFFSITE_RESTORE",
+      "evidence": "Previous checkpoint6 10 files 519882866 bytes, adapter SHA 66779f2e...0d674, on-host reload; no current independent offsite restoration."
+    },
+    {
+      "n": 5,
+      "status": "HOLD_ANTI_FORGETTING",
+      "evidence": "Previous 16-example next-token loss 1.5214923173189163 to 1.3033105581998825; no RU/ES/code/Genesis anti-forgetting and no model promotion."
+    }
+  ],
+  "WEIGHTS": {
+    "updates_verified_this_slot": 0,
+    "previous_native_successful_updates": 6,
+    "previous_native_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43806455891",
+    "checkpoint6_manifest_sha256": "bbe6ff24861fdcf33d28eba089edba583406ffbb9184c68e5a43d305a619b293",
+    "independent_offsite_restore_verified": false
+  },
+  "KNOWLEDGE": {
+    "hunter_to_licensed_source_s03_write_readback_recall_this_slot": false,
+    "new_candidate": false
+  },
+  "DISPATCHER_RESOURCES": {
+    "fresh_pid_lease_gpu_cgroup_ssd_status": "UNKNOWN_NOT_OBSERVED_THIS_SLOT",
+    "restart_count_this_slot": 0,
+    "download_bytes_native_this_slot": 0
+  },
+  "source_verification": "NEW_TESTS_COMMITTED_CI_PENDING",
+  "native_proof_new_this_slot": false,
+  "files_deleted": [],
+  "bytes_freed_verified": 0,
+  "lesson": "Malformed preflight data must yield a bounded HOLD, never crash or silently claim a compatible LoRA; do not call text hashes independent when Unicode format-controls survive normalization.",
+  "next_step": "On existing owner-authenticated single OneHost perform fresh STOP/lease/resource/offsite-restore readback, then fixed RU/ES/code/Genesis anti-forgetting of checkpoint6 before any extra training/merge."
+}

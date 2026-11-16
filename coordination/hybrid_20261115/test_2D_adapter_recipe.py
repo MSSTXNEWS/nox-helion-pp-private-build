@@ -95,6 +95,35 @@ class ForgeRecipeTest(unittest.TestCase):
     def test_incorrect_mode_type_hold(self):
         self.assertEqual(recipe.plan_adapter(**self.kwargs,use_rslora="yes")["state"],"HOLD_RSLORA_MODE")
 
+    def test_malformed_owner_recipe_inputs_hold_not_crash(self):
+        cases=[
+            ("rank", [], "HOLD_LORA_RANK"),
+            ("rank", True, "HOLD_LORA_RANK"),
+            ("alpha", None, "HOLD_LORA_RANK"),
+            ("alpha", 2.3, "HOLD_LORA_RANK"),
+            ("learning_rate", "0.00008", "HOLD_PRECISION_OR_LR"),
+            ("learning_rate", float("nan"), "HOLD_PRECISION_OR_LR"),
+            ("learning_rate", float("inf"), "HOLD_PRECISION_OR_LR"),
+            ("max_steps", "5", "HOLD_STEP_BUDGET"),
+            ("max_steps", False, "HOLD_STEP_BUDGET"),
+            ("target_modules", [{"q_proj":"bad"}], "HOLD_TARGET_MODULES"),
+            ("precision", [], "HOLD_PRECISION_OR_LR"),
+            ("expert_target_parameters", 3, "HOLD_EXPERT_TARGETS"),
+            ("expert_target_parameters", [None], "HOLD_EXPERT_TARGETS"),
+            ("corpus_dir", None, "HOLD_NONLOCAL_CORPUS"),
+            ("corpus_dir", "\\x00bad", "HOLD_NONLOCAL_CORPUS"),
+        ]
+        for key,value,expected in cases:
+            with self.subTest(key=key,value=repr(value)):
+                self.assertEqual(
+                    recipe.plan_adapter(**(self.kwargs|{key:value}))["state"],expected)
+
+    def test_format_control_in_prompt_or_completion_is_not_a_clean_holdout(self):
+        self._rewrite([self._row("Привет\\u200b мир")],[self._row("Hello")])
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"HOLD_CORPUS_JSONL_FORMAT")
+        self._rewrite([self._row("Привет","ES\\u200b answer")],[self._row("Hello")])
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],"HOLD_CORPUS_JSONL_FORMAT")
+
     def _rewrite(self,train,holdout,counts=None):
         m=json.loads((self.corpus/"manifest.json").read_text("utf8"))
         m["counts"]=counts if counts is not None else {"train":len(train),"holdout":len(holdout)}

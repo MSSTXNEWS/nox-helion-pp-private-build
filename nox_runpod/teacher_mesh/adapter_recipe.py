@@ -9,6 +9,7 @@ from hashlib import sha256
 from pathlib import Path
 import hashlib
 import json
+import math
 import re
 import unicodedata
 
@@ -24,7 +25,10 @@ KNOWN_MODULES={
 MAX_EXPERT_PATTERNS=80
 
 def _under_allowed_root(path):
-    p=Path(path).resolve(strict=False)
+    try:
+        p=Path(path).resolve(strict=False)
+    except (OSError, TypeError, ValueError):
+        return False
     return p.is_absolute() and any(root==p or root in p.parents for root in ALLOWED_ROOTS)
 
 def _file_sha256_streamed(file:Path)->str:
@@ -52,6 +56,11 @@ def _prompt_fingerprint(row:object)->str|None:
                 or message["role"]!=role or not isinstance(message["content"],str)
                 or not message["content"].strip()):
             return None
+    # Invisible format-controls can disguise a train/holdout collision.
+    # Fail closed rather than treating different hashes as disjoint evidence.
+    if any(unicodedata.category(ch) == "Cf"
+           for msg in (prompt[0],completion[0]) for ch in msg["content"]):
+        return None
     normalized=unicodedata.normalize("NFKC",prompt[0]["content"]).casefold()
     normalized=" ".join(normalized.split())
     return sha256(normalized.encode("utf-8")).hexdigest()
@@ -89,7 +98,10 @@ def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]
     return {"state":"SOURCE_ROWS_PARSED","sha256":digest.hexdigest(),"prompts":seen}
 
 def verify_corpus(corpus_dir:str)->dict:
-    p=Path(corpus_dir)
+    try:
+        p=Path(corpus_dir)
+    except (OSError, TypeError, ValueError):
+        return {"state":"HOLD_NONLOCAL_CORPUS"}
     if not _under_allowed_root(p):
         return {"state":"HOLD_NONLOCAL_CORPUS"}
     if p.is_symlink() or not p.is_dir():
@@ -168,19 +180,22 @@ def plan_adapter(
         return {"state":"HOLD_PROVENANCE_HASH"}
     if type(use_rslora) is not bool:
         return {"state":"HOLD_RSLORA_MODE"}
-    if rank not in ALLOWED_RANKS or not 1<=alpha<=512:
+    if type(rank) is not int or rank not in ALLOWED_RANKS or type(alpha) is not int or not 1<=alpha<=512:
         return {"state":"HOLD_LORA_RANK"}
-    if precision not in SUPPORTED_PRECISIONS or not 0.0<learning_rate<0.001:
+    if (not isinstance(precision,str) or precision not in SUPPORTED_PRECISIONS
+            or type(learning_rate) not in (int,float) or not math.isfinite(learning_rate)
+            or not 0.0<learning_rate<0.001):
         return {"state":"HOLD_PRECISION_OR_LR"}
-    if not 1<=max_steps<=100000:
+    if type(max_steps) is not int or not 1<=max_steps<=100000:
         return {"state":"HOLD_STEP_BUDGET"}
     if not isinstance(target_modules,list) or not target_modules or any(
-       t not in KNOWN_MODULES for t in target_modules
+       not isinstance(t,str) or t not in KNOWN_MODULES for t in target_modules
     ):
         return {"state":"HOLD_TARGET_MODULES"}
-    if expert_target_parameters:
-        if (len(expert_target_parameters)>MAX_EXPERT_PATTERNS
-             or any(not re.fullmatch(r"[A-Za-z0-9._*]{3,200}",x)
+    if expert_target_parameters is not None:
+        if (not isinstance(expert_target_parameters,list)
+             or len(expert_target_parameters)>MAX_EXPERT_PATTERNS
+             or any(not isinstance(x,str) or not re.fullmatch(r"[A-Za-z0-9._*]{3,200}",x)
                     for x in expert_target_parameters)):
             return {"state":"HOLD_EXPERT_TARGETS"}
     corpus=verify_corpus(corpus_dir)
