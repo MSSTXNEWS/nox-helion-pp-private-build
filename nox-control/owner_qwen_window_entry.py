@@ -29,7 +29,7 @@ try:
 except NameError:
     BUNDLE = {}
 
-MODE = "OBSERVE"  # Root reviews a separate source change to ADVANCE6 / ADVANCE1000.
+MODE = "ADVANCE6"  # Reviewed transition after native first-five observation.
 INITIAL_REQUEST = "6907283384"
 INITIAL_SOURCE = "2a0d18d8c4434c4798335868df4b28be0e507ed5"
 HELPER_NAME = "owner_qwen_install_entry.py"

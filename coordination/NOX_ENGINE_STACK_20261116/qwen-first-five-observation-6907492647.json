@@ -1,0 +1,116 @@
+{
+  "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43805460667",
+  "job": 133095111142,
+  "request": "6907492647",
+  "source_sha": "cc5f400b5636dd31fdcebf6c414518cb53fd3ce1",
+  "receipt": {
+    "active_goal": 5,
+    "active_request": "6907283384",
+    "admission_sha256": "c82b6d4eadabf973ad184f87b120243b74acf78c52565b17440a19f5566c3a33",
+    "admission_stable": true,
+    "checkpoint": {
+      "directory": "checkpoint-u00000005-a00000005-g01794803450864100744",
+      "manifest_sha256": "96aed3c5512a6d60da0a1370ae086ab248f226a6e68f7ab3f42dc9b15dc838e9",
+      "manifest_sha256_verified": true,
+      "pointer_stable": true,
+      "recorded_file_count": 10,
+      "successful_total": 5,
+      "weight_hashes": "RECORDED_NOT_REHASHED_IN_OBSERVE"
+    },
+    "content_exported": false,
+    "files_written": 0,
+    "final_result": {
+      "attempted_steps": 5,
+      "file_sha256": "3c305ea42f49a40903aa5bfcfa2131d49a06b085642aac6c559686eb636d9d59",
+      "final_adapter_tensor_sha256": "7a82a5ffc4cc4520d8e6d0d066a5cfd7657891da6cecf3229f3b8d1f82c30ef3",
+      "holdout_evaluated_successful_total": 5,
+      "independent_holdout_accepted": true,
+      "matches_current_goal": true,
+      "new_successful_optimizer_steps": 5,
+      "present": true,
+      "process_identity": {
+        "boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+        "pid": 646468,
+        "start_ticks": 159590101
+      },
+      "reload_verified": false,
+      "skipped_steps": 0,
+      "state": "STUDENT_UPDATES_CHECKPOINTED_RESTART_ACCEPTANCE_REQUIRED",
+      "successful_optimizer_steps": 5
+    },
+    "hold": {
+      "bytes": 53,
+      "matches_owned_completion": true,
+      "sha256": "9c723a9560c0497e6e6d5f256ebb3a212ef213ab46f2b4b0c1f45ce9270e425f"
+    },
+    "initial_request": "6907283384",
+    "log_diagnostics": [
+      {
+        "exception_types": [],
+        "hold_codes": [],
+        "log_bytes": 763646,
+        "may_include_prior_runs": true,
+        "mtime_ns": 1794803456159305500,
+        "raw_text_exported": false,
+        "safe_events": [
+          {
+            "public_file_bytes": 4294967296,
+            "public_file_total_bytes": 5335161512,
+            "state": "PINNED_PUBLIC_BASE_STAGING"
+          },
+          {
+            "public_file_bytes": 5368709120,
+            "public_file_total_bytes": 5368717440,
+            "state": "PINNED_PUBLIC_BASE_STAGING"
+          },
+          {
+            "state": "REAL_CORPUS_TOKENIZED_ADMISSION"
+          },
+          {
+            "state": "STUDENT_UPDATES_CHECKPOINTED_RESTART_ACCEPTANCE_REQUIRED"
+          }
+        ],
+        "stream": "stdout",
+        "tail_bytes_read": 65536
+      },
+      {
+        "exception_types": [],
+        "hold_codes": [],
+        "log_bytes": 7846042,
+        "may_include_prior_runs": true,
+        "mtime_ns": 1794803382736088300,
+        "raw_text_exported": false,
+        "safe_events": [],
+        "stream": "stderr",
+        "tail_bytes_read": 65536
+      }
+    ],
+    "manual_stop_or_pause": false,
+    "model_id": "Qwen/Qwen3.5-9B",
+    "process_chain": {
+      "gpu_release_verified": false,
+      "processes": []
+    },
+    "progress": {
+      "adapter_tensor_sha256": "7a82a5ffc4cc4520d8e6d0d066a5cfd7657891da6cecf3229f3b8d1f82c30ef3",
+      "attempted_steps": 5,
+      "file_sha256": "78221753d898f6388967b63c4593fa5b9b27f67bbcc7f3c6510b5d71650502a4",
+      "pid": 646468,
+      "present": true,
+      "skipped_steps": 0,
+      "state": "NATIVE_STUDENT_UPDATE_OBSERVED",
+      "successful_optimizer_steps": 5,
+      "time": 1794803455.56055
+    },
+    "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+    "schema": "NOX_QWEN_WINDOW_OBSERVATION_V1",
+    "service": {
+      "pid": null,
+      "rc": 3,
+      "state": "EXITED"
+    },
+    "state": "OBSERVED_NOT_ADVANCED",
+    "supervisor_process": null,
+    "time": 1794804020.2959023
+  }
+}
