@@ -97,6 +97,75 @@ def synthetic_tensor_roles():
     rows.append({"name": "blk.2.engram_embd.weight", "dtype": "IQ4_NL", "dims": [512, 1000]})
     return rows
 
+
+def synthetic_gpu_stdout(*, second_uuid="GPU-bbbbbbbb-1111-2222-3333-555555555555",
+                         first_free_mib="24576", second_free_mib="24576",
+                         first_index="0", second_index="1", second_cc="7.0"):
+    return "\\n".join([
+        f"{first_index},GPU-aaaaaaaa-1111-2222-3333-444444444444,Tesla V100-SXM2-32GB,7.0,32768,{first_free_mib}",
+        f"{second_index},{second_uuid},Tesla V100-SXM2-32GB,{second_cc},32768,{second_free_mib}",
+    ]) + "\\n"
+
+
+class MayaGpuTopologyTests(unittest.TestCase):
+    def completed(self, stdout, returncode=0):
+        return type("Completed", (), {"returncode": returncode, "stdout": stdout,
+                                      "stderr": ""})()
+
+    def test_direct_receipt_carries_unique_uuid_sm70_visible_ids_and_fresh_vram(self):
+        with patch.object(PROFILE.gpu_topology.subprocess, "run",
+                          return_value=self.completed(synthetic_gpu_stdout())), \
+             patch.object(PROFILE.gpu_topology.time, "monotonic_ns", side_effect=[1, 2]):
+            got = PROFILE.gpu_topology.collect_two_v100_topology()
+        self.assertEqual(got["state"], "NATIVE_GPU_TOPOLOGY_VERIFIED")
+        self.assertTrue(got["native_gpu_readback_verified"])
+        self.assertFalse(got["launchable"])
+        self.assertEqual(got["visible_ids"], [0, 1])
+        self.assertEqual(got["device_uuids"], [
+            "GPU-aaaaaaaa-1111-2222-3333-444444444444",
+            "GPU-bbbbbbbb-1111-2222-3333-555555555555",
+        ])
+        self.assertEqual([row["compute_capability"] for row in got["devices"]], ["7.0", "7.0"])
+        self.assertTrue(all(row["free_bytes"] > 0 for row in got["devices"]))
+        self.assertEqual(got["visibility_binding"],
+                         "CUDA_VISIBLE_DEVICES is pinned to this ordered UUID list; Maya --gpus uses visible ordinals")
+
+    def test_missing_or_malformed_native_receipt_holds(self):
+        with patch.object(PROFILE.gpu_topology.subprocess, "run",
+                          side_effect=FileNotFoundError("nvidia-smi absent")):
+            missing = PROFILE.gpu_topology.collect_two_v100_topology()
+        self.assertEqual(missing["state"], "HOLD_NATIVE_GPU_COLLECTOR_UNAVAILABLE")
+        self.assertFalse(missing["native_gpu_readback_verified"])
+        self.assertFalse(missing["launchable"])
+        with patch.object(PROFILE.gpu_topology.subprocess, "run",
+                          return_value=self.completed(synthetic_gpu_stdout(second_uuid="GPU-aaaaaaaa-1111-2222-3333-444444444444"))), \
+             patch.object(PROFILE.gpu_topology.time, "monotonic_ns", side_effect=[1, 2]):
+            duplicate = PROFILE.gpu_topology.collect_two_v100_topology()
+        self.assertEqual(duplicate["state"], "HOLD_NATIVE_GPU_TOPOLOGY")
+        self.assertFalse(duplicate["launchable"])
+
+    def test_wrong_sm_or_stale_native_query_holds(self):
+        with patch.object(PROFILE.gpu_topology.subprocess, "run",
+                          return_value=self.completed(synthetic_gpu_stdout(second_cc="8.0"))), \
+             patch.object(PROFILE.gpu_topology.time, "monotonic_ns", side_effect=[1, 2]):
+            wrong_sm = PROFILE.gpu_topology.collect_two_v100_topology()
+        self.assertEqual(wrong_sm["state"], "HOLD_NATIVE_GPU_SM")
+        self.assertFalse(wrong_sm["launchable"])
+        with patch.object(PROFILE.gpu_topology.subprocess, "run",
+                          return_value=self.completed(synthetic_gpu_stdout())), \
+             patch.object(PROFILE.gpu_topology.time, "monotonic_ns",
+                          side_effect=[1, 10_000_000_002]):
+            stale = PROFILE.gpu_topology.collect_two_v100_topology()
+        self.assertEqual(stale["state"], "HOLD_NATIVE_GPU_READBACK_STALE")
+        self.assertFalse(stale["native_gpu_readback_verified"])
+        self.assertFalse(stale["launchable"])
+
+    def test_collector_accepts_no_caller_inventory_or_clock(self):
+        with self.assertRaises(TypeError):
+            PROFILE.gpu_topology.collect_two_v100_topology(
+                inventory=synthetic_gpu_stdout(), now_utc="2026-11-16T00:00:00Z")
+
+
 class MayaLinkageReadOnlyTests(unittest.TestCase):
     def test_readelf_reports_dynamic_needs_without_running_maya(self):
         output = """Dynamic section at offset 0x1000 contains 4 entries:
@@ -183,18 +252,22 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
         with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
                           return_value=BINARY_OK), \
                 patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
-                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked), \
+                patch.object(PROFILE.gpu_topology.subprocess, "run",
+                             return_value=type("Completed", (), {"returncode": 1, "stdout": "",
+                                                                 "stderr": "no native GPU telemetry"})()):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
                 tensor_role_inventory=synthetic_tensor_roles(),
             )
-        self.assertEqual(got["state"], "HOLD_RUNTIME_MEMORY_TELEMETRY")
+        self.assertEqual(got["state"], "HOLD_UNVERIFIED_GPU_TOPOLOGY")
+        self.assertEqual(got["gpu_topology_state"], "HOLD_NATIVE_GPU_QUERY_FAILED")
         self.assertFalse(got["launchable"])
+        self.assertNotIn("argv", got)
 
 class MayaLaunchPlanTests(unittest.TestCase):
 
@@ -249,11 +322,14 @@ class MayaLaunchPlanTests(unittest.TestCase):
         with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
                           return_value=BINARY_OK), \
                 patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
-                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight):
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight), \
+                patch.object(PROFILE.gpu_topology.subprocess, "run",
+                             return_value=type("Completed", (), {"returncode": 0,
+                                 "stdout": synthetic_gpu_stdout(), "stderr": ""})()), \
+                patch.object(PROFILE.gpu_topology.time, "monotonic_ns", side_effect=[1, 2]):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
@@ -265,12 +341,65 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertFalse(got["launchable"])
         self.assertNotIn("argv", got)
         self.assertFalse(got["runtime_memory"]["telemetry_authenticated"])
+
+    def test_profile_rejects_caller_forged_gpu_inventory_or_receipt(self):
+        self.assertFalse(hasattr(PROFILE, "GPU_NAMES"))
+        with self.assertRaises(TypeError):
+            PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+                gpu_names=["Tesla V100", "Tesla V100"],
+                gpu_receipt={"state": "NATIVE_GPU_TOPOLOGY_VERIFIED",
+                             "uuid": "caller-forged", "visible_ids": [0, 1]})
+
+    def test_synthetic_native_receipt_binds_visible_ordinals_to_uuid_and_keeps_cpu_lane_conditional(self):
+        fake_preflight = {
+            "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
+            "packer_output_dir": "/synthetic/model/maya-ds4",
+        }
+        fake_memory = {"state": "SYNTHETIC_MEMORY_PASS_ONLY",
+                       "admission_state": "PASS_VERIFIED_RUNTIME_MEMORY"}
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value=BINARY_OK), \
+                patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=fake_preflight), \
+                patch.object(PROFILE.gpu_topology.subprocess, "run",
+                             return_value=type("Completed", (), {"returncode": 0,
+                                 "stdout": synthetic_gpu_stdout(), "stderr": ""})()), \
+                patch.object(PROFILE.gpu_topology.time, "monotonic_ns", side_effect=[1, 2]), \
+                patch.object(PROFILE.runtime_memory_budget, "evaluate_memory_budget",
+                             return_value=fake_memory):
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+                tensor_role_inventory=synthetic_tensor_roles())
+        self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
+        self.assertFalse(got["launchable"])
+        self.assertEqual(got["env"]["CUDA_VISIBLE_DEVICES"],
+                         "GPU-aaaaaaaa-1111-2222-3333-444444444444,"
+                         "GPU-bbbbbbbb-1111-2222-3333-555555555555")
+        self.assertEqual(got["gpus"], [0, 1])
+        self.assertEqual(got["gpu_names"], ["Tesla V100-SXM2-32GB", "Tesla V100-SXM2-32GB"])
+        self.assertEqual(got["requested_tensor_parallel"], 2)
+        self.assertEqual(got["effective_tensor_parallel"],
+                         "NOT_TESTED_UNTIL_NATIVE_RUNTIME_INFO")
+        self.assertIn("mmap-experts=auto", got["expert_mapping"])
+        self.assertIn("depend on Maya mmap-experts=auto and the native RAM budget",
+                      got["expert_mapping"])
+        self.assertIn("omitted: Maya default auto is retained", got["mmap_experts_cli"])
+        self.assertNotIn("--mmap-experts", got["mmap_experts_cli"])
+
     def test_v100_profile_holds_unknown_stop_before_preflight(self):
         with patch.object(PROFILE.preflight, "evaluate_source_plan") as evaluate:
             got = PROFILE.build_source_plan(
                 owner_stop=None,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6)
@@ -532,11 +661,14 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
         with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
                           return_value=BINARY_OK), \
                 patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
-                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked):
+                patch.object(PROFILE.preflight, "evaluate_source_plan", return_value=checked), \
+                patch.object(PROFILE.gpu_topology.subprocess, "run",
+                             return_value=type("Completed", (), {"returncode": 0,
+                                 "stdout": synthetic_gpu_stdout(), "stderr": ""})()), \
+                patch.object(PROFILE.gpu_topology.time, "monotonic_ns", side_effect=[1, 2]):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
@@ -556,7 +688,6 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
@@ -580,7 +711,6 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             got = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
@@ -597,8 +727,7 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                     got = PROFILE.build_source_plan(
                         owner_stop=stop,
                         observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                        gpu_names=PROFILE.GPU_NAMES,
-                        verified_files=complete_rows(),
+                                verified_files=complete_rows(),
                         tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                         model_file_paths=["synthetic"] * 6,
                     )
@@ -626,11 +755,14 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
         with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
                           return_value=BINARY_OK), \
                 patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
-                patch.object(PROFILE.preflight, "observe_packer_output", return_value=packed):
+                patch.object(PROFILE.preflight, "observe_packer_output", return_value=packed), \
+                patch.object(PROFILE.gpu_topology.subprocess, "run",
+                             return_value=type("Completed", (), {"returncode": 0,
+                                 "stdout": synthetic_gpu_stdout(), "stderr": ""})()), \
+                patch.object(PROFILE.gpu_topology.time, "monotonic_ns", side_effect=[1, 2]):
             missing = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
@@ -640,7 +772,6 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
             ready = PROFILE.build_source_plan(
                 owner_stop=False,
                 observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
-                gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
