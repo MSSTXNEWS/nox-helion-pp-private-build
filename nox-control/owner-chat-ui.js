@@ -169,7 +169,7 @@
       if(document.visibilityState==='hidden')return;
       try{const value=await api('/api/ui/executors');chips.replaceChildren();
         if(value.state==='MODEL_UPDATE'||value.state==='HOLD_MAINTENANCE_UNKNOWN'){
-          label.textContent=value.state==='MODEL_UPDATE'?'Модель обновляется · владелец остановил NOX':'Обслуживание · статус STOP не подтверждён';
+          label.textContent=value.state==='MODEL_UPDATE'?'Модель обновляется · состояние процессов требует проверки':'Обслуживание · статус STOP не подтверждён';
           window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0,state:value.state}}));
           return;
         }
