@@ -86,7 +86,7 @@ def _executor_status_reply(user_text,path=None):
 
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
-    request=dict(payload,stream=True,cache_prompt=True)
+    request=dict(payload,model='maya',stream=True,cache_prompt=True)
     text=[];calls={};finished=None;complete=False;size=0
     async with client.stream('POST',url,json=request,timeout=180.0) as response:
         if response.status_code!=200:
