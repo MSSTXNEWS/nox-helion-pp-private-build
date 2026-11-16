@@ -1,0 +1,98 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2A",
+  "at_utc": "2026-11-16T16:21:06.102Z",
+  "at_msk": "2026-11-16T19:21:06.102+03:00",
+  "instance_id": 60509551,
+  "scope": "ORIGINAL_ONEHOST_P0_DEEPSEEK_RANGE_ADMISSION_NO_NATIVE_WRITES",
+  "source_fix_commit": "f25b72a0b683ecac80b90a66d2a57ee6269cc9eb",
+  "source_preimage_blobs": {
+    "code": "4816c07abe33861d3ad56e61227542277e14370c",
+    "test": "f47e2e09fbf47cf546edf7afe726a09e3ebd555e"
+  },
+  "source_readback_blobs": {
+    "code": "fb16d930127d954d5967fcb408b317c35e5e5223",
+    "test": "85bd8e2dc145f9eecd2c53ca7cc51c2c1a1f6f49"
+  },
+  "root_cause": "Python json.loads silently accepts duplicate object keys and nonstandard NaN/Infinity, so a DeepSeek P0 owner manifest can be ambiguous across readers although final immutable bytes/SHA pins remain checked",
+  "fix": "Nested object_pairs_hook forbids duplicate keys; parse_constant forbids nonfinite values; malformed JSON converted to explicit HOLD; preserve pinned revision+file bytes/hash, STOP/lease, single Range claim and no network until owner admission",
+  "regression": "test_manifest_rejects_duplicate_keys_nonfinite_and_malformed_json (one test, six negative subcases plus canonical positive)",
+  "source_ci": {
+    "run_id": 43906083344,
+    "job_id": 133435160641,
+    "conclusion": "success",
+    "unique_tests": 52,
+    "test_invocations": 66,
+    "source_only": true,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43906083344"
+  },
+  "task_results": [
+    {
+      "id": "S2-07",
+      "state": "SOURCE_TESTED",
+      "native": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "evidence": "P0 Range manifest JSON rejects duplicate root/shard/Engram-alias keys, NaN, Infinity and malformed JSON; source CI PASS"
+    },
+    {
+      "id": "S1-01",
+      "state": "PRIOR_LIVE_VERIFIED_READ_ONLY",
+      "native": "HOLD_FRESH_OWNER_STOP_READBACK",
+      "evidence": "Latest read-only 2026-11-16T15:59:58Z, owner STOP+MAINTENANCE PRESENT, not a writer lease"
+    },
+    {
+      "id": "S1-03",
+      "state": "HOLD_OWNER_LEASE",
+      "native": "UNKNOWN",
+      "evidence": "No authenticated native write claim or current lease in this slot; deliberate STOP retained"
+    },
+    {
+      "id": "S1-07",
+      "state": "HOLD_INDEPENDENT_RESTORE",
+      "native": "UNKNOWN",
+      "evidence": "No independently restored offsite S03/Genesis and unique optimizer/scaler/RNG checkpoint"
+    },
+    {
+      "id": "S3-04",
+      "state": "HOLD_NATIVE_MAYA_INFERENCE",
+      "native": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "evidence": "Maya compiled SHA historically inspected, but no 248834257920-byte model placement, CUDA inference, original Resonance SSE/STOP/S03 acceptance"
+    }
+  ],
+  "latest_native_evidence": {
+    "at_utc": "2026-11-16T15:59:58Z",
+    "run_id": 43887943803,
+    "stop": "PRESENT",
+    "maintenance": "PRESENT",
+    "writer_lease": "UNKNOWN",
+    "supervisor_services": "5_STOPPED",
+    "listener_8081": "ABSENT",
+    "gpu_used_mib": [
+      0,
+      0
+    ],
+    "disk_total_bytes": 183609851904,
+    "disk_free_bytes": 43158855680,
+    "shm_free_bytes": 3366711296,
+    "rclone_remote_count": 0,
+    "historical_not_current": true
+  },
+  "WEIGHTS": {
+    "successful_optimizer_updates_this_slot": 0,
+    "checkpoint_restore_this_slot": false
+  },
+  "KNOWLEDGE": {
+    "hunter_s03_recall_this_slot": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "new_native_pids": null,
+    "native_claims": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0,
+    "model_switched": false,
+    "stop_cleared": false
+  },
+  "rollback": "CAS revert exact modified code/test blobs against latest branch HEAD; no native rollback required",
+  "next_first_ready": "Owner-native current STOP/lease+independent restore+seekable storage >=248834257920 B plus reserve; then single existing Range claim, verified SHA and Maya sm70 inference/Resonance RU/ES E2E"
+}
