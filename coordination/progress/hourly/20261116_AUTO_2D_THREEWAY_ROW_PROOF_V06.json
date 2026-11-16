@@ -1,0 +1,68 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2D",
+  "instructions_version": "0.0.6",
+  "slot": "2D",
+  "scope": "SOURCE_ONLY",
+  "recorded_utc": "2026-11-16T10:29:37Z",
+  "head_before": "55aef04282f5d87d106cdf59b9a01a55d086fbe6",
+  "head_after": "THIS_COMMIT",
+  "error_id": "NOX-P1-2D-THREEWAY-MANIFEST-ROW-PROOF-UNBOUND-20261116",
+  "root_cause": "2D source corpus gate checked split group SHA metadata shape and JSONL file hashes independently, but never bound owner source_receipts prompt/answer fingerprints and group IDs to actual per-row payloads. A consistent regenerated JSONL+manifest hash could be silently accepted while reusing stale owner review proofs.",
+  "fix": "Require exact one-to-one threeway owner source receipts, unique source identity, source-group equality and V28 canonical prompt/answer hash match against streamed file rows. Preserve legacy two-way gate; require fresh owner-native provenance separately.",
+  "lesson": "Content hashes plus unattested group lists are insufficient to attest owner-reviewed dataset lineage; receipt and JSONL must be joined by exact row hashes before native admission.",
+  "changed_files": [
+    "nox_runpod/teacher_mesh/adapter_recipe.py",
+    "coordination/hybrid_20261115/test_2D_adapter_recipe.py"
+  ],
+  "tests_planned": "Python 2D offline CI normal and -O; six new adversarial regressions; exact CI after commit",
+  "native_status": "HOLD_NO_OWNER_STOP_WRITER_LEASE_OFFSITE_RESTORE",
+  "weights": {
+    "prior_owner_native_checkpoint25_reported": true,
+    "global_step_current_live": null,
+    "loss_current_live": null,
+    "new_successful_updates_this_slot": 0,
+    "checkpoint_sha_current": null,
+    "offsite_restore_verified": false
+  },
+  "knowledge": {
+    "new_hunter_s03_recall_verified": false,
+    "source_threeway_native_export_verified": false
+  },
+  "dispatcher_resources": {
+    "native_snapshot_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110",
+    "observed_utc": "2026-11-16T10:14:55Z",
+    "dispatcher_pid": 945279,
+    "gpu0_used_mib": 21562,
+    "gpu1_used_mib": 474,
+    "ssd_free_bytes": 16922000000,
+    "stop_writer_lease_verified": false,
+    "os_worker_pids_verified": false
+  },
+  "tasks": [
+    {
+      "n": 1,
+      "status": "SOURCE_FIXED_ROW_PROVENANCE_NATIVE_CORPUS_HOLD"
+    },
+    {
+      "n": 2,
+      "status": "HOLD_STOP_NATIVE_WRITER_LEASE_OFFSITE_RESTORE"
+    },
+    {
+      "n": 3,
+      "status": "HOLD_NO_NEW_OPTIMIZER_UPDATES;_PRIOR_25_HISTORICAL"
+    },
+    {
+      "n": 4,
+      "status": "HOLD_NO_NEW_NATIVE_INDEPENDENT_CHECKPOINT_RESTORE"
+    },
+    {
+      "n": 5,
+      "status": "HOLD_FIXED_RU_ES_CODE_GENESIS_ANTIFORGETTING_NOT_PROVEN"
+    }
+  ],
+  "no_native_writes": true,
+  "download_bytes": 0,
+  "deleted_bytes": 0,
+  "web29_modified": false,
+  "next": "Under owner-auth original OneHost obtain STOP+writer lease+offsite checkpoint25 optimizer/RNG restore, then compare independent RU/ES/code/Genesis on pinned base against adapter checkpoint25; no automatic promotion."
+}
