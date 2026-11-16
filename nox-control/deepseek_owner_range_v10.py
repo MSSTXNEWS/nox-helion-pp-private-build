@@ -224,10 +224,26 @@ def content_range(header,start,end,total):
     require(lo==start and hi==end and n==total,'HOLD_HTTP_RANGE_MISMATCH')
 
 def digest(path):
-    h=hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        while chunk:=stream.read(8*CHUNK): h.update(chunk)
-    return h.hexdigest()
+    """Pin a regular GGUF fd for SHA; never follow a raced FIFO or symlink."""
+    try:
+        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    except OSError as exc:
+        raise Hold('HOLD_HASH_FILE_UNREADABLE') from exc
+    try:
+        original=os.fstat(fd)
+        require(stat.S_ISREG(original.st_mode) and original.st_uid==os.geteuid()
+                and original.st_nlink==1,'HOLD_HASH_FILE_UNSAFE')
+        h=hashlib.sha256()
+        while chunk:=os.read(fd,8*CHUNK):
+            h.update(chunk)
+        after=os.fstat(fd)
+        on_path=regular(Path(path))
+        fingerprint=lambda st:(st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns)
+        require(fingerprint(original)==fingerprint(after)==fingerprint(on_path),
+                'HOLD_HASH_FILE_CHANGED')
+        return h.hexdigest()
+    finally:
+        os.close(fd)
 
 def atomic_receipt(path,obj):
     """Publish one immutable SHA receipt; never replace an earlier owner record.
@@ -290,7 +306,10 @@ def finalize_complete_partial(row, partial, final, destination, root, lease_file
     require(actual==row['sha256'],'HOLD_FINAL_SHA_MISMATCH')
     # A complete pre-existing partial may have been staged by a prior process.
     # Ensure its contents reach storage before adding its final directory name.
-    syncfd=os.open(partial,os.O_RDONLY|os.O_NOFOLLOW)
+    try:
+        syncfd=os.open(partial,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    except OSError as exc:
+        raise Hold('HOLD_PARTIAL_FSYNC_OPEN_RACE') from exc
     try:
         synced=os.fstat(syncfd)
         require((synced.st_dev,synced.st_ino,synced.st_size)==expected,
@@ -345,7 +364,10 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
         # Keep the admitted inode allocated across HTTP I/O: unlink/recreate may reuse
         # the same st_ino and defeat a later dev/inode/size comparison.
         if partial_stat is not None:
-            partial_guard_fd=os.open(partial,os.O_RDONLY|os.O_NOFOLLOW)
+            try:
+                partial_guard_fd=os.open(partial,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+            except OSError as exc:
+                raise Hold('HOLD_PARTIAL_GUARD_OPEN_RACE') from exc
             admitted=os.fstat(partial_guard_fd)
             require(stat.S_ISREG(admitted.st_mode) and admitted.st_uid==os.geteuid() and
                     admitted.st_nlink==1 and
@@ -385,10 +407,11 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
             require(isinstance(length,str) and re.fullmatch(r'[0-9]{1,20}',length) is not None
                     and int(length)==end-offset+1,'HOLD_HTTP_LENGTH')
             # Bind an append to the inode admitted BEFORE network I/O, not a raced replacement.
-            flags=os.O_WRONLY|os.O_APPEND|os.O_NOFOLLOW
+            flags=os.O_WRONLY|os.O_APPEND|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC
             if partial_stat is None: flags|=os.O_CREAT|os.O_EXCL
             try: partfd=os.open(partial,flags,0o600)
             except FileExistsError: raise Hold('HOLD_PARTIAL_CREATE_RACE')
+            except OSError as exc: raise Hold('HOLD_PARTIAL_APPEND_OPEN_RACE') from exc
             wrote=0
             with os.fdopen(partfd,'ab',buffering=0) as output:
                 opened=os.fstat(output.fileno())
