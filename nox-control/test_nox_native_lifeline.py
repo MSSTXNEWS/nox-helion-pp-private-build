@@ -49,6 +49,11 @@ class LifelineTests(unittest.TestCase):
             link.symlink_to(path)
             with self.assertRaises(ValueError):
                 lifeline.policy_load(link)
+            path.chmod(0o600)
+            hardlink = Path(d)/"hardlinked-policy"
+            os.link(path, hardlink)
+            with self.assertRaisesRegex(ValueError, "HOLD_POLICY_FILE"):
+                lifeline.policy_load(path)
 
     def test_supervisorctl_never_shell_and_not_train(self):
         with self.assertRaises(ValueError):
@@ -158,6 +163,26 @@ class LifelineTests(unittest.TestCase):
             f.write_text('{"services":[]}', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "HOLD_STATE_STRUCTURE"):
                 lifeline.read_state(f)
+
+    def test_lifeline_restart_state_must_not_be_world_writable_or_hardlinked(self):
+        # If an untrusted actor could rewrite attempts, the restart rate limits
+        # would be reset. The guarded read must HOLD before any service action.
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "state.json"
+            raw = '{"services":{"nox-dispatcher-t855u":{"attempts":[1,2],"failures":2}}}'
+            path.write_text(raw, encoding="utf-8")
+            path.chmod(0o666)
+            with self.assertRaisesRegex(ValueError, "HOLD_STATE_PERMISSIONS"):
+                lifeline.read_state(path)
+            self.assertEqual(path.read_text(encoding="utf-8"), raw)
+            path.chmod(0o600)
+            copy = Path(d) / "state-hardlink.json"
+            os.link(path, copy)
+            with self.assertRaisesRegex(ValueError, "HOLD_STATE_FILE"):
+                lifeline.read_state(path)
+            copy.unlink()
+            self.assertEqual(lifeline.read_state(path)["services"]
+                             ["nox-dispatcher-t855u"]["attempts"], [1,2])
 
     def test_repair_history_corruption_never_resets_attempts(self):
         with tempfile.TemporaryDirectory() as d:
