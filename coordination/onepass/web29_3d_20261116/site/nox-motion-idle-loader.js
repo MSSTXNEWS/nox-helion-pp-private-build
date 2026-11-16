@@ -13,7 +13,7 @@
   let runtimeKnown = window.NOX_NATIVE_OWNER !== true;
   let hidden = document.hidden, closed = false, stopped = false;
   let queued = false, started = false, done = !!window.Motion;
-  let failed = false, idleHandle = null, fallbackHandle = null;
+  let failed = false, idleHandle = null, fallbackHandle = null, inflight = null;
   let attempts = 0;
   const events = [];
   const on = (target, type, callback) => {
@@ -24,17 +24,30 @@
   const editing = () => document.documentElement?.dataset?.typing === 'true' ||
     !!document.activeElement?.closest?.('textarea,input,[contenteditable="true"],loquix-chat-composer');
   const training = () => document.body?.dataset?.trainingActive === 'true';
-  const allowed = () => {
+  // Quiet state is separate from admission: an in-flight script sets started=true,
+  // but a harmless settings/runtime event must not abort that same request.
+  const quiet = () => {
     const settings = preferences();
     return !closed && !hidden && !chatBusy && !voiceBusy && !mediaBusy && runtimeKnown &&
-      !runtimeBusy && !editing() && !training() && !stopped && !failed && !started && !done &&
-      !reduce.matches && settings.motion !== 'reduce' && settings.mode !== 'ECO';
+      !runtimeBusy && !editing() && !training() && !stopped && !reduce.matches &&
+      settings.motion !== 'reduce' && settings.mode !== 'ECO';
   };
+  const allowed = () => quiet() && !failed && !started && !done;
   const cancel = () => {
     if (idleHandle !== null && window.cancelIdleCallback) cancelIdleCallback(idleHandle);
     if (fallbackHandle !== null) clearTimeout(fallbackHandle);
     idleHandle = fallbackHandle = null;
     queued = false;
+    // Decorative fetch is best-effort canceled when a native request or STOP
+    // takes priority. Removing <script> is not a guarantee the network stopped.
+    if (inflight) {
+      const {script, onLoad, onError} = inflight;
+      inflight = null;
+      script.removeEventListener('load', onLoad);
+      script.removeEventListener('error', onError);
+      script.remove();
+      started = false;
+    }
   };
   function admit() {
     queued = false;
@@ -47,8 +60,19 @@
     script.async = true;
     script.src = url.href;
     script.dataset.noxDecorativeOnly = 'true';
-    script.addEventListener('load', () => { done = true; });
-    script.addEventListener('error', () => { failed = true; });
+    const onLoad = () => {
+      if (inflight?.script !== script) return;
+      inflight = null;
+      done = true;
+    };
+    const onError = () => {
+      if (inflight?.script !== script) return;
+      inflight = null;
+      failed = true;
+    };
+    inflight = {script, onLoad, onError};
+    script.addEventListener('load', onLoad);
+    script.addEventListener('error', onError);
     document.head.appendChild(script);
   }
   function schedule() {
@@ -67,13 +91,13 @@
   on(window, 'nox-runtime-observed', e => {
     runtimeKnown = e.detail?.known === true;
     runtimeBusy = e.detail?.busy !== false;
-    if (!allowed()) cancel(); else schedule();
+    if (!quiet()) cancel(); else schedule();
   });
-  on(window, 'nox-typing', () => {if (!allowed()) cancel(); else schedule();});
-  on(window, 'nox-training-activity', () => {if (!allowed()) cancel(); else schedule();});
+  on(window, 'nox-typing', () => {if (!quiet()) cancel(); else schedule();});
+  on(window, 'nox-training-activity', () => {if (!quiet()) cancel(); else schedule();});
   on(window, 'nox-stop-requested', () => {stopped = true; cancel();});
-  on(window, 'nox-settings', () => {if (!allowed()) cancel(); else schedule();});
-  on(reduce, 'change', () => {if (!allowed()) cancel(); else schedule();});
+  on(window, 'nox-settings', () => {if (!quiet()) cancel(); else schedule();});
+  on(reduce, 'change', () => {if (!quiet()) cancel(); else schedule();});
   on(document, 'visibilitychange', () => {hidden = document.hidden; if (hidden) cancel(); else schedule();});
   on(window, 'pagehide', e => {cancel(); if (!e.persisted) {closed = true; for (const [host,type,fn] of events) host.removeEventListener(type,fn);}});
   on(window, 'pageshow', e => {if (e.persisted) {stopped = false; schedule();}});
@@ -81,7 +105,7 @@
     diagnostics: () => ({decorativeOnly: true, nonBlocking: true, originalLibraryPreserved: true,
       busy: chatBusy || voiceBusy || mediaBusy || runtimeBusy || editing() || training(),
       chatBusy, voiceBusy, mediaBusy, runtimeKnown, runtimeBusy,
-      stopped, queued, started, loaded: done, failed, attempts})
+      stopped, queued, started, inFlight: !!inflight, loaded: done, failed, attempts})
   });
   if (document.readyState === 'complete') schedule();
   else on(window, 'load', schedule);
