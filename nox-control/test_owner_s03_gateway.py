@@ -3,6 +3,8 @@ import importlib.util
 import json
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import struct
 import tempfile
 import threading
@@ -140,6 +142,84 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(json.loads(raw)['dialog_owner'],'PRIVATE_OWNER')
             self.assertEqual(json.loads(raw)['role'],'assistant')
         self.assertTrue((g.STATE/'backups/123/canonical.sqlite').is_file())
+
+    def test_verified_disposable_snapshot_recovers_wal_foreign_keys_embeddings_and_recall_after_restart(self):
+        # Only the fixture DB is copied and mutated; self.db is checked byte-identical.
+        with g.connection(self.db,write=True) as c:
+            c.execute('CREATE TABLE nox_s03_recovery_links(item_id TEXT NOT NULL REFERENCES s03_items(id) ON DELETE CASCADE)')
+        source_sha=g.file_sha(self.db)
+        clone=self.root/'recovery-clone.sqlite'
+        receipt=g.snapshot_database(self.db,clone)
+        self.assertEqual(receipt['kind'],'CONSISTENT_SQLITE_SNAPSHOT')
+        self.assertTrue(receipt['original_retained'])
+        self.assertEqual(receipt['sha256'],g.file_sha(clone))
+        self.assertEqual(receipt['bytes'],clone.stat().st_size)
+
+        with g.connection(clone,write=True) as c:
+            self.assertEqual(c.execute('PRAGMA foreign_keys').fetchone()[0],1)
+            self.assertEqual(c.execute('PRAGMA journal_mode=WAL').fetchone()[0].lower(),'wal')
+        gateway_path=Path(g.__file__).resolve()
+        child=r'''
+import importlib.util, os, sqlite3, sys
+from pathlib import Path
+db=Path(sys.argv[1]); module_path=Path(sys.argv[2])
+keeper=sqlite3.connect(db)
+keeper.execute('PRAGMA foreign_keys=ON')
+keeper.execute('PRAGMA journal_mode=WAL')
+keeper.execute('PRAGMA synchronous=FULL')
+spec=importlib.util.spec_from_file_location('owner_s03_gateway',module_path)
+g=importlib.util.module_from_spec(spec);spec.loader.exec_module(g)
+g.stop_active=lambda:False
+identity='a'*64
+text='I enjoy quiet walks among pine trees.'
+item_id='restart-fixture'
+with g.connection(db,write=True) as c:
+    c.execute('INSERT INTO s03_items VALUES(?,?,?,?,?,?,?,?)',
+      (item_id,'M2',text,'synthetic-test',g.text_sha('M2|'+text),0.5,'2026-11-16','{"test_fixture":true}'))
+    c.execute('INSERT INTO s03_fts VALUES(?,?,?)',(item_id,text,'M2'))
+    c.execute('INSERT INTO nox_s03_recovery_links VALUES(?)',(item_id,))
+def vector(texts,timeout):
+    values=[]
+    for _ in texts:
+        row=[0.0]*g.DIMENSIONS;row[0]=1.0;values.append(row)
+    return values
+proof=g.index_batch(db,embedder=vector,identity_fn=lambda:identity)
+if proof.get('indexed')!=1:raise SystemExit('S03_INDEX_NOT_WRITTEN')
+if keeper.execute('PRAGMA foreign_key_check').fetchall():raise SystemExit('S03_FK_CHECK_FAILED')
+sys.stdout.flush()
+os._exit(0)
+'''
+        run=subprocess.run([sys.executable,'-c',child,str(clone),str(gateway_path)],
+                           capture_output=True,text=True,timeout=15)
+        self.assertEqual(run.returncode,0,msg=run.stderr or run.stdout)
+        wal=Path(str(clone)+'-wal')
+        self.assertTrue(wal.exists() and wal.stat().st_size>0,'expected committed WAL to survive abrupt process exit')
+        identity='a'*64
+        def query_embedding(texts,timeout):
+            rows=[]
+            for _ in texts:
+                row=[0.0]*g.DIMENSIONS;row[0]=1.0;rows.append(row)
+            return rows
+        with g.connection(clone) as c:
+            self.assertEqual(c.execute('PRAGMA foreign_keys').fetchone()[0],1)
+            self.assertEqual(c.execute('PRAGMA foreign_key_check').fetchall(),[])
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_recovery_links').fetchone()[0],1)
+        with g.connection(clone,write=True) as c:
+            with self.assertRaises(sqlite3.IntegrityError):
+                c.execute('INSERT INTO nox_s03_recovery_links VALUES(?)',('missing-parent',))
+        rows=g.recall('woodland recreation preference',db=clone,embedder=query_embedding,identity_fn=lambda:identity)
+        self.assertTrue(rows)
+        self.assertEqual(rows[0]['id'],'restart-fixture')
+        self.assertEqual(rows[0]['how'],'semantic')
+        self.assertEqual(g.file_sha(self.db),source_sha,'source fixture changed while disposable clone was tested')
+
+    def test_writer_lock_gate_blocks_s03_sync_before_index_write(self):
+        with g.operation_lock():
+            with patch.object(g,'index_batch',side_effect=AssertionError('writer ran without lock')):
+                with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_SYNC_BUSY'):
+                    g.sync({'id':'lease-gate-test','owner_claim':{'nonce':'leaseGate123'}},db=self.db)
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_vectors').fetchone()[0],0)
 
     def test_malformed_legacy_schema_cannot_partially_commit(self):
         legacy=self.root/'cores'
