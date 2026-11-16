@@ -181,6 +181,18 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
     reserve=resources.get('checkpoint_disk_reserve_bytes',10_000_000_000)
     if type(disk) is not int or type(reserve) is not int or disk<0 or reserve<10_000_000_000:
         return {'state':'HOLD_DISK_TELEMETRY','planned':[],'source_sha256':source_hash}
+    # V19: subordinate the original 60 logical worms to live chat and direct
+    # owner instructions. A clean NOX release, STOP and GPU lease are required
+    # before even proposing new background weight-training claims.
+    from .worm_supervisor import recommend_background_admission
+    background=recommend_background_admission(observations)
+    if background['state'] in ('HOLD_BACKGROUND_NATIVE_OBSERVATIONS',
+                              'HOLD_BACKGROUND_CHAT_OR_DIRECT_STATE',
+                              'HOLD_BACKGROUND_STOP_OR_MODEL_NOT_SERVING'):
+        return {'state':background['state'],'planned':[],'jobs_enqueued':0,
+                'source_sha256':source_hash,'background_policy':background}
+    budget_cpu=min(budget_cpu,background['new_worm_cpu_claims_max'])
+    budget_gpu=min(budget_gpu,background['new_worm_gpu_claims_max'])
     # Reconcile real OneHost queue state before proposing any new work.
     # Never re-enqueue a running or unknown task on stale heartbeat alone.
     blocked_native=set()
@@ -242,7 +254,7 @@ def plan(matrix:dict, observations:Mapping, *, max_new:int=8)->dict:
        'cpu_data_preparation_threads_max_fraction':0.85,
        'ram_cache_cgroup_fraction_max':0.85,
        'cpu_initial_worker_limit':8,
-       'actual_training_started':False}
+       'actual_training_started':False,'background_policy':background}
 
 
 def enqueue_approved(native:NativePorts,matrix:dict,owner_scope:str,*,limit:int=8)->dict:
