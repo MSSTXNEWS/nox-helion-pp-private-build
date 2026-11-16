@@ -296,6 +296,26 @@ class ForgeRecipeTest(unittest.TestCase):
         self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
                          "HOLD_CORPUS_ROW_PROVENANCE_MISMATCH")
 
+    def test_threeway_hash_consistent_duplicate_completion_is_hold(self):
+        # The V28 exporter already rejects this; the FORGE importer must too.
+        m=self._set_threeway()
+        f=self.corpus/"dev.jsonl"
+        raw=f.read_text("utf8").replace("answer dev","answer train")
+        f.write_text(raw,encoding="utf8")
+        m["dev.jsonl_sha256"]=hashlib.sha256(raw.encode("utf8")).hexdigest()
+        for proof in m["source_receipts"]:
+            if proof["part"]=="dev":
+                proof["answer_sha256"]=recipe._source_row_sha256("answer train")
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_DUPLICATE_ANSWER")
+
+    def test_legacy_two_split_duplicate_answer_remains_compatible(self):
+        self._rewrite([self._row("first unique", "common short answer")],
+                      [self._row("second unique", "common short answer")])
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "VERIFIED_SOURCE_CORPUS")
+
     def test_legacy_manifest_cannot_silently_ignore_dev(self):
         (self.corpus/"dev.jsonl").write_text("extra dev data")
         self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],

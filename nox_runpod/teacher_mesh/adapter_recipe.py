@@ -72,7 +72,8 @@ def _source_row_sha256(value:str)->str:
     return sha256(re.sub(r"\s+"," ",normalized).encode("utf-8")).hexdigest()
 
 def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]|None,
-                         owner_proofs:list[dict]|None=None)->dict:
+                         owner_proofs:list[dict]|None=None,
+                         seen_answers:set[str]|None=None)->dict:
     """Stream/hash/parse bounded JSONL. Exact-text disjointness, not semantic proof."""
     digest=sha256()
     seen=set()
@@ -104,6 +105,14 @@ def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]
                 return {"state":"HOLD_CORPUS_DUPLICATE_PROMPT"}
             if train_fingerprints is not None and fp in train_fingerprints:
                 return {"state":"HOLD_CORPUS_EXACT_HOLDOUT_LEAKAGE"}
+            # The existing V28 three-way exporter forbids duplicate completions.
+            # Mirror that rule in the independent FORGE importer, including
+            # hash-consistent repacks with newly generated row receipts.
+            if seen_answers is not None:
+                answer_fp=_source_row_sha256(row["completion"][0]["content"])
+                if answer_fp in seen_answers:
+                    return {"state":"HOLD_CORPUS_DUPLICATE_ANSWER"}
+                seen_answers.add(answer_fp)
             seen.add(fp)
             rows+=1
             if rows>MAX_CORPUS_ROWS or rows>expected_rows:
@@ -197,6 +206,7 @@ def verify_corpus(corpus_dir:str)->dict:
                    for k in expected_splits):
                 return {"state":"HOLD_CORPUS_SOURCE_RECEIPT_GROUPS"}
         all_prompts=set()
+        all_answers=set() if threeway else None
         verified_shas={}
         for part in expected_splits:
             filename=part+".jsonl"
@@ -204,7 +214,8 @@ def verify_corpus(corpus_dir:str)->dict:
             if not file.is_file() or file.is_symlink():
                 return {"state":"HOLD_CORPUS_FILE"}
             details=_inspect_corpus_file(file,counts[part],all_prompts if all_prompts else None,
-                                         proof_by_split[part] if threeway else None)
+                                         proof_by_split[part] if threeway else None,
+                                         all_answers)
             if details["state"]!="SOURCE_ROWS_PARSED":
                 return {"state":details["state"]}
             if details["sha256"]!=manifest.get(filename+"_sha256"):
