@@ -1,0 +1,165 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_1A_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "1A",
+  "stream": "1/3",
+  "time_utc": "2026-11-16T07:04:20Z",
+  "time_msk": "2026-11-16T10:04:20+03:00",
+  "source_head_before": "755e4f99f8fb27812c15fcd2f37aead7ccb2860e",
+  "pinned_inspector_source_sha": "755e4f99f8fb27812c15fcd2f37aead7ccb2860e",
+  "native_run_id": 43820928237,
+  "native_job_id": 133144049733,
+  "owner_comment_id": 6909754179,
+  "native_evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43820928237",
+  "native_scope": "READ_ONLY_INSPECT_SUCCESS; TEMP_SSH_CLEANUP_DETACHED_AND_VERIFIED; NO_MUTATION",
+  "five_tasks": [
+    {
+      "id": 1,
+      "status": "DONE_NATIVE_ACCESS_VERIFIED",
+      "fact": "Original Vast instance 60509551, owner-authenticated pinned SSH, host key verified, temporary key detached."
+    },
+    {
+      "id": 2,
+      "status": "DONE_NATIVE_PARTIAL_ACTIVE_MODEL_HOLD",
+      "fact": "Supervisor + process snapshot and HTTP 8080/8081/8082=200; configured current.gguf target observed, loaded model identity and STOP authorization not independently verified."
+    },
+    {
+      "id": 3,
+      "status": "DONE_NATIVE_RESOURCE_SNAPSHOT",
+      "fact": "Live cgroup CPU/RAM, two V100, SSD, /dev/shm, OOM events and process evidence recorded."
+    },
+    {
+      "id": 4,
+      "status": "HOLD_NATIVE_REPAIR_NOT_SAFE",
+      "fact": "Old nox-train-volta-t866u FATAL and Supervisor nox-chat-8081 STOPPED, but standalone chat HTTP is 200 and Qwen student has later receipt. No service restart without exact scope, valid checkpoint/restore, STOP and writer lease."
+    },
+    {
+      "id": 5,
+      "status": "DONE_NATIVE_READBACK_SOURCE_RECEIPT",
+      "fact": "Owner native original inspection succeeded; job and cleanup readback confirmed. Unique append-only source receipt records facts without changing OneHost."
+    }
+  ],
+  "original_onehost": {
+    "instance_id": 60509551,
+    "owner_ssh_verified": true,
+    "ssh_host_pin_verified": true,
+    "ephemeral_key_cleanup": "DETACHED_AND_VERIFIED",
+    "web_ports_http": {
+      "8080": 200,
+      "8081": 200,
+      "8082": 200
+    },
+    "original_resonance_full_e2e": "HOLD_NOT_TESTED",
+    "configured_model_symlink": "/root/nox/models/current.gguf",
+    "configured_model_target": "/root/nox/progress_pull_t784u/gguf/nox36-mix_final_pref-Q4_K_M.gguf",
+    "configured_model_bytes": 21836629568,
+    "loaded_model_sha256": "UNKNOWN_NOT_VERIFIED",
+    "s03_metadata": {
+      "file": "knowledge.sqlite",
+      "bytes": 49016832,
+      "independent_recall_verified": false
+    },
+    "supervisor": {
+      "nox-dispatcher-t855u": {
+        "state": "RUNNING",
+        "pid": 746352
+      },
+      "nox-priority-scheduler": {
+        "state": "RUNNING",
+        "pid": 498221
+      },
+      "nox-selfheal": {
+        "state": "RUNNING",
+        "pid": 498241
+      },
+      "nox-lifeline-guard": {
+        "state": "RUNNING",
+        "pid": 631501
+      },
+      "nox-proxy": {
+        "state": "RUNNING",
+        "pid": 678480
+      },
+      "nox-train-volta-t866u": {
+        "state": "FATAL",
+        "pid": null
+      },
+      "nox-chat-8081": {
+        "state": "STOPPED",
+        "pid": null,
+        "comment": "HTTP 8081=200 from separately running model; no blind restart"
+      }
+    },
+    "train_hold_flag_present": true,
+    "train_wants_gpu1_flag_present": true,
+    "owner_manual_STOP_and_writer_lease": "UNKNOWN_NOT_INDEPENDENTLY_VERIFIED",
+    "actual_three_OS_subexecutors": "UNKNOWN_NOT_PROVEN_BY_THIS_SNAPSHOT"
+  },
+  "resources": {
+    "cgroup_cpu_quota_cores": 19.2,
+    "cgroup_memory_current_bytes": 88086274048,
+    "cgroup_memory_max_bytes": 194065203200,
+    "cgroup_memory_events": {
+      "oom": 0,
+      "oom_kill": 0,
+      "max": 0,
+      "high": 0
+    },
+    "gpu0": {
+      "name": "Tesla V100-SXM2-32GB",
+      "used_mib": 21562,
+      "free_mib": 10933,
+      "util_percent": 0,
+      "temp_c": 19,
+      "host_gpu_pid": 1975458
+    },
+    "gpu1": {
+      "name": "Tesla V100-SXM2-32GB",
+      "used_mib": 474,
+      "free_mib": 32021,
+      "util_percent": 0,
+      "temp_c": 22,
+      "host_gpu_pid": 3986161
+    },
+    "gpu_pid_namespace_mapping": "UNRESOLVED_FOR_BOTH; NOT_A_WRITER_LEASE",
+    "ssd_free_bytes": 12005203968,
+    "shm_free_bytes": 7980650496
+  },
+  "WEIGHTS": {
+    "base_student": "Qwen3.5-9B",
+    "latest_receipt_self_reported_successful_optimizer_steps": 10,
+    "latest_receipt_mtime_utc": "2026-11-16T06:26:23Z",
+    "latest_receipt_self_reported_loss": 0.9827851355075836,
+    "historical_independently_verified_updates": 8,
+    "independent_verification_updates_9_and_10": "HOLD",
+    "checkpoint_optimizer_scaler_RNG_offsite_restore": "HOLD_NOT_PROVEN",
+    "active_trainer_heartbeat_and_pid": "HOLD_CURRENT_TRAINER_UNCONFIRMED",
+    "old_t866u_status": "FATAL_IS_NOT_QWEN_STUDENT_PROOF",
+    "DeepSeek_main_candidate": "NOT_INSTALLED_NOT_SERVING"
+  },
+  "KNOWLEDGE": {
+    "new_Hunter_verified_source_to_S03_readback_recall": "HOLD_NOT_TESTED",
+    "s03_file_exists_native": true,
+    "weights_updates_are_not_S03_writes": true
+  },
+  "DISPATCHER+RESOURCES": {
+    "dispatcher_pid": 746352,
+    "priority_pid": 498221,
+    "selfheal_pid": 498241,
+    "configured_internal_workers": 6,
+    "three_OS_worker_pids_verified_this_run": false,
+    "queue_job_terminal_receipts_this_run": 0,
+    "resource_readback": true,
+    "restarts_by_slot": 0,
+    "downloads_bytes_by_slot": 0,
+    "deleted_bytes_by_slot": 0
+  },
+  "source_test": "NATIVE_ORIGINAL_SUCCESS_AND_CLEANUP_LOG_READBACK; SOURCE_RECEIPT_ATOMIC_CREATE",
+  "source_modified_files": 0,
+  "native_modified_files": 0,
+  "freed_bytes": 0,
+  "error_id": "NOX-1A-20261116-ACTIVE-QWEN-COUNTER-NOT-INDEPENDENTLY-VERIFIED",
+  "root_cause": "Current progress receipt is a self-reported counter and does not supply an independent successful optimizer/tensor delta and offsite-restore proof; old trainer FATAL cannot identify Qwen student activity.",
+  "lesson": "Separate configured model, HTTP health, old Supervisor trainer, modern Qwen student progress and independent optimizer evidence. No blind restart or cleanup after a healthy chat route.",
+  "next_one_action": "With owner lease and STOP readback, take Qwen exact trainer PID/starttime, signed optimizer updates 8→10, checkpoint optimizer/scaler/RNG SHA and verified offsite restore; only then decide on reversible repair of old FATAL service."
+}
