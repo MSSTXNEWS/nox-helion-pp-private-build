@@ -127,29 +127,52 @@ def command(args, timeout=3600):
 
 
 def stream_sha256(remote, size, timeout=3600):
-    """Hash the full remote stream with bounded memory, no model-sized SSD copy."""
+    """Hash complete remote bytes without disk spool; STOP is live throughout.
+
+    This is the existing offsite *readback* used to issue a source receipt.
+    Manual owner STOP must interrupt the data stream and post-EOF wait;
+    a success receipt is forbidden if STOP is latched even after all bytes.
+    Only the rclone child created here may be signalled.
+    """
+    remote = assert_remote(remote)
+    if type(size) is not int or size < 1:
+        raise ValueError('HOLD_READBACK_SIZE')
+    if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError('HOLD_READBACK_TIMEOUT')
+    assert_owner_stop_clear()
     digest, count = hashlib.sha256(), 0
     deadline = time.monotonic() + timeout
-    p = subprocess.Popen(['rclone', 'cat', remote, '--retries', '2', '--low-level-retries', '2'],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(
+        ['rclone', 'cat', remote, '--retries', '2', '--low-level-retries', '2'],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:
         with selectors.DefaultSelector() as sel:
-            sel.register(p.stdout, selectors.EVENT_READ, True)
-            sel.register(p.stderr, selectors.EVENT_READ, False)
+            sel.register(p.stdout, selectors.EVENT_READ)
             while sel.get_map():
-                left = deadline - time.monotonic()
-                if left <= 0:
+                assert_owner_stop_clear()
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
                     raise RuntimeError('HOLD_READBACK_TIMEOUT')
-                for key, _ in sel.select(min(left, 1.0)):
-                    chunk = os.read(key.fd, 1024 * 1024)
+                for key, _ in sel.select(min(0.2, remaining)):
+                    chunk = os.read(key.fd, min(1024 * 1024, size - count + 1))
                     if not chunk:
                         sel.unregister(key.fileobj)
-                    elif key.data:
+                    else:
                         count += len(chunk)
                         if count > size:
                             raise RuntimeError('HOLD_READBACK_OVERSIZE')
                         digest.update(chunk)
-        if p.wait(timeout=max(0.1, deadline-time.monotonic())) != 0 or count != size:
+        while p.poll() is None:
+            assert_owner_stop_clear()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError('HOLD_READBACK_TIMEOUT')
+            try:
+                p.wait(timeout=min(0.2, remaining))
+            except subprocess.TimeoutExpired:
+                pass
+        assert_owner_stop_clear()
+        if p.returncode != 0 or count != size:
             raise RuntimeError('HOLD_READBACK_INCOMPLETE')
         return digest.hexdigest()
     finally:
@@ -157,7 +180,6 @@ def stream_sha256(remote, size, timeout=3600):
             p.kill()
         p.wait()
         p.stdout.close()
-        p.stderr.close()
 
 
 MAX_VERIFIED_RANGE_BYTES = 1024 * 1024

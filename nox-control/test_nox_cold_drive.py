@@ -312,6 +312,61 @@ class ColdTests(unittest.TestCase):
         with patch.dict(os.environ,{'TEST_CAT_FAILURE':'1'}),self.assertRaises(RuntimeError):cold.copy_verified(self.job)
     def test_stderr_does_not_deadlock(self):
         with patch.dict(os.environ,{'TEST_STDERR':'1'}):self.assertTrue(cold.copy_verified(self.job)['readback_verified'])
+    def test_stream_readback_stop_before_io(self):
+        stop=self.root/'STOP.flag';stop.touch()
+        with patch.object(cold,'OWNER_STOP_PATHS',(stop,)), \
+             patch.object(cold.subprocess,'Popen') as launched, \
+             self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+            cold.stream_sha256('fixture:cold/model.gguf', 123, 5)
+        launched.assert_not_called()
+
+    def test_stream_readback_stop_during_stall(self):
+        remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+        remote.parent.mkdir(parents=True,exist_ok=True)
+        remote.write_bytes(self.src.read_bytes())
+        stop=self.root/'STOP.flag'
+        timer=threading.Timer(.20,stop.touch)
+        started=time.monotonic()
+        with patch.dict(os.environ,{'TEST_STALL':'1'}), \
+             patch.object(cold,'OWNER_STOP_PATHS',(stop,)), \
+             self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+            timer.start()
+            cold.stream_sha256('fixture:cold/model.gguf',remote.stat().st_size,4)
+        timer.join(timeout=2)
+        self.assertLess(time.monotonic()-started,2.8)
+
+    def test_stream_readback_stop_after_eof(self):
+        remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+        remote.parent.mkdir(parents=True,exist_ok=True)
+        remote.write_bytes(self.src.read_bytes())
+        marker=self.root/'EOF';stop=self.root/'STOP.flag'
+        def trigger():
+            for _ in range(150):
+                if marker.exists():
+                    stop.touch();return
+                time.sleep(.02)
+        watcher=threading.Thread(target=trigger,daemon=True)
+        started=time.monotonic()
+        with patch.dict(os.environ,{'TEST_CLOSE_STDOUT_THEN_STALL':'1',
+                                    'TEST_EOF_MARKER':str(marker)}), \
+             patch.object(cold,'OWNER_STOP_PATHS',(stop,)), \
+             self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+            watcher.start()
+            cold.stream_sha256('fixture:cold/model.gguf',remote.stat().st_size,4)
+        watcher.join(timeout=2)
+        self.assertTrue(marker.exists())
+        self.assertLess(time.monotonic()-started,2.8)
+
+    def test_stream_readback_timeout_after_eof(self):
+        remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+        remote.parent.mkdir(parents=True,exist_ok=True)
+        remote.write_bytes(self.src.read_bytes())
+        started=time.monotonic()
+        with patch.dict(os.environ,{'TEST_CLOSE_STDOUT_THEN_STALL':'1'}), \
+             self.assertRaisesRegex(RuntimeError,'HOLD_READBACK_TIMEOUT'):
+            cold.stream_sha256('fixture:cold/model.gguf',remote.stat().st_size,.35)
+        self.assertLess(time.monotonic()-started,2.8)
+
     def test_stream_timeout(self):
         row=cold.copy_verified(self.job)
         with patch.dict(os.environ,{'TEST_STALL':'1'}),self.assertRaises(RuntimeError):
