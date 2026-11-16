@@ -21,6 +21,36 @@ STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/
 SHA = re.compile(r"[a-f0-9]{64}\Z")
 FILE = re.compile(r"(?:DeepSeek-V4\.1-Flash-1017-GSQ-RCO-IQ2_XXS-0000[1-5]-of-00006|DeepSeek-V4\.1-Flash-Engram-IQ4_NL)\.gguf\Z")
 
+# Immutable owner-reviewed LFS identities, pinned independently of input manifest.
+# Source: feature/nox-engine-stage-20261116 @ blob 0608cdcacb1573835e4edc194c8ee63d4877180b
+# Model revision and total bytes alone cannot authenticate individual files.
+PINNED_FILE_FACTS = {
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf": (
+        5780704,
+        "f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9"
+    ),
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf": (
+        39535781184,
+        "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3"
+    ),
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf": (
+        39736712000,
+        "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48"
+    ),
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf": (
+        39036908384,
+        "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0"
+    ),
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf": (
+        19923784832,
+        "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1"
+    ),
+    "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf": (
+        110595290816,
+        "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3"
+    )
+}
+
 class Hold(RuntimeError): pass
 
 def require(ok, reason):
@@ -59,6 +89,9 @@ def load_manifest(raw):
         by[name]=row
     require(sum(row['bytes'] for row in by.values())==m.get('total_unique_gguf_bytes')==248834257920,
             'HOLD_MANIFEST_TOTAL')
+    require(set(by)==set(PINNED_FILE_FACTS) and all(
+        (row['bytes'],row['sha256'])==tuple(PINNED_FILE_FACTS[name])
+        for name,row in by.items()), 'HOLD_MANIFEST_FILE_IDENTITY')
     a=m.get('alias')
     require(isinstance(a,dict) and
             a.get('path')=='DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf' and
