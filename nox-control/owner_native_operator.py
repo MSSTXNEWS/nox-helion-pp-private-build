@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_browser_stream_only_entry.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_storage_warm_batch.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
@@ -160,6 +160,15 @@ def run_native(action,request_id):
                      'nox-control/owner_drive_ram_assets.json','nox-control/owner_drive_ram_envelope.json',
                      'nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py',
                      'nox_runpod/teacher_mesh/v137/owner_self_observation.py',
+                     'nox-control/owner_hermes_qa_batch.py',
+                     'nox-control/owner_builder_cold_storage_entry.py',
+                     'nox-control/owner_builder_archive_reclaim.py',
+                     'nox-control/owner_qwen_disk_rearm_entry.py',
+                     'nox-control/owner_builder_cold_location.py',
+                     'nox-control/owner_drive_storage_bridge.py',
+                     'nox-control/owner_builder_cold_chat_binding.py',
+                     'nox-control/owner_hermes_warm_move.py',
+                     'nox-control/owner_hermes_hydrate.py',
                      'coordination/onepass/nox-v135-resonance-owner-bridge.js',
                      'coordination/onepass/nox-v137-owner-self-status.js',
                      'nox-control/owner_qwen_training_status_entry.py',
