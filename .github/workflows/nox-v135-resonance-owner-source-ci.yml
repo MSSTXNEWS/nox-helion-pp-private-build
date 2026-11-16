@@ -3,6 +3,8 @@ on:
   push:
     branches: [fix/nox-v135-resonance-native-stream-20261115, feature/nox-v38-synaptic-brain-20261114]
     paths:
+      - 'nox-control/owner_chat_ui.py'
+      - 'nox-control/test_owner_chat_ui_workers.py'
       - 'nox-control/owner_chat_stream_only_qa.py'
       - 'nox-control/owner_browser_stream_only_entry.py'
       - 'nox-control/test_owner_chat_stream_only_qa.py'
@@ -16,6 +18,8 @@ on:
       - '.github/workflows/nox-v135-resonance-owner-source-ci.yml'
   pull_request:
     paths:
+      - 'nox-control/owner_chat_ui.py'
+      - 'nox-control/test_owner_chat_ui_workers.py'
       - 'nox-control/owner_chat_stream_only_qa.py'
       - 'nox-control/owner_browser_stream_only_entry.py'
       - 'nox-control/test_owner_chat_stream_only_qa.py'
@@ -54,6 +58,11 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=nox-control python3 -m unittest -v test_owner_chat_stream_only_qa
+      - name: Original owner UI worker claims (source only, no server)
+        run: |
+          set -euo pipefail
+          python3 -m pip install -q "fastapi==0.128.2"
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_chat_ui_workers
       - name: Byte-level ZIP no-loss and SHA-pinned rollback fixtures
         run: |
           set -euo pipefail
