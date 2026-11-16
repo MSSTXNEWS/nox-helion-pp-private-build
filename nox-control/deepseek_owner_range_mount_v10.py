@@ -25,7 +25,12 @@ import time
 from urllib.parse import urlsplit
 import urllib.request
 
-from fuse import FUSE, FuseOSError, Operations
+try:
+    from fuse import FUSE, FuseOSError, Operations
+except ImportError as exc:
+    raise SystemExit(
+        "HOLD_FUSE_PREREQUISITE: Linux FUSE device/kernel and fusepy must be installed in the owner Python environment"
+    ) from exc
 
 import deepseek_owner_range_v10 as owner
 
