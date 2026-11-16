@@ -442,18 +442,65 @@ def parse_sftconfig_signature_probe(rc, output):
     return result
 
 
+def pinned_python_path_status(py, venv_root=Path('/root/venv_volta'),
+                              trusted_uid=0,
+                              system_dirs=(Path('/usr/bin'), Path('/usr/local/bin'))):
+    """Validate a pinned venv Python, including normal root-owned venv symlinks.
+
+    Only the known venv path and root-controlled executable targets are allowed.
+    Do not run a path that escaped into a writable directory. This is a
+    read-only metadata gate, not a writer lease or a CUDA/ABI acceptance.
+    """
+    if py != venv_root / 'bin' / 'python':
+        return 'HOLD_PINNED_NATIVE_PYTHON_PATH'
+    try:
+        for directory in (venv_root, venv_root / 'bin'):
+            metadata = directory.lstat()
+            if (not stat.S_ISDIR(metadata.st_mode) or
+                    metadata.st_uid != trusted_uid or metadata.st_mode & 0o022):
+                return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
+        config = venv_root / 'pyvenv.cfg'
+        config_stat = config.lstat()
+        if (not stat.S_ISREG(config_stat.st_mode) or
+                config_stat.st_uid != trusted_uid or
+                config_stat.st_mode & 0o022 or
+                config_stat.st_size > 65536):
+            return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
+        entry_stat = py.lstat()
+        if not (stat.S_ISLNK(entry_stat.st_mode) or
+                stat.S_ISREG(entry_stat.st_mode)):
+            return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
+        resolved = py.resolve(strict=True)
+        target_stat = resolved.stat()
+        approved_local = resolved == venv_root / 'bin' / 'python'
+        approved_system = (
+            resolved.parent in system_dirs and
+            re.fullmatch(r'python3(?:\\.[0-9]{1,2})?', resolved.name) is not None)
+        if (not (approved_local or approved_system) or
+                not stat.S_ISREG(target_stat.st_mode) or
+                not target_stat.st_mode & 0o111 or
+                target_stat.st_uid != trusted_uid or
+                target_stat.st_mode & 0o022):
+            return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
+    except (OSError, RuntimeError):
+        return 'HOLD_PINNED_NATIVE_PYTHON_MISSING'
+    return 'PINNED_NATIVE_PYTHON_TRUSTED'
+
+
 def pinned_sftconfig_signature_probe(py):
-    """Inspect original pinned Python without any model/optimizer construction."""
-    if (str(py) != '/root/venv_volta/bin/python' or
-            py.is_symlink() or not py.is_file()):
+    """Inspect the vetted venv interpreter, not its symlink spelling."""
+    admission = pinned_python_path_status(py)
+    if admission != 'PINNED_NATIVE_PYTHON_TRUSTED':
         return {'record': 'pinned_trl_sftconfig_signature',
                 'scope': 'READ_ONLY_SIGNATURE_NO_TRAINER',
-                'status': 'HOLD_PINNED_NATIVE_PYTHON_MISSING',
+                'status': admission,
                 'constructor_executed': False, 'optimizer_updates': 0}
     # Constructing SFTConfig() may initialise devices; inspect only its real
     # installed signature. A passed signature is not a live training test.
     code = """
-import inspect, importlib.metadata, json
+import inspect, importlib.metadata, json, os, sys
+if sys.version_info[:2] != (3, 12) or os.path.realpath(sys.prefix) != '/root/venv_volta':
+    raise RuntimeError('PINNED_VENV_INTERPRETER_IDENTITY_HOLD')
 from trl import SFTConfig
 required = %r
 parameters = inspect.signature(SFTConfig).parameters
