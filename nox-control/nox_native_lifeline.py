@@ -119,6 +119,11 @@ def read_state(path):
             os.close(fd)
     if not isinstance(obj, dict) or ("services" in obj and not isinstance(obj["services"], dict)):
         raise ValueError("HOLD_STATE_STRUCTURE")
+    services = obj.get("services", {})
+    # Preserve persisted restart history: never reset a malformed service row.
+    if any(not isinstance(name, str) or not isinstance(row, dict)
+           for name, row in services.items()):
+        raise ValueError("HOLD_STATE_SERVICE_ROW")
     return obj
 
 def stopped():
@@ -159,7 +164,7 @@ def supervise(name, command="status"):
     # Treat unknown output, group names, errors, and missing pid as UNKNOWN.
     first = p.stdout.strip().splitlines()
     match = STATUS.match(first[0]) if len(first) == 1 else None
-    if not match or match[1] != name:
+    if p.returncode != 0 or not match or match[1] != name:
         return {"state": "UNKNOWN", "pid": None, "rc": p.returncode}
     state = match[2]
     pid = int(match[3]) if match[3] else None
@@ -176,13 +181,13 @@ def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn
     observed = []
     records = state.setdefault("services", {})
     if not isinstance(records, dict):
-        records = state["services"] = {}
+        raise ValueError("HOLD_REPAIR_HISTORY_CORRUPT")
     for spec in policy["services"]:
         name = spec["name"]
         current = status_fn(name, "status")
         row = records.setdefault(name, {})
         if not isinstance(row, dict):
-            row = records[name] = {}
+            raise ValueError("HOLD_REPAIR_HISTORY_CORRUPT")
         attempts = row.get("attempts", [])
         if not isinstance(attempts, list) or any(
             type(x) not in (int, float) or not 0 <= x <= now for x in attempts
