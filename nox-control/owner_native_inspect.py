@@ -475,10 +475,10 @@ def pinned_python_path_status(py, venv_root=Path('/root/venv_volta'),
         target_stat = resolved.stat()
         approved_local = (
             resolved.parent == venv_root / 'bin' and
-            re.fullmatch(r'python(?:3(?:\\.[0-9]{1,2})?)?', resolved.name) is not None)
+            re.fullmatch(r'python(?:3(?:\.[0-9]{1,2})?)?', resolved.name) is not None)
         approved_system = (
             resolved.parent in system_dirs and
-            re.fullmatch(r'python3(?:\\.[0-9]{1,2})?', resolved.name) is not None)
+            re.fullmatch(r'python3(?:\.[0-9]{1,2})?', resolved.name) is not None)
         if (not (approved_local or approved_system) or
                 not stat.S_ISREG(target_stat.st_mode) or
                 not target_stat.st_mode & 0o111 or
