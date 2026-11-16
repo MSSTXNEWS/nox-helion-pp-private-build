@@ -183,7 +183,11 @@ def restore_test(encrypted: Path, test_identity: Path) -> dict:
         raise RuntimeError('HOLD_TEST_AGE_DECRYPTION')
     # Strict member coverage, path/type checks, pinned per-file SHA and SQLite
     # integrity run in-memory; no archive extraction or production DB writes.
-    return verify_plaintext_tar(p.stdout)
+    result=verify_plaintext_tar(p.stdout)
+    return {'verified_files':result['verified_files'],
+            'restored_plain_sha256':result['plaintext_sha256'],
+            'sqlite_integrity_checked':result['sqlite_integrity_checked'],
+            'production_writes':0}
 
 
 def run() -> None:
