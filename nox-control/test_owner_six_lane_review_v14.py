@@ -37,8 +37,36 @@ class ReconcileTest(unittest.TestCase):
             self.assertEqual(coordinator_reconcile(b, [receipt("V14-web-1")])["done"], 0)
 
     def test_duplicate_once(self):
-        r = receipt("V14-memory-2")
+        r = receipt("V14-memory-1")
         self.assertEqual(coordinator_reconcile(batch(), [r, r])["done"], 1)
+
+    def test_child_without_predecessor_holds(self):
+        r = coordinator_reconcile(batch(), [receipt("V14-web-2")])
+        self.assertEqual(r["state"], "HOLD_DEPENDENCY_READBACK")
+        self.assertEqual(r["done"], 0)
+        self.assertEqual(r["blocked_dependency_ids"], ["V14-web-2"])
+
+    def test_reversed_complete_dag_counts_in_order(self):
+        r = coordinator_reconcile(batch(), [receipt("V14-web-3"), receipt("V14-web-1"), receipt("V14-web-2")])
+        self.assertEqual(r["task_ids"], ["V14-web-1", "V14-web-2", "V14-web-3"])
+        self.assertEqual(r["done"], 3)
+
+    def test_gap_stays_blocked(self):
+        r = coordinator_reconcile(batch(), [receipt("V14-memory-3"), receipt("V14-memory-1")])
+        self.assertEqual(r["task_ids"], ["V14-memory-1"])
+        self.assertEqual(r["blocked_dependency_ids"], ["V14-memory-3"])
+
+    def test_failed_parent_does_not_unlock_child(self):
+        parent = receipt("V14-safety-1")
+        parent["rollback_verified"] = False
+        r = coordinator_reconcile(batch(), [parent, receipt("V14-safety-2")])
+        self.assertEqual(r["state"], "HOLD_DEPENDENCY_READBACK")
+        self.assertEqual(r["done"], 0)
+
+    def test_independent_lane_proceeds(self):
+        r = coordinator_reconcile(batch(), [receipt("V14-web-2"), receipt("V14-maya-1")])
+        self.assertEqual(r["task_ids"], ["V14-maya-1"])
+        self.assertEqual(r["blocked_dependency_ids"], ["V14-web-2"])
 
 if __name__ == "__main__":
     unittest.main()
