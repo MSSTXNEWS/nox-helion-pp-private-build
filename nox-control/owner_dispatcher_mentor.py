@@ -31,7 +31,8 @@ COMPONENT_TASKS = {'owner.training_stack', 'owner.dispatcher', 'owner.chat',
 FIXED_SERVICE_HANDLERS = {'ensure_scheduler': 'nox-priority-scheduler',
                           'ensure_gpu_watchdog': 'nox-gpu-watchdog-t865u'}
 READ_ONLY_RETRY_HANDLERS = {'wait_q4', 'verify_q4', 'holdout_gate', 'new_gguf'}
-STOP_NAMES = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP')
+STOP_NAMES = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
+              'state/STOP', 'state/STOP.flag')
 SERVICE_STATES = {'RUNNING', 'STOPPED', 'STARTING', 'STOPPING', 'BACKOFF', 'EXITED', 'FATAL', 'UNKNOWN'}
 
 
@@ -121,7 +122,9 @@ def journal(kind, **fields):
 
 
 def stop_active():
-    if any((ROOT / name).exists() or (ROOT / name).is_symlink() for name in STOP_NAMES) or Path('/workspace/NOX_STOP').exists() or (ROOT / 'state/OWNER_MAINTENANCE.flag').exists():
+    if (any((ROOT / name).exists() or (ROOT / name).is_symlink() for name in STOP_NAMES)
+            or any(path.exists() or path.is_symlink() for path in
+                   (Path('/workspace/NOX_STOP'), ROOT / 'state/OWNER_MAINTENANCE.flag'))):
         return True
     try:
         fd = os.open(ROOT / 'state/owner_maintenance.lock', os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
