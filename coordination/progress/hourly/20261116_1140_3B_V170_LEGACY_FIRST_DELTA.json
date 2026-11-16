@@ -10,8 +10,8 @@
   "source_blobs": [
     {
       "path": "coordination/onepass/nox-v135-resonance-owner-bridge.js",
-      "before": "266b698914f3721d616a0cb48e45c97264d355ff",
-      "after": "2d7fd90519cf2a5cbeab28d48fa490fb67991b4e"
+      "before": "2d7fd90519cf2a5cbeab28d48fa490fb67991b4e",
+      "after": "f98b879c2afb4656ca23b7cb336581423c851b3e"
     },
     {
       "path": "coordination/onepass/test_v135_resonance_owner_bridge.cjs",
@@ -19,7 +19,7 @@
       "after": "7376eb8ea8b1358f5cc12c32bba357a90e46b613"
     }
   ],
-  "tests": "First V135 exact SHA CI 43835090607 FAIL HOLD_OWNER_BRIDGE_BOUNDS (20439 bytes); reduced comments only, code logic unchanged; recheck pending next CI.",
+  "tests": "First V135 run 43835090607 failed fixed <=20KB gate; corrected V135 run 43835368110 success. V139 initial run 43835368191 failed because comment-only removal disrupted immutable max_speed_transport.patch context; exact 4 source context comments restored without code change; new CI pending.",
   "tasks": [
     {
       "n": 1,
@@ -98,5 +98,11 @@
     "max_allowed": 20000,
     "action": "Remove only redundant comments, retain fixed 20000 byte staging ceiling",
     "size_after": 18548
+  },
+  "ci_progress": {
+    "v135_success": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43835368110",
+    "v139_context_error": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43835368191",
+    "fixed_patch_context": true,
+    "source_bytes": 18855
   }
 }
