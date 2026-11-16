@@ -186,7 +186,7 @@
                 ?'signal_accepted':'unconfirmed';
             }
           }catch{stopOutcome=c.signal.aborted?'timeout':'unknown';}
-          finally{clearTimeout(t);}
+          finally{if(typeof clearTimeout==='function')clearTimeout(t);}
         }
         upstreamAbort.abort();
         if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
