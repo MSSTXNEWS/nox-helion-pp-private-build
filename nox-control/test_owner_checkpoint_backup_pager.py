@@ -85,6 +85,20 @@ class CheckpointPagerTests(unittest.TestCase):
         with patch.object(pager,'stopped',side_effect=[False,True]):
             with self.assertRaisesRegex(RuntimeError,'OWNER_STOP'):pager.page(self.transfer,sha,0,'456','c'*40)
 
+    def test_stop_reclaimed_during_blocking_pread_never_emits_a_page(self):
+        sha,_=self.prepare()
+        native_pread=os.pread
+        revoked={'active':False}
+        def read_then_revoke(*args):
+            raw=native_pread(*args)
+            revoked['active']=True
+            return raw
+        with patch.object(pager,'stopped',side_effect=lambda:revoked['active']), \
+             patch.object(pager.os,'pread',side_effect=read_then_revoke):
+            with self.assertRaisesRegex(RuntimeError,'OWNER_STOP'):
+                pager.page(self.transfer,sha,0,'456','c'*40)
+        self.assertTrue(revoked['active'])
+
     def test_unprepared_public_pin_and_bad_module_never_start_child(self):
         with patch.dict(os.environ,{'NOX_OWNER_REQUEST_ID':'123','NOX_OWNER_SOURCE_SHA':'a'*40,
                                    'NOX_CHECKPOINT_PAGER_ACTION':'prepare'}), \
