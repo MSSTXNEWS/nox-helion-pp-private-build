@@ -26,6 +26,8 @@ class FakeOpener:
 class ReadOnlyRangeContractTests(unittest.TestCase):
     def test_authoritative_immutable_metadata_matches_hf_tree(self):
         expected = {
+            "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf":
+                (5780704, "f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9"),
             "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf":
                 (39535781184, "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3"),
             "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf":
@@ -42,7 +44,13 @@ class ReadOnlyRangeContractTests(unittest.TestCase):
         self.assertEqual(actual, expected)
         self.assertEqual(len(probe.PINNED_SOURCES), len(expected))
         shard5 = "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf"
+        engram = "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf"
         self.assertEqual(sum(row["path"] == shard5 for row in probe.PINNED_SOURCES), 1)
+        self.assertEqual(sum(row["path"] == engram for row in probe.PINNED_SOURCES), 1)
+        self.assertTrue(all(
+            sum(row["path"] == f"DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-0000{i}-of-00006.gguf"
+                for row in probe.PINNED_SOURCES) == 1
+            for i in range(1, 6)))
         for row in probe.PINNED_SOURCES:
             self.assertEqual(row["revision"], "65d53bc8be65123e255ff02f3ded958b6dbf54fd")
             self.assertEqual(
