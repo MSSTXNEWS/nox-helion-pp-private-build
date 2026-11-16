@@ -67,7 +67,7 @@ jobs:
           }
           for name,want in expected.items():
               raw=Path(name).read_bytes()
-              got=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\\0'+raw).hexdigest()
+              got=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
               if got!=want: raise SystemExit('HOLD_INTEGRATION_SOURCE_PIN_'+name.replace('/','_').replace('.','_'))
               compile(raw,name,'exec')
           print('NOX_DEPLOY_SOURCE_PIN=VERIFIED')

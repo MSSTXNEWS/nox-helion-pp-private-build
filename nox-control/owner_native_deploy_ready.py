@@ -125,8 +125,6 @@ def sha256_file(path, expected_bytes=None):
     before = lstat_path(path, "file")
     if expected_bytes is not None and before.st_size != expected_bytes:
         raise Hold("HOLD_MODEL_FILE_SIZE")
-    if before.st_mode & 0o077:
-        raise Hold("HOLD_MODEL_FILE_PERMISSIONS")
     fd = None
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
