@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_checkpoint_page_action.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_training_placement_recovery.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
@@ -126,6 +126,7 @@ def run_native(action,request_id):
                      'nox-control/owner_training_status.py','nox-control/owner_builder_proc_probe.py',
                      'nox-control/owner_training_status_entry.py','nox-control/owner_training_status_binding.py',
                      'nox-control/owner_training_amp_calibration.py','nox-control/owner_training_scaler_probe.py',
+                     'nox-control/owner_training_placement_recovery.py','nox-control/owner_training_restore_preflight.py',
                      'nox-control/owner_calibration_receipt_read.py','nox-control/owner_chat_runtime_snapshot.py',
                      'nox-control/owner_browser_transport_qa_entry.py','nox-control/owner_chat_browser_transport_qa.py',
                      'nox-control/owner_chat_reports_state_entry.py',

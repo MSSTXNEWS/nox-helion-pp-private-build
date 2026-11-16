@@ -201,6 +201,74 @@ def read_frozen_dataset(path: Path):
         return [json.loads(line) for line in stream]
 
 
+def bind_checkpoint_restore(trainer, checkpoint: Path, torch, lineage: dict) -> dict:
+    """Restore only existing LoRA tensors; leave base placement and HF state restore intact."""
+    step = complete_checkpoint(checkpoint)
+    if checkpoint != OUTPUT / f'checkpoint-{step}' or trainer.optimizer is not None:
+        raise RuntimeError('HOLD_ADAPTER_RESTORE_SCOPE_OR_ORDER')
+    receipt = json.loads((OUTPUT / f'owner_receipt_step_{step}.json').read_text())
+    if (receipt.get('schema') != SCHEMA or receipt.get('native_sha256') != lineage['native_sha256'] or
+        receipt.get('lineage_sha256') != json_sha(lineage) or receipt.get('global_step') != step or
+        receipt.get('checkpoint') != checkpoint_record(checkpoint) or
+        not SHA.fullmatch(str(receipt.get('after_tensor_sha256', '')))):
+        raise RuntimeError('HOLD_ADAPTER_RESTORE_CHECKPOINT_PROOF')
+    model = trainer.model
+    expected_model = model
+    if (list(getattr(model, 'active_adapters', [])) != ['default'] or
+        set(getattr(model, 'peft_config', {})) != {'default'}):
+        raise RuntimeError('HOLD_ADAPTER_RESTORE_ACTIVE_ADAPTER')
+    if fp32_adapters(model, torch, convert=False) != lineage['targets']:
+        raise RuntimeError('HOLD_ADAPTER_RESTORE_TARGET_SCHEMA')
+    parameters = dict(model.named_parameters())
+    mapped = {}
+    for name, parameter in parameters.items():
+        if not parameter.requires_grad: continue
+        if not re.search(r'\.lora_[AB]\.default\.weight$', name):
+            raise RuntimeError('HOLD_ADAPTER_RESTORE_UNSUPPORTED_PARAMETER')
+        key = re.sub(r'\.(lora_[AB])\.default\.weight$', r'.\1.weight', name)
+        if key in mapped: raise RuntimeError('HOLD_ADAPTER_RESTORE_DUPLICATE_KEY')
+        mapped[key] = parameter
+    shape = lambda: [(name, id(p), str(p.device), str(p.dtype), list(p.shape), p.requires_grad)
+                     for name, p in model.named_parameters()]
+    placement = lambda: sorted((str(k), str(v)) for k, v in (getattr(model, 'hf_device_map', {}) or {}).items())
+    before_shape, before_placement = shape(), placement()
+    proof = {'schema': 'NOX_LORA_INPLACE_CHECKPOINT_RESTORE_V1', 'global_step': step,
+             'restored': False, 'optimizer_scheduler_scaler_rng_restore': 'DELEGATED_TO_HF_TRAINER'}
+    def restore(self, resume_from_checkpoint, model=None):
+        if (Path(resume_from_checkpoint) != checkpoint or (model is not None and model is not self.model) or
+            self.model is not expected_model or self.optimizer is not None or proof['restored']):
+            raise RuntimeError('HOLD_ADAPTER_RESTORE_SCOPE_OR_ORDER')
+        if shape() != before_shape or placement() != before_placement:
+            raise RuntimeError('HOLD_ADAPTER_RESTORE_PRELOAD_PLACEMENT_CHANGED')
+        if checkpoint_record(checkpoint) != receipt['checkpoint']:
+            raise RuntimeError('HOLD_ADAPTER_RESTORE_CHECKPOINT_CHANGED')
+        adapter = checkpoint / 'adapter_model.safetensors'
+        if adapter.stat().st_size > 64 * 1024**2:
+            raise RuntimeError('HOLD_ADAPTER_RESTORE_FILE_SIZE')
+        from safetensors.torch import load_file
+        values = load_file(str(adapter), device='cpu')
+        if set(values) != set(mapped): raise RuntimeError('HOLD_ADAPTER_RESTORE_KEYS')
+        for key, parameter in mapped.items():
+            value = values[key]
+            if (value.dtype != torch.float32 or list(value.shape) != list(parameter.shape) or
+                not bool(torch.isfinite(value).all().item())):
+                raise RuntimeError('HOLD_ADAPTER_RESTORE_TENSOR_SCHEMA')
+        with torch.no_grad():
+            for key, parameter in mapped.items():
+                parameter.copy_(values[key].to(device=parameter.device, dtype=parameter.dtype))
+        del values
+        if (shape() != before_shape or placement() != before_placement or
+            fp32_adapters(self.model, torch, convert=False) != lineage['targets'] or
+            tensor_sha(self.model, torch) != receipt['after_tensor_sha256'] or
+            file_sha(adapter) != receipt['checkpoint']['files_sha256']['adapter_model.safetensors']):
+            raise RuntimeError('HOLD_ADAPTER_RESTORE_READBACK')
+        proof.update(restored=True, parameter_objects_preserved=True, base_placement_preserved=True,
+                     trainable_tensors=len(mapped), restored_tensor_sha256=receipt['after_tensor_sha256'],
+                     adapter_file_sha256=receipt['checkpoint']['files_sha256']['adapter_model.safetensors'])
+    trainer._load_from_checkpoint = types.MethodType(restore, trainer)
+    return proof
+
+
 def build_existing_trainer(native, model, tokenizer, dataset, planned: int, torch):
     """Retain native TRL compatibility path; override its configuration only."""
     import trl
@@ -377,10 +445,11 @@ def run(args) -> dict:
                'targets': targets, 'training_config': config}
     if old is not None:
         if old != lineage: raise RuntimeError('HOLD_CONTINUATION_LINEAGE_CHANGED')
-        # The Trainer resumes adapter/optimizer/scheduler/RNG itself before
-        # on_train_begin. This initial hash is superseded there after restore.
+        # The in-place hook restores the adapter before optimizer construction;
+        # HF restores optimizer/scheduler/scaler/RNG through its normal path.
     else:
         atomic_json(lineage_path, lineage)
+    restore_proof = bind_checkpoint_restore(trainer, resume, torch, lineage) if resume else None
     from transformers import TrainerCallback
     state = {'before_tensor_sha256': None, 'loss': None, 'successful_optimizer_steps': 0,
              'skipped_optimizer_steps': 0, 'last_save_at': time.monotonic(),
@@ -390,6 +459,9 @@ def run(args) -> dict:
             check_stop(); fp32_adapters(trainer.model, torch, convert=False)
             optimizer_fp32(trainer, torch)
             state['before_tensor_sha256'] = tensor_sha(trainer.model, torch)
+            if restore_proof is not None and (restore_proof.get('restored') is not True or
+                state['before_tensor_sha256'] != restore_proof.get('restored_tensor_sha256')):
+                raise RuntimeError('HOLD_ADAPTER_RESTORE_NOT_APPLIED_BEFORE_OPTIMIZER')
             return c
         def on_step_begin(self, a, s, c, **kw):
             state['stop_requested'] |= stop_active()
@@ -438,6 +510,7 @@ def run(args) -> dict:
                        'after_tensor_sha256': tensor_sha(trainer.model, torch),
                        'checkpoint': state['checkpoint'], 'merged': False,
                        'live_promoted': False, 'external_restore_verified': False}
+            if restore_proof is not None: receipt['checkpoint_restore'] = dict(restore_proof)
             receipt['adapter_delta_verified'] = receipt['before_tensor_sha256'] != receipt['after_tensor_sha256']
             atomic_json(OUTPUT / f'owner_receipt_step_{s.global_step}.json', receipt)
             return c
