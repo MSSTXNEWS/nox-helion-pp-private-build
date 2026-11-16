@@ -237,11 +237,28 @@ class Subagents:
                 # Do not return even a candidate as accepted after revocation.
                 if not admitted():
                     raise GateError('HOLD_OWNER_GATE_CHANGED')
+                if not isinstance(event, dict):
+                    raise GateError('HOLD_SUBAGENT_RESULT_IDENTITY')
                 tid = event.get('id')
                 role = event.get('role')
                 if (event.get('kind')!='RESULT' or tid not in active or role != active_roles.get(tid)
                     or role not in busy_roles or event.get('pid')!=self.processes[role].pid):
                     raise GateError('HOLD_SUBAGENT_RESULT_IDENTITY')
+                # An in-process worker result is untrusted candidate evidence, not
+                # permission to claim DONE/LIVE/INSTALLED or unlock dependents.
+                common = {'kind', 'role', 'pid', 'id', 'elapsed_ms', 'state'}
+                elapsed = event.get('elapsed_ms')
+                state = event.get('state')
+                if type(elapsed) is not int or elapsed < 0:
+                    raise GateError('HOLD_SUBAGENT_RESULT_SCHEMA')
+                if state == 'CANDIDATE_NOT_APPLIED':
+                    answer = event.get('answer')
+                    if (set(event) != common | {'answer'} or not isinstance(answer, str)
+                        or not answer.strip() or len(answer.encode('utf-8')) > MAX_OUTPUT_BYTES):
+                        raise GateError('HOLD_SUBAGENT_RESULT_SCHEMA')
+                elif (not isinstance(state, str) or not state.startswith('HOLD_')
+                      or len(state) > 128 or set(event) != common):
+                    raise GateError('HOLD_SUBAGENT_RESULT_SCHEMA')
                 outcomes[tid] = event
                 active.remove(tid)
                 del active_started[tid]
