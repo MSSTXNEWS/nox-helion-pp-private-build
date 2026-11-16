@@ -69,7 +69,7 @@ def required_stop():
     for path in flags:
         check(not path.is_symlink(), "STOP_SYMLINK")
         check(path.is_file(), "STOP_NOT_ACTIVE")
-        check(path.stat().st_uid == 0, "STOP_OWNER")
+        check(path.stat().st_uid == ROOT.stat().st_uid, "STOP_OWNER")
     return True
 
 
