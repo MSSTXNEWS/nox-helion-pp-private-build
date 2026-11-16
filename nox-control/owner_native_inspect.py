@@ -949,6 +949,76 @@ def maya_elf_linkage_readback(root=None):
     result['state'] = 'ELF_LINKAGE_READ_ONLY'
     return result
 
+def maya_dependency_path_readback(linkage=None):
+    """Stat expected CUDA DSOs in ldconfig cache or ELF RPATH; never load a DSO."""
+    linkage = maya_elf_linkage_readback() if linkage is None else linkage
+    result = {'schema':'NOX_MAYA_DEPENDENCY_PATHS_READONLY_V1',
+              'state':'HOLD_UNKNOWN','method':'LDCONFIG_CACHE_AND_ELF_RPATH_STAT_ONLY',
+              'libraries':{},'maya_executable_invoked':False,
+              'cuda_context_created':False,'runtime_abi':'NOT_TESTED'}
+    if linkage.get('state') != 'ELF_LINKAGE_READ_ONLY':
+        result['state'] = 'HOLD_ELF_LINKAGE'
+        return result
+    ldconfig = shutil.which('ldconfig')
+    if not ldconfig:
+        result['state'] = 'HOLD_LDCONFIG_UNAVAILABLE'
+        return result
+    try:
+        cp = subprocess.run([ldconfig, '-p'], shell=False, check=False,
+                            capture_output=True, text=True, timeout=8)
+    except (OSError, subprocess.TimeoutExpired):
+        result['state'] = 'HOLD_LDCONFIG_FAILED'
+        return result
+    if cp.returncode != 0 or len(cp.stdout) > 1024 * 1024:
+        result['state'] = 'HOLD_LDCONFIG_FAILED'
+        return result
+    names = ('libcuda.so.1','libcudart.so.12','libcublas.so.12','libcublasLt.so.12')
+    cache = {name:[] for name in names}
+    for line in cp.stdout.splitlines():
+        match = re.match(r'\\s*(\\S+)\\s+\\([^)]*\\)\\s+=>\\s+(\\S+)\\s*    f=(hardware,processes,training,controls,chat_storage,receipts)[i]
+    try: return {'section':f.__name__,'worker_pid':os.getpid(),'result':f()}
+    except Exception as e: return {'section':f.__name__,'worker_pid':os.getpid(),'error':type(e).__name__}
+
+if __name__=='__main__':
+    with ProcessPoolExecutor(max_workers=6) as pool:
+        for row in pool.map(worker,range(6)):
+            # Each source record has its own bounded line; a long controller must
+            # not hide all controls behind the transport's per-line safety cap.
+            items=[dict(row,result=[item]) for item in row.get('result',[])] if row['section']=='controls' and isinstance(row.get('result'),list) else [row]
+            for item in items:
+                print('NOX_MAINT_INSPECT='+json.dumps(item,separators=(',',':')),flush=True)
+    owner_component_readback()
+    print('NOX_MAINT_SAFETY=' + json.dumps(owner_safety_snapshot(), separators=(',', ':'), allow_nan=False), flush=True)
+    print('NOX_MAINT_MAYA_P0=' + json.dumps(maya_p0_binary_readback(), separators=(',', ':'), allow_nan=False), flush=True)
+    print('NOX_MAINT_MAYA_ELF_LINKAGE=' + json.dumps(maya_elf_linkage_readback(), separators=(',', ':'), allow_nan=False), flush=True)
+    print('NOX_MAINT_MAYA_DEPENDENCIES=' + json.dumps(maya_dependency_path_readback(), separators=(',', ':'), allow_nan=False), flush=True)
+    bounded_capacity_readback()
+    print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
+, line)
+        if match and match.group(1) in cache:
+            cache[match.group(1)].append(match.group(2))
+    rpaths = [x for x in linkage.get('rpath',[]) if isinstance(x,str)]
+    for name in names:
+        paths = list(dict.fromkeys(cache[name] + [str(Path(base) / name) for base in rpaths]))
+        found = []
+        for candidate in paths[:32]:
+            try:
+                p = Path(candidate)
+                if p.is_file():
+                    found.append({'path':candidate,'resolved_path':str(p.resolve(strict=True))})
+            except (OSError, RuntimeError):
+                pass
+        result['libraries'][name] = {'present':bool(found),'candidates':found[:8]}
+    result['state'] = ('AVAILABLE_PATHS_ONLY' if all(result['libraries'][n]['present'] for n in names)
+                       else 'HOLD_REQUIRED_LIBRARY_PATH_MISSING')
+    cuda_paths = result['libraries']['libcuda.so.1']['candidates']
+    rt_paths = result['libraries']['libcudart.so.12']['candidates']
+    result['driver_path_hint'] = cuda_paths[0]['resolved_path'] if cuda_paths else None
+    result['toolkit_path_hint'] = rt_paths[0]['resolved_path'] if rt_paths else None
+    result['cuda_toolkit_path_version_hint'] = (
+        '12.4' if any('/cuda-12.4/' in row['resolved_path'] for row in rt_paths) else 'UNKNOWN')
+    return result
+
 def worker(i):
     f=(hardware,processes,training,controls,chat_storage,receipts)[i]
     try: return {'section':f.__name__,'worker_pid':os.getpid(),'result':f()}
