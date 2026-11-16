@@ -785,10 +785,17 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 raise RuntimeError('HOLD_OWNER_STOP')
             return _s03_prompt_context(trusted,request,question,6)
         try:
-            memory_message=await asyncio.to_thread(read_memory_after_gates)
+            memory_message=await asyncio.wait_for(
+                asyncio.to_thread(read_memory_after_gates),timeout=1.5)
+        except asyncio.TimeoutError:
+            release_active()
+            return JSONResponse({'error':'HOLD_S03_RECALL_TIMEOUT'},status_code=503)
         except RuntimeError as exc:
             release_active()
             return JSONResponse({'error':str(exc)},status_code=503)
+        except Exception:
+            release_active()
+            return JSONResponse({'error':'HOLD_S03_RECALL_FAILED'},status_code=503)
         if cancel.is_set() or not _stop_clear(trusted):
             release_active()
             return JSONResponse({'error':'HOLD_OWNER_STOP'},status_code=503)
