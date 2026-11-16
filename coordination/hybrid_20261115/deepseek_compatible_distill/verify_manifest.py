@@ -95,7 +95,9 @@ def validate(manifest: dict) -> dict:
 
     if manifest.get("training_enabled") is not False:
         blockers.append("TRAINING_MUST_REMAIN_DISABLED")
-    if teacher.get("format") != "GGUF" or teacher.get("training_target") is not False:
+    if (teacher.get("format") != "GGUF" or teacher.get("training_target") is not False
+            or teacher.get("inference_only") is not True
+            or method.get("teacher_role") != "GGUF inference and teacher-response generation only"):
         blockers.append("GGUF_TEACHER_IS_INFERENCE_ONLY")
     if method.get("gguf_direct_weight_training") is not False:
         blockers.append("GGUF_DIRECT_TRAINING_FORBIDDEN")
@@ -136,6 +138,12 @@ def validate(manifest: dict) -> dict:
     if teacher.get("local_presence") != "LIVE_VERIFIED":
         blockers.append("TEACHER_LOCAL_PRESENCE_UNVERIFIED")
 
+    student_id = student.get("model_id")
+    if (not isinstance(student_id, str)
+            or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", student_id)
+            or student_id in {teacher.get("model_id"), teacher.get("quantization_source_id")}
+            or student.get("training_target") is not True):
+        blockers.append("STUDENT_MUST_BE_DISTINCT_PINNED_HF_TARGET")
     revision = student.get("revision")
     if not isinstance(revision, str) or not HEX40.fullmatch(revision):
         blockers.append("STUDENT_REVISION_UNPINNED")
@@ -149,6 +157,22 @@ def validate(manifest: dict) -> dict:
                           or not HEX64.fullmatch(x["sha256"]) for x in shards)
             or sum(x.get("bytes", 0) for x in shards) != student.get("expected_weight_bytes")):
         blockers.append("STUDENT_WEIGHT_MANIFEST_INVALID")
+    weight_manifest_sha256 = student.get("weight_manifest_sha256")
+    if (not isinstance(weight_manifest_sha256, str) or not HEX64.fullmatch(weight_manifest_sha256)
+            or weight_manifest_sha256 != canonical_sha256({"weight_shards": shards})):
+        blockers.append("STUDENT_WEIGHT_MANIFEST_SHA256_MISMATCH")
+    metadata = student.get("metadata_blobs", {})
+    required_metadata = ("config.json", "model.safetensors.index.json",
+                         "tokenizer.json", "tokenizer_config.json")
+    for name in required_metadata:
+        entry = metadata.get(name, {}) if isinstance(metadata, dict) else {}
+        runtime_sha = entry.get("runtime_sha256") if isinstance(entry, dict) else None
+        if not isinstance(runtime_sha, str) or not HEX64.fullmatch(runtime_sha):
+            blockers.append("STUDENT_METADATA_RUNTIME_HASH_MISSING")
+    if student.get("config_sha256") != metadata.get("config.json", {}).get("runtime_sha256"):
+        blockers.append("STUDENT_CONFIG_HASH_MISMATCH")
+    if student.get("tokenizer_sha256") != metadata.get("tokenizer.json", {}).get("runtime_sha256"):
+        blockers.append("STUDENT_TOKENIZER_HASH_MISMATCH")
     if student.get("local_weight_readback") is not True:
         blockers.append("STUDENT_LOCAL_WEIGHTS_UNVERIFIED")
     if student.get("architecture_load_tested") is not True:
