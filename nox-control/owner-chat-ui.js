@@ -30,6 +30,33 @@
     const strip=E('div',undefined,'nox-live-strip'),label=E('span','Исполнители'),chips=E('span');chips.style.display='contents';
     const actions=E('div',undefined,'nox-live-actions'),image=E('button','Фото','nox-live-btn'),video=E('button','Видео','nox-live-btn');
     image.type=video.type='button';actions.append(image,video);strip.append(label,chips,actions);header.after(strip);
+    const reports=E('details',undefined,'nox-owner-reports'),reportTitle=E('summary','Отчёты NOX'),reportList=E('div');
+    reports.append(reportTitle,reportList);strip.after(reports);
+    const reportStyle=E('style');reportStyle.textContent='.nox-owner-reports{margin:0 12px 10px;color:#cbd7e3;font:12px system-ui}.nox-owner-reports summary{padding:8px;cursor:pointer;color:#d8bc87}.nox-owner-report{border-left:2px solid #a3824e;background:#111b25b8;border-radius:0 9px 9px 0;padding:11px 13px;margin:7px 0;line-height:1.55}.nox-owner-report p{margin:5px 0}.nox-owner-report small{color:#90a2b5}';document.head.append(reportStyle);
+    let eventCursor=null,eventsBusy=false,eventCount=0;
+    try{const n=Number(localStorage.getItem('nox.owner.events.cursor'));if(Number.isSafeInteger(n)&&n>0)eventCursor=n;}catch{}
+    async function refreshEvents(){
+      if(eventsBusy||document.hidden)return;eventsBusy=true;
+      try{
+        const value=await api('/api/ui/events?limit=20'+(eventCursor===null?'':'&cursor='+eventCursor));
+        if(value.schema!=='NOX_OWNER_EVENTS_V1'||!Array.isArray(value.events)||!Number.isSafeInteger(value.next_cursor))return;
+        for(const event of value.events){
+          if(!Number.isSafeInteger(event.sequence)||typeof event.title!=='string'||typeof event.message!=='string')continue;
+          if(reportList.querySelector('[data-event-sequence="'+event.sequence+'"]'))continue;
+          const card=E('article',undefined,'nox-owner-report');card.dataset.eventSequence=String(event.sequence);
+          const heading=E('b',event.title),message=E('p',event.message);
+          const when=new Date(Number(event.created_at)*1000);const stamp=E('small',Number.isFinite(when.getTime())?when.toLocaleString():'');
+          const task=event.task&&typeof event.task.id==='string'?event.task.id:'';if(task)stamp.textContent+=' · '+task;
+          card.append(heading,message,stamp);reportList.append(card);eventCount++;
+          while(reportList.childElementCount>60)reportList.firstElementChild.remove();
+        }
+        eventCursor=value.next_cursor;try{localStorage.setItem('nox.owner.events.cursor',String(eventCursor));}catch{}
+        reportTitle.textContent=eventCount?'Отчёты NOX · '+eventCount:'Отчёты NOX · ожидаю события';
+        if(eventCount)reports.open=true;
+      }catch{if(!eventCount)reportTitle.textContent='Отчёты NOX · подключение';}
+      finally{eventsBusy=false;}
+    }
+    void refreshEvents();setInterval(()=>void refreshEvents(),5000);
     const panel=E('section',undefined,'nox-media-panel');panel.hidden=true;panel.setAttribute('aria-label','Фото и видео NOX');
     const title=E('h2','NOX · Фото'),description=E('p','Опишите результат. Генерация выполняется на сервере NOX.'),prompt=E('textarea');prompt.maxLength=1500;prompt.placeholder='Что создать?';
     const row=E('div',undefined,'nox-live-actions'),go=E('button','Создать','nox-live-btn'),cancel=E('button','Остановить','nox-live-btn'),close=E('button','Закрыть','nox-live-btn');
@@ -76,9 +103,10 @@
     async function refresh(){
       if(document.visibilityState==='hidden')return;
       try{const value=await api('/api/ui/executors');chips.replaceChildren();label.textContent=value.state==='OBSERVED'?'Исполнители':'Состояние обновляется';
+        window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:value.state==='OBSERVED',busy:(value.workers||[]).filter(x=>x.status==='busy').length}}));
         for(const [index,worker] of (value.workers||[]).entries()){
           const known=value.state==='OBSERVED',busy=worker.status==='busy';const chip=E('span',String(index+1)+' · '+(known?(busy?'работает':'свободен'):'нет свежих данных'),'nox-live-chip');chip.dataset.state=known&&busy?'busy':'idle';chip.title=worker.task_id||worker.id;chips.append(chip);
-        }}catch{label.textContent='Исполнители · нет связи';}
+        }}catch{label.textContent='Исполнители · нет связи';window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0}}));}
     }
     void refresh();setInterval(()=>void refresh(),10000);
   }

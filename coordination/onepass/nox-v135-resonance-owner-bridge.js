@@ -164,7 +164,12 @@
     const nativeSignal=upstreamAbort.signal;
     const body=new ReadableStream({
       async start(controller){
-        const event=payload=>{if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));};
+        const event=payload=>{
+          const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
+          if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+            window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
+          if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
+        };
         try {
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           const id=await dialogId(data,nativeSignal);
@@ -225,6 +230,8 @@
       cancel(){
         closed=true;
         upstreamAbort.abort();
+        if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+          window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));
         signal?.removeEventListener?.('abort',onAbort);
       }
     });

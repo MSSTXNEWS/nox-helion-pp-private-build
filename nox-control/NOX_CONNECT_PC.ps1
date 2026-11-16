@@ -88,15 +88,41 @@ function Protect-Path([string]$Path, [switch]$Directory, [switch]$Administrators
     }
     Set-Acl -LiteralPath $Path -AclObject $acl
 }
-function Assert-NoReparse([string]$Path) {
-    $current = $Path
-    while ($current) {
-        if (Test-Path -LiteralPath $current) {
-            if ((Get-Item -LiteralPath $current -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'HOLD_REPARSE_PATH' }
+function Windows-PathAncestors([string]$Path) {
+    # Keep the drive root absolute. A provider-relative C: can refer to the
+    # current directory on that drive; it must never replace C:\ in this check.
+    $current = $Path.Replace('/','\')
+    if ($current -notmatch '^[A-Za-z]:\\' -or $current -match '(^|\\)\.\.?(\\|$)' -or $current -match '[\x00-\x1f]') {
+        throw 'HOLD_NONLOCAL_CHECKED_PATH'
+    }
+    $root = $current.Substring(0,3)
+    $current = $current.TrimEnd('\')
+    if ($current.Length -eq 2) { $current = $root }
+    while ($true) {
+        $current
+        if ($current.Equals($root,[StringComparison]::OrdinalIgnoreCase)) { break }
+        $slash = $current.LastIndexOf('\')
+        if ($slash -le 2) { $current = $root } else { $current = $current.Substring(0,$slash) }
+    }
+}
+function Local-PathAttributes([string]$Path) {
+    # Query filesystem attributes directly, without provider/drive aliases.
+    # GetAttributes retains ReparsePoint for links; missing nodes are allowed
+    # only because their existing parents are still checked below.
+    try { return [IO.File]::GetAttributes($Path) }
+    catch [IO.FileNotFoundException] { return $null }
+    catch [IO.DirectoryNotFoundException] { return $null }
+}
+function Assert-NoReparse([string]$Path, [ValidatePattern('^[A-Z_]{1,32}$')][string]$Scope = 'LOCAL_PATH') {
+    $depth = 0
+    foreach ($current in @(Windows-PathAncestors $Path)) {
+        $attributes = Local-PathAttributes $current
+        if ($null -ne $attributes -and (([long]$attributes -band [long][IO.FileAttributes]::ReparsePoint) -ne 0)) {
+            # Local diagnostic only: never sent to NOX, Vast, or connection.log.
+            Write-Warning ("NOX path check: scope=$Scope; ancestor=$depth; attributes=$([long]$attributes); path=$current. Existing files were preserved. Select an ordinary local folder with -DestinationRoot.") -WarningAction Continue
+            throw ('HOLD_REPARSE_PATH_' + $Scope + '_D' + $depth)
         }
-        $parent = Split-Path -Parent $current
-        if ($parent -eq $current) { break }
-        $current = $parent
+        $depth++
     }
 }
 function Assert-Administrator {
@@ -454,7 +480,7 @@ function Invoke-Remote([string]$Action) {
 }
 function Read-Manifest {
     if (-not (Test-Path -LiteralPath $ManifestFile -PathType Leaf)) { throw 'HOLD_INSTALL_FIRST' }
-    Assert-NoReparse $ManifestFile
+    Assert-NoReparse $ManifestFile 'INSTALLATION_MANIFEST'
     $value = [IO.File]::ReadAllText($ManifestFile) | ConvertFrom-Json
     if ($value.schema -ne 'NOX_PC_INSTALL_V1' -or $value.instance_id -ne $InstanceId -or
         $value.installation_id -notmatch '^[a-f0-9]{32}$' -or $value.owner_sid -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -or
@@ -549,7 +575,7 @@ function Install-LocalSsh([string]$OperatorKey) {
     $existingConfig = $initialConfigExisted
     $newService = -not $initialConfigExisted
     if ($newService -and $info.service.State -eq 'Running') { throw 'HOLD_RUNNING_SSHD_CONFIG_MISSING' }
-    Assert-NoReparse $info.config
+    Assert-NoReparse $info.config 'SSH_CONFIGURATION'
     $priorText = ''
     if ($existingConfig) { $priorText = [IO.File]::ReadAllText($info.config) }
     $user = Current-SshUser
@@ -579,7 +605,7 @@ function Install-LocalSsh([string]$OperatorKey) {
     if ($previousFiles -eq 'none') { $previousFiles = '' }
     $previousArguments = Existing-KeyArguments $previousFiles
     $authFile = Join-Path $env:ProgramData ('ssh\nox_pc_' + $script:Manifest.installation_id + '_authorized_keys')
-    Assert-NoReparse $authFile
+    Assert-NoReparse $authFile 'AUTHORIZED_KEY'
     if (Test-Path -LiteralPath $authFile) { throw 'HOLD_OWNED_KEY_FILE_EXISTS' }
     $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $authFile)
     $authorizedLine = 'from="127.0.0.1,::1",no-agent-forwarding,no-port-forwarding,no-X11-forwarding ' + (Public-Identity $OperatorKey) + ' NOX-PC-' + $script:Manifest.installation_id + "`n"
@@ -797,12 +823,12 @@ function Remove-Link {
     $block = [string](Get-Field $script:Manifest 'sshd_owned_block' '')
     $authFile = [string](Get-Field $script:Manifest 'authorized_file' '')
     if ($authFile -and (Test-Path -LiteralPath $authFile)) {
-        Assert-NoReparse $authFile
+        Assert-NoReparse $authFile 'AUTHORIZED_KEY'
         if ((Get-FileHash -LiteralPath $authFile -Algorithm SHA256).Hash.ToLowerInvariant() -ne $script:Manifest.authorized_sha256) { throw 'HOLD_OPERATOR_KEY_FILE_CHANGED' }
         Remove-Item -LiteralPath $authFile -Force
     }
     if ($config -and (Test-Path -LiteralPath $config)) {
-        Assert-NoReparse $config
+        Assert-NoReparse $config 'SSH_CONFIGURATION'
         $text = [IO.File]::ReadAllText($config)
         $matches = [regex]::Matches($text,[regex]::Escape($block))
         if ($block -and $matches.Count -eq 1) {
@@ -826,7 +852,7 @@ function Remove-Link {
     }
     if ($detached -and $remoteRemoved) {
         foreach ($path in @($KeyPath,($KeyPath+'.pub'),$TokenFile,$KnownHosts)) {
-            Assert-NoReparse $path
+            Assert-NoReparse $path 'OWNED_FILE'
             if (Test-Path -LiteralPath $path -PathType Leaf) { Remove-Item -LiteralPath $path -Force }
         }
         Set-Field $script:Manifest 'phase' 'UNINSTALLED'
@@ -844,8 +870,8 @@ function Remove-Link {
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'Run this script on your Windows PC.' }
     if ($Mode -in @('Install','Uninstall')) { Assert-Administrator }
-    Assert-NoReparse $DestinationRoot
-    Assert-NoReparse $LinkRoot
+    Assert-NoReparse $DestinationRoot 'DESTINATION_ROOT'
+    Assert-NoReparse $LinkRoot 'LINK_DIRECTORY'
     $openSshFolder = Join-Path $env:SystemRoot 'System32\OpenSSH'
     if (($env:PATH -split ';') -notcontains $openSshFolder) { $env:PATH = $openSshFolder + ';' + $env:PATH }
     if ($Mode -eq 'Install') {
@@ -880,7 +906,7 @@ try {
         Save-Manifest
         foreach ($name in @('BACKUPS','WARM')) {
             $path = Join-Path $DestinationRoot $name
-            Assert-NoReparse $path
+            Assert-NoReparse $path 'BACKUP_DIRECTORY'
             $null = New-Item -ItemType Directory -Force -Path $path
         }
         if ((Test-Path -LiteralPath $KeyPath) -or (Test-Path -LiteralPath ($KeyPath+'.pub'))) { throw 'HOLD_UNOWNED_LOCAL_KEY' }

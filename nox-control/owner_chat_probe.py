@@ -145,13 +145,15 @@ def main():
                     with request(client,local) as asset:report['assets'].append({'path':local,'status':asset.status,'bytes_sampled':len(asset.read(100))})
         unauth=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         report['anonymous_http']={}
-        for path in ('/api/nox/status','/api/ui/executors'):
+        for path in ('/api/nox/status','/api/ui/executors','/api/ui/events'):
             with request(unauth,path) as response:report['anonymous_http'][path]=response.status
         if report['nonloopback_peer']:
             if set(report['anonymous_http'].values())!={401}:raise RuntimeError('HOLD_ANONYMOUS_OWNER_SCOPE')
             status=obj(request(client,'/api/nox/status'))
             report['owner_status_bound']=status.get('native_p02_bound') is True
             executors=obj(request(client,'/api/ui/executors'))
+            event_status=obj(request(client,'/api/ui/events?limit=1'))
+            report['owner_events_access']=event_status.get('schema')=='NOX_OWNER_EVENTS_V1' and isinstance(event_status.get('events'),list)
             rows=executors.get('workers',[])
             report['owner_executors_access']=bool(executors.get('schema')=='NOX_OWNER_EXECUTORS_V1' and isinstance(rows,list))
             report['owner_executors']={'state':executors.get('state'),'configured':executors.get('configured'),
@@ -161,7 +163,7 @@ def main():
         report['slots']={'count':len(slot),'busy':sum(bool(s.get('is_processing',s.get('processing',False))) for s in slot)}
         emit('chat_before_probe',report)
         if not report['nonloopback_peer']:raise RuntimeError('HOLD_NONLOOPBACK_ACCEPTANCE_REQUIRED')
-        if not report.get('owner_status_bound') or not report.get('owner_executors_access'):
+        if not report.get('owner_status_bound') or not report.get('owner_executors_access') or not report.get('owner_events_access'):
             raise RuntimeError('HOLD_AUTHENTICATED_OWNER_APIS')
         if (not report['assets'] or any(asset['status']!=200 or asset['bytes_sampled']==0 for asset in report['assets'])
                 or any(page['status']!=200 for page in report['paths'])):

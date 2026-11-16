@@ -201,6 +201,11 @@ async def _run(native,url,payload,user_text):
     req=dict(payload)
     req.pop('_agent_final',None)
     req.update(tools=native['TOOLS'],tool_choice='auto',stream=True,cache_prompt=True)
+    # Native Qwen3.5 fixture verified this mode: visible tokens start directly.
+    # Explicit callers may opt into deliberation; ordinary chat defaults fast.
+    template=dict(req.get('chat_template_kwargs') or {})
+    template.setdefault('enable_thinking',False)
+    req['chat_template_kwargs']=template
     if native.get('_POOL'):
         req=native['prepare_payload'](req,cache=True)
     steps=0

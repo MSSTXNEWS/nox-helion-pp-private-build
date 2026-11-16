@@ -9,7 +9,7 @@ from fastapi.routing import APIRoute
 ROOT=Path('/root/nox')
 DEST='/nox-web-v29/pc/resonance.html'
 PAGES={'pc/resonance.html','pc/v22/resonance.template.html'}
-BUILD='NOX_OWNER_LIVE_RESONANCE_20261115'
+BUILD='NOX_OWNER_LIVE_RESONANCE_20261116'
 
 def decorate_html(raw,path):
     if path.lstrip('/') not in PAGES:return raw
@@ -18,7 +18,7 @@ def decorate_html(raw,path):
     raw=raw.replace('="/pc/','="/nox-web-v29/pc/').replace("='/pc/","='/nox-web-v29/pc/")
     if 'data-nox-live-owner="1"' in raw:return raw
     extra='\n<meta name="nox-live-build" content="'+BUILD+'">\n'
-    for name in ('nox-v135-resonance-owner-bridge.js','nox-v137-owner-self-status.js','owner-chat-ui.js'):
+    for name in ('nox-v135-resonance-owner-bridge.js','nox-v137-owner-self-status.js','owner-chat-ui.js','owner-presence.js'):
         extra+='<script defer src="/nox-web-v29/'+name+'" data-nox-live-owner="1"></script>\n'
     return raw.replace('</head>',extra+'</head>',1)
 

@@ -55,6 +55,7 @@ def prepare_sources(patcher):
     anchor='if __name__ == "__main__":\n    main()'
     if proxy.count(anchor)!=1:raise RuntimeError('HOLD_PROXY_MAIN_ANCHOR')
     registration=('from owner_chat_ui import register_owner_chat_ui\nregister_owner_chat_ui(app,globals())\n'
+        'from owner_event_outbox import register_owner_events\nregister_owner_events(app,globals())\n'
         'from owner_media_runtime import register_media\nregister_media(app,globals())\n'
         'from nox_v137_owner_self_observation import register_nox_v137_self_observation\n'
         'register_nox_v137_self_observation(app,globals())\n\n')
@@ -67,11 +68,13 @@ def prepare_sources(patcher):
         SCRIPTS/'slim_chat_t885u.py':patcher.patch_slim(read(SCRIPTS/'slim_chat_t885u.py')),
         SCRIPTS/'owner_chat_stream.py':get_bundle('owner_chat_stream.py'),
         SCRIPTS/'owner_chat_ui.py':get_bundle('owner_chat_ui.py'),
+        SCRIPTS/'owner_event_outbox.py':get_bundle('owner_event_outbox.py'),
         SCRIPTS/'owner_media_runtime.py':get_bundle('owner_media_runtime.py'),
         SCRIPTS/'nox_v137_owner_self_observation.py':observer.encode(),
         SITE/'nox-v135-resonance-owner-bridge.js':get_bundle('nox-v135-resonance-owner-bridge.js'),
         SITE/'nox-v137-owner-self-status.js':get_bundle('nox-v137-owner-self-status.js'),
-        SITE/'owner-chat-ui.js':get_bundle('owner-chat-ui.js')}
+        SITE/'owner-chat-ui.js':get_bundle('owner-chat-ui.js'),
+        SITE/'owner-presence.js':get_bundle('owner-presence.js')}
     for path,blob in sources.items():
         if path.suffix=='.py':compile(blob,str(path),'exec')
     return sources
