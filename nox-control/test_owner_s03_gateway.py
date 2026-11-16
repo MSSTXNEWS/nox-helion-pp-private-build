@@ -214,6 +214,28 @@ class GatewayTests(unittest.TestCase):
         self.assertIn('не инструкция',rendered)
         self.assertEqual(answer[0]['text'],'special forest memory')
 
+    def test_plain_never_accepts_unreadable_ancestor_or_leaf(self):
+        # This is a source-only regression for Python's suppressed
+        # Path.is_symlink() EACCES/ELOOP behavior, not a native S03 claim.
+        target=self.root/'pending'/'receipt.json'
+        original_lstat=g.os.lstat
+        for blocked in (self.root/'pending',target):
+            for failure in (PermissionError(13,'denied'),
+                            OSError(40,'symlink loop')):
+                with self.subTest(blocked=str(blocked),errno=failure.errno):
+                    def deny(path,*args,**kwargs):
+                        if Path(path)==blocked:raise failure
+                        return original_lstat(path,*args,**kwargs)
+                    with patch.object(g.os,'lstat',side_effect=deny):
+                        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_PATH_UNREADABLE'):
+                            g.plain(target)
+        # Absent destinations remain legal for atomic creation.
+        self.assertEqual(g.plain(target),target)
+        dangling=self.root/'dangling_parent'
+        dangling.symlink_to(self.root/'no-target',target_is_directory=True)
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_SYMLINK'):
+            g.plain(dangling/'receipt.json')
+
     def test_no_fifo_or_symlink_database_and_source_patch_is_pinned(self):
         import os
         fifo=self.root/'fifo';os.mkfifo(fifo)
