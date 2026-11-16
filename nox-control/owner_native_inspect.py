@@ -87,7 +87,7 @@ def processes():
         try:
             argv=(p/'cmdline').read_bytes().decode(errors='replace').strip('\0').split('\0')
             if not argv or not argv[0]: continue
-            stat=(p/'stat').read_text().split(') ',1)[1].split()
+            stat=(p/'stat').read_text().rsplit(') ',1)[1].split()
             env=dict(x.split('=',1) for x in (p/'environ').read_bytes().decode(errors='replace').split('\0') if '=' in x)
             status=(p/'status').read_text()
             row={'pid':int(p.name),'ppid':int(stat[1]),'state':stat[0],'starttime':stat[19], 'exe':os.path.basename(argv[0]),
