@@ -293,7 +293,7 @@ def run() -> None:
             raise RuntimeError('HOLD_SSH_OR_AGE_STREAM')
         with FINAL.open('rb') as source:
             ciphertext=source.read(MAX_CIPHERTEXT_BYTES+1)
-        if not 0<ciphertext.__len__()<=MAX_CIPHERTEXT_BYTES:
+        if not 0<len(ciphertext)<=MAX_CIPHERTEXT_BYTES:
             raise RuntimeError('HOLD_CIPHERTEXT_SIZE')
         outer_buffer=io.BytesIO()
         with zipfile.ZipFile(outer_buffer,'w',compression=zipfile.ZIP_STORED) as bundle:
