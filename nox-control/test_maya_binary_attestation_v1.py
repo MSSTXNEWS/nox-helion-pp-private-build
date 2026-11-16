@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -68,6 +69,33 @@ class MayaBinaryAttestationTests(unittest.TestCase):
         binary, sha = self.fixture()
         got, _ = self.invoke(binary, sha, elf_report="ELF file 1: sm_120\n")
         self.assertEqual(got["state"], "HOLD_MAYA_SM70_ELF_MISSING")
+
+    def test_symlink_binary_path_holds(self):
+        binary, sha = self.fixture()
+        link = binary.parent / "maya-link"
+        link.symlink_to(binary)
+        with patch.object(attestation, "PINNED_BINARY_SHA256", sha), \
+             patch.object(attestation.subprocess, "run") as run:
+            got = attestation.attest_maya_binary(link, sha)
+        self.assertEqual(got["state"], "HOLD_MAYA_BINARY_PATH_SYMLINK")
+        run.assert_not_called()
+
+    def test_path_replaced_after_sha_during_elf_inspection_holds(self):
+        binary, sha = self.fixture()
+        replacement = binary.parent / "replacement"
+        replacement.write_bytes(b"replacement binary bytes")
+        result = subprocess.CompletedProcess(
+            args=["cuobjdump", "--list-elf", str(binary)],
+            returncode=0, stdout="ELF file 1: sm_70\\n", stderr="",
+        )
+        def swap_during_inspection(*args, **kwargs):
+            os.replace(replacement, binary)
+            return result
+        with patch.object(attestation, "PINNED_BINARY_SHA256", sha), \
+             patch.object(attestation.shutil, "which", return_value="/fake/cuobjdump"), \
+             patch.object(attestation.subprocess, "run", side_effect=swap_during_inspection):
+            got = attestation.attest_maya_binary(binary, sha)
+        self.assertEqual(got["state"], "HOLD_MAYA_BINARY_CHANGED_AFTER_HASH")
 
     def test_sha_mismatch_holds_before_build_metadata(self):
         binary, sha = self.fixture()
