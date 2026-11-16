@@ -10,6 +10,7 @@ import ast
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -265,9 +266,22 @@ def reserve_incident(incident):
     fd = os.open(lockpath, os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     with _THREAD_LOCK, os.fdopen(fd, 'r+') as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
-        old = read_json(path) or {}
-        attempts = int(old.get('attempts') or 0)
-        if attempts >= 2 or time.time() - float(old.get('last_attempt') or 0) < 300:
+        old = read_json(path)
+        # A missing record starts a new budget; a corrupt, replaced or
+        # unreadable existing record MUST NOT reset a spent recovery budget.
+        if old is None:
+            if path.exists() or path.is_symlink():
+                return False
+            attempts, last_attempt = 0, 0.0
+        else:
+            if (type(old) is not dict or old.get('incident') != incident
+                    or type(old.get('attempts')) is not int or old['attempts'] < 0
+                    or type(old.get('last_attempt')) not in (int, float)
+                    or not math.isfinite(old['last_attempt'])
+                    or old['last_attempt'] < 0 or old['last_attempt'] > time.time() + 60):
+                return False
+            attempts, last_attempt = old['attempts'], old['last_attempt']
+        if attempts >= 2 or time.time() - last_attempt < 300:
             return False
         atomic_json(path, {'incident': incident, 'attempts': attempts + 1, 'last_attempt': time.time()})
         return True
