@@ -206,7 +206,10 @@ def _maya_server_config(route):
         engine_raw,engine_meta=_maya_read_file(engine,256*1024*1024)
         if hashlib.sha256(engine_raw).hexdigest()!=MAYA_ENGINE_SHA256:
             raise ValueError('engine')
-        if config.get('gpu') not in (None,[0,1]) or config.get('port',8080)!=8080:
+        configured_cwd=config.get('cwd')
+        if (config.get('gpu') not in (None,[0,1]) or config.get('port',8080)!=8080
+                or (configured_cwd is not None
+                    and Path(configured_cwd).resolve()!=Path(route['manager_cwd']).resolve())):
             raise ValueError('runtime')
     except (OSError,ValueError,TypeError,AttributeError,IndexError,StreamFailure):
         raise StreamFailure('HOLD_MAYA_RUNTIME_PIN') from None
