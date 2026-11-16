@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_WEB_ONE_FINAL_V7_ARTIFACT_RECORDED",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-17",
+  "name": "NOX_HELION_WEB_ONE_FINAL_20261117.zip",
+  "bytes": 112293974,
+  "sha256": "e29ff220be8725d5f24c6adcc18cae7ff1d0ca5f0cdc2f201980f7d2d6c9f5c3",
+  "zip_members": 1320,
+  "crc_pass": true,
+  "library_path": "/NOX HELION EXPRESS INTEGRATOR/NOX_HELION_WEB_ONE_FINAL_20261117.zip",
+  "library_file_id": "libfile_9b9a527229d48191acbf8eab6553921b",
+  "google_drive_folder": "https://drive.google.com/drive/folders/1TYHLIagxtKX6_Si_i0V6_HIykla65Hcj",
+  "google_drive_transport_parts": 6,
+  "drive_readback_all_parts_sha_pass": true,
+  "additions": [
+    "WOW STUDIO ADDON full source exact SHA",
+    "V6 visual controls",
+    "V7 12 atmosphere scene selector and direct no-dropdown navigation",
+    "18 unique V9 recovery source files",
+    "19 V29.5 RU/ES voice S03 Windows native source files",
+    "motion100 assets",
+    "5-world 6-palettes and original 2K D02 materials",
+    "Resonance media UI"
+  ],
+  "preserved": [
+    "S03 and weights unchanged",
+    "no duplicate backend",
+    "current native OneHost not deployed",
+    "older active site source paths preserved"
+  ],
+  "deliberate_non_adoptions": [
+    "V7 reduced 1K material downgrade",
+    "V7 removed strict S03 done verification",
+    "V7 removed WOW JSON export and motion toggle"
+  ],
+  "cleanup": {
+    "drive_old_files_deleted": 40,
+    "library_old_zip_deleted": 3,
+    "unused_rollback_folder_deleted": true
+  },
+  "tests": {
+    "zip_crc": "PASS",
+    "source_sha": "PASS",
+    "google_drive_part_readback": "PASS",
+    "live_gpu_inference": "NOT_RUN",
+    "browser_native_e2e": "NOT_RUN"
+  },
+  "github_source_pr": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/363",
+  "scope": "archived build and provenance; PR source tree is not complete artifact mirror"
+}
