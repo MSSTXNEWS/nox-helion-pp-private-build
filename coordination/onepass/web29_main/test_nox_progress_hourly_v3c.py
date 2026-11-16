@@ -3,6 +3,10 @@ import json
 import sqlite3
 import tempfile
 import unittest
+import asyncio
+import sys
+import types
+from unittest.mock import patch
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -70,5 +74,51 @@ class S03HoursTest(unittest.TestCase):
     self.j.snapshot(OWNER,NOW,4)
     with sqlite3.connect(self.path) as db:
       self.assertEqual(db.execute('SELECT count(*) FROM nox_evolution_hours').fetchone()[0],0)
+
+  def _owner_route(self, auth, scope, deny):
+    # Exercise the existing FastAPI mount without installing a second service
+    # or requiring FastAPI on an otherwise pure SQLite CI runner.
+    fake=types.ModuleType('fastapi')
+    fake.Request=type('FakeRequest',(object,),{})
+    responses=types.ModuleType('fastapi.responses')
+    class FakeJSONResponse:
+      def __init__(self,data,status_code=200,headers=None):
+        self.status_code=status_code
+        self.body=json.dumps(data).encode('utf-8')
+    responses.JSONResponse=FakeJSONResponse
+    class App:
+      def __init__(self):self.routes=[]
+      def add_api_route(self,path,endpoint,methods):
+        self.routes.append(types.SimpleNamespace(path=path))
+        self.endpoint=endpoint
+    app=App()
+    with patch.dict(sys.modules,{'fastapi':fake,'fastapi.responses':responses}):
+      mod.register_progress(app,{'_session_ok':auth,'_unauthorized':deny,'progress_owner_scope':scope},self.j)
+    return app.endpoint
+
+  def test_async_false_owner_auth_fails_closed_before_readback(self):
+    async def denied(_):return False
+    async def owner(_):raise AssertionError('Owner scope must not be read after denial')
+    async def deny():return types.SimpleNamespace(status_code=401)
+    endpoint=self._owner_route(denied,owner,deny)
+    response=asyncio.run(endpoint(types.SimpleNamespace(query_params={'hours':'2'})))
+    self.assertEqual(response.status_code,401)
+
+  def test_async_true_owner_scope_uses_existing_s03(self):
+    async def allowed(_):return True
+    async def owner(_):return OWNER
+    endpoint=self._owner_route(allowed,owner,lambda:types.SimpleNamespace(status_code=401))
+    response=asyncio.run(endpoint(types.SimpleNamespace(query_params={'hours':'2'})))
+    self.assertEqual(response.status_code,200)
+    self.assertEqual(json.loads(response.body)['schema'],mod.SCHEMA)
+    self.assertEqual(json.loads(response.body)['hourly_readback']['persisted_verified'],0)
+
+  def test_truthy_nonboolean_or_auth_error_is_never_permission(self):
+    async def owner(_):raise AssertionError('Owner scope must not be read after denial')
+    async def broken(_):raise RuntimeError('owner session unavailable')
+    request=types.SimpleNamespace(query_params={'hours':'2'})
+    for invalid in (lambda _:{'ok':True},lambda _:'yes',broken):
+      endpoint=self._owner_route(invalid,owner,lambda:types.SimpleNamespace(status_code=401))
+      self.assertEqual(asyncio.run(endpoint(request)).status_code,401)
 
 if __name__=='__main__':unittest.main(verbosity=2)
