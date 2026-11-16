@@ -106,12 +106,13 @@ class V112Tests(unittest.TestCase):
                     # Incremental UTF-8 decoder must be finalized at EOF.
                     yield b'\xe2\x82'
             return StreamingResponse(chunks(),media_type='text/event-stream')
-        register_native_v29_chat(self.app,{
+        self.trusted={
           '_session_ok':lambda request:request.cookies.get('owner')=='yes',
           '_unauthorized':lambda:JSONResponse({'error':'AUTH'},status_code=401),
           '_proxy_completion':native,
           'nox_status':old_status,
-        },site_dir=self.site)
+        }
+        register_native_v29_chat(self.app,self.trusted,site_dir=self.site)
         self.client=TestClient(self.app)
         self.addCleanup(self.client.close)
         self.cookie={'owner':'yes'}
@@ -198,7 +199,7 @@ class V112Tests(unittest.TestCase):
             self.assertEqual(r.status_code,401,url)
         self.assertEqual(self.calls,[])
 
-    def test_source_status_is_augmented_not_faked(self):
+    def test_source_status_separates_s03_table_from_semantic_recall(self):
         r=self.client.get('/api/nox/status',cookies=self.cookie)
         self.assertEqual(r.status_code,200)
         data=r.json()
@@ -206,10 +207,20 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(data['primary_model'],'NOX PRIME 8B')
         self.assertEqual(data['backend'],'EXISTING_NATIVE_ONEHOST')
         self.assertTrue(data['native_p02_bound'])
-        self.assertTrue(data['native_cognitive_memory_bound'])
+        # Fixture DB contains s03_items, but no semantic recall callback is wired.
+        self.assertTrue(data['native_s03_table_available'])
+        self.assertFalse(data['native_semantic_retrieval_bound'])
+        self.assertFalse(data['native_cognitive_memory_bound'])
         self.assertTrue(data['native_dialogs_ready'])
         self.assertTrue(self.client.get('/api/ui/memory/dialogs/status',cookies=self.cookie)
                         .json()['persistent_threads'])
+
+        # A trusted semantic retrieval callback is reported only after it is wired.
+        self.trusted['_s03_recall']=lambda **kwargs:[]
+        wired=self.client.get('/api/nox/status',cookies=self.cookie).json()
+        self.assertTrue(wired['native_s03_table_available'])
+        self.assertTrue(wired['native_semantic_retrieval_bound'])
+        self.assertTrue(wired['native_cognitive_memory_bound'])
 
     def test_stream_s03_and_owner_thread_roundtrip(self):
         create=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
