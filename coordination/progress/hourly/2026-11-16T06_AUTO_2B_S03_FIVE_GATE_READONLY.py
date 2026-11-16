@@ -99,13 +99,14 @@ def inspect(path: Path, *, fixture=False):
             # Row-count equality is not sufficient: an orphan and a missing row cancel.
             fts_bad = db.execute(
                 'SELECT count(*) FROM s03_items i LEFT JOIN s03_fts f ON f.id=i.id '
-                'WHERE f.id IS NULL OR f.text != i.text OR f.segment != i.segment'
+                'WHERE f.id IS NULL OR f.text IS NOT i.text OR f.segment IS NOT i.segment'
             ).fetchone()[0]
             fts_orphans = db.execute(
                 'SELECT count(*) FROM s03_fts f LEFT JOIN s03_items i ON i.id=f.id '
                 'WHERE i.id IS NULL'
             ).fetchone()[0]
             valid_shape = valid_hash = valid_both = vectors = 0
+            invalid_or_missing_model_ids = 0
             active_models = set()
             vector_orphans = 0
             total_vector_rows = (int(db.execute('SELECT count(*) FROM nox_s03_vectors').fetchone()[0])
@@ -120,17 +121,19 @@ def inspect(path: Path, *, fixture=False):
                     'SELECT i.text,v.content_sha256,v.model_identity,v.dimensions,length(v.embedding) '
                     'FROM nox_s03_vectors v JOIN s03_items i ON i.id=v.item_id LIMIT 20001'):
                     vectors += 1
-                    if isinstance(model, str) and model:
+                    model_id_valid = (isinstance(model, str) and len(model) == 64
+                                      and all(c in '0123456789abcdef' for c in model))
+                    invalid_or_missing_model_ids += int(not model_id_valid)
+                    if model_id_valid:
                         active_models.add(model)
                     shape_ok = dims == EXPECTED_VECTOR_DIM and blob_size == 4 * EXPECTED_VECTOR_DIM
                     hash_ok = isinstance(item_text, str) and hashlib.sha256(item_text.encode()).hexdigest() == content_sha
                     valid_shape += int(shape_ok)
                     valid_hash += int(hash_ok)
                     valid_both += int(shape_ok and hash_ok)
-            identity_ok = vector_scan_complete and len(active_models) == 1 and all(
-                len(model) == 64 and all(c in '0123456789abcdef' for c in model)
-                for model in active_models
-            )
+            identity_ok = (vector_scan_complete and vectors > 0
+                           and invalid_or_missing_model_ids == 0
+                           and len(active_models) == 1)
             complete = bool(
                 fts_ok and items > 0 and eligible > 0 and fts_rows == items
                 and fts_bad == 0 and fts_orphans == 0
@@ -149,7 +152,9 @@ def inspect(path: Path, *, fixture=False):
                                 observed_coverage_percent=(round(100 * valid_both / eligible, 2)
                                                            if eligible and vector_scan_complete else None),
                                 distinct_vector_model_ids=len(active_models),
-                                active_model_sha_identity_valid=identity_ok))
+                                invalid_or_missing_vector_model_ids=invalid_or_missing_model_ids,
+                                active_model_sha_identity_valid=identity_ok,
+                                native_embedding_model_artifact_verified=False))
             origins = db.execute('SELECT count(*) FROM nox_s03_origins').fetchone()[0] if 'nox_s03_origins' in names else 0
             imported = 0
             unscoped_imports = 0
@@ -214,6 +219,28 @@ def selftest():
         bad_fts = inspect(path, fixture=True)
         assert bad_fts[2]['fts_mismatched_or_missing'] == 1 and bad_fts[2]['state'] == 'HOLD'
         assert 'MISMATCH_SYNTHETIC' not in json.dumps(bad_fts)
+        # Synthetic regressions: SQL NULL mismatch and one missing model ID.
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE s03_fts SET text=NULL WHERE id=?', ('item',))
+        assert inspect(path, fixture=True)[2]['fts_mismatched_or_missing'] == 1
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE s03_fts SET text=?,segment=NULL WHERE id=?', (text, 'item'))
+        assert inspect(path, fixture=True)[2]['fts_mismatched_or_missing'] == 1
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE s03_fts SET segment=? WHERE id=?', ('M1', 'item'))
+            db.execute('UPDATE nox_s03_vectors SET model_identity=? WHERE item_id=?', ('a'*64, 'item'))
+            second = 'SECOND_PUBLIC_SYNTHETIC_FIXTURE'
+            db.execute('INSERT INTO s03_items VALUES (?,?,?,?,?,?,?,?)',
+                       ('second', 'M2', second, 'synthetic', 'a'*64, .5, '2026', '{}'))
+            db.execute('INSERT INTO s03_fts VALUES (?,?,?)', ('second', second, 'M2'))
+            db.execute('INSERT INTO nox_s03_vectors VALUES (?,?,?,?,?,?)',
+                       ('second', hashlib.sha256(second.encode()).hexdigest(), None,
+                        1024, bytes(4096), 0))
+        invalid_model = inspect(path, fixture=True)
+        assert invalid_model[2]['valid_shape_and_content'] == 2
+        assert invalid_model[2]['invalid_or_missing_vector_model_ids'] == 1
+        assert not invalid_model[2]['active_model_sha_identity_valid']
+        assert invalid_model[2]['state'] == 'HOLD'
         wal = path.with_name(path.name + '-wal')
         wal.write_bytes(b'SYNTHETIC_NO_REAL_S03')
         wal.chmod(0o644)
