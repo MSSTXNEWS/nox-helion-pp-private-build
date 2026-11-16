@@ -1,0 +1,166 @@
+{
+  "schema": "NOX_V13_PREPRODUCTION_DEPENDENCY_ADMISSION_V1",
+  "instructions_version": "0.0.6",
+  "scope": "Original Vast.ai #60509551 only; source/Drive metadata preparation, NOT native install or tested model inference",
+  "canonical_master": "coordination/NOX_PRIME_SIX_RELAY_20261115.md#16-owner-v13-full-offline-integration-and-drive-reuse-before-production-restart",
+  "preservation": [
+    "Owner MODEL_UPDATE STOP",
+    "S03/Genesis/history/skills/ACL",
+    "unique weights/checkpoints/optimizer/scaler/RNG",
+    "original UI/D02/14 worlds",
+    "rollback before deletion"
+  ],
+  "verification": {
+    "source": "Drive connector folder metadata and JSON SHA manifests; GitHub source preimages",
+    "archive_payloads_rehashed_this_run": false,
+    "ssd_seekable_native_verified": false,
+    "owner_stop_lease_fresh": false,
+    "independent_s03_restore": false,
+    "native_python_gpu_import_sm70": false
+  },
+  "requirements": {
+    "D1": {
+      "kind": "REQUIRED",
+      "model": "DeepSeek-V4.1-Flash-1017 GSQ-RCO IQ2_XXS",
+      "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+      "total_unique_bytes": 248834257920,
+      "missing_unique_expected_bytes": 248828477216,
+      "part_sizes": [
+        5780704,
+        39535781184,
+        39736712000,
+        39036908384,
+        19923784832,
+        110595290816
+      ],
+      "engram_copies": 1,
+      "full_sha_validation_native": "HOLD",
+      "seekable_placement_native": "HOLD"
+    },
+    "D2": {
+      "kind": "REUSE",
+      "folder": "https://drive.google.com/drive/folders/1bTf6pYSghj6rG7KslA34Vjqkc3OakVb2",
+      "source_parts_manifest": "https://drive.google.com/file/d/1h479rBz2iQwAzfmEyfSNAFAct2J6B0kg/view",
+      "archive_bytes": 331718151,
+      "archive_expected_sha256": "e1a48952fafbd8c7a0a64deb4ea645fd328b5d726c0317e1d2d323f4198c8290",
+      "parts_count": 4,
+      "drive_metadata_sizes_matched": 4,
+      "payload_digest_this_run": "NOT_CHECKED",
+      "native_presence": "UNKNOWN"
+    },
+    "D3": {
+      "kind": "CONDITIONAL_ABI_GATED",
+      "folder": "https://drive.google.com/drive/folders/1q1qR71IiOU7LsGAYjPiIbYAN5PrffDNX",
+      "source_parts_manifest": "https://drive.google.com/file/d/1oxmS0ZiboacyGmHG_OJ49FyoouNVjGRf/view",
+      "archive_bytes": 3831295823,
+      "archive_expected_sha256": "7f1b932f38df0872ee21e009eb8f3005da5eb99b662a372dcb389e8d4e056b95",
+      "parts_count": 39,
+      "drive_metadata_sizes_matched": 39,
+      "abi": "CP311_LINUX_CU126",
+      "historical_existing_native_abi": "PY312_CU124_SM70",
+      "admission": "HOLD_ISOLATED_ABI_AND_SM70_SMOKE",
+      "payload_digest_this_run": "NOT_CHECKED"
+    },
+    "D4": {
+      "kind": "REUSE_IF_HASH_VERIFIED",
+      "maya_historical_binary_bytes": 71289520,
+      "full_binary_sha_native_this_run": null,
+      "current_build": "UNKNOWN",
+      "real_TP2_inference": "HOLD"
+    },
+    "D5": {
+      "kind": "CONDITIONAL",
+      "s03_no_second_database": true,
+      "bge_presence_native": "UNKNOWN",
+      "independent_restore": "HOLD"
+    },
+    "D6": {
+      "kind": "REUSE_BEFORE_DOWNLOAD",
+      "assets": [
+        [
+          "SDXL Lightning 4step",
+          6938040682,
+          "e0d996ee0013e79d9d3561f50fcafb9a17e3ff07b780358e3b66d67932c4d490"
+        ],
+        [
+          "Wan2.1 T2V1.3B",
+          2838303560,
+          "be531024cd9018cb5b48c40cfbb6a6191645b1c792eb8bf4f8c1c6e10f924dc5"
+        ],
+        [
+          "UMT5",
+          6735906897,
+          "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68"
+        ],
+        [
+          "Wan VAE",
+          253815318,
+          "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b"
+        ]
+      ],
+      "historical_total_bytes": 16766066457,
+      "current_native_hashes": "UNKNOWN"
+    },
+    "D7": {
+      "kind": "CONDITIONAL",
+      "source_audit_file": "nox-control/owner_native_audit.py",
+      "source_blob": "934576036c598ca8167739d7f7cb2c55392fcb88",
+      "test_file": "nox-control/test_owner_native_audit_model_paths.py",
+      "test_blob": "46bea3b75e8d81ae883010d13dbff28c46e3065c",
+      "patch_commits": [
+        "4f07be149ad47ba75b120968acda206515baa0dc",
+        "9245b62e5d64ffb2159781c6703c0b874f018e47"
+      ],
+      "scope": "Source fail-closed CP311/cu126 wheelhouse admission vs installed ABI; adds original Volta interpreter to audit and metadata-only media deps; no package installation",
+      "native_smoke": "HOLD"
+    },
+    "D8": {
+      "kind": "DEFERRED",
+      "items": [
+        "Old Qwen training",
+        "unapproved LoRA merge",
+        "teacher downloads",
+        "new backend/scheduler",
+        "EXE"
+      ]
+    }
+  },
+  "task_outcomes": [
+    {
+      "task_id": "V13-01",
+      "status": "HOLD_NATIVE",
+      "reason": "No fresh owner STOP/lease, dual PID/start ticks + GPU readback"
+    },
+    {
+      "task_id": "V13-02",
+      "status": "HOLD_NATIVE",
+      "reason": "Independent S03/checkpoint+optimizer/scaler/RNG restore not verified"
+    },
+    {
+      "task_id": "V13-03",
+      "status": "SOURCE_METADATA_VERIFIED",
+      "reason": "Drive parts 4/4 +39/39 names/sizes match pinned manifest; content SHA not rehashed"
+    },
+    {
+      "task_id": "V13-04",
+      "status": "SOURCE_PATCHED",
+      "reason": "ABI guard changed in existing native audit; 5 regression test cases saved; native install HOLD"
+    },
+    {
+      "task_id": "V13-10",
+      "status": "SOURCE_PREP_MANIFEST",
+      "reason": "One consolidated reuse and compatibility inventory, no server actions"
+    }
+  ],
+  "native_effects": {
+    "installed": false,
+    "restarts": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "new_optimizer_updates": 0,
+    "live_model_identity": "UNKNOWN",
+    "native_claim_ids": []
+  },
+  "next": "Owner-native read-only STOP/lease + independent restore; approved >=248834257920B+reserve seekable storage, then isolated Python/GPU SM70 smoke before original OneHost CUTOVER.",
+  "head_at_preparation": "bf8fad7bd57dd1c635349bdbfe755b4b1a97c3f2"
+}
