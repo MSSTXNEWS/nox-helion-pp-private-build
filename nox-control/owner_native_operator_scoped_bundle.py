@@ -253,6 +253,9 @@ def run_native(action,request_id):
                      'nox-control/owner_media_inbox_fair_entry.py',
                      'nox-control/owner_qwen_handback_retry.py',
                      'nox-control/owner_subagent_instruction_truth.py',
+                     'nox-control/deepseek_owner_range_v10.py',
+                     'nox-control/deepseek_owner_range_mount_v10.py',
+                     'nox-control/deepseek_v41_download_manifest.json',
                      'coordination/NOX_STORAGE_STREAMING_20261115/download_manifest.json')):
             p=Path(path)
             if p.is_file():assets[p.name]=base64.b64encode(p.read_bytes()).decode('ascii')
