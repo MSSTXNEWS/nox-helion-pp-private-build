@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01'){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[]){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -25,7 +25,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       onHistory?.();
       return Response.json({status:'READY',dialog_id:id,messages:[
         {role:'user',exchange_id:historyExchangeId,content:prompt,ts:'2026-11-15T00:00:00Z'},
-        {role:'assistant',exchange_id:historyExchangeId,content:reply,ts:'2026-11-15T00:00:01Z'}]});
+        {role:'assistant',exchange_id:historyExchangeId,content:reply,ts:'2026-11-15T00:00:01Z'}, ...historyTail]});
     }
     if(u.pathname==='/api/ui/memory/dialogs/update'){
       const b=JSON.parse(opts.body);
@@ -730,6 +730,44 @@ test('V164 S03 readback must bind BOTH saved rows to the native receipt exchange
     assert(frames.some(x=>x.type==='error'&&/HOLD_DIALOG_HISTORY_READBACK/.test(x.error)));
     assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
     assert(!f.calls.some(x=>x.path==='/api/nox/stop'),'do not send global STOP');
+  }
+});
+
+test('V166 exact S03 receipt survives newer independent rows in the same dialog',async()=>{
+  // Concurrent owner requests can finish after this exchange is persisted.
+  // Readback must search bounded history for the exact exchange_id; never
+  // accept a different exchange, even with identical prompt and answer.
+  const newer=[
+    {role:'user',exchange_id:'newer-exchange-02',content:'Другой вопрос'},
+    {role:'assistant',exchange_id:'newer-exchange-02',content:'Другой ответ'}
+  ];
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,'verified-exchange-01',newer);
+  const json=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt})});
+  assert.equal(json.status,200,'a verified earlier exchange remains persisted');
+  assert.equal((await json.json()).history_persisted,true);
+  const stream=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v166-concurrent-01'})});
+  const frames=await events(stream);
+  assert.equal(frames.filter(e=>e.type==='done').length,1);
+  assert.equal(frames.at(-1).history_persisted,true);
+  assert(f.calls.filter(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')).length>=2);
+});
+
+test('V166 duplicate receipt rows and stale exchange still fail closed',async()=>{
+  for(const badTail of [
+    [{role:'user',exchange_id:'verified-exchange-01',content:'Forged duplicate'}],
+    [{role:'assistant',exchange_id:'verified-exchange-01',content:'Forged duplicate'}]
+  ]){
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+      undefined,false,5,undefined,'verified-exchange-01',badTail);
+    const r=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt})});
+    assert.equal(r.status,503,'duplicate receipt ID cannot prove unique S03 write');
+    const j=await r.json();
+    assert.equal(j.history_persisted,false);
+    assert.match(j.error,/HOLD_DIALOG_HISTORY_READBACK/);
   }
 });
 
