@@ -199,6 +199,10 @@ def supervise(name, command="status"):
     match = STATUS.match(first[0]) if len(first) == 1 else None
     if p.returncode != 0 or not match or match[1] != name:
         return {"state": "UNKNOWN", "pid": None, "rc": p.returncode}
+    # Malformed PID evidence may not become a repairable STOPPED/EXITED row.
+    # Keep legitimate Supervisor "Not started" and ", uptime" text intact.
+    if match[3] is None and re.search(r"\bpid\b", first[0][match.end():], re.IGNORECASE):
+        return {"state": "UNKNOWN", "pid": None, "rc": p.returncode}
     state = match[2]
     pid = int(match[3]) if match[3] else None
     if state == "RUNNING" and not pid:
