@@ -104,7 +104,7 @@ class V13OwnerFenceMetadataTests(unittest.TestCase):
         observed=audit.v13_owner_fence_metadata(
             root=Path('/fixture/nox'), workspace_stop=Path('/fixture/workspace/NOX_STOP'),
             lstat=metadata_only)
-        self.assertEqual(len(seen),10)
+        self.assertEqual(len(seen),11)
         self.assertFalse(observed['may_start_nox'])
         self.assertFalse(observed['may_write_native'])
         self.assertFalse(observed['may_clear_stop'])
@@ -125,6 +125,15 @@ class V13OwnerFenceMetadataTests(unittest.TestCase):
         got=self.sample(present=('/state/TRAIN_HOLD.flag',))
         self.assertEqual(got['train_hold_state'],'PRESENT')
         self.assertEqual(got['owner_stop_state'],'NOT_OBSERVED_NOT_AUTHORIZED')
+
+    def test_state_stop_flag_independently_fences_and_unreadable_is_unknown(self):
+        active = self.sample(present=('/state/STOP.flag',))
+        self.assertEqual(active['markers']['STATE_STOP_FLAG'], 'PRESENT')
+        self.assertEqual(active['owner_stop_state'], 'PRESENT')
+        self.assertEqual(active['markers']['STATE_STOP'], 'NOT_FOUND_AT_SNAPSHOT')
+        unreadable = self.sample(denied=('/state/STOP.flag',))
+        self.assertEqual(unreadable['markers']['STATE_STOP_FLAG'], 'UNKNOWN_UNREADABLE')
+        self.assertEqual(unreadable['owner_stop_state'], 'UNKNOWN')
 
     def test_unreadable_stop_never_becomes_absent_or_authorized(self):
         got=self.sample(denied=('/state/STOP',))
