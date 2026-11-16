@@ -26,6 +26,7 @@ ROOT = Path('/root/nox')
 HOME_ROOT = Path('/root')
 SHM = Path('/dev/shm')
 PROC = Path('/proc')
+MOUNTINFO_OVERRIDE = None
 CGROUP = Path('/sys/fs/cgroup')
 GIB = 1024 ** 3
 SCHEMA = 'NOX_OWNER_STORAGE_RECLAIM_V1'
@@ -91,6 +92,46 @@ def bounded_bytes(path, maximum=262144):
     if len(raw) > maximum:
         raise StorageHold('HOLD_STORAGE_FILE_SCOPE')
     return raw
+
+
+def read_mount_table():
+    """Read mount IDs and mountpoints, failing closed if containment is unknown."""
+    source = MOUNTINFO_OVERRIDE or (Path('/proc') / str(os.getpid()) / 'mountinfo')
+    try:
+        raw = bounded_bytes(source, 8 * 1024 * 1024).decode('utf-8')
+        rows = []
+        for line in raw.splitlines():
+            fields = line.split()
+            if len(fields) < 6 or not fields[0].isdigit():
+                raise ValueError('invalid mountinfo row')
+            point = re.sub(r'\\([0-7]{3})', lambda match: chr(int(match.group(1), 8)), fields[4])
+            mountpoint = Path(point)
+            if not mountpoint.is_absolute() or '..' in mountpoint.parts:
+                raise ValueError('invalid mountpoint')
+            rows.append((int(fields[0]), mountpoint))
+        if not rows:
+            raise ValueError('empty mount table')
+        return rows
+    except (OSError, UnicodeError, ValueError, StorageHold) as exc:
+        raise StorageHold('HOLD_STORAGE_MOUNT_TABLE_UNAVAILABLE') from exc
+
+
+def mount_id_for(path, mounts):
+    """Return the most-specific Linux mount ID containing an absolute path."""
+    target = Path(os.path.abspath(os.fspath(path)))
+    matches = [(len(point.parts), mount_id) for mount_id, point in mounts
+               if target == point or target.is_relative_to(point)]
+    if not matches:
+        raise StorageHold('HOLD_STORAGE_MOUNT_ID_UNKNOWN')
+    return max(matches)[1]
+
+
+def mountpoint_ids(mounts):
+    """Map visible mountpoints to their newest ID for bounded tree traversal."""
+    result = {}
+    for mount_id, point in mounts:
+        result[point] = max(mount_id, result.get(point, mount_id))
+    return result
 
 
 def optional_json(path, maximum=262144):
@@ -322,11 +363,16 @@ def teacher_candidate_review(path, info=None, usage=None, observation_error=None
 
 
 def deletion_kind(path):
-    """A closed allowlist, not a general filesystem cleanup predicate."""
+    """Allow only regenerable caches under the exact configured pip cache root."""
     path = Path(path)
+    if not path.is_absolute() or '..' in path.parts:
+        return None
+    normalized = Path(os.path.abspath(os.fspath(path)))
+    if normalized != path:
+        return None
     # Exact legacy teacher paths stay denied even if a future generic allowlist,
     # suffix set, or backup-registration flag changes.
-    if os.path.abspath(os.fspath(path)) in LEGACY_TEACHERS:
+    if os.fspath(path) in LEGACY_TEACHERS:
         return None
     if path.suffix.lower() in WEIGHT_SUFFIX or PARTIAL.search(path.name):
         return None
@@ -335,21 +381,33 @@ def deletion_kind(path):
         return None
     pip_root = HOME_ROOT / '.cache/pip'
     if path.is_relative_to(pip_root):
+        # Do not classify an entry reached through any symlinked component.
+        try:
+            plain(path)
+        except (OSError, StorageHold):
+            return None
         relative = path.relative_to(pip_root)
         if relative.parts and relative.parts[0] in ('http', 'http-v2') and re.fullmatch(r'[0-9a-f]{40,64}(?:\.body)?', path.name):
             return 'PIP_DOWNLOAD_CACHE', 86400
         if relative.parts and relative.parts[0] == 'wheels' and path.suffix == '.whl':
             return 'PIP_WHEEL_CACHE', 86400
         return None
-    # Non-cache logs and core dumps can contain unique user or diagnostic data.
-    # Without trusted full-file backup/restore evidence, keep them out of RECLAIM.
     return None
 
 
-def qualify(path, info, now, usage):
+def qualify(path, info, now, usage, mounts=None):
     kind = deletion_kind(path)
     if kind is None:
         return None, 'PROTECTED_OR_NOT_ALLOWLISTED'
+    try:
+        mounts = mounts if mounts is not None else read_mount_table()
+        pip_root = HOME_ROOT / '.cache/pip'
+        root_mount_id = mount_id_for(pip_root, mounts)
+        path_mount_id = mount_id_for(path, mounts)
+    except StorageHold:
+        return None, 'MOUNT_TABLE_UNAVAILABLE'
+    if path_mount_id != root_mount_id:
+        return None, 'MOUNT_ESCAPE'
     if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.geteuid()
             or info.st_blocks * 512 < 1024 * 1024):
         return None, 'OWNERSHIP_LINK_TYPE_OR_SMALL_FILE'
@@ -372,7 +430,8 @@ def qualify(path, info, now, usage):
         return None, 'MODEL_OR_SERIALIZED_STATE_HEADER'
     return {'path': str(path), 'category': kind[0], 'minimum_age_seconds': kind[1],
             'identity': identity(info), 'allocated_bytes': info.st_blocks * 512,
-            'prefix_sha256': digest_bytes(head), 'path_id': digest_bytes(str(path).encode())[:20]}, None
+            'prefix_sha256': digest_bytes(head), 'mount_id': path_mount_id,
+            'path_id': digest_bytes(str(path).encode())[:20]}, None
 
 
 def filesystem_budget():
@@ -414,6 +473,8 @@ def audit(request, source):
     started = time.time()
     end = time.monotonic() + AUDIT_SECONDS
     usage = process_usage(min(end, time.monotonic() + 5))
+    mounts = read_mount_table()
+    mounted_ids = mountpoint_ids(mounts)
     groups = defaultdict(lambda: Counter(files=0, unique_inodes=0, unique_logical_bytes=0, unique_allocated_bytes=0, repeated_inode_paths=0))
     seen, candidates, possible_copies = set(), [], defaultdict(set)
     counts, refusals = Counter(), Counter()
@@ -432,6 +493,7 @@ def audit(request, source):
             initial = root.stat()
             if not stat.S_ISDIR(initial.st_mode):
                 row['state'] = 'NOT_DIRECTORY'; continue
+            root_mount_id = mount_id_for(root, mounts)
         except FileNotFoundError:
             row['state'] = 'ABSENT'; continue
         except (OSError, StorageHold):
@@ -459,6 +521,9 @@ def audit(request, source):
                                 continue
                             if info.st_dev != initial.st_dev:
                                 counts['other_mounts_not_crossed'] += 1; continue
+                            mounted_id = mounted_ids.get(Path(os.path.abspath(path)))
+                            if mounted_id is not None and mounted_id != root_mount_id:
+                                counts['other_mounts_not_crossed'] += 1; continue
                             if stat.S_ISDIR(info.st_mode):
                                 if depth >= 18:
                                     row['complete'] = False
@@ -482,7 +547,7 @@ def audit(request, source):
                             group['unique_allocated_bytes'] += info.st_blocks * 512
                             if info.st_size >= 8 * 1024 * 1024 and len(possible_copies) < 4096:
                                 possible_copies[(path.name, info.st_size)].add(key)
-                            candidate, reason = qualify(path, info, now, usage)
+                            candidate, reason = qualify(path, info, now, usage, mounts)
                             if candidate is not None:
                                 candidates.append(candidate)
                                 if len(candidates) > MAX_CANDIDATES * 2:
@@ -615,6 +680,13 @@ def reclaim_candidate(candidate, deadline):
     path = Path(candidate.get('path', ''))
     if deletion_kind(path) is None:
         raise StorageHold('HOLD_STORAGE_PROTECTED_TARGET')
+    mounts = read_mount_table()
+    pip_root = HOME_ROOT / '.cache/pip'
+    candidate_mount_id = candidate.get('mount_id')
+    if (not isinstance(candidate_mount_id, int)
+            or candidate_mount_id != mount_id_for(path, mounts)
+            or candidate_mount_id != mount_id_for(pip_root, mounts)):
+        raise StorageHold('HOLD_STORAGE_MOUNT_ESCAPE_OR_CHANGED')
     parent_fd = open_parent(path)
     fd = None
     quarantine_name = None
@@ -622,6 +694,12 @@ def reclaim_candidate(candidate, deadline):
     staged = False
     entry_name = 'candidate'
     try:
+        # Re-read after opening the parent: a mount inserted between admission
+        # and openat must not redirect this dirfd to an unapproved cache subtree.
+        mounts = read_mount_table()
+        if (candidate_mount_id != mount_id_for(path, mounts)
+                or candidate_mount_id != mount_id_for(pip_root, mounts)):
+            raise StorageHold('HOLD_STORAGE_MOUNT_ESCAPE_OR_CHANGED')
         info = os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
         if identity(info) != candidate.get('identity') or not stat.S_ISREG(info.st_mode):
             raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
@@ -633,7 +711,7 @@ def reclaim_candidate(candidate, deadline):
         if digest_bytes(head) != candidate.get('prefix_sha256'):
             raise StorageHold('HOLD_STORAGE_PREFIX_CHANGED')
         usage = process_usage(min(deadline, time.monotonic() + 4), ignore_fd=(os.getpid(), str(fd)))
-        fresh, reason = qualify(path, info, time.time(), usage)
+        fresh, reason = qualify(path, info, time.time(), usage, mounts)
         if fresh is None or fresh['identity'] != candidate['identity'] or fresh['category'] != candidate['category']:
             raise StorageHold('HOLD_STORAGE_' + str(reason or 'CANDIDATE_CHANGED'))
         if time.monotonic() > deadline:
