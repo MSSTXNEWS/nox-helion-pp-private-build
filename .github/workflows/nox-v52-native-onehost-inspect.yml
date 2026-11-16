@@ -1,7 +1,7 @@
 name: NOX V52 native OneHost/S03/WEB read-only audit
 on:
   push:
-    branches: [feature/nox-v38-synaptic-brain-20261114]
+    branches: [feature/nox-v38-synaptic-brain-20261114, task/nox-20261116-02m-v52-path-stat]
     paths:
       - ".github/workflows/nox-v52-native-onehost-inspect.yml"
       - "nox-control/test_v52_exact_model_path_workflow_contract.py"
