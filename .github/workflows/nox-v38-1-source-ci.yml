@@ -1,0 +1,30 @@
+name: NOX V38.1 source acceptance
+on:
+  push:
+    branches:
+      - feature/nox-v38-synaptic-brain-20261114
+  pull_request:
+    paths:
+      - "nox_runpod/teacher_mesh/v38/**"
+      - "nox_runpod/teacher_mesh/v130/**"
+      - ".github/workflows/nox-v38-1-source-ci.yml"
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source and Python syntax
+        run: |
+          python3 -m compileall -q nox_runpod/teacher_mesh/v38
+          PYTHONPATH=. python3 -m unittest nox_runpod.teacher_mesh.v38.tests.test_v38_control nox_runpod.teacher_mesh.v38.tests.test_v38_memory_speed -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_s03_gateway.py' -v
+      - name: Test isolated owner-fact lesson import
+        run: |
+          python3 -m pip install -q fastapi==0.128.2 httpx==0.28.1
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/v130/tests -p 'test_*.py' -v
+      - name: Mark boundaries (NO GPU model training)
+        run: |
+          echo "SOURCE ONLY — no Vast.ai deployment or NOX inference benchmark"
