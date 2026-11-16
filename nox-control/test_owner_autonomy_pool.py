@@ -18,6 +18,40 @@ class PoolTests(unittest.TestCase):
                  'priority':'P0' if i%3==0 else 'P2','resource':'CPU_LIGHT',
                  'source_sha256':'a'*64,'estimated_cost':1+i%9} for i in range(n)]
 
+    def test_any_count_in_one_command(self):
+        rows=self.make_rows(1500)
+        result=pool.validate_submission({'schema':pool.SCHEMA,'tasks':rows},allowed_handlers={'owner_component'})
+        self.assertEqual(result['task_count'],1500)
+        self.assertGreater(result['page_count'],1)
+        self.assertTrue(all(len(p['tasks'])<=256 for p in result['pages']))
+        self.assertEqual(len({t['id'] for p in result['pages'] for t in p['tasks']}),1500)
+
+    def test_cross_page_cycle_fails(self):
+        rows=self.make_rows(550)
+        rows[0]['deps']=['job.00549']
+        rows[549]['deps']=['job.00000']
+        with self.assertRaisesRegex(pool.AutoHold,'CYCLE'):
+            pool.validate_submission({'schema':pool.SCHEMA,'tasks':rows},allowed_handlers={'owner_component'})
+
+    def test_dispatcher_tick_requires_real_native_callbacks(self):
+        self.assertEqual(pool.tick_existing_dispatcher({}, {}, mode='NORMAL')['state'],'HOLD_NATIVE_POOL_CALLBACKS')
+        n=Mock()
+        n.read_reviewed_catalog.return_value={'schema':pool.SCHEMA,'tasks':self.make_rows(4)}
+        n.read_resource_snapshot.return_value={'native_verified':True,'instance_id':60509551,
+            'stop_active':False,'source_sha_verified':True,'owner_scope_verified':True,
+            'task_status':{},'cgroup_memory_ratio':.4,'cpu_pressure':0,'gpu_available':False}
+        n.allowed_handlers.return_value={'owner_component'}
+        n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
+        n.ensure_processes.return_value=True;n.native_duplicate_check.return_value=False
+        n.process_readback.return_value=[{'pid':30+i,'process_starttime':100+i,'native_pid_verified':True,
+            'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'} for i in range(3)]
+        n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'native-'+task['id']}
+        n.s03_readback.side_effect=lambda tid,jid:{'task_id':tid,'job_id':jid,'native_verified':True,
+            'receipt_sha256':'b'*64}
+        r=pool.tick_existing_dispatcher({'_nox_owner_autonomy_native':n},{},mode='NORMAL')
+        self.assertEqual(r['jobs_started'],3)
+        self.assertEqual(r['active_subexecutor_processes'],3)
+
     def test_30_jobs_one_command(self):
         rows=self.make_rows(30)
         validated=pool.validate_page({'schema':pool.SCHEMA,'tasks':rows},allowed_handlers={'owner_component'})
@@ -79,6 +113,20 @@ class PoolTests(unittest.TestCase):
             self.assertEqual(result['state'],'NATIVE_POOL_READY_IDLE')
             self.assertEqual(result['active_subexecutor_processes'],count)
             n.ensure_processes.assert_called_with(count)
+
+    def test_empty_queue_still_keeps_default_pool(self):
+        n=Mock();n.read_reviewed_catalog.return_value={'schema':pool.SCHEMA,'tasks':[]}
+        n.read_resource_snapshot.return_value={'native_verified':True,'instance_id':60509551,
+            'stop_active':False,'source_sha_verified':True,'owner_scope_verified':True,
+            'task_status':{},'cgroup_memory_ratio':.5,'cpu_pressure':0,'gpu_available':False}
+        n.allowed_handlers.return_value={'owner_component'}
+        n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
+        n.ensure_processes.return_value=True
+        n.process_readback.return_value=[{'pid':60+i,'process_starttime':100+i,'native_pid_verified':True,
+            'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost'} for i in range(3)]
+        r=pool.tick_existing_dispatcher({'_nox_owner_autonomy_native':n},{},mode='NORMAL')
+        self.assertEqual(r['state'],'NATIVE_POOL_READY_IDLE')
+        self.assertEqual(r['active_subexecutor_processes'],3)
 
     def test_native_gates_hold_or_verified(self):
         task=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},allowed_handlers={'owner_component'})
