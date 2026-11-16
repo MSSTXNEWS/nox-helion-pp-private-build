@@ -9,6 +9,10 @@ import unittest
 from unittest.mock import patch
 
 from test_maya_binary_attestation_v1 import MayaBinaryAttestationTests  # noqa: F401
+from test_maya_memory_admission_v1 import (
+    MayaMemoryAdmissionTests, budget as synthetic_memory_budget,
+    snapshot as synthetic_memory_snapshot, NOW as SYNTHETIC_MEMORY_NOW,
+)  # noqa: F401
 
 HERE = Path(__file__).parent
 PLAN_SPEC = importlib.util.spec_from_file_location(
@@ -45,6 +49,14 @@ def complete_rows():
     return [{"path": name, "bytes": PLAN.PINNED_FILE_FACTS[name][0],
              "sha256": PLAN.PINNED_FILE_FACTS[name][1], "sha_verified": True}
             for name in PLAN.EXPECTED_FILES]
+
+
+def synthetic_memory_inputs():
+    return {
+        "memory_snapshot": synthetic_memory_snapshot(),
+        "memory_budget": synthetic_memory_budget(),
+        "now_seconds": SYNTHETIC_MEMORY_NOW,
+    }
 
 
 def synthetic_tensor_roles():
@@ -198,7 +210,8 @@ class MayaLaunchPlanTests(unittest.TestCase):
                 gpu_names=PROFILE.GPU_NAMES,
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
-                model_file_paths=["synthetic"] * 6)
+                model_file_paths=["synthetic"] * 6,
+                **synthetic_memory_inputs())
         self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
         self.assertFalse(got["launchable"])
         argv = got["argv"]
@@ -493,6 +506,7 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
+                **synthetic_memory_inputs(),
             )
         self.assertEqual(got["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
         self.assertFalse(got["launchable"])
@@ -507,6 +521,23 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
         self.assertIn("CPU-lane experts read in-place", got["expert_mapping"])
         self.assertNotIn("--mmap-experts", got["argv"])
         self.assertFalse(got["measured"])
+
+    def test_profile_holds_without_fresh_memory_readback(self):
+        with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
+                          return_value=BINARY_OK), \
+                patch.object(PROFILE.binary_attestation, "binary_identity_matches", return_value=True), \
+                patch.object(PROFILE.preflight, "evaluate_source_plan") as run:
+            got = PROFILE.build_source_plan(
+                owner_stop=False,
+                observed_binary_sha256=PROFILE.MAYA_BINARY_SHA256,
+                gpu_names=PROFILE.GPU_NAMES,
+                verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6,
+            )
+        self.assertEqual(got["state"], "HOLD_MEMORY_LIVE_SNAPSHOT_REQUIRED")
+        self.assertFalse(got["launchable"])
+        run.assert_not_called()
 
     def test_profile_holds_without_local_sm70_binary_attestation(self):
         with patch.object(PROFILE.binary_attestation, "attest_maya_binary",
@@ -544,6 +575,7 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                 tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
                 tensor_role_inventory=synthetic_tensor_roles(),
+                **synthetic_memory_inputs(),
             )
         self.assertEqual(got["state"], "HOLD_MAYA_BINARY_CHANGED_AFTER_PREFLIGHT")
         self.assertFalse(got["launchable"])
@@ -593,6 +625,7 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                 verified_files=complete_rows(),
                 tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
+                **synthetic_memory_inputs(),
             )
             self.assertEqual(missing["state"], "HOLD_TENSOR_ROLE_INVENTORY_REQUIRED")
             self.assertFalse(missing["launchable"])
@@ -604,6 +637,7 @@ class MayaLaunchProfileCliContractTests(unittest.TestCase):
                 tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
                 model_file_paths=["synthetic"] * 6,
                 tensor_role_inventory=synthetic_tensor_roles(),
+                **synthetic_memory_inputs(),
             )
         self.assertEqual(ready["state"], "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE")
         self.assertFalse(ready["launchable"])
