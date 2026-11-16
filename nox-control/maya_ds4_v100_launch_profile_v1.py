@@ -21,6 +21,10 @@ MAYA_BINARY = Path(
     "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4"
 )
 MAYA_BINARY_SHA256 = "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20"
+MAYA_MODEL_ID = "deepseek-v4.1-flash"
+MAYA_API_URL = "http://127.0.0.1:8080/v1/chat/completions"
+MAYA_MODELS_URL = "http://127.0.0.1:8080/v1/models"
+MAYA_ROUTE_STATE = "/root/nox/config/maya_ds4_owner_route_v1.json"
 GPU_NAMES = ("Tesla V100-SXM2-32GB", "Tesla V100-SXM2-32GB")
 GPU_IDS = (0, 1)
 TP = 2
@@ -69,12 +73,44 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "--parallel", str(PARALLEL),
         "--serve",
     ]
+    server_config_path = str(Path(pack_dir).parent / "maya-ds4-owner.json")
+    server_config = {
+        "exe": str(MAYA_BINARY),
+        "args": argv[1:-1],
+        "cwd": str(MAYA_BINARY.parents[1]),
+        "tokenizer": str(Path(pack_dir) / "tokenizer"),
+        "model_name": MAYA_MODEL_ID,
+        "gpu": list(GPU_IDS),
+        "port": 8080,
+        "host": "127.0.0.1",
+    }
+    manager = {
+        "kind": "project_maya_official_server",
+        "module": "serve.server",
+        "engine": "maya",
+        "config_path": server_config_path,
+        "argv_template": [
+            "<owner_verified_maya_python>", "-m", "serve.server",
+            "--engine", "maya", "--config", server_config_path,
+            "--host", "127.0.0.1", "--port", "8080",
+        ],
+        "working_directory": str(MAYA_BINARY.parents[1]),
+        "bind": "127.0.0.1",
+        "api_url": MAYA_API_URL,
+        "models_url": MAYA_MODELS_URL,
+        "model": MAYA_MODEL_ID,
+        "owner_route_state": MAYA_ROUTE_STATE,
+        "launch_only_after_owner_stop_lease_resources_and_pack_gates": True,
+    }
     return {
         "state": "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE",
         "launchable": False,
         "argv": argv,
         "env": {"CUDA_VISIBLE_DEVICES": "0,1"},
         "model_pack": pack_dir,
+        "server_config": server_config,
+        "server_manager": manager,
+        "protocol": "Project Maya official OpenAI-compatible serve.server on loopback; engine uses Maya's native stdin/stdout protocol",
         "model_content_sha256": "REQUIRES_NATIVE_PINNED_READBACK",
         "engine_sha256": MAYA_BINARY_SHA256,
         "gpu_names": list(GPU_NAMES),
