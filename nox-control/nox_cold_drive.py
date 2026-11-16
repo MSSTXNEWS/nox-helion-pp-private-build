@@ -691,6 +691,107 @@ def load(a):
             temp.unlink(missing_ok=True)
 
 
+
+# SOURCE-only, read-only admission for exact DeepSeek IQ2_XXS on existing OneHost.
+# Never an authorization to install, download, remove files or start another daemon.
+DEEPSEEK_TOTAL_BYTES = 248834257920
+DEEPSEEK_REVISION = "65d53bc8be65123e255ff02f3ded958b6dbf54fd"
+DEEPSEEK_ENGRAM = "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf"
+DEEPSEEK_ALIAS = "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf"
+DEEPSEEK_PINS = {
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf": (5780704, "f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9"),
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf": (39535781184, "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3"),
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf": (39736712000, "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48"),
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf": (39036908384, "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0"),
+    "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf": (19923784832, "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1"),
+    "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf": (110595290816, "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3"),
+}
+
+
+def deepseek_storage_admission(manifest, root, verify_full=False, reserve_bytes=8*GIB):
+    """Source-only seekable capacity gate. Does not attest OneHost owner authorization."""
+    import mmap
+    assert_owner_stop_clear()
+    if (not isinstance(manifest, dict)
+            or manifest.get('revision') != DEEPSEEK_REVISION
+            or manifest.get('repository') != "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
+            or manifest.get('quantization') != 'GSQ-RCO-IQ2_XXS'
+            or manifest.get('total_unique_gguf_bytes') != DEEPSEEK_TOTAL_BYTES
+            or type(reserve_bytes) is not int or reserve_bytes < 8*GIB):
+        raise ValueError('HOLD_DEEPSEEK_MANIFEST_OR_RESERVE')
+    rows = manifest.get('files')
+    if not isinstance(rows, list) or len(rows) != 6:
+        raise ValueError('HOLD_DEEPSEEK_FILE_COUNT')
+    observed = {}
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get('path'), str):
+            raise ValueError('HOLD_DEEPSEEK_FILE_SCHEMA')
+        name = row['path']
+        if name in observed or name not in DEEPSEEK_PINS or (row.get('bytes'), row.get('sha256')) != DEEPSEEK_PINS[name]:
+            raise ValueError('HOLD_DEEPSEEK_FILE_PIN')
+        observed[name] = True
+    alias = manifest.get('alias')
+    if (not isinstance(alias, dict) or alias.get('path') != DEEPSEEK_ALIAS
+            or alias.get('target') != DEEPSEEK_ENGRAM
+            or alias.get('duplicate_bytes') is not False
+            or sum(v[0] for v in DEEPSEEK_PINS.values()) != DEEPSEEK_TOTAL_BYTES):
+        raise ValueError('HOLD_DEEPSEEK_ENGRAM_ALIAS')
+    root = plain_path(root)
+    if not root.is_dir():
+        raise ValueError('HOLD_DEEPSEEK_SEEKABLE_ROOT')
+    filesystem = root.stat().st_dev
+    free = shutil.disk_usage(root).free
+    unverified = verified = 0
+    files = {}
+    for name, (size, expected) in DEEPSEEK_PINS.items():
+        path = root/name
+        if not path.exists() and not path.is_symlink():
+            files[name] = 'MISSING'; unverified += size; continue
+        try:
+            path = plain_path(path)
+            info = path.stat()
+            if not stat.S_ISREG(info.st_mode) or info.st_dev != filesystem or info.st_size != size:
+                raise RuntimeError('HOLD_FILE_SIZE_OR_MOUNT')
+            if verify_full:
+                original = identity(path)
+                if sha256(path) != expected or identity(path) != original:
+                    raise RuntimeError('HOLD_FILE_SHA_OR_IDENTITY')
+                with path.open('rb') as fd:
+                    for offset in (0, ((size-1)//mmap.ALLOCATIONGRANULARITY)*mmap.ALLOCATIONGRANULARITY):
+                        with mmap.mmap(fd.fileno(), min(mmap.ALLOCATIONGRANULARITY,size-offset),
+                                       access=mmap.ACCESS_READ, offset=offset) as data:
+                            _ = data[0], data[-1]
+                if identity(path) != original:
+                    raise RuntimeError('HOLD_FILE_CHANGED')
+                files[name] = 'SHA256_MMAP_VERIFIED'; verified += size
+            else:
+                files[name] = 'SIZE_ONLY_SHA_UNVERIFIED'; unverified += size
+        except (OSError,ValueError,RuntimeError):
+            files[name] = 'HOLD_UNVERIFIED_FILE'; unverified += size
+    shared_alias = False
+    alias_path = root/DEEPSEEK_ALIAS
+    if os.path.lexists(alias_path):
+        try:
+            target = root/DEEPSEEK_ENGRAM
+            shared_alias = (alias_path.resolve(strict=True) == target if alias_path.is_symlink()
+                            else (alias_path.stat().st_dev, alias_path.stat().st_ino) ==
+                                 (target.stat().st_dev, target.stat().st_ino))
+        except (OSError,RuntimeError):
+            shared_alias = False
+    capacity = free >= unverified+reserve_bytes
+    full = capacity and verified == DEEPSEEK_TOTAL_BYTES and shared_alias
+    return {'schema':'NOX_DEEPSEEK_STORAGE_READONLY_V1',
+            'state':'LOCAL_ONLY_SEEKABLE_SHA_CANDIDATE' if full else 'HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT',
+            'unique_file_count':6,'unique_bytes':DEEPSEEK_TOTAL_BYTES,
+            'metadata_only_bytes':5780704,'unverified_bytes':unverified,
+            'sha256_verified_bytes':verified,'ssd_free_bytes':free,
+            'ssd_reserve_bytes':reserve_bytes,'capacity_admitted':capacity,
+            'engram_alias_same_data':shared_alias,'files':files,
+            'owner_native_lease_verified':False,'server_oauth_verified':False,
+            'native_model_installed':False,'downloads_started':0,'deleted_bytes':0}
+
+
+
 def parser():
     p=argparse.ArgumentParser(description=__doc__)
     sp=p.add_subparsers(dest='action',required=True)

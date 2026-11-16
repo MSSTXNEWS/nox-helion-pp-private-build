@@ -773,4 +773,51 @@ class ColdTests(unittest.TestCase):
             cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body)+1,
                 hashlib.sha256(body[:100]).hexdigest(),stop_probe=lambda:False)
 
+
+class DeepSeekStorageAdmissionRegressions(unittest.TestCase):
+    def manifest(self):
+        return {'repository':"ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+                'revision':cold.DEEPSEEK_REVISION,'quantization':'GSQ-RCO-IQ2_XXS',
+                'total_unique_gguf_bytes':cold.DEEPSEEK_TOTAL_BYTES,
+                'files':[{'path':k,'bytes':v[0],'sha256':v[1]} for k,v in cold.DEEPSEEK_PINS.items()],
+                'alias':{'path':cold.DEEPSEEK_ALIAS,'target':cold.DEEPSEEK_ENGRAM,'duplicate_bytes':False}}
+
+    def test_immutable_unique_six_file_capacity_and_zero_native_claim(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(cold,'OWNER_STOP_PATHS',()):
+            result=cold.deepseek_storage_admission(self.manifest(),tmp)
+        self.assertEqual(result['unique_bytes'],248834257920)
+        self.assertEqual(result['unverified_bytes'],248834257920)
+        self.assertEqual(result['sha256_verified_bytes'],0)
+        self.assertEqual(result['downloads_started'],0)
+        self.assertFalse(result['owner_native_lease_verified'])
+
+    def test_metadata_presence_only_is_not_verified_weights(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(cold,'OWNER_STOP_PATHS',()):
+            name=next(iter(cold.DEEPSEEK_PINS))
+            (Path(tmp)/name).write_bytes(b'x'*5780704)
+            result=cold.deepseek_storage_admission(self.manifest(),tmp)
+        self.assertEqual(result['files'][name],'SIZE_ONLY_SHA_UNVERIFIED')
+        self.assertEqual(result['unverified_bytes'],248834257920)
+
+    def test_bad_hash_duplicate_and_alias_are_rejected(self):
+        m=self.manifest();m['files'][0]['sha256']='0'*64
+        with tempfile.TemporaryDirectory() as tmp,patch.object(cold,'OWNER_STOP_PATHS',()),self.assertRaisesRegex(ValueError,'HOLD_DEEPSEEK_FILE_PIN'):
+            cold.deepseek_storage_admission(m,tmp)
+        m=self.manifest();m['files'][1]=dict(m['files'][0])
+        with tempfile.TemporaryDirectory() as tmp,patch.object(cold,'OWNER_STOP_PATHS',()),self.assertRaisesRegex(ValueError,'HOLD_DEEPSEEK_FILE_PIN'):
+            cold.deepseek_storage_admission(m,tmp)
+        m=self.manifest();m['alias']['duplicate_bytes']=True
+        with tempfile.TemporaryDirectory() as tmp,patch.object(cold,'OWNER_STOP_PATHS',()),self.assertRaisesRegex(ValueError,'HOLD_DEEPSEEK_ENGRAM_ALIAS'):
+            cold.deepseek_storage_admission(m,tmp)
+
+    def test_owner_stop_and_unapproved_reserve_hold(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stop=Path(tmp)/'STOP';stop.touch()
+            with patch.object(cold,'OWNER_STOP_PATHS',(stop,)),self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+                cold.deepseek_storage_admission(self.manifest(),tmp)
+            with patch.object(cold,'OWNER_STOP_PATHS',()),self.assertRaisesRegex(ValueError,'HOLD_DEEPSEEK_MANIFEST_OR_RESERVE'):
+                cold.deepseek_storage_admission(self.manifest(),tmp,reserve_bytes=1)
+
+
+
 if __name__=='__main__':unittest.main(verbosity=2)
