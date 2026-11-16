@@ -10,11 +10,14 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_training_control_readonly_batch.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_workspace_asset_install.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_workspace_asset_install.py':(
+        'owner_chat_stream_asset_install_v2.py','owner_media_acceptance_entry.py',
+        'owner_native_repair.py','workspace-owner-capabilities.js'),
     'nox-control/owner_qwen_public_memfd_access_probe.py':(),
     'nox-control/owner_training_control_readonly_batch.py':(
         'owner_qwen_transport_budget_observe.py','owner_admin_control_structure_probe.py','owner_qwen_public_memfd_access_probe.py'),
@@ -65,6 +68,8 @@ SCOPED_REPAIR_BUNDLES={
         'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
 }
 SCOPED_REPAIR_EXTRA_PATHS={
+    'nox-control/owner_workspace_asset_install.py':(
+        'nox-control/owner_chat_stream_asset_install_v2.py','coordination/onepass/workspace-owner-capabilities.js'),
     'nox-control/owner_training_control_readonly_batch.py':(
         'nox-control/owner_qwen_transport_budget_observe.py','nox-control/owner_admin_control_structure_probe.py','nox-control/owner_qwen_public_memfd_access_probe.py'),
     'nox-control/owner_chat_action_routing_install.py':(
