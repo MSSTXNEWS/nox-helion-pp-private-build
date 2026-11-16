@@ -88,6 +88,8 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
         self.assertEqual(got["state"], "AVAILABLE_PATHS_ONLY")
         self.assertEqual(got["cuda_toolkit_path_version_hint"], "UNKNOWN")
         self.assertEqual(got["runtime_abi"], "NOT_TESTED")
+        self.assertEqual(got["state"], "AVAILABLE_PATHS_ONLY")
+        self.assertNotIn("compatible", str(got).lower())
         self.assertFalse(got["maya_executable_invoked"])
         self.assertFalse(got["cuda_context_created"])
         self.assertTrue(all(row["present"] for row in got["libraries"].values()))
@@ -139,6 +141,11 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertEqual(got["packer_model_dir"], "/synthetic/model")
         self.assertEqual(got["packer_output_dir"], "/synthetic/model/maya-ds4")
         self.assertTrue(got["packer_non_clobber_precondition"])
+        self.assertEqual(got["model_content_sha256"], "VERIFIED_AGAINST_PINNED_FACTS")
+        self.assertEqual(got["model_tensor_inventory"], "NOT_TESTED_BY_SOURCE_PREFLIGHT")
+        self.assertEqual(got["runtime_abi"], "NOT_TESTED")
+        self.assertEqual(got["sm70_execution"], "NOT_TESTED")
+        self.assertEqual(got["runtime_compatibility"], "NOT_TESTED")
 
     def test_output_observation_rejects_existing_directory_symlink_and_unknown_paths(self):
         names = PLAN.EXPECTED_FILES
@@ -156,6 +163,14 @@ class MayaLaunchPlanTests(unittest.TestCase):
                 paths.append(path)
             absent = PLAN.observe_packer_output(paths)
             self.assertEqual(absent["state"], "PACKER_OUTPUT_ABSENT_VERIFIED")
+            # Same path/name/size is not enough: bad bytes must fail the pinned digest.
+            original = paths[0].read_bytes()
+            paths[0].write_bytes(b"x" * len(original))
+            self.assertEqual(PLAN.observe_packer_output(paths)["state"],
+                             "HOLD_PACKER_MODEL_SHA256_MISMATCH")
+            paths[0].write_bytes(original)
+            self.assertEqual(PLAN.observe_packer_output(paths)["state"],
+                             "PACKER_OUTPUT_ABSENT_VERIFIED")
             self.assertEqual(absent["output_dir"], str(model / "maya-ds4"))
             self.assertFalse((model / "maya-ds4").exists())
 
