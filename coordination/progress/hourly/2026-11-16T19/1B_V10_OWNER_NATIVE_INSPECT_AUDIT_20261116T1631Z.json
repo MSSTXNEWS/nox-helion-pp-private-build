@@ -1,0 +1,158 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1B",
+  "scope": "OWNER_AUTHENTICATED_NATIVE_READ_ONLY",
+  "source_pin": "1942a0d2858c12c582bdf5b82a251742fc7fae08",
+  "source_blobs": {
+    "inspect": "7b69acaab914c446bc35c4760573c67114b2d6de",
+    "audit": "3f885889583c4fbff621f804376851aecfcaf23a"
+  },
+  "observed_utc_window": [
+    "2026-11-16T16:27:00Z",
+    "2026-11-16T16:31:06Z"
+  ],
+  "observed_msk_window": [
+    "2026-11-16T19:27:00+03:00",
+    "2026-11-16T19:31:06+03:00"
+  ],
+  "live_evidence": [
+    {
+      "run": 43907561913,
+      "job": 133440388251,
+      "action": "inspect",
+      "state": "SUCCESS_NATIVE_READONLY"
+    },
+    {
+      "run": 43908214337,
+      "job": 133442703998,
+      "action": "audit",
+      "state": "SUCCESS_NATIVE_READONLY"
+    }
+  ],
+  "instance": {
+    "id": 60509551,
+    "actual_status": "running",
+    "num_gpus": 2,
+    "owner_ssh_host_pin": "VERIFIED"
+  },
+  "owner_control": {
+    "manual_stop": "PRESENT",
+    "maintenance_flag": "PRESENT",
+    "train_hold": "PRESENT",
+    "train_pause": "PRESENT",
+    "writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+    "supervisor_five": "STOPPED",
+    "trainer_supervisor": "FATAL",
+    "listener_8081": "NO_LISTENING_SOCKET",
+    "no_native_queue_claims": true
+  },
+  "hardware": {
+    "gpu": [
+      {
+        "index": 0,
+        "name": "Tesla V100-SXM2-32GB",
+        "vram_total_mib": 32768,
+        "vram_used_mib": 0,
+        "utilization_pct": 0,
+        "temp_c": 17
+      },
+      {
+        "index": 1,
+        "name": "Tesla V100-SXM2-32GB",
+        "vram_total_mib": 32768,
+        "vram_used_mib": 0,
+        "utilization_pct": 0,
+        "temp_c": 19
+      }
+    ],
+    "cpu_quota_cores": 19.2,
+    "cpu_affinity": 80,
+    "cgroup_ram_max_bytes": 194065203200,
+    "cgroup_ram_current_inspect_bytes": 60387975168,
+    "shm_total_bytes": 50465865728,
+    "shm_free_bytes": 3366711296,
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes_audit": 43158827008,
+    "ssd_free_bytes_inspect": 43158790144,
+    "model_total_unique_bytes": 248834257920,
+    "model_missing_five_bytes": 248828477216,
+    "total_physical_shortfall_bytes": 65224406016,
+    "free_shortfall_before_reserve_bytes": 205675430912,
+    "storage_remotes": [],
+    "mounted_data_volume": false,
+    "filesystem": "overlay",
+    "model_inventory": "TRUNCATED_180_ROWS",
+    "gpu_processes": 0
+  },
+  "maya": {
+    "elf_bytes": 71289520,
+    "sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+    "pin_match": true,
+    "linkage": "libcudart.so.12+libcublas.so.12",
+    "cuda12_4_dependency_paths": "PRESENT_READONLY",
+    "driver_path": "PRESENT_READONLY",
+    "inference": "NOT_TESTED",
+    "model_pack": "NOT_TESTED"
+  },
+  "s03": {
+    "primary_path": "/root/nox/kb/knowledge.sqlite",
+    "bytes": 49037312,
+    "other_filename": "knowledge.sqlite.nox-v125-verified.sqlite3",
+    "other_bytes": 44036096,
+    "content_sha256": "NOT_MEASURED",
+    "sqlite_integrity": "NOT_TESTED",
+    "recall": "NOT_TESTED",
+    "independent_restore": "NOT_TESTED"
+  },
+  "task_outcomes": [
+    {
+      "id": "P0-1B-01",
+      "state": "PARTIAL_LIVE_VERIFIED_READONLY",
+      "evidence": "disk/mount/GPU/PID inventory; model scan truncated; inode/handles/du for exact candidates not complete"
+    },
+    {
+      "id": "P0-1B-02",
+      "state": "HOLD",
+      "reason": "S03 and Genesis/checkpoint payload SHA not read; only metadata"
+    },
+    {
+      "id": "P0-1B-03",
+      "state": "HOLD",
+      "reason": "No independently restored S03 and checkpoint+optimizer/scaler/RNG"
+    },
+    {
+      "id": "P0-1B-04",
+      "state": "HOLD_NO_DELETE",
+      "reason": "Owner MODEL_UPDATE STOP present, writer lease unknown, no exact cleanup admission/restore"
+    },
+    {
+      "id": "P0-1B-05",
+      "state": "PARTIAL_LIVE_VERIFIED_READONLY",
+      "evidence": "actual SSD free 43158827008, but zero deletes by this slot; S03 integrity/recall not proven"
+    }
+  ],
+  "WEIGHTS": {
+    "new_successful_optimizer_updates": 0,
+    "checkpoint_independent_restore_verified": false,
+    "current_trainer_pid": null
+  },
+  "KNOWLEDGE": {
+    "new_hunter_s03_recall": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "native_queue_claims": 0,
+    "os_subagent_pids_verified": 0,
+    "dispatcher_supervisor": "STOPPED",
+    "byte_downloads_by_this_slot": 0,
+    "byte_deletes_by_this_slot": 0,
+    "restarts_by_this_slot": 0
+  },
+  "rollback": "NONE_REQUIRED_READONLY_ONLY",
+  "next_ready": "Owner-authorized independent S03/Genesis/checkpoint restore and genuinely mounted seekable DeepSeek storage >=248834257920 bytes plus reserve/quota/readback, then one native fenced SHA-verified shard. Respect owner STOP until original lease permits operations.",
+  "notes": [
+    "Two successful authenticated native read-only calls are not inference activation or S03 integrity proof.",
+    "Host xfs/ext4 single-file binds /etc and /usr are not usable mounted model volumes; no /data mount.",
+    "No new source code, installed model, trainer, dispatcher or UI changes."
+  ]
+}
