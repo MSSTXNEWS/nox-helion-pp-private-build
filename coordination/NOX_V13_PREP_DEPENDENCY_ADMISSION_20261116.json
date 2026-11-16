@@ -53,7 +53,21 @@
       "engram_copies": 1,
       "full_sha_validation_native": "HOLD",
       "seekable_placement_native": "HOLD",
-      "deficit_to_current_root_free_bytes": 205675607040
+      "deficit_to_current_root_free_bytes": 205675607040,
+      "source_inventory_guard": {
+        "status": "SOURCE_TESTED_ONLY_NATIVE_HOLD",
+        "description": "Pinned GGUF pathname inventory now returns HOLD_MODEL_FILES_MISSING for absent paths, not OK; path metadata cannot verify payload SHA, persistent storage, or serving.",
+        "source_path": "nox-control/owner_native_audit.py",
+        "source_blob": "7318a107fca0535f7f317a2bbc85d2da73f07f9e",
+        "regression_path": "nox-control/test_owner_native_audit_pinned_v10.py",
+        "regression_blob": "003b583da9f029ffe820dbdee5ed1f34427d7dce",
+        "source_commit": "8865ed2d734ffbfac586bf561dcfe1a3fd82b41a",
+        "test_commit": "959a59350670f2dd967e1caf13109149c02177a8",
+        "source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43946595401",
+        "tests_scope": "owner storage reclaim and native audit source fixtures: 36/36 PASS; no native OneHost deployment",
+        "native_file_rehash_completed": false,
+        "native_model_replacement_completed": false
+      }
     },
     "D2": {
       "kind": "REUSE",
