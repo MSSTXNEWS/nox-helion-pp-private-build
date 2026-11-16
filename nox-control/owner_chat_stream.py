@@ -197,7 +197,11 @@ def _normal_calls(rows,step):
             try:args=json.loads(args)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         if not isinstance(args,dict):raise StreamFailure('HOLD_TOOL_ARGUMENTS')
-        result.append({'id':row.get('id') or f'owner_call_{step}_{index}',
+        # Native parser / deterministic routes share the same bounded ID rule.
+        call_id=row.get('id')
+        if call_id is not None and (not isinstance(call_id,str) or not 1<=len(call_id)<=160):
+            raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
+        result.append({'id':call_id or f'owner_call_{step}_{index}',
                        'name':row['name'],'arguments':args})
     return result
 
