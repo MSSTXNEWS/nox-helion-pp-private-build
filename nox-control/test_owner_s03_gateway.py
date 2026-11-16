@@ -226,7 +226,9 @@ class GatewayTests(unittest.TestCase):
         with g.connection(self.db,write=True) as c:item(c,'x','new memory')
         saves=[];namespace={'HANDLERS':{},'ingest_owner_orders':lambda state:None,'save_state':lambda state:saves.append(1),'_qlock':threading.RLock()}
         state={'tasks':{}}
-        with patch.object(g,'MODEL',model):
+        # Uptime can be below 90 seconds on a newly provisioned OneHost.
+        # First permitted ingest must not be skipped as if it were a retry.
+        with patch.object(g,'MODEL',model),patch.object(g.time,'monotonic',return_value=30.0):
             g.bind_dispatcher(namespace);namespace['ingest_owner_orders'](state);namespace['ingest_owner_orders'](state)
         self.assertEqual(len(state['tasks']),1);self.assertEqual(len(saves),1)
         task=next(iter(state['tasks'].values()))
