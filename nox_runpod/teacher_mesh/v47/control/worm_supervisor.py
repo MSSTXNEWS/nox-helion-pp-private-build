@@ -23,6 +23,73 @@ def _valid_native_job_id(value) -> bool:
 
 
 
+# Source-only passive audit: does not restart a PID or impersonate owner telemetry.
+# Signed native OneHost must supply a complete inventory and two samples.
+def audit_process_progress(current, previous, *, now_unix: int, grace_seconds: int = 1800) -> dict:
+    """Compare useful *verified* progress, not CPU/GPU activity or a heartbeat alone."""
+    report = {"schema": "NOX_NATIVE_PROGRESS_AUDIT_V1",
+              "state": "HOLD_PROGRESS_SAMPLES_UNAVAILABLE",
+              "advancing": [], "suspected_stalls": [], "holds": [],
+              "restart_permitted": False, "mutations": 0}
+    if (type(now_unix) is not int or now_unix <= 0
+            or type(grace_seconds) is not int or not 600 <= grace_seconds <= 43200
+            or not isinstance(current, Mapping) or not isinstance(previous, Mapping)
+            or len(current) > 512 or len(previous) > 512):
+        return report
+    report["state"] = "PROGRESS_AUDITED_ADVISORY_ONLY"
+    for identity, sample in current.items():
+        if (not isinstance(identity, str)
+                or re.fullmatch(r"[A-Za-z0-9_.:/-]{1,128}", identity) is None):
+            report["holds"].append({"id": "UNKNOWN", "reason": "HOLD_PROGRESS_ID"})
+            continue
+        old = previous.get(identity)
+        if not isinstance(sample, Mapping):
+            report["holds"].append({"id": identity, "reason": "HOLD_PROGRESS_FORMAT"})
+            continue
+        def valid(x):
+            return (isinstance(x, Mapping)
+                and x.get("native_verified") is True
+                and isinstance(x.get("receipt_sha256"), str)
+                and SHA.fullmatch(x["receipt_sha256"]) is not None
+                and type(x.get("pid")) is int and x["pid"] > 0
+                and type(x.get("start_ticks")) is int and x["start_ticks"] > 0
+                and type(x.get("counter")) is int and x["counter"] >= 0
+                and type(x.get("observed_unix")) is int
+                and 0 < x["observed_unix"] <= now_unix + 30
+                and x.get("metric") in
+                    ("optimizer_updates", "verified_bytes", "native_jobs_done",
+                     "s03_recall_done", "stream_completions", "accepted_improvements")
+                and type(x.get("active")) is bool)
+        if not valid(sample):
+            report["holds"].append({"id": identity, "reason": "HOLD_UNVERIFIED_PROGRESS"})
+            continue
+        if not sample["active"]:
+            report["holds"].append({"id": identity, "reason": "IDLE_NOT_STALLED"})
+            continue
+        if not valid(old):
+            report["holds"].append({"id": identity, "reason": "NEED_TWO_NATIVE_SAMPLES"})
+            continue
+        if (old["pid"] != sample["pid"]
+                or old["start_ticks"] != sample["start_ticks"]
+                or old["metric"] != sample["metric"]):
+            report["holds"].append({"id": identity, "reason": "NEW_PROCESS_BASELINE"})
+            continue
+        elapsed = sample["observed_unix"] - old["observed_unix"]
+        if elapsed <= 0 or sample["counter"] < old["counter"]:
+            report["holds"].append({"id": identity, "reason": "HOLD_STALE_OR_RESET_COUNTER"})
+        elif sample["counter"] > old["counter"]:
+            report["advancing"].append({"id": identity, "metric": sample["metric"],
+                                          "delta": sample["counter"] - old["counter"]})
+        elif elapsed >= grace_seconds:
+            report["suspected_stalls"].append({
+                "id": identity, "pid": sample["pid"], "metric": sample["metric"],
+                "no_progress_seconds": elapsed, "action": "DIAGNOSE_AND_CHANGE_APPROACH",
+                "restart_permitted": False, "owner_lease_required": True})
+        else:
+            report["holds"].append({"id": identity, "reason": "NORMAL_LONG_STEP_GRACE"})
+    return report
+
+
 def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=600,
                        max_attempts: int=3) -> dict:
     """Fail-closed task heartbeat, completion and bounded restart proposals.
@@ -165,6 +232,10 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
                     "may_enqueue_via_generic_plan":False})
         else:
             protected.add(tid)
+    result["process_progress_audit"] = audit_process_progress(
+        observations.get("process_progress_current"),
+        observations.get("process_progress_previous"),
+        now_unix=now_unix)
     result["protected_task_ids"]=sorted(protected)
     result["state"]="NATIVE_QUEUE_RECONCILED_PROPOSALS_ONLY"
     return result
