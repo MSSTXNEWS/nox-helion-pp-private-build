@@ -79,9 +79,7 @@
   async function checkHistory(id,prompt,answer,exchangeId,signal) {
     const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
     if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
-    // A newer verified exchange may be appended before this request's S03
-    // readback. Match the exact receipt ID, not merely the last two rows.
-    // Reject duplicates, mixed roles, and stale/missing receipts fail-closed.
+    // Check exact S03 exchange; newer saved rows may occupy the tail.
     const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
     if(pair.length!==2||pair[0].role!=='user'||pair[1].role!=='assistant'||
        pair[0].content!==prompt||pair[1].content!==answer||
