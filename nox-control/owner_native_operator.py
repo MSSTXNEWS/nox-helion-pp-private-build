@@ -10,7 +10,8 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_checkpoint_status_entry.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_checkpoint_status_entry.py',
+       'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -88,7 +89,19 @@ def run_native(action,request_id):
     if check.returncode:raise RuntimeError('HOLD_SSH_MASTER_NOT_ALIVE')
     print('NOX_MAINT_AUTHENTICATED_INSTANCE=60509551',flush=True)
     payload=Path(FILES[action]).read_text()
-    if action in ('stage','repair'):
+    if action == 'lifeline':
+        assets={}
+        for path in ('nox-control/nox_native_lifeline.py',
+                     'nox-control/lifeline.example.json',
+                     'nox-control/supervisor/nox-lifeline-guard.conf'):
+            source=Path(path)
+            if not source.is_file() or source.stat().st_size > 32768:
+                raise RuntimeError('HOLD_LIFELINE_SOURCE_SCOPE')
+            raw=source.read_bytes()
+            assets[source.name]={'content':base64.b64encode(raw).decode('ascii'),
+                                 'sha256':__import__('hashlib').sha256(raw).hexdigest()}
+        payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
+    elif action in ('stage','repair'):
         assets={}
         for path in ('nox-control/nox_cold_drive.py','nox-control/owner_native_audit.py',
                      'nox-control/owner_native_inspect.py','nox-control/hybrid_training_entry.py',
