@@ -810,13 +810,34 @@ class DeepSeekStorageAdmissionRegressions(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp,patch.object(cold,'OWNER_STOP_PATHS',()),self.assertRaisesRegex(ValueError,'HOLD_DEEPSEEK_ENGRAM_ALIAS'):
             cold.deepseek_storage_admission(m,tmp)
 
-    def test_owner_stop_and_unapproved_reserve_hold(self):
+    def test_owner_stop_readonly_metadata_not_full_sha(self):
         with tempfile.TemporaryDirectory() as tmp:
             stop=Path(tmp)/'STOP';stop.touch()
-            with patch.object(cold,'OWNER_STOP_PATHS',(stop,)),self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
-                cold.deepseek_storage_admission(self.manifest(),tmp)
+            with patch.object(cold,'OWNER_STOP_PATHS',(stop,)), patch.object(cold,'sha256') as digest:
+                result=cold.deepseek_storage_admission(self.manifest(),tmp)
+                self.assertTrue(result['owner_stop_observed'])
+                self.assertTrue(result['inspection_only_under_stop'])
+                self.assertEqual(result['sha256_verified_bytes'],0)
+                self.assertEqual(result['downloads_started'],0)
+                self.assertFalse(result['owner_native_lease_verified'])
+                digest.assert_not_called()
+                with self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP_FULL_SCAN'):
+                    cold.deepseek_storage_admission(self.manifest(),tmp,verify_full=True)
+                digest.assert_not_called()
             with patch.object(cold,'OWNER_STOP_PATHS',()),self.assertRaisesRegex(ValueError,'HOLD_DEEPSEEK_MANIFEST_OR_RESERVE'):
                 cold.deepseek_storage_admission(self.manifest(),tmp,reserve_bytes=1)
+
+    def test_owner_model_update_maintenance_does_not_authorize_full_scan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            maintenance=Path(tmp)/'OWNER_MAINTENANCE.flag';maintenance.touch()
+            with patch.object(cold,'OWNER_STOP_PATHS',()), patch.object(cold,'OWNER_MODEL_UPDATE_FLAG',maintenance), patch.object(cold,'sha256') as digest:
+                result=cold.deepseek_storage_admission(self.manifest(),tmp)
+                self.assertTrue(result['owner_maintenance_flag_observed'])
+                self.assertTrue(result['inspection_only_under_stop'])
+                self.assertFalse(result['native_model_installed'])
+                with self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP_FULL_SCAN'):
+                    cold.deepseek_storage_admission(self.manifest(),tmp,verify_full=True)
+                digest.assert_not_called()
 
 
 

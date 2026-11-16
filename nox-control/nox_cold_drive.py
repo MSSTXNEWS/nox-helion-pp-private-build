@@ -29,6 +29,7 @@ BLOCKED_PARTS = {'s03', 'checkpoint', 'checkpoints', 'optimizer', 'training', 's
                  'lora', 'qlora', 'adapter', 'adapters', 'runs_owner_hybrid'}
 ALLOWED_SUFFIX = {'.safetensors', '.gguf', '.bin', '.pt', '.pth'}
 SHA = re.compile(r'^[0-9a-f]{64}$')
+OWNER_MODEL_UPDATE_FLAG = Path('/root/nox/state/OWNER_MAINTENANCE.flag')
 OWNER_STOP_PATHS = (
     Path('/root/nox/STOP'), Path('/root/nox/STOP.flag'),
     Path('/root/nox/stop.flag'), Path('/root/nox/.stop'),
@@ -711,7 +712,13 @@ DEEPSEEK_PINS = {
 def deepseek_storage_admission(manifest, root, verify_full=False, reserve_bytes=8*GIB):
     """Source-only seekable capacity gate. Does not attest OneHost owner authorization."""
     import mmap
-    assert_owner_stop_clear()
+    # Original MODEL_UPDATE STOP must not block safe read-only metadata audit.
+    # Full SHA/mmap is resource-heavy: do not run it while stopped/maintenance.
+    owner_stop_observed = any(p.exists() or p.is_symlink() for p in OWNER_STOP_PATHS)
+    maintenance_observed = (OWNER_MODEL_UPDATE_FLAG.exists() or
+                            OWNER_MODEL_UPDATE_FLAG.is_symlink())
+    if verify_full and (owner_stop_observed or maintenance_observed):
+        raise RuntimeError('HOLD_OWNER_STOP_FULL_SCAN')
     if (not isinstance(manifest, dict)
             or manifest.get('revision') != DEEPSEEK_REVISION
             or manifest.get('repository') != "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
@@ -787,6 +794,9 @@ def deepseek_storage_admission(manifest, root, verify_full=False, reserve_bytes=
             'sha256_verified_bytes':verified,'ssd_free_bytes':free,
             'ssd_reserve_bytes':reserve_bytes,'capacity_admitted':capacity,
             'engram_alias_same_data':shared_alias,'files':files,
+            'owner_stop_observed':owner_stop_observed,
+            'owner_maintenance_flag_observed':maintenance_observed,
+            'inspection_only_under_stop':owner_stop_observed or maintenance_observed,
             'owner_native_lease_verified':False,'server_oauth_verified':False,
             'native_model_installed':False,'downloads_started':0,'deleted_bytes':0}
 
