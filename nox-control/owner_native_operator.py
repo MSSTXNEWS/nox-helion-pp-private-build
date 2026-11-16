@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_media_inbox_fair_entry.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_current_capacity_batch.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
@@ -171,6 +171,7 @@ def run_native(action,request_id):
                      'nox-control/owner_qwen_guard_install_entry.py',
                      'nox-control/owner_qwen_guard_activate_entry.py',
                      'nox-control/owner_qwen_window_observe_entry.py',
+                     'nox-control/owner_qwen_current_observe.py',
                      'nox-control/owner_qwen_media_retry_observe.py',
                      'nox-control/owner_capacity_current_load_entry.py',
                      'nox-control/owner_qwen_training_guard.py',
