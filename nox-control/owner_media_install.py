@@ -8,6 +8,7 @@ as ready. The optional supervised engine binds loopback and uses physical GPU1.
 """
 from __future__ import annotations
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 import fcntl
 import hashlib
@@ -23,6 +24,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -73,8 +75,8 @@ ASSETS = (
      'license':'apache-2.0','workflow':'wan21_t2v_13b'},
 )
 # --no-deps prevents pip from changing/reinstalling the shared CUDA/Torch stack.
-# Dependencies not listed here are inherited read-only from the trainer venv.
-PYPI_PINS = (
+# This exact original set is retained for the reviewed additive migration.
+LEGACY_PYPI_PINS = (
     'comfyui-frontend-package==1.12.14','torchsde==0.2.6','trampoline==0.1.2',
     'numpy==1.26.4','einops==0.8.1','transformers==4.49.0','tokenizers==0.21.0',
     'huggingface-hub==0.29.3','sentencepiece==0.2.0','safetensors==0.5.3',
@@ -83,10 +85,29 @@ PYPI_PINS = (
     'kornia_rs==0.1.8','spandrel==0.4.1','soundfile==0.13.1','av==14.2.0',
     'cffi==1.17.1','pycparser==2.22',
 )
+REQUESTS_PINS = ('requests==2.34.2', 'urllib3==2.8.0', 'charset-normalizer==3.5.2',
+                 'certifi==2026.10.23', 'idna==3.20')
+# Universal wheels and SHA256s verified against PyPI release JSON, 2026-11-16.
+# All five are small pure-Python dependencies; none can replace CUDA or Torch.
+REQUESTS_WHEELS = (
+    ('https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl',
+     '2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0'),
+    ('https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl',
+     '0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3'),
+    ('https://files.pythonhosted.org/packages/fc/ad/d07d7862a62ffa6d79d68074d14823243dd235a77c45262acbf6adeb28bf/charset_normalizer-3.5.2-py3-none-any.whl',
+     'b6b751274acb69d77b3323d6b7dbaa3c7fdfc1eb829b7eb61d262f32e1af9685'),
+    ('https://files.pythonhosted.org/packages/32/d1/a3652fe2c19134d0d15922177821d863cbd7e842d53a21bbe7e8e3a1b5ac/certifi-2026.10.23-py3-none-any.whl',
+     'e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1'),
+    ('https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl',
+     'ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c'),
+)
+PYPI_PINS = LEGACY_PYPI_PINS + REQUESTS_PINS
 CUDA_PINS = ('torchvision==0.21.0+cu124','torchaudio==2.6.0+cu124')
 REQUIRED_NODES = ('CheckpointLoaderSimple','CLIPTextEncode','EmptyLatentImage',
                   'KSampler','VAEDecode','SaveImage','UNETLoader','CLIPLoader',
                   'VAELoader','ModelSamplingSD3','EmptyHunyuanLatentVideo','SaveWEBM')
+_EMIT_LOCK = threading.Lock()
+_STORAGE_WRITE_LOCK = threading.Lock()
 
 
 def fail(code):
@@ -94,7 +115,8 @@ def fail(code):
 
 
 def emit(phase, **data):
-    print('NOX_MEDIA_INSTALL='+json.dumps({'phase':phase, **data},separators=(',',':')), flush=True)
+    with _EMIT_LOCK:
+        print('NOX_MEDIA_INSTALL='+json.dumps({'phase':phase, **data},separators=(',',':')), flush=True)
 
 
 def plain(value):
@@ -317,8 +339,12 @@ def download(url, path, expected, reserve=DISK_RESERVE):
                     block = response.read(4*1024*1024)
                     if not block: break
                     if count+len(block)>expected['bytes']: fail('HOLD_MEDIA_DOWNLOAD_OVERSIZE')
-                    check_write_space(path.parent,len(block),reserve)
-                    target.write(block); count += len(block)
+                    # Parallel network reads share this short write admission,
+                    # so two writers cannot each spend the same free bytes.
+                    with _STORAGE_WRITE_LOCK:
+                        check_write_space(path.parent,len(block),reserve)
+                        target.write(block)
+                    count += len(block)
                     if time.monotonic()-last>30:
                         emit('download',file=path.name,bytes=count,total=expected['bytes']); last=time.monotonic()
                 target.flush(); os.fsync(target.fileno())
@@ -388,13 +414,70 @@ def base_environment():
     return data
 
 
+def environment_spec(base, legacy=False):
+    return {'schema':1,'shared_purelib':base['purelib'],'shared_torch':base['torch'],
+            'torch_file':base['torch_file'],
+            'pypi_pins':list(LEGACY_PYPI_PINS if legacy else PYPI_PINS),'cuda_pins':list(CUDA_PINS)}
+
+
+PIN_AUDIT_CODE = r'''
+import importlib.metadata as m,json,pathlib,sys
+pins=json.loads(sys.argv[1]);root=pathlib.Path(sys.argv[2]).resolve()
+result={'missing':[],'mismatched':[],'outside_isolated_environment':[]}
+for pin in pins:
+ name,version=pin.split('==',1)
+ try:d=m.distribution(name)
+ except m.PackageNotFoundError:result['missing'].append(name);continue
+ if d.version!=version:result['mismatched'].append(name)
+ if not pathlib.Path(d.locate_file('')).resolve().is_relative_to(root):result['outside_isolated_environment'].append(name)
+result['ok']=not any(result.values());print(json.dumps(result))
+'''
+
+
+DEPENDENCY_AUDIT_CODE = r'''
+import importlib.metadata as m,json,sys
+from packaging.markers import default_environment
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
+pending=[Requirement(x) for x in json.loads(sys.argv[1])];seen=set();bad=[];env=default_environment()
+while pending:
+ requirement=pending.pop();name=canonicalize_name(requirement.name)
+ try:dist=m.distribution(name)
+ except m.PackageNotFoundError:bad.append({'package':name,'reason':'MISSING'});continue
+ if requirement.specifier and not requirement.specifier.contains(dist.version,prereleases=True):
+  bad.append({'package':name,'reason':'VERSION_MISMATCH'});continue
+ extras=tuple(sorted(requirement.extras));key=(name,extras)
+ if key in seen:continue
+ seen.add(key)
+ if len(seen)>128:raise RuntimeError('DEPENDENCY_GRAPH_BUDGET')
+ # Torch/CUDA are verified independently by exact version, origin and SM70.
+ # Do not resolve their installer dependencies or change the shared stack.
+ if name=='torch':continue
+ for raw in dist.requires or []:
+  item=Requirement(raw)
+  if item.marker and not any(item.marker.evaluate({**env,'extra':extra}) for extra in ('',*extras)):continue
+  pending.append(item)
+print(json.dumps({'ok':not bad,'packages_checked':len(seen),'issues':bad[:64]}))
+'''
+
+
+def pinned_environment(python, purelib, pins, env):
+    value = json.loads(run([python,'-c',PIN_AUDIT_CODE,json.dumps(list(pins)),str(purelib)],30,env=env))
+    if not isinstance(value,dict) or type(value.get('ok')) is not bool:
+        fail('HOLD_MEDIA_PACKAGE_AUDIT_SCHEMA')
+    return value
+
+
 def ensure_environment(base):
     environment = plain(MEDIA/'venv'); python = environment/'bin/python'
-    marker = environment/'nox-environment.json'
-    spec = {'schema':1,'shared_purelib':base['purelib'],'shared_torch':base['torch'],
-            'torch_file':base['torch_file'],'pypi_pins':list(PYPI_PINS),'cuda_pins':list(CUDA_PINS)}
+    marker = plain(environment/'nox-environment.json')
+    spec = environment_spec(base)
+    previous = None
     if environment.exists():
-        if not marker.is_file() or json.loads(marker.read_text())!=spec:
+        if not marker.is_file() or marker.stat().st_size>16384:
+            fail('HOLD_MEDIA_EXISTING_ENVIRONMENT_SCOPE')
+        previous = json.loads(marker.read_text())
+        if previous not in (spec,environment_spec(base,legacy=True)):
             fail('HOLD_MEDIA_EXISTING_ENVIRONMENT_SCOPE')
     else:
         run([BASE_PYTHON,'-m','venv',environment],120)
@@ -403,20 +486,53 @@ def ensure_environment(base):
     if not purelib.is_relative_to(environment): fail('HOLD_MEDIA_ISOLATED_INSTALL_PATH')
     # The isolated environment sees the existing CUDA/Torch wheels. All pip
     # targets remain in this new venv; the trainer's dependencies are untouched.
-    plain(purelib/'nox_shared_torch.pth').write_text(base['purelib']+'\n')
     env = {**os.environ,'PIP_DISABLE_PIP_VERSION_CHECK':'1','PIP_NO_CACHE_DIR':'1',
            'PIP_REQUIRE_VIRTUALENV':'1','PYTHONNOUSERSITE':'1','PYTHONDONTWRITEBYTECODE':'1',
            'CUDA_VISIBLE_DEVICES':''}
-    emit('isolated_environment_installing',packages=len(PYPI_PINS)+len(CUDA_PINS),shared_torch=base['torch'])
-    run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
-         '--index-url','https://pypi.org/simple',*PYPI_PINS],900,env=env)
-    run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
-         '--index-url','https://download.pytorch.org/whl/cu124',*CUDA_PINS],600,env=env)
-    code = "import json,torch,torchvision,torchaudio,transformers,aiohttp,yarl,torchsde,kornia,spandrel,soundfile,sentencepiece,av;from av.codec import Codec;print(json.dumps({'torch':torch.__version__,'torch_file':torch.__file__,'transformers':transformers.__version__,'torchvision':torchvision.__version__,'torchaudio':torchaudio.__version__,'av':av.__version__,'vp9_encoder':Codec('libvpx-vp9','w').name}))"
+    inherited = plain(purelib/'nox_shared_torch.pth')
+    migration = previous is not None and previous != spec
+    if migration:
+        if not inherited.is_file() or inherited.read_text()!=base['purelib']+'\n':
+            fail('HOLD_MEDIA_LEGACY_SHARED_PATH_CHANGED')
+        # A familiar marker alone does not authorize rewriting an arbitrary env.
+        # Every original wheel must still be exactly pinned and local.
+        audit = pinned_environment(python,purelib,LEGACY_PYPI_PINS+CUDA_PINS,env)
+        if audit.get('ok') is not True:
+            emit('legacy_environment_unverified',**audit)
+            fail('HOLD_MEDIA_LEGACY_PACKAGES_CHANGED')
+        emit('additive_dependency_migration',packages=list(REQUESTS_PINS),shared_torch=base['torch'])
+    else:
+        if inherited.exists() and inherited.read_text()!=base['purelib']+'\n':
+            fail('HOLD_MEDIA_SHARED_PATH_CHANGED')
+        inherited.write_text(base['purelib']+'\n')
+        installed = pinned_environment(python,purelib,LEGACY_PYPI_PINS+CUDA_PINS,env)
+        if installed.get('ok') is not True:
+            emit('isolated_environment_installing',packages=len(LEGACY_PYPI_PINS)+len(CUDA_PINS),shared_torch=base['torch'])
+            run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
+                 '--index-url','https://pypi.org/simple',*LEGACY_PYPI_PINS],900,env=env)
+            run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
+                 '--index-url','https://download.pytorch.org/whl/cu124',*CUDA_PINS],600,env=env)
+    additions = pinned_environment(python,purelib,REQUESTS_PINS,env)
+    if additions.get('ok') is not True:
+        run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
+             '--no-index',*[url+'#sha256='+sha for url,sha in REQUESTS_WHEELS]],300,env=env)
+    audit = pinned_environment(python,purelib,PYPI_PINS+CUDA_PINS,env)
+    if audit.get('ok') is not True:
+        emit('isolated_packages_unverified',**audit)
+        fail('HOLD_MEDIA_PINNED_PACKAGES_UNVERIFIED')
+    closure = json.loads(run([python,'-c',DEPENDENCY_AUDIT_CODE,json.dumps(list(PYPI_PINS+CUDA_PINS))],30,env=env))
+    emit('isolated_dependency_closure',**closure)
+    if closure.get('ok') is not True: fail('HOLD_MEDIA_DEPENDENCY_CLOSURE')
+    code = "import json,torch,torchvision,torchaudio,transformers,aiohttp,yarl,torchsde,kornia,spandrel,soundfile,sentencepiece,av,requests,urllib3,charset_normalizer,certifi,idna;from av.codec import Codec;print(json.dumps({'torch':torch.__version__,'torch_file':torch.__file__,'transformers':transformers.__version__,'torchvision':torchvision.__version__,'torchaudio':torchaudio.__version__,'av':av.__version__,'requests':requests.__version__,'vp9_encoder':Codec('libvpx-vp9','w').name}))"
     check = json.loads(run([python,'-c',code],120,env=env))
     if check.get('torch_file')!=base['torch_file'] or check.get('torch')!=base['torch']:
         fail('HOLD_MEDIA_TORCH_REUSE_CHANGED')
     if check.get('vp9_encoder')!='libvpx-vp9': fail('HOLD_MEDIA_VP9_ENCODER_MISSING')
+    if check.get('requests')!='2.34.2': fail('HOLD_MEDIA_REQUESTS_PIN')
+    # Promote only the known environment marker, and only after full imports.
+    # An interrupted migration keeps the old marker and is safely retryable.
+    if previous != spec:
+        atomic_json(marker,spec)
     emit('isolated_environment_verified',**check)
     return python,check
 
@@ -426,6 +542,50 @@ def model_paths_config(rows):
     return {'nox_media':{'base_path':'/', **{
         subdir:'\n'.join(sorted({str(Path(row['path']).parent) for row in rows if row['subdir']==subdir}))
         for subdir in sorted({row['subdir'] for row in rows})}}}
+
+
+def admit_parallel_downloads(rows):
+    remaining = {'ram':0,'disk':0}
+    for row in rows:
+        path = plain(row['path'])
+        if path.exists():
+            # The download task still rehashes this file before publication.
+            if not path.is_file() or path.stat().st_size!=row['bytes']:
+                fail('HOLD_MEDIA_EXISTING_FILE_SIZE')
+            continue
+        partial = plain(path.with_name(path.name+'.partial'))
+        size = partial.stat().st_size if partial.exists() else 0
+        if (partial.exists() and not partial.is_file()) or not 0 <= size <= row['bytes']:
+            fail('HOLD_MEDIA_PARTIAL_SIZE')
+        remaining[row['storage']] += row['bytes']-size
+    actual = resources()
+    if actual['disk_free'] < remaining['disk']+DISK_RESERVE:
+        fail('HOLD_MEDIA_PARALLEL_DISK_ADMISSION')
+    if actual['shm_free'] < remaining['ram']+SHM_RESERVE:
+        fail('HOLD_MEDIA_PARALLEL_SHM_ADMISSION')
+    if actual['memory_free'] < sum(remaining.values())+32*GIB:
+        fail('HOLD_MEDIA_PARALLEL_MEMORY_ADMISSION')
+    return remaining
+
+
+def download_selected(rows):
+    remaining = admit_parallel_downloads(rows)
+    emit('parallel_downloads_admitted',maximum_transfers=3,pending_bytes=remaining)
+    failures = []
+    with ThreadPoolExecutor(max_workers=3,thread_name_prefix='nox-media-download') as pool:
+        futures = {pool.submit(download,row['source_url'],row['path'],row,
+                               SHM_RESERVE if row['storage']=='ram' else DISK_RESERVE):row for row in rows}
+        for future in as_completed(futures):
+            row = futures[future]
+            try:
+                row.update(future.result())
+                emit('asset_sha_verified',filename=row['filename'],bytes=row['bytes'],
+                     sha256=row['sha256'],storage=row['storage'])
+            except Exception as exc:
+                failures.append(exc)
+    if failures:
+        raise failures[0]
+    return rows
 
 
 def health_chat():
@@ -525,11 +685,7 @@ def install(start=False):
         python,environment = ensure_environment(base)
         # Environment setup has a bounded allowance; recheck actual free space
         # before the first large transfer, then on every streamed block.
-        for row in rows:
-            checked = download(row['source_url'],row['path'],row,
-                               SHM_RESERVE if row['storage']=='ram' else DISK_RESERVE)
-            row.update(checked)
-            emit('asset_sha_verified',filename=row['filename'],bytes=row['bytes'],sha256=row['sha256'],storage=row['storage'])
+        download_selected(rows)
         paths_file = MEDIA/'extra_model_paths.json'
         atomic_json(paths_file,model_paths_config(rows))
         output = plain(MEDIA/'outputs'); output.mkdir(mode=0o700,parents=True,exist_ok=True)

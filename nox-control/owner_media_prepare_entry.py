@@ -12,6 +12,7 @@ import fcntl
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -28,7 +29,10 @@ except NameError:
 ROOT = Path('/root/nox')
 STATE = ROOT/'state/owner_media'
 SCRIPTS = ROOT/'scripts'
-INSTALLER_SHA = '90bc1069a003b3571ad2d3f348cbb9a2729e0d0a7b3cbd01f2e9670f7e35041a'
+INSTALLER_SHA = '504cd1c69d51c7aebfeb7b2c935904c4becb1e296f0d04beeb493c8775a13ee6'
+LEGACY_INSTALLER_SHA = '90bc1069a003b3571ad2d3f348cbb9a2729e0d0a7b3cbd01f2e9670f7e35041a'
+LEGACY_WORKER_SHA = '464c20e889abc371c2e848551d0ca9d2a9d48d411ba8f0f75a4b1c3687bfb733'
+LEGACY_FAILED_REQUESTS = {'6903443315','6903599168'}
 RUNTIME_SHA = 'ca8ce2466d0ee4321e17bbf2dc26a6f6396bafb93f3df361a1b35a7e8e3347e5'
 PINS = {'owner_media_install.py':INSTALLER_SHA, 'owner_media_runtime.py':RUNTIME_SHA}
 HOLD_TEXT = ('OWNER_REQUESTED_TRAINING_HALT request=6902883046 '
@@ -123,6 +127,49 @@ def original_hold():
                  ROOT/'state/STOP', ROOT/'state/MEDIA_STOP.flag', Path('/workspace/NOX_STOP')):
         if path.exists() or path.is_symlink(): fail('HOLD_MEDIA_NEW_OWNER_STOP')
     if trainer_status() not in ('STOPPED','EXITED','FATAL'): fail('HOLD_MEDIA_TRAINER_NOT_STOPPED')
+
+
+def legacy_migration_proof(old):
+    """Only the two observed, terminated dependency failures may be upgraded."""
+    if (not isinstance(old,dict) or old.get('schema')!='NOX_MEDIA_PREPARE_JOB_V1'
+            or old.get('request') not in LEGACY_FAILED_REQUESTS
+            or old.get('installer_sha256')!=LEGACY_INSTALLER_SHA
+            or old.get('runtime_sha256')!=RUNTIME_SHA or old.get('worker_sha256')!=LEGACY_WORKER_SHA
+            or not re.fullmatch('[0-9a-f]{40}',str(old.get('source_sha','')))
+            or type(old.get('pid')) is not int or old['pid']<=0
+            or same_job(old,identity(old['pid']))):
+        fail('HOLD_MEDIA_LEGACY_JOB_IDENTITY')
+    archived = read_json(STATE/'prepare_jobs'/(old['request']+'.json'),16000)
+    result = read_json(STATE/('prepare_result_'+old['request']+'.json'),16000)
+    times = (result.get('started'),result.get('finished'))
+    if (archived!=old or result.get('schema')!='NOX_MEDIA_PREPARE_WORKER_V1'
+            or result.get('request')!=old['request'] or result.get('source_sha')!=old['source_sha']
+            or result.get('state')!='HOLD_MEDIA_PREPARE' or result.get('error')!='HOLD_MEDIA_COMMAND_EXIT_1'
+            or not all(type(value) in (int,float) and math.isfinite(value) for value in times)
+            or not 0 < times[0] <= times[1]):
+        fail('HOLD_MEDIA_LEGACY_FAILURE_RECEIPT')
+    original_hold()
+    return {'request':old['request'],'previous_installer_sha256':LEGACY_INSTALLER_SHA,
+            'previous_worker_sha256':LEGACY_WORKER_SHA,'terminal_result_sha256':digest(STATE/('prepare_result_'+old['request']+'.json'))}
+
+
+def install_component(path, data, expected, legacy=None, migration=None):
+    path=plain(path)
+    if hashlib.sha256(data).hexdigest()!=expected:fail('HOLD_MEDIA_BUNDLE_PIN')
+    compile(data,str(path),'exec')
+    if path.exists():
+        old_sha=digest(path)
+        if old_sha==expected:return
+        if not migration or not legacy or old_sha!=legacy:
+            fail('HOLD_MEDIA_INSTALLED_COMPONENT_CHANGED')
+        backup=plain(STATE/'source_backups'/(path.name+'.'+old_sha))
+        if backup.exists():
+            if digest(backup)!=old_sha:fail('HOLD_MEDIA_SOURCE_BACKUP_CHANGED')
+        else:atomic(backup,path.read_bytes())
+        if digest(path)!=old_sha:fail('HOLD_MEDIA_COMPONENT_CHANGED_DURING_BACKUP')
+    atomic(path,data)
+    os.chmod(path,0o700 if path==WORKER else 0o755)
+    if digest(path)!=expected:fail('HOLD_MEDIA_INSTALLED_COMPONENT_READBACK')
 
 
 def module_from_installer():
@@ -264,13 +311,17 @@ def main():
         else:
             job_fd = acquire(STATE/'prepare.lock')
             if job_fd is None: fail('HOLD_MEDIA_UNTRACKED_PREPARATION_BUSY')
+            migration = None
+            installed_source = plain(SCRIPTS/'owner_media_install.py')
+            old_installer = installed_source.exists() and digest(installed_source)==LEGACY_INSTALLER_SHA
+            old_worker = WORKER.exists() and digest(WORKER)==LEGACY_WORKER_SHA
+            if old_installer or old_worker:
+                migration=legacy_migration_proof(old)
+                result['additive_dependency_migration']=migration
             for name, sha in PINS.items():
                 data = base64.b64decode(BUNDLE.get(name,''), validate=True)
-                if hashlib.sha256(data).hexdigest() != sha: fail('HOLD_MEDIA_BUNDLE_PIN')
-                compile(data, name, 'exec')
-                path = plain(SCRIPTS/name)
-                if path.exists() and digest(path) != sha: fail('HOLD_MEDIA_INSTALLED_COMPONENT_CHANGED')
-                if not path.exists(): atomic(path, data); os.chmod(path, 0o755)
+                install_component(SCRIPTS/name,data,sha,
+                                  LEGACY_INSTALLER_SHA if name=='owner_media_install.py' else None,migration)
             installer = module_from_installer()
             observed = readiness(installer)
             if observed['state'] == 'ENGINE_AND_FILES_READY_GENERATION_ACCEPTANCE_PENDING':
@@ -285,9 +336,8 @@ def main():
                 if not free.isdigit() or int(free) < 27000: fail('HOLD_MEDIA_GPU1_ADMISSION')
                 installer.health_chat()
                 worker_bytes = WORKER_SOURCE.encode(); compile(worker_bytes, str(WORKER), 'exec')
-                if WORKER.exists() and digest(WORKER) != hashlib.sha256(worker_bytes).hexdigest():
-                    fail('HOLD_MEDIA_WORKER_SOURCE_CHANGED')
-                if not WORKER.exists(): atomic(WORKER, worker_bytes); os.chmod(WORKER, 0o700)
+                install_component(WORKER,worker_bytes,hashlib.sha256(worker_bytes).hexdigest(),
+                                  LEGACY_WORKER_SHA,migration)
                 mode = 'start' if observed.get('all_asset_sha256_verified') else 'install'
                 log = plain(ROOT/'logs'/('owner_media_prepare_'+request+'.log'))
                 log.parent.mkdir(parents=True, exist_ok=True)

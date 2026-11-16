@@ -115,6 +115,64 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(entry.digest(HERE/'owner_media_install.py'), entry.INSTALLER_SHA)
         self.assertEqual(entry.digest(HERE/'owner_media_runtime.py'), entry.RUNTIME_SHA)
         compile(entry.WORKER_SOURCE, '<finite-media-worker>', 'exec')
+        legacy=entry.WORKER_SOURCE.replace(entry.INSTALLER_SHA,entry.LEGACY_INSTALLER_SHA)
+        self.assertEqual(hashlib.sha256(legacy.encode()).hexdigest(),entry.LEGACY_WORKER_SHA)
+
+    def migration_fixture(self, root):
+        state=root/'state';state.mkdir()
+        request='6903599168'
+        old={'schema':'NOX_MEDIA_PREPARE_JOB_V1','request':request,'source_sha':'a'*40,
+             'installer_sha256':entry.LEGACY_INSTALLER_SHA,'runtime_sha256':entry.RUNTIME_SHA,
+             'worker_sha256':entry.LEGACY_WORKER_SHA,'pid':101,'start_ticks':'1000',
+             'boot_id':'boot-a','argv':['python','worker.py'],'state':'S'}
+        archived=state/'prepare_jobs'/(request+'.json');archived.parent.mkdir()
+        archived.write_text(json.dumps(old))
+        result={'schema':'NOX_MEDIA_PREPARE_WORKER_V1','request':request,'source_sha':'a'*40,
+                'state':'HOLD_MEDIA_PREPARE','error':'HOLD_MEDIA_COMMAND_EXIT_1',
+                'started':1794787396.0916307,'finished':1794787436.342228}
+        result_path=state/('prepare_result_'+request+'.json')
+        result_path.write_text(json.dumps(result))
+        return state,old,result,result_path
+
+    def test_migration_requires_exact_terminated_known_job_and_matching_receipt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state,old,result,result_path=self.migration_fixture(Path(directory))
+            with patch.object(entry,'STATE',state),patch.object(entry,'identity',return_value=None), \
+                 patch.object(entry,'original_hold') as hold:
+                proof=entry.legacy_migration_proof(old)
+                self.assertEqual(proof['request'],old['request'])
+                hold.assert_called_once()
+                result['source_sha']='b'*40
+                result_path.write_text(json.dumps(result))
+                with self.assertRaisesRegex(RuntimeError,'LEGACY_FAILURE_RECEIPT'):
+                    entry.legacy_migration_proof(old)
+            with patch.object(entry,'STATE',state),patch.object(entry,'identity',return_value=old), \
+                 patch.object(entry,'original_hold') as hold:
+                with self.assertRaisesRegex(RuntimeError,'LEGACY_JOB_IDENTITY'):
+                    entry.legacy_migration_proof(old)
+                hold.assert_not_called()
+            with patch.object(entry,'STATE',state),patch.object(entry,'identity',return_value=None):
+                with self.assertRaisesRegex(RuntimeError,'LEGACY_JOB_IDENTITY'):
+                    entry.legacy_migration_proof({**old,'request':'123'})
+
+    def test_source_migration_backs_up_only_exact_recognized_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);state=root/'state';source=root/'installer.py'
+            old=b'old_pin = 1\n';new=b'new_pin = 2\n'
+            source.write_bytes(old)
+            old_sha=hashlib.sha256(old).hexdigest();new_sha=hashlib.sha256(new).hexdigest()
+            with patch.object(entry,'STATE',state):
+                with self.assertRaisesRegex(RuntimeError,'INSTALLED_COMPONENT_CHANGED'):
+                    entry.install_component(source,new,new_sha,old_sha,None)
+                self.assertEqual(source.read_bytes(),old)
+                entry.install_component(source,new,new_sha,old_sha,{'request':'6903599168'})
+                self.assertEqual(source.read_bytes(),new)
+                backup=state/'source_backups'/('installer.py.'+old_sha)
+                self.assertEqual(backup.read_bytes(),old)
+                entry.install_component(source,new,new_sha,old_sha,None)
+                source.write_bytes(b'unknown = 3\n')
+                with self.assertRaisesRegex(RuntimeError,'INSTALLED_COMPONENT_CHANGED'):
+                    entry.install_component(source,new,new_sha,old_sha,{'request':'6903599168'})
 
 
 if __name__ == '__main__':

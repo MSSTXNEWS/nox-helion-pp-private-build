@@ -2,10 +2,16 @@
 """Admission, integrity, resume and GPU-lease tests; no network/CUDA operations."""
 import hashlib
 import importlib.util
+import contextlib
 import io
+import json
 from pathlib import Path
+import sys
 import tarfile
 import tempfile
+import threading
+import time
+import types
 import unittest
 from unittest import mock
 
@@ -122,6 +128,128 @@ class MediaInstallTests(unittest.TestCase):
         self.assertEqual(config['base_path'],'/')
         for row in rows:
             self.assertIn(str(Path(row['path']).parent),config[row['subdir']].splitlines())
+
+    def environment_fixture(self, legacy=True):
+        environment = self.root/'media/venv'
+        purelib = environment/'lib/python3.12/site-packages'
+        purelib.mkdir(parents=True)
+        base = {'purelib':'/root/venv_volta/lib/python3.12/site-packages',
+                'torch':'2.6.0+cu124','torch_file':'/root/venv_volta/lib/python3.12/site-packages/torch/__init__.py'}
+        marker = environment/'nox-environment.json'
+        marker.write_text(json.dumps(m.environment_spec(base,legacy=legacy)))
+        (purelib/'nox_shared_torch.pth').write_text(base['purelib']+'\n')
+        return purelib,base,marker
+
+    def environment_runner(self, purelib, base, calls, failure=None):
+        def run(args, *positional, **kwargs):
+            args = list(map(str,args)); calls.append(args)
+            if args[1:3]==['-m','pip']:
+                return ''
+            code = args[2]
+            if 'sysconfig.get_path' in code:
+                return str(purelib)
+            if code == m.PIN_AUDIT_CODE:
+                requested = json.loads(args[3])
+                if requested == list(m.REQUESTS_PINS) and not any(c[1:3]==['-m','pip'] for c in calls):
+                    return json.dumps({'ok':False,'missing':['requests'],'mismatched':[],
+                                       'outside_isolated_environment':[]})
+                return json.dumps({'ok':True,'missing':[],'mismatched':[],
+                                   'outside_isolated_environment':[]})
+            if code == m.DEPENDENCY_AUDIT_CODE:
+                return json.dumps({'ok':True,'packages_checked':45,'issues':[]})
+            if 'libvpx-vp9' in code:
+                if failure: raise RuntimeError(failure)
+                return json.dumps({'torch':base['torch'],'torch_file':base['torch_file'],
+                                   'vp9_encoder':'libvpx-vp9','requests':'2.34.2'})
+            raise AssertionError('unexpected command')
+        return run
+
+    def test_exact_legacy_environment_adds_only_five_hashed_wheels(self):
+        purelib,base,marker = self.environment_fixture()
+        calls = []
+        with mock.patch.object(m,'run',side_effect=self.environment_runner(purelib,base,calls)),mock.patch.object(m,'emit'):
+            m.ensure_environment(base)
+        pip = [row for row in calls if row[1:3]==['-m','pip']]
+        self.assertEqual(len(pip),1)
+        self.assertIn('--no-deps',pip[0])
+        self.assertIn('--no-index',pip[0])
+        wheels = [arg for arg in pip[0] if arg.startswith('https:')]
+        self.assertEqual(len(wheels),5)
+        self.assertTrue(all('files.pythonhosted.org/' in arg and '#sha256=' in arg for arg in wheels))
+        self.assertNotIn('torchvision', ' '.join(pip[0]))
+        self.assertNotIn('torchaudio', ' '.join(pip[0]))
+        self.assertEqual(json.loads(marker.read_text()),m.environment_spec(base))
+
+    def test_unknown_or_altered_legacy_environment_is_not_rewritten(self):
+        purelib,base,marker = self.environment_fixture()
+        unknown = m.environment_spec(base,legacy=True)
+        unknown['shared_torch']='unrecognized'
+        marker.write_text(json.dumps(unknown))
+        before = marker.read_bytes()
+        with mock.patch.object(m,'run') as run:
+            with self.assertRaisesRegex(RuntimeError,'EXISTING_ENVIRONMENT_SCOPE'):
+                m.ensure_environment(base)
+        run.assert_not_called()
+        self.assertEqual(marker.read_bytes(),before)
+        marker.write_text(json.dumps(m.environment_spec(base,legacy=True)))
+        calls=[]
+        runner=self.environment_runner(purelib,base,calls)
+        def changed(args,*positional,**kwargs):
+            if args[2] == m.PIN_AUDIT_CODE:
+                return json.dumps({'ok':False,'missing':[], 'mismatched':['transformers'],
+                                   'outside_isolated_environment':[]})
+            return runner(args,*positional,**kwargs)
+        with mock.patch.object(m,'run',side_effect=changed),mock.patch.object(m,'emit'):
+            with self.assertRaisesRegex(RuntimeError,'LEGACY_PACKAGES_CHANGED'):
+                m.ensure_environment(base)
+        self.assertFalse(any(row[1:3]==['-m','pip'] for row in calls))
+        self.assertEqual(json.loads(marker.read_text()),m.environment_spec(base,legacy=True))
+
+    def test_failed_import_keeps_old_environment_marker_for_safe_retry(self):
+        purelib,base,marker = self.environment_fixture()
+        before = marker.read_bytes()
+        calls=[]
+        with mock.patch.object(m,'run',side_effect=self.environment_runner(purelib,base,calls,'HOLD_MEDIA_COMMAND_EXIT_1')),mock.patch.object(m,'emit'):
+            with self.assertRaisesRegex(RuntimeError,'COMMAND_EXIT_1'):
+                m.ensure_environment(base)
+        self.assertEqual(marker.read_bytes(),before)
+
+    def test_dependency_audit_ignores_unrequested_extras_and_shared_torch_installer_graph(self):
+        rows={'core':('1',['requests>=2','optional;extra == "private"','torch==2.6.0']),
+              'requests':('2.34.2',['idna>=2.5,<4']),'idna':('3.20',[]),
+              'torch':('2.6.0+cu124',['do-not-install-driver'])}
+        def distribution(name):
+            version,requirements=rows[name]
+            return types.SimpleNamespace(version=version,requires=requirements)
+        output=io.StringIO()
+        with mock.patch('importlib.metadata.distribution',side_effect=distribution), \
+             mock.patch.object(sys,'argv',['audit','["core==1"]']),contextlib.redirect_stdout(output):
+            exec(compile(m.DEPENDENCY_AUDIT_CODE,'<dependency-audit>','exec'),{})
+        result=json.loads(output.getvalue())
+        self.assertTrue(result['ok'])
+        self.assertEqual(result['packages_checked'],4)
+
+    def test_parallel_transfers_are_jointly_admitted_and_bounded_at_three(self):
+        rows=m.plan_assets({'disk_free':20*m.GIB,'shm_free':24*m.GIB,'memory_free':100*m.GIB})
+        active=0; maximum=0; guard=threading.Lock()
+        def transfer(url,path,row,reserve):
+            nonlocal active,maximum
+            with guard:
+                active+=1;maximum=max(maximum,active)
+            time.sleep(0.04)
+            with guard:active-=1
+            return {'verified':True,'path':str(path),'stat_mtime_ns':1}
+        with mock.patch.object(m,'resources',return_value={'disk_free':20*m.GIB,'shm_free':24*m.GIB,'memory_free':100*m.GIB}), \
+             mock.patch.object(m,'download',side_effect=transfer) as download,mock.patch.object(m,'emit'):
+            m.download_selected(rows)
+        self.assertEqual(download.call_count,4)
+        self.assertEqual(maximum,3)
+        self.assertTrue(all(row['verified'] for row in rows))
+        with mock.patch.object(m,'resources',return_value={'disk_free':20*m.GIB,'shm_free':m.SHM_RESERVE,'memory_free':100*m.GIB}), \
+             mock.patch.object(m,'download') as download:
+            with self.assertRaisesRegex(RuntimeError,'PARALLEL_SHM_ADMISSION'):
+                m.download_selected(rows)
+        download.assert_not_called()
 
 
 if __name__=='__main__': unittest.main()
