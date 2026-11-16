@@ -684,4 +684,32 @@ class DeepSeekP0Offline(unittest.TestCase):
                 self.do(opener=lambda *a,**k:self.fail('complete partial never fetches'))
         self.assertEqual(len(counts),3)
 
+
+    def test_download_lock_inode_swap_during_http_holds_before_append(self):
+        """A second owner must not acquire a newly-created lock while the first appends."""
+        lock_path=self.dst/'.nox-deepseek-owner.lock'
+        def swapped_opener(req, timeout=30):
+            self.assertTrue(lock_path.is_file())
+            lock_path.unlink()  # Original flock remains held on now-unlinked inode.
+            lock_path.write_bytes(b'SECOND-WORKER-LOCK')
+            return self.opener(req, timeout=timeout)
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_DOWNLOAD_LOCK_REPLACED'):
+                self.do(opener=swapped_opener)
+        self.assertEqual(lock_path.read_bytes(),b'SECOND-WORKER-LOCK')
+        part=self.dst/(self.name+'.part')
+        self.assertEqual(part.stat().st_size if part.exists() else 0,0)
+        self.assertFalse((self.dst/self.name).exists())
+
+    def test_download_lock_rejects_insecure_existing_permissions(self):
+        """The existing owner lock must not be writable by another Unix identity."""
+        lock_path=self.dst/'.nox-deepseek-owner.lock'
+        lock_path.write_bytes(b'EXISTING')
+        lock_path.chmod(0o666)
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'HOLD_DOWNLOAD_LOCK_PERMISSIONS'):
+                self.do(opener=lambda *args, **kwargs: self.fail('network must not start'))
+        self.assertEqual(lock_path.read_bytes(),b'EXISTING')
+        self.assertFalse((self.dst/(self.name+'.part')).exists())
+
 if __name__=='__main__':unittest.main()
