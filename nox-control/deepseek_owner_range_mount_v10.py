@@ -8,15 +8,18 @@ separate owner-private writable directory for Maya's local model pack.
 
 The original V10 OneHost downloader remains the safe full-file disk fallback.
 Every mount and file operation is fenced by its current OneHost lease and
-OWNER_STOP. Direct I/O prevents cached kernel pages from bypassing those gates.
+OWNER_STOP. Direct I/O prevents cached kernel pages from bypassing those gates. During deploy, a root-only exact-request PREPARE token permits only this mount while physical OWNER_STOP remains in place.
 """
 from __future__ import annotations
 
 import argparse
+import ctypes
 import errno
 import hashlib
 import json
 import os
+import re
+import tempfile
 from collections import OrderedDict
 from pathlib import Path, PurePosixPath
 import stat
@@ -40,6 +43,8 @@ NETWORK_TIMEOUT = 60
 PACK_VIRTUAL = "/maya-ds4"
 PACK_RESERVE_BYTES = 1024**3
 RECEIPT_SCHEMA = "NOX_DEEPSEEK_RANGE_SHA_RECEIPT_V1"
+PROGRESS_SCHEMA = "NOX_DEEPSEEK_RANGE_SHA_PROGRESS_V1"
+PREPARE_TOKEN_PATH = Path("/root/nox/state/owner_maya_deploy_prepare_v1.json")
 
 
 class PublicRedirect(urllib.request.HTTPRedirectHandler):
@@ -105,14 +110,126 @@ def _private_directory(path, create=False, private=True):
     return path
 
 
+
+class _OpenSslSha256:
+    """Serializable OpenSSL SHA-256 state for bounded range-by-range resume.
+
+    The owner job checkpoints the native SHA256_CTX after each verified range;
+    this avoids downloading a 249 GB prefix again after a process restart while
+    preserving the exact ordinary SHA-256 digest. ABI/version mismatches HOLD.
+    """
+    _lib = None
+    _backend = None
+
+    class _CTX(ctypes.Structure):
+        _fields_ = [
+            ("h", ctypes.c_uint32 * 8),
+            ("Nl", ctypes.c_uint32),
+            ("Nh", ctypes.c_uint32),
+            ("data", ctypes.c_uint32 * 16),
+            ("num", ctypes.c_uint),
+            ("md_len", ctypes.c_uint),
+        ]
+
+    @classmethod
+    def _load(cls):
+        if cls._lib is not None:
+            return cls._lib, cls._backend
+        import ctypes
+        import ctypes.util
+        name = ctypes.util.find_library("crypto")
+        if not name:
+            raise owner.Hold("HOLD_RANGE_SHA_STATE_BACKEND")
+        try:
+            lib = ctypes.CDLL(name)
+            lib.SHA256_Init.argtypes = [ctypes.POINTER(cls._CTX)]
+            lib.SHA256_Init.restype = ctypes.c_int
+            lib.SHA256_Update.argtypes = [ctypes.POINTER(cls._CTX), ctypes.c_void_p, ctypes.c_size_t]
+            lib.SHA256_Update.restype = ctypes.c_int
+            lib.SHA256_Final.argtypes = [ctypes.POINTER(ctypes.c_ubyte), ctypes.POINTER(cls._CTX)]
+            lib.SHA256_Final.restype = ctypes.c_int
+            version_fn = getattr(lib, "OpenSSL_version", None)
+            if version_fn is None:
+                version_fn = getattr(lib, "SSLeay_version", None)
+            if version_fn is None or ctypes.sizeof(cls._CTX) != 112:
+                raise ValueError("ABI")
+            version_fn.argtypes = [ctypes.c_int]
+            version_fn.restype = ctypes.c_char_p
+            backend = (name + ":" + version_fn(0).decode("ascii", "strict"))
+            if not backend or not backend.isascii():
+                raise ValueError("backend")
+        except (AttributeError, OSError, ValueError, UnicodeError):
+            raise owner.Hold("HOLD_RANGE_SHA_STATE_BACKEND") from None
+        cls._lib, cls._backend = lib, backend
+        return lib, backend
+
+    def __init__(self, snapshot=None):
+        import ctypes
+        self.lib, self.backend = self._load()
+        self.ctx = self._CTX()
+        self.offset = 0
+        if snapshot is None:
+            if self.lib.SHA256_Init(ctypes.byref(self.ctx)) != 1:
+                raise owner.Hold("HOLD_RANGE_SHA_STATE_INIT")
+            return
+        if (not isinstance(snapshot, dict)
+                or snapshot.get("backend") != self.backend
+                or type(snapshot.get("offset")) is not int
+                or snapshot["offset"] < 0
+                or not isinstance(snapshot.get("context"), str)
+                or not re.fullmatch(r"[0-9a-f]{224}", snapshot["context"])):
+            raise owner.Hold("HOLD_RANGE_SHA_PROGRESS_STATE")
+        raw = bytes.fromhex(snapshot["context"])
+        if len(raw) != ctypes.sizeof(self.ctx):
+            raise owner.Hold("HOLD_RANGE_SHA_PROGRESS_ABI")
+        ctypes.memmove(ctypes.byref(self.ctx), raw, len(raw))
+        self.offset = snapshot["offset"]
+        bit_count = ((int(self.ctx.Nh) << 32) | int(self.ctx.Nl))
+        if (int(self.ctx.md_len) != 32
+                or int(self.ctx.num) != self.offset % 64
+                or bit_count != ((self.offset * 8) & ((1 << 64) - 1))):
+            raise owner.Hold("HOLD_RANGE_SHA_PROGRESS_STATE")
+
+    def update(self, data):
+        import ctypes
+        if not isinstance(data, bytes) or not data:
+            raise owner.Hold("HOLD_RANGE_SHA_PROGRESS_BLOCK")
+        if self.lib.SHA256_Update(ctypes.byref(self.ctx), ctypes.c_char_p(data), len(data)) != 1:
+            raise owner.Hold("HOLD_RANGE_SHA_STATE_UPDATE")
+        self.offset += len(data)
+
+    def snapshot(self):
+        import ctypes
+        return {
+            "backend": self.backend,
+            "offset": self.offset,
+            "context": ctypes.string_at(ctypes.byref(self.ctx), ctypes.sizeof(self.ctx)).hex(),
+        }
+
+    def hexdigest(self):
+        import ctypes
+        final_ctx = self._CTX()
+        ctypes.memmove(ctypes.byref(final_ctx), ctypes.byref(self.ctx), ctypes.sizeof(self.ctx))
+        output = (ctypes.c_ubyte * 32)()
+        if self.lib.SHA256_Final(output, ctypes.byref(final_ctx)) != 1:
+            raise owner.Hold("HOLD_RANGE_SHA_STATE_FINAL")
+        return bytes(output).hex()
+
+
 class DeepSeekOwnerRangeFS(Operations):
     def __init__(
         self, *, manifest_path, destination, pack_root, receipt_dir,
-        owner_root, lease_path, request_id, cache_bytes,
+        owner_root, lease_path, request_id, cache_bytes, deploy_request_id, source_sha,
     ):
         self.owner_root = Path(owner_root)
         self.lease_path = Path(lease_path)
         self.request_id = request_id
+        self.deploy_request_id = str(deploy_request_id)
+        self.source_sha = str(source_sha)
+        if not re.fullmatch(r"\d{1,20}", self.deploy_request_id) or not re.fullmatch(r"[0-9a-f]{40}", self.source_sha):
+            raise owner.Hold("HOLD_DEPLOY_PREPARE_IDENTITY")
+        self.lease_document = owner.lease(self.lease_path, self.request_id, time.time(), self.owner_root)
+        self.lease_sha256 = hashlib.sha256(owner.canonical(self.lease_document)).hexdigest()
         self.destination = Path(destination)
         self.cache_bytes_limit = cache_bytes
         self.cache = OrderedDict()
@@ -162,8 +279,55 @@ class DeepSeekOwnerRangeFS(Operations):
         self.guard()
 
     def guard(self):
-        owner.stop(self.owner_root)
-        owner.lease(self.lease_path, self.request_id, time.time(), self.owner_root)
+        current = owner.lease(self.lease_path, self.request_id, time.time(), self.owner_root)
+        if hashlib.sha256(owner.canonical(current)).hexdigest() != self.lease_sha256:
+            raise owner.Hold("HOLD_OWNER_LEASE_CHANGED")
+        stop_paths = (*(self.owner_root / name for name in owner.STOP_NAMES), Path("/workspace/NOX_STOP"))
+        present = []
+        for flag in stop_paths:
+            try:
+                info = os.lstat(flag)
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise owner.Hold("HOLD_OWNER_STOP_UNREADABLE") from exc
+            owner.require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and info.st_nlink == 1,
+                          "HOLD_OWNER_STOP_UNSAFE")
+            present.append(flag)
+        if not present:
+            return
+        path = PREPARE_TOKEN_PATH
+        before = owner.regular(path, allow_missing=True)
+        owner.require(before is not None and before.st_size <= 8192 and
+                      before.st_uid == 0 and before.st_nlink == 1 and not (before.st_mode & 0o077),
+                      "HOLD_DEPLOY_PREPARE_TOKEN")
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+        try:
+            opened = os.fstat(fd)
+            owner.require(stat.S_ISREG(opened.st_mode) and _identity(opened) == _identity(before),
+                          "HOLD_DEPLOY_PREPARE_CHANGED")
+            raw = os.read(fd, 8193)
+            owner.require(len(raw) == opened.st_size and _identity(os.fstat(fd)) == _identity(opened)
+                          and _identity(owner.regular(path)) == _identity(opened),
+                          "HOLD_DEPLOY_PREPARE_CHANGED")
+        finally:
+            os.close(fd)
+        try:
+            token = json.loads(raw, object_pairs_hook=owner._strict_lease_pairs,
+                               parse_constant=owner._reject_lease_nonfinite)
+        except (ValueError, UnicodeError, TypeError) as exc:
+            raise owner.Hold("HOLD_DEPLOY_PREPARE_JSON") from exc
+        now = time.time()
+        owner.require(isinstance(token, dict)
+                      and token.get("schema") == "NOX_OWNER_MAYA_DEPLOY_PREPARE_V1"
+                      and token.get("deploy_request_id") == self.deploy_request_id
+                      and token.get("source_sha") == self.source_sha
+                      and token.get("lease_path") == str(self.lease_path)
+                      and token.get("lease_request_id") == self.request_id
+                      and token.get("lease_sha256") == self.lease_sha256
+                      and type(token.get("expires_unix")) in (int, float)
+                      and now < token["expires_unix"] <= current["expires_unix"],
+                      "HOLD_DEPLOY_PREPARE_SCOPE")
 
     def runtime_guard(self):
         try:
@@ -172,11 +336,14 @@ class DeepSeekOwnerRangeFS(Operations):
             raise FuseOSError(errno.EIO) from exc
 
     def _receipt_path(self, row, etag):
-        identity = "\0".join((
-            owner.REPO, owner.REVISION, row["path"], str(row["bytes"]),
-            row["sha256"], row["url"], etag,
-        )).encode()
-        key = hashlib.sha256(identity).hexdigest()
+        identity = {
+            "repository": owner.REPO, "revision": owner.REVISION,
+            "source_path": row["path"], "bytes": row["bytes"],
+            "sha256": row["sha256"], "url": row["url"], "etag": etag,
+            "lease_path": str(self.lease_path), "lease_request_id": self.request_id,
+            "lease_sha256": self.lease_sha256,
+        }
+        key = hashlib.sha256(owner.canonical(identity)).hexdigest()
         return self.receipt_dir / (key + ".json")
 
     def _receipt_matches(self, path, row, etag):
@@ -210,6 +377,9 @@ class DeepSeekOwnerRangeFS(Operations):
             "verified_sha256": row["sha256"],
             "url": row["url"],
             "etag": etag,
+            "lease_path": str(self.lease_path),
+            "lease_request_id": self.request_id,
+            "lease_sha256": self.lease_sha256,
         }
         owner.require(isinstance(doc, dict) and
                       all(doc.get(key) == value for key, value in expected.items()),
@@ -228,9 +398,122 @@ class DeepSeekOwnerRangeFS(Operations):
             "verified_sha256": row["sha256"],
             "url": row["url"],
             "etag": etag,
+            "lease_path": str(self.lease_path),
+            "lease_request_id": self.request_id,
+            "lease_sha256": self.lease_sha256,
             "method": method,
             "verified_at_unix": time.time(),
         })
+
+    def _progress_path(self, row, etag):
+        return self._receipt_path(row, etag).with_suffix(".progress.json")
+
+    def _read_progress(self, row, etag):
+        path = self._progress_path(row, etag)
+        before = owner.regular(path, allow_missing=True)
+        if before is None:
+            return None
+        owner.require(0 < before.st_size <= 8192 and not (before.st_mode & 0o077),
+                      "HOLD_RANGE_SHA_PROGRESS_PERMISSIONS")
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+        try:
+            opened = os.fstat(fd)
+            owner.require(stat.S_ISREG(opened.st_mode) and _identity(opened) == _identity(before),
+                          "HOLD_RANGE_SHA_PROGRESS_CHANGED")
+            raw = os.read(fd, 8193)
+            owner.require(len(raw) == opened.st_size and _identity(os.fstat(fd)) == _identity(opened)
+                          and _identity(owner.regular(path)) == _identity(opened),
+                          "HOLD_RANGE_SHA_PROGRESS_CHANGED")
+        finally:
+            os.close(fd)
+        try:
+            doc = json.loads(raw, object_pairs_hook=owner._strict_lease_pairs,
+                             parse_constant=owner._reject_lease_nonfinite)
+        except (ValueError, UnicodeError, TypeError) as exc:
+            raise owner.Hold("HOLD_RANGE_SHA_PROGRESS_JSON") from exc
+        expected = {
+            "schema": PROGRESS_SCHEMA,
+            "repository": owner.REPO,
+            "revision": owner.REVISION,
+            "source_path": row["path"],
+            "bytes": row["bytes"],
+            "sha256": row["sha256"],
+            "url": row["url"],
+            "etag": etag,
+            "lease_path": str(self.lease_path),
+            "lease_request_id": self.request_id,
+            "lease_sha256": self.lease_sha256,
+        }
+        owner.require(isinstance(doc, dict) and all(doc.get(key) == value for key, value in expected.items())
+                      and type(doc.get("offset")) is int
+                      and 0 <= doc["offset"] <= row["bytes"]
+                      and (doc["offset"] % STREAM_VERIFY_BYTES == 0 or doc["offset"] == row["bytes"]),
+                      "HOLD_RANGE_SHA_PROGRESS_IDENTITY")
+        state = _OpenSslSha256(doc.get("hash_state"))
+        owner.require(state.offset == doc["offset"], "HOLD_RANGE_SHA_PROGRESS_CURSOR")
+        return state
+
+    def _save_progress(self, row, etag, state):
+        path = self._progress_path(row, etag)
+        current = owner.regular(path, allow_missing=True)
+        if current is not None:
+            owner.require(current.st_size <= 8192 and not (current.st_mode & 0o077),
+                          "HOLD_RANGE_SHA_PROGRESS_PERMISSIONS")
+        document = {
+            "schema": PROGRESS_SCHEMA,
+            "repository": owner.REPO,
+            "revision": owner.REVISION,
+            "source_path": row["path"],
+            "bytes": row["bytes"],
+            "sha256": row["sha256"],
+            "url": row["url"],
+            "etag": etag,
+            "lease_path": str(self.lease_path),
+            "lease_request_id": self.request_id,
+            "lease_sha256": self.lease_sha256,
+            "offset": state.offset,
+            "hash_state": state.snapshot(),
+            "checkpoint_unix": time.time(),
+        }
+        fd, temporary = tempfile.mkstemp(prefix=".nox-range-progress-", dir=str(self.receipt_dir))
+        try:
+            with os.fdopen(fd, "wb") as target:
+                os.fchmod(target.fileno(), 0o600)
+                target.write(owner.canonical(document))
+                target.flush()
+                os.fsync(target.fileno())
+            if current is None:
+                try:
+                    os.link(temporary, path, follow_symlinks=False)
+                except FileExistsError as exc:
+                    raise owner.Hold("HOLD_RANGE_SHA_PROGRESS_RACE") from exc
+                os.unlink(temporary)
+            else:
+                os.replace(temporary, path)
+            directory_fd = os.open(self.receipt_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        finally:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+
+    def _remove_progress(self, row, etag):
+        path = self._progress_path(row, etag)
+        existing = owner.regular(path, allow_missing=True)
+        if existing is None:
+            return
+        owner.require(existing.st_size <= 8192 and not (existing.st_mode & 0o077),
+                      "HOLD_RANGE_SHA_PROGRESS_PERMISSIONS")
+        os.unlink(path)
+        directory_fd = os.open(self.receipt_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
 
     def _probe_remote(self, name, row):
         self.guard()
@@ -279,22 +562,29 @@ class DeepSeekOwnerRangeFS(Operations):
     def _verify_remote_source(self, name, row, etag):
         receipt = self._receipt_path(row, etag)
         if self._receipt_matches(receipt, row, etag):
+            self._remove_progress(row, etag)
             self.sha_verified.add(name)
             return
-        whole = hashlib.sha256()
-        offset = 0
+        whole = self._read_progress(row, etag)
+        if whole is None:
+            whole = _OpenSslSha256()
+        offset = whole.offset
         while offset < row["bytes"]:
             self.guard()
             block = self._request_block(name, row, etag, offset, STREAM_VERIFY_BYTES)
             whole.update(block)
             offset += len(block)
+            owner.require(whole.offset == offset, "HOLD_RANGE_SHA_PROGRESS_CURSOR")
+            self._save_progress(row, etag, whole)
         self.guard()
-        owner.require(whole.hexdigest() == row["sha256"], "HOLD_RANGE_FULL_SOURCE_SHA")
+        owner.require(whole.offset == row["bytes"] and whole.hexdigest() == row["sha256"],
+                      "HOLD_RANGE_FULL_SOURCE_SHA")
         try:
-            self._save_receipt(row, etag, "FULL_PUBLIC_RANGE_STREAM")
+            self._save_receipt(row, etag, "FULL_PUBLIC_RANGE_STREAM_RESUMABLE")
         except owner.Hold:
             if not self._receipt_matches(receipt, row, etag):
                 raise
+        self._remove_progress(row, etag)
         self.sha_verified.add(name)
 
     def _verify_local_source(self, name, row, path, before, etag):
@@ -735,6 +1025,8 @@ def main():
     parser.add_argument("--receipt-dir", default="/root/nox/state/deepseek_range_sha_receipts")
     parser.add_argument("--lease", required=True, help="current OneHost owner lease")
     parser.add_argument("--request", required=True, help="request ID matching the original lease")
+    parser.add_argument("--deploy-request", required=True, help="exact owner issue-comment ID authorizing PREPARE access")
+    parser.add_argument("--source-sha", required=True, help="exact owner-reviewed GitHub checkout SHA")
     parser.add_argument("--cache-gib", type=float, default=4.0)
     args = parser.parse_args()
 
@@ -759,6 +1051,8 @@ def main():
         lease_path=args.lease,
         request_id=args.request,
         cache_bytes=int(args.cache_gib * 1024**3),
+        deploy_request_id=args.deploy_request,
+        source_sha=args.source_sha,
     )
     # We allow writes only under virtual /maya-ds4; the GGUF source paths stay
     # immutable. direct_io forces each model read through owner STOP/lease gates.
