@@ -1,0 +1,31 @@
+name: NOX native stage STOP and owner lease source tests
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox-control/owner_native_stage.py'
+      - 'nox-control/test_owner_native_stage.py'
+      - '.github/workflows/nox-owner-native-stage-source-ci.yml'
+  pull_request:
+    paths:
+      - 'nox-control/owner_native_stage.py'
+      - 'nox-control/test_owner_native_stage.py'
+      - '.github/workflows/nox-owner-native-stage-source-ci.yml'
+permissions:
+  contents: read
+jobs:
+  source-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run stage admission regressions
+        run: |
+          python -m py_compile nox-control/owner_native_stage.py nox-control/test_owner_native_stage.py
+          cd nox-control
+          python -m unittest -v test_owner_native_stage
+      - name: Mark runtime boundary
+        run: echo 'SOURCE TESTS ONLY. No OneHost, stage, trainer, STOP, or model actions.'
