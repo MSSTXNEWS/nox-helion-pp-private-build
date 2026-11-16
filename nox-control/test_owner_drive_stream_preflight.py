@@ -1,6 +1,8 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -10,7 +12,7 @@ spec.loader.exec_module(m)
 
 
 class DrivePreflightTests(unittest.TestCase):
-    def probe(self, names='nox_drive:\nnox_pc:\n', identifier=None, free=400_000_000_000, stream_size=True):
+    def probe(self, names='nox_drive:\nnox_pc:\n', identifier=None, free=400_000_000_000, stream_size=True, single_stat=True):
         calls = []
         def command(argv, **kwargs):
             calls.append(argv)
@@ -20,7 +22,7 @@ class DrivePreflightTests(unittest.TestCase):
             elif verb == 'listremotes':
                 raw = names.encode()
             elif '--help' in argv or verb == 'help':
-                raw = b'--json --stat --drive-root-folder-id --drive-chunk-size' + (b' --size' if stream_size else b'')
+                raw = b'--json --drive-root-folder-id --drive-chunk-size' + (b' --stat' if single_stat else b'') + (b' --size' if stream_size else b'')
             elif verb == 'lsjson':
                 raw = json.dumps({'ID': identifier or m.SENTINEL_ID, 'Name': m.SENTINEL,
                                   'Path': m.SENTINEL, 'Size': 3000, 'IsDir': False}).encode()
@@ -29,7 +31,9 @@ class DrivePreflightTests(unittest.TestCase):
             else:
                 raise AssertionError('Unexpected command: ' + repr(argv))
             return {'returncode': 0, 'state': 'OK'}, raw
-        with patch.object(m.shutil, 'which', return_value='/usr/bin/rclone'), patch.object(m, 'command', side_effect=command):
+        profile = {'path': '/root/nox/state/cold_drive.conf', 'state': 'VERIFIED_PRIVATE_PROFILE_METADATA', 'contents_inspected': False}
+        with patch.object(m.shutil, 'which', return_value='/usr/bin/rclone'), patch.object(m, 'documented_profile', return_value=profile), \
+             patch.object(m, 'command', side_effect=command):
             result = m.drive_probe()
         return result, calls
 
@@ -39,6 +43,7 @@ class DrivePreflightTests(unittest.TestCase):
         cloud = [x for x in calls if x[1] in ('about', 'lsjson') and '--help' not in x]
         self.assertEqual(len(cloud), 2)
         for argv in cloud:
+            self.assertEqual(argv[argv.index('--config') + 1], '/root/nox/state/cold_drive.conf')
             self.assertEqual(argv[argv.index('--drive-root-folder-id') + 1], m.FOLDER)
             self.assertTrue(argv[2].startswith('nox_drive:'))
         self.assertEqual(cloud[0][2], m.REMOTE + m.SENTINEL)
@@ -47,6 +52,31 @@ class DrivePreflightTests(unittest.TestCase):
         self.assertEqual(result['write_permission'], 'NOT_EXERCISED_READ_ONLY')
         self.assertTrue(all(x[1] not in ('copy', 'copyto', 'move', 'delete', 'mkdir', 'config') for x in calls))
         self.assertTrue(all('--help' in x for x in calls if x[1] == 'rcat'))
+        self.assertIn('--config', next(x for x in calls if x[1] == 'listremotes'))
+
+    def test_legacy_lsjson_targets_only_the_same_file_without_stat(self):
+        result, calls = self.probe(single_stat=False)
+        self.assertEqual(result['state'], 'READY_READ_ONLY_DRIVE_STREAM_PREFLIGHT')
+        listing = next(x for x in calls if x[1] == 'lsjson' and '--help' not in x)
+        self.assertEqual(listing[2], m.REMOTE + m.SENTINEL)
+        self.assertNotIn('--stat', listing)
+        self.assertEqual(result['folder_listing']['objects'][0]['ID'], m.SENTINEL_ID)
+
+    def test_documented_profile_uses_metadata_only_and_rejects_bad_mode_and_symlinks(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'state').mkdir()
+            path = root / 'state/cold_drive.conf'
+            path.write_text('NEVER_READ_CONFIG_CONTENTS')
+            path.chmod(0o600)
+            with patch.object(m, 'ROOT', root), patch.object(m, 'read_regular', side_effect=AssertionError('profile content read')), \
+                 patch('builtins.open', side_effect=AssertionError('profile content opened')):
+                self.assertEqual(m.documented_profile()['state'], 'VERIFIED_PRIVATE_PROFILE_METADATA')
+                path.chmod(0o644)
+                self.assertEqual(m.documented_profile()['state'], 'HOLD_DOCUMENTED_PROFILE_OWNER_OR_MODE')
+                path.unlink()
+                path.symlink_to(root / 'elsewhere')
+                self.assertEqual(m.documented_profile()['state'], 'HOLD_DOCUMENTED_PROFILE_SYMLINK')
 
     def test_missing_known_alias_never_probes_other_storage(self):
         result, calls = self.probe(names='unrelated:\nnox_pc:\n')

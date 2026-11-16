@@ -65,6 +65,20 @@ def command(argv, timeout=20, limit=512 * 1024):
     return meta, p.stdout if p.returncode == 0 else b''
 
 
+def documented_profile():
+    path = ROOT / 'state/cold_drive.conf'  # nox_pc_export.finalize uses this exact installed profile.
+    result = {'path': str(path), 'contents_inspected': False}
+    try:
+        if any(p.is_symlink() for p in (*path.parents, path)):
+            return dict(result, state='HOLD_DOCUMENTED_PROFILE_SYMLINK')
+        info = path.lstat()
+    except OSError:
+        return dict(result, state='HOLD_DOCUMENTED_PROFILE_MISSING')
+    if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o600:
+        return dict(result, state='HOLD_DOCUMENTED_PROFILE_OWNER_OR_MODE')
+    return dict(result, state='VERIFIED_PRIVATE_PROFILE_METADATA', mode='0600', owner_uid=info.st_uid)
+
+
 def drive_probe():
     executable = shutil.which('rclone', path=SAFE_PATH)
     result = {'remote_selection': 'ONLY_EXISTING_NOX_DRIVE_ALIAS', 'selected_remote': None,
@@ -75,7 +89,12 @@ def drive_probe():
         return dict(result, state='HOLD_RCLONE_MISSING')
     meta, raw = command([executable, 'version'], timeout=8)
     result['version'] = dict(meta, first_line=raw.decode('utf-8', 'replace').splitlines()[:1])
-    meta, raw = command([executable, 'listremotes'], timeout=12, limit=16384)
+    profile = documented_profile()
+    result['documented_profile'] = profile
+    if profile['state'] != 'VERIFIED_PRIVATE_PROFILE_METADATA':
+        return dict(result, state=profile['state'])
+    config_args = ['--config', profile['path']]
+    meta, raw = command([executable, 'listremotes', *config_args], timeout=12, limit=16384)
     names = [x for x in raw.decode('utf-8', 'replace').splitlines() if re.fullmatch(r'[A-Za-z0-9_.-]{1,64}:', x)]
     result['listremotes'] = dict(meta, names=names[:64])
     capabilities = {}
@@ -99,11 +118,13 @@ def drive_probe():
     if REMOTE not in names:
         return dict(result, state='HOLD_KNOWN_DRIVE_REMOTE_MISSING')
     result['selected_remote'] = REMOTE
-    if not capabilities['lsjson'].get('single_object_stat') or not capabilities['drive_backend'].get('root_folder_override'):
+    if not capabilities['drive_backend'].get('root_folder_override'):
         return dict(result, state='HOLD_BOUNDED_FOLDER_PROBE_UNSUPPORTED')
-    common = ['--drive-root-folder-id', FOLDER, '--retries', '1', '--low-level-retries', '1',
+    common = [*config_args, '--drive-root-folder-id', FOLDER, '--retries', '1', '--low-level-retries', '1',
               '--contimeout', '10s', '--timeout', '20s']
-    status, raw = command([executable, 'lsjson', REMOTE + SENTINEL, '--stat', *common], timeout=35, limit=65536)
+    # rclone v1.53.3 NewFsSrc adds an exact-file filter for remote:file even without --stat.
+    stat_args = ['--stat'] if capabilities['lsjson'].get('single_object_stat') else []
+    status, raw = command([executable, 'lsjson', REMOTE + SENTINEL, *stat_args, *common], timeout=35, limit=65536)
     listing = dict(status, objects=[])
     if status['state'] == 'OK':
         try:
@@ -158,6 +179,17 @@ def system_probe():
             meta, raw = command([path, '--version'], timeout=8, limit=65536)
             row.update(meta, version_lines=raw.decode('utf-8', 'replace').splitlines()[:4])
         result['commands'][name] = row
+    known_nvcc = Path('/usr/local/cuda-12.4/bin/nvcc')
+    row = {'path': str(known_nvcc)}
+    try:
+        info = known_nvcc.stat()
+        row['available'] = stat.S_ISREG(info.st_mode) and os.access(known_nvcc, os.X_OK)
+        if row['available']:
+            meta, raw = command([str(known_nvcc), '--version'], timeout=8, limit=65536)
+            row.update(meta, version_lines=raw.decode('utf-8', 'replace').splitlines()[:5])
+    except OSError:
+        row['available'] = False
+    result['known_cuda_12_4_nvcc'] = row
     patterns = ('/usr/local/cuda*/lib64/libcublas*', '/usr/local/cuda*/targets/x86_64-linux/lib/libcublas*',
                 '/usr/lib/x86_64-linux-gnu/libcublas*', '/usr/local/cuda*/include/cublas*.h',
                 '/usr/local/cuda*/targets/x86_64-linux/include/cublas*.h', '/usr/include/cublas*.h',
