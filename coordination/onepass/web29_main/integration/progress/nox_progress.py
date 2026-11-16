@@ -213,18 +213,34 @@ class ProgressJournal:
 
 def register_progress(app, trusted, journal):
     """Mount read-only owner-auth route inside the existing FastAPI app."""
-    import asyncio
+    import asyncio, inspect
     from fastapi import Request
     from fastapi.responses import JSONResponse
     auth=trusted.get('_session_ok');deny=trusted.get('_unauthorized');owner=trusted.get('progress_owner_scope')
     if not all(callable(x) for x in (auth,deny,owner)):raise ValueError('EXISTING_OWNER_AUTH_REQUIRED')
     if any(getattr(r,'path',None)=='/api/nox/evolution' for r in app.routes):raise ValueError('DUPLICATE_ROUTE')
+    async def resolved(callback,*args):
+        # Async owner callbacks must be AWAITED; a coroutine is truthy even
+        # when the real permission result is False. Never grant on truthiness.
+        result=callback(*args)
+        return await asyncio.wait_for(result,timeout=2) if inspect.isawaitable(result) else result
     async def endpoint(request):
-        if not auth(request):return deny()
+        try:
+            allowed=await resolved(auth,request)
+        except Exception:
+            allowed=False
+        if allowed is not True:
+            # Preserve the original owner's denial response where available.
+            try:
+                denial=await resolved(deny)
+                if denial is not None:return denial
+            except Exception:
+                pass
+            return JSONResponse({'schema':SCHEMA,'mode':'unavailable','state':'HOLD','reason':'OWNER_SESSION_REQUIRED'},status_code=401,headers={'Cache-Control':'no-store'})
         try:
             count=int(request.query_params.get('hours','24'))
             if not 1<=count<=168:raise ValueError('INVALID_HOURS')
-            who=owner(request)
+            who=journal.owner(await resolved(owner,request))
             value=await asyncio.wait_for(asyncio.to_thread(journal.snapshot,who,hours=count),timeout=8)
             return JSONResponse(value,headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
         except Exception:
