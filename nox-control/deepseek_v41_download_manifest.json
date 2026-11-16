@@ -48,11 +48,16 @@
       "fusepy installed in the owner process Python environment",
       "the active OneHost owner lease for p0.model_download"
     ],
-    "mount_mode": "read-only",
+    "mount_mode": "read-only pinned GGUF files; only virtual /maya-ds4 maps to local writable pack-root",
     "cache": "bounded in-process RAM LRU, default 4 GiB",
+    "maya_pack": "local writable backing directory exposed only as /maya-ds4",
+    "maya_pack_minimum_startup_free_bytes": 3221225472,
+    "maya_pack_free_reserve_bytes": 1073741824,
     "owner_stop_gate": "checked at mount start and every direct-I/O read",
     "persistent_disk_fallback": "nox-control/deepseek_owner_range_v10.py with its SHA-verified final files and receipts",
-    "full_sha_for_remote_ranges": "not claimed; exact Range, length, strong ETag, HTTPS and immutable source pins are enforced"
+    "full_sha_for_remote_ranges": "full SHA-256 streamed before mount on first use; a small receipt is reused only for the exact source and strong ETag",
+    "model_bytes_spooled_to_disk": false,
+    "range_reads_after_mount": "exact byte range, length, strong ETag and HTTPS are enforced"
   },
   "alias": {
     "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf",
