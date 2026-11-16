@@ -8,6 +8,7 @@ import json
 import sqlite3
 import tarfile
 import unittest
+import warnings
 from pathlib import Path
 import zipfile
 from unittest.mock import patch
@@ -84,10 +85,53 @@ def gzip_bomb(expanded_bytes: int = 8192) -> bytes:
     return result.getvalue()
 
 
-def outer_zip(ciphertext: bytes, name: str = validator.INNER_CIPHERTEXT_NAME) -> bytes:
+def receipt_object(ciphertext: bytes, overrides: dict | None = None) -> dict:
+    receipt = {
+        "schema": "NOX_V60_OFFSITE_ENCRYPTED_BACKUP_RECEIPT_V1",
+        "instance_id": 60509551,
+        "ciphertext_file": validator.INNER_CIPHERTEXT_NAME,
+        "ciphertext_bytes": len(ciphertext),
+        "ciphertext_sha256": hashlib.sha256(ciphertext).hexdigest(),
+        "existing_owner_ssh_recipient_sha256": "a" * 64,
+        "restoration_with_temporary_test_identity": "PASS",
+        "restored_file_sha256_count": 7,
+        "plaintext_tar_sha256": "b" * 64,
+        "web_frozen_source_count": 4,
+        "consistent_sqlite_online_backups": 3,
+        "raw_source_files_uploaded_to_github": False,
+        "remote_source_files_deleted": False,
+        "owner_ssh_private_key_decryption_tested": False,
+        "native_queue_deployment": False,
+    }
+    receipt.update(overrides or {})
+    return receipt
+
+
+def outer_zip(
+    ciphertext: bytes,
+    name: str = validator.INNER_CIPHERTEXT_NAME,
+    *,
+    include_receipt: bool = True,
+    receipt_overrides: dict | None = None,
+    extra_member: tuple[str, bytes] | None = None,
+    duplicate_ciphertext: bool = False,
+) -> bytes:
     result = io.BytesIO()
-    with zipfile.ZipFile(result, "w", compression=zipfile.ZIP_STORED) as archive:
-        archive.writestr(name, ciphertext)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        with zipfile.ZipFile(result, "w", compression=zipfile.ZIP_STORED) as archive:
+            archive.writestr(name, ciphertext)
+            if duplicate_ciphertext:
+                archive.writestr(name, ciphertext)
+            if include_receipt:
+                raw_receipt = json.dumps(
+                    receipt_object(ciphertext, receipt_overrides),
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+                archive.writestr(validator.RECEIPT_NAME, raw_receipt)
+            if extra_member is not None:
+                archive.writestr(extra_member[0], extra_member[1])
     return result.getvalue()
 
 
@@ -123,6 +167,41 @@ class V60RestoreValidatorTests(unittest.TestCase):
                 raw, expected_outer_bytes=len(raw), expected_outer_sha256=hashlib.sha256(raw).hexdigest(),
                 expected_ciphertext_sha256=hashlib.sha256(ciphertext).hexdigest(),
             )
+
+    def test_outer_zip_exact_ciphertext_and_receipt_pair_passes(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext)
+        self.assertEqual(self.verify_outer(raw, ciphertext), ciphertext)
+
+    def test_outer_zip_requires_receipt_member(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext, include_receipt=False)
+        with self.assertRaisesRegex(RuntimeError, "HOLD_OUTER_ZIP_MEMBERS"):
+            self.verify_outer(raw, ciphertext)
+
+    def test_outer_zip_rejects_extra_member(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext, extra_member=("unexpected.txt", b"synthetic"))
+        with self.assertRaisesRegex(RuntimeError, "HOLD_OUTER_ZIP_MEMBERS"):
+            self.verify_outer(raw, ciphertext)
+
+    def test_outer_zip_rejects_duplicate_member(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext, duplicate_ciphertext=True)
+        with self.assertRaisesRegex(RuntimeError, "HOLD_OUTER_ZIP_MEMBERS"):
+            self.verify_outer(raw, ciphertext)
+
+    def test_receipt_ciphertext_sha_mismatch_fails_closed(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext, receipt_overrides={"ciphertext_sha256": "0" * 64})
+        with self.assertRaisesRegex(RuntimeError, "HOLD_RECEIPT_CIPHERTEXT_BINDING"):
+            self.verify_outer(raw, ciphertext)
+
+    def test_receipt_ciphertext_size_mismatch_fails_closed(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext, receipt_overrides={"ciphertext_bytes": len(ciphertext) + 1})
+        with self.assertRaisesRegex(RuntimeError, "HOLD_RECEIPT_CIPHERTEXT_BINDING"):
+            self.verify_outer(raw, ciphertext)
 
     def test_plaintext_hashes_and_sqlite_integrity_pass_on_synthetic_fixture(self):
         result = validator.verify_plaintext_tar(plaintext_tar())
