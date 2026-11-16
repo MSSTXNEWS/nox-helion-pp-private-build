@@ -94,5 +94,5 @@
   },
   "native_mutations": false,
   "rollback": "Exact per-file source/test Git blob CAS revert after latest HEAD; no native rollback needed; original GGUF and S03 unchanged",
-  "next": "Wait exact-source CI result; native owner-authorized STOP/lease and independent restore, then verified seekable placement >=248828477216 B missing GGUF + rollback reserve, Maya --serve stdio adapter, one original owner SSE/S03/STOP E2E."
+  "next": "SOURCE CI PASS confirmed. P0 next: refresh original owner STOP/lease and verify independent recoverability of S03/Genesis/checkpoint, then authorized seekable placement for 248828477216 B missing unique GGUF plus rollback reserve, final SHAs, Maya stdio inference via original OneHost, RU/ES SSE/STOP/S03 E2E; no manual STOP reset."
 }
