@@ -204,6 +204,26 @@ class DistillationManifestTest(unittest.TestCase):
         self.assertNotIn("workflow_dispatch:", workflow)
         self.assertIn('python -m unittest discover -s coordination/hybrid_20261115/deepseek_compatible_distill', workflow)
         self.assertIn('python coordination/hybrid_20261115/deepseek_compatible_distill/verify_manifest.py', workflow)
+        steps = [
+            line.strip() for line in workflow.splitlines()
+            if line.strip().startswith(("- uses:", "- name:"))
+        ]
+        self.assertEqual(steps, [
+            "- uses: actions/checkout@v4",
+            "- uses: actions/setup-python@v5",
+            "- name: Validate source-only learning manifest",
+            "- name: Emit current blocked status",
+        ])
+        run_commands = [
+            line.strip() for line in workflow.splitlines()
+            if line.strip().startswith("run:")
+        ]
+        self.assertEqual(run_commands, [
+            'run: python -m unittest discover -s coordination/hybrid_20261115/deepseek_compatible_distill -p "test_*.py"',
+            "run: python coordination/hybrid_20261115/deepseek_compatible_distill/verify_manifest.py",
+        ])
+        self.assertNotIn("secrets.", lowered)
+        self.assertNotIn("env:", lowered)
         forbidden = (
             "ssh ", "nvidia-smi", "torchrun", "accelerate launch", "trainer.train",
             "optimizer.step", "save_pretrained", "/dev/nvidia", "curl ", "wget ",
