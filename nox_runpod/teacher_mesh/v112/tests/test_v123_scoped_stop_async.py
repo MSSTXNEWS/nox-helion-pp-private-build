@@ -4,7 +4,8 @@ import inspect
 import unittest
 
 from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-    _next_native_chunk_or_stop, register_native_v29_chat,
+    _next_native_chunk_or_stop, _next_native_completion_or_stop,
+    register_native_v29_chat,
 )
 
 
@@ -82,10 +83,51 @@ class RealStreamCancellation(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(called)
         await iterator.aclose()
 
+    async def test_scoped_stop_cancels_provider_waiting_for_headers(self):
+        started=asyncio.Event()
+        closed=asyncio.Event()
+        async def provider(payload):
+            try:
+                started.set()
+                await asyncio.Event().wait()
+            finally:
+                await asyncio.sleep(0)
+                closed.set()
+        cancel=asyncio.Event()
+        task=asyncio.create_task(
+            _next_native_completion_or_stop(provider,{"_owner":True},cancel))
+        await asyncio.wait_for(started.wait(),1)
+        cancel.set()
+        self.assertEqual(
+            await asyncio.wait_for(task,timeout=2),
+            ('stop',None))
+        self.assertTrue(closed.is_set())
+
+    async def test_disconnected_caller_cancels_pending_provider_setup(self):
+        started=asyncio.Event()
+        closed=asyncio.Event()
+        async def provider(payload):
+            try:
+                started.set()
+                await asyncio.Event().wait()
+            finally:
+                await asyncio.sleep(0)
+                closed.set()
+        cancel=asyncio.Event()
+        task=asyncio.create_task(
+            _next_native_completion_or_stop(provider,{"_owner":True},cancel))
+        await asyncio.wait_for(started.wait(),1)
+        task.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await asyncio.wait_for(task,timeout=2)
+        self.assertFalse(cancel.is_set())
+        self.assertTrue(closed.is_set())
+
     async def test_source_does_not_claim_native_gpu_stop(self):
         source=inspect.getsource(register_native_v29_chat)
         self.assertIn("'gpu_stop_verified':False",source)
         self.assertIn("event,chunk=await _next_native_chunk_or_stop(",source)
+        self.assertIn("_next_native_completion_or_stop(",source)
         self.assertIn("'STREAM_STOP_REQUESTED'",source)
         self.assertIn("await wire.body_iterator.aclose()",source)
 
