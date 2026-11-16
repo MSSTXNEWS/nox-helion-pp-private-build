@@ -1,0 +1,43 @@
+name: NOX 05N V29.3 V135 V112 bounded S03 source integration
+on:
+  push:
+    branches: [codex/nox-05n-v112-v135-s03-integration-20261116]
+    paths:
+      - 'nox_runpod/teacher_mesh/v112/**'
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+      - 'coordination/onepass/v135_resonance_owner_stage.py'
+      - '.github/workflows/nox-05n-v112-v135-s03-integration.yml'
+permissions: {contents: read}
+jobs:
+  source-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install pinned fixture-only Python dependencies
+        run: python -m pip install -q fastapi==0.128.2 httpx==0.28.1
+      - name: Compile source and cross-version contract
+        run: |
+          set -euo pipefail
+          python -m py_compile nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py
+          python -m py_compile nox_runpod/teacher_mesh/v112/tests/test_native_bridge.py
+          python -m py_compile nox_runpod/teacher_mesh/v112/tests/test_s03_recall_writer_contract.py
+          python -m json.tool nox_runpod/teacher_mesh/v112/tests/fixtures/session_access_evidence_lesson.json >/dev/null
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --check coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: V135 page shim SSE and V112 route source contract
+        run: node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+      - name: V112 bounded recall owner scope STOP and S03 fixtures
+        run: python -m unittest discover -s nox_runpod/teacher_mesh/v112/tests -p 'test_*.py' -v
+      - name: State the verification boundary
+        run: |
+          echo 'NOX_05N_SOURCE_INTEGRATION=PASS_IF_PRIOR_STEPS_PASS'
+          echo 'NOX_05N_MAYA_BINDING=UNVERIFIED'
+          echo 'NOX_05N_LIVE_ROUTE_OR_GPU=UNVERIFIED'
+          echo 'NOX_05N_PRODUCTION_S03_STOP_OR_SERVICE_CHANGED=false'
