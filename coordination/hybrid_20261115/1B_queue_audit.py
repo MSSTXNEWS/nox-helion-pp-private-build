@@ -90,7 +90,9 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
         # A registration receipt is not proof of an active job when the
         # native status has already become terminal or disagrees with queue.
         native_state = status.get("state")
-        if native_state not in RUNNING:
+        # Native callbacks may return malformed JSON values such as [] or {}.
+        # Validate type before membership in a set (unhashable values must HOLD).
+        if not isinstance(native_state, str) or native_state not in RUNNING:
             out["rejected"].append({"task_id": tid, "reason": "NOT_ACTIVE_NATIVE_STATE"})
             continue
         queue, event, proof = queues.get(jid), events.get(jid), s03.get(jid)
@@ -219,6 +221,18 @@ class ContractTests(unittest.TestCase):
             d["statuses"]["NOX-V46-02"] = row
         self.assertEqual(self.check(mutation)["crosschecked_queue_s03_pairs"], 0)
         self.assertEqual(self.check(mutation)["status_job_ids_seen"], 2)
+
+    def test_unhashable_list_native_state_fails_closed(self):
+        r = self.check(lambda d: d["statuses"]["NOX-V46-01"].update(state=[]))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+        self.assertEqual(r["rejected"][0]["reason"], "NOT_ACTIVE_NATIVE_STATE")
+        self.assertFalse(r["native_pass"])
+
+    def test_unhashable_mapping_native_state_fails_closed(self):
+        r = self.check(lambda d: d["statuses"]["NOX-V46-01"].update(state={}))
+        self.assertEqual(r["crosschecked_queue_s03_pairs"], 0)
+        self.assertEqual(r["rejected"][0]["reason"], "NOT_ACTIVE_NATIVE_STATE")
+        self.assertFalse(r["native_pass"])
 
     def test_terminal_status_not_active_receipt(self):
         r = self.check(lambda d: d["statuses"]["NOX-V46-01"].update(state="FAILED"))

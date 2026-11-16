@@ -1,0 +1,28 @@
+name: NOX 1B queue evidence source acceptance
+on:
+  push:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - coordination/hybrid_20261115/1B_queue_audit.py
+      - coordination/hybrid_20261115/1B.md
+      - .github/workflows/nox-hybrid-1b-source-acceptance.yml
+  pull_request:
+    paths:
+      - coordination/hybrid_20261115/1B_queue_audit.py
+      - .github/workflows/nox-hybrid-1b-source-acceptance.yml
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and run exact 1B source selftests
+        run: |
+          python -m py_compile coordination/hybrid_20261115/1B_queue_audit.py
+          python coordination/hybrid_20261115/1B_queue_audit.py --selftest
+          python -O coordination/hybrid_20261115/1B_queue_audit.py --selftest
