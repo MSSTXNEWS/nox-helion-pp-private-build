@@ -185,13 +185,21 @@ def atomic_receipt(path,obj):
         if os.path.exists(tmp): os.unlink(tmp)
 
 def inventory(manifest,target):
+    """Metadata-only, STOP-safe inventory: never scan hundreds of GiB without a lease.
+
+    A matching stat size is NOT a matching SHA. Existing files are SHA-verified
+    separately by download_one() under its exact owner lease and download lock.
+    """
     rows=[]
     for name,row in manifest.items():
         p=target/name;part=target/(name+'.part')
         a,b=regular(p,True),regular(part,True)
+        metadata_complete=bool(a and a.st_size==row['bytes'])
         rows.append({'file':name,'expected_bytes':row['bytes'],'expected_sha256':row['sha256'],
                      'present_bytes':a.st_size if a else None,'partial_bytes':b.st_size if b else None,
-                     'verified':bool(a and a.st_size==row['bytes'] and digest(p)==row['sha256'])})
+                     'metadata_complete':metadata_complete,
+                     'verification_scope':'SHA_UNCHECKED' if a else 'NO_FINAL_FILE',
+                     'verified':False})
     return rows
 
 
