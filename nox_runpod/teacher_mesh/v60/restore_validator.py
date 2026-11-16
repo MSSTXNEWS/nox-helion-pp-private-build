@@ -33,6 +33,8 @@ MAX_TAR_EXPANDED_BYTES = MAX_TOTAL_BYTES + 16 * 1024
 MAX_TAR_COMPRESSION_RATIO = 2048
 MAX_TAR_RATIO_FLOOR_BYTES = 1024 * 1024
 MANIFEST_NAME = "RESTORE_MANIFEST.json"
+RECEIPT_NAME = "NOX_V60_ENCRYPTED_BACKUP_RECEIPT.json"
+MAX_RECEIPT_BYTES = 64 * 1024
 
 EXPECTED_FILES = frozenset({
     "S03/s03_seed_primary.sqlite3",
@@ -44,6 +46,16 @@ EXPECTED_FILES = frozenset({
     "WEB_V29_3/site/pc/nox-chat.js",
 })
 EXPECTED_TAR_MEMBERS = EXPECTED_FILES | {MANIFEST_NAME}
+EXPECTED_ZIP_MEMBERS = frozenset({INNER_CIPHERTEXT_NAME, RECEIPT_NAME})
+EXPECTED_RECEIPT_KEYS = frozenset({
+    "schema", "instance_id", "ciphertext_file", "ciphertext_bytes",
+    "ciphertext_sha256", "existing_owner_ssh_recipient_sha256",
+    "restoration_with_temporary_test_identity", "restored_file_sha256_count",
+    "plaintext_tar_sha256", "web_frozen_source_count",
+    "consistent_sqlite_online_backups", "raw_source_files_uploaded_to_github",
+    "remote_source_files_deleted", "owner_ssh_private_key_decryption_tested",
+    "native_queue_deployment",
+})
 
 
 def _safe_relative_name(name: object) -> bool:
@@ -72,15 +84,55 @@ def _is_sha256(value: object) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
 
-def verify_outer_zip(
+def _validate_receipt(raw_receipt: bytes, ciphertext: bytes, inner_name: str) -> dict:
+    """Validate the sibling receipt and bind its payload claims to the age bytes."""
+    try:
+        receipt = json.loads(
+            raw_receipt.decode("utf-8"),
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (UnicodeError, ValueError, RecursionError):
+        raise RuntimeError("HOLD_OUTER_ZIP_RECEIPT_JSON") from None
+    if not isinstance(receipt, dict) or set(receipt) != EXPECTED_RECEIPT_KEYS:
+        raise RuntimeError("HOLD_OUTER_ZIP_RECEIPT_SCHEMA")
+
+    ciphertext_sha256 = hashlib.sha256(ciphertext).hexdigest()
+    if (receipt.get("ciphertext_file") != inner_name
+            or type(receipt.get("ciphertext_bytes")) is not int
+            or receipt.get("ciphertext_bytes") != len(ciphertext)
+            or receipt.get("ciphertext_sha256") != ciphertext_sha256):
+        raise RuntimeError("HOLD_RECEIPT_CIPHERTEXT_BINDING")
+
+    if (receipt.get("schema") != "NOX_V60_OFFSITE_ENCRYPTED_BACKUP_RECEIPT_V1"
+            or type(receipt.get("instance_id")) is not int
+            or receipt.get("instance_id") != 60509551
+            or not _is_sha256(receipt.get("existing_owner_ssh_recipient_sha256"))
+            or receipt.get("restoration_with_temporary_test_identity") != "PASS"
+            or type(receipt.get("restored_file_sha256_count")) is not int
+            or receipt.get("restored_file_sha256_count") != 7
+            or not _is_sha256(receipt.get("plaintext_tar_sha256"))
+            or type(receipt.get("web_frozen_source_count")) is not int
+            or receipt.get("web_frozen_source_count") != 4
+            or type(receipt.get("consistent_sqlite_online_backups")) is not int
+            or receipt.get("consistent_sqlite_online_backups") != 3
+            or receipt.get("raw_source_files_uploaded_to_github") is not False
+            or receipt.get("remote_source_files_deleted") is not False
+            or receipt.get("owner_ssh_private_key_decryption_tested") is not False
+            or receipt.get("native_queue_deployment") is not False):
+        raise RuntimeError("HOLD_OUTER_ZIP_RECEIPT_SCHEMA")
+    return receipt
+
+
+def _verify_outer_zip_pair(
     outer_bytes: bytes,
     *,
     expected_outer_bytes: int = OUTER_ZIP_BYTES,
     expected_outer_sha256: str = OUTER_ZIP_SHA256,
     expected_ciphertext_sha256: str = INNER_CIPHERTEXT_SHA256,
     inner_name: str = INNER_CIPHERTEXT_NAME,
-) -> bytes:
-    """Verify outer ZIP and return one pinned age ciphertext, without extraction."""
+) -> tuple[bytes, dict]:
+    """Verify exact ZIP pair, hashes, and receipt before any decryptor is called."""
     if not isinstance(outer_bytes, bytes) or not 0 < len(outer_bytes) <= MAX_OUTER_BYTES:
         raise RuntimeError("HOLD_OUTER_ZIP_SIZE")
     if type(expected_outer_bytes) is not int or expected_outer_bytes <= 0:
@@ -98,28 +150,63 @@ def verify_outer_zip(
         with zipfile.ZipFile(io.BytesIO(outer_bytes), "r") as archive:
             infos = archive.infolist()
             names = [item.filename for item in infos]
-            if len(infos) != 1 or names != [inner_name]:
+            if (len(infos) != 2 or len(set(names)) != 2
+                    or set(names) != {inner_name, RECEIPT_NAME}):
                 raise RuntimeError("HOLD_OUTER_ZIP_MEMBERS")
-            info = infos[0]
-            mode = info.external_attr >> 16
-            kind = stat.S_IFMT(mode)
-            if (not _safe_relative_name(info.filename) or info.is_dir()
-                    or info.flag_bits & 0x1
-                    or kind not in (0, stat.S_IFREG)):
-                raise RuntimeError("HOLD_OUTER_ZIP_UNSAFE_MEMBER")
-            if not 0 < info.file_size <= MAX_CIPHERTEXT_BYTES:
+
+            by_name = {item.filename: item for item in infos}
+            for info in infos:
+                mode = info.external_attr >> 16
+                kind = stat.S_IFMT(mode)
+                if (not _safe_relative_name(info.filename) or info.is_dir()
+                        or info.flag_bits & 0x1
+                        or kind not in (0, stat.S_IFREG)):
+                    raise RuntimeError("HOLD_OUTER_ZIP_UNSAFE_MEMBER")
+
+            ciphertext_info = by_name[inner_name]
+            receipt_info = by_name[RECEIPT_NAME]
+            if not 0 < ciphertext_info.file_size <= MAX_CIPHERTEXT_BYTES:
                 raise RuntimeError("HOLD_CIPHERTEXT_SIZE")
-            with archive.open(info, "r") as stream:
+            if not 0 < receipt_info.file_size <= MAX_RECEIPT_BYTES:
+                raise RuntimeError("HOLD_RECEIPT_SIZE")
+            with archive.open(ciphertext_info, "r") as stream:
                 ciphertext = stream.read(MAX_CIPHERTEXT_BYTES + 1)
-            if len(ciphertext) != info.file_size or len(ciphertext) > MAX_CIPHERTEXT_BYTES:
+            with archive.open(receipt_info, "r") as stream:
+                raw_receipt = stream.read(MAX_RECEIPT_BYTES + 1)
+            if (len(ciphertext) != ciphertext_info.file_size
+                    or len(ciphertext) > MAX_CIPHERTEXT_BYTES):
                 raise RuntimeError("HOLD_CIPHERTEXT_SIZE")
+            if (len(raw_receipt) != receipt_info.file_size
+                    or len(raw_receipt) > MAX_RECEIPT_BYTES):
+                raise RuntimeError("HOLD_RECEIPT_SIZE")
     except RuntimeError:
         raise
-    except (OSError, EOFError, KeyError, zipfile.BadZipFile, zipfile.LargeZipFile, RuntimeError):
+    except (OSError, EOFError, KeyError, NotImplementedError,
+            zipfile.BadZipFile, zipfile.LargeZipFile):
         raise RuntimeError("HOLD_OUTER_ZIP_INVALID") from None
 
+    receipt = _validate_receipt(raw_receipt, ciphertext, inner_name)
     if hashlib.sha256(ciphertext).hexdigest() != expected_ciphertext_sha256:
         raise RuntimeError("HOLD_INNER_CIPHERTEXT_SHA256")
+    return ciphertext, receipt
+
+
+def verify_outer_zip(
+    outer_bytes: bytes,
+    *,
+    expected_outer_bytes: int = OUTER_ZIP_BYTES,
+    expected_outer_sha256: str = OUTER_ZIP_SHA256,
+    expected_ciphertext_sha256: str = INNER_CIPHERTEXT_SHA256,
+    inner_name: str = INNER_CIPHERTEXT_NAME,
+) -> bytes:
+    """Verify the pinned two-member ZIP and return its age ciphertext."""
+    ciphertext, _ = _verify_outer_zip_pair(
+        outer_bytes,
+        expected_outer_bytes=expected_outer_bytes,
+        expected_outer_sha256=expected_outer_sha256,
+        expected_ciphertext_sha256=expected_ciphertext_sha256,
+        inner_name=inner_name,
+    )
     return ciphertext
 
 
@@ -322,7 +409,7 @@ def verify_offsite_candidate(
     inner_name: str = INNER_CIPHERTEXT_NAME,
 ) -> dict:
     """Validate an encrypted Drive candidate only with an explicit owner decryptor."""
-    ciphertext = verify_outer_zip(
+    ciphertext, receipt = _verify_outer_zip_pair(
         outer_bytes,
         expected_outer_bytes=expected_outer_bytes,
         expected_outer_sha256=expected_outer_sha256,
@@ -341,4 +428,5 @@ def verify_offsite_candidate(
         "outer_zip_sha256": hashlib.sha256(outer_bytes).hexdigest(),
         "ciphertext_sha256": hashlib.sha256(ciphertext).hexdigest(),
         "owner_key_available": False,
+        "receipt_verified": True,
     }
