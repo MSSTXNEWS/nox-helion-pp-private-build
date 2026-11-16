@@ -77,9 +77,9 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
             for name in names:
                 path = Path(temp) / name
                 path.write_bytes(b"synthetic-link-target")
-                lines.append(f"\\t{name} (libc6,x86-64) => {path}")
-            cp = type("Completed", (), {"returncode": 0, "stdout": "\\n".join(lines)})()
-            with patch.object(INSPECT.shutil, "which", return_value="/sbin/ldconfig"), \\
+                lines.append(f"\t{name} (libc6,x86-64) => {path}")
+            cp = type("Completed", (), {"returncode": 0, "stdout": "\n".join(lines)})()
+            with patch.object(INSPECT.shutil, "which", return_value="/sbin/ldconfig"), \
                  patch.object(INSPECT.subprocess, "run", return_value=cp) as run:
                 got = INSPECT.maya_dependency_path_readback({
                     "state": "ELF_LINKAGE_READ_ONLY", "rpath": []})
@@ -100,15 +100,14 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
             for name in names:
                 path = Path(temp) / name
                 path.write_bytes(b"synthetic-link-target")
-                lines.append(f"\\t{name} (libc6,x86-64) => {path}")
-            cp = type("Completed", (), {"returncode": 0, "stdout": "\\n".join(lines)})()
-            with patch.object(INSPECT.shutil, "which", return_value="/sbin/ldconfig"), \\
+                lines.append(f"\t{name} (libc6,x86-64) => {path}")
+            cp = type("Completed", (), {"returncode": 0, "stdout": "\n".join(lines)})()
+            with patch.object(INSPECT.shutil, "which", return_value="/sbin/ldconfig"), \
                  patch.object(INSPECT.subprocess, "run", return_value=cp):
                 got = INSPECT.maya_dependency_path_readback({
                     "state": "ELF_LINKAGE_READ_ONLY", "rpath": []})
         self.assertEqual(got["state"], "HOLD_REQUIRED_LIBRARY_PATH_MISSING")
         self.assertFalse(got["libraries"]["libcublasLt.so.12"]["present")
-
 
 
 class MayaLaunchPlanTests(unittest.TestCase):
