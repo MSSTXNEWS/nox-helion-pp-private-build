@@ -299,6 +299,54 @@ print('NATIVE_P0_OWNER_STOP='+bounded_native_json(
     pinned_owner_stop_snapshot(pinned_stop_paths, os.lstat),
     300,'HOLD_STOP_JSON_BUDGET'))
 
+
+def chat_listener_projection(supervisor, call, procroot):
+    # A listening PID is observed process evidence, never a writer lease.
+    services = supervisor.get('services', []) if isinstance(supervisor, dict) else []
+    chat = next((x for x in services if x.get('service') == 'nox-chat-8081'), None)
+    if chat is None:
+        return {'status': 'HOLD_CHAT_SUPERVISOR_NOT_OBSERVED'}
+    rc, output = call(['ss', '-H', '-ltnp'])
+    if rc or len(output) >= 10000:
+        return {'status': 'HOLD_CHAT_LISTENER_QUERY'}
+    owners = set()
+    found_listener = False
+    for line in output.splitlines():
+        fields = line.split(None, 5)
+        if len(fields) < 5 or fields[0] != 'LISTEN' or not fields[3].endswith(':8081'):
+            continue
+        found_listener = True
+        pids = re.findall(r'\bpid=([1-9][0-9]{0,8})\b', line)
+        if not pids:
+            return {'status': 'HOLD_CHAT_LISTENER_PID_UNREADABLE'}
+        owners.update(map(int, pids))
+        if len(owners) > 5:
+            return {'status': 'HOLD_CHAT_LISTENER_AMBIGUOUS'}
+    if not found_listener:
+        return {'status': 'NO_CHAT_LISTENER_ON_8081',
+                'supervisor_status': chat['status'], 'restart_authorized': False}
+    pins = []
+    for pid in sorted(owners):
+        try:
+            p = procroot / str(pid)
+            raw = (p / 'stat').read_text()
+            stat = raw.rsplit(') ', 1)[1].split()
+            start = stat[19]
+            comm = (p / 'comm').read_text().strip()
+        except (OSError, IndexError, ValueError):
+            return {'status': 'HOLD_CHAT_PID_IDENTITY_UNREADABLE'}
+        if not start.isdigit() or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,40}', comm):
+            return {'status': 'HOLD_CHAT_PID_IDENTITY_SCHEMA'}
+        pins.append({'pid': pid, 'start_ticks': int(start), 'comm': comm})
+    status = ('CHAT_UNMANAGED_LISTENER_OBSERVED' if chat['status'] != 'RUNNING'
+              else 'CHAT_LISTENER_OBSERVED')
+    return {'status': status, 'supervisor_status': chat['status'],
+            'listener_pids': pins, 'restart_authorized': False}
+
+print('NATIVE_P0_CHAT_LISTENER='+bounded_native_json(
+    chat_listener_projection(supervisor_projection(rc,out),call,Path('/proc')),
+    680,'HOLD_CHAT_LISTENER_OUTPUT_BUDGET'))
+
 print('NATIVE_P0_GPU_PID_MAP='+bounded_native_json(
     gpu_pid_map(call,Path('/proc')),740,'HOLD_GPU_PID_LOG_BUDGET'))
 print('NATIVE_P0_CGROUP_OOM='+bounded_native_json(

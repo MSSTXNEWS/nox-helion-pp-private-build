@@ -9,8 +9,8 @@ from nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe import REMOTE
 
 code=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
 tree=ast.parse(code)
-nodes=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in {'gpu_pid_map','cgroup_oom_pair','supervisor_projection','bounded_native_json','pinned_owner_stop_snapshot'}]
-assert len(nodes)==5
+nodes=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in {'gpu_pid_map','cgroup_oom_pair','supervisor_projection','bounded_native_json','pinned_owner_stop_snapshot','chat_listener_projection'}]
+assert len(nodes)==6
 context={'re':re,'json':json}
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'<v51-native-functions>','exec'),context)
 
@@ -168,5 +168,38 @@ class ReadOnlySafety(unittest.TestCase):
         self.assertIn('NATIVE_P0_OWNER_STOP=',REMOTE)
         self.assertIn("pinned_owner_stop_snapshot(pinned_stop_paths, os.lstat)",REMOTE)
         self.assertIn("'manual_stop_clear_verified': False",code)
+
+
+    def test_chat_listener_split_brain_blocks_blind_restart(self):
+        status={'services':[{'service':'nox-chat-8081','status':'STOPPED','pid':None}]}
+        line='LISTEN 0 128 127.0.0.1:8081 0.0.0.0:* users:(("llama-server",pid=7637,fd=12))\n'
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'7637';p.mkdir()
+            (p/'stat').write_text('7637 (llama-server) S '+' '.join(['0']*19+['123456']+['0']*10))
+            (p/'comm').write_text('llama-server\n')
+            x=context['chat_listener_projection'](status,lambda _: (0,line),Path(d))
+        self.assertEqual(x['status'],'CHAT_UNMANAGED_LISTENER_OBSERVED')
+        self.assertEqual(x['listener_pids'][0]['start_ticks'],123456)
+        self.assertFalse(x['restart_authorized'])
+        self.assertNotIn('users:',json.dumps(x))
+
+    def test_chat_listener_fails_closed_on_unknown_pid_and_supervisor(self):
+        parse=context['chat_listener_projection']
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)
+            self.assertEqual(parse({},lambda _: (0,''),path)['status'],
+                             'HOLD_CHAT_SUPERVISOR_NOT_OBSERVED')
+            status={'services':[{'service':'nox-chat-8081','status':'STOPPED','pid':None}]}
+            self.assertEqual(parse(status,lambda _: (99,''),path)['status'],
+                             'HOLD_CHAT_LISTENER_QUERY')
+            self.assertEqual(parse(status,lambda _: (0,'LISTEN 0 128 127.0.0.1:8081 0.0.0.0:*'),path)['status'],
+                             'HOLD_CHAT_LISTENER_PID_UNREADABLE')
+
+    def test_chat_listener_native_probe_is_readonly_and_forwarded(self):
+        workflow=(Path(__file__).resolve().parents[4]/'.github/workflows/nox-v51-ephemeral-ssh-native.yml').read_text()
+        self.assertIn('NATIVE_P0_CHAT_LISTENER=',REMOTE)
+        self.assertIn('chat_listener_projection(supervisor_projection(rc,out),call,Path',REMOTE)
+        self.assertIn('"NATIVE_P0_"',workflow)
+        self.assertNotIn('supervisorctl restart',REMOTE)
 
 if __name__=='__main__':unittest.main()

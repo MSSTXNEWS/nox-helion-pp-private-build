@@ -1,0 +1,69 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_1A_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "1A",
+  "stream": "1",
+  "at_utc": "2026-11-16T12:19:59.658Z",
+  "head_before": "3fb529fb785640ca3a17d086adcaa8dfa4a2344a",
+  "head_after": "COMMIT_CARRYING_THIS_RECEIPT",
+  "source_before_blob": "f1a8979f34ed1d607fd78b7464c8c15d096ab2c4",
+  "test_before_blob": "df8a3433f37cd79293ae5887eeba0cf5f0b4692f",
+  "onehost_instance": 60509551,
+  "error_id": "NOX-P0-SUPERVISOR-STOPPED-BUT-LIVE-LLAMA-8081-OWNER-UNRESOLVED-20261116",
+  "root_cause": "Original native receipt #43846952110 reported nox-chat-8081 Supervisor STOPPED while an independent llama-server PID 7637 served HTTP200; V51 gave no bounded listener PID/starttime reconciliation; blind service restart risks duplicate inference.",
+  "five_tasks": [
+    {
+      "task": 1,
+      "status": "DONE_SOURCE_ACCESS_PLAYBOOK",
+      "evidence": "Vast v1 owner-pinned V51 path and latest PR HEAD inspected; new SSH not invoked"
+    },
+    {
+      "task": 2,
+      "status": "DONE_SOURCE_OBSERVABILITY_NATIVE_HOLD",
+      "evidence": "Added V51 read-only 8081 listener PID and /proc starttime observation; native current PID, model SHA and owner STOP remain HOLD"
+    },
+    {
+      "task": 3,
+      "status": "HOLD_NO_FRESH_NATIVE_ADMISSION",
+      "evidence": "Last independently referenced cgroup/GPU/SSD/OOM is native #43846952110 2026-11-16T10:14Z, not current"
+    },
+    {
+      "task": 4,
+      "status": "DONE_SOURCE_DIAGNOSTIC_NATIVE_REPAIR_HOLD",
+      "evidence": "Fail-closed split-brain detection and restart_authorized=false; actual Supervisor/service not changed; no native writer lease/rollback"
+    },
+    {
+      "task": 5,
+      "status": "SOURCE_LOCAL_6_6_AND_POSTCOMMIT_CI_PENDING",
+      "evidence": "6 focused Python tests run locally; GitHub source/blob readback next, new native V51 workflow_dispatch not available from GitHub connector"
+    }
+  ],
+  "WEIGHTS": {
+    "new_successful_optimizer_updates_verified": 0,
+    "historical_checkpoint25": "RECEIPT_ONLY_NOT_REVALIDATED",
+    "trainer_pid_current": null,
+    "offsite_optimizer_scaler_rng_restore": "HOLD"
+  },
+  "KNOWLEDGE": {
+    "new_native_hunter_verified_source_s03_recall": false
+  },
+  "DISPATCHER+RESOURCES": {
+    "current_pid": null,
+    "resource_admission": "HOLD",
+    "owner_stop": "HOLD",
+    "writer_lease": "UNKNOWN",
+    "restarts": 0,
+    "downloads_bytes": 0,
+    "deleted_bytes": 0,
+    "reference": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43846952110"
+  },
+  "touched_paths": [
+    "nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py",
+    "nox_runpod/teacher_mesh/v50/tests/test_v51_native_safety_readonly.py",
+    "coordination/progress/hourly/2026-11-16T15/1A_chat_listener_owner_reconciliation_v06.json"
+  ],
+  "service_restarted": false,
+  "live_mutations": 0,
+  "cleaned_bytes": 0,
+  "next_one_action": "Dispatch only existing owner-approved exact-HEAD V51 read-only workflow: verify NATIVE_P0_CHAT_LISTENER with supervisor and 8081 owner, eight STOP paths, cgroups, 2xV100 and active model; do not restart live chat until separate writer lease and rollback."
+}
