@@ -98,9 +98,14 @@ def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]
     return {"state":"SOURCE_ROWS_PARSED","sha256":digest.hexdigest(),"prompts":seen}
 
 def verify_corpus(corpus_dir:str)->dict:
+    """Bounded local JSONL integrity gate, including optional owner threeway splits.
+
+    Owner group hashes are checked for shape/disjointness only. The caller must
+    obtain independent authenticated owner-native provenance before training.
+    """
     try:
         p=Path(corpus_dir)
-    except (OSError, TypeError, ValueError):
+    except (OSError,TypeError,ValueError):
         return {"state":"HOLD_NONLOCAL_CORPUS"}
     if not _under_allowed_root(p):
         return {"state":"HOLD_NONLOCAL_CORPUS"}
@@ -111,34 +116,66 @@ def verify_corpus(corpus_dir:str)->dict:
         if not mf.is_file() or mf.is_symlink():
             return {"state":"HOLD_CORPUS_MANIFEST_FILE"}
         manifest=json.loads(mf.read_text("utf-8"))
-        if not isinstance(manifest,dict) or manifest.get("schema")!="nox-teacher-approved-sft-v1":
+        if not isinstance(manifest,dict):
+            return {"state":"HOLD_CORPUS_SCHEMA"}
+        schema=manifest.get("schema")
+        legacy=schema=="nox-teacher-approved-sft-v1"
+        threeway=schema=="nox-teacher-owner-threeway-sft-v2"
+        if not (legacy or threeway):
             return {"state":"HOLD_CORPUS_SCHEMA"}
         if manifest.get("status")!="REVIEWED_NOT_OPTIMIZER_TRAINED":
             return {"state":"HOLD_CORPUS_STATE"}
         if manifest.get("response_only_loss_required") is not True:
             return {"state":"HOLD_LOSS_MASK"}
-        counts=manifest["counts"]
-        if (not isinstance(counts,dict) or
-            any(type(counts.get(k)) is not int or not 1<=counts[k]<=MAX_CORPUS_ROWS
-                for k in ("train","holdout"))):
+        counts=manifest.get("counts")
+        expected_splits=("train","dev","holdout") if threeway else ("train","holdout")
+        if not isinstance(counts,dict) or set(counts)!=set(expected_splits):
+            return {"state":"HOLD_CORPUS_SPLIT_SET"}
+        if any(type(counts[k]) is not int or not 1<=counts[k]<=MAX_CORPUS_ROWS
+               for k in expected_splits):
             return {"state":"HOLD_CORPUS_NO_HOLDOUT"}
-        train_fingerprints=None
-        for part in ("train","holdout"):
+        if legacy and (p/"dev.jsonl").exists():
+            return {"state":"HOLD_CORPUS_UNDECLARED_SPLIT"}
+        if threeway:
+            if manifest.get("splitting")!="OWNER_RECEIPT_SOURCE_GROUP_DISJOINT_SHA256":
+                return {"state":"HOLD_CORPUS_OWNER_SPLIT_POLICY"}
+            owner_groups=manifest.get("source_group_shas_by_split")
+            if not isinstance(owner_groups,dict) or set(owner_groups)!=set(expected_splits):
+                return {"state":"HOLD_CORPUS_OWNER_GROUPS"}
+            all_groups=set()
+            for part in expected_splits:
+                group_shas=owner_groups[part]
+                if (not isinstance(group_shas,list) or not group_shas
+                        or any(not isinstance(s,str) or re.fullmatch(r"[a-f0-9]{64}",s) is None
+                               for s in group_shas)
+                        or len(set(group_shas))!=len(group_shas)):
+                    return {"state":"HOLD_CORPUS_OWNER_GROUPS"}
+                if all_groups.intersection(group_shas):
+                    return {"state":"HOLD_CORPUS_OWNER_GROUP_OVERLAP"}
+                all_groups.update(group_shas)
+        all_prompts=set()
+        verified_shas={}
+        for part in expected_splits:
             filename=part+".jsonl"
             file=p/filename
             if not file.is_file() or file.is_symlink():
                 return {"state":"HOLD_CORPUS_FILE"}
-            details=_inspect_corpus_file(file,counts[part],train_fingerprints)
+            details=_inspect_corpus_file(file,counts[part],all_prompts if all_prompts else None)
             if details["state"]!="SOURCE_ROWS_PARSED":
                 return {"state":details["state"]}
             if details["sha256"]!=manifest.get(filename+"_sha256"):
                 return {"state":"HOLD_CORPUS_HASH"}
-            if part=="train":
-                train_fingerprints=details["prompts"]
-        return {"state":"VERIFIED_SOURCE_CORPUS","counts":counts,
-                "train_sha256":manifest["train.jsonl_sha256"],
-                "holdout_sha256":manifest["holdout.jsonl_sha256"],
-                "split_evidence":"EXACT_PROMPT_DISJOINT_SOURCE_ONLY_SEMANTIC_HOLDOUT_UNVERIFIED"}
+            verified_shas[part]=details["sha256"]
+            all_prompts.update(details["prompts"])
+        result={"state":"VERIFIED_SOURCE_CORPUS","counts":counts,
+                "train_sha256":verified_shas["train"],
+                "holdout_sha256":verified_shas["holdout"],
+                "owner_corpus_identity_native_verified":False,
+                "split_evidence":"EXACT_PROMPT_THREEWAY_DISJOINT_SOURCE_ONLY_OWNER_RECEIPTS_NOT_NATIVE_VALIDATED"
+                    if threeway else "EXACT_PROMPT_DISJOINT_SOURCE_ONLY_SEMANTIC_HOLDOUT_UNVERIFIED"}
+        if threeway:
+            result["dev_sha256"]=verified_shas["dev"]
+        return result
     except (OSError,ValueError,KeyError,TypeError,AttributeError):
         return {"state":"HOLD_CORPUS_UNREADABLE"}
 
@@ -219,6 +256,9 @@ def plan_adapter(
       "corpus":corpus_dir,
       "training_data_sha256":corpus["train_sha256"],
       "holdout_data_sha256":corpus["holdout_sha256"],
+      "dev_data_sha256":corpus.get("dev_sha256"),
+      "owner_corpus_identity_native_verified":False,
+      "corpus_split_evidence":corpus["split_evidence"],
       "precision":precision,
       "peft":{
         "type":"LORA", "target_modules":sorted(set(target_modules)),

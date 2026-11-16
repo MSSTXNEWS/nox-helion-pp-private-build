@@ -171,5 +171,75 @@ class ForgeRecipeTest(unittest.TestCase):
         self.assertEqual(checked["state"],"VERIFIED_SOURCE_CORPUS")
         self.assertIn("SEMANTIC_HOLDOUT_UNVERIFIED",checked["split_evidence"])
 
+
+    def _set_threeway(self, dev_question="safe dev"):
+        manifest_file=self.corpus/"manifest.json"
+        manifest=json.loads(manifest_file.read_text("utf8"))
+        dev_data=(json.dumps(self._row(dev_question,"answer dev"))+"\n").encode()
+        # Keep bytes identical to those consumed by the verifier.
+        dev_data=dev_data.replace(b"\\\\n",b"\\n")
+        (self.corpus/"dev.jsonl").write_bytes(dev_data)
+        manifest["schema"]="nox-teacher-owner-threeway-sft-v2"
+        manifest["counts"]={"train":1,"dev":1,"holdout":1}
+        manifest["splitting"]="OWNER_RECEIPT_SOURCE_GROUP_DISJOINT_SHA256"
+        manifest["source_group_shas_by_split"]={"train":["a"*64],"dev":["b"*64],"holdout":["c"*64]}
+        manifest["dev.jsonl_sha256"]=hashlib.sha256(dev_data).hexdigest()
+        manifest_file.write_text(json.dumps(manifest),encoding="utf8")
+        return manifest
+
+    def test_owner_threeway_source_gate_is_not_native_authorization(self):
+        self._set_threeway()
+        out=recipe.verify_corpus(str(self.corpus))
+        self.assertEqual(out["state"],"VERIFIED_SOURCE_CORPUS")
+        self.assertEqual(out["counts"]["dev"],1)
+        self.assertEqual(out["dev_sha256"],
+                         hashlib.sha256((self.corpus/"dev.jsonl").read_bytes()).hexdigest())
+        self.assertFalse(out["owner_corpus_identity_native_verified"])
+        planned=recipe.plan_adapter(**self.kwargs)
+        self.assertEqual(planned["state"],"RECIPE_ONLY_NOT_TRAINED")
+        self.assertEqual(planned["dev_data_sha256"],out["dev_sha256"])
+        self.assertFalse(planned["native_writer_lease_verified"])
+        self.assertEqual(planned["optimizer_steps_verified"],0)
+
+    def test_owner_threeway_dev_holdout_leakage_rejected(self):
+        self._set_threeway("safe hold")
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_EXACT_HOLDOUT_LEAKAGE")
+
+    def test_owner_threeway_train_dev_leakage_rejected(self):
+        self._set_threeway("safe train")
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_EXACT_HOLDOUT_LEAKAGE")
+
+    def test_owner_threeway_missing_dev_rejected(self):
+        self._set_threeway()
+        (self.corpus/"dev.jsonl").unlink()
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_FILE")
+
+    def test_owner_threeway_cross_split_group_collision_rejected(self):
+        m=self._set_threeway()
+        m["source_group_shas_by_split"]["dev"]=["a"*64]
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_OWNER_GROUP_OVERLAP")
+
+    def test_owner_threeway_unsigned_split_metadata_rejected(self):
+        m=self._set_threeway()
+        del m["source_group_shas_by_split"]
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_OWNER_GROUPS")
+
+    def test_legacy_manifest_cannot_silently_ignore_dev(self):
+        (self.corpus/"dev.jsonl").write_text("extra dev data")
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_UNDECLARED_SPLIT")
+        m=json.loads((self.corpus/"manifest.json").read_text())
+        m["counts"]["dev"]=1
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_SPLIT_SET")
+
 if __name__=="__main__":
     unittest.main()
