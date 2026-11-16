@@ -1,0 +1,92 @@
+{
+  "schema": "NOX_PRIME_SIX_RELAY_V10",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3D",
+  "at_utc": "2026-11-16T15:01:04Z",
+  "at_msk": "2026-11-16T18:01:04+03:00",
+  "source_head_at_verification": "f16875b59a380baae58c6dc0b337d3ab2ada3a2a",
+  "source_patch_commit": "35a5c46ddc19378f0e5ce8c3a519745399f14a41",
+  "source_test_commit": "f16875b59a380baae58c6dc0b337d3ab2ada3a2a",
+  "code_blob_before": "8504639a97efc6cdddd3922eb3d952b2b1d7c4c3",
+  "code_blob_after": "78cf73c3e12314a54224672c0083fc62f8451c88",
+  "test_blob_after": "7b5a22566707b30de534eb669273085b060c2da2",
+  "task_outcomes": [
+    {
+      "id": "S2-07",
+      "state": "SOURCE_TESTED",
+      "detail": "Critical DeepSeek GGUF publish rename previously overwrote another file created between existence check and os.replace; use atomic os.link(NOREPLACE behavior) with inode+directory fsync, exact collision regression 25/25 PASS; native storage still HOLD"
+    },
+    {
+      "id": "S1-01",
+      "state": "LIVE_VERIFIED_HISTORICAL_READONLY",
+      "detail": "Prior owner-native instance and MODEL_UPDATE STOP in Actions 43887943803 (14:39Z); no new owner-native scan in this slot"
+    },
+    {
+      "id": "S1-03",
+      "state": "HOLD",
+      "detail": "Owner STOP/MAINTENANCE PRESENT historically; current exclusive writer lease/start_ticks and native task claim unavailable"
+    },
+    {
+      "id": "S1-07",
+      "state": "HOLD",
+      "detail": "Independent offsite S03 + unique checkpoint/optimizer/scaler/RNG restore not evidenced, no destructive cleanup"
+    },
+    {
+      "id": "S3-04",
+      "state": "HOLD",
+      "detail": "DeepSeek/Maya not loaded and :8081 original model SSE RU/ES/STOP/S03 E2E not observed under owner MODEL_UPDATE"
+    }
+  ],
+  "source_ci": {
+    "run_id": 43891728922,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43891728922",
+    "job_id": 133384432156,
+    "tests_pass": 25,
+    "tests_total": 25,
+    "result": "SUCCESS",
+    "scope": "OFFLINE_SOURCE_ONLY"
+  },
+  "root_cause": "TOCTOU clobber: os.replace(partial,final) can overwrite a different writer's unique file after final.exists() returned false; race fixture demonstrates prior destructive behavior.",
+  "fix": "os.link(partial, final, follow_symlinks=False) refuses existing final atomically; compare published inode and size to fsynced partial, unlink only original partial, fsync directory before verified receipt.",
+  "rollback": "CAS revert only code/test blobs against exact SHA to previous 8504639a97efc6cdddd3922eb3d952b2b1d7c4c3 / 8ce7fabbaabaac22c475d09bb9bf8d887a2b1e47, preserving intervening changes.",
+  "P0": {
+    "current_server": "Vast.ai #60509551",
+    "previous_native_observation": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803",
+    "owner_stop_historical": "PRESENT_OWNER_MODEL_UPDATE",
+    "writer_lease_current": null,
+    "live_pid_start_ticks_current": null,
+    "gpu_used_mib_current": null,
+    "ssd_free_bytes_current": null,
+    "historical_ssd_free_bytes": 43158929408,
+    "deepseek_unique_bytes": 248834257920,
+    "missing_download_bytes_manifest": 248828477216,
+    "full_model_downloaded": false,
+    "maya_binary_sha_historical": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+    "maya_live_inference": false
+  },
+  "WEIGHTS": {
+    "new_successful_optimizer_updates": 0,
+    "checkpoint_restored_this_run": false,
+    "active_trainer_verified_this_run": false
+  },
+  "KNOWLEDGE": {
+    "hunter_source_s03_write_readback_recall_this_run": false,
+    "new_native_s03_jobs": 0
+  },
+  "DISPATCHER_RESOURCES": {
+    "new_native_downloaded_bytes": 0,
+    "new_native_deleted_bytes": 0,
+    "new_native_restarts": 0,
+    "native_writes": 0,
+    "current_native_worker_pids": null,
+    "current_native_dispatcher_pid": null
+  },
+  "preserved": [
+    "owner STOP/lease",
+    "S03/Genesis/history",
+    "original D02/14 worlds",
+    "Qwen unique checkpoint+optimizer",
+    "current serving release and rollback"
+  ],
+  "next_ready": "Owner-auth read-only STOP+writer lease+storage seekable quota/free space and full shard current inventory; enforce a single download claim, verify 5 missing SHA and Maya owner-fenced real SSE before model switch."
+}
