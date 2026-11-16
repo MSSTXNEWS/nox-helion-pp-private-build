@@ -24,6 +24,7 @@ class MountInventoryTests(unittest.TestCase):
         self.assertEqual(result['mounts'][0]['available_bytes'],102400)
         self.assertFalse(result['data_mount_present'])
         self.assertEqual(result['eligible_block_mount_count'],3)
+        self.assertEqual(result['mountinfo_entry_count'],4)
     def test_exposes_direct_data_mount_without_claiming_provider_disk(self):
         result=audit._mount_inventory_from_text('1 0 8:1 / /data rw - ext4 /dev/sda1 rw',lambda p:Stat())
         self.assertTrue(result['data_mount_present'])
@@ -34,6 +35,21 @@ class MountInventoryTests(unittest.TestCase):
         self.assertNotIn('/dev/sda1',rendered)
         self.assertNotIn("'filesystem': 'proc'",rendered)
         self.assertIn('device_major_minor',rendered)
+    def test_data_path_resolves_underlying_overlay_mount_and_capacity(self):
+        text='1 0 0:42 / / rw - overlay overlay rw'
+        result=audit._mount_inventory_from_text(text,lambda p:Stat(),lambda p:p in ('/','/data','/workspace'))
+        data=next(x for x in result['storage_paths'] if x['path']=='/data')
+        self.assertFalse(result['data_mount_present'])
+        self.assertTrue(data['exists'])
+        self.assertEqual(data['mountpoint'],'/')
+        self.assertEqual(data['filesystem'],'overlay')
+        self.assertEqual(data['available_bytes'],102400)
+    def test_exact_data_overlay_mount_is_reported(self):
+        text='1 0 0:42 / /data rw - overlay overlay rw'
+        result=audit._mount_inventory_from_text(text,lambda p:Stat(),lambda p:True)
+        self.assertTrue(result['data_mount_present'])
+        self.assertEqual(result['data_mount_entry']['filesystem'],'overlay')
+        self.assertEqual(result['mounts'],[])
     def test_stat_failure_is_reported_as_unknown_capacity(self):
         result=audit._mount_inventory_from_text('1 0 8:1 / /data rw - ext4 /dev/x rw',
                                                  lambda p:(_ for _ in ()).throw(OSError()))
