@@ -399,13 +399,25 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
     require(destination.is_dir() and not destination.is_symlink(),'HOLD_SEEKABLE_STORAGE_MISSING')
     name=row['path'];require(FILE.fullmatch(name),'HOLD_UNEXPECTED_FILE')
     stop(root);lease(lease_file,request,time.time(),root)
-    fd=os.open(destination/'.nox-deepseek-owner.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
+    lock_path=destination/'.nox-deepseek-owner.lock'
+    fd=os.open(lock_path,os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC,0o600)
     partial_guard_fd=None
     try:
         lock_st=os.fstat(fd)
         require(stat.S_ISREG(lock_st.st_mode) and lock_st.st_uid==os.geteuid() and
                 lock_st.st_nlink==1, 'HOLD_LOCK_FILE_UNSAFE')
+        require(not(lock_st.st_mode & 0o077),'HOLD_DOWNLOAD_LOCK_PERMISSIONS')
         fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        def check_download_lock():
+            # flock guards an INODE, not a name. If a second worker unlinks and
+            # recreates the lock pathname, it can acquire a DIFFERENT inode.
+            # Detect loss of the original owner identity before any GGUF write.
+            current=regular(lock_path)
+            held=os.fstat(fd)
+            identity=lambda s:(s.st_dev,s.st_ino,s.st_uid,s.st_mode,s.st_nlink)
+            require(identity(current)==identity(held)==identity(lock_st),
+                    'HOLD_DOWNLOAD_LOCK_REPLACED')
+        check_download_lock()
         final,partial=destination/name,destination/(name+'.part')
         existing=regular(final,True)
         if existing:
@@ -428,6 +440,7 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     'recovered_existing':True,'at_unix':time.time()})
             else:
                 verify_existing_receipt(receipt_path, row)
+            check_download_lock()
             return {'state':'REUSED_SHA_VERIFIED','new_bytes':0,'file':name,'sha256':row['sha256']}
         partial_stat=regular(partial,True)
         # Keep the admitted inode allocated across HTTP I/O: unlink/recreate may reuse
@@ -457,6 +470,7 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
         require(vfs.f_blocks*vfs.f_frsize>=MIN_MODEL_VOLUME_BYTES+RESERVE,
                 'HOLD_STORAGE_TOTAL_CAPACITY')
         if offset==row['bytes']:
+            check_download_lock()
             # Fully downloaded .part from a prior crash: validate and publish
             # without a redundant HTTP request or duplicate GGUF allocation.
             return finalize_complete_partial(row,partial,final,destination,root,lease_file,request,
@@ -499,10 +513,12 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     # Blocking network I/O may outlive an owner STOP or lease
                     # revocation. Do not append a chunk after either occurs.
                     stop(root);lease(lease_file,request,time.time(),root)
+                    check_download_lock()
                     output.write(chunk);wrote+=len(chunk)
                 output.flush();os.fsync(output.fileno())
         # Never acknowledge a partial Range after owner STOP, lease expiry or inode swap.
         stop(root);lease(lease_file,request,time.time(),root)
+        check_download_lock()
         after=regular(partial)
         require((after.st_dev,after.st_ino,after.st_size)==
                 (opened.st_dev,opened.st_ino,end+1),'HOLD_PARTIAL_LENGTH_RACE')
