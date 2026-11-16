@@ -1,0 +1,27 @@
+name: NOX native Supervisor lifeline safety regression
+on:
+  pull_request:
+    paths:
+      - 'nox-control/nox_native_lifeline.py'
+      - 'nox-control/test_nox_native_lifeline.py'
+      - '.github/workflows/nox-native-lifeline-ci.yml'
+  push:
+    paths:
+      - 'nox-control/nox_native_lifeline.py'
+      - 'nox-control/test_nox_native_lifeline.py'
+      - '.github/workflows/nox-native-lifeline-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Source syntax
+        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py
+      - name: Independent unit and failure tests
+        run: python3 -m unittest discover -s nox-control -p 'test_nox_native_lifeline.py' -v
