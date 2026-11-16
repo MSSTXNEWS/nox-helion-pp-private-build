@@ -15,6 +15,12 @@ REVISION = "65d53bc8be65123e255ff02f3ded958b6dbf54fd"
 REPO = "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
 RESERVE = 16 * 1024**3
 MIN_MODEL_VOLUME_BYTES = 248834257920  # Six unique GGUF files; shared Engram counted once.
+# Exact Library receipt: progress v57, file_id file_00000000820481f593d1ab61b7d5745d,
+# 870895 bytes; owner record SHA-256 e8dfbfc7f2c1b946d0ca0e88ff7e90673739d059a4a4b2f1eea6b7bd4fbe1469.
+# This immutable receipt records all 200 parts and the whole-file SHA for shard 00005.
+COLDPACK_PROGRESS_SHA256 = "e8dfbfc7f2c1b946d0ca0e88ff7e90673739d059a4a4b2f1eea6b7bd4fbe1469"
+COLDPACK_COMPLETED_FILE = "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf"
+COLDPACK_PROGRESS_MAX_BYTES = 1024 * 1024
 MAX_RANGE = 256 * 1024**2
 CHUNK = 1024**2
 STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/STOP", "state/STOP.flag", "state/OWNER_MAINTENANCE.flag")
@@ -127,6 +133,89 @@ def load_manifest(raw):
             a.get('target')=='DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf' and
             a.get('duplicate_bytes') is False,'HOLD_SHARED_ENGRAM_ALIAS')
     return by
+
+
+def reject_completed_coldpack_duplicate(name, progress_raw):
+    """Fail closed when the exact pinned Library receipt proves this file complete.
+
+    The Drive model manifest is an immutable source/identity manifest, not a
+    live transfer ledger. Its NOT_DOWNLOADED row for shard 00005 is older than
+    Library progress v57 and must never authorize another transfer.
+    """
+    if name != COLDPACK_COMPLETED_FILE:
+        return
+    require(isinstance(progress_raw, (bytes, bytearray)) and
+            0 < len(progress_raw) <= COLDPACK_PROGRESS_MAX_BYTES,
+            'HOLD_COLDPACK_PROGRESS_REQUIRED')
+    require(hashlib.sha256(progress_raw).hexdigest() == COLDPACK_PROGRESS_SHA256,
+            'HOLD_COLDPACK_PROGRESS_UNVERIFIED')
+    try:
+        progress = json.loads(progress_raw)
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise Hold('HOLD_COLDPACK_PROGRESS_INVALID') from exc
+    require(isinstance(progress, dict) and
+            progress.get('schema') == 'NOX_DEEPSEEK_COLDPACK_PROGRESS_V1' and
+            progress.get('revision') == REVISION and
+            progress.get('native_ready') is False and
+            progress.get('seekable_placement_verified') is False,
+            'HOLD_COLDPACK_PROGRESS_IDENTITY')
+    matches = [row for row in progress.get('files', [])
+               if isinstance(row, dict) and row.get('path') == name]
+    require(len(matches) == 1, 'HOLD_COLDPACK_PROGRESS_ENTRY')
+    row = matches[0]
+    expected_bytes, expected_sha = PINNED_FILE_FACTS[name]
+    parts = row.get('parts')
+    require(row.get('bytes') == expected_bytes and row.get('sha256') == expected_sha and
+            row.get('whole_sha256_verified') is True and isinstance(parts, list) and
+            len(parts) == 200, 'HOLD_COLDPACK_PROGRESS_INCOMPLETE')
+    total = 0
+    for index, part in enumerate(parts, 1):
+        expected_part_bytes = 100_000_000 if index < 200 else 23_784_832
+        expected_part_name = f'{name}.part{index:04d}'
+        remote = part.get('remote') if isinstance(part, dict) else None
+        require(isinstance(part, dict) and part.get('index') == index and
+                part.get('file') == expected_part_name and
+                part.get('offset') == (index - 1) * 100_000_000 and
+                part.get('bytes') == expected_part_bytes and
+                part.get('state') == 'SAVED_METADATA_VERIFIED' and
+                isinstance(remote, dict) and remote.get('name') == expected_part_name and
+                remote.get('size_bytes') == expected_part_bytes,
+                'HOLD_COLDPACK_PART_INVENTORY')
+        total += expected_part_bytes
+    require(total == expected_bytes, 'HOLD_COLDPACK_PART_TOTAL')
+    raise Hold('HOLD_COLDPACK_ALREADY_COMPLETE')
+
+
+def read_coldpack_progress_file(path):
+    """Bounded no-follow read, tied to the regular file inspected before open."""
+    path = Path(path)
+    before = regular(path)
+    require(before.st_size <= COLDPACK_PROGRESS_MAX_BYTES,
+            'HOLD_COLDPACK_PROGRESS_LIMIT')
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        opened = os.fstat(fd)
+        require(stat.S_ISREG(opened.st_mode) and opened.st_uid == os.geteuid() and
+                opened.st_nlink == 1 and
+                (opened.st_dev, opened.st_ino, opened.st_size) ==
+                (before.st_dev, before.st_ino, before.st_size),
+                'HOLD_COLDPACK_PROGRESS_RACE')
+        data = bytearray()
+        while len(data) <= COLDPACK_PROGRESS_MAX_BYTES:
+            chunk = os.read(fd, min(65536, COLDPACK_PROGRESS_MAX_BYTES + 1 - len(data)))
+            if not chunk:
+                break
+            data.extend(chunk)
+        after = os.fstat(fd)
+        require((after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns) ==
+                (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns),
+                'HOLD_COLDPACK_PROGRESS_RACE')
+        require(len(data) == opened.st_size and len(data) <= COLDPACK_PROGRESS_MAX_BYTES,
+                'HOLD_COLDPACK_PROGRESS_LIMIT')
+        return bytes(data)
+    finally:
+        os.close(fd)
+
 
 def stop(root):
     """Fail closed when an owner STOP flag is present OR unreadable.
@@ -261,7 +350,7 @@ def finalize_complete_partial(row, partial, final, destination, root, lease_file
     atomic_receipt(destination/(row['path']+'.verified.json'),receipt)
     return {'state':'VERIFIED_FINAL','file':row['path'],'new_bytes':new_bytes,'sha256':actual}
 
-def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=urlopen):
+def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=urlopen,progress_raw=None):
     """One bounded transfer. Require correct 206 Content-Range even at offset zero.
     Final path is published only after full SHA. Partial is left untouched on HOLD."""
     require(1<=limit<=MAX_RANGE,'HOLD_RANGE_BUDGET')
@@ -269,6 +358,7 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
     destination=Path(destination);root=Path(root)
     require(destination.is_dir() and not destination.is_symlink(),'HOLD_SEEKABLE_STORAGE_MISSING')
     name=row['path'];require(FILE.fullmatch(name),'HOLD_UNEXPECTED_FILE')
+    reject_completed_coldpack_duplicate(name, progress_raw)
     stop(root);lease(lease_file,request,time.time(),root)
     fd=os.open(destination/'.nox-deepseek-owner.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
     partial_guard_fd=None
@@ -373,6 +463,7 @@ def main():
     ap.add_argument('--download',default='')
     ap.add_argument('--lease',type=Path)
     ap.add_argument('--request',default='')
+    ap.add_argument('--coldpack-progress',type=Path)
     ap.add_argument('--max-range-mib',type=int,default=256)
     a=ap.parse_args()
     by=load_manifest(a.manifest.read_bytes())
@@ -380,11 +471,16 @@ def main():
         print(json.dumps({'status':'READ_ONLY','files':inventory(by,a.destination)},ensure_ascii=False));return
     require(a.download in by,'HOLD_FILE_NOT_IN_MANIFEST')
     require(a.lease is not None and a.request,'HOLD_OWNER_LEASE_REQUIRED')
+    progress_raw=None
+    if a.download == COLDPACK_COMPLETED_FILE:
+        require(a.coldpack_progress is not None,'HOLD_COLDPACK_PROGRESS_REQUIRED')
+        progress_raw=read_coldpack_progress_file(a.coldpack_progress)
     result=download_one(by[a.download],a.destination,Path('/root/nox'),a.lease,a.request,
-                        a.max_range_mib*1024**2)
+                        a.max_range_mib*1024**2,progress_raw=progress_raw)
     print(json.dumps(result,ensure_ascii=False))
 
 if __name__=='__main__':
     try:main()
     except Hold as e:
         print(json.dumps({'state':'HOLD','reason':str(e)}));raise SystemExit(2)
+
