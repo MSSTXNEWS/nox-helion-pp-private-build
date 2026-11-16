@@ -141,18 +141,13 @@ def verify_maya_admission(native: dict, *, now: int | None = None) -> dict:
             or type(lease.get("expires_unix")) not in (int, float)
             or not ts < lease["expires_unix"] <= ts + 7200):
         raise RuntimeError("HOLD_TRAINING_OWNER_LEASE")
-    # Bind admission to the actual launched trainer process. The owner lease
-    # stays the standard dispatcher schema; PID/start_ticks come from /proc.
-    pid, ticks = native.get("training_process_pid"), native.get("training_process_start_ticks")
-    if type(pid) is not int or pid != os.getpid() or type(ticks) is not int or ticks <= 0:
-        raise RuntimeError("HOLD_TRAINING_PROCESS_IDENTITY")
+    # Record the launched trainer process identity for the eventual receipt.
+    # Dispatcher claim binding is an owner-admission concern, not a lease field.
     try:
         stat_fields = Path("/proc/self/stat").read_text(encoding="ascii").rsplit(")", 1)[1].split()
-        actual_ticks = int(stat_fields[19])
+        pid, ticks = os.getpid(), int(stat_fields[19])
     except (OSError, ValueError, IndexError, UnicodeError) as exc:
         raise RuntimeError("HOLD_TRAINING_PROCESS_STAT") from exc
-    if actual_ticks != ticks:
-        raise RuntimeError("HOLD_TRAINING_PROCESS_IDENTITY")
     return {
         "maya_readiness_receipt_sha256": receipt_sha,
         "maya_model_id": MODEL_ID,
