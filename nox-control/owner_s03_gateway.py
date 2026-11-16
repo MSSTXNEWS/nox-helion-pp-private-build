@@ -729,7 +729,7 @@ def bind_dispatcher(namespace):
     if namespace.get('_owner_s03_dispatcher_bound'):return
     required=('HANDLERS','ingest_owner_orders','save_state','_qlock')
     if any(name not in namespace for name in required):hold('HOLD_S03_DISPATCHER_BIND')
-    old_ingest=namespace['ingest_owner_orders'];last=[0.0]
+    old_ingest=namespace['ingest_owner_orders'];last=[None]
     def handler(task):
         try:return True,sync(task)
         except Exception as exc:
@@ -737,8 +737,9 @@ def bind_dispatcher(namespace):
             return 'wait',{'schema':SCHEMA,'verified':False,'state':reason,'private_text_exported':False}
     def ingest(state):
         result=old_ingest(state)
-        if time.monotonic()-last[0]<90 or stop_active():return result
-        last[0]=time.monotonic()
+        now=time.monotonic()
+        if (last[0] is not None and now-last[0]<90) or stop_active():return result
+        last[0]=now
         try:
             with connection(DB,seconds=.25) as conn:
                 if not columns(conn,'nox_s03_vectors'):return result
