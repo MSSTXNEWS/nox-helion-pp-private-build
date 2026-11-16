@@ -18,6 +18,7 @@ from pathlib import Path
 import re
 import shutil
 import stat
+import secrets
 import tempfile
 import time
 
@@ -25,6 +26,7 @@ ROOT = Path('/root/nox')
 HOME_ROOT = Path('/root')
 SHM = Path('/dev/shm')
 PROC = Path('/proc')
+MOUNTINFO_OVERRIDE = None
 CGROUP = Path('/sys/fs/cgroup')
 GIB = 1024 ** 3
 SCHEMA = 'NOX_OWNER_STORAGE_RECLAIM_V1'
@@ -54,11 +56,12 @@ WEIGHT_SUFFIX = {'.gguf', '.safetensors', '.pt', '.pth', '.bin', '.ckpt', '.onnx
 PROTECTED_WORDS = {'s03', 'memory', 'memories', 'checkpoints', 'checkpoint', 'ckpt', 'lora',
                    'training', 'weights', 'models', 'scripts', 'source', 'src', 'pc_shell',
                    'credentials', 'secrets', 'backup', 'backups', 'distill', 'datasets'}
-LOG_PROTECTED = re.compile(r'(?i)(?:journal|audit|memory|s03|dialog|train|checkpoint|owner|receipt|distill|learn|event|report)')
 
 
 class StorageHold(RuntimeError):
-    pass
+    def __init__(self, code, quarantine_path=None):
+        super().__init__(code)
+        self.quarantine_path = quarantine_path
 
 
 def digest_bytes(value):
@@ -89,6 +92,46 @@ def bounded_bytes(path, maximum=262144):
     if len(raw) > maximum:
         raise StorageHold('HOLD_STORAGE_FILE_SCOPE')
     return raw
+
+
+def read_mount_table():
+    """Read mount IDs and mountpoints, failing closed if containment is unknown."""
+    source = MOUNTINFO_OVERRIDE or (Path('/proc') / str(os.getpid()) / 'mountinfo')
+    try:
+        raw = bounded_bytes(source, 8 * 1024 * 1024).decode('utf-8')
+        rows = []
+        for line in raw.splitlines():
+            fields = line.split()
+            if len(fields) < 6 or not fields[0].isdigit():
+                raise ValueError('invalid mountinfo row')
+            point = re.sub(r'\\([0-7]{3})', lambda match: chr(int(match.group(1), 8)), fields[4])
+            mountpoint = Path(point)
+            if not mountpoint.is_absolute() or '..' in mountpoint.parts:
+                raise ValueError('invalid mountpoint')
+            rows.append((int(fields[0]), mountpoint))
+        if not rows:
+            raise ValueError('empty mount table')
+        return rows
+    except (OSError, UnicodeError, ValueError, StorageHold) as exc:
+        raise StorageHold('HOLD_STORAGE_MOUNT_TABLE_UNAVAILABLE') from exc
+
+
+def mount_id_for(path, mounts):
+    """Return the most-specific Linux mount ID containing an absolute path."""
+    target = Path(os.path.abspath(os.fspath(path)))
+    matches = [(len(point.parts), mount_id) for mount_id, point in mounts
+               if target == point or target.is_relative_to(point)]
+    if not matches:
+        raise StorageHold('HOLD_STORAGE_MOUNT_ID_UNKNOWN')
+    return max(matches)[1]
+
+
+def mountpoint_ids(mounts):
+    """Map visible mountpoints to their newest ID for bounded tree traversal."""
+    result = {}
+    for mount_id, point in mounts:
+        result[point] = max(mount_id, result.get(point, mount_id))
+    return result
 
 
 def optional_json(path, maximum=262144):
@@ -320,11 +363,16 @@ def teacher_candidate_review(path, info=None, usage=None, observation_error=None
 
 
 def deletion_kind(path):
-    """A closed allowlist, not a general filesystem cleanup predicate."""
+    """Allow only regenerable caches under the exact configured pip cache root."""
     path = Path(path)
+    if not path.is_absolute() or '..' in path.parts:
+        return None
+    normalized = Path(os.path.abspath(os.fspath(path)))
+    if normalized != path:
+        return None
     # Exact legacy teacher paths stay denied even if a future generic allowlist,
     # suffix set, or backup-registration flag changes.
-    if os.path.abspath(os.fspath(path)) in LEGACY_TEACHERS:
+    if os.fspath(path) in LEGACY_TEACHERS:
         return None
     if path.suffix.lower() in WEIGHT_SUFFIX or PARTIAL.search(path.name):
         return None
@@ -333,27 +381,33 @@ def deletion_kind(path):
         return None
     pip_root = HOME_ROOT / '.cache/pip'
     if path.is_relative_to(pip_root):
+        # Do not classify an entry reached through any symlinked component.
+        try:
+            plain(path)
+        except (OSError, StorageHold):
+            return None
         relative = path.relative_to(pip_root)
         if relative.parts and relative.parts[0] in ('http', 'http-v2') and re.fullmatch(r'[0-9a-f]{40,64}(?:\.body)?', path.name):
             return 'PIP_DOWNLOAD_CACHE', 86400
         if relative.parts and relative.parts[0] == 'wheels' and path.suffix == '.whl':
             return 'PIP_WHEEL_CACHE', 86400
         return None
-    log_root = ROOT / 'logs'
-    system_log = Path('/var/log/supervisor')
-    if path.is_relative_to(log_root) or (path.is_relative_to(system_log) and path.name.lower().startswith(('nox-', 'nox_'))):
-        match = re.fullmatch(r'.+\.log\.(\d+)(?:\.(?:gz|xz|zst))?', path.name)
-        if match and int(match[1]) >= 3 and not LOG_PROTECTED.search(path.name):
-            return 'OLD_DEBUG_LOG_ROTATION', 3 * 86400
-    if (path.parent == ROOT or path.is_relative_to(ROOT / 'logs') or path.is_relative_to(ROOT / 'tmp')) and re.fullmatch(r'core(?:\.\d+)?', path.name):
-        return 'INACTIVE_ELF_CORE', 86400
     return None
 
 
-def qualify(path, info, now, usage):
+def qualify(path, info, now, usage, mounts=None):
     kind = deletion_kind(path)
     if kind is None:
         return None, 'PROTECTED_OR_NOT_ALLOWLISTED'
+    try:
+        mounts = mounts if mounts is not None else read_mount_table()
+        pip_root = HOME_ROOT / '.cache/pip'
+        root_mount_id = mount_id_for(pip_root, mounts)
+        path_mount_id = mount_id_for(path, mounts)
+    except StorageHold:
+        return None, 'MOUNT_TABLE_UNAVAILABLE'
+    if path_mount_id != root_mount_id:
+        return None, 'MOUNT_ESCAPE'
     if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.geteuid()
             or info.st_blocks * 512 < 1024 * 1024):
         return None, 'OWNERSHIP_LINK_TYPE_OR_SMALL_FILE'
@@ -374,12 +428,10 @@ def qualify(path, info, now, usage):
     safetensors_header = len(head) >= 9 and 8 <= int.from_bytes(head[:8], 'little') <= 16 * 1024 * 1024 and head[8:9] == b'{'
     if head.startswith((b'GGUF', b'\x80\x02', b'\x80\x03', b'\x80\x04', b'\x80\x05')) or safetensors_header:
         return None, 'MODEL_OR_SERIALIZED_STATE_HEADER'
-    if kind[0] == 'INACTIVE_ELF_CORE':
-        if len(head) < 18 or head[:4] != b'\x7fELF' or head[5] not in (1, 2) or int.from_bytes(head[16:18], 'little' if head[5] == 1 else 'big') != 4:
-            return None, 'NOT_ELF_CORE'
     return {'path': str(path), 'category': kind[0], 'minimum_age_seconds': kind[1],
             'identity': identity(info), 'allocated_bytes': info.st_blocks * 512,
-            'prefix_sha256': digest_bytes(head), 'path_id': digest_bytes(str(path).encode())[:20]}, None
+            'prefix_sha256': digest_bytes(head), 'mount_id': path_mount_id,
+            'path_id': digest_bytes(str(path).encode())[:20]}, None
 
 
 def filesystem_budget():
@@ -421,6 +473,8 @@ def audit(request, source):
     started = time.time()
     end = time.monotonic() + AUDIT_SECONDS
     usage = process_usage(min(end, time.monotonic() + 5))
+    mounts = read_mount_table()
+    mounted_ids = mountpoint_ids(mounts)
     groups = defaultdict(lambda: Counter(files=0, unique_inodes=0, unique_logical_bytes=0, unique_allocated_bytes=0, repeated_inode_paths=0))
     seen, candidates, possible_copies = set(), [], defaultdict(set)
     counts, refusals = Counter(), Counter()
@@ -439,6 +493,7 @@ def audit(request, source):
             initial = root.stat()
             if not stat.S_ISDIR(initial.st_mode):
                 row['state'] = 'NOT_DIRECTORY'; continue
+            root_mount_id = mount_id_for(root, mounts)
         except FileNotFoundError:
             row['state'] = 'ABSENT'; continue
         except (OSError, StorageHold):
@@ -466,6 +521,9 @@ def audit(request, source):
                                 continue
                             if info.st_dev != initial.st_dev:
                                 counts['other_mounts_not_crossed'] += 1; continue
+                            mounted_id = mounted_ids.get(Path(os.path.abspath(path)))
+                            if mounted_id is not None and mounted_id != root_mount_id:
+                                counts['other_mounts_not_crossed'] += 1; continue
                             if stat.S_ISDIR(info.st_mode):
                                 if depth >= 18:
                                     row['complete'] = False
@@ -489,7 +547,7 @@ def audit(request, source):
                             group['unique_allocated_bytes'] += info.st_blocks * 512
                             if info.st_size >= 8 * 1024 * 1024 and len(possible_copies) < 4096:
                                 possible_copies[(path.name, info.st_size)].add(key)
-                            candidate, reason = qualify(path, info, now, usage)
+                            candidate, reason = qualify(path, info, now, usage, mounts)
                             if candidate is not None:
                                 candidates.append(candidate)
                                 if len(candidates) > MAX_CANDIDATES * 2:
@@ -567,34 +625,134 @@ def open_parent(path):
         raise
 
 
+def create_quarantine_directory(parent_fd):
+    """Create a private same-filesystem directory using the already-open parent."""
+    for _ in range(16):
+        name = '.nox-reclaim-' + secrets.token_hex(16)
+        try:
+            os.mkdir(name, mode=0o700, dir_fd=parent_fd)
+        except FileExistsError:
+            continue
+        try:
+            fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+            info = os.fstat(fd)
+            parent = os.fstat(parent_fd)
+            if (info.st_uid != os.geteuid() or info.st_mode & 0o077
+                    or info.st_dev != parent.st_dev):
+                os.close(fd)
+                os.rmdir(name, dir_fd=parent_fd)
+                raise StorageHold('HOLD_STORAGE_QUARANTINE_DIRECTORY')
+            return name, fd
+        except BaseException:
+            try:
+                os.rmdir(name, dir_fd=parent_fd)
+            except OSError:
+                pass
+            raise
+    raise StorageHold('HOLD_STORAGE_QUARANTINE_COLLISION')
+
+
+def reclaim_version_matches(expected, info):
+    """Compare candidate version fields that a same-filesystem rename preserves."""
+    return (len(expected) == 7
+            and [info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns,
+                 info.st_uid, info.st_nlink]
+            == [expected[0], expected[1], expected[2], expected[3],
+                expected[5], expected[6]])
+
+
+def restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, original_name):
+    """Restore a moved entry without overwriting a concurrently recreated name."""
+    try:
+        os.link(entry_name, original_name, src_dir_fd=quarantine_fd,
+                dst_dir_fd=parent_fd, follow_symlinks=False)
+    except OSError:
+        return False
+    try:
+        os.unlink(entry_name, dir_fd=quarantine_fd)
+    except OSError:
+        # The original name is back; leave the private staging link for recovery.
+        return False
+    return True
+
+
 def reclaim_candidate(candidate, deadline):
     path = Path(candidate.get('path', ''))
     if deletion_kind(path) is None:
         raise StorageHold('HOLD_STORAGE_PROTECTED_TARGET')
+    mounts = read_mount_table()
+    pip_root = HOME_ROOT / '.cache/pip'
+    candidate_mount_id = candidate.get('mount_id')
+    if (not isinstance(candidate_mount_id, int)
+            or candidate_mount_id != mount_id_for(path, mounts)
+            or candidate_mount_id != mount_id_for(pip_root, mounts)):
+        raise StorageHold('HOLD_STORAGE_MOUNT_ESCAPE_OR_CHANGED')
     parent_fd = open_parent(path)
     fd = None
+    quarantine_name = None
+    quarantine_fd = None
+    staged = False
+    entry_name = 'candidate'
     try:
+        # Re-read after opening the parent: a mount inserted between admission
+        # and openat must not redirect this dirfd to an unapproved cache subtree.
+        mounts = read_mount_table()
+        if (candidate_mount_id != mount_id_for(path, mounts)
+                or candidate_mount_id != mount_id_for(pip_root, mounts)):
+            raise StorageHold('HOLD_STORAGE_MOUNT_ESCAPE_OR_CHANGED')
         info = os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
-        if identity(info) != candidate.get('identity'):
+        if identity(info) != candidate.get('identity') or not stat.S_ISREG(info.st_mode):
             raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
         fd = os.open(path.name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=parent_fd)
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if identity(os.fstat(fd)) != candidate['identity']:
             raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
-        head = os.read(fd, 32)
+        head = os.pread(fd, 32, 0)
         if digest_bytes(head) != candidate.get('prefix_sha256'):
             raise StorageHold('HOLD_STORAGE_PREFIX_CHANGED')
         usage = process_usage(min(deadline, time.monotonic() + 4), ignore_fd=(os.getpid(), str(fd)))
-        fresh, reason = qualify(path, info, time.time(), usage)
+        fresh, reason = qualify(path, info, time.time(), usage, mounts)
         if fresh is None or fresh['identity'] != candidate['identity'] or fresh['category'] != candidate['category']:
             raise StorageHold('HOLD_STORAGE_' + str(reason or 'CANDIDATE_CHANGED'))
         if time.monotonic() > deadline:
             raise StorageHold('HOLD_STORAGE_TIME_BUDGET')
         if identity(os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)) != candidate['identity']:
             raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
-        # One audited regular file only; no recursive removal or truncation.
-        os.unlink(path.name, dir_fd=parent_fd)
+
+        # Unlink has no inode-conditional form. Atomically move the entry into a
+        # private directory on the same filesystem, then compare the moved entry
+        # with the still-open descriptor before deleting anything.
+        quarantine_name, quarantine_fd = create_quarantine_directory(parent_fd)
+        os.rename(path.name, entry_name, src_dir_fd=parent_fd, dst_dir_fd=quarantine_fd)
+        staged = True
+        moved = os.stat(entry_name, dir_fd=quarantine_fd, follow_symlinks=False)
+        opened = os.fstat(fd)
+        if (not stat.S_ISREG(moved.st_mode)
+                or identity(moved) != identity(opened)
+                or not reclaim_version_matches(candidate['identity'], opened)
+                or digest_bytes(os.pread(fd, 32, 0)) != candidate.get('prefix_sha256')):
+            if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
+                staged = False
+                raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
+            raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED', quarantine_path=str(path.parent / quarantine_name))
+
+        # The private staging directory blocks ordinary users from swapping the
+        # verified name between the last descriptor check and unlink.
+        moved = os.stat(entry_name, dir_fd=quarantine_fd, follow_symlinks=False)
+        opened = os.fstat(fd)
+        if (not stat.S_ISREG(moved.st_mode) or identity(moved) != identity(opened)):
+            if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
+                staged = False
+                raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
+            raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED', quarantine_path=str(path.parent / quarantine_name))
+        os.unlink(entry_name, dir_fd=quarantine_fd)
+        staged = False
         os.close(fd); fd = None  # Release our read handle before measuring free space.
+        try:
+            os.rmdir(quarantine_name, dir_fd=parent_fd)
+            quarantine_name = None
+        except OSError as exc:
+            raise StorageHold('HOLD_STORAGE_QUARANTINE_CLEANUP') from exc
         try:
             os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
         except FileNotFoundError:
@@ -602,9 +760,23 @@ def reclaim_candidate(candidate, deadline):
                     'allocated_bytes_unlinked': candidate['allocated_bytes'], 'logical_bytes_unlinked': info.st_size,
                     'state': 'EXACT_AUDITED_FILE_UNLINKED', 'process_scan_complete': usage['complete']}
         raise StorageHold('HOLD_STORAGE_NAME_RECREATED_AFTER_UNLINK')
+    except BaseException:
+        if staged and quarantine_fd is not None:
+            if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
+                staged = False
+            else:
+                raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED', quarantine_path=str(path.parent / quarantine_name))
+        raise
     finally:
         if fd is not None:
             os.close(fd)
+        if quarantine_fd is not None:
+            os.close(quarantine_fd)
+        if quarantine_name is not None and not staged:
+            try:
+                os.rmdir(quarantine_name, dir_fd=parent_fd)
+            except OSError:
+                pass
         os.close(parent_fd)
 
 
@@ -645,8 +817,11 @@ def reclaim(request, source, audit_request, expected_sha):
                 receipt['allocated_bytes_unlinked'] += row['allocated_bytes_unlinked']
             except (OSError, StorageHold) as exc:
                 code = str(exc)
-                receipt['skipped'].append({'path_id': candidate.get('path_id'),
-                    'reason': code if re.fullmatch(r'HOLD_[A-Z_]+', code) else 'HOLD_STORAGE_OS_OPERATION'})
+                skipped = {'path_id': candidate.get('path_id'),
+                    'reason': code if re.fullmatch(r'HOLD_[A-Z_]+', code) else 'HOLD_STORAGE_OS_OPERATION'}
+                if isinstance(exc, StorageHold) and exc.quarantine_path:
+                    skipped['quarantine_path'] = exc.quarantine_path
+                receipt['skipped'].append(skipped)
             receipt['inflight'] = None
             write_receipt(output, receipt, replace=True)
         receipt.update(state='BOUNDED_EPHEMERAL_RECLAIM_COMPLETE', finished_at=time.time(), after=filesystem_budget())

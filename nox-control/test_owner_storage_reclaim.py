@@ -58,7 +58,83 @@ class StorageTests(unittest.TestCase):
                      self.root / 'logs/owner_audit.log.8', self.root / 'logs/training.log.9',
                      self.root / 'media/models/model.safetensors.partial'):
             self.assertIsNone(storage.deletion_kind(path), path)
-        self.assertEqual(storage.deletion_kind(self.root / 'logs/chat.log.3.gz')[0], 'OLD_DEBUG_LOG_ROTATION')
+        self.assertIsNone(storage.deletion_kind(self.root / 'logs/chat.log.3.gz'))
+        self.assertEqual(storage.deletion_kind(self.home / '.cache/pip/wheels/ab' / 'pkg.whl')[0], 'PIP_WHEEL_CACHE')
+        self.assertIsNone(storage.deletion_kind(self.home / '.cache/uv/wheels/ab/pkg.whl'))
+
+
+    def test_logs_and_nonregenerable_names_cannot_reclaim_with_forged_backup_flags(self):
+        paths = (
+            self.root / 'logs/chat.log.3.gz',
+            self.root / 'logs/conversation_history.log.99.gz',
+            self.root / 'logs/S03_journal.log.8.xz',
+            self.root / 'logs/skill_memory.log.7.zst',
+            self.root / 'logs/model_checkpoint.log.12.gz',
+            self.root / 'logs/history/events.log.22.gz',
+            self.root / 'logs/skills/decisions.log.16.gz',
+        )
+        for index, path in enumerate(paths):
+            with self.subTest(path=path.name, parent=path.parent.name):
+                self.file(path, b'unique conversation or state data', size=2 * 1024 * 1024)
+                self.assertIsNone(storage.deletion_kind(path))
+                candidate = {
+                    'path': str(path), 'category': 'OLD_DEBUG_LOG_ROTATION',
+                    'identity': [1, 2, 2 * 1024 * 1024, 3, 4, 0, 1],
+                    'prefix_sha256': 'a' * 64, 'backup_pc_verified': True,
+                    'backup_drive_verified': True, 'backup_pc_full_size': True,
+                    'backup_drive_full_size': True, 'backup_pc_sha256': 'b' * 64,
+                    'backup_drive_sha256': 'c' * 64, 'restore_receipt': 'PASS',
+                }
+                with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_PROTECTED_TARGET'):
+                    storage.reclaim_candidate(candidate, time.monotonic() + 2)
+                self.assertTrue(path.is_file())
+                self.assertEqual(path.stat().st_size, 2 * 1024 * 1024)
+
+
+    def test_pip_cache_path_containment_rejects_parent_symlink_and_dotdot_aliases(self):
+        path = self.pip_file()
+        root = self.home / '.cache/pip'
+        alias = root / 'http-v2' / '..' / 'http-v2' / 'a' / 'b' / 'c' / 'd' / 'e' / ('a' * 56 + '.body')
+        self.assertIsNone(storage.deletion_kind(alias))
+        self.assertEqual(storage.qualify(alias, path.stat(), self.now, self.usage)[1],
+                         'PROTECTED_OR_NOT_ALLOWLISTED')
+
+        link_parent = path.parent.parent / 'cache-alias'
+        link_parent.symlink_to(path.parent, target_is_directory=True)
+        linked_path = link_parent / path.name
+        self.assertIsNone(storage.deletion_kind(linked_path))
+        candidate, reason = storage.qualify(linked_path, path.stat(), self.now, self.usage)
+        self.assertIsNone(candidate)
+        self.assertEqual(reason, 'PROTECTED_OR_NOT_ALLOWLISTED')
+
+    def test_pip_cache_same_device_bind_mount_escape_holds_on_audit_and_reclaim(self):
+        path = self.pip_file()
+        self.assertEqual(path.stat().st_dev, (self.home / '.cache/pip').stat().st_dev)
+        candidate = self.candidate(path)
+        mountinfo = self.base / 'synthetic-mountinfo'
+        nested_point = str(path.parent)
+        mountinfo.write_text(
+            '100 1 8:1 / / rw - ext4 /dev/test rw\n'
+            + '101 100 8:1 / ' + nested_point + ' rw - ext4 /dev/test rw\n',
+            encoding='utf-8')
+        with patch.object(storage, 'MOUNTINFO_OVERRIDE', mountinfo):
+            synthetic_mounts = storage.read_mount_table()
+            audited, reason = storage.qualify(path, path.stat(), self.now, self.usage)
+            self.assertIsNone(audited)
+            self.assertEqual(reason, 'MOUNT_ESCAPE')
+            with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_MOUNT_ESCAPE_OR_CHANGED'):
+                storage.reclaim_candidate(candidate, time.monotonic() + 5)
+
+        # A same-device mount inserted after the first admission read but before
+        # the parent dirfd is used is detected by the post-open recheck.
+        baseline_mounts = storage.read_mount_table()
+        opener = lambda value: os.open(Path(value).parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        with patch.object(storage, 'read_mount_table', side_effect=[baseline_mounts, synthetic_mounts]), \
+             patch.object(storage, 'open_parent', opener):
+            with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_MOUNT_ESCAPE_OR_CHANGED'):
+                storage.reclaim_candidate(candidate, time.monotonic() + 5)
+        self.assertTrue(path.is_file())
+
 
     def test_disguised_weight_header_and_partial_are_never_cache_candidates(self):
         for head in (b'GGUF' + b'0' * 20, struct.pack('<Q', 100) + b'{"tensor":', b'\x80\x04pickle'):
@@ -152,12 +228,14 @@ class StorageTests(unittest.TestCase):
                         with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_PROTECTED_TARGET'):
                             storage.reclaim_candidate(candidate, time.monotonic() + 2)
 
-    def test_core_requires_real_elf_et_core_header(self):
-        path = self.file(self.root / 'core.1234', b'not a core')
-        self.assertEqual(storage.qualify(path, path.stat(), self.now, self.usage)[1], 'NOT_ELF_CORE')
+    def test_core_files_are_not_cleanup_candidates_without_restore_evidence(self):
+        path = self.root / 'core.1234'
         head = bytearray(32); head[:4] = b'\x7fELF'; head[4] = 2; head[5] = 1; head[16:18] = b'\x04\x00'
         self.file(path, bytes(head))
-        self.assertEqual(self.candidate(path)['category'], 'INACTIVE_ELF_CORE')
+        candidate, reason = storage.qualify(path, path.stat(), self.now, self.usage)
+        self.assertIsNone(candidate)
+        self.assertEqual(reason, 'PROTECTED_OR_NOT_ALLOWLISTED')
+        self.assertIsNone(storage.deletion_kind(path))
 
     def test_exact_unlink_rechecks_identity_and_does_not_follow_link(self):
         path = self.pip_file()
@@ -177,6 +255,102 @@ class StorageTests(unittest.TestCase):
             with self.assertRaisesRegex(storage.StorageHold, 'IDENTITY_CHANGED'):
                 storage.reclaim_candidate(candidate, time.monotonic() + 5)
         self.assertTrue(changed.exists())
+
+    def test_reclaim_restores_inode_or_symlink_replaced_after_final_gate(self):
+        opener = lambda value: os.open(Path(value).parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        real_rename = os.rename
+        real_replace = os.replace
+        for marker, use_symlink in ((b'substitute must survive', False), (b'symlink target survives', True)):
+            with self.subTest(use_symlink=use_symlink):
+                basename = ('d' if use_symlink else 'e') * 56 + '.body'
+                path = self.home / '.cache/pip/http-v2/a/b/c/d/e' / basename
+                self.file(path, b'audited original bytes')
+                candidate = self.candidate(path)
+                replacement = path.with_name('.replacement')
+                if use_symlink:
+                    target = path.with_name('.symlink-target')
+                    target.write_bytes(marker)
+                    replacement.symlink_to(target)
+                    replacement_inode = replacement.lstat().st_ino
+                else:
+                    replacement.write_bytes(marker)
+                    replacement_inode = replacement.stat().st_ino
+                injected = {'done': False}
+
+                def replace_before_quarantine(src, dst, **kwargs):
+                    if not injected['done'] and src == path.name and dst == 'candidate':
+                        real_replace(replacement, path)
+                        injected['done'] = True
+                    return real_rename(src, dst, **kwargs)
+
+                with patch.object(storage, 'open_parent', opener), \
+                     patch.object(storage, 'process_usage', return_value=self.usage), \
+                     patch.object(storage.time, 'time', return_value=self.now), \
+                     patch.object(storage.os, 'rename', side_effect=replace_before_quarantine):
+                    with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_IDENTITY_CHANGED'):
+                        storage.reclaim_candidate(candidate, time.monotonic() + 5)
+
+                self.assertTrue(injected['done'])
+                self.assertTrue(os.path.lexists(path))
+                self.assertEqual(path.lstat().st_ino, replacement_inode)
+                if use_symlink:
+                    self.assertTrue(path.is_symlink())
+                    self.assertEqual(path.read_bytes(), marker)
+                else:
+                    self.assertEqual(path.read_bytes(), marker)
+                self.assertFalse(os.path.lexists(replacement))
+                self.assertEqual(list(path.parent.glob('.nox-reclaim-*')), [])
+
+
+    def test_quarantine_restore_failures_report_and_preserve_staged_file(self):
+        opener = lambda value: os.open(Path(value).parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        real_rename = os.rename
+        real_replace = os.replace
+        real_link = os.link
+        for index, failure in enumerate(('destination_occupied', 'permission_error')):
+            with self.subTest(failure=failure):
+                path = self.home / '.cache/pip/http-v2/a/b/c/d/e' / (('f' if index == 0 else 'b') * 56 + '.body')
+                self.file(path, b'audited original bytes')
+                candidate = self.candidate(path)
+                replacement = path.with_name('.replacement')
+                marker = ('staged substitute ' + failure).encode()
+                replacement.write_bytes(marker)
+                injected = {'move': False, 'occupant': False}
+
+                def replace_before_quarantine(src, dst, **kwargs):
+                    if not injected['move'] and src == path.name and dst == 'candidate':
+                        real_replace(replacement, path)
+                        injected['move'] = True
+                    return real_rename(src, dst, **kwargs)
+
+                def fail_safe_restore(src, dst, **kwargs):
+                    if failure == 'permission_error':
+                        raise PermissionError('temporary restore denied')
+                    if not injected['occupant']:
+                        path.write_bytes(b'concurrent occupant must survive')
+                        injected['occupant'] = True
+                    return real_link(src, dst, **kwargs)
+
+                with patch.object(storage, 'open_parent', opener), \
+                     patch.object(storage, 'process_usage', return_value=self.usage), \
+                     patch.object(storage.time, 'time', return_value=self.now), \
+                     patch.object(storage.os, 'rename', side_effect=replace_before_quarantine), \
+                     patch.object(storage.os, 'link', side_effect=fail_safe_restore):
+                    with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_QUARANTINE_PRESERVED') as held:
+                        storage.reclaim_candidate(candidate, time.monotonic() + 5)
+
+                self.assertTrue(injected['move'])
+                recovery = Path(held.exception.quarantine_path)
+                staged = recovery / 'candidate'
+                self.assertTrue(recovery.is_dir())
+                self.assertTrue(staged.is_file())
+                self.assertEqual(staged.read_bytes(), marker)
+                if failure == 'destination_occupied':
+                    self.assertEqual(path.read_bytes(), b'concurrent occupant must survive')
+                else:
+                    self.assertFalse(os.path.lexists(path))
+                self.assertFalse(os.path.lexists(replacement))
+
 
     def test_reclaim_never_calls_unlink_when_fresh_scan_is_incomplete(self):
         path = self.pip_file()
