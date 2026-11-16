@@ -178,6 +178,52 @@ class StorageTests(unittest.TestCase):
                 storage.reclaim_candidate(candidate, time.monotonic() + 5)
         self.assertTrue(changed.exists())
 
+    def test_reclaim_restores_inode_or_symlink_replaced_after_final_gate(self):
+        opener = lambda value: os.open(Path(value).parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        real_rename = os.rename
+        real_replace = os.replace
+        for marker, use_symlink in ((b'substitute must survive', False), (b'symlink target survives', True)):
+            with self.subTest(use_symlink=use_symlink):
+                basename = ('d' if use_symlink else 'e') * 56 + '.body'
+                path = self.home / '.cache/pip/http-v2/a/b/c/d/e' / basename
+                self.file(path, b'audited original bytes')
+                candidate = self.candidate(path)
+                replacement = path.with_name('.replacement')
+                if use_symlink:
+                    target = path.with_name('.symlink-target')
+                    target.write_bytes(marker)
+                    replacement.symlink_to(target)
+                    replacement_inode = replacement.lstat().st_ino
+                else:
+                    replacement.write_bytes(marker)
+                    replacement_inode = replacement.stat().st_ino
+                injected = {'done': False}
+
+                def replace_before_quarantine(src, dst, **kwargs):
+                    if not injected['done'] and src == path.name and dst == 'candidate':
+                        real_replace(replacement, path)
+                        injected['done'] = True
+                    return real_rename(src, dst, **kwargs)
+
+                with patch.object(storage, 'open_parent', opener), \
+                     patch.object(storage, 'process_usage', return_value=self.usage), \
+                     patch.object(storage.time, 'time', return_value=self.now), \
+                     patch.object(storage.os, 'rename', side_effect=replace_before_quarantine):
+                    with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_IDENTITY_CHANGED'):
+                        storage.reclaim_candidate(candidate, time.monotonic() + 5)
+
+                self.assertTrue(injected['done'])
+                self.assertTrue(os.path.lexists(path))
+                self.assertEqual(path.lstat().st_ino, replacement_inode)
+                if use_symlink:
+                    self.assertTrue(path.is_symlink())
+                    self.assertEqual(path.read_bytes(), marker)
+                else:
+                    self.assertEqual(path.read_bytes(), marker)
+                self.assertFalse(os.path.lexists(replacement))
+                self.assertEqual(list(path.parent.glob('.nox-reclaim-*')), [])
+
+
     def test_reclaim_never_calls_unlink_when_fresh_scan_is_incomplete(self):
         path = self.pip_file()
         candidate = self.candidate(path)
