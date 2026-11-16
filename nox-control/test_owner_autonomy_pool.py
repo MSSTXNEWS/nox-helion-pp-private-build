@@ -94,9 +94,10 @@ class PoolTests(unittest.TestCase):
 
     def test_real_independent_processes_normal_and_forsazh(self):
         for count in (3,6):
-            q=mp.Queue();go=mp.Event(); processes=[]
+            q=mp.Queue();go=mp.Event(); processes=[];ready_events=[]
             for _ in range(count):
-                p=mp.Process(target=process_echo,args=(q,mp.Event(),go))
+                ready=mp.Event();ready_events.append(ready)
+                p=mp.Process(target=process_echo,args=(q,ready,go))
                 p.start();processes.append(p)
             observed=[q.get(timeout=4)[0] for _ in range(count)]
             go.set()
