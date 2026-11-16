@@ -25,7 +25,8 @@ SERVICES = frozenset({
 STOP_FILES = (
     "/root/nox/STOP", "/root/nox/STOP.flag", "/root/nox/stop.flag",
     "/root/nox/.stop", "/root/nox/program/STOP",
-    "/workspace/NOX_STOP", "/root/nox/state/OWNER_MAINTENANCE.flag",
+    "/workspace/NOX_STOP", "/root/nox/state/STOP", "/root/nox/state/STOP.flag",
+    "/root/nox/state/OWNER_MAINTENANCE.flag",
 )
 STATUS = re.compile(r"^([a-zA-Z0-9_.:-]+)\s+([A-Z]+)(?:\s+pid\s+([0-9]+))?")
 REPAIRABLE = frozenset(("STOPPED", "EXITED"))
@@ -131,8 +132,18 @@ def read_state(path):
     return obj
 
 def stopped():
-    if any(Path(name).exists() or Path(name).is_symlink() for name in STOP_FILES):
-        return True
+    # The owner inspector accepts /state/STOP and /state/STOP.flag; lifeline
+    # must honor the same manual fences. lstat also fails CLOSED on EACCES
+    # (Path.exists/is_symlink may otherwise report both false).
+    for name in STOP_FILES:
+        try:
+            os.lstat(name)
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return True
+        else:
+            return True
     # The original owner's maintenance lease also inhibits repair, even if
     # the legacy flag is absent during an interrupted maintenance operation.
     lease = Path("/root/nox/state/owner_maintenance.lock")
