@@ -23,9 +23,18 @@ import subprocess
 import sys
 import tarfile
 import time
+import zipfile
 
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as conn
-from nox_runpod.teacher_mesh.v60.restore_validator import verify_plaintext_tar
+from nox_runpod.teacher_mesh.v60.restore_validator import (
+    INNER_CIPHERTEXT_NAME,
+    INNER_CIPHERTEXT_SHA256,
+    MAX_CIPHERTEXT_BYTES,
+    MAX_OUTER_BYTES,
+    OUTER_ZIP_BYTES,
+    OUTER_ZIP_SHA256,
+    verify_offsite_candidate,
+)
 
 RUN = Path(os.environ.get("RUNNER_TEMP","/tmp")) / "nox-v60-critical"
 FINAL = Path("NOX_V60_S03_GENESIS_WEB_20261114.tar.age")
@@ -176,17 +185,36 @@ def attach_temporary_key() -> None:
     time.sleep(12)
 
 
-def restore_test(encrypted: Path, test_identity: Path) -> dict:
-    p=subprocess.run(['age','-d','-i',str(test_identity),str(encrypted)],
-                     capture_output=True,timeout=90)
-    if p.returncode!=0:
-        raise RuntimeError('HOLD_TEST_AGE_DECRYPTION')
-    # Strict member coverage, path/type checks, pinned per-file SHA and SQLite
-    # integrity run in-memory; no archive extraction or production DB writes.
-    result=verify_plaintext_tar(p.stdout)
+def restore_test(
+    outer_archive: bytes,
+    test_identity: Path,
+    *,
+    expected_outer_bytes: int = OUTER_ZIP_BYTES,
+    expected_outer_sha256: str = OUTER_ZIP_SHA256,
+    expected_ciphertext_sha256: str = INNER_CIPHERTEXT_SHA256,
+) -> dict:
+    """Verify the pinned ZIP and inner age bytes before invoking age decrypt."""
+    def decrypt(ciphertext: bytes) -> bytes:
+        p=subprocess.run(
+            ['age','-d','-i',str(test_identity)],
+            input=ciphertext,capture_output=True,timeout=90)
+        if p.returncode!=0:
+            raise RuntimeError('HOLD_TEST_AGE_DECRYPTION')
+        return p.stdout
+
+    result=verify_offsite_candidate(
+        outer_archive,
+        decryptor=decrypt,
+        expected_outer_bytes=expected_outer_bytes,
+        expected_outer_sha256=expected_outer_sha256,
+        expected_ciphertext_sha256=expected_ciphertext_sha256,
+        inner_name=INNER_CIPHERTEXT_NAME,
+    )
     return {'verified_files':result['verified_files'],
             'restored_plain_sha256':result['plaintext_sha256'],
             'sqlite_integrity_checked':result['sqlite_integrity_checked'],
+            'outer_zip_sha256':result['outer_zip_sha256'],
+            'ciphertext_sha256':result['ciphertext_sha256'],
             'production_writes':0}
 
 
@@ -263,7 +291,23 @@ def run() -> None:
             time.sleep(5)
         else:
             raise RuntimeError('HOLD_SSH_OR_AGE_STREAM')
-        result=restore_test(FINAL,test_identity)
+        with FINAL.open('rb') as source:
+            ciphertext=source.read(MAX_CIPHERTEXT_BYTES+1)
+        if not 0<ciphertext.__len__()<=MAX_CIPHERTEXT_BYTES:
+            raise RuntimeError('HOLD_CIPHERTEXT_SIZE')
+        outer_buffer=io.BytesIO()
+        with zipfile.ZipFile(outer_buffer,'w',compression=zipfile.ZIP_STORED) as bundle:
+            bundle.writestr(INNER_CIPHERTEXT_NAME,ciphertext)
+        outer_archive=outer_buffer.getvalue()
+        if len(outer_archive)>MAX_OUTER_BYTES:
+            raise RuntimeError('HOLD_OUTER_ZIP_SIZE')
+        # This just-created bundle uses its freshly measured pins. Restores of
+        # the Drive candidate use restore_test defaults from the pinned index.
+        result=restore_test(
+            outer_archive,test_identity,
+            expected_outer_bytes=len(outer_archive),
+            expected_outer_sha256=hashlib.sha256(outer_archive).hexdigest(),
+            expected_ciphertext_sha256=hashlib.sha256(ciphertext).hexdigest())
         out={
             'schema':'NOX_V60_OFFSITE_ENCRYPTED_BACKUP_RECEIPT_V1',
             'instance_id':60509551,
