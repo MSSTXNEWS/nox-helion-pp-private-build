@@ -122,6 +122,7 @@ def storage():
 # Read only the current Linux mount namespace. Device source strings are intentionally
 # omitted because they can contain remote paths or credentials. statvfs reads metadata only.
 BLOCK_FILESYSTEMS={'ext2','ext3','ext4','xfs','btrfs','zfs','vfat','exfat','ntfs'}
+LOCAL_CAPACITY_FILESYSTEMS=BLOCK_FILESYSTEMS|{'overlay','tmpfs','ramfs'}
 def _unescape_mountinfo(value):
     return re.sub(r'\\([0-7]{3})',lambda m:chr(int(m.group(1),8)),value)
 
@@ -131,6 +132,8 @@ def _capacity_row(path,mount_rows,statvfs,path_exists):
     mount=max(matches,key=lambda r:len(r['mountpoint'])) if matches else None
     try:
         if not exists:raise FileNotFoundError(path)
+        if mount is None or mount['filesystem'] not in LOCAL_CAPACITY_FILESYSTEMS:
+            raise OSError('filesystem is outside the local capacity allowlist')
         st=statvfs(path); block_size=st.f_frsize or st.f_bsize
         total=int(st.f_blocks)*int(block_size); available=int(st.f_bavail)*int(block_size)
     except (OSError,AttributeError,TypeError,ValueError):
