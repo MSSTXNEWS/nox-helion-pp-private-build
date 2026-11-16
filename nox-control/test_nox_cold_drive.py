@@ -775,6 +775,38 @@ class ColdTests(unittest.TestCase):
                 hashlib.sha256(body[:100]).hexdigest(),stop_probe=lambda:False)
 
 
+
+class ColdOwnerMaintenanceGateRegressions(unittest.TestCase):
+    def test_owner_model_update_regular_flag_blocks_rclone_before_spawn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            flag = Path(tmp) / 'OWNER_MAINTENANCE.flag'
+            flag.touch()
+            with patch.object(cold, 'OWNER_STOP_PATHS', ()), \
+                 patch.object(cold, 'OWNER_MODEL_UPDATE_FLAG', flag), \
+                 patch.object(cold.subprocess, 'Popen') as spawn, \
+                 self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_MODEL_UPDATE'):
+                cold.command(['rclone', 'lsf', 'fixture:models'], timeout=2)
+            spawn.assert_not_called()
+
+    def test_owner_model_update_dangling_symlink_blocks_eviction_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            flag = Path(tmp) / 'OWNER_MAINTENANCE.flag'
+            flag.symlink_to(Path(tmp) / 'not-yet-created')
+            with patch.object(cold, 'OWNER_STOP_PATHS', ()), \
+                 patch.object(cold, 'OWNER_MODEL_UPDATE_FLAG', flag), \
+                 self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_MODEL_UPDATE'):
+                cold.assert_owner_stop_clear()
+
+    def test_no_model_update_flag_does_not_fake_owner_writer_lease(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            flag = Path(tmp) / 'OWNER_MAINTENANCE.flag'
+            with patch.object(cold, 'OWNER_STOP_PATHS', ()), \
+                 patch.object(cold, 'OWNER_MODEL_UPDATE_FLAG', flag):
+                cold.assert_owner_stop_clear()
+            # Source gate clearance is never evidence of native owner lease.
+            self.assertFalse(flag.exists())
+
+
 class DeepSeekStorageAdmissionRegressions(unittest.TestCase):
     def manifest(self):
         return {'repository':"ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
