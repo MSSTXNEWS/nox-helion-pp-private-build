@@ -10,11 +10,12 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_workspace_asset_install.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_budget_failure_diagnose.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_qwen_budget_failure_diagnose.py':(),
     'nox-control/owner_workspace_asset_install.py':(
         'owner_chat_stream_asset_install_v2.py','owner_media_acceptance_entry.py',
         'owner_native_repair.py','workspace-owner-capabilities.js'),
