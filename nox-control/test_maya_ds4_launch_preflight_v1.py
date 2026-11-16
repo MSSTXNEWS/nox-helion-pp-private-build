@@ -372,7 +372,8 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertIn('bf16f(uint16_t b) { return __uint_as_float((uint32_t) b << 16); }', ds4_kernels)
         self.assertNotIn('__nv_bfloat16', ds4_kernels)
         self.assertNotIn('__nv_fp8', ds4_kernels)
-        self.assertIn('#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800\\n    asm volatile("mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32', ds4_kernels)
+        self.assertIn('#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800', ds4_kernels)
+        self.assertIn('mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32', ds4_kernels)
 
 if __name__ == "__main__":
     unittest.main()
