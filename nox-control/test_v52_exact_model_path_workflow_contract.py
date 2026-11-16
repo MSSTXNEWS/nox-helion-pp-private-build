@@ -2,6 +2,7 @@ import ast
 import importlib.util
 from pathlib import Path
 import unittest
+import tempfile
 
 ROOT=Path(__file__).resolve().parents[1]
 WORKFLOW=ROOT/'.github'/'workflows'/'nox-v52-native-onehost-inspect.yml'
@@ -50,6 +51,19 @@ class V52ExactModelPathWorkflowContractTests(unittest.TestCase):
         self.assertEqual(audit.MODEL_MANIFEST_REVISION,
                          manifest.PINNED_SOURCES[0]['revision'])
         self.assertEqual(audit.MODEL_ROOT,'/root/nox/models')
+
+    def test_stat_report_has_all_six_no_follow_metadata_rows(self):
+        with tempfile.TemporaryDirectory() as temp:
+            result=audit.pinned_model_paths(root=temp)
+        expected_names={name for name,_,_ in audit.PINNED_MODEL_FILES}
+        self.assertEqual(len(result['files']),6)
+        self.assertEqual({Path(row['path']).name for row in result['files']},expected_names)
+        for row in result['files']:
+            self.assertTrue({'path','exists','type','bytes','sha_status'}<=set(row))
+            self.assertEqual(row['sha_status'],'NOT_CHECKED')
+            self.assertFalse(row['exists'])
+            self.assertEqual(row['type'],'missing')
+            self.assertIsNone(row['bytes'])
 
     def test_source_route_keeps_stop_and_model_files_untouched(self):
         text=WORKFLOW.read_text()
