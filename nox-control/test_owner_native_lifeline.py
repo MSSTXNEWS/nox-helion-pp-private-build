@@ -61,6 +61,41 @@ class InstallerTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "HOLD_LIFELINE_CRITICAL_SERVICE_IDENTITY_UNSAFE"):
                     n.validate_baseline(snapshot)
 
+    def test_supervisor_nonzero_rc_fail_closed_even_with_running_stdout(self):
+        for state in ("RUNNING pid 901", "STOPPED"):
+            with self.subTest(state=state), patch.object(
+                n, "call", return_value=SimpleNamespace(
+                    stdout=f"nox-dispatcher-t855u {state}\\n", returncode=1
+                )
+            ):
+                self.assertEqual(n.info("nox-dispatcher-t855u"),
+                                 {"state": "UNKNOWN", "pid": None})
+
+    def test_supervisor_contradictory_or_unknown_state_fail_closed(self):
+        for line in ("RUNNING", "STOPPED pid 11", "EXITED pid 22",
+                     "FATAL", "RUNNING pid 0"):
+            with self.subTest(line=line), patch.object(
+                n, "call", return_value=SimpleNamespace(
+                    stdout=f"nox-dispatcher-t855u {line}\\n", returncode=0
+                )
+            ):
+                self.assertEqual(n.info("nox-dispatcher-t855u"),
+                                 {"state": "UNKNOWN", "pid": None})
+
+    def test_supervisor_valid_rows_preserved(self):
+        for state, tail, expected_pid in (
+            ("RUNNING", "pid 321", 321),
+            ("STOPPED", "", None),
+            ("EXITED", "", None),
+        ):
+            with self.subTest(state=state), patch.object(
+                n, "call", return_value=SimpleNamespace(
+                    stdout=f"nox-dispatcher-t855u {state} {tail}\\n", returncode=0
+                )
+            ):
+                self.assertEqual(n.info("nox-dispatcher-t855u"),
+                                 {"state": state, "pid": expected_pid})
+
     def test_wrong_supervisor_identity_rejected(self):
         with patch.object(n,"call",return_value=SimpleNamespace(stdout="evil RUNNING pid 1\n",returncode=0)):
             self.assertEqual(n.info("nox-dispatcher-t855u")["state"],"UNKNOWN")
