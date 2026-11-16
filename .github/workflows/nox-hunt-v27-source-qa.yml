@@ -1,7 +1,7 @@
 name: NOX Genesis HUNT V27 Source and WEB QA
 on:
   push:
-    branches: [feature/nox-teacher-mycelium-20261112]
+    branches: [feature/nox-teacher-mycelium-20261112, feature/nox-v38-synaptic-brain-20261114]
     paths:
       - '.github/workflows/nox-hunt-v27-source-qa.yml'
       - 'nox_runpod/teacher_mesh/autonomous_hunt_v27.py'
