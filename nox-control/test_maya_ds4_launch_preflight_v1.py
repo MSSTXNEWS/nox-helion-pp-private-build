@@ -28,12 +28,10 @@ def maya_source(path):
 
 
 def complete_rows():
-    names = PLAN.EXPECTED_FILES
-    weights = [49_000_000_000, 49_000_000_000, 49_000_000_000,
-               49_000_000_000, 17_000_000_000, 35_834_257_920]
-    return [{"path": name, "bytes": size, "sha256": f"{i + 1:064x}",
-             "sha_verified": True}
-            for i, (name, size) in enumerate(zip(names, weights))]
+    # Immutable manifest facts, never a caller-supplied "sha_verified" boolean alone.
+    return [{"path": name, "bytes": PLAN.PINNED_FILE_FACTS[name][0],
+             "sha256": PLAN.PINNED_FILE_FACTS[name][1], "sha_verified": True}
+            for name in PLAN.EXPECTED_FILES]
 
 
 class MayaLinkageReadOnlyTests(unittest.TestCase):
@@ -101,6 +99,22 @@ class MayaLaunchPlanTests(unittest.TestCase):
         rows[0]["sha256"] = "abc"
         args["verified_files"] = rows
         self.assertEqual(PLAN.evaluate_source_plan(**args)["state"],
+                         "HOLD_SIZE_OR_SHA256_UNVERIFIED")
+
+    def test_duplicate_or_synthetic_weight_attestation_fails_closed(self):
+        base=dict(stop_present=False, gpu_ids=(0, 1), tp=2, max_context=4096,
+                  reserve_mib=1024, tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"))
+        rows=complete_rows()
+        duplicated=rows + [dict(rows[0])]
+        self.assertEqual(PLAN.evaluate_source_plan(verified_files=duplicated, **base)["state"],
+                         "HOLD_ALL_FIVE_SHARDS_AND_ENGRAM_REQUIRED")
+        forged=complete_rows()
+        forged[1]["sha256"]="a"*64
+        self.assertEqual(PLAN.evaluate_source_plan(verified_files=forged, **base)["state"],
+                         "HOLD_SIZE_OR_SHA256_UNVERIFIED")
+        wrong_size=complete_rows()
+        wrong_size[3]["bytes"]+=1
+        self.assertEqual(PLAN.evaluate_source_plan(verified_files=wrong_size, **base)["state"],
                          "HOLD_SIZE_OR_SHA256_UNVERIFIED")
 
     def test_unconfirmed_fp8_is_rejected(self):
