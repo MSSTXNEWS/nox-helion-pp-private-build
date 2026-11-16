@@ -61,11 +61,14 @@
       "successful_updates_this_run": 0,
       "checkpoint8_manifest_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
       "offsite_restore_verified": false,
-      "train_hold": "HOLD_MEDIA_HANDBACK_FILE_CHANGED"
+      "train_hold": "PRIOR_HOLD_MEDIA_HANDBACK_FILE_CHANGED; owner handback subsequently reported RESUMED",
+      "owner_handback_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43815393580",
+      "last_native_readback_utc": "2026-11-16T06:15:54Z",
+      "last_native_readback_state": "RESUMED / RUNNING at readback; current train PID and ninth successful update unverified"
     },
     {
       "lane": "KNOWLEDGE",
-      "state": "HOLD_NATIVE_HUNTER_FULL_RECALL",
+      "state": "HISTORICAL_3_REVIEW_CANDIDATES;HOLD_NATIVE_HUNTER_SOURCE_TO_S03_RECALL",
       "historical_native_review_receipts": 3,
       "new_s03_writes_this_run": 0
     },
@@ -73,14 +76,21 @@
       "lane": "DISPATCHER+RESOURCES",
       "state": "HISTORICAL_NATIVE_CURRENT_RESOURCE_HOLD",
       "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814277490",
-      "last_dispatcher_pid": 724331,
-      "last_observed_utc": "2026-11-16T06:05:00Z",
+      "last_dispatcher_pid": 746352,
+      "last_observed_utc": "2026-11-16T06:15:54Z",
       "current_worker_pids": null,
       "current_gpu_cpu_ram_ssd_temp": null,
       "current_STOP": null,
       "current_lease": null,
       "native_jobs_this_run": 0,
-      "restarts_this_run": 0
+      "restarts_this_run": 0,
+      "last_dispatcher_evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43815393580",
+      "weight_download_observation": {
+        "at_utc": "2026-11-16T06:24:00Z",
+        "deepseek_shard_00005_verified_bytes": 19923784832,
+        "other_four_required_files_not_yet_downloaded_bytes": 228904692384,
+        "status": "PARTIAL_DOWNLOAD_NOT_SERVING"
+      }
     }
   ],
   "safety": {
@@ -91,5 +101,15 @@
     "deleted_files": 0,
     "original_D02_14_worlds_unchanged": true
   },
-  "next_ready_action": "Complete targeted source CI; existing authorized OneHost get preimage/STOP/writer lease/independent recovery, stage ONLY original progress module with native callbacks proving successful_optimizer_updates and observed_at_utc; verify owner 401/200 and S03 persisted hourly recall. Never blind resume on HOLD_MEDIA_HANDBACK_FILE_CHANGED."
+  "next_ready_action": "Owner-auth native read-only snapshot for latest trainer successful updates, STOP/lease, three actual workers and source current telemetry; wire existing progress callbacks to real successful_optimizer_updates and observed_at_utc; deploy 3C only after exact WEB29 preimage, reversible backup, and S03/owner/STOP browser readback.",
+  "source_validation": {
+    "status": "SUCCESS_SOURCE_ONLY",
+    "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43819883996",
+    "job_id": 133140297994,
+    "python_progress_tests": "12/12 PASS (10 prior + 2 new)",
+    "node_progress_regressions": "PASS",
+    "original_3d_source_regressions": "PASS",
+    "github_log_readback": true,
+    "live_onehost_acceptance": false
+  }
 }
