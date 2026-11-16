@@ -39,7 +39,7 @@ class ModeStageTests(unittest.TestCase):
     def test_stages_only_mode_without_starting_processes(self):
         self.assertEqual(mode.main(), 0)
         obj = json.loads(mode.MODE_PATH.read_text())
-        self.assertEqual(obj["mode_workers"], {"NORMAL": 2, "FORSAZH": 6})
+        self.assertEqual(obj["mode_workers"], {"NORMAL": 3, "FORSAZH": 6})
         self.assertEqual(obj["selected"], "FORSAZH")
         self.assertFalse(obj["production_processes_started"])
         self.assertFalse(obj["native_binding_active_verified"])
@@ -68,7 +68,7 @@ class ModeStageTests(unittest.TestCase):
 
     def test_conflicting_old_mode_is_not_overwritten(self):
         mode.MODE_PATH.write_text(json.dumps({"schema": mode.SCHEMA,
-            "selected": "NORMAL", "mode_workers": {"NORMAL": 3, "FORSAZH": 6}}))
+            "selected": "NORMAL", "mode_workers": {"NORMAL": 2, "FORSAZH": 6}}))
         before = mode.MODE_PATH.read_bytes()
         with self.assertRaisesRegex(mode.Hold, "EXISTING_OWNER_MODE_CONFLICT"):
             mode.main()
