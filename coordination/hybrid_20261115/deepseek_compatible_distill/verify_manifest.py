@@ -22,12 +22,23 @@ def staged_pair_blockers(corpus: dict) -> list[str]:
     blockers: list[str] = []
     pairs = corpus.get("staged_pairs", [])
     holdout = corpus.get("splits", {}).get("holdout", {})
-    holdout_hashes = holdout.get("example_hashes", [])
     if not isinstance(pairs, list):
         return ["STAGED_PAIR_SCHEMA_INVALID"]
-    if not isinstance(holdout_hashes, list) or any(not isinstance(x, str) or not HEX64.fullmatch(x) for x in holdout_hashes):
-        blockers.append("HOLDOUT_HASH_LIST_INVALID")
-        holdout_hashes = []
+    if type(corpus.get("staged_examples_count")) is not int or corpus["staged_examples_count"] != len(pairs):
+        blockers.append("STAGED_PAIR_COUNT_MISMATCH")
+    hash_fields = ("example_hashes", "prompt_sha256s", "completion_sha256s")
+    holdout_hashes = {}
+    for field in hash_fields:
+        values = holdout.get(field)
+        if values is None and holdout.get("membership_complete") is not True:
+            values = []
+        elif values is None:
+            blockers.append("HOLDOUT_HASH_MANIFEST_INCOMPLETE")
+            values = []
+        if not isinstance(values, list) or any(not isinstance(x, str) or not HEX64.fullmatch(x) for x in values):
+            blockers.append("HOLDOUT_HASH_LIST_INVALID")
+            values = []
+        holdout_hashes[field] = set(values)
     seen = set()
     for pair in pairs:
         if not isinstance(pair, dict):
@@ -52,7 +63,9 @@ def staged_pair_blockers(corpus: dict) -> list[str]:
         pair_hash = canonical_sha256(hash_input)
         if pair.get("pair_sha256") != pair_hash:
             blockers.append("STAGED_PAIR_HASH_MISMATCH")
-        if pair_hash in holdout_hashes:
+        if (pair_hash in holdout_hashes["example_hashes"]
+                or pair.get("prompt_sha256") in holdout_hashes["prompt_sha256s"]
+                or pair.get("completion_sha256") in holdout_hashes["completion_sha256s"]):
             blockers.append("STAGED_PAIR_HOLDOUT_LEAKAGE")
         source = pair.get("source", {})
         safety = pair.get("safety", {})

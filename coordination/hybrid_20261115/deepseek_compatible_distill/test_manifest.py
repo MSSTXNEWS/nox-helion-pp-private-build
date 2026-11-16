@@ -78,20 +78,44 @@ class DistillationManifestTest(unittest.TestCase):
         self.assertEqual(pair["split_assignment"], "train_candidate")
         self.assertEqual(pair["excluded_from"], "dev,holdout")
         self.assertEqual(len(pair["pair_sha256"]), 64)
-        self.assertIn("STAGED_PAIR_HOLDOUT_NOT_VERIFIABLE",
-                      validate(MANIFEST)["blockers"])
+        result = validate(MANIFEST)
+        self.assertIn("STAGED_PAIR_HOLDOUT_NOT_VERIFIABLE", result["blockers"])
+        self.assertEqual(result["state"], "HOLD")
+        self.assertFalse(result["training_started"])
+
+    def test_staged_pair_count_is_bound_to_manifest(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["corpus"]["staged_examples_count"] = 0
+        self.assertIn("STAGED_PAIR_COUNT_MISMATCH", validate(changed)["blockers"])
 
     def test_staged_pair_hash_and_holdout_leakage_are_checked(self):
         changed = copy.deepcopy(MANIFEST)
         pair = changed["corpus"]["staged_pairs"][0]
-        changed["corpus"]["splits"]["holdout"]["membership_complete"] = True
-        changed["corpus"]["splits"]["holdout"]["example_hashes"] = [pair["pair_sha256"]]
+        holdout = changed["corpus"]["splits"]["holdout"]
+        holdout["membership_complete"] = True
+        holdout["example_hashes"] = []
+        holdout["prompt_sha256s"] = [pair["prompt_sha256"]]
+        holdout["completion_sha256s"] = []
         self.assertIn("STAGED_PAIR_HOLDOUT_LEAKAGE", validate(changed)["blockers"])
+
+        changed = copy.deepcopy(MANIFEST)
+        holdout = changed["corpus"]["splits"]["holdout"]
+        holdout["membership_complete"] = True
+        holdout["example_hashes"] = []
+        holdout["prompt_sha256s"] = []
+        holdout["completion_sha256s"] = []
+        self.assertNotIn("STAGED_PAIR_HOLDOUT_NOT_VERIFIABLE", validate(changed)["blockers"])
 
         changed = copy.deepcopy(MANIFEST)
         changed["corpus"]["staged_pairs"][0]["completion"] += " changed"
         self.assertIn("STAGED_PAIR_COMPLETION_HASH_MISMATCH",
                       validate(changed)["blockers"])
+
+    def test_complete_holdout_requires_all_overlap_hash_indexes(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["corpus"]["splits"]["holdout"]["membership_complete"] = True
+        changed["corpus"]["splits"]["holdout"]["example_hashes"] = []
+        self.assertIn("HOLDOUT_HASH_MANIFEST_INCOMPLETE", validate(changed)["blockers"])
 
     def test_staged_pair_rejects_credential_or_personal_data_patterns(self):
         changed = copy.deepcopy(MANIFEST)
