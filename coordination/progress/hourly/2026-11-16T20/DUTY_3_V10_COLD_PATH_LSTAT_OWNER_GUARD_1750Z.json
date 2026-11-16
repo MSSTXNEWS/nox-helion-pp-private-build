@@ -1,0 +1,125 @@
+{
+  "schema": "NOX_UNIVERSAL_V10_FIVE_OUTCOMES_V1",
+  "instructions_version": "0.0.6",
+  "slot": "DUTY_3",
+  "date_utc": "2026-11-16",
+  "latest_source_ci_observed_at_utc": "2026-11-16T17:49:12Z",
+  "timezone": "Europe/Moscow",
+  "source_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "source_head_at_test": "292bb2b505274260822dc83ffbaa641c3ec6d9e5",
+  "source_changes": [
+    {
+      "file": "nox-control/nox_cold_drive.py",
+      "preimage_blob": "67171e2fc5c98dd896fde27fa61b352b5690c429",
+      "result_blob": "ad2ec6ddebde88f531002216498b5867fcfe856f",
+      "commit": "89bb4a23750f8875b2e30afe56209df597721821"
+    },
+    {
+      "file": "nox-control/test_nox_cold_drive.py",
+      "preimage_blob": "5071d20ec27dccb192c31cc478451958862a6f9c",
+      "result_blob": "42d6662421eacc26d560f660ab4c676db8d9503c",
+      "commit": "292bb2b505274260822dc83ffbaa641c3ec6d9e5"
+    }
+  ],
+  "root_cause": "cold storage plain_path checked symlink ancestors using Path.is_symlink(), which can mask ELOOP/EACCES as False; optional receipt paths could wrongly classify unreadable ancestry as safe",
+  "repair": "Use explicit os.lstat for each present ancestor, reject errors other than genuinely missing paths, symlinks, or non-directory parents; preserve safe optional nested output creation. This is a preflight only, not native lease or atomicity proof.",
+  "tests": {
+    "scope": "SOURCE_ONLY_OFFLINE_FIXTURE",
+    "success": 96,
+    "total": 96,
+    "new_regressions": 3,
+    "ci_run": 43922300377,
+    "ci_job": 133492477366,
+    "ci_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43922300377"
+  },
+  "five_outcomes": [
+    {
+      "task_id": "S2-07/PATH_METADATA_PREFLIGHT",
+      "status": "SOURCE_TESTED",
+      "scope": "cold model and receipt path lstat guard; download of DeepSeek unstarted"
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD",
+      "reason": "HOLD_FRESH_OWNER_NATIVE_READBACK",
+      "current_pid_startticks": null,
+      "lease": null
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD",
+      "reason": "HOLD_NATIVE_WRITER_STOP_LEASE_AND_CLAIMS",
+      "lease": null
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD",
+      "reason": "HOLD_INDEPENDENT_S03_GENESIS_CHECKPOINT_OPTIMIZER_SCALER_RNG_RESTORE"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD",
+      "reason": "HOLD_REAL_MAYA_MODEL_UI_SSE_RU_ES_STOP_AND_S03"
+    }
+  ],
+  "prior_native_evidence": {
+    "at_utc": "2026-11-16T16:48:21Z",
+    "job_id": 133453659138,
+    "workflow_run": 43887943803,
+    "owner_stop": "PRESENT_THEN",
+    "owner_maintenance": "PRESENT_THEN",
+    "supervisor_five": "STOPPED_THEN",
+    "listener_8081": "ABSENT_THEN",
+    "gpu_vram_used_mib": [
+      0,
+      0
+    ],
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158790144,
+    "rclone_remotes": [],
+    "current_state": "UNKNOWN"
+  },
+  "current_native": {
+    "owner_STOP": null,
+    "owner_writer_lease": null,
+    "supervisor_pids_startticks": null,
+    "os_workers": null,
+    "gpus": null,
+    "model_identity": null,
+    "trainer_pid": null,
+    "downloader_pid": null,
+    "dispatcher_heartbeat": null,
+    "s03_owner_recall": null,
+    "reason": "NO_FRESH_OWNER_NATIVE_SESSION"
+  },
+  "model_target": {
+    "name": "DeepSeek-V4.1-Flash-1017 GSQ-RCO IQ2_XXS + Maya sm70",
+    "unique_bytes": 248834257920,
+    "missing_large_shard_bytes_claimed_prior": 248828477216,
+    "current_verified_download_bytes": null,
+    "external_seekable_quota": null
+  },
+  "weights": {
+    "new_native_successful_optimizer_updates": 0,
+    "new_accepted_checkpoint": false,
+    "independent_restore": false
+  },
+  "knowledge": {
+    "new_native_hunter_to_s03_readback_recalls": 0
+  },
+  "dispatcher_resources": {
+    "new_native_owned_pids": [],
+    "new_native_task_claims": 0,
+    "new_download_bytes": 0,
+    "new_deleted_bytes": 0,
+    "new_restarts": 0,
+    "model_switched": false
+  },
+  "installed": false,
+  "live_verified": false,
+  "cleanup": "HOLD_CLEANUP_NO_INDEPENDENT_RESTORE_NEW_CHAT_OR_OWNER_LEASE",
+  "rollback": "Only reverse exact two source/test blobs with fresh GitHub CAS after reconciling concurrent HEAD; native rollback not applicable",
+  "next_first_ready": "S1-01 authorized original owner-native READ_ONLY STOP/lease/live PID+start_ticks and full process/model inventory; S2-07 seekable capacity and verified restore are the next engine dependencies",
+  "handoff_to": "DUTY_1",
+  "do_not_repeat": "Do not repatch nox_cold_drive.plain_path when code blob ad2ec6ddebde88f531002216498b5867fcfe856f is already present; CI 43922300377 proves only offline tests."
+}
