@@ -508,8 +508,12 @@ def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identit
     vectors=embedder([embedding_text(row[1]) for row in pending],timeout=4.0)
     if not isinstance(vectors,list) or len(vectors)!=len(pending):hold('HOLD_S03_INDEX_BATCH_RESULT')
     if identity_fn()!=identity:hold('HOLD_S03_MODEL_CHANGED_DURING_EMBEDDING')
+    # An owner STOP may arrive while the embedding endpoint is calculating.
+    # Do not start a SQLite write after that revocation.
+    if stop_active():hold('HOLD_S03_OWNER_STOP')
     written=0
     with connection(db,write=True,seconds=2) as conn:
+        if stop_active():hold('HOLD_S03_OWNER_STOP')
         conn.execute('BEGIN IMMEDIATE')
         for (item_id,text,sha),vector in zip(pending,vectors):
             live=conn.execute('SELECT text FROM s03_items WHERE id=?',(item_id,)).fetchone()
@@ -522,6 +526,9 @@ def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identit
         if info is not None:
             observed=[info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns]
             conn.execute('INSERT OR REPLACE INTO nox_s03_gateway_meta VALUES(?,?)',('model_file_stat',encoded(observed).decode()))
+        # Roll back the entire uncommitted vector batch if owner STOP was
+        # asserted while SQLite work was in progress. No partial index PASS.
+        if stop_active():hold('HOLD_S03_OWNER_STOP')
     return {'state':'INDEX_BATCH_VERIFIED','indexed':written,'stale_remaining':max(0,stale-written),
             'model_identity':identity,'dimensions':DIMENSIONS}
 
