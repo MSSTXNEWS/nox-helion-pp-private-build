@@ -46,16 +46,16 @@
     method:'POST',credentials:'same-origin',cache:'no-store',signal,
     headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
   }),signal);
-  async function reason(r) {
-    try{const j=await r.json();return String(j.error||j.reason||'HTTP_'+r.status).slice(0,110);}
-    catch{return 'HTTP_'+r.status;}
+  async function reason(r,signal) {
+    try{const j=await nativeBodyJSON(r,signal);return String(j.error||j.reason||'HTTP_'+r.status).slice(0,110);}
+    catch{if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');return 'HTTP_'+r.status;}
   }
   const responseJSON=(data,status=200)=>new Response(JSON.stringify(data),{
     status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
   });
   async function nativeJSON(path,init) {
     const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
-    if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r));
+    if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
     return nativeBodyJSON(r,init?.signal);
   }
   async function createDialog(title,signal) {
@@ -63,7 +63,7 @@
       title:String(title||'Новый диалог').replace(/[\x00-\x1F\x7F]/g,' ').trim().slice(0,140)||'Новый диалог',
       confirmed:true
     },signal);
-    if(!r.ok)throw Error('HOLD_DIALOG_CREATE_'+await reason(r));
+    if(!r.ok)throw Error('HOLD_DIALOG_CREATE_'+await reason(r,signal));
     const d=await nativeBodyJSON(r,signal);
     if(typeof d.dialog_id!=='string'||!ID.test(d.dialog_id))throw Error('HOLD_DIALOG_CREATE_RECEIPT');
     return d;
@@ -105,7 +105,7 @@
     finally{signal.removeEventListener('abort',onAbort);}
   }
   async function consume(response,emit,signal) {
-    if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response));
+    if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
     const reader=response.body.getReader(),decoder=new TextDecoder();
     let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
     let nativeModel='UNKNOWN';
@@ -319,7 +319,7 @@
         const r=await nativePost('/api/ui/memory/dialogs/update',{
           dialog_id:data.dialog_id,revision:row.revision,title:data.title,confirmed:true
         },init?.signal);
-        if(!r.ok)throw Error('HOLD_RENAME_'+await reason(r));
+        if(!r.ok)throw Error('HOLD_RENAME_'+await reason(r,init?.signal));
         const d=await nativeBodyJSON(r,init?.signal);
         if(d.dialog_id!==data.dialog_id||d.title!==data.title||
            !Number.isInteger(d.revision)||d.revision<=row.revision)

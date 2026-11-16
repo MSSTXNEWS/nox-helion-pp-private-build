@@ -1074,3 +1074,52 @@ test('V171 abort interrupts stalled dialog-create JSON body without inference',a
   assert.equal(frames.filter(e=>e.type==='done').length,0);
   assert(!f.calls.some(c=>c.path==='/api/nox/chat/stream'));
 });
+
+
+test('V172 aborts stalled non-2xx owner error bodies on create, model and S03',async()=>{
+  for(const stage of ['create','model','history']){
+    const abort=new AbortController(),calls=[];
+    const stalled=()=>new Response(new ReadableStream({start(){}}),{status:503});
+    const native=async path=>{
+      const p=new URL(String(path),'https://nox.local').pathname;
+      calls.push(p);
+      if(stage==='create'&&p==='/api/ui/memory/dialogs/create')return stalled();
+      if(p==='/api/ui/memory/dialogs/create')return Response.json({dialog_id:id});
+      if(stage==='model'&&p==='/api/nox/chat/stream')return stalled();
+      if(p==='/api/nox/chat/stream'){
+        const frames=[
+          {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+          {type:'start',model:'NOX HELION'},
+          {type:'delta',text:answer},
+          {type:'done',saved:true,s03_integrated:true,dialog_id:id,
+           exchange_id:'v172-owner-error-body'}
+        ];
+        return new Response(new ReadableStream({start(c){
+          c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
+          c.close();
+        }}));
+      }
+      if(stage==='history'&&p==='/api/ui/memory/dialogs/history')return stalled();
+      if(p==='/api/ui/memory/dialogs/history')return Response.json({status:'READY',
+        dialog_id:id,messages:[]});
+      throw Error('UNEXPECTED_NATIVE_ROUTE_'+p);
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:native};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const data={message:prompt,dialog_id:stage==='create'?null:id,request_id:'v172-'+stage};
+    const response=await w.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,
+      body:JSON.stringify(data)});
+    setTimeout(()=>abort.abort(),20);
+    const frames=await Promise.race([events(response),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('STALLED_ERROR_BODY_'+stage)),600))]);
+    assert(frames.some(e=>e.type==='error'&&e.error==='STREAM_STOP_REQUESTED'),
+      'scoped STOP must work even after HTTP error headers for '+stage);
+    assert.equal(frames.some(e=>e.type==='done'),false);
+    assert.equal(calls.includes('/api/nox/stop'),false);
+    if(stage==='create')assert.equal(calls.includes('/api/nox/chat/stream'),false);
+    if(stage==='history')assert(calls.includes('/api/ui/memory/dialogs/history'));
+  }
+});
