@@ -57,7 +57,7 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
         self.assertFalse(got["maya_executable_invoked"])
         self.assertFalse(got["cuda_context_created"])
         self.assertIs(run.call_args.kwargs["shell"], False)
-        self.assertIn("readelf", run.call_args.args[0][0])
+        self.assertEqual(run.call_args.args[0][0], "/usr/bin/readelf")
         self.assertNotIn(str(Path("/tmp/nox") / "engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4"),
                           run.call_args.args[0][0][0])
 
@@ -139,7 +139,7 @@ class MayaLaunchPlanTests(unittest.TestCase):
         for option in ('--tp', '--max-context', '--reserve-mib', '--serve'):
             self.assertIn(option, main)
         self.assertIn("Volta (sm_70: GLM, maya-ds4 and maya-mm3 run on V100s)", cmake)
-        self.assertIn("tensor parallel in groups of 2", setup)
+        self.assertIn("tensor parallel across pairs of equal GPUs", setup)
         self.assertIn("64K", setup)
 
 
