@@ -34,6 +34,12 @@
     if(!header||!main)return;
     const style=E('style');style.textContent=`
       body.nox-v24 .v24-stage{top:var(--nox-owner-top-inset,0px)}
+      body.nox-v24 .v24-app{min-height:0;max-height:100%;overflow:hidden}
+      body.nox-v24 .v24-main{min-height:0;overflow:hidden}
+      body.nox-v24 .v24-column{min-height:min(220px,40vh);min-width:0;flex:1 1 0;overflow:hidden}
+      body.nox-v24 .v24-stream{flex:1 1 0;min-height:0}
+      body.nox-v24 .v24-composer{flex:0 0 auto}
+      .nox-owner-status-stack{flex:0 1 auto;min-height:0;max-height:min(28vh,280px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#6e604d transparent}
       .nox-live-strip{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:9px 13px;margin:0 0 6px;color:#e9d8bd;font:12px system-ui}
       .nox-live-chip{padding:5px 8px;border-radius:9px;background:#151b22bb;border:1px solid #43464c;white-space:nowrap}
       .nox-live-chip[data-state=busy]{border-color:#d7a563;color:#ffe0a6;box-shadow:0 0 12px #d9a25720}
@@ -47,8 +53,13 @@
     const strip=E('div',undefined,'nox-live-strip'),label=E('span','Исполнители'),chips=E('span');chips.style.display='contents';
     const actions=E('div',undefined,'nox-live-actions'),image=E('button','Фото','nox-live-btn'),video=E('button','Видео','nox-live-btn');
     image.type=video.type='button';actions.append(image,video);strip.append(label,chips,actions);header.after(strip);
+    // Both existing panels share a bounded scrolling area. Their contents and
+    // open state never determine the space left for the composer/Stop control.
+    const statusStack=E('section',undefined,'nox-owner-status-stack');
+    statusStack.setAttribute('aria-label','Состояние и отчёты NOX');strip.after(statusStack);
+    window.__NOX_OWNER_COMPOSER_LAYOUT='BOUNDED_REPORTS_SCROLL_V1';
     const reports=E('details',undefined,'nox-owner-reports'),reportTitle=E('summary','Отчёты NOX'),reportList=E('div');
-    reports.append(reportTitle,reportList);strip.after(reports);
+    reports.append(reportTitle,reportList);statusStack.append(reports);
     const reportStyle=E('style');reportStyle.textContent='.nox-owner-reports{margin:0 12px 10px;color:#cbd7e3;font:12px system-ui}.nox-owner-reports summary{padding:8px;cursor:pointer;color:#d8bc87}.nox-owner-report{border-left:2px solid #a3824e;background:#111b25b8;border-radius:0 9px 9px 0;padding:11px 13px;margin:7px 0;line-height:1.55}.nox-owner-report p{margin:5px 0}.nox-owner-report small{color:#90a2b5}';document.head.append(reportStyle);
     const inventory=E('details',undefined,'nox-owner-reports'),inventoryTitle=E('summary','Загрузки · проверяю файлы'),inventoryBody=E('div');
     inventory.dataset.noxDownloadInventory='1';inventory.append(inventoryTitle,inventoryBody);reports.before(inventory);

@@ -168,7 +168,8 @@ OBSERVER_JS = r"""
  const cfg=__CONFIG__;
  const q=window.__NOX_BROWSER_QA={started:null,nativeFirst:null,nativeDone:null,
    nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,nativeCalls:0,
-   uiFirst:null,uiBeforeDone:false,uiLengths:[],contexts:[],draws:0};
+   uiFirst:null,uiBeforeDone:false,uiLengths:[],contexts:[],draws:0,
+   stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};
  const normalize=s=>s.replace(/\s+/g,'');
  const get=HTMLCanvasElement.prototype.getContext;
  HTMLCanvasElement.prototype.getContext=function(...args){
@@ -185,8 +186,18 @@ OBSERVER_JS = r"""
      type.prototype[method]=function(...args){q.draws++;return Reflect.apply(original,this,args);};
    }
  }
+ let sampleStop=()=>{};
  function watch(){
    const mount=document.getElementById('messages');if(!mount)return;
+   const form=document.getElementById('chatForm'),stop=form?.querySelector('[data-action=stop]');
+   if(form&&stop){sampleStop=()=>{
+     if(q.nativeCalls!==1||stop.disabled||q.stopSamples>=100)return;
+     const b=stop.getBoundingClientRect(),x=b.x+b.width/2,y=b.y+b.height/2;
+     const visible=b.width>0&&b.height>0&&b.top>=0&&b.bottom<=innerHeight&&b.left>=0&&b.right<=innerWidth;
+     const hit=visible?document.elementFromPoint(x,y):null;
+     q.stopSamples++;if(visible)q.stopVisibleSamples++;
+     if(!hit||!(hit===stop||stop.contains(hit)))q.stopOccludedSamples++;
+   };new MutationObserver(sampleStop).observe(form,{subtree:true,attributes:true,attributeFilter:['disabled','style','class']});}
    new MutationObserver(()=>{
      if(q.started===null||!q.answer)return;
      const wanted=normalize(q.answer);
@@ -237,7 +248,7 @@ OBSERVER_JS = r"""
  window.fetch=async function(input,init){
    let url;try{url=new URL(input instanceof Request?input.url:String(input),location.href);}catch{}
    const own=url&&url.origin===location.origin&&url.pathname==='/api/nox/chat/stream';
-   if(own){q.nativeCalls++;q.started=performance.now();}
+   if(own){q.nativeCalls++;q.started=performance.now();requestAnimationFrame(sampleStop);}
    const response=await fetch0(input,init);
    if(own){void observe(response.clone());}
    return response;
@@ -267,6 +278,7 @@ SNAPSHOT_JS = r"""() => {
  return {native_first_ms:q.nativeFirst,native_done_ms:q.nativeDone,native_delta_count:q.nativeDeltas,
    native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,
    ui_first_ms:q.uiFirst,ui_before_native_done:q.uiBeforeDone,ui_lengths:q.uiLengths,
+   stop_samples:q.stopSamples,stop_visible_samples:q.stopVisibleSamples,stop_occluded_samples:q.stopOccludedSamples,
    answer_characters:q.answer.length,dom_answer_matches_native:rendered,contexts,draw_calls:q.draws,
    native_owner:window.NOX_NATIVE_OWNER===true,v135:window.__NOX_V135_OWNER_RESONANCE==='OWNER_NATIVE_ONLY',
    v137:window.__NOX_V137_SELF_STATUS==='READ_ONLY',owner_live:window.__NOX_OWNER_LIVE_UI===true,
@@ -328,24 +340,67 @@ def status_projection(value):
 
 
 COMPOSER_JS = r"""() => {
- const prompt=document.getElementById('prompt'),send=document.querySelector('#chatForm [type=submit]');
+ const prompt=document.getElementById('prompt'),send=document.querySelector('#chatForm [type=submit]'),stop=document.querySelector('#chatForm [data-action=stop]');
  const project=node=>{
   if(!node)return {present:false};
   const box=node.getBoundingClientRect(),style=getComputedStyle(node);
   const x=box.x+box.width/2,y=box.y+box.height/2,inView=x>0&&x<innerWidth&&y>0&&y<innerHeight;
   const hit=inView?document.elementFromPoint(x,y):null;
   return {present:true,x,y,width:box.width,height:box.height,in_view:inView,
+   fully_in_view:box.top>=0&&box.bottom<=innerHeight&&box.left>=0&&box.right<=innerWidth,
    disabled:node.disabled===true,read_only:node.readOnly===true,
    pointer_events:style.pointerEvents,visible:style.display!=='none'&&style.visibility!=='hidden'&&box.width>0&&box.height>0,
    pointer_hit_own_control:!!hit&&(hit===node||node.contains(hit))};
  };
  const reports=[...document.querySelectorAll('.nox-owner-reports')].slice(0,2).map(node=>{
   const box=node.getBoundingClientRect();return {open:node.open===true,height:box.height,top:box.top};});
+ const stack=document.querySelector('.nox-owner-status-stack'),stackBox=stack?.getBoundingClientRect();
+ const statusStack=stack?{height:stackBox.height,top:stackBox.top,bottom:stackBox.bottom,
+  client_height:stack.clientHeight,scroll_height:stack.scrollHeight,overflow_y:getComputedStyle(stack).overflowY}:null;
  const knownPhases=['idle','thinking','speaking','stopped','error','done'];
- return {prompt:project(prompt),send:project(send),prompt_characters:prompt?.value?.length||0,
+ return {prompt:project(prompt),send:project(send),stop:project(stop),prompt_characters:prompt?.value?.length||0,
   phase:knownPhases.includes(document.body.dataset.noxPhase)?document.body.dataset.noxPhase:'OTHER',
-  reports,viewport_height:innerHeight,viewport_width:innerWidth};
+  reports,status_stack:statusStack,viewport_height:innerHeight,viewport_width:innerWidth,
+  reports_layout:window.__NOX_OWNER_COMPOSER_LAYOUT==='BOUNDED_REPORTS_SCROLL_V1'};
 }"""
+
+
+def composer_layout_valid(value, opened):
+    if not isinstance(value,dict) or value.get('reports_layout') is not True:
+        return False
+    reports=value.get('reports');stack=value.get('status_stack')
+    if (not isinstance(reports,list) or len(reports)!=2 or any(row.get('open') is not opened for row in reports)
+            or not isinstance(stack,dict) or stack.get('overflow_y')!='auto'):
+        return False
+    height=value.get('viewport_height',0)
+    if not 0<stack.get('height',0)<=min(280,height*.28)+2:
+        return False
+    return all(isinstance(value.get(name),dict) and all(value[name].get(key) is True
+               for key in ('present','visible','fully_in_view','pointer_hit_own_control')) for name in ('prompt','send'))
+
+
+async def check_report_layout(page,report):
+    """Exercise real layout at two viewport sizes; generate with both panels open."""
+    cases=[];report['report_layout_cases']=cases
+    for width,height,opened in ((1440,1000,False),(1440,1000,True),(1280,720,True),(1440,1000,True)):
+        await page.set_viewport_size({'width':width,'height':height})
+        await page.evaluate("""async opened=>{
+          for(const node of document.querySelectorAll('.nox-owner-reports'))node.open=opened;
+          const stack=document.querySelector('.nox-owner-status-stack');if(stack)stack.scrollTop=0;
+          await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+        }""",opened)
+        value=await page.evaluate(COMPOSER_JS)
+        cases.append({'opened':opened,'viewport_width':width,'viewport_height':height,'geometry':value})
+        if not composer_layout_valid(value,opened):
+            raise RuntimeError('HOLD_QA_REPORTS_COMPOSER_LAYOUT')
+    report['report_scroll_verified']=await page.evaluate("""()=>{
+      const node=document.querySelector('.nox-owner-status-stack');if(!node)return false;
+      const old=node.scrollTop;node.scrollTop=node.scrollHeight;
+      const moved=node.scrollTop>0;node.scrollTop=old;
+      return node.scrollHeight<=node.clientHeight+1||moved;
+    }""")
+    if report['report_scroll_verified'] is not True:
+        raise RuntimeError('HOLD_QA_REPORTS_SCROLL')
 
 
 async def click_send(page, report):
@@ -543,6 +598,8 @@ async def browser_run(report, directory, available):
             if stop_present():
                 raise RuntimeError('HOLD_OWNER_STOP')
             idle_slots()
+            report['browser_stage']='QA_REPORTS_COMPOSER_LAYOUT'
+            await check_report_layout(page,report)
             report['composer_before']=await page.evaluate(COMPOSER_JS)
             report['status_for_legacy_controls']=status_projection(await json_response(await context.request.get(
                 base+'/api/nox/status',max_redirects=0,timeout=6000)))
@@ -588,6 +645,10 @@ async def browser_run(report, directory, available):
                           progressive_stream_render_verified=bool(final['native_delta_count']>=2
                               and final['ui_before_native_done'] and len(final['ui_lengths'])>=2),
                           elapsed_turn_ms=round((time.monotonic()-started)*1000))
+            report['stop_visible_during_generation']=bool(final.get('stop_samples',0)>0
+                and final.get('stop_samples')==final.get('stop_visible_samples') and final.get('stop_occluded_samples')==0)
+            if not report['stop_visible_during_generation']:
+                raise RuntimeError('HOLD_QA_ACTIVE_STOP_LAYOUT')
             masks=[page.locator(selector) for selector in SENSITIVE_MASKS]
             if not saved or public!=EXPECTED:
                 masks.append(page.locator('#messages'))

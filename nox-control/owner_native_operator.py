@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_training_chat_followup.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_composer_acceptance.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -107,7 +107,8 @@ def run_native(action,request_id):
                      'nox-control/owner_s03_prepare_entry.py','nox-control/owner_s03_gateway.py',
                      'nox-control/owner_s03_activate_entry.py','nox-control/owner_adapter_lineage_audit.py',
                      'nox-control/owner_s03_recover_activate.py','nox-control/owner_s03_content_reindex_entry.py',
-                     'nox-control/owner_chat_layout_entry.py','nox-control/owner_training_failure_probe.py',
+                     'nox-control/owner_chat_layout_entry.py','nox-control/owner_chat_composer_entry.py',
+                     'nox-control/owner_training_failure_probe.py',
                      'nox-control/owner_chat_evidence_entry.py','nox-control/owner_chat_evidence.py',
                      'nox-control/owner_chat_evidence_patch.py',
                      'nox-control/owner_download_status_entry.py','nox-control/owner_download_status.py',
