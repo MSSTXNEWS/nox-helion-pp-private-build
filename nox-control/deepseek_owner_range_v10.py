@@ -212,7 +212,23 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
         require(actual==row['sha256'],'HOLD_FINAL_SHA_MISMATCH')
         stop(root);lease(lease_file,request,time.time(),root)
         require(not final.exists(),'HOLD_FINAL_RACE')
-        os.replace(partial,final)
+        # os.replace would silently overwrite another writer's newly published
+        # final between exists() and rename; hard-link creation is atomic
+        # NOREPLACE and preserves the verified .part on a collision.
+        try:
+            os.link(partial,final,follow_symlinks=False)
+        except FileExistsError:
+            raise Hold('HOLD_FINAL_RACE')
+        published=os.stat(final,follow_symlinks=False)
+        require(stat.S_ISREG(published.st_mode) and published.st_uid==os.geteuid() and
+                (published.st_dev,published.st_ino,published.st_size)==
+                (after.st_dev,after.st_ino,after.st_size),
+                'HOLD_PUBLISHED_INODE_MISMATCH')
+        os.unlink(partial)
+        # Persist the directory entry before writing a successful receipt.
+        dfd=os.open(destination,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+        try: os.fsync(dfd)
+        finally: os.close(dfd)
         receipt={'schema':'NOX_DEEPSEEK_RANGE_RECEIPT_V10','request':request,'file':name,
                  'bytes':row['bytes'],'sha256':actual,'new_bytes':wrote,'at_unix':time.time()}
         atomic_receipt(destination/(name+'.verified.json'),receipt)
