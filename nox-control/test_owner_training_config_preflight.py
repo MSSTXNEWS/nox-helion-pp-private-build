@@ -123,13 +123,31 @@ class PreflightTests(unittest.TestCase):
         exec(compile(source,'<actual-hybrid-function>','exec'),namespace)
         def native_builder(model,tokenizer,dataset,smoke,planned):
             from trl import SFTConfig
-            args=SFTConfig(output_dir='old',max_steps=planned)
+            args=SFTConfig(output_dir='old',max_steps=planned,save_safetensors=True)
             return types.SimpleNamespace(model=model,args=args,optimizer=None,
                         create_optimizer=lambda:None,compute_loss=lambda *a,**kw:None)
         with patch.dict(sys.modules,modules):
             trainer=namespace['build_existing_trainer'](types.SimpleNamespace(build_trainer=native_builder),
                        object(),object(),object(),1000,object())
             self.assertIs(type(trainer.args),StrictConfig)
+            self.assertIs(trl.SFTConfig,StrictConfig)
+            # Native legacy True is removed only if the real config lacks it.
+            # False must fail closed; no silent unsafe checkpoint format.
+            def unsafe_native(model,tokenizer,dataset,smoke,planned):
+                from trl import SFTConfig
+                return SFTConfig(output_dir='old',max_steps=planned,save_safetensors=False)
+            with self.assertRaisesRegex(RuntimeError,'HOLD_NATIVE_UNSAFE_SAVE_FORMAT'):
+                namespace['build_existing_trainer'](
+                    types.SimpleNamespace(build_trainer=unsafe_native),
+                    object(),object(),object(),1000,object())
+            self.assertIs(trl.SFTConfig,StrictConfig)
+            def unknown_native(model,tokenizer,dataset,smoke,planned):
+                from trl import SFTConfig
+                return SFTConfig(output_dir='old',max_steps=planned,unknown_setting=True)
+            with self.assertRaisesRegex(RuntimeError,'HOLD_NATIVE_SFTCONFIG_UNSUPPORTED_ARGUMENT'):
+                namespace['build_existing_trainer'](
+                    types.SimpleNamespace(build_trainer=unknown_native),
+                    object(),object(),object(),1000,object())
             self.assertIs(trl.SFTConfig,StrictConfig)
             restored=pickle.loads(pickle.dumps(trainer.args))
             self.assertEqual(restored,trainer.args)

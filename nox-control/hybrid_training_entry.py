@@ -204,6 +204,7 @@ def read_frozen_dataset(path: Path):
 def build_existing_trainer(native, model, tokenizer, dataset, planned: int, torch):
     """Retain native TRL compatibility path; override its configuration only."""
     import trl
+    import inspect
     # SFTTrainer must retain its real module-level config class for isinstance
     # checks. Returning that class also keeps training_args.bin pickleable.
     import trl.trainer.sft_trainer as sft_module
@@ -221,8 +222,23 @@ def build_existing_trainer(native, model, tokenizer, dataset, planned: int, torc
                    warmup_steps=3, learning_rate=1e-4,
                    optim='paged_adamw_8bit', lr_scheduler_type='cosine',
                    report_to=[])
+    # TRL API versions may remove save_safetensors from SFTConfig even if an
+    # older native build_trainer passes it. Do not silently drop other settings.
+    accepted = {name for name, parameter in inspect.signature(original_config).parameters.items()
+                if parameter.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                      inspect.Parameter.KEYWORD_ONLY)}
+    if not set(bounded).issubset(accepted):
+        raise RuntimeError('HOLD_NATIVE_SFT_CONFIG_REQUIRED_KWARG_UNSUPPORTED')
     def bounded_config(*args, **kwargs):
         kwargs.update(bounded)
+        # Only the explicitly required safe serialization setting may be
+        # normalized; complete_checkpoint still REQUIRES adapter_model.safetensors.
+        if 'save_safetensors' in kwargs and 'save_safetensors' not in accepted:
+            if kwargs['save_safetensors'] is not True:
+                raise RuntimeError('HOLD_NATIVE_UNSAFE_SAVE_FORMAT')
+            kwargs.pop('save_safetensors')
+        if set(kwargs) - accepted:
+            raise RuntimeError('HOLD_NATIVE_SFTCONFIG_UNSUPPORTED_ARGUMENT')
         return original_config(*args, **kwargs)
     try:
         trl.SFTConfig = bounded_config
