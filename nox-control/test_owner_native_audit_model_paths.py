@@ -80,7 +80,7 @@ class ProcessIdentityTests(unittest.TestCase):
     @staticmethod
     def stat_row(pid, ticks, comm='nox worker) main'):
         # stat field 22 is index 19 after the final ') ' separator.
-        return f"{pid} ({comm}) S " + " ".join(['0']*18+[str(ticks)]) + "\\n"
+        return f"{pid} ({comm}) S " + " ".join(['0']*18+[str(ticks)]) + "\n"
 
     def test_start_ticks_parses_parentheses_and_spaces_in_comm(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -100,8 +100,8 @@ class ProcessIdentityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             p=Path(temp)/'123';p.mkdir()
             (p/'stat').write_text(self.stat_row(123,123456))
-            (p/'cmdline').write_bytes(b'/usr/bin/python3\\0/root/nox/worker.py\\0')
-            (p/'comm').write_text('nox-worker\\n')
+            (p/'cmdline').write_bytes(b'/usr/bin/python3\0/root/nox/worker.py\0')
+            (p/'comm').write_text('nox-worker\n')
             rows=audit.process_rows(proc_root=Path(temp))
             self.assertEqual(len(rows),1)
             self.assertEqual(rows[0]['pid'],123)
