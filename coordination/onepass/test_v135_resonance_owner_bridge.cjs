@@ -1200,7 +1200,7 @@ test('V174 abort before model headers cancels the same POST and keeps GPU stop u
     if(chunk.done)break;
     rest+=decoder.decode(chunk.value,{stream:true});
     let boundary;
-    while((boundary=rest.indexOf('\\n\\n'))>=0){
+    while((boundary=rest.indexOf('\n\n'))>=0){
       const raw=rest.slice(0,boundary);rest=rest.slice(boundary+2);
       if(raw.startsWith('data: '))frames.push(JSON.parse(raw.slice(6)));
     }
