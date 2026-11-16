@@ -69,11 +69,58 @@ def process_rows(proc_root=Path('/proc')):
         except (OSError,ValueError):continue
     return rows[:100]
 
+def v13_owner_fence_metadata(root=Path('/root/nox'), workspace_stop=Path('/workspace/NOX_STOP'), lstat=os.lstat):
+    """READ-ONLY marker presence, not authorization to start, stop, or write.
+
+    Preserve unreadable markers as UNKNOWN; missing flags at one instant are
+    never evidence of an owner lease, safe release, or completed shutdown.
+    Do not open, follow, hash or export marker contents.
+    """
+    paths = {
+        'STOP': root / 'STOP',
+        'STOP_FLAG': root / 'STOP.flag',
+        'LOWER_STOP_FLAG': root / 'stop.flag',
+        'DOT_STOP': root / '.stop',
+        'PROGRAM_STOP': root / 'program/STOP',
+        'STATE_STOP': root / 'state/STOP',
+        'MEDIA_STOP': root / 'state/MEDIA_STOP.flag',
+        'OWNER_MAINTENANCE': root / 'state/OWNER_MAINTENANCE.flag',
+        'WORKSPACE_STOP': workspace_stop,
+        'TRAIN_HOLD': root / 'state/TRAIN_HOLD.flag',
+    }
+    rows = {}
+    for name, path in paths.items():
+        try:
+            lstat(path)
+            rows[name] = 'PRESENT'
+        except FileNotFoundError:
+            rows[name] = 'NOT_FOUND_AT_SNAPSHOT'
+        except OSError:
+            rows[name] = 'UNKNOWN_UNREADABLE'
+    owner_names = tuple(name for name in rows if name != 'TRAIN_HOLD')
+    owner_observed = [rows[name] for name in owner_names]
+    status = ('PRESENT' if 'PRESENT' in owner_observed else
+              'UNKNOWN' if 'UNKNOWN_UNREADABLE' in owner_observed else
+              'NOT_OBSERVED_NOT_AUTHORIZED')
+    return {
+        'scope': 'READ_ONLY_MARKER_METADATA',
+        'owner_stop_state': status,
+        'train_hold_state': rows['TRAIN_HOLD'],
+        'markers': rows,
+        'owner_lease_state': 'NOT_CHECKED',
+        'may_clear_stop': False,
+        'may_start_nox': False,
+        'may_write_native': False,
+        'pid_starttime_verified': False,
+    }
+
+
 def supervisor():
+    fence=v13_owner_fence_metadata()
     binary=shutil.which('supervisorctl')
     if not binary:
         binary=next((x for x in ('/opt/venv/bin/supervisorctl','/usr/local/bin/supervisorctl') if Path(x).is_file()),None)
-    if not binary:return {'available':False}
+    if not binary:return {'available':False,'owner_fence_readonly':fence}
     candidates=[None]+[x for x in ('/etc/supervisor/supervisord.conf','/etc/supervisord.conf','/root/nox/supervisord.conf') if Path(x).is_file()]
     results=[]
     for c in candidates:
@@ -87,7 +134,7 @@ def supervisor():
                 rows.append({'name':m.group(1),'state':m.group(2),'pid':int(pid[1]) if pid else None})
         results.append({'config':c,'rc':rc,'services':rows})
         if rows:break
-    return {'available':True,'results':results}
+    return {'available':True,'results':results,'owner_fence_readonly':fence}
 
 def v13_wheelhouse_admission(record):
     """Metadata-only ABI gate for the Drive CP311/cu126 wheelhouse, never an installer.
