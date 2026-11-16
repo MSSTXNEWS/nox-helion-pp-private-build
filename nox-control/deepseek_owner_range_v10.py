@@ -321,6 +321,31 @@ def verify_existing_receipt(path, row):
     return doc
 
 
+def remaining_model_storage_bytes(destination):
+    """Conservative *capacity admission*, not SHA validation of existing GGUF.
+
+    A volume may fit one Range/shard but not the complete immutable model.
+    Count missing files and unallocated portions of existing .part files before
+    admitting another byte. Sparse .part holes are not paid-for storage.
+    Existing finals still require independent SHA verification before reuse.
+    """
+    needed = 0
+    for name, (total, _sha) in PINNED_FILE_FACTS.items():
+        final = regular(destination / name, True)
+        part = regular(destination / (name + '.part'), True)
+        require(not (final and part), 'HOLD_STORAGE_DUPLICATE_FILE_STATE')
+        if final is not None:
+            require(final.st_size == total, 'HOLD_STORAGE_EXISTING_FINAL_SIZE')
+            continue
+        if part is not None:
+            require(part.st_size <= total, 'HOLD_STORAGE_PARTIAL_OVERSIZE')
+            allocated = min(part.st_size, part.st_blocks * 512)
+            needed += total - allocated
+        else:
+            needed += total
+    return needed
+
+
 def inventory(manifest,target):
     """Metadata-only, STOP-safe inventory: never scan hundreds of GiB without a lease.
 
@@ -487,6 +512,12 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
         # This is a necessary source gate, NOT owner quota/lease admission.
         require(vfs.f_blocks*vfs.f_frsize>=MIN_MODEL_VOLUME_BYTES+RESERVE,
                 'HOLD_STORAGE_TOTAL_CAPACITY')
+        # Do not consume 39 GiB of scarce SSD if other missing GGUF objects
+        # cannot also fit. The owner must still independently verify quota,
+        # seekability and each SHA before any inference promotion.
+        if MIN_MODEL_VOLUME_BYTES:
+            require(free >= remaining_model_storage_bytes(destination) + RESERVE,
+                    'HOLD_STORAGE_INSUFFICIENT_FOR_COMPLETE_MODEL')
         if offset==row['bytes']:
             check_download_lock()
             # Fully downloaded .part from a prior crash: validate and publish
