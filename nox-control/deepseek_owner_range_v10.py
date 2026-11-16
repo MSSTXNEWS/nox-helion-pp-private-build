@@ -136,6 +136,7 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
     name=row['path'];require(FILE.fullmatch(name),'HOLD_UNEXPECTED_FILE')
     stop(root);lease(lease_file,request,time.time(),root)
     fd=os.open(destination/'.nox-deepseek-owner.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
+    partial_guard_fd=None
     try:
         lock_st=os.fstat(fd)
         require(stat.S_ISREG(lock_st.st_mode) and lock_st.st_uid==os.geteuid() and
@@ -148,6 +149,16 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     'HOLD_EXISTING_FINAL_UNVERIFIED')
             return {'state':'REUSED_SHA_VERIFIED','new_bytes':0,'file':name,'sha256':row['sha256']}
         partial_stat=regular(partial,True)
+        # Keep the admitted inode allocated across HTTP I/O: unlink/recreate may reuse
+        # the same st_ino and defeat a later dev/inode/size comparison.
+        if partial_stat is not None:
+            partial_guard_fd=os.open(partial,os.O_RDONLY|os.O_NOFOLLOW)
+            admitted=os.fstat(partial_guard_fd)
+            require(stat.S_ISREG(admitted.st_mode) and admitted.st_uid==os.geteuid() and
+                    admitted.st_nlink==1 and
+                    (admitted.st_dev,admitted.st_ino,admitted.st_size)==
+                    (partial_stat.st_dev,partial_stat.st_ino,partial_stat.st_size),
+                    'HOLD_PARTIAL_PREIMAGE_CHANGED')
         offset=partial_stat.st_size if partial_stat else 0
         require(offset<row['bytes'],'HOLD_PARTIAL_AT_OR_ABOVE_TOTAL')
         with tempfile.TemporaryFile(dir=destination) as probe:
@@ -202,6 +213,7 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
         atomic_receipt(destination/(name+'.verified.json'),receipt)
         return {'state':'VERIFIED_FINAL','file':name,'new_bytes':wrote,'sha256':actual}
     finally:
+        if partial_guard_fd is not None: os.close(partial_guard_fd)
         os.close(fd)
 
 def main():

@@ -9,11 +9,11 @@
     "downloader": "a08486e1e9849abe07eeecf68d7345c5c03b8e39",
     "test": "ac9d4dd074c5cea114a97896aa40dd74c2e38ae0"
   },
-  "status": "SOURCE_PATCH_PROPOSED_CAS_PENDING",
+  "status": "SOURCE_REPAIRED_AFTER_FAILED_FIRST_CI_PENDING_NEW_CI",
   "error_id": "NOX-P0-DEEPSEEK-PARTIAL-HARDLINK-INODE-RACE-20261116-2B",
   "root_cause": "regular() accepted hardlinked model .part/final paths; append could alter a unique S03/checkpoint backup. Partial inode could change after preflight and before network response append.",
   "changes": "Reject hardlinks on preflight, verify lock fd ownership/links, create missing partial with O_EXCL, and fstat+dev/inode/size check of opened partial before writing. No new backend/trainer/scheduler.",
-  "tests": "5 new focused unittest cases added; CI pending until GitHub commit; other 14 original tests unchanged.",
+  "tests": "21-case GitHub CI rerun pending; initial 20/21 pass exposed inode reuse; no native proof claimed",
   "rollback": "CAS revert only the exact two file blobs from source_head_before; no native changes.",
   "five": [
     {
@@ -75,5 +75,9 @@
     "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43880277767",
     "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43881016385"
   ],
-  "next_action": "Original owner-authorized read-only STOP/lease/storage quota/seekability/5 shard inventory and Maya SHA; only then one 206 range under native claim with independent rollback."
+  "next_action": "Original owner-authorized read-only STOP/lease/storage quota/seekability/5 shard inventory and Maya SHA; only then one 206 range under native claim with independent rollback.",
+  "previous_commit": "adcb52ff84518d3234139b3711372137d6cfb78e",
+  "ci_first_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887314779",
+  "first_ci_result": "FAIL 20/21: inode reuse in test_replaced_partial_between_check_and_open_fails_closed; initial dev/inode/size comparison insufficient",
+  "corrected_root_cause": "Linux may immediately recycle unlinked inode, so stat metadata comparison alone cannot detect an exchanged partial; hold O_RDONLY|O_NOFOLLOW guard FD across network I/O and compare its still-live inode to append FD."
 }
