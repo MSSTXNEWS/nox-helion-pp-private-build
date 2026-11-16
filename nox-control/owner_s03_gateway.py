@@ -149,6 +149,8 @@ def connection(path=DB,write=False,seconds=2.0):
         if (before.st_dev,before.st_ino)!=(after.st_dev,after.st_ino):hold('HOLD_S03_DATABASE_REPLACED')
         conn.row_factory = sqlite3.Row
         conn.execute('PRAGMA busy_timeout=200')
+        conn.execute('PRAGMA foreign_keys=ON')
+        if conn.execute('PRAGMA foreign_keys').fetchone()[0] != 1:hold('HOLD_S03_FOREIGN_KEYS')
         if not write:conn.execute('PRAGMA query_only=ON')
         end = time.monotonic()+seconds
         conn.set_progress_handler(lambda:int(time.monotonic()>end),1000)

@@ -7,6 +7,8 @@ on:
     paths:
       - "nox_runpod/teacher_mesh/v38/**"
       - ".github/workflows/nox-v38-1-source-ci.yml"
+      - "nox-control/owner_s03_gateway.py"
+      - "nox-control/test_owner_s03_gateway.py"
 permissions:
   contents: read
 jobs:
@@ -19,6 +21,7 @@ jobs:
         run: |
           python3 -m compileall -q nox_runpod/teacher_mesh/v38
           PYTHONPATH=. python3 -m unittest nox_runpod.teacher_mesh.v38.tests.test_v38_control nox_runpod.teacher_mesh.v38.tests.test_v38_memory_speed -v
+          python3 nox-control/test_owner_s03_gateway.py -v
       - name: Mark boundaries (NO GPU model training)
         run: |
           echo "SOURCE ONLY — no Vast.ai deployment or NOX inference benchmark"
