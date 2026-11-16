@@ -115,15 +115,34 @@ def stop_present():
 
 def idle_slots():
     opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with opener.open('http://127.0.0.1:8081/slots',timeout=4) as response:
-        raw=response.read(100001)
-    if len(raw)>100000:
-        raise RuntimeError('HOLD_SLOTS_RESPONSE_LIMIT')
-    slots=json.loads(raw)
-    if (not isinstance(slots,list) or not slots or any(not isinstance(row,dict)
-            or row.get('is_processing',row.get('processing',False)) for row in slots)):
-        raise RuntimeError('HOLD_FOREGROUND_CHAT_BUSY')
-    return len(slots)
+    deadline=time.monotonic()+12
+    while True:
+        if stop_present():
+            raise RuntimeError('HOLD_OWNER_STOP')
+        remaining=deadline-time.monotonic()
+        if remaining<=0:
+            raise RuntimeError('HOLD_FOREGROUND_CHAT_BUSY')
+        with opener.open('http://127.0.0.1:8081/slots',timeout=min(4,remaining)) as response:
+            raw=response.read(100001)
+        if len(raw)>100000:
+            raise RuntimeError('HOLD_SLOTS_RESPONSE_LIMIT')
+        slots=json.loads(raw)
+        if not isinstance(slots,list) or not 1<=len(slots)<=64:
+            raise RuntimeError('HOLD_SLOTS_STATE_UNVERIFIED')
+        busy=[]
+        for row in slots:
+            flags=[row[key] for key in ('is_processing','processing') if isinstance(row,dict) and key in row]
+            if not flags or any(type(flag) is not bool for flag in flags) or len(set(flags))!=1:
+                raise RuntimeError('HOLD_SLOTS_STATE_UNVERIFIED')
+            busy.append(flags[0])
+        if stop_present():
+            raise RuntimeError('HOLD_OWNER_STOP')
+        remaining=deadline-time.monotonic()
+        if remaining<=0:
+            raise RuntimeError('HOLD_FOREGROUND_CHAT_BUSY')
+        if not any(busy):
+            return len(slots)
+        time.sleep(min(1,remaining))
 
 
 def budget():
@@ -494,8 +513,51 @@ async def json_response(response, limit=200000):
     return json.loads(raw)
 
 
+async def capture_private_screenshot(page, report, directory, name, masks, content,
+                                     timeout_errors=(TimeoutError,)):
+    """Defer only capture timeouts; all privacy and file guards stay mandatory."""
+    if name not in ('empty', 'completed'):
+        raise RuntimeError('HOLD_SCREENSHOT_SCOPE')
+    if stop_present():
+        raise RuntimeError('HOLD_OWNER_STOP')
+    started = time.monotonic()
+    capture = {'stage':name, 'state':'CAPTURING', 'timeout_ms':3500}
+    report.setdefault('screenshot_captures', []).append(capture)
+    try:
+        raw = await asyncio.wait_for(page.screenshot(
+            full_page=False, mask=masks, mask_color='#121821', timeout=3500),
+            timeout=4)
+    except timeout_errors as exc:
+        capture.update(state='CAPTURE_TIMEOUT',
+                       font_wait_reported='waiting for fonts to load' in str(exc).lower(),
+                       elapsed_ms=round((time.monotonic()-started)*1000))
+        if stop_present():
+            raise RuntimeError('HOLD_OWNER_STOP')
+        return False
+    if stop_present():
+        raise RuntimeError('HOLD_OWNER_STOP')
+    if len(raw)>6*1024**2:
+        raise RuntimeError('HOLD_SCREENSHOT_SIZE')
+    path = directory/(name+'.png')
+    write_private(path, raw)
+    report['artifacts'].append({'private_path':str(path), 'sha256':digest(raw),
+                               'bytes':len(raw), 'content':content})
+    capture.update(state='CAPTURED', elapsed_ms=round((time.monotonic()-started)*1000))
+    return True
+
+
+def require_screenshot_captures(report):
+    captures = report.get('screenshot_captures', [])
+    complete = (len(captures)==2
+                and {row.get('stage') for row in captures}=={'empty','completed'}
+                and all(row.get('state')=='CAPTURED' for row in captures))
+    report['screenshot_capture_verified'] = complete
+    if not complete:
+        raise RuntimeError('HOLD_SCREENSHOT_CAPTURE_PENDING')
+
+
 async def browser_run(report, directory, available):
-    from playwright.async_api import async_playwright
+    from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
     base=local_base()
     origin=urllib.parse.urlsplit(base).netloc
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
@@ -643,11 +705,8 @@ async def browser_run(report, directory, available):
             report['empty_dialog_history_verified']=True
             report['browser_stage']='QA_EMPTY_SCREENSHOT'
             masks=[page.locator(selector) for selector in (*SENSITIVE_MASKS,'#messages')]
-            raw=await page.screenshot(full_page=False,mask=masks,mask_color='#121821',timeout=12000)
-            if len(raw)>6*1024**2:
-                raise RuntimeError('HOLD_SCREENSHOT_SIZE')
-            write_private(directory/'empty.png',raw)
-            report['artifacts'].append({'private_path':str(directory/'empty.png'),'sha256':digest(raw),'bytes':len(raw),'content':'EMPTY_QA_VIEW_WITH_PRIVACY_MASKS'})
+            await capture_private_screenshot(page,report,directory,'empty',masks,
+                'EMPTY_QA_VIEW_WITH_PRIVACY_MASKS',(TimeoutError,PlaywrightTimeoutError))
             report['graphics_before']=before
             await page.wait_for_timeout(500)
             graphical=await page.evaluate(SNAPSHOT_JS)
@@ -710,12 +769,9 @@ async def browser_run(report, directory, available):
             if not saved or public!=EXPECTED:
                 masks.append(page.locator('#messages'))
             report['browser_stage']='QA_COMPLETED_SCREENSHOT'
-            raw=await page.screenshot(full_page=False,mask=masks,mask_color='#121821',timeout=12000)
-            if len(raw)>6*1024**2:
-                raise RuntimeError('HOLD_SCREENSHOT_SIZE')
-            write_private(directory/'completed.png',raw)
-            report['artifacts'].append({'private_path':str(directory/'completed.png'),'sha256':digest(raw),'bytes':len(raw),
-                                        'content':'VERIFIED_PUBLIC_NUMERIC_QA' if public==EXPECTED and saved else 'MASKED_QA_MESSAGES'})
+            await capture_private_screenshot(page,report,directory,'completed',masks,
+                'VERIFIED_PUBLIC_NUMERIC_QA' if public==EXPECTED and saved else 'MASKED_QA_MESSAGES',
+                (TimeoutError,PlaywrightTimeoutError))
             core=(report['webgl_visible'] and report['canvas_animation_observed']
                   and all(final['done'].values()) and saved and native_equal
                   and final['executor_chips']==6 and final['photo_button'] and final['video_button'])
@@ -749,6 +805,8 @@ async def browser_run(report, directory, available):
             await browser.close()
     if page_errors or report['failed_static_resources']:
         raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
+    report['functional_acceptance_verified']=True
+    require_screenshot_captures(report)
 
 
 def main():
@@ -779,6 +837,7 @@ def main():
     report={'schema':'NOX_OWNER_NATIVE_BROWSER_QA_V1','request':request,'source_sha':source,
             'started_at':time.time(),'state':'RUNNING','artifacts':[],
             'actual_native_backend':False,'actual_native_model_stream_verified':False,'synthetic_backend_used':False,
+            'functional_acceptance_verified':False,'screenshot_capture_verified':False,
             'screenshots_exported':False,'private_text_or_credentials_exported':False,
             'rendering_mode':'CPU_SWIFTSHADER_FUNCTIONAL_QA_NOT_CLIENT_GPU_BENCHMARK',
             'training_or_service_configuration_changed':False,'diagnostics_content':'COUNTS_PATHS_AND_PUBLIC_SYNTHETIC_NUMBERS_ONLY'}

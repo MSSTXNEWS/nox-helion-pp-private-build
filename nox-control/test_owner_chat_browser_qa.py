@@ -2,6 +2,7 @@
 import ast
 import copy
 import importlib.util
+import json
 import os
 from pathlib import Path
 import shutil
@@ -10,7 +11,7 @@ import subprocess
 import tempfile
 import types
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 SPEC=importlib.util.spec_from_file_location('browser_qa',Path(__file__).with_name('owner_chat_browser_qa.py'))
 QA=importlib.util.module_from_spec(SPEC)
@@ -171,6 +172,100 @@ class SendPointerTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(RuntimeError,'HOLD_QA_SEND_POINTER_OR_STATE'):
                 await QA.click_send(page,report)
             page.mouse.click.assert_not_awaited()
+
+
+class ScreenshotTimeoutTests(unittest.IsolatedAsyncioTestCase):
+    async def test_capture_timeout_allows_send_but_never_full_visual_acceptance(self):
+        class DriverTimeout(Exception):
+            pass
+        target=types.SimpleNamespace(evaluate=AsyncMock(return_value={'in_view':True,
+            'pointer_hit_own_button':True}),click=AsyncMock())
+        page=types.SimpleNamespace(
+            screenshot=AsyncMock(side_effect=DriverTimeout('private title; waiting for fonts to load')),
+            locator=lambda _:target)
+        report={'artifacts':[]};masks=[object(),object()]
+        with tempfile.TemporaryDirectory() as folder,patch.object(QA,'stop_present',return_value=False):
+            result=await QA.capture_private_screenshot(page,report,Path(folder),'empty',masks,
+                'EMPTY_QA_VIEW_WITH_PRIVACY_MASKS',(TimeoutError,DriverTimeout))
+            self.assertFalse(result)
+            self.assertEqual(list(Path(folder).iterdir()),[])
+            self.assertIs(page.screenshot.await_args.kwargs['mask'],masks)
+            self.assertEqual(page.screenshot.await_args.kwargs['timeout'],3500)
+            # The same physical-send helper used next by browser_run remains
+            # reachable after the capture timed out; no model response is faked.
+            await QA.click_send(page,report)
+            target.click.assert_awaited_once()
+            with self.assertRaisesRegex(RuntimeError,'HOLD_SCREENSHOT_CAPTURE_PENDING'):
+                QA.require_screenshot_captures(report)
+        self.assertFalse(report['screenshot_capture_verified'])
+        self.assertEqual(report['screenshot_captures'][0]['state'],'CAPTURE_TIMEOUT')
+        self.assertTrue(report['screenshot_captures'][0]['font_wait_reported'])
+        self.assertNotIn('private title',json.dumps(report))
+
+    async def test_non_timeout_capture_failure_is_not_deferred(self):
+        page=types.SimpleNamespace(screenshot=AsyncMock(side_effect=RuntimeError('capture failed')))
+        with tempfile.TemporaryDirectory() as folder,patch.object(QA,'stop_present',return_value=False):
+            with self.assertRaisesRegex(RuntimeError,'capture failed'):
+                await QA.capture_private_screenshot(page,{'artifacts':[]},Path(folder),'empty',[],
+                    'EMPTY_QA_VIEW_WITH_PRIVACY_MASKS')
+
+    async def test_two_private_captures_are_required_and_preserve_masks(self):
+        page=types.SimpleNamespace(screenshot=AsyncMock(return_value=b'private screenshot fixture'))
+        report={'artifacts':[]};masks=[object()]
+        with tempfile.TemporaryDirectory() as folder,patch.object(QA,'stop_present',return_value=False):
+            for name in ('empty','completed'):
+                self.assertTrue(await QA.capture_private_screenshot(page,report,Path(folder),name,masks,
+                    'EMPTY_QA_VIEW_WITH_PRIVACY_MASKS'))
+                self.assertEqual(stat.S_IMODE((Path(folder)/(name+'.png')).stat().st_mode),0o600)
+            QA.require_screenshot_captures(report)
+            self.assertTrue(report['screenshot_capture_verified'])
+            self.assertTrue(all(call.kwargs['mask'] is masks for call in page.screenshot.await_args_list))
+
+
+class IdleSlotsTests(unittest.TestCase):
+    def run_gate(self, values, stop=lambda:False):
+        clock=[0.0];calls=[]
+        class Response:
+            def __init__(self,value):self.value=value
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def read(self,limit):return json.dumps(self.value).encode()
+        def opening(url,timeout):
+            calls.append((url,timeout))
+            value=values[min(len(calls)-1,len(values)-1)]
+            return Response(value)
+        with patch.object(QA.urllib.request,'build_opener',return_value=types.SimpleNamespace(open=opening)), \
+             patch.object(QA,'stop_present',side_effect=stop), \
+             patch.object(QA.time,'monotonic',side_effect=lambda:clock[0]), \
+             patch.object(QA.time,'sleep',side_effect=lambda duration:clock.__setitem__(0,clock[0]+duration)):
+            return QA.idle_slots(),calls,clock[0]
+
+    def test_short_foreground_request_is_waited_out_without_sending_inference(self):
+        count,calls,elapsed=self.run_gate([[{'is_processing':True}],[{'is_processing':False}]*6])
+        self.assertEqual(count,6);self.assertEqual(elapsed,1)
+        self.assertEqual([url for url,_ in calls],['http://127.0.0.1:8081/slots']*2)
+        self.assertTrue(all(0<timeout<=4 for _,timeout in calls))
+
+    def test_persistent_busy_is_not_bypassed_at_deadline(self):
+        with self.assertRaisesRegex(RuntimeError,'HOLD_FOREGROUND_CHAT_BUSY'):
+            self.run_gate([[{'is_processing':True}]])
+
+    def test_missing_string_or_conflicting_processing_flags_never_mean_idle(self):
+        for value in ([{}],[{'is_processing':'false'}],[{'processing':0}],
+                      [{'is_processing':False,'processing':True}],[],{}):
+            with self.subTest(value=value),self.assertRaisesRegex(RuntimeError,'HOLD_SLOTS_STATE_UNVERIFIED'):
+                self.run_gate([value])
+
+    def test_stop_during_wait_is_respected_before_next_request(self):
+        checks=[False,False,True]
+        def stopped():return checks.pop(0) if checks else True
+        with self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+            self.run_gate([[{'is_processing':True}],[{'is_processing':False}]],stopped)
+
+    def test_stop_arriving_during_idle_read_still_blocks_acceptance(self):
+        checks=[False,True]
+        with self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+            self.run_gate([[{'is_processing':False}]],lambda:checks.pop(0))
 
 
 if __name__=='__main__':
