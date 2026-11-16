@@ -135,7 +135,7 @@ class DownloadTests(unittest.TestCase):
             with self.subTest(command=command), self.assertRaises(m.Hold):
                 m.git_argv(self.root, [command])
 
-    def fixture_repo(self):
+    def fixture_repo(self, conversion=False):
         fixture = Path(self.temp.name) / 'fixture'
         fixture.mkdir(mode=0o700)
         git = shutil.which('git')
@@ -144,6 +144,11 @@ class DownloadTests(unittest.TestCase):
         call('init', '--quiet', '--template=')
         (fixture / 'README.txt').write_text('source fixture\n')
         (fixture / '.gitattributes').write_text('*.bin filter=lfs\n*.txt filter=trap\n')
+        if conversion:
+            with (fixture / '.gitattributes').open('a') as out:
+                out.write('*.bat text eol=crlf\n*.utf16 text working-tree-encoding=UTF-16LE\n')
+            (fixture / 'launcher.bat').write_bytes(b'@echo off\necho source only\n')
+            (fixture / 'encoded.utf16').write_bytes('source only\n'.encode('utf-16le'))
         (fixture / 'weights.bin').write_text('version https://git-lfs.github.com/spec/v1\noid sha256:' + 'a' * 64 + '\nsize 9000000000\n')
         (fixture / 'link').symlink_to('README.txt')
         self.execution_marker = Path(self.temp.name) / 'EXECUTED'
@@ -152,6 +157,12 @@ class DownloadTests(unittest.TestCase):
         call('add', '--all')
         call('-c', 'user.name=Offline test', '-c', 'user.email=offline@example.invalid', 'commit', '--quiet', '-m', 'fixture')
         self.row['commit'] = call('rev-parse', 'HEAD').decode().strip()
+        if conversion:
+            (fixture / 'launcher.bat').unlink()
+            (fixture / 'encoded.utf16').unlink()
+            call('checkout', '--quiet', '--force', 'HEAD', '--', 'launcher.bat', 'encoded.utf16')
+            self.assertIn(b'\r\n', (fixture / 'launcher.bat').read_bytes())
+            self.assertNotEqual((fixture / 'encoded.utf16').read_bytes(), call('show', 'HEAD:encoded.utf16'))
         original = m.run_git
         self.calls = []
         def transport(path, args, row, budget, root, **kwargs):
@@ -186,6 +197,7 @@ class DownloadTests(unittest.TestCase):
             files = json.loads((target / m.HASH_FILE).read_bytes())['files']
             readme = next(x for x in files if x['path'] == 'README.txt')
             self.assertEqual(readme['sha256'], hashlib.sha256(b'source fixture\n').hexdigest())
+            (target / '.git/info/attributes').unlink()  # Previous successful candidates predate the conversion override.
             reused = m.stage_one(self.row, '124', 'b' * 64, m.Budget(self.root), self.root)
             self.assertEqual(reused['state'], 'REUSED_AND_SHA_VERIFIED')
             self.assertEqual(sum(x[0] == 'fetch' for x in self.calls), 1)
@@ -194,6 +206,18 @@ class DownloadTests(unittest.TestCase):
                 m.stage_one(self.row, '125', 'b' * 64, m.Budget(self.root), self.root)
         self.assertFalse(self.execution_marker.exists())
         self.assertTrue(all(x[0] in {'init', 'fetch', 'checkout', 'rev-parse', 'fsck', 'ls-tree', 'diff'} for x in self.calls))
+
+    def test_checkout_conversion_stages_canonical_blobs_without_weakening_identity(self):
+        transport = self.fixture_repo(conversion=True)
+        with transport, self.large_disk():
+            result = m.stage_one(self.row, '123', 'b' * 64, m.Budget(self.root), self.root)
+        target = Path(result['path'])
+        self.assertEqual((target / 'launcher.bat').read_bytes(), b'@echo off\necho source only\n')
+        self.assertEqual((target / 'encoded.utf16').read_bytes(), b'source only\n')
+        self.assertTrue(result['canonical_git_blob_ids_verified'])
+        self.assertFalse(self.execution_marker.exists())
+        with self.assertRaisesRegex(m.Hold, 'BLOB_ID_MISMATCH'):
+            m.hash_regular(target / 'launcher.bat', len(b'@echo off\necho source only\n'), self.root, 'a' * 40)
 
     def test_real_source_budget_refuses_checkout_and_never_publishes_target(self):
         transport = self.fixture_repo()

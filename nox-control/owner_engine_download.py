@@ -26,6 +26,7 @@ MAX_WORKERS = 6
 SAFE_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 OWNER_FILE = '.nox-download-owner.json'
 HASH_FILE = '.nox-tracked-sha256.json'
+ATTRIBUTES = b'* -text -eol -ident -filter -working-tree-encoding\n'
 CONFIG = b'[core]\n repositoryformatversion = 0\n bare = false\n filemode = true\n symlinks = false\n logallrefupdates = false\n hooksPath = /dev/null\n[gc]\n auto = 0\n[maintenance]\n auto = false\n'
 try:
     BUNDLE = __NOX_BUNDLE_JSON__
@@ -86,10 +87,11 @@ def read_regular(path, limit):
     return value
 
 
-def hash_regular(path, size, root):
+def hash_regular(path, size, root, blob):
     """Hash tracked bytes with bounded RAM, checking STOP between chunks."""
     fd = os.open(plain(path), os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     digest, count, prefix = hashlib.sha256(), 0, b''
+    git_digest = hashlib.sha1(('blob ' + str(size) + '\0').encode())
     with os.fdopen(fd, 'rb') as stream:
         before = os.fstat(stream.fileno())
         require(stat.S_ISREG(before.st_mode) and before.st_uid == os.geteuid() and before.st_size == size,
@@ -104,9 +106,11 @@ def hash_regular(path, size, root):
             count += len(chunk)
             require(count <= size, 'HOLD_ENGINE_TRACKED_SIZE_CHANGED')
             digest.update(chunk)
+            git_digest.update(chunk)
         after = os.fstat(stream.fileno())
     require(count == size and (before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) ==
             (after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns), 'HOLD_ENGINE_FILE_CHANGED')
+    require(git_digest.hexdigest() == blob, 'HOLD_ENGINE_BLOB_ID_MISMATCH')
     return digest.hexdigest(), prefix.startswith(b'version https://git-lfs.github.com/spec/v1\n')
 
 
@@ -305,6 +309,9 @@ def quarantine_partial(path, row, request):
 def verify_source(path, row, budget, root):
     owner_matches(path, row)
     require(read_regular(path / '.git/config', 16384) == CONFIG, 'HOLD_ENGINE_GIT_CONFIG')
+    attributes = path / '.git/info/attributes'
+    if attributes.exists() or attributes.is_symlink():
+        require(read_regular(attributes, 1024) == ATTRIBUTES, 'HOLD_ENGINE_GIT_ATTRIBUTES')
     for forbidden in ('objects/info/alternates', 'info/grafts', 'config.worktree'):
         require(not (path / '.git' / forbidden).exists(), 'HOLD_ENGINE_GIT_EXTERNAL_STATE')
     head = run_git(path, ['rev-parse', 'HEAD'], row, budget, root).decode().strip()
@@ -318,7 +325,7 @@ def verify_source(path, row, budget, root):
         if entry['mode'] == '160000':
             submodules.append({'path': entry['path'], 'commit': entry['blob']})
             continue
-        digest, is_lfs = hash_regular(path / entry['path'], entry['bytes'], root)
+        digest, is_lfs = hash_regular(path / entry['path'], entry['bytes'], root, entry['blob'])
         item = dict(entry, sha256=digest)
         if entry['mode'] == '120000':
             links += 1  # core.symlinks=false stores link target as inert text.
@@ -327,6 +334,7 @@ def verify_source(path, row, budget, root):
     raw = canonical({'schema': 'NOX_ENGINE_TRACKED_SHA256_V1', 'commit': head, 'files': hashes,
                      'unfetched_submodules': submodules, 'symlinks_as_text': links, 'lfs_pointer_files': lfs})
     return raw, {'head': head, 'git_fsck_passed': True, 'tracked_files': len(hashes),
+                 'canonical_git_blob_ids_verified': True,
                  'tracked_source_bytes': sum(x['bytes'] for x in hashes), 'submodules_fetched': False,
                  'unfetched_submodules': submodules, 'symlinks_as_text': links, 'lfs_pointer_files': lfs,
                  'tracked_manifest_sha256': hashlib.sha256(raw).hexdigest()}
@@ -353,6 +361,8 @@ def stage_one(row, request, manifest_sha, budget, root=ROOT):
                    manifest_sha256=manifest_sha, **{k: row[k] for k in ('name', 'repo', 'commit')})))
             run_git(partial, ['init', '--quiet', '--template='], row, budget, root)
             atomic(partial / '.git/config', CONFIG)
+            directory(partial / '.git/info')
+            atomic(partial / '.git/info/attributes', ATTRIBUTES)  # Stage canonical blob bytes, without checkout conversion.
             run_git(partial, ['fetch', '--depth=1', '--no-tags', '--no-recurse-submodules', '--no-write-fetch-head',
                              row['repo'], row['commit']], row, budget, root)
             source_tree(run_git(partial, ['ls-tree', '-r', '-z', '-l', row['commit']], row, budget, root), row)
