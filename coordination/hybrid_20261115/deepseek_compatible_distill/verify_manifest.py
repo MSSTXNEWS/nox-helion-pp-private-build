@@ -141,7 +141,8 @@ def validate(manifest: dict) -> dict:
     student_id = student.get("model_id")
     if (not isinstance(student_id, str)
             or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", student_id)
-            or student_id in {teacher.get("model_id"), teacher.get("quantization_source_id")}
+            or student_id == teacher.get("model_id")
+            or student_id == teacher.get("quantization_source_id")
             or student.get("training_target") is not True):
         blockers.append("STUDENT_MUST_BE_DISTINCT_PINNED_HF_TARGET")
     revision = student.get("revision")
@@ -169,9 +170,13 @@ def validate(manifest: dict) -> dict:
         runtime_sha = entry.get("runtime_sha256") if isinstance(entry, dict) else None
         if not isinstance(runtime_sha, str) or not HEX64.fullmatch(runtime_sha):
             blockers.append("STUDENT_METADATA_RUNTIME_HASH_MISSING")
-    if student.get("config_sha256") != metadata.get("config.json", {}).get("runtime_sha256"):
+    config_entry = metadata.get("config.json", {}) if isinstance(metadata, dict) else {}
+    tokenizer_entry = metadata.get("tokenizer.json", {}) if isinstance(metadata, dict) else {}
+    config_runtime_sha = config_entry.get("runtime_sha256") if isinstance(config_entry, dict) else None
+    tokenizer_runtime_sha = tokenizer_entry.get("runtime_sha256") if isinstance(tokenizer_entry, dict) else None
+    if student.get("config_sha256") != config_runtime_sha:
         blockers.append("STUDENT_CONFIG_HASH_MISMATCH")
-    if student.get("tokenizer_sha256") != metadata.get("tokenizer.json", {}).get("runtime_sha256"):
+    if student.get("tokenizer_sha256") != tokenizer_runtime_sha:
         blockers.append("STUDENT_TOKENIZER_HASH_MISMATCH")
     if student.get("local_weight_readback") is not True:
         blockers.append("STUDENT_LOCAL_WEIGHTS_UNVERIFIED")
