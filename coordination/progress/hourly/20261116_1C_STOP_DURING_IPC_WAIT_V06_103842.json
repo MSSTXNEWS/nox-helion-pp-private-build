@@ -1,0 +1,55 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_1C",
+  "instructions_version": "0.0.6",
+  "slot": "1C",
+  "at_utc": "2026-11-16T10:38:42.631Z",
+  "at_msk": "2026-11-16 13:38:42 MSK",
+  "source_head_before": "d09fcdb79efd5f51fa87643cd3536f8d8d813657",
+  "source_head_after": "COMMIT_CARRYING_RECEIPT",
+  "source_status": "SOURCE_PATCH_PREPARED_PENDING_EXACT_CI",
+  "native_status": "HOLD_NO_CURRENT_STOP_LEASE_OR_CLAIM",
+  "error_id": "NOX-P0-1C-STOP-LEASE-REVOKED-DURING-IPC-RESULT-WAIT-20261116",
+  "root_cause": "Original owner_subagent_processes.run checked STOP/owner lease before dispatch, but blocked in outbox.get(timeout+5) and accepted result without post-read gate. Manual STOP or lease revocation could remain unnoticed for the wait interval.",
+  "fix": "Bounded 250ms IPC outbox polling with owner STOP/authorization/writer-lease readback before each wait and after receiving result; no second scheduler; original worker pool and model untouched.",
+  "files_changed": [
+    "nox-control/owner_subagent_processes.py",
+    "nox-control/test_owner_subagent_processes.py"
+  ],
+  "five_tasks": [
+    {
+      "id": 1,
+      "state": "SOURCE_REVIEWED_HOLD_LIVE",
+      "reason": "Read existing dispatcher native interfaces and prior receipts; current STOP/lease unavailable."
+    },
+    {
+      "id": 2,
+      "state": "SOURCE_PATCHED",
+      "reason": "Existing owner_subagent_processes.run monitors STOP/lease while awaiting candidate; no new daemon."
+    },
+    {
+      "id": 3,
+      "state": "HOLD_FRESH_NATIVE",
+      "reason": "Three OS workers historically observed; fresh PID/starttime/heartbeat not available."
+    },
+    {
+      "id": 4,
+      "state": "SOURCE_PATCHED",
+      "reason": "Existing DAG and job identity contract unchanged; added revocation gate during work and before receipt acceptance."
+    },
+    {
+      "id": 5,
+      "state": "HOLD_NATIVE",
+      "reason": "Native writer lease and independent S03 terminal proof not available; no real claim submitted."
+    }
+  ],
+  "WEIGHTS": "Latest independently stated Qwen3.5-9B checkpoint25 /25 successful optimizer updates at historical owner-native #43828903713; EVALUATION_STALE. No new steps or checkpoint/restore this slot.",
+  "KNOWLEDGE": "No fresh Hunter→verified source→S03 write/readback/recall",
+  "DISPATCHER_RESOURCES": "Previous read-only #43833674167 captured dispatcher PID 876007 at 08:50 UTC, but fresh PID/STOP/lease/GPU current unknown. No server restarts, downloads or cleanup this run.",
+  "new_native_job_ids": [],
+  "new_optimizer_updates_proven": 0,
+  "bytes_downloaded": 0,
+  "freed_bytes": 0,
+  "exact_sha_ci": "PENDING",
+  "native_writes": false,
+  "next_action": "Verify exact-HEAD source CI and authorized native readback of owner STOP/lease, director+3 OS PID/starttime/heartbeat, then install only under unique writer lease and run one bounded job with terminal S03/rollback."
+}

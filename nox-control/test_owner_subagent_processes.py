@@ -94,6 +94,47 @@ class TestRealSubagentProcesses(unittest.TestCase):
             candidate.run(batch(2), stop_active=lambda: False,
                           authorize=lambda: True, lease_current=lambda: True)
 
+    def test_owner_stop_during_pending_result_is_observed(self):
+        # No new native processes: inspect only the existing run's wait loop.
+        from types import SimpleNamespace
+        from queue import Queue
+        candidate = Subagents.__new__(Subagents)
+        candidate.roles = ['infra', 'brain', 'web']
+        candidate.timeout = 1
+        candidate.inboxes = {role: Queue() for role in candidate.roles}
+        candidate.outbox = Queue()
+        candidate.processes = {
+            role: SimpleNamespace(pid=900+i) for i, role in enumerate(candidate.roles)
+        }
+        observations = [False, False, True]
+        def owner_stop():
+            return observations.pop(0) if observations else True
+        with self.assertRaisesRegex(GateError, 'HOLD_OWNER_GATE_CHANGED'):
+            candidate.run(batch(1), stop_active=owner_stop,
+                          authorize=lambda: True, lease_current=lambda: True)
+        self.assertEqual(observations, [])
+
+    def test_lease_revoked_between_result_read_and_acceptance(self):
+        from types import SimpleNamespace
+        from queue import Queue
+        candidate = Subagents.__new__(Subagents)
+        candidate.roles = ['infra', 'brain', 'web']
+        candidate.timeout = 1
+        candidate.inboxes = {role: Queue() for role in candidate.roles}
+        candidate.outbox = Queue()
+        candidate.processes = {
+            role: SimpleNamespace(pid=900+i) for i, role in enumerate(candidate.roles)
+        }
+        candidate.outbox.put({'kind':'RESULT', 'role':'infra', 'pid':900,
+                              'id':'job-0', 'state':'CANDIDATE_NOT_APPLIED'})
+        leases = [True, True, False]
+        def lease():
+            return leases.pop(0) if leases else False
+        with self.assertRaisesRegex(GateError, 'HOLD_OWNER_GATE_CHANGED'):
+            candidate.run(batch(1), stop_active=lambda: False,
+                          authorize=lambda: True, lease_current=lease)
+        self.assertEqual(leases, [])
+
     def test_external_model_url_rejected(self):
         from owner_subagent_processes import _model_reply
         with self.assertRaisesRegex(GateError, 'HOLD_NONLOCAL'):

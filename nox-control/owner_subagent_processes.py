@@ -213,10 +213,25 @@ class Subagents:
                 del remaining[tid]
                 progressed = True
             if active:
-                try:
-                    event = self.outbox.get(timeout=self.timeout+5)
-                except queue.Empty as exc:
-                    raise GateError('HOLD_SUBAGENT_TIMEOUT') from exc
+                # A blocking result read must not mask a manual owner STOP or
+                # a revoked writer lease for up to the model timeout (300s).
+                # Poll only the existing IPC outbox; never add another daemon.
+                deadline = time.monotonic() + self.timeout + 5
+                while True:
+                    if not admitted():
+                        raise GateError('HOLD_OWNER_GATE_CHANGED')
+                    remaining_wait = deadline - time.monotonic()
+                    if remaining_wait <= 0:
+                        raise GateError('HOLD_SUBAGENT_TIMEOUT')
+                    try:
+                        event = self.outbox.get(timeout=min(remaining_wait, 0.25))
+                        break
+                    except queue.Empty:
+                        continue
+                # The lease/STOP may change while an outbox event is in flight.
+                # Do not return even a candidate as accepted after revocation.
+                if not admitted():
+                    raise GateError('HOLD_OWNER_GATE_CHANGED')
                 tid = event.get('id')
                 role = event.get('role')
                 if (event.get('kind')!='RESULT' or tid not in active or role != active_roles.get(tid)
