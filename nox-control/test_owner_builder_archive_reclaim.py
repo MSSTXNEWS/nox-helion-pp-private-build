@@ -31,7 +31,8 @@ class ArchiveReclaimTests(unittest.TestCase):
             (p / 'adapter_config.json').write_bytes(self.config)
             (p / 'receipt.sidecar').write_bytes(b'PRESERVE THIS SIDECAR')
         (self.root / 'backup').mkdir()
-        (self.root / 'state').mkdir()
+        state = self.root / 'state'; state.mkdir()
+        (state / 'owner_maintenance.lock').touch()
         self.stack = ExitStack(); self.addCleanup(self.stack.close)
         for key, value in {'ROOT': self.root, 'STATE': self.root / 'state',
                 'ARCHIVE': self.archive, 'CANONICAL': self.canonical, 'RAM': self.ram,
@@ -39,11 +40,12 @@ class ArchiveReclaimTests(unittest.TestCase):
                 'CONFIG_SHA': hashlib.sha256(self.config).hexdigest(), 'RATE': 10**12}.items():
             self.stack.enter_context(patch.object(entry, key, value))
         self.stack.enter_context(patch.object(entry, 'stop', return_value=False))
-        self.visibility = {'visibility': 'PARTIAL', 'complete': False, 'known_reference_count': 0,
+        self.visibility = {'visibility': 'COMPLETE', 'complete': True, 'known_reference_count': 0,
                            'partial_visibility_is_not_proof_of_inactivity': True}
         self.usage = self.stack.enter_context(patch.object(entry, 'usage', return_value=self.visibility))
         self.result = {'request': '123', 'source_sha': 'a' * 40, 'fresh_archive_deleted': False}
-        self.proof = {'schema': 'SYNTHETIC_EXTERNAL_OWNER_PROOF', 'no_raw_ids': True}
+        self.proof = {'schema': 'SYNTHETIC_EXTERNAL_OWNER_PROOF',
+                      'evidence_origin': 'SYNTHETIC_FIXTURE', 'no_raw_ids': True}
         self.originals = {p: (entry.identity(p.stat()), p.read_bytes()) for p in (self.canonical, self.ram,
             self.archive.parent / 'adapter_config.json', self.canonical.parent / 'adapter_config.json',
             self.archive.parent / 'receipt.sidecar', self.canonical.parent / 'receipt.sidecar')}
@@ -76,7 +78,7 @@ class ArchiveReclaimTests(unittest.TestCase):
         self.assertFalse(self.archive.exists())
         self.assertTrue(result['fresh_archive_deleted'])
         self.assertEqual(result['global_free_space_delta_bytes'], 0)
-        self.assertEqual(result['usage_before']['visibility'], 'PARTIAL')
+        self.assertEqual(result['usage_before']['visibility'], 'COMPLETE')
         self.assertFalse(result['global_free_delta_attributed_exclusively_to_operation'])
         self.assert_preserved()
 
@@ -87,6 +89,40 @@ class ArchiveReclaimTests(unittest.TestCase):
         rename.assert_not_called()
         self.assertIn('KNOWN_PROCESS_REFERENCE', result['reason'])
         self.assertEqual(self.archive.read_bytes(), self.data)
+        self.assert_preserved()
+
+    def test_stop_blocks_archive_cleanup_before_any_rename(self):
+        (self.root / 'STOP').write_text('fixture hold')
+        with patch.object(entry, 'dependencies', return_value=(None, self.proof)), \
+             patch.object(entry, 'stop', return_value=True), \
+             patch.dict(os.environ, {'NOX_OWNER_REQUEST_ID': '123', 'NOX_OWNER_SOURCE_SHA': 'a' * 40}), \
+             patch.object(entry, 'rename_noreplace') as rename:
+            with self.assertRaisesRegex(entry.Hold, 'OWNER_STOP'):
+                entry.main()
+        rename.assert_not_called()
+        self.assertTrue(self.archive.exists())
+        self.assert_preserved()
+
+    def test_missing_external_backup_proof_holds_before_archive_cleanup(self):
+        here = Path(__file__).parent
+        bundle = {entry.PROC_NAME: base64.b64encode((here / entry.PROC_NAME).read_bytes()).decode()}
+        with patch.object(entry, 'BUNDLE', bundle), \
+             patch.dict(os.environ, {'NOX_OWNER_REQUEST_ID': '123', 'NOX_OWNER_SOURCE_SHA': 'a' * 40}), \
+             patch.object(entry, 'rename_noreplace') as rename:
+            with self.assertRaisesRegex(entry.Hold, 'EXTERNAL_PROOF_BOUND'):
+                entry.main()
+        rename.assert_not_called()
+        self.assertTrue(self.archive.exists())
+        self.assert_preserved()
+
+    def test_incomplete_dependency_scan_holds_before_archive_quarantine(self):
+        self.usage.return_value = {**self.visibility, 'visibility': 'PARTIAL', 'complete': False}
+        with patch.object(entry, 'rename_noreplace') as rename:
+            result = self.operate()
+        rename.assert_not_called()
+        self.assertFalse(result['fresh_archive_deleted'])
+        self.assertIn('PROCESS_INSPECTION_INCOMPLETE', result['reason'])
+        self.assertTrue(self.archive.exists())
         self.assert_preserved()
 
     def test_corrupt_restore_map_readback_holds_before_any_rename(self):

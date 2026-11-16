@@ -314,6 +314,7 @@ def operate(result, proc, proof, deadline):
         targets = {(archive_before['st_dev'], archive_before['st_ino']): ['BUILDER_ARCHIVE'],
                    (canonical_before['st_dev'], canonical_before['st_ino']): ['BUILDER_KEPT']}
         result['usage_before'] = usage(proc, targets, {archive_fd, canonical_fd}, min(deadline, time.monotonic() + 10))
+        require(result['usage_before'].get('complete') is True, 'PROCESS_INSPECTION_INCOMPLETE')
         require(result['usage_before']['known_reference_count'] == 0, 'KNOWN_PROCESS_REFERENCE')
         tick(deadline)
         backup_parent = directory(ROOT / 'backup'); handles.append(backup_parent)

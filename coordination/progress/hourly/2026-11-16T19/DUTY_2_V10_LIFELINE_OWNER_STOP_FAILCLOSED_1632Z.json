@@ -31,13 +31,13 @@
     },
     {
       "id": "S1-01",
-      "status": "LIVE_VERIFIED_READ_ONLY",
-      "evidence": "Owner-maintenance current attempt job 133443213794 at 2026-11-16T16:31:59Z verifies STOP, five Supervisor STOPPED, no :8081 socket; not a writer lease."
+      "status": "HOLD_FRESH_NATIVE",
+      "evidence": "Last independently verified owner read-only 2026-11-16T15:59:58Z; no newer native stop/PID/start_ticks captured in this turn"
     },
     {
       "id": "S1-03",
       "status": "HOLD_OWNER_WRITER_LEASE",
-      "evidence": "Current owner lease UNKNOWN_NO_OWNER_CAS_READBACK; three OS worker PIDs not live-verified (NOX is intentionally STOPPED)."
+      "evidence": "Current owner STOP/lease and 3 native worker PIDs unverified"
     },
     {
       "id": "S1-07",
@@ -47,34 +47,22 @@
     {
       "id": "S2-07",
       "status": "HOLD_SEEKABLE_STORAGE",
-      "evidence": "16:31:59Z current SSD total 183609851904/free 43158827008 B; 248834257920 B DeepSeek still cannot fit; server rclone remotes 0, no seekable external storage authorization."
+      "evidence": "Pinned unique DeepSeek 248834257920 B exceeds measured native SSD total 183609851904 B; server Drive OAuth/rclone remote unconfirmed"
     }
   ],
   "last_native": {
-    "as_of_utc": "2026-11-16T16:31:59Z",
-    "run_id": 43887943803,
-    "latest_attempt_job_id": 133443213794,
-    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803/job/133443213794",
-    "manual_STOP": "PRESENT_/root/nox/STOP",
+    "as_of_utc": "2026-11-16T15:59:58Z",
+    "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803",
+    "manual_STOP": "PRESENT",
     "OWNER_MAINTENANCE": "PRESENT",
-    "TRAIN_HOLD": "PRESENT",
-    "TRAIN_PAUSE_REQUEST": "PRESENT",
     "critical_supervisor": "5_STOPPED",
-    "listener_8081": "NO_SOCKET_INODE",
+    "listener_8081": "ABSENT",
     "gpu0_used_mib": 0,
     "gpu1_used_mib": 0,
     "ssd_total_bytes": 183609851904,
-    "ssd_free_bytes": 43158827008,
-    "shm_free_bytes": 3366711296,
-    "cgroup_memory_current_bytes": 60384092160,
-    "cgroup_memory_max_bytes": 194065203200,
-    "cpu_quota_cores": 19.2,
-    "server_rclone_remotes": 0,
-    "writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
-    "s03_memory_file": "/root/nox/kb/knowledge.sqlite",
-    "s03_recall": "UNKNOWN_NOT_PROBED",
-    "owner_native_inspection": true,
-    "owner_write_admission": false
+    "ssd_free_bytes": 43158855680,
+    "writer_lease": "UNKNOWN",
+    "historical_not_current": true
   },
   "weights": {
     "new_optimizer_updates_verified": 0,
@@ -96,6 +84,5 @@
   },
   "cleanup": "HOLD_NEW_MODEL_NOT_DEPLOYED",
   "rollback": "Git CAS revert only code/test commits against their exact preimages; no OneHost rollback because no native deployment.",
-  "next_first_ready": "Owner-authorized current STOP/lease, independently-restorable checkpoint/S03 and seekable random-access storage with quota/reserve, then one owner Range claim+SHA, Maya sm70 inference, existing Resonance SSE/S03 E2E.",
-  "latest_native_refresh_utc": "2026-11-16T16:36:22.753Z"
+  "next_first_ready": "Owner-authorized current STOP/lease, independently-restorable checkpoint/S03 and seekable random-access storage with quota/reserve, then one owner Range claim+SHA, Maya sm70 inference, existing Resonance SSE/S03 E2E."
 }
