@@ -69,6 +69,13 @@ def reconcile(*, statuses, queues, events, s03, owner_scope, source_sha256,
            for tid in statuses):
         out["state"] = "HOLD_FOREIGN_TASK_IDS"
         return out
+    # V46 and R60 are alternate names for the SAME 60 logical tasks.
+    # The original V175 supervisor rejects mixed families. Otherwise one
+    # canonical task with two different native job IDs can count twice here.
+    if len({("R60" if tid.startswith("R60-") else "V46")
+            for tid in statuses}) > 1:
+        out["state"] = "HOLD_MIXED_TASK_FAMILIES"
+        return out
     for tid, status in sorted(statuses.items()):
         if (not isinstance(tid, str) or not TASK.fullmatch(tid)
                 or not isinstance(status, Mapping)):
@@ -341,6 +348,42 @@ class ContractTests(unittest.TestCase):
                 self.assertEqual(out["crosschecked_queue_s03_pairs"], 0)
                 self.assertEqual(out["stale_heartbeat_holds"], ["NOX-V46-01"])
                 self.assertFalse(out["native_pass"])
+
+    @staticmethod
+    def _add_r60_alias(d, *, replace=False):
+        original_tid, original_jid = "NOX-V46-01", "native/001"
+        alias_tid, alias_jid = "R60-001", "native/002"
+        status = deepcopy(d["statuses"][original_tid])
+        status.update(task_id=alias_tid, job_id=alias_jid)
+        queue = deepcopy(d["queues"][original_jid])
+        queue.update(task_id=alias_tid, job_id=alias_jid)
+        event = deepcopy(d["events"][original_jid])
+        event.update(task_id=alias_tid, job_id=alias_jid)
+        proof = deepcopy(d["s03"][original_jid])
+        proof.update(task_id=alias_tid, job_id=alias_jid,
+                     event_sha256=digest(event))
+        if replace:
+            d["statuses"].clear()
+            d["queues"].clear()
+            d["events"].clear()
+            d["s03"].clear()
+        d["statuses"][alias_tid] = status
+        d["queues"][alias_jid] = queue
+        d["events"][alias_jid] = event
+        d["s03"][alias_jid] = proof
+
+    def test_mixed_v46_r60_aliases_not_two_logical_tasks(self):
+        # Both full, internally consistent source receipts have distinct job IDs.
+        # Under the former rule they counted as two despite ONE task number.
+        result = self.check(lambda d: self._add_r60_alias(d))
+        self.assertEqual(result["state"], "HOLD_MIXED_TASK_FAMILIES")
+        self.assertEqual(result["crosschecked_queue_s03_pairs"], 0)
+        self.assertFalse(result["native_pass"])
+
+    def test_r60_only_source_family_remains_compatible(self):
+        result = self.check(lambda d: self._add_r60_alias(d, replace=True))
+        self.assertEqual(result["crosschecked_queue_s03_pairs"], 1)
+        self.assertFalse(result["native_pass"])
 
     def test_empty_is_unknown(self):
         r = self.check(lambda d: (d["statuses"].clear(),d["queues"].clear(),d["s03"].clear(),d["events"].clear()))
