@@ -265,6 +265,24 @@ def encoded_example(tokenizer, messages):
             "labels": labels, "example_sha256": canonical_sha(messages)}
 
 
+def holdout_evaluation_due(successful_total, goal_total, elapsed_since_save):
+    """Keep a measured holdout at most five successful updates behind the trainer.
+
+    The existing guard latches EVALUATION_STALE at a larger update gap. The
+    previous 300-second-only cadence was reset by five-step checkpoint saves,
+    making a fast 1000-step window hit that latch without another evaluation.
+    This is a trainer scheduling fix, not a relaxation of guard thresholds.
+    """
+    if (type(successful_total) is not int or type(goal_total) is not int
+            or not 0 <= successful_total <= goal_total <= 1000
+            or type(elapsed_since_save) not in (int, float)
+            or not math.isfinite(elapsed_since_save) or elapsed_since_save < 0):
+        raise Hold("HOLD_HOLDOUT_EVALUATION_SCHEDULE_INPUT")
+    return (successful_total == goal_total
+            or (successful_total > 0 and successful_total % 5 == 0)
+            or elapsed_since_save >= 300)
+
+
 def admit_tokenized_dataset(tokenizer, train, holdout):
     result = []; records = []
     for name, rows, minimum in (("train", train, 40), ("holdout", holdout, 8)):
@@ -720,7 +738,8 @@ def run(args):
             state["successful_total"] += 1; state["update_evidence"].append(proof)
             before_hash = after_hash; consecutive_skips = 0
             reason = stop_reason()
-            evaluation_due = state["successful_total"] == args.successful_updates or time.monotonic() - last_save >= 300
+            evaluation_due = holdout_evaluation_due(
+                state["successful_total"], args.successful_updates, time.monotonic() - last_save)
             checkpoint_due = evaluation_due or state["successful_total"] <= 6 or state["successful_total"] % 5 == 0
             if reason or checkpoint_due:
                 # Chat/STOP preemption checkpoints promptly; it does not run an
