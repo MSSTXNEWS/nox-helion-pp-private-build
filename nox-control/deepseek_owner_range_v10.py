@@ -33,6 +33,8 @@ def regular(path: Path, allow_missing=False):
         return None
     st=path.stat()
     require(stat.S_ISREG(st.st_mode) and st.st_uid==os.geteuid(), 'HOLD_NONREGULAR_OR_UNOWNED_FILE')
+    # A hardlinked .part could append directly into a unique checkpoint or S03 backup.
+    require(st.st_nlink==1, 'HOLD_HARDLINK_PATH')
     return st
 
 def canonical(d):
@@ -135,6 +137,9 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
     stop(root);lease(lease_file,request,time.time(),root)
     fd=os.open(destination/'.nox-deepseek-owner.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
     try:
+        lock_st=os.fstat(fd)
+        require(stat.S_ISREG(lock_st.st_mode) and lock_st.st_uid==os.geteuid() and
+                lock_st.st_nlink==1, 'HOLD_LOCK_FILE_UNSAFE')
         fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
         final,partial=destination/name,destination/(name+'.part')
         existing=regular(final,True)
@@ -162,9 +167,21 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     'HOLD_CONTENT_ENCODING')
             length=response.headers.get('Content-Length')
             require(length is not None and int(length)==end-offset+1,'HOLD_HTTP_LENGTH')
-            partfd=os.open(partial,os.O_WRONLY|os.O_APPEND|os.O_CREAT|os.O_NOFOLLOW,0o600)
+            # Bind an append to the inode admitted BEFORE network I/O, not a raced replacement.
+            flags=os.O_WRONLY|os.O_APPEND|os.O_NOFOLLOW
+            if partial_stat is None: flags|=os.O_CREAT|os.O_EXCL
+            try: partfd=os.open(partial,flags,0o600)
+            except FileExistsError: raise Hold('HOLD_PARTIAL_CREATE_RACE')
             wrote=0
             with os.fdopen(partfd,'ab',buffering=0) as output:
+                opened=os.fstat(output.fileno())
+                require(stat.S_ISREG(opened.st_mode) and opened.st_uid==os.geteuid() and
+                        opened.st_nlink==1, 'HOLD_PARTIAL_FD_UNSAFE')
+                if partial_stat is None:
+                    require(opened.st_size==0,'HOLD_PARTIAL_CHANGED')
+                else:
+                    require((opened.st_dev,opened.st_ino,opened.st_size)==
+                            (partial_stat.st_dev,partial_stat.st_ino,offset),'HOLD_PARTIAL_CHANGED')
                 require(output.tell()==offset,'HOLD_CONCURRENT_PARTIAL_CHANGE')
                 while wrote<end-offset+1:
                     stop(root);lease(lease_file,request,time.time(),root)

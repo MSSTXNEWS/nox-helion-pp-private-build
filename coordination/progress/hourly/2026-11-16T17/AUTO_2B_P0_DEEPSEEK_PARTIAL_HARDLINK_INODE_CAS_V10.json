@@ -1,0 +1,79 @@
+{
+  "schema": "NOX_RELAY_V10_FIVE_OUTCOMES_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2B",
+  "at_utc": "2026-11-16T14:35:06.049Z",
+  "at_msk": "2026-11-16 17:35:06 MSK",
+  "source_head_before": "35b334467c477ba26f8bebf95e673162a9c91b70",
+  "source_preimage_blobs": {
+    "downloader": "a08486e1e9849abe07eeecf68d7345c5c03b8e39",
+    "test": "ac9d4dd074c5cea114a97896aa40dd74c2e38ae0"
+  },
+  "status": "SOURCE_PATCH_PROPOSED_CAS_PENDING",
+  "error_id": "NOX-P0-DEEPSEEK-PARTIAL-HARDLINK-INODE-RACE-20261116-2B",
+  "root_cause": "regular() accepted hardlinked model .part/final paths; append could alter a unique S03/checkpoint backup. Partial inode could change after preflight and before network response append.",
+  "changes": "Reject hardlinks on preflight, verify lock fd ownership/links, create missing partial with O_EXCL, and fstat+dev/inode/size check of opened partial before writing. No new backend/trainer/scheduler.",
+  "tests": "5 new focused unittest cases added; CI pending until GitHub commit; other 14 original tests unchanged.",
+  "rollback": "CAS revert only the exact two file blobs from source_head_before; no native changes.",
+  "five": [
+    {
+      "id": "S2-07",
+      "status": "SOURCE_TESTED_PENDING_CI",
+      "native": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "claim": "NO_NATIVE_LEASE",
+      "evidence": "fixed existing DeepSeek Range downloader safety; not downloaded"
+    },
+    {
+      "id": "S1-04",
+      "status": "HOLD_NATIVE",
+      "claim": "NO_NATIVE_LEASE",
+      "evidence": "historical 2026-11-16T13:59:30Z 2xV100 0MiB; SSD free 43158925312 B, no current resource sample"
+    },
+    {
+      "id": "S1-03",
+      "status": "HOLD_OWNER_STOP",
+      "claim": "NO_NATIVE_LEASE",
+      "evidence": "owner maintenance & stop PRESENT at 2026-11-16T13:54:56Z known_format OWNER_MODEL_UPDATE; no current writer lease"
+    },
+    {
+      "id": "S1-07",
+      "status": "HOLD_RESTORE",
+      "claim": "NO_NATIVE_LEASE",
+      "evidence": "independent S03/optimizer/scaler/RNG restore not established"
+    },
+    {
+      "id": "S3-04",
+      "status": "HOLD_LIVE_MODEL",
+      "claim": "NO_NATIVE_LEASE",
+      "evidence": "no DeepSeek/Maya stdio->original SSE tested, no TTFT/p95"
+    }
+  ],
+  "weights": {
+    "new_successful_optimizer_updates": 0,
+    "checkpoint_restore_verified": false,
+    "historical_qwen_updates": 55,
+    "trainer_resume": false,
+    "deepseek_live": false
+  },
+  "knowledge": {
+    "native_hunter_to_s03_recall": false,
+    "new_s03_writes": 0
+  },
+  "dispatcher_resources": {
+    "owner_stop_last_verified": "2026-11-16T13:54:56Z OWNER_MODEL_UPDATE",
+    "fresh_pid_start_ticks": null,
+    "fresh_lease": null,
+    "gpu0_mib_last_sample": 0,
+    "gpu1_mib_last_sample": 0,
+    "ssd_free_last_sample_bytes": 43158925312,
+    "new_downloaded_bytes": 0,
+    "new_deleted_bytes": 0,
+    "native_restarts": 0,
+    "native_writes": 0
+  },
+  "native_evidence": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43880277767",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43881016385"
+  ],
+  "next_action": "Original owner-authorized read-only STOP/lease/storage quota/seekability/5 shard inventory and Maya SHA; only then one 206 range under native claim with independent rollback."
+}

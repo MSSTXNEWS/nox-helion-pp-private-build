@@ -107,4 +107,40 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertEqual(sum([5780704,39535781184,39736712000,39036908384,19923784832,110595290816]),
                          248834257920)
 
+
+    def test_existing_partial_hardlink_cannot_modify_checkpoint(self):
+        preserve=self.dst/'unique-checkpoint';preserve.write_bytes(b'checkpoint-bytes')
+        (self.dst/(self.name+'.part')).hardlink_to(preserve)
+        with self.assertRaisesRegex(m.Hold,'HARDLINK_PATH'):self.do()
+        self.assertEqual(preserve.read_bytes(),b'checkpoint-bytes')
+    def test_existing_final_hardlink_is_not_reused(self):
+        preserve=self.dst/'unique-model';preserve.write_bytes(self.content)
+        (self.dst/self.name).hardlink_to(preserve)
+        with self.assertRaisesRegex(m.Hold,'HARDLINK_PATH'):
+            self.do(opener=lambda *a,**k:self.fail('network used'))
+        self.assertEqual(preserve.read_bytes(),self.content)
+    def test_replaced_partial_between_check_and_open_fails_closed(self):
+        with patch.object(m,'RESERVE',0):self.do(limit=6)
+        partial=self.dst/(self.name+'.part')
+        def switched(request,timeout=30):
+            partial.unlink()
+            partial.write_bytes(self.content[:6])
+            return self.opener(request,timeout)
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'PARTIAL_CHANGED'):self.do(opener=switched)
+        self.assertEqual(partial.read_bytes(),self.content[:6])
+    def test_new_partial_created_during_response_fails_closed(self):
+        partial=self.dst/(self.name+'.part')
+        def intruder(request,timeout=30):
+            partial.write_bytes(b'protected-other-write')
+            return self.opener(request,timeout)
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'PARTIAL_CREATE_RACE'):self.do(opener=intruder)
+        self.assertEqual(partial.read_bytes(),b'protected-other-write')
+    def test_download_lock_hardlink_is_rejected(self):
+        preserve=self.dst/'unique-backup';preserve.write_bytes(b'keep')
+        (self.dst/'.nox-deepseek-owner.lock').hardlink_to(preserve)
+        with self.assertRaisesRegex(m.Hold,'LOCK_FILE_UNSAFE'):self.do()
+        self.assertEqual(preserve.read_bytes(),b'keep')
+
 if __name__=='__main__':unittest.main()
