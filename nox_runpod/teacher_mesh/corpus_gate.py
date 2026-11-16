@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import tempfile
 import os
+import unicodedata
 from typing import Any
 
 SCHEMA="nox-teacher-approved-sft-v1"
@@ -26,7 +27,9 @@ FORBIDDEN_KEYS={"secret","password","api_key","token","private_key"}
 
 
 def canonical_hash(text: str) -> str:
-    normalized=re.sub(r"\s+"," ",text.strip().casefold())
+    normalized=unicodedata.normalize("NFKC",text.strip().casefold())
+    normalized="".join(ch for ch in normalized if unicodedata.category(ch)!="Cf")
+    normalized=re.sub(r"\s+"," ",normalized)
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
@@ -45,9 +48,11 @@ def quality_gate(record: Any) -> tuple[bool,str]:
     if not all(record.get(k) is True for k in (
         "quality_verified","rights_verified","privacy_verified","owner_approved"
     )):return False,"NOT_APPROVED"
-    if record["source_kind"] not in ALLOWED_SOURCE_KINDS:
+    if (not isinstance(record["source_kind"],str)
+            or record["source_kind"] not in ALLOWED_SOURCE_KINDS):
         return False,"HOSTED_TRAINING_PERMISSION_NOT_VERIFIED"
-    if record["license"].lower() not in SAFE_LICENSES:
+    if (not isinstance(record["license"],str)
+            or record["license"].lower() not in SAFE_LICENSES):
         return False,"LICENSE_NOT_ALLOWLISTED"
     if (not isinstance(record["model_card_url"],str)
             or not record["model_card_url"].startswith("https://huggingface.co/")):
@@ -113,6 +118,103 @@ def build_approved_sft(records:list[dict],holdout_rate:int=15) -> dict:
             "accepted":accepted,"rejected":rejected,
             "train":sum(1 for x in accepted if x["split"]=="train"),
             "holdout":sum(1 for x in accepted if x["split"]=="holdout")}
+
+
+
+def _split_by_owner_source_sha(source_group_sha256: str,
+                               *, dev_rate: int=10, holdout_rate: int=15) -> str:
+    """Deterministic *source-family* partition, not a user-provided cluster."""
+    bucket=int(hashlib.sha256(source_group_sha256.encode("ascii")).hexdigest()[:8],16)%100
+    return ("holdout" if bucket < holdout_rate
+            else "dev" if bucket < holdout_rate + dev_rate else "train")
+
+
+def build_owner_pinned_threeway_sft(records: list[dict], policy: dict,
+                                    *, dev_rate: int=10, holdout_rate: int=15) -> dict:
+    """Prepare a candidate; NEVER enqueue training or export without native 2D.
+
+    source_group_sha_by_receipt and privacy receipt allowlist must be supplied by
+    authenticated owner-native callbacks, NOT records, teachers or downloaded sites.
+    This function checks their shape but does not verify a cryptographic signature.
+    No fixture can establish actual OneHost auth or a live Hunter/S03 receipt.
+    """
+    def hold(reason, **details):
+        return {"status":reason,"accepted":[],"train":0,"dev":0,"holdout":0,
+                "optimizer_updates_verified":0,"native_queue_modified":False,**details}
+    if (not isinstance(policy,dict)
+            or policy.get("signed_by_native_owner") is not True
+            or policy.get("allow_source_disjoint_corpus") is not True
+            or policy.get("stop_requested") is not False):
+        return hold("HOLD_NATIVE_OWNER_POLICY_OR_STOP")
+    if (not isinstance(records,list) or not 3 <= len(records) <= MAX_EXAMPLES):
+        return hold("HOLD_BATCH_SIZE")
+    if (type(dev_rate) is not int or type(holdout_rate) is not int
+            or not 5 <= dev_rate <= 25 or not 5 <= holdout_rate <= 30
+            or dev_rate + holdout_rate >= 50):
+        return hold("HOLD_THREEWAY_SPLIT_POLICY")
+    group_map=policy.get("source_group_sha_by_receipt")
+    privacy_shas=policy.get("accepted_privacy_receipt_shas")
+    sha_pattern=re.compile(r"^[a-f0-9]{64}$")
+    if (not isinstance(group_map,dict) or not 1 <= len(group_map) <= MAX_EXAMPLES
+            or any(not isinstance(k,str) or not sha_pattern.fullmatch(k)
+                   or not isinstance(v,str) or not sha_pattern.fullmatch(v)
+                   for k,v in group_map.items())):
+        return hold("HOLD_OWNER_SOURCE_GROUP_RECEIPTS")
+    if (not isinstance(privacy_shas,list) or not 1 <= len(privacy_shas) <= MAX_EXAMPLES
+            or any(not isinstance(x,str) or not sha_pattern.fullmatch(x)
+                   for x in privacy_shas)):
+        return hold("HOLD_OWNER_PRIVACY_RECEIPTS")
+    privacy_allow=set(privacy_shas)
+    seen_prompts,seen_completions=set(),set()
+    accepted,rejected=[],{}
+    for record in records:
+        valid,code=quality_gate(record)
+        if not valid:
+            rejected[code]=rejected.get(code,0)+1
+            continue
+        source_sha=record.get("source_receipt_sha256")
+        privacy_sha=record.get("privacy_receipt_sha256")
+        if (not isinstance(source_sha,str) or source_sha not in group_map
+                or record.get("source_provenance_verified") is not True):
+            rejected["UNPINNED_SOURCE_RECEIPT"]=rejected.get("UNPINNED_SOURCE_RECEIPT",0)+1
+            continue
+        if (not isinstance(privacy_sha,str) or privacy_sha not in privacy_allow
+                or record.get("pii_review") != "PASS"):
+            rejected["UNPINNED_PRIVACY_RECEIPT"]=rejected.get("UNPINNED_PRIVACY_RECEIPT",0)+1
+            continue
+        prompt_sha,answer_sha=canonical_hash(record["prompt"]),canonical_hash(record["completion"])
+        # Conservative leak prevention: overlapping prompts OR answers are
+        # excluded even when a row claims a distinct family/cluster.
+        if prompt_sha in seen_prompts or answer_sha in seen_completions:
+            rejected["CROSS_SOURCE_DUPLICATE"]=rejected.get("CROSS_SOURCE_DUPLICATE",0)+1
+            continue
+        seen_prompts.add(prompt_sha);seen_completions.add(answer_sha)
+        owner_group=group_map[source_sha]
+        accepted.append({
+            "split":_split_by_owner_source_sha(owner_group,
+                                              dev_rate=dev_rate,holdout_rate=holdout_rate),
+            "source_group_sha256":owner_group,
+            "source_receipt_sha256":source_sha,
+            "privacy_receipt_sha256":privacy_sha,
+            "prompt_sha256":prompt_sha,"answer_sha256":answer_sha,
+            "task_id":record["task_id"],"teacher_model":record["teacher_model"],
+            "license":record["license"],
+            "sft":{"prompt":[{"role":"user","content":record["prompt"]}],
+                   "completion":[{"role":"assistant","content":record["completion"]}]},
+        })
+    counts={kind:sum(r["split"]==kind for r in accepted)
+            for kind in ("train","dev","holdout")}
+    if not all(counts.values()):
+        return hold("HOLD_THREEWAY_SOURCE_COVERAGE",
+                    rejected=rejected,verified_candidate_counts=counts)
+    if any({r["split"] for r in accepted if r["source_group_sha256"]==g}!={s}
+           for g,s in {(r["source_group_sha256"],r["split"]) for r in accepted}):
+        return hold("HOLD_SOURCE_SPLIT_COLLISION")
+    return {"status":"OWNER_PINNED_THREEWAY_CANDIDATES_NOT_TRAINED",
+            "accepted":accepted,"rejected":rejected,**counts,
+            "splitting":"OWNER_RECEIPT_SOURCE_GROUP_DISJOINT_SHA256",
+            "optimizer_updates_verified":0,"native_queue_modified":False,
+            "source_data_is_not_new_deepseek_distillation":True}
 
 
 def export_versioned(local_output_root:str, corpus:dict) -> dict:

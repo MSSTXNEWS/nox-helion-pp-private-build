@@ -106,5 +106,83 @@ class NightlyCorpusTests(unittest.TestCase):
               target_modules=["q_proj"])
         self.assertEqual(result["state"],"HOLD_PROVENANCE_HASH")
 
+    def test_untrusted_malformed_record_is_rejected_not_exception(self):
+        for key,bad in (("source_kind",[]),("license",None),("license",{})):
+            row=accepted_record()
+            row[key]=bad
+            self.assertFalse(c.quality_gate(row)[0])
+
+    def _approved_threeway(self):
+        import hashlib
+        groups={}
+        for i in range(5000):
+            digest=hashlib.sha256(("source-family-%d"%i).encode()).hexdigest()
+            split=c._split_by_owner_source_sha(digest)
+            groups.setdefault(split,digest)
+            if len(groups)==3:break
+        self.assertEqual(set(groups),{"train","dev","holdout"})
+        data=[];owner_groups={};privacy=[]
+        for i,(split,group) in enumerate(sorted(groups.items())):
+            source=hashlib.sha256(("receipt-%s"%split).encode()).hexdigest()
+            priv=hashlib.sha256(("privacy-%s"%split).encode()).hexdigest()
+            owner_groups[source]=group;privacy.append(priv)
+            record=accepted_record("reviewtask"+str(i).zfill(6),
+                                   "UNTRUSTED_CLIENT_CLUSTER_"+str(i),str(i))
+            record.update(source_receipt_sha256=source,
+                          privacy_receipt_sha256=priv,
+                          source_provenance_verified=True,pii_review="PASS")
+            data.append(record)
+        policy={"signed_by_native_owner":True,
+                "allow_source_disjoint_corpus":True,"stop_requested":False,
+                "source_group_sha_by_receipt":owner_groups,
+                "accepted_privacy_receipt_shas":privacy}
+        return data,policy
+
+    def test_owner_pinned_source_disjoint_threeway(self):
+        data,policy=self._approved_threeway()
+        result=c.build_owner_pinned_threeway_sft(data,policy)
+        self.assertEqual(result["status"],"OWNER_PINNED_THREEWAY_CANDIDATES_NOT_TRAINED")
+        self.assertEqual((result["train"],result["dev"],result["holdout"]),(1,1,1))
+        self.assertEqual(len({row["source_group_sha256"] for row in result["accepted"]}),3)
+        self.assertEqual(result["optimizer_updates_verified"],0)
+        self.assertFalse(result["native_queue_modified"])
+        self.assertEqual(c.export_versioned("/tmp/nox",result)["status"],"HOLD_NO_APPROVED_DATA")
+
+    def test_unpinned_source_and_privacy_receipts_excluded(self):
+        data,policy=self._approved_threeway()
+        data[0]["source_receipt_sha256"]="f"*64
+        result=c.build_owner_pinned_threeway_sft(data,policy)
+        self.assertEqual(result["status"],"HOLD_THREEWAY_SOURCE_COVERAGE")
+        self.assertEqual(result["rejected"]["UNPINNED_SOURCE_RECEIPT"],1)
+        data,policy=self._approved_threeway()
+        data[1]["privacy_receipt_sha256"]="f"*64
+        result=c.build_owner_pinned_threeway_sft(data,policy)
+        self.assertEqual(result["rejected"]["UNPINNED_PRIVACY_RECEIPT"],1)
+
+    def test_owner_stop_and_unsigned_policy_block_candidate(self):
+        data,policy=self._approved_threeway()
+        for change in ({"stop_requested":True},
+                       {"signed_by_native_owner":False},
+                       {"allow_source_disjoint_corpus":False}):
+            self.assertEqual(c.build_owner_pinned_threeway_sft(
+                data,{**policy,**change})["status"],"HOLD_NATIVE_OWNER_POLICY_OR_STOP")
+
+    def test_cross_source_prompt_and_invisible_format_dedup(self):
+        data,policy=self._approved_threeway()
+        self.assertEqual(c.canonical_hash("\u200bАБВ"),c.canonical_hash("АБВ"))
+        data[1]["prompt"]="\u200b"+data[0]["prompt"]
+        result=c.build_owner_pinned_threeway_sft(data,policy)
+        self.assertEqual(result["status"],"HOLD_THREEWAY_SOURCE_COVERAGE")
+        self.assertEqual(result["rejected"]["CROSS_SOURCE_DUPLICATE"],1)
+
+    def test_wrong_source_group_is_not_controlled_by_client_cluster(self):
+        data,policy=self._approved_threeway()
+        base=c.build_owner_pinned_threeway_sft(data,policy)
+        for r in data:r["cluster_id"]="all_same_but_untrusted"
+        changed=c.build_owner_pinned_threeway_sft(data,policy)
+        self.assertEqual([r["split"] for r in base["accepted"]],
+                         [r["split"] for r in changed["accepted"]])
+
+
 if __name__=="__main__":
     unittest.main()
