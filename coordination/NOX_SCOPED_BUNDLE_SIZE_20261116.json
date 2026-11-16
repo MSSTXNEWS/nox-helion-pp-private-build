@@ -1,0 +1,48 @@
+{
+  "candidate_operator_sha256": "7d6ded3789cfcbd7170be4805c0ae890845e3e84d3e7ef830d8ab1c2ba13d936",
+  "measurement_scope": "LOCAL_REPOSITORY_146_ASSETS_PLUS_FOUR_EXACT_COMMIT_ASSETS; NOT_CAPTURED_NETWORK_TRAFFIC",
+  "network_throughput_or_failure_cause_proven": false,
+  "operations": {
+    "owner_qwen_held_media_smoke_entry.py": {
+      "after": {
+        "asset_count": 5,
+        "asset_raw_bytes": 179829,
+        "bundle_json_bytes": 239959,
+        "expanded_payload_bytes": 241628,
+        "ssh_stdin_script_bytes": 241791
+      },
+      "baseline_candidates_added_for_complete_transport_closure": false,
+      "before": {
+        "asset_count": 150,
+        "asset_raw_bytes": 2832190,
+        "bundle_json_bytes": 3782046,
+        "expanded_payload_bytes": 3783715,
+        "ssh_stdin_script_bytes": 3783878
+      },
+      "reduction_bytes": 3542087,
+      "reduction_percent": 93.61
+    },
+    "owner_qwen_transport_install_entry.py": {
+      "after": {
+        "asset_count": 14,
+        "asset_raw_bytes": 520045,
+        "bundle_json_bytes": 693989,
+        "expanded_payload_bytes": 697070,
+        "ssh_stdin_script_bytes": 697233
+      },
+      "baseline_candidates_added_for_complete_transport_closure": true,
+      "before": {
+        "asset_count": 152,
+        "asset_raw_bytes": 2957951,
+        "bundle_json_bytes": 3949836,
+        "expanded_payload_bytes": 3952917,
+        "ssh_stdin_script_bytes": 3953080
+      },
+      "reduction_bytes": 3255847,
+      "reduction_percent": 82.362
+    }
+  },
+  "original_operator_sha256": "0aa8df81e9cfdeac71ceabd77f4e1a6b5287ececb8f650cc51f7195b34d1210e",
+  "original_operator_source_commit": "91839ce36c2b074f86b4bd0ad0ebf21e5909bf86",
+  "schema": "NOX_SCOPED_BUNDLE_LOCAL_SIZE_V1"
+}
