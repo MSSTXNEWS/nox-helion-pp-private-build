@@ -30,12 +30,29 @@ def hardware():
       'cpu_max':num('/sys/fs/cgroup/cpu.max'),
       'disk':{r:dict(zip(('total','used','free'),shutil.disk_usage(r))) for r in ROOTS if Path(r).is_dir()}}
 
-def process_rows():
+def proc_start_ticks(proc_dir, expected_pid):
+    """Read Linux /proc/<pid>/stat field 22; verify PID despite ')' in comm.
+
+    A numeric PID without a validated start tick is not proof of process identity.
+    Do not export cmdline, environment, or the raw stat record.
+    """
+    raw=(Path(proc_dir)/'stat').read_text()
+    prefix=str(expected_pid)+' ('
+    boundary=raw.rfind(') ')
+    if not raw.startswith(prefix) or boundary<len(prefix):
+        raise ValueError('HOLD_PID_STAT_IDENTITY')
+    fields=raw[boundary+2:].split()
+    if len(fields)<20 or not fields[19].isdigit():
+        raise ValueError('HOLD_PID_START_TICKS')
+    return int(fields[19])
+
+def process_rows(proc_root=Path('/proc')):
     rows=[]
     flags={'-m','--model','--model-path','--model_path','--base-model','--student','--output_dir','--output-dir','--config','-c'}
-    for p in Path('/proc').iterdir():
+    for p in Path(proc_root).iterdir():
         if not p.name.isdigit():continue
         try:
+            initial_ticks=proc_start_ticks(p,int(p.name))
             argv=(p/'cmdline').read_bytes().decode(errors='replace').strip('\0').split('\0')
             if not argv or not any(k in ' '.join(argv[:3]).lower() for k in ('nox','llama','train','python','supervisor','rclone','jupyter')):continue
             args=[]
@@ -45,6 +62,9 @@ def process_rows():
                  'executable':os.path.basename(argv[0]),'arguments':args[:12]}
             scripts=[v for v in argv[1:5] if v.endswith(('.py','.sh')) and SAFE.fullmatch(v)]
             if scripts:row['scripts']=scripts
+            # Do not attribute a reused PID to the model observed earlier.
+            if proc_start_ticks(p,int(p.name)) != initial_ticks:continue
+            row['start_ticks']=initial_ticks
             rows.append(row)
         except (OSError,ValueError):continue
     return rows[:100]
