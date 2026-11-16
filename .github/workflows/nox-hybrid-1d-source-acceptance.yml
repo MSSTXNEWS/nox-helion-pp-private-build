@@ -24,7 +24,7 @@ jobs:
           script="coordination/hybrid_20261115/1D_eval.py"
           python -m py_compile "$script"
           python "$script" --selftest | tee /tmp/nox-1d-selftest.txt
-          grep -q 'SELFTEST 16/16 PASS' /tmp/nox-1d-selftest.txt
+          grep -q 'SELFTEST 18/18 PASS' /tmp/nox-1d-selftest.txt
           if python -O "$script" --selftest; then
             echo "ERROR: optimized selftest false PASS"; exit 1
           fi

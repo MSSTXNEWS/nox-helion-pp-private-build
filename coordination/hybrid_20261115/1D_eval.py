@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 
 REQUIRED_CATEGORIES = {'ru_dialogue', 'es_dialogue', 'code', 'memory', 'identity', 'emotion', 'forgetting'}
+# Critical capabilities must be evaluated in BOTH languages, not only RU plus one ES dialogue.
+BILINGUAL_CATEGORIES = {'code', 'memory', 'identity', 'emotion', 'forgetting'}
 REQUIRED_CHECKS = {
     'ru_dialogue': {'relevance', 'accuracy'},
     'es_dialogue': {'relevance', 'accuracy'},
@@ -92,6 +94,9 @@ def validate_run(run, label):
             require(digest_ok(case.get('s03_receipt_sha256')), f'{label}/{cid}: durable S03 receipt missing')
         unique[cid] = case
     require({c['category'] for c in cases} >= REQUIRED_CATEGORIES, f'{label}: RU/ES/code/memory/identity/emotion/forgetting coverage incomplete')
+    for category in sorted(BILINGUAL_CATEGORIES):
+        observed = {case['locale'] for case in cases if case['category'] == category}
+        require(observed == {'ru', 'es'}, f'{label}: bilingual RU/ES {category} coverage incomplete')
     return meta, unique
 
 
@@ -185,18 +190,21 @@ def selftest():
     h = lambda value: hashlib.sha256(value.encode()).hexdigest()
     def make_run(variant):
         cases = []
-        for i, cat in enumerate(sorted(REQUIRED_CATEGORIES)):
-            checks = {k: True for k in REQUIRED_CHECKS[cat]}
-            row = dict(case_id=f't{i}', split='holdout', category=cat,
-                       locale='es' if cat == 'es_dialogue' else 'ru',
-                       prompt_sha256=h('prompt'+str(i)), source_group_sha256=h('group'+str(i)),
-                       answer_sha256=h(variant+str(i)),
-                       evaluation_sha256=h('review'+str(i)), checks=checks,
-                       reviewer_receipt='isolated-fixture-only', ttft_ms=100,
-                       decode_tps=25, peak_vram_bytes=1000, max_logit_abs_delta=0.01)
-            if cat == 'code': row['sandbox'] = {'network_disabled': True, 'run_id': 'synthetic'}
-            if cat == 'memory': row['s03_receipt_sha256'] = h('synthetic S03')
-            cases.append(row)
+        for cat in sorted(REQUIRED_CATEGORIES):
+            locales = ('ru', 'es') if cat in BILINGUAL_CATEGORIES else (('es',) if cat == 'es_dialogue' else ('ru',))
+            for locale in locales:
+                i = len(cases)
+                checks = {k: True for k in REQUIRED_CHECKS[cat]}
+                row = dict(case_id=f't{i}', split='holdout', category=cat,
+                           locale=locale,
+                           prompt_sha256=h('prompt'+str(i)), source_group_sha256=h('group'+str(i)),
+                           answer_sha256=h(variant+str(i)),
+                           evaluation_sha256=h('review'+str(i)), checks=checks,
+                           reviewer_receipt='isolated-fixture-only', ttft_ms=100,
+                           decode_tps=25, peak_vram_bytes=1000, max_logit_abs_delta=0.01)
+                if cat == 'code': row['sandbox'] = {'network_disabled': True, 'run_id': 'synthetic'}
+                if cat == 'memory': row['s03_receipt_sha256'] = h('synthetic S03')
+                cases.append(row)
         meta = dict(variant=variant, base_sha256=h('base'), tokenizer_sha256=h('tokenizer'),
                     generation_sha256=h('generation'), dataset_sha256=h('dataset'),
                     hardware_id='fixture-v100', engine_build='synthetic', evidence_origin='native_measurement')
@@ -207,6 +215,14 @@ def selftest():
                max_logit_abs_delta=.02)
     result = evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
     assert result['source_consistency'] == 'PASS' and result['native_verified'] is False
+    # One ES dialogue alone cannot certify ES memory, code, emotion or identity behavior.
+    for label in ('reference', 'candidate'):
+        incomplete = make_run(label)
+        incomplete['cases'] = [row for row in incomplete['cases']
+                               if not (row['category'] == 'memory' and row['locale'] == 'es')]
+        try: validate_run(incomplete, label)
+        except ValueError as exc: assert 'bilingual RU/ES memory' in str(exc)
+        else: raise AssertionError(f'{label}: missing ES memory holdout accepted')
     # Empty train evidence must never pass as proof of separation.
     try: evaluate(a, b, {'prompt_sha256': [], 'source_group_sha256': []}, pol)
     except ValueError as exc: assert 'empty train manifest' in str(exc)
@@ -266,7 +282,7 @@ def selftest():
     try: evaluate(a, b, {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
     except ValueError as exc: assert 'logit delta' in str(exc)
     else: raise AssertionError('missing logit metric not detected')
-    # A one-case 25->1 TPS collapse is invisible to the existing seven-case median.
+    # A one-case 25->1 TPS collapse is invisible to the 12-case aggregate median.
     # The owner must explicitly supply the per-case threshold; no native scores are inferred.
     slow_code = make_run('merged')
     slow_code['cases'][0]['decode_tps'] = 1
@@ -280,7 +296,7 @@ def selftest():
     recovered = evaluate(a, slow_code,
                          {'prompt_sha256': [h('train')], 'source_group_sha256': [h('train_group')]}, pol)
     assert recovered['source_consistency'] == 'PASS' and not recovered['slow_case_ids']
-    print('SELFTEST 16/16 PASS (synthetic fixtures only; native HOLD)')
+    print('SELFTEST 18/18 PASS (synthetic fixtures only; native HOLD)')
 
 
 def main():
