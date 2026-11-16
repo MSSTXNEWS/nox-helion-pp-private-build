@@ -2,7 +2,7 @@
   "schema": "NOX_V13_3D_SOURCE_PREP_RECEIPT_V1",
   "instructions_version": "0.0.6",
   "observed_at_utc": "2026-11-16T20:06:38.476Z",
-  "observed_at_msk": "2026-11-16T20:06:38.476+03:00 (UTC timestamp; add 3 hours for MSK)",
+  "observed_at_msk": "2026-11-16T23:06:38.476+03:00",
   "target_instance": 60509551,
   "status": "SOURCE_TESTED_NATIVE_HOLD",
   "source_head_at_receipt": "55b837395a0a5758e281daf1ed774ef04e174285",
