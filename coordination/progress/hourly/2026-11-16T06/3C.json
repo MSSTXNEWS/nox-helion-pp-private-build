@@ -32,12 +32,18 @@
     {
       "task": 5,
       "status": "SOURCE_REGRESSION_ADDED_NATIVE_HOLD",
-      "detail": "Node source assertions added for HOLD hour, open-hour exclusion and freshness; real OneHost owner S03/browser not tested"
+      "detail": "Python 7/7, Node source regressions, JS syntax passed in existing GitHub Actions; authenticated OneHost S03/browser not tested."
     }
   ],
-  "source_validation": "Exact-once patch anchors and invariant checks PASS; native and CI execution unverified until workflow readback.",
+  "source_validation": "PASS: GitHub Actions existing onepass source workflow 43799969276 completed success; Python hourly SQLite 7/7 PASS, Node pure regression PASS, node --check PASS.",
   "production_deployed": false,
   "onehost_mutations": 0,
   "original_deleted": 0,
-  "next_action": "Use existing owner-authorized OneHost deployment with preimage SHA, backup/rollback and real STOP/lease. Bind existing progress API/hourly_tick to original S03/dispatcher, verify owner-auth browser and real persisted readback; preserve D02/14 worlds."
+  "next_action": "Use existing owner-authorized OneHost deployment with preimage SHA, backup/rollback and real STOP/lease. Bind existing progress API/hourly_tick to original S03/dispatcher, verify owner-auth browser and real persisted readback; preserve D02/14 worlds.",
+  "source_ci": {
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43799969276",
+    "job_id": 133077579005,
+    "result": "SUCCESS",
+    "log_observed_utc": "2026-11-16T03:44:56Z"
+  }
 }
