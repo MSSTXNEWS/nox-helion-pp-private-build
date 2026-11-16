@@ -2,7 +2,7 @@
 """Six bounded read-only probes of existing NOX, without env/credential dumps."""
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-import configparser, hashlib, json, os, re, shlex, shutil, stat, subprocess, time, urllib.request
+import configparser, hashlib, json, math, os, re, shlex, shutil, stat, subprocess, time, urllib.request
 ROOT = Path('/root/nox')
 PROC = Path('/proc')
 SECRET = re.compile(r'(?i)(?:Bearer\s+\S+|(?:hf_|ghp_|github_pat_)[A-Za-z0-9_]{12,}|(?:password|secret|api_key|access_key|authorization|token)\s*[:=]\s*[\"\'][^\"\']{12,})')
@@ -272,17 +272,9 @@ def qwen_training_readback():
                 data=json.loads(raw)
                 if not isinstance(data,dict):
                     row['state']='UNEXPECTED_FORMAT';rows.append(row);continue
-                keys=('schema','state','status','phase','request','training_started',
-                      'optimizer_steps_verified','successful_optimizer_steps',
-                      'successful_updates','global_step','step','loss',
-                      'checkpoint_verified','error','reason','finished_at','updated_at')
-                fields={}
-                for key in keys:
-                    if key not in data:continue
-                    value=data[key]
-                    if isinstance(value,(str,int,float,bool)) or value is None:
-                        fields[key]=redact(value)[:240] if isinstance(value,str) else value
-                row.update(state='METADATA_READ_ONLY',fields=fields)
+                # Receipt text is owner-private and counters are not independent proof.
+                row.update(state='METADATA_READ_ONLY',scope='SELF_REPORTED_NOT_LIVE_PROOF',
+                           fields=safe_qwen_receipt_fields(data))
             except (OSError,ValueError,TypeError):
                 row['state']='READ_OR_PARSE_HOLD'
             rows.append(row)
@@ -473,6 +465,35 @@ PUBLIC_EVIDENCE_NUMBERS = frozenset((
     'successful_optimizer_steps', 'attempted_steps', 'skipped_steps',
     'verified_files', 'verified_bytes', 'training_started',
     'optimizer_steps_verified', 'native_verified', 'source_sha_verified'))
+
+def safe_qwen_receipt_fields(data):
+    """Only public coded statuses/finite scalar metrics from a self-reported receipt."""
+    if not isinstance(data, dict):
+        return {}
+    fields = {}
+    for key in ('schema', 'state', 'status', 'phase', 'error', 'reason'):
+        value = data.get(key)
+        if type(value) is str and PUBLIC_STATUS_CODE.fullmatch(value):
+            fields[key] = value
+    request = data.get('request')
+    if type(request) is str and re.fullmatch(r'[0-9]{1,24}', request):
+        fields['request'] = request
+    for key in ('training_started', 'optimizer_steps_verified', 'checkpoint_verified'):
+        value = data.get(key)
+        if type(value) is bool:
+            fields[key] = value
+    for key in ('successful_optimizer_steps', 'successful_updates', 'global_step', 'step'):
+        value = data.get(key)
+        if type(value) is int and 0 <= value <= 10**12:
+            fields[key] = value
+    value = data.get('loss')
+    if type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 10**6:
+        fields['loss'] = value
+    for key in ('finished_at', 'updated_at'):
+        value = data.get(key)
+        if type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 10**12:
+            fields[key] = value
+    return fields
 
 
 def bounded_receipt_meta(path, limit=100000):
