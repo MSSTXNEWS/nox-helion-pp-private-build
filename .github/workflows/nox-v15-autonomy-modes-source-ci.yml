@@ -6,6 +6,8 @@ on:
       - 'nox-control/test_owner_autonomy_pool.py'
       - 'nox-control/owner_autonomy_mode_stage_v15.py'
       - 'nox-control/test_owner_autonomy_mode_stage_v15.py'
+      - 'nox-control/owner_subagent_processes.py'
+      - 'nox-control/test_owner_subagent_processes.py'
       - '.github/workflows/nox-v15-autonomy-modes-source-ci.yml'
   workflow_dispatch:
 permissions:
@@ -22,6 +24,8 @@ jobs:
         run: |
           python3 -m py_compile nox-control/owner_autonomy_pool.py nox-control/owner_autonomy_mode_stage_v15.py
           PYTHONPATH=nox-control python3 -m unittest -v test_owner_autonomy_pool test_owner_autonomy_mode_stage_v15
+          python3 -m py_compile nox-control/owner_subagent_processes.py
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_subagent_processes
       - name: Assert pinned modes and no production activation by source test
         run: |
           python3 - <<'PY'
