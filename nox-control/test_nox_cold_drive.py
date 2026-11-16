@@ -90,6 +90,41 @@ class ColdTests(unittest.TestCase):
         args=cold.parser().parse_args(['load','--remote','fixture:cold/a.gguf','--sha256','bad'])
         with patch.object(cold,'command') as op,self.assertRaises(ValueError):cold.load(args)
         op.assert_not_called()
+    def test_ram_load_holds_when_cgroup_reserve_drops_during_copy(self):
+        if not Path('/dev/shm').is_dir():
+            self.skipTest('tmpfs unavailable')
+        with tempfile.TemporaryDirectory(prefix='nox-ram-budget-', dir='/dev/shm') as ram_dir:
+            remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+            remote.parent.mkdir(parents=True, exist_ok=True)
+            remote.write_bytes(self.src.read_bytes())
+            args=cold.parser().parse_args([
+                'load','--remote','fixture:cold/model.gguf','--ram-dir',ram_dir,
+                '--sha256',cold.sha256(self.src),'--reserve-gib','1','--timeout','5'])
+            size=self.src.stat().st_size
+            with patch.object(cold,'memory_budget',side_effect=[size+1,-1]), \
+                 self.assertRaisesRegex(RuntimeError,'HOLD_RAM_RESERVE_AFTER_COPY'):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    cold.load(args)
+            self.assertFalse((Path(ram_dir)/'model.gguf').exists())
+            self.assertEqual(list(Path(ram_dir).glob('.nox-load-*')),[])
+
+    def test_ram_load_publishes_only_when_postcopy_reserve_remains(self):
+        if not Path('/dev/shm').is_dir():
+            self.skipTest('tmpfs unavailable')
+        with tempfile.TemporaryDirectory(prefix='nox-ram-budget-', dir='/dev/shm') as ram_dir:
+            remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+            remote.parent.mkdir(parents=True, exist_ok=True)
+            remote.write_bytes(self.src.read_bytes())
+            args=cold.parser().parse_args([
+                'load','--remote','fixture:cold/model.gguf','--ram-dir',ram_dir,
+                '--sha256',cold.sha256(self.src),'--reserve-gib','1','--timeout','5'])
+            size=self.src.stat().st_size
+            with patch.object(cold,'memory_budget',side_effect=[size+1,1]):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    cold.load(args)
+            self.assertEqual((Path(ram_dir)/'model.gguf').read_bytes(),self.src.read_bytes())
+            self.assertEqual(list(Path(ram_dir).glob('.nox-load-*')),[])
+
     def test_symlink_source_rejected(self):
         p=self.root/'link.gguf';p.symlink_to(self.src)
         with self.assertRaises(ValueError):cold.assert_model(p)
