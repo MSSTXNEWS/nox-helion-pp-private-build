@@ -23,7 +23,7 @@ class V52ExactModelPathWorkflowContractTests(unittest.TestCase):
         self.assertIn('Native inspect exact DeepSeek paths through existing V52 SSH route',text)
         self.assertIn('from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as connection',text)
         self.assertIn('inspect.getsource(audit.pinned_model_paths)',text)
-        self.assertIn('PINNED_MODEL_FILES=' + '+repr(audit.PINNED_MODEL_FILES)',text)
+        self.assertIn('"PINNED_MODEL_FILES=" + repr(audit.PINNED_MODEL_FILES)',text)
         self.assertIn('connection.REMOTE =',text)
         self.assertIn('connection.probe()',text)
         self.assertIn("print('NATIVE_DEEPSEEK_PATH='+json.dumps(row,separators=(',',':')))",text)
