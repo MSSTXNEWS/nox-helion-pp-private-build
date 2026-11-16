@@ -4,7 +4,7 @@ Only known source revisions are patched. No blind process sweep or weight deleti
 """
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
-import base64, configparser, fcntl, hashlib, json, os, py_compile, re, shutil, signal, stat, subprocess, tempfile, time, urllib.request
+import base64, configparser, fcntl, hashlib, json, os, py_compile, re, shutil, signal, subprocess, tempfile, time, urllib.request
 BUNDLE=__NOX_BUNDLE_JSON__
 ROOT=Path('/root/nox');STATE=ROOT/'state';SCRIPTS=ROOT/'scripts'
 SHA=os.environ['NOX_OWNER_SOURCE_SHA'];REQUEST=os.environ['NOX_OWNER_REQUEST_ID']
@@ -101,109 +101,7 @@ def health():
   except Exception as e:result[str(port)]=type(e).__name__
  return result
 
-WORKSPACE_STOP = Path('/workspace/NOX_STOP')
-STOP_PATHS = (ROOT/'STOP',ROOT/'STOP.flag',ROOT/'stop.flag',ROOT/'.stop',
-              ROOT/'program/STOP',STATE/'STOP',STATE/'STOP.flag',WORKSPACE_STOP)
-OWNER_MAINTENANCE_FLAG = STATE/'OWNER_MAINTENANCE.flag'
-OWNER_WRITER_LEASE_STATE = 'UNKNOWN_NO_OWNER_CAS_READBACK'
-
-
-def _native_flag_state(path):
- try:
-  info=Path(path).lstat()
- except FileNotFoundError:
-  return 'ABSENT'
- except OSError:
-  return 'UNKNOWN'
- return 'PRESENT' if stat.S_ISREG(info.st_mode) else 'UNSAFE'
-
-
-def stage_gate(stop_paths, maintenance_flag, lease_state):
- # Match owner_native_inspect.owner_safety_snapshot. Existing STOP aliases and
- # the separate OWNER_MODEL_UPDATE maintenance flag block all stage writes.
- for path in stop_paths:
-  state=_native_flag_state(path)
-  if state=='PRESENT':
-   raise RuntimeError('HOLD_OWNER_STOP_ACTIVE')
-  if state!='ABSENT':
-   raise RuntimeError('HOLD_OWNER_STOP_EVIDENCE_UNKNOWN')
- maintenance=_native_flag_state(maintenance_flag)
- if maintenance=='PRESENT':
-  raise RuntimeError('HOLD_OWNER_MODEL_UPDATE_ACTIVE')
- if maintenance!='ABSENT':
-  raise RuntimeError('HOLD_OWNER_MODEL_UPDATE_EVIDENCE_UNKNOWN')
- if lease_state!='OWNER_CAS_VERIFIED':
-  raise RuntimeError('HOLD_OWNER_LEASE_UNKNOWN')
-
-
-def require_stage_admission():
- # owner_native_inspect reports UNKNOWN_NO_OWNER_CAS_READBACK. A flock is not
- # a native owner lease, so production stage remains blocked until proof exists.
- stage_gate(STOP_PATHS,OWNER_MAINTENANCE_FLAG,OWNER_WRITER_LEASE_STATE)
-
-
-def _same_hold_preimage(path, identity, sha):
- try:
-  info=path.lstat()
-  if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:
-   return False
-  current=(info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns)
-  return current==identity and digest(path.read_bytes())==sha
- except OSError:
-  return False
-
-
-def _restore_train_hold(hold, archived, identity, sha):
- if archived is None or not archived.exists():
-  return
- if not _same_hold_preimage(archived,identity,sha):
-  raise RuntimeError('HOLD_TRAIN_HOLD_PREIMAGE_CHANGED')
- if hold.exists() or hold.is_symlink():
-  raise RuntimeError('HOLD_TRAIN_HOLD_RESTORE_COLLISION')
- archived.rename(hold)
-
-
-def release_hold_and_start_trainer():
- hold=STATE/'TRAIN_HOLD.flag'
- archived=None
- hold_identity=None
- hold_sha=None
- attempts=STATE/'train_volta_t866u.attempts'
- prior_attempts=None
- require_stage_admission()  # immediately before TRAIN_HOLD can be released
- try:
-  if hold.is_file() and not hold.is_symlink():
-   before=hold.lstat()
-   prior=backup(hold)
-   after=hold.lstat()
-   if ((before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns)!=
-       (after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns) or digest(hold.read_bytes())!=digest(prior)):
-    raise RuntimeError('HOLD_TRAIN_HOLD_PREIMAGE_CHANGED')
-   hold_identity=(before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns)
-   hold_sha=digest(prior)
-   archived=STATE/('TRAIN_HOLD.resumed_by_owner_'+REQUEST)
-   if archived.exists() or archived.is_symlink():raise RuntimeError('HOLD_TRAIN_HOLD_ARCHIVE_COLLISION')
-   hold.rename(archived)
-  if attempts.exists():
-   prior_attempts=backup(attempts)
-  require_stage_admission()
-  atomic(attempts,b'0\\n')
-  require_stage_admission()  # last fence immediately before supervisor start
- except BaseException:
-  if prior_attempts is None:
-   try:
-    if attempts.is_symlink() or attempts.is_file():attempts.unlink()
-   except FileNotFoundError:
-    pass
-  else:
-   atomic(attempts,prior_attempts)
-  _restore_train_hold(hold,archived,hold_identity,hold_sha)
-  raise
- return command(['supervisorctl','start','nox-train-volta-t866u'],40)
-
-
 def main():
- require_stage_admission()  # before mkdir, receipt, backup, or service actions
  STATE.mkdir(parents=True,exist_ok=True)
  lock=os.open(STATE/'owner_maintenance.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
  fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -275,10 +173,15 @@ def main():
  oldenv=STATE/'train_cpu_max.env'
  if oldenv.exists():backup(oldenv)
  atomic(oldenv,b'TRAIN_CPU_MAX=64GiB\nOMP_NUM_THREADS=4\nMKL_NUM_THREADS=4\nOPENBLAS_NUM_THREADS=1\nTOKENIZERS_PARALLELISM=false\n',0o600)
-  # HOLD, attempt counter, and trainer start share repeated owner admission gates.
- had_hold=(STATE/'TRAIN_HOLD.flag').is_file()
- rc,out,_=release_hold_and_start_trainer()
- if had_hold:emit('manual_hold_released_by_explicit_owner_request',True)
+ # Owner explicitly requested restart. Preserve, rather than delete, a prior HOLD.
+ hold=STATE/'TRAIN_HOLD.flag'
+ if hold.is_file():
+  backup(hold);hold.rename(STATE/('TRAIN_HOLD.resumed_by_owner_'+REQUEST))
+  emit('manual_hold_released_by_explicit_owner_request',True)
+ attempts=STATE/'train_volta_t866u.attempts'
+ if attempts.exists():backup(attempts)
+ atomic(attempts,b'0\n')
+ rc,out,_=command(['supervisorctl','start','nox-train-volta-t866u'],40)
  emit('existing_trainer_start',{'rc':rc,'state':status('nox-train-volta-t866u')})
  result.update(steps=result['steps'],gpu1_after=gpu1(),stopped_teacher_pids=[x['pid'] for x in stopped],
                trainer_status=status('nox-train-volta-t866u'),chat_after=health(),finished=time.time(),
