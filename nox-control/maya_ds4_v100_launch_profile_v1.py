@@ -15,6 +15,7 @@ if str(HERE) not in sys.path:
 
 import maya_launch_preflight_v1 as preflight
 import maya_binary_attestation_v1 as binary_attestation
+import maya_runtime_memory_budget_v1 as runtime_memory_budget
 
 MAYA_BINARY = Path(
     "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4"
@@ -32,7 +33,8 @@ PARALLEL = 1
 
 def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
                       verified_files, tensor_types, model_file_paths,
-                      tensor_role_inventory=None):
+                      tensor_role_inventory=None, runtime_observation=None,
+                      runtime_budget=None):
     """Build exact argv only after all pinned source preflight checks pass."""
     if owner_stop is not False:
         return {"state": "HOLD_OWNER_STOP", "launchable": False}
@@ -64,6 +66,12 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
             MAYA_BINARY, attested.get("binary_identity")):
         return {"state": "HOLD_MAYA_BINARY_CHANGED_AFTER_PREFLIGHT", "launchable": False}
 
+    memory = runtime_memory_budget.evaluate_memory_budget(runtime_observation, runtime_budget)
+    if memory.get("admission_state") != "PASS_VERIFIED_RUNTIME_MEMORY":
+        return {"state": memory.get("state", "HOLD_UNVERIFIED_PROVENANCE"),
+                "admission_state": "HOLD_UNVERIFIED_PROVENANCE",
+                "launchable": False, "runtime_memory": memory}
+
     pack_dir = checked["packer_output_dir"]
     argv = [
         str(MAYA_BINARY),
@@ -93,8 +101,9 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "parallel_requests": PARALLEL,
         "expert_mapping": "GGUF hot experts in VRAM cache; CPU-lane experts read in-place from model files",
         "mmap_experts_cli": "omitted: Maya forces file-backed CPU-lane experts for GGUF; --mmap-experts does not change that path",
-        "kv_cache_fit": "HOLD_LIVE_VRAM_AND_RAM_READBACK_REQUIRED",
-        "runtime_fit": "HOLD_LIVE_FREE_MEMORY_PREFLIGHT_REQUIRED",
+        "kv_cache_fit": memory["state"],
+        "runtime_fit": memory["state"],
+        "runtime_memory_budget": memory,
         "drafting": "disabled",
         "precision_override": "none; GGUF quantization comes from verified model files",
         "protocol": "Maya stdin/stdout engine protocol; not an HTTP endpoint",
