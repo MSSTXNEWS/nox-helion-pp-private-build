@@ -1,0 +1,109 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const source = fs.readFileSync(new URL('../site/nox-motion-idle-loader.js', import.meta.url), 'utf8');
+
+class Target {
+  constructor() { this.events = new Map(); }
+  addEventListener(name, fn) {
+    const a = this.events.get(name) || []; a.push(fn); this.events.set(name, a);
+  }
+  removeEventListener(name, fn) { this.events.set(name, (this.events.get(name) || []).filter(f => f !== fn)); }
+  dispatchEvent(evt) { for (const f of [...(this.events.get(evt.type) || [])]) f(evt); }
+  emit(name, detail = {}) { this.dispatchEvent({type: name, detail}); }
+}
+
+function harness({reduced = false, ready = 'complete', existing = false, origin = 'https://nox.test'} = {}) {
+  const window = new Target(), document = new Target(), media = new Target();
+  let idleId = 0, timeoutId = 0;
+  const pending = new Map(), fallbacks = new Map(), injected = [];
+  media.matches = reduced;
+  document.hidden = false;
+  document.readyState = ready;
+  document.currentScript = {src: 'https://nox.test/nox-motion-idle-loader.js'};
+  document.createElement = () => Object.assign(new Target(), {dataset: {}});
+  document.head = {appendChild: el => injected.push(el)};
+  window.NoxWorkspace = {settings: {mode:'BALANCED', motion:'system'}};
+  if (existing) window.Motion = {animate() {}};
+  window.requestIdleCallback = fn => { const id = ++idleId; pending.set(id,fn); return id; };
+  window.cancelIdleCallback = id => pending.delete(id);
+  const setTimeout = fn => {const id = ++timeoutId;fallbacks.set(id,fn);return id;};
+  const clearTimeout = id => fallbacks.delete(id);
+  const sandbox = {window, document, location: {origin}, matchMedia:()=>media, URL,
+    requestIdleCallback:window.requestIdleCallback, cancelIdleCallback:window.cancelIdleCallback,
+    setTimeout,clearTimeout};
+  vm.runInNewContext(source, sandbox, {filename:'nox-motion-idle-loader.js'});
+  const flush = () => {const jobs = [...pending.values()];pending.clear(); for (const fn of jobs)fn();};
+  const diag = () => window.NoxMotionIdleLoader?.diagnostics();
+  return {window, document, media, pending, injected, flush, diag};
+}
+
+test('idle load: exactly one same-origin decorative script, never a native request', () => {
+  const h = harness();
+  assert.equal(h.diag().queued, true);
+  h.flush();
+  assert.equal(h.injected.length,1);
+  assert.equal(h.injected[0].src, 'https://nox.test/vendor/fx/motion.js');
+  assert.equal(h.injected[0].async,true);
+  h.injected[0].emit('load');
+  assert.equal(h.diag().loaded,true);
+  h.window.emit('nox-settings');h.flush();
+  assert.equal(h.injected.length,1);
+});
+test('chat blocks loading before first token', () => {
+  const h = harness();
+  h.window.emit('nox-chat-activity',{active:true});h.flush();
+  assert.equal(h.diag().queued,false);
+  assert.equal(h.injected.length,0);
+  h.window.emit('nox-chat-activity',{active:false});h.flush();
+  assert.equal(h.injected.length,1);
+});
+test('voice ending cannot override a running chat', () => {
+  const h = harness();
+  h.window.emit('nox-chat-activity',{active:true});
+  h.window.emit('nox-voice-activity',{active:true});
+  h.window.emit('nox-voice-activity',{active:false});h.flush();
+  assert.equal(h.injected.length,0);
+  h.window.emit('nox-chat-activity',{active:false});h.flush();
+  assert.equal(h.injected.length,1);
+});
+test('reduced-motion OS setting prevents optional library request', () => {
+  const h = harness({reduced:true});h.flush();
+  assert.equal(h.injected.length,0);
+  h.media.matches = false;h.media.emit('change');h.flush();
+  assert.equal(h.injected.length,1);
+});
+test('explicit reduced motion and ECO block loading', () => {
+  const h = harness();h.window.NoxWorkspace.settings.motion = 'reduce';
+  h.window.emit('nox-settings');h.flush();assert.equal(h.injected.length,0);
+  h.window.NoxWorkspace.settings.motion = 'system';h.window.NoxWorkspace.settings.mode='ECO';
+  h.window.emit('nox-settings');h.flush();assert.equal(h.injected.length,0);
+  h.window.NoxWorkspace.settings.mode='MAX';
+  h.window.emit('nox-settings');h.flush();assert.equal(h.injected.length,1);
+});
+test('page hiding and STOP cancel idle callbacks; next chat idle is explicit', () => {
+  const h = harness();h.document.hidden=true;h.document.emit('visibilitychange');h.flush();
+  assert.equal(h.injected.length,0);
+  h.document.hidden=false;h.document.emit('visibilitychange');
+  h.window.emit('nox-stop-requested');h.flush();assert.equal(h.injected.length,0);
+  h.window.emit('nox-chat-activity',{active:false});h.flush();assert.equal(h.injected.length,1);
+});
+test('load gate waits for existing page load event and never delays it', () => {
+  const h = harness({ready:'loading'});
+  assert.equal(h.pending.size,0);h.window.emit('load');assert.equal(h.pending.size,1);
+});
+test('already loaded Motion is reused, not loaded again', () => {
+  const h = harness({existing:true});h.flush();assert.equal(h.injected.length,0);
+  assert.equal(h.diag().loaded,true);
+});
+test('same-origin is mandatory', () => {
+  const h = harness({origin:'https://other.host'});
+  assert.equal(h.window.NoxMotionIdleLoader,undefined);
+});
+test('back-forward cache restoration can resume optional decoration', () => {
+  const h = harness();h.window.dispatchEvent({type:'pagehide',persisted:true});h.flush();
+  assert.equal(h.injected.length,0);
+  h.window.dispatchEvent({type:'pageshow',persisted:true});h.flush();assert.equal(h.injected.length,1);
+});
