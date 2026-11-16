@@ -230,8 +230,11 @@ class V60RestoreValidatorTests(unittest.TestCase):
 
     def test_injected_fixture_decryptor_validates_without_production_writes(self):
         ciphertext = b"synthetic age ciphertext"
-        raw = outer_zip(ciphertext)
         plain = plaintext_tar()
+        raw = outer_zip(
+            ciphertext,
+            receipt_overrides={"plaintext_tar_sha256": hashlib.sha256(plain).hexdigest()},
+        )
         original_connect = sqlite3.connect
         seen = []
 
@@ -287,6 +290,21 @@ class V60RestoreValidatorTests(unittest.TestCase):
                 expected_ciphertext_sha256="0" * 64,
             )
         self.assertEqual(calls, [])
+
+    def test_receipt_plaintext_hash_mismatch_fails_after_decryption(self):
+        ciphertext = b"synthetic age ciphertext"
+        plaintext = plaintext_tar()
+        raw = outer_zip(ciphertext, receipt_overrides={"plaintext_tar_sha256": "0" * 64})
+        calls = []
+        with self.assertRaisesRegex(RuntimeError, "HOLD_RECEIPT_PLAINTEXT_BINDING"):
+            validator.verify_offsite_candidate(
+                raw,
+                decryptor=lambda value: calls.append(value) or plaintext,
+                expected_outer_bytes=len(raw),
+                expected_outer_sha256=hashlib.sha256(raw).hexdigest(),
+                expected_ciphertext_sha256=hashlib.sha256(ciphertext).hexdigest(),
+            )
+        self.assertEqual(calls, [ciphertext])
 
     def test_synthetic_decryptor_failure_fails_closed(self):
         ciphertext = b"synthetic age ciphertext"
