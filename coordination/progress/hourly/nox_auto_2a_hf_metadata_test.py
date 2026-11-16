@@ -67,4 +67,26 @@ with tempfile.TemporaryDirectory() as d:
     print('PASS 12: unindexed trailing data')
     assert pair(b_dtype='F9')=='HOLD_TENSOR_DTYPE_UNSUPPORTED'
     print('PASS 13: unknown dtype')
+
+# A synthetic signature-parser regression: no installed native TRL is inferred.
+good={'schema':'NOX_SFTCONFIG_NATIVE_SIGNATURE_V1','trl_version':'1.18.0',
+      'missing_required_kwargs':[],'save_safetensors_parameter':False}
+wire=lambda value:'NOX_SFTCONFIG_SIGNATURE='+json.dumps(value)
+actual=m.parse_sftconfig_signature_probe(0,wire(good))
+assert actual['status']=='LEGACY_TRUE_REQUIRES_SAFE_OMISSION'
+assert actual['constructor_executed'] is False and actual['optimizer_updates']==0
+print('PASS 14: safe omitted legacy argument, without claiming a constructor call')
+good['save_safetensors_parameter']=True
+assert m.parse_sftconfig_signature_probe(0,wire(good))['status']=='SIGNATURE_ACCEPTS_LEGACY_SAVE_SAFETENSORS'
+print('PASS 15: real-signature marker supporting legacy flag')
+good['missing_required_kwargs']=['max_steps']
+assert m.parse_sftconfig_signature_probe(0,wire(good))['status']=='HOLD_REQUIRED_SFTCONFIG_KWARGS_UNSUPPORTED'
+print('PASS 16: required API incompatibility blocks admission')
+assert m.parse_sftconfig_signature_probe(3,'')['status']=='HOLD_NATIVE_TRL_SIGNATURE_IMPORT'
+assert m.parse_sftconfig_signature_probe(0,'unexpected')['status']=='HOLD_NATIVE_TRL_SIGNATURE_OUTPUT'
+good['missing_required_kwargs']=['unknown_kwarg']
+assert m.parse_sftconfig_signature_probe(0,wire(good))['status']=='HOLD_NATIVE_TRL_SIGNATURE_SCHEMA'
+print('PASS 17-19: import failure, missing marker and unexpected fields block')
+print('NOX_AUTO_2A_SFTCONFIG_SIGNATURE_SYNTHETIC_6_6_PASS; NATIVE_HOLD')
+
 print('NOX_AUTO_2A_HF_METADATA_SYNTHETIC_13_13_PASS; NATIVE_HOLD')

@@ -324,6 +324,85 @@ def supervisor_config():
             rows.append({'path':str(p),'service':service,'settings':selected})
     return rows
 
+SFTCONFIG_REQUIRED = (
+    'output_dir', 'per_device_train_batch_size', 'gradient_accumulation_steps',
+    'max_length', 'max_steps', 'fp16', 'bf16', 'packing',
+    'gradient_checkpointing', 'gradient_checkpointing_kwargs',
+    'dataloader_num_workers', 'logging_steps', 'save_steps',
+    'save_total_limit', 'warmup_steps', 'learning_rate', 'optim',
+    'lr_scheduler_type', 'report_to',
+)
+
+
+def parse_sftconfig_signature_probe(rc, output):
+    """Fail closed on the installed TRL signature; never report training."""
+    result = {'record': 'pinned_trl_sftconfig_signature',
+              'scope': 'READ_ONLY_SIGNATURE_NO_TRAINER',
+              'constructor_executed': False, 'optimizer_updates': 0}
+    if rc != 0:
+        return dict(result, status='HOLD_NATIVE_TRL_SIGNATURE_IMPORT')
+    matches = [line[len('NOX_SFTCONFIG_SIGNATURE='):]
+               for line in output.splitlines()
+               if line.startswith('NOX_SFTCONFIG_SIGNATURE=')]
+    if len(matches) != 1 or len(matches[0]) > 4096:
+        return dict(result, status='HOLD_NATIVE_TRL_SIGNATURE_OUTPUT')
+    try:
+        data = json.loads(matches[0])
+        if (not isinstance(data, dict) or
+                set(data) != {'schema', 'trl_version', 'missing_required_kwargs',
+                              'save_safetensors_parameter'} or
+                data.get('schema') != 'NOX_SFTCONFIG_NATIVE_SIGNATURE_V1' or
+                type(data.get('trl_version')) is not str or
+                not re.fullmatch(r'[0-9A-Za-z.+_-]{1,64}', data['trl_version']) or
+                type(data.get('save_safetensors_parameter')) is not bool or
+                not isinstance(data.get('missing_required_kwargs'), list) or
+                len(set(map(str, data['missing_required_kwargs']))) != len(data['missing_required_kwargs']) or
+                any(type(k) is not str or k not in SFTCONFIG_REQUIRED
+                    for k in data['missing_required_kwargs'])):
+            raise ValueError('INVALID_SIGNATURE_RECORD')
+    except (ValueError, TypeError, UnicodeError):
+        return dict(result, status='HOLD_NATIVE_TRL_SIGNATURE_SCHEMA')
+    result.update(trl_version=data['trl_version'],
+                  save_safetensors_parameter=data['save_safetensors_parameter'],
+                  missing_required_kwargs=data['missing_required_kwargs'])
+    if data['missing_required_kwargs']:
+        result['status'] = 'HOLD_REQUIRED_SFTCONFIG_KWARGS_UNSUPPORTED'
+    elif data['save_safetensors_parameter']:
+        result['status'] = 'SIGNATURE_ACCEPTS_LEGACY_SAVE_SAFETENSORS'
+    else:
+        result['status'] = 'LEGACY_TRUE_REQUIRES_SAFE_OMISSION'
+    return result
+
+
+def pinned_sftconfig_signature_probe(py):
+    """Inspect original pinned Python without any model/optimizer construction."""
+    if (str(py) != '/root/venv_volta/bin/python' or
+            py.is_symlink() or not py.is_file()):
+        return {'record': 'pinned_trl_sftconfig_signature',
+                'scope': 'READ_ONLY_SIGNATURE_NO_TRAINER',
+                'status': 'HOLD_PINNED_NATIVE_PYTHON_MISSING',
+                'constructor_executed': False, 'optimizer_updates': 0}
+    # Constructing SFTConfig() may initialise devices; inspect only its real
+    # installed signature. A passed signature is not a live training test.
+    code = """
+import inspect, importlib.metadata, json
+from trl import SFTConfig
+required = %r
+parameters = inspect.signature(SFTConfig).parameters
+accepted = {key for key, value in parameters.items()
+            if value.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                              inspect.Parameter.KEYWORD_ONLY)}
+print('NOX_SFTCONFIG_SIGNATURE=' + json.dumps({
+  'schema': 'NOX_SFTCONFIG_NATIVE_SIGNATURE_V1',
+  'trl_version': importlib.metadata.version('trl'),
+  'missing_required_kwargs': [key for key in required if key not in accepted],
+  'save_safetensors_parameter': 'save_safetensors' in accepted,
+}, separators=(',', ':')))
+""" % (SFTCONFIG_REQUIRED,)
+    rc, output = run([str(py), '-I', '-c', code], timeout=30)
+    return parse_sftconfig_signature_probe(rc, output)
+
+
 def controls():
     configs=supervisor_config()
     names=['train_qlora_35b_t866u.py','run_train_volta_t866u.sh',
@@ -374,6 +453,7 @@ def controls():
         try:versions=json.loads(output) if rc==0 else {}
         except ValueError:versions={}
         rows.append({'record':'installed_package_versions','python':str(py),'rc':rc,'versions':versions})
+        rows.append(pinned_sftconfig_signature_probe(py))
     # Only filenames and selected nonsecret routing fields, never credentials.
     routes=[]
     for p in sorted((ROOT/'config').glob('*.json'))[:120]:
