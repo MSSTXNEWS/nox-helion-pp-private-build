@@ -75,5 +75,16 @@
     "freed_bytes": 0,
     "chat_s03_post_delete": "NOT_APPLICABLE"
   },
-  "next_step": "Confirm exact GitHub CI; original owner-authorized read-only STOP, Drive server OAuth, allocated capacity, independent S03/optimizer restore and cleanup lease; then only exact proven duplicates or missing DeepSeek parts."
+  "next_step": "Confirm exact GitHub CI; original owner-authorized read-only STOP, Drive server OAuth, allocated capacity, independent S03/optimizer restore and cleanup lease; then only exact proven duplicates or missing DeepSeek parts.",
+  "source_ci_first_run": {
+    "run_id": 43813278606,
+    "status": "RED",
+    "error": "Python syntax error because JS String.replace interpreted literal regex $' in replacement as suffix, producing truncated SHA line and duplicate source. No native impact."
+  },
+  "source_ci_repair": {
+    "state": "PENDING_EXACT_SHA_CI",
+    "lesson": "Use replacement callbacks for literal dollar signs in generated code; reject implausible file-size change before Git CAS",
+    "source_bytes_before": 28879,
+    "source_bytes_after": 29445
+  }
 }
