@@ -219,8 +219,12 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
         status='HOLD_MODEL_TARGET_TYPE'
     elif any(r.get('size_status')=='MISMATCH' for r in results):
         status='HOLD_MODEL_FILE_SIZE_MISMATCH'
+    elif any(r['type']=='missing' for r in results):
+        # Missing GGUF files are not an admitted model, even if every readable
+        # pathname was safe. In particular, never report OK for an empty root.
+        status='HOLD_MODEL_FILES_MISSING'
     else:
-        status='OK'  # Metadata was readable; NOT a claim of full weights or SHA verification.
+        status='OK'  # Size/path metadata only; payload SHA and inference still NOT verified.
     return {'status':status,'root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
             'files':results}
 
