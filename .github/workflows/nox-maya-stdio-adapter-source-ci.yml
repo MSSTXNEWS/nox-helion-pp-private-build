@@ -1,0 +1,35 @@
+name: NOX Maya stdio adapter source tests
+
+on:
+  pull_request:
+    paths:
+      - "nox-control/maya_ds4_stdio_adapter_v1.py"
+      - "nox-control/test_maya_ds4_stdio_adapter_v1.py"
+      - ".github/workflows/nox-maya-stdio-adapter-source-ci.yml"
+  push:
+    branches:
+      - "codex/maya-stdio-adapter-05ab-20261116"
+    paths:
+      - "nox-control/maya_ds4_stdio_adapter_v1.py"
+      - "nox-control/test_maya_ds4_stdio_adapter_v1.py"
+      - ".github/workflows/nox-maya-stdio-adapter-source-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile and run mock-process tests
+        run: |
+          python -m py_compile nox-control/maya_ds4_stdio_adapter_v1.py nox-control/test_maya_ds4_stdio_adapter_v1.py
+          cd nox-control
+          python -m unittest -v test_maya_ds4_stdio_adapter_v1
+      - name: Mark runtime boundary
+        run: echo "SOURCE_TESTED only. No Maya process, model, GPU, V112 bridge, HTTP listener, or deployment."
