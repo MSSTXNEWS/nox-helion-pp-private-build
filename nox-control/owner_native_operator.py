@@ -35,6 +35,14 @@ def run_native(action,request_id):
     values=s.api('GET','/instances/',key)
     values=values.get('instances',values) if isinstance(values,dict) else values
     target=next((x for x in values if isinstance(x,dict) and str(x.get('id'))==str(INSTANCE)),None) if isinstance(values,list) else None
+    def public_state(value):
+        return value if isinstance(value,str) and re.fullmatch('[a-zA-Z0-9_-]{1,40}',value) else None
+    print('NOX_MAINT_INSTANCE_STATE='+json.dumps({'instance':INSTANCE,'found':target is not None,
+        'actual_status':public_state(target.get('actual_status')) if target else None,
+        'intended_status':public_state(target.get('intended_status')) if target else None,
+        'cur_state':public_state(target.get('cur_state')) if target else None,
+        'num_gpus':int(str(target.get('num_gpus'))) if target and re.fullmatch('[0-9]{1,2}',str(target.get('num_gpus'))) else None,
+        'read_only_provider_lookup':True,'provider_mutations':0},sort_keys=True),flush=True)
     if not target or target.get('actual_status')!='running' or str(target.get('num_gpus'))!='2':raise RuntimeError('HOLD_EXACT_RUNNING_INSTANCE')
     ip=target.get('public_ipaddr')
     if not ipaddress.ip_address(ip).is_global:raise RuntimeError('HOLD_INSTANCE_ROUTE')
