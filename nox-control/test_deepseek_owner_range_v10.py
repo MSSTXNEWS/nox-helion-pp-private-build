@@ -65,6 +65,17 @@ class DeepSeekP0Offline(unittest.TestCase):
         d=json.loads(self.lease.read_text());d['request_id']='different'
         self.lease.write_text(json.dumps(d))
         with self.assertRaisesRegex(m.Hold,'ORIGINAL_LEASE'):self.do()
+    def test_lease_parent_traversal_fails_before_file_read(self):
+        # A same-owner forged JSON outside dispatcher was admitted by a
+        # raw string-prefix path check with dispatcher/../forged.json.
+        forged=self.root/'state'/'forged.json'
+        forged.write_bytes(self.lease.read_bytes());forged.chmod(0o600)
+        escaped=self.root/'state'/'dispatcher'/'..'/'forged.json'
+        with self.assertRaisesRegex(m.Hold,'HOLD_LEASE_ORIGIN'):
+            m.lease(escaped,self.request,time.time(),self.root)
+    def test_lease_absolute_origin_is_mandatory(self):
+        with self.assertRaisesRegex(m.Hold,'HOLD_LEASE_ORIGIN'):
+            m.lease(Path('state/dispatcher/lease.json'),self.request,time.time(),self.root)
     def test_http_200_cannot_corrupt_partial(self):
         def ignored(request,timeout):
             r=self.opener(request,timeout);r.status=200;return r

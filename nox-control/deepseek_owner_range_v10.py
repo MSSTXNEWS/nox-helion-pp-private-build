@@ -70,7 +70,13 @@ def stop(root):
 def lease(path,request,now,root):
     # Only existing OneHost is authorised to issue this lease. This script cannot create one.
     path=Path(path)
-    require(str(path).startswith(str(root/'state'/'dispatcher')+'/'),'HOLD_LEASE_ORIGIN')
+    # The original OneHost lease must be beneath the actual dispatcher path.
+    # Prefix-only checks admit /state/dispatcher/../forged.json outside the
+    # owner lease directory even though every element is a regular file.
+    base=Path(root)/'state'/'dispatcher'
+    require(path.is_absolute() and '..' not in path.parts and
+            path.parts[:len(base.parts)]==base.parts and len(path.parts)>len(base.parts),
+            'HOLD_LEASE_ORIGIN')
     st=regular(path)
     require(st.st_size<=8192 and not (st.st_mode & 0o077),'HOLD_LEASE_PERMISSIONS')
     d=json.loads(path.read_bytes())
