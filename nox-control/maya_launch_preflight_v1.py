@@ -29,15 +29,21 @@ SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
                          verified_files, tensor_types):
     """Return only SOURCE_ONLY_* or HOLD; this function has no launch action."""
-    if stop_present:
+    # Only an explicit owner-confirmed False may pass this source gate.
+    if stop_present is not False:
         return {"state": "HOLD_OWNER_STOP", "launchable": False}
-    if tuple(gpu_ids) != (0, 1) or tp != 2:
+    if (not isinstance(gpu_ids, (list, tuple)) or len(gpu_ids) != 2 or
+            any(type(x) is not int for x in gpu_ids) or tuple(gpu_ids) != (0, 1) or
+            type(tp) is not int or tp != 2):
         return {"state": "HOLD_TWO_V100_TP2_REQUIRED", "launchable": False}
     if type(max_context) is not int or not 1 <= max_context <= 65536:
         return {"state": "HOLD_CONTEXT_EXPLICIT_OR_TOO_LARGE", "launchable": False}
     if type(reserve_mib) is not int or reserve_mib <= 0:
         return {"state": "HOLD_POSITIVE_MEMORY_RESERVE_REQUIRED", "launchable": False}
-    if not isinstance(verified_files, (tuple, list)) or len(verified_files) != len(EXPECTED_FILES) or any(not isinstance(row, dict) for row in verified_files):
+    if (not isinstance(verified_files, (tuple, list)) or
+            len(verified_files) != len(EXPECTED_FILES) or
+            any(not isinstance(row, dict) or not isinstance(row.get("path"), str)
+                for row in verified_files)):
         return {"state": "HOLD_ALL_FIVE_SHARDS_AND_ENGRAM_REQUIRED", "launchable": False}
     rows = {row.get("path"): row for row in verified_files}
     if set(rows) != set(EXPECTED_FILES) or len(rows) != len(verified_files):
@@ -46,6 +52,9 @@ def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
            or row.get("sha256") != PINNED_FILE_FACTS[name][1]
            or row.get("sha_verified") is not True for name, row in rows.items()):
         return {"state": "HOLD_SIZE_OR_SHA256_UNVERIFIED", "launchable": False}
+    if (not isinstance(tensor_types, (list, tuple, set, frozenset)) or
+            any(not isinstance(t, str) for t in tensor_types)):
+        return {"state": "HOLD_UNCONFIRMED_TENSOR_KERNEL", "launchable": False}
     types = frozenset(tensor_types)
     unknown = sorted(types - SUPPORTED_TYPES)
     if not types or unknown:
