@@ -133,6 +133,46 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn('private upstream detail',wire)
             self.assertNotIn('_agent_final',payload)
 
+    async def test_post_terminal_delta_or_repeated_finish_cannot_certify_s03(self):
+        # An upstream completion frame is terminal. A trailing token or a
+        # repeated finish must not be mistaken for a complete saved answer.
+        trailing=(
+            frame('late after stop'),
+            frame(finish='stop'),
+            frame(calls=[{'index':0,'id':'late','type':'function',
+                          'function':{'name':'calculate','arguments':'{}'}}]),
+        )
+        for unwanted in trailing:
+            with self.subTest(unwanted=unwanted):
+                chunks=Chunks([frame('early'),frame(finish='stop'),unwanted,
+                               b'data: [DONE]\\n\\n'])
+                _,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'¿Prueba?'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'¿Prueba?',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn('HOLD_MODEL_POST_TERMINAL_DELTA',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertTrue(chunks.closed)
+
+    async def test_usage_only_after_terminal_still_completes_normally(self):
+        usage=b'data: {"choices":[],"usage":{"completion_tokens":1}}\\n\\n'
+        chunks=Chunks([frame('¡Respuesta!'),frame(finish='stop'),usage,
+                       b'data: [DONE]\\n\\n'])
+        _,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Responde'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Responde',True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertEqual(payload['_agent_final'],'¡Respuesta!')
+        self.assertIn('[DONE]',wire)
+        self.assertTrue(chunks.closed)
+
     async def test_disconnect_does_not_save_or_fabricate_terminal(self):
         gate=asyncio.Event();chunks=Chunks([frame('Partial'),frame(finish='stop')],gate)
         _,factory=self.transport([chunks])
