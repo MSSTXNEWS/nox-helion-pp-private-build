@@ -277,4 +277,30 @@ class MediaInstallTests(unittest.TestCase):
         run.assert_not_called()
 
 
+    def test_v13_manual_stop_prevents_media_activation_before_lease(self):
+        # Under V13, source/media preparation is allowed, but service activation
+        # must never override a manual STOP or acquire GPU/engine leases.
+        for name, symbolic in (
+                ('STOP', False), ('state/MEDIA_STOP.flag', False),
+                ('STOP.flag', True), ('program/STOP', False)):
+            with self.subTest(marker=name):
+                marker = self.root / name
+                marker.parent.mkdir(parents=True, exist_ok=True)
+                if symbolic:
+                    marker.symlink_to(self.root / 'missing-marker-target')
+                else:
+                    marker.write_text('OWNER STOP')
+                with mock.patch.object(m, 'lock') as engine_lock, \
+                     mock.patch.object(m, 'gpu_lease') as lease, \
+                     mock.patch.object(m, 'health_chat') as chat_health, \
+                     mock.patch.object(m, 'service_status') as supervisor:
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_MEDIA_OWNER_STOP_PRESENT'):
+                        m.start_engine({'engine_root': str(self.root / 'media')})
+                    engine_lock.assert_not_called()
+                    lease.assert_not_called()
+                    chat_health.assert_not_called()
+                    supervisor.assert_not_called()
+                marker.unlink()
+
+
 if __name__=='__main__': unittest.main()
