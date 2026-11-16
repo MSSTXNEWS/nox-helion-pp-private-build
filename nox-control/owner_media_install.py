@@ -659,7 +659,33 @@ def service_status():
     return {'state':match[1] if match else 'UNKNOWN','pid':int(match[2]) if match and match[2] else None}
 
 
+def v13_owner_stop_present():
+    """Fail closed on owner NOX STOP during V13 pre-production staging.
+
+    File presence is a veto, including symlinks and unreadable marker paths.
+    Only the existing owner cutover process may remove STOP; this helper never
+    changes owner flags, maintenance leases or service state.
+    """
+    markers = [ROOT / part for part in (
+        'STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
+        'state/STOP', 'state/MEDIA_STOP.flag')]
+    markers.append(Path('/workspace/NOX_STOP'))
+    for marker in markers:
+        try:
+            marker.lstat()
+            return True
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return True
+    return False
+
+
 def start_engine(config):
+    # Native media setup is allowed offline; activation is NOT allowed under
+    # the owner's global MODEL_UPDATE/STOP. Do this before taking any GPU lock.
+    if v13_owner_stop_present():
+        fail('HOLD_MEDIA_OWNER_STOP_PRESENT')
     with lock('media.lock'),gpu_lease():
         if not plain(ROOT/'state/TRAIN_HOLD.flag').is_file(): fail('HOLD_MEDIA_TRAINING_MUST_YIELD')
         health_chat()
