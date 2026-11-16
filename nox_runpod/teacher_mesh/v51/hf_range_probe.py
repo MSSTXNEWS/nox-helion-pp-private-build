@@ -31,9 +31,12 @@ def _pin(path: str, size: int, sha256: str) -> dict:
     }
 
 
-# Hugging Face API tree metadata (expand=true) at _REVISION.
-# Shard 00005 is included once, unchanged, to anchor the existing coldpack file.
+# HF expanded repository tree metadata (expand=true) at _REVISION.
+# The IQ2_XXS backbone is shards 1-5; shard 00005 is included exactly once
+# because it is already present in the coldpack. Engram is a single shared file.
 PINNED_SOURCES = (
+    _pin("DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+         5780704, "f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9"),
     _pin("DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
          39535781184, "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3"),
     _pin("DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
