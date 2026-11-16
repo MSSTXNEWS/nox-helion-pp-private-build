@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from test_maya_binary_attestation_v1 import MayaBinaryAttestationTests  # noqa: F401
+
 HERE = Path(__file__).parent
 PLAN_SPEC = importlib.util.spec_from_file_location(
     "maya_launch_preflight_v1", HERE / "maya_launch_preflight_v1.py")
