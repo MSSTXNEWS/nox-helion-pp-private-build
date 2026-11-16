@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 NVIDIA_SMI = "/usr/bin/nvidia-smi"
 MIN_GPU_TOTAL_BYTES = 30 * 1024 ** 3
 MAX_QUERY_SECONDS = 10.0
-UUID_PATTERN = re.compile(r"GPU-[0-9A-Fa-f-]{8,}\\Z")
+UUID_PATTERN = re.compile(r"GPU-[0-9A-Fa-f-]{8,}\Z")
 QUERY = (
     "--query-gpu=index,uuid,name,compute_cap,memory.total,memory.free",
     "--format=csv,noheader,nounits",
