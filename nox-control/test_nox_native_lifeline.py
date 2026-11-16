@@ -234,7 +234,7 @@ class LifelineTests(unittest.TestCase):
             def native(argv, **kwargs):
                 observed.append(argv)
                 return type("Result", (), {"returncode": 1,
-                    "stdout": "nox-dispatcher-t855u STOPPED Not started\\n"})()
+                    "stdout": "nox-dispatcher-t855u STOPPED Not started\n"})()
             with patch.object(lifeline.subprocess, "run", side_effect=native):
                 for n in range(4):
                     result = lifeline.tick(policy(), s, now=100+n,
@@ -246,7 +246,7 @@ class LifelineTests(unittest.TestCase):
     def test_nonzero_status_running_output_is_not_health_proof(self):
         with patch.object(lifeline.subprocess, "run") as run:
             run.return_value.returncode = 2
-            run.return_value.stdout = "nox-dispatcher-t855u RUNNING pid 123, uptime 0:00:10\\n"
+            run.return_value.stdout = "nox-dispatcher-t855u RUNNING pid 123, uptime 0:00:10\n"
             observed = lifeline.supervise("nox-dispatcher-t855u")
             self.assertEqual(observed, {"state": "UNKNOWN", "pid": None, "rc": 2})
 
@@ -257,7 +257,7 @@ class LifelineTests(unittest.TestCase):
             def native(argv, **kwargs):
                 seen.append(argv)
                 return type("Result", (), {"returncode": 0,
-                    "stdout": "nox-dispatcher-t855u EXITED pid 7637, uptime 0:01:00\\n"})()
+                    "stdout": "nox-dispatcher-t855u EXITED pid 7637, uptime 0:01:00\n"})()
             with patch.object(lifeline.subprocess, "run", side_effect=native):
                 for n in range(4):
                     result = lifeline.tick(policy(), s, now=100+n,
@@ -330,7 +330,7 @@ class LifelineTests(unittest.TestCase):
 
     def test_supervisor_nonzero_rc_never_reports_running_from_stdout(self):
         with patch.object(lifeline.subprocess, "run") as run:
-            run.return_value.stdout = "nox-dispatcher-t855u RUNNING pid 123, uptime 0:01:00\\n"
+            run.return_value.stdout = "nox-dispatcher-t855u RUNNING pid 123, uptime 0:01:00\n"
             run.return_value.returncode = 1
             status = lifeline.supervise("nox-dispatcher-t855u")
             self.assertEqual(status, {"state": "UNKNOWN", "pid": None, "rc": 1})
@@ -367,6 +367,29 @@ class LifelineTests(unittest.TestCase):
             with patch.object(lifeline.os, "lstat", side_effect=PermissionError("denied")):
                 self.assertTrue(lifeline.stopped())
 
+
+    def test_malformed_supervisor_pid_cannot_authorize_automatic_restart(self):
+        with tempfile.TemporaryDirectory() as d:
+            state = self.state(d)
+            seen = []
+            def native(argv, **kwargs):
+                seen.append(argv)
+                return type("Result", (), {"returncode": 0,
+                    "stdout": "nox-dispatcher-t855u STOPPED pid unknown, uptime 0:00:01\n"})()
+            with patch.object(lifeline.subprocess, "run", side_effect=native):
+                for t in range(3):
+                    report = lifeline.tick(policy(), state, now=100+t,
+                        status_fn=lifeline.supervise, stop_fn=lambda: False)
+            self.assertEqual(report["results"][0]["action"], "owner_investigation_required")
+            self.assertEqual(state["services"]["nox-dispatcher-t855u"]["attempts"], [])
+            self.assertTrue(all(cmd[1] == "status" for cmd in seen))
+            self.assertFalse(Path(d, "state.json").exists())
+
+    def test_normal_stopped_description_remains_repairable_observation(self):
+        with patch.object(lifeline.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = "nox-dispatcher-t855u STOPPED Not started\n"
+            self.assertEqual(lifeline.supervise("nox-dispatcher-t855u")["state"], "STOPPED")
 
 if __name__=="__main__":
     unittest.main()
