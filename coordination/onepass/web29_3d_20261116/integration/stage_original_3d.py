@@ -62,7 +62,7 @@ def stage(src: Path, overlay: Path, dest: Path):
    source=overlay / Path(path).name
    if not source.is_file():raise RuntimeError('HOLD_MISSING_3D_ASSET_'+str(source))
    changes[path]=source.read_bytes()
-  expected={'site/nox-motion-idle-loader.js':'3c7c2d9cce1b18e7ed825981b0c01ee19da2e240','site/nox-cinematic-accessibility-3d.css':'682b90bf6c3d6c0092752d67386f743e6f274cbb'}
+  expected={'site/nox-motion-idle-loader.js':'3c7c2d9cce1b18e7ed825981b0c01ee19da2e240','site/nox-cinematic-accessibility-3d.css':'d65629a3e35894899a4a3cd983f2499918919030'}
   for path,digest in expected.items():
    data=changes[path]
    git_blob=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
@@ -84,7 +84,7 @@ def stage(src: Path, overlay: Path, dest: Path):
    os.replace(tmp,dest)
   finally:
    if os.path.exists(tmp):os.unlink(tmp)
- return {'schema':'NOX_WEB29_3D_SOURCE_STAGE_V1','status':'SOURCE_ONLY_NOT_ONEHOST_DEPLOY','input_sha256':sha(src.read_bytes()),'output_sha256':sha(dest.read_bytes()),'output_bytes':dest.stat().st_size,'original_members':len(names),'output_members':len(names)+2,'modified_original_paths':list(REPLACE),'added_assets':list(ASSETS),'all_unrelated_original_bytes_identical':True,'D02_14_worlds_sha_verified':True,'native_browser_test':'HOLD_ADMIN_BLOCK','native_SSE_STOP_S03':'HOLD_NOT_CONNECTED'}
+ return {'schema':'NOX_WEB29_3D_SOURCE_STAGE_V1','status':'SOURCE_ONLY_NOT_ONEHOST_DEPLOY','input_sha256':sha(src.read_bytes()),'output_sha256':sha(dest.read_bytes()),'output_bytes':dest.stat().st_size,'original_members':len(names),'output_members':len(names)+2,'modified_original_paths':list(REPLACE),'modified_original_paths_scope':'relative to selected approved source preimage; not necessarily primary WEB29 MAIN','added_assets':list(ASSETS),'all_unrelated_original_bytes_identical':True,'D02_14_worlds_sha_verified':True,'native_browser_test':'HOLD_ADMIN_BLOCK','native_SSE_STOP_S03':'HOLD_NOT_CONNECTED'}
 
 if __name__=='__main__':
  parser=argparse.ArgumentParser()
