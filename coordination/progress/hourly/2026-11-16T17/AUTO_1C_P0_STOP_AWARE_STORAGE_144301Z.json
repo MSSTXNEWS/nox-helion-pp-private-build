@@ -9,7 +9,7 @@
   "old_test_blob": "e64d9364bdac17f59d72aa461b63349590f04779",
   "root_cause": "DeepSeek storage metadata-only admission wrongly invoked assert_owner_stop_clear(), preventing read-only capacity inspection under intentional OWNER_MODEL_UPDATE STOP.",
   "fix": "Read-only metadata/stat/capacity inspection allowed under observed STOP/maintenance, but full SHA/mmap remains fail-closed; observed flags are not an authorization or native lease.",
-  "tests": "Two new isolated Python regression cases in existing cold-drive suite; CI pending",
+  "tests": "84/84 existing cold drive + 2 STOP/maintenance regressions PASS on exact source SHA; SOURCE ONLY",
   "rollback": "CAS revert only exact source and test blobs after checking descendants",
   "native": {
     "owner_stop_last_verified_at": "2026-11-16T13:54:56Z",
@@ -22,12 +22,12 @@
   "five_tasks": [
     {
       "id": "S2-07",
-      "status": "SOURCE_TESTED_PENDING_CI_NATIVE_HOLD",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
       "cause": "OWNER_MODEL_UPDATE metadata gate"
     },
     {
       "id": "S2-STORAGE-CAPACITY",
-      "status": "SOURCE_TESTED_PENDING_CI_NATIVE_HOLD",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
       "cause": "no fresh native capacity"
     },
     {
@@ -60,5 +60,21 @@
     "deleted_bytes_this_slot": 0,
     "restarts_this_slot": 0
   },
-  "next": "Owner-auth original instance read-only STOP/maintenance, mount/quota, exact shards; verified seekable 248834257920B plus reserve and restore, then lease-bounded staging and Maya/SSE acceptance. Keep STOP; do not restart Qwen."
+  "next": "Owner-auth original instance read-only STOP/maintenance, mount/quota, exact shards; verified seekable 248834257920B plus reserve and restore, then lease-bounded staging and Maya/SSE acceptance. Keep STOP; do not restart Qwen.",
+  "source_ci": {
+    "scope": "SOURCE_TESTED_OFFLINE_FIXTURES",
+    "status": "SUCCESS",
+    "tests_passed": 84,
+    "tests_total": 84,
+    "workflow_run_id": 43888715815,
+    "job_id": 133373770350,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43888715815",
+    "validated_source_sha": "26482eab4f8f51afd0fd75b1e2756dedbae17491",
+    "new_regression_tests": [
+      "test_owner_stop_readonly_metadata_not_full_sha",
+      "test_owner_model_update_maintenance_does_not_authorize_full_scan"
+    ],
+    "verified_at_utc": "2026-11-16T14:47:43.165Z"
+  },
+  "overall": "SOURCE_TESTED_NATIVE_HOLD"
 }
