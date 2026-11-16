@@ -176,6 +176,40 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertFalse(rows[0]['verified'])
         self.assertEqual(rows[0]['verification_scope'],'SHA_UNCHECKED')
 
+    def test_full_model_capacity_blocks_a_partial_download_before_network(self):
+        # Current shard fits (16 B < 35 B), but other pinned shards cannot.
+        # Per-shard admission alone could strand the model on an undersized disk.
+        from types import SimpleNamespace
+        other = 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf'
+        tiny = {self.name: (len(self.content), self.row['sha256']),
+                other: (25, 'a' * 64)}
+        vfs = SimpleNamespace(f_bavail=35, f_frsize=1, f_blocks=120)
+        with patch.object(m, 'PINNED_FILE_FACTS', tiny), \
+             patch.object(m, 'MIN_MODEL_VOLUME_BYTES', 50), \
+             patch.object(m, 'RESERVE', 0), \
+             patch.object(m.os, 'statvfs', return_value=vfs):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_STORAGE_INSUFFICIENT_FOR_COMPLETE_MODEL'):
+                self.do(opener=lambda *a, **k: self.fail('network must not start'))
+        self.assertFalse((self.dst / (self.name + '.part')).exists())
+
+    def test_full_model_capacity_allows_already_allocated_partial_resume(self):
+        from types import SimpleNamespace
+        other = 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf'
+        tiny = {self.name: (len(self.content), self.row['sha256']),
+                other: (25, 'a' * 64)}
+        part = self.dst / (self.name + '.part')
+        part.write_bytes(self.content[:8])
+        # 8 existing bytes are allocated, leaving 8+25 = 33 B of growth.
+        vfs = SimpleNamespace(f_bavail=35, f_frsize=1, f_blocks=120)
+        with patch.object(m, 'PINNED_FILE_FACTS', tiny), \
+             patch.object(m, 'MIN_MODEL_VOLUME_BYTES', 50), \
+             patch.object(m, 'RESERVE', 0), \
+             patch.object(m.os, 'statvfs', return_value=vfs):
+            result = self.do(limit=8)
+        self.assertEqual(result['state'], 'VERIFIED_FINAL')
+        self.assertEqual(result['new_bytes'], 8)
+        self.assertEqual((self.dst / self.name).read_bytes(), self.content)
+
     def test_owner_stop_prevents_transfer(self):
         (self.root/'STOP').touch()
         with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):self.do()
