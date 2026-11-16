@@ -1,0 +1,572 @@
+{
+  "schema": "NOX_COMPONENT_DOWNLOAD_STATUS_V1",
+  "status": "COMPLETED_VERIFIED",
+  "verified_at": "2026-11-16T03:04:13.606282+00:00",
+  "scope": "main component pack and training wheelhouse only",
+  "folders": [
+    {
+      "group": "main",
+      "folder_id": "1bTf6pYSghj6rG7KslA34Vjqkc3OakVb2",
+      "archive": "NOX_24H_STARTER_KIT_20261116.zip",
+      "archive_bytes": 331718151,
+      "archive_sha256": "e1a48952fafbd8c7a0a64deb4ea645fd328b5d726c0317e1d2d323f4198c8290",
+      "folder_url": "https://drive.google.com/drive/folders/1bTf6pYSghj6rG7KslA34Vjqkc3OakVb2",
+      "files_verified": 7,
+      "parts_verified": 4,
+      "shared": false,
+      "all_downloadable": true,
+      "duplicates": 0
+    },
+    {
+      "group": "training",
+      "folder_id": "1q1qR71IiOU7LsGAYjPiIbYAN5PrffDNX",
+      "archive": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip",
+      "archive_bytes": 3831295823,
+      "archive_sha256": "7f1b932f38df0872ee21e009eb8f3005da5eb99b662a372dcb389e8d4e056b95",
+      "folder_url": "https://drive.google.com/drive/folders/1q1qR71IiOU7LsGAYjPiIbYAN5PrffDNX",
+      "files_verified": 45,
+      "parts_verified": 39,
+      "shared": false,
+      "all_downloadable": true,
+      "duplicates": 0
+    }
+  ],
+  "objects": [
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.001",
+      "drive_id": "1sU31Vfl8hJNIF09wFC7PI1TxYr30DrEI",
+      "url": "https://drive.google.com/file/d/1sU31Vfl8hJNIF09wFC7PI1TxYr30DrEI/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "187c870cf0f572eba8ff8983574969ef5e505fb538f598523dea2ed4390b7665",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.002",
+      "drive_id": "10c0nocfhWm8suEZMoW2LPwcrfWw-RU7b",
+      "url": "https://drive.google.com/file/d/10c0nocfhWm8suEZMoW2LPwcrfWw-RU7b/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "9310825b06529b869acdcd66bae23e0a50080c7e410f45459f2b7e5c694ebd24",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.003",
+      "drive_id": "1tWquwFuJyiCtz3DNOSBkVKxtPsTzBD09",
+      "url": "https://drive.google.com/file/d/1tWquwFuJyiCtz3DNOSBkVKxtPsTzBD09/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "875722f6feb36dbf1c21a072aa75279163b8dac1a781c80205ff32e46f0135e8",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.004",
+      "drive_id": "1Q2Ql3Vgli1thJHDfypC56OCEtJgJwG1N",
+      "url": "https://drive.google.com/file/d/1Q2Ql3Vgli1thJHDfypC56OCEtJgJwG1N/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "6c4e2dd50c1106f39147d4962c6364e9c5ce7adb4555ad80788da31182d18f87",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.005",
+      "drive_id": "1v5KlHbIAbeaH7Jn3KTOH8qOANs4gQ_Db",
+      "url": "https://drive.google.com/file/d/1v5KlHbIAbeaH7Jn3KTOH8qOANs4gQ_Db/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "1a5ba929609e75c2ca90d71328152ff6aaee91736bb63c0a08f899b185977c59",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.006",
+      "drive_id": "13y9jYPWn57YZdsFQwuOIVSwESw20JSwY",
+      "url": "https://drive.google.com/file/d/13y9jYPWn57YZdsFQwuOIVSwESw20JSwY/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "23b3f603cc3ed571517624666c6980654121f199a37a92a9cb0a7923d88ea6ca",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.007",
+      "drive_id": "1HBUad3NvA_93iWKJV1XYQBQ7YTdHuGYQ",
+      "url": "https://drive.google.com/file/d/1HBUad3NvA_93iWKJV1XYQBQ7YTdHuGYQ/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "3c1aa582f025e0b8910e7e0404162ea5b8d5ae4d181632ba6477e4f3dfb5cec5",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.008",
+      "drive_id": "1nz6641jbpvRczt-tI0HmecEWIb4z5aLd",
+      "url": "https://drive.google.com/file/d/1nz6641jbpvRczt-tI0HmecEWIb4z5aLd/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "deed17c491180b27ba2bc50e748b9cd5d9585679d6630008abdb6892ed5f708f",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.009",
+      "drive_id": "1gdhSjIW_v194D8O8fJZHIut2JvB3ytfg",
+      "url": "https://drive.google.com/file/d/1gdhSjIW_v194D8O8fJZHIut2JvB3ytfg/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "f7fac84d9cffd00043d25b8d35718648bb272db29680205d603f6e9f8e17022f",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.010",
+      "drive_id": "1gZYbyPgKSOJw4_3sN_oN8ImlKqpWJWNO",
+      "url": "https://drive.google.com/file/d/1gZYbyPgKSOJw4_3sN_oN8ImlKqpWJWNO/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "673b11da9e8d1f5929493bf3da42ba33948c03b9ddac56aaf7bdf7532f223333",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.011",
+      "drive_id": "1IXohkLr6MKbZYWibtsy2jm93z28PkO5n",
+      "url": "https://drive.google.com/file/d/1IXohkLr6MKbZYWibtsy2jm93z28PkO5n/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "4da992aa8699c3df3b94157972e6f1dc701fa41be99324d0ab7473c7b93fbb1a",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "main",
+      "file": "NOX_24H_STARTER_KIT_20261116.zip.001",
+      "drive_id": "1ErUA9ezoPINpHtugANfI0T3YWagF3cxw",
+      "url": "https://drive.google.com/file/d/1ErUA9ezoPINpHtugANfI0T3YWagF3cxw/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "75cceba95e84689a96881879d174c403dad6d275a6f4abe3046c404bbe4a8916",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "main",
+      "file": "NOX_24H_STARTER_KIT_20261116.zip.002",
+      "drive_id": "1EQJhG6cNl2roQ7pjLlPBt5UYenx3DpRV",
+      "url": "https://drive.google.com/file/d/1EQJhG6cNl2roQ7pjLlPBt5UYenx3DpRV/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "c61ac7299217b215880473c97fa2016f9edb008df538cdc0daf994583fa98e24",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "main",
+      "file": "NOX_24H_STARTER_KIT_20261116.zip.003",
+      "drive_id": "1RN6L3-FIEL1-Uk3migP18IdduNzDx32u",
+      "url": "https://drive.google.com/file/d/1RN6L3-FIEL1-Uk3migP18IdduNzDx32u/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "4c9bf75053048382f36cfbcfca44e5e5e98fe86f26555c9cd27bae6b7c119219",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "main",
+      "file": "NOX_24H_STARTER_KIT_20261116.zip.004",
+      "drive_id": "1XbSyrNKQ1-yumH1SEQwIdQ4yNOq5bKlh",
+      "url": "https://drive.google.com/file/d/1XbSyrNKQ1-yumH1SEQwIdQ4yNOq5bKlh/view?usp=drivesdk",
+      "bytes": 31718151,
+      "local_source_sha256": "66aeb033b78d3d3d8ae8f5f758c4403c881d951bfd38fe9154f9ca9e758c5e1a",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "main",
+      "file": "parts_manifest.json",
+      "drive_id": "1h479rBz2iQwAzfmEyfSNAFAct2J6B0kg",
+      "url": "https://drive.google.com/file/d/1h479rBz2iQwAzfmEyfSNAFAct2J6B0kg/view?usp=drivesdk",
+      "bytes": 1072,
+      "local_source_sha256": "9fcb939e6a0c9647d939d6a9f12a3d38e4d5544fd84492473c99d6e26bdbecbb",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "main",
+      "file": "assemble_download_parts.py",
+      "drive_id": "1uNEOPV4LlZPB5GAWb5wGSj8m6acGllFR",
+      "url": "https://drive.google.com/file/d/1uNEOPV4LlZPB5GAWb5wGSj8m6acGllFR/view?usp=drivesdk",
+      "bytes": 4574,
+      "local_source_sha256": "f07fa488d4802ff87ffa1a8d4c781c8b7eaaaa160b8f67fee82a9803d75d2a72",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "main",
+      "file": "README_ASSEMBLY_RU.txt",
+      "drive_id": "15XPtiEX71nEV08STwlyC_pe96V70r4-4",
+      "url": "https://drive.google.com/file/d/15XPtiEX71nEV08STwlyC_pe96V70r4-4/view?usp=drivesdk",
+      "bytes": 553,
+      "local_source_sha256": "ffb45b7575be105b74c53842c3533d765a6784b921e93e43c8f486e941b4ed3f",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.012",
+      "drive_id": "1T9tUD79DQv8NYyca1kf8WndkwFkMMHDK",
+      "url": "https://drive.google.com/file/d/1T9tUD79DQv8NYyca1kf8WndkwFkMMHDK/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "8834db2fcca239c1d43f2611cc7d0515de37f7b2c3c2ec86362b3ab489718014",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.013",
+      "drive_id": "1T3FR7DQ5UmMAXsXjnC_d-ly7HdgLxH1B",
+      "url": "https://drive.google.com/file/d/1T3FR7DQ5UmMAXsXjnC_d-ly7HdgLxH1B/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "04bb33e5a739fe1caa47cdce07bb2ecea6b10980a4b65c934236010cf737f6f4",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.014",
+      "drive_id": "17_5ZIvDoIjXfccyRV8jV5Q-r4W9GQ9sZ",
+      "url": "https://drive.google.com/file/d/17_5ZIvDoIjXfccyRV8jV5Q-r4W9GQ9sZ/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "9807cd5d5239ddad28abadf06727a013b4fbb4766c1d8453da09a95568960ea6",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.015",
+      "drive_id": "1L8bT7OZkZ8EmDYtklgzG8oyiNrgHzGxr",
+      "url": "https://drive.google.com/file/d/1L8bT7OZkZ8EmDYtklgzG8oyiNrgHzGxr/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "4d857c5cc90989e8088f3fc43c98e73ce2ba8c58fb25c738dae61cfc21259484",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.016",
+      "drive_id": "1Q3-pOf-u5ZAMGMqeldZeyYmg56UJ_Rtc",
+      "url": "https://drive.google.com/file/d/1Q3-pOf-u5ZAMGMqeldZeyYmg56UJ_Rtc/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "ed1fcec8862287ea63771c4c89f905960b444402900745c5d14463d6daa68521",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.017",
+      "drive_id": "15qvUY65OzYkEfWkZ-Nnoq6XERxTSfRWn",
+      "url": "https://drive.google.com/file/d/15qvUY65OzYkEfWkZ-Nnoq6XERxTSfRWn/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "2483f14f30a2723609a109b43ee9e2da28320926cfdbaa3122b8ef99caaa3641",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "parts_manifest.json",
+      "drive_id": "1oxmS0ZiboacyGmHG_OJ49FyoouNVjGRf",
+      "url": "https://drive.google.com/file/d/1oxmS0ZiboacyGmHG_OJ49FyoouNVjGRf/view?usp=drivesdk",
+      "bytes": 7754,
+      "local_source_sha256": "fcb0ece8b321b5c170723466d8e9731b8348c8dfbd135928b9c923861850c2dd",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "training",
+      "file": "assemble_download_parts.py",
+      "drive_id": "1AIHN3FrlqrrvjGDieg8iLMmudZNELaa5",
+      "url": "https://drive.google.com/file/d/1AIHN3FrlqrrvjGDieg8iLMmudZNELaa5/view?usp=drivesdk",
+      "bytes": 4574,
+      "local_source_sha256": "f07fa488d4802ff87ffa1a8d4c781c8b7eaaaa160b8f67fee82a9803d75d2a72",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "training",
+      "file": "README_ASSEMBLY_RU.txt",
+      "drive_id": "1qD_zSR7d2xHJ-cAmjP4_xp4ujK1U3oKh",
+      "url": "https://drive.google.com/file/d/1qD_zSR7d2xHJ-cAmjP4_xp4ujK1U3oKh/view?usp=drivesdk",
+      "bytes": 553,
+      "local_source_sha256": "ffb45b7575be105b74c53842c3533d765a6784b921e93e43c8f486e941b4ed3f",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "training",
+      "file": "training_wheelhouse_manifest.json",
+      "drive_id": "1qQDxR5ulyu0jBpVKrno5KoryRDlglco4",
+      "url": "https://drive.google.com/file/d/1qQDxR5ulyu0jBpVKrno5KoryRDlglco4/view?usp=drivesdk",
+      "bytes": 145340,
+      "local_source_sha256": "58795a1d71d32aa390b6765fd97c64639832b3672a5726dae9820ab2e20cca3d",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "training",
+      "file": "requirements-cp311-linux-cu126.lock",
+      "drive_id": "1vFCkJ-1k7vuaVo_WqOpdfBp0tqlTlQgV",
+      "url": "https://drive.google.com/file/d/1vFCkJ-1k7vuaVo_WqOpdfBp0tqlTlQgV/view?usp=drivesdk",
+      "bytes": 7333,
+      "local_source_sha256": "8484b77f5020abd8e8d62f667845ee5da23684be7b4e738ec8f5833b98f3c362",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "training",
+      "file": "training_wheelhouse_archive.json",
+      "drive_id": "1PHEPKdtI3KqUEER5JSLfs_ISxUNUY79i",
+      "url": "https://drive.google.com/file/d/1PHEPKdtI3KqUEER5JSLfs_ISxUNUY79i/view?usp=drivesdk",
+      "bytes": 1032,
+      "local_source_sha256": "9c29d07bb7e8f5ede607ff450b2ca1123d98e824928cbf8d950a5cee8c97e0ac",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": true
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.018",
+      "drive_id": "1LB7UEM7H5pSRn_0pBgF96Xil_l5tyV9Z",
+      "url": "https://drive.google.com/file/d/1LB7UEM7H5pSRn_0pBgF96Xil_l5tyV9Z/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "3fbf0deb02834c225095fc5eecf1925c59f35ad75e991d95b3e978feb59e5717",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.019",
+      "drive_id": "1SyRJI6Q81ycClJZ-RLlYXMuvYLmowCNe",
+      "url": "https://drive.google.com/file/d/1SyRJI6Q81ycClJZ-RLlYXMuvYLmowCNe/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "44468ecd82ef520165c328f02d65c2c48739c7c927e7ce45ec169cd03a4ad4ed",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.020",
+      "drive_id": "1AlRDM-xPVOmbwEnF-EtzxYvpr0uPAYMH",
+      "url": "https://drive.google.com/file/d/1AlRDM-xPVOmbwEnF-EtzxYvpr0uPAYMH/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "0e1d44e5821b102faf5b34db1a142b7e940800d94738ca33a2d629bfb443f814",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.021",
+      "drive_id": "1TKP6F1qAH2B1KRvmm7xh--FUXGCkDKSl",
+      "url": "https://drive.google.com/file/d/1TKP6F1qAH2B1KRvmm7xh--FUXGCkDKSl/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "0f9782f7f776090df40be115453e1fb861eb3f4eafb231580b6cbe702e7b83fb",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.022",
+      "drive_id": "10dgVEzv2ZJMWfU0HFAguey2RdBOo728B",
+      "url": "https://drive.google.com/file/d/10dgVEzv2ZJMWfU0HFAguey2RdBOo728B/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "07493be1748c446ce28b6cd9a3655f552787f01552b4b7fda853a70f647aca83",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.023",
+      "drive_id": "1_6obmUy-OFpGo3__WJaE9OE6Y4GsrnJj",
+      "url": "https://drive.google.com/file/d/1_6obmUy-OFpGo3__WJaE9OE6Y4GsrnJj/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "681da6daf88d062a924072a4a961d471665445ee6eacbf591583f47b7369ed4c",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.024",
+      "drive_id": "1iySEmn0Ea1rm1iBFqG4q5Cnk0Ww5Nhu_",
+      "url": "https://drive.google.com/file/d/1iySEmn0Ea1rm1iBFqG4q5Cnk0Ww5Nhu_/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "eeb076c19f91c6362619ad9e59b876906dfbfdf7558106d0d66b5ee6ba8b960c",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.025",
+      "drive_id": "1X9UwumqYI6keH7ROQ4fEt4Am-gv22YF5",
+      "url": "https://drive.google.com/file/d/1X9UwumqYI6keH7ROQ4fEt4Am-gv22YF5/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "612130940fe49dc660c9a542c0a196d68cb0d893f951bc4dabbb32b642017022",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.026",
+      "drive_id": "1qCUdH9AeFX70seZ5ieY_KaHnSbFIjS5m",
+      "url": "https://drive.google.com/file/d/1qCUdH9AeFX70seZ5ieY_KaHnSbFIjS5m/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "1ce0c0c969ea08c350e590f0e669798bac6db7ec9e3af0e7974c88fc53847d33",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.027",
+      "drive_id": "1LuWlLXqIs0Zy4UuIeRC_kAmCQp0Wf7xY",
+      "url": "https://drive.google.com/file/d/1LuWlLXqIs0Zy4UuIeRC_kAmCQp0Wf7xY/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "e410cff2f8de4a5909e9819495bbfd2418cf935f1c37e0e6d94ea264670efeae",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.028",
+      "drive_id": "1y7DKt8QkO5B8zuIEkHE9472PXWqPPRoN",
+      "url": "https://drive.google.com/file/d/1y7DKt8QkO5B8zuIEkHE9472PXWqPPRoN/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "77e7180c4a6f2e21b829426dea870af3f3212b43b08d2aa6f68f1c0cc6a616fd",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.029",
+      "drive_id": "1z5M-2khZG_D099NFoDHzmLVD9P0lyp6e",
+      "url": "https://drive.google.com/file/d/1z5M-2khZG_D099NFoDHzmLVD9P0lyp6e/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "accb50bbe8ffa2853621ee707e174654cfb351e9f9cee227e9b11765c1d6bb70",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.030",
+      "drive_id": "1PnPXYeRFmZScuenhnF2D2wkoCrPXNBQh",
+      "url": "https://drive.google.com/file/d/1PnPXYeRFmZScuenhnF2D2wkoCrPXNBQh/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "7442d8a9077679ffdd2fb9151adf7ea12ffd12b7158e7535acd48c3f74c2e4bf",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.031",
+      "drive_id": "1ya-QkwozzAQPFGV9ln5QSCX4IFzys2oR",
+      "url": "https://drive.google.com/file/d/1ya-QkwozzAQPFGV9ln5QSCX4IFzys2oR/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "d356baeb4a2ea851d50bc4fb3cfa4e95bb01fb4b5df86303e524dd08e025a7c8",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.032",
+      "drive_id": "1BqEJ8SNe1L0zHl3do2XBKeYX-i0y7NOH",
+      "url": "https://drive.google.com/file/d/1BqEJ8SNe1L0zHl3do2XBKeYX-i0y7NOH/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "ad9cb8876f27f6dd3004bfb234b19874870ec654065c83e353b4c76cff36d0b0",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.033",
+      "drive_id": "1Vo6mrLxWYfCLRX-rO070fSUISr_zpHKf",
+      "url": "https://drive.google.com/file/d/1Vo6mrLxWYfCLRX-rO070fSUISr_zpHKf/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "7327274d89a4ca20b5fdde857e584aba8b96c2be8521e13444a9c793cccfcbec",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.034",
+      "drive_id": "1yWhvefXyikH68hehLRmUryID98eZZz6o",
+      "url": "https://drive.google.com/file/d/1yWhvefXyikH68hehLRmUryID98eZZz6o/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "60112d1c5b4da4e5e5a08cd55c3c6c0cb2a87754e9c1fd7eaa86c96736c78aae",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.035",
+      "drive_id": "1HcGJjX5yq6iRI_ekelwhBDJ8cjZCFQN-",
+      "url": "https://drive.google.com/file/d/1HcGJjX5yq6iRI_ekelwhBDJ8cjZCFQN-/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "8ca6dfec72c8697ef4ff0894ff8b5537162882935ca85fbf906917c477098ad9",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.036",
+      "drive_id": "132GZ6Sl-wWHHiv2nl6QB43bSgt69dTqH",
+      "url": "https://drive.google.com/file/d/132GZ6Sl-wWHHiv2nl6QB43bSgt69dTqH/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "ba70fe6d2e18cf3d737ee50e8ffd314a776f0540d5ecda16f10d31233857571d",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.037",
+      "drive_id": "1Sgp2G-CvJ0BdMHsnRcA8SQlUZUNMho7H",
+      "url": "https://drive.google.com/file/d/1Sgp2G-CvJ0BdMHsnRcA8SQlUZUNMho7H/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "b6892f4801111e8fcbf686af7d09c8cdb0c97af8e39cb9ed396a0b67bfae6f4d",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.038",
+      "drive_id": "1mbPDGOShxfnG2WuXRnFtMqBXy5ldIEsv",
+      "url": "https://drive.google.com/file/d/1mbPDGOShxfnG2WuXRnFtMqBXy5ldIEsv/view?usp=drivesdk",
+      "bytes": 100000000,
+      "local_source_sha256": "05264273e6367e76c774ccb716d84fac6012255ed06fc0fd637a337d5b16ac4a",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    },
+    {
+      "group": "training",
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.039",
+      "drive_id": "1dgX_rUuD1etttH8RyesZx1kG0NHS7RZu",
+      "url": "https://drive.google.com/file/d/1dgX_rUuD1etttH8RyesZx1kG0NHS7RZu/view?usp=drivesdk",
+      "bytes": 31295823,
+      "local_source_sha256": "3661094c09b61114bd05a51e7e2213982c5452f9c9792581abe35befddbdb635",
+      "drive_metadata_status": "VERIFIED_NAME_SIZE_PARENT_PRIVATE_DOWNLOADABLE",
+      "local_file_currently_present": false
+    }
+  ],
+  "source_sha256_provenance": "Local archive/part creation and pre-upload metadata manifests; not remote SHA256. Original wheel hashes also matched official release metadata.",
+  "remote_sha256_verified": false,
+  "remote_verification": [
+    "known file ID",
+    "filename",
+    "size",
+    "parent after upload",
+    "shared=false",
+    "purpose-built folder membership listing",
+    "can_download=true"
+  ],
+  "native_installation_executed": false,
+  "training_executed": false,
+  "full_model_weights_included": false,
+  "local_retention_note": "Root authorized cleanup of the 39 temporary training parts after whole-ZIP/per-part SHA256 and verified remote 45/45 ledger. The full 3,831,295,823-byte training ZIP is retained for streaming into the master kit. No parts were recreated.",
+  "search_adapter_note": "google_drive_search omitted binary archive parts and application/json files. Purpose-built list_folder returned and verified every expected file. For future resume use list_folder or known-ID metadata, not absence from search."
+}

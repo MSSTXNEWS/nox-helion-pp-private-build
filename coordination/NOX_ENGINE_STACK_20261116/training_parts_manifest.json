@@ -1,0 +1,204 @@
+{
+  "schema": "NOX_SPLIT_ARCHIVE_V1",
+  "archive": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip",
+  "archive_bytes": 3831295823,
+  "archive_sha256": "7f1b932f38df0872ee21e009eb8f3005da5eb99b662a372dcb389e8d4e056b95",
+  "part_bytes": 100000000,
+  "parts": [
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.001",
+      "bytes": 100000000,
+      "sha256": "187c870cf0f572eba8ff8983574969ef5e505fb538f598523dea2ed4390b7665"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.002",
+      "bytes": 100000000,
+      "sha256": "9310825b06529b869acdcd66bae23e0a50080c7e410f45459f2b7e5c694ebd24"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.003",
+      "bytes": 100000000,
+      "sha256": "875722f6feb36dbf1c21a072aa75279163b8dac1a781c80205ff32e46f0135e8"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.004",
+      "bytes": 100000000,
+      "sha256": "6c4e2dd50c1106f39147d4962c6364e9c5ce7adb4555ad80788da31182d18f87"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.005",
+      "bytes": 100000000,
+      "sha256": "1a5ba929609e75c2ca90d71328152ff6aaee91736bb63c0a08f899b185977c59"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.006",
+      "bytes": 100000000,
+      "sha256": "23b3f603cc3ed571517624666c6980654121f199a37a92a9cb0a7923d88ea6ca"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.007",
+      "bytes": 100000000,
+      "sha256": "3c1aa582f025e0b8910e7e0404162ea5b8d5ae4d181632ba6477e4f3dfb5cec5"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.008",
+      "bytes": 100000000,
+      "sha256": "deed17c491180b27ba2bc50e748b9cd5d9585679d6630008abdb6892ed5f708f"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.009",
+      "bytes": 100000000,
+      "sha256": "f7fac84d9cffd00043d25b8d35718648bb272db29680205d603f6e9f8e17022f"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.010",
+      "bytes": 100000000,
+      "sha256": "673b11da9e8d1f5929493bf3da42ba33948c03b9ddac56aaf7bdf7532f223333"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.011",
+      "bytes": 100000000,
+      "sha256": "4da992aa8699c3df3b94157972e6f1dc701fa41be99324d0ab7473c7b93fbb1a"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.012",
+      "bytes": 100000000,
+      "sha256": "8834db2fcca239c1d43f2611cc7d0515de37f7b2c3c2ec86362b3ab489718014"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.013",
+      "bytes": 100000000,
+      "sha256": "04bb33e5a739fe1caa47cdce07bb2ecea6b10980a4b65c934236010cf737f6f4"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.014",
+      "bytes": 100000000,
+      "sha256": "9807cd5d5239ddad28abadf06727a013b4fbb4766c1d8453da09a95568960ea6"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.015",
+      "bytes": 100000000,
+      "sha256": "4d857c5cc90989e8088f3fc43c98e73ce2ba8c58fb25c738dae61cfc21259484"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.016",
+      "bytes": 100000000,
+      "sha256": "ed1fcec8862287ea63771c4c89f905960b444402900745c5d14463d6daa68521"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.017",
+      "bytes": 100000000,
+      "sha256": "2483f14f30a2723609a109b43ee9e2da28320926cfdbaa3122b8ef99caaa3641"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.018",
+      "bytes": 100000000,
+      "sha256": "3fbf0deb02834c225095fc5eecf1925c59f35ad75e991d95b3e978feb59e5717"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.019",
+      "bytes": 100000000,
+      "sha256": "44468ecd82ef520165c328f02d65c2c48739c7c927e7ce45ec169cd03a4ad4ed"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.020",
+      "bytes": 100000000,
+      "sha256": "0e1d44e5821b102faf5b34db1a142b7e940800d94738ca33a2d629bfb443f814"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.021",
+      "bytes": 100000000,
+      "sha256": "0f9782f7f776090df40be115453e1fb861eb3f4eafb231580b6cbe702e7b83fb"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.022",
+      "bytes": 100000000,
+      "sha256": "07493be1748c446ce28b6cd9a3655f552787f01552b4b7fda853a70f647aca83"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.023",
+      "bytes": 100000000,
+      "sha256": "681da6daf88d062a924072a4a961d471665445ee6eacbf591583f47b7369ed4c"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.024",
+      "bytes": 100000000,
+      "sha256": "eeb076c19f91c6362619ad9e59b876906dfbfdf7558106d0d66b5ee6ba8b960c"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.025",
+      "bytes": 100000000,
+      "sha256": "612130940fe49dc660c9a542c0a196d68cb0d893f951bc4dabbb32b642017022"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.026",
+      "bytes": 100000000,
+      "sha256": "1ce0c0c969ea08c350e590f0e669798bac6db7ec9e3af0e7974c88fc53847d33"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.027",
+      "bytes": 100000000,
+      "sha256": "e410cff2f8de4a5909e9819495bbfd2418cf935f1c37e0e6d94ea264670efeae"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.028",
+      "bytes": 100000000,
+      "sha256": "77e7180c4a6f2e21b829426dea870af3f3212b43b08d2aa6f68f1c0cc6a616fd"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.029",
+      "bytes": 100000000,
+      "sha256": "accb50bbe8ffa2853621ee707e174654cfb351e9f9cee227e9b11765c1d6bb70"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.030",
+      "bytes": 100000000,
+      "sha256": "7442d8a9077679ffdd2fb9151adf7ea12ffd12b7158e7535acd48c3f74c2e4bf"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.031",
+      "bytes": 100000000,
+      "sha256": "d356baeb4a2ea851d50bc4fb3cfa4e95bb01fb4b5df86303e524dd08e025a7c8"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.032",
+      "bytes": 100000000,
+      "sha256": "ad9cb8876f27f6dd3004bfb234b19874870ec654065c83e353b4c76cff36d0b0"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.033",
+      "bytes": 100000000,
+      "sha256": "7327274d89a4ca20b5fdde857e584aba8b96c2be8521e13444a9c793cccfcbec"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.034",
+      "bytes": 100000000,
+      "sha256": "60112d1c5b4da4e5e5a08cd55c3c6c0cb2a87754e9c1fd7eaa86c96736c78aae"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.035",
+      "bytes": 100000000,
+      "sha256": "8ca6dfec72c8697ef4ff0894ff8b5537162882935ca85fbf906917c477098ad9"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.036",
+      "bytes": 100000000,
+      "sha256": "ba70fe6d2e18cf3d737ee50e8ffd314a776f0540d5ecda16f10d31233857571d"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.037",
+      "bytes": 100000000,
+      "sha256": "b6892f4801111e8fcbf686af7d09c8cdb0c97af8e39cb9ed396a0b67bfae6f4d"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.038",
+      "bytes": 100000000,
+      "sha256": "05264273e6367e76c774ccb716d84fac6012255ed06fc0fd637a337d5b16ac4a"
+    },
+    {
+      "file": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip.039",
+      "bytes": 31295823,
+      "sha256": "3661094c09b61114bd05a51e7e2213982c5452f9c9792581abe35befddbdb635"
+    }
+  ]
+}

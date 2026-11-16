@@ -1,0 +1,167 @@
+{
+  "schema": "NOX_MAYA_LAUNCH_PROFILE_V1",
+  "source_commit": "c81fab6c9d63cf69b928f92460e0a662b28aa9ec",
+  "state": "PARSER_VERIFIED_CANDIDATE_NOT_ACTIVATED_NOT_NATIVE_BENCHMARKED",
+  "model_manifest": "deepseek_iq2_xxs_manifest.json",
+  "model_revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+  "model_total_unique_bytes": 248834257920,
+  "native_observation": {
+    "source_receipt": "drive-profile-preflight-6905769573.json",
+    "gpu_source_receipt": "engine-download-6905391932-receipt.json",
+    "gpus": [
+      "Tesla V100-SXM2-32GB",
+      "Tesla V100-SXM2-32GB"
+    ],
+    "memory_max_bytes": 194065203200,
+    "memory_current_bytes": 149319143424,
+    "disk_free_bytes": 13991006208,
+    "dev_fuse_exists": false,
+    "training_state": "RUNNING_AT_LATEST_OBSERVATION_ACCEPTANCE_PENDING"
+  },
+  "variables": {
+    "MAYA_SOURCE": "/root/nox/engine_candidates/maya/c81fab6c9d63cf69b928f92460e0a662b28aa9ec",
+    "MAYA_BINARY": "absolute path from a future verified build receipt; binary not available yet",
+    "MODEL_DIR": "absolute seekable filesystem directory containing all six unique files, SHA256 verified against manifest",
+    "PACK_DIR": "owned output directory for metadata only; must remain with its referenced original GGUF files"
+  },
+  "pack": {
+    "argv": [
+      "python3",
+      "${MAYA_SOURCE}/tools/ds4/pack_gguf.py",
+      "--model",
+      "${MODEL_DIR}",
+      "--out",
+      "${PACK_DIR}",
+      "--engram",
+      "${MODEL_DIR}",
+      "--without",
+      "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf",
+      "--shards",
+      "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+      "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+      "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+      "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+      "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf"
+    ],
+    "copies_weight_payload": false,
+    "replaces_missing_sixth_alias_with_explicit_engram": true,
+    "notes": [
+      "Only the five trunk shard names are passed in --shards. --without names the sixth split alias; --engram supplies the separately downloaded Engram file from the same directory. No duplicate 110.6GB Engram copy is required.",
+      "The source parser checks split.count, tensor geometry and Engram completeness. These have not yet been checked against all real weight bytes.",
+      "Pack creates geometry, tensor offsets, Engram hash metadata and tokenizer files. It references the original GGUF files for open/mmap."
+    ]
+  },
+  "launch": {
+    "argv": [
+      "${MAYA_BINARY}",
+      "--pack",
+      "${PACK_DIR}",
+      "--gpus",
+      "0,1",
+      "--tp",
+      "2",
+      "--max-context",
+      "8192",
+      "--reserve-mib",
+      "2048",
+      "--vram-experts",
+      "0.90",
+      "--cpu-threads",
+      "16",
+      "--prefill-chunk",
+      "128",
+      "--threads",
+      "on",
+      "--mmap-experts",
+      "on",
+      "--ssd-cache",
+      "off",
+      "--ssd-policy",
+      "lru",
+      "--dspark",
+      "none",
+      "--suffix-draft",
+      "0",
+      "--vision",
+      "off",
+      "--parallel",
+      "1",
+      "--profile-readonly",
+      "--serve"
+    ],
+    "transport": "stdio Maya engine protocol; --serve is not an HTTP/OpenAI server",
+    "candidate_parameters": {
+      "context_tokens": 8192,
+      "gpu_ids": [
+        0,
+        1
+      ],
+      "tensor_parallel": 2,
+      "per_gpu_vram_reserve_mib": 2048,
+      "expert_budget_fraction": 0.9,
+      "cpu_threads_max": 16,
+      "prefill_chunk": 128,
+      "parallel_conversations": 1,
+      "mmap_experts": "on",
+      "ssd_cache": "off",
+      "dspark": "none",
+      "suffix_draft": 0,
+      "vision": "off",
+      "expert_router_override": null
+    },
+    "parameter_notes": [
+      "--reserve-mib is per GPU. --vram-experts is a fraction of the computed expert budget, not a fixed total VRAM limit. Native measured peaks must satisfy the reserve.",
+      "--ssd-cache names a RAM expert store fed from file storage. It is not an SSD pathname, Drive downloader, mount or HTTP block bridge. Disabled until the selected IQ2 geometry and memory use are verified.",
+      "--mmap-experts on avoids copying all CPU-lane experts into anonymous RAM; file-backed pages and other allocations still consume memory.",
+      "--experts is intentionally unset: changing router top-N is lossy. These resource values are initial candidates, not performance or quality claims.",
+      "Use a clean environment without unrelated DS4_*/MAYA_* overrides; this profile has not configured or cleared the existing native environment."
+    ]
+  },
+  "acceptance_gates": [
+    "All six unique model files must have admitted seekable placement and verified size/SHA256. The current 13.03GiB free native SSD cannot hold the 248.83GB files.",
+    "Drive credentials, quota and persistent streaming admission must be resolved; even a completed Drive archive is not a random-access mmap filesystem. HTTP-to-mmap block bridge is not ready.",
+    "Training must cooperatively yield its GPU lease before a two-GPU inference acceptance test; this profile does not stop it.",
+    "Build must produce a pinned binary; verify metadata pack, then bounded actual load/inference, sampled fidelity, peak RAM/VRAM, context handling and throughput before activating chat.",
+    "The NOX chat adapter for Maya stdio or a reviewed HTTP wrapper must be validated. No assumption that --serve automatically replaces the existing chat route.",
+    "Six virtual agents and forty worms are dispatcher policy, not Maya CLI flags; run background work only through explicit admission while the main chat model sleeps."
+  ],
+  "source_references": [
+    {
+      "path": "src/ds4/ds4_main.cpp",
+      "url": "https://github.com/mw00/project-maya/blob/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/src/ds4/ds4_main.cpp",
+      "sha256": "e1b02673c1ea75a98034bde2a4c3f6e206b0daacab18aea69a4be8904d0064e7"
+    },
+    {
+      "path": "src/ds4/ds4_model.hpp",
+      "url": "https://github.com/mw00/project-maya/blob/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/src/ds4/ds4_model.hpp",
+      "sha256": "05c781636b3def3e13b0fec76ab650fb97a26adfc189b1bf60d219cae7518c3d"
+    },
+    {
+      "path": "src/ds4/ds4_model.cu",
+      "url": "https://github.com/mw00/project-maya/blob/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/src/ds4/ds4_model.cu",
+      "sha256": "05bf6b5089f2ddeca9742b3e0db4aeee416adb964b42bd384fbd295a56db6313"
+    },
+    {
+      "path": "src/ds4/ds4_os.hpp",
+      "url": "https://github.com/mw00/project-maya/blob/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/src/ds4/ds4_os.hpp",
+      "sha256": "546398916715a0de7a73954549bbad64e8d90155e766f247930c680a8565fd25"
+    },
+    {
+      "path": "tools/ds4/pack_gguf.py",
+      "url": "https://github.com/mw00/project-maya/blob/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/tools/ds4/pack_gguf.py",
+      "sha256": "f45c5c16cbd59d5aa1ad5b22d07f082818d4d806cfa9254b66bc173d9a458859"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "url": "https://github.com/mw00/project-maya/blob/c81fab6c9d63cf69b928f92460e0a662b28aa9ec/CMakeLists.txt",
+      "sha256": "80054ee7fccba9be34a1c0dca074967736d0b1a008e038c1333d78f81752e46c"
+    }
+  ],
+  "validation": {
+    "all_launch_options_present_in_pinned_cpp_parser": true,
+    "all_pack_options_present_in_pinned_argparse": true,
+    "executed_pack": false,
+    "executed_inference": false,
+    "native_configuration_changed": false
+  }
+}

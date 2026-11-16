@@ -1,0 +1,18 @@
+{
+  "schema": "NOX_TRAINING_WHEELHOUSE_ARCHIVE_V1",
+  "status": "COMPLETE_OFFLINE_WHEELHOUSE_HASH_VERIFIED_NOT_INSTALLED",
+  "created_at": "2026-11-16T02:21:57.995059+00:00",
+  "archive_filename": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip",
+  "archive_path": "/workspace/scratch/f9bc2028661c/nox-training-wheelhouse/NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip",
+  "archive_bytes": 3831295823,
+  "archive_sha256": "7f1b932f38df0872ee21e009eb8f3005da5eb99b662a372dcb389e8d4e056b95",
+  "manifest_sha256": "58795a1d71d32aa390b6765fd97c64639832b3672a5726dae9820ab2e20cca3d",
+  "lock_sha256": "8484b77f5020abd8e8d62f667845ee5da23684be7b4e738ec8f5833b98f3c362",
+  "wheel_count": 72,
+  "wheel_bytes": 3831088888,
+  "official_hash_verified_count": 72,
+  "target_dependency_closure_verified": true,
+  "offline_hashlock_resolution_exit_code": 0,
+  "stored_archive_note": "Wheels are already compressed; ZIP_STORED avoids redundant compression and keeps build time bounded.",
+  "combined_staging_bytes_after_archive": 7662618042
+}

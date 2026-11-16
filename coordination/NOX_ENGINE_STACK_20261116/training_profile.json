@@ -49,7 +49,7 @@
     "gradient_accumulation_steps": 8,
     "gradient_checkpointing": true,
     "use_cache": false,
-    "learning_rate": 0.00005,
+    "learning_rate": 5e-05,
     "optimizer": "AdamW",
     "minimum_actual_optimizer_steps": 5
   },
@@ -60,7 +60,19 @@
     "chat_priority": true,
     "train_hold_respected": true,
     "teacher_student_overlap_allowed": false,
-    "require_current_telemetry": true
+    "require_current_telemetry": true,
+    "storage_gate": {
+      "student_full_hf_bytes": 19329393661,
+      "latest_native_free_ssd_bytes": 14019645440,
+      "original_hf_files_fit_current_ssd": false,
+      "require_explicit_location_for": [
+        "original_model_files",
+        "expanded_environment",
+        "temporary_files",
+        "optimizer_checkpoints"
+      ],
+      "nf4_does_not_shrink_original_download": true
+    }
   },
   "acceptance": [
     "finite loss and gradients",

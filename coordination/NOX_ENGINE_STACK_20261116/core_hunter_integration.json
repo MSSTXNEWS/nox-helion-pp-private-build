@@ -85,5 +85,56 @@
       "training data needed for transfer"
     ]
   },
-  "source_storage": "Source code remains in the repository; this bundle carries pinned source references and integration contracts."
+  "source_storage": "Source code remains in the repository; this bundle carries pinned source references and integration contracts.",
+  "student_lineage_contract": {
+    "owner_state_field": "active_student_sha256",
+    "train_candidate_field": "student_sha256",
+    "must_match": true,
+    "digest_type": "SHA256 of the verified canonical base-file manifest",
+    "hf_git_revision_is_not_sha256": true,
+    "role": "trainable_student Qwen/Qwen3.5-9B, not active_chat_model DeepSeek",
+    "manifest_identity_excludes_mutable_download_status": true,
+    "admission_requires_all_source_file_hashes_verified": true
+  },
+  "v28_existing_modules": [
+    {
+      "path": "nox_runpod/teacher_mesh/nox_neural_matchmaker_v28.py",
+      "role": "teacher_selection",
+      "state": "SOURCE_PRESENT_NATIVE_BINDING_NOT_VERIFIED"
+    },
+    {
+      "path": "nox_runpod/teacher_mesh/nox_adviser_arena_v28.py",
+      "role": "teacher_evaluation",
+      "state": "SOURCE_PRESENT_NATIVE_BINDING_NOT_VERIFIED"
+    },
+    {
+      "path": "nox_runpod/teacher_mesh/nox_curriculum_dna_v28.py",
+      "role": "gap_driven_curriculum_and_anti_forgetting",
+      "state": "SOURCE_PRESENT_NATIVE_BINDING_NOT_VERIFIED"
+    },
+    {
+      "path": "nox_runpod/teacher_mesh/nox_speed_lab_v28.py",
+      "role": "measured_optimization",
+      "state": "SOURCE_PRESENT_NATIVE_BINDING_NOT_VERIFIED"
+    },
+    {
+      "path": "nox_runpod/teacher_mesh/nox_emotional_resonance_v28.py",
+      "role": "calibrated_interaction_style",
+      "state": "SOURCE_PRESENT_NATIVE_BINDING_NOT_VERIFIED"
+    },
+    {
+      "path": "nox_runpod/teacher_mesh/nox_future_cortex_bridge_v28.py",
+      "role": "future_cortex_plan_bridge",
+      "state": "SOURCE_PRESENT_NATIVE_BINDING_NOT_VERIFIED"
+    }
+  ],
+  "v28_memory_recovered_requirements": [
+    "RePlay Vaccine",
+    "Proof of Growth",
+    "FAST/VERIFY/DEEP",
+    "Memory Immune Network",
+    "Autobiographical Root",
+    "episodic time graph",
+    "Worm Blueprint Forge"
+  ]
 }

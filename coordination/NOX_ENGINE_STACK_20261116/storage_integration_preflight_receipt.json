@@ -1,0 +1,1114 @@
+{
+  "schema": "NOX_STORAGE_INTEGRATION_PREFLIGHT_V1",
+  "observed_at_epoch": 1794798408.620548,
+  "source_sha": "83bca5aa8de27d8f8b6ad183ac818f49dfc1eb4f",
+  "request": "6906139872",
+  "storage": {
+    "state": "READ_ONLY_STORAGE_OBSERVED",
+    "mounts": [
+      {
+        "mountpoint": "/",
+        "device": "0:39",
+        "fstype": "overlay",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/dev",
+        "device": "0:147",
+        "fstype": "tmpfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/dev/shm",
+        "device": "0:153",
+        "fstype": "tmpfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/etc/hostname",
+        "device": "252:1",
+        "fstype": "xfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/etc/hosts",
+        "device": "252:1",
+        "fstype": "xfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/etc/resolv.conf",
+        "device": "252:1",
+        "fstype": "xfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/run/nvidia-persistenced/socket",
+        "device": "0:26",
+        "fstype": "tmpfs",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/bin/nvidia-cuda-mps-control",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/bin/nvidia-cuda-mps-server",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/bin/nvidia-debugdump",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/bin/nvidia-persistenced",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/bin/nvidia-smi",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/etc/vulkan/icd.d/nvidia_icd.json",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/etc/vulkan/implicit_layer.d/nvidia_layers.json",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libEGL_nvidia.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libGLESv1_CM_nvidia.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libGLESv2_nvidia.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libcuda.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libcudadebugger.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvcuvid.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-cfg.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-egl-gbm.so.1.1.3",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-egl-wayland.so.1.1.13",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-eglcore.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-encode.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-fbc.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-glvkspirv.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-ngx.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-nvvm.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-opencl.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-opticalflow.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-pkcs11-openssl3.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-pkcs11.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-present.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-ptxjitcompiler.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-rtcore.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-tls.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvidia-vksc-core.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/libnvoptix.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/share/nvidia/nvoptix.bin",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/firmware/nvidia/580.178.04/gsp_ga10x.bin",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/firmware/nvidia/580.178.04/gsp_tu10x.bin",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/vdpau/libvdpau_nvidia.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/share/X11/xorg.conf.d/10-nvidia.conf",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/nvidia/xorg/libglxserver_nvidia.so.580.178.04",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/usr/lib/x86_64-linux-gnu/nvidia/xorg/nvidia_drv.so",
+        "device": "252:0",
+        "fstype": "ext4",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/proc/acpi",
+        "device": "0:154",
+        "fstype": "tmpfs",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/proc/interrupts",
+        "device": "0:147",
+        "fstype": "tmpfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/proc/kcore",
+        "device": "0:147",
+        "fstype": "tmpfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/proc/keys",
+        "device": "0:147",
+        "fstype": "tmpfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/proc/latency_stats",
+        "device": "0:147",
+        "fstype": "tmpfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/proc/timer_list",
+        "device": "0:147",
+        "fstype": "tmpfs",
+        "read_only": false
+      },
+      {
+        "mountpoint": "/proc/scsi",
+        "device": "0:155",
+        "fstype": "tmpfs",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/sys/firmware",
+        "device": "0:156",
+        "fstype": "tmpfs",
+        "read_only": true
+      },
+      {
+        "mountpoint": "/sys/devices/virtual/powercap",
+        "device": "0:157",
+        "fstype": "tmpfs",
+        "read_only": true
+      }
+    ],
+    "mountinfo_rows_seen": 154,
+    "mount_metadata_limit": 64,
+    "df": {
+      "state": "OK",
+      "returncode": 0,
+      "filesystems": [
+        {
+          "mountpoint": "/",
+          "fstype": "overlay",
+          "size_bytes": 183609851904,
+          "used_bytes": 169673912320,
+          "available_bytes": 13935939584
+        },
+        {
+          "mountpoint": "/dev",
+          "fstype": "tmpfs",
+          "size_bytes": 67108864,
+          "used_bytes": 0,
+          "available_bytes": 67108864
+        },
+        {
+          "mountpoint": "/dev/shm",
+          "fstype": "tmpfs",
+          "size_bytes": 50465865728,
+          "used_bytes": 42482380800,
+          "available_bytes": 7983484928
+        },
+        {
+          "mountpoint": "/etc/hosts",
+          "fstype": "xfs",
+          "size_bytes": 1808845275136,
+          "used_bytes": 511326982144,
+          "available_bytes": 1297518292992
+        },
+        {
+          "mountpoint": "/run/nvidia-persistenced/socket",
+          "fstype": "tmpfs",
+          "size_bytes": 40430366720,
+          "used_bytes": 3547136,
+          "available_bytes": 40426819584
+        },
+        {
+          "mountpoint": "/usr/bin/nvidia-smi",
+          "fstype": "ext4",
+          "size_bytes": 105089261568,
+          "used_bytes": 16568573952,
+          "available_bytes": 83135201280
+        },
+        {
+          "mountpoint": "/proc/acpi",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/proc/scsi",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/firmware",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/virtual/powercap",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu0/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu1/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu2/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu3/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu4/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu5/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu6/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu7/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu8/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu9/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu10/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu11/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu12/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu13/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu14/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu15/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu16/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu17/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu18/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu19/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu20/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu21/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu22/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu23/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu24/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu25/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu26/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu27/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu28/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu29/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu30/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu31/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu32/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu33/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu34/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu35/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu36/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu37/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu38/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu39/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu40/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu41/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu42/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu43/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu44/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu45/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu46/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu47/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu48/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu49/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu50/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu51/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu52/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu53/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu54/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu55/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu56/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu57/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu58/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu59/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu60/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu61/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu62/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu63/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu64/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu65/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu66/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu67/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu68/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu69/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu70/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu71/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu72/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu73/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu74/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu75/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu76/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu77/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu78/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        },
+        {
+          "mountpoint": "/sys/devices/system/cpu/cpu79/thermal_throttle",
+          "fstype": "tmpfs",
+          "size_bytes": 202151817216,
+          "used_bytes": 0,
+          "available_bytes": 202151817216
+        }
+      ]
+    },
+    "lsblk": {
+      "state": "OK",
+      "returncode": 0,
+      "blockdevices": [
+        {
+          "name": "sda",
+          "type": "disk",
+          "size": 1920383410176,
+          "fstype": null,
+          "mountpoint": null,
+          "ro": false,
+          "children": [
+            {
+              "name": "sda1",
+              "type": "part",
+              "size": 1127219200,
+              "fstype": null,
+              "mountpoint": null,
+              "ro": false
+            },
+            {
+              "name": "sda2",
+              "type": "part",
+              "size": 2147483648,
+              "fstype": null,
+              "mountpoint": null,
+              "ro": false
+            },
+            {
+              "name": "sda3",
+              "type": "part",
+              "size": 1917106257920,
+              "fstype": null,
+              "mountpoint": null,
+              "ro": false
+            }
+          ]
+        }
+      ]
+    },
+    "dev_fuse_exists": false,
+    "visible_device_is_not_proof_of_allocated_or_mounted_storage": true
+  },
+  "profiles": [
+    {
+      "path": "/root/nox/state/cold_drive.conf",
+      "contents_read": false,
+      "state": "HOLD_PROFILE_NOT_FOUND"
+    },
+    {
+      "path": "/root/.config/rclone/rclone.conf",
+      "contents_read": false,
+      "state": "HOLD_PROFILE_NOT_FOUND"
+    },
+    {
+      "path": "/root/nox/rclone.conf",
+      "contents_read": false,
+      "state": "HOLD_PROFILE_NOT_FOUND"
+    }
+  ],
+  "drive_env_names_present": [],
+  "services_changed": false,
+  "credential_contents_inspected_or_emitted": false,
+  "configured_client_may_use_existing_credentials": true,
+  "files_transferred": 0,
+  "mounts_changed": false,
+  "queue_changed": false,
+  "gpu_or_training_action": false,
+  "pc_integration": "DEFERRED_BY_OWNER_GOOGLE_DRIVE_ONLY",
+  "drive_probes": [
+    {
+      "profile": "existing_default_client_configuration",
+      "profile_contents_read": false,
+      "listremotes": {
+        "state": "OK",
+        "returncode": 0,
+        "names": []
+      },
+      "state": "HOLD_KNOWN_DRIVE_REMOTE_MISSING"
+    }
+  ],
+  "state": "HOLD_NO_VERIFIED_EXISTING_GOOGLE_DRIVE_PROFILE"
+}

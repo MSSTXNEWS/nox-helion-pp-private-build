@@ -1,0 +1,135 @@
+{
+  "schema": "NOX_SYSTEM_RUNTIME_CANDIDATE_V1",
+  "date": "2026-11-16",
+  "state": "PREPARED_NOT_ACTIVATED",
+  "main_model": "DeepSeek-V4.1-Flash-1017 GSQ-RCO IQ2_XXS",
+  "main_revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+  "student_model": "Qwen/Qwen3.5-9B",
+  "student_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+  "paid_api_required": false,
+  "unverified_weak_model_fallback": false,
+  "single_scheduler": true,
+  "single_s03": true,
+  "scheduler_native_path": "/root/nox/scripts/nox_priority_scheduler.py",
+  "dispatcher_native_path": "/root/nox/scripts/nox_dispatcher_t855u.py",
+  "memory_db": "/root/nox/kb/knowledge.sqlite",
+  "resource_limits_observed": {
+    "memory_max_bytes": 194065203200,
+    "cpu_quota_cores": 19.2,
+    "gpu_count": 2,
+    "gpu_model": "Tesla V100-SXM2-32GB",
+    "disk_total_bytes": 183609851904,
+    "disk_free_bytes_at_preflight": 13991006208
+  },
+  "admission_candidate": {
+    "memory_reserve_bytes": 25769803776,
+    "disk_reserve_bytes": 8589934592,
+    "build_jobs_max": 2,
+    "download_streams_max": 6,
+    "background_executors_max": 3,
+    "sleep_logical_jobs_max": 40,
+    "fresh_telemetry_required": true,
+    "gpu_lease_required": true,
+    "stop_honored": true,
+    "network_read_chunk_bytes": 1048576,
+    "chat_priority": true
+  },
+  "modes": {
+    "CHAT": {
+      "priority": "highest",
+      "background_gpu_training": false,
+      "active_chat_model": "main_model"
+    },
+    "WARM": {
+      "cache_budget": "MEASURE_WORKING_SET_BEFORE_ADMISSION",
+      "allow_background": "only_with_resource_admission"
+    },
+    "TRAIN": {
+      "teacher_student_simultaneous": false,
+      "checkpoint_before_yield": true,
+      "gpu_memory_release_required": true,
+      "sigstop_is_not_gpu_release": true
+    },
+    "SLEEP": {
+      "logical_jobs_max": 40,
+      "executors_max": 3,
+      "model_replica_count": "not_equal_to_job_count"
+    }
+  },
+  "training_candidate": {
+    "sequence_length": 512,
+    "micro_batch": 1,
+    "gradient_accumulation": 8,
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "learning_rate": 0.0002,
+    "seed": 42,
+    "proof_optimizer_steps_min": 5,
+    "quantization": "NF4",
+    "compute_dtype": "float16",
+    "trainable_state_dtype": "float32_where_required",
+    "bf16": false,
+    "tf32": false,
+    "flash_attention_2": false,
+    "torch_compile": false,
+    "gradient_checkpointing": true,
+    "dataloader_num_workers": 0,
+    "target_modules": "inspect actual text layers before binding"
+  },
+  "drive": {
+    "canonical_project_folder_id": "1ewQ-R7z33fN0fKoMNNuFzv1_3rCEP96v",
+    "model_folder_id": "1f6d8mwMtR6Be8xMMiA5EpLZI7B47IS2l",
+    "release_folder_id": "1LmJQVKT2bzgGs8M_3mW3pNjU-uvyCP0L",
+    "documented_server_profile": "/root/nox/state/cold_drive.conf",
+    "profile_observed": "MISSING",
+    "other_documented_integration_paths": "ALL_THREE_PROFILES_ABSENT_AT_NATIVE_PREFLIGHT_6906139872",
+    "server_auth_connected": false,
+    "server_write_test_passed": false,
+    "connector_write_test_passed": true,
+    "private_only": true,
+    "credentials_in_bundle": false,
+    "full_model_unique_bytes": 248834257920,
+    "quota_required": "exact final manifest bytes + versions/reserve; not yet verified",
+    "documented_profiles_checked": [
+      "/root/nox/state/cold_drive.conf",
+      "/root/.config/rclone/rclone.conf",
+      "/root/nox/rclone.conf"
+    ]
+  },
+  "adapter_autoload": false,
+  "delete_old_model": {
+    "required": true,
+    "before_new_endpoint_verified": false,
+    "preserve": [
+      "S03",
+      "history",
+      "skills",
+      "provenance",
+      "necessary_training_data",
+      "verified_recovery"
+    ]
+  },
+  "required_receipts": [
+    "fresh inventory",
+    "Drive server read/write/SHA",
+    "Maya build",
+    "full weight size/SHA",
+    "seekable placement",
+    "training optimizer/checkpoint/reload",
+    "S03 recall/write/readback",
+    "chat endpoint model identity",
+    "quality and latency",
+    "old model retirement"
+  ],
+  "latest_user_native_subagent_target": 3,
+  "logical_program_directions": 6,
+  "hourly_control": {
+    "automation_id": "6afa6a3187448191b80e4a925ce71710",
+    "timezone": "Europe/Moscow",
+    "first_run": "2026-11-16T06:30:00+03:00",
+    "interval_hours": 1,
+    "worker_prompts_updated": 13,
+    "native_run_completed": false
+  }
+}

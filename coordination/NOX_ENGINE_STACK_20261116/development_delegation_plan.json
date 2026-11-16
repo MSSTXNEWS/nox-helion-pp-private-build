@@ -1,0 +1,338 @@
+{
+  "schema": "NOX_DEVELOPMENT_DELEGATION_REVIEW_V1",
+  "status": "SOURCE_VALIDATED_REGISTRATION_NOT_PERFORMED",
+  "director": "NOX",
+  "execution_mode": "NORMAL",
+  "requested_native_subexecutor_processes": 3,
+  "roles": [
+    "server_resources",
+    "training_quality",
+    "memory_hunter"
+  ],
+  "role_routing_native_verified": false,
+  "authoritative_queue": "EXISTING_NOX_DISPATCHER_ONLY",
+  "new_scheduler": false,
+  "new_database": false,
+  "source_program_sha256": "efc6c8689e6c9171365fadff38df9fc763a4b10e988ad505988473daf6fe6340",
+  "source_program_hash_is_review_snapshot": true,
+  "sources": {
+    "owner_task_plans.py": {
+      "revision": "9a6d1da9732bff0a2126d09fc2750a2b05d47b3f",
+      "sha256": "6787f78748f211c930e1a40fde10b3cebb2dd29299f7a783a9101e4584546914",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/9a6d1da9732bff0a2126d09fc2750a2b05d47b3f/nox-control/owner_task_plans.py"
+    },
+    "owner_autonomy_pool.py": {
+      "revision": "9a6d1da9732bff0a2126d09fc2750a2b05d47b3f",
+      "sha256": "d55a2e91c38f4bb99396a46d634ba9b442ba6837148653698265aea800088b88",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/9a6d1da9732bff0a2126d09fc2750a2b05d47b3f/nox-control/owner_autonomy_pool.py"
+    },
+    "owner_subagent_processes.py": {
+      "revision": "9a6d1da9732bff0a2126d09fc2750a2b05d47b3f",
+      "sha256": "c1f550354601320d95e0a2d39397cae8fb716a9e63bd7f0a9f807aa772e7300d",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/9a6d1da9732bff0a2126d09fc2750a2b05d47b3f/nox-control/owner_subagent_processes.py"
+    }
+  },
+  "main_revision_inspected": "738e063f0c9c18ba3a0175ab8e5c0173b854ffaf",
+  "main_has_these_new_modules": false,
+  "native_installed_source_hashes_verified": false,
+  "native_registration_ready": false,
+  "native_registration_blockers": [
+    "NATIVE_POOL_CALLBACK_BINDING_NOT_PROVEN",
+    "THREE_NATIVE_PID_STARTTIME_READBACK_REQUIRED",
+    "REVIEWED_CATALOG_WRITE_CONTRACT_REQUIRED"
+  ],
+  "required_native_callbacks": [
+    "read_reviewed_catalog",
+    "read_resource_snapshot",
+    "allowed_handlers",
+    "owner_allowed",
+    "stop_active",
+    "writer_lease",
+    "ensure_processes",
+    "process_readback",
+    "native_duplicate_check",
+    "native_queue_claim",
+    "s03_readback"
+  ],
+  "initial_scoped_submission": {
+    "schema": "NOX_AUTONOMY_PROCESS_POOL_V1",
+    "tasks": [
+      {
+        "id": "owner.program.20261116.v1.inventory",
+        "handler": "owner_order",
+        "deps": [],
+        "priority": "P0",
+        "resource": "CPU_LIGHT",
+        "source_sha256": "6787f78748f211c930e1a40fde10b3cebb2dd29299f7a783a9101e4584546914",
+        "params": {
+          "plan": {
+            "schema": "NOX_OWNER_PLAN_REQUEST_V1",
+            "intent": "audit"
+          }
+        },
+        "title": "Инвентаризация действующего NOX и компонентов",
+        "estimated_cost": 1
+      },
+      {
+        "id": "owner.program.20261116.v1.training_inventory",
+        "handler": "owner_order",
+        "deps": [
+          "owner.program.20261116.v1.inventory"
+        ],
+        "priority": "P0",
+        "resource": "CPU_LIGHT",
+        "source_sha256": "6787f78748f211c930e1a40fde10b3cebb2dd29299f7a783a9101e4584546914",
+        "params": {
+          "plan": {
+            "schema": "NOX_OWNER_PLAN_REQUEST_V1",
+            "intent": "training_status"
+          }
+        },
+        "title": "Проверка существующего учебного стека и checkpoint",
+        "estimated_cost": 1
+      },
+      {
+        "id": "owner.program.20261116.v1.download_prerequisites",
+        "handler": "owner_order",
+        "deps": [
+          "owner.program.20261116.v1.inventory"
+        ],
+        "priority": "P1",
+        "resource": "CPU_LIGHT",
+        "source_sha256": "6787f78748f211c930e1a40fde10b3cebb2dd29299f7a783a9101e4584546914",
+        "params": {
+          "plan": {
+            "schema": "NOX_OWNER_PLAN_REQUEST_V1",
+            "intent": "downloads",
+            "component_ids": [
+              "deepseek1017_iq2_xxs",
+              "qwen35_9b",
+              "training_cp311_cu126"
+            ]
+          }
+        },
+        "title": "Проверка prerequisites скачивания, без обещания загрузки",
+        "estimated_cost": 1
+      }
+    ]
+  },
+  "initial_submission_validation": {
+    "passed": true,
+    "scope": "PURE_SOURCE_SCHEMA_DAG_VALIDATION_ONLY",
+    "task_count": 3,
+    "page_count": 1,
+    "request_sha256": "39ac895c07ae7b81f9cdd08538a7dd0c77b703f365ee19002c6488c8c54d8862"
+  },
+  "initial_submission_limits": [
+    "audit and training_status observe existing state; they do not install the new Qwen student",
+    "downloads currently ends in WAIT_DOWNLOAD_ADMISSION",
+    "do not use optimize_workers: current handler hardcodes six dispatcher threads",
+    "subagent_processes only returns CANDIDATE_NOT_APPLIED, no tools or authoritative queue writes"
+  ],
+  "development_backlog": [
+    {
+      "id": "nox.program.20261116.phase.00",
+      "role": "server_resources",
+      "title": "Свежие ресурсы, STOP, процесс trainer/chat и lease",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "NATIVE_RESOURCE_READBACK_REQUIRED",
+      "acceptance": "Свежие PID/starttime, cgroup, VRAM/SSD и состояние lease",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.01",
+      "role": "server_resources",
+      "title": "Подключение существующего Google Drive",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "GOOGLE_DRIVE_AUTH_OR_DOCUMENTED_PROFILE_REQUIRED",
+      "acceptance": "Идентичность папки, квота, write/read/hash небольшого файла",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.02",
+      "role": "server_resources",
+      "title": "Подготовка pinned исходников и сборщика",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "NATIVE_BUILD_ENVIRONMENT_ADMISSION_REQUIRED",
+      "acceptance": "Исходные SHA и точные CMake/nvcc без вытеснения обучения",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.03",
+      "role": "server_resources",
+      "title": "Сборка Maya sm70",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "MAYA_BUILD_HANDLER_REQUIRED",
+      "acceptance": "Бинарник с SHA и успешный build receipt; максимум2 compile jobs",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.04",
+      "role": "server_resources",
+      "title": "Размещение полного DeepSeek",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "SEEKABLE_STORAGE_CAPACITY_REQUIRED",
+      "acceptance": "Место для248834257920B плюс cache/rollback",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.05",
+      "role": "server_resources",
+      "title": "Доставка основных весов",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "WAIT_DOWNLOAD_ADMISSION",
+      "acceptance": "Все6 уникальных файлов по SHA; сейчас отсутствует248828477216B",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.06",
+      "role": "training_quality",
+      "title": "Отдельное Python3.11/cu126 обучение",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "QWEN_TRAINING_ENV_HANDLER_REQUIRED",
+      "acceptance": "Import/kernel smoke на V100, официальный lock, отдельное окружение",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.07",
+      "role": "training_quality",
+      "title": "Lineage основной модели и студента",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "STUDENT_LINEAGE_READBACK_REQUIRED",
+      "acceptance": "Qwen3.5-9B revision c202236235762e1c871ad0ccb60c8ee5ba337b9a; main DeepSeek отдельно",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.08",
+      "role": "memory_hunter",
+      "title": "Связать S03, ядра и Hunter",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "NATIVE_S03_HUNTER_CALLBACKS_REQUIRED",
+      "acceptance": "Запись+recall+readback, reuse существующих gateway/queue, без новойDB",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.09",
+      "role": "training_quality",
+      "title": "Первые5 optimizer steps студента",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "QWEN_TRAINING_ADMISSION_REQUIRED",
+      "acceptance": "Конечные loss/gradients, delta весов, save/reload адаптера и independent holdout",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.10",
+      "role": "server_resources",
+      "title": "Metadata pack и пробная загрузка DeepSeek",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "PRIMARY_WEIGHTS_AND_GPU_RELEASE_REQUIRED",
+      "acceptance": "Teacher inference с реальными RAM/VRAM/latency и quality receipt",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.11",
+      "role": "memory_hunter",
+      "title": "Подключить основной NOX chat/tools/memory",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "PRIMARY_INFERENCE_TOOL_CHAIN_REQUIRED",
+      "acceptance": "Проверяемая цепь модель→S03→typed action→readback",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.12",
+      "role": "training_quality",
+      "title": "Перенести полезный опыт старых моделей",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "DATASET_PROVENANCE_AND_HOLDOUT_REQUIRED",
+      "acceptance": "Проверенный корпус; без смешивания несовместимых7B/35B LoRA",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.13",
+      "role": "server_resources",
+      "title": "Удалить точные старые слабые веса после перехода",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "VERIFIED_CUTOVER_AND_RETENTION_LIST_REQUIRED",
+      "acceptance": "Принятый новый endpoint, остановленный старый процесс, сохранённые нужные данные; затем удаление точного списка",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.14",
+      "role": "training_quality",
+      "title": "Дистилляция и самостоятельный code diff",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "TEACHER_STUDENT_LEASE_AND_REVIEWED_CHANGE_HANDLER_REQUIRED",
+      "acceptance": "Teacher generation→unload→student training; полезный diff с независимой проверкой",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    },
+    {
+      "id": "nox.program.20261116.phase.15",
+      "role": "memory_hunter",
+      "title": "Создание UI и10 критериев качества",
+      "state": "BLOCKED_NOT_NATIVE_REGISTERED",
+      "blocker": "CORE_ACCEPTANCE_AND_UI_CHANGE_HANDLER_REQUIRED",
+      "acceptance": "Реальный UI на существующем NOX и10 отдельных измерений;9/10 покацель",
+      "native_handler": null,
+      "native_job_id": null,
+      "native_claim": null
+    }
+  ],
+  "registration_contract": {
+    "operation": "REVIEW_REQUIRED_NO_NATIVE_WRITE_PERFORMED",
+    "reuse": "Existing native catalog/queue entry and writer lease, with same IDs on retry",
+    "same_id_same_payload": "Return existing durable record; preserve all claims/results",
+    "same_id_different_payload": "HOLD_TASK_ID_COLLISION; never overwrite",
+    "unknown_claim_outcome": "Read existing queue/S03 by taskID; never retry blindly",
+    "claim_receipt_fields": [
+      "task_id",
+      "job_id",
+      "claim_nonce",
+      "worker_pid",
+      "process_starttime",
+      "source_sha256",
+      "s03_receipt_sha256"
+    ],
+    "acceptance": [
+      "Three distinct native (pid,starttime) with instance_id60509551 and existing_onehost origin",
+      "All submitted IDs read back from authoritative queue",
+      "Claim outcomes backed by S03 native_verified receipt with exact task_id/job_id and SHA",
+      "STOP, writer lease and resource admission checked before each claim",
+      "Blocked prerequisites retained; queued is not done"
+    ]
+  },
+  "actual_native_job_ids": [],
+  "actual_claims": [],
+  "registration_performed": false,
+  "processes_launched": false,
+  "native_commands_run": false
+}

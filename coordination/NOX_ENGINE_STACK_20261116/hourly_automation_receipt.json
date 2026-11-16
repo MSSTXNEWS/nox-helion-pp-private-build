@@ -1,0 +1,110 @@
+{
+  "schema": "NOX_HOURLY_AUTOMATION_UPDATE_V1",
+  "date": "2026-11-16",
+  "user_requested_timezone": "Europe/Moscow",
+  "controller": {
+    "id": "6afa6a3187448191b80e4a925ce71710",
+    "title": "NOX · развитие и контроль",
+    "enabled": true,
+    "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261116T063000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30;BYSECOND=0\nEND:VEVENT",
+    "next_run_time": "2026-11-16T06:30:00+03:00",
+    "marker_verified": true
+  },
+  "worker_updates": [
+    {
+      "id": "6afa6900607c8191a2048d2319fbb4fa",
+      "title": "NOX 3D · поток 3 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T055500\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "6afa68fde1988191a33e4029103e6cfe",
+      "title": "NOX 3C · поток 3 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T054000\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "6afa68fb554481918bbe95db73b560a7",
+      "title": "NOX 3B · поток 3 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T052500\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "6afa68f921b48191a8f7875efae6e783",
+      "title": "NOX 3A · поток 3 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T051000\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "6af9d06031408191a0d7fb4d91e31da5",
+      "title": "NOX 2D · поток 2 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T055000\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "Automation_26409201a5f88191875878544488d623",
+      "title": "NOX 2C · поток 2 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T053500\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "Automation_699343fbe37881919cdb75168812fafe",
+      "title": "NOX 2B · поток 2 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T052000\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "Automation_c10be790f1cc819192f5678833c2c029",
+      "title": "NOX 2A · поток 2 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T050500\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "6af9d05d909881918e20e732baf36aec",
+      "title": "NOX 1D · поток 1 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T054500\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "6af903a81f348191b18f01a8cde7ec05",
+      "title": "NOX 1C · поток 1 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T053000\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "6af903a5c1208191a22263faae73d193",
+      "title": "NOX 1B · поток 1 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T051500\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "6af903a3a9f0819185c32b64e51e4ecc",
+      "title": "NOX 1A · поток 1 · полный цикл",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T050000\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    },
+    {
+      "id": "Automation_84a52b3e3c188191bf26037991b96005",
+      "title": "NOX CONTROL A · сервер, обучение, помощь",
+      "enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261116T050200\nRRULE:FREQ=HOURLY;INTERVAL=1\nEND:VEVENT",
+      "marker_verified": true
+    }
+  ],
+  "verified": true,
+  "native_subagent_target": 3,
+  "native_queue_registration_proven": false,
+  "scheduled_run_is_not_a_completed_native_deployment": true
+}

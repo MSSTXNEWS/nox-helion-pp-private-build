@@ -1,0 +1,190 @@
+{
+  "schema": "NOX_STORAGE_INTEGRATION_SOURCE_AUDIT_V1",
+  "date": "2026-11-16",
+  "workflows_inspected": [
+    {
+      "path": ".github/workflows/nox-v60-encrypted-critical-export.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v60-encrypted-critical-export.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v58-offload-preflight.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v58-offload-preflight.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v66-offload-cache-audit.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v66-offload-cache-audit.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v61-encrypted-checkpoint-export.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v61-encrypted-checkpoint-export.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v61-encrypted-drive-chunks.yml",
+      "secret_names": [],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v61-encrypted-drive-chunks.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v59-offload-manifest-export.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v59-offload-manifest-export.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v69-offload-inventory.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v69-offload-inventory.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v69-encrypted-single-archive-offload.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v69-encrypted-single-archive-offload.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v140-drive-onehost-readonly-integration-preflight.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [
+        "/root/.config/rclone/rclone.conf"
+      ],
+      "rclone_source_mentions": 5,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v140-drive-onehost-readonly-integration-preflight.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v70-onepass-cold-ram-offsite.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v70-onepass-cold-ram-offsite.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v144-windows-owner-backup-source.yml",
+      "secret_names": [],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v144-windows-owner-backup-source.yml"
+    },
+    {
+      "path": ".github/workflows/nox-v66-offsite-handoff-artifact.yml",
+      "secret_names": [],
+      "storage_env_names": [],
+      "known_config_paths": [],
+      "rclone_source_mentions": 0,
+      "source_ref": "e4364b487a2c08111a261b95a2a2d379e413acdc",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e4364b487a2c08111a261b95a2a2d379e413acdc/.github/workflows/nox-v66-offsite-handoff-artifact.yml"
+    },
+    {
+      "path": ".github/workflows/nox-owner-maintenance-command.yml",
+      "source_ref": "main",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/main/.github/workflows/nox-owner-maintenance-command.yml",
+      "secret_names": [
+        "NOX2"
+      ],
+      "storage_env_names": []
+    }
+  ],
+  "scope_limit": "Only documented storage/export/Drive workflows plus current owner maintenance. This does not enumerate repository secret inventory or prove no credentials exist elsewhere.",
+  "credential_values_read": false,
+  "google_or_rclone_secret_binding_seen": false,
+  "declared_transport_secret_name": "NOX2",
+  "documented_drive_profiles": [
+    {
+      "path": "/root/nox/state/cold_drive.conf",
+      "source": "nox-control/nox_pc_export.py::finalize",
+      "latest_native_observation": "HOLD_PROFILE_NOT_FOUND",
+      "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43796089671"
+    },
+    {
+      "path": "/root/.config/rclone/rclone.conf",
+      "source": ".github/workflows/nox-v140-drive-onehost-readonly-integration-preflight.yml",
+      "latest_native_default_listremotes": "RETURN_CODE_0_EMPTY_NAMES",
+      "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43796089671",
+      "latest_native_observation": "HOLD_PROFILE_NOT_FOUND"
+    },
+    {
+      "path": "/root/nox/rclone.conf",
+      "source": "nox-control/owner_native_audit.py::remote_inventory known_config_present",
+      "latest_native_observation": "HOLD_PROFILE_NOT_FOUND",
+      "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43796089671"
+    }
+  ],
+  "other_routes": [
+    {
+      "route": "nox_pc SFTP reverse SSH 127.0.0.1:46051",
+      "source": "nox-control/nox_cold_drive.py::configure_pc",
+      "active_scope": "EXCLUDED_OWNER_GOOGLE_DRIVE_ONLY"
+    },
+    {
+      "route": "Drive connector signed download URL to /dev/shm/nox_drive/3t724u",
+      "source": "nox-control/owner_drive_ram_bridge.py",
+      "active_scope": "ONE_TIME_RAM_RESTORE_NOT_PERSISTENT_DRIVE_AUTH"
+    }
+  ],
+  "new_native_inventory_payload": "nox-control/owner_storage_integration_preflight.py",
+  "new_native_inventory_state": "EXECUTED_READ_ONLY_ALL_THREE_DOCUMENTED_PROFILES_NOT_FOUND",
+  "latest_native_source_sha": "83bca5aa8de27d8f8b6ad183ac818f49dfc1eb4f",
+  "latest_native_receipt_sha256": "72a8935e4c85e8f9204627869dcd1e6968d9e183d0705a01b408045ba085b465",
+  "latest_native_default_listremotes": {
+    "returncode": 0,
+    "names": []
+  },
+  "latest_native_storage_environment_names_present": [],
+  "native_next_step": "Establish normal persistent Google Drive OAuth authorization; no credential config found in the three documented locations. Do not mistake connector signed-URL restore for persistent server authorization."
+}

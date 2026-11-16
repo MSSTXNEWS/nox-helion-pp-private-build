@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_COMPONENT_PACKS_DELIVERY_V1",
+  "status": "COMPLETED_VERIFIED",
+  "completed_at": "2026-11-16T02:52:37.613Z",
+  "planned_files": 52,
+  "verified_files": 52,
+  "total_uploaded_bytes": 4163186759,
+  "groups": [
+    {
+      "group": "main",
+      "folder_id": "1bTf6pYSghj6rG7KslA34Vjqkc3OakVb2",
+      "archive": "NOX_24H_STARTER_KIT_20261116.zip",
+      "archive_bytes": 331718151,
+      "archive_sha256": "e1a48952fafbd8c7a0a64deb4ea645fd328b5d726c0317e1d2d323f4198c8290",
+      "folder_url": "https://drive.google.com/drive/folders/1bTf6pYSghj6rG7KslA34Vjqkc3OakVb2",
+      "files_verified": 7,
+      "parts_verified": 4,
+      "shared": false,
+      "all_downloadable": true,
+      "duplicates": 0
+    },
+    {
+      "group": "training",
+      "folder_id": "1q1qR71IiOU7LsGAYjPiIbYAN5PrffDNX",
+      "archive": "NOX_TRAINING_WHEELHOUSE_CP311_CU126_20261116.zip",
+      "archive_bytes": 3831295823,
+      "archive_sha256": "7f1b932f38df0872ee21e009eb8f3005da5eb99b662a372dcb389e8d4e056b95",
+      "folder_url": "https://drive.google.com/drive/folders/1q1qR71IiOU7LsGAYjPiIbYAN5PrffDNX",
+      "files_verified": 45,
+      "parts_verified": 39,
+      "shared": false,
+      "all_downloadable": true,
+      "duplicates": 0
+    }
+  ],
+  "wheelhouse_status": "COMPLETE_OFFLINE_WHEELHOUSE_HASH_VERIFIED_NOT_INSTALLED",
+  "wheel_count": 72,
+  "hashlock_sha256": "8484b77f5020abd8e8d62f667845ee5da23684be7b4e738ec8f5833b98f3c362",
+  "native_installation_or_training_executed": false,
+  "verification_scope": "Local part SHA256 verified during splitting; Drive readback verifies filename, size, exact parent and shared=false. Remote SHA256 is not exposed by this metadata adapter.",
+  "final_listing_method": "google_drive_list_folder plus per-file get_file_metadata readbacks",
+  "search_adapter_note": "google_drive_search omitted binary archive parts and application/json files. Purpose-built list_folder returned and verified every expected file. For future resume use list_folder or known-ID metadata, not absence from search.",
+  "metadata_links": [
+    {
+      "group": "main",
+      "file": "parts_manifest.json",
+      "url": "https://drive.google.com/file/d/1h479rBz2iQwAzfmEyfSNAFAct2J6B0kg/view?usp=drivesdk",
+      "sha256": "9fcb939e6a0c9647d939d6a9f12a3d38e4d5544fd84492473c99d6e26bdbecbb"
+    },
+    {
+      "group": "main",
+      "file": "assemble_download_parts.py",
+      "url": "https://drive.google.com/file/d/1uNEOPV4LlZPB5GAWb5wGSj8m6acGllFR/view?usp=drivesdk",
+      "sha256": "f07fa488d4802ff87ffa1a8d4c781c8b7eaaaa160b8f67fee82a9803d75d2a72"
+    },
+    {
+      "group": "main",
+      "file": "README_ASSEMBLY_RU.txt",
+      "url": "https://drive.google.com/file/d/15XPtiEX71nEV08STwlyC_pe96V70r4-4/view?usp=drivesdk",
+      "sha256": "ffb45b7575be105b74c53842c3533d765a6784b921e93e43c8f486e941b4ed3f"
+    },
+    {
+      "group": "training",
+      "file": "parts_manifest.json",
+      "url": "https://drive.google.com/file/d/1oxmS0ZiboacyGmHG_OJ49FyoouNVjGRf/view?usp=drivesdk",
+      "sha256": "fcb0ece8b321b5c170723466d8e9731b8348c8dfbd135928b9c923861850c2dd"
+    },
+    {
+      "group": "training",
+      "file": "assemble_download_parts.py",
+      "url": "https://drive.google.com/file/d/1AIHN3FrlqrrvjGDieg8iLMmudZNELaa5/view?usp=drivesdk",
+      "sha256": "f07fa488d4802ff87ffa1a8d4c781c8b7eaaaa160b8f67fee82a9803d75d2a72"
+    },
+    {
+      "group": "training",
+      "file": "README_ASSEMBLY_RU.txt",
+      "url": "https://drive.google.com/file/d/1qD_zSR7d2xHJ-cAmjP4_xp4ujK1U3oKh/view?usp=drivesdk",
+      "sha256": "ffb45b7575be105b74c53842c3533d765a6784b921e93e43c8f486e941b4ed3f"
+    },
+    {
+      "group": "training",
+      "file": "training_wheelhouse_manifest.json",
+      "url": "https://drive.google.com/file/d/1qQDxR5ulyu0jBpVKrno5KoryRDlglco4/view?usp=drivesdk",
+      "sha256": "58795a1d71d32aa390b6765fd97c64639832b3672a5726dae9820ab2e20cca3d"
+    },
+    {
+      "group": "training",
+      "file": "requirements-cp311-linux-cu126.lock",
+      "url": "https://drive.google.com/file/d/1vFCkJ-1k7vuaVo_WqOpdfBp0tqlTlQgV/view?usp=drivesdk",
+      "sha256": "8484b77f5020abd8e8d62f667845ee5da23684be7b4e738ec8f5833b98f3c362"
+    },
+    {
+      "group": "training",
+      "file": "training_wheelhouse_archive.json",
+      "url": "https://drive.google.com/file/d/1PHEPKdtI3KqUEER5JSLfs_ISxUNUY79i/view?usp=drivesdk",
+      "sha256": "9c29d07bb7e8f5ede607ff450b2ca1123d98e824928cbf8d950a5cee8c97e0ac"
+    }
+  ]
+}
