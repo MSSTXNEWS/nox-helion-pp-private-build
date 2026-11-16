@@ -100,6 +100,44 @@ class DeepSeekP0Offline(unittest.TestCase):
     def test_lease_absolute_origin_is_mandatory(self):
         with self.assertRaisesRegex(m.Hold,'HOLD_LEASE_ORIGIN'):
             m.lease(Path('state/dispatcher/lease.json'),self.request,time.time(),self.root)
+    def test_ambiguous_owner_lease_json_never_admits_a_download(self):
+        # JSON default last-key-wins can disagree with another lease reader.
+        valid=self.lease.read_text()
+        original=json.loads(valid)
+        cases={
+            'duplicate_root':valid[:-1]+',"owner":"MSSTXNEWS"}',
+            'duplicate_nested':json.dumps(dict(original, note=json.loads('{"x":1,"x":2}'))),
+            'nonfinite':valid[:-1]+',"unused":NaN}',
+            'malformed':'{"owner":',
+            'array':'[]',
+        }
+        # Preserve the duplicate nested keys on the wire instead of round-tripping.
+        cases['duplicate_nested']=valid[:-1]+',"note":{"x":1,"x":2}}'
+        for label,wire in cases.items():
+            with self.subTest(label=label):
+                self.lease.write_text(wire)
+                with self.assertRaises(m.Hold) as error:
+                    self.do(opener=lambda *a,**k:self.fail('network on invalid owner lease'))
+                self.assertIn(str(error.exception), (
+                    'HOLD_LEASE_DUPLICATE_KEY', 'HOLD_LEASE_NONFINITE_JSON',
+                    'HOLD_LEASE_INVALID_JSON', 'HOLD_LEASE_SCHEMA'))
+                self.assertFalse((self.dst/(self.name+'.part')).exists())
+        self.lease.write_text(valid)
+        with patch.object(m,'RESERVE',0):
+            self.assertEqual(self.do(limit=6)['state'],'PARTIAL_SHA_PENDING')
+
+    def test_invalid_http_content_length_holds_before_partial_write(self):
+        for malformed in ('NaN','+16','1.0','not-a-number','9'*200,''):
+            with self.subTest(header=malformed[:20]):
+                def bad_response(request,timeout):
+                    response=self.opener(request,timeout)
+                    response.headers['Content-Length']=malformed
+                    return response
+                with patch.object(m,'RESERVE',0):
+                    with self.assertRaisesRegex(m.Hold,'HOLD_HTTP_LENGTH'):
+                        self.do(opener=bad_response)
+                self.assertFalse((self.dst/(self.name+'.part')).exists())
+
     def test_http_200_cannot_corrupt_partial(self):
         def ignored(request,timeout):
             r=self.opener(request,timeout);r.status=200;return r
