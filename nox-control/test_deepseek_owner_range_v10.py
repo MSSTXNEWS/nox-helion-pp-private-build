@@ -88,12 +88,42 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertFalse((self.dst/(self.name+'.part')).exists())
 
     def test_dangling_workspace_stop_fails_closed(self):
-        # Simulate a dangling global STOP without writing outside temporary fixture.
-        original_exists=Path.exists
-        original_symlink=Path.is_symlink
-        with patch.object(Path,'exists',new=lambda p: False if str(p)=='/workspace/NOX_STOP' else original_exists(p)), \
-             patch.object(Path,'is_symlink',new=lambda p: True if str(p)=='/workspace/NOX_STOP' else original_symlink(p)):
+        # lstat identifies even a dangling owner STOP symlink; no network call.
+        original=m.os.lstat
+        def simulated(path,*args,**kwargs):
+            if str(path)=='/workspace/NOX_STOP':
+                return object()
+            return original(path,*args,**kwargs)
+        with patch.object(m.os,'lstat',side_effect=simulated):
             with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):
+                m.stop(self.root)
+
+    def test_unreadable_owner_stop_is_not_mistaken_for_absence(self):
+        # EACCES/ELOOP on any owner flag must prevent Range network and writes.
+        original=m.os.lstat
+        flags=(self.root/'STOP',self.root/'state/OWNER_MAINTENANCE.flag',
+               Path('/workspace/NOX_STOP'))
+        for blocked in flags:
+            with self.subTest(flag=str(blocked)):
+                def denied(path,*args,**kwargs):
+                    if Path(path)==blocked:
+                        raise PermissionError(13,'owner STOP not readable',str(blocked))
+                    return original(path,*args,**kwargs)
+                with patch.object(m.os,'lstat',side_effect=denied),patch.object(m,'RESERVE',0):
+                    with self.assertRaisesRegex(m.Hold,'HOLD_OWNER_STOP_UNREADABLE'):
+                        self.do(opener=lambda *a,**kw:self.fail('network on unreadable STOP'))
+                self.assertFalse((self.dst/(self.name+'.part')).exists())
+
+    def test_owner_stop_symlink_loop_is_not_mistaken_for_absence(self):
+        import errno
+        original=m.os.lstat
+        blocked=self.root/'state/STOP.flag'
+        def loop(path,*args,**kwargs):
+            if Path(path)==blocked:
+                raise OSError(errno.ELOOP,'unsafe owner STOP path',str(blocked))
+            return original(path,*args,**kwargs)
+        with patch.object(m.os,'lstat',side_effect=loop):
+            with self.assertRaisesRegex(m.Hold,'HOLD_OWNER_STOP_UNREADABLE'):
                 m.stop(self.root)
 
     def test_trainer_hold_is_not_global_stop(self):
