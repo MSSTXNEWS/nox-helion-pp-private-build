@@ -40,10 +40,20 @@
     method:init.method||'GET',cache:'no-store',credentials:'same-origin',
     signal:init.signal,headers:init.headers
   });
-  const nativePost=(path,data,signal)=>nativeFetch(path,{
+  async function waitOrAbort(op,signal){
+    if(!signal)return op();
+    if(signal.aborted)throw Error('STREAM_STOP_REQUESTED');
+    let stop;const cancelled=new Promise((_,reject)=>{
+      stop=()=>reject(Error('STREAM_STOP_REQUESTED'));
+      signal.addEventListener('abort',stop,{once:true});
+    });
+    try{return await Promise.race([Promise.resolve().then(op),cancelled]);}
+    finally{signal.removeEventListener('abort',stop);}
+  }
+  const nativePost=(path,data,signal)=>waitOrAbort(()=>nativeFetch(path,{
     method:'POST',credentials:'same-origin',cache:'no-store',signal,
     headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
-  });
+  }),signal);
   async function reason(r) {
     try{const j=await r.json();return String(j.error||j.reason||'HTTP_'+r.status).slice(0,110);}
     catch{return 'HTTP_'+r.status;}
@@ -52,7 +62,7 @@
     status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
   });
   async function nativeJSON(path,init) {
-    const r=await nativeFetch(path,options(init));
+    const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
     if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r));
     return r.json();
   }
@@ -178,7 +188,7 @@
     }
   }
   function sseChat(data,signal) {
-    let closed=false;const started=performance.now();
+    let closed=false;const started=performance.now();let firstVisibleMs=null;
     // Abort is scoped to this generation, never global /api/nox/stop.
     const upstreamAbort=new AbortController();
     const onAbort=()=>upstreamAbort.abort();
@@ -188,6 +198,8 @@
     const body=new ReadableStream({
       async start(controller){
         const event=payload=>{
+          if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
+            firstVisibleMs=Math.round(performance.now()-started);
           const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
           if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
             window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
@@ -241,6 +253,7 @@
             history_persisted:true,dialog_id:id,exchange_id:receipt.exchange_id,
             model_label:receipt.native_model_label||'UNKNOWN',
             model_identity_verified:false,answer_source:'LIVE_NOX',
+            first_visible_token_ms:firstVisibleMs,
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
           event({type:'error',error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150)});

@@ -946,3 +946,60 @@ test('V167 same-chunk native frames after done remain fail-closed',async()=>{
   assert.match((await r.json()).error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
   assert.equal(readback,0);
 });
+
+test('V168 pending native POST must unblock after scoped STOP even if transport ignores signal',async()=>{
+  for(const streamed of [false,true]){
+    const calls=[],abort=new AbortController(),question='V168 POST pending';
+    const native=async path=>{
+      const u=new URL(String(path),'https://nox.local');calls.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')return Response.json({dialog_id:id});
+      if(u.pathname==='/api/nox/chat/stream')return new Promise(()=>{});
+      throw Error('UNEXPECTED_NATIVE_ROUTE');
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:native};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const data={message:question,...(streamed?{dialog_id:id,request_id:'v168-stop'}:{})};
+    const pending=w.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,body:JSON.stringify(data)});
+    if(streamed){
+      const response=await pending,reader=response.body.getReader(),dec=new TextDecoder();
+      const meta=JSON.parse(dec.decode((await reader.read()).value).slice(6).trim());
+      assert.equal(meta.type,'meta');
+      abort.abort();
+      const next=await Promise.race([reader.read(),
+        new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_STALLED_POST_ABORT')),500))]);
+      assert.equal(next.done,false);
+      const error=JSON.parse(dec.decode(next.value).slice(6).trim());
+      assert.equal(error.type,'error');assert.equal(error.error,'STREAM_STOP_REQUESTED');
+      assert.equal((await reader.read()).done,true);
+    }else{
+      await new Promise(ok=>setTimeout(ok,5));abort.abort();
+      const response=await Promise.race([pending,
+        new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_STALLED_JSON_ABORT')),500))]);
+      assert.equal(response.status,503);
+      const error=await response.json();
+      assert.equal(error.error,'STREAM_STOP_REQUESTED');
+      assert.equal(error.history_persisted,false);
+    }
+    assert(calls.includes('/api/nox/chat/stream'));
+    assert(!calls.includes('/api/ui/memory/dialogs/history'));
+    assert(!calls.includes('/api/nox/stop'));
+  }
+});
+
+test('V168 SSE first-visible-token metric only appears after true upstream text',async()=>{
+  const f=fake(),response=await f.fetch('/api/nox/chat',{
+    method:'POST',body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v168-timing'})
+  });
+  const all=await events(response);
+  assert.equal(all[0].type,'meta');
+  assert.equal(all[0].answer_source,'NATIVE_PENDING');
+  assert(all.some(x=>x.type==='token'&&x.t.trim()));
+  const done=all.find(x=>x.type==='done');
+  assert(done&&done.history_persisted===true);
+  assert(Number.isInteger(done.first_visible_token_ms));
+  assert(done.first_visible_token_ms>=0);
+  assert.equal(done.model_identity_verified,false);
+});

@@ -1,0 +1,65 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3B_V168",
+  "instructions_version": "0.0.6",
+  "slot": "3B",
+  "source_head_before": "b55322c2f5628a7c49a5005e3cbdb0895d368a81",
+  "source_blob_before": "3d7678bffc5e164c9293cbde7324735a44d56e67",
+  "test_blob_before": "dcc4d4b0f7a27dcc0cfd82abe4491c0bdf63f4b9",
+  "source_scope": "SOURCE_PATCH_CI_PENDING_NOT_NATIVE_DEPLOYED",
+  "fix": "Bound scoped STOP against a native POST that never resolves even after its AbortSignal, and against stalled native S03 GET. Expose measured first_visible_token_ms of real model text, not fake model TTFT. No global STOP.",
+  "tasks": [
+    {
+      "id": 1,
+      "status": "HOLD_NATIVE",
+      "reason": "Owner-auth original browser and exact current model SHA unverified"
+    },
+    {
+      "id": 2,
+      "status": "SOURCE_PATCHED",
+      "reason": "Native stream unchanged, first visible real token timestamp added; not a live RU/ES benchmark"
+    },
+    {
+      "id": 3,
+      "status": "SOURCE_PRESERVED",
+      "reason": "Exact S03 exchange_id history readback; abort is now effective during header/history wait"
+    },
+    {
+      "id": 4,
+      "status": "SOURCE_PATCHED",
+      "reason": "STOP abort fence on pending native POST with SSE and JSON regression tests"
+    },
+    {
+      "id": 5,
+      "status": "HOLD_NATIVE",
+      "reason": "Authenticated browser RU/ES paired p50/p95 not available"
+    }
+  ],
+  "WEIGHTS": {
+    "status": "PREVIOUS_NATIVE_8_SUCCESSFUL_UPDATES_THIS_SLOT_0",
+    "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758",
+    "checkpoint8_files": 10,
+    "checkpoint8_bytes": 519884896,
+    "manifest_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+    "independent_offsite_restore": false,
+    "latest_train_status": "FATAL/TRAIN_HOLD"
+  },
+  "KNOWLEDGE": {
+    "status": "HOLD_HUNTER_LICENSED_SOURCE_S03_RECALL",
+    "new_complete_jobs": 0,
+    "old_review_receipts": 3
+  },
+  "DISPATCHER+RESOURCES": {
+    "status": "HISTORICAL_NOT_CURRENT",
+    "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814277490",
+    "dispatcher_pid_last_observed": 724331,
+    "workers_current": null,
+    "lease_current": null,
+    "gpus_current": null,
+    "ssd_free_last_observed": 12220051456,
+    "restarts": 0,
+    "downloaded_bytes": 0,
+    "deleted_bytes": 0
+  },
+  "cleanup": "HOLD_NEW_MODEL_NOT_ACCEPTED_OFFSITE_RESTORE_UNKNOWN",
+  "next": "Exact SHA CI and original owner-native preimage/STOP/lease/restore; then real browser SSE/STOP/S03 RU/ES p50/p95. Trainer restart owned by 2D/control A."
+}
