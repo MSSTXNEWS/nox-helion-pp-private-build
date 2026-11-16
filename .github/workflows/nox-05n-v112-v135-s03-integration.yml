@@ -1,5 +1,13 @@
 name: NOX 05N V29.3 V135 V112 bounded S03 source integration
 on:
+  pull_request:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v112/**'
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+      - 'coordination/onepass/v135_resonance_owner_stage.py'
+      - '.github/workflows/nox-05n-v112-v135-s03-integration.yml'
   push:
     branches: [codex/nox-05n-v112-v135-s03-integration-20261116]
     paths:
