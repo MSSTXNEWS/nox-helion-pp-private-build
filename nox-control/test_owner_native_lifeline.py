@@ -28,6 +28,32 @@ class InstallerTests(unittest.TestCase):
             p=Path(d)/"new";self.assertTrue(n.preserve_or_write(p,b"safe",0o600))
             self.assertEqual(p.read_bytes(),b"safe")
             self.assertEqual(p.stat().st_mode & 0o777,0o600)
+    def test_concurrent_regular_file_or_dangling_link_never_replaced(self):
+        # No-clobber publication must survive a competing owner creating the
+        # destination AFTER initial path preflight but BEFORE atomic link.
+        import os
+        real_link = os.link
+        for kind in ("file", "dangling_symlink"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as d:
+                target = Path(d) / "owner-lifeline.conf"
+                def competing_link(src, dst, **kwargs):
+                    if kind == "file":
+                        Path(dst).write_bytes(b"other-owner-config")
+                    else:
+                        Path(dst).symlink_to("missing-owner-config")
+                    return real_link(src, dst, **kwargs)
+                with patch.object(n.os, "link", side_effect=competing_link):
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "HOLD_LIFELINE_CONCURRENT_FILE_CREATE"):
+                        n.preserve_or_write(target, b"my-config", 0o600)
+                if kind == "file":
+                    self.assertEqual(target.read_bytes(), b"other-owner-config")
+                else:
+                    self.assertTrue(target.is_symlink())
+                    self.assertEqual(os.readlink(target), "missing-owner-config")
+                self.assertEqual(sorted(p.name for p in Path(d).iterdir()),
+                                 ["owner-lifeline.conf"])
+
     def test_symlink_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);origin=root/"old";origin.write_bytes(b"keep")
