@@ -143,4 +143,48 @@ class DeepSeekP0Offline(unittest.TestCase):
         with self.assertRaisesRegex(m.Hold,'LOCK_FILE_UNSAFE'):self.do()
         self.assertEqual(preserve.read_bytes(),b'keep')
 
+
+    def test_stop_in_last_read_prevents_partial_success(self):
+        def interrupted(request,timeout=30):
+            response=self.opener(request,timeout)
+            original=response.read
+            def read(n):
+                chunk=original(n)
+                (self.root/'STOP').touch()
+                return chunk
+            response.read=read
+            return response
+        with patch.object(m,'RESERVE',0):
+            with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):
+                self.do(limit=6,opener=interrupted)
+        self.assertEqual((self.dst/(self.name+'.part')).read_bytes(),self.content[:6])
+
+    def test_stop_during_complete_reuse_digest_prevents_ack(self):
+        final=self.dst/self.name;final.write_bytes(self.content)
+        original=m.digest
+        def interrupted(path):
+            h=original(path);(self.root/'STOP').touch();return h
+        with patch.object(m,'digest',side_effect=interrupted):
+            with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):
+                self.do(opener=lambda *a,**kw:self.fail('unexpected network'))
+        self.assertEqual(final.read_bytes(),self.content)
+
+    def test_partial_inode_replacement_after_fsync_fails(self):
+        part=self.dst/(self.name+'.part');original=m.stop
+        old_fds=[];swapped=[]
+        def swap(root):
+            if not swapped and part.exists() and part.stat().st_size==6:
+                import os
+                old_fds.append(os.open(part,os.O_RDONLY))
+                part.unlink();part.write_bytes(self.content[:6]);swapped.append(True)
+            return original(root)
+        try:
+            with patch.object(m,'RESERVE',0),patch.object(m,'stop',side_effect=swap):
+                with self.assertRaisesRegex(m.Hold,'PARTIAL_LENGTH_RACE'):
+                    self.do(limit=6)
+        finally:
+            import os
+            for fd in old_fds:os.close(fd)
+        self.assertTrue(swapped)
+
 if __name__=='__main__':unittest.main()

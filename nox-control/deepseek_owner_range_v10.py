@@ -147,6 +147,7 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
         if existing:
             require(existing.st_size==row['bytes'] and digest(final)==row['sha256'],
                     'HOLD_EXISTING_FINAL_UNVERIFIED')
+            stop(root);lease(lease_file,request,time.time(),root)
             return {'state':'REUSED_SHA_VERIFIED','new_bytes':0,'file':name,'sha256':row['sha256']}
         partial_stat=regular(partial,True)
         # Keep the admitted inode allocated across HTTP I/O: unlink/recreate may reuse
@@ -200,7 +201,11 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     require(chunk,'HOLD_EARLY_EOF')
                     output.write(chunk);wrote+=len(chunk)
                 output.flush();os.fsync(output.fileno())
-        require(partial.stat().st_size==end+1,'HOLD_PARTIAL_LENGTH_RACE')
+        # Never acknowledge a partial Range after owner STOP, lease expiry or inode swap.
+        stop(root);lease(lease_file,request,time.time(),root)
+        after=regular(partial)
+        require((after.st_dev,after.st_ino,after.st_size)==
+                (opened.st_dev,opened.st_ino,end+1),'HOLD_PARTIAL_LENGTH_RACE')
         if end+1!=row['bytes']:
             return {'state':'PARTIAL_SHA_PENDING','file':name,'new_bytes':wrote,'part_bytes':end+1}
         actual=digest(partial)
