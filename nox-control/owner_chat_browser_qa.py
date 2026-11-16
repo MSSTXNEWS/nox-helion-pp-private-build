@@ -33,7 +33,7 @@ import urllib.request
 ROOT = Path('/root/nox')
 STATE = ROOT/'state/owner_browser_qa'
 PAGE = '/nox-web-v29/pc/resonance.html'
-BUILD = 'NOX_OWNER_LIVE_RESONANCE_20261115'
+BUILD = 'NOX_OWNER_LIVE_RESONANCE_20261116'
 PLAYWRIGHT_PIN = '1.65.2'  # Official PyPI metadata checked 2026-11-16.
 EXPECTED = '1,2,3,4,5,6,7,8,9,10'
 SAFE_API = {'/api/nox/status','/api/nox/chat/stream','/api/nox/stop',
@@ -389,6 +389,7 @@ async def browser_run(report, directory, available):
             await page.wait_for_function("window.__NOX_OWNER_LIVE_UI===true && !!document.querySelector('#prompt')",timeout=15000)
             await page.wait_for_timeout(1200)
             before=await page.evaluate(SNAPSHOT_JS)
+            report['graphics_before']=before
             if (not before or before['build']!=BUILD or not all(before.get(k) for k in ('native_owner','v135','v137','owner_live','prompt_visible'))):
                 raise RuntimeError('HOLD_GRAPHICAL_MODULES_NOT_ACTIVE')
             target=page.locator('#nativeChats').get_by_text(title,exact=True)

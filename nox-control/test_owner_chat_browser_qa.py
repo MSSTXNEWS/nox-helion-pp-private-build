@@ -1,4 +1,5 @@
 """Portable source/security tests; no browser or native NOX action is executed."""
+import ast
 import importlib.util
 import os
 from pathlib import Path
@@ -14,6 +15,12 @@ SPEC.loader.exec_module(QA)
 
 
 class BrowserQaTests(unittest.TestCase):
+    def test_browser_expected_build_matches_deployed_ui_renderer(self):
+        tree = ast.parse(Path(QA.__file__).with_name('owner_chat_ui.py').read_text())
+        builds = [ast.literal_eval(node.value) for node in tree.body
+                  if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == 'BUILD' for target in node.targets)]
+        self.assertEqual(builds, [QA.BUILD])
+
     def test_resource_paths_never_include_query_credentials(self):
         self.assertEqual(QA.safe_route('http://127.0.0.1:8080/nox-web-v29/owner-chat-ui.js?token=secret'),
                          '/nox-web-v29/owner-chat-ui.js')

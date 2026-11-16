@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -82,7 +83,7 @@ class BrowserEntryTests(unittest.TestCase):
         self.assertNotIn('install-deps', source)
         self.assertNotIn('--with-deps', source)
         self.assertNotIn('--allow-unauthenticated', source)
-        self.assertIn("PIN='2033a533268c06f4f0ff25a44f6e635db704fc20e6bbc6ba7f077a8265cc0bad'", source)
+        self.assertEqual(entry.PIN, hashlib.sha256(Path(entry.__file__).with_name('owner_chat_browser_qa.py').read_bytes()).hexdigest())
 
     def test_linker_parser_exports_missing_names_only(self):
         raw = b'\tlibXdamage.so.1 => not found\n\tlibc.so.6 => /private/runtime/path/libc.so.6 (0x123)\n'

@@ -17,7 +17,7 @@ UBUNTU_SOURCES=('deb [arch=amd64 signed-by=/usr/share/keyrings/ubuntu-archive-ke
  'deb [arch=amd64 signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] '
  'http://security.ubuntu.com/ubuntu jammy-security main\n')
 # Full source hash is checked before any package operation.
-PIN='2033a533268c06f4f0ff25a44f6e635db704fc20e6bbc6ba7f077a8265cc0bad'
+PIN='2b8f704cc69201e8dc527353ea5954f964a1ab3be885564a7317ca19b27fd5ea'
 def emit(kind,data):print('NOX_MAINT_REPAIR='+json.dumps({'kind':kind,'data':data},separators=(',',':')),flush=True)
 def run(argv,env,timeout,tag):
  proc=subprocess.run(argv,env=env,capture_output=True,timeout=timeout)
