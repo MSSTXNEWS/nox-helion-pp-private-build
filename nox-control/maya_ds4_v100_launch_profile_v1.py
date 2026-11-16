@@ -30,7 +30,8 @@ PARALLEL = 1
 
 
 def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
-                      verified_files, tensor_types, model_file_paths):
+                      verified_files, tensor_types, model_file_paths,
+                      tensor_role_inventory=None):
     """Build exact argv only after all pinned source preflight checks pass."""
     if owner_stop is not False:
         return {"state": "HOLD_OWNER_STOP", "launchable": False}
@@ -48,6 +49,7 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         verified_files=verified_files,
         tensor_types=tensor_types,
         model_file_paths=model_file_paths,
+        tensor_role_inventory=tensor_role_inventory,
     )
     if checked.get("state") != "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE":
         return {"state": checked.get("state", "HOLD_PREFLIGHT_UNKNOWN"),
@@ -62,7 +64,6 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "--max-context", str(MAX_CONTEXT),
         "--reserve-mib", str(RESERVE_MIB),
         "--expert-profile", "none",
-        "--mmap-experts", "auto",
         "--dspark", "none",
         "--parallel", str(PARALLEL),
         "--serve",
@@ -80,9 +81,13 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "context_tokens": MAX_CONTEXT,
         "vram_reserve_mib": RESERVE_MIB,
         "parallel_requests": PARALLEL,
-        "expert_mapping": "auto",
+        "expert_mapping": "GGUF hot experts in VRAM cache; CPU-lane experts read in-place from model files",
+        "mmap_experts_cli": "omitted: Maya forces file-backed CPU-lane experts for GGUF; --mmap-experts does not change that path",
+        "kv_cache_fit": "HOLD_LIVE_VRAM_AND_RAM_READBACK_REQUIRED",
+        "runtime_fit": "HOLD_LIVE_FREE_MEMORY_PREFLIGHT_REQUIRED",
         "drafting": "disabled",
         "precision_override": "none; GGUF quantization comes from verified model files",
         "protocol": "Maya stdin/stdout engine protocol; not an HTTP endpoint",
         "measured": False,
     }
+
