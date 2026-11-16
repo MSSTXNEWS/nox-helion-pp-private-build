@@ -10,11 +10,13 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_successor_memfd_progress.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_workspace_browser_acceptance_v5.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_workspace_browser_acceptance_v5.py':('owner_workspace_browser_acceptance_v2.py','owner_workspace_browser_acceptance.py','owner_chat_page_diagnose.py','owner_browser_stream_only_entry.py','owner_chat_browser_qa.py'),
+    'nox-control/owner_chat_markdown_acceptance.py':('owner_browser_stream_only_entry.py','owner_chat_browser_qa.py'),
     'nox-control/owner_qwen_successor_memfd_progress.py':(),
     'nox-control/owner_qwen_successor_checkpoint_proof.py':(),
     'nox-control/owner_qwen_successor_observe_v2.py':(),
@@ -78,6 +80,7 @@ SCOPED_REPAIR_BUNDLES={
         'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
 }
 SCOPED_REPAIR_EXTRA_PATHS={
+    'nox-control/owner_workspace_browser_acceptance_v5.py':('nox-control/owner_workspace_browser_acceptance_v2.py','nox-control/owner_workspace_browser_acceptance.py','nox-control/owner_chat_page_diagnose.py'),
     'nox-control/owner_workspace_browser_acceptance_v3.py':('nox-control/owner_workspace_browser_acceptance_v2.py','nox-control/owner_workspace_browser_acceptance.py','nox-control/owner_chat_page_diagnose.py'),
     'nox-control/owner_qwen_successor_entry_v2.py':('nox-control/owner_qwen_successor_install_v2.py','nox-control/owner_qwen_execution_successor.py','nox-control/qwen_student_training_entry_successor.py','nox-control/owner_qwen_successor_guard.py','nox-control/owner_qwen_successor_status.py','nox-control/owner_qwen_successor_media_handoff.py','nox-control/owner_qwen_successor_media_guard.py','nox-control/owner_qwen_successor_handback_retry.py','nox-control/owner_qwen_successor_hermes_hydrate.py','nox-control/owner_qwen_successor_watch.py',),
     'nox-control/owner_workspace_browser_acceptance_v2.py':('nox-control/owner_workspace_browser_acceptance.py','nox-control/owner_chat_page_diagnose.py'),
@@ -126,7 +129,7 @@ def repair_bundle_paths(action,entrypoint,paths):
     if len(set(selected))!=len(selected):raise RuntimeError('HOLD_SCOPED_BUNDLE_DUPLICATE_ALLOWLIST')
     overrides=(FROZEN_BROWSER_DEPENDENCIES if entrypoint in FROZEN_BROWSER_ENTRIES else
                FROZEN_BROWSER_PAGE_DEPENDENCIES if entrypoint in ('nox-control/owner_chat_page_diagnose.py',
-                   'nox-control/owner_workspace_browser_acceptance.py','nox-control/owner_workspace_browser_acceptance_v2.py','nox-control/owner_workspace_browser_acceptance_v3.py') else {})
+                   'nox-control/owner_workspace_browser_acceptance.py','nox-control/owner_workspace_browser_acceptance_v2.py','nox-control/owner_workspace_browser_acceptance_v3.py','nox-control/owner_workspace_browser_acceptance_v5.py','nox-control/owner_chat_markdown_acceptance.py') else {})
     if not set(overrides).issubset(selected):raise RuntimeError('HOLD_SCOPED_BUNDLE_FROZEN_SCOPE')
     found={}
     for path in (*paths,*SCOPED_REPAIR_EXTRA_PATHS.get(entrypoint,()),*overrides.values()):
