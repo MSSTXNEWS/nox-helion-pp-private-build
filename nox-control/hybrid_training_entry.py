@@ -196,29 +196,33 @@ def select_resume(output: Path, requested: bool) -> tuple[Path | None, int]:
 def build_existing_trainer(native, model, tokenizer, dataset, planned: int, torch):
     """Retain native TRL compatibility path; override its configuration only."""
     import trl
+    # SFTTrainer must retain its real module-level config class for isinstance
+    # checks. Returning that class also keeps training_args.bin pickleable.
+    import trl.trainer.sft_trainer as sft_module
+    _ = trl.SFTTrainer
     original_config = trl.SFTConfig
-    class BoundedConfig(original_config):
-        def __init__(self, *args, **kwargs):
-            kwargs.update(output_dir=str(OUTPUT), per_device_train_batch_size=1,
-                          gradient_accumulation_steps=1, max_length=256,
-                          max_steps=planned, fp16=True, bf16=False, packing=False,
-                          gradient_checkpointing=True,
-                          gradient_checkpointing_kwargs={'use_reentrant': False},
-                          dataloader_num_workers=0, logging_steps=1,
-                          save_steps=planned, save_total_limit=None,
-                          warmup_steps=3, learning_rate=1e-4,
-                          optim='paged_adamw_8bit', lr_scheduler_type='cosine',
-                          report_to=[], save_safetensors=True)
-            super().__init__(*args, **kwargs)
+    if sft_module.SFTConfig is not original_config:
+        raise RuntimeError('HOLD_NATIVE_SFT_CONFIG_CLASS_MISMATCH')
+    bounded = dict(output_dir=str(OUTPUT), per_device_train_batch_size=1,
+                   gradient_accumulation_steps=1, max_length=256,
+                   max_steps=planned, fp16=True, bf16=False, packing=False,
+                   gradient_checkpointing=True,
+                   gradient_checkpointing_kwargs={'use_reentrant': False},
+                   dataloader_num_workers=0, logging_steps=1,
+                   save_steps=planned, save_total_limit=None,
+                   warmup_steps=3, learning_rate=1e-4,
+                   optim='paged_adamw_8bit', lr_scheduler_type='cosine',
+                   report_to=[])
+    def bounded_config(*args, **kwargs):
+        kwargs.update(bounded)
+        return original_config(*args, **kwargs)
     try:
-        trl.SFTConfig = BoundedConfig
+        trl.SFTConfig = bounded_config
         trainer = native.build_trainer(model, tokenizer, dataset, False, planned)
     finally:
         trl.SFTConfig = original_config
-    if (Path(trainer.args.output_dir) != OUTPUT or
-        trainer.args.gradient_accumulation_steps != 1 or
-        getattr(trainer.args, 'max_length', None) != 256 or
-        trainer.args.fp16 is not True or trainer.args.bf16 is not False):
+    if (type(trainer.args) is not original_config or any(
+            getattr(trainer.args, key, object()) != value for key, value in bounded.items())):
         raise RuntimeError('HOLD_NATIVE_TRAINER_CONFIG_NOT_APPLIED')
     # TRL may cast adapters during SFTTrainer construction even with fp16=True.
     fp32_adapters(trainer.model, torch, convert=True)
