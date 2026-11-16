@@ -125,39 +125,55 @@ BLOCK_FILESYSTEMS={'ext2','ext3','ext4','xfs','btrfs','zfs','vfat','exfat','ntfs
 def _unescape_mountinfo(value):
     return re.sub(r'\\([0-7]{3})',lambda m:chr(int(m.group(1),8)),value)
 
-def _mount_inventory_from_text(text,statvfs=os.statvfs):
-    rows=[]; seen=set(); eligible=0
-    lines=text.splitlines()
-    truncated=len(lines)>4096
+def _capacity_row(path,mount_rows,statvfs,path_exists):
+    exists=bool(path_exists(path))
+    matches=[r for r in mount_rows if path==r['mountpoint'] or path.startswith(r['mountpoint'].rstrip('/')+'/')]
+    mount=max(matches,key=lambda r:len(r['mountpoint'])) if matches else None
+    try:
+        if not exists:raise FileNotFoundError(path)
+        st=statvfs(path); block_size=st.f_frsize or st.f_bsize
+        total=int(st.f_blocks)*int(block_size); available=int(st.f_bavail)*int(block_size)
+    except (OSError,AttributeError,TypeError,ValueError):
+        total=None; available=None
+    row={'path':path,'exists':exists,'mountpoint':mount['mountpoint'] if mount else None,
+         'filesystem':mount['filesystem'] if mount else None,
+         'device_major_minor':mount['device_major_minor'] if mount else None,
+         'total_bytes':total,'available_bytes':available}
+    return row
+
+def _mount_inventory_from_text(text,statvfs=os.statvfs,path_exists=None):
+    rows=[]; mount_by_path={}; type_counts={}
+    lines=text.splitlines(); truncated=len(lines)>4096
     for line in lines[:4096]:
         try:
             before,after=line.split(' - ',1)
             left=before.split(); right=after.split()
             if len(left)<6 or len(right)<3:continue
-            fstype=right[0]
-            if fstype not in BLOCK_FILESYSTEMS:continue
-            mountpoint=_unescape_mountinfo(left[4])
-            dev=left[2]
-            if mountpoint in seen or not SAFE.fullmatch(mountpoint) or not re.fullmatch(r'\d+:\d+',dev):continue
-            eligible+=1
-            if len(rows)>=512:
-                truncated=True
-                continue
-            try:
-                st=statvfs(mountpoint)
-                block_size=st.f_frsize or st.f_bsize
-                total=int(st.f_blocks)*int(block_size)
-                available=int(st.f_bavail)*int(block_size)
-            except (OSError,AttributeError,TypeError,ValueError):
-                total=None; available=None
-            seen.add(mountpoint)
-            rows.append({'mountpoint':mountpoint,'filesystem':fstype,'device_major_minor':dev,
-                         'total_bytes':total,'available_bytes':available})
+            fstype=right[0]; mountpoint=_unescape_mountinfo(left[4]); dev=left[2]
+            if not SAFE.fullmatch(mountpoint) or not re.fullmatch(r'\d+:\d+',dev):continue
+            if re.fullmatch(r'[A-Za-z0-9_.+-]{1,64}',fstype):
+                type_counts[fstype]=type_counts.get(fstype,0)+1
+            entry={'mountpoint':mountpoint,'filesystem':fstype,'device_major_minor':dev}
+            mount_by_path[mountpoint]=entry
+            if fstype in BLOCK_FILESYSTEMS and not any(r['mountpoint']==mountpoint for r in rows):
+                try:
+                    st=statvfs(mountpoint); block_size=st.f_frsize or st.f_bsize
+                    total=int(st.f_blocks)*int(block_size); available=int(st.f_bavail)*int(block_size)
+                except (OSError,AttributeError,TypeError,ValueError):
+                    total=None; available=None
+                rows.append({**entry,'total_bytes':total,'available_bytes':available})
         except (ValueError,IndexError):continue
+    if len(rows)>512:
+        rows=rows[:512]; truncated=True
     rows.sort(key=lambda r:(r['mountpoint'],r['filesystem'],r['device_major_minor']))
+    if path_exists is None:path_exists=lambda p:Path(p).exists()
+    all_mount_rows=list(mount_by_path.values())
+    data_entry=mount_by_path.get('/data')
+    paths=[_capacity_row(p,all_mount_rows,statvfs,path_exists) for p in ('/','/data','/workspace')]
     return {'scope':'current_process_mount_namespace_only','provider_disk_visibility':'not_established',
-            'mountinfo_readable':True,'data_mount_present':any(r['mountpoint']=='/data' for r in rows),
-            'eligible_block_mount_count':eligible,'truncated':truncated,'mounts':rows}
+            'mountinfo_readable':True,'mountinfo_entry_count':len(lines),'filesystem_type_counts':type_counts,
+            'data_mount_present':data_entry is not None,'data_mount_entry':data_entry,
+            'storage_paths':paths,'eligible_block_mount_count':len(rows),'truncated':truncated,'mounts':rows}
 
 def mount_inventory():
     try:
