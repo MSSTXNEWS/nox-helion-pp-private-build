@@ -69,10 +69,29 @@ def assert_owner_stop_clear():
 
 
 def plain_path(value, must_exist=True):
+    """Fail closed on unreadable ancestors, including optional receipt paths.
+
+    Path.is_symlink() can return False on ELOOP/EACCES on newer Python,
+    silently treating a blocked model/receipt parent as a safe directory.
+    A genuinely absent path is still permitted for owner-created receipts;
+    this is a preflight guard, not a substitute for atomic/no-follow writes.
+    """
     p = Path(os.path.abspath(value))
-    for part in [*reversed(p.parents), p]:
-        if part.is_symlink():
+    missing = False
+    for part in (*reversed(p.parents), p):
+        if missing:
+            continue
+        try:
+            mode = os.lstat(part).st_mode
+        except FileNotFoundError:
+            missing = True
+            continue
+        except OSError as exc:
+            raise ValueError('HOLD_PATH_UNREADABLE') from exc
+        if stat.S_ISLNK(mode):
             raise ValueError('HOLD_SYMLINK_PATH')
+        if part != p and not stat.S_ISDIR(mode):
+            raise ValueError('HOLD_NON_DIRECTORY_PARENT')
     if must_exist:
         p.stat()
     return p
