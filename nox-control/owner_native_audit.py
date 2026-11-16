@@ -83,6 +83,7 @@ def v13_owner_fence_metadata(root=Path('/root/nox'), workspace_stop=Path('/works
         'DOT_STOP': root / '.stop',
         'PROGRAM_STOP': root / 'program/STOP',
         'STATE_STOP': root / 'state/STOP',
+        'STATE_STOP_FLAG': root / 'state/STOP.flag',
         'MEDIA_STOP': root / 'state/MEDIA_STOP.flag',
         'OWNER_MAINTENANCE': root / 'state/OWNER_MAINTENANCE.flag',
         'WORKSPACE_STOP': workspace_stop,
