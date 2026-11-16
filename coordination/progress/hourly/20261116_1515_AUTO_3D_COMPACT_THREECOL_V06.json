@@ -72,7 +72,7 @@
     {
       "n": 5,
       "status": "SOURCE_PATCHED_HOLD_NATIVE",
-      "proof": "CSS committed via blob CAS b108432, offline regression source separately committed d8b3ef, both GitHub blob readback PASS. Single-tree atomic update_ref failed with GitHubGraphQLAPIError; no forced update; native deploy still HOLD."
+      "proof": "SOURCE integrated with existing stage script: CSS b108432, regression test d8b3ef, exact pin 6599ce and GitHub readback all PASS. No native OneHost deployment/STOP/S03/rollback verified."
     }
   ],
   "WEIGHTS": {
@@ -124,7 +124,12 @@
   "test_blob_sha": "fef099dc4d1fc9547155dd18fdafa0f2a6dcfb3f",
   "test_source_commit": "d8b3ef45be072c72b08b79dde160335c6730be57",
   "git_write_mode": "TWO_SEQUENTIAL_CAS_CONTENTS_WRITES_AFTER_ATOMIC_REF_UPDATE_FAILED; NO_FORCE_PUSH",
-  "ci_exact_sha": "PENDING_OR_NOT_YET_OBSERVED",
+  "ci_exact_sha": "UNMEASURED_NEW_COMMIT",
   "test_repro_command": "python coordination/onepass/web29_3d_20261116/test_short_landscape_threecol_v06.py --archive <trusted_existing_WEB29_archive.zip> --css coordination/onepass/web29_3d_20261116/site/nox-cinematic-accessibility-3d.css",
-  "work_notes": "Offline tests were executed before commit against an extracted original WEB29 archive with the current CSS media rules plus the proposed overrides. GitHub blob and source fingerprints read back after commit; no native owner-auth SSE/STOP/S03."
+  "work_notes": "Offline tests were executed before commit against an extracted original WEB29 archive with the current CSS media rules plus the proposed overrides. GitHub blob and source fingerprints read back after commit; no native owner-auth SSE/STOP/S03.",
+  "integrator_pin_sha": "95b4909993b10b52af0d7218dd1152f5a82a4e5b",
+  "integrator_pin_commit": "6599ce4711c51266462c0189392add5658bdf4d8",
+  "integrator_pin_source_readback": "PASS",
+  "source_verified_paths": 4,
+  "integration_script_already_present": true
 }
