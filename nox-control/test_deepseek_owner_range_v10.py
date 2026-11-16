@@ -169,6 +169,27 @@ class DeepSeekP0Offline(unittest.TestCase):
                 self.do(opener=lambda *a,**kw:self.fail('unexpected network'))
         self.assertEqual(final.read_bytes(),self.content)
 
+    def test_final_publication_never_overwrites_racing_owner_file(self):
+        # Existing final is absent at initial admission. Another writer publishes
+        # it immediately after our final.exists() guard: os.replace lost it.
+        final=self.dst/self.name
+        partial=self.dst/(self.name+'.part')
+        original_exists=Path.exists
+        calls={'final':0}
+        def race_exists(path):
+            if path==final:
+                calls['final']+=1
+                if calls['final']==2:
+                    final.write_bytes(b'other-owner-unique-checkpoint')
+                    return False
+            return original_exists(path)
+        with patch.object(m,'RESERVE',0),patch.object(Path,'exists',new=race_exists):
+            with self.assertRaisesRegex(m.Hold,'HOLD_FINAL_RACE'):
+                self.do(limit=len(self.content))
+        self.assertEqual(final.read_bytes(),b'other-owner-unique-checkpoint')
+        self.assertEqual(partial.read_bytes(),self.content)
+        self.assertFalse((self.dst/(self.name+'.verified.json')).exists())
+
     def test_partial_inode_replacement_after_fsync_fails(self):
         part=self.dst/(self.name+'.part');original=m.stop
         old_fds=[];swapped=[]
