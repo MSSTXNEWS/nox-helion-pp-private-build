@@ -134,7 +134,8 @@ class MediaInstallTests(unittest.TestCase):
         purelib = environment/'lib/python3.12/site-packages'
         purelib.mkdir(parents=True)
         base = {'purelib':'/root/venv_volta/lib/python3.12/site-packages',
-                'torch':'2.6.0+cu124','torch_file':'/root/venv_volta/lib/python3.12/site-packages/torch/__init__.py'}
+                'torch':'2.6.0+cu124','torch_file':'/root/venv_volta/lib/python3.12/site-packages/torch/__init__.py',
+                'python':'3.12.16','machine':'x86_64'}
         marker = environment/'nox-environment.json'
         marker.write_text(json.dumps(m.environment_spec(base,legacy=legacy)))
         (purelib/'nox_shared_torch.pth').write_text(base['purelib']+'\n')
@@ -150,8 +151,8 @@ class MediaInstallTests(unittest.TestCase):
                 return str(purelib)
             if code == m.PIN_AUDIT_CODE:
                 requested = json.loads(args[3])
-                if requested == list(m.REQUESTS_PINS) and not any(c[1:3]==['-m','pip'] for c in calls):
-                    return json.dumps({'ok':False,'missing':['requests'],'mismatched':[],
+                if requested == list(m.AIOHTTP_PINS) and not any(c[1:3]==['-m','pip'] for c in calls):
+                    return json.dumps({'ok':False,'missing':['multidict'],'mismatched':[],
                                        'outside_isolated_environment':[]})
                 return json.dumps({'ok':True,'missing':[],'mismatched':[],
                                    'outside_isolated_environment':[]})
@@ -160,11 +161,12 @@ class MediaInstallTests(unittest.TestCase):
             if 'libvpx-vp9' in code:
                 if failure: raise RuntimeError(failure)
                 return json.dumps({'torch':base['torch'],'torch_file':base['torch_file'],
-                                   'vp9_encoder':'libvpx-vp9','requests':'2.34.2'})
+                                   'vp9_encoder':'libvpx-vp9','requests':'2.34.2',
+                                   'aiohttp':'3.11.13','multidict':'6.9.1'})
             raise AssertionError('unexpected command')
         return run
 
-    def test_exact_legacy_environment_adds_only_five_hashed_wheels(self):
+    def test_exact_observed_environment_adds_complete_seven_wheel_closure(self):
         purelib,base,marker = self.environment_fixture()
         calls = []
         with mock.patch.object(m,'run',side_effect=self.environment_runner(purelib,base,calls)),mock.patch.object(m,'emit'):
@@ -174,10 +176,13 @@ class MediaInstallTests(unittest.TestCase):
         self.assertIn('--no-deps',pip[0])
         self.assertIn('--no-index',pip[0])
         wheels = [arg for arg in pip[0] if arg.startswith('https:')]
-        self.assertEqual(len(wheels),5)
+        self.assertEqual(len(wheels),7)
         self.assertTrue(all('files.pythonhosted.org/' in arg and '#sha256=' in arg for arg in wheels))
         self.assertNotIn('torchvision', ' '.join(pip[0]))
         self.assertNotIn('torchaudio', ' '.join(pip[0]))
+        self.assertNotIn('/requests-', ' '.join(pip[0]))
+        baseline=[json.loads(row[3]) for row in calls if row[1]=='-c' and row[2]==m.PIN_AUDIT_CODE][0]
+        self.assertEqual(baseline,list(m.LEGACY_PYPI_PINS+m.REQUESTS_PINS+m.CUDA_PINS))
         self.assertEqual(json.loads(marker.read_text()),m.environment_spec(base))
 
     def test_unknown_or_altered_legacy_environment_is_not_rewritten(self):
@@ -250,6 +255,26 @@ class MediaInstallTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'PARALLEL_SHM_ADMISSION'):
                 m.download_selected(rows)
         download.assert_not_called()
+
+    def test_environment_failure_does_not_cancel_admitted_downloads(self):
+        complete=threading.Event()
+        def downloads(rows,allowance):
+            self.assertEqual(allowance,m.SETUP_ALLOWANCE)
+            time.sleep(0.03);complete.set()
+        with mock.patch.object(m,'admit_parallel_downloads') as admitted, \
+             mock.patch.object(m,'ensure_environment',side_effect=RuntimeError('HOLD_MEDIA_DEPENDENCY_CLOSURE')), \
+             mock.patch.object(m,'download_selected',side_effect=downloads),mock.patch.object(m,'emit'):
+            with self.assertRaisesRegex(RuntimeError,'DEPENDENCY_CLOSURE'):
+                m.prepare_assets_and_environment({},[])
+        admitted.assert_called_once_with([],m.SETUP_ALLOWANCE)
+        self.assertTrue(complete.is_set())
+
+    def test_compiled_dependency_wheels_require_observed_platform(self):
+        _,base,_=self.environment_fixture()
+        with mock.patch.object(m,'run') as run:
+            with self.assertRaisesRegex(RuntimeError,'DEPENDENCY_WHEEL_PLATFORM'):
+                m.ensure_environment({**base,'python':'3.11.16'})
+        run.assert_not_called()
 
 
 if __name__=='__main__': unittest.main()

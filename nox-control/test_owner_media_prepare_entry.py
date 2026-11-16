@@ -120,16 +120,16 @@ class PreparationTests(unittest.TestCase):
 
     def migration_fixture(self, root):
         state=root/'state';state.mkdir()
-        request='6903599168'
-        old={'schema':'NOX_MEDIA_PREPARE_JOB_V1','request':request,'source_sha':'a'*40,
+        request='6903919663'
+        old={'schema':'NOX_MEDIA_PREPARE_JOB_V1','request':request,'source_sha':entry.LEGACY_SOURCE_SHA,
              'installer_sha256':entry.LEGACY_INSTALLER_SHA,'runtime_sha256':entry.RUNTIME_SHA,
              'worker_sha256':entry.LEGACY_WORKER_SHA,'pid':101,'start_ticks':'1000',
              'boot_id':'boot-a','argv':['python','worker.py'],'state':'S'}
         archived=state/'prepare_jobs'/(request+'.json');archived.parent.mkdir()
         archived.write_text(json.dumps(old))
-        result={'schema':'NOX_MEDIA_PREPARE_WORKER_V1','request':request,'source_sha':'a'*40,
-                'state':'HOLD_MEDIA_PREPARE','error':'HOLD_MEDIA_COMMAND_EXIT_1',
-                'started':1794787396.0916307,'finished':1794787436.342228}
+        result={'schema':'NOX_MEDIA_PREPARE_WORKER_V1','request':request,'source_sha':entry.LEGACY_SOURCE_SHA,
+                'state':'HOLD_MEDIA_PREPARE','error':'HOLD_MEDIA_DEPENDENCY_CLOSURE',
+                'started':1794788749.5905006,'finished':1794788752.6067092}
         result_path=state/('prepare_result_'+request+'.json')
         result_path.write_text(json.dumps(result))
         return state,old,result,result_path
@@ -165,14 +165,14 @@ class PreparationTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError,'INSTALLED_COMPONENT_CHANGED'):
                     entry.install_component(source,new,new_sha,old_sha,None)
                 self.assertEqual(source.read_bytes(),old)
-                entry.install_component(source,new,new_sha,old_sha,{'request':'6903599168'})
+                entry.install_component(source,new,new_sha,old_sha,{'request':'6903919663'})
                 self.assertEqual(source.read_bytes(),new)
                 backup=state/'source_backups'/('installer.py.'+old_sha)
                 self.assertEqual(backup.read_bytes(),old)
                 entry.install_component(source,new,new_sha,old_sha,None)
                 source.write_bytes(b'unknown = 3\n')
                 with self.assertRaisesRegex(RuntimeError,'INSTALLED_COMPONENT_CHANGED'):
-                    entry.install_component(source,new,new_sha,old_sha,{'request':'6903599168'})
+                    entry.install_component(source,new,new_sha,old_sha,{'request':'6903919663'})
 
 
 if __name__ == '__main__':

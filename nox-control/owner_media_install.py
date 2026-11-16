@@ -101,7 +101,29 @@ REQUESTS_WHEELS = (
     ('https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl',
      'ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c'),
 )
-PYPI_PINS = LEGACY_PYPI_PINS + REQUESTS_PINS
+AIOHTTP_PINS = ('propcache==0.5.4','multidict==6.9.1','frozenlist==1.8.0',
+                'attrs==26.1.0','aiosignal==1.4.0','aiohappyeyeballs==2.7.1',
+                'typing-extensions==4.16.0')
+# Complete mandatory closure for aiohttp3.11/yarl1.18 on the observed CPython
+# 3.12 x86_64 host. multidict7 is incompatible with pinned aiohttp3.11.13.
+# The three extension wheels support glibc2.17, below Ubuntu22.04's glibc.
+AIOHTTP_WHEELS = (
+    ('https://files.pythonhosted.org/packages/85/9f/83a07b6ec0e043c050cfdd35fb0cf1b7897b91d554d6eea293740309afe7/propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl',
+     '2814ecd8e818f487bee4b0f921bc4d1c176cc5fc71ac0f072d0fa67eda4ac14b'),
+    ('https://files.pythonhosted.org/packages/ed/5b/db08419c1e1f7c9d60cfd2787b2b517d7ae4ebbda8281b48a33eb5141467/multidict-6.9.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl',
+     '976fd7689d69ec78d67d31d38d396d8adb562f7e8368279f76aed4aa451fa06d'),
+    ('https://files.pythonhosted.org/packages/6a/bd/d91c5e39f490a49df14320f4e8c80161cfcce09f1e2cde1edd16a551abb3/frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl',
+     '494a5952b1c597ba44e0e78113a7266e656b9794eec897b19ead706bd7074383'),
+    ('https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl',
+     'c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309'),
+    ('https://files.pythonhosted.org/packages/fb/76/641ae371508676492379f16e2fa48f4e2c11741bd63c48be4b12a6b09cba/aiosignal-1.4.0-py3-none-any.whl',
+     '053243f8b92b990551949e63930a839ff0cf0b0ebbe0597b0f3fb19e1a0fe82e'),
+    ('https://files.pythonhosted.org/packages/71/43/1947f06babed6b3f1d7f38b0c767f52df66bfb2bc10b468c4a7de9eceff2/aiohappyeyeballs-2.7.1-py3-none-any.whl',
+     '9243213661e29250eb41368e5daa826fc017156c3b8a11440826b2e3ed376472'),
+    ('https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl',
+     '481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8'),
+)
+PYPI_PINS = LEGACY_PYPI_PINS + REQUESTS_PINS + AIOHTTP_PINS
 CUDA_PINS = ('torchvision==0.21.0+cu124','torchaudio==2.6.0+cu124')
 REQUIRED_NODES = ('CheckpointLoaderSimple','CLIPTextEncode','EmptyLatentImage',
                   'KSampler','VAEDecode','SaveImage','UNETLoader','CLIPLoader',
@@ -405,7 +427,7 @@ def ensure_engine(existing):
 
 
 def base_environment():
-    code = "import json,sys,sysconfig,torch;print(json.dumps({'python':sys.version.split()[0],'purelib':sysconfig.get_path('purelib'),'torch':torch.__version__,'torch_file':torch.__file__,'cuda':torch.version.cuda,'arch':(torch._C._cuda_getArchFlags() or '').split()}))"
+    code = "import json,sys,sysconfig,platform,torch;print(json.dumps({'python':sys.version.split()[0],'machine':platform.machine(),'purelib':sysconfig.get_path('purelib'),'torch':torch.__version__,'torch_file':torch.__file__,'cuda':torch.version.cuda,'arch':(torch._C._cuda_getArchFlags() or '').split()}))"
     data = json.loads(run([BASE_PYTHON,'-c',code],60,env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1','CUDA_VISIBLE_DEVICES':''}))
     if data.get('torch')!='2.6.0+cu124' or data.get('cuda')!='12.4' or 'sm_70' not in data.get('arch',[]):
         fail('HOLD_MEDIA_SHARED_TORCH_SM70_PIN')
@@ -469,6 +491,8 @@ def pinned_environment(python, purelib, pins, env):
 
 
 def ensure_environment(base):
+    if not str(base.get('python','')).startswith('3.12.') or base.get('machine')!='x86_64':
+        fail('HOLD_MEDIA_DEPENDENCY_WHEEL_PLATFORM')
     environment = plain(MEDIA/'venv'); python = environment/'bin/python'
     marker = plain(environment/'nox-environment.json')
     spec = environment_spec(base)
@@ -496,11 +520,11 @@ def ensure_environment(base):
             fail('HOLD_MEDIA_LEGACY_SHARED_PATH_CHANGED')
         # A familiar marker alone does not authorize rewriting an arbitrary env.
         # Every original wheel must still be exactly pinned and local.
-        audit = pinned_environment(python,purelib,LEGACY_PYPI_PINS+CUDA_PINS,env)
+        audit = pinned_environment(python,purelib,LEGACY_PYPI_PINS+REQUESTS_PINS+CUDA_PINS,env)
         if audit.get('ok') is not True:
             emit('legacy_environment_unverified',**audit)
             fail('HOLD_MEDIA_LEGACY_PACKAGES_CHANGED')
-        emit('additive_dependency_migration',packages=list(REQUESTS_PINS),shared_torch=base['torch'])
+        emit('additive_dependency_migration',packages=list(AIOHTTP_PINS),shared_torch=base['torch'])
     else:
         if inherited.exists() and inherited.read_text()!=base['purelib']+'\n':
             fail('HOLD_MEDIA_SHARED_PATH_CHANGED')
@@ -512,10 +536,11 @@ def ensure_environment(base):
                  '--index-url','https://pypi.org/simple',*LEGACY_PYPI_PINS],900,env=env)
             run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
                  '--index-url','https://download.pytorch.org/whl/cu124',*CUDA_PINS],600,env=env)
-    additions = pinned_environment(python,purelib,REQUESTS_PINS,env)
-    if additions.get('ok') is not True:
-        run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
-             '--no-index',*[url+'#sha256='+sha for url,sha in REQUESTS_WHEELS]],300,env=env)
+    for pins,wheels in ((REQUESTS_PINS,REQUESTS_WHEELS),(AIOHTTP_PINS,AIOHTTP_WHEELS)):
+        additions = pinned_environment(python,purelib,pins,env)
+        if additions.get('ok') is not True:
+            run([python,'-m','pip','install','--no-deps','--ignore-installed','--only-binary=:all:',
+                 '--no-index',*[url+'#sha256='+sha for url,sha in wheels]],300,env=env)
     audit = pinned_environment(python,purelib,PYPI_PINS+CUDA_PINS,env)
     if audit.get('ok') is not True:
         emit('isolated_packages_unverified',**audit)
@@ -523,12 +548,13 @@ def ensure_environment(base):
     closure = json.loads(run([python,'-c',DEPENDENCY_AUDIT_CODE,json.dumps(list(PYPI_PINS+CUDA_PINS))],30,env=env))
     emit('isolated_dependency_closure',**closure)
     if closure.get('ok') is not True: fail('HOLD_MEDIA_DEPENDENCY_CLOSURE')
-    code = "import json,torch,torchvision,torchaudio,transformers,aiohttp,yarl,torchsde,kornia,spandrel,soundfile,sentencepiece,av,requests,urllib3,charset_normalizer,certifi,idna;from av.codec import Codec;print(json.dumps({'torch':torch.__version__,'torch_file':torch.__file__,'transformers':transformers.__version__,'torchvision':torchvision.__version__,'torchaudio':torchaudio.__version__,'av':av.__version__,'requests':requests.__version__,'vp9_encoder':Codec('libvpx-vp9','w').name}))"
+    code = "import json,torch,torchvision,torchaudio,transformers,aiohttp,yarl,torchsde,kornia,spandrel,soundfile,sentencepiece,av,requests,urllib3,charset_normalizer,certifi,idna,propcache,multidict,frozenlist,attrs,aiosignal,aiohappyeyeballs,typing_extensions;from av.codec import Codec;print(json.dumps({'torch':torch.__version__,'torch_file':torch.__file__,'transformers':transformers.__version__,'torchvision':torchvision.__version__,'torchaudio':torchaudio.__version__,'av':av.__version__,'requests':requests.__version__,'aiohttp':aiohttp.__version__,'multidict':multidict.__version__,'vp9_encoder':Codec('libvpx-vp9','w').name}))"
     check = json.loads(run([python,'-c',code],120,env=env))
     if check.get('torch_file')!=base['torch_file'] or check.get('torch')!=base['torch']:
         fail('HOLD_MEDIA_TORCH_REUSE_CHANGED')
     if check.get('vp9_encoder')!='libvpx-vp9': fail('HOLD_MEDIA_VP9_ENCODER_MISSING')
     if check.get('requests')!='2.34.2': fail('HOLD_MEDIA_REQUESTS_PIN')
+    if check.get('aiohttp')!='3.11.13' or check.get('multidict')!='6.9.1':fail('HOLD_MEDIA_AIOHTTP_PIN')
     # Promote only the known environment marker, and only after full imports.
     # An interrupted migration keeps the old marker and is safely retryable.
     if previous != spec:
@@ -544,7 +570,7 @@ def model_paths_config(rows):
         for subdir in sorted({row['subdir'] for row in rows})}}}
 
 
-def admit_parallel_downloads(rows):
+def admit_parallel_downloads(rows,disk_setup_allowance=0):
     remaining = {'ram':0,'disk':0}
     for row in rows:
         path = plain(row['path'])
@@ -559,7 +585,8 @@ def admit_parallel_downloads(rows):
             fail('HOLD_MEDIA_PARTIAL_SIZE')
         remaining[row['storage']] += row['bytes']-size
     actual = resources()
-    if actual['disk_free'] < remaining['disk']+DISK_RESERVE:
+    if disk_setup_allowance not in (0,SETUP_ALLOWANCE):fail('HOLD_MEDIA_SETUP_ALLOWANCE')
+    if actual['disk_free'] < remaining['disk']+DISK_RESERVE+disk_setup_allowance:
         fail('HOLD_MEDIA_PARALLEL_DISK_ADMISSION')
     if actual['shm_free'] < remaining['ram']+SHM_RESERVE:
         fail('HOLD_MEDIA_PARALLEL_SHM_ADMISSION')
@@ -568,13 +595,14 @@ def admit_parallel_downloads(rows):
     return remaining
 
 
-def download_selected(rows):
-    remaining = admit_parallel_downloads(rows)
-    emit('parallel_downloads_admitted',maximum_transfers=3,pending_bytes=remaining)
+def download_selected(rows,disk_setup_allowance=0):
+    remaining = admit_parallel_downloads(rows,disk_setup_allowance)
+    emit('parallel_downloads_admitted',maximum_transfers=3,pending_bytes=remaining,
+         concurrent_setup_reserve_bytes=disk_setup_allowance)
     failures = []
     with ThreadPoolExecutor(max_workers=3,thread_name_prefix='nox-media-download') as pool:
         futures = {pool.submit(download,row['source_url'],row['path'],row,
-                               SHM_RESERVE if row['storage']=='ram' else DISK_RESERVE):row for row in rows}
+                               SHM_RESERVE if row['storage']=='ram' else DISK_RESERVE+disk_setup_allowance):row for row in rows}
         for future in as_completed(futures):
             row = futures[future]
             try:
@@ -586,6 +614,29 @@ def download_selected(rows):
     if failures:
         raise failures[0]
     return rows
+
+
+def prepare_assets_and_environment(base,rows):
+    """Admitted downloads continue even if an independent environment check fails."""
+    errors=[];environment=None
+    # Reserve the whole model transfer plus the original setup allowance before
+    # either branch starts; every model write retains its measured space gate.
+    admit_parallel_downloads(rows,SETUP_ALLOWANCE)
+    emit('preparation_parallel_started',environment_jobs=1,maximum_download_jobs=3)
+    with ThreadPoolExecutor(max_workers=2,thread_name_prefix='nox-media-prepare') as pool:
+        jobs={pool.submit(ensure_environment,base):'environment',
+              pool.submit(download_selected,rows,SETUP_ALLOWANCE):'assets'}
+        for future in as_completed(jobs):
+            try:
+                value=future.result()
+                if jobs[future]=='environment':environment=value
+            except Exception as exc:
+                errors.append(exc);code=str(exc)
+                emit('preparation_component_failed',component=jobs[future],
+                     code=code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else type(exc).__name__)
+    if errors:raise errors[0]
+    if environment is None:fail('HOLD_MEDIA_ENVIRONMENT_RESULT_MISSING')
+    return environment
 
 
 def health_chat():
@@ -682,10 +733,9 @@ def install(start=False):
         verify_hf_metadata()
         base = base_environment()
         engine = ensure_engine(existing_engine)
-        python,environment = ensure_environment(base)
-        # Environment setup has a bounded allowance; recheck actual free space
-        # before the first large transfer, then on every streamed block.
-        download_selected(rows)
+        # Environment setup and the three admitted transfer slots are
+        # independent; one missing import cannot prevent all weight downloads.
+        python,environment = prepare_assets_and_environment(base,rows)
         paths_file = MEDIA/'extra_model_paths.json'
         atomic_json(paths_file,model_paths_config(rows))
         output = plain(MEDIA/'outputs'); output.mkdir(mode=0o700,parents=True,exist_ok=True)

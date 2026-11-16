@@ -29,10 +29,11 @@ except NameError:
 ROOT = Path('/root/nox')
 STATE = ROOT/'state/owner_media'
 SCRIPTS = ROOT/'scripts'
-INSTALLER_SHA = '504cd1c69d51c7aebfeb7b2c935904c4becb1e296f0d04beeb493c8775a13ee6'
-LEGACY_INSTALLER_SHA = '90bc1069a003b3571ad2d3f348cbb9a2729e0d0a7b3cbd01f2e9670f7e35041a'
-LEGACY_WORKER_SHA = '464c20e889abc371c2e848551d0ca9d2a9d48d411ba8f0f75a4b1c3687bfb733'
-LEGACY_FAILED_REQUESTS = {'6903443315','6903599168'}
+INSTALLER_SHA = 'e66a5b743deb0dfaa7e1e846e11b2d06190962d9ba0ba4abb67abeca54c02ca5'
+LEGACY_INSTALLER_SHA = '504cd1c69d51c7aebfeb7b2c935904c4becb1e296f0d04beeb493c8775a13ee6'
+LEGACY_WORKER_SHA = '80f44bc88266dddf46c4c40d9597d75be6b272d5fce1eab79a1e28f12cc4bc8e'
+LEGACY_SOURCE_SHA = 'e88dc6f974f33552336143e553c0a0d0cd1ce7ce'
+LEGACY_FAILED_REQUESTS = {'6903919663'}
 RUNTIME_SHA = 'ca8ce2466d0ee4321e17bbf2dc26a6f6396bafb93f3df361a1b35a7e8e3347e5'
 PINS = {'owner_media_install.py':INSTALLER_SHA, 'owner_media_runtime.py':RUNTIME_SHA}
 HOLD_TEXT = ('OWNER_REQUESTED_TRAINING_HALT request=6902883046 '
@@ -130,12 +131,12 @@ def original_hold():
 
 
 def legacy_migration_proof(old):
-    """Only the two observed, terminated dependency failures may be upgraded."""
+    """Only the observed, terminated closure failure may be upgraded."""
     if (not isinstance(old,dict) or old.get('schema')!='NOX_MEDIA_PREPARE_JOB_V1'
             or old.get('request') not in LEGACY_FAILED_REQUESTS
             or old.get('installer_sha256')!=LEGACY_INSTALLER_SHA
             or old.get('runtime_sha256')!=RUNTIME_SHA or old.get('worker_sha256')!=LEGACY_WORKER_SHA
-            or not re.fullmatch('[0-9a-f]{40}',str(old.get('source_sha','')))
+            or old.get('source_sha')!=LEGACY_SOURCE_SHA
             or type(old.get('pid')) is not int or old['pid']<=0
             or same_job(old,identity(old['pid']))):
         fail('HOLD_MEDIA_LEGACY_JOB_IDENTITY')
@@ -144,7 +145,7 @@ def legacy_migration_proof(old):
     times = (result.get('started'),result.get('finished'))
     if (archived!=old or result.get('schema')!='NOX_MEDIA_PREPARE_WORKER_V1'
             or result.get('request')!=old['request'] or result.get('source_sha')!=old['source_sha']
-            or result.get('state')!='HOLD_MEDIA_PREPARE' or result.get('error')!='HOLD_MEDIA_COMMAND_EXIT_1'
+            or result.get('state')!='HOLD_MEDIA_PREPARE' or result.get('error')!='HOLD_MEDIA_DEPENDENCY_CLOSURE'
             or not all(type(value) in (int,float) and math.isfinite(value) for value in times)
             or not 0 < times[0] <= times[1]):
         fail('HOLD_MEDIA_LEGACY_FAILURE_RECEIPT')
