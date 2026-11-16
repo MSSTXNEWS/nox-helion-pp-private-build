@@ -66,7 +66,7 @@
     "existing_regressions": 55,
     "added_owner_stop_regressions": 3,
     "total_expected": 58,
-    "exact_ci": "PENDING_AFTER_COMMIT",
+    "exact_ci": "SUCCESS_43813443653_58_OF_58",
     "native_deployed": false
   },
   "cleanup": {
@@ -82,9 +82,15 @@
     "error": "Python syntax error because JS String.replace interpreted literal regex $' in replacement as suffix, producing truncated SHA line and duplicate source. No native impact."
   },
   "source_ci_repair": {
-    "state": "PENDING_EXACT_SHA_CI",
-    "lesson": "Use replacement callbacks for literal dollar signs in generated code; reject implausible file-size change before Git CAS",
-    "source_bytes_before": 28879,
-    "source_bytes_after": 29445
-  }
+    "state": "SOURCE_TESTED",
+    "exact_code_commit": "f1673c804e1e26baa135e8883f57117e64d712f8",
+    "run_id": 43813443653,
+    "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813443653",
+    "python_compile": "PASS",
+    "tests_passed": 58,
+    "tests_total": 58,
+    "lesson": "Literal $' in JS String.replace expands suffix; use callback replacement for code; verify source length and Python compile in exact CI. First CI 43813278606 RED, repaired before acceptance."
+  },
+  "final_status": "SOURCE_TESTED_58_OF_58_NATIVE_HOLD",
+  "notion_checkpoint_url": "https://app.notion.com/p/40cacc184a9f81248703e3840d4c2422"
 }
