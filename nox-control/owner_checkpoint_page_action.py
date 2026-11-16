@@ -11,7 +11,7 @@ ENTRY_SHA='133e49867e5b97493d6bc3047b1b45ec993b42f3772a6e1cde3e6b605a268d95'
 ACTION='page'
 TRANSFER_ID='6cd298dabe632e4fadd3a39442b328a0'
 MANIFEST_SHA='7a367c32efad33b09b4f19b26866fd57262ad4914e1afa32b1815774a0923270'
-PAGE_INDEX=0
+PAGE_INDICES=(1,2)
 
 def main():
     raw=base64.b64decode(BUNDLE.get('owner_checkpoint_backup_deflated_entry.py',''),validate=True)
@@ -23,7 +23,14 @@ def main():
     os.environ['NOX_CHECKPOINT_PAGER_ACTION']=ACTION
     os.environ['NOX_CHECKPOINT_PAGER_TRANSFER_ID']=TRANSFER_ID
     os.environ['NOX_CHECKPOINT_PAGER_MANIFEST_SHA256']=MANIFEST_SHA
-    os.environ['NOX_CHECKPOINT_PAGER_PAGE_INDEX']=str(PAGE_INDEX)
-    return module.main()
+    if ACTION!='page' or not 1<=len(PAGE_INDICES)<=2 or tuple(sorted(set(PAGE_INDICES)))!=PAGE_INDICES:
+        raise RuntimeError('HOLD_CHECKPOINT_PAGE_BATCH_SCOPE')
+    for page_index in PAGE_INDICES:
+        if type(page_index) is not int or not 0<=page_index<8:
+            raise RuntimeError('HOLD_CHECKPOINT_PAGE_BATCH_SCOPE')
+        os.environ['NOX_CHECKPOINT_PAGER_PAGE_INDEX']=str(page_index)
+        code=module.main()
+        if code not in (None,0):return code
+    return 0
 
 if __name__=='__main__':raise SystemExit(main())
