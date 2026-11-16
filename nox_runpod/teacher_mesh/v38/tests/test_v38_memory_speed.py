@@ -114,6 +114,40 @@ class RequiredMemory(unittest.TestCase):
         self.assertEqual(third[0]['labels'],['owner-verified'])
         self.assertEqual(len(calls),1)
 
+    def test_cache_persona_switch_requires_fresh_native_recall(self):
+        # Same owner/chat and S03 revision, but a different persona scope.
+        calls=[]
+        def recall(s,p,l):
+            persona=s.persona_id if s.persona_enabled else None
+            calls.append(persona)
+            return [record(persona=persona,text='recall-'+str(persona))]
+        cache=WarmS03Cache(recall,lambda s:'shared-revision')
+        kv=Session(tenant='nox',principal='owner',chat_id='resonance',
+                   persona_enabled=True,persona_id='KV')
+        am=Session(tenant='nox',principal='owner',chat_id='resonance',
+                   persona_enabled=True,persona_id='AM')
+        self.assertEqual(cache(kv,'memory',8)[0]['content'],'recall-KV')
+        self.assertEqual(cache(S,'memory',8)[0]['content'],'recall-None')
+        self.assertEqual(cache(am,'memory',8)[0]['content'],'recall-AM')
+        self.assertEqual(cache(kv,'memory',8)[0]['content'],'recall-KV')
+        self.assertEqual(calls,['KV',None,'AM'])
+        self.assertEqual(cache.stats['hits'],1)
+        cache.invalidate(S)
+        self.assertEqual(cache(kv,'memory',8)[0]['content'],'recall-KV')
+        self.assertEqual(calls,['KV',None,'AM','KV'])
+
+    def test_cache_ru_es_language_switch_requires_fresh_recall(self):
+        calls=[]
+        def recall(s,p,l):
+            calls.append(s.language)
+            return [record(text='native-language-'+s.language)]
+        cache=WarmS03Cache(recall,lambda s:'shared-revision')
+        es=Session(tenant='nox',principal='owner',chat_id='resonance',language='es')
+        self.assertEqual(cache(S,'same prompt',8)[0]['content'],'native-language-ru')
+        self.assertEqual(cache(es,'same prompt',8)[0]['content'],'native-language-es')
+        self.assertEqual(cache(S,'same prompt',8)[0]['content'],'native-language-ru')
+        self.assertEqual(calls,['ru','es'])
+
     def test_cache_bypasses_foreign_chat_without_losing_authorised_record(self):
         calls=[]
         rows=[record(chat='other-chat',text='owner-granted cross chat')]
