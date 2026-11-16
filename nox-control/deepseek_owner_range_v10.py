@@ -359,6 +359,20 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
             require(existing.st_size==row['bytes'] and digest(final)==row['sha256'],
                     'HOLD_EXISTING_FINAL_UNVERIFIED')
             stop(root);lease(lease_file,request,time.time(),root)
+            # A crash after final hardlink publication but before atomic_receipt
+            # leaves a fully valid GGUF with no durable owner verification record.
+            # Reconcile only that missing receipt under the original owner lease,
+            # without downloading or duplicating any model bytes.
+            receipt_path=destination/(name+'.verified.json')
+            receipt_stat=regular(receipt_path,True)
+            if receipt_stat is None:
+                require(digest(final)==row['sha256'],'HOLD_EXISTING_FINAL_UNVERIFIED')
+                stop(root);lease(lease_file,request,time.time(),root)
+                atomic_receipt(receipt_path,{
+                    'schema':'NOX_DEEPSEEK_RANGE_RECEIPT_V10',
+                    'request':request,'file':name,'bytes':row['bytes'],
+                    'sha256':row['sha256'],'new_bytes':0,
+                    'recovered_existing':True,'at_unix':time.time()})
             return {'state':'REUSED_SHA_VERIFIED','new_bytes':0,'file':name,'sha256':row['sha256']}
         partial_stat=regular(partial,True)
         # Keep the admitted inode allocated across HTTP I/O: unlink/recreate may reuse
