@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_RELAY_CONTROL_APPEND_V1",
+  "instructions_version": "0.0.6",
+  "slot": "3A",
+  "at_utc": "2026-11-16T06:26:58Z",
+  "at_msk": "2026-11-16 09:26:58 MSK",
+  "scope": "SOURCE_ONLY_WEB29_V25_NAVIGATION",
+  "source_patch_commit": "72d5569c4707a754a4fd491d0008451bd3b4abcf",
+  "source_patch_path": "coordination/progress/hourly/20261116_0914_3A_CATALOG_FAILCLOSED_V06.patch",
+  "input_zip_sha256": "48fa3a189b100242a3ff965e15da3ef83e426c443e275df03bdaae76dfaf413a",
+  "output_zip_sha256": "b51563815baf1a48214ce2b586cd86e4901be60015f57bf0789385f32c54f328",
+  "primary_zip_sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+  "changed_paths": [
+    "site/pc/hub.html",
+    "site/pc/menu.html"
+  ],
+  "unchanged_paths_from_previous_candidate": 1210,
+  "same_paths_as_primary": 1212,
+  "unchanged_paths_from_primary": 1206,
+  "tasks": [
+    {
+      "id": "3A-01",
+      "state": "DONE_SOURCE",
+      "evidence": "Input ZIP exact pinned SHA and latest accepted 3A branch artefact; no automatic downgrade"
+    },
+    {
+      "id": "3A-02",
+      "state": "DONE_SOURCE",
+      "evidence": "1212/1212 paths preserved; all other 1210 member bytes unchanged, media/D02/14-world sources untouched; ZIP CRC PASS"
+    },
+    {
+      "id": "3A-03",
+      "state": "DONE_SOURCE",
+      "evidence": "Real source bug fixed: unavailable IA catalogue no longer blanks menu/hub; fallback preserves HOME/Resonance/Development routes"
+    },
+    {
+      "id": "3A-04",
+      "state": "HOLD_NATIVE",
+      "reason": "No fresh owner native WEB29 deploy writer lease/current served preimage SHA, independent rollback acceptance and protected live S03/STOP E2E"
+    },
+    {
+      "id": "3A-05",
+      "state": "DONE_SOURCE_BROWSER_HOLD",
+      "evidence": "node --check both inline scripts PASS; 18/18 Node isolated DOM assertions PASS; exact git apply --unidiff-zero check/apply PASS; identical modified bytes and ZIP CRC PASS; Chromium local HTTP/file navigation ERR_BLOCKED_BY_ADMINISTRATOR; no live HTTP E2E claimed"
+    }
+  ],
+  "control_rows": [
+    {
+      "stream": "WEIGHTS",
+      "state": "NATIVE_HISTORICAL_HOLD",
+      "successful_updates_last_verified": 8,
+      "skipped_updates": 0,
+      "checkpoint_files_verified": 10,
+      "checkpoint_bytes": 519884896,
+      "checkpoint_sha_manifest": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+      "proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758",
+      "current_training": "FATAL_no_PID_from_09:05_MSK_readonly",
+      "offsite_restore_verified": false,
+      "updates_this_slot": 0
+    },
+    {
+      "stream": "KNOWLEDGE",
+      "state": "HOLD_NATIVE",
+      "hunter_source_to_s03_to_recall_verified": false,
+      "source_evidence": "Earlier native review S03 receipts exist; not proof of complete Hunter learning cycle",
+      "new_records_this_slot": 0
+    },
+    {
+      "stream": "DISPATCHER+RESOURCES",
+      "state": "HOLD_PARTIAL_NATIVE",
+      "dispatcher_pid_last_observed": 724331,
+      "media_pid_last_observed": 447681,
+      "trainer_pid_last_observed": null,
+      "handler_status": "HOLD_MEDIA_HANDBACK_FILE_CHANGED",
+      "native_readonly_proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814277490",
+      "three_worker_concurrent_pid_verified": false,
+      "gpu_vram_cpu_ssd_fresh": null,
+      "server_restarts_this_slot": 0
+    }
+  ],
+  "native_effects_this_slot": {
+    "deployed": false,
+    "model_switched": false,
+    "optimizer_steps_executed": 0,
+    "server_files_deleted": 0,
+    "server_writes": 0
+  },
+  "next_action": "Owner fenced read-only exact current WEB29 preimages + original redirect/owner login/SSE/STOP/S03 browser acceptance; only then one-writer reversible deploy of 3A patch. Independently resolve trainer media handback HOLD under own lease; no blind restart."
+}
