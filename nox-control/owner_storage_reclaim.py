@@ -18,6 +18,7 @@ from pathlib import Path
 import re
 import shutil
 import stat
+import secrets
 import tempfile
 import time
 
@@ -567,21 +568,76 @@ def open_parent(path):
         raise
 
 
+def create_quarantine_directory(parent_fd):
+    """Create a private same-filesystem directory using the already-open parent."""
+    for _ in range(16):
+        name = '.nox-reclaim-' + secrets.token_hex(16)
+        try:
+            os.mkdir(name, mode=0o700, dir_fd=parent_fd)
+        except FileExistsError:
+            continue
+        try:
+            fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+            info = os.fstat(fd)
+            parent = os.fstat(parent_fd)
+            if (info.st_uid != os.geteuid() or info.st_mode & 0o077
+                    or info.st_dev != parent.st_dev):
+                os.close(fd)
+                os.rmdir(name, dir_fd=parent_fd)
+                raise StorageHold('HOLD_STORAGE_QUARANTINE_DIRECTORY')
+            return name, fd
+        except BaseException:
+            try:
+                os.rmdir(name, dir_fd=parent_fd)
+            except OSError:
+                pass
+            raise
+    raise StorageHold('HOLD_STORAGE_QUARANTINE_COLLISION')
+
+
+def reclaim_version_matches(expected, info):
+    """Compare candidate version fields that a same-filesystem rename preserves."""
+    return (len(expected) == 7
+            and [info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns,
+                 info.st_uid, info.st_nlink]
+            == [expected[0], expected[1], expected[2], expected[3],
+                expected[5], expected[6]])
+
+
+def restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, original_name):
+    """Restore a moved entry without overwriting a concurrently recreated name."""
+    try:
+        os.link(entry_name, original_name, src_dir_fd=quarantine_fd,
+                dst_dir_fd=parent_fd, follow_symlinks=False)
+    except OSError:
+        return False
+    try:
+        os.unlink(entry_name, dir_fd=quarantine_fd)
+    except OSError:
+        # The original name is back; leave the private staging link for recovery.
+        return False
+    return True
+
+
 def reclaim_candidate(candidate, deadline):
     path = Path(candidate.get('path', ''))
     if deletion_kind(path) is None:
         raise StorageHold('HOLD_STORAGE_PROTECTED_TARGET')
     parent_fd = open_parent(path)
     fd = None
+    quarantine_name = None
+    quarantine_fd = None
+    staged = False
+    entry_name = 'candidate'
     try:
         info = os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
-        if identity(info) != candidate.get('identity'):
+        if identity(info) != candidate.get('identity') or not stat.S_ISREG(info.st_mode):
             raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
         fd = os.open(path.name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=parent_fd)
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if identity(os.fstat(fd)) != candidate['identity']:
             raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
-        head = os.read(fd, 32)
+        head = os.pread(fd, 32, 0)
         if digest_bytes(head) != candidate.get('prefix_sha256'):
             raise StorageHold('HOLD_STORAGE_PREFIX_CHANGED')
         usage = process_usage(min(deadline, time.monotonic() + 4), ignore_fd=(os.getpid(), str(fd)))
@@ -592,9 +648,41 @@ def reclaim_candidate(candidate, deadline):
             raise StorageHold('HOLD_STORAGE_TIME_BUDGET')
         if identity(os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)) != candidate['identity']:
             raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
-        # One audited regular file only; no recursive removal or truncation.
-        os.unlink(path.name, dir_fd=parent_fd)
+
+        # Unlink has no inode-conditional form. Atomically move the entry into a
+        # private directory on the same filesystem, then compare the moved entry
+        # with the still-open descriptor before deleting anything.
+        quarantine_name, quarantine_fd = create_quarantine_directory(parent_fd)
+        os.rename(path.name, entry_name, src_dir_fd=parent_fd, dst_dir_fd=quarantine_fd)
+        staged = True
+        moved = os.stat(entry_name, dir_fd=quarantine_fd, follow_symlinks=False)
+        opened = os.fstat(fd)
+        if (not stat.S_ISREG(moved.st_mode)
+                or identity(moved) != identity(opened)
+                or not reclaim_version_matches(candidate['identity'], opened)
+                or digest_bytes(os.pread(fd, 32, 0)) != candidate.get('prefix_sha256')):
+            if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
+                staged = False
+                raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
+            raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED')
+
+        # The private staging directory blocks ordinary users from swapping the
+        # verified name between the last descriptor check and unlink.
+        moved = os.stat(entry_name, dir_fd=quarantine_fd, follow_symlinks=False)
+        opened = os.fstat(fd)
+        if (not stat.S_ISREG(moved.st_mode) or identity(moved) != identity(opened)):
+            if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
+                staged = False
+                raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
+            raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED')
+        os.unlink(entry_name, dir_fd=quarantine_fd)
+        staged = False
         os.close(fd); fd = None  # Release our read handle before measuring free space.
+        try:
+            os.rmdir(quarantine_name, dir_fd=parent_fd)
+            quarantine_name = None
+        except OSError as exc:
+            raise StorageHold('HOLD_STORAGE_QUARANTINE_CLEANUP') from exc
         try:
             os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
         except FileNotFoundError:
@@ -602,9 +690,23 @@ def reclaim_candidate(candidate, deadline):
                     'allocated_bytes_unlinked': candidate['allocated_bytes'], 'logical_bytes_unlinked': info.st_size,
                     'state': 'EXACT_AUDITED_FILE_UNLINKED', 'process_scan_complete': usage['complete']}
         raise StorageHold('HOLD_STORAGE_NAME_RECREATED_AFTER_UNLINK')
+    except BaseException:
+        if staged and quarantine_fd is not None:
+            if restore_quarantined_entry(quarantine_fd, entry_name, parent_fd, path.name):
+                staged = False
+            else:
+                raise StorageHold('HOLD_STORAGE_QUARANTINE_PRESERVED')
+        raise
     finally:
         if fd is not None:
             os.close(fd)
+        if quarantine_fd is not None:
+            os.close(quarantine_fd)
+        if quarantine_name is not None and not staged:
+            try:
+                os.rmdir(quarantine_name, dir_fd=parent_fd)
+            except OSError:
+                pass
         os.close(parent_fd)
 
 
