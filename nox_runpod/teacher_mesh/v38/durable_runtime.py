@@ -80,8 +80,14 @@ class WarmS03Cache:
         if not isinstance(rev,str) or not 1<=len(rev)<=128:
             self.stats['bypasses']+=1
             return self.recall(session,prompt,limit)
-        key=(session.tenant,session.principal,session.chat_id,rev,
-             sha256(prompt.encode('utf8')).hexdigest(),int(limit))
+        # A verified native S03 revision is not a persona/language revision.
+        # The same owner/chat can switch personas or RU/ES without changing
+        # the underlying DB revision; never reuse that earlier callback result.
+        # Keep the first three key fields as scope for invalidate(session).
+        key=(session.tenant,session.principal,session.chat_id,
+             session.language,session.persona_enabled,
+             session.persona_id if session.persona_enabled else None,
+             rev,sha256(prompt.encode('utf8')).hexdigest(),int(limit))
         now=time.monotonic()
         with self.lock:
             for old in list(self.entries):
