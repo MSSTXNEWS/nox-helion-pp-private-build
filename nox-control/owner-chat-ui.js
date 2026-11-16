@@ -59,6 +59,8 @@
     statusStack.setAttribute('aria-label','Состояние и отчёты NOX');strip.after(statusStack);
     window.__NOX_OWNER_COMPOSER_LAYOUT='BOUNDED_REPORTS_SCROLL_V1';
     const reports=E('details',undefined,'nox-owner-reports'),reportTitle=E('summary','Отчёты NOX'),reportList=E('div');
+    // PRESERVE_REPORTS_OPEN_STATE_V1: polling never overrides the owner's choice.
+    reports.open=true;reportTitle.setAttribute('aria-live','polite');
     reports.append(reportTitle,reportList);statusStack.append(reports);
     const reportStyle=E('style');reportStyle.textContent='.nox-owner-reports{margin:0 12px 10px;color:#cbd7e3;font:12px system-ui}.nox-owner-reports summary{padding:8px;cursor:pointer;color:#d8bc87}.nox-owner-report{border-left:2px solid #a3824e;background:#111b25b8;border-radius:0 9px 9px 0;padding:11px 13px;margin:7px 0;line-height:1.55}.nox-owner-report p{margin:5px 0}.nox-owner-report small{color:#90a2b5}';document.head.append(reportStyle);
     const inventory=E('details',undefined,'nox-owner-reports'),inventoryTitle=E('summary','Загрузки · проверяю файлы'),inventoryBody=E('div');
@@ -114,8 +116,8 @@
           while(reportList.childElementCount>60)reportList.firstElementChild.remove();
         }
         eventCursor=value.next_cursor;try{localStorage.setItem('nox.owner.events.cursor',String(eventCursor));}catch{}
-        reportTitle.textContent=eventCount?'Отчёты NOX · '+eventCount:'Отчёты NOX · ожидаю события';
-        if(eventCount)reports.open=true;
+        const nextTitle=eventCount?'Отчёты NOX · '+eventCount:'Отчёты NOX · ожидаю события';
+        if(reportTitle.textContent!==nextTitle)reportTitle.textContent=nextTitle;
       }catch{if(!eventCount)reportTitle.textContent='Отчёты NOX · подключение';}
       finally{eventsBusy=false;}
     }
