@@ -380,6 +380,18 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
         receipts.append({'task_id':task['id'],'job_id':job_id,'pid_count':len(workers),
                          's03_sha256':proof['receipt_sha256'],
                          'execution_evidence':execution_evidence})
+        # S03 can block while the owner presses STOP or a native writer lease
+        # expires. Preserve the already-confirmed claim/receipt, but never
+        # report the pool ready or dispatch another task on a revoked fence.
+        try:
+            still_authorized = (native.owner_allowed() is True
+                and native.stop_active() is False and native.writer_lease() is True)
+        except Exception:
+            return {'state':'HOLD_OWNER_GATE_READBACK',
+                    'jobs_started':len(receipts),'receipts':receipts}
+        if not still_authorized:
+            return {'state':'HOLD_STOP_OR_LEASE_CHANGED',
+                    'jobs_started':len(receipts),'receipts':receipts}
     return {'state':'NATIVE_QUEUE_READBACK_VERIFIED' if receipts else 'NATIVE_POOL_READY_IDLE',
             'jobs_started':len(receipts),  # legacy counter: CLAIMS, not executed jobs
             'jobs_completed_verified':sum(r['execution_evidence']=='DONE_NATIVE' for r in receipts),
