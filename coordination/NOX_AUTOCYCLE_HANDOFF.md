@@ -1464,3 +1464,9 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 
 ### V14 B3 SOURCE CLAIM · V14-3-03 · 2026-11-16T23:28Z · instructions_version 0.0.6
 - TaskID `V14-3-03` original S03 dialogue history ownership/admission. Previous A3 `V14-3-05` SOURCE_TESTED complete; distinct source task was unclaimed in handoff and errors as read. Source CAS only, **not OneHost/native writer lease**. Inspect exact gateway file SHA, prevent cross-owner historical conversation ingestion, preserve original records and no-loss. One focused regression and existing CI; native STOP/lease unknown HOLD. Release source claim after receipt; no native changes.
+
+
+### B2 V14-2-09 SOURCE CLAIM · 2026-11-16T23:33:59.383Z · instructions_version 0.0.6
+- **Owner/TaskID:** B2 / `V14-2-09` P1, original Maya DeepSeek source launch profile. This is a source-only claim, not a native Vast.ai/STOP/lease claim; no deployment authority.
+- **Context:** A2 `V14-2-11` already SOURCE_TESTED (CI 43976188295), no repeated manifest patch. Actual GGUF pack creation and full storage/readback remain HOLD; source profile currently emits a serve command for a pack path observed ABSENT, risking later treatment as executable-ready.
+- **Bounded scope:** inspect original `nox-control/maya_ds4_v100_launch_profile_v1.py` and preflight, make missing pack prerequisite explicit/fail-closed without starting Maya or changing pinned versions, test exact source semantics and preserve existing cmd template for later review. No new backend, scheduler or OneHost operation. Release claim with source SHA, regression, rollback and one append-only handoff; stop on changed code preimage.
