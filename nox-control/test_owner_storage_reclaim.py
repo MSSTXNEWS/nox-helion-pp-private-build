@@ -59,6 +59,9 @@ class StorageTests(unittest.TestCase):
                      self.root / 'media/models/model.safetensors.partial'):
             self.assertIsNone(storage.deletion_kind(path), path)
         self.assertIsNone(storage.deletion_kind(self.root / 'logs/chat.log.3.gz'))
+        self.assertEqual(storage.deletion_kind(self.home / '.cache/pip/wheels/ab' / 'pkg.whl')[0], 'PIP_WHEEL_CACHE')
+        self.assertIsNone(storage.deletion_kind(self.home / '.cache/uv/wheels/ab/pkg.whl'))
+
 
     def test_logs_and_nonregenerable_names_cannot_reclaim_with_forged_backup_flags(self):
         paths = (
@@ -86,6 +89,51 @@ class StorageTests(unittest.TestCase):
                     storage.reclaim_candidate(candidate, time.monotonic() + 2)
                 self.assertTrue(path.is_file())
                 self.assertEqual(path.stat().st_size, 2 * 1024 * 1024)
+
+
+    def test_pip_cache_path_containment_rejects_parent_symlink_and_dotdot_aliases(self):
+        path = self.pip_file()
+        root = self.home / '.cache/pip'
+        alias = root / 'http-v2' / '..' / 'http-v2' / 'a' / 'b' / 'c' / 'd' / 'e' / ('a' * 56 + '.body')
+        self.assertIsNone(storage.deletion_kind(alias))
+        self.assertEqual(storage.qualify(alias, path.stat(), self.now, self.usage)[1],
+                         'PROTECTED_OR_NOT_ALLOWLISTED')
+
+        link_parent = path.parent.parent / 'cache-alias'
+        link_parent.symlink_to(path.parent, target_is_directory=True)
+        linked_path = link_parent / path.name
+        self.assertIsNone(storage.deletion_kind(linked_path))
+        candidate, reason = storage.qualify(linked_path, path.stat(), self.now, self.usage)
+        self.assertIsNone(candidate)
+        self.assertEqual(reason, 'PROTECTED_OR_NOT_ALLOWLISTED')
+
+    def test_pip_cache_same_device_bind_mount_escape_holds_on_audit_and_reclaim(self):
+        path = self.pip_file()
+        self.assertEqual(path.stat().st_dev, (self.home / '.cache/pip').stat().st_dev)
+        candidate = self.candidate(path)
+        mountinfo = self.base / 'synthetic-mountinfo'
+        nested_point = str(path.parent)
+        mountinfo.write_text(
+            '100 1 8:1 / / rw - ext4 /dev/test rw\n'
+            + '101 100 8:1 / ' + nested_point + ' rw - ext4 /dev/test rw\n',
+            encoding='utf-8')
+        with patch.object(storage, 'MOUNTINFO_OVERRIDE', mountinfo):
+            synthetic_mounts = storage.read_mount_table()
+            audited, reason = storage.qualify(path, path.stat(), self.now, self.usage)
+            self.assertIsNone(audited)
+            self.assertEqual(reason, 'MOUNT_ESCAPE')
+            with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_MOUNT_ESCAPE_OR_CHANGED'):
+                storage.reclaim_candidate(candidate, time.monotonic() + 5)
+
+        # A same-device mount inserted after the first admission read but before
+        # the parent dirfd is used is detected by the post-open recheck.
+        baseline_mounts = storage.read_mount_table()
+        opener = lambda value: os.open(Path(value).parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        with patch.object(storage, 'read_mount_table', side_effect=[baseline_mounts, synthetic_mounts]), \
+             patch.object(storage, 'open_parent', opener):
+            with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_MOUNT_ESCAPE_OR_CHANGED'):
+                storage.reclaim_candidate(candidate, time.monotonic() + 5)
+        self.assertTrue(path.is_file())
 
 
     def test_disguised_weight_header_and_partial_are_never_cache_candidates(self):
