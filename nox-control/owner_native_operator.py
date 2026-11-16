@@ -11,7 +11,7 @@ INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
        'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_post_reset_state_observe.py',
-       'lifeline':'nox-control/owner_native_lifeline.py'}
+       'lifeline':'nox-control/owner_native_lifeline.py','deploy':'nox-control/owner_native_deploy.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
