@@ -164,6 +164,10 @@ class HuntDirector:
         if state.get("chat_busy") is True:
             return {"schema":SCHEMA,"state":"CHAT_PRIORITY_IDLE_DEFER",
                     "training_weight_updates_verified":0,"worms_are_os_processes":False}
+        # Missing/malformed chat activity is not equivalent to an idle chat.
+        # Research/weights callbacks must not compete with an unknown foreground.
+        if state.get("chat_busy") is not False:
+            return self._hold("CHAT_PRIORITY_STATE_UNVERIFIED")
         knowledge=self.hunger(state.get("last_verified_learning_utc"),now=now,
                               gap_score=state.get("verified_gap_score"))
         if knowledge["score"] is None:return self._hold("HUNGER_INPUTS_UNVERIFIED")
@@ -201,6 +205,11 @@ class HuntDirector:
         if state.get("trainer_running") is True or gpu.get("chat_gpu_busy") is True:
             response["gpu"]="BUSY_NO_CONCURRENT_TRAINER"
             return response
+        # Exact booleans only. Missing process ownership/readback cannot mean
+        # 'false' and must never admit another model download/trainer job.
+        if state.get("trainer_running") is not False or gpu.get("chat_gpu_busy") is not False:
+            response["gpu"]="HOLD_TRAINER_OR_CHAT_ACTIVITY_UNVERIFIED"
+            return response
         if gpu.get("telemetry_verified") is not True or gpu.get("gpu_owner")!="NOX":
             response["gpu"]="HOLD_DEVICE_OWNERSHIP_OR_TELEMETRY"
             return response
@@ -211,10 +220,16 @@ class HuntDirector:
                     gpu.get("safe70_active") is not True):
                 response["gpu"]="HOLD_SAFE70_SENSOR_OR_THERMAL"
                 return response
-        if (type(gpu.get("free_disk_gb")) not in (int,float)
-                or gpu["free_disk_gb"]<policy.get("min_free_disk_gb",25)
-                or type(gpu.get("free_vram_mb")) not in (int,float)
-                or gpu["free_vram_mb"]<policy.get("min_free_vram_mb",2048)):
+        free_disk=gpu.get("free_disk_gb")
+        free_vram=gpu.get("free_vram_mb")
+        min_disk=policy.get("min_free_disk_gb",25)
+        min_vram=policy.get("min_free_vram_mb",2048)
+        # NaN comparisons are always false, so unchecked NaN used to bypass
+        # resource admission. Reject non-finite, negative and boolean values
+        # on BOTH measured resources and owner-signed minimums.
+        if (any(type(x) not in (int,float) or not math.isfinite(x) or x<0
+                for x in (free_disk,free_vram,min_disk,min_vram))
+                or free_disk<min_disk or free_vram<min_vram):
             response["gpu"]="HOLD_DISK_OR_VRAM_BUDGET"
             return response
         if policy.get("allow_autonomous_model_download") is True:

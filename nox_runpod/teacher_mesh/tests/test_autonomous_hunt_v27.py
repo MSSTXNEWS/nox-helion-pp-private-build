@@ -189,5 +189,37 @@ class TestAutonomy(unittest.TestCase):
         self.assertFalse(HuntDirector._valid_idea(dict(IDEA,worm_kind="execute_python")))
         self.assertFalse(HuntDirector._valid_idea(dict(IDEA,worm_kind="isolated_browser")))
         self.assertTrue(HuntDirector._valid_idea(IDEA))
+    def test_missing_or_malformed_chat_activity_blocks_research_and_training(self):
+        for bad in (None,0,"false"):
+            with self.subTest(chat_busy=bad):
+                h=NativeHarness();h.current_state["chat_busy"]=bad
+                result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                self.assertEqual(result["reason"],"CHAT_PRIORITY_STATE_UNVERIFIED")
+                self.assertEqual(h.worm_ticks,0)
+                self.assertFalse(h.created or h.downloads or h.training_jobs)
+
+    def test_unknown_trainer_or_gpu_chat_activity_blocks_gpu_admission(self):
+        for key in ("trainer_running","chat_gpu_busy"):
+            for bad in (None,0,"false"):
+                with self.subTest(field=key,value=bad):
+                    h=NativeHarness()
+                    target=(h.current_state if key=="trainer_running"
+                            else h.current_state["gpu"])
+                    target[key]=bad
+                    result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                    self.assertEqual(result["gpu"],"HOLD_TRAINER_OR_CHAT_ACTIVITY_UNVERIFIED")
+                    self.assertFalse(h.downloads or h.training_jobs)
+
+    def test_nonfinite_gpu_resources_and_policy_minimums_fail_closed(self):
+        for key,where in (("free_disk_gb","gpu"),("free_vram_mb","gpu"),
+                          ("min_free_disk_gb","policy"),("min_free_vram_mb","policy")):
+            for bad in (float("nan"),float("inf"),-float("inf"),True):
+                with self.subTest(field=key,value=str(bad)):
+                    h=NativeHarness()
+                    target=(h.current_state["gpu"] if where=="gpu" else h.policy)
+                    target[key]=bad
+                    result=HuntDirector(h.callbacks()).tick("owner",now=NOW)
+                    self.assertEqual(result["gpu"],"HOLD_DISK_OR_VRAM_BUDGET")
+                    self.assertFalse(h.downloads or h.training_jobs)
 if __name__=="__main__":
     unittest.main()
