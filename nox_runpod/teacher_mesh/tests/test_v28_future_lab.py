@@ -141,7 +141,8 @@ class CurriculumTests(unittest.TestCase):
         p=curriculum_policy();p["stop_requested"]=True
         self.assertEqual(build_curriculum([bench("instruction")],p,now=NOW)["state"],"HOLD_NATIVE_STOP")
     def test_promotion_blocks_regression(self):
-        p={"signed_by_native_owner":True,"baseline_sha256":STUDENT,
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],"baseline_sha256":STUDENT,
            "candidate_sha256":CANDIDATE,
            "required_domains":["instruction","coding"],
            "checkpoint_reloaded_and_sha_verified":True,
@@ -152,7 +153,8 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(promotion_gate(baseline=b,candidate=c,policy=p,now=NOW)["state"],
                          "REJECT_MEASURED_REGRESSION")
     def test_promotion_only_for_owner_review(self):
-        p={"signed_by_native_owner":True,"baseline_sha256":STUDENT,
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],"baseline_sha256":STUDENT,
            "candidate_sha256":CANDIDATE,"required_domains":["instruction","coding"],
            "checkpoint_reloaded_and_sha_verified":True,"real_optimizer_receipt_verified":True}
         b=[bench("instruction",correct=50),bench("coding",correct=80)]
@@ -161,11 +163,59 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(r["state"],"READY_FOR_OWNER_REVIEW_NOT_PROMOTED")
         self.assertFalse(r["production_modified"])
     def test_same_harness_required(self):
-        p={"signed_by_native_owner":True,"baseline_sha256":STUDENT,
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],"baseline_sha256":STUDENT,
            "candidate_sha256":CANDIDATE,"required_domains":["instruction"]}
         c=bench("instruction",model=CANDIDATE,correct=90);c["harness_sha256"]="1"*64
         self.assertEqual(promotion_gate(baseline=[bench("instruction",correct=50)],
               candidate=[c],policy=p,now=NOW)["state"],"HOLD_DIFFERENT_HARNESS_SPLIT_OR_SAMPLE_COUNT")
+
+
+    def test_promotion_missing_native_eval_allowlist_fails_closed(self):
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding"]}
+        r=promotion_gate(baseline=[bench("coding",correct=20)],
+                         candidate=[bench("coding",model=CANDIDATE,correct=80)],
+                         policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_OWNER_EVAL_RECEIPT_ALLOWLIST")
+    def test_promotion_cannot_use_unpinned_candidate_receipt(self):
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding"]}
+        c=bench("coding",model=CANDIDATE,correct=80)
+        c["source_receipt_sha256"]="f"*64
+        r=promotion_gate(baseline=[bench("coding",correct=20)],
+                         candidate=[c],policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_MISSING_SAME_DOMAIN_RESULTS")
+    def test_promotion_duplicate_domain_scores_are_not_last_writer_wins(self):
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding"]}
+        r=promotion_gate(baseline=[bench("coding",correct=90),bench("coding",correct=20)],
+                         candidate=[bench("coding",model=CANDIDATE,correct=95)],
+                         policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_AMBIGUOUS_DUPLICATE_DOMAIN_EVAL")
+    def test_promotion_native_stop_preempts_owner_review(self):
+        p={"signed_by_native_owner":True,"stop_requested":True,
+           "accepted_eval_receipt_shas":[RECEIPT],
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding"]}
+        r=promotion_gate(baseline=[bench("coding",correct=20)],
+                         candidate=[bench("coding",model=CANDIDATE,correct=80)],
+                         policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_NATIVE_STOP")
+    def test_promotion_duplicate_required_domain_fails_closed(self):
+        p={"signed_by_native_owner":True,"stop_requested":False,
+           "accepted_eval_receipt_shas":[RECEIPT],
+           "baseline_sha256":STUDENT,"candidate_sha256":CANDIDATE,
+           "required_domains":["coding","coding"]}
+        r=promotion_gate(baseline=[bench("coding",correct=20)],
+                         candidate=[bench("coding",model=CANDIDATE,correct=80)],
+                         policy=p,now=NOW)
+        self.assertEqual(r["state"],"HOLD_REQUIRED_DOMAINS")
 
 class ArenaTests(unittest.TestCase):
     def test_teacher_text_is_evidence_not_nox_answer(self):

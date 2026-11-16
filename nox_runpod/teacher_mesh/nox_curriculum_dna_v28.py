@@ -121,6 +121,17 @@ def promotion_gate(*,baseline:list[dict],candidate:list[dict],policy:dict,now:da
     now=now or datetime.now(timezone.utc)
     if not isinstance(policy,dict) or policy.get("signed_by_native_owner") is not True:
         return {"schema":SCHEMA,"state":"HOLD_NATIVE_OWNER_POLICY"}
+    if policy.get("stop_requested") is not False:
+        return {"schema":SCHEMA,"state":"HOLD_NATIVE_STOP"}
+    # A benchmark row may claim independent replay, heldout and PASS itself.
+    # Promotion requires the native owner to pin actual benchmark/S03 receipts,
+    # independently of the candidate's own JSON assertions.
+    approved=policy.get("accepted_eval_receipt_shas")
+    if (not isinstance(approved,list) or not 1<=len(approved)<=400
+            or any(not isinstance(x,str) or SHA.fullmatch(x) is None
+                   for x in approved)):
+        return {"schema":SCHEMA,"state":"HOLD_OWNER_EVAL_RECEIPT_ALLOWLIST"}
+    approved_set=set(approved)
     base_sha=policy.get("baseline_sha256");candidate_sha=policy.get("candidate_sha256")
     if not all(isinstance(v,str) and SHA.fullmatch(v) for v in (base_sha,candidate_sha)):
         return {"schema":SCHEMA,"state":"HOLD_MODEL_SHA"}
@@ -128,14 +139,23 @@ def promotion_gate(*,baseline:list[dict],candidate:list[dict],policy:dict,now:da
     if not isinstance(baseline,list) or not isinstance(candidate,list):
         return {"schema":SCHEMA,"state":"HOLD_EVAL_DATA"}
     required=policy.get("required_domains")
-    if not isinstance(required,list) or not required or not all(x in DOMAINS for x in required):
+    if (not isinstance(required,list) or not required
+            or not all(x in DOMAINS for x in required)
+            or len(set(required))!=len(required)):
         return {"schema":SCHEMA,"state":"HOLD_REQUIRED_DOMAINS"}
     def by_domain(seq,sha):
         out={}
         for r in seq:
-            if _valid_record(r,sha,now):out[r["domain"]]=r
+            if (_valid_record(r,sha,now)
+                    and r["source_receipt_sha256"] in approved_set):
+                # The last submitted row must not silently replace an earlier
+                # score for the same model+domain, even when both are pinned.
+                if r["domain"] in out:return None
+                out[r["domain"]]=r
         return out
     b=by_domain(baseline,base_sha);c=by_domain(candidate,candidate_sha)
+    if b is None or c is None:
+        return {"schema":SCHEMA,"state":"HOLD_AMBIGUOUS_DUPLICATE_DOMAIN_EVAL"}
     if any(x not in b or x not in c for x in required):
         return {"schema":SCHEMA,"state":"HOLD_MISSING_SAME_DOMAIN_RESULTS"}
     regressions=[];improvements=[]
