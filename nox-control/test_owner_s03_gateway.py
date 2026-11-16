@@ -72,6 +72,22 @@ class GatewayTests(unittest.TestCase):
         with patch.object(g,'stop_active',REAL_STOP_ACTIVE):
             self.assertFalse(g.stop_active())
 
+    def test_unreadable_owner_stop_cannot_admit_index(self):
+        # EACCES/ELOOP on an owner STOP alias must not look like owner consent.
+        flag=self.root/'state/STOP.flag'
+        original_lstat=g.os.lstat
+        for denial in (PermissionError('owner stop unreadable'),
+                       OSError(40, 'owner stop lookup loop')):
+            with self.subTest(error=type(denial).__name__):
+                def denied_lstat(path,*args,**kwargs):
+                    if Path(path)==flag:raise denial
+                    return original_lstat(path,*args,**kwargs)
+                with patch.object(g,'stop_active',REAL_STOP_ACTIVE), patch.object(g.os,'lstat',side_effect=denied_lstat):
+                    self.assertTrue(g.stop_active())
+                    with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_OWNER_STOP'):
+                        g.index_batch(self.db,identity_fn=lambda:'a'*64,
+                                      embedder=lambda *args,**kwargs: [])
+
     def test_bounded_pins_leave_real_query_results(self):
         pins=[{'id':'p'+str(i),'text':'identity '+str(i),'how':'pin'} for i in range(14)]
         facts=[{'id':'hit'+str(i),'text':'useful memory '+str(i)} for i in range(8)]
