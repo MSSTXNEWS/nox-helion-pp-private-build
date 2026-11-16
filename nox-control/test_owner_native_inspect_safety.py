@@ -64,6 +64,21 @@ class OwnerSafetyReadOnlyTests(unittest.TestCase):
                          "HOLD_SYMLINK")
         self.assertEqual(snapshot["manual_stop"], "HOLD_UNSAFE_FLAG")
 
+    def test_owner_model_update_maintenance_flag_is_visible_not_a_lease(self):
+        # Real 2026-11-16 owner stop used this distinct flag.
+        flag = self.root / "state" / "OWNER_MAINTENANCE.flag"
+        flag.parent.mkdir(parents=True, exist_ok=True)
+        flag.write_text("OWNER_MODEL_UPDATE 6917926683\\n")
+        snap = INSPECT.owner_safety_snapshot()
+        self.assertEqual(snap["owner_maintenance_flag"], "PRESENT")
+        self.assertEqual(snap["writer_lease"], "UNKNOWN_NO_OWNER_CAS_READBACK")
+        self.assertEqual(snap["manual_stop"], "NOT_OBSERVED_NOT_AUTHORIZATION")
+        self.assertEqual(snap["admission"], "READ_ONLY_NO_RESTART_NO_DELETE_NO_TRAINER")
+        flag.unlink()
+        flag.symlink_to(self.root / "not-authorized")
+        snap = INSPECT.owner_safety_snapshot()
+        self.assertEqual(snap["owner_maintenance_flag"], "HOLD_SYMLINK")
+
     def test_live_supervisor_pid_and_socket_inode_are_bound_to_start_ticks(self):
         pid = 432
         process = self.proc / str(pid)
