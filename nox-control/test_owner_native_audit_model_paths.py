@@ -27,7 +27,7 @@ class PinnedModelPathTests(unittest.TestCase):
             name,size,_=audit.PINNED_MODEL_FILES[0]
             (root/name).write_bytes(b'123')
             result=audit.pinned_model_paths(root=str(root))
-            self.assertEqual(result['status'],'OK')
+            self.assertEqual(result['status'],'HOLD_MODEL_FILE_SIZE_MISMATCH')
             self.assertEqual(len(result['files']),6)
             first=result['files'][0]
             self.assertEqual(first['path'],str(root/name))
@@ -75,6 +75,8 @@ class PinnedModelPathTests(unittest.TestCase):
         result=audit.models()
         self.assertEqual(set(result),{'pinned_model_paths'})
         self.assertEqual(audit.models.__code__.co_names,('pinned_model_paths',))
+
+from test_owner_native_audit_pinned_v10 import PinnedModelInventoryAdmissionTest
 
 if __name__=='__main__':
     unittest.main()
