@@ -121,6 +121,29 @@ class GatewayTests(unittest.TestCase):
         with self.assertRaisesRegex(g.MemoryHold,'MODEL_CHANGED'):
             g.index_batch(self.db,embedder=lambda *a,**k:[vector(0)],identity_fn=iter(['a'*64,'b'*64]).__next__)
 
+    def test_owner_stop_arriving_during_embedding_aborts_without_s03_write(self):
+        # The owner may enter MODEL_UPDATE after initial admission.
+        with g.connection(self.db,write=True) as c:item(c,'mid','memory before STOP')
+        flag=self.root/'state'/'STOP.flag'
+        flag.parent.mkdir(parents=True,exist_ok=True)
+        def delayed_embedding(texts,timeout):
+            flag.write_text('OWNER_MODEL_UPDATE\\n',encoding='utf8')
+            return [vector(0)]
+        with patch.object(g,'stop_active',REAL_STOP_ACTIVE):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_OWNER_STOP'):
+                g.index_batch(self.db,embedder=delayed_embedding,identity_fn=lambda:'a'*64)
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_vectors').fetchone()[0],0)
+
+    def test_owner_stop_before_sqlite_commit_rolls_back_all_vectors(self):
+        # A STOP after INSERT but before transaction exit is not a partial PASS.
+        with g.connection(self.db,write=True) as c:item(c,'late','memory pending commit')
+        with patch.object(g,'stop_active',side_effect=[False,False,False,True]):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_OWNER_STOP'):
+                g.index_batch(self.db,embedder=lambda *a,**k:[vector(0)],identity_fn=lambda:'a'*64)
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_vectors').fetchone()[0],0)
+
     def test_exact_history_origin_dedup_and_no_truth_promotion(self):
         private='PRIVATE_MEMORY_SENTINEL'
         first={'id':1,'ts':123.0,'text':private,'kind':'error','meta':'{"unverified":true}'}
