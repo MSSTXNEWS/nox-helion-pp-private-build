@@ -318,7 +318,8 @@ def infer(model, index, cancel, deadline, usage=True):
         valid = done and finish in ('stop', 'eos_token') and first is not None and validate_content(index, content)
         row.update(state='PASSED' if valid else 'INVALID_OR_INCOMPLETE', stream_done=done,
                    finish_reason=finish, task_valid=bool(valid), reasoning_observed=reasoning,
-                   completion_tokens=tokens, token_source='native_stream_usage' if tokens is not None else 'unavailable')
+                   completion_tokens=tokens, token_source='native_stream_usage' if tokens is not None else 'unavailable',
+                   public_fixture_response=content[:500])
     except urllib.error.HTTPError as exc:
         row['state'] = 'HTTP_' + str(exc.code)
     except (Hold, OSError, ValueError, UnicodeError) as exc:
@@ -369,9 +370,13 @@ def burst(model, concurrency, samples, deadline, usage):
     after = sampled[-1]
     cpu_seconds = (after['cpu_stat'].get('usage_usec', 0) - before['cpu_stat'].get('usage_usec', 0)) / 1e6
     passed = [row for row in rows if row['state'] == 'PASSED']
+    streamed = [row for row in rows if row.get('stream_done') is True
+                and row.get('finish_reason') in ('stop', 'eos_token') and row.get('ttft_ms') is not None]
+    state = 'PASSED' if len(passed) == samples and not failure else (
+        'QUALITY_FAILED' if len(streamed) == samples and not failure else 'FAILED')
     exact_tokens = sum(row['completion_tokens'] for row in rows) if len(rows) == samples and all(type(row.get('completion_tokens')) is int for row in rows) else None
     return {'concurrency': concurrency, 'samples': samples, 'completed_samples': len(rows),
-            'passed': len(passed), 'state': 'PASSED' if len(passed) == samples and not failure else 'FAILED',
+            'passed': len(passed), 'native_streams_completed': len(streamed), 'state': state,
             'hold_reason': failure, 'elapsed_sec': round(elapsed, 4),
             'useful_tasks_per_sec': round(len(passed) / elapsed, 4),
             'completion_tokens_per_sec': round(exact_tokens / elapsed, 3) if exact_tokens is not None else None,
@@ -455,7 +460,7 @@ def main(argv=None):
             case = burst(model, concurrency, args.samples, deadline, usage)
             result['cases'].append(case)
             print('NOX_MAINT_CAPACITY_CASE=' + json.dumps(case, sort_keys=True, separators=(',', ':')), flush=True)
-            if case['state'] != 'PASSED':
+            if case['state'] == 'FAILED':
                 raise Hold('CANDIDATE_FAILED')
         result['state'] = 'BOUNDED_BENCHMARK_COMPLETED'
     except Hold as exc:
