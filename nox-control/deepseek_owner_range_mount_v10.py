@@ -91,7 +91,7 @@ class DeepSeekOwnerRangeFS(Operations):
 
         self.guard()
         self.manifest = owner.load_manifest(Path(manifest_path).read_bytes())
-        self.aliases = { }  # Set only from the V10-validated alias in the same manifest.
+        self.aliases = {}  # Set only from the V10-validated alias in the same manifest.
         raw_manifest = __import__("json").loads(Path(manifest_path).read_text())
         alias = raw_manifest["alias"]
         self.aliases[alias["path"]] = alias["target"]
@@ -103,7 +103,9 @@ class DeepSeekOwnerRangeFS(Operations):
             local_stat = owner.regular(local_path, allow_missing=True)
             if local_stat is not None:
                 receipt_path = self.destination / (name + ".verified.json")
-                owner.verify_existing_receipt(receipt_path, row)
+                receipt_stat = owner.regular(receipt_path, allow_missing=True)
+                if receipt_stat is not None:
+                    owner.verify_existing_receipt(receipt_path, row)
                 self._open_and_hash_local(name, row, local_path, local_stat)
             else:
                 self._probe_remote(name, row)
@@ -134,7 +136,8 @@ class DeepSeekOwnerRangeFS(Operations):
                 offset += count
             after = os.fstat(fd)
             owner.require(_identity(opened) == _identity(after), "HOLD_LOCAL_FALLBACK_CHANGED")
-            owner.require(owner.regular(path) and _identity(owner.regular(path)) == _identity(after),
+            after_path = owner.regular(path)
+            owner.require(after_path is not None and _identity(after_path) == _identity(after),
                           "HOLD_LOCAL_FALLBACK_PATH_CHANGED")
             owner.require(whole.hexdigest() == row["sha256"], "HOLD_LOCAL_FALLBACK_SHA")
             owner.verify_existing_receipt(self.destination / (name + ".verified.json"), row)
@@ -307,7 +310,6 @@ def main():
     parser.add_argument("--mountpoint", required=True, help="existing empty absolute directory")
     parser.add_argument("--manifest", default=str(Path(__file__).with_name("deepseek_v41_download_manifest.json")))
     parser.add_argument("--destination", required=True, help="existing owner-protected model directory")
-    parser.add_argument("--owner-root", default="/root/nox")
     parser.add_argument("--lease", required=True, help="current OneHost-issued owner lease")
     parser.add_argument("--request", required=True, help="request ID matching the original lease")
     parser.add_argument("--cache-gib", type=float, default=4.0)
@@ -326,7 +328,7 @@ def main():
     fs = DeepSeekOwnerRangeFS(
         manifest_path=args.manifest,
         destination=args.destination,
-        owner_root=args.owner_root,
+        owner_root="/root/nox",
         lease_path=args.lease,
         request_id=args.request,
         cache_bytes=int(args.cache_gib * 1024**3),
