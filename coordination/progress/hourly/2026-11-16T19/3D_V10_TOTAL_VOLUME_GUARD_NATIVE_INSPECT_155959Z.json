@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_AUTO_3D_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_3D",
+  "timestamp_utc": "2026-11-16T16:07:00Z",
+  "timestamp_msk": "2026-11-16T19:07:00+03:00",
+  "native_owner_inspect": {
+    "instance": 60509551,
+    "job_id": 133422195964,
+    "run_id": 43887943803,
+    "at_utc": "2026-11-16T15:59:58Z",
+    "status": "SUCCESS",
+    "scope": "RERUN_EXISTING_OWNER_AUTH_INSPECT_READONLY",
+    "owner_stop": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "writer_lease": "UNKNOWN",
+    "original_five_supervisors": "STOPPED",
+    "chat_listener_8081": "ABSENT",
+    "gpu_used_mib": [
+      0,
+      0
+    ],
+    "gpu_temp_c": [
+      16,
+      18
+    ],
+    "cgroup_mem_current_bytes": 60387147776,
+    "cgroup_mem_max_bytes": 194065203200,
+    "cpu_quota_cores": 19.2,
+    "ssd_total_bytes": 183609851904,
+    "ssd_free_bytes": 43158855680,
+    "shm_free_bytes": 3366711296,
+    "rclone_remotes": 0,
+    "ssh_key_cleanup": "DETACHED_AND_VERIFIED"
+  },
+  "source": {
+    "fix": "Prevent partial DeepSeek GGUF transfer if total underlying filesystem capacity is lower than full model unique bytes + reserve. A free-space per-current-shard gate alone is insufficient.",
+    "code_sha_before": "63ba78771399e47ce12914356d03db54b00ffe65",
+    "code_sha_after": "ae209fd57e453f3dfacb7dc154d605456107120d",
+    "code_commit": "835d8d78e3fcefb13458539792eef4d2a5a4bf60",
+    "test_sha_before": "5d13073e283f1fc9989f2b1e3cda5903f3ce18c7",
+    "test_sha_after": "0d56c78b8e1d62d856df027fd8b290c2d48f625c",
+    "test_commit": "021efb447bb114a97f6f81d8850942d981cc5e27",
+    "ci_run": 43903160217,
+    "ci_job": 133424868362,
+    "ci": "SUCCESS; 32 DeepSeek tests PASS, 4 Maya source and 12 Maya launch suite PASS twice",
+    "status": "SOURCE_TESTED_NOT_INSTALLED",
+    "rollback": "CAS restore exact preimage blobs only after rereading latest HEAD; do not overwrite other agents"
+  },
+  "tasks": [
+    {
+      "id": "S1-01",
+      "state": "LIVE_VERIFIED_READ_ONLY",
+      "why": "Original owner approved exact instance inspector, STOP and maintenance present; writer lease unknown"
+    },
+    {
+      "id": "S1-02",
+      "state": "LIVE_VERIFIED_READ_ONLY",
+      "why": "Original 5 NOX Supervisor STOPPED and no 8081 listener; no owned chat/dispatcher/trainer PID"
+    },
+    {
+      "id": "S1-04",
+      "state": "LIVE_VERIFIED_READ_ONLY",
+      "why": "Both V100 idle and storage quota limits measured; internal SSD physically smaller than DeepSeek model"
+    },
+    {
+      "id": "S2-07",
+      "state": "SOURCE_TESTED_NATIVE_HOLD",
+      "why": "CI proven total-volume prevention fix; no storage admission or owner lease for transfer"
+    },
+    {
+      "id": "S3-04",
+      "state": "HOLD",
+      "why": "Maya/DeepSeek original UI SSE RU/ES STOP S03 E2E blocked while owner STOP remains"
+    }
+  ],
+  "weight_updates_new": 0,
+  "knowledge_s03_recall_new": 0,
+  "downloaded_bytes_new": 0,
+  "deleted_bytes_new": 0,
+  "native_restarts_new": 0,
+  "manual_stop_cleared": false,
+  "model_replaced": false,
+  "deepseek_unique_bytes": 248834257920,
+  "missing_shard_bytes": 248828477216,
+  "physical_ssd_shortfall_bytes": 65224406016,
+  "free_ssd_shortfall_bytes": 205675402240,
+  "next": "Owner-approved seekable external volume/capacity and quota, independent backup+restore, one owner writer lease; then exact five shard SHA and Maya inference/original UI SSE E2E with rollback; never resume Qwen merely for steps."
+}
