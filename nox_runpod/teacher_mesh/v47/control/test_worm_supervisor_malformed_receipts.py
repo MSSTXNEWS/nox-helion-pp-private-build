@@ -57,5 +57,55 @@ class MalformedReceiptTests(unittest.TestCase):
         report = worm.audit_native_queue(matrix(), observed, now_unix=1730000000)
         self.assertEqual(report["state"], "HOLD_NATIVE_OWNER_STOP_S03_OR_CHAT")
 
+class ProgressStallTests(unittest.TestCase):
+    def sample(self, counter, at, pid=321, ticks=900):
+        return {"native_verified": True, "receipt_sha256": "a" * 64,
+                "pid": pid, "start_ticks": ticks, "counter": counter,
+                "observed_unix": at, "metric": "optimizer_updates",
+                "active": True}
+
+    def test_running_without_useful_progress_needs_diagnosis_not_restart(self):
+        before = {"trainer": self.sample(25, 1000)}
+        now = {"trainer": self.sample(25, 4000)}
+        result = worm.audit_process_progress(now, before, now_unix=4000, grace_seconds=1800)
+        self.assertEqual(result["state"], "PROGRESS_AUDITED_ADVISORY_ONLY")
+        self.assertEqual(result["suspected_stalls"][0]["action"], "DIAGNOSE_AND_CHANGE_APPROACH")
+        self.assertFalse(result["restart_permitted"])
+        self.assertEqual(result["mutations"], 0)
+
+    def test_real_optimizer_progress_not_flagged_as_stalled(self):
+        result = worm.audit_process_progress(
+            {"trainer": self.sample(27, 4000)},
+            {"trainer": self.sample(25, 1000)}, now_unix=4000)
+        self.assertEqual(result["advancing"][0]["delta"], 2)
+        self.assertEqual(result["suspected_stalls"], [])
+
+    def test_pid_replacement_and_long_step_are_not_restarted(self):
+        baseline = {"trainer": self.sample(25, 1000)}
+        swapped = worm.audit_process_progress(
+            {"trainer": self.sample(25, 4000, pid=322)}, baseline, now_unix=4000)
+        self.assertEqual(swapped["holds"][0]["reason"], "NEW_PROCESS_BASELINE")
+        graceful = worm.audit_process_progress(
+            {"trainer": self.sample(25, 1200)}, baseline, now_unix=1200, grace_seconds=1800)
+        self.assertEqual(graceful["holds"][0]["reason"], "NORMAL_LONG_STEP_GRACE")
+
+    def test_untrusted_forged_counter_or_no_previous_sample_cannot_trigger_restart(self):
+        sample = self.sample(25, 4000)
+        untrusted = dict(sample, native_verified=False)
+        result = worm.audit_process_progress({"trainer": untrusted}, {"trainer": self.sample(25, 1000)}, now_unix=4000)
+        self.assertEqual(result["holds"][0]["reason"], "HOLD_UNVERIFIED_PROGRESS")
+        self.assertFalse(result["restart_permitted"])
+        missing = worm.audit_process_progress({"trainer": sample}, {}, now_unix=4000)
+        self.assertEqual(missing["holds"][0]["reason"], "NEED_TWO_NATIVE_SAMPLES")
+
+    def test_queue_audit_emits_stall_report_without_mutating_queue(self):
+        observed = observations("RUNNING")
+        observed["process_progress_previous"] = {"trainer": self.sample(25, 1000)}
+        observed["process_progress_current"] = {"trainer": self.sample(25, 4000)}
+        result = worm.audit_native_queue(matrix(), observed, now_unix=4000)
+        self.assertEqual(result["process_progress_audit"]["suspected_stalls"][0]["id"], "trainer")
+        self.assertEqual(result["native_jobs_restarted"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
