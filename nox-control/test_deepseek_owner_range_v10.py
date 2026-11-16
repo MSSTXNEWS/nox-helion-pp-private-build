@@ -58,6 +58,27 @@ class DeepSeekP0Offline(unittest.TestCase):
     def test_owner_stop_prevents_transfer(self):
         (self.root/'STOP').touch()
         with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):self.do()
+    def test_owner_maintenance_blocks_exact_deepseek_transfer(self):
+        # Maintenance is an owner fence even if every legacy STOP name is absent.
+        flag=self.root/'state/OWNER_MAINTENANCE.flag'
+        flag.touch()
+        with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):
+            self.do(opener=lambda *a,**kw:self.fail('maintenance must not download'))
+        flag.unlink()
+        flag.symlink_to(self.root/'unavailable-target')
+        with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):
+            self.do(opener=lambda *a,**kw:self.fail('dangling owner maintenance must not download'))
+        self.assertFalse((self.dst/(self.name+'.part')).exists())
+
+    def test_dangling_workspace_stop_fails_closed(self):
+        # Simulate a dangling global STOP without writing outside temporary fixture.
+        original_exists=Path.exists
+        original_symlink=Path.is_symlink
+        with patch.object(Path,'exists',new=lambda p: False if str(p)=='/workspace/NOX_STOP' else original_exists(p)), \
+             patch.object(Path,'is_symlink',new=lambda p: True if str(p)=='/workspace/NOX_STOP' else original_symlink(p)):
+            with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):
+                m.stop(self.root)
+
     def test_trainer_hold_is_not_global_stop(self):
         (self.root/'state/TRAIN_HOLD.flag').touch()
         with patch.object(m,'RESERVE',0):self.assertEqual(self.do(limit=6)['state'],'PARTIAL_SHA_PENDING')
