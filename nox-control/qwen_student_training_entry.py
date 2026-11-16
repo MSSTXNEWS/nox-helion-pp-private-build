@@ -34,6 +34,7 @@ from owner_qwen_training_contract import (
     validate_manifest, verify_proof,
 )
 from owner_qwen_memfd import SealedModel, tiny_safetensors_smoke
+from maya_acceptance_gate import verify_maya_admission
 
 ROOT = Path("/root/nox")
 SERVICE = "nox-train-volta-t866u"
@@ -129,7 +130,7 @@ def admission(args):
             or student.get("successful_updates_goal") != args.successful_updates
             or not isinstance(student.get("runtime_versions"), dict)):
         raise Hold("HOLD_QWEN_EXPLICIT_NATIVE_ADMISSION_REQUIRED")
-    for name in ("qwen_student_training_entry.py", "owner_qwen_training_contract.py", "owner_qwen_memfd.py"):
+    for name in ("qwen_student_training_entry.py", "owner_qwen_training_contract.py", "owner_qwen_memfd.py", "maya_acceptance_gate.py"):
         path = Path(__file__).with_name(name)
         if (str(path) != str(ROOT / "scripts" / name)
                 or value.get("sources", {}).get(str(path)) != sha256_file(path)):
@@ -139,7 +140,10 @@ def admission(args):
             or policy.get("training_allowed") is not True or policy.get("training_service") != SERVICE
             or policy.get("training_gpu") != 1):
         raise Hold("HOLD_EXISTING_TRAINER_POLICY")
-    return student
+    # The legacy QLoRA route shares the exact accepted Maya receipt and active
+    # p0.training owner lease gate, but this migration is full-base only.
+    verify_maya_admission(value)
+    raise Hold("HOLD_LEGACY_QWEN_ADAPTER_ROUTE_DISABLED_USE_V135_FULL_BASE")
 
 
 @contextmanager
