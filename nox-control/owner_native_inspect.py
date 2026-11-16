@@ -740,7 +740,6 @@ def bounded_capacity_readback():
 
 def owner_safety_snapshot():
     """Read-only owner/8081 admission evidence; NEVER interpret a flag absence as a lease."""
-    import socket
     root = ROOT
     stop_names = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
                   'state/STOP')
@@ -769,8 +768,8 @@ def owner_safety_snapshot():
                  'nox-selfheal', 'nox-gpu-watchdog-t865u'):
         rc, output = run(['supervisorctl', 'status', name], timeout=8)
         lines = output.strip().splitlines()
-        match = re.fullmatch(re.escape(name) + r'\s+([A-Z]+)(?:\s+pid\s+(\d+).*)?',
-                             lines[0]) if len(lines) == 1 else None
+        match = re.match(r'^' + re.escape(name) + r'\s+([A-Z]+)(?:\s+pid\s+(\d+)\b)?',
+                         lines[0]) if len(lines) == 1 else None
         status = match.group(1) if match else 'UNKNOWN'
         pid = int(match.group(2)) if match and match.group(2) else None
         start_ticks = None
@@ -811,6 +810,8 @@ def owner_safety_snapshot():
                         break
         except OSError:
             net_status = 'UNKNOWN_PID_SOCKET_MAPPING'
+    if inodes and not owners and net_status == 'OBSERVED':
+        net_status = 'UNRESOLVED_LISTENER_OWNER'
     heartbeat = {}
     for name in ('status/dispatcher_t855u.json', 'status/agents_t856u.json'):
         path = root / name
