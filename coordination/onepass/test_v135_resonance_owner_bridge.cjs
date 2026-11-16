@@ -1358,7 +1358,7 @@ test('V180 concurrent cookie-scoped sessions: cancelling A leaves B active',asyn
         {type:'delta',text:'Live stream for '+cookie}
       ];
       const body=new ReadableStream({start(controller){
-        controller.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\\n').join('')));
+        controller.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
       }});
       return new Response(body,{headers:{'content-type':'application/x-ndjson'}});
     };
@@ -1390,7 +1390,7 @@ test('V180 concurrent cookie-scoped sessions: cancelling A leaves B active',asyn
     if(chunk.done)break;
     raw+=decodeA.decode(chunk.value,{stream:true});
     let boundary;
-    while((boundary=raw.indexOf('\\n\\n'))>=0){
+    while((boundary=raw.indexOf('\n\n'))>=0){
       const item=raw.slice(0,boundary);raw=raw.slice(boundary+2);
       if(item.startsWith('data: '))frames.push(JSON.parse(item.slice(6)));
     }
