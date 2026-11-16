@@ -225,9 +225,9 @@ def memory_text(receipt):
 def s03_readback(receipt):
     text = memory_text(receipt)
     with s03_connection() as conn:
-        rows = conn.execute('SELECT id,text,meta,sha256 FROM s03_items WHERE text=? AND provenance=? LIMIT 2',
+        rows = conn.execute("SELECT id,text,meta,sha256 FROM s03_items WHERE segment='M2' AND text=? AND provenance=? LIMIT 2",
                             (text, 'owner_native_subagents')).fetchall()
-    if len(rows) != 1 or rows[0][3] != digest(text.encode()):
+    if len(rows) != 1 or rows[0][3] != digest(('M2|'+text).encode()):
         return None
     try:
         meta = json.loads(rows[0][2])

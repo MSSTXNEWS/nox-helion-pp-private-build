@@ -416,7 +416,8 @@ def main():
                     hold('HOLD_NATIVE_CORE_IDENTITY_CHANGED')
                 success = True
                 break
-            failed = [task for task in tasks if task.get('status') in ('blocked', 'failed')]
+            failed = [task for task in tasks if task.get('status') in ('blocked', 'failed')
+                      and task.get('note') != 'WAIT_S03_ADMISSION_READBACK']
             if failed:
                 result['task_holds'] = [{'id': t.get('id'), 'status': t.get('status'), 'note': t.get('note')}
                                         for t in failed]

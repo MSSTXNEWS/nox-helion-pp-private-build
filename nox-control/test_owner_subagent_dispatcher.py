@@ -45,7 +45,7 @@ class NativeBindingTests(unittest.TestCase):
         with sqlite3.connect(self.db) as conn:
             conn.execute('INSERT INTO s03_items VALUES(?,?,?,?,?,?,?,?)',
                          ('existing-item', 'M2', text, 'owner_native_subagents',
-                          module.digest(text.encode()), .1, 'now',
+                          module.digest(('M2|'+text).encode()), .1, 'now',
                           json.dumps({'receipt': {**receipt, 'job_id': 'wrong'} if alter else receipt})))
 
     def test_full_19kb_policy_ack_and_bounded_model_excerpt(self):
@@ -89,6 +89,19 @@ class NativeBindingTests(unittest.TestCase):
     def test_model_claim_or_wrong_metadata_is_not_s03_proof(self):
         receipt = self.receipt()
         self.write_memory(receipt, alter=True)
+        self.assertIsNone(module.s03_readback(receipt))
+
+    def test_native_segment_hash_required_and_other_segment_cannot_shadow_receipt(self):
+        receipt = self.receipt()
+        self.write_memory(receipt)
+        text = module.memory_text(receipt)
+        with sqlite3.connect(self.db) as conn:
+            conn.execute('INSERT INTO s03_items VALUES(?,?,?,?,?,?,?,?)',
+                ('other-segment', 'M1', text, 'owner_native_subagents',
+                 module.digest(('M1|'+text).encode()), .1, 'now', json.dumps({'receipt': receipt})))
+        self.assertEqual(module.s03_readback(receipt)['s03_item_id'], 'existing-item')
+        with sqlite3.connect(self.db) as conn:
+            conn.execute("UPDATE s03_items SET sha256=? WHERE id='existing-item'", (module.digest(text.encode()),))
         self.assertIsNone(module.s03_readback(receipt))
 
     def test_ambiguous_http_is_read_back_and_not_posted_twice(self):
