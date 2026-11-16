@@ -6,6 +6,7 @@ or persistence store is introduced here; chat_proxy retains its S03 postflight.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from contextlib import aclosing
 from datetime import datetime,timezone
 import json
@@ -24,6 +25,13 @@ class StreamFailure(RuntimeError):
 
 
 EXECUTOR_STATUS=Path('/root/nox/status/agents_t856u.json')
+MAYA_ROUTE_STATE=Path('/root/nox/config/maya_ds4_owner_route_v1.json')
+MAYA_API_URL='http://127.0.0.1:8080/v1/chat/completions'
+MAYA_MODELS_URL='http://127.0.0.1:8080/v1/models'
+MAYA_MODEL_ID='deepseek-v4.1-flash'
+MAYA_ENGINE_SHA256='3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20'
+_MAYA_MANAGER_PROCESS=None
+_MAYA_MANAGER_LOCK=asyncio.Lock()
 
 
 def owner_request_query(user_text):
@@ -84,11 +92,208 @@ def _executor_status_reply(user_text,path=None):
         return unknown
 
 
-async def _model_events(client, url, payload):
+def _maya_read_file(path,limit):
+    target=Path(path)
+    try:
+        fd=os.open(target,os.O_RDONLY|os.O_NOFOLLOW)
+    except FileNotFoundError:
+        raise
+    except OSError:
+        raise StreamFailure('HOLD_MAYA_RUNTIME_FILE') from None
+    try:
+        meta=os.fstat(fd)
+        if (not stat.S_ISREG(meta.st_mode) or meta.st_uid!=0
+                or stat.S_IMODE(meta.st_mode)&0o022 or not 0<meta.st_size<=limit):
+            raise StreamFailure('HOLD_MAYA_RUNTIME_FILE')
+        with os.fdopen(fd,'rb',closefd=False) as source:
+            raw=source.read(limit+1)
+        if len(raw)>limit:
+            raise StreamFailure('HOLD_MAYA_RUNTIME_FILE')
+        return raw,meta
+    finally:
+        os.close(fd)
+
+
+def _maya_stop_manager():
+    global _MAYA_MANAGER_PROCESS
+    process=_MAYA_MANAGER_PROCESS
+    _MAYA_MANAGER_PROCESS=None
+    if process is not None and process.returncode is None:
+        try:process.terminate()
+        except (OSError,ProcessLookupError):pass
+
+
+def _maya_route():
+    """Use only a fresh owner-supervisor grant; absent/disabled preserves the current route."""
+    try:
+        raw,meta=_maya_read_file(MAYA_ROUTE_STATE,8192)
+    except FileNotFoundError:
+        return None
+    except StreamFailure:
+        _maya_stop_manager()
+        raise
+    try:
+        route=json.loads(raw)
+    except (TypeError,ValueError):
+        _maya_stop_manager()
+        raise StreamFailure('HOLD_MAYA_ROUTE_CONFIG') from None
+    if not isinstance(route,dict) or route.get('schema')!='NOX_MAYA_DS4_OWNER_ROUTE_V1':
+        _maya_stop_manager()
+        raise StreamFailure('HOLD_MAYA_ROUTE_CONFIG')
+    if type(route.get('enabled')) is not bool:
+        _maya_stop_manager()
+        raise StreamFailure('HOLD_MAYA_ROUTE_CONFIG')
+    if not route['enabled']:
+        _maya_stop_manager()
+        return None
+    if not 0<=time.time()-meta.st_mtime<=30:
+        _maya_stop_manager()
+        raise StreamFailure('HOLD_MAYA_ROUTE_STATE_STALE')
+    if (route.get('provider')!='maya_ds4' or route.get('api_url')!=MAYA_API_URL
+            or route.get('models_url')!=MAYA_MODELS_URL or route.get('model')!=MAYA_MODEL_ID):
+        _maya_stop_manager()
+        raise StreamFailure('HOLD_MAYA_ROUTE_CONFIG')
+    if route.get('owner_stop') is not False:
+        _maya_stop_manager()
+        raise StreamFailure('HOLD_OWNER_STOP')
+    if (route.get('lease_valid') is not True
+            or type(route.get('lease_expires_epoch')) is not int
+            or route['lease_expires_epoch']<=time.time()):
+        _maya_stop_manager()
+        raise StreamFailure('HOLD_MAYA_LEASE')
+    if route.get('resources_reserved') is not True or route.get('model_pack_verified') is not True:
+        _maya_stop_manager()
+        raise StreamFailure('HOLD_MAYA_RESOURCE_OR_PACK_GATE')
+    for field in ('model_pack_receipt_sha256','manager_python_sha256',
+                  'server_config_sha256','server_module_sha256'):
+        value=route.get(field)
+        if not isinstance(value,str) or not re.fullmatch(r'[a-f0-9]{64}',value):
+            _maya_stop_manager()
+            raise StreamFailure('HOLD_MAYA_ROUTE_CONFIG')
+    for field in ('manager_python','manager_cwd','server_config_path','model_pack_dir'):
+        value=route.get(field)
+        if not isinstance(value,str) or not Path(value).is_absolute():
+            _maya_stop_manager()
+            raise StreamFailure('HOLD_MAYA_ROUTE_CONFIG')
+    key=os.environ.get('NOX_MAYA_API_KEY')
+    route['_headers']={'Authorization':'Bearer '+key} if key else {}
+    return route
+
+
+def _maya_server_config(route):
+    """Validate supervisor-pinned files, then build the official serve.server argv."""
+    python=Path(route['manager_python'])
+    cwd=Path(route['manager_cwd'])
+    config_path=Path(route['server_config_path'])
+    try:
+        python_raw,python_meta=_maya_read_file(python,256*1024*1024)
+        source_raw,source_meta=_maya_read_file(cwd/'serve/server.py',16*1024*1024)
+        config_raw,config_meta=_maya_read_file(config_path,1024*1024)
+        config=json.loads(config_raw)
+        if (not os.access(python,os.X_OK)
+                or hashlib.sha256(python_raw).hexdigest()!=route['manager_python_sha256']
+                or hashlib.sha256(source_raw).hexdigest()!=route['server_module_sha256']
+                or hashlib.sha256(config_raw).hexdigest()!=route['server_config_sha256']):
+            raise ValueError('pin')
+        if not isinstance(config,dict) or config.get('model_name')!=MAYA_MODEL_ID:
+            raise ValueError('model')
+        engine=config.get('exe')
+        args=config.get('args')
+        pack_arg=args[args.index('--pack')+1] if isinstance(args,list) else None
+        pack=Path(route['model_pack_dir']).resolve(strict=True)
+        if Path(pack_arg).resolve(strict=True)!=pack:
+            raise ValueError('pack')
+        engine_raw,engine_meta=_maya_read_file(engine,256*1024*1024)
+        if hashlib.sha256(engine_raw).hexdigest()!=MAYA_ENGINE_SHA256:
+            raise ValueError('engine')
+        if config.get('gpu') not in (None,[0,1]) or config.get('port',8080)!=8080:
+            raise ValueError('runtime')
+    except (OSError,ValueError,TypeError,AttributeError,IndexError,StreamFailure):
+        raise StreamFailure('HOLD_MAYA_RUNTIME_PIN') from None
+    if config.get('api_key') and not route['_headers']:
+        raise StreamFailure('HOLD_MAYA_API_KEY_UNAVAILABLE')
+    return [str(python),'-m','serve.server','--engine','maya','--config',str(config_path),
+            '--host','127.0.0.1','--port','8080'],str(cwd)
+
+
+async def _maya_probe(client,route):
+    try:
+        response=await client.get(MAYA_MODELS_URL,headers=route['_headers'],timeout=5.0)
+    except (httpx.ConnectError,httpx.ConnectTimeout):
+        return 'offline'
+    except httpx.HTTPError:
+        raise StreamFailure('HOLD_MAYA_API_UNAVAILABLE') from None
+    if response.status_code in (401,403):
+        raise StreamFailure('HOLD_MAYA_API_AUTH')
+    if response.status_code==503:
+        return 'loading'
+    if response.status_code!=200:
+        raise StreamFailure('HOLD_MAYA_API_HTTP')
+    try:
+        doc=response.json()
+        rows=doc.get('data')
+        if not isinstance(rows,list):
+            raise ValueError('models')
+        model=next((row for row in rows if isinstance(row,dict) and row.get('id')==MAYA_MODEL_ID),None)
+        if model is None:
+            raise StreamFailure('HOLD_MAYA_MODEL_IDENTITY')
+        status=model.get('status')
+        value=status.get('value') if isinstance(status,dict) else None
+        if value=='loaded':
+            return 'ready'
+        if value in ('loading','starting','unloading'):
+            return 'loading'
+        raise StreamFailure('HOLD_MAYA_MODEL_NOT_LOADED')
+    except StreamFailure:
+        raise
+    except (AttributeError,TypeError,ValueError):
+        raise StreamFailure('HOLD_MAYA_MODELS_RESPONSE') from None
+
+
+async def _ensure_maya_server(client,route):
+    """Launch only the official Maya API manager after fresh owner, lease, resource and pack gates."""
+    global _MAYA_MANAGER_PROCESS
+    state=await _maya_probe(client,route)
+    if state=='ready':
+        return
+    if state=='loading':
+        raise StreamFailure('HOLD_MAYA_ENGINE_STARTING')
+    async with _MAYA_MANAGER_LOCK:
+        state=await _maya_probe(client,route)
+        if state=='ready':
+            return
+        if state=='loading':
+            raise StreamFailure('HOLD_MAYA_ENGINE_STARTING')
+        if _MAYA_MANAGER_PROCESS is not None and _MAYA_MANAGER_PROCESS.returncode is None:
+            raise StreamFailure('HOLD_MAYA_ENGINE_STARTING')
+        argv,cwd=_maya_server_config(route)
+        env=os.environ.copy()
+        env['CUDA_VISIBLE_DEVICES']='0,1'
+        try:
+            _MAYA_MANAGER_PROCESS=await asyncio.create_subprocess_exec(
+                *argv,cwd=cwd,env=env,stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,stderr=asyncio.subprocess.DEVNULL,
+                start_new_session=True)
+        except (OSError,ValueError):
+            _MAYA_MANAGER_PROCESS=None
+            raise StreamFailure('HOLD_MAYA_MANAGER_START') from None
+        for _ in range(8):
+            await asyncio.sleep(0.5)
+            if _MAYA_MANAGER_PROCESS.returncode is not None:
+                raise StreamFailure('HOLD_MAYA_MANAGER_EXIT')
+            state=await _maya_probe(client,route)
+            if state=='ready':
+                return
+            if state=='loading':
+                raise StreamFailure('HOLD_MAYA_ENGINE_STARTING')
+        raise StreamFailure('HOLD_MAYA_ENGINE_STARTING')
+
+
+async def _model_events(client, url, payload, *, model='maya', headers=None):
     """Forward content immediately; assemble function-call arguments privately."""
-    request=dict(payload,model='maya',stream=True,cache_prompt=True)
+    request=dict(payload,model=model,stream=True,cache_prompt=True)
     text=[];calls={};finished=None;complete=False;size=0
-    async with client.stream('POST',url,json=request,timeout=180.0) as response:
+    async with client.stream('POST',url,json=request,headers=headers,timeout=180.0) as response:
         if response.status_code!=200:
             raise StreamFailure('HOLD_MODEL_HTTP')
         async for line in response.aiter_lines():
@@ -206,6 +411,7 @@ def _assistant_tools(calls,content=''):
 
 
 async def _run(native,url,payload,user_text):
+    maya_route=await asyncio.to_thread(_maya_route)
     executor_reply=await asyncio.to_thread(_executor_status_reply,user_text)
     if executor_reply is not None:
         yield 'token',executor_reply
@@ -295,7 +501,17 @@ async def _run(native,url,payload,user_text):
                 model_request.pop('tools',None)
                 model_request['tool_choice']='none'
             message=None
-            async with aclosing(_model_events(client,url,model_request)) as model_stream:
+            if maya_route:
+                await _ensure_maya_server(client,maya_route)
+                model_url=MAYA_API_URL
+                model_id=MAYA_MODEL_ID
+                model_headers=maya_route['_headers']
+            else:
+                model_url=url
+                model_id='maya'
+                model_headers=None
+            async with aclosing(_model_events(client,model_url,model_request,
+                                              model=model_id,headers=model_headers)) as model_stream:
                 async for kind,value in model_stream:
                     if kind=='token':
                         yield kind,value
