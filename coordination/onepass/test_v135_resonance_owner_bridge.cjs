@@ -1238,7 +1238,7 @@ test('V175 cross-version V29.3 page stage → V135 SSE → V112 NDJSON/provider 
   assert(bridge.includes("message:data.message,dialog_id:id,task:'general',history:[]"));
   assert(bridge.includes("event({type:'token',t:parts[index]})"));
   assert(bridge.includes("event({type:'done',status:'done',saved:true,s03_integrated:true"));
-  assert(bridge.includes("type:'error',error:nativeSignal.aborted?'STREAM_STOP_REQUESTED'"));
+  assert(bridge.includes("error:nativeSignal.aborted?'STREAM_STOP_REQUESTED'"));
   assert(bridge.includes("gpu_stop_verified:false"));
   assert(!bridge.includes("gpu_stop_verified:true"));
 
