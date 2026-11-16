@@ -79,6 +79,44 @@ class StorageTests(unittest.TestCase):
         os.link(path, path.with_name('another-link'))
         self.assertEqual(storage.qualify(path, path.stat(), self.now, self.usage)[1], 'OWNERSHIP_LINK_TYPE_OR_SMALL_FILE')
 
+    def test_memory_genesis_history_skills_and_training_state_never_become_reclaim_candidates(self):
+        # These state files must remain outside the ephemeral-cache/log/core allowlist,
+        # regardless of an old mtime or a harmless-looking suffix.
+        protected_paths = (
+            self.root / 'memory/s03/records.sqlite3',
+            self.root / 'state/genesis/facts.json',
+            self.root / 'state/history/events.jsonl',
+            self.root / 'state/skills/skill_memory.sqlite3',
+            self.root / 'checkpoints/checkpoint-55/model.safetensors',
+            self.root / 'lora/run/optimizer.pt',
+            self.root / 'lora/run/scaler.pt',
+            self.root / 'lora/run/rng_state.pth',
+            self.root / 'training/optimizer.bin',
+            self.root / 'training/scaler.json',
+            self.root / 'training/rng_state.json',
+        )
+        for path in protected_paths:
+            self.file(path, b'protected state', size=2 * 1024 * 1024)
+            candidate, reason = storage.qualify(path, path.stat(), self.now, self.usage)
+            self.assertIsNone(candidate, str(path))
+            self.assertEqual(reason, 'PROTECTED_OR_NOT_ALLOWLISTED', str(path))
+
+    def test_every_registered_teacher_and_model_suffix_alias_is_not_a_cache_candidate(self):
+        # Exercise the actual legacy teacher manifest and every model/state suffix
+        # against otherwise plausible pip cache locations.
+        for registered in storage.LEGACY_TEACHERS:
+            path = self.root / 'models/teachers' / Path(registered).name
+            self.file(path, b'protected teacher', size=2 * 1024 * 1024)
+            candidate, reason = storage.qualify(path, path.stat(), self.now, self.usage)
+            self.assertIsNone(candidate, str(path))
+            self.assertEqual(reason, 'PROTECTED_OR_NOT_ALLOWLISTED', str(path))
+
+        cache_dir = self.home / '.cache/pip/http-v2/a/b/c/d/e'
+        for suffix in sorted(storage.WEIGHT_SUFFIX):
+            for alias in (suffix, suffix.upper()):
+                path = cache_dir / ('c' * 56 + alias)
+                self.assertIsNone(storage.deletion_kind(path), str(path))
+
     def test_core_requires_real_elf_et_core_header(self):
         path = self.file(self.root / 'core.1234', b'not a core')
         self.assertEqual(storage.qualify(path, path.stat(), self.now, self.usage)[1], 'NOT_ELF_CORE')

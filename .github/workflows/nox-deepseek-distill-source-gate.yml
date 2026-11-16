@@ -1,0 +1,30 @@
+name: NOX DeepSeek distillation source gate
+
+on:
+  pull_request:
+    paths:
+      - "coordination/hybrid_20261115/deepseek_compatible_distill/**"
+      - ".github/workflows/nox-deepseek-distill-source-gate.yml"
+  push:
+    branches:
+      - "codex/nox-deepseek-distill-manifest-20261116"
+    paths:
+      - "coordination/hybrid_20261115/deepseek_compatible_distill/**"
+      - ".github/workflows/nox-deepseek-distill-source-gate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  manifest-source-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate source-only learning manifest
+        run: python -m unittest discover -s coordination/hybrid_20261115/deepseek_compatible_distill -p "test_*.py"
+      - name: Emit current blocked status
+        run: python coordination/hybrid_20261115/deepseek_compatible_distill/verify_manifest.py

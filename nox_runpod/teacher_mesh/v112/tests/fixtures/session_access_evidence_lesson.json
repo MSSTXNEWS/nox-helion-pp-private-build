@@ -1,0 +1,34 @@
+{
+  "fact_key": "WORKFLOW-LESSON-SESSION-ACCESS-EVIDENCE-20261116",
+  "content": "For NOX project work, inspect canonical memory and the existing authorized route receipts before concluding access is blocked. Use the existing owner-auth V51 bridge for permitted native checks. Keep SOURCE_TESTED, INSTALLED, and LIVE_VERIFIED as separate evidence states. Preserve STOP, S03, backup, and writer-lease gates; a source fixture or CI pass does not prove live learning or deployment.",
+  "valid_from": "2026-11-16T00:00:00.000Z",
+  "source_ref": "SESSION:2026-11-16:NOX-ONEPASS-04D:PAIR:session-route-correction-20261116-01:5fe912ec7a914f546df97df0f3c5cc6ef0b87d60c5bd974923644028c32c1168",
+  "source_sha256": "35d188218086cc837778f9d8190e85c7690d6d26366c2559ef85e80a419ef88a",
+  "training_pair_ref": {
+    "manifest_path": "coordination/hybrid_20261115/deepseek_compatible_distill/manifest.v1.json",
+    "relationship": "RELATED_CONTEXT_NOT_IDENTICAL_TEXT",
+    "id": "session-route-correction-20261116-01",
+    "status": "STAGED",
+    "split_assignment": "train_candidate",
+    "excluded_from": "dev,holdout",
+    "prompt": "проверь память/маршруты",
+    "completion": "Проверил канонический контекст: указанный авторизованный маршрут к Vast.ai #60509551 — существующий OneHost GitHub Actions V51 bridge. Это подтверждает маршрут через bridge, но не подтверждает наличие активного входа или сессии в веб-интерфейсе Vast.ai; статус UI-аутентификации не проверялся. Использовать только существующий owner-auth bridge и сохранять STOP; не обходить аварийный gate.",
+    "source": {
+      "type": "session_and_canonical_memory_context",
+      "description": "Пользовательская коррекция в этой сессии; parent-provided verified canonical overview identifies existing owner-auth V51 bridge to Vast.ai instance #60509551.",
+      "durable_source_uri": null,
+      "source_uri_status": "not supplied in task context",
+      "verified_claim": "existing owner-auth GitHub Actions V51 bridge routes to Vast.ai #60509551",
+      "unverified_claim": "Vast.ai web UI login/session state"
+    },
+    "safety": {
+      "contains_credentials": false,
+      "contains_personal_data": false,
+      "claims_consciousness": false,
+      "stop_gate": "PRESERVE"
+    },
+    "prompt_sha256": "0f6c2f6fc1a15d296b98d215881ee988a0401bdde2ab38cf34a85474ea76a2f5",
+    "completion_sha256": "5fa92a5e43c8cb7b50405b10ecfb90f8ba9f515c7fc55da10667ceb1d041e299",
+    "pair_sha256": "5fe912ec7a914f546df97df0f3c5cc6ef0b87d60c5bd974923644028c32c1168"
+  }
+}
