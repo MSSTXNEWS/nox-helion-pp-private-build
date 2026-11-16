@@ -1289,7 +1289,7 @@ test('V179 STOP UI outcome distinguishes rejection, timeout and accepted transpo
       if(chunk.done)break;
       raw+=decoder.decode(chunk.value,{stream:true});
       let boundary;
-      while((boundary=raw.indexOf('\\n\\n'))>=0){
+      while((boundary=raw.indexOf('\n\n'))>=0){
         const item=raw.slice(0,boundary);raw=raw.slice(boundary+2);
         if(item.startsWith('data: '))frames.push(JSON.parse(item.slice(6)));
       }
