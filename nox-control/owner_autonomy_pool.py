@@ -221,8 +221,10 @@ def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
     budget = max(0, budget-existing_claims)
     ranked=[]
     for task in tasks:
-        tid=task['id'];state=status.get(tid)
-        if state is not None:continue   # never reenqueue unknown/running/done jobs
+        tid=task['id']
+        # Presence is authoritative even when an uncertain native claim has
+        # status None. Distinguish absent from unresolved before any replay.
+        if tid in status:continue   # never reenqueue known/unknown/running/done jobs
         if any(status.get(d)!='done' for d in task['deps']): continue
         if task['resource']=='GPU_EXCLUSIVE' and not gpu_available: continue
         heapq.heappush(ranked,(PRIORITIES[task['priority']],task['estimated_cost'],tid,task))

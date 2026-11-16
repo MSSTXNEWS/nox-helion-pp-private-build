@@ -305,4 +305,25 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(out['state'],'HOLD_STOP_OR_LEASE_CHANGED')
         n.native_queue_claim.assert_not_called()
 
+
+    def test_unknown_none_status_is_present_and_never_requeued(self):
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(1)},
+                                 allowed_handlers={'owner_component'})
+        task_id=tasks[0]['id']
+        self.assertEqual(len(pool.choose_ready(tasks,status={},mode='NORMAL',
+                                              memory_ratio=.5)),1)
+        self.assertEqual(pool.choose_ready(tasks,status={task_id:None},mode='NORMAL',
+                                            memory_ratio=.5),[])
+
+    def test_null_status_does_not_issue_second_native_claim(self):
+        n=self._native_claim_mock()
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(1)},
+                                 allowed_handlers={'owner_component'})
+        result=pool.admit_native_tick(n,tasks=tasks,status={tasks[0]['id']:None},
+                                      mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(result['state'],'NATIVE_POOL_READY_IDLE')
+        self.assertEqual(result['jobs_started'],0)
+        n.native_queue_claim.assert_not_called()
+        n.native_duplicate_check.assert_not_called()
+
 if __name__=='__main__':unittest.main()
