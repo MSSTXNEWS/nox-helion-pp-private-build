@@ -57,16 +57,31 @@ def require(ok, reason):
     if not ok: raise Hold(reason)
 
 def regular(path: Path, allow_missing=False):
-    path=Path(path)
-    for p in (path, *path.parents): require(not p.is_symlink(), 'HOLD_SYMLINK_PATH')
-    if not path.exists():
-        require(allow_missing, 'HOLD_MISSING_FILE')
-        return None
-    st=path.stat()
-    require(stat.S_ISREG(st.st_mode) and st.st_uid==os.geteuid(), 'HOLD_NONREGULAR_OR_UNOWNED_FILE')
-    # A hardlinked .part could append directly into a unique checkpoint or S03 backup.
-    require(st.st_nlink==1, 'HOLD_HARDLINK_PATH')
-    return st
+    """Fail closed for unreadable or looping metadata; never call it 'missing'.
+
+    Path.exists()/is_symlink() can return False for ELOOP, which otherwise
+    permits an unsafe redundant download claim for an unknown existing part.
+    This is a metadata guard, not a substitute for O_NOFOLLOW and inode checks.
+    """
+    path = Path(path)
+    for candidate in (*reversed(path.parents), path):
+        try:
+            st = os.lstat(candidate)
+        except FileNotFoundError as exc:
+            if candidate == path and allow_missing:
+                return None
+            raise Hold('HOLD_MISSING_FILE') from exc
+        except OSError as exc:
+            raise Hold('HOLD_PATH_UNREADABLE') from exc
+        require(not stat.S_ISLNK(st.st_mode), 'HOLD_SYMLINK_PATH')
+        if candidate != path:
+            require(stat.S_ISDIR(st.st_mode), 'HOLD_UNSAFE_PARENT_PATH')
+            continue
+        require(stat.S_ISREG(st.st_mode) and st.st_uid == os.geteuid(),
+                'HOLD_NONREGULAR_OR_UNOWNED_FILE')
+        # A hardlinked .part could append directly into a unique checkpoint or S03 backup.
+        require(st.st_nlink == 1, 'HOLD_HARDLINK_PATH')
+        return st
 
 def canonical(d):
     return json.dumps(d,sort_keys=True,separators=(',', ':'),allow_nan=False).encode()

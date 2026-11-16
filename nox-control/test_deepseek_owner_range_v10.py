@@ -284,6 +284,36 @@ class DeepSeekP0Offline(unittest.TestCase):
                          248834257920)
 
 
+    def test_looping_or_unreadable_part_metadata_never_counted_as_missing(self):
+        # On Python 3.13 Path.exists()/is_symlink() suppress ELOOP and can
+        # misclassify an unreadable existing .part as a genuinely absent one.
+        import errno
+        part = self.dst / (self.name + '.part')
+        part.write_bytes(b'unique-owner-partial')
+        original = m.os.lstat
+        for failure in (errno.ELOOP, errno.EACCES):
+            with self.subTest(errno=failure):
+                def inaccessible(path, *args, **kwargs):
+                    if Path(path) == part:
+                        raise OSError(failure, 'metadata unavailable', str(path))
+                    return original(path, *args, **kwargs)
+                with patch.object(m.os, 'lstat', side_effect=inaccessible), patch.object(m, 'RESERVE', 0):
+                    with self.assertRaisesRegex(m.Hold, 'HOLD_PATH_UNREADABLE'):
+                        self.do(opener=lambda *a, **kw: self.fail('download on unknown metadata'))
+                self.assertEqual(part.read_bytes(), b'unique-owner-partial')
+
+    def test_unreadable_parent_metadata_holds_before_network(self):
+        import errno
+        original = m.os.lstat
+        def inaccessible(path, *args, **kwargs):
+            if Path(path) == self.dst:
+                raise OSError(errno.EACCES, 'parent metadata inaccessible', str(path))
+            return original(path, *args, **kwargs)
+        with patch.object(m.os, 'lstat', side_effect=inaccessible), patch.object(m, 'RESERVE', 0):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_PATH_UNREADABLE'):
+                self.do(opener=lambda *a, **kw: self.fail('network on blocked parent'))
+        self.assertFalse((self.dst / (self.name + '.part')).exists())
+
     def test_existing_partial_hardlink_cannot_modify_checkpoint(self):
         preserve=self.dst/'unique-checkpoint';preserve.write_bytes(b'checkpoint-bytes')
         (self.dst/(self.name+'.part')).hardlink_to(preserve)
@@ -374,7 +404,7 @@ class DeepSeekP0Offline(unittest.TestCase):
         def race_exists(path):
             if path==final:
                 calls['final']+=1
-                if calls['final']==2:
+                if calls['final']==1:
                     final.write_bytes(b'other-owner-unique-checkpoint')
                     return False
             return original_exists(path)
