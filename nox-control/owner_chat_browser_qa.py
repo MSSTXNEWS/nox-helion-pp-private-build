@@ -62,6 +62,9 @@ def safe_route(url):
     path = urllib.parse.urlsplit(url).path
     if path in SAFE_API or path in (PAGE,'/','/chat'):
         return path
+    if path in ('/pc/v25/nox-shell-v25.css','/pc/v25/nox-ia-v25.json',
+                '/pc/vendor/fonts/tektur/tektur.css'):
+        return path
     if (path.startswith('/nox-web-v29/') and len(path) <= 220
             and re.fullmatch(r'/[A-Za-z0-9_./-]+', path)
             and path.endswith(('.js','.mjs','.css','.woff','.woff2','.ttf','.svg','.png','.jpg','.webp'))):
@@ -282,11 +285,21 @@ CONTROL_JS = r"""el => {
  const inView=x>0&&x<innerWidth&&y>0&&y<innerHeight;
  const hit=inView?document.elementFromPoint(x,y):null;
  const known=new Set(['v24Rail','nativeChats','v24Cursor','noxCoreEntry','n25Menu','v24System','messages','chatForm']);
+ const publicClasses=['nox-v28-pc-return','v24-stage','v24-app','v24-rail','v24-main','v24-top','v24-chat-item','v24-chats','n25-menu'];
+ const banner=document.querySelector('body.nox-v24 > .nox-v28-pc-return'),bb=banner?.getBoundingClientRect();
+ const stage=document.querySelector('body.nox-v24 .v24-stage'),sb=stage?.getBoundingClientRect();
+ const layers=inView?document.elementsFromPoint(x,y).slice(0,6).map(node=>({
+   tag:node.tagName,known_id:known.has(node.id)?node.id:'OTHER',
+   known_classes:publicClasses.filter(name=>node.classList.contains(name)),
+   z_index:/^-?\d+$/.test(getComputedStyle(node).zIndex)?Number(getComputedStyle(node).zIndex):null})):[];
  return {x,y,width:box.width,height:box.height,in_view:inView,
    pointer_hit_own_button:!!hit&&(hit===button||button.contains(hit)),
    hit_tag:hit?.tagName||null,hit_known_id:hit?(known.has(hit.id)?hit.id:'OTHER'):null,
    hit_in_other_dialog:!!hit&&!!hit.closest('#nativeChats')&&!button.contains(hit),
    hit_in_header:!!hit&&!!hit.closest('header'),
+   hit_in_return_banner:!!hit&&!!hit.closest('.nox-v28-pc-return'),hit_layers:layers,
+   return_banner_present:!!banner,return_banner_bottom:bb?.bottom||0,return_banner_height:bb?.height||0,
+   stage_top:sb?.top||0,layout_fix:window.__NOX_OWNER_LAYOUT_FIX==='RETURN_BANNER_INSET_V1',
    target_pointer_events:style.pointerEvents,rail_present:!!rail,
    rail_collapsed:rail?.dataset.collapsed==='true',rail_width:rb?.width||0,
    rail_opacity:rs?Number(rs.opacity):null,rail_pointer_events:rs?.pointerEvents||null};

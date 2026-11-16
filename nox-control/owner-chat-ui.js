@@ -13,10 +13,27 @@
       const result=await r.json();if(!r.ok)throw Error(result.reason||result.error||'HTTP_'+r.status);return result;
     }finally{clearTimeout(timer);}
   }
+  function reserveReturnBanner(){
+    const banner=document.querySelector('body.nox-v24 > .nox-v28-pc-return');
+    if(!banner)return;
+    // The preserved WEB29 return bar is in normal flow above a fixed stage.
+    // Reserve its real height so it cannot cover the first dialog control.
+    const update=()=>{
+      const box=banner.getBoundingClientRect();
+      const shown=box.width>0&&box.height>0&&getComputedStyle(banner).display!=='none';
+      const bottom=shown&&Number.isFinite(box.bottom)?Math.max(0,Math.min(window.innerHeight,Math.ceil(box.bottom))):0;
+      document.documentElement.style.setProperty('--nox-owner-top-inset',bottom+'px');
+      window.__NOX_OWNER_LAYOUT_FIX='RETURN_BANNER_INSET_V1';
+    };
+    update();
+    if(typeof ResizeObserver==='function'){const observer=new ResizeObserver(update);observer.observe(banner);}
+    window.addEventListener('resize',update,{passive:true});
+  }
   function attach(){
     const header=document.querySelector('.v24-top'),main=document.querySelector('.v24-main');
     if(!header||!main)return;
     const style=E('style');style.textContent=`
+      body.nox-v24 .v24-stage{top:var(--nox-owner-top-inset,0px)}
       .nox-live-strip{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:9px 13px;margin:0 0 6px;color:#e9d8bd;font:12px system-ui}
       .nox-live-chip{padding:5px 8px;border-radius:9px;background:#151b22bb;border:1px solid #43464c;white-space:nowrap}
       .nox-live-chip[data-state=busy]{border-color:#d7a563;color:#ffe0a6;box-shadow:0 0 12px #d9a25720}
@@ -26,7 +43,7 @@
       .nox-media-panel h2{margin:0 0 12px;font:600 20px system-ui}.nox-media-panel img,.nox-media-panel video{display:block;max-width:100%;max-height:48vh;border-radius:10px;margin-top:14px}
       .nox-media-panel button:disabled{opacity:.5;cursor:default}.nox-media-status{white-space:pre-wrap;line-height:1.5;margin:12px 0}.nox-media-links{display:flex;gap:12px;margin-top:12px}
       @media(max-width:600px){.nox-live-strip{gap:5px;padding:6px}.nox-live-chip{font-size:10px}.nox-media-panel{inset:6vh 3vw auto}.nox-live-actions{width:100%;margin-left:0}}
-    `;document.head.append(style);
+    `;document.head.append(style);reserveReturnBanner();
     const strip=E('div',undefined,'nox-live-strip'),label=E('span','Исполнители'),chips=E('span');chips.style.display='contents';
     const actions=E('div',undefined,'nox-live-actions'),image=E('button','Фото','nox-live-btn'),video=E('button','Видео','nox-live-btn');
     image.type=video.type='button';actions.append(image,video);strip.append(label,chips,actions);header.after(strip);

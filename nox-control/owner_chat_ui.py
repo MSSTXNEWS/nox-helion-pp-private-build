@@ -16,6 +16,16 @@ def decorate_html(raw,path):
     if raw.count('</head>')!=1:raise ValueError('HOLD_RESONANCE_HEAD')
     # The original archive assumes hosting at /. Our owner-only mount is nested.
     raw=raw.replace('="/pc/','="/nox-web-v29/pc/').replace("='/pc/","='/nox-web-v29/pc/")
+    # The legacy shell otherwise inserts a second, unmounted /pc/v25 CSS URL.
+    # Mark only its exact, already relocated stylesheet; preserve the asset.
+    def shell_css(match):
+        tag=match.group(0)
+        if (re.search(r'\bhref\s*=\s*([\"\'])/nox-web-v29/pc/v25/nox-shell-v25\.css(?:\?[^\"\']*)?\1',tag,re.I)
+                and not re.search(r'\bdata-n25-css(?:\s*=|\s|/?>)',tag,re.I)):
+            end='/>' if tag.endswith('/>') else '>'
+            return tag[:-len(end)]+' data-n25-css="1"'+end
+        return tag
+    raw=re.sub(r'<link\b[^>]*>',shell_css,raw,flags=re.I)
     if 'data-nox-live-owner="1"' in raw:return raw
     extra='\n<meta name="nox-live-build" content="'+BUILD+'">\n'
     for name in ('nox-v135-resonance-owner-bridge.js','nox-v137-owner-self-status.js','owner-chat-ui.js','owner-presence.js'):

@@ -32,11 +32,12 @@ except NameError:BUNDLE={}
 ROOT=Path('/root/nox');SCRIPTS=ROOT/'scripts';STATE=ROOT/'state'
 HELPER_SHA='b3d1887b92cb805076301f6631e56b6e42c48e7dae02d62f2a272c10669644e0'
 PREPARE_GATEWAY_SHA='40caff3109111d971ff2d37cb81c0c2050ead08ae42d1f631a245778dd1a7a4d'
-GATEWAY_SHA='1f1e3799aad2d74d5ce34cce98267bc1e2ce9e2f4fd9fcf6464e0166c6ef1127'
+GATEWAY_SHA='cb7f373cf2d3c4f01d47ed4ef0c48b0a89af7a05eb92a06530752c40453fdf20'
+REINDEX_ENTRY_SHA='8fceef538e00e0c6f240e2cd95c7b046f3d3c0c33093d6da6d790d350f1ef6c4'
 S03_BEFORE='82c592ea5a59281fb5fc1061d133ac4e149b8e95a6d0947a254882715cba7f91'
 S03_AFTER='3ebdc3585f32bafbd0e1210ceee286b174a657c37696e16fce9fcafb57c43e10'
 DISPATCHER_BEFORE='d4e665915ae2a9f0be8ae4603be3768467e0f88be876e408465c3a7cc156c243'
-DISPATCHER_AFTER='934193bf4df6fef73293628793eaac1c10e923e15aea4b7a36c82335ad3795b8'
+DISPATCHER_AFTER='2294ad543cf78ae7c72cb79f399d458a86feae9c4d144586abc8630d9b4295e0'
 CONFIG_BEFORE='70d600e861a1e9908d06691790e54e2abcd814b460144ece2af3d2b6a54e0e80'
 LIFECYCLE_BEFORE='020fcee6d1267189811c51da031761aa9ae681a3a2bcd567fbbc150c33db8605'
 OUTBOX_BEFORE='af4edd2c34e4d46902ccf914b5be9c845a95d682d34f92a08cd69357c4b69c00'
@@ -138,6 +139,25 @@ def verify_prepare(path,expected_sha,gateway):
     if digest(updated.encode())!=value.get('s03_after_activation_sha256') or digest(updated.encode())!=S03_AFTER:
         fail('HOLD_S03_PREDICTED_SOURCE_MISMATCH')
     return value,updated.encode()
+
+
+def verify_reindex(request,source,expected_sha,gateway):
+    if not re.fullmatch('[a-f0-9]{64}',expected_sha):fail('HOLD_S03_REINDEX_CONTEXT')
+    reindex=module('owner_s03_content_reindex_validator',bundle('owner_s03_content_reindex_entry.py',REINDEX_ENTRY_SHA))
+    path=STATE/'owner_s03'/('content_reindex_'+request+'.json');raw=read(path,512*1024)
+    if digest(raw)!=expected_sha:fail('HOLD_S03_REINDEX_RECEIPT_PIN')
+    value=reindex.validate_record(json.loads(raw),request,source,gateway)
+    # A sealed old result is not a substitute for the current canonical index.
+    current=gateway.status()
+    if (current.get('stale_embeddings')!=0 or current.get('current_embeddings',0)<514
+            or current.get('model_identity')!=value['content_identity']['identity']):
+        fail('HOLD_S03_REINDEX_NO_LONGER_CURRENT')
+    return {'schema':reindex.SCHEMA,'request':request,'source_sha':source,'receipt_sha256':expected_sha,
+            'state':value['state'],'gateway_sha256':GATEWAY_SHA,
+            'model_identity':value['content_identity']['identity'],
+            'model_content_sha256':value['content_identity']['content_sha256'],
+            'indexed_in_action':value['indexed_in_action'],'current_embeddings':current['current_embeddings'],
+            'stale_embeddings':current['stale_embeddings'],'legacy_vectors_relabelled':False}
 
 
 def local_json(port,path,timeout=5,limit=256000):
@@ -466,8 +486,10 @@ def identity_only_probe():
 def main():
     request=os.environ.get('NOX_OWNER_REQUEST_ID','');source=os.environ.get('NOX_OWNER_SOURCE_SHA','')
     prepare_request=os.environ.get('NOX_S03_PREPARE_REQUEST','');prepare_sha=os.environ.get('NOX_S03_PREPARE_SHA256','')
+    reindex_sha=os.environ.get('NOX_S03_REINDEX_SHA256','')
     if (not request.isdigit() or not prepare_request.isdigit() or not re.fullmatch('[a-f0-9]{40}',source)
-            or not re.fullmatch('[a-f0-9]{64}',prepare_sha)):fail('HOLD_S03_ACTIVATION_CONTEXT')
+            or not re.fullmatch('[a-f0-9]{64}',prepare_sha)
+            or not re.fullmatch('[a-f0-9]{64}',reindex_sha)):fail('HOLD_S03_ACTIVATION_CONTEXT')
     helper=module('owner_s03_activation_helper',bundle('owner_native_repair.py',HELPER_SHA))
     if digest(read(SCRIPTS/'owner_s03_gateway.py'))!=PREPARE_GATEWAY_SHA:fail('HOLD_S03_GATEWAY_SOURCE_PIN')
     raw_gateway=bundle('owner_s03_gateway.py',GATEWAY_SHA)
@@ -477,6 +499,7 @@ def main():
     outbox=module('owner_event_outbox',new_outbox)
     lifecycle=module('owner_task_lifecycle',new_lifecycle)
     prepare,updated_s03=verify_prepare(STATE/'owner_s03'/('prepare_'+prepare_request+'.json'),prepare_sha,gateway)
+    content_reindex=verify_reindex(request,source,reindex_sha,gateway)
     receipt=STATE/'owner_s03'/('activation_'+request+'.json')
     if receipt.exists():fail('HOLD_S03_ACTIVATION_REQUEST_REUSED')
     fd=os.open(gateway.plain(STATE/'owner_maintenance.lock'),os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
@@ -484,6 +507,7 @@ def main():
     backup=ROOT/'backup/owner_s03_activation'/request
     record={'schema':'NOX_OWNER_S03_ACTIVATION_V1','request':request,'source_sha':source,'started_at':time.time(),
             'prepare_request':prepare_request,'prepare_receipt_sha256':prepare_sha,'state':'ADMITTING',
+            'content_reindex':content_reindex,
             'installed_sources':[],'steps':[],'weights_deleted':0,'memory_records_deleted':0,
             'llama_restarted':False,'training_started':False,'private_text_exported':False,'rollback':False}
     installed=[];paused=[];queue_backup={};success=False;proxy_stopped=False
@@ -548,8 +572,8 @@ def main():
         for name in CONTROLLERS:stop(name)
         if active_claims():fail('HOLD_S03_QUEUE_CHANGED_DURING_PAUSE')
         # Retain the live proxy until all non-proxy source bytes are ready.
-        # Explicit approved utility revision: same-descriptor hashing and
-        # WAL-aware destination reserve. PREPARE provenance remains40caff.
+        # Actual one-time reembedding under the verified content fingerprint
+        # precedes this source handoff. PREPARE provenance remains40caff.
         install(SCRIPTS/'owner_s03_gateway.py',raw_gateway,PREPARE_GATEWAY_SHA)
         install(SCRIPTS/'owner_event_outbox.py',new_outbox,OUTBOX_BEFORE)
         install(SCRIPTS/'owner_task_lifecycle.py',new_lifecycle,LIFECYCLE_BEFORE)

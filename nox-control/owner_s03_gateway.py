@@ -32,6 +32,11 @@ STATE = ROOT/'state/owner_s03'
 MODEL = ROOT/'models/bge-m3-Q4_K_M.gguf'
 DIMENSIONS = 1024
 MODEL_BYTES = 437778496
+# Independently hashed by native read-only identity probe6904832882. The
+# previous index had no historical content hash and must be re-embedded once.
+MODEL_CONTENT_SHA256 = '6d39681b26c61279ac1f82db35a04a05009e94c415b51c858ff571489a82fc06'
+MODEL_IDENTITY_SCHEMA = 'NOX_S03_BGE_CONTENT_IDENTITY_V1'
+EMBEDDING_PROTOCOL = 'BGE_M3_LLAMA_FLOAT32_L2_NORMALIZED_1024_V1'
 BASE_S03_SHA = '82c592ea5a59281fb5fc1061d133ac4e149b8e95a6d0947a254882715cba7f91'
 SCHEMA = 'NOX_OWNER_S03_GATEWAY_V1'
 MARKER = 'NOX_OWNER_S03_GATEWAY_BIND_V1'
@@ -43,6 +48,7 @@ INDEX_BATCH = 12
 PIN_BUDGET = 2
 _model_cache = {'until':0.0,'id':None}
 _cache_lock = threading.Lock()
+_content_cache = {'stat': None, 'sha256': None, 'database': None}
 
 
 class MemoryHold(RuntimeError):
@@ -255,9 +261,71 @@ def _request_json(path,payload=None,timeout=.7,maximum=1024*1024):
     finally:client.close()
 
 
+def content_identity():
+    """Mutable API aliases/inode metadata are not embedding semantics."""
+    return digest(encoded({'schema':MODEL_IDENTITY_SCHEMA,'model_sha256':MODEL_CONTENT_SHA256,
+                           'dimensions':DIMENSIONS,'embedding_protocol':EMBEDDING_PROTOCOL}))
+
+
+def model_stat(info):
+    return [info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns]
+
+
+def _verified_content_record(db, observed):
+    try:
+        with connection(db,seconds=.35) as conn:
+            row=conn.execute('SELECT value FROM nox_s03_gateway_meta WHERE key=?',('model_content_identity',)).fetchone()
+        if not row or not isinstance(row[0],str) or len(row[0])>16000:return None
+        value=json.loads(row[0])
+        if (not isinstance(value,dict) or value.get('schema')!=MODEL_IDENTITY_SCHEMA
+                or value.get('content_sha256')!=MODEL_CONTENT_SHA256 or value.get('file_stat')!=observed
+                or value.get('identity')!=content_identity() or value.get('dimensions')!=DIMENSIONS
+                or value.get('embedding_protocol')!=EMBEDDING_PROTOCOL or value.get('full_file_hash_verified') is not True):
+            return None
+        return value
+    except (OSError,ValueError,sqlite3.Error,MemoryHold):return None
+
+
+def refresh_model_identity(db=DB):
+    """Indexer-only cache refresh; same bytes retain the same vector identity.
+
+    Callers hold the existing operation_lock. Recall only reads this cache and
+    can use lexical fallback while an admitted index task verifies changed file
+    metadata. No vector is relabelled from a legacy stat-based identity.
+    """
+    if stop_active():hold('HOLD_S03_OWNER_STOP')
+    info=regular(MODEL)
+    if info.st_size!=MODEL_BYTES:hold('HOLD_S03_BGE_MODEL_FILE_CHANGED')
+    observed=model_stat(info);cached=_verified_content_record(db,observed)
+    if cached is None:
+        actual=file_sha(MODEL)
+        if model_stat(regular(MODEL))!=observed:hold('HOLD_S03_BGE_MODEL_CHANGED_WHILE_HASHING')
+        if actual!=MODEL_CONTENT_SHA256:hold('HOLD_S03_BGE_MODEL_CONTENT_CHANGED')
+        cached={'schema':MODEL_IDENTITY_SCHEMA,'content_sha256':actual,'file_stat':observed,
+                'identity':content_identity(),'dimensions':DIMENSIONS,'embedding_protocol':EMBEDDING_PROTOCOL,
+                'full_file_hash_verified':True,'verified_at':time.time()}
+        if stop_active():hold('HOLD_S03_OWNER_STOP')
+        with connection(db,write=True,seconds=2) as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            conn.execute('INSERT OR REPLACE INTO nox_s03_gateway_meta VALUES(?,?)',
+                         ('model_content_identity',encoded(cached).decode()))
+            conn.execute('INSERT OR REPLACE INTO nox_s03_gateway_meta VALUES(?,?)',
+                         ('model_file_stat',encoded(observed).decode()))
+    with _cache_lock:
+        _content_cache.update(stat=observed,sha256=MODEL_CONTENT_SHA256,database=str(db))
+    return cached
+
+
 def model_identity():
     info = regular(MODEL)
     if info.st_size!=MODEL_BYTES:hold('HOLD_S03_BGE_MODEL_FILE_CHANGED')
+    observed=model_stat(info)
+    with _cache_lock:
+        cached=(_content_cache['stat']==observed and _content_cache['sha256']==MODEL_CONTENT_SHA256
+                and _content_cache['database']==str(DB))
+    if not cached:
+        if _verified_content_record(DB,observed) is None:hold('HOLD_S03_BGE_CONTENT_VERIFICATION_REQUIRED')
+        with _cache_lock:_content_cache.update(stat=observed,sha256=MODEL_CONTENT_SHA256,database=str(DB))
     now = time.monotonic()
     with _cache_lock:
         if _model_cache['until']<now:
@@ -268,8 +336,7 @@ def model_identity():
             if not isinstance(identifier,str) or not 1<=len(identifier)<=4096 or 'bge' not in identifier.lower():hold('HOLD_S03_BGE_MODEL_ID')
             _model_cache.update(id=identifier,until=now+30)
         identifier = _model_cache['id']
-    return digest(encoded({'model_id':identifier,'dimensions':DIMENSIONS,'device':info.st_dev,'inode':info.st_ino,
-                           'bytes':info.st_size,'mtime_ns':info.st_mtime_ns,'ctime_ns':info.st_ctime_ns}))
+    return content_identity()
 
 
 def embed(texts,timeout=.7):
@@ -402,6 +469,7 @@ def migrate_history(request,db=DB,legacy_root=None):
 def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identity):
     if stop_active():hold('HOLD_S03_OWNER_STOP')
     if type(limit) is not int or not 1<=limit<=INDEX_BATCH:hold('HOLD_S03_INDEX_LIMIT')
+    if identity_fn is model_identity:refresh_model_identity(db)
     identity=identity_fn();pending=[];stale=0;pending_bytes=0
     with connection(db,seconds=3) as conn:
         validate_base(conn)
@@ -674,8 +742,8 @@ def bind_dispatcher(namespace):
         try:
             with connection(DB,seconds=.25) as conn:
                 if not columns(conn,'nox_s03_vectors'):return result
-                missing=any(row['content_sha256']!=text_sha(row['text']) for row in conn.execute(
-                    'SELECT s.text,v.content_sha256 FROM s03_items s LEFT JOIN nox_s03_vectors v ON v.item_id=s.id LIMIT ?', (MAX_ITEMS+1,))
+                missing=any(row['content_sha256']!=text_sha(row['text']) or row['model_identity']!=content_identity() for row in conn.execute(
+                    'SELECT s.text,v.content_sha256,v.model_identity FROM s03_items s LEFT JOIN nox_s03_vectors v ON v.item_id=s.id LIMIT ?', (MAX_ITEMS+1,))
                     if isinstance(row['text'],str) and row['text'].strip())
                 info=regular(MODEL)
                 observed=encoded([info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns]).decode()
