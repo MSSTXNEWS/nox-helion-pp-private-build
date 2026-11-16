@@ -50,7 +50,7 @@ def run_action(action):
                     capture_output=True, text=True, timeout=6, check=False
                 )
                 match = re.match(r"^" + re.escape(name) +
-                                 r"\\s+([A-Z]+)(?:\\s+pid\\s+([0-9]+))?",
+                                 r"\s+([A-Z]+)(?:\s+pid\s+([0-9]+))?",
                                  (result.stdout or "").strip())
                 current = match.group(1) if match else "UNKNOWN"
                 pid = int(match.group(2)) if match and match.group(2) else None
