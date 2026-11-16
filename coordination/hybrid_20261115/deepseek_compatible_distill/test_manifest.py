@@ -62,6 +62,14 @@ class DistillationManifestTest(unittest.TestCase):
         changed["corpus"]["splits"]["holdout"]["sha256"] = "a" * 64
         self.assertIn("HOLDOUT_NOT_FROZEN", validate(changed)["blockers"])
 
+    def test_v100_rejects_bf16_and_unknown_lora_modules(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["method"]["lora"]["precision"] = "bf16"
+        changed["method"]["lora"]["target_modules"].append("unsupported_proj")
+        result = validate(changed)
+        self.assertIn("V100_FP16_ONLY", result["blockers"])
+        self.assertIn("LORA_TARGET_MODULES_UNSUPPORTED", result["blockers"])
+
     def test_training_flag_never_clears_other_gates(self):
         changed = copy.deepcopy(MANIFEST)
         changed["training_enabled"] = True

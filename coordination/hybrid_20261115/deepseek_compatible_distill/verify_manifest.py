@@ -8,6 +8,7 @@ import re
 SCHEMA = "NOX_DEEPSEEK_TEACHER_STUDENT_SOURCE_MANIFEST_V1"
 HEX64 = re.compile(r"^[a-f0-9]{64}$")
 HEX40 = re.compile(r"^[a-f0-9]{40}$")
+KNOWN_LORA_MODULES = {"q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"}
 
 
 def validate(manifest: dict) -> dict:
@@ -28,8 +29,20 @@ def validate(manifest: dict) -> dict:
         blockers.append("GGUF_TEACHER_IS_INFERENCE_ONLY")
     if method.get("gguf_direct_weight_training") is not False:
         blockers.append("GGUF_DIRECT_TRAINING_FORBIDDEN")
-    if method.get("precision") != "fp16" or method.get("bf16_allowed") is not False:
+    lora = method.get("lora", {})
+    if lora.get("precision") != "fp16" or method.get("bf16_allowed") is not False:
         blockers.append("V100_FP16_ONLY")
+    targets = lora.get("target_modules", [])
+    if (not isinstance(targets, list) or not targets
+            or any(not isinstance(x, str) or x not in KNOWN_LORA_MODULES for x in targets)):
+        blockers.append("LORA_TARGET_MODULES_UNSUPPORTED")
+    if type(lora.get("rank")) is not int or lora["rank"] not in {8, 16, 32, 64, 128}:
+        blockers.append("LORA_RANK_UNSUPPORTED")
+    if (type(lora.get("learning_rate")) not in {int, float}
+            or not 0 < lora["learning_rate"] <= 0.001):
+        blockers.append("LORA_LEARNING_RATE_INVALID")
+    if type(lora.get("max_steps")) is not int or not 1 <= lora["max_steps"] <= 10000:
+        blockers.append("LORA_MAX_STEPS_INVALID")
     if method.get("name") != "response_level_distillation_sft":
         blockers.append("UNSUPPORTED_METHOD")
 
