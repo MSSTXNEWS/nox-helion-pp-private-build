@@ -3,7 +3,7 @@
   "instructions_version": "0.0.6",
   "slot": "AUTO_1C",
   "at_utc": "2026-11-16T18:39:36.107Z",
-  "at_msk": "2026-11-16T18:39:36.107 UTC+03:00 (add 3h to UTC)",
+  "at_msk": "2026-11-16T21:39:36.107+03:00",
   "scope": "EXISTING_ONEHOST_OWNER_POOL_SOURCE_ONLY",
   "instance_id": 60509551,
   "source": {
