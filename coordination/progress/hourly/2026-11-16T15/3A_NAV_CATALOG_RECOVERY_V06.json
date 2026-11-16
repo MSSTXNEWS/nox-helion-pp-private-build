@@ -33,7 +33,7 @@
     "site/pc/hub.html": "2743ee9082ad2fc26836a49c27ae9f5726ae170c2e94a2d9287ff5cd8ee9d7d8"
   },
   "postimages": {
-    "site/pc/v25/nox-shell-v25.js": "7df1261fbb0191c5559683ccd4176e49a73ddea629e7c50ffb43e5635fe2cb74",
+    "site/pc/v25/nox-shell-v25.js": "acc12c5a866149efe57b26063406b61abe1370c1638c661cd78f65fa6f985897",
     "site/pc/hub.html": "db1d5ca411c69927f58e2781f51c16279cea3ff6dbe52f90174db755d4714f3a"
   },
   "five_tasks": [
@@ -100,5 +100,11 @@
     "status": "HOLD_NO_VERIFIED_REPLACEMENT_RESTORE",
     "deleted_bytes": 0
   },
-  "next_action": "Authorized current OneHost WEB29 preimage/STOP/writer lease plus independent rollback; apply exact two-path patch only if SHA matches, then auth browser HOME/MENU/HUB/Resonance/Development and S03/STOP; preserve no-loss."
+  "next_action": "Authorized current OneHost WEB29 preimage/STOP/writer lease plus independent rollback; apply exact two-path patch only if SHA matches, then auth browser HOME/MENU/HUB/Resonance/Development and S03/STOP; preserve no-loss.",
+  "source_sha_correction": {
+    "reason": "Final allow-empty-HOLD-href compatibility adjustment changed JS SHA after preliminary hash capture; exact git apply/reverse and SHA of final patch reverified",
+    "verified": "EXACT_APPLY_AND_ROLLBACK_CHECK_PASS",
+    "previous_incorrect_sha": "7df1261fbb0191c5559683ccd4176e49a73ddea629e7c50ffb43e5635fe2cb74",
+    "correct_sha": "acc12c5a866149efe57b26063406b61abe1370c1638c661cd78f65fa6f985897"
+  }
 }
