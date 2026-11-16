@@ -314,6 +314,64 @@ def click_error_projection(exc):
         ('pointer_intercepted','intercepts pointer events'),('detached','detached'))}
 
 
+def status_projection(value):
+    """Legacy-control compatibility only; never export arbitrary model/status text."""
+    if not isinstance(value, dict):
+        return {'object': False}
+    return {'object': True, 'legacy_model_field': 'model' in value,
+            'legacy_model_truthy': bool(value.get('model')),
+            'primary_model_present': isinstance(value.get('primary_model'), str) and bool(value['primary_model']),
+            'native_p02_bound': value.get('native_p02_bound') is True,
+            'native_backend': value.get('backend') == 'EXISTING_NATIVE_ONEHOST',
+            'native_dialogs_ready': value.get('native_dialogs_ready') is True,
+            'status_ready': value.get('status') == 'READY', 'owner_stop': value.get('stop_flag') is True}
+
+
+COMPOSER_JS = r"""() => {
+ const prompt=document.getElementById('prompt'),send=document.querySelector('#chatForm [type=submit]');
+ const project=node=>{
+  if(!node)return {present:false};
+  const box=node.getBoundingClientRect(),style=getComputedStyle(node);
+  const x=box.x+box.width/2,y=box.y+box.height/2,inView=x>0&&x<innerWidth&&y>0&&y<innerHeight;
+  const hit=inView?document.elementFromPoint(x,y):null;
+  return {present:true,x,y,width:box.width,height:box.height,in_view:inView,
+   disabled:node.disabled===true,read_only:node.readOnly===true,
+   pointer_events:style.pointerEvents,visible:style.display!=='none'&&style.visibility!=='hidden'&&box.width>0&&box.height>0,
+   pointer_hit_own_control:!!hit&&(hit===node||node.contains(hit))};
+ };
+ const reports=[...document.querySelectorAll('.nox-owner-reports')].slice(0,2).map(node=>{
+  const box=node.getBoundingClientRect();return {open:node.open===true,height:box.height,top:box.top};});
+ const knownPhases=['idle','thinking','speaking','stopped','error','done'];
+ return {prompt:project(prompt),send:project(send),prompt_characters:prompt?.value?.length||0,
+  phase:knownPhases.includes(document.body.dataset.noxPhase)?document.body.dataset.noxPhase:'OTHER',
+  reports,viewport_height:innerHeight,viewport_width:innerWidth};
+}"""
+
+
+async def click_send(page, report):
+    """Physical send, with the same fresh hit gate as the dialog selection."""
+    target=page.locator('#chatForm [type=submit]')
+    detail={'before':await target.evaluate(CONTROL_JS)}
+    report['qa_send_control']=detail
+    try:
+        await target.click(timeout=3500)
+    except Exception as exc:
+        detail['click_wait']=click_error_projection(exc)
+        snapshot=await page.evaluate(SNAPSHOT_JS)
+        calls=snapshot.get('native_calls') if isinstance(snapshot,dict) else None
+        if calls==1:
+            # A timed-out post-click wait may follow an already delivered click.
+            # Observe that real request; never submit a duplicate generation.
+            detail['native_request_already_started']=True
+            return
+        control=await target.evaluate(CONTROL_JS)
+        detail['after_wait']=control
+        if calls!=0 or not await target.is_enabled() or not control['in_view'] or not control['pointer_hit_own_button']:
+            raise RuntimeError('HOLD_QA_SEND_POINTER_OR_STATE') from None
+        await page.mouse.click(control['x'],control['y'])
+        detail['physical_pointer_click']=True
+
+
 async def json_response(response, limit=200000):
     if response.status!=200:
         raise RuntimeError('HOLD_OWNER_HTTP_'+str(response.status))
@@ -469,6 +527,8 @@ async def browser_run(report, directory, available):
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
             if initial.get('messages')!=[]:
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_EMPTY')
+            report['empty_dialog_history_verified']=True
+            report['browser_stage']='QA_EMPTY_SCREENSHOT'
             masks=[page.locator(selector) for selector in (*SENSITIVE_MASKS,'#messages')]
             raw=await page.screenshot(full_page=False,mask=masks,mask_color='#121821',timeout=12000)
             if len(raw)>6*1024**2:
@@ -483,10 +543,17 @@ async def browser_run(report, directory, available):
             if stop_present():
                 raise RuntimeError('HOLD_OWNER_STOP')
             idle_slots()
+            report['composer_before']=await page.evaluate(COMPOSER_JS)
+            report['status_for_legacy_controls']=status_projection(await json_response(await context.request.get(
+                base+'/api/nox/status',max_redirects=0,timeout=6000)))
+            report['browser_stage']='QA_PROMPT_FILL'
             await page.locator('#prompt').fill(prompt)
+            report['browser_stage']='QA_SEND_ENABLED'
             await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+            report['browser_stage']='QA_SEND_CLICK'
             started=time.monotonic()
-            await page.locator('#chatForm [type=submit]').click()
+            await click_send(page, report)
+            report['browser_stage']='QA_REAL_STREAM'
             final=None
             while time.monotonic()-started<85:
                 if stop_present():
@@ -501,7 +568,9 @@ async def browser_run(report, directory, available):
                 raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
             # V135 performs its own real S03 readback after native done; wait for
             # the original submit button to be usable again before final proof.
+            report['browser_stage']='QA_SEND_RELEASE'
             await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+            report['browser_stage']='QA_PERSISTED_HISTORY'
             history=await json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
             rows=history.get('messages')
@@ -522,6 +591,7 @@ async def browser_run(report, directory, available):
             masks=[page.locator(selector) for selector in SENSITIVE_MASKS]
             if not saved or public!=EXPECTED:
                 masks.append(page.locator('#messages'))
+            report['browser_stage']='QA_COMPLETED_SCREENSHOT'
             raw=await page.screenshot(full_page=False,mask=masks,mask_color='#121821',timeout=12000)
             if len(raw)>6*1024**2:
                 raise RuntimeError('HOLD_SCREENSHOT_SIZE')
@@ -545,6 +615,8 @@ async def browser_run(report, directory, available):
             report['failed_static_resources']=[row for row in network if row['status']>=400 and row['resource_type'] in ('script','stylesheet')]
             if page is not None:
                 try:
+                    report['composer_final']=await page.evaluate(COMPOSER_JS)
+                    report['stream_final']=await page.evaluate(SNAPSHOT_JS)
                     pending=await page.evaluate('!!window.__NOX_BROWSER_QA?.nativeCalls&&!window.__NOX_BROWSER_QA?.done')
                     if pending:
                         await context.request.post(base+'/api/nox/stop',data={},max_redirects=0,timeout=4000)

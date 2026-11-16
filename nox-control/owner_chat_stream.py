@@ -16,6 +16,7 @@ import stat
 import time
 
 import httpx
+import owner_chat_evidence as _current
 
 
 class StreamFailure(RuntimeError):
@@ -23,6 +24,12 @@ class StreamFailure(RuntimeError):
 
 
 EXECUTOR_STATUS=Path('/root/nox/status/agents_t856u.json')
+
+
+def owner_request_query(user_text):
+    """Keep current native facts/actions out of the legacy early-answer hook."""
+    return (executor_status_query(user_text) or _current.relevant_query(user_text)
+            or _current.media_status_query(user_text) is not None)
 
 
 def executor_status_query(user_text):
@@ -197,10 +204,29 @@ async def _run(native,url,payload,user_text):
     if executor_reply is not None:
         yield 'token',executor_reply
         return
+    turn={}
+    intent=_current.explicit_media_request(user_text)
+    status_id=_current.media_status_query(user_text)
+    if intent or status_id:
+        name='owner_queue_media_v1' if intent else 'owner_media_job_v1'
+        arguments={'kind':intent['kind']} if intent else {'job_id':status_id}
+        rec=await asyncio.to_thread(_current.dispatch,name,arguments,user_text,turn)
+        await asyncio.to_thread(native['audit'],'tool_step',name=name,step=1,ok=rec.get('ok'))
+        yield 'token',rec['text']
+        return
+    if _current.download_status_query(user_text):
+        yield 'token',await asyncio.to_thread(_current.inventory_reply)
+        return
     messages=[dict(message) for message in payload.get('messages') or []]
+    messages=await asyncio.to_thread(_current.augment_messages,messages,user_text)
+    native_tools=list(native['TOOLS'])
+    if _current.relevant_query(user_text):
+        if any((row.get('function') or {}).get('name') in _current.NAMES for row in native_tools):
+            raise StreamFailure('HOLD_OWNER_TOOL_NAME_COLLISION')
+        native_tools+=_current.tools()
     req=dict(payload)
     req.pop('_agent_final',None)
-    req.update(tools=native['TOOLS'],tool_choice='auto',stream=True,cache_prompt=True)
+    req.update(tools=native_tools,tool_choice='auto',stream=True,cache_prompt=True)
     # Native Qwen3.5 fixture verified this mode: visible tokens start directly.
     # Explicit callers may opt into deliberation; ordinary chat defaults fast.
     template=dict(req.get('chat_template_kwargs') or {})
@@ -208,6 +234,7 @@ async def _run(native,url,payload,user_text):
     req['chat_template_kwargs']=template
     if native.get('_POOL'):
         req=native['prepare_payload'](req,cache=True)
+        req['tools']=native_tools
     steps=0
     # Resolve existing deterministic routes before any model text is shown.
     # Never reinterpret already-streamed prose as an executable command.
@@ -234,12 +261,16 @@ async def _run(native,url,payload,user_text):
                     if steps>=int(native.get('MAX_STEPS',8)):
                         raise StreamFailure('HOLD_TOOL_STEP_LIMIT')
                     steps+=1
-                    rec=await asyncio.to_thread(native['dispatch'],call['name'],call['arguments'])
+                    rec=await asyncio.to_thread(_current.dispatch,call['name'],call['arguments'],user_text,turn)
+                    if rec is None:
+                        rec=await asyncio.to_thread(native['dispatch'],call['name'],call['arguments'])
                     if not isinstance(rec,dict):raise StreamFailure('HOLD_TOOL_RESULT')
                     await asyncio.to_thread(native['audit'],'tool_step',name=call['name'],
                                             step=steps,ok=rec.get('ok'))
                     text=rec.get('text') or ''
                     if not isinstance(text,str):raise StreamFailure('HOLD_TOOL_RESULT')
+                    if rec.get('ok') is False and not rec.get('needs_confirmation'):
+                        text='Инструмент не подтвердил выполнение действия. '+text
                     if rec.get('needs_confirmation'):
                         text+=native['confirm_marker'](rec)
                         if not text.strip():raise StreamFailure('HOLD_TOOL_CONFIRMATION')
@@ -268,10 +299,19 @@ async def _run(native,url,payload,user_text):
                 return
             # Function-call arguments stayed private until a complete tool_calls
             # terminal. Keep exact IDs for the original native dispatch contract.
-            calls=_normal_calls(native['parse_tool_calls'](message,''),steps)
+            own=[];legacy=[]
+            for row in message['tool_calls']:
+                function=row['function']
+                if function['name'] in _current.NAMES:
+                    own.append({'id':row['id'],'name':function['name'],'arguments':function['arguments']})
+                else:legacy.append(row)
+            parsed=native['parse_tool_calls'](dict(message,tool_calls=legacy),'') if legacy else []
+            calls=_normal_calls(own+parsed,steps)
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
-            if {call['id'] for call in calls}!={call['id'] for call in message['tool_calls']}:
+            by_id={call['id']:call for call in calls}
+            if len(by_id)!=len(calls) or set(by_id)!={call['id'] for call in message['tool_calls']}:
                 raise StreamFailure('HOLD_TOOL_CALL_ID')
+            calls=[by_id[row['id']] for row in message['tool_calls']]
             if native.get('_POOL'):calls=native['dedup_calls'](calls)
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
             messages.append(_assistant_tools(calls,message['content']))
