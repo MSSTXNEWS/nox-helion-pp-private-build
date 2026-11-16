@@ -14,7 +14,7 @@ except NameError:
 
 ENTRIES = (
     ('owner_qwen_training_status_entry.py', '4610f1eece18307bdbfef7b7895f2d78deee059d4afd6e75c80914cfc8a36781'),
-    ('owner_subagent_fresh_install_entry.py', '4b591661c38a2dded8846e3ffdc37825e6dc733cc55d745943fe7956a443b7b3'),
+    ('owner_subagent_fresh_install_entry.py', '670cad05144157a4a2294dbdb07fee7504346587120275c8c85649c5253f2fd4'),
 )
 CONTEXT = {
     'request': '6907513913',
