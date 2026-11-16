@@ -375,13 +375,32 @@ def execute_gpu_recovery(plan, *, authorize, stop_state, restore,
         if start_existing(plan) is not True:
             return {'state':'HOLD_RECOVERY_START_UNVERIFIED','performed':'UNKNOWN'}
         actual=readback(plan)
-        if (not isinstance(actual,_Mapping) or actual.get('gpu_id')!=plan['gpu_id']
+        if (not isinstance(actual,_Mapping) or type(actual.get('gpu_id')) is not int
+                or actual['gpu_id']!=plan['gpu_id']
                 or actual.get('native_owner')!='OneHost'
                 or actual.get('owned_process_running') is not True
-                or actual.get('manual_stop_latched') is not False):
+                or actual.get('manual_stop_latched') is not False
+                or actual.get('onehost_gpu_lease') is not True
+                or actual.get('stop_active') is not False
+                or type(actual.get('pid')) is not int or actual['pid']<=0
+                or type(actual.get('start_ticks')) is not int or actual['start_ticks']<=0
+                or actual.get('heartbeat_fresh_after_restart') is not True):
             return {'state':'HOLD_RECOVERY_READBACK','performed':'UNKNOWN'}
+        # A Supervisor RUNNING flag or stale process snapshot alone cannot
+        # prove recovery. Require a native useful-progress receipt after the
+        # restart: a successful optimizer update on GPU1, or a completed job
+        # on GPU0. Counts must not be bools, strings or cumulative old steps.
+        if plan['gpu_id']==1:
+            updates=actual.get('new_successful_optimizer_updates_after_restart')
+            useful=type(updates) is int and updates>0
+        else:
+            useful=(actual.get('new_completed_job_after_restart') is True)
+        if not useful:
+            return {'state':'HOLD_RECOVERY_NO_NEW_USEFUL_PROGRESS','performed':'UNKNOWN'}
+        if stop_state(plan) is not False:
+            return {'state':'HOLD_RECOVERY_STOP_AFTER_READBACK','performed':'UNKNOWN'}
         return {'state':'NATIVE_OWNER_PROCESS_RECOVERED','gpu_id':plan['gpu_id'],
-                'performed':True}
+                'performed':True,'pid':actual['pid'],'start_ticks':actual['start_ticks']}
     except Exception:
         return {'state':'HOLD_RECOVERY_EXCEPTION','performed':'UNKNOWN'}
 
