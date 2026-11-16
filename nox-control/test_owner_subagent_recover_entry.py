@@ -1,5 +1,8 @@
+import base64
+import json
 from pathlib import Path
 import subprocess
+import sys
 import unittest
 from unittest.mock import Mock, patch
 
@@ -7,6 +10,18 @@ import owner_subagent_recover_entry as recovery
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_real_transport_replacement_preserves_nested_helper_bundle(self):
+        folder = Path(__file__).resolve().parent
+        assets = {'owner_subagent_install_entry.py': base64.b64encode(
+            (folder/'owner_subagent_install_entry.py').read_bytes()).decode(),
+            'owner_subagent_dispatcher.py': 'reviewed-module-sentinel'}
+        payload = (folder/'owner_subagent_recover_entry.py').read_text().replace(
+            '__NOX_BUNDLE_JSON__', json.dumps(assets))
+        namespace = {'__name__': 'recovery_transport_test'}
+        with patch.dict(sys.modules):
+            exec(compile(payload, '<materialized-native-transport>', 'exec'), namespace)
+            self.assertEqual(namespace['helper']().BUNDLE, assets)
+
     def test_exact_observed_preimage_has_only_reviewed_hash_delta(self):
         root = Path(__file__).resolve().parents[1]
         before = subprocess.check_output(['git', 'show',

@@ -56,7 +56,7 @@ def helper():
     if not raw or len(raw) > 40000:
         raise RuntimeError('HOLD_SUBAGENT_REPAIR_HELPER')
     value = types.ModuleType('owner_subagent_recovery_helper')
-    value.__dict__['__NOX_BUNDLE_JSON__'] = BUNDLE
+    value.__dict__['__NOX_'+'BUNDLE_JSON__'] = BUNDLE
     sys.modules[value.__name__] = value
     exec(compile(raw, '<reviewed-subagent-helper>', 'exec'), value.__dict__)
     return value
