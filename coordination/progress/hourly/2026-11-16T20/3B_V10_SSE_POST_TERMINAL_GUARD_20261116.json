@@ -11,7 +11,7 @@
   "error_id": "NOX-P0-3B-SSE-POST-FINISH-DELTA",
   "root_cause": "Original owner_chat_stream._model_events accepted fresh content/tool deltas and repeated finish frames after finish_reason=stop/tool_calls, before [DONE], allowing invalid model output to be shown and _agent_final/S03 to be certified.",
   "repair": "Reject nonempty model content, tool calls or a second finish_reason after first terminal finish; allow usage-only choices=[] metadata, preserve early first meaningful token and original model transport. No fake content.",
-  "source_status": "SOURCE_PATCH_PENDING_CI",
+  "source_status": "SOURCE_TESTED",
   "native_status": "HOLD",
   "native": {
     "instance_id": 60509551,
@@ -31,7 +31,7 @@
   "tasks": [
     {
       "id": "S3-04",
-      "state": "SOURCE_PATCH_PENDING_CI_NATIVE_HOLD",
+      "state": "SOURCE_TESTED_NATIVE_HOLD",
       "evidence": "Post-terminal illegal SSE delta regression; native deepseek/adapter unavailable"
     },
     {
@@ -70,5 +70,30 @@
     "restarts": 0
   },
   "rollback": "Source CAS restore exact preimage file blobs if regression, no native rollback necessary",
-  "next": "Verify exact source CI. Current owner-native read-only STOP/lease/UI/model identity and offsite restore; admit seekable storage, then integrate verified Maya stdio to existing OneHost SSE and benchmark RU/ES."
+  "next": "Verify exact source CI. Current owner-native read-only STOP/lease/UI/model identity and offsite restore; admit seekable storage, then integrate verified Maya stdio to existing OneHost SSE and benchmark RU/ES.",
+  "source_commit": "a94029e4e1cd71cc4245d4964e6ad3d9877b5c2b",
+  "test_fix_commit": "e560aeeb09d6fabbb1d0a3d7e24ac2a76ab3989c",
+  "workflow_commit": "71db0bcc206d79ff2712d4eca915081263b513e7",
+  "source_blob": "3af23129f9e1549f68f9b55eaddda2d96a40549d",
+  "test_blob": "dc2ba6d3c8f3629417f677380eda08e771c75c3e",
+  "workflow_blob": "77e51b3fd977415991309c34202930e3d252fe36",
+  "ci": {
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43920970821",
+    "run_id": 43920970821,
+    "job_id": 133487826763,
+    "status": "SUCCESS",
+    "scope": "SOURCE_ONLY_GITHUB_ACTIONS",
+    "test_owner_chat_stream": {
+      "discovered": 15,
+      "passed": 13,
+      "skipped_local_only": 2,
+      "failed": 0
+    },
+    "extra_v135_steps": "SUCCESS"
+  },
+  "last_checked_at_utc": "2026-11-16T17:45:01.312Z",
+  "evidence_failure_before_fix": {
+    "run_id": 43920723971,
+    "diagnosis": "Test fixture used literal escaped LF instead of real SSE LF delimiters; stream never reached DONE. Corrected test-only encoding, no source change."
+  }
 }
