@@ -70,6 +70,19 @@ class AdmissionTests(unittest.TestCase):
             "TARGET_NOT_AUTHORIZED",
         )
 
+    def test_a5000_workflow_is_explicit_hold_and_checks_pinned_manifest_stop(self):
+        root = Path(__file__).resolve().parents[3]
+        workflow = (root / ".github/workflows/nox-runpod-direct.yml").read_text(encoding="utf-8")
+        manifest = json.loads((root / "nox_runpod/stage0/training_admission_manifest.json").read_text())
+        self.assertEqual(manifest["status"], "HOLD")
+        self.assertIn("default: HOLD", workflow)
+        self.assertIn('TRAINING_ADMISSION" != "AUTHORIZED"', workflow)
+        self.assertIn("model_manifest_sha256", workflow)
+        self.assertIn("training_admission_manifest.json", workflow)
+        self.assertIn("/workspace/nox/STOP", workflow)
+        self.assertIn("/workspace/nox/MODEL_UPDATE", workflow)
+        self.assertIn("needs.preflight.outputs.admission_ready == 'true'", workflow)
+
     def test_legacy_trainer_checks_gate_before_cuda_optimizer_or_checkpoint(self):
         stage0 = Path(__file__).resolve().parents[1]
         source = (stage0 / "a40_full_parameter_distill_cycle.py").read_text(encoding="utf-8")
