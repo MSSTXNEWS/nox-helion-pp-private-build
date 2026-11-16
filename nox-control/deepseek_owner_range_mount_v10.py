@@ -30,6 +30,7 @@ from fuse import FUSE, FuseOSError, Operations
 import deepseek_owner_range_v10 as owner
 
 BLOCK_BYTES = 16 * 1024 * 1024
+STREAM_VERIFY_BYTES = 128 * 1024 * 1024
 NETWORK_TIMEOUT = 60
 PACK_VIRTUAL = "/maya-ds4"
 PACK_RESERVE_BYTES = 1024**3
@@ -77,7 +78,7 @@ def _identity(info):
     )
 
 
-def _private_directory(path, create=False):
+def _private_directory(path, create=False, private=True):
     path = Path(path).expanduser()
     if not path.is_absolute() or ".." in path.parts:
         raise owner.Hold("HOLD_RANGE_DIRECTORY_PATH")
@@ -92,8 +93,10 @@ def _private_directory(path, create=False):
     except OSError as exc:
         raise owner.Hold("HOLD_RANGE_DIRECTORY_UNREADABLE") from exc
     owner.require(stat.S_ISDIR(info.st_mode), "HOLD_RANGE_DIRECTORY_TYPE")
-    owner.require(info.st_uid == os.geteuid() and not (info.st_mode & 0o077),
+    owner.require(info.st_uid == os.geteuid() and not (info.st_mode & 0o022),
                   "HOLD_RANGE_DIRECTORY_PERMISSIONS")
+    if private:
+        owner.require(not (info.st_mode & 0o077), "HOLD_RANGE_DIRECTORY_PRIVATE")
     return path
 
 
@@ -119,7 +122,7 @@ class DeepSeekOwnerRangeFS(Operations):
         self.opener = urllib.request.build_opener(PublicRedirect())
 
         self.guard()
-        self.destination = _private_directory(self.destination)
+        self.destination = _private_directory(self.destination, private=False)
         self.pack_root = _private_directory(pack_root, create=True)
         self.receipt_dir = _private_directory(receipt_dir, create=True)
         owner.require(
@@ -134,8 +137,9 @@ class DeepSeekOwnerRangeFS(Operations):
             "HOLD_MAYA_PACK_DISK_RESERVE",
         )
 
-        self.manifest = owner.load_manifest(Path(manifest_path).read_bytes())
-        raw_manifest = json.loads(Path(manifest_path).read_text())
+        manifest_raw = Path(manifest_path).read_bytes()
+        self.manifest = owner.load_manifest(manifest_raw)
+        raw_manifest = json.loads(manifest_raw)
         alias = raw_manifest["alias"]
         self.aliases = {alias["path"]: alias["target"]}
         self.names = set(self.manifest) | set(self.aliases)
@@ -242,8 +246,8 @@ class DeepSeekOwnerRangeFS(Operations):
         self.remote[name] = dict(row, etag=etag)
         return etag
 
-    def _request_block(self, name, row, etag, start):
-        count = min(BLOCK_BYTES, row["bytes"] - start)
+    def _request_block(self, name, row, etag, start, max_bytes=BLOCK_BYTES):
+        count = min(max_bytes, row["bytes"] - start)
         if count <= 0:
             raise owner.Hold("HOLD_RANGE_OFFSET")
         end = start + count - 1
@@ -276,7 +280,7 @@ class DeepSeekOwnerRangeFS(Operations):
         offset = 0
         while offset < row["bytes"]:
             self.guard()
-            block = self._request_block(name, row, etag, offset)
+            block = self._request_block(name, row, etag, offset, STREAM_VERIFY_BYTES)
             whole.update(block)
             offset += len(block)
         self.guard()
