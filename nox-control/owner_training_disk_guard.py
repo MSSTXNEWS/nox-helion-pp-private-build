@@ -17,7 +17,7 @@ import time
 
 ROOT=Path('/root/nox');STATE=ROOT/'state';OUTPUT=ROOT/'lora/qlora_t866u/runs_owner_hybrid'
 SERVICE='nox-train-volta-t866u';HYBRID=ROOT/'scripts/hybrid_training_entry.py'
-HYBRID_SHA='7a384bbee919bec9b24642cc5f56b930cc986065172d7a334cc682c7ee40e455'
+HYBRID_SHA='f2ba60d6556ba3662713db0e503773f2361b82b6c83391be4e56a506aad8c0af'
 NATIVE_SHA='703da2adf5620ce4979bd559c73a15446c743e6608f39d34a6b17e016b47920a'
 SCHEMA='NOX_OWNER_TRAINING_DISK_GUARD_V1';MARKER='NOX_OWNER_TRAINING_DISK_GUARD_BIND_V1'
 NAMES=('adapter_model.safetensors','adapter_config.json','optimizer.pt','scheduler.pt','rng_state.pth','scaler.pt','trainer_state.json')

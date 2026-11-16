@@ -193,6 +193,14 @@ def select_resume(output: Path, requested: bool) -> tuple[Path | None, int]:
     return path, step
 
 
+def read_frozen_dataset(path: Path):
+    # JSONL is separated by LF bytes. str.splitlines also splits valid U+0085,
+    # U+2028 and U+2029 inside JSON strings written with ensure_ascii=False.
+    # Preserve those characters and the already pinned dataset bytes exactly.
+    with path.open('r', encoding='utf8', newline='\n') as stream:
+        return [json.loads(line) for line in stream]
+
+
 def build_existing_trainer(native, model, tokenizer, dataset, planned: int, torch):
     """Retain native TRL compatibility path; override its configuration only."""
     import trl
@@ -325,7 +333,7 @@ def run(args) -> dict:
         expected_dataset_sha = (old or previous_preparation or {}).get('dataset_sha256')
         if file_sha(dataset_path) != expected_dataset_sha:
             raise RuntimeError('HOLD_RECOVERY_DATASET_CHANGED')
-        texts = [json.loads(line) for line in dataset_path.read_text().splitlines()]
+        texts = read_frozen_dataset(dataset_path)
     else:
         rows = native.load_train_rows()
         if len(rows) < 50: raise RuntimeError('HOLD_NATIVE_TRAINING_DATA_TOO_SMALL')

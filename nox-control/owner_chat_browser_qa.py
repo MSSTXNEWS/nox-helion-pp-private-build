@@ -78,6 +78,22 @@ def public_numeric_answer(value):
     return re.sub(r'\s+','',value)
 
 
+def progressive_stream_valid(value):
+    """Require growing visible prefixes while the real native stream is open."""
+    if not isinstance(value, dict):
+        return False
+    lengths = value.get('ui_prefix_lengths_before_done')
+    first, done = value.get('ui_first_ms'), value.get('native_done_ms')
+    return (value.get('ui_measurement_kind') == 'CUMULATIVE_VISIBLE_ASSISTANT_BODY'
+            and type(value.get('native_delta_count')) is int and value['native_delta_count'] >= 2
+            and value.get('ui_before_native_done') is True
+            and isinstance(lengths, list) and 2 <= len(lengths) <= 80
+            and all(type(n) is int and 3 <= n <= 4096 for n in lengths)
+            and all(a < b for a, b in zip(lengths, lengths[1:]))
+            and type(first) in (int, float) and type(done) in (int, float)
+            and 0 <= first < done)
+
+
 def local_base():
     for _, name in socket.if_nameindex():
         if name=='lo':
@@ -168,7 +184,8 @@ OBSERVER_JS = r"""
  const cfg=__CONFIG__;
  const q=window.__NOX_BROWSER_QA={started:null,nativeFirst:null,nativeDone:null,
    nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,nativeCalls:0,
-   uiFirst:null,uiBeforeDone:false,uiLengths:[],contexts:[],draws:0,
+   uiFirst:null,uiBeforeDone:false,uiLengths:[],uiPrefixLengthsBeforeDone:[],uiBody:null,
+   uiVisible:false,uiMaxTokenSpans:0,contexts:[],draws:0,
    stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};
  const normalize=s=>s.replace(/\s+/g,'');
  const get=HTMLCanvasElement.prototype.getContext;
@@ -186,7 +203,32 @@ OBSERVER_JS = r"""
      type.prototype[method]=function(...args){q.draws++;return Reflect.apply(original,this,args);};
    }
  }
- let sampleStop=()=>{};
+ let sampleStop=()=>{},sampleUi=()=>{},uiFramePending=false;
+ const queueUi=()=>{
+   if(uiFramePending||q.started===null)return;
+   uiFramePending=true;
+   requestAnimationFrame(()=>{uiFramePending=false;sampleUi();});
+ };
+ function visibleBody(node,mount){
+   if(!node||!mount.contains(node)||document.hidden)return false;
+   const box=node.getBoundingClientRect();
+   if(box.width<=0||box.height<=0)return false;
+   let left=Math.max(0,box.left),right=Math.min(innerWidth,box.right);
+   let top=Math.max(0,box.top),bottom=Math.min(innerHeight,box.bottom),current=node;
+   for(let depth=0;current&&depth<24;depth++,current=current.parentElement){
+     const style=getComputedStyle(current);
+     if(style.display==='none'||['hidden','collapse'].includes(style.visibility)||
+        Number(style.opacity)===0||style.contentVisibility==='hidden')return false;
+     const clip=current.getBoundingClientRect();
+     if(current!==node&&/^(auto|scroll|hidden|clip)$/.test(style.overflowX)){
+       left=Math.max(left,clip.left);right=Math.min(right,clip.right);
+     }
+     if(current!==node&&/^(auto|scroll|hidden|clip)$/.test(style.overflowY)){
+       top=Math.max(top,clip.top);bottom=Math.min(bottom,clip.bottom);
+     }
+   }
+   return right>left&&bottom>top;
+ }
  function watch(){
    const mount=document.getElementById('messages');if(!mount)return;
    const form=document.getElementById('chatForm'),stop=form?.querySelector('[data-action=stop]');
@@ -198,22 +240,29 @@ OBSERVER_JS = r"""
      q.stopSamples++;if(visible)q.stopVisibleSamples++;
      if(!hit||!(hit===stop||stop.contains(hit)))q.stopOccludedSamples++;
    };new MutationObserver(sampleStop).observe(form,{subtree:true,attributes:true,attributeFilter:['disabled','style','class']});}
-   new MutationObserver(()=>{
-     if(q.started===null||!q.answer)return;
-     const wanted=normalize(q.answer);
-     const walker=document.createTreeWalker(mount,NodeFilter.SHOW_TEXT);
-     let node,count=0;
-     while((node=walker.nextNode())&&count++<1000){
-       const text=node.nodeValue.trim();
-       if(!/^[0-9,\s]+$/.test(text))continue;
-       const actual=normalize(text);
-       if(actual.length<3||!actual.includes(',')||!wanted.startsWith(actual))continue;
-       const now=performance.now()-q.started;
-       if(q.uiFirst===null)q.uiFirst=now;
-       if(q.nativeDone===null)q.uiBeforeDone=true;
-       if(q.uiLengths.length<80&&q.uiLengths[q.uiLengths.length-1]!==actual.length)q.uiLengths.push(actual.length);
+   sampleUi=()=>{
+     q.uiVisible=visibleBody(q.uiBody,mount);
+     if(q.started===null||q.nativeCalls!==1||!q.answer||!q.uiVisible)return;
+     // V24 appends each real token as a separate span.tok. Measure the
+     // cumulative rendered body, never one text node or an earlier answer.
+     const text=q.uiBody.innerText;
+     if(typeof text!=='string'||text.length>4096||!/^[0-9,\s]+$/.test(text))return;
+     const spans=q.uiBody.querySelectorAll('.tok');
+     if(spans.length>512)return;
+     q.uiMaxTokenSpans=Math.max(q.uiMaxTokenSpans,spans.length);
+     if([...spans].some(node=>/[0-9,]/.test(node.textContent)&&!visibleBody(node,mount)))return;
+     const actual=normalize(text),wanted=normalize(q.answer);
+     if(actual.length<3||!actual.includes(',')||!wanted.startsWith(actual))return;
+     const now=performance.now()-q.started;
+     if(q.uiFirst===null)q.uiFirst=now;
+     if(q.nativeDone===null){
+       q.uiBeforeDone=true;
+       const before=q.uiPrefixLengthsBeforeDone;
+       if(before.length<80&&actual.length>(before.at(-1)||0))before.push(actual.length);
      }
-   }).observe(mount,{subtree:true,childList:true,characterData:true});
+     if(q.uiLengths.length<80&&actual.length>(q.uiLengths.at(-1)||0))q.uiLengths.push(actual.length);
+   };
+   new MutationObserver(queueUi).observe(mount,{subtree:true,childList:true,characterData:true});
  }
  addEventListener('DOMContentLoaded',watch,{once:true});
  const fetch0=window.fetch.bind(window);
@@ -235,6 +284,9 @@ OBSERVER_JS = r"""
            if(typeof frame.text!=='string'||q.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');
            q.answer+=frame.text;q.nativeDeltas++;
            if(q.nativeFirst===null&&/[^\s.…]/.test(frame.text))q.nativeFirst=performance.now()-q.started;
+           // The tee observer and the UI consume independently. A DOM change
+           // may precede this clone's frame; retry on the next real paint.
+           queueUi();
          }else if(frame.type==='done'){
            q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,
                    dialog_matches:frame.dialog_id===cfg.did};
@@ -248,7 +300,12 @@ OBSERVER_JS = r"""
  window.fetch=async function(input,init){
    let url;try{url=new URL(input instanceof Request?input.url:String(input),location.href);}catch{}
    const own=url&&url.origin===location.origin&&url.pathname==='/api/nox/chat/stream';
-   if(own){q.nativeCalls++;q.started=performance.now();requestAnimationFrame(sampleStop);}
+   if(own){
+     q.nativeCalls++;q.started=performance.now();
+     const pending=document.querySelectorAll('#messages .v24-msg.nox.streaming .body');
+     q.uiBody=q.nativeCalls===1&&pending.length===1?pending[0]:null;
+     requestAnimationFrame(sampleStop);
+   }
    const response=await fetch0(input,init);
    if(own){void observe(response.clone());}
    return response;
@@ -259,13 +316,10 @@ OBSERVER_JS = r"""
 SNAPSHOT_JS = r"""() => {
  const q=window.__NOX_BROWSER_QA;if(!q)return null;
  const normalize=s=>s.replace(/\s+/g,'');
- const mount=document.getElementById('messages');let rendered=false;
- if(mount&&q.answer){
-   const walker=document.createTreeWalker(mount,NodeFilter.SHOW_TEXT);let node,n=0;
-   while((node=walker.nextNode())&&n++<1000){
-     if(/^[0-9,\s]+$/.test(node.nodeValue)&&normalize(node.nodeValue)===normalize(q.answer)){rendered=true;break;}
-   }
- }
+ const mount=document.getElementById('messages'),body=q.uiBody;
+ const rendered=!!(mount&&body&&mount.contains(body)&&q.answer&&
+   typeof body.innerText==='string'&&/^[0-9,\s]+$/.test(body.innerText)&&
+   normalize(body.innerText)===normalize(q.answer));
  const contexts=q.contexts.map(({canvas,kind,ctx})=>{
    let renderer='unknown';
    try{const ext=ctx.getExtension('WEBGL_debug_renderer_info');
@@ -278,6 +332,10 @@ SNAPSHOT_JS = r"""() => {
  return {native_first_ms:q.nativeFirst,native_done_ms:q.nativeDone,native_delta_count:q.nativeDeltas,
    native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,
    ui_first_ms:q.uiFirst,ui_before_native_done:q.uiBeforeDone,ui_lengths:q.uiLengths,
+   ui_prefix_lengths_before_done:q.uiPrefixLengthsBeforeDone,ui_body_visible:q.uiVisible,
+   ui_token_span_peak:q.uiMaxTokenSpans,
+   ui_measurement_kind:'CUMULATIVE_VISIBLE_ASSISTANT_BODY',
+   intl_segmenter_available:typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function',
    stop_samples:q.stopSamples,stop_visible_samples:q.stopVisibleSamples,stop_occluded_samples:q.stopOccludedSamples,
    answer_characters:q.answer.length,dom_answer_matches_native:rendered,contexts,draw_calls:q.draws,
    native_owner:window.NOX_NATIVE_OWNER===true,v135:window.__NOX_V135_OWNER_RESONANCE==='OWNER_NATIVE_ONLY',
@@ -642,8 +700,7 @@ async def browser_run(report, directory, available):
                           answer_sha256=digest(answer.encode()),answer_characters=len(answer),
                           synthetic_number_sequence_pass=public==EXPECTED,
                           synthetic_public_numeric_answer=public,
-                          progressive_stream_render_verified=bool(final['native_delta_count']>=2
-                              and final['ui_before_native_done'] and len(final['ui_lengths'])>=2),
+                          progressive_stream_render_verified=progressive_stream_valid(final),
                           elapsed_turn_ms=round((time.monotonic()-started)*1000))
             report['stop_visible_during_generation']=bool(final.get('stop_samples',0)>0
                 and final.get('stop_samples')==final.get('stop_visible_samples') and final.get('stop_occluded_samples')==0)
