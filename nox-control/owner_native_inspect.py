@@ -374,6 +374,27 @@ def controls():
                          'excerpts':'\n'.join(excerpts)[:12000]})
     return rows
 
+def memory_metadata_inventory(roots):
+    """Bounded nonsecret metadata for DB filenames, never a recall/health PASS.
+
+    Do not follow symlinks, recurse into training data or read private rows.
+    Canonical /root/nox/kb/knowledge.sqlite was missed by the older *.db glob.
+    """
+    files=[];seen=set()
+    for root in roots:
+        if root.is_symlink() or not root.is_dir(): continue
+        for pattern in ('*.db','*.sqlite','*.sqlite3'):
+            for p in sorted(root.glob(pattern))[:50]:
+                if p.is_symlink() or not p.is_file(): continue
+                try: st=p.stat()
+                except OSError: continue
+                key=(st.st_dev,st.st_ino)
+                if key in seen: continue
+                seen.add(key)
+                files.append({'path':str(p),'bytes':st.st_size,'mtime':st.st_mtime})
+                if len(files)>=100: return files
+    return files
+
 def chat_storage():
     out={'health':{},'storage':{}}
     for port in (8080,8081,8082):
@@ -385,10 +406,12 @@ def chat_storage():
     if shutil.which('rclone'):
         rc,s=run(['rclone','listremotes']);out['storage']={'rclone':True,'rc':rc,'remotes':[x for x in s.splitlines() if re.fullmatch(r'[A-Za-z0-9_.-]{1,64}:',x)]}
     else: out['storage']={'rclone':False}
-    out['memory_files']=[]
-    for root in (ROOT/'memory',ROOT/'kb'):
-        for p in root.glob('*.db'):
-            st=p.stat();out['memory_files'].append({'path':str(p),'bytes':st.st_size,'mtime':st.st_mtime})
+    # Filesystem inventory is NOT a successful owner S03 recall. The canonical
+    # original S03 often uses knowledge.sqlite, rather than a *.db suffix.
+    out['memory_files']=memory_metadata_inventory((ROOT/'memory',ROOT/'kb'))
+    out['memory_files_scope']='LOCAL_METADATA_ONLY'
+    out['s03_recall_status']='UNKNOWN_NOT_PROBED'
+    out['model_slots_scope']='INFERENCE_CONTEXT_SLOTS_NOT_MODEL_INSTANCES'
     try:
         with urllib.request.urlopen('http://127.0.0.1:8081/slots',timeout=3) as response:
             slots=json.loads(response.read(100000))
