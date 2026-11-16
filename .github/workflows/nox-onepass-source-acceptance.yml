@@ -8,6 +8,8 @@ on:
       - 'coordination/onepass/**'
       - 'nox-control/owner_s03_gateway.py'
       - 'nox-control/test_owner_s03_gateway.py'
+      - 'nox-control/maya_ds4_v100_launch_profile_v1.py'
+      - 'nox-control/test_maya_ds4_launch_preflight_v1.py'
       - '.github/workflows/nox-onepass-source-acceptance.yml'
   pull_request:
     paths:
@@ -16,6 +18,8 @@ on:
       - 'coordination/onepass/**'
       - 'nox-control/owner_s03_gateway.py'
       - 'nox-control/test_owner_s03_gateway.py'
+      - 'nox-control/maya_ds4_v100_launch_profile_v1.py'
+      - 'nox-control/test_maya_ds4_launch_preflight_v1.py'
       - '.github/workflows/nox-onepass-source-acceptance.yml'
 permissions:
   contents: read
@@ -79,6 +83,12 @@ jobs:
           python -m py_compile nox-control/owner_s03_gateway.py nox-control/test_owner_s03_gateway.py
           python nox-control/test_owner_s03_gateway.py -v
 
+      - name: V14-2-09 Maya missing-pack nonlaunch regression (SOURCE ONLY)
+        run: |
+          set -euo pipefail
+          python -m py_compile nox-control/maya_launch_preflight_v1.py nox-control/maya_ds4_v100_launch_profile_v1.py nox-control/test_maya_ds4_launch_preflight_v1.py
+          python nox-control/test_maya_ds4_launch_preflight_v1.py MayaV14PackReadinessTests -v
+          echo 'NOX_MAYA_PACK_REQUIRED_NOT_INSTALLED=true'
       - name: No server or weight action in this workflow
         run: |
           echo 'NOX_ONEPASS_SOURCE_ONLY=true'
