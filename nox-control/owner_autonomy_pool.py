@@ -110,6 +110,95 @@ def validate_page(page, *, allowed_handlers, known_ids=frozenset()):
     return tasks
 
 
+
+def validate_submission(submission, *, allowed_handlers, known_ids=frozenset()):
+    """Accept one command with any number of tasks; paginate internally.
+
+    Total count follows available storage/memory, not a literal 30/60 cap.
+    Each emitted page is bounded, and the whole DAG is checked before enqueue.
+    """
+    if (not isinstance(submission, Mapping) or set(submission) != {'schema','tasks'}
+        or submission.get('schema') != SCHEMA or not isinstance(submission.get('tasks'),list)):
+        raise AutoHold('HOLD_SUBMISSION_SCHEMA')
+    rows=submission['tasks']
+    if not rows:
+        raise AutoHold('HOLD_EMPTY_SUBMISSION')
+    items=[_task(row,allowed_handlers) for row in rows]
+    ids=[item['id'] for item in items]
+    if len(set(ids))!=len(ids) or set(ids)&set(known_ids):
+        raise AutoHold('HOLD_DUPLICATE_TASK_ID')
+    known=set(ids)|set(known_ids)
+    lookup={item['id']:item for item in items}
+    children={tid:[] for tid in ids}
+    indegree={tid:0 for tid in ids}
+    for row in items:
+        if any(dep not in known for dep in row['deps']):
+            raise AutoHold('HOLD_UNKNOWN_DEPENDENCY')
+        for dep in row['deps']:
+            if dep in lookup:
+                children[dep].append(row['id']);indegree[row['id']]+=1
+    heap=[]
+    for tid in ids:
+        if not indegree[tid]:
+            row=lookup[tid];heapq.heappush(heap,(PRIORITIES[row['priority']],row['estimated_cost'],tid))
+    ordered=[]
+    while heap:
+        _,_,tid=heapq.heappop(heap)
+        ordered.append(lookup[tid])
+        for child in children[tid]:
+            indegree[child]-=1
+            if not indegree[child]:
+                r=lookup[child];heapq.heappush(heap,(PRIORITIES[r['priority']],r['estimated_cost'],child))
+    if len(ordered)!=len(items):
+        raise AutoHold('HOLD_DEPENDENCY_CYCLE')
+    pages=[];current=[]
+    for row in ordered:
+        trial={'schema':SCHEMA,'tasks':current+[row]}
+        if len(current)>=MAX_PAGE or len(json.dumps(trial,ensure_ascii=False,allow_nan=False).encode())>MAX_PAGE_BYTES:
+            if not current: raise AutoHold('HOLD_SINGLE_TASK_EXCEEDS_PAGE')
+            pages.append({'schema':SCHEMA,'tasks':current});current=[]
+        current.append(row)
+    if current: pages.append({'schema':SCHEMA,'tasks':current})
+    return {'schema':SCHEMA,'task_count':len(ordered),'page_count':len(pages),
+            'request_sha256':fingerprint(submission),'pages':pages,'ordered':ordered}
+
+
+def tick_existing_dispatcher(namespace, state, *, mode):
+    """Auto-invoked by existing owner planner on every queue-ingest cycle.
+
+    Native callbacks, not a repo file/model prompt, own worker launch, queue
+    claims, STOP and S03. Missing callbacks yield an honest HOLD, never a fake
+    worker process or a second scheduler.
+    """
+    native=namespace.get('_nox_owner_autonomy_native')
+    if native is None:
+        return {'state':'HOLD_NATIVE_POOL_CALLBACKS','jobs_started':0}
+    if not all(callable(getattr(native,key,None)) for key in
+               ('read_reviewed_catalog','read_resource_snapshot','allowed_handlers')):
+        return {'state':'HOLD_AUTONOMY_SOURCE_CALLBACKS','jobs_started':0}
+    try:
+        catalog=native.read_reviewed_catalog()
+        runtime=native.read_resource_snapshot()
+        if (not isinstance(runtime,Mapping) or runtime.get('native_verified') is not True
+            or runtime.get('instance_id')!=60509551 or runtime.get('stop_active') is not False
+            or runtime.get('source_sha_verified') is not True
+            or runtime.get('owner_scope_verified') is not True):
+            return {'state':'HOLD_AUTONOMY_NATIVE_SNAPSHOT','jobs_started':0}
+        tasks=([] if isinstance(catalog,Mapping) and catalog.get('schema')==SCHEMA
+               and catalog.get('tasks')==[] else
+               validate_submission(catalog,allowed_handlers=native.allowed_handlers())['ordered'])
+        status=runtime.get('task_status')
+        return admit_native_tick(native,tasks=tasks,status=status,
+            mode=mode,memory_ratio=runtime.get('cgroup_memory_ratio'),
+            cpu_pressure=runtime.get('cpu_pressure',0),
+            gpu_available=runtime.get('gpu_available') is True)
+    except (AutoHold,TypeError,ValueError,OverflowError) as exc:
+        return {'state':str(exc) if isinstance(exc,AutoHold) else 'HOLD_AUTONOMY_INPUT',
+                'jobs_started':0}
+    except Exception:
+        return {'state':'HOLD_NATIVE_AUTONOMY_CALLBACK_EXCEPTION','jobs_started':0}
+
+
 def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
                  gpu_available=False, verified_native=True):
     """Default three process claims, boost six; independent from queue length."""
