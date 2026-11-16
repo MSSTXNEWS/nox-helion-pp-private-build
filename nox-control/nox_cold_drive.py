@@ -38,15 +38,33 @@ OWNER_STOP_PATHS = (
 )
 
 
-def assert_owner_stop_clear():
-    """Owner STOP and the independent MODEL_UPDATE flag fence all cold writes.
+def _owner_flag_present_or_hold(path):
+    """Only ENOENT is absence; unreadable owner controls are never clear."""
+    try:
+        os.lstat(path)  # Also detects dangling symlinks; never follows the final link.
+    except FileNotFoundError:
+        return False
+    except OSError:
+        raise RuntimeError('HOLD_OWNER_STOP_UNREADABLE') from None
+    return True
 
-    The maintenance flag may exist independently of manual STOP, including as
-    a dangling symlink. This is NOT an owner lease or permission to clear it.
-    """
-    if any(path.exists() or path.is_symlink() for path in OWNER_STOP_PATHS):
+
+def owner_control_flags():
+    """Inspect every alias, including maintenance, without short-circuiting errors."""
+    stopped = False
+    for path in OWNER_STOP_PATHS:
+        if _owner_flag_present_or_hold(path):
+            stopped = True
+    maintenance = _owner_flag_present_or_hold(OWNER_MODEL_UPDATE_FLAG)
+    return stopped, maintenance
+
+
+def assert_owner_stop_clear():
+    """Owner STOP/MODEL_UPDATE fence writes, including unreadable control paths."""
+    stopped, maintenance = owner_control_flags()
+    if stopped:
         raise RuntimeError('HOLD_OWNER_STOP')
-    if OWNER_MODEL_UPDATE_FLAG.exists() or OWNER_MODEL_UPDATE_FLAG.is_symlink():
+    if maintenance:
         raise RuntimeError('HOLD_OWNER_MODEL_UPDATE')
 
 
@@ -263,10 +281,12 @@ def read_verified_range(remote, offset, length, object_size, block_sha256, timeo
         raise ValueError('HOLD_RANGE_BLOCK_SHA_REQUIRED')
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
         raise ValueError('HOLD_RANGE_TIMEOUT')
-    if stop_probe is None:
-        # Use the original OneHost's *full* STOP alias set; never bypass a
-        # manual STOP via a partial duplicate list in the Range entry point.
-        stop_probe = lambda: any(path.exists() or path.is_symlink() for path in OWNER_STOP_PATHS)
+    caller_probe = stop_probe
+    def stop_probe():
+        # A caller-supplied probe is additive, never a replacement for the
+        # original owner STOP and MODEL_UPDATE controls.
+        stopped, maintenance = owner_control_flags()
+        return stopped or maintenance or (caller_probe is not None and caller_probe())
     if stop_probe():
         raise RuntimeError('HOLD_OWNER_STOP')
     deadline = time.monotonic() + timeout
@@ -720,9 +740,7 @@ def deepseek_storage_admission(manifest, root, verify_full=False, reserve_bytes=
     import mmap
     # Original MODEL_UPDATE STOP must not block safe read-only metadata audit.
     # Full SHA/mmap is resource-heavy: do not run it while stopped/maintenance.
-    owner_stop_observed = any(p.exists() or p.is_symlink() for p in OWNER_STOP_PATHS)
-    maintenance_observed = (OWNER_MODEL_UPDATE_FLAG.exists() or
-                            OWNER_MODEL_UPDATE_FLAG.is_symlink())
+    owner_stop_observed, maintenance_observed = owner_control_flags()
     if verify_full and (owner_stop_observed or maintenance_observed):
         raise RuntimeError('HOLD_OWNER_STOP_FULL_SCAN')
     if (not isinstance(manifest, dict)

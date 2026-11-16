@@ -777,6 +777,44 @@ class ColdTests(unittest.TestCase):
 
 
 class ColdOwnerMaintenanceGateRegressions(unittest.TestCase):
+    def test_unreadable_owner_control_holds_before_rclone(self):
+        with patch.object(cold, 'OWNER_STOP_PATHS', (Path('/invalid/STOP'),)), \
+             patch.object(cold.os, 'lstat', side_effect=PermissionError(13, 'denied')), \
+             patch.object(cold.subprocess, 'Popen') as spawn, \
+             self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP_UNREADABLE'):
+            cold.command(['rclone', 'size', 'fixture:models'], timeout=2)
+        spawn.assert_not_called()
+
+    def test_custom_range_probe_cannot_bypass_owner_stop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stop = Path(tmp) / 'STOP'
+            stop.touch()
+            with patch.object(cold, 'OWNER_STOP_PATHS', (stop,)), \
+                 patch.object(cold, '_range_size_with_stop') as metadata, \
+                 self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP'):
+                cold.read_verified_range('fixture:cold/model.gguf', 0, 1, 1,
+                                         '0'*64, stop_probe=lambda: False)
+            metadata.assert_not_called()
+
+    def test_range_owner_model_update_blocks_before_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            flag = Path(tmp) / 'OWNER_MAINTENANCE.flag'
+            flag.touch()
+            with patch.object(cold, 'OWNER_STOP_PATHS', ()), \
+                 patch.object(cold, 'OWNER_MODEL_UPDATE_FLAG', flag), \
+                 patch.object(cold, '_range_size_with_stop') as metadata, \
+                 self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP'):
+                cold.read_verified_range('fixture:cold/model.gguf', 0, 1, 1,
+                                         '0'*64, stop_probe=lambda: False)
+            metadata.assert_not_called()
+
+    def test_readonly_storage_audit_refuses_unreadable_owner_flag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(cold, 'OWNER_STOP_PATHS', (Path('/invalid/STOP'),)), \
+                 patch.object(cold.os, 'lstat', side_effect=OSError(40, 'too many links')), \
+                 self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP_UNREADABLE'):
+                cold.deepseek_storage_admission({}, tmp)
+
     def test_owner_model_update_regular_flag_blocks_rclone_before_spawn(self):
         with tempfile.TemporaryDirectory() as tmp:
             flag = Path(tmp) / 'OWNER_MAINTENANCE.flag'
