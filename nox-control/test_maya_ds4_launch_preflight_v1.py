@@ -101,10 +101,10 @@ def synthetic_tensor_roles():
 def synthetic_gpu_stdout(*, second_uuid="GPU-bbbbbbbb-1111-2222-3333-555555555555",
                          first_free_mib="24576", second_free_mib="24576",
                          first_index="0", second_index="1", second_cc="7.0"):
-    return "\\n".join([
+    return "\n".join([
         f"{first_index},GPU-aaaaaaaa-1111-2222-3333-444444444444,Tesla V100-SXM2-32GB,7.0,32768,{first_free_mib}",
         f"{second_index},{second_uuid},Tesla V100-SXM2-32GB,{second_cc},32768,{second_free_mib}",
-    ]) + "\\n"
+    ]) + "\n"
 
 
 class MayaGpuTopologyTests(unittest.TestCase):
