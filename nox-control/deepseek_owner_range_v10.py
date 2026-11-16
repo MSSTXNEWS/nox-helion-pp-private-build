@@ -16,7 +16,7 @@ REPO = "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
 RESERVE = 16 * 1024**3
 MAX_RANGE = 256 * 1024**2
 CHUNK = 1024**2
-STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/STOP", "state/STOP.flag")
+STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/STOP", "state/STOP.flag", "state/OWNER_MAINTENANCE.flag")
 SHA = re.compile(r"[a-f0-9]{64}\Z")
 FILE = re.compile(r"(?:DeepSeek-V4\.1-Flash-1017-GSQ-RCO-IQ2_XXS-0000[1-5]-of-00006|DeepSeek-V4\.1-Flash-Engram-IQ4_NL)\.gguf\Z")
 
@@ -67,7 +67,7 @@ def load_manifest(raw):
 
 def stop(root):
     require(not any((root/p).exists() or (root/p).is_symlink() for p in STOP_NAMES),'HOLD_OWNER_STOP')
-    require(not Path('/workspace/NOX_STOP').exists(),'HOLD_OWNER_STOP')
+    require(not (Path('/workspace/NOX_STOP').exists() or Path('/workspace/NOX_STOP').is_symlink()),'HOLD_OWNER_STOP')
 
 def lease(path,request,now,root):
     # Only existing OneHost is authorised to issue this lease. This script cannot create one.
