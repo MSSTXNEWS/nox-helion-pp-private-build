@@ -37,6 +37,11 @@ class Filesystem(unittest.TestCase):
         self.canonical.write_bytes(self.payload); self.canonical.chmod(0o666)
         self.alias.write_bytes(self.payload); self.alias.chmod(0o600)
         self.sidecar = self.canonical.parent/'adapter_config.json'; self.sidecar.write_text('{}')
+        self.canonical.parent.chmod(0o777)
+        parent = self.canonical.parent.stat()
+        self.entry.CANONICAL_PARENT_PREIMAGE = {
+            key: getattr(parent, key) for key in self.entry.CANONICAL_PARENT_PREIMAGE
+        }
         self.backup = self.root/'backup'; self.backup.mkdir(mode=0o700)
         self.backupfd = os.open(self.backup, os.O_RDONLY|os.O_DIRECTORY)
         row = {'role':'builder','filename':self.alias.name,'bytes':self.size,'sha256':self.digest,
@@ -65,6 +70,9 @@ class Filesystem(unittest.TestCase):
         self.assertEqual(self.canonical.read_bytes(),self.payload)
         self.assertEqual(self.canonical.stat().st_ino,before.st_ino)
         self.assertEqual(stat.S_IMODE(self.canonical.stat().st_mode),0o644)
+        self.assertEqual(stat.S_IMODE(self.canonical.parent.stat().st_mode),0o755)
+        self.assertTrue(result['canonical_parent_permission_verified'])
+        self.assertFalse(result['other_parent_permissions_changed'])
         self.assertTrue(self.alias.is_symlink());self.assertEqual(os.readlink(self.alias),str(self.canonical))
         self.assertEqual(self.ramreceipt.read_bytes(),self.old)
         self.assertEqual(stat.S_IMODE(self.receipt.stat().st_mode),0o600)
@@ -81,7 +89,84 @@ class Filesystem(unittest.TestCase):
         self.assertFalse(self.alias.is_symlink());self.assertEqual(self.alias.stat().st_ino,original)
         self.assertEqual(self.alias.read_bytes(),self.payload);self.assertFalse(self.receipt.exists())
         self.assertEqual(stat.S_IMODE(self.canonical.stat().st_mode),0o666)
+        self.assertEqual(stat.S_IMODE(self.canonical.parent.stat().st_mode),0o777)
+        self.assertTrue(self.journal['canonical_parent_permission_rollback_verified'])
         self.assertTrue(self.journal['storage_rollback_verified'])
+
+    def test_unknown_parent_identity_holds_and_closes_every_opened_directory(self):
+        self.entry.CANONICAL_PARENT_PREIMAGE['st_ino'] += 1
+        original = self.core.directory; opened = []
+        def observed(path):
+            fd = original(path); opened.append(fd); return fd
+        with patch.object(self.core, 'directory', side_effect=observed):
+            with self.assertRaisesRegex(RuntimeError, 'CANONICAL_PARENT_PREIMAGE'):
+                self.transition()
+        for fd in set(opened):
+            with self.assertRaises(OSError): os.fstat(fd)
+        self.assertEqual(stat.S_IMODE(self.canonical.parent.stat().st_mode),0o777)
+        self.assertFalse(self.receipt.exists()); self.assertEqual(self.calls,[])
+
+    def test_full_sha_failure_cannot_change_parent_permissions(self):
+        self.canonical.write_bytes(b'x' * self.size)
+        with self.assertRaisesRegex(RuntimeError, 'HASH_OR_METADATA_CHANGED'):
+            self.transition()
+        self.assertEqual(stat.S_IMODE(self.canonical.parent.stat().st_mode),0o777)
+        self.assertEqual(stat.S_IMODE(self.canonical.stat().st_mode),0o666)
+        self.assertFalse((self.backup/'restore-map.json').exists())
+
+    def test_parent_permission_intent_has_private_verified_restore_map(self):
+        original = os.fchmod; parent_id = self.canonical.parent.stat().st_ino; witnessed = []
+        other_before = {p: self.core.identity(p.stat()) for p in (self.ramroot,self.state)}
+        def observed(fd, mode):
+            if os.fstat(fd).st_ino == parent_id and stat.S_ISDIR(os.fstat(fd).st_mode):
+                raw = (self.backup/'restore-map.json').read_bytes(); value = json.loads(raw)
+                self.assertEqual(stat.S_IMODE((self.backup/'restore-map.json').stat().st_mode),0o600)
+                self.assertEqual(value['canonical_parent_before']['st_ino'],parent_id)
+                self.assertEqual(value['canonical_parent_target_mode'],0o755)
+                self.assertEqual(value['canonical_parent_observed_preimage'],self.entry.CANONICAL_PARENT_PREIMAGE)
+                self.assertGreaterEqual(len(self.calls),2); witnessed.append(mode)
+            return original(fd,mode)
+        with patch.object(self.entry.os, 'fchmod', side_effect=observed): self.transition()
+        self.assertEqual(witnessed,[0o755])
+        for p, before in other_before.items():
+            now = self.core.identity(p.stat())
+            for key in ('st_dev','st_ino','st_mode','st_uid','st_gid'):
+                self.assertEqual(now[key],before[key])
+
+    def test_fsync_failure_after_parent_chmod_rolls_back_exact_mode(self):
+        original = os.fsync; parent_id = self.canonical.parent.stat().st_ino; failed = []
+        def failing(fd):
+            info = os.fstat(fd)
+            if info.st_ino == parent_id and stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o755 and not failed:
+                failed.append(True); raise OSError('fixture fsync after actual chmod')
+            return original(fd)
+        with patch.object(self.entry.os, 'fsync', side_effect=failing):
+            with self.assertRaisesRegex(OSError, 'fixture fsync'): self.transition()
+        self.assertEqual(failed,[True]); self.assertEqual(stat.S_IMODE(self.canonical.parent.stat().st_mode),0o777)
+        self.assertEqual(stat.S_IMODE(self.canonical.stat().st_mode),0o666)
+        self.assertTrue(self.journal['canonical_parent_permission_rollback_verified'])
+        self.assertFalse(self.alias.is_symlink()); self.assertFalse(self.receipt.exists())
+
+    def test_foreign_same_directory_mode_not_overwritten_by_rollback(self):
+        def foreign():
+            self.canonical.parent.chmod(0o700)
+            raise RuntimeError('HOLD_FIXTURE_FOREIGN_PARENT')
+        with self.assertRaisesRegex(RuntimeError, 'ROLLBACK_PARENT_FOREIGN'): self.transition(foreign)
+        self.assertEqual(stat.S_IMODE(self.canonical.parent.stat().st_mode),0o700)
+        self.assertTrue(self.journal['canonical_parent_permission_intent'])
+        self.assertFalse(self.journal.get('storage_rollback_verified',not self.journal))
+        self.assertNotIn('canonical_parent_permission_rollback_verified',self.journal)
+
+    def test_foreign_named_parent_replacement_not_overwritten_by_rollback(self):
+        old = self.root/'detached-canonical'
+        def foreign():
+            self.canonical.parent.rename(old); self.canonical.parent.mkdir(mode=0o700)
+            self.canonical.write_bytes(b'foreign')
+            raise RuntimeError('HOLD_FIXTURE_REPLACED_PARENT')
+        with self.assertRaisesRegex(RuntimeError, 'PARENT_PATH_CHANGED'): self.transition(foreign)
+        self.assertEqual(stat.S_IMODE(self.canonical.parent.stat().st_mode),0o700)
+        self.assertEqual(self.canonical.read_bytes(),b'foreign')
+        self.assertEqual(stat.S_IMODE(old.stat().st_mode),0o755)
 
     def test_foreign_alias_is_never_deleted_by_rollback(self):
         def foreign():

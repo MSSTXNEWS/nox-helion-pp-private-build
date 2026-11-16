@@ -32,7 +32,7 @@ SCHEMA = 'NOX_OWNER_STORAGE_WARM_BATCH_V1'
 TRANSPORT = 'owner_hermes_qa_batch.py'
 PINS = {
     TRANSPORT: '84a4d402ae3d86000fc65018660cf906b9952560430ae73a979a11ecaa08ed3d',
-    'owner_builder_cold_storage_entry.py': '4914abfe666dd2e4d1c5db7fd04af53ebdd081d28d37b0e1d419ae49845036df',
+    'owner_builder_cold_storage_entry.py': '77199afa4b08feda5e3734255c7899d00194cbda23458792cc26c02657bf9df6',
     'owner_builder_archive_reclaim.py': '804ea161e91c52df57964ca450c3da07a860a0ff428bb95993d5c94ecc4541f6',
     'owner_builder_proc_probe.py': '1743c8587dac72f412400be9059d1fe01ef73a1955af2056ff77a550e53af3ff',
     'owner_builder_drive_public_proof.json': '46888f4bd3dfdf5d89fbe3ff8c24afd07918091e5867c8be663ccb82b76b112e',

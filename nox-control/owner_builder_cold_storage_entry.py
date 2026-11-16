@@ -2,9 +2,10 @@
 """Move the one redundant RAM builder to a verified canonical SSD alias.
 
 No weight bytes, checkpoint, training source, admission or training flag is
-changed. The only permission change is canonical builder 0666 -> 0644, with a
-durable reversible record and all known legacy writers stopped. New receipt
-and consumers report cold SSD explicitly; the old RAM receipt is untouched.
+changed. Only the exact canonical builder 0666 -> 0644 and its independently
+observed parent 0777 -> 0755 are protected, with a durable reversible record
+and all known legacy writers stopped. New receipt and consumers report cold
+SSD explicitly; the old RAM receipt is untouched.
 """
 from __future__ import annotations
 
@@ -51,6 +52,14 @@ PROXY_TAIL = ("\n# NOX_BUILDER_COLD_STORAGE_RUNTIME_V1\n"
               "from owner_builder_cold_chat_binding import bind as _nox_bind_builder_storage\n"
               "_nox_bind_builder_storage()\n")
 MAIN_ANCHOR = 'if __name__ == "__main__":\n    main()'
+CANONICAL_PARENT_PREIMAGE = {
+    'st_dev': 39, 'st_ino': 106953430, 'st_uid': 0, 'st_gid': 0,
+    'st_mode': stat.S_IFDIR | 0o777,
+}
+CANONICAL_PARENT_PROBE = {
+    'request': '6910454892', 'source_sha': 'f5568e7725992ea58bc7e75ac5f61845c93e8073',
+    'workflow_run': '43825634733', 'job': '133158708688',
+}
 
 
 def require(value, code):
@@ -159,6 +168,62 @@ def verify_parent(core, fd):
     require(stat.S_ISDIR(info.st_mode) and info.st_uid == os.geteuid() and not info.st_mode & 0o022, 'PARENT_DIRECTORY')
 
 
+def named_parent(core, path, fd, expected=None):
+    """Match the open directory to a second complete no-follow traversal."""
+    before = core.identity(os.fstat(fd)); check = core.directory(path)
+    try:
+        named = core.identity(os.fstat(check)); after = core.identity(os.fstat(fd))
+        require(stat.S_ISDIR(before['st_mode']) and before == named == after
+                and (expected is None or after == expected), 'PARENT_PATH_CHANGED')
+        return after
+    finally:
+        os.close(check)
+
+
+def canonical_parent_preimage(core, fd):
+    observed = named_parent(core, core.CANONICAL.parent, fd)
+    require(observed['st_uid'] == os.geteuid()
+            and all(observed[key] == value for key, value in CANONICAL_PARENT_PREIMAGE.items()),
+            'CANONICAL_PARENT_PREIMAGE')
+    return observed
+
+
+def protect_parent(core, fd, before, mutation):
+    named_parent(core, core.CANONICAL.parent, fd, before)
+    mutation['attempted'] = True  # intent is already durable; latch before chmod/fsync
+    os.fchmod(fd, 0o755)
+    after = named_parent(core, core.CANONICAL.parent, fd)
+    require(all(after[key] == before[key] for key in core.FIELDS if key not in ('st_mode', 'st_ctime_ns'))
+            and stat.S_IMODE(after['st_mode']) == 0o755, 'PARENT_PERMISSION_SCOPE')
+    mutation['after'] = after  # a following fsync failure still has an owned preimage
+    os.fsync(fd)
+    verify_parent(core, fd)
+    return named_parent(core, core.CANONICAL.parent, fd, after)
+
+
+def parent_rollback_target(core, fd, before, mutation):
+    current = named_parent(core, core.CANONICAL.parent, fd)
+    if mutation.get('after') is not None:
+        require(current == mutation['after'], 'ROLLBACK_PARENT_FOREIGN')
+    elif stat.S_IMODE(current['st_mode']) == 0o777:
+        require(current == before, 'ROLLBACK_PARENT_FOREIGN')
+    else:
+        require(stat.S_IMODE(current['st_mode']) == 0o755
+                and all(current[key] == before[key] for key in core.FIELDS
+                        if key not in ('st_mode', 'st_ctime_ns')), 'ROLLBACK_PARENT_FOREIGN')
+    return current
+
+
+def restore_parent(core, fd, before, mutation):
+    current = parent_rollback_target(core, fd, before, mutation)
+    if stat.S_IMODE(current['st_mode']) != 0o777:
+        os.fchmod(fd, 0o777); os.fsync(fd)
+    restored = named_parent(core, core.CANONICAL.parent, fd)
+    require(all(restored[key] == before[key] for key in core.FIELDS if key != 'st_ctime_ns'),
+            'PARENT_PERMISSION_ROLLBACK')
+    mutation['restored'] = True
+
+
 def protect_canonical(core, parent, name, fd, before):
     core.named(parent, name, fd, before)
     mode = stat.S_IMODE(os.fstat(fd).st_mode)
@@ -183,10 +248,15 @@ def storage_transition(core, location, proc, proof, request, source, backup, dea
     journal = {} if journal is None else journal
     handles = []; moved = linked = published = removed = protected = False
     c = r = q = state = canonical_fd = ram_fd = None; canonical_before = canonical_after = None
+    parent_before = parent_after = None; parent_mutation = {}
     alias_identity = None; storage_raw = None
     try:
-        for path in (core.CANONICAL.parent, core.RAM.parent, location.RECEIPT.parent):
-            fd = core.directory(path); verify_parent(core, fd); handles.append(fd)
+        for index, path in enumerate((core.CANONICAL.parent, core.RAM.parent, location.RECEIPT.parent)):
+            fd = core.directory(path); handles.append(fd)  # close even when the next guard fails
+            if index == 0:
+                parent_before = canonical_parent_preimage(core, fd)
+            else:
+                verify_parent(core, fd)
         c, r, state = handles
         canonical_fd = core.regular(c, core.CANONICAL.name, expected_size=core.SIZE); handles.append(canonical_fd)
         ram_fd = core.regular(r, core.RAM.name, expected_size=core.SIZE); handles.append(ram_fd)
@@ -217,6 +287,10 @@ def storage_transition(core, location, proc, proof, request, source, backup, dea
                        'quarantine_path': str(core.RAM.parent / qname / 'ram.safetensors'),
                        'canonical_before': canonical_before, 'ram_before': ram_before,
                        'sha256': core.SHA, 'bytes': core.SIZE, 'canonical_target_mode': 0o644,
+                       'canonical_parent_path': str(core.CANONICAL.parent),
+                       'canonical_parent_before': parent_before, 'canonical_parent_target_mode': 0o755,
+                       'canonical_parent_observed_preimage': CANONICAL_PARENT_PREIMAGE,
+                       'canonical_parent_probe': CANONICAL_PARENT_PROBE,
                        'external_drive_proof': proof, 'external_drive_proof_canonical_sha256': core.PROOF_SHA,
                        'previous_ram_receipt_sha256': sha(old_ram), 'sidecars': sidecars,
                        'restore_rule': 'NO_CLOBBER_RENAME_OWN_RAM_BEFORE_UNLINK_OTHERWISE_COPY_FULL_SHA_FROM_SSD',
@@ -224,6 +298,11 @@ def storage_transition(core, location, proc, proof, request, source, backup, dea
         restore_proof = core.private_json(backup, 'restore-map.json', restore_map)
         core.absent(state, location.RECEIPT.name)
         before_commit(); core.tick(deadline)
+        core.named(c, core.CANONICAL.name, canonical_fd, canonical_before)
+        core.named(r, core.RAM.name, ram_fd, ram_before)
+        require(core.sidecars(c) == sidecars, 'SIDECARS_CHANGED_BEFORE_PERMISSIONS')
+        journal['canonical_parent_permission_intent'] = True
+        parent_after = protect_parent(core, c, parent_before, parent_mutation)
         protected = True  # latch before fchmod; exceptions must recheck/restore
         canonical_after = protect_canonical(core, c, core.CANONICAL.name, canonical_fd, canonical_before)
         # Rehash after removing write permissions, before publishing any trust.
@@ -251,6 +330,7 @@ def storage_transition(core, location, proc, proof, request, source, backup, dea
         location.locate(rehash=True, deadline=deadline)
         after_alias()
         before_commit(); core.named(c, core.CANONICAL.name, canonical_fd, canonical_after)
+        named_parent(core, core.CANONICAL.parent, c, parent_after); verify_parent(core, c)
         require(core.sidecars(c) == sidecars and location.read(location.RAM_RECEIPT, private=True) == old_ram, 'SIDECARS_OR_RAM_RECEIPT_CHANGED')
         require(location.read(location.RECEIPT, private=True) == storage_raw, 'STORAGE_RECEIPT_CHANGED')
         moved_now = core.named(q, 'ram.safetensors', ram_fd)
@@ -262,6 +342,9 @@ def storage_transition(core, location, proc, proof, request, source, backup, dea
         return {'state': 'BUILDER_COLD_ON_SSD_AND_CONSUMERS_VERIFIED', 'storage_receipt_sha256': sha(storage_raw),
                 'ram_duplicate_unlinked_bytes': core.SIZE, 'canonical_permission_before': stat.S_IMODE(canonical_before['st_mode']),
                 'canonical_permission_after': 0o644, 'canonical_full_sha256_verified': True,
+                'canonical_parent_permission_before': 0o777, 'canonical_parent_permission_after': 0o755,
+                'canonical_parent_identity_before': parent_before, 'canonical_parent_identity_after': parent_after,
+                'canonical_parent_permission_verified': True, 'other_parent_permissions_changed': False,
                 'previous_ram_full_sha256_verified': True, 'restore_map': restore_proof,
                 'proc_visibility': usage, 'old_ram_receipt_unchanged': True,
                 'unique_weight_content_removed': False, 'all_sidecars_preserved': True}
@@ -269,6 +352,8 @@ def storage_transition(core, location, proc, proof, request, source, backup, dea
         if not removed:
             # Restore only this operation's namespace changes. Foreign paths
             # are preserved, and any uncertainty is a rollback HOLD.
+            if parent_mutation.get('attempted'):
+                parent_rollback_target(core, c, parent_before, parent_mutation)
             if storage_raw is not None and not published and location.RECEIPT.exists():
                 require(location.read(location.RECEIPT, private=True) == storage_raw, 'ROLLBACK_PUBLICATION_FOREIGN')
                 published = True
@@ -289,6 +374,9 @@ def storage_transition(core, location, proc, proof, request, source, backup, dea
                             and stat.S_IMODE(canonical_after['st_mode']) in (0o644, stat.S_IMODE(canonical_before['st_mode'])),
                             'ROLLBACK_PERMISSION_IDENTITY')
                 restore_mode(core, c, core.CANONICAL.name, canonical_fd, canonical_after, canonical_before)
+            if parent_mutation.get('attempted'):
+                restore_parent(core, c, parent_before, parent_mutation)
+                journal['canonical_parent_permission_rollback_verified'] = True
             journal['storage_rollback_verified'] = True
         raise
     finally:
