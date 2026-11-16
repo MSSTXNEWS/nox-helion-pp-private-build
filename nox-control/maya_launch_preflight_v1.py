@@ -32,6 +32,7 @@ ROLE_FLOAT_TYPES = frozenset({"F32", "F16", "BF16", "Q8_0"})
 ROLE_EXPERT_TYPES = frozenset({"IQ2_XXS"})
 ROLE_ENGRAM_TABLE_TYPES = frozenset({"IQ4_NL"})
 ROLE_LAYERS = re.compile(r"blk\.(\d+)\.")
+EXPECTED_LAYER_IDS = frozenset(range(40))
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
 
@@ -41,6 +42,8 @@ def validate_tensor_role_inventory(rows):
         return {"state": "HOLD_TENSOR_ROLE_INVENTORY_REQUIRED"}
     embed = []
     routers = []
+    router_weight_layers = set()
+    router_bias_layers = set()
     experts = {}
     engrams = []
     for row in rows:
@@ -60,6 +63,10 @@ def validate_tensor_role_inventory(rows):
         tail = name[match.end():]
         if tail in ("ffn_gate_inp.weight", "exp_probs_b.bias", "exp_probs_b_vl.bias"):
             routers.append((name, dtype))
+            if tail == "ffn_gate_inp.weight":
+                router_weight_layers.add(layer)
+            elif tail == "exp_probs_b.bias":
+                router_bias_layers.add(layer)
         elif tail in ("ffn_gate_exps.weight", "ffn_up_exps.weight", "ffn_down_exps.weight"):
             role = {"ffn_gate_exps.weight": "w1", "ffn_up_exps.weight": "w3",
                     "ffn_down_exps.weight": "w2"}[tail]
@@ -70,14 +77,18 @@ def validate_tensor_role_inventory(rows):
         return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "token_embedding"}
     if embed[0][1] not in {"BF16", "Q8_0", "Q4_K", "Q5_K", "Q6_K"}:
         return {"state": "HOLD_UNSUPPORTED_ROLE_DTYPE", "role": "token_embedding", "dtype": embed[0][1]}
-    if not routers:
-        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "router"}
+    if (router_weight_layers != EXPECTED_LAYER_IDS or
+            router_bias_layers != EXPECTED_LAYER_IDS):
+        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "router",
+                "router_weight_layers": len(router_weight_layers),
+                "router_bias_layers": len(router_bias_layers)}
     bad_router = next(((name, dtype) for name, dtype in routers if dtype not in ROLE_FLOAT_TYPES), None)
     if bad_router:
         return {"state": "HOLD_UNSUPPORTED_ROLE_DTYPE", "role": "router",
                 "name": bad_router[0], "dtype": bad_router[1]}
-    if not experts:
-        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "routed_experts"}
+    if set(experts) != EXPECTED_LAYER_IDS:
+        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "routed_experts",
+                "expert_layers": len(experts)}
     for layer, parts in sorted(experts.items()):
         if set(parts) != {"w1", "w2", "w3"}:
             return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "routed_experts",
@@ -98,7 +109,8 @@ def validate_tensor_role_inventory(rows):
             return {"state": "HOLD_ENGRAM_IQ4_NL_BLOCK_ALIGNMENT", "name": name}
     return {"state": "ROLE_DTYPE_METADATA_PASS", "launchable": False,
             "roles_checked": {"token_embedding": len(embed), "router": len(routers),
-                              "routed_expert_layers": len(experts), "engram_tables": len(engrams)}}
+                              "routed_expert_layers": len(experts), "engram_tables": len(engrams),
+                              "engram_layer_coverage": "NOT_TESTED"}}
 
 
 
