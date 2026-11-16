@@ -23,6 +23,12 @@ test('preserve earlier reduced-motion and original D02 source locks',()=>{
 test('stage asset pin tracks the exact reviewed CSS source',()=>{
  const bytes=Buffer.from(css);
  const blob=createHash('sha1').update('blob '+bytes.length+'\0').update(bytes).digest('hex');
- assert.equal(blob,'682b90bf6c3d6c0092752d67386f743e6f274cbb');
+ assert.equal(blob,'d65629a3e35894899a4a3cd983f2499918919030');
  assert.ok(stage.includes(blob));
+});
+
+test('compact mobile composer fits short viewport without losing the three panels',()=>{
+ assert.match(css,/@media \(max-width:760px\) and \(max-height:860px\)/);
+ assert.match(css,/height:max\(220px,calc\(100dvh - 126px\)\)!important/);
+ assert.match(css,/min-height:220px!important/);
 });
