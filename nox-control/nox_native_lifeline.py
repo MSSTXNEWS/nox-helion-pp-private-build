@@ -106,7 +106,25 @@ def read_state(path):
         return {}
 
 def stopped():
-    return any(Path(name).exists() or Path(name).is_symlink() for name in STOP_FILES)
+    if any(Path(name).exists() or Path(name).is_symlink() for name in STOP_FILES):
+        return True
+    # The original owner's maintenance lease also inhibits repair, even if
+    # the legacy flag is absent during an interrupted maintenance operation.
+    lease = Path("/root/nox/state/owner_maintenance.lock")
+    try:
+        fd = os.open(lease, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            return False
+        except BlockingIOError:
+            return True
+    finally:
+        os.close(fd)
 
 def supervise(name, command="status"):
     if name not in SERVICES or command not in ("status", "start"):
@@ -208,8 +226,10 @@ def main():
         return 2
     try:
         while True:
+            interval = 60
             try:
                 policy = policy_load(policy_path)
+                interval = policy["poll_seconds"]
                 state = read_state(state_path)
                 state["_path"] = state_path
                 report = tick(policy, state, dry_run=a.dry_run)
@@ -219,9 +239,11 @@ def main():
             except Exception as exc:
                 # Fail closed, do not mutate services. Log code only; no secret details.
                 print("NOX_LIFELINE_HOLD=" + type(exc).__name__, flush=True)
+                if a.once:
+                    return 2
             if a.once:
                 break
-            time.sleep(60)  # bounded policy refetched every cycle; never untrusted remote
+            time.sleep(interval)  # local bounded poll; never untrusted remote
     finally:
         os.close(lockfd)
     return 0
