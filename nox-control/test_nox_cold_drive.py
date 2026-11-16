@@ -608,6 +608,56 @@ class ColdTests(unittest.TestCase):
         self.assertLess(time.monotonic()-started,2.5)
         self.assertTrue(self.src.exists())
 
+    def test_verified_range_default_stop_checks_all_native_aliases_before_network(self):
+        self.stage_range()
+        body = self.src.read_bytes()
+        aliases = tuple(self.root / ('owner-stop-' + str(i)) for i in range(8))
+        self.assertEqual(len(cold.OWNER_STOP_PATHS), 8)
+        with patch.object(cold, 'OWNER_STOP_PATHS', aliases):
+            for alias in aliases:
+                with self.subTest(alias=alias.name):
+                    alias.touch()
+                    try:
+                        with patch.object(cold, '_range_size_with_stop') as size_call, \
+                             self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP'):
+                            cold.read_verified_range(
+                                'fixture:cold/model.gguf', 0, 100, len(body),
+                                hashlib.sha256(body[:100]).hexdigest(), timeout=3)
+                        size_call.assert_not_called()
+                    finally:
+                        alias.unlink()
+
+    def test_verified_range_default_stop_detects_dangling_symlink(self):
+        self.stage_range()
+        body = self.src.read_bytes()
+        stop = self.root / 'dangling-owner-stop'
+        stop.symlink_to(self.root / 'nonexistent-target')
+        self.assertFalse(stop.exists())
+        self.assertTrue(stop.is_symlink())
+        with patch.object(cold, 'OWNER_STOP_PATHS', (stop,)), \
+             patch.object(cold, '_range_size_with_stop') as size_call, \
+             self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP'):
+            cold.read_verified_range(
+                'fixture:cold/model.gguf', 0, 100, len(body),
+                hashlib.sha256(body[:100]).hexdigest(), timeout=3)
+        size_call.assert_not_called()
+
+    def test_verified_range_default_stop_rechecked_after_metadata(self):
+        self.stage_range()
+        body = self.src.read_bytes()
+        stop = self.root / 'late-owner-stop'
+        def metadata(remote, deadline, probe):
+            stop.touch()
+            return {'count': 1, 'bytes': len(body)}
+        with patch.object(cold, 'OWNER_STOP_PATHS', (stop,)), \
+             patch.object(cold, '_range_size_with_stop', side_effect=metadata), \
+             patch.object(cold.subprocess, 'Popen') as popen, \
+             self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP'):
+            cold.read_verified_range(
+                'fixture:cold/model.gguf', 0, 100, len(body),
+                hashlib.sha256(body[:100]).hexdigest(), timeout=3)
+        popen.assert_not_called()
+
     def test_verified_range_object_size_changed(self):
         self.stage_range()
         body=self.src.read_bytes()

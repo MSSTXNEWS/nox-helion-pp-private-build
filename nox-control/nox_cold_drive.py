@@ -208,9 +208,9 @@ def read_verified_range(remote, offset, length, object_size, block_sha256, timeo
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
         raise ValueError('HOLD_RANGE_TIMEOUT')
     if stop_probe is None:
-        stop_probe = lambda: any(path.exists() or path.is_symlink() for path in (
-            Path('/root/nox/STOP'), Path('/root/nox/STOP.flag'),
-            Path('/root/nox/state/STOP'), Path('/root/nox/state/STOP.flag')))
+        # Use the original OneHost's *full* STOP alias set; never bypass a
+        # manual STOP via a partial duplicate list in the Range entry point.
+        stop_probe = lambda: any(path.exists() or path.is_symlink() for path in OWNER_STOP_PATHS)
     if stop_probe():
         raise RuntimeError('HOLD_OWNER_STOP')
     deadline = time.monotonic() + timeout
