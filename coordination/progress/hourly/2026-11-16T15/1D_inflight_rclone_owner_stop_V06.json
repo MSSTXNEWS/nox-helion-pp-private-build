@@ -1,0 +1,87 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_1D_CANCELLABLE_RCLONE_V1",
+  "instructions_version": "0.0.6",
+  "slot": "1D",
+  "stream": "1/3",
+  "utc": "2026-11-16T12:23:18.026Z",
+  "msk_timezone": "Europe/Moscow",
+  "head_at_start": "642ce57b38787b2894c12d8f11d7104356f5686d",
+  "head_before_receipt": "06d3c4cd8d2e462127fa5d80eec858f554385fb0",
+  "source_changes": [
+    {
+      "path": "nox-control/nox_cold_drive.py",
+      "blob_sha": "ce9478d8023b32b885f3b43baea1ce3af4316ee4",
+      "commit": "04d5ed884eaaf36b679678ab362b98eeb1887c0c"
+    },
+    {
+      "path": "nox-control/test_nox_cold_drive.py",
+      "blob_sha": "e9d9c6a4965f9047db0c394e76997f733db88544",
+      "commit": "77cf329e1e816f9f4764c7c3fa07f42929f6f216"
+    }
+  ],
+  "error_id": "NOX-P1-1D-OWNER-STOP-DURING-BLOCKING-RCLONE-TRANSFER-20261116",
+  "root_cause": "Blocking subprocess.run(timeout=3600) did not poll owner STOP during long rclone size/copyto. Even though load checked STOP after transfer, I/O could continue for hours after STOP.",
+  "fix": "Changed existing command() to poll STOP every <=0.2s and terminate/kill only its exact owned Popen child on STOP or deadline, with provider stderr discarded. Kept prior SHA, reserve, receipt, inode and no-loss checks. Two direct stalled-rclone regression tests.",
+  "five_tasks": [
+    {
+      "n": 1,
+      "status": "SOURCE_MANIFEST_METADATA_VERIFIED_NATIVE_HOLD",
+      "facts": "Drive manifest IDs checked today: starter 1h479rBz2iQwAzfmEyfSNAFAct2J6B0kg 1072 B and wheelhouse 1oxmS0ZiboacyGmHG_OJ49FyoouNVjGRf 7754 B, unchanged modified times; decoded declarations 4 parts 331718151 B sha256 e1a48952fafbd8c7a0a64deb4ea645fd328b5d726c0317e1d2d323f4198c8290, and 39 parts 3831295823 B sha256 7f1b932f38df0872ee21e009eb8f3005da5eb99b662a372dcb389e8d4e056b95. Last 43/43 part metadata verification historical, NOT rehashed or reinstalled. Current Qwen and four DeepSeek host location/SHA and server-side Drive OAuth not verified."
+    },
+    {
+      "n": 2,
+      "status": "HOLD_NATIVE_CAPACITY_RESTORE",
+      "facts": "No fresh authorized OneHost admission or independent offsite S03/config/checkpoint/optimizer/scaler/RNG full restore. Prior SSD free 12005203968 B dated 07:04 UTC, not current."
+    },
+    {
+      "n": 3,
+      "status": "HOLD_NATIVE_SINGLE_DOWNLOAD_CLAIM",
+      "facts": "Required DeepSeek unique bytes 248834257920; previous first full file 19923784832 B, four prior missing total 228904692384 B. No current exact verified part SHA+lease+capacity; downloaded 0 B."
+    },
+    {
+      "n": 4,
+      "status": "HOLD_NO_EXACT_CLEANUP_ALLOWLIST",
+      "facts": "No path/fileID has exact matching restorable SHA, quiesced PID, no active FD/mmap and full controller lease. Allowlist [] only."
+    },
+    {
+      "n": 5,
+      "status": "SOURCE_TESTED_LIVE_HOLD",
+      "facts": "Corrected cancellable existing rclone source, new cancellation regressions; physical deletion 0, freed 0 B, new download 0 B; no native chat/S03 post-cleanup run."
+    }
+  ],
+  "test": {
+    "scope": "GITHUB_ACTIONS_OFFLINE_RCLONE_FIXTURE_NOT_NATIVE",
+    "workflow_id": 43864450546,
+    "job_id": 133289277997,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43864450546",
+    "py_compile": "PASS",
+    "unittest": "75/75 PASS",
+    "new_regressions": 2,
+    "source_readback": "PASS",
+    "live_deployed": false
+  },
+  "cleanup": {
+    "allowlist": [],
+    "deleted_files": 0,
+    "freed_bytes": 0,
+    "downloaded_bytes": 0,
+    "cleanup_lease": "UNVERIFIED",
+    "S03_untouched": true
+  },
+  "WEIGHTS": "HOLD new verified optimizer updates/learned tensors/current PID/checkpoint optimizer scaler RNG independent restore; historical 25 Qwen3.5-9B updates are not counted again. Pinned Qwen revision c202236235762e1c871ad0ccb60c8ee5ba337b9a is desired lineage, not current host proof.",
+  "KNOWLEDGE": "HOLD Hunter trusted source -> S03 write -> readback -> recall and training candidate not revalidated.",
+  "DISPATCHER_RESOURCES": "HOLD current 3 worker PIDs, dispatcher heartbeat, STOP, lease, GPU0/GPU1 VRAM, cgroup and SSD; zero new host restarts, second trainers or GPU jobs.",
+  "native_operations": {
+    "downloads": 0,
+    "deletions": 0,
+    "restarts": 0,
+    "model_swaps": 0,
+    "owner_stop_reset": false
+  },
+  "lesson": "Manual STOP must preempt a blocking copy process itself, not merely publication after copy. SOURCE PASS cannot substitute for OneHost authorized native STOP/restore/lease and live E2E.",
+  "next": "Read-only owner OneHost STOP/lease/PIDs/Drive OAuth/cgroup/SSD/S03 and offsite independent restore; then under one controller claim run one missing DeepSeek part OR exact verified inactive duplicate cleanup. Chat foreground wins.",
+  "links": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/256",
+    "https://app.notion.com/p/40cacc184a9f81248703e3840d4c2422"
+  ]
+}
