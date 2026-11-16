@@ -415,7 +415,7 @@ def finalize_complete_partial(row, partial, final, destination, root, lease_file
     atomic_receipt(destination/(row['path']+'.verified.json'),receipt)
     return {'state':'VERIFIED_FINAL','file':row['path'],'new_bytes':new_bytes,'sha256':actual}
 
-def _write_checked(output, chunk, root, lease_file, request):
+def _write_checked(output, chunk, root, lease_file, request, lock_guard=None):
     """Drain short regular-file writes without overstating verified bytes.
 
     FileIO.write may return fewer bytes than requested. Recheck the original
@@ -426,6 +426,9 @@ def _write_checked(output, chunk, root, lease_file, request):
     while pos < len(view):
         stop(root)
         lease(lease_file, request, time.time(), root)
+        # A short write can yield between chunks; re-fence the owner flock
+        # pathname before EACH continuation, not only the first write.
+        if lock_guard is not None: lock_guard()
         count = output.write(view[pos:])
         require(type(count) is int and 0 < count <= len(view) - pos,
                 'HOLD_PARTIAL_WRITE_NO_PROGRESS')
@@ -563,7 +566,8 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     # revocation. Do not append a chunk after either occurs.
                     stop(root);lease(lease_file,request,time.time(),root)
                     check_download_lock()
-                    wrote += _write_checked(output, chunk, root, lease_file, request)
+                    wrote += _write_checked(output, chunk, root, lease_file, request,
+                                            check_download_lock)
                 output.flush();os.fsync(output.fileno())
         # Never acknowledge a partial Range after owner STOP, lease expiry or inode swap.
         stop(root);lease(lease_file,request,time.time(),root)
