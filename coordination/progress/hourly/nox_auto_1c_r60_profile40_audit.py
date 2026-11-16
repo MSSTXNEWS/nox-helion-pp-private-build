@@ -23,9 +23,19 @@ JOB = re.compile(r"[A-Za-z0-9._:@/-]{1,128}\Z")
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 
 
-def reconcile(master: Mapping, snapshot: Mapping, *, verify_job: Callable | None = None,
-              verify_worker: Callable | None = None) -> dict:
-    """All callback claims must be independently verified by original OneHost."""
+def _trusted(cb, *args):
+    """Original owner-native callbacks only: unknown, exception or integer 1 is never proof."""
+    if not callable(cb):
+        return False
+    try:
+        return cb(*args) is True
+    except Exception:
+        return False
+
+
+def reconcile(master: Mapping, snapshot: Mapping, *, verify_job=None,
+              verify_s03=None, verify_worker=None, verify_dependency=None) -> dict:
+    """Read-only source audit. 3 actual OS PIDs != 6 threads != 40/60 task IDs."""
     if not isinstance(master, Mapping) or master.get("schema") != "NOX_R60_SOURCE_PLAN_V1":
         raise ValueError("HOLD_R60_MASTER_SCHEMA")
     tasks = master.get("tasks")
@@ -54,17 +64,32 @@ def reconcile(master: Mapping, snapshot: Mapping, *, verify_job: Callable | None
     workers, jobs = snapshot.get("workers", []), snapshot.get("jobs", [])
     if not isinstance(workers, list) or not isinstance(jobs, list):
         raise ValueError("HOLD_NATIVE_SNAPSHOT_LISTS")
-    if len(workers) > 6:
-        raise ValueError("HOLD_SIX_NATIVE_WORKER_BOUND")
-    worker_ids = [w.get("id") for w in workers if isinstance(w, dict)]
-    if (len(worker_ids) != len(workers) or
-            any(not isinstance(x, str) or not JOB.fullmatch(x) for x in worker_ids) or
-            len(set(worker_ids)) != len(worker_ids)):
-        raise ValueError("HOLD_WORKER_IDENTITIES")
-    verified_workers = sum(verify_worker(w, snapshot) is True for w in workers) if callable(verify_worker) else 0
+    if len(workers) > 3:
+        raise ValueError("HOLD_THREE_NATIVE_OS_PROCESS_BOUND")
+    threads = snapshot.get("internal_threads")
+    if threads is not None and (type(threads) is not int or not 0 <= threads <= 6):
+        raise ValueError("HOLD_INTERNAL_THREADS_BOUND")
+    seen, verified_workers = set(), 0
+    for worker in workers:
+        if not isinstance(worker, Mapping):
+            raise ValueError("HOLD_WORKER_IDENTITIES")
+        wid, pid, start = worker.get("id"), worker.get("pid"), worker.get("process_starttime")
+        if (not isinstance(wid, str) or not JOB.fullmatch(wid)
+                or type(pid) is not int or pid <= 1
+                or type(start) is not int or start <= 0
+                or (wid, pid, start) in seen
+                or any(x[1] == pid for x in seen)):
+            raise ValueError("HOLD_WORKER_IDENTITIES")
+        seen.add((wid, pid, start))
+        shape = (worker.get("instance_id") == 60509551
+                 and worker.get("origin") == "existing_onehost"
+                 and worker.get("native_pid_verified") is True
+                 and worker.get("state") == "RUNNING")
+        if shape and _trusted(verify_worker, worker, snapshot):
+            verified_workers += 1
     if len(jobs) > 60:
         raise ValueError("HOLD_JOB_LIST_BOUNDS")
-    job_ids, task_ids, verified_tasks = set(), set(), []
+    job_ids, task_ids, queue_verified, s03_verified = set(), set(), [], []
     for job in jobs:
         if not isinstance(job, Mapping):
             raise ValueError("HOLD_JOB_ROW")
@@ -75,66 +100,93 @@ def reconcile(master: Mapping, snapshot: Mapping, *, verify_job: Callable | None
             raise ValueError("HOLD_DUPLICATED_JOB_OR_TASK")
         task_ids.add(tid)
         job_ids.add(jid)
-        if (callable(verify_job) and
-                isinstance(job.get("registry_sha256"), str) and SHA.fullmatch(job["registry_sha256"]) and
-                isinstance(job.get("s03_sha256"), str) and SHA.fullmatch(job["s03_sha256"]) and
-                verify_job(by_id[tid], job, snapshot) is True):
-            verified_tasks.append(tid)
+        hashes = (isinstance(job.get("registry_sha256"), str)
+                  and SHA.fullmatch(job["registry_sha256"]) is not None
+                  and isinstance(job.get("s03_sha256"), str)
+                  and SHA.fullmatch(job["s03_sha256"]) is not None)
+        if hashes and _trusted(verify_job, by_id[tid], job, snapshot):
+            queue_verified.append(tid)
+            if _trusted(verify_s03, by_id[tid], job, snapshot):
+                s03_verified.append(tid)
     profile = {f"R60-{i:03}" for i in range(1, 41)}
-    verified = sorted(profile.intersection(verified_tasks))
+    verified = sorted(profile.intersection(s03_verified))
+    queue_profile = sorted(profile.intersection(queue_verified))
     external = sorted({dep for tid in profile for dep in by_id[tid]["depends_on"] if dep not in profile})
+    external_unknown = [d for d in external if not _trusted(verify_dependency, d, snapshot)]
     return {
-        "schema": "NOX_1C_R60_PROFILE40_EVIDENCE_V1",
+        "schema": "NOX_1C_R60_PROFILE40_EVIDENCE_V2",
         "scope": "READ_ONLY_EXISTING_ONEHOST",
         "source_tasks": 60,
         "working_profile_source_tasks": 40,
+        "os_process_target": 3,
         "workers_observed_untrusted": len(workers),
         "workers_callback_verified": verified_workers,
+        "internal_threads_observed_untrusted": threads,
         "jobs_observed_untrusted": len(jobs),
-        "profile_jobs_callback_verified": len(verified),
+        "profile_queue_jobs_callback_verified": len(queue_profile),
+        "profile_s03_receipts_independently_verified": len(verified),
         "profile_verified_task_ids": verified,
         "outside_profile_dependencies": external,
-        "native_state": "CALLBACK_VERIFIED_PARTIAL" if verified else "HOLD_NO_INDEPENDENT_NATIVE_PROOF",
-        "source_only": not bool(verified),
-        "note": "6 workers, 40 working tasks and 60 logical jobs are not interchangeable",
+        "outside_dependencies_unverified": external_unknown,
+        "native_state": "CALLBACK_VERIFIED_PARTIAL" if verified and verified_workers == 3 else "HOLD_NO_INDEPENDENT_NATIVE_PROOF",
+        "source_only": not bool(verified and verified_workers == 3),
+        "note": "Three OS PIDs, six internal threads, forty profile tasks and sixty logical tasks are distinct",
     }
 
 
 def selftest():
     rows = [{"task_id": f"R60-{i:03}", "legacy_task_id": f"NOX-V46-{i:02}",
              "depends_on": [f"R60-{i-1:03}"] if i > 1 else []} for i in range(1, 61)]
+    rows[19]["depends_on"] = ["R60-056"]
     master = {"schema": "NOX_R60_SOURCE_PLAN_V1", "tasks": rows}
-    workers = [{"id": f"worker{i}"} for i in range(6)]
-    one = {"task_id": "R60-001", "job_id": "job-1",
+    workers = [{"id": f"w{i}", "pid": 120+i, "process_starttime": 800+i,
+                "instance_id": 60509551, "origin": "existing_onehost",
+                "native_pid_verified": True, "state": "RUNNING"} for i in range(3)]
+    job = {"task_id": "R60-001", "job_id": "job1",
            "registry_sha256": "a"*64, "s03_sha256": "b"*64}
+    snapshot = {"workers": workers, "internal_threads": 6, "jobs": [job]}
     n = 0
-    def check(value, label):
+    def check(value):
         nonlocal n
-        assert value, label
+        assert value
         n += 1
-    a = reconcile(master, {"workers": workers, "jobs": [one]})
-    check(a["profile_jobs_callback_verified"] == 0 and a["workers_callback_verified"] == 0, "no callback no pass")
-    check(a["working_profile_source_tasks"] == 40 and a["source_tasks"] == 60, "count identities")
-    check(a["workers_observed_untrusted"] == 6 and a["jobs_observed_untrusted"] == 1, "distinct sources")
-    b = reconcile(master, {"workers": workers, "jobs": [one]},
-                  verify_job=lambda t,j,s: True, verify_worker=lambda w,s: True)
-    check(b["profile_jobs_callback_verified"] == 1 and b["workers_callback_verified"] == 6, "genuine callbacks")
-    check(reconcile(master, {"jobs": [one]}, verify_job=lambda t,j,s: 1)["profile_jobs_callback_verified"] == 0, "strict true")
-    check(reconcile(master, {"jobs": [{**one, "s03_sha256": "bad"}]}, verify_job=lambda t,j,s: True)["profile_jobs_callback_verified"] == 0, "S03 input")
+    none = reconcile(master, snapshot)
+    check(none["source_only"] and none["os_process_target"] == 3)
+    check(none["internal_threads_observed_untrusted"] == 6 and none["workers_callback_verified"] == 0)
+    check(none["outside_dependencies_unverified"] == ["R60-056"])
+    native = dict(verify_worker=lambda w,s: True, verify_job=lambda t,j,s: True,
+                  verify_s03=lambda t,j,s: True)
+    good = reconcile(master, snapshot, **native)
+    check(good["profile_s03_receipts_independently_verified"] == 1 and good["workers_callback_verified"] == 3)
+    check(good["native_state"] == "CALLBACK_VERIFIED_PARTIAL")
+    check(reconcile(master, {"jobs":[job]}, verify_job=lambda *a: True)["profile_s03_receipts_independently_verified"] == 0)
+    check(reconcile(master, {"jobs":[job]}, verify_job=lambda *a: True,
+                    verify_s03=lambda *a: 1)["profile_s03_receipts_independently_verified"] == 0)
+    check(reconcile(master, {"workers":[{"id":"w","pid":3,"process_starttime":1}]},
+                    verify_worker=lambda *a: True)["workers_callback_verified"] == 0)
+    check(reconcile(master, {"jobs":[job]}, verify_job=lambda *a: 1,
+                    verify_s03=lambda *a: True)["profile_queue_jobs_callback_verified"] == 0)
+    def explode(*args): raise RuntimeError("synthetic failure")
+    check(reconcile(master, {"jobs":[job]}, verify_job=explode)["profile_queue_jobs_callback_verified"] == 0)
+    check(reconcile(master, {"jobs":[job]}, verify_job=lambda *a: True,
+                    verify_s03=lambda *a: True,
+                    verify_dependency=lambda d,s: d == "R60-056")["outside_dependencies_unverified"] == [])
     def blocked(fn, expected):
         try: fn()
-        except ValueError as exc: check(str(exc) == expected, expected)
+        except ValueError as exc: check(str(exc) == expected)
         else: raise AssertionError("missing gate " + expected)
-    blocked(lambda: reconcile(master, {"workers": workers + [{"id":"worker6"}]}), "HOLD_SIX_NATIVE_WORKER_BOUND")
-    blocked(lambda: reconcile(master, {"workers": [{"id":"x"},{"id":"x"}]}), "HOLD_WORKER_IDENTITIES")
-    blocked(lambda: reconcile(master, {"jobs": [one,{**one, "job_id":"job2"}]}), "HOLD_DUPLICATED_JOB_OR_TASK")
-    blocked(lambda: reconcile(master, {"jobs": [{**one, "task_id":"R60-061"}]}), "HOLD_UNKNOWN_OR_INVALID_JOB")
-    blocked(lambda: reconcile({**master, "tasks": rows[:-1]}, {}), "HOLD_R60_MASTER_60_ROWS")
+    blocked(lambda: reconcile(master, {"workers": workers + [{"id":"w4"}]}), "HOLD_THREE_NATIVE_OS_PROCESS_BOUND")
+    blocked(lambda: reconcile(master, {"internal_threads": 7}), "HOLD_INTERNAL_THREADS_BOUND")
+    blocked(lambda: reconcile(master, {"workers": [workers[0], workers[0]]}), "HOLD_WORKER_IDENTITIES")
+    blocked(lambda: reconcile(master, {"workers": [workers[0], {**workers[1], "pid": workers[0]["pid"]}]}), "HOLD_WORKER_IDENTITIES")
+    blocked(lambda: reconcile(master, {"jobs": [job,job]}), "HOLD_DUPLICATED_JOB_OR_TASK")
+    blocked(lambda: reconcile(master, {"jobs": [{**job, "task_id":"R60-061"}]}), "HOLD_UNKNOWN_OR_INVALID_JOB")
+    blocked(lambda: reconcile({**master, "tasks":rows[:-1]}, {}), "HOLD_R60_MASTER_60_ROWS")
     bad = rows.copy(); bad[0] = {**rows[0], "legacy_task_id":"NOX-V46-02"}
-    blocked(lambda: reconcile({**master,"tasks":bad}, {}), "HOLD_R60_V46_ALIAS")
+    blocked(lambda: reconcile({**master, "tasks":bad}, {}), "HOLD_R60_V46_ALIAS")
     bad = rows.copy(); bad[0] = {**rows[0], "depends_on":["R60-001"]}
-    blocked(lambda: reconcile({**master,"tasks":bad}, {}), "HOLD_R60_DEPENDENCIES")
-    print(f"NOX_1C_R60_PROFILE40_SELFTEST_PASS {n}/{n}; no native operation")
+    blocked(lambda: reconcile({**master, "tasks":bad}, {}), "HOLD_R60_DEPENDENCIES")
+    print(f"NOX_1C_POOL3_PROFILE40_SELFTEST_PASS {n}/{n}; synthetic only, no native operation")
 
 
 def main():

@@ -1,0 +1,36 @@
+{
+  "schema": "NOX_1C_FIVE_TASKS_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1C",
+  "at_msk": "2026-11-16 06:30 Europe/Moscow",
+  "accepted_head": "566e585e1c161b5d4a6a42e5077c0e35893963d0",
+  "error_id": "NOX-P0-R60-PROFILE40-WORKER-EQUIVALENCE-20261116",
+  "root_cause": "Previous 1C audit accepted six worker IDs as if six OS executors and trusted one opaque callback for both queue and independent S03 evidence; owner target now exactly three OS processes with six independent internal threads.",
+  "changed_paths": [
+    "coordination/progress/hourly/nox_auto_1c_r60_profile40_audit.py",
+    "coordination/progress/hourly/2026-11-16T0630_AUTO_1C_POOL3_R60_RECEIPT.json"
+  ],
+  "tasks": [
+    "1 HOLD_NATIVE: one dispatcher + three OS PID/starttime/heartbeat/lease not freshly authenticated; source only; six internal threads counted separately.",
+    "2 DONE_SOURCE: immutable R60 source mapped 60 IDs and first 40, preserving R60-020 dependency on R60-056; native registration still unknown.",
+    "3 DONE_SOURCE: patched existing 1C audit to cap 3 OS processes, reject PID reuse, count 6 threads separately, reject duplicate job IDs, require independent queue and S03 callbacks; no native enqueue.",
+    "4 HOLD_NATIVE: HuntDirector.tick exists in original V27 source, but an authorized idle-tick callback and owner lease have not been read back; no duplicate scheduler.",
+    "5 HOLD_NATIVE: a live OneHost job_id + independent S03 job receipt readback is unavailable in this access context; no optimizer or job was fabricated."
+  ],
+  "test": "20/20 offline deterministic synthetic regression PASS on equivalent candidate, Python py_compile PASS; exact GitHub SHA CI not yet measured",
+  "native_status": "HOLD_NOT_AUTHORIZED_FOR_MUTATION",
+  "native_os_pids_verified": 0,
+  "native_threads_current": "UNKNOWN",
+  "native_job_ids_verified_this_run": 0,
+  "s03_receipts_verified_this_run": 0,
+  "last_historical_positive_job_count": 0,
+  "actual_queue_count": "UNKNOWN",
+  "owner_write_lease_verified": false,
+  "full_s03_optimizer_offsite_restore_verified": false,
+  "installed": [],
+  "deleted": [],
+  "freed_bytes": 0,
+  "production_modified": false,
+  "lesson": "Differentiate 3 OS PID/starttime identities, 6 internal threads, and R60 source IDs; require two separate original owner-native proofs for queue and S03; callbacks never grant rights by returning generic truthy.",
+  "next_action": "Owner-approved pinned read-only OneHost session: read original 3 PID/starttime/heartbeat/STOP/lease and R60-056 completion, queue_readback and s03_registration_lookup; permit one idle-tick HuntDirector callback only after fenced native lease and restore."
+}
