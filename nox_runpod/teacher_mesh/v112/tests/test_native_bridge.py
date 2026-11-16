@@ -16,6 +16,10 @@ from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
     _sse_delta, _timestamp, ensure_dialog_schema, register_native_v29_chat,
 )
 
+LESSON_FIXTURE=Path(__file__).parent/'fixtures/session_access_evidence_lesson.json'
+LESSON_SOURCE_COMMIT='d96e96613f1d285fde2cb32f7b526610dc2cbea9'
+LESSON_GIT_BLOB_SHA='f45bc617899b8e0365460bbfb5e1bfde0cc3e52c'
+
 class V112Tests(unittest.TestCase):
     def setUp(self):
         tmp=tempfile.TemporaryDirectory()
@@ -23,7 +27,11 @@ class V112Tests(unittest.TestCase):
         folder=Path(tmp.name)
         self.db=folder/'existing_s03.sqlite3'
         with sqlite3.connect(self.db) as db:
-            db.execute('CREATE TABLE s03_items (id TEXT PRIMARY KEY, sha256 TEXT, text TEXT, ts TEXT)')
+            db.execute('CREATE TABLE s03_items (id TEXT PRIMARY KEY, sha256 TEXT, text TEXT, ts TEXT, '
+                       'segment TEXT, provenance TEXT, meta TEXT, persona_id TEXT, verified INTEGER)')
+            db.execute('INSERT INTO s03_items VALUES(?,?,?,?,?,?,?,?,?)',(
+                'fixture-s03-shared','a'*64,'Сохранённая заметка: проект называется NOX.',
+                '2026-11-15','M2','fixture://owner-memory','{}',None,1))
         mod=types.ModuleType('s03_memory')
         mod.DB=self.db
         previous=sys.modules.get('s03_memory')
@@ -43,6 +51,7 @@ class V112Tests(unittest.TestCase):
         async def old_status():
             return {'model':'NOX PRIME 8B','ts':123}
         self.calls=[]
+        self.recall_calls=[]
         self.record=True
         self.bulk_sse=''
         async def native(payload):
@@ -93,7 +102,7 @@ class V112Tests(unittest.TestCase):
                     from datetime import datetime,timezone
                     stamp=datetime.now(timezone.utc).isoformat()
                     with sqlite3.connect(self.db) as db:
-                        db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',(
+                        db.execute('INSERT INTO s03_items(id,sha256,text,ts) VALUES(?,?,?,?)',(
                           'new-exchange-0001',hashlib.sha256((q+answer).encode()).hexdigest(),
                           'U:'+q+' A:'+answer,stamp))
                 if self.bulk_sse=='invalid_utf8_comment':
@@ -106,12 +115,23 @@ class V112Tests(unittest.TestCase):
                     # Incremental UTF-8 decoder must be finalized at EOF.
                     yield b'\xe2\x82'
             return StreamingResponse(chunks(),media_type='text/event-stream')
-        register_native_v29_chat(self.app,{
+        def recall(query,k=6):
+            self.recall_calls.append((query,k))
+            with sqlite3.connect(self.db) as db:
+                db.row_factory=sqlite3.Row
+                rows=db.execute('SELECT id,sha256,text,segment,provenance,meta,persona_id,verified '
+                                'FROM s03_items ORDER BY ts DESC LIMIT ?', (k,)).fetchall()
+            return [dict(row,verified=row['verified'] is True or row['verified']==1)
+                    for row in rows]
+        self.trusted={
           '_session_ok':lambda request:request.cookies.get('owner')=='yes',
           '_unauthorized':lambda:JSONResponse({'error':'AUTH'},status_code=401),
           '_proxy_completion':native,
           'nox_status':old_status,
-        },site_dir=self.site)
+          'recall':recall,
+          'stop_active':lambda:False,
+        }
+        register_native_v29_chat(self.app,self.trusted,site_dir=self.site)
         self.client=TestClient(self.app)
         self.addCleanup(self.client.close)
         self.cookie={'owner':'yes'}
@@ -423,11 +443,176 @@ class V112Tests(unittest.TestCase):
             json={'dialog_id':dialog,'message':'Как он называется?',
                   'history':[{'role':'assistant','content':'Подменённый ответ.'}]})
         self.assertEqual(response.status_code,200,response.text)
-        self.assertEqual(self.calls[-1]['messages'],[
+        messages=self.calls[-1]['messages']
+        self.assertEqual(messages[0]['role'],'system')
+        self.assertIn('fixture-s03-shared',messages[0]['content'])
+        self.assertIn('s03://fixture-s03-shared?sha256='+('a'*64),messages[0]['content'])
+        self.assertIn('Сохранённая заметка: проект называется NOX.',messages[0]['content'])
+        self.assertEqual(messages[1:],[
             {'role':'user','content':'Проект называется NOX.'},
             {'role':'assistant','content':'Продолжим работу над NOX.'},
             {'role':'user','content':'Как он называется?'}])
+        self.assertEqual(self.recall_calls[-1],('Как он называется?',6))
         self.assertEqual(json.loads(response.text.splitlines()[-1])['type'],'done')
+
+    def test_s03_recall_is_called_only_after_auth_and_stop_checks(self):
+        before=len(self.recall_calls)
+        denied=self.client.post('/api/nox/chat/stream',json={'message':'No auth'})
+        self.assertEqual(denied.status_code,401)
+        self.assertEqual(len(self.recall_calls),before)
+        self.trusted['stop_active']=lambda:True
+        stopped=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                 json={'message':'STOP must gate recall'})
+        self.assertEqual(stopped.status_code,503)
+        self.assertEqual(stopped.json()['error'],'HOLD_OWNER_STOP')
+        self.assertEqual(len(self.recall_calls),before)
+        self.assertEqual(self.calls,[])
+
+    def test_s03_recall_is_skipped_if_owner_session_expires_before_lookup(self):
+        checks={'count':0}
+        def expires(request):
+            checks['count']+=1
+            return checks['count']==1
+        self.trusted['_session_ok']=expires
+        before=len(self.recall_calls)
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                  json={'message':'Session expires before S03 lookup'})
+        self.assertEqual(response.status_code,401)
+        self.assertEqual(len(self.recall_calls),before)
+        self.assertEqual(self.calls,[])
+
+    def test_global_stop_cancels_inflight_stream_before_first_delta(self):
+        import asyncio
+        state={'provider_started':False}
+        self.record=False
+        self.trusted['stop_active']=lambda:state['provider_started']
+        with sqlite3.connect(self.db) as db:
+            before=db.execute('SELECT COUNT(*) FROM s03_items').fetchone()[0]
+        async def pending_provider(payload):
+            state['provider_started']=True
+            async def chunks():
+                await asyncio.sleep(.25)
+                yield 'data: '+json.dumps({'choices':[{'delta':{'content':'must be stopped'}}]})+'\n\n'
+                yield 'data: [DONE]\n\n'
+            return StreamingResponse(chunks(),media_type='text/event-stream')
+        self.trusted['_proxy_completion']=pending_provider
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                  json={'message':'Check global STOP while awaiting a token'})
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_OWNER_STOP'})
+        self.assertFalse(any(frame.get('type') in ('delta','done') or frame.get('saved')
+                             for frame in frames))
+        with sqlite3.connect(self.db) as db:
+            after=db.execute('SELECT COUNT(*) FROM s03_items').fetchone()[0]
+        self.assertEqual(after,before)
+
+    def test_global_stop_after_s03_readback_blocks_dialog_history_write(self):
+        from unittest.mock import patch
+        state={'stop':False}
+        self.record=False
+        self.trusted['stop_active']=lambda:state['stop']
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'STOP write boundary','confirmed':True}).json()['dialog_id']
+        def stop_during_readback(question,answer,started_at):
+            state['stop']=True
+            return {'record_id':'fixture-proof-after-stop'}
+        with patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge._readback',
+                   side_effect=stop_during_readback), \
+             patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge._save_exchange',
+                   side_effect=AssertionError('dialog writer called after global STOP')):
+            response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                json={'message':'Do not persist after STOP','dialog_id':dialog})
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_OWNER_STOP'})
+        self.assertFalse(any(frame.get('type')=='done' or frame.get('saved') for frame in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()
+        self.assertEqual(history['messages'],[])
+
+    def test_s03_recall_missing_fails_closed_before_provider(self):
+        self.trusted.pop('recall')
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                  json={'message':'No recall callback'})
+        self.assertEqual(response.status_code,503)
+        self.assertEqual(response.json()['error'],'HOLD_S03_RECALL_UNAVAILABLE')
+        self.assertEqual(self.calls,[])
+
+    def test_s03_context_keeps_provenance_and_excludes_other_acl_or_persona(self):
+        self.trusted['recall']=lambda query,k=6:[
+            {'id':'fixture-shared','segment':'M1','text':'shared owner note',
+             'sha256':'b'*64,'provenance':'fixture://shared','meta':'{}','verified':True},
+            {'id':'fixture-persona','segment':'M5','text':'private persona note',
+             'sha256':'c'*64,'provenance':'fixture://persona','meta':'{"persona_id":"KV"}'},
+            {'id':'fixture-foreign','segment':'M2','text':'foreign chat note',
+             'sha256':'d'*64,'provenance':'fixture://foreign',
+             'meta':'{"tenant":"other","principal":"other","chat_id":"other"}'},
+        ]
+        self.trusted['memory_scope_authorize']=lambda request,row:False
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                  json={'message':'Retrieve authorized memory'})
+        self.assertEqual(response.status_code,200,response.text)
+        system=self.calls[-1]['messages'][0]['content']
+        self.assertIn('fixture-shared',system)
+        self.assertIn('s03://fixture-shared?sha256='+('b'*64),system)
+        self.assertNotIn('private persona note',system)
+        self.assertNotIn('fixture-persona',system)
+        self.assertNotIn('foreign chat note',system)
+        self.assertNotIn('fixture-foreign',system)
+
+    def test_hash_bound_session_lesson_is_recalled_after_fixture_app_restart(self):
+        raw=LESSON_FIXTURE.read_bytes()
+        git_blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
+        self.assertEqual(git_blob,LESSON_GIT_BLOB_SHA)
+        lesson=json.loads(raw)
+        self.assertEqual(lesson['source_sha256'],
+                         hashlib.sha256(lesson['content'].encode('utf-8')).hexdigest())
+        self.assertIn('SOURCE_TESTED',lesson['content'])
+        self.assertIn('INSTALLED',lesson['content'])
+        self.assertIn('LIVE_VERIFIED',lesson['content'])
+        self.assertIn('does not prove live learning or deployment',lesson['content'])
+        self.assertFalse(lesson['training_pair_ref']['safety']['contains_credentials'])
+        self.assertEqual(lesson['training_pair_ref']['safety']['stop_gate'],'PRESERVE')
+        meta=json.dumps({'source_ref':lesson['source_ref'],
+                         'source_sha256':lesson['source_sha256'],
+                         'fixture_source':f'PR334@{LESSON_SOURCE_COMMIT}#blob:{LESSON_GIT_BLOB_SHA}'})
+        with sqlite3.connect(self.db) as db:
+            db.execute('INSERT INTO s03_items(id,sha256,text,ts,segment,provenance,meta,persona_id,verified) '
+                       'VALUES(?,?,?,?,?,?,?,?,?)',(
+                lesson['fact_key'],lesson['source_sha256'],lesson['content'],
+                lesson['valid_from'],'M2',
+                f'PR334@{LESSON_SOURCE_COMMIT}#blob:{LESSON_GIT_BLOB_SHA}',meta,None,1))
+
+        # A fresh callback/app resolves records from the same disposable DB,
+        # mirroring process restart without touching live S03 or STOP.
+        recall_after_restart=[]
+        def reopened_recall(query,k=6):
+            with sqlite3.connect(self.db) as db:
+                db.row_factory=sqlite3.Row
+                rows=db.execute('SELECT id,sha256,text,segment,provenance,meta,persona_id,verified '
+                                'FROM s03_items WHERE id=? LIMIT ?',
+                                (lesson['fact_key'],k)).fetchall()
+            values=[dict(row,verified=row['verified'] is True or row['verified']==1)
+                    for row in rows]
+            recall_after_restart.extend(values)
+            return values
+        restarted=FastAPI()
+        @restarted.get('/api/nox/status')
+        async def restarted_status():return {'model':'fixture'}
+        trusted=dict(self.trusted,recall=reopened_recall)
+        register_native_v29_chat(restarted,trusted,site_dir=self.site)
+        with TestClient(restarted) as client:
+            response=client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                 json={'message':'What source is this note from?'})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(len(recall_after_restart),1)
+        system=self.calls[-1]['messages'][0]['content']
+        self.assertIn(lesson['content'],system)
+        self.assertIn(lesson['source_ref'],system)
+        self.assertIn(lesson['source_sha256'],system)
+        self.assertIn('s03://'+lesson['fact_key']+'?sha256='+lesson['source_sha256'],system)
+        self.assertIn(LESSON_SOURCE_COMMIT,meta)
+        self.assertIn(LESSON_GIT_BLOB_SHA,meta)
+        self.assertIn('SOURCE_TESTED',system)
 
     def test_dialog_context_is_recent_bounded_complete_pairs(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
@@ -519,3 +704,4 @@ class V112Tests(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
