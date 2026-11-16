@@ -238,7 +238,18 @@
           };
           const {answer,receipt}=await consume(upstream,async t=>{
             trailing+=t;
-            if(!segmenter)return;
+            if(!segmenter){
+              // Without a segmenter, emit only a known-safe ASCII prefix.
+              // Keep one glyph of lookahead so subsequent combining marks
+              // cannot tear a grapheme across native delta boundaries.
+              const ascii=trailing.match(/^[\x20-\x7e]{2,}/);
+              if(ascii){
+                const safe=ascii[0].slice(0,-1);
+                trailing=trailing.slice(safe.length);
+                await emitPieces(safe);
+              }
+              return;
+            }
             const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
             trailing=glyphs.pop()||'';
             if(glyphs.length)await emitPieces(glyphs.join(''));
