@@ -389,6 +389,53 @@ class NativeLifecycleTests(unittest.TestCase):
         with self.assertRaises(lifecycle.LifecycleHold):
             lifecycle.patch_dispatcher(updated, '0' * 64, pins)
 
+    def test_complete_native_binding_starts_in_clean_python_without_test_imports(self):
+        repair = module('owner_native_repair')
+        media = module('owner_media_runtime')
+        plans = module('owner_task_plans')
+        names = ('owner_dispatcher_mentor', 'owner_component_tasks', 'owner_media_runtime',
+                 'owner_task_plans', 'owner_task_lifecycle', 'owner_event_outbox', 'owner_senior_gateway')
+        scripts = self.root / 'scripts'; scripts.mkdir(exist_ok=True)
+        for name in names:
+            (scripts / (name + '.py')).write_bytes((HERE / (name + '.py')).read_bytes())
+        pins = {name: lifecycle.file_sha(scripts / (name + '.py')) for name in
+                ('owner_media_runtime', 'owner_task_plans', 'owner_event_outbox', 'owner_senior_gateway')}
+        pins['owner_mentor'] = lifecycle.file_sha(scripts / 'owner_dispatcher_mentor.py')
+        source = mentor.transform_dispatcher(repair.patch_dispatcher(FIXTURE.read_text()))
+        source = media.patch_dispatcher_media(source, hashlib.sha256(source.encode()).hexdigest())
+        source = plans.patch_dispatcher(source, hashlib.sha256(source.encode()).hexdigest())
+        source = lifecycle.patch_dispatcher(source, hashlib.sha256(source.encode()).hexdigest(), pins)
+        (scripts / 'nox_dispatcher_t855u.py').write_text(source)
+        runner = self.root / 'clean_start.py'
+        runner.write_text('''import builtins, pathlib, sys
+root = pathlib.Path(__file__).parent
+scripts = str(root / 'scripts')
+sys.path.insert(0, scripts)
+original_import = builtins.__import__
+def scoped_import(name, globals=None, locals=None, fromlist=(), level=0):
+    # Relocate filesystem roots only; preserve the actual module bytes and
+    # production import order, with no unittest/importlib.util preloading.
+    if name.startswith('owner_') and sys.path[0] != scripts:
+        sys.path.insert(0, scripts)
+    value = original_import(name, globals, locals, fromlist, level)
+    if name.startswith('owner_') and hasattr(value, 'ROOT'):
+        value.ROOT = root
+    return value
+builtins.__import__ = scoped_import
+path = root / 'scripts/nox_dispatcher_t855u.py'
+namespace = {'__name__': 'clean_native_binding', '__file__': str(path)}
+assert 'owner_senior_gateway' not in sys.modules
+exec(compile(path.read_bytes(), str(path), 'exec'), namespace)
+assert all(namespace.get(key) for key in ('_owner_media_bound', '_owner_plans_bound', '_owner_lifecycle_bound'))
+assert namespace['WORKERS'] == 6
+assert callable(namespace['owner_senior_gateway'].consult_plan)
+print('SIX_WORKER_NATIVE_BINDERS_READY')
+''')
+        result = subprocess.run([sys.executable, '-I', '-S', str(runner)],
+                                capture_output=True, text=True, timeout=8)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), 'SIX_WORKER_NATIVE_BINDERS_READY')
+
     def test_reviewed_plan_gateway_and_lifecycle_complete_one_native_six_branch_dag(self):
         mentor.record_experience, mentor.verify_success = self.original_experience, self.original_verify
         repair = module('owner_native_repair')

@@ -10,7 +10,7 @@ from __future__ import annotations
 import ast
 import copy
 import hashlib
-import importlib
+import importlib.util
 import json
 import math
 import os

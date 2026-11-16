@@ -21,7 +21,7 @@ PINS={
  'owner_event_outbox.py':'af4edd2c34e4d46902ccf914b5be9c845a95d682d34f92a08cd69357c4b69c00',
  'owner_media_runtime.py':'ca8ce2466d0ee4321e17bbf2dc26a6f6396bafb93f3df361a1b35a7e8e3347e5',
  'owner_task_plans.py':'7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773',
- 'owner_task_lifecycle.py':'a6d1828de919526480565657114594dfcc23112902debb708ded9fd71c762434',
+ 'owner_task_lifecycle.py':'020fcee6d1267189811c51da031761aa9ae681a3a2bcd567fbbc150c33db8605',
  'owner_senior_gateway.py':'1fd1556009ce62fa806bdee0a9a34577d276344e728fe9d94b33f44eb151346e',
  'owner_s03_diagnostic.py':'a06e45cfe58b6350f5d67787ab13b834a168f78f910574db51af7635e8c969f1',
  'owner_task_lifecycle.json':'70d600e861a1e9908d06691790e54e2abcd814b460144ece2af3d2b6a54e0e80',
@@ -214,7 +214,10 @@ def main():
   restarted_at=time.time()
   for name,observed in controllers.items():
    if observed['state']=='RUNNING':
-    if helper.command(['supervisorctl','start',name],40)[0] or helper.service_state(name)['state'] not in ('STARTING','RUNNING'):fail('HOLD_UPGRADE_CONTROLLER_START')
+    rc=helper.command(['supervisorctl','start',name],40)[0]
+    observed_state=helper.service_state(name)['state']
+    step('controller_start_attempt',{'service':name,'returncode':rc,'state':observed_state})
+    if rc or observed_state not in ('STARTING','RUNNING'):fail('HOLD_UPGRADE_CONTROLLER_START')
   if helper.service_state('nox-dispatcher-t855u')['state']!='RUNNING':fail('HOLD_UPGRADE_DISPATCHER_NOT_RUNNING')
   if helper.health().get('8081')!=200:fail('HOLD_UPGRADE_CHAT_HEALTH')
   result['state']='INSTALLED_NATIVE_ACCEPTANCE_PENDING';save()
