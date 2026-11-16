@@ -1,0 +1,85 @@
+{
+  "schema": "NOX_UNIVERSAL_RELAY_V10",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2D",
+  "at_utc": "2026-11-16T18:59:09.525Z",
+  "at_msk": "2026-11-16T21:59:09.525+03:00",
+  "priority": "OWNER_P0_MODEL_REPLACEMENT",
+  "source_head_at_patch": "4746ec37ac959d19d3a45a635881ca7f46daf0b9",
+  "source_commit": "d65939dc2ce07158c3edb93de506dad5f26f94b9",
+  "test_commit": "b8dd358918cd367db40281527a6e57e2b1e79214",
+  "source_blob_before": "5495d08d21ed89f3daf055142ada2190d2947090",
+  "source_blob_after": "fcf1755bbd807115059d543bcbb8d2cb17f69b2e",
+  "test_blob_after": "17b231a309067a936ac5fcdb2376632b7e0f6ba0",
+  "ci": {
+    "run_id": 43934175482,
+    "job_id": 133534256490,
+    "conclusion": "success",
+    "scope": "SOURCE_ONLY",
+    "tests_executed": 100,
+    "unit_suites": [
+      60,
+      4,
+      18,
+      18
+    ],
+    "three_new_tests": [
+      "partial_write_drain",
+      "zero_progress_hold",
+      "stop_between_short_writes"
+    ]
+  },
+  "root_cause": "Existing DeepSeek range append used output.write(chunk); wrote += len(chunk) without checking actual unbuffered FileIO write count; short writes could misreport useful bytes and interrupt safe resume.",
+  "fix": "Drain returned short writes fully, count only actually written bytes, recheck original owner STOP/lease before every remaining write, HOLD if zero progress",
+  "rollback": "Restore exact prior Git blob by per-file CAS after new HEAD inspection; original native service unchanged",
+  "five_outcomes": [
+    {
+      "task_id": "S2-07",
+      "status": "SOURCE_TESTED_NATIVE_HOLD",
+      "evidence": "CI source-only; no native bytes transferred or five shard download completed"
+    },
+    {
+      "task_id": "S1-01",
+      "status": "HOLD_FRESH_NATIVE",
+      "evidence": "18:51 UTC owner read-only inspect blocked Vast API 429 before guest SSH; historical 18:32 UTC only"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_STOP_LEASE",
+      "evidence": "manual owner STOP/MAINTENANCE observed historical; no fresh owner writer lease or process start_ticks"
+    },
+    {
+      "task_id": "S1-07",
+      "status": "HOLD_RESTORE",
+      "evidence": "No independently verified S03/Genesis/checkpoint25 optimizer/scaler/RNG restore"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD_REAL_MODEL_INFERENCE",
+      "evidence": "Maya identity historical only; no actual DeepSeek inference on two V100 or Resonance SSE E2E"
+    }
+  ],
+  "WEIGHTS": {
+    "new_successful_optimizer_updates": 0,
+    "new_global_step": null,
+    "new_loss": null,
+    "checkpoint_restore_verified": false,
+    "model_promoted": false
+  },
+  "KNOWLEDGE": {
+    "new_hunter_s03_recall": 0,
+    "native_s03_job_id": null
+  },
+  "DISPATCHER_RESOURCES": {
+    "fresh_native_pid_start_ticks": [],
+    "owner_lease": null,
+    "new_downloaded_bytes": 0,
+    "new_deleted_bytes": 0,
+    "new_restarts": 0,
+    "owner_stop": "PRIOR_PRESENT_NOT_FRESH",
+    "historical_native_inspect": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43929707415",
+    "native_429": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43932618696",
+    "remaining_deepseek_unique_bytes_expected": 248834257920
+  },
+  "next": "After Vast 429 cooldown request one authorized native read-only inspect; verify owner STOP/lease, independent restore, 248834257920 B seekable placement+reserve, only then remaining shards and Maya original Resonance E2E. No Qwen restart."
+}
