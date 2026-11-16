@@ -92,9 +92,15 @@ def preserve_or_write(path, raw, mode):
             w.write(raw)
             w.flush()
             os.fsync(w.fileno())
-        if path.exists() or path.is_symlink():
+        # Atomic no-clobber publication: the preflight check alone is racy.
+        # A concurrent owner-created file (including a dangling symlink) must
+        # never be replaced, even between check and final publication.
+        try:
+            os.link(temp, path, follow_symlinks=False)
+        except FileExistsError:
             fail("CONCURRENT_FILE_CREATE")
-        os.replace(temp, path)
+        except OSError:
+            fail("ATOMIC_PUBLISH_UNAVAILABLE")
         dfd = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
         try:
             os.fsync(dfd)
