@@ -5,6 +5,7 @@ creates CUDA contexts, downloads weights, or changes production state.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import stat
@@ -44,6 +45,14 @@ def _path_has_symlink_component(path: Path) -> bool:
     return False
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(8 * 1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def observe_packer_output(model_file_paths):
     """Derive the pack output from six real manifest files and lstat it without creating anything."""
     if not isinstance(model_file_paths, (tuple, list)) or len(model_file_paths) != len(EXPECTED_FILES):
@@ -68,8 +77,14 @@ def observe_packer_output(model_file_paths):
             return {"state": "HOLD_PACKER_MODEL_INPUT_MISSING"}
         if not stat.S_ISREG(st.st_mode):
             return {"state": "HOLD_PACKER_MODEL_INPUT_NOT_PINNED"}
-        if st.st_size != PINNED_FILE_FACTS[path.name][0]:
+        expected_bytes, expected_sha256 = PINNED_FILE_FACTS[path.name]
+        if st.st_size != expected_bytes:
             return {"state": "HOLD_PACKER_MODEL_INPUT_NOT_PINNED"}
+        try:
+            if _sha256_file(path) != expected_sha256:
+                return {"state": "HOLD_PACKER_MODEL_SHA256_MISMATCH"}
+        except OSError:
+            return {"state": "HOLD_PACKER_MODEL_SHA256_UNREADABLE"}
     output = model_dir / "maya-ds4"
     try:
         output.lstat()
@@ -133,6 +148,11 @@ def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
         "packer_model_dir": packer["model_dir"],
         "packer_output_dir": packer["output_dir"],
         "packer_non_clobber_precondition": True,
+        "model_content_sha256": "VERIFIED_AGAINST_PINNED_FACTS",
+        "model_tensor_inventory": "NOT_TESTED_BY_SOURCE_PREFLIGHT",
+        "runtime_abi": "NOT_TESTED",
+        "sm70_execution": "NOT_TESTED",
+        "runtime_compatibility": "NOT_TESTED",
         "command_contract": ["--pack", "--gpus 0,1", "--tp 2",
                              "--max-context", "--reserve-mib", "--serve"],
     }
