@@ -46,8 +46,11 @@ def workers():
                or not re.fullmatch(r'nox-agent-[0-9]{2}',row['id'])
                or row.get('status') not in ('idle','busy') for row in rows):return result
         if len({row['id'] for row in rows})!=len(rows):return result
+        # A single busy worker with an empty/invalid task_id is not evidence
+        # of a claimed job. Continue to reject duplicate active claims.
         claims=[row.get('current_task',{}).get('id') for row in rows if isinstance(row.get('current_task'),dict)]
-        if len(set(claims))!=len(claims):return result
+        if (any(not isinstance(claim,str) or not claim.strip() or len(claim)>100 for claim in claims)
+                or len(set(claims))!=len(claims)):return result
         if any((row['status']=='busy')!=isinstance(row.get('current_task'),dict) for row in rows):return result
         for row in rows:
             if not isinstance(row,dict):continue
