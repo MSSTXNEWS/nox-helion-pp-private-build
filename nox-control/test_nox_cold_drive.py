@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -25,6 +26,9 @@ cmd=args[0]
 if cmd=='copyto':
     src,dst=loc(args[1]),loc(args[2])
     if src.name==os.environ.get('FAIL_NAME'):sys.exit(9)
+    if os.environ.get('TEST_STALL_COPY'):
+        Path(os.environ['TEST_COPY_STARTED']).write_text(str(os.getpid()))
+        time.sleep(5)
     time.sleep(0.06)
     dst.parent.mkdir(parents=True,exist_ok=True)
     if '--immutable' in args and dst.exists() and dst.read_bytes()!=src.read_bytes():sys.exit(10)
@@ -191,6 +195,55 @@ class ColdTests(unittest.TestCase):
                 cold.load(args)
             self.assertFalse((Path(ram_dir)/'model.gguf').exists())
             self.assertEqual(list(Path(ram_dir).glob('.nox-load-*')),[])
+
+    def test_owner_stop_cancels_inflight_ram_copy_without_publish(self):
+        if not Path('/dev/shm').is_dir():
+            self.skipTest('tmpfs unavailable')
+        with tempfile.TemporaryDirectory(prefix='nox-ram-cancel-',dir='/dev/shm') as ram_dir:
+            remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+            remote.parent.mkdir(parents=True,exist_ok=True)
+            remote.write_bytes(self.src.read_bytes())
+            marker=self.root/'copy-started'
+            stop=self.root/'STOP.flag'
+            def trigger_stop():
+                for _ in range(100):
+                    if marker.exists():
+                        stop.touch()
+                        return
+                    time.sleep(.02)
+            args=cold.parser().parse_args([
+                'load','--remote','fixture:cold/model.gguf','--ram-dir',ram_dir,
+                '--sha256',cold.sha256(self.src),'--reserve-gib','1','--timeout','4'])
+            watcher=threading.Thread(target=trigger_stop,daemon=True)
+            started=time.monotonic()
+            with patch.dict(os.environ,{'TEST_STALL_COPY':'1','TEST_COPY_STARTED':str(marker)}), \
+                 patch.object(cold,'OWNER_STOP_PATHS',(stop,)), \
+                 patch.object(cold,'memory_budget',return_value=self.src.stat().st_size+1), \
+                 self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+                watcher.start()
+                cold.load(args)
+            watcher.join(timeout=2)
+            self.assertTrue(marker.exists())
+            self.assertTrue(stop.exists())
+            self.assertLess(time.monotonic()-started,2.8)
+            self.assertFalse((Path(ram_dir)/'model.gguf').exists())
+            self.assertEqual(list(Path(ram_dir).glob('.nox-load-*')),[])
+
+    def test_owner_stop_interrupts_stalled_rclone_metadata(self):
+        remote=Path(os.environ['TEST_REMOTE'])/'cold'/'model.gguf'
+        remote.parent.mkdir(parents=True,exist_ok=True)
+        remote.write_bytes(self.src.read_bytes())
+        checks=[0]
+        def gate():
+            checks[0]+=1
+            if checks[0]>=4:
+                raise RuntimeError('HOLD_OWNER_STOP')
+        started=time.monotonic()
+        with patch.dict(os.environ,{'TEST_STALL_SIZE':'1'}), \
+             patch.object(cold,'assert_owner_stop_clear',side_effect=gate), \
+             self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+            cold.command(['rclone','size','--json','fixture:cold/model.gguf'],timeout=4)
+        self.assertLess(time.monotonic()-started,2.8)
 
     def test_symlink_source_rejected(self):
         p=self.root/'link.gguf';p.symlink_to(self.src)
