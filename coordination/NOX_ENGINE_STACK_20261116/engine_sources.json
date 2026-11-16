@@ -1,0 +1,11 @@
+{
+  "schema": "NOX_ENGINE_SOURCES_V1",
+  "sources": [
+    {"name":"maya","repo":"https://github.com/mw00/project-maya.git","commit":"c81fab6c9d63cf69b928f92460e0a662b28aa9ec","source_max_bytes":134217728,"git_max_bytes":67108864},
+    {"name":"strata","repo":"https://github.com/Niko1221/Strata.git","commit":"d2f096475817d4666c364c820b0ca830f751cfc5","source_max_bytes":268435456,"git_max_bytes":134217728},
+    {"name":"llama.cpp","repo":"https://github.com/ggml-org/llama.cpp.git","commit":"74bca3950054eed1795f525cb9cf06bfe796492d","source_max_bytes":536870912,"git_max_bytes":268435456},
+    {"name":"bnk","repo":"https://github.com/christ-pher/bnk.git","commit":"68fa9f3be8501973d05e8f6cc1c387e15f432f66","source_max_bytes":33554432,"git_max_bytes":16777216},
+    {"name":"rclone","repo":"https://github.com/rclone/rclone.git","commit":"b0ef5f6a6eca641a6bfb55bc05ef1595f4105d07","source_max_bytes":134217728,"git_max_bytes":67108864},
+    {"name":"prism-bonsai","repo":"https://github.com/PrismML-Eng/Bonsai-demo.git","commit":"de058d0bfcb846cf0d8374eae8623376708673ed","source_max_bytes":134217728,"git_max_bytes":67108864}
+  ]
+}

@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_ready_followup.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_engine_download.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -113,7 +113,8 @@ def run_native(action,request_id):
                      'nox_runpod/teacher_mesh/v137/owner_self_observation.py',
                      'coordination/onepass/nox-v135-resonance-owner-bridge.js',
                      'coordination/onepass/nox-v137-owner-self-status.js',
-                     'coordination/NOX_STORAGE_STREAMING_20261115/download_manifest.json'):
+                     'coordination/NOX_STORAGE_STREAMING_20261115/download_manifest.json',
+                     'coordination/NOX_ENGINE_STACK_20261116/engine_sources.json'):
             p=Path(path)
             if p.is_file():assets[p.name]=base64.b64encode(p.read_bytes()).decode('ascii')
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
