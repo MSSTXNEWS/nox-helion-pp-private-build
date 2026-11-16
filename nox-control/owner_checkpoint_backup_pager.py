@@ -183,6 +183,9 @@ def page(transfer_id,manifest_sha,index,request,source):
             if stopped():hold('HOLD_CHECKPOINT_PAGER_OWNER_STOP')
             size=min(core.CHUNK_CHARS,value['ciphertext_chars']-chunk*core.CHUNK_CHARS)
             raw=os.pread(fd,size,chunk*core.CHUNK_CHARS)
+            # A blocking read may finish after the owner revokes the transfer.
+            # Do not stage even one post-STOP ciphertext chunk for emission.
+            if stopped():hold('HOLD_CHECKPOINT_PAGER_OWNER_STOP')
             require(len(raw)==size and digest(raw)==value['chunk_sha256'][chunk],
                     'HOLD_CHECKPOINT_PAGER_CHUNK_SHA')
             text=raw.decode('ascii')
@@ -200,6 +203,7 @@ def page(transfer_id,manifest_sha,index,request,source):
         'envelope_sha256':value['header']['envelope_sha256'],'action_context':context,
         'ciphertext_only':True,'files_written':0,'training_control_performed':False}})
     require(len(core.canonical(rows))<390000,'HOLD_CHECKPOINT_PAGER_PAGE_OUTPUT_BOUND')
+    if stopped():hold('HOLD_CHECKPOINT_PAGER_OWNER_STOP')
     return rows
 
 
