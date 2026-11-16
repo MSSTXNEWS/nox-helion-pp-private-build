@@ -158,20 +158,33 @@ def inspect(path: Path, *, fixture=False):
             origins = db.execute('SELECT count(*) FROM nox_s03_origins').fetchone()[0] if 'nox_s03_origins' in names else 0
             imported = 0
             unscoped_imports = 0
+            invalid_meta_rows = 0
             persona_scan_complete = items <= AUDIT_ROW_LIMIT
             for (meta,) in db.execute('SELECT meta FROM s03_items LIMIT 20001'):
+                # Fail closed: malformed/non-object metadata must not hide imports.
                 try:
-                    value = json.loads(meta) if isinstance(meta, str) else {}
+                    value = json.loads(meta) if isinstance(meta, str) else None
                 except (ValueError, TypeError):
-                    value = {}
-                if isinstance(value, dict) and value.get('history_import') is True:
+                    value = None
+                if not isinstance(value, dict):
+                    invalid_meta_rows += 1
+                    continue
+                # "true" is not a reliable import marker; do not silently skip it.
+                if 'history_import' in value and not isinstance(value['history_import'], bool):
+                    invalid_meta_rows += 1
+                    continue
+                if value.get('history_import') is True:
                     imported += 1
-                    if not isinstance(value.get('persona_id'), str) or not value['persona_id']:
+                    persona_id = value.get('persona_id')
+                    if not isinstance(persona_id, str) or not persona_id.strip():
                         unscoped_imports += 1
-            results.append(gate(4, 'HOLD' if unscoped_imports or not persona_scan_complete else 'DONE_SOURCE',
-                                'IMPORTED_PERSONA_SCOPE_MISSING_FAIL_CLOSED' if unscoped_imports else 'METADATA_PERSONA_CHECK_ONLY_NOT_ACL_E2E',
+            metadata_safe = not (invalid_meta_rows or unscoped_imports or not persona_scan_complete)
+            results.append(gate(4, 'DONE_SOURCE' if metadata_safe else 'HOLD',
+                                ('S03_METADATA_UNPARSABLE_OR_INVALID_FAIL_CLOSED' if invalid_meta_rows
+                                 else 'IMPORTED_PERSONA_SCOPE_MISSING_FAIL_CLOSED' if unscoped_imports
+                                 else 'METADATA_PERSONA_CHECK_ONLY_NOT_ACL_E2E'),
                                 imported_history_items=imported, imported_without_persona_scope=unscoped_imports,
-                                persona_scan_complete=persona_scan_complete,
+                                invalid_meta_rows=invalid_meta_rows, persona_scan_complete=persona_scan_complete,
                                 provenance_origin_links=origins, provenance_payload_exported=False))
         else:
             results += [gate(3, 'HOLD', 'NO_FTS_OR_VECTOR_SCHEMA'), gate(4, 'HOLD', 'NO_ORIGIN_PERSONA_SCHEMA')]
@@ -241,6 +254,30 @@ def selftest():
         assert invalid_model[2]['invalid_or_missing_vector_model_ids'] == 1
         assert not invalid_model[2]['active_model_sha_identity_valid']
         assert invalid_model[2]['state'] == 'HOLD'
+        # Malformed JSON and whitespace-only persona scopes cannot give false PASS.
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE s03_items SET meta=? WHERE id=?',
+                       ('{"history_import":true,"persona_id":"  "}', 'item'))
+            db.execute('UPDATE s03_items SET meta=? WHERE id=?',
+                       ('{broken-json', 'second'))
+        bad_meta = inspect(path, fixture=True)[3]
+        assert bad_meta['state'] == 'HOLD' and bad_meta['invalid_meta_rows'] == 1
+        assert bad_meta['imported_without_persona_scope'] == 1
+        assert bad_meta['reason'] == 'S03_METADATA_UNPARSABLE_OR_INVALID_FAIL_CLOSED'
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE s03_items SET meta=? WHERE id=?',
+                       ('{"history_import":"true","persona_id":"p"}', 'item'))
+        assert inspect(path, fixture=True)[3]['invalid_meta_rows'] == 2
+        # Positive source-only case: complete metadata and matching model IDs.
+        with sqlite3.connect(path) as db:
+            db.execute('UPDATE s03_items SET meta=? WHERE id=?',
+                       ('{"history_import":true,"persona_id":"p"}', 'item'))
+            db.execute('UPDATE s03_items SET meta=? WHERE id=?', ('{}', 'second'))
+            db.execute('UPDATE nox_s03_vectors SET model_identity=? WHERE item_id=?',
+                       ('a'*64, 'second'))
+        clean = inspect(path, fixture=True)
+        assert clean[2]['state'] == 'DONE_SOURCE'
+        assert clean[3]['state'] == 'DONE_SOURCE' and clean[3]['invalid_meta_rows'] == 0
         wal = path.with_name(path.name + '-wal')
         wal.write_bytes(b'SYNTHETIC_NO_REAL_S03')
         wal.chmod(0o644)
