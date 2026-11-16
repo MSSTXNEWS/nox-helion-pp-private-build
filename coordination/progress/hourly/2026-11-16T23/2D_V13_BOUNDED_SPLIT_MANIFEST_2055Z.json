@@ -1,0 +1,73 @@
+{
+  "schema": "NOX_V13_2D_PREP_OUTCOMES_V1",
+  "instructions_version": "0.0.6",
+  "slot": "NOX_2D",
+  "at_utc": "2026-11-16T20:58:21.034Z",
+  "at_msk": "2026-11-16T23:58:21.034+03:00",
+  "scope": "Existing Vast.ai #60509551; original NOX PREP source only; no production app/trainer restart; no native writer/STOP mutation",
+  "owner_priority": "MODEL_WEB_WOW_V13",
+  "master": "coordination/NOX_PRIME_SIX_RELAY_20261115.md#16-owner-v13-full-offline-integration-and-drive-reuse-before-production-restart",
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "head_when_receipted": "a2e5a5c58d643af7d6229f270b07063021509888",
+  "task_outcomes": [
+    {
+      "task_id": "V13-03",
+      "status": "SOURCE_TESTED",
+      "result": "Existing offline Drive split archive assembler bounded to 1MiB JSON, rejects nonfinite JSON, excessive parts and nonobject roots before copy; old no-clobber and full per-part/archive SHA checks retained. 12/12 normal and 12/12 -O regression cases on GitHub CI. D2/D3 real payload SHA still HOLD."
+    },
+    {
+      "task_id": "V13-10",
+      "status": "SOURCE_MANIFEST_UPDATED",
+      "result": "Updated original V13 dependency admission manifest with source/test/workflow CAS blobs and exact CI; unchanged D2 331718151 B four parts, D3 3831295823 B 39 parts, neither native installed nor content-reverified."
+    },
+    {
+      "task_id": "V13-01",
+      "status": "HOLD_CURRENT_OWNER_LEASE",
+      "result": "No fresh in-slot authorized native lease/read-only two PID/start_ticks sweeps. Prior owner read-only 2026-11-16T20:09:37Z reported STOP/maintenance, five Supervisor stopped, 8081 no listener, GPUs 0/0 MiB. Do not infer still true now."
+    },
+    {
+      "task_id": "V13-02",
+      "status": "HOLD_INDEPENDENT_RESTORE",
+      "result": "No new verified independent restore of S03 SQLite/WAL, Genesis/history/skills and unique checkpoint optimizer/scaler/RNG and web rollback; prohibit deletion."
+    },
+    {
+      "task_id": "V13-05",
+      "status": "HOLD_NATIVE_SEEKABLE_STORAGE",
+      "result": "No owner-auth persistent random-access mount >=248834257920 B plus reserve; last source-backed root free 43158585344 B vs 248828477216 B missing GGUF. No download claim."
+    }
+  ],
+  "source_evidence": {
+    "source_path": "nox-control/v13_split_archive.py",
+    "source_preimage_blob": "d761c21516c4159eafb92b0a1e29a24104af822f",
+    "source_blob": "a66d3d5a6ddf7220bc2511fe5852036e0180a658",
+    "test_path": "nox-control/test_v13_split_archive.py",
+    "test_blob": "270c2789b94851bfb18bef96d76d265edfc588b9",
+    "ci_workflow": ".github/workflows/nox-hybrid-2d-source-acceptance.yml",
+    "workflow_blob": "327e75b97e36882031f731ec15a64068990cda46",
+    "ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43954743059",
+    "ci_job_id": 133606189374,
+    "ci_result": "SUCCESS 40+47+12=99 tests, repeated under python -O => 198 tests PASS; V13 specifically 12+12 PASS",
+    "source_commits": [
+      "ab5258b0e334251b74652b0f76cf01252eb792a5",
+      "693a6352cac5e739d618ca859773fcd6366749ab",
+      "a8814d5d1ca9ce42657c5debdf540d300ba3b285"
+    ],
+    "manifest_path": "coordination/NOX_V13_PREP_DEPENDENCY_ADMISSION_20261116.json",
+    "manifest_blob": "d77baf9c1f86c18e8d225bbf77555405b0d9e859",
+    "manifest_commit": "a2e5a5c58d643af7d6229f270b07063021509888"
+  },
+  "native_proof": {
+    "new_owner_native_pid_startticks": [],
+    "new_native_jobs": [],
+    "new_successful_optimizer_updates": 0,
+    "new_S03_write_readback_recall": 0,
+    "model_payload_downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "production_restarts": 0,
+    "owner_stop_reset": false,
+    "native_installed": false,
+    "live_model_verified": false
+  },
+  "rollback": "GitHub exact source/test/workflow preimage blobs with CAS; no OneHost rollback required because this slot made no server mutations",
+  "next_ready": "Owner native lease plus two independent STOP/PID/GPU samples and independently restored offsite S03/checkpoints; prove persistent seekable quota and full GGUF SHA; stage existing Drive packs only after byte-level verification and isolated CP311/cu126 dual-V100 FP16 smoke before Maya TP2 and one original WEB cutover."
+}
