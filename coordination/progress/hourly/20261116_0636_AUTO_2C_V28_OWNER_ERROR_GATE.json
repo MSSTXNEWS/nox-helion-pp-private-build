@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_AUTO_2C_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_2C",
+  "at_msk": "2026-11-16 06:36 Europe/Moscow",
+  "accepted_head": "6c49a1d3ea95c5b1f683d1174a23bd74c7d5e140",
+  "commit_status": "PENDING_GITHUB_BRANCH_CAS_AND_CI",
+  "source_sha_after": "COMMIT_CARRYING_THIS_RECEIPT",
+  "error_id": "NOX-P1-V28-CURRICULUM-SELF-ATTESTED-ERROR-RECEIPT-20261116",
+  "symptom": "V28 Curriculum DNA accepted syntactically valid self-asserted benchmark errors and unpinned source receipt hashes as verified learning gaps.",
+  "root_cause": "_valid_record validated record booleans/hash shape but did not compare source_receipt_sha256 to an authenticated native owner allowlist.",
+  "changed_paths": [
+    "nox_runpod/teacher_mesh/nox_curriculum_dna_v28.py",
+    "nox_runpod/teacher_mesh/tests/test_v28_future_lab.py",
+    "coordination/NOX_AUTOCYCLE_ERRORS.jsonl",
+    "coordination/NOX_AUTOCYCLE_HANDOFF.md",
+    "coordination/NOX_PRIME_6_RELAY_RECEIPTS.jsonl",
+    "coordination/progress/hourly/20261116_0636_AUTO_2C_V28_OWNER_ERROR_GATE.json"
+  ],
+  "tasks": [
+    {
+      "n": 1,
+      "status": "DONE_SOURCE_INSPECTION",
+      "detail": "Existing HuntDirector V27 callbacks/policy STOP/source-head and quota verified from original source; no second hunter."
+    },
+    {
+      "n": 2,
+      "status": "HOLD_NATIVE",
+      "detail": "Original signed_policy/native_stop/owner_state/quota/enqueue_existing/train_candidate callbacks lack current authenticated owner-native readback/lease; no queue mutation."
+    },
+    {
+      "n": 3,
+      "status": "SOURCE_PATCHED_TEST_PENDING",
+      "detail": "Curriculum V28 now filters by owner-approved native error receipt digest; new four source regressions; Matchmaker/Arena untouched."
+    },
+    {
+      "n": 4,
+      "status": "HOLD_NATIVE_SOURCE_DATA",
+      "detail": "No independently approved real RU/ES licensed deidentified source-disjoint train/dev/holdout manifest; none generated from fixtures."
+    },
+    {
+      "n": 5,
+      "status": "HOLD_NATIVE",
+      "detail": "No fenced owner writer lease, PID/job ID, STOP/offsite restore or S03 result readback; no research job enqueued, no learning claimed."
+    }
+  ],
+  "source_test": "PENDING_GITHUB_CI_ON_EXACT_COMMIT; source-pattern-contract inspected",
+  "verified_native_job_ids": null,
+  "verified_s03_job_receipts": null,
+  "actual_native_queue_count": "UNKNOWN_NOT_READ",
+  "training_started": false,
+  "optimizer_steps_verified": null,
+  "model_weights_changed": false,
+  "installed_native_paths": [],
+  "deleted_native_paths": [],
+  "freed_bytes_verified": 0,
+  "lesson": "Require native-owner-pinned signed receipt allowlist before transforming independent benchmark error records into curriculum proposals; source booleans are not owner-native proof.",
+  "next_action": "Owner-authenticated read-only original HuntDirector error receipt/S03 lookup and dispatcher PID/STOP/lease; only then bind one bounded research task without new scheduler."
+}

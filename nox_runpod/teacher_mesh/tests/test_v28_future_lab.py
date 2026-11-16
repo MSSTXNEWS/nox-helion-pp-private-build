@@ -39,7 +39,8 @@ def bench(domain,model=STUDENT,correct=54,total=100):
             "observed_at_utc":NOW.isoformat()}
 def curriculum_policy():
     return {"signed_by_native_owner":True,"active_student_sha256":STUDENT,
-            "stop_requested":False,"max_proposals":3}
+            "stop_requested":False,"max_proposals":3,
+            "accepted_error_receipt_shas":[RECEIPT]}
 def advice(ident="teacher1",text="Independent tested solution with evidence",score=.9):
     return {"teacher_id":ident,"origin":"isolated_frozen_teacher","text":text,
             "text_sha256":hashlib.sha256(text.encode()).hexdigest(),
@@ -111,6 +112,31 @@ class CurriculumTests(unittest.TestCase):
     def test_training_denied_on_source_split_tamper(self):
         r=bench("coding");r["source_separated"]=False
         self.assertEqual(build_curriculum([r],curriculum_policy(),now=NOW)["proposals"],[])
+    def test_unpinned_benchmark_error_cannot_generate_curriculum(self):
+        p=curriculum_policy()
+        p["accepted_error_receipt_shas"]=["f"*64]
+        out=build_curriculum([bench("coding",correct=10)],p,now=NOW)
+        self.assertEqual(out["state"],"HOLD_NO_INDEPENDENT_BENCHMARK_GAPS")
+        self.assertEqual(out["proposals"],[])
+    def test_missing_native_owner_error_allowlist_fails_closed(self):
+        p=curriculum_policy();p.pop("accepted_error_receipt_shas")
+        out=build_curriculum([bench("reasoning",correct=10)],p,now=NOW)
+        self.assertEqual(out["state"],"HOLD_OWNER_ERROR_RECEIPT_ALLOWLIST")
+    def test_malformed_owner_error_allowlist_fails_closed(self):
+        for invalid in (None,{},[],["invalid"],["f"*64,None],["g"*64]):
+            with self.subTest(invalid=invalid):
+                p=curriculum_policy();p["accepted_error_receipt_shas"]=invalid
+                self.assertEqual(build_curriculum([bench("coding")],p,now=NOW)["state"],
+                                 "HOLD_OWNER_ERROR_RECEIPT_ALLOWLIST")
+    def test_only_owner_pinned_receipts_count_in_mixed_results(self):
+        p=curriculum_policy()
+        good=bench("coding",correct=20)
+        rogue=bench("instruction",correct=1)
+        rogue["source_receipt_sha256"]="f"*64
+        out=build_curriculum([good,rogue],p,now=NOW)
+        self.assertEqual(out["state"],"CURRICULUM_PROPOSED_NOT_TRAINED")
+        self.assertEqual(out["evaluation_records_accepted"],1)
+        self.assertEqual([x["domain"] for x in out["proposals"]],["coding"])
     def test_owner_native_stop_blocks_curriculum(self):
         p=curriculum_policy();p["stop_requested"]=True
         self.assertEqual(build_curriculum([bench("instruction")],p,now=NOW)["state"],"HOLD_NATIVE_STOP")

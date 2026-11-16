@@ -66,7 +66,18 @@ def build_curriculum(records:list[dict], policy:dict, *, now:datetime|None=None)
     total_budget=policy.get("max_proposals",3)
     if type(total_budget) is not int or not 1<=total_budget<=5:
         return {"schema":SCHEMA,"state":"HOLD_CURRICULUM_BUDGET","proposals":[]}
-    verified=[r for r in records if _valid_record(r,student_sha,now)]
+    # Only owner-pinned original S03/benchmark error receipts may become
+    # measured learning gaps. Record-provided independent_replay/heldout flags
+    # and a syntactically valid digest alone do not prove native provenance.
+    accepted=policy.get("accepted_error_receipt_shas")
+    if (not isinstance(accepted,list) or not 1<=len(accepted)<=400
+            or any(not isinstance(x,str) or SHA.fullmatch(x) is None
+                   for x in accepted)):
+        return {"schema":SCHEMA,"state":"HOLD_OWNER_ERROR_RECEIPT_ALLOWLIST","proposals":[]}
+    accepted_set=set(accepted)
+    verified=[r for r in records
+              if _valid_record(r,student_sha,now)
+              and r["source_receipt_sha256"] in accepted_set]
     latest_by_domain={}
     for r in verified:
         domain=r["domain"];t=_timestamp(r["observed_at_utc"])

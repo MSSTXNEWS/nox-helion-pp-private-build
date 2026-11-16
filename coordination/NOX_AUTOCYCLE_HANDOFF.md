@@ -666,3 +666,10 @@ Reproduced source-level cross-profile dependency `R60-020 → R60-056` in immuta
 Stable error_id `NOX-P0-R60-PROFILE40-WORKER-EQUIVALENCE-20261116`. Root cause: task/profile boundary crosses canonical dependency and source/worker/proof levels were conflated. Lesson: fail closed without original queue + S03 exact native readback; require verified heartbeat/lease and R60-056 predecessor. SOURCE_TESTED for prototype, committed SHA CI pending, native HOLD. No installs, stops, deletes or freed bytes.
 
 One next action → AUTO 2C: bind original owner-native queue_readback and s03_registration_lookup to the read-only R60-001..040 audit, confirm R60-056 dependency and six PID/heartbeat/leases before owner-fenced queue admission. No second scheduler/backend.
+
+
+### AUTO 2C · 2026-11-16 06:36 Europe/Moscow · NOX-P1-V28-CURRICULUM-SELF-ATTESTED-ERROR-RECEIPT-20261116 · SOURCE PATCH / LIVE HOLD
+- Accepted latest HEAD 6c49a1d3ea95c5b1f683d1174a23bd74c7d5e140. HuntDirector V27 is the original callback-only, one-tick source implementation, not a second hunter.
+- Confirmed existing V28 Curriculum DNA would accept syntactically well-formed self-attested error receipts; added native-owner-pinned receipt allowlist and four synthetic regressions. No native error receipt, source-disjoint live corpus, GPU PID/STOP/lease or verified S03 research result was available. **SOURCE CI pending exact SHA**, no native enqueue/start/deploy/cleanup. Changed source: nox_runpod/teacher_mesh/nox_curriculum_dna_v28.py; test: nox_runpod/teacher_mesh/tests/test_v28_future_lab.py; own receipt: coordination/progress/hourly/20261116_0636_AUTO_2C_V28_OWNER_ERROR_GATE.json.
+- Lesson: owner-signed policy must bind real S03/benchmark receipt IDs; never infer a true measured gap from benchmark record flags. Native job count UNKNOWN, training/optimizer updates UNKNOWN; freed_bytes=0.
+- One next action → Owner-authenticated read-only original HuntDirector error receipt/S03 lookup and dispatcher PID/STOP/lease; only then bind one bounded research task without new scheduler.
