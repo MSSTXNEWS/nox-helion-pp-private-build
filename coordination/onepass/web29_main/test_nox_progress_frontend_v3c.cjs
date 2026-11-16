@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const content=fs.readFileSync(__dirname+'/site/pc/progress/nox-progress.js','utf8');
 const ctx={URL,Date,Number,Intl,Set,console};ctx.globalThis=ctx;
 vm.runInNewContext(content,ctx,{filename:'nox-progress.js'});
-const {normalize,filterEvents,safeURL,color,eligibleHourCards,nativeFresh}=ctx.NoxEvolution;
+const {normalize,filterEvents,safeURL,color,eligibleHourCards,nativeFresh,nativeGroupValue,expireNative}=ctx.NoxEvolution;
 const A='a'.repeat(64);
 const hours=[{id:'hour-20261116T01',start:'2026-11-16T01:00:00Z',end:'2026-11-16T02:00:00Z',closed:true,
    readback_verified:false,readback_sha256:A,readback_state:'HOLD_PERSISTED_HOUR_MISSING',groups:{}}];
