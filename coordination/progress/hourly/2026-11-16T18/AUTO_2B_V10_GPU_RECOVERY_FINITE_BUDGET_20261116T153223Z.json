@@ -1,0 +1,62 @@
+{
+  "schema": "NOX_PRIME_UNIVERSAL_V10_RECEIPT",
+  "instructions_version": "0.0.6",
+  "slot": "2B",
+  "stream": "UNIVERSAL",
+  "at_utc": "2026-11-16T15:32:23Z",
+  "at_msk": "2026-11-16T18:32:23+03:00",
+  "source_head_before": "35687b05edbedb6714d97020d1973aa8dca04bb2",
+  "source_preimage_blob": "ae02b8513dcfcc9a3c102d61afc3c2db06826d22",
+  "test_preimage_blob": "7dfb5ee6e1cbc4b1fc3c6cd4898cedfd15b81f8b",
+  "tasks": [
+    {
+      "task_id": "S1-08",
+      "status": "SOURCE_PATCHED_CI_PENDING",
+      "claim": "SOURCE_SCOPE_ONLY",
+      "reason": "V43 third auto-restart/NaN nonfinite backoff",
+      "evidence_path": "nox_runpod/teacher_mesh/v43/nox/resource_brain.py"
+    },
+    {
+      "task_id": "S1-03",
+      "status": "HOLD_NATIVE",
+      "reason": "owner MODEL_UPDATE STOP historically present; current native writer lease/STOP and 3 OS PID start_ticks not verified"
+    },
+    {
+      "task_id": "S1-04",
+      "status": "HOLD_NATIVE",
+      "reason": "no current authorized CPU quota, RAM/cgroup, V100x2 VRAM temperatures, SSD/shm readback"
+    },
+    {
+      "task_id": "S2-07",
+      "status": "HOLD_NATIVE",
+      "reason": "248834257920 unique DeepSeek model bytes require verified seekable storage plus reserve, five missing complete GGUF shard SHA and single download claim"
+    },
+    {
+      "task_id": "S3-04",
+      "status": "HOLD_NATIVE",
+      "reason": "Maya actual 2xV100 inference/SSE and RU/ES original UI TTFT/tokens/sec/p95/STOP not verified"
+    }
+  ],
+  "WEIGHTS": {
+    "successful_optimizer_updates_this_run": 0,
+    "checkpoint_restore_this_run": false,
+    "new_training_started": false,
+    "model_cutover": false
+  },
+  "KNOWLEDGE": {
+    "hunter_to_licensed_source_s03_recall_new_verified": 0,
+    "canonical_s03_mutated": false
+  },
+  "DISPATCHER+RESOURCES": {
+    "new_verified_native_pid_start_ticks": null,
+    "owner_stop_historical": "OWNER_MODEL_UPDATE",
+    "writer_lease_now": "UNKNOWN",
+    "new_downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "restarts": 0,
+    "model_installs": 0
+  },
+  "test_claim": "EXACT_REGRESSION_ADDED_NATIVE_HOLD_CI_PENDING",
+  "rollback": "git revert exact commit under CAS; no filesystem operations on OneHost",
+  "next_ready": "Owner-auth READ-ONLY STOP/lease/5 Supervisor/actual PIDs/resources plus verified >=248834257920 B seekable storage and independent offsite restore. Keep OWNER_STOP."
+}

@@ -321,6 +321,31 @@ class TestSafeGPUControl(unittest.TestCase):
         self.inv['restart_attempts']['1']=3
         self.assertEqual(plan_gpu_recovery(self.inv,1)['state'],
                          'HOLD_RESTART_BACKOFF_OR_BUDGET')
+    def test_gpu_recovery_two_attempt_limit_and_finite_backoff(self):
+        # A NaN cooldown used to bypass elapsed < 60; the former default
+        # allowed a third restart despite the owner two-per-hour policy.
+        self.inv['unexpected_owner_process_failure']={'1':True}
+        self.inv['restart_attempts']={'1':0}
+        self.inv['seconds_since_restart']={'1':75}
+        self.inv['checkpoint_optimizer_restorable']=True
+        self.inv['offsite_restore_verified']=True
+        for bad in (float('nan'), float('inf'), float('-inf'), True):
+            with self.subTest(elapsed=repr(bad)):
+                self.inv['seconds_since_restart']['1']=bad
+                self.assertEqual(plan_gpu_recovery(self.inv,1)['state'],
+                                 'HOLD_RESTART_BACKOFF_OR_BUDGET')
+        self.inv['seconds_since_restart']['1']=75
+        self.inv['restart_attempts']['1']=2
+        self.assertEqual(plan_gpu_recovery(self.inv,1)['state'],
+                         'HOLD_RESTART_BACKOFF_OR_BUDGET')
+        self.inv['restart_attempts']['1']=0
+        self.assertEqual(plan_gpu_recovery(self.inv,1,max_attempts=3)['state'],
+                         'HOLD_RESTART_BACKOFF_OR_BUDGET')
+        self.assertEqual(plan_gpu_recovery(self.inv,1,max_attempts=True)['state'],
+                         'HOLD_RESTART_BACKOFF_OR_BUDGET')
+        self.assertEqual(plan_gpu_recovery(self.inv,1)['state'],
+                         'OWNER_NATIVE_RECOVERY_ADMITTED')
+
     def test_owned_recovery_needs_restored_progress_and_clean_readback(self):
         self.inv['unexpected_owner_process_failure']={'0':True,'1':True}
         self.inv['restart_attempts']={'0':0,'1':0}

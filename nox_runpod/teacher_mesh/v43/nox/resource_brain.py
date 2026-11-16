@@ -6,6 +6,7 @@ STOP, idempotent receipt and independent readback before actual state change.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+import math
 
 @dataclass(frozen=True)
 class Policy:
@@ -324,7 +325,7 @@ def execute_gpu_stop(plan, *, authorize, latch_stop, quiesce,
                 'manual_stop_latched':latched}
 
 
-def plan_gpu_recovery(snapshot, gpu_id, *, max_attempts=3):
+def plan_gpu_recovery(snapshot, gpu_id, *, max_attempts=2):
     """Only unexpected failure may auto-recover. Manual STOP never auto-resumes."""
     if not isinstance(snapshot,_Mapping) or snapshot.get('native_verified') is not True:
         return {'state':'HOLD_NATIVE_RECOVERY_INVENTORY','performed':False}
@@ -339,8 +340,10 @@ def plan_gpu_recovery(snapshot, gpu_id, *, max_attempts=3):
         return {'state':'HOLD_NO_OWNED_CRASH_OR_LEASE','performed':False}
     attempts=snapshot.get('restart_attempts',{}).get(str(gpu_id))
     elapsed=snapshot.get('seconds_since_restart',{}).get(str(gpu_id))
-    if (type(attempts) is not int or not 0<=attempts<max_attempts
-            or type(elapsed) not in (int,float) or elapsed<60):
+    if (type(max_attempts) is not int or not 1<=max_attempts<=2
+            or type(attempts) is not int or not 0<=attempts<max_attempts
+            or type(elapsed) not in (int,float) or not math.isfinite(elapsed)
+            or elapsed<60):
         return {'state':'HOLD_RESTART_BACKOFF_OR_BUDGET','performed':False}
     if gpu_id==0 and snapshot.get('s03_restorable') is not True:
         return {'state':'HOLD_S03_RESTORE_UNVERIFIED','performed':False}
