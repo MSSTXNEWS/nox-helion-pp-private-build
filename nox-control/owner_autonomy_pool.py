@@ -1,6 +1,6 @@
 """NOX autonomous process-pool admission for the EXISTING owner dispatcher.
 
-One user-facing NOX; NORMAL activates three dedicated *OS processes* and
+One user-facing NOX; NORMAL activates two dedicated *OS processes* and
 FORSAZH activates six. A task batch may contain any number of typed tasks;
 only a bounded ready window is admitted on each tick. Existing owner-native
 callbacks do actual process lifecycle, task claiming and S03 persistence.
@@ -17,7 +17,7 @@ from collections import deque
 from collections.abc import Mapping
 
 SCHEMA = 'NOX_AUTONOMY_PROCESS_POOL_V1'
-MODES = {'NORMAL': 3, 'FORSAZH': 6}
+MODES = {'NORMAL': 2, 'FORSAZH': 6}
 PRIORITIES = {'P0': 0, 'P1': 1, 'P2': 2, 'P3': 3}
 ID = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
 SHA = re.compile(r'^[a-f0-9]{64}$')
@@ -201,7 +201,7 @@ def tick_existing_dispatcher(namespace, state, *, mode):
 
 def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
                  gpu_available=False, verified_native=True):
-    """Default three process claims, boost six; independent from queue length."""
+    """Normal two process claims, FORSAZH six; independent from queue length."""
     if mode not in MODES:
         raise AutoHold('HOLD_MODE')
     if verified_native is not True:
