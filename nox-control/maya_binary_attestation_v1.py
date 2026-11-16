@@ -24,6 +24,8 @@ def _has_symlink_component(path: Path) -> bool:
         try:
             if stat.S_ISLNK(current.lstat().st_mode):
                 return True
+        except FileNotFoundError:
+            return False
         except OSError:
             return True
     return False
