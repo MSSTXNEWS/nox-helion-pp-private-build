@@ -316,6 +316,45 @@ class ForgeRecipeTest(unittest.TestCase):
         self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
                          "VERIFIED_SOURCE_CORPUS")
 
+    def test_manifest_duplicate_json_key_rejected_even_if_values_agree(self):
+        manifest_path=self.corpus/"manifest.json"
+        before=manifest_path.read_text("utf8")
+        manifest_path.write_text(before[:-1]+', "counts": {"train": 1, "holdout": 1}}')
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_UNREADABLE")
+
+    def test_manifest_nonfinite_undeclared_value_is_not_accepted(self):
+        manifest_path=self.corpus/"manifest.json"
+        m=json.loads(manifest_path.read_text("utf8"))
+        m["evaluation_score"]=float("nan")
+        manifest_path.write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_UNREADABLE")
+
+    def test_rehashed_row_cannot_hide_duplicate_nested_role(self):
+        file=self.corpus/"train.jsonl"
+        raw=file.read_text("utf8").replace('"role": "user"',
+              '"role": "assistant", "role": "user"',1)
+        file.write_text(raw,encoding="utf8")
+        manifest_path=self.corpus/"manifest.json"
+        m=json.loads(manifest_path.read_text("utf8"))
+        m["train.jsonl_sha256"]=hashlib.sha256(raw.encode("utf8")).hexdigest()
+        manifest_path.write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_JSONL_FORMAT")
+
+    def test_rehashed_row_cannot_hide_duplicate_nested_content(self):
+        file=self.corpus/"train.jsonl"
+        raw=file.read_text("utf8").replace('"content": "safe train"',
+              '"content": "wrong content", "content": "safe train"',1)
+        file.write_text(raw,encoding="utf8")
+        manifest_path=self.corpus/"manifest.json"
+        m=json.loads(manifest_path.read_text("utf8"))
+        m["train.jsonl_sha256"]=hashlib.sha256(raw.encode("utf8")).hexdigest()
+        manifest_path.write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_JSONL_FORMAT")
+
     def test_legacy_manifest_cannot_silently_ignore_dev(self):
         (self.corpus/"dev.jsonl").write_text("extra dev data")
         self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],

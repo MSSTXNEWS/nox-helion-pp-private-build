@@ -39,6 +39,23 @@ def _file_sha256_streamed(file:Path)->str:
             hasher.update(chunk)
     return hasher.hexdigest()
 
+def _reject_duplicate_json_keys(pairs):
+    """A rehashed corpus must not hide conflicting JSON property values."""
+    result={}
+    for key,value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON property")
+        result[key]=value
+    return result
+
+def _reject_nonfinite_json_constant(value):
+    raise ValueError("nonfinite JSON constant: "+value)
+
+def _strict_json_loads(value):
+    """Use one unambiguous JSON interpretation for manifest and TRL rows."""
+    return json.loads(value,object_pairs_hook=_reject_duplicate_json_keys,
+                      parse_constant=_reject_nonfinite_json_constant)
+
 MAX_CORPUS_ROW_BYTES=65536
 MAX_CORPUS_ROWS=50000
 
@@ -87,7 +104,7 @@ def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]
                 return {"state":"HOLD_CORPUS_ROW_TOO_LARGE"}
             digest.update(raw)
             try:
-                row=json.loads(raw)
+                row=_strict_json_loads(raw)
             except (ValueError,UnicodeDecodeError):
                 return {"state":"HOLD_CORPUS_JSONL_FORMAT"}
             fp=_prompt_fingerprint(row)
@@ -139,7 +156,7 @@ def verify_corpus(corpus_dir:str)->dict:
         mf=p/"manifest.json"
         if not mf.is_file() or mf.is_symlink():
             return {"state":"HOLD_CORPUS_MANIFEST_FILE"}
-        manifest=json.loads(mf.read_text("utf-8"))
+        manifest=_strict_json_loads(mf.read_text("utf-8"))
         if not isinstance(manifest,dict):
             return {"state":"HOLD_CORPUS_SCHEMA"}
         schema=manifest.get("schema")
