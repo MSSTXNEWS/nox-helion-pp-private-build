@@ -23,7 +23,7 @@ test('preserve earlier reduced-motion and original D02 source locks',()=>{
 test('stage asset pin tracks the exact reviewed CSS source',()=>{
  const bytes=Buffer.from(css);
  const blob=createHash('sha1').update('blob '+bytes.length+'\0').update(bytes).digest('hex');
- assert.equal(blob,'d65629a3e35894899a4a3cd983f2499918919030');
+ assert.equal(blob,'1e55b7ad84c4d05d91350d4c75f2f436c53895bc');
  assert.ok(stage.includes(blob));
 });
 
@@ -31,4 +31,13 @@ test('compact mobile composer fits short viewport without losing the three panel
  assert.match(css,/@media \(max-width:760px\) and \(max-height:860px\)/);
  assert.match(css,/height:max\(220px,calc\(100dvh - 126px\)\)!important/);
  assert.match(css,/min-height:220px!important/);
+});
+
+test('short desktop keeps all three original panels and a scrollable conversation',()=>{
+ assert.match(css,/@media \(min-width:1200px\) and \(max-height:600px\)/);
+ assert.match(css,/height:max\(260px,calc\(100dvh - 175px\)\)!important/);
+ assert.match(css,/grid-template-rows:minmax\(0,1fr\)!important/);
+ assert.match(css,/\.chat-layout > \.chat-conversation\{grid-column:2!important;grid-row:1!important;\}/);
+ assert.match(css,/\.chat-layout > \.chat-telemetry-panel\{grid-column:3!important;grid-row:1!important;\}/);
+ assert.match(css,/flex:1 1 0!important;min-height:0!important;overflow:auto!important/);
 });

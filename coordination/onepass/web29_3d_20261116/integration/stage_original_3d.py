@@ -62,7 +62,7 @@ def stage(src: Path, overlay: Path, dest: Path):
    source=overlay / Path(path).name
    if not source.is_file():raise RuntimeError('HOLD_MISSING_3D_ASSET_'+str(source))
    changes[path]=source.read_bytes()
-  expected={'site/nox-motion-idle-loader.js':'3c7c2d9cce1b18e7ed825981b0c01ee19da2e240','site/nox-cinematic-accessibility-3d.css':'d65629a3e35894899a4a3cd983f2499918919030'}
+  expected={'site/nox-motion-idle-loader.js':'3c7c2d9cce1b18e7ed825981b0c01ee19da2e240','site/nox-cinematic-accessibility-3d.css':'1e55b7ad84c4d05d91350d4c75f2f436c53895bc'}
   for path,digest in expected.items():
    data=changes[path]
    git_blob=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
