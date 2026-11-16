@@ -11,6 +11,10 @@ spec.loader.exec_module(m)
 
 
 class StoragePreflightTests(unittest.TestCase):
+    def test_profile_scope_is_only_three_documented_paths(self):
+        self.assertEqual(m.PROFILES, ('/root/nox/state/cold_drive.conf',
+                                    '/root/.config/rclone/rclone.conf', '/root/nox/rclone.conf'))
+
     def test_mount_output_cannot_include_network_credentials_or_options(self):
         raw = '1 0 8:1 / /mnt/other\\040disk rw,password=EXAMPLE - cifs //user:EXAMPLE@server/share username=user,password=EXAMPLE\n'
         rows = m.mount_rows(raw)

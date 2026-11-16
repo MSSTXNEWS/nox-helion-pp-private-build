@@ -13,7 +13,7 @@ import time
 
 ROOT = Path('/root/nox')
 SAFE_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-PROFILES = ('/root/nox/state/cold_drive.conf', '/root/.config/rclone/rclone.conf')
+PROFILES = ('/root/nox/state/cold_drive.conf', '/root/.config/rclone/rclone.conf', '/root/nox/rclone.conf')
 REMOTE = 'nox_drive:'
 FOLDER = '1f6d8mwMtR6Be8xMMiA5EpLZI7B47IS2l'
 SENTINEL = 'deepseek_iq2_xxs_manifest.json'
