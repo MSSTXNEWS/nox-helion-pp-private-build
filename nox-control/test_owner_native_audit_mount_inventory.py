@@ -44,6 +44,17 @@ class MountInventoryTests(unittest.TestCase):
         self.assertEqual(data['mountpoint'],'/')
         self.assertEqual(data['filesystem'],'overlay')
         self.assertEqual(data['available_bytes'],102400)
+    def test_remote_filesystems_keep_type_but_skip_statvfs(self):
+        for filesystem in ('nfs','fuse.s3fs'):
+            calls=[]
+            text=f'1 0 0:42 / /data rw - {filesystem} remote rw'
+            result=audit._mount_inventory_from_text(text,lambda p:calls.append(p),lambda p:True)
+            data=next(x for x in result['storage_paths'] if x['path']=='/data')
+            self.assertTrue(data['exists'])
+            self.assertEqual(data['filesystem'],filesystem)
+            self.assertIsNone(data['total_bytes'])
+            self.assertIsNone(data['available_bytes'])
+            self.assertEqual(calls,[])
     def test_exact_data_overlay_mount_is_reported(self):
         text='1 0 0:42 / /data rw - overlay overlay rw'
         result=audit._mount_inventory_from_text(text,lambda p:Stat(),lambda p:True)
