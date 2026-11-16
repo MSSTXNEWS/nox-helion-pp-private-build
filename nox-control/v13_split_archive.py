@@ -19,6 +19,8 @@ import stat
 CHUNK = 1024 * 1024
 RESERVE = 256 * 1024 * 1024
 SHA_RE = re.compile(r"[0-9a-f]{64}\Z")
+MAX_MANIFEST_BYTES = 1024 * 1024
+MAX_PARTS = 1024
 
 
 def _reject_duplicate_keys(pairs):
@@ -43,6 +45,27 @@ def _hash(x):
     return x
 
 
+def _reject_nonfinite(value):
+    raise ValueError("HOLD_MANIFEST_NONFINITE_JSON")
+
+
+def _read_manifest_bounded(path):
+    """No unbounded JSON allocation from a Drive/staging manifest."""
+    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+    with os.fdopen(fd, 'rb') as f:
+        if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):
+            raise ValueError("HOLD_MANIFEST_NOT_REGULAR")
+        payload = f.read(MAX_MANIFEST_BYTES + 1)
+    if len(payload) > MAX_MANIFEST_BYTES:
+        raise ValueError("HOLD_MANIFEST_TOO_LARGE")
+    data = json.loads(payload.decode('utf-8'),
+                      object_pairs_hook=_reject_duplicate_keys,
+                      parse_constant=_reject_nonfinite)
+    if not isinstance(data, dict):
+        raise ValueError("HOLD_INVALID_MANIFEST_ROOT")
+    return data
+
+
 def _digest(path):
     h = hashlib.sha256()
     fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
@@ -61,8 +84,7 @@ def assemble(manifest_path: Path, *, before_publish=None, reserve=RESERVE):
     """
     manifest_path = Path(manifest_path).resolve(strict=True)
     root = manifest_path.parent
-    m = json.loads(manifest_path.read_text(encoding='utf-8'),
-                   object_pairs_hook=_reject_duplicate_keys)
+    m = _read_manifest_bounded(manifest_path)
     if m.get('schema') != 'NOX_SPLIT_ARCHIVE_V1':
         raise ValueError("HOLD_UNKNOWN_MANIFEST_SCHEMA")
     name = _name(m['archive'])
@@ -70,6 +92,10 @@ def assemble(manifest_path: Path, *, before_publish=None, reserve=RESERVE):
     total, parts = m['archive_bytes'], m['parts']
     if type(total) is not int or total <= 0 or not isinstance(parts, list) or not parts:
         raise ValueError("HOLD_INVALID_MANIFEST_SIZE")
+    if len(parts) > MAX_PARTS:
+        raise ValueError("HOLD_TOO_MANY_ARCHIVE_PARTS")
+    if any(not isinstance(p, dict) for p in parts):
+        raise ValueError("HOLD_INVALID_ARCHIVE_PART")
     known = set()
     for p in parts:
         f = _name(p['file'])
