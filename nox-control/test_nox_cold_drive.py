@@ -193,6 +193,48 @@ class ColdTests(unittest.TestCase):
             result=cold.evict_verified(row,self.manifest(),str(self.root/'separate-mount'))
         self.assertFalse(self.src.exists());self.assertTrue(result['source_deleted'])
         self.assertEqual(result['source_logical_bytes_removed'],row['size'])
+
+    def test_owner_stop_blocks_eviction_before_restore(self):
+        row=cold.copy_verified(self.job)
+        stop=self.root/'STOP.flag';stop.touch()
+        with patch.object(cold,'OWNER_STOP_PATHS',(stop,)),patch.object(
+                cold,'independent_restore') as restore,self.assertRaisesRegex(
+                RuntimeError,'HOLD_OWNER_STOP'):
+            cold.evict_verified(row,self.manifest(),str(self.root/'separate-mount'))
+        restore.assert_not_called()
+        self.assertTrue(self.src.exists())
+
+    def test_owner_stop_during_restore_blocks_unlink(self):
+        row=cold.copy_verified(self.job)
+        stop=self.root/'STOP.flag'
+        def restore_then_stop(*args,**kwargs):
+            stop.touch()
+            return True
+        with patch.object(cold,'OWNER_STOP_PATHS',(stop,)),patch.object(
+                cold,'independent_restore',side_effect=restore_then_stop),patch.object(
+                cold,'assert_not_open'),self.assertRaisesRegex(RuntimeError,'HOLD_OWNER_STOP'):
+            cold.evict_verified(row,self.manifest(),str(self.root/'separate-mount'))
+        self.assertTrue(self.src.exists())
+
+    def test_owner_stop_before_unlink_blocks_eviction(self):
+        row=cold.copy_verified(self.job)
+        stop=self.root/'STOP.flag'
+        original=cold.fresh_manifest
+        visits=[0]
+        def checked_manifest(*args,**kwargs):
+            visits[0]+=1
+            result=original(*args,**kwargs)
+            if visits[0]==2:
+                stop.touch()
+            return result
+        with patch.object(cold,'OWNER_STOP_PATHS',(stop,)),patch.object(
+                cold,'independent_restore',return_value=True),patch.object(
+                cold,'assert_not_open'),patch.object(
+                cold,'fresh_manifest',side_effect=checked_manifest),self.assertRaisesRegex(
+                RuntimeError,'HOLD_OWNER_STOP'):
+            cold.evict_verified(row,self.manifest(),str(self.root/'separate-mount'))
+        self.assertTrue(self.src.exists())
+
     def test_evict_without_independent_restore_never_unlinks(self):
         row=cold.copy_verified(self.job)
         with patch.object(cold,'assert_not_open'), self.assertRaisesRegex(RuntimeError,'HOLD_INDEPENDENT_RESTORE_REQUIRED'):
