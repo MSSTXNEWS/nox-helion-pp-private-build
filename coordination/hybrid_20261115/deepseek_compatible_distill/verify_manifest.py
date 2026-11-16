@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import re
+from pathlib import Path
 
 SCHEMA = "NOX_DEEPSEEK_TEACHER_STUDENT_SOURCE_MANIFEST_V1"
 HEX64 = re.compile(r"^[a-f0-9]{64}$")
@@ -92,9 +93,31 @@ def validate(manifest: dict) -> dict:
     checkpoint = manifest.get("checkpoint", {})
     evaluation = manifest.get("evaluation", {})
     gates = manifest.get("native_gates", {})
+    scorer = evaluation.get("scoring_harness", {})
 
     if manifest.get("training_enabled") is not False:
         blockers.append("TRAINING_MUST_REMAIN_DISABLED")
+    if (scorer.get("path") != "score_ru_es_holdout.py"
+            or scorer.get("status") != "SOURCE_TESTED_NOT_RUN"
+            or scorer.get("training_started") is not False
+            or scorer.get("promotion_authorized") is not False
+            or scorer.get("paired_same_dataset_required") is not True
+            or scorer.get("required_languages") != ["ru", "es"]
+            or scorer.get("refusal_positive_and_negative_per_language") is not True
+            or scorer.get("safety_case_per_language") is not True
+            or type(scorer.get("bootstrap_iterations")) is not int
+            or not 1000 <= scorer.get("bootstrap_iterations", 0) <= 50000):
+        blockers.append("QUALITY_SCORER_CONTRACT_INVALID")
+    try:
+        scorer_source_sha = hashlib.sha256(
+            Path(__file__).with_name("score_ru_es_holdout.py").read_bytes()
+        ).hexdigest()
+    except OSError:
+        scorer_source_sha = None
+    if (not isinstance(scorer.get("source_sha256"), str)
+            or not HEX64.fullmatch(scorer.get("source_sha256", ""))
+            or scorer.get("source_sha256") != scorer_source_sha):
+        blockers.append("QUALITY_SCORER_SOURCE_SHA256_MISMATCH")
     if (teacher.get("format") != "GGUF" or teacher.get("training_target") is not False
             or teacher.get("inference_only") is not True
             or method.get("teacher_role") != "GGUF inference and teacher-response generation only"):
@@ -226,6 +249,36 @@ def validate(manifest: dict) -> dict:
 
     if evaluation.get("status") != "VERIFIED_IMPROVEMENT":
         blockers.append("HOLDOUT_EVALUATION_NOT_ACCEPTED")
+    if evaluation.get("status") == "VERIFIED_IMPROVEMENT":
+        if (scorer.get("status") != "SCORED_NUMERIC_ONLY"
+                or scorer.get("numeric_improvement_gate") is not True
+                or scorer.get("promotion_authorized") is not False):
+            blockers.append("QUALITY_SCORER_REPORT_NOT_ACCEPTED")
+        bindings = (
+            ("dataset_sha256", "fixed_ru_es_case_set_sha256"),
+            ("baseline_model_sha256", "baseline_student_sha256"),
+            ("candidate_model_sha256", "candidate_adapter_sha256"),
+            ("evaluator_sha256", "evaluator_source_sha256"),
+            ("report_sha256", "evaluation_report_sha256"),
+        )
+        if any(scorer.get(left) != evaluation.get(right) for left, right in bindings):
+            blockers.append("QUALITY_SCORER_REPORT_BINDING_MISMATCH")
+        score_hashes = ("baseline_scores_sha256", "candidate_scores_sha256")
+        if any(not isinstance(scorer.get(key), str) or not HEX64.fullmatch(scorer[key])
+               for key in score_hashes):
+            blockers.append("QUALITY_SCORER_SCORE_HASH_MISSING")
+        scorer_metrics = scorer.get("ru_es_metrics")
+        eval_metrics = evaluation.get("before_after_metrics")
+        if not isinstance(scorer_metrics, dict) or not isinstance(eval_metrics, dict):
+            blockers.append("QUALITY_SCORER_METRICS_MISSING")
+        else:
+            for language in ("ru", "es"):
+                sm = scorer_metrics.get(language, {})
+                em = eval_metrics.get(language, {})
+                if (not isinstance(sm, dict) or not isinstance(em, dict)
+                        or sm.get("baseline_composite_mean") != em.get("baseline")
+                        or sm.get("candidate_composite_mean") != em.get("candidate")):
+                    blockers.append("QUALITY_SCORER_METRICS_BINDING_MISMATCH")
     if evaluation.get("quality_reviewed") is not True:
         blockers.append("QUALITY_REVIEW_REQUIRED")
     if evaluation.get("frozen_holdout_same_for_baseline_and_candidate") is not True:
@@ -288,3 +341,4 @@ if __name__ == "__main__":
     print(json.dumps(result, sort_keys=True))
     if result["state"] != "HOLD":
         raise SystemExit("Unexpectedly cleared owner and training gates.")
+
