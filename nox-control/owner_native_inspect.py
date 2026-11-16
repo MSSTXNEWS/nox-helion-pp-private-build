@@ -467,12 +467,15 @@ def pinned_python_path_status(py, venv_root=Path('/root/venv_volta'),
                 config_stat.st_size > 65536):
             return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
         entry_stat = py.lstat()
-        if not (stat.S_ISLNK(entry_stat.st_mode) or
-                stat.S_ISREG(entry_stat.st_mode)):
+        if (entry_stat.st_uid != trusted_uid or
+                not (stat.S_ISLNK(entry_stat.st_mode) or
+                     stat.S_ISREG(entry_stat.st_mode))):
             return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
         resolved = py.resolve(strict=True)
         target_stat = resolved.stat()
-        approved_local = resolved == venv_root / 'bin' / 'python'
+        approved_local = (
+            resolved.parent == venv_root / 'bin' and
+            re.fullmatch(r'python(?:3(?:\\.[0-9]{1,2})?)?', resolved.name) is not None)
         approved_system = (
             resolved.parent in system_dirs and
             re.fullmatch(r'python3(?:\\.[0-9]{1,2})?', resolved.name) is not None)
