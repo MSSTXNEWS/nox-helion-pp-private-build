@@ -712,4 +712,50 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertEqual(lock_path.read_bytes(),b'EXISTING')
         self.assertFalse((self.dst/(self.name+'.part')).exists())
 
+    def test_short_disk_write_drains_exact_bytes_before_receipt(self):
+        # Unbuffered regular-file write is permitted to return a short count.
+        class ShortSink:
+            def __init__(self):
+                self.data = bytearray()
+                self.calls = 0
+            def write(self, data):
+                self.calls += 1
+                count = max(1, len(data) // 2)
+                self.data.extend(data[:count])
+                return count
+        sink = ShortSink()
+        with patch.object(m, 'stop') as stop, patch.object(m, 'lease') as lease:
+            count = m._write_checked(sink, b'abcdefgh', self.root, self.lease, self.request)
+        self.assertEqual(count, 8)
+        self.assertEqual(bytes(sink.data), b'abcdefgh')
+        self.assertGreater(sink.calls, 1)
+        self.assertEqual(stop.call_count, sink.calls)
+        self.assertEqual(lease.call_count, sink.calls)
+
+    def test_zero_progress_disk_write_fails_closed(self):
+        class StalledSink:
+            def write(self, data):
+                return 0
+        with patch.object(m, 'stop'), patch.object(m, 'lease'):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_PARTIAL_WRITE_NO_PROGRESS'):
+                m._write_checked(StalledSink(), b'data', self.root, self.lease, self.request)
+
+    def test_stop_between_short_writes_keeps_partial_and_holds(self):
+        class OneByteSink:
+            def __init__(self):
+                self.data = bytearray()
+            def write(self, data):
+                self.data.extend(data[:1])
+                return 1
+        sink = OneByteSink()
+        checks = {'count': 0}
+        def owner_stop(root):
+            checks['count'] += 1
+            if checks['count'] == 2:
+                raise m.Hold('OWNER_STOP')
+        with patch.object(m, 'stop', side_effect=owner_stop), patch.object(m, 'lease'):
+            with self.assertRaisesRegex(m.Hold, 'OWNER_STOP'):
+                m._write_checked(sink, b'abc', self.root, self.lease, self.request)
+        self.assertEqual(bytes(sink.data), b'a')
+
 if __name__=='__main__':unittest.main()
