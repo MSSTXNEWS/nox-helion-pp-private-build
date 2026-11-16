@@ -8,7 +8,7 @@
   "source_head_after": "COMMIT_CONTAINING_THIS_RECEIPT",
   "master_blob_sha": "d786467369a7ba6a54b9ac40ce656c225a2a0389",
   "output_path": "coordination/progress/hourly/2026-11-16T16/3A_noloss_gate_v08.py",
-  "local_source_sha256": "3140a89b85eb0b9c86b908ae9cec48bea6e0c05a619b293",
+  "local_source_sha256": "3140a89b85eb0b9c86b908ae9cec48bea6bcd29741db8851fed73c87d9364400",
   "source_test": "3/3 negative-positive synthetic checks PASS; exact 2 real ZIP CRC and SHA PASS",
   "source_original_archive_sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
   "source_candidate_sha256": "d5603047763b9abfe03973e61fbb00e7b0c0f2acde9187c70f200f055bde9ea6",
@@ -67,5 +67,8 @@
   "errors": [
     "SOURCE_MANIFEST_V29 is a historical hash index and cannot attest current WEB29; do not silently rewrite original or claim 512 individually audited cinematic locks"
   ],
-  "next_ready": "Owner V51 read-only #60509551: STOP/lease/PID/cgroup/SSD and DeepSeek seekable 248.83GB placement; continue other independent source validations."
+  "next_ready": "Owner V51 read-only #60509551: STOP/lease/PID/cgroup/SSD and DeepSeek seekable 248.83GB placement; continue other independent source validations.",
+  "source_git_blob_sha": "95b4e1f8fcbad22627decc365b0377f8efb854df",
+  "source_commit": "ff0090bf64f400acf44f1af57bcf3d1341cb1e3a",
+  "receipt_correction": "Correct local_source_sha256 after independent container SHA-256 and GitHub blob-SHA readback. No production mutation."
 }
