@@ -114,7 +114,7 @@ class MayaP0BinaryReadOnlyTests(unittest.TestCase):
         self.root = Path(self.tmp.name)/'nox'
         self.path = self.root/INSPECT.MAYA_P0_BINARY_REL
         self.path.parent.mkdir(parents=True)
-        self.elf = b'\\x7fELF'+bytes([2,1])+b'\\x00'*12+(62).to_bytes(2,'little')+b'\\x00'*44
+        self.elf = b'\x7fELF'+bytes([2,1])+b'\x00'*12+(62).to_bytes(2,'little')+b'\x00'*44
         self.path.write_bytes(self.elf)
         self.path.chmod(0o700)
         self.good_sha = hashlib.sha256(self.elf).hexdigest()

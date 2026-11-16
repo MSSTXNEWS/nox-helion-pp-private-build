@@ -873,7 +873,7 @@ def maya_p0_binary_readback(root=None, expected_sha256=None):
             with os.fdopen(fd,'rb',closefd=False) as stream:
                 first = stream.read(64)
                 digest.update(first)
-                if (first[:4] != b'\\x7fELF' or first[4] != 2 or first[5] != 1
+                if (first[:4] != b'\x7fELF' or first[4] != 2 or first[5] != 1
                         or int.from_bytes(first[18:20],'little') != 62):
                     result['state']='HOLD_NOT_LINUX_X86_64_ELF'; return result
                 while block := stream.read(8*1024*1024):
