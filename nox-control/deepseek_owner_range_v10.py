@@ -83,6 +83,17 @@ def _strict_manifest_pairs(pairs):
 def _reject_manifest_nonfinite(value):
     raise Hold('HOLD_MANIFEST_NONFINITE_JSON')
 
+def _strict_lease_pairs(pairs):
+    """Reject ambiguous owner lease keys, including in nested objects."""
+    result = {}
+    for key, value in pairs:
+        require(key not in result, 'HOLD_LEASE_DUPLICATE_KEY')
+        result[key] = value
+    return result
+
+def _reject_lease_nonfinite(value):
+    raise Hold('HOLD_LEASE_NONFINITE_JSON')
+
 
 def load_manifest(raw):
     require(isinstance(raw, (str, bytes, bytearray)) and len(raw) <= 131072,
@@ -133,7 +144,12 @@ def lease(path,request,now,root):
             'HOLD_LEASE_ORIGIN')
     st=regular(path)
     require(st.st_size<=8192 and not (st.st_mode & 0o077),'HOLD_LEASE_PERMISSIONS')
-    d=json.loads(path.read_bytes())
+    try:
+        d=json.loads(path.read_bytes(),object_pairs_hook=_strict_lease_pairs,
+                     parse_constant=_reject_lease_nonfinite)
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise Hold('HOLD_LEASE_INVALID_JSON') from exc
+    require(isinstance(d,dict),'HOLD_LEASE_SCHEMA')
     require(d.get('schema')=='NOX_ONEHOST_OWNER_LEASE_V1' and
             d.get('instance_id')==INSTANCE and d.get('owner')=='MSSTXNEWS' and
             d.get('resource')=='p0.model_download' and d.get('request_id')==request and
@@ -290,7 +306,8 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
             require(response.headers.get('Content-Encoding','identity').lower()=='identity',
                     'HOLD_CONTENT_ENCODING')
             length=response.headers.get('Content-Length')
-            require(length is not None and int(length)==end-offset+1,'HOLD_HTTP_LENGTH')
+            require(isinstance(length,str) and re.fullmatch(r'[0-9]{1,20}',length) is not None
+                    and int(length)==end-offset+1,'HOLD_HTTP_LENGTH')
             # Bind an append to the inode admitted BEFORE network I/O, not a raced replacement.
             flags=os.O_WRONLY|os.O_APPEND|os.O_NOFOLLOW
             if partial_stat is None: flags|=os.O_CREAT|os.O_EXCL
