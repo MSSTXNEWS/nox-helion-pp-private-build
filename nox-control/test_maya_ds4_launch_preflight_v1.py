@@ -107,7 +107,7 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
                 got = INSPECT.maya_dependency_path_readback({
                     "state": "ELF_LINKAGE_READ_ONLY", "rpath": []})
         self.assertEqual(got["state"], "HOLD_REQUIRED_LIBRARY_PATH_MISSING")
-        self.assertFalse(got["libraries"]["libcublasLt.so.12"]["present")
+        self.assertFalse(got["libraries"]["libcublasLt.so.12"]["present"])
 
 
 class MayaLaunchPlanTests(unittest.TestCase):
