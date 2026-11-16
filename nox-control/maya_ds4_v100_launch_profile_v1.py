@@ -15,6 +15,7 @@ if str(HERE) not in sys.path:
 
 import maya_launch_preflight_v1 as preflight
 import maya_binary_attestation_v1 as binary_attestation
+import maya_memory_admission_v1 as memory_admission
 
 MAYA_BINARY = Path(
     "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4"
@@ -32,7 +33,8 @@ PARALLEL = 1
 
 def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
                       verified_files, tensor_types, model_file_paths,
-                      tensor_role_inventory=None):
+                      tensor_role_inventory=None, memory_snapshot=None,
+                      memory_budget=None, now_seconds=None):
     """Build exact argv only after all pinned source preflight checks pass."""
     if owner_stop is not False:
         return {"state": "HOLD_OWNER_STOP", "launchable": False}
@@ -45,6 +47,17 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
     if attested.get("state") != "BINARY_BUILD_ATTESTED_SOURCE_ONLY":
         return {"state": attested.get("state", "HOLD_MAYA_BINARY_BUILD_UNATTESTED"),
                 "launchable": False}
+
+    memory = memory_admission.evaluate_memory_admission(
+        snapshot=memory_snapshot,
+        budget=memory_budget,
+        now_seconds=now_seconds,
+        required_context_tokens=MAX_CONTEXT,
+        minimum_gpu_reserve_bytes=RESERVE_MIB * 1024 * 1024,
+    )
+    if memory.get("state") != "MEMORY_ADMISSION_PASS_SOURCE_ONLY":
+        return {"state": memory.get("state", "HOLD_MEMORY_ADMISSION_UNKNOWN"),
+                "launchable": False, "memory_admission": memory}
 
     checked = preflight.evaluate_source_plan(
         stop_present=False,
@@ -85,6 +98,7 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "model_pack": pack_dir,
         "engine_sha256": MAYA_BINARY_SHA256,
         "binary_build_attestation": attested,
+        "memory_admission": memory,
         "gpu_names": list(GPU_NAMES),
         "gpus": list(GPU_IDS),
         "tensor_parallel": TP,
