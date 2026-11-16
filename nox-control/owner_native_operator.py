@@ -94,6 +94,7 @@ def run_native(action,request_id):
                      'nox-control/owner_native_inspect.py','nox-control/hybrid_training_entry.py',
                      'nox-control/owner_qwen_runtime_smoke.py',
                      'nox-control/owner_qwen_install_entry.py',
+                     'nox-control/owner_active_plan_inventory.py',
                      'nox-control/qwen_student_training_entry.py','nox-control/owner_qwen_training_contract.py',
                      'nox-control/owner_qwen_memfd.py','nox-control/owner_qwen_corpus.py',
                      'nox-control/qwen35_9b_manifest.json',

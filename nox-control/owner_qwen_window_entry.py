@@ -29,7 +29,7 @@ try:
 except NameError:
     BUNDLE = {}
 
-MODE = "ADVANCE6"  # Reviewed transition after native first-five observation.
+MODE = "OBSERVE"  # Read-only progress, complete-six proof and active-plan inventory.
 INITIAL_REQUEST = "6907283384"
 INITIAL_SOURCE = "2a0d18d8c4434c4798335868df4b28be0e507ed5"
 HELPER_NAME = "owner_qwen_install_entry.py"
@@ -346,12 +346,35 @@ def observe(h):
             "weight_hashes": "RECORDED_NOT_REHASHED_IN_OBSERVE",
             "recorded_file_count": len(checkpoint.get("files_sha256", {})),
             "pointer_stable": h.read(pointer, 16000) == before}
+    result["active_plans"] = active_plan_inventory(h)
+    if (p["successful_updates_goal"] == 6 and service["state"] in ("STOPPED", "FATAL", "EXITED")
+            and result.get("final_result", {}).get("successful_optimizer_steps") == 6
+            and not h.owner_stop()):
+        accepted = validate_advance(h, ctx, 1000)
+        result["six_acceptance"] = {k: v for k, v in accepted.items() if k != "hold"}
+        result["six_acceptance"].update(verification_only=True, next_window_started=False)
+        full_receipt, _ = document(h, output / "owner_last_result.json")
+        result["six_acceptance"]["quality_metrics"] = {k: full_receipt.get(k) for k in
+            ("initial_holdout_loss", "final_holdout_loss", "holdout_scope", "gpu_peak_allocated_bytes",
+             "gpu_peak_reserved_bytes", "training_unique_examples", "holdout_unique_examples")}
     result["admission_stable"] = h.read(h.ADMISSION, 64000) == ctx["raw"]
     if h.HOLD.exists() or h.HOLD.is_symlink():
         raw = h.read(h.HOLD, 256)
         expected = completion_hold(ctx["admission"]["request"], p["successful_updates_goal"])
         result["hold"] = {"bytes": len(raw), "sha256": h.digest(raw), "matches_owned_completion": raw == expected}
     return result
+
+
+
+def active_plan_inventory(h):
+    name = "owner_active_plan_inventory.py"
+    raw = base64.b64decode(BUNDLE.get(name, ""), validate=True)
+    if hashlib.sha256(raw).hexdigest() != "2fd87a005cd71d1844f1b7dcda2e370006b91e014ddd40af74aa6f76d8911b55":
+        fail("HOLD_ACTIVE_PLAN_INVENTORY_SOURCE_PIN")
+    module = types.ModuleType("_nox_readonly_active_plan_inventory")
+    module.__file__ = str(h.SCRIPTS / name)
+    exec(compile(raw, module.__file__, "exec"), module.__dict__)
+    return module.observe(h.ROOT)
 
 
 def completion_hold(request, goal):
