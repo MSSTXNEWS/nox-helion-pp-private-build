@@ -61,6 +61,20 @@
     "model_bytes_spooled_to_disk": false,
     "range_reads_after_mount": "exact byte range, length, strong ETag and HTTPS are enforced"
   },
+  "preflight_resume": {
+    "scope": "six unique GGUF source files; shared Engram alias adds no duplicate bytes",
+    "checkpoint_granularity": "one completed whole file",
+    "receipt_binding": [
+      "repository and immutable revision",
+      "exact source path, size and pinned SHA-256",
+      "observed strong ETag",
+      "numeric owner request ID",
+      "SHA-256 of canonical active OneHost lease payload and lease path"
+    ],
+    "receipt_write": "same-directory atomic no-clobber file, mode 0600, fsync before reuse",
+    "interrupted_file": "restart that file's SHA stream from offset zero; completed prior-file receipts remain reusable only under the exact same live lease/request",
+    "failure_policy": "no mount or model launch; never clear or replace OWNER_STOP; HOLD remains fail-closed"
+  },
   "alias": {
     "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf",
     "target": "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
