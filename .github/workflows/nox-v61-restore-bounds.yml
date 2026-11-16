@@ -1,0 +1,29 @@
+name: NOX V61 bounded offline restore
+on:
+  pull_request:
+    paths:
+      - 'nox_runpod/teacher_mesh/v61/**'
+      - '.github/workflows/nox-v61-restore-bounds.yml'
+  push:
+    branches:
+      - 'fix/nox-v61-bounded-restore-20261116'
+      - 'feature/nox-v38-synaptic-brain-20261114'
+    paths:
+      - 'nox_runpod/teacher_mesh/v61/**'
+      - '.github/workflows/nox-v61-restore-bounds.yml'
+permissions:
+  contents: read
+jobs:
+  offline-restore:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Synthetic restore, corruption, bounds and no-overwrite tests
+        run: python -m unittest discover -s nox_runpod/teacher_mesh/v61/tests -p "test_offsite_restore*.py" -v
