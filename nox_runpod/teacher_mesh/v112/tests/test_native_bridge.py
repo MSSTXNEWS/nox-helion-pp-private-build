@@ -506,6 +506,29 @@ class V112Tests(unittest.TestCase):
             after=db.execute('SELECT COUNT(*) FROM s03_items').fetchone()[0]
         self.assertEqual(after,before)
 
+    def test_global_stop_after_s03_readback_blocks_dialog_history_write(self):
+        from unittest.mock import patch
+        state={'stop':False}
+        self.record=False
+        self.trusted['stop_active']=lambda:state['stop']
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'STOP write boundary','confirmed':True}).json()['dialog_id']
+        def stop_during_readback(question,answer,started_at):
+            state['stop']=True
+            return {'record_id':'fixture-proof-after-stop'}
+        with patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge._readback',
+                   side_effect=stop_during_readback), \
+             patch('nox_runpod.teacher_mesh.v112.native_v29_full_bridge._save_exchange',
+                   side_effect=AssertionError('dialog writer called after global STOP')):
+            response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                json={'message':'Do not persist after STOP','dialog_id':dialog})
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_OWNER_STOP'})
+        self.assertFalse(any(frame.get('type')=='done' or frame.get('saved') for frame in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()
+        self.assertEqual(history['messages'],[])
+
     def test_s03_recall_missing_fails_closed_before_provider(self):
         self.trusted.pop('recall')
         response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,

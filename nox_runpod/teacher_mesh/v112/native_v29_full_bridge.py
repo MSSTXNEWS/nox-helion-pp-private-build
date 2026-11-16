@@ -929,6 +929,9 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 if cancel.is_set():
                     yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
                     return
+                if not _stop_clear(trusted):
+                    yield _jsonl({'type':'error','error':'HOLD_OWNER_STOP'})
+                    return
                 if not complete or not answer.strip():
                     yield _jsonl({'type':'error','error':'HOLD_INCOMPLETE_NATIVE_RESPONSE'})
                     return
@@ -939,6 +942,14 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     if attempt<3:await asyncio.sleep(.12)
                 if proof is None:
                     yield _jsonl({'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
+                    return
+                # STOP may be raised while native S03 readback is in flight.
+                # Recheck immediately before the dialog-history writer.
+                if cancel.is_set():
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                    return
+                if not _stop_clear(trusted):
+                    yield _jsonl({'type':'error','error':'HOLD_OWNER_STOP'})
                     return
                 if not await asyncio.to_thread(_save_exchange,dialog_id,question,answer,proof['record_id']):
                     yield _jsonl({'type':'error','error':'HOLD_S03_DIALOG_COMMIT_NOT_VERIFIED'})
