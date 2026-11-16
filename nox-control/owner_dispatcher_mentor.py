@@ -441,9 +441,10 @@ def component_validation(task):
     """Bounded native checks for actual queue jobs; no fake sleep/track success."""
     component = (task.get('params') or {}).get('component')
     if component == 'dispatcher_workers':
-        config = read_json(ROOT / 'config/dispatcher_agents_t868u.json')
-        if isinstance(config, dict) and all(config.get(key) == 6 for key in ('workers', 'min_workers', 'max_workers')):
-            return {'verification': {'kind': 'native_worker_configuration', 'workers': 6, 'config_sha256': digest(config)}}
+        # Configured thread slots do not prove independent native worker PIDs.
+        # Only an owner-native /proc PID+start_ticks and job/heartbeat readback
+        # can establish process identity; this check has no such evidence.
+        return {'verification': None, 'state': 'HOLD_WORKERS_PID_STARTTICKS_UNVERIFIED'}
     elif component in ('chat_proxy', 'chat_model', 'embeddings'):
         port = {'chat_proxy': 8080, 'chat_model': 8081, 'embeddings': 8082}[component]
         try:
@@ -453,9 +454,10 @@ def component_validation(task):
         except OSError:
             pass
     elif component == 'training_checkpoint':
-        receipt = read_json(ROOT / 'lora/qlora_t866u/runs_owner_hybrid/owner_last_result.json')
-        if isinstance(receipt, dict) and receipt.get('adapter_delta_verified') is True and type(receipt.get('global_step')) is int and receipt['global_step'] > 0 and receipt.get('state') in ('VERIFIED_BOUNDED_ADAPTER_UPDATE', 'CHECKPOINTED_OWNER_STOP'):
-            return {'verification': {'kind': 'native_adapter_receipt', 'step': receipt['global_step'], 'receipt_sha256': digest(receipt)}}
+        # An old adapter receipt, tensor digest or global_step is not a fresh
+        # successful optimizer update, a compatible checkpoint restore, or
+        # evidence of an active trainer bound to PID+start_ticks.
+        return {'verification': None, 'state': 'HOLD_FRESH_OPTIMIZER_RESTORE_UNVERIFIED'}
     elif component == 'resource_budget':
         try:
             quota, period = Path('/sys/fs/cgroup/cpu.max').read_text().split()
