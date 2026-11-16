@@ -1,4 +1,4 @@
-name: NOX V61 exact checkpoint6 encrypted backup
+name: NOX V61 exact Qwen checkpoint encrypted backup
 on:
   workflow_dispatch:
     inputs:
@@ -9,10 +9,10 @@ on:
         options: ['NO', 'YES']
         default: 'NO'
       checkpoint_scope:
-        description: 'Only the accepted six-update Qwen checkpoint; no latest-checkpoint claim'
+        description: 'Choose exact accepted checkpoint6 or quality-held checkpoint55; no automatic latest selection'
         type: choice
         required: true
-        options: ['QWEN6']
+        options: ['QWEN6', 'QWEN55']
         default: 'QWEN6'
       source_sha:
         description: 'Exact reviewed 40-character commit, equal to the selected immutable export ref HEAD'
@@ -107,6 +107,98 @@ jobs:
         with:
           name: NOX_QWEN6_CIPHER_${{ github.run_id }}_RECEIPT
           path: artifacts/qwen6-checkpoint-backup/QWEN6_CIPHER_RECEIPT.json
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Always verify removal of this job's temporary native SSH key
+        if: always()
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: /usr/bin/python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+
+  qwen55-export:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && inputs.checkpoint_scope == 'QWEN55' && github.actor == 'MSSTXNEWS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate reviewed Qwen55 source before native credentials are provided
+        run: |
+          if ! /usr/bin/python3 -c 'import cryptography'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-cryptography
+          fi
+          /usr/bin/python3 -m py_compile nox-control/owner_qwen55_backup_stream.py nox-control/owner_qwen55_backup_runner.py nox-control/owner_qwen55_backup_local.py
+          /usr/bin/python3 -m unittest discover -s nox-control -p test_owner_qwen55_backup.py
+      - name: Export exact checkpoint55 as ciphertext only through pinned owner SSH
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: /usr/bin/python3 nox-control/owner_qwen55_backup_runner.py --native
+      - name: Upload encrypted part 0
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN55_CIPHER_${{ github.run_id }}_PART_000
+          path: artifacts/qwen55-checkpoint-backup/qwen55-cipher.part000
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN55_CIPHER_${{ github.run_id }}_PART_001
+          path: artifacts/qwen55-checkpoint-backup/qwen55-cipher.part001
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN55_CIPHER_${{ github.run_id }}_PART_002
+          path: artifacts/qwen55-checkpoint-backup/qwen55-cipher.part002
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN55_CIPHER_${{ github.run_id }}_PART_003
+          path: artifacts/qwen55-checkpoint-backup/qwen55-cipher.part003
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 4
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN55_CIPHER_${{ github.run_id }}_PART_004
+          path: artifacts/qwen55-checkpoint-backup/qwen55-cipher.part004
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 5
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN55_CIPHER_${{ github.run_id }}_PART_005
+          path: artifacts/qwen55-checkpoint-backup/qwen55-cipher.part005
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload encrypted part 6
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN55_CIPHER_${{ github.run_id }}_PART_006
+          path: artifacts/qwen55-checkpoint-backup/qwen55-cipher.part006
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload checksum receipt only
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_QWEN55_CIPHER_${{ github.run_id }}_RECEIPT
+          path: artifacts/qwen55-checkpoint-backup/QWEN55_CIPHER_RECEIPT.json
           compression-level: 0
           retention-days: 7
           if-no-files-found: error
