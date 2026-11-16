@@ -2,6 +2,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
+const crypto=require('node:crypto');
 const fs=require('node:fs');
 const file='coordination/onepass/nox-v135-resonance-owner-bridge.js';
 const JS=fs.readFileSync(file,'utf8');
@@ -1324,6 +1325,95 @@ test('V178 V135 cancellation uses only V112 authenticated cookie-scoped STOP',()
     'do not send STOP after normal native stream completion');
 });
 
+test('V180 concurrent cookie-scoped sessions: cancelling A leaves B active',async()=>{
+  const scope=cookie=>crypto.createHash('sha256')
+    .update(JSON.stringify([['nox_session',cookie]])).digest('hex');
+  const keyA=scope('cookie-A'),keyB=scope('cookie-B');
+  assert.notEqual(keyA,keyB,'distinct owner cookies must derive distinct V112 scopes');
+  const scopeStart=V112.indexOf('    def scope(request):');
+  const scopeEnd=V112.indexOf("    @app.get('/api/nox/status')",scopeStart);
+  const scopeSource=V112.slice(scopeStart,scopeEnd);
+  assert(scopeSource.includes('sorted(request.cookies.items())'));
+  assert(scopeSource.includes("separators=(',',':')"));
+  assert(scopeSource.includes("hashlib.sha256(raw.encode()).hexdigest()"));
+  assert(V112.includes('active[key].set()'),'existing STOP sets only the scoped active event');
+
+  const active=new Map(),stopCounts=new Map();
+  function makeSession(cookie){
+    const key=scope(cookie),caller=new AbortController();
+    const onStop=()=>{
+      stopCounts.set(cookie,(stopCounts.get(cookie)||0)+1);
+      const stream=active.get(key);
+      if(!stream)return Response.json({status:'HOLD',reason:'NO_ACTIVE_SESSION_STREAM'},{status:409});
+      stream.stopSignalled=true;
+      return Response.json({status:'STOP_REQUESTED',stream_cancellation_signalled:true,
+        gpu_stop_verified:false});
+    };
+    const onModel=(_calls,opts)=>{
+      const stream={signal:opts.signal,stopSignalled:false};
+      active.set(key,stream);
+      const frames=[
+        {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+        {type:'start',model:'NOX HELION'},
+        {type:'delta',text:'Live stream for '+cookie}
+      ];
+      const body=new ReadableStream({start(controller){
+        controller.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\\n').join('')));
+      }});
+      return new Response(body,{headers:{'content-type':'application/x-ndjson'}});
+    };
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+      undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,onStop,onModel);
+    return {key,caller,f};
+  }
+  const a=makeSession('cookie-A'),b=makeSession('cookie-B');
+  const ra=await a.f.fetch('/api/nox/chat',{method:'POST',signal:a.caller.signal,
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v180-A'})});
+  const readerA=ra.body.getReader(),decodeA=new TextDecoder();
+  assert.equal(JSON.parse(decodeA.decode((await readerA.read()).value).slice(6).trim()).type,'meta');
+  assert.equal(JSON.parse(decodeA.decode((await readerA.read()).value).slice(6).trim()).type,'token');
+
+  const rb=await b.f.fetch('/api/nox/chat',{method:'POST',signal:b.caller.signal,
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v180-B'})});
+  const readerB=rb.body.getReader(),decodeB=new TextDecoder();
+  assert.equal(JSON.parse(decodeB.decode((await readerB.read()).value).slice(6).trim()).type,'meta');
+  assert.equal(JSON.parse(decodeB.decode((await readerB.read()).value).slice(6).trim()).type,'token');
+  assert(active.has(keyA)&&active.has(keyB),'both owner streams are active concurrently');
+  assert.equal(active.get(keyA).signal.aborted,false);
+  assert.equal(active.get(keyB).signal.aborted,false);
+
+  a.caller.abort();
+  let raw='',frames=[];
+  for(;;){
+    const chunk=await Promise.race([readerA.read(),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V180_A_CANCEL')),700))]);
+    if(chunk.done)break;
+    raw+=decodeA.decode(chunk.value,{stream:true});
+    let boundary;
+    while((boundary=raw.indexOf('\\n\\n'))>=0){
+      const item=raw.slice(0,boundary);raw=raw.slice(boundary+2);
+      if(item.startsWith('data: '))frames.push(JSON.parse(item.slice(6)));
+    }
+  }
+  const stopped=frames.find(x=>x.type==='error');
+  assert.equal(stopped?.stop_transport_outcome,'signal_accepted');
+  assert.equal(stopped?.gpu_stop_verified,false);
+  assert.equal(active.get(keyA).stopSignalled,true);
+  assert.equal(active.get(keyA).signal.aborted,true);
+  assert.equal(active.get(keyB).stopSignalled,false,'STOP for A must not set B cancellation event');
+  assert.equal(active.get(keyB).signal.aborted,false,'B model POST must remain active');
+  assert.equal(stopCounts.get('cookie-A'),1);
+  assert.equal(stopCounts.has('cookie-B'),false);
+  const stopA=a.f.calls.find(x=>x.path==='/api/nox/stop');
+  assert(stopA,'session A sent exactly one scoped STOP');
+  assert.equal(a.f.calls.filter(x=>x.path==='/api/nox/stop').length,1);
+  assert.equal(stopA.credentials,'same-origin');
+  assert.equal(b.f.calls.filter(x=>x.path==='/api/nox/stop').length,0);
+
+  b.caller.abort();
+  await readerB.cancel();
+  assert.equal(stopCounts.get('cookie-B'),1,'cleanup cancels B only after isolation assertions');
+});
 test('V173 legacy RU ES first meaningful delta precedes delayed native done, S03 verified',async()=>{
   for(const [reply,firstDeltaAt] of [
     ['Привет, NOX — я отвечаю по-русски.',6],
