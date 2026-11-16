@@ -98,6 +98,13 @@ def sidecar_safety(path: Path, info):
 # Coverage derives from fresh canonical DB rows, never a historical fixed vector goal.
 
 
+def begin_read_snapshot(db):
+    """Pin one WAL-aware SQLite snapshot for every multi-query S03 audit gate."""
+    db.execute('BEGIN')
+    # BEGIN is deferred in SQLite: the first read pins the actual snapshot.
+    db.execute('SELECT count(*) FROM sqlite_master').fetchone()
+
+
 def gate(name, state, reason, **counts):
     return dict(task=name, state=state, reason=reason, **counts)
 
@@ -125,13 +132,17 @@ def inspect(path: Path, *, fixture=False):
                      db_private=db_private, sidecars_private=sidecars_private,
                      sidecars_present=sidecars_present) for i in range(1, 6)]
     uri = 'file:' + urllib.parse.quote(str(path.resolve()), safe='/') + '?mode=ro'
-    db = sqlite3.connect(uri, uri=True, timeout=.2)
+    try:
+        db = sqlite3.connect(uri, uri=True, timeout=.2)
+    except sqlite3.Error:
+        return [gate(i, 'HOLD', 'S03_READ_ONLY_CONNECTION_UNAVAILABLE') for i in range(1, 6)]
     try:
         db.execute('PRAGMA query_only=ON')
         db.execute('PRAGMA trusted_schema=OFF')
         db.execute('PRAGMA busy_timeout=200')
         deadline = time.monotonic() + 3.0
         db.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
+        begin_read_snapshot(db)
         names = {row[0]: row[1] for row in db.execute(
             "SELECT name, sql FROM sqlite_master WHERE type='table'")}
         required = {'s03_items', 's03_fts'}
@@ -253,6 +264,10 @@ def inspect(path: Path, *, fixture=False):
         results.append(gate(5, 'HOLD', 'CROSS_CHAT_RECALL_AND_INDEPENDENT_OFFSITE_RESTORE_NOT_DEMONSTRATED',
                             canonical_dialog_tables=dialogs, original_db_unchanged=True))
         return results
+    except sqlite3.Error:
+        # Busy/checkpoint contention or read deadline is NOT a memory PASS.
+        # Do not leak table contents, owner identifiers or SQL exception text.
+        return [gate(i, 'HOLD', 'S03_SNAPSHOT_READ_INCOMPLETE') for i in range(1, 6)]
     finally:
         db.close()
 
@@ -389,6 +404,25 @@ def selftest():
         wal.symlink_to(path)
         assert sidecar_safety(path, path.stat())[0] is False
         wal.unlink()
+        # WAL concurrent-writer regression: all audit SELECTs must see one
+        # snapshot; a later successful write cannot shift mid-scan counts.
+        snapshot_path = Path(temp) / 'concurrent.sqlite'
+        with sqlite3.connect(snapshot_path) as writer:
+            writer.execute('PRAGMA journal_mode=WAL')
+            writer.execute('CREATE TABLE tick(x INTEGER)')
+            writer.execute('INSERT INTO tick VALUES(1)')
+        reader = sqlite3.connect('file:' + urllib.parse.quote(str(snapshot_path), safe='/') + '?mode=ro', uri=True)
+        try:
+            reader.execute('PRAGMA query_only=ON')
+            begin_read_snapshot(reader)
+            assert reader.execute('SELECT count(*) FROM tick').fetchone()[0] == 1
+            with sqlite3.connect(snapshot_path) as concurrent_writer:
+                concurrent_writer.execute('INSERT INTO tick VALUES(2)')
+            assert reader.execute('SELECT count(*) FROM tick').fetchone()[0] == 1
+            reader.rollback()
+            assert reader.execute('SELECT count(*) FROM tick').fetchone()[0] == 2
+        finally:
+            reader.close()
         try:
             inspect(Path(temp) / 'other.sqlite')
         except ValueError as exc:
