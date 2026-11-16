@@ -65,6 +65,20 @@
         "test_commit": "959a59350670f2dd967e1caf13109149c02177a8",
         "source_ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43946595401",
         "tests_scope": "owner storage reclaim and native audit source fixtures: 36/36 PASS; no native OneHost deployment",
+        "size_match_only_guard": {
+          "status": "SOURCE_TESTED_NATIVE_HOLD",
+          "unverified_sha_status": "HOLD_MODEL_SHA_UNVERIFIED",
+          "reason": "All six pinned GGUF pathname lengths can match without any payload hash or inference. Metadata-only probe must not return OK.",
+          "source_commit": "0bba1c3b0819d5c37aed38b0a4e18df3fa466f48",
+          "source_blob": "ee5161d1097cd632ed55662bcf3b1ec48434d3b3",
+          "regression_commit": "92d698beaf7d2c21827903b44931e693504071ba",
+          "regression_blob": "bf80279f4fe3447f57914df6fc9978ffbe2fc034",
+          "ci_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43949032579",
+          "ci_job": 133586263964,
+          "ci_scope": "37/37 source tests PASS including synthetic six matching-size files with SHA NOT_CHECKED",
+          "full_sha256_native": "NOT_PERFORMED",
+          "mmap_tp2_native": "NOT_PERFORMED"
+        },
         "native_file_rehash_completed": false,
         "native_model_replacement_completed": false
       },
