@@ -773,6 +773,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
         if key in active:
             return JSONResponse({'error':'HOLD_ACTIVE_SESSION_STREAM'},status_code=409)
+        if not check(request):
+            return trusted['_unauthorized']()
         if not _stop_clear(trusted):
             return JSONResponse({'error':'HOLD_OWNER_STOP'},status_code=503)
         cancel=asyncio.Event()
@@ -796,6 +798,9 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         except Exception:
             release_active()
             return JSONResponse({'error':'HOLD_S03_RECALL_FAILED'},status_code=503)
+        if not check(request):
+            release_active()
+            return trusted['_unauthorized']()
         if cancel.is_set() or not _stop_clear(trusted):
             release_active()
             return JSONResponse({'error':'HOLD_OWNER_STOP'},status_code=503)

@@ -468,6 +468,19 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(len(self.recall_calls),before)
         self.assertEqual(self.calls,[])
 
+    def test_s03_recall_is_skipped_if_owner_session_expires_before_lookup(self):
+        checks={'count':0}
+        def expires(request):
+            checks['count']+=1
+            return checks['count']==1
+        self.trusted['_session_ok']=expires
+        before=len(self.recall_calls)
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                                  json={'message':'Session expires before S03 lookup'})
+        self.assertEqual(response.status_code,401)
+        self.assertEqual(len(self.recall_calls),before)
+        self.assertEqual(self.calls,[])
+
     def test_s03_recall_missing_fails_closed_before_provider(self):
         self.trusted.pop('recall')
         response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
