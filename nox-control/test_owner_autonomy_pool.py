@@ -45,19 +45,19 @@ class PoolTests(unittest.TestCase):
         n.ensure_processes.return_value=True;n.native_duplicate_check.return_value=False
         n.process_readback.return_value=[{'pid':30+i,'process_starttime':100+i,'native_pid_verified':True,
             'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
-            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(3)]
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(2)]
         n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'native-'+task['id']}
         n.s03_readback.side_effect=lambda tid,jid:{'task_id':tid,'job_id':jid,'native_verified':True,
             'receipt_sha256':'b'*64}
         r=pool.tick_existing_dispatcher({'_nox_owner_autonomy_native':n},{},mode='NORMAL')
-        self.assertEqual(r['jobs_started'],3)
-        self.assertEqual(r['active_subexecutor_processes'],3)
+        self.assertEqual(r['jobs_started'],2)
+        self.assertEqual(r['active_subexecutor_processes'],2)
 
     def test_30_jobs_one_command(self):
         rows=self.make_rows(30)
         validated=pool.validate_page({'schema':pool.SCHEMA,'tasks':rows},allowed_handlers={'owner_component'})
         self.assertEqual(len(validated),30)
-        self.assertEqual(len(pool.choose_ready(validated,status={},mode='NORMAL',memory_ratio=.4)),3)
+        self.assertEqual(len(pool.choose_ready(validated,status={},mode='NORMAL',memory_ratio=.4)),2)
         self.assertEqual(len(pool.choose_ready(validated,status={},mode='FORSAZH',memory_ratio=.4)),6)
 
     def test_many_jobs_as_bounded_pages_no_global_count(self):
@@ -85,8 +85,8 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(pool.choose_ready(rows,status={},mode='FORSAZH',memory_ratio=.96),[])
         self.assertEqual(len(pool.choose_ready(rows,status={},mode='FORSAZH',memory_ratio=.86)),3)
         self.assertEqual(len(pool.choose_ready(rows,status={},mode='FORSAZH',memory_ratio=.4,cpu_pressure=51)),1)
-        self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'running','job.00001':'running'},mode='NORMAL',memory_ratio=.4)),1)
-        self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'done'},mode='NORMAL',memory_ratio=.4)),3)
+        self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'running','job.00001':'running'},mode='NORMAL',memory_ratio=.4)),0)
+        self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'done'},mode='NORMAL',memory_ratio=.4)),2)
 
     def test_no_thread_alias_as_os_process(self):
         bad=[{'pid':777,'process_starttime':1,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
@@ -95,7 +95,7 @@ class PoolTests(unittest.TestCase):
             pool.verify_distinct_native_processes(bad,requested=3)
 
     def test_real_independent_processes_normal_and_forsazh(self):
-        for count in (3,6):
+        for count in (2,6):
             q=mp.Queue();go=mp.Event(); processes=[];ready_events=[]
             for _ in range(count):
                 ready=mp.Event();ready_events.append(ready)
@@ -107,10 +107,10 @@ class PoolTests(unittest.TestCase):
             self.assertEqual(len(set(observed)),count)
             self.assertTrue(all(p.exitcode==0 for p in processes))
 
-    def test_idle_still_opens_three_or_six_os_processes(self):
+    def test_idle_still_opens_two_or_six_os_processes(self):
         n=Mock();n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True
-        for mode,count in [('NORMAL',3),('FORSAZH',6)]:
+        for mode,count in [('NORMAL',2),('FORSAZH',6)]:
             n.process_readback.return_value=[{'pid':20+i,'process_starttime':100+i,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
             'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(count)]
             result=pool.admit_native_tick(n,tasks=[],status={},mode=mode,memory_ratio=.5)
@@ -128,23 +128,23 @@ class PoolTests(unittest.TestCase):
         n.ensure_processes.return_value=True
         n.process_readback.return_value=[{'pid':60+i,'process_starttime':100+i,'native_pid_verified':True,
             'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
-            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(3)]
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(2)]
         r=pool.tick_existing_dispatcher({'_nox_owner_autonomy_native':n},{},mode='NORMAL')
         self.assertEqual(r['state'],'NATIVE_POOL_READY_IDLE')
-        self.assertEqual(r['active_subexecutor_processes'],3)
+        self.assertEqual(r['active_subexecutor_processes'],2)
 
     def test_native_gates_hold_or_verified(self):
         task=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},allowed_handlers={'owner_component'})
         n=Mock();n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True
         n.process_readback.return_value=[{'pid':10+i,'process_starttime':100+i,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
-            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(3)]
+            'native_heartbeat_verified':True,'heartbeat_age_seconds':1} for i in range(2)]
         n.native_duplicate_check.return_value=False
         n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'native-'+task['id']}
         n.s03_readback.side_effect=lambda tid,jid:{'task_id':tid,'job_id':jid,'native_verified':True,'receipt_sha256':'b'*64}
         receipt=pool.admit_native_tick(n,tasks=task,status={},mode='NORMAL',memory_ratio=.5)
-        self.assertEqual(receipt['jobs_started'],3)
-        self.assertEqual(receipt['active_subexecutor_processes'],3)
+        self.assertEqual(receipt['jobs_started'],2)
+        self.assertEqual(receipt['active_subexecutor_processes'],2)
         n.stop_active.return_value=True
         self.assertEqual(pool.admit_native_tick(n,tasks=task,status={},mode='NORMAL',memory_ratio=.5)['jobs_started'],0)
 
@@ -160,7 +160,7 @@ class PoolTests(unittest.TestCase):
             {'pid':500+i,'process_starttime':1000+i,'native_pid_verified':True,
              'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
             'native_heartbeat_verified':True,'heartbeat_age_seconds':1}
-            for i in range(3)]
+            for i in range(2)]
         n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'native-'+task['id']}
         n.s03_readback.side_effect=lambda tid,jid:{
             'native_verified':True,'task_id':tid,'job_id':jid,'receipt_sha256':'b'*64}
@@ -370,7 +370,7 @@ class PoolTests(unittest.TestCase):
         n.native_duplicate_check.assert_not_called()
 
 
-    def test_claimed_queued_and_unknown_reserve_all_three_native_slots(self):
+    def test_claimed_queued_and_unknown_reserve_all_normal_native_slots(self):
         tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(4)},
                                  allowed_handlers={'owner_component'})
         status={'old-1':'CLAIMED','old-2':'queued','old-3':None}
@@ -389,11 +389,11 @@ class PoolTests(unittest.TestCase):
         status={'old-complete':'completed','old-failed':'FAILED','old-cancel':'CANCELED',
                 'old-unverified':{'state':'done'}}
         ready=pool.choose_ready(tasks,status=status,mode='NORMAL',memory_ratio=.5)
-        self.assertEqual(len(ready),2)
+        self.assertEqual(len(ready),1)
         # The string "running" is not the only inflight status.
         status={'old-running':'RUNNING','old-admitted':'ADMITTED_NOT_EXECUTED'}
         ready=pool.choose_ready(tasks,status=status,mode='NORMAL',memory_ratio=.5)
-        self.assertEqual(len(ready),1)
+        self.assertEqual(len(ready),0)
 
     def test_native_queue_capacity_does_not_overclaim_with_admitted_jobs(self):
         tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(6)},
@@ -402,9 +402,9 @@ class PoolTests(unittest.TestCase):
         status={'prior-1':'ADMITTED_NOT_EXECUTED','prior-2':'running'}
         out=pool.admit_native_tick(n,tasks=tasks,status=status,
                                    mode='NORMAL',memory_ratio=.5)
-        self.assertEqual(out['state'],'NATIVE_QUEUE_READBACK_VERIFIED')
-        self.assertEqual(out['jobs_started'],1)
-        self.assertEqual(n.native_queue_claim.call_count,1)
-        self.assertEqual(len(out['receipts']),1)
+        self.assertEqual(out['state'],'NATIVE_POOL_READY_IDLE')
+        self.assertEqual(out['jobs_started'],0)
+        self.assertEqual(n.native_queue_claim.call_count,0)
+        self.assertEqual(len(out['receipts']),0)
 
 if __name__=='__main__':unittest.main()
