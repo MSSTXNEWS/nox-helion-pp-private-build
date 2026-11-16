@@ -1,0 +1,70 @@
+{
+  "schema": "NOX_CONTROL_B_WEB_WEIGHTS_V06_NATIVE_20261116",
+  "instructions_version": "0.0.6",
+  "recorded_at_utc": "2026-11-16T04:40:58Z",
+  "recorded_at_msk": "2026-11-16T07:40:58+03:00",
+  "scope": "Original NOX WEB29 D02/14 worlds + model weights on existing OneHost #60509551",
+  "statuses": [
+    {
+      "task": 1,
+      "state": "DONE_CONTROL_READBACK_NATIVE_RUN_OUTCOMES_PARTIAL",
+      "details": "All 12 1A–3D automation configs enabled; prior timestamps vary. Scheduled/executed automation ≠ 12 native tasks completed. No recurring jobs created, stopped or reactivated."
+    },
+    {
+      "task": 2,
+      "state": "NATIVE_OBSERVED_READ_ONLY",
+      "run_id": 43804990579,
+      "run_id_followup": 43805389841,
+      "details": "Original OneHost owner inspect completed; health 8080/8081/8082=200; GPU0 21562MiB and GPU1 474MiB measured; memory.current=87551483904, max=194065203200; root disk free 12228071424; cgroup oom=0. rclone remotes=[], server Drive OAuth not confirmed. S03 recall NOT tested by inspect."
+    },
+    {
+      "task": 3,
+      "state": "NATIVE_OBSERVED_NOT_AUTONOMOUS_PATCH",
+      "run_id": 43804648527,
+      "details": "Original director 628762 and 3 native OS worker processes 628943/628944/628945 initially verified, later dispatcher PID652295. Three native review tasks were processed by model PID7637 and persisted as S03 receipt items S03-2d599e1b1cb44bc5/S03-682e97fff7374dea/S03-046b6639b29f4e4f. Review results CANDIDATE_NOT_APPLIED; no self-improving code change proven."
+    },
+    {
+      "task": 4,
+      "state": "NATIVE_OBSERVED_FIVE_UPDATES_RELOAD_HOLD",
+      "run_id": 43805087031,
+      "details": "Qwen3.5-9B separate student: five positive optimizer updates proven from actual model loaded; 0 skipped. Trainer loss 0.8615515837445855, source-disjoint holdout loss 1.5214923173189163 -> 1.3258472383022308; adapter tensor delta+finite gradients proven. Checkpoint 519881851 bytes, 10 files SHA matched, optimizer/scaler/RNG included. Service EXITED after bounded first window; owner_acceptance.json not yet observed. Independent reload/6th update/offsite restore NOT verified; do not resume blindly. Old NOX36 still serves main chat."
+    },
+    {
+      "task": 5,
+      "state": "SOURCE_PATCH_PLUS_NATIVE_READBACK",
+      "source_commits": [
+        "bab6e016ae8ee04d91bbe098bbdb46654f733673",
+        "3a73043b8c24f4fdbaef9b8802c325a8d70d4c51"
+      ],
+      "test_commits": [
+        "8c07ea38f9040d41c2f2db285cf1dba1213c0cb3",
+        "481c60fc26d3a3e4b0c1f622f7587b8bbe7bbc01"
+      ],
+      "native_run_id": 43805389841,
+      "details": "Patched existing owner_native_inspect.py to include canonical *.sqlite/ *.sqlite3 inventory without following symlinks, mark S03 recall UNKNOWN not empty, mark llama slots as contexts not models, and add bounded read-only Qwen student progress/terminal/acceptance receipt diagnostics, no corpus export. Exact pinned-source native inspect succeeded: knowledge.sqlite 49016832 bytes; progress 5, terminal 5, owner_acceptance.json NOT_OBSERVED. 6 source regression tests added; standalone unit execution not independently witnessed. No server code installed or training services restarted by this action."
+    }
+  ],
+  "cleanup": {
+    "status": "HOLD_NEW_MODEL_NOT_DEPLOYED",
+    "deleted_paths": [],
+    "freed_bytes_verified": 0,
+    "reason": "Original /root/nox/models/current.gguf still points to nox36-mix_final_pref-Q4_K_M.gguf (21836629568 bytes); full DeepSeek IQ2_XXS not yet downloaded/deployed/verified; no verified server Drive OAuth or old-weight retirement gate. Protect original S03, Genesis, unique checkpoints, current Qwen student."
+  },
+  "overall": {
+    "source_tested": "PATCHES_SAVED_AND_NATIVE_EXECUTED_READ_ONLY",
+    "live_verified": "INSPECT_AND_QWEN_5_OPTIMIZER_UPDATES_ONLY",
+    "main_chat_switched": false,
+    "full_weight_distillation_completed": false,
+    "performance_before_after": "UNMEASURED",
+    "image_render": "NOT_IN_CURRENT_WEB_AND_WEIGHTS_CRITICAL_PATH",
+    "stopped_or_restarted_pid": [],
+    "new_remote_weight_bytes_confirmed": 0
+  },
+  "next_one_action": "Using existing owner-authorized single-writer controls and a verified offsite restore, check new Qwen checkpoint reload from fresh process and sixth real optimizer update; preserve STOP/CHAT and publish exact before/after SHA plus native S03 receipt. Do not activate DeepSeek until mandatory 248834257920 bytes are verified and cache placement accepted.",
+  "evidence": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43804648527",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43804990579",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43805087031",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43805389841"
+  ]
+}
