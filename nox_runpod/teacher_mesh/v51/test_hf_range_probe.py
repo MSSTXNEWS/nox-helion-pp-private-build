@@ -1,8 +1,6 @@
 import contextlib
-import hashlib
 import io
 import unittest
-from unittest.mock import patch
 
 from nox_runpod.teacher_mesh.v51 import hf_range_probe as probe
 
@@ -13,10 +11,6 @@ class FakeResponse(io.BytesIO):
         self.status = status
         self.headers = headers or {}
         self.read_sizes = []
-
-    def read(self, size=-1):
-        self.read_sizes.append(size)
-        return super().read(size)
 
 
 class FakeOpener:
@@ -30,68 +24,80 @@ class FakeOpener:
 
 
 class ReadOnlyRangeContractTests(unittest.TestCase):
-    payload = b"fixture-source-content"
-    pin = {
-        "revision": "0123456789abcdef0123456789abcdef01234567",
-        "path": "fixture.gguf",
-        "url": "https://huggingface.co/test/model/resolve/0123456789abcdef0123456789abcdef01234567/fixture.gguf",
-        "bytes": len(payload) + 100,
-        "sha256": hashlib.sha256(payload).hexdigest(),
-    }
-
-    def test_missing_authoritative_pin_fails_closed_before_opener(self):
-        opener = FakeOpener()
-        with patch.object(probe, "PINNED_SOURCES", ()):
-            with self.assertRaisesRegex(probe.ProbeHold, "^PIN_METADATA_UNAVAILABLE$"):
-                probe.probe_one_byte(self.pin, opener=opener)
-        self.assertEqual(opener.requests, [])
+    def test_authoritative_immutable_metadata_matches_hf_tree(self):
+        expected = {
+            "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf":
+                (39535781184, "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3"),
+            "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf":
+                (39736712000, "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48"),
+            "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf":
+                (39036908384, "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0"),
+            "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf":
+                (19923784832, "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1"),
+            "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf":
+                (110595290816, "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3"),
+        }
+        actual = {row["path"]: (row["bytes"], row["sha256"])
+                  for row in probe.PINNED_SOURCES}
+        self.assertEqual(actual, expected)
+        self.assertEqual(len(probe.PINNED_SOURCES), len(expected))
+        shard5 = "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf"
+        self.assertEqual(sum(row["path"] == shard5 for row in probe.PINNED_SOURCES), 1)
+        for row in probe.PINNED_SOURCES:
+            self.assertEqual(row["revision"], "65d53bc8be65123e255ff02f3ded958b6dbf54fd")
+            self.assertEqual(
+                row["url"],
+                f"https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/{row['revision']}/{row['path']}")
+            self.assertEqual(probe._resolve_pin(dict(row)), row)
 
     def test_arbitrary_or_mismatched_metadata_never_opens(self):
+        pin = probe.PINNED_SOURCES[0]
         mutations = {
             "arbitrary URL": {"url": "https://huggingface.co/other/repo/file"},
-            "wrong size": {"bytes": self.pin["bytes"] + 1},
+            "wrong size": {"bytes": pin["bytes"] + 1},
             "wrong SHA": {"sha256": "0" * 64},
             "wrong revision": {"revision": "f" * 40},
             "wrong path": {"path": "other.gguf"},
         }
         for label, replacement in mutations.items():
             with self.subTest(label=label):
-                supplied = {**self.pin, **replacement}
+                supplied = {**pin, **replacement}
                 opener = FakeOpener()
-                with patch.object(probe, "PINNED_SOURCES", (self.pin,)):
-                    with self.assertRaisesRegex(probe.ProbeHold, "^PIN_METADATA_MISMATCH$"):
-                        probe.probe_one_byte(supplied, opener=opener)
+                with self.assertRaisesRegex(probe.ProbeHold, "^PIN_METADATA_MISMATCH$"):
+                    probe.probe_one_byte(supplied, opener=opener)
                 self.assertEqual(opener.requests, [])
 
-    def test_exact_test_fixture_pin_reaches_only_head_and_one_byte_range(self):
+    def test_exact_production_pin_reaches_only_head_and_one_byte_range(self):
+        pin = probe.PINNED_SOURCES[0]
         etag = '"stable-etag"'
         opener = FakeOpener([
             FakeResponse(status=200, headers={
-                "Content-Length": str(self.pin["bytes"]),
+                "Content-Length": str(pin["bytes"]),
                 "ETag": etag,
                 "Content-Encoding": "identity",
             }),
             FakeResponse(bytes([127]), status=206, headers={
                 "Content-Length": "1",
-                "Content-Range": f"bytes 0-0/{self.pin['bytes']}",
+                "Content-Range": f"bytes 0-0/{pin['bytes']}",
                 "ETag": etag,
                 "Content-Encoding": "identity",
             }),
         ])
         output = io.StringIO()
-        with patch.object(probe, "PINNED_SOURCES", (self.pin,)), contextlib.redirect_stdout(output):
-            result = probe.probe_one_byte(self.pin, opener=opener)
+        with contextlib.redirect_stdout(output):
+            result = probe.probe_one_byte(pin, opener=opener)
 
         requests = [request for request, _ in opener.requests]
         self.assertEqual([request.get_method() for request in requests], ["HEAD", "GET"])
+        self.assertEqual(requests[0].full_url, pin["url"])
         self.assertEqual(requests[0].get_header("Accept-encoding"), "identity")
         self.assertEqual(requests[1].get_header("Range"), "bytes=0-0")
         self.assertEqual(requests[1].get_header("If-range"), etag)
         self.assertIsNone(requests[0].get_header("Authorization"))
         self.assertIsNone(requests[1].get_header("Authorization"))
         self.assertEqual(result["bytes_read"], 1)
-        self.assertEqual(result["source_bytes"], self.pin["bytes"])
-        self.assertEqual(result["source_sha256"], self.pin["sha256"])
+        self.assertEqual(result["source_bytes"], pin["bytes"])
+        self.assertEqual(result["source_sha256"], pin["sha256"])
         self.assertNotIn("url", result)
         self.assertEqual(output.getvalue(), "")
         self.assertEqual(opener.responses, [])
