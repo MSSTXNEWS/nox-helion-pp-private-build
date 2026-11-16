@@ -140,3 +140,39 @@ html:root:root[data-nox-cinema="still"] body:is([data-page],.helion-home)
   min-height:0!important;
  }
 }
+/* Short landscape WEB29: place three ORIGINAL panels side-by-side while
+ * preserving scrollable transcript and accessible telemetry. Earlier two-row
+ * geometry left only 33–43px for real tokens at 800–1199px x 400–420px.
+ * No changes to D02, 14 worlds, owner/S03/STOP or motion runtime. */
+@media (min-width:761px) and (max-width:1199px) and (max-height:540px){
+ html body.chat-workspace-v2 .chat-layout{
+  grid-template-columns:clamp(98px,15vw,145px) minmax(0,1fr) clamp(120px,16vw,165px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  height:max(190px,calc(100dvh - 180px))!important;
+  min-height:0!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-history-panel{
+  grid-column:1!important;grid-row:1!important;
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-conversation{
+  grid-column:2!important;grid-row:1!important;
+  height:100%!important;min-height:0!important;max-height:100%!important;
+ }
+ html body.chat-workspace-v2 .chat-layout > .chat-telemetry-panel{
+  grid-column:3!important;grid-row:1!important;
+  height:100%!important;min-height:0!important;max-height:100%!important;
+  overflow:auto!important;
+ }
+ html body.chat-workspace-v2 .chat-conversation #messages{
+  flex:1 1 0!important;min-height:0!important;overflow:auto!important;
+ }
+}
+/* Tall mobile original floor sometimes puts the composer 9–13px below
+ * viewport. Keep its full feature set, shrink only the conversation track. */
+@media (max-width:760px) and (min-height:861px){
+ html body.chat-workspace-v2 .chat-conversation{
+  height:max(220px,calc(100dvh - 155px))!important;
+  min-height:220px!important;
+ }
+}
