@@ -14,6 +14,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import maya_launch_preflight_v1 as preflight
+import maya_binary_attestation_v1 as binary_attestation
 
 MAYA_BINARY = Path(
     "/root/nox/engine_builds/maya-c81fab6c9d63-cu124-sm70-v1/build/maya-ds4"
@@ -40,6 +41,11 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
     if not isinstance(gpu_names, (list, tuple)) or tuple(gpu_names) != GPU_NAMES:
         return {"state": "HOLD_TWO_V100_IDENTITY", "launchable": False}
 
+    attested = binary_attestation.attest_maya_binary(MAYA_BINARY, MAYA_BINARY_SHA256)
+    if attested.get("state") != "BINARY_BUILD_ATTESTED_SOURCE_ONLY":
+        return {"state": attested.get("state", "HOLD_MAYA_BINARY_BUILD_UNATTESTED"),
+                "launchable": False}
+
     checked = preflight.evaluate_source_plan(
         stop_present=False,
         gpu_ids=GPU_IDS,
@@ -54,6 +60,9 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
     if checked.get("state") != "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE":
         return {"state": checked.get("state", "HOLD_PREFLIGHT_UNKNOWN"),
                 "launchable": False}
+    if not binary_attestation.binary_identity_matches(
+            MAYA_BINARY, attested.get("binary_identity")):
+        return {"state": "HOLD_MAYA_BINARY_CHANGED_AFTER_PREFLIGHT", "launchable": False}
 
     pack_dir = checked["packer_output_dir"]
     argv = [
@@ -75,6 +84,7 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "env": {"CUDA_VISIBLE_DEVICES": "0,1"},
         "model_pack": pack_dir,
         "engine_sha256": MAYA_BINARY_SHA256,
+        "binary_build_attestation": attested,
         "gpu_names": list(GPU_NAMES),
         "gpus": list(GPU_IDS),
         "tensor_parallel": TP,
