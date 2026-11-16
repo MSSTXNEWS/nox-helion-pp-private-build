@@ -256,8 +256,17 @@ def cgroup_oom_pair(path,pause):
         return {'verified':False,'reason':'HOLD_CGROUP_OOM_AFTER_OR_RESET'}
     return {'verified':True,'oom_delta':b['oom']-a['oom'],'oom_kill_delta':b['oom_kill']-a['oom_kill']}
 
-print('NATIVE_P0_GPU_PID_MAP='+json.dumps(gpu_pid_map(call,Path('/proc')),sort_keys=True,separators=(',',':'))[:740])
-print('NATIVE_P0_CGROUP_OOM='+json.dumps(cgroup_oom_pair(Path('/sys/fs/cgroup/memory.events'),__import__('time').sleep),sort_keys=True,separators=(',',':'))[:260])
+# Preserve a complete, parseable receipt; a clipped JSON string is not evidence.
+def bounded_native_json(value,max_chars,hold_status):
+    payload=json.dumps(value,sort_keys=True,separators=(',',':'))
+    return (payload if len(payload)<=max_chars else
+            json.dumps({'status':hold_status},sort_keys=True,separators=(',',':')))
+
+print('NATIVE_P0_GPU_PID_MAP='+bounded_native_json(
+    gpu_pid_map(call,Path('/proc')),740,'HOLD_GPU_PID_LOG_BUDGET'))
+print('NATIVE_P0_CGROUP_OOM='+bounded_native_json(
+    cgroup_oom_pair(Path('/sys/fs/cgroup/memory.events'),__import__('time').sleep),
+    260,'HOLD_CGROUP_OOM_LOG_BUDGET'))
 print('NATIVE_P0_WRITER_LEASE=HOLD_NOT_PROVEN_BY_PID_INVENTORY')
 print('NATIVE_P0_OFFSITE_RESTORE=HOLD_NOT_PROVEN_BY_READ_ONLY_PROBE')
 

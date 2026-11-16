@@ -1,5 +1,6 @@
 """V51 source-only regression of the ACTUAL embedded native read-only functions."""
 import ast
+import json
 import re
 import tempfile
 import unittest
@@ -8,9 +9,9 @@ from nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe import REMOTE
 
 code=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
 tree=ast.parse(code)
-nodes=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in {'gpu_pid_map','cgroup_oom_pair','supervisor_projection'}]
-assert len(nodes)==3
-context={'re':re}
+nodes=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in {'gpu_pid_map','cgroup_oom_pair','supervisor_projection','bounded_native_json'}]
+assert len(nodes)==4
+context={'re':re,'json':json}
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'<v51-native-functions>','exec'),context)
 
 class ReadOnlySafety(unittest.TestCase):
@@ -92,6 +93,30 @@ class ReadOnlySafety(unittest.TestCase):
         self.assertEqual(parse(3,'caddy STOPPED\n')['state'],'HOLD_SUPERVISOR_NO_CORE')
         self.assertEqual(parse(3,'nox-selfheal RUNNING pid 1,\n'*41)['state'],'HOLD_SUPERVISOR_BOUNDS')
         self.assertEqual(parse(3,'')['state'],'HOLD_SUPERVISOR_BOUNDS')
+
+    def test_gpu_pid_log_budget_is_complete_json_or_explicit_hold(self):
+        evidence={'status':'PID_ONLY_NO_OWNER_LEASE',
+                  'gpu1_owner_lease_verified':False,
+                  'processes':[{'gpu':1,'pid':123+i,'vram_mib':20000,
+                                'comm':'python3_long_worker_process'} for i in range(12)]}
+        original=json.dumps(evidence,sort_keys=True,separators=(',',':'))
+        self.assertGreater(len(original),740)
+        with self.assertRaises(json.JSONDecodeError):
+            json.loads(original[:740])
+        bounded=context['bounded_native_json'](evidence,740,'HOLD_GPU_PID_LOG_BUDGET')
+        self.assertLessEqual(len(bounded),740)
+        self.assertEqual(json.loads(bounded),{'status':'HOLD_GPU_PID_LOG_BUDGET'})
+        small={'status':'PID_ONLY_NO_OWNER_LEASE','processes':[]}
+        self.assertEqual(json.loads(context['bounded_native_json'](
+            small,740,'HOLD_GPU_PID_LOG_BUDGET')),small)
+        self.assertEqual(json.loads(context['bounded_native_json'](
+            {'verified':True,'oom_delta':0,'oom_kill_delta':0},
+            260,'HOLD_CGROUP_OOM_LOG_BUDGET'))['verified'],True)
+
+    def test_gpu_and_oom_evidence_never_use_unparseable_prefix_slices(self):
+        self.assertIn('bounded_native_json(\\n    gpu_pid_map',code)
+        self.assertIn('HOLD_GPU_PID_LOG_BUDGET',code)
+        self.assertNotIn("separators=(',',':'))[:740]",code)
 
     def test_supervisor_uses_existing_owner_only_p0_forwarding(self):
         workflow=(Path(__file__).resolve().parents[4]/'.github/workflows/nox-v51-ephemeral-ssh-native.yml').read_text()
