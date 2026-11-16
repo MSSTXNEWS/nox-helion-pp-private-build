@@ -10,6 +10,7 @@ from pathlib import Path
 import hashlib
 import json
 import re
+import unicodedata
 
 SCHEMA="nox-mycelium-sft-recipe-v1"
 SUPPORTED_PRECISIONS={"fp16"}  # Existing 2x V100 SM70: never silently request BF16.
@@ -34,6 +35,59 @@ def _file_sha256_streamed(file:Path)->str:
             hasher.update(chunk)
     return hasher.hexdigest()
 
+MAX_CORPUS_ROW_BYTES=65536
+MAX_CORPUS_ROWS=50000
+
+def _prompt_fingerprint(row:object)->str|None:
+    """Check the intended TRL message shape, not merely a hash of arbitrary JSONL."""
+    if not isinstance(row,dict) or set(row)!={"prompt","completion"}:
+        return None
+    prompt=row["prompt"]
+    completion=row["completion"]
+    if (not isinstance(prompt,list) or len(prompt)!=1
+            or not isinstance(completion,list) or len(completion)!=1):
+        return None
+    for message,role in ((prompt[0],"user"),(completion[0],"assistant")):
+        if (not isinstance(message,dict) or set(message)!={"role","content"}
+                or message["role"]!=role or not isinstance(message["content"],str)
+                or not message["content"].strip()):
+            return None
+    normalized=unicodedata.normalize("NFKC",prompt[0]["content"]).casefold()
+    normalized=" ".join(normalized.split())
+    return sha256(normalized.encode("utf-8")).hexdigest()
+
+def _inspect_corpus_file(file:Path,expected_rows:int,train_fingerprints:set[str]|None)->dict:
+    """Stream/hash/parse bounded JSONL. Exact-text disjointness, not semantic proof."""
+    digest=sha256()
+    seen=set()
+    rows=0
+    with file.open("rb") as stream:
+        while True:
+            raw=stream.readline(MAX_CORPUS_ROW_BYTES+1)
+            if not raw:
+                break
+            if len(raw)>MAX_CORPUS_ROW_BYTES:
+                return {"state":"HOLD_CORPUS_ROW_TOO_LARGE"}
+            digest.update(raw)
+            try:
+                row=json.loads(raw)
+            except (ValueError,UnicodeDecodeError):
+                return {"state":"HOLD_CORPUS_JSONL_FORMAT"}
+            fp=_prompt_fingerprint(row)
+            if fp is None:
+                return {"state":"HOLD_CORPUS_JSONL_FORMAT"}
+            if fp in seen:
+                return {"state":"HOLD_CORPUS_DUPLICATE_PROMPT"}
+            if train_fingerprints is not None and fp in train_fingerprints:
+                return {"state":"HOLD_CORPUS_EXACT_HOLDOUT_LEAKAGE"}
+            seen.add(fp)
+            rows+=1
+            if rows>MAX_CORPUS_ROWS or rows>expected_rows:
+                return {"state":"HOLD_CORPUS_COUNT_MISMATCH"}
+    if rows!=expected_rows:
+        return {"state":"HOLD_CORPUS_COUNT_MISMATCH"}
+    return {"state":"SOURCE_ROWS_PARSED","sha256":digest.hexdigest(),"prompts":seen}
+
 def verify_corpus(corpus_dir:str)->dict:
     p=Path(corpus_dir)
     if not _under_allowed_root(p):
@@ -45,26 +99,35 @@ def verify_corpus(corpus_dir:str)->dict:
         if not mf.is_file() or mf.is_symlink():
             return {"state":"HOLD_CORPUS_MANIFEST_FILE"}
         manifest=json.loads(mf.read_text("utf-8"))
-        if manifest.get("schema")!="nox-teacher-approved-sft-v1":
+        if not isinstance(manifest,dict) or manifest.get("schema")!="nox-teacher-approved-sft-v1":
             return {"state":"HOLD_CORPUS_SCHEMA"}
         if manifest.get("status")!="REVIEWED_NOT_OPTIMIZER_TRAINED":
             return {"state":"HOLD_CORPUS_STATE"}
+        if manifest.get("response_only_loss_required") is not True:
+            return {"state":"HOLD_LOSS_MASK"}
+        counts=manifest["counts"]
+        if (not isinstance(counts,dict) or
+            any(type(counts.get(k)) is not int or not 1<=counts[k]<=MAX_CORPUS_ROWS
+                for k in ("train","holdout"))):
+            return {"state":"HOLD_CORPUS_NO_HOLDOUT"}
+        train_fingerprints=None
         for part in ("train","holdout"):
             filename=part+".jsonl"
             file=p/filename
             if not file.is_file() or file.is_symlink():
                 return {"state":"HOLD_CORPUS_FILE"}
-            if _file_sha256_streamed(file)!=manifest.get(filename+"_sha256"):
+            details=_inspect_corpus_file(file,counts[part],train_fingerprints)
+            if details["state"]!="SOURCE_ROWS_PARSED":
+                return {"state":details["state"]}
+            if details["sha256"]!=manifest.get(filename+"_sha256"):
                 return {"state":"HOLD_CORPUS_HASH"}
-        if not manifest.get("response_only_loss_required"):
-            return {"state":"HOLD_LOSS_MASK"}
-        counts=manifest["counts"]
-        if any(type(counts.get(k)) is not int or counts[k]<1 for k in ("train","holdout")):
-            return {"state":"HOLD_CORPUS_NO_HOLDOUT"}
+            if part=="train":
+                train_fingerprints=details["prompts"]
         return {"state":"VERIFIED_SOURCE_CORPUS","counts":counts,
                 "train_sha256":manifest["train.jsonl_sha256"],
-                "holdout_sha256":manifest["holdout.jsonl_sha256"]}
-    except (OSError,ValueError,KeyError,TypeError):
+                "holdout_sha256":manifest["holdout.jsonl_sha256"],
+                "split_evidence":"EXACT_PROMPT_DISJOINT_SOURCE_ONLY_SEMANTIC_HOLDOUT_UNVERIFIED"}
+    except (OSError,ValueError,KeyError,TypeError,AttributeError):
         return {"state":"HOLD_CORPUS_UNREADABLE"}
 
 def plan_adapter(
