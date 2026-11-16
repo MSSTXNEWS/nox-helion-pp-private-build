@@ -2,6 +2,8 @@
 import importlib.util
 import hashlib
 import json
+import re
+import unicodedata
 import tempfile
 import unittest
 from pathlib import Path
@@ -183,6 +185,18 @@ class ForgeRecipeTest(unittest.TestCase):
         manifest["counts"]={"train":1,"dev":1,"holdout":1}
         manifest["splitting"]="OWNER_RECEIPT_SOURCE_GROUP_DISJOINT_SHA256"
         manifest["source_group_shas_by_split"]={"train":["a"*64],"dev":["b"*64],"holdout":["c"*64]}
+        def owner_sha(text):
+            normalized=unicodedata.normalize("NFKC",text.strip().casefold())
+            normalized="".join(ch for ch in normalized if unicodedata.category(ch)!="Cf")
+            return hashlib.sha256(re.sub(r"\\s+"," ",normalized).encode("utf-8")).hexdigest()
+        receipts=[]
+        for part,group,source in (("train","a","1"),("dev","b","2"),("holdout","c","3")):
+            row=json.loads((self.corpus/(part+".jsonl")).read_text("utf8").splitlines()[0])
+            receipts.append({"part":part,"task_id":"nox-task-"+part,
+                             "group":group*64,"source":source*64,"privacy":"9"*64,
+                             "prompt_sha256":owner_sha(row["prompt"][0]["content"]),
+                             "answer_sha256":owner_sha(row["completion"][0]["content"])})
+        manifest["source_receipts"]=sorted(receipts,key=lambda x:(x["part"],x["source"],x["task_id"]))
         manifest["dev.jsonl_sha256"]=hashlib.sha256(dev_data).hexdigest()
         manifest_file.write_text(json.dumps(manifest),encoding="utf8")
         return manifest
@@ -230,6 +244,52 @@ class ForgeRecipeTest(unittest.TestCase):
         (self.corpus/"manifest.json").write_text(json.dumps(m))
         self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
                          "HOLD_CORPUS_OWNER_GROUPS")
+
+    def test_threeway_missing_row_provenance_is_hold(self):
+        m=self._set_threeway()
+        del m["source_receipts"]
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_SOURCE_RECEIPT_PROOF")
+
+    def test_threeway_rehashed_row_cannot_reuse_approved_receipt(self):
+        self._set_threeway()
+        path=self.corpus/"dev.jsonl"
+        data=path.read_bytes().replace(b"safe dev",b"swapped dev")
+        path.write_bytes(data)
+        mf=self.corpus/"manifest.json"
+        m=json.loads(mf.read_text());m["dev.jsonl_sha256"]=hashlib.sha256(data).hexdigest()
+        mf.write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_ROW_PROVENANCE_MISMATCH")
+
+    def test_threeway_replayed_owner_source_receipt_is_hold(self):
+        m=self._set_threeway()
+        m["source_receipts"][0]["source"]=m["source_receipts"][1]["source"]
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_SOURCE_RECEIPT_REPLAY")
+
+    def test_threeway_fabricated_unused_group_is_hold(self):
+        m=self._set_threeway()
+        m["source_group_shas_by_split"]["dev"].append("d"*64)
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_SOURCE_RECEIPT_GROUPS")
+
+    def test_threeway_wrong_receipt_group_is_hold(self):
+        m=self._set_threeway()
+        m["source_receipts"][0]["group"]="d"*64
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_SOURCE_RECEIPT_GROUPS")
+
+    def test_threeway_owner_prompt_proof_swap_is_hold(self):
+        m=self._set_threeway()
+        m["source_receipts"][0]["prompt_sha256"]="e"*64
+        (self.corpus/"manifest.json").write_text(json.dumps(m))
+        self.assertEqual(recipe.verify_corpus(str(self.corpus))["state"],
+                         "HOLD_CORPUS_ROW_PROVENANCE_MISMATCH")
 
     def test_legacy_manifest_cannot_silently_ignore_dev(self):
         (self.corpus/"dev.jsonl").write_text("extra dev data")
