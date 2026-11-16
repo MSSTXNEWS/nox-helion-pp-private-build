@@ -156,10 +156,12 @@ class TestRealSubagentProcesses(unittest.TestCase):
                 if self.calls == 1:
                     clock.t = 5.0
                     return {'kind': 'RESULT', 'role': 'infra', 'pid': 810,
-                            'id': 'job-0', 'state': 'CANDIDATE_NOT_APPLIED'}
+                            'id': 'job-0', 'state': 'CANDIDATE_NOT_APPLIED',
+                            'elapsed_ms': 5000, 'answer': 'candidate'}
                 clock.t = 8.0
                 return {'kind': 'RESULT', 'role': 'brain', 'pid': 811,
-                        'id': 'job-1', 'state': 'CANDIDATE_NOT_APPLIED'}
+                        'id': 'job-1', 'state': 'CANDIDATE_NOT_APPLIED',
+                        'elapsed_ms': 8000, 'answer': 'candidate'}
 
         candidate = Subagents.__new__(Subagents)
         candidate.roles = ['infra', 'brain', 'web']
@@ -172,6 +174,46 @@ class TestRealSubagentProcesses(unittest.TestCase):
             with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TIMEOUT'):
                 candidate.run(batch(2), stop_active=lambda: False,
                               authorize=lambda: True, lease_current=lambda: True)
+
+    def test_worker_result_cannot_forge_live_or_done(self):
+        # IPC is not a production receipt. These are pure in-memory tests,
+        # with no native OneHost worker or second model invocation.
+        from types import SimpleNamespace
+        from queue import Queue
+
+        base = {'kind': 'RESULT', 'role': 'infra', 'pid': 920,
+                'id': 'job-0', 'elapsed_ms': 1,
+                'state': 'CANDIDATE_NOT_APPLIED', 'answer': 'candidate'}
+        forged = [
+            {**base, 'state': 'LIVE_VERIFIED'},
+            {**base, 'state': 'DONE'},
+            {k: v for k, v in base.items() if k != 'answer'},
+            {**base, 'live_onehost_deployed': True},
+            {**base, 'elapsed_ms': -1},
+            {**base, 'state': 'HOLD_MODEL_UNAVAILABLE'},
+        ]
+        for event in [base, *forged]:
+            with self.subTest(event=event):
+                pool = Subagents.__new__(Subagents)
+                pool.roles = ['infra', 'brain', 'web']
+                pool.timeout = 1
+                pool.inboxes = {role: Queue() for role in pool.roles}
+                pool.outbox = Queue()
+                pool.processes = {role: SimpleNamespace(pid=920 + i)
+                                  for i, role in enumerate(pool.roles)}
+                pool.outbox.put(event)
+                if event is base:
+                    result = pool.run(batch(1), stop_active=lambda: False,
+                                      authorize=lambda: True,
+                                      lease_current=lambda: True)
+                    self.assertEqual(result['results']['job-0']['state'],
+                                     'CANDIDATE_NOT_APPLIED')
+                    self.assertFalse(result['live_onehost_deployed'])
+                else:
+                    with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_RESULT_SCHEMA'):
+                        pool.run(batch(1), stop_active=lambda: False,
+                                 authorize=lambda: True,
+                                 lease_current=lambda: True)
 
     def test_external_model_url_rejected(self):
         from owner_subagent_processes import _model_reply
