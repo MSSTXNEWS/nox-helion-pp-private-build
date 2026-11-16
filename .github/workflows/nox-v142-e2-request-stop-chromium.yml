@@ -63,10 +63,16 @@ jobs:
           window.NOX_NATIVE_OWNER=(scenario!=='unauth');
           // Simulate a suspended background tab: rAF callbacks never fire.
           if(scenario==='rafblocked')window.requestAnimationFrame=()=>0;
-          window.nativeProof={paths:[],signal:null,aborted:false,historyCalls:0};
+          window.nativeProof={paths:[],signal:null,aborted:false,historyCalls:0,stopCount:0,stopSawLiveModel:false,stopCredentials:null};
           window.fetch=async function nativeFixture(input,options={}) {
             const path=new URL(String(input),location.href).pathname;
             window.nativeProof.paths.push(path);
+            if(path==='/api/nox/stop'){
+              window.nativeProof.stopCount++;
+              window.nativeProof.stopSawLiveModel=window.nativeProof.signal?.aborted===false;
+              window.nativeProof.stopCredentials=options.credentials;
+              return Response.json({status:'STOP_REQUESTED',stream_cancellation_signalled:true,gpu_stop_verified:false});
+            }
             if(path==='/api/nox/chat/stream'){
               window.nativeProof.signal=options.signal;
               const body=new ReadableStream({
@@ -144,7 +150,13 @@ jobs:
               assert(window.nativeProof.aborted,'downstream cancel did not abort native fetch');
               assert(window.nativeProof.signal?.aborted===true,'native AbortSignal not aborted');
               assert(window.nativeProof.historyCalls===0,'history read after user cancel');
-              assert(!window.nativeProof.paths.includes('/api/nox/stop'),'global STOP incorrectly triggered');
+              const stopIndex=window.nativeProof.paths.indexOf('/api/nox/stop');
+              const streamIndex=window.nativeProof.paths.indexOf('/api/nox/chat/stream');
+              assert(window.nativeProof.stopCount===1,'active model cancellation must request exactly one session STOP');
+              assert(stopIndex>streamIndex,'session STOP must follow native stream start');
+              assert(window.nativeProof.stopSawLiveModel,'session STOP must be requested before aborting the model request');
+              assert(window.nativeProof.stopCredentials==='same-origin','STOP must use the same-origin owner session');
+              assert(window.nativeProof.aborted,'native stream must abort after STOP response');
             }else if(scenario==='preabort') {
               const ac=new AbortController();ac.abort();
               const response=await window.fetch(new Request(location.origin+'/api/nox/chat',{method:'POST',signal:ac.signal,
