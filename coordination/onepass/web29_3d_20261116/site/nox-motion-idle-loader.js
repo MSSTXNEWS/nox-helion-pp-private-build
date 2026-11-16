@@ -1,5 +1,5 @@
 /* WEB29 decorative Motion.js loader. Chat/S03/STOP never await this resource.
- * Preserves the original library in vendor/fx/motion.js, loads only when idle.
+ * Preserves the original library in vendor/fx/motion.js, loads only when proven idle.
  */
 (() => {'use strict';
   if (window.NoxMotionIdleLoader) return;
@@ -8,7 +8,10 @@
   const url = new URL('vendor/fx/motion.js', owner.src);
   if (url.origin !== location.origin) return;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-  let chatBusy = false, voiceBusy = false, hidden = document.hidden, closed = false, stopped = false;
+  let chatBusy = false, voiceBusy = false, mediaBusy = false, runtimeBusy = false;
+  // Native owner pages must observe a quiet runtime before decorative fetch.
+  let runtimeKnown = window.NOX_NATIVE_OWNER !== true;
+  let hidden = document.hidden, closed = false, stopped = false;
   let queued = false, started = false, done = !!window.Motion;
   let failed = false, idleHandle = null, fallbackHandle = null;
   let attempts = 0;
@@ -18,9 +21,13 @@
     events.push([target, type, callback]);
   };
   const preferences = () => window.NoxWorkspace?.settings || {};
+  const editing = () => document.documentElement?.dataset?.typing === 'true' ||
+    !!document.activeElement?.closest?.('textarea,input,[contenteditable="true"],loquix-chat-composer');
+  const training = () => document.body?.dataset?.trainingActive === 'true';
   const allowed = () => {
     const settings = preferences();
-    return !closed && !hidden && !chatBusy && !voiceBusy && !stopped && !failed && !started && !done &&
+    return !closed && !hidden && !chatBusy && !voiceBusy && !mediaBusy && runtimeKnown &&
+      !runtimeBusy && !editing() && !training() && !stopped && !failed && !started && !done &&
       !reduce.matches && settings.motion !== 'reduce' && settings.mode !== 'ECO';
   };
   const cancel = () => {
@@ -48,13 +55,22 @@
     if (!allowed() || queued) return;
     queued = true;
     if (typeof requestIdleCallback === 'function') {
-      idleHandle = requestIdleCallback(admit, {timeout: 4000});
+      // Never force a decorative fetch during prolonged token rendering/input.
+      idleHandle = requestIdleCallback(admit);
     } else {
       fallbackHandle = setTimeout(admit, 1400);
     }
   }
   on(window, 'nox-chat-activity', e => {chatBusy = e.detail?.active !== false; if (chatBusy) cancel(); else {stopped = false; schedule();}});
   on(window, 'nox-voice-activity', e => {voiceBusy = e.detail?.active !== false; if (voiceBusy) cancel(); else schedule();});
+  on(window, 'nox-media-activity', e => {mediaBusy = e.detail?.active !== false; if (mediaBusy) cancel(); else schedule();});
+  on(window, 'nox-runtime-observed', e => {
+    runtimeKnown = e.detail?.known === true;
+    runtimeBusy = e.detail?.busy !== false;
+    if (!allowed()) cancel(); else schedule();
+  });
+  on(window, 'nox-typing', () => {if (!allowed()) cancel(); else schedule();});
+  on(window, 'nox-training-activity', () => {if (!allowed()) cancel(); else schedule();});
   on(window, 'nox-stop-requested', () => {stopped = true; cancel();});
   on(window, 'nox-settings', () => {if (!allowed()) cancel(); else schedule();});
   on(reduce, 'change', () => {if (!allowed()) cancel(); else schedule();});
@@ -63,7 +79,9 @@
   on(window, 'pageshow', e => {if (e.persisted) {stopped = false; schedule();}});
   window.NoxMotionIdleLoader = Object.freeze({
     diagnostics: () => ({decorativeOnly: true, nonBlocking: true, originalLibraryPreserved: true,
-      busy: chatBusy || voiceBusy, chatBusy, voiceBusy, stopped, queued, started, loaded: done, failed, attempts})
+      busy: chatBusy || voiceBusy || mediaBusy || runtimeBusy || editing() || training(),
+      chatBusy, voiceBusy, mediaBusy, runtimeKnown, runtimeBusy,
+      stopped, queued, started, loaded: done, failed, attempts})
   });
   if (document.readyState === 'complete') schedule();
   else on(window, 'load', schedule);
