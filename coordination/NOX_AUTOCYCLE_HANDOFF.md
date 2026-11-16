@@ -855,3 +855,9 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **No native mutation**; protect original WEB29/D02/14 worlds, serving/STOP/S03, unique model/checkpoint/Genesis. Full [receipt](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/feature/nox-v38-synaptic-brain-20261114/coordination/progress/hourly/2026-11-16T18/3D_P0_DEEPSEEK_NONCLOBBER_V10_1501Z.json) and JSONL error `NOX-3D-P0-DEEPSEEK-FINAL-PUBLISH-NOCLOBBER-20261116`.
 - **Next READY:** owner-auth read-only current STOP/writer lease/actual HTTP UI and seekable capacity ≥248,834,257,920 B + reserve; complete/check 5 missing unique files, reuse Maya with verified SHA, then existing OneHost original SSE/STOP/S03 RU/ES E2E. Never infer installed from CI, clear OWNER_STOP or restart prior Qwen.
 
+### 2026-11-16T15:27:25.028Z · AUTO 2A · OWNER-SUPERVISOR-RUNNING-RC · starting_SHA b124c382c2685020735ebb539a7009719874475e
+- Readback: original owner STOP/MODEL_UPDATE previously PRESENT, Maya ELF SHA verified only, DeepSeek unique storage HOLD; do not misclassify deliberate maintenance as outage.
+- Source finding: a nonzero supervisorctl status could still supply a RUNNING-looking row with PID, or RUNNING without PID. Inspector reported that as live; fail closed to UNKNOWN_SUPERVISOR_RUNNING_IDENTITY while preserving STOPPED rc=3.
+- Patch/tests: coordination/progress/hourly/2026-11-16T18/2A_SUPERVISOR_RUNNING_RC_FAILCLOSED_V10_20261116T152725Z.json; two regression tests added, CI pending. No native install or process change; rollback via exact Git CAS.
+- Five outcomes: S1-02 SOURCE_PATCHED_CI_PENDING; P0 Maya prior native ELF verified; parser/CUDA, seekable storage, inference HOLD. No optimizer updates, bytes, S03 jobs, restart or deletion this slot.
+- Next READY: owner-read-only inspect STOP + lease, verify eligible seekable 248834257920 B storage and five shards, then runtime parser/pack CUDA proof without clearing owner STOP.

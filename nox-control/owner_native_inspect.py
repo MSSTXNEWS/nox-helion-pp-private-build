@@ -781,6 +781,11 @@ def owner_safety_snapshot():
                          lines[0]) if len(lines) == 1 else None
         status = match.group(1) if match else 'UNKNOWN'
         pid = int(match.group(2)) if match and match.group(2) else None
+        # Nonzero supervisorctl cannot attest a RUNNING PID. A RUNNING row
+        # without pid also fails closed; legitimate STOPPED (rc=3) remains visible.
+        if status == 'RUNNING' and (rc != 0 or pid is None):
+            status = 'UNKNOWN_SUPERVISOR_RUNNING_IDENTITY'
+            pid = None
         start_ticks = None
         if pid:
             try:

@@ -53,6 +53,32 @@ class OwnerSafetyReadOnlyTests(unittest.TestCase):
         self.assertEqual(snapshot["listener_8081"]["socket_inodes_observed"], 0)
         self.assertEqual(snapshot["listener_8081"]["matched_pids"], [])
 
+    def test_failed_supervisorctl_running_line_is_not_proof(self):
+        # supervisorctl may return a stale-looking RUNNING line on error.
+        def bad_run(args, timeout=12):
+            if args[2] == "nox-chat-8081":
+                return 7, "nox-chat-8081 RUNNING pid 987, uptime 0:00:10\\n"
+            return self.supervisor_stopped(args, timeout=timeout)
+        with patch.object(INSPECT, "run", side_effect=bad_run):
+            snap = INSPECT.owner_safety_snapshot()
+        chat = snap["supervisor"]["nox-chat-8081"]
+        self.assertEqual(chat["state"], "UNKNOWN_SUPERVISOR_RUNNING_IDENTITY")
+        self.assertEqual(chat["supervisor_rc"], 7)
+        self.assertIsNone(chat["pid"])
+        self.assertIsNone(chat["start_ticks"])
+        self.assertEqual(snap["admission"], "READ_ONLY_NO_RESTART_NO_DELETE_NO_TRAINER")
+
+    def test_successful_supervisorctl_running_without_pid_is_unknown(self):
+        def missing_pid(args, timeout=12):
+            if args[2] == "nox-chat-8081":
+                return 0, "nox-chat-8081 RUNNING, uptime 0:00:10\\n"
+            return self.supervisor_stopped(args, timeout=timeout)
+        with patch.object(INSPECT, "run", side_effect=missing_pid):
+            snap = INSPECT.owner_safety_snapshot()
+        chat = snap["supervisor"]["nox-chat-8081"]
+        self.assertEqual(chat["state"], "UNKNOWN_SUPERVISOR_RUNNING_IDENTITY")
+        self.assertIsNone(chat["pid"])
+
     def test_stop_and_symlink_are_distinct_fail_closed(self):
         (self.root / "STOP.flag").write_text("owner manually stopped\n")
         snapshot = INSPECT.owner_safety_snapshot()
