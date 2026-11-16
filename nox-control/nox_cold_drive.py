@@ -89,14 +89,41 @@ def assert_remote(value):
 
 
 def command(args, timeout=3600):
-    # Suppress provider stderr; it can contain signed URLs or credentials.
+    """Cooperatively cancel only our exact rclone child on owner STOP or timeout.
+
+    Background transfers must not continue consuming I/O after a manual STOP.
+    No native trainer/dispatcher process IDs are inferred or signalled here.
+    """
+    assert_owner_stop_clear()
+    deadline = time.monotonic() + timeout
+    # Provider stderr can disclose signed URLs or credentials: never capture it.
+    proc = subprocess.Popen(args, stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:
-        p = subprocess.run(args, capture_output=True, timeout=timeout, check=False)
-    except subprocess.TimeoutExpired:
-        raise RuntimeError('HOLD_TRANSFER_TIMEOUT') from None
-    if p.returncode:
-        raise RuntimeError('HOLD_RCLONE_EXIT_' + str(p.returncode))
-    return p.stdout
+        while True:
+            assert_owner_stop_clear()
+            left = deadline - time.monotonic()
+            if left <= 0:
+                raise RuntimeError('HOLD_TRANSFER_TIMEOUT')
+            try:
+                output, _ = proc.communicate(timeout=min(0.2, left))
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        assert_owner_stop_clear()
+        if proc.returncode != 0:
+            raise RuntimeError('HOLD_RCLONE_EXIT_' + str(proc.returncode))
+        return output
+    finally:
+        if proc.poll() is None:
+            proc.terminate()  # Exactly the process created above.
+            try:
+                proc.communicate(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.communicate()
+        if proc.stdout is not None:
+            proc.stdout.close()
 
 
 def stream_sha256(remote, size, timeout=3600):
