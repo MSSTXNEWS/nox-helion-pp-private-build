@@ -100,6 +100,24 @@ class ExistingExecutorClaimsTests(unittest.TestCase):
         self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
         self.assertEqual(result["workers"], [])
 
+    def test_missing_state_directory_does_not_clear_owner_maintenance(self):
+        # Previously FileNotFoundError from parent.lstat() incorrectly meant ABSENT.
+        (self.root / "state").rmdir()
+        result = self.snapshot([{"id": "nox-agent-01", "status": "idle"}])
+        self.assertEqual(result["owner_maintenance"], "UNKNOWN")
+        self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
+        self.assertEqual(result["workers"], [])
+
+    def test_symlinked_state_directory_cannot_admit_stale_workers(self):
+        (self.root / "state").rmdir()
+        alternate = self.root / "alternate_state"
+        alternate.mkdir()
+        (self.root / "state").symlink_to(alternate, target_is_directory=True)
+        result = self.snapshot([{"id": "nox-agent-01", "status": "idle"}])
+        self.assertEqual(result["owner_maintenance"], "UNKNOWN")
+        self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
+        self.assertEqual(result["workers"], [])
+
     def test_owner_scripts_present_maintenance_without_claims(self):
         script = Path(__file__).with_name("owner-chat-ui.js").read_text()
         presence = Path(__file__).with_name("owner-presence.js").read_text()
