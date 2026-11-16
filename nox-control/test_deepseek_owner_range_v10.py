@@ -792,4 +792,25 @@ class DeepSeekP0Offline(unittest.TestCase):
                 m._write_checked(sink, b'abc', self.root, self.lease, self.request)
         self.assertEqual(bytes(sink.data), b'a')
 
+
+    def test_short_write_rechecks_original_lock_before_every_continuation(self):
+        """A replaced owner lock must stop additional bytes on short writes."""
+        class OneByteSink:
+            def __init__(self):
+                self.data=bytearray()
+            def write(self,view):
+                self.data.extend(view[:1])
+                return 1
+        sink=OneByteSink()
+        checks={'count':0}
+        def owner_lock_guard():
+            checks['count']+=1
+            if checks['count']==3:
+                raise m.Hold('HOLD_DOWNLOAD_LOCK_REPLACED')
+        with patch.object(m,'stop'),patch.object(m,'lease'):
+            with self.assertRaisesRegex(m.Hold,'HOLD_DOWNLOAD_LOCK_REPLACED'):
+                m._write_checked(sink,b'abcd',self.root,self.lease,self.request,owner_lock_guard)
+        self.assertEqual(bytes(sink.data),b'ab')
+        self.assertEqual(checks['count'],3)
+
 if __name__=='__main__':unittest.main()
