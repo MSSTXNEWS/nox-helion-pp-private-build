@@ -59,9 +59,14 @@ class WarmS03Cache:
         self.max_bytes=max_bytes; self.ttl=ttl_seconds
         self.entries:OrderedDict[tuple,tuple[float,int,list[dict]]]=OrderedDict()
         self.bytes=0; self.lock=threading.RLock(); self.stats={'hits':0,'misses':0,'bypasses':0}
+        # Fence in-flight recall fills after owner/session/global invalidation.
+        self.generation=0
 
     def invalidate(self, session:Session|None=None):
         with self.lock:
+            # A recall already in progress must not repopulate evicted data,
+            # even if its native revision callback still returns the old value.
+            self.generation+=1
             if session is None:self.entries.clear();self.bytes=0;return
             scope=(session.tenant,session.principal,session.chat_id)
             for key in list(self.entries):
@@ -90,6 +95,7 @@ class WarmS03Cache:
              rev,sha256(prompt.encode('utf8')).hexdigest(),int(limit))
         now=time.monotonic()
         with self.lock:
+            generation=self.generation
             for old in list(self.entries):
                 if self.entries[old][0] <= now:
                     _,n,_=self.entries.pop(old);self.bytes-=n
@@ -126,7 +132,7 @@ class WarmS03Cache:
             # Avoid caching if revision changed while native callback was running.
             try: same=self.revision(session)==rev
             except Exception:same=False
-            if same:
+            if same and generation==self.generation:
                 old=self.entries.pop(key,None)
                 if old:self.bytes-=old[1]
                 self.entries[key]=(now+self.ttl,n,safe);self.bytes+=n
