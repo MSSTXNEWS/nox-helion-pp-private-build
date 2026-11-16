@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[]){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -16,6 +16,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
     if(u.pathname==='/api/ui/memory/dialogs/create'){
       const body=JSON.parse(opts.body||'{}');
       assert.equal(body.confirmed,true);
+      if(stallCreateBody)return new Response(new ReadableStream({start(){}}));
       return Response.json({dialog_id:id,title:body.title});
     }
     if(u.pathname==='/api/ui/memory/dialogs'){
@@ -23,6 +24,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
     }
     if(u.pathname==='/api/ui/memory/dialogs/history'){
       onHistory?.();
+      if(stallHistoryBody)return new Response(new ReadableStream({start(){}}));
       return Response.json({status:'READY',dialog_id:id,messages:[
         {role:'user',exchange_id:historyExchangeId,content:prompt,ts:'2026-11-15T00:00:00Z'},
         {role:'assistant',exchange_id:historyExchangeId,content:reply,ts:'2026-11-15T00:00:01Z'}, ...historyTail]});
@@ -1037,4 +1039,38 @@ test('V168 SSE first-visible-token metric only appears after true upstream text'
   assert(Number.isInteger(done.first_visible_token_ms));
   assert(done.first_visible_token_ms>=0);
   assert.equal(done.model_identity_verified,false);
+});
+
+
+test('V171 abort interrupts stalled owner S03 history JSON body after HTTP headers',async()=>{
+  const abort=new AbortController();
+  let didRead=false;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,undefined,
+    false,5,()=>{didRead=true;setTimeout(()=>abort.abort(),10);},
+    'verified-exchange-01',[],true);
+  const response=await f.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v171-s03-stall'})});
+  const frames=await Promise.race([
+    events(response),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_STALLED_S03_BODY')),500))
+  ]);
+  assert(didRead,'readback really started');
+  assert(frames.some(e=>e.type==='error'&&e.error==='STREAM_STOP_REQUESTED'));
+  assert.equal(frames.filter(e=>e.type==='done').length,0);
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+});
+test('V171 abort interrupts stalled dialog-create JSON body without inference',async()=>{
+  const abort=new AbortController();
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,undefined,
+    false,5,undefined,'verified-exchange-01',[],false,true);
+  const response=await f.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,
+    body:JSON.stringify({message:prompt,dialog_id:null,request_id:'v171-create-stall'})});
+  setTimeout(()=>abort.abort(),15);
+  const frames=await Promise.race([
+    events(response),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_STALLED_CREATE_BODY')),500))
+  ]);
+  assert(frames.some(e=>e.type==='error'&&e.error==='STREAM_STOP_REQUESTED'));
+  assert.equal(frames.filter(e=>e.type==='done').length,0);
+  assert(!f.calls.some(c=>c.path==='/api/nox/chat/stream'));
 });

@@ -41,6 +41,7 @@
     try{return await Promise.race([Promise.resolve().then(op),cancelled]);}
     finally{signal.removeEventListener('abort',stop);}
   }
+  const nativeBodyJSON=(response,signal)=>waitOrAbort(()=>response.json(),signal);
   const nativePost=(path,data,signal)=>waitOrAbort(()=>nativeFetch(path,{
     method:'POST',credentials:'same-origin',cache:'no-store',signal,
     headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
@@ -55,7 +56,7 @@
   async function nativeJSON(path,init) {
     const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
     if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r));
-    return r.json();
+    return nativeBodyJSON(r,init?.signal);
   }
   async function createDialog(title,signal) {
     const r=await nativePost('/api/ui/memory/dialogs/create',{
@@ -63,7 +64,7 @@
       confirmed:true
     },signal);
     if(!r.ok)throw Error('HOLD_DIALOG_CREATE_'+await reason(r));
-    const d=await r.json();
+    const d=await nativeBodyJSON(r,signal);
     if(typeof d.dialog_id!=='string'||!ID.test(d.dialog_id))throw Error('HOLD_DIALOG_CREATE_RECEIPT');
     return d;
   }
@@ -319,7 +320,7 @@
           dialog_id:data.dialog_id,revision:row.revision,title:data.title,confirmed:true
         },init?.signal);
         if(!r.ok)throw Error('HOLD_RENAME_'+await reason(r));
-        const d=await r.json();
+        const d=await nativeBodyJSON(r,init?.signal);
         if(d.dialog_id!==data.dialog_id||d.title!==data.title||
            !Number.isInteger(d.revision)||d.revision<=row.revision)
           throw Error('HOLD_RENAME_RECEIPT');
