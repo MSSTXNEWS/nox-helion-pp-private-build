@@ -224,7 +224,7 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
         # pathname was safe. In particular, never report OK for an empty root.
         status='HOLD_MODEL_FILES_MISSING'
     else:
-        status='OK'  # Size/path metadata only; payload SHA and inference still NOT verified.
+        status='HOLD_MODEL_SHA_UNVERIFIED'  # File sizes match, but full GGUF SHA was NOT checked.
     return {'status':status,'root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
             'files':results}
 
