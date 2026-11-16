@@ -281,6 +281,18 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             path.unlink();path.symlink_to(Path(folder)/'absent')
             self.assertIn('не могу подтвердить',stream._executor_status_reply('Сколько агентов?',path))
 
+    def test_normalized_tool_ids_are_bounded_for_native_and_heuristic_routes(self):
+        for value in ('z'*161, 12, [], ''):
+            with self.subTest(value_type=type(value).__name__,size=len(value) if hasattr(value,'__len__') else 0):
+                with self.assertRaisesRegex(stream.StreamFailure,'HOLD_TOOL_CALL_ID_SIZE'):
+                    stream._normal_calls([{'id':value,'name':'calculate',
+                                           'arguments':{}}],0)
+        allowed=stream._normal_calls([{'id':'z'*160,'name':'calculate',
+                                       'arguments':{}}],0)
+        self.assertEqual(allowed[0]['id'],'z'*160)
+        fallback=stream._normal_calls([{'name':'calculate','arguments':{}}],1)
+        self.assertEqual(fallback[0]['id'],'owner_call_1_0')
+
     def test_executor_route_does_not_capture_actions_plans_or_history(self):
         for question in ('Включи 6 агентов','Сколько агентов нужно запустить?',
                          'Сколько агентов работало вчера?','Добавь активных исполнителей',
