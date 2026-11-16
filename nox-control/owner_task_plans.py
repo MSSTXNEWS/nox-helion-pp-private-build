@@ -639,6 +639,17 @@ def bind_dispatcher(namespace):
                     state['tasks'][key].update(value)
             planner.state = state
             planner.auto_media(state)
+        # NOX autonomously admits reviewed work on EVERY existing dispatcher tick.
+        # This is outside _qlock: native process/queue calls enforce own fencing.
+        # Separate OS process PID proofs are required; never count threads as agents.
+        try:
+            import owner_autonomy_pool
+            mode_name = 'FORSAZH' if parallel_policy()[0] == 'TASK_BOOST' else 'NORMAL'
+            namespace['_nox_autonomy_last'] = owner_autonomy_pool.tick_existing_dispatcher(
+                namespace, state, mode=mode_name)
+        except (ImportError, AttributeError):
+            namespace['_nox_autonomy_last'] = {
+                'state': 'HOLD_AUTONOMY_POOL_MODULE_NOT_INSTALLED', 'jobs_started': 0}
     def dependencies(state, task):
         if task.get('handler') == 'owner_plan_join' and task.get('owner_plan_id'):
             children = [state['tasks'].get(key) for key in task.get('owner_plan_children', [])]
