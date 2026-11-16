@@ -175,7 +175,7 @@ def worker(i):
 
 def main():
     with ProcessPoolExecutor(max_workers=7) as pool:
-        for row in pool.map(worker,range(6)):
+        for row in pool.map(worker,range(7)):
             # One JSON record per bounded result item; never dump env/config secrets.
             print('NOX_MAINT_AUDIT='+json.dumps(row,separators=(',',':')),flush=True)
     print('NOX_MAINT_AUDIT_COMPLETE=true',flush=True)
