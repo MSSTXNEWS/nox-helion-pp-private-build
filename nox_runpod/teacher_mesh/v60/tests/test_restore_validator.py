@@ -8,9 +8,11 @@ import json
 import sqlite3
 import tarfile
 import unittest
+from pathlib import Path
 import zipfile
 from unittest.mock import patch
 
+from nox_runpod.teacher_mesh.v60 import encrypted_backup
 from nox_runpod.teacher_mesh.v60 import restore_validator as validator
 
 
@@ -225,6 +227,24 @@ class V60RestoreValidatorTests(unittest.TestCase):
                 expected_ciphertext_sha256=hashlib.sha256(ciphertext).hexdigest(),
             )
         self.assertEqual(calls, [ciphertext])
+
+
+    def test_restore_test_stops_before_age_on_inner_hash_mismatch(self):
+        ciphertext = b"synthetic age ciphertext"
+        raw = outer_zip(ciphertext)
+        with patch.object(
+            encrypted_backup.subprocess,
+            "run",
+            side_effect=AssertionError("age must not run before inner SHA passes"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "HOLD_INNER_CIPHERTEXT_SHA256"):
+                encrypted_backup.restore_test(
+                    raw,
+                    Path("synthetic-identity"),
+                    expected_outer_bytes=len(raw),
+                    expected_outer_sha256=hashlib.sha256(raw).hexdigest(),
+                    expected_ciphertext_sha256="0" * 64,
+                )
 
 
 if __name__ == "__main__":
