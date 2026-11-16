@@ -26,7 +26,7 @@
       "rank": 32,
       "alpha": 64,
       "dropout": 0.05,
-      "learning_rate": 0.00008,
+      "learning_rate": 8e-05,
       "max_steps": 500,
       "precision": "fp16",
       "sequence_length": null,
@@ -263,7 +263,32 @@
     "before_after_metrics": null,
     "minimum_improvement_threshold": null,
     "quality_reviewed": false,
-    "latency_and_memory_benchmarked": false
+    "latency_and_memory_benchmarked": false,
+    "scoring_harness": {
+      "schema": "NOX_RU_ES_PAIRED_HOLDOUT_SCORE_V1",
+      "path": "score_ru_es_holdout.py",
+      "source_sha256": "75205e75507af6642f0b87fe6e5a378dd8f310730c9321187afc0ba1d6aef490",
+      "status": "SOURCE_TESTED_NOT_RUN",
+      "training_started": false,
+      "promotion_authorized": false,
+      "paired_same_dataset_required": true,
+      "required_languages": [
+        "ru",
+        "es"
+      ],
+      "refusal_positive_and_negative_per_language": true,
+      "safety_case_per_language": true,
+      "bootstrap_iterations": 5000,
+      "dataset_sha256": null,
+      "baseline_model_sha256": null,
+      "candidate_model_sha256": null,
+      "evaluator_sha256": null,
+      "baseline_scores_sha256": null,
+      "candidate_scores_sha256": null,
+      "report_sha256": null,
+      "ru_es_metrics": null,
+      "numeric_improvement_gate": null
+    }
   },
   "native_gates": {
     "existing_onehost_owner_lease": false,
