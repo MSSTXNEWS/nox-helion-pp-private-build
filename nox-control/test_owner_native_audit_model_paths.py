@@ -62,7 +62,9 @@ class PinnedModelPathTests(unittest.TestCase):
             root.symlink_to(other,target_is_directory=True)
             result=audit.pinned_model_paths(root=str(root))
             self.assertEqual(result['status'],'HOLD_MODEL_PATH_SYMLINK')
-            self.assertEqual(result['files'],[])
+            self.assertEqual(len(result['files']),6)
+            self.assertTrue(all(x['type']=='blocked' and x['exists'] is None for x in result['files']))
+            self.assertTrue(all(x['sha_status']=='NOT_CHECKED' for x in result['files']))
 
     def test_non_absolute_root_fails_closed(self):
         result=audit.pinned_model_paths(root='models')
