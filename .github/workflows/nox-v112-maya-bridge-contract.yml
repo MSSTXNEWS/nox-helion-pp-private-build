@@ -33,6 +33,7 @@ jobs:
           python -m unittest -v nox_runpod.teacher_mesh.v112.tests.test_maya_existing_bridge_contract
           python -m unittest -v nox_runpod.teacher_mesh.v112.tests.test_native_bridge
           python -m unittest -v nox_runpod.teacher_mesh.v112.tests.test_v123_scoped_stop_async
+          python -m unittest -v nox_runpod.teacher_mesh.v112.tests.test_v122_owner_ui_contract
       - name: Report scope without implying Maya runtime
         run: |
           echo 'NOX_V112_MAYA_BRIDGE_CONTRACT_SOURCE_TESTED=true'
