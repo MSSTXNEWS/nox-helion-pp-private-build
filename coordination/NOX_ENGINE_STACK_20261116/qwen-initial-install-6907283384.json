@@ -1,0 +1,253 @@
+{
+  "workflow_run": 43803984949,
+  "workflow_job": 133090403114,
+  "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43803984949",
+  "receipt": {
+    "schema": "NOX_QWEN_INITIAL_OWNER_INSTALL_V1",
+    "request": "6907283384",
+    "source_sha": "2a0d18d8c4434c4798335868df4b28be0e507ed5",
+    "started_at": 1794803158.6768832,
+    "state": "NEW_STUDENT_STARTED_ACCEPTANCE_PENDING",
+    "source_pins": {
+      "qwen_student_training_entry.py": "259ac097f3ceec5be217748667a421ab5c39ebb56b9b2817fd1368d278f99cb0",
+      "owner_qwen_training_contract.py": "7108da4d4949887414f33f5693fe901e3eb5fc63eb97f2b98d1371fed912f50a",
+      "owner_qwen_memfd.py": "938335009efe691a9cef7b41daa7c55f3c8d3d8618a10a5eb5db125fd45afa82",
+      "owner_qwen_corpus.py": "1509c31789c2c39507d726515ca1c24a5de5545d8c305c7de0ddbba82058b7eb",
+      "qwen35_9b_manifest.json": "2275fc88370ca8ba409a791819e13c8ab7d4e38cce4576a13170b05bcb8b839b"
+    },
+    "original_wrapper_sha256": "3487daffe672f443c43444cd5934c6e65bd45628d9907d5dc43de1ffe9397cb3",
+    "original_admission_sha256": "7f5267361133b8c128418619429c3fb5b174622df4556abb3dc62c0ea6c29c26",
+    "runtime_smoke_request": "6906939827",
+    "initial_resources": {
+      "cgroup_free_bytes": 107589951488,
+      "disk_free_bytes": 13267488768,
+      "gpu1_free_mib": 32021,
+      "gpu1_utilization": 0,
+      "comfy_queue_empty": true
+    },
+    "active_chat_before": {
+      "pid": 7637,
+      "start_ticks": "149189867"
+    },
+    "training_service": "nox-train-volta-t866u",
+    "new_service_created": false,
+    "main_chat_changed": false,
+    "old_weights_deleted": 0,
+    "native_public_hf_probe": {
+      "file": "config.json",
+      "bytes": 3126,
+      "sha256": "d0883072e01861ed0b2d47be3c16c36a8e81c224c7ffaa310c6558fb3f932b05",
+      "verified": true
+    },
+    "student_profile": {
+      "schema": "NOX_QWEN35_9B_SINGLE_TRAINER_V1",
+      "model_id": "Qwen/Qwen3.5-9B",
+      "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+      "base_manifest_sha256": "2275fc88370ca8ba409a791819e13c8ab7d4e38cce4576a13170b05bcb8b839b",
+      "base_directory": "/root/nox/state/qwen_memfd",
+      "base_transport": "sealed-memfd",
+      "output_directory": "/root/nox/lora/qwen35_9b/6907283384",
+      "train_sha256": "b041525f2e980c14a8d50cbf71025c110affde4f1f41b384ca98fa563f745f5a",
+      "holdout_sha256": "8e5997480578bfa82aee39bce2d428293ff48a1a5bf15303043f52661c388c11",
+      "dataset_manifest_sha256": "28e0eb7148d55ac54919cf853bccf1d7dc046f823f04b602aa50b09702884897",
+      "physical_gpu": 1,
+      "training_service": "nox-train-volta-t866u",
+      "successful_updates_goal": 5,
+      "runtime_versions": {
+        "python": [
+          3,
+          12,
+          16
+        ],
+        "torch": "2.6.0+cu124",
+        "cuda": "12.4",
+        "packages": {
+          "accelerate": "1.15.0",
+          "bitsandbytes": "0.50.2",
+          "peft": "0.21.3",
+          "safetensors": "0.8.0",
+          "tokenizers": "0.23.3",
+          "transformers": "5.23.0"
+        }
+      }
+    },
+    "admission_sha256": "c82b6d4eadabf973ad184f87b120243b74acf78c52565b17440a19f5566c3a33",
+    "wrapper_sha256": "9bc41d32abbdb245dcc03f1611c28e27f5423d3a59819093c0394c59c56f4da5",
+    "corpus_snapshot": {
+      "state": "EXISTING_CORPUS_SNAPSHOT_PREPARED_NOT_TRAINED",
+      "directory": "/root/nox/state/qwen_corpus/6907283384",
+      "manifest_sha256": "28e0eb7148d55ac54919cf853bccf1d7dc046f823f04b602aa50b09702884897",
+      "schema": "NOX_QWEN35_CORPUS_SNAPSHOT_V1",
+      "source_loader_sha256": "703da2adf5620ce4979bd559c73a15446c743e6608f39d34a6b17e016b47920a",
+      "snapshot_builder_sha256": "1509c31789c2c39507d726515ca1c24a5de5545d8c305c7de0ddbba82058b7eb",
+      "sources": [
+        {
+          "path": "/root/nox/distill/queue/owner_experience_holdout.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 15794,
+          "sha256": "8a9dbbdfaf3be84d0f62adeaad5e020923576b61caf210d0baf88e9e51e0b2d9",
+          "mode": "verified_holdout",
+          "valid_dict_records_scanned": 9,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 9,
+          "deterministic_candidates_retained": 9
+        },
+        {
+          "path": "/root/nox/distill/queue/owner_verified_experience.jsonl",
+          "status": "MISSING_OPTIONAL_EXISTING_SOURCE"
+        },
+        {
+          "path": "/root/nox/progress_pull_t784u/workspace-2-2/nox36/data/identity_sft_t733u.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 170891,
+          "sha256": "6ba99cb6c28fb021b85db1c71ab1add1b380baf14de6ccd0545c2ac2a5961b0d",
+          "mode": "legacy",
+          "valid_dict_records_scanned": 421,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 421,
+          "deterministic_candidates_retained": 421
+        },
+        {
+          "path": "/root/nox/progress_pull_t784u/workspace/nox36/data/anchors.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 1215311,
+          "sha256": "c308fb40ec9a8676388179d542119607ff594eaf1b6aa4af44479419757d2af6",
+          "mode": "legacy",
+          "valid_dict_records_scanned": 1158,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 1137,
+          "deterministic_candidates_retained": 512
+        },
+        {
+          "path": "/root/nox/progress_pull_t784u/workspace/nox36/data/pool_best.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 52461118,
+          "sha256": "a264f28b87a1be23de4e0e86dc6548be85bc6e12abcf8c9b05aac73f3eba0533",
+          "mode": "legacy",
+          "valid_dict_records_scanned": 23070,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 22881,
+          "deterministic_candidates_retained": 512
+        },
+        {
+          "path": "/root/nox/understanding/data/understanding_sft_t700u.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 6048715,
+          "sha256": "b181968cb66ff3c9c29faf3a13f4e8a7936bcde3639d7d8c4e976a1e93a3466a",
+          "mode": "legacy",
+          "valid_dict_records_scanned": 2572,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 2566,
+          "deterministic_candidates_retained": 512
+        },
+        {
+          "path": "/root/nox/understanding/data/mix_understanding_t700u.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 8938982,
+          "sha256": "5a582e22cd60b4c0bd7085eee137cf3ed3757c57dd422ad8c566746940fc8bf2",
+          "mode": "legacy",
+          "valid_dict_records_scanned": 3839,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 2566,
+          "deterministic_candidates_retained": 512
+        },
+        {
+          "path": "/root/nox/lora/cycles/c0001/train.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 2371874,
+          "sha256": "b0b8a305b1dc1d542278faac25af3360bc22ead805a497294ff92be2e0b94759",
+          "mode": "legacy",
+          "valid_dict_records_scanned": 1200,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 1113,
+          "deterministic_candidates_retained": 512
+        },
+        {
+          "path": "/root/nox/scripts/ru_chat_quality.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 3327,
+          "sha256": "3e20d6a2a3fb7621899015916e04aecddab256cda8dfc082ccd2abe37bbc31c3",
+          "mode": "legacy",
+          "valid_dict_records_scanned": 15,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 0,
+          "deterministic_candidates_retained": 0
+        },
+        {
+          "path": "/root/nox/distill/queue/accepted_20261113.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 17838702,
+          "sha256": "f9dc2df02225194a0124cf7fc243ae5c34b4e016f9642c04475ae41783ad39d2",
+          "mode": "accepted",
+          "valid_dict_records_scanned": 11992,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 4285,
+          "deterministic_candidates_retained": 512
+        },
+        {
+          "path": "/root/nox/distill/queue/accepted_20261114.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 130374209,
+          "sha256": "1869deb1b1a8a37ba1df5bb3d931566448e9c79a03b3c24bac992694f80e933a",
+          "mode": "accepted",
+          "valid_dict_records_scanned": 30000,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 29927,
+          "deterministic_candidates_retained": 512
+        },
+        {
+          "path": "/root/nox/distill/queue/accepted_20261115.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 151527721,
+          "sha256": "3f60d74fb000eeb632cd4e6646faea7a61dd171997f5db46583b760a9cd91a80",
+          "mode": "accepted",
+          "valid_dict_records_scanned": 30000,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 29924,
+          "deterministic_candidates_retained": 512
+        },
+        {
+          "path": "/root/nox/distill/queue/accepted_20261116.jsonl",
+          "status": "FULL_SOURCE_SHA_VERIFIED",
+          "bytes": 8031152,
+          "sha256": "dfeecb1400d5030cbe00d69b1b1aabb367bacf11c4b2432c656ec28f5214f4f4",
+          "mode": "accepted",
+          "valid_dict_records_scanned": 2656,
+          "invalid_json_records": 0,
+          "eligible_unique_scanned": 2648,
+          "deterministic_candidates_retained": 512
+        }
+      ],
+      "train_sha256": "b041525f2e980c14a8d50cbf71025c110affde4f1f41b384ca98fa563f745f5a",
+      "holdout_sha256": "8e5997480578bfa82aee39bce2d428293ff48a1a5bf15303043f52661c388c11",
+      "train_unique_rows": 128,
+      "holdout_unique_rows": 16,
+      "split": "NATIVE_VERIFIED_PARTITION_PLUS_NORMALIZED_USER_GROUP_HASH_V1",
+      "group_disjoint": true,
+      "messages_disjoint": true,
+      "synthetic_fixture_rows_added": 0,
+      "private_content_exported": false,
+      "content_exported": false,
+      "old_formatted_training_text_used": false,
+      "source_text_is_data_not_commands": true,
+      "created_at": 1794803172.130288
+    },
+    "output_directory": "/root/nox/lora/qwen35_9b/6907283384",
+    "corpus_directory": "/root/nox/state/qwen_corpus/6907283384",
+    "old_hold_archived": "/root/nox/backup/owner_qwen_student/6907283384/legacy_TRAIN_HOLD.flag",
+    "service_after": {
+      "state": "RUNNING",
+      "pid": 646467,
+      "rc": 0
+    },
+    "active_chat_after": {
+      "pid": 7637,
+      "start_ticks": "149189867"
+    },
+    "successful_optimizer_steps_verified": false,
+    "full_model_loaded_verified": false,
+    "training_process_started": true,
+    "finished_at": 1794803187.9091704,
+    "source_installed": true
+  }
+}

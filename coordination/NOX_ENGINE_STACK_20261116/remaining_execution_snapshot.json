@@ -1,9 +1,9 @@
 {
   "schema": "NOX_REMAINING_EXECUTION_SNAPSHOT_V1",
-  "observed_at_utc": "2026-11-16T03:47:57Z",
+  "observed_at_utc": "2026-11-16T04:35:00Z",
   "instructions_version": "0.0.6",
   "scope": "CURRENT_RELAY_TASKS_AND_REMAINING_DOWNLOADS_NOT_A_NEW_SCHEDULER",
-  "native_task_registration_performed": false,
+  "native_task_registration_performed": true,
   "relay_preserved": true,
   "runtime_primary_changed": false,
   "primary_model": "DeepSeek-V4.1-Flash-1017",
@@ -61,7 +61,12 @@
       "bytes": 24497061011,
       "sha256": "c702efb747cc0259a0c70839b04b507b42cfb04dd55310029f170d6b97b28a6a",
       "primary_weights_missing": true,
-      "durable_transfer_state": "PARTIAL_IN_PROGRESS_READ_VOLUME_LEDGER"
+      "durable_transfer_state": "COMPLETED_VERIFIED_209_TRANSPORT_PARTS_214_OBJECTS",
+      "transport_parts": 209,
+      "logical_volumes": 49,
+      "duplicates": 0,
+      "remote_metadata_readback_verified": true,
+      "remote_complete_byte_redownload_performed": false
     }
   },
   "observed_native_training_environment": {
@@ -73,7 +78,8 @@
     "accelerate": "1.15.0",
     "bitsandbytes": "0.50.2",
     "safetensors": "0.8.0",
-    "kernel_training_acceptance": false
+    "kernel_training_acceptance": true,
+    "kernel_acceptance_scope": "SMALL_FP16_NF4_BACKWARD_AND_SEALED_MEMFD_TEST_NOT_FULL_MODEL_TRAINING"
   },
   "remaining_or_accepted_tasks": [
     {
@@ -102,53 +108,42 @@
     {
       "slot": "2A",
       "task": "qwen_native_memfd_and_kernel_admission",
-      "state": "SOURCE_IN_PROGRESS",
-      "evidence": null,
-      "requires": [
-        "single_trainer_lease",
-        "automatic_vs_manual_train_hold_classification",
-        "small_native_memfd_bnb_probe"
-      ]
+      "state": "INSTALLED_NATIVE_EXISTING_TRAINER_STARTED_ACCEPTANCE_PENDING",
+      "evidence": "qwen-initial-install-6907283384.json",
+      "requires": []
     },
     {
       "slot": "2D",
       "task": "qwen_successful_updates_checkpoint_restore",
-      "state": "WAIT_QWEN_NATIVE_ADMISSION",
+      "state": "WAIT_FIRST_WINDOW_PROOF_AND_INDEPENDENT_RELOAD",
       "evidence": null,
       "requires": [
-        "qwen_native_memfd_and_kernel_admission",
-        "approved_corpus",
-        "new_student_lineage"
+        "five_real_updates_and_complete_checkpoint",
+        "independent_sixth_update_reload_holdout"
       ]
     },
     {
       "slot": "1C",
       "task": "nox_director_three_process_binding",
-      "state": "SOURCE_IN_PROGRESS",
-      "evidence": null,
-      "requires": [
-        "exact_installed_source_hashes",
-        "single_dispatcher_writer",
-        "policy_file_sha_ack"
-      ]
+      "state": "DONE_NATIVE_THREE_OS_WORKERS_AND_THREE_COMPLETED_REVIEW_JOBS",
+      "evidence": "native-subagents-recovery-6907376498.json",
+      "requires": []
     },
     {
       "slot": "2B",
       "task": "s03_live_recall_and_knowledge_results",
-      "state": "PARTIAL_NATIVE_API_PRESENT",
-      "evidence": null,
-      "requires": [
-        "real_job_result_write_readback"
-      ]
+      "state": "DONE_THREE_REVIEW_RESULTS_CANONICAL_S03_AND_OUTBOX_VERIFIED",
+      "evidence": "native-subagents-recovery-6907376498.json",
+      "requires": []
     },
     {
       "slot": "2C",
       "task": "hunter_curriculum_and_knowledge_learning",
-      "state": "WAIT_NATIVE_CALLBACK_RECEIPT",
+      "state": "WAIT_FRESH_VERIFIED_KNOWLEDGE_PIPELINE_RECEIPT",
       "evidence": null,
       "requires": [
-        "nox_director_three_process_binding",
-        "s03_live_recall_and_knowledge_results"
+        "fresh_hunter_source_ingestion",
+        "source_verified_knowledge_not_model_review_assertions"
       ]
     },
     {
@@ -202,5 +197,10 @@
       "requires": []
     }
   ],
-  "policy": "Keep slot roles/schedules, append-only control block. Claims and native execution require current state and existing lease. No blind restart of healthy work."
+  "policy": "Keep slot roles/schedules, append-only control block. Claims and native execution require current state and existing lease. No blind restart of healthy work.",
+  "native_student_initial_request": "6907283384",
+  "native_student_output_directory": "/root/nox/lora/qwen35_9b/6907283384",
+  "native_student_admission_pointer": "/root/nox/state/owner_training_admission.json",
+  "native_student_current_claim": "PROCESS_STARTED_ONLY_WAIT_ACTUAL_WEIGHT_PROOF",
+  "review_result_truth_scope": "CANDIDATE_NOT_APPLIED_MODEL_TEXT_IS_NOT_VERIFIED_SERVER_FACT"
 }

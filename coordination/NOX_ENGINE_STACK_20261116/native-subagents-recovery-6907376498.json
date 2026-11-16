@@ -1,0 +1,232 @@
+{
+  "schema": "NOX_NATIVE_SUBAGENT_RECOVERY_PUBLIC_METADATA_V1",
+  "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43804648527",
+  "workflow_job": 133092502984,
+  "request": "6907376498",
+  "source_sha": "6c2d82701ead34c50311b14a48c4b01278ba2879",
+  "state": "LIVE_NATIVE_REVIEWS_AND_S03_VERIFIED",
+  "started_at": 1794803548.7975404,
+  "finished_at": 1794803572.7680187,
+  "module_before_sha256": "28f2e21786cef4fb4a2627ac810789dc1b5b65c8196712c19eb5d8398d70b800",
+  "module_after_sha256": "b60c14db2b3dbef526daf45843aa96f11f70060c90b071a24f8b61ea7c9e1866",
+  "config_before_sha256": "803eb3f0d08f9b139313af00b8d5eea407a85de6422a0dba8c796cb4dbed5eff",
+  "config_after_sha256": "52e9252ac363679f52ef52c63f27253a4abcca56eca2c30c9c40a68e901bd490",
+  "active_model_before": {
+    "pid": 7637,
+    "starttime": 149189867
+  },
+  "active_model_after": {
+    "pid": 7637,
+    "starttime": 149189867
+  },
+  "chat_health_before": {
+    "8080": 200,
+    "8081": 200,
+    "8082": 200
+  },
+  "chat_health_after": {
+    "8080": 200,
+    "8081": 200,
+    "8082": 200
+  },
+  "queue_file_edited_by_payload": false,
+  "admission_post_repeated": false,
+  "training_started_by_recovery": false,
+  "weights_changed": false,
+  "stop_cleared": false,
+  "new_callback_loaded": true,
+  "native_pool": {
+    "director": {
+      "pid": 652295,
+      "ppid": 115,
+      "process_starttime": 159627807
+    },
+    "last_admission": {
+      "active_subexecutor_processes": 3,
+      "jobs_started": 0,
+      "state": "NATIVE_QUEUE_IDLE"
+    },
+    "mode": "NORMAL",
+    "observed_at": 1794803572.4463315,
+    "same_model_shared": true,
+    "target": 3,
+    "thread_runner_count": 6,
+    "workers": [
+      {
+        "current_task": null,
+        "heartbeat_at": 1794803571.6707368,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 652465,
+        "ppid": 652295,
+        "process_starttime": 159628390,
+        "role": "runtime",
+        "state": "RUNNING"
+      },
+      {
+        "current_task": null,
+        "heartbeat_at": 1794803571.6709135,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 652466,
+        "ppid": 652295,
+        "process_starttime": 159628390,
+        "role": "memory",
+        "state": "RUNNING"
+      },
+      {
+        "current_task": null,
+        "heartbeat_at": 1794803571.6710823,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 652467,
+        "ppid": 652295,
+        "process_starttime": 159628390,
+        "role": "weights",
+        "state": "RUNNING"
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "task_id": "owner.native.v06.memory.84780aaf911a",
+      "job_id": "nox-native-c47baa93f3c3c6f0a2cfdbb6",
+      "claim": {
+        "at": "2026-11-16 07:32:34 Europe/Moscow (UTC+3)",
+        "nonce": "67830944e6d8fd3a7371df69",
+        "pid": 652295,
+        "worker": "nox-agent-01"
+      },
+      "s03": {
+        "native_verified": true,
+        "task_id": "owner.native.v06.memory.84780aaf911a",
+        "job_id": "nox-native-c47baa93f3c3c6f0a2cfdbb6",
+        "receipt_sha256": "34bbf852b4acb0263f2d0fe50189bd1cb6cd16c215c49969dc82cbf795cc85f2",
+        "s03_item_id": "S03-2d599e1b1cb44bc5",
+        "database": "/root/nox/kb/knowledge.sqlite",
+        "phase": "NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED"
+      },
+      "scope": "NATIVE_TECHNICAL_REVIEW_CANDIDATE_NOT_APPLIED",
+      "worker_result": {
+        "elapsed_ms": 16329,
+        "id": "owner.native.v06.memory.84780aaf911a",
+        "kind": "RESULT",
+        "model_response": {
+          "endpoint": "http://127.0.0.1:8081/v1/chat/completions",
+          "finish_reason": "length",
+          "model": "/root/nox/models/current.gguf",
+          "usage_counts": {
+            "input": 368,
+            "output": 256,
+            "total": 624
+          },
+          "weights_identity_verified": false
+        },
+        "pid": 652466,
+        "role": "memory",
+        "state": "CANDIDATE_NOT_APPLIED"
+      }
+    },
+    {
+      "task_id": "owner.native.v06.runtime.84780aaf911a",
+      "job_id": "nox-native-669b4b9208bf0019aa4d89a9",
+      "claim": {
+        "at": "2026-11-16 07:32:34 Europe/Moscow (UTC+3)",
+        "nonce": "5017936b1af1ccf6e34c8476",
+        "pid": 652295,
+        "worker": "nox-agent-02"
+      },
+      "s03": {
+        "native_verified": true,
+        "task_id": "owner.native.v06.runtime.84780aaf911a",
+        "job_id": "nox-native-669b4b9208bf0019aa4d89a9",
+        "receipt_sha256": "ebc1467e15866fcd1e09968083d7d3006044798540de76a4db290ec7143a6bab",
+        "s03_item_id": "S03-682e97fff7374dea",
+        "database": "/root/nox/kb/knowledge.sqlite",
+        "phase": "NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED"
+      },
+      "scope": "NATIVE_TECHNICAL_REVIEW_CANDIDATE_NOT_APPLIED",
+      "worker_result": {
+        "elapsed_ms": 16307,
+        "id": "owner.native.v06.runtime.84780aaf911a",
+        "kind": "RESULT",
+        "model_response": {
+          "endpoint": "http://127.0.0.1:8081/v1/chat/completions",
+          "finish_reason": "length",
+          "model": "/root/nox/models/current.gguf",
+          "usage_counts": {
+            "input": 476,
+            "output": 256,
+            "total": 732
+          },
+          "weights_identity_verified": false
+        },
+        "pid": 652465,
+        "role": "runtime",
+        "state": "CANDIDATE_NOT_APPLIED"
+      }
+    },
+    {
+      "task_id": "owner.native.v06.weights.84780aaf911a",
+      "job_id": "nox-native-6f63e763762d185cf2768fa9",
+      "claim": {
+        "at": "2026-11-16 07:32:34 Europe/Moscow (UTC+3)",
+        "nonce": "6b86c032ed955802f069faac",
+        "pid": 652295,
+        "worker": "nox-agent-04"
+      },
+      "s03": {
+        "native_verified": true,
+        "task_id": "owner.native.v06.weights.84780aaf911a",
+        "job_id": "nox-native-6f63e763762d185cf2768fa9",
+        "receipt_sha256": "2ea9fd410307c70527cc955c3e766e852d91e9ce180de509eb5e78b115aee29a",
+        "s03_item_id": "S03-046b6639b29f4e4f",
+        "database": "/root/nox/kb/knowledge.sqlite",
+        "phase": "NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED"
+      },
+      "scope": "NATIVE_TECHNICAL_REVIEW_CANDIDATE_NOT_APPLIED",
+      "worker_result": {
+        "elapsed_ms": 16336,
+        "id": "owner.native.v06.weights.84780aaf911a",
+        "kind": "RESULT",
+        "model_response": {
+          "endpoint": "http://127.0.0.1:8081/v1/chat/completions",
+          "finish_reason": "length",
+          "model": "/root/nox/models/current.gguf",
+          "usage_counts": {
+            "input": 487,
+            "output": 256,
+            "total": 743
+          },
+          "weights_identity_verified": false
+        },
+        "pid": 652467,
+        "role": "weights",
+        "state": "CANDIDATE_NOT_APPLIED"
+      }
+    }
+  ],
+  "events": [
+    {
+      "event_id": "cbcb622df11e60aa23cd1ba95f0cdd4a",
+      "sequence": 95,
+      "kind": "task_verified"
+    },
+    {
+      "event_id": "0f1268a14ec444a2695b23e67ba9ab72",
+      "sequence": 96,
+      "kind": "task_verified"
+    },
+    {
+      "event_id": "c45a357190092cfb6188f6cd9c0bfcd3",
+      "sequence": 97,
+      "kind": "task_verified"
+    }
+  ],
+  "model_text_exported": false,
+  "model_claims_accepted_as_facts": false,
+  "quality_note": "All three 256-token model reviews ended with length; unverified dates/counts are candidate assertions only. This receipt proves execution, S03 readback, callbacks and live workers, not recommendation correctness."
+}
