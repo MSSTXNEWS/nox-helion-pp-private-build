@@ -1,0 +1,55 @@
+{
+  "schema": "NOX_V6_TASK_UI_DOWNLOADED_NPM_SHA_20261117",
+  "downloadedTo": "isolated Vercel sandbox; not yet in live NOX web",
+  "items": [
+    {
+      "name": "cytoscape",
+      "version": "3.35.0",
+      "sha256": "058a81a7534777ea68dc737e9b77bd5b701e00acd9bee246245a576eeeac32e6",
+      "license": "MIT",
+      "bytes": 1406928
+    },
+    {
+      "name": "@floating-ui/dom",
+      "version": "1.7.4",
+      "sha256": "e1463aab6ef54b60c01eecfd0a02e32f2f8140e9cef9355cefa9c3de80808d78",
+      "license": "MIT",
+      "bytes": 34002
+    },
+    {
+      "name": "@floating-ui/dom",
+      "version": "1.8.0",
+      "sha256": "b9511cc8fd8898c7c67143ff8dd93a3d427108632c801a546ae72ab1df3cd6a5",
+      "license": "MIT",
+      "bytes": 35146
+    },
+    {
+      "name": "pdfjs-dist",
+      "version": "6.5.438",
+      "sha256": "7461aefcd27c4ef0dd76f9ca5760f09466eb6b3f934432670c12132e7b3d6faa",
+      "license": "Apache-2.0",
+      "bytes": 9144013
+    },
+    {
+      "name": "sortablejs",
+      "version": "1.15.7",
+      "sha256": "66cbfc8fa18860783584fe0c346baf6cbf3399da72d23d21053425ba232abed4",
+      "license": "MIT",
+      "bytes": 155441
+    },
+    {
+      "name": "vis-timeline",
+      "version": "8.5.6",
+      "sha256": "e836d5f9182fa11a33357a92667aba2e85c70bb043a822570dec6b569540aab2",
+      "license": "(Apache-2.0 OR MIT)",
+      "bytes": 16575001
+    },
+    {
+      "name": "@xyflow/react",
+      "version": "13.0.1",
+      "sha256": "1e871c1e19bcf40c1b329c5fe647bbb1cfb16ac17ffc7b8325ef2daa8247e20a",
+      "license": "MIT",
+      "bytes": 331454
+    }
+  ]
+}
