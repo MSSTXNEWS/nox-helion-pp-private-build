@@ -317,19 +317,35 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
     for task in ready:
         if (native.owner_allowed() is not True or native.stop_active() is not False or native.writer_lease() is not True):
             return {'state':'HOLD_STOP_OR_LEASE_CHANGED','jobs_started':len(receipts),'receipts':receipts}
+        # Keep duplicate lookup errors separate from a possibly committed claim.
+        # Neither outcome authorizes a replay until exact native queue/S03 readback.
         try:
-            # Each task is claimed once, never replay unknown outcomes.
             duplicate=native.native_duplicate_check(task['id'])
-            if duplicate is not False:
-                return {'state':'HOLD_DUPLICATE_OR_UNKNOWN_TASK',
-                        'jobs_started':len(receipts),'receipts':receipts}
+        except Exception:
+            return {'state':'HOLD_NATIVE_DUPLICATE_READBACK',
+                    'jobs_started':len(receipts),'possible_unverified_claim':task['id'],
+                    'receipts':receipts}
+        if duplicate is not False:
+            return {'state':'HOLD_DUPLICATE_OR_UNKNOWN_TASK',
+                    'jobs_started':len(receipts),'possible_unverified_claim':task['id'],
+                    'receipts':receipts}
+        try:
             # Owner scope, STOP and lease can change during duplicate lookup.
             if (native.owner_allowed() is not True or native.stop_active() is not False
                 or native.writer_lease() is not True):
-                return {'state':'HOLD_STOP_OR_LEASE_CHANGED','jobs_started':len(receipts),'receipts':receipts}
+                return {'state':'HOLD_STOP_OR_LEASE_CHANGED',
+                        'jobs_started':len(receipts),'receipts':receipts}
+        except Exception:
+            return {'state':'HOLD_OWNER_GATE_READBACK',
+                    'jobs_started':len(receipts),'receipts':receipts}
+        try:
             result=native.native_queue_claim(task,owner_pids=[x['pid'] for x in workers])
         except Exception:
-            return {'state':'UNKNOWN_NATIVE_CLAIM','jobs_started':len(receipts),'receipts':receipts}
+            # The queue may have committed the task before its acknowledgement
+            # failed; preserve the exact ID for reconciliation, never retry.
+            return {'state':'UNKNOWN_NATIVE_CLAIM',
+                    'jobs_started':len(receipts),'possible_unverified_claim':task['id'],
+                    'receipts':receipts}
         # Never retry a claim after ambiguous result; demand durable readback.
         job_id=result.get('job_id') if isinstance(result,Mapping) else None
         # A native claim may exist even if its returned ID is invalid or repeated.

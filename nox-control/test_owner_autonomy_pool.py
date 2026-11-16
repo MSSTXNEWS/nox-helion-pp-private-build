@@ -177,6 +177,46 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(out['jobs_started'],0)
         self.assertEqual(n.native_queue_claim.call_count,1)
 
+    def test_native_claim_exception_preserves_ambiguous_task_for_readback(self):
+        n=self._native_claim_mock()
+        n.native_queue_claim.side_effect=TimeoutError('ACK lost after possible enqueue')
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},
+                                 allowed_handlers={'owner_component'})
+        result=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(result['state'],'UNKNOWN_NATIVE_CLAIM')
+        self.assertEqual(result['possible_unverified_claim'],'job.00000')
+        self.assertEqual(result['jobs_started'],0)
+        self.assertEqual(result['receipts'],[])
+        n.native_queue_claim.assert_called_once()
+        n.s03_readback.assert_not_called()
+
+    def test_duplicate_lookup_exception_must_not_claim_any_task(self):
+        n=self._native_claim_mock()
+        n.native_duplicate_check.side_effect=OSError('native duplicate lookup timeout')
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(1)},
+                                 allowed_handlers={'owner_component'})
+        result=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(result['state'],'HOLD_NATIVE_DUPLICATE_READBACK')
+        self.assertEqual(result['possible_unverified_claim'],'job.00000')
+        self.assertEqual(result['jobs_started'],0)
+        n.native_queue_claim.assert_not_called()
+
+    def test_ambiguous_later_claim_preserves_prior_verified_s03_receipt(self):
+        n=self._native_claim_mock()
+        def claim(task, owner_pids):
+            if task['id']=='job.00001':
+                raise ConnectionError('ACK lost')
+            return {'job_id':'native-'+task['id']}
+        n.native_queue_claim.side_effect=claim
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},
+                                 allowed_handlers={'owner_component'})
+        result=pool.admit_native_tick(n,tasks=tasks,status={},mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(result['state'],'UNKNOWN_NATIVE_CLAIM')
+        self.assertEqual(result['possible_unverified_claim'],'job.00001')
+        self.assertEqual(result['jobs_started'],1)
+        self.assertEqual(result['receipts'][0]['task_id'],'job.00000')
+        self.assertEqual(n.native_queue_claim.call_count,2)
+
     def test_duplicate_native_job_id_fails_closed(self):
         n=self._native_claim_mock()
         n.native_queue_claim.side_effect=lambda task,owner_pids:{'job_id':'SAME-JOB'}
