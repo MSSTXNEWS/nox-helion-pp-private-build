@@ -70,6 +70,30 @@ class TestRealSubagentProcesses(unittest.TestCase):
                 pool.run(batch(1), stop_active=lambda: True,
                          authorize=lambda: True, lease_current=lambda: True)
 
+    def test_cross_worker_result_must_match_assigned_task_role(self):
+        # Real pooled outboxes multiplex messages from independent processes.
+        # A valid PID/role must NOT be allowed to attest another role's job ID.
+        from types import SimpleNamespace
+        from queue import Queue
+        candidate = Subagents.__new__(Subagents)  # no new OS process or model
+        candidate.roles = ['infra', 'brain', 'web']
+        candidate.timeout = 1
+        candidate.inboxes = {role: Queue() for role in candidate.roles}
+        candidate.outbox = Queue()
+        candidate.processes = {
+            role: SimpleNamespace(pid=800 + i)
+            for i, role in enumerate(candidate.roles)
+        }
+        # Both job IDs exist and both reported PIDs belong to the pool,
+        # but each worker attempts to attribute its event to the other job.
+        candidate.outbox.put({'kind': 'RESULT', 'role': 'brain', 'pid': 801,
+                              'id': 'job-0', 'state': 'CANDIDATE_NOT_APPLIED'})
+        candidate.outbox.put({'kind': 'RESULT', 'role': 'infra', 'pid': 800,
+                              'id': 'job-1', 'state': 'CANDIDATE_NOT_APPLIED'})
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_RESULT_IDENTITY'):
+            candidate.run(batch(2), stop_active=lambda: False,
+                          authorize=lambda: True, lease_current=lambda: True)
+
     def test_external_model_url_rejected(self):
         from owner_subagent_processes import _model_reply
         with self.assertRaisesRegex(GateError, 'HOLD_NONLOCAL'):

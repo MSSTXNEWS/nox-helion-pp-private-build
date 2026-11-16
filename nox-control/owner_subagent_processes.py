@@ -191,6 +191,7 @@ class Subagents:
         remaining = dict(tasks)
         outcomes = {}
         active = set()
+        active_roles = {}  # Job ID must remain bound to its assigned OS worker role.
         busy_roles = set()
         while remaining or active:
             # Re-check gates before *each* dispatch, not only at batch start.
@@ -208,6 +209,7 @@ class Subagents:
                 self.inboxes[t['subagent']].put(t)
                 busy_roles.add(t['subagent'])
                 active.add(tid)
+                active_roles[tid] = t['subagent']
                 del remaining[tid]
                 progressed = True
             if active:
@@ -217,10 +219,12 @@ class Subagents:
                     raise GateError('HOLD_SUBAGENT_TIMEOUT') from exc
                 tid = event.get('id')
                 role = event.get('role')
-                if event.get('kind')!='RESULT' or tid not in active or role not in busy_roles or event.get('pid')!=self.processes[role].pid:
+                if (event.get('kind')!='RESULT' or tid not in active or role != active_roles.get(tid)
+                    or role not in busy_roles or event.get('pid')!=self.processes[role].pid):
                     raise GateError('HOLD_SUBAGENT_RESULT_IDENTITY')
                 outcomes[tid] = event
                 active.remove(tid)
+                del active_roles[tid]
                 busy_roles.remove(role)
             elif not progressed and remaining:
                 raise GateError('HOLD_SUBAGENT_DISPATCH_DEADLOCK')
