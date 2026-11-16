@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_checkpoint_status_entry.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_checkpoint_page_action.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
@@ -131,6 +131,8 @@ def run_native(action,request_id):
                      'nox-control/owner_chat_reports_state_entry.py',
                      'nox-control/owner_checkpoint_backup_transport.py','nox-control/owner_checkpoint_backup_export.py',
                      'nox-control/owner_checkpoint_backup_size_probe.py',
+                     'nox-control/owner_checkpoint_backup_pager.py','nox-control/owner_checkpoint_backup_pager_entry.py',
+                     'nox-control/owner_checkpoint_backup_deflated.py','nox-control/owner_checkpoint_backup_deflated_entry.py',
                      'nox-control/owner_training_restore_probe.py',
                      'nox-control/owner_checkpoint_backup_public_key.json',
                      'nox-control/owner_training_resume.py','nox-control/owner_training_recovery_entry.py',
