@@ -87,7 +87,11 @@ class NightlyCorpusTests(unittest.TestCase):
                       base_model_sha256="a"*64,
                       checkpoint_sha256="b"*64,
                       target_modules=["q_proj","v_proj"],
-                      rank=32)
+                      rank=32,base_revision="c"*40,
+                      base_architecture="Qwen3ForCausalLM",
+                      base_config_sha256="d"*64,
+                      tokenizer_sha256="e"*64,
+                      base_weight_manifest_sha256="f"*64)
             self.assertEqual(planned["state"],"RECIPE_ONLY_NOT_TRAINED")
             self.assertFalse(planned["model_weights_updated"])
             self.assertEqual(planned["optimizer_steps_verified"],0)
@@ -103,7 +107,11 @@ class NightlyCorpusTests(unittest.TestCase):
               base_model_id="NOX3.6-35B-A3B",
               base_model_sha256="not-a-hash",
               checkpoint_sha256="b"*64,
-              target_modules=["q_proj"])
+              target_modules=["q_proj"],base_revision="c"*40,
+              base_architecture="Qwen3ForCausalLM",
+              base_config_sha256="d"*64,
+              tokenizer_sha256="e"*64,
+              base_weight_manifest_sha256="f"*64)
         self.assertEqual(result["state"],"HOLD_PROVENANCE_HASH")
 
     def test_untrusted_malformed_record_is_rejected_not_exception(self):
