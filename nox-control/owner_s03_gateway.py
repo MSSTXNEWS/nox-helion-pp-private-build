@@ -124,9 +124,19 @@ def atomic_json(path,value):
 
 
 def stop_active():
-    return any(path.exists() or path.is_symlink() for path in (
-        ROOT/'STOP',ROOT/'STOP.flag',ROOT/'stop.flag',ROOT/'.stop',ROOT/'program/STOP',
-        ROOT/'state/STOP',ROOT/'state/STOP.flag',ROOT/'state/MEMORY_STOP.flag',Path('/workspace/NOX_STOP')))
+    # A denied/unreadable STOP path is not proof that the owner cleared STOP.
+    # lstat sees dangling symlinks as deliberate flags; never follow them.
+    for path in (ROOT/'STOP',ROOT/'STOP.flag',ROOT/'stop.flag',ROOT/'.stop',
+                 ROOT/'program/STOP',ROOT/'state/STOP',ROOT/'state/STOP.flag',
+                 ROOT/'state/MEMORY_STOP.flag',Path('/workspace/NOX_STOP')):
+        try:
+            os.lstat(path)
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return True
+        return True
+    return False
 
 
 @contextlib.contextmanager
