@@ -15,19 +15,23 @@ class Target {
   emit(name, detail = {}) { this.dispatchEvent({type: name, detail}); }
 }
 
-function harness({reduced = false, ready = 'complete', existing = false, origin = 'https://nox.test'} = {}) {
+function harness({reduced = false, ready = 'complete', existing = false, origin = 'https://nox.test', nativeOwner = false} = {}) {
   const window = new Target(), document = new Target(), media = new Target();
   let idleId = 0, timeoutId = 0;
-  const pending = new Map(), fallbacks = new Map(), injected = [];
+  const pending = new Map(), fallbacks = new Map(), injected = [], idleOptions = [];
   media.matches = reduced;
   document.hidden = false;
   document.readyState = ready;
+  document.documentElement = {dataset: {typing:'false'}};
+  document.body = {dataset: {trainingActive:'false'}};
+  document.activeElement = {closest:()=>false};
   document.currentScript = {src: 'https://nox.test/nox-motion-idle-loader.js'};
   document.createElement = () => Object.assign(new Target(), {dataset: {}});
   document.head = {appendChild: el => injected.push(el)};
   window.NoxWorkspace = {settings: {mode:'BALANCED', motion:'system'}};
+  if (nativeOwner) window.NOX_NATIVE_OWNER = true;
   if (existing) window.Motion = {animate() {}};
-  window.requestIdleCallback = fn => { const id = ++idleId; pending.set(id,fn); return id; };
+  window.requestIdleCallback = (fn,opts) => { const id = ++idleId; idleOptions.push(opts); pending.set(id,fn); return id; };
   window.cancelIdleCallback = id => pending.delete(id);
   const setTimeout = fn => {const id = ++timeoutId;fallbacks.set(id,fn);return id;};
   const clearTimeout = id => fallbacks.delete(id);
@@ -37,7 +41,7 @@ function harness({reduced = false, ready = 'complete', existing = false, origin 
   vm.runInNewContext(source, sandbox, {filename:'nox-motion-idle-loader.js'});
   const flush = () => {const jobs = [...pending.values()];pending.clear(); for (const fn of jobs)fn();};
   const diag = () => window.NoxMotionIdleLoader?.diagnostics();
-  return {window, document, media, pending, injected, flush, diag};
+  return {window, document, media, pending, injected, idleOptions, flush, diag};
 }
 
 test('idle load: exactly one same-origin decorative script, never a native request', () => {
@@ -106,4 +110,38 @@ test('back-forward cache restoration can resume optional decoration', () => {
   const h = harness();h.window.dispatchEvent({type:'pagehide',persisted:true});h.flush();
   assert.equal(h.injected.length,0);
   h.window.dispatchEvent({type:'pageshow',persisted:true});h.flush();assert.equal(h.injected.length,1);
+});
+
+test('native owner fail-closed until known idle runtime (not timer alone)', () => {
+  const h = harness({nativeOwner:true});
+  assert.equal(h.diag().runtimeKnown,false);h.flush();assert.equal(h.injected.length,0);
+  h.window.emit('nox-runtime-observed',{known:false,busy:false});h.flush();assert.equal(h.injected.length,0);
+  h.window.emit('nox-runtime-observed',{known:true,busy:false});h.flush();assert.equal(h.injected.length,1);
+});
+test('native busy runtime blocks idle fetch before token events', () => {
+  const h=harness();h.window.emit('nox-runtime-observed',{known:true,busy:true});h.flush();
+  assert.equal(h.injected.length,0);h.window.emit('nox-runtime-observed',{known:true,busy:false});
+  h.flush();assert.equal(h.injected.length,1);
+});
+test('media playback does not race with optional Motion download', () => {
+  const h=harness();h.window.emit('nox-media-activity',{active:true});h.flush();assert.equal(h.injected.length,0);
+  h.window.emit('nox-media-activity',{active:false});h.flush();assert.equal(h.injected.length,1);
+});
+test('typing and training-state idle gate is independent of the chat event', () => {
+  const h=harness();h.document.documentElement.dataset.typing='true';
+  h.window.emit('nox-typing');h.flush();assert.equal(h.injected.length,0);
+  h.document.documentElement.dataset.typing='false';h.document.body.dataset.trainingActive='true';
+  h.window.emit('nox-typing');h.flush();assert.equal(h.injected.length,0);
+  h.document.body.dataset.trainingActive='false';h.window.emit('nox-training-activity');h.flush();
+  assert.equal(h.injected.length,1);
+});
+test('requestIdleCallback no forced timeout under continuous token rendering', () => {
+  const h=harness();assert.equal(h.idleOptions.length,1);assert.equal(h.idleOptions[0],undefined);
+  h.window.emit('nox-chat-activity',{active:true});h.flush();assert.equal(h.injected.length,0);
+});
+test('reduced-motion CSS wins against original contrast and live shorthand', () => {
+  const css=fs.readFileSync(new URL('../site/nox-cinematic-accessibility-3d.css', import.meta.url),'utf8');
+  assert.match(css,/html:root:root:root:root body:is/);
+  assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
+  assert.doesNotMatch(css,/not\(\[data-theme="contrast"\]\)/);
 });
