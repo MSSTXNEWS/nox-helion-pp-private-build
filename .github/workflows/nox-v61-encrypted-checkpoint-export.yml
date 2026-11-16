@@ -43,6 +43,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Regression for original owner STOP revocation during checkpoint ciphertext read (source only)
+        run: |
+          /usr/bin/python3 -m py_compile nox-control/owner_checkpoint_backup_pager.py nox-control/test_owner_checkpoint_backup_pager.py
+          /usr/bin/python3 -m unittest discover -s nox-control -p test_owner_checkpoint_backup_pager.py -v
       - name: Validate bounded Qwen6 source only, without credentials or native access
         run: |
           if ! /usr/bin/python3 -c 'import cryptography'; then
@@ -51,10 +55,6 @@ jobs:
           fi
           /usr/bin/python3 -m py_compile nox-control/owner_qwen6_backup_stream.py nox-control/owner_qwen6_backup_runner.py nox-control/owner_qwen6_backup_local.py
           /usr/bin/python3 -m unittest discover -s nox-control -p test_owner_qwen6_backup.py
-      - name: Regression for original owner STOP revocation during checkpoint ciphertext read (source only)
-        run: |
-          /usr/bin/python3 -m py_compile nox-control/owner_checkpoint_backup_pager.py nox-control/test_owner_checkpoint_backup_pager.py
-          /usr/bin/python3 -m unittest discover -s nox-control -p test_owner_checkpoint_backup_pager.py -v
 
   export:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (!inputs.checkpoint_scope || inputs.checkpoint_scope == 'LEGACY') }}
