@@ -767,6 +767,10 @@ def owner_safety_snapshot():
                   else 'HOLD_UNSAFE_FLAG' if any(x != 'ABSENT' for x in manual_flags)
                   else 'NOT_OBSERVED_NOT_AUTHORIZATION')
     maintenance_lock = kind(root / 'state/owner_maintenance.lock')
+    # The real owner MODEL_UPDATE uses this separate maintenance flag.
+    # Its omission made a stopped server appear to have no known maintenance
+    # even when the owner had deliberately fenced it. Never infer a lease.
+    owner_maintenance = kind(root / 'state/OWNER_MAINTENANCE.flag')
     # Neither a lock-file's existence nor a STOP absence is an owner writer lease.
     services = {}
     for name in ('nox-chat-8081', 'nox-dispatcher-t855u', 'nox-priority-scheduler',
@@ -830,6 +834,7 @@ def owner_safety_snapshot():
             heartbeat[name] = {'state': kind(path)}
     return {'schema': 'NOX_OWNER_SAFETY_READONLY_V1',
             'stop_flags': flags, 'manual_stop': owner_stop,
+            'owner_maintenance_flag': owner_maintenance,
             'maintenance_lock_file': maintenance_lock,
             'writer_lease': 'UNKNOWN_NO_OWNER_CAS_READBACK',
             'supervisor': services,
