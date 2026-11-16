@@ -76,25 +76,29 @@ def save(path,obj):
     finally:
         if os.path.exists(p):os.unlink(p)
 def no_open():
+    """Targeted in-use check after all native NOX services and detached chat stop.
+
+    The previous all-proc/maps scanner was excessively broad and blocked on
+    unrelated inaccessible platform processes. fuser checks precisely each
+    old weight file, including mappings held by other visible PIDs. No wildcard.
+    """
+    import shutil
+    tool=shutil.which('fuser')
+    if tool is None:return None
     used=set()
-    for p in Path('/proc').iterdir():
-        if not p.name.isdigit():continue
+    for name,size in OLD.items():
+        p=Path(name)
+        if not p.is_file() or p.is_symlink():continue
         try:
-            for entry in (p/'fd').iterdir():
-                try:
-                    s=entry.stat()
-                    if stat.S_ISREG(s.st_mode):used.add((s.st_dev,s.st_ino))
-                except (FileNotFoundError,ProcessLookupError):pass
-            with (p/'maps').open('rb') as f:maps=f.read(2*1024*1024+1)
-            if len(maps)>2*1024*1024:return None
-            for line in maps.splitlines():
-                v=line.split(None,5)
-                if len(v)>=5 and v[4].isdigit() and v[4]!=b'0':
-                    major,minor=v[3].split(b':')
-                    used.add((os.makedev(int(major,16),int(minor,16)),int(v[4])))
-        except (FileNotFoundError,ProcessLookupError):continue
-        except (OSError,ValueError):return None
+            result=subprocess.run([tool,'-s','--',str(p)],
+                                  capture_output=True,timeout=15,shell=False)
+        except (OSError,subprocess.TimeoutExpired):return None
+        if result.returncode==0:
+            st=p.stat(follow_symlinks=False)
+            used.add((st.st_dev,st.st_ino))
+        elif result.returncode!=1:return None
     return used
+
 def main():
     checked(os.geteuid()==0 and re.fullmatch('[a-f0-9]{40}',SOURCE or '') and REQUEST.isdigit(),'OWNER_CONTEXT')
     checked(ROOT.is_dir() and STATE.is_dir() and not STATE.is_symlink(),'EXACT_HOST')
