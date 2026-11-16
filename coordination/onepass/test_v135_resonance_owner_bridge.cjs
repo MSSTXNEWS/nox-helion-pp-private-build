@@ -1123,3 +1123,43 @@ test('V172 aborts stalled non-2xx owner error bodies on create, model and S03',a
     if(stage==='history')assert(calls.includes('/api/ui/memory/dialogs/history'));
   }
 });
+
+test('V173 legacy RU ES first meaningful delta precedes delayed native done, S03 verified',async()=>{
+  for(const [reply,firstDeltaAt] of [
+    ['Привет, NOX — я отвечаю по-русски.',6],
+    ['¡Hola, señor! ¿Cómo estás?',6]
+  ]){
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,
+      3,undefined,true,firstDeltaAt);
+    const response=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v173-legacy-ru-es'})});
+    const reader=response.body.getReader(),decoder=new TextDecoder();
+    const meta=JSON.parse(decoder.decode((await reader.read()).value).slice(6).trim());
+    assert.equal(meta.answer_source,'NATIVE_PENDING');
+    const first=await Promise.race([
+      reader.read(),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_LEGACY_RU_ES_BUFFERED')),95))
+    ]);
+    assert.equal(first.done,false);
+    const initial=JSON.parse(decoder.decode(first.value).slice(6).trim());
+    assert.equal(initial.type,'token');
+    assert(initial.t.length>0 && reply.startsWith(initial.t));
+    const frames=[initial];
+    for(;;){
+      const chunk=await reader.read();
+      if(chunk.done)break;
+      frames.push(JSON.parse(decoder.decode(chunk.value).slice(6).trim()));
+    }
+    const tokens=frames.filter(x=>x.type==='token');
+    assert.equal(tokens.map(x=>x.t).join(''),reply,'no invented/truncated text');
+    let offset=0;const boundaries=new Set();
+    for(const g of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(reply)){
+      offset+=g.segment.length;boundaries.add(offset);
+    }
+    offset=0;for(const t of tokens){offset+=t.t.length;assert(boundaries.has(offset));}
+    const done=frames.find(x=>x.type==='done');
+    assert(done && done.history_persisted===true && Number.isInteger(done.first_visible_token_ms));
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+    assert.equal(f.calls.some(x=>x.path==='/api/nox/stop'),false);
+  }
+});
