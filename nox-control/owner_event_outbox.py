@@ -183,6 +183,13 @@ def proof_projection(value):
         if type(value.get('verified_children')) is int and 0 <= value['verified_children'] <= 6:
             result['verified_children'] = value['verified_children']
         return result
+    if (kind == 'bounded_native_s03_index' and all(key in common for key in ('receipt_sha256', 'source_sha256'))
+            and value.get('scope') == 'BOUNDED_S03_VECTOR_INDEX'
+            and all(type(value.get(key)) is int and 0 <= value[key] <= 1_000_000 for key in ('indexed', 'stale_remaining'))
+            and type(value.get('training_examples_accepted')) is int and value['training_examples_accepted'] == 0):
+        return {'kind': kind, **common, 'scope': 'BOUNDED_S03_VECTOR_INDEX',
+                'indexed': value['indexed'], 'stale_remaining': value['stale_remaining'],
+                'training_examples_accepted': 0, 'blockers': []}
     if kind == 'native_supervisor_running' and value.get('state') == 'RUNNING' and type(value.get('pid')) is int and value['pid'] > 0:
         if value.get('service') not in ('nox-priority-scheduler', 'nox-gpu-watchdog-t865u'):
             return None
@@ -236,7 +243,7 @@ def project_report(record):
     lifecycle = record.get('lifecycle') or {}
     result = {'kind': kind, 'task': {'id': task_id, 'handler': safe_id(task.get('handler')), 'claim': claim},
               'state': safe_code(record.get('state')), 'verification': proof,
-              'lifecycle': {key: safe_code(lifecycle.get(key)) for key in ('memory', 'senior', 'research', 'optimization')},
+              'lifecycle': {key: safe_code(lifecycle.get(key)) for key in ('memory', 'memory_retrieval', 'senior', 'research', 'optimization')},
               'learning': safe_code(record.get('learning'), 'NOT_ACCEPTED'),
               'journal_sha256': record.get('journal_sha256') if SHA.fullmatch(str(record.get('journal_sha256', ''))) else None}
     if kind == 'task_progress':
@@ -256,6 +263,10 @@ def project_report(record):
 def _text(event):
     kind, proof = event['kind'], event.get('verification') or {}
     if kind == 'task_verified':
+        if proof.get('kind') == 'bounded_native_s03_index':
+            return 'Общая память обновлена', ('Проверена индексация записей: ' + str(proof['indexed'])
+                + '. Ожидают обновления: ' + str(proof['stale_remaining'])
+                + '. Архивные тексты не приняты в обучающий набор автоматически.')
         if proof.get('kind') in ('bounded_native_component_check', 'bounded_native_plan_step', 'bounded_native_plan_join'):
             count = len(proof.get('blockers') or [])
             return 'Проверка завершена', 'Проверка задачи выполнена и подтверждена квитанцией.' + (

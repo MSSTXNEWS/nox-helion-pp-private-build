@@ -81,11 +81,25 @@ def regular(path,maximum=512*1024*1024):
 
 
 def file_sha(path):
-    regular(path)
-    value = hashlib.sha256()
-    with plain(path).open('rb') as stream:
-        for block in iter(lambda:stream.read(1024*1024),b''): value.update(block)
-    return value.hexdigest()
+    path=plain(path)
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    try:
+        before=os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size>512*1024*1024:
+            hold('HOLD_S03_FILE_TYPE_OR_SIZE')
+        value=hashlib.sha256();count=0
+        for block in iter(lambda:os.read(fd,1024*1024),b''):
+            count+=len(block)
+            if count>before.st_size:hold('HOLD_S03_FILE_CHANGED_DURING_HASH')
+            value.update(block)
+        after=os.fstat(fd);named=os.stat(path,follow_symlinks=False)
+        fields=('st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns')
+        if (count!=before.st_size or any(getattr(before,key)!=getattr(after,key) for key in fields)
+                or (before.st_dev,before.st_ino)!=(named.st_dev,named.st_ino)
+                or not stat.S_ISREG(named.st_mode)):
+            hold('HOLD_S03_FILE_CHANGED_DURING_HASH')
+        return value.hexdigest()
+    finally:os.close(fd)
 
 
 def atomic_json(path,value):
@@ -184,17 +198,29 @@ def snapshot_database(source,destination,seconds=12):
     """A consistent SQLite byte artifact including committed WAL content."""
     source = plain(source);destination = plain(destination)
     regular(source)
-    if shutil.disk_usage(source.parent).free<6*1024**3+source.stat().st_size:
-        hold('HOLD_S03_BACKUP_DISK_RESERVE')
     if destination.exists():hold('HOLD_S03_SNAPSHOT_ALREADY_EXISTS')
     destination.parent.mkdir(parents=True,mode=0o700,exist_ok=True)
-    fd = os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
     deadline = time.monotonic()+seconds
-    def progress(status,remaining,total):
-        if time.monotonic()>deadline:hold('HOLD_S03_BACKUP_BUDGET')
-    with connection(source,seconds=seconds) as src,sqlite3.connect(destination) as dst:
-        src.backup(dst,pages=128,progress=progress,sleep=.01)
-        if dst.execute('PRAGMA quick_check').fetchone()[0]!='ok':hold('HOLD_S03_BACKUP_INTEGRITY')
+    with connection(source,seconds=seconds) as src:
+        # Establish the read snapshot before sizing it: page_count includes
+        # committed WAL pages that are absent from the main-file st_size.
+        src.execute('BEGIN')
+        src.execute('SELECT count(*) FROM sqlite_master').fetchone()
+        pages=src.execute('PRAGMA page_count').fetchone()[0]
+        page_size=src.execute('PRAGMA page_size').fetchone()[0]
+        logical_bytes=pages*page_size
+        if not 0<logical_bytes<=512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
+        if shutil.disk_usage(destination.parent).free<6*1024**3+logical_bytes:
+            hold('HOLD_S03_BACKUP_DISK_RESERVE')
+        fd=os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
+        def progress(status,remaining,total):
+            if time.monotonic()>deadline:hold('HOLD_S03_BACKUP_BUDGET')
+            if total*page_size>512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
+            if shutil.disk_usage(destination.parent).free<6*1024**3+remaining*page_size:
+                hold('HOLD_S03_BACKUP_DISK_RESERVE')
+        with sqlite3.connect(destination) as dst:
+            src.backup(dst,pages=128,progress=progress,sleep=.01)
+            if dst.execute('PRAGMA quick_check').fetchone()[0]!='ok':hold('HOLD_S03_BACKUP_INTEGRITY')
     fd = os.open(destination,os.O_RDONLY|os.O_NOFOLLOW)
     try:os.fsync(fd)
     finally:os.close(fd)

@@ -399,10 +399,16 @@ async def browser_run(report, directory, available):
             await target.first.wait_for(state='attached',timeout=10000)
             if not await target.count():
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_LISTED')
-            if not await target.first.is_visible():
+            box=await target.first.bounding_box()
+            report['qa_dialog_controls']['bounding_box']=box
+            # CSS-translated closed rails still satisfy Playwright is_visible;
+            # their text remains outside the viewport and cannot receive clicks.
+            hidden_horizontally=bool(box and not 0 < box['x']+box['width']/2 < 1440)
+            if not await target.first.is_visible() or hidden_horizontally:
                 report['browser_stage']='QA_RAIL_OPEN'
                 await page.locator('[data-action="toggle-rail"]').first.click()
             report['browser_stage']='QA_DIALOG_CLICK'
+            await target.first.scroll_into_view_if_needed()
             await target.first.click()
             report['browser_stage']='QA_DIALOG_HISTORY'
             await page.wait_for_timeout(350)

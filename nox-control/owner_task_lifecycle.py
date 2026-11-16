@@ -28,6 +28,8 @@ import owner_event_outbox as outbox
 ROOT = Path('/root/nox')
 PATCH_MARKER = 'NOX_OWNER_TASK_LIFECYCLE_BIND_V1'
 SHA = re.compile(r'^[0-9a-f]{64}$')
+MEMORY_METHODS = {'semantic', 'hybrid', 'fts', 'like', 'pin', 'recent'}
+MEMORY_KINDS = {'LEXICAL_WITH_PINS', 'LEXICAL_BOUNDED_PINS', 'SEMANTIC_LEXICAL_BOUNDED_PINS'}
 _LOCAL = threading.local()
 _CONTEXT_SLOT = threading.Lock()
 _CACHE_LOCK = threading.Lock()
@@ -110,24 +112,42 @@ def journal_recall(task):
 _RECALL_CHILD = r'''
 import contextlib, hashlib, importlib.util, json, os, pathlib, sys
 p=pathlib.Path('/root/nox/scripts/s03_memory.py')
-if p.is_symlink() or hashlib.sha256(p.read_bytes()).hexdigest()!=sys.argv[1]:
+raw=p.read_bytes()
+if p.is_symlink() or hashlib.sha256(raw).hexdigest()!=sys.argv[1]:
     raise SystemExit(2)
 sys.path.insert(0,str(p.parent))
+gateway_sha=sys.argv[3] if len(sys.argv)>3 else '-'
+gateway_raw=None;gateway_path=p.parent/'owner_s03_gateway.py'
+if gateway_sha!='-':
+    gateway_raw=gateway_path.read_bytes()
+    if gateway_path.is_symlink() or hashlib.sha256(gateway_raw).hexdigest()!=gateway_sha:
+        raise SystemExit(2)
+elif b'owner_s03_gateway' in raw:
+    raise SystemExit(2)
 with open(os.devnull,'w') as sink, contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+    if gateway_raw is not None:
+        spec=importlib.util.spec_from_file_location('owner_s03_gateway',str(gateway_path))
+        gateway=importlib.util.module_from_spec(spec);sys.modules['owner_s03_gateway']=gateway
+        exec(compile(gateway_raw,str(gateway_path),'exec'),gateway.__dict__)
     spec=importlib.util.spec_from_file_location('s03_memory',str(p))
-    module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    module=importlib.util.module_from_spec(spec);sys.modules['s03_memory']=module
+    exec(compile(raw,str(p),'exec'),module.__dict__)
     rows=module.recall(sys.argv[2],k=16)
 if not isinstance(rows,list): raise SystemExit(3)
 result=[]
 rows=rows[:20]
-ranked=sorted(rows,key=lambda row:0 if isinstance(row,dict) and row.get('how') in ('fts','like') else 1)
+ranked=sorted(rows,key=lambda row:0 if isinstance(row,dict) and row.get('how') in ('semantic','hybrid','fts','like') else 1)
 for row in ranked[:8]:
     if not isinstance(row,dict): continue
     encoded=json.dumps(row,sort_keys=True,ensure_ascii=False,default=str).encode()
     result.append({'reference_sha256':hashlib.sha256(encoded).hexdigest(),
-                   'method':row.get('how') if row.get('how') in ('fts','like','pin','recent') else 'unknown'})
-print(json.dumps({'state':'S03_RECALLED','retrieval_kind':'LEXICAL_WITH_PINS',
-                  'lexical_matches':sum(isinstance(row,dict) and row.get('how') in ('fts','like') for row in rows),
+                   'method':row.get('how') if row.get('how') in ('semantic','hybrid','fts','like','pin','recent') else 'unknown'})
+semantic=sum(isinstance(row,dict) and row.get('how') in ('semantic','hybrid') for row in rows)
+if semantic and gateway_raw is None:raise SystemExit(3)
+kind=('SEMANTIC_LEXICAL_BOUNDED_PINS' if semantic else 'LEXICAL_BOUNDED_PINS') if gateway_raw is not None else 'LEXICAL_WITH_PINS'
+print(json.dumps({'state':'S03_RECALLED','retrieval_kind':kind,
+                  'lexical_matches':sum(isinstance(row,dict) and row.get('how') in ('fts','like','hybrid') for row in rows),
+                  'semantic_matches':semantic,'gateway_source_verified':gateway_raw is not None,
                   'references':result,'content_exported':False}))
 '''
 
@@ -139,31 +159,59 @@ def semantic_recall(task):
     expected = config.get('s03_source_sha256')
     if not isinstance(expected, str) or not SHA.fullmatch(expected):
         return {'state': 'MISSING_S03_SOURCE_PIN', 'content_exported': False}
+    gateway_sha = config.get('s03_gateway_source_sha256')
+    gateway_enabled = config.get('shared_memory_retrieval') in ('LEXICAL_BOUNDED_PINS', 'SEMANTIC_LEXICAL_BOUNDED_PINS')
+    if gateway_enabled and (not isinstance(gateway_sha, str) or not SHA.fullmatch(gateway_sha)):
+        return {'state': 'MISSING_S03_GATEWAY_SOURCE_PIN', 'content_exported': False}
     source = ROOT / 'scripts/s03_memory.py'
     try:
         if file_sha(source) != expected:
             return {'state': 'S03_SOURCE_CHANGED', 'content_exported': False}
+        if gateway_enabled and file_sha(ROOT / 'scripts/owner_s03_gateway.py') != gateway_sha:
+            return {'state': 'S03_GATEWAY_SOURCE_CHANGED', 'content_exported': False}
         # No arbitrary task text is interpolated into code or an external call.
         query = 'NOX technical verified decisions prior errors ' + outbox.safe_id(task.get('handler'))
-        child = subprocess.run(['/root/venv_volta/bin/python', '-I', '-c', _RECALL_CHILD, expected, query],
+        child = subprocess.run(['/root/venv_volta/bin/python', '-I', '-c', _RECALL_CHILD, expected, query,
+                                gateway_sha if gateway_enabled else '-'],
                                capture_output=True, timeout=1.25, check=False)
         if child.returncode or len(child.stdout) > 12000:
             return {'state': 'S03_RECALL_UNAVAILABLE', 'content_exported': False}
         value = json.loads(child.stdout)
         refs = value.get('references') if isinstance(value, dict) else None
-        if (not isinstance(value, dict) or value.get('state') != 'S03_RECALLED' or value.get('retrieval_kind') != 'LEXICAL_WITH_PINS'
+        if (not isinstance(value, dict) or value.get('state') != 'S03_RECALLED' or value.get('retrieval_kind') not in MEMORY_KINDS
+                or (value['retrieval_kind'] != 'LEXICAL_WITH_PINS' and not gateway_enabled)
+                or (gateway_enabled and value.get('gateway_source_verified') is not True)
                 or not isinstance(refs, list) or len(refs) > 8
                 or any(not isinstance(row, dict) or not SHA.fullmatch(str(row.get('reference_sha256', ''))) for row in refs)):
             return {'state': 'S03_RECALL_UNVERIFIED', 'content_exported': False}
         matches = value.get('lexical_matches')
-        return {'state': 'S03_RECALLED', 'retrieval_kind': 'LEXICAL_WITH_PINS',
+        semantic = value.get('semantic_matches')
+        if value['retrieval_kind'] == 'SEMANTIC_LEXICAL_BOUNDED_PINS' and (type(semantic) is not int or not 1 <= semantic <= 20):
+            return {'state': 'S03_RECALL_UNVERIFIED', 'content_exported': False}
+        return {'state': 'S03_RECALLED', 'retrieval_kind': value['retrieval_kind'],
                 'lexical_matches': matches if type(matches) is int and 0 <= matches <= 20 else None,
-                'references': [{'reference_sha256': row['reference_sha256'], 'method': row.get('method') if row.get('method') in ('fts', 'like', 'pin', 'recent') else 'unknown'} for row in refs],
-                'source_sha256': expected, 'content_exported': False}
+                'semantic_matches': semantic if type(semantic) is int and 0 <= semantic <= 20 else None,
+                'references': [{'reference_sha256': row['reference_sha256'], 'method': row.get('method') if row.get('method') in MEMORY_METHODS else 'unknown'} for row in refs],
+                'source_sha256': expected, 'gateway_source_sha256': gateway_sha if gateway_enabled else None,
+                'content_exported': False}
     except subprocess.TimeoutExpired:
         return {'state': 'S03_RECALL_BUDGET_EXHAUSTED', 'content_exported': False}
     except (OSError, ValueError, LifecycleHold):
         return {'state': 'S03_RECALL_UNAVAILABLE', 'content_exported': False}
+
+
+def configure_shared_recall(config, s03_source_sha256, gateway_source_sha256):
+    """Derive only the reviewed S03 config delta; caller pins and writes it."""
+    if not isinstance(config, dict) or config.get('schema') != LIFECYCLE_SCHEMA:
+        raise LifecycleHold('HOLD_LIFECYCLE_RECALL_CONFIG_SCHEMA')
+    if any(not isinstance(value, str) or not SHA.fullmatch(value)
+           for value in (s03_source_sha256, gateway_source_sha256)):
+        raise LifecycleHold('HOLD_LIFECYCLE_RECALL_CONFIG_PINS')
+    result = copy.deepcopy(config)
+    result.update(s03_source_sha256=s03_source_sha256,
+                  s03_gateway_source_sha256=gateway_source_sha256,
+                  shared_memory_retrieval='SEMANTIC_LEXICAL_BOUNDED_PINS')
+    return result
 
 
 def _gateway_result(value):
@@ -378,6 +426,7 @@ def _lifecycle_summary(value):
     context = value.get('shared_context') or {}
     senior = context.get('senior') or {}
     return {'memory': (context.get('memory') or {}).get('state'), 'senior': senior.get('state'),
+            'memory_retrieval': (context.get('memory') or {}).get('retrieval_kind'),
             'research': senior.get('research_state'), 'optimization': (value.get('optimization') or {}).get('state')}
 
 
@@ -655,17 +704,20 @@ def bind_dispatcher(namespace, source_pins):
     if file_sha(outbox.__file__) != source_pins.get('owner_event_outbox'):
         raise LifecycleHold('HOLD_LIFECYCLE_OUTBOX_SOURCE')
     mentor = _checked_module(namespace, 'owner_mentor', source_pins.get('owner_mentor'))
-    for name in ('owner_task_plans', 'owner_media_runtime'):
+    for name in ('owner_task_plans', 'owner_media_runtime', 'owner_s03_gateway'):
         if name in source_pins and namespace.get(name) is None:
             raise LifecycleHold('HOLD_EXISTING_BINDING_REQUIRED_' + name)
     plans = _checked_module(namespace, 'owner_task_plans', source_pins.get('owner_task_plans'))
     media = _checked_module(namespace, 'owner_media_runtime', source_pins.get('owner_media_runtime'))
+    memory = _checked_module(namespace, 'owner_s03_gateway', source_pins.get('owner_s03_gateway'))
     gateway = _checked_module(namespace, 'owner_senior_gateway', source_pins.get('owner_senior_gateway'),
                               required='owner_senior_gateway' in source_pins)
     if plans is not None and not callable(getattr(plans, 'plan_metadata', None)):
         raise LifecycleHold('HOLD_LIFECYCLE_PLAN_INTERFACE')
     if gateway is not None and not callable(getattr(gateway, 'consult_plan', None)):
         raise LifecycleHold('HOLD_LIFECYCLE_SENIOR_INTERFACE')
+    if memory is not None and not callable(getattr(memory, 'verify_success', None)):
+        raise LifecycleHold('HOLD_LIFECYCLE_S03_INDEX_INTERFACE')
     coordinator = Coordinator(namespace, mentor, plans, gateway, media)
     original_experience = mentor.record_experience
     original_verify = mentor.verify_success
@@ -675,6 +727,8 @@ def bind_dispatcher(namespace, source_pins):
             value = plans.verify_success(task, evidence)
         if value is None and media is not None and task.get('handler') == 'owner_media':
             return verify_media(media, task, evidence)
+        if value is None and memory is not None and task.get('handler') == 'owner_memory_sync':
+            return memory.verify_success(task, evidence)
         return value
     def experience(*args, **kwargs):
         value = original_experience(*args, **kwargs)
