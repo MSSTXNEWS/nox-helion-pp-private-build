@@ -91,6 +91,27 @@ class S03HoursTest(unittest.TestCase):
     self.assertEqual(snap['groups']['weights']['value'],2)
     self.assertEqual(snap['events'][0]['delta'],2)
 
+  def test_overflow_events_are_bounded_and_never_claim_complete_progress(self):
+    # More than 5000 genuine journal rows must not crash the WEB frontend or
+    # allow an incomplete aggregate to be called a confirmed native total.
+    base={'kind':'knowledge','at':'2026-11-16T02:25:00Z',
+          'state':'source','evidence':'source','delta':None}
+    rows=[{**base,'id':f'overflow-{i}'} for i in range(5001)]
+    with patch.object(self.j,'_events',return_value=rows):
+      snap=self.j.snapshot(OWNER,NOW,2)
+    self.assertTrue(snap['truncated'])
+    self.assertEqual(len(snap['events']),5000)
+    for kind in mod.KINDS:
+      self.assertIsNone(snap['groups'][kind]['value'])
+      self.assertFalse(snap['groups'][kind]['complete'])
+      self.assertEqual(snap['groups'][kind]['state'],'blocked')
+      self.assertIn('HOLD',snap['groups'][kind]['summary'])
+    self.assertEqual(snap['hourly_readback']['persisted_verified'],0)
+    with patch.object(self.j,'_events',return_value=rows[:-1]):
+      exact=self.j.snapshot(OWNER,NOW,2)
+    self.assertFalse(exact['truncated'])
+    self.assertEqual(len(exact['events']),5000)
+
   def test_stale_or_unstamped_telemetry_never_becomes_live(self):
     values={'ttft_ms':280,'gpu0_percent':45,'gpu1_percent':101}
     self.assertIsNone(self.j.snapshot(OWNER,NOW,2,telemetry=values)['metrics']['ttft_ms'])

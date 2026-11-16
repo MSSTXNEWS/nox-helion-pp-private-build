@@ -85,4 +85,11 @@ const knowledgeMatched=normalize({...data,generated_at:liveStamp,events:[verifie
  groups:{knowledge:{value:3,complete:false}}});
 assert.equal(nativeGroupValue(knowledgeMatched,'knowledge'),3);
 
-console.log('PASS source regressions: S03 HOLD, stale aggregate, disconnected telemetry and owner session revocation');
+const clipped=normalize({...data,generated_at:liveStamp,events:verifiedWeights.events,truncated:true,
+ groups:{weights:{value:2,complete:true}}});
+assert.equal(clipped.truncated,true);
+assert.equal(nativeGroupValue(clipped,'weights'),null); // even a matching partial aggregate is UNKNOWN
+assert.match(content,/выборка неполная/); // explicit user-facing notice
+assert.match(content,/Событий больше 5000/);
+
+console.log('PASS source regressions: bounded 5000-event window, S03 HOLD, aggregate truthfulness and owner isolation');

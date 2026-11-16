@@ -205,7 +205,11 @@ class ProgressJournal:
         self.owner(owner);now=now or datetime.now(timezone.utc)
         if type(hours) is not int or not 1<=hours<=168:raise ValueError('INVALID_HOURS')
         start=hour(now)-timedelta(hours=hours-1);end=hour(now)+timedelta(hours=1)
-        events=self._events(owner,start,min(end,now+timedelta(seconds=1)))
+        # Query one extra row to detect overflow, but never ship >5000 records
+        # to the existing browser contract (which rejects an oversized response).
+        fetched=self._events(owner,start,min(end,now+timedelta(seconds=1)),limit=5001)
+        truncated=len(fetched)>5000
+        events=fetched[:5000]
         cards=[];all_coverage=set(KINDS);expected_closed=0;verified_closed=0
         for i in range(hours):
             h=start+timedelta(hours=i);covered=self._coverage(owner,h);all_coverage &= covered
@@ -230,7 +234,16 @@ class ProgressJournal:
         for k in ('ttft_ms','tokens_per_second','gpu0_percent','gpu1_percent','ram_percent'):
             v=sample.get(k)
             metrics[k]=v if sample_fresh and type(v) in (float,int) and math.isfinite(v) and v>=0 and ('percent' not in k or v<=100) else None
-        return {'schema':SCHEMA,'mode':'native','generated_at':iso(now),'window_start':iso(start),'timezone':'Europe/Moscow','groups':summarize(events,all_coverage,start,end),'metrics':metrics,'hours':list(reversed(cards)),'events':events,'truncated':False,
+        groups=summarize(events,all_coverage,start,end)
+        if truncated:
+            # A clipped list cannot prove complete learning or a true zero.
+            # Keep source events visible, but never publish a partial sum as
+            # verified optimizer updates / knowledge / deploys.
+            groups={kind:{**group,'value':None,'complete':False,
+                          'state':'blocked',
+                          'summary':f"{LABELS[kind]}: HOLD · окно превышает 5000 событий; подтверждённый итог неизвестен"}
+                    for kind,group in groups.items()}
+        return {'schema':SCHEMA,'mode':'native','generated_at':iso(now),'window_start':iso(start),'timezone':'Europe/Moscow','groups':groups,'metrics':metrics,'hours':list(reversed(cards)),'events':events,'truncated':truncated,
                 'hourly_readback':{'expected_closed':expected_closed,'persisted_verified':verified_closed,
                                    'complete':expected_closed==verified_closed}}
 
