@@ -217,7 +217,14 @@ def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
     elif memory_ratio >= 0.85: budget = min(budget,3)
     if cpu_pressure >= 50: budget = min(budget,1)
     elif cpu_pressure >= 20:budget = min(budget,3)
-    existing_claims = sum(1 for row in status.values() if row == 'running')
+    # Reservation is native queue state, not only a lowercase "running".
+    # A lost ACK can leave an admitted/queued/unknown job consuming a slot.
+    # Fail closed for unknown/null/structured statuses; release capacity only
+    # for explicit terminal states from the verified native snapshot.
+    terminal = frozenset(('done','completed','failed','cancelled','canceled'))
+    existing_claims = sum(
+        1 for state in status.values()
+        if not (isinstance(state, str) and state.casefold() in terminal))
     budget = max(0, budget-existing_claims)
     ranked=[]
     for task in tasks:

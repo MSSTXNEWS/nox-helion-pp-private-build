@@ -1,0 +1,60 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_SLOT_1C",
+  "instructions_version": "0.0.6",
+  "slot": "1C",
+  "recorded_utc": "2026-11-16T12:11:20.094Z",
+  "recorded_msk": "2026-11-16 15:09 MSK (approx)",
+  "source_head_before": "beb6cf2f6c0c3f2e8ac7fe3c05e0372cff426c3c",
+  "source_status": "SOURCE_PATCHED_PENDING_CI",
+  "native_status": "HOLD_NO_FRESH_VERIFIED_ONEHOST_WRITER_LEASE",
+  "error_id": "NOX-P0-1C-NONRUNNING-NATIVE-CLAIMS-OVERADMISSION-20261116",
+  "root_cause": "choose_ready counted only status == 'running'; admitted, queued, claimed and unknown ACK jobs consumed no capacity and could over-admit 3 additional native jobs with a full NORMAL pool.",
+  "fix": "Count every non-terminal verified native status as occupying one of three process claim slots. Release only explicit terminal string states. Never replay task IDs present in status. Existing dispatcher and OneHost unchanged.",
+  "paths": [
+    "nox-control/owner_autonomy_pool.py",
+    "nox-control/test_owner_autonomy_pool.py"
+  ],
+  "five_tasks": [
+    {
+      "id": 1,
+      "state": "SOURCE_REVIEWED_NATIVE_HOLD",
+      "reason": "Existing read_resource_snapshot, STOP/owner/writer lease interface reviewed; fresh native readback unavailable"
+    },
+    {
+      "id": 2,
+      "state": "SOURCE_PATCHED",
+      "reason": "Preserved existing callbacks; adjusted original admission budget"
+    },
+    {
+      "id": 3,
+      "state": "HOLD_NATIVE",
+      "reason": "No fresh distinct 3 PID/starttime/heartbeats"
+    },
+    {
+      "id": 4,
+      "state": "SOURCE_PATCHED",
+      "reason": "Bounded typed DAG queue now counts admitted/unknown claims against normal 3-slot cap"
+    },
+    {
+      "id": 5,
+      "state": "HOLD_NATIVE",
+      "reason": "Not issued without owner writer lease; no new terminal S03 proof"
+    }
+  ],
+  "WEIGHTS": {
+    "new_updates_verified": 0,
+    "trainer_pid": null,
+    "checkpoint_restore_verified": false
+  },
+  "KNOWLEDGE": {
+    "new_native_hunter_s03_recall_verified": false
+  },
+  "DISPATCHER_RESOURCES": {
+    "new_pid_verified": false,
+    "lease_verified": false,
+    "remote_restarts": 0,
+    "bytes_downloaded": 0,
+    "files_deleted": 0
+  },
+  "next_action": "Check owner-native readback STOP/lease, 3 worker PIDs and unresolved admitted claims; install only under actual writer lease and run one bounded job S03 terminal+rollback."
+}

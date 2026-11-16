@@ -326,4 +326,42 @@ class PoolTests(unittest.TestCase):
         n.native_queue_claim.assert_not_called()
         n.native_duplicate_check.assert_not_called()
 
+
+    def test_claimed_queued_and_unknown_reserve_all_three_native_slots(self):
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(4)},
+                                 allowed_handlers={'owner_component'})
+        status={'old-1':'CLAIMED','old-2':'queued','old-3':None}
+        # Existing leases remain capacity claims even when not yet RUNNING.
+        self.assertEqual(pool.choose_ready(tasks,status=status,mode='NORMAL',
+                                           memory_ratio=.5),[])
+        n=self._native_claim_mock()
+        out=pool.admit_native_tick(n,tasks=tasks,status=status,
+                                   mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['jobs_started'],0)
+        n.native_queue_claim.assert_not_called()
+
+    def test_explicit_terminal_states_release_slots_but_unknown_do_not(self):
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(4)},
+                                 allowed_handlers={'owner_component'})
+        status={'old-complete':'completed','old-failed':'FAILED','old-cancel':'CANCELED',
+                'old-unverified':{'state':'done'}}
+        ready=pool.choose_ready(tasks,status=status,mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(len(ready),2)
+        # The string "running" is not the only inflight status.
+        status={'old-running':'RUNNING','old-admitted':'ADMITTED_NOT_EXECUTED'}
+        ready=pool.choose_ready(tasks,status=status,mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(len(ready),1)
+
+    def test_native_queue_capacity_does_not_overclaim_with_admitted_jobs(self):
+        tasks=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(6)},
+                                 allowed_handlers={'owner_component'})
+        n=self._native_claim_mock()
+        status={'prior-1':'ADMITTED_NOT_EXECUTED','prior-2':'running'}
+        out=pool.admit_native_tick(n,tasks=tasks,status=status,
+                                   mode='NORMAL',memory_ratio=.5)
+        self.assertEqual(out['state'],'NATIVE_QUEUE_READBACK_VERIFIED')
+        self.assertEqual(out['jobs_started'],1)
+        self.assertEqual(n.native_queue_claim.call_count,1)
+        self.assertEqual(len(out['receipts']),1)
+
 if __name__=='__main__':unittest.main()
