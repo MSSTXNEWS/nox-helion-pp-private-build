@@ -43,4 +43,28 @@ with tempfile.TemporaryDirectory() as d:
     fixture(root);(root/'extra.safetensors').write_bytes(b'0')
     assert m.hf_metadata_probe(root)['status']=='HOLD_SHARD_INDEX_FILESET_MISMATCH'
     print('PASS 7: extra unindexed shard')
-print('NOX_AUTO_2A_HF_METADATA_SYNTHETIC_7_7_PASS; NATIVE_HOLD')
+
+# Layout checks are synthetic, never native tensor SHA evidence.
+with tempfile.TemporaryDirectory() as d:
+    root=Path(d); fixture(root)
+    name='model-00001-of-00001.safetensors'
+    (root/'model.safetensors.index.json').write_text(json.dumps({'weight_map':{'a':name,'b':name}}))
+    def pair(a_shape=(1,),b_offsets=(2,4),payload=bytes(4),b_dtype='F16'):
+        hdr={'a':{'dtype':'F16','shape':list(a_shape),'data_offsets':[0,2]},
+             'b':{'dtype':b_dtype,'shape':[1],'data_offsets':list(b_offsets)}}
+        raw=json.dumps(hdr).encode()
+        (root/name).write_bytes(len(raw).to_bytes(8,'little')+raw+payload)
+        return m.hf_metadata_probe(root)['status']
+    assert pair()=='HEADER_INDEX_MATCH_ONLY_CONTENT_SHA_PENDING'
+    print('PASS 8: contiguous two-tensor payload')
+    assert pair(a_shape=(2,))=='HOLD_TENSOR_BYTE_SIZE'
+    print('PASS 9: incorrect tensor shape bytes')
+    assert pair(b_offsets=(1,3),payload=bytes(3))=='HOLD_TENSOR_LAYOUT'
+    print('PASS 10: overlapping offsets')
+    assert pair(b_offsets=(3,5),payload=bytes(5))=='HOLD_TENSOR_LAYOUT'
+    print('PASS 11: hole between tensors')
+    assert pair(payload=bytes(5))=='HOLD_TENSOR_LAYOUT'
+    print('PASS 12: unindexed trailing data')
+    assert pair(b_dtype='F9')=='HOLD_TENSOR_DTYPE_UNSUPPORTED'
+    print('PASS 13: unknown dtype')
+print('NOX_AUTO_2A_HF_METADATA_SYNTHETIC_13_13_PASS; NATIVE_HOLD')

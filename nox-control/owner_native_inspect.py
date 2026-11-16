@@ -130,6 +130,12 @@ def hf_metadata_probe(base):
            'weight_payload_sha256_verified':False,'immutable_hf_revision_verified':False,
            'adapter_merge_authorized':False}
     MAX_JSON=16*1024*1024
+    # The index and tensor headers do not prove a SHA256 of the weight payload.
+    DTYPE_BYTES = {
+        'BOOL': 1, 'U8': 1, 'I8': 1, 'F8_E4M3': 1, 'F8_E5M2': 1, 'F8_E8M0': 1,
+        'U16': 2, 'I16': 2, 'F16': 2, 'BF16': 2,
+        'U32': 4, 'I32': 4, 'F32': 4, 'U64': 8, 'I64': 8, 'F64': 8,
+    }
     def unique(pairs):
         obj={}
         for key,value in pairs:
@@ -178,6 +184,8 @@ def hf_metadata_probe(base):
                 header=json.loads(stream.read(n),object_pairs_hook=unique)
             if not isinstance(header,dict) or len(header)>100000:
                 raise ValueError('HOLD_SAFETENSORS_HEADER_OBJECT')
+            payload_bytes=nbytes-8-n
+            ranges=[]
             entries=[(k,v) for k,v in header.items() if k!='__metadata__']
             from_index={k for k,v in mapping.items() if v==name}
             if {k for k,_ in entries}!=from_index:
@@ -187,12 +195,25 @@ def hf_metadata_probe(base):
                 shape=desc.get('shape'); dtype=desc.get('dtype');offsets=desc.get('data_offsets')
                 if (not isinstance(shape,list) or len(shape)>16 or
                     any(type(v)!=int or v<0 for v in shape) or
-                    not isinstance(dtype,str) or not re.fullmatch(r'[A-Z0-9]{2,12}',dtype) or
+                    not isinstance(dtype,str) or not re.fullmatch(r'[A-Z0-9_]{2,16}',dtype) or
                     not isinstance(offsets,list) or len(offsets)!=2 or
                     any(type(v)!=int or v<0 for v in offsets) or
                     offsets[0]>offsets[1] or offsets[1]>nbytes-8-n):
                     raise ValueError('HOLD_TENSOR_HEADER_INVALID')
+                width=DTYPE_BYTES.get(dtype)
+                if width is None:
+                    raise ValueError('HOLD_TENSOR_DTYPE_UNSUPPORTED')
+                if offsets[1]-offsets[0] != math.prod(shape)*width:
+                    raise ValueError('HOLD_TENSOR_BYTE_SIZE')
+                ranges.append((offsets[0],offsets[1]))
                 tensors.append((key,name,dtype,shape))
+            cursor=0
+            for first,last in sorted(ranges):
+                if first!=cursor:
+                    raise ValueError('HOLD_TENSOR_LAYOUT')
+                cursor=last
+            if cursor!=payload_bytes:
+                raise ValueError('HOLD_TENSOR_LAYOUT')
         out['shard_index_sha256']=hashlib.sha256(idxbytes).hexdigest()
         out['tensor_metadata_sha256']=hashlib.sha256(json.dumps(
             sorted(tensors),ensure_ascii=False,separators=(',',':')).encode()).hexdigest()

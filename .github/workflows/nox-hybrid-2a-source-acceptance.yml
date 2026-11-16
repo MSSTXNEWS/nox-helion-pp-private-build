@@ -4,6 +4,8 @@ on:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'nox-control/hybrid_training_entry.py'
+      - 'nox-control/owner_native_inspect.py'
+      - 'coordination/progress/hourly/nox_auto_2a_hf_metadata_test.py'
       - 'nox-control/test_owner_training_config_preflight.py'
       - '.github/workflows/nox-hybrid-2a-source-acceptance.yml'
   workflow_dispatch:
@@ -21,3 +23,6 @@ jobs:
         run: python -m unittest discover -s nox-control -p test_owner_training_config_preflight.py -v
       - name: Existing frozen dataset regression
         run: python -m unittest discover -s nox-control -p test_hybrid_training_dataset_reader.py -v
+
+      - name: Exact 2A safetensors metadata layout test
+        run: python coordination/progress/hourly/nox_auto_2a_hf_metadata_test.py
