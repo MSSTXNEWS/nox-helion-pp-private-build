@@ -123,12 +123,50 @@ class MayaLaunchPlanTests(unittest.TestCase):
         got = PLAN.evaluate_source_plan(
             stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
             reserve_mib=1024, verified_files=complete_rows(),
-            tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"))
+            tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
+            packer_output_absent=True)
         self.assertEqual(got["state"], "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE")
         self.assertFalse(got["launchable"])
         self.assertEqual(got["unique_verified_files"], 6)
         self.assertEqual(got["unique_bytes"], 248_834_257_920)
         self.assertIn("--serve", got["command_contract"])
+        self.assertEqual(got["packer_output_dir"], "maya-ds4")
+        self.assertTrue(got["packer_non_clobber_precondition"])
+
+    def test_packer_output_must_be_absent_to_prevent_clobber(self):
+        common = dict(stop_present=False, gpu_ids=(0, 1), tp=2,
+                      max_context=4096, reserve_mib=1024,
+                      verified_files=complete_rows(),
+                      tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"))
+        for observed in (None, False, 0, "false"):
+            with self.subTest(output_absent=repr(observed)):
+                got = PLAN.evaluate_source_plan(
+                    **{**common, "packer_output_absent": observed})
+                self.assertEqual(got["state"], "HOLD_PACKER_OUTPUT_NOT_ABSENT")
+                self.assertFalse(got["launchable"])
+        passed = PLAN.evaluate_source_plan(
+            **{**common, "packer_output_absent": True})
+        self.assertEqual(passed["state"], "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE")
+
+    def test_exact_manifest_and_packer_shard_contract(self):
+        expected = tuple(
+            [f"DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-0000{i}-of-00006.gguf"
+             for i in range(1, 6)] +
+            ["DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf"])
+        self.assertEqual(PLAN.EXPECTED_FILES, expected)
+        self.assertEqual(len(set(PLAN.EXPECTED_FILES)), 6)
+        self.assertEqual(set(PLAN.PINNED_FILE_FACTS), set(PLAN.EXPECTED_FILES))
+        packer = maya_source("tools/ds4/pack_gguf.py")
+        # Maya requires five supplied trunk files plus the omitted logical 00006
+        # shard and an explicit Engram source when split.count is six.
+        self.assertIn('ap.add_argument("--shards", nargs="+",', packer)
+        self.assertIn('ap.add_argument("--without", nargs="+", default=[]', packer)
+        self.assertIn('ap.add_argument("--engram"', packer)
+        self.assertIn("split != len(gs) + len(a.without)", packer)
+        self.assertIn("if a.without and not a.engram:", packer)
+        self.assertIn('model / "maya-ds4"', packer)
+        self.assertIn('open("w")', packer)
+        self.assertIn('open("wb")', packer)
 
     def test_missing_engram_or_bad_digest_holds(self):
         rows = complete_rows()[:-1]
@@ -185,13 +223,16 @@ class MayaLaunchPlanTests(unittest.TestCase):
             **{**common, "verified_files": invalid})["state"],
             "HOLD_ALL_FIVE_SHARDS_AND_ENGRAM_REQUIRED")
 
-    def test_unconfirmed_fp8_is_rejected(self):
-        got = PLAN.evaluate_source_plan(
-            stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
-            reserve_mib=1024, verified_files=complete_rows(),
-            tensor_types=("BF16", "IQ2_XXS", "IQ4_NL", "FP8_E4M3"))
-        self.assertEqual(got["state"], "HOLD_UNCONFIRMED_TENSOR_KERNEL")
-        self.assertIn("FP8_E4M3", got["unknown_types"])
+    def test_unconfirmed_fp8_fp4_or_mxfp_kernels_are_rejected(self):
+        for unsupported in ("FP8_E4M3", "MXFP8", "FP4", "MXFP4"):
+            with self.subTest(tensor_type=unsupported):
+                got = PLAN.evaluate_source_plan(
+                    stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
+                    reserve_mib=1024, verified_files=complete_rows(),
+                    tensor_types=("BF16", "IQ2_XXS", "IQ4_NL", unsupported),
+                    packer_output_absent=True)
+                self.assertEqual(got["state"], "HOLD_UNCONFIRMED_TENSOR_KERNEL")
+                self.assertIn(unsupported, got["unknown_types"])
 
     def test_invalid_gpu_context_or_reserve_holds(self):
         common = dict(stop_present=False, verified_files=complete_rows(),
