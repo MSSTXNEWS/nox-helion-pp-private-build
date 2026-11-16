@@ -90,5 +90,62 @@ class MountInventoryTests(unittest.TestCase):
         names=audit.mount_inventory.__code__.co_names
         self.assertFalse(any(word in names for word in ('unlink','remove','Popen')))
         self.assertIn('/proc/self/mountinfo',audit.mount_inventory.__code__.co_consts)
+class V13OwnerFenceMetadataTests(unittest.TestCase):
+    def sample(self, present=(), denied=()):
+        seen=[]
+        def metadata_only(path):
+            name=str(path)
+            seen.append(name)
+            if any(name.endswith(suffix) for suffix in denied):
+                raise PermissionError('not readable')
+            if any(name.endswith(suffix) for suffix in present):
+                return object()
+            raise FileNotFoundError(name)
+        observed=audit.v13_owner_fence_metadata(
+            root=Path('/fixture/nox'), workspace_stop=Path('/fixture/workspace/NOX_STOP'),
+            lstat=metadata_only)
+        self.assertEqual(len(seen),10)
+        self.assertFalse(observed['may_start_nox'])
+        self.assertFalse(observed['may_write_native'])
+        self.assertFalse(observed['may_clear_stop'])
+        self.assertEqual(observed['owner_lease_state'],'NOT_CHECKED')
+        self.assertEqual(observed['scope'],'READ_ONLY_MARKER_METADATA')
+        return observed
+
+    def test_no_marker_is_observation_not_owner_clearance(self):
+        got=self.sample()
+        self.assertEqual(got['owner_stop_state'],'NOT_OBSERVED_NOT_AUTHORIZED')
+        self.assertEqual(got['train_hold_state'],'NOT_FOUND_AT_SNAPSHOT')
+
+    def test_present_owner_stop_and_maintenance_always_fence(self):
+        for flag in ('/STOP','/state/OWNER_MAINTENANCE.flag','/NOX_STOP'):
+            with self.subTest(flag=flag):
+                got=self.sample(present=(flag,))
+                self.assertEqual(got['owner_stop_state'],'PRESENT')
+        got=self.sample(present=('/state/TRAIN_HOLD.flag',))
+        self.assertEqual(got['train_hold_state'],'PRESENT')
+        self.assertEqual(got['owner_stop_state'],'NOT_OBSERVED_NOT_AUTHORIZED')
+
+    def test_unreadable_stop_never_becomes_absent_or_authorized(self):
+        got=self.sample(denied=('/state/STOP',))
+        self.assertEqual(got['owner_stop_state'],'UNKNOWN')
+        self.assertEqual(got['markers']['STATE_STOP'],'UNKNOWN_UNREADABLE')
+        got=self.sample(present=('/STOP',),denied=('/state/STOP',))
+        self.assertEqual(got['owner_stop_state'],'PRESENT')
+
+    def test_original_supervisor_audit_attaches_fence_without_adding_worker(self):
+        from unittest.mock import patch
+        with patch.object(audit.shutil, 'which', return_value=None), \
+             patch.object(audit.Path, 'is_file', return_value=False), \
+             patch.object(audit, 'v13_owner_fence_metadata',
+                          return_value={'owner_stop_state':'UNKNOWN'}) as check:
+            got=audit.supervisor()
+        self.assertIs(got['available'],False)
+        self.assertEqual(got['owner_fence_readonly']['owner_stop_state'],'UNKNOWN')
+        check.assert_called_once()
+        source=SOURCE.read_text()
+        self.assertIn('pool.map(worker,range(7))',source)
+
+
 if __name__=='__main__':unittest.main()
 
