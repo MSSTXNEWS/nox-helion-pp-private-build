@@ -123,6 +123,87 @@ def processes():
                    'note':'Namespace ambiguity is unresolved; CUDA_VISIBLE_DEVICES alone is not GPU ownership.'})
     return result
 
+
+def hf_metadata_probe(base):
+    """Bounded read-only HF metadata: never treats tensor headers as weight payload SHA."""
+    out = {'record':'trainable_hf_lineage_metadata','scope':'READ_ONLY',
+           'weight_payload_sha256_verified':False,'immutable_hf_revision_verified':False,
+           'adapter_merge_authorized':False}
+    MAX_JSON=16*1024*1024
+    def unique(pairs):
+        obj={}
+        for key,value in pairs:
+            if key in obj:raise ValueError('DUPLICATE_JSON_KEY')
+            obj[key]=value
+        return obj
+    try:
+        files={}
+        for name in ('tokenizer.json','tokenizer_config.json','special_tokens_map.json',
+                     'added_tokens.json','chat_template.jinja','generation_config.json'):
+            p=base/name
+            if not p.exists():continue
+            if p.is_symlink() or not p.is_file() or p.stat().st_size>32*1024*1024:
+                raise ValueError('HOLD_TOKENIZER_FILE_UNSAFE')
+            h=hashlib.sha256()
+            with p.open('rb') as stream:
+                for chunk in iter(lambda:stream.read(1024*1024),b''):h.update(chunk)
+            files[name]={'sha256':h.hexdigest(),'bytes':p.stat().st_size}
+        out['tokenizer_file_digests']=files
+        if 'tokenizer.json' not in files or 'tokenizer_config.json' not in files:
+            raise ValueError('HOLD_TOKENIZER_REQUIRED_FILES')
+        idx=base/'model.safetensors.index.json'
+        if idx.is_symlink() or not idx.is_file() or idx.stat().st_size>MAX_JSON:
+            raise ValueError('HOLD_SHARD_INDEX_MISSING_OR_UNSAFE')
+        idxbytes=idx.read_bytes(); index=json.loads(idxbytes,object_pairs_hook=unique)
+        mapping=index.get('weight_map')
+        if not isinstance(mapping,dict) or not mapping or len(mapping)>100000:
+            raise ValueError('HOLD_SHARD_INDEX_MAP')
+        names=set(mapping.values())
+        if any(not isinstance(k,str) or not k or not isinstance(v,str) or
+               not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*\.safetensors',v)
+               for k,v in mapping.items()):
+            raise ValueError('HOLD_SHARD_NAME_UNSAFE')
+        actual={p.name for p in base.glob('*.safetensors')}
+        if actual!=names or len(names)>50:
+            raise ValueError('HOLD_SHARD_INDEX_FILESET_MISMATCH')
+        tensors=[]; total_bytes=0
+        for name in sorted(names):
+            p=base/name
+            if p.is_symlink() or not p.is_file():raise ValueError('HOLD_SHARD_UNSAFE')
+            nbytes=p.stat().st_size;total_bytes+=nbytes
+            with p.open('rb') as stream:
+                n=int.from_bytes(stream.read(8),'little')
+                if not 2<=n<=MAX_JSON or nbytes<8+n:
+                    raise ValueError('HOLD_SAFETENSORS_HEADER_SIZE')
+                header=json.loads(stream.read(n),object_pairs_hook=unique)
+            if not isinstance(header,dict) or len(header)>100000:
+                raise ValueError('HOLD_SAFETENSORS_HEADER_OBJECT')
+            entries=[(k,v) for k,v in header.items() if k!='__metadata__']
+            from_index={k for k,v in mapping.items() if v==name}
+            if {k for k,_ in entries}!=from_index:
+                raise ValueError('HOLD_TENSOR_INDEX_HEADER_MISMATCH')
+            for key,desc in entries:
+                if not isinstance(desc,dict):raise ValueError('HOLD_TENSOR_DESCRIPTOR')
+                shape=desc.get('shape'); dtype=desc.get('dtype');offsets=desc.get('data_offsets')
+                if (not isinstance(shape,list) or len(shape)>16 or
+                    any(type(v)!=int or v<0 for v in shape) or
+                    not isinstance(dtype,str) or not re.fullmatch(r'[A-Z0-9]{2,12}',dtype) or
+                    not isinstance(offsets,list) or len(offsets)!=2 or
+                    any(type(v)!=int or v<0 for v in offsets) or
+                    offsets[0]>offsets[1] or offsets[1]>nbytes-8-n):
+                    raise ValueError('HOLD_TENSOR_HEADER_INVALID')
+                tensors.append((key,name,dtype,shape))
+        out['shard_index_sha256']=hashlib.sha256(idxbytes).hexdigest()
+        out['tensor_metadata_sha256']=hashlib.sha256(json.dumps(
+            sorted(tensors),ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+        out['tensor_count']=len(tensors);out['shards_count']=len(names)
+        out['shards_total_bytes']=total_bytes
+        out['status']='HEADER_INDEX_MATCH_ONLY_CONTENT_SHA_PENDING'
+    except (OSError,UnicodeError,ValueError,TypeError,OverflowError) as e:
+        code=str(e)
+        out['status']=code if code.startswith('HOLD_') else 'HOLD_METADATA_'+type(e).__name__.upper()
+    return out
+
 def training():
     rows=[]
     keys={'phase','step','global_step','loss','smoke','rows','ts','updated_msk','program','error','method','model','s_per_step','eta_sec','best_gated','max_steps','trainable_params','resume'}
@@ -161,6 +242,7 @@ def training():
                          'weight_files':[{'name':p.name,'bytes':p.stat().st_size}
                                          for p in sorted(base.glob('*.safetensors'))[:50] if p.is_file() and not p.is_symlink()]})
         except (OSError,ValueError,TypeError):rows.append({'record':'trainable_hf_base','metadata_error':True})
+    rows.append(hf_metadata_probe(base))
     return rows
 
 def supervisor_config():
