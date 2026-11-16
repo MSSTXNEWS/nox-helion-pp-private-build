@@ -1,0 +1,106 @@
+{
+  "schema": "NOX_RELAY_V10_FIVE_TASK_RECEIPT",
+  "instructions_version": "0.0.6",
+  "id": "DUTY_1_V10_OWNER_NATIVE_MAYA_RANGE_LEASE_20261116T1439Z",
+  "at_utc": "2026-11-16T14:39:40Z",
+  "at_msk": "2026-11-16T17:39:40+03:00",
+  "slot": "DUTY_1",
+  "instance": 60509551,
+  "source_head_recorded_from": "0c0cbd6e69bf67d1e044b5c00d3e9e26bfdd366d",
+  "read_only_owner_inspection": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803",
+  "owner_comment_id": 6919505894,
+  "native_source_commit": "ec8f885d04981d3e8fcd76e836c4e1d41cd869f3",
+  "stop": "PRESENT",
+  "maintenance": "PRESENT",
+  "train_hold": "PRESENT",
+  "train_pause": "PRESENT",
+  "writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+  "supervisor": "NOX production stopped under owner MODEL_UPDATE",
+  "gpu0": {
+    "model": "V100-32GB",
+    "vram_used_mib": 0,
+    "utilization_pct": 0
+  },
+  "gpu1": {
+    "model": "V100-32GB",
+    "vram_used_mib": 0,
+    "utilization_pct": 0
+  },
+  "native_nox_active_pid_start_ticks": [],
+  "cgroup_max_ram_bytes": 194065203200,
+  "cgroup_used_ram_bytes": 60387917824,
+  "cgroup_cpu_cores": 19.2,
+  "ssd_free_bytes": 43158929408,
+  "shm_free_bytes": 3366711296,
+  "rclone_remotes": [],
+  "port_8081": "CONNECTION_REFUSED",
+  "model": "DeepSeek-V4.1-Flash-1017 GSQ-RCO IQ2_XXS",
+  "model_unique_bytes_needed": 248834257920,
+  "model_missing_five_bytes": 248828477216,
+  "maya_binary_sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+  "maya_binary_bytes": 71289520,
+  "maya_binary": "SHA_PIN_MATCH_ELF_ONLY_NOT_INFERENCE",
+  "maya_original_build_receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/feature/nox-engine-stage-20261116/coordination/NOX_ENGINE_STACK_20261116/maya-build-6906295096-receipt.json",
+  "source_fix_commits": [
+    "35b334467c477ba26f8bebf95e673162a9c91b70",
+    "ec8f885d04981d3e8fcd76e836c4e1d41cd869f3"
+  ],
+  "source_test_runs": [
+    43886937043,
+    43887884274
+  ],
+  "native_install": false,
+  "model_promoted": false,
+  "s03_callback_verified": false,
+  "watchdog_native_24_7_verified": false,
+  "tasks": [
+    {
+      "id": "S1-01",
+      "state": "LIVE_VERIFIED",
+      "scope": "OWNER_READ_ONLY_INSTANCE_STOP",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803"
+    },
+    {
+      "id": "S1-03",
+      "state": "HOLD",
+      "scope": "OWNER_MODEL_UPDATE_STOP_PRESENT_WRITER_LEASE_UNKNOWN"
+    },
+    {
+      "id": "S1-04",
+      "state": "LIVE_VERIFIED",
+      "scope": "OWNER_READ_ONLY_GPU_CGROUP_SSD_SHM",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803"
+    },
+    {
+      "id": "S2-07",
+      "state": "SOURCE_TESTED",
+      "native": "HOLD_STORAGE_AUTH_OR_SEEKABLE_PLACEMENT",
+      "ci": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43886937043",
+      "tests": "16/16"
+    },
+    {
+      "id": "P0-2A-MAYA-ELF-SHA",
+      "state": "LIVE_VERIFIED",
+      "scope": "MAYA_BINARY_SHA_ELF_ONLY_NOT_INFERENCE",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43887943803"
+    }
+  ],
+  "counters_this_run": {
+    "optimizer_successful_updates": 0,
+    "new_downloaded_bytes": 0,
+    "deleted_bytes": 0,
+    "freed_bytes": 0,
+    "service_restarts": 0,
+    "owner_stop_clears": 0,
+    "model_inferences": 0,
+    "s03_write_readback_recall": 0
+  },
+  "historical_qwen_steps_not_current": 55,
+  "other_holds": [
+    "S1-07 checkpoint optimizer S03 independent restore unknown",
+    "S2-08 Hunter S03 write/readback/recall unverified",
+    "S3-04 current WEB SSE not available during owner STOP"
+  ],
+  "rollback": "No native mutations. Source fix revert only under new CAS with preservation of concurrent changes.",
+  "first_next_ready": "S2-07: authorize and verify ≥248.83GB unique seekable storage, external quota and restore; inspect native shards; require exclusive original OneHost writer lease before transfer, preserve STOP."
+}
