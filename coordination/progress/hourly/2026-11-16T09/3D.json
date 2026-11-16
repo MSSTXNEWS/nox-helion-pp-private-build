@@ -1,0 +1,181 @@
+{
+  "schema": "NOX_WEB_WEIGHTS_V06_3D_RELAY_RECEIPT_V4",
+  "instructions_version": "0.0.6",
+  "slot": "3D",
+  "source_branch": "feature/nox-v38-synaptic-brain-20261114",
+  "recorded_at_utc": "2026-11-16T06:17:42.564Z",
+  "recorded_at_msk": "2026-11-16T09:17:42.564+03:00",
+  "source_head_before_receipt": "1eae79c66c3cec1b62cefb6d8e8738bce5683fae",
+  "primary_web": {
+    "filename": "NOX_HELION_WEB29_MAIN_20261116.zip",
+    "bytes": 84223045,
+    "sha256": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc"
+  },
+  "reviewed_3a_candidate": {
+    "sha256": "48fa3a189b100242a3ff965e15da3ef83e426c443e275df03bdaae76dfaf413a",
+    "original_entries": 1212,
+    "changed_vs_primary": [
+      "site/pc/hub.html",
+      "site/pc/menu.html",
+      "site/pc/progress.html",
+      "site/pc/v25/nox-shell-v25.js",
+      "site/pc/world.html",
+      "site/progress.html"
+    ],
+    "added_or_deleted_entries": 0,
+    "locked_shader_sha256": "124a5d341059eb1070adcf58640657aa471ea4888e4409101503ecaa9337f952",
+    "locked_orbit14_sha256": "3aced1774354b6212b665ef40514e78fb7660a3319fd346c4b12bbf277a39d38",
+    "themes_bytes_preserved": true
+  },
+  "source_improvement": {
+    "root_cause": "Original accepted WEB29 site/chat.html still had eager vendor/fx/motion.js defer; STOP-specific event was not emitted by the core site/nox-chat.js and aborted-stream finally idle could re-admit decorative fetch. Prior source-only idle loader wasn't wired to chat HTML.",
+    "stop_race_commit": "49c2f7d060b7cb739f97adc82d02b05f1c1efc83",
+    "stop_race_js_blob": "3c7c2d9cce1b18e7ed825981b0c01ee19da2e240",
+    "stop_race_test_blob": "afdc6208daa5f737fc7860d1032736f6ff856021",
+    "stage_script_commit": "89fb092d573b62a89b128abaeec54356d2575698",
+    "stage_script_path": "coordination/onepass/web29_3d_20261116/integration/stage_original_3d.py",
+    "staged_archive_sha256": "3b5d95e7ba4a1b8671b20c7da588b4fa582845f5706fbeba96414762bcc6dc92",
+    "staged_archive_bytes": 84227151,
+    "staged_archive_members": 1214,
+    "permitted_changes": [
+      "site/chat.html",
+      "site/nox-chat.js"
+    ],
+    "added_assets": [
+      "site/nox-motion-idle-loader.js",
+      "site/nox-cinematic-accessibility-3d.css"
+    ],
+    "no_other_original_bytes_changed": true,
+    "original_vendor_motion_and_D02_14_worlds_retained": true,
+    "stop_event_only_decorative_listener": "nox-stop-requested dispatched once on user STOP before model API STOP request; owner STOP not cleared",
+    "native_deployment": false
+  },
+  "validation": {
+    "source_ci": "SUCCESS",
+    "run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814344887",
+    "exact_3d_node_tests": "20/20 PASS",
+    "node_syntax": "PASS",
+    "local_stage_node_vm": "4/4 PASS",
+    "source_stage_zip_crc": "PASS",
+    "archive_equivalence": "1212 original paths preserved except exact 2 allowlisted, plus 2 new assets",
+    "browser_real_chromium_navigation": "HOLD_ERR_BLOCKED_BY_ADMINISTRATOR",
+    "browser_attempts_blocked": 16,
+    "blocked_routes": [
+      "site/index.html",
+      "site/chat.html",
+      "site/progress.html",
+      "site/pc/resonance.html"
+    ],
+    "viewports_attempted": [
+      320,
+      390,
+      800,
+      1440
+    ],
+    "owner_authenticated_browser": false,
+    "live_ttft": null,
+    "live_visual_screenshot": null,
+    "live_sse_stop_s03": null,
+    "note": "No policy bypass. Local Node VM tests and archive tests are not authenticated browser or OneHost E2E."
+  },
+  "five_tasks": [
+    {
+      "n": 1,
+      "state": "DONE_SOURCE_LOCK",
+      "detail": "Compared original and accepted 3A candidate: 1212 matching paths; only 6 permitted 3A changes, original shaders/orbit14/world themes byte-identical."
+    },
+    {
+      "n": 2,
+      "state": "DONE_SOURCE_PATCH",
+      "detail": "Fixed aborted STOP->inactive decorative re-admission; staged replacement of eager Motion.js in original chat with existing gated loader and exact STOP activity hook; native runtime not modified."
+    },
+    {
+      "n": 3,
+      "state": "SOURCE_TESTED_HOLD_BROWSER",
+      "detail": "Preserved D02/14, source Reduced Motion CSS imported byte-exact from GitHub and all unrelated original assets preserved; new viewport/keyboard real DOM measurements blocked."
+    },
+    {
+      "n": 4,
+      "state": "HOLD_ADMIN_BLOCK",
+      "detail": "16 attempts at real local Chromium HTTP navigation blocked by administrator; no screenshots/TTFT metrics invented."
+    },
+    {
+      "n": 5,
+      "state": "DONE_SOURCE_STAGE_HOLD_NATIVE",
+      "detail": "Created SHA-verifiable portable staged archive and committed guarded staging recipe; no owner-native preimage/lease/rollback, so original OneHost WEB/CHAT/S03 not overwritten."
+    }
+  ],
+  "relay_control": [
+    {
+      "lane": "WEIGHTS",
+      "state": "HISTORICAL_NATIVE_VERIFIED_CURRENT_TRAIN_HOLD",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43813584758",
+      "student": "Qwen3.5-9B",
+      "successful_optimizer_updates_last_verified": 8,
+      "previous_3d_verified": 5,
+      "previous_3c_verified": 6,
+      "verified_increase_since_previous_3c": 2,
+      "skipped_updates": 0,
+      "checkpoint8_files": 10,
+      "checkpoint8_hashed_bytes": 519884896,
+      "checkpoint8_manifest_sha256": "107f26c33c62b7e9ee4326013bafd75ed2cc3ad03de14f5da24bcd99c57f78b2",
+      "adapter_tensor_sha256": "2d83465f71095e0b94d2eb115390fddd85f2ad350d66172c8565e41cf054113e",
+      "onhost_reload_verified": true,
+      "independent_offsite_restore_verified": false,
+      "latest_loss_at_step8": null,
+      "new_updates_this_3d_run": 0,
+      "current_trainer_at_2026_11_16T0605Z": "FATAL / NO PID; TRAIN_HOLD",
+      "training_restart_this_run": false,
+      "issue": "HOLD_MEDIA_HANDBACK_FILE_CHANGED blocks owner.qwen.resume claim; exact owner lease and preimage required before retry"
+    },
+    {
+      "lane": "KNOWLEDGE",
+      "state": "HOLD_FULL_HUNTER_E2E",
+      "native_review_receipts_historical": 3,
+      "hunter_licensed_source_s03_write_readback_recall_verified": false,
+      "new_s03_writes_this_run": 0
+    },
+    {
+      "lane": "DISPATCHER+RESOURCES",
+      "state": "PARTIAL_HISTORICAL_NATIVE_NO_CURRENT_ADMISSION",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43814277490",
+      "dispatcher_pid_at_0605Z": 724331,
+      "chat_ports_http200_at_0559Z": [
+        8080,
+        8081,
+        8082
+      ],
+      "three_worker_pids_current": null,
+      "current_gpu0": null,
+      "current_gpu1": null,
+      "current_cpu": null,
+      "current_ram": null,
+      "current_temperatures": null,
+      "current_ssd": null,
+      "current_owner_lease": null,
+      "ssd_free_historical_at_0559Z": 12220051456,
+      "owner_train_hold_at_0605Z": true,
+      "download_bytes_this_run": 0,
+      "server_restarts_this_run": 0,
+      "live_jobs_finished_this_run": 0
+    }
+  ],
+  "cleanup": {
+    "state": "HOLD_NOT_ELIGIBLE",
+    "reason": "New DeepSeek mandatory weights not installed/accepted, original serving endpoint not switched, offsite restore and exclusive cleanup lease unproven",
+    "deleted_files": 0,
+    "freed_bytes": 0
+  },
+  "boundaries": {
+    "new_backend": false,
+    "new_scheduler": false,
+    "new_s03": false,
+    "exe": false,
+    "api_paid": false,
+    "server_commands_executed": false,
+    "live_weights_changed": false,
+    "web_deployed": false,
+    "owner_stop_cleared": false
+  },
+  "next_ready_action": "Existing authorised V51 OneHost exact serving preimage/STOP/lease/verified independent rollback; stage only accepted WEB29 3A+3D source; real authenticated browser SSE first meaningful token, STOP, S03/owner ACL, 320/390/800/1440 visual and p50/p95. Do not restart blocked Qwen claim without exact reconciliation."
+}
