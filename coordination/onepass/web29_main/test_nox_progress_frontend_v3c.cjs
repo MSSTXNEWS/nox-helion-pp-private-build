@@ -55,4 +55,34 @@ assert.equal(nativeGroupValue(disconnected,'weights'),null);
 assert.equal(verifiedWeights.metrics.ttft_ms,300); // historical object never modified
 assert.match(content,/if\(e\.status===401\|\|e\.status===403\).*detailBody.*replaceChildren/); // revoke owner details
 
+const forgedAggregate=normalize({...data,generated_at:liveStamp,events:verifiedWeights.events,
+ groups:{weights:{value:25,complete:false}}});
+assert.equal(nativeGroupValue(forgedAggregate,'weights'),null); // one receipt proves 2, never 25
+const forgedComplete=normalize({...data,generated_at:liveStamp,events:verifiedWeights.events,
+ groups:{weights:{value:25,complete:true}}});
+assert.equal(nativeGroupValue(forgedComplete,'weights'),null); // "complete" cannot override proof
+const forgedFraction=normalize({...data,generated_at:liveStamp,events:verifiedWeights.events,
+ groups:{weights:{value:2.5,complete:true}}});
+assert.equal(nativeGroupValue(forgedFraction,'weights'),null); // count must be integer
+const unprovenComplete=normalize({...data,generated_at:liveStamp,events:[],
+ groups:{weights:{value:8,complete:true}}});
+assert.equal(nativeGroupValue(unprovenComplete,'weights'),null); // no native updates at all
+const zeroComplete=normalize({...data,generated_at:liveStamp,events:[],
+ groups:{weights:{value:0,complete:true}}});
+assert.equal(nativeGroupValue(zeroComplete,'weights'),0); // legitimate complete zero
+const zeroIncomplete=normalize({...data,generated_at:liveStamp,events:[],
+ groups:{weights:{value:0,complete:false}}});
+assert.equal(nativeGroupValue(zeroIncomplete,'weights'),null);
+const truncatedAggregate=normalize({...data,generated_at:liveStamp,events:verifiedWeights.events,truncated:true,
+ groups:{weights:{value:2,complete:true}}});
+assert.equal(nativeGroupValue(truncatedAggregate,'weights'),null); // incomplete source view
+const verifiedKnowledge={...verifiedWeights.events[0],id:'native-knowledge',kind:'knowledge',
+ proof:{receipt_sha256:A,records_added:3,s03_readback_sha256:'d'.repeat(64)}};
+const knowledgeMismatch=normalize({...data,generated_at:liveStamp,events:[verifiedKnowledge],
+ groups:{knowledge:{value:4,complete:false}}});
+assert.equal(nativeGroupValue(knowledgeMismatch,'knowledge'),null);
+const knowledgeMatched=normalize({...data,generated_at:liveStamp,events:[verifiedKnowledge],
+ groups:{knowledge:{value:3,complete:false}}});
+assert.equal(nativeGroupValue(knowledgeMatched,'knowledge'),3);
+
 console.log('PASS source regressions: S03 HOLD, stale aggregate, disconnected telemetry and owner session revocation');

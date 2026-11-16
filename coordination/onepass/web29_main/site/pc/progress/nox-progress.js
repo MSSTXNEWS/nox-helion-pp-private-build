@@ -22,11 +22,25 @@ function nativeFresh(raw,now=Date.now()){
  return raw?.mode==='native'&&Number.isFinite(at)&&age>=-30000&&age<=120000;
 }
 /* Aggregate counts need fresh owner-native proof, not merely a native label. */
+/* Reconcile the native aggregate with independently checked event proofs.
+   A fresh API timestamp alone cannot turn a contradictory sum into progress. */
 function nativeGroupValue(data,kind){
  const g=data?.groups?.[kind];
- if(!data?.liveFresh||!g||!finite(g.value))return null;
- const hasVerified=data.events.some(e=>e.kind===kind&&e.state==='verified'&&e.evidence==='native');
- return hasVerified||g.complete===true?g.value:null;
+ if(!data?.liveFresh||!g||data.truncated===true||
+    !Number.isSafeInteger(g.value)||g.value<0||!Array.isArray(data.events))return null;
+ const verified=data.events.filter(e=>e.kind===kind&&e.state==='verified'&&
+    e.evidence==='native'&&proofValid(e));
+ let total=0;
+ for(const e of verified){
+  const delta=kind==='weights'?e.proof.successful_optimizer_updates:
+              kind==='knowledge'?e.proof.records_added:1;
+  if(!Number.isSafeInteger(delta)||delta<0||!Number.isSafeInteger(total+delta))return null;
+  total+=delta;
+ }
+ // A complete zero is possible only when the original native collector
+ // explicitly supplied complete coverage. Partial zero means UNKNOWN.
+ if(!verified.length&&g.complete!==true)return null;
+ return total===g.value?total:null;
 }
 /* Lose current hardware/latency claims immediately on failed refresh. */
 function expireNative(data){
