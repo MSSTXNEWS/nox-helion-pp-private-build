@@ -98,8 +98,12 @@ class NightlyCorpusTests(unittest.TestCase):
             self.assertTrue(planned["trl"]["completion_only_loss"])
             self.assertEqual(c.export_versioned(work,corpus)["status"],
                              "HOLD_ALREADY_EXPORTED")
-            with (Path(out["path"])/"train.jsonl").open("a") as stream:
-                stream.write("corrupted\n")
+            train_file=Path(out["path"])/"train.jsonl"
+            original=train_file.read_text(encoding="utf-8")
+            corrupted=original.replace("Ответ: четыре", "Ответ: пять")
+            self.assertNotEqual(corrupted,original)
+            train_file.write_text(corrupted,encoding="utf-8")
+            # Valid JSON, same row count, changed source bytes: HASH gate.
             self.assertEqual(a.verify_corpus(out["path"])["state"],
                              "HOLD_CORPUS_HASH")
     def test_training_recipe_requires_real_checkpoint(self):
