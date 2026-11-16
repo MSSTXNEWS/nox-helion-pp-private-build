@@ -143,7 +143,71 @@ class StorageTests(unittest.TestCase):
         self.assertNotIn('hidden-credential', json.dumps(public))
         self.assertNotIn('/private/model', json.dumps(public))
 
-    def test_audit_deduplicates_inode_and_keeps_separate_copy_unverified(self):
+    def test_teacher_hold_reasons_are_specific_and_never_delete(self):
+        expected_path, expected_bytes = next(iter(storage.LEGACY_TEACHERS.items()))
+        path = self.root / Path(expected_path).relative_to(Path('/root/nox'))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b'GGUF-small-test')
+        usage = dict(self.usage, complete=False)
+        row = storage.teacher_candidate_review(path, path.stat(), usage)
+        self.assertEqual(row['observation'], 'OBSERVED_METADATA')
+        self.assertEqual(row['observed_bytes'], len(b'GGUF-small-test'))
+        self.assertEqual(row['hold_codes'], [
+            'TEACHER_WEIGHTS_PROTECTED',
+            'TWO_INDEPENDENT_SHA_VERIFIED_PC_AND_DRIVE_COPIES_REQUIRED',
+            'EXPECTED_SIZE_MISMATCH',
+            'PROCESS_INSPECTION_INCOMPLETE'])
+        self.assertFalse(row['deletion_authorized'])
+        self.assertTrue(path.exists())
+
+        hardlink = self.base / 'second-link.gguf'
+        os.link(path, hardlink)
+        info = path.stat()
+        busy = dict(self.usage, used={(info.st_dev, info.st_ino)})
+        row = storage.teacher_candidate_review(path, info, busy)
+        self.assertIn('EXPECTED_SIZE_MISMATCH', row['hold_codes'])
+        self.assertIn('LINK_COUNT_NOT_ONE', row['hold_codes'])
+        self.assertIn('OPEN_OR_MEMORY_MAPPED', row['hold_codes'])
+        self.assertTrue(path.exists())
+
+        row = storage.teacher_candidate_review(path, observation_error=PermissionError(13, 'denied'))
+        self.assertIn('OSERROR_EACCES', row['hold_codes'])
+        row = storage.teacher_candidate_review(path, observation_error=storage.StorageHold('HOLD_STORAGE_SYMLINK'))
+        self.assertIn('HOLD_STORAGE_SYMLINK', row['hold_codes'])
+        row = storage.teacher_candidate_review(path, observation_error='SYMLINK_NOT_FOLLOWED')
+        self.assertIn('SYMLINK_NOT_FOLLOWED', row['hold_codes'])
+        row = storage.teacher_candidate_review(path)
+        self.assertIn('NOT_OBSERVED_WITHIN_BOUNDED_AUDIT', row['hold_codes'])
+        with patch.object(storage.os, 'geteuid', return_value=path.stat().st_uid + 1):
+            row = storage.teacher_candidate_review(path, path.stat(), self.usage)
+        self.assertIn('OWNER_UID_MISMATCH', row['hold_codes'])
+        with patch.object(storage.stat, 'S_ISREG', return_value=False):
+            row = storage.teacher_candidate_review(path, path.stat(), self.usage)
+        self.assertIn('FILE_NOT_REGULAR', row['hold_codes'])
+        self.assertFalse(row['deletion_authorized'])
+        self.assertTrue(path.exists())
+        self.assertIsNone(storage.teacher_candidate_review('/tmp/not-a-teacher.gguf'))
+
+    def test_teacher_holds_are_in_audit_receipt_with_no_file_action(self):
+        expected_path = next(iter(storage.LEGACY_TEACHERS))
+        path = self.root / Path(expected_path).relative_to(Path('/root/nox'))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b'GGUF-temp')
+        budget = {'ssd': {'total_bytes': 200 * GIB, 'used_bytes': 180 * GIB, 'free_bytes': 20 * GIB},
+                  'tmpfs': {'total_bytes': 50 * GIB, 'used_bytes': 30 * GIB, 'free_bytes': 20 * GIB},
+                  'cgroup': {'headroom_bytes': 120 * GIB}}
+        with patch.object(storage, 'root_specs', return_value=[('NOX', self.root)]), \
+             patch.object(storage, 'process_usage', return_value=dict(self.usage, complete=False)), \
+             patch.object(storage, 'filesystem_budget', return_value=budget):
+            result = storage.audit('123', 'a' * 40)
+        row = next(item for item in result['teacher_candidate_holds']
+                   if item['path_id'] == storage.teacher_candidate_review(path)['path_id'])
+        self.assertEqual(row['observation'], 'OBSERVED_METADATA')
+        self.assertIn('PROCESS_INSPECTION_INCOMPLETE', row['hold_codes'])
+        self.assertIn('TEACHER_WEIGHTS_PROTECTED', row['hold_codes'])
+        self.assertFalse(row['deletion_authorized'])
+        self.assertTrue(path.exists())
+        self.assertEqual(result['files_deleted'], 0)
         folder = self.root / 'models'
         first = self.file(folder / 'model.gguf', b'GGUF', 8 * 1024 * 1024)
         other = folder / 'other'; other.mkdir()

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from contextlib import contextmanager
+import errno
 import fcntl
 import hashlib
 import json
@@ -36,6 +37,13 @@ AUDIT_SECONDS = 24
 RECLAIM_SECONDS = 35
 AUDIT_TTL = 900
 MEDIA_BYTES = 6938040682 + 2838303560 + 6735906897 + 253815318
+LEGACY_TEACHERS = {
+    '/root/nox/models/teachers/Dolphin3.0-Llama3.1-8B-Q4_K_M.gguf': 4920745856,
+    '/root/nox/models/teachers/Hermes-3-Llama-3.1-8B.Q4_K_M.gguf': 4920733824,
+    '/root/nox/models/teachers/NousResearch_DeepHermes-3-Llama-3-8B-Preview-Q4_K_M.gguf': 4920740800,
+    '/root/nox/models/teachers/saiga_nemo_12b.Q4_K_M.gguf': 7477204832,
+    '/root/nox/models/teachers/vikhr-nemo-12b-instruct-r-21-09-24-q4_k_m.gguf': 7477218656,
+}
 PARTIAL = re.compile(r'(?i)(?:\.part(?:ial)?|\.incomplete|\.download|\.tmp|\.lock)(?:[.-]|$)')
 WEIGHT_SUFFIX = {'.gguf', '.safetensors', '.pt', '.pth', '.bin', '.ckpt', '.onnx', '.h5', '.npz'}
 PROTECTED_WORDS = {'s03', 'memory', 'memories', 'checkpoints', 'checkpoint', 'ckpt', 'lora',
@@ -254,6 +262,53 @@ def prefix(path, count=32):
         return stream.read(count)
 
 
+def teacher_candidate_review(path, info=None, usage=None, observation_error=None):
+    """Explain why a known legacy teacher remains held; never authorizes deletion."""
+    path = Path(path)
+    try:
+        relative = path.relative_to(ROOT)
+    except ValueError:
+        return None
+    expected = LEGACY_TEACHERS.get(str(Path('/root/nox') / relative))
+    if expected is None:
+        return None
+    path = str(path)
+    codes = ['TEACHER_WEIGHTS_PROTECTED',
+             'TWO_INDEPENDENT_SHA_VERIFIED_PC_AND_DRIVE_COPIES_REQUIRED']
+    observation = 'OBSERVED_METADATA' if info is not None else 'NOT_OBSERVED_WITHIN_BOUNDED_AUDIT'
+    if observation_error is not None:
+        observation = 'OBSERVATION_ERROR'
+        if observation_error == 'SYMLINK_NOT_FOLLOWED':
+            codes.append('SYMLINK_NOT_FOLLOWED')
+        elif isinstance(observation_error, StorageHold):
+            token = str(observation_error)
+            codes.append(token if re.fullmatch(r'[A-Z0-9_]{1,96}', token)
+                         else 'STORAGE_HOLD_UNCLASSIFIED')
+        elif isinstance(observation_error, OSError):
+            code = errno.errorcode.get(observation_error.errno, 'UNKNOWN')
+            codes.append('OSERROR_' + code)
+        else:
+            codes.append('OBSERVATION_ERROR_' + type(observation_error).__name__)
+    if info is None and observation_error is None:
+        codes.append('NOT_OBSERVED_WITHIN_BOUNDED_AUDIT')
+    if info is not None:
+        if not stat.S_ISREG(info.st_mode):
+            codes.append('FILE_NOT_REGULAR')
+        if info.st_size != expected:
+            codes.append('EXPECTED_SIZE_MISMATCH')
+        if info.st_nlink != 1:
+            codes.append('LINK_COUNT_NOT_ONE')
+        if info.st_uid != os.geteuid():
+            codes.append('OWNER_UID_MISMATCH')
+        if usage is None or not usage.get('complete'):
+            codes.append('PROCESS_INSPECTION_INCOMPLETE')
+        elif (info.st_dev, info.st_ino) in usage.get('used', set()):
+            codes.append('OPEN_OR_MEMORY_MAPPED')
+    return {'path_id': digest_bytes(path.encode())[:20], 'observation': observation,
+            'expected_bytes': expected, 'observed_bytes': info.st_size if info is not None else None,
+            'hold_codes': list(dict.fromkeys(codes)), 'deletion_authorized': False}
+
+
 def deletion_kind(path):
     """A closed allowlist, not a general filesystem cleanup predicate."""
     path = Path(path)
@@ -355,6 +410,11 @@ def audit(request, source):
     groups = defaultdict(lambda: Counter(files=0, unique_inodes=0, unique_logical_bytes=0, unique_allocated_bytes=0, repeated_inode_paths=0))
     seen, candidates, possible_copies = set(), [], defaultdict(set)
     counts, refusals = Counter(), Counter()
+    teacher_reviews = {}
+    for teacher_path in LEGACY_TEACHERS:
+        teacher_path = ROOT / Path(teacher_path).relative_to(Path('/root/nox'))
+        row = teacher_candidate_review(teacher_path)
+        teacher_reviews[row['path_id']] = row
     coverage = []
     now = time.time()
     for label, root in root_specs():
@@ -385,7 +445,11 @@ def audit(request, source):
                         try:
                             info = entry.stat(follow_symlinks=False)
                             if stat.S_ISLNK(info.st_mode):
-                                counts['symlinks_not_followed'] += 1; continue
+                                counts['symlinks_not_followed'] += 1
+                                review = teacher_candidate_review(path, observation_error='SYMLINK_NOT_FOLLOWED')
+                                if review is not None:
+                                    teacher_reviews[review['path_id']] = review
+                                continue
                             if info.st_dev != initial.st_dev:
                                 counts['other_mounts_not_crossed'] += 1; continue
                             if stat.S_ISDIR(info.st_mode):
@@ -398,6 +462,9 @@ def audit(request, source):
                                 counts['special_files_not_read'] += 1; continue
                             group = groups[category(label, path)]
                             group['files'] += 1
+                            review = teacher_candidate_review(path, info, usage)
+                            if review is not None:
+                                teacher_reviews[review['path_id']] = review
                             key = (info.st_dev, info.st_ino)
                             if key in seen:
                                 group['repeated_inode_paths'] += 1
@@ -416,8 +483,11 @@ def audit(request, source):
                                     candidates = candidates[:MAX_CANDIDATES]
                             elif deletion_kind(path) is not None:
                                 refusals[reason] += 1
-                        except (OSError, StorageHold):
+                        except (OSError, StorageHold) as exc:
                             counts['unreadable_entries'] += 1; row['complete'] = False
+                            review = teacher_candidate_review(path, observation_error=exc)
+                            if review is not None:
+                                teacher_reviews[review['path_id']] = review
             except OSError:
                 row['complete'] = False
         row.setdefault('state', 'OBSERVED' if row['complete'] else 'BOUNDED_PARTIAL')
@@ -437,6 +507,7 @@ def audit(request, source):
                'distinct_inode_same_name_size_files': sum(copy_groups), 'content_duplicate_verified': False,
                'process_scan': {k: v for k, v in usage.items() if k != 'used'},
                'cleanup_candidates': candidates, 'cleanup_refusals': dict(refusals),
+               'teacher_candidate_holds': sorted(teacher_reviews.values(), key=lambda row: row['path_id']),
                'eligible_allocated_bytes': sum(x['allocated_bytes'] for x in candidates),
                'reclaim_batch_limit': MAX_DELETIONS, 'budget': budget, 'placement': placement(budget, aggregate),
                'pc_registration_present': bool(pc.get('schema') == 'NOX_PC_LINK_V1' and stamp),
