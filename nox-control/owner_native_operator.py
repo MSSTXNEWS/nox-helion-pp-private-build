@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_training_and_browser_acceptance.py'}
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_training_observe_and_chat.py'}
 MASTER=None
 
 def authorize_event(action):
@@ -114,6 +114,7 @@ def run_native(action,request_id):
                      'nox-control/owner_training_config_preflight.py','nox-control/owner_training_disk_guard.py',
                      'nox-control/owner_training_disk_guard_entry.py',
                      'nox-control/owner_training_recovery_chain.py','nox-control/owner_training_jsonl_recovery.py',
+                     'nox-control/owner_training_jsonl_observe.py','nox-control/owner_training_recovery_observe.py',
                      'nox-control/owner_training_corpus_probe.py',
                      'nox-control/owner_chat_evidence_entry.py','nox-control/owner_chat_evidence.py',
                      'nox-control/owner_chat_evidence_patch.py',
