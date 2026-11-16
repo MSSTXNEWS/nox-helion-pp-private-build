@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "enabled": false,
+  "poll_seconds": 60,
+  "stop_file": "/var/lib/nox/STOP",
+  "cooldown_seconds": 900,
+  "daily_restart_limit": 2,
+  "services": [
+    {
+      "unit": "nox-dispatcher.service",
+      "health_url": "http://127.0.0.1:8080/health",
+      "failures_before_restart": 3,
+      "restart_enabled": false
+    }
+  ]
+}
