@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage owner's FORSAZH=6 / NORMAL=2 selection on original Vast OneHost.
+"""Stage owner's FORSAZH=6 / NORMAL=3 selection on original Vast OneHost.
 
 This guarded owner-command writes ONLY a mode-intent record while emergency
 MODEL_UPDATE STOP is active. It NEVER starts, restarts, kills or resumes a
@@ -22,7 +22,7 @@ ROOT = Path("/root/nox")
 STATE = ROOT / "state"
 MODE_PATH = STATE / "owner_autonomy_mode_v15.json"
 INSTANCE = 60509551
-NORMAL = 2
+NORMAL = 3
 FORSAZH = 6
 SCHEMA = "NOX_OWNER_MODE_INTENT_V15"
 SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -112,7 +112,7 @@ def main():
         check(MODE_PATH.is_file(), "EXISTING_MODE_TYPE")
         item = json.loads(MODE_PATH.read_text(encoding="utf-8"))
         check(item.get("schema") == SCHEMA and item.get("selected") == "FORSAZH"
-              and item.get("mode_workers") == {"NORMAL": 2, "FORSAZH": 6},
+              and item.get("mode_workers") == {"NORMAL": 3, "FORSAZH": 6},
               "EXISTING_OWNER_MODE_CONFLICT")
         output = {"kind": "autonomy_mode_intent_v15", "state": "ALREADY_STAGED",
                   "selected": "FORSAZH", "target_native_workers_after_handback": 6,
