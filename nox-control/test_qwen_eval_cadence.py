@@ -106,7 +106,7 @@ class CheckpointRetentionNoLossTest(unittest.TestCase):
         self.assertEqual(len(nodes), 1)
         namespace = {
             "Path": Path, "ROOT": root, "Hold": Hold,
-            "CHECKPOINT_NAME": re.compile(r"checkpoint-u\\d{8}-a\\d{8}-g\\d{20}"),
+            "CHECKPOINT_NAME": re.compile(r"checkpoint-u\d{8}-a\d{8}-g\d{20}"),
             "math": math, "canonical_sha": digest,
             "check_path": lambda path: Path(path),
             "read_json": lambda path: json.loads(Path(path).read_text()),
