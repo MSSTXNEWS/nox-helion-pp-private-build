@@ -27,7 +27,79 @@ PINNED_FILE_FACTS = {
     "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf": (110595290816, "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3"),
 }
 SUPPORTED_TYPES = frozenset({"BF16", "Q8_0", "Q6_K", "Q5_K", "IQ2_XXS", "IQ4_NL"})
+ROLE_FLOAT_TYPES = frozenset({"F32", "F16", "BF16", "Q8_0"})
+# This plan is pinned to the declared IQ2_XXS trunk + IQ4_NL Engram artifacts.
+ROLE_EXPERT_TYPES = frozenset({"IQ2_XXS"})
+ROLE_ENGRAM_TABLE_TYPES = frozenset({"IQ4_NL"})
+ROLE_LAYERS = re.compile(r"blk\.(\d+)\.")
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+
+
+def validate_tensor_role_inventory(rows):
+    """Validate synthetic/raw GGUF role metadata against Maya's runtime dtype contracts."""
+    if not isinstance(rows, (tuple, list)) or not rows:
+        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_REQUIRED"}
+    embed = []
+    routers = []
+    experts = {}
+    engrams = []
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("name"), str) or not isinstance(row.get("dtype"), str):
+            return {"state": "HOLD_TENSOR_ROLE_INVENTORY_MALFORMED"}
+        name, dtype = row["name"], row["dtype"]
+        dims = row.get("dims")
+        if not isinstance(dims, (tuple, list)) or not dims or any(type(x) is not int or x <= 0 for x in dims):
+            return {"state": "HOLD_TENSOR_ROLE_INVENTORY_MALFORMED"}
+        if name == "token_embd.weight":
+            embed.append((name, dtype))
+            continue
+        match = ROLE_LAYERS.match(name)
+        if not match:
+            continue
+        layer = int(match.group(1))
+        tail = name[match.end():]
+        if tail in ("ffn_gate_inp.weight", "exp_probs_b.bias", "exp_probs_b_vl.bias"):
+            routers.append((name, dtype))
+        elif tail in ("ffn_gate_exps.weight", "ffn_up_exps.weight", "ffn_down_exps.weight"):
+            role = {"ffn_gate_exps.weight": "w1", "ffn_up_exps.weight": "w3",
+                    "ffn_down_exps.weight": "w2"}[tail]
+            experts.setdefault(layer, {})[role] = (name, dtype)
+        elif tail == "engram_embd.weight":
+            engrams.append((name, dtype, dims))
+    if len(embed) != 1:
+        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "token_embedding"}
+    if embed[0][1] not in {"BF16", "Q8_0", "Q4_K", "Q5_K", "Q6_K"}:
+        return {"state": "HOLD_UNSUPPORTED_ROLE_DTYPE", "role": "token_embedding", "dtype": embed[0][1]}
+    if not routers:
+        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "router"}
+    bad_router = next(((name, dtype) for name, dtype in routers if dtype not in ROLE_FLOAT_TYPES), None)
+    if bad_router:
+        return {"state": "HOLD_UNSUPPORTED_ROLE_DTYPE", "role": "router",
+                "name": bad_router[0], "dtype": bad_router[1]}
+    if not experts:
+        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "routed_experts"}
+    for layer, parts in sorted(experts.items()):
+        if set(parts) != {"w1", "w2", "w3"}:
+            return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "routed_experts",
+                    "layer": layer}
+        bad_expert = next((v for v in parts.values() if v[1] not in ROLE_EXPERT_TYPES), None)
+        if bad_expert:
+            return {"state": "HOLD_UNSUPPORTED_ROLE_DTYPE", "role": "routed_expert",
+                    "name": bad_expert[0], "dtype": bad_expert[1]}
+        if parts["w1"][1] != parts["w3"][1]:
+            return {"state": "HOLD_EXPERT_GATE_UP_TYPE_MISMATCH", "layer": layer}
+    if not engrams:
+        return {"state": "HOLD_TENSOR_ROLE_INVENTORY_INCOMPLETE", "role": "engram_table"}
+    for name, dtype, dims in engrams:
+        if dtype not in ROLE_ENGRAM_TABLE_TYPES:
+            return {"state": "HOLD_UNSUPPORTED_ROLE_DTYPE", "role": "engram_table",
+                    "name": name, "dtype": dtype}
+        if dtype == "IQ4_NL" and dims[0] % 32 != 0:
+            return {"state": "HOLD_ENGRAM_IQ4_NL_BLOCK_ALIGNMENT", "name": name}
+    return {"state": "ROLE_DTYPE_METADATA_PASS", "launchable": False,
+            "roles_checked": {"token_embedding": len(embed), "router": len(routers),
+                              "routed_expert_layers": len(experts), "engram_tables": len(engrams)}}
+
 
 
 def _path_has_symlink_component(path: Path) -> bool:
@@ -116,7 +188,7 @@ def observe_packer_output(model_file_paths):
 
 
 def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
-                         verified_files, tensor_types, model_file_paths=None):
+                         verified_files, tensor_types, tensor_role_inventory=None, model_file_paths=None):
     """Return only SOURCE_ONLY_* or HOLD; this function has no launch action."""
     # Only an explicit owner-confirmed False may pass this source gate.
     if stop_present is not False:
@@ -153,6 +225,9 @@ def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
     packer = observe_packer_output(model_file_paths)
     if packer["state"] != "PACKER_OUTPUT_ABSENT_VERIFIED":
         return {"state": packer["state"], "launchable": False}
+    role_gate = validate_tensor_role_inventory(tensor_role_inventory)
+    if role_gate["state"] != "ROLE_DTYPE_METADATA_PASS":
+        return {"state": role_gate["state"], "launchable": False, **role_gate}
     return {
         "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
         "launchable": False,
@@ -167,7 +242,8 @@ def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
         "packer_output_dir": packer["output_dir"],
         "packer_non_clobber_precondition": True,
         "model_content_sha256": "VERIFIED_AGAINST_PINNED_FACTS",
-        "model_tensor_inventory": "NOT_TESTED_BY_SOURCE_PREFLIGHT",
+        "model_tensor_inventory": "ROLE_DTYPE_CHECKED_FOR_SUPPLIED_METADATA_ONLY",
+        "role_dtype_gate": role_gate,
         "runtime_abi": "NOT_TESTED",
         "sm70_execution": "NOT_TESTED",
         "runtime_compatibility": "NOT_TESTED",
