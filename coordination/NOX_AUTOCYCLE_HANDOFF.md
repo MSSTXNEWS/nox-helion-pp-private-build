@@ -1454,3 +1454,10 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 
 ### B4 CLAIM V14-4-10 · 2026-11-16T23:27Z · instructions_version 0.0.6
 - Owner: B4 hourly relay, PROCESS4; source-only Git CAS task claim (NOT native OneHost writer lease). A4 predecessor completed V14-4-08; this distinct V14-4-10 was unclaimed in readback. Work: recover uncompleted source subagent dispatch safely by fail-closed RESULT schema validation and a regression in existing owner_subagent_processes/test. No STOP/lease change, no native dispatch, no new backend. Release claim promptly after source validation or HOLD.
+
+
+### NOX-V14-B1-V14-1-16-TOOL-ID-SIZE-20261117T0228MSK · SOURCE CLAIM · instructions_version 0.0.6
+- TaskID `V14-1-16` · owner B1/PROCESS 1. Distinct unclaimed source-only tool-call parsing hardening; latest A1 `V14-1-01` already SOURCE_TESTED and is not reworked.
+- Preimage candidate: `nox-control/owner_chat_stream.py` Git blob `742f62cffcfa5b2f6411dbc2f96e6b686fcdb2a1`. Verify exact preimage again before a one-patch source change. GitHub source claim is **not** a native OneHost writer lease.
+- Gate: preserve manual OWNER STOP/maintenance, current live model, S03, D02 and 14 worlds. No native command, deployment, restart, download, deletion or training; native HOLD until actual owner lease and independent restore proof.
+- Work: bound model-emitted tool-call IDs and guarantee malformed/oversized fragmented IDs never reach native dispatcher. Add regression in existing test suite, run existing package/source acceptance, then append final evidence. Do not hold a native lease.
