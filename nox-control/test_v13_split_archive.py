@@ -85,5 +85,33 @@ class ArchiveSafetyTests(unittest.TestCase):
             assemble(self.manifest, reserve=0)
 
 
+    def test_manifest_oversize_rejected_before_archive(self):
+        self.manifest.write_bytes(b' ' * (1024 * 1024 + 1))
+        with self.assertRaisesRegex(ValueError, 'HOLD_MANIFEST_TOO_LARGE'):
+            assemble(self.manifest, reserve=0)
+        self.assertFalse((self.root/'test.zip').exists())
+
+    def test_nonfinite_manifest_metadata_rejected(self):
+        self.metadata['unsafe_extra'] = float('nan')
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'HOLD_MANIFEST_NONFINITE_JSON'):
+            assemble(self.manifest, reserve=0)
+        self.assertFalse((self.root/'test.zip').exists())
+
+    def test_excessive_part_count_rejected_before_io(self):
+        self.metadata['parts'] = [dict(self.entries[0]) for _ in range(1025)]
+        self.metadata['archive_bytes'] = sum(p['bytes'] for p in self.metadata['parts'])
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'HOLD_TOO_MANY_ARCHIVE_PARTS'):
+            assemble(self.manifest, reserve=0)
+        self.assertFalse((self.root/'test.zip').exists())
+
+    def test_manifest_nonobject_root_rejected(self):
+        self.manifest.write_text('[]', encoding='utf8')
+        with self.assertRaisesRegex(ValueError, 'HOLD_INVALID_MANIFEST_ROOT'):
+            assemble(self.manifest, reserve=0)
+        self.assertFalse((self.root/'test.zip').exists())
+
+
 if __name__ == '__main__':
     unittest.main()
