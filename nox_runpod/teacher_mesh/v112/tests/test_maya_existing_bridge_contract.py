@@ -251,5 +251,245 @@ class MayaExistingBridgeContractTests(unittest.TestCase):
         self.assertEqual(history.json()["messages"], [])
 
 
+class MayaOpenAIProviderBridgeTests(unittest.TestCase):
+    """Use the official OpenAI SSE shape through V112 without starting Maya."""
+
+    def setUp(self):
+        import asyncio
+        import hashlib
+        import httpx
+        import sqlite3
+        import tempfile
+        import threading
+        import types
+        from datetime import datetime, timezone
+        from pathlib import Path
+        from fastapi import FastAPI
+        from fastapi.responses import JSONResponse
+        from fastapi.testclient import TestClient
+        from nox_runpod.teacher_mesh.v112.maya_openai_sse_adapter import MayaOpenAICompletion
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import ensure_dialog_schema, register_native_v29_chat
+
+        self.asyncio = asyncio
+        self.httpx = httpx
+        self.sqlite3 = sqlite3
+        self.threading = threading
+        self.datetime = datetime
+        self.timezone = timezone
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.db = Path(self.temp.name) / "existing_s03.sqlite3"
+        with sqlite3.connect(self.db) as conn:
+            conn.execute("CREATE TABLE s03_items (id TEXT PRIMARY KEY, sha256 TEXT, text TEXT, ts TEXT)")
+        self.previous_memory = sys.modules.get("s03_memory")
+        memory = types.ModuleType("s03_memory")
+        memory.DB = self.db
+        sys.modules["s03_memory"] = memory
+        self.addCleanup(self._restore_memory)
+
+        self.stop_mode = False
+        self.first_delta = threading.Event()
+        self.release = threading.Event()
+        self.stream_closed = threading.Event()
+        self.requests = []
+        self.s03_writer_calls = []
+        self.app = FastAPI()
+
+        class EventStream(httpx.AsyncByteStream):
+            def __init__(stream_self, chunks, pause=False):
+                stream_self.chunks = chunks
+                stream_self.pause = pause
+
+            async def __aiter__(stream_self):
+                for index, chunk in enumerate(stream_self.chunks):
+                    yield chunk
+                    if stream_self.pause and index == 0:
+                        self.first_delta.set()
+                        await asyncio.to_thread(self.release.wait, 5)
+
+            async def aclose(stream_self):
+                self.stream_closed.set()
+
+        self.EventStream = EventStream
+
+        async def upstream(request):
+            self.requests.append(request)
+            body = __import__("json").loads(request.content)
+            question = body["messages"][-1]["content"]
+            answer = (
+                "Respuesta confirmada desde el historial."
+                if "¿" in question
+                else "Проверенный ответ из истории."
+            )
+            frames = [
+                ("data: " + __import__("json").dumps(
+                    {"choices": [{"index": 0, "delta": {"content": answer}, "finish_reason": None}],
+                     "model": "maya-test"} , ensure_ascii=False) + "\n\n"),
+                ("data: " + __import__("json").dumps(
+                    {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                     "model": "maya-test"}, ensure_ascii=False) + "\n\n"),
+                "data: [DONE]\n\n",
+            ]
+            wire = "".join(frames).encode("utf-8")
+            # Split inside a multibyte sequence when possible; the adapter must
+            # preserve UTF-8 while forwarding the exact SSE bytes.
+            split = next((i for i in range(1, len(wire)) if wire[i] & 0xC0 == 0x80), len(wire) // 2)
+            chunks = [wire[:split], wire[split:]]
+            return httpx.Response(
+                200,
+                headers={"content-type": "text/event-stream; charset=utf-8"},
+                stream=EventStream(chunks, pause=self.stop_mode),
+            )
+
+        self.transport = httpx.MockTransport(upstream)
+
+        def persist_pair(question, answer):
+            self.s03_writer_calls.append((question, answer))
+            record_id = "maya-v112-" + str(len(self.s03_writer_calls)).zfill(8)
+            stamp = datetime.now(timezone.utc).isoformat()
+            text = "U:" + question + "\nA:" + answer
+            with sqlite3.connect(self.db) as conn:
+                conn.execute(
+                    "INSERT INTO s03_items VALUES(?,?,?,?)",
+                    (record_id, hashlib.sha256(text.encode("utf-8")).hexdigest(), text, stamp),
+                )
+
+        def client_factory(**kwargs):
+            return httpx.AsyncClient(transport=self.transport, **kwargs)
+
+        provider = MayaOpenAICompletion(
+            base_url="http://maya.internal:8080",
+            model="DeepSeek-V4.1-Flash-1017",
+            api_key="test-owner-token",
+            persist_pair=persist_pair,
+            client_factory=client_factory,
+        )
+        async def status():
+            return {"model": "existing configured engine", "ts": 123}
+
+        register_native_v29_chat(
+            self.app,
+            {
+                "_session_ok": lambda request: request.cookies.get("owner") == "yes",
+                "_unauthorized": lambda: JSONResponse({"error": "AUTH"}, status_code=401),
+                "_proxy_completion": provider,
+                "nox_status": status,
+            },
+            site_dir=Path(self.temp.name),
+        )
+        self.client = TestClient(self.app)
+        self.addCleanup(self.client.close)
+        self.cookies = {"owner": "yes"}
+        self.assertTrue(ensure_dialog_schema())
+
+    def _restore_memory(self):
+        if self.previous_memory is None:
+            sys.modules.pop("s03_memory", None)
+        else:
+            sys.modules["s03_memory"] = self.previous_memory
+
+    def _new_dialog(self):
+        response = self.client.post(
+            "/api/ui/memory/dialogs/create",
+            cookies=self.cookies,
+            json={"title": "Maya provider contract", "confirmed": True},
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        return response.json()["dialog_id"]
+
+    def _turn(self, dialog_id, question, extra=None):
+        body = {"message": question, "dialog_id": dialog_id, "history": []}
+        if extra:
+            body.update(extra)
+        response = self.client.post(
+            "/api/nox/chat/stream", cookies=self.cookies, json=body
+        )
+        self.assertEqual(response.status_code, 200, response.text[:500])
+        return [__import__("json").loads(line) for line in response.text.splitlines() if line.strip()]
+
+    def test_official_maya_openai_sse_uses_v112_s03_readback_and_owner_history(self):
+        dialog_id = self._new_dialog()
+        first = self._turn(dialog_id, "Привет, сохрани контекст.")
+        self.assertEqual(first[-1]["type"], "done")
+        self.assertTrue(first[-1]["saved"])
+        self.assertEqual(first[-1]["dialog_id"], dialog_id)
+        self.assertEqual(len(self.s03_writer_calls), 1)
+
+        second = self._turn(
+            dialog_id,
+            "¿Cómo continúa la conversación?",
+            {"model": "untrusted-client-model", "history": [{"role": "assistant", "content": "fake"}]},
+        )
+        self.assertEqual(second[-1]["type"], "done")
+        self.assertTrue(second[-1]["s03_integrated"])
+        self.assertEqual(len(self.s03_writer_calls), 2)
+
+        first_request = __import__("json").loads(self.requests[0].content)
+        second_request = __import__("json").loads(self.requests[1].content)
+        self.assertEqual(self.requests[0].url, "http://maya.internal:8080/v1/chat/completions")
+        self.assertEqual(self.requests[0].headers["authorization"], "Bearer test-owner-token")
+        self.assertEqual(first_request["model"], "DeepSeek-V4.1-Flash-1017")
+        self.assertTrue(first_request["stream"])
+        self.assertNotIn("_owner", first_request)
+        self.assertNotIn("untrusted-client-model", str(second_request))
+        self.assertEqual(
+            [(row["role"], row["content"]) for row in second_request["messages"]],
+            [
+                ("user", "Привет, сохрани контекст."),
+                ("assistant", "Проверенный ответ из истории."),
+                ("user", "¿Cómo continúa la conversación?"),
+            ],
+        )
+        self.assertEqual(
+            "".join(frame.get("text", "") for frame in second if frame.get("type") == "delta"),
+            "Respuesta confirmada desde el historial.",
+        )
+
+    def test_v112_stop_closes_maya_stream_without_s03_write_or_false_done(self):
+        dialog_id = self._new_dialog()
+        self.stop_mode = True
+        frames = queue.Queue()
+
+        def consume():
+            with self.client.stream(
+                "POST",
+                "/api/nox/chat/stream",
+                cookies=self.cookies,
+                json={"message": "Продолжай до команды остановки.", "dialog_id": dialog_id},
+            ) as response:
+                for line in response.iter_lines():
+                    if line:
+                        frames.put(__import__("json").loads(line))
+
+        worker = threading.Thread(target=consume, daemon=True)
+        worker.start()
+        self.assertTrue(self.first_delta.wait(3), "Maya SSE fixture emitted no first delta")
+        stopper = TestClient(self.app)
+        try:
+            stopped = stopper.post("/api/nox/stop", cookies=self.cookies, json={})
+        finally:
+            stopper.close()
+        self.assertEqual(stopped.status_code, 200, stopped.text)
+        self.assertFalse(stopped.json()["gpu_stop_verified"])
+        self.release.set()
+        worker.join(5)
+        self.assertFalse(worker.is_alive())
+        observed = []
+        while not frames.empty():
+            observed.append(frames.get_nowait())
+        self.assertTrue(any(item.get("type") == "delta" for item in observed))
+        self.assertEqual(observed[-1], {"type": "error", "error": "STREAM_STOP_REQUESTED"})
+        self.assertFalse(any(item.get("type") == "done" or item.get("saved") for item in observed))
+        self.assertEqual(self.s03_writer_calls, [])
+        self.assertTrue(self.stream_closed.wait(2))
+        history = self.client.get(
+            "/api/ui/memory/dialogs/history",
+            cookies=self.cookies,
+            params={"dialog_id": dialog_id},
+        )
+        self.assertEqual(history.status_code, 200, history.text)
+        self.assertEqual(history.json()["messages"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
