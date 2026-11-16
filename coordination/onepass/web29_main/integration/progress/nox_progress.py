@@ -50,7 +50,9 @@ def successful_weight_updates(proof):
     n=proof.get('successful_optimizer_updates')
     skipped=proof.get('skipped_optimizer_updates')
     if not (integer(a) and integer(b) and b>a and integer(n) and 0<n<=b-a):return None
-    if skipped is not None and not integer(skipped):return None
+    # A reported skipped step cannot also be a successful optimizer update.
+    # Reject contradictions rather than inflating the weights progress card.
+    if skipped is not None and (not integer(skipped) or n+skipped>b-a):return None
     return n
 
 def clean_event(raw:Mapping, *, now:datetime):

@@ -38,6 +38,15 @@ assert.equal(nativeGroupValue(skippedOnly,'weights'),null); // fresh evidenced v
 assert.equal(nativeGroupValue(normalize({...data,generated_at:'2020-01-01T00:00:00Z',events:verifiedWeights.events,groups:verifiedWeights.groups}),'weights'),null); // stale is unknown
 assert.equal(nativeGroupValue({...verifiedWeights,events:[]},'weights'),null); // unauthenticated aggregate alone
 assert.equal(nativeGroupValue({...verifiedWeights,groups:{weights:{value:0,complete:true}},events:[]},'weights'),0); // legitimate zero
+const impossibleSkip=normalize({...data,generated_at:liveStamp,
+ events:[{...verifiedWeights.events[0],proof:{...weightProof,skipped_optimizer_updates:2}}],
+ groups:{weights:{value:2,complete:false}}});
+assert.equal(impossibleSkip.events[0].state,'unknown');
+assert.equal(nativeGroupValue(impossibleSkip,'weights'),null);
+const validSkip=normalize({...data,generated_at:liveStamp,
+ events:[{...verifiedWeights.events[0],proof:{...weightProof,skipped_optimizer_updates:1}}],
+ groups:{weights:{value:2,complete:false}}});
+assert.equal(nativeGroupValue(validSkip,'weights'),2);
 const disconnected=expireNative(verifiedWeights);
 assert.equal(disconnected.liveFresh,false);
 assert.equal(disconnected.metrics.ttft_ms,null);

@@ -81,6 +81,10 @@ class S03HoursTest(unittest.TestCase):
       invalid={**event,'proof':{**proof,'successful_optimizer_updates':count}}
       with self.assertRaisesRegex(ValueError,'SUCCESSFUL_OPTIMIZER_UPDATES_REQUIRED'):
         self.j.record(OWNER,invalid,now=NOW)
+    for skipped in (-1,'1',2):
+      with self.assertRaisesRegex(ValueError,'SUCCESSFUL_OPTIMIZER_UPDATES_REQUIRED'):
+        self.j.record(OWNER,{**event,'proof':{**proof,
+          'successful_optimizer_updates':2,'skipped_optimizer_updates':skipped}},now=NOW)
     self.j.record(OWNER,{**event,'proof':{**proof,'successful_optimizer_updates':2,
                                         'skipped_optimizer_updates':1}},now=NOW)
     snap=self.j.snapshot(OWNER,NOW,2)
