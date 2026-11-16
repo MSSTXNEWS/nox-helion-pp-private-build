@@ -26,4 +26,21 @@ assert.equal(fresh.liveFresh,true);assert.equal(fresh.metrics.ttft_ms,300);
 const stale=normalize({...data,generated_at:'2020-01-01T00:00:00Z',metrics:{ttft_ms:300}});
 assert.equal(stale.liveFresh,false);assert.equal(stale.metrics.ttft_ms,null);
 assert.equal(nativeFresh({...data,generated_at:liveStamp},Date.parse(liveStamp)+121000),false);
-console.log('PASS source regression: HOLD hour visible, open hour excluded, stale live telemetry suppressed');
+
+const weightProof={receipt_sha256:A,step_before:3,step_after:6,tensor_before:'b'.repeat(64),tensor_after:'c'.repeat(64),checkpoint_sha256:'d'.repeat(64)};
+const verifiedWeights=normalize({...data,generated_at:liveStamp,metrics:{ttft_ms:300,gpu0_percent:40},
+ events:[{id:'native-weight',kind:'weights',state:'verified',evidence:'native',at:liveStamp,title:'Checkpoint',proof:weightProof}],
+ groups:{weights:{value:3,complete:false}}});
+assert.equal(nativeGroupValue(verifiedWeights,'weights'),3); // fresh evidenced value
+assert.equal(nativeGroupValue(normalize({...data,generated_at:'2020-01-01T00:00:00Z',events:verifiedWeights.events,groups:verifiedWeights.groups}),'weights'),null); // stale is unknown
+assert.equal(nativeGroupValue({...verifiedWeights,events:[]},'weights'),null); // unauthenticated aggregate alone
+assert.equal(nativeGroupValue({...verifiedWeights,groups:{weights:{value:0,complete:true}},events:[]},'weights'),0); // legitimate zero
+const disconnected=expireNative(verifiedWeights);
+assert.equal(disconnected.liveFresh,false);
+assert.equal(disconnected.metrics.ttft_ms,null);
+assert.equal(disconnected.metrics.gpu0_percent,null);
+assert.equal(nativeGroupValue(disconnected,'weights'),null);
+assert.equal(verifiedWeights.metrics.ttft_ms,300); // historical object never modified
+assert.match(content,/if\(e\.status===401\|\|e\.status===403\).*detailBody.*replaceChildren/); // revoke owner details
+
+console.log('PASS source regressions: S03 HOLD, stale aggregate, disconnected telemetry and owner session revocation');

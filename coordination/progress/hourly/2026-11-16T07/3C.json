@@ -1,0 +1,84 @@
+{
+  "schema": "NOX_PRIME_3C_RELAY_RECEIPT_V3",
+  "instructions_version": "0.0.6",
+  "slot": "3C",
+  "stream": 3,
+  "at_utc": "2026-11-16T04:51:46.414Z",
+  "at_msk": "2026-11-16T07:51:46.414+03:00",
+  "accepted_head": "4c064706964f3dbc570ac66a4ea049a5b6e2e5db",
+  "accepted_source_blob_sha": "acd8cc66d022be3b39b84cba12b170bdd57a987a",
+  "accepted_test_blob_sha": "8ca6e5eb3bca38780586bfd5299740c5b4652a6f",
+  "source_status": "SOURCE_PATCH_COMMITTED_NOT_NATIVE_DEPLOYED",
+  "issue": "NOX_3C_STALE_GROUP_VALUES_AND_OWNER_SESSION_DETAIL_CACHE",
+  "changes": [
+    "Suppress stale group totals for self_improvement/knowledge/weights even when older native proof exists",
+    "Expire current TTFT/GPU/RAM values on connection failure rather than leaving cached native metrics",
+    "Close and wipe owner-only event modal/filter details on HTTP 401 or 403"
+  ],
+  "five_tasks": [
+    {
+      "task": 1,
+      "status": "SOURCE_VERIFIED",
+      "detail": "Existing original WEB29 progress contract, 3-lane model and S03 readback source inspected; no new backend"
+    },
+    {
+      "task": 2,
+      "status": "SOURCE_VERIFIED_NATIVE_HOLD",
+      "detail": "Original three groups preserved; independent native callback bindings not proven in this run"
+    },
+    {
+      "task": 3,
+      "status": "SOURCE_VERIFIED_NATIVE_HOLD",
+      "detail": "Existing hourly card and evidence route preserved; actual persisted owner S03 readback not authenticated"
+    },
+    {
+      "task": 4,
+      "status": "SOURCE_PATCHED_TEST_PENDING",
+      "detail": "Fixed stale 3-group counts and immediate telemetry expiry; Node regression assertions appended"
+    },
+    {
+      "task": 5,
+      "status": "SOURCE_PATCHED_TEST_PENDING_NATIVE_HOLD",
+      "detail": "Owner session revocation now clears cached modal details; native browser/adaptive E2E not performed"
+    }
+  ],
+  "supplemental_control": [
+    {
+      "lane": "WEIGHTS",
+      "status": "HOLD_NATIVE",
+      "successful_updates": null,
+      "global_step": null,
+      "checkpoint_sha256": null,
+      "restore_verified": null,
+      "notes": "No new verified optimizer/tensor receipts; last historical train_error step=0 is not current state"
+    },
+    {
+      "lane": "KNOWLEDGE",
+      "status": "HOLD_NATIVE",
+      "s03_write_readback": null,
+      "hunter_job_id": null,
+      "notes": "No authenticated Hunter→S03 write/reload proof in this run"
+    },
+    {
+      "lane": "DISPATCHER+RESOURCES",
+      "status": "HOLD_NATIVE",
+      "worker_pids": null,
+      "queue_claims": null,
+      "gpu_ram_cpu_ssd": null,
+      "notes": "No new original OneHost PID/lease/GPU/cgroup readback; do not infer from CI or scheduled runs"
+    }
+  ],
+  "validation": {
+    "static_exact_anchors": "5/5",
+    "no_loss": "3 lanes + renderHours + renderEvents retained",
+    "local_pure_node_equivalent": "8/8 helper assertions passed against archived WEB29 source",
+    "exact_head_ci": "PENDING",
+    "native_live": false
+  },
+  "nox_web_replaced": false,
+  "original_cinematic_deleted": false,
+  "model_weights_changed": false,
+  "onehost_mutated": false,
+  "cleanup_bytes_deleted": 0,
+  "next_action": "Independent source CI on new commit; then under existing owner STOP/lease validate authenticated OneHost S03 persistence and real browser, only deploy with exact preimage/rollback. No blind restart or model replacement."
+}
