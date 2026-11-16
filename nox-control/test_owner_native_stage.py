@@ -105,6 +105,40 @@ class NativeStageStopGateTests(unittest.TestCase):
         self.assertEqual(attempts.read_text(), '7\\n')
         start.assert_not_called()
 
+    def test_stop_after_initial_admission_blocks_before_hold_rename(self):
+        namespace = self.load_stage()
+        state = namespace['STATE']
+        state.mkdir(parents=True)
+        namespace['BACKUP'].mkdir(parents=True)
+        hold = state / 'TRAIN_HOLD.flag'
+        hold.write_text('MANUAL_HOLD')
+        attempts = state / 'train_volta_t866u.attempts'
+        attempts.write_text('7\\n')
+        original_backup = namespace['backup']
+
+        def backup_then_activate_stop(path):
+            data = original_backup(path)
+            if Path(path) == hold:
+                stop = namespace['STOP_PATHS'][0]
+                stop.parent.mkdir(parents=True, exist_ok=True)
+                stop.write_text('manual stop')
+            return data
+
+        namespace['backup'] = backup_then_activate_stop
+        namespace['require_stage_admission'] = lambda: namespace['stage_gate'](
+            namespace['STOP_PATHS'], namespace['OWNER_MAINTENANCE_FLAG'], 'OWNER_CAS_VERIFIED'
+        )
+        start = Mock(side_effect=AssertionError('trainer start must remain blocked'))
+        namespace['command'] = start
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_OWNER_STOP_ACTIVE'):
+            namespace['release_hold_and_start_trainer']()
+        archived = state / 'TRAIN_HOLD.resumed_by_owner_123'
+        self.assertEqual(hold.read_text(), 'MANUAL_HOLD')
+        self.assertFalse(archived.exists())
+        self.assertEqual(attempts.read_text(), '7\\n')
+        self.assertFalse((state / 'owner_maintenance_123.json').exists())
+        start.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()
