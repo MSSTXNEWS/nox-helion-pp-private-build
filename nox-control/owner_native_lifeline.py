@@ -46,12 +46,20 @@ def call(args, timeout=15):
         fail("COMMAND_UNAVAILABLE")
 
 def info(name):
+    # A nonzero supervisorctl rc invalidates stdout even when it resembles a
+    # plausible RUNNING/STOPPED row. Never admit a service from a failed probe.
     p = call(["supervisorctl", "status", name])
+    if p.returncode != 0 or not isinstance(p.stdout, str):
+        return {"state": "UNKNOWN", "pid": None}
     lines = p.stdout.strip().splitlines()
     m = SUPERVISOR_OUTPUT.match(lines[0]) if len(lines) == 1 else None
     if m is None or m[1] != name:
         return {"state": "UNKNOWN", "pid": None}
-    return {"state": m[2], "pid": int(m[3]) if m[3] else None}
+    state, pid = m[2], int(m[3]) if m[3] else None
+    if not ((state == "RUNNING" and pid is not None and pid > 0) or
+            (state in ("STOPPED", "EXITED") and pid is None)):
+        return {"state": "UNKNOWN", "pid": None}
+    return {"state": state, "pid": pid}
 
 def protect_path(path):
     # Existing directories may not be replaced by symlink attacks.
