@@ -134,6 +134,8 @@ class DistillationManifestTest(unittest.TestCase):
             "baseline_student_sha256": "a" * 64,
             "candidate_adapter_sha256": "b" * 64,
             "fixed_ru_es_case_set_sha256": "c" * 64,
+            "evaluation_report_sha256": "d" * 64,
+            "evaluator_source_sha256": "e" * 64,
             "minimum_improvement_threshold": 0.01,
             "before_after_metrics": {},
         })
@@ -156,6 +158,26 @@ class DistillationManifestTest(unittest.TestCase):
             },
         })
         self.assertIn("RU_ES_IMPROVEMENT_THRESHOLD_NOT_MET", validate(changed)["blockers"])
+
+    def test_nonfinite_threshold_cannot_clear_evaluation(self):
+        changed = copy.deepcopy(MANIFEST)
+        changed["evaluation"].update({
+            "status": "VERIFIED_IMPROVEMENT",
+            "quality_reviewed": True,
+            "frozen_holdout_same_for_baseline_and_candidate": True,
+            "holdout_sha256": changed["corpus"]["splits"]["holdout"]["sha256"],
+            "baseline_student_sha256": "a" * 64,
+            "candidate_adapter_sha256": "b" * 64,
+            "fixed_ru_es_case_set_sha256": "c" * 64,
+            "evaluation_report_sha256": "d" * 64,
+            "evaluator_source_sha256": "e" * 64,
+            "minimum_improvement_threshold": float("nan"),
+            "before_after_metrics": {
+                "ru": {"baseline": 0.70, "candidate": 0.99},
+                "es": {"baseline": 0.70, "candidate": 0.99},
+            },
+        })
+        self.assertIn("RU_ES_BASELINE_METRICS_MISSING", validate(changed)["blockers"])
 
     def test_checkpoint_restore_requires_state_hash_receipt(self):
         changed = copy.deepcopy(MANIFEST)
