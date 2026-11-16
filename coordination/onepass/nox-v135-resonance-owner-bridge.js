@@ -139,7 +139,6 @@
         if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
         preparingSeen=true;
       } else {
-        // Fail closed: an unrecognized native frame cannot precede a
         throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
       }
     };
@@ -149,7 +148,6 @@
         const chunk=await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
-        // Cap unfinished NDJSON frames, not combined chunks.
         let j;while((j=buf.indexOf('\n'))>=0){
           if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
@@ -170,18 +168,9 @@
   }
   function sseChat(data,signal) {
     let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
-    let stopTransportOutcome='not_requested',stopNotified=false;
+    let stopOutcome='not_requested';
     const started=performance.now();let firstVisibleMs=null;
     const upstreamAbort=new AbortController();
-    const publishStopOutcome=()=>{
-      if(stopNotified)return;stopNotified=true;
-      if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-        window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
-          transport_outcome:stopTransportOutcome,
-          signal_accepted:stopTransportOutcome==='signal_accepted',
-          gpu_stop_verified:false
-        }}));
-    };
     const stopThenAbort=()=>{
       if(finished)return;
       canceling=true;
@@ -190,18 +179,20 @@
           const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
           try{
             const r=await nativePost('/api/nox/stop',{},c.signal);
-            if(!r.ok)stopTransportOutcome='rejected';
+            if(!r.ok)stopOutcome='rejected';
             else{
-              let receipt=null;
-              try{receipt=await nativeBodyJSON(r,c.signal);}catch{}
-              stopTransportOutcome=receipt?.status==='STOP_REQUESTED'&&
-                receipt?.stream_cancellation_signalled===true?'signal_accepted':'unconfirmed';
+              const x=await nativeBodyJSON(r,c.signal);
+              stopOutcome=x?.status==='STOP_REQUESTED'&&x?.stream_cancellation_signalled===true
+                ?'signal_accepted':'unconfirmed';
             }
-          }catch{stopTransportOutcome=c.signal.aborted?'timeout':'unknown';}
-          finally{if(typeof clearTimeout==='function')clearTimeout(t);}
+          }catch{stopOutcome=c.signal.aborted?'timeout':'unknown';}
+          finally{clearTimeout(t);}
         }
         upstreamAbort.abort();
-        publishStopOutcome();
+        if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+          window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
+            transport_outcome:stopOutcome,gpu_stop_verified:false
+          }}));
       })());
     };
     const onAbort=stopThenAbort;
@@ -237,11 +228,7 @@
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              // Bound visual pacing to 8 actual frames per incoming native chunk.
-              // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
-                // Browsers with suspended rAF (including headless/hidden tabs)
-                // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
                   let settled=false;
                   const finish=()=>{if(!settled){settled=true;resolve();}};
@@ -255,9 +242,6 @@
           const {answer,receipt}=await consume(upstream,async t=>{
             trailing+=t;
             if(!segmenter){
-              // Without a segmenter, emit only a known-safe ASCII prefix.
-              // Keep one glyph of lookahead so subsequent combining marks
-              // cannot tear a grapheme across native delta boundaries.
               const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
               if(ascii){
                 const safe=ascii[0].slice(0,-1);
@@ -285,10 +269,8 @@
         }catch(e){
           event({type:'error',
             error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
-            // GPU cancellation is unverified.
             gpu_stop_verified:false,
-            stop_transport_outcome:stopTransportOutcome,
-            stop_signal_accepted:stopTransportOutcome==='signal_accepted'});
+            stop_transport_outcome:stopOutcome});
         }finally{
           finished=true;
           signal?.removeEventListener?.('abort',onAbort);
