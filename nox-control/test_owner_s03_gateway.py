@@ -235,6 +235,40 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(json.loads(raw)['role'],'assistant')
         self.assertTrue((g.STATE/'backups/123/canonical.sqlite').is_file())
 
+    def test_mixed_dialogue_owners_hold_before_import_and_preserve_sources(self):
+        # Same original S03 may contain several dialog owners. The shared
+        # M1 retrieval route cannot enforce owner ACL for these imports.
+        # Refuse to combine them; do not mutate original S03 rows.
+        with g.connection(self.db,write=True) as c:
+            for i,owner in enumerate(('OWNER_A','OWNER_B'),start=1):
+                dialog='D'+str(i)
+                c.execute('INSERT INTO nox_v29_dialogs VALUES(?,?,?,?,?,?,?)',
+                          (dialog,owner,'private title',0,1,'t','t'))
+                c.execute('INSERT INTO nox_v29_dialog_messages VALUES(?,?,?,?,?,?)',
+                          (i,dialog,'E'+str(i),'user','PRIVATE_'+owner,'t'))
+        before=g.file_sha(self.db)
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_DIALOG_OWNER_SCOPE'):
+            g.migrate_history('193',db=self.db,legacy_root=self.root/'missing_legacy')
+        # The consistent snapshot was retained for owner-authorized recovery;
+        # the original data was not imported into the global memory index.
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM s03_items').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_import_records').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_origins').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_v29_dialog_messages').fetchone()[0],2)
+        self.assertTrue((g.STATE/'backups/193/canonical.sqlite').is_file())
+
+    def test_blank_dialogue_owner_is_not_treated_as_acl_proof(self):
+        with g.connection(self.db,write=True) as c:
+            c.execute('INSERT INTO nox_v29_dialogs VALUES(?,?,?,?,?,?,?)',
+                      ('D',None,'untitled',0,1,'t','t'))
+            c.execute('INSERT INTO nox_v29_dialog_messages VALUES(?,?,?,?,?,?)',
+                      (1,'D','E','user','PRIVATE_UNOWNED','t'))
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_DIALOG_OWNER_SCOPE'):
+            g.migrate_history('194',db=self.db,legacy_root=self.root/'missing_legacy')
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM s03_items').fetchone()[0],0)
+
     def test_malformed_legacy_schema_cannot_partially_commit(self):
         legacy=self.root/'cores'
         for key in ('C01','C02'):
