@@ -262,6 +262,43 @@ def bounded_native_json(value,max_chars,hold_status):
     return (payload if len(payload)<=max_chars else
             json.dumps({'status':hold_status},sort_keys=True,separators=(',',':')))
 
+
+def pinned_owner_stop_snapshot(paths, lstat):
+    # Observation only: eight canonical known paths do not prove every STOP gate.
+    if len(paths) != 8 or len(set(paths)) != 8:
+        return {'status': 'HOLD_STOP_SCOPE'}
+    def scan():
+        present = []
+        for idx, path in enumerate(paths):
+            try:
+                lstat(path)  # Counts even dangling STOP symlinks.
+            except FileNotFoundError:
+                continue
+            except OSError:
+                return None
+            present.append(idx)
+        return present
+    first = scan()
+    second = scan()
+    if first is None or second is None:
+        return {'status': 'HOLD_STOP_IO'}
+    if first != second:
+        return {'status': 'HOLD_STOP_CHANGED_DURING_READ'}
+    return {'status': 'STOP_PRESENT' if first else 'NO_STOP_IN_EIGHT_PINNED_PATHS',
+            'checked_count': 8, 'present_ids': first,
+            'manual_stop_clear_verified': False}
+
+# Exactly the eight owner STOP paths already guarded by nox_cold_drive.
+# This is a read-only observation, never a write lease or authorisation.
+pinned_stop_paths = (
+    '/root/nox/STOP', '/root/nox/STOP.flag',
+    '/root/nox/stop.flag', '/root/nox/.stop',
+    '/root/nox/program/STOP', '/root/nox/state/STOP',
+    '/root/nox/state/STOP.flag', '/workspace/NOX_STOP')
+print('NATIVE_P0_OWNER_STOP='+bounded_native_json(
+    pinned_owner_stop_snapshot(pinned_stop_paths, os.lstat),
+    300,'HOLD_STOP_JSON_BUDGET'))
+
 print('NATIVE_P0_GPU_PID_MAP='+bounded_native_json(
     gpu_pid_map(call,Path('/proc')),740,'HOLD_GPU_PID_LOG_BUDGET'))
 print('NATIVE_P0_CGROUP_OOM='+bounded_native_json(

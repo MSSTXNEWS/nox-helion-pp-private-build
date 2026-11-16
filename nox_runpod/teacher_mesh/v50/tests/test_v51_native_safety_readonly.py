@@ -9,8 +9,8 @@ from nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe import REMOTE
 
 code=REMOTE.split("<<'PYREMOTE'\n",1)[1].rsplit("\nPYREMOTE",1)[0]
 tree=ast.parse(code)
-nodes=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in {'gpu_pid_map','cgroup_oom_pair','supervisor_projection','bounded_native_json'}]
-assert len(nodes)==4
+nodes=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in {'gpu_pid_map','cgroup_oom_pair','supervisor_projection','bounded_native_json','pinned_owner_stop_snapshot'}]
+assert len(nodes)==5
 context={'re':re,'json':json}
 exec(compile(ast.Module(body=nodes,type_ignores=[]),'<v51-native-functions>','exec'),context)
 
@@ -123,5 +123,50 @@ class ReadOnlySafety(unittest.TestCase):
         self.assertIn('"NATIVE_P0_"',workflow)
         self.assertIn("inputs.allow_native == 'YES'",workflow)
         self.assertIn('NATIVE_P0_SUPERVISOR_STATUS=',REMOTE)
+
+
+    def test_pinned_stop_absence_is_not_global_manual_stop_clear(self):
+        paths=tuple(str(i) for i in range(8))
+        def missing(_):
+            raise FileNotFoundError
+        record=context['pinned_owner_stop_snapshot'](paths,missing)
+        self.assertEqual(record['status'],'NO_STOP_IN_EIGHT_PINNED_PATHS')
+        self.assertEqual(record['checked_count'],8)
+        self.assertFalse(record['manual_stop_clear_verified'])
+
+    def test_pinned_stop_detects_present_and_dangling_symlink_by_lstat(self):
+        paths=tuple(str(i) for i in range(8))
+        def exists(path):
+            if path in ('2','7'): return object()
+            raise FileNotFoundError
+        record=context['pinned_owner_stop_snapshot'](paths,exists)
+        self.assertEqual(record['status'],'STOP_PRESENT')
+        self.assertEqual(record['present_ids'],[2,7])
+        self.assertFalse(record['manual_stop_clear_verified'])
+
+    def test_stop_read_is_fail_closed_on_scope_permission_and_race(self):
+        paths=tuple(str(i) for i in range(8))
+        def missing(_): raise FileNotFoundError
+        self.assertEqual(context['pinned_owner_stop_snapshot'](paths[:7],missing)['status'],
+                         'HOLD_STOP_SCOPE')
+        def denied(path):
+            if path=='3': raise PermissionError
+            raise FileNotFoundError
+        self.assertEqual(context['pinned_owner_stop_snapshot'](paths,denied)['status'],
+                         'HOLD_STOP_IO')
+        counter={'n':0}
+        def changing(path):
+            counter['n']+=1
+            if path=='4' and counter['n']<=8: return object()
+            raise FileNotFoundError
+        self.assertEqual(context['pinned_owner_stop_snapshot'](paths,changing)['status'],
+                         'HOLD_STOP_CHANGED_DURING_READ')
+
+    def test_remote_pinned_paths_and_owner_only_forwarding(self):
+        self.assertIn("'/root/nox/state/STOP.flag'",REMOTE)
+        self.assertIn("'/workspace/NOX_STOP'",REMOTE)
+        self.assertIn('NATIVE_P0_OWNER_STOP=',REMOTE)
+        self.assertIn("pinned_owner_stop_snapshot(pinned_stop_paths, os.lstat)",REMOTE)
+        self.assertIn("'manual_stop_clear_verified': False",code)
 
 if __name__=='__main__':unittest.main()
