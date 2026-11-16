@@ -1,6 +1,6 @@
 """Activate the existing graphical Resonance for authenticated NOX owners."""
 from __future__ import annotations
-import asyncio,json,re,time
+import asyncio,json,re,stat,time
 from pathlib import Path
 from fastapi import Request
 from fastapi.responses import JSONResponse,RedirectResponse
@@ -32,10 +32,31 @@ def decorate_html(raw,path):
         extra+='<script defer src="/nox-web-v29/'+name+'" data-nox-live-owner="1"></script>\n'
     return raw.replace('</head>',extra+'</head>',1)
 
+def owner_maintenance_gate():
+    """Read-only, fail-closed owner maintenance indicator; never grants a lease."""
+    parent = ROOT / 'state'
+    try:
+        if not stat.S_ISDIR(parent.lstat().st_mode):
+            return 'UNKNOWN'
+        flag = (parent / 'OWNER_MAINTENANCE.flag').lstat()
+    except FileNotFoundError:
+        return 'ABSENT'
+    except OSError:
+        return 'UNKNOWN'
+    return 'PRESENT' if stat.S_ISREG(flag.st_mode) else 'UNKNOWN'
+
+
 def workers():
     path=ROOT/'status/agents_t856u.json'
     result={'schema':'NOX_OWNER_EXECUTORS_V1','state':'UNAVAILABLE','workers':[],
             'configured':None,'observed_at':None,'training_held':(ROOT/'state/TRAIN_HOLD.flag').exists()}
+    maintenance=owner_maintenance_gate()
+    result['owner_maintenance']=maintenance
+    if maintenance!='ABSENT':
+        # Do not advertise stale worker claims while owner MODEL_UPDATE is active.
+        # An unreadable, symlinked or non-file marker is UNKNOWN, never permission.
+        result['state']='MODEL_UPDATE' if maintenance=='PRESENT' else 'HOLD_MAINTENANCE_UNKNOWN'
+        return result
     try:
         if path.is_symlink() or path.stat().st_size>750000:return result
         value=json.loads(path.read_text());stamp=path.stat().st_mtime
