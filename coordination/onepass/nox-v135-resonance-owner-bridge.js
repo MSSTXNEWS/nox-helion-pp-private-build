@@ -169,39 +169,35 @@
     }
   }
   function sseChat(data,signal) {
-    let closed=false,finished=false,cancelRequested=false,modelRequestStarted=false,modelStreamDone=false,stopPromise=null;
+    let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
     const started=performance.now();let firstVisibleMs=null;
     const upstreamAbort=new AbortController();
     const stopThenAbort=()=>{
-      if(finished)return Promise.resolve();
-      cancelRequested=true;
-      if(stopPromise)return stopPromise;
-      stopPromise=(async()=>{
-        try{
-          if(modelRequestStarted&&!modelStreamDone){
-            const stopAbort=new AbortController();
-            const timer=setTimeout(()=>stopAbort.abort(),1000);
-            try{await nativePost('/api/nox/stop',{},stopAbort.signal);}catch{}
-            finally{if(typeof clearTimeout==='function')clearTimeout(timer);}
-          }
-        }finally{upstreamAbort.abort();}
-      })();
-      return stopPromise;
+      if(finished)return;
+      canceling=true;
+      return stopJob||(stopJob=(async()=>{
+        if(modelStarted&&!streamDone){
+          const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
+          try{await nativePost('/api/nox/stop',{},c.signal);}catch{}
+          finally{if(typeof clearTimeout==='function')clearTimeout(t);}
+        }
+        upstreamAbort.abort();
+      })());
     };
-    const onAbort=()=>{void stopThenAbort();};
+    const onAbort=stopThenAbort;
     if(signal?.aborted)onAbort();
     else signal?.addEventListener?.('abort',onAbort,{once:true});
     const nativeSignal=upstreamAbort.signal;
     const body=new ReadableStream({
       async start(controller){
         const event=payload=>{
-          if(closed||(cancelRequested&&payload.type!=='error'))return;
+          if(closed||(canceling&&payload.type!=='error'))return;
           if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
             firstVisibleMs=Math.round(performance.now()-started);
           const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
           if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
             window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
-          if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
+          controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
         };
         try {
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
@@ -209,7 +205,7 @@
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
             answer_source:'NATIVE_PENDING',model_identity_verified:false});
-          modelRequestStarted=true;
+          modelStarted=true;
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
@@ -254,7 +250,7 @@
             trailing=glyphs.pop()||'';
             if(glyphs.length)await emitPieces(glyphs.join(''));
           },nativeSignal);
-          modelStreamDone=true;
+          streamDone=true;
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
@@ -268,8 +264,8 @@
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
           event({type:'error',
-            error:(nativeSignal.aborted||cancelRequested)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
-            // HTTP cancellation is confirmed; GPU/native execution is not.
+            error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+            // GPU cancellation is unverified.
             gpu_stop_verified:false});
         }finally{
           finished=true;
