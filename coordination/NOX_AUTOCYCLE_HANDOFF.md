@@ -1486,3 +1486,8 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **Error lesson:** existing `NOX_AUTOCYCLE_ERRORS.jsonl` contains incident and closure `NOX-V14-B3-S03-MIXED-DIALOG-OWNER-GLOBAL-IMPORT-20261117`; exact preimage rollback only after fresh CAS, preserve concurrent unrelated commits.
 - **Next A3:** inspect new source HEAD and deployed source exact SHA; acquire owner-auth read-only STOP/lease, independently restore existing S03/history and inspect legacy owner identities before any production CUTOVER; test owner-scoped dialogue RU/ES + recall/ACL and original web only after authorization. If blocked, take next distinct unclaimed P3 source task; do not repeat same SHA. Other lanes continue independently.
 
+
+### V14 B6 SOURCE CLAIM · V14-6-09 · 2026-11-16T23:33Z · instructions_version 0.0.6
+- TaskID `V14-6-09` P1 — progress evidence beyond PID in ORIGINAL dispatcher diagnostic/admission code. Claimed by B6 PROCESS6, independent of A6 `V14-6-07`, source-only Git blob-SHA CAS; NOT native OneHost writer/STOP/lease.
+- Deliverable: fail closed when claiming useful progress solely from a live PID or recent heartbeat; require current task, PID/start_ticks, owner STOP/lease, substantive progress (counter+timestamp+source), safe status and clear HOLD for unavailable metrics. Existing dispatcher only, no extra service, no QLoRA/weights/S03 mutation. One scoped regression, one source CI/acceptance, append terminal handoff and release source claim.
+- Native actions forbidden while current STOP/writer lease remain unverified; no restart, kill, delete or new trainer. Baseline handoff blob `a6bd5f3ba7de574fd8e5f49a9fadd123ce4ade61`; obey changed-source CAS.
