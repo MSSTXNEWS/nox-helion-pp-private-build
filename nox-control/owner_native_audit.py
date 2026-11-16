@@ -105,13 +105,25 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
         for ancestor in ancestors:
             mode=lstat(str(ancestor)).st_mode
             if __import__('stat').S_ISLNK(mode):
-                return {'status':'HOLD_MODEL_PATH_SYMLINK','files':[]}
+                return {'status':'HOLD_MODEL_PATH_SYMLINK','root':str(root_path),
+                        'files':[{'path':str(root_path/name),'exists':None,'type':'blocked',
+                                  'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
+                                  'path_status':'HOLD_MODEL_PATH_SYMLINK'}
+                                 for name,size,_ in PINNED_MODEL_FILES]}
             if ancestor!=root_path and not __import__('stat').S_ISDIR(mode):
-                return {'status':'HOLD_MODEL_ROOT_COMPONENT_TYPE','files':[]}
+                return {'status':'HOLD_MODEL_ROOT_COMPONENT_TYPE','root':str(root_path),
+                        'files':[{'path':str(root_path/name),'exists':None,'type':'blocked',
+                                  'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
+                                  'path_status':'HOLD_MODEL_ROOT_COMPONENT_TYPE'}
+                                 for name,size,_ in PINNED_MODEL_FILES]}
     except FileNotFoundError:
         pass
     except OSError as exc:
-        return {'status':'HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper(),'files':[]}
+        status='HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper()
+        return {'status':status,'root':str(root_path),
+                'files':[{'path':str(root_path/name),'exists':None,'type':'unknown',
+                          'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
+                          'path_status':status} for name,size,_ in PINNED_MODEL_FILES]}
     results=[]
     for name,expected_bytes,sha256 in PINNED_MODEL_FILES:
         if (not name or Path(name).name!=name or '/' in name or '\\\\' in name
@@ -122,15 +134,16 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
         row={'path':path,'exists':False,'type':'missing','bytes':None,
              'expected_bytes':expected_bytes,'sha_status':'NOT_CHECKED'}
         try:
-            mode=lstat(path).st_mode
+            observed=lstat(path)
+            mode=observed.st_mode
             statmod=__import__('stat')
             if statmod.S_ISLNK(mode):
                 row.update({'type':'symlink','path_status':'HOLD_MODEL_PATH_SYMLINK'})
                 results.append(row)
                 continue
             if statmod.S_ISREG(mode):
-                row.update({'exists':True,'type':'regular','bytes':lstat(path).st_size,
-                            'size_status':'MATCH' if lstat(path).st_size==expected_bytes else 'MISMATCH'})
+                row.update({'exists':True,'type':'regular','bytes':observed.st_size,
+                            'size_status':'MATCH' if observed.st_size==expected_bytes else 'MISMATCH'})
             elif statmod.S_ISDIR(mode):
                 row.update({'exists':True,'type':'directory','bytes':None})
             else:
