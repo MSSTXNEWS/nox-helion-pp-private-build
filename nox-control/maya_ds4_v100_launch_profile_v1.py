@@ -53,8 +53,12 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         return {"state": checked.get("state", "HOLD_PREFLIGHT_UNKNOWN"),
                 "launchable": False}
 
+    # The preceding preflight explicitly proved the pack directory ABSENT.
+    # Never expose an executable argv before the reviewed offline packer has
+    # produced a complete pack and independent native readback has accepted it.
+    # A command template is useful for review, but cannot authorize serving.
     pack_dir = checked["packer_output_dir"]
-    argv = [
+    argv_template = [
         str(MAYA_BINARY),
         "--pack", pack_dir,
         "--gpus", "0,1",
@@ -68,9 +72,12 @@ def build_source_plan(*, owner_stop, observed_binary_sha256, gpu_names,
         "--serve",
     ]
     return {
-        "state": "SOURCE_ONLY_COMMAND_READY_NOT_LAUNCHABLE",
+        "state": "SOURCE_ONLY_PACKING_REQUIRED_NOT_LAUNCHABLE",
         "launchable": False,
-        "argv": argv,
+        "production_serve_ready": False,
+        "pack_state": "ABSENT_VERIFIED_REQUIRES_REVIEWED_PACKER",
+        "required_next_stage": "OFFLINE_PACK_THEN_OWNER_SHA_AND_STOP_LEASE_READBACK",
+        "argv_template_not_executable": argv_template,
         "env": {"CUDA_VISIBLE_DEVICES": "0,1"},
         "model_pack": pack_dir,
         "engine_sha256": MAYA_BINARY_SHA256,
