@@ -65,7 +65,7 @@ class InstallerTests(unittest.TestCase):
         for state in ("RUNNING pid 901", "STOPPED"):
             with self.subTest(state=state), patch.object(
                 n, "call", return_value=SimpleNamespace(
-                    stdout=f"nox-dispatcher-t855u {state}\\n", returncode=1
+                    stdout=f"nox-dispatcher-t855u {state}\n", returncode=1
                 )
             ):
                 self.assertEqual(n.info("nox-dispatcher-t855u"),
@@ -76,7 +76,7 @@ class InstallerTests(unittest.TestCase):
                      "FATAL", "RUNNING pid 0"):
             with self.subTest(line=line), patch.object(
                 n, "call", return_value=SimpleNamespace(
-                    stdout=f"nox-dispatcher-t855u {line}\\n", returncode=0
+                    stdout=f"nox-dispatcher-t855u {line}\n", returncode=0
                 )
             ):
                 self.assertEqual(n.info("nox-dispatcher-t855u"),
@@ -90,7 +90,7 @@ class InstallerTests(unittest.TestCase):
         ):
             with self.subTest(state=state), patch.object(
                 n, "call", return_value=SimpleNamespace(
-                    stdout=f"nox-dispatcher-t855u {state} {tail}\\n", returncode=0
+                    stdout=f"nox-dispatcher-t855u {state} {tail}\n", returncode=0
                 )
             ):
                 self.assertEqual(n.info("nox-dispatcher-t855u"),
