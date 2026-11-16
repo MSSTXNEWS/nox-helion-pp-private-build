@@ -62,8 +62,12 @@
   },
   "tests": {
     "added": 2,
-    "source_test": "PENDING_EXACT_GITHUB_ACTIONS",
+    "first_ci_run_id": 43820060031,
+    "first_ci_status": "RED_60_PASS_2_FAIL",
+    "first_ci_root_cause": "GitHub Actions runner denies enumeration of unrelated /proc PIDs; production fail-closed HOLD_PROCESS_SCAN_PERMISSION was correct. New fixture should supply a synthetic isolated proc_root.",
+    "exact_ci": "PENDING",
     "native_test": "NOT_RUN"
   },
-  "next": "Run exact-source CI; current authorized OneHost STOP/lease/OAuth/SSD/current-Qwen and independent S03 optimizer restore; resume one missing DeepSeek shard only if claim+capacity; cleanup exact proven inactive duplicate with fresh accepted chat/S03."
+  "next": "Run exact-source CI; current authorized OneHost STOP/lease/OAuth/SSD/current-Qwen and independent S03 optimizer restore; resume one missing DeepSeek shard only if claim+capacity; cleanup exact proven inactive duplicate with fresh accepted chat/S03.",
+  "error_lesson": "Tests of /proc scanning must isolate the PID namespace rather than expect privileged enumeration in GitHub Actions. Do not weaken production PermissionError HOLD; keep inode-based alias checks."
 }

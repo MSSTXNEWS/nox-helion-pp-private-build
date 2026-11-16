@@ -345,11 +345,11 @@ def fresh_manifest(path, source):
         raise ValueError('HOLD_NOT_EXPLICITLY_EVICTABLE')
 
 
-def assert_not_open(source):
+def assert_not_open(source, proc_root=Path('/proc')):
     """Fail closed on open file descriptors OR mapped inodes, including alias paths."""
     info = source.stat()
     target = (info.st_dev, info.st_ino)
-    proc = Path('/proc')
+    proc = proc_root
     if not proc.is_dir():
         raise RuntimeError('HOLD_NATIVE_PROCESS_INSPECTION_UNAVAILABLE')
     for pid in proc.iterdir():

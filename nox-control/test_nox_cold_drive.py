@@ -196,20 +196,23 @@ class ColdTests(unittest.TestCase):
     def test_open_hardlink_alias_blocks_eviction_by_inode(self):
         alias = self.root/'other-name.gguf'
         os.link(self.src, alias)
-        with alias.open('rb'), self.assertRaisesRegex(RuntimeError, 'HOLD_MODEL_OPEN_BY_PROCESS'):
-            cold.assert_not_open(self.src)
+        proc = self.root/'proc'/'123'
+        (proc/'fd').mkdir(parents=True)
+        (proc/'fd'/'5').symlink_to(alias)
+        (proc/'maps').write_text('')
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_MODEL_OPEN_BY_PROCESS'):
+            cold.assert_not_open(self.src, self.root/'proc')
 
     def test_mapped_hardlink_alias_blocks_eviction_by_inode(self):
-        import mmap
         alias = self.root/'mapped-alias.gguf'
         os.link(self.src, alias)
-        with alias.open('rb') as stream:
-            mapped = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
-        try:
-            with self.assertRaisesRegex(RuntimeError, 'HOLD_MODEL_MEMORY_MAPPED'):
-                cold.assert_not_open(self.src)
-        finally:
-            mapped.close()
+        info = self.src.stat()
+        proc = self.root/'proc'/'123'
+        (proc/'fd').mkdir(parents=True)
+        (proc/'maps').write_text('0000-1000 r--p 00000000 %02x:%02x %d %s\\n' %
+             (os.major(info.st_dev), os.minor(info.st_dev), info.st_ino, alias))
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_MODEL_MEMORY_MAPPED'):
+            cold.assert_not_open(self.src, self.root/'proc')
 
     def test_verified_fixture_eviction_record(self):
         row=cold.copy_verified(self.job)
