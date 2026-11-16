@@ -224,6 +224,56 @@ class StorageTests(unittest.TestCase):
                 self.assertEqual(list(path.parent.glob('.nox-reclaim-*')), [])
 
 
+    def test_quarantine_restore_failures_report_and_preserve_staged_file(self):
+        opener = lambda value: os.open(Path(value).parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        real_rename = os.rename
+        real_replace = os.replace
+        real_link = os.link
+        for index, failure in enumerate(('destination_occupied', 'permission_error')):
+            with self.subTest(failure=failure):
+                path = self.home / '.cache/pip/http-v2/a/b/c/d/e' / (('f' if index == 0 else 'b') * 56 + '.body')
+                self.file(path, b'audited original bytes')
+                candidate = self.candidate(path)
+                replacement = path.with_name('.replacement')
+                marker = ('staged substitute ' + failure).encode()
+                replacement.write_bytes(marker)
+                injected = {'move': False, 'occupant': False}
+
+                def replace_before_quarantine(src, dst, **kwargs):
+                    if not injected['move'] and src == path.name and dst == 'candidate':
+                        real_replace(replacement, path)
+                        injected['move'] = True
+                    return real_rename(src, dst, **kwargs)
+
+                def fail_safe_restore(src, dst, **kwargs):
+                    if failure == 'permission_error':
+                        raise PermissionError('temporary restore denied')
+                    if not injected['occupant']:
+                        path.write_bytes(b'concurrent occupant must survive')
+                        injected['occupant'] = True
+                    return real_link(src, dst, **kwargs)
+
+                with patch.object(storage, 'open_parent', opener), \
+                     patch.object(storage, 'process_usage', return_value=self.usage), \
+                     patch.object(storage.time, 'time', return_value=self.now), \
+                     patch.object(storage.os, 'rename', side_effect=replace_before_quarantine), \
+                     patch.object(storage.os, 'link', side_effect=fail_safe_restore):
+                    with self.assertRaisesRegex(storage.StorageHold, 'HOLD_STORAGE_QUARANTINE_PRESERVED') as held:
+                        storage.reclaim_candidate(candidate, time.monotonic() + 5)
+
+                self.assertTrue(injected['move'])
+                recovery = Path(held.exception.quarantine_path)
+                staged = recovery / 'candidate'
+                self.assertTrue(recovery.is_dir())
+                self.assertTrue(staged.is_file())
+                self.assertEqual(staged.read_bytes(), marker)
+                if failure == 'destination_occupied':
+                    self.assertEqual(path.read_bytes(), b'concurrent occupant must survive')
+                else:
+                    self.assertFalse(os.path.lexists(path))
+                self.assertFalse(os.path.lexists(replacement))
+
+
     def test_reclaim_never_calls_unlink_when_fresh_scan_is_incomplete(self):
         path = self.pip_file()
         candidate = self.candidate(path)
