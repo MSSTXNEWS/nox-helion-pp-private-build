@@ -68,6 +68,8 @@ def load_model():
   from transformers import AutoModelForCausalLM as Class
  # Never load a PEFT adapter or quantized 4-bit training model.
  base=pathlib.Path(os.environ.get("NOX_STUDENT_BASE",str(BASE)))
+ if base.name!="NOX_9B_UNIFIED" or base.is_symlink() or base.resolve().name!="NOX_9B_UNIFIED":
+  raise RuntimeError("TRAINING_TARGET_BASE_PATH_MISMATCH")
  if not base.is_dir():raise RuntimeError("NOX_STUDENT_BASE_DIRECTORY_MISSING")
  receipt=base/("NOX_FULL_TRAIN_RECEIPT.json" if (base/"NOX_FULL_TRAIN_RECEIPT.json").exists() else "NOX_UNIFIED_RECEIPT.json")
  if not receipt.is_file():raise RuntimeError("NOX_UNIFIED_FULL_BASE_NOT_VERIFIED")
