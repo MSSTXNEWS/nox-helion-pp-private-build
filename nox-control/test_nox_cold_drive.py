@@ -35,6 +35,9 @@ elif cmd=='cat':
     if os.environ.get('TEST_CORRUPT'):b=b'X'+b[1:]
     if os.environ.get('TEST_TRUNCATE'):b=b[:-1]
     if os.environ.get('TEST_OVERSIZE'):b+=b'X'
+    if '--offset' in args and not os.environ.get('TEST_IGNORE_RANGE'):
+        off=int(args[args.index('--offset')+1]);cnt=int(args[args.index('--count')+1])
+        b=b[off:off+cnt]
     if os.environ.get('TEST_STDERR'):sys.stderr.write('e'*200000)
     sys.stdout.buffer.write(b)
     if os.environ.get('TEST_CAT_FAILURE'):sys.exit(5)
@@ -251,5 +254,64 @@ class ColdTests(unittest.TestCase):
         with patch.dict(os.environ,{'FAIL_NAME':'fail.gguf'}),self.assertRaises(RuntimeError):cold.batch(args)
         self.assertTrue(all(Path(x['path']).exists() for x in files))
         self.assertEqual(json.loads((self.receipts/'last-batch.json').read_text())['sources_deleted'],0)
+
+
+    def test_verified_range_uses_exact_block_not_entire_model(self):
+        body=self.src.read_bytes()
+        selected=body[111:111+512]
+        got=cold.read_verified_range(
+            'fixture:cold/model.gguf',111,512,len(body),hashlib.sha256(selected).hexdigest(),
+            timeout=5,stop_probe=lambda:False)
+        self.assertEqual(got,selected)
+        self.assertEqual(len(got),512)
+        self.assertTrue(self.src.exists())
+
+    def test_verified_range_block_hash_rejects_corruption(self):
+        body=self.src.read_bytes()
+        with patch.dict(os.environ,{'TEST_CORRUPT':'1'}),self.assertRaisesRegex(
+                RuntimeError,'HOLD_RANGE_SHA_MISMATCH'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),
+                                     hashlib.sha256(body[:100]).hexdigest(),stop_probe=lambda:False)
+
+    def test_verified_range_overfetch_never_publishes(self):
+        body=self.src.read_bytes()
+        with patch.dict(os.environ,{'TEST_IGNORE_RANGE':'1'}),self.assertRaisesRegex(
+                RuntimeError,'HOLD_RANGE_OVERSIZE'):
+            cold.read_verified_range('fixture:cold/model.gguf',100,100,len(body),
+                                     hashlib.sha256(body[100:200]).hexdigest(),stop_probe=lambda:False)
+
+    def test_verified_range_network_failure_and_timeout(self):
+        body=self.src.read_bytes()
+        hashpart=hashlib.sha256(body[:100]).hexdigest()
+        with patch.dict(os.environ,{'TEST_CAT_FAILURE':'1'}),self.assertRaisesRegex(
+                RuntimeError,'HOLD_RANGE_INCOMPLETE'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),hashpart,
+                                     timeout=5,stop_probe=lambda:False)
+        with patch.dict(os.environ,{'TEST_STALL':'1'}),self.assertRaisesRegex(
+                RuntimeError,'HOLD_RANGE_TIMEOUT'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),hashpart,
+                                     timeout=.25,stop_probe=lambda:False)
+
+    def test_verified_range_stop_and_bounds_before_network(self):
+        body=self.src.read_bytes()
+        hashpart=hashlib.sha256(body[:100]).hexdigest()
+        with patch.object(cold,'command') as cmd,self.assertRaisesRegex(
+                RuntimeError,'HOLD_OWNER_STOP'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body),hashpart,
+                                     stop_probe=lambda:True)
+        cmd.assert_not_called()
+        for offset,length in [(-1,100),(0,0),(0,2**20+1),(len(body),1),
+                              (len(body)-10,100)]:
+            with patch.object(cold,'command') as cmd,self.assertRaisesRegex(
+                    ValueError,'HOLD_RANGE_BOUNDS'):
+                cold.read_verified_range('fixture:cold/model.gguf',offset,length,len(body),
+                                         hashpart,stop_probe=lambda:False)
+            cmd.assert_not_called()
+
+    def test_verified_range_object_size_changed(self):
+        body=self.src.read_bytes()
+        with self.assertRaisesRegex(RuntimeError,'HOLD_RANGE_OBJECT_SIZE_CHANGED'):
+            cold.read_verified_range('fixture:cold/model.gguf',0,100,len(body)+1,
+                hashlib.sha256(body[:100]).hexdigest(),stop_probe=lambda:False)
 
 if __name__=='__main__':unittest.main(verbosity=2)

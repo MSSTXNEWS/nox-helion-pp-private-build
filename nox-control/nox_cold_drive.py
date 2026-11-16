@@ -120,6 +120,76 @@ def stream_sha256(remote, size, timeout=3600):
         p.stderr.close()
 
 
+MAX_VERIFIED_RANGE_BYTES = 1024 * 1024
+
+
+def read_verified_range(remote, offset, length, object_size, block_sha256, timeout=30, stop_probe=None):
+    """Bounded, immutable-hash-gated rclone range read; NO FUSE/SSD file/engine launch.
+
+    Callers must obtain *independent* trusted SHA256 for this exact block before
+    using it. A whole-object SHA is not a block SHA; this is not a Maya mmap
+    adapter or authorization to consume unverified Google Drive data.
+    """
+    remote = assert_remote(remote)
+    if (not remote.lower().endswith(tuple(ALLOWED_SUFFIX))
+            or '/' not in remote.split(':', 1)[1]):
+        raise ValueError('HOLD_RANGE_REMOTE_MODEL_REQUIRED')
+    if (any(type(n) is not int for n in (offset, length, object_size))
+            or object_size <= 0 or offset < 0 or length < 1
+            or length > MAX_VERIFIED_RANGE_BYTES or offset >= object_size
+            or length > object_size - offset):
+        raise ValueError('HOLD_RANGE_BOUNDS')
+    if not isinstance(block_sha256, str) or not SHA.fullmatch(block_sha256):
+        raise ValueError('HOLD_RANGE_BLOCK_SHA_REQUIRED')
+    if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError('HOLD_RANGE_TIMEOUT')
+    if stop_probe is None:
+        stop_probe = lambda: any(path.exists() or path.is_symlink() for path in (
+            Path('/root/nox/STOP'), Path('/root/nox/STOP.flag'),
+            Path('/root/nox/state/STOP'), Path('/root/nox/state/STOP.flag')))
+    if stop_probe():
+        raise RuntimeError('HOLD_OWNER_STOP')
+    meta = json.loads(command(['rclone', 'size', '--json', remote], min(timeout, 10)))
+    if meta.get('count') != 1 or meta.get('bytes') != object_size:
+        raise RuntimeError('HOLD_RANGE_OBJECT_SIZE_CHANGED')
+    deadline = time.monotonic() + timeout
+    proc = subprocess.Popen(
+        ['rclone', 'cat', remote, '--offset', str(offset), '--count', str(length),
+         '--retries', '2', '--low-level-retries', '2'],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    chunks = []
+    count = 0
+    try:
+        with selectors.DefaultSelector() as selector:
+            selector.register(proc.stdout, selectors.EVENT_READ)
+            while True:
+                if stop_probe():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    raise RuntimeError('HOLD_RANGE_TIMEOUT')
+                if not selector.select(min(left, 0.2)):
+                    continue
+                data = os.read(proc.stdout.fileno(), min(65536, length + 1 - count))
+                if not data:
+                    break
+                count += len(data)
+                if count > length:
+                    raise RuntimeError('HOLD_RANGE_OVERSIZE')
+                chunks.append(data)
+        if proc.wait(timeout=max(0.01, deadline - time.monotonic())) != 0 or count != length:
+            raise RuntimeError('HOLD_RANGE_INCOMPLETE')
+        data = b''.join(chunks)
+        if hashlib.sha256(data).hexdigest() != block_sha256:
+            raise RuntimeError('HOLD_RANGE_SHA_MISMATCH')
+        return data
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait()
+        proc.stdout.close()
+
+
 def atomic_json(path, obj):
     path = plain_path(path, False)
     path.parent.mkdir(parents=True, exist_ok=True)
