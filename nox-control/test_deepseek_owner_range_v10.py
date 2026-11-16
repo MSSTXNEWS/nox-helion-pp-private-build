@@ -21,6 +21,9 @@ class Response:
 
 class DeepSeekP0Offline(unittest.TestCase):
     def setUp(self):
+        # Tiny synthetic GGUF fixtures do not occupy the real 248.8GB target.
+        volume_fixture=patch.object(m,'MIN_MODEL_VOLUME_BYTES',0)
+        volume_fixture.start();self.addCleanup(volume_fixture.stop)
         tmp=tempfile.TemporaryDirectory();self.addCleanup(tmp.cleanup)
         self.root=Path(tmp.name)/'root';self.dst=Path(tmp.name)/'store';self.dst.mkdir()
         (self.root/'state/dispatcher').mkdir(parents=True)
@@ -110,6 +113,19 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertFalse(m.final_url_allowed('http://huggingface.co/file'))
         self.assertFalse(m.final_url_allowed('https://attacker.example'))
         self.assertTrue(m.final_url_allowed('https://cas-bridge.xethub.hf.co/abc'))
+    def test_physically_undersized_volume_blocks_before_any_http(self):
+        # The 183GB original disk can fit a single 39GB shard but never the
+        # complete 248.8GB model. Fail before network or part allocation.
+        from types import SimpleNamespace
+        small_volume=SimpleNamespace(f_blocks=180*1024**3,
+                                     f_bavail=80*1024**3,f_frsize=1)
+        with patch.object(m,'MIN_MODEL_VOLUME_BYTES',248834257920), \
+             patch.object(m,'RESERVE',0), \
+             patch.object(m.os,'statvfs',return_value=small_volume):
+            with self.assertRaisesRegex(m.Hold,'HOLD_STORAGE_TOTAL_CAPACITY'):
+                self.do(opener=lambda *a,**kw:self.fail('network forbidden'))
+        self.assertFalse((self.dst/(self.name+'.part')).exists())
+
     def test_full_file_space_and_rollback_reserve(self):
         with patch.object(m,'RESERVE',10**18):
             with self.assertRaisesRegex(m.Hold,'STORAGE_AUTH_OR_SEEKABLE_PLACEMENT'):self.do()
