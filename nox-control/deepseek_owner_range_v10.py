@@ -5,7 +5,7 @@ Source only until admitted by the original native owner controller. No scheduler
 serving backend, trainer, weights promotion, model deletion or automatic retry.
 """
 from __future__ import annotations
-import argparse, fcntl, hashlib, json, os, re, stat, tempfile, time
+import argparse, fcntl, hashlib, json, math, os, re, stat, tempfile, time
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -268,6 +268,59 @@ def atomic_receipt(path,obj):
     finally:
         if os.path.exists(tmp): os.unlink(tmp)
 
+def verify_existing_receipt(path, row):
+    """A previous final GGUF is reusable only with consistent immutable evidence.
+
+    Never trust mere existence of a .verified.json or a raced pathname. The
+    independently hashed GGUF is authoritative; this validates receipt identity,
+    provenance fields and a stable, nonblocking regular-file read.
+    """
+    before = regular(path)
+    require(0 < before.st_size <= 8192, 'HOLD_RECEIPT_SIZE')
+    stamp = lambda st: (st.st_dev, st.st_ino, st.st_size, st.st_mode,
+                        st.st_uid, st.st_nlink, st.st_mtime_ns, st.st_ctime_ns)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError as exc:
+        raise Hold('HOLD_RECEIPT_UNREADABLE') from exc
+    try:
+        opened = os.fstat(fd)
+        require(stat.S_ISREG(opened.st_mode) and stamp(opened) == stamp(before),
+                'HOLD_RECEIPT_CHANGED')
+        raw = os.read(fd, 8193)
+        require(len(raw) == opened.st_size and stamp(os.fstat(fd)) == stamp(opened)
+                and stamp(regular(path)) == stamp(opened), 'HOLD_RECEIPT_CHANGED')
+    except OSError as exc:
+        raise Hold('HOLD_RECEIPT_UNREADABLE') from exc
+    finally:
+        os.close(fd)
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            require(key not in result, 'HOLD_RECEIPT_DUPLICATE_KEY')
+            result[key] = value
+        return result
+    try:
+        doc = json.loads(raw, object_pairs_hook=unique,
+                         parse_constant=lambda _: (_ for _ in ()).throw(Hold('HOLD_RECEIPT_NONFINITE')))
+    except (ValueError, UnicodeError, TypeError) as exc:
+        raise Hold('HOLD_RECEIPT_INVALID_JSON') from exc
+    require(isinstance(doc, dict) and
+            doc.get('schema') == 'NOX_DEEPSEEK_RANGE_RECEIPT_V10' and
+            doc.get('file') == row['path'] and
+            type(doc.get('bytes')) is int and doc['bytes'] == row['bytes'] and
+            doc.get('sha256') == row['sha256'] and
+            isinstance(doc.get('request'), str) and
+            re.fullmatch(r'\\d{1,20}', doc['request']) and
+            type(doc.get('new_bytes')) is int and
+            0 <= doc['new_bytes'] <= row['bytes'] and
+            type(doc.get('at_unix')) in (int, float) and
+            math.isfinite(doc['at_unix']) and doc['at_unix'] > 0 and
+            doc.get('recovered_existing', True) is True,
+            'HOLD_RECEIPT_IDENTITY')
+    return doc
+
+
 def inventory(manifest,target):
     """Metadata-only, STOP-safe inventory: never scan hundreds of GiB without a lease.
 
@@ -373,6 +426,8 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     'request':request,'file':name,'bytes':row['bytes'],
                     'sha256':row['sha256'],'new_bytes':0,
                     'recovered_existing':True,'at_unix':time.time()})
+            else:
+                verify_existing_receipt(receipt_path, row)
             return {'state':'REUSED_SHA_VERIFIED','new_bytes':0,'file':name,'sha256':row['sha256']}
         partial_stat=regular(partial,True)
         # Keep the admitted inode allocated across HTTP I/O: unlink/recreate may reuse
