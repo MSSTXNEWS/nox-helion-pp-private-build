@@ -1,0 +1,16 @@
+/* WEB29 3D: retain the original scene/shaders, remove only decorative metal breathing.
+   Higher specificity than original live rule, which otherwise overrides the
+   older reduced-motion @media rule despite both using !important. */
+html:root:root[data-nox-cinema="still"] body:is([data-page],.helion-home)
+  :is(button:not(:disabled),a.graphic-button,a.command-key,a.nox-route-orbit,
+      .home-primary-navigation a.helion-card,.brand-name,.core-name,.eyebrow){
+  animation:none!important;
+}
+@media (prefers-reduced-motion: reduce){
+  html:root:root:not([data-theme="contrast"])[data-nox-cinema="live"] body:is([data-page],.helion-home)
+    :is(button:not(:disabled),a.graphic-button,a.command-key,a.nox-route-orbit,
+        .home-primary-navigation a.helion-card,.brand-name,.core-name,.eyebrow){
+    animation:none!important;
+    transition-duration:0s!important;
+  }
+}
