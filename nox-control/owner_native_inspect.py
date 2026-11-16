@@ -738,6 +738,102 @@ def bounded_capacity_readback():
     for line in p.stdout.splitlines():
         if line.startswith('NOX_MAINT_CAPACITY') and len(line)<150000:print(line,flush=True)
 
+def owner_safety_snapshot():
+    """Read-only owner/8081 admission evidence; NEVER interpret a flag absence as a lease."""
+    import socket
+    root = ROOT
+    stop_names = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
+                  'state/STOP')
+    paths = [root / name for name in stop_names] + [Path('/workspace/NOX_STOP'),
+                                                    root / 'state/TRAIN_HOLD.flag',
+                                                    root / 'state/TRAIN_PAUSE_REQUEST.flag']
+    def kind(path):
+        try:
+            mode = path.lstat().st_mode
+            if stat.S_ISLNK(mode):
+                return 'HOLD_SYMLINK'
+            return 'PRESENT' if stat.S_ISREG(mode) else 'HOLD_NONREGULAR'
+        except FileNotFoundError:
+            return 'ABSENT'
+        except OSError:
+            return 'UNKNOWN'
+    flags = {str(path): kind(path) for path in paths}
+    manual_flags = [flags[str(p)] for p in paths[:7]]
+    owner_stop = ('PRESENT' if 'PRESENT' in manual_flags
+                  else 'HOLD_UNSAFE_FLAG' if any(x != 'ABSENT' for x in manual_flags)
+                  else 'NOT_OBSERVED_NOT_AUTHORIZATION')
+    maintenance_lock = kind(root / 'state/owner_maintenance.lock')
+    # Neither a lock-file's existence nor a STOP absence is an owner writer lease.
+    services = {}
+    for name in ('nox-chat-8081', 'nox-dispatcher-t855u', 'nox-priority-scheduler',
+                 'nox-selfheal', 'nox-gpu-watchdog-t865u'):
+        rc, output = run(['supervisorctl', 'status', name], timeout=8)
+        lines = output.strip().splitlines()
+        match = re.fullmatch(re.escape(name) + r'\s+([A-Z]+)(?:\s+pid\s+(\d+).*)?',
+                             lines[0]) if len(lines) == 1 else None
+        status = match.group(1) if match else 'UNKNOWN'
+        pid = int(match.group(2)) if match and match.group(2) else None
+        start_ticks = None
+        if pid:
+            try:
+                start_ticks = int((PROC / str(pid) / 'stat').read_text().rsplit(') ', 1)[1].split()[19])
+            except (OSError, IndexError, ValueError):
+                status = 'UNKNOWN_PID_IDENTITY'
+        services[name] = {'supervisor_rc': rc, 'state': status, 'pid': pid,
+                          'start_ticks': start_ticks}
+    inodes = set()
+    net_status = 'OBSERVED'
+    for net in (PROC / 'net/tcp', PROC / 'net/tcp6'):
+        try:
+            for line in net.read_text().splitlines()[1:]:
+                parts = line.split()
+                if len(parts) >= 10 and parts[3] == '0A' and int(parts[1].rsplit(':', 1)[1], 16) == 8081:
+                    inodes.add(parts[9])
+        except (OSError, IndexError, ValueError):
+            net_status = 'UNKNOWN_NETWORK_NAMESPACE'
+    owners = []
+    if inodes:
+        try:
+            for proc in PROC.iterdir():
+                if not proc.name.isdecimal():
+                    continue
+                for fd in (proc / 'fd').iterdir():
+                    try:
+                        target = os.readlink(fd)
+                    except OSError:
+                        continue
+                    if target.startswith('socket:[') and target[8:-1] in inodes:
+                        try:
+                            ticks = int((proc / 'stat').read_text().rsplit(') ', 1)[1].split()[19])
+                            owners.append({'pid': int(proc.name), 'start_ticks': ticks})
+                        except (OSError, ValueError, IndexError):
+                            owners.append({'pid': int(proc.name), 'start_ticks': None})
+                        break
+        except OSError:
+            net_status = 'UNKNOWN_PID_SOCKET_MAPPING'
+    heartbeat = {}
+    for name in ('status/dispatcher_t855u.json', 'status/agents_t856u.json'):
+        path = root / name
+        if kind(path) == 'PRESENT':
+            try:
+                heartbeat[name] = {'mtime_ns': path.stat().st_mtime_ns,
+                                   'scope': 'FILE_MTIME_ONLY_NOT_HEARTBEAT_PROOF'}
+            except OSError:
+                heartbeat[name] = {'state': 'UNKNOWN'}
+        else:
+            heartbeat[name] = {'state': kind(path)}
+    return {'schema': 'NOX_OWNER_SAFETY_READONLY_V1',
+            'stop_flags': flags, 'manual_stop': owner_stop,
+            'maintenance_lock_file': maintenance_lock,
+            'writer_lease': 'UNKNOWN_NO_OWNER_CAS_READBACK',
+            'supervisor': services,
+            'listener_8081': {'status': net_status,
+                              'socket_inodes_observed': len(inodes),
+                              'matched_pids': owners[:10],
+                              'complete_pid_map': len(owners) <= 10 and net_status == 'OBSERVED'},
+            'dispatcher_heartbeat_files': heartbeat,
+            'admission': 'READ_ONLY_NO_RESTART_NO_DELETE_NO_TRAINER'}
+
 def worker(i):
     f=(hardware,processes,training,controls,chat_storage,receipts)[i]
     try: return {'section':f.__name__,'worker_pid':os.getpid(),'result':f()}
@@ -752,5 +848,6 @@ if __name__=='__main__':
             for item in items:
                 print('NOX_MAINT_INSPECT='+json.dumps(item,separators=(',',':')),flush=True)
     owner_component_readback()
+    print('NOX_MAINT_SAFETY=' + json.dumps(owner_safety_snapshot(), separators=(',', ':'), allow_nan=False), flush=True)
     bounded_capacity_readback()
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
