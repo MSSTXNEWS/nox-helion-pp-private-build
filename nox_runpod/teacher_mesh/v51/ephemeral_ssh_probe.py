@@ -15,6 +15,8 @@ import re
 import subprocess
 import sys
 import time
+import email.utils
+from datetime import datetime, timezone
 import urllib.error
 import urllib.request
 
@@ -360,6 +362,39 @@ PYREMOTE
 """
 
 
+_MAX_RETRY_AFTER_SECONDS = 30
+
+def _retry_after_seconds(exc: urllib.error.HTTPError, retry_index: int) -> float:
+    """Return a bounded delay; an invalid/too-long server delay fails closed."""
+    headers = getattr(exc, "headers", None)
+    value = headers.get("Retry-After") if headers is not None else None
+    if value is None:
+        return float(2 ** retry_index)
+    raw = str(value).strip()
+    try:
+        delay = float(raw)
+    except (TypeError, ValueError):
+        try:
+            when = email.utils.parsedate_to_datetime(raw)
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            delay = (when - datetime.now(timezone.utc)).total_seconds()
+        except (TypeError, ValueError, OverflowError):
+            raise RuntimeError("HOLD_VAST_API_HTTP_429_RETRY_AFTER_INVALID") from None
+    if delay < 0:
+        delay = 0.0
+    if delay > _MAX_RETRY_AFTER_SECONDS:
+        raise RuntimeError("HOLD_VAST_API_HTTP_429_RETRY_AFTER_TOO_LONG") from None
+    return delay
+
+
+def _retryable_read_only_metadata(method: str, path: str, data: dict | None) -> bool:
+    # Exact allowlist: account instance listing and this instance's SSH-key metadata.
+    return (method == "GET" and data is None and
+            (path == "/instances/" or
+             path == f"/instances/{INSTANCE}/ssh/"))
+
+
 def api(method: str, path: str, key: str, data: dict | None = None):
     if not key:
         raise RuntimeError("HOLD_NOX2_MISSING")
@@ -369,13 +404,19 @@ def api(method: str, path: str, key: str, data: dict | None = None):
         raw = json.dumps(data, separators=(",", ":")).encode()
         headers["Content-Type"] = "application/json"
     endpoint = LIST_API if method == "GET" and path == "/instances/" else API + path
-    request = urllib.request.Request(endpoint, headers=headers, data=raw, method=method)
-    try:
-        with urllib.request.urlopen(request, timeout=22) as response:
-            body = response.read(250000)
-        value = json.loads(body)
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError("HOLD_VAST_API_HTTP_" + str(exc.code)) from None
+    retryable = _retryable_read_only_metadata(method, path, data)
+    for retry_index in range(3):
+        request = urllib.request.Request(endpoint, headers=headers, data=raw, method=method)
+        try:
+            with urllib.request.urlopen(request, timeout=22) as response:
+                body = response.read(250000)
+            value = json.loads(body)
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429 and retryable and retry_index < 2:
+                time.sleep(_retry_after_seconds(exc, retry_index))
+                continue
+            raise RuntimeError("HOLD_VAST_API_HTTP_" + str(exc.code)) from None
     if isinstance(value, dict) and value.get("success") is False:
         raise RuntimeError("HOLD_VAST_API_REJECTED_" + method)
     return value
