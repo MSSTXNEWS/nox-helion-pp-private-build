@@ -392,13 +392,19 @@ async def browser_run(report, directory, available):
             report['graphics_before']=before
             if (not before or before['build']!=BUILD or not all(before.get(k) for k in ('native_owner','v135','v137','owner_live','prompt_visible'))):
                 raise RuntimeError('HOLD_GRAPHICAL_MODULES_NOT_ACTIVE')
+            report['browser_stage']='QA_DIALOG_LIST'
             target=page.locator('#nativeChats').get_by_text(title,exact=True)
+            report['qa_dialog_controls']={'list_count':await page.locator('#nativeChats').count(),
+                'title_count':await target.count(),'rail_toggle_count':await page.locator('[data-action="toggle-rail"]').count()}
             await target.first.wait_for(state='attached',timeout=10000)
             if not await target.count():
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_LISTED')
             if not await target.first.is_visible():
+                report['browser_stage']='QA_RAIL_OPEN'
                 await page.locator('[data-action="toggle-rail"]').first.click()
+            report['browser_stage']='QA_DIALOG_CLICK'
             await target.first.click()
+            report['browser_stage']='QA_DIALOG_HISTORY'
             await page.wait_for_timeout(350)
             initial=await json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))

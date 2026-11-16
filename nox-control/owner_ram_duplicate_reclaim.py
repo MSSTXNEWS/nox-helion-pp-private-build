@@ -25,7 +25,7 @@ def plain(path):
  return path
 def identity(info):return (info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns)
 def full_hash(path):
- path=plain(path);fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+ path=plain(path);fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
  with os.fdopen(fd,'rb') as stream:
   before=os.fstat(stream.fileno())
   if not stat.S_ISREG(before.st_mode) or before.st_size!=SIZE or before.st_uid!=os.geteuid():fail('HOLD_RAM_DUPLICATE_FILE_IDENTITY')
@@ -81,7 +81,11 @@ def main():
  lock=os.open(plain(ROOT/'state/owner_maintenance.lock'),os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
  fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
  try:
-  raw=plain(FOCUS).read_bytes()
+  descriptor=os.open(plain(FOCUS),os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+  with os.fdopen(descriptor,'rb') as stream:
+   info=os.fstat(stream.fileno())
+   if not stat.S_ISREG(info.st_mode) or info.st_size>262144:fail('HOLD_RAM_DUPLICATE_INVENTORY_TYPE_OR_SIZE')
+   raw=stream.read(262145)
   if len(raw)>262144 or hashlib.sha256(raw).hexdigest()!=FOCUS_SHA:fail('HOLD_RAM_DUPLICATE_INVENTORY_PIN')
   inventory=json.loads(raw)
   if inventory.get('schema')!='NOX_OWNER_STORAGE_FOCUS_V1' or inventory.get('request')!='6904156795':fail('HOLD_RAM_DUPLICATE_INVENTORY_SCHEMA')
