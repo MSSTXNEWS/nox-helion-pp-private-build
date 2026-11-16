@@ -5,7 +5,10 @@ creates CUDA contexts, downloads weights, or changes production state.
 """
 from __future__ import annotations
 
+import os
 import re
+import stat
+from pathlib import Path
 
 EXPECTED_FILES = tuple(
     [f"DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-0000{i}-of-00006.gguf"
@@ -26,8 +29,61 @@ SUPPORTED_TYPES = frozenset({"BF16", "Q8_0", "Q6_K", "Q5_K", "IQ2_XXS", "IQ4_NL"
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
 
+def _path_has_symlink_component(path: Path) -> bool:
+    """Reject symlinked ancestors so the checked model/output path has a stable lexical root."""
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current = current / part
+        try:
+            if stat.S_ISLNK(current.lstat().st_mode):
+                return True
+        except FileNotFoundError:
+            return False
+        except OSError:
+            return True
+    return False
+
+
+def observe_packer_output(model_file_paths):
+    """Derive the pack output from six real manifest files and lstat it without creating anything."""
+    if not isinstance(model_file_paths, (tuple, list)) or len(model_file_paths) != len(EXPECTED_FILES):
+        return {"state": "HOLD_PACKER_MODEL_PATH_UNKNOWN"}
+    if any(not isinstance(raw, (str, os.PathLike)) for raw in model_file_paths):
+        return {"state": "HOLD_PACKER_MODEL_PATH_UNKNOWN"}
+    try:
+        paths = [Path(raw).absolute() for raw in model_file_paths]
+    except (TypeError, ValueError, OSError):
+        return {"state": "HOLD_PACKER_MODEL_PATH_UNKNOWN"}
+    if (len({p.name for p in paths}) != len(paths) or
+            {p.name for p in paths} != set(EXPECTED_FILES) or
+            len({p.parent for p in paths}) != 1):
+        return {"state": "HOLD_PACKER_MODEL_PATH_UNKNOWN"}
+    model_dir = paths[0].parent
+    if _path_has_symlink_component(model_dir):
+        return {"state": "HOLD_PACKER_MODEL_PATH_SYMLINK"}
+    for path in paths:
+        try:
+            st = path.lstat()
+        except OSError:
+            return {"state": "HOLD_PACKER_MODEL_INPUT_MISSING"}
+        if not stat.S_ISREG(st.st_mode):
+            return {"state": "HOLD_PACKER_MODEL_INPUT_NOT_PINNED"}
+        if st.st_size != PINNED_FILE_FACTS[path.name][0]:
+            return {"state": "HOLD_PACKER_MODEL_INPUT_NOT_PINNED"}
+    output = model_dir / "maya-ds4"
+    try:
+        output.lstat()
+    except FileNotFoundError:
+        return {"state": "PACKER_OUTPUT_ABSENT_VERIFIED",
+                "model_dir": str(model_dir), "output_dir": str(output)}
+    except OSError:
+        return {"state": "HOLD_PACKER_OUTPUT_UNKNOWN"}
+    return {"state": "HOLD_PACKER_OUTPUT_EXISTS",
+            "model_dir": str(model_dir), "output_dir": str(output)}
+
+
 def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
-                         verified_files, tensor_types, packer_output_absent=None):
+                         verified_files, tensor_types, model_file_paths=None):
     """Return only SOURCE_ONLY_* or HOLD; this function has no launch action."""
     # Only an explicit owner-confirmed False may pass this source gate.
     if stop_present is not False:
@@ -60,10 +116,10 @@ def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
     if not types or unknown:
         return {"state": "HOLD_UNCONFIRMED_TENSOR_KERNEL", "launchable": False,
                 "unknown_types": unknown}
-    # pack_gguf.py opens ds4.txt/tensors.txt/engram.bin with truncating modes;
-    # only an independently observed absent output path protects existing artifacts.
-    if packer_output_absent is not True:
-        return {"state": "HOLD_PACKER_OUTPUT_NOT_ABSENT", "launchable": False}
+    # Derive the output from actual input paths. A caller-supplied bool is not evidence.
+    packer = observe_packer_output(model_file_paths)
+    if packer["state"] != "PACKER_OUTPUT_ABSENT_VERIFIED":
+        return {"state": packer["state"], "launchable": False}
     return {
         "state": "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE",
         "launchable": False,
@@ -74,7 +130,8 @@ def evaluate_source_plan(*, stop_present, gpu_ids, tp, max_context, reserve_mib,
         "unique_verified_files": len(rows),
         "unique_bytes": sum(row["bytes"] for row in rows.values()),
         "tensor_types": sorted(types),
-        "packer_output_dir": "maya-ds4",
+        "packer_model_dir": packer["model_dir"],
+        "packer_output_dir": packer["output_dir"],
         "packer_non_clobber_precondition": True,
         "command_contract": ["--pack", "--gpus 0,1", "--tp 2",
                              "--max-context", "--reserve-mib", "--serve"],
