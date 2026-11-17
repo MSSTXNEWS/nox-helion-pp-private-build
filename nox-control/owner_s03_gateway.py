@@ -398,6 +398,20 @@ def _meta(row):
     return value if isinstance(value,dict) else {}
 
 
+def _recent_provenance_rank(row):
+    """Invalid/non-object metadata is unknown, never current-owner evidence."""
+    raw = row.get('meta')
+    if not isinstance(raw, str):
+        return 0
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        return 0
+    if not isinstance(value, dict):
+        return 0
+    return 1 if value.get('history_import') is True else 2
+
+
 def _recent_event_timestamp(row):
     """Event time is different from the time old history was imported."""
     value = row.get('ts')
@@ -426,14 +440,19 @@ def recent_rows(conn, limit=12):
     # The 256 newest rowids can all be old imported history. Rank canonical
     # current-session records first *before* applying the bounded SQL LIMIT,
     # otherwise even an exact recent preference disappears from fallback.
-    # SQLite CASE short-circuits json_type on malformed legacy metadata.
+    # Unknown/non-object metadata must not evict current owner decisions
+    # before the bounded SQL window. Preserve three distinct trust ranks in
+    # SQL and Python (canonical=2, historical=1, malformed=0).
+    # Nested CASE prevents json_type() evaluating malformed JSON.
     candidates = [dict(row) for row in conn.execute(
         """SELECT * FROM s03_items WHERE segment=?
            ORDER BY CASE WHEN json_valid(COALESCE(meta,'')) THEN
-             CASE WHEN json_type(meta,'$.history_import')='true' THEN 0 ELSE 1 END
-           ELSE 1 END DESC, rowid DESC LIMIT 256""", ('M1',))]
+             CASE WHEN json_type(meta)='object' THEN
+               CASE WHEN json_type(meta,'$.history_import')='true' THEN 1 ELSE 2 END
+             ELSE 0 END
+           ELSE 0 END DESC, rowid DESC LIMIT 256""", ('M1',))]
     ordered = sorted(enumerate(candidates), key=lambda entry: (
-        _meta(entry[1]).get('history_import') is not True,
+        _recent_provenance_rank(entry[1]),
         _recent_event_timestamp(entry[1]),
         -entry[0]), reverse=True)
     return [row for _, row in ordered[:limit]]
