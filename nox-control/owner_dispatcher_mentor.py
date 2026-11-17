@@ -311,7 +311,7 @@ def on_failure(task, error):
             # status checks after transient transport faults. No shell,
             # service mutations, training, downloads, merge or model swaps.
             # The incident budget is durable and never reset by retrying.
-            if (handler in READ_ONLY_RETRY_HANDLERS
+            if (handler in ('wait_q4', 'verify_q4', 'holdout_gate')
                     and category in ('timeout', 'service_unavailable')
                     and reserve_incident(incident)
                     and not stop_active()):
