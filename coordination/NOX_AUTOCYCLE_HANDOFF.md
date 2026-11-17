@@ -1,3 +1,13 @@
+## A6 · next owner baton · 17.11.2026 · SOURCE exact Node gate
+
+- **TaskID:** `5V14-24`; run `NOX-A6-20261117-EXACT-NODE22-GATE`; operation `7dd67f7e117f0ca5a955665b9529ff536db24560228ad5aa70bbf0e55b6db872`.
+- **Inputs/source:** GitLab `source/nox-web-v15-onehost-execution-kit-20261117`; `handoff/20261117/nox-v15-kit/site/pc/nox-resonance-readability.js` blob `48e52da54d7c194e2b78867a07ad200ff84e135d`; `test-nox-resonance-readability.cjs` blob `34b5f327767df8d415b89657e89ea0720d72dad7`. SHA checked using original bytes, no code modifications.
+- **New useful result:** exact unmodified original CommonJS test run on Node v22.16.0, **16/16 PASS**, `node --check` both PASS, stdout SHA256 `172abbd066cc7c5cd7dc82014f71f35e5f840181671a322962f073a718b8ed5f`. Three extra DOM V8 simulated scenarios pass; **no actual browser, native or installed acceptance**. [Readback receipt/claim released](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/e43b307a34b64443c15690158dd2f296effc74b3).
+- **Claims / remote run:** A6 source test operation RELEASED, no native lease, no A6 remote run; owner STOP and PAUSED_SOURCE unchanged; no source modifications/restarts/model calls. PR256 has other-owner maintenance activity up to at least comment `6959251525` (19:55:56 UTC), outcome NOT reconciled by A6. Do not replay any native repair/canary POST.
+- **NEXT_READY:** reconcile that owner maintenance run and installed/served SHA for current Resonance HTML/JS via authorized owner transport; compare badge status and 390/1280/200% visual, composer/NewChat/STOP/history/SSE. If owner lease/transport unavailable, `HOLD_OWNER_AUTH_INSTALLED_SERVED_BROWSER_SSE` and choose separate unclaimed READY source work; no artificial native PASS. Native accepted +0, main 295 total unchanged.
+
+---
+
 # Текущий регламент: передача до завершения — 17.11.2026
 
 NOX_HANDOFF_BEFORE_EXIT_V3_VERIFIED_15_OF_15. Проверено 15 включённых автоматизаций: A1–A6, B0–B5, D1–D3. Полный V3 присутствует 15/15; schedules сохранены 15/15. A :00/:10/:20/:30/:40/:50; D :05/:25/:45; B без изменения :30, Europe/Moscow. Это 15 расписаний, не 15 native GPU workers. В этой активной команде максимум три субисполнителя плюс root.
