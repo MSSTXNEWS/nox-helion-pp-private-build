@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_MODEL_REFERENCE_INSTALL_PUBLICATION_V1",
+  "instructions_version": "0.0.6",
+  "source": "5da7849bffc2b590201bb1917840b5a2b39ca2a7",
+  "parent": "4438d67bae87a59b857bb3a5f8af0927c0509e7f",
+  "tree": "683865984b0e7fd7afecaf0ece0f9a188bc3ed7c",
+  "branch": "work/nox-model-reference-install-20261118",
+  "payload_sha256": "18582aff7f7a4e6a292aa14382ee2f09c36b1873f816ad41f1baa53b7b724b25",
+  "bytes": 45869,
+  "checks": [
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/native_model_binding_installer.py",
+      "exact": true,
+      "blob": "a0df3592ea766302a7f4481664e4845b853e4657",
+      "blob_expected": "a0df3592ea766302a7f4481664e4845b853e4657",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/native_v24_dialog_transform.py",
+      "exact": true,
+      "blob": "996e9a7e6ca5f2f72396f8aec1bd58f8c0b7ef43",
+      "blob_expected": "996e9a7e6ca5f2f72396f8aec1bd58f8c0b7ef43",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/build_install_payload.py",
+      "exact": true,
+      "blob": "7a973b76d0f50581cd50db9d5575fbe90b1ff271",
+      "blob_expected": "7a973b76d0f50581cd50db9d5575fbe90b1ff271",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/test_native_model_binding_installer.py",
+      "exact": true,
+      "blob": "7c0b5af9ae0939a3d86d4234c63b3f4dff103bf0",
+      "blob_expected": "7c0b5af9ae0939a3d86d4234c63b3f4dff103bf0",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/test_source_rollback_ownership.py",
+      "exact": true,
+      "blob": "e2d6acddd67efa82ae8d05e65a2521f0724ef598",
+      "blob_expected": "e2d6acddd67efa82ae8d05e65a2521f0724ef598",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/BUILD_MANIFEST.json",
+      "exact": true,
+      "blob": "bb6d9b992cb3da1c0c65b9999ba4a66690e4dfe1",
+      "blob_expected": "bb6d9b992cb3da1c0c65b9999ba4a66690e4dfe1",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/SOURCE_RECEIPT.json",
+      "exact": true,
+      "blob": "9aaf9734a558582a63ba7153ea3831e6770bcdce",
+      "blob_expected": "9aaf9734a558582a63ba7153ea3831e6770bcdce",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/INSTALL_READINESS.md",
+      "exact": true,
+      "blob": "410aee262e9f84a4a6c3ac70300e7c7c27783f8b",
+      "blob_expected": "410aee262e9f84a4a6c3ac70300e7c7c27783f8b",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/INDEPENDENT_INSTALLER_REVIEW.json",
+      "exact": true,
+      "blob": "a41ada818ba12ccac00acb1d0e795b28c559cfc7",
+      "blob_expected": "a41ada818ba12ccac00acb1d0e795b28c559cfc7",
+      "error": false
+    },
+    {
+      "path": "nox-control/owner_resonance_canary_v3_20261117.py",
+      "exact": true,
+      "blob": "52fd3edcec630c21ffead765bee71f9b31cd1106",
+      "blob_expected": "52fd3edcec630c21ffead765bee71f9b31cd1106",
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_binding_install_20261118/test_peer_source_rollback_ownership.py",
+      "exact": true,
+      "blob": "4f5cf8ed1c85f5b831d89b931b0992bec9cb48eb",
+      "blob_expected": "4f5cf8ed1c85f5b831d89b931b0992bec9cb48eb",
+      "error": false
+    },
+    {
+      "path": "nox-control/owner_native_operator.py",
+      "exact": true,
+      "blob": "4a6c8a8bfc4301c7a7b1c78cf6ceb212b899a432",
+      "blob_expected": "4a6c8a8bfc4301c7a7b1c78cf6ceb212b899a432",
+      "error": false
+    }
+  ],
+  "verified": true,
+  "operator_unchanged": true,
+  "native_dispatched": false
+}

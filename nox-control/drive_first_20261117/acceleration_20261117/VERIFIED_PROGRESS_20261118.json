@@ -1498,5 +1498,142 @@
     "native_headroom_receipt_included": true,
     "remote2_native_installed": false,
     "mr205_native_installed": false
+  },
+  "cpu_shared_reconcile_source": {
+    "state": "PUBLISHED_READBACK_VERIFIED",
+    "commit": "6f648658131bbbc6da7ecc5126b16705a4ad118c",
+    "files_exact": 8,
+    "patch_sha256": "733c7c95e58477b1aaeb4a45a82a1b73303ed6c5bedd791c50f187b5b27dfd89",
+    "root_independent_review_sha256": "7c93249a123a80fc5b58529011b24e3bdddd7ffed6101a24530ca7ad2958e03c",
+    "author_focused_tests": 3,
+    "author_local_process_tests": "PASS",
+    "native": false,
+    "does_not_delay_current_cpu_only_baseline": true
+  },
+  "smart_resonance_install_candidate": {
+    "state": "NATIVE_INSTALLED_PROXY_RESTARTED_USE_PENDING",
+    "payload_sha256": "18582aff7f7a4e6a292aa14382ee2f09c36b1873f816ad41f1baa53b7b724b25",
+    "payload_bytes": 45869,
+    "main_sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+    "independent_review_sha256": "61a25ad40ac91e652c2b8716677aaba8e3f598b9945e3f4b90912a35d5923bea",
+    "existing_sources": 3,
+    "new_artifacts": 2,
+    "proxy_restart_only": true,
+    "native_dispatched": true,
+    "issue_fixed": "Source rollback now proves staged/postimage inode ownership before restore; foreign identical bytes HOLD",
+    "next": "Immutable publication, native owner repair and exactly one changed-path QA in existing dialog"
+  },
+  "smart_resonance_native_install": {
+    "schema": "NOX_MODEL_REFERENCE_NATIVE_INSTALL_ACCEPTANCE_V1",
+    "instructions_version": "0.0.6",
+    "state": "PASS_INSTALLED_AND_PROXY_RESTARTED_USE_PENDING",
+    "run_id": 44198936370,
+    "job_id": 134447651037,
+    "request_id": 6963969126,
+    "source_sha": "5da7849bffc2b590201bb1917840b5a2b39ca2a7",
+    "payload_sha256": "18582aff7f7a4e6a292aa14382ee2f09c36b1873f816ad41f1baa53b7b724b25",
+    "raw_receipt_sha256": "34e7acd86ae0f024d12d74b8c660b4d26cd5b6d16dce48053ae99d249adbfba6",
+    "raw_receipt_bytes": 19983,
+    "status": "APPLIED_RELOADED_USE_PENDING",
+    "completed": true,
+    "installed": true,
+    "used": false,
+    "accepted_chat_behavior": false,
+    "source_files": {
+      "owner_chat_stream.py": {
+        "sha256": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+        "bytes": 26955
+      },
+      "nox_v29_chat_bridge.py": {
+        "sha256": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
+        "bytes": 51865
+      },
+      "chat_proxy.py": {
+        "sha256": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+        "bytes": 103831
+      }
+    },
+    "new_artifacts": {
+      "owner_model_reference_binding.py": {
+        "path": "/root/nox/scripts/owner_model_reference_binding.py",
+        "expected": {
+          "sha256": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+          "bytes": 18265
+        },
+        "originally_absent": true,
+        "link_attempted": true,
+        "created_by_request": true,
+        "removed_by_rollback": false,
+        "after": {
+          "sha256": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+          "bytes": 18265,
+          "dev": 36,
+          "ino": 3271884681,
+          "mode": "0o600",
+          "uid": 0,
+          "gid": 0,
+          "nlink": 1
+        }
+      },
+      "verified_model_reference.json": {
+        "path": "/root/nox/state/verified_model_reference.json",
+        "expected": {
+          "sha256": "0d0a839b7a30e6b617accd1ba61f5a2e04b99a7d144ab5a99b107ae09a4cf668",
+          "bytes": 1204
+        },
+        "originally_absent": true,
+        "link_attempted": true,
+        "created_by_request": true,
+        "removed_by_rollback": false,
+        "after": {
+          "sha256": "0d0a839b7a30e6b617accd1ba61f5a2e04b99a7d144ab5a99b107ae09a4cf668",
+          "bytes": 1204,
+          "dev": 36,
+          "ino": 3271884682,
+          "mode": "0o600",
+          "uid": 0,
+          "gid": 0,
+          "nlink": 1
+        }
+      }
+    },
+    "proxy_before": {
+      "pid": 3550426,
+      "state": "S",
+      "ppid": 114,
+      "pgrp": 3550426,
+      "start_ticks": 174075151,
+      "service": "nox-proxy",
+      "script_bound": true,
+      "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+      "exe": "/usr/bin/python3.12",
+      "cwd": "/root/nox/scripts"
+    },
+    "proxy_after": {
+      "pid": 3648425,
+      "state": "S",
+      "ppid": 114,
+      "pgrp": 3648425,
+      "start_ticks": 175058217,
+      "service": "nox-proxy",
+      "script_bound": true,
+      "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+      "exe": "/usr/bin/python3.12",
+      "cwd": "/root/nox/scripts"
+    },
+    "maintenance_and_rollback_source_review": "PASS",
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "no_model_calls_or_reloads": true,
+    "no_queue_counter_or_history_resets": true,
+    "native_install_not_replayable": true,
+    "remaining": [
+      "One changed-path SSE answer in existing owned dialog",
+      "History prefix and new exchange S03 readback",
+      "Actual system-prefix fit and answer relevance"
+    ],
+    "limits": [
+      "service restart and exact source readback are proven; loaded module memory hash not asserted",
+      "owner-idle check is a bounded observation, not atomic new-chat admission"
+    ]
   }
 }

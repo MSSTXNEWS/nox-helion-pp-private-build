@@ -1,0 +1,74 @@
+{
+  "schema": "NOX_SOURCE_PUBLICATION_READBACK_V1",
+  "instructions_version": "0.0.6",
+  "sha": "6f648658131bbbc6da7ecc5126b16705a4ad118c",
+  "checks": [
+    {
+      "file": "CPU_SHARED_RECONCILE.patch",
+      "exact": true,
+      "error": false,
+      "keys": [
+        "path",
+        "ref",
+        "metadata",
+        "content"
+      ]
+    },
+    {
+      "file": "test_cpu_shared_reconcile.py",
+      "exact": true,
+      "error": false,
+      "keys": [
+        "path",
+        "ref",
+        "metadata",
+        "content"
+      ]
+    },
+    {
+      "file": "INPUT_PINS.json",
+      "exact": true,
+      "error": false,
+      "keys": [
+        "path",
+        "ref",
+        "metadata",
+        "content"
+      ]
+    },
+    {
+      "file": "SOURCE_RECEIPT.json",
+      "exact": true,
+      "error": false,
+      "keys": [
+        "path",
+        "ref",
+        "metadata",
+        "content"
+      ]
+    },
+    {
+      "file": "SOURCE_SCOPE_GATE.json",
+      "exact": true,
+      "error": false
+    },
+    {
+      "file": "INTEGRATION.md",
+      "exact": true,
+      "error": false
+    },
+    {
+      "file": "PUBLISH_MANIFEST.json",
+      "exact": true,
+      "error": false
+    },
+    {
+      "file": "ROOT_INDEPENDENT_REVIEW.json",
+      "exact": true,
+      "error": false
+    }
+  ],
+  "verified": true,
+  "native": false,
+  "provider_calls": 0
+}
