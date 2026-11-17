@@ -1,0 +1,127 @@
+{
+  "schema": "NOX_POST8098_NATIVE_INSTALL_SOURCE_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "author": "/root/dispatcher_acceleration",
+  "recorded_at": "2026-11-17T22:57:07.096996+00:00",
+  "status": "READY_ROOT_SINGLE_FILE_REPAIR_SOURCE_REVIEWED",
+  "files": {
+    "native_post8098_headroom_install.py": {
+      "sha256": "ab645c628d2d0aa561495eff562291b06c2bf187024ff2dc5dc81de14da6ffc0",
+      "bytes": 17785
+    },
+    "test_native_post8098_headroom_install.py": {
+      "sha256": "4cd91e9a18b6fca19ea33144405b04b9e0580fa0faedbd9d0de71939ec9c5062",
+      "bytes": 11617
+    }
+  },
+  "native_calls": 0,
+  "other_workspace_writes": 0,
+  "native_ready": false,
+  "actual_input_provenance": {
+    "run": "44187317953",
+    "lossless_metadata": true,
+    "target": "/root/nox/scripts/post8098_chain_exec09.sh",
+    "before_sha256": "533ac6e89e3514cef30af6678e7dba50e5465bb07f1bff8f530b38486f38906b",
+    "before_bytes": 3577,
+    "before_dev": 36,
+    "before_ino": 1152408707,
+    "before_uid": 0,
+    "before_gid": 0,
+    "before_mode": "0o775",
+    "before_mtime_ns": 1794895746508029718,
+    "after_sha256": "0979b33716d19f9c209acdbc6ba7025c635725319ab3fe6cfb2b0d6677737522",
+    "after_bytes": 3719
+  },
+  "scope": {
+    "source_file_changes": 1,
+    "private_backup_and_receipts": true,
+    "temporary_source_stage": true,
+    "existing_maintenance_lock": "/root/nox/state/owner_maintenance.lock",
+    "lease_dev": 36,
+    "lease_ino": 59886214,
+    "lease_open_without_create": true,
+    "lease_nonblocking": true,
+    "new_locks": 0,
+    "services": 0,
+    "training_hold": 0,
+    "queue": 0,
+    "counter": 0,
+    "model": 0,
+    "http": 0,
+    "active_shell_restarted": false,
+    "no_pid_signals": true
+  },
+  "failure_contract": {
+    "before_effect": "All original byte, inode, owner, group, mode, size and mtime pins checked before attempt directory; renewed exact body/fingerprint CAS after durable intent.",
+    "partial_effect": "No automatic rollback/retry. source_file_installed is null when a replacement was attempted or a prior attempt is detected, until accepted. Read-only reconciliation reports current preimage/owned postimage/unknown.",
+    "retry_fence": "Fixed private attempt directory remains after a partial attempt; a different request is blocked before replacement. Existing lease is the only lock.",
+    "rollback": "Executable explicit same-retained-transaction rollback is only available for unaccepted replacement and exact owned staged inode/body; verified0600 original backup is required. Foreign identical bytes with different inode block rollback. Entry never calls rollback automatically.",
+    "process_loss": "After process loss, retained backup/phase records are evidence for a separately reviewed reconciliation; no command claims replay authority.",
+    "successful_install": "Durable backup, postimage source, directory fsync, phase receipt and final readback; active preexisting bash generation remains unverified."
+  },
+  "focused_tests": {
+    "command": "python -B -m unittest test_native_post8098_headroom_install -v",
+    "exit_code": 0,
+    "test_methods": 7,
+    "elapsed_seconds_reported": 0.012,
+    "cases": [
+      "real file install with mode/uid/gid preserved and private0600 backup",
+      "wrong exact preimage and busy real flock before effects",
+      "same-byte new inode after intent preserved by final CAS",
+      "real rename then lost ACK: unknown effect, read-only reconcile, explicit owned rollback",
+      "post-rename directory fsync failure and new-request retry denial",
+      "rollback rejects a same-byte foreign inode",
+      "entry partial-effect report, no retry, bounded import/call surface"
+    ],
+    "isolation": "Only TemporaryDirectory files and an existing fixture flock are touched. Production source hashes remain pinned; only ROOT/native metadata/UID are substituted for local fixtures. No source application is executed.",
+    "corrected_during_local_test": "Initial fixture run revealed Python default uid=OWNER_UID captured production0 before fixture injection. Defaults now resolve to immutable production OWNER_UID/BEFORE gid at call time; native constants remain0 and no native permission requirement changed.",
+    "final_deltas": [
+      {
+        "change": "Prior-attempt marker retains source_file_installed=null even in new Transaction object",
+        "existing_case_repeated": 1,
+        "result": "PASS",
+        "independent_lost_ack_fresh_request_case": "PASS, attributed to peer receipt"
+      },
+      {
+        "change": "Cache actual installed_identity from the existing final owned_postimage readback; zero extra reads",
+        "existing_positive_case_repeated": 1,
+        "result": "PASS"
+      }
+    ]
+  },
+  "route": {
+    "action": "repair",
+    "verified_mutating_base_commit": "4438d67bae87a59b857bb3a5f8af0927c0509e7f",
+    "entrypoint": "nox-control/owner_resonance_canary_v3_20261117.py",
+    "scoped_bundle": [],
+    "self_contained": true,
+    "operator_or_workflow_changes": false,
+    "read_only_diagnostic_entrypoint_allowed": false,
+    "owner_environment_reads": [
+      "NOX_OWNER_REQUEST_ID",
+      "NOX_OWNER_SOURCE_SHA"
+    ],
+    "owner_authorization": "Retained existing operator exact-owner issue-comment/source-commit checks; installer does not create a new bridge or credential path.",
+    "stdout_markers": [
+      "NOX_MAINT_REPAIR=<bounded JSON>",
+      "NOX_MAINT_REPAIR_COMPLETE=true only on SOURCE_FILE_INSTALLED acceptance"
+    ],
+    "operator_local_file_sha256": "6284cd40858d5fcd58a2cbfcd5a82241c6f7719ed95ced4eb861cd9ebb8beed6",
+    "operator_local_git_blob_sha1": "4a6c8a8bfc4301c7a7b1c78cf6ceb212b899a432",
+    "root_supplied_remote_blob_sha1": "4a6c8a8bfc4301c7a7b1c78cf6ceb212b899a432",
+    "remote_blob_discrepancy_sent_to_root": true,
+    "remote_blob_discrepancy_resolved": "Removed one local extra terminal newline; root uses unchanged remote operator/tree.",
+    "fresh_parent_tree": "cdd491d3ed1db0a7e61b0e3d9d887d907edc0d86",
+    "payload_wrapper": "The installer file itself is the complete stdlib-only payload; copy its exact bytes to the already verified mutating repair entrypoint. Do not wrap it in a second lease or run the read-only diagnostic entrypoint."
+  },
+  "next": "Root alone publishes exact reviewed payload, performs fresh claimed single-file repair, and reconciles the lossless native receipt before any retry. No additional source or server audit is required by this installer.",
+  "source_ready_for_root_install": true,
+  "native_installed": false,
+  "counter_scope_complete": false,
+  "independent_review": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/headroom_installer_review_20261118/INDEPENDENT_NATIVE_INSTALLER_REVIEW.json",
+    "sha256": "c3bfb358923ca80f39ac63061efd1b770eec4959c4897bbf346b2a3006a4ce43",
+    "status": "PASS_SOURCE_SCOPE_ROOT_NATIVE_COORDINATION_REQUIRED"
+  },
+  "successful_readback": "Bounded actual installed_identity (dev,ino,uid,gid,mode,bytes,mtime_ns) is returned only on accepted installation, from the already executed final source readback. Preserve lossless JSON integers."
+}

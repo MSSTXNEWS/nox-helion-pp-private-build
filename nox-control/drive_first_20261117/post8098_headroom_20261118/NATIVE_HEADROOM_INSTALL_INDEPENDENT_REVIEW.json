@@ -1,0 +1,48 @@
+{
+  "schema": "NOX_HEADROOM_NATIVE_INSTALLER_INDEPENDENT_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "verdict": "PASS_SOURCE_SCOPE_ROOT_NATIVE_COORDINATION_REQUIRED",
+  "source_sha256": "ab645c628d2d0aa561495eff562291b06c2bf187024ff2dc5dc81de14da6ffc0",
+  "source_bytes": 17785,
+  "initial_review_sha256": "ece53f31de037e23444673eb436565c90530ac005648e36e77bdfc9de3ef8eaf",
+  "tested_reporting_fix_sha256": "3a8def93e2b7fb26901aacc8b864b9a4671420114cfb784ef763202c8dc9fcfe",
+  "blocking_defects_remaining": [],
+  "corrected_defect": "Retained prior-attempt marker now keeps source_file_installed=null, not false, when previous effect is unknown.",
+  "checks": [
+    "Exact before dev/inode/UID/GID/mode/bytes/mtime/SHA and exact after SHA/bytes; bounded fixed two-line edit only",
+    "Existing maintenance lock inode36/59886214, no CREATE, root-owned regular single-link non-group-writable, nonblocking flock; retained no-follow directory chain rechecked",
+    "Durable private0700 attempt marker precedes effect;0600 intent and original backup verified; stage fsync/readback and replace-intent precede fresh target/stage CAS",
+    "Only known source pathname atomically replaced; directory fsync, exact owned inode/hash/mode readback and installed journal precede accepted=true",
+    "Any prior marker blocks a new request; uncertain rename/fsync remains HOLD with no automatic retry or rollback",
+    "Explicit rollback is same-transaction only and requires still-owned postimage inode/hash plus original backup; foreign same-byte inode rejected",
+    "No processes, signals, services, network, model requests, queue, counters or TRAIN_HOLD changes; only two public owner-context env reads",
+    "Final ab645 delta caches installed_identity from the already-existing final owned_postimage read; no new file reads/effects; emitted only when accepted"
+  ],
+  "independent_targeted_test": {
+    "name": "test_prior_attempt_redelivery_preserves_unknown_outcome_without_replace",
+    "source_sha256": "e0e3382fc701a129eb51449a22d884dbeda6a1aec18d90d7311ac85ffa851a5e",
+    "tool_chunk_id": "35cc35",
+    "passed": 1,
+    "fixture": "Actual TempFS rename then injected ACK loss; fresh request is denied before replace, outcome remains null, source stays postimage, other state untouched",
+    "ran_on_sha256": "3a8def93e2b7fb26901aacc8b864b9a4671420114cfb784ef763202c8dc9fcfe",
+    "final_identity_only_delta_reviewed_statically": true
+  },
+  "author_tests_attributed": {
+    "initial_passed": 7,
+    "one_existing_redelivery_case_repeated_after_reporting_fix": true,
+    "one_existing_positive_case_repeated_after_identity_projection": true,
+    "reviewer_did_not_repeat_suite": true
+  },
+  "setup_event": "First immutable-input copy rejected concurrent source drift; test harness import failed before any fixture or operation. Refrozen exact source before the successful focused test.",
+  "scope_limits": [
+    "Source file repair only; already running launcher behavior is not replaced or claimed stopped",
+    "20-second checks are a cooperative budget, not a hard system-call deadline",
+    "Readback and replace rely on the existing serialized owner maintenance protocol; no global writer/process closure is asserted",
+    "No automatic retry after UNKNOWN; next action needs actual receipt/reconciliation"
+  ],
+  "native_calls": 0,
+  "provider_calls": 0,
+  "installer_executed_natively": false,
+  "private_source_body_exported": false
+}
