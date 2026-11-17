@@ -255,6 +255,30 @@ class LifelineTests(unittest.TestCase):
             self.assertFalse(Path(d, "state.json").exists())
 
 
+    def test_supervisor_rc3_exact_stop_is_observed_but_never_automatically_started_when_disabled(self):
+        with patch.object(lifeline.subprocess, "run") as cmd:
+            cmd.return_value.returncode = 3
+            cmd.return_value.stdout = "nox-dispatcher-t855u STOPPED Not started\\n"
+            self.assertEqual(lifeline.supervise("nox-dispatcher-t855u"),
+                             {"state":"STOPPED","pid":None,"rc":3})
+        with tempfile.TemporaryDirectory() as d:
+            state = self.state(d)
+            calls = []
+            def observe(name, command="status"):
+                calls.append(command)
+                return {"state":"STOPPED","pid":None,"rc":3}
+            for i in range(3):
+                lifeline.tick(policy(enabled=False, restart=False), state, now=100+i,
+                              status_fn=observe, stop_fn=lambda:True)
+            self.assertNotIn("start", calls)
+
+    def test_supervisor_rc3_cannot_admit_running_or_fatal(self):
+        for row in ("RUNNING pid 123, uptime 0:01", "FATAL", "STOPPED pid 987"):
+            with self.subTest(row=row), patch.object(lifeline.subprocess, "run") as cmd:
+                cmd.return_value.returncode = 3
+                cmd.return_value.stdout = "nox-dispatcher-t855u " + row + "\\n"
+                self.assertEqual(lifeline.supervise("nox-dispatcher-t855u")["state"], "UNKNOWN")
+
     def test_nonzero_supervisorctl_status_cannot_start_any_service(self):
         with tempfile.TemporaryDirectory() as d:
             s = self.state(d)
