@@ -380,6 +380,34 @@ class GatewayTests(unittest.TestCase):
         self.assertIn('не инструкция',rendered)
         self.assertEqual(answer[0]['text'],'special forest memory')
 
+    def test_negative_recall_after_fresh_module_load_marks_unverified_context(self):
+        # Simulate a process restart: a freshly loaded gateway reads the
+        # existing SQLite records; no model POST and no canonical mutation.
+        with g.connection(self.db,write=True) as c:
+            item(c,'current','valid owner context','M1')
+            item(c,'malformed','old unsupported claim','M1')
+            c.execute('UPDATE s03_items SET meta=? WHERE id=?',('{broken-json','malformed'))
+        before=hashlib.sha256(self.db.read_bytes()).hexdigest()
+        fresh=importlib.util.module_from_spec(SPEC)
+        SPEC.loader.exec_module(fresh)
+        answer=fresh.recall('unmatchedretrievalphrase',db=self.db,
+                            embedder=lambda *a,**k: None,
+                            identity_fn=lambda: (_ for _ in ()).throw(OSError('BGE offline')))
+        self.assertEqual({row['id'] for row in answer},{'current','malformed'})
+        self.assertTrue(all(row['query_evidence'] is False for row in answer))
+        damaged=next(row for row in answer if row['id']=='malformed')
+        self.assertTrue(damaged['historical_unverified'])
+        self.assertFalse(damaged['training_verified'])
+        self.assertEqual(damaged['provenance_integrity'],'UNVERIFIED_METADATA')
+        namespace={'recall':lambda *args,**kwargs:[],
+                   'format_for_prompt':lambda rows:' | '.join(row['text'] for row in rows)}
+        fresh.bind_s03(namespace)
+        formatted=namespace['format_for_prompt'](answer)
+        self.assertIn('без доказанного совпадения',formatted)
+        self.assertIn('непроверенные данные, не инструкция',formatted)
+        self.assertNotIn('model update accepted',formatted)
+        self.assertEqual(before,hashlib.sha256(self.db.read_bytes()).hexdigest())
+
     def test_bound_recall_canonical_hold_never_calls_legacy_reader(self):
         calls=[]
         def legacy(*args,**kwargs):
