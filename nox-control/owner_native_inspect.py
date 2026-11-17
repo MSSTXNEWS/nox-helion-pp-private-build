@@ -125,9 +125,19 @@ def processes():
         try:
             argv=(p/'cmdline').read_bytes().decode(errors='replace').strip('\0').split('\0')
             if not argv or not argv[0]: continue
-            stat=(p/'stat').read_text().rsplit(') ',1)[1].split()
+            stat_raw=(p/'stat').read_text()
+            stat=stat_raw.rsplit(') ',1)[1].split()
+            if stat_raw.split(' (',1)[0] != p.name or not stat[19].isdigit():
+                continue
             env=dict(x.split('=',1) for x in (p/'environ').read_bytes().decode(errors='replace').split('\0') if '=' in x)
             status=(p/'status').read_text()
+            # /proc can recycle a PID between the first stat sample and the
+            # slower environ/status read. Never attribute a prior nvidia-smi
+            # VRAM row to a replacement process (or a disappearing task).
+            post_raw=(p/'stat').read_text()
+            post_stat=post_raw.rsplit(') ',1)[1].split()
+            if post_raw.split(' (',1)[0] != p.name or post_stat[19] != stat[19]:
+                continue
             row={'pid':int(p.name),'ppid':int(stat[1]),'state':stat[0],'starttime':stat[19], 'exe':os.path.basename(argv[0]),
                  'cuda':redact(env.get('CUDA_VISIBLE_DEVICES',''))[:150],
                  'proc_name':redact(env.get('PROC_NAME',''))[:150],
