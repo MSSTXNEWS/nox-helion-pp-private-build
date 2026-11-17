@@ -1,0 +1,75 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="../_kit/nox-pages.css"><script src="../_kit/nox-pages.js"></script>
+<style>.orbw{display:flex;align-items:center;justify-content:center;min-height:180px;flex:1}#orb{width:150px;height:150px;transition:transform .08s,box-shadow .08s}
+#tabs .nx-btn{padding:4px 8px}.pane{display:none}.pane.on{display:flex}#log{flex:1;overflow:auto;min-height:80px}#log div{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}#side{width:320px}@media(max-width:700px){#side{width:auto}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main"><section class="nx-col nx-grow">
+ <div class="nx-row nx-glass" id="tabs"><button class="nx-btn on" data-p="tr">Переводчик RU↔ES</button><button class="nx-btn" data-p="ma">MAESTRO — учитель испанского</button><button class="nx-btn" data-p="ca">Звонки</button><span class="nx-sp"></span><span class="nx-tag hold" id="asr">Распознавание: не загружено</span></div>
+ <div class="nx-glass orbw"><div id="orb" class="nx-orb" title="Уровень звука"></div></div>
+ <div class="nx-row nx-glass"><button class="nx-btn on" id="b-mic">🎙 Разрешить микрофон</button><button class="nx-btn" id="b-rec" disabled>● Говорить</button><button class="nx-btn" id="b-file">Распознать файл</button><button class="nx-btn" id="b-sample">Образец речи</button>
+  <select class="nx-in" id="dir"><option value="ru-es">RU → ES</option><option value="es-ru">ES → RU</option><option value="auto">Авто (с подтверждением)</option></select><input class="nx-in nx-grow" id="txt" placeholder="Или введите текст"><button class="nx-btn" id="b-tr">Перевести</button></div>
+ <div class="pane nx-col nx-glass on" id="p-tr"><div class="nx-row"><b>Оригинал:</b><span id="src" class="nx-grow">—</span></div><div class="nx-row"><b>Перевод:</b><span id="dst" class="nx-grow">—</span><button class="nx-btn" id="b-say">🔊 Прослушать</button><button class="nx-btn" id="b-copy">Копировать</button></div></div>
+ <div class="pane nx-col nx-glass" id="p-ma"><div class="nx-row"><select class="nx-in" id="cefr"><option>A1</option><option>A2</option><option selected>B1</option><option>B2</option><option>C1</option><option>C2</option></select>
+   <select class="nx-in" id="topic"><option>Свободная беседа</option><option>Грамматика</option><option>Словарь</option><option>Диалог: в кафе в Мадриде</option><option>Диалог: аренда квартиры</option><option>Произношение и повтор</option></select><button class="nx-btn on" id="b-lesson">Начать урок</button><button class="nx-btn" id="b-mexp">Экспорт прогресса</button><button class="nx-btn" id="b-mdel">Удалить прогресс</button></div>
+   <div id="mout" class="nx-dim">MAESTRO отвечает тем же локальным NOX. Ответьте голосом или текстом — исправления сохраняются.</div></div>
+ <div class="pane nx-col nx-glass" id="p-ca"><div class="nx-row"><span class="nx-tag hold">HOLD</span><span>Шлюз PSTN/SIP не подключён. По ТЗ §24.5 звонки возможны только после подключения провайдера, подтверждения стоимости и уведомления собеседника об ИИ. Фальшивого «идёт звонок» нет.</span></div>
+   <div class="nx-row"><input class="nx-in" placeholder="+34 …" disabled><button class="nx-btn" disabled title="Нужен подключённый шлюз">Позвонить</button><button class="nx-btn" id="b-gw">Проверить шлюз</button></div></div>
+ </section>
+ <aside class="nx-col nx-glass" id="side"><div class="nx-h">Устройства и голос</div>
+  <label class="nx-sub">Микрофон</label><select class="nx-in" id="din"></select><label class="nx-sub">Вывод</label><select class="nx-in" id="dout"></select>
+  <label class="nx-sub">Голос (только установленные в системе)</label><select class="nx-in" id="voice"></select><label class="nx-sub">Скорость <span id="rv">1.0</span></label><input type="range" id="rate" min="0.6" max="1.6" step="0.1" value="1">
+  <button class="nx-btn" id="b-test">Прослушать пример</button><div class="nx-sub">Запись хранится только в памяти страницы и никуда не отправляется. Распознавание идёт локально.</div>
+  <div class="nx-h">Журнал</div><div id="log" class="nx-sub"></div></aside></main>
+<input type="file" id="f" accept="audio/*" hidden>
+<script>
+(async()=>{await NOX.mount({route:'voice',title:'Голос'});
+const L=m=>{NOX.$('#log').prepend(NOX.el('div',{text:new Date().toLocaleTimeString('ru-RU',{timeZone:'Europe/Moscow'})+' '+m}))};
+let stream=null,ac=null,an=null,rec=null,chunks=[],W=null,jid=0,level=0;const orb=NOX.$('#orb');
+(function pulse(){let l=level;if(an){const d=new Uint8Array(an.fftSize);an.getByteTimeDomainData(d);let s=0;for(const x of d)s+=(x-128)**2;l=Math.max(l,Math.sqrt(s/d.length)/40)}level*=.9;const k=1+Math.min(.6,l);orb.style.transform=`scale(${k})`;orb.style.boxShadow=`0 0 ${40+l*160}px rgba(127,216,255,${.35+Math.min(.5,l)})`;requestAnimationFrame(pulse)})();
+function worker(){if(W)return W;W=new Worker('asr-worker.mjs',{type:'module'});W.onmessage=e=>{const d=e.data;if(d.status==='loading'){NOX.$('#asr').textContent='Распознавание: загрузка…'}if(d.status==='ready'){NOX.$('#asr').textContent='Распознавание: NOX локально';NOX.$('#asr').className='nx-tag ok'}
+ if(d.error){L('ASR ошибка: '+d.error);NOX.toast('Распознавание: '+d.error,'bad')}if(d.text!=null&&W._cb){W._cb(d.text,d.ms)}};return W}
+async function toPcm(blob){const buf=await blob.arrayBuffer();const tmp=new AudioContext();const ab=await tmp.decodeAudioData(buf);tmp.close();const oc=new OfflineAudioContext(1,Math.ceil(ab.duration*16000),16000);const s=oc.createBufferSource();s.buffer=ab;s.connect(oc.destination);s.start();return (await oc.startRendering()).getChannelData(0)}
+const langOf=()=>{const d=NOX.$('#dir').value;return d==='ru-es'?'russian':d==='es-ru'?'spanish':null};
+function recognize(pcm,lang){return new Promise(res=>{const w=worker();w._cb=(t,ms)=>{L('распознано за '+ms+' мс');res(t)};w.postMessage({audio:pcm,language:lang,id:++jid})})}
+async function devices(){const ds=await navigator.mediaDevices.enumerateDevices();const fill=(id,kind)=>{const s=NOX.$(id);s.innerHTML='';ds.filter(d=>d.kind===kind).forEach((d,k)=>s.append(NOX.el('option',{value:d.deviceId,text:d.label||kind+' '+(k+1)})));if(!s.options.length)s.append(NOX.el('option',{text:'нет устройств / нет разрешения'}))};fill('#din','audioinput');fill('#dout','audiooutput')}
+NOX.action('mic','Голос: разрешить микрофон',async()=>{try{stream=await navigator.mediaDevices.getUserMedia({audio:NOX.$('#din').value?{deviceId:NOX.$('#din').value}:true});ac=new AudioContext();an=ac.createAnalyser();an.fftSize=512;ac.createMediaStreamSource(stream).connect(an);NOX.$('#b-rec').disabled=false;L('микрофон разрешён');await devices();worker().postMessage({warm:true})}catch(e){NOX.toast('Микрофон: '+e.message,'bad')}},NOX.$('#b-mic'));
+NOX.$('#din').onchange=()=>{if(stream){stream.getTracks().forEach(t=>t.stop());NOX.$('#b-mic').click()}};
+NOX.action('rec','Голос: говорить (запись/стоп)',()=>{const b=NOX.$('#b-rec');if(rec&&rec.state==='recording'){rec.stop();return}chunks=[];rec=new MediaRecorder(stream);rec.ondataavailable=e=>chunks.push(e.data);
+ rec.onstop=async()=>{b.textContent='● Говорить';b.classList.remove('on');const pcm=await toPcm(new Blob(chunks,{type:rec.mimeType}));handle(await recognize(pcm,langOf()))};rec.start();b.textContent='■ Стоп';b.classList.add('on');L('запись…')},NOX.$('#b-rec'));
+NOX.action('file','Голос: распознать аудиофайл',()=>NOX.$('#f').click(),NOX.$('#b-file'));NOX.$('#f').onchange=async e=>handle(await recognize(await toPcm(e.target.files[0]),langOf()));
+NOX.action('sample','Голос: образец речи (EN)',async()=>{const pcm=await toPcm(await (await fetch('samples/jfk.flac')).blob());const t=await recognize(pcm,'english');NOX.$('#src').textContent=t;L('образец: '+t.slice(0,60));window._lastAsr=t},NOX.$('#b-sample'));
+let maestro=NOX.store.get('voice.maestro',[]);const pane=()=>NOX.$('#tabs .on').dataset.p;
+function handle(t){window._lastAsr=t;if(!t)return NOX.toast('Речь не распознана');if(pane()==='ma'){NOX.$('#txt').value=t;return lesson(t)}NOX.$('#src').textContent=t;translate(t)}
+async function translate(t){let d=NOX.$('#dir').value;if(d==='auto'){const es=/[ñ¿¡áéíóú]|\b(el|la|de|que|y|es|hola)\b/i.test(t)&&!/[а-яё]/i.test(t);d=es?'es-ru':'ru-es';if(!confirm('Определено направление '+d.toUpperCase()+'. Перевести?'))return}
+ NOX.$('#dst').textContent='NOX переводит…';try{const a=await NOX.ask((d==='ru-es'?'Переведи на испанский (es-ES), только перевод: ':'Переведи на русский, только перевод: ')+t,{onToken:(x,all)=>NOX.$('#dst').textContent=all});NOX.$('#dst').dataset.lang=d==='ru-es'?'es':'ru';speak(a.trim(),d==='ru-es'?'es':'ru')}catch(e){NOX.$('#dst').textContent='HOLD: '+e.message;L('перевод HOLD: '+e.message)}}
+NOX.action('tr','Голос: перевести текст',()=>{const t=NOX.$('#txt').value.trim()||NOX.$('#src').textContent;if(!t||t==='—')return NOX.toast('Нет текста');if(pane()==='ma')return lesson(t);NOX.$('#src').textContent=t;translate(t)},NOX.$('#b-tr'));
+function voices(){const vs=speechSynthesis.getVoices().filter(v=>/^(ru|es)/i.test(v.lang));const s=NOX.$('#voice');s.innerHTML='';vs.forEach(v=>s.append(NOX.el('option',{value:v.name,text:v.name+' · '+v.lang})));if(!vs.length)s.append(NOX.el('option',{value:'',text:'RU/ES голоса в системе не найдены'}));return vs}
+voices();speechSynthesis.onvoiceschanged=voices;
+function speak(t,lang){return new Promise(res=>{const vs=voices();const u=new SpeechSynthesisUtterance(t);let v=vs.find(x=>x.name===NOX.$('#voice').value&&x.lang.startsWith(lang))||vs.find(x=>x.lang.startsWith(lang));if(v){u.voice=v;u.lang=v.lang}else u.lang=lang==='es'?'es-ES':'ru-RU';
+ u.rate=+NOX.$('#rate').value;u.onboundary=()=>level=.6;u.onstart=()=>{window._ttsStarted=true;L('голос: '+(v?v.name:'системный')+' ('+u.lang+')')};u.onend=()=>res(true);u.onerror=e=>{L('TTS: '+e.error);res(false)};speechSynthesis.speak(u);if(!v)L('нет установленного голоса '+lang+' — текст показан, звук зависит от системы')})}
+window.noxSpeak=speak;
+NOX.action('say','Голос: прослушать перевод',()=>speak(NOX.$('#dst').textContent,NOX.$('#dst').dataset.lang||'es'),NOX.$('#b-say'));
+NOX.action('test','Голос: пример',()=>speak(NOX.$('#voice').selectedOptions[0]?.text.includes('es')?'Hola, mi señor. Soy NOX.':'Мессир, я NOX. Голос работает.',NOX.$('#voice').selectedOptions[0]?.text.includes('es')?'es':'ru'),NOX.$('#b-test'));
+NOX.$('#rate').oninput=e=>NOX.$('#rv').textContent=(+e.target.value).toFixed(1);
+NOX.action('copy','Голос: копировать перевод',async()=>{try{await navigator.clipboard.writeText(NOX.$('#dst').textContent);NOX.toast('Скопировано')}catch{NOX.toast('Буфер недоступен','hold')}},NOX.$('#b-copy'));
+NOX.$('#dout').onchange=async e=>{NOX.toast('Вывод: системный TTS использует устройство Windows по умолчанию','hold')};
+async function lesson(answer){const lv=NOX.$('#cefr').value,tp=NOX.$('#topic').value;NOX.$('#mout').textContent='MAESTRO думает…';
+ const p=answer?`Ты MAESTRO, учитель испанского (es-ES), объясняешь по-русски. Уровень ${lv}, тема «${tp}». Ученик ответил: «${answer}». Исправь ошибки (строка «Исправление: …»), коротко объясни и дай следующее задание.`:`Ты MAESTRO, учитель испанского (es-ES), объясняешь по-русски. Уровень ${lv}, тема «${tp}». Начни короткий урок: одно объяснение и одно упражнение.`;
+ try{const a=await NOX.ask(p,{onToken:(x,all)=>NOX.$('#mout').textContent=all});maestro.push({at:new Date().toISOString(),cefr:lv,topic:tp,answer:answer||null,reply:a});NOX.store.set('voice.maestro',maestro.slice(-200));const es=a.match(/[¿¡][^\n]+|«([^»]*[ñáéíóú][^»]*)»/);if(es)speak(es[0].replace(/[«»]/g,''),'es')}catch(e){NOX.$('#mout').textContent='HOLD: '+e.message}}
+NOX.action('lesson','MAESTRO: начать урок',()=>lesson(null),NOX.$('#b-lesson'));
+NOX.action('mexp','MAESTRO: экспорт прогресса',()=>{const a=NOX.el('a',{href:URL.createObjectURL(new Blob([JSON.stringify(maestro,null,1)],{type:'application/json'})),download:'maestro-progress.json'});a.click()},NOX.$('#b-mexp'));
+NOX.action('mdel','MAESTRO: удалить прогресс',()=>{if(confirm('Удалить прогресс MAESTRO из этого браузера?')){maestro=[];NOX.store.set('voice.maestro',[]);NOX.toast('Прогресс удалён')}},NOX.$('#b-mdel'));
+NOX.action('gw','Звонки: проверить шлюз',async()=>{const r=await NOX.module('/api/nox/calls/gateway',{check:true});NOX.toast(r.missing?'Шлюз звонков не установлен (HOLD)':r.ok?'Шлюз отвечает: '+JSON.stringify(r.data).slice(0,80):'Ошибка: '+r.error,r.ok?'':'hold')},NOX.$('#b-gw'));
+NOX.$$('#tabs [data-p]').forEach(b=>NOX.action('tab-'+b.dataset.p,'Голос: '+b.textContent,()=>{NOX.$$('#tabs [data-p]').forEach(x=>x.classList.toggle('on',x===b));NOX.$$('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.p))},b));
+NOX.onStop(()=>{speechSynthesis.cancel();if(rec&&rec.state==='recording')rec.stop();if(W){W.terminate();W=null;NOX.$('#asr').textContent='Распознавание: остановлено';NOX.$('#asr').className='nx-tag hold'}});
+devices().catch(()=>{});
+})();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

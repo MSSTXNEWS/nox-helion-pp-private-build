@@ -1,0 +1,96 @@
+{
+  "schema": "NOX_A5_UNIVERSAL_SOURCE_BLOCK_V1",
+  "run_id": "NOX-49-20261117",
+  "executor": "A5.7",
+  "native_accepted": false,
+  "new_accepted_ids": [],
+  "source_manifest_sha256": "6def1a2620aae599dbbf7f73c88dc56250366d44c1f23ac18c319d790c1db3c8",
+  "source_checks": {
+    "viewport_pending": {
+      "commit": "2f8f663f71591bcd6e274abaac822816c9bd3b29",
+      "groups_passed": 5,
+      "width_cases": 25,
+      "native": false
+    },
+    "stop_ui": {
+      "schema": "NOX_STOP_UI_SOURCE_ACCEPTANCE_V1",
+      "task_id": "1A04",
+      "scope": "real Chromium with local HTTP fixture and synthetic receipt events",
+      "native_accepted": false,
+      "checks": [
+        "Local cancellation never claims GPU stopped",
+        "Unrelated request receipt ignored",
+        "Scoped acknowledgement differs from verified GPU stop",
+        "Verified matching receipt updates original message after transport closes",
+        "Media job unchanged; no owner STOP/task cancellation requested; zero page errors"
+      ],
+      "passed": 5,
+      "page_errors": [],
+      "sha256": "232cd731add48ea1b3a6c01a47420eb27f89ca76a8eaa1149964af5445811cc5"
+    },
+    "composer_dock": "STOP hit-tested unobscured across320/390/800/1440/3840 with rail closed; actual default-width click verified separately.",
+    "source_stage_admission": {
+      "passed": 9,
+      "log": "current-stage-test.log"
+    },
+    "v13": "../v13-merge/browser-acceptance.json"
+  },
+  "cards": [
+    {
+      "TaskID": "5A02",
+      "original_role": 5,
+      "required_level": "native",
+      "status": "HOLD_NATIVE",
+      "resume_condition": "Current-SHA native same-origin Resonance and accepted media-job recovery with real server receipts."
+    },
+    {
+      "TaskID": "6A02",
+      "original_role": 6,
+      "required_level": "native",
+      "status": "HOLD_NATIVE",
+      "resume_condition": "Original owner lease and live concurrent-writer/restart cursor receipts from the existing queue."
+    },
+    {
+      "TaskID": "0A03",
+      "original_role": 0,
+      "required_level": "native",
+      "status": "HOLD_NATIVE",
+      "resume_condition": "Actual browser/C01-C08/Maya/S03 accepted, completed and persisted receipts under current SHA."
+    },
+    {
+      "TaskID": "1A04",
+      "original_role": 1,
+      "required_level": "native",
+      "status": "HOLD_NATIVE",
+      "resume_condition": "Native request-scoped generation STOP, media cancel, task cancel and OWNER STOP effects; HTTP ACK alone is not GPU stop."
+    },
+    {
+      "TaskID": "2A02",
+      "original_role": 2,
+      "required_level": "native",
+      "status": "HOLD_NATIVE",
+      "resume_condition": "Root confirms external backup, unique-state recovery, seekable capacity/reserve/random reads on original OneHost."
+    },
+    {
+      "TaskID": "3V14-04",
+      "original_role": 3,
+      "required_level": "native",
+      "status": "HOLD_NATIVE",
+      "resume_condition": "Native exact-decision retrieval with original S03 provenance and references; source fixture is not native memory evidence."
+    },
+    {
+      "TaskID": "4V14-21",
+      "original_role": 4,
+      "required_level": "native",
+      "status": "HOLD_NATIVE",
+      "resume_condition": "Native optimizer/checkpoint restore with same trainable revision and verified unique training state."
+    }
+  ],
+  "prerequisite": {
+    "TaskID": "5V14-14",
+    "owner": "A0",
+    "counted_here": false,
+    "source": "25 viewport cases passed; current panel/composer follow-up recorded"
+  },
+  "archive_replacement": "Waiting final freeze and other role packages; previous source archive retained."
+}

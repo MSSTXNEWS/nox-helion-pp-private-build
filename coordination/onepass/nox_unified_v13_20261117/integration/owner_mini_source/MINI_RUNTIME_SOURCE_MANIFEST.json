@@ -1,0 +1,27 @@
+{
+  "schema": "NOX_MINI_RUNTIME_SOURCE_FILES_V1",
+  "scope": "source",
+  "native_install_performed": false,
+  "required_owner_lease": true,
+  "files_sha256": {
+    "nox_dispatcher_t855u.py": "2f673620382cfa2d0aece19180f2d274146740a5186b90d5d965b1fe501f4c05",
+    "owner_task_plans.py": "9500a72135941ecf801854c040041df72df5c9a1b1da9ee4337631600d8ba7d4",
+    "owner_dispatcher_mentor.py": "eafaae8c14abe84fd3cfdfbc60b8ac43d2426b0b29f31e11334c064bc373be5f",
+    "owner_autonomy_pool.py": "83a6894c825eeb367f8d9c3e06e3b67a635abfb028744cb65a896404735c57ec",
+    "owner_resource_policy.py": "ed0e294cd153294c5fe2dba1647f380d93058287e9815e9bebec0ef2028097d9",
+    "owner_mini_tasks.py": "46e4558fa585850a24d47a9c1479c63d1f31118fccee61070153dde5d4e69a66",
+    "owner_mini_planning.py": "b139a2930e34ada50bd7d017481ae906a3eaff38c647232b351376338b53e894",
+    "v112_s03_stream.py": "7282e53c3d6c7a1c093cbb77f646ccfd16733ac146555a57c1ebc907069f68b4"
+  },
+  "mini_helper_sha256": "46e4558fa585850a24d47a9c1479c63d1f31118fccee61070153dde5d4e69a66",
+  "source_pins": {
+    "dispatcher_before": "f36d405ca49c775bfe421745c296cf7aa2963e71a6b6413388790d3e12f6478f",
+    "dispatcher_after": "2f673620382cfa2d0aece19180f2d274146740a5186b90d5d965b1fe501f4c05",
+    "plans_before": "6787f78748f211c930e1a40fde10b3cebb2dd29299f7a783a9101e4584546914",
+    "plans_after": "9500a72135941ecf801854c040041df72df5c9a1b1da9ee4337631600d8ba7d4",
+    "mini_module": "46e4558fa585850a24d47a9c1479c63d1f31118fccee61070153dde5d4e69a66"
+  },
+  "free_text_state": "awaiting_plan",
+  "planning_state": "VERIFIED_PROPOSAL_REVIEW_REQUIRED only after existing model and exact S03 readback",
+  "native_planning_bound": false
+}

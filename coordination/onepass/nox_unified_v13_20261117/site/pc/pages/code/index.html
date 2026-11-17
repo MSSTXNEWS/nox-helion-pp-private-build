@@ -1,0 +1,50 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="../_kit/nox-pages.css"><script src="../_kit/nox-pages.js"></script>
+<style>#ed,#df{flex:1;min-height:0;border-radius:var(--r);overflow:hidden;padding:0}#df{display:none}#out{height:30%;min-height:90px;overflow:auto;white-space:pre-wrap;font:12px/1.2 ui-monospace,Consolas,monospace;margin:0}#side{width:34%}
+#nox{flex:1;overflow:auto;white-space:pre-wrap}@media(max-width:700px){#side{width:auto}#ed{min-height:45vh}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main">
+ <section class="nx-col nx-grow">
+  <div class="nx-row nx-glass"><button class="nx-btn" id="b-open">Открыть</button><button class="nx-btn" id="b-save">Сохранить</button><button class="nx-btn on" id="b-run">▶ Тест (Python)</button>
+   <button class="nx-btn" id="b-ana">Анализ NOX</button><button class="nx-btn" id="b-fix">Исправить (NOX)</button><button class="nx-btn" id="b-diff">Diff</button><button class="nx-btn" id="b-undo">Отменить</button><button class="nx-btn" id="b-ask">Попросить NOX</button>
+   <span class="nx-tag hold" id="py">Python: загрузка…</span></div>
+  <div id="ed" class="nx-glass"></div><div id="df" class="nx-glass"></div>
+  <pre id="out" class="nx-glass"></pre>
+ </section>
+ <aside class="nx-col nx-glass" id="side"><div class="nx-h">NOX</div><textarea class="nx-in" id="q" rows="2" placeholder="Вопрос NOX о коде"></textarea><div id="nox" class="nx-dim">Ответ NOX появится здесь. Код отправляется в единый чат NOX (тот же диалог).</div></aside>
+</main><input type="file" id="f" accept=".py,.txt,.js,.json,.md" hidden>
+<script src="../_vendor/monaco/vs/loader.js"></script>
+<script>
+(async()=>{await NOX.mount({route:'code',title:'Лаборатория кода'});
+require.config({paths:{vs:'../_vendor/monaco/vs'}});
+const monaco=await new Promise(r=>require(['vs/editor/editor.main'],()=>r(window.monaco)));
+monaco.editor.defineTheme('nox',{base:'vs-dark',inherit:true,rules:[],colors:{'editor.background':'#00000000','editor.lineHighlightBackground':'#7fd8ff10','editorGutter.background':'#00000000'}});
+const hist=NOX.store.get('code.versions',[]);const init=NOX.store.get('code.cur','# NOX · Лаборатория кода\nprint(2+2)\n');
+const ed=monaco.editor.create(NOX.$('#ed'),{value:init,language:'python',theme:'nox',automaticLayout:true,minimap:{enabled:false},fontSize:13,lineHeight:18,padding:{top:4}});window.noxEditor=ed;
+let base=init,proposal=null;ed.onDidChangeModelContent(()=>NOX.store.set('code.cur',ed.getValue()));
+let W;const out=NOX.$('#out');const say=(t,c)=>{out.append(NOX.el('span',{style:c?'color:'+c:'',text:t+'\n'}));out.scrollTop=1e9};
+function boot(){W=new Worker('py-worker.mjs',{type:'module'});NOX.$('#py').textContent='Python: загрузка…';W.onmessage=e=>{const d=e.data;if(d.ready){NOX.$('#py').textContent='Python '+d.ready+' · NOX';NOX.$('#py').className='nx-tag ok'}if(d.out!=null)say(d.out);if(d.err!=null)say(d.err,'#ffb5a6');if(d.done){if(d.error)say(d.error,'#ff5a3c');else if(d.result!=null)say('→ '+d.result,'#7fd8ff');say('— готово —','#5dffb0');NOX.$('#b-run').disabled=false}}}
+boot();
+const pushVer=()=>{hist.push(ed.getValue());while(hist.length>30)hist.shift();NOX.store.set('code.versions',hist)};
+NOX.action('run','Код: запустить Python',()=>{out.textContent='';NOX.$('#b-run').disabled=true;W.postMessage({code:ed.getValue()})},NOX.$('#b-run'));
+NOX.onStop(()=>{W.terminate();say('STOP: выполнение прервано','#ffb347');NOX.$('#b-run').disabled=false;boot()});
+NOX.action('open','Код: открыть файл',()=>NOX.$('#f').click(),NOX.$('#b-open'));
+NOX.$('#f').onchange=async e=>{const fl=e.target.files[0];pushVer();const t=await fl.text();ed.setValue(t);base=t;const ext=fl.name.split('.').pop();monaco.editor.setModelLanguage(ed.getModel(),{py:'python',js:'javascript',json:'json',md:'markdown'}[ext]||'plaintext');NOX.toast('Открыт '+fl.name)};
+NOX.action('save','Код: сохранить файл',()=>{const a=NOX.el('a',{href:URL.createObjectURL(new Blob([ed.getValue()])),download:'nox_code.py'});a.click()},NOX.$('#b-save'));
+async function askNox(prompt,{apply}={}){const box=NOX.$('#nox');box.textContent='NOX думает…';try{const a=await NOX.ask(prompt,{onToken:(t,all)=>box.textContent=all});if(apply){const m=a.match(/```(?:python|py)?\n([\s\S]*?)```/);proposal=m?m[1]:null;if(proposal)showDiff(ed.getValue(),proposal,'Предложение NOX — нажмите «Diff» ещё раз, чтобы принять');else NOX.toast('NOX не прислал блок кода')}return a}catch(e){box.textContent='HOLD: '+e.message;NOX.toast('Чат NOX недоступен','hold')}}
+NOX.action('ask','Код: попросить NOX',()=>askNox((NOX.$('#q').value||'Посмотри этот код')+'\n\nКод:\n```python\n'+ed.getValue()+'\n```'),NOX.$('#b-ask'));
+NOX.action('ana','Код: анализ NOX',()=>askNox('Проанализируй код коротко: ошибки, риски, улучшения.\n```python\n'+ed.getValue()+'\n```'),NOX.$('#b-ana'));
+NOX.action('fix','Код: исправить с NOX',()=>askNox('Исправь код и верни полный исправленный вариант в одном блоке ```python.\n```python\n'+ed.getValue()+'\n```',{apply:true}),NOX.$('#b-fix'));
+let de=null;function showDiff(a,b,msg){NOX.$('#ed').style.display='none';NOX.$('#df').style.display='block';if(!de)de=monaco.editor.createDiffEditor(NOX.$('#df'),{theme:'nox',automaticLayout:true,renderSideBySide:innerWidth>700});de.setModel({original:monaco.editor.createModel(a,'python'),modified:monaco.editor.createModel(b,'python')});msg&&NOX.toast(msg)}
+NOX.action('diff','Код: diff (принять/закрыть)',()=>{if(NOX.$('#df').style.display==='block'){if(proposal){pushVer();ed.setValue(proposal);proposal=null;NOX.toast('Исправление NOX принято')}NOX.$('#df').style.display='none';NOX.$('#ed').style.display='block';return}showDiff(hist[hist.length-1]??base,ed.getValue(),'Diff: прошлая версия ↔ текущая')},NOX.$('#b-diff'));
+NOX.action('undo','Код: отменить (прошлая версия)',()=>{if(hist.length){ed.setValue(hist.pop());NOX.store.set('code.versions',hist);NOX.toast('Возвращена прошлая версия')}else{ed.trigger('nox','undo');NOX.toast('Отмена в редакторе')}},NOX.$('#b-undo'));
+})();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

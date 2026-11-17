@@ -1,0 +1,55 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../_kit/nox-pages.css"><script src="../_kit/nox-pages.js"></script>
+<style>#g{flex:1;min-height:0;border-radius:var(--r);overflow:hidden;padding:0}#side{width:260px}@media(max-width:700px){#side{width:auto}#g{min-height:55vh}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main">
+ <section class="nx-col nx-grow">
+  <div class="nx-row nx-glass">
+   <button class="nx-btn on" id="b-load">Память S03</button><button class="nx-btn" id="b-file">Импорт JSON</button><button class="nx-btn" id="b-demo">Демо-данные</button>
+   <select class="nx-in" id="flt"><option value="">Все уровни</option></select><input class="nx-in" id="q" placeholder="Фильтр по тексту" style="width:150px">
+   <span class="nx-sub">Timeline</span><input type="range" id="tl" min="0" max="100" value="100" style="width:120px"><button class="nx-btn" id="b-exp">Экспорт JSON</button>
+   <span id="src" class="nx-tag">—</span>
+  </div>
+  <div id="g" class="nx-glass"></div>
+ </section>
+ <aside class="nx-col nx-glass" id="side"><div class="nx-h">Узел</div><div id="info" class="nx-dim">Кликните узел: содержание, источник, связи.</div><div class="nx-h" style="margin-top:6px">Уровни</div><ul class="nx-list" id="lv"></ul></aside>
+</main><input type="file" id="f" accept=".json" hidden>
+<script src="../_vendor/3d-force-graph/3d-force-graph.min.js"></script>
+<script>
+(async()=>{await NOX.mount({route:'graph',title:'Граф памяти 3D'});
+const COL={M0:'#7fd8ff',M1:'#9fb8ff',M2:'#b48cff',M3:'#ff7ad9',M4:'#ffb347',M5:'#5dffb0',M6:'#ffd36e',M7:'#ff5a3c'};
+let raw=null,data={nodes:[],links:[]};
+const G=ForceGraph3D()(NOX.$('#g')).backgroundColor('rgba(0,0,0,0)').nodeLabel(n=>n.label).nodeVal(n=>n.val).nodeColor(n=>n.color).linkColor(()=>'rgba(127,216,255,.25)').linkDirectionalParticles(l=>NOX.mode==='ECO'?0:2).linkDirectionalParticleSpeed(.006).onNodeClick(show);
+window.noxGraph=G;const fit=()=>G.width(NOX.$('#g').clientWidth).height(NOX.$('#g').clientHeight);fit();addEventListener('resize',fit);
+addEventListener('nox:mode',e=>{G.linkDirectionalParticles(l=>e.detail==='ECO'?0:2);e.detail==='ECO'?G.pauseAnimation():G.resumeAnimation()});
+function build(mem){raw=mem;const nodes=[{id:'NOX',label:'NOX · ядро',val:14,color:'#ffffff',lv:'core'}],links=[];const seg=mem.segments||{};const levels=mem.levels||{};
+ NOX.$('#flt').innerHTML='<option value="">Все уровни</option>';NOX.$('#lv').innerHTML='';
+ for(const k of Object.keys(seg)){const p=k.slice(0,2),cnt=(mem.stats&&(mem.stats[k]??mem.stats[p]))??seg[k].length;nodes.push({id:k,label:k+' · '+(levels[k]||''),val:7,color:COL[p]||'#ccc',lv:k,count:cnt});links.push({source:'NOX',target:k});
+  NOX.$('#flt').append(NOX.el('option',{value:k,text:k}));const li=NOX.el('li',{},NOX.el('span',{text:k}),NOX.el('span',{class:'nx-sub',text:String(cnt)}));li.onclick=()=>{NOX.$('#flt').value=k;apply()};NOX.$('#lv').append(li);
+  seg[k].forEach((e,i)=>{const id=k+'#'+i;nodes.push({id,label:(e.content||'').slice(0,80),val:2+3*(+e.significance||0),color:COL[p]||'#ccc',lv:k,e});links.push({source:k,target:id});
+   const pv=(e.provenance||'').split(' ')[0];const twin=nodes.find(n=>n.e&&n.id!==id&&(n.e.provenance||'').split(' ')[0]===pv&&pv);if(twin)links.push({source:id,target:twin.id})})}
+ data={nodes,links};apply()}
+function apply(){const lv=NOX.$('#flt').value,q=NOX.$('#q').value.toLowerCase(),t=+NOX.$('#tl').value;const ts=data.nodes.filter(n=>n.e&&n.e.created_at).map(n=>Date.parse(n.e.created_at)).filter(x=>x);const mn=Math.min(...ts),mx=Math.max(...ts),cut=mn+(mx-mn)*t/100;
+ const keep=new Set(data.nodes.filter(n=>!n.e||((!lv||n.lv===lv)&&(!q||(n.e.content||'').toLowerCase().includes(q))&&(!ts.length||!n.e.created_at||Date.parse(n.e.created_at)<=cut+1))).map(n=>n.id));
+ const nodes=data.nodes.filter(n=>keep.has(n.id)),links=data.links.filter(l=>keep.has(l.source.id||l.source)&&keep.has(l.target.id||l.target));G.graphData({nodes,links});NOX.$('#src').textContent=nodes.length+' узлов'}
+function show(n){const e=n.e||{};const links=data.links.filter(l=>(l.source.id||l.source)===n.id||(l.target.id||l.target)===n.id).length;
+ NOX.$('#info').innerHTML='';NOX.$('#info').append(NOX.el('div',{text:e.content||n.label}),NOX.el('div',{class:'nx-sub',text:'Источник: '+(e.provenance||n.lv)}),NOX.el('div',{class:'nx-sub',text:'Время: '+(e.created_at||'—')+' · связей: '+links+(n.count!=null?' · записей: '+n.count:'')}));
+ const d=90/Math.hypot(n.x||1,n.y||1,n.z||1);G.cameraPosition({x:n.x*(1+d),y:n.y*(1+d),z:n.z*(1+d)},n,900)}
+NOX.action('load','Граф: загрузить память S03',async()=>{try{const m=await NOX.api('/api/nox/memory');if(m.status!=='READY')throw new Error(m.reason||m.status);build(m);NOX.$('#src').className='nx-tag ok';NOX.toast('S03: '+data.nodes.length+' узлов, цепочка Ledger '+(m.ledger_chain_ok?'OK':'?'))}catch(e){NOX.$('#src').className='nx-tag hold';NOX.$('#src').textContent='HOLD: '+e.message}},NOX.$('#b-load'));
+NOX.action('file','Граф: импорт JSON экспорта памяти',()=>NOX.$('#f').click(),NOX.$('#b-file'));
+NOX.$('#f').onchange=async e=>{build(JSON.parse(await e.target.files[0].text()));NOX.toast('Импортировано')};
+NOX.action('demo','Граф: демо-данные (помечены DEMO)',async()=>{build(await (await fetch('sample-memory.json')).json());NOX.$('#src').className='nx-tag hold';NOX.$('#src').textContent='DEMO · '+data.nodes.length},NOX.$('#b-demo'));
+NOX.action('export','Граф: экспорт JSON',()=>{const a=NOX.el('a',{href:URL.createObjectURL(new Blob([JSON.stringify(raw||{},null,1)],{type:'application/json'})),download:'nox-memory-graph.json'});a.click()},NOX.$('#b-exp'));
+NOX.$('#flt').onchange=apply;NOX.$('#q').oninput=apply;NOX.$('#tl').oninput=apply;
+NOX.onStop(()=>G.pauseAnimation());
+NOX.$('#b-load').click();
+})();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

@@ -1,0 +1,31 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#08090c"><title>NOX HELION · КОНСТРУКТОР ВСЕЛЕННОЙ</title>
+<link rel="stylesheet" href="../nox-cinematic-worlds.css"><link rel="stylesheet" href="../nox-master-web.css" data-nox-master="v4">
+<script defer src="../nox-cinematic-worlds.js"></script><script defer src="../nox-web-shell-v4.js" data-nox-master="v4"></script><script defer src="../nox-theme-studio-v4.js"></script>
+<link rel="stylesheet" href="../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../nox-wow-max.css"><link rel="stylesheet" href="../nox-studio-v7.css">
+<link rel="stylesheet" href="../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.js","three/addons/":"../vendor/three/addons/"}}</script>
+
+<script type="module" src="../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body data-page="studio" data-nox-page="studio" class="nox-shared-glass nox-master-page"><main class="nox-master-wrap"><div class="nox-master-hero"><h1>КОНСТРУКТОР ВСЕЛЕННОЙ</h1><p>5 заводских миров × 6 цветовых палитр; каждая кнопка — готовый визуальный компонент. Совместимость проверяется перед применением.</p></div>
+<div class="nox-master-preview" id="studioPreview" role="region" aria-label="Предпросмотр темы"><div><strong id="previewWorld">HELION</strong><p id="previewKind">Оригинальный D02</p><p id="previewComposition">Материалы, типографика, слой</p></div></div>
+<div class="nox-v7-stage-tools" aria-label="Проверка оформления">
+ <a class="nox-master-action" href="index.html" id="noxV7OpenHome">✦ ОТКРЫТЬ ОРИГИНАЛЬНЫЙ D02</a>
+ <a class="nox-master-action" href="chat.html">РЕЗОНАНС</a>
+ <a class="nox-master-action" href="../motion100/gallery.html" aria-label="Открыть 100 оригинальных живых анимаций NOX">✦ MOTION100 · 100 АНИМАЦИЙ</a>
+ <button type="button" class="nox-master-action" id="noxV7ButtonSample" aria-label="Проверить выбранное оформление кнопок">ПРОВЕРКА МАТЕРИАЛА</button>
+ </div><div id="noxV7ButtonResult" class="nox-v7-hint" role="status" aria-live="polite">Заводские темы не заменяются пользовательскими.</div>
+<p id="studioStatus" class="nox-master-warning" role="status">Композиция проверяется по правилам совместимости</p>
+
+<section class="nox-master-section"><h2>01 · Мир NOX</h2><div id="studioWorlds" class="nox-master-grid"></div></section>
+<section class="nox-master-section"><h2>02 · Цветовая температура</h2><div id="studioPalettes" class="nox-master-grid"></div></section>
+<section class="nox-master-section"><h2>03 · Архитектура кнопок</h2><div id="studioButtons" class="nox-master-grid"></div></section>
+<section class="nox-master-section"><h2>04 · Типографика</h2><div id="studioFonts" class="nox-master-grid"></div></section>
+<section class="nox-master-section"><h2>05 · Совместимые эффекты</h2><div id="studioLayers" class="nox-master-grid"></div></section>
+<section class="nox-master-section"><h2>06 · Ресурсный профиль</h2><div id="studioQuality" class="nox-master-grid"></div></section>
+<section class="nox-master-section" id="noxV7SceneSection"><h2>07 · 12 живых атмосфер</h2><p class="nox-v7-hint">Это выбор режимов уже существующего движка NOX WOW MAX V2. Эффект полностью исполняется в оригинальном HOME; альтернативные миры отключают фон HELION во избежание наложения движков.</p><div class="nox-master-grid nox-v7-scenes" id="noxV7SceneGrid" role="group" aria-label="Режимы атмосферы"></div></section>
+<section class="nox-master-section"><h2>08 · Мои скины</h2><div id="studioSaved" class="nox-master-grid"></div>
+<div class="nox-master-row"><label for="studioPresetName">Название</label><input id="studioPresetName" maxlength="64" placeholder="Мой мир NOX" autocomplete="off"><button type="button" id="studioSave" class="nox-master-action">Сохранить</button><button type="button" id="studioExport" class="nox-master-action">Экспорт JSON</button><button type="button" id="studioImport" class="nox-master-action">Импорт JSON</button><button type="button" id="studioReset" class="nox-master-action">Заводская тема</button><input id="studioFile" type="file" accept="application/json,.json" hidden></div></section>
+<section class="nox-master-section" id="noxV9EngineSection"><h2>09 · Реальная библиотека движков и слоёв</h2><p class="nox-v9-layer-notice" id="noxV9EngineSummary" role="status">Проверка физических ресурсов…</p><div id="noxV9EngineLibrary" role="region" aria-label="Проверенный реестр исходных движков"></div><p class="nox-v9-layer-notice">Проверяются реальные SHA исходных файлов. Режимы эффектов рисуются в двух существующих атмосферных Canvas2D; ядро D02 и его оригинальный WebGL остаются отдельным владельцем сцены. Недоступные на OneHost функции не выдаются за LIVE.</p></section></main><script defer src="../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../nox-wow-max.js"></script><script defer src="../nox-studio-v7.js"></script><script defer src="../nox-v9-library.js"></script><script defer src="../nox-v9-interface.js" data-nox-interface="v9"></script><script defer src="../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

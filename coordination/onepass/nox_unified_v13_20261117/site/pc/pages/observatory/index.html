@@ -1,0 +1,59 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="../_kit/nox-pages.css"><script src="../_kit/nox-pages.js"></script>
+<style>.grid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(170px,1fr);gap:var(--g);flex:1;min-height:0}.ch{width:100%;height:100%;min-height:150px}
+.kpi{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--g)}.kpi .nx-glass b{display:block;font-family:"NOX Cosmic";font-size:15px;color:#fff}
+@media(max-width:700px){.grid{grid-template-columns:1fr;grid-auto-rows:200px}.kpi{grid-template-columns:repeat(2,1fr)}}#ev{white-space:pre-wrap;font:11px/1.2 ui-monospace,monospace;max-height:40vh;overflow:auto;display:none}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main"><section class="nx-col nx-grow">
+ <div class="nx-row nx-glass"><button class="nx-btn on" id="b-sum">Сводка</button><button class="nx-btn" id="b-mil">Milestones</button><button class="nx-btn" id="b-ev">Evidence</button><button class="nx-btn" id="b-cmp">Сравнить</button><button class="nx-btn" id="b-exp">Экспорт CSV</button><button class="nx-btn" id="b-ref">Обновить</button><span class="nx-sub" id="upd">—</span></div>
+ <div class="kpi" id="kpi"></div>
+ <pre class="nx-glass" id="ev"></pre>
+ <div class="grid">
+  <div class="nx-glass"><div class="nx-h">Обучение · шаг / строки</div><div class="ch" id="c-train"></div></div>
+  <div class="nx-glass"><div class="nx-h">SAFE70 · GPU Hot Spot °C</div><div class="ch" id="c-temp"></div></div>
+  <div class="nx-glass"><div class="nx-h">Голод · черви</div><div class="ch" id="c-hunger"></div></div>
+  <div class="nx-glass"><div class="nx-h">Рост знаний · индекс</div><div class="ch" id="c-know"></div></div>
+  <div class="nx-glass"><div class="nx-h">Genesis Ledger · память S03</div><div class="ch" id="c-mem"></div></div>
+  <div class="nx-glass"><div class="nx-h">Ресурсы ПК / внешний GPU</div><div class="ch" id="c-res"></div></div>
+ </div></section></main>
+<script src="../../vendor/nox-extra/echarts.min.js"></script>
+<script>
+(async()=>{await NOX.mount({route:'observatory',title:'Обсерватория'});
+const HIST=NOX.store.get('obs.hist',[]);const C={};const T={textStyle:{color:'#dfe7f2',fontSize:10},grid:{left:34,right:8,top:14,bottom:20},tooltip:{trigger:'axis'},xAxis:{type:'time',axisLabel:{color:'#8b97a8',fontSize:9}},yAxis:{type:'value',axisLabel:{color:'#8b97a8',fontSize:9},splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},animationDuration:600};
+for(const id of['train','temp','hunger','know','mem','res'])C[id]=echarts.init(NOX.$('#c-'+id),null,{renderer:'canvas'});window.noxCharts=C;addEventListener('resize',()=>Object.values(C).forEach(c=>c.resize()));
+const line=(name,data,color,area)=>({name,type:'line',showSymbol:data.length<3,smooth:true,data,lineStyle:{color,width:2,shadowColor:color,shadowBlur:8},itemStyle:{color},areaStyle:area?{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:color+'66'},{offset:1,color:color+'00'}])}:undefined});
+const HL={SATIATED:0,PECKISH:1,HUNGRY:2,STARVING:3};let last=null,prev=null;
+async function poll(){const g=async p=>{try{return await NOX.api(p)}catch(e){return{status:'HOLD',reason:e.message}}};
+ const [live,pc,pred,mem,prog]=await Promise.all([g('/api/nox/training-live'),g('/api/pc-metrics'),g('/api/nox/predator/status'),g('/api/nox/memory'),g('/api/nox/progress')]);
+ const tr=live.trainer||{},ix=live.indexer||{},sf=pc.safe70||live.safe70||{};const now=Date.now();
+ const s={t:now,step:tr.step,rows:tr.rows_done,rows_total:tr.rows_total,hold:tr.holdout_improvement_pct,tok:tr.tok_s,gpu:tr.gpu_percent,vram:tr.vram_used_gb,temp:sf.gpu_hot_spot_c??sf.gpu_temp_c,dec:sf.decision,hunger:HL[pred.hunger_level],hl:pred.hunger_level,worms:pred.journal_records,pending:pred.pending_requests,chunks:ix.chunks_embedded,chunks_total:ix.chunks_total,ram:pc.ram_percent,cpu:pc.cpu_percent,ledger:(mem.stats&&mem.stats.M7_autobiography),memtot:mem.stats?Object.values(mem.stats).reduce((a,b)=>a+(+b||0),0):null,chain:mem.ledger_chain_ok,trstatus:tr.status,gguf:tr.gguf_status};
+ prev=last;last={s,live,pc,pred,mem,prog};HIST.push(s);while(HIST.length>720)HIST.shift();NOX.store.set('obs.hist',HIST);render();NOX.$('#upd').textContent='обновлено '+new Date().toLocaleTimeString('ru-RU',{timeZone:'Europe/Moscow'})}
+const v=x=>x==null?'Н/Д':x;
+function render(){const s=last.s,ser=k=>HIST.filter(h=>h[k]!=null).map(h=>[h.t,h[k]]);
+ const K=[['Обучение',s.trstatus+(s.step!=null?' · шаг '+s.step:'')],['Строки',s.rows!=null?s.rows+' / '+v(s.rows_total):'Н/Д'],['Holdout',s.hold!=null?'+'+s.hold+'%':'Н/Д'],['SAFE70',v(s.temp)+(s.temp!=null?'°C':'')+' · '+v(s.dec)],['Голод',v(s.hl)],['Знания',v(s.chunks)+' / '+v(s.chunks_total)]];
+ NOX.$('#kpi').innerHTML='';K.forEach(([a,b])=>NOX.$('#kpi').append(NOX.el('div',{class:'nx-glass'},NOX.el('span',{class:'nx-sub',text:a}),NOX.el('b',{text:String(b)}))));
+ C.train.setOption({...T,series:[line('шаг',ser('step'),'#7fd8ff',true),line('holdout %',ser('hold'),'#ffb347')]});
+ C.temp.setOption({...T,yAxis:{...T.yAxis,min:30,max:90},series:[{...line('Hot Spot',ser('temp'),'#ff5a3c',true),markLine:{symbol:'none',data:[{yAxis:65,lineStyle:{color:'#ffb347'}},{yAxis:70,lineStyle:{color:'#ff7a3c'}},{yAxis:75,lineStyle:{color:'#ff2a2a'}}]}}],graphic:s.temp==null?[{type:'text',left:'center',top:'middle',style:{text:'HOLD: датчик не читается',fill:'#ffb347',fontSize:12}}]:[]});
+ C.hunger.setOption({...T,series:[line('уровень голода 0–3',ser('hunger'),'#ff7ad9',true),line('записи червей',ser('worms'),'#5dffb0')]});
+ C.know.setOption({...T,series:[line('чанки в индексе',ser('chunks'),'#5dffb0',true)]});
+ C.mem.setOption({...T,series:[line('память S03 всего',ser('memtot'),'#b48cff',true),line('Ledger M7',ser('ledger'),'#ffd36e')]});
+ C.res.setOption({...T,yAxis:{...T.yAxis,max:100},series:[line('RAM ПК %',ser('ram'),'#9fb8ff'),line('CPU ПК %',ser('cpu'),'#7fd8ff'),line('GPU внешн. %',ser('gpu'),'#ffb347')]});
+ NOX.$('#ev').textContent=JSON.stringify({training:last.live,pc:last.pc,predator:last.pred,progress:last.prog,ledger_chain_ok:last.mem.ledger_chain_ok},null,1)}
+NOX.action('sum','Обсерватория: сводка',()=>{NOX.$('#ev').style.display='none';NOX.toast('Сводка: '+NOX.$$('#kpi b').map(b=>b.textContent).join(' · '))},NOX.$('#b-sum'));
+NOX.action('mil','Обсерватория: milestones',()=>{const s=last.s,m=[['Рождение NOX',last.prog.nox_prime_born_at||'2026-11-10 22:04:59 Madrid'],['GGUF',v(s.gguf)],['Обновление весов подтверждено',last.prog.weightUpdateVerified?'да':'нет (HOLD)'],['Ledger цепочка',s.chain==null?'Н/Д':s.chain?'OK':'FAIL']];NOX.$('#ev').style.display='block';NOX.$('#ev').textContent=m.map(x=>x.join(': ')).join('\n')},NOX.$('#b-mil'));
+NOX.action('ev','Обсерватория: evidence (сырые ответы API)',()=>{NOX.$('#ev').style.display=NOX.$('#ev').style.display==='block'?'none':'block';render()},NOX.$('#b-ev'));
+NOX.action('cmp','Обсерватория: сравнить с прошлым замером',()=>{if(!prev)return NOX.toast('Нужно два замера — нажмите «Обновить»');const d=k=>(last.s[k]!=null&&prev.s[k]!=null)?(k+': '+prev.s[k]+' → '+last.s[k]):null;NOX.$('#ev').style.display='block';NOX.$('#ev').textContent=['step','rows','hold','temp','hunger','chunks','memtot','ram'].map(d).filter(Boolean).join('\n')||'Нет числовых изменений (Н/Д)'},NOX.$('#b-cmp'));
+NOX.action('exp','Обсерватория: экспорт CSV',()=>{const keys=Object.keys(HIST[HIST.length-1]||{});const csv=[keys.join(',')].concat(HIST.map(h=>keys.map(k=>h[k]??'').join(','))).join('\n');const a=NOX.el('a',{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:'nox-observatory.csv'});a.click();NOX.toast('CSV: '+HIST.length+' строк')},NOX.$('#b-exp'));
+NOX.action('ref','Обсерватория: обновить',poll,NOX.$('#b-ref'));
+let timer;const sched=()=>{clearInterval(timer);if(!window._obsStopped)timer=setInterval(()=>{if(!document.hidden)poll()},NOX.mode==='ECO'?20000:5000)};addEventListener('nox:mode',sched);
+NOX.onStop(()=>{window._obsStopped=true;clearInterval(timer)});await poll();sched();
+})();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

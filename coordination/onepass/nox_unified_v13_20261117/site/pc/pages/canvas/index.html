@@ -1,0 +1,58 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../_kit/nox-pages.css"><script src="../_kit/nox-pages.js"></script>
+<style>#ex{flex:1;min-height:0;border-radius:var(--r);overflow:hidden}.excalidraw{--color-primary:#7fd8ff}.excalidraw .App-menu_top,.excalidraw .Island{background:rgba(14,18,26,.55)!important;backdrop-filter:blur(10px)}
+#layers{width:200px}@media(max-width:700px){#layers{width:auto;max-height:120px}#ex{min-height:60vh}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main">
+ <section class="nx-col nx-grow">
+  <div class="nx-row nx-glass">
+   <button class="nx-btn" id="b-new">Новый</button><button class="nx-btn" id="b-rect">Фигуры</button><button class="nx-btn" id="b-text">Текст</button>
+   <button class="nx-btn" id="b-png">Экспорт PNG</button><button class="nx-btn" id="b-json">Сохранить файл холста</button><button class="nx-btn" id="b-open">Открыть</button>
+   <input class="nx-in nx-grow" id="idea" placeholder="Идея для NOX — он разложит её на ветви"><button class="nx-btn on" id="b-ask">NOX: развить идею</button>
+   <span class="nx-sub" id="st">Автосохранение в браузере</span>
+  </div>
+  <div id="ex" class="nx-glass" style="padding:0"></div>
+ </section>
+ <aside class="nx-col nx-glass" id="layers"><div class="nx-h">Слои</div><ul class="nx-list" id="ll"></ul></aside>
+</main>
+<input type="file" id="f" accept=".excalidraw,.json" hidden>
+<script>window.EXCALIDRAW_ASSET_PATH="/pc/pages/_vendor/excalidraw/";</script>
+<script src="../_vendor/react/react.production.min.js"></script><script src="../_vendor/react/react-dom.production.min.js"></script>
+<script src="../_vendor/excalidraw/excalidraw.production.min.js"></script>
+<script>
+(async()=>{await NOX.mount({route:'canvas',title:'Холст мыслей'});
+const L=window.ExcalidrawLib;let api;const saved=NOX.store.get('canvas.scene',null);
+const onChange=(els,app)=>{clearTimeout(window._t);window._t=setTimeout(()=>{NOX.store.set('canvas.scene',{elements:els.filter(e=>!e.isDeleted)});drawLayers(els)},400)};
+const App=()=>React.createElement(L.Excalidraw,{excalidrawAPI:a=>{api=a;window.noxExcalidraw=a},theme:'dark',langCode:'ru-RU',initialData:{elements:saved?saved.elements:[],appState:{viewBackgroundColor:'transparent',theme:'dark'}},onChange});
+ReactDOM.createRoot(document.getElementById('ex')).render(React.createElement(App));
+const wait=()=>new Promise(r=>{const i=setInterval(()=>{if(api){clearInterval(i);r()}},50)});await wait();
+function drawLayers(els){const ul=NOX.$('#ll');ul.innerHTML='';[...els].filter(e=>!e.isDeleted).reverse().forEach(e=>{const li=NOX.el('li',{},NOX.el('span',{text:e.type+(e.text?': '+e.text.slice(0,18):'')}));
+ const vis=NOX.el('button',{class:'nx-btn',text:e.opacity<30?'◌':'●',title:'Показать/приглушить'});vis.onclick=ev=>{ev.stopPropagation();api.updateScene({elements:api.getSceneElements().map(x=>x.id===e.id?{...x,opacity:x.opacity<30?100:20,version:x.version+1}:x)})};
+ li.append(vis);li.onclick=()=>api.updateScene({appState:{selectedElementIds:{[e.id]:true}}});ul.append(li)})}
+drawLayers(api.getSceneElements());
+NOX.action('new','Холст: новый',()=>{api.resetScene();NOX.store.set('canvas.scene',null);NOX.toast('Новый холст')},NOX.$('#b-new'));
+NOX.action('shapes','Холст: прямоугольник',()=>api.setActiveTool({type:'rectangle'}),NOX.$('#b-rect'));
+NOX.action('text','Холст: текст',()=>api.setActiveTool({type:'text'}),NOX.$('#b-text'));
+NOX.action('png','Холст: экспорт PNG',async()=>{const blob=await L.exportToBlob({elements:api.getSceneElements(),appState:{...api.getAppState(),exportBackground:true,viewBackgroundColor:'#05070c'},files:api.getFiles(),mimeType:'image/png'});dl(blob,'nox-canvas.png')},NOX.$('#b-png'));
+NOX.action('json','Холст: сохранить файл',()=>{const s=L.serializeAsJSON(api.getSceneElements(),api.getAppState(),api.getFiles(),'local');dl(new Blob([s],{type:'application/json'}),'nox-canvas.excalidraw')},NOX.$('#b-json'));
+NOX.action('open','Холст: открыть файл',()=>NOX.$('#f').click(),NOX.$('#b-open'));
+NOX.$('#f').onchange=async e=>{const d=await L.loadFromBlob(e.target.files[0],null,null);api.updateScene({elements:d.elements});NOX.toast('Открыто')};
+function dl(b,n){const a=NOX.el('a',{href:URL.createObjectURL(b),download:n});a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);NOX.toast('Сохранено: '+n)}
+NOX.action('ask','Холст: NOX развивает идею',async()=>{const idea=NOX.$('#idea').value.trim()||'План развития NOX';NOX.$('#st').textContent='NOX думает…';
+ try{const ans=await NOX.ask('Разложи идею на 5–7 коротких ветвей (каждая строка до 8 слов, без нумерации): '+idea);
+  const lines=ans.split('\n').map(s=>s.replace(/^[-*•\d.)\s]+/,'').trim()).filter(Boolean).slice(0,8);addMap(idea,lines);NOX.$('#st').textContent='Готово: '+lines.length+' ветвей'}
+ catch(e){NOX.$('#st').textContent='HOLD: '+e.message;NOX.toast('Чат NOX недоступен — карта не построена','hold')}},NOX.$('#b-ask'));
+function addMap(root,lines){const cx=400,cy=300,sk=[{type:'ellipse',x:cx-110,y:cy-40,width:220,height:80,strokeColor:'#ffb347',backgroundColor:'transparent',label:{text:root.slice(0,40)}}];
+ lines.forEach((t,i)=>{const a=i/lines.length*Math.PI*2,x=cx+Math.cos(a)*330-90,y=cy+Math.sin(a)*220-25;sk.push({type:'rectangle',x,y,width:180,height:50,strokeColor:'#7fd8ff',label:{text:t}});sk.push({type:'arrow',x:cx,y:cy,points:[[0,0],[x+90-cx,y+25-cy]],strokeColor:'#5a7696'})});
+ api.updateScene({elements:[...api.getSceneElements(),...L.convertToExcalidrawElements(sk)]});api.scrollToContent()}
+window.noxAddMap=addMap;
+})();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

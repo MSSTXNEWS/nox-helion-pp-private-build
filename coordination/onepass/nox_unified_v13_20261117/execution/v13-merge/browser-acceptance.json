@@ -1,0 +1,35 @@
+{
+  "scope": "actual local Chromium/WebGL assets; API fixture only",
+  "native_accepted": false,
+  "checks": [
+    "Offline API shows no connection; no service availability claim",
+    "Auth, non-ready JSON, explicit API-ready and empty status distinguished",
+    "180 rendered theme/palette/viewport combinations; unique five materials; one header/status; no horizontal overflow",
+    "Original inner-page Three renderer receives palette; unknown runtime clamps MAX to BALANCED",
+    "Legacy null settings event is safe",
+    "Original HOME still has fourteen actual orbit controls"
+  ],
+  "page_errors": [],
+  "combinations": 180,
+  "shapes": {
+    "helion": "18px 6px 20px 7px",
+    "chronos": "3px 13px 3px 13px",
+    "somnium": "29% 15% 29% 11% / 18% 34% 21% 30%",
+    "forge": "0px",
+    "synapse": "26px 13px 27px 13px"
+  },
+  "context_scene": {
+    "state": "READY",
+    "canvasCount": 1,
+    "budget": "BALANCED",
+    "runtimeKnown": false,
+    "reducedMotion": true
+  },
+  "home_objects": {
+    "count": 14,
+    "colors": 6,
+    "giants": 5,
+    "asteroids": 3
+  },
+  "status": "SOURCE_BROWSER_PASS"
+}

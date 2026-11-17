@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOX HELION · РАЗДЕЛ</title><link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts/tektur/tektur.css"><link rel="stylesheet" href="./v25/nox-shell-v25.css">
+<script defer src="./v25/nox-shell-v25.js"></script><link rel="stylesheet" href="./nox-wow-max.css" data-nox-wow-max="1">
+<script defer src="./nox-wow-max.js" data-nox-wow-max="1"></script>
+<link rel="stylesheet" href="./nox-cinematic-worlds.css" data-nox-five-worlds="v3">
+<script defer src="./nox-cinematic-worlds.js" data-nox-five-worlds="v3"></script>
+<link rel="stylesheet" href="../nox-master-web.css" data-nox-master="v4">
+<link rel="stylesheet" href="../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.js","three/addons/":"../vendor/three/addons/"}}</script>
+
+<script type="module" src="../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../nox-connection-v13.js" data-nox-connection-v13="1"></script></head>
+<body class="nox-shared-glass n25-body" data-n25-page="hub">
+<header class="n25-topbar"><a class="n25-brand" href="/index.html">NOX</a><nav class="n25-crumbs" id="crumbs" aria-label="Путь"></nav><span class="n25-sp"></span>
+<input class="n25-q" id="filter" type="search" placeholder="Фильтр функций раздела…" aria-label="Фильтр функций раздела">
+<a class="n25-btn" href="/pc/menu.html" id="toMenu">▦ Меню</a><a class="n25-btn" href="/resonance.html">Резонанс</a></header>
+<main class="n25-wrap"><div class="n25-hub">
+  <nav class="n25-panel n25-side" id="side" aria-label="Разделы NOX"></nav>
+  <section>
+    <div class="n25-head"><span class="n25-orb" id="orb"></span><div><h1 id="title" style="font-size:20px">…</h1><div class="n25-crumb" id="desc"></div></div></div>
+    <div class="n25-state" id="state" role="status">Состояние: проверка…</div>
+    <div class="n25-panel n25-tool" id="tool" hidden></div>
+    <div class="n25-cards" id="cards" aria-live="polite"></div>
+    <p id="empty" class="n25-crumb" hidden>Нет функций по фильтру.</p>
+  </section>
+</div></main>
+<div class="n25-foot">LOCAL · NOX HELION V25 · 127.0.0.1</div>
+<script>
+addEventListener('DOMContentLoaded', async () => {
+  const S = window.NOX_V25_SHELL, IA = await S.loadIA(), qs = new URLSearchParams(location.search);
+  const t = IA.find(x => x.id === qs.get('s')) || IA[0];
+  document.title = 'NOX HELION · ' + t.title;
+  document.getElementById('crumbs').innerHTML = `<a href="/index.html">Главная</a> › <a href="/pc/menu.html">Меню</a> › <b style="color:var(--n25-gold2)">${S.esc(t.title)}</b>`;
+  document.getElementById('side').innerHTML = IA.map(x => `<a href="/pc/hub.html?s=${x.id}" ${x.id === t.id ? 'aria-current="page"' : ''}>${S.svg(x.icon)}${S.esc(x.title)}</a>`).join('');
+  document.getElementById('orb').innerHTML = S.svg(t.icon);
+  document.getElementById('title').textContent = t.title;
+  document.getElementById('desc').textContent = t.desc;
+  const cards = document.getElementById('cards');
+  function draw(q) {
+    q = (q || '').toLocaleLowerCase('ru');
+    const list = t.items.filter(x => !q || (x.title + ' ' + (x.note || '') + ' ' + (x.group || '')).toLocaleLowerCase('ru').includes(q));
+    cards.innerHTML = list.map(x => {
+      const hold = x.availability === 'HOLD';
+      const act = hold ? (x.href ? `<a class="n25-btn" href="${S.esc(x.href)}">Открыть (HOLD)</a>` : `<button class="n25-btn" type="button" disabled aria-disabled="true" title="${S.esc(x.note)}">HOLD · нет backend</button>`)
+                       : `<a class="n25-btn" href="${S.esc(x.href)}">Открыть →</a>`;
+      return `<article class="n25-card" id="${x.routeId}" data-s="${x.availability}">${x.group ? `<span class="n25-grp">${S.esc(x.group)}</span>` : ''}<h3>${S.esc(x.title)}<span class="n25-badge" data-s="${x.availability}">${S.ST[x.availability]}</span></h3><p>${S.esc(x.note || '')}</p>${act}</article>`;
+    }).join('');
+    document.getElementById('empty').hidden = list.length > 0;
+    if (location.hash) document.querySelector(location.hash)?.scrollIntoView({ block: 'center' });
+  }
+  draw(''); document.getElementById('filter').addEventListener('input', e => draw(e.target.value));
+  const r = t.items.reduce((a, x) => (a[x.availability] = (a[x.availability] || 0) + 1, a), {});
+  try {
+    const st = await (await fetch('/api/nox/status', { cache: 'no-store' })).json();
+    const sf = st.safe70 || {};
+    document.getElementById('state').innerHTML = `<span>Функций: <b>${t.items.length}</b> · работает <b>${r.READY || 0}</b> · частично <b>${r.PARTIAL || 0}</b> · HOLD <b>${r.HOLD || 0}</b></span><span>NOX: <b>${S.esc(st.model || 'не загружен')}</b></span><span>Ollama: <b>${st.ollama_online ? 'на связи' : 'нет связи'}</b></span><span>SAFE70: <b>${sf.gpu_temp_c != null ? sf.gpu_temp_c + ' °C' : 'датчик не читается'}</b></span>`;
+  } catch { document.getElementById('state').textContent = 'Сервер NOX не отвечает — данные состояния недоступны.'; }
+  if (qs.get('tool') === 'search') {
+    const tool = document.getElementById('tool'); tool.hidden = false;
+    tool.innerHTML = `<h2 style="margin:0 0 10px;font:700 13px Tektur;letter-spacing:.24em;color:var(--n25-gold2)">ПОИСК · ПРОВЕРКА ФАКТОВ</h2><form id="sf"><input class="n25-q" id="sq" required placeholder="Запрос…" aria-label="Запрос"><button class="n25-btn" data-src="wikipedia">Wikipedia</button><button class="n25-btn" data-src="arxiv">arXiv</button></form><ol id="sr"></ol><div class="n25-src" id="ss"></div>`;
+    let src = 'wikipedia';
+    tool.querySelectorAll('button[data-src]').forEach(b => b.onclick = () => { src = b.dataset.src; });
+    tool.querySelector('#sf').onsubmit = async e => {
+      e.preventDefault(); const q = document.getElementById('sq').value.trim(); const sr = document.getElementById('sr'); sr.innerHTML = '<li>Поиск…</li>';
+      try { const d = await (await fetch(`/api/nox/tools/${src}?q=${encodeURIComponent(q)}`)).json();
+        sr.innerHTML = (d.items || []).slice(0, 8).map(i => `<li><a href="${S.esc(i.url)}" target="_blank" rel="noopener noreferrer">${S.esc(i.title)}</a><br><small style="color:var(--n25-dim)">${S.esc(String(i.snippet || i.summary || '').slice(0, 220))}</small></li>`).join('') || `<li>${S.esc(d.reason || 'Нет результатов')}</li>`;
+        document.getElementById('ss').textContent = `Источник: ${d.source || src} · ${d.at || ''} · статус ${d.status || '?'}`;
+      } catch { sr.innerHTML = '<li>Инструмент недоступен (HOLD).</li>'; }
+    };
+  }
+});
+</script>
+<script defer src="../nox-web-shell-v4.js" data-nox-master="v4"></script>
+<script defer src="../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../nox-v9-interface.js" data-nox-interface="v9"></script><script defer src="../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

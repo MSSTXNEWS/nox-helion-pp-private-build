@@ -1,0 +1,26 @@
+{
+  "schema": "NOX_MINI_SOURCE_BUNDLE_V1",
+  "run_id": "NOX-49-20261117",
+  "native_deployed": false,
+  "native_accepted": false,
+  "expected_bridge_before_sha256": "3cd548a69ac0fa7128368bef77f5f7ef032359128cf723eaca1c6a0514c85dc6",
+  "files": {
+    "native_v29_full_bridge.py": "03fbddf0f620cef9d972bf560dba7c0d631786e13cee2bf899eabc1109811cf0",
+    "owner_mini_tasks.py": "46e4558fa585850a24d47a9c1479c63d1f31118fccee61070153dde5d4e69a66",
+    "verify_mini_source.py": "066f5973e809df77cad256925d85c6e5ad994ce85d1fe8737f65b8a8feb5bb3d",
+    "owner_task_plans.py": "9500a72135941ecf801854c040041df72df5c9a1b1da9ee4337631600d8ba7d4",
+    "nox_dispatcher_t855u.py": "2f673620382cfa2d0aece19180f2d274146740a5186b90d5d965b1fe501f4c05",
+    "owner_mini_planning.py": "b139a2930e34ada50bd7d017481ae906a3eaff38c647232b351376338b53e894",
+    "v112_s03_stream.py": "7282e53c3d6c7a1c093cbb77f646ccfd16733ac146555a57c1ebc907069f68b4",
+    "owner_chat_request_ledger.py": "87fc5fb69eb24652ebe4b4d02e25d58177924255a2db07f9a0d914002f173d91"
+  },
+  "target_bridge": "/root/nox/scripts/nox_v29_chat_bridge.py",
+  "required_existing_dispatcher_binding": "NOX_MINI_EXISTING_QUEUE_BIND_V1",
+  "gate": "HOLD_OWNER_LEASE_ORDERED_SERVER_ADMISSION",
+  "planning_state": "VERIFIED_PROPOSAL_REVIEW_REQUIRED only after existing model and exact S03 readback",
+  "native_planning_bound": false,
+  "schema_init": "existing native_v29_full_bridge.ensure_dialog_schema; original s03_memory.DB only",
+  "request_ledger_source_verified": true,
+  "admission_manifest": "CURRENT_SOURCE_MANIFEST.json",
+  "component_receipt_only": true
+}

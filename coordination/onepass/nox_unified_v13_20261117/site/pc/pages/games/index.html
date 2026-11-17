@@ -1,0 +1,49 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="../_kit/nox-pages.css"><link rel="stylesheet" href="../_vendor/chess/cm-assets/chessboard.css"><script src="../_kit/nox-pages.js"></script>
+<style>#bw{flex:0 0 auto;width:min(72vh,60vw);padding:6px}#board{width:100%}.cm-chessboard .board .square.white{fill:rgba(200,220,255,.18)!important}.cm-chessboard .board .square.black{fill:rgba(40,60,96,.55)!important}.cm-chessboard .board .border,.cm-chessboard .board .background{fill:transparent!important}.cm-chessboard .coordinates .coordinate{fill:#8b97a8}
+#side{flex:1}#moves{flex:1;overflow:auto;font:12px/1.25 ui-monospace,monospace}@media(max-width:700px){#bw{width:100%}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main">
+ <section class="nx-glass" id="bw"><div id="board"></div></section>
+ <section class="nx-col nx-glass" id="side">
+  <div class="nx-row"><button class="nx-btn on" id="b-new">Запустить партию</button><select class="nx-in" id="mode"><option value="nox">Против NOX</option><option value="coop">Co-op (двое за одним ПК)</option></select>
+   <select class="nx-in" id="persona" title="Persona Games"><option value="1">Persona «Ученик» · ур.1</option><option value="2">Persona «Страж» · ур.2</option><option value="3" selected>HELION · ур.3</option><option value="4">Persona «Стратег» · ур.4</option><option value="5">Persona «Оракул» · ур.5</option></select>
+   <select class="nx-in" id="color"><option value="w">Белые</option><option value="b">Чёрные</option></select></div>
+  <div class="nx-row"><button class="nx-btn" id="b-hint">Стратегия: подсказка</button><button class="nx-btn" id="b-undo">Ход назад</button><button class="nx-btn" id="b-say">Комментарий NOX</button><button class="nx-btn" id="b-pgn">Экспорт PGN</button><span id="st" class="nx-tag">—</span></div>
+  <div class="nx-h">Ходы</div><div id="moves"></div><div class="nx-sub" id="cm"></div>
+  <div class="nx-h">История партий</div><ul class="nx-list" id="hist" style="max-height:120px"></ul>
+  <div class="nx-sub">Шахматный разум NOX · локально, без сети</div>
+ </section></main>
+<script type="module">
+import {Chess} from '../_vendor/chess/chess.mjs';
+import {Chessboard,COLOR,INPUT_EVENT_TYPE,FEN} from '../_vendor/chess/cm-chessboard/Chessboard.js';
+await NOX.mount({route:'games',title:'Игры · Шахматы'});
+const H=NOX.store.get('games.hist',[]);let g=new Chess(),thinking=false,reqId=0;const W=new Worker('engine-worker.mjs',{type:'module'});
+const board=new Chessboard(NOX.$('#board'),{position:FEN.start,assetsUrl:'../_vendor/chess/cm-assets/',style:{pieces:{file:'pieces/staunty.svg'},animationDuration:NOX.reduced?0:250}});window.noxChess={g:()=>g,board};
+const human=()=>NOX.$('#mode').value==='coop'?null:NOX.$('#color').value;
+function status(){let s=g.turn()==='w'?'Ход белых':'Ход чёрных';if(g.isCheckmate())s='Мат! '+(g.turn()==='w'?'Чёрные':'Белые')+' победили';else if(g.isDraw())s='Ничья';else if(g.isCheck())s+=' · шах';if(thinking)s='NOX думает…';NOX.$('#st').textContent=s;
+ NOX.$('#moves').textContent=g.history().map((m,k)=>k%2?m+'  ':(k/2+1)+'. '+m+' ').join('');if(g.isGameOver())finish()}
+function finish(){if(g._saved)return;g._saved=1;H.push({at:new Date().toISOString(),pgn:g.pgn(),result:NOX.$('#st').textContent,vs:NOX.$('#mode').value==='coop'?'co-op':NOX.$('#persona').selectedOptions[0].text});NOX.store.set('games.hist',H.slice(-30));drawHist()}
+function drawHist(){const ul=NOX.$('#hist');ul.innerHTML='';H.slice().reverse().forEach(h=>{const li=NOX.el('li',{},NOX.el('span',{class:'nx-grow',text:h.at.slice(0,16).replace('T',' ')+' · '+h.vs}),NOX.el('span',{class:'nx-sub',text:h.result}));li.onclick=()=>{g=new Chess();g.loadPgn(h.pgn);board.setPosition(g.fen(),true);status()};ul.append(li)})}
+function input(ev){if(ev.type===INPUT_EVENT_TYPE.moveInputStarted){if(thinking)return false;const h=human();if(h&&g.turn()!==h)return false;return g.moves({square:ev.squareFrom}).length>0}
+ if(ev.type===INPUT_EVENT_TYPE.validateMoveInput){let m=null;try{m=g.move({from:ev.squareFrom,to:ev.squareTo,promotion:'q'})}catch{}if(!m)return false;setTimeout(()=>{board.setPosition(g.fen(),true);status();if(human()&&!g.isGameOver())engine()},10);return true}}
+board.enableMoveInput(input);
+function engine(){thinking=true;status();const id=++reqId,lv=+NOX.$('#persona').value;W.postMessage({fen:g.fen(),level:lv,randomness:lv<3?60:10,id})}
+W.onerror=e=>{thinking=false;NOX.toast('Шахматный разум NOX не загрузился: '+(e.message||'ошибка'),'bad');status()};
+W.onmessage=e=>{if(e.data.id!==reqId)return;thinking=false;if(e.data.error){NOX.toast('Движок: '+e.data.error,'bad');return status()}const [f,t]=Object.entries(e.data.move)[0];if(window._hint){window._hint=0;NOX.toast('Подсказка: '+f.toLowerCase()+'→'+t.toLowerCase());return status()}
+ try{g.move({from:f.toLowerCase(),to:t.toLowerCase(),promotion:'q'})}catch(err){NOX.toast('Ход движка отклонён','bad')}board.setPosition(g.fen(),true);status()};
+NOX.action('new','Шахматы: новая партия',()=>{g=new Chess();reqId++;thinking=false;board.setPosition(FEN.start,true);board.setOrientation(NOX.$('#color').value==='b'?COLOR.black:COLOR.white);status();if(human()==='b')engine()},NOX.$('#b-new'));
+NOX.action('hint','Шахматы: подсказка стратегии',()=>{if(g.isGameOver())return;window._hint=1;engine()},NOX.$('#b-hint'));
+NOX.action('undo','Шахматы: ход назад',()=>{reqId++;thinking=false;g.undo();if(human()&&g.turn()!==human())g.undo();board.setPosition(g.fen(),true);status()},NOX.$('#b-undo'));
+NOX.action('pgn','Шахматы: экспорт PGN',()=>{const a=NOX.el('a',{href:URL.createObjectURL(new Blob([g.pgn()])),download:'nox-chess.pgn'});a.click()},NOX.$('#b-pgn'));
+NOX.action('say','Шахматы: комментарий NOX',async()=>{NOX.$('#cm').textContent='NOX смотрит на доску…';try{NOX.$('#cm').textContent=await NOX.ask('Коротко (1–2 фразы) прокомментируй шахматную позицию как соперник. FEN: '+g.fen()+' Ходы: '+g.history().join(' '),{onToken:(t,a)=>NOX.$('#cm').textContent=a})}catch(e){NOX.$('#cm').textContent='HOLD: '+e.message}},NOX.$('#b-say'));
+NOX.onStop(()=>{reqId++;thinking=false;status()});status();drawHist();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

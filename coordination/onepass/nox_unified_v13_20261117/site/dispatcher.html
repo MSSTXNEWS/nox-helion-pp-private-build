@@ -1,0 +1,17 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#08090c"><title>NOX HELION · ДИСПЕТЧЕР NOX</title>
+<link rel="stylesheet" href="./nox-cinematic-worlds.css"><link rel="stylesheet" href="./nox-master-web.css" data-nox-master="v4">
+<script defer src="./nox-cinematic-worlds.js"></script><script defer src="./nox-web-shell-v4.js" data-nox-master="v4"></script><script defer src="./nox-task-dispatcher-v4.js"></script>
+<link rel="stylesheet" href="./nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="./nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+
+<script type="module" src="./nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="./nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="./nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body data-page="dispatcher" data-nox-page="dispatcher" class="nox-shared-glass nox-master-page"><main class="nox-master-wrap"><div class="nox-master-hero"><h1>ДИСПЕТЧЕР NOX</h1><p>Задачи, шесть субисполнителей, очередь обучения, источник каждого статуса. Только фактические данные.</p></div>
+<div class="nox-master-row"><button type="button" class="nox-master-action" id="dispatchRefresh">Обновить настоящие данные</button><span>Последний опрос <output id="dispatchLast">—</output></span></div>
+<section class="nox-master-section"><h2>6 рабочих мест / подтверждение native PID + heartbeat</h2><div class="nox-master-grid" id="dispatchWorkers"></div></section>
+<section class="nox-master-section"><h2>Реальная очередь <output id="dispatchQueueTotal">—</output></h2><div class="nox-master-filter"><button aria-pressed="true" type="button" data-queue-filter="all">Все</button><button aria-pressed="false" type="button" data-queue-filter="tasks">Задачи</button><button aria-pressed="false" type="button" data-queue-filter="downloads">Загрузки</button></div><div id="dispatchQueue" class="nox-master-grid"></div></section>
+<section class="nox-master-section"><h2>Статус источников</h2><div id="dispatchSource" class="nox-master-grid"></div></section>
+<p class="nox-master-warning">Никаких синтетических исполнителей, процентов или завершённых скачиваний. Если авторизованный OneHost недоступен, виден HOLD. Кнопка STOP — только оригинальная.</p>
+</main><script defer src="./nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="./nox-v9-interface.js" data-nox-interface="v9"></script><script defer src="nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

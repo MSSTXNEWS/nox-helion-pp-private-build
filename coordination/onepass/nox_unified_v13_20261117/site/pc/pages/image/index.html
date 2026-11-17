@@ -1,0 +1,61 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="../_kit/nox-pages.css"><script src="../_kit/nox-pages.js"></script>
+<style>#ph{position:relative;flex:1;min-height:0;border-radius:var(--r);overflow:hidden;padding:0}#var{width:200px}#var img{width:100%;border-radius:8px;cursor:pointer;border:1px solid var(--edge)}
+.ptro-wrapper,.ptro-holder{background:transparent!important}.ptro-bar{background:rgba(14,18,26,.6)!important;backdrop-filter:blur(10px)}@media(max-width:700px){#var{width:auto;flex-direction:row!important;overflow:auto}#var img{width:80px}#ph{min-height:60vh}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main"><section class="nx-col nx-grow">
+ <div class="nx-row nx-glass"><button class="nx-btn" id="b-new">Новый</button><button class="nx-btn on" id="b-open">Открыть / Редактировать</button><button class="nx-btn" id="b-var">Варианты</button><button class="nx-btn" id="b-mask">Маска-виньетка</button><button class="nx-btn" id="b-exp">Экспорт PNG</button><input class="nx-in nx-grow" id="prompt" placeholder="Что изменить? (NOX)"><button class="nx-btn on" id="b-ai">NOX: изменить фото</button><button class="nx-btn" id="b-vid">NOX: видео из фото</button><span class="nx-sub" id="st">NOX Studio</span></div>
+ <div id="ph" class="nx-glass"></div><div class="nx-glass" id="vbox" style="display:none"><div class="nx-h">Видео NOX</div><video id="vout" controls style="max-width:100%;max-height:30vh"></video><div class="nx-sub" id="vst"></div></div></section>
+ <aside class="nx-col nx-glass" id="var"><div class="nx-h">Варианты</div></aside></main>
+<input type="file" id="f" accept="image/*" hidden>
+<script src="../_vendor/painterro/painterro.min.js"></script>
+<script>
+(async()=>{await NOX.mount({route:'image',title:'Студия картинок'});
+let lastSaved=null;const P=Painterro({id:'ph',defaultTool:'brush',activeColor:'#7fd8ff',backgroundFillColor:'#0b0f16',hiddenTools:['close'],language:'ru',
+ saveHandler:(img,done)=>{lastSaved=img.asDataURL('image/png');const a=NOX.el('a',{href:lastSaved,download:'nox-image.png'});a.click();NOX.toast('Сохранено nox-image.png');done(false)}});window.noxPaint=P;P.show();
+const cur=()=>P.imageSaver.asDataURL('image/png');
+async function openGeneratedPhoto(){
+ const query=new URLSearchParams(location.search),job=query.get('noxMediaJob'),output=query.get('noxMediaOutput');
+ if(!job&&!output)return;
+ const notice=NOX.$('#st');
+ if(!/^[0-9a-f]{32}$/.test(job||'')||!/^\d{1,3}$/.test(output||'')){notice.textContent='Некорректная ссылка на фото';return}
+ notice.textContent='Загрузка фото из Резонанса…';
+ try{
+  const response=await fetch('/api/ui/media/jobs/'+job+'/outputs/'+output,{credentials:'same-origin',cache:'no-store'});
+  const mime=response.headers.get('content-type')?.split(';')[0];
+  if(!response.ok||!['image/png','image/jpeg','image/webp'].includes(mime))throw Error('MEDIA_NOT_IMAGE');
+  const blob=await response.blob();
+  if(!blob.size||blob.size>20_000_000)throw Error('MEDIA_SIZE');
+  const reader=new FileReader();
+  reader.onload=()=>{P.show(reader.result);notice.textContent='Фото из Резонанса · исходник сохранён'};
+  reader.onerror=()=>{notice.textContent='Фото не удалось прочитать'};
+  reader.readAsDataURL(blob);
+ }catch{notice.textContent='Не удалось загрузить фото из Резонанса'}
+}
+void openGeneratedPhoto();
+NOX.action('new','Картинка: новый холст',()=>{P.show(false);NOX.toast('Новый холст')},NOX.$('#b-new'));
+NOX.action('open','Картинка: открыть файл',()=>NOX.$('#f').click(),NOX.$('#b-open'));
+NOX.$('#f').onchange=e=>{const r=new FileReader();r.onload=()=>{P.show(r.result);NOX.$('#st').textContent=e.target.files[0].name};r.readAsDataURL(e.target.files[0])};
+function load(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src})}
+async function filt(src,f){const i=await load(src);const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d');x.filter=f;x.drawImage(i,0,0);return c.toDataURL('image/png')}
+NOX.action('var','Картинка: варианты',async()=>{const src=cur();const box=NOX.$('#var');box.querySelectorAll('img').forEach(i=>i.remove());
+ for(const[n,f]of[['Холод NOX','hue-rotate(160deg) saturate(1.4) contrast(1.1)'],['Янтарь','sepia(.8) saturate(1.6)'],['Ч/Б','grayscale(1) contrast(1.2)'],['Негатив','invert(1)']]){const u=await filt(src,f);const im=NOX.el('img',{src:u,title:n,alt:n});im.onclick=()=>P.show(u);box.append(im)}NOX.toast('4 варианта готовы — кликните, чтобы открыть')},NOX.$('#b-var'));
+NOX.action('mask','Картинка: маска-виньетка',async()=>{const i=await load(cur());const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d');x.drawImage(i,0,0);const g=x.createRadialGradient(c.width/2,c.height/2,Math.min(c.width,c.height)*.2,c.width/2,c.height/2,Math.max(c.width,c.height)*.7);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.85)');x.fillStyle=g;x.fillRect(0,0,c.width,c.height);P.show(c.toDataURL('image/png'));NOX.toast('Маска применена (Ctrl+Z — отмена в редакторе)')},NOX.$('#b-mask'));
+NOX.action('export','Картинка: экспорт PNG',()=>P.save(),NOX.$('#b-exp'));
+function missing(r,what){NOX.$('#st').innerHTML='';NOX.$('#st').append(NOX.el('span',{class:'nx-tag hold',text:'модуль не установлен'}),' '+what+' — модуль NOX ещё не поставлен на этот ПК');NOX.toast('Модуль NOX «'+what+'» не установлен','hold')}
+NOX.action('ai','NOX: изменить фото по описанию',async()=>{const prompt=NOX.$('#prompt').value.trim();if(!prompt)return NOX.toast('Опишите, что изменить');NOX.$('#st').textContent='NOX редактирует…';
+ const r=await NOX.module('/api/nox/image/edit',{image:cur(),prompt});if(r.missing)return missing(r,'Изменение фото');if(r.error){NOX.$('#st').textContent='Ошибка NOX: '+r.error;return}
+ const d=r.data,img=d.image||d.image_url||d.url;if(img){P.show(img);NOX.$('#st').textContent='Готово · NOX'}else if(d.job_id){NOX.$('#st').textContent='NOX принял задачу '+d.job_id+' (статус: '+(d.status||'queued')+')'}else NOX.$('#st').textContent='NOX ответил без изображения'},NOX.$('#b-ai'));
+NOX.action('vid','NOX: видео из фото',async()=>{const prompt=NOX.$('#prompt').value.trim()||'плавное кинематографичное движение камеры';NOX.$('#st').textContent='NOX готовит видео…';
+ const r=await NOX.module('/api/nox/video/generate',{image:cur(),prompt});if(r.missing)return missing(r,'Видео');if(r.error){NOX.$('#st').textContent='Ошибка NOX: '+r.error;return}
+ const d=r.data,u=d.video||d.video_url||d.url;NOX.$('#vbox').style.display='block';if(u){NOX.$('#vout').src=u;NOX.$('#vst').textContent='Готово · NOX'}else NOX.$('#vst').textContent=d.job_id?('Задача '+d.job_id+' · '+(d.status||'queued')):'NOX ответил без видео'},NOX.$('#b-vid'));
+})();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

@@ -1,0 +1,73 @@
+{
+  "schema": "NOX_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-49-20261117",
+  "executor": "A5.7",
+  "task_ids": [
+    "5A02",
+    "6A02",
+    "0A03",
+    "1A04",
+    "2A02",
+    "3V14-04",
+    "4V14-21"
+  ],
+  "prerequisite_id": "5V14-14",
+  "prerequisite_owner": "A0",
+  "status": "SOURCE_BROWSER_PASS_SCOPED",
+  "native_accepted": false,
+  "new_accepted_ids": [],
+  "fix": "Clamp panel to current dynamic viewport and update visual viewport variable on window resize.",
+  "test": {
+    "new_checks": [
+      "dock and panel visible without document overflow across 5 pages × 5 widths",
+      "keyboard shortcut, Escape and close work",
+      "iframe guard prevents duplicate global workspaces",
+      "Calendar real FullCalendar create/edit/reload/timezone/week/list/ICS export+dedup import/delete",
+      "World reuses both real shared notes and Interact runtime"
+    ],
+    "previous_unchanged_checks": "Preserved paused commit53a115da; not repeated.",
+    "page_errors": [],
+    "widths": {
+      "tools.html": {
+        "320": 0,
+        "390": 0,
+        "800": 0,
+        "1440": 0,
+        "3840": 0
+      },
+      "world.html": {
+        "320": 0,
+        "390": 0,
+        "800": 0,
+        "1440": 0,
+        "3840": 0
+      },
+      "calendar.html": {
+        "320": 0,
+        "390": 0,
+        "800": 0,
+        "1440": 0,
+        "3840": 0
+      },
+      "pc/resonance.html": {
+        "320": 0,
+        "390": 0,
+        "800": 0,
+        "1440": 0,
+        "3840": 0
+      },
+      "pc/pages/image/index.html": {
+        "320": 0,
+        "390": 0,
+        "800": 0,
+        "1440": 0,
+        "3840": 0
+      }
+    }
+  },
+  "native_resume_condition": "Owner lease ordered server admission and actual current-SHA native viewport/runtime evidence",
+  "files": {
+    "site/nox-corner-workspace.js": "aee4217236282bb7eb53495bf72f75b2d83ba419ef736e7f095f87ed55fad837",
+    "site/nox-corner-workspace.css": "85dd48254c60f490145330976de6d519999bb7f4414e6691725fa9b1dc5fe1c8"
+  }
+}

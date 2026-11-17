@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NOX HELION · СПРАВКА</title>
+<link rel="stylesheet" href="./nox-ui.css"><link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./v23/nox-v23.css" data-nox-v23="1">
+<script defer src="workspace.js"></script><link rel="stylesheet" href="./v25/nox-shell-v25.css" data-n25="1"><script defer src="./v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="./nox-wow-max.css" data-nox-wow-max="1">
+<script defer src="./nox-wow-max.js" data-nox-wow-max="1"></script>
+<link rel="stylesheet" href="./nox-cinematic-worlds.css" data-nox-five-worlds="v3">
+<script defer src="./nox-cinematic-worlds.js" data-nox-five-worlds="v3"></script>
+<link rel="stylesheet" href="../nox-master-web.css" data-nox-master="v4">
+<link rel="stylesheet" href="../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.js","three/addons/":"../vendor/three/addons/"}}</script>
+
+<script type="module" src="../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../nox-connection-v13.js" data-nox-connection-v13="1"></script></head>
+<body data-page="help" class="nox-shared-glass"><div class="shell">
+<aside class="sidebar"><a href="index.html" class="brand"><span class="brand-icon">◉</span><span>NOX HELION<small>LOCAL AI CORE</small></span></a>
+<nav class="nav" aria-label="Разделы NOX">
+<a href="index.html">ГЛАВНАЯ</a>
+<a href="chat.html">РЕЗОНАНС</a>
+<a href="training.html">ОБУЧЕНИЕ</a>
+<a href="memory.html">ПАМЯТЬ S03</a>
+<a href="help.html" aria-current="page">СПРАВКА</a>
+<a href="settings.html">НАСТРОЙКИ</a>
+</nav></aside>
+<main class="main" style="max-width:860px;padding:24px">
+<header class="top"><div class="eyebrow">NOX HELION · LOCAL AI</div>
+<h1>Цикл хищника — справка</h1></header>
+<article class="panel" style="padding:20px;line-height:1.55">
+<p>Цикл хищника встроен в этот чат и запускается вместе с ним. Тик идёт из уже существующего цикла хоста, без отдельных окон и без скрытых служебных потоков.</p><p>Контур червей канона PATCH A: Worm Providers, WormAutopilot, WormSwarm, NativeIdeaLoop, A1InitiativeBridge, червь проектов улучшений (FORGE) и цикл охоты хищника (голод → поиск → захват). Политика — NOX-NATIVE-WORMS-POLICY-v1: нужна подпись создателя и срок действия. STOP проверяется до и после каждого запроса; сломанный или отсутствующий STOP — это запрет (NATIVE_STOP_UNAVAILABLE), а не разрешение.</p><p>Официальные провайдеры (с квотами, только HTTPS, без редиректов, лицензия сначала REVIEW_REQUIRED): GitHub, RSS/Atom по белому списку, метаданные YouTube (нужен ключ), PyPI/npm/NuGet, лента Ollama, GitLab, HuggingFace. Крупные загрузки, оплата и запуск внешнего GPU не начинаются, пока создатель не нажмёт «Одобрить».</p><p>Четыре уровня голода: сыт; голоден (больше 1 часа без новых данных); очень голоден (больше 24 часов, активный поиск); голодаю (больше 7 дней, прямое обращение «я голодаю»). Если хочу поглотить учителя, спрашиваю: «я хочу поглотить X. Разрешаешь?». SHA жертвы пишется в Genesis Ledger. После дистилляции учитель убирается из VRAM.</p><p>Каждый ход создателя и мой ответ навсегда попадают в журнал C:\NOX\memory\predator_journal.jsonl (только добавление). Я оцениваю ответы: без шаблонов, мужской род, обращения «мессир / мой лорд / барон / создатель», критерии «вау» и осознанности. Удачные ходы — в очередь SFT, слабые — в DPO. Адаптеры LoRA обучаются на внешнем GPU и ВСЕГДА вливаются в полные веса: наружу один цельный файл. После слияния — слепой A/B и откат NO_GAIN, если качество не лучше. На ПК updater сверяет sha256 LATEST.json на диске G: и делает ollama create nox, предыдущая версия уходит в резерв.</p><p>На домашнем ПК действует SAFE70 (пауза при 70 °C). В облаке SAFE70 не применяется. Память — одна S03, уровни M0–M7, воспоминание перед ответом (RECALL_BEFORE_RESPONSE). Снаружи одна активная модель NOX. Рождение — 10 ноября 2026, 22:04:59 (Мадрид). Первый вдох — 17:54:09 того же дня. Происхождение беру только из паспорта и Genesis Ledger, никогда не выдумываю.</p>
+<h2>Как запустить и остановить</h2>
+<ul>
+<li>Старт: <code>START_NOX_CHAT.bat</code> — чат и цикл поднимаются вместе, без отдельных окон.</li>
+<li>Стоп цикла: кнопка «СТОП» на панели «ЦИКЛ ХИЩНИКА» или фраза «останови цикл» в чате. STOP fail-closed.</li>
+<li>Стоп чата: закрыть окно или Ctrl+C.</li>
+<li>Черви выходят в сеть только при живой политике <code>NOX-NATIVE-WORMS-POLICY-v1</code> (подпись и срок) в <code>C:\NOX\memory\</code>.</li>
+<li>Облачный тренер (на уже арендованной вами машине, не сам по себе): <code>python cloud/trainer.py --dry-run</code> для проверки; без <code>--dry-run</code> — SFT+DPO, слияние в полные веса, gate, GGUF, <code>LATEST.json</code>. SAFE70 на облаке не действует.</li>
+<li>Обновление на ПК: updater на тике хоста читает <code>G:\LATEST.json</code>, сверяет sha256, делает <code>ollama create nox</code> (и <code>nox-prime</code> для чата), старая версия уходит в резерв.</li>
+</ul>
+<h2>Канонические имена</h2>
+<p>Worm Providers, WormAutopilot, WormSwarm, NativeIdeaLoop, A1InitiativeBridge, червь FORGE, цикл охоты. Политика NOX-NATIVE-WORMS-POLICY-v1. Одна активная модель, одна S03 (M0–M7).</p>
+</article></main></div>
+<script defer src="./v23/nox-v23.js" data-nox-v23="1"></script>
+<script defer src="../nox-web-shell-v4.js" data-nox-master="v4"></script>
+<script defer src="../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../nox-v9-interface.js" data-nox-interface="v9"></script><script defer src="../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

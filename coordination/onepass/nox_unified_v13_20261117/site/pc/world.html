@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOX HELION · МИР · NOX SPACE</title><link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts/tektur/tektur.css"><link rel="stylesheet" href="./v25/nox-shell-v25.css">
+<script defer src="./v25/nox-shell-v25.js"></script><link rel="stylesheet" href="./nox-wow-max.css" data-nox-wow-max="1">
+<script defer src="./nox-wow-max.js" data-nox-wow-max="1"></script>
+<link rel="stylesheet" href="./nox-cinematic-worlds.css" data-nox-five-worlds="v3">
+<script defer src="./nox-cinematic-worlds.js" data-nox-five-worlds="v3"></script>
+<link rel="stylesheet" href="../nox-master-web.css" data-nox-master="v4">
+<link rel="stylesheet" href="../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.js","three/addons/":"../vendor/three/addons/"}}</script>
+
+<script type="module" src="../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../nox-connection-v13.js" data-nox-connection-v13="1"></script></head>
+<body class="nox-shared-glass n25-body" data-n25-page="world">
+<header class="n25-topbar"><a class="n25-brand" href="/index.html">NOX</a><nav class="n25-crumbs" aria-label="Путь"><a href="/index.html">Главная</a> › <a href="/pc/menu.html">Меню</a> › <a href="/pc/hub.html?s=world">МИР</a> › <b style="color:var(--n25-gold2)">NOX SPACE</b></nav><span class="n25-sp"></span>
+<button class="n25-btn" id="refresh" type="button">↻ Обновить</button><a class="n25-btn" href="/pc/menu.html">▦ Меню</a><a class="n25-btn" href="/resonance.html">Резонанс</a></header>
+<main class="n25-wrap">
+ <div class="n25-head"><h1>NOX SPACE</h1><span class="n25-crumb">Погода · курсы · новости — с источником и временем (ТЗ V16 §21.7, §23.2)</span></div>
+ <div class="n25-w-grid">
+  <section class="n25-panel" id="weather" aria-labelledby="wT"><h2 id="wT">ПОГОДА</h2>
+   <form id="wf" style="display:flex;gap:6px;margin-bottom:10px"><input class="n25-q" id="city" placeholder="Город (по умолчанию Мадрид)" aria-label="Город" style="min-width:0;flex:1"><button class="n25-btn">OK</button></form>
+   <div id="wNow" class="n25-big">—</div><div id="wDesc" class="n25-crumb"></div><div class="n25-days" id="wDays"></div><div class="n25-src" id="wSrc"></div></section>
+  <section class="n25-panel n25-wide" id="rates" aria-labelledby="rT"><h2 id="rT">КУРСЫ · РЫНОК</h2><div class="n25-rates" id="rGrid"><div class="n25-rate"><small>загрузка</small><b>—</b></div></div><div class="n25-src" id="rSrc"></div></section>
+  <section class="n25-panel n25-full n25-news" id="news" aria-labelledby="nT"><h2 id="nT">НОВОСТИ</h2><div id="nList">—</div><div class="n25-src" id="nSrc"></div></section>
+ </div>
+</main>
+<div class="n25-foot">LOCAL · NOX HELION V25 · 127.0.0.1</div>
+<script>
+const $ = id => document.getElementById(id), E = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const WMO = {0:'ясно',1:'преимущественно ясно',2:'переменная облачность',3:'пасмурно',45:'туман',48:'изморозь',51:'морось',53:'морось',55:'сильная морось',61:'небольшой дождь',63:'дождь',65:'ливень',71:'снег',73:'снег',75:'сильный снег',80:'ливни',81:'ливни',82:'сильные ливни',95:'гроза'};
+const fmt = (n, d = 2) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('ru-RU', { maximumFractionDigits: d, minimumFractionDigits: n < 100 ? d : 0 });
+const time = s => { try { return new Date(s).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }); } catch { return s || ''; } };
+function spark(arr) { if (!arr || arr.length < 2) return ''; const mn = Math.min(...arr), mx = Math.max(...arr), w = 160, h = 30; const pts = arr.map((v, i) => `${(i / (arr.length - 1) * w).toFixed(1)},${(h - 2 - (v - mn) / ((mx - mn) || 1) * (h - 4)).toFixed(1)}`).join(' '); const up = arr[arr.length - 1] >= arr[0]; return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${up ? '#79d39a' : '#ef8a7a'}" stroke-width="1.4"/></svg>`; }
+function hist(key, v) { try { const k = 'nox.v25.rates.' + key; const a = JSON.parse(localStorage.getItem(k) || '[]'); if (v != null && a[a.length - 1] !== v) a.push(v); while (a.length > 48) a.shift(); localStorage.setItem(k, JSON.stringify(a)); return a; } catch { return []; } }
+async function weather(city) {
+  try { const d = await (await fetch('/api/ui/services/weather' + (city ? '?city=' + encodeURIComponent(city) : ''), { cache: 'no-store' })).json();
+    if (d.status !== 'READY') throw new Error(d.reason || d.status);
+    const c = d.current || {}; $('wNow').textContent = fmt(c.temperature_2m, 1) + ' °C';
+    $('wDesc').textContent = `${d.place || ''} · ${WMO[c.weather_code] || 'код ' + c.weather_code} · ощущается ${fmt(c.apparent_temperature, 1)} °C · ветер ${fmt(c.wind_speed_10m, 0)} км/ч · влажность ${c.relative_humidity_2m ?? '—'}%`;
+    $('wDays').innerHTML = (d.forecast || []).slice(0, 5).map(f => `<span>${E(new Date(f.date).toLocaleDateString('ru-RU', { weekday: 'short', day: '2-digit' }))} · ${fmt(f.low, 0)}…${fmt(f.high, 0)}°</span>`).join('');
+    $('wSrc').textContent = `Источник: ${d.provider || 'open-meteo.com'} · ${c.time || ''} (${d.timezone || ''})`;
+  } catch (e) { $('wNow').textContent = '—'; $('wDesc').textContent = 'Погода недоступна: ' + e.message; }
+}
+async function rates() {
+  try { const d = await (await fetch('/api/nox/tools/rates', { cache: 'no-store' })).json();
+    const cards = [];
+    const f = d.fiat || {}; for (const [k, v] of Object.entries(f.rates || {})) { const h = hist(k, v); cards.push(`<div class="n25-rate"><small>${k}/RUB · ${E(f.source || '')}</small><b>₽ ${fmt(v)}</b>${spark(h)}</div>`); }
+    const names = { bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL' }; const cr = d.crypto || {};
+    for (const [k, v] of Object.entries(cr.prices || {})) { const ch = v.usd_24h_change; const h = hist(k, v.usd); cards.push(`<div class="n25-rate"><small>${names[k] || k}/USD · ${E(cr.source || '')}</small><b>$ ${fmt(v.usd, v.usd > 1000 ? 0 : 2)}</b><i class="${ch >= 0 ? 'n25-up' : 'n25-down'}">${ch >= 0 ? '▲' : '▼'} ${fmt(Math.abs(ch), 2)}% за 24 ч</i>${spark(h)}</div>`); }
+    for (const key of ['gold', 'brent']) { const g = d[key]; if (!g || g.status !== 'READY') continue; cards.push(`<div class="n25-rate"><small>${key === 'gold' ? 'ЗОЛОТО' : 'BRENT'} · ${E(g.symbol || '')}</small><b>$ ${fmt(g.price, 1)}</b>${spark(g.spark)}</div>`); }
+    $('rGrid').innerHTML = cards.join('') || '<div class="n25-rate"><small>нет данных</small><b>—</b></div>';
+    $('rSrc').textContent = `Статус ${d.status} · обновлено ${time(d.at)} · кэш ${d.cache_sec || 60} с · ЦБ РФ на ${f.date || '—'} · мини-графики по данным источника / истории этого браузера`;
+  } catch (e) { $('rSrc').textContent = 'Курсы недоступны (HOLD): ' + e.message; }
+}
+async function news() {
+  try { const d = await (await fetch('/api/ui/services/news', { cache: 'no-store' })).json();
+    $('nList').innerHTML = (d.items || []).slice(0, 12).map(i => `<a href="${E(i.url)}" target="_blank" rel="noopener noreferrer">${E(i.title)}<small>${E(i.published || '')}</small></a>`).join('') || E(d.reason || 'Нет новостей');
+    $('nSrc').textContent = `Источник: ${d.provider || ''} · получено ${time(d.observed_at)}`;
+  } catch (e) { $('nList').textContent = 'Новости недоступны: ' + e.message; }
+}
+function all() { weather(localStorage.getItem('nox.v25.city') || ''); rates(); news(); }
+$('wf').onsubmit = e => { e.preventDefault(); const c = $('city').value.trim(); localStorage.setItem('nox.v25.city', c); weather(c); };
+$('refresh').onclick = all; all(); setInterval(rates, 60000);
+</script>
+<script defer src="../nox-web-shell-v4.js" data-nox-master="v4"></script>
+<script defer src="../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../nox-v9-interface.js" data-nox-interface="v9"></script><script defer src="../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

@@ -1,0 +1,57 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="../_kit/nox-pages.css"><script src="../_kit/nox-pages.js"></script>
+<style>#viz{flex:1;min-height:0;padding:0;overflow:hidden}#viz canvas{width:100%;height:100%;display:block;border-radius:var(--r)}#q{width:320px}#seek{flex:1}
+@media(max-width:700px){#q{width:auto;max-height:40vh}#viz{min-height:220px}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main"><section class="nx-col nx-grow">
+ <div class="nx-row nx-glass"><button class="nx-btn on" id="b-file">Файлы…</button><button class="nx-btn" id="b-sample">Образец NOX</button><input class="nx-in nx-grow" id="url" placeholder="Радио / подкаст: URL аудиопотока (mp3/aac/ogg)"><button class="nx-btn" id="b-radio">Радио/Подкаст</button>
+  <select class="nx-in" id="preset" style="max-width:200px"></select><button class="nx-btn" id="b-next-p">Пресет ↻</button></div>
+ <div id="viz" class="nx-glass"><canvas id="cv"></canvas></div>
+ <div class="nx-row nx-glass"><button class="nx-btn" id="b-prev">⏮</button><button class="nx-btn on" id="b-play">▶</button><button class="nx-btn" id="b-next">⏭</button><span class="nx-sub" id="tm">0:00</span><input type="range" id="seek" min="0" max="1000" value="0"><select class="nx-in" id="rate" title="Скорость (аудиокниги)"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>2</option></select><input type="range" id="vol" min="0" max="1" step="0.01" value="0.8" style="width:80px"><span class="nx-sub" id="now">—</span></div>
+ </section>
+ <aside class="nx-col nx-glass" id="q"><div class="nx-h">Очередь</div><ul class="nx-list nx-grow" id="list"></ul>
+  <div class="nx-row"><input class="nx-in nx-grow" id="pln" placeholder="Имя плейлиста"><button class="nx-btn" id="b-savepl">Сохранить</button></div>
+  <div class="nx-h">Плейлисты</div><ul class="nx-list" id="pls"></ul>
+  <label class="nx-sub"><input type="checkbox" id="book"> режим аудиокниги (помнить позицию)</label></aside></main>
+<input type="file" id="f" accept="audio/*" multiple hidden>
+<script src="../_vendor/howler/howler.min.js"></script><script src="../_vendor/butterchurn/butterchurn.min.js"></script><script src="../_vendor/butterchurn/butterchurnPresets.min.js"></script>
+<script>
+(async()=>{await NOX.mount({route:'music',title:'Музыка'});
+const Q=[],BLOB={},PL=NOX.store.get('music.pl',{}),POS=NOX.store.get('music.pos',{});let i=-1,snd=null,viz=null;
+const cv=NOX.$('#cv');const size=()=>{cv.width=cv.clientWidth*devicePixelRatio;cv.height=cv.clientHeight*devicePixelRatio;viz&&viz.setRendererSize(cv.width,cv.height)};
+const presets=(window.butterchurnPresets.getPresets?window.butterchurnPresets:window.butterchurnPresets.default).getPresets();const names=Object.keys(presets);
+names.slice(0,60).forEach(n=>NOX.$('#preset').append(NOX.el('option',{value:n,text:n.slice(0,40)})));
+function ensureViz(){if(viz)return;Howler.volume(+NOX.$('#vol').value);const ctx=Howler.ctx;size();viz=(window.butterchurn.default||window.butterchurn).createVisualizer(ctx,cv,{width:cv.width,height:cv.height,pixelRatio:1});viz.connectAudio(Howler.masterGain);viz.loadPreset(presets[NOX.$('#preset').value||names[0]],0);window.noxViz=viz;
+ const loop=()=>{if(!document.hidden&&NOX.mode!=='ECO'&&!NOX.reduced)viz.render();requestAnimationFrame(loop)};loop()}
+addEventListener('resize',size);
+const fmt=s=>{s=Math.floor(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function draw(){const ul=NOX.$('#list');ul.innerHTML='';Q.forEach((t,k)=>{const li=NOX.el('li',{class:k===i?'cur':''},NOX.el('span',{class:'nx-grow',text:t.name}));const x=NOX.el('button',{class:'nx-btn',text:'×',title:'Убрать из очереди'});x.onclick=e=>{e.stopPropagation();Q.splice(k,1);if(k<i)i--;draw()};li.append(x);li.onclick=()=>play(k);ul.append(li)});
+ const pl=NOX.$('#pls');pl.innerHTML='';Object.keys(PL).forEach(n=>{const li=NOX.el('li',{},NOX.el('span',{class:'nx-grow',text:n+' ('+PL[n].length+')'}));li.onclick=()=>{Q.length=0;PL[n].forEach(t=>Q.push(t));i=-1;draw();NOX.toast('Плейлист «'+n+'»: '+Q.length+' (локальные файлы выберите заново)')};pl.append(li)})}
+function play(k){const t=Q[k];if(!t)return;const src=t.url||BLOB[t.id];if(!src){NOX.toast('Файл «'+t.name+'» нужно выбрать заново','hold');return NOX.$('#f').click()}
+ if(snd){snd.unload()}i=k;ensureViz();const stream=!!t.stream;
+ snd=new Howl({src:[src],html5:stream,format:t.fmt?[t.fmt]:undefined,rate:+NOX.$('#rate').value,onplay:()=>{NOX.$('#b-play').textContent='⏸';if(NOX.$('#book').checked&&POS[t.id])snd.seek(POS[t.id])},onpause:()=>NOX.$('#b-play').textContent='▶',onend:()=>{POS[t.id]=0;NOX.store.set('music.pos',POS);play(i+1)},onloaderror:(id,e)=>NOX.toast('Не удалось загрузить: '+e,'bad'),onplayerror:()=>NOX.toast('Нажмите ▶')});
+ window.noxSound=snd;snd.play();NOX.$('#now').textContent=t.name+(stream?' · поток (визуализатор только для локальных/CORS)':'');draw()}
+setInterval(()=>{if(snd&&snd.playing()){const p=snd.seek(),d=snd.duration()||0;NOX.$('#tm').textContent=fmt(p)+' / '+fmt(d);NOX.$('#seek').value=d?p/d*1000:0;if(NOX.$('#book').checked){POS[Q[i].id]=p;NOX.store.set('music.pos',POS)}}},500);
+NOX.$('#seek').oninput=e=>{if(snd&&snd.duration())snd.seek(snd.duration()*e.target.value/1000)};NOX.$('#vol').oninput=e=>Howler.volume(+e.target.value);NOX.$('#rate').onchange=e=>snd&&snd.rate(+e.target.value);
+NOX.action('file','Музыка: добавить файлы',()=>NOX.$('#f').click(),NOX.$('#b-file'));
+NOX.$('#f').onchange=e=>{const st=Q.length;for(const fl of e.target.files){const id='f:'+fl.name+':'+fl.size;BLOB[id]=URL.createObjectURL(fl);if(!Q.find(t=>t.id===id))Q.push({id,name:fl.name,fmt:fl.name.split('.').pop().toLowerCase()})}draw();if(i<0)play(st)};
+NOX.action('sample','Музыка: образец NOX (синтез)',async()=>{const sr=44100,len=sr*12,oc=new OfflineAudioContext(2,len,sr);[110,165,220,330].forEach((f,k)=>{const o=oc.createOscillator(),g=oc.createGain();o.type=k%2?'sawtooth':'sine';o.frequency.value=f;g.gain.setValueAtTime(0,0);for(let t=0;t<12;t+=.5)g.gain.linearRampToValueAtTime(((t*2+k)%4===0)?.25:.05,t+.25);o.connect(g).connect(oc.destination);o.start()});
+ const buf=await oc.startRendering();const wav=toWav(buf);const id='u:sample';BLOB[id]=URL.createObjectURL(new Blob([wav],{type:'audio/wav'}));if(!Q.find(t=>t.id===id))Q.push({id,name:'NOX · образец (синтез)',fmt:'wav'});draw();play(Q.findIndex(t=>t.id===id))},NOX.$('#b-sample'));
+function toWav(b){const n=b.length,ch=b.numberOfChannels,dv=new DataView(new ArrayBuffer(44+n*ch*2));const w=(o,s)=>[...s].forEach((c,k)=>dv.setUint8(o+k,c.charCodeAt(0)));w(0,'RIFF');dv.setUint32(4,36+n*ch*2,true);w(8,'WAVEfmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,ch,true);dv.setUint32(24,b.sampleRate,true);dv.setUint32(28,b.sampleRate*ch*2,true);dv.setUint16(32,ch*2,true);dv.setUint16(34,16,true);w(36,'data');dv.setUint32(40,n*ch*2,true);let o=44;for(let k=0;k<n;k++)for(let c=0;c<ch;c++){const s=Math.max(-1,Math.min(1,b.getChannelData(c)[k]));dv.setInt16(o,s*32767,true);o+=2}return dv.buffer}
+NOX.action('radio','Музыка: радио/подкаст по URL',()=>{const u=NOX.$('#url').value.trim();if(!/^https?:\/\//.test(u))return NOX.toast('Нужен http(s) URL потока','hold');Q.push({id:'u:'+u,name:u.split('/').pop()||u,url:u,stream:true});draw();play(Q.length-1)},NOX.$('#b-radio'));
+NOX.action('play','Музыка: пуск/пауза',()=>{if(!snd)return Q.length?play(0):NOX.toast('Очередь пуста');snd.playing()?snd.pause():snd.play()},NOX.$('#b-play'));
+NOX.action('next','Музыка: следующий',()=>play(i+1),NOX.$('#b-next'));NOX.action('prev','Музыка: предыдущий',()=>play(Math.max(0,i-1)),NOX.$('#b-prev'));
+NOX.action('preset','Визуализатор: следующий пресет',()=>{const s=NOX.$('#preset');s.selectedIndex=(s.selectedIndex+1)%s.options.length;s.onchange()},NOX.$('#b-next-p'));
+NOX.$('#preset').onchange=()=>viz&&viz.loadPreset(presets[NOX.$('#preset').value],2);
+NOX.action('savepl','Музыка: сохранить плейлист',()=>{const n=NOX.$('#pln').value.trim()||('Плейлист '+(Object.keys(PL).length+1));PL[n]=Q.map(t=>({id:t.id,name:t.name,url:t.url,stream:t.stream,fmt:t.fmt}));NOX.store.set('music.pl',PL);draw();NOX.toast('Сохранён «'+n+'»')},NOX.$('#b-savepl'));
+NOX.onStop(()=>snd&&snd.pause());draw();
+})();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

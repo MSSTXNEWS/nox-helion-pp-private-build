@@ -1,0 +1,9 @@
+{
+  "source_root": "/workspace/scratch/98d1e08cfc37/work/role5/final/site",
+  "active_routes": 45,
+  "protected_core_files": 5,
+  "missing_local_deps": 0,
+  "errors": [],
+  "verdict": "SOURCE_PASS",
+  "production": "HOLD — no authenticated OneHost E2E"
+}

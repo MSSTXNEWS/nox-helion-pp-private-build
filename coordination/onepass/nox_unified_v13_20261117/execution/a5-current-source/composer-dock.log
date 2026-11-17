@@ -1,0 +1,5 @@
+320 {'rect': {'x': 138.71875, 'y': 421, 'right': 220, 'bottom': 457}, 'hit': '<span>STOP</span>', 'uncovered': True}
+390 {'rect': {'x': 208.71875, 'y': 421, 'right': 290, 'bottom': 457}, 'hit': '<span>STOP</span>', 'uncovered': True}
+800 {'rect': {'x': 618.71875, 'y': 421, 'right': 700, 'bottom': 457}, 'hit': '<span>STOP</span>', 'uncovered': True}
+1440 {'rect': {'x': 1258.71875, 'y': 651, 'right': 1340, 'bottom': 687}, 'hit': '<span>STOP</span>', 'uncovered': True}
+3840 {'rect': {'x': 3658.71875, 'y': 2001, 'right': 3740, 'bottom': 2037}, 'hit': '<span>STOP</span>', 'uncovered': True}

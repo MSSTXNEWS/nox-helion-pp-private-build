@@ -1,0 +1,16 @@
+{
+  "schema": "NOX_STOP_UI_SOURCE_ACCEPTANCE_V1",
+  "task_id": "1A04",
+  "scope": "real Chromium with local HTTP fixture and synthetic receipt events",
+  "native_accepted": false,
+  "checks": [
+    "Local cancellation never claims GPU stopped",
+    "Unrelated request receipt ignored",
+    "Scoped acknowledgement differs from verified GPU stop",
+    "Verified matching receipt updates original message after transport closes",
+    "Media job unchanged; no owner STOP/task cancellation requested; zero page errors"
+  ],
+  "passed": 5,
+  "page_errors": [],
+  "sha256": "232cd731add48ea1b3a6c01a47420eb27f89ca76a8eaa1149964af5445811cc5"
+}

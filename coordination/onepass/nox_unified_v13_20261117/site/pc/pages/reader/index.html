@@ -1,0 +1,52 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="../_kit/nox-pages.css"><script src="../_kit/nox-pages.js"></script>
+<style>#view{flex:1;min-height:0;overflow:auto;padding:6px;position:relative}#pdfc{display:block;margin:0 auto;max-width:100%;border-radius:6px;box-shadow:0 0 30px rgba(127,216,255,.15)}#epub{height:100%;background:rgba(240,244,250,.92);border-radius:6px}
+#txt{white-space:pre-wrap;line-height:1.35;max-width:760px;margin:0 auto;font-size:15px}#side{width:280px}#nox{white-space:pre-wrap}@media(max-width:700px){#side{width:auto}#view{min-height:55vh}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main"><section class="nx-col nx-grow">
+ <div class="nx-row nx-glass"><button class="nx-btn on" id="b-open">Открыть</button><button class="nx-btn" id="b-spdf">Образец PDF</button><button class="nx-btn" id="b-sepub">Образец EPUB</button><button class="nx-btn" id="b-prev">◀</button><span class="nx-sub" id="pg">—</span><button class="nx-btn" id="b-next">▶</button>
+  <button class="nx-btn" id="b-toc">Оглавление</button><button class="nx-btn" id="b-bm">Закладка</button><button class="nx-btn" id="b-note">Заметка</button><button class="nx-btn" id="b-cite">Цитировать</button><button class="nx-btn" id="b-exp">Объяснить (NOX)</button><span class="nx-sub" id="ttl"></span></div>
+ <div id="view" class="nx-glass"><div class="nx-dim">Откройте PDF, EPUB или TXT. Позиция и закладки сохраняются в браузере.</div></div></section>
+ <aside class="nx-col nx-glass" id="side"><div class="nx-h">Оглавление</div><ul class="nx-list" id="toc" style="max-height:30vh"></ul><div class="nx-h">Закладки и заметки</div><ul class="nx-list nx-grow" id="bms"></ul><div class="nx-h">NOX</div><div id="nox" class="nx-dim">Выделите текст и нажмите «Объяснить».</div></aside></main>
+<input type="file" id="f" accept=".pdf,.epub,.txt" hidden>
+<script src="../../vendor/assets13/jszip.min.js"></script><script src="../../vendor/nox-extra/epub.min.js"></script>
+<script type="module">
+import * as pdfjs from '../../vendor/nox-extra/pdf.mjs';pdfjs.GlobalWorkerOptions.workerSrc='../../vendor/nox-extra/pdf.worker.mjs';
+await NOX.mount({route:'reader',title:'Читалка'});
+const BM=NOX.store.get('reader.bm',{}),POS=NOX.store.get('reader.pos',{});let doc=null,book=null,rend=null,page=1,key=null,kind=null,txtPages=[];
+const V=NOX.$('#view');const save=()=>{NOX.store.set('reader.bm',BM);NOX.store.set('reader.pos',POS)};window.noxReader={state:()=>({kind,page,key,pages:doc?doc.numPages:txtPages.length})};
+async function openBuf(name,buf){key=name+':'+buf.byteLength;NOX.$('#ttl').textContent=name;NOX.$('#toc').innerHTML='';if(rend){rend.destroy();rend=null}if(book){book.destroy();book=null}doc=null;
+ const ext=name.split('.').pop().toLowerCase();
+ if(ext==='pdf'){kind='pdf';doc=await pdfjs.getDocument({data:new Uint8Array(buf),isEvalSupported:false}).promise;V.innerHTML='<canvas id="pdfc"></canvas>';page=POS[key]||1;
+  const out=await doc.getOutline();(out||[]).forEach(o=>tocItem(o.title,async()=>{const d=typeof o.dest==='string'?await doc.getDestination(o.dest):o.dest;if(d){page=await doc.getPageIndex(d[0])+1;render()}}));if(!out||!out.length)for(let k=1;k<=Math.min(doc.numPages,50);k++)tocItem('Страница '+k,()=>{page=k;render()});await render()}
+ else if(ext==='epub'){kind='epub';V.innerHTML='<div id="epub"></div>';book=ePub(buf);rend=book.renderTo('epub',{width:'100%',height:'100%',flow:'paginated'});await rend.display(POS[key]||undefined);
+  rend.on('relocated',l=>{POS[key]=l.start.cfi;save();NOX.$('#pg').textContent=(l.start.displayed?l.start.displayed.page+'/'+l.start.displayed.total:'')+' · '+(l.start.href||'')});
+  const nav=await book.loaded.navigation;nav.toc.forEach(t=>tocItem(t.label.trim(),()=>rend.display(t.href)))}
+ else{kind='txt';const t=new TextDecoder().decode(buf);txtPages=t.match(/[\s\S]{1,3000}(\s|$)/g)||[''];page=POS[key]||1;V.innerHTML='<div id="txt"></div>';txtPages.forEach((p,k)=>tocItem('Часть '+(k+1),()=>{page=k+1;render()}));render()}
+ drawBm();NOX.toast('Открыто: '+name)}
+function tocItem(t,fn){const li=NOX.el('li',{text:t});li.onclick=fn;NOX.$('#toc').append(li)}
+async function render(){if(kind==='pdf'){page=Math.max(1,Math.min(page,doc.numPages));const p=await doc.getPage(page);const vp=p.getViewport({scale:Math.min(2,(V.clientWidth-20)/p.getViewport({scale:1}).width)*devicePixelRatio});const c=NOX.$('#pdfc');c.width=vp.width;c.height=vp.height;c.style.width=vp.width/devicePixelRatio+'px';await p.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;NOX.$('#pg').textContent=page+' / '+doc.numPages}
+ if(kind==='txt'){page=Math.max(1,Math.min(page,txtPages.length));NOX.$('#txt').textContent=txtPages[page-1];NOX.$('#pg').textContent=page+' / '+txtPages.length}POS[key]=page;save()}
+const where=()=>kind==='epub'?(rend.currentLocation()?.start?.cfi):page;
+const label=()=>kind==='epub'?(rend.currentLocation()?.start?.href||'EPUB'):'стр. '+page;
+function drawBm(){const ul=NOX.$('#bms');ul.innerHTML='';(BM[key]||[]).forEach((b,k)=>{const li=NOX.el('li',{},NOX.el('span',{class:'nx-grow',text:(b.note?'✎ '+b.note:'⌖ ')+' · '+b.label}));const x=NOX.el('button',{class:'nx-btn',text:'×'});x.onclick=e=>{e.stopPropagation();BM[key].splice(k,1);save();drawBm()};li.append(x);li.onclick=()=>{if(kind==='epub')rend.display(b.at);else{page=b.at;render()}};ul.append(li)})}
+const sel=()=>{let s=String(getSelection()||'').trim();if(!s&&rend){try{const c=rend.getContents()[0];s=String(c.window.getSelection()||'').trim()}catch{}}if(!s&&kind==='txt')s=txtPages[page-1].slice(0,600);return s};
+NOX.action('open','Читалка: открыть файл',()=>NOX.$('#f').click(),NOX.$('#b-open'));NOX.$('#f').onchange=async e=>{const fl=e.target.files[0];openBuf(fl.name,await fl.arrayBuffer())};
+NOX.action('spdf','Читалка: образец PDF',async()=>openBuf('sample.pdf',await (await fetch('/pc/v23/samples/sample.pdf')).arrayBuffer()),NOX.$('#b-spdf'));
+NOX.action('sepub','Читалка: образец EPUB',async()=>openBuf('sample.epub',await (await fetch('/pc/v23/samples/sample.epub')).arrayBuffer()),NOX.$('#b-sepub'));
+NOX.action('next','Читалка: дальше',()=>{if(kind==='epub')rend.next();else{page++;render()}},NOX.$('#b-next'));NOX.action('prev','Читалка: назад',()=>{if(kind==='epub')rend.prev();else{page--;render()}},NOX.$('#b-prev'));
+NOX.action('toc','Читалка: оглавление',()=>{NOX.$('#toc').scrollIntoView({behavior:'smooth'});NOX.toast('Пунктов оглавления: '+NOX.$$('#toc li').length)},NOX.$('#b-toc'));
+NOX.action('bm','Читалка: закладка',()=>{if(!key)return NOX.toast('Сначала откройте книгу');(BM[key]=BM[key]||[]).push({at:where(),label:label()});save();drawBm();NOX.toast('Закладка: '+label())},NOX.$('#b-bm'));
+NOX.action('note','Читалка: заметка',()=>{if(!key)return NOX.toast('Сначала откройте книгу');const n=prompt('Заметка к '+label()+':',sel().slice(0,120));if(n){(BM[key]=BM[key]||[]).push({at:where(),label:label(),note:n});save();drawBm()}},NOX.$('#b-note'));
+NOX.action('cite','Читалка: цитировать',async()=>{const s=sel();if(!s)return NOX.toast('Выделите текст');const c='«'+s.slice(0,500)+'» — '+NOX.$('#ttl').textContent+', '+label();try{await navigator.clipboard.writeText(c)}catch{}NOX.$('#nox').textContent=c;NOX.toast('Цитата скопирована')},NOX.$('#b-cite'));
+NOX.action('explain','Читалка: объяснить (NOX)',async()=>{const s=sel();if(!s)return NOX.toast('Выделите текст');NOX.$('#nox').textContent='NOX читает…';try{NOX.$('#nox').textContent=await NOX.ask('Объясни простыми словами этот фрагмент из книги «'+NOX.$('#ttl').textContent+'»:\n'+s.slice(0,2000),{onToken:(t,a)=>NOX.$('#nox').textContent=a})}catch(e){NOX.$('#nox').textContent='HOLD: '+e.message}},NOX.$('#b-exp'));
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowRight')NOX.$('#b-next').click();if(e.key==='ArrowLeft')NOX.$('#b-prev').click()});
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

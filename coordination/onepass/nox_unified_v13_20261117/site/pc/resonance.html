@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050608">
+<title>NOX HELION · РЕЗОНАНС</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; frame-src 'none'; object-src 'none'">
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="./vendor/fonts/tektur/tektur.css">
+<link rel="stylesheet" href="./vendor/nox-liquid-glass/liquid-glass.css">
+<link rel="stylesheet" href="./vendor/v24/github-dark-dimmed.min.css">
+<link rel="stylesheet" href="./v24/nox-v24.css">
+<link rel="stylesheet" href="./predator/predator.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+<script defer src="./vendor/fx/gsap.min.js"></script>
+<script defer src="./vendor/nox-extra/lucide.min.js"></script>
+<script defer src="./vendor/v22/marked.umd.js"></script>
+<script defer src="./vendor/v22/purify.min.js"></script>
+<script defer src="./vendor/v24/highlight.min.js"></script>
+<script defer src="./vendor/nox-ux/nox_ux.js"></script>
+<script defer src="./workspace.js"></script>
+<script type="module" src="./nox-core-bg.mjs"></script>
+<link rel="stylesheet" href="./v25/nox-shell-v25.css" data-n25="1"><script defer src="./v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="./nox-wow-max.css" data-nox-wow-max="1">
+<script defer src="./nox-wow-max.js" data-nox-wow-max="1"></script>
+<link rel="stylesheet" href="./nox-cinematic-worlds.css" data-nox-five-worlds="v3">
+<script defer src="./nox-cinematic-worlds.js" data-nox-five-worlds="v3"></script>
+<link rel="stylesheet" href="../nox-master-web.css" data-nox-master="v4">
+<link rel="stylesheet" href="../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../nox-v9-interface.css" data-nox-interface="v9"><link rel="stylesheet" href="../nox-cinematic-accessibility-3d.css" data-nox-motion-reduced="safe">
+<script type="module" src="../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../nox-connection-v13.js" data-nox-connection-v13="1"></script></head>
+<body class="nox-shared-glass nox-v24 helion-glass" data-page="resonance" data-nox-view="resonance-v24" data-nox-phase="idle"><div class="nox-v28-pc-return" style="position:relative;z-index:99;display:flex;justify-content:flex-end;padding:6px 12px;background:#09090bf0;border-bottom:1px solid #85613c88"><a href="../chat.html" style="display:inline-flex;min-height:44px;align-items:center;padding:7px 13px;color:#f0c68e;background:#211b17;border:1px solid #a07a45;border-radius:9px;font:600 12px system-ui,sans-serif;text-decoration:none">РЕЗОНАНС · ГЛАВНЫЙ ЧАТ</a></div>
+<a class="v24-skip" href="#prompt">К сообщению NOX</a>
+<div class="v24-cursor" id="v24Cursor" aria-hidden="true"></div>
+
+<main class="v24-stage helion-stage" data-qa="eclipse-live">
+  <a id="noxCoreEntry" class="v24-core-entry" href="#prompt" aria-label="Ядро NOX: к сообщению"><span class="sr-only">Ядро NOX</span></a>
+
+  <div class="v24-app">
+    <aside id="v24Rail" class="v24-rail v24-glass v24-shine" aria-label="Диалоги">
+      <button type="button" class="v24-new v24-sweep" data-action="new-chat" title="Новый диалог (старые не удаляются)">
+        <i data-lucide="plus" aria-hidden="true"></i><span>Новый чат</span>
+      </button>
+      <form id="noxV22Rename" class="v24-rename" hidden>
+        <label class="sr-only" for="noxV22RenameInput">Новое имя диалога</label>
+        <input id="noxV22RenameInput" maxlength="140" autocomplete="off">
+        <button type="submit" class="v24-iconbtn" title="Сохранить имя">OK</button>
+        <button type="button" class="v24-iconbtn" data-action="rename-cancel" aria-label="Отмена">✕</button>
+      </form>
+      <div id="nativeChats" class="v24-chats" role="list"></div>
+    </aside>
+
+    <section class="v24-main" aria-label="Резонанс с NOX">
+      <header class="v24-top v24-glass">
+        <button type="button" class="v24-iconbtn" data-action="toggle-rail" aria-label="Показать или скрыть список диалогов" title="Диалоги">
+          <i data-lucide="panel-left" aria-hidden="true"></i>
+        </button>
+        <a class="v24-brand" href="index.html" title="Главная NOX">
+          <b>NOX HELION</b>
+        </a>
+        <div class="v24-top-right">
+          <button type="button" class="v24-pill v24-glass" id="v24LivePill" data-action="open-live" title="Живой прогресс обучения и индекса" aria-label="Живой прогресс">
+            <i data-lucide="activity" aria-hidden="true"></i><span id="v24LivePillText">прогресс</span>
+          </button>
+          <button type="button" class="v24-iconbtn" id="v24SystemBtn" data-action="open-system" aria-label="Система" title="Система">
+            <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="v24-iconbtn" data-action="open-menu" aria-label="Меню" title="Меню" aria-haspopup="true" aria-expanded="false">
+            <i data-lucide="more-vertical" aria-hidden="true"></i>
+          </button>
+        </div>
+        <nav id="v24Menu" class="v24-menu v24-glass" hidden data-open="false" aria-label="Разделы NOX">
+          <a href="index.html">Главная</a>
+          <a href="training.html">Обучение</a>
+          <a href="memory.html">Память S03</a>
+          <a href="system.html">Мониторинг</a>
+          <a href="cinema.html">Кинотеатр</a>
+          <a href="help.html">Справка</a>
+          <a href="settings.html">Настройки</a>
+          <a href="personas.html">Персоны</a>
+          <a href="projects.html">Проекты</a>
+          <button type="button" data-action="open-archive">Архив диалогов</button>
+        </nav>
+      </header>
+
+      <div class="v24-column">
+        <div id="noxCoreTitle">РЕЗОНАНС</div>
+        <div id="messages" class="v24-stream" role="log" aria-live="polite" data-qa="chat-messages"></div>
+        <form id="chatForm" class="v24-composer v24-glass v24-shine v24-sweep" autocomplete="off">
+          <label class="sr-only" for="prompt">Сообщение NOX</label>
+          <textarea id="prompt" rows="1" maxlength="10000" placeholder="Сообщение NOX…" title="Enter — отправить · Shift+Enter — новая строка · Esc — STOP"></textarea>
+          <button type="button" class="v24-stop" data-action="stop" disabled aria-label="STOP — оборвать ответ NOX">
+            <i data-lucide="square" aria-hidden="true"></i><span>STOP</span>
+          </button>
+          <button type="button" class="v24-iconbtn" data-action="speak" aria-label="Произнести последний ответ голосом" title="Голос (HOLD, если нет RU TTS)">
+            <i data-lucide="volume-2" aria-hidden="true"></i>
+          </button>
+          <button type="submit" class="v24-send" data-action="send" aria-label="Отправить">
+            <i data-lucide="arrow-up" aria-hidden="true"></i>
+          </button>
+        </form>
+      </div>
+    </section>
+  </div>
+</main>
+
+<aside id="v24System" class="v24-drawer v24-glass v24-shine" data-open="false" aria-label="Система" hidden>
+  <header style="display:flex;align-items:center;gap:8px">
+    <h2>СИСТЕМА</h2>
+    <button type="button" class="v24-iconbtn" data-action="close-system" aria-label="Закрыть" style="margin-left:auto"><i data-lucide="x" aria-hidden="true"></i></button>
+  </header>
+  <div id="v24WidgetsMount"></div>
+
+  <section class="v24-block v24-glass" aria-labelledby="addrTitle">
+    <h2 id="addrTitle">Как NOX обращается к вам</h2>
+    <div class="v24-address" id="noxV22Address" role="group" aria-label="Форма обращения">
+      <button type="button" data-address="auto" aria-pressed="false">живо</button>
+      <button type="button" data-address="мессир" aria-pressed="false">мессир</button>
+      <button type="button" data-address="мой лорд" aria-pressed="false">мой лорд</button>
+      <button type="button" data-address="барон" aria-pressed="false">барон</button>
+      <button type="button" data-address="создатель" aria-pressed="false">создатель</button>
+    </div>
+  </section>
+
+  <section class="v24-block v24-glass">
+    <h2>Быстрые запросы</h2>
+    <div id="quickCommands" class="v24-quick" aria-label="Быстрые запросы"></div>
+  </section>
+
+  <section class="v24-block v24-glass" id="v24Predator" aria-labelledby="v24PredTitle"></section>
+
+  <section class="v24-block v24-glass" id="v24LiveBoard" aria-labelledby="v24LiveTitle">
+    <h2 id="v24LiveTitle">Живой прогресс</h2>
+    <div class="v24-live-grid">
+      <article class="v24-live-card" data-live="trainer">
+        <h3>Внешняя GPU · тренер</h3>
+        <p class="v24-live-line"><span>Шаг</span><strong id="v24TrStep">—</strong></p>
+        <p class="v24-live-line"><span>Строки</span><strong id="v24TrRows">—</strong></p>
+        <div class="v24-live-bar" aria-hidden="true"><i id="v24TrBar"></i></div>
+        <p class="v24-live-line"><span>Holdout</span><strong id="v24TrHold">—</strong></p>
+        <p class="v24-live-line"><span>ток/с</span><strong id="v24TrTps">—</strong></p>
+        <p class="v24-live-line"><span>GPU / VRAM / RAM</span><strong id="v24TrHw">—</strong></p>
+        <p class="v24-live-line"><span>ETA</span><strong id="v24TrEta">—</strong></p>
+        <p class="v24-live-line"><span>GGUF</span><strong id="v24TrGguf">—</strong></p>
+        <p class="v24-mini" id="v24TrSrc">ждём C:\NOX\progress\status.json</p>
+      </article>
+      <article class="v24-live-card" data-live="indexer">
+        <h3>ПК · индекс знаний</h3>
+        <p class="v24-live-line"><span>Фрагменты</span><strong id="v24IxChunks">—</strong></p>
+        <div class="v24-live-bar" aria-hidden="true"><i id="v24IxBar"></i></div>
+        <p class="v24-live-line"><span>Скорость</span><strong id="v24IxRate">—</strong></p>
+        <p class="v24-live-line"><span>SAFE70</span><strong id="v24IxSafe">—</strong></p>
+        <p class="v24-mini" id="v24IxSrc">локальный knowledge.db</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="v24-block v24-glass">
+    <h2>Ядро</h2>
+    <p id="noxV22Model" role="status">Проверка ядра NOX…</p>
+    <p id="noxV22Source" data-source="NONE" role="status">Источник ответа: проверка…</p>
+    <p id="noxV22Phase">NOX / ПРОВЕРКА</p>
+    <p id="noxV22Thought" aria-live="polite"></p>
+  </section>
+
+  <section class="v24-block v24-glass" id="noxV22Wx">
+    <h2 id="wxTitle">Мадрид</h2>
+    <p><strong id="noxV22WxTemp">—</strong> <span id="noxV22WxText">погода: проверка…</span> <time id="noxV22Clock">--:--</time></p>
+    <p class="v24-mini" id="noxV22WxMeta"></p>
+  </section>
+
+  <section class="v24-block v24-glass">
+    <h2>Датчики ПК</h2>
+    <div class="v24-sensors">
+      <div>CPU<strong id="cpuPercent">—</strong></div>
+      <div>GPU<strong id="gpuReadout">—</strong></div>
+      <div>RAM<strong id="ramPercent">—</strong></div>
+      <div>°C<strong id="gpuTemp">—</strong></div>
+      <div>VRAM<strong id="gpuVram">—</strong></div>
+      <div>SAFE70<strong id="noxV22Safe70" data-known="false">проверка</strong></div>
+    </div>
+    <p class="v24-mini" id="noxV22MetricSrc">Источник: /api/pc-metrics</p>
+    <p class="v24-mini" id="noxV22Gov">Графика: авто</p>
+  </section>
+
+  <section class="v24-block v24-glass" id="noxV22Memory">
+    <h2>Память S03 · M0–M7</h2>
+    <div class="v24-mgrid" id="noxV22MGrid"></div>
+    <p class="v24-mini" id="noxV22MemNote">—</p>
+    <button type="button" class="v24-chip" data-action="memory-open">Открыть всю память</button>
+  </section>
+
+  <section class="v24-block v24-glass" id="noxV22Receipt">
+    <h2>Квитанция дистилляции</h2>
+    <p><strong id="noxV22RStatus">—</strong></p>
+    <div id="noxV22RBody" class="v24-mini"></div>
+  </section>
+
+  <section class="v24-block v24-glass" id="v24ArchiveBlock">
+    <h2>Архив диалогов</h2>
+    <p class="v24-mini">Скрытие только в этом окне. Сообщения создателя в S03 не удаляются.</p>
+    <div id="v24ArchiveList" class="v24-chats"></div>
+  </section>
+
+  <p class="v24-mini" id="historyState">SQLite S03</p>
+  <output id="chatHold" class="v24-hold" aria-live="polite"></output>
+</aside>
+
+<dialog id="noxV22MemoryDialog" class="v24-dialog" aria-labelledby="memDlgTitle">
+  <header style="display:flex;align-items:center;gap:8px">
+    <h2 id="memDlgTitle">Память S03 · M0–M7</h2>
+    <button type="button" class="v24-iconbtn" data-action="memory-close" aria-label="Закрыть" style="margin-left:auto">✕</button>
+  </header>
+  <p class="v24-mini">Только добавление: удаление и правка запрещены. Каждое сообщение создателя хранится навсегда.</p>
+  <div id="noxV22MemoryFull"></div>
+</dialog>
+
+<div hidden id="noxHomeBindings" aria-hidden="true">
+  <span id="ollamaStatus"></span>
+  <span id="fpsTop">—</span>
+  <span id="renderStatus"></span>
+  <span id="coreActivityLabel" hidden></span>
+  <span id="gpuDial"></span><span id="vramDial"></span><span id="gpuPercent"></span><span id="vramPercent"></span>
+  <span id="gpuPower"></span><span id="hudTemp"></span><span id="hudVram"></span><span id="hudSensor"></span>
+</div>
+
+<div id="nox-public-safe-preview" class="v24-badge">LOCAL · NOX HELION V25 · 127.0.0.1</div>
+<script defer src="./v24/nox-v24-chat.js"></script>
+<script defer src="./predator/predator.js"></script>
+<script defer src="./v24/nox-v24-menu.js"></script>
+<script defer src="./v24/nox-v24-learn.js"></script>
+<script defer src="./v24/nox-v24-widgets.js"></script>
+<script defer src="../nox-web-shell-v4.js" data-nox-master="v4"></script>
+<script defer src="../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../nox-v9-interface.js" data-nox-interface="v9"></script><script defer src="../motion100/nox-motion100-lazy.js" data-nox-motion100="owner-only"></script><script defer src="/nox-web-v29/nox-v135-resonance-owner-bridge.js" data-nox-owner-v135="1"></script><link rel="stylesheet" href="/nox-web-v29/nox-media-chat.css" data-nox-media="1"><script defer src="/nox-web-v29/nox-media-chat.js" data-nox-media="1"></script><script defer src="../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>

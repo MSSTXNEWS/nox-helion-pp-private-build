@@ -1,0 +1,13 @@
+/* NOX V13: shared glass UI, live source-grounded connection status, no fake preview plates. */
+body.nox-shared-glass #nox-public-safe-preview{display:none!important}
+.nox-connection-v13{--tone:var(--nox-head-rgb,233,180,101);display:inline-flex;flex:0 0 auto;gap:6px;align-items:center;justify-content:center;min-height:43px;max-width:123px;padding:5px 10px;color:rgb(var(--tone));border-radius:13px;border:1px solid rgba(var(--tone),.28);background:linear-gradient(145deg,rgba(var(--tone),.075),rgba(7,12,20,.24));backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px);font:700 9px/1.1 Tektur,system-ui,sans-serif;letter-spacing:.035em;text-align:center;white-space:normal}
+.nox-connection-glyph-v13{font:800 16px/1 system-ui,sans-serif;text-shadow:0 0 6px rgba(var(--tone),.35)}
+.nox-connection-v13[data-nox-connection=ok]{--tone:97,219,177}
+.nox-connection-v13:is([data-nox-connection=hold],[data-nox-connection=offline]){--tone:218,156,129}
+.nox-connection-v13[data-nox-connection=auth]{--tone:242,184,96}
+.nox-connection-v13[data-nox-connection=pending]{--tone:190,197,211}
+.nox-connection-v13[data-nox-connection=ok] .nox-connection-glyph-v13{animation:nox-v13-status-breathe 2.5s ease-in-out infinite}
+@keyframes nox-v13-status-breathe{50%{filter:brightness(1.5);opacity:.74}}
+@media(max-width:930px){.nox-connection-v13{max-width:35px;min-width:31px;padding:4px}.nox-connection-word-v13{display:none}}
+@media(max-width:400px){.nox-connection-v13{max-width:27px;min-width:27px}.nox-connection-glyph-v13{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.nox-connection-v13 *{animation:none!important;transition:none!important}}

@@ -1,0 +1,54 @@
+{
+  "schema": "NOX_SERVICES_SOURCE_ACCEPTANCE_V1",
+  "scope": "real local Chromium; mini queue API is a local contract fixture, not OneHost",
+  "native_accepted": false,
+  "checks": [
+    "dock and panel visible without document overflow across 5 pages × 5 widths",
+    "keyboard shortcut, Escape and close work",
+    "iframe guard prevents duplicate global workspaces",
+    "Calendar real FullCalendar create/edit/reload/timezone/week/list/ICS export+dedup import/delete",
+    "World reuses both real shared notes and Interact runtime"
+  ],
+  "widths": {
+    "tools.html": {
+      "320": 0,
+      "390": 0,
+      "800": 0,
+      "1440": 0,
+      "3840": 0
+    },
+    "world.html": {
+      "320": 0,
+      "390": 0,
+      "800": 0,
+      "1440": 0,
+      "3840": 0
+    },
+    "calendar.html": {
+      "320": 0,
+      "390": 0,
+      "800": 0,
+      "1440": 0,
+      "3840": 0
+    },
+    "pc/resonance.html": {
+      "320": 0,
+      "390": 0,
+      "800": 0,
+      "1440": 0,
+      "3840": 0
+    },
+    "pc/pages/image/index.html": {
+      "320": 0,
+      "390": 0,
+      "800": 0,
+      "1440": 0,
+      "3840": 0
+    }
+  },
+  "themes": {},
+  "page_errors": [],
+  "request_count": 0,
+  "posts": [],
+  "status": "SOURCE_BROWSER_PASS"
+}

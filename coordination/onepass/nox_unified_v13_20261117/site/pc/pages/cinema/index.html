@@ -1,0 +1,69 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="../_kit/nox-pages.css"><link rel="stylesheet" href="../_vendor/plyr/plyr.css"><script src="../_kit/nox-pages.js"></script>
+<style>#lib{width:300px}.stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden}.stage .plyr{width:100%;height:100%;--plyr-color-main:#7fd8ff;background:transparent}
+.stage video{max-height:100%}.plyr__video-wrapper,.plyr--video{background:transparent!important}.plyr--video .plyr__controls{background:linear-gradient(transparent,rgba(3,4,6,.8))}#tabs .nx-btn{padding:3px 7px}
+@media(max-width:700px){#lib{width:auto;max-height:45vh}.stage{min-height:240px}}</style><link rel="stylesheet" href="../../v25/nox-shell-v25.css" data-n25="1"><script defer src="../../v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="../../../nox-select-tiles-v5.css" data-nox-visual-v5="1"><link rel="stylesheet" href="../../../nox-master-web.css" data-nox-master="v5"><link rel="stylesheet" href="../../../nox-visual-control-v6.css" data-nox-visual-v6="1"><link rel="stylesheet" href="../../../nox-v9-interface.css" data-nox-interface="v9">
+<script type="importmap">{"imports":{"three":"../../../vendor/three/three.module.js","three/addons/":"../../../vendor/three/addons/"}}</script>
+
+<script type="module" src="../../../nox-shared-scene-v10.mjs" data-nox-scene="original-d02-shared"></script>
+
+<link rel="stylesheet" href="../../../nox-shared-chrome-v10.css" data-nox-shared-v10="1">
+<script defer src="../../../nox-shared-chrome-v10.js" data-nox-shared-v10="1"></script>
+<link rel="stylesheet" href="../../../nox-theme-header-v12.css" data-nox-header-v12="1"><script defer src="../../../nox-mini-client.js" data-nox-mini-client="v1"></script><link rel="stylesheet" href="../../../nox-world-controls-v13.css" data-nox-controls-v13="1"><link rel="stylesheet" href="../../../nox-connection-v13.css" data-nox-connection-v13="1"><script defer src="../../../nox-connection-v13.js" data-nox-connection-v13="1"></script></head><body class="nox-shared-glass">
+<main class="nx-main">
+ <section class="nx-col nx-grow">
+  <div class="nx-row nx-glass"><button class="nx-btn on" id="b-file">Файлы…</button><input class="nx-in nx-grow" id="url" placeholder="URL видео (mp4/webm/HLS .m3u8) — только разрешённые источники"><button class="nx-btn" id="b-url">Добавить URL</button><button class="nx-btn" id="b-sub">Субтитры .vtt</button><select class="nx-in" id="aud" title="Аудиодорожка"><option>Аудио: по умолчанию</option></select><button class="nx-btn" id="b-bm">Закладка</button><button class="nx-btn" id="b-sample">Образец</button><button class="nx-btn" id="b-gen">NOX: создать видео</button></div>
+  <div class="stage nx-glass"><video id="v" playsinline crossorigin="anonymous"></video></div>
+  <div class="nx-row nx-glass"><span class="nx-sub" id="now">Ничего не выбрано</span><span class="nx-sp"></span><span class="nx-sub" id="bms"></span></div>
+ </section>
+ <aside class="nx-col nx-glass" id="lib">
+  <div class="nx-row" id="tabs"><button class="nx-btn on" data-t="all">Медиатека</button><button class="nx-btn" data-t="cont">Продолжить</button><button class="nx-btn" data-t="fav">Избранное</button><button class="nx-btn" data-t="hist">История</button></div>
+  <input class="nx-in" id="q" placeholder="Поиск по медиатеке">
+  <ul class="nx-list nx-grow" id="list"></ul>
+  <button class="nx-btn" id="b-what">Что посмотреть? (NOX)</button><div class="nx-sub" id="rec"></div>
+  <div class="nx-sub">ТЗ §13.4: только разрешённые файлы/потоки, без пиратского каталога.</div>
+ </aside></main>
+<input type="file" id="f" accept="video/*,.m3u8" multiple hidden><input type="file" id="fs" accept=".vtt" hidden>
+<script src="../_vendor/plyr/plyr.min.js"></script>
+<script>
+(async()=>{await NOX.mount({route:'cinema',title:'Кинотеатр'});
+const v=NOX.$('#v');const player=new Plyr(v,{iconUrl:'../_vendor/plyr/plyr.svg',blankVideo:'',captions:{active:true,language:'auto',update:true},keyboard:{global:true},i18n:{play:'Пуск',pause:'Пауза',mute:'Звук',settings:'Настройки',captions:'Субтитры',enterFullscreen:'Во весь экран',exitFullscreen:'Выход'}});window.noxPlayer=player;
+const LIB=NOX.store.get('cinema.lib',[]),POS=NOX.store.get('cinema.pos',{}),FAV=NOX.store.get('cinema.fav',[]),HIST=NOX.store.get('cinema.hist',[]),BM=NOX.store.get('cinema.bm',{});const BLOB={};
+let cur=null,tab='all',shaka=null;const save=()=>{NOX.store.set('cinema.lib',LIB.filter(x=>x.url));NOX.store.set('cinema.pos',POS);NOX.store.set('cinema.fav',FAV);NOX.store.set('cinema.hist',HIST.slice(-50));NOX.store.set('cinema.bm',BM)};
+const fmt=s=>{s=Math.floor(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function draw(){const q=NOX.$('#q').value.toLowerCase();const ul=NOX.$('#list');ul.innerHTML='';let items=LIB;
+ if(tab==='cont')items=LIB.filter(i=>POS[i.id]>5);if(tab==='fav')items=LIB.filter(i=>FAV.includes(i.id));if(tab==='hist')items=HIST.slice().reverse().map(h=>LIB.find(i=>i.id===h)).filter(Boolean);
+ items.filter(i=>i.name.toLowerCase().includes(q)).forEach(i=>{const li=NOX.el('li',{class:cur&&cur.id===i.id?'cur':''},NOX.el('span',{class:'nx-grow',text:i.name}),NOX.el('span',{class:'nx-sub',text:POS[i.id]?fmt(POS[i.id]):(i.url?'URL':'файл')}));
+  const st=NOX.el('button',{class:'nx-btn',text:FAV.includes(i.id)?'★':'☆',title:'Избранное'});st.onclick=e=>{e.stopPropagation();const k=FAV.indexOf(i.id);k<0?FAV.push(i.id):FAV.splice(k,1);save();draw()};li.append(st);
+  if(!i.url&&!BLOB[i.id])li.title='Файл нужно выбрать заново (браузер не хранит локальные файлы)';li.onclick=()=>play(i);ul.append(li)})}
+async function play(i){if(!i.url&&!BLOB[i.id]){NOX.toast('Выберите файл «'+i.name+'» заново — позиция сохранена','hold');return NOX.$('#f').click()}
+ cur=i;const src=i.url||BLOB[i.id];if(shaka){await shaka.destroy();shaka=null}
+ if(/\.m3u8(\?|$)/i.test(src)&&!v.canPlayType('application/vnd.apple.mpegurl')){await loadShaka();shaka=new window.shaka.Player();await shaka.attach(v);await shaka.load(src);fillAudio()}
+ else{v.src=src}
+ NOX.$('#now').textContent='▶ '+i.name;HIST.push(i.id);save();draw();
+ v.addEventListener('loadedmetadata',()=>{if(POS[i.id]>5&&POS[i.id]<v.duration-3){v.currentTime=POS[i.id];NOX.toast('Продолжаю с '+fmt(POS[i.id]))}},{once:true});
+ if(i.sub)addSub(i.sub);try{await player.play()}catch(e){NOX.toast('Нажмите ▶ для запуска')}showBm()}
+function loadShaka(){return window.shaka?Promise.resolve():new Promise((r,j)=>{const s=NOX.el('script',{src:'../../vendor/nox-extra/shaka-player.compiled.js'});s.onload=r;s.onerror=()=>j(new Error('HLS-модуль NOX не найден'));document.head.append(s)})}
+function fillAudio(){const sel=NOX.$('#aud');sel.innerHTML='';const ls=shaka?shaka.getAudioLanguages():[];if(!ls.length)sel.append(NOX.el('option',{text:'Аудио: одна дорожка'}));ls.forEach(l=>sel.append(NOX.el('option',{value:l,text:'Аудио: '+l})))}
+NOX.$('#aud').onchange=e=>{if(shaka&&e.target.value)shaka.selectAudioLanguage(e.target.value)};
+function addSub(url){[...v.querySelectorAll('track')].forEach(t=>t.remove());v.append(NOX.el('track',{kind:'captions',label:'Субтитры',srclang:'ru',src:url,default:''}));setTimeout(()=>{if(v.textTracks[0])v.textTracks[0].mode='showing'},300)}
+v.addEventListener('timeupdate',()=>{if(cur&&v.currentTime>0){POS[cur.id]=v.currentTime;if(Math.round(v.currentTime)%5===0)save()}});
+v.addEventListener('ended',()=>{if(!cur)return;POS[cur.id]=0;save();const k=LIB.indexOf(cur);if(LIB[k+1]){NOX.toast('Следующее: '+LIB[k+1].name);play(LIB[k+1])}});
+NOX.action('file','Кино: выбрать файлы',()=>NOX.$('#f').click(),NOX.$('#b-file'));
+NOX.$('#f').onchange=e=>{let first;for(const fl of e.target.files){const id='f:'+fl.name+':'+fl.size;BLOB[id]=URL.createObjectURL(fl);let it=LIB.find(x=>x.id===id);if(!it){it={id,name:fl.name};LIB.push(it)}first=first||it}save();draw();first&&play(first)};
+NOX.action('url','Кино: добавить URL',()=>{const u=NOX.$('#url').value.trim();if(!/^https?:\/\/|^\//.test(u))return NOX.toast('Нужен http(s) URL','hold');const it={id:'u:'+u,name:decodeURIComponent(u.split('/').pop()||u),url:u};if(!LIB.find(x=>x.id===it.id))LIB.push(it);save();draw();play(it)},NOX.$('#b-url'));
+NOX.action('sub','Кино: субтитры .vtt',()=>NOX.$('#fs').click(),NOX.$('#b-sub'));NOX.$('#fs').onchange=e=>{addSub(URL.createObjectURL(e.target.files[0]));NOX.toast('Субтитры подключены')};
+NOX.action('sample','Кино: образец (локальный клип)',()=>{const it={id:'u:sample',name:'NOX образец · clip.mp4',url:'/pc/v23/samples/clip.mp4',sub:'/pc/v23/samples/clip.ru.vtt'};if(!LIB.find(x=>x.id===it.id))LIB.push(it);const h={id:'u:sample-hls',name:'NOX образец · HLS',url:'/pc/v23/samples/clip.m3u8'};if(!LIB.find(x=>x.id===h.id))LIB.push(h);save();draw();play(it)},NOX.$('#b-sample'));
+function showBm(){NOX.$('#bms').innerHTML='';(BM[cur&&cur.id]||[]).forEach(t=>{const b=NOX.el('button',{class:'nx-btn',text:'⌖ '+fmt(t)});b.onclick=()=>v.currentTime=t;NOX.$('#bms').append(b)})}
+NOX.action('bm','Кино: закладка таймкода',()=>{if(!cur)return NOX.toast('Сначала выберите видео');(BM[cur.id]=BM[cur.id]||[]).push(v.currentTime);save();showBm();NOX.toast('Закладка '+fmt(v.currentTime))},NOX.$('#b-bm'));
+NOX.$$('#tabs .nx-btn').forEach(b=>NOX.action('tab-'+b.dataset.t,'Кино: '+b.textContent,()=>{tab=b.dataset.t;NOX.$$('#tabs .nx-btn').forEach(x=>x.classList.toggle('on',x===b));draw()},b));
+NOX.$('#q').oninput=draw;
+NOX.action('what','Кино: что посмотреть (NOX)',async()=>{const names=LIB.map(i=>i.name).join('; ')||'медиатека пуста';NOX.$('#rec').textContent='NOX думает…';try{NOX.$('#rec').textContent=await NOX.ask('Мессир выбирает, что посмотреть. В медиатеке: '+names+'. Посоветуй одно и коротко почему.',{onToken:(t,a)=>NOX.$('#rec').textContent=a})}catch(e){NOX.$('#rec').textContent='HOLD: '+e.message}},NOX.$('#b-what'));
+NOX.action('gen','Кино: NOX создаёт видео по описанию',async()=>{const prompt=NOX.$('#url').value.trim();if(!prompt||/^https?:/.test(prompt))return NOX.toast('Впишите в строку описание сцены для NOX');NOX.$('#now').textContent='NOX готовит видео…';
+ const r=await NOX.module('/api/nox/video/generate',{prompt});if(r.missing){NOX.$('#now').innerHTML='';NOX.$('#now').append(NOX.el('span',{class:'nx-tag hold',text:'модуль не установлен'}),' Видео NOX ещё не поставлено на этот ПК');return}
+ if(r.error){NOX.$('#now').textContent='Ошибка NOX: '+r.error;return}const d=r.data,u=d.video||d.video_url||d.url;if(u){const it={id:'u:'+u,name:'NOX · '+prompt.slice(0,40),url:u};LIB.push(it);save();draw();play(it)}else NOX.$('#now').textContent=d.job_id?('NOX принял задачу '+d.job_id):'NOX ответил без видео'},NOX.$('#b-gen'));
+NOX.onStop(()=>player.pause());draw();
+})();
+</script><script defer src="../../../nox-select-tiles-v5.js" data-nox-visual-v5="1"></script><script defer src="../../../nox-web-shell-v4.js" data-nox-master="v5"></script><script defer src="../../../nox-visual-control-v6.js" data-nox-visual-v6="1"></script><script defer src="../../../nox-v9-interface.js" data-nox-interface="v9"></script>
+<script defer src="../../../nox-cinematic-worlds.js" data-nox-worlds="one-shared-world"></script>
+<script defer src="../../../nox-corner-workspace.js" data-nox-corner="global-v1"></script></body></html>
