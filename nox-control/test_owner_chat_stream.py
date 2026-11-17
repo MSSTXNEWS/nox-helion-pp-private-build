@@ -66,6 +66,38 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_bounded_sse_metadata_preserves_real_tokens_and_terminal(self):
+        # Some upstream SSE servers prepend standard event/id fields to data.
+        chunks=Chunks([b': heartbeat\n\n',b'event: message\nid: reply-7\n',
+                       frame('Hola'),frame(finish='stop'),b'data: [DONE]\n\n'])
+        _,factory=self.transport([chunks])
+        native=self.native();payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion']('http://native/model',payload,'Hola',True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertIn('Hola',wire)
+        self.assertNotIn('reply-7',wire)
+        self.assertIn('[DONE]',wire)
+        self.assertEqual(payload['_agent_final'],'Hola')
+        self.assertTrue(chunks.closed)
+
+    async def test_untrusted_sse_event_or_id_metadata_fails_closed(self):
+        cases=((b'event: error\n\n','HOLD_MODEL_SSE_EVENT'),
+               (b'id: '+b'x'*257+b'\n\n','HOLD_MODEL_SSE_FRAME'))
+        for metadata,code in cases:
+            with self.subTest(code=code):
+                chunks=Chunks([frame('partial'),metadata,frame(finish='stop'),
+                               b'data: [DONE]\n\n'])
+                _,factory=self.transport([chunks])
+                native=self.native();payload={'messages':[{'role':'user','content':'Hola'}]}
+                with factory:
+                    response=await native['owner_completion']('http://native/model',payload,'Hola',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn(code,wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertTrue(chunks.closed)
+
     async def test_first_model_content_arrives_before_completion_and_sets_final_before_done(self):
         gate=asyncio.Event()
         chunks=Chunks([frame('323'),frame('',finish='stop'),b'data: [DONE]\n\n'],gate)
