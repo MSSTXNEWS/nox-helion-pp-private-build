@@ -1,0 +1,15 @@
+{
+  "scope": "SOURCE_CROSS_CONTRACT_ACTUAL_ASGI_SQLITE_SYNTHETIC_MODEL",
+  "passed": 3,
+  "checks": [
+    "actual transport reconnect uses GET only, one inference, exact Unicode and atomic S03 pair",
+    "request-scoped STOP acknowledgement leaves other producer and server alive; no GPU-halt claim",
+    "actual ASGI process restart marks orphan interrupted; GET recovery never repeats inference"
+  ],
+  "backend_sha256": "03fbddf0f620cef9d972bf560dba7c0d631786e13cee2bf899eabc1109811cf0",
+  "ledger_sha256": "87fc5fb69eb24652ebe4b4d02e25d58177924255a2db07f9a0d914002f173d91",
+  "client_sha256": "7525c0aaca7fa0b0dfdf3446c56161a47a811442c3448172865d5608b738b062",
+  "native_accepted": false,
+  "onehost_mutated": false,
+  "synthetic_model_invocations": 4
+}

@@ -1,0 +1,126 @@
+{
+  "schema": "NOX_A3_EXISTING_PLANNER_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-49-20261117",
+  "executor": "A3",
+  "assigned_cards": [
+    {
+      "id": "3A01",
+      "title": "Подключить существующие C01–C08 к каждому действительному запросу: C01 восприятие, C02 S03, C03 самопонимание, C04 эмоции, C05 личность, C06 рассуждение, C07 навыки и учителя, C08 действия и «черви».",
+      "group": 3,
+      "wave": "A",
+      "evidence": "native",
+      "team": "A",
+      "original_role": 3,
+      "assigned_run_id": "NOX-49-20261117",
+      "claim_state": "assigned_A"
+    },
+    {
+      "id": "4A03",
+      "title": "Выполнить учебный smoke в допускаемом окне: forward, loss, backward, optimizer, SHA изменённых тензоров, FP16 overflow, peak VRAM и effective tokens/s.",
+      "group": 4,
+      "wave": "A",
+      "evidence": "native",
+      "team": "A",
+      "original_role": 4,
+      "assigned_run_id": "NOX-49-20261117",
+      "claim_state": "assigned_A"
+    },
+    {
+      "id": "5A05",
+      "title": "Освободить основной поток браузера: ленивые ассеты WebGL и медиа, Reduced Motion, простой фон без потери функций. D02 вычисляет анимацию из фактического этапа, один оригинальный набор эффектов.",
+      "group": 5,
+      "wave": "A",
+      "evidence": "native",
+      "team": "A",
+      "original_role": 5,
+      "assigned_run_id": "NOX-49-20261117",
+      "claim_state": "assigned_A"
+    },
+    {
+      "id": "6A04",
+      "title": "Отделить полезную GPU-загрузку, VRAM и CPU/I/O. Чат задаёт допустимую задержку, «черви» занимают только измеренный остаток до 85%.",
+      "group": 6,
+      "wave": "A",
+      "evidence": "native",
+      "team": "A",
+      "original_role": 6,
+      "assigned_run_id": "NOX-49-20261117",
+      "claim_state": "assigned_A"
+    },
+    {
+      "id": "0B03",
+      "title": "В существующей эстафете семь направлений A/B берут свободные TaskID, сохраняют результат и передают следующий блокер через один журнал. Общий контроль 15-го — по этому же журналу.",
+      "group": 0,
+      "wave": "B",
+      "evidence": "native",
+      "team": "A",
+      "original_role": 0,
+      "assigned_run_id": "NOX-49-20261117",
+      "claim_state": "assigned_A"
+    },
+    {
+      "id": "1V14-04",
+      "title": "Разделить канал разговоров и очередь длительных задач.",
+      "group": 1,
+      "wave": "V14",
+      "priority": "P0",
+      "evidence": "native",
+      "team": "A",
+      "original_role": 1,
+      "assigned_run_id": "NOX-49-20261117",
+      "claim_state": "assigned_A"
+    },
+    {
+      "id": "2V14-11",
+      "title": "Проверить целостность весов по манифестам и хешам.",
+      "group": 2,
+      "wave": "V14",
+      "priority": "P0",
+      "evidence": "native",
+      "team": "A",
+      "original_role": 2,
+      "assigned_run_id": "NOX-49-20261117",
+      "claim_state": "assigned_A"
+    }
+  ],
+  "source_changed_for": [
+    "3A01",
+    "1V14-04"
+  ],
+  "parent_task": "0A03",
+  "native_accepted_ids": [],
+  "server_mutations": 0,
+  "unique_files_deleted": 0,
+  "source_result": "PASS",
+  "tests": {
+    "passed": 24,
+    "failed": 0,
+    "new_integration": 12,
+    "existing_mini_regression": 12,
+    "scope": "Pinned actual V38/AttachedNOX/DurableTurn/Planner/HTTP route on isolated CPU fixture ports, not native model/S03"
+  },
+  "files_sha256": {
+    "owner_mini_tasks.py": "46e4558fa585850a24d47a9c1479c63d1f31118fccee61070153dde5d4e69a66",
+    "owner_task_plans.py": "9500a72135941ecf801854c040041df72df5c9a1b1da9ee4337631600d8ba7d4",
+    "nox_dispatcher_t855u.py": "2f673620382cfa2d0aece19180f2d274146740a5186b90d5d965b1fe501f4c05",
+    "owner_mini_planning.py": "b139a2930e34ada50bd7d017481ae906a3eaff38c647232b351376338b53e894",
+    "v112_s03_stream.py": "7282e53c3d6c7a1c093cbb77f646ccfd16733ac146555a57c1ebc907069f68b4",
+    "MINI_RUNTIME_SOURCE_MANIFEST.json": "36a5f10c32803a9038fe4490c9710eea49221a2d215b3d0ced6da17e4ae3ff78"
+  },
+  "native_blocker": "HOLD_EXISTING_NOX_PLANNING_BINDINGS; STOP/backup/restore/storage/model admission remain root-owned",
+  "resume_condition": "Owner supplies current existing AttachedNOX authenticated task-session, original fenced S03 writer/readback, verified source receipts, after ordered STOP gates; executes one native mini request and verifies C01-C08/S03/queue scope on accepted SHA. No automatic source-to-native promotion.",
+  "review_policy": "Model-produced intents do not authorize actions; owner review may install only existing audit/training_status DAG. UI changes require separately reviewed native handler at parent0A03.",
+  "coordinated_owners": {
+    "fullbridge": "A6 dispatcher owns ledger and planning_state/plan_proposal tuple fields; excluded from A3 commit",
+    "shared_client": "A1 resonance commit40585de0 supports PLAN_REVIEW_REQUIRED and proposal"
+  },
+  "memory_sources": {
+    "repository": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build",
+    "ref": "feature/nox-v38-synaptic-brain-20261114",
+    "blobs": {
+      "synaptic_brain.py": "78ef4e3154a30a3fcf830486a6d5062e689622cf",
+      "native_bridge_v38.py": "dc58cbd4344802027eaf2a11a7f65f82e06c1a14",
+      "durable_runtime.py": "8f5faf153b746039c682f8bc4101e5c54bff150b"
+    }
+  }
+}

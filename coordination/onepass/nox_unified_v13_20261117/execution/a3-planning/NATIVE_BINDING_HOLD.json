@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_A3_NATIVE_BINDING_HOLD_V1",
+  "run_id": "NOX-49-20261117",
+  "executor": "A3",
+  "assigned_task_ids": [
+    "3A01",
+    "4A03",
+    "5A05",
+    "6A04",
+    "0B03",
+    "1V14-04",
+    "2V14-11"
+  ],
+  "affected_task_ids": [
+    "3A01",
+    "1V14-04"
+  ],
+  "parent_task_id": "0A03",
+  "observed_at_utc": "2026-11-17T01:15:23Z",
+  "state": "HOLD_CAPABILITY_SERVICES_NOT_STOPPED",
+  "observation": "Root-owned bounded native AST probe failed its stopped-services gate before contract inspection.",
+  "native_ast_emitted": false,
+  "s03_database_opened": false,
+  "model_started": false,
+  "native_binding_installed": false,
+  "native_accepted_ids": [],
+  "probe_source_sha": "274bc6fb3a18d026b7b067714f9553806b0fdb7e",
+  "github_run_id": 43994060072,
+  "github_job_id": 133741607647,
+  "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43994060072/job/133741607647",
+  "independently_verified_job_metadata": {
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-17T01:14:41Z",
+    "completed_at": "2026-11-17T01:15:26Z"
+  },
+  "gate_detail_source": "Root native observation; A3 independently verified job/run identity and conclusion via GitHub runs/jobs API.",
+  "preserved_source_commit": "4f36e1f19cfb5e9e3d7ca6cd1d88dfa9ac2e7885",
+  "preserved_source_tests": {
+    "passed": 24,
+    "failed": 0
+  },
+  "unified_branch": "source/nox-unified-v13-pass49-20261117",
+  "unified_head_reported_by_root": "ad51f9f988b822ed116730c881a110e2ecb2d1d1",
+  "resume_condition": "Root lease owner verifies full STOP and reruns the bounded AST probe through the existing owner-maintenance channel. Only after exact deployed AttachedNOX/S03 writer/lease contracts are returned may A3 implement the native binding; no generic remember/substring proof/fake epoch substitution.",
+  "persistence": "Local final receipt for root next aggregate batch; no new paperwork-only commit per root instruction.",
+  "server_changes_by_A3": 0,
+  "source_binder_changes_after_hold": 0,
+  "unique_files_deleted": 0
+}
