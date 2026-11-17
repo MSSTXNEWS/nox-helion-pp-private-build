@@ -97,6 +97,18 @@ class ChangedPathTests(unittest.TestCase):
         self.assertIn('a' * 32, payload['request_id'])
         self.assertFalse(module.model_identity_query(payload['message'] + ' и проверь сервер'))
 
+    def test_actual_previous_receipt_full_exchange_id_is_preserved(self):
+        reference = json.loads((Path(__file__).with_name('PREVIOUS_QA_REFERENCE.json')).read_bytes())
+        prior = reference['completed_owned_request']
+        self.assertEqual(prior['run'], 44177251374)
+        self.assertEqual(prior['source'], 'e7fd580233c303f362c83ea346c48acd8233378c')
+        self.assertEqual(qa.DIALOG, prior['history']['dialog_id'])
+        # Match the exact recorded identifier; never normalize or strip it.
+        self.assertEqual(qa.OLD_EXCHANGE, prior['history']['exchange_id'])
+        self.assertEqual(qa.OLD_EXCHANGE, prior['s03']['record_id'])
+        self.assertEqual(prior['s03']['sha256'],
+                         'b7513f8177f4ec65b9dd65f248097108bf4e2a2cb364e407e3cb191f98e4bdec')
+
     def test_unknown_send_consumes_journal_and_http_allowlist_refuses_create(self):
         client = qa.Client()
         class SocketFailure:

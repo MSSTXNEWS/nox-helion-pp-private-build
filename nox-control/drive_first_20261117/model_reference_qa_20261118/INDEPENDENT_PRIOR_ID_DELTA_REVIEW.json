@@ -1,0 +1,71 @@
+{
+  "schema": "NOX_INDEPENDENT_PRIOR_QA_ID_DELTA_REVIEW_V1",
+  "status": "PASS_EXACT_SINGLE_CONSTANT_DELTA_COORDINATED_NATIVE_PENDING",
+  "before_main_sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+  "after_main_sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+  "payload_sha256": "2c95e93ee6c73fef2635eb15d38db41bc1fa4cba5f5526479756a05afdb15095",
+  "payload_bytes": 27579,
+  "modules": {
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414,
+      "unchanged": true
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690,
+      "unchanged": true
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+      "bytes": 1936,
+      "unchanged": true
+    },
+    "model_reference_changed_path_qa.py": {
+      "sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+      "bytes": 27336,
+      "unchanged": false
+    }
+  },
+  "actual_reference": {
+    "path": "nox_refresh/acceleration_20261118/CANARY_RESULT_RECONCILED.json",
+    "sha256": "465a214efa9d7ef79dc994df8adcf63ef0373f8729d951ba8222adfb45d86b2e",
+    "independent_fields": [
+      "data.stream.exchange_id",
+      "data.history.exchange_id",
+      "data.s03.record_id"
+    ],
+    "opaque_id": "S03-48140046c4684fe5",
+    "dialog_id_and_M1_sha_match": true
+  },
+  "prior_execution": {
+    "run": 44201078451,
+    "raw_sha256": "5f09e5661b16d49c26d1da2838bf7dad919f2663fd078441c7438eb7c8525ad2",
+    "status": "HOLD_PRIOR_QA_PAIR_BINDING",
+    "http_counts": {
+      "dialog_create_post": 0,
+      "get": 0,
+      "login_post": 0,
+      "model_post": 0
+    },
+    "unknown_delivery_possible": false,
+    "journal_not_reached_by_this_path": true
+  },
+  "checks": {
+    "only_literal_changed_byte_exact": true,
+    "wrapper_AST_unchanged_except_PINS_PACKED": true,
+    "four_modules_decoded_verified": true,
+    "three_modules_unchanged": true,
+    "compile_without_execution": true,
+    "guards_and_single_send_flow_unchanged": true,
+    "earlier_fixture_constant_derived_was_not_independent_oracle": true,
+    "new_check_uses_saved_native_receipt_not_source_constant": true
+  },
+  "author_regression": "Actual-reference RED_TO_GREEN attributed to author; not repeated",
+  "native_calls": 0,
+  "HTTP_calls": 0,
+  "source_or_wrapper_executions": 0,
+  "automatic_retry_allowed": false,
+  "dispatch_owner": "/root",
+  "remaining": "Fresh unique intent only after coordinator reconciliation; no assertion that question already sent or semantic result accepted."
+}

@@ -27,7 +27,7 @@ from model_reference_qa_release import RELEASE
 
 BASE = 'http://127.0.0.1:18775'
 DIALOG = '12092579cf5144419cfa4fadc2e3a03b'
-OLD_EXCHANGE = '48140046c4684fe5'
+OLD_EXCHANGE = 'S03-48140046c4684fe5'
 OLD_RECORD_SHA = 'b7513f8177f4ec65b9dd65f248097108bf4e2a2cb364e407e3cb191f98e4bdec'
 QUESTION = 'Какая модель в твоей основе сейчас?'
 MODEL_REFERENCE = 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf'

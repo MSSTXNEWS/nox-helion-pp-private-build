@@ -1,0 +1,43 @@
+{
+  "schema": "NOX_ACTUAL_PREVIOUS_QA_REFERENCE_V1",
+  "source_progress_path": "nox_refresh/acceleration_20261118/VERIFIED_PROGRESS_NEXT.json",
+  "source_progress_sha256": "f92aec33edac08e816a1a4457bcc2ccbad92a3965a983241b97ae24657617fe2",
+  "completed_owned_request": {
+    "run": 44177251374,
+    "job": 134371795328,
+    "source": "e7fd580233c303f362c83ea346c48acd8233378c",
+    "status": "EXECUTED_PERSISTED_MODEL_BINDING_PENDING",
+    "model_posts": 1,
+    "new_dialogs_created": 0,
+    "history": {
+      "dialog_id": "12092579cf5144419cfa4fadc2e3a03b",
+      "exchange_id": "S03-48140046c4684fe5",
+      "messages": 2,
+      "full_question_sha256": "f2a3311a6aebf1ea044c095ecfa405a39b8728d4d6185ac3cd91fcd443dce10c",
+      "full_answer_sha256": "e8727b7be5bc92aa4f1b2a31f05395c4ac74ff06f59dae91a7bdf1101efd3cc4",
+      "strict_scope_verified": true,
+      "full_contents_verified": true
+    },
+    "s03": {
+      "record_id": "S03-48140046c4684fe5",
+      "segment": "M1",
+      "provenance": "chat_turn",
+      "sha256": "b7513f8177f4ec65b9dd65f248097108bf4e2a2cb364e407e3cb191f98e4bdec",
+      "canonical_chars": 569,
+      "full_frame_verified": true,
+      "own_dialog_pair_verified": true,
+      "application_data_sql_writes": 0,
+      "filesystem_write_free_guaranteed": false,
+      "sqlite_auxiliary_file_writes": "POSSIBLE_WAL_SHM_CREATE_OR_UPDATE"
+    },
+    "stream_metrics": {
+      "first_content_ms": 6667,
+      "first_nonplaceholder_ms": 6667,
+      "completed_ms": 13883,
+      "token_frames": 74,
+      "token_frames_are_not_generation_tokens": true
+    },
+    "repeat_allowed": false
+  },
+  "private_message_contents_included": false
+}

@@ -1,6 +1,6 @@
 {
   "schema": "NOX_CHANGED_PATH_QA_SOURCE_RECEIPT_V1",
-  "status": "FROZEN_INDEPENDENT_SOURCE_AND_BUILD_PASS",
+  "status": "FROZEN_EXACT_PRIOR_ID_DELTA_PEER_PASS",
   "native_calls": 0,
   "publications": 0,
   "dispatch_owner": "/root",
@@ -8,8 +8,8 @@
     "state": "FROZEN_CODE_AND_FIXTURES_READY_FOR_PEER",
     "files": {
       "model_reference_changed_path_qa.py": {
-        "sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
-        "bytes": 27332
+        "sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+        "bytes": 27336
       },
       "model_reference_qa_release.py": {
         "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
@@ -24,12 +24,16 @@
         "bytes": 8414
       },
       "test_model_reference_changed_path_qa.py": {
-        "sha256": "cb83dff99f8ada768c50e15e061080e66deb53dc1d3543896882916b70da4712",
-        "bytes": 13093
+        "sha256": "3ffb94a1fc8ce1f002bd78467b865591714ebfa0def34145601ba5cbe2d8670c",
+        "bytes": 13890
+      },
+      "PREVIOUS_QA_REFERENCE.json": {
+        "sha256": "a1d191f2ef1d446061c5d1678d2443d93bae375c7cb54224888ae05faa6245ee",
+        "bytes": 1662
       }
     },
     "tests": {
-      "unique_pass": 5,
+      "unique_pass": 6,
       "initial_pass": 4,
       "initial_fixture_uid_failure": 1,
       "fixture_only_fix": "Retain real TempFS UID; mock only native run owner-context guard",
@@ -44,10 +48,18 @@
       "backend_http_directly_observed": false,
       "prefix_path_source_inferred": true,
       "one_targeted_fixture_pass": true
+    },
+    "exact_prior_id_delta": {
+      "before_source_sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+      "after_source_sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+      "only_runtime_change": "OLD_EXCHANGE string adds exact recorded S03- prefix",
+      "validation_conditions_changed": false,
+      "actual_reference_regression": "RED_TO_GREEN",
+      "native_calls_by_author": 0
     }
   },
-  "payload_sha256": "fafe7487de86885b4363e99aa4578d4bf45179bea98e5d2be60afa8aa48a062c",
-  "payload_bytes": 27575,
+  "payload_sha256": "2c95e93ee6c73fef2635eb15d38db41bc1fa4cba5f5526479756a05afdb15095",
+  "payload_bytes": 27579,
   "actual_install": {
     "request": "6963969126",
     "source_sha": "5da7849bffc2b590201bb1917840b5a2b39ca2a7",
@@ -68,7 +80,8 @@
     "native_semantic_acceptance": "PENDING_ACTUAL_RESULT",
     "actual_prefix_runtime_fit": "SOURCE_INFERRED_ONLY_AFTER_COMPLETED_QA; NOT_INPUT_TRACE",
     "max_owner_chat_post_attempts": 1,
-    "backend_model_http_posts": "NOT_DIRECTLY_OBSERVED"
+    "backend_model_http_posts": "NOT_DIRECTLY_OBSERVED",
+    "exact_previous_exchange_id": "S03-48140046c4684fe5"
   },
   "same_old_canary_repeated": false,
   "old_canary_reference": "44177251374/6961140220",
@@ -78,5 +91,39 @@
     "bytes": 6125,
     "additional_independent_test_pass": 1,
     "full_suite_repeated": false
+  },
+  "previous_native_attempt": {
+    "schema": "NOX_EXACT_PRIOR_QA_ID_CORRECTION_V1",
+    "native_result_sha256": "5f09e5661b16d49c26d1da2838bf7dad919f2663fd078441c7438eb7c8525ad2",
+    "run": "44201078451",
+    "request": "6964246497",
+    "source": "c1656acc6b1eb9d41f3083b1ec99486093a1c47b",
+    "result": "HOLD_PRIOR_QA_PAIR_BINDING",
+    "http_counts": {
+      "dialog_create_post": 0,
+      "get": 0,
+      "login_post": 0,
+      "model_post": 0
+    },
+    "journal_scope": "NOT_REACHED_BY_THIS_EXECUTION; NO_RESERVATION_CREATED_BY_THIS_EXECUTION",
+    "unknown_delivery_possible": false,
+    "correct_id": "S03-48140046c4684fe5",
+    "delta": {
+      "before_source_sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+      "after_source_sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+      "only_runtime_change": "OLD_EXCHANGE string adds exact recorded S03- prefix",
+      "validation_conditions_changed": false,
+      "actual_reference_regression": "RED_TO_GREEN",
+      "native_calls_by_author": 0
+    },
+    "guard_relaxations": 0,
+    "automatic_retry_allowed": false,
+    "corrected_payload_sha256": "2c95e93ee6c73fef2635eb15d38db41bc1fa4cba5f5526479756a05afdb15095"
+  },
+  "native_calls_scope": "AUTHOR_EXECUTIONS_ONLY; ROOT_PRIOR_PREFLIGHT_ATTEMPT_RECONCILED_SEPARATELY",
+  "independent_prior_id_delta_review": {
+    "sha256": "d61a353c96ce7dd8677c1a404bf6e5025c9225b917cf30701f2b157ffe92618f",
+    "bytes": 2739,
+    "native_calls": 0
   }
 }

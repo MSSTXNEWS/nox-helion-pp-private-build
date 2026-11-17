@@ -1,0 +1,22 @@
+{
+  "schema": "NOX_QA_OPAQUE_ID_ROOT_DELTA_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "state": "PASS_EXACT_CONSTANT_AND_ACTUAL_RECEIPT_BINDING",
+  "before_main_sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+  "after_main_sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+  "delta": "Only OLD_EXCHANGE gains actual S03- prefix; every other source byte unchanged",
+  "actual_prior_run": 44177251374,
+  "actual_prior_job": 134371795328,
+  "actual_history_exchange_id": "S03-48140046c4684fe5",
+  "actual_s03_record_id": "S03-48140046c4684fe5",
+  "actual_record_sha256": "b7513f8177f4ec65b9dd65f248097108bf4e2a2cb364e407e3cb191f98e4bdec",
+  "payload_sha256": "2c95e93ee6c73fef2635eb15d38db41bc1fa4cba5f5526479756a05afdb15095",
+  "payload_bytes": 27579,
+  "all_four_module_pins_compile": true,
+  "previous_native_attempt": "44201078451 pre-Journal/pre-HTTP HOLD reconciled,0ownerchatposts",
+  "source_runtime_guard_weakening": false,
+  "dynamic_or_broad_tests_repeated": false,
+  "wrapper_executed": false,
+  "native_calls": 0,
+  "before_new_dispatch": "One distinct pinned source/intent, not old-payload replay"
+}

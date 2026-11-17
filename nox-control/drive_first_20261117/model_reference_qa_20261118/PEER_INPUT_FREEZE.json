@@ -2,8 +2,8 @@
   "state": "FROZEN_CODE_AND_FIXTURES_READY_FOR_PEER",
   "files": {
     "model_reference_changed_path_qa.py": {
-      "sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
-      "bytes": 27332
+      "sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+      "bytes": 27336
     },
     "model_reference_qa_release.py": {
       "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
@@ -18,12 +18,16 @@
       "bytes": 8414
     },
     "test_model_reference_changed_path_qa.py": {
-      "sha256": "cb83dff99f8ada768c50e15e061080e66deb53dc1d3543896882916b70da4712",
-      "bytes": 13093
+      "sha256": "3ffb94a1fc8ce1f002bd78467b865591714ebfa0def34145601ba5cbe2d8670c",
+      "bytes": 13890
+    },
+    "PREVIOUS_QA_REFERENCE.json": {
+      "sha256": "a1d191f2ef1d446061c5d1678d2443d93bae375c7cb54224888ae05faa6245ee",
+      "bytes": 1662
     }
   },
   "tests": {
-    "unique_pass": 5,
+    "unique_pass": 6,
     "initial_pass": 4,
     "initial_fixture_uid_failure": 1,
     "fixture_only_fix": "Retain real TempFS UID; mock only native run owner-context guard",
@@ -38,5 +42,13 @@
     "backend_http_directly_observed": false,
     "prefix_path_source_inferred": true,
     "one_targeted_fixture_pass": true
+  },
+  "exact_prior_id_delta": {
+    "before_source_sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+    "after_source_sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+    "only_runtime_change": "OLD_EXCHANGE string adds exact recorded S03- prefix",
+    "validation_conditions_changed": false,
+    "actual_reference_regression": "RED_TO_GREEN",
+    "native_calls_by_author": 0
   }
 }

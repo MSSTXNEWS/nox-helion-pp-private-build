@@ -2,8 +2,8 @@
   "schema": "NOX_MODEL_REFERENCE_QA_PAYLOAD_V1",
   "payload_path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
   "repository_payload_path": "nox-control/owner_resonance_canary_v3_20261117.py",
-  "payload_sha256": "fafe7487de86885b4363e99aa4578d4bf45179bea98e5d2be60afa8aa48a062c",
-  "payload_bytes": 27575,
+  "payload_sha256": "2c95e93ee6c73fef2635eb15d38db41bc1fa4cba5f5526479756a05afdb15095",
+  "payload_bytes": 27579,
   "modules": {
     "p0_witness_protocol.py": {
       "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
@@ -18,8 +18,8 @@
       "bytes": 1936
     },
     "model_reference_changed_path_qa.py": {
-      "sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
-      "bytes": 27332
+      "sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+      "bytes": 27336
     }
   },
   "deterministic_gzip_mtime": 0,

@@ -1,0 +1,28 @@
+{
+  "schema": "NOX_EXACT_PRIOR_QA_ID_CORRECTION_V1",
+  "native_result_sha256": "5f09e5661b16d49c26d1da2838bf7dad919f2663fd078441c7438eb7c8525ad2",
+  "run": "44201078451",
+  "request": "6964246497",
+  "source": "c1656acc6b1eb9d41f3083b1ec99486093a1c47b",
+  "result": "HOLD_PRIOR_QA_PAIR_BINDING",
+  "http_counts": {
+    "dialog_create_post": 0,
+    "get": 0,
+    "login_post": 0,
+    "model_post": 0
+  },
+  "journal_scope": "NOT_REACHED_BY_THIS_EXECUTION; NO_RESERVATION_CREATED_BY_THIS_EXECUTION",
+  "unknown_delivery_possible": false,
+  "correct_id": "S03-48140046c4684fe5",
+  "delta": {
+    "before_source_sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+    "after_source_sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+    "only_runtime_change": "OLD_EXCHANGE string adds exact recorded S03- prefix",
+    "validation_conditions_changed": false,
+    "actual_reference_regression": "RED_TO_GREEN",
+    "native_calls_by_author": 0
+  },
+  "guard_relaxations": 0,
+  "automatic_retry_allowed": false,
+  "corrected_payload_sha256": "2c95e93ee6c73fef2635eb15d38db41bc1fa4cba5f5526479756a05afdb15095"
+}
