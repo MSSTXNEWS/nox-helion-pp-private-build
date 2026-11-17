@@ -1,0 +1,56 @@
+{
+  "schema": "NOX_CACHE_LEASE_INDEPENDENT_CORRECTNESS_REVIEW_V1",
+  "reviewed_at_utc": "2026-11-17T20:24:48.711428+00:00",
+  "reviewer": "/root/relay_independent_review",
+  "work_id": "cache-lease-6433449-independent-review",
+  "status": "PASS",
+  "scope": "SOURCE_CORRECTNESS_ONLY",
+  "commit": "6433449c2087d29819f8cf7a2e2e1316a1f3f189",
+  "controller_sha256": "f8ba7103afb17b42191abebf0ab90e76a6c4210cc92dc1451c7452a1ed38405c",
+  "source_modified": false,
+  "findings": [],
+  "checks": {
+    "unknown_admission_written_before_callback": true,
+    "unknown_release_persisted_and_repeated_cache_admission_blocked": true,
+    "old_fence_cannot_reconcile_new_same_id_epoch": true,
+    "exact_current_fence_allows_one_release_retry": true,
+    "new_epoch_after_recovery_no_irreversible_deadlock": true,
+    "known_lease_reconcile_requires_typed_exact_identity": true,
+    "unknown_lease_reconcile_requires_exact_request": true,
+    "existing_api_signatures_unchanged": true,
+    "additive_reconciliation_api_only": true
+  },
+  "abi": {
+    "existing_functions_and_methods_checked": 24,
+    "changed_or_removed": [],
+    "added": [
+      "Controller.reconcile_cache_lease",
+      "Controller.release_reconciled_cache_lease"
+    ]
+  },
+  "independent_validation": {
+    "command": "python -m unittest -v independent_cache_review.test_cache_epoch_aba",
+    "tests_run": 1,
+    "tests_passed": 1,
+    "exit_code": 0,
+    "real_local_io": true,
+    "host_callbacks": "fault-injected local fixture; not native host",
+    "case": "same lease ID at fences1,2,3; reject fence1 against UNKNOWN fence2; release exactly fence2 after current readback; next cache cycle completes",
+    "test_file_sha256": "b989acfd617c9b50cfa1ab878170bf774b7365eb2bc525eb740d48770f79146a",
+    "broad_author_suite_rerun": false
+  },
+  "native_actions": 0,
+  "model_requests": 0,
+  "network_calls_by_regression": 0,
+  "runtime_binding_verified": false,
+  "contract_boundaries": [
+    "Host callbacks must be authoritative and enforce their lease/fencing contract",
+    "Existing OneHost coordinator serializes conflicting mutations; no new cross-process mutex is claimed",
+    "This source review does not establish native cache/model load or Drive authorization"
+  ],
+  "claim_state": "LOCAL_READ_ONLY_SOURCE_REVIEW_COMPLETE; original controller unchanged; only own review files written",
+  "NEXT_READY": {
+    "owner": "/root",
+    "action": "Publish the accepted6433449 source patch with this independent receipt; native adoption must use the existing owner path and update exact matching source pins. Do not count this as native installed/used."
+  }
+}

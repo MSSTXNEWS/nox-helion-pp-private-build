@@ -84,6 +84,26 @@ plan = controller.startup(apply=False)
 
 ## Контракты host callbacks
 
+### Проверяемое завершение cache lease
+
+Cache/preload writer admission и release теперь записывают намерение в тот же
+журнал controller до вызова host. Потерянный ACK оставляет UNKNOWN; новый
+`cache_local`/startup group не повторяет admission и не затирает прежний lease.
+После завершённого цикла следующий запрос получает новый сохранённый epoch.
+
+Доверенный host читает свой существующий lease ledger и вызывает
+`reconcile_cache_lease(receipt)`: обязательны `verified=true`, `source`,
+`observed_at`, boolean `released` и точные `lease_id`/integer `fencing_token`.
+При потерянном admission, когда lease ID ещё неизвестен, требуется точный
+`settled_resource_request_id` из записанного request и `released=true`;
+незавершённый запрос сначала урегулирует сам host. Метод не вызывает сеть,
+admission или release. Readback `released=false` для известного lease разрешает
+один явный `release_reconciled_cache_lease()`; повтор после ещё одного потерянного
+ACK опять требует readback. Старый `cache_lease_reconcile` journal поддержан.
+
+Это source-исправление существующего controller, без нового scheduler или
+native binding. Установленный ранее runtime0.2 автоматически не меняется.
+
 Callbacks получают стабильный operation_key и возвращают `{ok: true, operation_key: ...}` **после реального действия и readback**. Они работают в доверенном административном слое.
 
 | Callback | Обязательное поведение |

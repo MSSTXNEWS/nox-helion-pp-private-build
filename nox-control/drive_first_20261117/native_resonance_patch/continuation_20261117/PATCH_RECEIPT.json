@@ -1,0 +1,100 @@
+{
+  "schema": "NOX_SCOPED_EXISTING_CANARY_PATCH_V1",
+  "created_at_utc": "2026-11-17T20:21:44.568041+00:00",
+  "reviewer": "/root/relay_independent_review",
+  "work_id": "chat-s03-canary-scope-and-token-cap",
+  "status": "SOURCE_TESTED_INDEPENDENT_DELTA_ACCEPTED_NOT_DISPATCHED",
+  "base_source_commit": "900fd318804625cfd0a69fbeace97da003fba968",
+  "base_source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/900fd318804625cfd0a69fbeace97da003fba968/nox-control/owner_resonance_reconcile_20261117.py",
+  "base_decoded_sha256": "dce5a92e235f8a879904d89bd521068bb4e4f92126b345451845e4e462901621",
+  "candidate_decoded_sha256": "3c9fd543221991dc66ba6c746b4aa48eaa9caa3e2ca48c3203d902d576ac504f",
+  "confirmed_defects": [
+    "Existing public_turn accepts foreign dialog_id when roles/text match",
+    "Existing public_turn accepts a split pair with different exchange_id",
+    "Existing single stream request has no literal max_tokens budget",
+    "Terminal done.exchange_id could differ from the persisted pair and still pass"
+  ],
+  "change_scope": [
+    "Strict READY and own dialog schema in public_turn",
+    "Equal non-empty typed history exchange IDs",
+    "Pass created owned dialog to both public_turn call sites",
+    "Literal max_tokens=32 for preserved arithmetic request",
+    "Require typed terminal exchange_id to equal both persisted rows",
+    "Reject optional terminal dialog_id when present and conflicting",
+    "Preserve terminal exchange hash in partial report before history GET"
+  ],
+  "validation": {
+    "command": "python -m unittest -v test_canary_scope.py",
+    "exit_code": 0,
+    "tests_run": 10,
+    "tests_passed": 10,
+    "network_requests": 0,
+    "baseline_false_positive_reproduced": true,
+    "partial_terminal_report_retained": true,
+    "terminal_provenance_regression_added": true
+  },
+  "native_installed": false,
+  "native_used": false,
+  "native_accepted": false,
+  "new_model_requests": 0,
+  "external_mutations": 0,
+  "active_owner_paths_modified": false,
+  "server_source_pin_rebound": false,
+  "read_only_old_qa_preserved": true,
+  "smart_chat_model_path_contract": "AWAITING_FROZEN_AUTHORITATIVE_SERVER_FIELDS; do not infer from answer text",
+  "files": {
+    "BASE_DECODED.py": {
+      "bytes": 46684,
+      "sha256": "dce5a92e235f8a879904d89bd521068bb4e4f92126b345451845e4e462901621"
+    },
+    "BASE_PUBLIC_WRAPPER.py": {
+      "bytes": 19108,
+      "sha256": "374fd097ecee1a9afd6f1b48cb223571f7aca5cccdcf34790d17dd0f84a7cbea"
+    },
+    "CANARY_SCOPE_AND_TOKEN_CAP.patch": {
+      "bytes": 5328,
+      "sha256": "6a381825872cfb9b211674287fff2356e5d1fe992529d87fb24d441b8e893ac5"
+    },
+    "CANDIDATE_DECODED.py": {
+      "bytes": 48323,
+      "sha256": "3c9fd543221991dc66ba6c746b4aa48eaa9caa3e2ca48c3203d902d576ac504f"
+    },
+    "PRIMARY_STATUS.json": {
+      "bytes": 1759,
+      "sha256": "12f18ea3e375ecf52188ea6151627aa06b5f04587f3f6eda7963e5417546c584"
+    },
+    "SINGLE_SEND_CONTEXT_CASE.md": {
+      "bytes": 3716,
+      "sha256": "5c4ee2ecbfdd8c07dca8f12b145f078ce59c6cf46650a5d6c24779584162659f"
+    },
+    "TERMINAL_BINDING_DELTA.patch": {
+      "bytes": 2552,
+      "sha256": "117570ef1c1d669afb595f7614bfb2567ad7bcaeaf6dddfc2f485099b2febabd"
+    },
+    "test_canary_scope.py": {
+      "bytes": 5907,
+      "sha256": "c2ebc5c05bceac9d672bdc083df1b378498e44c6109bdf520fa75ad5d635e3a8"
+    }
+  },
+  "NEXT_READY": {
+    "owner": "/root",
+    "action": "Review the concrete executor diff; coordinate O1 frozen postimage and model-path contract; integrate this narrow guard into the actual frozen canary; preserve existing one-send intent and read-only retries. Run the synthetic context case only after current operation state and admission are known.",
+    "claims": "O1 owns chat/S03 source+installer, O2 legacy-state adoption, O5 recovery; this patch changes only isolated local canary candidate files."
+  },
+  "prior_candidate_sha256": "157858a0ad55aa43c1016a6c165f5ed4cb3e3ab69feeb06b8d5e03abb056585a",
+  "updated_at_utc": "2026-11-17T20:27:17.916728+00:00",
+  "terminal_field_provenance": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/history_contract_reuse/candidates/native-chat-p0.patch",
+    "sha256": "913ab09f775b7a1a83b86a567aa4c0a3806e64a79f19efd9b63386780cb7e936",
+    "source_field": "done.exchange_id = proof['record_id']",
+    "current_native_postimage_verified_by_this_check": false
+  },
+  "independent_delta_review": {
+    "reviewer": "/root/relay_policy_audit",
+    "status": "PASS_SOURCE_DELTA",
+    "receipt_path": "/workspace/scratch/4136374a0419/nox_refresh/relay_policy_audit_20261117/canary_review/DELTA_ACCEPTANCE.json",
+    "receipt_sha256": "6d2ccb1f6e7f5452ff472b2c077497309c11542386aa8b6268ecbce40a0beedc",
+    "exact_candidate_sha256": "3c9fd543221991dc66ba6c746b4aa48eaa9caa3e2ca48c3203d902d576ac504f",
+    "full_suite_repeated_by_reviewer": false
+  }
+}

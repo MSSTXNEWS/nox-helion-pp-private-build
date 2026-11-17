@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_CACHE_LEASE_RECONCILIATION_SOURCE_V1",
+  "instructions_version": "0.0.6",
+  "tested_at_utc": "2026-11-17T20:20:47.160048+00:00",
+  "base_commit": "1d807a83e94647a33e7725c61a21ed505a306eb5",
+  "branch": "fix/cache-lease-reconcile-20261117",
+  "scope": "SOURCE_TESTED",
+  "before": {
+    "regressions": 6,
+    "failures": 2,
+    "errors": 4,
+    "meaning": "two concrete repeat/overwrite failures; missing pending journal and reconciliation methods explain errors"
+  },
+  "after": {
+    "tests": 28,
+    "new_tests": 8,
+    "passed": true
+  },
+  "native_mutations": 0,
+  "new_model_requests": 0,
+  "new_scheduler": false,
+  "files": [
+    {
+      "path": "nox_warm/controller.py",
+      "bytes": 42069,
+      "sha256": "f8ba7103afb17b42191abebf0ab90e76a6c4210cc92dc1451c7452a1ed38405c"
+    },
+    {
+      "path": "tests/test_cache_lease_reconciliation.py",
+      "bytes": 9468,
+      "sha256": "5b5246bd5584a73d969903f071f63d093f03c927f26ba32d9f429b713675d611"
+    },
+    {
+      "path": "README.md",
+      "bytes": 25154,
+      "sha256": "b999cd57943fa9913b44b3cd85412c64ae652062f4e94c67f1e82471814f6406"
+    },
+    {
+      "path": "CACHE_LEASE_BEFORE.log",
+      "bytes": 6567,
+      "sha256": "66d291ea07ef27216d4bf7be35c9a71847c4ee806b540f1264a8ba5f485949c6"
+    },
+    {
+      "path": "CACHE_LEASE_REGRESSION.log",
+      "bytes": 5037,
+      "sha256": "0e7a33023d84577f3bc874ff62310232ac4a99f180d32c942f6c6f83e41858d0"
+    }
+  ],
+  "next_ready": "Independent review then publish source patch; native adoption remains owned by O0/O5 and requires new exact artifact pins."
+}

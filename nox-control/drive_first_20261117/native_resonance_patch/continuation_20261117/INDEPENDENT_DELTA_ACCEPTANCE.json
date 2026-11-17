@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_CANARY_TERMINAL_BINDING_DELTA_REVIEW_V1",
+  "verified_at_utc": "2026-11-17T20:26:58.501437+00:00",
+  "status": "PASS_SOURCE_DELTA",
+  "candidate_sha256": "3c9fd543221991dc66ba6c746b4aa48eaa9caa3e2ca48c3203d902d576ac504f",
+  "prior_sha256": "157858a0ad55aa43c1016a6c165f5ed4cb3e3ab69feeb06b8d5e03abb056585a",
+  "reverse_delta_recreates_exact_prior": true,
+  "checks": {
+    "same_exchange_pass": true,
+    "mismatch_rejects": true,
+    "missing_rejects": true,
+    "untyped_rejects": true,
+    "explicit_foreign_dialog_rejects": true,
+    "legacy_missing_terminal_dialog_allowed": true,
+    "partial_terminal_hash_survives_without_history": true
+  },
+  "whole_suite_repeated": false,
+  "read_only_routes_and_source_pins": "unchanged by exact reverse delta",
+  "max_tokens32_scope": "unchanged arithmetic request only",
+  "network_requests": 0,
+  "native_mutations": 0,
+  "author_sources_modified": false,
+  "native_acceptance": false,
+  "remaining_native_gate": "Authoritative installed postimage bindings, model-path evidence, owner admission and one-send intent remain required."
+}

@@ -1,0 +1,45 @@
+{
+  "schema": "NOX_CHAT_CANARY_PRIMARY_STATUS_V1",
+  "history_source": {
+    "run_id": "44161265798",
+    "job_id": "134315406019",
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44161265798/job/134315406019",
+    "status": "HISTORY_AND_UI_RECONCILED_TERMINAL_RECEIPT_UNAVAILABLE",
+    "own_dialog_id": "5ce69137da0a4c42a0387917c8567d52",
+    "history_reconciliation_pass": true,
+    "terminal_receipt_fields_recovered": false,
+    "model_requests": 0,
+    "dialogs_created": 0,
+    "native_canary_pass": false,
+    "history_http_diagnostic": {
+      "status": 200,
+      "bytes_read": 396,
+      "truncated": false,
+      "sha256": "bf54f8b01ff9e7283b7c13718ca0b7db02eeb527443a547f73ecd8be9d0b795b",
+      "content_type": "application/json",
+      "json_decoded": true,
+      "json_type": "dict"
+    },
+    "question_sha256": "7f648db8c34f925d13f3d580e98013f515e762ade35257a1603c6d510baf18b9",
+    "answer_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "exchange_id_sha256": "ebd4cc31e704ab324150215ce83afb498a3a3008c899e59abd5b055d4d3f0614"
+  },
+  "stop_source": {
+    "run_id": "44164862565",
+    "job_id": "134328071956",
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44164862565/job/134328071956",
+    "status": "APPLIED_STATIC_USE_PENDING",
+    "installed": true,
+    "used": false,
+    "accepted": false,
+    "file_after": {
+      "sha256": "b957b74ba1067eec3117918ac4d908103c4a85ce319dda40e9f4eb3be39cfea9",
+      "bytes": 32247,
+      "dev": 36,
+      "ino": 1152408745
+    },
+    "model_calls": 0,
+    "service_mutations": 0
+  },
+  "observation_scope": "Read-only connector receipts; this review executed no native command or model request."
+}

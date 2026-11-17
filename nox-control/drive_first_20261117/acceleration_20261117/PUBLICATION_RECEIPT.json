@@ -1,0 +1,97 @@
+{
+  "schema": "NOX_ACCELERATION_SOURCE_PUBLICATION_V1",
+  "instructions_version": "0.0.6",
+  "expected_parent": "5dd2c6379adadb183ab0b0e92025cc762785489c",
+  "expected_tree": "777ec826ea687662c0744033859ae0373934f846",
+  "branch": "work/nox-resonance-direct-launch-20261117",
+  "operator_changed": false,
+  "workflow_changed": false,
+  "native_chat_or_model_changed": false,
+  "audit_entry_updated": false,
+  "files": [
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/nox_warm/controller.py",
+      "bytes": 42069,
+      "git_blob": "cfa5c38319a7d9b9286db09d2e3f2ad7b36ff7be",
+      "sha256": "f8ba7103afb17b42191abebf0ab90e76a6c4210cc92dc1451c7452a1ed38405c"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/tests/test_cache_lease_reconciliation.py",
+      "bytes": 9468,
+      "git_blob": "e936cf063d7e47c874d75d0e84236b498a267928",
+      "sha256": "5b5246bd5584a73d969903f071f63d093f03c927f26ba32d9f429b713675d611"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/README.md",
+      "bytes": 25154,
+      "git_blob": "fb5bff4c811668f7d2dc793ebf966d51a0890c63",
+      "sha256": "b999cd57943fa9913b44b3cd85412c64ae652062f4e94c67f1e82471814f6406"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/CACHE_LEASE_SOURCE_RECEIPT.json",
+      "bytes": 1595,
+      "git_blob": "c911abe3ba9cd29f4bc964d6b23395e5488b1425",
+      "sha256": "f86b528358b5ecbccd3d84967f344978bf0ebfcdbac46a66e1e39dc8355649bf"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/independent_cache_review/REVIEW_RECEIPT.json",
+      "bytes": 2624,
+      "git_blob": "4205d8c429776fec9e8a3dd32d97c73a8dfa69fc",
+      "sha256": "89c9e1ff1ee483c9ca247fbf80e517ab6f2519fc97b6919ca761b4b0b4c6d9c5"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/CANARY_SCOPE_AND_TOKEN_CAP.patch",
+      "bytes": 5328,
+      "git_blob": "ca15900bf99e3bf92d2b3b2ff3f5d64e4e998b29",
+      "sha256": "6a381825872cfb9b211674287fff2356e5d1fe992529d87fb24d441b8e893ac5"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/CANDIDATE_DECODED.py",
+      "bytes": 48323,
+      "git_blob": "2dcf6c2013cc6bca256485e7dbe39eb49f890e4c",
+      "sha256": "3c9fd543221991dc66ba6c746b4aa48eaa9caa3e2ca48c3203d902d576ac504f"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/test_canary_scope.py",
+      "bytes": 5907,
+      "git_blob": "36846b08aab31b75dbddc89c46c21055e1d474d8",
+      "sha256": "c2ebc5c05bceac9d672bdc083df1b378498e44c6109bdf520fa75ad5d635e3a8"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/PATCH_RECEIPT.json",
+      "bytes": 4885,
+      "git_blob": "e3e03ea44c0d1b825a127a8405a97e90df02f378",
+      "sha256": "2c46fd4f4f03284cb81979228789b55063637be6a5c0ce2c98de1d29eff937b8"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/PRIMARY_STATUS.json",
+      "bytes": 1759,
+      "git_blob": "2b737fe8988cf4501227e39db77805264510a846",
+      "sha256": "12f18ea3e375ecf52188ea6151627aa06b5f04587f3f6eda7963e5417546c584"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/SINGLE_SEND_CONTEXT_CASE.md",
+      "bytes": 3716,
+      "git_blob": "34157881f40398e9ea5e696493e022caf8e7511d",
+      "sha256": "5c4ee2ecbfdd8c07dca8f12b145f078ce59c6cf46650a5d6c24779584162659f"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/TERMINAL_BINDING_DELTA.patch",
+      "bytes": 2552,
+      "git_blob": "3aa429d2ff2606f7217e675b81bf09de5020056e",
+      "sha256": "117570ef1c1d669afb595f7614bfb2567ad7bcaeaf6dddfc2f485099b2febabd"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/INDEPENDENT_DELTA_ACCEPTANCE.json",
+      "bytes": 1102,
+      "git_blob": "39e2ab704aba9884adeb8f7f043063020d06c7ae",
+      "sha256": "6d2ccb1f6e7f5452ff472b2c077497309c11542386aa8b6268ecbce40a0beedc"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/EXECUTION_PROGRAM.md",
+      "bytes": 6608,
+      "git_blob": "1bc9c9d13482244a4552e4c1968318de942319b9",
+      "sha256": "28097d91e6e84a0983d6893520cf556f4ff73bd18bfb4dbaa9aaa3a40e0c6b9b"
+    }
+  ]
+}

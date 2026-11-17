@@ -246,18 +246,78 @@ class Controller:
         return guarded_pause
 
     def _cache_lease(self, entry, needed, warm):
-        receipt=self.host_resource_admission({'operation':'cache','transition_id':'cache:'+entry['id']+':'+entry['sha256'],
-            'group':entry['id'],'cache_path':entry['cache_path'],'ram_bytes':needed+warm,'gpu_bytes':0})
+        previous=self.data.get('cache_lease_operation',{})
+        if (self.data.get('cache_lease_reconcile') or
+            previous and previous.get('state') not in ['RELEASED','RECONCILED','DENIED']):
+            raise Hold('CACHE_LEASE_RECONCILE_REQUIRED')
+        epoch=self.data.get('cache_lease_epoch',0)
+        if type(epoch) is not int or epoch<0:raise Hold('CACHE_LEASE_EPOCH_UNVERIFIED')
+        epoch+=1
+        identity=hashlib.sha256(json.dumps([entry['id'],entry['sha256']],separators=(',',':')).encode()).hexdigest()
+        request={'operation':'cache','transition_id':'cache:'+identity+':'+str(epoch),
+            'group':entry['id'],'cache_path':entry['cache_path'],'ram_bytes':needed+warm,'gpu_bytes':0}
+        pending={'state':'ADMISSION_PENDING','request':request,'lease':None}
+        self.data.update(cache_lease_epoch=epoch,cache_lease_operation=pending);self._persist()
+        try:receipt=self.host_resource_admission(dict(request))
+        except BaseException:
+            pending['state']='UNKNOWN';self._persist();raise
+        if isinstance(receipt,dict) and receipt.get('granted') is False:
+            pending['state']='DENIED';self._persist();raise Hold('HOST_RESOURCE_ADMISSION_DENIED')
         if (not isinstance(receipt,dict) or receipt.get('granted') is not True or receipt.get('scope')!='host'
-            or not receipt.get('lease_id') or type(receipt.get('fencing_token')) is not int):raise Hold('HOST_RESOURCE_ADMISSION_DENIED')
+            or not receipt.get('lease_id') or type(receipt.get('fencing_token')) is not int):
+            pending['state']='UNKNOWN';self._persist();raise Hold('HOST_RESOURCE_ADMISSION_DENIED')
+        pending.update(state='HELD',lease=receipt,release_retry_authorized=False);self._persist()
         return receipt
 
     def _cache_release(self, lease):
-        try:result=self.host_release_resource(lease)
-        except Exception:result=None
+        pending=self.data.get('cache_lease_operation',{})
+        if (pending.get('state')!='HELD' or pending.get('lease')!=lease):
+            raise Hold('CACHE_LEASE_RECONCILE_REQUIRED')
+        pending.update(state='RELEASE_PENDING',release_retry_authorized=False);self._persist()
+        try:result=self.host_release_resource(dict(lease))
+        except BaseException as exc:
+            pending['state']='UNKNOWN';self.data['cache_lease_reconcile']=lease;self._persist()
+            if not isinstance(exc,Exception):raise
+            raise Hold('CACHE_RESOURCE_RELEASE_UNCONFIRMED') from None
         if not isinstance(result,dict) or result.get('released') is not True:
-            self.data['cache_lease_reconcile']=lease;self._persist()
+            pending['state']='UNKNOWN';self.data['cache_lease_reconcile']=lease;self._persist()
             raise Hold('CACHE_RESOURCE_RELEASE_UNCONFIRMED')
+        pending['state']='RELEASED';self.data.pop('cache_lease_reconcile',None);self._persist()
+
+    def reconcile_cache_lease(self, receipt):
+        """Consume exact host readback; no host admission/release is called here."""
+        pending=self.data.get('cache_lease_operation')
+        if pending is None and self.data.get('cache_lease_reconcile'):
+            pending={'state':'UNKNOWN','lease':self.data['cache_lease_reconcile'],'request':None}
+        if not pending or pending.get('state') not in ['ADMISSION_PENDING','HELD','RELEASE_PENDING','UNKNOWN']:
+            raise Hold('NO_PENDING_CACHE_LEASE')
+        if (not isinstance(receipt,dict) or receipt.get('verified') is not True
+            or not receipt.get('source') or not receipt.get('observed_at')
+            or type(receipt.get('released')) is not bool):raise Hold('CACHE_LEASE_READBACK_UNVERIFIED')
+        lease=pending.get('lease')
+        if lease:
+            if (receipt.get('lease_id')!=lease.get('lease_id') or type(receipt.get('fencing_token')) is not int
+                or receipt.get('fencing_token')!=lease.get('fencing_token')):
+                raise Hold('CACHE_LEASE_READBACK_UNVERIFIED')
+        elif (receipt.get('settled_resource_request_id')!=(pending.get('request') or {}).get('transition_id')
+              or not receipt.get('settled_resource_request_id')):
+            raise Hold('CACHE_LEASE_READBACK_UNVERIFIED')
+        if not lease and receipt['released'] is not True:raise Hold('CACHE_RESOURCE_REQUEST_NOT_SETTLED')
+        self.data['cache_lease_operation']=pending
+        pending.update(state='RECONCILED' if receipt['released'] else 'HELD',
+                       release_retry_authorized=not receipt['released'],readback=receipt)
+        if receipt['released']:self.data.pop('cache_lease_reconcile',None)
+        self._persist()
+        return {'status':'CACHE_LEASE_READBACK_VERIFIED','lease_released':receipt['released'],
+                'native_release_performed':False}
+
+    def release_reconciled_cache_lease(self):
+        """One explicit retry only after host readback confirms this lease held."""
+        pending=self.data.get('cache_lease_operation',{})
+        if pending.get('state')!='HELD' or pending.get('release_retry_authorized') is not True:
+            raise Hold('CACHE_RELEASE_RETRY_NOT_AUTHORIZED')
+        self._cache_release(pending['lease'])
+        return {'status':'CACHE_LEASE_RELEASED','lease_released':True}
 
     def cache_local(self, group_id, source, *, apply=False, should_pause=None):
         if self.manifest.get('allow_ssd_cache') is not True:raise Hold('SSD_CACHE_REQUIRES_EXPLICIT_OPT_IN')

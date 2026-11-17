@@ -1,0 +1,76 @@
+--- decoded/owner_resonance_reconcile_900fd318.py
++++ decoded/owner_resonance_reconcile_scoped.py
+@@ -542,20 +542,40 @@
+             'delta_count': count, 'placeholder_delta_count': placeholders,
+             'stream_total_ms': round((time.monotonic() - started) * 1000)}
+ 
+-def public_turn(turn, history, question):
++def public_turn(turn, history, question, expected_dialog_id):
+     answer = turn['answer']
+     messages = history.get('messages') if isinstance(history, dict) else None
++    own_dialog = (isinstance(expected_dialog_id, str)
++                  and re.fullmatch(r'[a-f0-9]{32}', expected_dialog_id) is not None
++                  and isinstance(history, dict) and history.get('status') == 'READY'
++                  and history.get('dialog_id') == expected_dialog_id)
+     pair_ok = (isinstance(messages, list) and len(messages) == 2 and all(isinstance(m, dict) for m in messages)
+                and messages[0].get('role') == 'user' and messages[0].get('content') == question
+                and messages[1].get('role') == 'assistant' and messages[1].get('content') == answer)
++    first_exchange = messages[0].get('exchange_id') if pair_ok else None
++    same_exchange = (pair_ok and isinstance(first_exchange, str)
++                     and 0 < len(first_exchange) <= 200
++                     and first_exchange == messages[1].get('exchange_id'))
+     done = turn['done']
+-    saved = done.get('saved') is True and done.get('s03_integrated') is True and pair_ok
++    terminal_exchange = done.get('exchange_id')
++    terminal_exchange_valid = isinstance(terminal_exchange, str) and 0 < len(terminal_exchange) <= 200
++    terminal_exchange_matches = same_exchange and terminal_exchange_valid and terminal_exchange == first_exchange
++    terminal_dialog_matches = 'dialog_id' not in done or done.get('dialog_id') == expected_dialog_id
++    saved = (done.get('saved') is True and done.get('s03_integrated') is True
++             and own_dialog and pair_ok and same_exchange
++             and terminal_exchange_matches and terminal_dialog_matches)
+     numeric = answer.strip().strip('`*_ .!\n\r\t')
+     arithmetic = numeric == '42'
+     return {k: turn[k] for k in ('first_meaningful_delta_ms', 'delta_count', 'placeholder_delta_count', 'stream_total_ms')} | {
+         'answer_public_synthetic': '42' if arithmetic else '[WITHHELD]', 'answer_sha256': digest(answer.encode()),
+         'arithmetic_pass': arithmetic, 'terminal_receipt': True,
+         'receipt_saved': done.get('saved') is True, 'receipt_s03_integrated': done.get('s03_integrated') is True,
++        'own_dialog_matches': own_dialog, 'same_exchange_id': bool(same_exchange),
++        'terminal_exchange_matches': bool(terminal_exchange_matches),
++        'terminal_dialog_matches': terminal_dialog_matches,
++        'terminal_exchange_id_sha256': digest(terminal_exchange.encode()) if terminal_exchange_valid else None,
++        'question_sha256': digest(question.encode()),
++        'exchange_id_sha256': digest(first_exchange.encode()) if same_exchange else None,
+         'history_persisted': saved, 'useful_chat_pass': arithmetic and saved,
+         'performance_target_pass': arithmetic and saved and turn['first_meaningful_delta_ms'] <= 8000 and turn['stream_total_ms'] <= 25000}
+ 
+@@ -732,17 +752,18 @@
+             stream_started = True; report['model_requests'] = 1
+             report['phase'] = 'OWN_STREAM'
+             turn_start = time.monotonic()
+-            response = client.request('/api/nox/chat/stream', {'message': question, 'history': [], 'task': 'general', 'dialog_id': did}, timeout=45)
++            response = client.request('/api/nox/chat/stream', {'message': question, 'history': [], 'task': 'general', 'dialog_id': did, 'max_tokens': 32}, timeout=45)
+             if response.status != 200:
+                 raise Hold('HOLD_STREAM_HTTP')
+             turn = read_stream(response, turn_start, started + 56)
+             stream_terminal = True
+             report['stream_terminal_received'] = True
+             report['phase'] = 'OWN_STREAM_RECEIPT'
+-            partial_turn = public_turn(turn, {}, question)
++            partial_turn = public_turn(turn, {}, question, did)
+             report['stream_receipt'] = {key: partial_turn[key] for key in
+                 ('answer_public_synthetic', 'answer_sha256', 'arithmetic_pass', 'terminal_receipt',
+-                 'receipt_saved', 'receipt_s03_integrated', 'first_meaningful_delta_ms', 'stream_total_ms')}
++                 'receipt_saved', 'receipt_s03_integrated', 'terminal_exchange_id_sha256',
++                 'terminal_dialog_matches', 'first_meaningful_delta_ms', 'stream_total_ms')}
+             report['phase'] = 'OWN_STREAM_CLOSE'
+             response.close(); response = None
+             report['phase'] = 'OWN_HISTORY_READ'
+@@ -751,7 +772,7 @@
+             if history_meta['status'] != 200 or not history_meta['json_decoded'] or history_meta['truncated']:
+                 raise Hold('HOLD_HISTORY_HTTP_OR_JSON')
+             report['phase'] = 'OWN_HISTORY_VALIDATE'
+-            report.update(public_turn(turn, history, question))
++            report.update(public_turn(turn, history, question, did))
+             finalize_acceptance(report)
+             report['phase'] = 'COMPLETE_CANARY'
+     except (Exception, KeyboardInterrupt) as exc:
