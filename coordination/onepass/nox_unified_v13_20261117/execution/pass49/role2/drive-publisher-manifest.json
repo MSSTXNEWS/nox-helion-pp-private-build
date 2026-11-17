@@ -1,0 +1,64 @@
+{
+  "schema": "NOX_MODEL_DOWNLOAD_MANIFEST_V1",
+  "checked_date": "2026-11-16",
+  "model": "DeepSeek-V4.1-Flash-1017",
+  "role": "active_chat_model_candidate",
+  "repository": "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+  "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+  "quantization": "GSQ-RCO-IQ2_XXS",
+  "total_unique_gguf_bytes": 248834257920,
+  "files": [
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+      "bytes": 5780704,
+      "sha256": "f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+      "download_state": "METADATA_SHARD_DOWNLOADED_SHA256_VERIFIED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+      "bytes": 39535781184,
+      "sha256": "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+      "bytes": 39736712000,
+      "sha256": "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+      "bytes": 39036908384,
+      "sha256": "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+      "bytes": 19923784832,
+      "sha256": "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    },
+    {
+      "path": "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
+      "bytes": 110595290816,
+      "sha256": "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3",
+      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF/resolve/65d53bc8be65123e255ff02f3ded958b6dbf54fd/DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
+      "download_state": "NOT_DOWNLOADED"
+    }
+  ],
+  "alias": {
+    "path": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf",
+    "target": "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
+    "duplicate_bytes": false
+  },
+  "vision": "Optional projector is not included in text-first minimum",
+  "state": "MANIFEST_PLUS_METADATA_SHARD_ONLY_NOT_RUNNABLE",
+  "full_model_downloaded": false,
+  "native_model_changed": false,
+  "note": "No full weight tensors downloaded. The first shard contains metadata; remaining files require admitted storage and verified streamed transfer. File hashes come from pinned public HF LFS metadata; partial block hashes require a separately verified ingestion manifest."
+}

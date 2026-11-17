@@ -1,0 +1,63 @@
+{
+  "schema": "NOX_A4_SEVEN_PACKET_V1",
+  "run_id": "NOX-49-20261117",
+  "instructions_version": "0.0.6",
+  "assigned_ids": [
+    "4A02",
+    "5A04",
+    "6A03",
+    "0B01",
+    "1V14-03",
+    "2A03",
+    "3V14-13"
+  ],
+  "newly_accepted_ids": [],
+  "previously_accepted_ids": [
+    "0B01"
+  ],
+  "cards": [
+    {
+      "id": "4A02",
+      "original_role": 4,
+      "state": "SOURCE_PREPARED_NATIVE_HOLD",
+      "next": "Use approved owner RU/ES corpus with all required memory/speech/planning/tools/code/behavior strata and source provenance; run existing corpus preparation and independently verify all train/dev/holdout hashes, no data publication."
+    },
+    {
+      "id": "5A04",
+      "original_role": 5,
+      "state": "SOURCE_IMPLEMENTATION_REMAINS",
+      "next": "Add asset_id/mask_id/operation to existing OneHost media route and CPU FFmpeg trim/subtitle/export integration; existing Painterro job deep-link alone does not satisfy this card; native output/readback still required."
+    },
+    {
+      "id": "6A03",
+      "original_role": 6,
+      "state": "TRAINER_SOURCE_IMPLEMENTED_NATIVE_HOLD",
+      "next": "Bind ExistingTrainerBinding to existing owner native callback after gates (HOLD_NATIVE_POOL_CALLBACKS); embedding-batch safe-point integration remains separate; run native checkpoint/RNG/optimizer/cursor pause/resume proof. VRAM reservation remains held."
+    },
+    {
+      "id": "0B01",
+      "original_role": 0,
+      "state": "PREVIOUSLY_ACCEPTED_DO_NOT_RECOUNT",
+      "existing_evidence": "execution/role0/relay295/progress.json: source receipt fc16654248c77bbbd6a61823a8218dd03d100522; unchanged by this packet"
+    },
+    {
+      "id": "1V14-03",
+      "original_role": 1,
+      "state": "SOURCE_PRESENT_NATIVE_HOLD",
+      "next": "Existing owner authenticated acceptance/SSE route on current deployed SHA: prove same request ID immediate acceptance, ordered delta, no duplicate producer and durable S03 readback; source fixtures are not live latency/acceptance evidence."
+    },
+    {
+      "id": "2A03",
+      "original_role": 2,
+      "state": "DELIVERY_SOURCE_IMPLEMENTED_NATIVE_HOLD",
+      "next": "Root-owned lease; verified external backup/restore and admitted storage reserve; stage directory0700 on persistent admitted storage; execute bounded calls against exact pinned publisher manifest; independently native-verify all six SHA/alias and atomic published directory on current SHA."
+    },
+    {
+      "id": "3V14-13",
+      "original_role": 3,
+      "state": "SOURCE_PRESENT_NATIVE_HOLD",
+      "next": "Existing original S03 typed/scoped fact recall on active accepted SHA; native verified-fact vs hypothesis/error boundary case and source receipt readback required."
+    }
+  ],
+  "full_packet_complete": false
+}

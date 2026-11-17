@@ -1,0 +1,22 @@
+{
+  "schema": "NOX_GGUF_DELIVERY_SOURCE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "run_id": "NOX-49-20261117",
+  "task_id": "2A03",
+  "original_role": 2,
+  "receipt_level": "source",
+  "native_accepted_ids": [],
+  "source_tests_passed": 12,
+  "source_tests_failed": 0,
+  "test_command": "python -m unittest -v test_gguf_delivery.py",
+  "test_scope": "Synthetic six GGUF byte fixtures, real filesystem fsync/renameat2, actual existing manifest/verifier, isolated HTTP-range response fixtures. No network or model inference/training.",
+  "files": {
+    "deliver_gguf_pack.py": "57506d9af3e5250ee4ca880388848b494672c7eac38f2b17ec1b6cfffb7f24f5",
+    "test_gguf_delivery.py": "3dfafb186bb1285b922e22c20d07dcb9b892007ee40175c352a6b1e2f1c66895"
+  },
+  "existing_verifier_sha256": "f363d57e60005f674b2c191d65af31a40757ce7d67efc5284a1452edb6094d8a",
+  "server_mutated": false,
+  "real_model_bytes_downloaded": 0,
+  "training_started": false,
+  "resume_condition": "Root-owned lease; verified external backup/restore and admitted storage reserve; stage directory0700 on persistent admitted storage; execute bounded calls against exact pinned publisher manifest; independently native-verify all six SHA/alias and atomic published directory on current SHA."
+}
