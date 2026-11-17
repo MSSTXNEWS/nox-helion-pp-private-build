@@ -43,6 +43,21 @@ class ReciprocalTests(unittest.TestCase):
                 return SimpleNamespace(returncode=0, stdout=raw)
             out = module.inspect(("nox-dispatcher-t855u",), call=call)
             self.assertFalse(out["verified"])
+    def test_native_rc3_stopped_is_reported_as_unhealthy_not_unknown(self):
+        def call(argv, **kwargs):
+            return SimpleNamespace(returncode=3,
+                stdout=f"{argv[-1]} STOPPED Not started")
+        result = module.inspect(("nox-dispatcher-t855u",), call=call)
+        self.assertFalse(result["verified"])
+        self.assertEqual(result["services"][0]["state"], "STOPPED")
+        self.assertFalse(result["services"][0]["identity_verified"])
+        for bad in ("RUNNING pid 123", "STOPPED pid 123", "FATAL"):
+            with self.subTest(bad=bad):
+                def invalid(argv, **kwargs):
+                    return SimpleNamespace(returncode=3, stdout=f"{argv[-1]} {bad}")
+                result = module.inspect(("nox-dispatcher-t855u",), call=invalid)
+                self.assertEqual(result["services"][0]["state"], "UNKNOWN")
+
     def test_reject_unreviewed_services(self):
         with self.assertRaises(ValueError):
             module.inspect(("sshd",))
