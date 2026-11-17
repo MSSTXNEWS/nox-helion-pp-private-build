@@ -1593,3 +1593,9 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **Evidence limits:** SERVER STOP/lease/current serving SHA/PID/start_ticks/restore = UNKNOWN; new native S03 writes/readback/recall=0; weights/optimizer=0, downloaded/deleted bytes=0, native installs/restarts=0. Historic OneHost manual STOP must remain unchanged. V14 160 goals ≠ accepted live; separate V15 Drive 295 request counts not merged into V14 done count.
 - **Rollback:** Exact per-file source/preimage Git CAS revert only after fresh HEAD; no server rollback required. Root cause and prevention appended to **existing** `NOX_AUTOCYCLE_ERRORS.jsonl` under `NOX-V14-A3-S03-STALE-FTS-CANONICAL-MISMATCH-20261117` (commit `cdeb5ba872a028c33b10cf0e669798a184383284`).
 - **Next B3/A3:** Obtain owner-authorized read-only current OneHost live S03 owner-ACL, STOP, service SHA and decision recall; under no native lease stay source-only and choose distinct unclaimed `V14-3-06` current-session context / `V14-3-04` **do not duplicate** at same input SHA. Do not touch S03/unique weights/checkpoints/installed backend or schedules/enabled.
+
+
+### A4 SOURCE CLAIM V14-4-09 · 2026-11-17T00:03:20.218Z · instructions_version 0.0.6
+- **Owner:** A4 PROCESS 4; V14-4-09 (long engineering task continuity) distinct from A4 V14-4-08 and B4 V14-4-10, both SOURCE_TESTED. This is a GitHub source-only CAS reservation, not OneHost writer lease.
+- **Preimage:** nox-control/owner_subagent_processes.py blob e8597d3037efc9d32981ceafeb4af2c96233bfd0. Investigate reuse of a pooled worker outbox after a failed/timeout batch: stale RESULT from previous invocation could be attributed to a replayed TaskID. Fix fail-closed, add focused regression, verify exact source and CI before SOURCE_TESTED.
+- **Safety:** native STOP/writer lease unknown; no server mutation/restart/training/S03/cleanup and no schedule changes. Release source claim on final evidence or HOLD; do not duplicate committed patches.
