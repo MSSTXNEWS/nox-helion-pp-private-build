@@ -9,7 +9,11 @@
       "/root/dispatcher_acceleration",
       "/root/integrations_completion"
     ],
-    "native_worker_count_not_inferred": true
+    "native_worker_count_not_inferred": true,
+    "relay_until_available_tasks_finished": true,
+    "fixed_subagent_count": 3,
+    "replace_finished_worker_with_next_READY": true,
+    "unknown_effect_requires_reconciliation_before_retry": true
   },
   "completed_owned_request": {
     "run": 44177251374,
@@ -48,42 +52,6 @@
     },
     "repeat_allowed": false
   },
-  "current_native_attempt": {
-    "run": 44183713964,
-    "job": 134394515659,
-    "request": "6961965545",
-    "source": "82c5053fa97b52224abe9722881c424c93fd2430",
-    "status": "HOLD_LAUNCHER_CAPSULE_INCOMPLETE_OR_CONTEXT",
-    "phase": "HOLD_BEFORE_SEND",
-    "failed_phase": "PREFLIGHT",
-    "launcher_status": "HOLD_PARENT_SHELL_ENTRY_UNRESOLVED",
-    "fixed_processes_observed": 9,
-    "source_metadata_rows": 6,
-    "plaintext_capsule_obtained": false,
-    "parent_argc": 2,
-    "http_counts": {
-      "login_post": 0,
-      "dialog_create_post": 0,
-      "model_post": 0,
-      "get": 0
-    },
-    "counter": {
-      "sha256": "4b331e0d9806b19ab9a837172eabb0d8e93f63e532708bb075dcc183b3064a8f",
-      "bytes": 223,
-      "inflight": 4,
-      "dev": 36,
-      "ino": 1086985810,
-      "mtime_ns": 1794950150740498400,
-      "legacy_counter_has_writer_identity": false,
-      "historical_requests_resolved": false,
-      "last_ts": 1794950150.741278,
-      "last_start": 1794950137.537253,
-      "last_end": 1794950150.741278
-    },
-    "cleanup": "DETACHED_AND_VERIFIED",
-    "duplicate_command_sent_by_this_team": false,
-    "changed_candidate_needed": true
-  },
   "adviser_v22": {
     "source": "37dcb878301f7fae385e1eed2e776b6e581ce079",
     "verified_files": 8,
@@ -93,10 +61,1307 @@
   },
   "remaining": {
     "native_NORMAL3": false,
-    "model_identity": "UNVERIFIED",
+    "model_identity": "CURRENT_PRIMARY_LISTENER_ARGV_REFERENCE_VERIFIED_ONLY",
     "direct_main_url": "https://clarity-sit-efficient-has.trycloudflare.com/nox-web-v29/chat.html",
     "browser_status": "BLOCKED_IN_LAST_OBSERVATION",
     "menu_source_tested": true,
-    "menu_native_installed": false
+    "menu_native_installed": false,
+    "native_remote_two_slots": false,
+    "current_arbiter_cpu_light_is_not_remote_lease": true,
+    "source_bodies_obtained": 10,
+    "source_body_total_bytes": 70340,
+    "counter_scope_complete": false,
+    "last_chat_backend_identity": "UNKNOWN",
+    "weight_content_identity": "UNKNOWN",
+    "next_source_review": [
+      "owner_qwen_execution_revision.py",
+      "nox_kb_bootstrap.py",
+      "Supervisor exact command binding",
+      "opaque parent lifetime containment"
+    ]
+  },
+  "reconciled_native_attempts": [
+    {
+      "run": 44183713964,
+      "job": 134394515659,
+      "request": "6961965545",
+      "source": "82c5053fa97b52224abe9722881c424c93fd2430",
+      "status": "HOLD_LAUNCHER_CAPSULE_INCOMPLETE_OR_CONTEXT",
+      "phase": "HOLD_BEFORE_SEND",
+      "failed_phase": "PREFLIGHT",
+      "launcher_status": "HOLD_PARENT_SHELL_ENTRY_UNRESOLVED",
+      "fixed_processes_observed": 9,
+      "source_metadata_rows": 6,
+      "plaintext_capsule_obtained": false,
+      "parent_argc": 2,
+      "http_counts": {
+        "login_post": 0,
+        "dialog_create_post": 0,
+        "model_post": 0,
+        "get": 0
+      },
+      "counter": {
+        "sha256": "4b331e0d9806b19ab9a837172eabb0d8e93f63e532708bb075dcc183b3064a8f",
+        "bytes": 223,
+        "inflight": 4,
+        "dev": 36,
+        "ino": 1086985810,
+        "mtime_ns": 1794950150740498400,
+        "legacy_counter_has_writer_identity": false,
+        "historical_requests_resolved": false,
+        "last_ts": 1794950150.741278,
+        "last_start": 1794950137.537253,
+        "last_end": 1794950150.741278
+      },
+      "cleanup": "DETACHED_AND_VERIFIED",
+      "duplicate_command_sent_by_this_team": false,
+      "changed_candidate_needed": true
+    },
+    {
+      "run": 44185657423,
+      "job": 134401384535,
+      "request": "6962219685",
+      "source": "d288f5f0b5c6b68a56c8b1ac52a2e6550d00f92c",
+      "status": "HOLD_LAUNCHER_CAPSULE_INCOMPLETE_OR_CONTEXT",
+      "phase": "HOLD_BEFORE_SEND",
+      "launcher_status": "HOLD_PARENT_SHELL_ENTRY_UNRESOLVED",
+      "http_counts": {
+        "login_post": 0,
+        "dialog_create_post": 0,
+        "model_post": 0,
+        "get": 0
+      },
+      "counter_inflight": 4,
+      "counter_sha256": "4b331e0d9806b19ab9a837172eabb0d8e93f63e532708bb075dcc183b3064a8f",
+      "cleanup": "DETACHED_AND_VERIFIED",
+      "duplicate_command_sent_by_this_team": false
+    }
+  ],
+  "current_native_attempt": null,
+  "drive_concept": {
+    "drive_id": "1Ez0JSlLmb51GdzeV1-Nls0TF8dWczM_E",
+    "verified": true,
+    "bytes": 961611,
+    "sha256": "2969828eabb716ac6dd104b5f650556bce3d269741e4fbf172e0485681f3436c",
+    "same_file_id": true,
+    "status_block_count": 1,
+    "all_other_concept_bytes_unchanged": true
+  },
+  "o2_guard_publication": {
+    "commit": "24a0caad5ca25a43062ded4c6a4835531cceb5ae",
+    "verified": true,
+    "checks": [
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/owner_idle_after_watchdog.patch",
+        "exact": true,
+        "chars": 830,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/test_owner_idle_recovery_contract.py",
+        "exact": true,
+        "chars": 10731,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/OWNER_IDLE_AFTER_WATCHDOG_REVIEW.json",
+        "exact": true,
+        "chars": 6494,
+        "isError": false
+      }
+    ],
+    "native_installed": false,
+    "note": "Exact 328ced preimage only; other coordinator current source has since advanced; do not apply blindly."
+  },
+  "remote2_source_candidate": {
+    "commit": "7649c9d7756ed48092c34d9328fcf8cc12cd1fb4",
+    "native_installed": false,
+    "verified": true,
+    "files": [
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/COMPATIBILITY_FINDINGS.md",
+        "exact": true,
+        "chars": 8881,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/COMPATIBILITY_INPUT_PINS.json",
+        "exact": true,
+        "chars": 3957,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/INDEPENDENT_REVIEW_DISPATCHER.json",
+        "exact": true,
+        "chars": 3804,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/REMOTE2_MANIFEST.json",
+        "exact": true,
+        "chars": 3272,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/REMOTE2_RUNTIME.patch",
+        "exact": true,
+        "chars": 25034,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/SOURCE_GATE_RESULTS.json",
+        "exact": true,
+        "chars": 2423,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/test_remote2_existing_ledger.py",
+        "exact": true,
+        "chars": 13823,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/PUBLISH_MANIFEST.json",
+        "exact": true,
+        "chars": 1401,
+        "isError": false
+      }
+    ],
+    "native_ready": false
+  },
+  "model_audit": {
+    "run": 44192038242,
+    "job": 134423665423,
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "replay_allowed": false,
+    "data": {
+      "application_imports": 0,
+      "architecture_or_training_identity_verified": false,
+      "argv_projection": {
+        "environment_read": false,
+        "full_argv_exported": false,
+        "listener_process_binding_verified": true,
+        "model_argument": {
+          "bytes": 103,
+          "chars": 103,
+          "empty": false,
+          "model_basename": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+          "present": true,
+          "previous_audit_mask_reasons": [
+            "previous_audit_character_or_length_rule",
+            "previous_audit_sensitive_marker"
+          ],
+          "sha256": "cf724eeeb8c3e2f0b794f60e9b854faf24b0593072335d69ff9405d969155436",
+          "type": "string",
+          "under_known_model_root": true
+        },
+        "model_argument_count": 1,
+        "requires_listener_pid_start_witness": true,
+        "weight_content_or_training_identity_proven": false
+      },
+      "atomic_snapshot": false,
+      "audit_entry_writes": 0,
+      "backend": {
+        "projection": {
+          "completion_path": "/v1/chat/completions",
+          "configured_model": {
+            "bytes": 103,
+            "chars": 103,
+            "empty": false,
+            "model_basename": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "present": true,
+            "previous_audit_mask_reasons": [
+              "previous_audit_character_or_length_rule",
+              "previous_audit_sensitive_marker"
+            ],
+            "sha256": "cf724eeeb8c3e2f0b794f60e9b854faf24b0593072335d69ff9405d969155436",
+            "type": "string",
+            "under_known_model_root": true
+          },
+          "configured_model_name": {
+            "bytes": 25,
+            "chars": 25,
+            "empty": false,
+            "identifier": "deepseek-v41-flash-iq2xxs",
+            "present": true,
+            "previous_audit_mask_reasons": [],
+            "sha256": "4733aef33b92348b0a03ffe3b48d5c95831b75c75230ffc3a2a9ac7c0e42ce99",
+            "type": "string"
+          },
+          "default_host_used": false,
+          "default_port_used": false,
+          "fallback_health_url": "http://127.0.0.1:8085/health",
+          "fallback_only_after_primary_definite_failure": true,
+          "health_host_matches_completion_host": true,
+          "host": "127.0.0.1",
+          "maximum_health_gets": 2,
+          "model_posts": 0,
+          "port": 8098,
+          "primary_health_url": "http://127.0.0.1:8098/health",
+          "read_only_sample_does_not_reconstruct_previous_request": true
+        },
+        "readback": {
+          "bytes": 529,
+          "dev": 36,
+          "gid": 0,
+          "ino": 106953452,
+          "mode": "0o664",
+          "mtime_ns": 1794923567686842129,
+          "sha256": "3691d603a8f9690ab2f9158f7046f7f92198596f71bf6d1025bf866a439cf028",
+          "uid": 0
+        }
+      },
+      "bytes_read": 431343,
+      "configured_primary_healthy_by_source_rule": true,
+      "disk_status": {
+        "age_seconds": 391715.06,
+        "api_status_sampled": false,
+        "origin": "FIXED_DISK_SNAPSHOT",
+        "projection": {
+          "model_field_type": "string",
+          "native_p02_bound": null,
+          "origin": "snapshot or API status; no model execution proof",
+          "primary_model": {
+            "present": false,
+            "type": "null"
+          },
+          "schema_valid": true,
+          "selected_model": {
+            "bytes": 39,
+            "chars": 39,
+            "empty": false,
+            "model_basename": "nox-s1-l05-Q4_K_M.gguf",
+            "present": true,
+            "previous_audit_mask_reasons": [
+              "previous_audit_character_or_length_rule",
+              "previous_audit_sensitive_marker"
+            ],
+            "sha256": "3d433d093192f80983b6e343064b00c5482ffc4f4590569fa687bc8f087d329f",
+            "type": "string",
+            "under_known_model_root": true
+          },
+          "selected_source_field": "model"
+        },
+        "readback": {
+          "bytes": 791,
+          "dev": 36,
+          "gid": 0,
+          "ino": 1161002918,
+          "mode": "0o664",
+          "mtime_ns": 1794563448276026711,
+          "sha256": "5c2fae6762777655022583c51372058ddac255aad6c2e5de46e8654f4c049ab3",
+          "uid": 0
+        }
+      },
+      "elapsed_seconds": 0.012,
+      "env_reads": 0,
+      "evidence_scope": "CURRENT_PINNED_PRIMARY_LISTENER_ARGV_REFERENCE_ONLY",
+      "external_requests": 0,
+      "fallback_8085_observed": false,
+      "file_writes": 0,
+      "full_argv_exported": false,
+      "health": {
+        "bytes": 15,
+        "complete": true,
+        "healthy_by_source_rule": true,
+        "http_status": 200,
+        "response_body_exported": false,
+        "rule": "exact _nox_t153_port_ok source predicate; no response body exported",
+        "sha256": "a29ee2b15c494311c52521766e44af56a3ad2248e7a8ab465e5206463c13d288"
+      },
+      "http_gets": 1,
+      "http_posts": 0,
+      "key_reads": 0,
+      "last_chat_backend_identified": false,
+      "listener": {
+        "address": "0.0.0.0",
+        "atomic_binding": false,
+        "file_descriptors": [
+          67
+        ],
+        "global_listener_uniqueness_proven": false,
+        "network_namespace_sha256": "a7927ec5c8940a3fec256240dd4242eeda83f351f1579c3da2a21906ef515238",
+        "pid": 3266857,
+        "port": 8098,
+        "same_network_namespace": true,
+        "socket_inode": 508955271,
+        "start_ticks": 172046662,
+        "table_scan": {
+          "bytes_read": 4050,
+          "maximum_bytes": 262144,
+          "maximum_rows": 4096,
+          "rows_checked": 10,
+          "stopped_at_owned_listener": true,
+          "table_eof_required": false
+        },
+        "table_scan_after": {
+          "bytes_read": 4050,
+          "maximum_bytes": 262144,
+          "maximum_rows": 4096,
+          "rows_checked": 10,
+          "stopped_at_owned_listener": true,
+          "table_eof_required": false
+        },
+        "table_scope": "BOUNDED_PREFIX_UNTIL_FIXED_PID_OWNED_IPV4_LISTENER",
+        "uid": 0
+      },
+      "listener_model_reference_verified": true,
+      "model_requests": 0,
+      "observed_at": 1794955163,
+      "owner_context_environment_reads": 2,
+      "owner_request": "6963059953",
+      "process": {
+        "argv_exported": false,
+        "argv_sha256": "88bc6d7a0ed91c5363a7129514e354983e7285f8c13bcd00e84c3649192b56e4",
+        "cwd_sha256": "5ac55c8ee49f44fbeb36ae4536b880b5db18275d00d087bf23c7e6e7a81a143b",
+        "environment_read": false,
+        "exe_path_sha256": "4b67e9230f074d14e7f16587f6f9adbb2c7f094a0556d313b55ee320c0091815",
+        "pid": 3266857,
+        "ppid": 114,
+        "start_ticks": 172046662,
+        "uid": 0
+      },
+      "props_endpoint_assumed": false,
+      "raw_config_exported": false,
+      "read_attempts": 25,
+      "schema": "NOX_BOUND_MODEL_REFERENCE_READBACK_V1",
+      "service_mutations": 0,
+      "source_contract": {
+        "backend_read_path": "/root/nox/config/backend.json",
+        "completion_route": "load_backend(host,port) -> /v1/chat/completions",
+        "fallback_completion_route": "http://127.0.0.1:8085/v1/chat/completions",
+        "fallback_health_route": "http://127.0.0.1:8085/health only after primary health failure",
+        "owner_runtime_chain": [
+          "chat_proxy._proxy_completion -> agent_loop.owner_completion",
+          "agent_loop bottom import owner_chat_stream.install(globals())",
+          "owner_chat_stream.install replaces owner_completion",
+          "owner_chat_stream._run -> _model_events(client,url,model_request)",
+          "_model_events streams POST at the same supplied url"
+        ],
+        "primary_health_route": "/health on configured port",
+        "prior_request_backend_identity_reconstructed": false,
+        "proxy_v1_models_origin": "synthetic config model_name; not a live backend catalog",
+        "source_pins": {
+          "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+          "chat_proxy.py": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+          "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+          "nox_v29_chat_bridge.py": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+          "owner_chat_stream.py": "2c4ae86d1d8e2113c8dbb55807f0d52890f098904ac2914f0b1383156ed7ea25"
+        },
+        "status_is_live_model_response": false,
+        "status_model_selector": "model string; else model.name, model.model, model.id; sliced to200 chars",
+        "status_origin": "disk snapshot via chat_proxy.nox_status -> common.load_json",
+        "status_read_path": "/root/nox/status/status.json",
+        "upstream_cache_ttl_seconds": 2
+      },
+      "source_readback": {
+        "agent_loop.py": {
+          "bytes": 19762,
+          "dev": 36,
+          "gid": 0,
+          "ino": 1196681647,
+          "mode": "0o644",
+          "mtime_ns": 1794788225408623768,
+          "sha256": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+          "uid": 0
+        },
+        "chat_proxy.py": {
+          "bytes": 103637,
+          "dev": 36,
+          "gid": 0,
+          "ino": 49468858,
+          "mode": "0o644",
+          "mtime_ns": 1794948021292140674,
+          "sha256": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+          "uid": 0
+        },
+        "common.py": {
+          "bytes": 5971,
+          "dev": 36,
+          "gid": 0,
+          "ino": 1152395981,
+          "mode": "0o755",
+          "mtime_ns": 1794432917000000000,
+          "sha256": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+          "uid": 0
+        },
+        "nox_v29_chat_bridge.py": {
+          "bytes": 51632,
+          "dev": 36,
+          "gid": 0,
+          "ino": 49468857,
+          "mode": "0o644",
+          "mtime_ns": 1794948021291140687,
+          "sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+          "uid": 0
+        },
+        "owner_chat_stream.py": {
+          "bytes": 26210,
+          "dev": 36,
+          "gid": 0,
+          "ino": 1152408738,
+          "mode": "0o600",
+          "mtime_ns": 1794942807919009473,
+          "sha256": "2c4ae86d1d8e2113c8dbb55807f0d52890f098904ac2914f0b1383156ed7ea25",
+          "uid": 0
+        }
+      },
+      "source_sha": "dd824cbd6cc4508deeb84681f9612b9cee2fe31d",
+      "status": "BOUNDED_LISTENER_MODEL_REFERENCE_SNAPSHOT",
+      "weight_content_identity_verified": false
+    }
+  },
+  "semantic_six_source_review": {
+    "source": "25d1ad0d55c7d897fe2b4d61d645c7bfaef21b36",
+    "readback_verified": true,
+    "remaining_concrete_source_targets": 3,
+    "counter_scope_complete": false
+  },
+  "automations_v5": {
+    "schema": "NOX_AUTOMATION_RELAY_V5_READBACK",
+    "instructions_version": "0.0.6",
+    "requested_subagent_count": 3,
+    "updated": 15,
+    "verified": true,
+    "new_automations_created": 0,
+    "schedule_mutations": 0,
+    "checks": [
+      {
+        "id": "Automation_4462d9cb0d2c8191b9c4ff1c360ddb98",
+        "title": "NOX D3 — оптимизация",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "Automation_cb0de5e416188191968e635bba979021",
+        "title": "NOX D2 — интеграция",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "Automation_16e3a9ffdff48191bc3b1d54947bb758",
+        "title": "NOX D1 — восстановление",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6afafd9113fc8191b23b7e4b0e11d902",
+        "title": "NOX V14 · B5 · эстафета",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6afa6a3187448191b80e4a925ce71710",
+        "title": "NOX V14 · B4 · эстафета",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6afa6900607c8191a2048d2319fbb4fa",
+        "title": "NOX V14 · B3 · эстафета",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6afa68fde1988191a33e4029103e6cfe",
+        "title": "NOX V14 · B2 · эстафета",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6afa68fb554481918bbe95db73b560a7",
+        "title": "NOX V14 · B1 · эстафета",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6afa68f921b48191a8f7875efae6e783",
+        "title": "NOX V14 · B0 · эстафета",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6af9d06031408191a0d7fb4d91e31da5",
+        "title": "NOX A6 · Приёмка и слияние",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "Automation_26409201a5f88191875878544488d623",
+        "title": "NOX A5 · Исполнители и ресурсы",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "Automation_699343fbe37881919cdb75168812fafe",
+        "title": "NOX A4 · Drive и общий канон",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "Automation_c10be790f1cc819192f5678833c2c029",
+        "title": "NOX A3 · Память и развитие",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6af903a81f348191b18f01a8cde7ec05",
+        "title": "NOX A2 · Советники и инструменты",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      },
+      {
+        "id": "6af903a5c1208191a22263faae73d193",
+        "title": "NOX A1 · Чат и координация",
+        "exists": true,
+        "prompt_exact": true,
+        "schedule_unchanged": true,
+        "enabled_unchanged": true,
+        "timezone_unchanged": true,
+        "tail_unchanged": true
+      }
+    ]
+  },
+  "verified_at": "2026-11-18T01:54:17.135815+03:00",
+  "owned_transport_cancellation": {
+    "run": 44187317953,
+    "job": 134407197678,
+    "source": "781dada3e796a1a9bee7c49ae46a56feb8dcbf8a",
+    "request": "6962437325",
+    "status": "OWNED_TRANSPORT_CLOSED_COUNTER_RETURNED",
+    "phase": "COMPLETE",
+    "used": true,
+    "accepted": false,
+    "model_posts": 1,
+    "global_stop_posts": 0,
+    "service_mutations": 0,
+    "counter_resets": 0,
+    "model_reloads": 0,
+    "http_counts": {
+      "login_post": 1,
+      "dialog_create_post": 1,
+      "model_post": 1,
+      "get": 4
+    },
+    "transport_cancellation_acceptance": true,
+    "own_transport_close_returned": true,
+    "prefix": {
+      "received_bytes": 154,
+      "visible_bytes": 2,
+      "first_visible_piece_sha256": "07b8c0e68d5c16c22ba76b8120bda74c2dd64173f14edf5ba00191cefe2e0444",
+      "elapsed_ms": 6794,
+      "terminal_seen_before_close": false,
+      "counter_active": {
+        "sha256": "bd0a6c9143c1ef8cf56d6f001fef47c36c76588d10f043894fae0cf39b559a79",
+        "bytes": 225,
+        "inflight": 5,
+        "dev": 36,
+        "ino": 1086985822,
+        "mtime_ns": 1794953634498856174,
+        "legacy_counter_has_writer_identity": false,
+        "historical_requests_resolved": false,
+        "last_ts": 1794953634.4994676,
+        "last_start": 1794953634.4994676,
+        "last_end": 1794950150.741278
+      },
+      "increment_observed": true,
+      "full_answer_or_model_task_identity_verified": false
+    },
+    "counter": {
+      "before": {
+        "sha256": "4b331e0d9806b19ab9a837172eabb0d8e93f63e532708bb075dcc183b3064a8f",
+        "bytes": 223,
+        "inflight": 4,
+        "dev": 36,
+        "ino": 1086985810,
+        "mtime_ns": 1794950150740498506,
+        "legacy_counter_has_writer_identity": false,
+        "historical_requests_resolved": false,
+        "last_ts": 1794950150.741278,
+        "last_start": 1794950137.537253,
+        "last_end": 1794950150.741278
+      },
+      "active": {
+        "sha256": "bd0a6c9143c1ef8cf56d6f001fef47c36c76588d10f043894fae0cf39b559a79",
+        "bytes": 225,
+        "inflight": 5,
+        "dev": 36,
+        "ino": 1086985822,
+        "mtime_ns": 1794953634498856174,
+        "legacy_counter_has_writer_identity": false,
+        "historical_requests_resolved": false,
+        "last_ts": 1794953634.4994676,
+        "last_start": 1794953634.4994676,
+        "last_end": 1794950150.741278
+      },
+      "after": {
+        "sha256": "9284bae59a92ad6d48ac2a8e3fe39aa6bfd68b9b50cc70b4a08b603aadda4926",
+        "bytes": 226,
+        "inflight": 4,
+        "dev": 36,
+        "ino": 1086985807,
+        "mtime_ns": 1794953640755785551,
+        "legacy_counter_has_writer_identity": false,
+        "historical_requests_resolved": false,
+        "last_ts": 1794953640.7562537,
+        "last_start": 1794953634.4994676,
+        "last_end": 1794953640.7562537
+      },
+      "samples": 10,
+      "stable_return_seconds": 2.011,
+      "net_delta": 0,
+      "observed_sequence": [
+        4,
+        5,
+        4
+      ],
+      "runtime_exact_release_call_count_verified": false,
+      "historical_baseline_resolved": false
+    },
+    "request_timing": {
+      "status": "MATCHED_OWN_NONCE",
+      "record_sha256": "72fd31105361f8c73b68ea4e5f76832f7854d3be08a83d11e9d088c64ba9eba5",
+      "ttft_s": 6.792,
+      "meaning": "PROXY_FIRST_STREAM_BYTE_NOT_REASONING_OR_USEFUL_TOKEN"
+    },
+    "empty_history_after": {
+      "dialog_id": "2cc5f05c9a014a56b0274de449052f66",
+      "messages": 0,
+      "partial_output_saved_claimed": false,
+      "full_turn_saved_claimed": false,
+      "scope": "OWN_DIALOG_ONLY"
+    },
+    "native_model_task_identity": "UNKNOWN",
+    "gpu_stop_verified": false,
+    "native_ui_button_event_observed": false,
+    "natural_upstream_completion_at_close_excluded": false,
+    "runtime_exact_release_call_count_verified": false,
+    "source_exact_once_invariant": "INDEPENDENT_SOURCE_AND_FIXTURE_EVIDENCE",
+    "launcher": {
+      "status": "BOUNDED_ENCRYPTED_SOURCE_AND_BINDING_SNAPSHOTS",
+      "processes": 9,
+      "sources": 6,
+      "parent": {
+        "pid": 498567,
+        "kind": "EXACT_ARGV_STDIN_SHELL_BODY_UNAVAILABLE",
+        "source_body_available": false,
+        "argc": 2,
+        "start_ticks": 168416044,
+        "argv_sha256": "88bd0fbfc483e7a67a7459ed0230d33457c308a1efd64ae2e45f6dfc0d8199ee",
+        "exe_path_sha256": "82c0aad1330a0c428ee3f9b7ff0d5ba7e5238c550c58c17aa4ed27382902e002",
+        "cwd_sha256": "3c590f2f120bd22263af64a761d1c04ce54cbf99bbabdb83ce41122d75cc85d1",
+        "nonwriter_proven": false,
+        "coverage_complete": false,
+        "stdin_read": false,
+        "fd_metadata": [
+          {
+            "fd": 0,
+            "content_read": false,
+            "status": "OBSERVED_LINK_AND_TYPE_ONLY",
+            "target_type": "CHARACTER",
+            "link_sha256": "fd5d32feb2d3562582258990ecfca9b88376957e512d5caac72ad89fc78d2df4",
+            "link_bytes": 9,
+            "dev": 236,
+            "ino": 5,
+            "uid": 0,
+            "mode": "0o666"
+          },
+          {
+            "fd": 255,
+            "content_read": false,
+            "status": "NOT_OBSERVED"
+          }
+        ]
+      },
+      "writer_coverage_complete": false,
+      "native_accepted": false
+    },
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "replay_allowed": false,
+    "numeric_fidelity": "PARSED_FROM_ORIGINAL_LOG_JSON_IN_PYTHON_INTEGER_PRECISION"
+  },
+  "model_audit_history": [
+    {
+      "source": "863fedea67d809d866092e5177a97bcd366e0923",
+      "request": 6962800516,
+      "run": 44190032651,
+      "status": "HOLD_FILE_BYTES",
+      "model_posts": 0,
+      "max_gets": 1,
+      "service_mutations": 0,
+      "job": 134416648458,
+      "source_pins_verified": true,
+      "process_identity_verified": true,
+      "listener_model_reference_verified": false,
+      "http_gets": 0,
+      "bytes_read": 474161,
+      "read_attempts": 13,
+      "cleanup": "DETACHED_AND_VERIFIED",
+      "changed_input_required": true,
+      "readonly_snapshot_age_seconds": 390964.594
+    }
+  ],
+  "backend_remote2_readers_publication": {
+    "commit": "4b115b994e7afa266ec3b5027021cbb4c20efda3",
+    "verified": true,
+    "files": [
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/backend_permission_prestop.patch",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/test_backend_permission_prestop.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/BACKEND_PERMISSION_PRESTOP_REVIEW.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/BACKEND_PERMISSION_PRESTOP_INDEPENDENT_REVIEW.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/BASE_PINS.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/README_READER_DELTA.md",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/REMOTE2_READERS.patch",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/SOURCE_RECEIPT.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/tests/fixtures/ORACLE_PINS.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/tests/fixtures/remote2_validation_oracle.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/tests/test_remote2_reader_compatibility.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/PUBLISH_MANIFEST.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_reader_compat_20261118/ROOT_INDEPENDENT_REVIEW.json",
+        "exact": true,
+        "isError": false
+      }
+    ],
+    "native_installed": false,
+    "readback_rate_limit_retry": "Only two rate-limited immutable reads retried after Retry-After."
+  },
+  "composition_publication": {
+    "instructions_version": "0.0.6",
+    "commit": "824bb7f5def5729277cb423e5d7c78bd1b140893",
+    "checks": [
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/TWO_EDGE_SEMANTIC_REVIEW_44191374734.json",
+        "exact": true,
+        "read_bytes": 5492,
+        "error": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/backend_remote2_composed.patch",
+        "exact": true,
+        "read_bytes": 10657,
+        "error": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/BACKEND_REMOTE2_COMPOSITION_RECEIPT.json",
+        "exact": true,
+        "read_bytes": 3915,
+        "error": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/BACKEND_REMOTE2_COMPOSED_INDEPENDENT_REVIEW.json",
+        "exact": true,
+        "read_bytes": 1990,
+        "error": false
+      }
+    ],
+    "verified": true,
+    "native_installed": false
+  },
+  "headroom_source_publication": {
+    "instructions_version": "0.0.6",
+    "commit": "b74344da205d708362672350be7445a1e62b6ce6",
+    "checks": [
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/post8098_headroom_failclosed.patch",
+        "exact": true,
+        "error": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/test_post8098_headroom_failclosed.py",
+        "exact": true,
+        "error": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/POST8098_HEADROOM_FAILCLOSED_REVIEW.json",
+        "exact": true,
+        "error": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/POST8098_HEADROOM_INDEPENDENT_REVIEW.json",
+        "exact": true,
+        "error": false
+      }
+    ],
+    "verified": true,
+    "native_installed": false
+  },
+  "headroom_native_installation": {
+    "status": "SOURCE_TESTED_INSTALLER_IN_PREPARATION",
+    "file_installed": false,
+    "active_shell_changed": false
+  },
+  "automation_observation": {
+    "instructions_version": "0.0.6",
+    "observed_at_utc": "2026-11-17T22:48:58Z",
+    "mutations": 0,
+    "enabled": 15,
+    "v5": 15,
+    "rows": [
+      {
+        "id": "6af903a5c1208191a22263faae73d193",
+        "title": "NOX A1 · Чат и координация",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:32:03.401703+00:00"
+      },
+      {
+        "id": "6af903a81f348191b18f01a8cde7ec05",
+        "title": "NOX A2 · Советники и инструменты",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:32:00.784043+00:00"
+      },
+      {
+        "id": "Automation_c10be790f1cc819192f5678833c2c029",
+        "title": "NOX A3 · Память и развитие",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:31:57.229247+00:00"
+      },
+      {
+        "id": "Automation_699343fbe37881919cdb75168812fafe",
+        "title": "NOX A4 · Drive и общий канон",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:40:34.681908+00:00"
+      },
+      {
+        "id": "Automation_26409201a5f88191875878544488d623",
+        "title": "NOX A5 · Исполнители и ресурсы",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:31:51.806447+00:00"
+      },
+      {
+        "id": "6af9d06031408191a0d7fb4d91e31da5",
+        "title": "NOX A6 · Приёмка и слияние",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:31:50.750036+00:00"
+      },
+      {
+        "id": "6afa68f921b48191a8f7875efae6e783",
+        "title": "NOX V14 · B0 · эстафета",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:38:01.429069+00:00"
+      },
+      {
+        "id": "6afa68fb554481918bbe95db73b560a7",
+        "title": "NOX V14 · B1 · эстафета",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:37:20.953637+00:00"
+      },
+      {
+        "id": "6afa68fde1988191a33e4029103e6cfe",
+        "title": "NOX V14 · B2 · эстафета",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:31:37.843032+00:00"
+      },
+      {
+        "id": "6afa6900607c8191a2048d2319fbb4fa",
+        "title": "NOX V14 · B3 · эстафета",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:31:35.217209+00:00"
+      },
+      {
+        "id": "6afa6a3187448191b80e4a925ce71710",
+        "title": "NOX V14 · B4 · эстафета",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:34:44.190481+00:00"
+      },
+      {
+        "id": "6afafd9113fc8191b23b7e4b0e11d902",
+        "title": "NOX V14 · B5 · эстафета",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:36:41.199611+00:00"
+      },
+      {
+        "id": "Automation_16e3a9ffdff48191bc3b1d54947bb758",
+        "title": "NOX D1 — восстановление",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:31:25.790056+00:00"
+      },
+      {
+        "id": "Automation_cb0de5e416188191968e635bba979021",
+        "title": "NOX D2 — интеграция",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:36:24.957480+00:00"
+      },
+      {
+        "id": "Automation_4462d9cb0d2c8191b9c4ff1c360ddb98",
+        "title": "NOX D3 — оптимизация",
+        "prefix": "BEGIN_NOX_POOL_RELAY_V5_EXECUTABLE\n\nДействующее уточнение владельца от 18.11.2026: в каждом активном запуске поддерживат",
+        "updated": "2026-11-17T22:31:20.054163+00:00"
+      }
+    ]
+  },
+  "remaining_edges_readback": {
+    "run": 44193822421,
+    "job": 134429871560,
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "data": {
+      "application_imports": 0,
+      "application_writes": 0,
+      "basis_run": 44191374734,
+      "bounds": {
+        "explicit_read_total": 524288,
+        "gzip_plaintext": 100000,
+        "output": 150000,
+        "raw_plaintext": 750000,
+        "seconds_cooperative": 6.0,
+        "source_each": 262144,
+        "sources": 2
+      },
+      "bytes_read": 80086,
+      "callers_after": [
+        {
+          "bytes": 2406,
+          "dev": 36,
+          "gid": 0,
+          "ino": 3335838968,
+          "loaded_source_proven": false,
+          "mode": "0o755",
+          "mtime_ns": 1794887864582062189,
+          "process": {
+            "argc": 3,
+            "argv_sha256": "ea58def66ddab796952ee1672c3630b0b5f961d7e29342a3289b21b299402ef4",
+            "cwd_sha256": "ad9a608cb2f044756ba590d7fd1a12352d1bedc252b7dd2d5a849e0a26de5f92",
+            "exe_path_sha256": "8a94588eda9d64d9e9a351ab8144e55b1fabf5113b54e67dd26a8c27df0381b3",
+            "nonwriter_proven": false,
+            "pid": 3355802,
+            "ppid": 114,
+            "start_ticks": 172313892,
+            "status": "EXACT_FIXED_LIFETIME_ARGV_EXE_CWD",
+            "uid": 0
+          },
+          "relative_path": "bootstrap/nox_kb_eventlistener.py",
+          "sha256": "6a20cfcb1bbbf3ea34edcc4157c219e79d76a7f4f303f7eeb9257aff52a1dad0",
+          "uid": 0
+        },
+        {
+          "bytes": 3577,
+          "dev": 36,
+          "gid": 0,
+          "ino": 1152408707,
+          "loaded_source_proven": false,
+          "mode": "0o775",
+          "mtime_ns": 1794895746508029718,
+          "process": {
+            "argc": 2,
+            "argv_sha256": "3fd8ee5c96ea10f710f287e9d05652436fe6279c52226d18790c4d05671e7104",
+            "cwd_sha256": "94a6b447580330f9f2b609422537b04239ff3a39df9137e32efd559f1a2935cb",
+            "exe_path_sha256": "82c0aad1330a0c428ee3f9b7ff0d5ba7e5238c550c58c17aa4ed27382902e002",
+            "nonwriter_proven": false,
+            "pid": 836227,
+            "ppid": 1,
+            "start_ticks": 168847622,
+            "status": "EXACT_FIXED_LIFETIME_ARGV_EXE_CWD",
+            "uid": 0
+          },
+          "relative_path": "scripts/post8098_chain_exec09.sh",
+          "sha256": "533ac6e89e3514cef30af6678e7dba50e5465bb07f1bff8f530b38486f38906b",
+          "uid": 0
+        }
+      ],
+      "callers_before": [
+        {
+          "bytes": 2406,
+          "dev": 36,
+          "gid": 0,
+          "ino": 3335838968,
+          "loaded_source_proven": false,
+          "mode": "0o755",
+          "mtime_ns": 1794887864582062189,
+          "process": {
+            "argc": 3,
+            "argv_sha256": "ea58def66ddab796952ee1672c3630b0b5f961d7e29342a3289b21b299402ef4",
+            "cwd_sha256": "ad9a608cb2f044756ba590d7fd1a12352d1bedc252b7dd2d5a849e0a26de5f92",
+            "exe_path_sha256": "8a94588eda9d64d9e9a351ab8144e55b1fabf5113b54e67dd26a8c27df0381b3",
+            "nonwriter_proven": false,
+            "pid": 3355802,
+            "ppid": 114,
+            "start_ticks": 172313892,
+            "status": "EXACT_FIXED_LIFETIME_ARGV_EXE_CWD",
+            "uid": 0
+          },
+          "relative_path": "bootstrap/nox_kb_eventlistener.py",
+          "sha256": "6a20cfcb1bbbf3ea34edcc4157c219e79d76a7f4f303f7eeb9257aff52a1dad0",
+          "uid": 0
+        },
+        {
+          "bytes": 3577,
+          "dev": 36,
+          "gid": 0,
+          "ino": 1152408707,
+          "loaded_source_proven": false,
+          "mode": "0o775",
+          "mtime_ns": 1794895746508029718,
+          "process": {
+            "argc": 2,
+            "argv_sha256": "3fd8ee5c96ea10f710f287e9d05652436fe6279c52226d18790c4d05671e7104",
+            "cwd_sha256": "94a6b447580330f9f2b609422537b04239ff3a39df9137e32efd559f1a2935cb",
+            "exe_path_sha256": "82c0aad1330a0c428ee3f9b7ff0d5ba7e5238c550c58c17aa4ed27382902e002",
+            "nonwriter_proven": false,
+            "pid": 836227,
+            "ppid": 1,
+            "start_ticks": 168847622,
+            "status": "EXACT_FIXED_LIFETIME_ARGV_EXE_CWD",
+            "uid": 0
+          },
+          "relative_path": "scripts/post8098_chain_exec09.sh",
+          "sha256": "533ac6e89e3514cef30af6678e7dba50e5465bb07f1bff8f530b38486f38906b",
+          "uid": 0
+        }
+      ],
+      "capsule_retained": true,
+      "counter_mutations": 0,
+      "diagnostics": [
+        {
+          "body_bytes_read": 45406,
+          "fstat": {
+            "bytes": 45406,
+            "ctime_ns": 1794955824304207563,
+            "dev": 36,
+            "gid": 0,
+            "ino": 1160341070,
+            "mode": "0o644",
+            "mtime_ns": 1794832279879545356,
+            "nlink": 1,
+            "predicates": {
+              "followup_262144_byte_bound": true,
+              "original_32768_byte_bound": false,
+              "owner_uid_zero": true,
+              "regular_file": true,
+              "single_link": true
+            },
+            "type": "REGULAR",
+            "uid": 0
+          },
+          "lstat": {
+            "bytes": 45406,
+            "ctime_ns": 1794955824304207563,
+            "dev": 36,
+            "gid": 0,
+            "ino": 1160341070,
+            "mode": "0o644",
+            "mtime_ns": 1794832279879545356,
+            "nlink": 1,
+            "predicates": {
+              "followup_262144_byte_bound": true,
+              "original_32768_byte_bound": false,
+              "owner_uid_zero": true,
+              "regular_file": true,
+              "single_link": true
+            },
+            "type": "REGULAR",
+            "uid": 0
+          },
+          "relative_path": "scripts/owner_qwen_execution_revision.py",
+          "sha256": "d3b2905c568d088cde2d8267f02f9e913f9fe1d3e46f590992c3a7fcb138ae14",
+          "source_bytes_read": true,
+          "stage": "SEALED",
+          "status": "PASS"
+        },
+        {
+          "body_bytes_read": 13504,
+          "fstat": {
+            "bytes": 13504,
+            "ctime_ns": 1794955824633203990,
+            "dev": 36,
+            "gid": 0,
+            "ino": 3335838946,
+            "mode": "0o755",
+            "mtime_ns": 1794888398716967514,
+            "nlink": 1,
+            "predicates": {
+              "followup_262144_byte_bound": true,
+              "original_32768_byte_bound": true,
+              "owner_uid_zero": true,
+              "regular_file": true,
+              "single_link": true
+            },
+            "type": "REGULAR",
+            "uid": 0
+          },
+          "lstat": {
+            "bytes": 13504,
+            "ctime_ns": 1794955824633203990,
+            "dev": 36,
+            "gid": 0,
+            "ino": 3335838946,
+            "mode": "0o755",
+            "mtime_ns": 1794888398716967514,
+            "nlink": 1,
+            "predicates": {
+              "followup_262144_byte_bound": true,
+              "original_32768_byte_bound": true,
+              "owner_uid_zero": true,
+              "regular_file": true,
+              "single_link": true
+            },
+            "type": "REGULAR",
+            "uid": 0
+          },
+          "relative_path": "bootstrap/nox_kb_bootstrap.py",
+          "sha256": "bc4a8849a1dde69e6952220835064a1632f21536dce32d4df26f013451312289",
+          "source_bytes_read": true,
+          "stage": "SEALED",
+          "status": "PASS"
+        }
+      ],
+      "intermediate_basis": {
+        "bytes": 744,
+        "relative_path": "bootstrap/nox_kb_bootstrap.sh",
+        "reread_in_this_packet": false,
+        "run": 44191374734,
+        "sha256": "71417d3eb0c4aef13cf57cf3dbe8274af85920dd32252f2dd67025be4950531e",
+        "source_snapshot_only": true
+      },
+      "loaded_code_proven": false,
+      "model_calls": 0,
+      "native_accepted": false,
+      "network_calls": 0,
+      "owner_request": "6963289638",
+      "purpose": "TWO_REMAINING_CALLER_EDGES_METADATA_AND_SOURCE_ONLY",
+      "read_attempts": 26,
+      "schema": "NOX_REMAINING_EDGES_READBACK_V1",
+      "signals_sent": 0,
+      "source_count": 2,
+      "source_sha": "6344a0fa5a15c84753a957e7be7fee56d6a246f2",
+      "sources": [
+        {
+          "bytes": 45406,
+          "caller_pid": 836227,
+          "dev": 36,
+          "gid": 0,
+          "hash_evidence": "FIRST_OBSERVED_CURRENT_SOURCE_SNAPSHOT",
+          "ino": 1160341070,
+          "mode": "0o644",
+          "mtime_ns": 1794832279879545356,
+          "relative_path": "scripts/owner_qwen_execution_revision.py",
+          "sha256": "d3b2905c568d088cde2d8267f02f9e913f9fe1d3e46f590992c3a7fcb138ae14",
+          "uid": 0
+        },
+        {
+          "bytes": 13504,
+          "caller_pid": 3355802,
+          "dev": 36,
+          "gid": 0,
+          "hash_evidence": "FIRST_OBSERVED_CURRENT_SOURCE_SNAPSHOT",
+          "ino": 3335838946,
+          "mode": "0o755",
+          "mtime_ns": 1794888398716967514,
+          "relative_path": "bootstrap/nox_kb_bootstrap.py",
+          "sha256": "bc4a8849a1dde69e6952220835064a1632f21536dce32d4df26f013451312289",
+          "uid": 0
+        }
+      ],
+      "status": "BOUNDED_REMAINING_EDGES_READBACK",
+      "subprocess_calls": 0,
+      "successful_source_paths_not_reread": [
+        "bootstrap/nox_kb_bootstrap.sh",
+        "scripts/cgroup_headroom_gib.py"
+      ],
+      "writer_coverage_complete": false
+    }
   }
 }

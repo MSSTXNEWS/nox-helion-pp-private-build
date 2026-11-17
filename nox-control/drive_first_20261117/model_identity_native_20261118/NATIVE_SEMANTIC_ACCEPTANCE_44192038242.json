@@ -1,0 +1,87 @@
+{
+  "schema": "NOX_MODEL_REFERENCE_NATIVE_SEMANTIC_ACCEPTANCE_V2",
+  "recorded_utc": "2026-11-17T22:47:41.391336+00:00",
+  "status": "PASS_CURRENT_LISTENER_MODEL_REFERENCE",
+  "run": 44192038242,
+  "job": 134423665423,
+  "request": "6963059953",
+  "source_sha": "dd824cbd6cc4508deeb84681f9612b9cee2fe31d",
+  "lossless_raw_sha256": "f430bfb170c74ec39b57a59b676e4cbf0ad32063d70962e17681738ff03b45ef",
+  "observed_at": 1794955163,
+  "source_pins_verified": {
+    "chat_proxy.py": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+    "nox_v29_chat_bridge.py": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+    "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+    "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+    "owner_chat_stream.py": "2c4ae86d1d8e2113c8dbb55807f0d52890f098904ac2914f0b1383156ed7ea25"
+  },
+  "process": {
+    "argv_exported": false,
+    "argv_sha256": "88bc6d7a0ed91c5363a7129514e354983e7285f8c13bcd00e84c3649192b56e4",
+    "cwd_sha256": "5ac55c8ee49f44fbeb36ae4536b880b5db18275d00d087bf23c7e6e7a81a143b",
+    "environment_read": false,
+    "exe_path_sha256": "4b67e9230f074d14e7f16587f6f9adbb2c7f094a0556d313b55ee320c0091815",
+    "pid": 3266857,
+    "ppid": 114,
+    "start_ticks": 172046662,
+    "uid": 0
+  },
+  "listener": {
+    "address": "0.0.0.0",
+    "atomic_binding": false,
+    "file_descriptors": [
+      67
+    ],
+    "global_listener_uniqueness_proven": false,
+    "network_namespace_sha256": "a7927ec5c8940a3fec256240dd4242eeda83f351f1579c3da2a21906ef515238",
+    "pid": 3266857,
+    "port": 8098,
+    "same_network_namespace": true,
+    "socket_inode": 508955271,
+    "start_ticks": 172046662,
+    "table_scan": {
+      "bytes_read": 4050,
+      "maximum_bytes": 262144,
+      "maximum_rows": 4096,
+      "rows_checked": 10,
+      "stopped_at_owned_listener": true,
+      "table_eof_required": false
+    },
+    "table_scan_after": {
+      "bytes_read": 4050,
+      "maximum_bytes": 262144,
+      "maximum_rows": 4096,
+      "rows_checked": 10,
+      "stopped_at_owned_listener": true,
+      "table_eof_required": false
+    },
+    "table_scope": "BOUNDED_PREFIX_UNTIL_FIXED_PID_OWNED_IPV4_LISTENER",
+    "uid": 0
+  },
+  "model_basename": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+  "model_reference_sha256": "cf724eeeb8c3e2f0b794f60e9b854faf24b0593072335d69ff9405d969155436",
+  "config_reference_matches_argv": true,
+  "config_alias": "deepseek-v41-flash-iq2xxs",
+  "disk_status_model_basename": "nox-s1-l05-Q4_K_M.gguf",
+  "disk_status_age_seconds": 391715.06,
+  "health": {
+    "bytes": 15,
+    "complete": true,
+    "healthy_by_source_rule": true,
+    "http_status": 200,
+    "response_body_exported": false,
+    "rule": "exact _nox_t153_port_ok source predicate; no response body exported",
+    "sha256": "a29ee2b15c494311c52521766e44af56a3ad2248e7a8ab465e5206463c13d288"
+  },
+  "http_gets": 1,
+  "http_posts": 0,
+  "model_requests": 0,
+  "file_writes": 0,
+  "parent_reported_cleanup": "DETACHED_AND_VERIFIED",
+  "scope": "CURRENT_PINNED_PRIMARY_LISTENER_ARGV_REFERENCE_ONLY",
+  "weight_content_identity_verified": false,
+  "architecture_or_training_identity_verified": false,
+  "previous_chat_backend_identity_reconstructed": false,
+  "global_listener_uniqueness_proven": false,
+  "native_repeated_by_reviewer": false
+}

@@ -1,0 +1,33 @@
+{
+  "instructions_version": "0.0.6",
+  "commit": "824bb7f5def5729277cb423e5d7c78bd1b140893",
+  "checks": [
+    {
+      "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/TWO_EDGE_SEMANTIC_REVIEW_44191374734.json",
+      "exact": true,
+      "read_bytes": 5492,
+      "error": false
+    },
+    {
+      "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/backend_remote2_composed.patch",
+      "exact": true,
+      "read_bytes": 10657,
+      "error": false
+    },
+    {
+      "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/BACKEND_REMOTE2_COMPOSITION_RECEIPT.json",
+      "exact": true,
+      "read_bytes": 3915,
+      "error": false
+    },
+    {
+      "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/BACKEND_REMOTE2_COMPOSED_INDEPENDENT_REVIEW.json",
+      "exact": true,
+      "read_bytes": 1990,
+      "error": false
+    }
+  ],
+  "verified": true,
+  "native_installed": false
+}
+

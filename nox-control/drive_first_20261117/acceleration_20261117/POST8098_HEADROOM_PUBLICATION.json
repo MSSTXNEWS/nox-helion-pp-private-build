@@ -1,0 +1,29 @@
+{
+  "instructions_version": "0.0.6",
+  "commit": "b74344da205d708362672350be7445a1e62b6ce6",
+  "checks": [
+    {
+      "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/post8098_headroom_failclosed.patch",
+      "exact": true,
+      "error": false
+    },
+    {
+      "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/test_post8098_headroom_failclosed.py",
+      "exact": true,
+      "error": false
+    },
+    {
+      "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/POST8098_HEADROOM_FAILCLOSED_REVIEW.json",
+      "exact": true,
+      "error": false
+    },
+    {
+      "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/POST8098_HEADROOM_INDEPENDENT_REVIEW.json",
+      "exact": true,
+      "error": false
+    }
+  ],
+  "verified": true,
+  "native_installed": false
+}
+
