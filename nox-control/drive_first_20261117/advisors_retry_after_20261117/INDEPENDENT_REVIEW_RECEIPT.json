@@ -1,0 +1,60 @@
+{
+  "schema": "NOX_ADVISER_RETRY_AFTER_INDEPENDENT_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewed_utc": "2026-11-17T20:47:00.913813+00:00",
+  "reviewer": "/root/relay_policy_audit",
+  "work_id": "ADVISER_RETRY_AFTER_DELTA_REVIEW_20261117",
+  "result": "PASS_SOURCE",
+  "commit": "4a0317f8c66db5ae231ec50c6cb39869d000f98c",
+  "source_path": "nox_advisors/client.py",
+  "source_sha256": "dc12679270d735507fb26613a679ee074f53c08aff8d72d28717196711cf2a54",
+  "runtime_delta": "import math; replace upper clamp 300 with preserved finite delay, nonfinite fallback 2.0; existing minimum floor 0.05 unchanged",
+  "findings": [],
+  "static_verification": {
+    "AdvisoryClient_ast_unchanged": true,
+    "CircuitBreaker_ast_unchanged": true,
+    "admission_free_only_guards_unchanged": true,
+    "worker_deadline_and_attempt_loop_unchanged": true,
+    "unchanged_package_files": [
+      "nox_advisors/models.py",
+      "nox_advisors/adapters.py",
+      "nox_advisors/transport.py",
+      "nox_advisors/host.py"
+    ],
+    "worktree_clean_before_and_after": true,
+    "nonfinite_handling": "float/date/fallback yields number; math.isfinite rejects NaN and either infinity before returning receipt hint",
+    "http_date_handling": "existing UTC normalization and date subtraction unchanged; resulting finite cooldown no longer capped"
+  },
+  "focused_gate": {
+    "command": "PYTHONPATH=/workspace/scratch/4136374a0419/nox_refresh/advisors_retry_after_fix python -m unittest discover -s /workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/independent_review -p test_retry_after_extremes.py -v",
+    "tests": 1,
+    "passed": 1,
+    "exit_code": 0,
+    "subcases": [
+      "maximum finite float",
+      "HTTP-date in year 9999"
+    ],
+    "worker_deadline_seconds": 0.2,
+    "per_subcase_synthetic_post_count": 1,
+    "wait_calls": 0,
+    "receipt_json_allow_nan_false": true,
+    "author_tests_repeated": false,
+    "external_http_calls": 0
+  },
+  "author_evidence_not_rerun": "Author four focused gates: numeric3600, HTTP-date3600, nonfinite hints, existing same-model/no-fallback backoff",
+  "limits": [
+    "Preserving retry_after_seconds does not prove native scheduler honors the full cooldown.",
+    "Native registration, provider accounts/free quota and model execution are outside this source review.",
+    "No new scheduler, provider fallback, retry loop or host binding was introduced."
+  ],
+  "source_changes_by_reviewer": false,
+  "native_calls": 0,
+  "native_writes": 0,
+  "provider_api_calls": 0,
+  "remote_published_by_reviewer": false,
+  "next_ready": {
+    "owner": "/root",
+    "action": "publish exact source delta only after canonical remote advisors/client.py path and current-source CAS are established",
+    "acceptance": "readback source SHA and attached review; preserve separate O5 host persistence patch and all free-only guards"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_ADVISER_WORKER_SOURCE_PUBLICATION_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "recorded_at_utc": "2026-11-17T20:42:36.264764+00:00",
+  "agent": "/root/relay_policy_audit",
+  "work_id": "ADVISER_POST_PUBLICATION_HANDOFF_20261117",
+  "state": "SOURCE_PUBLISHED_NATIVE_BINDING_PENDING",
+  "repository": "s-grouptwet/nox-helion-pp-private-build",
+  "branch": "source/nox-web-v15-onehost-execution-kit-20261117",
+  "published_commit": "0443eb4270d7072d8241fdb16ed5eb9316e81a51",
+  "repository_scope": "handoff/20261117/nox-v15-kit/execution/optimization/O5/",
+  "publication_owner": "/root",
+  "remote_readback": {
+    "authority": "root direct task message",
+    "reported_files": 4,
+    "reported_byte_exact": 4,
+    "root_reported_429_retry_completed": true,
+    "author_repeated_remote_reads": false
+  },
+  "local_publication_payload": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/adviser_publication.json",
+    "sha256": "fd6ed7efc2fffdba19589043d013d11661edab2712948a73c026bb7ecf77f4cf",
+    "files": [
+      {
+        "path": "host.py",
+        "sha256": "ad51ad815ac680c07f5eed7799939e0045c04df89c1ca190c2fdcdfb4aa50ecf",
+        "bytes": 7762,
+        "matches_root_publication_payload": true
+      },
+      {
+        "path": "test_worker_persistence.py",
+        "sha256": "02f7729e09a0b1adbdabd3490b2308a4be81981dfb3b7d341dc4df35caceb065",
+        "bytes": 7993,
+        "matches_root_publication_payload": true
+      },
+      {
+        "path": "SOURCE_RECEIPT.json",
+        "sha256": "a9d5ef24e973a00c7be6009b0ae1f39574cdb5299e79e2fb525efb35615f36b6",
+        "bytes": 3373,
+        "matches_root_publication_payload": true
+      },
+      {
+        "path": "independent_review/REVIEW_RECEIPT.json",
+        "sha256": "ad2822de4b95ba6df4fa49a23eadb133a9eb0e06d42b723830c1bdc2e4812b23",
+        "bytes": 2700,
+        "matches_root_publication_payload": true
+      }
+    ]
+  },
+  "original_source_receipt_preserved": true,
+  "source_receipt_status_semantics": "immutable preparation-stage SOURCE_TESTED / source_published=false; this receipt supersedes only publication stage",
+  "updated_local_handoff_files": [
+    {
+      "path": "README.md",
+      "sha256": "efc4268e305c2f743587f3d7bf9c0f569ba1796b25528018ae58ba90e24d709f",
+      "bytes": 4098
+    },
+    {
+      "path": "NEXT_NATIVE_O5.md",
+      "sha256": "801be1e1e2985e9329e24d1f49ef25b6fa6544b94e207ed11523a6568179725c",
+      "bytes": 9847
+    }
+  ],
+  "exact_binding_boundary": {
+    "kind": "nox.online_advice.v1",
+    "call": "existing_worker_handler",
+    "sink": "host_result_sink(advice_dict)",
+    "envelope_consumer": "existing native task completion adapter after the handler returns, before task ACK/requeue",
+    "native_consumer_symbol_observed": false,
+    "reason": "cached owner_subagent_dispatcher has different handler owner_native_subagent_review; package README callback names are explicitly illustrative"
+  },
+  "must_reconcile": [
+    "outer reconcile_required",
+    "advice.outcome_uncertain even with successful sink ACK",
+    "host_lease.release_uncertain independently of advice status"
+  ],
+  "native_accepted": false,
+  "new_native_calls": 0,
+  "new_provider_calls": 0,
+  "new_remote_writes": 0,
+  "claims_changed": false,
+  "next_ready": {
+    "owner": "O5/native_binding",
+    "input": "authoritative native registry and completion callback symbol, task envelope/TaskID, existing receipt readback and lease reconciliation callbacks",
+    "action": "bind the published worker and preserve/reconcile full returned envelope before generic retry or task ACK",
+    "focused_acceptance": "synthetic provider invoked once across lost sink ACK plus repeat delivery of same request key; existing readback recovers stored original advice; uncertain provider/release never triggers blind replay"
+  },
+  "author_remaining_ready": "Receive pending new Resonance audit output for a concrete source fix if root assigns it; no speculative extra tests or native calls."
+}

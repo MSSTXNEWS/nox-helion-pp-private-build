@@ -1,0 +1,288 @@
+diff --git a/PROVIDER_LIMITS_20261117.json b/PROVIDER_LIMITS_20261117.json
+new file mode 100644
+index 0000000..f1c54a7
+--- /dev/null
++++ b/PROVIDER_LIMITS_20261117.json
+@@ -0,0 +1,84 @@
++{
++  "schema": "NOX_EXISTING_ADVISORS_OFFICIAL_LIMITS_CHECK_V1",
++  "observed_at_utc": "2026-11-17T20:43:46.210356+00:00",
++  "scope": "Three official documentation pages; no provider API/account calls, no key access, no new provider/framework",
++  "providers": [
++    {
++      "provider": "openrouter",
++      "url": "https://openrouter.ai/docs/api_reference/limits",
++      "retrieval_ref": "turn170view0",
++      "verified": {
++        "quota_endpoint": "GET https://openrouter.ai/api/v1/key",
++        "daily_counter_field": "data.free_model_daily_requests",
++        "counter_keys": [
++          "used",
++          "limit",
++          "remaining"
++        ],
++        "reset_basis": "UTC day",
++        "legacy_rate_limit_object": "deprecated",
++        "retry_after": "honor when present"
++      },
++      "numeric_free_rpm_rpd": "UNVERIFIED: the retrieved dynamic table omitted numeric cells; no 20/50/1000 assumption",
++      "account_check_performed": false,
++      "free_capacity_unlimited": false
++    },
++    {
++      "provider": "groq",
++      "url": "https://console.groq.com/docs/rate-limits",
++      "retrieval_ref": "turn169view1",
++      "verified": {
++        "quota_scope": "organization",
++        "limits_interact": [
++          "RPM",
++          "RPD",
++          "TPM",
++          "TPD",
++          "optional ITPM/OTPM"
++        ],
++        "retry_after_seconds_header": "only on 429",
++        "x_ratelimit_remaining_requests": "RPD",
++        "x_ratelimit_remaining_tokens": "TPM"
++      },
++      "public_table_example": {
++        "model": "openai/gpt-oss-20b",
++        "rpm": 30,
++        "rpd": 1000,
++        "tpm": 8000,
++        "tpd": 200000
++      },
++      "table_caveat": "Public summary only; extraction does not certify the selected Free/Developer tab or this NOX organization. Exact limits require existing account Limits page.",
++      "account_check_performed": false,
++      "free_capacity_unlimited": false
++    },
++    {
++      "provider": "gemini",
++      "url": "https://aistudio.google.com/docs/rate-limits",
++      "requested_url": "https://ai.google.dev/gemini-api/docs/rate-limits",
++      "retrieval_ref": "turn169view2",
++      "verified": {
++        "quota_scope": "project, not individual API key",
++        "limits_interact": [
++          "RPM",
++          "input TPM",
++          "RPD"
++        ],
++        "rpd_reset": "midnight Pacific time",
++        "active_limits_url": "https://aistudio.google.com/rate-limit?timeRange=last-28-days",
++        "capacity_guaranteed": false
++      },
++      "numeric_generateContent_free_quota": "not asserted; active model/project tier must be checked in AI Studio",
++      "account_check_performed": false,
++      "free_capacity_unlimited": false
++    }
++  ],
++  "contract_fix": {
++    "file": "nox_advisors/client.py",
++    "function": "retry_delay",
++    "before": "valid numeric/date cooldown capped at 300 seconds",
++    "after": "preserve finite provider minimum; worker deadline still prevents long waits/retries"
++  },
++  "endpoints_and_payloads_revalidated_by_this_check": false,
++  "free_price_guards_changed": false,
++  "native_installed": false
++}
+diff --git a/README.md b/README.md
+index 8986f26..ffd0810 100644
+--- a/README.md
++++ b/README.md
+@@ -118,6 +118,12 @@ Puter.js, Pollinations OAuth/PKCE и отдельные Gradio Spaces требу
+ - [Gemini generateContent API](https://ai.google.dev/api/generate-content)
+ - [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing)
+ 
++### Уточнение квот и Retry-After — 17.11.2026
++
++Повторно проверены только три официальные страницы ограничений: [OpenRouter](https://openrouter.ai/docs/api_reference/limits), [Groq](https://console.groq.com/docs/rate-limits), [Gemini](https://aistudio.google.com/docs/rate-limits). Точные наблюдения и границы подтверждения находятся в `PROVIDER_LIMITS_20261117.json`. Квоты аккаунта NOX и реальный бесплатный доступ не проверялись; публичная таблица не заменяет host-owned attestation.
++
++Исправлена передача длинного `Retry-After`: значение 3600 секунд больше не сокращается до 300. Если ожидание не помещается в существующую deadline worker, `consult()` сразу возвращает `RATE_LIMITED` и полный интервал для существующего host. Дополнительный запрос, ожидание на час и новый scheduler не создаются. Неконечные числовые значения заголовка заменяются конечным fallback. Paid fallback и правила допуска сохранены.
++
+ ## Проверки
+ 
+ Авторский suite использует настоящий локальный HTTP server/socket transport с официальными target paths, без обращений к провайдерам. Проверяет payloads, headers, zero-price guard,429backoff, circuit breaker, redirect denial, secret rejection, Gemini thought exclusion, timeout/uncertain outcome, active-socket cancellation, process-wide2, обязательный host lease binding и неблокирующий chat enqueue. Independent review добавляется отдельным receipt. `manifest.json` содержит exact file hashes и статус native=false.
+diff --git a/manifest.json b/manifest.json
+index e4f5d55..92a02ba 100644
+--- a/manifest.json
++++ b/manifest.json
+@@ -7,21 +7,18 @@
+   "external_writes": false,
+   "runtime_dependencies": "Python standard library only",
+   "local_tests": {
+-    "count": 19,
++    "count": 4,
+     "result": "PASS",
+-    "transport": "real local HTTP fixtures"
++    "scope": "Retry-After delta: three new focused tests plus one existing short-429 retry test",
++    "transport": "in-memory quota reply plus one local HTTP fixture; no provider API"
+   },
+   "independent_review": {
+-    "status": "PASS",
+-    "count": 28,
+-    "failures": 0,
+-    "errors": 0,
+-    "source_hashes_match": true,
+-    "receipt": "review_receipt.json"
++    "status": "PENDING_RETRY_AFTER_DELTA",
++    "baseline_receipt": "review_receipt.json"
+   },
+-  "cli_check": "PASS_NO_NETWORK",
+-  "host_example": "PASS_OFFLINE_ENV_KEY_HOLD",
+-  "compileall": "PASS",
++  "cli_check": "BASELINE_PASS_NOT_RERUN_FOR_DELTA",
++  "host_example": "BASELINE_PASS_NOT_RERUN_FOR_DELTA",
++  "compileall": "BASELINE_PASS_NOT_RERUN_FOR_DELTA",
+   "limits": {
+     "host_http_consultations": 2,
+     "host_shared_arbiter_binding_required": true,
+@@ -62,8 +59,8 @@
+     },
+     {
+       "path": "nox_advisors/client.py",
+-      "bytes": 8986,
+-      "sha256": "816cab725f99050ca8e4760712477dce6121c4c9b66482c47ac27f0ea7773ecf"
++      "bytes": 9161,
++      "sha256": "dc12679270d735507fb26613a679ee074f53c08aff8d72d28717196711cf2a54"
+     },
+     {
+       "path": "nox_advisors/handoff.py",
+@@ -109,6 +106,16 @@
+       "path": "review_tests/test_advisors_independent.py",
+       "bytes": 20244,
+       "sha256": "923a4e701b65dff7b45695f80a51b202555f7764bbd778e280ef803100fd2232"
++    },
++    {
++      "path": "tests/test_retry_after_contract.py",
++      "bytes": 2218,
++      "sha256": "918ea913b7e579a2314ece5137840bd24a95aae567756f4dbfe3da369e9d9b15"
++    },
++    {
++      "path": "PROVIDER_LIMITS_20261117.json",
++      "bytes": 3073,
++      "sha256": "aae849ef79bd1d88dfe5df2de7ae16990fff8e192d4fde80c6c965d0b19514ab"
+     }
+   ],
+   "official_sources": [
+@@ -118,7 +125,28 @@
+     "https://console.groq.com/docs/api-reference",
+     "https://console.groq.com/docs/rate-limits",
+     "https://ai.google.dev/api/generate-content",
+-    "https://ai.google.dev/gemini-api/docs/pricing"
++    "https://ai.google.dev/gemini-api/docs/pricing",
++    "https://openrouter.ai/docs/api_reference/limits",
++    "https://aistudio.google.com/docs/rate-limits"
+   ],
+-  "readiness": "LOCAL_TESTED_READY_FOR_EXISTING_HOST_BINDING_NOT_NATIVE"
++  "readiness": "LOCAL_DELTA_TESTED_PENDING_REVIEW_NOT_NATIVE",
++  "baseline_verification": {
++    "source_revision": "4a9a88b00704441a9c38dc83999105c734efc143",
++    "local_tests": {
++      "count": 19,
++      "result": "PASS",
++      "transport": "real local HTTP fixtures"
++    },
++    "independent_review": {
++      "status": "PASS",
++      "count": 28,
++      "failures": 0,
++      "errors": 0,
++      "source_hashes_match": true,
++      "receipt": "review_receipt.json"
++    },
++    "cli_check": "PASS_NO_NETWORK",
++    "host_example": "PASS_OFFLINE_ENV_KEY_HOLD",
++    "compileall": "PASS"
++  }
+ }
+diff --git a/nox_advisors/client.py b/nox_advisors/client.py
+index 9637de2..a4e386d 100644
+--- a/nox_advisors/client.py
++++ b/nox_advisors/client.py
+@@ -5,6 +5,7 @@ from datetime import datetime, timezone
+ from email.utils import parsedate_to_datetime
+ import os
+ import json
++import math
+ import threading
+ import time
+ from .models import Advice, Consultation, FreeTierAttestation, SECRET, brief_digest
+@@ -55,8 +56,10 @@ def retry_delay(headers, attempt):
+             delay=(stamp-datetime.now(timezone.utc)).total_seconds()
+         except (ValueError, TypeError, OverflowError):
+             delay=0.25*(2**max(0,attempt-1))
+-    if delay != delay:delay=2.0  # NaN is never a retry permission.
+-    return max(0.05,min(delay,300.0))
++    if not math.isfinite(delay):delay=2.0  # Invalid hints cannot enter receipts.
++    # A worker deadline limits waiting, not the provider's minimum cooldown.
++    # consult() returns long hints to the existing host without sleeping/retrying.
++    return max(0.05,delay)
+ 
+ 
+ class AdvisoryClient:
+diff --git a/tests/test_retry_after_contract.py b/tests/test_retry_after_contract.py
+new file mode 100644
+index 0000000..3a68262
+--- /dev/null
++++ b/tests/test_retry_after_contract.py
+@@ -0,0 +1,57 @@
++"""Provider Retry-After is a minimum retry hint, independent of worker deadline."""
++import json
++import unittest
++from datetime import datetime, timedelta, timezone
++from email.utils import format_datetime
++
++from nox_advisors import Consultation
++from nox_advisors.client import AdvisoryClient, CircuitBreaker, retry_delay
++from nox_advisors.transport import CancelToken, HTTPReply
++
++
++class NoWait(CancelToken):
++    def wait(self, delay):
++        raise AssertionError('A long provider cooldown must return to the existing host')
++
++
++class RetryAfterContractTests(unittest.TestCase):
++    def test_long_429_hint_reaches_host_unchanged_without_wait_or_retry(self):
++        class QuotaReply:
++            calls = 0
++
++            def post(self, *args, **kwargs):
++                self.calls += 1
++                return HTTPReply(429, {'retry-after': '3600'}, b'{}')
++
++        transport = QuotaReply()
++        client = AdvisoryClient(
++            transport=transport,
++            environ={'OPENROUTER_API_KEY': 'offline-fixture-only'},
++            breaker=CircuitBreaker(),
++        )
++        request = Consultation(
++            'openrouter', 'openrouter/free', 'Compare two bounded index designs.',
++            'retry-after-regression', True, deadline_seconds=0.2,
++        )
++        reply = client.consult(request, cancel=NoWait())
++        self.assertEqual(reply.status, 'RATE_LIMITED')
++        self.assertEqual(reply.attempts, 1)
++        self.assertEqual(transport.calls, 1)
++        self.assertEqual(reply.retry_after_seconds, 3600.0)
++
++    def test_http_date_cooldown_is_not_shortened_to_five_minutes(self):
++        later = datetime.now(timezone.utc) + timedelta(hours=1)
++        delay = retry_delay({'retry-after': format_datetime(later, usegmt=True)}, 1)
++        self.assertGreater(delay, 3590.0)
++        self.assertLessEqual(delay, 3600.0)
++
++    def test_nonfinite_header_does_not_enter_receipt(self):
++        for value in ('NaN', 'inf', '-inf', '1e9999'):
++            with self.subTest(value=value):
++                delay = retry_delay({'retry-after': value}, 1)
++                self.assertEqual(delay, 2.0)
++                json.dumps({'retry_after_seconds': delay}, allow_nan=False)
++
++
++if __name__ == '__main__':
++    unittest.main()

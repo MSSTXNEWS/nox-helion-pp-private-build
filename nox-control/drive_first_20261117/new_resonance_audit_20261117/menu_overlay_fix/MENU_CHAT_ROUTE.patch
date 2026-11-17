@@ -1,0 +1,13 @@
+--- historical_3cd548/nox_v29_chat_bridge.py
++++ historical_candidate/nox_v29_chat_bridge.py
+@@ -332,6 +332,10 @@
+     (
+         "const ready=health?.status==='READY'&&health.owner_transport_bound===true&&core?.native_p02_bound===true&&core.native_contract?.transport_bound===true&&typeof core.primary_model==='string'&&Boolean(core.primary_model);",
+         "const ready=health?.status==='READY'&&health?.backend==='EXISTING_NOX_ONEHOST'&&health.chat_http===200&&health.model_http===200&&core?.backend==='EXISTING_NATIVE_ONEHOST'&&core.native_p02_bound===true&&core.native_cognitive_memory_bound===true&&core.native_dialogs_ready===true&&typeof core.primary_model==='string'&&Boolean(core.primary_model);",
++    ),
++    (
++        "link.setAttribute('href','/nox/'+page+(match[2]||''));",
++        "link.setAttribute('href',(page==='chat'&&location.pathname.startsWith('/nox-web-v29/')?'/nox-web-v29/chat.html':'/nox/'+page)+(match[2]||''));",
+     ),
+ )
+ 

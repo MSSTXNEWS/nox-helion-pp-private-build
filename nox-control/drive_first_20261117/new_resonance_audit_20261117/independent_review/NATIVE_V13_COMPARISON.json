@@ -1,0 +1,232 @@
+{
+  "schema": "NOX_NEW_RESONANCE_NATIVE_V13_COMPARISON_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/relay_independent_review",
+  "reviewed_at_utc": "2026-11-17T20:52:14.325158+00:00",
+  "status": "SERVED_SOURCE_VERIFIED_WITH_OPEN_NAVIGATION_AND_ACCEPTANCE_ITEMS",
+  "native_receipt": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/NATIVE_RESULT_V2.json",
+    "sha256": "2b86a682068759ceebb34fd7abb02b70a9781695efb373acd9e19605ba093658",
+    "run_id": 44172726307,
+    "job_id": 134355830401,
+    "request_id": 6960522423,
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "source_sha": "51528655fbb34db94602a02b7f213319d10a80d2"
+  },
+  "source_archive": {
+    "sha256": "f12a6f36e9718ee483e0d9d2e3f16aa41c3911ec9ef6e2bc03502a5da0d62fe4",
+    "full_archive_hash_reverified": true
+  },
+  "script_comparison": [
+    {
+      "path": "/nox-web-v29/native-owner.js",
+      "status": 200,
+      "observed_sha256": "6b8fda36c35a1ef68b7d2f966832547e22a1f5ad93ad5d91987a5f0b2b31016a",
+      "observed_bytes": 31,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "6b8fda36c35a1ef68b7d2f966832547e22a1f5ad93ad5d91987a5f0b2b31016a",
+      "comparison": "EXACT_OWNER_FLAG_BODY"
+    },
+    {
+      "path": "/nox-web-v29/workspace.js",
+      "status": 200,
+      "observed_sha256": "9b77c5011da892769c7332826c4b35bce581fb121960c13694638657735fc0ae",
+      "observed_bytes": 6451,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "9b77c5011da892769c7332826c4b35bce581fb121960c13694638657735fc0ae",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    },
+    {
+      "path": "/nox-web-v29/nox-ui.js",
+      "status": 200,
+      "observed_sha256": "18d8c8d6009323188b9f903920308b3b871a6123f7b425a77184a6b2c147640e",
+      "observed_bytes": 42933,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "18d8c8d6009323188b9f903920308b3b871a6123f7b425a77184a6b2c147640e",
+      "comparison": "EXACT_EXISTING_OWNER_OVERLAY"
+    },
+    {
+      "path": "/nox-web-v29/nox-chat.js",
+      "status": 200,
+      "observed_sha256": "d9fa29e0fa726502adc6e83ea344adf13b8a2354acd3610b3de96ec378e942ce",
+      "observed_bytes": 66619,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "d9fa29e0fa726502adc6e83ea344adf13b8a2354acd3610b3de96ec378e942ce",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    },
+    {
+      "path": "/nox-web-v29/vendor/nox-extra/lucide.min.js",
+      "status": 200,
+      "observed_sha256": "a4f75b7aeae05a07cd1eae556b15fcbdfc3d0e357aa8f7904ada6ed31be37c1f",
+      "observed_bytes": 262145,
+      "response_hash_scope": "bounded_prefix",
+      "expected_prefix_sha256": "a4f75b7aeae05a07cd1eae556b15fcbdfc3d0e357aa8f7904ada6ed31be37c1f",
+      "comparison": "EXACT_PREFIX_ONLY_FULL_RESPONSE_UNVERIFIED"
+    },
+    {
+      "path": "/nox-web-v29/vendor/fx/motion.js",
+      "status": 200,
+      "observed_sha256": "cbaccc5c5809cdaa2777ded956e475a404f0596048cb9645c8c80da85c6e8174",
+      "observed_bytes": 80947,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "cbaccc5c5809cdaa2777ded956e475a404f0596048cb9645c8c80da85c6e8174",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    },
+    {
+      "path": "/nox-web-v29/nox-chat-diagrams.js",
+      "status": 200,
+      "observed_sha256": "f85f2626bf4c9dfa94ee6950ae0e4dda08cbe7403dada4a7414eedda292b0090",
+      "observed_bytes": 14723,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "f85f2626bf4c9dfa94ee6950ae0e4dda08cbe7403dada4a7414eedda292b0090",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    },
+    {
+      "path": "/nox-web-v29/nox-core-inspector.js",
+      "status": 200,
+      "observed_sha256": "133292d57f0943e9f57991cf5afc28d34661a61dfd35e8f05dce2d7087f22c9f",
+      "observed_bytes": 4677,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "133292d57f0943e9f57991cf5afc28d34661a61dfd35e8f05dce2d7087f22c9f",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    },
+    {
+      "path": "/nox-web-v29/nox-global-wow-v18.js",
+      "status": 200,
+      "observed_sha256": "c06cfd8ce8d18eab87c2338b0b493b9f61af99a0b61c246d5cb4aa0012c72e77",
+      "observed_bytes": 3895,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "c06cfd8ce8d18eab87c2338b0b493b9f61af99a0b61c246d5cb4aa0012c72e77",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    },
+    {
+      "path": "/nox-web-v29/nox-universe-v19.js",
+      "status": 200,
+      "observed_sha256": "4c2c9a2d456da77bfeab74f2aa5037b8828eb723a3690579c382b93fe2af6d68",
+      "observed_bytes": 40767,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "4c2c9a2d456da77bfeab74f2aa5037b8828eb723a3690579c382b93fe2af6d68",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    },
+    {
+      "path": "/nox-web-v29/nox-chat-training-v23.mjs",
+      "status": 200,
+      "observed_sha256": "52ee9bcb55220d08e982ea8796f147c28fc1e6eeb1cf450ffecb0014bdf5fde1",
+      "observed_bytes": 8252,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "52ee9bcb55220d08e982ea8796f147c28fc1e6eeb1cf450ffecb0014bdf5fde1",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    },
+    {
+      "path": "/nox-web-v29/nox-v29-pc-genesis-addons.mjs",
+      "status": 200,
+      "observed_sha256": "5968f7b9ca72cbfd053c77e90853fcee9076c1671b2d0592b00a67cf4e2b9f5c",
+      "observed_bytes": 13510,
+      "response_hash_scope": "complete_response",
+      "expected_sha256": "5968f7b9ca72cbfd053c77e90853fcee9076c1671b2d0592b00a67cf4e2b9f5c",
+      "comparison": "EXACT_V13_ARCHIVE_ASSET"
+    }
+  ],
+  "full_script_response_matches": 11,
+  "prefix_only_matches": 1,
+  "main_html": {
+    "observed": {
+      "path": "/nox-web-v29/chat.html",
+      "status": 200,
+      "bytes_read": 14757,
+      "sha256": "4f43bcf9c51c9f0fdd59027b4bdaee0ad5962fe347cd9d74f1fc4a0c40444996",
+      "sha256_scope": "complete_response",
+      "truncated": false,
+      "content_type": "text/html",
+      "identity_encoding": true
+    },
+    "v13_raw": {
+      "archive_path": "site/chat.html",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/chat.html",
+      "bytes": 16422,
+      "sha256": "99b909ea77df8384d5e64fbd59c86cf3a1ed7793227ea9db8879e1a21d75b118"
+    },
+    "expected_v13_after_owner_flag": {
+      "bytes": 16474,
+      "sha256": "6b97d471304bf43c66960b3c5f79a773e5d7db205f3cffe9fe71a07b0e2aae58",
+      "assumption": "no additional main-specific HTML transform"
+    },
+    "equals_v13_shell": false,
+    "shell_revision": "UNKNOWN; engine and shared assets match, HTML differs",
+    "v13_direct_script_refs_not_in_served_html": [
+      "/nox-web-v29/nox-cinematic-worlds.js",
+      "/nox-web-v29/nox-connection-v13.js",
+      "/nox-web-v29/nox-motion-idle-loader.js",
+      "/nox-web-v29/nox-select-tiles-v5.js",
+      "/nox-web-v29/nox-shared-chrome-v10.js",
+      "/nox-web-v29/nox-shared-scene-v10.mjs",
+      "/nox-web-v29/nox-v9-interface.js",
+      "/nox-web-v29/nox-visual-control-v6.js",
+      "/nox-web-v29/nox-web-shell-v4.js",
+      "/nox-web-v29/nox-wow-max.js"
+    ],
+    "runtime_imports_and_css_audited": false
+  },
+  "owner_flag": {
+    "source_defined": true,
+    "before_critical_scripts": true,
+    "javascript_executed": false,
+    "runtime_activation_verified": false
+  },
+  "native_send": {
+    "definition_present": true,
+    "native_stream_literal_present": true,
+    "model_endpoint_literal_present": false,
+    "native_model_origin_verified": false
+  },
+  "status_read": {
+    "http": 200,
+    "observed_projection": {
+      "schema_valid": true,
+      "native_p02_bound": true,
+      "backend": "EXISTING_NATIVE_ONEHOST",
+      "primary_model": "[WITHHELD_OR_UNAVAILABLE]"
+    },
+    "known_saved_source_primary_model_type": "string truncated to200, or null when no model string",
+    "known_saved_source_invariant": "native_p02_bound=true implies nonempty primary_model in saved V112 function",
+    "known_source_sha256": "3cd548a69ac0fa7128368bef77f5f7ef032359128cf723eaca1c6a0514c85dc6",
+    "current_native_primary_model_type": "UNKNOWN; not exported",
+    "current_native_primary_model_truthiness": "UNKNOWN; not exported",
+    "projection_can_hide_nonempty_string": true,
+    "must_not_infer_null": true
+  },
+  "alias": {
+    "path": "/nox/chat",
+    "status": 401,
+    "bytes_read": 50,
+    "sha256": "ecbf9bb1d507050280e1d5186445f6cec620eb5fe9fceb9dda6e84002b269248",
+    "sha256_scope": "complete_response",
+    "truncated": false,
+    "content_type": "application/json",
+    "identity_encoding": true,
+    "route_basis": "FIXED_V13_NAVIGATION_CONTRACT",
+    "same_body_as_main": false
+  },
+  "menu_source_reproduction": {
+    "receipt": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/independent_review/MENU_ROUTE_REPRODUCTION.json",
+    "sha256": "e1cdc1529438b9e85307fb412f9ecace53fb89a7ffb2dd342e9dfd0c39324472",
+    "actual_runtime_menu_click_verified": false,
+    "minimal_fix": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/menu_overlay_fix/MENU_CHAT_ROUTE.patch",
+    "fix_stage": "SOURCE_TESTED_NOT_INSTALLED"
+  },
+  "scoped_cancel_source_contract_verified": true,
+  "gpu_cancellation_verified": false,
+  "model_reply_and_s03_exchange_accepted": false,
+  "public_browser_verified": false,
+  "effect_counts": {
+    "model_requests": 0,
+    "dialogs_created": 0,
+    "stop_requests": 0,
+    "reloads": 0,
+    "native_file_writes": 0,
+    "external_requests": 0
+  },
+  "audit_elapsed_ms": 279,
+  "elapsed_is_inference_latency": false,
+  "next_ready": "O1/root rebase narrow menu overlay tuple on its exact current bridge under existing claim; use direct authenticated /nox-web-v29/chat.html while separate model/S03 acceptance remains pending."
+}

@@ -1,0 +1,152 @@
+{
+  "schema": "NOX_ADVISORS_RETRY_AFTER_PUBLICATION_MAP_V1",
+  "instructions_version": "0.0.6",
+  "prepared_at_utc": "2026-11-17T20:51:34.052462+00:00",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "work/nox-resonance-direct-launch-20261117",
+  "target_prefix": "nox-control/drive_first_20261117/advisors_retry_after_20261117/",
+  "publication_kind": "reviewed patch plus additive test/receipts; not a second complete advisors package",
+  "canonical_base": {
+    "drive_file_id": "1WW8njIE1-NdmXcgPAPiK7iLlS0yJw5vQ",
+    "drive_url": "https://drive.google.com/file/d/1WW8njIE1-NdmXcgPAPiK7iLlS0yJw5vQ/view",
+    "zip_sha256": "b7b11c008af64dbfcbef498bfa506b12dc527a853547e86f3f3ff2687bf4bc0e",
+    "zip_bytes": 47668,
+    "zip_prefix": "nox-online-advisors/",
+    "local_source_commit": "4a9a88b00704441a9c38dc83999105c734efc143",
+    "client_path": "nox_advisors/client.py",
+    "client_sha256": "816cab725f99050ca8e4760712477dce6121c4c9b66482c47ac27f0ea7773ecf",
+    "client_bytes": 8986,
+    "local_origin_configured": false
+  },
+  "reviewed_change": {
+    "local_commit": "4a0317f8c66db5ae231ec50c6cb39869d000f98c",
+    "patch_sha256": "e35c1e4c65911d45da5d1eadd3a95df75766a4b19cd3d43bda53ee98abe052bd",
+    "client_result_sha256": "dc12679270d735507fb26613a679ee074f53c08aff8d72d28717196711cf2a54",
+    "source_tests_passed": 4,
+    "independent_review": "PASS_SOURCE",
+    "independent_review_receipt_sha256": "8473cd7473bd7abc0196d25fc11a12ec0465c737c66a4c8a6424293b7b71aee8"
+  },
+  "applies": [
+    {
+      "path": "nox_advisors/client.py",
+      "action": "update",
+      "preimage_sha256": "816cab725f99050ca8e4760712477dce6121c4c9b66482c47ac27f0ea7773ecf",
+      "preimage_bytes": 8986,
+      "postimage_sha256": "dc12679270d735507fb26613a679ee074f53c08aff8d72d28717196711cf2a54",
+      "postimage_bytes": 9161
+    },
+    {
+      "path": "README.md",
+      "action": "update",
+      "preimage_sha256": "16bfcbeba03f55f42188d9d6dee78ecb2e502b0ed0546d5e8ba9b3a5b99c6b7d",
+      "preimage_bytes": 15370,
+      "postimage_sha256": "ba3e50400289e8ffe6b0923ec1a5b0729d8eb713f61d113b260ccf21bed7dbdb",
+      "postimage_bytes": 16749
+    },
+    {
+      "path": "manifest.json",
+      "action": "update",
+      "preimage_sha256": "63f9a30d752220060aa674ca06b396ea8cc5d725c37b10b12f3cf8df9e12cce8",
+      "preimage_bytes": 4043,
+      "postimage_sha256": "b29900c398c3dce5feff037fffcc3244f881517e0bd1eff711e344a8915a9838",
+      "postimage_bytes": 5130
+    },
+    {
+      "path": "tests/test_retry_after_contract.py",
+      "action": "create",
+      "preimage_sha256": null,
+      "preimage_bytes": null,
+      "postimage_sha256": "918ea913b7e579a2314ece5137840bd24a95aae567756f4dbfe3da369e9d9b15",
+      "postimage_bytes": 2218
+    },
+    {
+      "path": "PROVIDER_LIMITS_20261117.json",
+      "action": "create",
+      "preimage_sha256": null,
+      "preimage_bytes": null,
+      "postimage_sha256": "aae849ef79bd1d88dfe5df2de7ae16990fff8e192d4fde80c6c965d0b19514ab",
+      "postimage_bytes": 3073
+    }
+  ],
+  "application_check": {
+    "method": "git apply --check on verified canonical ZIP extracted into disposable source directory",
+    "result": "PASS",
+    "all_existing_patch_preimages_match_zip_and_base_commit": true,
+    "patch_application_performed": false
+  },
+  "existing_upstream_declaration": {
+    "repository": "s-grouptwet/nox-helion-pp-private-build",
+    "branch": "source/nox-web-v15-onehost-execution-kit-20261117",
+    "observed_branch_tip": "ae32d5ddd9c98087d39df8f1702d804126880be8",
+    "path": "handoff/20261117/nox-v15-kit/execution/automation/A2/advisors-source-README.md",
+    "last_file_commit": "cf6514b70f89bba06d5156051da676827932ab29",
+    "statement": "Upstream canonical package is the Drive ZIP; existing repo delivery is patch plus additive regression, not a deployed integration"
+  },
+  "github_checked_tree": {
+    "commit": "51528655fbb34db94602a02b7f213319d10a80d2",
+    "entries": 2080,
+    "truncated": false,
+    "advisor_paths_present": false
+  },
+  "files": [
+    {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/publication/README_APPLY.md",
+      "repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/README_APPLY.md",
+      "bytes": 5589,
+      "sha256": "84898c9ef14cc5ee3913db1934df6ce2b6a2334d16d92a9868afbfed9b01581a"
+    },
+    {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/publication/ADVISORS_RETRY_AFTER.patch",
+      "repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/ADVISORS_RETRY_AFTER.patch",
+      "bytes": 12440,
+      "sha256": "e35c1e4c65911d45da5d1eadd3a95df75766a4b19cd3d43bda53ee98abe052bd"
+    },
+    {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/publication/SOURCE_RECEIPT.json",
+      "repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/SOURCE_RECEIPT.json",
+      "bytes": 3575,
+      "sha256": "64f895f0a8f799cbc627a680e84c680712662c6fdf49b1aab9afe9fd1f5aecba"
+    },
+    {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/publication/INDEPENDENT_REVIEW_RECEIPT.json",
+      "repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/INDEPENDENT_REVIEW_RECEIPT.json",
+      "bytes": 2912,
+      "sha256": "8473cd7473bd7abc0196d25fc11a12ec0465c737c66a4c8a6424293b7b71aee8"
+    },
+    {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/publication/PROVIDER_LIMITS_20261117.json",
+      "repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/PROVIDER_LIMITS_20261117.json",
+      "bytes": 3073,
+      "sha256": "aae849ef79bd1d88dfe5df2de7ae16990fff8e192d4fde80c6c965d0b19514ab"
+    },
+    {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/publication/tests/test_retry_after_contract.py",
+      "repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/tests/test_retry_after_contract.py",
+      "bytes": 2218,
+      "sha256": "918ea913b7e579a2314ece5137840bd24a95aae567756f4dbfe3da369e9d9b15"
+    },
+    {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/publication/CLIENT_RUNTIME_ONLY.patch",
+      "repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/CLIENT_RUNTIME_ONLY.patch",
+      "bytes": 1039,
+      "sha256": "ddb5789a4062bfd21bd63251756f79a392441fd402c066348c11fc6dd94baa75"
+    }
+  ],
+  "self_repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/PUBLICATION_MAP.json",
+  "publish_precondition": "root obtains fresh branch head and checks destination paths before normal existing publication; this map performs no claim/remote writes",
+  "native_calls": 0,
+  "provider_calls": 0,
+  "secret_access": false,
+  "external_writes_by_preparer": 0,
+  "source_runtime_modified_since_review": false,
+  "review_status_provenance": "Frozen author SOURCE_RECEIPT and patch manifest predate independent PASS; current exact-source review is separate and does not rewrite reviewed patch.",
+  "runtime_only_patch": {
+    "repository_path": "nox-control/drive_first_20261117/advisors_retry_after_20261117/CLIENT_RUNTIME_ONLY.patch",
+    "bytes": 1039,
+    "sha256": "ddb5789a4062bfd21bd63251756f79a392441fd402c066348c11fc6dd94baa75",
+    "base_client_sha256": "816cab725f99050ca8e4760712477dce6121c4c9b66482c47ac27f0ea7773ecf",
+    "result_client_sha256": "dc12679270d735507fb26613a679ee074f53c08aff8d72d28717196711cf2a54",
+    "check": "git apply --check and apply on disposable exact canonical ZIP extraction; exactly one file changed",
+    "native_writes": 0
+  }
+}

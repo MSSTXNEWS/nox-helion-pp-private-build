@@ -1,0 +1,58 @@
+{
+  "schema": "NOX_NEW_RESONANCE_NOTION_WRITE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "verified_at_utc": "2026-11-17T20:53:18.689Z",
+  "agent_id": "/root/relay_policy_audit",
+  "work_id": "DURABLE_NEW_RESONANCE_MAIN_ROUTE_20261117",
+  "operation_key": "NOX_NEW_RESONANCE_MAIN_ROUTE_VERIFIED_20261117",
+  "status": "BOTH_WRITES_READBACK_VERIFIED",
+  "guide_fetched": "40cacc184a9f8154ba82feaa8f963e65",
+  "markdown_spec_read": true,
+  "enabled_skills_fetched": true,
+  "pages": [
+    {
+      "id": "41bacc184a9f811aa65ae53e0024f858",
+      "title": "NOX — мегабиблиотека, общий план и исходные патчи",
+      "url": "https://app.notion.com/p/41bacc184a9f811aa65ae53e0024f858?pvs=204",
+      "page_last_edited_at": "2026-11-17T20:52:25.462Z",
+      "marker_count": 1,
+      "original_content_preserved_as_prefix": true,
+      "old_content_chars": 150237,
+      "new_content_chars": 152359,
+      "run_recorded": true,
+      "job_recorded": true,
+      "source_recorded": true,
+      "direct_link_recorded": true
+    },
+    {
+      "id": "419acc184a9f81fca144dfe8432e1a5b",
+      "title": "⚙️ NOX HELION · ONEPASS 04/20/40 МСК — журнал ошибок и эстафета",
+      "url": "https://app.notion.com/p/419acc184a9f81fca144dfe8432e1a5b?pvs=204",
+      "page_last_edited_at": "2026-11-17T20:52:33.701Z",
+      "marker_count": 1,
+      "original_content_preserved_as_prefix": true,
+      "old_content_chars": 601292,
+      "new_content_chars": 603366,
+      "run_recorded": true,
+      "job_recorded": true,
+      "source_recorded": true,
+      "direct_link_recorded": true
+    }
+  ],
+  "mutations": "append one small separate section per existing page",
+  "original_content_preserved": true,
+  "live_optimization_checkpoint_edited": false,
+  "external_requests_beyond_authorized_notion_calls": 0,
+  "native_calls_by_author": 0,
+  "source": {
+    "native_result_file": "nox_refresh/new_resonance_audit_20261117/NATIVE_RESULT_V2.json",
+    "run_id": 44172726307,
+    "job_id": 134355830401,
+    "request_id": 6960522423,
+    "source_commit": "51528655fbb34db94602a02b7f213319d10a80d2",
+    "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44172726307/job/134355830401",
+    "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/51528655fbb34db94602a02b7f213319d10a80d2"
+  },
+  "scope_released": "Notion two-page append complete; no pending writes; root may resume page edits",
+  "next_ready": "O1/root separate contentful model exchange and same-exchange full history/S03 acceptance; assigned reviewer source menu-overlay repair without overwriting O1 native scope"
+}

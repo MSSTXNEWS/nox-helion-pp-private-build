@@ -1,0 +1,683 @@
+{
+  "run_id": 44172726307,
+  "job_id": 134355830401,
+  "request_id": 6960522423,
+  "cleanup": "DETACHED_AND_VERIFIED",
+  "result": {
+    "schema": "NOX_NEW_RESONANCE_READ_ONLY_AUDIT_V1",
+    "owner_request_id": "6960522423",
+    "owner_source_sha": "51528655fbb34db94602a02b7f213319d10a80d2",
+    "page": "/nox-web-v29/chat.html",
+    "model_requests": 0,
+    "dialogs_created": 0,
+    "stop_requests": 0,
+    "reloads": 0,
+    "native_file_writes": 0,
+    "external_requests": 0,
+    "source_text_exported": false,
+    "credentials_exported": false,
+    "js_executed": false,
+    "public_tunnel_verified": false,
+    "native_model_origin_verified": false,
+    "common_source_pin": {
+      "sha256": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+      "bytes": 5971,
+      "stable_file_identity_verified": true,
+      "binding": "PINNED_PROXY_FROM_COMMON_IMPORT_SECRETS_FIXED_SIBLING",
+      "code_executed": false,
+      "loaded_module_memory_identity_verified": false
+    },
+    "scoped_cancel_contract_verified": true,
+    "html": {
+      "path": "/nox-web-v29/chat.html",
+      "status": 200,
+      "bytes_read": 14757,
+      "sha256": "4f43bcf9c51c9f0fdd59027b4bdaee0ad5962fe347cd9d74f1fc4a0c40444996",
+      "sha256_scope": "complete_response",
+      "truncated": false,
+      "content_type": "text/html",
+      "identity_encoding": true
+    },
+    "page_projection": {
+      "title": "NOX HELION · РЕЗОНАНС",
+      "title_sha256": "8096126739aaa16808ef84beca373ab3a9a8f51cfef198fce69be87b37076fb9",
+      "dom_ids": [
+        {
+          "tag": "div",
+          "id": "sidebarStatus"
+        },
+        {
+          "tag": "div",
+          "id": "globalStatus"
+        },
+        {
+          "tag": "input",
+          "id": "chatSearch"
+        },
+        {
+          "tag": "div",
+          "id": "nativeChats"
+        },
+        {
+          "tag": "p",
+          "id": "historyState"
+        },
+        {
+          "tag": "div",
+          "id": "savedChats"
+        },
+        {
+          "tag": "div",
+          "id": "chatPersonaControls"
+        },
+        {
+          "tag": "div",
+          "id": "personas"
+        },
+        {
+          "tag": "div",
+          "id": "chatTitle"
+        },
+        {
+          "tag": "p",
+          "id": "chatCorePhase"
+        },
+        {
+          "tag": "span",
+          "id": "chatStatus"
+        },
+        {
+          "tag": "div",
+          "id": "messages"
+        },
+        {
+          "tag": "form",
+          "id": "chatForm"
+        },
+        {
+          "tag": "textarea",
+          "id": "prompt"
+        },
+        {
+          "tag": "div",
+          "id": "chatVoiceVisual"
+        },
+        {
+          "tag": "svg",
+          "id": "chatVoiceWave"
+        },
+        {
+          "tag": "polyline",
+          "id": "chatVoiceLine"
+        },
+        {
+          "tag": "button",
+          "id": "chatDictate"
+        },
+        {
+          "tag": "input",
+          "id": "fileAttach",
+          "input_type": "file"
+        },
+        {
+          "tag": "strong",
+          "id": "chatCpu"
+        },
+        {
+          "tag": "strong",
+          "id": "chatGpu"
+        },
+        {
+          "tag": "strong",
+          "id": "chatRam"
+        },
+        {
+          "tag": "strong",
+          "id": "chatCpuTemp"
+        },
+        {
+          "tag": "strong",
+          "id": "chatGpuTemp"
+        },
+        {
+          "tag": "strong",
+          "id": "chatVram"
+        },
+        {
+          "tag": "div",
+          "id": "chatAdvancedDiagrams"
+        },
+        {
+          "tag": "svg",
+          "id": "chatMetricHistory"
+        },
+        {
+          "tag": "path",
+          "id": "chatCpuLine"
+        },
+        {
+          "tag": "path",
+          "id": "chatGpuLine"
+        },
+        {
+          "tag": "p",
+          "id": "chatMetricSource"
+        },
+        {
+          "tag": "div",
+          "id": "quickCommands"
+        },
+        {
+          "tag": "details",
+          "id": "chat-command-tools"
+        },
+        {
+          "tag": "button",
+          "id": "chatTranslate"
+        },
+        {
+          "tag": "div",
+          "id": "chatToolButtons"
+        },
+        {
+          "tag": "pre",
+          "id": "chatToolResult"
+        },
+        {
+          "tag": "div",
+          "id": "chatSources"
+        },
+        {
+          "tag": "article",
+          "id": "chatSourceDetail"
+        },
+        {
+          "tag": "strong",
+          "id": "chatOllama"
+        },
+        {
+          "tag": "strong",
+          "id": "chatModel"
+        },
+        {
+          "tag": "strong",
+          "id": "chatMemory"
+        },
+        {
+          "tag": "strong",
+          "id": "chatTTS"
+        },
+        {
+          "tag": "output",
+          "id": "chatHold"
+        },
+        {
+          "tag": "div",
+          "id": "nox-public-safe-preview"
+        }
+      ],
+      "script_paths": [
+        "/nox-web-v29/native-owner.js",
+        "/nox-web-v29/workspace.js",
+        "/nox-web-v29/vendor/nox-extra/lucide.min.js",
+        "/nox-web-v29/vendor/fx/motion.js",
+        "/nox-web-v29/nox-ui.js",
+        "/nox-web-v29/nox-chat.js",
+        "/nox-web-v29/nox-chat-diagrams.js",
+        "/nox-web-v29/nox-core-inspector.js",
+        "/nox-web-v29/nox-global-wow-v18.js",
+        "/nox-web-v29/nox-universe-v19.js",
+        "/nox-web-v29/nox-chat-training-v23.mjs",
+        "/nox-web-v29/nox-v29-pc-genesis-addons.mjs"
+      ],
+      "script_count": 12,
+      "discarded_script_refs": 0,
+      "base_tag_present": false,
+      "inline_wiring": [
+        {
+          "literal_routes": [],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": false,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      ],
+      "script_tag_order": [
+        {
+          "script_index": 1,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": false,
+          "owner_flag_true_defined": true,
+          "path": "/nox-web-v29/native-owner.js"
+        },
+        {
+          "script_index": 2,
+          "kind": "inline",
+          "execution": "inert",
+          "async": false,
+          "defer": false,
+          "owner_flag_true_defined": false
+        },
+        {
+          "script_index": 3,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/workspace.js"
+        },
+        {
+          "script_index": 4,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/vendor/nox-extra/lucide.min.js"
+        },
+        {
+          "script_index": 5,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/vendor/fx/motion.js"
+        },
+        {
+          "script_index": 6,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/nox-ui.js"
+        },
+        {
+          "script_index": 7,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/nox-chat.js"
+        },
+        {
+          "script_index": 8,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/nox-chat-diagrams.js"
+        },
+        {
+          "script_index": 9,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/nox-core-inspector.js"
+        },
+        {
+          "script_index": 10,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/nox-global-wow-v18.js"
+        },
+        {
+          "script_index": 11,
+          "kind": "external",
+          "execution": "classic",
+          "async": false,
+          "defer": true,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/nox-universe-v19.js"
+        },
+        {
+          "script_index": 12,
+          "kind": "external",
+          "execution": "module",
+          "async": false,
+          "defer": false,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/nox-chat-training-v23.mjs"
+        },
+        {
+          "script_index": 13,
+          "kind": "external",
+          "execution": "module",
+          "async": false,
+          "defer": false,
+          "owner_flag_true_defined": false,
+          "path": "/nox-web-v29/nox-v29-pc-genesis-addons.mjs"
+        }
+      ],
+      "script_tag_order_truncated": false,
+      "owner_flag_true_defined": true,
+      "owner_flag_before_critical_scripts": true,
+      "owner_flag_activation_verified": false,
+      "source_text_exported": false
+    },
+    "owner_flag_true_defined": true,
+    "owner_flag_before_critical_scripts": true,
+    "owner_flag_activation_verified": false,
+    "scripts": [
+      {
+        "path": "/nox-web-v29/native-owner.js",
+        "status": 200,
+        "bytes_read": 31,
+        "sha256": "6b8fda36c35a1ef68b7d2f966832547e22a1f5ad93ad5d91987a5f0b2b31016a",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "application/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": true,
+          "owner_flag_gate_present": false,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/workspace.js",
+        "status": 200,
+        "bytes_read": 6451,
+        "sha256": "9b77c5011da892769c7332826c4b35bce581fb121960c13694638657735fc0ae",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": true,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/nox-ui.js",
+        "status": 200,
+        "bytes_read": 42933,
+        "sha256": "18d8c8d6009323188b9f903920308b3b871a6123f7b425a77184a6b2c147640e",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "application/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [
+            "/api/nox/status"
+          ],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": true,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/nox-chat.js",
+        "status": 200,
+        "bytes_read": 66619,
+        "sha256": "d9fa29e0fa726502adc6e83ea344adf13b8a2354acd3610b3de96ec378e942ce",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [
+            "/api/nox/chat/stream",
+            "/api/nox/stop",
+            "/api/nox/status",
+            "/api/ui/memory/dialogs/status",
+            "/api/ui/memory/dialogs/history",
+            "/api/ui/memory/dialogs/create",
+            "/api/ui/capabilities"
+          ],
+          "direct_literal_calls": [
+            {
+              "call": "fetch",
+              "route": "/api/nox/chat/stream"
+            },
+            {
+              "call": "api",
+              "route": "/api/nox/stop"
+            },
+            {
+              "call": "api",
+              "route": "/api/nox/status"
+            },
+            {
+              "call": "api",
+              "route": "/api/ui/memory/dialogs/status"
+            },
+            {
+              "call": "api",
+              "route": "/api/ui/memory/dialogs/create"
+            },
+            {
+              "call": "api",
+              "route": "/api/ui/capabilities"
+            }
+          ],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": true,
+          "sendNative_definition_present": true,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/vendor/nox-extra/lucide.min.js",
+        "status": 200,
+        "bytes_read": 262145,
+        "sha256": "a4f75b7aeae05a07cd1eae556b15fcbdfc3d0e357aa8f7904ada6ed31be37c1f",
+        "sha256_scope": "bounded_prefix",
+        "truncated": true,
+        "content_type": "text/javascript",
+        "identity_encoding": true
+      },
+      {
+        "path": "/nox-web-v29/vendor/fx/motion.js",
+        "status": 200,
+        "bytes_read": 80947,
+        "sha256": "cbaccc5c5809cdaa2777ded956e475a404f0596048cb9645c8c80da85c6e8174",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": false,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/nox-chat-diagrams.js",
+        "status": 200,
+        "bytes_read": 14723,
+        "sha256": "f85f2626bf4c9dfa94ee6950ae0e4dda08cbe7403dada4a7414eedda292b0090",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": false,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/nox-core-inspector.js",
+        "status": 200,
+        "bytes_read": 4677,
+        "sha256": "133292d57f0943e9f57991cf5afc28d34661a61dfd35e8f05dce2d7087f22c9f",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [
+            "/api/nox/status"
+          ],
+          "direct_literal_calls": [
+            {
+              "call": "fetch",
+              "route": "/api/nox/status"
+            }
+          ],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": false,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/nox-global-wow-v18.js",
+        "status": 200,
+        "bytes_read": 3895,
+        "sha256": "c06cfd8ce8d18eab87c2338b0b493b9f61af99a0b61c246d5cb4aa0012c72e77",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": false,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/nox-universe-v19.js",
+        "status": 200,
+        "bytes_read": 40767,
+        "sha256": "4c2c9a2d456da77bfeab74f2aa5037b8828eb723a3690579c382b93fe2af6d68",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": false,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/nox-chat-training-v23.mjs",
+        "status": 200,
+        "bytes_read": 8252,
+        "sha256": "52ee9bcb55220d08e982ea8796f147c28fc1e6eeb1cf450ffecb0014bdf5fde1",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [
+            "/api/nox/status"
+          ],
+          "direct_literal_calls": [
+            {
+              "call": "get",
+              "route": "/api/nox/status"
+            }
+          ],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": true,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      },
+      {
+        "path": "/nox-web-v29/nox-v29-pc-genesis-addons.mjs",
+        "status": 200,
+        "bytes_read": 13510,
+        "sha256": "5968f7b9ca72cbfd053c77e90853fcee9076c1671b2d0592b00a67cf4e2b9f5c",
+        "sha256_scope": "complete_response",
+        "truncated": false,
+        "content_type": "text/javascript",
+        "identity_encoding": true,
+        "wiring": {
+          "literal_routes": [
+            "/api/nox/status"
+          ],
+          "direct_literal_calls": [],
+          "owner_flag_true_defined": false,
+          "owner_flag_gate_present": true,
+          "sendNative_definition_present": false,
+          "model_endpoint_literal_present": false,
+          "observation": "STATIC_SOURCE_NOT_EXECUTED"
+        }
+      }
+    ],
+    "unfetched_script_count": 0,
+    "sendNative_definition_present": true,
+    "native_stream_literal_present": true,
+    "model_endpoint_literal_present": false,
+    "status_route": {
+      "path": "/api/nox/status",
+      "status": 200,
+      "bytes_read": 824,
+      "sha256": "e6246cc290d21b47b50b1c5f6d9e8a337a29ca74f00d8ff69f53aa8c923d61f7",
+      "sha256_scope": "complete_response",
+      "truncated": false,
+      "content_type": "application/json",
+      "identity_encoding": true
+    },
+    "status_fields": {
+      "schema_valid": true,
+      "native_p02_bound": true,
+      "backend": "EXISTING_NATIVE_ONEHOST",
+      "primary_model": "[WITHHELD_OR_UNAVAILABLE]"
+    },
+    "known_chat_alias": {
+      "path": "/nox/chat",
+      "status": 401,
+      "bytes_read": 50,
+      "sha256": "ecbf9bb1d507050280e1d5186445f6cec620eb5fe9fceb9dda6e84002b269248",
+      "sha256_scope": "complete_response",
+      "truncated": false,
+      "content_type": "application/json",
+      "identity_encoding": true,
+      "route_basis": "FIXED_V13_NAVIGATION_CONTRACT",
+      "same_body_as_main": false
+    },
+    "status": "UI_AUDIT_COMPLETE",
+    "loopback_requests": 16,
+    "bytes_read": 560592,
+    "elapsed_ms": 279
+  }
+}

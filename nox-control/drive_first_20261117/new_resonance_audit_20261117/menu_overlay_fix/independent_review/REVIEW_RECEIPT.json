@@ -1,0 +1,46 @@
+{
+  "schema": "NOX_MENU_OVERLAY_INDEPENDENT_STATIC_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/relay_runtime_algorithm",
+  "author": "/root/relay_independent_review",
+  "reviewed_at_utc": "2026-11-17T20:54:45.023803+00:00",
+  "handoff_id": "menu-overlay-static-review-6e1721c2-20261117",
+  "task_id": "narrow_native_menu_overlay_review",
+  "operation_key": "source-review:menu-overlay:6e1721c2c7be98df",
+  "verdict": "PASS_SOURCE_STATIC",
+  "patch_path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/menu_overlay_fix/MENU_CHAT_ROUTE.patch",
+  "patch_sha256": "6e1721c2c7be98dfef0192e27a83640c4ef55d7705de51a70f275f83303285cd",
+  "patch_bytes": 960,
+  "checked": {
+    "exact_single_pair_added_to": "_V122_OWNER_UI_PATCHES",
+    "historical_python_ast_except_pair": "unchanged",
+    "patch_is_exact_unified_diff": true,
+    "frozen_js_input_sha256": "c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765",
+    "frozen_js_modified": false,
+    "preexisting_guard": "nativeOwner is window.NOX_NATIVE_OWNER === true; routeLinks returns before rewrite when false",
+    "changed_branch": "target page === 'chat' and current location.pathname startsWith('/nox-web-v29/')",
+    "query_fragment": "same untouched (match[2] || empty) concatenated after target",
+    "other_target_pages": "unchanged",
+    "outside_mount": "unchanged",
+    "public_mode": "unchanged",
+    "external_links": "unchanged",
+    "native_http_or_model_calls": 0,
+    "source_mutations_by_reviewer": 0
+  },
+  "author_test_evidence": {
+    "test_methods": 2,
+    "route_boundary_cases": 9,
+    "result": "PASS_REPORTED_IN_TEST_RECEIPT",
+    "independently_rerun": false
+  },
+  "installation_boundary": {
+    "historical_fixture_only_sha256": "612da90c9675d16a5d38572206423e22bff1c6e983a602368f59297d864ae346",
+    "do_not_install_historical_full_candidate": true,
+    "current_bridge_observed_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+    "adoption_owner": "O1/root under existing current claim",
+    "required_next": "rebase only the tuple on exact current bridge and verify served source/menu behavior; preserve all later chat/S03 changes"
+  },
+  "pending_run_ids": [],
+  "claim_state": "review complete; no native/resource claim held",
+  "overall_block_done": false
+}

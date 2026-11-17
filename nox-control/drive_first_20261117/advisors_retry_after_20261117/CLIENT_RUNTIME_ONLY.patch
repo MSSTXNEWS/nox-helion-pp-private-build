@@ -1,0 +1,25 @@
+diff --git a/nox_advisors/client.py b/nox_advisors/client.py
+index 9637de2..a4e386d 100644
+--- a/nox_advisors/client.py
++++ b/nox_advisors/client.py
+@@ -5,6 +5,7 @@ from datetime import datetime, timezone
+ from email.utils import parsedate_to_datetime
+ import os
+ import json
++import math
+ import threading
+ import time
+ from .models import Advice, Consultation, FreeTierAttestation, SECRET, brief_digest
+@@ -55,8 +56,10 @@ def retry_delay(headers, attempt):
+             delay=(stamp-datetime.now(timezone.utc)).total_seconds()
+         except (ValueError, TypeError, OverflowError):
+             delay=0.25*(2**max(0,attempt-1))
+-    if delay != delay:delay=2.0  # NaN is never a retry permission.
+-    return max(0.05,min(delay,300.0))
++    if not math.isfinite(delay):delay=2.0  # Invalid hints cannot enter receipts.
++    # A worker deadline limits waiting, not the provider's minimum cooldown.
++    # consult() returns long hints to the existing host without sleeping/retrying.
++    return max(0.05,delay)
+ 
+ 
+ class AdvisoryClient:

@@ -1,0 +1,23 @@
+{
+  "schema": "NOX_EXISTING_SERVING_OVERLAY_MENU_RECIPE_V1",
+  "instructions_version": "0.0.6",
+  "status": "SOURCE_CANDIDATE_NOT_INSTALLED",
+  "historical_context_path": "/workspace/scratch/4136374a0419/nox_refresh/history_contract_reuse/candidates/native_v29_bridge_432b6195.py",
+  "historical_context_sha256": "3cd548a69ac0fa7128368bef77f5f7ef032359128cf723eaca1c6a0514c85dc6",
+  "candidate_sha256": "612da90c9675d16a5d38572206423e22bff1c6e983a602368f59297d864ae346",
+  "patch_sha256": "6e1721c2c7be98dfef0192e27a83640c4ef55d7705de51a70f275f83303285cd",
+  "old_js_anchor": "link.setAttribute('href','/nox/'+page+(match[2]||''));",
+  "new_js_anchor": "link.setAttribute('href',(page==='chat'&&location.pathname.startsWith('/nox-web-v29/')?'/nox-web-v29/chat.html':'/nox/'+page)+(match[2]||''));",
+  "target_constant": "_V122_OWNER_UI_PATCHES",
+  "frozen_js_input_sha256": "c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765",
+  "observed_current_bridge_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+  "native_adoption": "O1 owner must rebase this single tuple onto exact current bridge under existing claim and validate source/served result. Historical full candidate must never overwrite the current bridge.",
+  "raw_js_modified": false,
+  "native_modified": false,
+  "authorization_changed": false,
+  "scope": "nativeOwner routeLinks only; page chat under /nox-web-v29/; other pages, public and outside-mount behavior unchanged",
+  "expected_served_js_after": {
+    "sha256": "13897495d7c9c628ef4f3094fafdad5f5932a3570d21c650112ba7138ab3c2f0",
+    "bytes": 43021
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "NOX_MENU_PORTABLE_REPRODUCTION_V1",
+  "instructions_version": "0.0.6",
+  "status": "PASS_EXPLICIT_PATHS",
+  "verified_at_utc": "2026-11-17T20:56:31.649697+00:00",
+  "patch_sha256": "6e1721c2c7be98dfef0192e27a83640c4ef55d7705de51a70f275f83303285cd",
+  "patch_unchanged": true,
+  "test_sha256": "e3107693ab38c6ffcca7efb019b44edcd5f585a556f5b84f9f2596ab2d17a463",
+  "readme_sha256": "f607e57fb00657cd56a5d23aef71bac862c55b06af85f566993ef566cefe1a0c",
+  "explicit_environment_variables": [
+    "NOX_MENU_BASE_SOURCE",
+    "NOX_MENU_RAW_UI",
+    "NOX_MENU_CANDIDATE_SOURCE"
+  ],
+  "input_sha256": {
+    "NOX_MENU_BASE_SOURCE": "3cd548a69ac0fa7128368bef77f5f7ef032359128cf723eaca1c6a0514c85dc6",
+    "NOX_MENU_RAW_UI": "c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765",
+    "NOX_MENU_CANDIDATE_SOURCE": "612da90c9675d16a5d38572206423e22bff1c6e983a602368f59297d864ae346"
+  },
+  "candidate_preparation": "copy known historical fixture; git -C temporary_directory apply -p1 MENU_CHAT_ROUTE.patch",
+  "raw_ui_origin": "canonical V13 ZIP member site/nox-ui.js",
+  "source_hash_checked_before_AST_parse_and_selected_exec": true,
+  "raw_ui_pin_checked_before_overlay_execution": true,
+  "tests": {
+    "test_methods": 2,
+    "passed": 2,
+    "new_test_cases": 0,
+    "route_boundary_cases": 9,
+    "exit_code": 0,
+    "run_from_temporary_directory": true
+  },
+  "temporary_fixture_removed": true,
+  "native_requests": 0,
+  "native_changes": 0,
+  "full_historical_candidate_required_in_publication": false
+}

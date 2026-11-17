@@ -1,0 +1,86 @@
+{
+  "handoff_id": "advisors-retry-after-4a0317f8c66d",
+  "task_id": "existing_advisors_official_contract_refresh",
+  "operation_key": "source-fix:advisors-retry-after:4a0317f8c66d",
+  "agent_id": "/root/relay_runtime_algorithm",
+  "created_at_utc": "2026-11-17T20:44:42.695197+00:00",
+  "repo": "/workspace/scratch/4136374a0419/nox_refresh/advisors_retry_after_fix",
+  "branch": "fix/advisors-retry-after-20261117",
+  "base_revision": "4a9a88b00704441a9c38dc83999105c734efc143",
+  "commit": "4a0317f8c66db5ae231ec50c6cb39869d000f98c",
+  "runtime_scope": [
+    "nox_advisors/client.py:retry_delay"
+  ],
+  "acceptance": "SOURCE_TESTED_NOT_NATIVE",
+  "independent_review": "PENDING_DELTA_REVIEW",
+  "finding": "Numeric and HTTP-date Retry-After greater than 300 seconds was shortened before returning the retry hint to existing host.",
+  "fix": "Finite provider cooldown preserved; existing worker deadline returns RATE_LIMITED without long sleep/retry; nonfinite input gets finite fallback.",
+  "before": {
+    "targeted_tests": 3,
+    "fixed_contract_regressions_failed": 2,
+    "new_nonfinite_fallback_subtest_failures": 3,
+    "note": "Nonfinite before-results are guard coverage for removing the clamp, not three extra claimed provider incidents."
+  },
+  "after": {
+    "tests": 4,
+    "passed": 4,
+    "command": "PYTHONPATH=tests python -m unittest test_retry_after_contract test_advisors.TransportTests.test_429_backoff_same_model_no_fallback -v",
+    "transport": "in-memory quota response plus existing localhost fixture; provider API calls zero",
+    "full_baseline_suite_repeated": false
+  },
+  "sources": [
+    {
+      "url": "https://openrouter.ai/docs/api_reference/limits",
+      "retrieval_ref": "turn170view0"
+    },
+    {
+      "url": "https://console.groq.com/docs/rate-limits",
+      "retrieval_ref": "turn169view1"
+    },
+    {
+      "url": "https://aistudio.google.com/docs/rate-limits",
+      "retrieval_ref": "turn169view2"
+    }
+  ],
+  "official_sources_count": 3,
+  "provider_api_calls": 0,
+  "account_checks": 0,
+  "native_calls": 0,
+  "native_writes": 0,
+  "secret_access": false,
+  "files": {
+    "nox_advisors/client.py": {
+      "sha256": "dc12679270d735507fb26613a679ee074f53c08aff8d72d28717196711cf2a54",
+      "bytes": 9161
+    },
+    "tests/test_retry_after_contract.py": {
+      "sha256": "918ea913b7e579a2314ece5137840bd24a95aae567756f4dbfe3da369e9d9b15",
+      "bytes": 2218
+    },
+    "PROVIDER_LIMITS_20261117.json": {
+      "sha256": "aae849ef79bd1d88dfe5df2de7ae16990fff8e192d4fde80c6c965d0b19514ab",
+      "bytes": 3073
+    },
+    "README.md": {
+      "sha256": "ba3e50400289e8ffe6b0923ec1a5b0729d8eb713f61d113b260ccf21bed7dbdb",
+      "bytes": 16749
+    },
+    "manifest.json": {
+      "sha256": "b29900c398c3dce5feff037fffcc3244f881517e0bd1eff711e344a8915a9838",
+      "bytes": 5130
+    }
+  },
+  "patch_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_wave_20261117/advisors_retry_after_delivery/ADVISORS_RETRY_AFTER.patch",
+  "patch_sha256": "e35c1e4c65911d45da5d1eadd3a95df75766a4b19cd3d43bda53ee98abe052bd",
+  "pending_run_ids": [],
+  "claim_state": "isolated source worktree committed; no native/resource claim held",
+  "next_ready": {
+    "task": "independent review exact commit, then adopt existing advisors source before host binding; do not start a new scheduler",
+    "dependencies": [
+      "one free reviewer",
+      "root source adoption decision"
+    ],
+    "acceptance": "preserved long provider hint, unchanged free-only admission and no deadline-blocking retry"
+  },
+  "overall_block_done": false
+}
