@@ -1,0 +1,13 @@
+{
+  "source_sha256": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+  "source_bytes": 103831,
+  "path": "nox_refresh/model_identity_binding_20261118/private_postimages/chat_proxy.py",
+  "isolated_functions_sha256": "3166ca61ec21a9513dfa675addc762f2dd2621665a2a1af1989ba2af4523c6df",
+  "functions": [
+    "_live_slot_ctx",
+    "_count_msg_tokens",
+    "_shrink_last_user",
+    "_trim_ctx"
+  ],
+  "native_calls": 0
+}

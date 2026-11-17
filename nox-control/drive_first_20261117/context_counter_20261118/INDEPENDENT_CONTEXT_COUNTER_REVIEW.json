@@ -1,0 +1,81 @@
+{
+  "schema": "NOX_CONTEXT_COUNTER_INDEPENDENT_REVIEW_V1",
+  "state": "PASS_SOURCE_ONLY",
+  "reviewer": "dispatcher_acceleration",
+  "freeze": {
+    "sha256": "b8ca42114dbf457d4cc810f3bf78edb0a7be38eab8331207d49b66a7440e6e90",
+    "bytes": 1797
+  },
+  "reviewed_files": {
+    "owner_context_budget.py": {
+      "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+      "bytes": 15511
+    },
+    "source_transform.py": {
+      "sha256": "b88af796086821a397d27469d5549e24af7cf38bc4430c281b64b8ab760e88bd",
+      "bytes": 5596
+    },
+    "test_context_counter.py": {
+      "sha256": "8406bc4cac2b74f6c48b78b2d67cf52e28e8c11ed198d944d9550d7f460a66d6",
+      "bytes": 10070
+    },
+    "actual_counter_functions.py": {
+      "sha256": "3166ca61ec21a9513dfa675addc762f2dd2621665a2a1af1989ba2af4523c6df",
+      "bytes": 6050
+    },
+    "CONTEXT_COUNTER.patch": {
+      "sha256": "f778173301ef1ed7e0363b71240ab062f1580cac4a3c07f29d9b8a1b8bfddddb",
+      "bytes": 7741
+    },
+    "SOURCE_INPUT_PIN.json": {
+      "sha256": "7261e7fe0bfd0bf4a2a260ab8e2ba90559b0488860a101e6a4e0e9d0e10abd8d",
+      "bytes": 436
+    },
+    "SOURCE_TRANSFORM_RECEIPT.json": {
+      "sha256": "40022d87a16a7c6d4a6d52c854e4e6a9168fbd7f7062681ce576d4cdf5db7837",
+      "bytes": 412
+    }
+  },
+  "actual_proxy_before": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+  "proxy_after": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62",
+  "exact_source_pin_verification": "7/7 frozen files and exact private proxy postimage match",
+  "scope": {
+    "selected_route": "Actual _proxy_completion chooses load_backend/failover url before passing selected_url; helper permits only the existing loopback 8098/8085 route shapes and never substitutes primary for fallback.",
+    "cache": "Request-local key is selected base, canonical message SHA, actually rendered prompt SHA. Every count round renders anew; different input messages cannot alias solely because rendered text is equal.",
+    "unknown": "Malformed or incomplete HTTP200, duplicate JSON fields, empty tokens for nonempty prompt, invalid integer IDs, failed endpoints and expired budget return tokens=None, never a character estimate labelled as a token measurement.",
+    "bounds": "MAX_ROUNDS=2; one slots request plus at most two template/tokenize pairs, <=5 helper HTTP attempts. Cooperative deadline/socket phase timeout only; no hard wall or end-to-end latency guarantee.",
+    "protected_content": "Latest original question is passed separately. Full user-led history groups are removed; current user/tool/assistant tail is retained. Stable generated contract prefix is retained; ambiguous marker seams retain the whole system message. Input dictionaries are not mutated.",
+    "overflow": "Known protected-only overflow returns a specific 413. An unmeasured reduced minimum is not assigned a preceding candidate count. Tokenizer unavailability preserves protected input and remains explicitly heuristic.",
+    "identity_branch": "Existing owner identity predicate and _build_messages branch preserve behavior, with no context-helper import or counting HTTP added.",
+    "source_delta": "Only _count_msg_tokens, _trim_ctx and _proxy_completion differ at top-level AST; every other top-level node is identical."
+  },
+  "independent_regression": {
+    "path": "nox_refresh/context_counter_review_20261118/test_context_cache_and_protected_tail.py",
+    "sha256": "9718b8c9690c2bdc9c2b28484d6295fb19b801dd8872c08d8b56a0a5cca20400",
+    "bytes": 4471,
+    "tests_run": 1,
+    "result": "PASS",
+    "cases": [
+      "Same rendered prompt for distinct message bodies performs fresh tokenize and cannot reuse the old count; third round produces UNKNOWN without a fifth request.",
+      "Duplicate prompt keys in HTTP200 produce UNKNOWN after one round; immutable input, exact original question including delimiter text, complete stable prefix and all current assistant/tool/result metadata survive whole-history-group trimming."
+    ],
+    "network_calls": 0,
+    "transport": "local scripted byte responses"
+  },
+  "author_tests": {
+    "reported_unique_pass": 7,
+    "repeated_by_reviewer": 0,
+    "attribution": "Author freeze/test source; not claimed as independent executions."
+  },
+  "limits": [
+    "Counts cover rendered messages before later tool schemas, training/math/typo/emotion enrichments. The existing 1300-token tool reserve is policy, not a measured schema size; exact_final_context_fit remains false.",
+    "Backend process/tokenizer generation is not sampled atomically; no cache survives a request.",
+    "This review does not assert that all pre-existing builders preserve tool metadata or that downstream provider/context behavior has been measured.",
+    "Source-only package: runtime installation, native identity/CAS and post-install QA remain root-coordinated work. No context-window extension or measured server speedup is claimed."
+  ],
+  "native_calls": 0,
+  "model_generation_calls": 0,
+  "foreign_worktree_writes": 0,
+  "full_proxy_imported_or_executed": false,
+  "next_action": "Publish this receipt with the frozen source package; retain current installed proxy30207 until an accepted native install receipt establishes the next pin."
+}

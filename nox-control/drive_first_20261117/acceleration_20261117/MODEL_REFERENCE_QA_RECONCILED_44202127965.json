@@ -1,0 +1,46 @@
+{
+  "schema": "NOX_CHANGED_PATH_QA_KNOWN_ZERO_SEND_RECONCILIATION_V1",
+  "instructions_version": "0.0.6",
+  "run_id": 44202127965,
+  "job_id": 134458900891,
+  "request_id": 6964382138,
+  "source_sha": "6dd20a0aac59742138918840c3b4bb1963142928",
+  "status": "HOLD_OWNER_PRIORITY_BUSY_OR_STALE",
+  "raw_sha256": "2604f8a35f27a6eb998348407cdb6d82ba78c3b22c1e97ee030859cd3bc28d34",
+  "raw_bytes": 3585,
+  "owner_chat_posts": 0,
+  "unknown_delivery_possible": false,
+  "http_counts": {
+    "login_post": 1,
+    "get": 2,
+    "dialog_create_post": 0,
+    "model_post": 0
+  },
+  "installed_release_still_verified": true,
+  "writer_pid": 3648425,
+  "writer_start_ticks": 175058217,
+  "prior_history_2_messages_and_exact_M1_verified": true,
+  "served_menu": {
+    "sha256": "13897495d7c9c628ef4f3094fafdad5f5932a3570d21c650112ba7138ab3c2f0",
+    "bytes": 43021,
+    "authenticated_HTTP": true,
+    "browser_visual_click_test": false
+  },
+  "private_outcome": {
+    "path": "/root/nox/state/owner_model_reference_acceptance_20261118/outcome.json",
+    "expected_sha256": "f0224c15acf37aaad4b45380ce174a27ae2acbafbdf361f036f07eca846e4fd9",
+    "expected_bytes": 3534,
+    "native_recheck_required_before_continuation": true
+  },
+  "original_journal_exists": true,
+  "original_intent_not_written_by_this_run_source_inference": true,
+  "current_intent_absence_must_be_verified": true,
+  "old_source_replay_allowed": false,
+  "busy_vs_stale_subcause": "UNOBSERVED",
+  "cleanup": "DETACHED_AND_VERIFIED",
+  "qa_accepted": false,
+  "counter_before_after": "UNOBSERVED",
+  "model_answer": "NOT_REQUESTED",
+  "next": "Exact known-zero-send child continuation, preserving old journal; one login, bounded read-only idle wait, then current source/writer/history/STOP/slots and durable single send; unknown never replayed",
+  "run_binding": "Exact source and authorized request6964382138; unrelated inspect44202087922 excluded"
+}

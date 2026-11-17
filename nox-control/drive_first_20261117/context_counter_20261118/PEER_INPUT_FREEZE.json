@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_CONTEXT_COUNTER_SOURCE_FREEZE_V1",
+  "state": "READY_FOR_INDEPENDENT_SOURCE_REVIEW",
+  "files": {
+    "owner_context_budget.py": {
+      "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+      "bytes": 15511
+    },
+    "source_transform.py": {
+      "sha256": "b88af796086821a397d27469d5549e24af7cf38bc4430c281b64b8ab760e88bd",
+      "bytes": 5596
+    },
+    "test_context_counter.py": {
+      "sha256": "8406bc4cac2b74f6c48b78b2d67cf52e28e8c11ed198d944d9550d7f460a66d6",
+      "bytes": 10070
+    },
+    "actual_counter_functions.py": {
+      "sha256": "3166ca61ec21a9513dfa675addc762f2dd2621665a2a1af1989ba2af4523c6df",
+      "bytes": 6050
+    },
+    "CONTEXT_COUNTER.patch": {
+      "sha256": "f778173301ef1ed7e0363b71240ab062f1580cac4a3c07f29d9b8a1b8bfddddb",
+      "bytes": 7741
+    },
+    "SOURCE_INPUT_PIN.json": {
+      "sha256": "7261e7fe0bfd0bf4a2a260ab8e2ba90559b0488860a101e6a4e0e9d0e10abd8d",
+      "bytes": 436
+    },
+    "SOURCE_TRANSFORM_RECEIPT.json": {
+      "sha256": "40022d87a16a7c6d4a6d52c854e4e6a9168fbd7f7062681ce576d4cdf5db7837",
+      "bytes": 412
+    }
+  },
+  "actual_proxy_before": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+  "proxy_after": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62",
+  "focused_tests": {
+    "unique_pass": 7,
+    "initial_pass": 7,
+    "cache_key_field_delta_targeted_repeat_pass": 1,
+    "full_suite_repeated": false
+  },
+  "native_calls": 0,
+  "model_generation_calls": 0,
+  "new_runtime_paths": [
+    "/root/nox/scripts/owner_context_budget.py"
+  ],
+  "existing_runtime_path": "/root/nox/scripts/chat_proxy.py",
+  "runtime_installation": "NOT_PREPARED_OR_EXECUTED",
+  "time_budget_kind": "COOPERATIVE_WITH_SOCKET_PHASE_TIMEOUTS_NOT_HARD_WALL_TIMER"
+}

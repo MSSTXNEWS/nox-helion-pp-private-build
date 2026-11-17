@@ -684,7 +684,7 @@
       }
     ]
   },
-  "verified_at": "2026-11-18T02:11:20.795351+03:00",
+  "verified_at": "2026-11-18T02:57:01.904812+03:00",
   "owned_transport_cancellation": {
     "run": 44187317953,
     "job": 134407197678,
@@ -1521,7 +1521,7 @@
     "proxy_restart_only": true,
     "native_dispatched": true,
     "issue_fixed": "Source rollback now proves staged/postimage inode ownership before restore; foreign identical bytes HOLD",
-    "next": "Immutable publication, native owner repair and exactly one changed-path QA in existing dialog"
+    "next": "Current installed version: completed known-zero-send history/menu check; bounded immutable continuation pending one actual answer"
   },
   "smart_resonance_native_install": {
     "schema": "NOX_MODEL_REFERENCE_NATIVE_INSTALL_ACCEPTANCE_V1",
@@ -1635,5 +1635,202 @@
       "service restart and exact source readback are proven; loaded module memory hash not asserted",
       "owner-idle check is a bounded observation, not atomic new-chat admission"
     ]
+  },
+  "counter_cutover_composition": {
+    "state": "SOURCE_REVIEWED_PUBLICATION_PENDING_ACTUAL_QA_ANCHOR",
+    "helper_sha256": "410d4951ef8098b4636d60869c176369d8c1dcc20f1b933bf61bada26c62c580",
+    "helper_independent_review_sha256": "f38d0a8f1227addccd5a65d4d8118495d5db779e2d6c9c407d61681c303e4be9",
+    "current_caller_sha256": "d31bf8f7f493429b4c9211ad4b9af490254419c651c6a864c0038321e0ee8a48",
+    "new_existing_control": "CutoverControls",
+    "reuse_existing_control_required": true,
+    "whole_old_caller_replacement_allowed": false,
+    "opaque_resume_guard": "a6c47d30f5c5f2a2dea594c0f0b65e136fab7a21609fa6435afd644214926800",
+    "native_cutover": false,
+    "caller_after_sha256": "9cc0cc46d11405544016e5383edbfa24b2ab0de34f00019aa3e22aaa416bab9e",
+    "independent_composition_review_sha256": "3ddb9116f200ce74f0843b1d324fd378dc92e0d2516779f4fa8260b29ea77f09"
+  },
+  "current_optional_remote2_compatibility": {
+    "cpu_kb_parent_sha256": "4bf31b216bdfa67ae7172d2e268fba2ca03d084513102150dca6cbbd39c032c0",
+    "parent_bytes": 56954,
+    "root_confirmed_kb_hooks_and_backend_permissions": true,
+    "whole_11f12_replace_allowed": false,
+    "next": "Exact ONLY_REMOTE2 delta onto current KB-aware parent; optional and does not delay CPU path",
+    "native": false
+  },
+  "model_reference_qa_attempts": [
+    {
+      "schema": "NOX_CHANGED_PATH_QA_PRE_SEND_RECONCILIATION_V1",
+      "instructions_version": "0.0.6",
+      "run_id": 44201078451,
+      "job_id": 134455002857,
+      "request_id": 6964246497,
+      "source_sha": "c1656acc6b1eb9d41f3083b1ec99486093a1c47b",
+      "status": "HOLD_PRIOR_QA_PAIR_BINDING",
+      "raw_sha256": "5f09e5661b16d49c26d1da2838bf7dad919f2663fd078441c7438eb7c8525ad2",
+      "raw_bytes": 2633,
+      "http_counts": {
+        "dialog_create_post": 0,
+        "get": 0,
+        "login_post": 0,
+        "model_post": 0
+      },
+      "owner_chat_posts": 0,
+      "unknown_delivery_possible": false,
+      "journal_phase": "NOT_ENTERED_BEFORE_OWN_HISTORY_PROOF",
+      "journal_not_created_inference": "Verified source places Journal.__enter__ strictly after failing prefix binding guard",
+      "installed_release_still_verified": true,
+      "proxy_generation": {
+        "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+        "cwd": "/root/nox/scripts",
+        "exe": "/usr/bin/python3.12",
+        "pgrp": 3648425,
+        "pid": 3648425,
+        "ppid": 114,
+        "script_bound": true,
+        "service": "nox-proxy",
+        "start_ticks": 175058217
+      },
+      "model_question_delivered": false,
+      "cleanup": "DETACHED_AND_VERIFIED",
+      "old_source_replay_allowed": false,
+      "correction": "Use exact opaque old exchange and record ID S03-48140046c4684fe5 from accepted actual441772 receipt; preserve every other guard",
+      "lesson": "Regression expectations for durable IDs must be seeded from actual accepted receipts, not imported from the code under test; never strip an opaque ID prefix",
+      "native_new_attempt": "REQUIRES_CORRECTED_PINNED_SOURCE_AND_ONE_NEW_INTENT"
+    },
+    {
+      "schema": "NOX_CHANGED_PATH_QA_KNOWN_ZERO_SEND_RECONCILIATION_V1",
+      "instructions_version": "0.0.6",
+      "run_id": 44202127965,
+      "job_id": 134458900891,
+      "request_id": 6964382138,
+      "source_sha": "6dd20a0aac59742138918840c3b4bb1963142928",
+      "status": "HOLD_OWNER_PRIORITY_BUSY_OR_STALE",
+      "raw_sha256": "2604f8a35f27a6eb998348407cdb6d82ba78c3b22c1e97ee030859cd3bc28d34",
+      "raw_bytes": 3585,
+      "owner_chat_posts": 0,
+      "unknown_delivery_possible": false,
+      "http_counts": {
+        "login_post": 1,
+        "get": 2,
+        "dialog_create_post": 0,
+        "model_post": 0
+      },
+      "installed_release_still_verified": true,
+      "writer_pid": 3648425,
+      "writer_start_ticks": 175058217,
+      "prior_history_2_messages_and_exact_M1_verified": true,
+      "served_menu": {
+        "sha256": "13897495d7c9c628ef4f3094fafdad5f5932a3570d21c650112ba7138ab3c2f0",
+        "bytes": 43021,
+        "authenticated_HTTP": true,
+        "browser_visual_click_test": false
+      },
+      "private_outcome": {
+        "path": "/root/nox/state/owner_model_reference_acceptance_20261118/outcome.json",
+        "expected_sha256": "f0224c15acf37aaad4b45380ce174a27ae2acbafbdf361f036f07eca846e4fd9",
+        "expected_bytes": 3534,
+        "native_recheck_required_before_continuation": true
+      },
+      "original_journal_exists": true,
+      "original_intent_not_written_by_this_run_source_inference": true,
+      "current_intent_absence_must_be_verified": true,
+      "old_source_replay_allowed": false,
+      "busy_vs_stale_subcause": "UNOBSERVED",
+      "cleanup": "DETACHED_AND_VERIFIED",
+      "qa_accepted": false,
+      "counter_before_after": "UNOBSERVED",
+      "model_answer": "NOT_REQUESTED",
+      "next": "Exact known-zero-send child continuation, preserving old journal; one login, bounded read-only idle wait, then current source/writer/history/STOP/slots and durable single send; unknown never replayed",
+      "run_binding": "Exact source and authorized request6964382138; unrelated inspect44202087922 excluded"
+    }
+  ],
+  "training_family_source_publication": {
+    "schema": "NOX_SOURCE_PUBLICATION_READBACK_V1",
+    "instructions_version": "0.0.6",
+    "commit": "cc861f831305865dcc2b4b59bb1a15361ef7b6b6",
+    "checks": [
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/training_chain_quiescence.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/test_training_chain_quiescence.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/test_phase_cutover_composition.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/test_typed_counter_scope.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/test_frozen_phase_bundle.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/COUNTER_SCOPE_TYPED_PHASE.patch",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/EXISTING_CUTOVER_RETAINED_FAMILY.patch",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/EXISTING_FROZEN_BUNDLE_TYPED_ABI.patch",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/PATCH_COMPOSITION_CHECKS.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/SOURCE_RECEIPT.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/training-family-owned-phase/INDEPENDENT_COMPOSITION_REVIEW.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/FINITE_CONTAINMENT_REVIEW_44193822421.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/bootstrap_independent_review_44193822421.json",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/opaque_parent_postmigration_resume_guard.patch",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/test_opaque_parent_resume_contract.py",
+        "exact": true,
+        "isError": false
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O2/counter-writer-closure/OPAQUE_PARENT_POSTMIGRATION_GUARD_INDEPENDENT_REVIEW.json",
+        "exact": true,
+        "isError": false
+      }
+    ],
+    "verified": true,
+    "native_installed": false
   }
 }

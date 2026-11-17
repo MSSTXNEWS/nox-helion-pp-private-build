@@ -1,0 +1,17 @@
+{
+  "schema": "NOX_CONTEXT_COUNTER_SOURCE_DEPENDENCY_DELTA_V1",
+  "state": "SOURCE_ONLY_NOT_INSTALLED",
+  "existing_path": "/root/nox/scripts/chat_proxy.py",
+  "before_sha256": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+  "after_sha256": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62",
+  "new_absent_only_path": "/root/nox/scripts/owner_context_budget.py",
+  "current_identity_helper_path": "/root/nox/scripts/owner_model_reference_binding.py",
+  "current_identity_helper_change": "NONE",
+  "current_bridge_change": "NONE",
+  "current_owner_stream_change": "NONE",
+  "proxy_reload_needed_to_use_candidate": true,
+  "model_restart_needed": false,
+  "queue_or_s03_reset_needed": false,
+  "adoption_prerequisite_rule": "Rebase exact old proxy prerequisite only after accepted native install; do not publish a source proposal as an installed runtime pin",
+  "native_calls": 0
+}
