@@ -118,6 +118,36 @@ class ExistingExecutorClaimsTests(unittest.TestCase):
         self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
         self.assertEqual(result["workers"], [])
 
+    def test_symlinked_status_directory_is_not_a_trusted_snapshot(self):
+        rows = [{"id": "nox-agent-01", "status": "idle"}]
+        self.snapshot(rows)
+        original = self.root / "status"
+        relocated = self.root / "moved_status"
+        original.rename(relocated)
+        original.symlink_to(relocated, target_is_directory=True)
+        result = ui.workers()
+        self.assertEqual(result["state"], "UNAVAILABLE")
+        self.assertEqual(result["workers"], [])
+
+    def test_fifo_snapshot_is_rejected_without_waiting_for_writer(self):
+        import os
+        os.mkfifo(self.root / "status/agents_t856u.json")
+        result = ui.workers()
+        self.assertEqual(result["state"], "UNAVAILABLE")
+        self.assertEqual(result["workers"], [])
+
+    def test_maintenance_transition_during_snapshot_cannot_admit_workers(self):
+        rows = [{"id": "nox-agent-01", "status": "idle"}]
+        (self.root / "status/agents_t856u.json").write_text(
+            json.dumps({"n": 1, "workers": rows}), encoding="utf-8"
+        )
+        with patch.object(ui, "owner_maintenance_gate", side_effect=["ABSENT", "PRESENT"]):
+            result = ui.workers()
+        self.assertEqual(result["state"], "MODEL_UPDATE")
+        self.assertEqual(result["owner_maintenance"], "PRESENT")
+        self.assertEqual(result["workers"], [])
+        self.assertIsNone(result["observed_at"])
+
     def test_owner_scripts_present_maintenance_without_claims(self):
         script = Path(__file__).with_name("owner-chat-ui.js").read_text()
         presence = Path(__file__).with_name("owner-presence.js").read_text()
