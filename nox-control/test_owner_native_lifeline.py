@@ -126,6 +126,23 @@ class InstallerTests(unittest.TestCase):
                 n.check_existing_installation(expected)
             self.assertEqual(expected[2][0].read_bytes(), b"other-owner-policy")
 
+    def test_existing_mismatch_reports_hashes_not_private_contents(self):
+        with tempfile.TemporaryDirectory() as d:
+            files = [(Path(d) / n, b"expected") for n in ("script.py", "policy.json", "guard.conf")]
+            for path, raw in files:
+                path.write_bytes(raw)
+            files[1][0].write_bytes(b"very-private-different-policy")
+            with patch.object(n, "emit") as emit:
+                with self.assertRaisesRegex(RuntimeError, "EXISTING_INSTALL_SOURCE_MISMATCH"):
+                    n.check_existing_installation(files)
+                report = emit.call_args.args[0]
+                self.assertEqual(report["state"], "HOLD_EXISTING_LIFELINE_DIFF")
+                self.assertTrue(report["changes_not_applied"])
+                self.assertEqual([x["name"] for x in report["existing_source_fingerprints_only"]],
+                                 ["policy.json"])
+                self.assertNotIn("very-private", str(report))
+                self.assertEqual(files[1][0].read_bytes(), b"very-private-different-policy")
+
     def test_supervisor_rc3_exact_stopped_row_is_native_valid(self):
         for state in ("STOPPED", "EXITED"):
             with self.subTest(state=state), patch.object(n, "call", return_value=SimpleNamespace(
