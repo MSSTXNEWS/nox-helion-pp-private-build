@@ -79,6 +79,7 @@ def journal_recall(task):
                 stream.readline(65537)
             lines = stream.read(65536).splitlines()
         categories = set()
+        verified_receipts = set()
         for line in lines[-100:]:
             try:
                 row = json.loads(line)
@@ -106,6 +107,11 @@ def journal_recall(task):
                         or not isinstance(row.get('dedup_sha256'), str)
                         or not SHA.fullmatch(row['dedup_sha256'])):
                     continue
+                # Journal replay or repeated reporting of the same native
+                # evidence is not another successful skill application.
+                if row['dedup_sha256'] in verified_receipts:
+                    continue
+                verified_receipts.add(row['dedup_sha256'])
                 result['verified'] += 1
             elif kind == 'error_observed':
                 result['errors'] += 1
