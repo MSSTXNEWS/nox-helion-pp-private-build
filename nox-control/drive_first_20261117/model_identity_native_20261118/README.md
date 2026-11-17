@@ -1,6 +1,7 @@
 # NOX: точная привязка имени модели к процессу и порту
 
-Статус: **готовый исходный код и синтетические проверки; native audit ещё не выполнен**.
+Статус: **native V1 выполнен, получено точное HOLD на большой TCP table;
+исправленный V2 проверен в TempFS и ожидает отдельного согласованного audit**.
 Публикацию и один запуск через существующий owner audit координирует root. Пакет
 не изменяет уже выполненную проверку отмены и её frozen payload `6436a866…`.
 
@@ -24,7 +25,7 @@ read-only наблюдения, а не замена новой проверки
 | Статус | `/root/nox/status/status.json`, до 131072 байт | Только заранее заданные поля модели, тип/маскировка, basename и возраст дискового снимка |
 | Backend | `/root/nox/config/backend.json`, до 65536 байт | Только host/port/model reference; сырой config не выводится |
 | Процесс | `/proc/3266857/{stat,cmdline,status,exe,cwd}` | Фиксированные identity hashes, PID/start, безопасный basename; полные argv не выводятся |
-| Сеть | `/proc/3266857/ns/net`, `/proc/self/ns/net`, `/proc/3266857/net/tcp`, до 512 fd links | Один IPv4 listener `8098`, его inode и fd, принадлежащие тому же PID; одинаковое network namespace |
+| Сеть | `/proc/3266857/ns/net`, `/proc/self/ns/net`, `/proc/3266857/net/tcp`, до 512 fd links | Сначала socket inodes этого PID, затем ограниченный TCP prefix до его LISTEN `8098`; одинаковое network namespace |
 | Readiness | **Один GET `http://127.0.0.1:8098/health`** | Проверенный исходниками readiness predicate, статус/длина/hash ответа; тело не выводится |
 | Координация | Существующий `/root/nox/state/owner_maintenance.lock`, dev36/ino59886214 | Проверка старого inode и неблокирующая advisory lease; файл не создаётся |
 
@@ -33,7 +34,10 @@ read-only наблюдения, а не замена новой проверки
 не становится именем модели. Прочие значения аргументов остаются скрытыми.
 
 Файлы маршрута и backend повторно проверяются после чтения listener и health.
-PID/start/argv/exe/cwd и socket/fd binding также проверяются повторно. Периодическое
+PID/start/argv/exe/cwd и socket/fd binding также проверяются повторно. Размер и
+порядок посторонних строк TCP могут изменяться: это не объявляется сменой
+подтверждённого inode/fd. Глобальная уникальность listener не утверждается.
+Периодическое
 обновление status.json не объявляется ошибкой: это самостоятельный стабильный
 дисковый снимок с точным временем чтения. Весь результат явно не является
 атомарным снимком сервера.
@@ -46,6 +50,10 @@ PID/start/argv/exe/cwd и socket/fd binding также проверяются п
 обучение, доступный контекст, загрузку всех shards или backend прошлого ответа.
 `weight_content_identity_verified`, `architecture_or_training_identity_verified`
 и `last_chat_backend_identified` остаются false.
+
+Проекция argv сохраняется сразу после проверки точного процесса. Если позднее
+socket/readiness проверка не завершится, basename остаётся полезным фактом о
+process reference, а `listener_process_binding_verified` остаётся false.
 
 Readiness сообщается отдельно: неуспешный `/health` не превращается в доказательство
 активности fallback. Порт 8085 и `/props` не опрашиваются; поддержка `/props` этим
@@ -63,7 +71,10 @@ Readiness сообщается отдельно: неуспешный `/health` 
 
 Дисковые/proc чтения: максимум 2 MiB суммарно; один ответ health — максимум
 65536 байт плюс один байт для обнаружения переполнения. TCP table ограничена
-262144 байтами и 4096 строками. Health timeout не больше 0.8 секунды, redirects
+262144 байтами и 4096 строками; чтение прекращается сразу после строки принадлежащего
+процессу socket, без требования EOF всей TCP table. Строка ограничена 1024 байтами.
+Если искомая строка не встретилась в пределах prefix, результат — явный HOLD.
+Health timeout не больше 0.8 секунды, redirects
 не следуются, environment proxy не используется. Cooperative budget — 15 секунд,
 жёсткий SIGALRM — 20 секунд, весь stdout с operator markers — не больше 32768 байт.
 
@@ -75,11 +86,20 @@ Private launcher sources и любые ключи в bundle не входят.
 
 ## Проверки
 
-Пять целевых TempFS tests прошли: корректная process/socket/model reference;
-отказ при другом владельце socket или namespace; отказ при нескольких listeners
-или source SHA drift; отказ при неподтверждённом host/port; полный entry с уже
-существующим lock и ограниченным stdout. HTTP заменён локальным fake, все proc
-файлы синтетические, секреты вымышленные. Native вызовов и реальных health GET нет.
+V1: пять целевых TempFS tests прошли до первого native audit. Сам audit
+`44190032651` подтвердил пять исходников и process identity, но на чтении №13
+получил `HOLD_FILE_BYTES`: вся TCP table превышала 262144 байта. HTTP/model calls
+и записи — ноль. Дисковый status оказался старше 390964 секунд, его модельное
+имя отличается от backend config. Поэтому эти поля нельзя смешивать с live
+process identity. Подробности сохранены в `NATIVE_FAILURE_RECONCILIATION_44190032651.json`.
+
+V2: четыре focused cases прошли после исправления: огромная TCP table с ранним
+owned listener; изменение постороннего prefix при неизменном owned inode/fd;
+точная остановка на 262144 байтах без GET, если listener позже; отказ при другом
+socket/namespace/source drift. Посторонний listener больше не объявляет ошибку
+сам по себе: `global_listener_uniqueness_proven=false`. HTTP заменён локальным fake,
+все proc файлы синтетические, секреты вымышленные. Новых native вызовов этими
+тестами нет; старый native payload не повторяется.
 
 После независимого review root может опубликовать точный bundle через существующий
 audit entry и выполнить один read-only запуск, согласовав его с текущим cutover.

@@ -114,26 +114,74 @@ class ModelIdentityReadbackTests(unittest.TestCase):
         target = self.pid/'fd/17'
         target.unlink(); target.symlink_to('socket:[7002]')
         result = self.observe()
-        self.assertEqual(result['status'], 'HOLD_IDENTITY_SOCKET_NOT_OWNED')
+        self.assertEqual(result['status'], 'HOLD_IDENTITY_OWNED_LISTENER_NOT_OBSERVED_WITHIN_BOUND')
         self.assertEqual(self.http_calls, [])
         self.assertIs(result['listener_model_reference_verified'], False)
+        self.assertEqual(result['argv_projection']['model_argument']['model_basename'], 'Synthetic-Model-Q4.gguf')
+        self.assertIs(result['argv_projection']['listener_process_binding_verified'], False)
         target.unlink(); target.symlink_to('socket:[7001]')
         ns = self.pid/'ns/net'; ns.unlink(); ns.symlink_to('net:[4026531994]')
         result = self.observe()
         self.assertEqual(result['status'], 'HOLD_IDENTITY_NETWORK_NAMESPACE')
         self.assertEqual(self.http_calls, [])
 
-    def test_duplicate_listener_or_changed_source_fail_before_network(self):
+    def test_unrelated_listener_does_not_claim_global_exclusivity_and_source_drift_holds(self):
         target = self.pid/'net/tcp'
         target.write_text(self.tcp + self.tcp.splitlines(True)[1].replace('7001', '7003'))
         result = self.observe()
-        self.assertEqual(result['status'], 'HOLD_IDENTITY_LISTENER_NOT_UNIQUE')
-        self.assertEqual(self.http_calls, [])
+        self.assertEqual(result['status'], 'BOUNDED_LISTENER_MODEL_REFERENCE_SNAPSHOT')
+        self.assertIs(result['listener']['global_listener_uniqueness_proven'], False)
+        self.assertEqual(len(self.http_calls), 1)
+        self.http_calls.clear()
         target.write_text(self.tcp)
         (self.root/'scripts/common.py').write_text('# not the reviewed source\n')
         result = self.observe()
         self.assertEqual(result['status'], 'HOLD_IDENTITY_SOURCE_SHA:common.py')
         self.assertEqual(self.http_calls, [])
+
+    def test_fd_first_scan_handles_huge_table_and_unrelated_prefix_churn(self):
+        header, own = self.tcp.splitlines(True)
+        other = own.replace('7001', '9900')
+        target = self.pid/'net/tcp'
+        target.write_text(header + other + own + other*6000)
+        self.assertGreater(target.stat().st_size, m.MAX_TCP_SCAN)
+        original_health = m.health
+        def churn(reader):
+            result = original_health(reader)
+            target.write_text(header + other*100 + own + other*6000)
+            return result
+        with patch.object(m, 'health', side_effect=churn):
+            result = self.observe()
+        self.assertEqual(result['status'], 'BOUNDED_LISTENER_MODEL_REFERENCE_SNAPSHOT', result)
+        self.assertIs(result['listener_model_reference_verified'], True)
+        self.assertEqual(result['listener']['socket_inode'], 7001)
+        self.assertEqual(result['listener']['table_scan']['rows_checked'], 2)
+        self.assertEqual(result['listener']['table_scan_after']['rows_checked'], 101)
+        self.assertLess(result['listener']['table_scan']['bytes_read'], m.MAX_TCP_SCAN)
+        self.assertLess(result['listener']['table_scan_after']['bytes_read'], m.MAX_TCP_SCAN)
+        self.assertIs(result['listener']['global_listener_uniqueness_proven'], False)
+        self.assertEqual(len(self.http_calls), 1)
+
+    def test_tcp_prefix_bound_preserves_process_reference_without_get(self):
+        header, own = self.tcp.splitlines(True)
+        other = own.replace('7001', '9900')
+        (self.pid/'net/tcp').write_text(header + other*6000 + own)
+        reads = []
+        inode = (self.pid/'net/tcp').stat().st_ino
+        original = os.read
+        def observe_read(fd, count):
+            raw = original(fd, count)
+            if os.fstat(fd).st_ino == inode:
+                reads.append(len(raw))
+            return raw
+        with patch.object(m.os, 'read', side_effect=observe_read):
+            result = self.observe()
+        self.assertEqual(result['status'], 'HOLD_IDENTITY_OWNED_LISTENER_NOT_OBSERVED_WITHIN_BOUND')
+        self.assertEqual(sum(reads), m.MAX_TCP_SCAN)
+        self.assertEqual(self.http_calls, [])
+        self.assertEqual(result['argv_projection']['model_argument']['model_basename'], 'Synthetic-Model-Q4.gguf')
+        self.assertIs(result['argv_projection']['listener_process_binding_verified'], False)
+        self.assertIs(result['listener_model_reference_verified'], False)
 
     def test_configured_route_is_not_replaced_with_guessed_pid_or_host(self):
         target = self.root/'config/backend.json'

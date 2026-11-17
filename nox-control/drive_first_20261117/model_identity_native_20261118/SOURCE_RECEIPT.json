@@ -1,7 +1,7 @@
 {
-  "schema": "NOX_MODEL_IDENTITY_SOURCE_RECEIPT_V1",
-  "recorded_utc": "2026-11-17T22:22:26.682813+00:00",
-  "status": "SOURCE_READY_INDEPENDENTLY_REVIEWED",
+  "schema": "NOX_MODEL_IDENTITY_SOURCE_RECEIPT_V2",
+  "recorded_utc": "2026-11-17T22:34:18.893007+00:00",
+  "status": "FD_FIRST_SOURCE_READY_INDEPENDENTLY_REVIEWED",
   "files": {
     "model_identity_projection.py": {
       "sha256": "cb22df37c3b716c44c7fb8ab1828e4b220706ae985583bcfdb5ea58d4d596e65",
@@ -9,9 +9,9 @@
       "git_blob_sha1": "b2393016e15e9578c26b12fb5b6c8b9737725cba"
     },
     "native_model_identity_readback.py": {
-      "sha256": "e2c6fe0db7712bbecb1d12ab135cef76043eb37fa3797f192dfa56d40404fde7",
-      "bytes": 19068,
-      "git_blob_sha1": "346ce9b4eb61b3544e51b94589a5385044cd5d6a"
+      "sha256": "8a313ca790fcfe1b951c50e025eea2c9a5ff27be22c239d28ffa74e64a30aefe",
+      "bytes": 21874,
+      "git_blob_sha1": "3bedc05a715cb9e9d8208297ca0664f3c9268026"
     },
     "model_identity_audit_entry.py": {
       "sha256": "5cca3c2d88c5072bfa079f17ed4d936a452b1155486427bc3e8982466e1dced0",
@@ -24,82 +24,45 @@
       "git_blob_sha1": "fcafbdd6d35eb47d1dbf8f82b9d967fc9b121b1c"
     },
     "test_native_model_identity.py": {
-      "sha256": "26819c54e488b679dd08bea01e298d795f2b08cccd4b2233f15aa5116afb9cc9",
-      "bytes": 9254,
-      "git_blob_sha1": "5c4486b384cd5f0f5a13f6402967bac161c5f8eb"
+      "sha256": "7a415a16c732cbb33ca759cc0870fc22de9b9c450bec433ac888051a9733cda0",
+      "bytes": 12087,
+      "git_blob_sha1": "1d38b490a3e4d22eb13cf0706c92af2c032ff146"
     },
     "README.md": {
-      "sha256": "b1838eb854cb8dab6469f78018b0aa231c27f8eed46172557b393b3b649eadd2",
-      "bytes": 8065,
-      "git_blob_sha1": "dd7f3d7b8a43adbb349e60a4d8533c01f68226fe"
+      "sha256": "ceab0b5c2259e1276391190f9cb53ed7726a8cba3df52df58c46e148777b69b8",
+      "bytes": 10050,
+      "git_blob_sha1": "dcb60539de1e981ac05ef6016357f0149ec60219"
     },
     "BUILD_MANIFEST.json": {
-      "sha256": "c24870ac286883dc6df81a9e72e6ee538ddb33c62d8bbf3d696e7f29b41a8eaa",
+      "sha256": "e22624f083b9bde26b8ca383c756e3a5fee08ada82c4d85ccacc1feef19cb8ca",
       "bytes": 1028,
-      "git_blob_sha1": "e7664f63b56b1778d50615cde8d14bbf6e5b2024"
+      "git_blob_sha1": "e559a5310cd58816c26134f6520bacf101326d97"
     },
     "public_payload/nox-control/owner_native_audit.py": {
-      "sha256": "f961eb5e473a3e2e6488ba7585586a606c552f11f4c170241f23276cbd82bdcc",
-      "bytes": 16032,
-      "git_blob_sha1": "70e721b24b2ad33955f2754e19e5b61bde57a8e8"
+      "sha256": "bc6d3eb11a09c7348ba81e56cbb4e012ded6519c746c4c867a1b0b726abc04e7",
+      "bytes": 16812,
+      "git_blob_sha1": "fdfcafdce6dfe51c604e180b9702166b767c7dce"
+    },
+    "FD_FIRST_LISTENER_FIX.patch": {
+      "sha256": "9d8c1052260a74e0d246ecf1e311d0db4bcbbbe48aec7e50ed08016728112fb0",
+      "bytes": 8779,
+      "git_blob_sha1": "72269c22e841d29b665dc8be1d2841e4daecded0"
+    },
+    "NATIVE_FAILURE_RECONCILIATION_44190032651.json": {
+      "sha256": "5ff0ba8fc957a20667b69f3a6a90eb27fcd4340a31236d52ee9e061d7ae62324",
+      "bytes": 1328,
+      "git_blob_sha1": "e57d2390626b6f1227e2f18e667b7d024f77c6ce"
     }
   },
   "runtime_source_basis": {
-    "run": 44187317953,
-    "request": 6962437325,
-    "source_sha": "781dada3e796a1a9bee7c49ae46a56feb8dcbf8a"
+    "run": 44190032651,
+    "job": 134416648458,
+    "request": 6962800516,
+    "source_sha": "863fedea67d809d866092e5177a97bcd366e0923",
+    "status": "HOLD_FILE_BYTES_AT_TCP_TABLE_AFTER_PROCESS_PROOF"
   },
-  "projection_source_unchanged": true,
-  "reader_provenance": {
-    "source": "launcher_source_readback.py",
-    "source_sha256": "33d035e80053083f9e084a2c69f1c12710fa7bf4196556138e366600fc14802f",
-    "retained_methods": [
-      "__init__",
-      "check",
-      "read_fd",
-      "directory",
-      "close_dirs",
-      "verify_dirs",
-      "file"
-    ],
-    "proc_and_config_methods_not_copied": true
-  },
-  "entry_selection": {
-    "selected": "reviewed child0a3 base plus root explicit context-read counters and kind envelope",
-    "child_base_sha256": "0a3b0deab5e8d624a831613470aa8ee9ecb6c846d9cecb317758fd9352d13e8a",
-    "root_alternative_sha256": "9130684fd04b1fa7716df500ed05e1433db14676c0ad0c9d4408dadda6251761",
-    "reason": "Retains child main-thread/no-existing-timer precondition, nonblocking/no-follow/no-create lock with retained parent identity, cleanup, strict output marker budget; adds root explicit2publiccontextenvreads and typed receipt envelope",
-    "final_sha256": "5cca3c2d88c5072bfa079f17ed4d936a452b1155486427bc3e8982466e1dced0",
-    "final_wrapper_rebuilt_from_single_exact_entry": true
-  },
-  "tests": {
-    "unique_tests": 5,
-    "author_original_scope_tests": 4,
-    "author_entry_test": 1,
-    "entry_rechecked_after_entry_merge": true,
-    "status": "PASS",
-    "native_calls": 0,
-    "actual_network_calls": 0,
-    "real_private_key_reads": 0
-  },
-  "build": {
-    "embedded_modules_verified_exact": 3,
-    "wrapper_compile_ast_verified": true,
-    "entry_verified": "m.main()",
-    "payload_executed": false,
-    "independent_review_pending": false
-  },
-  "allowed_destinations": [
-    "http://127.0.0.1:8098/health"
-  ],
-  "maximum_gets": 1,
-  "maximum_posts": 0,
-  "maximum_model_requests": 0,
-  "scope": "CURRENT_PINNED_PRIMARY_LISTENER_ARGV_REFERENCE_ONLY",
-  "native_executed": false,
-  "published": false,
-  "no_private_source_inputs_or_keys_in_bundle": true,
-  "independent_reviews": {
+  "projection_and_entry_unchanged": true,
+  "v1_review_refs": {
     "INDEPENDENT_REVIEW.json": {
       "sha256": "f232039590edf7ca5ce4e98ca23d0111070088b200b92bf5620c8eb7cceee967",
       "bytes": 5356
@@ -109,12 +72,69 @@
       "bytes": 2156
     }
   },
-  "independent_tests": {
-    "helper_extra_tests": 1,
-    "helper_subcases": 2,
-    "entry_extra_tests": 1,
-    "entry_subcases": 2,
-    "full_author_suites_repeated": false,
+  "v1_test_evidence": {
+    "unique_tests": 5,
+    "author_original_scope_tests": 4,
+    "author_entry_test": 1,
+    "entry_rechecked_after_entry_merge": true,
+    "status": "PASS",
+    "native_calls": 0,
+    "actual_network_calls": 0,
+    "real_private_key_reads": 0
+  },
+  "v2_focused_tests": {
+    "tests": 4,
+    "new_tests": 2,
+    "adapted_tests": 2,
+    "status": "PASS",
+    "other_cases_not_repeated": true,
+    "http_calls_all_fake": true,
+    "native_calls": 0
+  },
+  "runtime_limits_not_increased": {
+    "filesystem_proc_bytes": 2097152,
+    "tcp_prefix_bytes": 262144,
+    "tcp_rows": 4096,
+    "fd_entries": 512,
+    "max_http_gets": 1,
+    "health_timeout": 0.8,
+    "hard_wall_seconds": 20,
+    "stdout_bytes": 32768
+  },
+  "corrected_claim_scope": [
+    "FD owned socket identity proven before reading TCP",
+    "Stops on owned LISTEN row; no complete TCP table requirement",
+    "No global listener uniqueness claim",
+    "Safe argv reference survives later HOLD but listener verified flag stays false",
+    "Unrelated prefix churn excluded from stable ownership identity comparison"
+  ],
+  "build": {
+    "modules_exact": 3,
+    "only_changed_module": "native_model_identity_readback",
+    "payload_executed": false,
+    "delta_independent_review_pending": false
+  },
+  "allowed_destinations": [
+    "http://127.0.0.1:8098/health"
+  ],
+  "new_native_run_executed": false,
+  "old_payload_retry_permitted": false,
+  "new_published": false,
+  "v2_independent_reviews": {
+    "TCP_DELTA_INDEPENDENT_REVIEW.json": {
+      "sha256": "16b3d1ab3681a6df9e54b77bffc783efe909e179a76d2f50fbd4545a41769a09",
+      "bytes": 3214
+    },
+    "TCP_DELTA_BUILD_CHECK.json": {
+      "sha256": "2f808807fb0f0b19664cd03f791e3d7d8e3ed9638283c3694fa62c90d9c2866a",
+      "bytes": 1144
+    }
+  },
+  "v2_independent_tests": {
+    "tests": 1,
+    "status": "PASS",
+    "case": "selected socket FD changes after early TCP match; HOLD before GET, safe argv retained",
+    "full_suite_repeated": false,
     "native_calls": 0
   }
 }

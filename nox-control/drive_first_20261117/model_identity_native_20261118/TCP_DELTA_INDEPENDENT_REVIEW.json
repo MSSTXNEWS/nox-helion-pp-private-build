@@ -1,0 +1,52 @@
+{
+  "schema": "NOX_MODEL_IDENTITY_TCP_DELTA_INDEPENDENT_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "verdict": "PASS_FD_FIRST_BOUNDED_SOURCE_DELTA_AND_EXACT_BUNDLE",
+  "helper_sha256": "8a313ca790fcfe1b951c50e025eea2c9a5ff27be22c239d28ffa74e64a30aefe",
+  "helper_base_sha256": "e2c6fe0db7712bbecb1d12ab135cef76043eb37fa3797f192dfa56d40404fde7",
+  "wrapper_sha256": "bc6d3eb11a09c7348ba81e56cbb4e012ded6519c746c4c867a1b0b726abc04e7",
+  "wrapper_bytes": 16812,
+  "projection_sha256": "cb22df37c3b716c44c7fb8ab1828e4b220706ae985583bcfdb5ea58d4d596e65",
+  "entry_sha256": "5cca3c2d88c5072bfa079f17ed4d936a452b1155486427bc3e8982466e1dced0",
+  "prior_reviews": [
+    "INDEPENDENT_REVIEW.json",
+    "ENTRY_BUNDLE_INDEPENDENT_REVIEW.json"
+  ],
+  "build_check": "TCP_DELTA_BUILD_CHECK.json",
+  "guard_review": [
+    "Only the pinned PID FD directory is enumerated first; at most512 descriptors, retained no-follow directory, socket inode links only",
+    "TCP scan reads at most262144 bytes and checks at most4096 rows/1024 bytes per line, under unchanged total2MiB/attempt/time budgets; it can stop before unrelated table EOF",
+    "Only a fixedPID-owned inode in IPv4 LISTEN8098 with root UID and loopback/wildcard address matches; selected FD and namespace are rechecked after scan",
+    "Safe argv model projection is recorded only after exact process pins, and listener binding remains false on later HOLD",
+    "Before/after identity compares inode/UID/port/address/PID/start/FDs/namespace, deliberately excludes unrelated table-prefix bytes/row counts",
+    "Entry, projection, destination, oneGET limit, hard deadline, lock handling, output limit and SHA-before-exec wrapper remain exact",
+    "No credential/body/source exports, new endpoint, POST, file write, process mutation or native invocation"
+  ],
+  "independent_targeted_test": {
+    "path": "test_independent_tcp_delta.py",
+    "sha256": "189570fa62d550f183df8b139ac3342fedcb72f48cd211cbf545664653dc330c",
+    "name": "test_socket_change_after_owned_row_scan_blocks_get_and_retains_safe_argv",
+    "passed": 1,
+    "tool_chunk_id": "3abc12",
+    "fixture": "TempFS and mocked health only; real network0",
+    "evidence": [
+      "Unrelated TCP suffix exceeds262144 but owned row is found in first4096 bytes",
+      "Changing the selected FD immediately after row lookup causes HOLD_IDENTITY_SOCKET_CHANGED",
+      "Health GET0, listener proof remains false, safe model basename survives"
+    ]
+  },
+  "author_tests_attributed_separately": {
+    "reported_passed": 4,
+    "reviewer_did_not_repeat_suite": true
+  },
+  "native_calls": 0,
+  "provider_http_calls": 0,
+  "native_ready": false,
+  "scope_limits": [
+    "FixedPID owned-listener model-file reference snapshot; global listener uniqueness is explicitly false",
+    "Before/after snapshots are non-atomic; no claim of exclusive responder attribution in a possible shared-port setup",
+    "No chat generation, weight-content/architecture/training proof, writer closure or NORMAL3 readiness"
+  ],
+  "next_step": "Root coordinator may publish this exact reviewed source and choose one fresh read-only native audit; this review does not dispatch it"
+}

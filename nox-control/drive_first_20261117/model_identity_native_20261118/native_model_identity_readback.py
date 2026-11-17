@@ -38,6 +38,9 @@ LOCK_PIN = {'dev': 36, 'ino': 59886214}
 MAX_READ = 2 * 1024 * 1024
 MAX_SECONDS = 15.0
 MAX_FDS = 512
+MAX_TCP_SCAN = 262144
+MAX_TCP_ROWS = 4096
+MAX_TCP_LINE = 1024
 MAX_OUTPUT = 32768
 
 
@@ -180,7 +183,7 @@ def strict_json(raw):
 
 
 def proc_read(reader, relative, maximum):
-    allowed = {'stat': 8192, 'cmdline': 32768, 'status': 16384, 'net/tcp': 262144}
+    allowed = {'stat': 8192, 'cmdline': 32768, 'status': 16384}
     require(relative in allowed and maximum == allowed[relative], 'HOLD_IDENTITY_PROC_SCOPE')
     path = PROC / str(PINNED_PID) / relative
     opened = reader.directory(path.parent)
@@ -245,23 +248,68 @@ def model_process(reader):
             'argv_exported': False, 'environment_read': False}, argv
 
 
-def ipv4_listener_rows(raw, port):
-    require(type(port) is int and port == PINNED_PORT, 'HOLD_IDENTITY_LISTENER_PORT')
-    lines = raw.decode('ascii', 'strict').splitlines()
-    require(1 <= len(lines) <= 4096 and 'local_address' in lines[0], 'HOLD_IDENTITY_TCP_SCHEMA')
-    rows = []
-    for line in lines[1:]:
-        fields = line.split()
-        require(len(fields) >= 10 and re.fullmatch(r'[0-9A-Fa-f]{8}:[0-9A-Fa-f]{4}', fields[1])
-                and re.fullmatch(r'[0-9A-Fa-f]{2}', fields[3])
-                and fields[7].isdigit() and fields[9].isdigit(), 'HOLD_IDENTITY_TCP_ROW')
-        address, raw_port = fields[1].upper().split(':')
-        if fields[3].upper() == '0A' and int(raw_port, 16) == port and address in {'0100007F', '00000000'}:
-            rows.append({'socket_inode': int(fields[9]), 'uid': int(fields[7]),
-                         'port': port, 'address': '127.0.0.1' if address == '0100007F' else '0.0.0.0'})
-    require(len(rows) == 1 and rows[0]['socket_inode'] > 0 and rows[0]['uid'] == OWNER_UID,
-            'HOLD_IDENTITY_LISTENER_NOT_UNIQUE')
-    return rows[0]
+def owned_ipv4_listener_row(raw, owned_inodes):
+    fields = raw.decode('ascii', 'strict').split()
+    require(len(fields) >= 10 and re.fullmatch(r'[0-9A-Fa-f]{8}:[0-9A-Fa-f]{4}', fields[1])
+            and re.fullmatch(r'[0-9A-Fa-f]{2}', fields[3])
+            and fields[7].isdigit() and fields[9].isdigit(), 'HOLD_IDENTITY_TCP_ROW')
+    address, raw_port = fields[1].upper().split(':')
+    inode = int(fields[9])
+    if (inode in owned_inodes and inode > 0 and fields[3].upper() == '0A'
+            and int(raw_port, 16) == PINNED_PORT and address in {'0100007F', '00000000'}):
+        require(int(fields[7]) == OWNER_UID, 'HOLD_IDENTITY_SOCKET_UID')
+        return {'socket_inode': inode, 'uid': int(fields[7]), 'port': PINNED_PORT,
+                'address': '127.0.0.1' if address == '0100007F' else '0.0.0.0'}
+    return None
+
+
+def owned_tcp_listener(reader, owned_inodes):
+    """Stop at a matching owned row; never require an unrelated table's EOF."""
+    opened = reader.directory(PROC / str(PINNED_PID) / 'net')
+    fd = None
+    try:
+        fd = os.open('tcp', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                     dir_fd=opened[-1][0])
+        before = os.fstat(fd)
+        require(stat.S_ISREG(before.st_mode) and before.st_uid == OWNER_UID,
+                'HOLD_IDENTITY_PROC_FILE')
+        reader.attempts += 1
+        scanned = rows = 0
+        pending = b''
+        header = False
+        while scanned < MAX_TCP_SCAN and rows < MAX_TCP_ROWS:
+            reader.check()
+            remaining = min(MAX_TCP_SCAN - scanned, MAX_READ - reader.total)
+            require(remaining > 0, 'HOLD_READ_BUDGET')
+            chunk = os.read(fd, min(4096, remaining))
+            scanned += len(chunk); reader.total += len(chunk)
+            if not chunk:
+                require(not pending, 'HOLD_IDENTITY_TCP_PARTIAL_LINE')
+                break
+            pending += chunk
+            while b'\n' in pending:
+                line, pending = pending.split(b'\n', 1)
+                require(len(line) <= MAX_TCP_LINE, 'HOLD_IDENTITY_TCP_LINE_BOUND')
+                if not header:
+                    require(b'local_address' in line, 'HOLD_IDENTITY_TCP_SCHEMA')
+                    header = True
+                    continue
+                rows += 1
+                require(rows <= MAX_TCP_ROWS, 'HOLD_IDENTITY_TCP_ROW_BOUND')
+                row = owned_ipv4_listener_row(line, owned_inodes)
+                if row is not None:
+                    require(dir_ident(os.fstat(fd)) == dir_ident(before), 'HOLD_IDENTITY_PROC_DRIFT')
+                    reader.verify_dirs(opened)
+                    reader.check()
+                    return {**row, 'table_scan': {'bytes_read': scanned, 'rows_checked': rows,
+                            'stopped_at_owned_listener': True, 'table_eof_required': False,
+                            'maximum_bytes': MAX_TCP_SCAN, 'maximum_rows': MAX_TCP_ROWS}}
+            require(len(pending) <= MAX_TCP_LINE, 'HOLD_IDENTITY_TCP_LINE_BOUND')
+        raise Hold('HOLD_IDENTITY_OWNED_LISTENER_NOT_OBSERVED_WITHIN_BOUND')
+    finally:
+        if fd is not None:
+            os.close(fd)
+        reader.close_dirs(opened)
 
 
 def listener(reader):
@@ -269,9 +317,8 @@ def listener(reader):
     self_ns = bounded_link(PROC / 'self/ns/net')
     require(re.fullmatch(r'net:\[[0-9]{1,24}\]', process_ns) and process_ns == self_ns,
             'HOLD_IDENTITY_NETWORK_NAMESPACE')
-    row = ipv4_listener_rows(proc_read(reader, 'net/tcp', 262144), PINNED_PORT)
     opened = reader.directory(PROC / str(PINNED_PID) / 'fd')
-    found = []
+    owned = {}
     try:
         fd = opened[-1][0]
         with os.scandir(fd) as entries:
@@ -284,9 +331,12 @@ def listener(reader):
                 except FileNotFoundError:
                     continue  # Unrelated descriptor churn is not listener evidence.
                 require(len(value.encode()) <= 4096, 'HOLD_IDENTITY_FD_LINK_BOUND')
-                if value == 'socket:[' + str(row['socket_inode']) + ']':
-                    found.append(int(entry.name))
-        require(bool(found), 'HOLD_IDENTITY_SOCKET_NOT_OWNED')
+                matched = re.fullmatch(r'socket:\[([0-9]{1,24})\]', value)
+                if matched:
+                    owned.setdefault(int(matched[1]), []).append(int(entry.name))
+        require(bool(owned), 'HOLD_IDENTITY_NO_OWNED_SOCKETS')
+        row = owned_tcp_listener(reader, set(owned))
+        found = owned[row['socket_inode']]
         for number in found:
             require(os.readlink(str(number), dir_fd=fd) == 'socket:[' + str(row['socket_inode']) + ']',
                     'HOLD_IDENTITY_SOCKET_CHANGED')
@@ -299,7 +349,8 @@ def listener(reader):
     return {**row, 'pid': PINNED_PID, 'start_ticks': PROCESS_PIN['start_ticks'],
             'file_descriptors': sorted(found), 'same_network_namespace': True,
             'network_namespace_sha256': sha(process_ns.encode()),
-            'table_scope': 'FIXED_PROCESS_NAMESPACE_IPV4_TCP',
+            'table_scope': 'BOUNDED_PREFIX_UNTIL_FIXED_PID_OWNED_IPV4_LISTENER',
+            'global_listener_uniqueness_proven': False,
             'atomic_binding': False}
 
 
@@ -370,17 +421,24 @@ def observe(owner_request, source_sha, *, maintenance_lock_fd):
         report['backend'] = {'projection': plan, 'readback': backend_meta}
         process_before, argv = model_process(reader)
         report['process'] = process_before
-        binding = listener(reader)
-        report['listener'] = binding
+        # Useful current process-reference evidence survives a later listener
+        # HOLD. Its separate listener binding flag stays false until final proof.
         report['argv_projection'] = projection.model_argv_projection(argv)
         argv = None
+        binding = listener(reader)
+        report['listener'] = binding
         require(plan['port'] == PINNED_PORT, 'HOLD_IDENTITY_CONFIGURED_PORT_NOT_PINNED_LISTENER')
         require(plan['host'] == '127.0.0.1', 'HOLD_IDENTITY_LOCALHOST_RESOLUTION_NOT_OBSERVED')
         report['http_gets'] = 1
         report['health'] = health(reader)
         process_after, _ = model_process(reader)
-        require(process_before == process_after and listener(reader) == binding,
+        binding_after = listener(reader)
+        identity_fields = ('socket_inode', 'uid', 'port', 'address', 'pid', 'start_ticks',
+                           'file_descriptors', 'network_namespace_sha256', 'same_network_namespace')
+        require(process_before == process_after
+                and all(binding_after[key] == binding[key] for key in identity_fields),
                 'HOLD_IDENTITY_BINDING_CHANGED')
+        report['listener']['table_scan_after'] = binding_after['table_scan']
         for name, before in source_meta.items():
             _, info = reader.file(ROOT / 'scripts' / name, 262144)
             require(info == before, 'HOLD_IDENTITY_SOURCE_CHANGED')

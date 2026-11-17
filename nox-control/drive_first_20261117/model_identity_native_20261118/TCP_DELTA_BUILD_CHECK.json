@@ -1,0 +1,40 @@
+{
+  "schema": "NOX_MODEL_IDENTITY_TCP_DELTA_BUILD_CHECK_V1",
+  "wrapper_sha256": "bc6d3eb11a09c7348ba81e56cbb4e012ded6519c746c4c867a1b0b726abc04e7",
+  "wrapper_bytes": 16812,
+  "modules": {
+    "model_identity_projection": {
+      "sha256": "cb22df37c3b716c44c7fb8ab1828e4b220706ae985583bcfdb5ea58d4d596e65",
+      "bytes": 10522
+    },
+    "native_model_identity_readback": {
+      "sha256": "8a313ca790fcfe1b951c50e025eea2c9a5ff27be22c239d28ffa74e64a30aefe",
+      "bytes": 21874
+    },
+    "model_identity_audit_entry": {
+      "sha256": "5cca3c2d88c5072bfa079f17ed4d936a452b1155486427bc3e8982466e1dced0",
+      "bytes": 2936
+    }
+  },
+  "all_decoded_bytes_exact": true,
+  "outer_program_reconstructed_exactly": true,
+  "entry_invocations": 1,
+  "compiled": true,
+  "executed": false,
+  "changed_existing_functions": [
+    "listener",
+    "observe",
+    "proc_read"
+  ],
+  "new_functions": [
+    "owned_ipv4_listener_row",
+    "owned_tcp_listener"
+  ],
+  "removed_functions": [
+    "ipv4_listener_rows"
+  ],
+  "entry_and_projection_unchanged": true,
+  "operational_limits_unchanged": true,
+  "native_calls": 0,
+  "provider_http_calls": 0
+}
