@@ -1,82 +1,160 @@
 #!/usr/bin/env python3
-"""Read only: identify existing owner credential reader and native bridge pins."""
-import ast, hashlib, json, re, time
+"""Pinned source-only diagnosis of CHAT_PASSWORD_PATH -> SECRETS bindings.
+
+Reads one fixed Python source file. Never reads a credential, imports native
+code, executes the password reader, evaluates an expression or contacts HTTP.
+All literal values are withheld; only syntax, names, origins and locations exit.
+"""
+import ast
+import hashlib
+import json
+import os
 from pathlib import Path
+import re
+import stat
 
-ROOT=Path('/root/nox')
-SAFE_PATH=re.compile(r'^/root/nox/[A-Za-z0-9_./-]{1,220}$')
-SAFE_NAME=re.compile(r'^[A-Z_][A-Z0-9_]{1,95}$')
-TARGETS={'_read_chat_password','_session_ok','_unauthorized','chat_login','login'}
+SOURCE = Path('/root/nox/scripts/chat_proxy.py')
+SOURCE_SHA = 'a03119817d695b1dc7ca2681a60bc564a0aa891468582bbf11b70592e2b4dfd6'
+MAX_SOURCE = 250000
+MAX_OUTPUT = 24000
+IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_]{0,95}')
+MODULE = re.compile(r'[A-Za-z_][A-Za-z0-9_.]{0,191}')
 
-def read(path,limit):
-    if path.is_symlink() or not path.is_file() or path.stat().st_size>limit:return None
-    with path.open('rb') as f:return f.read(limit+1)
+def name(value):
+    return value if isinstance(value, str) and IDENT.fullmatch(value) else '[IDENTIFIER_WITHHELD]'
 
-def redact_tree(node):
-    keep=set()
-    for item in ast.walk(node):
-        if isinstance(item,ast.Call) and isinstance(item.func,ast.Attribute) and item.func.attr in ('get','getenv') and item.args:
-            key=item.args[0]
-            owner=item.func.value
-            name=owner.attr if isinstance(owner,ast.Attribute) else owner.id if isinstance(owner,ast.Name) else ''
-            if name in ('os','environ') and isinstance(key,ast.Constant) and isinstance(key.value,str) and SAFE_NAME.fullmatch(key.value):keep.add(id(key))
-    class Redact(ast.NodeTransformer):
-        def visit_Constant(self,n):
-            if id(n) in keep or n.value is None or isinstance(n.value,bool):return n
-            if isinstance(n.value,str) and SAFE_PATH.fullmatch(n.value) and '..' not in Path(n.value).parts:return n
-            return ast.copy_location(ast.Constant(value='<REDACTED_VALUE>'),n)
-    return ast.unparse(ast.fix_missing_locations(Redact().visit(node)))
-
-def pin(path):
-    raw=read(path,150000)
-    return {'path':str(path),'exists':raw is not None,**({'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)} if raw is not None else {})}
-
-def run():
-    p=ROOT/'scripts/chat_proxy.py';raw=read(p,150000)
-    out={'schema':'NOX_OWNER_AUTH_READER_PROBE_V1','observed_at_epoch':time.time(),'http_requests':0,'native_mutations':False,'credential_values_exported':False,'proxy':pin(p)}
-    if raw is not None:
-        tree=ast.parse(raw.decode());functions=[];assignments=[];names=[]
-        for n in tree.body:
-            if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)):
-                if re.search('auth|session|password|login',n.name,re.I):names.append(n.name)
-                if n.name in TARGETS or re.search('(?:read|load).*password|password.*(?:read|load)',n.name,re.I):functions.append(redact_tree(n))
-            elif isinstance(n,(ast.Assign,ast.AnnAssign)):
-                targets=n.targets if isinstance(n,ast.Assign) else [n.target]
-                identifiers=[x.id for t in targets for x in ast.walk(t) if isinstance(x,ast.Name)]
-                if any(re.search('AUTH|PASS|SESSION|COOKIE|CONFIG|ROOT',x) for x in identifiers):assignments.append(redact_tree(n))
-        out['auth_function_names']=names;out['auth_readers']=functions;out['auth_config_assignments']=assignments
-    web=read(ROOT/'scripts/nox_web29_onehost_18775.py',16384)
-    if web:
-        for n in ast.parse(web).body:
-            if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='UPSTREAM' for t in n.targets) and isinstance(n.value,ast.Constant):
-                value=n.value.value
-                if isinstance(value,str) and re.fullmatch(r'http://127\.0\.0\.1:[0-9]{2,5}/?',value):out['web_loopback_upstream']=value
-    out['existing_helpers']=[pin(ROOT/'scripts'/name) for name in ('owner_drive_ram_bridge.py','owner_drive_ram_prepare.py','owner_drive_storage_bridge.py','owner_hermes_hydrate.py','owner_subagent_dispatcher_fresh.py')]
-    out['tunnels']=[]
-    for p in list(Path('/proc').glob('[0-9]*/cmdline'))[:2048]:
-        try:
-            raw=p.read_bytes()[:8192]
-            if b'cloudflared' not in raw:continue
-            args=raw.decode(errors='replace').split('\0')
-            local=[a for a in args if re.fullmatch(r'http://(?:127\.0\.0\.1|localhost):[0-9]{2,5}',a)]
-            out['tunnels'].append({'pid':int(p.parent.name),'local_targets':local,'token_values_exported':False})
-        except OSError:pass
-    out['tunnel_hostnames_from_native_logs']=[]
-    logs=[]
-    for pat in ('*cloudflar*.log','*tunnel*.log'):
-        logs.extend(list((ROOT/'logs').glob(pat))[:12])
-    for p in list(dict.fromkeys(logs))[:20]:
-        try:
-            if p.is_symlink() or not p.is_file():continue
-            with p.open('rb') as f:
-                f.seek(max(0,p.stat().st_size-65536));txt=f.read(65536).decode(errors='replace')
-            hosts=sorted(set(re.findall(r'https://([a-z0-9-]{4,100}\.trycloudflare\.com)',txt)))
-            if hosts:out['tunnel_hostnames_from_native_logs'].append({'log_path':str(p),'hostnames':hosts[-4:],'mtime_epoch':p.stat().st_mtime})
-        except OSError:pass
+def shape(node, depth=0, budget=None):
+    """Explicit nonvalue projection; never ast.dump/unparse native source."""
+    if budget is None: budget = [120]
+    budget[0] -= 1
+    if node is None: return {'node': 'ABSENT'}
+    out = {'node': type(node).__name__}
+    if depth >= 9 or budget[0] <= 0:
+        out['truncated'] = True
+        return out
+    sub = lambda n: shape(n, depth + 1, budget)
+    if isinstance(node, ast.Constant):
+        out['literal_type'] = type(node.value).__name__
+        out['value_withheld'] = True
+    elif isinstance(node, ast.Name): out['identifier'] = name(node.id)
+    elif isinstance(node, ast.Attribute): out.update(owner=sub(node.value), attribute=name(node.attr))
+    elif isinstance(node, ast.Call):
+        out.update(function=sub(node.func), args=[sub(n) for n in node.args[:8]],
+                   keywords=[{'name': name(n.arg) if n.arg else '**', 'value_shape': sub(n.value)} for n in node.keywords[:8]])
+    elif isinstance(node, ast.BinOp): out.update(operator=type(node.op).__name__, left=sub(node.left), right=sub(node.right))
+    elif isinstance(node, ast.Subscript): out.update(owner=sub(node.value), index=sub(node.slice))
+    elif isinstance(node, (ast.Tuple, ast.List, ast.Set)): out.update(count=len(node.elts), elements=[sub(n) for n in node.elts[:16]])
+    elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        out.update(targets=[sub(n) for n in targets[:8]], value_shape=sub(node.value))
+    elif isinstance(node, ast.Return): out['value_shape'] = sub(node.value)
+    elif isinstance(node, ast.Try):
+        out.update(body=[sub(n) for n in node.body[:8]],
+                   handlers=[{'type_shape': sub(h.type), 'body': [sub(n) for n in h.body[:8]]} for h in node.handlers[:4]],
+                   else_count=len(node.orelse), finally_count=len(node.finalbody))
+    elif isinstance(node, ast.If):
+        out.update(test_shape=sub(node.test), body_node_types=[type(n).__name__ for n in node.body[:16]],
+                   else_node_types=[type(n).__name__ for n in node.orelse[:16]])
+    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        out.update(function_name=name(node.name), parameters=[name(a.arg) for a in node.args.posonlyargs + node.args.args + node.args.kwonlyargs][:32],
+                   body=[sub(n) for n in node.body[:12]])
+    else:
+        out['child_node_types'] = [type(n).__name__ for n in ast.iter_child_nodes(node)][:16]
     return out
 
-if __name__=='__main__':
-    try:result=run();good=True
-    except Exception as exc:result={'status':'HOLD','error_type':type(exc).__name__};good=False
-    print('NOX_MAINT_AUDIT='+json.dumps(result,ensure_ascii=False,separators=(',',':')))
-    print('NOX_MAINT_AUDIT_COMPLETE='+str(good).lower())
+def target_names(node):
+    if isinstance(node, ast.Name): return {node.id}
+    if isinstance(node, (ast.Tuple, ast.List)):
+        return set().union(*(target_names(n) for n in node.elts)) if node.elts else set()
+    if isinstance(node, ast.Starred): return target_names(node.value)
+    return set()
+
+def describe_source(source):
+    tree = ast.parse(source)
+    bindings = {}; wildcards = []; readers = []; visits = 0
+    def add(identifier, row, dependencies=()):
+        if IDENT.fullmatch(identifier):
+            bindings.setdefault(identifier, []).append((row, set(dependencies)))
+    def walk(node, scope, context):
+        nonlocal visits
+        visits += 1
+        if visits > 50000: raise ValueError('AST_LIMIT')
+        location = {'line': getattr(node, 'lineno', None), 'scope': scope[:8], 'context': context[:8]}
+        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            ids = set().union(*(target_names(n) for n in targets))
+            deps = {n.id for n in ast.walk(node.value) if isinstance(n, ast.Name)} if node.value else set()
+            for identifier in ids:
+                add(identifier, {**location, 'binding_kind': type(node).__name__, 'statement_shape': shape(node)}, deps)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            module = node.module if isinstance(node, ast.ImportFrom) else None
+            module = module if module is None or MODULE.fullmatch(module) else '[MODULE_WITHHELD]'
+            for alias in node.names:
+                row = {**location, 'binding_kind': type(node).__name__, 'module': module,
+                       'level': node.level if isinstance(node, ast.ImportFrom) else 0,
+                       'import_name': alias.name if MODULE.fullmatch(alias.name) or alias.name == '*' else '[NAME_WITHHELD]',
+                       'alias': name(alias.asname) if alias.asname else None}
+                if alias.name == '*': wildcards.append(row)
+                else: add(alias.asname or alias.name.split('.')[0], row)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            add(node.name, {**location, 'binding_kind': 'FunctionDef', 'function_name': name(node.name)})
+            if node.name == '_read_chat_password': readers.append({**location, 'reader_shape': shape(node)})
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            scope = scope + [name(node.name)]
+        for field, value in ast.iter_fields(node):
+            children = value if isinstance(value, list) else [value]
+            for child in children:
+                if not isinstance(child, ast.AST): continue
+                nested = context
+                if isinstance(node, (ast.If, ast.Try, ast.With, ast.For, ast.While, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.ExceptHandler)):
+                    nested = context + [type(node).__name__ + '.' + field]
+                walk(child, scope, nested)
+    walk(tree, [], [])
+    pending = ['CHAT_PASSWORD_PATH', 'SECRETS']; seen = set(); output = []; unresolved = []
+    while pending and len(seen) < 24:
+        identifier = pending.pop(0)
+        if identifier in seen or not IDENT.fullmatch(identifier): continue
+        seen.add(identifier)
+        rows = bindings.get(identifier, [])
+        if not rows: unresolved.append(identifier)
+        for row, deps in rows[:8]:
+            output.append({'identifier': identifier, **row})
+            pending.extend(sorted(n for n in deps if n not in ('Path', '__file__') and n not in seen))
+    return {'bindings': output, 'dependency_identifiers': sorted(seen), 'unresolved_identifiers': sorted(unresolved),
+            'wildcard_imports': wildcards[:8], 'password_readers': readers[:2],
+            'dependency_limit_reached': bool(pending)}
+
+def run():
+    report = {'schema': 'NOX_CHAT_PASSWORD_PATH_AST_DIAGNOSTIC_V1', 'source_path': str(SOURCE),
+              'expected_source_sha256': SOURCE_SHA, 'credential_file_read': False,
+              'native_app_imported': False, 'password_reader_executed': False,
+              'literal_values_exported': False, 'http_requests': 0, 'native_mutations': 0}
+    if SOURCE.resolve() != SOURCE: raise ValueError('SOURCE_SYMLINK')
+    fd = os.open(SOURCE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_SOURCE: raise ValueError('SOURCE_TYPE_OR_SIZE')
+        raw = os.pread(fd, MAX_SOURCE + 1, 0)
+        after = os.fstat(fd)
+        if len(raw) != info.st_size or (info.st_ino, info.st_dev, info.st_mtime_ns, info.st_ctime_ns) != (after.st_ino, after.st_dev, after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError('SOURCE_CHANGED')
+    finally:
+        os.close(fd)
+    report['observed_source_sha256'] = hashlib.sha256(raw).hexdigest()
+    if report['observed_source_sha256'] != SOURCE_SHA:
+        return {**report, 'status': 'HOLD_SOURCE_SHA_CHANGED'}
+    report.update(describe_source(raw.decode('utf-8')))
+    report['status'] = 'AST_BINDING_DIAGNOSTIC_ONLY'
+    if len(json.dumps(report, ensure_ascii=False).encode()) > MAX_OUTPUT:
+        for row in report['bindings']: row.pop('statement_shape', None)
+        report['password_readers'] = [{k: v for k, v in r.items() if k != 'reader_shape'} for r in report['password_readers']]
+        report['shapes_omitted'] = 'TOTAL_OUTPUT_BUDGET'
+    return report
+
+if __name__ == '__main__':
+    try:
+        result = run(); complete = result.get('status') == 'AST_BINDING_DIAGNOSTIC_ONLY'
+    except Exception:
+        result = {'schema': 'NOX_CHAT_PASSWORD_PATH_AST_DIAGNOSTIC_V1', 'status': 'HOLD_BOUNDED_SOURCE_DIAGNOSTIC', 'credential_file_read': False, 'http_requests': 0}; complete = False
+    print('NOX_MAINT_AUDIT=' + json.dumps(result, ensure_ascii=False, separators=(',', ':')))
+    print('NOX_MAINT_AUDIT_COMPLETE=' + str(complete).lower())
