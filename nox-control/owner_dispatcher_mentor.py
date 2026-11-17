@@ -154,7 +154,7 @@ def service_state(service):
                       or (match[1] == 'RUNNING' and not match[2])
                       or (match[1] in ('STOPPED', 'EXITED') and match[2])):
             return {'state': 'UNKNOWN', 'pid': None}
-        if match and not match[2] and re.search(r'\\bpid\\b', result.stdout.strip()[match.end():], re.I):
+        if match and not match[2] and re.search(r'\bpid\b', result.stdout.strip()[match.end():], re.I):
             return {'state': 'UNKNOWN', 'pid': None}
         return {'state': match[1] if match and match[1] in SERVICE_STATES else 'UNKNOWN', 'pid': int(match[2]) if match and match[2] else None}
     except (OSError, subprocess.TimeoutExpired):
