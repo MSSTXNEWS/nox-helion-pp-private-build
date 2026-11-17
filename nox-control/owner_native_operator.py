@@ -13,6 +13,7 @@ FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_
        'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_post_reset_state_observe.py',
        'lifeline':'nox-control/owner_native_lifeline.py','deploy':'nox-control/owner_native_deploy.py'}
 MASTER=None
+PROVIDER_ONLY=False
 
 SCOPED_REPAIR_BUNDLES={
     'nox-control/owner_post_reset_state_observe.py':(),
@@ -164,7 +165,7 @@ def authorize_event(action):
     return c['id']
 
 def run_native(action,request_id):
-    global MASTER
+    global MASTER, PROVIDER_ONLY
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
     key=os.environ.get('NOX2','')
@@ -182,8 +183,14 @@ def run_native(action,request_id):
         'read_only_provider_lookup':True,'provider_mutations':0},sort_keys=True),flush=True)
     if not target or target.get('actual_status')!='running' or str(target.get('num_gpus'))!='2':raise RuntimeError('HOLD_EXACT_RUNNING_INSTANCE')
     if action=='deploy':
+        PROVIDER_ONLY=True
         from owner_cloudcopy_capability import probe as cloudcopy_probe
-        print('NOX_MAINT_CLOUDCOPY='+json.dumps(cloudcopy_probe(key),sort_keys=True),flush=True)
+        result=cloudcopy_probe(key)
+        print('NOX_MAINT_CLOUDCOPY='+json.dumps(result,sort_keys=True),flush=True)
+        print('NOX_MAINT_TRANSPORT=PROVIDER_ONLY_NO_SSH',flush=True)
+        good=result.get('state') in ('EXISTING_CLOUDCOPY_CONNECTIONS','NO_EXISTING_CLOUDCOPY_CONNECTIONS')
+        print('NOX_MAINT_DEPLOY_COMPLETE='+str(good).lower(),flush=True)
+        return good
     ip=target.get('public_ipaddr')
     if not ipaddress.ip_address(ip).is_global:raise RuntimeError('HOLD_INSTANCE_ROUTE')
     port=None
@@ -393,12 +400,15 @@ def main():
     finally:
         if MASTER:
             with contextlib.suppress(Exception):subprocess.run(MASTER,capture_output=True,timeout=8)
-        sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-        from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
-        try:
-            if not s.cleanup():good=False
-        except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
-        with contextlib.suppress(OSError):s.KEY.unlink()
+        if PROVIDER_ONLY:
+            print('NOX_MAINT_CLEANUP=NOT_NEEDED_PROVIDER_ONLY',flush=True)
+        else:
+            sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+            from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
+            try:
+                if not s.cleanup():good=False
+            except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
+            with contextlib.suppress(OSError):s.KEY.unlink()
     return 0 if good else 2
 if __name__=='__main__':raise SystemExit(main())
 
