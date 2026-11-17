@@ -323,7 +323,6 @@ class VerifiedJournalRecallV14Tests(unittest.TestCase):
             self.assertEqual(len(result['references_sha256']), 3)
 
 
-@unittest.skipUnless(FIXTURE.exists(), 'Requires retrieved pinned native dispatcher fixture')
 class SharedOptimizationCacheV14Tests(unittest.TestCase):
     def test_sibling_context_cache_respects_handler_params_and_failure(self):
         """A parent claim cannot lend its optimization advice to a different task."""
@@ -377,6 +376,7 @@ class SharedOptimizationCacheV14Tests(unittest.TestCase):
                 lifecycle._CACHE.clear()
 
 
+@unittest.skipUnless(FIXTURE.exists(), 'Requires retrieved pinned native dispatcher fixture')
 class NativeTransformTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
