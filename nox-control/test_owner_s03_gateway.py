@@ -128,6 +128,30 @@ class GatewayTests(unittest.TestCase):
             with self.assertRaisesRegex(g.MemoryHold, 'HOLD_S03_RECENT_LIMIT'):
                 g.recent_rows(c, limit=1024)
 
+    def test_stale_fts_cannot_resurrect_superseded_decision(self):
+        # Native S03 is authoritative. A lagging FTS row must never return
+        # the *new* decision as a response to words only in the old one.
+        with g.connection(self.db, write=True) as c:
+            item(c, 'revised', 'Decision choose blue', 'M2')
+            item(c, 'stable', 'Decision choose amber', 'M2')
+        with g.connection(self.db) as c:
+            self.assertEqual([r['id'] for r in g.lexical(c, 'blue')], ['revised'])
+            self.assertEqual([r['id'] for r in g.lexical(c, 'amber')], ['stable'])
+        with g.connection(self.db, write=True) as c:
+            c.execute('UPDATE s03_items SET text=? WHERE id=?',
+                      ('Decision choose green', 'revised'))
+        with g.connection(self.db) as c:
+            self.assertEqual(g.lexical(c, 'blue'), [])
+            self.assertEqual(g.lexical(c, 'green'), [])  # no fake fresh index
+            self.assertEqual([r['id'] for r in g.lexical(c, 'amber')], ['stable'])
+        with g.connection(self.db, write=True) as c:
+            c.execute('DELETE FROM s03_fts WHERE id=?', ('revised',))
+            c.execute('INSERT INTO s03_fts VALUES(?,?,?)',
+                      ('revised', 'Decision choose green', 'M2'))
+        with g.connection(self.db) as c:
+            self.assertEqual([r['id'] for r in g.lexical(c, 'green')], ['revised'])
+            self.assertEqual(g.lexical(c, 'blue'), [])
+
     def test_semantic_recall_finds_nonlexical_memory_and_rejects_stale_text(self):
         with g.connection(self.db,write=True) as c:
             item(c,'old','Я люблю гулять среди деревьев')
