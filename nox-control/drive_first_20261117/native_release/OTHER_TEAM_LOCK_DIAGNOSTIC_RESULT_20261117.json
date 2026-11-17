@@ -1,0 +1,35 @@
+{
+  "run_id": 44151821575,
+  "job_id": 134281917471,
+  "comment_id": 6957615494,
+  "source_commit": "c494c3f65a156dcf72c0ca8e0f2f83032656df0e",
+  "receipt": {
+    "kind": "maintenance_lock_diagnostic",
+    "data": {
+      "schema": "NOX_MAINTENANCE_LOCK_DIAGNOSTIC_V1",
+      "owner_request_id": "6957615494",
+      "owner_source_sha": "c494c3f65a156dcf72c0ca8e0f2f83032656df0e",
+      "lock": {
+        "path": "/root/nox/state/owner_maintenance.lock",
+        "dev": 36,
+        "ino": 59886214,
+        "uid": 0,
+        "gid": 0,
+        "mode_octal": "0o600",
+        "regular": true
+      },
+      "writes": 0,
+      "service_calls": 0,
+      "signals": 0,
+      "model_calls": 0,
+      "holders": [],
+      "kernel_locks": [],
+      "kernel_rows_truncated": false,
+      "nonblocking_probe": "ACQUIRED_AND_IMMEDIATELY_RELEASED",
+      "stable_lock_identity": true,
+      "status": "OBSERVED_NOT_AUTHORIZATION_TO_MUTATE"
+    }
+  },
+  "temporary_ssh_cleanup": "DETACHED_AND_VERIFIED",
+  "used_for": "Reuse exact lock observation; no duplicate diagnostic"
+}

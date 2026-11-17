@@ -1,0 +1,43 @@
+{
+  "schema": "NOX_V24_RUNTIME02_DELTA_BASE_V1",
+  "prepared_utc": "2026-11-17T18:38:01.573099+00:00",
+  "version": "2.4",
+  "plan_revision": 5,
+  "source_release_directory": "/workspace/scratch/4136374a0419/nox_refresh/release",
+  "files": [
+    {
+      "file": "NOX_Unique_Concept_20261117.md",
+      "bytes": 937895,
+      "sha256": "bea7b93bc5515dd11eaf68beb1a54737e657a3d20ec3db232b736ce1bdede2af",
+      "drive_id": "1Ez0JSlLmb51GdzeV1-Nls0TF8dWczM_E"
+    },
+    {
+      "file": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.json",
+      "bytes": 832126,
+      "sha256": "7c4c6de511ba6dcf55c42f2866de5d1474b113607a39ce76b9bd07be27081ff7",
+      "drive_id": "1HIhJ6rBZM_Jc7nIDOOg9AO0If7Hfa7b3"
+    },
+    {
+      "file": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.md",
+      "bytes": 105873,
+      "sha256": "a8aa60eafce1213c23e8d97db8f6c9fff0e9cda0f4217b38a65698f85206c95c",
+      "drive_id": "1SwQwESbQM07fUzZqmlc2in6x2z2Gehml"
+    },
+    {
+      "file": "NOX_MEGA_LIBRARY_START_20261117.md",
+      "bytes": 269179,
+      "sha256": "5c228520a7790d7a9d2b19f2fe1b1d4a985ae1d6b2110fbcfc7edf3e726d3471",
+      "drive_id": "116mv2NgnUm0PSBUZ1PZwXWnfv_8lAW7e"
+    },
+    {
+      "file": "NOX_UNIFIED_CANON_20261117.md",
+      "bytes": 315869,
+      "sha256": "a978d6b480acd2a3d5994d62acad493d4bc602de4edbaa6cecd50643388efd6b",
+      "drive_id": "1nt2ZNgj6iq04iTwnSFWaqf9wXALnxubZ"
+    }
+  ],
+  "previous_drive_readback": {
+    "verified_utc": "2026-11-17T18:20:37.742244+00:00",
+    "fresh_guard_still_required": true
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "NOX_V24_RUNTIME02_LOCAL_APPLY_V1",
+  "status": "APPLIED_LOCAL_ONLY_NOT_PUBLISHED",
+  "applied_utc": "2026-11-17T19:08:06.740989+00:00",
+  "backup": "/workspace/scratch/4136374a0419/nox_refresh/release/backups/v24_before_runtime02_7bbe52832aac",
+  "checks": {
+    "cards": 240,
+    "steps": 54,
+    "workpackages": 9,
+    "protected_structures_exact": true,
+    "markdown_body_reversible_exact": true,
+    "payload_sha256_without_self_hash": "028dcce6048a5ddf900e957226935f0db7e696262062fa08c87d5cc4db61ca97"
+  },
+  "fresh_drive_guard_sha256": "189ca1fd8351a1bb46d35b3606bd41ad877ad9a159fe66846fab815f3e385aa8",
+  "files": [
+    {
+      "file": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.json",
+      "bytes": 881871,
+      "sha256": "33f368dc0342e9f53e52853d8a0a37bb6715d2522cc4cf9d09e9e2fab24f2477"
+    },
+    {
+      "file": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.md",
+      "bytes": 113793,
+      "sha256": "4d4fbee695a5fbc8ba8ca14d2e6236b49a333706cd0c1833fcba43413e7926c0"
+    },
+    {
+      "file": "NOX_MEGA_LIBRARY_START_20261117.md",
+      "bytes": 277238,
+      "sha256": "2b42fabff8abd09216e12c9bcada0701b30c8cf36c046941dc3c273e0d71c434"
+    },
+    {
+      "file": "NOX_UNIFIED_CANON_20261117.md",
+      "bytes": 323789,
+      "sha256": "53ae6ff59f52680f367beef2c0442fb58cd9c383f1e67c805255f5263659701a"
+    },
+    {
+      "file": "NOX_Unique_Concept_20261117.md",
+      "bytes": 945815,
+      "sha256": "4f5da4fe74719ea6a86b29cb523a3c183375866aa4c6890f5ba3adde30acf321"
+    }
+  ],
+  "external_writes": 0,
+  "native_calls": 0
+}

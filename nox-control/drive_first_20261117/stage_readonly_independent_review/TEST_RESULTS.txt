@@ -1,0 +1,7 @@
+test_late_fifo_substitution_is_bounded_and_never_certified (test_late_fifo.LateFIFOTest.test_late_fifo_substitution_is_bounded_and_never_certified)
+A regular leaf becomes FIFO after lstat but before open; must not block/read/hash it. ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.011s
+
+OK

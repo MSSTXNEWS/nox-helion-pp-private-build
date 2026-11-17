@@ -1,0 +1,52 @@
+{
+  "schema": "NOX_STAGE_READONLY_DIAGNOSTIC_SOURCE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "created_at_utc": "2026-11-17T18:56:59.677467+00:00",
+  "status": "READY_SOURCE_ONLY",
+  "files": {
+    "owner_runtime_stage_readonly_diagnostic.py": {
+      "bytes": 19240,
+      "sha256": "0fb3d5e341058ba55f88a62b5976f15afc1c0afba5344cfc478d3a94536f1036"
+    },
+    "test_stage_readonly_diagnostic.py": {
+      "bytes": 8570,
+      "sha256": "133f3631907f5af30bac1eb3f9063aae4aa726b2d4cbd29792268ccebc3b8523"
+    },
+    "STAGE_READONLY_DIAGNOSTIC_HANDOFF.md": {
+      "bytes": 7960,
+      "sha256": "ca393d073ac1224a913ad37cadc57d0c23b708220251dcac05756b2aa9898588"
+    }
+  },
+  "author_tests": {
+    "passed": 8,
+    "failed": 0,
+    "seconds": 0.014,
+    "command": "python -m unittest -v test_stage_readonly_diagnostic.py"
+  },
+  "independent_review": {
+    "passed_tests": 1,
+    "case": "late regular-to-FIFO substitution; bytes_read=0, CHANGED_BEFORE_READ",
+    "concrete_blockers": 0,
+    "reviewer": "autonomy_rollout_design",
+    "receipt_path": "/workspace/scratch/4136374a0419/nox_refresh/stage_readonly_independent_review/REVIEW_RECEIPT.json",
+    "receipt_sha256": "c7247a5dee7cfc085d6bb5806d434def7d84295c71ef6cb9b798ae55fcd2c621",
+    "commit": "74ab77de5711551c27bd3a8c7f479ee78fb4f6a0"
+  },
+  "fixed_directory_count": 7,
+  "fixed_source_file_count": 12,
+  "expected_source_bytes": 98385,
+  "maximum_source_read_bytes": 98397,
+  "per_proc_locks_read_limit": 262144,
+  "maximum_proc_lock_rows": 4096,
+  "maximum_positive_holder_pids": 8,
+  "native_calls": 0,
+  "external_writes": 0,
+  "stage_guard_modified": false,
+  "native_mutations": 0,
+  "native_accepted": false,
+  "chmod_chown_calls": 0,
+  "flock_unlock_kill_calls": 0,
+  "secret_or_cmdline_reads": 0,
+  "owns_O1_repair_claim": false,
+  "NEXT_READY": "Root one-shot read-only partial-stage reconciliation; reuse actual O1 hardening receipt; no blind retry, chmod, or lock polling."
+}

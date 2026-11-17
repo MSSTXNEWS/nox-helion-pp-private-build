@@ -1,0 +1,148 @@
+{
+  "schema": "NOX_HISTORY_INVALID_LIMIT_SOURCE_ANALYSIS_V1",
+  "instructions_version": "0.0.6",
+  "native_calls_performed": 0,
+  "core_changed": false,
+  "expected_pins_changed": false,
+  "observed": {
+    "run_id": 44153064827,
+    "job_id": 134286323528,
+    "comment_id": 6957781455,
+    "source_commit": "6cd94848050a509790d5e81d6e18409d3cf981f8",
+    "receipt_sha256": "7608ec8a4b71463ab1693526aa1e20b6b93b60fe00e5cf24a001283a7cf41a5b",
+    "history_http_diagnostic": {
+      "status": 422,
+      "bytes_read": 25,
+      "truncated": false,
+      "sha256": "c72ee0295be63b2e06c1de1ec0b5c22e9dd197c48172348d9a6317799dc73a61",
+      "content_type": "application/json",
+      "json_decoded": true,
+      "json_type": "dict"
+    },
+    "exact_error_classification": "invalid_limit",
+    "ui_asset_acceptance_pass": true,
+    "model_requests": 0,
+    "dialogs_created": 0
+  },
+  "client": {
+    "core_sha256": "7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e",
+    "request_function": "LoopbackClient.request",
+    "history_function": "LoopbackClient.history_evidence",
+    "constructed_path": "/api/ui/memory/dialogs/history?dialog_id=5ce69137da0a4c42a0387917c8567d52&limit=2",
+    "method": "GET",
+    "request_body": null,
+    "exact_regex_guard": true,
+    "extra_query_encoding_or_append": false,
+    "local_capture": "PASS_LOCAL_CAPTURE_ONLY",
+    "fixture_path": "check_captured_history_request.py",
+    "real_network_requests_in_fixture": 0
+  },
+  "saved_handler": {
+    "whole_source_sha256": "3cd548a69ac0fa7128368bef77f5f7ef032359128cf723eaca1c6a0514c85dc6",
+    "native_whole_source_matches": false,
+    "limit_expression": "max(1,min(int(request.query_params.get('limit','100')),100))",
+    "literal_2_accepted": true,
+    "missing_limit_default_100_accepted": true,
+    "simple_whole_query_loss_explains_422_in_this_candidate": false,
+    "runtime_native_handler_identity_proven": false
+  },
+  "inverse_reconstruction": {
+    "transform_sha256": "497fe694a8acce04763e0757a078b79e91ab684985e198fb170f74834b9ab122",
+    "patch_sha256": "913ab09f775b7a1a83b86a567aa4c0a3806e64a79f19efd9b63386780cb7e936",
+    "patch_complete_lines": 601,
+    "base_sha256": "0cff2e7aee068571b2895ec476255e97ef3b85bd93104a27a822acfb8408632b",
+    "base_bytes": 47831,
+    "required_postimage_sha256": "ffdefe48fe45d797987fedcf76a231418c6c38c31c33ac8f687d99e753687cee",
+    "required_postimage_bytes": 49331,
+    "available_candidate_sha256": "3cd548a69ac0fa7128368bef77f5f7ef032359128cf723eaca1c6a0514c85dc6",
+    "available_candidate_bytes": 37613,
+    "available_candidate_is_inverse_input": false,
+    "available_candidate_is_forward_input": false,
+    "before_fragment_bytes": 1792,
+    "edit_before_spans": [
+      [
+        171,
+        172
+      ],
+      [
+        181,
+        182
+      ],
+      [
+        658,
+        660
+      ],
+      [
+        662,
+        662
+      ],
+      [
+        665,
+        666
+      ],
+      [
+        667,
+        668
+      ],
+      [
+        680,
+        681
+      ],
+      [
+        686,
+        686
+      ],
+      [
+        687,
+        699
+      ],
+      [
+        710,
+        711
+      ],
+      [
+        712,
+        712
+      ],
+      [
+        714,
+        715
+      ],
+      [
+        717,
+        720
+      ],
+      [
+        733,
+        744
+      ],
+      [
+        746,
+        748
+      ],
+      [
+        749,
+        749
+      ],
+      [
+        753,
+        754
+      ],
+      [
+        755,
+        756
+      ],
+      [
+        757,
+        758
+      ]
+    ],
+    "history_parser_present_in_edits_or_patch": false,
+    "reconstructed_native_preimage": false,
+    "reason": "The exact inverse requires the complete 49331-byte ffdefe48 postimage; the available candidate is 37613-byte 3cd548. The transform and unified diff omit unchanged regions including the history handler. They cannot recover missing native bytes or establish SHA0cff."
+  },
+  "conclusion": "Root/O0 verified the exact wrapper line under SHA0a0165: interpolating httpx.URL.query bytes formats Python bytes repr, corrupting dialog_id key and adding a trailing quote to limit. Independent local httpx0.28.1 reproduction gives limit=\"2'\" and ValueError. Cause identified; O0 owns the ASCIIdecode source fix and native installation remains pending.",
+  "next_ready": "O0 finishes the scoped wrapper source fix and provides actual installation/postimage receipt. Root then coordinates minimum pin rebase and one read-only reconciliation of the existing own dialog; no new model POST.",
+  "historical_conclusion_before_exact_wrapper_source": "Observed INVALID_LIMIT is established; its causal source is not. The frozen client constructs the expected literal limit=2. No client URL patch or wrapper/query patch is justified without the exact native handler/limit helper and wrapper preimages.",
+  "source_backed_reproduction": "QUERY_TARGET_REPRODUCTION.json"
+}

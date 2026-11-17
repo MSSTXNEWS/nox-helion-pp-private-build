@@ -1,0 +1,40 @@
+{
+  "schema": "NOX_WRAPPER_QUERY_CAUSAL_REPRODUCTION_V1",
+  "instructions_version": "0.0.6",
+  "status": "SOURCE_BACKED_CAUSE_REPRODUCED_LOCALLY_FIX_PENDING",
+  "source_evidence_kind": "Parent read-verified O0 shared Notion journal; reviewer did not export native preimages",
+  "journal_marker": "NOX_A1_RECONCILE_INVALID_LIMIT_20261117",
+  "wrapper_sha256": "0a0165e5b061f88ec60009c49a3c12e9823a45b89044604186e307c81fb701e6",
+  "bridge_sha256": "0cff2e7aee068571b2895ec476255e97ef3b85bd93104a27a822acfb8408632b",
+  "verified_wrapper_line": "target = path + (f\"?{url.query}\" if url.query else \"\")",
+  "verified_bridge_parser": "limit=max(1,min(int(request.query_params.get('limit','100')),100)); INVALID_LIMIT on ValueError",
+  "independent_local_result": {
+    "httpx_version": "0.28.1",
+    "url_query_type": "bytes",
+    "broken_parameter_names": [
+      "b'dialog_id",
+      "limit"
+    ],
+    "broken_limit": "2'",
+    "int_result": "ValueError",
+    "ascii_decoded_keys": [
+      "dialog_id",
+      "limit"
+    ],
+    "ascii_decoded_limit": "2",
+    "real_network_requests": 0,
+    "native_calls": 0
+  },
+  "native_fix_owner": "O0",
+  "native_fix_installed": false,
+  "native_postimage_sha256": null,
+  "canary_core_changed": false,
+  "fixture": "check_httpx_query_target.py",
+  "fixture_sha256": "79c295fe2bfcd3e8dd2287aeb490945df0c5a8738985b7757bf4277d0e7170a0",
+  "limits": [
+    "Local reproduction proves the formatting error in the source-verified line; it is not native installation or history persistence acceptance.",
+    "Existing handler source statement was verified by O0/root; reviewer independently confirmed the exact httpx behavior without native imports or HTTP.",
+    "The earlier own-dialog outcome remains unaccepted; do not generate again."
+  ],
+  "next_ready": "O0 finishes the scoped wrapper source fix and provides actual installation/postimage receipt. Root then coordinates minimum pin rebase and one read-only reconciliation of the existing own dialog; no new model POST."
+}

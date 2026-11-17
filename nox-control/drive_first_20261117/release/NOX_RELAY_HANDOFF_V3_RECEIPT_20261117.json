@@ -1,0 +1,344 @@
+{
+  "schema": "NOX_RELAY_PRE_EXIT_HANDOFF_V3_RECEIPT",
+  "date_msk": "2026-11-17",
+  "enabled_total": 15,
+  "verified_policy_count": 15,
+  "preserved_schedule_count": 15,
+  "current_active_subagents_limit": 3,
+  "automation_groups": {
+    "A": 6,
+    "B": 6,
+    "D": 3
+  },
+  "checks": [
+    {
+      "id": "Automation_4462d9cb0d2c8191b9c4ff1c360ddb98",
+      "title": "NOX D3 — оптимизация",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": true,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:45:00+03:00"
+    },
+    {
+      "id": "Automation_cb0de5e416188191968e635bba979021",
+      "title": "NOX D2 — интеграция",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": true,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:25:00+03:00"
+    },
+    {
+      "id": "Automation_16e3a9ffdff48191bc3b1d54947bb758",
+      "title": "NOX D1 — восстановление",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": true,
+      "v3_present": true,
+      "next_run": "2026-11-17T22:05:00+03:00"
+    },
+    {
+      "id": "6afafd9113fc8191b23b7e4b0e11d902",
+      "title": "NOX V14 · B5 · эстафета",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": true,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:30:00+03:00"
+    },
+    {
+      "id": "6afa6a3187448191b80e4a925ce71710",
+      "title": "NOX V14 · B4 · эстафета",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": true,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:30:00+03:00"
+    },
+    {
+      "id": "6afa6900607c8191a2048d2319fbb4fa",
+      "title": "NOX V14 · B3 · эстафета",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": true,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:30:00+03:00"
+    },
+    {
+      "id": "6afa68fde1988191a33e4029103e6cfe",
+      "title": "NOX V14 · B2 · эстафета",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": false,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:30:00+03:00"
+    },
+    {
+      "id": "6afa68fb554481918bbe95db73b560a7",
+      "title": "NOX V14 · B1 · эстафета",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": false,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:30:00+03:00"
+    },
+    {
+      "id": "6afa68f921b48191a8f7875efae6e783",
+      "title": "NOX V14 · B0 · эстафета",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": false,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:30:00+03:00"
+    },
+    {
+      "id": "6af9d06031408191a0d7fb4d91e31da5",
+      "title": "NOX A6 · Приёмка и слияние",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": false,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:50:00+03:00"
+    },
+    {
+      "id": "Automation_26409201a5f88191875878544488d623",
+      "title": "NOX A5 · Исполнители и ресурсы",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": false,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:40:00+03:00"
+    },
+    {
+      "id": "Automation_699343fbe37881919cdb75168812fafe",
+      "title": "NOX A4 · Drive и общий канон",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": false,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:30:00+03:00"
+    },
+    {
+      "id": "Automation_c10be790f1cc819192f5678833c2c029",
+      "title": "NOX A3 · Память и развитие",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": false,
+      "v3_present": true,
+      "next_run": "2026-11-17T21:20:00+03:00"
+    },
+    {
+      "id": "6af903a81f348191b18f01a8cde7ec05",
+      "title": "NOX A2 · Советники и инструменты",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": false,
+      "v3_present": true,
+      "next_run": "2026-11-17T22:10:00+03:00"
+    },
+    {
+      "id": "6af903a5c1208191a22263faae73d193",
+      "title": "NOX A1 · Чат и координация",
+      "enabled": true,
+      "schedule_equal": true,
+      "prompt_equal": true,
+      "v3_present": true,
+      "next_run": "2026-11-17T22:00:00+03:00"
+    }
+  ],
+  "policy": "\n\nBEGIN_NOX_HANDOFF_BEFORE_EXIT_V3\nПоследнее прямое правило владельца: продолжать эстафету и пополнять пул до завершения всех доступных задач общего блока. Во время активного запуска поддерживай3–6 полезных субисполнителей в рамках фактических свободных слотов; в текущей среде максимум3 субисполнителя плюс ведущий. Это рабочие слоты, не дополнительные копии основной модели.\nПеред завершением КАЖДОГО исполнителя обязателен pre-exit handoff: сохранить проверенный результат/checkpoint и durable receipt; прочитать свежие claims; выбрать следующую конкретную READY-задачу; передать NEXT_READY с inputs/source SHA, dependencies, acceptance и owner parent. Если есть свободный слот и разрешённая независимая работа, запусти следующего исполнителя до своего выхода. Если лимит заполнен, передай команду на пополнение ведущему; ведущий делает followup/restart сразу после освобождения слота. Не превышай лимит и не размножай вложенные группы. За однократное пополнение одного слота отвечает его ведущий; остальные не дублируют запуск.\nВедущий сам работает над критическим путём и после каждого завершения/ошибки исполнителя заново заполняет доступные слоты. Завершение одной карточки не завершает общий блок. По законченному own claim можно брать свободную задачу соседнего направления; чужой активный claim сохраняется. Долгий remote run передаётся по настоящему run/task ID, следующий этап выполняет независимые задачи.\nПерезапуск после сбоя сначала делает reconciliation неизвестного внешнего эффекта и проверку процесса/receipt. Нельзя повторять nativePOST/команду лишь из-за timeout, TTL или старта новой роли. Одинаковый подтверждённый source defect/отсутствующая авторизация/ресурсный HOLD требуют изменившегося предусловия, а не циклического повторения. Retry-safe временные ошибки ограничены3попытками на одни inputs с backoff; затем журнал ошибки, HOLD этой карточки и следующая READY.\nЦикл работает до исчерпания доступной разрешённой работы или runtime active run. На границе runtime — checkpoint, курсор, pending run IDs и конкретный NEXT_READY для следующей уже включённой часовой задачи. Не создавать новые расписания/дубли, не снимать owner pause/STOP и не выдавать почасовой запуск за бесконечный живой процесс. При отсутствии READY зафиксируй причины блокировки и условия продолжения; не выдумывай задачи ради числа агентов.\nОбщий человеческий журнал https://app.notion.com/p/419acc184a9f81fca144dfe8432e1a5b и память https://app.notion.com/p/41bacc184a9f811aa65ae53e0024f858 включают связанные NOX_OPT_SHARED_ERROR_LESSON_JOURNAL/NOX_RELAY6 записи. Машинные события сохраняй в существующие journal/receipt paths своей команды, со ссылками на общий IncidentID/operation_key: не плодить второй native ledger. Ошибка→проверенная причина→исправление→regression proof→принятый урок; source/installed/loaded/used разделены. instructions_version:\"0.0.6\" во всех Notion calls. Новые уроки не разрешают менять доступы/guards или считать память обучением весов.\nEND_NOX_HANDOFF_BEFORE_EXIT_V3\n",
+  "canary_v3": {
+    "run_id": 44144658040,
+    "job_id": 134256394067,
+    "comment_id": "6956669580",
+    "source_sha": "8b7f431f419a3618bed7a9442ccf1072a48e747a",
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "schema": "NOX_NATIVE_RESONANCE_ACCEPTANCE_V1",
+    "mode": "canary",
+    "native_canary_pass": false,
+    "external_http_requests": 0,
+    "credentials_exported": false,
+    "model_reloads": 0,
+    "dialogs_created": 0,
+    "model_requests": 0,
+    "scope": "LOOPBACK_18775_TO_8080_EXISTING_CHAT_AND_MODEL_8098",
+    "public_tunnel_verified": false,
+    "actor_authorization": "EXISTING_OWNER_REPAIR_RUNNER_REQUIRED",
+    "common_source_pin": {
+      "sha256": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+      "bytes": 5971,
+      "stable_file_identity_verified": true,
+      "binding": "PINNED_PROXY_FROM_COMMON_IMPORT_SECRETS_FIXED_SIBLING",
+      "code_executed": false,
+      "loaded_module_memory_identity_verified": false
+    },
+    "proxy_sha256": "a03119817d695b1dc7ca2681a60bc564a0aa891468582bbf11b70592e2b4dfd6",
+    "bridge_sha256": "0cff2e7aee068571b2895ec476255e97ef3b85bd93104a27a822acfb8408632b",
+    "auth_path_resolved": true,
+    "scoped_stop_verified": true,
+    "assets_on_disk": {
+      "resonance.html": true,
+      "nox-resonance-native-fix-v1.css": true,
+      "nox-resonance-native-fix-v1.js": true
+    },
+    "priority": {
+      "CHAT_ACTIVE": "0",
+      "MODE": "IDLE"
+    },
+    "owner_request_id": "6956669580",
+    "owner_source_sha": "8b7f431f419a3618bed7a9442ccf1072a48e747a",
+    "free_model_slots": 2,
+    "authenticated_login": true,
+    "authenticated_assets": {
+      "resonance.html": false,
+      "nox-resonance-native-fix-v1.css": true,
+      "nox-resonance-native-fix-v1.js": true
+    },
+    "status": "HOLD_SERVED_ASSET_HASH",
+    "total_ms": 113
+  },
+  "latest_readback": {
+    "verified_utc": "2026-11-17 19:06:14 UTC",
+    "source": "automations.peek fresh same-turn readback",
+    "enabled_count": 15,
+    "all_fifteen_v3": true,
+    "rows": [
+      {
+        "id": "6af903a5c1208191a22263faae73d193",
+        "found": true,
+        "title": "NOX A1 · Чат и координация",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T210000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=0;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "6af903a81f348191b18f01a8cde7ec05",
+        "found": true,
+        "title": "NOX A2 · Советники и инструменты",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T211000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=10;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "Automation_c10be790f1cc819192f5678833c2c029",
+        "found": true,
+        "title": "NOX A3 · Память и развитие",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T212000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=20;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "Automation_699343fbe37881919cdb75168812fafe",
+        "found": true,
+        "title": "NOX A4 · Drive и общий канон",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T213000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "Automation_26409201a5f88191875878544488d623",
+        "found": true,
+        "title": "NOX A5 · Исполнители и ресурсы",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T214000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=40;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "6af9d06031408191a0d7fb4d91e31da5",
+        "found": true,
+        "title": "NOX A6 · Приёмка и слияние",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T215000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=50;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "6afa68f921b48191a8f7875efae6e783",
+        "found": true,
+        "title": "NOX V14 · B0 · эстафета",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T023000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "6afa68fb554481918bbe95db73b560a7",
+        "found": true,
+        "title": "NOX V14 · B1 · эстафета",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T023000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "6afa68fde1988191a33e4029103e6cfe",
+        "found": true,
+        "title": "NOX V14 · B2 · эстафета",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T023000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "6afa6900607c8191a2048d2319fbb4fa",
+        "found": true,
+        "title": "NOX V14 · B3 · эстафета",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T023000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "6afa6a3187448191b80e4a925ce71710",
+        "found": true,
+        "title": "NOX V14 · B4 · эстафета",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T023000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "6afafd9113fc8191b23b7e4b0e11d902",
+        "found": true,
+        "title": "NOX V14 · B5 · эстафета",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T023000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "Automation_16e3a9ffdff48191bc3b1d54947bb758",
+        "found": true,
+        "title": "NOX D1 — восстановление",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T210500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=5;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "Automation_cb0de5e416188191968e635bba979021",
+        "found": true,
+        "title": "NOX D2 — интеграция",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T212500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=25;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      },
+      {
+        "id": "Automation_4462d9cb0d2c8191b9c4ff1c360ddb98",
+        "found": true,
+        "title": "NOX D3 — оптимизация",
+        "enabled": true,
+        "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261117T214500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=45;BYSECOND=0\nEND:VEVENT",
+        "v3": true,
+        "endMarker": true
+      }
+    ]
+  }
+}

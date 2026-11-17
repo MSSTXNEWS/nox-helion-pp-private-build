@@ -1,0 +1,53 @@
+{
+  "schema": "NOX_DRIVE_RUNTIME02_RAW_READBACK_V1",
+  "verified_utc": "2026-11-17T19:09:31.998157+00:00",
+  "same_drive_ids": true,
+  "all_five_verified": true,
+  "files": [
+    {
+      "file": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.md",
+      "drive_id": "1SwQwESbQM07fUzZqmlc2in6x2z2Gehml",
+      "sha256": "4d4fbee695a5fbc8ba8ca14d2e6236b49a333706cd0c1833fcba43413e7926c0",
+      "bytes": 113793,
+      "raw_bytes_verified": true,
+      "actual_sha256": "4d4fbee695a5fbc8ba8ca14d2e6236b49a333706cd0c1833fcba43413e7926c0",
+      "actual_bytes": 113793
+    },
+    {
+      "file": "NOX_MEGA_LIBRARY_START_20261117.md",
+      "drive_id": "116mv2NgnUm0PSBUZ1PZwXWnfv_8lAW7e",
+      "sha256": "2b42fabff8abd09216e12c9bcada0701b30c8cf36c046941dc3c273e0d71c434",
+      "bytes": 277238,
+      "raw_bytes_verified": true,
+      "actual_sha256": "2b42fabff8abd09216e12c9bcada0701b30c8cf36c046941dc3c273e0d71c434",
+      "actual_bytes": 277238
+    },
+    {
+      "file": "NOX_UNIFIED_CANON_20261117.md",
+      "drive_id": "1nt2ZNgj6iq04iTwnSFWaqf9wXALnxubZ",
+      "sha256": "53ae6ff59f52680f367beef2c0442fb58cd9c383f1e67c805255f5263659701a",
+      "bytes": 323789,
+      "raw_bytes_verified": true,
+      "actual_sha256": "53ae6ff59f52680f367beef2c0442fb58cd9c383f1e67c805255f5263659701a",
+      "actual_bytes": 323789
+    },
+    {
+      "file": "NOX_Unique_Concept_20261117.md",
+      "drive_id": "1Ez0JSlLmb51GdzeV1-Nls0TF8dWczM_E",
+      "sha256": "4f5da4fe74719ea6a86b29cb523a3c183375866aa4c6890f5ba3adde30acf321",
+      "bytes": 945815,
+      "raw_bytes_verified": true,
+      "actual_sha256": "4f5da4fe74719ea6a86b29cb523a3c183375866aa4c6890f5ba3adde30acf321",
+      "actual_bytes": 945815
+    },
+    {
+      "file": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.json",
+      "drive_id": "1HIhJ6rBZM_Jc7nIDOOg9AO0If7Hfa7b3",
+      "sha256": "33f368dc0342e9f53e52853d8a0a37bb6715d2522cc4cf9d09e9e2fab24f2477",
+      "bytes": 881871,
+      "raw_bytes_verified": true,
+      "actual_sha256": "33f368dc0342e9f53e52853d8a0a37bb6715d2522cc4cf9d09e9e2fab24f2477",
+      "actual_bytes": 881871
+    }
+  ]
+}

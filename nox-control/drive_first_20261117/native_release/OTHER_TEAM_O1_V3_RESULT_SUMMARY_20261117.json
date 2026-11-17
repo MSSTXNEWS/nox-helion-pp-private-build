@@ -1,0 +1,350 @@
+{
+  "run_id": 44153572961,
+  "job_id": 134288583621,
+  "kind": "native_chat_p0",
+  "request": "6957849667",
+  "source_sha": "2ece8810fb106ae38e36981ea4ae9ba28db885ff",
+  "status": "HOLD",
+  "error": "HOLD_FILENOTFOUNDERROR",
+  "steps": [
+    {
+      "phase": "permission_hardening_planned",
+      "time": 1794942001.2463005,
+      "targets": [
+        {
+          "path": "/root/nox",
+          "before_mode": "0o775",
+          "after_mode": "0o755",
+          "dev": 36,
+          "ino": 2214192306,
+          "sha256_before": null
+        },
+        {
+          "path": "/root/nox/scripts/chat_proxy.py",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 1146896197,
+          "sha256_before": "a03119817d695b1dc7ca2681a60bc564a0aa891468582bbf11b70592e2b4dfd6"
+        },
+        {
+          "path": "/root/nox/state/priority",
+          "before_mode": "0o775",
+          "after_mode": "0o755",
+          "dev": 36,
+          "ino": 2157348507,
+          "sha256_before": null
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-cache-watchdog-t166u.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 106052541,
+          "sha256_before": "4be7cb42dd42ccda0ebc67f8854c0f84a068f31a4f6d07caab0a9cd279954ca5"
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-cores.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 106952151,
+          "sha256_before": "7294bb7a3210e68bf9060dca5d9e8e9e258167db292411ab5a68847a5afad49b"
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-ds41-8098.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 106052539,
+          "sha256_before": "07187b45fdeb8e1f8122e4fe47e797317a2db7feafea5e764564af0ad9f6f447"
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-fill-idle-t166u.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 106052542,
+          "sha256_before": "ac29d27ad4379fdbe97db8a1a02956ad53a55569933f1ee8f9c74e91dd7fdfaa"
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-gpumon-t21u.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 107044225,
+          "sha256_before": "bcc34cf759a9a35b50a7bbcf0fbb72a50a772bc13384f13296795eff6c88c015"
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-nano.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 106052534,
+          "sha256_before": "6d069bc2614b3dd7c4fc7800de0c4c154752447566033445511193e16ee71a48"
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-offload-t850u.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 106778977,
+          "sha256_before": "a1fd3b2acb1233b7d1c12ef22c1d4feb9e5c94c68f0a3168dc21b88245750aad"
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-priority-arbiter.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 106052540,
+          "sha256_before": "75e6a2c003539d2dc03933b299eed243e0c00eb3633cc8bc049f9cd46626a3f0"
+        },
+        {
+          "path": "/etc/supervisor/conf.d/nox-web29-18775.conf",
+          "before_mode": "0o664",
+          "after_mode": "0o644",
+          "dev": 36,
+          "ino": 106052538,
+          "sha256_before": "072d1395d978fb6312e21a7dc161cc585a6b05084a9335132d14aa1b95a4e16d"
+        }
+      ],
+      "retained_by_code_rollback": true
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2485735,
+      "path": "/root/nox",
+      "before_mode": "0o775",
+      "after_mode": "0o755",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": null,
+      "sha256_after": null
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2513683,
+      "path": "/root/nox/scripts/chat_proxy.py",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "a03119817d695b1dc7ca2681a60bc564a0aa891468582bbf11b70592e2b4dfd6",
+      "sha256_after": "a03119817d695b1dc7ca2681a60bc564a0aa891468582bbf11b70592e2b4dfd6"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.253491,
+      "path": "/root/nox/state/priority",
+      "before_mode": "0o775",
+      "after_mode": "0o755",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": null,
+      "sha256_after": null
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2556248,
+      "path": "/etc/supervisor/conf.d/nox-cache-watchdog-t166u.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "4be7cb42dd42ccda0ebc67f8854c0f84a068f31a4f6d07caab0a9cd279954ca5",
+      "sha256_after": "4be7cb42dd42ccda0ebc67f8854c0f84a068f31a4f6d07caab0a9cd279954ca5"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2577558,
+      "path": "/etc/supervisor/conf.d/nox-cores.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "7294bb7a3210e68bf9060dca5d9e8e9e258167db292411ab5a68847a5afad49b",
+      "sha256_after": "7294bb7a3210e68bf9060dca5d9e8e9e258167db292411ab5a68847a5afad49b"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.25989,
+      "path": "/etc/supervisor/conf.d/nox-ds41-8098.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "07187b45fdeb8e1f8122e4fe47e797317a2db7feafea5e764564af0ad9f6f447",
+      "sha256_after": "07187b45fdeb8e1f8122e4fe47e797317a2db7feafea5e764564af0ad9f6f447"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2620516,
+      "path": "/etc/supervisor/conf.d/nox-fill-idle-t166u.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "ac29d27ad4379fdbe97db8a1a02956ad53a55569933f1ee8f9c74e91dd7fdfaa",
+      "sha256_after": "ac29d27ad4379fdbe97db8a1a02956ad53a55569933f1ee8f9c74e91dd7fdfaa"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2641788,
+      "path": "/etc/supervisor/conf.d/nox-gpumon-t21u.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "bcc34cf759a9a35b50a7bbcf0fbb72a50a772bc13384f13296795eff6c88c015",
+      "sha256_after": "bcc34cf759a9a35b50a7bbcf0fbb72a50a772bc13384f13296795eff6c88c015"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2663324,
+      "path": "/etc/supervisor/conf.d/nox-nano.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "6d069bc2614b3dd7c4fc7800de0c4c154752447566033445511193e16ee71a48",
+      "sha256_after": "6d069bc2614b3dd7c4fc7800de0c4c154752447566033445511193e16ee71a48"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.268735,
+      "path": "/etc/supervisor/conf.d/nox-offload-t850u.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "a1fd3b2acb1233b7d1c12ef22c1d4feb9e5c94c68f0a3168dc21b88245750aad",
+      "sha256_after": "a1fd3b2acb1233b7d1c12ef22c1d4feb9e5c94c68f0a3168dc21b88245750aad"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2712715,
+      "path": "/etc/supervisor/conf.d/nox-priority-arbiter.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "75e6a2c003539d2dc03933b299eed243e0c00eb3633cc8bc049f9cd46626a3f0",
+      "sha256_after": "75e6a2c003539d2dc03933b299eed243e0c00eb3633cc8bc049f9cd46626a3f0"
+    },
+    {
+      "phase": "permission_hardened",
+      "time": 1794942001.2736876,
+      "path": "/etc/supervisor/conf.d/nox-web29-18775.conf",
+      "before_mode": "0o664",
+      "after_mode": "0o644",
+      "retained_by_code_rollback": true,
+      "code_bytes_changed": false,
+      "sha256_before": "072d1395d978fb6312e21a7dc161cc585a6b05084a9335132d14aa1b95a4e16d",
+      "sha256_after": "072d1395d978fb6312e21a7dc161cc585a6b05084a9335132d14aa1b95a4e16d"
+    },
+    {
+      "phase": "private_backup_directory_created",
+      "time": 1794942001.2761683,
+      "path": "/root/nox/backup",
+      "mode": "0o700",
+      "dev": 36,
+      "ino": 1086695001,
+      "contents_created": 0
+    },
+    {
+      "phase": "private_backup_directory_created",
+      "time": 1794942001.2782395,
+      "path": "/root/nox/backup/owner_maintenance",
+      "mode": "0o700",
+      "dev": 36,
+      "ino": 2157348696,
+      "contents_created": 0
+    },
+    {
+      "phase": "preflight",
+      "time": 1794942001.421032,
+      "guard": {
+        "priority": {
+          "CHAT_ACTIVE": "0",
+          "MODE": "IDLE"
+        },
+        "status_sha256": "4e1a8a840677dbdee975f93a51692b4cf0359778aa664ae24225c0b1b2df3a76",
+        "status_age_seconds": 0.419,
+        "free_model_slots": 2,
+        "atomic_owner_admission_lease": false
+      },
+      "before": {
+        "service": {
+          "state": "RUNNING",
+          "pid": 3367881,
+          "rc": 0
+        },
+        "config": {
+          "path": "/etc/supervisor/conf.d/nox-proxy.conf",
+          "sha256": "ddec2af7e644f9bfae231ae47d1975542b9eddf6f2bee1d2e14a0ff34db3c18b",
+          "launcher_sha256": "adf2a6cde9281a096ea2924add38955d1fbaf26ddbefb499ddb349052b4a911b",
+          "command_sha256": "ade93b341c1e586be3eca4263400d12e881ded1e6dc54e3aae55c7c8d7d688b3",
+          "stop_settings": {
+            "stopasgroup": "true",
+            "killasgroup": "true",
+            "stopsignal": "TERM",
+            "stopwaitsecs": "20"
+          }
+        },
+        "process": {
+          "pid": 3367881,
+          "state": "S",
+          "ppid": 114,
+          "pgrp": 3367881,
+          "start_ticks": 172388763,
+          "service": "nox-proxy",
+          "script_bound": true,
+          "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+          "exe": "/usr/bin/python3.12",
+          "cwd": "/root/nox/scripts"
+        }
+      }
+    }
+  ],
+  "installed": false,
+  "used": false,
+  "accepted": false,
+  "replaced_files": [],
+  "permission_modes_after": {
+    "/root/nox": "0o755",
+    "/root/nox/scripts/chat_proxy.py": "0o644",
+    "/root/nox/state/priority": "0o755",
+    "/etc/supervisor/conf.d/nox-cache-watchdog-t166u.conf": "0o644",
+    "/etc/supervisor/conf.d/nox-cores.conf": "0o644",
+    "/etc/supervisor/conf.d/nox-ds41-8098.conf": "0o644",
+    "/etc/supervisor/conf.d/nox-fill-idle-t166u.conf": "0o644",
+    "/etc/supervisor/conf.d/nox-gpumon-t21u.conf": "0o644",
+    "/etc/supervisor/conf.d/nox-nano.conf": "0o644",
+    "/etc/supervisor/conf.d/nox-offload-t850u.conf": "0o644",
+    "/etc/supervisor/conf.d/nox-priority-arbiter.conf": "0o644",
+    "/etc/supervisor/conf.d/nox-web29-18775.conf": "0o644"
+  },
+  "permission_hardening_is_separate_from_code_rollback": true,
+  "files_after": {
+    "owner_chat_stream.py": {
+      "sha256": "c7ed0c34e8413c43d64ff8c32507226f73d416e0bfd584823d2ad49c43aebc5e",
+      "bytes": 24758
+    },
+    "nox_v29_chat_bridge.py": {
+      "sha256": "0cff2e7aee068571b2895ec476255e97ef3b85bd93104a27a822acfb8408632b",
+      "bytes": 47831
+    },
+    "chat_proxy.py": {
+      "sha256": "a03119817d695b1dc7ca2681a60bc564a0aa891468582bbf11b70592e2b4dfd6",
+      "bytes": 100149
+    }
+  },
+  "lock": {
+    "dev": 36,
+    "ino": 59886214
+  },
+  "model_calls": 0,
+  "model_reloads": 0,
+  "s03_modified": false,
+  "auth_modified": false
+}

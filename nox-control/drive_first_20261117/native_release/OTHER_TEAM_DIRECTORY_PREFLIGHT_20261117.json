@@ -1,0 +1,94 @@
+{
+  "run_id": 44150637673,
+  "job_id": 134277673977,
+  "source_commit": "5a047cb91894cfc9bc5efe30b3c806f10bf48aa7",
+  "status": "HOLD_METADATA_PREFLIGHT",
+  "paths": [
+    {
+      "path": "/root/nox",
+      "kind": "directory",
+      "required": true,
+      "uid": 0,
+      "gid": 0,
+      "mode_octal": "0o775",
+      "dev": 36,
+      "ino": 2214192306,
+      "size": 4096,
+      "realpath": "/root/nox",
+      "planned_tightening_to": "0o755",
+      "blockers": []
+    },
+    {
+      "path": "/root/nox/state",
+      "kind": "directory",
+      "required": true,
+      "uid": 0,
+      "gid": 0,
+      "mode_octal": "0o755",
+      "dev": 36,
+      "ino": 156,
+      "size": 16384,
+      "realpath": "/root/nox/state",
+      "blockers": []
+    },
+    {
+      "path": "/root/nox/state/priority",
+      "kind": "directory",
+      "required": true,
+      "uid": 0,
+      "gid": 0,
+      "mode_octal": "0o775",
+      "dev": 36,
+      "ino": 2157348507,
+      "size": 4096,
+      "realpath": "/root/nox/state/priority",
+      "blockers": [
+        "GROUP_OR_OTHER_WRITE"
+      ]
+    },
+    {
+      "path": "/root/nox/state/owner_maintenance.lock",
+      "kind": "file",
+      "required": true,
+      "uid": 0,
+      "gid": 0,
+      "mode_octal": "0o600",
+      "dev": 36,
+      "ino": 59886214,
+      "size": 0,
+      "realpath": "/root/nox/state/owner_maintenance.lock",
+      "blockers": []
+    },
+    {
+      "path": "/root/nox/scripts/chat_proxy.py",
+      "kind": "file",
+      "required": true,
+      "uid": 0,
+      "gid": 0,
+      "mode_octal": "0o664",
+      "dev": 36,
+      "ino": 1146896197,
+      "size": 100149,
+      "realpath": "/root/nox/scripts/chat_proxy.py",
+      "planned_tightening_to": "0o644",
+      "blockers": []
+    },
+    {
+      "path": "/root/nox/state/priority/CHAT_ACTIVE",
+      "kind": "file",
+      "required": true,
+      "uid": 0,
+      "gid": 0,
+      "mode_octal": "0o644",
+      "dev": 36,
+      "ino": 2157348700,
+      "size": 2,
+      "realpath": "/root/nox/state/priority/CHAT_ACTIVE",
+      "blockers": []
+    }
+  ],
+  "writes": 0,
+  "permissions_changed": false,
+  "service_calls": 0,
+  "evidence_scope": "Exact metadata preflight reused; O1 owns correction; no current lease inferred"
+}

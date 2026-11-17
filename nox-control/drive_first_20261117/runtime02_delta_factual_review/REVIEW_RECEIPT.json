@@ -1,0 +1,196 @@
+{
+  "schema": "NOX_RUNTIME02_DELTA_INDEPENDENT_FACTUAL_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "status": "PASS_FACTUAL_REVIEW_FOR_ROOT_SAME_ID_PUBLICATION",
+  "reviewed_at_utc": "2026-11-17T19:07:46.895508+00:00",
+  "source_commit": "2ebc783a737e1de42ffd34b153c682745b5bc482",
+  "preview_receipt_sha256": "f5d9216ae6c4c61b1fe093bf1feb5d0980b140913682e95fb088516d9e300689",
+  "final_checkpoint_sha256": "854f8ce70445514ea151e1db0eddf04a65e896ac370393fc4962328b42fe1d19",
+  "concrete_factual_blockers": [],
+  "frozen_candidate_files": [
+    {
+      "path": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.json",
+      "sha256": "33f368dc0342e9f53e52853d8a0a37bb6715d2522cc4cf9d09e9e2fab24f2477",
+      "bytes": 881871,
+      "candidate_matches_preview": true,
+      "base_unchanged": true
+    },
+    {
+      "path": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.md",
+      "sha256": "4d4fbee695a5fbc8ba8ca14d2e6236b49a333706cd0c1833fcba43413e7926c0",
+      "bytes": 113793,
+      "candidate_matches_preview": true,
+      "base_unchanged": true
+    },
+    {
+      "path": "NOX_MEGA_LIBRARY_START_20261117.md",
+      "sha256": "2b42fabff8abd09216e12c9bcada0701b30c8cf36c046941dc3c273e0d71c434",
+      "bytes": 277238,
+      "candidate_matches_preview": true,
+      "base_unchanged": true
+    },
+    {
+      "path": "NOX_UNIFIED_CANON_20261117.md",
+      "sha256": "53ae6ff59f52680f367beef2c0442fb58cd9c383f1e67c805255f5263659701a",
+      "bytes": 323789,
+      "candidate_matches_preview": true,
+      "base_unchanged": true
+    },
+    {
+      "path": "NOX_Unique_Concept_20261117.md",
+      "sha256": "4f5da4fe74719ea6a86b29cb523a3c183375866aa4c6890f5ba3adde30acf321",
+      "bytes": 945815,
+      "candidate_matches_preview": true,
+      "base_unchanged": true
+    }
+  ],
+  "preserved_structures": {
+    "cards": 240,
+    "steps": 54,
+    "workpackages": 9,
+    "protected_structures_exact": true,
+    "markdown_body_reversible_exact": true,
+    "payload_sha256_without_self_hash": "028dcce6048a5ddf900e957226935f0db7e696262062fa08c87d5cc4db61ca97"
+  },
+  "execution_enabled": false,
+  "active_automation_count_preserved": 15,
+  "source_tests": {
+    "integration": 26,
+    "controller": 20,
+    "independent_lifecycle": 2,
+    "total": 48,
+    "tests_rerun_by_this_review": 0,
+    "new_editorial_tests_added": 0,
+    "native_acceptance_inferred": false
+  },
+  "verified_facts": {
+    "latest_source_stage": {
+      "run_id": 44154217772,
+      "job_id": 134290449539,
+      "status": "SOURCE_INSTALLED_NOT_BOUND",
+      "files": 12,
+      "bytes": 98385,
+      "all_file_pins_match": true,
+      "all_created": true,
+      "runtime_imported": false,
+      "runtime_bound": false,
+      "model_requests": 0,
+      "model_downloads": 0,
+      "workers_started": 0
+    },
+    "historical_stage_diagnostic": {
+      "run_id": 44153563662,
+      "job_id": 134288122505,
+      "status": "READ_ONLY_DIAGNOSTIC_COMPLETE",
+      "present_files": 0,
+      "priority_mode": "0775",
+      "chat_active_before_after": [
+        1,
+        1
+      ],
+      "native_mutations": 0,
+      "network_requests": 0,
+      "locks_acquired": 0,
+      "meaning": "Historical snapshot, not latest installed state; /proc no-match does not prove free lease."
+    },
+    "other_team_hardening": {
+      "run_id": 44153572961,
+      "job_id": 134288583621,
+      "owner": "OTHER_TEAM_O1",
+      "priority_mode_after": "0755",
+      "code_installed": false,
+      "replaced_files": 0,
+      "error": "HOLD_FILENOTFOUNDERROR",
+      "not_attributed_to_our_stage": true
+    },
+    "latest_history": {
+      "run_id": 44153064827,
+      "job_id": 134286323528,
+      "status": "HOLD_HISTORY_HTTP_OR_JSON",
+      "http_status": 422,
+      "error": "INVALID_LIMIT",
+      "auth_and_ui_assets_pass": true,
+      "visual_or_public_browser_acceptance": false,
+      "model_requests": 0,
+      "dialogs_created": 0,
+      "wrapper_cause": "SOURCE_BACKED_LOCAL_REPRODUCTION",
+      "wrapper_fix_native_installed": false,
+      "native_canary_pass": false
+    },
+    "credentials_and_binding": {
+      "google_oauth_native_status": "UNKNOWN_NOT_INFERRED",
+      "runtime_bound": false,
+      "live_drive_acceptance": false
+    }
+  },
+  "read_only_probe_source_review": {
+    "sha256": "0fb3d5e341058ba55f88a62b5976f15afc1c0afba5344cfc478d3a94536f1036",
+    "all_file_open_flags": "O_RDONLY with no-follow/nonblocking bounds as applicable",
+    "write_chmod_chown_flock_kill_network_or_runtime_import_paths_found": false,
+    "review_type": "Static source review plus existing actual receipt; no extra native probe"
+  },
+  "evidence": [
+    {
+      "path": "native_release/NATIVE_RUNTIME_STAGE_RESULT_20261117.json",
+      "bytes": 307,
+      "sha256": "922ba786e2851575ecd6b35d5947bc514db69f6d604e3795a1c21f6004a50e99"
+    },
+    {
+      "path": "native_release/NATIVE_RUNTIME_STAGE_DIAGNOSTIC_20261117.json",
+      "bytes": 12334,
+      "sha256": "b5ac01b24ac6d1128edf8c12aaeeb2ee088531e1a7eb8e9232c058c76c2bde46"
+    },
+    {
+      "path": "native_release/OTHER_TEAM_O1_V3_RESULT_SUMMARY_20261117.json",
+      "bytes": 12373,
+      "sha256": "414006ecee71a46730c587dbda4ba2529b90f18c2beb4a677af84d4d4abe35e2"
+    },
+    {
+      "path": "native_release/NATIVE_RUNTIME_STAGE_AFTER_HARDENING_RESULT_20261117.json",
+      "bytes": 3318,
+      "sha256": "0119836b6f107391865288b9b8bb764dd07b603ad134b34c212de775f4e0018f"
+    },
+    {
+      "path": "native_release/NATIVE_CANARY_V4_RESULT_20261117.json",
+      "bytes": 29293,
+      "sha256": "ca69ff4e4499af9e16d4b45e8aba2809182a73c1a367fd06f3b610ee49d1a46a"
+    },
+    {
+      "path": "native_release/NATIVE_RECONCILE_AFTER_LOCK_RESULT_20261117.json",
+      "bytes": 12071,
+      "sha256": "7608ec8a4b71463ab1693526aa1e20b6b93b60fe00e5cf24a001283a7cf41a5b"
+    },
+    {
+      "path": "integrations_bridge/VALIDATION.json",
+      "bytes": 1217,
+      "sha256": "2cfc3826f1ac5f6c47dc6834c16e6f2486c09906c1bcb3c6a38462c187ba8bfc"
+    },
+    {
+      "path": "warm_weights_controller/RELEASE_RECEIPT.json",
+      "bytes": 5999,
+      "sha256": "7a5551e894e3b201f5167cef34ceabb4e7264c451b8d97a708f1eef1ef720c3f"
+    },
+    {
+      "path": "controller_lifecycle_review/REVIEW_RECEIPT.json",
+      "bytes": 3990,
+      "sha256": "b9426f45f3cb92a3d3c2ca521965e5fb201f5195f7492bd1bb8150934f892e83"
+    },
+    {
+      "path": "history_contract_reuse/QUERY_TARGET_REPRODUCTION.json",
+      "bytes": 2013,
+      "sha256": "cd7f844bda20228b1a2e0cead25527ec1b9718e8e22f89926b3f2ffc732060db"
+    },
+    {
+      "path": "onehost_binding_projection/owner_runtime_stage_readonly_diagnostic.py",
+      "bytes": 19240,
+      "sha256": "0fb3d5e341058ba55f88a62b5976f15afc1c0afba5344cfc478d3a94536f1036"
+    }
+  ],
+  "frozen_documents_modified_by_reviewer": false,
+  "native_calls_by_reviewer": 0,
+  "external_writes_by_reviewer": 0,
+  "NEXT_READY": {
+    "owner": "root",
+    "action": "Fresh exact Drive readback of the five base IDs, apply the reviewed candidate delta and publish to those same IDs, then verify exact readback. Keep O0 ownership of the wrapper fix and separate host binding acceptance; do not generate another dialog."
+  }
+}

@@ -1,0 +1,357 @@
+{
+  "kind": "drive_first_runtime_readonly_reconcile",
+  "data": {
+    "schema": "NOX_RUNTIME_STAGE_READONLY_DIAGNOSTIC_V1",
+    "instructions_version": "0.0.6",
+    "status": "READ_ONLY_DIAGNOSTIC_COMPLETE",
+    "snapshot_atomic": false,
+    "failed_stage": {
+      "run_id": "44149977429",
+      "job_id": "134275278537",
+      "comment_id": "6957369880",
+      "source_commit": "c49ee68d34fc9e0890a234fbff48d0c0e4132fe5",
+      "reported_error": "HOLD_DIRECTORY_OWNER_OR_MODE"
+    },
+    "bundle_sha256": "ee142b97c81327edf0130e2aba46c431e1d1334396581b11922507310553aa2b",
+    "staging_manifest_sha256": "61433567b16a2bd5433104146fad458a7f1427b6a7159a948211227b349a1d9d",
+    "destination": "/root/nox/extensions/drive_first_20261117_ee142b97c813",
+    "directories": [
+      {
+        "path": "/root/nox/state/priority",
+        "exists": true,
+        "bytes_read": 0,
+        "metadata": {
+          "type": "directory",
+          "uid": 0,
+          "gid": 0,
+          "mode": "0775",
+          "size": 4096,
+          "dev": 36,
+          "inode": 2157348507,
+          "nlink": 2,
+          "owner_matches_euid": true,
+          "group_or_other_writable": true
+        },
+        "status": "METADATA_ONLY",
+        "stage_directory_guard_ok": false,
+        "used_as_final_directory_by_stage_entry": true
+      },
+      {
+        "path": "/root/nox/state",
+        "exists": true,
+        "bytes_read": 0,
+        "metadata": {
+          "type": "directory",
+          "uid": 0,
+          "gid": 0,
+          "mode": "0755",
+          "size": 16384,
+          "dev": 36,
+          "inode": 156,
+          "nlink": 81,
+          "owner_matches_euid": true,
+          "group_or_other_writable": false
+        },
+        "status": "METADATA_ONLY",
+        "stage_directory_guard_ok": true,
+        "used_as_final_directory_by_stage_entry": true
+      },
+      {
+        "path": "/root/nox/extensions",
+        "exists": true,
+        "bytes_read": 0,
+        "metadata": {
+          "type": "directory",
+          "uid": 0,
+          "gid": 0,
+          "mode": "0700",
+          "size": 47,
+          "dev": 36,
+          "inode": 1086695026,
+          "nlink": 3,
+          "owner_matches_euid": true,
+          "group_or_other_writable": false
+        },
+        "status": "METADATA_ONLY",
+        "stage_directory_guard_ok": true,
+        "used_as_final_directory_by_stage_entry": false
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813",
+        "exists": false,
+        "bytes_read": 0,
+        "status": "PATH_OR_ANCESTOR_MISSING",
+        "used_as_final_directory_by_stage_entry": false
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime",
+        "exists": false,
+        "bytes_read": 0,
+        "status": "PATH_OR_ANCESTOR_MISSING",
+        "used_as_final_directory_by_stage_entry": false
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations",
+        "exists": false,
+        "bytes_read": 0,
+        "status": "PATH_OR_ANCESTOR_MISSING",
+        "used_as_final_directory_by_stage_entry": true
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_warm",
+        "exists": false,
+        "bytes_read": 0,
+        "status": "PATH_OR_ANCESTOR_MISSING",
+        "used_as_final_directory_by_stage_entry": true
+      }
+    ],
+    "observed_original_directory_guard_failure_candidates": [
+      "/root/nox/state/priority"
+    ],
+    "original_failure_path_proven": false,
+    "chat_active_before": {
+      "path": "/root/nox/state/priority/CHAT_ACTIVE",
+      "exists": true,
+      "bytes_read": 2,
+      "value": 1,
+      "value_scope": "Only literal 0 or 1 is returned; other contents withheld",
+      "metadata": {
+        "type": "regular",
+        "uid": 0,
+        "gid": 0,
+        "mode": "0644",
+        "size": 2,
+        "dev": 36,
+        "inode": 2157348715,
+        "nlink": 1,
+        "owner_matches_euid": true,
+        "group_or_other_writable": false
+      },
+      "status": "FLAG_OBSERVED",
+      "would_pass_original_owner_idle_file_guard": false
+    },
+    "chat_active_after": {
+      "path": "/root/nox/state/priority/CHAT_ACTIVE",
+      "exists": true,
+      "bytes_read": 2,
+      "value": 1,
+      "value_scope": "Only literal 0 or 1 is returned; other contents withheld",
+      "metadata": {
+        "type": "regular",
+        "uid": 0,
+        "gid": 0,
+        "mode": "0644",
+        "size": 2,
+        "dev": 36,
+        "inode": 2157348715,
+        "nlink": 1,
+        "owner_matches_euid": true,
+        "group_or_other_writable": false
+      },
+      "status": "FLAG_OBSERVED",
+      "would_pass_original_owner_idle_file_guard": false
+    },
+    "maintenance_lock_snapshot": {
+      "state": "NO_MATCH_OBSERVED",
+      "metadata_before": {
+        "path": "/root/nox/state/owner_maintenance.lock",
+        "exists": true,
+        "bytes_read": 0,
+        "metadata": {
+          "type": "regular",
+          "uid": 0,
+          "gid": 0,
+          "mode": "0600",
+          "size": 0,
+          "dev": 36,
+          "inode": 59886214,
+          "nlink": 1,
+          "owner_matches_euid": true,
+          "group_or_other_writable": false
+        },
+        "status": "METADATA_ONLY",
+        "stage_directory_guard_ok": false
+      },
+      "matching_locks": [],
+      "holders": [],
+      "locks_acquired": 0,
+      "unlock_calls": 0,
+      "kill_calls": 0,
+      "free_lock_proven": false,
+      "retry_authorized": false,
+      "visibility_scope": "Current /proc mount and PID namespace; point-in-time observation only",
+      "proc_locks_bytes_before": 419,
+      "proc_locks_bytes_after": 419,
+      "matching_locks_after": [],
+      "metadata_after": {
+        "path": "/root/nox/state/owner_maintenance.lock",
+        "exists": true,
+        "bytes_read": 0,
+        "metadata": {
+          "type": "regular",
+          "uid": 0,
+          "gid": 0,
+          "mode": "0600",
+          "size": 0,
+          "dev": 36,
+          "inode": 59886214,
+          "nlink": 1,
+          "owner_matches_euid": true,
+          "group_or_other_writable": false
+        },
+        "status": "METADATA_ONLY",
+        "stage_directory_guard_ok": false
+      },
+      "reason": "No matching kernel lock in two complete bounded snapshots; existing lease gate still required"
+    },
+    "chat_flag_values_equal": true,
+    "files": [
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations/__init__.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 364,
+        "expected_sha256": "13fa6a78def2edfb4b9ff819f36e933aabd4b17c0a3196f0d77ccb5f27841be9",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations/__main__.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 1368,
+        "expected_sha256": "14ae1e9c9fe3dd0477d1809489177846f48a3bdc8cb2dbc89ad046b0fde88bd2",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations/config.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 5394,
+        "expected_sha256": "29682a5e43ce4485ee9d91d3001800a27159df5c890083c06a5296a575468cc8",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations/core.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 7028,
+        "expected_sha256": "c660e389cd2c6318aacc4468a2cfa2198640b5fb2510b2b20d9b035479e480db",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations/drive.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 19308,
+        "expected_sha256": "2d985e33ed6501b95a085b85abbf5654d576513b9570710f706e678e8ff78c3b",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations/host.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 6782,
+        "expected_sha256": "5130d9028d60a9f78f5c0b3644c067329219f98d389859b1fdd6d933f946da1d",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations/memfd.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 5877,
+        "expected_sha256": "ec9910a67228cc8681a1f1157f9107003bac4634548ec3130bc43573745b1386",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_integrations/providers.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 4512,
+        "expected_sha256": "329d036498b6c38af71b996f15c138b5efbdc0a7d64f3c919f61745bfe8acebe",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_warm/__init__.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 213,
+        "expected_sha256": "696685fce0e046b6f53bfd2e3c866cdafbb8a16086faa00290f7fdcb94a156f2",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_warm/__main__.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 2795,
+        "expected_sha256": "ee9991fcbacaec2cc8bc720dcebfa7f13aae0f2ddb0963b55a84899957cf214c",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_warm/cache.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 6803,
+        "expected_sha256": "48bd8b61c002235ad6e7365bda9f80a21810fd98c05d5fba5ca169b9b055e9e5",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      },
+      {
+        "path": "/root/nox/extensions/drive_first_20261117_ee142b97c813/runtime/nox_warm/controller.py",
+        "exists": false,
+        "bytes_read": 0,
+        "expected_bytes": 37941,
+        "expected_sha256": "1312845745150bbfc52863fa6eab85d67da12d5108fb1cc1a7776d56621b5d05",
+        "sha256": null,
+        "matches_manifest": false,
+        "status": "PATH_OR_ANCESTOR_MISSING"
+      }
+    ],
+    "expected_file_count": 12,
+    "present_file_count": 0,
+    "matching_source_count": 0,
+    "all_expected_source_files_match": false,
+    "partial_destination_state": "NO_EXPECTED_FILES_OBSERVED",
+    "native_mutations": 0,
+    "chmod_chown_calls": 0,
+    "locks_acquired": 0,
+    "network_requests": 0,
+    "runtime_imported": false,
+    "runtime_bound": false,
+    "native_staging_accepted": false,
+    "source_bytes_read": 0,
+    "max_source_bytes_read": 98397,
+    "elapsed_ms": 20.63,
+    "interpretation": "Observed metadata/hash snapshot only. No authority to retry staging, chmod, bind callbacks or infer current owner lease.",
+    "owner_request_id": "6957847918",
+    "owner_source_sha": "fa6cc1c226416d739ef7e65d37e1429c4d4756ea"
+  },
+  "provenance": {
+    "run_id": 44153563662,
+    "job_id": 134288122505,
+    "comment_id": 6957847918,
+    "source_commit": "fa6cc1c226416d739ef7e65d37e1429c4d4756ea",
+    "temporary_ssh_cleanup": "DETACHED_AND_VERIFIED",
+    "remote_exit_code": 0
+  }
+}

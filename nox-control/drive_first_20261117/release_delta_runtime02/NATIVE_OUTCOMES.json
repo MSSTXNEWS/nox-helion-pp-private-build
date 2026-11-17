@@ -1,0 +1,196 @@
+{
+  "schema": "NOX_V24_RUNTIME02_NATIVE_OUTCOMES_V1",
+  "source_stage": {
+    "state": "OBSERVED",
+    "run_id": 44154217772,
+    "job_id": 134290449539,
+    "source_commit": "c49ee68d34fc9e0890a234fbff48d0c0e4132fe5",
+    "receipt": {
+      "status": "SOURCE_INSTALLED_NOT_BOUND",
+      "source_staging_only": true,
+      "directory": "/root/nox/extensions/drive_first_20261117_ee142b97c813",
+      "files": 12,
+      "bytes": 98385,
+      "bundle_sha256": "ee142b97c81327edf0130e2aba46c431e1d1334396581b11922507310553aa2b",
+      "runtime_imported": false,
+      "runtime_bound": false,
+      "model_downloads": 0,
+      "model_requests": 0,
+      "new_services": 0,
+      "workers_started": 0,
+      "legacy_patch_repeated": false,
+      "native_chat_canary_pass": false,
+      "completion_scope": "SOURCE_STAGING_ONLY_NOT_CHAT_ACCEPTANCE",
+      "owner_request_id": "6957935205",
+      "credentials_read_or_exported": false,
+      "serialization": "existing owner_maintenance.lock; cooperating writers only",
+      "file_pins": [
+        {
+          "path": "runtime/nox_integrations/__init__.py",
+          "bytes": 364,
+          "sha256": "13fa6a78def2edfb4b9ff819f36e933aabd4b17c0a3196f0d77ccb5f27841be9",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_integrations/__main__.py",
+          "bytes": 1368,
+          "sha256": "14ae1e9c9fe3dd0477d1809489177846f48a3bdc8cb2dbc89ad046b0fde88bd2",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_integrations/config.py",
+          "bytes": 5394,
+          "sha256": "29682a5e43ce4485ee9d91d3001800a27159df5c890083c06a5296a575468cc8",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_integrations/core.py",
+          "bytes": 7028,
+          "sha256": "c660e389cd2c6318aacc4468a2cfa2198640b5fb2510b2b20d9b035479e480db",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_integrations/drive.py",
+          "bytes": 19308,
+          "sha256": "2d985e33ed6501b95a085b85abbf5654d576513b9570710f706e678e8ff78c3b",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_integrations/host.py",
+          "bytes": 6782,
+          "sha256": "5130d9028d60a9f78f5c0b3644c067329219f98d389859b1fdd6d933f946da1d",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_integrations/memfd.py",
+          "bytes": 5877,
+          "sha256": "ec9910a67228cc8681a1f1157f9107003bac4634548ec3130bc43573745b1386",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_integrations/providers.py",
+          "bytes": 4512,
+          "sha256": "329d036498b6c38af71b996f15c138b5efbdc0a7d64f3c919f61745bfe8acebe",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_warm/__init__.py",
+          "bytes": 213,
+          "sha256": "696685fce0e046b6f53bfd2e3c866cdafbb8a16086faa00290f7fdcb94a156f2",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_warm/__main__.py",
+          "bytes": 2795,
+          "sha256": "ee9991fcbacaec2cc8bc720dcebfa7f13aae0f2ddb0963b55a84899957cf214c",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_warm/cache.py",
+          "bytes": 6803,
+          "sha256": "48bd8b61c002235ad6e7365bda9f80a21810fd98c05d5fba5ca169b9b055e9e5",
+          "created": true
+        },
+        {
+          "path": "runtime/nox_warm/controller.py",
+          "bytes": 37941,
+          "sha256": "1312845745150bbfc52863fa6eab85d67da12d5108fb1cc1a7776d56621b5d05",
+          "created": true
+        }
+      ]
+    },
+    "source_receipt_sha256": "9966f2c0edf5285e4f10243c54fb56e473c3dd14ca184a8819e4b87693a48ef9"
+  },
+  "readonly_reconcile": {
+    "state": "OBSERVED",
+    "run_id": 44153064827,
+    "job_id": 134286323528,
+    "source_commit": "6cd94848050a509790d5e81d6e18409d3cf981f8",
+    "receipt": {
+      "status": "HOLD_HISTORY_HTTP_OR_JSON",
+      "mode": "reconcile",
+      "phase": "OWN_HISTORY_READ_ONLY",
+      "error_phase": "OWN_HISTORY_READ_ONLY",
+      "error_class": "Hold",
+      "ui_asset_acceptance_pass": true,
+      "ui_status": "PASS",
+      "native_canary_pass": false,
+      "native_chat_canary_pass": false,
+      "dialogs_created": 0,
+      "model_requests": 0,
+      "external_http_requests": 0,
+      "model_reloads": 0,
+      "authenticated_login": true,
+      "auth_path_resolved": true,
+      "owner_request_id": "6957781455",
+      "owner_ui_sha256": "da2cea21d21d3c1129bcb6621cd5293469a085ad861924a8c5cc63981577a866",
+      "total_ms": 134,
+      "python_version": [
+        3,
+        10,
+        12
+      ],
+      "history_http_diagnostic": {
+        "status": 422,
+        "bytes_read": 25,
+        "truncated": false,
+        "sha256": "c72ee0295be63b2e06c1de1ec0b5c22e9dd197c48172348d9a6317799dc73a61",
+        "content_type": "application/json",
+        "json_decoded": true,
+        "json_type": "dict"
+      }
+    },
+    "source_receipt_sha256": "cb660a9f467ea99a4765bb9385ccb2c366d7334d0723fc8d1e8e363cad63b86e"
+  },
+  "history": [
+    {
+      "kind": "readonly_reconcile",
+      "outcome": {
+        "state": "OBSERVED",
+        "run_id": 44150997251,
+        "job_id": 134278972543,
+        "source_commit": "6cd94848050a509790d5e81d6e18409d3cf981f8",
+        "receipt": {
+          "status": "HOLD_MAINTENANCE_BUSY",
+          "mode": "reconcile",
+          "phase": "SOURCE_IDENTITY",
+          "error_phase": "SOURCE_IDENTITY",
+          "error_class": "Hold",
+          "ui_asset_acceptance_pass": false,
+          "native_canary_pass": false,
+          "native_chat_canary_pass": false,
+          "dialogs_created": 0,
+          "model_requests": 0,
+          "external_http_requests": 0,
+          "model_reloads": 0,
+          "owner_ui_sha256": "da2cea21d21d3c1129bcb6621cd5293469a085ad861924a8c5cc63981577a866",
+          "total_ms": 65,
+          "python_version": [
+            3,
+            10,
+            12
+          ]
+        },
+        "source_receipt_sha256": "9e9b24ea51abc61d76b924cc5df40af3ef15e42724e2949ccc99706a88392fbf"
+      }
+    },
+    {
+      "kind": "source_stage",
+      "outcome": {
+        "state": "OBSERVED",
+        "run_id": 44149977429,
+        "job_id": 134275278537,
+        "source_commit": "c49ee68d34fc9e0890a234fbff48d0c0e4132fe5",
+        "receipt": {
+          "status": "HOLD_DIRECTORY_OWNER_OR_MODE",
+          "source_staging_only": true,
+          "runtime_bound": false,
+          "native_chat_canary_pass": false,
+          "partial_destination_may_exist": true,
+          "error_type": "Hold"
+        },
+        "source_receipt_sha256": "a8d1a3da86ff017d87de631ae60b52ef2748806981b49afae5213dd91b8b78db"
+      }
+    }
+  ]
+}

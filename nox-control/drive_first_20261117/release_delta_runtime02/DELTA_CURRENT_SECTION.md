@@ -1,0 +1,29 @@
+<!-- NOX_RUNTIME02_DELTA_BEGIN -->
+## Текущая дельта v2.4: runtime 0.2, canary v4 и reconciliation
+
+**Версия 2.4 / plan_revision 5 сохранена.** V3-политика и расписания подтверждены для **15 active = 12 A/B + 3 D**; все **240 карточек / 54 шага / 9 пакетов** сохранены. `execution_enabled=false`: исходники, отдельные native-факты и принятие работающей функции учитываются раздельно.
+
+| Контур | Последнее доказательство | Текущий допуск |
+|---|---|---|
+| Совместимые integration/controller **0.2.0** | **26 + 20 + 2 = 48 PASS**: 46 авторских и 2 независимых lifecycle tests | **SOURCE_TESTED**, native binding не подтверждён. Два независимых блокера исправлены: неизвестный load не освобождает RAM handle/lease; устаревший fencing token не урегулирует текущий lease. |
+| Прежний staging `0c40501f9068` | Исторически установлены 17 файлов; directory сохранён | **Не активировать старый runtime**: его lifecycle исправления заменены совместимой 0.2. Старые bytes не удаляются, legacy policy не запускается повторно. |
+| Новый source-only staging | **12 файлов / 98385 байт**, bundle `ee142b97c81327edf0130e2aba46c431e1d1334396581b11922507310553aa2b` | **SOURCE_INSTALLED_NOT_BOUND**, run `44154217772`, job `134290449539`; source `c49ee68d34fc9e0890a234fbff48d0c0e4132fe5`. Даже успех означает только `SOURCE_INSTALLED_NOT_BOUND`, без импорта/запуска runtime, модели или новых workers. |
+| Native canary v4 | Run **44147786817 / job 134267516216**, один собственный диалог и **1 model request** | **HOLD_BOUNDED_CANARY_FAILURE**. Own dialog `5ce69137da0a4c42a0387917c8567d52`; native chat/S03/terminal acceptance не подтверждены. Автоматически повторять генерацию нельзя. |
+| Причина прежнего UI hash mismatch | Native served HTML **14519 байт**, SHA `e736c54022439cc2cddfaba17aeebf9844e2f6cf35a3b07c3837a8c0531b70cc`; exact composition с `owner_chat_ui` SHA `da2cea21d21d3c1129bcb6621cd5293469a085ad861924a8c5cc63981577a866` | Причина установлена: штатное HTML-дополнение. Исправленный checker принимает только точные bytes при совпадающем helper pin; это отдельно от результата чата. |
+| Read-only reconciliation | Проверенный source SHA `7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e`; `run(False, …, reconcile_dialog_id=RECONCILE_DIALOG_ID)` | **HOLD_HISTORY_HTTP_OR_JSON**, run `44153064827`, job `134286323528`; source `6cd94848050a509790d5e81d6e18409d3cf981f8`. Только официальный login и разрешённые GET; **0 create / 0 model request / 0 STOP**. |
+
+**Свежий native-факт:** read-only run `44153064827` / job `134286323528` подтвердил авторизацию и доставку точного HTML/CSS/JS (**UI asset PASS**, без visual PASS). Итог — **HOLD_HISTORY_HTTP_OR_JSON**: history HTTP `422`, `application/json`, 25 байт, SHA `c72ee0295be63b2e06c1de1ec0b5c22e9dd197c48172348d9a6317799dc73a61`. Вторая команда **O0 воспроизвела ошибку передачи query** в существующем wrapper: `url.query` имеет тип bytes и попадает в строку с лишней пунктуацией, после чего parser отклоняет limit. Исправление через ASCII decode готовится; native patch и успешный history readback ещё не подтверждены. **0 create / 0 model request / 0 STOP**; это не новый ответ модели и не native canary PASS. Предыдущий `HOLD_MAINTENANCE_BUSY` сохранён в истории. Последний source staging: **SOURCE_INSTALLED_NOT_BOUND**; runtime не связан с host.
+
+**NEXT_READY:** передать подготовку исправления query и read-only проверку того же собственного диалога владельцу **O0**. Новую генерацию не повторять. После source-only установки binding и приёмка остаются отдельной работой существующих O1/O5.
+
+**История нашей диагностики staging:** run `44153563662` / job `134288122505`, comment `6957847918`, source `fa6cc1c226416d739ef7e65d37e1429c4d4756ea` завершился `READ_ONLY_DIAGNOSTIC_COMPLETE` за 20.63 мс. В тот момент нового каталога не было, **0 из 12 файлов** присутствовали; priority был `0775` (dev 36, inode 2157348507), CHAT_ACTIVE **1 → 1**. Записей, сети и захвата блокировок — 0. Это исторический снимок до следующего изменения прав, а не актуальные разрешения после O1. Исходный staging `HOLD_DIRECTORY_OWNER_OR_MODE` сохранён как отдельная попытка.
+
+**Следующее изменение другой команды O1:** run `44153572961` / job `134288583621` выполнил hardening: `/root/nox` и `state/priority` → `0755`, proxy и **9 supervisor configs** → `0644`; bytes исходников не изменены. Собственная установка chat-патча O1 завершилась **HOLD_FILENOTFOUNDERROR**, `installed=false`, заменённых файлов 0. Это не наша установка runtime. В их preflight 2026-11-17T19:00:01.421032+00:00 наблюдались CHAT_ACTIVE=0, MODE=IDLE и 2 свободных слота; это снимок, не постоянный допуск.
+
+
+V4 source `9699fd3ec4cfaaaa6c7df1ed37250663a8f4e553`, comment `6957085526`, сообщил итог **4221 мс**, но terminal flags и stream timings не сохранил. Это не clean TTFT и не время принятого ответа. Даже успешный history/UI reconciliation не восстанавливает потерянные terminal fields и не становится `native_canary_pass=true`.
+
+Source commits совместимой пары: integrations `690342457804f096b918664731756e1a79564631`, controller `7ce6290420bf1765fefd1c0b082175a1bea42ab9`. Подтверждённые контракты: неизвестный release ACK требует readback без повторного освобождения; owner pause объединяется с local pause; TRAIN → WORK → TRAIN использует проверенный checkpoint. Защита chat/core/Engram сохраняется. Полная работоспособность модели, обучения и Drive не выводится из локальных fixtures.
+
+**Учёт дальнейших результатов:** обновлять поля `runtime02_delta.native_outcomes.source_stage` / `readonly_reconcile` только по фактическим run/job/source и receipt. Предыдущие наблюдения сохраняются в `native_outcome_history`; v4 canary HOLD остаётся отдельным фактом. До отдельного binding/acceptance общий план остаётся выключенным; новые метрики ускорения остаются **N/A**.
+<!-- NOX_RUNTIME02_DELTA_END -->

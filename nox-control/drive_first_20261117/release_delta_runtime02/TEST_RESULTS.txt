@@ -1,0 +1,8 @@
+test_deterministic_no_loss_and_payload_hash (test_delta.DeltaTests.test_deterministic_no_loss_and_payload_hash) ... ok
+test_outcome_slots_reject_false_activation_or_replayed_chat (test_delta.DeltaTests.test_outcome_slots_reject_false_activation_or_replayed_chat) ... ok
+test_stale_guard_blocks_then_fresh_guard_applies_only_temp_copy (test_delta.DeltaTests.test_stale_guard_blocks_then_fresh_guard_applies_only_temp_copy) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.301s
+
+OK

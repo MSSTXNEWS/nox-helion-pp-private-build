@@ -1,0 +1,280 @@
+{
+  "schema": "NOX_V24_RUNTIME02_DELTA_FACTS_V1",
+  "version": "2.4",
+  "plan_revision": 5,
+  "runtime02": {
+    "status": "SOURCE_TESTED_NOT_NATIVE_BOUND",
+    "integration_version": "0.2.0",
+    "controller_version": "0.2.0",
+    "integration_source_commit": "690342457804f096b918664731756e1a79564631",
+    "controller_source_commit": "7ce6290420bf1765fefd1c0b082175a1bea42ab9",
+    "integration_behavior_commit": "2e78cc5d037c824aac0749ae6a953e39673401ed",
+    "controller_behavior_commit": "f1b7df742f26d4acf3733c9a91da34809d2b87f4",
+    "local_tests": {
+      "integration": 26,
+      "controller": 20,
+      "independent_lifecycle": 2,
+      "total": 48
+    },
+    "fixed_blockers": [
+      "uncertain load cannot release RAM handle/lease before reconciliation; release proof binds current handle/lease/fence",
+      "stale or absent settlement fencing token cannot settle current mode lease"
+    ],
+    "other_fixed_contracts": [
+      "unknown RAM release ACK requires readback without blind retry",
+      "owner pause OR local pause; host callback mandatory",
+      "verified checkpoint continuity across TRAIN/WORK/TRAIN"
+    ],
+    "native_pass": false,
+    "review_receipt_sha256": "b9426f45f3cb92a3d3c2ca521965e5fb201f5195f7492bd1bb8150934f892e83"
+  },
+  "old_staging": {
+    "directory": "/root/nox/extensions/drive_first_20261117_0c40501f9068",
+    "bundle_sha256": "0c40501f9068b3041df9ea4816ca0bbee978163006018287c9cf8301a9eb2de1",
+    "activation_policy": "DO_NOT_ACTIVATE_SUPERSEDED_LIFECYCLE_SOURCE",
+    "delete_requested": false
+  },
+  "source_stage": {
+    "status": "SOURCE_INSTALLED_NOT_BOUND",
+    "entry_sha256": "945451e072fda3d56cd5835f775c064907a3f6584ae385455988c9e0583a1aa8",
+    "bundle_sha256": "ee142b97c81327edf0130e2aba46c431e1d1334396581b11922507310553aa2b",
+    "directory": "/root/nox/extensions/drive_first_20261117_ee142b97c813",
+    "files": 12,
+    "bytes": 98385,
+    "expected_file_pins": [
+      {
+        "path": "runtime/nox_integrations/__init__.py",
+        "bytes": 364,
+        "sha256": "13fa6a78def2edfb4b9ff819f36e933aabd4b17c0a3196f0d77ccb5f27841be9"
+      },
+      {
+        "path": "runtime/nox_integrations/__main__.py",
+        "bytes": 1368,
+        "sha256": "14ae1e9c9fe3dd0477d1809489177846f48a3bdc8cb2dbc89ad046b0fde88bd2"
+      },
+      {
+        "path": "runtime/nox_integrations/config.py",
+        "bytes": 5394,
+        "sha256": "29682a5e43ce4485ee9d91d3001800a27159df5c890083c06a5296a575468cc8"
+      },
+      {
+        "path": "runtime/nox_integrations/core.py",
+        "bytes": 7028,
+        "sha256": "c660e389cd2c6318aacc4468a2cfa2198640b5fb2510b2b20d9b035479e480db"
+      },
+      {
+        "path": "runtime/nox_integrations/drive.py",
+        "bytes": 19308,
+        "sha256": "2d985e33ed6501b95a085b85abbf5654d576513b9570710f706e678e8ff78c3b"
+      },
+      {
+        "path": "runtime/nox_integrations/host.py",
+        "bytes": 6782,
+        "sha256": "5130d9028d60a9f78f5c0b3644c067329219f98d389859b1fdd6d933f946da1d"
+      },
+      {
+        "path": "runtime/nox_integrations/memfd.py",
+        "bytes": 5877,
+        "sha256": "ec9910a67228cc8681a1f1157f9107003bac4634548ec3130bc43573745b1386"
+      },
+      {
+        "path": "runtime/nox_integrations/providers.py",
+        "bytes": 4512,
+        "sha256": "329d036498b6c38af71b996f15c138b5efbdc0a7d64f3c919f61745bfe8acebe"
+      },
+      {
+        "path": "runtime/nox_warm/__init__.py",
+        "bytes": 213,
+        "sha256": "696685fce0e046b6f53bfd2e3c866cdafbb8a16086faa00290f7fdcb94a156f2"
+      },
+      {
+        "path": "runtime/nox_warm/__main__.py",
+        "bytes": 2795,
+        "sha256": "ee9991fcbacaec2cc8bc720dcebfa7f13aae0f2ddb0963b55a84899957cf214c"
+      },
+      {
+        "path": "runtime/nox_warm/cache.py",
+        "bytes": 6803,
+        "sha256": "48bd8b61c002235ad6e7365bda9f80a21810fd98c05d5fba5ca169b9b055e9e5"
+      },
+      {
+        "path": "runtime/nox_warm/controller.py",
+        "bytes": 37941,
+        "sha256": "1312845745150bbfc52863fa6eab85d67da12d5108fb1cc1a7776d56621b5d05"
+      }
+    ],
+    "source_staging_only": true,
+    "runtime_bound": false,
+    "native_pass": false,
+    "preparation_status_before_native_attempts": "PENDING_NATIVE_SOURCE_STAGING"
+  },
+  "canary_v4": {
+    "status": "HOLD_BOUNDED_CANARY_FAILURE",
+    "total_ms": 4221,
+    "own_dialog_id": "5ce69137da0a4c42a0387917c8567d52",
+    "dialogs_created": 1,
+    "model_requests": 1,
+    "native_canary_pass": false,
+    "native_chat_canary_pass": false,
+    "ui_asset_acceptance_pass": false,
+    "authenticated_login": true,
+    "auth_path_resolved": true,
+    "external_http_requests": 0,
+    "model_reloads": 0,
+    "owner_request_id": "6957085526",
+    "owner_source_sha": "9699fd3ec4cfaaaa6c7df1ed37250663a8f4e553",
+    "run_id": 44147786817,
+    "job_id": 134267516216,
+    "source_sha": "9699fd3ec4cfaaaa6c7df1ed37250663a8f4e553",
+    "canary_file_sha256": "2e319aaa381ebecae73de00772397d5d4b640810728be37f78606e3a62372dbf",
+    "terminal_fields_recorded": false,
+    "stream_timings_recorded": false,
+    "automatic_generation_replay_allowed": false,
+    "interpretation": "One own request was submitted. Accepted chat/S03/terminal outcome is unverified; use fixed-ID read-only reconciliation. total_ms is not clean TTFT or accepted-answer latency.",
+    "evidence_sha256": "ca69ff4e4499af9e16d4b45e8aba2809182a73c1a367fd06f3b610ee49d1a46a"
+  },
+  "ui_transform": {
+    "status": "SERVED_UI_ASSET_ACCEPTANCE_PASS_NATIVE_READ_ONLY",
+    "owner_ui_path": "/root/nox/scripts/owner_chat_ui.py",
+    "owner_ui_sha256": "da2cea21d21d3c1129bcb6621cd5293469a085ad861924a8c5cc63981577a866",
+    "owner_ui_bytes": 4854,
+    "served_html_sha256": "e736c54022439cc2cddfaba17aeebf9844e2f6cf35a3b07c3837a8c0531b70cc",
+    "served_html_bytes": 14519,
+    "mechanism": "existing owner head injection plus pinned owner_chat_ui.decorate_html composition",
+    "evidence_scope": "Native read-only run44153064827 verifies authenticated served asset bytes; no visual/history/model acceptance",
+    "initial_evidence_scope": "native v4 observed bytes + root/author exact source reconstruction; corrected acceptance not yet natively run",
+    "corrected_native_ui_asset_acceptance_pass": true,
+    "native_canary_pass": false,
+    "visual_acceptance_pass": false
+  },
+  "readonly_reconcile": {
+    "status": "HOLD_HISTORY_HTTP_OR_JSON",
+    "source_sha256": "7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e",
+    "fixed_dialog_id": "5ce69137da0a4c42a0387917c8567d52",
+    "invocation": "run(False, expected_source_sha=source, reconcile_dialog_id=RECONCILE_DIALOG_ID)",
+    "new_dialogs_allowed": 0,
+    "model_requests_allowed": 0,
+    "stop_requests_allowed": 0,
+    "native_pass": false,
+    "review_receipt_sha256": "4b19fa6c6cb2039cc903496a79506ddd2dba99182071940a5aa2ca5f73c8ac3d",
+    "preparation_status_before_native_attempts": "PENDING_READ_ONLY_NATIVE_RECONCILIATION"
+  },
+  "preserved": {
+    "active_automations": 15,
+    "V3_complete": 15,
+    "cards": 240,
+    "steps": 54,
+    "workpackages": 9,
+    "execution_enabled": false
+  },
+  "source_stage_readonly_diagnostic": {
+    "run_id": 44153563662,
+    "job_id": 134288122505,
+    "comment_id": 6957847918,
+    "source_commit": "fa6cc1c226416d739ef7e65d37e1429c4d4756ea",
+    "source_file": "native_release/NATIVE_RUNTIME_STAGE_DIAGNOSTIC_20261117.json",
+    "source_file_sha256": "b5ac01b24ac6d1128edf8c12aaeeb2ee088531e1a7eb8e9232c058c76c2bde46",
+    "status": "READ_ONLY_DIAGNOSTIC_COMPLETE",
+    "elapsed_ms": 20.63,
+    "destination": "/root/nox/extensions/drive_first_20261117_ee142b97c813",
+    "destination_exists": false,
+    "expected_file_count": 12,
+    "present_file_count": 0,
+    "matching_source_count": 0,
+    "source_bytes_read": 0,
+    "priority_mode_at_observation": "0775",
+    "priority_uid": 0,
+    "priority_gid": 0,
+    "priority_dev": 36,
+    "priority_inode": 2157348507,
+    "chat_active_before": 1,
+    "chat_active_after": 1,
+    "original_failure_path_proven": false,
+    "snapshot_atomic": false,
+    "native_mutations": 0,
+    "chmod_chown_calls": 0,
+    "locks_acquired": 0,
+    "network_requests": 0,
+    "runtime_imported": false,
+    "runtime_bound": false,
+    "native_staging_accepted": false,
+    "observation_role": "HISTORICAL_READ_ONLY_SNAPSHOT_BEFORE_OTHER_TEAM_O1_PERMISSION_HARDENING",
+    "next_owner_for_hardening": "OTHER_TEAM_O1"
+  },
+  "other_team_o1_permission_hardening": {
+    "run_id": 44153572961,
+    "job_id": 134288583621,
+    "owner_request_id": "6957849667",
+    "source_commit": "2ece8810fb106ae38e36981ea4ae9ba28db885ff",
+    "source_file": "native_release/OTHER_TEAM_O1_V3_RESULT_SUMMARY_20261117.json",
+    "source_file_sha256": "414006ecee71a46730c587dbda4ba2529b90f18c2beb4a677af84d4d4abe35e2",
+    "owner": "OTHER_TEAM_O1",
+    "status": "HOLD",
+    "error": "HOLD_FILENOTFOUNDERROR",
+    "installed": false,
+    "used": false,
+    "accepted": false,
+    "replaced_files": [],
+    "permission_hardening_completed": true,
+    "code_bytes_changed": false,
+    "permission_modes_after": {
+      "/root/nox": "0o755",
+      "/root/nox/scripts/chat_proxy.py": "0o644",
+      "/root/nox/state/priority": "0o755",
+      "/etc/supervisor/conf.d/nox-cache-watchdog-t166u.conf": "0o644",
+      "/etc/supervisor/conf.d/nox-cores.conf": "0o644",
+      "/etc/supervisor/conf.d/nox-ds41-8098.conf": "0o644",
+      "/etc/supervisor/conf.d/nox-fill-idle-t166u.conf": "0o644",
+      "/etc/supervisor/conf.d/nox-gpumon-t21u.conf": "0o644",
+      "/etc/supervisor/conf.d/nox-nano.conf": "0o644",
+      "/etc/supervisor/conf.d/nox-offload-t850u.conf": "0o644",
+      "/etc/supervisor/conf.d/nox-priority-arbiter.conf": "0o644",
+      "/etc/supervisor/conf.d/nox-web29-18775.conf": "0o644"
+    },
+    "supervisor_config_count": 9,
+    "preflight_utc": "2026-11-17T19:00:01.421032+00:00",
+    "preflight": {
+      "priority": {
+        "CHAT_ACTIVE": "0",
+        "MODE": "IDLE"
+      },
+      "free_model_slots": 2,
+      "atomic_owner_admission_lease": false
+    },
+    "model_calls": 0,
+    "model_reloads": 0,
+    "s03_modified": false,
+    "auth_modified": false,
+    "scope": "Other team hardening completed; their code install remains HOLD. Not this agent source-stage installation."
+  },
+  "history_contract_evidence": {
+    "read_only_run_id": 44153064827,
+    "read_only_job_id": 134286323528,
+    "http_status": 422,
+    "content_type": "application/json",
+    "bytes": 25,
+    "sha256": "c72ee0295be63b2e06c1de1ec0b5c22e9dd197c48172348d9a6317799dc73a61",
+    "error_code": "INVALID_LIMIT",
+    "error_code_confirmed_by": "ROOT_AND_OTHER_TEAM_O0_SOURCE_BACKED_REPRODUCTION",
+    "parser_root_cause_confirmed": true,
+    "corrected_history_read_pass": false,
+    "NEXT_READY": "O0 owns the source-bound wrapper query ASCII-decode correction and subsequent read-only verification of the same own dialog; do not repeat generation or activate runtime.",
+    "raw_response_included": false,
+    "query_forwarding_cause_identified": true,
+    "cause_verification_scope": "OTHER_TEAM_SOURCE_BACKED_REPRODUCTION_NOT_NATIVE_FIX",
+    "fix_owner": "OTHER_TEAM_O0",
+    "wrapper_sha256": "0a0165e5b061f88ec60009c49a3c12e9823a45b89044604186e307c81fb701e6",
+    "bridge_sha256": "0cff2e7aee068571b2895ec476255e97ef3b85bd93104a27a822acfb8408632b",
+    "journal_marker": "NOX_A1_RECONCILE_INVALID_LIMIT_20261117",
+    "cause": "Existing wrapper interpolates httpx url.query bytes into an f-string; forwarded query includes bytes repr punctuation, downstream limit becomes 2 followed by a quote and int parsing raises INVALID_LIMIT",
+    "proposed_fix": "ASCII decode query bytes before constructing forwarding target",
+    "wrapper_query_fix_applied": false,
+    "independent_reproduction": {
+      "path": "history_contract_reuse/QUERY_TARGET_REPRODUCTION.json",
+      "sha256": "cd7f844bda20228b1a2e0cead25527ec1b9718e8e22f89926b3f2ffc732060db",
+      "commit": "fa684d2ee7102e53ec30f2db38a19cf67f1857a2",
+      "reviewer": "launch_native_route",
+      "scope": "Local httpx0.28.1 reproduction; no network/native patch"
+    }
+  }
+}

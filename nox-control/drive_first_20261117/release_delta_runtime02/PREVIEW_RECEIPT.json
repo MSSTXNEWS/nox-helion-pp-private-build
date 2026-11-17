@@ -1,0 +1,172 @@
+{
+  "schema": "NOX_V24_RUNTIME02_DELTA_PREVIEW_V1",
+  "status": "PREPARED_NOT_APPLIED_FRESH_DRIVE_GUARD_REQUIRED",
+  "frozen_files_modified": false,
+  "checks": {
+    "cards": 240,
+    "steps": 54,
+    "workpackages": 9,
+    "protected_structures_exact": true,
+    "markdown_body_reversible_exact": true,
+    "payload_sha256_without_self_hash": "028dcce6048a5ddf900e957226935f0db7e696262062fa08c87d5cc4db61ca97"
+  },
+  "delta_facts_sha256": "69d32ac3da9d7bb432965b94499d353b7081828dbe02641fbd49d05c94a7603e",
+  "outcomes_sha256": "612290c96e3c2046f9a8583b6d78c7629479bda17fa88b3e866eb0dae559723a",
+  "patch_sha256": "9df706196a0da6f989ac438bc0db4bd3d4f927f2c1bb53c4c069c24d1e9d0a16",
+  "latest_native_facts": {
+    "read_only_run_id": 44153064827,
+    "read_only_job_id": 134286323528,
+    "read_only_status": "HOLD_HISTORY_HTTP_OR_JSON",
+    "authenticated_login": true,
+    "ui_asset_acceptance_pass": true,
+    "visual_acceptance_pass": false,
+    "history_http_diagnostic": {
+      "status": 422,
+      "bytes_read": 25,
+      "truncated": false,
+      "sha256": "c72ee0295be63b2e06c1de1ec0b5c22e9dd197c48172348d9a6317799dc73a61",
+      "content_type": "application/json",
+      "json_decoded": true,
+      "json_type": "dict"
+    },
+    "dialogs_created": 0,
+    "model_requests": 0,
+    "source_stage_status": "SOURCE_INSTALLED_NOT_BOUND",
+    "new_stage_acceptance_pending": false,
+    "partial_destination_may_exist": false,
+    "installed_source_files": 12,
+    "installed_source_bytes": 98385,
+    "created_source_files": 12,
+    "runtime_bound": false,
+    "native_canary_pass": false,
+    "history_error_code": "INVALID_LIMIT",
+    "history_parser_root_cause_confirmed": true,
+    "history_cause_verification_scope": "OTHER_TEAM_SOURCE_BACKED_REPRODUCTION_NOT_NATIVE_FIX",
+    "history_wrapper_query_fix_applied": false,
+    "historical_stage_diagnostic": {
+      "run_id": 44153563662,
+      "job_id": 134288122505,
+      "comment_id": 6957847918,
+      "source_commit": "fa6cc1c226416d739ef7e65d37e1429c4d4756ea",
+      "source_file": "native_release/NATIVE_RUNTIME_STAGE_DIAGNOSTIC_20261117.json",
+      "source_file_sha256": "b5ac01b24ac6d1128edf8c12aaeeb2ee088531e1a7eb8e9232c058c76c2bde46",
+      "status": "READ_ONLY_DIAGNOSTIC_COMPLETE",
+      "elapsed_ms": 20.63,
+      "destination": "/root/nox/extensions/drive_first_20261117_ee142b97c813",
+      "destination_exists": false,
+      "expected_file_count": 12,
+      "present_file_count": 0,
+      "matching_source_count": 0,
+      "source_bytes_read": 0,
+      "priority_mode_at_observation": "0775",
+      "priority_uid": 0,
+      "priority_gid": 0,
+      "priority_dev": 36,
+      "priority_inode": 2157348507,
+      "chat_active_before": 1,
+      "chat_active_after": 1,
+      "original_failure_path_proven": false,
+      "snapshot_atomic": false,
+      "native_mutations": 0,
+      "chmod_chown_calls": 0,
+      "locks_acquired": 0,
+      "network_requests": 0,
+      "runtime_imported": false,
+      "runtime_bound": false,
+      "native_staging_accepted": false,
+      "observation_role": "HISTORICAL_READ_ONLY_SNAPSHOT_BEFORE_OTHER_TEAM_O1_PERMISSION_HARDENING",
+      "next_owner_for_hardening": "OTHER_TEAM_O1"
+    },
+    "other_team_o1_hardening": {
+      "run_id": 44153572961,
+      "job_id": 134288583621,
+      "owner_request_id": "6957849667",
+      "source_commit": "2ece8810fb106ae38e36981ea4ae9ba28db885ff",
+      "source_file": "native_release/OTHER_TEAM_O1_V3_RESULT_SUMMARY_20261117.json",
+      "source_file_sha256": "414006ecee71a46730c587dbda4ba2529b90f18c2beb4a677af84d4d4abe35e2",
+      "owner": "OTHER_TEAM_O1",
+      "status": "HOLD",
+      "error": "HOLD_FILENOTFOUNDERROR",
+      "installed": false,
+      "used": false,
+      "accepted": false,
+      "replaced_files": [],
+      "permission_hardening_completed": true,
+      "code_bytes_changed": false,
+      "permission_modes_after": {
+        "/root/nox": "0o755",
+        "/root/nox/scripts/chat_proxy.py": "0o644",
+        "/root/nox/state/priority": "0o755",
+        "/etc/supervisor/conf.d/nox-cache-watchdog-t166u.conf": "0o644",
+        "/etc/supervisor/conf.d/nox-cores.conf": "0o644",
+        "/etc/supervisor/conf.d/nox-ds41-8098.conf": "0o644",
+        "/etc/supervisor/conf.d/nox-fill-idle-t166u.conf": "0o644",
+        "/etc/supervisor/conf.d/nox-gpumon-t21u.conf": "0o644",
+        "/etc/supervisor/conf.d/nox-nano.conf": "0o644",
+        "/etc/supervisor/conf.d/nox-offload-t850u.conf": "0o644",
+        "/etc/supervisor/conf.d/nox-priority-arbiter.conf": "0o644",
+        "/etc/supervisor/conf.d/nox-web29-18775.conf": "0o644"
+      },
+      "supervisor_config_count": 9,
+      "preflight_utc": "2026-11-17T19:00:01.421032+00:00",
+      "preflight": {
+        "priority": {
+          "CHAT_ACTIVE": "0",
+          "MODE": "IDLE"
+        },
+        "free_model_slots": 2,
+        "atomic_owner_admission_lease": false
+      },
+      "model_calls": 0,
+      "model_reloads": 0,
+      "s03_modified": false,
+      "auth_modified": false,
+      "scope": "Other team hardening completed; their code install remains HOLD. Not this agent source-stage installation."
+    },
+    "NEXT_READY": "O0 owns the source-bound wrapper query ASCII-decode correction and subsequent read-only verification of the same own dialog; do not repeat generation or activate runtime. Source-only staging does not bind runtime; preserve existing O1/O5 ownership and separate host binding/acceptance."
+  },
+  "historical_outcome_count": 2,
+  "files": [
+    {
+      "file": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.json",
+      "base_sha256": "7c4c6de511ba6dcf55c42f2866de5d1474b113607a39ce76b9bd07be27081ff7",
+      "candidate_sha256": "33f368dc0342e9f53e52853d8a0a37bb6715d2522cc4cf9d09e9e2fab24f2477",
+      "candidate_bytes": 881871
+    },
+    {
+      "file": "NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.md",
+      "base_sha256": "a8aa60eafce1213c23e8d97db8f6c9fff0e9cda0f4217b38a65698f85206c95c",
+      "candidate_sha256": "4d4fbee695a5fbc8ba8ca14d2e6236b49a333706cd0c1833fcba43413e7926c0",
+      "candidate_bytes": 113793
+    },
+    {
+      "file": "NOX_MEGA_LIBRARY_START_20261117.md",
+      "base_sha256": "5c228520a7790d7a9d2b19f2fe1b1d4a985ae1d6b2110fbcfc7edf3e726d3471",
+      "candidate_sha256": "2b42fabff8abd09216e12c9bcada0701b30c8cf36c046941dc3c273e0d71c434",
+      "candidate_bytes": 277238
+    },
+    {
+      "file": "NOX_UNIFIED_CANON_20261117.md",
+      "base_sha256": "a978d6b480acd2a3d5994d62acad493d4bc602de4edbaa6cecd50643388efd6b",
+      "candidate_sha256": "53ae6ff59f52680f367beef2c0442fb58cd9c383f1e67c805255f5263659701a",
+      "candidate_bytes": 323789
+    },
+    {
+      "file": "NOX_Unique_Concept_20261117.md",
+      "base_sha256": "bea7b93bc5515dd11eaf68beb1a54737e657a3d20ec3db232b736ce1bdede2af",
+      "candidate_sha256": "4f5da4fe74719ea6a86b29cb523a3c183375866aa4c6890f5ba3adde30acf321",
+      "candidate_bytes": 945815
+    }
+  ],
+  "NEXT_READY": {
+    "owner": "root",
+    "action": "O0 owns the source-bound wrapper query ASCII-decode correction and subsequent read-only verification of the same own dialog; do not repeat generation or activate runtime. Source-only staging does not bind runtime; preserve existing O1/O5 ownership and separate host binding/acceptance. Preserve prior HOLD evidence; fresh raw Drive readback of five unchanged base files before local apply and same-ID publication.",
+    "native_status": {
+      "source_stage": "SOURCE_INSTALLED_NOT_BOUND",
+      "readonly_reconcile": "HOLD_HISTORY_HTTP_OR_JSON",
+      "runtime_bound": false,
+      "native_canary_pass": false
+    },
+    "claim_state": "Only delta directory owned; five frozen files remain untouched"
+  }
+}

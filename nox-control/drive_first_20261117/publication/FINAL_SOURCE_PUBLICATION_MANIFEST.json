@@ -1,0 +1,373 @@
+{
+  "schema": "NOX_FINAL_SOURCE_PUBLICATION_MANIFEST_V1",
+  "instructions_version": "0.0.6",
+  "prepared_utc": "2026-11-17T19:13:40.909630+00:00",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "expected_parent_commit": "fa6cc1c226416d739ef7e65d37e1429c4d4756ea",
+  "base_tree": "9374799d482f688d3ca6803d0561ea74f3c31d4d",
+  "scope_prefix": "nox-control/drive_first_20261117/",
+  "operation": "SOURCE_AND_SANITIZED_EVIDENCE_ONLY",
+  "owner_operator_changed": false,
+  "owner_entrypoint_changed": false,
+  "native_invocation_requested": false,
+  "files": [
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/delta.py",
+      "role": "delta_program",
+      "bytes": 32206,
+      "sha256": "59b03bb8dca14c499c5b64af10a9ef7e5bfe0fc76d710a3cdec93b6038cf9421",
+      "git_blob_sha1": "cc22eabd51b4c96406d764ce16bf7b427215d93f",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/tests/test_delta.py",
+      "role": "delta_author_tests",
+      "bytes": 5748,
+      "sha256": "1fe274b630fb0307470e5b6ce8ad9f030b14fdb7b7e50872293ac5a34829cdac",
+      "git_blob_sha1": "e056e1d9c1998de3bfe6166f5437353803363269",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/BASE_SHA256.json",
+      "role": "delta_base_manifest",
+      "bytes": 1522,
+      "sha256": "f62ed0353831dcb5e197b7e0f37cc82a0c9e4eb1fbed0badb5bf65abe844a0e9",
+      "git_blob_sha1": "11eba1a0a0a3f7be29f27358843b157cdb9b794a",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/DELTA_FACTS.json",
+      "role": "delta_source_facts",
+      "bytes": 12092,
+      "sha256": "69d32ac3da9d7bb432965b94499d353b7081828dbe02641fbd49d05c94a7603e",
+      "git_blob_sha1": "9b1ccb924728e847bc1e7a7b5679c367b88c406c",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/DELTA_CURRENT_SECTION.md",
+      "role": "delta_current_section_only",
+      "bytes": 7971,
+      "sha256": "3f5b68587f33f42b2982d6951c0232827b2b7ab11299f4b8f2a6a58c829a5f04",
+      "git_blob_sha1": "9988b96e05276f2e7273e330d178df64a7e66301",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/NATIVE_OUTCOMES.json",
+      "role": "delta_native_outcomes",
+      "bytes": 6723,
+      "sha256": "612290c96e3c2046f9a8583b6d78c7629479bda17fa88b3e866eb0dae559723a",
+      "git_blob_sha1": "04cfa3a34623c7413adca7dca4c97747475ecc41",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/PREVIEW_RECEIPT.json",
+      "role": "delta_frozen_preview",
+      "bytes": 7674,
+      "sha256": "f5d9216ae6c4c61b1fe093bf1feb5d0980b140913682e95fb088516d9e300689",
+      "git_blob_sha1": "7da79be1c01fa9f95e21b9f74f6f1af349a05338",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/FINAL_CHECKPOINT.json",
+      "role": "delta_frozen_checkpoint",
+      "bytes": 8101,
+      "sha256": "854f8ce70445514ea151e1db0eddf04a65e896ac370393fc4962328b42fe1d19",
+      "git_blob_sha1": "01e074ea165e73a7f8b2ceda7efc8fd440f23012",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/LOCAL_APPLY_RECEIPT.json",
+      "role": "delta_historical_local_apply",
+      "bytes": 1557,
+      "sha256": "174c31ca299b366675c68ccf92271672db2ca6882111f3acb56f22e7521adb5b",
+      "git_blob_sha1": "c0c4551ce5ea357eaec86e59f40f9777145f9a29",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/TEST_RESULTS.txt",
+      "role": "delta_existing_test_receipt",
+      "bytes": 527,
+      "sha256": "a669460ed9bc1ad0eacbb3a4a51e1234a5e5e13a97f1040034145fa88a3df2d7",
+      "git_blob_sha1": "9768eea5632fe901a1e730fb6ad3af05c5609179",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release_delta_runtime02/README.md",
+      "role": "delta_program_handoff",
+      "bytes": 9952,
+      "sha256": "127d5e3bdaf97837c8f63775105cb8094513debc2a3194afdb3e71931bced373",
+      "git_blob_sha1": "47480bfdcf23d89b5e4455fd1bb069ab8e33dc97",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/history_contract_reuse/INVALID_LIMIT_ANALYSIS.json",
+      "role": "history_causal_analysis",
+      "bytes": 4896,
+      "sha256": "2edeac8569774306008affc7069c16472482aeb71e1d43e2f1610fef41aa051e",
+      "git_blob_sha1": "6bb941fbec18a84597fe8496ad0335b3b5689d31",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/history_contract_reuse/INVALID_LIMIT_ANALYSIS.md",
+      "role": "history_causal_analysis",
+      "bytes": 3204,
+      "sha256": "b574d92e889f8eb54640dde905fa7081844619446a119eccbb10e4f2f9057289",
+      "git_blob_sha1": "ecd95b09cae471ef9da428b5b45f585f4512ed66",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/history_contract_reuse/QUERY_TARGET_REPRODUCTION.json",
+      "role": "history_source_and_reproduction_evidence",
+      "bytes": 2013,
+      "sha256": "cd7f844bda20228b1a2e0cead25527ec1b9718e8e22f89926b3f2ffc732060db",
+      "git_blob_sha1": "71eb15c44b55d4e6f65e3b98637d55fa3837fb1c",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/history_contract_reuse/check_httpx_query_target.py",
+      "role": "history_exact_line_fixture",
+      "bytes": 1451,
+      "sha256": "79c295fe2bfcd3e8dd2287aeb490945df0c5a8738985b7757bf4277d0e7170a0",
+      "git_blob_sha1": "6320a9776bcad28e219db1c43316a4e6deec325f",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/history_contract_reuse/check_captured_history_request.py",
+      "role": "history_captured_request_fixture",
+      "bytes": 2191,
+      "sha256": "bcff7d89cb711c921c0dfebdb732ee1329ba8a46be777c42e9197a89b9726f97",
+      "git_blob_sha1": "0404321e498a6a49fcf35445d6c02db62c32fd94",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime02_delta_factual_review/REVIEW_RECEIPT.json",
+      "role": "independent_factual_review",
+      "bytes": 7129,
+      "sha256": "4a0d7f99d903307e0777d28cbda311305acb17c9dc2e9ad15b31ed69111d54bc",
+      "git_blob_sha1": "1a10191f28dd82571640c6a27173c916ed103030",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime02_delta_factual_review/REVIEW.md",
+      "role": "independent_factual_review",
+      "bytes": 1847,
+      "sha256": "f8ef1706ccfb4e7a023048ad761bfd7da33745e868b5bab16539a947ec5d0689",
+      "git_blob_sha1": "39c46e66a7c95629927517dc2d0bfc0578c86174",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only/README.md",
+      "role": "historical_source_stage_handoff",
+      "bytes": 5099,
+      "sha256": "1d3de33841b86811ce78f977a18aa12e3377ab678990d2bf2917c72800a1a0f8",
+      "git_blob_sha1": "a401de5a391a0383bc1b916c67b9c6689bb57568",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only/STAGING_MANIFEST.json",
+      "role": "source_stage_pins",
+      "bytes": 3220,
+      "sha256": "61433567b16a2bd5433104146fad458a7f1427b6a7159a948211227b349a1d9d",
+      "git_blob_sha1": "b0ac89b496b44fc9a7d9a1df011ca7ae113274ad",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only/inputs.lock.json",
+      "role": "source_stage_inputs",
+      "bytes": 1725,
+      "sha256": "eb0954ceb39d143bfdbf33275064dbff030d09dade4e7532a0d8320407cecd81",
+      "git_blob_sha1": "15254db00f5d42d7c38aede1ac22716eebda5805",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only/LOCAL_TEST_RECEIPT.json",
+      "role": "source_stage_existing_tests",
+      "bytes": 2674,
+      "sha256": "b673466829fc0e365539cbc5d50af83986e8af571625e345c90427791001ad74",
+      "git_blob_sha1": "ad4437fb9a21c191fb764c3680e286a66c757dc2",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only/TEST_RESULTS.txt",
+      "role": "source_stage_existing_tests",
+      "bytes": 594,
+      "sha256": "ed8a2c1a3aadb339a423caf9d37701106e799274745b630a632c74b0f1184aad",
+      "git_blob_sha1": "fe509a4dfab7b08e1ca41725d104392b27ec3f4e",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only/PREPARE_PUBLICATION_FILES.json",
+      "role": "historical_stage_publication_handoff",
+      "bytes": 3644,
+      "sha256": "4806126665361b7dd8423bb4449228245803a73f44fe364e97a5d2bb7033a4df",
+      "git_blob_sha1": "53f6c58fe5a93fe48df7aabfd841c857cd157655",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only_review/REVIEW_RECEIPT.json",
+      "role": "independent_stage_review",
+      "bytes": 1970,
+      "sha256": "8402eae20f9dda859e280d7eab4fbc681ccd9ea4fc496f88d3ac20c8562f7b47",
+      "git_blob_sha1": "b3628b251a4615bd2033e7656717b2780aa251fe",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only_review/README.md",
+      "role": "independent_stage_review",
+      "bytes": 371,
+      "sha256": "afc5bd1d3cd28124106230efa60c8d4e6a0651beacee588942cc484909586f94",
+      "git_blob_sha1": "6272c0279c89c524643ff836205755e09971e0ce",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/runtime_stage_only_review/test_stage_independent.py",
+      "role": "independent_stage_fixture",
+      "bytes": 4204,
+      "sha256": "2ae18064e9cad8b74dc0b6dd44445e88c44c015a1bf11bac780b2855934ee988",
+      "git_blob_sha1": "93a2a07e08e0fffa1be845db6209e10e565ce497",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/onehost_binding_projection/STAGE_READONLY_DIAGNOSTIC_HANDOFF.md",
+      "role": "historical_readonly_stage_handoff",
+      "bytes": 7960,
+      "sha256": "ca393d073ac1224a913ad37cadc57d0c23b708220251dcac05756b2aa9898588",
+      "git_blob_sha1": "8a9e38ed130aa6b83ffefd2b2b2704042a29856c",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/onehost_binding_projection/STAGE_READONLY_PROBE_RECEIPT.json",
+      "role": "readonly_stage_source_receipt",
+      "bytes": 1960,
+      "sha256": "9250203403596906774f8e9aa2edc9f8245408b1df283747ba42f6d1748c726b",
+      "git_blob_sha1": "11a5269f74ca0f76493f00344675938670ae6685",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/stage_readonly_independent_review/REVIEW_RECEIPT.json",
+      "role": "readonly_stage_independent_review",
+      "bytes": 2884,
+      "sha256": "c7247a5dee7cfc085d6bb5806d434def7d84295c71ef6cb9b798ae55fcd2c621",
+      "git_blob_sha1": "1b4b7d41e93cfdf91f075d4583fe01137b6fd82e",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/stage_readonly_independent_review/README.md",
+      "role": "readonly_stage_independent_review",
+      "bytes": 4051,
+      "sha256": "13adec9a4d5ea7018206fffa5b97a6d6b3300a3b66bcaec20a1bccccc8b43ac8",
+      "git_blob_sha1": "0d44bf408c174dedbb500415924ebd4f4deb7c4d",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/stage_readonly_independent_review/TEST_RESULTS.txt",
+      "role": "readonly_stage_existing_test_receipt",
+      "bytes": 338,
+      "sha256": "2fd20ad11d64245b6a0c1f4fe27cd4a33f29d4fe4a72c92dfccb13773144b6d9",
+      "git_blob_sha1": "bbed2c7daad68ad25ba50b2ab6f0817ac2d027a6",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/stage_readonly_independent_review/test_late_fifo.py",
+      "role": "readonly_stage_independent_fixture",
+      "bytes": 3421,
+      "sha256": "4c010b1f1de8b2376d194cb4cbe1a140dd8a41cdd1cc8acbcd48fc2140e2191a",
+      "git_blob_sha1": "9910f290edbd50adbd0ea97d3916f4122107392c",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/native_release/NATIVE_RUNTIME_STAGE_AFTER_HARDENING_RESULT_20261117.json",
+      "role": "sanitized_native_latest_source_stage",
+      "bytes": 3318,
+      "sha256": "0119836b6f107391865288b9b8bb764dd07b603ad134b34c212de775f4e0018f",
+      "git_blob_sha1": "78da10d4e20c846f507fd931bda365c75b81e6f3",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/native_release/NATIVE_RUNTIME_STAGE_DIAGNOSTIC_20261117.json",
+      "role": "sanitized_native_historical_readonly_diagnostic",
+      "bytes": 12334,
+      "sha256": "b5ac01b24ac6d1128edf8c12aaeeb2ee088531e1a7eb8e9232c058c76c2bde46",
+      "git_blob_sha1": "7e4c6d8977fbc7e0b3e83f713f0d657be3a7fbfc",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/native_release/NATIVE_RECONCILE_AFTER_LOCK_RESULT_20261117.json",
+      "role": "sanitized_native_latest_history_result",
+      "bytes": 12071,
+      "sha256": "7608ec8a4b71463ab1693526aa1e20b6b93b60fe00e5cf24a001283a7cf41a5b",
+      "git_blob_sha1": "acc286ab940f42672e2c9ba72f2ee73990c0efb9",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/native_release/OTHER_TEAM_O1_V3_RESULT_SUMMARY_20261117.json",
+      "role": "sanitized_other_team_summary",
+      "bytes": 12373,
+      "sha256": "414006ecee71a46730c587dbda4ba2529b90f18c2beb4a677af84d4d4abe35e2",
+      "git_blob_sha1": "e0788f340b49602ae90708b3032ffb37d67e8c9d",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/native_release/OTHER_TEAM_LOCK_DIAGNOSTIC_RESULT_20261117.json",
+      "role": "sanitized_other_team_summary",
+      "bytes": 1062,
+      "sha256": "faf544d1127e215a152d5d60d43ef4f47bf4a8086b2726fd55c9e7a243ba4c50",
+      "git_blob_sha1": "676e12fea91c4d345ff40c1cc2b0ebf5eb21ab9e",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/native_release/OTHER_TEAM_DIRECTORY_PREFLIGHT_20261117.json",
+      "role": "sanitized_other_team_summary",
+      "bytes": 2229,
+      "sha256": "72ac8f1d76cae5f07e0fcdd562434e9ded25936adb8fb83bc96b84636e955c31",
+      "git_blob_sha1": "4d8b2490d012dbafd083018bcd4b6b9ee2a16d32",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release/DRIVE_RUNTIME02_RAW_READBACK_RECEIPT.json",
+      "role": "root_verified_same_id_drive_publication",
+      "bytes": 2098,
+      "sha256": "aa6a728bca603beac5f25fa1ce5d708ce3984a3b75e9ba2227eb608b254e0bbe",
+      "git_blob_sha1": "9a7d7aae9d1a4a451418268985ba35782a3d87fc",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/release/NOX_RELAY_HANDOFF_V3_RECEIPT_20261117.json",
+      "role": "root_verified_automation_readback",
+      "bytes": 16881,
+      "sha256": "bb9cd159268a29098ed86251f86ea220febf6cfa9a9902d1e0c312528bcda88f",
+      "git_blob_sha1": "7a3499ca4e04a8e1102ef7972adef406b626a2cb",
+      "mode": "100644"
+    },
+    {
+      "repository_path": "nox-control/drive_first_20261117/publication/SOURCE_PUBLICATION_HANDOFF.md",
+      "role": "current_source_publication_and_history_handoff",
+      "bytes": 3573,
+      "sha256": "b5fdb55d2bbe7e276e8e31df2f6fe0ba2d66d805f4a65d1382824da32e23acc1",
+      "git_blob_sha1": "023c9e08b776c933847c1d1ab6f2d5f65a168900",
+      "mode": "100644"
+    }
+  ],
+  "manifest_self_entry_omitted_to_avoid_recursive_hash": true,
+  "required_existing_dependency": {
+    "path": "nox-control/drive_first_20261117/native_resonance_patch/native_acceptance.py",
+    "bytes": 46684,
+    "sha256": "7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e",
+    "git_blob_sha1": "3f68bf18e9d5483d0d7c052e883f0218947db7a8",
+    "base_tree_match_read_verified": true
+  },
+  "main_document_publication": "ROOT_SAME_ID_DRIVE_5_OF_5_BYTE_EXACT",
+  "excluded": [
+    "five_main_document_copies",
+    "DELTA_PREVIEW.patch",
+    "candidate_full_native_preimages",
+    "exports_and_ciphertexts",
+    "credentials_or_private_keys",
+    "git_metadata",
+    "archives",
+    "three_shared_journals_on_other_branch",
+    "owner_operator_and_entrypoint_changes"
+  ],
+  "next_owner": "root",
+  "next_action": "One commit from the exact parent using the fixed base tree, followed by exact readback; no native invocation."
+}
