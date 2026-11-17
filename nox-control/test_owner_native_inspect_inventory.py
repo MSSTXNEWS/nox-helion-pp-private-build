@@ -93,6 +93,44 @@ class MemoryInventoryTests(unittest.TestCase):
             self.assertEqual(result['starttime'], '987654')
             self.assertEqual(result['namespace_pids'], [432])
 
+    def test_recycled_pid_during_probe_cannot_claim_gpu_vram(self):
+        # The nvidia-smi PID predates the slower /proc status/environ sample.
+        # A reused PID must remain UNMAPPED rather than crediting a new process.
+        with tempfile.TemporaryDirectory() as temp:
+            proc = Path(temp)
+            worker = proc / '432'
+            worker.mkdir()
+            (worker / 'cmdline').write_bytes(b'/usr/bin/python3\\0nox-worker.py\\0')
+            (worker / 'stat').write_text(
+                '432 (nox-worker) S 1 ' + ' '.join(['0'] * 17 + ['987654']) + '\\n')
+            (worker / 'environ').write_bytes(b'PROC_NAME=nox-worker\\0')
+            (worker / 'status').write_text('NSpid:\\t432\\nVmRSS:\\t10 kB\\nThreads:\\t1\\n')
+            real_read_text = Path.read_text
+            count = [0]
+
+            def raced_read_text(path, *args, **kwargs):
+                original = real_read_text(path, *args, **kwargs)
+                if path == worker / 'stat':
+                    count[0] += 1
+                    if count[0] > 1:
+                        return original.replace('987654', '987655')
+                return original
+
+            def fake_run(args, timeout=12):
+                if args[0] == 'nvidia-smi':
+                    return (0, '432, GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee, 2048')
+                return (0, '')
+
+            with mock.patch.object(inspector, 'PROC', proc), \\
+                 mock.patch.object(inspector, 'run', side_effect=fake_run), \\
+                 mock.patch.object(Path, 'read_text', raced_read_text):
+                rows = inspector.processes()
+            self.assertEqual(count[0], 2)
+            self.assertFalse(any(row.get('pid') == 432 for row in rows))
+            mapping = next(row for row in rows if row.get('record') == 'gpu_pid_mapping')
+            self.assertEqual(mapping['unresolved'][0]['mapping'], 'UNMAPPED')
+            self.assertEqual(mapping['unresolved'][0]['reported_pid'], 432)
+
     def test_qwen_receipt_is_bounded_metadata_only(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
