@@ -1,0 +1,102 @@
+{
+  "schema": "NOX_VERIFIED_ACCELERATION_PROGRESS_20261118",
+  "instructions_version": "0.0.6",
+  "user_timezone": "Europe/Moscow",
+  "team": {
+    "coordinator": "/root",
+    "subagents": [
+      "/root/resonance_native",
+      "/root/dispatcher_acceleration",
+      "/root/integrations_completion"
+    ],
+    "native_worker_count_not_inferred": true
+  },
+  "completed_owned_request": {
+    "run": 44177251374,
+    "job": 134371795328,
+    "source": "e7fd580233c303f362c83ea346c48acd8233378c",
+    "status": "EXECUTED_PERSISTED_MODEL_BINDING_PENDING",
+    "model_posts": 1,
+    "new_dialogs_created": 0,
+    "history": {
+      "dialog_id": "12092579cf5144419cfa4fadc2e3a03b",
+      "exchange_id": "S03-48140046c4684fe5",
+      "messages": 2,
+      "full_question_sha256": "f2a3311a6aebf1ea044c095ecfa405a39b8728d4d6185ac3cd91fcd443dce10c",
+      "full_answer_sha256": "e8727b7be5bc92aa4f1b2a31f05395c4ac74ff06f59dae91a7bdf1101efd3cc4",
+      "strict_scope_verified": true,
+      "full_contents_verified": true
+    },
+    "s03": {
+      "record_id": "S03-48140046c4684fe5",
+      "segment": "M1",
+      "provenance": "chat_turn",
+      "sha256": "b7513f8177f4ec65b9dd65f248097108bf4e2a2cb364e407e3cb191f98e4bdec",
+      "canonical_chars": 569,
+      "full_frame_verified": true,
+      "own_dialog_pair_verified": true,
+      "application_data_sql_writes": 0,
+      "filesystem_write_free_guaranteed": false,
+      "sqlite_auxiliary_file_writes": "POSSIBLE_WAL_SHM_CREATE_OR_UPDATE"
+    },
+    "stream_metrics": {
+      "first_content_ms": 6667,
+      "first_nonplaceholder_ms": 6667,
+      "completed_ms": 13883,
+      "token_frames": 74,
+      "token_frames_are_not_generation_tokens": true
+    },
+    "repeat_allowed": false
+  },
+  "current_native_attempt": {
+    "run": 44183713964,
+    "job": 134394515659,
+    "request": "6961965545",
+    "source": "82c5053fa97b52224abe9722881c424c93fd2430",
+    "status": "HOLD_LAUNCHER_CAPSULE_INCOMPLETE_OR_CONTEXT",
+    "phase": "HOLD_BEFORE_SEND",
+    "failed_phase": "PREFLIGHT",
+    "launcher_status": "HOLD_PARENT_SHELL_ENTRY_UNRESOLVED",
+    "fixed_processes_observed": 9,
+    "source_metadata_rows": 6,
+    "plaintext_capsule_obtained": false,
+    "parent_argc": 2,
+    "http_counts": {
+      "login_post": 0,
+      "dialog_create_post": 0,
+      "model_post": 0,
+      "get": 0
+    },
+    "counter": {
+      "sha256": "4b331e0d9806b19ab9a837172eabb0d8e93f63e532708bb075dcc183b3064a8f",
+      "bytes": 223,
+      "inflight": 4,
+      "dev": 36,
+      "ino": 1086985810,
+      "mtime_ns": 1794950150740498400,
+      "legacy_counter_has_writer_identity": false,
+      "historical_requests_resolved": false,
+      "last_ts": 1794950150.741278,
+      "last_start": 1794950137.537253,
+      "last_end": 1794950150.741278
+    },
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "duplicate_command_sent_by_this_team": false,
+    "changed_candidate_needed": true
+  },
+  "adviser_v22": {
+    "source": "37dcb878301f7fae385e1eed2e776b6e581ce079",
+    "verified_files": 8,
+    "author_tests": 21,
+    "independent_checks": 2,
+    "native_installed": false
+  },
+  "remaining": {
+    "native_NORMAL3": false,
+    "model_identity": "UNVERIFIED",
+    "direct_main_url": "https://clarity-sit-efficient-has.trycloudflare.com/nox-web-v29/chat.html",
+    "browser_status": "BLOCKED_IN_LAST_OBSERVATION",
+    "menu_source_tested": true,
+    "menu_native_installed": false
+  }
+}

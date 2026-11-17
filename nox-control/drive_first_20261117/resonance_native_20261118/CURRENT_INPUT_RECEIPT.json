@@ -1,0 +1,21 @@
+{
+  "schema": "NOX_NATIVE_MENU_EXACT_DELTA_V1",
+  "instructions_version": "0.0.6",
+  "before_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+  "before_bytes": 51632,
+  "after_sha256": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
+  "after_bytes": 51865,
+  "insertion_sha256": "0de62b3dcdf3d5a456035bfe851082648a4468e4474146382df0c2d576ea932d",
+  "insertion_bytes": 233,
+  "served_before_sha256": "18d8c8d6009323188b9f903920308b3b871a6123f7b425a77184a6b2c147640e",
+  "served_before_bytes": 42933,
+  "served_after_sha256": "13897495d7c9c628ef4f3094fafdad5f5932a3570d21c650112ba7138ab3c2f0",
+  "served_after_bytes": 43021,
+  "source_scope": "one appended tuple in existing _V122_OWNER_UI_PATCHES",
+  "other_ast_and_bytes_unchanged": true,
+  "rollback_to_exact_preimage": true,
+  "native_installed": false,
+  "native_used": false,
+  "actual_current_source_tested": true,
+  "source_input": "exact O1 repo postimage matching installed source be4750/run44171616874; native read again still required before install"
+}

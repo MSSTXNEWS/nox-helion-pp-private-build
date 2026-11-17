@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_INDEPENDENT_SOURCE_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/dispatcher_acceleration",
+  "reviewed_source": "native_menu_overlay_transform.py",
+  "source_sha256": "989e50a35d6043c33e8cba132f414ed7ccb3194ee9a60241787f15553023c459",
+  "test_source_sha256": "012309d1d1888bd154f2d0ab5a14ae98d3aee43eb9c9fb43a710ad2cf7c4f81d",
+  "decision": "PASS_SOURCE_TRANSFORM_ONLY",
+  "reviewed_properties": [
+    "Production forward entry requires exact observed full bridge SHA-256 and length.",
+    "Frozen UI SHA-256 and both served before/after SHA-256+length are mandatory.",
+    "Only the one tuple is appended; inverse byte delta and normalized AST equality preserve unrelated routing, auth, S03, model and cancellation code.",
+    "UTF-8 AST byte offsets are used correctly.",
+    "Rollback requires removal of the unique insertion to recover the exact current preimage; it cannot restore an unrelated historical whole file.",
+    "Transformation is pure and performs no file, service, network or native application operations."
+  ],
+  "independent_focused_checks": {
+    "tests_passed": 3,
+    "tests": [
+      "forward_reverse_and_served_delta_on_verified_fixture",
+      "public_fixed_entry_rejects_historical_file_and_invalid_types",
+      "utf8_prefix_preserves_exact_byte_splice"
+    ],
+    "fixture_scope": "Known historical source with explicitly substituted test pins; production fixed entry rejects that historical source.",
+    "actual_native_bridge_transform_executed": true,
+    "actual_native_bridge_transform_scope": "Exact previously exported current native source, executed locally only; no live native operation."
+  },
+  "integration_dependency": {
+    "component": "Existing O5 admission_adoption.py",
+    "source_sha256": "61f34aa50c18004222ba8659431670fae9a96207ccce5c33289232be75016385",
+    "pinned_bridge_prerequisite_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+    "effect": "Installing this menu change before common/NORMAL3 adoption changes the prerequisite. Rebase the existing O5 composed source on the actual menu postimage, or install menu after that cutover. Do not weaken prerequisite checks."
+  },
+  "native_installed": false,
+  "native_used": false,
+  "installer_review_in_scope": false,
+  "independent_current_input_check": {
+    "schema": "NOX_NATIVE_MENU_EXACT_DELTA_V1",
+    "instructions_version": "0.0.6",
+    "before_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+    "before_bytes": 51632,
+    "after_sha256": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
+    "after_bytes": 51865,
+    "insertion_sha256": "0de62b3dcdf3d5a456035bfe851082648a4468e4474146382df0c2d576ea932d",
+    "insertion_bytes": 233,
+    "served_before_sha256": "18d8c8d6009323188b9f903920308b3b871a6123f7b425a77184a6b2c147640e",
+    "served_before_bytes": 42933,
+    "served_after_sha256": "13897495d7c9c628ef4f3094fafdad5f5932a3570d21c650112ba7138ab3c2f0",
+    "served_after_bytes": 43021,
+    "source_scope": "one appended tuple in existing _V122_OWNER_UI_PATCHES",
+    "other_ast_and_bytes_unchanged": true,
+    "rollback_to_exact_preimage": true,
+    "native_installed": false,
+    "native_used": false
+  },
+  "final_delta_review": {
+    "decision": "PASS",
+    "scope": "Fixed already-known postimage SHA/length now required by forward and rollback entry; only stricter exact-output acceptance.",
+    "tests_repeated": false
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "source_pins": {
+    "chat_proxy.py": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+    "nox_v29_chat_bridge.py": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+    "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+    "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+    "owner_chat_stream.py": "2c4ae86d1d8e2113c8dbb55807f0d52890f098904ac2914f0b1383156ed7ea25"
+  },
+  "status_read_path": "/root/nox/status/status.json",
+  "status_origin": "disk snapshot via chat_proxy.nox_status -> common.load_json",
+  "status_model_selector": "model string; else model.name, model.model, model.id; sliced to200 chars",
+  "status_is_live_model_response": false,
+  "backend_read_path": "/root/nox/config/backend.json",
+  "completion_route": "load_backend(host,port) -> /v1/chat/completions",
+  "primary_health_route": "/health on configured port",
+  "fallback_health_route": "http://127.0.0.1:8085/health only after primary health failure",
+  "fallback_completion_route": "http://127.0.0.1:8085/v1/chat/completions",
+  "upstream_cache_ttl_seconds": 2,
+  "owner_runtime_chain": [
+    "chat_proxy._proxy_completion -> agent_loop.owner_completion",
+    "agent_loop bottom import owner_chat_stream.install(globals())",
+    "owner_chat_stream.install replaces owner_completion",
+    "owner_chat_stream._run -> _model_events(client,url,model_request)",
+    "_model_events streams POST at the same supplied url"
+  ],
+  "proxy_v1_models_origin": "synthetic config model_name; not a live backend catalog",
+  "prior_request_backend_identity_reconstructed": false
+}

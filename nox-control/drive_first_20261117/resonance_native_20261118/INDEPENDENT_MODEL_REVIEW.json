@@ -1,0 +1,43 @@
+{
+  "schema": "NOX_MODEL_IDENTITY_SOURCE_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "root/integrations_completion",
+  "decision": "PASS_FOR_REPAIRED_PURE_HELPER_SOURCE_SCOPE",
+  "source_sha256": "cb22df37c3b716c44c7fb8ab1828e4b220706ae985583bcfdb5ea58d4d596e65",
+  "source_bytes": 10522,
+  "actual_private_source_pins_exact": 5,
+  "actual_private_sources_copied_or_published": false,
+  "semantic_review": "Actual status snapshot selector/route replacement, common defaults, two-second upstream cache, primary/fallback health routing and owner_stream supplied-url chain verified against five exact source pins. Missing/null/object and actual boolean remain distinct; no prior backend reconstruction claimed.",
+  "resolved_finding": {
+    "id": "MODEL_LIKE_API_KEY_ARG_VALUE_LEAK",
+    "before": "FAIL_REPRODUCED_SYNTHETIC_ONLY",
+    "after": "PASS_ONE_FOCUSED_REGRESSION_THREE_SUBCASES",
+    "change": "Consume credential-option values sequentially; export model argv only for validated known-root GGUF reference, withhold other values including hashes/lengths."
+  },
+  "author_existing_suite_cases": 6,
+  "independent_whole_suite_reruns": 0,
+  "independent_focused_postfix_tests": 1,
+  "native_calls": 0,
+  "network_calls": 0,
+  "integration_checks": [
+    "Verify exact helperSHA and allfiveSOURCE_PINS beforecalling source_contract; do notimportnativeapplicationmodules",
+    "Supply bounded exact status/backend JSONobjects with duplicate-key rejection in caller; source_contract itself doesnotreadfiles",
+    "Treat APIprimary_model and disk modelselection as separateobservations; masked/unavailable/missing/null are not interchangeable",
+    "Onlyusemodel_argv_projection after caller has verified fixedlistener PID/start/argv/exe binding; never readenvironment or enumerateprocessesforthishelper",
+    "Onlyknown-rootGGUF basename is an exported argvreference; it is lexical and doesnotprove symlinktarget, weightcontent, architecture or trainingidentity",
+    "HealthGET plan allowsmaximum2 boundedloopbackreads and0POST; bodytruncation meansUNKNOWN, nothealthy; freshreadcannotreconstructpriorcachedroute",
+    "Preserve wholecombinedauditoutput175000-byte cap, no rawstatus/config/argv instdout"
+  ],
+  "limitations": [
+    "Typed configmodel_name remains a label, notlivebackendidentity; proxy/v1/models is synthetic configcatalog",
+    "Current sourcepins prove bytes only; caller mustestablish nativeinstalled/currentness separately",
+    "Credentialvalueparser is conservative, not a full LlamaCLI parser; unknownorambiguous argumentsmustnotbe promoted to modelidentity",
+    "Noactualmodel/health/servertests performed bythisreview"
+  ],
+  "evidence_label_clarification": {
+    "accepted": true,
+    "logic_changed": false,
+    "delta": "listener_process_binding_verified=false and requires_listener_pid_start_witness=true replace implied supplied=true",
+    "tests_repeated": false
+  }
+}

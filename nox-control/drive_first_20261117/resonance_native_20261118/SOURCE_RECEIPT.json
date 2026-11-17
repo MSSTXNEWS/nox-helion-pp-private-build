@@ -1,0 +1,74 @@
+{
+  "schema": "NOX_MENU_DELTA_SOURCE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "created_utc": "2026-11-17T21:43:36.299652+00:00",
+  "agent_id": "/root/resonance_native",
+  "status": "SOURCE_TESTED_CURRENT_INPUT_AND_ROLLBACK_VERIFIED",
+  "tests": {
+    "passed": 7,
+    "failed": 0,
+    "scope": "7 targeted regressions + production exact current source forward/reverse + independent current source review"
+  },
+  "native_installed": false,
+  "native_calls": 0,
+  "current_bridge_before_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+  "current_bridge_after_sha256": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
+  "files": {
+    "native_menu_overlay_transform.py": {
+      "sha256": "989e50a35d6043c33e8cba132f414ed7ccb3194ee9a60241787f15553023c459",
+      "bytes": 8282
+    },
+    "test_native_menu_overlay_transform.py": {
+      "sha256": "012309d1d1888bd154f2d0ab5a14ae98d3aee43eb9c9fb43a710ad2cf7c4f81d",
+      "bytes": 5133
+    },
+    "CURRENT_MENU.patch": {
+      "sha256": "c7a9b9b8728a5c0ba335f124bb85724feaad9db082d3f6b7ba213cfe019d5140",
+      "bytes": 925
+    },
+    "CURRENT_INPUT_RECEIPT.json": {
+      "sha256": "95e1e7f27ea373d8088379c6f2036a20848cc1e93d3b71222b34b0e76ee6a863",
+      "bytes": 1061
+    },
+    "INDEPENDENT_MENU_REVIEW.json": {
+      "sha256": "c36041e20b66191e6bd4050036876ff520ff6a58c23367113e889685ec9d462b",
+      "bytes": 3471
+    },
+    "model_identity_projection.py": {
+      "sha256": "cb22df37c3b716c44c7fb8ab1828e4b220706ae985583bcfdb5ea58d4d596e65",
+      "bytes": 10522
+    },
+    "test_model_identity_projection.py": {
+      "sha256": "747e0ba587ab1476c14614e75fef3202bae840741d52b619fd55343b9e83b369",
+      "bytes": 5198
+    },
+    "MODEL_SOURCE_CONTRACT.json": {
+      "sha256": "6fc2ec1d8b68daac348bdccf2907f26aba445d129d29edb4292397184682d0f8",
+      "bytes": 1655
+    },
+    "MODEL_IDENTITY_READSET.md": {
+      "sha256": "ce3fe3c18e1e596e16bce644b5fa220e2f0c0703ef0c4f2f0ccc9c524e36be16",
+      "bytes": 6842
+    },
+    "INDEPENDENT_MODEL_REVIEW.json": {
+      "sha256": "a6acb0989e06aa3946b2b678fad0166ae9930c6787b3e9b91bcc0cd9d017c73e",
+      "bytes": 2922
+    },
+    "README.md": {
+      "sha256": "e6845de790e3d0c3d4dcc325ddda0aef208c91d335165269243751ed7a253b7c",
+      "bytes": 7483
+    }
+  },
+  "model_identity_tests": {
+    "existing_cases_passed": 6,
+    "post_review_focused_cases_passed": 1,
+    "post_review_subcases": 3,
+    "source_pins_verified": 5,
+    "native_probe_run": false,
+    "full_suite_repeated_after_privacy_fix": false,
+    "final_evidence_label_delta_accepted_without_test_repeat": true
+  },
+  "updated_utc": "2026-11-17T21:54:06.791033+00:00",
+  "frozen": true,
+  "independent_model_review": "INDEPENDENT_MODEL_REVIEW.json"
+}
