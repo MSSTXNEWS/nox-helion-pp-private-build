@@ -243,7 +243,7 @@ class VerifiedJournalRecallV14Tests(unittest.TestCase):
                       category='timeout', accepted=False),
                 event('experience_quarantined', task_id='current', accepted=False),
             ]
-            path.write_text(''.join(json.dumps(row) + '\\n' for row in rows))
+            path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
             result = lifecycle.journal_recall({'id': 'current', 'handler': 'shared'})
             self.assertEqual(result['state'], 'JOURNAL_RECALLED')
             self.assertEqual(result['verified'], 1)
