@@ -1,0 +1,60 @@
+{
+  "schema": "NOX_MODEL_BINDING_OWNER_INSTALL_PAYLOAD_V1",
+  "instructions_version": "0.0.6",
+  "operator_base": "8b7f431f419a3618bed7a9442ccf1072a48e747a",
+  "operator_changes": false,
+  "action": "repair",
+  "entrypoint": "nox-control/owner_resonance_canary_v3_20261117.py",
+  "successful_lifecycle_base_sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+  "modules": {
+    "source_transform": {
+      "sha256": "d26783b43ef0043a8f83332901aa10aa4e722ee0850d8d8a17e050e8896ae2e3",
+      "bytes": 5325
+    },
+    "native_menu_overlay_transform": {
+      "sha256": "989e50a35d6043c33e8cba132f414ed7ccb3194ee9a60241787f15553023c459",
+      "bytes": 8282
+    },
+    "native_v24_dialog_transform": {
+      "sha256": "69c5d69fc3f23d559c29bcfb23f8d86ddb7b51ca77390238344dc34ad06cf819",
+      "bytes": 2487
+    },
+    "native_v24_dialog_installer": {
+      "sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+      "bytes": 38058
+    },
+    "binding_install_artifacts": {
+      "sha256": "72fa85bb70e7b772795b89360cc8108140dae9e0ba2bea149ef0fd9a27ff8196",
+      "bytes": 26488
+    },
+    "native_model_binding_installer": {
+      "sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+      "bytes": 16596
+    }
+  },
+  "artifacts": {
+    "owner_model_reference_binding.py": {
+      "sha256": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+      "bytes": 18265
+    },
+    "verified_model_reference.json": {
+      "sha256": "0d0a839b7a30e6b617accd1ba61f5a2e04b99a7d144ab5a99b107ae09a4cf668",
+      "bytes": 1204
+    }
+  },
+  "payload": {
+    "sha256": "18582aff7f7a4e6a292aa14382ee2f09c36b1873f816ad41f1baa53b7b724b25",
+    "bytes": 45869
+  },
+  "native_calls_during_build": 0,
+  "payload_executed": false,
+  "automatic_retry_allowed": false,
+  "source_install_count": 3,
+  "new_file_count": 2,
+  "service": "nox-proxy",
+  "model_posts": 0,
+  "model_restarts": 0,
+  "counter_or_queue_resets": 0,
+  "publication": "NOT_DONE",
+  "runtime_acceptance": "PENDING"
+}

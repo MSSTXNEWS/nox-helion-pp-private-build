@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_MODEL_REFERENCE_INSTALL_SOURCE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "state": "FROZEN_INDEPENDENT_INSTALLER_REVIEW_PASS",
+  "native_calls": 0,
+  "wrapper_executed": false,
+  "payload": {
+    "sha256": "18582aff7f7a4e6a292aa14382ee2f09c36b1873f816ad41f1baa53b7b724b25",
+    "bytes": 45869
+  },
+  "modules": {
+    "source_transform": {
+      "sha256": "d26783b43ef0043a8f83332901aa10aa4e722ee0850d8d8a17e050e8896ae2e3",
+      "bytes": 5325
+    },
+    "native_menu_overlay_transform": {
+      "sha256": "989e50a35d6043c33e8cba132f414ed7ccb3194ee9a60241787f15553023c459",
+      "bytes": 8282
+    },
+    "native_v24_dialog_transform": {
+      "sha256": "69c5d69fc3f23d559c29bcfb23f8d86ddb7b51ca77390238344dc34ad06cf819",
+      "bytes": 2487
+    },
+    "native_v24_dialog_installer": {
+      "sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+      "bytes": 38058
+    },
+    "binding_install_artifacts": {
+      "sha256": "72fa85bb70e7b772795b89360cc8108140dae9e0ba2bea149ef0fd9a27ff8196",
+      "bytes": 26488
+    },
+    "native_model_binding_installer": {
+      "sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+      "bytes": 16596
+    }
+  },
+  "author_verification": {
+    "unique_tests": 5,
+    "passed": 5,
+    "targeted_followup_tests": 1,
+    "reason": "snapshot mode drift with unchanged body hash must prevent final acceptance",
+    "full_suite_repeated": false,
+    "compile": "PASS",
+    "total_unique_successful_checks_including_peer_reproducer": 6,
+    "rollback_fix_followup": {
+      "unique_new_peer_reproducer": 1,
+      "reproducer_before": "FAIL (foreign identical-byte inode overwritten)",
+      "reproducer_after": "PASS (HOLD before foreign replacement)",
+      "affected_existing_cases_repeated": 2,
+      "targeted_total_passed": 3,
+      "base_changed": false
+    }
+  },
+  "approved_route": {
+    "action": "repair",
+    "entrypoint": "nox-control/owner_resonance_canary_v3_20261117.py",
+    "publish_base": "4438d67bae87a59b857bb3a5f8af0927c0509e7f",
+    "unchanged_operator_parent": "8b7f431f419a3618bed7a9442ccf1072a48e747a"
+  },
+  "scope": {
+    "existing_source_files": 3,
+    "new_artifacts": 2,
+    "service_restart": "nox-proxy only",
+    "model_posts": 0,
+    "counter_resets": 0,
+    "queue_resets": 0,
+    "s03_reset_or_migration_requests": 0,
+    "new_services": 0
+  },
+  "unverified": [
+    "actual current owner idle / maintenance lease until native preflight",
+    "actual first system prefix byte length until one changed-path QA",
+    "native installed / loaded / served / used pending"
+  ],
+  "rollback_scope": "automatic same-transaction recovery; explicit post-success rollback requires its exact receipt/backup and is not a repeat of this install",
+  "base_reused_byte_exact": true,
+  "base_sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+  "files": {
+    "native_model_binding_installer.py": {
+      "sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+      "bytes": 16596
+    },
+    "native_v24_dialog_transform.py": {
+      "sha256": "69c5d69fc3f23d559c29bcfb23f8d86ddb7b51ca77390238344dc34ad06cf819",
+      "bytes": 2487
+    },
+    "build_install_payload.py": {
+      "sha256": "ee498265441c1f75bda954b862ede5fc8e4313ab375640e6f8496bc937b37c3b",
+      "bytes": 4108
+    },
+    "test_native_model_binding_installer.py": {
+      "sha256": "1c13bc86e448d09bb385d2417fb60742a9bfb8d8aaf0a1d53ab5294b45cc33ca",
+      "bytes": 7406
+    },
+    "INSTALL_READINESS.md": {
+      "sha256": "5b3a62cb9fe08eb50e35718a6f420f41541a50c674caf5f4b482069271a203fa",
+      "bytes": 9955
+    },
+    "BUILD_MANIFEST.json": {
+      "sha256": "b5db1f24ad2a10c2b5448897f44bc0f521f782bb53406239b7d5cc179f2b87ca",
+      "bytes": 2049
+    },
+    "test_source_rollback_ownership.py": {
+      "sha256": "6f299a9a02350c3eabbeada8c4070def4652934586495e6555a4ec7601e8e4be",
+      "bytes": 1346
+    },
+    "INDEPENDENT_INSTALLER_REVIEW.json": {
+      "sha256": "61a25ad40ac91e652c2b8716677aaba8e3f598b9945e3f4b90912a35d5923bea",
+      "bytes": 7102
+    }
+  },
+  "rollback_fix": {
+    "old_main_sha256": "97086eb46f99dc52d080912680380c2af1e1a4a4bc78e2753f8cd7714c9170a6",
+    "new_main_sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+    "fix": "Track 3 staged source inode/owner/mode identities; exact own postimage before every restore; never overwrite foreign same-body inode."
+  },
+  "independent_review": {
+    "path": "INDEPENDENT_INSTALLER_REVIEW.json",
+    "sha256": "61a25ad40ac91e652c2b8716677aaba8e3f598b9945e3f4b90912a35d5923bea",
+    "status": "PASS",
+    "native_execution": false
+  }
+}

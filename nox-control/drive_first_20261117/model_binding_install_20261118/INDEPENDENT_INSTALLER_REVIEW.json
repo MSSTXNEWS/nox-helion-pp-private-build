@@ -1,0 +1,124 @@
+{
+  "schema": "NOX_MODEL_BINDING_INSTALLER_INDEPENDENT_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "state": "PASS_FIXED_SOURCE_AND_BUILD_SCOPE_COORDINATED_NATIVE_PENDING",
+  "payload": {
+    "sha256": "18582aff7f7a4e6a292aa14382ee2f09c36b1873f816ad41f1baa53b7b724b25",
+    "bytes": 45869
+  },
+  "modules": {
+    "source_transform": {
+      "sha256": "d26783b43ef0043a8f83332901aa10aa4e722ee0850d8d8a17e050e8896ae2e3",
+      "bytes": 5325
+    },
+    "native_menu_overlay_transform": {
+      "sha256": "989e50a35d6043c33e8cba132f414ed7ccb3194ee9a60241787f15553023c459",
+      "bytes": 8282
+    },
+    "native_v24_dialog_transform": {
+      "sha256": "69c5d69fc3f23d559c29bcfb23f8d86ddb7b51ca77390238344dc34ad06cf819",
+      "bytes": 2487
+    },
+    "native_v24_dialog_installer": {
+      "sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+      "bytes": 38058
+    },
+    "binding_install_artifacts": {
+      "sha256": "72fa85bb70e7b772795b89360cc8108140dae9e0ba2bea149ef0fd9a27ff8196",
+      "bytes": 26488
+    },
+    "native_model_binding_installer": {
+      "sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+      "bytes": 16596
+    }
+  },
+  "artifacts": {
+    "owner_model_reference_binding.py": {
+      "sha256": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+      "bytes": 18265
+    },
+    "verified_model_reference.json": {
+      "sha256": "0d0a839b7a30e6b617accd1ba61f5a2e04b99a7d144ab5a99b107ae09a4cf668",
+      "bytes": 1204
+    }
+  },
+  "build_manifest": {
+    "sha256": "b5db1f24ad2a10c2b5448897f44bc0f521f782bb53406239b7d5cc179f2b87ca",
+    "bytes": 2049
+  },
+  "fixed_blocker": {
+    "initial_main_sha256": "97086eb46f99dc52d080912680380c2af1e1a4a4bc78e2753f8cd7714c9170a6",
+    "initial_payload_sha256": "15803273455b219e6664a6c670bb08cf60d22ff7525b2618fbee57a792147bd6",
+    "defect": "Inherited source rollback accepted equal postimage bytes on a different, unowned inode and overwrote that inode.",
+    "initial_independent_case": "FAIL reproduced",
+    "initial_tool_chunk": "f423a5",
+    "fixed_main_sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+    "fix": "BindingTransaction pins three staged source identities, verifies staged/prepared ownership, and uses an owned source restore loop with dev/ino/uid/gid/mode/size+bytes checks before each restore. Successful lifecycle base dff6 remains byte-identical.",
+    "fixed_independent_case": "PASS",
+    "fixed_tool_chunk": "359510",
+    "test_file": {
+      "sha256": "86babe1dcd8b769706a3bc0e6913ee34fff8c7d1857239db5a89645fa2dad8a1",
+      "bytes": 1352
+    }
+  },
+  "independent_review": [
+    "Six embedded module bodies and every SHA/size guard equal the final immutable manifest. The complete wrapper equals the expected deterministic template; only the main installer module changed after the reviewed initial bundle.",
+    "All three exact source transforms compile and reverse to original bytes. Menu change appends one existing overlay tuple; identity route preserves ordinary tool loop. No application module or payload was executed.",
+    "Five-file scope is exact: three existing sources require pinned before/after bytes; helper and snapshot require absence and atomic no-clobber os.link creation. Existing unexpected targets are neither adopted nor overwritten.",
+    "New-file ownership follows the exact staged inode including partial link/unlink states. Rollback removes only new paths whose bytes/dev/inode/owner/mode still match the transaction; new hardlinks require matching staged identity.",
+    "Fixed source rollback checks its recorded staged/postimage identity both before preparing a restore and immediately before replacement. Equal bytes on another inode now HOLD without overwriting it.",
+    "Existing maintenance lock pin, global STOP guards, fresh IDLE status and free 8098 slots remain. Pre-stop Supervisor identity must match pinned PID3550426/start174075151/argv and config; stop/start scope is only nox-proxy.",
+    "Existing recovery keeps old and newly observed proxy lifetimes, rejects unknown startup identity, requires known lifetimes dead before restoration/start, and preserves global STOP. Old base dff6 is unchanged.",
+    "Model restart, model POST, S03/history/queue/counter reset and permission widening are outside this transaction. Public output redacts Supervisor command/environment values; only bounded metadata/hash receipts are exposed.",
+    "Final installed status requires all three postimage hashes plus both exact new artifacts with single link,0600 and expected ownership. A mixed or unreadable state is UNKNOWN; completed cannot stay true when final five-file readback fails."
+  ],
+  "author_validation_attribution": {
+    "initial_tests_reported_pass": 5,
+    "final_metadata_case_reported_pass": 1,
+    "after_fix_targeted_cases_reported_pass": 3,
+    "independent_full_suite_repeat": false
+  },
+  "independent_dynamic_validation": {
+    "tests_executed_on_fixed_candidate": 1,
+    "result": "PASS",
+    "case": "Replace a successfully installed source with equal bytes on a foreign inode, then rollback: HOLD and foreign inode/body preserved.",
+    "native_services": false,
+    "provider_calls": 0
+  },
+  "allowed_scope": {
+    "source_files": [
+      "/root/nox/scripts/owner_chat_stream.py",
+      "/root/nox/scripts/nox_v29_chat_bridge.py",
+      "/root/nox/scripts/chat_proxy.py"
+    ],
+    "new_files_absent_only": [
+      "/root/nox/scripts/owner_model_reference_binding.py",
+      "/root/nox/state/verified_model_reference.json"
+    ],
+    "existing_service": "nox-proxy",
+    "service_operations": [
+      "status",
+      "stop",
+      "start"
+    ],
+    "model_services": [],
+    "loopback_get_allowlist": [
+      "http://127.0.0.1:8098/slots",
+      "http://127.0.0.1:8080/health"
+    ]
+  },
+  "limits_and_followup": [
+    "Source/build approval does not prove native installation, fresh server pins or active loaded-module identity.",
+    "Owner idle and slot checks are bounded observations, not an atomic lock against a newly arriving chat. Coordinator must provide the existing authorized quiet maintenance window and one unique dispatch intent.",
+    "The inherited process identity reader reads bounded environ locally for Supervisor service identity; values are never exported. No credential extraction/transfer is added.",
+    "Filesystem CAS relies on the existing cooperating maintenance lock; the review does not claim protection against arbitrary concurrent privileged writers between check and rename.",
+    "Lost filesystem effects may leave a conservative HOLD/manual-readback state. Do not replay the wrapper or treat a failed receipt as absence of effects.",
+    "Changed-path QA must still confirm model question SSE, actual prefix fit, ordinary tool path, preserved conversation/history and the repaired menu URL after coordinated loading."
+  ],
+  "native_calls": 0,
+  "provider_calls": 0,
+  "wrapper_executed": false,
+  "foreign_workspace_writes": 0,
+  "remote_mutations": 0
+}
