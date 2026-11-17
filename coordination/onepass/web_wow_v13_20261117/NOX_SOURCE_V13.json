@@ -1,0 +1,76 @@
+{
+  "schema": "nox-source-registry-v1",
+  "instructions_version": "0.0.6",
+  "run_id": "NOX-49-20261117",
+  "source_id": "NOX-SRC-WEB-V13",
+  "kind": "source_dependency_not_additional_project_position",
+  "parent_task_id": "0A02",
+  "project_total": 295,
+  "wave_ids_unchanged": true,
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "ref": "fix/nox-web-v13-glass-materials-20261117",
+    "commit": "97a19ff9711aa86ca95130e00ee00f1c9d020350",
+    "path": "coordination/onepass/web_wow_v13_20261117",
+    "site_tree_sha": "ba839b52f1472364cc4bb5d50fd045beff612b1c",
+    "archive_url": "https://drive.google.com/file/d/1goyd4rTLYEJFA80dMl_A-zpYLxQnASXQ/view",
+    "archive_sha256": "f12a6f36e9718ee483e0d9d2e3f16aa41c3911ec9ef6e2bc03502a5da0d62fe4",
+    "archive_bytes": 84526089,
+    "archive_entries": 1271,
+    "master_url": "https://drive.google.com/file/d/1J8mbi_7ooTCmYl3cBqB34Uus7GzA8Vwz/view",
+    "memory_url": "https://app.notion.com/p/411acc184a9f81a08486d769748818f9"
+  },
+  "verification": {
+    "github_ref_and_readme": "READ_CONFIRMED",
+    "archive_hash": "SOURCE_RECEIPT_CLAIM_NOT_REDOWNLOADED_BY_PRIME",
+    "reported_visual_cases": 180,
+    "current_native_e2e": "HOLD",
+    "accepted_project_ids": []
+  },
+  "task_updates": [
+    {
+      "id": "0A02",
+      "scope": "Pin V13 source and full archive; preserve current unified release, source provenance and rollback."
+    },
+    {
+      "id": "5V14-12",
+      "scope": "Merge five world-specific materials and six palettes; preserve new settings/lazy scene fixes."
+    },
+    {
+      "id": "5A05",
+      "scope": "One original D02 renderer per view; MAX/BALANCED/ECO and Reduced Motion; pause hidden effects and yield to measured native activity."
+    },
+    {
+      "id": "5V14-14",
+      "scope": "Verify shared top/bottom chrome, focus and no overflow at 320/390/800/1024/1440/1920/3840 widths; real mobile viewport."
+    },
+    {
+      "id": "5V14-13",
+      "scope": "Shared bottom commands and page-scoped mini assistant remain functional alongside V13 materials; preserve World/calendar/notes."
+    },
+    {
+      "id": "5V14-24",
+      "scope": "Promote only exact integrated SHA with native authenticated WebGL/stream/STOP/S03/voice/cinema/GPU evidence."
+    }
+  ],
+  "integration_requirements": [
+    "Merge selected V13 deltas into current final; no wholesale rollback to V13",
+    "Include active HTML hooks, not five modules alone",
+    "Keep original D02 and HOME 14 interactive objects; interior eclipse is not evidence that all 14 objects are present",
+    "Preserve persistent request IDs, event replay, page scope and truthful native STOP receipts",
+    "Every worker accepts, saves and integrates its own package; no root acceptance gate",
+    "Remove only verified replaced copies after external restore and accepted current SHA"
+  ],
+  "native_prerequisites": [
+    {
+      "id": "2V14-04",
+      "state": "HOLD",
+      "resume_condition": "Private offsite copy and independent functional restore of S03/checkpoints verified"
+    },
+    {
+      "id": "2V14-07",
+      "state": "HOLD",
+      "resume_condition": "Warm weights and unique optimizer/RNG/cursor state preserved and restored before replacement"
+    }
+  ]
+}
