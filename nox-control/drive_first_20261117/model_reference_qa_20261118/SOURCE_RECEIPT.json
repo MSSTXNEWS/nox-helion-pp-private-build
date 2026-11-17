@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_CHANGED_PATH_QA_SOURCE_RECEIPT_V1",
+  "status": "FROZEN_INDEPENDENT_SOURCE_AND_BUILD_PASS",
+  "native_calls": 0,
+  "publications": 0,
+  "dispatch_owner": "/root",
+  "code_freeze": {
+    "state": "FROZEN_CODE_AND_FIXTURES_READY_FOR_PEER",
+    "files": {
+      "model_reference_changed_path_qa.py": {
+        "sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+        "bytes": 27332
+      },
+      "model_reference_qa_release.py": {
+        "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+        "bytes": 1936
+      },
+      "p0_native_helpers.py": {
+        "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+        "bytes": 20690
+      },
+      "p0_witness_protocol.py": {
+        "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+        "bytes": 8414
+      },
+      "test_model_reference_changed_path_qa.py": {
+        "sha256": "cb83dff99f8ada768c50e15e061080e66deb53dc1d3543896882916b70da4712",
+        "bytes": 13093
+      }
+    },
+    "tests": {
+      "unique_pass": 5,
+      "initial_pass": 4,
+      "initial_fixture_uid_failure": 1,
+      "fixture_only_fix": "Retain real TempFS UID; mock only native run owner-context guard",
+      "targeted_rerun_pass": 1,
+      "full_suite_repeated": false
+    },
+    "native_calls": 0,
+    "root_dispatch_only": true,
+    "receipt_attribution_delta": {
+      "io_or_control_flow_changed": false,
+      "owner_ui_count_named": true,
+      "backend_http_directly_observed": false,
+      "prefix_path_source_inferred": true,
+      "one_targeted_fixture_pass": true
+    }
+  },
+  "payload_sha256": "fafe7487de86885b4363e99aa4578d4bf45179bea98e5d2be60afa8aa48a062c",
+  "payload_bytes": 27575,
+  "actual_install": {
+    "request": "6963969126",
+    "source_sha": "5da7849bffc2b590201bb1917840b5a2b39ca2a7",
+    "run": "44198936370",
+    "job": "134447651037",
+    "proxy_pid": 3648425,
+    "proxy_start_ticks": 175058217,
+    "raw_sha256": "34e7acd86ae0f024d12d74b8c660b4d26cd5b6d16dce48053ae99d249adbfba6"
+  },
+  "qa": {
+    "existing_dialog": "12092579cf5144419cfa4fadc2e3a03b",
+    "question": "Какая модель в твоей основе сейчас?",
+    "dialog_create_posts": 0,
+    "before_messages": 2,
+    "after_messages": 4,
+    "prior_prefix_contents_exported": false,
+    "own_new_answer_max_bytes": 4096,
+    "native_semantic_acceptance": "PENDING_ACTUAL_RESULT",
+    "actual_prefix_runtime_fit": "SOURCE_INFERRED_ONLY_AFTER_COMPLETED_QA; NOT_INPUT_TRACE",
+    "max_owner_chat_post_attempts": 1,
+    "backend_model_http_posts": "NOT_DIRECTLY_OBSERVED"
+  },
+  "same_old_canary_repeated": false,
+  "old_canary_reference": "44177251374/6961140220",
+  "ordinary_chat_and_tools_tested_by_this_package": false,
+  "independent_review": {
+    "sha256": "8aa206afca51c03e5fd7417b71f3893103d1f791e889f179d7ba98a7cd4adb59",
+    "bytes": 6125,
+    "additional_independent_test_pass": 1,
+    "full_suite_repeated": false
+  }
+}

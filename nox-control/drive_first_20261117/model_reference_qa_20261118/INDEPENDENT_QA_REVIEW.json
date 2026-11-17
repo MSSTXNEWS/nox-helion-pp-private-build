@@ -1,0 +1,93 @@
+{
+  "schema": "NOX_MODEL_REFERENCE_CHANGED_PATH_QA_INDEPENDENT_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "state": "PASS_SOURCE_AND_BUILD_ONE_COORDINATED_NATIVE_QA_PENDING",
+  "payload": {
+    "sha256": "fafe7487de86885b4363e99aa4578d4bf45179bea98e5d2be60afa8aa48a062c",
+    "bytes": 27575
+  },
+  "modules": {
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+      "bytes": 1936
+    },
+    "model_reference_changed_path_qa.py": {
+      "sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+      "bytes": 27332
+    }
+  },
+  "build_review": {
+    "sha256": "45db3003ff5ef9b237ddc2d4754af1655251f65786d107efce924a6e513d9ba0",
+    "bytes": 1060
+  },
+  "release_provenance": {
+    "sha256": "2d909aa907ce39bbe2c4dc5b73433cfac517265206044dde4d09cef7bc050888",
+    "bytes": 389
+  },
+  "accepted_install_run": "44198936370",
+  "reviewed_contract": [
+    "Release constants independently equal actual raw successful install receipt34e7, request6963969126/source5da7849; fresh proxy3648425/start175058217, config/launcher/command and all five postimages/three source inode pins match.",
+    "Native preflight revalidates exact source/hash/inode, current proxy generation, original maintenance lock, global STOP and owner-idle/slot observations before the one changed-path question.",
+    "The existing owned dialog12092579cf5144419cfa4fadc2e3a03b must have exactly the known two messages with the old exchange48140046c4684fe5 and full M1 record digestb7513f. Old text/title remain private and are not copied to the receipt.",
+    "The exact standalone question keeps the nonce only in request metadata; it does not append a tag that would bypass the narrow identity matcher. Client history is empty; prior persisted history is verified rather than rewritten.",
+    "Exclusive purpose journal creation, O_EXCL intent, exact readback, file fsync and directory fsync precede model POST. Intent/journal survive all exits. Attempt counters advance before socket work; no uncertain POST is retried.",
+    "HTTP destination/path/count allowlist is fixed loopback: loginPOST<=1, owner chatPOST<=1, own historyGET<=2 and menuGET<=1; no dialog creation, arbitrary route, redirect, proxy-env routing or external HTTP. Separate owner-idle observations may GET8098/slots twice.",
+    "Reused bounded SSE parser requires context/meta binding, nonplaceholder answer, exact done/S03 markers and normal EOF. Frame count is not presented as a model token count.",
+    "After the stream, read-only application SQL checks exact old two-row prefix, one revision increment, exactly two appended rows bound to new exchange/question/answer, and exact complete M1 frame. Authenticated history API must equal that same four-row snapshot.",
+    "Only the bounded new synthetic answer may be included for semantic review; old conversation bodies, credentials, environment values and raw server errors are not exported. Official runtime password resolution is bounded and source-pinned; no new key or integration credential is extracted.",
+    "Application SQL writes by QA are zero; the server performs the authorized new chat exchange. Possible SQLite WAL/SHM auxiliary effects are explicitly identified.",
+    "Final receipt-only attribution correctly distinguishes owner_chat_posts from unobserved backend HTTP counts, and source-inferred identity-path completion from unobserved exact model input/prefix bytes.",
+    "Four packed modules, literal filenames and SHA/size guards match final manifest. Exact wrapper AST writes only those modules into a private temporary directory and invokes one entry. Wrapper compiled/decoded, never executed by reviewer."
+  ],
+  "independent_targeted_test": {
+    "file": {
+      "sha256": "b81cf171eeba7a0a0ee82ccb2e89029213a7604c2fa1907377e7aed50f430f4a",
+      "bytes": 2485
+    },
+    "test": "DurableIntentAckLoss.test_committed_intent_ack_loss_never_sends_and_later_request_cannot_replay",
+    "result": "PASS",
+    "tool_chunk": "045182",
+    "tests": 1,
+    "real_tempfs": true,
+    "network_forbidden": true,
+    "case": "Lost acknowledgement after successful intent fsync/readback sends zero HTTP; existing intent blocks same-object resend, purpose reservation blocks a different request/nonce replay."
+  },
+  "author_validation_attribution": {
+    "reported_unique_pass": 5,
+    "fixture_uid_fix_targeted": true,
+    "receipt_only_label_case_targeted": true,
+    "independent_full_suite_repeat": false
+  },
+  "post_limits": {
+    "owner_ui_login": 1,
+    "owner_ui_chat": 1,
+    "create_dialog": 0,
+    "external_http": 0,
+    "actual_backend_http": "NOT_DIRECTLY_OBSERVED",
+    "owner_prior_history_rows": 2,
+    "expected_after_rows": 4,
+    "answer_utf8_bytes": 4096,
+    "request_generation_token_cap": 256,
+    "generation_tokens_observed": null
+  },
+  "remaining_acceptance": [
+    "This authorizes source/build scope for the coordinator's one existing owner repair dispatch; native use and actual answer semantic acceptance are still pending.",
+    "Fresh native guards can still HOLD. After an intent or ambiguous delivery, reconcile the actual journal/history/S03 before considering any new action; no blind retry.",
+    "Completed means transport and persistence verified. accepted remains false and semantic review pending until the coordinator reads the new answer; filename evidence is not weight-content, architecture or training provenance.",
+    "The 120-second interruptible wall timer and 90-second SSE bound do not establish speed benchmarks. No ordinary-path second POST, benchmark or extra native audit was performed."
+  ],
+  "native_calls": 0,
+  "provider_calls": 0,
+  "wrapper_executed": false,
+  "foreign_workspace_writes": 0,
+  "remote_mutations": 0
+}

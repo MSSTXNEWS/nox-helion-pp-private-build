@@ -1,0 +1,14 @@
+{
+  "p0_native_helpers.py": {
+    "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+    "bytes": 20690,
+    "original_path": "nox_refresh/launcher_parent_file_fix_20261118/frozen_22302/p0_native_helpers.py",
+    "changed": false
+  },
+  "p0_witness_protocol.py": {
+    "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+    "bytes": 8414,
+    "original_path": "nox_refresh/launcher_parent_file_fix_20261118/frozen_22302/p0_witness_protocol.py",
+    "changed": false
+  }
+}

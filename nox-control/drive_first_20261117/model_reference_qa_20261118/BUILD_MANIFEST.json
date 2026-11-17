@@ -1,0 +1,55 @@
+{
+  "schema": "NOX_MODEL_REFERENCE_QA_PAYLOAD_V1",
+  "payload_path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+  "repository_payload_path": "nox-control/owner_resonance_canary_v3_20261117.py",
+  "payload_sha256": "fafe7487de86885b4363e99aa4578d4bf45179bea98e5d2be60afa8aa48a062c",
+  "payload_bytes": 27575,
+  "modules": {
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+      "bytes": 1936
+    },
+    "model_reference_changed_path_qa.py": {
+      "sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+      "bytes": 27332
+    }
+  },
+  "deterministic_gzip_mtime": 0,
+  "entry_count": 1,
+  "entry": "model_reference_changed_path_qa.entry",
+  "native_execution_by_builder": 0,
+  "operator": "UNCHANGED_EXISTING_OWNER_REPAIR_ROUTE",
+  "actual_install_source": "5da7849bffc2b590201bb1917840b5a2b39ca2a7",
+  "actual_install_request": "6963969126",
+  "actual_proxy_pid": 3648425,
+  "actual_proxy_start_ticks": 175058217,
+  "hard_deadline_seconds": 120,
+  "sse_total_cooperative_deadline_seconds": 90,
+  "socket_timeout_seconds": 20,
+  "max_output_bytes": 65536,
+  "allowed_http": {
+    "127.0.0.1:18775": {
+      "POST /chat/login": 1,
+      "POST /api/nox/chat": 1,
+      "GET /nox-web-v29/nox-ui.js": 1,
+      "GET /api/ui/memory/dialogs/history?dialog_id=12092579cf5144419cfa4fadc2e3a03b&limit=4": 2
+    },
+    "127.0.0.1:8098": {
+      "GET /slots": 2
+    }
+  },
+  "dialog_create_posts": 0,
+  "model_reloads": 0,
+  "service_mutations": 0,
+  "counter_resets": 0,
+  "automatic_retry_allowed": false,
+  "native_dispatch_owner": "/root"
+}

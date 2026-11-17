@@ -1,0 +1,42 @@
+{
+  "state": "FROZEN_CODE_AND_FIXTURES_READY_FOR_PEER",
+  "files": {
+    "model_reference_changed_path_qa.py": {
+      "sha256": "5cfb8eab0a617528762d971ffc8dc722ea8eadbabecd61781574c509fba7be57",
+      "bytes": 27332
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+      "bytes": 1936
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "test_model_reference_changed_path_qa.py": {
+      "sha256": "cb83dff99f8ada768c50e15e061080e66deb53dc1d3543896882916b70da4712",
+      "bytes": 13093
+    }
+  },
+  "tests": {
+    "unique_pass": 5,
+    "initial_pass": 4,
+    "initial_fixture_uid_failure": 1,
+    "fixture_only_fix": "Retain real TempFS UID; mock only native run owner-context guard",
+    "targeted_rerun_pass": 1,
+    "full_suite_repeated": false
+  },
+  "native_calls": 0,
+  "root_dispatch_only": true,
+  "receipt_attribution_delta": {
+    "io_or_control_flow_changed": false,
+    "owner_ui_count_named": true,
+    "backend_http_directly_observed": false,
+    "prefix_path_source_inferred": true,
+    "one_targeted_fixture_pass": true
+  }
+}
