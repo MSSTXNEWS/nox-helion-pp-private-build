@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import threading
 import time
 import types
 import unittest
@@ -293,6 +294,26 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn('nox-agent-06',wire)
             self.assertEqual(self.dispatched,[])
             self.assertIn('настроено 6',payload['_agent_final'])
+
+    @unittest.skipUnless(hasattr(os,'mkfifo') and hasattr(os,'O_NONBLOCK'),
+                         'POSIX FIFO nonblocking admission regression')
+    def test_executor_fifo_status_path_cannot_block_chat(self):
+        # A FIFO at this path must be rejected *before* an open() waits for a
+        # writer. Previous O_NOFOLLOW-only logic blocked before the fstat gate.
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'agents.json'
+            os.mkfifo(path)
+            answers=[]
+            worker=threading.Thread(
+                target=lambda:answers.append(stream._executor_status_reply(
+                    'Сколько агентов сейчас?',path)),daemon=True)
+            worker.start()
+            worker.join(0.75)
+            self.assertFalse(worker.is_alive(),
+                             'nonregular status FIFO blocked immediate chat admission')
+            self.assertEqual(len(answers),1)
+            self.assertIn('не могу подтвердить',answers[0])
+            self.assertNotIn('настроено',answers[0])
 
     def test_executor_unknown_on_stale_corrupt_duplicate_or_inconsistent_snapshot(self):
         with tempfile.TemporaryDirectory() as folder:
