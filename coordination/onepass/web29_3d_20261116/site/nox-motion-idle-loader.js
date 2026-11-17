@@ -113,7 +113,10 @@
   on(reduce, 'change', () => {if (!quiet()) cancel(); else schedule();});
   on(document, 'visibilitychange', () => {hidden = document.hidden; if (hidden) cancel(); else schedule();});
   on(window, 'pagehide', e => {cancel(); if (!e.persisted) {closed = true; for (const [host,type,fn] of events) host.removeEventListener(type,fn);}});
-  on(window, 'pageshow', e => {if (e.persisted) {stopped = false; schedule();}});
+  // BFCache re-entry is not a new owner/chat generation: a prior STOP stays
+  // latched until an explicitly new chat-active transition clears it.
+  // The normal no-STOP BFCache restore still admits decorative idle work.
+  on(window, 'pageshow', e => {if (e.persisted) schedule();});
   window.NoxMotionIdleLoader = Object.freeze({
     diagnostics: () => ({decorativeOnly: true, nonBlocking: true, originalLibraryPreserved: true,
       busy: chatBusy || voiceBusy || mediaBusy || runtimeBusy || editing() || training(),
