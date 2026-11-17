@@ -348,6 +348,43 @@ class VerifiedJournalRecallV14Tests(unittest.TestCase):
             self.assertEqual(len(result['references_sha256']), 3)
 
 
+class SkillJournalReplayB49Tests(unittest.TestCase):
+    def test_replayed_success_does_not_inflate_skill_repetition_rank(self):
+        lifecycle = module('owner_task_lifecycle')
+        success = {'schema': 'NOX_DISPATCHER_MENTOR_V1',
+                   'kind': 'experience_verified', 'task_id': 'current',
+                   'partition': 'train', 'accepted': True,
+                   'verification': {'kind': 'native_supervisor_running',
+                                    'service': 'nox-priority-scheduler'},
+                   'dedup_sha256': 'a' * 64}
+        rows = [success, dict(success), {**success, 'timestamp': 'later'},
+                {**success, 'dedup_sha256': 'b' * 64}]
+        with tempfile.TemporaryDirectory() as directory, patch.object(lifecycle, 'ROOT', Path(directory)):
+            path = Path(directory) / 'memory/dispatcher_mentor/events.jsonl'
+            path.parent.mkdir(parents=True)
+            path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+            result = lifecycle.journal_recall({'id': 'current', 'handler': 'shared'})
+        self.assertEqual(result['verified'], 2)
+        self.assertEqual(len(result['references_sha256']), 2)
+        self.assertEqual(len(set(result['references_sha256'])), 2)
+
+    def test_rejected_copy_cannot_hide_later_verified_evidence(self):
+        lifecycle = module('owner_task_lifecycle')
+        valid = {'schema': 'NOX_DISPATCHER_MENTOR_V1',
+                 'kind': 'experience_verified', 'task_id': 'current',
+                 'partition': 'train', 'accepted': True,
+                 'verification': {'kind': 'native_gguf_header'},
+                 'dedup_sha256': 'c' * 64}
+        rows = [{**valid, 'accepted': False}, {**valid, 'partition': 'holdout'}, valid]
+        with tempfile.TemporaryDirectory() as directory, patch.object(lifecycle, 'ROOT', Path(directory)):
+            path = Path(directory) / 'memory/dispatcher_mentor/events.jsonl'
+            path.parent.mkdir(parents=True)
+            path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+            result = lifecycle.journal_recall({'id': 'current', 'handler': 'shared'})
+        self.assertEqual(result['verified'], 1)
+        self.assertEqual(len(result['references_sha256']), 1)
+
+
 class SharedOptimizationCacheV14Tests(unittest.TestCase):
     def test_sibling_context_cache_respects_handler_params_and_failure(self):
         """A parent claim cannot lend its optimization advice to a different task."""
