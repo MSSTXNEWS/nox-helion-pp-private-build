@@ -22,6 +22,8 @@ jobs:
           python3 -m unittest discover -s nox-control -p 'test_owner_s03_gateway.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_s03_diagnostic.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_pinned_python_v13.py' -v
+          python3 -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_inventory.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_inventory.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_media_install.py' -v
       - name: Check original owner UI maintenance mode without native writes
         run: |
