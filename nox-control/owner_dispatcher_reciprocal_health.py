@@ -49,7 +49,13 @@ def inspect(names=("nox-dispatcher-t855u", "nox-priority-scheduler", "nox-selfhe
                      timeout=5, check=False)
             raw = p.stdout.strip()
             match = LINE.match(raw) if len(raw) <= 500 and "\n" not in raw else None
-            valid = p.returncode == 0 and match and match.group(1) == name
+            # Real supervisorctl returns rc=3 for STOPPED on this owner host.
+            # It is a *negative* health finding, not a generic command error.
+            valid = (p.returncode in (0, 3) and match is not None
+                     and match.group(1) == name
+                     and (p.returncode == 0
+                          or match.group(2) in ("STOPPED", "EXITED"))
+                     and not (p.returncode == 3 and PID.search(raw)))
             state = match.group(2) if valid else "UNKNOWN"
             found = PID.search(raw) if state == "RUNNING" else None
             process = process_identity(int(found.group(1)), SERVICES[name], proc) if found else None
