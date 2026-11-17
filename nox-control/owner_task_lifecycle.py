@@ -349,6 +349,13 @@ def shared_context(task, local_recall, plan, gateway=None):
         'task': task.get('id'), 'handler': task.get('handler'), 'params_sha256': outbox.digest(task.get('params') or {})}
     # A new observed failure invalidates earlier advice for this plan. Sibling
     # checks still share their initial context instead of consulting per thread.
+    # Siblings may reuse advice only for the SAME technical question. A shared
+    # parent/plan alone previously leaked a sibling's handler, parameters or
+    # failure note into another task's optimisation candidate.
+    group['handler'] = outbox.safe_id(task.get('handler'))
+    group['params_sha256'] = outbox.digest(task.get('params') or {})
+    group['plan_intent'] = outbox.safe_code(task.get('owner_plan_intent'), 'NONE')
+    group['note_sha256'] = hashlib.sha256(str(task.get('note') or '')[:2000].encode('utf-8')).hexdigest()
     group['retries'] = task.get('retries') if type(task.get('retries')) is int else 0
     group['incident'] = task.get('mentor_incident') if SHA.fullmatch(str(task.get('mentor_incident', ''))) else None
     key = outbox.digest(group)
