@@ -173,7 +173,11 @@ def coordinator_reconcile(review, native_receipts):
         or len(set(pids.values())) != len(ROLES)
         or any(type(pid) is not int or pid < 2 for pid in pids.values())):
         return {"state": "HOLD_REVIEW_IDENTITY", "done": 0}
-    verified = set()
+    # A TaskID with two different otherwise-accepted native result hashes is
+    # disputed, not independently verified. Idempotent identical readbacks
+    # remain valid; unrelated lanes must not be blocked by the conflict.
+    verified_hashes = {}
+    conflicting = set()
     for row in native_receipts:
         if not isinstance(row, Mapping):
             continue
@@ -187,7 +191,12 @@ def coordinator_reconcile(review, native_receipts):
             or row.get("installed_and_readback") is not True
             or row.get("rollback_verified") is not True):
             continue
-        verified.add(task_id)
+        prior = verified_hashes.get(task_id)
+        if prior is not None and prior != sha:
+            conflicting.add(task_id)
+        else:
+            verified_hashes[task_id] = sha
+    verified = set(verified_hashes) - conflicting
     # Role tasks form an ordered three-stage DAG. A proven stage 3 receipt
     # without verified stages 1 and 2 must never count as completed release work.
     approved, blocked = [], []
@@ -201,11 +210,13 @@ def coordinator_reconcile(review, native_receipts):
                 approved.append(task_id)
             else:
                 blocked.append(task_id)
-    return {"state": ("NATIVE_EVIDENCE_READBACK" if approved else
+    return {"state": ("HOLD_CONFLICTING_NATIVE_RECEIPTS" if conflicting else
+                       "NATIVE_EVIDENCE_READBACK" if approved else
                        "HOLD_DEPENDENCY_READBACK" if blocked else
                        "HOLD_NO_NATIVE_COMPLETIONS"),
             "done": len(approved), "task_ids": approved,
-            "blocked_dependency_ids": blocked}
+            "blocked_dependency_ids": blocked,
+            "conflicting_task_ids": sorted(conflicting)}
 
 if __name__ == "__main__":
     print("NOX_V14_SOURCE_ONLY_NOT_INSTALLED_OR_STARTED")
