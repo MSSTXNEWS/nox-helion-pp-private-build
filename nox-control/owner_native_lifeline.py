@@ -224,12 +224,16 @@ MIGRATED_SCRIPT_NEW_SHA = None
 def replace_script_exact(path, expected_old, replacement):
     """Atomic, owner-locked exact-script swap. No other config or services."""
     protect_path(path)
-    before = path.lstat()
+    def identity(info):
+        # Reading a source may legitimately update atime on relatime mounts.
+        return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+                info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    before = identity(path.lstat())
     if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
         fail("LEGACY_SCRIPT_UNSAFE")
     if path.read_bytes() != expected_old:
         fail("LEGACY_SCRIPT_CHANGED")
-    if path.lstat() != before:
+    if identity(path.lstat()) != before:
         fail("LEGACY_SCRIPT_RACE")
     fd, temp = tempfile.mkstemp(prefix=".nox-lifeline-upgrade-", dir=path.parent)
     try:
@@ -238,7 +242,7 @@ def replace_script_exact(path, expected_old, replacement):
             w.write(replacement)
             w.flush()
             os.fsync(w.fileno())
-        if path.lstat() != before or path.read_bytes() != expected_old:
+        if identity(path.lstat()) != before or path.read_bytes() != expected_old:
             fail("LEGACY_SCRIPT_RACE")
         os.replace(temp, path)
         fd_dir = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
