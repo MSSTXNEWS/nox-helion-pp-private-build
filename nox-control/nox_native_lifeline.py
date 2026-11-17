@@ -205,12 +205,15 @@ def supervise(name, command="status"):
         return {"rc": p.returncode}
     # supervisorctl may include stale status-like stdout on a failed command.
     # Never infer a repairable or healthy state from a nonzero status exit code.
-    if p.returncode != 0:
+    if p.returncode not in (0, 3):
         return {"state": "UNKNOWN", "pid": None, "rc": p.returncode}
     # Treat unknown output, group names, errors, and missing pid as UNKNOWN.
     first = p.stdout.strip().splitlines()
     match = STATUS.match(first[0]) if len(first) == 1 else None
-    if p.returncode != 0 or not match or match[1] != name:
+    if not match or match[1] != name:
+        return {"state": "UNKNOWN", "pid": None, "rc": p.returncode}
+    # rc=3 is a Supervisor STOPPED/EXITED state, never RUNNING/FATAL proof.
+    if p.returncode == 3 and match[2] not in REPAIRABLE:
         return {"state": "UNKNOWN", "pid": None, "rc": p.returncode}
     # Malformed PID evidence may not become a repairable STOPPED/EXITED row.
     # Keep legitimate Supervisor "Not started" and ", uptime" text intact.
