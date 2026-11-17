@@ -15,5 +15,25 @@
   "native_execution_by_package_author": false,
   "native_canary_pass": null,
   "public_tunnel_verified": false,
-  "source_fix": "Dependency-chain-only path aliases; fixed native binding metadata reader"
+  "source_fix": "Dependency-chain-only path aliases; fixed native binding metadata reader",
+  "targeted_common_import_patch": {
+    "validated_at_utc": "2026-11-17T18:05:57.773489+00:00",
+    "command": "python -m unittest discover -s tests -p test_acceptance.py -v",
+    "passed": 3,
+    "failed": 0,
+    "canary_sha256": "a5f18eaa0cdca7f80f9acf998f914c0d8b9ecec1e5a29cde95bc8d98c1baa7a9",
+    "native_calls_by_author": 0
+  },
+  "targeted_v4_split_acceptance": {
+    "validated_at_utc": "2026-11-17T18:22:51.804645+00:00",
+    "command": "python -m unittest discover -s tests -p test_acceptance.py -v",
+    "passed": 5,
+    "failed": 0,
+    "canary_sha256": "2e319aaa381ebecae73de00772397d5d4b640810728be37f78606e3a62372dbf",
+    "native_calls_by_author": 0,
+    "new_fixture_evidence": [
+      "Unknown served HTML rejected; only hashes and fixed marker counts exported",
+      "Full fake transport: one own model request; chat/S03 true; UI false; overall HOLD; credential/cookie/HTML sentinels withheld"
+    ]
+  }
 }

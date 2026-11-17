@@ -1,0 +1,72 @@
+{
+  "schema": "NOX_CANARY_V4_INDEPENDENT_NARROW_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewed_utc": "2026-11-17T18:24:28.677392+00:00",
+  "verdict": "PASS_SOURCE_REVIEW_NO_BLOCKERS",
+  "blocking_findings": [],
+  "native_pass": false,
+  "native_execution_performed": false,
+  "external_calls": 0,
+  "reviewed_source": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/native_resonance_patch/native_acceptance.py",
+    "sha256": "2e319aaa381ebecae73de00772397d5d4b640810728be37f78606e3a62372dbf",
+    "bytes": 37718,
+    "baseline_commit": "1d66f323dee1989a1d88f5e89f1df179cceca224",
+    "baseline_file_sha256": "a5f18eaa0cdca7f80f9acf998f914c0d8b9ecec1e5a29cde95bc8d98c1baa7a9"
+  },
+  "reviewed_owner_wrapper": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/native_release/owner_resonance_canary_v4_20261117.py",
+    "sha256": "f0895cab749f0ac8d0aaecd21c8d545727d130e495b09d7030b7be0f1283975e",
+    "bytes": 16192,
+    "embedded_source_byte_exact": true,
+    "embedded_sha_guard": "explicit conditional SystemExit; survives optimize=2; before exec",
+    "existing_owner_operator_not_modified_by_reviewer": true
+  },
+  "native_serving_wrapper_pin": {
+    "path": "/root/nox/scripts/nox_web29_onehost_18775.py",
+    "sha256": "0a0165e5b061f88ec60009c49a3c12e9823a45b89044604186e307c81fb701e6",
+    "source": "root reported observed native identity; equals v4 constant",
+    "new_native_read_by_reviewer": false
+  },
+  "author_tests_repeated": {
+    "command": "python -m unittest discover -s tests -p test_acceptance.py -v",
+    "passed": 5,
+    "failures": 0,
+    "errors": 0
+  },
+  "independent_tests": {
+    "command": "python -m unittest discover -s nox_refresh/canary_v4_review -p test_*.py -v",
+    "passed": 4,
+    "failures": 0,
+    "errors": 0,
+    "admission_subcases": 7,
+    "test_file_sha256": "329823c79eaf1574c00c745da604e17d691f9629f6221b81efdc22a08fc4eebb",
+    "results_sha256": "5e420616985b58a91d8a545d21439007ea4dd0c7d2680056a9ea5a34a64724a7"
+  },
+  "verified_properties": [
+    "Overall PASS requires useful exact own chat/S03/history AND UI asset acceptance; HTML mismatch cannot become overall PASS.",
+    "Wrong owner/source binding, wrapper pin, busy owner, unproved scoped STOP, held maintenance lease, busy model slots or missing own login cookie produce no own dialog/model request.",
+    "UI diagnostic mismatch permits only the separately authorized synthetic chat after fresh priority/slots admission; HTML is never executed.",
+    "One own stream invocation per canary; ambiguous transport timeout triggers one same-private-cookie scoped STOP attempt, no retry or history read after failed stream.",
+    "Password/cookie/unexpected exception/model answer/HTML sentinels are withheld; normal output reports fixed 42 or hash/WITHHELD.",
+    "Only fixed loopback routes; proxy env disabled; redirects fail; model8098 is slots GET only.",
+    "HTTP body/frame/function/reference counts and wall-time are bounded; diagnostic projections contain lengths/hashes/allowlisted identifiers and no raw source/HTML/literal values.",
+    "Wrapper payload bytes and explicit SHA guard match reviewed source; final completion marker derives only from native_canary_pass."
+  ],
+  "limits": [
+    "Source/fixture review is not native execution, full browser acceptance or external tunnel verification.",
+    "At most one model call is per invocation. Existing owner action identity/authorization/idempotency remains authoritative outside this module.",
+    "An attempted request or failed STOP may leave provider/model work uncertain; no internal retry exists. Root must reconcile the recorded own dialog/run before any new canary attempt.",
+    "Admission checks do not prove browser-owner exclusion after dispatch; maintenance lease serializes cooperating writers only, as documented.",
+    "New operator FILES/SCOPED_REPAIR_BUNDLES substitution is root-owned and was not executed or modified by reviewer."
+  ],
+  "NEXT_READY": {
+    "owner": "root",
+    "action": "Publish reviewed v4 source/owner wrapper under existing authorized owner repair action, preserve operator/workflow guards, perform at most one admitted native attempt, then reconcile sanitized receipt.",
+    "expected_source_sha256": "2e319aaa381ebecae73de00772397d5d4b640810728be37f78606e3a62372dbf",
+    "expected_wrapper_sha256": "f0895cab749f0ac8d0aaecd21c8d545727d130e495b09d7030b7be0f1283975e",
+    "claim_state": "read-only review complete; reviewer releases task slot",
+    "on_uncertain_model_outcome": "HOLD and reconcile own dialog/run; do not automatically rerun generation",
+    "successor_refill": "parent takes next eligible READY after slot release within environment capacity"
+  }
+}

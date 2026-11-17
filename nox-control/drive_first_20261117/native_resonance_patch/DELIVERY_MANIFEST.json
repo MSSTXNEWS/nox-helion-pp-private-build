@@ -20,18 +20,23 @@
     },
     {
       "path": "ACCEPTANCE.md",
-      "bytes": 4147,
-      "sha256": "79af7c501c92ff1e6e352f235f97fd76776433bb3faac5f57919691cfb087962"
+      "bytes": 6490,
+      "sha256": "90ec246fef707c659a6c2fd1fa640391bf87e1b48caaad1e934b2ed6ce506e8a"
     },
     {
       "path": "ACCEPTANCE_TEST_RECEIPT.json",
-      "bytes": 597,
-      "sha256": "83cc01ab904f2f79371cedb8e7b57065537e8ef163ec673ac9994d4dd0698ae6"
+      "bytes": 1523,
+      "sha256": "988715ee1cf252ca328999c0014a03a217a672b8e47064b595fa657eb3ffa1e6"
+    },
+    {
+      "path": "AUTH_PATH_DIAGNOSTIC.md",
+      "bytes": 2722,
+      "sha256": "8379b11abd3a5958d4ed48acc6ac7cd9c21d6fe9feb65e3830ea93b081933da4"
     },
     {
       "path": "NATIVE_CANARY_PARENT_REPORT.json",
-      "bytes": 532,
-      "sha256": "d9ec4f07a7a0afdc645561a47fe4d8e375661ab47d5437a2e15d36384351de97"
+      "bytes": 1753,
+      "sha256": "5f3c6132040902d84df0d035c7d1aa71ffc0a3fc521904edb5baccdef390195a"
     },
     {
       "path": "NATIVE_UI_APPLY_PARENT_REPORT.json",
@@ -55,8 +60,13 @@
     },
     {
       "path": "native_acceptance.py",
-      "bytes": 23738,
-      "sha256": "633c2d1afce41f5d3d99d4fb1b6a5baf5aa488e9f3196426d0317bfa56cbf63b"
+      "bytes": 37718,
+      "sha256": "2e319aaa381ebecae73de00772397d5d4b640810728be37f78606e3a62372dbf"
+    },
+    {
+      "path": "native_auth_path_diagnostic.py",
+      "bytes": 9376,
+      "sha256": "cec1b09d01ea0fc64c8746e5bb88e736c15f0ba852ac99e492b994e90ab16b90"
     },
     {
       "path": "native_integration_readset.py",
@@ -95,8 +105,13 @@
     },
     {
       "path": "tests/test_acceptance.py",
-      "bytes": 5757,
-      "sha256": "d0f2330ce5b63839f9edfe48cd19ae0eedccb6234bab911f85bb433c1a10537a"
+      "bytes": 13335,
+      "sha256": "ab095aae88fab4d295b223dbf0a864014868d6af80b81e1177964cf9a1b4d2eb"
+    },
+    {
+      "path": "tests/test_auth_diagnostic.py",
+      "bytes": 2395,
+      "sha256": "8e15f3174dbf6bb3e5380a40fdd7a4421c64c47a8f1c60fed19f1a5acc81119a"
     },
     {
       "path": "tests/test_patch.py",
@@ -114,5 +129,6 @@
       "sha256": "7d8db91c6831e556d4dbbe1fdb4c104c8f9161567888712c9018d2a805a9c315"
     }
   ],
-  "native_canary_parent_report": "NATIVE_CANARY_PARENT_REPORT.json"
+  "native_canary_parent_report": "NATIVE_CANARY_PARENT_REPORT.json",
+  "latest_source_change": "Version4 independent UI/chat acceptance with fixed-pin serving-source fingerprint diagnostics; native acceptance pending"
 }

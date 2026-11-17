@@ -1,0 +1,9 @@
+test_dispatch_gates_prevent_generation (test_canary_v4_independent.Review.test_dispatch_gates_prevent_generation) ... ok
+test_embedded_sha_guard_survives_optimized_python (test_canary_v4_independent.Review.test_embedded_sha_guard_survives_optimized_python) ... ok
+test_ui_and_chat_are_both_required_for_overall_pass (test_canary_v4_independent.Review.test_ui_and_chat_are_both_required_for_overall_pass) ... ok
+test_uncertain_send_is_not_retried_and_only_own_stop_attempted (test_canary_v4_independent.Review.test_uncertain_send_is_not_retried_and_only_own_stop_attempted) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.016s
+
+OK

@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 SPEC = importlib.util.spec_from_file_location('acceptance', Path(__file__).parents[1] / 'native_acceptance.py')
 m = importlib.util.module_from_spec(SPEC)
@@ -45,6 +46,27 @@ def _read_chat_password():
                     m.resolve_password_path(source.replace("SECRETS / 'owner_private'", bad), root / 'scripts/chat_proxy.py', root)
                 self.assertNotIn('owner_private', str(caught.exception))
                 self.assertNotIn('shadow', str(caught.exception))
+            imported = source.replace("SECRETS = ROOT / 'secrets'", 'from common import SECRETS')
+            common = "from pathlib import Path\nROOT = Path(__file__).resolve().parents[1]\nSECRETS = ROOT / 'secrets'\nUNRELATED = __import__('os').system('must_never_run')\n"
+            self.assertEqual(m.resolve_password_path(imported, root / 'scripts/chat_proxy.py', root, common_source=common), path)
+            with self.assertRaisesRegex(m.Hold, 'HOLD_COMMON_SOURCE_REQUIRED'):
+                m.resolve_password_path(imported, root / 'scripts/chat_proxy.py', root)
+            for unsafe in (imported.replace('from common import SECRETS', 'from other import SECRETS'),
+                           imported.replace('from common import SECRETS', 'from .common import SECRETS'),
+                           imported.replace('from common import SECRETS', 'from common import OTHER as SECRETS')):
+                with self.assertRaises(m.Hold):
+                    m.resolve_password_path(unsafe, root / 'scripts/chat_proxy.py', root, common_source=common)
+            for bad_common in (common.replace("ROOT / 'secrets'", "Path(os.getenv('PRIVATE_TOKEN'))"),
+                               common.replace("ROOT / 'secrets'", "SECRETS"),
+                               common.replace("ROOT / 'secrets'", "Path('/etc')")):
+                with self.assertRaises(m.Hold):
+                    m.resolve_password_path(imported, root / 'scripts/chat_proxy.py', root, common_source=bad_common)
+            common_file = root / 'common.py'
+            common_file.write_text(common)
+            common_raw, proof = m.stable_common_read(common_file)
+            self.assertEqual(proof['sha256'], m.digest(common_raw))
+            self.assertTrue(proof['stable_file_identity_verified'])
+            self.assertNotIn('secrets', json.dumps(proof).lower().replace('import_secrets', ''))
             scoped = '''def register_native_v29_chat(app, trusted, site_dir=None):
  @app.post('/api/nox/stop')
  async def stream_stop(request: Request):
@@ -91,6 +113,81 @@ def _read_chat_password():
         result = m.public_turn(turn, history, question)
         self.assertNotIn('private unexpected text', json.dumps(result))
         self.assertEqual(result['answer_public_synthetic'], '[WITHHELD]')
+
+    def test_unknown_html_diagnostic_hashes_only_and_pinned_source_projection(self):
+        html = (Path(__file__).parents[1] / 'source_after/resonance.html').read_bytes()
+        sentinel = 'PRIVATE_HTML_SENTINEL_8d29'
+        changed = html.replace(b'<head>', m.OWNER_HTML_INJECTION + ('<script src="/' + sentinel + '"></script>').encode(), 1)
+        report = m.served_asset_diagnostic('resonance.html', changed, html, content_type='text/html; charset=UTF-8')
+        self.assertFalse(report['matches_pinned_asset'])
+        self.assertEqual(report['accepted_transform'], 'NONE')
+        self.assertEqual(report['known_owner_head_injection_count'], 1)
+        self.assertEqual(report['difference_after_known_injection_normalization']['expected_middle']['bytes'], 0)
+        self.assertNotIn(sentinel, json.dumps(report))
+        self.assertIn(m.digest(('/' + sentinel).encode()), json.dumps(report))
+        source = ("OVERLAY = '" + sentinel + "'\nclass _OwnerStatic:\n def get_response(self, raw):\n  return raw.replace('<head>', OVERLAY, 1)\n").encode()
+        projection = m.serving_source_projection(source, 'bridge')
+        self.assertEqual(projection['functions'][0]['function'], '_OwnerStatic.get_response')
+        self.assertEqual(projection['functions'][0]['replacements'][0]['args'][1]['identifier'], 'OVERLAY')
+        self.assertNotIn(sentinel, json.dumps(projection))
+        self.assertIn(m.digest(sentinel.encode()), json.dumps(projection))
+
+    def test_ui_mismatch_still_runs_exactly_one_guarded_own_chat_and_overall_holds(self):
+        fixture_dir = Path(__file__).parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td); site = root / 'site'; (site / 'pc').mkdir(parents=True)
+            for name in m.EXPECTED:
+                original = fixture_dir / ('source_after' if name.endswith('.html') else 'pc') / name
+                (site / 'pc' / name).write_bytes(original.read_bytes())
+            proxy, bridge, wrapper = (root / name for name in ('proxy.py', 'bridge.py', 'wrapper.py'))
+            proxy.write_text('pass\n'); bridge.write_text('pass\n')
+            wrapper.write_text("def proxy(raw):\n return raw.replace('<head>', '<head>unrecognized')\n")
+            password = root / 'credential'; password.write_text('PRIVATE_PASSWORD_SENTINEL'); password.chmod(0o600)
+            lock = root / 'owner.lock'; lock.touch()
+            class Response(io.BytesIO):
+                status = 200
+            class Client:
+                def __init__(self):
+                    self.jar = []; self.created = 0; self.requested = 0; self.question = None
+                def raw(self, path, data=None, **kwargs):
+                    assert path == '/chat/login' and data == {'password': 'PRIVATE_PASSWORD_SENTINEL'}
+                    self.jar.append('OWN_COOKIE_SENTINEL'); return b'{}'
+                def asset(self, name, expected_raw):
+                    raw = expected_raw.replace(b'<head>', b'<head><script>UNRECOGNIZED_OVERLAY</script>', 1) if name.endswith('.html') else expected_raw
+                    return m.served_asset_diagnostic(name, raw, expected_raw, content_type='text/html')
+                def json(self, path, data=None, **kwargs):
+                    if path == '/slots':
+                        return [{'is_processing': False}]
+                    if path == '/api/ui/memory/dialogs/create':
+                        self.created += 1
+                        return {'dialog_id': 'a' * 32}
+                    assert path == '/api/ui/memory/dialogs/history?dialog_id=' + 'a' * 32 + '&limit=2'
+                    return {'messages': [{'role': 'user', 'content': self.question}, {'role': 'assistant', 'content': '42'}]}
+                def request(self, path, data=None, **kwargs):
+                    assert path == '/api/nox/chat/stream'
+                    self.requested += 1; self.question = data['message']
+                    assert data['dialog_id'] == 'a' * 32 and data['history'] == []
+                    return Response(b'{"type":"delta","text":"42"}\n{"type":"done","saved":true,"s03_integrated":true}\n')
+            client = Client()
+            patches = {'PROXY': proxy, 'PROXY_SHA': m.digest(proxy.read_bytes()), 'BRIDGE': bridge,
+                       'BRIDGE_SHA': m.digest(bridge.read_bytes()), 'WRAPPER': wrapper,
+                       'WRAPPER_SHA': m.digest(wrapper.read_bytes()), 'SITE': site, 'LOCK': lock}
+            with mock.patch.multiple(m, **patches), mock.patch.object(m, 'resolve_password_path', return_value=password), \
+                 mock.patch.object(m, 'scoped_stop_supported', return_value=True), \
+                 mock.patch.object(m, 'priority_snapshot', return_value={'CHAT_ACTIVE':'0', 'MODE':'IDLE'}), \
+                 mock.patch.object(m, 'LoopbackClient', return_value=client), \
+                 mock.patch.dict(m.os.environ, {'NOX_OWNER_REQUEST_ID': '123', 'NOX_OWNER_SOURCE_SHA': 'b' * 40}):
+                result = m.run(True, expected_source_sha='b' * 40)
+            self.assertEqual(client.created, 1); self.assertEqual(client.requested, 1)
+            self.assertTrue(result['native_chat_canary_pass'])
+            self.assertFalse(result['ui_asset_acceptance_pass'])
+            self.assertFalse(result['native_canary_pass'])
+            self.assertEqual(result['status'], 'HOLD_SERVED_ASSET_HASH')
+            self.assertEqual(result['external_http_requests'], 0)
+            self.assertEqual(client.jar, [])
+            exported = json.dumps(result)
+            for withheld in ('PRIVATE_PASSWORD_SENTINEL', 'OWN_COOKIE_SENTINEL', 'UNRECOGNIZED_OVERLAY', '<head>'):
+                self.assertNotIn(withheld, exported)
 
 if __name__ == '__main__':
     unittest.main()

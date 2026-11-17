@@ -11,6 +11,7 @@ import ast
 import contextlib
 import fcntl
 import hashlib
+from html.parser import HTMLParser
 import http.cookiejar
 import json
 import os
@@ -26,9 +27,12 @@ import urllib.request
 
 ROOT = Path('/root/nox')
 PROXY = ROOT / 'scripts/chat_proxy.py'
+COMMON = PROXY.with_name('common.py')
 PROXY_SHA = 'a03119817d695b1dc7ca2681a60bc564a0aa891468582bbf11b70592e2b4dfd6'
 BRIDGE = ROOT / 'scripts/nox_v29_chat_bridge.py'
 BRIDGE_SHA = '0cff2e7aee068571b2895ec476255e97ef3b85bd93104a27a822acfb8408632b'
+WRAPPER = ROOT / 'scripts/nox_web29_onehost_18775.py'
+WRAPPER_SHA = '0a0165e5b061f88ec60009c49a3c12e9823a45b89044604186e307c81fb701e6'
 SITE = ROOT / 'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site'
 BASE = 'http://127.0.0.1:18775'
 MODEL_BASE = 'http://127.0.0.1:8098'
@@ -56,6 +60,141 @@ def served_asset_matches(name, raw):
         return digest(raw.replace(OWNER_HTML_INJECTION, b'<head>', 1)) == expected
     return False
 
+def _identifier(value):
+    return value if isinstance(value, str) and re.fullmatch(r'[A-Za-z_][A-Za-z_0-9.]{0,159}', value) else '[WITHHELD]'
+
+def _call_name(node):
+    if isinstance(node, ast.Name):
+        return _identifier(node.id)
+    if isinstance(node, ast.Attribute):
+        return _identifier(_call_name(node.value) + '.' + node.attr)
+    return '[COMPUTED]'
+
+def _literal_fingerprint(value):
+    raw = value.encode('utf-8') if isinstance(value, str) else value
+    return {'bytes': len(raw), 'sha256': digest(raw)}
+
+def serving_source_projection(raw, kind):
+    """Pinned-source syntax only. No native code, literal values or URLs returned."""
+    tree = ast.parse(raw.decode('utf-8'))
+    functions = []
+    def collect(nodes, prefix=''):
+        for node in nodes:
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                name = prefix + node.name
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    functions.append((name, node))
+                collect(node.body, name + '.')
+    collect(tree.body)
+    def relevant(name, node):
+        if kind == 'bridge':
+            return name == '_OwnerStatic.get_response' or 'overlay' in name.lower()
+        return (any(x in name.lower() for x in ('proxy', 'response', 'forward', 'handle'))
+                or name.rsplit('.', 1)[-1] in ('do_GET', 'do_POST', 'do_HEAD')
+                or any(isinstance(n, ast.Call) and _call_name(n.func).rsplit('.', 1)[-1] in
+                       ('replace', 'HTMLResponse', 'StreamingResponse', 'Response') for n in ast.walk(node)))
+    selected = [(name, node) for name, node in functions if relevant(name, node)]
+    selected.sort(key=lambda item: (item[0] != '_OwnerStatic.get_response', item[1].lineno))
+    helper_names = {n.func.id for _, node in selected for n in ast.walk(node)
+                    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    selected += [(name, node) for name, node in functions if name in helper_names and (name, node) not in selected]
+    lines = raw.splitlines(keepends=True)
+    rows = []
+    dependencies = set()
+    for name, node in selected[:20]:
+        calls = [n for n in ast.walk(node) if isinstance(n, ast.Call)]
+        literals = [n.value for n in ast.walk(node) if isinstance(n, ast.Constant) and isinstance(n.value, (str, bytes))]
+        dependencies.update(n.id for n in ast.walk(node) if isinstance(n, ast.Name))
+        replacements = []
+        for call in calls:
+            if _call_name(call.func).endswith('.replace'):
+                args = []
+                for arg in call.args[:3]:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, (str, bytes)):
+                        args.append({'kind': 'literal', **_literal_fingerprint(arg.value)})
+                    elif isinstance(arg, ast.Name):
+                        args.append({'kind': 'name', 'identifier': _identifier(arg.id)})
+                    else:
+                        args.append({'kind': type(arg).__name__})
+                replacements.append({'line': call.lineno, 'target': _call_name(call.func), 'args': args})
+        rows.append({'function': _identifier(name), 'line': node.lineno,
+                     'source_sha256': digest(b''.join(lines[node.lineno - 1:node.end_lineno])),
+                     'calls': sorted({_call_name(n.func) for n in calls})[:40],
+                     'replacements': replacements[:16],
+                     'literal_fingerprints': [_literal_fingerprint(v) for v in literals[:48]],
+                     'literal_count': len(literals)})
+    constants = []
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            if node.targets[0].id in dependencies and isinstance(node.value, ast.Constant) and isinstance(node.value.value, (str, bytes)):
+                constants.append({'identifier': _identifier(node.targets[0].id), **_literal_fingerprint(node.value.value)})
+    result = {'source_sha256': digest(raw), 'source_bytes': len(raw), 'source_executed': False,
+              'selected_function_count': len(selected), 'functions': rows,
+              'referenced_literal_bindings': constants[:24], 'literal_values_exported': False}
+    while len(json.dumps(result)) > 16000 and result['functions']:
+        result['functions'].pop()
+    result['emitted_function_count'] = len(result['functions'])
+    return result
+
+def served_asset_diagnostic(name, raw, expected_raw, *, status=200, content_type='', content_encoding='', truncated=False):
+    mime = content_type.split(';', 1)[0].strip().lower()
+    mime = mime if mime in ('text/html', 'text/css', 'text/javascript', 'application/javascript', 'application/json', 'text/plain', 'application/octet-stream') else '[OTHER_OR_MISSING]'
+    encoding = content_encoding.strip().lower()
+    encoding = encoding if encoding in ('', 'identity', 'gzip', 'br', 'deflate') else '[OTHER]'
+    result = {'status': status, 'content_type': mime, 'content_encoding': encoding,
+              'bytes_read': len(raw), 'truncated': truncated, 'sha256': digest(raw),
+              'sha256_scope': 'PREFIX_ONLY' if truncated else 'ENTIRE_RESPONSE',
+              'expected_disk_bytes': len(expected_raw), 'expected_disk_sha256': digest(expected_raw),
+              'matches_pinned_asset': status == 200 and not truncated and served_asset_matches(name, raw)}
+    if name != 'resonance.html':
+        return result
+    normalized = raw
+    count = raw.count(OWNER_HTML_INJECTION)
+    if count == 1:
+        normalized = raw.replace(OWNER_HTML_INJECTION, b'<head>', 1)
+    result['known_owner_head_injection_count'] = count
+    result['accepted_transform'] = ('RAW' if digest(raw) == EXPECTED[name] else
+                                    'SINGLE_KNOWN_OWNER_HEAD_INJECTION' if result['matches_pinned_asset'] else 'NONE')
+    markers = {'html_head': b'<head>', 'html_body': b'<body', 'chat_form': b'chatForm',
+               'native_css': b'nox-resonance-native-fix-v1.css', 'native_js': b'nox-resonance-native-fix-v1.js',
+               'owner_script': b'/nox-web-v29/native-owner.js', 'password_input': b'type="password"'}
+    result['fixed_marker_counts'] = {key: raw.count(value) for key, value in markers.items()}
+    class Refs(HTMLParser):
+        def __init__(self):
+            super().__init__(); self.rows = []; self.total = 0
+        def handle_starttag(self, tag, attrs):
+            if tag not in ('script', 'link', 'img'):
+                return
+            for key, value in attrs:
+                if key in ('src', 'href') and isinstance(value, str):
+                    self.total += 1
+                    if len(self.rows) < 64:
+                        self.rows.append({'tag': tag, 'attribute': key, **_literal_fingerprint(value)})
+    observed, expected = Refs(), Refs()
+    observed.feed(raw.decode('utf-8', errors='replace')); expected.feed(expected_raw.decode('utf-8', errors='replace'))
+    expected_hashes = {row['sha256'] for row in expected.rows}
+    result['static_reference_fingerprints'] = [row | {'present_in_expected_disk': row['sha256'] in expected_hashes} for row in observed.rows]
+    result['static_reference_count'] = observed.total
+    prefix = 0
+    common = min(len(normalized), len(expected_raw))
+    while prefix < common and normalized[prefix] == expected_raw[prefix]:
+        prefix += 1
+    suffix = 0
+    while suffix < common - prefix and normalized[len(normalized) - suffix - 1] == expected_raw[len(expected_raw) - suffix - 1]:
+        suffix += 1
+    expected_middle = expected_raw[prefix:len(expected_raw) - suffix if suffix else len(expected_raw)]
+    served_middle = normalized[prefix:len(normalized) - suffix if suffix else len(normalized)]
+    result['difference_after_known_injection_normalization'] = {
+        'common_prefix_bytes': prefix, 'common_suffix_bytes': suffix,
+        'expected_middle': _literal_fingerprint(expected_middle), 'served_middle': _literal_fingerprint(served_middle)}
+    return result
+
+def finalize_acceptance(report):
+    report['native_chat_canary_pass'] = report.get('useful_chat_pass') is True
+    report['native_canary_pass'] = report['native_chat_canary_pass'] and report.get('ui_asset_acceptance_pass') is True
+    report['status'] = ('PASS' if report['native_canary_pass'] else
+                        'HOLD_USEFUL_CHAT' if not report['native_chat_canary_pass'] else 'HOLD_SERVED_ASSET_HASH')
+
 def regular_read(path, limit):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     try:
@@ -70,17 +209,60 @@ def regular_read(path, limit):
     finally:
         os.close(fd)
 
-def resolve_password_path(source, source_path=PROXY, allowed_root=ROOT):
+def stable_common_read(path=COMMON):
+    """Read existing sibling source as data, with a stable owner-controlled pin."""
+    if path.resolve() != path:
+        raise Hold('HOLD_COMMON_SOURCE_SYMLINK')
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_uid != os.geteuid() or before.st_mode & 0o022 or before.st_size > 250000:
+            raise Hold('HOLD_COMMON_SOURCE_TYPE_OWNER_OR_SIZE')
+        raw = os.pread(fd, 250001, 0)
+        after, current = os.fstat(fd), path.lstat()
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        if len(raw) != before.st_size or any(getattr(before, k) != getattr(after, k) or getattr(before, k) != getattr(current, k) for k in fields):
+            raise Hold('HOLD_COMMON_SOURCE_CHANGED')
+        return raw, {'sha256': digest(raw), 'bytes': len(raw), 'stable_file_identity_verified': True,
+                     'binding': 'PINNED_PROXY_FROM_COMMON_IMPORT_SECRETS_FIXED_SIBLING',
+                     'code_executed': False, 'loaded_module_memory_identity_verified': False}
+    finally:
+        os.close(fd)
+
+def exact_common_import(tree):
+    rows = []
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.asname == 'SECRETS' or alias.name == 'SECRETS' and alias.asname is None:
+                    rows.append((node, alias))
+    if not rows:
+        return False
+    if len(rows) != 1 or rows[0][0].module != 'common' or rows[0][0].level != 0 or rows[0][1].name != 'SECRETS' or rows[0][1].asname is not None:
+        raise Hold('HOLD_SECRETS_IMPORT_UNSUPPORTED')
+    return True
+
+def resolve_password_path(source, source_path=PROXY, allowed_root=ROOT, *, common_source=None):
     """Interpret a tiny path AST grammar; no eval/exec/import or env expansion."""
     tree = ast.parse(source)
-    assigned = {}
-    for node in tree.body:
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name):
-                    assigned.setdefault(target.id, []).append(node.value)
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            assigned.setdefault(node.target.id, []).append(node.value)
+    def assignments(unit):
+        result = {}
+        for node in unit.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        result.setdefault(target.id, []).append(node.value)
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                result.setdefault(node.target.id, []).append(node.value)
+        return result
+    assigned = {'proxy': assignments(tree)}
+    common_import = exact_common_import(tree)
+    if common_import and 'SECRETS' in assigned['proxy']:
+        raise Hold('HOLD_DUPLICATE_SECRETS_BINDING')
+    if common_source is not None:
+        if not common_import:
+            raise Hold('HOLD_UNREQUESTED_COMMON_SOURCE')
+        assigned['common'] = assignments(ast.parse(common_source))
     readers = [x for x in tree.body if isinstance(x, ast.FunctionDef) and x.name == '_read_chat_password']
     if len(readers) != 1:
         raise Hold('HOLD_AUTH_READER_MISSING')
@@ -110,31 +292,39 @@ def resolve_password_path(source, source_path=PROXY, allowed_root=ROOT):
             raise Hold('HOLD_AUTH_READER_ENCODING')
     resolving = set()
     dependencies = set()
-    def evaluate(node):
+    def evaluate(node, unit='proxy'):
         if isinstance(node, ast.Name):
             dependencies.add(node.id)
             if len(dependencies) > 64:
                 raise Hold('HOLD_PATH_CHAIN_LIMIT')
-            if node.id in resolving:
+            identity = (unit, node.id)
+            if identity in resolving:
                 raise Hold('HOLD_PATH_CYCLE')
-            if node.id not in assigned:
+            resolving.add(identity)
+            if unit == 'proxy' and node.id == 'SECRETS' and common_import:
+                if 'common' not in assigned:
+                    raise Hold('HOLD_COMMON_SOURCE_REQUIRED')
+                result = evaluate(ast.Name(id='SECRETS'), 'common')
+                resolving.remove(identity)
+                return result
+            local = assigned[unit]
+            if node.id not in local:
                 raise Hold('HOLD_PATH_NAME')
-            if len(assigned[node.id]) != 1:
+            if len(local[node.id]) != 1:
                 raise Hold('HOLD_DUPLICATE_PATH_BINDING')
-            resolving.add(node.id)
-            result = evaluate(assigned[node.id][0])
-            resolving.remove(node.id)
+            result = evaluate(local[node.id][0], unit)
+            resolving.remove(identity)
             return result
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'Path' and len(node.args) == 1 and not node.keywords:
             arg = node.args[0]
             if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                 return Path(arg.value)
             if isinstance(arg, ast.Name) and arg.id == '__file__':
-                return Path(source_path)
+                return Path(source_path) if unit == 'proxy' else Path(source_path).with_name('common.py')
         if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
             rhs = node.right
             if isinstance(rhs, ast.Constant) and isinstance(rhs.value, str) and rhs.value and not Path(rhs.value).is_absolute() and '..' not in Path(rhs.value).parts:
-                return evaluate(node.left) / rhs.value
+                return evaluate(node.left, unit) / rhs.value
         # Exact Path(__file__).resolve().parents[1], interpreted statically.
         if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Attribute) and node.value.attr == 'parents':
             idx = node.slice
@@ -142,7 +332,8 @@ def resolve_password_path(source, source_path=PROXY, allowed_root=ROOT):
             if isinstance(idx, ast.Constant) and idx.value == 1 and isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute) and call.func.attr == 'resolve' and not call.args and not call.keywords:
                 inner = call.func.value
                 if (isinstance(inner, ast.Call) and isinstance(inner.func, ast.Name) and inner.func.id == 'Path' and len(inner.args) == 1 and isinstance(inner.args[0], ast.Name) and inner.args[0].id == '__file__' and not inner.keywords):
-                    return Path(source_path).absolute().parents[1]
+                    unit_path = Path(source_path) if unit == 'proxy' else Path(source_path).with_name('common.py')
+                    return unit_path.absolute().parents[1]
         raise Hold('HOLD_PATH_EXPRESSION')
     try:
         result = evaluate(ast.Name(id='CHAT_PASSWORD_PATH'))
@@ -240,6 +431,20 @@ class LoopbackClient:
             if len(raw) > limit:
                 raise Hold('HOLD_HTTP_SIZE')
             return raw
+    def asset(self, name, expected_raw):
+        # HTTP errors are UI evidence, not permission to follow redirects or run code.
+        if name not in EXPECTED:
+            raise Hold('HOLD_ASSET_NAME')
+        try:
+            response = self.request('/nox-web-v29/pc/' + name)
+        except urllib.error.HTTPError as exc:
+            response = exc
+        with response:
+            raw = response.read(200001)
+            truncated = len(raw) > 200000
+            return served_asset_diagnostic(name, raw[:200000], expected_raw,
+                status=response.status, content_type=response.headers.get('Content-Type', ''),
+                content_encoding=response.headers.get('Content-Encoding', ''), truncated=truncated)
     def json(self, path, data=None, *, model=False):
         return json.loads(self.raw(path, data, model=model))
 
@@ -310,23 +515,38 @@ def public_turn(turn, history, question):
 def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
     started = time.monotonic()
     report = {'schema': 'NOX_NATIVE_RESONANCE_ACCEPTANCE_V1', 'mode': 'canary' if canary else 'readiness',
-              'native_canary_pass': False, 'external_http_requests': 0, 'credentials_exported': False,
+              'native_canary_pass': False, 'native_chat_canary_pass': False, 'ui_asset_acceptance_pass': False,
+              'external_http_requests': 0, 'credentials_exported': False,
               'model_reloads': 0, 'dialogs_created': 0, 'model_requests': 0,
               'scope': 'LOOPBACK_18775_TO_8080_EXISTING_CHAT_AND_MODEL_8098',
               'public_tunnel_verified': False, 'actor_authorization': 'EXISTING_OWNER_REPAIR_RUNNER_REQUIRED'}
     source = regular_read(PROXY, 250000)
     if digest(source) != PROXY_SHA:
         raise Hold('HOLD_PROXY_SHA_CHANGED')
-    password_path = resolve_password_path(source.decode())
+    common_raw = None
+    if exact_common_import(ast.parse(source.decode())):
+        common_raw, common_pin = stable_common_read()
+        report['common_source_pin'] = common_pin
+    try:
+        password_path = resolve_password_path(source.decode(), common_source=common_raw.decode() if common_raw is not None else None)
+    except Hold as exc:
+        if common_raw is not None:
+            exc.common_source_pin = report['common_source_pin']
+        raise
     bridge_source = regular_read(BRIDGE, 250000)
     if digest(bridge_source) != BRIDGE_SHA:
         raise Hold('HOLD_BRIDGE_SHA_CHANGED')
     stop_scoped = scoped_stop_supported(bridge_source.decode())
+    wrapper_source = regular_read(WRAPPER, 250000)
+    if digest(wrapper_source) != WRAPPER_SHA:
+        raise Hold('HOLD_WRAPPER_SHA_CHANGED')
     report['proxy_sha256'] = PROXY_SHA
     report['bridge_sha256'] = BRIDGE_SHA
+    report['wrapper_sha256'] = WRAPPER_SHA
     report['auth_path_resolved'] = True
     report['scoped_stop_verified'] = stop_scoped
-    report['assets_on_disk'] = {name: digest(regular_read(SITE / 'pc' / name, 200000)) == expected for name, expected in EXPECTED.items()}
+    disk_assets = {name: regular_read(SITE / 'pc' / name, 200000) for name in EXPECTED}
+    report['assets_on_disk'] = {name: digest(raw) == EXPECTED[name] for name, raw in disk_assets.items()}
     report['priority'] = priority_snapshot()
     if not canary:
         report['status'] = 'READY_FOR_EXPLICIT_CANARY' if stop_scoped and all(report['assets_on_disk'].values()) else 'HOLD_READINESS'
@@ -353,6 +573,10 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
         with maintenance_lease(maintenance_lock_fd):
             priority_snapshot()
             report['free_model_slots'] = slots_free(client)
+            if common_raw is not None:
+                current_common, _ = stable_common_read()
+                if digest(current_common) != report['common_source_pin']['sha256']:
+                    raise Hold('HOLD_COMMON_SOURCE_CHANGED_BEFORE_LOGIN')
             info = password_path.stat()
             if info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) & 0o077:
                 raise Hold('HOLD_CREDENTIAL_FILE_PERMISSIONS')
@@ -367,11 +591,22 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
                 raise Hold('HOLD_OFFICIAL_LOGIN_NO_SESSION')
             report['authenticated_login'] = True
             report['authenticated_assets'] = {}
-            for name, expected in EXPECTED.items():
-                raw = client.raw('/nox-web-v29/pc/' + name)
-                report['authenticated_assets'][name] = served_asset_matches(name, raw)
-            if not all(report['authenticated_assets'].values()):
-                raise Hold('HOLD_SERVED_ASSET_HASH')
+            report['served_asset_diagnostics'] = {}
+            for name in EXPECTED:
+                diagnostic = client.asset(name, disk_assets[name])
+                report['served_asset_diagnostics'][name] = diagnostic
+                report['authenticated_assets'][name] = diagnostic['matches_pinned_asset']
+            report['ui_asset_acceptance_pass'] = all(report['authenticated_assets'].values())
+            if not report['ui_asset_acceptance_pass']:
+                report['ui_status'] = 'HOLD_SERVED_ASSET_HASH'
+                report['serving_source_projection'] = {
+                    'bridge': serving_source_projection(bridge_source, 'bridge'),
+                    'wrapper': serving_source_projection(wrapper_source, 'wrapper')}
+            else:
+                report['ui_status'] = 'PASS'
+            # HTML is never executed here. Its independent mismatch cannot change
+            # pinned auth, own-session scope or chat admission. Overall PASS still
+            # requires both UI asset identity and the real own-chat receipt.
             marker = secrets.token_hex(6)
             question = '[QA ' + marker + '] Сколько будет 17 + 25? Ответь только числом.'
             priority_snapshot(); slots_free(client)
@@ -392,8 +627,7 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
             response.close(); response = None
             history = client.json('/api/ui/memory/dialogs/history?dialog_id=' + did + '&limit=2')
             report.update(public_turn(turn, history, question))
-            report['native_canary_pass'] = report['useful_chat_pass']
-            report['status'] = 'PASS' if report['native_canary_pass'] else 'HOLD_USEFUL_CHAT'
+            finalize_acceptance(report)
     except (Exception, KeyboardInterrupt) as exc:
         report['status'] = str(exc) if isinstance(exc, Hold) else 'HOLD_BOUNDED_CANARY_FAILURE'
         # Never print raw exception text, cookies, password, or unexpected answer.
@@ -429,6 +663,8 @@ def main():
         result = {'schema': 'NOX_NATIVE_RESONANCE_ACCEPTANCE_V1', 'status': str(exc) if isinstance(exc, Hold) else 'HOLD_READINESS_FAILURE', 'native_canary_pass': False, 'credentials_exported': False}
         if isinstance(exc, Hold) and hasattr(exc, 'dependency_identifiers'):
             result['dependency_identifiers'] = exc.dependency_identifiers
+        if isinstance(exc, Hold) and hasattr(exc, 'common_source_pin'):
+            result['common_source_pin'] = exc.common_source_pin
     print('NOX_MAINT_REPAIR=' + json.dumps({'kind': 'native_resonance_acceptance', 'data': result}, ensure_ascii=False, separators=(',', ':')), flush=True)
     return 0 if result.get('native_canary_pass') or result.get('status') == 'READY_FOR_EXPLICIT_CANARY' else 2
 

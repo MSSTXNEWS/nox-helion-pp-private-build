@@ -34,6 +34,13 @@ the supported path syntax, final root and symlink guards are unchanged. Calls to
 environment readers or other functions, cycles and duplicate assignments in the
 used chain HOLD. A failure may publish bounded ASCII dependency names, never
 their values, source or paths. Unrelated assignments are never interpreted.
+The observed native `from common import SECRETS` is the sole supported cross-file
+binding: only the fixed sibling `/root/nox/scripts/common.py` is read as data.
+Its owner/mode, regular-file type and stable inode/stat/path are checked, its SHA
+is reported, and only the SECRETS path dependency chain is interpreted. That SHA
+is checked again before login. No alias, relative import, wildcard, other module,
+environment call or module execution is accepted. This records current source
+identity; it does not claim inspection of the running process's cached module.
 the native app is never imported. The secret is read privately
 only for official `/chat/login`. All later requests use a new private cookie
 jar, which is cleared on exit.
@@ -43,6 +50,29 @@ CSS and new JS. HTML accepts the exact source bytes or only the known existing
 `_OwnerStatic` single injection of `/nox-web-v29/native-owner.js` immediately
 after `<head>`; removing that one exact insertion must recover the pinned SHA.
 Duplicate or other overlays fail. CSS/JS retain strict raw SHA checks.
+
+Version 4 separates two results: `ui_asset_acceptance_pass` proves those three
+served assets; `native_chat_canary_pass` proves the authenticated chat, model
+stream and exact own S03 history. `native_canary_pass` is their conjunction.
+An unrecognized served HTML change remains `HOLD_SERVED_ASSET_HASH` overall
+even when the chat works. Because this canary never executes HTML, that isolated
+UI mismatch does not block the single independently guarded chat test. Source
+identity, official authentication, owner runner binding, idle priority, free
+model slots, maintenance lease and own-session STOP remain mandatory. A failed
+guard still stops the run. Unknown HTML is never normalized or accepted.
+
+The pinned `/root/nox/scripts/nox_web29_onehost_18775.py` wrapper is also checked
+before HTTP: SHA `0a0165e5b061f88ec60009c49a3c12e9823a45b89044604186e307c81fb701e6`,
+as reported by the parent from native binding identities. Asset diagnostics
+contain only HTTP status, sanitized MIME/encoding, byte length/SHA, fixed marker
+counts, static reference fingerprints and bounded changed-span fingerprints.
+No HTML, arbitrary URL, response-header value, source literal or source body is
+exported. On a UI mismatch, fixed-file bridge/wrapper AST projections identify
+relevant functions and calls, replacement argument shapes and literal lengths
+and SHA hashes, capped at 16 KB per source. No native source is imported or
+executed. These projections diagnose a transform; they do not authorize a new
+transform or claim that disk source equals process memory.
+
 It creates one uniquely named QA dialog, asks `17 + 25` once,
 reads NDJSON meaningful deltas and terminal receipt, and reads only that own
 dialog's last two messages. PASS requires exactly numerical 42, saved and
@@ -59,9 +89,12 @@ semantics HOLD before generation. There are no retries. The QA dialog is left
 as evidence, not silently deleted. A failed history check may still leave a
 completed own generation; the report does not claim rollback.
 
-Local validation: three focused tests passed, covering rejected AST code/path
+Local validation: five focused tests passed, covering rejected AST code/path
 escape with nonleaking errors, scoped/global stop distinction, actual NDJSON
-and missing terminal, exact own history and withheld unexpected model text.
+and missing terminal, exact own history and withheld unexpected model text;
+unknown HTML fingerprints and AST literal withholding; and a complete local
+fake transport run proving one own dialog/request, successful chat/S03, failed
+UI and overall HOLD without leaking credential, cookie or HTML sentinels.
 No native HTTP request or deployment was executed by the author. Browser
 geometry and external tunnel availability are separate acceptance checks;
 loopback PASS alone does not certify a publicly working link.
