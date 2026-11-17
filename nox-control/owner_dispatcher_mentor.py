@@ -453,6 +453,18 @@ def record_experience(ok, task, what, evidence, fix='', accepted_path=None):
 def component_validation(task):
     """Bounded native checks for actual queue jobs; no fake sleep/track success."""
     component = (task.get('params') or {}).get('component')
+    if component == 'dispatcher_reciprocal_health':
+        # Read-only reciprocal observation through the CURRENT Supervisor.
+        # A configured unit/worker count is not proof of a live process.
+        try:
+            import owner_dispatcher_reciprocal_health as reciprocal
+            live = reciprocal.inspect()
+            if live.get('verified') is True and live.get('state') == 'ALL_IDENTITIES_VERIFIED':
+                return {'verification': {'kind': 'native_reciprocal_dispatcher_identity',
+                                         'scope': live['scope'], 'services': live['services']}}
+            return {'verification': None, 'state': 'HOLD_DISPATCHER_RECIPROCAL_IDENTITY'}
+        except (ImportError, OSError, ValueError, TypeError, KeyError):
+            return {'verification': None, 'state': 'HOLD_RECIPROCAL_MODULE_OR_PROBE'}
     if component == 'dispatcher_workers':
         # Configured thread slots do not prove independent native worker PIDs.
         # Only an owner-native /proc PID+start_ticks and job/heartbeat readback
