@@ -112,6 +112,29 @@ class GatewayTests(unittest.TestCase):
         self.assertTrue(answer[1]['historical_unverified'])
         self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
 
+    def test_current_session_recall_survives_over_256_later_history_imports(self):
+        # A current owner M1 fact must not disappear simply because later
+        # migrations inserted more than the bounded recent-rowid window.
+        with g.connection(self.db,write=True) as c:
+            item(c,'current_session','owner current session decision','M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-17T18:00:00Z','current_session'))
+            for i in range(300):
+                key='old_import_'+str(i)
+                item(c,key,'unverified historical note '+str(i),'M1')
+                c.execute('UPDATE s03_items SET ts=?,meta=? WHERE id=?',
+                          ('2024-01-01','{"history_import":true}',key))
+            item(c,'malformed_meta','untrusted malformed legacy metadata','M1')
+            c.execute('UPDATE s03_items SET meta=? WHERE id=?',
+                      ('{invalid JSON','malformed_meta'))
+        before=hashlib.sha256(self.db.read_bytes()).hexdigest()
+        result=g.recall('nomatchtoken',db=self.db,
+                        identity_fn=lambda: (_ for _ in ()).throw(OSError('offline')))
+        self.assertEqual(result[0]['id'],'current_session')
+        self.assertEqual(result[0]['how'],'recent')
+        self.assertNotIn('HOLD_S03_',str(result))
+        self.assertEqual(before,hashlib.sha256(self.db.read_bytes()).hexdigest())
+
     def test_recent_rejects_future_clock_and_oversized_request(self):
         with g.connection(self.db, write=True) as c:
             item(c, 'valid', 'valid current fact', 'M1')
