@@ -1,3 +1,15 @@
+## A3 · 18.11.2026 00:30 МСК · malformed-typed provenance S03 source fix
+
+- **TaskID/run/op:** `V14-3-24` continued · `NOX-A3-20261118-0024-PROVENANCE-TYPE` · `f0ca39856c1be2cd4586d6c56acc38469cdcb48d8c660b827da2aa457cdbec81`. No extra native/task acceptance.
+- **Actual defect:** SQLite `recent_rows()` ordered 300 JSON-valid but incorrectly typed `{"history_import":1}` records as current owner facts ahead of genuine M1 before `LIMIT 256`. Reproduced locally on in-memory SQLite. Neither original canonical S03 nor credentials were read or changed.
+- **Source patch exact:** `nox-control/owner_s03_gateway.py` blob `f94f3be7815a8dc98b637e4de52d57740cb0744f` → `5d343f562845f4e8690df98b81d97e85a2815346`, [commit df052981](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/df05298155dc72fa5d4a415a7616d1b18a06f3e3). Python+SQL now rank explicit non-boolean history markers as invalid/unverified before candidate cut.
+- **Regression:** `nox-control/test_owner_s03_gateway.py` blob `35fe25a87a96631b04341df9769211824d226a43` → `c2fd7843395734fa8a5db535ca5882e186ca05fc`; [source CI #44180257716/job134382383832](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44180257716/job/134382383832) **31/31 PASS** on head `00f0fb5ab586bc2419d2fef05b9f461a91f6c783`, test visibly executed.
+- **Claim/readback:** Existing GitLab A3 scoped [claim + source receipt](https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/commit/1f2389e192210d4775d0c94f76ab8d4e9e924635), `active=false`, source scope only. [Machine receipt](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/b0d9ebcc2d13a59934dc4f916890a24d02f9e77c) and [IncidentID](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/bfecd7a1b8c751c22d9e32960e362e2e5c627832): `NOX-A3-S03-NONBOOLEAN-HISTORY-MARKER-20261118`. Claim released; no A3 owner native lease, no active A3 remote runs.
+- **Acceptance:** SOURCE_TESTED only; INSTALLED/LOADED/USED/ACCEPTED remain HOLD. No OneHost mutations, no model calls, no optimizer update, no STOP/PAUSED_SOURCE changes; schedules untouched. Direct collaboration tools unavailable in this execution: `SUBAGENTS_UNAVAILABLE`, agent IDs/work IDs none.
+- **NEXT_READY:** read fresh task/file claims and installed→served S03 exact SHA/PID/start_ticks via *existing owner-authorized read-only transport*. Verify owner STOP/ACL, fenced lease and independent S03 restore; then one actual scoped current-M1 query preserving background provenance. If native window absent, take next unclaimed independent S03/working-object source task (do not repeat this test on unchanged SHA). `next_cursor=A3/V14-3-24/NATIVE_SHA_MAPPING_OR_NEXT_FREE_MEMORY_READY`. Unknown external effects by others require reconciliation, not replay.
+
+---
+
 ## A6 · 17.11.2026 23:55 МСК · read-only native release reconciliation
 
 - **TaskID/run/operation:** `5V14-24` · `NOX-A6-20261117-2354-READONLY-RECON` · `bb3e54d4bbebcc46c81ff0094d2628f0fe028936433bc701aafc4dad6b7d1967`; scoped A6 claim [GitLab `6110244b`](https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/commit/6110244b087695581e3b0c49b78f0c4dc6d0c384).
