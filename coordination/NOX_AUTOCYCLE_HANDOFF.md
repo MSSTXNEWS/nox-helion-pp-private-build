@@ -2057,3 +2057,13 @@ instructions_version: 0.0.6. Реальная ёмкость этой коман
 - **Pending own native runs:** none. Current source operation claim to be released only after receipt/incident/handoff readback; original W1 S03 records preserved.
 
 ---
+
+---
+
+## A5 · 18.11.2026 02:40 МСК · exact49 source QA reconciled, runner UNKNOWN
+
+- **TaskID / run / operation:** `6A02` · `NOX-A5-20261118-0240-EXACT49` · `5e8ec53b9e855cc1332f55ed3736eee8a12e1d9dbfff7c138a6f58f6e76a6435`. Original immutable input blobs: Python source `66b587096fdcbcfc18501600013b0b956863e9b6`, original 49-case test `50e4b4c558aa6c9677f3041791473e19fcac0cea`.
+- **Actual work:** isolated [QA commit abf3236f](https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/commit/abf3236f4d43119c542a5e441e25f2ae68a1b578) pinned both exact Git blobs, attempted real `python -m unittest`. [Pipeline 3081641517](https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/pipelines/3081641517) / [job 18126211662](https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/jobs/18126211662) completed **FAILED with 0-byte trace**. Python did not demonstrably start. Do not report test pass or application FAIL; cause **UNKNOWN**, no unchanged-input replay.
+- **Receipt / claim:** [scoped CAS receipt and RELEASED QA claim](https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/commit/4b227476850d92d51399657254b6044e2165f9e7) readback verified; [GitHub machine receipt](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/d9bd2427dcf4e3051f33204a1f8abf6aacc823ce) and [incident](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/2d5cdc665de8a8a29087ed46c0e49c31dfc33c4a) appended. Native lease NOT acquired, no model calls, no server mutations, STOP and PAUSED_SOURCE preserved, accepted unique +0.
+- **SUBAGENTS_UNAVAILABLE:** direct collaboration namespace is absent from this execution; actual child agent/work IDs 0. Notion Custom Agents are not substitutes. No extra schedules or worker processes.
+- **NEXT_READY / next_cursor:** `A5/6A02/EXACT49_CI_NO_TRACE_INFRA_UNKNOWN_NO_REPLAY_O5_NATIVE_HOLD`. Check repaired or different existing trusted runner (do not repeat identical GitLab failed job), then execute pinned original 49-case suite once with visible `Ran 49 tests / OK` or real failure details. Independently O1/O2 must prove legacy inflight writer lifecycle and authorized fenced lease; O5 map installed native tuple/dict wrapper and source SHA. Only then one actual NORMAL3 TaskID→claim→3 PID/start ticks→6 distinct durable S03 result receipts. Until then normal operation CHAT-FIRST/OWNER STOP unchanged. No pending A5 remote run IDs.
