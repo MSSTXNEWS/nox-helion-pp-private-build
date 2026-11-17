@@ -1742,3 +1742,9 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **New independent root cause:** `_executor_status_reply` opens mutable status path using `O_RDONLY|O_NOFOLLOW` without `O_NONBLOCK`; an unexpected FIFO at status path can indefinitely block `os.open` before `fstat` rejects nonregular files. That stalls admission of otherwise healthy chat status messages. Plan: fail-closed nonblocking open, original regular-file verification unchanged, one FIFO regression in existing test suite.
 - **No native action:** current Vast.ai owner STOP/lease, live PID+starttime, active model SHA and independent S03 restore unavailable; production hold. No downloads, removals, restarts, S03 writes or optimizer updates.
 - **Next:** exact source/test CAS, existing narrow tests and readback; on fail record HOLD and release source claim; on pass report SOURCE_TESTED only. Roll back exact source/test blobs under fresh CAS if needed.
+
+
+### NOX-V14-B4-V14-4-12-SOURCE-CLAIM-20261117 · 2026-11-17T00:38:00Z · instructions_version 0.0.6
+- **TaskID V14-4-12**, owner **B4 PROCESS 4**; GitHub source-only CAS claim, not native OneHost lease. A4 V14-4-11 SOURCE_TESTED; prior B4 V14-4-10 SOURCE_TESTED; A4 V14-4-09 remains separate.
+- Scope: existing `owner_task_lifecycle.shared_context` reused same-parent cache's task-specific optimization evidence across different handlers/params. Correct only verified source defect with regression; preserve S03/STOP and original dispatcher. Fail CLOSED if concurrent change.
+- Native STOP/lease/PID, storage auth, independent restore UNKNOWN. No OneHost changes. Release source claim in terminal handoff after test/readback.
