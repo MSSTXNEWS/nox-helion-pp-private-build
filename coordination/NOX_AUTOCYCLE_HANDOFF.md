@@ -1693,3 +1693,9 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **Native OneHost:** STOP current state and writer lease **UNKNOWN**, no live PID/start_ticks, no independent S03/checkpoint restore; not installed, not live verified. New native S03 jobs, optimizer updates, downloads/deletions/restarts = **0**. No schedules, weights, protected assets, OWNER STOP changed.
 - **Rollback:** only revert exact source/test/workflow change after fresh HEAD and blob CAS; no server rollback. Shared error marker `NOX-V14-A4-VERIFIED-JOURNAL-ACCEPTED-20261117` appended.
 - **Next B4:** do not recode `V14-4-11`; choose next unclaimed `V14-4-12` source work or prioritize native owner-authorized STOP/lease+PID/Genesis/S03/checkpoint readback, then E2E original chat. Keep `V14-4-09` claim separate, avoid duplicates.
+
+
+### NOX-V14-B2-V14-2-22-SOURCE-CLAIM · 2026-11-17T00:29:47.438Z · instructions_version 0.0.6
+- Owner B2 PROCESS2, unique V14-2-22 telemetry source-only CAS claim; NO OneHost native writer/STOP lease. Previous A2 V14-2-08 and B2 V14-2-09 SOURCE_TESTED, untouched.
+- Exact source scope: existing nox-control/owner_native_inspect.py PID/start_ticks double-read admission for GPU process mapping, and original test_owner_native_inspect_inventory.py regression; prevent reported nvidia-smi PID re-use race from misattributing VRAM to unrelated process. Do not create scheduler/backend or change running processes.
+- Native STOP/lease/PID current state UNKNOWN. Test in source CI if possible; release claim with SHA + verified result/HOLD promptly, no server actions.
