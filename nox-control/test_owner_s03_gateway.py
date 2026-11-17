@@ -135,6 +135,37 @@ class GatewayTests(unittest.TestCase):
         self.assertNotIn('HOLD_S03_',str(result))
         self.assertEqual(before,hashlib.sha256(self.db.read_bytes()).hexdigest())
 
+    def test_malformed_metadata_cannot_starve_current_owner_recall(self):
+        # A corrupt old import is not evidence of a current owner decision.
+        # The SQL candidate LIMIT must distinguish both malformed JSON and
+        # valid but non-object JSON before it truncates the rowid window.
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current', 'most recent verified owner decision', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-17T20:00:00Z', 'current'))
+            for i in range(300):
+                key = 'bad_json_' + str(i)
+                item(c, key, 'legacy malformed fact ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET meta=?,ts=? WHERE id=?',
+                          ('{invalid JSON', '2024-01-01', key))
+            for i in range(300):
+                key = 'non_object_' + str(i)
+                item(c, key, 'legacy JSON scalar ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET meta=?,ts=? WHERE id=?',
+                          ('[]', '2024-01-01', key))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with g.connection(self.db) as c:
+            candidates = g.recent_rows(c)
+        self.assertEqual(candidates[0]['id'], 'current')
+        self.assertEqual(g._recent_provenance_rank(candidates[0]), 2)
+        self.assertEqual(g._recent_provenance_rank({'meta': '{bad'}), 0)
+        self.assertEqual(g._recent_provenance_rank({'meta': '[]'}), 0)
+        self.assertEqual(g._recent_provenance_rank({'meta': '{"history_import":true}'}), 1)
+        answer = g.recall('nomatchtoken', db=self.db,
+                          identity_fn=lambda: (_ for _ in ()).throw(OSError('offline')))
+        self.assertEqual(answer[0]['id'], 'current')
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
     def test_recent_rejects_future_clock_and_oversized_request(self):
         with g.connection(self.db, write=True) as c:
             item(c, 'valid', 'valid current fact', 'M1')
