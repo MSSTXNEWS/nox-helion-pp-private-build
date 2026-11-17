@@ -1,0 +1,2557 @@
+{
+  "ast_read_started": true,
+  "checkpoint_created_claim": false,
+  "database_opened": false,
+  "instance": 60509551,
+  "module_resolution": [
+    {
+      "module": "s03_memory",
+      "origins": [
+        "/root/nox/scripts/s03_memory.py"
+      ],
+      "resolution_only_no_import": true
+    },
+    {
+      "module": "native_bridge_v38",
+      "origins": [],
+      "resolution_only_no_import": true
+    },
+    {
+      "module": "durable_runtime",
+      "origins": [],
+      "resolution_only_no_import": true
+    },
+    {
+      "module": "synaptic_brain",
+      "origins": [],
+      "resolution_only_no_import": true
+    }
+  ],
+  "private_literals_exported": false,
+  "request": "6934845556",
+  "run_id": "NOX-49-20261117",
+  "runtime_bindings_verified": false,
+  "runtime_modules_imported": false,
+  "schema": "NOX_STOP_AND_S03_AST_V1",
+  "source_deleted": false,
+  "source_sha": "d514906e293655de937ec02561af2c286c46e357",
+  "source_writes": 0,
+  "sources": [
+    {
+      "bytes": 37827,
+      "contract": {
+        "ast_nodes": 5126,
+        "classes": [],
+        "constructor_bindings": [],
+        "contract_slots": [
+          {
+            "bound_symbol": null,
+            "line": 594,
+            "target": "revision"
+          }
+        ],
+        "functions": [
+          {
+            "async": false,
+            "calls": [
+              "Path",
+              "RuntimeError",
+              "conn.close",
+              "conn.execute",
+              "path.is_file",
+              "path.is_symlink",
+              "sqlite3.connect",
+              "str"
+            ],
+            "default_count": 1,
+            "end_line": 71,
+            "keyword_only": [],
+            "line": 52,
+            "name": "_db",
+            "owner": null,
+            "positional": [
+              "write"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "_db",
+              "db.execute"
+            ],
+            "default_count": 0,
+            "end_line": 96,
+            "keyword_only": [],
+            "line": 90,
+            "name": "_s03_ready",
+            "owner": null,
+            "positional": [],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "_db",
+              "_timestamp",
+              "answer.strip",
+              "db.execute",
+              "isinstance",
+              "len",
+              "question.strip",
+              "re.fullmatch"
+            ],
+            "default_count": 0,
+            "end_line": 193,
+            "keyword_only": [],
+            "line": 172,
+            "name": "_readback",
+            "owner": null,
+            "positional": [
+              "question",
+              "answer",
+              "started_at"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "RuntimeError",
+              "_db",
+              "_get_dialog",
+              "_now",
+              "bool",
+              "db.execute",
+              "expected.items",
+              "len"
+            ],
+            "default_count": 0,
+            "end_line": 233,
+            "keyword_only": [],
+            "line": 195,
+            "name": "_save_exchange",
+            "owner": null,
+            "positional": [
+              "dialog_id",
+              "question",
+              "answer",
+              "exchange_id"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "JSONResponse",
+              "Path",
+              "RuntimeError",
+              "StreamingResponse",
+              "_OwnerStatic",
+              "_db",
+              "_get_dialog",
+              "_jsonl",
+              "_model_name",
+              "_next_native_chunk_or_stop",
+              "_now",
+              "_row",
+              "_s03_ready",
+              "_schema_ready",
+              "_sse_delta",
+              "_validated_history",
+              "active.get",
+              "active.pop",
+              "answer.strip",
+              "any",
+              "app.get",
+              "app.mount",
+              "app.post",
+              "app.router.routes.insert"
+            ],
+            "default_count": 1,
+            "end_line": 779,
+            "keyword_only": [],
+            "line": 451,
+            "name": "register_native_v29_chat",
+            "owner": null,
+            "positional": [
+              "app",
+              "trusted",
+              "site_dir"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          }
+        ],
+        "imports": [
+          {
+            "level": 0,
+            "module": "__future__",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "annotations"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "asyncio"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "codecs"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "contextlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "contextmanager"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "datetime",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "datetime"
+              },
+              {
+                "alias": null,
+                "name": "timezone"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "hashlib"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "json"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "pathlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Path"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "re"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "sqlite3"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "time"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "uuid"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "urllib.request"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "typing",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Mapping"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "fastapi",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Request"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "fastapi.responses",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "HTMLResponse"
+              },
+              {
+                "alias": null,
+                "name": "JSONResponse"
+              },
+              {
+                "alias": null,
+                "name": "Response"
+              },
+              {
+                "alias": null,
+                "name": "StreamingResponse"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "fastapi.routing",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "APIRoute"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "fastapi.staticfiles",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "StaticFiles"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "s03_memory"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "nox_v125_live_readonly",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "register_nox_v125_live_readonly"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "owner_chat_ui",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "decorate_html"
+              }
+            ]
+          }
+        ],
+        "literal_values_exported": false,
+        "runtime_binding_verified": false,
+        "truncated": false
+      },
+      "path": "/root/nox/scripts/nox_v29_chat_bridge.py",
+      "runtime_imported": false,
+      "sha256": "7669bf1c3158c0f30f0f4ee6302427e540618041c9a8c554320464045973dc6c",
+      "state": "AST_CONTRACT_OBSERVED"
+    },
+    {
+      "bytes": 67233,
+      "contract": {
+        "ast_nodes": 11568,
+        "classes": [],
+        "constructor_bindings": [],
+        "contract_slots": [],
+        "functions": [
+          {
+            "async": false,
+            "calls": [
+              "h.release",
+              "task.pop"
+            ],
+            "default_count": 0,
+            "end_line": 1021,
+            "keyword_only": [],
+            "line": 1016,
+            "name": "release_locks",
+            "owner": null,
+            "positional": [
+              "task"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          }
+        ],
+        "imports": [
+          {
+            "level": 0,
+            "module": "__future__",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "annotations"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "hashlib"
+              },
+              {
+                "alias": null,
+                "name": "json"
+              },
+              {
+                "alias": null,
+                "name": "os"
+              },
+              {
+                "alias": null,
+                "name": "re"
+              },
+              {
+                "alias": null,
+                "name": "shutil"
+              },
+              {
+                "alias": null,
+                "name": "signal"
+              },
+              {
+                "alias": null,
+                "name": "subprocess"
+              },
+              {
+                "alias": null,
+                "name": "sys"
+              },
+              {
+                "alias": null,
+                "name": "threading"
+              },
+              {
+                "alias": null,
+                "name": "time"
+              },
+              {
+                "alias": null,
+                "name": "traceback"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "concurrent.futures",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "ThreadPoolExecutor"
+              },
+              {
+                "alias": null,
+                "name": "as_completed"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "datetime",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "datetime"
+              },
+              {
+                "alias": null,
+                "name": "timezone"
+              },
+              {
+                "alias": null,
+                "name": "timedelta"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "pathlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Path"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "typing",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Any"
+              },
+              {
+                "alias": null,
+                "name": "Optional"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": "owner_mentor",
+                "name": "owner_dispatcher_mentor"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "owner_component_tasks",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "run_component_task"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_media_runtime"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_task_plans"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_s03_gateway"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_qwen_media_handoff"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_qwen_training_guard"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_qwen_media_guard"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_media_inbox_fair"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_subagent_dispatcher"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_subagent_instruction_truth"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_qwen_handback_retry"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_task_lifecycle"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_subagent_dispatcher"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": "journal",
+                "name": "nox_journal"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": "_f",
+                "name": "fcntl"
+              },
+              {
+                "alias": "_o",
+                "name": "os"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": "_json",
+                "name": "json"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": "_json",
+                "name": "json"
+              }
+            ]
+          }
+        ],
+        "literal_values_exported": false,
+        "runtime_binding_verified": false,
+        "truncated": false
+      },
+      "path": "/root/nox/scripts/nox_dispatcher_t855u.py",
+      "runtime_imported": false,
+      "sha256": "c8e6adccf85b9dd089486cdbcc192261d34390cba9fb68231b4966e82d7024bb",
+      "state": "AST_CONTRACT_OBSERVED"
+    },
+    {
+      "bytes": 37583,
+      "contract": {
+        "ast_nodes": 4676,
+        "classes": [],
+        "constructor_bindings": [],
+        "contract_slots": [],
+        "functions": [
+          {
+            "async": false,
+            "calls": [
+              "Path",
+              "clean",
+              "fcntl.flock",
+              "getattr",
+              "handle.fileno",
+              "handle.flush",
+              "handle.write",
+              "json.dumps",
+              "os.fdopen",
+              "os.fsync",
+              "os.open",
+              "path.parent.mkdir"
+            ],
+            "default_count": 0,
+            "end_line": 113,
+            "keyword_only": [],
+            "line": 103,
+            "name": "append_json",
+            "owner": null,
+            "positional": [
+              "path",
+              "value"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          }
+        ],
+        "imports": [
+          {
+            "level": 0,
+            "module": "__future__",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "annotations"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "ast"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "fcntl"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "hashlib"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "json"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "os"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "pathlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Path"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "re"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "subprocess"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "tempfile"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "threading"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "time"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "urllib.parse"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "urllib.request"
+              }
+            ]
+          }
+        ],
+        "literal_values_exported": false,
+        "runtime_binding_verified": false,
+        "truncated": false
+      },
+      "path": "/root/nox/scripts/owner_dispatcher_mentor.py",
+      "runtime_imported": false,
+      "sha256": "12211a29f77de8e5181d4dd78c35d5da2ed5de0dc6ea529149d32f0896809292",
+      "state": "AST_CONTRACT_OBSERVED"
+    },
+    {
+      "bytes": 36715,
+      "contract": {
+        "ast_nodes": 6590,
+        "classes": [],
+        "constructor_bindings": [],
+        "contract_slots": [],
+        "functions": [
+          {
+            "async": false,
+            "calls": [
+              "NONCE.fullmatch",
+              "PlanHold",
+              "Planner",
+              "admission_capacity",
+              "any",
+              "bool",
+              "callable",
+              "claim.get",
+              "copy.deepcopy",
+              "field.startswith",
+              "getattr",
+              "isinstance",
+              "namespace.get",
+              "old_admission",
+              "old_deps",
+              "old_ingest",
+              "old_run",
+              "planner.auto_media",
+              "planner.state.get",
+              "row.get",
+              "saved.items",
+              "state.get",
+              "sum",
+              "task.get"
+            ],
+            "default_count": 0,
+            "end_line": 669,
+            "keyword_only": [],
+            "line": 609,
+            "name": "bind_dispatcher",
+            "owner": null,
+            "positional": [
+              "namespace"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          }
+        ],
+        "imports": [
+          {
+            "level": 0,
+            "module": "__future__",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "annotations"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "ast"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "copy"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "contextlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "contextmanager"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "fcntl"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "hashlib"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "importlib"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "json"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "math"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "os"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "pathlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Path"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "re"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "stat"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "tempfile"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "threading"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "time"
+              }
+            ]
+          }
+        ],
+        "literal_values_exported": false,
+        "runtime_binding_verified": false,
+        "truncated": false
+      },
+      "path": "/root/nox/scripts/owner_task_plans.py",
+      "runtime_imported": false,
+      "sha256": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+      "state": "AST_CONTRACT_OBSERVED"
+    },
+    {
+      "bytes": 42486,
+      "contract": {
+        "ast_nodes": 8370,
+        "classes": [],
+        "constructor_bindings": [],
+        "contract_slots": [
+          {
+            "bound_symbol": null,
+            "line": 40,
+            "target": "BASE_S03_SHA"
+          }
+        ],
+        "functions": [
+          {
+            "async": false,
+            "calls": [
+              "all",
+              "columns",
+              "conn.execute",
+              "connection",
+              "dict",
+              "embedder",
+              "embedding_text",
+              "float",
+              "heapq.heappush",
+              "heapq.heapreplace",
+              "identity_fn",
+              "isinstance",
+              "len",
+              "lexical",
+              "list",
+              "math.isfinite",
+              "pin_rows.append",
+              "query.strip",
+              "round",
+              "select_results",
+              "sorted",
+              "str",
+              "struct.unpack",
+              "sum"
+            ],
+            "default_count": 4,
+            "end_line": 582,
+            "keyword_only": [],
+            "line": 550,
+            "name": "recall",
+            "owner": null,
+            "positional": [
+              "query",
+              "k",
+              "db",
+              "embedder",
+              "identity_fn"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "DB.absolute",
+              "Path",
+              "_meta",
+              "callable",
+              "dict",
+              "formatter",
+              "hold",
+              "int",
+              "isinstance",
+              "max",
+              "min",
+              "namespace.get",
+              "namespace.update",
+              "original",
+              "prepared.append",
+              "recall",
+              "row.get",
+              "select_results",
+              "str",
+              "target.absolute",
+              "value.get"
+            ],
+            "default_count": 0,
+            "end_line": 609,
+            "keyword_only": [],
+            "line": 585,
+            "name": "bind_s03",
+            "owner": null,
+            "positional": [
+              "namespace"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "ast.parse",
+              "compile",
+              "digest",
+              "hold",
+              "isinstance",
+              "len",
+              "source.encode",
+              "source.splitlines"
+            ],
+            "default_count": 1,
+            "end_line": 626,
+            "keyword_only": [],
+            "line": 612,
+            "name": "patch_s03",
+            "owner": null,
+            "positional": [
+              "source",
+              "expected_sha"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "any",
+              "columns",
+              "conn.execute",
+              "connection",
+              "content_identity",
+              "encoded",
+              "hold",
+              "int",
+              "isinstance",
+              "namespace.get",
+              "old_ingest",
+              "regular",
+              "state.get",
+              "stop_active",
+              "str",
+              "sync",
+              "task.get",
+              "tasks.values",
+              "text_sha",
+              "time.monotonic",
+              "time.time",
+              "type"
+            ],
+            "default_count": 0,
+            "end_line": 767,
+            "keyword_only": [],
+            "line": 727,
+            "name": "bind_dispatcher",
+            "owner": null,
+            "positional": [
+              "namespace"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          }
+        ],
+        "imports": [
+          {
+            "level": 0,
+            "module": "__future__",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "annotations"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "contextlib"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "fcntl"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "hashlib"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "heapq"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "http.client"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "json"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "math"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "os"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "pathlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Path"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "re"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "shutil"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "sqlite3"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "stat"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "struct"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "tempfile"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "threading"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "time"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "ast"
+              }
+            ]
+          }
+        ],
+        "literal_values_exported": false,
+        "runtime_binding_verified": false,
+        "truncated": false
+      },
+      "path": "/root/nox/scripts/owner_s03_gateway.py",
+      "runtime_imported": false,
+      "sha256": "cb7f373cf2d3c4f01d47ed4ef0c48b0a89af7a05eb92a06530752c40453fdf20",
+      "state": "AST_CONTRACT_OBSERVED"
+    },
+    {
+      "bytes": 47179,
+      "contract": {
+        "ast_nodes": 7549,
+        "classes": [],
+        "constructor_bindings": [],
+        "contract_slots": [
+          {
+            "bound_symbol": null,
+            "line": 112,
+            "target": "_RECALL_CHILD"
+          },
+          {
+            "bound_symbol": null,
+            "line": 754,
+            "target": "persisted"
+          }
+        ],
+        "functions": [
+          {
+            "async": false,
+            "calls": [
+              "categories.add",
+              "getattr",
+              "hashlib.sha256",
+              "isinstance",
+              "json.loads",
+              "max",
+              "os.fdopen",
+              "os.fstat",
+              "os.open",
+              "result.update",
+              "row.get",
+              "set",
+              "sorted",
+              "stat.S_ISREG",
+              "stream.fileno",
+              "stream.read",
+              "stream.readline",
+              "stream.seek",
+              "task.get"
+            ],
+            "default_count": 0,
+            "end_line": 106,
+            "keyword_only": [],
+            "line": 65,
+            "name": "journal_recall",
+            "owner": null,
+            "positional": [
+              "task"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "SHA.fullmatch",
+              "any",
+              "bounded_json",
+              "config.get",
+              "file_sha",
+              "isinstance",
+              "json.loads",
+              "len",
+              "outbox.safe_id",
+              "row.get",
+              "str",
+              "subprocess.run",
+              "task.get",
+              "type",
+              "value.get"
+            ],
+            "default_count": 0,
+            "end_line": 200,
+            "keyword_only": [],
+            "line": 155,
+            "name": "semantic_recall",
+            "owner": null,
+            "positional": [
+              "task"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "LifecycleHold",
+              "SHA.fullmatch",
+              "any",
+              "config.get",
+              "copy.deepcopy",
+              "isinstance",
+              "result.update"
+            ],
+            "default_count": 0,
+            "end_line": 214,
+            "keyword_only": [],
+            "line": 203,
+            "name": "configure_shared_recall",
+            "owner": null,
+            "positional": [
+              "config",
+              "s03_source_sha256",
+              "gateway_source_sha256"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "Coordinator",
+              "LifecycleHold",
+              "_checked_module",
+              "any",
+              "bounded_json",
+              "callable",
+              "coordinator.drain",
+              "coordinator.run",
+              "file_sha",
+              "getattr",
+              "isinstance",
+              "job.get",
+              "kwargs.get",
+              "len",
+              "memory.verify_success",
+              "mentor.journal",
+              "namespace.get",
+              "original_experience",
+              "original_status",
+              "original_update",
+              "original_verify",
+              "outbox.digest",
+              "persisted.get",
+              "plans.verify_success"
+            ],
+            "default_count": 0,
+            "end_line": 778,
+            "keyword_only": [],
+            "line": 698,
+            "name": "bind_dispatcher",
+            "owner": null,
+            "positional": [
+              "namespace",
+              "source_pins"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          }
+        ],
+        "imports": [
+          {
+            "level": 0,
+            "module": "__future__",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "annotations"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "ast"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "copy"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "hashlib"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "importlib.util"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "json"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "math"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "os"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "pathlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Path"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "re"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "shutil"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "stat"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "subprocess"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "sys"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "threading"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "time"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": "outbox",
+                "name": "owner_event_outbox"
+              }
+            ]
+          }
+        ],
+        "literal_values_exported": false,
+        "runtime_binding_verified": false,
+        "truncated": false
+      },
+      "path": "/root/nox/scripts/owner_task_lifecycle.py",
+      "runtime_imported": false,
+      "sha256": "909502a75799096e094a622639fe959ecfa835cc70db705a4062541940cea27e",
+      "state": "AST_CONTRACT_OBSERVED"
+    },
+    {
+      "bytes": 14436,
+      "contract": {
+        "ast_nodes": 2490,
+        "classes": [],
+        "constructor_bindings": [],
+        "contract_slots": [],
+        "functions": [
+          {
+            "async": false,
+            "calls": [
+              "con.commit",
+              "con.executescript",
+              "connect"
+            ],
+            "default_count": 1,
+            "end_line": 62,
+            "keyword_only": [],
+            "line": 58,
+            "name": "init_db",
+            "owner": null,
+            "positional": [
+              "db"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "ValueError",
+              "con.close",
+              "con.commit",
+              "con.execute",
+              "float",
+              "init_db",
+              "json.dumps",
+              "now_iso",
+              "sha",
+              "uuid.uuid4"
+            ],
+            "default_count": 5,
+            "end_line": 90,
+            "keyword_only": [],
+            "line": 64,
+            "name": "remember",
+            "owner": null,
+            "positional": [
+              "text",
+              "segment",
+              "provenance",
+              "salience",
+              "meta",
+              "db"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "LEDGER_DOC.parent.mkdir",
+              "con.close",
+              "con.commit",
+              "con.execute",
+              "f.write",
+              "init_db",
+              "json.dumps",
+              "now_iso",
+              "open",
+              "sha"
+            ],
+            "default_count": 1,
+            "end_line": 109,
+            "keyword_only": [],
+            "line": 92,
+            "name": "ledger_append",
+            "owner": null,
+            "positional": [
+              "event",
+              "payload",
+              "db"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "_json.dumps",
+              "_json.loads",
+              "add",
+              "con.close",
+              "con.execute",
+              "float",
+              "init_db",
+              "it.get",
+              "len",
+              "max",
+              "out.append",
+              "pinned.add",
+              "query.replace",
+              "resp.read",
+              "seen.add",
+              "set",
+              "sorted",
+              "urllib.request.Request",
+              "urllib.request.urlopen",
+              "x.get",
+              "zip"
+            ],
+            "default_count": 2,
+            "end_line": 170,
+            "keyword_only": [],
+            "line": 111,
+            "name": "recall",
+            "owner": null,
+            "positional": [
+              "query",
+              "k",
+              "db"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          },
+          {
+            "async": false,
+            "calls": [
+              "STATUS.exists",
+              "STATUS.parent.mkdir",
+              "STATUS.read_text",
+              "STATUS.with_suffix",
+              "_de",
+              "_mem0_hook",
+              "_sys.path.insert",
+              "any",
+              "con.close",
+              "con.commit",
+              "con.execute",
+              "con.executemany",
+              "counts",
+              "init_db",
+              "isinstance",
+              "json.dumps",
+              "json.loads",
+              "len",
+              "now_iso",
+              "remember",
+              "tmp.replace",
+              "tmp.write_text"
+            ],
+            "default_count": 1,
+            "end_line": 298,
+            "keyword_only": [],
+            "line": 240,
+            "name": "persist_turn",
+            "owner": null,
+            "positional": [
+              "user",
+              "assistant",
+              "db"
+            ],
+            "positional_only": [],
+            "vararg": null,
+            "varkw": null
+          }
+        ],
+        "imports": [
+          {
+            "level": 0,
+            "module": "__future__",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "annotations"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "hashlib"
+              },
+              {
+                "alias": null,
+                "name": "json"
+              },
+              {
+                "alias": null,
+                "name": "os"
+              },
+              {
+                "alias": null,
+                "name": "sqlite3"
+              },
+              {
+                "alias": null,
+                "name": "time"
+              },
+              {
+                "alias": null,
+                "name": "uuid"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "pathlib",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Path"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "typing",
+            "symbols": [
+              {
+                "alias": null,
+                "name": "Optional"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "owner_s03_gateway"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "argparse"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": null,
+                "name": "urllib.request"
+              },
+              {
+                "alias": "_json",
+                "name": "json"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": null,
+            "symbols": [
+              {
+                "alias": "_sys",
+                "name": "sys"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "runtime_enrich",
+            "symbols": [
+              {
+                "alias": "_de",
+                "name": "detect_emotion"
+              }
+            ]
+          },
+          {
+            "level": 0,
+            "module": "s03_mem0",
+            "symbols": [
+              {
+                "alias": "_mem0_hook",
+                "name": "persist_hook"
+              }
+            ]
+          }
+        ],
+        "literal_values_exported": false,
+        "runtime_binding_verified": false,
+        "truncated": false
+      },
+      "path": "/root/nox/scripts/s03_memory.py",
+      "runtime_imported": false,
+      "sha256": "3ebdc3585f32bafbd0e1210ceee286b174a657c37696e16fce9fcafb57c43e10",
+      "state": "AST_CONTRACT_OBSERVED"
+    }
+  ],
+  "state": "OLD_NOX_QUIESCENT_AND_AST_INSPECTION_COMPLETE",
+  "stop_flags_unchanged": true,
+  "stop_observation": {
+    "active_training_services": [],
+    "all_noX_services_quiescent": true,
+    "all_states_literal_STOPPED": false,
+    "known_trainer_process_count": 0,
+    "stop_flag_presence": {
+      "OWNER_MAINTENANCE.flag": true,
+      "STOP": true,
+      "TRAIN_HOLD.flag": true,
+      "TRAIN_PAUSE_REQUEST.flag": true
+    },
+    "stop_flags_unchanged_after_control": true,
+    "stop_targets": [
+      "nox-lifeline-guard"
+    ],
+    "supervisor_after": [
+      {
+        "name": "nox-agent-architect-t859u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-agent-integrator-t859u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-agent-tuner-t858u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-chat-8081",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-checklist-worker",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-cores",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-dialog-miner",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-dispatcher-t855u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-distill-worm-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-downloads-t802u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-embed",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-gpu-watchdog-t865u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-hidden-router",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-lifeline-guard",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-media-comfyui",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-offload-t850u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-priority-scheduler",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-proxy",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-report-heartbeat-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-self-improve-t846u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-self-learning-loop",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-selfheal",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-teacher-bringup",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-teacher-serve-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-train-volta-t866u",
+        "state": "FATAL"
+      },
+      {
+        "name": "nox-train-worm-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-vram-guard-t829u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-watch-swap-t845u",
+        "state": "STOPPED"
+      }
+    ],
+    "supervisor_before": [
+      {
+        "name": "nox-agent-architect-t859u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-agent-integrator-t859u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-agent-tuner-t858u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-chat-8081",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-checklist-worker",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-cores",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-dialog-miner",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-dispatcher-t855u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-distill-worm-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-downloads-t802u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-embed",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-gpu-watchdog-t865u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-hidden-router",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-lifeline-guard",
+        "state": "RUNNING"
+      },
+      {
+        "name": "nox-media-comfyui",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-offload-t850u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-priority-scheduler",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-proxy",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-report-heartbeat-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-self-improve-t846u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-self-learning-loop",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-selfheal",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-teacher-bringup",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-teacher-serve-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-train-volta-t866u",
+        "state": "FATAL"
+      },
+      {
+        "name": "nox-train-worm-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-vram-guard-t829u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-watch-swap-t845u",
+        "state": "STOPPED"
+      }
+    ],
+    "supervisor_exit_code": 3,
+    "supervisor_status": [
+      {
+        "name": "nox-agent-architect-t859u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-agent-integrator-t859u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-agent-tuner-t858u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-chat-8081",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-checklist-worker",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-cores",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-dialog-miner",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-dispatcher-t855u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-distill-worm-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-downloads-t802u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-embed",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-gpu-watchdog-t865u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-hidden-router",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-lifeline-guard",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-media-comfyui",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-offload-t850u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-priority-scheduler",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-proxy",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-report-heartbeat-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-self-improve-t846u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-self-learning-loop",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-selfheal",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-teacher-bringup",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-teacher-serve-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-train-volta-t866u",
+        "state": "FATAL"
+      },
+      {
+        "name": "nox-train-worm-t811u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-vram-guard-t829u",
+        "state": "STOPPED"
+      },
+      {
+        "name": "nox-watch-swap-t845u",
+        "state": "STOPPED"
+      }
+    ],
+    "supervisor_stop_attempted": true,
+    "supervisor_stop_exit_code": 0,
+    "trainer_match_count": 0
+  },
+  "stopped_services": 28,
+  "training_resume": false,
+  "weights_opened": false
+}
