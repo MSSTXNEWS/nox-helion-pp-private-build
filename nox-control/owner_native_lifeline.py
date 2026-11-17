@@ -189,6 +189,21 @@ def validate_baseline(baseline):
     return baseline
 
 
+def check_existing_installation(expected):
+    """Only complete byte-identical existing installations may be reused."""
+    for path, _ in expected:
+        protect_path(path)
+    present = [path for path, _ in expected if path.exists() or path.is_symlink()]
+    if not present:
+        return False
+    if len(present) != len(expected):
+        fail("PARTIAL_INSTALL_REQUIRES_OWNER_RECONCILIATION")
+    for path, raw in expected:
+        if not path.is_file() or path.is_symlink() or path.read_bytes() != raw:
+            fail("EXISTING_INSTALL_SOURCE_MISMATCH")
+    return True
+
+
 def main():
     global OWNER_LOCK_FD
     sha = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
@@ -221,17 +236,8 @@ def main():
     # Never overwrite an existing differing file / old policy / owner configuration.
     for path in (SCRIPT, POLICY, CONFIG):
         protect_path(path)
-    existing = [p for p in (SCRIPT, POLICY, CONFIG) if p.exists() or p.is_symlink()]
-    if existing:
-        # Safe idempotence after power loss: accept ONLY a complete,
-        # byte-identical prior installation, never overwrite a changed
-        # service, policy or code or infer equality from filenames.
-        if len(existing) != 3:
-            fail("PARTIAL_INSTALL_REQUIRES_OWNER_RECONCILIATION")
-        if any((not p.is_file() or p.is_symlink() or
-                p.read_bytes() != raw) for p, raw in
-               ((SCRIPT, script), (POLICY, policy), (CONFIG, config))):
-            fail("EXISTING_INSTALL_SOURCE_MISMATCH")
+    existing = check_existing_installation(
+        ((SCRIPT, script), (POLICY, policy), (CONFIG, config)))
     compile(script, str(SCRIPT), "exec")
     guard_state = ROOT / "state/lifeline"
     protect_path(guard_state)
