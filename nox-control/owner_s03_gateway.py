@@ -428,7 +428,10 @@ def _recent_event_timestamp(row):
         seconds = moment.timestamp()
     except (TypeError, ValueError, OverflowError):
         return 0.0
-    if not math.isfinite(seconds) or seconds < 0 or seconds > time.time() + 86400:
+    # A future-dated event within the previous 24h tolerance could outrank
+    # a genuine current M1 owner decision. Allow only two seconds of skew;
+    # recency is not permission to promote a forged future timestamp.
+    if not math.isfinite(seconds) or seconds < 0 or seconds > time.time() + 2:
         return 0.0
     return seconds
 
