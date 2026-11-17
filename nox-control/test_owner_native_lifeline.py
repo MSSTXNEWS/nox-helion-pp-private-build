@@ -108,6 +108,21 @@ class InstallerTests(unittest.TestCase):
                 self.assertEqual(n.info("nox-dispatcher-t855u"),
                                  {"state": "UNKNOWN", "pid": None})
 
+    def test_supervisor_rc3_exact_stopped_row_is_native_valid(self):
+        for state in ("STOPPED", "EXITED"):
+            with self.subTest(state=state), patch.object(n, "call", return_value=SimpleNamespace(
+                stdout=f"nox-dispatcher-t855u {state} Not started\\n", returncode=3)):
+                self.assertEqual(n.info("nox-dispatcher-t855u"),
+                                 {"state": state, "pid": None})
+
+    def test_supervisor_rc3_never_admits_running_error_or_pid(self):
+        for row in ("RUNNING pid 999", "FATAL", "STOPPED pid 99",
+                    "EXITED pid 10", "STOPPED Not started\\nevil RUNNING pid 12"):
+            with self.subTest(row=row), patch.object(n, "call", return_value=SimpleNamespace(
+                    stdout="nox-dispatcher-t855u " + row + "\\n", returncode=3)):
+                self.assertEqual(n.info("nox-dispatcher-t855u"),
+                                 {"state": "UNKNOWN", "pid": None})
+
     def test_supervisor_valid_rows_preserved(self):
         for state, tail, expected_pid in (
             ("RUNNING", "pid 321", 321),
