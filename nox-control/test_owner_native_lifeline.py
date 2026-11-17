@@ -108,6 +108,24 @@ class InstallerTests(unittest.TestCase):
                 self.assertEqual(n.info("nox-dispatcher-t855u"),
                                  {"state": "UNKNOWN", "pid": None})
 
+    def test_idempotent_lifeline_requires_exact_complete_existing_bundle(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            expected = tuple((root / name, content) for name, content in
+                             (("guard.py", b"read-only"), ("policy.json", b"disabled"),
+                              ("guard.conf", b"supervisor")))
+            self.assertFalse(n.check_existing_installation(expected))
+            expected[0][0].write_bytes(expected[0][1])
+            with self.assertRaisesRegex(RuntimeError, "PARTIAL_INSTALL"):
+                n.check_existing_installation(expected)
+            for path, data in expected[1:]:
+                path.write_bytes(data)
+            self.assertTrue(n.check_existing_installation(expected))
+            expected[2][0].write_bytes(b"other-owner-policy")
+            with self.assertRaisesRegex(RuntimeError, "EXISTING_INSTALL_SOURCE_MISMATCH"):
+                n.check_existing_installation(expected)
+            self.assertEqual(expected[2][0].read_bytes(), b"other-owner-policy")
+
     def test_supervisor_rc3_exact_stopped_row_is_native_valid(self):
         for state in ("STOPPED", "EXITED"):
             with self.subTest(state=state), patch.object(n, "call", return_value=SimpleNamespace(
