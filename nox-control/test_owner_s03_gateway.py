@@ -223,6 +223,31 @@ class GatewayTests(unittest.TestCase):
                 self.assertEqual(g.recent_rows(c)[0]['id'], 'current')
         self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
 
+    def test_current_m1_survives_many_late_inserted_old_canonical_rows(self):
+        # Previously a 256-row SQL rowid cut dropped a recent decision before
+        # Python could rank it, even though all later rows were older events.
+        now = datetime.now(timezone.utc)
+        with g.connection(self.db, write=True) as c:
+            item(c, 'owner_today', 'owner decision from this session', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ((now - timedelta(seconds=20)).isoformat(), 'owner_today'))
+            for i in range(300):
+                key = 'late_old_canonical_' + str(i)
+                item(c, key, 'old valid event ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                          ('2022-01-01T00:00:00Z', key))
+            for i in range(20):
+                key = 'late_future_' + str(i)
+                item(c, key, 'future unverified event ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                          ((now + timedelta(days=1)).isoformat(), key))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with g.connection(self.db) as c:
+            rows = g.recent_rows(c)
+        self.assertEqual(rows[0]['id'], 'owner_today')
+        self.assertEqual(g._recent_provenance_rank(rows[0]), 2)
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
     def test_recent_rejects_future_clock_and_oversized_request(self):
         with g.connection(self.db, write=True) as c:
             item(c, 'valid', 'valid current fact', 'M1')
