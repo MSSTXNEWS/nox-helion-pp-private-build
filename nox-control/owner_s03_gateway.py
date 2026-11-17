@@ -665,6 +665,14 @@ def bind_s03(namespace):
         target=Path(db) if db is not None else DB
         if target.absolute()!=DB.absolute():return original(query,k=k,db=target)
         try:return recall(query,k=k,db=target)
+        except MemoryHold:
+            # A canonical S03 safety HOLD must never be downgraded to an
+            # unscoped legacy recall by the compatibility fallback.
+            raise
+        except (sqlite3.DatabaseError, OSError) as exc:
+            # Missing/denied/corrupt canonical SQLite is not an embedding
+            # outage. The original reader cannot validate the same scope.
+            raise MemoryHold('HOLD_S03_CANONICAL_READ_UNVERIFIED') from exc
         except Exception:
             # The original may prepend up to14 pins. Rerank its wider fallback
             # through the same fixed pin budget instead of returning those pins.
