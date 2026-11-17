@@ -1599,3 +1599,8 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **Owner:** A4 PROCESS 4; V14-4-09 (long engineering task continuity) distinct from A4 V14-4-08 and B4 V14-4-10, both SOURCE_TESTED. This is a GitHub source-only CAS reservation, not OneHost writer lease.
 - **Preimage:** nox-control/owner_subagent_processes.py blob e8597d3037efc9d32981ceafeb4af2c96233bfd0. Investigate reuse of a pooled worker outbox after a failed/timeout batch: stale RESULT from previous invocation could be attributed to a replayed TaskID. Fix fail-closed, add focused regression, verify exact source and CI before SOURCE_TESTED.
 - **Safety:** native STOP/writer lease unknown; no server mutation/restart/training/S03/cleanup and no schedule changes. Release source claim on final evidence or HOLD; do not duplicate committed patches.
+
+### NOX-V14-A6 SOURCE CLAIM · V14-6-03 · 2026-11-17T00:04:24.266Z · instructions_version 0.0.6
+- **Owner:** A6 PROCESS6, distinct unclaimed `V14-6-03`, source-only GitHub CAS, **not** native OneHost writer lease. Exact source preimage `nox-control/owner_component_tasks.py` blob `cce61078143d39c0ba7bffb933858eb7473584d5`.
+- **Bug to prove/fix:** existing `dispatcher()` uses `verified=workers==6` from static config, not six observed live native OS worker PID/start_ticks/TaskID+claims. Config is not execution evidence. Add fail-closed regression in original suite.
+- **Safety:** preserve OWNER STOP, protected weights/S03/checkpoints, no installs/restarts/cleanup or second backend/dispatcher. Abort source write if blob drifts; append terminal result after tests.
