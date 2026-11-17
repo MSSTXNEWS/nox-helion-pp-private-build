@@ -68,5 +68,36 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual(r["task_ids"], ["V14-maya-1"])
         self.assertEqual(r["blocked_dependency_ids"], ["V14-web-2"])
 
+    def test_conflicting_receipts_do_not_complete(self):
+        first = receipt("V14-web-1")
+        second = dict(first, result_sha256="b"*64)
+        out = coordinator_reconcile(batch(), [first, second])
+        self.assertEqual(out["state"], "HOLD_CONFLICTING_NATIVE_RECEIPTS")
+        self.assertEqual(out["done"], 0)
+        self.assertEqual(out["conflicting_task_ids"], ["V14-web-1"])
+
+    def test_conflicting_parent_never_unlocks_child(self):
+        first = receipt("V14-web-1")
+        second = dict(first, result_sha256="c"*64)
+        out = coordinator_reconcile(batch(), [first, receipt("V14-web-2"), second])
+        self.assertEqual(out["done"], 0)
+        self.assertEqual(out["blocked_dependency_ids"], ["V14-web-2"])
+        self.assertEqual(out["conflicting_task_ids"], ["V14-web-1"])
+
+    def test_conflict_isolated_from_independent_role(self):
+        first = receipt("V14-web-1")
+        second = dict(first, result_sha256="d"*64)
+        out = coordinator_reconcile(batch(), [first, second, receipt("V14-maya-1")])
+        self.assertEqual(out["state"], "HOLD_CONFLICTING_NATIVE_RECEIPTS")
+        self.assertEqual(out["task_ids"], ["V14-maya-1"])
+        self.assertEqual(out["done"], 1)
+
+    def test_identical_native_replay_remains_idempotent(self):
+        first = receipt("V14-web-1")
+        out = coordinator_reconcile(batch(), [first, dict(first)])
+        self.assertEqual(out["state"], "NATIVE_EVIDENCE_READBACK")
+        self.assertEqual(out["task_ids"], ["V14-web-1"])
+        self.assertEqual(out["conflicting_task_ids"], [])
+
 if __name__ == "__main__":
     unittest.main()
