@@ -1,3 +1,21 @@
+# Актуальный регламент NOX RELAY6 · 17.11.2026
+
+Маркер NOX_RELAY6_20261117_V1. Последнее поручение владельца заменяет для команды A старые одновременные A0–A6 на шесть разных часовых этапов. Europe/Moscow: A1 :00 чат+координация; A2 :10 советники+инструменты; A3 :20 память+модель; A4 :30 Drive+канон; A5 :40 OneHost+ресурсы; A6 :50 WEB+приёмка+слияние. Каждая задача FREQ=HOURLY, enabled/readback6/6. A0 paused, роль включена в A1. B/O и другие расписания не изменены. Старые записи ниже сохранены как история.
+
+Общий журнал: https://app.notion.com/p/419acc184a9f81fca144dfe8432e1a5b ; память https://app.notion.com/p/41bacc184a9f811aa65ae53e0024f858 ; канон https://drive.google.com/file/d/1Ez0JSlLmb51GdzeV1-Nls0TF8dWczM_E/view ; machine plan https://drive.google.com/file/d/1HIhJ6rBZM_Jc7nIDOOg9AO0If7Hfa7b3/view . Существующие AUTOCYCLE_ERRORS/PRIME_6_RELAY_RECEIPTS/HANDOFF переиспользуются. instructions_version0.0.6. Notion не является lock.
+
+Каждый этап: свежий baton/error fingerprint → незаблокированный шаг → существующий TaskID/claim + currentSHA/fencing → patch → целевая проверка → интеграция/readback → releaseclaim/checkpoint/next_action. Автор сам сливает свой проверенный patch. A1 и A6 не обязательные единственные интеграторы. Долгая работа передаёт checkpoint/runID, независимые направления продолжаются. Три параллельных субисполнителя при наличии слотов, шесть направлений волнами; без вложенных шестёрок. К восьмой минуте окна сохранять checkpoint, не обрывая native mutation.
+
+OperationID=sha256(TaskID+inputSHA+action+target+configrevision), час/новыйrunID не делают повторнуюnativeкоманду новой операцией. ERROR fingerprint=component+code+source/inputSHA+phase. Retry только при изменении данных/гипотезы; unknown outcome → reconciliation. Старый TTL не даёт права отобрать живой claim. Native host leases/arbiter сохраняются; repo CAS только для source/журнала. Не считать записьвGit аппаратнымfence.
+
+Журнал: run_id, slot, TaskID, operation_id, base/input/resultSHA, evidenceURL, scope(source/installed/native), started/finishedMSK, status, error_id, причина/unknown, attempt, fix, regression, rollback, releasedclaim и next_action. Самоулучшение: lesson_candidate → verified_regression/metric → accepted_rule/rejected. Никакого изменения permissions радиPASS и выдачи памятизаoptimizerupdates. Реальные nativeрезультатыобязательны; прежнийканон/240карточек/52семействасохраняются.
+
+Актуальные native факты 17.11.2026: ownerSSH/Vast60509551 подтверждены. UI patch APPLIED run44139486151, безrestart. Combinedrelease run44141930938/job134246732037 source05b7996e2be505d61d468f5845afdfab6f115efa:17runtimefiles SOURCE_INSTALLED_NOT_BOUND; legacyDrive-first script PATCH_APPLIED_NOT_EXECUTED SHA14ec1196f61813ff6c88b1854a479660e7ef445fe7f5cb78c6f46e315dbf81e2 сverifiedbackup; credentialsдляновогомостаотсутствуют, loader/callbacks неbound; GGUFпервыйшард5.78MBmetadataonly/tensor_count0,declared1048576/YaRN16 не runtimeконтекст и не fullweightproof; currentruntimeранее8192total/2×4096. Canary633 HOLD_PATH_NAME зависимостьSECRETS, доHTTP. Не повторять весьrelease; readexactsource dependency, новыйузкийcanaryпослеисправления. https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44141930938/job/134246732037 .
+
+Первый A1 run_now принят планировщиком как inline_run в текущем диалоге; ongoingnativeintegration/rootработа выполняетэтотэтап. Это не отдельныйфоновыйпроцесс. Allweights внешние→verifiedDrive→ownedRAM, protectedchat/core/Engram, realWORK/TRAINgovernor. ПостаромуCloudflareURLauto-reviewтребуетявноеtrustподтверждение, не обходить; authorisednative loopback независим.
+
+---
+
 # NOX HELION · ONEHOST · HOURLY CONTINUITY HANDOFF
 
 > Shared baton log for the 3 hourly ChatGPT executors. Canonical source = this file on `feature/nox-v38-synaptic-brain-20261114`; PR #256 is the fallback ledger, and Notion Agent Task Control holds only verified durable task state. Never promote this document itself as a proof of production deployment.
