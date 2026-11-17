@@ -29,12 +29,15 @@ def decorate_html(raw,path):
     # A single stale marker does not prove that all live owner handlers exist.
     # Check each actual script tag: preserve already-mounted scripts and restore
     # only missing pieces. This is idempotent for partially decorated archives.
+    # Comments in retained archives are not live <meta> or <script> elements.
+    # Inspect a non-comment view but preserve the exact original HTML bytes.
+    active_markup=re.sub(r'<!--.*?(?:-->|$)', '', raw, flags=re.S)
     extra=''
-    if not re.search(r'<meta\b[^>]*\bname\s*=\s*(["\'])nox-live-build\1',raw,re.I):
+    if not re.search(r'<meta\b[^>]*\bname\s*=\s*(["\'])nox-live-build\1',active_markup,re.I):
         extra='\n<meta name="nox-live-build" content="'+BUILD+'">\n'
     for name in ('nox-v135-resonance-owner-bridge.js','nox-v137-owner-self-status.js','owner-chat-ui.js','owner-presence.js'):
         if re.search(r'<script\b[^>]*\bsrc\s*=\s*(["\'])/nox-web-v29/'
-                     +re.escape(name)+r'(?:\?[^"\']*)?\1',raw,re.I):
+                     +re.escape(name)+r'(?:\?[^"\']*)?\1',active_markup,re.I):
             continue
         extra+='<script defer src="/nox-web-v29/'+name+'" data-nox-live-owner="1"></script>\n'
     return raw.replace('</head>',extra+'</head>',1) if extra else raw
