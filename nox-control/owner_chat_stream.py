@@ -94,6 +94,17 @@ async def _model_events(client, url, payload):
         async for line in response.aiter_lines():
             if not line or line.startswith(':'):
                 continue
+            # SSE permits bounded metadata before the data field. Common
+            # OpenAI-compatible proxies emit event: message and id: per chunk.
+            # Other event types (including error) fail closed, not as tokens.
+            if line.startswith('event:'):
+                if line[6:].strip()!='message':
+                    raise StreamFailure('HOLD_MODEL_SSE_EVENT')
+                continue
+            if line.startswith('id:'):
+                if len(line)>256 or '\x00' in line:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+                continue
             if not line.startswith('data:'):
                 raise StreamFailure('HOLD_MODEL_SSE_FRAME')
             wire=line[5:].strip()
