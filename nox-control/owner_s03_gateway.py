@@ -451,6 +451,11 @@ def recent_rows(conn, limit=12):
     # before the bounded SQL window. Preserve three distinct trust ranks in
     # SQL and Python (canonical=2, historical=1, malformed=0).
     # Nested CASE prevents json_type() evaluating malformed JSON.
+    # Within each provenance tier rank the event time BEFORE limiting to 256.
+    # Rowid is an ingestion position, not an event time; later ingestion of
+    # 300 old-but-valid canonical records must not evict a current M1 decision.
+    # Match the final Python +2s future bound with a parameterized UTC cutoff.
+    cutoff_julian = 2440587.5 + (time.time() + 2) / 86400
     candidates = [dict(row) for row in conn.execute(
         """SELECT * FROM s03_items WHERE segment=?
            ORDER BY CASE WHEN json_valid(COALESCE(meta,'')) THEN
@@ -460,7 +465,10 @@ def recent_rows(conn, limit=12):
                          OR json_type(meta,'$.history_import') IS NULL THEN 2
                     ELSE 0 END
              ELSE 0 END
-           ELSE 0 END DESC, rowid DESC LIMIT 256""", ('M1',))]
+           ELSE 0 END DESC,
+           CASE WHEN julianday(ts) BETWEEN 2440587.5 AND ?
+                THEN julianday(ts) ELSE 0 END DESC,
+           rowid DESC LIMIT 256""", ('M1', cutoff_julian))]
     ordered = sorted(enumerate(candidates), key=lambda entry: (
         _recent_provenance_rank(entry[1]),
         _recent_event_timestamp(entry[1]),
