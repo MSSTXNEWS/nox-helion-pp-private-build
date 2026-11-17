@@ -423,8 +423,15 @@ def recent_rows(conn, limit=12):
     """
     if type(limit) is not int or not 1 <= limit <= 12:
         hold('HOLD_S03_RECENT_LIMIT')
+    # The 256 newest rowids can all be old imported history. Rank canonical
+    # current-session records first *before* applying the bounded SQL LIMIT,
+    # otherwise even an exact recent preference disappears from fallback.
+    # SQLite CASE short-circuits json_type on malformed legacy metadata.
     candidates = [dict(row) for row in conn.execute(
-        'SELECT * FROM s03_items WHERE segment=? ORDER BY rowid DESC LIMIT 256', ('M1',))]
+        """SELECT * FROM s03_items WHERE segment=?
+           ORDER BY CASE WHEN json_valid(COALESCE(meta,'')) THEN
+             CASE WHEN json_type(meta,'$.history_import')='true' THEN 0 ELSE 1 END
+           ELSE 1 END DESC, rowid DESC LIMIT 256""", ('M1',))]
     ordered = sorted(enumerate(candidates), key=lambda entry: (
         _meta(entry[1]).get('history_import') is not True,
         _recent_event_timestamp(entry[1]),
