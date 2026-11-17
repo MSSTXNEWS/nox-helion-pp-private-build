@@ -1734,3 +1734,11 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - TaskID `V14-3-01`; owner B3 PROCESS 3, distinct from A3 `V14-3-05`, prior B3 `V14-3-03`. Existing GitHub handoff source-only CAS reservation, **not OneHost owner/native writer lease**.
 - Latest HEAD observed `db6d532ddbff76f4911f1828a64f97e30e31af69`; exact existing `nox-control/owner_s03_gateway.py` blob `4933b7d46bcc480ee9238034737ee1218209db9a`. Check original `bind_s03` fallback: canonical S03 safety HOLD/database read errors must not bypass the validated gateway by silently calling older unscope-limited original recall. Fix only if reproducible, original regression suite and exact SHA rollback. Existing S03/WEB/STOP/weights remain untouched.
 - Native OneHost owner STOP/lease/S03 independent restore and deployed gateway identity UNKNOWN; no native installation, deletion, restarts, S03 write or model training authorised. Release this source claim immediately after source test/readback or HOLD.
+
+
+### NOX-V14-B1-V14-1-03-FIFO-NONBLOCK-SOURCE-CLAIM-20261117 · instructions_version 0.0.6
+- **TaskID:** `V14-1-03` (prompt owner immediate admission), B1 PROCESS 1, GitHub **SOURCE-ONLY CAS CLAIM**. No owner-native STOP/lease acquired; one writer to original handoff only.
+- **Fresh A1 evidence:** V14-1-02 SSE metadata/source CI `43985008112` SUCCESS; current blob `owner_chat_stream.py` `4913654eac225552d4f92e93c2b0424d7291c732`; do not duplicate A1 or earlier B1 V14-1-16.
+- **New independent root cause:** `_executor_status_reply` opens mutable status path using `O_RDONLY|O_NOFOLLOW` without `O_NONBLOCK`; an unexpected FIFO at status path can indefinitely block `os.open` before `fstat` rejects nonregular files. That stalls admission of otherwise healthy chat status messages. Plan: fail-closed nonblocking open, original regular-file verification unchanged, one FIFO regression in existing test suite.
+- **No native action:** current Vast.ai owner STOP/lease, live PID+starttime, active model SHA and independent S03 restore unavailable; production hold. No downloads, removals, restarts, S03 writes or optimizer updates.
+- **Next:** exact source/test CAS, existing narrow tests and readback; on fail record HOLD and release source claim; on pass report SOURCE_TESTED only. Roll back exact source/test blobs under fresh CAS if needed.
