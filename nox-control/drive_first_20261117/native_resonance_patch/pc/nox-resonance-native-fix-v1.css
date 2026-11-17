@@ -1,0 +1,47 @@
+/* Native Resonance compatibility fix. Existing theme and handlers stay in place. */
+html body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] .v24-top,
+html body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] .nox-shared-header-v10 {
+  color: #fff2db !important;
+  background: linear-gradient(150deg, #26313d, #151c25) !important;
+  border-color: #b48b52 !important;
+}
+html body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] .v24-brand,
+html body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] .v24-top button,
+html body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] .nox-shared-links-v10 a,
+html body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] .nox-shared-catalog-v11 {
+  color: #fff2db !important;
+}
+html body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] .v24-new[data-action="new-chat"] {
+  color: #fff2db !important;
+  background: linear-gradient(150deg, #49351e, #2c2117) !important;
+  border-color: #e3b36a !important;
+  font-weight: 700;
+}
+html body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] .v24-new:focus-visible {
+  outline: 2px solid #ffe0a3 !important;
+  outline-offset: 3px;
+}
+body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] #messages {
+  color: #fff2db;
+  line-height: 1.55;
+  min-height: 0;
+  overflow-wrap: anywhere;
+  scroll-padding-block-start: 12px;
+}
+body[data-nox-view="resonance-v24"][data-nox-layout-inset="ready"] #messages {
+  margin-block-start: calc(var(--nox-message-base-margin, 0px) + var(--nox-message-header-inset, 0px)) !important;
+}
+body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] #prompt {
+  color: #fff2db !important;
+  line-height: 1.45;
+}
+body[data-nox-view="resonance-v24"][data-nox-readability-fix="1"] #nox-public-safe-preview {
+  color: #fff2db !important;
+  background: #151c25 !important;
+  border-color: #b48b52 !important;
+  max-width: calc(100vw - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}

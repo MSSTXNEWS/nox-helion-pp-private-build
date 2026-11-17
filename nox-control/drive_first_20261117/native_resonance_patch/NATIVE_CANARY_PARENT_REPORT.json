@@ -1,0 +1,13 @@
+{
+  "schema": "NOX_NATIVE_CANARY_PARENT_REPORT_V1",
+  "evidence_origin": "Parent /root task message; not independently executed by package author",
+  "run_id": "44140031232",
+  "job_id": "134239996585",
+  "status": "HOLD_PATH_NAME",
+  "phase": "STATIC_AUTH_PATH_RESOLUTION",
+  "http_requests_reported": 0,
+  "model_requests_reported": 0,
+  "dialogs_created_reported": 0,
+  "native_canary_pass": false,
+  "source_fix_after_report": "Allow all simple-name path dependencies with unchanged pure AST grammar; not yet accepted native"
+}

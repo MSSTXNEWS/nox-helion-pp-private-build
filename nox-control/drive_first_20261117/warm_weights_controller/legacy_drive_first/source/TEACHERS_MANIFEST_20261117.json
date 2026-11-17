@@ -1,0 +1,120 @@
+{
+  "title": "TEACHERS_MANIFEST_20261117",
+  "created_msk": "2026-11-17T07:52:00+03:00",
+  "cycle": "t145u",
+  "drive_folder_name": "TEACHERS_WARM_20261117",
+  "drive_folder_id": "14Y63mLoWjcBqnXgjItbe1CBxOxDH6i4g",
+  "drive_folder_url": "https://drive.google.com/drive/folders/14Y63mLoWjcBqnXgjItbe1CBxOxDH6i4g",
+  "parent_folder_id": "1qYf9_jD9-2AYuurZpGPqwtt8uXW7NXh-",
+  "shm_root": "/dev/shm/nox_t802u",
+  "models_symlinks": {
+    "teachers": "/root/nox/models/teachers -> /dev/shm/nox_t802u/teachers",
+    "judge": "/root/nox/models/judge -> /dev/shm/nox_t802u/judge",
+    "vision": "/root/nox/models/vision -> /dev/shm/nox_t802u/vision",
+    "whisper": "/root/nox/models/whisper -> /dev/shm/nox_t802u/whisper"
+  },
+  "upload_status": {
+    "method_attempted": [
+      "scp from server was ~320 KiB/s (shared path with Exec09); switched to HF download on the box after verifying LFS sha256+size match the server files",
+      "cursor UploadFile to user-Google-drive: rejected Qwen3Guard-Gen-4B.Q4_K_M.gguf (2,716,068,928 bytes) as over the 100.0 MB limit",
+      "split -b 2G would also exceed the 100 MB UploadFile limit; create_file base64 cap is 1,000,000 chars; rclone token is not on the box or the server; MCP Drive credentials were not reused"
+    ],
+    "teachers_judge_drive_id": "upload_blocked_uploadfile_100mb_limit",
+    "vision_whisper_drive_id": "pending_exec09",
+    "autoload_primary": "hf_url (sha+size verified against /dev/shm on server 2026-11-17)",
+    "autoload_fallback": "drive_id via rclone noxdrive copyid once a token exists"
+  },
+  "files": [
+    {
+      "dir": "teachers",
+      "name": "Dolphin3.0-Llama3.1-8B-Q4_K_M.gguf",
+      "size": 4920745856,
+      "sha256": "4c001f29d4edbd9327a6df8e16e2b7907a64e0e31b0a7abe9c779a96773f304e",
+      "hf_url": "https://huggingface.co/dphn/Dolphin3.0-Llama3.1-8B-GGUF/resolve/main/Dolphin3.0-Llama3.1-8B-Q4_K_M.gguf",
+      "hf_repo": "dphn/Dolphin3.0-Llama3.1-8B-GGUF",
+      "drive_id": "upload_blocked_uploadfile_100mb_limit"
+    },
+    {
+      "dir": "teachers",
+      "name": "NousResearch_DeepHermes-3-Llama-3-8B-Preview-Q4_K_M.gguf",
+      "size": 4920740800,
+      "sha256": "de36671bcfc78636dc3c1be4b702198c9d9e0b8abe22dc644e4da332b31b325f",
+      "hf_url": "https://huggingface.co/bartowski/NousResearch_DeepHermes-3-Llama-3-8B-Preview-GGUF/resolve/main/NousResearch_DeepHermes-3-Llama-3-8B-Preview-Q4_K_M.gguf",
+      "hf_repo": "bartowski/NousResearch_DeepHermes-3-Llama-3-8B-Preview-GGUF",
+      "drive_id": "upload_blocked_uploadfile_100mb_limit"
+    },
+    {
+      "dir": "teachers",
+      "name": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+      "size": 4683074336,
+      "sha256": "1664fccab734674a50763490a8c6931b70e3f2f8ec10031b54806d30e5f956b6",
+      "hf_url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+      "hf_repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+      "drive_id": "upload_blocked_uploadfile_100mb_limit"
+    },
+    {
+      "dir": "teachers",
+      "name": "saiga_nemo_12b.Q4_K_M.gguf",
+      "size": 7477204832,
+      "sha256": "5a0e7dcefbe998bb49405395f1fe5fcd77f676ebed788212b757d47024f9e3da",
+      "hf_url": "https://huggingface.co/mradermacher/saiga_nemo_12b-GGUF/resolve/main/saiga_nemo_12b.Q4_K_M.gguf",
+      "hf_repo": "mradermacher/saiga_nemo_12b-GGUF",
+      "note": "Official IlyaGusev/saiga_nemo_12b_gguf main has different SHA/size (1efb729a / 7477203840). Exact match is mradermacher.",
+      "drive_id": "upload_blocked_uploadfile_100mb_limit"
+    },
+    {
+      "dir": "teachers",
+      "name": "vikhr-nemo-12b-instruct-r-21-09-24-q4_k_m.gguf",
+      "size": 7477218656,
+      "sha256": "9c66e0e746803e479a3fade854d93a3d0899adcfb26c6d8c2789c6f508308cf4",
+      "hf_url": "https://huggingface.co/VlSav/Vikhr-Nemo-12B-Instruct-R-21-09-24-Q4_K_M-GGUF/resolve/main/vikhr-nemo-12b-instruct-r-21-09-24-q4_k_m.gguf",
+      "hf_repo": "VlSav/Vikhr-Nemo-12B-Instruct-R-21-09-24-Q4_K_M-GGUF",
+      "drive_id": "upload_blocked_uploadfile_100mb_limit"
+    },
+    {
+      "dir": "judge",
+      "name": "Qwen3Guard-Gen-4B.Q4_K_M.gguf",
+      "size": 2716068928,
+      "sha256": "c81d88da8e1f90a80d1b892a29fb3deac592fc5f321b35fc964a568398c1dbfb",
+      "hf_url": "https://huggingface.co/mradermacher/Qwen3Guard-Gen-4B-GGUF/resolve/main/Qwen3Guard-Gen-4B.Q4_K_M.gguf",
+      "hf_repo": "mradermacher/Qwen3Guard-Gen-4B-GGUF",
+      "drive_id": "upload_blocked_uploadfile_100mb_limit"
+    },
+    {
+      "dir": "vision",
+      "name": "Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf",
+      "size": 4683072032,
+      "sha256": "9258bf05b12686d097ff3b6b18d968ab393649780aa2b3cd67fec43d50554392",
+      "hf_url": "https://huggingface.co/ggml-org/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf",
+      "hf_repo": "ggml-org/Qwen2.5-VL-7B-Instruct-GGUF",
+      "drive_id": "pending_exec09"
+    },
+    {
+      "dir": "vision",
+      "name": "mmproj-Qwen2.5-VL-7B-Instruct-Q8_0.gguf",
+      "size": 853119712,
+      "sha256": "2ddb555391bae966e412deab9e07b58afa18bcc06930ba0f1c78a3695ab9e506",
+      "hf_url": "https://huggingface.co/ggml-org/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/mmproj-Qwen2.5-VL-7B-Instruct-Q8_0.gguf",
+      "hf_repo": "ggml-org/Qwen2.5-VL-7B-Instruct-GGUF",
+      "drive_id": "pending_exec09"
+    },
+    {
+      "dir": "whisper",
+      "name": "ggml-medium-q5_0.bin",
+      "size": 539212467,
+      "sha256": "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f",
+      "hf_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q5_0.bin",
+      "hf_repo": "ggerganov/whisper.cpp",
+      "drive_id": "pending_exec09"
+    },
+    {
+      "dir": "whisper",
+      "name": "ggml-small.bin",
+      "size": 487601967,
+      "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "hf_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+      "hf_repo": "ggerganov/whisper.cpp",
+      "drive_id": "pending_exec09"
+    }
+  ]
+}

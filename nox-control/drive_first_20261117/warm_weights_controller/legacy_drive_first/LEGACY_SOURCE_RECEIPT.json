@@ -1,0 +1,66 @@
+{
+  "schema": "NOX_LEGACY_DRIVE_FIRST_PATCH_V1",
+  "created_at_utc": "2026-11-17T17:43:51Z",
+  "source_drive_file_id": "1r5jIOB2ykM7OsxyYRAk4TMaE5i3wOTly",
+  "source_sha256": "437739550dbdff28380a95302c1cc1e98ceab3f147de898b40dd8ec82ef80389",
+  "manifest_drive_file_id": "1AqJun2kWY5qWJtV1eZ8gY7WFgTJVOLqG",
+  "manifest_sha256": "237deb2a93c53de9d73501bc572f62af2565c45b8a895382a183685434199093",
+  "report_drive_file_id": "19zhlsEo9TsLE2XhgwR3ycWH9qy3cTdd-",
+  "drive_bytes_match_report": true,
+  "native_sha_read": false,
+  "native_apply_performed": false,
+  "model_network_downloads": 0,
+  "service_restarts": 0,
+  "targeted_tests_passed": 2,
+  "bash_syntax": "PASS",
+  "compileall": "PASS",
+  "primary_source_for_copyid": "https://rclone.org/drive/#copyid",
+  "maintenance_lock": "/root/nox/state/owner_maintenance.lock",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 9604,
+      "sha256": "a6d9eb7f64b878bda75e583a70deecd4a0f13ca73efaea1bbd28829a5ff07e02"
+    },
+    {
+      "path": "TEST_RESULTS.txt",
+      "bytes": 486,
+      "sha256": "1d69c63bbc1c8c0c506160e64b918d67f20c346b41538e8dbdd59daa4e428edf"
+    },
+    {
+      "path": "build_patch.py",
+      "bytes": 5384,
+      "sha256": "62fe204374d3e3b62cac0cf3e126eae78ee0367df315c54273e54e4a2e85868e"
+    },
+    {
+      "path": "install.py",
+      "bytes": 5825,
+      "sha256": "2183d0751ecd35e800035feaa4e940c1157099547dbe1592755236e341b50250"
+    },
+    {
+      "path": "nox_teachers_warm.drive_first.patch",
+      "bytes": 7997,
+      "sha256": "4f15d1bad07e26bb4e8b299466e2577bfaceb6745c54f4799ee0f113af033653"
+    },
+    {
+      "path": "nox_teachers_warm.drive_first.sh",
+      "bytes": 7474,
+      "sha256": "14ec1196f61813ff6c88b1854a479660e7ef445fe7f5cb78c6f46e315dbf81e2"
+    },
+    {
+      "path": "source/TEACHERS_MANIFEST_20261117.json",
+      "bytes": 6035,
+      "sha256": "237deb2a93c53de9d73501bc572f62af2565c45b8a895382a183685434199093"
+    },
+    {
+      "path": "source/nox_teachers_warm.sh",
+      "bytes": 7643,
+      "sha256": "437739550dbdff28380a95302c1cc1e98ceab3f147de898b40dd8ec82ef80389"
+    },
+    {
+      "path": "tests/test_legacy.py",
+      "bytes": 7029,
+      "sha256": "de759fe87197f5d139657f1ef815b85f45f5dbed002967e9d02abcb1bfc64ad5"
+    }
+  ]
+}

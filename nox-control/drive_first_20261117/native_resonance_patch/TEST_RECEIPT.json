@@ -1,0 +1,28 @@
+{
+  "schema": "NOX_NATIVE_RESONANCE_LOCAL_TEST_RECEIPT_V1",
+  "created_utc": "2026-11-17T17:37:25.802462+00:00",
+  "native_pass": false,
+  "native_execution_performed": false,
+  "source_sha256": "9a5ee14787f4fc529926576339f86e07ce6ec838fe6e34fe6b2523f102719194",
+  "after_sha256": "597ede7cf68e7606fc6b761f7d366e14737f86ffa50d648b637857b2275d070b",
+  "installer_sha256": "1a85bc7803e9fa904e961b3a552c525013031737ecbb37b86ae71c1d13e21b50",
+  "python": {
+    "command": "python3 -m unittest discover -s tests -p 'test_patch.py' -v",
+    "passed": 5,
+    "failures": 0,
+    "errors": 0,
+    "observed_seconds": 0.008
+  },
+  "node": {
+    "command": "node tests/test_ui.cjs",
+    "assertions_passed": 10,
+    "failures": 0
+  },
+  "preserved": "Every original HTML start tag/attribute/ID/data-action and asset order; existing runtime sources unchanged",
+  "scope": "Temp filesystem fixtures and JS pure functions/static no-network/no-handler checks. No native assets execution or browser acceptance.",
+  "review_regressions": [
+    "Late foreign asset never overwritten; HTML remains original on HOLD",
+    "Busy existing maintenance lock blocks apply; borrowed matching FD remains held and open"
+  ],
+  "serialization": "Existing native maintenance lease for cooperating writers; no global CAS claim against unrelated editors"
+}

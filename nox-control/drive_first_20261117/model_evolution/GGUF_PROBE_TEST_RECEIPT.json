@@ -1,0 +1,18 @@
+{
+  "schema": "NOX_GGUF_METADATA_PROBE_FIXTURE_RECEIPT_V1",
+  "created_utc": "2026-11-17T17:45:55.104704+00:00",
+  "passed": 2,
+  "errors": 0,
+  "failures": 0,
+  "observed_seconds": 0.001,
+  "fixture_cases": [
+    "Valid selected metadata; 8KiB vocabulary seek-skipped; metadata end exact; tensor region not read; runtime context not fabricated",
+    "Malformed/truncated header; excessive array length; unknown value type fail closed"
+  ],
+  "source_sha256": "3a5567e83e0f06ed8c6881ef93350045fdcea3ecdde7d40ee562c98b9c1ad87d",
+  "native_executed": false,
+  "max_metadata_span_bytes": 67108864,
+  "max_total_array_items": 1000000,
+  "no_tensor_load": true,
+  "dependencies": "Python standard library only"
+}

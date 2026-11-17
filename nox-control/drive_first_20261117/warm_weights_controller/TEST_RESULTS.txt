@@ -1,0 +1,17 @@
+test_atomic_paused_copy_resume_and_sha_failure (test_controller.ControllerTests.test_atomic_paused_copy_resume_and_sha_failure) ... ok
+test_cache_startup_and_local_apply_require_owner_and_host_lease (test_controller.ControllerTests.test_cache_startup_and_local_apply_require_owner_and_host_lease) ... ok
+test_cgroup_accounts_shmem_and_does_not_promote_inactive_file_to_free (test_controller.ControllerTests.test_cgroup_accounts_shmem_and_does_not_promote_inactive_file_to_free) ... ok
+test_drive_cache_hit_contract_and_startup_selected_cap (test_controller.ControllerTests.test_drive_cache_hit_contract_and_startup_selected_cap) ... ok
+test_drive_first_real_sealed_memfd_retained_then_released_by_verified_owner (test_controller.ControllerTests.test_drive_first_real_sealed_memfd_retained_then_released_by_verified_owner) ... ok
+test_low_headroom_holds_startup_no_download_or_gpu_action (test_controller.ControllerTests.test_low_headroom_holds_startup_no_download_or_gpu_action) ... ok
+test_manifest_pins_and_path_escape (test_controller.ControllerTests.test_manifest_pins_and_path_escape) ... ok
+test_mmap_warm_is_bounded_hint_and_cooperative (test_controller.ControllerTests.test_mmap_warm_is_bounded_hint_and_cooperative) ... ok
+test_protected_group_and_health_failure_never_fake_ready (test_controller.ControllerTests.test_protected_group_and_health_failure_never_fake_ready) ... ok
+test_reconciled_rollback_executes_reverse_hooks_and_restores_work (test_controller.ControllerTests.test_reconciled_rollback_executes_reverse_hooks_and_restores_work) ... ok
+test_uncertain_callback_requires_reconcile_then_resumes_without_duplicate_unload (test_controller.ControllerTests.test_uncertain_callback_requires_reconcile_then_resumes_without_duplicate_unload) ... ok
+test_work_train_pause_resume_real_checkpoint_and_idempotency (test_controller.ControllerTests.test_work_train_pause_resume_real_checkpoint_and_idempotency) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.023s
+
+OK

@@ -1,0 +1,17 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const file = path.join(__dirname, '../pc/nox-resonance-native-fix-v1.js');
+const {insetFor, pageLabel} = require(file);
+assert.equal(insetFor(20, 0, 90, 200), 82);
+assert.equal(insetFor(102, 82, 90, 200), 82, 'Repeated resize must not accumulate the inset');
+assert.equal(insetFor(102, 82, 0, 200), 0, 'Inset must release when the overlap disappears');
+assert.equal(insetFor(0, 0, 1000, 200), 200, 'Small screens have a bounded inset');
+assert.equal(insetFor(NaN, 0, 100, 200), 0);
+assert.equal(pageLabel({protocol:'https:', host:'nox.example:8443'}), 'NOX HELION · nox.example:8443');
+assert.equal(pageLabel({protocol:'file:', host:''}), 'NOX HELION · Резонанс');
+assert.equal(pageLabel(null), 'NOX HELION · Резонанс');
+const source = fs.readFileSync(file, 'utf8');
+assert.doesNotMatch(source, /\b(fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage)\b/);
+assert.doesNotMatch(source, /addEventListener\(['"](submit|click|keydown)/);
+console.log('PASS: bounded nonaccumulating geometry, actual page address, no network/storage/chat listeners (10 assertions)');

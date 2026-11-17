@@ -1,0 +1,15 @@
+{
+  "schema": "NOX_MODEL_EVOLUTION_STRUCTURAL_CHECK_V1",
+  "passed": true,
+  "proposal_count": 17,
+  "new_subproposals": 9,
+  "augment_existing": 8,
+  "all_existing_card_ids_resolve": true,
+  "all_native_task_ids_null": true,
+  "all_artifact_exists_false": true,
+  "unique_proposal_ids": true,
+  "source_links": 19,
+  "source_urls_primary_only": true,
+  "native_calls": 0,
+  "source_only": true
+}

@@ -1,0 +1,7 @@
+test_hf_url_never_called_even_after_drive_failure_and_installer_cas (test_legacy.LegacyDriveOnlyTests.test_hf_url_never_called_even_after_drive_failure_and_installer_cas) ... ok
+test_missing_drive_binding_or_config_blocks_new_download_preserves_existing_weights (test_legacy.LegacyDriveOnlyTests.test_missing_drive_binding_or_config_blocks_new_download_preserves_existing_weights) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.420s
+
+OK

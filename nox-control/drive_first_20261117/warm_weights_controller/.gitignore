@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.part
+state/
+cache/
+*.gitbundle
+*.zip

@@ -1,0 +1,13 @@
+{
+  "schema": "NOX_NATIVE_UI_APPLY_PARENT_REPORT_V1",
+  "evidence_origin": "Parent /root task message; not independently executed or fetched by package author",
+  "reported_at": "2026-11-17 20:40:52 (timezone not supplied in parent message)",
+  "status": "APPLIED",
+  "source_commit": "4138252497bec7b662a236036038a2cfb55b0bae",
+  "job_id": "134238035392",
+  "installed_html_sha256": "597ede7cf68e7606fc6b761f7d366e14737f86ffa50d648b637857b2275d070b",
+  "backup_verified_reported": true,
+  "scope": "Static Resonance UI patch only",
+  "native_model_chat_canary_pass": null,
+  "external_link_verified": null
+}

@@ -1,0 +1,28 @@
+test_cli_status_offline_and_missing_credentials (test_integrations.ConfigAndProcessTests.test_cli_status_offline_and_missing_credentials) ... ok
+test_process_output_timeout_and_cancel_bounded (test_integrations.ConfigAndProcessTests.test_process_output_timeout_and_cancel_bounded) ... ok
+test_secret_file_requires_0600_and_environment_overrides (test_integrations.ConfigAndProcessTests.test_secret_file_requires_0600_and_environment_overrides) ... ok
+test_check_list_read_and_literal_shell_characters (test_integrations.DriveTests.test_check_list_read_and_literal_shell_characters) ... ok
+test_download_atomically_publishes_hash_verified_cache (test_integrations.DriveTests.test_download_atomically_publishes_hash_verified_cache) ... ok
+test_download_conflict_keeps_existing_and_symlink_is_rejected (test_integrations.DriveTests.test_download_conflict_keeps_existing_and_symlink_is_rejected) ... ok
+test_download_wrong_sha_cleans_part_and_never_publishes (test_integrations.DriveTests.test_download_wrong_sha_cleans_part_and_never_publishes) ... ok
+test_memfd_abort_closes_only_owned_fd_and_releases (test_integrations.DriveTests.test_memfd_abort_closes_only_owned_fd_and_releases) ... ok
+test_memfd_verified_sealed_and_owned_reservation_lifetime (test_integrations.DriveTests.test_memfd_verified_sealed_and_owned_reservation_lifetime) ... ok
+test_mid_transfer_cancel_removes_part_and_respects_host_stop (test_integrations.DriveTests.test_mid_transfer_cancel_removes_part_and_respects_host_stop) ... ok
+test_publication_race_does_not_replace_other_writer (test_integrations.DriveTests.test_publication_race_does_not_replace_other_writer) ... ok
+test_read_rejects_oversized_and_binary (test_integrations.DriveTests.test_read_rejects_oversized_and_binary) ... ok
+test_size_budget_and_cancel (test_integrations.DriveTests.test_size_budget_and_cancel) ... ok
+test_traversal_and_remote_override_rejected (test_integrations.DriveTests.test_traversal_and_remote_override_rejected) ... ok
+test_upload_conflict_no_overwrite_and_no_secret_stderr (test_integrations.DriveTests.test_upload_conflict_no_overwrite_and_no_secret_stderr) ... ok
+test_upload_has_data_and_manifest_readback_and_is_repeatable (test_integrations.DriveTests.test_upload_has_data_and_manifest_readback_and_is_repeatable) ... ok
+test_upload_secret_and_wrong_hash_never_copy (test_integrations.DriveTests.test_upload_secret_and_wrong_hash_never_copy) ... ok
+test_upload_secret_spanning_chunks_is_rejected (test_integrations.DriveTests.test_upload_secret_spanning_chunks_is_rejected) ... ok
+test_host_authorization_receipt_and_truthful_state (test_integrations.ProviderAndHostTests.test_host_authorization_receipt_and_truthful_state) ... ok
+test_no_credentials_no_host_request_and_no_arbitrary_host (test_integrations.ProviderAndHostTests.test_no_credentials_no_host_request_and_no_arbitrary_host) ... ok
+test_real_provider_request_shapes_and_selected_responses (test_integrations.ProviderAndHostTests.test_real_provider_request_shapes_and_selected_responses) ... ok
+test_redirect_limit_bad_json_and_http_error_never_return_body (test_integrations.ProviderAndHostTests.test_redirect_limit_bad_json_and_http_error_never_return_body) ... ok
+test_typed_arguments_secret_rejection_and_persistence_failure (test_integrations.ProviderAndHostTests.test_typed_arguments_secret_rejection_and_persistence_failure) ... ok
+
+----------------------------------------------------------------------
+Ran 23 tests in 1.256s
+
+OK

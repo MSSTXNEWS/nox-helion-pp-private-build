@@ -1,0 +1,118 @@
+{
+  "schema": "NOX_NATIVE_RESONANCE_UI_CANARY_PACKAGE_V1",
+  "base_ui_git_commit": "bf560526bc1b270b178d528584a1bc86b77ff1e3",
+  "package_scope": [
+    "Existing Resonance CSS/JS and exact HTML patch",
+    "Bounded official-auth loopback acceptance canary",
+    "Local fixtures and native apply parent report",
+    "Fixed-path read-only integration binding AST inventory"
+  ],
+  "local_validation": "ACCEPTANCE_TEST_RECEIPT.json",
+  "native_apply_parent_report": "NATIVE_UI_APPLY_PARENT_REPORT.json",
+  "native_canary_acceptance": "NOT_PROVEN_BY_THIS_PACKAGE",
+  "native_pass": false,
+  "public_tunnel_verified": false,
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 19,
+      "sha256": "862263fa1f46c20f0d1e4dac5ffcc75abd55c08211b2c3864c5f8764b9d87793"
+    },
+    {
+      "path": "ACCEPTANCE.md",
+      "bytes": 4147,
+      "sha256": "79af7c501c92ff1e6e352f235f97fd76776433bb3faac5f57919691cfb087962"
+    },
+    {
+      "path": "ACCEPTANCE_TEST_RECEIPT.json",
+      "bytes": 597,
+      "sha256": "83cc01ab904f2f79371cedb8e7b57065537e8ef163ec673ac9994d4dd0698ae6"
+    },
+    {
+      "path": "NATIVE_CANARY_PARENT_REPORT.json",
+      "bytes": 532,
+      "sha256": "d9ec4f07a7a0afdc645561a47fe4d8e375661ab47d5437a2e15d36384351de97"
+    },
+    {
+      "path": "NATIVE_UI_APPLY_PARENT_REPORT.json",
+      "bytes": 609,
+      "sha256": "119bf82ca9b687f220e3560345b9e4108eef3e30f4bb8d2cdf7ffcc0cd183f8f"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4388,
+      "sha256": "dd95eae98c1310b408e9100a6cc649148c8bea446d04dca238c8c7c791e112e1"
+    },
+    {
+      "path": "TEST_RECEIPT.json",
+      "bytes": 1325,
+      "sha256": "7e85367df9f0d1bd46bc2b8b30e1f17765f71a1e54841426b71d3840b611d518"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 1385,
+      "sha256": "24c476609815f1c12af360bab0d11a497f0bc05d457e98897740e20513e012e9"
+    },
+    {
+      "path": "native_acceptance.py",
+      "bytes": 23738,
+      "sha256": "633c2d1afce41f5d3d99d4fb1b6a5baf5aa488e9f3196426d0317bfa56cbf63b"
+    },
+    {
+      "path": "native_integration_readset.py",
+      "bytes": 8977,
+      "sha256": "50ac0457ceae8dff31fe2c5a98befeb09dd9299cb67985e0f046e008037e4be7"
+    },
+    {
+      "path": "native_minimal_patch.py",
+      "bytes": 14979,
+      "sha256": "1a85bc7803e9fa904e961b3a552c525013031737ecbb37b86ae71c1d13e21b50"
+    },
+    {
+      "path": "native_resonance.diff",
+      "bytes": 2622,
+      "sha256": "b7b672794992dfd183db41cd2c5b762a6a37270dd484c86ea169dbec09985898"
+    },
+    {
+      "path": "pc/nox-resonance-native-fix-v1.css",
+      "bytes": 2059,
+      "sha256": "717aec370c76857c7f932d3d0973921d3440d882d55a252b65edac35a9a37c29"
+    },
+    {
+      "path": "pc/nox-resonance-native-fix-v1.js",
+      "bytes": 3929,
+      "sha256": "323f9153db7101e85280f9302738d078f0504fa7db4ba77d98ce794eef9455c9"
+    },
+    {
+      "path": "source_after/resonance.html",
+      "bytes": 13984,
+      "sha256": "597ede7cf68e7606fc6b761f7d366e14737f86ffa50d648b637857b2275d070b"
+    },
+    {
+      "path": "source_before/resonance.html",
+      "bytes": 13785,
+      "sha256": "9a5ee14787f4fc529926576339f86e07ce6ec838fe6e34fe6b2523f102719194"
+    },
+    {
+      "path": "tests/test_acceptance.py",
+      "bytes": 5757,
+      "sha256": "d0f2330ce5b63839f9edfe48cd19ae0eedccb6234bab911f85bb433c1a10537a"
+    },
+    {
+      "path": "tests/test_patch.py",
+      "bytes": 5567,
+      "sha256": "957a43874a5eab39df1a630f0f40f04e4499e2120b4c2f08cfbb9fd5b72f4a10"
+    },
+    {
+      "path": "tests/test_readset.py",
+      "bytes": 1630,
+      "sha256": "13e0f674be103a31b977378c99da2d8423373bd541a5d3bade103b10170688bd"
+    },
+    {
+      "path": "tests/test_ui.cjs",
+      "bytes": 1199,
+      "sha256": "7d8db91c6831e556d4dbbe1fdb4c104c8f9161567888712c9018d2a805a9c315"
+    }
+  ],
+  "native_canary_parent_report": "NATIVE_CANARY_PARENT_REPORT.json"
+}

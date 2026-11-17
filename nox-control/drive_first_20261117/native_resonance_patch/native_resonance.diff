@@ -1,0 +1,27 @@
+--- a/pc/resonance.html
++++ b/pc/resonance.html
+@@ -20,8 +20,9 @@
+ <script defer src="./vendor/nox-ux/nox_ux.js"></script>
+ <script defer src="./workspace.js"></script>
+ <script type="module" src="./nox-core-bg.mjs"></script>
+-<link rel="stylesheet" href="/pc/v25/nox-shell-v25.css" data-n25="1"><script defer src="/pc/v25/nox-shell-v25.js" data-n25="1"></script></head>
+-<body class="nox-v24 helion-glass" data-page="resonance" data-nox-view="resonance-v24" data-nox-phase="idle"><div class="nox-v28-pc-return" style="position:relative;z-index:99;display:flex;justify-content:flex-end;padding:6px 12px;background:#09090bf0;border-bottom:1px solid #85613c88"><a href="../chat.html" style="display:inline-flex;min-height:44px;align-items:center;padding:7px 13px;color:#f0c68e;background:#211b17;border:1px solid #a07a45;border-radius:9px;font:600 12px system-ui,sans-serif;text-decoration:none">РЕЗОНАНС · ГЛАВНЫЙ ЧАТ</a></div>
++<link rel="stylesheet" href="/pc/v25/nox-shell-v25.css" data-n25="1"><script defer src="/pc/v25/nox-shell-v25.js" data-n25="1"></script><link rel="stylesheet" href="./nox-resonance-native-fix-v1.css" data-nox-native-fix="1">
++</head>
++<body class="nox-v24 helion-glass" data-page="resonance" data-nox-view="resonance-v24" data-nox-phase="idle" data-nox-readability-fix="1"><div class="nox-v28-pc-return" style="position:relative;z-index:99;display:flex;justify-content:flex-end;padding:6px 12px;background:#09090bf0;border-bottom:1px solid #85613c88"><a href="../chat.html" style="display:inline-flex;min-height:44px;align-items:center;padding:7px 13px;color:#f0c68e;background:#211b17;border:1px solid #a07a45;border-radius:9px;font:600 12px system-ui,sans-serif;text-decoration:none">РЕЗОНАНС · ГЛАВНЫЙ ЧАТ</a></div>
+ <a class="v24-skip" href="#prompt">К сообщению NOX</a>
+ <div class="v24-cursor" id="v24Cursor" aria-hidden="true"></div>
+ 
+@@ -216,10 +217,11 @@
+   <span id="gpuPower"></span><span id="hudTemp"></span><span id="hudVram"></span><span id="hudSensor"></span>
+ </div>
+ 
+-<div id="nox-public-safe-preview" class="v24-badge">LOCAL · NOX HELION V25 · 127.0.0.1</div>
++<div id="nox-public-safe-preview" class="v24-badge">NOX HELION · Резонанс</div>
+ <script defer src="./v24/nox-v24-chat.js"></script>
+ <script defer src="./predator/predator.js"></script>
+ <script defer src="./v24/nox-v24-menu.js"></script>
+ <script defer src="./v24/nox-v24-learn.js"></script>
+ <script defer src="./v24/nox-v24-widgets.js"></script>
++<script defer src="./nox-resonance-native-fix-v1.js" data-nox-native-fix="1"></script>
+ </body></html>

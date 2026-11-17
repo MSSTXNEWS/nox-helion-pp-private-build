@@ -1,0 +1,28 @@
+{
+  "schema": "NOX_NATIVE_RESONANCE_MINIMAL_PATCH_V1",
+  "native_pass": false,
+  "native_site": "/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site",
+  "source_native_sha256": "9a5ee14787f4fc529926576339f86e07ce6ec838fe6e34fe6b2523f102719194",
+  "source_native_bytes": 13785,
+  "export_file_sha256": "4b6caf4dce89a84ee1ff3b1e7a7b834558bd05eae02c5f08ba34ae98ad223109",
+  "export_file_bytes": 13786,
+  "export_normalization": "Exactly one transfer-added final LF removed locally; resulting exact bytes match native SHA. Native installer does not normalize.",
+  "after_sha256": "597ede7cf68e7606fc6b761f7d366e14737f86ffa50d648b637857b2275d070b",
+  "after_bytes": 13984,
+  "assets": {
+    "nox-resonance-native-fix-v1.css": {
+      "sha256": "717aec370c76857c7f932d3d0973921d3440d882d55a252b65edac35a9a37c29",
+      "bytes": 2059
+    },
+    "nox-resonance-native-fix-v1.js": {
+      "sha256": "323f9153db7101e85280f9302738d078f0504fa7db4ba77d98ce794eef9455c9",
+      "bytes": 3929
+    }
+  },
+  "installer_sha256": "1a85bc7803e9fa904e961b3a552c525013031737ecbb37b86ae71c1d13e21b50",
+  "network_requests_added": 0,
+  "model_calls_added": 0,
+  "native_execution_performed": false,
+  "serialization": "Existing owner_maintenance.lock EX|NB plus local patch flock; cooperating writers only",
+  "asset_publication": "fsynced temporary file + atomic no-clobber hard link"
+}

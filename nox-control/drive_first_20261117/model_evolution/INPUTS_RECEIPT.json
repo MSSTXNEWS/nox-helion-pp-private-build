@@ -1,0 +1,30 @@
+{
+  "schema": "NOX_MODEL_EVOLUTION_DEDUP_INPUTS_V1",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-17",
+  "concept_path": "/workspace/scratch/4136374a0419/nox_refresh/release/NOX_Unique_Concept_20261117.md",
+  "concept_sha256": "528c7ee5af96177e427c7d08a3b75188022ea3a2781636d502d5d0f4816994cf",
+  "plan_path": "/workspace/scratch/4136374a0419/nox_refresh/release/NOX_FAST_CHAT_SIX_IMPLEMENTATION_20261117.json",
+  "plan_sha256": "71ca33242c121d83113972f816cbac83b6daea7d43ce1bbb0ae849a8a33cf8a5",
+  "plan_id": "NOX_FAST_CHAT_SIX_20261117",
+  "plan_revision": 4,
+  "existing_cards": 240,
+  "term_occurrences": {
+    "YaRN": 0,
+    "LongRoPE": 0,
+    "FIM": 0,
+    "fill-in": 0,
+    "RLVR": 0,
+    "imatrix": 0,
+    "tokenizer expansion": 0,
+    "расширение словаря": 0,
+    "DPO": 34,
+    "MTP": 3,
+    "дистилл": 2,
+    "distill": 3,
+    "контекстное окно": 0
+  },
+  "scan_scope": "Complete local canonical concept text and current implementation-plan JSON, plus manual semantic review of N10, N21, N24, OF29/32/42/43/50 and Teacher Distillation with Provenance. Absence of a term alone is not proof of global novelty.",
+  "global_drive_dedup_claimed": false,
+  "native_calls": 0
+}

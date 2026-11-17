@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_NATIVE_UI_CANARY_LOCAL_VALIDATION_V1",
+  "validated_at_utc": "2026-11-17T17:48:06.517124+00:00",
+  "python": {
+    "command": "python -m unittest discover -s tests -p 'test_*.py' -v",
+    "passed": 9,
+    "failed": 0
+  },
+  "ui": {
+    "command": "node tests/test_ui.cjs",
+    "assertions_passed": 10,
+    "failed": 0,
+    "source_unchanged_since_previous_pass": true
+  },
+  "native_execution_by_package_author": false,
+  "native_canary_pass": null,
+  "public_tunnel_verified": false,
+  "source_fix": "Dependency-chain-only path aliases; fixed native binding metadata reader"
+}

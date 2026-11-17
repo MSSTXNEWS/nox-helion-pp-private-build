@@ -1,0 +1,20 @@
+{
+  "schema": "nox.integrations.validation.v1",
+  "date": "2026-11-17",
+  "instructions_version": "0.0.6",
+  "status": "TESTED_LOCAL",
+  "tests_passed": 23,
+  "tests_failed": 0,
+  "external_api_calls": 0,
+  "native_actions": 0,
+  "real_rclone_calls": 0,
+  "fake_rclone_local_subprocesses": true,
+  "https_connection_fixtures": true,
+  "local_kernel_memfd_success_and_abort_tests": 2,
+  "secret_values_used": "synthetic_test_values_only",
+  "json_capabilities": 8,
+  "ram_callback": "download_memfd_verified",
+  "download_policy": "external_to_verified_drive_to_owned_ram",
+  "disk_cache_default_enabled": false,
+  "runtime_bytes": 46542
+}

@@ -1,0 +1,229 @@
+--- a/root/nox/ops/nox_teachers_warm.sh
++++ b/root/nox/ops/nox_teachers_warm.sh
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env bash
+-# nox_teachers_warm.sh (t145u)
++# nox_teachers_warm.sh (t145u; exact-source DRIVE_FIRST patch)
+ # Idempotent, fail-closed warm-load of teacher/judge/vision/whisper GGUFs
+ # into /dev/shm/nox_t802u, then refresh /root/nox/models/{teachers,judge,...} symlinks.
+ # Usage: nox_teachers_warm.sh [--check]
+@@ -21,11 +21,10 @@
+ 
+ [[ -f "$MANIFEST" ]] || fail "manifest missing: $MANIFEST"
+ command -v python3 >/dev/null || fail "python3 required"
+-command -v curl >/dev/null || fail "curl required"
+ command -v sha256sum >/dev/null || fail "sha256sum required"
+ command -v stat >/dev/null || fail "stat required"
+ 
+-# dir|name|size|sha256|hf_url|drive_id
++# dir|name|size|sha256|drive_id|drive_verified; historical hf_url is ignored.
+ mapfile -t ITEMS < <(python3 - "$MANIFEST" <<'PY'
+ import json, sys
+ m = json.load(open(sys.argv[1], encoding="utf-8"))
+@@ -40,29 +39,28 @@
+         size = int(f.get("size", 0))
+     except (TypeError, ValueError):
+         size = 0
++    receipt = f.get("drive_verification", {})
++    verified = (isinstance(receipt, dict) and receipt.get("verified") is True
++        and receipt.get("drive_id") == f.get("drive_id")
++        and receipt.get("size") == size and receipt.get("sha256") == f.get("sha256")
++        and bool(receipt.get("receipt_id")) and bool(receipt.get("verified_at")))
+     print("|".join([
+         c(f.get("dir", "")),
+         c(f.get("name", "")),
+         str(size),
+         c(f.get("sha256", "")),
+-        c(f.get("hf_url", "")),
+         c(f.get("drive_id", "")),
++        "1" if verified else "0",
+     ]))
+ PY
+ )
++[[ "${#ITEMS[@]}" -gt 0 ]] || fail "HOLD: manifest has no readable rows"
+ 
+ shm_avail() { df -B1 --output=avail /dev/shm | tail -1 | tr -d ' '; }
+ 
+ placeholder() {
+   case "${1:-}" in
+     ""|pending*|upload_*|none|null|UNKNOWN) return 0 ;;
+-    *) return 1 ;;
+-  esac
+-}
+-
+-usable_url() {
+-  case "${1:-}" in
+-    http://*|https://*) return 0 ;;
+     *) return 1 ;;
+   esac
+ }
+@@ -78,9 +76,7 @@
+       log "SYMLINK_OK $link -> $target"
+       return 0
+     fi
+-    log "WARN: replacing symlink $link (was $(readlink "$link")) -> $target"
+-    rm -f "$link"
+-    ln -s "$target" "$link"
++    fail "HOLD: existing symlink differs; preserving $link -> $(readlink "$link")"
+   elif [[ -e "$link" ]]; then
+     fail "path exists and is not a symlink: $link"
+   else
+@@ -90,51 +86,30 @@
+   fi
+ }
+ 
+-download_one() {
+-  local dest_part="$1" url="$2" expected_size="$3"
+-  mkdir -p "$(dirname "$dest_part")"
+-  log "DOWNLOAD start url=$url dest=$dest_part expected=$expected_size"
+-  if ! curl -fL --retry 20 --retry-delay 10 --retry-all-errors -C - \
+-      -o "$dest_part" "$url"; then
+-    log "CURL_FAIL url=$url"
++fetch_from_drive() {
++  local dest_part="$1" drive_id="$2" expected_size="$3"
++  # No HF, public-URL, or credential fallback. A configured Drive remote is required.
++  if ! command -v rclone >/dev/null 2>&1; then
++    log "HOLD: DRIVE_RCLONE_ABSENT"
++    return 1
++  fi
++  if ! rclone listremotes 2>/dev/null | grep -qx 'noxdrive:'; then
++    log "HOLD: DRIVE_RCLONE_NOT_CONFIGURED"
++    return 1
++  fi
++  if [[ -e "$dest_part" || -L "$dest_part" ]]; then
++    log "HOLD: existing partial preserved; provenance needs reconciliation: $dest_part"
++    return 1
++  fi
++  log "DRIVE_ONLY id=$drive_id expected=$expected_size"
++  if ! rclone backend copyid noxdrive: "$drive_id" "$dest_part" >>"$LOG" 2>&1; then
++    log "HOLD: DRIVE_RCLONE_COPYID_FAILED id=$drive_id"
+     return 1
+   fi
+   local got
+   got=$(stat -c %s "$dest_part" 2>/dev/null || echo 0)
+-  if [[ "$got" -ne "$expected_size" ]]; then
+-    log "SIZE_MISMATCH after download got=$got expected=$expected_size url=$url"
+-    return 1
+-  fi
++  [[ "$got" -eq "$expected_size" ]] || { log "HOLD: DRIVE_SIZE_MISMATCH got=$got expected=$expected_size"; return 1; }
+   return 0
+-}
+-
+-fetch_from_drive() {
+-  local dest_part="$1" drive_id="$2" expected_size="$3"
+-  log "DRIVE_FALLBACK id=$drive_id"
+-  if command -v rclone >/dev/null 2>&1; then
+-    if rclone listremotes 2>/dev/null | grep -qx 'noxdrive:'; then
+-      log "rclone copyid noxdrive $drive_id"
+-      if rclone backend copyid noxdrive "$drive_id" "$dest_part" >>"$LOG" 2>&1; then
+-        local got
+-        got=$(stat -c %s "$dest_part" 2>/dev/null || echo 0)
+-        if [[ "$got" -eq "$expected_size" ]]; then
+-          return 0
+-        fi
+-        log "DRIVE_RCLONE_SIZE_MISMATCH got=$got expected=$expected_size"
+-      else
+-        log "DRIVE_RCLONE_COPYID_FAILED id=$drive_id"
+-      fi
+-    else
+-      log "DRIVE_RCLONE_NOT_CONFIGURED (no noxdrive remote)"
+-    fi
+-  else
+-    log "DRIVE_RCLONE_ABSENT"
+-  fi
+-  # Last resort: public/uc URL. Usually fails for large private Drive files; fail-closed if so.
+-  if download_one "$dest_part" "https://drive.google.com/uc?export=download&confirm=t&id=${drive_id}" "$expected_size"; then
+-    return 0
+-  fi
+-  return 1
+ }
+ 
+ ok=0
+@@ -146,7 +121,7 @@
+ 
+ for line in "${ITEMS[@]}"; do
+   [[ -n "$line" ]] || continue
+-  IFS='|' read -r dir name size sha hf_url drive_id <<<"$line"
++  IFS='|' read -r dir name size sha drive_id drive_verified <<<"$line"
+   [[ -n "$name" && "$size" -gt 0 ]] || fail "bad manifest row: $line"
+   dest_dir="$SHM_ROOT/$dir"
+   dest="$dest_dir/$name"
+@@ -161,13 +136,9 @@
+       ok=$((ok + 1))
+       continue
+     fi
+-    log "SIZE_WRONG $dir/$name got=$got expected=$size"
+-    if [[ "$CHECK" -eq 1 ]]; then
+-      log "CHECK would replace $dir/$name"
+-      failed=$((failed + 1))
+-      continue
+-    fi
+-    rm -f "$dest"
++    log "HOLD: existing size mismatch; preserved $dir/$name got=$got expected=$size"
++    failed=$((failed + 1))
++    continue
+   else
+     log "MISSING $dir/$name"
+     if [[ "$CHECK" -eq 1 ]]; then
+@@ -176,6 +147,12 @@
+       continue
+     fi
+   fi
++
++  if placeholder "$drive_id" || [[ ! "$drive_id" =~ ^[A-Za-z0-9_-]{10,200}$ || "$drive_verified" != 1 ]]; then
++    fail "HOLD: verified whole-object Drive binding required for $dir/$name"
++  fi
++  [[ "$sha" =~ ^[a-f0-9]{64}$ ]] || fail "HOLD: pinned SHA256 required for $dir/$name"
++  [[ ! -e "$dest" && ! -L "$dest" ]] || fail "HOLD: existing target preserved: $dest"
+ 
+   avail=$(shm_avail)
+   already=0
+@@ -194,34 +171,18 @@
+     fail "SHA missing/placeholder for $dir/$name — refuse to download (fail-closed)"
+   fi
+ 
+-  fetched=0
+-  if usable_url "$hf_url"; then
+-    if download_one "$part" "$hf_url" "$size"; then
+-      fetched=1
+-    else
+-      log "HF_DOWNLOAD_FAILED $dir/$name"
+-    fi
+-  else
+-    log "NO_HF_URL $dir/$name hf_url='$hf_url'"
+-  fi
+-  if [[ "$fetched" -ne 1 ]]; then
+-    if placeholder "$drive_id"; then
+-      fail "no usable source for $dir/$name (hf failed/missing, drive_id='$drive_id')"
+-    fi
+-    if fetch_from_drive "$part" "$drive_id" "$size"; then
+-      fetched=1
+-    else
+-      fail "could not fetch $dir/$name from HF or Drive"
+-    fi
++  if ! fetch_from_drive "$part" "$drive_id" "$size"; then
++    fail "HOLD: Drive-only fetch unavailable for $dir/$name; no external fallback"
+   fi
+ 
+   gotsha=$(sha256sum "$part" | awk '{print $1}')
+   if [[ "$gotsha" != "$sha" ]]; then
+-    rm -f "$part"
+-    fail "SHA_MISMATCH $dir/$name got=$gotsha expected=$sha"
++    fail "HOLD: partial preserved; SHA_MISMATCH $dir/$name got=$gotsha expected=$sha"
+   fi
+   log "SHA_OK $dir/$name $sha"
+-  mv -f "$part" "$dest"
++  # Atomic no-clobber publication: never replace an existing weight path.
++  ln -T -- "$part" "$dest" || fail "HOLD: target appeared; preserving both paths: $dest"
++  rm -f "$part"
+   log "PUBLISHED $dir/$name"
+   ok=$((ok + 1))
+ done
+@@ -246,6 +207,7 @@
+   exit 0
+ fi
+ 
++[[ "$failed" -eq 0 ]] || fail "HOLD: existing-file conflicts preserved; no symlink changes"
+ ensure_symlink "$MODELS/teachers" "$SHM_ROOT/teachers"
+ ensure_symlink "$MODELS/judge" "$SHM_ROOT/judge"
+ [[ -d "$SHM_ROOT/vision" ]] && ensure_symlink "$MODELS/vision" "$SHM_ROOT/vision"
