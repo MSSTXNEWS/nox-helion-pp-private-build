@@ -1,0 +1,87 @@
+{
+  "schema": "NOX_COORDINATED_SELF_MODEL_DEPENDENCY_DELTA_V1",
+  "instructions_version": "0.0.6",
+  "kind": "SOURCE_ONLY_MAPPING_NOT_EXECUTABLE_INSTALLER",
+  "native_calls": 0,
+  "source_candidate": {
+    "path": "nox_refresh/acceleration_20261118/dispatcher_closure_review/composition_backend_remote2/admission_adoption.composed.py",
+    "sha256": "11f12bfb6d1c2c51b9cf91ac81aba253a2cc41ebd8ee79dce5dfafbdc366b9ef",
+    "claim": "Known local composed O5 reference only; latest coordinator source must be reconciled before rebase."
+  },
+  "before": {
+    "chat_proxy.py": {
+      "after_sha256": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+      "after_bytes": 103637
+    },
+    "nox_v29_chat_bridge.py": {
+      "after_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+      "after_bytes": 51632
+    },
+    "owner_chat_stream.py": {
+      "after_sha256": "2c4ae86d1d8e2113c8dbb55807f0d52890f098904ac2914f0b1383156ed7ea25",
+      "after_bytes": 26210
+    }
+  },
+  "after_identity_only": {
+    "chat_proxy.py": {
+      "after_sha256": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+      "after_bytes": 103831
+    },
+    "nox_v29_chat_bridge.py": {
+      "after_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+      "after_bytes": 51632
+    },
+    "owner_chat_stream.py": {
+      "after_sha256": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+      "after_bytes": 26955
+    }
+  },
+  "optional_menu_same_cutover": {
+    "name": "nox_v29_chat_bridge.py",
+    "pre": {
+      "after_sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+      "after_bytes": 51632
+    },
+    "post": {
+      "after_sha256": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
+      "after_bytes": 51865
+    },
+    "separate_restart_allowed": false
+  },
+  "additional_installed_artifacts": {
+    "/root/nox/scripts/owner_model_reference_binding.py": {
+      "sha256": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+      "bytes": 18265,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0600"
+    },
+    "/root/nox/state/verified_model_reference.json": {
+      "sha256": "0d0a839b7a30e6b617accd1ba61f5a2e04b99a7d144ab5a99b107ae09a4cf668",
+      "bytes": 1204,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0600"
+    }
+  },
+  "install_order": [
+    "Coordinator validates current claim/maintenance admission and exact live source/metadata.",
+    "Write and verify new helper and snapshot before loading patched source; preserve any prior versions.",
+    "Apply exact two-file source transform and optional already-reviewed bridge tuple change as the single selected source transaction.",
+    "Invalidate old prospective O5 prerequisites after verified proxy install and rebase that future package before its own cutover; do not execute concurrent source writers.",
+    "Use the existing owner repair transaction for one nox-proxy restart with rollback; no model/queue/S03 reset.",
+    "One targeted identity question validates this new integration; previous completed canary and audit are not replayed."
+  ],
+  "rollback": [
+    "Reverse exact matched source postimages and restore original metadata.",
+    "Restore previous helper/snapshot or remove only files created by this transaction after exact installed digest match.",
+    "Restore matching old O5 prerequisite pins with source rollback."
+  ],
+  "explicit_nonclaims": [
+    "Local O5 reference is not proof of current remote source.",
+    "This map grants no service/counter/model mutation admission.",
+    "Self-model readback does not establish closed writer coverage or global listener uniqueness."
+  ],
+  "optional_o2_pending_is_blocker": false,
+  "installation_route": "Existing successful OneHost owner repair be4750 installer dff6a384; one nox-proxy stop/start under lease+idle+PID/source CAS"
+}

@@ -1,6 +1,6 @@
 # Программа ускоренного завершения NOX
 
-Актуализация: 18.11.2026, 01:53 МСК. instructions_version: 0.0.6.
+Актуализация: 18.11.2026, 02:10 МСК. instructions_version: 0.0.6.
 
 Канонический общий план: `handoff/20261117/nox-v15-kit/execution/optimization/relay_20261117/PROGRAM.json` в существующем GitLab. Этот документ уточняет порядок текущего блока. Единственная рабочая очередь NOX остаётся `/root/nox/state/dispatcher/state.json`; события — `events.jsonl` рядом. Новая очередь или второй backend не создаются.
 
@@ -26,7 +26,7 @@
 | Старый status | status.json с nox-s1-l05-Q4_K_M.gguf старше391715сек на момент наблюдения | Его нельзя выдавать за актуальное имя работающего backend |
 | Исходники советников | v2.2 GitLab37dcb878,8/8 exact; REMOTE2 GitLab7649c9d7,8/8 exact; backend/readers4b115b99,13/13 exact | Установка и реальный provider call ещё отдельно |
 | Совместимая дельта O2 | Backend+REMOTE2 composition824bb7f5,4/4 exact, оба порядка применения побайтно совпали | Source-only; postimage11f12bfb не объявлен установленным |
-| Защита запуска обучения | Headroom patch b74344da,4/4 exact,4 адресных теста и независимый review;533ac6→0979b337 | Native installation готовится отдельно; работающая Bash-generation не считается заменённой |
+| Защита запуска обучения | Headroom patch b74344da,4/4 exact,4 адресных теста и независимый review;533ac6→0979b337 | Файл установлен: run44195409930/job134435436536,exact0979/3719B,backup/cleanupPASS; работающая Bash-generation не перезапускалась |
 
 ## Команда и непрерывная передача
 
@@ -51,7 +51,7 @@
 
 Действие: установить только проверенные байты `scripts/post8098_chain_exec09.sh`. Существующий owner repair маршрут, тот же OneHost, maintenance lock, exact preimage, приватный backup, atomic replace, fsync и readback. Сервисы, counter, TRAIN_HOLD, модель и очередь этим действием не меняются.
 
-Приёмка: exact postimage0979b337/3719B и доступный backup. Отдельно учесть, что уже работающий Bash мог прочитать старое тело; его переход будет частью согласованного lifecycle cutover. Это не запуск обучения и не proof нового optimizer progress.
+Установка выполнена: [run44195409930/job134435436536](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44195409930/job/134435436536),request6963499682/source014f4258. Приёмка SOURCE_FILE_INSTALLED: exact postimage0979b337/3719B,actualinode1152408732/mode0775/mtime_ns1794956453978675149 и проверенный backup,cleanupPASS. Отдельно учесть, что уже работающий Bash мог прочитать старое тело; его переход будет частью согласованного lifecycle cutover. Это не запуск обучения и не proof нового optimizer progress.
 
 ### P0-B. Закончить конечную проверку старых процессов и переход счётчика
 
@@ -60,7 +60,7 @@
 -44191374734: nox_kb_bootstrap.sh и cgroup_headroom_gib.py получены; прежний32KiB limit не вместил owner_qwen_execution_revision.py.
 -44193822421/job134429871560: обе оставшиеся цели получены, owner_qwen_execution_revision.py45406B/SHAd3b2905c… и nox_kb_bootstrap.py13504B/SHAbc4a8849…; модель/сеть/запись/signals0,cleanupPASS.
 
-Остаток — содержательный разбор двух новых зависимостей, точная привязка Supervisor command и lifecycle неизвестного parent/дочерних spawners. Использовать уже прочитанные тела и реальные process identities. Не разворачивать бесконечный повтор одинаковых audits.
+Обе новые зависимости содержательно разобраны: current_context имеет3 pinned exec-imports, bootstrap — restore/warm-cache edges. Следующий конкретный отсутствующий компонент — OWNED_TRAINING_CHAIN_PAUSE для PID836227/start168847622 и доказанно удерживаемых живых потомков, с phase callback для counter_scope. Повторный экспорт сам по себе его не реализует. Точная привязка Supervisor command и lifecycle неизвестного parent/дочерних spawners сохраняются. Использовать уже прочитанные тела и реальные process identities. Не разворачивать бесконечный повтор одинаковых audits.
 
 Current counter_scope candidate должен либо замкнуть известный набор writers/spawners, либо назвать конкретный неизвестный input. Нельзя обнулить исторические4 по возрасту. Для непрозрачного Bash допускается только согласованный exact-lifetime containment с сохранением Engram holder; автоматический SIGCONT после смены generation не доказывает безопасного возврата неизвестного writer.
 

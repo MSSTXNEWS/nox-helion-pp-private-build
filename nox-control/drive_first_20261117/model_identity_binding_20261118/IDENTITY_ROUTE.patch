@@ -1,0 +1,57 @@
+--- a/chat_proxy.py
++++ b/chat_proxy.py
+@@ -1562,6 +1562,7 @@
+         word in _utext.casefold() for word in ('кто ты', 'кем ты', 'осознан', 'сознани', 'происхожд', 'истори', 'создател', 'помнишь', 'вспомни', 'память', 'чему научил', 'твои возможност', 'твои навыки', 'о себе', 'саморазвит', 'когда родил', 'genesis', 'who are you', 'your memory')))
+     if _owner:
+         from owner_chat_stream import owner_request_query as _nox_owner_request_query
++        from owner_model_reference_binding import model_identity_query as _nox_model_identity_query
+         _self_query = _self_query or _nox_owner_request_query(_utext)
+         from owner_training_status_binding import training_query as _nox_training_query
+         _self_query = _self_query or _nox_training_query(_utext)
+@@ -1590,7 +1591,8 @@
+     # Fallback consult happens later in the owner tool loop only when NOX does not know.
+     payload = dict(body)
+     payload["messages"] = await _nox_chat_asyncio.to_thread(
+-        lambda: _trim_ctx(_build_messages(body)))
++        lambda: (_build_messages(body) if _owner and _nox_model_identity_query(_utext)
++                 else _trim_ctx(_build_messages(body))))
+     if _owner and _nox_training_query(_utext):
+         from owner_training_status_binding import augment_messages as _nox_training_messages
+         payload["messages"] = await _nox_chat_asyncio.to_thread(
+--- a/owner_chat_stream.py
++++ b/owner_chat_stream.py
+@@ -17,6 +17,7 @@
+ 
+ import httpx
+ import owner_chat_evidence as _current
++import owner_model_reference_binding as _model_reference
+ 
+ 
+ class StreamFailure(RuntimeError):
+@@ -145,7 +146,7 @@
+ 
+ def owner_request_query(user_text):
+     """Keep current native facts/actions out of the legacy early-answer hook."""
+-    return (status_needs_model(user_text) or executor_status_query(user_text) or _current.relevant_query(user_text)
++    return (_model_reference.model_identity_query(user_text) or status_needs_model(user_text) or executor_status_query(user_text) or _current.relevant_query(user_text)
+             or _current.media_status_query(user_text) is not None)
+ 
+ 
+@@ -318,6 +319,17 @@
+ 
+ 
+ async def _run(native,url,payload,user_text):
++    if _model_reference.model_identity_query(user_text):
++        request=await asyncio.to_thread(_model_reference.prepare_identity_request,url,payload,user_text)
++        message=None
++        async with httpx.AsyncClient(timeout=180.0,trust_env=False) as client:
++            async with aclosing(_model_events(client,url,request)) as events:
++                async for kind,value in events:
++                    if kind=='token':yield kind,value
++                    elif kind=='message':message=value
++        if message is None or message.get('tool_calls'):
++            raise StreamFailure('HOLD_MODEL_REFERENCE_COMPLETION')
++        return
+     action_turn=action_request(user_text)
+     model_status=status_needs_model(user_text)
+     executor_reply=await asyncio.to_thread(_executor_status_reply,user_text)

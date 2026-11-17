@@ -1,0 +1,18 @@
+{
+  "chat_proxy.py": {
+    "pre_sha256": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+    "pre_bytes": 103637,
+    "post_sha256": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+    "post_bytes": 103831,
+    "ast_scope_verified": true,
+    "exact_inverse_verified": true
+  },
+  "owner_chat_stream.py": {
+    "pre_sha256": "2c4ae86d1d8e2113c8dbb55807f0d52890f098904ac2914f0b1383156ed7ea25",
+    "pre_bytes": 26210,
+    "post_sha256": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+    "post_bytes": 26955,
+    "ast_scope_verified": true,
+    "exact_inverse_verified": true
+  }
+}

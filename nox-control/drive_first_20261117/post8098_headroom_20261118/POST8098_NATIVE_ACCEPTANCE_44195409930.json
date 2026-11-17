@@ -1,0 +1,100 @@
+{
+  "schema": "NOX_POST8098_NATIVE_SEMANTIC_ACCEPTANCE_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/dispatcher_acceleration",
+  "recorded_at": "2026-11-17T23:02:22.150290+00:00",
+  "status": "ACCEPTED_EXACT_SOURCE_FILE_REPAIR_RUNNING_SHELL_UNCHANGED",
+  "actual": {
+    "run": "44195409930",
+    "job": "134435436536",
+    "request": "6963499682",
+    "source_commit": "014f42580407c22ca75e0f39db5df92a60f8a049",
+    "cleanup": "Root reported PASS; this readback file contains the native application receipt only.",
+    "native_receipt_sha256": "9da3a709ed52c2ae3c219b94b1fedf15d62b579bc18689060256e6e32610080e",
+    "native_receipt_bytes": 870,
+    "lossless_python_json_parse": true,
+    "payload_sha256": "ab645c628d2d0aa561495eff562291b06c2bf187024ff2dc5dc81de14da6ffc0"
+  },
+  "accepted": {
+    "active_launcher_changed": false,
+    "after_sha256": "0979b33716d19f9c209acdbc6ba7025c635725319ab3fe6cfb2b0d6677737522",
+    "attempt_created": true,
+    "automatic_retry": false,
+    "automatic_rollback": false,
+    "before_sha256": "533ac6e89e3514cef30af6678e7dba50e5465bb07f1bff8f530b38486f38906b",
+    "counter_changed": 0,
+    "installation_accepted": true,
+    "installed_identity": {
+      "bytes": 3719,
+      "dev": 36,
+      "gid": 0,
+      "ino": 1152408732,
+      "mode": 509,
+      "mtime_ns": 1794956453978675149,
+      "uid": 0
+    },
+    "model_calls": 0,
+    "network_calls": 0,
+    "queue_changed": 0,
+    "reconcile_required": false,
+    "replace_attempted": true,
+    "replace_returned": true,
+    "request": "6963499682",
+    "rollback_attempted": false,
+    "schema": "NOX_POST8098_SOURCE_REPAIR_V1",
+    "services_changed": 0,
+    "source_commit": "014f42580407c22ca75e0f39db5df92a60f8a049",
+    "source_file_installed": true,
+    "status": "SOURCE_FILE_INSTALLED",
+    "training_hold_changed": 0
+  },
+  "behavior": "Fresh execution of the exact new launcher source requires successful numeric cgroup headroom >=40 before its existing TRAIN_HOLD clear/start lines. Failed or invalid headroom is fail-closed. The full preexisting launcher was not run by this installation.",
+  "live_generation_boundary": {
+    "restarted_or_signalled_by_this_install": false,
+    "loaded_code_proven": false,
+    "current_shell_using_new_bytes_proven": false,
+    "source_pin_is_disk_evidence_only": true,
+    "training_chain_pause_or_owned_restart_still_separate": true,
+    "last_observed_bash_pid": 836227,
+    "last_observed_bash_start_ticks": 168847622,
+    "process_presence_rechecked_by_install": false
+  },
+  "counter_scope_rebase": {
+    "latest_other_candidate_sha256_observed": "2f4f061f77d34cf7adef0ad31e87706ba40cd0a5852b87298d699500ab021a4b",
+    "observed_pin": {
+      "LIVE": "533ac6e89e3514cef30af6678e7dba50e5465bb07f1bff8f530b38486f38906b",
+      "OFFLINE": "533ac6e89e3514cef30af6678e7dba50e5465bb07f1bff8f530b38486f38906b"
+    },
+    "target_source_key": "scripts/post8098_chain_exec09.sh",
+    "required_disk_pins": {
+      "LIVE": "0979b33716d19f9c209acdbc6ba7025c635725319ab3fe6cfb2b0d6677737522",
+      "OFFLINE": "0979b33716d19f9c209acdbc6ba7025c635725319ab3fe6cfb2b0d6677737522"
+    },
+    "actual_disk_metadata": {
+      "bytes": 3719,
+      "dev": 36,
+      "gid": 0,
+      "ino": 1152408732,
+      "mode": 509,
+      "mtime_ns": 1794956453978675149,
+      "uid": 0
+    },
+    "change_allowed": [
+      "Update only exact current disk source/hash/size/metadata expectations and package/source manifests through current O2 owner CAS."
+    ],
+    "do_not_change": [
+      "PID/start/argv identity of the already-running shell",
+      "Loaded-bytecode-proof flag",
+      "Unresolved training/KB/opaque parent phase requirements",
+      "Counter value, generation, owner guard, or source completeness flags"
+    ],
+    "old_pin_not_accepted_as_an_alternative": true
+  },
+  "no_repeat": {
+    "new_native_calls_by_reviewer": 0,
+    "repeated_install": false,
+    "future_retry_permitted_without_reconciliation": false
+  },
+  "counter_scope_complete": false,
+  "normal3_runtime_installed_by_this_change": false
+}

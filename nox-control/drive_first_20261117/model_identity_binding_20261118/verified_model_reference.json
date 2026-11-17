@@ -1,0 +1,35 @@
+{
+  "schema": "NOX_VERIFIED_MODEL_REFERENCE_V1",
+  "evidence": {
+    "run": "44192038242",
+    "request": "6963059953",
+    "source_sha": "dd824cbd6cc4508deeb84681f9612b9cee2fe31d",
+    "raw_sha256": "f430bfb170c74ec39b57a59b676e4cbf0ad32063d70962e17681738ff03b45ef",
+    "observed_at": 1794955163
+  },
+  "route": {
+    "host": "127.0.0.1",
+    "port": 8098,
+    "path": "/v1/chat/completions"
+  },
+  "process": {
+    "pid": 3266857,
+    "start_ticks": 172046662,
+    "ppid": 114,
+    "uid": 0,
+    "argv_sha256": "88bc6d7a0ed91c5363a7129514e354983e7285f8c13bcd00e84c3649192b56e4",
+    "exe_path_sha256": "4b67e9230f074d14e7f16587f6f9adbb2c7f094a0556d313b55ee320c0091815",
+    "cwd_sha256": "5ac55c8ee49f44fbeb36ae4536b880b5db18275d00d087bf23c7e6e7a81a143b"
+  },
+  "listener": {
+    "fd": 67,
+    "socket_inode": 508955271,
+    "network_namespace_sha256": "a7927ec5c8940a3fec256240dd4242eeda83f351f1579c3da2a21906ef515238",
+    "address": "0.0.0.0"
+  },
+  "model_reference": {
+    "basename": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+    "argument_sha256": "cf724eeeb8c3e2f0b794f60e9b854faf24b0593072335d69ff9405d969155436"
+  },
+  "scope": "CURRENT_LISTENER_ARGV_REFERENCE_ONLY"
+}

@@ -1,0 +1,75 @@
+{
+  "schema": "NOX_INDEPENDENT_MODEL_IDENTITY_BINDING_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "state": "PASS_REVIEWED_SOURCE_SCOPE_NATIVE_CUTOVER_PENDING",
+  "source_pins": {
+    "SOURCE_RECEIPT.json": {
+      "sha256": "a2fd0c33a15bbe1d7348b06fb6616ae1159479cf5972a8f6f3389ad4cca203ad",
+      "bytes": 4405
+    },
+    "build_model_reference_snapshot.py": {
+      "sha256": "6be18774e9eaf008d5f1749648c7bd3f8806720f7d3668eacc6eb3f0e0764004",
+      "bytes": 3190
+    },
+    "owner_model_reference_binding.py": {
+      "sha256": "8ce86f31469f9c866b490c0d26d5a20100fd0de5d0ff1c9eee8230c676dfed12",
+      "bytes": 18245
+    },
+    "source_transform.py": {
+      "sha256": "d26783b43ef0043a8f83332901aa10aa4e722ee0850d8d8a17e050e8896ae2e3",
+      "bytes": 5325
+    },
+    "verified_model_reference.json": {
+      "sha256": "0d0a839b7a30e6b617accd1ba61f5a2e04b99a7d144ab5a99b107ae09a4cf668",
+      "bytes": 1204
+    }
+  },
+  "source_gate": {
+    "sha256": "d6e79e4086468b0a9925d45b3f840791abe137ad84b00cee3f0f75b40a7ba8af",
+    "bytes": 696
+  },
+  "reviewed_semantics": [
+    "Full-match bounded standalone RU/EN model question; compound commands keep the existing owner route.",
+    "Exact primary URL is checked before local proof reads; fallback 8085 never reuses primary model basename.",
+    "Root-owned strict bounded snapshot is derived byte-exactly from accepted audit f430bfb1; no credential, environment or model-weight exports.",
+    "Fresh pinned process lifetime, argv hash, executable/cwd hashes, owned socket FD, same network namespace and bounded LISTEN table proof are required twice.",
+    "Reader uses retained no-follow directory descriptors, bounded reads and descriptor cleanup; time limit is cooperative, not represented as hard wall time.",
+    "Prepared verified fact is rebuilt each request; failed proof removes prior verified basename and yields explicit unverified reference.",
+    "Identity-only payload keeps the bounded stable system prefix plus current fact and exact user question: two messages, no tools, generated token cap 256. Exact input token count is not claimed.",
+    "Branch uses existing actual model SSE path and rejects absent final message or tool calls; ordinary generic/tool loop statements are AST-identical.",
+    "Projection labels model reference only; no weight-content, architecture/training, prior-chat-backend, atomic-snapshot or global-listener uniqueness claim.",
+    "Proxy and owner route patch forward/inverse bytes and unaffected AST verified independently; postimages compile without execution."
+  ],
+  "author_validation": {
+    "reported_unique_checks_passed": 11,
+    "independent_full_suite_rerun": false,
+    "attribution": "Author SOURCE_RECEIPT.json; not counted as new independent executions."
+  },
+  "independent_targeted_validation": {
+    "test": "test_independent_identity_binding.IndependentIdentityBinding.test_prepared_verified_fact_is_removed_after_argv_drift_or_route_switch",
+    "test_source": {
+      "sha256": "cd78516877d530676ed65586407ecde5f7f6997df04f83aa8293fd91fbc24945",
+      "bytes": 2696
+    },
+    "tool_chunk": "9fe6f0",
+    "tests_executed": 1,
+    "result": "PASS",
+    "subcases": [
+      "Verified request then same-PID argv drift removes prior verified model fact",
+      "Previously prepared verified request then fallback 8085 removes basename without any Reader construction"
+    ],
+    "network_forbidden": true
+  },
+  "exact_source_gate_tool_chunk": "87b3de",
+  "remaining_acceptance": [
+    "Coordinator must compose installation with current O5 source prerequisites and existing startup transaction; independent restart is not authorized by this review.",
+    "Native post-install canary must confirm actual bounded system prefix fits, identity question streams a model response and ordinary tool questions still retain tools.",
+    "Process/socket proof is a bounded observation, not an atomic lifetime guarantee; changing backend invalidates the cached reference on a subsequent proof.",
+    "No native installation, restart, live model response or provider call was performed by this reviewer."
+  ],
+  "native_calls": 0,
+  "provider_calls": 0,
+  "foreign_workspace_writes": 0,
+  "remote_mutations": 0
+}

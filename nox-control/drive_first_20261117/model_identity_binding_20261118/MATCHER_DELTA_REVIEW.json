@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_IDENTITY_MATCHER_DELTA_REVIEW_V1",
+  "reviewer": "/root/integrations_completion",
+  "instructions_version": "0.0.6",
+  "state": "PASS_EXACT_ONE_REGEX_DELTA",
+  "base_sha256": "8ce86f31469f9c866b490c0d26d5a20100fd0de5d0ff1c9eee8230c676dfed12",
+  "post_sha256": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+  "post_bytes": 18265,
+  "exact_delta": "Optional trailing сейчас only within the existing full-match в твоей основе alternative. All other helper bytes unchanged.",
+  "source_review_receipt_sha256": "1430c6240ec37da9d7248e212730f4232f10f67d58334cc5b349269ddf95bb32",
+  "author_targeted_cases": {
+    "count": 3,
+    "reported_result": "PASS",
+    "scope": "Standalone exact QA question accepted; two compound action questions remain rejected."
+  },
+  "suite_repeated": false,
+  "native_calls": 0,
+  "provider_calls": 0
+}

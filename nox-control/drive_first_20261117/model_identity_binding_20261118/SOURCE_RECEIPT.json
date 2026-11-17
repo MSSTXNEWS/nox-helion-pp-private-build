@@ -1,0 +1,150 @@
+{
+  "schema": "NOX_MODEL_REFERENCE_BINDING_SOURCE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "state": "SOURCE_FROZEN_INDEPENDENT_REVIEW_PASS",
+  "native_calls": 0,
+  "installed": false,
+  "publication_by_this_agent": false,
+  "accepted_native_audit": {
+    "run": "44192038242",
+    "request": "6963059953",
+    "source_sha": "dd824cbd6cc4508deeb84681f9612b9cee2fe31d",
+    "raw_sha256": "f430bfb170c74ec39b57a59b676e4cbf0ad32063d70962e17681738ff03b45ef",
+    "semantic_acceptance_sha256": "84e60142ace956a0f7837a61a2381a842fa318062860c2520a4e1c6fe2a8b9a0"
+  },
+  "files": {
+    "owner_model_reference_binding.py": {
+      "sha256": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+      "git_blob_sha": "1786f39c7e80b3221c1adbde735c67468a88cf5d",
+      "bytes": 18265
+    },
+    "build_model_reference_snapshot.py": {
+      "sha256": "6be18774e9eaf008d5f1749648c7bd3f8806720f7d3668eacc6eb3f0e0764004",
+      "git_blob_sha": "80cdab474135d700d695b4e797a17f1f1113b863",
+      "bytes": 3190
+    },
+    "verified_model_reference.json": {
+      "sha256": "0d0a839b7a30e6b617accd1ba61f5a2e04b99a7d144ab5a99b107ae09a4cf668",
+      "git_blob_sha": "532a69d781302efb5b71cd185902c035c439f0c9",
+      "bytes": 1204
+    },
+    "source_transform.py": {
+      "sha256": "d26783b43ef0043a8f83332901aa10aa4e722ee0850d8d8a17e050e8896ae2e3",
+      "git_blob_sha": "a3ba9ef0e4cdd85202bbd175ab0818b16f966fab",
+      "bytes": 5325
+    },
+    "IDENTITY_ROUTE.patch": {
+      "sha256": "aa0f80d9366cab51e0b6f99399699623cbae5b853b5a4a4590e7973636770ed2",
+      "git_blob_sha": "45a7ec76d552bc479df8405dc7ef30a91171c675",
+      "bytes": 3124
+    },
+    "SOURCE_TRANSFORM_RECEIPT.json": {
+      "sha256": "c7e9c262a3e9cf093ebb47e161101843c3720f45d4ae0eb39b9ee907cd5cbdf6",
+      "git_blob_sha": "a5e020d5418e6b45f74e5ebf85d8d1c8eae3ae98",
+      "bytes": 642
+    },
+    "test_model_reference_binding.py": {
+      "sha256": "235f901fd7e3e70d85013beec7191406076c339953dcf81228a9d671fcbc4de7",
+      "git_blob_sha": "6ee3907da9b44ed0cb1f2f0c2818a9b2c83a7303",
+      "bytes": 13771
+    },
+    "README.md": {
+      "sha256": "7ec0269c0d16a8841ab6dd5bd4010051f738ccdb4d48862806ea8673bf845b81",
+      "git_blob_sha": "c10b429db50f2a895e6574a0f04edc98964f8175",
+      "bytes": 10098
+    },
+    "SOURCE_PATH_DESIGN.md": {
+      "sha256": "aeff8e86630f7b5f07a5d0f5751c8c21f4bece4e02a359f490fe84f98230dc22",
+      "git_blob_sha": "4802cafb108e9297ebc0ea31cd8af9b2097002fb",
+      "bytes": 10879
+    },
+    "COORDINATED_DEPENDENCY_DELTA.json": {
+      "sha256": "e9bd27c771d7f4b1fb5f64d135673bb1ae25e46b8bc4b872e7b25fc690bf71a9",
+      "git_blob_sha": "8ed0457d2451660e64781a31b0b30c5359e959ed",
+      "bytes": 3919
+    },
+    "INDEPENDENT_IDENTITY_BINDING_REVIEW.json": {
+      "sha256": "1430c6240ec37da9d7248e212730f4232f10f67d58334cc5b349269ddf95bb32",
+      "git_blob_sha": "ac4d05cb647e3975fef9426d0915da28f2484baa",
+      "bytes": 4266
+    },
+    "MATCHER_DELTA_REVIEW.json": {
+      "sha256": "b3d7a9c828c266fe1075a0200a66deceb5ceffa7d9a03bc55fd21628b2427a1d",
+      "git_blob_sha": "0afa8c043cee38151cec4585ccad61d02a48dc36",
+      "bytes": 887
+    }
+  },
+  "source_transform": {
+    "chat_proxy.py": {
+      "pre_sha256": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+      "pre_bytes": 103637,
+      "post_sha256": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+      "post_bytes": 103831,
+      "ast_scope_verified": true,
+      "exact_inverse_verified": true
+    },
+    "owner_chat_stream.py": {
+      "pre_sha256": "2c4ae86d1d8e2113c8dbb55807f0d52890f098904ac2914f0b1383156ed7ea25",
+      "pre_bytes": 26210,
+      "post_sha256": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+      "post_bytes": 26955,
+      "ast_scope_verified": true,
+      "exact_inverse_verified": true
+    }
+  },
+  "tests": {
+    "unique_passed": 12,
+    "initial_run": {
+      "tests": 10,
+      "pass": 9,
+      "fixture_uid_error": 1
+    },
+    "targeted_followup": {
+      "tests": 2,
+      "pass": 2,
+      "reasons": [
+        "isolate accepted-root audit producer from TempFS UID mock",
+        "new namespace disappearance FD cleanup regression"
+      ]
+    },
+    "full_suite_repeated": false,
+    "actual_native_test_after_install": false,
+    "assigned_question_followup": {
+      "unique_tests": 1,
+      "cases": 3,
+      "pass": 3,
+      "purpose": "root assigned exact current-model question fullmatch; compound actions remain excluded"
+    }
+  },
+  "bounds": {
+    "question_characters": 240,
+    "question_utf8_bytes": 640,
+    "prefix_utf8_bytes": 6144,
+    "fact_utf8_bytes": 1536,
+    "two_message_utf8_bytes": 8192,
+    "max_generated_tokens": 256,
+    "exact_input_token_count": "UNKNOWN_NOT_CLAIMED",
+    "network_requests_by_binding": 0,
+    "local_reads_cooperative_deadline_seconds": 0.25,
+    "local_file_read_bytes": 700000
+  },
+  "existing_owner_tool_loop_ast_unchanged": true,
+  "no_compound_user_command_reclassified": true,
+  "runtime_paths": [
+    "/root/nox/scripts/owner_model_reference_binding.py",
+    "/root/nox/state/verified_model_reference.json"
+  ],
+  "coordinator_dependency": "Single existing OneHost proxy repair after concrete lease/owner-idle/PID/source CAS; optional O2 pending is not a blocker. Update prospective O5 prerequisite pins before its own future cutover.",
+  "independent_review": {
+    "receipt_path": "nox_refresh/model_identity_binding_review_20261118/INDEPENDENT_IDENTITY_BINDING_REVIEW.json",
+    "sha256": "1430c6240ec37da9d7248e212730f4232f10f67d58334cc5b349269ddf95bb32",
+    "helper_reviewed_before_query_extension": "8ce86f31469f9c866b490c0d26d5a20100fd0de5d0ff1c9eee8230c676dfed12",
+    "status": "PASS_BASE_AND_EXACT_QUERY_DELTA",
+    "matcher_delta_sha256": "b3d7a9c828c266fe1075a0200a66deceb5ceffa7d9a03bc55fd21628b2427a1d"
+  },
+  "query_compatibility_delta": {
+    "old": "в\\s+твоей\\s+основе",
+    "new": "в\\s+твоей\\s+основе(?:\\s+сейчас)?",
+    "logic_elsewhere_changed": false
+  }
+}

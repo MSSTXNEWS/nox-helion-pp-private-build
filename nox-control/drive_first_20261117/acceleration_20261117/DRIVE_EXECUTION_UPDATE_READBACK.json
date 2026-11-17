@@ -1,0 +1,15 @@
+{
+  "instructions_version": "0.0.6",
+  "file_id": "1Ez0JSlLmb51GdzeV1-Nls0TF8dWczM_E",
+  "bytes": 960516,
+  "sha256": "8b9e4cc18ad49f0ee06ac4627c25dc0816ec911c83a13a231bd159d46577b564",
+  "full_raw_exact": true,
+  "unrelated_prefix_suffix_unchanged": true,
+  "old_bytes": 961611,
+  "old_sha256": "2969828eabb716ac6dd104b5f650556bce3d269741e4fbf172e0485681f3436c",
+  "native_headroom_result_included": true,
+  "current_model_reference_included": true,
+  "same_id": true,
+  "modified_time": "2026-11-17T23:08:54.567Z",
+  "last_writer_check": "fresh metadata immediately before upload; no atomic provider CAS claimed"
+}
