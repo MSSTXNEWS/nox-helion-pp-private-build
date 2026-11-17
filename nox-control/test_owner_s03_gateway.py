@@ -1,4 +1,5 @@
 import hashlib
+from datetime import datetime, timedelta, timezone
 import importlib.util
 import json
 from pathlib import Path
@@ -199,6 +200,27 @@ class GatewayTests(unittest.TestCase):
         self.assertTrue(unverified)
         self.assertTrue(all(r['historical_unverified'] and not r['training_verified']
                             for r in unverified))
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_recent_rejects_near_future_event_before_owner_recency(self):
+        # Regression: +1 hour is within the old +24 hour tolerance, but
+        # must not outrank the genuine owner M1 decision.
+        fixed = datetime(2026, 11, 18, 0, 0, tzinfo=timezone.utc)
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current', 'verified owner decision', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ((fixed - timedelta(seconds=3)).isoformat(), 'current'))
+            item(c, 'future_hour', 'unverified future-dated event', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ((fixed + timedelta(hours=1)).isoformat(), 'future_hour'))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with patch.object(g.time, 'time', return_value=fixed.timestamp()):
+            self.assertEqual(g._recent_event_timestamp({
+                'ts': (fixed + timedelta(hours=1)).isoformat()}), 0.0)
+            self.assertGreater(g._recent_event_timestamp({
+                'ts': (fixed + timedelta(seconds=1)).isoformat()}), 0.0)
+            with g.connection(self.db) as c:
+                self.assertEqual(g.recent_rows(c)[0]['id'], 'current')
         self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
 
     def test_recent_rejects_future_clock_and_oversized_request(self):
