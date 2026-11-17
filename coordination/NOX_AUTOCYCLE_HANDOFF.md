@@ -1631,3 +1631,8 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **Preimages:** existing `web29_3d_20261116/site/nox-motion-idle-loader.js` Git blob `3c7c2d9cce1b18e7ed825981b0c01ee19da2e240`, stage lock `95b4909993b10b52af0d7218dd1152f5a82a4e5b`, regression `afdc6208daa5f737fc7860d1032736f6ff856021`.
 - **Source-only bounded target:** during BFCache `pageshow.persisted`, existing optional Motion.js loader must never clear a previously recorded `nox-stop-requested`. Preserve no-STOP BFCache resume, new-chat recovery, low-power and reduced-motion gates. Add regression, repair exact stage SHA, run original test, CAS readback.
 - **Safety:** owner STOP/lease, original backend/chat/S03/weights, D02 and 14-world shaders untouched; no native install/restart/cleanup. After readback release claim with final receipt.
+
+
+### NOX-V14-A0-SSH-READONLY-43984910217 · 2026-11-17T00:07Z · supplemental network observation, NOT a new A0 DONE
+- External existing [V136 read-only job #43984910217 / 133710446872](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43984910217/job/133710446872) SUCCESS: `ssh9.vast.ai:26623` DNS/TCP/SSH banner true, 150 ms; `166.113.48.41:11234` DNS/TCP/SSH banner true, 102 ms. This proves network listener only, **NOT authenticated SSH, native command, PID, model, STOP or lease** (original logs explicitly `NOX_V136_NATIVE_SSH_AUTHENTICATED=false`).
+- A0 `V14-0-14` SOURCE_TESTED closure unchanged; another executor owns V136 probe, no double-credit. Next owner read-only identity through existing pinned SSH/owner authorization; preserve STOP. This evidence does not lift production HOLD.
