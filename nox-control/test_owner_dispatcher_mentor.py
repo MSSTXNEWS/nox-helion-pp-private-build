@@ -214,6 +214,45 @@ class MentorTests(unittest.TestCase):
         self.assertNotIn('hf_abcdefghijklmnop', output)
 
 
+class VerifiedJournalRecallV14Tests(unittest.TestCase):
+    def test_reusable_repair_requires_exact_task_accepted_native_receipt(self):
+        lifecycle = module('owner_task_lifecycle')
+        schema = 'NOX_DISPATCHER_MENTOR_V1'
+        verified = {'kind': 'native_supervisor_running', 'service': 'nox-priority-scheduler'}
+        def event(kind, **fields):
+            return {'schema': schema, 'kind': kind, **fields}
+        with tempfile.TemporaryDirectory() as directory, patch.object(lifecycle, 'ROOT', Path(directory)):
+            path = Path(directory) / 'memory/dispatcher_mentor/events.jsonl'
+            path.parent.mkdir(parents=True)
+            rows = [
+                event('experience_verified', task_id='current', partition='train',
+                      accepted=True, verification=verified, dedup_sha256='a' * 64),
+                event('experience_verified', task_id='current', partition='holdout',
+                      accepted=False, verification=verified, dedup_sha256='b' * 64),
+                event('experience_verified', task_id='current', partition='train',
+                      accepted=False, verification=verified, dedup_sha256='c' * 64),
+                event('experience_verified', task_id='other', handler='shared',
+                      partition='train', accepted=True, verification=verified,
+                      dedup_sha256='d' * 64),
+                event('experience_verified', task_id='current', partition='train',
+                      accepted=True, verification={'kind': 'model_claim'},
+                      dedup_sha256='e' * 64),
+                event('experience_verified', task_id='current', partition='train',
+                      accepted=True, verification=verified, dedup_sha256='invalid'),
+                event('error_observed', task_id='other', handler='shared',
+                      category='timeout', accepted=False),
+                event('experience_quarantined', task_id='current', accepted=False),
+            ]
+            path.write_text(''.join(json.dumps(row) + '\\n' for row in rows))
+            result = lifecycle.journal_recall({'id': 'current', 'handler': 'shared'})
+            self.assertEqual(result['state'], 'JOURNAL_RECALLED')
+            self.assertEqual(result['verified'], 1)
+            self.assertEqual(result['errors'], 1)
+            self.assertEqual(result['quarantined'], 1)
+            self.assertEqual(result['error_categories'], ['timeout'])
+            self.assertEqual(len(result['references_sha256']), 3)
+
+
 @unittest.skipUnless(FIXTURE.exists(), 'Requires retrieved pinned native dispatcher fixture')
 class NativeTransformTests(unittest.TestCase):
     @classmethod
