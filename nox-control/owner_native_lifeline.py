@@ -217,8 +217,66 @@ def check_existing_installation(expected):
     return True
 
 
+LEGACY_LIFELINE_SHA256 = "c04f66ea3bc9cf3fe753aded140d197411104501d8dd52a3cb2cffd8d753446a"
+MIGRATED_SCRIPT_BACKUP = None
+MIGRATED_SCRIPT_NEW_SHA = None
+
+def replace_script_exact(path, expected_old, replacement):
+    """Atomic, owner-locked exact-script swap. No other config or services."""
+    protect_path(path)
+    before = path.lstat()
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+        fail("LEGACY_SCRIPT_UNSAFE")
+    if path.read_bytes() != expected_old:
+        fail("LEGACY_SCRIPT_CHANGED")
+    if path.lstat() != before:
+        fail("LEGACY_SCRIPT_RACE")
+    fd, temp = tempfile.mkstemp(prefix=".nox-lifeline-upgrade-", dir=path.parent)
+    try:
+        os.fchmod(fd, 0o644)
+        with os.fdopen(fd, "wb") as w:
+            w.write(replacement)
+            w.flush()
+            os.fsync(w.fileno())
+        if path.lstat() != before or path.read_bytes() != expected_old:
+            fail("LEGACY_SCRIPT_RACE")
+        os.replace(temp, path)
+        fd_dir = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(fd_dir)
+        finally:
+            os.close(fd_dir)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+    if path.read_bytes() != replacement:
+        fail("LEGACY_SCRIPT_READBACK")
+    return True
+
+
+def recover_legacy_script():
+    """Best-effort rollback without touching a live guard, original services or STOP."""
+    global MIGRATED_SCRIPT_BACKUP, MIGRATED_SCRIPT_NEW_SHA
+    if MIGRATED_SCRIPT_BACKUP is None:
+        return
+    path = MIGRATED_SCRIPT_BACKUP
+    old = path.read_bytes()
+    if hashlib.sha256(old).hexdigest() != LEGACY_LIFELINE_SHA256:
+        fail("LEGACY_BACKUP_CORRUPT")
+    current = info(GUARD)
+    if current["state"] not in ("STOPPED", "EXITED") or current["pid"] is not None:
+        fail("LEGACY_ROLLBACK_GUARD_ACTIVE")
+    if hashlib.sha256(SCRIPT.read_bytes()).hexdigest() != MIGRATED_SCRIPT_NEW_SHA:
+        fail("LEGACY_ROLLBACK_SOURCE_CHANGED")
+    replace_script_exact(SCRIPT, SCRIPT.read_bytes(), old)
+    emit({"state": "LEGACY_SCRIPT_ROLLBACK_VERIFIED",
+          "restored_sha256": LEGACY_LIFELINE_SHA256,
+          "owner_stop_preserved": True})
+    MIGRATED_SCRIPT_BACKUP = None
+
+
 def main():
-    global OWNER_LOCK_FD
+    global OWNER_LOCK_FD, MIGRATED_SCRIPT_BACKUP, MIGRATED_SCRIPT_NEW_SHA
     sha = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
     if not AUDIT_SHA.fullmatch(sha) or not request.isdigit():
@@ -249,6 +307,36 @@ def main():
     # Never overwrite an existing differing file / old policy / owner configuration.
     for path in (SCRIPT, POLICY, CONFIG):
         protect_path(path)
+    # This EXACT previously installed legacy byte fingerprint was observed
+    # by authenticated owner SSH. Never broaden it to an unknown version.
+    previous = None
+    if (SCRIPT.is_file() and not SCRIPT.is_symlink()
+        and POLICY.is_file() and not POLICY.is_symlink()
+        and CONFIG.is_file() and not CONFIG.is_symlink()):
+        previous = SCRIPT.read_bytes()
+        if (hashlib.sha256(previous).hexdigest() == LEGACY_LIFELINE_SHA256
+            and POLICY.read_bytes() == policy and CONFIG.read_bytes() == config):
+            original_guard = info(GUARD)
+            if original_guard["state"] not in ("STOPPED", "EXITED") or original_guard["pid"] is not None:
+                fail("LEGACY_GUARD_MUST_BE_STOPPED")
+            backup = ROOT / "backup/owner_maintenance" / request / "nox_native_lifeline_preupgrade.py"
+            if backup.exists() or backup.is_symlink():
+                # No clobber: exact same old bytes already backed up is okay.
+                if backup.is_symlink() or not backup.is_file() or backup.read_bytes() != previous:
+                    fail("LEGACY_BACKUP_CONFLICT")
+            else:
+                preserve_or_write(backup, previous, 0o600)
+            if backup.read_bytes() != previous:
+                fail("LEGACY_BACKUP_READBACK")
+            compile(script, str(SCRIPT), "exec")
+            replace_script_exact(SCRIPT, previous, script)
+            MIGRATED_SCRIPT_BACKUP = backup
+            MIGRATED_SCRIPT_NEW_SHA = hashlib.sha256(script).hexdigest()
+            emit({"state": "LEGACY_SCRIPT_EXACT_UPGRADE",
+                  "old_sha256": LEGACY_LIFELINE_SHA256,
+                  "new_sha256": MIGRATED_SCRIPT_NEW_SHA,
+                  "backup_sha256_verified": True,
+                  "original_services_untouched": True})
     existing = check_existing_installation(
         ((SCRIPT, script), (POLICY, policy), (CONFIG, config)))
     compile(script, str(SCRIPT), "exec")
@@ -317,6 +405,14 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as exc:
+        if MIGRATED_SCRIPT_BACKUP is not None:
+            try:
+                recover_legacy_script()
+            except Exception as rollback_exc:
+                emit({"state": "HOLD_LEGACY_ROLLBACK",
+                      "reason": type(rollback_exc).__name__,
+                      "backup_preserved": True,
+                      "original_services_untouched": True})
         code = str(exc)
         if not re.fullmatch(r"HOLD_LIFELINE_[A-Z0-9_]+", code):
             code = "HOLD_LIFELINE_" + type(exc).__name__.upper()
