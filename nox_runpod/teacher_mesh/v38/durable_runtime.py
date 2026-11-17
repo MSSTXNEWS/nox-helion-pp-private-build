@@ -61,12 +61,18 @@ class WarmS03Cache:
         self.bytes=0; self.lock=threading.RLock(); self.stats={'hits':0,'misses':0,'bypasses':0}
         # Fence in-flight recall fills after owner/session/global invalidation.
         self.generation=0
+        # Active read tickets exist only for the duration of a callback.
+        # Unlike permanent per-scope epochs, this cannot grow with old sessions.
+        self._reads:dict[int,tuple[tuple,list[bool]]]={}
 
     def invalidate(self, session:Session|None=None):
         with self.lock:
             # A recall already in progress must not repopulate evicted data,
             # even if its native revision callback still returns the old value.
             self.generation+=1
+            revoked=None if session is None else (session.tenant,session.principal,session.chat_id)
+            for scope,ticket in self._reads.values():
+                if revoked is None or scope==revoked:ticket[0]=True
             if session is None:self.entries.clear();self.bytes=0;return
             scope=(session.tenant,session.principal,session.chat_id)
             for key in list(self.entries):
@@ -74,6 +80,20 @@ class WarmS03Cache:
                     _,n,_=self.entries.pop(key);self.bytes-=n
 
     def __call__(self,session:Session,prompt:str,limit:int)->list[dict]:
+        # Fence BEFORE revision lookup, including uncached/bypass reads. An ACL
+        # invalidation must revoke the in-flight result, not only its cache fill.
+        ticket=[False]
+        scope=(session.tenant,session.principal,session.chat_id)
+        with self.lock:self._reads[id(ticket)]=(scope,ticket)
+        try:
+            result=self._read(session,prompt,limit,ticket)
+            with self.lock:
+                if ticket[0]:raise RuntimeError('HOLD_S03_CACHE_INVALIDATED_DURING_READ')
+                return result
+        finally:
+            with self.lock:self._reads.pop(id(ticket),None)
+
+    def _read(self,session:Session,prompt:str,limit:int,ticket:list[bool])->list[dict]:
         if not self.revision:
             self.stats['bypasses']+=1
             return self.recall(session,prompt,limit)
@@ -95,7 +115,6 @@ class WarmS03Cache:
              rev,sha256(prompt.encode('utf8')).hexdigest(),int(limit))
         now=time.monotonic()
         with self.lock:
-            generation=self.generation
             for old in list(self.entries):
                 if self.entries[old][0] <= now:
                     _,n,_=self.entries.pop(old);self.bytes-=n
@@ -132,7 +151,7 @@ class WarmS03Cache:
             # Avoid caching if revision changed while native callback was running.
             try: same=self.revision(session)==rev
             except Exception:same=False
-            if same and generation==self.generation:
+            if same and not ticket[0]:
                 old=self.entries.pop(key,None)
                 if old:self.bytes-=old[1]
                 self.entries[key]=(now+self.ttl,n,safe);self.bytes+=n
