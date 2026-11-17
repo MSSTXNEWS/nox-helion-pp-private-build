@@ -769,10 +769,17 @@ def ensure_watchdog_task(st: dict) -> None:
                     "status": "pending", "retries": 0, "max_retries": 3,
                     "last_rearm_epoch": time.time(),
                 }
-            elif (check.get("status") == "done"
-                  and time.time() - float(check.get("last_rearm_epoch") or 0) >= 300):
-                check["status"] = "pending"
-                check["last_rearm_epoch"] = time.time()
+            elif isinstance(check, dict) and check.get("status") == "done":
+                observed = check.get("last_rearm_epoch")
+                epoch = time.time()
+                if (type(observed) in (int, float)
+                        and 0 <= observed <= epoch
+                        and epoch - observed >= 300):
+                    check["status"] = "pending"
+                    check["last_rearm_epoch"] = epoch
+                elif type(observed) not in (int, float) or not 0 <= observed <= epoch:
+                    check["status"] = "blocked"
+                    check["note"] = "HOLD_RECIPROCAL_REARM_EPOCH_INVALID"
 ''')
     source = exact_replace(source, 'def write_status(st):\n',
         'def write_status(st):\n    with _qlock:\n        st = {"tasks": {tid: dict(task) for tid, task in st["tasks"].items()}}\n')
