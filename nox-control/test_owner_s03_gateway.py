@@ -326,6 +326,29 @@ class GatewayTests(unittest.TestCase):
         self.assertIn('не инструкция',rendered)
         self.assertEqual(answer[0]['text'],'special forest memory')
 
+    def test_bound_recall_canonical_hold_never_calls_legacy_reader(self):
+        calls=[]
+        def legacy(*args,**kwargs):
+            calls.append((args,kwargs))
+            return []
+        namespace={'recall':legacy,'format_for_prompt':lambda rows:''}
+        g.bind_s03(namespace)
+        for failure,expected in (
+            (g.MemoryHold('HOLD_S03_CANONICAL_SCHEMA_CHANGED'),'HOLD_S03_CANONICAL_SCHEMA_CHANGED'),
+            (sqlite3.DatabaseError('malformed canonical database'),'HOLD_S03_CANONICAL_READ_UNVERIFIED'),
+            (PermissionError(13,'canonical database denied'),'HOLD_S03_CANONICAL_READ_UNVERIFIED'),
+            (FileNotFoundError(2,'canonical database absent'),'HOLD_S03_CANONICAL_READ_UNVERIFIED'),
+        ):
+            with self.subTest(error=type(failure).__name__):
+                with patch.object(g,'recall',side_effect=failure):
+                    with self.assertRaisesRegex(g.MemoryHold,expected):
+                        namespace['recall']('owner session question')
+        self.assertEqual(calls,[],'legacy recall must not bypass canonical safety')
+        # Retain a bounded compatibility fallback for non-admission failures.
+        with patch.object(g,'recall',side_effect=RuntimeError('formatting transient')):
+            self.assertEqual(namespace['recall']('owner session question'),[])
+        self.assertEqual(len(calls),1)
+
     def test_plain_never_accepts_unreadable_ancestor_or_leaf(self):
         # This is a source-only regression for Python's suppressed
         # Path.is_symlink() EACCES/ELOOP behavior, not a native S03 claim.
