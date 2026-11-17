@@ -10,11 +10,12 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
-       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_resonance_native_canary_20261117.py',
+       'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_drive_first_release_20261117.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
+    'nox-control/owner_drive_first_release_20261117.py':(),
     'nox-control/owner_resonance_native_canary_20261117.py':(),
     'nox-control/owner_resonance_native_minimal_20261117.py':(),
     'nox-control/owner_post_reset_state_observe.py':(),
