@@ -1,0 +1,15 @@
+diff --git a/site/nox-connection-v13.js b/site/nox-connection-v13.js
+--- a/site/nox-connection-v13.js
++++ b/site/nox-connection-v13.js
+@@ -1,5 +1,5 @@
+ /* NOX V13 — evidence-only connection indicator in the canonical HOME navigation.
+    It does not assert that workers, models, STOP or GPU are available. No second backend. */
+@@
+   const seq=++token;controller?.abort();controller=new AbortController();
+-  const timer=setTimeout(()=>controller?.abort(),4500);
++  const currentController=controller;
++  const timer=setTimeout(()=>currentController.abort(),4500);
+   try{
+    const reply=await fetch('/api/nox/status',{cache:'no-store',credentials:'same-origin',headers:{Accept:'application/json'},signal:controller.signal});
++   if(seq!==token)return;
+    if(reply.status===401||reply.status===403){present('auth','OneHost требует авторизации');return;}
