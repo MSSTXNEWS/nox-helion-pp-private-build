@@ -189,15 +189,25 @@ def _dispatcher_progress_observation(root=ROOT,proc_root=Path('/proc'),now=None)
 
 def dispatcher():
     config=read_json(ROOT/'config/dispatcher_agents_t868u.json')
-    workers=int(config.get('workers',0))
+    if not isinstance(config,dict):
+        raise ValueError('HOLD_DISPATCHER_CONFIG_SCHEMA')
+    declared=config.get('workers',0)
+    workers=declared if type(declared) is int and 0<=declared<=1024 else None
     script=ROOT/'scripts/nox_dispatcher_t855u.py'
     ast.parse(script.read_text())
     progress=_dispatcher_progress_observation()
-    return {'verified':workers==6,'workers':workers,'min_workers':config.get('min_workers'),
-            'max_workers':config.get('max_workers'),'dispatcher_sha256':digest(script),
+    # V14-6-03: a configured worker count is NEVER an attested native
+    # worker count. Only owner-auth PID/start_ticks + TaskID/claim readback
+    # can establish live executor identity (not a config/heartbeat/CI result).
+    return {'verified':False,'configuration_verified':workers==6,
+            'workers':workers,'native_worker_count':None,
+            'native_worker_count_verified':False,'worker_claims_verified':False,
+            'min_workers':config.get('min_workers'),'max_workers':config.get('max_workers'),
+            'dispatcher_sha256':digest(script),
             'progress_observation':progress,'live_progress_verified':False,
-            'scope':'CONFIGURED_EXECUTORS_PLUS_UNATTESTED_PROGRESS_OBSERVATIONS',
-            'blockers':['CAPACITY_BENCHMARK_REQUIRED',
+            'scope':'CONFIGURED_EXECUTORS_ONLY_NATIVE_WORKER_COUNT_HOLD',
+            'blockers':['NATIVE_SIX_WORKER_PID_START_TICKS_TASKID_CLAIMS_REQUIRED',
+                        'CAPACITY_BENCHMARK_REQUIRED',
                         'NATIVE_PID_START_TICKS_OWNER_LEASE_AND_PROGRESS_READBACK_REQUIRED']}
 
 def chat():
