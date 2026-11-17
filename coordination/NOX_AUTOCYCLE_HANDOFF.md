@@ -1748,3 +1748,9 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - **TaskID V14-4-12**, owner **B4 PROCESS 4**; GitHub source-only CAS claim, not native OneHost lease. A4 V14-4-11 SOURCE_TESTED; prior B4 V14-4-10 SOURCE_TESTED; A4 V14-4-09 remains separate.
 - Scope: existing `owner_task_lifecycle.shared_context` reused same-parent cache's task-specific optimization evidence across different handlers/params. Correct only verified source defect with regression; preserve S03/STOP and original dispatcher. Fail CLOSED if concurrent change.
 - Native STOP/lease/PID, storage auth, independent restore UNKNOWN. No OneHost changes. Release source claim in terminal handoff after test/readback.
+
+
+### NOX-V14-B5-V14-2-01-NATIVE-READONLY-CLAIM-2026-11-17T00:38 · instructions_version 0.0.6
+- **TaskID:** `V14-2-01`; **B5 PROCESS 5 universal / cross-lane P0**. Read latest A5 V14-5-15 SOURCE_TESTED; no duplicate. Source-only CAS claim for one bounded owner-authorized **READ-ONLY** OneHost inspect, not a native owner writer lease. Previous V14-2-01 HOLD attempts have no active claim in newest handoff. 
+- **Safety:** exact Vast.ai #60509551, current OWNER STOP / manual HOLD preserved; no changes to OneHost processes, credentials, S03, weights, checkpoints, SSD, lease, schedules, pipelines. An inspect must use existing pinned owner route and verify temporary key removal. If unavailable mark HOLD_NATIVE, release task promptly; do not impersonate owner.
+- **Input:** current release head independently rechecked at dispatch; source CI/deployed runtime are distinct. **Next:** inspect then append exact terminal receipt for A5/A2; no lock retained on failed auth.
