@@ -772,6 +772,25 @@ def patch_dispatcher_media(source, expected_sha256):
     return updated
 
 
+def verified_export_path(config, job, item):
+    """Bind a served asset to its completed job's recorded bytes and MIME."""
+    expected = {'image': ('image/png', '.png'), 'video': ('video/webm', '.webm')}.get(
+        (job.get('request') or {}).get('kind'))
+    if (job.get('generation_verified') is not True or expected is None
+            or not isinstance(item, dict) or item.get('media_type') != expected[0]
+            or not isinstance(item.get('sha256'), str) or not SHA.fullmatch(item['sha256'])
+            or type(item.get('bytes')) is not int):
+        raise MediaHold('HOLD_OUTPUT_VERIFICATION_MISSING')
+    try:
+        path = output_path(config, job['id'], item)
+        if (path.suffix.lower() != expected[1] or path.stat().st_size != item['bytes']
+                or file_sha(path) != item['sha256']):
+            raise MediaHold('HOLD_OUTPUT_CHANGED')
+        return path
+    except OSError:
+        raise MediaHold('HOLD_OUTPUT_CHANGED') from None
+
+
 def register_media(app, trusted):
     """Mount inside the existing owner-authenticated FastAPI application only."""
     from starlette.requests import Request
@@ -854,9 +873,7 @@ def register_media(app, trusted):
             if job['state'] != 'COMPLETED' or not 0 <= index < len(job.get('outputs', [])):
                 raise MediaHold('MEDIA_JOB_NOT_FOUND')
             item = job['outputs'][index]
-            path = output_path(configuration(), job_id, item)
-            if path.stat().st_size != item['bytes']:
-                raise MediaHold('HOLD_OUTPUT_CHANGED')
+            path = await asyncio.to_thread(verified_export_path, configuration(), job, item)
             return FileResponse(path, media_type=item['media_type'], filename=path.name,
                 content_disposition_type='inline', headers={'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff'})
         except MediaHold as exc:
