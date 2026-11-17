@@ -88,6 +88,27 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'running','job.00001':'running'},mode='NORMAL',memory_ratio=.4)),1)
         self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'done'},mode='NORMAL',memory_ratio=.4)),3)
 
+    def test_verified_success_aliases_unlock_only_successful_dependents(self):
+        # Native terminal states are independently read from the original
+        # dispatcher; an upstream failed/cancelled/unknown claim is not READY.
+        rows=pool.validate_page({'schema':pool.SCHEMA,'tasks':[
+            {'id':'job.parent','handler':'owner_component','deps':[],
+             'resource':'CPU_LIGHT','priority':'P0','source_sha256':'a'*64},
+            {'id':'job.child','handler':'owner_component','deps':['job.parent'],
+             'resource':'CPU_LIGHT','priority':'P0','source_sha256':'b'*64}
+        ]},allowed_handlers={'owner_component'})
+        for terminal in ('done','DONE','Done','completed','COMPLETED','Completed'):
+            with self.subTest(terminal=terminal):
+                ready=pool.choose_ready(rows,status={'job.parent':terminal},
+                    mode='NORMAL',memory_ratio=.4)
+                self.assertEqual([x['id'] for x in ready],['job.child'])
+        for not_success in ('failed','FAILED','cancelled','CANCELED','running',
+                            'done ',None,{'state':'done'},0):
+            with self.subTest(not_success=not_success):
+                ready=pool.choose_ready(rows,status={'job.parent':not_success},
+                    mode='NORMAL',memory_ratio=.4)
+                self.assertEqual(ready,[])
+
     def test_no_thread_alias_as_os_process(self):
         bad=[{'pid':777,'process_starttime':1,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
             'native_heartbeat_verified':True,'heartbeat_age_seconds':1}]*3
