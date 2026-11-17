@@ -1,0 +1,98 @@
+{
+  "schema": "NOX_V13_MAIN_CHAT_SOURCE_AUDIT_V1",
+  "scope": "SOURCE_ONLY",
+  "production_modified": false,
+  "native_requests": 0,
+  "main_route_from_frozen_canon": "/nox-web-v29/chat.html",
+  "existing_native_alias_from_source": "/nox/chat",
+  "archive_sha256": "f12a6f36e9718ee483e0d9d2e3f16aa41c3911ec9ef6e2bc03502a5da0d62fe4",
+  "frozen_primary_sha256_verified": false,
+  "frozen_primary_drive_metadata_result": "404 NOT_FOUND; access/deletion not distinguished",
+  "archive_receipts": {
+    "site/NOX_WEB_V13_RELEASE_RECEIPT.json": {
+      "sha256": "212e5b9d83a2162c88904c5cff255ea64ebb78e07babe05c0acd474875e500fd",
+      "bytes": 1982,
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/archive_receipts/NOX_WEB_V13_RELEASE_RECEIPT.json"
+    },
+    "site/NOX_V29_UNIFIED_RECEIPT.json": {
+      "sha256": "b23498d472b1b1a78f431610880f1e7001ec50a619f128ecbfc33600f18877a8",
+      "bytes": 2849,
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/archive_receipts/NOX_V29_UNIFIED_RECEIPT.json"
+    },
+    "site/NOX_WEB_V10_SOURCE_RECEIPT.json": {
+      "sha256": "b3d7acd1e06d6f0648f4cc9a52728d2b62115f31bc69b1a036ff6c362703c738",
+      "bytes": 2288,
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/archive_receipts/NOX_WEB_V10_SOURCE_RECEIPT.json"
+    }
+  },
+  "main_engine_matches_archive_v29_immutable_receipt": true,
+  "owner_activation": {
+    "condition": "window.NOX_NATIVE_OWNER === true",
+    "defined_in_raw_main_html": false,
+    "required_before": [
+      "workspace.js",
+      "nox-ui.js",
+      "nox-chat.js"
+    ],
+    "is_authorization": false
+  },
+  "preview": {
+    "banner_present": true,
+    "fetch_override_in_direct_scripts_found": false,
+    "banner_alone_is_api_gate": false
+  },
+  "native_send": {
+    "endpoint": "/api/nox/chat/stream",
+    "method": "POST",
+    "credentials": "same-origin",
+    "body_keys": [
+      "message",
+      "task",
+      "history",
+      "dialog_id (when bound)"
+    ],
+    "model_selection": "server-owned; browser native branch does not choose weights/model path",
+    "framing": "newline-delimited JSON: preparing/start/delta/done/error"
+  },
+  "readiness": {
+    "endpoint": "/api/nox/status",
+    "condition": "native_p02_bound === true && backend === 'EXISTING_NATIVE_ONEHOST' && Boolean(primary_model)"
+  },
+  "dialogs": {
+    "status_endpoint": "/api/ui/memory/dialogs/status",
+    "condition": "persistent_threads === true && status === 'READY'",
+    "create_endpoint": "/api/ui/memory/dialogs/create",
+    "list_endpoint": "/api/ui/memory/dialogs",
+    "history_endpoint": "/api/ui/memory/dialogs/history",
+    "browser_native_localStorage_disabled": true
+  },
+  "terminal_source_checks": [
+    "nonempty result",
+    "saved === true",
+    "s03_integrated === true",
+    "dialog_id equals selected dialog if bound"
+  ],
+  "stop": {
+    "endpoint": "/api/nox/stop",
+    "body": {},
+    "local_abort": true,
+    "on_pagehide_post": true,
+    "actual_backend_scope": "requires current handler proof; canary scoped_stop_supported checks scope(request)",
+    "old_source_label": "STOP общий / весь текущий скоуп владельца",
+    "global_cancel_proved": false
+  },
+  "model_display": {
+    "source": "hardcoded NOX HELION in #chatModel",
+    "runtime_identity_verified_by_source": false
+  },
+  "native_acceptance_pending": [
+    "served main/JS hashes",
+    "owner activation before scripts",
+    "same existing /nox/chat alias",
+    "current scoped stop handler",
+    "actual status readiness fields",
+    "done receipt schema dialog_id/exchange_id",
+    "one real answer and matching S03 persisted exchange"
+  ],
+  "source_patch_applied": false
+}

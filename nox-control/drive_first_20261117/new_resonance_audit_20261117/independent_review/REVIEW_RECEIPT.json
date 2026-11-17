@@ -1,0 +1,64 @@
+{
+  "schema": "NOX_NEW_RESONANCE_AUDIT_INDEPENDENT_REVIEW_V1",
+  "reviewer": "/root/relay_runtime_algorithm",
+  "author": "/root/relay_policy_audit",
+  "task_id": "new_resonance_readonly_audit_review",
+  "operation_key": "source-review:new-resonance-audit:a0b476a87c113977",
+  "handoff_id": "new-resonance-audit-review-a0b476a8-20261117",
+  "result": "PASS_SOURCE_SCOPE",
+  "source_path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/owner_native_audit.py",
+  "source_sha256": "a0b476a87c1139771d3c1e75abaf3028bd4b5d51a6939a86fdf53b28d47affd1",
+  "source_bytes": 32755,
+  "review_time_utc": "2026-11-17T20:39:35.278848+00:00",
+  "fixed_finding": {
+    "before": "canonical_script_path rejected valid leading ./ script URLs seen in V13",
+    "after": "only leading ./ normalized, parent segments and external origins remain rejected"
+  },
+  "reviewed_constraints": {
+    "http_origin": "http://127.0.0.1:18775",
+    "fixed_read_routes": [
+      "/nox-web-v29/chat.html",
+      "/nox/chat"
+    ],
+    "script_reads": "only HTML-observed canonical same-origin /nox-web-v29/*.js or *.mjs paths; capped at 24",
+    "status_read": "/api/nox/status only if found as literal in observed source",
+    "post_routes": [
+      "/chat/login"
+    ],
+    "model_get_post_allowed": false,
+    "stop_request_allowed": false,
+    "native_code_executed": false,
+    "credentials": "password path resolved statically inside existing ROOT, owner/mode/stability checked; password and cookie jar remain in memory; no headers/body export",
+    "redirects": "not followed",
+    "deadline_seconds": 90,
+    "max_file_bytes": 262144,
+    "total_bytes_limit": 6291456,
+    "owner_flag": "ordered source observation only; activation_verified stays false",
+    "partial_failure": "safe partial HTML/completed script hashes retained on late HOLD; cookies and timer cleared in finally"
+  },
+  "independent_validation": {
+    "command": "PYTHONPATH=/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117 python -m unittest test_audit_scope.AuditScopeTests.test_real_v13_relative_script_forms_and_owner_flag_order -v",
+    "tests_run": 1,
+    "exit_code": 0,
+    "covers": [
+      "valid leading ./ relative script forms",
+      "early owner flag before consumers",
+      "late flag does not satisfy conservative before proof",
+      "inert script does not satisfy proof",
+      "traversal/external paths rejected"
+    ],
+    "source_sha_before_after_equal": true,
+    "full_author_suite_repeated": false,
+    "author_reported_suite": "10/10 offline tests; not independently rerun"
+  },
+  "native_requests": 0,
+  "model_requests": 0,
+  "source_modified_by_reviewer": false,
+  "pending_run_ids": [],
+  "claim_state": "isolated review complete; no native/resource claim held",
+  "next_ready": {
+    "owner": "/root/relay_independent_review",
+    "task": "compare resulting native main/JS hashes and owner flag with V13 manifest; root owns single existing audit entry publication/run"
+  },
+  "global_block_done": false
+}

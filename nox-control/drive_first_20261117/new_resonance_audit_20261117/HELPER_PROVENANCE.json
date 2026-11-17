@@ -1,0 +1,61 @@
+{
+  "source": "/workspace/scratch/4136374a0419/nox_refresh/chat_canary_continuation_20261117/CANDIDATE_DECODED.py",
+  "source_sha256": "3c9fd543221991dc66ba6c746b4aa48eaa9caa3e2ca48c3203d902d576ac504f",
+  "helpers": [
+    {
+      "symbol": "Hold",
+      "source_sha256": "c376d9d20de49973192e01851280b9e31d78b1c5d0bce3dacf24bca8afb68881",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "digest",
+      "source_sha256": "884bb01e185f2d9d9430301d9fae0ad420aa9c9ab5ec6be9c82587a6bf0ed525",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "_identifier",
+      "source_sha256": "e651379625a8203ac8bb34f712a0a0fe0e506008f49650e7bdfd9e2c756ea55b",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "_call_name",
+      "source_sha256": "1914226e8e5e070e589d29c6438aeb8015aab3176dfd7e7e03ed8f7b90fd05ac",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "regular_read",
+      "source_sha256": "ff0bc4b6ca2c73f9b286c138f58aca59ca5c2628020417a7c41a8bbf9c30d70f",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "stable_common_read",
+      "source_sha256": "39c357095a6f3f80dddf3f4d4b6d582396262976ecd2a09c327b81d927acca07",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "exact_common_import",
+      "source_sha256": "bdcb0e05060c9acdca545c4f388478777a1ddff9928492e185748b5c326f9059",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "resolve_password_path",
+      "source_sha256": "536a8a31ffa43fd55e9c2809625fc9bc515f2ee9d61f8ea627377867c38e4545",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "scoped_stop_supported",
+      "source_sha256": "4c80db1c1d5658bbb804325d90ade6de303d4abe8fd435c946267e9b3c8e8081",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "maintenance_lease",
+      "source_sha256": "cb0ecb50a592ccfaf94bb25e0dc388da6b157e624c4f6cb7e38e3cef66968747",
+      "copied_exactly": true
+    },
+    {
+      "symbol": "NoRedirect",
+      "source_sha256": "fe530370af4f826d8cb3c2935f747f25d289bc3e3133493ac557694aee8d0a67",
+      "copied_exactly": true
+    }
+  ]
+}

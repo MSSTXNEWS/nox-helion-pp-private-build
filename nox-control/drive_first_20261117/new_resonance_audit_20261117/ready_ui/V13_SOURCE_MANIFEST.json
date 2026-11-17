@@ -1,0 +1,155 @@
+{
+  "archive_library_file_id": "libfile_e075033cb9908191ab8fd099f90fa3e2",
+  "archive_name": "NOX_HELION_WEB_WOW_MAX_V13_UNIFIED_20261117.zip",
+  "archive_bytes": 84526089,
+  "archive_sha256": "f12a6f36e9718ee483e0d9d2e3f16aa41c3911ec9ef6e2bc03502a5da0d62fe4",
+  "original_primary_drive_available": false,
+  "original_primary_sha256_not_verified": "611a3cf21b37ff79dbaece57f4c65c5efb70e0c302b5fc4b4f64dbfa060f15bc",
+  "scope": "V13 distinct saved revision source audit; not installed/native accepted",
+  "main_chat": "site/chat.html",
+  "script_src": [
+    "workspace.js",
+    "./nox-wow-max.js",
+    "./nox-cinematic-worlds.js",
+    "./nox-shared-scene-v10.mjs",
+    "./nox-shared-chrome-v10.js",
+    "nox-connection-v13.js",
+    "./vendor/nox-extra/lucide.min.js",
+    "vendor/fx/motion.js",
+    "nox-ui.js",
+    "nox-chat.js",
+    "nox-chat-diagrams.js",
+    "nox-core-inspector.js",
+    "./nox-global-wow-v18.js",
+    "./nox-universe-v19.js",
+    "./nox-chat-training-v23.mjs",
+    "./nox-v29-pc-genesis-addons.mjs",
+    "./nox-web-shell-v4.js",
+    "./nox-select-tiles-v5.js",
+    "nox-visual-control-v6.js",
+    "./nox-v9-interface.js",
+    "./nox-motion-idle-loader.js"
+  ],
+  "files": [
+    {
+      "archive_path": "site/chat.html",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/chat.html",
+      "bytes": 16422,
+      "sha256": "99b909ea77df8384d5e64fbd59c86cf3a1ed7793227ea9db8879e1a21d75b118"
+    },
+    {
+      "archive_path": "site/workspace.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/workspace.js",
+      "bytes": 6451,
+      "sha256": "9b77c5011da892769c7332826c4b35bce581fb121960c13694638657735fc0ae"
+    },
+    {
+      "archive_path": "site/nox-wow-max.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-wow-max.js",
+      "bytes": 15916,
+      "sha256": "3456c8544ec2909e0950ed1685e3ed6c256b532e28a31f4b8a12a4e0e077a7b5"
+    },
+    {
+      "archive_path": "site/nox-cinematic-worlds.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-cinematic-worlds.js",
+      "bytes": 17915,
+      "sha256": "fead5947e017834ff26d005961f2ba309d13bd4a5e3f79faa70b797fa9abb118"
+    },
+    {
+      "archive_path": "site/nox-shared-scene-v10.mjs",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-shared-scene-v10.mjs",
+      "bytes": 157,
+      "sha256": "3debf160184b530f0ff3504207a01efedd48aa98627f15ba07e89058f85fb7a7"
+    },
+    {
+      "archive_path": "site/nox-shared-chrome-v10.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-shared-chrome-v10.js",
+      "bytes": 5736,
+      "sha256": "ab5490981b6b64876172a8ab549ad96174e82f24886278cb47d5b782ad4874c4"
+    },
+    {
+      "archive_path": "site/nox-connection-v13.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-connection-v13.js",
+      "bytes": 3570,
+      "sha256": "2bf36798d84f7ef103d2acaa411c8a57581c68568d2e9c3f619ce862efdf5390"
+    },
+    {
+      "archive_path": "site/nox-ui.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-ui.js",
+      "bytes": 42684,
+      "sha256": "c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765"
+    },
+    {
+      "archive_path": "site/nox-chat.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-chat.js",
+      "bytes": 66619,
+      "sha256": "d9fa29e0fa726502adc6e83ea344adf13b8a2354acd3610b3de96ec378e942ce"
+    },
+    {
+      "archive_path": "site/nox-chat-diagrams.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-chat-diagrams.js",
+      "bytes": 14723,
+      "sha256": "f85f2626bf4c9dfa94ee6950ae0e4dda08cbe7403dada4a7414eedda292b0090"
+    },
+    {
+      "archive_path": "site/nox-core-inspector.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-core-inspector.js",
+      "bytes": 4677,
+      "sha256": "133292d57f0943e9f57991cf5afc28d34661a61dfd35e8f05dce2d7087f22c9f"
+    },
+    {
+      "archive_path": "site/nox-global-wow-v18.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-global-wow-v18.js",
+      "bytes": 3895,
+      "sha256": "c06cfd8ce8d18eab87c2338b0b493b9f61af99a0b61c246d5cb4aa0012c72e77"
+    },
+    {
+      "archive_path": "site/nox-universe-v19.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-universe-v19.js",
+      "bytes": 40767,
+      "sha256": "4c2c9a2d456da77bfeab74f2aa5037b8828eb723a3690579c382b93fe2af6d68"
+    },
+    {
+      "archive_path": "site/nox-chat-training-v23.mjs",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-chat-training-v23.mjs",
+      "bytes": 8252,
+      "sha256": "52ee9bcb55220d08e982ea8796f147c28fc1e6eeb1cf450ffecb0014bdf5fde1"
+    },
+    {
+      "archive_path": "site/nox-v29-pc-genesis-addons.mjs",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-v29-pc-genesis-addons.mjs",
+      "bytes": 13510,
+      "sha256": "5968f7b9ca72cbfd053c77e90853fcee9076c1671b2d0592b00a67cf4e2b9f5c"
+    },
+    {
+      "archive_path": "site/nox-web-shell-v4.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-web-shell-v4.js",
+      "bytes": 2416,
+      "sha256": "911bd39739c29807a82897f4cc8bf9b9a8454305a7759b83bdfe65262158d75e"
+    },
+    {
+      "archive_path": "site/nox-select-tiles-v5.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-select-tiles-v5.js",
+      "bytes": 3619,
+      "sha256": "09fdbb663407740ff991024229dff208dc84775583bae34ecf87f7670b367360"
+    },
+    {
+      "archive_path": "site/nox-visual-control-v6.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-visual-control-v6.js",
+      "bytes": 3172,
+      "sha256": "c1c243cb9f3ac817997fca9be6daae2cf810591d6062bef4708fae86ebeaf947"
+    },
+    {
+      "archive_path": "site/nox-v9-interface.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-v9-interface.js",
+      "bytes": 2672,
+      "sha256": "782cfe428ea136008f3c2cc6cba9ca235e28bcf46accb334b060b421e85fd10e"
+    },
+    {
+      "archive_path": "site/nox-motion-idle-loader.js",
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/source_v13/site/nox-motion-idle-loader.js",
+      "bytes": 3414,
+      "sha256": "15c3ae88c8fb4a8e1acc950df54998368b030913e0a31b47aa58a0e3e77d00d8"
+    }
+  ]
+}

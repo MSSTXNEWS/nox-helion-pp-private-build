@@ -1,0 +1,74 @@
+{
+  "schema": "NOX_NEW_RESONANCE_AUDIT_SOURCE_RECEIPT_V1",
+  "created_utc": "2026-11-17T20:39:24.305255+00:00",
+  "work_id": "NEW_RESONANCE_READ_ONLY_AUDIT_20261117",
+  "agent_id": "/root/relay_policy_audit",
+  "state": "SOURCE_TESTED_INDEPENDENT_REVIEW_PASS",
+  "source_path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/owner_native_audit.py",
+  "source_sha256": "a0b476a87c1139771d3c1e75abaf3028bd4b5d51a6939a86fdf53b28d47affd1",
+  "source_bytes": 32755,
+  "repository_target": "nox-control/owner_native_audit.py",
+  "tests": {
+    "command": "python -m unittest discover -s /workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117 -p test_audit_scope.py -v",
+    "passed": 10,
+    "failed": 0,
+    "evidence_scope": "OFFLINE_FAKE_IO_ONLY"
+  },
+  "helper_provenance": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/HELPER_PROVENANCE.json",
+  "fixed_origin": "http://127.0.0.1:18775",
+  "fixed_get_routes": [
+    "/nox-web-v29/chat.html",
+    "/nox/chat"
+  ],
+  "conditional_get_routes": [
+    "observed same-origin .js/.mjs under /nox-web-v29/",
+    "/api/nox/status only when its literal is observed in fetched UI source"
+  ],
+  "only_post": "/chat/login through existing official password resolver and in-memory CookieJar",
+  "limits": {
+    "deadline_seconds": 90,
+    "max_script_requests": 24,
+    "max_body_bytes": 262144,
+    "aggregate_bytes": 6291456,
+    "stdout_json_bytes": 120000
+  },
+  "properties": [
+    "leading ./ script paths accepted; ../ and external origins rejected",
+    "conservative static owner-flag ordering relative to critical consumers",
+    "safe partial report retained on late failure; HOLD is not complete",
+    "known /nox/chat alias fetched without fabricated discovery",
+    "exact existing native source pins and AST/no-follow credential resolution retained",
+    "no redirects or external origin; no raw exceptions/source/session contents exported"
+  ],
+  "execution": {
+    "native_dispatch": false,
+    "network_requests_by_author": 0,
+    "model_requests": 0,
+    "native_files_changed": 0,
+    "published": false
+  },
+  "limitations": [
+    "Static wiring and owner flag order do not establish JavaScript execution or model-origin proof.",
+    "Audit completion is diagnostic completion, not runtime acceptance.",
+    "Only direct HTML script refs are fetched, no CSS or recursive module imports.",
+    "Pinned native source drift produces HOLD and requires authoritative revision reconciliation.",
+    "A failed read preserves earlier safe observations but later routes may remain unobserved."
+  ],
+  "next_ready": {
+    "owner": "/root",
+    "depends_on": "one independent source review by /root/relay_runtime_algorithm",
+    "action": "publish exact frozen source via existing audit entry; one authorized owner audit command; compare resulting metadata against source manifest"
+  },
+  "remote_run_ids": [],
+  "independent_review": {
+    "reviewer": "/root/relay_runtime_algorithm",
+    "source_sha256": "a0b476a87c1139771d3c1e75abaf3028bd4b5d51a6939a86fdf53b28d47affd1",
+    "result": "PASS",
+    "focused_gate": "test_real_v13_relative_script_forms_and_owner_flag_order",
+    "focused_gate_passed": 1,
+    "sha_readback_unchanged": true,
+    "full_suite_repeated": false,
+    "native_actions": 0,
+    "evidence": "reviewer direct collaboration message to author and root"
+  }
+}

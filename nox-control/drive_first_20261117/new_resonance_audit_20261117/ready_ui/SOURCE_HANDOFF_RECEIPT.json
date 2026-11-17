@@ -1,0 +1,47 @@
+{
+  "handoff_id": "web29-v13-main-source-f12a6f36-20261117",
+  "task_id": "web29_v13_main_source_audit",
+  "operation_key": "source-audit:web29-v13:f12a6f36e9718ee4",
+  "agent_id": "/root/relay_runtime_algorithm",
+  "evidence_scope": "exact archive source, routing/contracts, syntax only; no native acceptance",
+  "source_revision": "V13 archive SHA256 f12a6f36e9718ee483e0d9d2e3f16aa41c3911ec9ef6e2bc03502a5da0d62fe4",
+  "claim_state": "isolated source read/extraction complete; no native/resource claim held",
+  "production_writes": 0,
+  "model_requests": 0,
+  "pending_run_ids": [],
+  "checkpoint": {
+    "MAIN_CHAT_SOURCE_AUDIT.json": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/MAIN_CHAT_SOURCE_AUDIT.json",
+      "sha256": "bf0b45fc2e04c7b7da16a637c3774479f02f34071751f1eeb458d675ead85f33",
+      "bytes": 3794
+    },
+    "MAIN_CHAT_SOURCE_AUDIT.md": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/MAIN_CHAT_SOURCE_AUDIT.md",
+      "sha256": "8525411e633a9cc53b285faf98dcb449f4ee52879b6099f65ca10dadbaa0427f",
+      "bytes": 8422
+    },
+    "V13_SOURCE_MANIFEST.json": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/V13_SOURCE_MANIFEST.json",
+      "sha256": "4e80b9bd0a742f148f05212c1032f4007e9983c86662b832bce9876ff0a88dd7",
+      "bytes": 7329
+    },
+    "MAIN_CHAT_SYNTAX_CHECKS.json": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/web29_original_chat_audit_20261117/MAIN_CHAT_SYNTAX_CHECKS.json",
+      "sha256": "b9c5caec3e8080b53d1e0802ecbe2c1bd610472b1994916a6c39dbbd250be601",
+      "bytes": 427
+    }
+  },
+  "next_ready": {
+    "task": "compare exact main/JS served hashes, owner flag injection, /nox/chat alias and current stream/STOP contract; make smallest proved integration fix",
+    "inputs": [
+      "root/relay_policy_audit native main receipt",
+      "root/relay_independent_review current bridge proof",
+      "source_v13/site files"
+    ],
+    "acceptance": "main ready native branch plus real stream+matching S03 exchange through existing OneHost; no PC/V24 substitution"
+  },
+  "source_patch_applied": false,
+  "block_complete": false,
+  "card_state": "SOURCE_AUDIT_COMPLETE_NATIVE_BINDING_PENDING",
+  "created_at_utc": "2026-11-17T20:34:15.386805+00:00"
+}

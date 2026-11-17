@@ -1,0 +1,81 @@
+{
+  "commit": "123ca4d6fe46474d57c63520ce7c402e795a93af",
+  "head_matches": true,
+  "files": [
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/nox_warm/controller.py",
+      "match": true,
+      "git_blob": "cfa5c38319a7d9b9286db09d2e3f2ad7b36ff7be"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/tests/test_cache_lease_reconciliation.py",
+      "match": true,
+      "git_blob": "e936cf063d7e47c874d75d0e84236b498a267928"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/README.md",
+      "match": true,
+      "git_blob": "fb5bff4c811668f7d2dc793ebf966d51a0890c63"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/CACHE_LEASE_SOURCE_RECEIPT.json",
+      "match": true,
+      "git_blob": "c911abe3ba9cd29f4bc964d6b23395e5488b1425"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/warm_weights_controller/independent_cache_review/REVIEW_RECEIPT.json",
+      "match": true,
+      "git_blob": "4205d8c429776fec9e8a3dd32d97c73a8dfa69fc"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/CANARY_SCOPE_AND_TOKEN_CAP.patch",
+      "match": true,
+      "git_blob": "ca15900bf99e3bf92d2b3b2ff3f5d64e4e998b29"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/CANDIDATE_DECODED.py",
+      "match": true,
+      "git_blob": "2dcf6c2013cc6bca256485e7dbe39eb49f890e4c"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/test_canary_scope.py",
+      "match": true,
+      "git_blob": "36846b08aab31b75dbddc89c46c21055e1d474d8"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/PATCH_RECEIPT.json",
+      "match": true,
+      "git_blob": "e3e03ea44c0d1b825a127a8405a97e90df02f378"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/PRIMARY_STATUS.json",
+      "match": true,
+      "git_blob": "2b737fe8988cf4501227e39db77805264510a846"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/SINGLE_SEND_CONTEXT_CASE.md",
+      "match": true,
+      "git_blob": "34157881f40398e9ea5e696493e022caf8e7511d"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/TERMINAL_BINDING_DELTA.patch",
+      "match": true,
+      "git_blob": "3aa429d2ff2606f7217e675b81bf09de5020056e"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/native_resonance_patch/continuation_20261117/INDEPENDENT_DELTA_ACCEPTANCE.json",
+      "match": true,
+      "git_blob": "39e2ab704aba9884adeb8f7f043063020d06c7ae"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/EXECUTION_PROGRAM.md",
+      "match": true,
+      "git_blob": "1bc9c9d13482244a4552e4c1968318de942319b9"
+    }
+  ],
+  "all_match": true,
+  "tree_truncated": false,
+  "operator_unchanged": true,
+  "audit_entry_unchanged": true,
+  "native_calls": 0
+}
