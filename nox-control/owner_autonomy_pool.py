@@ -232,7 +232,10 @@ def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
         # Presence is authoritative even when an uncertain native claim has
         # status None. Distinguish absent from unresolved before any replay.
         if tid in status:continue   # never reenqueue known/unknown/running/done jobs
-        if any(status.get(d)!='done' for d in task['deps']): continue
+        # The verified native snapshot may use DONE or COMPLETED case variants.
+        # Only explicit successful terminals release DAG dependents; failures,
+        # cancellations and unresolved claims must never unlock new work.
+        if any(not (isinstance(status.get(d), str) and status[d].casefold() in ('done', 'completed')) for d in task['deps']): continue
         if task['resource']=='GPU_EXCLUSIVE' and not gpu_available: continue
         heapq.heappush(ranked,(PRIORITIES[task['priority']],task['estimated_cost'],tid,task))
     selected=[];gpu_used=False
