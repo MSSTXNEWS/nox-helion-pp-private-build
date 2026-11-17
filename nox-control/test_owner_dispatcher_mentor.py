@@ -131,6 +131,31 @@ class MentorTests(unittest.TestCase):
             call.assert_not_called()
             self.assertTrue((Path(root) / 'memory/dispatcher_mentor/events.jsonl').exists())
 
+    def test_native_rc3_stopped_is_valid_negative_service_evidence(self):
+        from types import SimpleNamespace
+        for state in ("STOPPED", "EXITED"):
+            with self.subTest(state=state), patch.object(mentor.subprocess, "run",
+                 return_value=SimpleNamespace(returncode=3,
+                     stdout=f"nox-priority-scheduler {state} Not started\\n")):
+                self.assertEqual(mentor.service_state("nox-priority-scheduler"),
+                                 {"state":state,"pid":None})
+        for bad in ("RUNNING pid 42", "STOPPED pid 23", "FATAL", "STOPPED pid wrong"):
+            with self.subTest(bad=bad), patch.object(mentor.subprocess, "run",
+                 return_value=SimpleNamespace(returncode=3,
+                     stdout=f"nox-priority-scheduler {bad}\\n")):
+                self.assertEqual(mentor.service_state("nox-priority-scheduler")["state"], "UNKNOWN")
+
+    def test_holdout_regression_is_a_separate_nonretryable_owner_hold(self):
+        self.assertEqual(mentor.error_category("HOLDOUT_REGRESSION: two evaluations worse"), "training_regression")
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
+            with patch.object(mentor, 'stop_active', return_value=False), patch.object(mentor, 'discover_senior', return_value=None):
+                task={'id':'training-regression','handler':'holdout_gate','retries':0}
+                result=mentor.on_failure(task,'HOLDOUT_REGRESSION')
+                self.assertEqual(task['status'],'blocked')
+                self.assertEqual(result['owner_question_code'],'training_regression')
+                self.assertFalse(result.get('auto_retry',False))
+                self.assertIn('checkpoint',result['owner_question'])
+
     def test_no_senior_transient_readonly_is_retried_once_with_durable_budget(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
             with patch.object(mentor, 'stop_active', return_value=False), patch.object(mentor, 'discover_senior', return_value=None):
