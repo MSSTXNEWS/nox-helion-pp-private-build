@@ -158,5 +158,30 @@ class ExistingExecutorClaimsTests(unittest.TestCase):
 
 
 
+
+class ExistingOwnerBridgePartialHtmlTests(unittest.TestCase):
+    def test_partial_existing_marked_script_still_loads_all_four_handlers(self):
+        raw = ('<html><head><script defer src="/nox-web-v29/owner-presence.js" '
+               'data-nox-live-owner="1"></script></head><body></body></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        for name in ('nox-v135-resonance-owner-bridge.js',
+                     'nox-v137-owner-self-status.js', 'owner-chat-ui.js',
+                     'owner-presence.js'):
+            self.assertEqual(result.count('src="/nox-web-v29/'+name+'"'), 1)
+
+    def test_unmarked_existing_live_script_is_not_duplicated(self):
+        raw = ('<html><head><script src="/nox-web-v29/owner-chat-ui.js">'
+               '</script></head><body></body></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_unrelated_marked_script_cannot_suppress_live_owner_bridge(self):
+        raw = ('<html><head><script data-nox-live-owner="1" '
+               'src="/nox-web-v29/unrelated.js"></script></head></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertEqual(result.count('src="/nox-web-v29/nox-v135-resonance-owner-bridge.js"'), 1)
+        self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
+
 if __name__ == "__main__":
     unittest.main()
