@@ -583,7 +583,9 @@ def lexical(conn,query,limit=48):
     if not terms:return []
     expression=' OR '.join('"'+term+'"' for term in terms)
     try:
-        return [dict(row) for row in conn.execute('SELECT s.*,bm25(s03_fts) AS lexical_rank FROM s03_fts JOIN s03_items s ON s.id=s03_fts.id WHERE s03_fts MATCH ? ORDER BY bm25(s03_fts) LIMIT ?', (expression,limit))]
+        # Reject stale FTS hits after a canonical item was corrected. The FTS
+        # table is an index, never an authority for current decision text.
+        return [dict(row) for row in conn.execute('SELECT s.*,bm25(s03_fts) AS lexical_rank FROM s03_fts JOIN s03_items s ON s.id=s03_fts.id AND s.text=s03_fts.text AND s.segment=s03_fts.segment WHERE s03_fts MATCH ? ORDER BY bm25(s03_fts) LIMIT ?', (expression,limit))]
     except sqlite3.OperationalError:
         # LIKE is parameterized and bounded; no FTS control operators from text.
         escaped=[term.replace('\\','\\\\').replace('%','\\%').replace('_','\\_') for term in terms[:8]]
