@@ -148,7 +148,7 @@ class MentorTests(unittest.TestCase):
 
     def test_no_senior_never_autoretries_mutating_work_or_active_stop(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'discover_senior', return_value=None):
-            for handler, stopping in (('exec_plan', False), ('start_qlora', False), ('verify_q4', True)):
+            for handler, stopping in (('exec_plan', False), ('start_qlora', False), ('new_gguf', False), ('verify_q4', True)):
                 with self.subTest(handler=handler, stop=stopping), patch.object(mentor, 'stop_active', return_value=stopping):
                     task = {'id': 'unsafe-' + handler, 'handler': handler, 'retries': 0}
                     result = mentor.on_failure(task, 'connection timed out')
