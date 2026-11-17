@@ -1,0 +1,28 @@
+{
+  "run_id": 44171929567,
+  "job_id": 134353031742,
+  "request_id": 6960406494,
+  "cleanup": "DETACHED_AND_VERIFIED",
+  "result": {
+    "schema": "NOX_NEW_RESONANCE_READ_ONLY_AUDIT_V1",
+    "owner_request_id": "6960406494",
+    "owner_source_sha": "b740217b5564776ac29fe02619bf9082e2b66a61",
+    "page": "/nox-web-v29/chat.html",
+    "model_requests": 0,
+    "dialogs_created": 0,
+    "stop_requests": 0,
+    "reloads": 0,
+    "native_file_writes": 0,
+    "external_requests": 0,
+    "source_text_exported": false,
+    "credentials_exported": false,
+    "js_executed": false,
+    "public_tunnel_verified": false,
+    "native_model_origin_verified": false,
+    "status": "HOLD_PROXY_SHA_CHANGED",
+    "partial": true,
+    "loopback_requests": 0,
+    "bytes_read": 0,
+    "elapsed_ms": 1
+  }
+}

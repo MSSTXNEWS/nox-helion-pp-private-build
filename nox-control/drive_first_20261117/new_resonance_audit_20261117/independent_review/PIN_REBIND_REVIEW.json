@@ -1,0 +1,51 @@
+{
+  "schema": "NOX_NEW_RESONANCE_AUDIT_PIN_REBIND_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/relay_independent_review",
+  "review_time_utc": "2026-11-17T20:43:57.550880+00:00",
+  "status": "PASS_EXACT_TWO_PIN_DELTA",
+  "base_sha256": "a0b476a87c1139771d3c1e75abaf3028bd4b5d51a6939a86fdf53b28d47affd1",
+  "candidate_sha256": "4e22e0fd73f46c759d9663b9a6be58d0cb48a9c3fce636d2ee1b6e18821c8b6a",
+  "candidate_bytes": 32755,
+  "delta": [
+    {
+      "constant": "PROXY_SHA",
+      "before": "7a2f886bd93a4629947b7c8c44b908dc0f0800651b80cb15d0b6818b6cc8b068",
+      "after": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+      "installed_native_path": "/root/nox/scripts/chat_proxy.py"
+    },
+    {
+      "constant": "BRIDGE_SHA",
+      "before": "ffdefe48fe45d797987fedcf76a231418c6c38c31c33ac8f687d99e753687cee",
+      "after": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+      "installed_native_path": "/root/nox/scripts/nox_v29_chat_bridge.py"
+    }
+  ],
+  "exact_reverse_restores_entire_old_source": true,
+  "guard_and_function_logic_unchanged": true,
+  "wrapper_pin_unchanged": true,
+  "syntax_compile_pass": true,
+  "full_test_suite_repeated": false,
+  "postimage_evidence": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/O1_INSTALLED_POSTIMAGES_20261117.json",
+    "sha256": "c19c83b9939480decb8eb14a98ef76f3e4a300328ee72f4372ed8071edfffbd9",
+    "run_id": 44171616874,
+    "job_id": 134351926185,
+    "source_sha": "be4750aae3cb456e09df0ddcb39fcf0fd1673bd1",
+    "status": "APPLIED_RELOADED_USE_PENDING"
+  },
+  "prior_attempt": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/FIRST_NATIVE_RESULT.json",
+    "sha256": "e035a8182544f4a873b2e6df94785e4ce0bb43fa76e9d379f2d277a3f3f7e190",
+    "run_id": 44171929567,
+    "job_id": 134353031742,
+    "status": "HOLD_PROXY_SHA_CHANGED",
+    "loopback_requests": 0,
+    "cleanup": "DETACHED_AND_VERIFIED"
+  },
+  "native_commands_by_reviewer": 0,
+  "model_requests_by_reviewer": 0,
+  "claim_mutations_by_reviewer": 0,
+  "acceptance_limit": "only source pin rebind accepted; new read-only audit result and model/S03 acceptance remain unobserved",
+  "next_ready": "root may run the already authorized read-only audit once with these new pinned postimages and existing guards; independent native-to-V13 comparison follows"
+}

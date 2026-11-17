@@ -1,0 +1,55 @@
+{
+  "commit": "b740217b5564776ac29fe02619bf9082e2b66a61",
+  "head_match": true,
+  "checks": [
+    {
+      "path": "nox-control/owner_native_audit.py",
+      "match": true
+    },
+    {
+      "path": "nox-control/test_new_resonance_audit_scope.py",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/new_resonance_audit_20261117/SOURCE_RECEIPT.json",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/new_resonance_audit_20261117/README.md",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/new_resonance_audit_20261117/HELPER_PROVENANCE.json",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/new_resonance_audit_20261117/independent_review/REVIEW_RECEIPT.json",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/new_resonance_audit_20261117/ready_ui/MAIN_CHAT_SOURCE_AUDIT.md",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/new_resonance_audit_20261117/ready_ui/MAIN_CHAT_SOURCE_AUDIT.json",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/new_resonance_audit_20261117/ready_ui/V13_SOURCE_MANIFEST.json",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/new_resonance_audit_20261117/ready_ui/SOURCE_HANDOFF_RECEIPT.json",
+      "match": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/PUBLISHED_READBACK.json",
+      "match": true
+    }
+  ],
+  "all_match": true,
+  "operator_unchanged": true,
+  "workflow_in_source_tree_unchanged": true,
+  "execution_workflow": "existing main owner issue_comment workflow, not edited",
+  "truncated": false
+}

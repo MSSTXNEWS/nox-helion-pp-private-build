@@ -1,0 +1,33 @@
+{
+  "run_id": 44171616874,
+  "job_id": 134351926185,
+  "request_id": 6960360421,
+  "source_sha": "be4750aae3cb456e09df0ddcb39fcf0fd1673bd1",
+  "status": "APPLIED_RELOADED_USE_PENDING",
+  "files_after": {
+    "s03_memory.py": {
+      "sha256": "776a6dc25726540d75ec51216d1e333ca89b24e803ba3620f9b5e470a3c81476",
+      "bytes": 15093
+    },
+    "nox_v120_s03_owner_memory_views.py": {
+      "sha256": "1ca8fea88a0b8ea7071a87b61bdf689f096fcdb27f5dd688fc2eb447cfaa1de9",
+      "bytes": 6297
+    },
+    "nox_v29_chat_bridge.py": {
+      "sha256": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f",
+      "bytes": 51632
+    },
+    "chat_proxy.py": {
+      "sha256": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc",
+      "bytes": 103637
+    }
+  },
+  "runtime_dependencies": {
+    "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+    "owner_chat_stream.py": "2c4ae86d1d8e2113c8dbb55807f0d52890f098904ac2914f0b1383156ed7ea25",
+    "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167"
+  },
+  "used": false,
+  "accepted": false,
+  "model_calls": 0
+}

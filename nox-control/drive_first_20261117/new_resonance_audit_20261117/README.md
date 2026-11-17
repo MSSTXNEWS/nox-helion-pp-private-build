@@ -2,9 +2,17 @@
 
 ## Готовый исходник
 
-`owner_native_audit.py` — self-contained замена существующего `nox-control/owner_native_audit.py`. Автор не публиковал и не запускал её на сервере. SHA-256: `a0b476a87c1139771d3c1e75abaf3028bd4b5d51a6939a86fdf53b28d47affd1`.
+`owner_native_audit.py` — self-contained исходник существующего `nox-control/owner_native_audit.py`. Текущий SHA-256 после переноса двух native source pins: `4e22e0fd73f46c759d9663b9a6be58d0cb48a9c3fce636d2ee1b6e18821c8b6a`. Исходник и единственный native dispatch публикует/выполняет root; автор не делает native вызовов.
 
-Проверка offline: 10/10 PASS. Протокол и пределы — `SOURCE_RECEIPT.json`, точное происхождение 11 проверенных helpers — `HELPER_PROVENANCE.json`.
+Первоначальный SHA `a0b476a87c1139771d3c1e75abaf3028bd4b5d51a6939a86fdf53b28d47affd1` прошёл 10/10 offline checks и независимый review. Исторический `SOURCE_RECEIPT.json` сохранён без изменения; перенос pins описан отдельно в `PIN_REBASE_RECEIPT.json`. Точное происхождение 11 проверенных helpers — `HELPER_PROVENANCE.json`.
+
+## Почему обновлены два pins
+
+O1 install из source commit `be4750aae3cb456e09df0ddcb39fcf0fd1673bd1`, run `44171616874`, job `134351926185`, установил четыре source файла и выполнил reload. Сохранённая postimage-квитанция имеет состояние `APPLIED_RELOADED_USE_PENDING`; она не заявляет model USED/ACCEPTED.
+
+После этого первый root audit, run `44171929567`, job `134353031742`, остановился на `HOLD_PROXY_SHA_CHANGED` за 1 ms: HTTP/loopback requests=0, bytes=0, model requests=0. Cleanup: `DETACHED_AND_VERIFIED`. Проверка авторизации и UI ещё не выполнялась; этот результат подтверждает source drift после известной установки, а не дефект login/parser.
+
+Root заменил только `PROXY_SHA` и `BRIDGE_SHA` на exact postimages O1. `WRAPPER_SHA`, auth resolver, lease, маршруты, deadline и поведение аудита сохранены. Обратная замена этих двух строк в памяти восстанавливает первоначальный SHA. Полный test suite повторно не запускался ради изменения constants. Независимый review этой дельты — PASS (`independent_review/PIN_REBIND_REVIEW.json`). Следующий единственный audit dispatch остаётся у root.
 
 ## Что делает один разрешённый запуск
 

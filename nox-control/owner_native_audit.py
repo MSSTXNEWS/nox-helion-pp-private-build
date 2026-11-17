@@ -70,13 +70,13 @@ PROXY = ROOT / 'scripts/chat_proxy.py'
 COMMON = PROXY.with_name('common.py')
 
 
-PROXY_SHA = '7a2f886bd93a4629947b7c8c44b908dc0f0800651b80cb15d0b6818b6cc8b068'
+PROXY_SHA = 'b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc'
 
 
 BRIDGE = ROOT / 'scripts/nox_v29_chat_bridge.py'
 
 
-BRIDGE_SHA = 'ffdefe48fe45d797987fedcf76a231418c6c38c31c33ac8f687d99e753687cee'
+BRIDGE_SHA = '17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f'
 
 
 WRAPPER = ROOT / 'scripts/nox_web29_onehost_18775.py'

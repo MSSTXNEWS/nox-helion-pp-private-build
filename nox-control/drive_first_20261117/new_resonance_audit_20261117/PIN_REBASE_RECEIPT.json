@@ -1,0 +1,73 @@
+{
+  "schema": "NOX_NEW_RESONANCE_AUDIT_PIN_REBASE_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "recorded_utc": "2026-11-17T20:44:16.706591+00:00",
+  "agent": "/root/relay_policy_audit",
+  "work_id": "NEW_RESONANCE_AUDIT_PIN_REBASE_20261117",
+  "state": "PIN_REBASE_INDEPENDENT_REVIEW_PASS",
+  "code_change_owner": "/root",
+  "author_code_changes": false,
+  "source_path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/owner_native_audit.py",
+  "previous_source_sha256": "a0b476a87c1139771d3c1e75abaf3028bd4b5d51a6939a86fdf53b28d47affd1",
+  "current_source_sha256": "4e22e0fd73f46c759d9663b9a6be58d0cb48a9c3fce636d2ee1b6e18821c8b6a",
+  "source_delta": [
+    {
+      "name": "PROXY_SHA",
+      "before": "7a2f886bd93a4629947b7c8c44b908dc0f0800651b80cb15d0b6818b6cc8b068",
+      "after": "b202301a3b94076a5152478dd9d1ad1eeceaa72e09cd2ce93e537eaab70740bc"
+    },
+    {
+      "name": "BRIDGE_SHA",
+      "before": "ffdefe48fe45d797987fedcf76a231418c6c38c31c33ac8f687d99e753687cee",
+      "after": "17932e2f49a659119593e6819acf945ebbedfb274595b8086f1031096b7d2a0f"
+    }
+  ],
+  "reverse_exact_two_assignments_matches_previous_sha": true,
+  "wrapper_pin_unchanged": true,
+  "source_functionality_unchanged": true,
+  "source_of_new_pins": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/O1_INSTALLED_POSTIMAGES_20261117.json",
+    "source_commit": "be4750aae3cb456e09df0ddcb39fcf0fd1673bd1",
+    "run_id": 44171616874,
+    "job_id": 134351926185,
+    "state": "APPLIED_RELOADED_USE_PENDING",
+    "model_calls": 0,
+    "used": false,
+    "accepted": false
+  },
+  "first_native_audit": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/FIRST_NATIVE_RESULT.json",
+    "run_id": 44171929567,
+    "job_id": 134353031742,
+    "source_commit": "b740217b5564776ac29fe02619bf9082e2b66a61",
+    "status": "HOLD_PROXY_SHA_CHANGED",
+    "loopback_requests": 0,
+    "model_requests": 0,
+    "elapsed_ms": 1,
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "meaning": "Expected source-pin drift after recorded O1 installation; auth and UI not reached"
+  },
+  "preserved_historical_source_receipt": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/SOURCE_RECEIPT.json",
+    "sha256": "831042836d303cb4ebffcd0d9686ef2a54599cde0b7ba75471c7a3e7682af05d",
+    "modified": false
+  },
+  "verification": {
+    "method": "AST extraction, exact match to saved postimage hashes, reverse-two-assignment SHA reconstruction",
+    "unit_suite_repeated": false,
+    "native_or_external_requests_by_author": 0
+  },
+  "independent_delta_review": {
+    "reviewer": "/root/relay_independent_review",
+    "result": "PASS",
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/new_resonance_audit_20261117/independent_review/PIN_REBIND_REVIEW.json",
+    "sha256": "08575ae9d4c4082173f5c4eda5f860c27d666cfadeeb744b72bcccaf6d4d9423",
+    "evidence": "reviewer receipt and direct collaboration confirmation; exact two pins only"
+  },
+  "next_ready": {
+    "owner": "/root",
+    "action": "one existing owner audit after independent two-constant delta review; reconcile its actual output, never count this pin update as UI/auth/model acceptance"
+  },
+  "claims_modified": false,
+  "native_dispatch_by_author": false
+}
