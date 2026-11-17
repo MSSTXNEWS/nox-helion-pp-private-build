@@ -754,6 +754,25 @@ def ensure_watchdog_task(st: dict) -> None:
                 "status": "pending", "locks": [], "retries": 0, "max_retries": 3}
         elif current["state"] != "RUNNING" and task.get("status") == "done":
             task["status"] = "pending"
+        # Reuse the SAME dispatcher queue and task-runner, never a second
+        # daemon. The native reciprocal module must be present on this host.
+        module_path = owner_mentor.ROOT / "scripts/owner_dispatcher_reciprocal_health.py"
+        if module_path.is_file() and not module_path.is_symlink():
+            rid = "owner.dispatcher_reciprocal_health"
+            check = st["tasks"].get(rid)
+            if check is None:
+                st["tasks"][rid] = {
+                    "id": rid, "class": "watchdog", "priority": 1,
+                    "deps": [], "locks": [], "handler": "owner_component_validate",
+                    "params": {"component": "dispatcher_reciprocal_health"},
+                    "title": "Verify NOX and original dispatcher processes",
+                    "status": "pending", "retries": 0, "max_retries": 3,
+                    "last_rearm_epoch": time.time(),
+                }
+            elif (check.get("status") == "done"
+                  and time.time() - float(check.get("last_rearm_epoch") or 0) >= 300):
+                check["status"] = "pending"
+                check["last_rearm_epoch"] = time.time()
 ''')
     source = exact_replace(source, 'def write_status(st):\n',
         'def write_status(st):\n    with _qlock:\n        st = {"tasks": {tid: dict(task) for tid, task in st["tasks"].items()}}\n')
