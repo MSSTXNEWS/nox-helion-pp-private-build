@@ -409,6 +409,10 @@ def _recent_provenance_rank(row):
         return 0
     if not isinstance(value, dict):
         return 0
+    # A syntactically valid JSON scalar is not necessarily an authenticated
+    # history marker. Numeric/string/null history_import must not be current.
+    if 'history_import' in value and type(value['history_import']) is not bool:
+        return 0
     return 1 if value.get('history_import') is True else 2
 
 
@@ -448,7 +452,10 @@ def recent_rows(conn, limit=12):
         """SELECT * FROM s03_items WHERE segment=?
            ORDER BY CASE WHEN json_valid(COALESCE(meta,'')) THEN
              CASE WHEN json_type(meta)='object' THEN
-               CASE WHEN json_type(meta,'$.history_import')='true' THEN 1 ELSE 2 END
+               CASE WHEN json_type(meta,'$.history_import')='true' THEN 1
+                    WHEN json_type(meta,'$.history_import')='false'
+                         OR json_type(meta,'$.history_import') IS NULL THEN 2
+                    ELSE 0 END
              ELSE 0 END
            ELSE 0 END DESC, rowid DESC LIMIT 256""", ('M1',))]
     ordered = sorted(enumerate(candidates), key=lambda entry: (
