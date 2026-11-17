@@ -30,11 +30,11 @@ def decorate_html(raw,path):
     # Check each actual script tag: preserve already-mounted scripts and restore
     # only missing pieces. This is idempotent for partially decorated archives.
     extra=''
-    if not re.search(r'<meta\\b[^>]*\\bname\\s*=\\s*(["\\'])nox-live-build\\1',raw,re.I):
+    if not re.search(r'<meta\b[^>]*\bname\s*=\s*(["\'])nox-live-build\1',raw,re.I):
         extra='\n<meta name="nox-live-build" content="'+BUILD+'">\n'
     for name in ('nox-v135-resonance-owner-bridge.js','nox-v137-owner-self-status.js','owner-chat-ui.js','owner-presence.js'):
-        if re.search(r'<script\\b[^>]*\\bsrc\\s*=\\s*(["\\'])/nox-web-v29/'
-                     +re.escape(name)+r'(?:\\?[^"\\']*)?\\1',raw,re.I):
+        if re.search(r'<script\b[^>]*\bsrc\s*=\s*(["\'])/nox-web-v29/'
+                     +re.escape(name)+r'(?:\?[^"\']*)?\1',raw,re.I):
             continue
         extra+='<script defer src="/nox-web-v29/'+name+'" data-nox-live-owner="1"></script>\n'
     return raw.replace('</head>',extra+'</head>',1) if extra else raw
