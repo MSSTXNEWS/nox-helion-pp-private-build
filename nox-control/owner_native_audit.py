@@ -370,6 +370,7 @@ def worker(i):
 O2_CODE_PATHS = (
     'scripts/chat_proxy.py', 'scripts/nox_v29_chat_bridge.py',
     'scripts/nox_priority_arbiter.py', 'scripts/owner_chat_ui.py',
+    'scripts/nox_web29_onehost_18775.py', 'scripts/nox_dispatcher_t855u.py',
     'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/pc/resonance.html',
     'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/pc/nox-chat.js',
     'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/nox-v135-resonance-owner-bridge.js',
