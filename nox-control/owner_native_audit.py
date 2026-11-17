@@ -1,377 +1,252 @@
 #!/usr/bin/env python3
-"""One-shot native audit. Seven bounded OS workers, no daemon, no mutation or credentials output."""
+"""Read-only fixed-target OneHost audit. No POST, generation, downloads or source export."""
 from __future__ import annotations
-from concurrent.futures import ProcessPoolExecutor
+import ast
+import hashlib
+from html.parser import HTMLParser
+import http.client
+import json
 from pathlib import Path
-import json, os, re, shutil, subprocess, sys, time
+import re
+import time
+from urllib.parse import urlsplit
 
-SAFE=re.compile(r'^[A-Za-z0-9_./+@:= -]{1,300}$')
-ROOTS=('/root/nox','/root/nox_learn','/workspace')
+SCRIPTS=('scripts/chat_proxy.py','scripts/nox_web29_onehost_18775.py','scripts/nox_v29_chat_bridge.py')
+PIDS=(3266857,3367881,3368105)
+TUNNEL_FILES=('logs/cloudflared.log','logs/nox-cloudflared.log','logs/web29_tunnel.log',
+              'state/tunnel_url.txt','state/public_url.txt')
+BLOCKED_HOST='clarity-sit-efficient-has.trycloudflare.com'
+TUNNEL=re.compile(r'\b[a-z0-9-]+\.(?:trycloudflare\.com|ngrok-free\.app)\b',re.I)
+SENSITIVE=re.compile(r'(?i)(?:\bsk-[a-z0-9_-]{12,}|bearer\s+\S+|(?:password|secret|token|api[_-]?key|cookie|session)[=:])')
+MAX_FILE=1024*1024
 
-def run(argv, seconds=12):
+
+def read_bytes(path,limit=MAX_FILE):
     try:
-        p=subprocess.run(argv,capture_output=True,text=True,timeout=seconds)
-        return p.returncode,p.stdout[:200000]
-    except Exception as e:return 99,type(e).__name__
-
-def num(path):
-    try:
-        v=Path(path).read_text().strip()
-        return int(v) if v.isdigit() else v[:40]
+        if not path.is_file() or path.is_symlink() or path.stat().st_size>limit:return None
+        with path.open('rb') as file:return file.read(limit+1)
     except OSError:return None
 
-def hardware():
-    rc,g=run(['nvidia-smi','--query-gpu=index,name,uuid,memory.total,memory.used,utilization.gpu,temperature.gpu','--format=csv,noheader,nounits'])
-    _,a=run(['nvidia-smi','--query-compute-apps=pid,gpu_uuid,used_gpu_memory','--format=csv,noheader,nounits'])
-    return {'gpu_rc':rc,'gpu':[x for x in g.splitlines() if SAFE.fullmatch(x.replace(',',''))][:4],
-      'gpu_apps':[x for x in a.splitlines() if SAFE.fullmatch(x.replace(',',''))][:16],
-      'cpus':os.cpu_count(),'load':list(os.getloadavg()),
-      'cgroup_max':num('/sys/fs/cgroup/memory.max'),'cgroup_current':num('/sys/fs/cgroup/memory.current'),
-      'cpu_max':num('/sys/fs/cgroup/cpu.max'),
-      'disk':{r:dict(zip(('total','used','free'),shutil.disk_usage(r))) for r in ROOTS if Path(r).is_dir()}}
 
-def proc_start_ticks(proc_dir, expected_pid):
-    """Read Linux /proc/<pid>/stat field 22; verify PID despite ')' in comm.
-
-    A numeric PID without a validated start tick is not proof of process identity.
-    Do not export cmdline, environment, or the raw stat record.
-    """
-    raw=(Path(proc_dir)/'stat').read_text()
-    prefix=str(expected_pid)+' ('
-    boundary=raw.rfind(') ')
-    if not raw.startswith(prefix) or boundary<len(prefix):
-        raise ValueError('HOLD_PID_STAT_IDENTITY')
-    fields=raw[boundary+2:].split()
-    if len(fields)<20 or not fields[19].isdigit():
-        raise ValueError('HOLD_PID_START_TICKS')
-    return int(fields[19])
-
-def process_rows(proc_root=Path('/proc')):
-    rows=[]
-    flags={'-m','--model','--model-path','--model_path','--base-model','--student','--output_dir','--output-dir','--config','-c'}
-    for p in Path(proc_root).iterdir():
-        if not p.name.isdigit():continue
-        try:
-            initial_ticks=proc_start_ticks(p,int(p.name))
-            argv=(p/'cmdline').read_bytes().decode(errors='replace').strip('\0').split('\0')
-            if not argv or not any(k in ' '.join(argv[:3]).lower() for k in ('nox','llama','train','python','supervisor','rclone','jupyter')):continue
-            args=[]
-            for i,v in enumerate(argv):
-                if v in flags and i+1<len(argv) and SAFE.fullmatch(argv[i+1]) and '://' not in argv[i+1]:args.append([v,argv[i+1]])
-            row={'pid':int(p.name),'comm':(p/'comm').read_text().strip()[:60],
-                 'executable':os.path.basename(argv[0]),'arguments':args[:12]}
-            scripts=[v for v in argv[1:5] if v.endswith(('.py','.sh')) and SAFE.fullmatch(v)]
-            if scripts:row['scripts']=scripts
-            # Do not attribute a reused PID to the model observed earlier.
-            if proc_start_ticks(p,int(p.name)) != initial_ticks:continue
-            row['start_ticks']=initial_ticks
-            rows.append(row)
-        except (OSError,ValueError):continue
-    return rows[:100]
-
-def v13_owner_fence_metadata(root=Path('/root/nox'), workspace_stop=Path('/workspace/NOX_STOP'), lstat=os.lstat):
-    """READ-ONLY marker presence, not authorization to start, stop, or write.
-
-    Preserve unreadable markers as UNKNOWN; missing flags at one instant are
-    never evidence of an owner lease, safe release, or completed shutdown.
-    Do not open, follow, hash or export marker contents.
-    """
-    paths = {
-        'STOP': root / 'STOP',
-        'STOP_FLAG': root / 'STOP.flag',
-        'LOWER_STOP_FLAG': root / 'stop.flag',
-        'DOT_STOP': root / '.stop',
-        'PROGRAM_STOP': root / 'program/STOP',
-        'STATE_STOP': root / 'state/STOP',
-        'STATE_STOP_FLAG': root / 'state/STOP.flag',
-        'MEDIA_STOP': root / 'state/MEDIA_STOP.flag',
-        'OWNER_MAINTENANCE': root / 'state/OWNER_MAINTENANCE.flag',
-        'WORKSPACE_STOP': workspace_stop,
-        'TRAIN_HOLD': root / 'state/TRAIN_HOLD.flag',
-    }
-    rows = {}
-    for name, path in paths.items():
-        try:
-            lstat(path)
-            rows[name] = 'PRESENT'
-        except FileNotFoundError:
-            rows[name] = 'NOT_FOUND_AT_SNAPSHOT'
-        except OSError:
-            rows[name] = 'UNKNOWN_UNREADABLE'
-    owner_names = tuple(name for name in rows if name != 'TRAIN_HOLD')
-    owner_observed = [rows[name] for name in owner_names]
-    status = ('PRESENT' if 'PRESENT' in owner_observed else
-              'UNKNOWN' if 'UNKNOWN_UNREADABLE' in owner_observed else
-              'NOT_OBSERVED_NOT_AUTHORIZED')
-    return {
-        'scope': 'READ_ONLY_MARKER_METADATA',
-        'owner_stop_state': status,
-        'train_hold_state': rows['TRAIN_HOLD'],
-        'markers': rows,
-        'owner_lease_state': 'NOT_CHECKED',
-        'may_clear_stop': False,
-        'may_start_nox': False,
-        'may_write_native': False,
-        'pid_starttime_verified': False,
-    }
-
-
-def supervisor():
-    fence=v13_owner_fence_metadata()
-    binary=shutil.which('supervisorctl')
-    if not binary:
-        binary=next((x for x in ('/opt/venv/bin/supervisorctl','/usr/local/bin/supervisorctl') if Path(x).is_file()),None)
-    if not binary:return {'available':False,'owner_fence_readonly':fence}
-    candidates=[None]+[x for x in ('/etc/supervisor/supervisord.conf','/etc/supervisord.conf','/root/nox/supervisord.conf') if Path(x).is_file()]
-    results=[]
-    for c in candidates:
-        args=[binary]+(['-c',c] if c else [])+['status']
-        rc,out=run(args)
-        rows=[]
-        for line in out.splitlines():
-            m=re.match(r'^([A-Za-z0-9_.:-]+)\s+(RUNNING|STARTING|STOPPED|FATAL|BACKOFF|EXITED|STOPPING|UNKNOWN)\b(.*)$',line)
-            if m:
-                pid=re.search(r'\bpid (\d+)',m.group(3))
-                rows.append({'name':m.group(1),'state':m.group(2),'pid':int(pid[1]) if pid else None})
-        results.append({'config':c,'rc':rc,'services':rows})
-        if rows:break
-    return {'available':True,'results':results,'owner_fence_readonly':fence}
-
-def v13_wheelhouse_admission(record):
-    """Metadata-only ABI gate for the Drive CP311/cu126 wheelhouse, never an installer.
-
-    A matching wheel tag is not a GPU smoke, driver test, license approval, or
-    native installation receipt. Incompatible installed Python environments
-    must not be modified to make a source check pass.
-    """
-    if not isinstance(record, dict) or not isinstance(record.get('_runtime'), dict):
-        return 'HOLD_WHEELHOUSE_RUNTIME_ABI_UNKNOWN'
-    runtime = record['_runtime']
-    if runtime.get('python_abi') != 'cpython-311':
-        return 'HOLD_WHEELHOUSE_CP311_PYTHON_ABI_MISMATCH'
-    if runtime.get('platform') != 'linux-x86_64':
-        return 'HOLD_WHEELHOUSE_LINUX_X86_64_PLATFORM_MISMATCH'
-    # A CP311 cache tag alone is not enough: it can disagree with the
-    # interpreter's actual version. Reject contradictory or missing evidence
-    # rather than labelling a potentially CP312 process a candidate.
-    python_version = runtime.get('python_version')
-    if not isinstance(python_version, str) or re.fullmatch(r'3\.11\.\d+', python_version) is None:
-        return 'HOLD_WHEELHOUSE_CP311_VERSION_MISMATCH'
-    version = record.get('torch')
-    if not isinstance(version, str) or not version:
-        return 'HOLD_WHEELHOUSE_TORCH_BUILD_UNKNOWN'
-    # A forged package label such as "unknown+cu126" is not a PyTorch build.
-    if re.fullmatch(r'[1-9]\d*\.\d+\.\d+\+cu126', version) is None:
-        return 'HOLD_WHEELHOUSE_CU126_TORCH_BUILD_MISMATCH'
-    return 'SOURCE_ONLY_WHEELHOUSE_ABI_CANDIDATE_NATIVE_SM70_HOLD'
-
-
-def packages():
-    code="import importlib.metadata as m,json,sys,sysconfig; names=['torch','transformers','accelerate','datasets','deepspeed','safetensors','peft','bitsandbytes','trl','psutil','nvidia-ml-py','diffusers','opencv-python','imageio-ffmpeg']; d={'_runtime':{'python_abi':sys.implementation.cache_tag,'python_version':'.'.join(map(str,sys.version_info[:3])),'platform':sysconfig.get_platform()}};\nfor n in names:\n try:d[n]=m.version(n)\n except m.PackageNotFoundError:d[n]=None\nprint(json.dumps(d))"
-    found={}
-    for p in ('/root/venv_volta/bin/python','/opt/venv/bin/python','/root/nox/.venv/bin/python','/usr/bin/python3'):
-        if Path(p).is_file():
-            rc,out=run([p,'-c',code])
-            try:
-                row=json.loads(out) if rc==0 else {'status':'IMPORT_FAILED'}
-                if isinstance(row,dict) and rc==0:
-                    row['_wheelhouse_candidate']=v13_wheelhouse_admission(row)
-                found[p]=row
-            except ValueError:found[p]={'status':'INVALID_OUTPUT'}
-    return found
-
-# Exact immutable DeepSeek pins mirrored from v51/hf_range_probe.py.
-# The offline source test asserts these rows remain identical to that manifest.
-MODEL_ROOT='/root/nox/models'
-MODEL_MANIFEST_REVISION='65d53bc8be65123e255ff02f3ded958b6dbf54fd'
-PINNED_MODEL_FILES=(
- ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf',5780704,'f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9'),
- ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf',39535781184,'25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3'),
- ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf',39736712000,'8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48'),
- ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf',39036908384,'9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0'),
- ('DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf',19923784832,'7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1'),
- ('DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf',110595290816,'3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3'),
-)
-
-def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
-    """Metadata-only, no-follow stat for the six immutable targets under one root."""
-    root_path=Path(root)
-    if not root_path.is_absolute():
-        return {'status':'HOLD_MODEL_ROOT_NOT_ABSOLUTE','root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,'files':[]}
-    root_parts=root_path.parts
-    ancestors=[]; current=Path(root_path.anchor)
-    for part in root_parts[1:]:
-        current=current/part
-        ancestors.append(current)
+def safe_path(value,root):
+    if not isinstance(value,str) or len(value)>512 or '\x00' in value or SENSITIVE.search(value):return None
+    candidate=Path(value)
+    if not candidate.is_absolute():return None
     try:
-        for ancestor in ancestors:
-            mode=lstat(str(ancestor)).st_mode
-            if __import__('stat').S_ISLNK(mode):
-                return {'status':'HOLD_MODEL_PATH_SYMLINK','root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
-                        'files':[{'path':str(root_path/name),'exists':None,'type':'blocked',
-                                  'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
-                                  'path_status':'HOLD_MODEL_PATH_SYMLINK'}
-                                 for name,size,_ in PINNED_MODEL_FILES]}
-            if not __import__('stat').S_ISDIR(mode):
-                return {'status':'HOLD_MODEL_ROOT_COMPONENT_TYPE','root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
-                        'files':[{'path':str(root_path/name),'exists':None,'type':'blocked',
-                                  'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
-                                  'path_status':'HOLD_MODEL_ROOT_COMPONENT_TYPE'}
-                                 for name,size,_ in PINNED_MODEL_FILES]}
-    except FileNotFoundError:
-        pass
-    except OSError as exc:
-        status='HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper()
-        return {'status':status,'root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
-                'files':[{'path':str(root_path/name),'exists':None,'type':'unknown',
-                          'bytes':None,'expected_bytes':size,'sha_status':'NOT_CHECKED',
-                          'path_status':status} for name,size,_ in PINNED_MODEL_FILES]}
-    results=[]
-    for name,expected_bytes,sha256 in PINNED_MODEL_FILES:
-        if (not name or Path(name).name!=name or '/' in name or '\\\\' in name
-                or name in ('.','..')):
-            return {'status':'HOLD_MODEL_PATH_ESCAPE','files':[]}
-        target=root_path/name
-        path=str(target)
-        row={'path':path,'exists':False,'type':'missing','bytes':None,
-             'expected_bytes':expected_bytes,'sha_status':'NOT_CHECKED'}
-        try:
-            observed=lstat(path)
-            mode=observed.st_mode
-            statmod=__import__('stat')
-            if statmod.S_ISLNK(mode):
-                row.update({'type':'symlink','path_status':'HOLD_MODEL_PATH_SYMLINK'})
-                results.append(row)
-                continue
-            if statmod.S_ISREG(mode):
-                row.update({'exists':True,'type':'regular','bytes':observed.st_size,
-                            'size_status':'MATCH' if observed.st_size==expected_bytes else 'MISMATCH'})
-            elif statmod.S_ISDIR(mode):
-                row.update({'exists':True,'type':'directory','bytes':None})
-            else:
-                row.update({'exists':True,'type':'other','bytes':None})
-            results.append(row)
-        except FileNotFoundError:
-            results.append(row)
-        except OSError as exc:
-            row.update({'type':'unknown','path_status':'HOLD_MODEL_PATH_STAT_'+type(exc).__name__.upper()})
-            results.append(row)
-    # Overall status must fail closed. The caller must not treat unreadable, bad-sized,
-    # or nonregular candidates as a clean model inventory just because other rows passed.
-    path_holds=[r['path_status'] for r in results if r.get('path_status')]
-    if 'HOLD_MODEL_PATH_SYMLINK' in path_holds:
-        status='HOLD_MODEL_PATH_SYMLINK'
-    elif path_holds:
-        status=path_holds[0]
-    elif any(r['type'] not in ('regular','missing') for r in results):
-        status='HOLD_MODEL_TARGET_TYPE'
-    elif any(r.get('size_status')=='MISMATCH' for r in results):
-        status='HOLD_MODEL_FILE_SIZE_MISMATCH'
-    elif any(r['type']=='missing' for r in results):
-        # Missing GGUF files are not an admitted model, even if every readable
-        # pathname was safe. In particular, never report OK for an empty root.
-        status='HOLD_MODEL_FILES_MISSING'
-    else:
-        status='HOLD_MODEL_SHA_UNVERIFIED'  # File sizes match, but full GGUF SHA was NOT checked.
-    return {'status':status,'root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
-            'files':results}
+        resolved=candidate.resolve()
+        if resolved!=root and root not in resolved.parents:return None
+        return resolved
+    except (OSError,ValueError):return None
 
-def models():
-    return {'pinned_model_paths':pinned_model_paths()}
 
-def storage():
-    rc=shutil.which('rclone')
-    if not rc:return {'rclone_present':False}
-    status,out=run([rc,'listremotes'])
-    names=[x.strip() for x in out.splitlines() if re.fullmatch(r'[A-Za-z0-9_.-]{1,64}:',x.strip())]
-    checks=[]
-    for remote in names[:3]:
-        code,out=run([rc,'about',remote,'--json'],15)
-        try:
-            d=json.loads(out);clean={k:d[k] for k in ('total','used','free','trashed') if type(d.get(k)) is int}
-        except (ValueError,TypeError):clean={}
-        checks.append({'remote':remote,'about_rc':code,'capacity':clean})
-    return {'rclone_present':True,'list_rc':status,'remotes':names,'checks':checks,
-            'known_config_present':{x:Path(x).is_file() for x in ('/root/.config/rclone/rclone.conf','/root/nox/rclone.conf')}}
+def scalar(value,kind='code'):
+    if value is None or isinstance(value,(bool,int)):return value
+    if isinstance(value,float):return value if value==value and abs(value)<1e20 else None
+    if not isinstance(value,str) or len(value)>200 or SENSITIVE.search(value):return None
+    pattern=r'[A-Za-z0-9_. /:+-]{1,200}' if kind=='model' else r'[A-Za-z0-9_.:-]{1,100}'
+    return value if re.fullmatch(pattern,value) else None
 
-# Read only the current Linux mount namespace. Device source strings are intentionally
-# omitted because they can contain remote paths or credentials. statvfs reads metadata only.
-BLOCK_FILESYSTEMS={'ext2','ext3','ext4','xfs','btrfs','zfs','vfat','exfat','ntfs'}
-LOCAL_CAPACITY_FILESYSTEMS=BLOCK_FILESYSTEMS|{'overlay','tmpfs','ramfs'}
-def _unescape_mountinfo(value):
-    return re.sub(r'\\([0-7]{3})',lambda m:chr(int(m.group(1),8)),value)
 
-def _capacity_row(path,mount_rows,statvfs,path_exists):
-    exists=bool(path_exists(path))
-    matches=[r for r in mount_rows if path==r['mountpoint'] or path.startswith(r['mountpoint'].rstrip('/')+'/')]
-    mount=max(matches,key=lambda r:len(r['mountpoint'])) if matches else None
+class Assets(HTMLParser):
+    def __init__(self):super().__init__();self.refs=[]
+    def handle_starttag(self,tag,attrs):
+        if tag not in ('script','link','img','audio','video','source'):return
+        for key,value in attrs:
+            if key not in ('src','href') or not value or len(value)>512:continue
+            parsed=urlsplit(value)
+            if parsed.hostname==BLOCKED_HOST or parsed.username or parsed.password:continue
+            if parsed.scheme in ('data','javascript'):continue
+            # Strip queries/fragments; never export inline script/config/session text.
+            ref=(parsed.scheme+'://'+parsed.netloc+parsed.path) if parsed.netloc else parsed.path
+            if ref and not SENSITIVE.search(ref):self.refs.append(ref)
+
+
+def html_metadata(raw):
+    parser=Assets()
+    try:parser.feed(raw.decode('utf-8','replace'))
+    except (ValueError,RecursionError):pass
+    return {'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),'asset_refs':sorted(set(parser.refs))[:80]}
+
+
+def source_metadata(path,root):
+    raw=read_bytes(path)
+    if raw is None:return {'path':str(path),'status':'MISSING_OR_NOT_BOUNDED'},[]
+    output={'path':str(path),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),'source_exported':False}
+    try:tree=ast.parse(raw.decode('utf-8'))
+    except (SyntaxError,UnicodeDecodeError,RecursionError):return dict(output,ast_status='UNPARSED'),[]
+    values={};routes=set();bound=[]
+    def evaluate(node):
+        if isinstance(node,ast.Constant) and isinstance(node.value,str):return node.value
+        if isinstance(node,ast.Name):return values.get(node.id)
+        if isinstance(node,ast.BinOp) and isinstance(node.op,ast.Div):
+            left,right=evaluate(node.left),evaluate(node.right)
+            if left is not None and right is not None:return str(Path(left)/right)
+        if isinstance(node,ast.Call):
+            name=node.func.id if isinstance(node.func,ast.Name) else node.func.attr if isinstance(node.func,ast.Attribute) else ''
+            parts=[evaluate(x) for x in node.args]
+            if name in ('Path','str') and len(parts)==1:return parts[0]
+            if name=='join' and parts and all(isinstance(x,str) for x in parts):return str(Path(parts[0]).joinpath(*parts[1:]))
+        return None
+    for node in tree.body:
+        if isinstance(node,(ast.Assign,ast.AnnAssign)):
+            value=evaluate(node.value)
+            targets=node.targets if isinstance(node,ast.Assign) else [node.target]
+            for target in targets:
+                if isinstance(target,ast.Name) and isinstance(value,str):values[target.id]=value
+    for node in ast.walk(tree):
+        if isinstance(node,ast.Call):
+            name=node.func.id if isinstance(node.func,ast.Name) else node.func.attr if isinstance(node.func,ast.Attribute) else ''
+            if name in ('get','post','route','mount','add_api_route') and node.args:
+                route=evaluate(node.args[0])
+                if isinstance(route,str) and re.fullmatch(r'/[A-Za-z0-9_./{}:-]{0,180}',route):routes.add(route)
+            if name in ('StaticFiles','SimpleHTTPRequestHandler','send_from_directory'):
+                candidates=[evaluate(x.value) for x in node.keywords if x.arg=='directory']
+                if name=='send_from_directory' and node.args:candidates.append(evaluate(node.args[0]))
+                for value in candidates:
+                    resolved=safe_path(value,root)
+                    if resolved:bound.append({'path':str(resolved),'evidence':'AST_DIRECTORY_ARGUMENT'})
+    for name,value in values.items():
+        if re.search(r'(SITE|WEB|ROOT|STATIC|DIRECTORY|HTML)',name,re.I):
+            resolved=safe_path(value,root)
+            if resolved:bound.append({'path':str(resolved),'evidence':'AST_PATH_CONSTANT','symbol':name[:80]})
+    # Constant candidates are labelled as candidates, never claimed actual routing.
+    output.update(ast_status='PARSED',routes=sorted(routes),directory_bindings=bound[:20])
+    return output,bound[:20]
+
+
+def loopback_get(port,path,connection_factory=None):
+    if (port,path) not in ((18775,'/api/nox/status'),(18775,'/nox-web-v29/pc/resonance.html'),(8098,'/health'),(8098,'/slots')):
+        return {'status':'TARGET_NOT_ALLOWED'},None
+    conn=(connection_factory or http.client.HTTPConnection)('127.0.0.1',port,timeout=1.5)
     try:
-        if not exists:raise FileNotFoundError(path)
-        if mount is None or mount['filesystem'] not in LOCAL_CAPACITY_FILESYSTEMS:
-            raise OSError('filesystem is outside the local capacity allowlist')
-        st=statvfs(path); block_size=st.f_frsize or st.f_bsize
-        total=int(st.f_blocks)*int(block_size); available=int(st.f_bavail)*int(block_size)
-    except (OSError,AttributeError,TypeError,ValueError):
-        total=None; available=None
-    row={'path':path,'exists':exists,'mountpoint':mount['mountpoint'] if mount else None,
-         'filesystem':mount['filesystem'] if mount else None,
-         'device_major_minor':mount['device_major_minor'] if mount else None,
-         'total_bytes':total,'available_bytes':available}
-    return row
+        conn.request('GET',path,headers={'Accept':'application/json,text/html','Accept-Encoding':'identity','Connection':'close'})
+        response=conn.getresponse();raw=response.read(262145)
+        meta={'http_status':response.status,'port':port,'path':path,'redirect_followed':False}
+        if len(raw)>262144:return dict(meta,body_status='SIZE_LIMIT'),None
+        if response.status!=200:return meta,None
+        return meta,raw
+    except (OSError,http.client.HTTPException):return {'port':port,'path':path,'status':'READ_UNAVAILABLE'},None
+    finally:conn.close()
 
-def _mount_inventory_from_text(text,statvfs=os.statvfs,path_exists=None):
-    rows=[]; mount_by_path={}; type_counts={}
-    lines=text.splitlines(); truncated=len(lines)>4096
-    for line in lines[:4096]:
+
+def filter_json(raw,kind):
+    try:value=json.loads(raw)
+    except (ValueError,UnicodeDecodeError,RecursionError):return {'parse_status':'INVALID_OR_NON_JSON'}
+    if kind=='slots':
+        if not isinstance(value,list):return {'parse_status':'UNEXPECTED_SCHEMA'}
+        keys=('id','id_task','state','is_processing','n_ctx','n_past','n_predict','n_decoded')
+        return {'slots':[{k:scalar(v) for k,v in item.items() if k in keys and scalar(v) is not None} for item in value[:8] if isinstance(item,dict)],'prompt_fields_exported':False}
+    if not isinstance(value,dict):return {'parse_status':'UNEXPECTED_SCHEMA'}
+    keys=('status','backend','primary_model','native_p02_bound','native_cognitive_memory_bound','native_dialogs_ready','chat_active','mode')
+    output={k:scalar(v,'model' if k=='primary_model' else 'code') for k,v in value.items() if k in keys and scalar(v,'model' if k=='primary_model' else 'code') is not None}
+    model=value.get('model')
+    if isinstance(model,str):output['model']=scalar(model,'model')
+    elif isinstance(model,dict):output['model']={k:scalar(model[k],'model') for k in ('name','id','model') if k in model and scalar(model[k],'model') is not None}
+    return output
+
+
+def owner_state(root):
+    out={}
+    for name in ('CHAT_ACTIVE','MODE','IDLE_MINUTES','TRAIN_PAUSE','KNOWLEDGE_PAUSE','LAST_OWNER_CHAT'):
+        raw=read_bytes(root/'state/priority'/name,512)
+        if raw is None:continue
+        text=raw.decode('ascii','ignore').strip()
+        if name=='LAST_OWNER_CHAT':
+            if re.fullmatch(r'[0-9.TZ:+ -]{1,50}',text):out[name]=text
+        elif scalar(text) is not None:out[name]=scalar(text)
+    raw=read_bytes(root/'state/priority/status.json',32768)
+    if raw:
+        try:data=json.loads(raw)
+        except (ValueError,UnicodeDecodeError):data={}
+        allowed=('mode','chat_active','idle_minutes','active_request_count','training_paused','knowledge_paused')
+        if isinstance(data,dict):out['status']={k:scalar(v) for k,v in data.items() if k in allowed and scalar(v) is not None}
+    out['train_pause_request_flag_exists']=(root/'state/TRAIN_PAUSE_REQUEST.flag').is_file()
+    return out
+
+
+def cgroup_snapshot(proc_root,cgroup_root):
+    raw=read_bytes(proc_root/'self/cgroup',4096);out={'status':'UNRESOLVED'}
+    if not raw:return out
+    rows=raw.decode('utf-8','replace').splitlines()
+    path=next((x.split(':',2)[2] for x in rows if x.startswith('0::')),None)
+    if path is None:return out
+    candidate=(cgroup_root/path.lstrip('/')).resolve()
+    if candidate!=cgroup_root and cgroup_root not in candidate.parents:return out
+    if not (candidate/'memory.stat').is_file():return out
+    out={'status':'READ','cgroup_path_sha256':hashlib.sha256(path.encode()).hexdigest()}
+    for name in ('memory.current','memory.max','memory.high'):
+        value=read_bytes(candidate/name,256)
+        if value:
+            value=value.decode().strip()
+            if value=='max' or value.isdigit():out[name]=value
+    stat=read_bytes(candidate/'memory.stat',16384)
+    if stat:
+        allowed={'anon','file','shmem','file_mapped','file_dirty','file_writeback','inactive_file','active_file','slab','sock','pagetables','kernel'}
+        out['memory.stat']={k:int(v) for row in stat.decode().splitlines() if len((pair:=row.split()))==2 for k,v in [pair] if k in allowed and v.isdigit()}
+    pressure=read_bytes(candidate/'memory.pressure',2048)
+    if pressure:
+        out['memory.pressure']={}
+        for row in pressure.decode().splitlines():
+            parts=row.split()
+            if parts and parts[0] in ('some','full'):
+                out['memory.pressure'][parts[0]]={k:float(v) for item in parts[1:] if '=' in item for k,v in [item.split('=',1)] if k in ('avg10','avg60','avg300','total') and re.fullmatch(r'[0-9.]+',v)}
+    out['cache_reclaimability']='NOT_ASSUMED'
+    return out
+
+
+def run_probe(root=Path('/root/nox'),proc_root=Path('/proc'),cgroup_root=Path('/sys/fs/cgroup'),fetch=loopback_get):
+    started=time.monotonic();root=root.resolve();cgroup_root=cgroup_root.resolve()
+    audit={'schema':'NOX_CHAT_LAUNCH_READONLY_AUDIT_V1','observed_at_epoch':time.time(),'native_mutations':False,'generation_calls':0,'source_exported':False}
+    scripts=[];dirs=[]
+    for rel in SCRIPTS:
+        info,bindings=source_metadata(root/rel,root);scripts.append(info);dirs.extend(bindings)
+    audit['scripts']=scripts
+    html=[];seen=set()
+    for binding in dirs:
+        for relative in ('pc/resonance.html','resonance.html','index.html'):
+            path=Path(binding['path'])/relative
+            if str(path) in seen or safe_path(str(path),root) is None:continue
+            seen.add(str(path));raw=read_bytes(path,262144)
+            if raw is not None:html.append({'directory':binding['path'],'relative_path':relative,'binding_evidence':binding['evidence'],**html_metadata(raw)})
+    audit['html_candidates']=html[:20]
+    network=[]
+    for port,path,kind in ((18775,'/api/nox/status','status'),(8098,'/health','health'),(8098,'/slots','slots'),(18775,'/nox-web-v29/pc/resonance.html','html')):
+        meta,raw=fetch(port,path)
+        if raw is not None:meta['selected_metadata']=html_metadata(raw) if kind=='html' else filter_json(raw,kind)
+        network.append(meta)
+    audit['loopback_reads']=network
+    audit['owner_state']=owner_state(root);audit['cgroup']=cgroup_snapshot(proc_root,cgroup_root)
+    processes=[];tunnels=[]
+    for pid in PIDS:
+        raw=read_bytes(proc_root/str(pid)/'cmdline',65536)
+        if raw:
+            argv=[x.decode('utf-8','replace') for x in raw.split(b'\0') if x]
+            names=[str(p) for item in argv if (p:=safe_path(item,root)) is not None]
+            flags={}
+            for i,item in enumerate(argv[:-1]):
+                if item in ('--port','-c','--ctx-size','-np','--parallel','--n-cpu-moe','--moe-cache-mib','-ctk','-ctv') and scalar(argv[i+1]) is not None:flags[item]=scalar(argv[i+1])
+            processes.append({'pid':pid,'script_or_model_paths':names[:12],'selected_flags':flags})
+            tunnels.extend({'host':h.lower(),'source':'fixed_pid_argv','pid':pid} for h in TUNNEL.findall('\n'.join(argv)) if h.lower()!=BLOCKED_HOST)
+    for relative in TUNNEL_FILES:
+        path=root/relative
         try:
-            before,after=line.split(' - ',1)
-            left=before.split(); right=after.split()
-            if len(left)<6 or len(right)<3:continue
-            fstype=right[0]; mountpoint=_unescape_mountinfo(left[4]); dev=left[2]
-            if not SAFE.fullmatch(mountpoint) or not re.fullmatch(r'\d+:\d+',dev):continue
-            if re.fullmatch(r'[A-Za-z0-9_.+-]{1,64}',fstype):
-                type_counts[fstype]=type_counts.get(fstype,0)+1
-            entry={'mountpoint':mountpoint,'filesystem':fstype,'device_major_minor':dev}
-            mount_by_path[mountpoint]=entry
-            if fstype in BLOCK_FILESYSTEMS and not any(r['mountpoint']==mountpoint for r in rows):
-                try:
-                    st=statvfs(mountpoint); block_size=st.f_frsize or st.f_bsize
-                    total=int(st.f_blocks)*int(block_size); available=int(st.f_bavail)*int(block_size)
-                except (OSError,AttributeError,TypeError,ValueError):
-                    total=None; available=None
-                rows.append({**entry,'total_bytes':total,'available_bytes':available})
-        except (ValueError,IndexError):continue
-    if len(rows)>512:
-        rows=rows[:512]; truncated=True
-    rows.sort(key=lambda r:(r['mountpoint'],r['filesystem'],r['device_major_minor']))
-    if path_exists is None:path_exists=lambda p:Path(p).exists()
-    all_mount_rows=list(mount_by_path.values())
-    data_entry=mount_by_path.get('/data')
-    paths=[_capacity_row(p,all_mount_rows,statvfs,path_exists) for p in ('/','/data','/workspace')]
-    return {'scope':'current_process_mount_namespace_only','provider_disk_visibility':'not_established',
-            'mountinfo_readable':True,'mountinfo_entry_count':len(lines),'filesystem_type_counts':type_counts,
-            'data_mount_present':data_entry is not None,'data_mount_entry':data_entry,
-            'storage_paths':paths,'eligible_block_mount_count':len(rows),'truncated':truncated,'mounts':rows}
+            if not path.is_file() or path.is_symlink():continue
+            with path.open('rb') as file:
+                file.seek(max(0,path.stat().st_size-65536));text=file.read(65536).decode('utf-8','replace')
+        except OSError:continue
+        tunnels.extend({'host':h.lower(),'source':relative} for h in sorted(set(TUNNEL.findall(text))) if h.lower()!=BLOCKED_HOST)
+    audit['processes']=processes;audit['public_tunnel_candidates']=tunnels[:20]
+    audit['external_http_calls']=0;audit['elapsed_seconds']=round(time.monotonic()-started,3)
+    return audit
 
-def mount_inventory():
-    try:
-        text=Path('/proc/self/mountinfo').read_text()
-    except OSError as e:
-        return {'scope':'current_process_mount_namespace_only','mountinfo_readable':False,
-                'error':type(e).__name__,'mounts':[]}
-    return _mount_inventory_from_text(text)
-
-def worker(i):
-    try:
-        functions=(hardware,process_rows,supervisor,packages,models,storage,mount_inventory)
-        return {'section':functions[i].__name__,'worker_pid':os.getpid(),'result':functions[i]()}
-    except Exception as e:return {'section':str(i),'worker_pid':os.getpid(),'error':type(e).__name__}
 
 def main():
-    with ProcessPoolExecutor(max_workers=7) as pool:
-        for row in pool.map(worker,range(7)):
-            # One JSON record per bounded result item; never dump env/config secrets.
-            print('NOX_MAINT_AUDIT='+json.dumps(row,separators=(',',':')),flush=True)
-    print('NOX_MAINT_AUDIT_COMPLETE=true',flush=True)
-if __name__=='__main__':main()
+    try:
+        audit=run_probe();complete=True
+    except Exception:
+        # No raw exception/source/config/private response may escape to job logs.
+        audit={'schema':'NOX_CHAT_LAUNCH_READONLY_AUDIT_V1','status':'BOUNDED_AUDIT_ERROR','native_mutations':False};complete=False
+    print('NOX_MAINT_AUDIT='+json.dumps(audit,ensure_ascii=False,separators=(',',':')))
+    print('NOX_MAINT_AUDIT_COMPLETE='+str(complete).lower())
 
+if __name__=='__main__':main()
