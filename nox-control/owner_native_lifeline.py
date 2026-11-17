@@ -221,12 +221,17 @@ def main():
     # Never overwrite an existing differing file / old policy / owner configuration.
     for path in (SCRIPT, POLICY, CONFIG):
         protect_path(path)
-    existing = [p for p in (SCRIPT, POLICY, CONFIG) if p.exists()]
-    if any(p == CONFIG for p in existing):
-        # An existing running guard is owned by an earlier install. Leave untouched.
-        fail("GUARD_CONFIG_ALREADY_EXISTS")
-    if POLICY.exists() or SCRIPT.exists():
-        fail("PARTIAL_INSTALL_REQUIRES_OWNER_RECONCILIATION")
+    existing = [p for p in (SCRIPT, POLICY, CONFIG) if p.exists() or p.is_symlink()]
+    if existing:
+        # Safe idempotence after power loss: accept ONLY a complete,
+        # byte-identical prior installation, never overwrite a changed
+        # service, policy or code or infer equality from filenames.
+        if len(existing) != 3:
+            fail("PARTIAL_INSTALL_REQUIRES_OWNER_RECONCILIATION")
+        if any((not p.is_file() or p.is_symlink() or
+                p.read_bytes() != raw) for p, raw in
+               ((SCRIPT, script), (POLICY, policy), (CONFIG, config))):
+            fail("EXISTING_INSTALL_SOURCE_MISMATCH")
     compile(script, str(SCRIPT), "exec")
     guard_state = ROOT / "state/lifeline"
     protect_path(guard_state)
@@ -242,11 +247,21 @@ def main():
     if p.returncode or "NOX_LIFELINE_RESULT=" not in p.stdout:
         fail("READ_ONLY_SELF_TEST")
     reread = call(["supervisorctl", "reread"], timeout=15)
-    if reread.returncode or GUARD not in reread.stdout:
+    if reread.returncode or (not existing and GUARD not in reread.stdout):
         fail("SUPERVISOR_REREAD")
-    update = call(["supervisorctl", "update", GUARD], timeout=18)
-    if update.returncode:
-        fail("SUPERVISOR_UPDATE")
+    if existing:
+        guard_before = info(GUARD)
+        if guard_before["state"] in ("STOPPED", "EXITED") and guard_before["pid"] is None:
+            # Starts only this independent, disabled/read-only observer.
+            started = call(["supervisorctl", "start", GUARD], timeout=18)
+            if started.returncode:
+                fail("EXISTING_GUARD_START")
+        elif guard_before["state"] != "RUNNING" or not guard_before["pid"]:
+            fail("EXISTING_GUARD_UNSAFE")
+    else:
+        update = call(["supervisorctl", "update", GUARD], timeout=18)
+        if update.returncode:
+            fail("SUPERVISOR_UPDATE")
     active = {"state": "UNKNOWN", "pid": None}
     for _ in range(8):
         active = info(GUARD)
