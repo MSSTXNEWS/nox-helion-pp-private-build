@@ -239,7 +239,10 @@ def queue():
         emit('QUEUE', {'path':str(path),'sha256':hashlib.sha256(raw).hexdigest(),
                       'task_count':len(tasks),'counts':counts,'handler_counts':handler_counts,
                       'record_limit':512,'records_truncated':len(tasks)>512})
-        for key, task in list(tasks.items())[:512]:
+        ordered = sorted(tasks.items(), key=lambda pair: (
+            {'running':0, 'pending':1, 'retry':1, 'blocked':2, 'failed':3, 'done':4, 'catalog':5}.get(
+                pair[1].get('status') if isinstance(pair[1],dict) else None, 6), str(pair[0])))
+        for key, task in ordered[:512]:
             if not isinstance(task,dict):
                 continue
             row = {k:identifier(task.get(k)) for k in ('id','handler','class','lane','status','claimed_by')}
@@ -274,8 +277,6 @@ def status():
 
 def main():
     emit('SNAPSHOT_A',runtime_snapshot())
-    sources()
-    configuration()
     queue()
     status()
     emit('LOCKS',locks())
