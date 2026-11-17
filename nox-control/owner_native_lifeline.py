@@ -54,13 +54,20 @@ def info(name):
     # A nonzero supervisorctl rc invalidates stdout even when it resembles a
     # plausible RUNNING/STOPPED row. Never admit a service from a failed probe.
     p = call(["supervisorctl", "status", name])
-    if p.returncode != 0 or not isinstance(p.stdout, str):
+    # Supervisorctl uses rc=3 for an explicitly stopped process on this host.
+    # Admit rc=3 ONLY with a single exact STOPPED/EXITED row and no PID.
+    if p.returncode not in (0, 3) or not isinstance(p.stdout, str):
         return {"state": "UNKNOWN", "pid": None}
     lines = p.stdout.strip().splitlines()
     m = SUPERVISOR_OUTPUT.match(lines[0]) if len(lines) == 1 else None
     if m is None or m[1] != name:
         return {"state": "UNKNOWN", "pid": None}
     state, pid = m[2], int(m[3]) if m[3] else None
+    if p.returncode == 3 and state not in ("STOPPED", "EXITED"):
+        return {"state": "UNKNOWN", "pid": None}
+    # A stray or malformed PID token after the matched prefix is contradictory.
+    if pid is None and re.search(r"\bpid\b", lines[0][m.end():], re.IGNORECASE):
+        return {"state": "UNKNOWN", "pid": None}
     if not ((state == "RUNNING" and pid is not None and pid > 0) or
             (state in ("STOPPED", "EXITED") and pid is None)):
         return {"state": "UNKNOWN", "pid": None}
