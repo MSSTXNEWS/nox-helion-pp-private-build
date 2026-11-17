@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot native audit. Seven bounded OS workers, no daemon, no mutation or credentials output."""
+"""One-shot narrow mapping readback; legacy audit helpers are not executed by main."""
 from __future__ import annotations
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -367,11 +367,206 @@ def worker(i):
         return {'section':functions[i].__name__,'worker_pid':os.getpid(),'result':functions[i]()}
     except Exception as e:return {'section':str(i),'worker_pid':os.getpid(),'error':type(e).__name__}
 
+O2_CODE_PATHS = (
+    'scripts/chat_proxy.py', 'scripts/nox_v29_chat_bridge.py',
+    'scripts/nox_priority_arbiter.py', 'scripts/owner_chat_ui.py',
+    'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/pc/resonance.html',
+    'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/pc/nox-chat.js',
+    'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/nox-v135-resonance-owner-bridge.js',
+    'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/owner-chat-ui.js',
+)
+# These are prior observations, not a claim that these PID roles remain valid.
+# No process discovery, cmdline, environ, configuration or user data is read.
+O2_PRIOR_PIDS = {'proxy':3367881, 'arbiter':3350646, 'web':3368105, 'model_supervisor':3266857}
+O2_STAT_KEYS = frozenset(('anon','file','shmem','inactive_anon','active_anon','inactive_file',
+    'active_file','file_dirty','file_writeback','slab_reclaimable','slab_unreclaimable',
+    'sock','kernel_stack','pagetables'))
+O2_FILE_LIMIT = 262144
+O2_TOTAL_CODE_LIMIT = 2097152
+
+
+def _o2_directory(path):
+    """Open every directory component without following symlinks."""
+    path = Path(path)
+    if not path.is_absolute() or '..' in path.parts:
+        raise ValueError('scope')
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    fd = os.open('/', flags)
+    try:
+        for part in path.parts[1:]:
+            child = os.open(part, flags, dir_fd=fd)
+            os.close(fd)
+            fd = child
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def _o2_read(path, limit, *, digest_only=False, deadline=None):
+    """Bounded regular-file read; confirm the named inode still matches.
+
+    No error text or source bytes are returned for a failed read. The time
+    check bounds progress between reads; it cannot interrupt a blocked kernel IO.
+    """
+    import hashlib, stat
+    path = Path(path)
+    parent = file_fd = checked_parent = None
+    try:
+        parent = _o2_directory(path.parent)
+        file_fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=parent)
+        before = os.fstat(file_fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
+            raise ValueError('type_or_size')
+        identity = lambda value: (value.st_dev,value.st_ino,value.st_size,value.st_mtime_ns,value.st_ctime_ns)
+        digest, chunks, total = hashlib.sha256(), [], 0
+        while True:
+            if deadline is not None and time.monotonic() > deadline:
+                raise ValueError('time')
+            block = os.read(file_fd, min(16384,limit-total+1))
+            if not block:
+                break
+            total += len(block)
+            if total > limit:
+                raise ValueError('growth')
+            digest.update(block)
+            if not digest_only:
+                chunks.append(block)
+        checked_parent = _o2_directory(path.parent)
+        old_dir, new_dir = os.fstat(parent), os.fstat(checked_parent)
+        named = os.stat(path.name, dir_fd=checked_parent, follow_symlinks=False)
+        if ((old_dir.st_dev,old_dir.st_ino) != (new_dir.st_dev,new_dir.st_ino)
+                or identity(before) != identity(os.fstat(file_fd)) or identity(before) != identity(named)):
+            raise ValueError('changed')
+        if digest_only and total != before.st_size:
+            raise ValueError('changed_size')
+        return {'state':'OBSERVED','bytes_read':total,'sha256':digest.hexdigest(),
+                'value':None if digest_only else b''.join(chunks)}
+    except (OSError,ValueError):
+        return {'state':'UNKNOWN_UNSAFE_UNREADABLE_CHANGED_OR_LIMIT','bytes_read':0,'sha256':None,'value':None}
+    finally:
+        for fd in (file_fd,parent,checked_parent):
+            if fd is not None:
+                os.close(fd)
+
+
+def _o2_number(raw):
+    if not re.fullmatch(rb'[0-9]{1,20}\s*',raw):
+        raise ValueError('counter')
+    return int(raw)
+
+
+def _o2_metric(raw, name):
+    import math
+    if name in ('memory.current','memory.max'):
+        return None if name == 'memory.max' and raw.strip() == b'max' else _o2_number(raw)
+    if name == 'memory.stat':
+        result, seen = {}, set()
+        for line in raw.splitlines():
+            key, value = line.split()
+            if key in seen:
+                raise ValueError('duplicate_counter')
+            seen.add(key)
+            number = _o2_number(value)
+            key = key.decode('ascii')
+            if key in O2_STAT_KEYS:
+                result[key] = number
+        if not {'anon','file','shmem'}.issubset(result):
+            raise ValueError('missing_counter')
+        return result
+    result = {}
+    for line in raw.splitlines():
+        fields = line.split()
+        if not fields or fields[0] not in (b'some',b'full') or fields[0].decode() in result:
+            raise ValueError('pressure')
+        parts = [field.split(b'=') for field in fields[1:]]
+        if len(parts) != 4 or any(len(part) != 2 for part in parts):
+            raise ValueError('pressure_fields')
+        pairs = dict(parts)
+        if set(pairs) != {b'avg10',b'avg60',b'avg300',b'total'}:
+            raise ValueError('pressure_fields')
+        values = {'total':_o2_number(pairs[b'total'])}
+        for key in (b'avg10',b'avg60',b'avg300'):
+            value = float(pairs[key])
+            if not math.isfinite(value) or not 0 <= value <= 100:
+                raise ValueError('pressure_value')
+            values[key.decode()] = value
+        result[fields[0].decode()] = values
+    if 'some' not in result or name != 'cpu.pressure' and 'full' not in result:
+        raise ValueError('pressure_missing')
+    return result
+
+
+def _o2_pid(proc, pid):
+    import hashlib
+    try:
+        raw = _o2_read(Path(proc)/str(pid)/'stat',8192)['value']
+        prefix = str(pid).encode() + b' ('
+        if raw is None or not raw.startswith(prefix):
+            raise ValueError('identity')
+        tail = raw[raw.rindex(b') ')+2:].split()
+        ticks = _o2_number(tail[19])
+        membership = _o2_read(Path(proc)/str(pid)/'cgroup',8192)['value']
+        lines = [line for line in membership.splitlines() if line.startswith(b'0::')]
+        if len(lines) != 1 or not re.fullmatch(rb'0::/[A-Za-z0-9_./:@-]{0,4096}',lines[0]) or b'..' in lines[0][3:].split(b'/'):
+            raise ValueError('membership')
+        return {'pid':pid,'start_ticks':ticks,'membership_sha256':hashlib.sha256(lines[0]).hexdigest(),
+                'membership_is_namespace_root':lines[0] == b'0::/'}
+    except (AttributeError,ValueError,IndexError,TypeError):
+        return None
+
+
+def native_mapping_readback(root=Path('/root/nox'), cgroup=Path('/sys/fs/cgroup'),
+                            proc=Path('/proc'), prior_pids=None):
+    """Only new mapping evidence; no HTTP, commands, model probes or writes."""
+    pids = O2_PRIOR_PIDS if prior_pids is None else prior_pids
+    if set(pids) - set(O2_PRIOR_PIDS) or any(type(pid) is not int or pid <= 0 for pid in pids.values()):
+        raise ValueError('pid_scope')
+    before = {name:_o2_pid(proc,pid) for name,pid in pids.items()}
+    files, remaining, deadline = [], O2_TOTAL_CODE_LIMIT, time.monotonic()+3
+    for relative in O2_CODE_PATHS:
+        allowance = min(O2_FILE_LIMIT,max(0,remaining-1))
+        read = (_o2_read(Path(root)/relative,allowance,digest_only=True,deadline=deadline) if remaining else
+                {'state':'UNKNOWN_TOTAL_BUDGET','bytes_read':0,'sha256':None})
+        # Charge the full per-file allowance after an uncertain read; a changing
+        # file must not reset the aggregate budget through a failed hash.
+        charged = read['bytes_read'] if read['state']=='OBSERVED' else min(allowance+1,remaining)
+        remaining -= charged
+        files.append({'relative_path':relative,'state':read['state'],'sha256':read['sha256'],
+                      'bytes':read['bytes_read'] if read['state']=='OBSERVED' else None,
+                      'serving_mapping':'UNKNOWN','executed_code_mapping':'UNKNOWN'})
+    metrics = {}
+    for name in ('memory.current','memory.max','memory.stat','memory.pressure','io.pressure','cpu.pressure'):
+        read = _o2_read(Path(cgroup)/name,65536 if name=='memory.stat' else 8192)
+        try:
+            value = _o2_metric(read['value'],name)
+            metrics[name] = {'state':'OBSERVED','value':value}
+        except (ValueError,TypeError,AttributeError,UnicodeError):
+            metrics[name] = {'state':'UNKNOWN','value':None}
+    processes = []
+    for name,pid in pids.items():
+        after = _o2_pid(proc,pid)
+        stable = before[name] is not None and before[name] == after
+        processes.append({'prior_audit_role':name,'pid':pid,'state':'CONSISTENT_SNAPSHOT' if stable else 'UNKNOWN_CHANGED_OR_UNREADABLE',
+                          'identity':after if stable else None,'current_role_binding':'UNKNOWN'})
+    return {'schema':'NOX_NATIVE_MAPPING_READBACK_V1','read_only':True,'native_accepted':False,
+            'observed_unix':round(time.time(),3),'source_pid_reference':'audit job 134219312713',
+            'code_files':files,'cgroup':{'scope':'VISIBLE_MOUNT_ROOT_ONLY','process_to_mount_binding':'UNKNOWN',
+                'hidden_ancestor_limits':'UNKNOWN','metrics':metrics},'processes':processes,
+            'owner_activity':{'CHAT_ACTIVE':'UNKNOWN','MODE':'UNKNOWN','activity_epoch':'UNKNOWN','binding':'NOT_VERIFIED_NOT_READ'},
+            'atomic_lease':False,'model_calls':0,'http_calls':0,'source_content_exported':False,'gpu_pid_namespace_mapping':'UNKNOWN',
+            'budget':{'code_file_bytes':O2_FILE_LIMIT,'total_code_bytes':O2_TOTAL_CODE_LIMIT,'code_time_seconds':3},
+            'limitations':['PID role is from a prior audit; consistency does not attest current service/code or prevent ABA changes.',
+                          'File presence/hash does not prove WEB serving or executed-code binding.',
+                          'Counters are a non-atomic visible mount-root observation; cache is not guaranteed available RAM.',
+                          'No CHAT_ACTIVE/MODE/epoch binding or resource lease is established.']}
+
+
 def main():
-    with ProcessPoolExecutor(max_workers=7) as pool:
-        for row in pool.map(worker,range(7)):
-            # One JSON record per bounded result item; never dump env/config secrets.
-            print('NOX_MAINT_AUDIT='+json.dumps(row,separators=(',',':')),flush=True)
+    # The owner workflow still pins and authorizes this source and uses its
+    # existing temporary SSH transport/cleanup. Do not run legacy audit workers.
+    row = {'section':'native_mapping_readback','worker_pid':os.getpid(),'result':native_mapping_readback()}
+    print('NOX_MAINT_AUDIT='+json.dumps(row,separators=(',',':'),allow_nan=False),flush=True)
     print('NOX_MAINT_AUDIT_COMPLETE=true',flush=True)
 if __name__=='__main__':main()
 
