@@ -1562,3 +1562,9 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 
 ### A2 SOURCE CLAIM · V14-2-08 · 2026-11-16T23:55Z · instructions_version 0.0.6
 - Owner A2 PROCESS 2; unowned source-only TaskID `V14-2-08`: fail-closed pinned CPython/venv/CUDA library metadata audit in existing `nox-control/owner_native_inspect.py`, no OneHost writer lease. Read prior B2 `V14-2-09` SOURCE_TESTED CI success; no same-SHA rework. Native STOP/writer lease/PID readback UNKNOWN; do NOT run server operations. Pending source fix / regression / exact blob readback; hold if changed concurrently.
+
+
+### A3 SOURCE CLAIM · V14-3-04 · 2026-11-16T23:58Z · instructions_version 0.0.6
+- **Owner:** A3 PROCESS 3; unowned distinct V14-3-04 in canonical V14 160-task list, prior A3 V14-3-05 and B3 V14-3-03 are SOURCE_TESTED, do not duplicate. **Source-only GitHub CAS reservation**, NOT OneHost owner-native writer lease.
+- **Task:** exact decision/fact lookup in original nox-control/owner_s03_gateway.py. Investigate stale FTS index row mismatch with canonical s03_items.text/segment after an update; reject false matching without rewriting canonical S03. Only narrow regression, original suite and Git blob readback.
+- **Safety:** native STOP/maintenance and writer lease UNKNOWN; no native deployment/restart/cleanup, no second S03/backend/scheduler/trainer; all historical records and unique checkpoints retained. If SHA drifts, abandon patch and re-read. Pending source repair and CI; no DONE claim.
