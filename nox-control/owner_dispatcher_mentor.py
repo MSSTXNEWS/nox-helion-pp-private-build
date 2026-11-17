@@ -365,6 +365,20 @@ def on_failure(task, error):
                 result['state'] = 'BLOCKED_SENIOR_OR_REPAIR_' + type(exc).__name__
             finally:
                 _ADVISOR_SLOT.release()
+    if result['state'].startswith('BLOCKED'):
+        # A typed owner decision request is persisted with the existing task;
+        # never auto-clear STOP, reconfigure credentials, or replay mutating work.
+        prompts = {
+            'permission': 'Review existing NOX service permissions and approve a scoped repair.',
+            'out_of_memory': 'Choose whether to pause lower-priority work or reduce the workload.',
+            'missing_file': 'Verify the pinned artifact source or provide the missing approved path.',
+            'timeout': 'Check the connection and choose whether another bounded retry is allowed.',
+            'service_unavailable': 'Review the service incident before authorizing further recovery.',
+            'validation': 'Inspect the failed integrity check; do not bypass it.',
+        }
+        result['needs_owner_input'] = True
+        result['owner_question'] = prompts.get(category, 'Inspect the incident evidence and select a safe next action.')
+        result['owner_question_code'] = category
     task['mentor'] = result
     journal('resolution', task_id=task.get('id'), **result, accepted=False)
     return result
