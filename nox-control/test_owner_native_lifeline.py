@@ -143,6 +143,43 @@ class InstallerTests(unittest.TestCase):
                 self.assertNotIn("very-private", str(report))
                 self.assertEqual(files[1][0].read_bytes(), b"very-private-different-policy")
 
+    def test_exact_legacy_script_upgrade_preserves_prior_file_until_backup(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"nox_native_lifeline.py"
+            old=b"known-old-source"
+            new=b"reviewed-new-source"
+            p.write_bytes(old)
+            with self.assertRaisesRegex(RuntimeError,"HOLD_LIFELINE_LEGACY_SCRIPT_CHANGED"):
+                n.replace_script_exact(p,b"not-old",new)
+            self.assertEqual(p.read_bytes(),old)
+            self.assertTrue(n.replace_script_exact(p,old,new))
+            self.assertEqual(p.read_bytes(),new)
+            self.assertEqual(p.stat().st_mode & 0o777,0o644)
+
+    def test_failed_migration_rolls_back_only_with_stopped_guard(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"nox_native_lifeline.py"
+            b=Path(d)/"backup.py"
+            old=b"known-owned-baseline"
+            new=b"verified-new-source"
+            p.write_bytes(new)
+            b.write_bytes(old)
+            with patch.object(n,"SCRIPT",p), patch.object(n,"MIGRATED_SCRIPT_BACKUP",b), \
+                 patch.object(n,"MIGRATED_SCRIPT_NEW_SHA",hashlib.sha256(new).hexdigest()), \
+                 patch.object(n,"LEGACY_LIFELINE_SHA256",hashlib.sha256(old).hexdigest()), \
+                 patch.object(n,"info",return_value={"state":"STOPPED","pid":None}), patch.object(n,"emit") as emit:
+                n.recover_legacy_script()
+                self.assertEqual(p.read_bytes(),old)
+                self.assertTrue(emit.called)
+            p.write_bytes(new)
+            with patch.object(n,"SCRIPT",p), patch.object(n,"MIGRATED_SCRIPT_BACKUP",b), \
+                 patch.object(n,"MIGRATED_SCRIPT_NEW_SHA",hashlib.sha256(new).hexdigest()), \
+                 patch.object(n,"LEGACY_LIFELINE_SHA256",hashlib.sha256(old).hexdigest()), \
+                 patch.object(n,"info",return_value={"state":"RUNNING","pid":22}):
+                with self.assertRaisesRegex(RuntimeError,"HOLD_LIFELINE_LEGACY_ROLLBACK_GUARD_ACTIVE"):
+                    n.recover_legacy_script()
+                self.assertEqual(p.read_bytes(),new)
+
     def test_supervisor_rc3_exact_stopped_row_is_native_valid(self):
         for state in ("STOPPED", "EXITED"):
             with self.subTest(state=state), patch.object(n, "call", return_value=SimpleNamespace(
