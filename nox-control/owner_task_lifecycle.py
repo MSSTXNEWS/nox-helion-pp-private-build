@@ -90,6 +90,22 @@ def journal_recall(task):
                 continue
             kind = row.get('kind')
             if kind == 'experience_verified':
+                # A verified holdout is not an accepted reusable repair.
+                # Native mentor receipts record the handler only in the
+                # underlying experience row, so bind reusable success to
+                # this exact TaskID rather than another task's handler.
+                proof = row.get('verification')
+                if (row.get('task_id') != task.get('id')
+                        or row.get('accepted') is not True
+                        or row.get('partition') != 'train'
+                        or not isinstance(proof, dict)
+                        or proof.get('kind') not in (
+                            'bounded_native_component_check',
+                            'native_supervisor_running',
+                            'native_gguf_header')
+                        or not isinstance(row.get('dedup_sha256'), str)
+                        or not SHA.fullmatch(row['dedup_sha256'])):
+                    continue
                 result['verified'] += 1
             elif kind == 'error_observed':
                 result['errors'] += 1
