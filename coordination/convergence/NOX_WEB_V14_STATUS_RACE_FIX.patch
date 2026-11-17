@@ -1,10 +1,8 @@
-diff --git a/site/nox-connection-v13.js b/site/nox-connection-v13.js
 --- a/site/nox-connection-v13.js
 +++ b/site/nox-connection-v13.js
-@@ -1,5 +1,5 @@
- /* NOX V13 — evidence-only connection indicator in the canonical HOME navigation.
-    It does not assert that workers, models, STOP or GPU are available. No second backend. */
-@@
+@@ -16,9 +16,11 @@
+   if(local){present('offline','Просмотр файла без запущенного NOX. Серверные функции не подтверждены.');return;}
+   if(!/^https?:$/.test(location.protocol)){present('hold','Протокол не поддерживает проверку OneHost');return;}
    const seq=++token;controller?.abort();controller=new AbortController();
 -  const timer=setTimeout(()=>controller?.abort(),4500);
 +  const currentController=controller;
@@ -13,3 +11,5 @@ diff --git a/site/nox-connection-v13.js b/site/nox-connection-v13.js
     const reply=await fetch('/api/nox/status',{cache:'no-store',credentials:'same-origin',headers:{Accept:'application/json'},signal:controller.signal});
 +   if(seq!==token)return;
     if(reply.status===401||reply.status===403){present('auth','OneHost требует авторизации');return;}
+    if(!reply.ok)throw Error('HTTP '+reply.status);
+    const ct=reply.headers.get('content-type')||'';if(!/json/i.test(ct))throw Error('Endpoint returned non-JSON');
