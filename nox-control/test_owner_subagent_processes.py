@@ -215,6 +215,36 @@ class TestRealSubagentProcesses(unittest.TestCase):
                                  authorize=lambda: True,
                                  lease_current=lambda: True)
 
+    def test_failed_long_batch_cannot_replay_stale_result_on_same_pool(self):
+        # A revoked owner STOP can leave an old worker RESULT in the outbox.
+        # Even a matching PID + role + TaskID must never be reused for a new
+        # request. Pure in-memory check; no new NOX model/process is launched.
+        from types import SimpleNamespace
+        from queue import Queue
+        pool = Subagents.__new__(Subagents)
+        pool.roles = ['infra', 'brain', 'web']
+        pool.timeout = 1
+        pool.inboxes = {role: Queue() for role in pool.roles}
+        pool.outbox = Queue()
+        pool.processes = {role: SimpleNamespace(pid=930 + i)
+                          for i, role in enumerate(pool.roles)}
+        observed = iter([False, False, True])
+        with self.assertRaisesRegex(GateError, 'HOLD_OWNER_GATE_CHANGED'):
+            pool.run(batch(1), stop_active=lambda: next(observed, True),
+                     authorize=lambda: True, lease_current=lambda: True)
+        self.assertTrue(pool._batch_used)
+        self.assertEqual(pool.inboxes['infra'].qsize(), 1)
+        # This stale worker result would otherwise look valid on the next
+        # run if TaskID, role and PID were reused in the same pool.
+        pool.outbox.put({'kind': 'RESULT', 'role': 'infra', 'pid': 930,
+                         'id': 'job-0', 'elapsed_ms': 1,
+                         'state': 'CANDIDATE_NOT_APPLIED', 'answer': 'STALE'})
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_POOL_REUSE'):
+            pool.run(batch(1), stop_active=lambda: False,
+                     authorize=lambda: True, lease_current=lambda: True)
+        self.assertEqual(pool.inboxes['infra'].qsize(), 1)
+        self.assertEqual(pool.outbox.qsize(), 1)
+
     def test_external_model_url_rejected(self):
         from owner_subagent_processes import _model_reply
         with self.assertRaisesRegex(GateError, 'HOLD_NONLOCAL'):
