@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_REVIEWED_RUNTIME_INPUT_LOCK_V1",
+  "source_commits": {
+    "integrations_bridge": "690342457804f096b918664731756e1a79564631",
+    "warm_weights_controller": "7ce6290420bf1765fefd1c0b082175a1bea42ab9"
+  },
+  "reviewed_behavior_commits": {
+    "integrations_bridge": "2e78cc5d037c824aac0749ae6a953e39673401ed",
+    "warm_weights_controller": "f1b7df742f26d4acf3733c9a91da34809d2b87f4"
+  },
+  "file_pins": {
+    "runtime/nox_integrations/__init__.py": "13fa6a78def2edfb4b9ff819f36e933aabd4b17c0a3196f0d77ccb5f27841be9",
+    "runtime/nox_integrations/__main__.py": "14ae1e9c9fe3dd0477d1809489177846f48a3bdc8cb2dbc89ad046b0fde88bd2",
+    "runtime/nox_integrations/config.py": "29682a5e43ce4485ee9d91d3001800a27159df5c890083c06a5296a575468cc8",
+    "runtime/nox_integrations/core.py": "c660e389cd2c6318aacc4468a2cfa2198640b5fb2510b2b20d9b035479e480db",
+    "runtime/nox_integrations/drive.py": "2d985e33ed6501b95a085b85abbf5654d576513b9570710f706e678e8ff78c3b",
+    "runtime/nox_integrations/host.py": "5130d9028d60a9f78f5c0b3644c067329219f98d389859b1fdd6d933f946da1d",
+    "runtime/nox_integrations/memfd.py": "ec9910a67228cc8681a1f1157f9107003bac4634548ec3130bc43573745b1386",
+    "runtime/nox_integrations/providers.py": "329d036498b6c38af71b996f15c138b5efbdc0a7d64f3c919f61745bfe8acebe",
+    "runtime/nox_warm/__init__.py": "696685fce0e046b6f53bfd2e3c866cdafbb8a16086faa00290f7fdcb94a156f2",
+    "runtime/nox_warm/__main__.py": "ee9991fcbacaec2cc8bc720dcebfa7f13aae0f2ddb0963b55a84899957cf214c",
+    "runtime/nox_warm/cache.py": "48bd8b61c002235ad6e7365bda9f80a21810fd98c05d5fba5ca169b9b055e9e5",
+    "runtime/nox_warm/controller.py": "1312845745150bbfc52863fa6eab85d67da12d5108fb1cc1a7776d56621b5d05"
+  }
+}

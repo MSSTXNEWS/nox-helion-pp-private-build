@@ -117,7 +117,8 @@ class ControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(Hold,'PENDING_EFFECTS_NOT_SETTLED'):
             self.c.adopt_verified_state('TRAIN',['train'],{'verified':True,'source':'fixture-readback','observed_at':2})
         self.c.adopt_verified_state('TRAIN',['train'],{'verified':True,'source':'fixture-readback','observed_at':2,
-            'settled_transition_id':'failed','pending_operations_settled':True})
+            'settled_transition_id':'failed','pending_operations_settled':True,
+            'resource_lease_settled':True,'settled_lease_id':'fixture-lease','settled_fencing_token':1})
         self.fail=None
         out=self.c.transition('WORK','rollback-failed',apply=True)
         self.assertEqual(out['status'],'DONE');self.assertEqual(self.c.data['mode'],'WORK')
@@ -148,6 +149,123 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(self.c.startup(apply=True)['selected'][0]['reason'],'CACHE_HOST_LEASE_OR_OWNER_ACTIVITY_UNBOUND')
         self.assertEqual(downloads,[]);self.assertEqual(self.calls,[])
 
+    def test_local_pause_callback_never_overrides_owner_or_replaces_missing_owner(self):
+        self.c.owner_should_pause=lambda:True
+        result=self.c.startup(apply=True,should_pause=lambda:False)
+        self.assertEqual(result['selected'][0]['reason'],'OWNER_ACTIVE_OR_PAUSE_REQUESTED')
+        self.assertNotIn('warming',result['selected'][0])
+        with self.assertRaisesRegex(Hold,'OWNER_ACTIVE_OR_PAUSE_REQUESTED'):
+            self.c.cache_local('work',self.source,apply=True,should_pause=lambda:False)
+        self.c.owner_should_pause=None
+        with self.assertRaisesRegex(Hold,'UNBOUND'):self.c._cache_guard(lambda:False)
+        self.c.owner_should_pause=lambda:None
+        with self.assertRaisesRegex(Hold,'OWNER_ACTIVITY_UNVERIFIED'):self.c._cache_guard(lambda:False)
+        active=[False];self.c.owner_should_pause=lambda:active[0]
+        callback=self.c._cache_guard(lambda:False);self.assertFalse(callback())
+        active[0]=True;self.assertTrue(callback())
+        active[0]=False
+        with self.assertRaisesRegex(Hold,'PAUSE_REQUESTED'):self.c._cache_guard(lambda:True)
+        with self.assertRaisesRegex(Hold,'LOCAL_PAUSE_STATE_UNVERIFIED'):self.c._cache_guard(lambda:None)
+
+    def test_work_return_to_train_restores_checkpoint_and_same_mode_does_not_recheckpoint(self):
+        self.c.transition('TRAIN','enter-train',apply=True)
+        self.c.transition('WORK','back-to-work',apply=True)
+        checkpoint=dict(self.c.data['training_checkpoint'])
+        self.c.transition('TRAIN','return-train',apply=True)
+        resume=self.c.data['operations']['return-train:resume']['payload']
+        self.assertTrue(resume['resume_from_verified_checkpoint'])
+        self.assertEqual(resume['checkpoint'],checkpoint)
+        before=len(self.calls)
+        self.c.transition('TRAIN','same-train',apply=True)
+        self.assertEqual(self.calls[before:],['health'])
+        self.assertEqual(self.calls.count('checkpoint'),1)
+        with self.assertRaisesRegex(Hold,'STALE_TRANSITION_ID_REUSE'):
+            self.c.transition('TRAIN','enter-train',apply=True)
+
+    def test_changed_checkpoint_never_reaches_trainer_resume(self):
+        self.c.transition('TRAIN','enter-train',apply=True)
+        self.c.transition('WORK','back-to-work',apply=True)
+        Path(self.c.data['training_checkpoint']['path']).write_text('corrupted fixture')
+        before=self.calls.count('resume')
+        with self.assertRaisesRegex(Hold,'CHECKPOINT_READBACK_FAILED'):
+            self.c.transition('TRAIN','return-corrupt',apply=True)
+        self.assertEqual(self.calls.count('resume'),before)
+        self.assertEqual(self.c.data['mode'],'HOLD')
+
+    def test_pause_retry_reuses_verified_checkpoint_without_duplicate_checkpoint(self):
+        self.c.transition('TRAIN','enter',apply=True);self.fail='pause'
+        with self.assertRaises(TimeoutError):self.c.transition('WORK','paused-ack',apply=True)
+        checkpoint=dict(self.c.data['training_checkpoint'])
+        self.fail=None
+        self.c.transition('WORK','paused-ack',apply=True)
+        self.assertEqual(self.calls.count('checkpoint'),1)
+        self.assertEqual(self.c.data['training_checkpoint'],checkpoint)
+
+    def test_unknown_release_blocks_retry_until_exact_lease_settled(self):
+        releases=[]
+        def release(lease):
+            releases.append(lease);raise TimeoutError('lost release ACK')
+        self.c.host_release_resource=release
+        with self.assertRaises(TimeoutError):self.c.transition('TRAIN','lost-release',apply=True)
+        self.assertEqual(self.c.data['transition']['resource_lease_state'],'UNKNOWN')
+        before=len(self.calls)
+        self.c.host_release_resource=lambda lease:{'released':True}
+        with self.assertRaisesRegex(Hold,'LEASE_RECONCILE_REQUIRED'):
+            self.c.transition('TRAIN','lost-release',apply=True)
+        self.assertEqual(len(self.calls),before);self.assertEqual(len(releases),1)
+        receipt={'verified':True,'source':'host-fixture','observed_at':2,
+                 'settled_transition_id':'lost-release','pending_operations_settled':True}
+        with self.assertRaisesRegex(Hold,'RESOURCE_LEASE_NOT_SETTLED'):
+            self.c.adopt_verified_state('TRAIN',['train'],receipt)
+        receipt.update(resource_lease_settled=True,settled_lease_id='fixture-lease',settled_fencing_token=1)
+        self.c.adopt_verified_state('TRAIN',['train'],receipt)
+        self.assertEqual(self.c.transition('WORK','safe-next',apply=True)['status'],'DONE')
+
+    def test_unknown_admission_is_journaled_before_callback_and_not_retried_blindly(self):
+        admissions=[]
+        def admission(request):
+            admissions.append(request)
+            recorded=json.loads(self.c.journal_path.read_text())['transition']
+            self.assertEqual(recorded['resource_lease_state'],'ADMISSION_PENDING')
+            raise TimeoutError('lost admission ACK')
+        self.c.host_resource_admission=admission
+        with self.assertRaises(TimeoutError):self.c.transition('TRAIN','lost-admission',apply=True)
+        self.assertEqual(self.calls,[])
+        with self.assertRaisesRegex(Hold,'LEASE_RECONCILE_REQUIRED'):
+            self.c.transition('TRAIN','lost-admission',apply=True)
+        self.assertEqual(len(admissions),1)
+        self.c.adopt_verified_state('WORK',['work'],{'verified':True,'source':'host-fixture','observed_at':3,
+            'settled_transition_id':'lost-admission','pending_operations_settled':True,
+            'resource_lease_settled':True,'settled_resource_request_id':'lost-admission'})
+        self.assertEqual(self.c.data['mode'],'WORK')
+
+    def test_registry_retains_handle_without_confirmed_release_and_prevents_overwrite(self):
+        class OldUncertainHandle:
+            def __init__(self):self.closed=False
+            def release_identity(self):return {'ram_handle_id':'old-handle','ram_lease_identity_sha256':'f'*64,'ram_fencing_token':7}
+            def close(self):
+                if not self.closed:
+                    self.closed=True;raise TimeoutError('release unknown')
+                return None
+        handle=OldUncertainHandle();self.c._ram_handles['work']=handle
+        self.c.adopt_verified_state('WORK',[],{'verified':True,'source':'fixture','observed_at':2})
+        proof={'group':'work','verified':True,'loader_refs_released':True,**handle.release_identity()}
+        with self.assertRaises(TimeoutError):self.c.release_owned_ram('work',proof)
+        with self.assertRaisesRegex(Hold,'RAM_RELEASE_UNCONFIRMED'):self.c.release_owned_ram('work',proof)
+        self.assertIs(self.c._ram_handles['work'],handle)
+        self.m.update(startup_storage='ownedRAM',allow_ssd_cache=False)
+        self.assertEqual(self.c.startup(apply=True)['selected'][0]['reason'],'OWNED_RAM_HANDLE_REQUIRES_RECONCILE')
+
+    def test_aborted_ram_release_reconciliation_requires_matching_lease_and_fence(self):
+        self.c.data['ram_release_reconcile']={'work':{'lease_id':'held-ram','fencing_token':7}}
+        with self.assertRaisesRegex(Hold,'READBACK_UNVERIFIED'):
+            self.c.reconcile_owned_ram_release('work',{'verified':True,'lease_id':'wrong','fencing_token':7,'released':True})
+        with self.assertRaisesRegex(Hold,'LEASE_STILL_HELD'):
+            self.c.reconcile_owned_ram_release('work',{'verified':True,'lease_id':'held-ram','fencing_token':7,'released':False})
+        self.assertIn('work',self.c.data['ram_release_reconcile'])
+        self.c.reconcile_owned_ram_release('work',{'verified':True,'lease_id':'held-ram','fencing_token':7,'released':True})
+        self.assertNotIn('work',self.c.data['ram_release_reconcile'])
+
     def test_drive_first_real_sealed_memfd_retained_then_released_by_verified_owner(self):
         self.m.update(startup_storage='ownedRAM',allow_ssd_cache=False)
         self.m['budgets']['startup_ram_bytes']=80*MiB
@@ -161,7 +279,12 @@ class ControllerTests(unittest.TestCase):
             def __init__(obj,fd,sha,size,lease,releaser):
                 obj.fd=fd;obj.sha256=sha;obj.size_bytes=size;obj.lease=lease;obj.releaser=releaser
             def fileno(obj):return obj.fd
-            def close(obj):os.close(obj.fd);obj.fd=-1;obj.releaser(obj.lease)
+            def release_identity(obj):return {'ram_handle_id':'fixture-owned-'+str(obj.fd),'ram_lease_identity_sha256':'f'*64,'ram_fencing_token':2}
+            def close(obj):
+                os.close(obj.fd);obj.fd=-1
+                result=obj.releaser(obj.lease)
+                if result.get('released') is not True:raise Hold('RAM_RELEASE_UNCONFIRMED')
+                return {'closed':True,'lease_released':True}
         def download(remote,sha,size,*,reserve_ram,release_ram,should_pause):
             self.assertFalse(should_pause());downloads.append(remote)
             lease=reserve_ram(size+64*MiB)
@@ -191,7 +314,9 @@ class ControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(Hold,'PROTECTED_RUNTIME_GROUP'):
             self.c.release_owned_ram('work',{'group':'work','verified':True,'loader_refs_released':True})
         self.assertEqual(releases,[]);self.m['groups'][0]['protected']=False
-        self.assertEqual(self.c.release_owned_ram('work',{'group':'work','verified':True,'loader_refs_released':True})['status'],'OWNED_RAM_CLOSED')
+        with self.assertRaisesRegex(Hold,'RAM_RELEASE_PROOF_IDENTITY_MISMATCH'):
+            self.c.release_owned_ram('work',{'group':'work','verified':True,'loader_refs_released':True})
+        self.assertEqual(self.c.release_owned_ram('work',{'group':'work','verified':True,'loader_refs_released':True,**handle.release_identity()})['status'],'OWNED_RAM_CLOSED')
         self.assertEqual(releases,['ram-fixture'])
         self.body=b'X'*len(self.body)
         self.assertEqual(self.c.startup(apply=True)['selected'][0]['reason'],'RAM_SHA_READBACK_FAILED')

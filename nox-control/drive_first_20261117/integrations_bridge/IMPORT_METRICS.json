@@ -1,0 +1,9 @@
+{
+  "import_seconds": 0.02177569099876564,
+  "process_peak_rss_kib": 14464,
+  "peak_rss_increase_kib": 5888,
+  "model_weights_loaded": false,
+  "gpu_used": false,
+  "local_fixture_only": true,
+  "version": "0.2.0"
+}

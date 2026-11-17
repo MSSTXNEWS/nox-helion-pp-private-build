@@ -1,81 +1,180 @@
 {
-  "schema": "NOX_WARM_RELEASE_V1",
-  "test_count": 12,
-  "tests_passed": 12,
-  "compileall": "PASS",
+  "schema": "NOX_WARM_RELEASE_V2",
+  "version": "0.2.0",
+  "source_commit": "7ce6290420bf1765fefd1c0b082175a1bea42ab9",
+  "reviewed_behavior_commit": "f1b7df742f26d4acf3733c9a91da34809d2b87f4",
+  "test_count": 20,
+  "tests_passed": 20,
+  "independent_pair_tests_passed": 2,
+  "baseline_regressions_failed": 3,
   "native_actions": 0,
   "network_model_downloads": 0,
   "native_binding_verified": false,
+  "native_pass": false,
   "source_policy": "DRIVE_FIRST",
   "default_startup_storage": "ownedRAM",
   "ram_transfer_allowance_bytes": 67108864,
   "persistent_host_required": true,
   "owned_memfd_fixture_executed": true,
   "fixture_only_not_production": true,
-  "created_at_utc": "2026-11-17T17:37:20Z",
+  "matching_integration_version": "0.2.0",
+  "created_at_utc": "2026-11-17T18:32:12.394479+00:00",
+  "independent_review_status": "PASS_TWO_TARGETED_BLOCKERS_RESOLVED",
+  "independent_review_receipt_sha256": "b9426f45f3cb92a3d3c2ca521965e5fb201f5195f7492bd1bb8150934f892e83",
+  "import_metrics": {
+    "import_seconds": 0.025554431000273325,
+    "process_peak_rss_kib": 12160,
+    "peak_rss_increase_kib": 3584,
+    "model_weights_loaded": false,
+    "gpu_used": false,
+    "local_fixture_only": true,
+    "version": "0.2.0"
+  },
   "files": [
     {
       "path": ".gitignore",
-      "size_bytes": 58,
+      "bytes": 58,
       "sha256": "b81a71f02e49aa7949c03ea4b20a6a92c2be646379c2c3447cc8af9ac0a0c622"
     },
     {
       "path": "IMPORT_METRICS.json",
-      "size_bytes": 191,
-      "sha256": "8b91ef585eeb51856ead50ae15b9ec3302aca98ea16ba7cb8b8aff8eaf658d25"
+      "bytes": 217,
+      "sha256": "1c193d78e8d52f9313d0ee97e5633c85485a8d495022ca823eec9459b4c0fb12"
+    },
+    {
+      "path": "LIFECYCLE_BASELINE_REPRODUCTION.json",
+      "bytes": 614,
+      "sha256": "dae25cc4b1effbee7b84867b98727cdd49e75a50a0f2007fd3ddf803a8e3c57d"
+    },
+    {
+      "path": "LIFECYCLE_BASELINE_REPRODUCTION.log",
+      "bytes": 2761,
+      "sha256": "e9dbc8dfbcf042b4607549bff17c89a62c3e6b8668c0a50252ec825bc97d76c6"
+    },
+    {
+      "path": "O5_MATCHING_RUNTIME_HANDOFF.md",
+      "bytes": 8118,
+      "sha256": "386566093cc42880bf5aae2f90098d07c6d8b2122261e3cd9078356219876d90"
     },
     {
       "path": "README.md",
-      "size_bytes": 19641,
-      "sha256": "63253baf92d12ce21148b89d939d614e40b15f6c69f318de03a74d18a2a0d4fa"
+      "bytes": 23445,
+      "sha256": "e8ba8c843739033223784ca68f7838ee9681b25e979d335540e29e48ac4271df"
+    },
+    {
+      "path": "REVIEW_CHECKPOINT_20261117.md",
+      "bytes": 1518,
+      "sha256": "134c60c02b1c9e398564d7d03e4bf9e0b7ebfccad0675abce840abeba23b588b"
     },
     {
       "path": "TEST_RESULTS.txt",
-      "size_bytes": 2025,
-      "sha256": "7f6576ec2a3cbdf5cb5d1ba9b6b4b1799ee83e955c6974d53e3c5fd679019ce6"
+      "bytes": 3493,
+      "sha256": "0d052f22449651724f568e40bb2442eff94da85ce9d762a1982418a61776d6f1"
     },
     {
       "path": "examples/pin_manifest.py",
-      "size_bytes": 1795,
+      "bytes": 1795,
       "sha256": "802a5b3005c2f635d855671560fd0dca11add51199065d479caacad5fde4ea00"
     },
     {
+      "path": "external_review/README.md",
+      "bytes": 579,
+      "sha256": "589eaa103d225df33e9373bb4d59a5512697d8a7d95fac965190024c2cd9c15f"
+    },
+    {
+      "path": "external_review/REVIEW_RECEIPT.json",
+      "bytes": 3990,
+      "sha256": "b9426f45f3cb92a3d3c2ca521965e5fb201f5195f7492bd1bb8150934f892e83"
+    },
+    {
+      "path": "external_review/before_results.txt",
+      "bytes": 1772,
+      "sha256": "a4cd394927e16344d02068319918933bf5edf4a3958072fc0b463abad66a0b1a"
+    },
+    {
+      "path": "external_review/test_additional_lifecycle.py",
+      "bytes": 4315,
+      "sha256": "13c271352c89c8a52494342cb5c7fa8a302123de58efde51d8749bd207449a10"
+    },
+    {
+      "path": "legacy_drive_first/LEGACY_SOURCE_RECEIPT.json",
+      "bytes": 2259,
+      "sha256": "f131533f23d5d341990684822e625812cdd6dac50a53478727f1d1ee55a472bd"
+    },
+    {
+      "path": "legacy_drive_first/README.md",
+      "bytes": 9604,
+      "sha256": "a6d9eb7f64b878bda75e583a70deecd4a0f13ca73efaea1bbd28829a5ff07e02"
+    },
+    {
+      "path": "legacy_drive_first/TEST_RESULTS.txt",
+      "bytes": 486,
+      "sha256": "1d69c63bbc1c8c0c506160e64b918d67f20c346b41538e8dbdd59daa4e428edf"
+    },
+    {
+      "path": "legacy_drive_first/build_patch.py",
+      "bytes": 5384,
+      "sha256": "62fe204374d3e3b62cac0cf3e126eae78ee0367df315c54273e54e4a2e85868e"
+    },
+    {
+      "path": "legacy_drive_first/install.py",
+      "bytes": 5825,
+      "sha256": "2183d0751ecd35e800035feaa4e940c1157099547dbe1592755236e341b50250"
+    },
+    {
+      "path": "legacy_drive_first/nox_teachers_warm.drive_first.patch",
+      "bytes": 7997,
+      "sha256": "4f15d1bad07e26bb4e8b299466e2577bfaceb6745c54f4799ee0f113af033653"
+    },
+    {
+      "path": "legacy_drive_first/nox_teachers_warm.drive_first.sh",
+      "bytes": 7474,
+      "sha256": "14ec1196f61813ff6c88b1854a479660e7ef445fe7f5cb78c6f46e315dbf81e2"
+    },
+    {
+      "path": "legacy_drive_first/source/TEACHERS_MANIFEST_20261117.json",
+      "bytes": 6035,
+      "sha256": "237deb2a93c53de9d73501bc572f62af2565c45b8a895382a183685434199093"
+    },
+    {
+      "path": "legacy_drive_first/source/nox_teachers_warm.sh",
+      "bytes": 7643,
+      "sha256": "437739550dbdff28380a95302c1cc1e98ceab3f147de898b40dd8ec82ef80389"
+    },
+    {
+      "path": "legacy_drive_first/tests/test_legacy.py",
+      "bytes": 7029,
+      "sha256": "de759fe87197f5d139657f1ef815b85f45f5dbed002967e9d02abcb1bfc64ad5"
+    },
+    {
       "path": "nox_warm/__init__.py",
-      "size_bytes": 213,
+      "bytes": 213,
       "sha256": "696685fce0e046b6f53bfd2e3c866cdafbb8a16086faa00290f7fdcb94a156f2"
     },
     {
       "path": "nox_warm/__main__.py",
-      "size_bytes": 2795,
+      "bytes": 2795,
       "sha256": "ee9991fcbacaec2cc8bc720dcebfa7f13aae0f2ddb0963b55a84899957cf214c"
     },
     {
       "path": "nox_warm/cache.py",
-      "size_bytes": 6803,
+      "bytes": 6803,
       "sha256": "48bd8b61c002235ad6e7365bda9f80a21810fd98c05d5fba5ca169b9b055e9e5"
     },
     {
       "path": "nox_warm/controller.py",
-      "size_bytes": 30982,
-      "sha256": "b559dafa5608587b7365eab91dbee70b6a8424b08fcf965ab28a3875aff7aef5"
+      "bytes": 37941,
+      "sha256": "1312845745150bbfc52863fa6eab85d67da12d5108fb1cc1a7776d56621b5d05"
     },
     {
       "path": "pyproject.toml",
-      "size_bytes": 319,
-      "sha256": "c2602d38a147a66938ddb79738c1bc6c1fdeb44e04591371bd4b11c828b48922"
+      "bytes": 319,
+      "sha256": "490c1bdc8bdc4a74347c4e405b070048ddea04d2de6cc39f61880aa07eac0f8a"
     },
     {
       "path": "tests/test_controller.py",
-      "size_bytes": 14404,
-      "sha256": "c556be0b3472b23d2af5aa2297168018662ba36ec5a954e39b376f303b7ccc3c"
+      "bytes": 22704,
+      "sha256": "0b2b3aeb5edaa6e968a6d72ea17da1d85bbb000c0995358892eb874d3f764ffb"
     }
-  ],
-  "import_metrics": {
-    "import_seconds": 0.02007421000053,
-    "process_peak_rss_kib": 12160,
-    "peak_rss_increase_kib": 1920,
-    "model_weights_loaded": false,
-    "gpu_used": false,
-    "local_fixture_only": true
-  }
+  ]
 }

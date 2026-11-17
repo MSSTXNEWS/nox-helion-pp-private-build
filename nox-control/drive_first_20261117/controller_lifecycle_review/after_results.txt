@@ -1,0 +1,7 @@
+test_old_fence_cannot_settle_current_mode_lease (test_additional_lifecycle.Review.test_old_fence_cannot_settle_current_mode_lease) ... ok
+test_uncertain_load_blocks_recycled_unload_receipt_and_ram_release (test_additional_lifecycle.Review.test_uncertain_load_blocks_recycled_unload_receipt_and_ram_release) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.003s
+
+OK

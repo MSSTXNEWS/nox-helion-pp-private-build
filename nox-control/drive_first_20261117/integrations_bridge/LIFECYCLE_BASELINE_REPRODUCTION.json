@@ -1,0 +1,14 @@
+{
+  "scope": "isolated_local_fixtures_against_previous_source",
+  "base_commit": "391953ee09807a890f0eaf37225e6e3670c1f4a9",
+  "tests": [
+    "test_integrations.DriveTests.test_memfd_lost_release_ack_requires_readback_and_never_double_releases",
+    "test_integrations.DriveTests.test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held",
+    "test_integrations.DriveTests.test_memfd_abort_with_unknown_release_reports_uncertain_lease"
+  ],
+  "executed": 3,
+  "failed_before": 3,
+  "expected_failure_confirmed": true,
+  "native_calls": 0,
+  "network_calls": 0
+}

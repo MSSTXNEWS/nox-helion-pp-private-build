@@ -22,7 +22,7 @@
 - Отдельные CHAT-, TRAIN- и системный резервы. Preload сохраняет все три. Большая PSI или недостаточный остаток дают HOLD. План не считает будущий unload уже состоявшимся.
 - Для каждого apply transfer/hash/warm обязателен существующий host-wide writer lease и callback активности владельца. Нет binding, владелец активен или запросил паузу —0 новых transfer/warming effects. Owner callback проверяется на границах chunk; arbiter обеспечивает конкурирующие допуски, snapshot сам по себе их не заменяет.
 - Drive→RAM: отдельный retained RAM lease на `size + 64MiB`, новый собственный sealed memfd, проверка fd/size/seals и повторный SHA readback через ограниченные `pread` chunks. fd не попадает в JSON-квитанции. Регистр handles живёт в процессе OneHost. Только `ram_handle_for_loader(group)` отдаёт доверенному loader действующий handle.
-- `release_owned_ram(group, receipt)` закрывает только собственный handle, после verified readback `loader_refs_released: true`, когда группа больше не числится загруженной. Защищённые группы не закрывает. Host обязан учесть дочерние/inherited fd и mmap references; закрытие единственного controller fd без освобождения прочих ссылок не обещает вернуть RAM.
+- `release_owned_ram(group, receipt)` закрывает только собственный handle, после verified readback `loader_refs_released: true`, когда группа больше не числится загруженной. Proof также содержит точные поля `handle.release_identity()`: nonce handle, SHA идентичности lease и integer fence. Незавершённый transition или STARTED load/unload этой группы дают HOLD до reconciliation. Защищённые группы не закрывает. Host обязан учесть дочерние/inherited fd и mmap references; закрытие единственного controller fd без освобождения прочих ссылок не обещает вернуть RAM.
 - При паузе CPU-передачи адаптер прекращает только свою передачу. Незавершённый RAM memfd закрывается адаптером с release; следующее чтение начинается из проверенного Drive. Пауза тренера сама освобождает0 байт. Никаких SIGSTOP CUDA, killall, глобального drop_caches или удаления старого Engram memfd.
 - Для опционального SSD: atomic staging `.part`, SHA/size, fsync, hardlink+unlink без перезаписи существующего файла. Конфликтующий файл не удаляется; local copy сохраняет свой `.part` при паузе. Проверенные файлы получают inode/device/mtime/size/SHA квитанцию. Неизменившийся файл не хешируется заново при каждом плане.
 - Опциональное SSD warming читает ограниченный префикс через mmap с owner/admission guard на chunk. Это файловый cache hint; страницы не закрепляются, mmap не удерживается. `touched_bytes` не является точным RSS или обещанием резидентности. Основной RAM путь отдельный: sealed memfd с учтённой памятью.
@@ -99,6 +99,37 @@ Callbacks получают стабильный operation_key и возвращ�
 
 Admission получает source mode, expected loaded, load/unload groups, RAM/GPU budget и resume lease. Host проверяет свежую реальность, владение ресурсом и stale journal. Ответ: granted=true, scope=host, lease_id, fencing_token; release: released=true. Один cache/mode writer обеспечивается существующим арбитром. Неопределённая операция не разрешает выдавать её ресурс повторно только по истёкшему TTL.
 
+### Изменения lifecycle 0.2
+
+Owner callback обязателен и проверяется первым. Дополнительный `should_pause`
+объединяется с ним через OR; локальный `False` не отменяет активность владельца.
+Небулевое/неизвестное состояние даёт HOLD.
+
+TRAIN→WORK сохраняет проверенный checkpoint. Следующий WORK→TRAIN передаёт
+`resume_from_verified_checkpoint=true` и вновь проверяет SHA/completeness;
+первый разрешённый запуск без checkpoint остаётся отдельным случаем fresh start.
+TRAIN→TRAIN с новым ID проверяет health без повторных drain/checkpoint/pause.
+Повтор одного незавершённого перехода использует журнал и проверку исхода
+операции; уже использованный старый ID не запускается после другого перехода.
+
+Намерение resource admission и release записывается до callback. Потерянный
+ACK оставляет `resource_lease_state=UNKNOWN`; повтор не выдаёт новый ресурс
+вслепую. Для `adopt_verified_state` после HOLD нужны прежние поля settlement,
+а также `resource_lease_settled=true`, точные `settled_lease_id` и
+`settled_fencing_token`. Когда admission ACK вообще не получен, нужен
+`settled_resource_request_id`, равный transition ID. Только существующий host
+может подтвердить эти факты. STARTED операции после такого readback становятся
+RECONCILED, не DONE; продолжение использует новый transition ID.
+
+Удерживаемый handle удаляется из реестра только после явного
+`closed=true, lease_released=true`. При ошибке/потерянном release ACK handle и
+неопределённый lease сохраняются для reconciliation; startup не перезаписывает
+такую группу новой загрузкой. `reconcile_owned_ram_release(group, receipt)`
+принимает настоящий host readback с exact lease/fence, а не выполняет запрос
+самостоятельно. Нужна согласованная версия `MemfdHandle` 0.2; старые handles
+без identity/ACK дают HOLD. Полнота и свежесть native readback принадлежат
+существующему owner/lifecycle, JSON от модели не заменяет это доказательство.
+
 `CommandHooks` — необязательный мост к доверенным административным скриптам: exact argv, SHA исполняемого файла, shell=False, JSON stdin/stdout, timeout. Команды не берутся из LLM. Wrapper должен иметь ограниченный stdout; его timeout не доказывает остановку внешнего trainer. RAM handle нельзя восстановить из JSON — RAM loader binding остаётся внутри постоянного host. Секреты в argv/квитанциях запрещены конфигурацией хоста.
 
 ## CLI и проверка
@@ -129,6 +160,6 @@ python -m nox_warm --manifest MANIFEST --cache-root CACHE --journal JOURNAL
 
 ## Проверка и границы результата
 
-12 локальных тестов проверяют настоящие временные файлы, Linux sealed memfd и изолированные callback fixtures: cgroup/shmem; manifest/path; atomic pause/resume и неверный SHA; low-headroom/0effects; bounded mmap; checkpoint/idempotency; journal recovery; protected wins; health failure; reconciliation и обратный переход; Drive cache hit; отсутствие owner/lease; RAM persistent binding/64MiB lease/retained handle/verified release.
+20 локальных тестов проверяют настоящие временные файлы, Linux sealed memfd и изолированные callback fixtures: cgroup/shmem; manifest/path; atomic pause/resume и неверный SHA; low-headroom/0effects; bounded mmap; checkpoint/idempotency; journal recovery; protected wins; health failure; reconciliation и обратный переход; Drive cache hit; обязательные owner/lease и OR cancellation; RAM persistent binding/64MiB lease/retained handle/verified release; потерянные lease ACK; checkpoint при возврате из WORK; отказ повторного старого transition ID. Три адресных новых случая воспроизведены на прежнем source: 3/3 FAIL до исправления. Дополнительный независимый review воспроизвёл и затем подтвердил исправление двух случаев: живой dup(fd) при неизвестном load ACK и stale settlement fence.
 
-Это не тест реального trainer, модели, Drive сети или native запуска. Пакет не установлен на OneHost; callback binding и native acceptance остаются необходимыми. Никаких серверных весов, существующего Engram memfd, активных V100 процессов, cron или чужого scheduler при разработке не изменяли.
+Это не тест реального trainer, модели, Drive сети или native запуска. Предыдущая версия источников staged на OneHost в `drive_first_20261117_0c40501f9068`; исправления lifecycle 0.2 туда не применялись. Callback binding и native acceptance остаются необходимыми. Никаких серверных весов, существующего Engram memfd, активных V100 процессов, cron или чужого scheduler при разработке не изменяли.

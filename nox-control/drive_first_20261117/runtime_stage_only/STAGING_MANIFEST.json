@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_RUNTIME_SOURCE_STAGING_MANIFEST_V1",
+  "source_staging_only": true,
+  "native_executed": false,
+  "runtime_bound": false,
+  "source_commits": {
+    "integrations_bridge": "690342457804f096b918664731756e1a79564631",
+    "warm_weights_controller": "7ce6290420bf1765fefd1c0b082175a1bea42ab9"
+  },
+  "reviewed_behavior_commits": {
+    "integrations_bridge": "2e78cc5d037c824aac0749ae6a953e39673401ed",
+    "warm_weights_controller": "f1b7df742f26d4acf3733c9a91da34809d2b87f4"
+  },
+  "files": 12,
+  "source_bytes": 98385,
+  "bundle_bytes": 103446,
+  "packed_bytes": 25836,
+  "bundle_sha256": "ee142b97c81327edf0130e2aba46c431e1d1334396581b11922507310553aa2b",
+  "destination": "/root/nox/extensions/drive_first_20261117_ee142b97c813",
+  "entry": "owner_runtime_source_stage_20261117.py",
+  "entry_bytes": 44198,
+  "entry_sha256": "945451e072fda3d56cd5835f775c064907a3f6584ae385455988c9e0583a1aa8",
+  "file_pins": [
+    {
+      "path": "runtime/nox_integrations/__init__.py",
+      "bytes": 364,
+      "sha256": "13fa6a78def2edfb4b9ff819f36e933aabd4b17c0a3196f0d77ccb5f27841be9"
+    },
+    {
+      "path": "runtime/nox_integrations/__main__.py",
+      "bytes": 1368,
+      "sha256": "14ae1e9c9fe3dd0477d1809489177846f48a3bdc8cb2dbc89ad046b0fde88bd2"
+    },
+    {
+      "path": "runtime/nox_integrations/config.py",
+      "bytes": 5394,
+      "sha256": "29682a5e43ce4485ee9d91d3001800a27159df5c890083c06a5296a575468cc8"
+    },
+    {
+      "path": "runtime/nox_integrations/core.py",
+      "bytes": 7028,
+      "sha256": "c660e389cd2c6318aacc4468a2cfa2198640b5fb2510b2b20d9b035479e480db"
+    },
+    {
+      "path": "runtime/nox_integrations/drive.py",
+      "bytes": 19308,
+      "sha256": "2d985e33ed6501b95a085b85abbf5654d576513b9570710f706e678e8ff78c3b"
+    },
+    {
+      "path": "runtime/nox_integrations/host.py",
+      "bytes": 6782,
+      "sha256": "5130d9028d60a9f78f5c0b3644c067329219f98d389859b1fdd6d933f946da1d"
+    },
+    {
+      "path": "runtime/nox_integrations/memfd.py",
+      "bytes": 5877,
+      "sha256": "ec9910a67228cc8681a1f1157f9107003bac4634548ec3130bc43573745b1386"
+    },
+    {
+      "path": "runtime/nox_integrations/providers.py",
+      "bytes": 4512,
+      "sha256": "329d036498b6c38af71b996f15c138b5efbdc0a7d64f3c919f61745bfe8acebe"
+    },
+    {
+      "path": "runtime/nox_warm/__init__.py",
+      "bytes": 213,
+      "sha256": "696685fce0e046b6f53bfd2e3c866cdafbb8a16086faa00290f7fdcb94a156f2"
+    },
+    {
+      "path": "runtime/nox_warm/__main__.py",
+      "bytes": 2795,
+      "sha256": "ee9991fcbacaec2cc8bc720dcebfa7f13aae0f2ddb0963b55a84899957cf214c"
+    },
+    {
+      "path": "runtime/nox_warm/cache.py",
+      "bytes": 6803,
+      "sha256": "48bd8b61c002235ad6e7365bda9f80a21810fd98c05d5fba5ca169b9b055e9e5"
+    },
+    {
+      "path": "runtime/nox_warm/controller.py",
+      "bytes": 37941,
+      "sha256": "1312845745150bbfc52863fa6eab85d67da12d5108fb1cc1a7776d56621b5d05"
+    }
+  ],
+  "input_lock_sha256": "eb0954ceb39d143bfdbf33275064dbff030d09dade4e7532a0d8320407cecd81",
+  "template_sha256": "11d71e06a9d9bc29a9e390308cf69c600525b38b622b1237150611701310e8b8",
+  "completion_marker_scope": "SOURCE_INSTALLED_NOT_BOUND only; never chat/native runtime acceptance"
+}

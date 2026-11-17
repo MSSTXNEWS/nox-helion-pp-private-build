@@ -1,0 +1,9 @@
+test_collision_and_symlink_never_overwrite (test_staging.StagingTests.test_collision_and_symlink_never_overwrite) ... ok
+test_input_pin_drift_rejected_before_stage_or_build (test_staging.StagingTests.test_input_pin_drift_rejected_before_stage_or_build) ... ok
+test_owner_activity_and_existing_lease_gate (test_staging.StagingTests.test_owner_activity_and_existing_lease_gate) ... ok
+test_safe_idempotent_source_only_stage (test_staging.StagingTests.test_safe_idempotent_source_only_stage) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.007s
+
+OK

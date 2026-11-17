@@ -1,0 +1,60 @@
+{
+  "schema": "NOX_RUNTIME_SOURCE_STAGING_LOCAL_RECEIPT_V1",
+  "created_utc": "2026-11-17T18:33:12.981759+00:00",
+  "status": "SOURCE_FROZEN_LOCAL_TESTS_PASS_NATIVE_NOT_RUN",
+  "source_staging_only": true,
+  "native_executed": false,
+  "external_writes": 0,
+  "runtime_imported_or_bound": false,
+  "tests": {
+    "passed": 4,
+    "errors": 0,
+    "failures": 0,
+    "command": "python -m unittest discover -s tests -v",
+    "test_sha256": "eca961567b5fbe8479953e22c91eaa0bf6655a2b9be5cd9a9d6a9c017825c2d1",
+    "log_sha256": "ed8a2c1a3aadb339a423caf9d37701106e799274745b630a632c74b0f1184aad"
+  },
+  "verified_source_repositories": [
+    {
+      "repository": "integrations_bridge",
+      "locked_source_commit": "690342457804f096b918664731756e1a79564631",
+      "latest_head": "c2aef7982267e62c2cd727cf882885a06c8b2347",
+      "runtime_diff_between_commits": false,
+      "all_runtime_pins_match_locked_commit_and_current_worktree": true
+    },
+    {
+      "repository": "warm_weights_controller",
+      "locked_source_commit": "7ce6290420bf1765fefd1c0b082175a1bea42ab9",
+      "latest_head": "1d807a83e94647a33e7725c61a21ed505a306eb5",
+      "runtime_diff_between_commits": false,
+      "all_runtime_pins_match_locked_commit_and_current_worktree": true
+    }
+  ],
+  "source_template_provenance": {
+    "path": "native_release/entry.template.py",
+    "sha256": "17180ce5f8c5a43664dc3e706e9d296fff1fecebd4cf7ef1cb8a9242c28bdf1b",
+    "reused_helpers": [
+      "directory",
+      "stage"
+    ],
+    "combined_main_not_included": true
+  },
+  "entry_sha256": "945451e072fda3d56cd5835f775c064907a3f6584ae385455988c9e0583a1aa8",
+  "bundle_sha256": "ee142b97c81327edf0130e2aba46c431e1d1334396581b11922507310553aa2b",
+  "destination": "/root/nox/extensions/drive_first_20261117_ee142b97c813",
+  "files": 12,
+  "source_bytes": 98385,
+  "limits": {
+    "no_runtime_activation": true,
+    "partial_destination_requires_exact_readback_or_hold": true,
+    "cooperating_maintenance_writers_only": true,
+    "owner_runner_authority_external": true
+  },
+  "NEXT_READY": {
+    "owner": "root",
+    "action": "Review plain template and frozen entry/manifest, publish exactly these bytes through existing owner repair allowlist, then invoke one admitted SOURCE-STAGING-ONLY action and read back per-file evidence.",
+    "required_operator_change_scope": "Root chooses/reviews exact entry allowlist change; existing actor/repo/source/host/lock checks preserved.",
+    "native_activation": "Separate pending task; staging completion is not runtime/chat acceptance.",
+    "claim_state": "staging author freezes package and releases claim after local commit; parent refills next READY slot"
+  }
+}

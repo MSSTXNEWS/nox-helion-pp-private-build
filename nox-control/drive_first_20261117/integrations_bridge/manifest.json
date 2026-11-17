@@ -1,7 +1,12 @@
 {
-  "schema": "nox.integrations.source_manifest.v1",
-  "version": "0.1.0",
+  "schema": "nox.integrations.source_manifest.v2",
+  "version": "0.2.0",
+  "created_at_utc": "2026-11-17T18:32:12.394479+00:00",
+  "source_commit": "690342457804f096b918664731756e1a79564631",
+  "reviewed_behavior_commit": "2e78cc5d037c824aac0749ae6a953e39673401ed",
   "native_pass": false,
+  "native_binding_verified": false,
+  "matching_controller_version": "0.2.0",
   "files": [
     {
       "path": ".gitignore",
@@ -9,24 +14,39 @@
       "sha256": "af3cee666d697f415974edfb1e59fda26ba408c7e9e9586725db2e41b56d7991"
     },
     {
+      "path": "IMPORT_METRICS.json",
+      "bytes": 216,
+      "sha256": "ea2c0db5b1940cdb9ac44cb80e682eb4e5821890ce50f6f0e1e55d254c803229"
+    },
+    {
+      "path": "LIFECYCLE_BASELINE_REPRODUCTION.json",
+      "bytes": 572,
+      "sha256": "39a67d27e4f4bb775bf529e5f08968e179d5e4d806eaaced678d62f399e9cc5f"
+    },
+    {
+      "path": "LIFECYCLE_BASELINE_REPRODUCTION.log",
+      "bytes": 3099,
+      "sha256": "93d79212e96b0961649c4068c0448d7f7024d0b62df0529b760bf2165c7c8b61"
+    },
+    {
       "path": "README.md",
-      "bytes": 13866,
-      "sha256": "126722a6ef91e832d83cb6af6dbdc4f9e5059a24b9ff4f37a9d2d3ae7d819b9b"
+      "bytes": 15561,
+      "sha256": "2fc2113b3f405816d9c8ff5d37a94364a0be34130c4e577ae1c6776361a84176"
     },
     {
       "path": "VALIDATION.json",
-      "bytes": 639,
-      "sha256": "dab84b25c4e0a4a22b4ca3be8d00c6e0aefe06f37a83c58c90e3f9656681a759"
+      "bytes": 1217,
+      "sha256": "2cfc3826f1ac5f6c47dc6834c16e6f2486c09906c1bcb3c6a38462c187ba8bfc"
     },
     {
       "path": "VALIDATION.log",
-      "bytes": 3468,
-      "sha256": "8fac98695440d764a7ed57277c982584b991202da54275f868e9216ca981f27e"
+      "bytes": 3984,
+      "sha256": "eb3ad944fe838db178dfde80f5d3cd552be63271d6868fa987c72503ce3e1a9a"
     },
     {
       "path": "nox_integrations/__init__.py",
       "bytes": 364,
-      "sha256": "d745195bb74736a5d5827be32eb69bde2de2ad4dc4764d1d1976db0593fc6e40"
+      "sha256": "13fa6a78def2edfb4b9ff819f36e933aabd4b17c0a3196f0d77ccb5f27841be9"
     },
     {
       "path": "nox_integrations/__main__.py",
@@ -45,8 +65,8 @@
     },
     {
       "path": "nox_integrations/drive.py",
-      "bytes": 18964,
-      "sha256": "a9f5787c8283f3fd68849b2a7e8c144c976748d3d66ab1a888b2209cfad2cc3f"
+      "bytes": 19308,
+      "sha256": "2d985e33ed6501b95a085b85abbf5654d576513b9570710f706e678e8ff78c3b"
     },
     {
       "path": "nox_integrations/host.py",
@@ -55,8 +75,8 @@
     },
     {
       "path": "nox_integrations/memfd.py",
-      "bytes": 2130,
-      "sha256": "746be65d875556f06a1920981a78b367c29e7f03bec560615f8e17bc9253a105"
+      "bytes": 5877,
+      "sha256": "ec9910a67228cc8681a1f1157f9107003bac4634548ec3130bc43573745b1386"
     },
     {
       "path": "nox_integrations/providers.py",
@@ -70,8 +90,8 @@
     },
     {
       "path": "tests/test_integrations.py",
-      "bytes": 18961,
-      "sha256": "57c6399ce720a994170f96b32a2f43d67ff831bfada2a5bac2ef2f78f66d7c31"
+      "bytes": 22396,
+      "sha256": "e453e95fcdb204c6ccf570ddbcd1a9e460774f5024012dbc5bfde98b672e8a64"
     }
   ]
 }

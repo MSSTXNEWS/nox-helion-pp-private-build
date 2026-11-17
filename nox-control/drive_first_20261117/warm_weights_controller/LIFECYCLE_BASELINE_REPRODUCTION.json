@@ -1,0 +1,14 @@
+{
+  "scope": "isolated_local_fixtures_against_previous_source",
+  "base_commit": "0ff4e582e38d828fe36511f5d955780ae13dce3a",
+  "tests": [
+    "test_controller.ControllerTests.test_local_pause_callback_never_overrides_owner_or_replaces_missing_owner",
+    "test_controller.ControllerTests.test_work_return_to_train_restores_checkpoint_and_same_mode_does_not_recheckpoint",
+    "test_controller.ControllerTests.test_registry_retains_handle_without_confirmed_release_and_prevents_overwrite"
+  ],
+  "executed": 3,
+  "failed_before": 3,
+  "expected_failure_confirmed": true,
+  "native_calls": 0,
+  "network_calls": 0
+}

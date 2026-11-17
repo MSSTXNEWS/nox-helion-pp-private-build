@@ -6,6 +6,9 @@ test_download_atomically_publishes_hash_verified_cache (test_integrations.DriveT
 test_download_conflict_keeps_existing_and_symlink_is_rejected (test_integrations.DriveTests.test_download_conflict_keeps_existing_and_symlink_is_rejected) ... ok
 test_download_wrong_sha_cleans_part_and_never_publishes (test_integrations.DriveTests.test_download_wrong_sha_cleans_part_and_never_publishes) ... ok
 test_memfd_abort_closes_only_owned_fd_and_releases (test_integrations.DriveTests.test_memfd_abort_closes_only_owned_fd_and_releases) ... ok
+test_memfd_abort_with_unknown_release_reports_uncertain_lease (test_integrations.DriveTests.test_memfd_abort_with_unknown_release_reports_uncertain_lease) ... ok
+test_memfd_lost_release_ack_requires_readback_and_never_double_releases (test_integrations.DriveTests.test_memfd_lost_release_ack_requires_readback_and_never_double_releases) ... ok
+test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held (test_integrations.DriveTests.test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held) ... ok
 test_memfd_verified_sealed_and_owned_reservation_lifetime (test_integrations.DriveTests.test_memfd_verified_sealed_and_owned_reservation_lifetime) ... ok
 test_mid_transfer_cancel_removes_part_and_respects_host_stop (test_integrations.DriveTests.test_mid_transfer_cancel_removes_part_and_respects_host_stop) ... ok
 test_publication_race_does_not_replace_other_writer (test_integrations.DriveTests.test_publication_race_does_not_replace_other_writer) ... ok
@@ -23,6 +26,6 @@ test_redirect_limit_bad_json_and_http_error_never_return_body (test_integrations
 test_typed_arguments_secret_rejection_and_persistence_failure (test_integrations.ProviderAndHostTests.test_typed_arguments_secret_rejection_and_persistence_failure) ... ok
 
 ----------------------------------------------------------------------
-Ran 23 tests in 1.256s
+Ran 26 tests in 1.098s
 
 OK

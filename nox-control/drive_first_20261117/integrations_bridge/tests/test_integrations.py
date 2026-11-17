@@ -137,7 +137,7 @@ class DriveTests(unittest.TestCase):
         reserved=[];released=[]
         handle=self.drive.download_memfd_verified("m",digest,len(data),
                     reserve_ram=lambda n:reserved.append(n) or "ram-lease",
-                    release_ram=lambda token:released.append(token),should_pause=lambda:False)
+                    release_ram=lambda token:released.append(token) or {"released":True},should_pause=lambda:False)
         self.assertEqual(os.read(handle.fileno(),len(data)),data)
         self.assertGreater(reserved[0],len(data))
         self.assertFalse(handle.describe()["model_loaded"])
@@ -164,12 +164,68 @@ class DriveTests(unittest.TestCase):
         try:
             with patch("os.memfd_create",side_effect=remember),self.assertRaisesRegex(BridgeError,"CANCELLED"):
                 DriveAdapter(self.cfg,runner=AbortRunner()).download_memfd_verified("m",digest,3,
-                    reserve_ram=lambda n:"lease",release_ram=lambda x:released.append(x),should_pause=lambda:False)
+                    reserve_ram=lambda n:"lease",release_ram=lambda x:released.append(x) or {"released":True},should_pause=lambda:False)
             self.assertEqual(released,["lease"])
             self.assertEqual(len(created),1)
             with self.assertRaises(OSError):os.fstat(created[0])
             os.fstat(unrelated)
         finally:os.close(unrelated)
+
+    def test_memfd_lost_release_ack_requires_readback_and_never_double_releases(self):
+        digest=self.seed("m",b"abc");calls=[]
+        lease={"lease_id":"ram-test","fencing_token":7}
+        def release(token):
+            calls.append(token)
+            raise TimeoutError("fixture ACK lost after release")
+        handle=self.drive.download_memfd_verified("m",digest,3,
+                    reserve_ram=lambda n:lease,release_ram=release,should_pause=lambda:False)
+        fd=handle.fileno()
+        with self.assertRaisesRegex(BridgeError,"RAM_RELEASE_UNCONFIRMED") as raised:
+            handle.close()
+        self.assertTrue(raised.exception.outcome_uncertain)
+        self.assertTrue(handle.closed)
+        self.assertEqual(handle.describe()["lease_release_state"],"UNKNOWN")
+        with self.assertRaises(OSError):os.fstat(fd)
+        # The number formerly held by this handle may now belong to another file.
+        unrelated=os.memfd_create("protected-unrelated-fixture",os.MFD_CLOEXEC)
+        try:
+            with self.assertRaisesRegex(BridgeError,"RECONCILE_REQUIRED"):handle.close()
+            self.assertEqual(len(calls),1);os.fstat(unrelated)
+            with self.assertRaisesRegex(BridgeError,"READBACK_UNVERIFIED"):
+                handle.reconcile_release({"verified":True,"lease_id":"wrong","fencing_token":7,"released":True})
+            handle.reconcile_release({"verified":True,"lease_id":"ram-test","fencing_token":7,"released":True})
+            self.assertEqual(handle.close(),{"closed":True,"lease_released":True})
+            self.assertEqual(len(calls),1);os.fstat(unrelated)
+        finally:os.close(unrelated)
+
+    def test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held(self):
+        digest=self.seed("m",b"abc");calls=[]
+        def release(token):
+            calls.append(token)
+            return None if len(calls)==1 else {"released":True}
+        handle=self.drive.download_memfd_verified("m",digest,3,
+                    reserve_ram=lambda n:"ram-test",release_ram=release,should_pause=lambda:False)
+        with self.assertRaisesRegex(BridgeError,"RAM_RELEASE_UNCONFIRMED"):handle.close()
+        with self.assertRaisesRegex(BridgeError,"RECONCILE_REQUIRED"):handle.close()
+        self.assertEqual(len(calls),1)
+        handle.reconcile_release({"verified":True,"lease_id":"ram-test","released":False})
+        self.assertTrue(handle.close()["lease_released"])
+        self.assertEqual(len(calls),2)
+
+    def test_memfd_abort_with_unknown_release_reports_uncertain_lease(self):
+        digest=self.seed("m",b"abc");real=BoundedRunner();created=[]
+        class AbortRunner:
+            def run(inner,argv,**kwargs):
+                if argv[1]=="cat":raise BridgeError("CANCELLED")
+                return real.run(argv,**kwargs)
+        original=os.memfd_create
+        def remember(*args,**kwargs):
+            fd=original(*args,**kwargs);created.append(fd);return fd
+        with patch("os.memfd_create",side_effect=remember),self.assertRaisesRegex(BridgeError,"RAM_ABORT_RELEASE_UNCONFIRMED") as raised:
+            DriveAdapter(self.cfg,runner=AbortRunner()).download_memfd_verified("m",digest,3,
+                reserve_ram=lambda n:"lease",release_ram=lambda token:None,should_pause=lambda:False)
+        self.assertTrue(raised.exception.outcome_uncertain)
+        with self.assertRaises(OSError):os.fstat(created[0])
 
     def test_upload_has_data_and_manifest_readback_and_is_repeatable(self):
         data=b"verified backup payload";digest=hashlib.sha256(data).hexdigest()

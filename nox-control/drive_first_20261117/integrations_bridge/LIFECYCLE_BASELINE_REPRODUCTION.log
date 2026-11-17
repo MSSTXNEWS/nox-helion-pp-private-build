@@ -1,0 +1,42 @@
+test_memfd_lost_release_ack_requires_readback_and_never_double_releases (test_integrations.DriveTests.test_memfd_lost_release_ack_requires_readback_and_never_double_releases) ... ERROR
+test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held (test_integrations.DriveTests.test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held) ... FAIL
+test_memfd_abort_with_unknown_release_reports_uncertain_lease (test_integrations.DriveTests.test_memfd_abort_with_unknown_release_reports_uncertain_lease) ... FAIL
+
+======================================================================
+ERROR: test_memfd_lost_release_ack_requires_readback_and_never_double_releases (test_integrations.DriveTests.test_memfd_lost_release_ack_requires_readback_and_never_double_releases)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/nox-before-fixture-fq47so_x/test_integrations.py", line 184, in test_memfd_lost_release_ack_requires_readback_and_never_double_releases
+    handle.close()
+  File "/tmp/nox-before-fixture-fq47so_x/nox_integrations/memfd.py", line 58, in close
+    self._release_ram(self._lease)
+  File "/tmp/nox-before-fixture-fq47so_x/test_integrations.py", line 179, in release
+    raise TimeoutError("fixture ACK lost after release")
+TimeoutError: fixture ACK lost after release
+
+======================================================================
+FAIL: test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held (test_integrations.DriveTests.test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/nox-before-fixture-fq47so_x/test_integrations.py", line 208, in test_memfd_missing_ack_cannot_retry_until_host_confirms_still_held
+    with self.assertRaisesRegex(BridgeError,"RAM_RELEASE_UNCONFIRMED"):handle.close()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: BridgeError not raised
+
+======================================================================
+FAIL: test_memfd_abort_with_unknown_release_reports_uncertain_lease (test_integrations.DriveTests.test_memfd_abort_with_unknown_release_reports_uncertain_lease)
+----------------------------------------------------------------------
+nox_integrations.core.BridgeError: CANCELLED
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/tmp/nox-before-fixture-fq47so_x/test_integrations.py", line 224, in test_memfd_abort_with_unknown_release_reports_uncertain_lease
+    with patch("os.memfd_create",side_effect=remember),self.assertRaisesRegex(BridgeError,"RAM_ABORT_RELEASE_UNCONFIRMED") as raised:
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "RAM_ABORT_RELEASE_UNCONFIRMED" does not match "CANCELLED"
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.133s
+
+FAILED (failures=2, errors=1)

@@ -361,7 +361,12 @@ class DriveAdapter:
         except BaseException:
             if fd is not None:
                 os.close(fd)
-            release_ram(lease)
+            try:
+                released=release_ram(lease)
+                if not isinstance(released,dict) or released.get("released") is not True:
+                    raise BridgeError("RAM_ABORT_RELEASE_UNCONFIRMED",outcome_uncertain=True)
+            except Exception:
+                raise BridgeError("RAM_ABORT_RELEASE_UNCONFIRMED",outcome_uncertain=True) from None
             raise
 
     @staticmethod

@@ -170,7 +170,32 @@ handle in the existing persistent host until all loader mappings, duplicate or
 inherited references are released; then call `close()`. The handle owns only its
 new descriptor and reservation. It never discovers, closes or adopts existing
 Engram descriptors. Failure/cancellation closes only that newly created memfd
-and releases its reservation. `close()` is idempotent.
+and requests release of its reservation. Version 0.2 requires an explicit
+`{"released": true}` acknowledgement from `release_ram`; `None` is not success.
+`close()` returns `{"closed": true, "lease_released": true}` only after that ACK.
+Closing the descriptor and releasing the reservation are separate states.
+
+If release throws or returns an unconfirmed ACK, the descriptor remains closed
+but the handle records `lease_release_state="UNKNOWN"`. A second `close()`
+raises `RAM_RELEASE_RECONCILE_REQUIRED`; it neither repeats the release nor
+pretends success. The existing host must read its authoritative lease record,
+then call `handle.reconcile_release(receipt)` with `verified=true`, the exact
+`lease_id`, the same integer `fencing_token` when present, and `released=true`
+or `false`. A confirmed release makes later close idempotently successful;
+a confirmed still-held lease permits one explicit close retry. The adapter
+does not invent a host lookup or infer release from an expired TTL.
+
+Before a controller-managed close, the existing loader returns its verified
+reference-release receipt together with `handle.release_identity()`:
+`ram_handle_id`, `ram_lease_identity_sha256`, and `ram_fencing_token`. This binds
+the proof to this particular handle and reservation without exporting the raw
+descriptor or reservation token. Old receipts cannot release a replacement
+handle. UNKNOWN load/unload outcomes require reconciliation first.
+
+Install this 0.2 handle with the matching 0.2 warm controller. Old handle
+implementations without `release_identity()` or a confirmed close ACK remain
+HOLD. The previous 0.1 sources were staged on the native host; these lifecycle
+fixes are local source changes and have not been deployed or accepted there.
 
 Actual loading needs a compatible model loader and explicit descriptor
 inheritance (`pass_fds` for a child) or an in-process mapping. Neither is invented

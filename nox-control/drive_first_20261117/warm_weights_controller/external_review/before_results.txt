@@ -1,0 +1,25 @@
+test_old_fence_cannot_settle_current_mode_lease (test_additional_lifecycle.Review.test_old_fence_cannot_settle_current_mode_lease) ... FAIL
+test_uncertain_load_blocks_recycled_unload_receipt_and_ram_release (test_additional_lifecycle.Review.test_uncertain_load_blocks_recycled_unload_receipt_and_ram_release) ... FAIL
+
+======================================================================
+FAIL: test_old_fence_cannot_settle_current_mode_lease (test_additional_lifecycle.Review.test_old_fence_cannot_settle_current_mode_lease)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/4136374a0419/nox_refresh/controller_lifecycle_review/test_additional_lifecycle.py", line 57, in test_old_fence_cannot_settle_current_mode_lease
+    with self.assertRaises(Hold):self.c.adopt_verified_state('WORK',['work'],delayed_receipt)
+         ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Hold not raised
+
+======================================================================
+FAIL: test_uncertain_load_blocks_recycled_unload_receipt_and_ram_release (test_additional_lifecycle.Review.test_uncertain_load_blocks_recycled_unload_receipt_and_ram_release)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/4136374a0419/nox_refresh/controller_lifecycle_review/test_additional_lifecycle.py", line 51, in test_uncertain_load_blocks_recycled_unload_receipt_and_ram_release
+    with self.assertRaises(Hold):self.c.release_owned_ram('train',old_unload_receipt)
+         ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Hold not raised
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.004s
+
+FAILED (failures=2)

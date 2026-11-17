@@ -210,22 +210,38 @@ class Controller:
         """Host supplies an authoritative current snapshot; UNKNOWN is never WORK-ready."""
         if mode not in ['WORK','TRAIN','PAUSED_TRAIN'] or not set(loaded)<=set(self.groups):raise ValueError('INVALID_HOST_STATE')
         if receipt.get('verified') is not True or not receipt.get('source') or not receipt.get('observed_at'):raise Hold('HOST_STATE_UNVERIFIED')
+        if mode=='PAUSED_TRAIN' and not self.data.get('training_checkpoint'):raise Hold('PAUSED_CHECKPOINT_UNVERIFIED')
         pending=self.data.get('transition')
         if pending and pending.get('status') in ['STARTED','HOLD']:
             if receipt.get('settled_transition_id')!=pending['id'] or receipt.get('pending_operations_settled') is not True:
                 raise Hold('PENDING_EFFECTS_NOT_SETTLED')
+            lease=pending.get('admission')
+            if (receipt.get('resource_lease_settled') is not True
+                or (lease and receipt.get('settled_lease_id')!=lease.get('lease_id'))
+                or (lease and (type(receipt.get('settled_fencing_token')) is not int
+                               or receipt.get('settled_fencing_token')!=lease.get('fencing_token')))
+                or (not lease and receipt.get('settled_resource_request_id')!=pending['id'])):
+                raise Hold('PENDING_RESOURCE_LEASE_NOT_SETTLED')
+            for key,operation in self.data['operations'].items():
+                if key.startswith(pending['id']+':') and operation.get('state')=='STARTED':
+                    operation.update(state='RECONCILED',state_before_reconcile='STARTED',
+                                     settled_by_transition_id=pending['id'])
+            pending['reconciliation_receipt']=receipt
             pending['status']='RECONCILED'
-        if mode=='PAUSED_TRAIN' and not self.data.get('training_checkpoint'):raise Hold('PAUSED_CHECKPOINT_UNVERIFIED')
         self.data.update(mode=mode,loaded=list(loaded),host_state_receipt=receipt);self._persist()
 
     def _cache_guard(self, should_pause=None):
-        callback=should_pause if should_pause is not None else self.owner_should_pause
-        if not callable(callback) or not callable(self.host_resource_admission) or not callable(self.host_release_resource):
+        if (not callable(self.owner_should_pause)
+            or (should_pause is not None and not callable(should_pause))
+            or not callable(self.host_resource_admission) or not callable(self.host_release_resource)):
             raise Hold('CACHE_HOST_LEASE_OR_OWNER_ACTIVITY_UNBOUND')
         def guarded_pause():
-            value=callback()
+            value=self.owner_should_pause()
             if type(value) is not bool:raise Hold('OWNER_ACTIVITY_UNVERIFIED')
-            return value
+            if value:return True
+            extra=False if should_pause is None else should_pause()
+            if type(extra) is not bool:raise Hold('LOCAL_PAUSE_STATE_UNVERIFIED')
+            return extra
         if guarded_pause():raise Hold('OWNER_ACTIVE_OR_PAUSE_REQUESTED')
         return guarded_pause
 
@@ -312,12 +328,57 @@ class Controller:
 
     def release_owned_ram(self, group_id, unload_receipt):
         if is_protected(self.groups[group_id]):raise Hold('PROTECTED_RUNTIME_GROUP')
+        pending=self.data.get('transition',{})
+        if (pending.get('status') in ['STARTED','HOLD']
+            and group_id in set(pending.get('load',[])+pending.get('unload',[])+pending.get('loaded_before',[]))):
+            raise Hold('RAM_TRANSITION_UNRECONCILED')
+        if any(op.get('state')=='STARTED' and op.get('name') in ['load','unload']
+               and op.get('payload',{}).get('group')==group_id for op in self.data['operations'].values()):
+            raise Hold('RAM_LOADER_OPERATION_UNCERTAIN')
         if (group_id in self.data['loaded'] or unload_receipt.get('group')!=group_id
             or unload_receipt.get('loader_refs_released') is not True
             or unload_receipt.get('verified') is not True):raise Hold('RAM_LOADER_REFERENCES_UNCONFIRMED')
         h=self._ram_handles.get(group_id)
-        if h is not None:h.close();self._ram_handles.pop(group_id,None)
-        return {'status':'OWNED_RAM_CLOSED','group':group_id,'other_memfd_touched':False}
+        if h is not None:
+            identity=getattr(h,'release_identity',None)
+            if not callable(identity):raise Hold('RAM_RELEASE_IDENTITY_UNBOUND')
+            expected=identity()
+            fields=('ram_handle_id','ram_lease_identity_sha256','ram_fencing_token')
+            if (not isinstance(expected,dict) or not expected.get('ram_handle_id')
+                or not expected.get('ram_lease_identity_sha256') or type(expected.get('ram_fencing_token')) is not int
+                or type(unload_receipt.get('ram_fencing_token')) is not int
+                or any(unload_receipt.get(k)!=expected.get(k) for k in fields)):
+                raise Hold('RAM_RELEASE_PROOF_IDENTITY_MISMATCH')
+            closed=h.close()
+            if (not isinstance(closed,dict) or closed.get('closed') is not True
+                or closed.get('lease_released') is not True):raise Hold('RAM_RELEASE_UNCONFIRMED')
+        if self.data.get('ram_release_reconcile',{}).get(group_id):raise Hold('RAM_RELEASE_RECONCILE_REQUIRED')
+        self._ram_handles.pop(group_id,None)
+        return {'status':'OWNED_RAM_CLOSED' if h is not None else 'NO_OWNED_RAM_HANDLE',
+                'group':group_id,'other_memfd_touched':False}
+
+    def reconcile_owned_ram_release(self, group_id, receipt):
+        """Record existing host's exact lease readback; never infer release from FD close."""
+        h=self._ram_handles.get(group_id)
+        pending=self.data.get('ram_release_reconcile',{}).get(group_id)
+        if pending is None and h is None:raise Hold('NO_PENDING_RAM_RELEASE')
+        if pending is not None:
+            if (not isinstance(receipt,dict) or receipt.get('verified') is not True
+                or receipt.get('lease_id')!=pending.get('lease_id')
+                or type(receipt.get('fencing_token')) is not int
+                or receipt.get('fencing_token')!=pending.get('fencing_token')
+                or type(receipt.get('released')) is not bool):raise Hold('RAM_RELEASE_READBACK_UNVERIFIED')
+        if h is not None:
+            reconcile=getattr(h,'reconcile_release',None)
+            if not callable(reconcile):raise Hold('RAM_RELEASE_RECONCILER_UNBOUND')
+            result=reconcile(receipt)
+            if not isinstance(result,dict) or result.get('closed') is not True:raise Hold('RAM_RELEASE_READBACK_UNVERIFIED')
+        elif receipt['released'] is not True:
+            raise Hold('RAM_LEASE_STILL_HELD')
+        if receipt['released'] is True:
+            self.data.setdefault('ram_release_reconcile',{}).pop(group_id,None);self._persist()
+        return {'status':'RAM_RELEASE_READBACK_VERIFIED','group':group_id,
+                'lease_released':receipt['released'],'native_query_performed':False}
 
     def _startup_ram(self,*,apply,should_pause):
         b=self.manifest['budgets'];total=0;transfer=0;rows=[]
@@ -327,12 +388,14 @@ class Controller:
             if len(rows)>=b.get('startup_max_groups',6):break
             row={'group':g['id'],'status':'PLANNED','source':'verifiedDrive','tier':'ownedRAM','model_loaded':False};lease=None
             try:
+                if self.data.get('ram_release_reconcile',{}).get(g['id']):raise Hold('RAM_RELEASE_RECONCILE_REQUIRED')
                 if g['id'] in self.data['loaded']:
                     row['status']='JOURNAL_GROUP_NOT_DUPLICATED';row['live_readback_required']=True;rows.append(row);continue
                 if is_protected(dict(g,protected=False)):
                     raise Hold('PRIMARY_CHAT_OR_ENGRAM_NO_DUPLICATE_PRELOAD')
                 if self._ram_valid(g['id']):
                     row['status']='OWNED_RAM_ALREADY_VERIFIED';rows.append(row);continue
+                if g['id'] in self._ram_handles:raise Hold('OWNED_RAM_HANDLE_REQUIRES_RECONCILE')
                 required=g['size_bytes']+RAM_TRANSFER_ALLOWANCE
                 if total+required>ram_cap or transfer+g['size_bytes']>b['startup_transfer_bytes']:raise Hold('STARTUP_RAM_OR_TRANSFER_CAP')
                 self.admit(required,'TRAIN')
@@ -350,9 +413,16 @@ class Controller:
                         if (not isinstance(receipt,dict) or receipt.get('granted') is not True or receipt.get('scope')!='host'
                             or not receipt.get('lease_id') or type(receipt.get('fencing_token')) is not int):raise Hold('RAM_RESERVATION_DENIED')
                         return receipt
-                    def release(receipt):
-                        result=self.host_release_ram(receipt)
-                        if not isinstance(result,dict) or result.get('released') is not True:raise Hold('RAM_RELEASE_UNCONFIRMED')
+                    def release(receipt,group_id=g['id']):
+                        try:result=self.host_release_ram(receipt)
+                        except BaseException:
+                            self.data.setdefault('ram_release_reconcile',{})[group_id]=receipt;self._persist()
+                            raise
+                        if not isinstance(result,dict) or result.get('released') is not True:
+                            self.data.setdefault('ram_release_reconcile',{})[group_id]=receipt;self._persist()
+                            raise Hold('RAM_RELEASE_UNCONFIRMED')
+                        self.data.setdefault('ram_release_reconcile',{}).pop(group_id,None);self._persist()
+                        return result
                     handle=self.download_memfd_verified(g['remote_path'],g['sha256'],g['size_bytes'],reserve_ram=reserve,release_ram=release,should_pause=pause)
                     self._ram_handles[g['id']]=handle
                     try:
@@ -366,7 +436,10 @@ class Controller:
                             digest.update(block);offset+=len(block)
                         if digest.hexdigest()!=g['sha256']:raise Hold('RAM_SHA_READBACK_FAILED')
                     except Exception:
-                        handle.close();self._ram_handles.pop(g['id'],None);raise
+                        closed=handle.close()
+                        if (not isinstance(closed,dict) or closed.get('closed') is not True
+                            or closed.get('lease_released') is not True):raise Hold('RAM_RELEASE_UNCONFIRMED')
+                        self._ram_handles.pop(g['id'],None);raise
                     row['status']='OWNED_RAM_VERIFIED_NOT_MODEL'
                 total+=required;transfer+=g['size_bytes']
                 row.update(size_bytes=g['size_bytes'],sha256=g['sha256'],ram_reservation_bytes=required)
@@ -385,8 +458,14 @@ class Controller:
         mode=self.data['mode'];loaded=list(self.data['loaded'])
         previous=self.data.get('transition',{})
         if previous.get('id')==transition_id and previous.get('target')!=target:raise Hold('TRANSITION_KEY_CONFLICT')
+        if previous.get('id')==transition_id and previous.get('status')=='RECONCILED':
+            raise Hold('RECONCILED_TRANSITION_REQUIRES_NEW_ID')
+        if previous.get('id')!=transition_id and any(k.startswith(transition_id+':') for k in self.data['operations']):
+            raise Hold('STALE_TRANSITION_ID_REUSE')
         resuming=previous.get('id')==transition_id and previous.get('status') in ['STARTED','HOLD']
         if resuming:
+            if previous.get('resource_lease_state') in ['ADMISSION_PENDING','RELEASE_PENDING','UNKNOWN']:
+                raise Hold('HOST_RESOURCE_LEASE_RECONCILE_REQUIRED')
             mode=previous['source'];loaded=previous['loaded_before']
         if mode not in ['WORK','TRAIN','PAUSED_TRAIN']:raise Hold('CURRENT_HOST_STATE_UNVERIFIED')
         if self.data.get('transition',{}).get('id')==transition_id and self.data['transition'].get('status')=='DONE':
@@ -412,14 +491,16 @@ class Controller:
         if self.hooks is None or self.host_resource_admission is None or self.host_release_resource is None:raise Hold('HOST_BINDING_REQUIRED')
         existing=self.data.get('transition')
         if existing and existing.get('status') in ['STARTED','HOLD'] and existing.get('id')!=transition_id:raise Hold('PENDING_TRANSITION_REQUIRES_RECONCILE')
-        admission=self.host_resource_admission({'transition_id':transition_id,'target':target,'expected_source_mode':mode,'expected_loaded':loaded,'load':load,'unload':unload,'ram_bytes':bytes_needed,'gpu_bytes':sum(self.groups[x]['gpu_load_bytes'] for x in load),'resume_lease':previous.get('admission') if resuming else None})
-        if (not isinstance(admission,dict) or admission.get('granted') is not True or not admission.get('lease_id')
-            or admission.get('scope')!='host' or type(admission.get('fencing_token')) is not int):raise Hold('HOST_RESOURCE_ADMISSION_DENIED')
-        self.data['transition']=dict(plan,status='STARTED',admission=admission)
+        self.data['transition']=dict(plan,status='STARTED',admission=previous.get('admission') if resuming else None,
+                                     resource_lease_state='ADMISSION_PENDING')
         self.data['mode']='TRANSITION';self._persist()
         try:
-            self._op(transition_id+':drain','drain',{'source':mode,'target':target})
-            if mode=='TRAIN':
+            admission=self.host_resource_admission({'transition_id':transition_id,'target':target,'expected_source_mode':mode,'expected_loaded':loaded,'load':load,'unload':unload,'ram_bytes':bytes_needed,'gpu_bytes':sum(self.groups[x]['gpu_load_bytes'] for x in load),'resume_lease':previous.get('admission') if resuming else None})
+            if (not isinstance(admission,dict) or admission.get('granted') is not True or not admission.get('lease_id')
+                or admission.get('scope')!='host' or type(admission.get('fencing_token')) is not int):raise Hold('HOST_RESOURCE_ADMISSION_DENIED')
+            self.data['transition'].update(admission=admission,resource_lease_state='HELD');self._persist()
+            if mode!=target:self._op(transition_id+':drain','drain',{'source':mode,'target':target})
+            if mode=='TRAIN' and target!='TRAIN':
                 cp=self._op(transition_id+':checkpoint','checkpoint',{'mode':'TRAIN'})
                 ck=cp.get('checkpoint',{})
                 required={'model','optimizer','scaler','rng','data_cursor'}
@@ -439,18 +520,28 @@ class Controller:
                 self._op(transition_id+':load:'+group,'load',{'group':group,**source,'sha256':self.groups[group]['sha256']})
                 if group not in self.data['loaded']:self.data['loaded'].append(group)
                 self._persist()
-            if target=='TRAIN':
+            if target=='TRAIN' and mode!='TRAIN':
                 saved=self.data.get('training_checkpoint')
                 if mode=='PAUSED_TRAIN' and not saved:raise Hold('PAUSED_CHECKPOINT_UNVERIFIED')
-                self._op(transition_id+':resume','resume',{'mode':'TRAIN','resume_from_verified_checkpoint':mode=='PAUSED_TRAIN','checkpoint':saved})
+                if saved is not None:
+                    required={'model','optimizer','scaler','rng','data_cursor'}
+                    if (not isinstance(saved,dict) or not required<=set(saved.get('components',[]))
+                        or saved.get('durable_verified') is not True or not saved.get('sha256') or not saved.get('path')):
+                        raise Hold('CHECKPOINT_INCOMPLETE')
+                    if not Path(saved['path']).is_file() or file_sha256(saved['path'])!=saved['sha256']:
+                        raise Hold('CHECKPOINT_READBACK_FAILED')
+                self._op(transition_id+':resume','resume',{'mode':'TRAIN','resume_from_verified_checkpoint':saved is not None,'checkpoint':saved})
             self._op(transition_id+':health','health',{'target':target,'loaded':self.data['loaded']})
+            self.data['transition']['resource_lease_state']='RELEASE_PENDING';self._persist()
             released=self.host_release_resource(admission)
             if not isinstance(released,dict) or released.get('released') is not True:raise Hold('HOST_RESOURCE_RELEASE_UNCONFIRMED')
-            self.data['mode']=target;self.data['transition'].update(status='DONE',verified_at=time.time(),resource_lease_released=True);self._persist()
+            self.data['mode']=target;self.data['transition'].update(status='DONE',verified_at=time.time(),resource_lease_released=True,resource_lease_state='RELEASED');self._persist()
             return self.data['transition']
         except Exception as exc:
             # Preserve durable successful steps; never claim automatic rollback or restored readiness.
             self.data['transition'].update(status='HOLD',error_code=type(exc).__name__,reason=str(exc)[:180],rollback_required=True)
+            if self.data['transition'].get('resource_lease_state') in ['ADMISSION_PENDING','RELEASE_PENDING']:
+                self.data['transition']['resource_lease_state']='UNKNOWN'
             self.data['mode']='HOLD'
             self._persist();raise
 
@@ -465,4 +556,6 @@ class Controller:
         if not t or t.get('status') not in ['HOLD','STARTED']:raise Hold('NO_PENDING_TRANSITION')
         return {'status':'RECONCILE_REQUIRED','restore_mode':t['source'],'restore_groups':t['loaded_before'],
                 'pending_operations':[k for k,v in self.data['operations'].items() if k.startswith(t['id']+':') and v['state']=='STARTED'],
-                'admission_lease':t.get('admission'),'memory_reclaimed_by_pause':0,'automatic_reload_performed':False}
+                'admission_lease':t.get('admission'),'resource_request_id':t['id'],
+                'resource_lease_state':t.get('resource_lease_state','UNKNOWN'),
+                'memory_reclaimed_by_pause':0,'automatic_reload_performed':False}

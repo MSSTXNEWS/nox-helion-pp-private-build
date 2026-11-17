@@ -1,0 +1,58 @@
+{
+  "schema": "NOX_CONTROLLER_LIFECYCLE_NARROW_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewed_utc": "2026-11-17T18:26:29.075289+00:00",
+  "status": "BLOCKED_TWO_REPRODUCED_LIFECYCLE_DEFECTS",
+  "source_snapshot": [
+    {
+      "path": "warm_weights_controller/nox_warm/controller.py",
+      "sha256": "fc23c22e3f5cc301a9021194367df32e1d13a9f03851bb4ae9ca13f20b16635b",
+      "bytes": 35901
+    },
+    {
+      "path": "integrations_bridge/nox_integrations/memfd.py",
+      "sha256": "caec27e22c127885b3db9d0d739bbabbb7f17703e325fbbf2ff3d1b6575a398f",
+      "bytes": 4864
+    },
+    {
+      "path": "integrations_bridge/nox_integrations/drive.py",
+      "sha256": "2d985e33ed6501b95a085b85abbf5654d576513b9570710f706e678e8ff78c3b",
+      "bytes": 19308
+    }
+  ],
+  "regressions": {
+    "path": "test_additional_lifecycle.py",
+    "sha256": "13c271352c89c8a52494342cb5c7fa8a302123de58efde51d8749bd207449a10",
+    "tests": 2,
+    "failures": 2,
+    "errors": 0,
+    "results": "before_results.txt",
+    "results_sha256": "a4cd394927e16344d02068319918933bf5edf4a3958072fc0b463abad66a0b1a"
+  },
+  "blocking_findings": [
+    {
+      "id": "LIFE-01",
+      "function": "Controller.release_owned_ram",
+      "condition": "load callback duplicated the real memfd, then timed out; operation state STARTED, target group absent from journal loaded",
+      "observed": "A recycled verified unload receipt was accepted; controller handle closed and RAM lease released while actual duplicated loader FD remained readable",
+      "required_fix": "Refuse release while group load/unload effects or transition remain unresolved; require current group/handle/lease/fence-bound confirmed loader release before closing or removing registry",
+      "fixture_uses_real_memfd_and_dup": true
+    },
+    {
+      "id": "LIFE-02",
+      "function": "Controller.adopt_verified_state",
+      "condition": "pending mode lease mode-lease with fence9; settlement receipt has same lease ID but settled_fencing_token8",
+      "observed": "Stale settlement accepted and transition marked reconciled",
+      "required_fix": "When admission contains fence, exact settled fencing token must match; absent or stale fence HOLD with prior state preserved"
+    }
+  ],
+  "scope": "Only additional uncertain loader effect and stale lease settlement; author prior tests not duplicated",
+  "native_calls": 0,
+  "external_writes": 0,
+  "author_repos_modified": false,
+  "NEXT_READY": {
+    "owner": "mega_release_acceptance",
+    "action": "Fix the two exact lifecycle gates, freeze source again; reviewer reruns only these two regressions",
+    "native_install": "HOLD until fixes and receipt verified"
+  }
+}

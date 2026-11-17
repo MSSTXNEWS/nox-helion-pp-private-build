@@ -1,0 +1,35 @@
+{
+  "schema": "NOX_STAGE_ONLY_INDEPENDENT_REVIEW_V1",
+  "reviewer": "/root/launch_native_route",
+  "reviewed_at_utc": "2026-11-17T18:35:26.815390+00:00",
+  "verdict": "PASS_SOURCE_REVIEW_NO_BLOCKERS",
+  "concrete_blockers": [],
+  "entry_sha256": "945451e072fda3d56cd5835f775c064907a3f6584ae385455988c9e0583a1aa8",
+  "template_sha256": "11d71e06a9d9bc29a9e390308cf69c600525b38b622b1237150611701310e8b8",
+  "bundle_sha256": "ee142b97c81327edf0130e2aba46c431e1d1334396581b11922507310553aa2b",
+  "files": 12,
+  "source_bytes": 98385,
+  "independent_test_command": "python -m unittest discover -s . -p test_stage_independent.py -v",
+  "independent_tests_passed": 3,
+  "independent_tests_failed": 0,
+  "author_tests_reported_passed": 4,
+  "author_tests_repeated_by_reviewer": false,
+  "verified": [
+    "Frozen entry exactly reconstructed from reviewed template and embedded bundle",
+    "All12 payload pins agree with manifest; source strings are not imported or executed",
+    "Source input pins validated before writes; no overwrite and exact owner/mode/content readback",
+    "Existing CHAT_ACTIVE and owner_maintenance.lock binding preserved",
+    "Owner arrival after first file stops at next boundary, preserving partial evidence and owner flag",
+    "Ancestor symlink and FIFO destination collision do not write outside target or block",
+    "Completion marker scope is SOURCE_INSTALLED_NOT_BOUND only"
+  ],
+  "limitations": [
+    "Parent runner retains owner actor/repository/host/source authorization; environment strings alone are not credentials",
+    "Interrupted final-file write can leave partial own source; collision HOLD requires explicit reconciliation, not blind replay or overwrite",
+    "Maintenance lock serializes cooperating writers, not arbitrary external mutations",
+    "No native execution, import, activation, model call or network performed by reviewer"
+  ],
+  "native_executed": false,
+  "runtime_bound": false,
+  "native_canary_pass": false
+}

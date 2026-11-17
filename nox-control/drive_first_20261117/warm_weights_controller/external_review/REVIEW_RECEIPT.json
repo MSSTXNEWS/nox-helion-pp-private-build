@@ -1,0 +1,80 @@
+{
+  "schema": "NOX_CONTROLLER_LIFECYCLE_NARROW_REVIEW_V2",
+  "instructions_version": "0.0.6",
+  "reviewed_utc": "2026-11-17T18:28:49.022396+00:00",
+  "status": "PASS_TWO_TARGETED_BLOCKERS_RESOLVED",
+  "native_pass": false,
+  "source_commits": {
+    "warm_weights_controller": "f1b7df742f26d4acf3733c9a91da34809d2b87f4",
+    "integrations_bridge": "2e78cc5d037c824aac0749ae6a953e39673401ed"
+  },
+  "source_snapshot": [
+    {
+      "path": "warm_weights_controller/nox_warm/controller.py",
+      "sha256": "1312845745150bbfc52863fa6eab85d67da12d5108fb1cc1a7776d56621b5d05",
+      "bytes": 37941
+    },
+    {
+      "path": "integrations_bridge/nox_integrations/memfd.py",
+      "sha256": "ec9910a67228cc8681a1f1157f9107003bac4634548ec3130bc43573745b1386",
+      "bytes": 5877
+    },
+    {
+      "path": "integrations_bridge/nox_integrations/drive.py",
+      "sha256": "2d985e33ed6501b95a085b85abbf5654d576513b9570710f706e678e8ff78c3b",
+      "bytes": 19308
+    }
+  ],
+  "baseline_receipt": "BLOCKERS_BASELINE_RECEIPT.json",
+  "baseline_tests": {
+    "tests": 2,
+    "failures": 2,
+    "errors": 0,
+    "results_sha256": "a4cd394927e16344d02068319918933bf5edf4a3958072fc0b463abad66a0b1a"
+  },
+  "final_tests": {
+    "command": "python -m unittest discover -s nox_refresh/controller_lifecycle_review -p test_*.py -v",
+    "tests": 2,
+    "passed": 2,
+    "failures": 0,
+    "errors": 0,
+    "test_file_sha256": "13c271352c89c8a52494342cb5c7fa8a302123de58efde51d8749bd207449a10",
+    "results_sha256": "f346630f99876d98acf2ac04656c1398c3550eb6d8f19183d5c317bea5a6dfb1",
+    "broad_author_suites_not_repeated": true
+  },
+  "resolved_findings": [
+    {
+      "id": "LIFE-01",
+      "status": "RESOLVED",
+      "evidence": "Real sealed memfd is dup-ed by fixture loader before unknown ACK. Pending transition/STARTED load prevents release_owned_ram, retained handle and RAM lease remain intact. New unload proof binds group plus per-handle nonce, lease identity hash and strict integer fence before close/pop."
+    },
+    {
+      "id": "LIFE-02",
+      "status": "RESOLVED",
+      "evidence": "Settlement fence8 for current fence9 now HOLD; source additionally rejects missing or wrong-type fence. Only explicit trusted settlement marks STARTED operations RECONCILED, not DONE; reconciled transition ID cannot be replayed."
+    }
+  ],
+  "additional_blockers": [],
+  "preserved_contracts": [
+    "Protected chat/core/Engram groups remain non-releasable.",
+    "TRAIN checkpoint completeness and on-disk SHA are still checked before trainer resume; reviewed delta does not weaken those gates.",
+    "Uncertain load or release does not count as reclaimed memory or successful readiness.",
+    "Owner pause is combined with local pause; mandatory host callback remains required."
+  ],
+  "limits": [
+    "Local targeted controller/handle fixtures and source diff review only; not a live Drive, trainer, GPU or native host acceptance.",
+    "Existing trusted host must verify actual loader/inherited mmap/fd references and return fresh matching receipts; arbitrary JSON is not evidence.",
+    "Install matching controller and MemfdHandle versions together; old handle implementations lacking release_identity must remain HOLD.",
+    "All original broad tests were the author responsibility; this reviewer repeated only the two additional reproduced regressions."
+  ],
+  "native_calls": 0,
+  "external_writes": 0,
+  "author_repos_modified": false,
+  "NEXT_READY": {
+    "owner": "root and existing package author",
+    "action": "Package/publish the matching source commits, recompute manifests and delivery SHA, then bind through existing native owner lifecycle only after explicit resource/admission/acceptance checks.",
+    "native_install_status": "PENDING_NOT_PERFORMED_BY_REVIEWER",
+    "claim_state": "narrow read-only review complete; two blockers resolved; reviewer releases task slot",
+    "successor_refill": "parent refills next eligible READY work after release within current capacity"
+  }
+}
