@@ -123,10 +123,34 @@ class MentorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'consult') as call:
             task = {'id': 'fixture', 'handler': 'verify_q4', 'retries': 1, 'max_retries': 3}
             result = mentor.on_failure(task, 'file missing')
-            self.assertEqual(result['state'], 'BLOCKED_SENIOR_NOT_CONFIGURED')
+            self.assertEqual(result['state'], 'BLOCKED_SENIOR_NOT_CONFIGURED_OR_UNSAFE')
             self.assertEqual(task['status'], 'blocked')
             call.assert_not_called()
             self.assertTrue((Path(root) / 'memory/dispatcher_mentor/events.jsonl').exists())
+
+    def test_no_senior_transient_readonly_is_retried_once_with_durable_budget(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
+            with patch.object(mentor, 'stop_active', return_value=False), patch.object(mentor, 'discover_senior', return_value=None):
+                task = {'id': 'read-only-status', 'handler': 'verify_q4', 'retries': 0, 'max_retries': 3}
+                first = mentor.on_failure(task, 'connection timed out')
+                self.assertEqual(first['state'], 'BOUNDED_READ_ONLY_RETRY_NO_SENIOR')
+                self.assertEqual(task['status'], 'pending')
+                self.assertGreater(task['next_try'], time.time())
+                second = mentor.on_failure(task, 'connection timed out')
+                self.assertEqual(second['state'], 'BLOCKED_SENIOR_NOT_CONFIGURED_OR_UNSAFE')
+                self.assertEqual(task['status'], 'blocked')
+                ledger = list((Path(root) / 'memory/dispatcher_mentor/incidents').glob('*.json'))
+                self.assertEqual(len(ledger), 1)
+                self.assertEqual(json.loads(ledger[0].read_text())['attempts'], 1)
+
+    def test_no_senior_never_autoretries_mutating_work_or_active_stop(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'discover_senior', return_value=None):
+            for handler, stopping in (('exec_plan', False), ('start_qlora', False), ('verify_q4', True)):
+                with self.subTest(handler=handler, stop=stopping), patch.object(mentor, 'stop_active', return_value=stopping):
+                    task = {'id': 'unsafe-' + handler, 'handler': handler, 'retries': 0}
+                    result = mentor.on_failure(task, 'connection timed out')
+                    self.assertEqual(task['status'], 'blocked')
+                    self.assertFalse(result.get('auto_retry', False))
 
     def test_nox_chat_is_never_substituted_for_senior(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
