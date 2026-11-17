@@ -14,6 +14,7 @@ import multiprocessing as mp
 import os
 import queue
 import re
+import threading
 import time
 import urllib.request
 from collections import deque
@@ -24,6 +25,9 @@ SAFE_ROLE = re.compile(r'^[A-Za-z][A-Za-z0-9_.-]{0,63}$')
 MAX_TASK_TEXT_BYTES = 8192
 MAX_OUTPUT_BYTES = 16384
 HOSTS = {'127.0.0.1', 'localhost'}
+# The original pool has one outbox. Never reuse it across batches: a failed
+# long-running request may leave an old RESULT with a replayed TaskID.
+_POOL_CLAIM_LOCK = threading.Lock()
 
 
 class GateError(RuntimeError):
@@ -188,6 +192,14 @@ class Subagents:
                 return False
         if not admitted():
             raise GateError('HOLD_OWNER_STOP_OR_LEASE')
+        # One execution batch per OS pool. After timeout, owner STOP or a
+        # revoked lease, an in-flight worker can still enqueue an old RESULT.
+        # Its PID, role and TaskID would otherwise match a subsequent replay.
+        # Atomically refuse reuse; a new explicit pool gets fresh IPC queues.
+        with _POOL_CLAIM_LOCK:
+            if getattr(self, '_batch_used', False):
+                raise GateError('HOLD_SUBAGENT_POOL_REUSE')
+            self._batch_used = True
         remaining = dict(tasks)
         outcomes = {}
         active = set()
