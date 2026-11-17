@@ -1,0 +1,37 @@
+{
+  "schema": "NOX_MODEL_IDENTITY_ENTRY_BUILD_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "verdict": "PASS_SELECTED_ENTRY_AND_EXACT_BUNDLE_SOURCE",
+  "entry_sha256": "5cca3c2d88c5072bfa079f17ed4d936a452b1155486427bc3e8982466e1dced0",
+  "wrapper_sha256": "f961eb5e473a3e2e6488ba7585586a606c552f11f4c170241f23276cbd82bdcc",
+  "wrapper_bytes": 16032,
+  "helper_review": "INDEPENDENT_REVIEW.json",
+  "build_check": "ENTRY_BUILD_CHECK.json",
+  "all_three_module_bytes_match_reviewed_sources": true,
+  "outer_program_reconstructed_exactly": true,
+  "payload_executed_by_reviewer": false,
+  "guard_review": [
+    "Two allowlisted public owner-context env reads only; strict IDs and sanitized errors",
+    "Main-thread and no existing ITIMER_REAL preconditions; 20s hard deadline, previous SIGALRM restored on exit",
+    "Existing pinned maintenance lock only; O_RDONLY|NOFOLLOW|NONBLOCK|CLOEXEC, no create; descriptor and retained parents close on exit",
+    "Single typed kind/data receipt; output bounded below32768 including both operator marker lines",
+    "Three decoded module bytes SHA-checked before exec; entry module __name__ is not __main__, outer m.main executes once",
+    "No source/body/key exports, additional endpoint, provider/model POST, workflow/operator edit, or service mutation"
+  ],
+  "targeted_test": {
+    "name": "test_existing_alarm_is_not_changed_and_expiry_closes_lease",
+    "passed": 1,
+    "subcases": 2,
+    "tool_chunk_id": "8b9204",
+    "source_sha256": "2230252d552d493b0b01f3adec010cef1a3496a2c30e66edd63d10b9627e89d9",
+    "evidence": [
+      "An existing alarm causes HOLD before any directory open and setitimer is never called",
+      "Invoking the installed expiry handler during observe yields bounded HOLD, closes FD, clears alarm and restores prior signal handler; zero HTTP"
+    ]
+  },
+  "native_execution_status": "NOT_RUN_BY_REVIEWER",
+  "native_calls": 0,
+  "provider_http_calls": 0,
+  "scope_limit": "Current pinned primary listener model-file reference snapshot only. Does not prove chat success, weights, training, writer closure or readiness of NORMAL3."
+}

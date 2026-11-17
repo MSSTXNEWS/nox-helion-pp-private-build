@@ -1,0 +1,120 @@
+{
+  "schema": "NOX_MODEL_IDENTITY_SOURCE_RECEIPT_V1",
+  "recorded_utc": "2026-11-17T22:22:26.682813+00:00",
+  "status": "SOURCE_READY_INDEPENDENTLY_REVIEWED",
+  "files": {
+    "model_identity_projection.py": {
+      "sha256": "cb22df37c3b716c44c7fb8ab1828e4b220706ae985583bcfdb5ea58d4d596e65",
+      "bytes": 10522,
+      "git_blob_sha1": "b2393016e15e9578c26b12fb5b6c8b9737725cba"
+    },
+    "native_model_identity_readback.py": {
+      "sha256": "e2c6fe0db7712bbecb1d12ab135cef76043eb37fa3797f192dfa56d40404fde7",
+      "bytes": 19068,
+      "git_blob_sha1": "346ce9b4eb61b3544e51b94589a5385044cd5d6a"
+    },
+    "model_identity_audit_entry.py": {
+      "sha256": "5cca3c2d88c5072bfa079f17ed4d936a452b1155486427bc3e8982466e1dced0",
+      "bytes": 2936,
+      "git_blob_sha1": "119e853190a8abd80c29092cc5e2f1e390686db4"
+    },
+    "build_model_identity_audit.py": {
+      "sha256": "2af1d60852df21a14d6e4bbf71338e36c1b2e2b526c1e66e3866c9803b6f96cd",
+      "bytes": 2398,
+      "git_blob_sha1": "fcafbdd6d35eb47d1dbf8f82b9d967fc9b121b1c"
+    },
+    "test_native_model_identity.py": {
+      "sha256": "26819c54e488b679dd08bea01e298d795f2b08cccd4b2233f15aa5116afb9cc9",
+      "bytes": 9254,
+      "git_blob_sha1": "5c4486b384cd5f0f5a13f6402967bac161c5f8eb"
+    },
+    "README.md": {
+      "sha256": "b1838eb854cb8dab6469f78018b0aa231c27f8eed46172557b393b3b649eadd2",
+      "bytes": 8065,
+      "git_blob_sha1": "dd7f3d7b8a43adbb349e60a4d8533c01f68226fe"
+    },
+    "BUILD_MANIFEST.json": {
+      "sha256": "c24870ac286883dc6df81a9e72e6ee538ddb33c62d8bbf3d696e7f29b41a8eaa",
+      "bytes": 1028,
+      "git_blob_sha1": "e7664f63b56b1778d50615cde8d14bbf6e5b2024"
+    },
+    "public_payload/nox-control/owner_native_audit.py": {
+      "sha256": "f961eb5e473a3e2e6488ba7585586a606c552f11f4c170241f23276cbd82bdcc",
+      "bytes": 16032,
+      "git_blob_sha1": "70e721b24b2ad33955f2754e19e5b61bde57a8e8"
+    }
+  },
+  "runtime_source_basis": {
+    "run": 44187317953,
+    "request": 6962437325,
+    "source_sha": "781dada3e796a1a9bee7c49ae46a56feb8dcbf8a"
+  },
+  "projection_source_unchanged": true,
+  "reader_provenance": {
+    "source": "launcher_source_readback.py",
+    "source_sha256": "33d035e80053083f9e084a2c69f1c12710fa7bf4196556138e366600fc14802f",
+    "retained_methods": [
+      "__init__",
+      "check",
+      "read_fd",
+      "directory",
+      "close_dirs",
+      "verify_dirs",
+      "file"
+    ],
+    "proc_and_config_methods_not_copied": true
+  },
+  "entry_selection": {
+    "selected": "reviewed child0a3 base plus root explicit context-read counters and kind envelope",
+    "child_base_sha256": "0a3b0deab5e8d624a831613470aa8ee9ecb6c846d9cecb317758fd9352d13e8a",
+    "root_alternative_sha256": "9130684fd04b1fa7716df500ed05e1433db14676c0ad0c9d4408dadda6251761",
+    "reason": "Retains child main-thread/no-existing-timer precondition, nonblocking/no-follow/no-create lock with retained parent identity, cleanup, strict output marker budget; adds root explicit2publiccontextenvreads and typed receipt envelope",
+    "final_sha256": "5cca3c2d88c5072bfa079f17ed4d936a452b1155486427bc3e8982466e1dced0",
+    "final_wrapper_rebuilt_from_single_exact_entry": true
+  },
+  "tests": {
+    "unique_tests": 5,
+    "author_original_scope_tests": 4,
+    "author_entry_test": 1,
+    "entry_rechecked_after_entry_merge": true,
+    "status": "PASS",
+    "native_calls": 0,
+    "actual_network_calls": 0,
+    "real_private_key_reads": 0
+  },
+  "build": {
+    "embedded_modules_verified_exact": 3,
+    "wrapper_compile_ast_verified": true,
+    "entry_verified": "m.main()",
+    "payload_executed": false,
+    "independent_review_pending": false
+  },
+  "allowed_destinations": [
+    "http://127.0.0.1:8098/health"
+  ],
+  "maximum_gets": 1,
+  "maximum_posts": 0,
+  "maximum_model_requests": 0,
+  "scope": "CURRENT_PINNED_PRIMARY_LISTENER_ARGV_REFERENCE_ONLY",
+  "native_executed": false,
+  "published": false,
+  "no_private_source_inputs_or_keys_in_bundle": true,
+  "independent_reviews": {
+    "INDEPENDENT_REVIEW.json": {
+      "sha256": "f232039590edf7ca5ce4e98ca23d0111070088b200b92bf5620c8eb7cceee967",
+      "bytes": 5356
+    },
+    "ENTRY_BUNDLE_INDEPENDENT_REVIEW.json": {
+      "sha256": "718d442b66e9d8588059306c7bdae99651fbbe28d484d85665de088ddf43c018",
+      "bytes": 2156
+    }
+  },
+  "independent_tests": {
+    "helper_extra_tests": 1,
+    "helper_subcases": 2,
+    "entry_extra_tests": 1,
+    "entry_subcases": 2,
+    "full_author_suites_repeated": false,
+    "native_calls": 0
+  }
+}

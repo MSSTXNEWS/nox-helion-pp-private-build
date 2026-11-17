@@ -1,0 +1,81 @@
+{
+  "schema": "NOX_MODEL_NATIVE_HELPER_INDEPENDENT_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "verdict": "PASS_SOURCE_HELPER_SCOPE_OUTER_ENTRY_NOT_REVIEWED",
+  "native_ready": false,
+  "source_pins": {
+    "native_model_identity_readback.py": {
+      "sha256": "e2c6fe0db7712bbecb1d12ab135cef76043eb37fa3797f192dfa56d40404fde7",
+      "bytes": 19068,
+      "source_path": "/workspace/scratch/4136374a0419/nox_refresh/model_identity_native_20261118/native_model_identity_readback.py"
+    },
+    "model_identity_projection.py": {
+      "sha256": "cb22df37c3b716c44c7fb8ab1828e4b220706ae985583bcfdb5ea58d4d596e65",
+      "bytes": 10522,
+      "source_path": "/workspace/scratch/4136374a0419/nox_refresh/model_identity_native_20261118/model_identity_projection.py"
+    },
+    "test_native_model_identity.py": {
+      "sha256": "aad8cd58545aaa3d54d94e2fa8e53281699a8ff0b67e7ca3c1cbd667eb1dca33",
+      "bytes": 9077,
+      "source_path": "/workspace/scratch/4136374a0419/nox_refresh/model_identity_native_20261118/test_native_model_identity.py"
+    }
+  },
+  "process_pin_check": {
+    "source_path": "/workspace/scratch/a0bb3ea3693a/nox_optimization/O1/v24-cancel-witness/NATIVE_RESULT_44187317953.json",
+    "source_sha256": "61119c6552737f059182985741e0c256c1796a04d18011d3341e114d1996eb62",
+    "native_run": 44187317953,
+    "receipt_path": "receipts[0].data.launcher_source_readback.processes[6]",
+    "fields": {
+      "pid": 3266857,
+      "start_ticks": 172046662,
+      "ppid": 114,
+      "argv_sha256": "88bc6d7a0ed91c5363a7129514e354983e7285f8c13bcd00e84c3649192b56e4",
+      "exe_path_sha256": "4b67e9230f074d14e7f16587f6f9adbb2c7f094a0556d313b55ee320c0091815",
+      "cwd_sha256": "5ac55c8ee49f44fbeb36ae4536b880b5db18275d00d087bf23c7e6e7a81a143b",
+      "uid": 0
+    },
+    "all_equal": true
+  },
+  "lock_pin": {
+    "dev": 36,
+    "ino": 59886214,
+    "matches_existing_frozen_p0_native_witness_guard": true,
+    "actual_fd_validation_per_run_required": true
+  },
+  "reviewed": {
+    "network": "Single fixed http.client HTTPConnection(127.0.0.1,8098), one GET /health; no POST, proxy config, redirects, auth headers, props or guessed alternate listener",
+    "process": "Exact PID/start/ppid/argv digest/exe digest/cwd digest and four UID values before/after; no /proc enumeration or environment reads",
+    "listener": "Same process/self network namespace; exact one IPv4 LISTEN8098 loopback or wildcard row; positive inode must be held by fixed PID FD, verified again after GET; evidence is non-atomic",
+    "source_readset": "Five cb22 source pins, status/status.json<=131072 and config/backend.json<=65536; no-follow retained parent chains, regular root-owned files, before/after fingerprints",
+    "privacy": "No raw argv, config, credential flag value, source body, unrelated FD target or health body output. Only validated known-model-root GGUF basename from argv; other values withheld. Scalar metadata/source hashes are emitted. Typed status/backend projections retain prior documented whitelist.",
+    "lease": "Passed existing maintenance FD must match pinned dev/inode and named root-owned regular lock; exclusive nonblocking flock is reasserted before reads and at completion",
+    "bounds": "Total read2MiB; up to250 read attempts; FD enumeration<=512; output<=32768; helper15s cooperative; HTTP per-block timeout<=0.8s; outer hard deadline remains required",
+    "claims": "Current listener argv model reference only; weight content, architecture/training and previous chat backend all explicitly unverified; no fallback8085 observed"
+  },
+  "test_evidence": {
+    "author_existing_cases": 4,
+    "author_existing_result": "PASS reported; broad suite not repeated",
+    "independent_case": "test_wrong_lease_and_post_get_socket_change_cannot_assert_identity",
+    "independent_subcases": 2,
+    "independent_result": "PASS",
+    "tool_chunk_id": "f785c5",
+    "independent_test_sha256": "0665e7e976e5e3cc38e65c1fcc734f9caa57421678710d85df34e8dba0bfdc27",
+    "coverage": [
+      "wrong passed FD fails before source readback and GET",
+      "socket ownership changes after GET => HOLD and both verified flags stay false"
+    ],
+    "fixture_selection": "Frozen aad8 test copy; imports except new audit entry, and exact setUp/observe AST extracted. Entry wrapper was intentionally not imported.",
+    "harness_note": "Initial full fixture import failed because author concurrently added a separate entry import. No helper observe or network ran in that failed harness; isolated setup extraction fixed the review harness."
+  },
+  "limits_and_followup": [
+    "MAX_SECONDS is cooperative; selected outer entry must enforce hard wall deadline without disrupting a pre-existing alarm",
+    "http_gets is an attempt marker set before health(); it is not proof that a GET reached the server when connect/deadline fails",
+    "Maintenance lease check reasserts flock; it does not independently prove the caller held it before observe()",
+    "Helper PASS does not cover the mutable audit entry/wrapper, operator source selection or dispatch; root must reconcile exact entry/module pins once",
+    "Live source or PID drift yields HOLD; do not substitute fallback processes or relax pins"
+  ],
+  "native_calls_by_reviewer": 0,
+  "real_provider_http_calls": 0,
+  "remote_mutations": 0
+}
