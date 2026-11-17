@@ -100,11 +100,11 @@ class MemoryInventoryTests(unittest.TestCase):
             proc = Path(temp)
             worker = proc / '432'
             worker.mkdir()
-            (worker / 'cmdline').write_bytes(b'/usr/bin/python3\\0nox-worker.py\\0')
+            (worker / 'cmdline').write_bytes(b'/usr/bin/python3\0nox-worker.py\0')
             (worker / 'stat').write_text(
-                '432 (nox-worker) S 1 ' + ' '.join(['0'] * 17 + ['987654']) + '\\n')
-            (worker / 'environ').write_bytes(b'PROC_NAME=nox-worker\\0')
-            (worker / 'status').write_text('NSpid:\\t432\\nVmRSS:\\t10 kB\\nThreads:\\t1\\n')
+                '432 (nox-worker) S 1 ' + ' '.join(['0'] * 17 + ['987654']) + '\n')
+            (worker / 'environ').write_bytes(b'PROC_NAME=nox-worker\0')
+            (worker / 'status').write_text('NSpid:\t432\nVmRSS:\t10 kB\nThreads:\t1\n')
             real_read_text = Path.read_text
             count = [0]
 
@@ -121,8 +121,8 @@ class MemoryInventoryTests(unittest.TestCase):
                     return (0, '432, GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee, 2048')
                 return (0, '')
 
-            with mock.patch.object(inspector, 'PROC', proc), \\
-                 mock.patch.object(inspector, 'run', side_effect=fake_run), \\
+            with mock.patch.object(inspector, 'PROC', proc), \
+                 mock.patch.object(inspector, 'run', side_effect=fake_run), \
                  mock.patch.object(Path, 'read_text', raced_read_text):
                 rows = inspector.processes()
             self.assertEqual(count[0], 2)
