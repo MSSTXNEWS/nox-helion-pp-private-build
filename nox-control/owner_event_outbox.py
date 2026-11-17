@@ -4,6 +4,7 @@
 This is an inline outbox, not another worker, scheduler or notification service.
 Event files are immutable; reconnecting a browser only reads them and never
 changes task admission, execution, cancellation or memory-learning acceptance.
+Reads may repair interrupted local dedup/cursor indices under the existing lock.
 """
 from __future__ import annotations
 
@@ -339,8 +340,11 @@ def events_after(cursor=None, limit=20):
         raise ValueError('INVALID_EVENT_CURSOR')
     if type(limit) is not int or not 1 <= limit <= 50:
         raise ValueError('INVALID_EVENT_LIMIT')
-    with locked(shared=True) as root:
+    # A crash may persist the event before its cursor. Repair under the existing
+    # exclusive, nonblocking lock so reconnect does not depend on another publish.
+    with locked() as root:
         meta = _meta(root)
+        _recover(root, meta)
         latest = meta['last_sequence']
         start = max(0, latest - limit) if cursor is None else min(cursor, latest)
         rows = []
