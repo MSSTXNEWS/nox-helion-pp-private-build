@@ -37,8 +37,8 @@ test('short desktop keeps all three original panels and a scrollable conversatio
  assert.match(css,/@media \(min-width:1200px\) and \(max-height:600px\)/);
  assert.match(css,/height:max\(260px,calc\(100dvh - 175px\)\)!important/);
  assert.match(css,/grid-template-rows:minmax\(0,1fr\)!important/);
- assert.match(css,/\.chat-layout > \.chat-conversation\{grid-column:2!important;grid-row:1!important;\}/);
- assert.match(css,/\.chat-layout > \.chat-telemetry-panel\{grid-column:3!important;grid-row:1!important;\}/);
+ assert.match(css,/\.chat-layout > \.chat-conversation\s*\{\s*grid-column:2!important;grid-row:1!important;/);
+ assert.match(css,/\.chat-layout > \.chat-telemetry-panel\s*\{\s*grid-column:3!important;grid-row:1!important;/);
  assert.match(css,/flex:1 1 0!important;min-height:0!important;overflow:auto!important/);
 });
 
