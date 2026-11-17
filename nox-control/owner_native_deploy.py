@@ -10,6 +10,9 @@ ROOT=Path('/root/nox');STATE=ROOT/'state'
 FLAGS=(ROOT/'STOP',STATE/'OWNER_MAINTENANCE.flag',STATE/'TRAIN_HOLD.flag',STATE/'TRAIN_PAUSE_REQUEST.flag')
 SAFE_PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 DEADLINE=None
+KNOWN_NOX_SERVICES=('nox-agent-architect-t859u', 'nox-agent-integrator-t859u', 'nox-agent-tuner-t858u', 'nox-chat-8081', 'nox-checklist-worker', 'nox-cores', 'nox-dialog-miner', 'nox-dispatcher-t855u', 'nox-distill-worm-t811u', 'nox-downloads-t802u', 'nox-embed', 'nox-gpu-watchdog-t865u', 'nox-hidden-router', 'nox-lifeline-guard', 'nox-media-comfyui', 'nox-offload-t850u', 'nox-priority-scheduler', 'nox-proxy', 'nox-report-heartbeat-t811u', 'nox-self-improve-t846u', 'nox-self-learning-loop', 'nox-selfheal', 'nox-teacher-bringup', 'nox-teacher-serve-t811u', 'nox-train-volta-t866u', 'nox-train-worm-t811u', 'nox-vram-guard-t829u', 'nox-watch-swap-t845u')
+OBSERVATION={}
+AST_READ_STARTED=False
 class Hold(RuntimeError): pass
 
 def require(value, code):
@@ -73,11 +76,84 @@ def execute(argv, seconds=12, pass_fds=(), collect=False):
 def binary(name):
     p=shutil.which(name,path=SAFE_PATH);require(p is not None,'EXECUTABLE_UNAVAILABLE');return p
 
-def stopped():
+def service_status():
     rc,raw=execute([binary('supervisorctl'),'status'],12,collect=True)
-    rows=[line.split() for line in raw.decode('utf8','replace').splitlines() if line.startswith('nox-')]
-    require(rc in (0,3) and bool(rows) and all(len(x)>1 and x[1] in ('STOPPED','EXITED','FATAL') for x in rows),'SERVICES_NOT_STOPPED')
+    allowed_states={'STOPPED','STARTING','RUNNING','BACKOFF','STOPPING','EXITED','FATAL','UNKNOWN'}
+    rows=[]
+    for line in raw.decode('utf8','replace').splitlines():
+        parts=line.split()
+        if not parts or not parts[0].startswith('nox-'):continue
+        require(len(rows)<64 and len(parts)>1 and re.fullmatch(r'nox-[A-Za-z0-9_.:-]{1,90}',parts[0]),'SERVICE_OUTPUT_SCOPE')
+        rows.append({'name':parts[0],'state':parts[1] if parts[1] in allowed_states else 'UNKNOWN'})
+    OBSERVATION['supervisor_status']=rows
+    OBSERVATION['supervisor_exit_code']=rc
+    require(rc in (0,3) and bool(rows),'SUPERVISOR_STATUS_UNAVAILABLE')
+    return rows
+
+def stopped():
+    rows=service_status()
+    require(all(x['state'] in ('STOPPED','EXITED','FATAL') for x in rows),'SERVICES_NOT_STOPPED')
     return len(rows)
+
+def flag_presence():
+    result={p.name:bool(p.is_file() and not p.is_symlink()) for p in FLAGS}
+    OBSERVATION['stop_flag_presence']=result
+    return result
+
+TRAINER_FILES={'train_full_base_zero3.py','qwen_student_training_entry.py','qwen_student_training_entry_revision.py','qwen_student_training_entry_successor.py','qwen_student_training_entry_transport.py','hybrid_training_entry.py'}
+def active_training(rows):
+    services=[r['name'] for r in rows if r['state'] in ('RUNNING','STARTING','STOPPING') and re.search(r'train|distill|self-learning|self-improve',r['name'])]
+    count=0;scanned=0
+    for entry in os.scandir('/proc'):
+        if not entry.name.isdigit():continue
+        scanned+=1;require(scanned<=4096,'PROCESS_SCAN_BOUND')
+        try:
+            fd=os.open('/proc/'+entry.name+'/cmdline',os.O_RDONLY|os.O_NOFOLLOW)
+            try:raw=os.read(fd,8193)
+            finally:os.close(fd)
+            if len(raw)>8192:continue
+            args=raw.split(b'\0')
+            if any(os.path.basename(a.decode('utf8','ignore')) in TRAINER_FILES for a in args):count+=1
+        except (FileNotFoundError,ProcessLookupError):continue
+        except PermissionError:raise Hold('HOLD_CAPABILITY_PROCESS_VISIBILITY') from None
+    OBSERVATION['active_training_services']=services
+    OBSERVATION['known_trainer_process_count']=count
+    OBSERVATION['trainer_match_count']=count
+    return bool(services or count)
+
+def ensure_stop_flags():
+    created=[]
+    for path in FLAGS:
+        plain(path)
+        if path.exists():read_regular(path);continue
+        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+        try:
+            os.write(fd,b'OWNER_FULL_STOP_NOX_49_20261117\n');os.fsync(fd)
+        finally:os.close(fd)
+        created.append(path.name)
+        OBSERVATION['stop_flags_created']=list(created)
+    flag_presence()
+    return created
+
+def full_stop():
+    flag_presence();rows=service_status();OBSERVATION['supervisor_before']=rows
+    require(not active_training(rows),'ACTIVE_TRAINER_NO_VERIFIED_SAFEPOINT')
+    # Existing deployed trainer throws on STOP before save. Never touch active training here.
+    require(all(r['name'] in KNOWN_NOX_SERVICES for r in rows),'UNREVIEWED_NOX_SERVICE')
+    ensure_stop_flags();baseline=flags()
+    # Check again immediately before supervisor control, while the owner lease is held.
+    rows=service_status();require(not active_training(rows),'ACTIVE_TRAINER_NO_VERIFIED_SAFEPOINT')
+    targets=[r['name'] for r in rows if r['state'] not in ('STOPPED','EXITED','FATAL')]
+    OBSERVATION['stop_targets']=targets;OBSERVATION['supervisor_stop_attempted']=bool(targets)
+    if targets:
+        rc,_=execute([binary('supervisorctl'),'stop',*targets],150,collect=False)
+        OBSERVATION['supervisor_stop_exit_code']=rc
+    count=stopped();require(flags()==baseline,'FLAGS_CHANGED')
+    OBSERVATION['stop_flags_unchanged_after_control']=True
+    OBSERVATION['supervisor_after']=OBSERVATION['supervisor_status']
+    OBSERVATION['all_noX_services_quiescent']=True
+    OBSERVATION['all_states_literal_STOPPED']=all(r['state']=='STOPPED' for r in OBSERVATION['supervisor_status'])
+    return count,baseline
 
 SCRIPT_NAMES=('nox_v29_chat_bridge.py','nox_dispatcher_t855u.py','owner_dispatcher_mentor.py','owner_task_plans.py','owner_s03_gateway.py','owner_task_lifecycle.py')
 MODULE_ROOTS={
@@ -171,34 +247,42 @@ def sources():
     paths=list(dict.fromkeys(paths));require(len(paths)<=14,'SOURCE_COUNT')
     return [inspect_source(p) for p in paths],resolution
 def main():
-    global DEADLINE
-    DEADLINE=time.monotonic()+75
+    global DEADLINE,AST_READ_STARTED
+    DEADLINE=time.monotonic()+240;AST_READ_STARTED=False;OBSERVATION.clear()
     source=os.environ.get('NOX_OWNER_SOURCE_SHA','');request=os.environ.get('NOX_OWNER_REQUEST_ID','')
     require(re.fullmatch('[a-f0-9]{40}',source) and re.fullmatch('[0-9]{1,24}',request),'OWNER_CONTEXT')
-    before=flags();count=stopped();lockpath=plain(STATE/'owner_maintenance.lock')
+    flag_presence()
+    lockpath=plain(STATE/'owner_maintenance.lock')
     lock=os.open(lockpath,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
     try:
         info=os.fstat(lock);require(stat.S_ISREG(info.st_mode) and info.st_uid==os.geteuid(),'LEASE_FILE')
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise Hold('HOLD_CAPABILITY_LEASE_BUSY') from None
-        require(flags()==before,'FLAGS_CHANGED')
-        rows,resolution=sources()
+        count,before=full_stop()
+        AST_READ_STARTED=True;rows,resolution=sources()
         require(flags()==before,'FLAGS_CHANGED');stopped()
-        result={'schema':'NOX_S03_WRITER_AST_CONTRACT_V1','run_id':'NOX-49-20261117','instance':60509551,
+        result={'schema':'NOX_STOP_AND_S03_AST_V1','run_id':'NOX-49-20261117','instance':60509551,
                 'source_sha':source,'request':request,'sources':rows,'module_resolution':resolution,
-                'state':'READ_ONLY_AST_INSPECTION_COMPLETE','stopped_services':count,'stop_flags_unchanged':True,
-                'database_opened':False,'weights_opened':False,'runtime_modules_imported':False,'source_writes':0,
-                'private_literals_exported':False,'runtime_bindings_verified':False,'server_mutations':0}
+                'state':'OLD_NOX_QUIESCENT_AND_AST_INSPECTION_COMPLETE','stopped_services':count,'stop_flags_unchanged':True,
+                'database_opened':False,'weights_opened':False,'runtime_modules_imported':False,
+                'source_writes':len(OBSERVATION.get('stop_flags_created',[])),
+                'private_literals_exported':False,'runtime_bindings_verified':False,'stop_observation':OBSERVATION,
+                'training_resume':False,'checkpoint_created_claim':False,'source_deleted':False,'ast_read_started':True}
         require(len(json.dumps(result).encode())<=MAX_OUTPUT,'TOTAL_OUTPUT_BOUND')
         return result
     finally:os.close(lock)
+def failure_record(exc):
+    return {'schema':'NOX_STOP_AND_S03_AST_V1','run_id':'NOX-49-20261117','instance':60509551,
+            'state':str(exc) if isinstance(exc,Hold) else 'HOLD_CAPABILITY_UNEXPECTED',
+            'source_writes':len(OBSERVATION.get('stop_flags_created',[])), 'database_opened':False,'weights_opened':False,
+            'stop_observation':OBSERVATION,'ast_read_started':AST_READ_STARTED,'training_resume':False,'source_deleted':False}
 if __name__=='__main__':
     def deadline(*args):raise Hold('HOLD_CAPABILITY_DEADLINE')
-    signal.signal(signal.SIGALRM,deadline);signal.alarm(80)
+    signal.signal(signal.SIGALRM,deadline);signal.alarm(250)
     try:
         print('NOX_MAINT_S03_CONTRACT='+json.dumps(main(),sort_keys=True),flush=True)
         print('NOX_MAINT_DEPLOY_COMPLETE=true',flush=True)
     except Exception as exc:
-        print('NOX_MAINT_S03_CONTRACT='+json.dumps({'state':str(exc) if isinstance(exc,Hold) else 'HOLD_CAPABILITY_UNEXPECTED','source_writes':0,'database_opened':False,'weights_opened':False}),flush=True)
+        print('NOX_MAINT_S03_CONTRACT='+json.dumps(failure_record(exc),sort_keys=True),flush=True)
         raise SystemExit(2)
     finally:signal.alarm(0)
