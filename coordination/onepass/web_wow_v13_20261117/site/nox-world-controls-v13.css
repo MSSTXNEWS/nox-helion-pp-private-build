@@ -1,0 +1,62 @@
+/* NOX V13 · Five world-specific physical button/material languages, ONE living HOME background.
+   This changes only foreground UI surfaces; no new 3D renderer or opaque panel. */
+html[data-nox-world] body.nox-shared-glass{
+ --nox-ui-rgb:var(--nox-world-rgb,233,180,101);
+ --nox-ui-highlight:rgba(var(--nox-ui-rgb),.27);
+ --nox-ui-line:rgba(var(--nox-ui-rgb),.38);
+ --nox-ui-shape:12px;
+ --nox-ui-clip:none;
+ --nox-ui-sweep:linear-gradient(112deg,transparent 27%,rgba(255,255,255,.11) 48%,transparent 71%);
+}
+html[data-nox-world] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nox-master-tile,.nx-btn,.nox-v7-scene,.nox-visual-choice):not(.stop):not([data-action=stop]):not(#stopButton):not(#nx-stop){
+ position:relative;overflow:hidden;isolation:isolate;
+ border-radius:var(--nox-ui-shape)!important;
+ border-color:var(--nox-ui-line)!important;
+ background-image:linear-gradient(145deg,rgba(var(--nox-ui-rgb),.12),rgba(200,217,233,.05) 36%,rgba(5,11,20,.31))!important;
+ background-color:rgba(5,10,17,.21)!important;
+ backdrop-filter:blur(12px) saturate(140%)!important;-webkit-backdrop-filter:blur(12px) saturate(140%)!important;
+ clip-path:var(--nox-ui-clip);box-shadow:inset 0 1px rgba(255,255,255,.15),inset 0 -4px rgba(0,0,0,.10),0 5px 18px rgba(0,0,0,.14)!important;
+ transition:transform .23s,border-color .23s,box-shadow .27s,background-color .23s;
+}
+html[data-nox-world] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nox-master-tile,.nx-btn,.nox-v7-scene,.nox-visual-choice):not(.stop):not([data-action=stop]):is(:hover,:focus-visible){
+ transform:translateY(-2px);border-color:rgba(var(--nox-ui-rgb),.83)!important;
+ box-shadow:inset 0 1px rgba(255,255,255,.21),0 0 19px rgba(var(--nox-ui-rgb),.18),0 8px 27px rgba(0,0,0,.26)!important;
+}
+html[data-nox-world] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nox-master-tile,.nx-btn,.nox-v7-scene,.nox-visual-choice):focus-visible{outline:2px solid rgb(var(--nox-ui-rgb))!important;outline-offset:3px!important}
+/* HELION: polished black-gold droplets, asymmetric molten edge. */
+html[data-nox-world=helion] body.nox-shared-glass{--nox-ui-shape:18px 6px 20px 7px}
+html[data-nox-world=helion] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nx-btn,.nox-master-tile):not(.stop):not([data-action=stop]):not(#stopButton):not(#nx-stop){
+ background-image:radial-gradient(ellipse at 18% 0%,rgba(var(--nox-ui-rgb),.20),transparent 58%),linear-gradient(158deg,rgba(239,230,205,.11),rgba(3,7,12,.15) 45%,rgba(0,0,0,.47))!important;
+}
+/* CHRONOS: machined brass, numbered-plate facets and double engraving. */
+html[data-nox-world=chronos] body.nox-shared-glass{--nox-ui-shape:3px 13px 3px 13px;--nox-ui-line:rgba(var(--nox-ui-rgb),.49)}
+html[data-nox-world=chronos] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nx-btn,.nox-master-tile):not(.stop):not([data-action=stop]):not(#stopButton):not(#nx-stop){
+ border-style:double!important;border-width:2px!important;
+ background-image:repeating-linear-gradient(90deg,transparent 0 13px,rgba(var(--nox-ui-rgb),.025) 14px 15px),linear-gradient(150deg,rgba(var(--nox-ui-rgb),.21),rgba(5,10,15,.30) 70%)!important;
+}
+/* SOMNIUM: physical mother-of-pearl liquid glass (one background stays unchanged). */
+html[data-nox-world=somnium] body.nox-shared-glass{--nox-ui-shape:29% 15% 29% 11% / 18% 34% 21% 30%}
+html[data-nox-world=somnium] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nx-btn,.nox-master-tile):not(.stop):not([data-action=stop]):not(#stopButton):not(#nx-stop){
+ background-image:radial-gradient(circle at 18% 6%,rgba(216,155,245,.21),transparent 59%),linear-gradient(136deg,rgba(78,191,225,.12),rgba(6,10,22,.24) 54%,rgba(var(--nox-ui-rgb),.10))!important;
+ backdrop-filter:blur(18px) saturate(160%)!important;
+}
+/* FORGE: rough cut refractory metal, no button 'pills'. */
+html[data-nox-world=forge] body.nox-shared-glass{--nox-ui-shape:0px;--nox-ui-clip:polygon(0 0,92% 0,100% 21%,100% 100%,8% 100%,0 78%)}
+html[data-nox-world=forge] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nx-btn,.nox-master-tile):not(.stop):not([data-action=stop]):not(#stopButton):not(#nx-stop){
+ background-image:repeating-linear-gradient(128deg,transparent 0 9px,rgba(255,255,255,.035) 10px 11px),linear-gradient(161deg,rgba(var(--nox-ui-rgb),.21),rgba(9,13,18,.30) 64%,rgba(0,0,0,.42))!important;
+}
+/* SYNAPSE: luminous membrane cells and semantic-graph impulses. */
+html[data-nox-world=synapse] body.nox-shared-glass{--nox-ui-shape:26px 13px 27px 13px}
+html[data-nox-world=synapse] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nx-btn,.nox-master-tile):not(.stop):not([data-action=stop]):not(#stopButton):not(#nx-stop){
+ background-image:radial-gradient(circle at 9% 15%,rgba(var(--nox-ui-rgb),.3) 0 2px,transparent 3px),radial-gradient(circle at 90% 85%,rgba(var(--nox-ui-rgb),.21) 0 2px,transparent 3px),linear-gradient(146deg,rgba(var(--nox-ui-rgb),.15),rgba(4,12,20,.24) 75%)!important;
+}
+/* Glass panels stay transparent while their EDGE language adapts to world, not the scene. */
+html[data-nox-world] body.nox-shared-glass :is(.panel,.nx-glass,.nox-master-preview,.nox-master-hero,.nox-v9-libcard){border-color:rgba(var(--nox-ui-rgb),.28)!important}
+html[data-nox-world=forge] body.nox-shared-glass :is(.panel,.nx-glass,.nox-master-preview,.nox-master-hero){border-radius:3px!important}
+html[data-nox-world=somnium] body.nox-shared-glass :is(.panel,.nx-glass,.nox-master-preview,.nox-master-hero){border-radius:22px 9px 24px 10px!important}
+html[data-nox-world=synapse] body.nox-shared-glass :is(.panel,.nx-glass,.nox-master-preview,.nox-master-hero){border-radius:18px!important}
+/* STOP remains red, uncut and visibly separate from decorative material choices. */
+body.nox-shared-glass :is(.stop,#nx-stop,#stopButton,[data-action=stop]){clip-path:none!important;transform:none!important;filter:none!important;border-radius:10px!important}
+/* Buttons must remain usable even when ECO or Reduced Motion requests stillness. */
+html[data-nox-demo-mode=ECO] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nx-btn){backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important}
+@media(prefers-reduced-motion:reduce){html[data-nox-world] body.nox-shared-glass :is(.graphic-button,.nox-master-action,.nox-master-tile,.nx-btn,.nox-v7-scene,.nox-visual-choice){animation:none!important;transition:none!important;transform:none!important}}
