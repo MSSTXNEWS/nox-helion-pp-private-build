@@ -114,4 +114,47 @@ class ProgressEvidenceTests(unittest.TestCase):
             self.assertFalse(v['live_progress_verified'])
             self.assertEqual(v['writer_lease'],'UNKNOWN_NOT_OBTAINED')
 
+    def test_v14_six_configured_never_means_six_native_workers(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            (root/'config').mkdir()
+            (root/'scripts').mkdir()
+            (root/'scripts/nox_dispatcher_t855u.py').write_text('running = True\\n')
+            with mock.patch.object(mod,'ROOT',root), mock.patch.object(
+                mod,'_dispatcher_progress_observation',
+                return_value={'state':'OBSERVED_LOCAL_COUNTER_ADVANCE_UNATTESTED',
+                              'live_progress_verified':False, 'writer_lease':'UNKNOWN_NOT_OBTAINED'}):
+                for raw,valid_config in ((6,True),('6',False),(True,False),(-1,False),(6.0,False)):
+                    (root/'config/dispatcher_agents_t868u.json').write_text(
+                        json.dumps({'workers':raw,'min_workers':3,'max_workers':6}))
+                    evidence=mod.dispatcher()
+                    self.assertIs(evidence['configuration_verified'],valid_config)
+                    self.assertIs(evidence['verified'],False)
+                    self.assertIs(evidence['native_worker_count_verified'],False)
+                    self.assertIsNone(evidence['native_worker_count'])
+                    self.assertIs(evidence['worker_claims_verified'],False)
+                    self.assertIn('NATIVE_SIX_WORKER_PID_START_TICKS_TASKID_CLAIMS_REQUIRED',
+                                  evidence['blockers'])
+
+    def test_v14_component_receipt_does_not_accept_config_as_native_done(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            (root/'config').mkdir()
+            (root/'scripts').mkdir()
+            (root/'scripts/nox_dispatcher_t855u.py').write_text('running = True\\n')
+            (root/'config/dispatcher_agents_t868u.json').write_text('{"workers":6}')
+            with mock.patch.object(mod,'ROOT',root), mock.patch.object(
+                mod,'_dispatcher_progress_observation',
+                return_value={'state':'HOLD_NO_COMPARABLE_PRIOR_SAMPLE',
+                              'live_progress_verified':False, 'writer_lease':'UNKNOWN_NOT_OBTAINED'}):
+                success,output=mod.run_component_task({'id':'owner.dispatcher','claimed_by':'synthetic'})
+                self.assertFalse(success)
+                self.assertFalse(output['verified'])
+                receipt=json.loads((root/'state/owner_components/owner.dispatcher.json').read_text())
+                self.assertFalse(receipt['success'])
+                self.assertEqual(receipt['evidence']['workers'],6)
+                self.assertFalse(receipt['evidence']['native_worker_count_verified'])
+
 if __name__=='__main__':unittest.main()
