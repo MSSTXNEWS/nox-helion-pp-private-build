@@ -5,7 +5,8 @@
     "Existing Resonance CSS/JS and exact HTML patch",
     "Bounded official-auth loopback acceptance canary",
     "Local fixtures and native apply parent report",
-    "Fixed-path read-only integration binding AST inventory"
+    "Fixed-path read-only integration binding AST inventory",
+    "Pinned owner-UI composition evidence and independent read-only reconciliation review"
   ],
   "local_validation": "ACCEPTANCE_TEST_RECEIPT.json",
   "native_apply_parent_report": "NATIVE_UI_APPLY_PARENT_REPORT.json",
@@ -20,13 +21,13 @@
     },
     {
       "path": "ACCEPTANCE.md",
-      "bytes": 6490,
-      "sha256": "90ec246fef707c659a6c2fd1fa640391bf87e1b48caaad1e934b2ed6ce506e8a"
+      "bytes": 9775,
+      "sha256": "90e54da3e6c3ad098ae75f209ad5cc8d464209f3ff1db496f13aab78d023bcd8"
     },
     {
       "path": "ACCEPTANCE_TEST_RECEIPT.json",
-      "bytes": 1523,
-      "sha256": "988715ee1cf252ca328999c0014a03a217a672b8e47064b595fa657eb3ffa1e6"
+      "bytes": 2131,
+      "sha256": "2c1ede4b572a6ddcb7a8ee8739ff9fd1534214589de49c0b0c0243d4027ad26a"
     },
     {
       "path": "AUTH_PATH_DIAGNOSTIC.md",
@@ -34,9 +35,14 @@
       "sha256": "8379b11abd3a5958d4ed48acc6ac7cd9c21d6fe9feb65e3830ea93b081933da4"
     },
     {
+      "path": "EVIDENCE_INDEX.md",
+      "bytes": 1213,
+      "sha256": "59e7712fc072e23215ec372451eb659b0dcd9c3166d9d22c8c5ca67b6a8575e9"
+    },
+    {
       "path": "NATIVE_CANARY_PARENT_REPORT.json",
-      "bytes": 1753,
-      "sha256": "5f3c6132040902d84df0d035c7d1aa71ffc0a3fc521904edb5baccdef390195a"
+      "bytes": 2865,
+      "sha256": "b2abca63eeb9c4cc545acdedb00933dc082c8831614dc42377a98550e9ba0d8a"
     },
     {
       "path": "NATIVE_UI_APPLY_PARENT_REPORT.json",
@@ -54,14 +60,24 @@
       "sha256": "7e85367df9f0d1bd46bc2b8b30e1f17765f71a1e54841426b71d3840b611d518"
     },
     {
+      "path": "evidence/HTML_TRANSFORM_MATCH.json",
+      "bytes": 1600,
+      "sha256": "a36427665537af7baee4bb4cb101aa82f1b8ea9e4a873d07e6d738cea62eb16d"
+    },
+    {
+      "path": "evidence/NATIVE_CANARY_V4_RESULT_20261117.json",
+      "bytes": 29293,
+      "sha256": "ca69ff4e4499af9e16d4b45e8aba2809182a73c1a367fd06f3b610ee49d1a46a"
+    },
+    {
       "path": "manifest.json",
       "bytes": 1385,
       "sha256": "24c476609815f1c12af360bab0d11a497f0bc05d457e98897740e20513e012e9"
     },
     {
       "path": "native_acceptance.py",
-      "bytes": 37718,
-      "sha256": "2e319aaa381ebecae73de00772397d5d4b640810728be37f78606e3a62372dbf"
+      "bytes": 46684,
+      "sha256": "7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e"
     },
     {
       "path": "native_auth_path_diagnostic.py",
@@ -94,6 +110,26 @@
       "sha256": "323f9153db7101e85280f9302738d078f0504fa7db4ba77d98ce794eef9455c9"
     },
     {
+      "path": "reviews/RECONCILE_WRAPPER_REVIEW.json",
+      "bytes": 940,
+      "sha256": "705ccb9fa4c11f4ecfdd7aff05e049813cc5ad84dfa596296b6b2ac3ddfe31b6"
+    },
+    {
+      "path": "reviews/reconcile/REVIEW.md",
+      "bytes": 2086,
+      "sha256": "953c67c4813fe3224b896dba15812a0f1c3abd70835f231e89bd7d84d2a71f7d"
+    },
+    {
+      "path": "reviews/reconcile/REVIEW_RECEIPT.json",
+      "bytes": 3675,
+      "sha256": "4b19fa6c6cb2039cc903496a79506ddd2dba99182071940a5aa2ca5f73c8ac3d"
+    },
+    {
+      "path": "reviews/reconcile/TEST_RESULTS.txt",
+      "bytes": 570,
+      "sha256": "2a5ce4cfafa9c1ac1bda4f8f377e9add388a49706f7c8a1cdc5ed8e216793faf"
+    },
+    {
       "path": "source_after/resonance.html",
       "bytes": 13984,
       "sha256": "597ede7cf68e7606fc6b761f7d366e14737f86ffa50d648b637857b2275d070b"
@@ -105,8 +141,8 @@
     },
     {
       "path": "tests/test_acceptance.py",
-      "bytes": 13335,
-      "sha256": "ab095aae88fab4d295b223dbf0a864014868d6af80b81e1177964cf9a1b4d2eb"
+      "bytes": 18648,
+      "sha256": "3eea46f89866d9701826f40266cd193abaa50d91746a92cdba9dadff1e0b7a92"
     },
     {
       "path": "tests/test_auth_diagnostic.py",
@@ -130,5 +166,5 @@
     }
   ],
   "native_canary_parent_report": "NATIVE_CANARY_PARENT_REPORT.json",
-  "latest_source_change": "Version4 independent UI/chat acceptance with fixed-pin serving-source fingerprint diagnostics; native acceptance pending"
+  "latest_source_change": "Core7b82ccbb: exact observed owner-UI composition and fixed-own-dialog read-only reconciliation; native read-only result pending"
 }

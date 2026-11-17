@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import re
 from pathlib import Path
 import tempfile
 import time
@@ -10,6 +11,22 @@ from unittest import mock
 SPEC = importlib.util.spec_from_file_location('acceptance', Path(__file__).parents[1] / 'native_acceptance.py')
 m = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(m)
+
+def decorated_html_fixture():
+    raw = (Path(__file__).parents[1] / 'source_after/resonance.html').read_text()
+    raw = raw.replace('<head>', m.OWNER_HTML_INJECTION.decode(), 1)
+    raw = raw.replace('="/pc/', '="/nox-web-v29/pc/').replace("='/pc/", "='/nox-web-v29/pc/")
+    def mark_link(match):
+        tag = match.group(0)
+        if re.search(r'\bhref\s*=\s*([\"\'])/nox-web-v29/pc/v25/nox-shell-v25\.css(?:\?[^\"\']*)?\1', tag, re.I):
+            end = '/>' if tag.endswith('/>') else '>'
+            return tag[:-len(end)] + ' data-n25-css="1"' + end
+        return tag
+    raw = re.sub(r'<link\b[^>]*>', mark_link, raw, flags=re.I)
+    extra = '\n<meta name="nox-live-build" content="NOX_OWNER_LIVE_RESONANCE_20261116">\n'
+    for name in ('nox-v135-resonance-owner-bridge.js', 'nox-v137-owner-self-status.js', 'owner-chat-ui.js', 'owner-presence.js'):
+        extra += '<script defer src="/nox-web-v29/' + name + '" data-nox-live-owner="1"></script>\n'
+    return raw.replace('</head>', extra + '</head>', 1).encode()
 
 class AcceptanceTests(unittest.TestCase):
     def test_auth_ast_no_eval_no_secret_export(self):
@@ -131,6 +148,13 @@ def _read_chat_password():
         self.assertEqual(projection['functions'][0]['replacements'][0]['args'][1]['identifier'], 'OVERLAY')
         self.assertNotIn(sentinel, json.dumps(projection))
         self.assertIn(m.digest(sentinel.encode()), json.dumps(projection))
+        exact = decorated_html_fixture()
+        self.assertEqual(len(exact), 14519)
+        self.assertEqual(m.digest(exact), m.OWNER_DECORATED_HTML_SHA)
+        self.assertFalse(m.served_asset_matches('resonance.html', exact))
+        self.assertTrue(m.served_asset_matches('resonance.html', exact, owner_ui_verified=True))
+        self.assertFalse(m.served_asset_matches('resonance.html', exact + b' ', owner_ui_verified=True))
+        self.assertFalse(m.served_asset_matches('resonance.html', exact.replace(b'owner-presence', b'other-presence'), owner_ui_verified=True))
 
     def test_ui_mismatch_still_runs_exactly_one_guarded_own_chat_and_overall_holds(self):
         fixture_dir = Path(__file__).parents[1]
@@ -142,6 +166,7 @@ def _read_chat_password():
             proxy, bridge, wrapper = (root / name for name in ('proxy.py', 'bridge.py', 'wrapper.py'))
             proxy.write_text('pass\n'); bridge.write_text('pass\n')
             wrapper.write_text("def proxy(raw):\n return raw.replace('<head>', '<head>unrecognized')\n")
+            owner_ui = root / 'owner_ui.py'; owner_ui.write_bytes(b' ' * 4854)
             password = root / 'credential'; password.write_text('PRIVATE_PASSWORD_SENTINEL'); password.chmod(0o600)
             lock = root / 'owner.lock'; lock.touch()
             class Response(io.BytesIO):
@@ -163,6 +188,8 @@ def _read_chat_password():
                         return {'dialog_id': 'a' * 32}
                     assert path == '/api/ui/memory/dialogs/history?dialog_id=' + 'a' * 32 + '&limit=2'
                     return {'messages': [{'role': 'user', 'content': self.question}, {'role': 'assistant', 'content': '42'}]}
+                def history_evidence(self, did):
+                    return self.json('/api/ui/memory/dialogs/history?dialog_id=' + did + '&limit=2'), {'status': 200, 'json_decoded': True, 'truncated': False}
                 def request(self, path, data=None, **kwargs):
                     assert path == '/api/nox/chat/stream'
                     self.requested += 1; self.question = data['message']
@@ -171,23 +198,68 @@ def _read_chat_password():
             client = Client()
             patches = {'PROXY': proxy, 'PROXY_SHA': m.digest(proxy.read_bytes()), 'BRIDGE': bridge,
                        'BRIDGE_SHA': m.digest(bridge.read_bytes()), 'WRAPPER': wrapper,
-                       'WRAPPER_SHA': m.digest(wrapper.read_bytes()), 'SITE': site, 'LOCK': lock}
+                       'WRAPPER_SHA': m.digest(wrapper.read_bytes()), 'SITE': site, 'LOCK': lock,
+                       'OWNER_UI': owner_ui, 'OWNER_UI_SHA': m.digest(owner_ui.read_bytes())}
             with mock.patch.multiple(m, **patches), mock.patch.object(m, 'resolve_password_path', return_value=password), \
                  mock.patch.object(m, 'scoped_stop_supported', return_value=True), \
                  mock.patch.object(m, 'priority_snapshot', return_value={'CHAT_ACTIVE':'0', 'MODE':'IDLE'}), \
                  mock.patch.object(m, 'LoopbackClient', return_value=client), \
                  mock.patch.dict(m.os.environ, {'NOX_OWNER_REQUEST_ID': '123', 'NOX_OWNER_SOURCE_SHA': 'b' * 40}):
                 result = m.run(True, expected_source_sha='b' * 40)
+                class ReadOnlyClient(Client):
+                    def asset(self, name, expected_raw):
+                        return m.served_asset_diagnostic(name, decorated_html_fixture() if name.endswith('.html') else expected_raw,
+                                                         expected_raw, owner_ui_verified=True)
+                    def json(self, path, data=None, **kwargs):
+                        assert path == '/slots' and data is None
+                        return [{'is_processing': False}]
+                    def history_evidence(self, did):
+                        assert did == m.RECONCILE_DIALOG_ID
+                        return {'status': 'READY', 'dialog_id': did, 'messages': [
+                            {'role': 'user', 'content': '[QA 123456abcdef] Сколько будет 17 + 25? Ответь только числом.', 'exchange_id': 'fixture-exchange'},
+                            {'role': 'assistant', 'content': '42', 'exchange_id': 'fixture-exchange'}]}, {'status': 200, 'json_decoded': True, 'truncated': False}
+                    def request(self, *args, **kwargs):
+                        raise AssertionError('reconcile must never create, generate or STOP')
+                readonly = ReadOnlyClient()
+                with mock.patch.object(m, 'LoopbackClient', return_value=readonly):
+                    reconciled = m.run(False, expected_source_sha='b' * 40, reconcile_dialog_id=m.RECONCILE_DIALOG_ID)
+                self.assertTrue(reconciled['reconciliation_pass'])
+                self.assertTrue(reconciled['ui_asset_acceptance_pass'])
+                self.assertFalse(reconciled['native_canary_pass'])
+                self.assertFalse(reconciled['terminal_receipt_fields_recovered'])
+                self.assertEqual(reconciled['dialogs_created'], 0); self.assertEqual(reconciled['model_requests'], 0)
+                self.assertNotIn('own_stream_stop_attempted', reconciled)
+                self.assertEqual(readonly.jar, [])
             self.assertEqual(client.created, 1); self.assertEqual(client.requested, 1)
             self.assertTrue(result['native_chat_canary_pass'])
             self.assertFalse(result['ui_asset_acceptance_pass'])
             self.assertFalse(result['native_canary_pass'])
             self.assertEqual(result['status'], 'HOLD_SERVED_ASSET_HASH')
             self.assertEqual(result['external_http_requests'], 0)
+            self.assertEqual(len(result['python_version']), 3)
+            self.assertTrue(all(type(item) is int for item in result['python_version']))
             self.assertEqual(client.jar, [])
             exported = json.dumps(result)
             for withheld in ('PRIVATE_PASSWORD_SENTINEL', 'OWN_COOKIE_SENTINEL', 'UNRECOGNIZED_OVERLAY', '<head>'):
                 self.assertNotIn(withheld, exported)
+
+    def test_readonly_transport_rejects_model_mutations_other_dialog_and_history_metadata_withholds_body(self):
+        client = m.LoopbackClient(read_only=True, owner_ui_verified=True)
+        with mock.patch.object(client.opener, 'open', side_effect=AssertionError('network forbidden')):
+            for path, data in (('/api/nox/chat/stream', {}), ('/api/nox/stop', {}),
+                               ('/api/ui/memory/dialogs/create', {}),
+                               ('/api/ui/memory/dialogs/history?dialog_id=' + 'f' * 32 + '&limit=2', None)):
+                with self.assertRaises(m.Hold):
+                    client.request(path, data)
+        class Response(io.BytesIO):
+            status = 503
+            headers = {'Content-Type': 'text/html; PRIVATE_HEADER_SENTINEL'}
+        with mock.patch.object(client, 'request', return_value=Response(b'<html>PRIVATE_BODY_SENTINEL</html>')):
+            value, meta = client.history_evidence(m.RECONCILE_DIALOG_ID)
+        self.assertIsNone(value)
+        self.assertEqual(meta['status'], 503)
+        self.assertEqual(meta['error_class'], 'JSONDecodeError')
+        self.assertNotIn('PRIVATE_', json.dumps(meta))
 
 if __name__ == '__main__':
     unittest.main()

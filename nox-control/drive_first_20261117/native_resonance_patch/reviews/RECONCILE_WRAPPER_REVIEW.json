@@ -1,0 +1,21 @@
+{
+  "schema": "NOX_READ_ONLY_WRAPPER_REVIEW_V1",
+  "reviewer": "/root/launch_native_route",
+  "reviewed_at_utc": "2026-11-17T18:38:06.273419+00:00",
+  "verdict": "PASS_SOURCE_REVIEW_NO_BLOCKERS",
+  "entry_sha256": "f8e29f94dd55d5dedab48a3aee361ea38805ea053a9269dfbe41bf3f453de0b5",
+  "entry_bytes": 19099,
+  "embedded_sha256": "7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e",
+  "embedded_bytes": 46684,
+  "embedded_exact_local_source": true,
+  "single_call": "run(False, expected_source_sha=source, reconcile_dialog_id=m.RECONCILE_DIALOG_ID)",
+  "completion_requires": [
+    "reconciliation_pass is True",
+    "model_requests == 0",
+    "dialogs_created == 0"
+  ],
+  "explicit_embedded_sha_guard": true,
+  "native_calls_by_reviewer": 0,
+  "native_acceptance_claim": false,
+  "authority": "Existing owner runner preserves actor/repository/host/source admission; environment variables alone are not owner authentication"
+}

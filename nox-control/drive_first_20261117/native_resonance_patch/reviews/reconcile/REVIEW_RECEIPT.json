@@ -1,0 +1,55 @@
+{
+  "schema": "NOX_READ_ONLY_RECONCILIATION_INDEPENDENT_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewed_utc": "2026-11-17T18:34:53.087661+00:00",
+  "verdict": "PASS_SOURCE_REVIEW_NO_BLOCKERS",
+  "source_path": "/workspace/scratch/4136374a0419/nox_refresh/native_resonance_patch/native_acceptance.py",
+  "source_sha256": "7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e",
+  "source_bytes": 46684,
+  "baseline_commit": "c5b12b72",
+  "native_executed": false,
+  "native_pass": false,
+  "external_calls": 0,
+  "reviewed_invocation": "run(False, expected_source_sha=source, reconcile_dialog_id=RECONCILE_DIALOG_ID)",
+  "fixed_own_dialog_id": "5ce69137da0a4c42a0387917c8567d52",
+  "helper_pin": {
+    "path": "/root/nox/scripts/owner_chat_ui.py",
+    "sha256": "da2cea21d21d3c1129bcb6621cd5293469a085ad861924a8c5cc63981577a866",
+    "bytes": 4854,
+    "accepted_composed_html_sha256": "e736c54022439cc2cddfaba17aeebf9844e2f6cf35a3b07c3837a8c0531b70cc",
+    "accepted_composed_html_bytes": 14519,
+    "evidence_scope": "root/author supplied observed native and official source identity; reviewer verified fixed guard implementation, no new native read"
+  },
+  "tests": {
+    "independent_passed": 3,
+    "errors": 0,
+    "failures": 0,
+    "test_file_sha256": "b04753c659c54fc0db97da04e0e817a2b5dc71e9c5479f57e738376453b9caa7",
+    "log_sha256": "2a5ce4cfafa9c1ac1bda4f8f377e9add388a49706f7c8a1cdc5ed8e216793faf",
+    "network_transport": "actual LoopbackClient request restrictions with mocked opener only; no network"
+  },
+  "verified_properties": [
+    "The intended call uses canary=False and fixed reconciliation ID; incompatible modes or another ID HOLD before transport.",
+    "Read-only LoopbackClient rejects create/stream/STOP with and without request data and rejects every other history ID before opener/network.",
+    "Successful history reconciliation performs one official login and only fixed GETs; no dialog creation, model request or STOP occurs.",
+    "Malformed503 history and transport timeout retain read-only behavior, clear cookie jar, never replay generation or send STOP.",
+    "Helper SHA/length drift HOLD before login; compound HTML accepts only the exact pinned composition, not generic stripping.",
+    "Output contains bounded HTTP/body hashes, MIME classes, Python version3integers, error class/phase; private sentinels never exported.",
+    "Reconciliation success remains distinct from native_canary_pass; lost prior terminal saved/S03 fields and timing are explicitly unrecovered."
+  ],
+  "blocking_findings": [],
+  "limits": [
+    "Source/fixture review does not execute native login/history lookup or independently authenticate current server identity.",
+    "Existing owner operator remains the authority for actor/repository/source/host admission; environment strings alone are not authentication.",
+    "The intended read-only entry must call run(False,...reconcile_dialog_id=RECONCILE_DIALOG_ID), never the old run(True).",
+    "No new model generation is authorized by this review; history absence or unknown outcome remains HOLD for reconciliation."
+  ],
+  "NEXT_READY": {
+    "owner": "root",
+    "action": "Build/publish exact reviewed read-only wrapper with canary=False and fixed ID; preserve existing owner action checks, run only the admitted read-only reconciliation and read sanitized receipt.",
+    "source_sha256": "7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e",
+    "native_status": "PENDING_NOT_RUN_BY_REVIEWER",
+    "claim_state": "read-only review complete; no author files modified",
+    "successor_refill": "parent refills next eligible READY slot after task release"
+  }
+}

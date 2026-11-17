@@ -51,6 +51,20 @@ CSS and new JS. HTML accepts the exact source bytes or only the known existing
 after `<head>`; removing that one exact insertion must recover the pinned SHA.
 Duplicate or other overlays fail. CSS/JS retain strict raw SHA checks.
 
+Native v4 run `44147786817` subsequently established the additional exact HTML
+composition: known owner-head script plus the existing `owner_chat_ui.decorate_html`
+mount relocation, shell CSS marker and four owner scripts. The 14,519 served
+bytes had SHA `e736c54022439cc2cddfaba17aeebf9844e2f6cf35a3b07c3837a8c0531b70cc`,
+identical to the independently computed fixture. Its 28 reference fingerprints
+and changed-span fingerprints also matched; the pinned bridge projection calls
+`decorate_html`, while the wrapper projection has no HTML replacement. The
+source `owner_chat_ui.py` was recovered from GitHub commit
+`432b6195e7a8e3e56b32b9abcfd258dfc21465ec`: 4,854 bytes, SHA
+`da2cea21d21d3c1129bcb6621cd5293469a085ad861924a8c5cc63981577a866`, identical
+to the prior native export. Acceptance now also checks that exact installed
+owner-UI source SHA and permits only the observed whole-response SHA/length.
+It does not execute the decorator, strip scripts, or accept arbitrary overlays.
+
 Version 4 separates two results: `ui_asset_acceptance_pass` proves those three
 served assets; `native_chat_canary_pass` proves the authenticated chat, model
 stream and exact own S03 history. `native_canary_pass` is their conjunction.
@@ -79,6 +93,39 @@ dialog's last two messages. PASS requires exactly numerical 42, saved and
 S03-integrated terminal receipt, and an exact persisted user/assistant pair.
 The report publishes only 42 or WITHHELD plus a SHA; arbitrary model text,
 response bodies, password, cookie and secret filename are never exported.
+Immediately after a terminal stream, the safe stream receipt is recorded before
+close/history handling. A later failure includes a fixed phase and exception
+class, never raw exception text. Own-history evidence includes HTTP status,
+sanitized MIME, length/SHA and JSON decoding status without response contents.
+
+## Read-only reconciliation after v4
+
+V4 created one dialog and sent one model request, then reported a bounded failure
+after returning from `read_stream`; the prior report did not preserve its stream
+receipt fields. Absence of a scoped-STOP attempt supports a control-flow inference,
+not a recovered terminal flag or latency measurement. Do not repeat generation
+to reconcile that unknown outcome.
+
+```text
+python3 native_acceptance.py --reconcile-owned-dialog --expected-source-sha <exact checkout SHA>
+python3 native_acceptance.py --assets-only --expected-source-sha <exact checkout SHA>
+```
+
+The first command permits only fixed own dialog
+`5ce69137da0a4c42a0387917c8567d52`, created by run `44147786817` / job
+`134267516216` / owner request `6957085526`. It uses a fresh official login,
+the same source/owner/idle/free-slot/lease guards, three asset GETs and one
+history GET with `limit=2`. Its read-only transport rejects dialog creation,
+model POST, STOP and a different dialog ID even if a caller attempts them.
+The prior session cookie is gone; it is neither reused nor impersonated.
+The read-only deadline is 20 seconds, with no retry and no STOP on exit.
+
+`reconciliation_pass` requires the pinned UI and exactly the fixed dialog's
+synthetic QA question, numeric answer 42, user/assistant roles, and a common
+nonempty exchange ID. Question/answer/exchange IDs are hashed, apart from 42.
+`native_canary_pass` remains false: terminal saved/S03 flags and measured TTFA
+from v4 are not recoverable merely by reading history. The separate positive
+history result must not be relabeled as a new successful generation.
 
 Global wall deadline is 56 seconds including setup, with up to 2 additional
 seconds for a scoped stop. The same private cookie jar may POST `/api/nox/stop`
@@ -89,12 +136,17 @@ semantics HOLD before generation. There are no retries. The QA dialog is left
 as evidence, not silently deleted. A failed history check may still leave a
 completed own generation; the report does not claim rollback.
 
-Local validation: five focused tests passed, covering rejected AST code/path
+Local validation: six focused tests passed, covering rejected AST code/path
 escape with nonleaking errors, scoped/global stop distinction, actual NDJSON
 and missing terminal, exact own history and withheld unexpected model text;
 unknown HTML fingerprints and AST literal withholding; and a complete local
 fake transport run proving one own dialog/request, successful chat/S03, failed
 UI and overall HOLD without leaking credential, cookie or HTML sentinels.
+The updated fixtures also verify the exact observed owner-UI composition and
+reject mutated bytes or an unverified owner-UI pin; a full read-only reconciliation
+performs zero generation/dialog/STOP calls; direct transport attempts to mutate
+or read another dialog fail before networking; malformed HTTP history exports
+only safe metadata and an exception class.
 No native HTTP request or deployment was executed by the author. Browser
 geometry and external tunnel availability are separate acceptance checks;
 loopback PASS alone does not certify a publicly working link.

@@ -15,7 +15,7 @@
   "native_execution_by_package_author": false,
   "native_canary_pass": null,
   "public_tunnel_verified": false,
-  "source_fix": "Dependency-chain-only path aliases; fixed native binding metadata reader",
+  "source_fix": "Exact observed owner-UI composition with helper pin; read-only fixed-own-dialog reconciliation; phase/error-class/Python-version metadata",
   "targeted_common_import_patch": {
     "validated_at_utc": "2026-11-17T18:05:57.773489+00:00",
     "command": "python -m unittest discover -s tests -p test_acceptance.py -v",
@@ -35,5 +35,16 @@
       "Unknown served HTML rejected; only hashes and fixed marker counts exported",
       "Full fake transport: one own model request; chat/S03 true; UI false; overall HOLD; credential/cookie/HTML sentinels withheld"
     ]
+  },
+  "targeted_readonly_reconciliation": {
+    "validated_at_utc": "2026-11-17T18:38:06.273419+00:00",
+    "command": "python -m unittest discover -s tests -p test_acceptance.py -v",
+    "passed": 6,
+    "failed": 0,
+    "source_sha256": "7b82ccbb235bd51c9a4782919aa6cfd484ad96e253ef0c2cebd9c61ca8e2ef9e",
+    "independent_review": "reviews/reconcile/REVIEW_RECEIPT.json",
+    "independent_review_sha256": "4b19fa6c6cb2039cc903496a79506ddd2dba99182071940a5aa2ca5f73c8ac3d",
+    "independent_tests_passed": 3,
+    "native_calls_by_author": 0
   }
 }

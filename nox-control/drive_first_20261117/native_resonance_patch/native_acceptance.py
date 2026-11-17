@@ -20,6 +20,7 @@ import re
 import secrets
 import signal
 import stat
+import sys
 import threading
 import time
 import urllib.error
@@ -33,6 +34,13 @@ BRIDGE = ROOT / 'scripts/nox_v29_chat_bridge.py'
 BRIDGE_SHA = '0cff2e7aee068571b2895ec476255e97ef3b85bd93104a27a822acfb8408632b'
 WRAPPER = ROOT / 'scripts/nox_web29_onehost_18775.py'
 WRAPPER_SHA = '0a0165e5b061f88ec60009c49a3c12e9823a45b89044604186e307c81fb701e6'
+OWNER_UI = ROOT / 'scripts/owner_chat_ui.py'
+OWNER_UI_SHA = 'da2cea21d21d3c1129bcb6621cd5293469a085ad861924a8c5cc63981577a866'
+OWNER_DECORATED_HTML_SHA = 'e736c54022439cc2cddfaba17aeebf9844e2f6cf35a3b07c3837a8c0531b70cc'
+RECONCILE_DIALOG_ID = '5ce69137da0a4c42a0387917c8567d52'
+RECONCILE_ORIGIN = {'run_id': '44147786817', 'job_id': '134267516216', 'owner_request_id': '6957085526',
+                    'owner_source_sha': '9699fd3ec4cfaaaa6c7df1ed37250663a8f4e553',
+                    'canary_sha256': '2e319aaa381ebecae73de00772397d5d4b640810728be37f78606e3a62372dbf'}
 SITE = ROOT / 'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site'
 BASE = 'http://127.0.0.1:18775'
 MODEL_BASE = 'http://127.0.0.1:8098'
@@ -51,9 +59,13 @@ class Hold(Exception):
 def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
-def served_asset_matches(name, raw):
+def served_asset_matches(name, raw, *, owner_ui_verified=False):
     expected = EXPECTED[name]
     if digest(raw) == expected:
+        return True
+    # Independently reproduced from exact owner_chat_ui.py da2cea... and then
+    # observed byte-for-byte in native run44147786817. No generic HTML removal.
+    if name == 'resonance.html' and owner_ui_verified and len(raw) == 14519 and digest(raw) == OWNER_DECORATED_HTML_SHA:
         return True
     # Exact existing _OwnerStatic HTML transform only. No generic stripping.
     if name == 'resonance.html' and raw.count(OWNER_HTML_INJECTION) == 1:
@@ -136,7 +148,7 @@ def serving_source_projection(raw, kind):
     result['emitted_function_count'] = len(result['functions'])
     return result
 
-def served_asset_diagnostic(name, raw, expected_raw, *, status=200, content_type='', content_encoding='', truncated=False):
+def served_asset_diagnostic(name, raw, expected_raw, *, status=200, content_type='', content_encoding='', truncated=False, owner_ui_verified=False):
     mime = content_type.split(';', 1)[0].strip().lower()
     mime = mime if mime in ('text/html', 'text/css', 'text/javascript', 'application/javascript', 'application/json', 'text/plain', 'application/octet-stream') else '[OTHER_OR_MISSING]'
     encoding = content_encoding.strip().lower()
@@ -145,7 +157,7 @@ def served_asset_diagnostic(name, raw, expected_raw, *, status=200, content_type
               'bytes_read': len(raw), 'truncated': truncated, 'sha256': digest(raw),
               'sha256_scope': 'PREFIX_ONLY' if truncated else 'ENTIRE_RESPONSE',
               'expected_disk_bytes': len(expected_raw), 'expected_disk_sha256': digest(expected_raw),
-              'matches_pinned_asset': status == 200 and not truncated and served_asset_matches(name, raw)}
+              'matches_pinned_asset': status == 200 and not truncated and served_asset_matches(name, raw, owner_ui_verified=owner_ui_verified)}
     if name != 'resonance.html':
         return result
     normalized = raw
@@ -154,6 +166,7 @@ def served_asset_diagnostic(name, raw, expected_raw, *, status=200, content_type
         normalized = raw.replace(OWNER_HTML_INJECTION, b'<head>', 1)
     result['known_owner_head_injection_count'] = count
     result['accepted_transform'] = ('RAW' if digest(raw) == EXPECTED[name] else
+                                    'PINNED_OWNER_HEAD_AND_OWNER_UI_COMPOSITION' if owner_ui_verified and len(raw) == 14519 and digest(raw) == OWNER_DECORATED_HTML_SHA else
                                     'SINGLE_KNOWN_OWNER_HEAD_INJECTION' if result['matches_pinned_asset'] else 'NONE')
     markers = {'html_head': b'<head>', 'html_body': b'<body', 'chat_form': b'chatForm',
                'native_css': b'nox-resonance-native-fix-v1.css', 'native_js': b'nox-resonance-native-fix-v1.js',
@@ -407,7 +420,9 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise Hold('HOLD_HTTP_REDIRECT')
 
 class LoopbackClient:
-    def __init__(self):
+    def __init__(self, *, read_only=False, owner_ui_verified=False):
+        self.read_only = read_only
+        self.owner_ui_verified = owner_ui_verified
         self.jar = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(), urllib.request.HTTPCookieProcessor(self.jar))
     def request(self, path, data=None, *, model=False, timeout=5):
@@ -415,6 +430,13 @@ class LoopbackClient:
         allowed = {'/chat/login', '/api/nox/chat/stream', '/api/nox/stop', '/api/ui/memory/dialogs/create'}
         allowed.update('/nox-web-v29/pc/' + name for name in EXPECTED)
         valid_history = re.fullmatch(r'/api/ui/memory/dialogs/history\?dialog_id=[a-f0-9]{32}&limit=2', path)
+        if self.read_only:
+            if data is not None and path != '/chat/login':
+                raise Hold('HOLD_READ_ONLY_POST')
+            if path in ('/api/nox/chat/stream', '/api/nox/stop', '/api/ui/memory/dialogs/create'):
+                raise Hold('HOLD_READ_ONLY_ROUTE')
+            if valid_history and path != '/api/ui/memory/dialogs/history?dialog_id=' + RECONCILE_DIALOG_ID + '&limit=2':
+                raise Hold('HOLD_RECONCILE_OWN_DIALOG_ONLY')
         if model:
             if path != '/slots' or data is not None:
                 raise Hold('HOLD_MODEL_ROUTE')
@@ -444,7 +466,32 @@ class LoopbackClient:
             truncated = len(raw) > 200000
             return served_asset_diagnostic(name, raw[:200000], expected_raw,
                 status=response.status, content_type=response.headers.get('Content-Type', ''),
-                content_encoding=response.headers.get('Content-Encoding', ''), truncated=truncated)
+                content_encoding=response.headers.get('Content-Encoding', ''), truncated=truncated,
+                owner_ui_verified=self.owner_ui_verified)
+    def history_evidence(self, dialog_id):
+        if not isinstance(dialog_id, str) or not re.fullmatch('[a-f0-9]{32}', dialog_id):
+            raise Hold('HOLD_HISTORY_DIALOG_SCHEMA')
+        try:
+            response = self.request('/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=2')
+        except urllib.error.HTTPError as exc:
+            response = exc
+        with response:
+            raw = response.read(200001)
+            mime = response.headers.get('Content-Type', '').split(';', 1)[0].strip().lower()
+            meta = {'status': response.status, 'bytes_read': min(len(raw), 200000),
+                    'truncated': len(raw) > 200000, 'sha256': digest(raw[:200000]),
+                    'content_type': mime if mime in ('application/json', 'text/html', 'text/plain') else '[OTHER_OR_MISSING]',
+                    'json_decoded': False}
+        if meta['truncated']:
+            return None, meta
+        try:
+            value = json.loads(raw)
+        except (ValueError, UnicodeError) as exc:
+            meta['error_class'] = type(exc).__name__
+            return None, meta
+        meta['json_decoded'] = True
+        meta['json_type'] = type(value).__name__
+        return value, meta
     def json(self, path, data=None, *, model=False):
         return json.loads(self.raw(path, data, model=model))
 
@@ -512,9 +559,46 @@ def public_turn(turn, history, question):
         'history_persisted': saved, 'useful_chat_pass': arithmetic and saved,
         'performance_target_pass': arithmetic and saved and turn['first_meaningful_delta_ms'] <= 8000 and turn['stream_total_ms'] <= 25000}
 
-def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
+def reconcile_history(history):
+    messages = history.get('messages') if isinstance(history, dict) else None
+    valid = (isinstance(history, dict) and history.get('status') == 'READY'
+             and history.get('dialog_id') == RECONCILE_DIALOG_ID and isinstance(messages, list)
+             and len(messages) == 2 and all(isinstance(row, dict) for row in messages))
+    result = {'own_dialog_id': RECONCILE_DIALOG_ID, 'history_schema_valid': valid,
+              'history_reconciliation_pass': False, 'history_content_exported': False,
+              'terminal_receipt_fields_recovered': False, 'prior_stream_timings_recovered': False,
+              'prior_stream_terminal_evidence': 'INFERRED_FROM_V4_CONTROL_FLOW_NOT_RECORDED_FIELDS'}
+    if not valid:
+        return result
+    question, answer = messages[0].get('content'), messages[1].get('content')
+    text_valid = isinstance(question, str) and isinstance(answer, str) and len(question) <= 1000 and len(answer) <= 10000
+    if not text_valid:
+        return result
+    synthetic = bool(re.fullmatch(r'\[QA [a-f0-9]{12}\] Сколько будет 17 \+ 25\? Ответь только числом\.', question))
+    roles = messages[0].get('role') == 'user' and messages[1].get('role') == 'assistant'
+    numeric = answer.strip().strip('`*_ .!\n\r\t') == '42'
+    first_exchange, second_exchange = messages[0].get('exchange_id'), messages[1].get('exchange_id')
+    same_exchange = (isinstance(first_exchange, str) and 0 < len(first_exchange) <= 200
+                     and first_exchange == second_exchange)
+    result.update({'own_synthetic_question_matches': synthetic, 'roles_match': roles,
+                   'question_sha256': digest(question.encode()), 'answer_sha256': digest(answer.encode()),
+                   'answer_public_synthetic': '42' if numeric and synthetic else '[WITHHELD]',
+                   'arithmetic_pass': numeric, 'same_exchange_id': same_exchange,
+                   'exchange_id_sha256': digest(first_exchange.encode()) if same_exchange else None,
+                   'history_reconciliation_pass': synthetic and roles and numeric and same_exchange})
+    return result
+
+def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None, reconcile_dialog_id=None, assets_only=False):
     started = time.monotonic()
-    report = {'schema': 'NOX_NATIVE_RESONANCE_ACCEPTANCE_V1', 'mode': 'canary' if canary else 'readiness',
+    reconcile = reconcile_dialog_id is not None
+    if sum((bool(canary), bool(assets_only), reconcile)) > 1:
+        raise Hold('HOLD_ACCEPTANCE_MODE_CONFLICT')
+    if reconcile and reconcile_dialog_id != RECONCILE_DIALOG_ID:
+        raise Hold('HOLD_RECONCILE_OWN_DIALOG_ONLY')
+    active = canary or assets_only or reconcile
+    mode = 'reconcile' if reconcile else 'assets_only' if assets_only else 'canary' if canary else 'readiness'
+    report = {'schema': 'NOX_NATIVE_RESONANCE_ACCEPTANCE_V1', 'mode': mode, 'phase': 'SOURCE_IDENTITY',
+              'python_version': tuple(sys.version_info[:3]),
               'native_canary_pass': False, 'native_chat_canary_pass': False, 'ui_asset_acceptance_pass': False,
               'external_http_requests': 0, 'credentials_exported': False,
               'model_reloads': 0, 'dialogs_created': 0, 'model_requests': 0,
@@ -540,15 +624,19 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
     wrapper_source = regular_read(WRAPPER, 250000)
     if digest(wrapper_source) != WRAPPER_SHA:
         raise Hold('HOLD_WRAPPER_SHA_CHANGED')
+    owner_ui_source = regular_read(OWNER_UI, 250000)
+    if len(owner_ui_source) != 4854 or digest(owner_ui_source) != OWNER_UI_SHA:
+        raise Hold('HOLD_OWNER_UI_SHA_CHANGED')
     report['proxy_sha256'] = PROXY_SHA
     report['bridge_sha256'] = BRIDGE_SHA
     report['wrapper_sha256'] = WRAPPER_SHA
+    report['owner_ui_sha256'] = OWNER_UI_SHA
     report['auth_path_resolved'] = True
     report['scoped_stop_verified'] = stop_scoped
     disk_assets = {name: regular_read(SITE / 'pc' / name, 200000) for name in EXPECTED}
     report['assets_on_disk'] = {name: digest(raw) == EXPECTED[name] for name, raw in disk_assets.items()}
     report['priority'] = priority_snapshot()
-    if not canary:
+    if not active:
         report['status'] = 'READY_FOR_EXPLICIT_CANARY' if stop_scoped and all(report['assets_on_disk'].values()) else 'HOLD_READINESS'
         return report
     request_id = os.environ.get('NOX_OWNER_REQUEST_ID', '')
@@ -561,16 +649,18 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
         raise Hold('HOLD_MAIN_THREAD_DEADLINE_REQUIRED')
     report['owner_request_id'] = request_id
     report['owner_source_sha'] = source_sha
-    client = LoopbackClient(); response = None; stream_started = False; stream_terminal = False
+    client = LoopbackClient(read_only=not canary, owner_ui_verified=True)
+    response = None; stream_started = False; stream_terminal = False
     previous_handler = signal.getsignal(signal.SIGALRM)
     if signal.getitimer(signal.ITIMER_REAL) != (0.0, 0.0):
         raise Hold('HOLD_EXISTING_ALARM')
     def expired(signum, frame):
         raise Hold('HOLD_CANARY_DEADLINE')
     signal.signal(signal.SIGALRM, expired)
-    signal.setitimer(signal.ITIMER_REAL, max(0.01, 56 - (time.monotonic() - started)))
+    signal.setitimer(signal.ITIMER_REAL, max(0.01, (56 if canary else 20) - (time.monotonic() - started)))
     try:
         with maintenance_lease(maintenance_lock_fd):
+            report['phase'] = 'OWNER_IDLE_AND_SLOTS'
             priority_snapshot()
             report['free_model_slots'] = slots_free(client)
             if common_raw is not None:
@@ -584,12 +674,14 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
             if not 6 <= len(password) <= 4096:
                 raise Hold('HOLD_CREDENTIAL_UNAVAILABLE')
             try:
+                report['phase'] = 'OFFICIAL_LOGIN'
                 client.raw('/chat/login', {'password': password}, limit=32768)
             finally:
                 password = None
             if not any(True for _ in client.jar):
                 raise Hold('HOLD_OFFICIAL_LOGIN_NO_SESSION')
             report['authenticated_login'] = True
+            report['phase'] = 'AUTHENTICATED_ASSETS'
             report['authenticated_assets'] = {}
             report['served_asset_diagnostics'] = {}
             for name in EXPECTED:
@@ -604,12 +696,32 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
                     'wrapper': serving_source_projection(wrapper_source, 'wrapper')}
             else:
                 report['ui_status'] = 'PASS'
+            if assets_only:
+                report['status'] = 'ASSETS_VERIFIED_ONLY' if report['ui_asset_acceptance_pass'] else 'HOLD_SERVED_ASSET_HASH'
+                report['phase'] = 'COMPLETE_ASSETS_ONLY'
+                return report
+            if reconcile:
+                report['reconciles_prior_canary'] = RECONCILE_ORIGIN
+                report['phase'] = 'OWN_HISTORY_READ_ONLY'
+                priority_snapshot(); slots_free(client)
+                history, history_meta = client.history_evidence(RECONCILE_DIALOG_ID)
+                report['history_http_diagnostic'] = history_meta
+                if history_meta['status'] != 200 or not history_meta['json_decoded'] or history_meta['truncated']:
+                    raise Hold('HOLD_HISTORY_HTTP_OR_JSON')
+                report.update(reconcile_history(history))
+                report['reconciliation_pass'] = report['history_reconciliation_pass'] and report['ui_asset_acceptance_pass']
+                report['status'] = ('HISTORY_AND_UI_RECONCILED_TERMINAL_RECEIPT_UNAVAILABLE' if report['reconciliation_pass']
+                                    else 'HOLD_OWN_HISTORY_RECONCILIATION' if not report['history_reconciliation_pass']
+                                    else 'HOLD_SERVED_ASSET_HASH')
+                report['phase'] = 'COMPLETE_RECONCILIATION'
+                return report
             # HTML is never executed here. Its independent mismatch cannot change
             # pinned auth, own-session scope or chat admission. Overall PASS still
             # requires both UI asset identity and the real own-chat receipt.
             marker = secrets.token_hex(6)
             question = '[QA ' + marker + '] Сколько будет 17 + 25? Ответь только числом.'
             priority_snapshot(); slots_free(client)
+            report['phase'] = 'OWN_DIALOG_CREATE'
             created = client.json('/api/ui/memory/dialogs/create', {'confirmed': True, 'title': 'Проверка связки NOX ' + marker})
             did = created.get('dialog_id') if isinstance(created, dict) else None
             if not isinstance(did, str) or not re.fullmatch(r'[a-f0-9]{32}', did):
@@ -618,18 +730,34 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
             report['own_dialog_id'] = did
             priority_snapshot(); slots_free(client)
             stream_started = True; report['model_requests'] = 1
+            report['phase'] = 'OWN_STREAM'
             turn_start = time.monotonic()
             response = client.request('/api/nox/chat/stream', {'message': question, 'history': [], 'task': 'general', 'dialog_id': did}, timeout=45)
             if response.status != 200:
                 raise Hold('HOLD_STREAM_HTTP')
             turn = read_stream(response, turn_start, started + 56)
             stream_terminal = True
+            report['stream_terminal_received'] = True
+            report['phase'] = 'OWN_STREAM_RECEIPT'
+            partial_turn = public_turn(turn, {}, question)
+            report['stream_receipt'] = {key: partial_turn[key] for key in
+                ('answer_public_synthetic', 'answer_sha256', 'arithmetic_pass', 'terminal_receipt',
+                 'receipt_saved', 'receipt_s03_integrated', 'first_meaningful_delta_ms', 'stream_total_ms')}
+            report['phase'] = 'OWN_STREAM_CLOSE'
             response.close(); response = None
-            history = client.json('/api/ui/memory/dialogs/history?dialog_id=' + did + '&limit=2')
+            report['phase'] = 'OWN_HISTORY_READ'
+            history, history_meta = client.history_evidence(did)
+            report['history_http_diagnostic'] = history_meta
+            if history_meta['status'] != 200 or not history_meta['json_decoded'] or history_meta['truncated']:
+                raise Hold('HOLD_HISTORY_HTTP_OR_JSON')
+            report['phase'] = 'OWN_HISTORY_VALIDATE'
             report.update(public_turn(turn, history, question))
             finalize_acceptance(report)
+            report['phase'] = 'COMPLETE_CANARY'
     except (Exception, KeyboardInterrupt) as exc:
         report['status'] = str(exc) if isinstance(exc, Hold) else 'HOLD_BOUNDED_CANARY_FAILURE'
+        report['error_class'] = _identifier(type(exc).__name__)
+        report['error_phase'] = report['phase']
         # Never print raw exception text, cookies, password, or unexpected answer.
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
@@ -653,12 +781,16 @@ def run(canary=False, *, expected_source_sha=None, maintenance_lock_fd=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--canary', action='store_true')
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--canary', action='store_true')
+    modes.add_argument('--assets-only', action='store_true')
+    modes.add_argument('--reconcile-owned-dialog', action='store_true')
     parser.add_argument('--expected-source-sha')
     parser.add_argument('--maintenance-lock-fd', type=int)
     args = parser.parse_args()
     try:
-        result = run(args.canary, expected_source_sha=args.expected_source_sha, maintenance_lock_fd=args.maintenance_lock_fd)
+        result = run(args.canary, expected_source_sha=args.expected_source_sha, maintenance_lock_fd=args.maintenance_lock_fd,
+                     reconcile_dialog_id=RECONCILE_DIALOG_ID if args.reconcile_owned_dialog else None, assets_only=args.assets_only)
     except Exception as exc:
         result = {'schema': 'NOX_NATIVE_RESONANCE_ACCEPTANCE_V1', 'status': str(exc) if isinstance(exc, Hold) else 'HOLD_READINESS_FAILURE', 'native_canary_pass': False, 'credentials_exported': False}
         if isinstance(exc, Hold) and hasattr(exc, 'dependency_identifiers'):
@@ -666,7 +798,7 @@ def main():
         if isinstance(exc, Hold) and hasattr(exc, 'common_source_pin'):
             result['common_source_pin'] = exc.common_source_pin
     print('NOX_MAINT_REPAIR=' + json.dumps({'kind': 'native_resonance_acceptance', 'data': result}, ensure_ascii=False, separators=(',', ':')), flush=True)
-    return 0 if result.get('native_canary_pass') or result.get('status') == 'READY_FOR_EXPLICIT_CANARY' else 2
+    return 0 if result.get('native_canary_pass') or result.get('reconciliation_pass') or result.get('status') in ('READY_FOR_EXPLICIT_CANARY', 'ASSETS_VERIFIED_ONLY') else 2
 
 if __name__ == '__main__':
     raise SystemExit(main())

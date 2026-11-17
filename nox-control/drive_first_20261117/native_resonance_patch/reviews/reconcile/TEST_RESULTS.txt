@@ -1,0 +1,8 @@
+test_fixed_id_helper_pin_and_transport_deny_before_mutation (test_readonly_reconcile.Review.test_fixed_id_helper_pin_and_transport_deny_before_mutation) ... ok
+test_history_error_and_timeout_never_replay_or_stop (test_readonly_reconcile.Review.test_history_error_and_timeout_never_replay_or_stop) ... ok
+test_readonly_success_recovers_only_own_history_not_native_pass (test_readonly_reconcile.Review.test_readonly_success_recovers_only_own_history_not_native_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.025s
+
+OK
