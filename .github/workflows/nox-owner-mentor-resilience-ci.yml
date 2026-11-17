@@ -4,11 +4,15 @@ on:
     paths:
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
+      - 'nox-control/owner_dispatcher_reciprocal_health.py'
+      - 'nox-control/test_owner_dispatcher_reciprocal_health.py'
       - '.github/workflows/nox-owner-mentor-resilience-ci.yml'
   pull_request:
     paths:
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
+      - 'nox-control/owner_dispatcher_reciprocal_health.py'
+      - 'nox-control/test_owner_dispatcher_reciprocal_health.py'
       - '.github/workflows/nox-owner-mentor-resilience-ci.yml'
   workflow_dispatch:
 permissions:
@@ -22,6 +26,8 @@ jobs:
         with:
           persist-credentials: false
       - name: Parse and compile pinned mentor source and regressions
-        run: python3 -m py_compile nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
+        run: python3 -m py_compile nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py nox-control/owner_dispatcher_reciprocal_health.py nox-control/test_owner_dispatcher_reciprocal_health.py
       - name: Run original mentor regressions plus bounded offline recovery
-        run: python3 -m unittest discover -s nox-control -p test_owner_dispatcher_mentor.py -v
+        run: python3 -m unittest discover -s nox-control -p 'test_owner_dispatcher_mentor.py' -v
+      - name: Run reciprocal NOX dispatcher process identity tests
+        run: python3 -m unittest discover -s nox-control -p 'test_owner_dispatcher_reciprocal_health.py' -v
