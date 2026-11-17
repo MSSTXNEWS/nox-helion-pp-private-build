@@ -16,7 +16,7 @@ def proc_fixture(root, pid, script, start="123456"):
     fields = ["S"] + ["0"] * 19
     fields[19] = start
     (p / "stat").write_text(f"{pid} (python) " + " ".join(fields))
-    (p / "cmdline").write_bytes(b"python3\\0" + script.encode() + b"\\0")
+    (p / "cmdline").write_bytes(b"python3\0" + script.encode() + b"\0")
 
 class ReciprocalTests(unittest.TestCase):
     def test_verified_pid_start_ticks(self):
@@ -38,7 +38,7 @@ class ReciprocalTests(unittest.TestCase):
     def test_reject_supervisor_mismatch_and_bad_status(self):
         for raw in ("nox-selfheal RUNNING pid 123, uptime 0:01",
                     "nox-dispatcher-t855u RUNNING no-pid",
-                    "nox-dispatcher-t855u RUNNING pid 123\\nnox-selfheal RUNNING pid 123"):
+                    "nox-dispatcher-t855u RUNNING pid 123\nnox-selfheal RUNNING pid 123"):
             def call(argv, **kwargs):
                 return SimpleNamespace(returncode=0, stdout=raw)
             out = module.inspect(("nox-dispatcher-t855u",), call=call)
