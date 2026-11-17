@@ -1,30 +1,33 @@
 #!/usr/bin/env python3
-"""Read-only private backup capability probe. No profile creation/copy/resume/delete."""
+"""Bounded static S03 writer/AttachedNOX contract. No runtime import, database, data or weights access.
+Projection narrows existing v129/read_native_s03_write_contract.py to AST-only metadata.
+"""
 import sys
-sys.dont_write_bytecode = True
-import configparser, datetime, fcntl, hashlib, json, os, re, selectors, shutil, signal, socket, stat, subprocess, time
-from pathlib import Path, PureWindowsPath
-
-ROOT = Path('/root/nox')
-STATE = ROOT/'state'
-FLAGS = (ROOT/'STOP', STATE/'OWNER_MAINTENANCE.flag', STATE/'TRAIN_HOLD.flag', STATE/'TRAIN_PAUSE_REQUEST.flag')
-KNOWN = (STATE/'cold_drive.conf', Path('/root/.config/rclone/rclone.conf'), ROOT/'rclone.conf', STATE/'cold_pc.conf')
-SAFE_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-DEADLINE = None
-
+sys.dont_write_bytecode=True
+import ast, fcntl, hashlib, importlib.machinery, json, os, re, selectors, shutil, signal, stat, subprocess, time
+from pathlib import Path
+ROOT=Path('/root/nox');STATE=ROOT/'state'
+FLAGS=(ROOT/'STOP',STATE/'OWNER_MAINTENANCE.flag',STATE/'TRAIN_HOLD.flag',STATE/'TRAIN_PAUSE_REQUEST.flag')
+SAFE_PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+DEADLINE=None
 class Hold(RuntimeError): pass
+
 def require(value, code):
     if not value: raise Hold('HOLD_CAPABILITY_'+code)
+
 def remaining(limit):
     left = limit if DEADLINE is None else DEADLINE-time.monotonic()
     require(left > 0, 'DEADLINE')
     return max(.1,min(limit,left))
+
 def identity(s): return (s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+
 def plain(path):
     path=Path(path)
     require(path.is_absolute() and '..' not in path.parts, 'PATH')
     require(not any(p.is_symlink() for p in (path,*path.parents)), 'SYMLINK')
     return path
+
 def read_regular(path, private=False, maximum=131072):
     path=plain(path)
     fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
@@ -36,9 +39,11 @@ def read_regular(path, private=False, maximum=131072):
         require(len(data)==before.st_size and identity(before)==identity(os.fstat(fd))==identity(path.lstat()), 'FILE_CHANGED')
         return data
     finally: os.close(fd)
+
 def flags():
     require(all(p.is_file() for p in FLAGS), 'FOUR_STOP_FLAGS_REQUIRED')
     return [hashlib.sha256(read_regular(p)).hexdigest() for p in FLAGS]
+
 def execute(argv, seconds=12, pass_fds=(), collect=False):
     # Bounded pipe, no provider diagnostics or filenames reach logs; kill whole subprocess group.
     env={'PATH':SAFE_PATH,'LC_ALL':'C','HOME':'/root'}
@@ -64,117 +69,136 @@ def execute(argv, seconds=12, pass_fds=(), collect=False):
             except ProcessLookupError:pass
         p.wait(timeout=3)
         if p.stdout:p.stdout.close()
+
 def binary(name):
     p=shutil.which(name,path=SAFE_PATH);require(p is not None,'EXECUTABLE_UNAVAILABLE');return p
+
 def stopped():
     rc,raw=execute([binary('supervisorctl'),'status'],12,collect=True)
     rows=[line.split() for line in raw.decode('utf8','replace').splitlines() if line.startswith('nox-')]
     require(rc in (0,3) and bool(rows) and all(len(x)>1 and x[1] in ('STOPPED','EXITED','FATAL') for x in rows),'SERVICES_NOT_STOPPED')
     return len(rows)
-def custom_paths():
-    result=[]
-    for key in ('NOX_RCLONE_CONFIG','RCLONE_CONFIG'):
-        if os.environ.get(key):result.append(('current_'+key,os.environ[key]))
-    # Only extract the two named path settings, never expose the process environment.
+
+SCRIPT_NAMES=('nox_v29_chat_bridge.py','nox_dispatcher_t855u.py','owner_dispatcher_mentor.py','owner_task_plans.py','owner_s03_gateway.py','owner_task_lifecycle.py')
+MODULE_ROOTS={
+    's03_memory':(ROOT/'scripts',ROOT),
+    'native_bridge_v38':(ROOT/'nox_runpod/teacher_mesh/v38',ROOT/'scripts/nox_runpod/teacher_mesh/v38'),
+    'durable_runtime':(ROOT/'nox_runpod/teacher_mesh/v38',ROOT/'scripts/nox_runpod/teacher_mesh/v38'),
+    'synaptic_brain':(ROOT/'nox_runpod/teacher_mesh/v38',ROOT/'scripts/nox_runpod/teacher_mesh/v38')}
+ALLOWED_PATHS={ROOT/'scripts'/n for n in SCRIPT_NAMES}|{root/(module+'.py') for module,roots in MODULE_ROOTS.items() for root in roots}
+IDENT=re.compile(r'[A-Za-z_][A-Za-z0-9_]{0,79}\Z')
+SENSITIVE=re.compile(r'^(?:sk_|ghp_|github_pat_)|password|credential|secret|api_key|bearer',re.I)
+INTEREST=re.compile(r's03|append|remember|persist|revision|readback|lease|writer|attach|bind|register|open_turn|_db|_proxy_completion|_save_exchange|_readback|recall|commit',re.I)
+CONSTRUCTORS={'AttachedNOX','HostBindings','NativePorts','OwnerBrainHooks'}
+MAX_FILE=1024*1024
+MAX_NODES=60000
+MAX_OUTPUT=98304
+
+def safe_name(value):
+    return value if isinstance(value,str) and IDENT.fullmatch(value) and not SENSITIVE.search(value) else None
+def symbol(node):
+    if isinstance(node,ast.Name):return safe_name(node.id)
+    if isinstance(node,ast.Attribute):
+        left=symbol(node.value);right=safe_name(node.attr)
+        return left+'.'+right if left and right and left.count('.')<4 else None
+    return None
+def signature(node,owner=None):
+    args=node.args
+    return {'name':safe_name(node.name),'owner':owner,'line':node.lineno,'end_line':node.end_lineno,
+            'async':isinstance(node,ast.AsyncFunctionDef),
+            'positional_only':[safe_name(a.arg) for a in args.posonlyargs],
+            'positional':[safe_name(a.arg) for a in args.args],
+            'keyword_only':[safe_name(a.arg) for a in args.kwonlyargs],
+            'vararg':safe_name(args.vararg.arg) if args.vararg else None,
+            'varkw':safe_name(args.kwarg.arg) if args.kwarg else None,
+            'default_count':len(args.defaults)+sum(v is not None for v in args.kw_defaults),
+            'calls':sorted({v for n in ast.walk(node) if isinstance(n,ast.Call) and (v:=symbol(n.func))})[:24]}
+def project(raw):
+    require(len(raw)<=MAX_FILE,'SOURCE_BOUND')
+    tree=ast.parse(raw.decode('utf8'));nodes=list(ast.walk(tree));require(len(nodes)<=MAX_NODES,'AST_BOUND')
+    imports=[];classes=[];functions=[];bindings=[];slots=[]
+    def visit(body,owner=None):
+        for node in body:
+            if isinstance(node,ast.ClassDef):
+                name=safe_name(node.name)
+                if name and (name in CONSTRUCTORS or INTEREST.search(name)):
+                    classes.append({'name':name,'line':node.lineno,'bases':[symbol(b) for b in node.bases]})
+                visit(node.body,name)
+            elif isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)):
+                if safe_name(node.name) and (INTEREST.search(node.name) or owner in CONSTRUCTORS):functions.append(signature(node,owner))
+            elif isinstance(node,(ast.Try,ast.If,ast.With)):
+                visit(node.body,owner)
+                for name in ('orelse','finalbody'):visit(getattr(node,name,[]),owner)
+                for handler in getattr(node,'handlers',[]):visit(handler.body,owner)
+    visit(tree.body)
+    for node in nodes:
+        if isinstance(node,(ast.Import,ast.ImportFrom)):
+            module=node.module if isinstance(node,ast.ImportFrom) else None
+            module='.'.join(module.split('.')) if module and all(safe_name(x) for x in module.split('.')) else None
+            imports.append({'module':module,'level':getattr(node,'level',0),'symbols':[{'name':a.name,'alias':safe_name(a.asname)} for a in node.names if all(safe_name(x) for x in a.name.split('.'))]})
+        elif isinstance(node,ast.Call) and (callee:=symbol(node.func)) and callee.split('.')[-1] in CONSTRUCTORS:
+            bindings.append({'callee':callee,'line':node.lineno,'keyword_symbols':{k.arg:symbol(k.value) for k in node.keywords if safe_name(k.arg)},'positional_symbols':[symbol(a) for a in node.args[:12]]})
+        elif isinstance(node,(ast.Assign,ast.AnnAssign)):
+            for target in node.targets if isinstance(node,ast.Assign) else [node.target]:
+                name=symbol(target)
+                if name and INTEREST.search(name):slots.append({'target':name,'bound_symbol':symbol(node.value),'line':node.lineno})
+    return {'classes':classes[:16],'functions':functions[:32],'imports':imports[:48],
+            'constructor_bindings':bindings[:24],'contract_slots':slots[:24],
+            'truncated':len(classes)>16 or len(functions)>32 or len(imports)>48 or len(bindings)>24 or len(slots)>24,
+            'ast_nodes':len(nodes),'literal_values_exported':False,'runtime_binding_verified':False}
+def inspect_source(path):
+    require(path in ALLOWED_PATHS and path.suffix=='.py','SOURCE_ALLOWLIST')
+    row={'path':str(path),'state':'ABSENT','runtime_imported':False}
     try:
-        fd=os.open('/proc/1/environ',os.O_RDONLY|os.O_NOFOLLOW)
-        try:raw=os.read(fd,131073)
-        finally:os.close(fd)
-        require(len(raw)<=131072,'ENV_BOUND')
-        for item in raw.split(b'\0'):
-            key,sep,val=item.partition(b'=')
-            if sep and key in (b'NOX_RCLONE_CONFIG',b'RCLONE_CONFIG'):
-                result.append(('init_'+key.decode(),val.decode('utf8','strict')))
-    except (OSError,UnicodeError,Hold):pass
-    return result
-def pc_metadata(path=None,now=None):
-    path=path or STATE/'pc_shell/connection.json';now=time.time() if now is None else now
-    row={'present':path.exists(),'private_metadata':False,'identity_valid':False,'fresh':False,'connected_claim':False,'loopback_open':False,'authenticated_read':False}
-    if not row['present']:return row,None
-    try:
-        data=json.loads(read_regular(path,True,32000));row['private_metadata']=True
-        valid=data.get('schema')=='NOX_PC_LINK_V1' and data.get('instance_id')==60509551 and data.get('reverse_host')=='127.0.0.1' and data.get('reverse_port')==46051
-        row['identity_valid']=valid;row['connected_claim']=data.get('connected') is True
-        stamp=data.get('last_verified_utc')
-        if isinstance(stamp,str):
-            dt=datetime.datetime.fromisoformat(stamp.replace('Z','+00:00'))
-            if dt.tzinfo is not None:row['fresh']=-5<=now-dt.timestamp()<=150
-        root=data.get('backup_root','');win=PureWindowsPath(root) if isinstance(root,str) else PureWindowsPath('')
-        target='nox_pc:/'+win.as_posix().rstrip('/') if win.is_absolute() and re.fullmatch('[A-Za-z]:',win.drive) and '..' not in win.parts and not any(ord(c)<32 or c in '?*<>|"#' for c in root) else None
-        if valid and row['connected_claim'] and target:
-            try:
-                with socket.create_connection(('127.0.0.1',46051),timeout=remaining(2)):row['loopback_open']=True
-            except OSError:pass
-        return row,target if valid else None
-    except (OSError,ValueError,TypeError,Hold):row['state']='HOLD_PC_METADATA';return row,None
-def pc_profile_valid(config):
-    if not config.has_section('nox_pc'):return False
-    s=config['nox_pc'];folder=STATE/'pc_shell'
-    expected={'type':'sftp','host':'127.0.0.1','port':'46051','key_file':str(folder/'operator_ed25519'),'known_hosts_file':str(folder/'rclone_known_hosts'),'shell_type':'none'}
-    if any(s.get(k)!=v for k,v in expected.items()):return False
-    if s.get('ssh') or s.get('ssh_command'):return False
-    read_regular(folder/'operator_ed25519',True,16384)
-    read_regular(folder/'rclone_known_hosts',False,16384)
-    return True
-def probe_profile(label,path,pc,target):
-    row={'candidate':label,'present':False,'private_metadata':False,'nox_drive':False,'nox_pc':False,'drive_authenticated_read':False,'pc_authenticated_read':False,'source_unchanged':True}
-    try:
-        require(isinstance(path,(str,Path)) and len(str(path))<=4096 and not any(ord(c)<32 for c in str(path)),'PATH')
-        path=plain(path);row['present']=path.exists()
-        if not row['present']:return row
-        raw=read_regular(path,True);before=identity(path.lstat());row['private_metadata']=True
-        config=configparser.ConfigParser(interpolation=None);config.read_string(raw.decode('utf8'))
-        row['nox_drive']=config.has_section('nox_drive');row['nox_pc']=config.has_section('nox_pc')
-        # A volatile memory copy prevents rclone OAuth refresh from changing source config.
-        fd=os.memfd_create('nox-capability-profile',os.MFD_CLOEXEC)
-        try:
-            os.write(fd,raw);os.lseek(fd,0,os.SEEK_SET)
-            cmd=[binary('rclone'),'--config','/proc/self/fd/'+str(fd),'--retries','1','--low-level-retries','1','--contimeout','3s','--timeout','8s','--max-duration','10s']
-            if row['nox_drive']:
-                rc,_=execute(cmd+['lsf','nox_drive:NOX_PRIVATE_BACKUPS','--max-depth','1','--dirs-only'],12,(fd,))
-                row['drive_authenticated_read']=rc==0
-            if row['nox_pc'] and pc['identity_valid'] and pc['connected_claim'] and pc['loopback_open'] and target and pc_profile_valid(config):
-                rc,_=execute(cmd+['lsf',target,'--max-depth','1','--dirs-only'],12,(fd,))
-                row['pc_authenticated_read']=rc==0
-        finally:os.close(fd)
-        row['source_unchanged']=identity(path.lstat())==before and read_regular(path,True)==raw
-        require(row['source_unchanged'],'PROFILE_CHANGED')
-    except (OSError,ValueError,configparser.Error,Hold,subprocess.SubprocessError):row['state']='HOLD_PROFILE_PROBE'
+        raw=read_regular(path,maximum=MAX_FILE)
+        row.update(state='AST_CONTRACT_OBSERVED',bytes=len(raw),sha256=hashlib.sha256(raw).hexdigest(),contract=project(raw))
+    except FileNotFoundError:pass
+    except (OSError,Hold,UnicodeError,SyntaxError,RecursionError):row['state']='HOLD_SOURCE_UNREADABLE_OR_INVALID'
     return row
+def sources():
+    paths=[ROOT/'scripts'/n for n in SCRIPT_NAMES];resolution=[]
+    for module,roots in MODULE_ROOTS.items():
+        origins=[]
+        for root in roots:
+            try:
+                plain(root)
+                spec=importlib.machinery.PathFinder.find_spec(module,[str(root)])
+                if spec and spec.origin and Path(spec.origin) in ALLOWED_PATHS and Path(spec.origin).suffix=='.py':
+                    path=Path(spec.origin);plain(path);origins.append(path)
+            except (OSError,Hold,ImportError,ValueError):continue
+        resolution.append({'module':module,'origins':[str(p) for p in origins],'resolution_only_no_import':True})
+        paths.extend(origins)
+    paths=list(dict.fromkeys(paths));require(len(paths)<=14,'SOURCE_COUNT')
+    return [inspect_source(p) for p in paths],resolution
 def main():
     global DEADLINE
-    DEADLINE=time.monotonic()+110
-    request=os.environ.get('NOX_OWNER_REQUEST_ID','');sha=os.environ.get('NOX_OWNER_SOURCE_SHA','')
-    require(re.fullmatch('[0-9]{1,24}',request) and re.fullmatch('[a-f0-9]{40}',sha),'OWNER_CONTEXT')
+    DEADLINE=time.monotonic()+75
+    source=os.environ.get('NOX_OWNER_SOURCE_SHA','');request=os.environ.get('NOX_OWNER_REQUEST_ID','')
+    require(re.fullmatch('[a-f0-9]{40}',source) and re.fullmatch('[0-9]{1,24}',request),'OWNER_CONTEXT')
     before=flags();count=stopped();lockpath=plain(STATE/'owner_maintenance.lock')
-    # Existing lease only: no O_CREAT, mkdir, profile write, snapshot or transfer.
     lock=os.open(lockpath,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
     try:
         info=os.fstat(lock);require(stat.S_ISREG(info.st_mode) and info.st_uid==os.geteuid(),'LEASE_FILE')
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise Hold('HOLD_CAPABILITY_LEASE_BUSY') from None
+        require(flags()==before,'FLAGS_CHANGED')
+        rows,resolution=sources()
         require(flags()==before,'FLAGS_CHANGED');stopped()
-        pc,target=pc_metadata();custom=custom_paths();seen=set();rows=[]
-        for label,path in custom+[(f'known_{i}',p) for i,p in enumerate(KNOWN)]:
-            if str(path) in seen:continue
-            seen.add(str(path))
-            if DEADLINE-time.monotonic()<30:
-                rows.append({'candidate':label,'state':'NOT_PROBED_BUDGET','drive_authenticated_read':False,'pc_authenticated_read':False})
-                continue
-            rows.append(probe_profile(label,path,pc,target))
-        pc['authenticated_read']=any(r['pc_authenticated_read'] for r in rows)
-        require(flags()==before,'FLAGS_CHANGED');stopped()
-        return {'schema':'NOX_PRIVATE_CAPABILITY_V2','instance':60509551,'request':request,'source_sha':sha,
-                'task_ids':['2V14-04','2V14-07'],'custom_env_candidates':len(custom),'profiles':rows,'pc':pc,
-                'state':'EXISTING_PRIVATE_READ_ROUTE_OBSERVED' if any(r['drive_authenticated_read'] or r['pc_authenticated_read'] for r in rows) else 'HOLD_CAPABILITY_INCOMPLETE' if any(r.get('state')=='NOT_PROBED_BUDGET' for r in rows) else 'HOLD_NO_PRIVATE_READ_ROUTE_OBSERVED',
-                'stopped_services':count,'stop_flags_unchanged':True,'source_writes':0,'uploaded_bytes':0,'source_deleted':False,'resume_attempted':False,
-                'external_copy_verified':False,'write_permission_verified':False,'restore_verified':False,'cloudcopy':'SEPARATE_PROVIDER_METADATA_ONLY'}
+        result={'schema':'NOX_S03_WRITER_AST_CONTRACT_V1','run_id':'NOX-49-20261117','instance':60509551,
+                'source_sha':source,'request':request,'sources':rows,'module_resolution':resolution,
+                'state':'READ_ONLY_AST_INSPECTION_COMPLETE','stopped_services':count,'stop_flags_unchanged':True,
+                'database_opened':False,'weights_opened':False,'runtime_modules_imported':False,'source_writes':0,
+                'private_literals_exported':False,'runtime_bindings_verified':False,'server_mutations':0}
+        require(len(json.dumps(result).encode())<=MAX_OUTPUT,'TOTAL_OUTPUT_BOUND')
+        return result
     finally:os.close(lock)
 if __name__=='__main__':
+    def deadline(*args):raise Hold('HOLD_CAPABILITY_DEADLINE')
+    signal.signal(signal.SIGALRM,deadline);signal.alarm(80)
     try:
-        print('NOX_MAINT_CAPABILITY='+json.dumps(main(),sort_keys=True),flush=True)
+        print('NOX_MAINT_S03_CONTRACT='+json.dumps(main(),sort_keys=True),flush=True)
         print('NOX_MAINT_DEPLOY_COMPLETE=true',flush=True)
     except Exception as exc:
-        code=str(exc) if isinstance(exc,Hold) else 'HOLD_CAPABILITY_UNEXPECTED'
-        print('NOX_MAINT_CAPABILITY='+json.dumps({'state':code,'source_writes':0,'uploaded_bytes':0,'source_deleted':False,'resume_attempted':False}),flush=True)
+        print('NOX_MAINT_S03_CONTRACT='+json.dumps({'state':str(exc) if isinstance(exc,Hold) else 'HOLD_CAPABILITY_UNEXPECTED','source_writes':0,'database_opened':False,'weights_opened':False}),flush=True)
         raise SystemExit(2)
+    finally:signal.alarm(0)

@@ -181,9 +181,6 @@ def run_native(action,request_id):
         'num_gpus':int(str(target.get('num_gpus'))) if target and re.fullmatch('[0-9]{1,2}',str(target.get('num_gpus'))) else None,
         'read_only_provider_lookup':True,'provider_mutations':0},sort_keys=True),flush=True)
     if not target or target.get('actual_status')!='running' or str(target.get('num_gpus'))!='2':raise RuntimeError('HOLD_EXACT_RUNNING_INSTANCE')
-    if action=='deploy':
-        from owner_cloudcopy_capability import probe as cloudcopy_probe
-        print('NOX_MAINT_CLOUDCOPY='+json.dumps(cloudcopy_probe(key),sort_keys=True),flush=True)
     ip=target.get('public_ipaddr')
     if not ipaddress.ip_address(ip).is_global:raise RuntimeError('HOLD_INSTANCE_ROUTE')
     port=None
