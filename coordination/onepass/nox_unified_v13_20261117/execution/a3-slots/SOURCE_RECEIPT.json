@@ -1,0 +1,46 @@
+{
+  "schema": "NOX_A3_DISCRETE_MODEL_SLOTS_SOURCE_V1",
+  "run_id": "NOX-49-20261117",
+  "executor": "A3",
+  "TaskID": "6A04",
+  "original_role": 6,
+  "required_level": "native",
+  "assigned_ids": [
+    "3A01",
+    "4A03",
+    "5A05",
+    "6A04",
+    "0B03",
+    "1V14-04",
+    "2V14-11"
+  ],
+  "native_accepted_ids": [],
+  "source_tests": {
+    "passed": 16,
+    "failed": 0,
+    "new_regressions": 6,
+    "existing_policy_regressions": 10,
+    "scope": "CPU source fixtures; no native telemetry/model execution"
+  },
+  "reproduced_before": {
+    "model_slots_capacity": 1,
+    "remaining": 0.85,
+    "demand": 1,
+    "decision": "WAIT_HOST_MEASURED_REMAINDER"
+  },
+  "verified_after": {
+    "model_slots_capacity": 1,
+    "first_job": "admitted",
+    "second_job": "WAIT_HOST_MEASURED_REMAINDER",
+    "fractional_counts": "HOLD_POLICY_MODEL_SLOT_COUNT",
+    "physical_resource_cap": 0.85,
+    "chat_priority_preserved": true
+  },
+  "source_before_sha256": "ed0e294cd153294c5fe2dba1647f380d93058287e9815e9bebec0ef2028097d9",
+  "source_after_sha256": "bb8b0d272f00ca2faf5166a4879003282f205b2eae375d4d265bcb62cd088dfd",
+  "current_manifest_after_sha256": "c658bd0318a5b10352b8760ebf527d835a2071f73069b0f09f44a7828ad74e14",
+  "server_mutations": 0,
+  "weights_loaded": false,
+  "deletions": 0,
+  "remaining_native_condition": "OneHost resource observation and native claim/S03 readback on accepted SHA after ordered STOP/storage/model gates; native callback wiring remains required."
+}

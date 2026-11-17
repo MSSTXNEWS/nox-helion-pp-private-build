@@ -33,6 +33,14 @@ def exact_sha(value):
     return isinstance(value, str) and SHA.fullmatch(value) is not None and value != '0' * 64
 
 
+def slot_count(value):
+    """Model slots are admitted concurrency counts, not utilization fractions."""
+    value = number(value, 'HOLD_POLICY_MODEL_SLOT_COUNT')
+    if value != math.floor(value):
+        raise PolicyHold('HOLD_POLICY_MODEL_SLOT_COUNT')
+    return int(value)
+
+
 def utility_score(task):
     """Explicit owner priority remains the outer order; this ranks within it."""
     cost = number(task.get('estimated_cost', 1), 'HOLD_POLICY_COST', .000001)
@@ -149,7 +157,13 @@ class Budget:
             used = number(row['used'][field], 'HOLD_POLICY_USED')
             pending = number(row['pending_reserved'][field], 'HOLD_POLICY_RESERVED')
             chat = number(row['chat_reserved'][field], 'HOLD_POLICY_CHAT_RESERVE')
-            result[field] = max(0, CAP * capacity - used - pending - chat)
+            if field == 'model_slots':
+                # Applying 85% to a single admitted slot left 0.85 slots, so
+                # even one job could never run. Compute/VRAM keep their caps.
+                capacity, used, pending, chat = map(slot_count, (capacity, used, pending, chat))
+                result[field] = max(0, capacity - used - pending - chat)
+            else:
+                result[field] = max(0, CAP * capacity - used - pending - chat)
         return result
 
     def reserve(self, task, quality=None, criteria=None):
@@ -161,6 +175,7 @@ class Budget:
             return 'HOLD_POLICY_TASK_DEMAND'
         try:
             requested_host = {k:number(host[k], 'HOLD_POLICY_TASK_DEMAND') for k in HOST_FIELDS}
+            requested_host['model_slots'] = slot_count(requested_host['model_slots'])
             requested_gpu = {}
             for uid, row in gpus.items():
                 if uid not in self.gpus or not isinstance(row, Mapping) or set(row) != set(GPU_FIELDS):
