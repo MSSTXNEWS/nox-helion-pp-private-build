@@ -14,8 +14,8 @@ SERVICES = {
     "nox-selfheal": "/root/nox_selfheal.py",
 }
 STATUSES = {"RUNNING", "STOPPED", "EXITED", "FATAL", "BACKOFF", "STARTING", "STOPPING"}
-LINE = re.compile(r"^([A-Za-z0-9_.@-]{1,80})\\s+(RUNNING|STOPPED|EXITED|FATAL|BACKOFF|STARTING|STOPPING)(?:\\s|$)")
-PID = re.compile(r"\\bpid ([1-9][0-9]{0,9})(?:,|\\s|$)")
+LINE = re.compile(r"^([A-Za-z0-9_.@-]{1,80})\s+(RUNNING|STOPPED|EXITED|FATAL|BACKOFF|STARTING|STOPPING)(?:\s|$)")
+PID = re.compile(r"\bpid ([1-9][0-9]{0,9})(?:,|\s|$)")
 
 def process_identity(pid, expected, proc=Path("/proc")):
     if type(pid) is not int or not 1 <= pid < 2**31:
@@ -30,7 +30,7 @@ def process_identity(pid, expected, proc=Path("/proc")):
         # Field 22: index 19 after the comm state begins at field 3.
         if len(sa) < 20 or len(sb) < 20 or sa[19] != sb[19] or not sa[19].isdigit():
             return None
-        argv = [arg.decode("utf8", "strict") for arg in cmd.split(b"\\0") if arg]
+        argv = [arg.decode("utf8", "strict") for arg in cmd.split(b"\0") if arg]
         if expected not in argv:
             return None
         return {"pid": pid, "start_ticks": int(sa[19]),
