@@ -166,6 +166,41 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(answer[0]['id'], 'current')
         self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
 
+    def test_non_boolean_history_import_cannot_evict_verified_recent_memory(self):
+        # Invalid provenance may still be syntactically valid JSON. The
+        # 256-row SQL limit must not admit 300 numeric or string impostors
+        # as current memory before Python has a chance to reject them.
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current', 'actual owner decision', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-17T21:00:00Z', 'current'))
+            for i in range(300):
+                key = 'bad_marker_' + str(i)
+                item(c, key, 'unsupported imported memory ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET meta=?,ts=? WHERE id=?',
+                          ('{"history_import":1}', '2024-01-01', key))
+            for kind, raw in [('string', '{"history_import":"true"}'),
+                              ('null', '{"history_import":null}')]:
+                item(c, kind, 'untrusted provenance ' + kind, 'M1')
+                c.execute('UPDATE s03_items SET meta=? WHERE id=?', (raw, kind))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with g.connection(self.db) as c:
+            rows = g.recent_rows(c)
+        self.assertEqual(rows[0]['id'], 'current')
+        for raw in ('{"history_import":1}', '{"history_import":"true"}',
+                    '{"history_import":null}'):
+            self.assertEqual(g._recent_provenance_rank({'meta':raw}), 0)
+        self.assertEqual(g._recent_provenance_rank({'meta':'{"history_import":true}'}), 1)
+        self.assertEqual(g._recent_provenance_rank({'meta':'{"history_import":false}'}), 2)
+        answer = g.recall('unmatchedfreshquery', db=self.db,
+                          identity_fn=lambda: (_ for _ in ()).throw(OSError('BGE offline')))
+        self.assertEqual(answer[0]['id'], 'current')
+        unverified = [r for r in answer if r['id'].startswith('bad_marker_')]
+        self.assertTrue(unverified)
+        self.assertTrue(all(r['historical_unverified'] and not r['training_verified']
+                            for r in unverified))
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
     def test_recent_rejects_future_clock_and_oversized_request(self):
         with g.connection(self.db, write=True) as c:
             item(c, 'valid', 'valid current fact', 'M1')
