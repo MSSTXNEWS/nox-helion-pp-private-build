@@ -1,0 +1,27 @@
+name: NOX existing OneHost mentor resilience
+on:
+  push:
+    paths:
+      - 'nox-control/owner_dispatcher_mentor.py'
+      - 'nox-control/test_owner_dispatcher_mentor.py'
+      - '.github/workflows/nox-owner-mentor-resilience-ci.yml'
+  pull_request:
+    paths:
+      - 'nox-control/owner_dispatcher_mentor.py'
+      - 'nox-control/test_owner_dispatcher_mentor.py'
+      - '.github/workflows/nox-owner-mentor-resilience-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  owner-mentor-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Parse and compile pinned mentor source and regressions
+        run: python3 -m py_compile nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
+      - name: Run original mentor regressions plus bounded offline recovery
+        run: python3 -m unittest discover -s nox-control -p test_owner_dispatcher_mentor.py -v
