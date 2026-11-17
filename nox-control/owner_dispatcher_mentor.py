@@ -307,7 +307,20 @@ def on_failure(task, error):
     else:
         config = discover_senior()
         if config is None:
-            result['state'] = 'BLOCKED_SENIOR_NOT_CONFIGURED'
+            # A missing senior must not stall previously reviewed, read-only
+            # status checks after transient transport faults. No shell,
+            # service mutations, training, downloads, merge or model swaps.
+            # The incident budget is durable and never reset by retrying.
+            if (handler in READ_ONLY_RETRY_HANDLERS
+                    and category in ('timeout', 'service_unavailable')
+                    and reserve_incident(incident)
+                    and not stop_active()):
+                task['status'] = 'pending'
+                task['next_try'] = time.time() + 30
+                result['state'] = 'BOUNDED_READ_ONLY_RETRY_NO_SENIOR'
+                result['auto_retry'] = True
+            else:
+                result['state'] = 'BLOCKED_SENIOR_NOT_CONFIGURED_OR_UNSAFE'
         elif not reserve_incident(incident):
             result['state'] = 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET'
         elif not _ADVISOR_SLOT.acquire(timeout=2):
