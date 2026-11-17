@@ -1699,3 +1699,10 @@ Existing DeepSeek Range owner lease path traversal fixed in commit 35b334467c; [
 - Owner B2 PROCESS2, unique V14-2-22 telemetry source-only CAS claim; NO OneHost native writer/STOP lease. Previous A2 V14-2-08 and B2 V14-2-09 SOURCE_TESTED, untouched.
 - Exact source scope: existing nox-control/owner_native_inspect.py PID/start_ticks double-read admission for GPU process mapping, and original test_owner_native_inspect_inventory.py regression; prevent reported nvidia-smi PID re-use race from misattributing VRAM to unrelated process. Do not create scheduler/backend or change running processes.
 - Native STOP/lease/PID current state UNKNOWN. Test in source CI if possible; release claim with SHA + verified result/HOLD promptly, no server actions.
+
+
+### NOX-V14-B0-V14-0-11-SOURCE-CLAIM-2026-11-17T00:28Z · instructions_version 0.0.6
+- **TaskID / owner:** V14-0-11 · B0 PROCESS 0; source-only GitHub CAS reservation, NOT owner-native OneHost writer lease.
+- **Independent defect:** current `nox-control/owner_autonomy_pool.py` treats native terminal status `COMPLETED` / `DONE` as freed capacity but only lowercase `done` as satisfying predecessor dependencies. A finished parent therefore blocks a subsequent READY task and starves the original queue. Fix ONLY exact dependency success normalization; failed/cancelled/unknown must not unlock a child.
+- **Source preimages:** `nox-control/owner_autonomy_pool.py` blob `78e1f66c2c82800e6d662851ac51528ab16d9b46`; `nox-control/test_owner_autonomy_pool.py` blob `58e0ec843cddcadc1a7df4c1d467f7dea502597b`. Preserve original native STOP/lease, no restarts, no S03 or model actions.
+- **Next:** exact source CAS patch + targeted existing tests, release claim with SOURCE/HOLD evidence and rollback; other lanes independent.
