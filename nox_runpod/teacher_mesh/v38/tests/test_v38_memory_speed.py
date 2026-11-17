@@ -164,8 +164,13 @@ class RequiredMemory(unittest.TestCase):
                     return [record(text='native-call-'+str(len(calls)))]
                 cache=WarmS03Cache(native,lambda s:'same-revision')
                 first=[]
-                thread=threading.Thread(
-                    target=lambda:first.extend(cache(S,'genesis',8)),daemon=True)
+                errors=[]
+                def read_first():
+                    try:
+                        first.extend(cache(S,'genesis',8))
+                    except RuntimeError as exc:
+                        errors.append(str(exc))
+                thread=threading.Thread(target=read_first,daemon=True)
                 thread.start()
                 try:
                     self.assertTrue(entered.wait(2),'native recall did not start')
@@ -175,7 +180,10 @@ class RequiredMemory(unittest.TestCase):
                     thread.join(3)
                 self.assertFalse(thread.is_alive())
                 self.assertEqual(len(calls),1)
-                self.assertEqual(first[0]['content'],'native-call-1')
+                # A revoked in-flight read is not only barred from the cache:
+                # it must never return a stale row to the caller.
+                self.assertEqual(first,[])
+                self.assertEqual(errors,['HOLD_S03_CACHE_INVALIDATED_DURING_READ'])
                 fresh=cache(S,'genesis',8)
                 self.assertEqual(fresh[0]['content'],'native-call-2')
                 self.assertEqual(len(calls),2)
