@@ -281,6 +281,59 @@ class VerifiedJournalRecallV14Tests(unittest.TestCase):
 
 
 @unittest.skipUnless(FIXTURE.exists(), 'Requires retrieved pinned native dispatcher fixture')
+class SharedOptimizationCacheV14Tests(unittest.TestCase):
+    def test_sibling_context_cache_respects_handler_params_and_failure(self):
+        """A parent claim cannot lend its optimization advice to a different task."""
+        lifecycle = module('owner_task_lifecycle')
+
+        class Gateway:
+            def __init__(self):
+                self.calls = []
+
+            def consult_plan(self, technical, deadline_seconds=2.0):
+                self.calls.append(technical.copy())
+                return {'state': 'CONSULTED', 'models_consulted': 1}
+
+        local = {'verified': 0, 'errors': 0, 'error_categories': []}
+        plan = {'mode': 'NORMAL'}
+        base = {'id': 'child-a', 'owner_parent_id': 'parent-123',
+                'owner_plan_id': 'plan-123', 'handler': 'verify_q4',
+                'params': {'operation': 'worker_verify'}, 'note': ''}
+        gateway = Gateway()
+        with patch.object(lifecycle, 'semantic_recall', return_value={'state': 'HOLD_NATIVE'}), \
+             patch.object(lifecycle, 'technical_details',
+                          side_effect=lambda task, *_: {
+                              'task_intent': task['handler'],
+                              'operation': task['params']['operation'],
+                              'error_note': task.get('note', '')}):
+            lifecycle._CACHE.clear()
+            try:
+                first = lifecycle.shared_context(base, local, plan, gateway)
+                sibling = {**base, 'id': 'child-b'}
+                repeated = lifecycle.shared_context(sibling, local, plan, gateway)
+                self.assertTrue(repeated['cache_reused'])
+                self.assertEqual(first['context_sha256'], repeated['context_sha256'])
+                self.assertEqual(len(gateway.calls), 1)
+
+                variations = [
+                    {**base, 'handler': 'ensure_downloads'},
+                    {**base, 'params': {'operation': 'component:memory'}},
+                    {**base, 'note': 'CUDA out of memory'},
+                ]
+                for task in variations:
+                    result = lifecycle.shared_context(task, local, plan, gateway)
+                    self.assertFalse(result['cache_reused'])
+                    self.assertNotEqual(result['context_sha256'], first['context_sha256'])
+                    self.assertEqual(result['technical_context']['task_intent'], task['handler'])
+                    self.assertEqual(result['technical_context']['operation'],
+                                     task['params']['operation'])
+                    self.assertEqual(result['technical_context']['error_note'],
+                                     task.get('note', ''))
+                self.assertEqual(len(gateway.calls), 4)
+            finally:
+                lifecycle._CACHE.clear()
+
+
 class NativeTransformTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
