@@ -155,6 +155,49 @@ class MentorTests(unittest.TestCase):
                     self.assertEqual(task['status'], 'blocked')
                     self.assertFalse(result.get('auto_retry', False))
 
+    def test_existing_dispatcher_periodic_reciprocal_task_never_duplicates_or_replays_hold(self):
+        import inspect
+        import threading
+        from types import SimpleNamespace
+        transform = ast.parse(inspect.getsource(mentor.transform_dispatcher))
+        replacements = [n for n in ast.walk(transform) if isinstance(n, ast.Call)
+                        and isinstance(n.func, ast.Name) and n.func.id == 'replace_function'
+                        and len(n.args) >= 3 and isinstance(n.args[1], ast.Constant)
+                        and n.args[1].value == 'ensure_watchdog_task']
+        self.assertEqual(len(replacements), 1)
+        source = replacements[0].args[2].value
+        compile(source, '<owner-periodic-watchdog>', 'exec')
+        clock = [1000.0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'scripts').mkdir()
+            (root / 'scripts/owner_dispatcher_reciprocal_health.py').write_text('# approved native fixture')
+            namespace = {'owner_mentor': SimpleNamespace(ROOT=root, service_state=lambda name: {'state':'RUNNING'}),
+                         '_qlock': threading.RLock(), 'time': SimpleNamespace(time=lambda: clock[0])}
+            exec(compile(source, '<owner-periodic-watchdog>', 'exec'), namespace)
+            tasks = {'tasks': {}}
+            namespace['ensure_watchdog_task'](tasks)
+            rid = 'owner.dispatcher_reciprocal_health'
+            self.assertEqual(tasks['tasks'][rid]['status'], 'pending')
+            self.assertEqual(tasks['tasks'][rid]['handler'], 'owner_component_validate')
+            self.assertEqual(tasks['tasks'][rid]['params']['component'], 'dispatcher_reciprocal_health')
+            tasks['tasks'][rid]['status'] = 'done'
+            clock[0] += 299
+            namespace['ensure_watchdog_task'](tasks)
+            self.assertEqual(tasks['tasks'][rid]['status'], 'done')
+            clock[0] += 2
+            namespace['ensure_watchdog_task'](tasks)
+            self.assertEqual(tasks['tasks'][rid]['status'], 'pending')
+            tasks['tasks'][rid]['status'] = 'blocked'
+            clock[0] += 600
+            namespace['ensure_watchdog_task'](tasks)
+            self.assertEqual(tasks['tasks'][rid]['status'], 'blocked')
+            tasks['tasks'][rid].update(status='done', last_rearm_epoch='bad')
+            namespace['ensure_watchdog_task'](tasks)
+            self.assertEqual(tasks['tasks'][rid]['status'], 'blocked')
+            self.assertEqual(tasks['tasks'][rid]['note'], 'HOLD_RECIPROCAL_REARM_EPOCH_INVALID')
+            self.assertEqual(sum(tid == rid for tid in tasks['tasks']), 1)
+
     def test_nox_chat_is_never_substituted_for_senior(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
             path = Path(root) / 'config/senior_model.json'
