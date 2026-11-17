@@ -120,7 +120,7 @@ class ProgressEvidenceTests(unittest.TestCase):
             root=Path(d)
             (root/'config').mkdir()
             (root/'scripts').mkdir()
-            (root/'scripts/nox_dispatcher_t855u.py').write_text('running = True\\n')
+            (root/'scripts/nox_dispatcher_t855u.py').write_text('running = True\n')
             with mock.patch.object(mod,'ROOT',root), mock.patch.object(
                 mod,'_dispatcher_progress_observation',
                 return_value={'state':'OBSERVED_LOCAL_COUNTER_ADVANCE_UNATTESTED',
@@ -143,7 +143,7 @@ class ProgressEvidenceTests(unittest.TestCase):
             root=Path(d)
             (root/'config').mkdir()
             (root/'scripts').mkdir()
-            (root/'scripts/nox_dispatcher_t855u.py').write_text('running = True\\n')
+            (root/'scripts/nox_dispatcher_t855u.py').write_text('running = True\n')
             (root/'config/dispatcher_agents_t868u.json').write_text('{"workers":6}')
             with mock.patch.object(mod,'ROOT',root), mock.patch.object(
                 mod,'_dispatcher_progress_observation',
