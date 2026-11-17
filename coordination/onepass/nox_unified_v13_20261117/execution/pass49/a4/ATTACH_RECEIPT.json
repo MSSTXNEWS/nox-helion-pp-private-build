@@ -1,0 +1,44 @@
+{
+  "schema": "NOX_A4_STAGE_ATTACH_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-49-20261117",
+  "instructions_version": "0.0.6",
+  "source_sha": "9db0ca9e1626b14fb19d05ad46ba868df3b92a9d",
+  "base_package_commit": "35d92ce6838703056526a5ce8b57751d176bf2ae",
+  "task_id": "6A03",
+  "receipt_level": "source",
+  "accepted_ids": [],
+  "server_changed": false,
+  "training_started": false,
+  "files": {
+    "nox_runpod/teacher_mesh/v135/resource_native_binding.py": "232c56ab6438a6a3bfdd599c66e9cd59a5305d420bf4941518cbed2be205ee2a",
+    "stage_existing_trainer.py": "215d4a5c725c12cee40487c0bf272a4e59faaec56254f93434b8fdc696f4a931",
+    "test_stage_attach.py": "c6690079651bc5f9bce412e86abe70f226d3c307377040e12d0659d93016cc55"
+  },
+  "test_status": "12_SOURCE_TESTS_PASS",
+  "stage_execution": {
+    "schema": "NOX_EXISTING_TRAINER_STAGE_ONLY_V1",
+    "run_id": "NOX-49-20261117",
+    "originals": {
+      "train_full_base_zero3.py": "c2e7b231d5af8b9493ec3578144f95e60ff31c7c",
+      "curate_teacher_distillation.py": "e1012794c1dbae911c3ca853c3686357e54faa3c",
+      "verified_resume.py": "f0cf9bf3546144f2d6b752fa88e626bb3a511151"
+    },
+    "files": {
+      "nox_runpod/teacher_mesh/v135/train_full_base_zero3.py": "5f900b525994eca2ba50660364a02940ed4753f28a077527dd88103958a20f1a",
+      "nox_runpod/teacher_mesh/v135/curate_teacher_distillation.py": "de821e42be69f571e8ba0aebc93e5c532529c20e1d4d3d8f4610be037dbcd957",
+      "nox_runpod/teacher_mesh/v135/verified_resume.py": "8b81dc44159239886d567492c7101b85cfb6fdc2c09a5bc1422febcfce0b269f",
+      "nox_runpod/teacher_mesh/v135/resource_safe_point.py": "65884db1069e13956a747e34ab1776103801036b8d7cde33accbfe401b5843e8",
+      "nox_runpod/teacher_mesh/v135/resource_native_binding.py": "232c56ab6438a6a3bfdd599c66e9cd59a5305d420bf4941518cbed2be205ee2a"
+    },
+    "training_started": false,
+    "source_tree_changed": false,
+    "server_changed": false,
+    "native_accepted_ids": []
+  },
+  "native_blocker": "HOLD_NATIVE_POOL_CALLBACKS: _nox_owner_autonomy_native binding absent in current final integration; existing owner handler must attach this one binding and supply fresh signed admissions after all server gates.",
+  "validation_limits": [
+    "Source tests use isolated existing-handler stand-in, actual extracted verify_owner HMAC function, and stubbed fullbase resource policy; live resource eligibility is not claimed.",
+    "Stage executed on exact three original Git blobs locally; no server write or training.",
+    "Resume uses existing conservative fullbase_admission; may HOLD while resident allocations consume headroom. No memory is counted as released."
+  ]
+}

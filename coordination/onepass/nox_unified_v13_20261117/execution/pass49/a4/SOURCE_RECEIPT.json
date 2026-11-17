@@ -1,0 +1,74 @@
+{
+  "schema": "NOX_A4_SAFE_POINT_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-49-20261117",
+  "instructions_version": "0.0.6",
+  "assigned_ids": [
+    "4A02",
+    "5A04",
+    "6A03",
+    "0B01",
+    "1V14-03",
+    "2A03",
+    "3V14-13"
+  ],
+  "implemented_ids": [
+    "4A02",
+    "6A03"
+  ],
+  "accepted_ids": [],
+  "receipt_level": "source",
+  "native_pass": false,
+  "authoritative_source_sha": "9db0ca9e1626b14fb19d05ad46ba868df3b92a9d",
+  "source_blob_preconditions": {
+    "train_full_base_zero3.py": "c2e7b231d5af8b9493ec3578144f95e60ff31c7c",
+    "curate_teacher_distillation.py": "e1012794c1dbae911c3ca853c3686357e54faa3c",
+    "verified_resume.py": "f0cf9bf3546144f2d6b752fa88e626bb3a511151"
+  },
+  "test": {
+    "command": "python -m unittest -v test_forge_safe_point.py",
+    "passed": 10,
+    "failed": 0,
+    "scope": "isolated fake trainer and synthetic corpus; no GPU/native work",
+    "initial_harness_failure": "Missing json in extracted-function namespace corrected before final 10/10 run"
+  },
+  "server_mutated": false,
+  "training_started": false,
+  "private_corpus_read_or_published": false,
+  "vram_released": false,
+  "files": {
+    "nox_runpod/teacher_mesh/v135/curate_teacher_distillation.py": "de821e42be69f571e8ba0aebc93e5c532529c20e1d4d3d8f4610be037dbcd957",
+    "nox_runpod/teacher_mesh/v135/resource_safe_point.py": "65884db1069e13956a747e34ab1776103801036b8d7cde33accbfe401b5843e8",
+    "nox_runpod/teacher_mesh/v135/train_full_base_zero3.py": "5f900b525994eca2ba50660364a02940ed4753f28a077527dd88103958a20f1a",
+    "nox_runpod/teacher_mesh/v135/verified_resume.py": "8b81dc44159239886d567492c7101b85cfb6fdc2c09a5bc1422febcfce0b269f",
+    "test_forge_safe_point.py": "af4b93c269c30d2c87c80da295a57f04bc90bcf052fd10c015c25e4ffb44e447"
+  },
+  "blockers": [
+    {
+      "task_id": "6A03",
+      "condition": "Root confirms deployed trainer blob, binds controller to existing native dispatcher and fresh signed resume admission after backup/restore/storage/optimization/model gates; native pause/resume exact-state proof still required."
+    },
+    {
+      "task_id": "4A02",
+      "condition": "Owner-approved local corpus provenance/permissions and enough independent groups; execute threeway preparation privately, verify exact hashes and independent native corpus identity; no fixture is owner data."
+    },
+    {
+      "task_id": "5A04",
+      "condition": "No new work claimed by this trainer package; original role and native acceptance criterion retained."
+    },
+    {
+      "task_id": "1V14-03",
+      "condition": "No new work claimed by this trainer package; original role and native acceptance criterion retained."
+    },
+    {
+      "task_id": "2A03",
+      "condition": "No new work claimed by this trainer package; original role and native acceptance criterion retained."
+    },
+    {
+      "task_id": "3V14-13",
+      "condition": "No new work claimed by this trainer package; original role and native acceptance criterion retained."
+    }
+  ],
+  "previously_accepted_do_not_recount": [
+    "0B01"
+  ]
+}
