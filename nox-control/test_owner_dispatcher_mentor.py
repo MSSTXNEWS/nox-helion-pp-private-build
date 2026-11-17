@@ -125,6 +125,9 @@ class MentorTests(unittest.TestCase):
             result = mentor.on_failure(task, 'file missing')
             self.assertEqual(result['state'], 'BLOCKED_SENIOR_NOT_CONFIGURED_OR_UNSAFE')
             self.assertEqual(task['status'], 'blocked')
+            self.assertTrue(result['needs_owner_input'])
+            self.assertEqual(result['owner_question_code'], 'missing_file')
+            self.assertTrue(result['owner_question'])
             call.assert_not_called()
             self.assertTrue((Path(root) / 'memory/dispatcher_mentor/events.jsonl').exists())
 
