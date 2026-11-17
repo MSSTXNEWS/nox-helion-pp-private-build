@@ -1,3 +1,17 @@
+# Текущий регламент: передача до завершения — 17.11.2026
+
+NOX_HANDOFF_BEFORE_EXIT_V3_VERIFIED_15_OF_15. Проверено 15 включённых автоматизаций: A1–A6, B0–B5, D1–D3. Полный V3 присутствует 15/15; schedules сохранены 15/15. A :00/:10/:20/:30/:40/:50; D :05/:25/:45; B без изменения :30, Europe/Moscow. Это 15 расписаний, не 15 native GPU workers. В этой активной команде максимум три субисполнителя плюс root.
+
+Перед завершением: проверенный checkpoint/receipt → свежие claims → конкретный NEXT_READY (inputs, source SHA, зависимости, приёмка) → запуск преемника при свободном слоте; если лимит полон, ведущий пополняет слот немедленно после освобождения. Один ведущий отвечает за один запуск. Не размножать вложенные группы. Работа продолжается до исчерпания доступных задач или времени активного запуска; остаток сохраняется для включённой часовой эстафеты. Неизвестный native side effect сначала сверяется по run/task ID. Повторять только безопасные временные ошибки с изменившимся условием/ограниченным backoff; source defect, auth, STOP, ресурсный HOLD не обходятся перезапусками. При отсутствии READY фиксируются точные зависимости, без холостых аудитов.
+
+Документы v2.4 / plan revision5 опубликованы в тех же пяти Drive ID и прочитаны обратно byte-exact 5/5; 240 карточек, 54 шага, 9 пакетов сохранены. Концепция: https://drive.google.com/file/d/1Ez0JSlLmb51GdzeV1-Nls0TF8dWczM_E/view . План: https://drive.google.com/file/d/1SwQwESbQM07fUzZqmlc2in6x2z2Gehml/view . JSON payload SHA 8e816552b1ca87c3cb2f24546532f1bffcde80f31aecad92a58baf5cba0a9305.
+
+Последний native canary 44144658040/job134256394067/comment6956669580/source8b7f431f419a3618bed7a9442ccf1072a48e747a: login и CSS/JS PASS, HTML hash mismatch → HOLD_SERVED_ASSET_HASH; dialogs_created=0, model_requests=0; cleanup DETACHED_AND_VERIFIED. HOLD_PATH_NAME устранён exact AST fixed-sibling common.SECRETS resolver. Следующий v4 независимо проверит HTML-выдачу и chat/model/S03, без ослабления auth/source/STOP/admission; пока PLANNED, не запускать второй canary без свежего root checkpoint. O1 bridge/S03, O2 arbiter-p0, вложенный O5/native_binding ACTIVE_SOURCE_ONLY сохраняют свои scopes.
+
+Общий журнал: https://app.notion.com/p/419acc184a9f81fca144dfe8432e1a5b ; shared memory: https://app.notion.com/p/41bacc184a9f811aa65ae53e0024f858 . Notion calls instructions_version 0.0.6. Исторические записи ниже сохраняются.
+
+---
+
 # Актуальный регламент NOX RELAY6 · 17.11.2026
 
 Маркер NOX_RELAY6_20261117_V1. Последнее поручение владельца заменяет для команды A старые одновременные A0–A6 на шесть разных часовых этапов. Europe/Moscow: A1 :00 чат+координация; A2 :10 советники+инструменты; A3 :20 память+модель; A4 :30 Drive+канон; A5 :40 OneHost+ресурсы; A6 :50 WEB+приёмка+слияние. Каждая задача FREQ=HOURLY, enabled/readback6/6. A0 paused, роль включена в A1. B/O и другие расписания не изменены. Старые записи ниже сохранены как история.
