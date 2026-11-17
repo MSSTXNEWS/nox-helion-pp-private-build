@@ -175,6 +175,10 @@ def fullbase_admission(native:Mapping|None,*,teacher_lanes:tuple[str,...]=())->d
                  'offsite_checkpoint_manifest_sha256'):
         if not _valid_sha(native.get(name)):
             reasons.append('HOLD_SHA_'+name.upper())
+    # A verified flag cannot override byte-identical train and holdout evidence.
+    if (_valid_sha(native.get('train_dataset_sha256'))
+        and native['train_dataset_sha256']==native.get('holdout_dataset_sha256')):
+        reasons.append('HOLD_TRAIN_HOLDOUT_LEAKAGE')
     # Enforce teacher scheduling policy without making a competing scheduler.
     allowed=('qwen-language','deepseek-reasoning','coder','owner-verified-knowledge')
     if len(set(teacher_lanes))!=len(teacher_lanes) or any(x not in allowed for x in teacher_lanes):

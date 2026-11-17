@@ -39,6 +39,13 @@ def fixture_native()->dict:
     return out
 
 class ZeRO3Safety(unittest.TestCase):
+    def test_identical_train_holdout_digest_blocks_despite_verified_flag(self):
+        native=fixture_native()
+        native['holdout_dataset_sha256']=native['train_dataset_sha256']
+        result=policy.fullbase_admission(native)
+        self.assertNotEqual(result['state'],'READY_FOR_SIGNED_ONEHOST_TRAINING_START')
+        self.assertIn('HOLD_TRAIN_HOLDOUT_LEAKAGE',result['reasons'])
+
     def test_fullbase_config_is_exact_cpu_offload_no_adapter(self):
         c=policy.zero3_cpu_config()
         self.assertEqual(c['zero_optimization']['stage'],3)
