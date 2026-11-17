@@ -198,9 +198,22 @@ def check_existing_installation(expected):
         return False
     if len(present) != len(expected):
         fail("PARTIAL_INSTALL_REQUIRES_OWNER_RECONCILIATION")
+    mismatches = []
     for path, raw in expected:
-        if not path.is_file() or path.is_symlink() or path.read_bytes() != raw:
+        if not path.is_file() or path.is_symlink():
             fail("EXISTING_INSTALL_SOURCE_MISMATCH")
+        current = path.read_bytes()
+        if current != raw:
+            # Only bounded fingerprints leave the host, never policy contents.
+            mismatches.append({"name": path.name,
+                               "actual_sha256": hashlib.sha256(current).hexdigest(),
+                               "expected_sha256": hashlib.sha256(raw).hexdigest(),
+                               "actual_bytes": len(current)})
+    if mismatches:
+        emit({"state": "HOLD_EXISTING_LIFELINE_DIFF",
+              "changes_not_applied": True,
+              "existing_source_fingerprints_only": mismatches})
+        fail("EXISTING_INSTALL_SOURCE_MISMATCH")
     return True
 
 
