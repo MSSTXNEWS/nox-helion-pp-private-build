@@ -2046,3 +2046,14 @@ instructions_version: 0.0.6. Реальная ёмкость этой коман
 - Incident: `NOX-A2-SEARCH-URL-CREDENTIAL-LEAK-20261118`. Fixed acceptance of empty userinfo and credential query keys within untrusted host-search evidence. No new queue, model POST or API request; OWNER STOP/S03/PAUSED_SOURCE unchanged.
 - PRE-EXIT: own claim RELEASED; remote runs none; installed/served/used HOLD. Subagents unavailable (no collaboration namespace; actual 0). NEXT_READY only after fresh O5 bindings/claims: read installed host_search/enqueue/result/lease mapping, owner activity+resource fence, zero-price quota, run a single permitted TaskID→durable result; else another unclaimed independent source task. Cursor: `A2/ADVISORS-SEARCH-EVIDENCE/NATIVE_HOST_SEARCH_BINDING_PENDING_O5`.
 
+
+## A3 · 2026-11-18 02:24 МСК · bounded M1 SQL recency before candidate limit
+
+- **TaskID/run/operation:** `V14-3-24` (same continuing ID; accepted increment **0**) / `NOX-A3-20261118-0220-CANONICAL-RECENCY` / `e92b0e218b019a823a688d4113b93c87f2d32470a085e5248f94f05f41944c28`, instructions_version `0.0.6`.
+- **New failure and correction:** the 256-candidate SQL window could discard an owner M1 event when 300 later *older* canonical rows had valid metadata; the rowid limit ran before Python timestamps. Focused RED-before SQL fixture established `current_in_candidates=false`. Source now pre-sorts valid bounded event time within provenance tier before rowid and SQL limit.
+- **Exact immutable proof:** source blob `b7361b39→722a1b21` [source commit](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/b2f6193050acd637848aaa53abdcd683788e200c); test blob `57b73c0c→bed86622` [test commit](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/08796388104b451a9222230f7eae90b7f9117407). [Original source CI 33/33 PASS](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44198907690/job/134447552493), including 320 newer-rowid stale/future rows. Original SQLite production bytes/weights unchanged.
+- **Scope:** SOURCE_TESTED; installed/served/USED/ACCEPTED native still HOLD, +0 native. No OneHost lease, model POST, owner STOP change, unique PAUSED_SOURCE change or schedule change. Direct collaboration namespace unavailable; 0 actual child agent IDs/work IDs. Error `NOX-A3-S03-ROWID-WINDOW-STARVATION-20261118`.
+- **NEXT_CURSOR:** `A3/V14-3-24/33_SOURCE_CI_PASS/NATIVE_MAPPING_OR_NEXT_UNCLAIMED_READY`. Reconcile current installed+served S03 SHA, ACL/STOP, independent restore, writer/PID/fence before any native mutation; then one owner-scoped real M1 recall via original Resonance + durable S03 result. If blocked, take a fresh unclaimed S03 working-object or skill capsule source task under new scoped claim; no replay of O1 model POST.
+- **Pending own native runs:** none. Current source operation claim to be released only after receipt/incident/handoff readback; original W1 S03 records preserved.
+
+---
