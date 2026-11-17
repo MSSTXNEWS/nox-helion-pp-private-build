@@ -228,8 +228,9 @@ def replace_script_exact(path, expected_old, replacement):
         # Reading a source may legitimately update atime on relatime mounts.
         return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
                 info.st_size, info.st_mtime_ns, info.st_ctime_ns)
-    before = identity(path.lstat())
-    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+    before_stat = path.lstat()
+    before = identity(before_stat)
+    if not stat.S_ISREG(before_stat.st_mode) or before_stat.st_nlink != 1:
         fail("LEGACY_SCRIPT_UNSAFE")
     if path.read_bytes() != expected_old:
         fail("LEGACY_SCRIPT_CHANGED")
