@@ -147,10 +147,14 @@ def service_state(service):
         return {'state': 'UNKNOWN', 'pid': None}
     try:
         result = subprocess.run(['supervisorctl', 'status', service], capture_output=True, text=True, timeout=4)
-        if result.returncode != 0 or len(result.stdout.strip().splitlines()) != 1:
+        if result.returncode not in (0, 3) or len(result.stdout.strip().splitlines()) != 1:
             return {'state': 'UNKNOWN', 'pid': None}
         match = re.match(r'^' + re.escape(service) + r'\s+([A-Z]+)(?:\s+pid\s+(\d+))?', result.stdout.strip())
-        if match and ((match[1] == 'RUNNING' and not match[2]) or (match[1] in ('STOPPED', 'EXITED') and match[2])):
+        if match and (result.returncode == 3 and match[1] not in ('STOPPED', 'EXITED')
+                      or (match[1] == 'RUNNING' and not match[2])
+                      or (match[1] in ('STOPPED', 'EXITED') and match[2])):
+            return {'state': 'UNKNOWN', 'pid': None}
+        if match and not match[2] and re.search(r'\\bpid\\b', result.stdout.strip()[match.end():], re.I):
             return {'state': 'UNKNOWN', 'pid': None}
         return {'state': match[1] if match and match[1] in SERVICE_STATES else 'UNKNOWN', 'pid': int(match[2]) if match and match[2] else None}
     except (OSError, subprocess.TimeoutExpired):
@@ -160,6 +164,7 @@ def service_state(service):
 def error_category(error):
     value = str(error).lower()
     for name, words in (
+        ('training_regression', ('holdout_regression', 'holdout regression', 'evaluation loss regressed', 'regression_streak')),
         ('out_of_memory', ('out of memory', 'unable to allocate cuda', 'cuda oom')),
         ('missing_file', ('no such file', 'missing', 'not found', 'filenotfounderror')),
         ('permission', ('permission denied', 'permissionerror')),
@@ -375,6 +380,7 @@ def on_failure(task, error):
             'timeout': 'Check the connection and choose whether another bounded retry is allowed.',
             'service_unavailable': 'Review the service incident before authorizing further recovery.',
             'validation': 'Inspect the failed integrity check; do not bypass it.',
+            'training_regression': 'Hold training. Verify the best historical checkpoint and quality evaluation; approve a separate rollback/resume decision.',
         }
         result['needs_owner_input'] = True
         result['owner_question'] = prompts.get(category, 'Inspect the incident evidence and select a safe next action.')
