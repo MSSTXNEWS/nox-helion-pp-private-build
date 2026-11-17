@@ -176,6 +176,22 @@ class ExistingOwnerBridgePartialHtmlTests(unittest.TestCase):
         self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
         self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
 
+    def test_commented_live_script_does_not_hide_required_handler(self):
+        raw = ('<html><head><!-- disabled <script src="/nox-web-v29/owner-chat-ui.js">'
+               '</script> --></head><body></body></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        expected = ('<script defer src="/nox-web-v29/owner-chat-ui.js" '
+                    'data-nox-live-owner="1"></script>')
+        self.assertIn(expected, result)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_commented_meta_does_not_hide_current_live_build(self):
+        raw = ('<html><head><!-- <meta name="nox-live-build" content="old"> -->'
+               '</head><body></body></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<meta name="nox-live-build" content="' + ui.BUILD + '">', result)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
     def test_unrelated_marked_script_cannot_suppress_live_owner_bridge(self):
         raw = ('<html><head><script data-nox-live-owner="1" '
                'src="/nox-web-v29/unrelated.js"></script></head></html>')
