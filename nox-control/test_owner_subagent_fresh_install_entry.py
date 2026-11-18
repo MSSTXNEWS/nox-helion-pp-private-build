@@ -31,7 +31,7 @@ def configuration():
             'mode': 'NORMAL', 'target': 3, 'owner_authorized': True,
             'owner_request': '6906985850',
             'owner_source_sha': '41fbe63b5e57b1172956f8264c403aefa338aa6d',
-            'module_pins': dict(entry.DEPENDENCIES)}
+            'module_pins': dict(entry.OLD_DEPENDENCIES)}
 
 
 def history():
@@ -79,9 +79,15 @@ class FakeNative:
         self.SCRIPTS.mkdir()
         (self.STATE / 'owner_maintenance.lock').touch()
         self.target = self.SCRIPTS / 'owner_subagent_dispatcher.py'
+        self.pool_target = self.SCRIPTS / 'owner_autonomy_pool.py'
+        self.process_target = self.SCRIPTS / 'owner_subagent_processes.py'
         self.config = root / 'config/owner_native_subagents.json'
         self.before = b'original callback fixture\n'
+        self.before_pool = b'original pool fixture\n'
+        self.before_process = b'original processes fixture\n'
         self.atomic(self.target, self.before)
+        self.atomic(self.pool_target, self.before_pool)
+        self.atomic(self.process_target, self.before_process)
         self.atomic(self.config, entry.encoded(configuration()))
         self.queue, self.prior, self.callback = history()
         self.commands, self.writes, self.outputs = [], [], []
@@ -154,14 +160,15 @@ class FakeNative:
 
 
 class FreshInstallerTests(unittest.TestCase):
-    def test_config_transition_changes_only_callback_pin(self):
+    def test_config_transition_updates_all_installed_module_pins(self):
         before = configuration()
         raw = entry.encoded(before)
         self.assertEqual(entry.digest(raw), entry.OLD_CONFIG)
         result = entry.checked_config(raw)
         self.assertEqual(entry.digest(result), entry.NEW_CONFIG)
         after = json.loads(result)
-        after['module_pins']['owner_subagent_dispatcher.py'] = entry.OLD_CALLBACK
+        self.assertEqual(after['module_pins'], entry.NEW_DEPENDENCIES)
+        after['module_pins'] = entry.OLD_DEPENDENCIES
         self.assertEqual(after, before)
 
     def test_bundle_failure_is_before_native_operations(self):
@@ -186,7 +193,9 @@ def main():
 '''
         raws = {'owner_subagent_hash_recovery_entry.py': recovery,
                 'owner_subagent_install_entry.py': helper,
-                'owner_subagent_dispatcher_fresh.py': b'candidate = True\n'}
+                'owner_subagent_dispatcher_fresh.py': b'candidate = True\n',
+                'owner_subagent_processes.py': b'processes = True\n',
+                'owner_autonomy_pool.py': b'pool = True\n'}
         assets = {key: base64.b64encode(raw).decode() for key, raw in raws.items()}
         source = Path(entry.__file__).read_text().replace('__NOX_BUNDLE_JSON__', json.dumps(assets))
         packed = types.ModuleType('fresh_packaging_test')
@@ -194,7 +203,8 @@ def main():
         packed.ASSETS = {key: entry.digest(raw) for key, raw in raws.items()}
         value, _, candidate = packed.load_helpers()
         self.assertEqual(value.BUNDLE, assets)
-        self.assertEqual(candidate, raws['owner_subagent_dispatcher_fresh.py'])
+        self.assertEqual(set(candidate), set(raws))
+        self.assertEqual(candidate['owner_subagent_dispatcher_fresh.py'], raws['owner_subagent_dispatcher_fresh.py'])
 
     def test_current_training_generation_is_preserved_without_old_pin(self):
         for generation in ('qwen-initial-five', 'later-authorized-qwen-resume'):
@@ -229,8 +239,10 @@ def main():
             helper = Mock()
             helper.read.side_effect = lambda path: path.read_bytes()
             with self.assertRaisesRegex(RuntimeError, 'ROLLBACK_FOREIGN_CHANGE'):
-                entry.rollback_files(helper, target, config, b'old callback', b'old config',
-                                     b'new callback', b'new config')
+                entry.rollback_files(helper, {
+                    target: (b'old callback', b'new callback'),
+                    config: (b'old config', b'new config'),
+                })
             helper.atomic.assert_not_called()
             self.assertEqual(target.read_bytes(), b'new callback')
 
@@ -239,7 +251,12 @@ def main():
         self.addCleanup(temporary.cleanup)
         helper = FakeNative(Path(temporary.name) / 'nox', failure)
         recovery = types.SimpleNamespace(owned_group=lambda pid: [helper.process(pid)])
-        candidate = Path(entry.__file__).with_name('owner_subagent_dispatcher_fresh.py').read_bytes()
+        assets = {
+            'owner_subagent_dispatcher_fresh.py': Path(entry.__file__).with_name('owner_subagent_dispatcher_fresh.py').read_bytes(),
+            'owner_autonomy_pool.py': Path(entry.__file__).with_name('owner_autonomy_pool.py').read_bytes(),
+            'owner_subagent_processes.py': Path(entry.__file__).with_name('owner_subagent_processes.py').read_bytes(),
+        }
+        helper.assets = assets
         original_queue = copy.deepcopy(helper.queue)
         snapshots = [training('new-current-qwen'), training('new-current-qwen')]
         after = training('new-current-qwen')
@@ -249,7 +266,7 @@ def main():
         with ExitStack() as stack:
             stack.enter_context(patch.dict(os.environ, {'NOX_OWNER_REQUEST_ID': '1234',
                 'NOX_OWNER_SOURCE_SHA': 'a' * 40}))
-            stack.enter_context(patch.object(entry, 'load_helpers', return_value=(helper, recovery, candidate)))
+            stack.enter_context(patch.object(entry, 'load_helpers', return_value=(helper, recovery, assets)))
             stack.enter_context(patch.object(entry, 'check_sources'))
             stack.enter_context(patch.object(entry, 'prior_receipt', return_value=helper.prior))
             stack.enter_context(patch.object(entry, 'old_callback', return_value=helper.callback))
@@ -273,6 +290,19 @@ def main():
         self.assertEqual(result['tasks_posted'], 0)
         self.assertEqual(result['tasks_requeued'], 0)
         self.assertTrue(result['source_installed'])
+        self.assertEqual(helper.pool_target.read_bytes(), helper.assets['owner_autonomy_pool.py'])
+        self.assertEqual(helper.process_target.read_bytes(), helper.assets['owner_subagent_processes.py'])
+        backup = helper.ROOT/'backup/owner_subagent_fresh_gate/1234'
+        before_files = {
+            'owner_subagent_dispatcher.py': helper.before,
+            'owner_autonomy_pool.py': helper.before_pool,
+            'owner_subagent_processes.py': helper.before_process,
+            'owner_native_subagents.json': entry.encoded(configuration()),
+        }
+        for name, raw in before_files.items():
+            saved = backup/name
+            self.assertEqual(saved.read_bytes(), raw)
+            self.assertEqual(saved.stat().st_mode & 0o777, 0o600)
         self.assertTrue(result['training_configuration_and_flags_preserved'])
         self.assertFalse((helper.STATE / 'OWNER_MAINTENANCE.flag').exists())
 
@@ -281,6 +311,8 @@ def main():
         self.assertEqual(rc, 2)
         self.assertEqual([row[1] for row in helper.commands], ['stop', 'start', 'start'])
         self.assertEqual(helper.target.read_bytes(), helper.before)
+        self.assertEqual(helper.pool_target.read_bytes(), helper.before_pool)
+        self.assertEqual(helper.process_target.read_bytes(), helper.before_process)
         self.assertEqual(entry.digest(helper.config.read_bytes()), entry.OLD_CONFIG)
         self.assertTrue(result['rollback_verified'])
         self.assertFalse(result['source_installed'])

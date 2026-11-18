@@ -25,9 +25,9 @@ except NameError:
     BUNDLE = {}
 
 OLD_CALLBACK = 'b60c14db2b3dbef526daf45843aa96f11f70060c90b071a24f8b61ea7c9e1866'
-NEW_CALLBACK = '179e50b71377e007d32a39d0558ff77dbe02267f43045a4c14763b3d4abd6114'
+NEW_CALLBACK = '08437184fe8bfc287a26283ed0acebb0a513e156c9fb18c9bc96148109003e94'
 OLD_CONFIG = '52e9252ac363679f52ef52c63f27253a4abcca56eca2c30c9c40a68e901bd490'
-NEW_CONFIG = 'e988316fc3f6a7600fbce088c4aa7de72c44f2bfcce097def8942fa93b9b9da9'
+NEW_CONFIG = '1bd614b5c9a5488a18a19801b8646610fc02979511998040cd4c937187670a4e'
 DISPATCHER_SHA = '66afe5e6aa5e3a333c21a86c6aee942c3afd0bf9be007d14f9288a4740281e32'
 POLICY_SHA = '84780aaf911a229a654995f38972cdad5d99c72ab38842f76f787ec280acb46f'
 PRIOR_REQUEST = '6907376498'
@@ -35,15 +35,22 @@ PRIOR_SOURCE = '6c2d82701ead34c50311b14a48c4b01278ba2879'
 PRIOR_RECEIPT_SHA = '772d335786caf3cd4f824e63167186e5cbc1dc00a1c1e2cecb6b61b054a6f050'
 CHAT = {'pid': 7637, 'starttime': 149189867}
 TRAIN_SERVICE = 'nox-train-volta-t866u'
+OLD_DEPENDENCIES = {
+    'owner_subagent_processes.py': '117842bc8f0f9adf825213403ebcd2139f80db692d4589ac05b3359381551164',
+    'owner_autonomy_pool.py': '8e14f7f7909cefb38686420638621ebf0903e337070ad95d733d86632064ef95',
+    'owner_subagent_dispatcher.py': OLD_CALLBACK,
+}
+NEW_DEPENDENCIES = {
+    'owner_subagent_processes.py': '8805da8d99c7d5fe38db6c9a100fb86cc052e1c795418fd78284a5cb7a84d276',
+    'owner_autonomy_pool.py': 'c4f0a178d22f47c1e1b2575f6b9c3280165eb0cf13920053c7b427ada3d8f8a9',
+    'owner_subagent_dispatcher.py': NEW_CALLBACK,
+}
 ASSETS = {
     'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
     'owner_subagent_install_entry.py': 'a210182012d8872390b27a1f0fa8a5668016f06cd94d5557aad2b242d67eb806',
     'owner_subagent_dispatcher_fresh.py': NEW_CALLBACK,
-}
-DEPENDENCIES = {
-    'owner_subagent_processes.py': '117842bc8f0f9adf825213403ebcd2139f80db692d4589ac05b3359381551164',
-    'owner_autonomy_pool.py': '8e14f7f7909cefb38686420638621ebf0903e337070ad95d733d86632064ef95',
-    'owner_subagent_dispatcher.py': OLD_CALLBACK,
+    'owner_subagent_processes.py': NEW_DEPENDENCIES['owner_subagent_processes.py'],
+    'owner_autonomy_pool.py': NEW_DEPENDENCIES['owner_autonomy_pool.py'],
 }
 HANDLER = 'owner_native_subagent_review'
 TASKS = {'owner.native.v06.' + role + '.84780aaf911a' for role in ('runtime', 'memory', 'weights')}
@@ -79,23 +86,24 @@ def load_helpers():
     recovery.BUNDLE = BUNDLE
     helper = recovery.helper()
     # Neither recovery.main nor helper.main is called by this operation.
-    return helper, recovery, assets['owner_subagent_dispatcher_fresh.py']
+    return helper, recovery, assets
 
 
 def checked_config(raw):
     require(digest(raw) == OLD_CONFIG, 'CONFIG_PREIMAGE')
     value = json.loads(raw)
-    require(value.get('module_pins') == DEPENDENCIES, 'CONFIG_MODULE_PINS')
-    value['module_pins']['owner_subagent_dispatcher.py'] = NEW_CALLBACK
+    require(value.get('module_pins') == OLD_DEPENDENCIES, 'CONFIG_MODULE_PINS')
+    value['module_pins'] = dict(NEW_DEPENDENCIES)
     result = encoded(value)
     require(digest(result) == NEW_CONFIG, 'CONFIG_POSTIMAGE')
     return result
 
 
-def check_sources(h, callback_sha=OLD_CALLBACK, config_sha=OLD_CONFIG):
+def check_sources(h, callback_sha=OLD_CALLBACK, config_sha=OLD_CONFIG,
+                  module_pins=OLD_DEPENDENCIES):
     require(digest(h.read(h.DISPATCHER)) == DISPATCHER_SHA, 'DISPATCHER_PREIMAGE')
     require(digest(h.read(h.SUPERVISOR_CONFIG, 32768)) == h.SUPERVISOR_SHA, 'SUPERVISOR_PREIMAGE')
-    for name, pin in {**h.DEPENDENCY_PINS, **DEPENDENCIES}.items():
+    for name, pin in {**h.DEPENDENCY_PINS, **module_pins}.items():
         expected = callback_sha if name == 'owner_subagent_dispatcher.py' else pin
         require(digest(h.read(h.SCRIPTS/name)) == expected, 'NATIVE_SOURCE_PIN')
     require(digest(h.read(h.ROOT/'config/owner_native_subagents.json')) == config_sha, 'CONFIG_PREIMAGE')
@@ -105,7 +113,7 @@ def check_sources(h, callback_sha=OLD_CALLBACK, config_sha=OLD_CONFIG):
 
 def old_callback(h):
     """Import only pinned definitions for read-only S03 receipt verification."""
-    for filename, pin in DEPENDENCIES.items():
+    for filename, pin in OLD_DEPENDENCIES.items():
         raw = h.read(h.SCRIPTS/filename)
         require(digest(raw) == pin, 'CALLBACK_READBACK_SOURCE')
         name = filename[:-3]
@@ -250,21 +258,22 @@ def loaded_status(h):
             'director_pid': current['pid'], 'fresh_resource_check': 'BEFORE_EVERY_SUBMIT'}
 
 
-def rollback_files(h, target, config, before_module, before_config, after_module, after_config):
-    current_module, current_config = h.read(target), h.read(config)
-    require(current_module in (before_module, after_module)
-            and current_config in (before_config, after_config), 'ROLLBACK_FOREIGN_CHANGE')
-    if current_module == after_module:
-        h.atomic(target, before_module)
-    if current_config == after_config:
-        h.atomic(config, before_config)
-    require(h.read(target) == before_module and h.read(config) == before_config, 'ROLLBACK_READBACK')
+def rollback_files(h, file_transitions):
+    current = {path: h.read(path) for path in file_transitions}
+    require(all(raw in file_transitions[path] for path, raw in current.items()),
+            'ROLLBACK_FOREIGN_CHANGE')
+    for path, (preimage, replacement) in file_transitions.items():
+        if current[path] != preimage:
+            h.atomic(path, preimage)
+    require(all(h.read(path) == pair[0] for path, pair in file_transitions.items()),
+            'ROLLBACK_READBACK')
 
 
 def main():
     request, source = os.environ.get('NOX_OWNER_REQUEST_ID', ''), os.environ.get('NOX_OWNER_SOURCE_SHA', '')
     require(re.fullmatch(r'\d{1,24}', request) and re.fullmatch('[a-f0-9]{40}', source), 'OWNER_CONTEXT')
-    h, recovery, candidate = load_helpers()
+    h, recovery, assets = load_helpers()
+    candidate = assets['owner_subagent_dispatcher_fresh.py']
     receipt_path = h.STATE/('owner_subagent_fresh_gate_' + request + '.json')
     require(not receipt_path.exists() and not receipt_path.is_symlink(), 'ALREADY_STARTED_READ_RECEIPT')
     check_sources(h)
@@ -272,8 +281,17 @@ def main():
     callback = old_callback(h)
     before_proofs = completed_proofs(h, callback, prior)
     target, config = h.SCRIPTS/'owner_subagent_dispatcher.py', h.ROOT/'config/owner_native_subagents.json'
+    pool_target = h.SCRIPTS/'owner_autonomy_pool.py'
+    process_target = h.SCRIPTS/'owner_subagent_processes.py'
     before_module, before_config = h.read(target), h.read(config)
+    before_pool, before_process = h.read(pool_target), h.read(process_target)
     updated_config = checked_config(before_config)
+    file_transitions = {
+        pool_target: (before_pool, assets['owner_autonomy_pool.py']),
+        process_target: (before_process, assets['owner_subagent_processes.py']),
+        target: (before_module, candidate),
+        config: (before_config, updated_config),
+    }
     require(not h.global_stop() and h.active_model() == CHAT, 'STOP_OR_CHAT_IDENTITY')
     health = h.health()
     require(health == {'8080': 200, '8081': 200, '8082': 200}, 'CORE_HEALTH')
@@ -292,6 +310,8 @@ def main():
               'source_sha': source, 'state': 'PREFLIGHT', 'started_at': time.time(),
               'callback_before_sha256': OLD_CALLBACK, 'callback_after_sha256': NEW_CALLBACK,
               'config_before_sha256': OLD_CONFIG, 'config_after_sha256': NEW_CONFIG,
+              'module_preimages_sha256': {path.name: digest(pair[0]) for path, pair in file_transitions.items()},
+              'module_postimages_sha256': {path.name: digest(pair[1]) for path, pair in file_transitions.items()},
               'dispatcher_sha256': DISPATCHER_SHA, 'prior_receipt_sha256': PRIOR_RECEIPT_SHA,
               'completed_reviews_before': before_proofs, 'training_control_performed': False,
               'queue_file_edited': False, 'tasks_posted': 0, 'tasks_requeued': 0,
@@ -315,8 +335,13 @@ def main():
         preserve_training(training_before, training_snapshot(h))
         require(completed_proofs(h, callback, prior) == before_proofs and not h.global_stop(), 'DONE_TASKS_OR_STOP')
         result['owned_group_before'] = dispatcher_group(h, recovery, training_before)
-        h.atomic(backup/'owner_subagent_dispatcher.py', before_module)
-        h.atomic(backup/'owner_native_subagents.json', before_config)
+        for path, (preimage, _) in file_transitions.items():
+            backup_path = backup/path.name
+            require(not backup_path.exists() and not backup_path.is_symlink(), 'BACKUP_ALREADY_EXISTS')
+            h.atomic(backup_path, preimage)
+            require(h.read(backup_path) == preimage
+                    and stat.S_IMODE(backup_path.stat().st_mode) == 0o600,
+                    'BACKUP_READBACK')
         stop_attempted = True
         rc = h.command(['supervisorctl', 'stop', h.SERVICE], 25)[0]
         stopped = h.service()['state'] == 'STOPPED'
@@ -324,9 +349,10 @@ def main():
         require(completed_proofs(h, callback, prior) == before_proofs, 'DONE_TASKS_AFTER_STOP')
         check_sources(h)
         writes_attempted = True
-        h.atomic(target, candidate)
-        h.atomic(config, updated_config)
-        check_sources(h, NEW_CALLBACK, NEW_CONFIG)
+        for path, (_, replacement) in file_transitions.items():
+            h.atomic(path, replacement)
+            require(digest(h.read(path)) == digest(replacement), 'INSTALL_READBACK')
+        check_sources(h, NEW_CALLBACK, NEW_CONFIG, NEW_DEPENDENCIES)
         rc = h.command(['supervisorctl', 'start', h.SERVICE], 30)[0]
         stopped = h.service()['state'] == 'STOPPED'
         require(rc == 0 and h.service()['state'] == 'RUNNING', 'DIRECTOR_START')
@@ -343,7 +369,7 @@ def main():
         training_after = training_snapshot(h)
         preserve_training(training_before, training_after)
         require(h.active_model() == CHAT and h.health() == health and not h.global_stop(), 'CORE_CHANGED_OR_STOP')
-        check_sources(h, NEW_CALLBACK, NEW_CONFIG)
+        check_sources(h, NEW_CALLBACK, NEW_CONFIG, NEW_DEPENDENCIES)
         require(h.read(flag, 4096) == note, 'MAINTENANCE_OWNERSHIP')
         result.update(state='FRESH_GATE_INSTALLED_HISTORY_PRESERVED', acceptance=status,
                       completed_reviews_after=after_proofs, training_after=training_after,
@@ -361,8 +387,8 @@ def main():
         if not released and (writes_attempted or stop_attempted):
             try:
                 # Reject foreign file changes BEFORE any rollback control call.
-                require(h.read(target) in (before_module, candidate)
-                        and h.read(config) in (before_config, updated_config), 'ROLLBACK_FOREIGN_CHANGE')
+                require(all(h.read(path) in pair for path, pair in file_transitions.items()),
+                        'ROLLBACK_FOREIGN_CHANGE')
                 current_state = h.service()['state']
                 require(current_state in ('RUNNING', 'STOPPED', 'EXITED', 'FATAL', 'BACKOFF'),
                         'ROLLBACK_SERVICE_UNSETTLED')
@@ -370,7 +396,7 @@ def main():
                     dispatcher_group(h, recovery, training_snapshot(h))
                     require(h.command(['supervisorctl', 'stop', h.SERVICE], 25)[0] == 0
                             and h.service()['state'] == 'STOPPED', 'ROLLBACK_STOP')
-                rollback_files(h, target, config, before_module, before_config, candidate, updated_config)
+                rollback_files(h, file_transitions)
                 if current_state != 'RUNNING' or writes_attempted:
                     require(h.command(['supervisorctl', 'start', h.SERVICE], 30)[0] == 0
                             and h.service()['state'] == 'RUNNING', 'ROLLBACK_START')
@@ -392,8 +418,17 @@ def main():
         try:
             result['native_callback_sha256'] = digest(h.read(target))
             result['native_config_sha256'] = digest(h.read(config))
-            result['source_installed'] = (result['native_callback_sha256'] == NEW_CALLBACK
-                                          and result['native_config_sha256'] == NEW_CONFIG)
+            result['native_module_sha256'] = {
+                pool_target.name: digest(h.read(pool_target)),
+                process_target.name: digest(h.read(process_target)),
+            }
+            result['source_installed'] = (
+                result['native_callback_sha256'] == NEW_CALLBACK
+                and result['native_config_sha256'] == NEW_CONFIG
+                and result['native_module_sha256'] == {
+                    'owner_autonomy_pool.py': NEW_DEPENDENCIES['owner_autonomy_pool.py'],
+                    'owner_subagent_processes.py': NEW_DEPENDENCIES['owner_subagent_processes.py'],
+                })
         except (OSError, RuntimeError):
             result['source_installed'] = None
         result['receipt_path'] = str(receipt_path)
