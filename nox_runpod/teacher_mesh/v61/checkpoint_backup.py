@@ -140,7 +140,17 @@ def verify_plaintext_tar(plaintext:bytes)->dict:
                     sha.update(part)
             if count!=expected_size or sha.hexdigest()!=digest:
                 raise RuntimeError('HOLD_CHECKPOINT_RESTORE_HASH')
-        return {'count':len(checked),'total_bytes':total}
+        # Archive hashes prove bytes, not optimizer/RNG compatibility or a live step.
+        # Names are hints only: a .pt file can contain arbitrary pickled objects.
+        names_lower = [name.rsplit('/', 1)[-1].lower() for name, _, _ in checked]
+        resume_name_hints = {
+            'optimizer': any('optimizer' in name or name.startswith('optim.') for name in names_lower),
+            'rng': any('rng' in name or 'random_state' in name for name in names_lower),
+            'scaler': any('scaler' in name or 'grad_scaler' in name for name in names_lower),
+        }
+        return {'count':len(checked),'total_bytes':total,
+                'resume_name_hints':resume_name_hints,
+                'functional_optimizer_restore_verified':False}
 
 
 def verify(encrypted:Path,test_identity:Path)->dict:
@@ -227,6 +237,11 @@ def run():
             'checkpoint_optimizer_files':restored['count'],
             'original_total_bytes':restored['total_bytes'],
             'restored_plain_sha256':restored['plaintext_sha256'],
+            'archive_hash_integrity_verified':True,
+            'resume_name_hints_only':restored['resume_name_hints'],
+            'functional_optimizer_restore_verified':False,
+            'optimizer_step_delta_verified':False,
+            'native_training_admission':'HOLD_RESTORE_AND_RESOURCE_UNVERIFIED',
             'temporary_age_test_restore':'PASS',
             'existing_ssh_owner_recipient_sha256':fingerprint,
             'owner_private_key_decryption_tested':False,
