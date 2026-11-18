@@ -41,6 +41,7 @@ jobs:
           python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_counter_incident_current_service.py' -v
           python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_chat_policy_live_smoke.py' -v
           python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_chat_policy_live_smoke_entry.py' -v
+          python3 -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_web_r62_source_preflight.py' -v
       - name: Check original owner UI maintenance mode without native writes
         run: |
           python3 -m pip install -q fastapi==0.128.2
