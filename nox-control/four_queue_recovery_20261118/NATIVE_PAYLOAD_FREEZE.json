@@ -1,0 +1,40 @@
+{
+  "schema": "NOX_IMMUTABLE_CURRENT_RECOVERY_NATIVE_INPUT_V1",
+  "sources": {
+    "installer": {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/delivery/native_current_recovery_install.py",
+      "sha256": "5fe28f37a81069c4e0b69d78e0ef9c41e9eade3fb7c4d94b2f8e7e7ef7f293ce",
+      "bytes": 37502
+    },
+    "composer": {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/delivery/prepare_current_recovery_install.py",
+      "sha256": "a6f1eac524e026fd424af7fb59a9132f53017d2653111b7e58cb665bc2e44f47",
+      "bytes": 6706
+    },
+    "dispatcher": {
+      "local_path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/repo/owner_subagent_dispatcher.py",
+      "sha256": "5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5",
+      "bytes": 72630
+    }
+  },
+  "payload": {
+    "local_path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/delivery/owner_current_four_queue_recovery_payload.py",
+    "sha256": "18233bbc4f569c2d20caea6990c42394eaa47715c881fce194f805885e8774ea",
+    "bytes": 59417
+  },
+  "decoded_bytes": 155834,
+  "tests": {
+    "local_tempfs_cases": 2,
+    "result": "PASS",
+    "elapsed_seconds": 0.008
+  },
+  "native_effects": 0,
+  "peer_review": "PENDING_FINAL_LIFETIME_DELTA",
+  "operator_max_seconds": 900,
+  "installer_cooperative_deadline_seconds": 240,
+  "mutating_repair_route": "nox-control/owner_resonance_canary_v3_20261117.py",
+  "operator_change_required": false,
+  "current_starting_state": "SAME_DIRECTOR_ZERO_NATIVE_WORKERS_ALL7DONE_ONE_SOURCE_PROVEN_INERT_TRACK",
+  "old_payload_superseded": "565ce80c7e60cb909ddcbfaf53954f9e907b251043922ffafea7a86ab1d87637",
+  "maintenance_retention_peer": "PASS_REAL_FLOCK_5f134b8b"
+}

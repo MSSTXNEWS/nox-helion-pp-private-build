@@ -1,0 +1,44 @@
+{
+  "schema": "NOX_FOUR_QUEUE_RECOVERY_COMPOSITION_PEER_V1",
+  "verdict": "PASS_PURE_COMPOSITION_SCOPE_ACTUAL_CONFIG_AND_NATIVE_TRANSACTION_PENDING",
+  "reviewer": "integrations_completion",
+  "composition": {
+    "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/prepare_current_recovery_install.py",
+    "sha256": "f0e30154f4db502f8bbd755ccd6f8187868da7f0c69933ac8bbd14e63c27c193",
+    "bytes": 6706
+  },
+  "contract": {
+    "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/NATIVE_INSTALL_CONTRACT.md",
+    "sha256": "be17b3dd06bd8f878b0a7ad372d03ea9b0f4be664ccf791bc092d069113d8e6a",
+    "bytes": 7117
+  },
+  "bindings": {
+    "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/COMPOSITION_BINDINGS.json",
+    "sha256": "9256048373062c6c24260387106e4fbcd62d45d246bf61dd87e92480da1b8c93",
+    "bytes": 929
+  },
+  "verified": [
+    "Exactly three preimage byte arrays are accepted; every one is bounded and SHA-pinned before parsing or transforming.",
+    "Dispatcher postimage is exactly the independently reviewed a7c45a source; compile only, no execution.",
+    "Actual d036 truth wrapper differs by exactly one CALLBACK_SHA literal; independent AST comparison, compilation and reverse-byte proof passed. Postimage201b3ac1 is2888 B.",
+    "Current config is privately supplied by the existing maintenance read. Its seven-row catalog hash, three reviewer roles, four queues and four CPU_LIGHT leaf source pins are checked.",
+    "Config preserves other fields. Only dispatcher module pin, four required catalog references, catalog digest and operation provenance change; exactly one new parent1V14-01 chat_health task is appended.",
+    "Historical queue rows/claims/results/S03 are not inputs or outputs to this pure function and are not rewritten.",
+    "Fixed new TaskID must be absent in authoritative stopped queue; this is an explicit caller gate, not falsely claimed by the pure config transform.",
+    "Contract requires physical source CAS, owned rollback, old director/all owned children exited, new exact result and three child identities with fresh heartbeats. No native fault injection or model question is added.",
+    "Known-zero source check: an absent actual config represented by unpinned{} raises preimage HOLD; no synthetic production-positive was claimed."
+  ],
+  "new_task_id": "1V14-01.native4q.recovery_health.20261118",
+  "config_positive_executed": false,
+  "actual_private_config_plaintext_available": false,
+  "native_ready": false,
+  "pending": [
+    "Root-owned concrete three-file installer and exact actual config read within that transaction.",
+    "Reconcile any separate source942e process install before frozen native preflight; never roll it back to c1d5.",
+    "Native acceptance after approved service restart and one genuine new health task."
+  ],
+  "native_calls": 0,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "remote_mutations": 0
+}

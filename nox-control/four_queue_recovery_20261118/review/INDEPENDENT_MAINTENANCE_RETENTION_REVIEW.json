@@ -1,0 +1,43 @@
+{
+  "schema": "NOX_MAINTENANCE_IDLE_RETENTION_NARROW_PEER_V1",
+  "verdict": "PASS_EXACT_SOURCE_REQUIRES_UPDATED_COMPOSITION_AND_NATIVE_INSTALL",
+  "reviewer": "integrations_completion",
+  "before_sha256": "a7c45a0ca492272b22784b70dab7cc45dc3332765bf4770f2ca7ff1cbe102e92",
+  "after_sha256": "5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5",
+  "after_bytes": 72630,
+  "changed_existing": [
+    "Native.tick"
+  ],
+  "added": [
+    "Native._maintenance_idle_pool"
+  ],
+  "other_existing_definitions_unchanged": 53,
+  "confirmed_mechanism": "Actual cached mentor.stop_active returnsTrue when SH|NB on owner_maintenance.lock meets EX. Original Native.tick closes the pool, and allDONE cold path does not recreate it.",
+  "mentor_source_sha256": "1352f15a2b902dfde60e460e8693a2766dc5cb572d434f96f7ce2e78d70765ec",
+  "test": {
+    "path": "nox_refresh/four_queue_recovery_review_20261118/test_maintenance_idle_retention.py",
+    "sha256": "55152b7a7704dc376a9d1fae870fb41ab49326e52c5ecb861ece5e1cb175e8b1",
+    "bytes": 4729,
+    "before": "RED0.234s, pool becameNone under maintenance EX",
+    "after": "GREEN0.179s, one case",
+    "exec_chunk_before": "bd1c85",
+    "exec_chunk_after": "4d98f0",
+    "uses": "Exact AST extracted actual mentor.stop_active; real local flock,3 multiprocessing children, actual Native.handle/tick and TempSQLite S03.",
+    "proof": [
+      "Maintenance-only contention retains same owned idle pool, does not call ensure/submit, starts0jobs.",
+      "Release keeps same3PID; existing queue/S03 byteexact.",
+      "Explicit state/STOP together with EX still closes the original pool and allchildren."
+    ]
+  },
+  "scope": [
+    "Only known idle owned IPC generation can be retained. Active/started/completed/interrupted/uncertain paths still use old close behavior.",
+    "Stop/admission still reports blocked during EX; no execution authority is relaxed.",
+    "Helper proves current regular owner-held maintenance file and actual SH contention, matches known process identities; no new queue/journal/daemon.",
+    "Previously reviewed recovery/save/no-replay methods are AST unchanged."
+  ],
+  "prior_installer565ce_eligibility": "NOT_CURRENT: assumes3oldworkers and embedsa7. Must use forthcoming0worker-aware installer/current5f composition.",
+  "additional_native_calls": 0,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "broad_tests_repeated": false
+}

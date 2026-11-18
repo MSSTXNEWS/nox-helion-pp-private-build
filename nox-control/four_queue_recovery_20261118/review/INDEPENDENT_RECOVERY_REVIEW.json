@@ -1,0 +1,120 @@
+{
+  "schema": "NOX_FOUR_QUEUE_RECOVERY_INDEPENDENT_REVIEW_V1",
+  "verdict": "PASS_FOR_EXACT_SOURCE_SCOPE_NATIVE_PENDING",
+  "reviewer": "integrations_completion",
+  "candidate": {
+    "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/owner_subagent_dispatcher.py",
+    "sha256": "a7c45a0ca492272b22784b70dab7cc45dc3332765bf4770f2ca7ff1cbe102e92",
+    "bytes": 70172
+  },
+  "baseline": {
+    "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/inputs__owner_subagent_dispatcher.py",
+    "sha256": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+    "bytes": 58287
+  },
+  "patch": {
+    "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/delivery__FOUR_QUEUE_WORKER_RECOVERY.patch",
+    "sha256": "4b62be1310a5d1e6934ba97d663a273e30f7531370b15b1cea4b6aee5b9a2a7f",
+    "bytes": 13938
+  },
+  "static_delta": {
+    "before_sha256": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+    "after_sha256": "a7c45a0ca492272b22784b70dab7cc45dc3332765bf4770f2ca7ff1cbe102e92",
+    "old_definitions_unchanged": 47,
+    "modified_existing": [
+      "Native.__init__",
+      "Native._fresh_admission_reason",
+      "Native.ensure_processes",
+      "Native.tick"
+    ],
+    "added": [
+      "Native._recovery_fence",
+      "Native._recovery_save",
+      "Native.reconcile_worker_claims"
+    ],
+    "removed": [],
+    "compile": "PASS"
+  },
+  "independent_test": {
+    "file": {
+      "path": "nox_refresh/four_queue_recovery_review_20261118/test_empty_active_and_lost_ack.py",
+      "sha256": "a58dbd178808c8a1ba261e577bccb4e040286cb58bc18fdf676c8b76152700ba",
+      "bytes": 6105
+    },
+    "command": "python -m unittest -v test_empty_active_and_lost_ack.py",
+    "exec_chunk_id": "8b66d2",
+    "result": "PASS",
+    "cases": 1,
+    "subscenarios": 2,
+    "duration_s": 0.434,
+    "actual_local_processes": true,
+    "actual_temp_sqlite_s03": true,
+    "controlled": [
+      "owner/config/resource telemetry fixture",
+      "fixed local echo worker; no NOX operations"
+    ],
+    "assertions": [
+      "Empty active/started maps plus durable UNKNOWN claim HOLD before retirement or replacement; original queue/S03 and surviving PIDs unchanged.",
+      "Actual local Native.handle success and S03 readback establish a settled result; all prior owned process objects exit before replacement.",
+      "ACTIVE replacement marker commits before simulated lost save ACK. Three replacement PIDs remain, but uncertain latch blocks tick and actual hot Native.handle before submit.",
+      "No second generation, task replay, result rewrite, or S03 mutation during lost-ACK handling."
+    ]
+  },
+  "source_findings": [
+    "Recovery executes before _drain, so one dead child no longer makes its reconciliation callback unreachable.",
+    "Owned process-object identities, parent PID/start time, current owner/STOP/writer/source/resource guards and shared maintenance lease are checked. Pool lock precedes queue lock.",
+    "All recognized native nonterminal durable rows are checked, including rows outside the current catalog and UNKNOWN/null statuses. A terminal historical label is not selected as positive recovery proof.",
+    "A current-source completed result must verify against actual S03 and bind the current director plus original worker generation or acknowledged replacement.",
+    "Intent/retired/replacement/active markers live inside an existing task row via existing save_state and exact readback. No separate scheduler, queue or ledger is added.",
+    "Retirement requires every owned child not alive with an integer exit code. A missing ACK or incomplete retirement prevents later replacement.",
+    "Four queue algorithms, all four leaf handlers, Native.handle maintenance locking, model route, resource policy, pool and process modules are unchanged.",
+    "The two-line uncertainty check in _fresh_admission_reason protects both cold and hot submit paths."
+  ],
+  "unchanged_modules": {
+    "owner_autonomy_pool.py": {
+      "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/owner_autonomy_pool.py",
+      "sha256": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+      "bytes": 33076
+    },
+    "owner_subagent_processes.py": {
+      "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/owner_subagent_processes.py",
+      "sha256": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
+      "bytes": 16073
+    },
+    "owner_resource_policy.py": {
+      "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/owner_resource_policy.py",
+      "sha256": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+      "bytes": 13467
+    }
+  },
+  "author_validation_attribution": {
+    "source": {
+      "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/SOURCE_FREEZE.json",
+      "sha256": "5cf0ba601f313168979ed01acb77ab4acbdf4fab0b7f4a81bee894a64ae8750c",
+      "bytes": 2308
+    },
+    "author_test": {
+      "path": "nox_refresh/four_queue_recovery_review_20261118/inputs/test_four_queue_worker_recovery.py",
+      "sha256": "967b6fefaa1a8d1b70ace3a1976e6a11545c4c3a2a2487a7442331c84cb9b951",
+      "bytes": 11578
+    },
+    "author_case_not_repeated_by_reviewer": true
+  },
+  "native_ready": false,
+  "remaining_gates": [
+    "Read and validate the actual installed config f283db153b763b8bc8e77dd57fedc3cd091c3a5336f40a6d9c805efbdf95d900; reviewer has receipt hash, not a verified plaintext config.",
+    "Compose callback source, instruction-truth CALLBACK_SHA and current config module/catalog source pins atomically; do not reuse historical 3-row prepare_config on current 7-row catalog.",
+    "A director restart with only existing DONE tasks intentionally starts zero workers. Admit one new genuine bounded chat_health read/check leaf under a new TaskID; do not replay the seven accepted rows.",
+    "Native installer must recheck current source/identity/idle/lease/STOP and preserve current four-queue claims/results and S03. Later process source942e is separate and must not be overwritten if already installed.",
+    "Observe actual three worker identities and one exact new S03 result. Native fault injection/recovery itself is not claimed by this source/local-process review."
+  ],
+  "server_native_calls": 0,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "remote_mutations": 0,
+  "limitations": [
+    "No claim of cross-director automatic recovery from an unresolved marker. Restart requires current native lifecycle checks and eligible work.",
+    "No claim that this closes the separate creator-PID/prctl race in unchanged c1d5 process source.",
+    "No broad suite or fresh native audit was run."
+  ]
+}
