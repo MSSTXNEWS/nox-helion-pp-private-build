@@ -6,6 +6,12 @@ on:
       - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py'
       - 'nox-control/systemic_relay_20261118/tests/test_b1_chat_priority_future_mtime_20261118.py'
       - '.github/workflows/nox-b1-chat-priority-once.yml'
+  pull_request:
+    branches: [repair/nox-continuous-execution-20261118]
+    paths:
+      - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py'
+      - 'nox-control/systemic_relay_20261118/tests/test_b1_chat_priority_future_mtime_20261118.py'
+      - '.github/workflows/nox-b1-chat-priority-once.yml'
 permissions:
   contents: read
 jobs:
