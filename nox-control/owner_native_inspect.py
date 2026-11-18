@@ -229,114 +229,6 @@ def queue_capabilities():
     emit('CAP_QUEUE',{'count':len(tasks),'counts':counts,'handler_counts':handlers,'sha256':hashlib.sha256(raw).hexdigest(),'selected':selected[:30]})
     disk=os.statvfs(ROOT);emit('CAP_DISK',{'path':str(ROOT),'available_bytes':disk.f_bavail*disk.f_frsize})
 
-DEPENDENCY_SCRIPT = r'''
-import hashlib, importlib.metadata as md, importlib.machinery, importlib.util, json, os, pathlib, re, stat, sys, sysconfig
-from packaging.requirements import Requirement
-NAMES=['fastapi','httpx','packaging']
-MODULES=('fastapi','httpx','starlette','pydantic','pydantic_core','anyio','httpcore','h11','typing_extensions','certifi','idna')
-result={'python':sys.executable,'version':list(sys.version_info[:3]),'stdlib':sysconfig.get_path('stdlib'),'modules':{},'distributions':[]}
-roots=[]; files={};total=0;missing=[];done=set()
-for name in MODULES:
-    spec=importlib.util.find_spec(name)
-    result['modules'][name]={'origin':spec.origin if spec else None,'locations':list(spec.submodule_search_locations or []) if spec else []}
-for name in NAMES:
-    key=name.lower().replace('_','-')
-    if key in done:continue
-    done.add(key)
-    try:d=md.distribution(name)
-    except md.PackageNotFoundError:missing.append(name);continue
-    for requirement in d.requires or []:
-        req=Requirement(requirement)
-        if req.marker is not None and not req.marker.evaluate({'extra':''}):continue
-        if req.url:raise ValueError('DEPENDENCY_URL_UNSUPPORTED')
-        try:actual=md.version(req.name)
-        except md.PackageNotFoundError:missing.append(req.name);continue
-        if req.specifier and actual not in req.specifier:raise ValueError('DEPENDENCY_VERSION_MISMATCH')
-        if req.name.lower().replace('_','-') not in done:NAMES.append(req.name)
-    root=pathlib.Path(d.locate_file('')).resolve()
-    if not root.is_absolute() or any(p.is_symlink() for p in (root,*root.parents)):raise ValueError('DEPENDENCY_ROOT')
-    if str(root) not in roots:roots.append(str(root))
-    root_index=roots.index(str(root));count=0
-    for entry in d.files or []:
-        relative=str(entry);path=pathlib.PurePosixPath(relative)
-        if path.is_absolute() or '..' in path.parts or '__pycache__' in path.parts or relative.endswith(('.pyc','.pyo')):continue
-        source=root/relative
-        if source.is_dir():continue
-        if any(p.is_symlink() for p in (source,*source.parents)):raise ValueError('DEPENDENCY_SYMLINK')
-        info=source.stat()
-        if not stat.S_ISREG(info.st_mode) or info.st_size>24*1024*1024:raise ValueError('DEPENDENCY_FILE_BOUND')
-        raw=source.read_bytes();after=source.stat()
-        if (info.st_ino,info.st_size,info.st_mtime_ns)!=(after.st_ino,after.st_size,after.st_mtime_ns):raise ValueError('DEPENDENCY_CHANGED')
-        row={'root_index':root_index,'path':relative,'sha256':hashlib.sha256(raw).hexdigest()}
-        if relative in files and files[relative]!=row:raise ValueError('DEPENDENCY_COLLISION')
-        if relative not in files:total+=len(raw)
-        files[relative]=row;count+=1
-        if len(files)>3000 or total>96*1024*1024:raise ValueError('DEPENDENCY_TOTAL_BOUND')
-    result['distributions'].append({'name':d.metadata['Name'],'version':d.version,'root':str(root),'files':count,'requires':[x for x in d.requires or [] if 'extra ==' not in x][:20]})
-result['complete']=all(x['origin'] for x in result['modules'].values()) and sys.version_info[:2]==(3,12) and not missing
-result['missing_requirements']=sorted(set(missing))
-result['file_count']=len(files);result['total_bytes']=total
-if sys.argv[1]=='full' and result['complete']:
-    result['manifest']={'schema':'NOX_PROJECT_TEST_DEPENDENCIES_V1','roots':roots,'files':sorted(files.values(),key=lambda x:x['path']),'preload_modules':['pydantic_core._pydantic_core','fastapi','fastapi.responses','fastapi.routing','fastapi.staticfiles','httpx','httpx._transports.asgi','anyio._backends._asyncio']}
-print(json.dumps(result,separators=(',',':'),sort_keys=True))
-'''
-
-def dependencies():
-    env={'PATH':'/usr/bin:/bin','LANG':'C.UTF-8','PYTHONDONTWRITEBYTECODE':'1'}
-    selected=False
-    for python in ('/root/nox/venv/bin/python',):
-        row={'invoked_python':python}
-        if not Path(python).exists():row['state']='ABSENT';emit('DEP_ENV',row);continue
-        try:
-            result=subprocess.run([python,'-I','-B','-c',DEPENDENCY_SCRIPT,'summary' if selected else 'full'],capture_output=True,text=True,timeout=24,env=env,check=False)
-            row['returncode']=result.returncode
-            if len(result.stdout)>850000:raise ValueError('DEPENDENCY_OUTPUT_BOUND')
-            if result.returncode:
-                row['stderr_tail']=redact_source(result.stderr[-1200:]);row['state']='UNAVAILABLE'
-            else:
-                data=json.loads(result.stdout);manifest=data.pop('manifest',None)
-                row.update(data)
-                if manifest is not None:
-                    encoded=json.dumps(manifest,separators=(',',':'),sort_keys=True).encode()
-                    emit('DEPENDENCY_MANIFEST',{'manifest':manifest,'sha256':hashlib.sha256(encoded).hexdigest(),'source_python':python,'bytes':len(encoded)})
-                    selected=True
-        except (OSError,ValueError,subprocess.SubprocessError) as exc:row.update(state='UNAVAILABLE',error=type(exc).__name__)
-        emit('DEP_ENV',row)
-    python=Path('/usr/bin/python3.12')
-    try:
-        raw,info=safe_read(python,32*1024*1024)
-        emit('PYTHON_PIN',{'path':str(python),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),'mode':oct(stat.S_IMODE(info.st_mode)),'uid':info.st_uid})
-    except (OSError,ValueError) as exc:emit('PYTHON_PIN',{'state':'UNAVAILABLE','error':type(exc).__name__})
-
-def model_template():
-    class NoRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self,*args,**kwargs):raise ValueError('REDIRECT_REJECTED')
-    opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
-    def call(path,payload=None):
-        request=urllib.request.Request('http://127.0.0.1:8098'+path,data=json.dumps(payload).encode() if payload is not None else None,method='POST' if payload is not None else 'GET',headers={'Content-Type':'application/json'})
-        with opener.open(request,timeout=5) as response:
-            raw=response.read(262145)
-            if response.status!=200 or len(raw)>262144:raise ValueError('MODEL_HTTP_OR_BOUND')
-        return json.loads(raw)
-    row={'inference_called':False,'synthetic_canary_only':True,'port':8098}
-    try:
-        models=call('/v1/models');row['model_ids']=[redact_source(x.get('id',''))[:240] for x in models.get('data',[]) if isinstance(x,dict)][:5]
-        props=call('/props');default=props.get('default_generation_settings') or {}
-        row.update(n_ctx=default.get('n_ctx'),total_slots=props.get('total_slots'))
-        template=props.get('chat_template')
-        row['supports_enable_thinking_kwarg']=isinstance(template,str) and 'enable_thinking' in template
-        slots=call('/slots');row['slots']=[scalar_projection(x,('id','is_processing','n_ctx')) for x in slots[:4]]
-        rendered=call('/apply-template',{'messages':[{'role':'user','content':'NOX static template capability probe.'}]})
-        prompt=rendered.get('prompt');row['apply_template_schema_ok']=isinstance(prompt,str)
-        if not isinstance(prompt,str):raise ValueError('TEMPLATE_SCHEMA')
-        row.update(prompt_bytes=len(prompt.encode()),prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest())
-        tokenized=call('/tokenize',{'content':prompt,'add_special':False,'parse_special':True,'with_pieces':False})
-        tokens=tokenized.get('tokens');row['tokenizer_schema_ok']=isinstance(tokens,list) and all(type(x) is int for x in tokens)
-        row['canary_token_count']=len(tokens) if isinstance(tokens,list) else None
-        row['state']='READY' if row['tokenizer_schema_ok'] else 'HOLD'
-    except (OSError,ValueError,TypeError) as exc:row.update(state='UNAVAILABLE',error=type(exc).__name__)
-    emit('MODEL_TEMPLATE',row)
-
 def native_status():
     data,raw,_=obj(ROOT/'status/agents_t856u.json',2*1024*1024)
     native=data.get('native_subexecutors') or {}
@@ -351,12 +243,107 @@ def native_status():
         if isinstance(native.get(name),dict):row[name]=scalar_projection(native[name],('state','reason','close_reason','closed_at'))
     emit('NATIVE_STATUS',row)
 
+KNOWN_CALLBACK='5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5'
+CORE=('nox_dispatcher_t855u.py','owner_subagent_dispatcher.py','owner_subagent_processes.py',
+      'owner_autonomy_pool.py','owner_subagent_instruction_truth.py','owner_task_plans.py',
+      'owner_component_tasks.py','owner_resource_policy.py')
+
+def exact_current_config():
+    path=ROOT/'config/owner_native_subagents.json'
+    try:
+        data,raw,info=obj(path,20000)
+        row={'path':str(path),'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),
+             'schema':data.get('schema'),'owner_request':data.get('owner_request')}
+        allowed={'schema','instance_id','owner_authorized','mode','target','policy_id','policy','module_pins',
+                 'catalog','catalog_sha256','owner_request','owner_source_sha','execution_mode','global_worker_cap',
+                 'project_pins','global_cap','normal_mode','stop_policy','max_workers',
+                 'historical_leaf_source_sha256','project_handoff'}
+        clean=redact_source(raw.decode());unknown=sorted(set(data)-allowed)
+        row['unknown_top_level_keys']=unknown
+        def sensitive(value):
+            if isinstance(value,dict):return any(re.search(r'secret|password|token|credential|authorization|api_key|access_key',str(k),re.I) or sensitive(v) for k,v in value.items())
+            if isinstance(value,list):return any(sensitive(v) for v in value)
+            return False
+        row['redacted']=clean!=raw.decode() or sensitive(data)
+        if data.get('schema')=='NOX_NATIVE_SUBAGENT_BINDING_V1' and not row['redacted']:
+            # Known owner binding/catalog configuration, explicitly requested.
+            row['content']=raw.decode()
+        else:row['content']='OMITTED_UNRECOGNIZED_OR_REDACTED_CONFIG'
+        emit('EXACT_CONFIG',row)
+        return data
+    except (OSError,ValueError,TypeError) as exc:
+        emit('EXACT_CONFIG',{'state':'UNAVAILABLE','error':type(exc).__name__});return {}
+
+def descendants(snapshot):
+    director=next((x['identity'] for x in snapshot['services'] if x['service']=='nox-dispatcher-t855u'),None)
+    if not director:emit('DESCENDANTS',{'state':'NO_DIRECTOR'});return
+    pending=[director['pid']];seen=set();rows={}
+    try:
+        while pending:
+            parent=pending.pop(0)
+            if parent in seen:continue
+            seen.add(parent)
+            if len(seen)>24:raise ValueError('CHILD_BOUND')
+            try:threads=list((Path('/proc')/str(parent)/'task').iterdir())
+            except FileNotFoundError:continue
+            if len(threads)>128:raise ValueError('THREAD_BOUND')
+            for thread in threads:
+                if not thread.name.isdigit():continue
+                try:raw=(thread/'children').read_text()
+                except FileNotFoundError:continue
+                if len(raw)>4096:raise ValueError('CENSUS_BOUND')
+                for child in raw.split():
+                    if not child.isdigit():raise ValueError('CENSUS_SCHEMA')
+                    identity=process(int(child))
+                    if identity.get('ppid')==parent:
+                        rows[int(child)]=identity;pending.append(int(child))
+        emit('DESCENDANTS',{'director':director,'rows':[rows[x] for x in sorted(rows)],
+                            'scope':'CHILD_IDENTITIES_NOT_ALL_CLASSIFIED_AS_WORKERS'})
+    except (OSError,ValueError) as exc:emit('DESCENDANTS',{'state':'UNKNOWN','error':type(exc).__name__})
+
+def recovery_receipts(config):
+    request=str(config.get('owner_request',''))
+    if not re.fullmatch(r'[0-9]{1,24}',request):return
+    directory=ROOT/'state'/('four_queue_recovery_'+request)
+    try:
+        entries=sorted(p for p in directory.iterdir() if re.fullmatch(r'\d{2}_[A-Z_]+\.json',p.name))
+        if len(entries)>64:raise ValueError('RECEIPT_BOUND')
+        for path in entries[-8:]:
+            data,raw,_=obj(path,100000)
+            # Installer phase/identity/source metadata only, never queue snapshots.
+            projection={key:data.get(key) for key in ('schema','request','source_sha','phase','reason','status',
+                'lifetime','restored_original_sources','release_intent','state') if key in data}
+            emit('FOREIGN_RECOVERY_PHASE',{'file':path.name,'sha256':hashlib.sha256(raw).hexdigest(),
+                                         'fields':projection})
+    except (OSError,ValueError,TypeError) as exc:emit('FOREIGN_RECOVERY_PHASE',{'state':'UNAVAILABLE','error':type(exc).__name__})
+
+def dispatcher_errors():
+    try:
+        result=subprocess.run(['supervisorctl','tail','nox-dispatcher-t855u','stderr'],capture_output=True,
+                              text=True,timeout=5,check=False)
+        lines=[]
+        for line in result.stdout[-12000:].splitlines():
+            if re.search(r'Traceback|File ".*(?:owner_|nox_dispatcher)|(?:GateError|RuntimeError|ValueError|NameError|ImportError|ModuleNotFoundError|TypeError|AttributeError|SyntaxError):|\bHOLD_[A-Z0-9_]+',line):
+                lines.append(redact_source(line)[:700])
+        emit('DISPATCHER_ERROR_LINES',{'returncode':result.returncode,'filtered_lines':lines[-40:],
+                                     'scope':'SUPERVISOR_BOUNDED_STDERR_EXCEPTION_LINES_ONLY'})
+    except (OSError,subprocess.SubprocessError) as exc:emit('DISPATCHER_ERROR_LINES',{'state':'UNAVAILABLE','error':type(exc).__name__})
+
 def main():
-    emit('SNAPSHOT_A',runtime_snapshot());configuration();emit('LOCKS',locks());native_status()
-    dependencies();model_template();queue_capabilities()
-    for name in ('nox_dispatcher_t855u.py','owner_subagent_dispatcher.py','owner_subagent_processes.py','owner_autonomy_pool.py','owner_subagent_instruction_truth.py','owner_task_plans.py','owner_component_tasks.py','owner_resource_policy.py'):
-        source_metadata(SCRIPTS/name,False,'CORE_PIN')
-    native_status();emit('SNAPSHOT_B',runtime_snapshot())
+    first=runtime_snapshot();emit('SNAPSHOT_A',first);descendants(first)
+    config=exact_current_config();configuration();emit('LOCKS',locks())
+    for name in CORE:
+        include=name=='owner_subagent_instruction_truth.py'
+        if name=='owner_subagent_dispatcher.py':
+            try:raw,_=safe_read(SCRIPTS/name,180000);include=hashlib.sha256(raw).hexdigest()!=KNOWN_CALLBACK
+            except (OSError,ValueError):include=False
+        source_metadata(SCRIPTS/name,include,'CURRENT_CORE_SOURCE')
+    for turn in range(2):
+        try:native_status()
+        except (OSError,ValueError,TypeError) as exc:emit('NATIVE_STATUS',{'state':'UNAVAILABLE','error':type(exc).__name__})
+        if turn==0:time.sleep(1)
+    queue_capabilities();recovery_receipts(config);dispatcher_errors()
+    final=runtime_snapshot();emit('SNAPSHOT_B',final);descendants(final)
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
 
 if __name__=='__main__':main()
