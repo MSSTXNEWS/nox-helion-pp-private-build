@@ -50,7 +50,7 @@ OLD_CONFIG_MODULE_PINS = {
 }
 UNVERIFIED_NATIVE_PREIMAGES = {'owner_subagent_processes.py', 'owner_dispatcher_mentor.py'}
 NEW_DEPENDENCIES = {
-    'owner_subagent_processes.py': '060247b16ef98dfd68fe09965ef7b8472512ab10d42d619ea3a72c57e739fc5f',
+    'owner_subagent_processes.py': 'b775269e1c9f9762b824a9ac65b81ad227433a7b13ffa7c9e0aaa40e5b9ea27b',
     'owner_autonomy_pool.py': 'a3f5f1d1081ecce84815005a4dcf1cf0d46fd0b8c023a4ee56dd68c8097f89ce',
     'owner_subagent_dispatcher.py': NEW_CALLBACK,
 }
