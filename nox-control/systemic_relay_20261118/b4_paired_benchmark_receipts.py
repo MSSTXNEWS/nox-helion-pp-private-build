@@ -141,9 +141,19 @@ def compare_paired(baseline, candidate):
     regressed = [task for task in baseline["declared_task_ids"]
                  if _within_budget_pass(old[task], baseline["max_task_ms"])
                  and not _within_budget_pass(new[task], candidate["max_task_ms"])]
+    # Aggregate p95 and peak RSS can improve while individual owner tasks regress.
+    # Preserve exact IDs for actionable diagnosis; this is descriptive only.
+    latency_regressed = [task for task in baseline["declared_task_ids"]
+                         if new[task]["latency_ms"] > old[task]["latency_ms"]]
+    rss_regressed = [task for task in baseline["declared_task_ids"]
+                     if new[task]["peak_rss_bytes"] > old[task]["peak_rss_bytes"]]
     return {**answer, "comparable": True, "state": "DESCRIPTIVE_ONLY",
             "reason": None, "baseline": before, "candidate": after,
             "fixed_task_ids": fixed, "regressed_task_ids": regressed,
+            "latency_regressed_task_ids": latency_regressed,
+            "peak_rss_regressed_task_ids": rss_regressed,
+            "peak_rss_delta_bytes": (after["peak_rss_bytes_max"]
+                                     - before["peak_rss_bytes_max"]),
             "pass_rate_delta": (after["passed"] - before["passed"]) / before["denominator"],
             "p95_latency_delta_ms": (after["p95_latency_ms_all_tasks"]
                                      - before["p95_latency_ms_all_tasks"]),
