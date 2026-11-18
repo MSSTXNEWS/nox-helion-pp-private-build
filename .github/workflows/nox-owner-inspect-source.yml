@@ -1,0 +1,23 @@
+name: NOX owner inspect source projection
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_complete_executor_observe.py'
+      - 'nox-control/test_owner_training_readiness_projection.py'
+      - '.github/workflows/nox-owner-inspect-source.yml'
+  push:
+    paths:
+      - 'nox-control/owner_complete_executor_observe.py'
+      - 'nox-control/test_owner_training_readiness_projection.py'
+      - '.github/workflows/nox-owner-inspect-source.yml'
+permissions:
+  contents: read
+jobs:
+  bounded-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Compile inspect source
+        run: python3 -m py_compile nox-control/owner_complete_executor_observe.py
+      - name: Focused bounded projection regression
+        run: python3 -m unittest discover -s nox-control -p 'test_owner_training_readiness_projection.py' -v
