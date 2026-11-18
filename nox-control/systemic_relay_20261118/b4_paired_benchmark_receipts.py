@@ -78,14 +78,24 @@ def _p95(values):
     return values[math.ceil(.95 * len(values)) - 1]  # nearest rank, every task
 
 
+def _within_budget_pass(event, max_task_ms):
+    """An asserted PASS that exceeded the task budget is not a scored PASS."""
+    return event["status"] == "PASS" and event["latency_ms"] <= max_task_ms
+
+
 def _metrics(events, max_task_ms):
     rows = list(events.values())
     n = len(rows)
+    passed = sum(_within_budget_pass(row, max_task_ms) for row in rows)
     return {
         "denominator": n,
-        "passed": sum(row["status"] == "PASS" for row in rows),
-        "failures_including_timeouts": sum(row["status"] != "PASS" for row in rows),
-        "timed_out_or_exhausted": sum(row["status"] in ("TIMEOUT", "BUDGET_EXHAUSTED") for row in rows),
+        "passed": passed,
+        "failures_including_timeouts": n - passed,
+        "timed_out_or_exhausted": sum(row["status"] in ("TIMEOUT", "BUDGET_EXHAUSTED") or
+                                      (row["status"] == "PASS" and row["latency_ms"] > max_task_ms)
+                                      for row in rows),
+        "over_budget_reported_passes": sum(row["status"] == "PASS" and row["latency_ms"] > max_task_ms
+                                          for row in rows),
         "over_budget_walltime": sum(row["latency_ms"] > max_task_ms for row in rows),
         "history_saved": sum(row["history_saved"] for row in rows),
         "background_completed": sum(row["background_completed"] for row in rows),
@@ -116,9 +126,11 @@ def compare_paired(baseline, candidate):
     before, after = (_metrics(old, baseline["max_task_ms"]),
                      _metrics(new, candidate["max_task_ms"]))
     fixed = [task for task in baseline["declared_task_ids"]
-             if old[task]["status"] != "PASS" and new[task]["status"] == "PASS"]
+             if not _within_budget_pass(old[task], baseline["max_task_ms"])
+             and _within_budget_pass(new[task], candidate["max_task_ms"])]
     regressed = [task for task in baseline["declared_task_ids"]
-                 if old[task]["status"] == "PASS" and new[task]["status"] != "PASS"]
+                 if _within_budget_pass(old[task], baseline["max_task_ms"])
+                 and not _within_budget_pass(new[task], candidate["max_task_ms"])]
     return {**answer, "comparable": True, "state": "DESCRIPTIVE_ONLY",
             "reason": None, "baseline": before, "candidate": after,
             "fixed_task_ids": fixed, "regressed_task_ids": regressed,
