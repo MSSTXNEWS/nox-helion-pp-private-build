@@ -46,15 +46,17 @@ def _validated(run):
              "TASK_BUDGET")
     tasks = run.get("declared_task_ids")
     _require(isinstance(tasks, list) and 1 <= len(tasks) <= 10000
-             and all(type(task) is str and 1 <= len(task) <= 160 for task in tasks)
-             and len(set(tasks)) == len(tasks), "TASK_SET")
+             and all(type(task) is str and 1 <= len(task) <= 160 for task in tasks),
+             "TASK_SET")
+    task_ids = set(tasks)
+    _require(len(task_ids) == len(tasks), "TASK_SET")
     events = run.get("outcomes")
     _require(isinstance(events, list) and len(events) == len(tasks), "OUTCOME_COUNT")
     mapped = {}
     for event in events:
         _require(isinstance(event, dict), "OUTCOME_SCHEMA")
         task = event.get("task_id")
-        _require(type(task) is str and task in tasks and task not in mapped,
+        _require(type(task) is str and task in task_ids and task not in mapped,
                  "MISSING_OR_DUPLICATE_TASK")
         _require(type(event.get("status")) is str and event["status"] in OUTCOMES, "UNKNOWN_STATUS")
         _require(_integer(event.get("latency_ms"), run["max_task_ms"]),
@@ -67,7 +69,7 @@ def _validated(run):
         _require(type(event.get("trace_sha256")) is str
                  and SHA.fullmatch(event["trace_sha256"]), "TRACE_PIN")
         mapped[task] = event
-    _require(set(mapped) == set(tasks), "TASK_SET_MISMATCH")
+    _require(set(mapped) == task_ids, "TASK_SET_MISMATCH")
     return mapped
 
 
