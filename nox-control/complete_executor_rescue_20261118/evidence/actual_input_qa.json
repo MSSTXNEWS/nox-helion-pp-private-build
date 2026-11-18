@@ -1,0 +1,28 @@
+{
+  "schema": "NOX_REVIEWED_APPEND_ACTUAL_INPUT_COMPATIBILITY_V1",
+  "state": "PASS",
+  "helper_sha256": "7063eae6da1a113595b45261e0780f0e4121f1569d94a355642c09573c3e14a5",
+  "config_sha256": "26fb86f00dd35cb2b711d275926a4aafb19eb8c22813b12e82df8dcce8a5c8b1",
+  "plan_sha256": "379d1c5b50e42fb50165ce1fbe904cf47b1b45b3747878c60f9b1208d6e13e23",
+  "contract_sha256": "eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4",
+  "asset_count": 3,
+  "checks": {
+    "canonical_plan": true,
+    "all_payload_hashes": true,
+    "bundle_decode": true,
+    "mode_scope": true,
+    "executor_validate_plan": true,
+    "reviewed_plan_scope": true,
+    "compose_catalog_only": true,
+    "preserves_all_old_catalog_rows": true,
+    "preserves_owner_module_executor_metadata": true,
+    "real_baseline_source_pair": true,
+    "real_plan_context_source_check": true,
+    "six_context_files_match_current_native_census": true
+  },
+  "old_catalog_count": 19,
+  "new_catalog_count": 20,
+  "remote_actions": 0,
+  "native_predecessor_fresh_readback_required": true,
+  "native_execution_proven": false
+}

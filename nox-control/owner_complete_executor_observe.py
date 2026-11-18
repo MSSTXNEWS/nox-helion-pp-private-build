@@ -490,6 +490,53 @@ def export_model_postimages(tid,plan,project,exported,remaining):
             'expected_files':len(files),'exported_bytes':used,'files':results},used
 
 
+def project_plan_reference(task,receipt,event,evidence):
+    """Read the actual reviewed-plan binding; worker reference is model-only."""
+    params=task.get('params') or {}
+    event_ref=event.get('reference') or {}
+    if not isinstance(params,dict) or not isinstance(event_ref,dict):
+        raise ValueError('PROJECT_REFERENCE_SHAPE')
+    if params.get('plan_sha256'):
+        reference={key:params[key] for key in ('plan_sha256','contract_sha256') if key in params}
+        if event_ref and event_ref!=reference:
+            raise ValueError('PROJECT_REFERENCE_CONFLICT')
+    else:
+        reference=event_ref
+        if reference.get('plan_sha256') and (
+                reference.get('contract_sha256')!=params.get('contract_sha256')
+                or task.get('native_project_generated_reference')!=reference):
+            raise ValueError('PROJECT_GENERATED_REFERENCE_CONFLICT')
+    if not reference.get('plan_sha256'):
+        if receipt.get('plan_sha256') is not None or evidence.get('plan_sha256') is not None:
+            raise ValueError('PROJECT_MISSING_DURABLE_REFERENCE')
+        return {}
+    if (set(reference)-{'plan_sha256','contract_sha256'}
+            or any(not isinstance(value,str) or not re.fullmatch(r'[a-f0-9]{64}',value)
+                   for value in reference.values())
+            or receipt.get('plan_sha256')!=reference['plan_sha256']
+            or evidence.get('plan_sha256')!=reference['plan_sha256']):
+        raise ValueError('PROJECT_REFERENCE_PIN_MISMATCH')
+    return reference
+
+
+def project_plan_binding(plan,raw,reference,task,receipt,evidence,project):
+    params=task.get('params') or {}
+    expected={'task_id':task.get('id'),'parent_task_id':params.get('parent_task_id'),
+              'queue_id':task.get('queue_id'),'root_id':'NOX_PROJECT_SOURCE'}
+    return (plan.get('schema')=='NOX_PROJECT_WORK_PLAN_V1'
+        and plan.get('operation')=='apply_reviewed_files' and encoded(plan)==raw
+        and plan.get('acceptance_scope')=='SOURCE_PATCH_TESTED'
+        and plan.get('original_task_accepted') is False
+        and expected['parent_task_id']==task.get('parent_task_id')
+        and all(isinstance(value,str) and plan.get(key)==value and evidence.get(key)==value
+                for key,value in expected.items())
+        and all(receipt.get(key)==expected[key] for key in ('task_id','parent_task_id','queue_id'))
+        and (plan.get('review_origin')=='OWNER_REVIEWED' and params.get('plan_sha256')==reference['plan_sha256']
+             or plan.get('review_origin')=='MODEL_CANDIDATE'
+             and plan.get('contract_sha256')==reference.get('contract_sha256')==params.get('contract_sha256'))
+        and plan.get('root_id') in project.get('roots',{}))
+
+
 def project_execution_readback():
     import base64
     config, config_raw, _ = obj(ROOT/'config/owner_native_subagents.json')
@@ -555,7 +602,10 @@ def project_execution_readback():
                 row['tests']['output_tail']=redact_source(str(tests.get('output',''))[-4000:])
             planner=event.get('planner_receipt') or {}
             row['planner_receipt']=planner
-            reference=event.get('reference') or {}
+            try:
+                reference=project_plan_reference(task,receipt,event,evidence)
+            except (ValueError,KeyError,TypeError) as exc:
+                reference={};row['plan']={'state':'REFERENCE_UNVERIFIED','error':str(exc)}
             if reference.get('plan_sha256'):
                 plan_path=Path(project['package_root'])/'plans'/(reference['plan_sha256']+'.json')
                 try:
@@ -563,10 +613,13 @@ def project_execution_readback():
                     row['plan']={'sha256':hashlib.sha256(raw).hexdigest(),
                         'matches_reference':hashlib.sha256(raw).hexdigest()==reference['plan_sha256'],
                         'files':plan.get('files'), 'review_origin':plan.get('review_origin'),
-                        'contract_sha256':plan.get('contract_sha256')}
+                        'contract_sha256':plan.get('contract_sha256'),
+                        'binding_verified':project_plan_binding(plan,raw,reference,task,receipt,evidence,project),
+                        'reference_source':'DURABLE_TASK_PARAMS' if (task.get('params') or {}).get('plan_sha256')
+                                           else 'DURABLE_GENERATED_REFERENCE'}
                     proof_verified=(task.get('status')=='done' and result.get('verified') is True
                         and evidence.get('state')=='INTEGRATED' and evidence.get('integration_verified') is True
-                        and tests.get('passed') is True and row['plan']['matches_reference']
+                        and tests.get('passed') is True and row['plan']['matches_reference'] and row['plan']['binding_verified']
                         and row['receipt_sha_matches'] and row['receipt_claim_matches']
                         and row['s03'].get('verified') is True and row['receipt_source']['source_authorized']
                         and row['receipt_source']['matches_durable_task_source']
@@ -578,18 +631,14 @@ def project_execution_readback():
                     if proof_verified and isinstance(files,list) and 1<=len(files)<=32:
                         postimages={approved_relative(f['path']):f['after_sha256'] for f in files}
                         if (len(postimages)==len(files) and postimages==evidence.get('postimages')
+                                and set(postimages)<=set(project['roots']['NOX_PROJECT_SOURCE']['allowed_paths'])
                                 and all(isinstance(v,str) and re.fullmatch(r'[a-f0-9]{64}',v)
                                         for v in postimages.values())):
                             for path,sha in postimages.items():
                                 verified_postimages.setdefault(path,[]).append({'task_id':tid,
                                     'receipt_sha256':result['receipt_sha256'],'sha256':sha})
                     if evidence.get('state')=='INTEGRATED' and plan.get('review_origin')=='MODEL_CANDIDATE':
-                        verified=(row['plan']['matches_reference'] and row['receipt_sha_matches']
-                            and row['receipt_claim_matches'] and row['s03'].get('verified') is True
-                            and row['receipt_source']['source_authorized']
-                            and row.get('project_evidence_sha_matches') is True
-                            and evidence.get('integration_verified') is True and tests.get('passed') is True
-                            and plan.get('task_id')==tid and plan.get('parent_task_id')==task.get('parent_task_id'))
+                        verified=proof_verified
                         if verified:
                             row['model_export'],used=export_model_postimages(tid,plan,project,exported,80000-export_bytes)
                             export_bytes+=used
