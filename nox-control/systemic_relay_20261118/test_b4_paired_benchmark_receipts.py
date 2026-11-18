@@ -41,6 +41,13 @@ class PairedReceiptTests(unittest.TestCase):
     def test_rejected_false_verified(self):
         b=example();c=example();c["native_verified"]=False
         self.assertEqual(compare_paired(b,c)["reason"],"INDEPENDENT_VERIFICATION_REQUIRED")
+    def test_overbudget_timeout_still_counted(self):
+        b=example();c=example();c["outcomes"][1]["latency_ms"]=1450
+        out=compare_paired(b,c)
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["candidate"]["over_budget_walltime"],1)
+        self.assertEqual(out["candidate"]["failures_including_timeouts"],2)
+        self.assertEqual(out["candidate"]["p95_latency_ms_all_tasks"],1450)
     def test_rejected_boolean_latency(self):
         b=example();c=example();c["outcomes"][0]["latency_ms"]=True
         self.assertEqual(compare_paired(b,c)["reason"],"INVALID_LATENCY")
