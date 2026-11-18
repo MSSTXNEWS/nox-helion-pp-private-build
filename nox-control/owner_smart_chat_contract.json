@@ -31,7 +31,7 @@
     "stream": {
       "module": "owner_chat_semantics_patch.py",
       "postimage_sha256": null,
-      "sha256": "d55858fd7f4f4e6abf7d212cb382e8643510e2a8118daa795c5552f158064d59"
+      "sha256": "a5fc54145a0f1dc922a29cb21673fc3e19682b087df440faa033f632c477fe54"
     }
   }
 }

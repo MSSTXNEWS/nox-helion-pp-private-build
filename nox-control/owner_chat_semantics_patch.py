@@ -1,7 +1,8 @@
 """Public semantic repair applied to native source without exporting private bindings.
 
 The source pin is from the observed native read-only probe on 2026-11-18.
-Only four functions are amended. Existing model-reference, bounded SSE parser,
+Only three functions are amended; the installed completion seam stays exact.
+Existing model-reference, bounded SSE parser,
 native tools, permission guards and imports remain in the host-owned source.
 transform() is pure and rejects all unreviewed source bytes.
 """
@@ -107,100 +108,7 @@ _PATCHES = [('_model_events', 'size=0', "size=0;pending_prefix='';visible=False"
   "        yield 'token','\\n\\n'\n"
   '        continue\n'
   '    return'),
- ('install',
-  'def install(native):\n'
-  '    """Replace the owner completion seam; original confirmation API stays intact."""\n'
-  '    async def owner_completion(url,payload,user_text,stream):\n'
-  '        from fastapi.responses import JSONResponse,StreamingResponse\n'
-  "        payload.pop('_agent_final',None)\n"
-  '\n'
-  '        async def generate():\n'
-  '            answer=[]\n'
-  '            try:\n'
-  '                async with aclosing(_run(native,url,payload,user_text)) as run:\n'
-  '                    async for kind,text in run:\n'
-  "                        if kind=='token' and text:\n"
-  '                            answer.append(text)\n'
-  "                            yield native['_sse'](text)\n"
-  "                final=''.join(answer)\n"
-  "                if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')\n"
-  '                # S03 postflight reads this only after normal exhaustion. Set it\n'
-  '                # before terminal DONE, never in a disconnect/error finally.\n'
-  "                payload['_agent_final']=final\n"
-  "                yield native['_sse']('',finish='stop')\n"
-  "                yield 'data: [DONE]\\n\\n'\n"
-  '            except asyncio.CancelledError:\n'
-  '                raise\n'
-  '            except Exception as error:\n'
-  "                payload.pop('_agent_final',None)\n"
-  "                code=str(error) if isinstance(error,StreamFailure) else 'HOLD_OWNER_STREAM_RUNTIME'\n"
-  "                yield 'data: '+json.dumps({'error':{'code':code}})+'\\n\\n'\n"
-  '\n'
-  '        if stream:\n'
-  "            return StreamingResponse(generate(),media_type='text/event-stream',headers={\n"
-  "                'Cache-Control':'no-cache, no-store','X-Accel-Buffering':'no'})\n"
-  '        try:\n'
-  '            answer=[]\n'
-  '            async with aclosing(_run(native,url,payload,user_text)) as run:\n'
-  '                async for kind,text in run:\n'
-  "                    if kind=='token':answer.append(text)\n"
-  "            final=''.join(answer)\n"
-  "            if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')\n"
-  "            payload['_agent_final']=final\n"
-  "            return JSONResponse(native['_final_json'](final))\n"
-  '        except Exception:\n'
-  "            payload.pop('_agent_final',None)\n"
-  "            return JSONResponse({'error':{'code':'HOLD_OWNER_STREAM_RUNTIME'}},status_code=502)\n"
-  '\n'
-  "    native['owner_completion']=owner_completion",
-  'def install(native):\n'
-  '    """Replace the owner completion seam; original confirmation API stays intact."""\n'
-  '    async def owner_completion(url,payload,user_text,stream):\n'
-  '        from fastapi.responses import JSONResponse,StreamingResponse\n'
-  "        payload.pop('_agent_final',None)\n"
-  '\n'
-  '        async def generate():\n'
-  '            answer=[];exhausted=False\n'
-  '            try:\n'
-  '                async with aclosing(_run(native,url,payload,user_text)) as run:\n'
-  '                    async for kind,text in run:\n'
-  "                        if kind=='token' and text:\n"
-  '                            answer.append(text)\n'
-  "                            yield native['_sse'](text)\n"
-  "                final=''.join(answer)\n"
-  "                if _placeholder(final):raise StreamFailure('HOLD_MODEL_EMPTY')\n"
-  '                # S03 postflight reads this only after normal exhaustion. Set it\n'
-  '                # before terminal DONE, never in a disconnect/error finally.\n'
-  "                payload['_agent_final']=final\n"
-  "                yield native['_sse']('',finish='stop')\n"
-  "                yield 'data: [DONE]\\n\\n'\n"
-  '                exhausted=True\n'
-  '            except asyncio.CancelledError:\n'
-  '                raise\n'
-  '            except Exception as error:\n'
-  "                payload.pop('_agent_final',None)\n"
-  "                yield 'data: "
-  "'+json.dumps({'error':_failure(error,partial=bool(answer))},ensure_ascii=False)+'\\n\\n'\n"
-  '            finally:\n'
-  "                if not exhausted:payload.pop('_agent_final',None)\n"
-  '\n'
-  '        if stream:\n'
-  "            return StreamingResponse(generate(),media_type='text/event-stream',headers={\n"
-  "                'Cache-Control':'no-cache, no-store','X-Accel-Buffering':'no'})\n"
-  '        try:\n'
-  '            answer=[]\n'
-  '            async with aclosing(_run(native,url,payload,user_text)) as run:\n'
-  '                async for kind,text in run:\n'
-  "                    if kind=='token':answer.append(text)\n"
-  "            final=''.join(answer)\n"
-  "            if _placeholder(final):raise StreamFailure('HOLD_MODEL_EMPTY')\n"
-  "            payload['_agent_final']=final\n"
-  "            return JSONResponse(native['_final_json'](final))\n"
-  '        except Exception as error:\n'
-  "            payload.pop('_agent_final',None)\n"
-  "            return JSONResponse({'error':_failure(error,partial=bool(answer))},status_code=502)\n"
-  '\n'
-  "    native['owner_completion']=owner_completion")]
+]
 
 
 def _ast(value):
@@ -284,7 +192,7 @@ def _transform(source):
     source=source[:point]+'\n\n'+_HELPERS+'\n'+source[point:]
     compile(source,'owner_chat_stream.py','exec')
     # Every other native function/class (including bounded SSE parsing) is exact.
-    changed={'owner_request_query','_model_events','_run','install'}
+    changed={'owner_request_query','_model_events','_run'}
     units=_source_units(source)
     if any(units.get(name)!=body for name,body in old_units.items() if name not in changed):
         raise ValueError('HOLD_CHAT_SEMANTICS_PROTECTED_UNIT_CHANGED')

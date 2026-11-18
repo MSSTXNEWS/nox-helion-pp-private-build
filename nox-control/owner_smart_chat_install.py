@@ -31,7 +31,7 @@ except NameError:
     BUNDLE = {}
 
 # Freeze this to the reviewed, public metadata-only contract before deployment.
-CONTRACT_SHA256 = 'eda1606e691597daf5054b7318560627d8c41ca29d7fd22b5abe9d8409dd66e8'
+CONTRACT_SHA256 = '30f49ab7e9f2e18c176af4515979b5834203fcd0e728e75394dd5db1e6ae978f'
 CONTRACT_NAME = 'owner_smart_chat_contract.json'
 ROOT = Path('/root/nox')
 STATE = ROOT / 'state'
