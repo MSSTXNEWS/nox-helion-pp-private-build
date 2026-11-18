@@ -40,6 +40,16 @@ class _ActiveOwnerTagScanner(HTMLParser):
         if tag == 'meta' and (values.get('name') or '').lower() == 'nox-live-build':
             self.meta_seen = True
         elif tag == 'script':
+            # A script element can be inert even outside template/noscript.
+            # JSON, importmap and other data-block types do not load handlers;
+            # nomodule does not run in our modern browser owner UI.
+            script_type = (values.get('type') or '').strip().lower().split(';', 1)[0]
+            if 'nomodule' in values or script_type not in (
+                '', 'module', 'text/javascript', 'application/javascript',
+                'text/ecmascript', 'application/ecmascript',
+                'application/x-javascript',
+            ):
+                return
             src = values.get('src')
             if isinstance(src, str):
                 for name in _OWNER_SCRIPTS:
