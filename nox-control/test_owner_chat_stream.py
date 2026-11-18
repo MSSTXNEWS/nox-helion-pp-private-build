@@ -178,13 +178,13 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
     async def test_complete_tool_observation_is_not_silently_clipped(self):
         # Prior adapter sent only the first 8000 characters to the model.
         # Preserve real RU/ES evidence, including its final non-ASCII suffix.
-        observation='RU начало:'+'я'*8050+'\\nES final: contexto completo 🦊'
+        observation='RU начало:'+'я'*8050+'\nES final: contexto completo 🦊'
         call=Chunks([
             frame(calls=[{'index':0,'id':'full_context_call','type':'function',
                           'function':{'name':'calculate','arguments':'{}'}}]),
-            frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+            frame(finish='tool_calls'),b'data: [DONE]\n\n'])
         answer=Chunks([frame('Respuesta completa'),frame(finish='stop'),
-                       b'data: [DONE]\\n\\n'])
+                       b'data: [DONE]\n\n'])
         requests,factory=self.transport([call,answer])
         native=self.native(result={'ok':True,'text':observation})
         payload={'messages':[{'role':'user','content':'Usa el resultado completo'}]}
@@ -204,7 +204,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         upstream=Chunks([
             frame(calls=[{'index':0,'id':'oversized_tool','type':'function',
                           'function':{'name':'calculate','arguments':'{}'}}]),
-            frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+            frame(finish='tool_calls'),b'data: [DONE]\n\n'])
         requests,factory=self.transport([upstream])
         native=self.native(result={'ok':True,'text':too_large})
         payload={'messages':[{'role':'user','content':'Preserva todo'}]}
