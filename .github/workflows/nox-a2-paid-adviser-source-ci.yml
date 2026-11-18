@@ -1,12 +1,5 @@
 name: NOX A2 paid adviser source gate
 on:
-  push:
-    branches:
-      - a2-no-paid-external-adviser-guard-20261118
-    paths:
-      - 'nox-control/owner_senior_gateway.py'
-      - 'nox-control/test_owner_senior_gateway.py'
-      - '.github/workflows/nox-a2-paid-adviser-source-ci.yml'
   pull_request:
     paths:
       - 'nox-control/owner_senior_gateway.py'
