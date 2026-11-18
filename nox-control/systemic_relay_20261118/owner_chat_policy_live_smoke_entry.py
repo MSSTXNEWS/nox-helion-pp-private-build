@@ -211,7 +211,7 @@ def main():
 if __name__=="__main__":
     raise SystemExit(main())
 '''
-if not SOURCE.startswith("#!/usr/bin/env python3\\n"):
+if not SOURCE.startswith("#!/usr/bin/env python3\n"):
     # Source is embedded as an owner-pinned literal, not fetched at runtime.
     raise SystemExit("HOLD_SMOKE_ENTRY_SOURCE")
 ast.parse(SOURCE)
