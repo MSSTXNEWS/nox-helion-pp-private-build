@@ -1,0 +1,65 @@
+{
+  "schema": "NOX_MODEL_TEMPLATE_FINDINGS_V1",
+  "observed_date_utc": "2026-11-18",
+  "scope": "READ_ONLY_PRIMARY_SOURCE_RESEARCH",
+  "native": {
+    "gguf_basename": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+    "identity_evidence": "systemic-next3-current-readback.json: PROJECT_EXECUTION planner_receipt.trace.model.model_id",
+    "source_evidence_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44374527203",
+    "source_evidence_file": "systemic-chat-idle-current-readback.json",
+    "owner_chat_stream_sha256": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+    "run_excerpt_sha256": "d52dee4d9b5aebc2e1e043ab81253ec2d84280dedc05efd06229944f82c875d3",
+    "model_events_excerpt_sha256": "7e87049fe05b07140775e26ef0504b8730ea7d37f7f11495920162e57fb55ff8",
+    "installed_llama_cpp_build": null,
+    "installed_chat_template_sha256": null,
+    "installed_template_matches_upstream": null,
+    "observations": [
+      "The ordinary _run route uses setdefault('enable_thinking', False) in chat_template_kwargs; explicitly supplied values remain unchanged.",
+      "The model-identity early route precedes that default. prepare_payload may run after it on the ordinary route.",
+      "_model_events consumes delta.content and tool_calls; it does not expose reasoning_content. A finish_reason other than stop or tool_calls raises HOLD_MODEL_INCOMPLETE."
+    ]
+  },
+  "primary_sources": [
+    {
+      "id": "deepseek_template",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/commit/144e18d1ae36f92a9463fcb34ada50250d836f67",
+      "upstream_commit": "144e18d1ae36f92a9463fcb34ada50250d836f67",
+      "facts": [
+        "enable_thinking=false is a supported alias for chat mode in this official template revision.",
+        "Selection precedence is explicit thinking_mode, then thinking, then enable_thinking, then reasoning_effort=none; otherwise thinking is enabled.",
+        "Chat mode closes the thinking block in the generation prefix. Explicit thinking_mode=thinking or thinking=true can override enable_thinking=false."
+      ]
+    },
+    {
+      "id": "deepseek_encoding",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/main/encoding/README.md",
+      "facts": [
+        "reasoning_effort is a prompt instruction from 1 to 100. The reference encoder maps low/high/max to 50/75/100, defaulting to high.",
+        "The effort prefix applies only to thinking mode and is inserted at the start of the conversation; it is not a hard token limit."
+      ]
+    },
+    {
+      "id": "llama_server",
+      "url": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+      "revision_scope": "CURRENT_UPSTREAM_MASTER_NOT_NATIVE_BUILD_PROOF",
+      "facts": [
+        "The current server documents request chat_template_kwargs and reasoning_effort=none, plus server options --reasoning off and --reasoning-budget N.",
+        "The documented thinking-token budget uses -1 for unrestricted, 0 for immediate end, and a positive value for a limit.",
+        "reasoning_format=none changes output parsing and returns raw generated text; it is not the reasoning-disable control.",
+        "GET /props exposes build_info, chat_template and template capabilities. POST /apply-template formats messages without inference.",
+        "A per-request thinking_budget_tokens field was not established from this server documentation. Do not infer native support from a separate current UI type."
+      ]
+    }
+  ],
+  "assessment": {
+    "wrong_parameter_proven": false,
+    "stale_qwen_comment_is_failure_proof": false,
+    "conditional_failure_mechanism": "If the installed template or caller leaves reasoning enabled and generation exhausts its budget before visible content, the current stream adapter can show no visible answer and reject the length terminal. No failing native SSE trace establishes that mechanism here.",
+    "next_useful_readpoint": "At an available native window, obtain a bounded GET /props projection of build_info, model basename, template SHA and recognized capability enums only. Exclude default prompts or history. Bind any later option decision to that installed build/template and an actual failure trace.",
+    "runtime_parameters_changed": false,
+    "model_calls": 0,
+    "model_downloads": 0,
+    "service_restarts": 0,
+    "measured_latency_improvement": false
+  }
+}

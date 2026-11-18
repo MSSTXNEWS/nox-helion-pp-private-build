@@ -1,0 +1,43 @@
+{
+  "assets": {
+    "native_helpers.py": {
+      "sha256": "b3d1887b92cb805076301f6631e56b6e42c48e7dae02d62f2a272c10669644e0",
+      "source": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/owner_native_repair.py"
+    },
+    "official_auth.py": {
+      "sha256": "73107aed7d1eaa72d92fe15d4f91c8c5878e560e9efcffaf4dbf583f500fbf60",
+      "source": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/owner_media_acceptance_entry.py"
+    },
+    "policy_patch.py": {
+      "sha256": "024d2aab7f5ab75ebd6b08fc2e8ac1dc12891b4197c74af22b7dc3ad5d890965",
+      "source": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/systemic_relay_20261118/next_chat_review/owner_chat_decomposition_patch.py"
+    },
+    "public_chat.js": {
+      "sha256": "646fe556bb446aa0a7b30abd44f1ed41865877553ceef2bb703c85f6b112d5a2",
+      "source": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/systemic_relay_20261118/next_chat_review/nox-v24-chat-nonempty-current.js"
+    }
+  },
+  "behavioral_acceptance_verified": false,
+  "entry": "nox-control/systemic_relay_20261118/next_chat_review/package_v5/owner_chat_decomposition_entry.py",
+  "entry_sha256": "28cd97f0bc8d42f37635a1c4d2e4e64554dac95ed999904decb12477cbaa1105",
+  "native_deployment_performed": false,
+  "native_preconditions_pending": [
+    "reachable authorized host",
+    "exact source/process pins",
+    "stable zero current inflight count",
+    "official owner-authenticated8080 asset before/after SHA and length",
+    "fresh owner sessions closed before source mutation and on errors"
+  ],
+  "original_task_accepted": false,
+  "output_sha256": {
+    "install_bundle.json": "d0d4b6fa700785c1f92973cee4ebf9069e3edffc2e77f8898988054227d4ddb8",
+    "install_spec.json": "0b3db4a0912660fae50db76b0239b77e73885f788cb8d113b0ce4797816cbd6c",
+    "owner_chat_decomposition_entry.py": "28cd97f0bc8d42f37635a1c4d2e4e64554dac95ed999904decb12477cbaa1105"
+  },
+  "probe_sha256": "490384ef8db109647489d84e683e287c9764810654cdb3eb6359969052028d85",
+  "schema": "NOX_CHAT_DECOMPOSITION_BUILD_V1",
+  "syntax_verified": true,
+  "template_sha256": "900a69dafb49981c022fcfe713ff70ae80eb5bd5a478c7ac4ce54519e7b0cd10",
+  "tests_executed": false,
+  "worker_readback_sha256": "98cd16e04562cb8b18be406729408b196162206b860da92bb5e8b7c17730acd9"
+}

@@ -1,0 +1,80 @@
+{
+  "acceptance_scope": "STATIC_ASSET_HTTP_ONLY_BEHAVIOR_PENDING",
+  "after_ui_sha256": "646fe556bb446aa0a7b30abd44f1ed41865877553ceef2bb703c85f6b112d5a2",
+  "asset_bytes": {
+    "after": 33602,
+    "before": 31906
+  },
+  "assets": {
+    "native_helpers.py": "b3d1887b92cb805076301f6631e56b6e42c48e7dae02d62f2a272c10669644e0",
+    "official_auth.py": "73107aed7d1eaa72d92fe15d4f91c8c5878e560e9efcffaf4dbf583f500fbf60",
+    "public_chat.js": "646fe556bb446aa0a7b30abd44f1ed41865877553ceef2bb703c85f6b112d5a2"
+  },
+  "before_ui_sha256": "92b952b6c7ee31f22ed74912d9444a88989c014694424083336660dce21a8a5b",
+  "expected_proxy": {
+    "pgrp": 3703386,
+    "pid": 3703386,
+    "ppid": 114,
+    "start_ticks": 175609570
+  },
+  "foreground_idle_required": false,
+  "guarded_sources": {
+    "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+    "chat_proxy.py": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62",
+    "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+    "nox_v29_chat_bridge.py": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
+    "owner_chat_evidence.py": "ea66e05f30472b066444058ac18d0c7af74def410bde760396d1e2431161e8b2",
+    "owner_chat_stream.py": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+    "slim_chat_t885u.py": "8e1a83a68b336fc0c12f350d754ea47e5b5b72688584670aacc0de4079b1d37b"
+  },
+  "original_task_accepted": false,
+  "policy_write_or_reload": false,
+  "protected_processes": {
+    "nox-dispatcher-t855u": {
+      "pgrp": 106058,
+      "pid": 106058,
+      "ppid": 114,
+      "start_ticks": 181620214
+    },
+    "nox-ds41-8098": {
+      "pgrp": 3266857,
+      "pid": 3266857,
+      "ppid": 114,
+      "start_ticks": 172046662
+    },
+    "nox-web29-18775": {
+      "pgrp": 3505392,
+      "pid": 3505392,
+      "ppid": 114,
+      "start_ticks": 173653097
+    },
+    "worker_0": {
+      "pgrp": 106058,
+      "pid": 106174,
+      "ppid": 106058,
+      "start_ticks": 181621423
+    },
+    "worker_1": {
+      "pgrp": 106058,
+      "pid": 106175,
+      "ppid": 106058,
+      "start_ticks": 181621423
+    },
+    "worker_2": {
+      "pgrp": 106058,
+      "pid": 106176,
+      "ppid": 106058,
+      "start_ticks": 181621423
+    }
+  },
+  "provenance": {
+    "current_process_readback_sha256": "af4e38655364e37a740469db86058b03f48abfcd5539f29119dd9b836a963e09",
+    "current_process_request": [
+      6989803150
+    ],
+    "unchanged_chat_hold_readback_sha256": "7bdc8f5c58aa57dba86238b08533f1a92ea9c267a57a4f2fb98932f8a373b135",
+    "unchanged_chat_hold_receipt_sha256": "4f854c83232358d6f928558f7a41816a08213bbcecb04895e61c17a436207b7b",
+    "v5_spec_sha256": "0b3db4a0912660fae50db76b0239b77e73885f788cb8d113b0ce4797816cbd6c"
+  },
+  "schema": "NOX_CHAT_UI_ONLY_INSTALL_SPEC_V1"
+}
