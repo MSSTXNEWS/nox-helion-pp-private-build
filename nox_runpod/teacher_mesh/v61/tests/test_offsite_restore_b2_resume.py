@@ -4,8 +4,12 @@ import io
 import json
 import tarfile
 import unittest
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
-from nox_runpod.teacher_mesh.v61.checkpoint_backup import verify_plaintext_tar, transport_retry_delay
+from nox_runpod.teacher_mesh.v61.checkpoint_backup import REMOTE, verify_plaintext_tar, transport_retry_delay
 
 
 def make_archive(names):
@@ -49,6 +53,30 @@ class V61ResumeProofBoundary(unittest.TestCase):
         self.assertEqual(result["resume_name_hints"],
                          {"optimizer": True, "rng": True, "scaler": True})
         self.assertIs(result["functional_optimizer_restore_verified"], False)
+
+
+class V61RemoteBoundedMemory(unittest.TestCase):
+    def test_real_remote_tar_uses_chunked_hashing_without_path_read_bytes(self):
+        # Run the actual embedded read-only remote script on an isolated fixture.
+        # A subprocess-local guard turns any whole-file Path.read_bytes into FAIL.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for idx in range(10):
+                (root / f"checkpoint_{idx:02d}.pt").write_bytes(bytes([idx]) * 4096)
+            old_root = "root=Path('/root/nox')"
+            self.assertEqual(REMOTE.count(old_root), 1)
+            script = ("from pathlib import Path\n"
+                      "def reject_read_bytes(*args, **kwargs):\n"
+                      "    raise AssertionError('unbounded_checkpoint_read_bytes')\n"
+                      "Path.read_bytes = reject_read_bytes\n"
+                      + REMOTE.replace(old_root, f"root=Path({str(root)!r})"))
+            result = subprocess.run([sys.executable, "-c", script],
+                                    capture_output=True, timeout=30, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+            checked = verify_plaintext_tar(result.stdout)
+            self.assertEqual(checked["count"], 10)
+            self.assertEqual(checked["total_bytes"], 40960)
+            self.assertFalse(checked["functional_optimizer_restore_verified"])
 
 
 class V61TransportRetryBoundary(unittest.TestCase):
