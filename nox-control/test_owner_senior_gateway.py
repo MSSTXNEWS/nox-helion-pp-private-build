@@ -66,9 +66,12 @@ class GatewayTests(unittest.TestCase):
         return config
 
     def test_no_paid_policy_blocks_status_consult_verify_and_direct_http(self):
+        # Use the actual module default: patching False would hide a future unsafe default.
+        self.policy_patch.stop()
+        self.assertIs(gateway.PAID_PROVIDER_EGRESS_ALLOWED, False)
         self.configure()
         self.credentials()
-        with patch.object(gateway, 'PAID_PROVIDER_EGRESS_ALLOWED', False), patch.object(gateway, 'request_contract') as request_contract:
+        with patch.object(gateway, 'request_contract') as request_contract:
             self.assertEqual(gateway.status()['state'], 'NO_PAID_API_POLICY')
             self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'NO_PAID_API_POLICY')
             self.assertEqual(gateway.verify_access()['state'], 'NO_PAID_API_POLICY')
