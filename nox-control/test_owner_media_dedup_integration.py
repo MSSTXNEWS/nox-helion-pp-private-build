@@ -62,6 +62,51 @@ class MediaCreateDedupIntegration(unittest.TestCase):
         self.assertNotEqual(media.create_job({'kind':'image','prompt':'same'},'alice')['id'],
                             media.create_job({'kind':'image','prompt':'same'},'alice')['id'])
 
+    def test_old_inbox_records_do_not_starve_a_new_job(self):
+        # Real inbox files are durable even after the task is integrated;
+        # three lexically earlier stale entries must not hide the next job.
+        inbox = self.root / 'state/media/inbox'
+        for char in ('0', '1', '2'):
+            job_id = char * 32
+            media.atomic(media.job_path(job_id), {
+                'id': job_id, 'state': 'COMPLETED', 'request': {'kind': 'image'}})
+            media.atomic(inbox / (job_id + '.json'), {'job_id': job_id})
+        fresh = 'f' * 32
+        media.atomic(media.job_path(fresh), {
+            'id': fresh, 'state': 'QUEUED', 'request': {'kind': 'image'}})
+        media.atomic(inbox / (fresh + '.json'), {'job_id': fresh})
+        state = {'tasks': {}}
+        self.assertEqual(media.ingest_media_tasks(state), 1)
+        self.assertIn('owner.media.' + fresh, state['tasks'])
+        self.assertEqual(len(list(inbox.glob('*.json'))), 4)
+
+    def test_orphan_inbox_cannot_starve_valid_job(self):
+        # The orphan receipt remains untouched for manual reconciliation.
+        inbox = self.root / 'state/media/inbox'
+        missing_id, valid_id = '0' * 32, 'f' * 32
+        media.atomic(inbox / (missing_id + '.json'), {'job_id': missing_id})
+        media.atomic(media.job_path(valid_id), {
+            'id': valid_id, 'state': 'QUEUED', 'request': {'kind': 'image'}})
+        media.atomic(inbox / (valid_id + '.json'), {'job_id': valid_id})
+        state = {'tasks': {}}
+        self.assertEqual(media.ingest_media_tasks(state), 1)
+        self.assertIn('owner.media.' + valid_id, state['tasks'])
+        self.assertEqual(len(list(inbox.glob('*.json'))), 2)
+        self.assertFalse(media.job_path(missing_id).exists())
+
+    def test_existing_corrupt_job_does_not_bypass_hold(self):
+        # Missing and unreadable are different. Do not mask damaged S03.
+        bad_id, valid_id = '0' * 32, 'f' * 32
+        inbox = self.root / 'state/media/inbox'
+        (media.job_path(bad_id)).write_text('{not-json')
+        media.atomic(inbox / (bad_id + '.json'), {'job_id': bad_id})
+        media.atomic(media.job_path(valid_id), {
+            'id': valid_id, 'state': 'QUEUED', 'request': {'kind': 'image'}})
+        media.atomic(inbox / (valid_id + '.json'), {'job_id': valid_id})
+        with self.assertRaisesRegex(media.MediaHold, 'MEDIA_JOB_NOT_FOUND'):
+            media.ingest_media_tasks({'tasks': {}})
+        self.assertEqual(len(list(inbox.glob('*.json'))), 2)
+
     def test_invalid_id_fails_closed(self):
         with self.assertRaisesRegex(media.MediaHold, 'INVALID_MEDIA_CLIENT_REQUEST_ID'):
             media.create_job(self.body(key='../'), 'alice')
@@ -99,6 +144,25 @@ class MediaCreateDedupIntegration(unittest.TestCase):
         first = media.create_job(self.body(), 'alice')
         self.assertEqual(media.create_job(self.body(), 'alice')['id'], first['id'])
         self.assertEqual(len(list((self.root / 'state/media/jobs').glob('*.json'))), 1)
+
+    def test_durable_job_missing_or_corrupt_never_recreated_from_worker_cache(self):
+        # The old "read_json(path) or job" fallback rewrote missing/corrupt
+        # durable records from an obsolete in-memory copy. That loses evidence.
+        for mode, key in (('missing', 'b' * 32), ('corrupt', 'c' * 32)):
+            with self.subTest(mode=mode):
+                cached = media.create_job(self.body(key=key), 'alice')
+                record = media.job_path(cached['id'])
+                if mode == 'missing':
+                    record.unlink()
+                else:
+                    record.write_text('{invalid-json')
+                before = record.read_bytes() if record.exists() else None
+                with self.assertRaisesRegex(media.MediaHold, 'HOLD_MEDIA_JOB_STATE_UNREADABLE'):
+                    media.update_job(cached, state='COMPLETED')
+                after = record.read_bytes() if record.exists() else None
+                self.assertEqual(after, before)
+                self.assertEqual(cached['state'], 'QUEUED')
+
 
 if __name__ == '__main__':
     unittest.main()

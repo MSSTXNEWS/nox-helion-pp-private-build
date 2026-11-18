@@ -104,7 +104,11 @@ def update_job(job, **fields):
     fd = os.open(lockpath, os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        current = read_json(job_path(job['id'])) or job
+        # Never reconstruct a missing/corrupt durable job from stale worker RAM.
+        # The prior `or job` fallback silently replaced S03 evidence on errors.
+        current = read_json(job_path(job['id']))
+        if not isinstance(current, dict) or current.get('id') != job['id']:
+            raise MediaHold('HOLD_MEDIA_JOB_STATE_UNREADABLE')
         current.update(fields, updated_at=now())
         if job.get('cancel_requested'):
             current['cancel_requested'] = True
@@ -788,12 +792,30 @@ def lookup_media_request(owner, client_request_id):
 
 def ingest_media_tasks(state):
     count = 0
-    for path in sorted((ROOT / 'state/media/inbox').glob('*.json'))[:3]:
+    # Scan past durable inbox receipts for already-ingested or terminal jobs.
+    # Cap only NEW admissions; limiting the candidate scan to three starves
+    # later requests after three older inbox records survive in S03.
+    for path in sorted((ROOT / 'state/media/inbox').glob('*.json')):
+        if count >= 3:
+            break
         value = read_json(path)
         job_id = value.get('job_id') if isinstance(value, dict) else None
         if not isinstance(job_id, str) or not JOB_ID.fullmatch(job_id) or path.stem != job_id:
             continue
-        job = load_job(job_id)
+        try:
+            job = load_job(job_id)
+        except MediaHold as exc:
+            if str(exc) != 'MEDIA_JOB_NOT_FOUND':
+                raise
+            # An orphan inbox receipt cannot be executed, but must not
+            # starve unrelated queued jobs. Preserve it for reconciliation.
+            # Only a genuinely absent job file is skippable: corrupted or
+            # symlinked state must retain the existing fail-closed behavior.
+            try:
+                os.lstat(job_path(job_id))
+            except FileNotFoundError:
+                continue
+            raise
         task_id = 'owner.media.' + job_id
         if task_id in state.setdefault('tasks', {}) or job.get('state') != 'QUEUED':
             continue
