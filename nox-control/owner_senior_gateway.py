@@ -734,6 +734,8 @@ def consult_plan(context, deadline_seconds=2.0):
 
 def initialize():
     """Create only this module's nonsecret configuration, preserving an existing one."""
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {'state': 'NO_PAID_API_POLICY', 'models_consulted': 0}
     fd = _lock()
     if fd is None:
         return {'state': 'PENDING', 'models_consulted': 0}
@@ -746,6 +748,8 @@ def initialize():
 
 
 def set_credential(provider, value):
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {'state': 'NO_PAID_API_POLICY', 'access_verified': False}
     if provider not in PROVIDERS or not _valid_key(value):
         raise GatewayHold('CREDENTIAL_INPUT_INVALID')
     fd = _lock()
@@ -823,9 +827,12 @@ def main(argv=None):
         elif args.command == 'init-config':
             result = initialize()
         elif args.command == 'set-key':
-            if not sys.stdin.isatty():
+            if not PAID_PROVIDER_EGRESS_ALLOWED:
+                result = {'state': 'NO_PAID_API_POLICY', 'access_verified': False}
+            elif not sys.stdin.isatty():
                 raise GatewayHold('PRIVATE_TERMINAL_REQUIRED')
-            result = set_credential(args.provider, getpass.getpass('Provider API key (hidden): '))
+            else:
+                result = set_credential(args.provider, getpass.getpass('Provider API key (hidden): '))
         else:
             result = verify_access(args.provider)
     except (GatewayHold, OSError, ValueError, TypeError):
