@@ -1,5 +1,6 @@
 """Safety admission and measurement validity tests without a GPU or live chat."""
 import importlib.util
+import contextlib
 import io
 import json
 from pathlib import Path
@@ -37,6 +38,50 @@ def sample(used=100, oom=0):
 
 
 class CapacityProbeTests(unittest.TestCase):
+    def test_explicit_model_port_is_bounded_to_existing_local_services(self):
+        self.assertEqual(probe.model_base(8098), 'http://127.0.0.1:8098')
+        self.assertEqual(probe.model_base(8081), probe.BASE)
+        for value in (8080, 8082, 0, 65536, True, '8098', 'https://remote.invalid'):
+            with self.assertRaisesRegex(probe.Hold, 'MODEL_PORT_SCOPE'):
+                probe.model_base(value)
+
+    def test_8098_inventory_uses_selected_service_without_inference(self):
+        profile = {'verified': False, 'heartbeats': [], 'processes': []}
+        with patch.object(probe, 'profile_evidence', return_value=profile), \
+                patch.object(probe, 'source_proof', return_value={}), \
+                patch.object(probe, 'resources', side_effect=sample), \
+                patch.object(probe, 'gpu_snapshot', return_value={}), \
+                patch.object(probe, 'stop_active', return_value=False), \
+                patch.object(probe.urllib.request, 'urlopen', return_value=Response(b'[{"is_processing":false}]')) as request, \
+                patch.object(probe, 'infer') as infer, contextlib.redirect_stdout(io.StringIO()):
+            result = probe.main(['--mode', 'TASK_BOOST', '--inventory-only', '--model-port', '8098'])
+        self.assertEqual(result['state'], 'INVENTORY_ONLY')
+        self.assertEqual(result['model_port'], 8098)
+        request.assert_called_once_with('http://127.0.0.1:8098/slots', timeout=2)
+        infer.assert_not_called()
+        self.assertEqual(probe.BASE, 'http://127.0.0.1:8081')
+
+    def test_model_id_must_match_one_native_process_on_selected_port(self):
+        model = '/root/nox/models/deepseek_v41_flash_iq2xxs/model-00001-of-00006.gguf'
+        row = {'kind': 'model_service', 'pid': 42, 'start_ticks': '123',
+               'port': '8098', 'model_path': model}
+        self.assertEqual(probe.native_model_identity(model, 8098, [row])['pid'], 42)
+        for rows in ([], [row, row], [{**row, 'port': '8081'}],
+                     [{**row, 'kind': 'teacher_or_judge'}], [{**row, 'start_ticks': '0'}]):
+            with self.assertRaises(probe.Hold):
+                probe.native_model_identity(model, 8098, rows)
+        with self.assertRaises(probe.Hold):
+            probe.native_model_identity('/root/nox/models/current.gguf', 8098, [row])
+
+    def test_selected_target_is_used_for_streaming_request(self):
+        response = stream({'choices': [{'delta': {'content': '{"chat":8080,"engine":8081,"embeddings":8082}'}, 'finish_reason': 'stop'}]})
+        with patch.object(probe.urllib.request, 'urlopen', return_value=response) as request, \
+                patch.object(probe, 'stop_active', return_value=False):
+            result = probe.infer('/root/nox/models/current.gguf', 0, threading.Event(),
+                                 time.monotonic() + 20, base=probe.model_base(8098))
+        self.assertEqual(result['state'], 'PASSED')
+        self.assertEqual(request.call_args.args[0].full_url, 'http://127.0.0.1:8098/v1/chat/completions')
+
     def test_slots_reject_ambiguous_activity_without_exporting_prompt(self):
         for rows in ([], [{'is_processing': 0}], [{'processing': None}],
                      [{'is_processing': False, 'processing': True}], [{'prompt': 'private'}]):
@@ -114,7 +159,7 @@ class CapacityProbeTests(unittest.TestCase):
     def test_burst_measures_same_six_tasks_and_never_invents_token_rate(self):
         lock = threading.Lock()
         state = {'active': 0, 'peak': 0}
-        def fake_infer(model, index, cancel, deadline, usage):
+        def fake_infer(model, index, cancel, deadline, usage, base=probe.BASE):
             with lock:
                 state['active'] += 1
                 state['peak'] = max(state['peak'], state['active'])

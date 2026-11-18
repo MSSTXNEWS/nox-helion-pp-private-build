@@ -22,6 +22,7 @@ import urllib.request
 ROOT = Path('/root/nox')
 CGROUP = Path('/sys/fs/cgroup')
 BASE = 'http://127.0.0.1:8081'
+MODEL_PORTS = (8081, 8098)
 STOP_PATHS = tuple(map(Path, ('/root/nox/STOP', '/root/nox/STOP.flag',
     '/root/nox/stop.flag', '/root/nox/.stop', '/root/nox/program/STOP', '/workspace/NOX_STOP')))
 HEAVY_SERVICES = ('nox-train-volta-t866u', 'nox-teacher-serve-t811u',
@@ -71,9 +72,16 @@ def run(args):
         return 99, ''
 
 
-def get(path):
+def model_base(port):
+    """An explicit local model target; never discover or probe unrelated ports."""
+    if type(port) is not int or port not in MODEL_PORTS:
+        raise Hold('MODEL_PORT_SCOPE')
+    return 'http://127.0.0.1:' + str(port)
+
+
+def get(path, base=BASE):
     try:
-        with urllib.request.urlopen(BASE + path, timeout=2) as response:
+        with urllib.request.urlopen(base + path, timeout=2) as response:
             data = response.read(262145)
         if len(data) > 262144:
             raise Hold('HTTP_RESPONSE_TOO_LARGE')
@@ -101,10 +109,10 @@ def slot_summary(items):
     return {'slots': len(items), 'busy': busy}
 
 
-def idle_gate():
+def idle_gate(base=BASE):
     if stop_active():
         raise Hold('OWNER_STOP')
-    result = slot_summary(get('/slots'))
+    result = slot_summary(get('/slots', base))
     if result['busy']:
         raise Hold('CHAT_BUSY')
     return result
@@ -181,10 +189,28 @@ def process_evidence():
                 continue
             kind = 'teacher_or_judge' if ('/teachers/' in model or '/judge/' in model) else 'model_service'
             rows.append({'pid': int(entry.name), 'kind': kind, 'model_basename': Path(model).name,
+                         'model_path': model,
                          'port': options.get('--port'), 'parallel': options.get('-np', options.get('--parallel')), 'start_ticks': stat[19]})
         except (OSError, ValueError, IndexError):
             continue
     return rows
+
+
+def native_model_identity(model, port, processes):
+    """Bind a model API ID to the one observed native process on that port."""
+    model_base(port)
+    rows = [row for row in processes if row.get('port') == str(port)]
+    if len(rows) != 1:
+        raise Hold('MODEL_PROCESS_UNVERIFIED')
+    row = rows[0]
+    path = row.get('model_path')
+    if (row.get('kind') != 'model_service' or type(row.get('pid')) is not int
+            or row['pid'] <= 0 or not str(row.get('start_ticks', '')).isdigit()
+            or int(row['start_ticks']) <= 0 or not isinstance(path, str)
+            or not path.startswith('/root/nox/models/') or '..' in Path(path).parts
+            or not path.endswith('.gguf') or model != path):
+        raise Hold('CURRENT_NOX_MODEL_UNVERIFIED')
+    return {key: row[key] for key in ('pid', 'start_ticks', 'port', 'model_path')}
 
 
 def profile_evidence(mode):
@@ -254,7 +280,7 @@ def validate_content(index, content):
         return False
 
 
-def infer(model, index, cancel, deadline, usage=True):
+def infer(model, index, cancel, deadline, usage=True, base=BASE):
     prompt = FIXTURES[index % len(FIXTURES)][1]
     request = {'model': model, 'stream': True, 'temperature': 0, 'max_tokens': 48,
                'cache_prompt': False, 'chat_template_kwargs': {'enable_thinking': False},
@@ -272,7 +298,7 @@ def infer(model, index, cancel, deadline, usage=True):
     try:
         if cancel.is_set() or stop_active() or start >= deadline:
             raise Hold('CANCELLED')
-        req = urllib.request.Request(BASE + '/v1/chat/completions',
+        req = urllib.request.Request(base + '/v1/chat/completions',
             data=json.dumps(request).encode(), headers={'Content-Type': 'application/json', 'Accept': 'text/event-stream'}, method='POST')
         with urllib.request.urlopen(req, timeout=min(8, max(0.1, deadline - start))) as response:
             while True:
@@ -334,8 +360,8 @@ def percentile(values, fraction):
     return values[max(0, math.ceil(len(values) * fraction) - 1)] if values else None
 
 
-def burst(model, concurrency, samples, deadline, usage):
-    idle_gate()
+def burst(model, concurrency, samples, deadline, usage, base=BASE):
+    idle_gate(base)
     before = resources()
     resource_gate(before)
     sampled = [before]
@@ -345,7 +371,7 @@ def burst(model, concurrency, samples, deadline, usage):
     start = time.monotonic()
     last_slot_check = start
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
-        pending = {pool.submit(infer, model, i, cancel, deadline, usage) for i in range(samples)}
+        pending = {pool.submit(infer, model, i, cancel, deadline, usage, base) for i in range(samples)}
         while pending:
             finished, pending = wait(pending, timeout=0.25, return_when=FIRST_COMPLETED)
             rows.extend(future.result() for future in finished if not future.cancelled())
@@ -359,7 +385,7 @@ def burst(model, concurrency, samples, deadline, usage):
                     # A spare slot can reveal newly arrived foreground traffic.
                     # This does not pretend to identify requests by private data.
                     last_slot_check = time.monotonic()
-                    if slot_summary(get('/slots'))['busy'] > concurrency:
+                    if slot_summary(get('/slots', base))['busy'] > concurrency:
                         raise Hold('FOREGROUND_TRAFFIC_OBSERVED')
             except Hold as exc:
                 failure = str(exc)
@@ -413,7 +439,10 @@ def main(argv=None):
     parser.add_argument('--max-ttft-ms', type=int, default=3000)
     parser.add_argument('--max-total-ms', type=int, default=12000)
     parser.add_argument('--inventory-only', action='store_true')
+    parser.add_argument('--model-port', type=int, choices=MODEL_PORTS, default=8081,
+                        help='Existing local model service; use 8098 for the current DeepSeek service.')
     args = parser.parse_args(argv)
+    base = model_base(args.model_port)
     deadline = time.monotonic() + args.deadline_sec
     result = {'schema': 'NOX_OWNER_CAPACITY_V1', 'requested_mode': args.mode,
               'recorded_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'source': source_proof(),
@@ -422,11 +451,12 @@ def main(argv=None):
               'gpu_before': gpu_snapshot(), 'reserve_foreground_slots': args.reserve_slots,
               'latency_policy': {'p95_ttft_ms': args.max_ttft_ms, 'p95_total_ms': args.max_total_ms},
               'cases': [], 'profile_verified': False, 'global_maximum_proven': False,
+              'model_port': args.model_port, 'model_target': base,
               'caveats': ['Idle admission is advisory, not an exclusive lease; foreground traffic can arrive during a burst.',
                           'Short finite task bursts do not establish sustained capacity for long contexts or tools.',
                           'Small-sample p95 is an empirical order statistic, not a confidence bound.']}
     try:
-        slots = idle_gate()
+        slots = idle_gate(base)
         result['model_slots'] = slots['slots']
         if args.inventory_only:
             result['state'] = 'INVENTORY_ONLY'
@@ -434,30 +464,32 @@ def main(argv=None):
         if not result['profile_before']['verified']:
             raise Hold('REQUESTED_MODE_NOT_VERIFIED')
         resource_gate(result['resources_before'])
-        models = get('/v1/models')
+        models = get('/v1/models', base)
         items = models.get('data') if isinstance(models, dict) else None
         if not isinstance(items, list) or len(items) != 1 or not isinstance(items[0], dict):
             raise Hold('SINGLE_EXISTING_MODEL_UNVERIFIED')
         model = items[0].get('id')
-        if not isinstance(model, str) or not model.endswith('/models/current.gguf'):
-            raise Hold('CURRENT_NOX_MODEL_UNVERIFIED')
+        native_identity = native_model_identity(model, args.model_port, process_evidence())
+        result['native_model_before'] = native_identity
         ceiling = min(slots['slots'] - args.reserve_slots, 6)
         if ceiling < 1:
             raise Hold('NO_BACKGROUND_SLOT_BUDGET')
         result['candidate_concurrency'] = sorted({value for value in (1, 2, 4, ceiling) if value <= ceiling})
         usage = True
-        warmup = infer(model, 0, threading.Event(), deadline, usage)
+        warmup = infer(model, 0, threading.Event(), deadline, usage, base)
         if warmup['state'] == 'HTTP_400':
-            idle_gate()
+            idle_gate(base)
             usage = False
-            warmup = infer(model, 0, threading.Event(), deadline, usage)
+            warmup = infer(model, 0, threading.Event(), deadline, usage, base)
         result['warmup_excluded'] = warmup
         if warmup['state'] != 'PASSED':
             raise Hold('WARMUP_TASK_NOT_VALID')
         for concurrency in result['candidate_concurrency']:
             if deadline - time.monotonic() < 15:
                 raise Hold('PROBE_TIME_BUDGET_EXHAUSTED')
-            case = burst(model, concurrency, args.samples, deadline, usage)
+            if native_model_identity(model, args.model_port, process_evidence()) != native_identity:
+                raise Hold('MODEL_PROCESS_CHANGED')
+            case = burst(model, concurrency, args.samples, deadline, usage, base)
             result['cases'].append(case)
             print('NOX_MAINT_CAPACITY_CASE=' + json.dumps(case, sort_keys=True, separators=(',', ':')), flush=True)
             if case['state'] == 'FAILED':
@@ -467,6 +499,14 @@ def main(argv=None):
         result['state'] = 'HOLD_' + str(exc)
     finally:
         result['profile_after'] = profile_evidence(args.mode)
+        if 'native_model_before' in result:
+            try:
+                result['native_model_after'] = native_model_identity(model, args.model_port, process_evidence())
+                result['native_model_stable'] = result['native_model_before'] == result['native_model_after']
+            except Hold:
+                result['native_model_stable'] = False
+            if not result['native_model_stable']:
+                result['state'] = 'HOLD_MODEL_PROCESS_CHANGED'
         result['resources_after'] = resources()
         result['gpu_after'] = gpu_snapshot()
         result['profile_verified'] = result['profile_before']['verified'] and result['profile_after']['verified']
@@ -474,7 +514,7 @@ def main(argv=None):
             before = {row['path']: row.get('step') for row in result['profile_before']['heartbeats']}
             result['training_step_advanced_during_probe'] = any(type(row.get('step')) is int and type(before.get(row['path'])) is int and row['step'] > before[row['path']] for row in result['profile_after']['heartbeats'])
         result['measured'] = recommend(result['cases'], args.max_ttft_ms, args.max_total_ms)
-        if not result['profile_verified']:
+        if not result['profile_verified'] or result.get('native_model_stable') is False:
             result['mode_capacity_usable'] = False
         else:
             result['mode_capacity_usable'] = bool(result['measured'].get('recommended_concurrency'))

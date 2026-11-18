@@ -11,9 +11,11 @@ import copy
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import stat
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -23,6 +25,24 @@ from owner_project_planner import PlannerHold, canonical, require, sha
 BASE_URL = 'http://127.0.0.1:8098'
 MODEL_LOCK = Path('/root/nox/state/dispatcher/project_model_slot.lock')
 MAX_REPLY = 256 * 1024
+MODEL_TURN_SECONDS = 360
+MODEL_WAIT_SECONDS = 2 * MODEL_TURN_SECONDS + 30
+MODEL_POLL_SECONDS = .25
+TURN_PAGE_BYTES = 4096
+TURN_SCHEMA = 'NOX_PROJECT_MODEL_TURNS_V1'
+# POSIX byte locks are process scoped. Serialize metadata operations and fd
+# closes within a process; flock remains the exclusive inference lock.
+_TURN_LOCAL_LOCK = threading.RLock()
+
+
+def process_identity(pid):
+    try:
+        fields = Path('/proc', str(pid), 'stat').read_text().rsplit(') ', 1)[1].split()
+        if fields[0] in ('Z', 'X', 'x'):
+            return None
+        return {'pid': pid, 'start_ticks': int(fields[19])}
+    except (OSError, ValueError, IndexError):
+        return None
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -111,46 +131,153 @@ class LocalModelClient:
         require(self.stop_check() is False, 'OWNER_STOP_OR_CLAIM_LOST')
         self.heartbeat()
 
+    def _lock_current(self, fd):
+        info = os.fstat(fd)
+        named = self.lock_path.lstat()
+        require(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid()
+                and stat.S_IMODE(info.st_mode) & 0o077 == 0 and info.st_nlink == 1
+                and stat.S_ISREG(named.st_mode)
+                and (info.st_dev, info.st_ino) == (named.st_dev, named.st_ino),
+                'MODEL_LOCK_OWNER_OR_IDENTITY')
+
+    def _turns(self, fd, change, deadline, *, check_alive=True):
+        """Update at most three ephemeral turn tickets in the existing lock.
+
+        The byte lock protects only this short metadata operation and is
+        independent of flock on Linux. Dead/reused PIDs and expired tickets
+        cannot reserve the next turn. The native task queue remains untouched.
+        """
+        with _TURN_LOCAL_LOCK:
+            while True:
+                if check_alive:
+                    self._alive()
+                self._lock_current(fd)
+                require(time.monotonic() < deadline, 'MODEL_SLOT_METADATA_BUSY')
+                try:
+                    fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB, 1, 0)
+                    break
+                except BlockingIOError:
+                    time.sleep(MODEL_POLL_SECONDS)
+            try:
+                self._lock_current(fd)
+                raw = os.pread(fd, TURN_PAGE_BYTES + 1, 0)
+                require(len(raw) in (0, TURN_PAGE_BYTES), 'MODEL_TURN_STATE_BOUND')
+                if raw:
+                    try:
+                        state = json.loads(raw)
+                    except ValueError as exc:
+                        raise PlannerHold('HOLD_PROJECT_PLANNER_MODEL_TURN_STATE_JSON') from exc
+                    require(isinstance(state, dict) and set(state) == {'schema', 'waiters'}
+                            and state['schema'] == TURN_SCHEMA
+                            and canonical(state) == raw.rstrip(b' '), 'MODEL_TURN_STATE_SCHEMA')
+                    rows = state['waiters']
+                else:
+                    rows = []
+                require(isinstance(rows, list) and len(rows) <= 3, 'MODEL_TURN_STATE_SIZE')
+                for row in rows:
+                    require(isinstance(row, dict)
+                            and set(row) == {'pid', 'start_ticks', 'token', 'expires'}
+                            and type(row['pid']) is int and row['pid'] > 0
+                            and type(row['start_ticks']) is int and row['start_ticks'] > 0
+                            and isinstance(row['token'], str) and len(row['token']) == 32
+                            and all(c in '0123456789abcdef' for c in row['token'])
+                            and type(row['expires']) in (int, float)
+                            and math.isfinite(row['expires']), 'MODEL_TURN_TICKET')
+                require(len({row['token'] for row in rows}) == len(rows), 'MODEL_TURN_DUPLICATE')
+                now = time.monotonic()
+                rows = [row for row in rows if row['expires'] > now
+                        and process_identity(row['pid']) == {
+                            'pid': row['pid'], 'start_ticks': row['start_ticks']}]
+                result = change(rows)
+                data = canonical({'schema': TURN_SCHEMA, 'waiters': rows})
+                require(len(rows) <= 3 and len(data) <= TURN_PAGE_BYTES, 'MODEL_TURN_STATE_SIZE')
+                page = data.ljust(TURN_PAGE_BYTES, b' ')
+                if page != raw:
+                    # A fixed-size single write avoids a trailing-old-bytes
+                    # window if a worker exits between write and truncate.
+                    require(os.pwrite(fd, page, 0) == len(page), 'MODEL_TURN_STATE_WRITE')
+                return result
+            finally:
+                fcntl.lockf(fd, fcntl.LOCK_UN, 1, 0)
+
+    def _release_slot(self, fd, token):
+        try:
+            self._turns(fd, lambda rows: rows.__setitem__(slice(None),
+                [row for row in rows if row['token'] != token]),
+                time.monotonic() + 2, check_alive=False)
+        finally:
+            with _TURN_LOCAL_LOCK:
+                os.close(fd)
+
     def _slot_lock(self):
         path = self.lock_path
         require(path.is_absolute() and not any(p.is_symlink() for p in (path, *path.parents)),
                 'MODEL_LOCK_PATH')
         fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-        info = os.fstat(fd)
-        if not (stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid()
-                and stat.S_IMODE(info.st_mode) & 0o077 == 0 and info.st_nlink == 1):
-            os.close(fd)
-            raise PlannerHold('HOLD_PROJECT_MODEL_LOCK_OWNER')
-        start = time.monotonic()
+        token = os.urandom(16).hex()
+        deadline = time.monotonic() + MODEL_WAIT_SECONDS
         try:
-            while True:
-                self._alive()
+            identity = process_identity(os.getpid())
+            require(identity is not None, 'MODEL_WORKER_IDENTITY')
+            def register(rows):
+                require(len(rows) < 3, 'MODEL_WAITER_LIMIT')
+                rows.append({**identity, 'token': token, 'expires': deadline})
+            self._turns(fd, register, deadline)
+
+            def acquire(rows):
+                require(any(row['token'] == token for row in rows), 'MODEL_TURN_TICKET_LOST')
+                if rows[0]['token'] != token:
+                    return None
                 try:
                     fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    return fd
                 except BlockingIOError:
-                    require(time.monotonic() - start < 120, 'MODEL_SLOT_BUSY')
-                    time.sleep(.5)
+                    return None
+                held_until = time.monotonic() + MODEL_TURN_SECONDS
+                rows[0]['expires'] = held_until
+                return held_until
+
+            while True:
+                require(process_identity(os.getpid()) == identity, 'MODEL_WORKER_IDENTITY')
+                require(time.monotonic() < deadline, 'MODEL_SLOT_BUSY')
+                held_until = self._turns(fd, acquire, deadline)
+                if held_until is not None:
+                    self._alive()
+                    return fd, token, held_until
+                time.sleep(MODEL_POLL_SECONDS)
         except BaseException:
-            os.close(fd)
+            try:
+                self._release_slot(fd, token)
+            except (OSError, ValueError, PlannerHold):
+                pass
             raise
 
     def __call__(self, messages):
         self._alive()
-        fd = self._slot_lock()
+        waiting_started = time.monotonic()
+        fd, token, turn_deadline = self._slot_lock()
+        waited_ms = round((time.monotonic() - waiting_started) * 1000)
         try:
-            models = self.http('/v1/models')
+            def http(path, payload=None, timeout=15):
+                self._alive()
+                remaining = turn_deadline - time.monotonic()
+                require(remaining > 0, 'MODEL_TURN_TIMEOUT')
+                result = self.http(path, payload, timeout=min(timeout, remaining))
+                self._alive()
+                require(time.monotonic() < turn_deadline, 'MODEL_TURN_TIMEOUT')
+                return result
+
+            models = http('/v1/models')
             require(isinstance(models, dict) and isinstance(models.get('data'), list)
                     and any(isinstance(x, dict) and x.get('id') == self.model_id
                             for x in models['data']), 'MODEL_ID_CHANGED')
-            props = self.http('/props')
+            props = http('/props')
             settings = props.get('default_generation_settings') if isinstance(props, dict) else None
             context = settings.get('n_ctx') if isinstance(settings, dict) else None
             require(type(context) is int and context >= 2048, 'MODEL_CONTEXT_UNKNOWN')
             slot_deadline = time.monotonic() + 120
             while True:
                 self._alive()
-                slots = self.http('/slots')
+                slots = http('/slots')
                 require(isinstance(slots, list) and len(slots) >= 2, 'MODEL_SLOT_SCHEMA')
                 if any(isinstance(s, dict) and s.get('is_processing') is False for s in slots):
                     break
@@ -159,10 +286,10 @@ class LocalModelClient:
             current = copy.deepcopy(messages)
             for _ in range(24):
                 self._alive()
-                rendered = self.http('/apply-template', {'messages': current})
+                rendered = http('/apply-template', {'messages': current})
                 require(isinstance(rendered, dict) and isinstance(rendered.get('prompt'), str),
                         'MODEL_TEMPLATE_SCHEMA')
-                tokenized = self.http('/tokenize', {'content': rendered['prompt'],
+                tokenized = http('/tokenize', {'content': rendered['prompt'],
                     'add_special': False, 'parse_special': True, 'with_pieces': False})
                 tokens = tokenized.get('tokens') if isinstance(tokenized, dict) else None
                 require(isinstance(tokens, list) and all(type(x) is int for x in tokens),
@@ -181,7 +308,7 @@ class LocalModelClient:
             if isinstance(template, str) and 'enable_thinking' in template:
                 payload['chat_template_kwargs'] = {'enable_thinking': False}
             started = time.monotonic()
-            response = self.http('/v1/chat/completions', payload, timeout=180)
+            response = http('/v1/chat/completions', payload, timeout=180)
             self._alive()
             try:
                 choice = response['choices'][0]
@@ -199,6 +326,8 @@ class LocalModelClient:
                 'measured_prompt_size': input_tokens,
                 'completion_budget': self.max_tokens,
                 'context_compactions': _,
+                'slot_wait_ms': waited_ms,
+                'slot_policy': 'BOUNDED_FIFO_THREE_NATIVE_WORKERS',
                 'duration_ms': round((time.monotonic() - started) * 1000),
                 'request_sha256': sha(canonical(payload)),
                 'response_sha256': sha(canonical(response)),
@@ -206,4 +335,4 @@ class LocalModelClient:
                           if type(value) is int and value >= 0},
                 'model_weights_identity_verified': False}}
         finally:
-            os.close(fd)
+            self._release_slot(fd, token)
