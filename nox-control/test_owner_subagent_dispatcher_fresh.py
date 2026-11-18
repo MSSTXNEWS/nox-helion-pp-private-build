@@ -224,6 +224,7 @@ class FreshSubmissionTests(unittest.TestCase):
                 'worker': {'pid': 1234}}}
         native.pool.submit.side_effect = lambda _: events.append('submit')
         native.pool.poll.side_effect = [None] * 64
+        native.pool.active = {'runtime': task['id']}
         native.pool.shutdown_and_drain = Mock(return_value=[result_event])
         native.pool.__exit__ = Mock()
         native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
@@ -327,7 +328,7 @@ class FreshSubmissionTests(unittest.TestCase):
         self.assertEqual(native.completed[task['id']], event)
         self.assertEqual(native.interrupted[task['id']],
                          'WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
-        closed_pool.__exit__.assert_not_called()
+        closed_pool.shutdown_and_drain.assert_called_once()
         self.assertIsNone(native.pool)
 
     def test_new_pool_rechecks_after_process_creation(self):

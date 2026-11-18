@@ -31,7 +31,7 @@ def configuration():
             'mode': 'NORMAL', 'target': 3, 'owner_authorized': True,
             'owner_request': '6906985850',
             'owner_source_sha': '41fbe63b5e57b1172956f8264c403aefa338aa6d',
-            'module_pins': dict(entry.OLD_DEPENDENCIES)}
+            'module_pins': dict(entry.OLD_CONFIG_MODULE_PINS)}
 
 
 def history():
@@ -82,16 +82,33 @@ class FakeNative:
         self.pool_target = self.SCRIPTS / 'owner_autonomy_pool.py'
         self.process_target = self.SCRIPTS / 'owner_subagent_processes.py'
         self.mentor_target = self.SCRIPTS / 'owner_dispatcher_mentor.py'
+        self.lifecycle_target = self.SCRIPTS / 'owner_task_lifecycle.py'
+        self.gateway_target = self.SCRIPTS / 'owner_senior_gateway.py'
+        self.core_target = self.DISPATCHER
         self.config = root / 'config/owner_native_subagents.json'
         self.before = b'original callback fixture\n'
         self.before_pool = b'original pool fixture\n'
         self.before_process = b'original processes fixture\n'
         self.before_mentor = b'original mentor fixture\n'
+        self.before_lifecycle = b'original lifecycle fixture\n'
+        self.before_gateway = b'original gateway fixture\n'
+        self.before_core = (b'import owner_task_lifecycle\n'
+            b'WORKERS = 6\n'
+            b'def _nox_owner_task_admitted(task): return True\n'
+            b'def owner_claim_ready(state, busy, worker, prefer=None): return None\n'
+            b'def run_one(state, task): return None\n'
+            b'def write_status(state): return None\n'
+            b'if __name__ == "__main__":\n'
+            b'    owner_task_lifecycle.bind_dispatcher()\n')
         self.atomic(self.mentor_target, self.before_mentor)
         self.atomic(self.target, self.before)
         self.atomic(self.pool_target, self.before_pool)
         self.atomic(self.process_target, self.before_process)
+        self.atomic(self.lifecycle_target, self.before_lifecycle)
+        self.atomic(self.gateway_target, self.before_gateway)
+        self.atomic(self.core_target, self.before_core)
         self.atomic(self.config, entry.encoded(configuration()))
+        self.before_config_sha = entry.digest(self.config.read_bytes())
         self.queue, self.prior, self.callback = history()
         self.commands, self.writes, self.outputs = [], [], []
         self.state, self.pid, self.starttime = 'RUNNING', 123, 456
@@ -166,13 +183,23 @@ class FreshInstallerTests(unittest.TestCase):
     def test_config_transition_updates_all_installed_module_pins(self):
         before = configuration()
         raw = entry.encoded(before)
-        self.assertEqual(entry.digest(raw), entry.OLD_CONFIG)
-        result = entry.checked_config(raw)
-        self.assertEqual(entry.digest(result), entry.NEW_CONFIG)
+        with patch.object(entry, 'OLD_CONFIG', entry.digest(raw)):
+            result = entry.checked_config(raw, 'f' * 64)
         after = json.loads(result)
-        self.assertEqual(after['module_pins'], entry.NEW_DEPENDENCIES)
-        after['module_pins'] = entry.OLD_DEPENDENCIES
+        expected_pins = {
+            **entry.OLD_CONFIG_MODULE_PINS,
+            **entry.NEW_DEPENDENCIES,
+            'owner_task_lifecycle.py': entry.NEW_LIFECYCLE_SHA,
+            'owner_senior_gateway.py': entry.NEW_GATEWAY_SHA,
+            'nox_dispatcher_t855u.py': 'f' * 64,
+        }
+        self.assertEqual(after['module_pins'], expected_pins)
+        after['module_pins'] = entry.OLD_CONFIG_MODULE_PINS
         self.assertEqual(after, before)
+
+    def test_unverified_native_preimages_hold_before_transition(self):
+        with self.assertRaisesRegex(RuntimeError, 'NATIVE_PREIMAGE_RECEIPT_INCOMPLETE'):
+            entry.require_native_preimages()
 
     def test_bundle_failure_is_before_native_operations(self):
         with patch.object(entry, 'BUNDLE', {}):
@@ -199,7 +226,9 @@ def main():
                 'owner_subagent_dispatcher_fresh.py': b'candidate = True\n',
                 'owner_subagent_processes.py': b'processes = True\n',
                 'owner_autonomy_pool.py': b'pool = True\n',
-                'owner_dispatcher_mentor.py': b'mentor = True\n'}
+                'owner_dispatcher_mentor.py': b'mentor = True\n',
+                'owner_task_lifecycle.py': b'lifecycle = True\n',
+                'owner_senior_gateway.py': b'gateway = True\n'}
         assets = {key: base64.b64encode(raw).decode() for key, raw in raws.items()}
         source = Path(entry.__file__).read_text().replace('__NOX_BUNDLE_JSON__', json.dumps(assets))
         packed = types.ModuleType('fresh_packaging_test')
@@ -260,6 +289,8 @@ def main():
             'owner_autonomy_pool.py': Path(entry.__file__).with_name('owner_autonomy_pool.py').read_bytes(),
             'owner_subagent_processes.py': Path(entry.__file__).with_name('owner_subagent_processes.py').read_bytes(),
             'owner_dispatcher_mentor.py': Path(entry.__file__).with_name('owner_dispatcher_mentor.py').read_bytes(),
+            'owner_task_lifecycle.py': Path(entry.__file__).with_name('owner_task_lifecycle.py').read_bytes(),
+            'owner_senior_gateway.py': Path(entry.__file__).with_name('owner_senior_gateway.py').read_bytes(),
         }
         helper.assets = assets
         original_queue = copy.deepcopy(helper.queue)
@@ -268,7 +299,21 @@ def main():
         if training_changed:
             after['flags']['TRAIN_HOLD.flag'] = {'present': True, 'sha256': '9' * 64}
         snapshots += [after] * 8
+        fake_preimages = dict(entry.NATIVE_PREIMAGES)
+        fake_preimages.update({
+            'owner_subagent_dispatcher.py': entry.digest(helper.before),
+            'owner_autonomy_pool.py': entry.digest(helper.before_pool),
+            'owner_subagent_processes.py': entry.digest(helper.before_process),
+            'owner_dispatcher_mentor.py': entry.digest(helper.before_mentor),
+            'owner_task_lifecycle.py': entry.digest(helper.before_lifecycle),
+            'owner_senior_gateway.py': entry.digest(helper.before_gateway),
+            'nox_dispatcher_t855u.py': entry.digest(helper.before_core),
+            'config/owner_native_subagents.json': entry.digest(helper.config.read_bytes()),
+        })
         with ExitStack() as stack:
+            stack.enter_context(patch.object(entry, 'NATIVE_PREIMAGES', fake_preimages))
+            stack.enter_context(patch.object(entry, 'UNVERIFIED_NATIVE_PREIMAGES', set()))
+            stack.enter_context(patch.object(entry, 'OLD_CONFIG', entry.digest(helper.config.read_bytes())))
             stack.enter_context(patch.dict(os.environ, {'NOX_OWNER_REQUEST_ID': '1234',
                 'NOX_OWNER_SOURCE_SHA': 'a' * 40}))
             stack.enter_context(patch.object(entry, 'load_helpers', return_value=(helper, recovery, assets)))
@@ -286,6 +331,7 @@ def main():
                 return sample['admission_allowed']
             stack.enter_context(patch.object(entry, 'resource_admission', side_effect=fresh_resource_sample))
             stack.enter_context(patch.object(entry, 'OLD_MENTOR_SHA', entry.digest(helper.before_mentor)))
+            stack.enter_context(patch.object(entry, 'NATIVE_PREIMAGE_RECEIPTS', {name: {'run_id': 'fixture'} for name in entry.REQUIRED_PREIMAGE_FILES}))
             stack.enter_context(patch.object(entry, 'prior_receipt', return_value=helper.prior))
             stack.enter_context(patch.object(entry, 'old_callback', return_value=helper.callback))
             stack.enter_context(patch.object(entry, 'training_snapshot', side_effect=snapshots))
@@ -349,6 +395,13 @@ def main():
         self.assertEqual(helper.pool_target.read_bytes(), helper.assets['owner_autonomy_pool.py'])
         self.assertEqual(helper.process_target.read_bytes(), helper.assets['owner_subagent_processes.py'])
         self.assertEqual(helper.mentor_target.read_bytes(), helper.assets['owner_dispatcher_mentor.py'])
+        self.assertEqual(helper.lifecycle_target.read_bytes(), helper.assets['owner_task_lifecycle.py'])
+        self.assertEqual(helper.gateway_target.read_bytes(), helper.assets['owner_senior_gateway.py'])
+        self.assertEqual(entry.digest(helper.core_target.read_bytes()), result['module_postimages_sha256'][helper.core_target.name])
+        for filename, before_meta in result['module_metadata_before'].items():
+            after_meta = result['module_metadata_after'][filename]
+            self.assertEqual((after_meta['mode'], after_meta['uid'], after_meta['gid']),
+                             (before_meta['mode'], before_meta['uid'], before_meta['gid']))
         self.assertEqual(result['mentor_file_readback_sha256'], entry.digest(helper.assets['owner_dispatcher_mentor.py']))
         self.assertEqual(result['mentor_reload_director_pid'], result['acceptance']['director_pid'])
         self.assertEqual(result['chat_identity_before'], entry.CHAT)
@@ -358,6 +411,9 @@ def main():
             'owner_autonomy_pool.py': helper.before_pool,
             'owner_subagent_processes.py': helper.before_process,
             'owner_dispatcher_mentor.py': helper.before_mentor,
+            'owner_task_lifecycle.py': helper.before_lifecycle,
+            'owner_senior_gateway.py': helper.before_gateway,
+            'nox_dispatcher_t855u.py': helper.before_core,
             'owner_native_subagents.json': entry.encoded(configuration()),
         }
         for name, raw in before_files.items():
@@ -375,7 +431,10 @@ def main():
         self.assertEqual(helper.pool_target.read_bytes(), helper.before_pool)
         self.assertEqual(helper.process_target.read_bytes(), helper.before_process)
         self.assertEqual(helper.mentor_target.read_bytes(), helper.before_mentor)
-        self.assertEqual(entry.digest(helper.config.read_bytes()), entry.OLD_CONFIG)
+        self.assertEqual(helper.lifecycle_target.read_bytes(), helper.before_lifecycle)
+        self.assertEqual(helper.gateway_target.read_bytes(), helper.before_gateway)
+        self.assertEqual(helper.core_target.read_bytes(), helper.before_core)
+        self.assertEqual(entry.digest(helper.config.read_bytes()), helper.before_config_sha)
         self.assertTrue(result['rollback_verified'])
         self.assertFalse(result['source_installed'])
         self.assertTrue(result['admissions_reopened'])

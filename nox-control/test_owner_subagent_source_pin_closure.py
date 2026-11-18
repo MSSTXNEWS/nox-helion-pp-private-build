@@ -22,9 +22,11 @@ class SourcePinClosureTests(unittest.TestCase):
                          "owner_subagent_fresh_install_entry.py")
         pins = bundle.SUBAGENT_BUNDLE_PINS
         self.assertEqual(pins["owner_dispatcher_mentor.py"],
-                         "d6fb298a9bfa8d3a81127848cc9f4e42ff276e2d8dcf89fbf63512cc7ec6359e")
+                         "ed135563c70acb24ce508bbd9f0d53616b5810bd113b1818f677766f751de82a")
+        self.assertEqual(pins["owner_task_lifecycle.py"],
+                         "75d0718bf9986f1a2cdbfa4f42f4fea9a8dad4558f1273c460c62dadb816f2a0")
         self.assertEqual(pins["owner_senior_gateway.py"],
-                         "50d147bb92d50fe56030bdd03d219fe4b1f5ca546b391700ef1eec02cd664401")
+                         "40cbaec2e32e43f2aa78a1078ed296d4957c620256081695111b81136d2d3751")
         for filename, expected in pins.items():
             with self.subTest(filename=filename):
                 actual = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
@@ -38,6 +40,25 @@ class SourcePinClosureTests(unittest.TestCase):
                          pins["owner_subagent_processes.py"])
         self.assertEqual(installer.NEW_MENTOR_SHA,
                          pins["owner_dispatcher_mentor.py"])
+        self.assertEqual(installer.NEW_LIFECYCLE_SHA,
+                         pins["owner_task_lifecycle.py"])
+        self.assertEqual(installer.NEW_GATEWAY_SHA,
+                         pins["owner_senior_gateway.py"])
+        self.assertEqual(installer.NATIVE_PREIMAGES["owner_task_lifecycle.py"],
+                         "909502a75799096e094a622639fe959ecfa835cc70db705a4062541940cea27e")
+        self.assertEqual(installer.NATIVE_PREIMAGES["owner_senior_gateway.py"],
+                         "1fd1556009ce62fa806bdee0a9a34577d276344e728fe9d94b33f44eb151346e")
+        self.assertEqual(installer.NATIVE_PREIMAGES["nox_dispatcher_t855u.py"],
+                         "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21")
+        self.assertEqual(installer.OLD_CONFIG_MODULE_PINS,
+                         {"owner_subagent_dispatcher.py": installer.OLD_CALLBACK,
+                          "owner_task_lifecycle.py": None,
+                          "owner_senior_gateway.py": None,
+                          "nox_dispatcher_t855u.py": None})
+        self.assertEqual(installer.UNVERIFIED_NATIVE_PREIMAGES,
+                         {"owner_subagent_processes.py", "owner_dispatcher_mentor.py"})
+        self.assertEqual(set(installer.NATIVE_PREIMAGE_RECEIPTS),
+                         installer.REQUIRED_PREIMAGE_FILES - installer.UNVERIFIED_NATIVE_PREIMAGES)
         for filename, expected in installer.ASSETS.items():
             with self.subTest(installer_asset=filename):
                 actual = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
