@@ -459,16 +459,31 @@ class Subagents:
         self._terminal_ids.add(assigned_id)
         return event
 
-    def poll(self, timeout=0):
-        """Return one task-bound event; heartbeat messages stay internal."""
+    def poll(self, timeout=0, on_validated_result=None):
+        """Return one task-bound event after its optional durable checkpoint."""
         if not self._persistent:
             raise GateError('HOLD_SUBAGENT_DISPATCHER_MODE')
+        if on_validated_result is not None and not callable(on_validated_result):
+            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT_CALLBACK')
         if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 <= timeout <= 300:
             raise GateError('HOLD_SUBAGENT_POLL_TIMEOUT')
         deadline = time.monotonic()+timeout
         with self._abi_lock:
+            pending_checkpoint_events = getattr(self, '_pending_checkpoint_events', None)
+            if pending_checkpoint_events is None:
+                pending_checkpoint_events = self._pending_checkpoint_events = deque()
             while True:
                 self._notice_dead_workers()
+                if pending_checkpoint_events:
+                    if on_validated_result is None:
+                        raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT_REQUIRED')
+                    accepted = pending_checkpoint_events.popleft()
+                    try:
+                        on_validated_result(accepted)
+                    except Exception as exc:
+                        pending_checkpoint_events.appendleft(accepted)
+                        raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT') from exc
+                    return accepted
                 if self._pending_events:
                     return self._pending_events.popleft()
                 left = deadline-time.monotonic()
@@ -485,6 +500,12 @@ class Subagents:
                     continue
                 accepted = self._accept_result(event)
                 if accepted is not None:
+                    if on_validated_result is not None:
+                        try:
+                            on_validated_result(accepted)
+                        except Exception as exc:
+                            pending_checkpoint_events.append(accepted)
+                            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT') from exc
                     return accepted
 
     def run(self,batch, *, stop_active, authorize, lease_current):

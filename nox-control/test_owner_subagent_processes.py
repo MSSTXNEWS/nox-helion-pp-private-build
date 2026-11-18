@@ -397,6 +397,40 @@ class TestRealSubagentProcesses(unittest.TestCase):
                                                'sha256': policy_sha},
                                     'operation': 'runtime', 'claim': claim}}
         pool, child, inbox, outbox = make_pool(True)
+        outbox.put(child.event)
+        child.event = None
+        poll_callbacks = []
+        poll_returned = False
+        def poll_checkpoint(event):
+            self.assertFalse(poll_returned)
+            self.assertFalse(inbox.closed)
+            self.assertFalse(outbox.closed)
+            poll_callbacks.append(event['id'])
+        polled = pool.poll(timeout=0, on_validated_result=poll_checkpoint)
+        poll_returned = True
+        self.assertEqual(poll_callbacks, ['native-1'])
+        self.assertEqual(polled['id'], 'native-1')
+        pool.shutdown_and_drain()
+
+        pool, child, inbox, outbox = make_pool(True)
+        outbox.put(child.event)
+        child.event = None
+        def fail_poll_checkpoint(_event):
+            raise OSError('checkpoint unavailable')
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_RESULT_CHECKPOINT'):
+            pool.poll(timeout=0, on_validated_result=fail_poll_checkpoint)
+        self.assertFalse(inbox.closed)
+        self.assertFalse(outbox.closed)
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_RESULT_CHECKPOINT_REQUIRED'):
+            pool.poll(timeout=0)
+        retried_poll = []
+        polled = pool.poll(timeout=0,
+            on_validated_result=lambda event: retried_poll.append(event['id']))
+        self.assertEqual(retried_poll, ['native-1'])
+        self.assertEqual(polled['id'], 'native-1')
+        pool.shutdown_and_drain()
+
+        pool, child, inbox, outbox = make_pool(True)
         callback_events = []
         def checkpoint(event):
             self.assertTrue(child.joined)
