@@ -272,20 +272,23 @@ def main():
     for option in ('publisher-checkpoint','publisher-template','transaction-helper'):
         parser.add_argument('--'+option)
     args = parser.parse_args()
+    # Reject invalid publisher arguments before writing any local publish request.
+    publisher_args = (args.publisher_checkpoint,args.publisher_template,args.transaction_helper)
+    require(not any(publisher_args) or all(publisher_args),'PUBLISHER_ARGUMENTS')
     previous,previous_sha = read_document(args.previous_manifest)
     require(previous_sha == args.previous_sha256,'PREVIOUS_MANIFEST_PIN')
     proposal,proposal_sha = read_document(args.proposal)
     census,census_sha = read_document(args.source_census)
     disposition,_ = read_document(args.registry)
     review,_ = read_document(args.review)
-    manifest = compile_taskpack(previous,previous_sha,proposal,proposal_sha,census,census_sha,disposition,review)
-    result = write_package(manifest,args.output,previous_sha=previous_sha)
-    publisher_args = (args.publisher_checkpoint,args.publisher_template,args.transaction_helper)
-    require(not any(publisher_args) or all(publisher_args),'PUBLISHER_ARGUMENTS')
+    checkpoint = None
     if all(publisher_args):
         checkpoint,_ = read_document(args.publisher_checkpoint)
         require(checkpoint.get('expected_source_files_sha256') == census.get('observed_files_sha256'),
                 'PUBLISH_CENSUS_PIN')
+    manifest = compile_taskpack(previous,previous_sha,proposal,proposal_sha,census,census_sha,disposition,review)
+    result = write_package(manifest,args.output,previous_sha=previous_sha)
+    if checkpoint is not None:
         result['native_build'] = publisher_entry(manifest,args.output,checkpoint,
                                                  args.publisher_template,args.transaction_helper)
     print(json.dumps(result,ensure_ascii=False,sort_keys=True))
