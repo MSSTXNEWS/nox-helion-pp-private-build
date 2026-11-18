@@ -81,6 +81,39 @@ class WitnessTests(unittest.TestCase):
         self.assertEqual(out['state'], 'MAPPED_GGUF_METADATA_VERIFIED')
         self.assertEqual(out['gguf']['metadata']['tokenizer.chat_template']['sha256'], hashlib.sha256(b'chat').hexdigest())
 
+    def test_two_large_tokenizer_arrays_hash_without_false_global_budget(self):
+        # Each valid array is below the per-array 262144 bound; combined
+        # elements exceed the old global 262144 cap while header stays small.
+        b = bytearray(b'GGUF' + struct.pack('<IQQ', 3, 0, 3))
+        for name, byte in ((b'tokenizer.ggml.tokens', b'x'),
+                           (b'tokenizer.ggml.merges', b'y')):
+            b += struct.pack('<Q', len(name)) + name + struct.pack('<IIQ', 9, 8, 150000)
+            b += (struct.pack('<Q', 1) + byte) * 150000
+        template = b'tokenizer.chat_template'
+        b += struct.pack('<Q', len(template)) + template + struct.pack('<IQ', 8, 4) + b'chat'
+        self.file.write_bytes(b)
+        out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(out['state'], 'MAPPED_GGUF_METADATA_VERIFIED', out.get('reason'))
+        info = out['gguf']
+        self.assertEqual(info['tokenizer_metadata_fields'], 3)
+        self.assertEqual(len(info['tokenizer_metadata_sha256']), 64)
+        self.assertEqual(info['metadata']['tokenizer.chat_template']['sha256'],
+                         hashlib.sha256(b'chat').hexdigest())
+        self.assertIsNone(out['loaded_model_sha256'])
+        self.assertEqual(out['s03_result'], 'NOT_CHECKED')
+        self.assertIn('NOT_RUNTIME_TOKENIZER_FILE', info['tokenizer_metadata_scope'])
+        original = info['tokenizer_metadata_sha256']
+        # Change only one merge entry: the full bounded tokenizer-metadata
+        # fingerprint must change even though the chat template is identical.
+        needle = struct.pack('<Q', 1) + b'y'
+        pos = b.find(needle)
+        self.assertGreater(pos, 0)
+        b[pos + 8] = ord('z')
+        self.file.write_bytes(b)
+        changed = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(changed['state'], 'MAPPED_GGUF_METADATA_VERIFIED')
+        self.assertNotEqual(original, changed['gguf']['tokenizer_metadata_sha256'])
+
     def test_budget_prevents_large_token_array(self):
         b = b'GGUF' + struct.pack('<IQQ', 3, 0, 1)
         k = b'tokenizer.ggml.tokens'
