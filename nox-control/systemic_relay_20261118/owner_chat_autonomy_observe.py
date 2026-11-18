@@ -21,7 +21,7 @@ import tokenize
 ROOT = Path('/root/nox')
 SCRIPTS = ROOT / 'scripts'
 SOURCE_NAMES = ('slim_chat_t885u.py', 'owner_chat_stream.py', 'agent_loop.py',
-                'chat_proxy.py', 'nox_v29_chat_bridge.py', 'owner_chat_evidence.py')
+                'chat_proxy.py', 'nox_v29_chat_bridge.py', 'owner_chat_evidence.py', 'common.py')
 PUBLIC_ASSET = ROOT / 'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/pc/v24/nox-v24-chat.js'
 SERVICES = ('nox-ds41-8098', 'nox-proxy', 'nox-web29-18775', 'nox-dispatcher-t855u')
 STREAM_CONSTANTS = frozenset(('EXECUTOR_STATUS', 'CONNECT_TIMEOUT', 'READ_TIMEOUT',
@@ -180,6 +180,70 @@ def assignment_names(node):
     return {part.id for target in targets for part in ast.walk(target) if isinstance(part, ast.Name)}
 
 
+def activity_marker():
+    path = ROOT / 'state/chat_active'
+    result = {'path': str(path), 'observed_at': time.time(), 'contents_exported': False,
+              'public_counts': None, 'idle_verified': False,
+              'count_state': 'MARKER_SCHEMA_REQUIRES_EXACT_FUNCTION_REVIEW'}
+    try:
+        require(not any(parent.is_symlink() for parent in path.parents), 'MARKER_PARENT_SYMLINK')
+        info = path.lstat()
+        result.update(present=True, **file_identity(info),
+                      age_seconds=result['observed_at'] - info.st_mtime,
+                      type='regular' if stat.S_ISREG(info.st_mode) else 'symlink' if stat.S_ISLNK(info.st_mode) else 'other')
+    except FileNotFoundError:
+        result.update(present=False, type='absent')
+    except (OSError, Hold) as exc:
+        if isinstance(exc, Hold) and str(exc) == 'PROBE_TIME_BUDGET':
+            raise
+        result.update(state='BLOCKED_MARKER_METADATA', reason=str(exc) if isinstance(exc, Hold) else type(exc).__name__)
+    return result
+
+
+def activity_symbols(name, tree):
+    """Select only actual source dependencies, without evaluating their values."""
+    if name == 'common.py':
+        functions = [node for node in ast.walk(tree)
+                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == 'mark_chat']
+        if len(functions) != 1:
+            return []
+        used = {node.id for node in ast.walk(functions[0]) if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)}
+        constants = set()
+        for node in tree.body:
+            names = assignment_names(node)
+            if not names & used:
+                continue
+            marker_literal = any(isinstance(item, ast.Constant) and isinstance(item.value, str)
+                                 and 'chat_active' in item.value for item in ast.walk(node))
+            for symbol in names & used:
+                if marker_literal or symbol in ('ROOT', 'NOX_ROOT', 'STATE', 'STATE_DIR') or re.fullmatch(
+                        r'_?(?:CHAT|ACTIVE|ACTIVITY)[A-Z0-9_]*', symbol):
+                    constants.add(symbol)
+        return sorted(constants)
+    if name == 'chat_proxy.py':
+        classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == '_ChatActivityStream']
+        if len(classes) != 1:
+            return []
+        activity_names = {node.id for node in ast.walk(classes[0]) if isinstance(node, ast.Name)
+                          and re.search(r'(?i)active|activity|inflight|chat_count', node.id)}
+        routes = []
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            used = {item.id for item in ast.walk(node) if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Load)}
+            if not used & activity_names:
+                continue
+            for decorator in node.decorator_list:
+                if (isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute)
+                        and decorator.func.attr == 'get' and decorator.args
+                        and isinstance(decorator.args[0], ast.Constant) and isinstance(decorator.args[0].value, str)
+                        and re.fullmatch(r'/(?:api/nox/)?(?:chat/)?(?:status|idle|health|healthz)', decorator.args[0].value)):
+                    routes.append(node.name)
+                    break
+        return sorted(set(routes))
+    return []
+
+
 def export_exact(label, raw, encoding, budget, *, start_line=None, end_line=None):
     item = {'symbol': label, 'sha256': sha(raw), 'bytes': len(raw), 'encoding': encoding}
     if start_line is not None:
@@ -202,11 +266,13 @@ def selected_exports(name, raw, tree, budget):
     if lines and not lines[-1]:
         lines.pop()
     requested = {'slim_chat_t885u.py': ('SLIM_RULES', 'apply_system'),
-                 'owner_chat_stream.py': ('_model_events', 'install', *sorted(STREAM_CONSTANTS))}.get(name, ())
+                 'owner_chat_stream.py': ('_model_events', '_run', 'install', *sorted(STREAM_CONSTANTS)),
+                 'common.py': ('mark_chat',), 'chat_proxy.py': ('_ChatActivityStream',)}.get(name, ())
+    requested = (*requested, *activity_symbols(name, tree))
     output = []
     for symbol in requested:
         nodes = [node for node in ast.walk(tree)
-                 if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == symbol)
+                 if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == symbol)
                  or symbol in assignment_names(node)]
         if len(nodes) != 1:
             output.append({'symbol': symbol, 'state': 'SYMBOL_ABSENT' if not nodes else 'BLOCKED_AMBIGUOUS_SYMBOL',
@@ -214,7 +280,9 @@ def selected_exports(name, raw, tree, budget):
             continue
         node = nodes[0]
         # Multi-target assignments could contain unrelated credentials or constants.
-        require(not assignment_names(node) or assignment_names(node) == {symbol}, 'SYMBOL_ASSIGNMENT_SCOPE')
+        if assignment_names(node) and assignment_names(node) != {symbol}:
+            output.append({'symbol': symbol, 'state': 'BLOCKED_SYMBOL_ASSIGNMENT_SCOPE'})
+            continue
         decorators = getattr(node, 'decorator_list', [])
         start = min([node.lineno, *(item.lineno for item in decorators)])
         segment = b''.join(lines[start - 1:node.end_lineno])
@@ -234,6 +302,7 @@ def main():
     budget = [0]
     try:
         result['protected_before'] = protected_snapshot()
+        result['chat_activity_before'] = activity_marker()
         paths = [PUBLIC_ASSET, *(SCRIPTS / name for name in SOURCE_NAMES)]
         for path in paths:
             row = {'path': str(path), 'name': path.name}
@@ -252,6 +321,7 @@ def main():
                 row.update(state='BLOCKED_SOURCE_OBSERVATION', reason=str(exc) if isinstance(exc, Hold) else type(exc).__name__)
             result['files'].append(row)
         result['protected_after'] = protected_snapshot()
+        result['chat_activity_after'] = activity_marker()
         result['protected_stable'] = result['protected_before'] == result['protected_after']
         result['protected_all_running_verified'] = all(row.get('state') == 'RUNNING' and row.get('identity')
             for row in result['protected_after']['services'])

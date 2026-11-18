@@ -62,6 +62,50 @@ class Hold(RuntimeError):
     pass
 
 
+SAFE_HOLD_CODES = frozenset('''
+AFTER_TOOL_PROOFS_GUARD ARCHIVE_COMPLETE ARCHIVE_MEMBER ARCHIVE_PATH ARCHIVE_PAYLOAD
+ARCHIVE_PAYLOAD_GREW ARCHIVE_SHORT_PAYLOAD ASSET_BOUND ASSET_PIN ASSET_ROLES ASSET_SET
+BEFORE_DOWNLOAD_GUARD BEFORE_RELEASE_GUARD BINARY_MEMBER_SCOPE BINARY_VERSION
+CHILD_DEADLINE CHILD_OUTPUT_BOUND CLI_PIN CONTROL_CAS_CHANGED CONTROL_PREIMAGE_CHANGED
+CREATE_SCOPE DIRECTORY_OWNER DIRECTORY_SCOPE DOWNLOAD_DEADLINE DOWNLOAD_FAILED
+DOWNLOAD_READBACK DUPLICATE_JSON_KEY DYNAMIC_INTERPRETER_NOT_ALLOWED ELF_ARCHITECTURE
+ELF_HEADERS EXPECTED_BINARY_REGULAR EXTRACTION_TOTAL FILE_BOUND FILE_CHANGED FILE_GREW
+FINAL_PUBLICATION_GUARD FOREIGN_CONTROL_FILE FOREIGN_CURRENT_PRESERVED
+FOREIGN_RELEASE_FILE HELPER_PIN INSTALLED_TOOL_SET INSTALL_LOCK NATIVE_OWNER_SCOPE
+NONFINITE_JSON OWNER_CONTEXT PERMANENT_ENTRYPOINT_PROOF PLATFORM PROJECT_SOURCE_SCOPE
+PUBLISHED_READBACK PYTHON_PATH READ_ONLY_TOOL_PROOF REGULAR_FILE RELEASE_FILESET
+RELEASE_FILE_COUNT RELEASE_PREIMAGE RENAME_NOREPLACE_UNAVAILABLE SHIM_PIN SHORT_WRITE
+SPEC_SCHEMA STAGED_BINARY_PIN STAGING_IDENTITY TOOL_BINARY_PROOF TOOL_PROFILE TOOL_SET
+UPSTREAM_PIN
+'''.split())
+SAFE_HELPER_HOLDS = frozenset('''
+PATH_SCOPE FILE_BOUND FILE_CHANGED UPDATE_DIRECTOR_CHANGED UPDATE_WORKER_COUNT
+UPDATE_WORKER_CHANGED PROTECTED_PROCESS_chat PROTECTED_PROCESS_proxy PROTECTED_PROCESS_web
+'''.split())
+SAFE_EXCEPTION_CLASSES = frozenset('''
+Hold OSError FileNotFoundError PermissionError NotADirectoryError IsADirectoryError
+BlockingIOError TimeoutError FileExistsError UnicodeDecodeError JSONDecodeError
+ValueError KeyError TypeError AttributeError IndexError SyntaxError OverflowError
+MemoryError RuntimeError ImportError ModuleNotFoundError NameError AssertionError
+SystemExit KeyboardInterrupt SubprocessError TimeoutExpired
+'''.split())
+
+
+def safe_failure(exc):
+    """Project fixed identifiers only; exception messages may contain host data."""
+    name = type(exc).__name__
+    result = {'state':'HOLD_ACCELERATION_UNCLASSIFIED',
+              'exception_class':name if name in SAFE_EXCEPTION_CLASSES else 'OTHER'}
+    code = exc.args[0] if len(exc.args) == 1 and type(exc.args[0]) is str else None
+    if code in {'HOLD_ACCELERATION_' + item for item in SAFE_HOLD_CODES}:
+        result['state'] = code
+    elif code in {'HOLD_COMPLETE_EXECUTOR_' + item for item in SAFE_HELPER_HOLDS}:
+        result['state'] = code
+    if isinstance(exc,OSError) and type(exc.errno) is int and exc.errno in errno.errorcode:
+        result['errno'] = exc.errno
+    return result
+
+
 def require(value, code):
     if not value:
         raise Hold('HOLD_ACCELERATION_' + code)
@@ -540,14 +584,22 @@ def verify_release(files):
     require(seen == expected, 'RELEASE_FILESET')
 
 
-def run(bundle, spec):
+def run(bundle, spec, diagnostic=None):
+    diagnostic = {} if diagnostic is None else diagnostic
+    def phase(name):
+        diagnostic.update(phase=name,operation='NONE')
     started = time.monotonic()
+    phase('OWNER_CONTEXT')
     request, source = os.environ.get('NOX_OWNER_REQUEST_ID',''), os.environ.get('NOX_OWNER_SOURCE_SHA','')
     require(re.fullmatch(r'[0-9]{1,24}',request) and re.fullmatch(r'[a-f0-9]{40}',source), 'OWNER_CONTEXT')
+    phase('PLATFORM')
     require(platform.system() == 'Linux' and platform.machine() == 'x86_64', 'PLATFORM')
+    phase('SPEC_SCHEMA')
     require(spec.get('schema') == 'NOX_ACCELERATION_INSTALL_SPEC_V1', 'SPEC_SCHEMA')
+    phase('ASSET_SET')
     pins = spec.get('assets')
     require(isinstance(pins,dict) and set(pins) == set(bundle) and len(pins) == 4, 'ASSET_SET')
+    phase('ASSET_DECODE_AND_PIN')
     assets = {}
     for name, pin in pins.items():
         require(re.fullmatch(r'[A-Za-z0-9_.-]{1,180}',name) and isinstance(pin,str) and SHA.fullmatch(pin)
@@ -555,17 +607,23 @@ def run(bundle, spec):
         raw = base64.b64decode(bundle[name],validate=True)
         require(len(raw) <= MIB and digest(raw) == pin, 'ASSET_PIN')
         assets[name] = raw
+    phase('ASSET_ROLES')
     names = [spec[k] for k in ('helper_asset','lock_asset','profile_asset','cli_asset')]
     require(len(set(names)) == 4 and set(names) == set(assets), 'ASSET_ROLES')
     require(digest(assets[spec['helper_asset']]) == HELPER_SHA, 'HELPER_PIN')
+    phase('HELPER_LOAD')
     helper = types.ModuleType('_nox_acceleration_helper')
     exec(compile(assets[spec['helper_asset']], '<pinned-helper>', 'exec'),helper.__dict__)
+    phase('LOCK_PARSE')
     lock = strict_json(assets[spec['lock_asset']])
+    phase('PROFILE_PARSE')
     profile = strict_json(assets[spec['profile_asset']])
+    phase('TOOL_PROFILE')
     require(lock.get('schema') == 'NOX_ACCELERATION_TOOLCHAIN_LOCK_V1'
             and lock.get('release_root') == str(RELEASE)
             and profile.get('schema') == 'NOX_ACCELERATION_PROFILE_V1'
             and profile.get('release_root') == str(RELEASE), 'TOOL_PROFILE')
+    phase('TOOL_METADATA')
     rows = lock.get('tools')
     require(isinstance(rows,list) and len(rows) == 3 and {r['name'] for r in rows} == set(ARCHIVES), 'TOOL_SET')
     for row in rows:
@@ -576,26 +634,37 @@ def run(bundle, spec):
             'relative_install_path':row['name']+'/'+version+'/'+binary,
             'installed_path':str(RELEASE / row['name'] / version / binary),'binary':binary} for binary in binaries]
         require(row.get('members') == expected, 'BINARY_MEMBER_SCOPE')
+    phase('CLI_COMPILE')
     cli_raw = assets[spec['cli_asset']]
     compile(cli_raw, '<pinned-nox-fast>', 'exec')
     observed_config_pins = set()
     def guard():
+        diagnostic['operation'] = 'CONFIG_READ'
         raw = helper.read_regular(ROOT / 'config/owner_native_subagents.json',2*MIB)
+        diagnostic['operation'] = 'CONFIG_PARSE'
         config = strict_json(raw)
+        diagnostic['operation'] = 'NATIVE_OWNER_SCOPE'
         require(config.get('schema') == 'NOX_NATIVE_SUBAGENT_BINDING_V1'
                 and config.get('owner_authorized') is True and config.get('instance_id') == 60509551
                 and config.get('target') == config.get('global_worker_cap') == 3
                 and config.get('execution_mode') == 'NATIVE_PROJECT_V1'
                 and helper.stop_clear(ROOT), 'NATIVE_OWNER_SCOPE')
+        diagnostic['operation'] = 'PROJECT_SOURCE_SCOPE'
         scope = config.get('project_executor',{}).get('roots',{}).get('NOX_PROJECT_SOURCE',{})
         require(scope.get('path') == str(ROOT/'projects/owner_executor/source_workspace')
                 and scope.get('integration_kind') == 'SOURCE_WORKSPACE'
                 and isinstance(scope.get('allowed_paths'),list) and 1 <= len(scope['allowed_paths']) <= 256,
                 'PROJECT_SOURCE_SCOPE')
         observed_config_pins.add(digest(raw))
-        return {'project_scope_sha256':digest(encoded(scope)),'processes':helper.expected_processes(spec),
-                'protected':helper.protected_snapshot(spec)}
+        diagnostic['operation'] = 'DIRECTOR_AND_WORKERS'
+        processes = helper.expected_processes(spec)
+        diagnostic['operation'] = 'PROTECTED_PROCESSES'
+        protected = helper.protected_snapshot(spec)
+        diagnostic['operation'] = 'NONE'
+        return {'project_scope_sha256':digest(encoded(scope)),'processes':processes,'protected':protected}
+    phase('BASELINE_GUARD')
     baseline = guard()
+    phase('TOOLS_DIRECTORY')
     root_fd = directory(TOOLS,True)
     lock_fd = stage = None
     receipt = {'schema':'NOX_ACCELERATION_INSTALL_RECEIPT_V1','request':request,'source_sha':source,
@@ -603,6 +672,7 @@ def run(bundle, spec):
                'service_restarts':0,'model_downloads':0,'python_downloads':0,'optimizer_updates':0,
                'original_tasks_accepted':0,'measured_latency_improvement':False}
     try:
+        phase('INSTALL_LOCK')
         lock_fd = os.open('install.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC,
                           0o600,dir_fd=root_fd)
         info = os.fstat(lock_fd)
@@ -610,8 +680,11 @@ def run(bundle, spec):
         require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid() and info.st_nlink == 1
                 and not info.st_mode & 0o022 and (info.st_dev,info.st_ino) == (named.st_dev,named.st_ino), 'INSTALL_LOCK')
         fcntl.flock(lock_fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        phase('BEFORE_DOWNLOAD_GUARD')
         require(guard() == baseline, 'BEFORE_DOWNLOAD_GUARD')
+        phase('CONTROL_PREIMAGES')
         old_pointer,old_shim = optional(CURRENT),optional(SHIM)
+        phase('STAGING_CREATE')
         stage = Path(tempfile.mkdtemp(prefix='.install-'+request+'-',dir=TOOLS))
         stage_identity = identity(os.stat(stage,follow_symlinks=False))[:2]
         stage_release = stage / 'release'
@@ -620,13 +693,17 @@ def run(bundle, spec):
         deadline = time.monotonic() + 180
         tools, total = {}, [0]
         for row in rows:
+            phase({'uv':'DOWNLOAD_UV','ruff':'DOWNLOAD_RUFF','rg':'DOWNLOAD_RG'}[row['name']])
             fd = download(row,stage/row['archive_name'],deadline)
             try:
+                phase({'uv':'EXTRACT_UV','ruff':'EXTRACT_RUFF','rg':'EXTRACT_RG'}[row['name']])
                 tools.update(extract(row,fd,stage_release,total))
             finally:
                 os.close(fd)
+        phase('VERSION_PROOFS')
         require(set(tools) == set(VERSIONS), 'INSTALLED_TOOL_SET')
         version_proofs = verify_versions(tools,stage_release)
+        phase('MANIFEST_BUILD')
         manifest = {'schema':'NOX_ACCELERATION_INSTALLED_V1','release_id':'20261118-v1',
             'release_root':str(RELEASE),'tools':tools,
             'cli':{'path':str(RELEASE/'owner_nox_fast_tools.py'),'sha256':digest(cli_raw)},
@@ -648,8 +725,11 @@ def run(bundle, spec):
             new_file(stage_release/name,data)
         expected_files = {name:digest(data) for name,data in static_files.items()}
         expected_files.update({str(Path(v['path']).relative_to(RELEASE)):v['sha256'] for v in tools.values()})
+        phase('BEFORE_RELEASE_GUARD')
         require(guard() == baseline, 'BEFORE_RELEASE_GUARD')
+        phase('RELEASE_PROMOTE')
         created = move_release_no_replace(stage_release)
+        phase('RELEASE_VERIFY')
         verify_release(expected_files)
         receipt.update(release_created=created,manifest_sha256=digest(raw),tools=tools,
                        downloaded_archive_bytes=sum(r['size_bytes'] for r in rows),extracted_bytes=total[0])
@@ -662,6 +742,7 @@ def run(bundle, spec):
                 ('check',['check','--file','forge_split_guard.py'])]
             proofs = {}
             for label,tail in commands:
+                phase({'status':'CLI_STATUS','context':'CLI_CONTEXT','search':'CLI_SEARCH','check':'CLI_CHECK'}[label])
                 code,out = run_bounded([sys.executable,'-I','-B','/proc/self/fd/'+str(cli_fd),
                     '--manifest',str(RELEASE/'manifest.json'),'--manifest-sha256',digest(raw),*tail],
                     pass_fds=(cli_fd,),seconds=12)
@@ -673,12 +754,16 @@ def run(bundle, spec):
                 proofs[label] = {'state':'READ_ONLY_RESULT','output_sha256':digest(out),'output_bytes':len(out)}
         finally:
             os.close(cli_fd)
+        phase('FINAL_PUBLICATION_GUARD')
         require(guard() == baseline and optional(CURRENT) == old_pointer and optional(SHIM) == old_shim,
                 'FINAL_PUBLICATION_GUARD')
         # The shim fails closed until its exact current pointer exists.
+        phase('CONTROL_PUBLISH')
         publish_equal_or_new(SHIM,shim,0o755)
         publish_equal_or_new(CURRENT,pointer)
+        phase('PUBLISHED_READBACK')
         require(read(CURRENT) == pointer and read(SHIM) == shim and guard() == baseline, 'PUBLISHED_READBACK')
+        phase('PERMANENT_ENTRYPOINT_PROOF')
         shim_fd = open_regular(SHIM,65536)
         try:
             require(consume(shim_fd,65536)[0] == digest(shim), 'SHIM_PIN')
@@ -691,14 +776,17 @@ def run(bundle, spec):
                                              'output_bytes':len(out)}
         finally:
             os.close(shim_fd)
+        phase('AFTER_TOOL_PROOFS_GUARD')
         require(guard() == baseline, 'AFTER_TOOL_PROOFS_GUARD')
         receipt.update(state='INSTALLED_AND_READ_ONLY_TOOLS_VERIFIED',manifest_path=str(RELEASE/'manifest.json'),
             current_path=str(CURRENT),cli_path=str(SHIM),cli_sha256=digest(shim),read_only_proofs=proofs,
             version_proofs=version_proofs,observed_config_sha256=sorted(observed_config_pins),
             native_processes_unchanged=True,protected_services_unchanged=True)
+        phase('COMPLETE')
         return receipt
     except BaseException as exc:
-        receipt['state'] = str(exc) if isinstance(exc,Hold) else 'HOLD_ACCELERATION_'+type(exc).__name__
+        receipt.update(safe_failure(exc),failure_phase=diagnostic['phase'],
+                       failure_operation=diagnostic['operation'])
         raise
     finally:
         if stage is not None:
@@ -718,6 +806,19 @@ def run(bundle, spec):
         print('NOX_MAINT_ACCELERATION_INSTALL='+encoded(receipt).decode(),flush=True)
 
 
-if __name__ == '__main__':
-    run(BUNDLE,SPEC)
+def main():
+    diagnostic = {'phase':'ENTRY','operation':'NONE'}
+    try:
+        run(BUNDLE,SPEC,diagnostic)
+    except BaseException as exc:
+        # Covers the preflight before the transaction receipt exists, with no traceback.
+        print('NOX_MAINT_ACCELERATION_DIAGNOSTIC='+encoded({
+            'schema':'NOX_ACCELERATION_FAILURE_DIAGNOSTIC_V1',
+            **diagnostic,**safe_failure(exc)}).decode(),flush=True)
+        return 1
     print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
