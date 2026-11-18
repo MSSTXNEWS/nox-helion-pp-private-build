@@ -20,7 +20,9 @@ def load(name, filename):
 
 
 gateway = load("advisor_gateway_boundary_test", "owner_senior_gateway.py")
-lifecycle = load("advisor_lifecycle_binding_test", "owner_task_lifecycle.py")
+outbox_stub = types.ModuleType("owner_event_outbox")
+with patch.dict(sys.modules, {"owner_event_outbox": outbox_stub}):
+    lifecycle = load("advisor_lifecycle_binding_test", "owner_task_lifecycle.py")
 mentor = load("advisor_mentor_boundary_test", "owner_dispatcher_mentor.py")
 
 
