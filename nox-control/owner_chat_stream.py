@@ -97,14 +97,23 @@ async def _model_events(client, url, payload):
         # Preserve valid multi-line JSON without allowing unbounded frames.
         parts=[]
         frame_size=0
+        frame_lines=0
         async for line in response.aiter_lines():
             if line=='':
+                # Each empty line ends one SSE record (including keepalives).
+                frame_lines=0
                 if not parts:
                     continue
                 wire='\n'.join(parts).strip()
                 parts=[]
                 frame_size=0
-            elif line.startswith(':'):
+            else:
+                # A legal stream may send keepalives, but an unbounded single
+                # record of comments/ids can otherwise starve chat indefinitely.
+                frame_lines+=1
+                if frame_lines>1024 or len(line)>300000:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+            if line.startswith(':'):
                 continue
             elif line.startswith('event:'):
                 if line[6:].strip()!='message':

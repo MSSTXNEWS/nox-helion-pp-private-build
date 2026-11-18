@@ -100,6 +100,22 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload.get('_agent_final'),'Hola')
         self.assertTrue(chunks.closed)
 
+    async def test_unbounded_metadata_record_cannot_starve_chat_or_save_s03(self):
+        # Every comment is a legal SSE field; their *unbounded number* is not.
+        chunks=Chunks([frame('Partial'),b': keepalive\n'*1025+b'\n',
+                       frame(finish='stop'),b'data: [DONE]\n\n'])
+        _,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertIn('HOLD_MODEL_SSE_FRAME',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertTrue(chunks.closed)
+
     async def test_untrusted_sse_event_or_id_metadata_fails_closed(self):
         cases=((b'event: error\n\n','HOLD_MODEL_SSE_EVENT'),
                (b'id: '+b'x'*257+b'\n\n','HOLD_MODEL_SSE_FRAME'))
