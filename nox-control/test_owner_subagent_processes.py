@@ -320,6 +320,92 @@ class TestRealSubagentProcesses(unittest.TestCase):
             pool.submit(task2)
 
 
+    def test_isolated_replacement_preserves_healthy_pids_and_fenced_task(self):
+        from collections import deque
+        from queue import Queue
+        import time
+
+        class Channel(Queue):
+            def __init__(self):
+                super().__init__()
+                self.closed = False
+            def close(self):
+                self.closed = True
+
+        class Child:
+            def __init__(self, pid, alive=True, role=None, outbox=None):
+                self.pid, self.alive = pid, alive
+                self.role, self.outbox = role, outbox
+                self.joins = self.terminations = 0
+            def is_alive(self):
+                return self.alive
+            def join(self, timeout=None):
+                self.joins += 1
+            def terminate(self):
+                self.terminations += 1
+                self.alive = False
+            def start(self):
+                self.alive = True
+                self.outbox.put({'kind': 'READY', 'role': self.role,
+                                 'pid': self.pid, 'heartbeat_at': time.time()})
+
+        class Context:
+            def __init__(self):
+                self.spawned = []
+            def Queue(self):
+                return Channel()
+            def Process(self, *, target, args, name):
+                self.spawned.append((args[0], target, name))
+                return Child(9914, False, args[0], args[2])
+
+        ctx = Context()
+        pool = Subagents.__new__(Subagents)
+        pool.roles = ['runtime', 'memory', 'weights']
+        pool.ctx = ctx
+        pool.url = 'http://127.0.0.1:8081/v1/chat/completions'
+        pool.timeout = 1
+        pool.worker_prepare = None
+        pool._abi_lock = threading.RLock()
+        pool._persistent = True
+        pool._shutdown_complete = False
+        pool._submitted_ids = {'native-old'}
+        pool._terminal_ids = set()
+        pool._pending_events = deque()
+        pool.active = {'memory': 'native-old'}
+        pool._active_started = {'memory': time.monotonic()}
+        pool._active_context = {'memory': {'claim': 'a'*24}}
+        pool.heartbeats = {}
+        pool.inboxes = {r: Channel() for r in pool.roles}
+        pool.outbox = Channel()
+        live_runtime, lost, live_weights = Child(9911), Child(9912, False), Child(9913)
+        pool.processes = {'runtime': live_runtime, 'memory': lost,
+                          'weights': live_weights}
+        old_memory_inbox = pool.inboxes['memory']
+        live_runtime_inbox, live_weights_inbox = pool.inboxes['runtime'], pool.inboxes['weights']
+
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_POOL_NOT_READY'):
+            pool._replace_idle_dead_pool()
+        event = pool._pending_events.popleft()
+        self.assertEqual((event['id'], event['state']),
+                         ('native-old', 'HOLD_SUBAGENT_PROCESS_EXIT'))
+        self.assertIn('native-old', pool._terminal_ids)
+        self.assertEqual(ctx.spawned, [])  # The owner must read the HOLD first.
+
+        pool._replace_idle_dead_pool()
+        self.assertEqual([role for role, _, _ in ctx.spawned], ['memory'])
+        self.assertEqual(pool.processes['memory'].pid, 9914)
+        self.assertIs(pool.processes['runtime'], live_runtime)
+        self.assertIs(pool.processes['weights'], live_weights)
+        self.assertIs(pool.inboxes['runtime'], live_runtime_inbox)
+        self.assertIs(pool.inboxes['weights'], live_weights_inbox)
+        self.assertEqual((live_runtime.joins, live_weights.joins), (0, 0))
+        self.assertEqual((live_runtime.terminations, live_weights.terminations), (0, 0))
+        self.assertTrue(old_memory_inbox.closed)
+        self.assertFalse(live_runtime_inbox.closed or live_weights_inbox.closed)
+        self.assertFalse(pool.outbox.closed)
+        self.assertEqual(pool.active, {})
+        self.assertIn('native-old', pool._submitted_ids)
+
     def test_shutdown_and_drain_keeps_joined_result_and_holds_missing_result(self):
         from collections import deque
         from queue import Queue
