@@ -1,5 +1,7 @@
 # NOX: three native workers and four project queues
 
+**Native installation and independent readback verified.** See [the final result](NOX_NATIVE_FOUR_QUEUE_RESULT_20261118.md) and `evidence/`. Three persistent processes are alive; four scoped subtasks completed. Full original project-task execution remains unbound.
+
 This source handoff implements the owner's 18 November 2026 request: three concurrent native worker processes sharing four queues. The full project specification is transferred; execution coverage is reported separately.
 
 ## Registry and scope

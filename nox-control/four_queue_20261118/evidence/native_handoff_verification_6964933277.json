@@ -1,0 +1,128 @@
+{
+  "schema": "NOX_TASK_INVENTORY_NATIVE_HANDOFF_VERIFICATION_V1",
+  "instructions_version": "0.0.6",
+  "verification": "PASS",
+  "scope": "EXACT_295_REGISTRY_HANDOFF_AND_OLD_CLAIM_PRESERVATION",
+  "install_request": "6964933277",
+  "install_source": "32546b26b03019169c22f440af5c9f6ed5b0e09c",
+  "evidence": [
+    {
+      "path": "/workspace/scratch/552ada07ed4f/native_install/native_install_receipt_6964933277.json",
+      "sha256": "0f2348a25e78671bfe2e24d990290bd23d493fb84dfe79724646c764d0847ef9"
+    },
+    {
+      "path": "/workspace/scratch/552ada07ed4f/native_install/postinstall_verified_6964933277.json",
+      "sha256": "dd60ca2629010477cce875b214523730cdfd17f75667feebe4a9f2ef6fbdf4a0"
+    }
+  ],
+  "native_readback_run": 44206628708,
+  "native_readback_job": 134474116404,
+  "project_files": [
+    {
+      "path": "/root/nox/state/dispatcher/project_work_tasks.json",
+      "bytes": 67790,
+      "sha256": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+      "matches_expected_source": true,
+      "row_count": 230
+    },
+    {
+      "path": "/root/nox/state/dispatcher/project_work_ideas.json",
+      "bytes": 32764,
+      "sha256": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+      "matches_expected_source": true,
+      "row_count": 65
+    },
+    {
+      "path": "/root/nox/state/dispatcher/project_work_receipts_source.json",
+      "bytes": 104321,
+      "sha256": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+      "matches_expected_source": true,
+      "row_count": 60
+    },
+    {
+      "path": "/root/nox/state/dispatcher/project_routing_4q.json",
+      "bytes": 128862,
+      "sha256": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671",
+      "matches_expected_source": true,
+      "row_count": 295
+    }
+  ],
+  "project_coverage": {
+    "original_count": 295,
+    "original_unique": 295,
+    "routed_count": 295,
+    "routed_unique": 295,
+    "missing_count": 0,
+    "extra_count": 0,
+    "queues": {
+      "Q4_INTEGRATION_ACCEPTANCE": 45,
+      "Q1_RUNTIME_CHAT": 145,
+      "Q3_TRAINING_WEIGHTS": 34,
+      "Q2_MEMORY_KNOWLEDGE": 71
+    },
+    "dispatch_cap": 3,
+    "source_scope": "MANIFEST_HANDOFF_ONLY_NOT_ORIGINAL_TASK_ACCEPTANCE"
+  },
+  "original_runtime_queue_preservation": {
+    "original_before_stop_count": 1453,
+    "original_after_stop_count": 1453,
+    "current_count": 1457,
+    "missing_before_stop_count": 0,
+    "missing_after_stop_count": 0,
+    "new_id_count": 4
+  },
+  "old_review_full_row_preservation": [
+    {
+      "task_id": "owner.native.v06.runtime.84780aaf911a",
+      "present_in_all_three": true,
+      "current_full_row_equals_before_stop": true,
+      "current_full_row_equals_final_stop": true,
+      "before_stop_row_sha256": "8c258eb20f0d762e44c190d5583971a98261e8e5f07490a982ed525c64784b64",
+      "final_stop_row_sha256": "8c258eb20f0d762e44c190d5583971a98261e8e5f07490a982ed525c64784b64",
+      "current_row_sha256": "8c258eb20f0d762e44c190d5583971a98261e8e5f07490a982ed525c64784b64",
+      "status_before": "done",
+      "status_current": "done",
+      "claim_equal": true,
+      "claim_epoch_equal": true,
+      "result_equal": true
+    },
+    {
+      "task_id": "owner.native.v06.memory.84780aaf911a",
+      "present_in_all_three": true,
+      "current_full_row_equals_before_stop": true,
+      "current_full_row_equals_final_stop": true,
+      "before_stop_row_sha256": "fde4ab0a17e5e1f262f9209fef0f791421a6b1f4ae97c7c1884c23faf45d196a",
+      "final_stop_row_sha256": "fde4ab0a17e5e1f262f9209fef0f791421a6b1f4ae97c7c1884c23faf45d196a",
+      "current_row_sha256": "fde4ab0a17e5e1f262f9209fef0f791421a6b1f4ae97c7c1884c23faf45d196a",
+      "status_before": "done",
+      "status_current": "done",
+      "claim_equal": true,
+      "claim_epoch_equal": true,
+      "result_equal": true
+    },
+    {
+      "task_id": "owner.native.v06.weights.84780aaf911a",
+      "present_in_all_three": true,
+      "current_full_row_equals_before_stop": true,
+      "current_full_row_equals_final_stop": true,
+      "before_stop_row_sha256": "10efab9c4ac16b5e76b361c5652d923875596ff2d981ab9ee8721ab1eb6591d3",
+      "final_stop_row_sha256": "10efab9c4ac16b5e76b361c5652d923875596ff2d981ab9ee8721ab1eb6591d3",
+      "current_row_sha256": "10efab9c4ac16b5e76b361c5652d923875596ff2d981ab9ee8721ab1eb6591d3",
+      "status_before": "done",
+      "status_current": "done",
+      "claim_equal": true,
+      "claim_epoch_equal": true,
+      "result_equal": true
+    }
+  ],
+  "historical_claim_receipt_entries_unchanged": 404,
+  "historical_verified_records_preserved": {
+    "total": 11,
+    "source": 7,
+    "native": 4
+  },
+  "original_task_acceptance_added": 0,
+  "full_original_task_execution_bindings_verified": 0,
+  "scoped_leaf_bindings": 4,
+  "scope_note": "295 registry entries are handed off; four scoped native leaves are completed. Historical verified states are preserved. No original TaskID is newly accepted by these checks."
+}
