@@ -325,7 +325,7 @@ def strict_json(raw):
 
 def activity_path(spec):
     # Inspect only the pinned AST. Do not import common.py or execute its code.
-    raw, _ = read(SCRIPTS / 'common.py', spec['guarded_sources']['common.py'])
+    raw, _ = read(SCRIPTS / 'common.py', spec['before']['common.py'])
     text = raw.decode('utf-8')
     tree = ast.parse(text)
     assignments = {}
@@ -352,7 +352,7 @@ def activity_path(spec):
     require(path == ROOT / 'status/chat_state.json', 'COMMON_CHAT_PATH')
     for name, expected in spec['idle_gate']['symbols'].items():
         source_name, symbol = name.split(':', 1)
-        source, _ = read(SCRIPTS / source_name, spec['guarded_sources'][source_name])
+        source, _ = read(SCRIPTS / source_name, spec['before'][source_name])
         decoded = source.decode('utf-8')
         nodes = [node for node in ast.parse(decoded).body
                  if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name == symbol]
