@@ -382,7 +382,7 @@ def consult(config, context, idempotency_key):
 
 def advisor_resource_admission_hold():
     """Require the exact live dispatcher binding and fresh shared resource decision."""
-    dispatcher = sys.modules.get('owner_subagent_dispatcher_fresh')
+    dispatcher = sys.modules.get('owner_subagent_dispatcher')
     native = getattr(dispatcher, '_BOUND', None)
     namespace = getattr(native, 'ns', None)
     autonomy = getattr(dispatcher, 'autonomy', None)

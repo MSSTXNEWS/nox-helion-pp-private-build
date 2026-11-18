@@ -57,7 +57,7 @@ class MentorTests(unittest.TestCase):
         dispatcher.autonomy = autonomy
         self.advisor_native = native
         self._advisor_binding = patch.dict(
-            sys.modules, {'owner_subagent_dispatcher_fresh': dispatcher})
+            sys.modules, {'owner_subagent_dispatcher': dispatcher})
         self._advisor_binding.start()
         self.addCleanup(self._advisor_binding.stop)
     def test_stop_active_fails_closed_on_state_aliases_and_dangling_flags(self):
@@ -206,7 +206,7 @@ class MentorTests(unittest.TestCase):
                     patch.object(mentor, 'discover_senior', return_value=config), \
                     patch.object(mentor, 'consult') as consult, \
                     patch.object(mentor, 'reserve_incident') as reserve, \
-                    patch.dict(sys.modules, {'owner_subagent_dispatcher_fresh': None}):
+                    patch.dict(sys.modules, {'owner_subagent_dispatcher': None}):
                 task = {'id': 'unbound-resource-gate', 'handler': 'verify_q4',
                         'retries': 0, 'max_retries': 3}
                 result = mentor.on_failure(task, 'timeout')
