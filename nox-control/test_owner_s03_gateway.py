@@ -312,6 +312,28 @@ class GatewayTests(unittest.TestCase):
         with self.assertRaisesRegex(g.MemoryHold,'MODEL_CHANGED'):
             g.index_batch(self.db,embedder=lambda *a,**k:[vector(0)],identity_fn=iter(['a'*64,'b'*64]).__next__)
 
+    def test_concurrent_memory_write_does_not_verify_incomplete_index(self):
+        # A different S03 writer commits after the read snapshot but before
+        # the vector transaction. The newly committed item must remain pending.
+        with g.connection(self.db,write=True) as c:item(c,'first','first memory')
+        def embedding_with_writer(texts,timeout):
+            with g.connection(self.db,write=True) as c:item(c,'late','new chat memory')
+            return [vector(0)]
+        result=g.index_batch(self.db,embedder=embedding_with_writer,identity_fn=lambda:'a'*64)
+        self.assertEqual(result['indexed'],1)
+        self.assertEqual(result['stale_remaining'],1)
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM s03_items').fetchone()[0],2)
+            self.assertIsNone(c.execute('SELECT item_id FROM nox_s03_vectors WHERE item_id=?',('late',)).fetchone())
+        task={'id':'owner.memory.index.concurrent','handler':'owner_memory_sync',
+              'owner_claim':{'nonce':'concurrent_a3'}}
+        with (patch.object(g,'resource_admission'),
+              patch.object(g,'index_batch',return_value=result),
+              patch.object(g.time,'monotonic',side_effect=[0.,.25,1.25])):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_INDEX_INCOMPLETE'):
+                g.sync(task,db=self.db,seconds=1.)
+        self.assertFalse((g.STATE/'receipts'/'index_concurrent_a3.json').exists())
+
     def test_owner_stop_arriving_during_embedding_aborts_without_s03_write(self):
         # The owner may enter MODEL_UPDATE after initial admission.
         with g.connection(self.db,write=True) as c:item(c,'mid','memory before STOP')

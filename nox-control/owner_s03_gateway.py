@@ -593,7 +593,7 @@ def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identit
             size=len(embedding_text(text).encode('utf-8'))
             if len(pending)<limit and pending_bytes+size<=6500:
                 pending.append((row['id'],text,sha));pending_bytes+=size
-    if not pending:return {'state':'INDEX_CURRENT','indexed':0,'stale_remaining':0,'model_identity':identity,'dimensions':DIMENSIONS}
+    if not pending:return {'state':'INDEX_CURRENT' if stale==0 else 'INDEX_INCOMPLETE','indexed':0,'stale_remaining':stale,'model_identity':identity,'dimensions':DIMENSIONS}
     vectors=embedder([embedding_text(row[1]) for row in pending],timeout=4.0)
     if not isinstance(vectors,list) or len(vectors)!=len(pending):hold('HOLD_S03_INDEX_BATCH_RESULT')
     if identity_fn()!=identity:hold('HOLD_S03_MODEL_CHANGED_DURING_EMBEDDING')
@@ -618,7 +618,19 @@ def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identit
         # Roll back the entire uncommitted vector batch if owner STOP was
         # asserted while SQLite work was in progress. No partial index PASS.
         if stop_active():hold('HOLD_S03_OWNER_STOP')
-    return {'state':'INDEX_BATCH_VERIFIED','indexed':written,'stale_remaining':max(0,stale-written),
+        remaining=max(0,stale-written)
+        if remaining==0:
+            # The embedding request ran outside the writer transaction. A chat
+            # writer may have added or edited S03 rows in that interval.
+            # Verify current text hashes and model identity under the writer
+            # lock before accepting any INDEX_CURRENT/verified completion.
+            remaining=sum(1 for row in conn.execute(
+                'SELECT s.text,v.content_sha256,v.model_identity FROM s03_items s '
+                'LEFT JOIN nox_s03_vectors v ON v.item_id=s.id')
+                if isinstance(row['text'],str) and row['text'].strip() and (
+                    row['content_sha256']!=text_sha(row['text']) or row['model_identity']!=identity))
+            if stop_active():hold('HOLD_S03_OWNER_STOP')
+    return {'state':'INDEX_BATCH_VERIFIED','indexed':written,'stale_remaining':remaining,
             'model_identity':identity,'dimensions':DIMENSIONS}
 
 
