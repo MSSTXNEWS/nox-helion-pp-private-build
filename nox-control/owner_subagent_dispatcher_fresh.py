@@ -692,6 +692,7 @@ class Native:
                 or receipt.get('optimizer_steps_verified') is not False
                 or receipt.get('service_or_weights_changed') is not False
                 or not isinstance(observation, dict)
+                or observation.get('operation') != intent.get('role')
                 or observation.get('claim') != claim.get('nonce')
                 or not isinstance(policy_ack, dict)
                 or policy_ack.get('sha256') != intent.get('policy_sha')
@@ -713,6 +714,8 @@ class Native:
 
     def _reconcile_s03_verified_queue(self, state):
         """Complete only a dead parent's exact S03-verified claim; no resubmit."""
+        # writer_lease holds a lifetime-exclusive LOCK_EX; only its owner may
+        # reconcile an S03 receipt after the previous dispatcher releases it.
         if (not self.owner_allowed() or self.stop_active()
                 or chat_priority_active() or not self.writer_lease()):
             return 0
