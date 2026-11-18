@@ -42,6 +42,7 @@ def native_with_pool():
     native = binding.Native.__new__(binding.Native)
     native.lock = threading.RLock()
     native.policy = {'sha256': 'a' * 64}
+    native.source = 'c' * 64
     native.catalog = {'tasks': [{'id': 'review.runtime', 'params': {'role': 'runtime'}}]}
     native._test_events = []
     native._test_tmpdir = tempfile.TemporaryDirectory()
