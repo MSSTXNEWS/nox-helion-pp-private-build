@@ -389,6 +389,24 @@ class GatewayTests(unittest.TestCase):
         reconstructed=pieces[0]+''.join(part[160:] for part in pieces[1:])
         self.assertEqual(reconstructed,text)
 
+    def test_utf8_multibyte_history_chunks_remain_indexable_without_loss(self):
+        original='🙂'*4200+'TAIL_PRESERVED'
+        with g.connection(self.db,write=True) as conn:
+            result=g.import_records(conn,[{'id':42,'text':original}],'C08','f'*64)
+        self.assertGreater(result['new_items'],2)
+        with g.connection(self.db) as conn:
+            pieces=[row[0] for row in conn.execute(
+                'SELECT s.text FROM nox_s03_origins o JOIN s03_items s ON s.id=o.item_id '
+                'ORDER BY o.chunk_index')]
+            stored=json.loads(conn.execute(
+                'SELECT payload_json FROM nox_s03_import_records').fetchone()[0])
+        self.assertEqual(stored['text'],original)
+        self.assertEqual(pieces[0]+''.join(part[160:] for part in pieces[1:]),original)
+        self.assertTrue(all(len(g.embedding_text(part).encode('utf-8'))<=6000 for part in pieces))
+        proof=g.index_batch(self.db,embedder=lambda texts,timeout:[vector(0) for _ in texts],
+                            identity_fn=lambda:'a'*64)
+        self.assertGreater(proof['indexed'],0)
+
     def test_snapshot_includes_committed_wal_and_has_private_mode(self):
         c=sqlite3.connect(self.db);c.execute('PRAGMA journal_mode=WAL')
         item(c,'wal','PRIVATE_WAL_RECORD');c.commit()
