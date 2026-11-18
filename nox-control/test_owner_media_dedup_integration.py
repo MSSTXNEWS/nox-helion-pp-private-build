@@ -145,5 +145,24 @@ class MediaCreateDedupIntegration(unittest.TestCase):
         self.assertEqual(media.create_job(self.body(), 'alice')['id'], first['id'])
         self.assertEqual(len(list((self.root / 'state/media/jobs').glob('*.json'))), 1)
 
+    def test_durable_job_missing_or_corrupt_never_recreated_from_worker_cache(self):
+        # The old "read_json(path) or job" fallback rewrote missing/corrupt
+        # durable records from an obsolete in-memory copy. That loses evidence.
+        for mode, key in (('missing', 'b' * 32), ('corrupt', 'c' * 32)):
+            with self.subTest(mode=mode):
+                cached = media.create_job(self.body(key=key), 'alice')
+                record = media.job_path(cached['id'])
+                if mode == 'missing':
+                    record.unlink()
+                else:
+                    record.write_text('{invalid-json')
+                before = record.read_bytes() if record.exists() else None
+                with self.assertRaisesRegex(media.MediaHold, 'HOLD_MEDIA_JOB_STATE_UNREADABLE'):
+                    media.update_job(cached, state='COMPLETED')
+                after = record.read_bytes() if record.exists() else None
+                self.assertEqual(after, before)
+                self.assertEqual(cached['state'], 'QUEUED')
+
+
 if __name__ == '__main__':
     unittest.main()
