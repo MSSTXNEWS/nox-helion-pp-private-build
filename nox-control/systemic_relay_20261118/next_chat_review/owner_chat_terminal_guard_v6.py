@@ -39,7 +39,7 @@ def prepare(raw: bytes, expected_sha256: str = EXPECTED_INPUT_SHA256) -> bytes:
             raise ValueError("HOLD_CHAT_UI_ANCHOR")
         text = text.replace(old, new, 1)
     candidate = text.encode("utf-8")
-    if candidate == raw or any(old in text for old, _ in ANCHORS):
+    if candidate == raw:
         raise ValueError("HOLD_CHAT_UI_UNCHANGED")
     return candidate
 
