@@ -16,7 +16,9 @@ def example():
         run["outcomes"].append(dict(task_id=task, status=status, latency_ms=delay,
             peak_rss_bytes=512, output_tokens=12, history_saved=True,
             background_completed=True, trace_sha256=H,
-            expected_full_input_sha256=H, served_full_input_sha256=H))
+            expected_full_input_sha256=H, served_full_input_sha256=H,
+            first_text_ms=10 if status == "PASS" else None,
+            cache_tokens_reused=3, prompt_tokens_evaluated=60))
     return run
 
 class PairedReceiptTests(unittest.TestCase):
@@ -124,5 +126,35 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(out["peak_rss_delta_bytes"],-100)
         self.assertEqual(out["peak_rss_regressed_task_ids"],["t1"])
         self.assertFalse(out["rank_claim_authorized"])
+
+    def test_first_text_regression_and_cache_evidence(self):
+        b=example();c=copy.deepcopy(b)
+        c["outcomes"][0]["first_text_ms"]=15
+        c["outcomes"][0]["cache_tokens_reused"]=30
+        c["outcomes"][0]["prompt_tokens_evaluated"]=5
+        out=compare_paired(b,c)
+        self.assertEqual(out["schema"],"NOX_B4_PAIRED_COMPARISON_V3")
+        self.assertEqual(out["first_text_regressed_task_ids"],["t1"])
+        self.assertEqual(out["p95_first_text_delta_ms_same_coverage"],5)
+        self.assertEqual(out["cache_tokens_reused_delta"],27)
+        self.assertEqual(out["prompt_tokens_evaluated_delta"],-55)
+        self.assertFalse(out["promotion_authorized"])
+
+    def test_lost_first_text_prevents_false_p95_improvement(self):
+        b=example();c=copy.deepcopy(b)
+        c["outcomes"][0]["first_text_ms"]=None
+        out=compare_paired(b,c)
+        self.assertEqual(out["first_text_lost_task_ids"],["t1"])
+        self.assertIsNone(out["p95_first_text_delta_ms_same_coverage"])
+        self.assertEqual(out["candidate"]["first_text_missing"],3)
+        self.assertTrue(out["quality_or_history_regression"])
+
+    def test_impossible_first_text_timestamp_holds(self):
+        b=example();c=example();c["outcomes"][0]["first_text_ms"]=21
+        self.assertEqual(compare_paired(b,c)["reason"],"FIRST_TEXT_AFTER_END")
+
+    def test_missing_kv_timing_evidence_holds(self):
+        b=example();c=example();del c["outcomes"][1]["prompt_tokens_evaluated"]
+        self.assertEqual(compare_paired(b,c)["reason"],"PROMPT_CACHE_TIMING_PROOF")
 
 if __name__ == '__main__': unittest.main()

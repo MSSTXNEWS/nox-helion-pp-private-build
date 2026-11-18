@@ -3,6 +3,8 @@
 Does not run models or authorize deployment, rank claims, training, or promotion.
 All declared tasks, including failures and timeouts, remain in the denominator.
 The independently assembled full input must match the bytes actually sent to serving.
+Streaming first-text coverage and llama.cpp KV-cache timings must be accounted for,
+otherwise a fast aggregate can hide a no-text response or a cold-cache regression.
 """
 from __future__ import annotations
 import math
@@ -74,6 +76,17 @@ def _validated(run):
                  "FULL_INPUT_PIN")
         _require(event["expected_full_input_sha256"] == event["served_full_input_sha256"],
                  "INPUT_TRUNCATED_OR_MODIFIED")
+        # An explicit None means no user-visible text arrived; do not substitute
+        # completion latency and falsely report a good first-text latency.
+        _require("first_text_ms" in event and
+                 (event["first_text_ms"] is None or
+                  _integer(event["first_text_ms"], 86_400_000)),
+                 "FIRST_TEXT_PROOF")
+        _require(event["first_text_ms"] is None or
+                 event["first_text_ms"] <= event["latency_ms"], "FIRST_TEXT_AFTER_END")
+        _require(all(_integer(event.get(key), 10 ** 10) for key in
+                     ("cache_tokens_reused", "prompt_tokens_evaluated")),
+                 "PROMPT_CACHE_TIMING_PROOF")
         mapped[task] = event
     _require(set(mapped) == task_ids, "TASK_SET_MISMATCH")
     return mapped
@@ -93,6 +106,8 @@ def _metrics(events, max_task_ms):
     rows = list(events.values())
     n = len(rows)
     passed = sum(_within_budget_pass(row, max_task_ms) for row in rows)
+    first_text = [row["first_text_ms"] for row in rows
+                  if row["first_text_ms"] is not None]
     return {
         "denominator": n,
         "passed": passed,
@@ -107,6 +122,11 @@ def _metrics(events, max_task_ms):
         "background_completed": sum(row["background_completed"] for row in rows),
         "p95_latency_ms_all_tasks": _p95([row["latency_ms"] for row in rows]),
         "total_output_tokens": sum(row["output_tokens"] for row in rows),
+        "first_text_observed": len(first_text),
+        "first_text_missing": n - len(first_text),
+        "p95_first_text_ms_observed_only": _p95(first_text) if first_text else None,
+        "total_cache_tokens_reused": sum(row["cache_tokens_reused"] for row in rows),
+        "total_prompt_tokens_evaluated": sum(row["prompt_tokens_evaluated"] for row in rows),
         "peak_rss_bytes_max": max(row["peak_rss_bytes"] for row in rows),
     }
 
@@ -117,7 +137,7 @@ def compare_paired(baseline, candidate):
     Errors yield HOLD rather than an optimistic partial score. Latency includes
     failed/timed-out runs and uses nearest-rank p95; no Arena or TOP30 mapping.
     """
-    answer = {"schema": "NOX_B4_PAIRED_COMPARISON_V2", "comparable": False,
+    answer = {"schema": "NOX_B4_PAIRED_COMPARISON_V3", "comparable": False,
               "promotion_authorized": False, "rank_claim_authorized": False,
               "measured_nox_gain": False}
     try:
@@ -147,17 +167,39 @@ def compare_paired(baseline, candidate):
                          if new[task]["latency_ms"] > old[task]["latency_ms"]]
     rss_regressed = [task for task in baseline["declared_task_ids"]
                      if new[task]["peak_rss_bytes"] > old[task]["peak_rss_bytes"]]
+    first_text_lost = [task for task in baseline["declared_task_ids"]
+                       if old[task]["first_text_ms"] is not None
+                       and new[task]["first_text_ms"] is None]
+    first_text_regressed = [task for task in baseline["declared_task_ids"]
+                            if old[task]["first_text_ms"] is not None
+                            and new[task]["first_text_ms"] is not None
+                            and new[task]["first_text_ms"] > old[task]["first_text_ms"]]
+    old_seen = [task for task in baseline["declared_task_ids"]
+                if old[task]["first_text_ms"] is not None]
+    new_seen = [task for task in baseline["declared_task_ids"]
+                if new[task]["first_text_ms"] is not None]
+    # Observed-only p95 is not comparable if the set of responses with text changed.
+    first_text_p95_delta = (after["p95_first_text_ms_observed_only"] -
+                            before["p95_first_text_ms_observed_only"]
+                            if old_seen == new_seen and old_seen else None)
     return {**answer, "comparable": True, "state": "DESCRIPTIVE_ONLY",
             "reason": None, "baseline": before, "candidate": after,
             "fixed_task_ids": fixed, "regressed_task_ids": regressed,
             "latency_regressed_task_ids": latency_regressed,
             "peak_rss_regressed_task_ids": rss_regressed,
+            "first_text_lost_task_ids": first_text_lost,
+            "first_text_regressed_task_ids": first_text_regressed,
+            "p95_first_text_delta_ms_same_coverage": first_text_p95_delta,
+            "cache_tokens_reused_delta": (after["total_cache_tokens_reused"] -
+                                          before["total_cache_tokens_reused"]),
+            "prompt_tokens_evaluated_delta": (after["total_prompt_tokens_evaluated"] -
+                                               before["total_prompt_tokens_evaluated"]),
             "peak_rss_delta_bytes": (after["peak_rss_bytes_max"]
                                      - before["peak_rss_bytes_max"]),
             "pass_rate_delta": (after["passed"] - before["passed"]) / before["denominator"],
             "p95_latency_delta_ms": (after["p95_latency_ms_all_tasks"]
                                      - before["p95_latency_ms_all_tasks"]),
-            "quality_or_history_regression": bool(regressed or any(
+            "quality_or_history_regression": bool(regressed or first_text_lost or any(
                 (old[task]["history_saved"] and not new[task]["history_saved"]) or
                 (old[task]["background_completed"] and not new[task]["background_completed"])
                 for task in baseline["declared_task_ids"]))}
