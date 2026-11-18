@@ -59,7 +59,7 @@ def _validated(run):
         _require(type(task) is str and task in task_ids and task not in mapped,
                  "MISSING_OR_DUPLICATE_TASK")
         _require(type(event.get("status")) is str and event["status"] in OUTCOMES, "UNKNOWN_STATUS")
-        _require(_integer(event.get("latency_ms"), run["max_task_ms"]),
+        _require(_integer(event.get("latency_ms"), 86_400_000),
                  "INVALID_LATENCY")
         _require(_integer(event.get("peak_rss_bytes"), 2 ** 63 - 1)
                  and _integer(event.get("output_tokens"), 10 ** 10), "INVALID_RESOURCE")
@@ -78,7 +78,7 @@ def _p95(values):
     return values[math.ceil(.95 * len(values)) - 1]  # nearest rank, every task
 
 
-def _metrics(events):
+def _metrics(events, max_task_ms):
     rows = list(events.values())
     n = len(rows)
     return {
@@ -86,6 +86,7 @@ def _metrics(events):
         "passed": sum(row["status"] == "PASS" for row in rows),
         "failures_including_timeouts": sum(row["status"] != "PASS" for row in rows),
         "timed_out_or_exhausted": sum(row["status"] in ("TIMEOUT", "BUDGET_EXHAUSTED") for row in rows),
+        "over_budget_walltime": sum(row["latency_ms"] > max_task_ms for row in rows),
         "history_saved": sum(row["history_saved"] for row in rows),
         "background_completed": sum(row["background_completed"] for row in rows),
         "p95_latency_ms_all_tasks": _p95([row["latency_ms"] for row in rows]),
@@ -112,7 +113,8 @@ def compare_paired(baseline, candidate):
                  "TASK_ORDER_MISMATCH")
     except ReceiptHold as err:
         return {**answer, "state": "HOLD", "reason": str(err)}
-    before, after = _metrics(old), _metrics(new)
+    before, after = (_metrics(old, baseline["max_task_ms"]),
+                     _metrics(new, candidate["max_task_ms"]))
     fixed = [task for task in baseline["declared_task_ids"]
              if old[task]["status"] != "PASS" and new[task]["status"] == "PASS"]
     regressed = [task for task in baseline["declared_task_ids"]
