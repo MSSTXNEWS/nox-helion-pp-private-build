@@ -167,6 +167,11 @@ def gguf_metadata(stream):
             'tokenizer_metadata_scope': 'GGUF_TOKENIZER_FIELDS_ONLY_NOT_RUNTIME_TOKENIZER_FILE'}
 
 
+def _file_signature(st):
+    """Identity plus mutation stamps; atime deliberately ignored."""
+    return (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns)
+
+
 def witness(pid: int, expected_start_ticks: int, model_file: str | None = None,
             proc_root: Path = Path('/proc')) -> dict:
     result = {'schema': 'NOX_MODEL_IDENTITY_WITNESS_V1', 'pid': pid,
@@ -184,6 +189,11 @@ def witness(pid: int, expected_start_ticks: int, model_file: str | None = None,
             st = os.fstat(f.fileno())
             mapped = mapped_inode(pid, st.st_dev, st.st_ino, proc_root)
             metadata = gguf_metadata(f)
+            # Parsing a current pathname is not evidence for the mapped file
+            # if that pathname was replaced or the inode mutated mid-probe.
+            if (_file_signature(os.fstat(f.fileno())) != _file_signature(st)
+                    or _file_signature(os.stat(chosen)) != _file_signature(st)):
+                raise EvidenceUnavailable('MODEL_FILE_CHANGED_DURING_PROBE')
             result.update({'model_file': chosen, 'model_size': st.st_size,
                            'model_inode': st.st_ino, 'model_device': st.st_dev,
                            'model_cmdline_match': arg == chosen,

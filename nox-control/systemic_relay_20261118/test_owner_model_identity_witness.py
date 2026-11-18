@@ -4,6 +4,7 @@ import os
 import struct
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location('witness', Path(__file__).with_name('owner_model_identity_witness.py'))
@@ -113,6 +114,37 @@ class WitnessTests(unittest.TestCase):
         changed = w.witness(self.pid, self.ticks, proc_root=self.proc)
         self.assertEqual(changed['state'], 'MAPPED_GGUF_METADATA_VERIFIED')
         self.assertNotEqual(original, changed['gguf']['tokenizer_metadata_sha256'])
+
+    def test_inplace_header_change_during_probe_is_unknown(self):
+        original = w.gguf_metadata
+
+        def mutate_after_parse(stream):
+            parsed = original(stream)
+            with self.file.open('ab') as fd:
+                fd.write(b'x')
+            return parsed
+
+        with mock.patch.object(w, 'gguf_metadata', side_effect=mutate_after_parse):
+            out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(out['state'], 'UNKNOWN')
+        self.assertEqual(out['reason'], 'MODEL_FILE_CHANGED_DURING_PROBE')
+        self.assertNotIn('gguf', out)
+
+    def test_model_path_replaced_during_probe_is_unknown(self):
+        original = w.gguf_metadata
+
+        def replace_after_parse(stream):
+            parsed = original(stream)
+            replacement = self.root / 'replacement.gguf'
+            gguf(replacement)
+            os.replace(replacement, self.file)
+            return parsed
+
+        with mock.patch.object(w, 'gguf_metadata', side_effect=replace_after_parse):
+            out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(out['state'], 'UNKNOWN')
+        self.assertEqual(out['reason'], 'MODEL_FILE_CHANGED_DURING_PROBE')
+        self.assertNotIn('gguf', out)
 
     def test_budget_prevents_large_token_array(self):
         b = b'GGUF' + struct.pack('<IQQ', 3, 0, 1)
