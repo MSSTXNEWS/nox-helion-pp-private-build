@@ -3,10 +3,7 @@ on:
   push:
     branches:
       - b4/paired-quality-latency-gate-20261118
-    paths:
-      - nox-control/systemic_relay_20261118/b4_paired_benchmark_receipts.py
-      - nox-control/systemic_relay_20261118/test_b4_paired_benchmark_receipts.py
-      - .github/workflows/nox-b4-paired-source-gate.yml
+    # Verify the exact branch HEAD also after a base-sync merge; source blobs may be unchanged.
 permissions:
   contents: read
 jobs:
