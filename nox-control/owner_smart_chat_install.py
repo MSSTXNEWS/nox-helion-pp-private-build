@@ -55,6 +55,8 @@ PROTECTED = {
     'owner_chat_evidence.py': 'ea66e05f30472b066444058ac18d0c7af74def410bde760396d1e2431161e8b2',
 }
 SERVICES = ('nox-proxy', 'nox-ds41-8098', 'nox-web29-18775')
+DISPATCHER = 'nox-dispatcher-t855u'
+DISPATCHER_IDENTITY = {'pid': 106058, 'pgrp': 106058, 'start_ticks': 181620214}
 FLAGS = tuple(ROOT / name for name in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
     'state/STOP', 'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag')) + (Path('/workspace/NOX_STOP'),)
 PRESERVE_FLAGS = (STATE / 'TRAIN_HOLD.flag', STATE / 'TRAIN_PAUSE_REQUEST.flag')
@@ -190,19 +192,43 @@ def exchange(first, second):
 
 
 @contextmanager
-def maintenance_lock():
+def maintenance_lock(expected, wait_seconds=45):
+    require(type(wait_seconds) is int and 0 <= wait_seconds <= 45, 'MAINTENANCE_WAIT_BOUND')
     path = STATE / 'owner_maintenance.lock'; directory = parent(path)
-    fd = os.open(path.name, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600, dir_fd=directory)
+    fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=directory)
     os.close(directory)
     try:
         info = os.fstat(fd)
         require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid()
                 and info.st_nlink == 1 and not info.st_mode & 0o022, 'MAINTENANCE_LOCK_SCOPE')
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise Hold('WAIT_SMART_CHAT_EXISTING_MAINTENANCE_LEASE') from None
-        yield
+        gate(); assert_services(expected)
+        started = time.monotonic(); deadline = started + wait_seconds; attempts = 0
+        guarded = dict(expected, **{DISPATCHER: DISPATCHER_IDENTITY})
+        while True:
+            gate()
+            named = os.stat(path, follow_symlinks=False)
+            require((named.st_dev, named.st_ino, named.st_mode, named.st_uid, named.st_nlink) ==
+                    (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_nlink),
+                    'MAINTENANCE_LOCK_CHANGED')
+            for name, previous in guarded.items():
+                current = process(previous['pid'])
+                require({key: current[key] for key in ('pid', 'pgrp', 'start_ticks')} == previous,
+                        'LEASE_WAIT_PROCESS_CHANGED_' + name.replace('-', '_').upper())
+            attempts += 1
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise Hold('WAIT_SMART_CHAT_EXISTING_MAINTENANCE_LEASE') from None
+                time.sleep(min(0.5, remaining))
+        acquired_at = time.monotonic()
+        gate(); assert_services(expected)
+        yield {'attempts': attempts, 'waited_ms': round((acquired_at - started) * 1000),
+               'maximum_acquisition_wait_seconds': wait_seconds, 'inode': info.st_ino,
+               'dispatcher_identity': dict(DISPATCHER_IDENTITY), 'existing_lock_reused': True,
+               'lock_removed_or_holder_signaled': False}
     finally:
         os.close(fd)
 
@@ -255,7 +281,7 @@ def command(args, timeout=8):
 
 
 def service(name):
-    require(name in SERVICES, 'SERVICE_SCOPE')
+    require(name in (*SERVICES, DISPATCHER), 'SERVICE_SCOPE')
     _, raw = command(['supervisorctl', 'status', name], timeout=5)
     rows = [line.split() for line in raw.decode('utf-8', 'replace').splitlines() if line.startswith(name + ' ')]
     require(len(rows) == 1 and len(rows[0]) >= 2, 'SERVICE_STATUS')
@@ -273,11 +299,12 @@ def service(name):
 
 
 def assert_services(expected, include_proxy=True):
-    for name in SERVICES:
+    guarded = dict(expected, **{DISPATCHER: DISPATCHER_IDENTITY})
+    for name in (*SERVICES, DISPATCHER):
         if name == 'nox-proxy' and not include_proxy:
             continue
         row = service(name)
-        require(row.get('state') == 'RUNNING' and row.get('identity') == expected[name],
+        require(row.get('state') == 'RUNNING' and row.get('identity') == guarded[name],
                 'SERVICE_PREDECESSOR_' + name.replace('-', '_').upper())
 
 
@@ -458,8 +485,9 @@ def main():
         signal.signal(sig, expired)
     signal.setitimer(signal.ITIMER_REAL, 210)
     try:
-        with maintenance_lock():
+        with maintenance_lock(expected) as lease:
             try:
+                record['maintenance_lease'] = lease
                 gate(); assert_services(expected); before = preserved()
                 original_executable = service('nox-proxy')['executable']
                 record['transform_preflight'] = []
