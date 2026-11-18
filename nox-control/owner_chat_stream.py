@@ -109,7 +109,14 @@ async def _model_events(client, url, payload):
         parts=[]
         frame_size=0
         frame_lines=0
+        first_line=True
         async for line in response.aiter_lines():
+            # WHATWG SSE decoding ignores one leading UTF-8 BOM, and only
+            # at the start of the stream. Do not erase later payload bytes.
+            if first_line:
+                first_line=False
+                if line.startswith('\ufeff'):
+                    line=line[1:]
             if line:
                 # A legal stream may send keepalives, but an unbounded single
                 # record of comments/ids can otherwise starve chat indefinitely.
@@ -127,12 +134,19 @@ async def _model_events(client, url, payload):
                 frame_size=0
             elif line.startswith(':'):
                 continue
-            elif line.startswith('event:'):
-                if line[6:].strip()!='message':
+            elif line.startswith('event:') or line=='event':
+                if line!='event' and line[6:].strip()!='message':
                     raise StreamFailure('HOLD_MODEL_SSE_EVENT')
                 continue
-            elif line.startswith('id:'):
+            elif line.startswith('id:') or line=='id':
                 if len(line)>256 or '\x00' in line:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+                continue
+            elif line.startswith('retry:') or line=='retry':
+                # A provider may supply SSE reconnection advice. This adapter
+                # never reconnects model POSTs (no risk of duplicate tool use).
+                # Ignore the bounded metadata while retaining event framing.
+                if len(line)>256:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
                 continue
             elif line.startswith('data:'):
