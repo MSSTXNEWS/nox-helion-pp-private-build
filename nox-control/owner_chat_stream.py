@@ -108,6 +108,7 @@ async def _model_events(client, url, payload):
         # Preserve valid multi-line JSON without allowing unbounded frames.
         parts=[]
         frame_size=0
+        record_size=0
         frame_lines=0
         first_line=True
         async for line in response.aiter_lines():
@@ -121,11 +122,15 @@ async def _model_events(client, url, payload):
                 # A legal stream may send keepalives, but an unbounded single
                 # record of comments/ids can otherwise starve chat indefinitely.
                 frame_lines+=1
-                if frame_lines>1024 or len(line)>300000:
+                # Comments and id/retry/event metadata also consume memory and
+                # parsing time. Cap aggregate record bytes, not only data:.
+                record_size+=len(line)+1
+                if frame_lines>1024 or len(line)>300000 or record_size>300000:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
             else:
                 # Each empty line ends one SSE record (including keepalives).
                 frame_lines=0
+                record_size=0
             if line=='':
                 if not parts:
                     continue
