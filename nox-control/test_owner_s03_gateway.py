@@ -588,8 +588,9 @@ class GatewayTests(unittest.TestCase):
         task={'id':'owner.memory.index.partial','handler':'owner_memory_sync',
               'owner_claim':{'nonce':'partial_a3'}}
         partial={'indexed':1,'stale_remaining':1,'model_identity':'b'*64}
-        with patch.object(g,'resource_admission'), patch.object(g,'index_batch',return_value=partial), \\
-             patch.object(g.time,'monotonic',side_effect=[0., .5, 1.5]):
+        with (patch.object(g,'resource_admission'),
+              patch.object(g,'index_batch',return_value=partial),
+              patch.object(g.time,'monotonic',side_effect=[0., .5, 1.5])):
             with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_INDEX_INCOMPLETE'):
                 g.sync(task,db=self.db,seconds=1.)
         receipt=g.STATE/'receipts'/'index_partial_a3.json'
