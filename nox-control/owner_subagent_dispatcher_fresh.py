@@ -611,14 +611,20 @@ class Native:
             if self.pool is not None:
                 self._drain()
                 if len(self.process_readback()) != 3:
-                    # Replace the pool only after all task-bound results have
-                    # been drained and no worker owns an uncertain in-flight job.
-                    if self.pool.active:
+                    # Stale heartbeat is not proof of death; preserve live peers.
+                    # Previously drained results need owner/S03 reconciliation.
+                    if self.pool.active or self.completed:
                         return False
-                    self.close_pool()
-            if self.pool is None:
-                self.pool = Subagents(list(ROLES), timeout=60,
-                                      worker_prepare=worker_input).__enter__()
+                    try:
+                        if not any(not p.is_alive() for p in self.pool.processes.values()):
+                            return False
+                        # One dead role only; retain live PIDs, IPC, and replay fences.
+                        self.pool._replace_idle_dead_pool()
+                    except (GateError, OSError, ValueError):
+                        return False
+                return len(self.process_readback()) == 3
+            self.pool = Subagents(list(ROLES), timeout=60,
+                                  worker_prepare=worker_input).__enter__()
             return len(self.process_readback()) == 3
 
     def process_readback(self):
