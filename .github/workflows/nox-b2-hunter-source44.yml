@@ -1,0 +1,32 @@
+name: NOX B2 Hunter original 44 CPU source regressions
+on:
+  push:
+    branches:
+      - b2-3b01-hunter-source44-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hunter-source44:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile exact modified Hunter modules
+        run: |
+          python -m compileall -q src/nox_selfbuilder/worm_providers.py src/nox_selfbuilder/worms.py
+      - name: Existing original 25-case provider test, no network
+        run: PYTHONPATH=src python -m unittest discover -s tests -p test_ev_a03_worm_providers.py -v
+      - name: Existing B2 13-case cache/dedup test, no network
+        run: PYTHONPATH=src python -m unittest discover -s tests -p test_hunter_http_cache.py -v
+      - name: Existing B2 6-case Retry-After test, no network
+        run: PYTHONPATH=src python -m unittest discover -s tests -p test_hunter_retry_minimum.py -v
+      - name: Emit scoped exact source provenance
+        run: |
+          git rev-parse HEAD
+          sha256sum src/nox_selfbuilder/worm_providers.py src/nox_selfbuilder/worms.py tests/test_ev_a03_worm_providers.py tests/test_hunter_http_cache.py tests/test_hunter_retry_minimum.py

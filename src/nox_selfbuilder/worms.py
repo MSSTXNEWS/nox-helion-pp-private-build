@@ -8,6 +8,7 @@ original native owner; default is OFF. External text is evidence, never code.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import OrderedDict
 from datetime import date, datetime, timezone
 import hashlib
 import json
@@ -171,7 +172,7 @@ class WormSwarm:
         self._enabled = False
         self._day = None
         self._attempted = set()
-        self._seen_source = set()
+        self._seen_source = OrderedDict()
         self._fetches = 0
         self._findings = 0
         self._errors = 0
@@ -228,7 +229,8 @@ class WormSwarm:
         if day != self._day:
             self._day = day
             self._attempted.clear()
-            self._seen_source.clear()
+            # Keep bounded URL+content dedup across day boundaries. Native S03
+            # remains responsible for durable dedup across process restarts.
             self._fetches = self._findings = self._errors = 0
         for task in plan_day(now):
             if self._fetches >= self.max_fetches_day or max_tasks <= 0:
@@ -270,7 +272,9 @@ class WormSwarm:
                     if self._native_stopped() or self._revoked:
                         return {**self.status(), "status": "HOLD",
                                 "reason": "WORM_STOP_AFTER_S03_READBACK_REQUIRED"}
-                    self._seen_source.add(finding["source_sha256"])
+                    self._seen_source[finding["source_sha256"]] = None
+                    while len(self._seen_source) > MAX_FINDINGS_DAY:
+                        self._seen_source.popitem(last=False)
                     self._findings += 1
             except (ValueError, TypeError, OSError, WormHold):
                 self._errors += 1

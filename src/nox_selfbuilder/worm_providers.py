@@ -11,7 +11,10 @@ import html
 import ipaddress
 import json
 import re
+import time
+from email.utils import parsedate_to_datetime
 import xml.etree.ElementTree as ET
+from urllib.error import HTTPError
 from urllib.parse import urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -23,6 +26,76 @@ MAX_RECORDS = 4
 MAX_QUERY = 160
 YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 REPO_URL = re.compile(r"^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/?$")
+
+
+class HTTPSourceCache:
+    """Bounded per-owner-provider-map memory; the existing tick owns polling.
+
+    No worker, sleep, durable store or network request is created here. HTTP
+    freshness and Retry-After determine when that existing tick may poll again.
+    """
+    def __init__(self, *, clock=time.monotonic, wall_clock=time.time, max_entries=64):
+        if (not callable(clock) or not callable(wall_clock) or
+                type(max_entries) is not int or not 1 <= max_entries <= 64):
+            raise WormHold("WORM_HTTP_CACHE_BOUND")
+        self.clock, self.wall_clock = clock, wall_clock
+        self.max_entries, self._entries = max_entries, {}
+
+    def entry(self, key):
+        return self._entries.get(key, {})
+
+    def discard(self, key):
+        self._entries.pop(key, None)
+
+    def _put(self, key, value):
+        self._entries.pop(key, None)
+        self._entries[key] = value
+        while len(self._entries) > self.max_entries:
+            self._entries.pop(next(iter(self._entries)))
+
+    @staticmethod
+    def validator(value):
+        return value if (isinstance(value, str) and 0 < len(value) <= 512
+                         and all(32 <= ord(c) < 127 for c in value)) else None
+
+    def remember(self, key, raw, headers, previous):
+        control = str(headers.get("Cache-Control", "")).lower()
+        vary = {x.strip().lower() for x in str(headers.get("Vary", "")).split(",") if x.strip()}
+        if "no-store" in control or vary - {"accept", "user-agent"}:
+            self.discard(key)
+            return
+        age = re.search(r"(?:^|,)\s*max-age\s*=\s*\"?([0-9]+)\"?\s*(?:,|$)", control)
+        fresh_for = min(int(age.group(1)), 3600) if age else 0
+        try:
+            fresh_for = max(0, fresh_for - max(0, int(headers.get("Age", "0"))))
+        except (TypeError, ValueError):
+            fresh_for = 0
+        if "no-cache" in control:
+            fresh_for = 0
+        self._put(key, {"raw": raw, "fresh_until": self.clock() + fresh_for,
+                        "etag": self.validator(headers.get("ETag")) or previous.get("etag"),
+                        "modified": self.validator(headers.get("Last-Modified")) or previous.get("modified"),
+                        "failures": 0, "retry_at": 0})
+
+    def defer(self, key, headers=None):
+        previous = self.entry(key)
+        failures = min(previous.get("failures", 0) + 1, 8)
+        # A server-provided zero/past Retry-After must never defeat the local
+        # first/second retry-safe backoff (10/30 s); longer hints still win.
+        delay = min(10 * 3 ** (failures - 1), 300)
+        retry = (headers or {}).get("Retry-After")
+        if isinstance(retry, str):
+            try:
+                if retry.strip().isdigit():
+                    delay = max(delay, min(int(retry.strip()), 86400))
+                else:
+                    at = parsedate_to_datetime(retry)
+                    if at.tzinfo is not None:
+                        delay = max(delay, min(86400, max(0, at.timestamp() - self.wall_clock())))
+            except (TypeError, ValueError, OverflowError):
+                pass
+        self._put(key, {**previous, "failures": failures,
+                        "fresh_until": 0, "retry_at": self.clock() + delay})
 
 
 def _safe(value, cap):
@@ -64,42 +137,83 @@ def _approved_url(url, host):
     return parsed
 
 
-def _read_pinned(url, *, host, accept, limit, timeout, read_urlopen=None):
+def _read_pinned(url, *, host, accept, limit, timeout, read_urlopen=None, cache=None):
     _approved_url(url, host)
     if type(timeout) not in (int, float) or not 0 < timeout <= 9:
         raise WormHold("WORM_PROVIDER_TIMEOUT_INVALID")
-    request = Request(url, headers={"Accept": accept,
-                                    "User-Agent": "NOX-WORMS-SOURCE-RESEARCH/1.0"})
+    if cache is not None and not isinstance(cache, HTTPSourceCache):
+        raise WormHold("WORM_HTTP_CACHE_REQUIRED")
+    key = (url, accept, limit)
+    previous = cache.entry(key) if cache is not None else {}
+    if cache is not None and cache.clock() < previous.get("retry_at", 0):
+        raise WormHold("WORM_PROVIDER_RETRY_AFTER")
+    if "raw" in previous and cache.clock() < previous.get("fresh_until", 0):
+        return previous["raw"]
+    headers = {"Accept": accept, "User-Agent": "NOX-WORMS-SOURCE-RESEARCH/1.0"}
+    if "raw" in previous:
+        if previous.get("etag"):
+            headers["If-None-Match"] = previous["etag"]
+        if previous.get("modified"):
+            headers["If-Modified-Since"] = previous["modified"]
+    request = Request(url, headers=headers)
     try:
         transport = _strict_urlopen if read_urlopen is None else read_urlopen
-        with transport(request, timeout=timeout) as response:
+        try:
+            response = transport(request, timeout=timeout)
+        except HTTPError as exc:
+            if exc.code != 304:
+                if cache is not None and 400 <= exc.code <= 599:
+                    cache.defer(key, exc.headers)
+                exc.close()
+                raise WormHold("WORM_PROVIDER_HTTP_HOLD") from exc
+            response = exc
+        with response:
             # This post-check also protects injected transport test doubles;
             # real default network transport never follows redirects at all.
             if response.geturl() != url:
                 raise WormHold("WORM_PROVIDER_REDIRECT_DENIED")
+            status = getattr(response, "status", None) or getattr(response, "code", None) or 200
+            if status == 304:
+                if cache is None or "raw" not in previous:
+                    raise WormHold("WORM_PROVIDER_304_WITHOUT_CACHE")
+                cache.remember(key, previous["raw"], response.headers, previous)
+                return previous["raw"]
+            if status != 200:
+                if cache is not None and 400 <= status <= 599:
+                    cache.defer(key, response.headers)
+                raise WormHold("WORM_PROVIDER_HTTP_HOLD")
             declared = response.headers.get("Content-Length")
             if declared is not None and int(declared) > limit:
                 raise WormHold("WORM_PROVIDER_RESPONSE_QUOTA")
             raw = response.read(limit + 1)
+            response_headers = response.headers
     except WormHold:
         raise
     except (OSError, ValueError, TimeoutError) as exc:
+        if cache is not None:
+            cache.defer(key)
         raise WormHold("WORM_PROVIDER_NETWORK_OR_JSON_HOLD") from exc
     if len(raw) > limit:
         raise WormHold("WORM_PROVIDER_RESPONSE_QUOTA")
+    if cache is not None:
+        cache.remember(key, raw, response_headers, {})
     return raw
 
 
-def fetch_official_json(url, *, host, timeout=9, read_urlopen=None):
+def fetch_official_json(url, *, host, timeout=9, read_urlopen=None, cache=None):
     """Exact official endpoint. No automatic cross-origin redirect requests."""
     raw = _read_pinned(url, host=host, accept="application/json",
                        limit=MAX_JSON_BYTES, timeout=timeout,
-                       read_urlopen=read_urlopen)
+                       read_urlopen=read_urlopen, cache=cache)
     try:
         data = json.loads(raw.decode("utf-8"))
     except (ValueError, UnicodeError) as exc:
+        if cache is not None:
+            cache.discard((url, "application/json", MAX_JSON_BYTES))
         raise WormHold("WORM_PROVIDER_NETWORK_OR_JSON_HOLD") from exc
     if not isinstance(data, dict):
+        if cache is not None:
+            cache.discard((url, "application/json", MAX_JSON_BYTES))
         raise WormHold("WORM_PROVIDER_JSON_OBJECT_REQUIRED")
     return data
 
@@ -202,16 +316,20 @@ def youtube_public_video_search(task: WormTask, *, api_key, fetch=fetch_official
     return records
 
 
-def fetch_official_feed(url, *, host, timeout=9, read_urlopen=None):
+def fetch_official_feed(url, *, host, timeout=9, read_urlopen=None, cache=None):
     """Fetch owner-pinned RSS/Atom XML, limited bytes, no DTD or redirects."""
     raw = _read_pinned(url, host=host, accept="application/rss+xml, application/atom+xml, application/xml",
                        limit=MAX_FEED_BYTES, timeout=timeout,
-                       read_urlopen=read_urlopen)
+                       read_urlopen=read_urlopen, cache=cache)
     if re.search(br"<!\s*(?:DOCTYPE|ENTITY)\b", raw, flags=re.I):
+        if cache is not None:
+            cache.discard((url, "application/rss+xml, application/atom+xml, application/xml", MAX_FEED_BYTES))
         raise WormHold("WORM_FEED_DTD_DENIED")
     try:
         return ET.fromstring(raw)
     except ET.ParseError as exc:
+        if cache is not None:
+            cache.discard((url, "application/rss+xml, application/atom+xml, application/xml", MAX_FEED_BYTES))
         raise WormHold("WORM_FEED_XML_INVALID") from exc
 
 
@@ -293,7 +411,7 @@ def official_feed(task: WormTask, *, feed_url, source_host, fetch=fetch_official
 def approved_provider_map(*, github_enabled=False, youtube_api_key=None,
                           official_fetch=fetch_official_json, approved_feed_url=None,
                           approved_source_host=None, feed_fetch=fetch_official_feed,
-                          native_stop=None):
+                          native_stop=None, http_cache=None):
     """Native owner assembles capabilities; unavailable APIs remain omitted.
 
     TikTok Research API requires approved research access and is NEVER implied
@@ -306,6 +424,13 @@ def approved_provider_map(*, github_enabled=False, youtube_api_key=None,
         raise WormHold("WORM_NATIVE_STOP_REQUIRED")
     providers = {}
     hosts = {}
+    cache = HTTPSourceCache() if http_cache is None else http_cache
+    if not isinstance(cache, HTTPSourceCache):
+        raise WormHold("WORM_HTTP_CACHE_REQUIRED")
+    if official_fetch is fetch_official_json:
+        official_fetch = lambda url, host: fetch_official_json(url, host=host, cache=cache)
+    if feed_fetch is fetch_official_feed:
+        feed_fetch = lambda url, host: fetch_official_feed(url, host=host, cache=cache)
     if github_enabled is True:
         providers["github_api"] = lambda t: github_repositories(
             t, fetch=official_fetch, stop=native_stop)
