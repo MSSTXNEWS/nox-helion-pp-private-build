@@ -111,6 +111,32 @@ def run_native(action,request_id):
          '-o','ConnectTimeout=15','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=3','-o','NumberOfPasswordPrompts=0',
          '-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile='+str(known),'-o','ControlPath='+str(sock)]
     host='root@'+ip
+    # Classify SSH failures without printing stderr, user names, IPs, keys,
+    # file paths or host fingerprints. Used only for owner diagnostics.
+    # Distinguish wrong key propagation from a down socket or mux failure.
+    def ssh_failure_class(stderr):
+        if not isinstance(stderr, str):
+            return 'UNKNOWN'
+        message = stderr[:2048].lower()
+        rules = (
+            ('authentication refused: bad ownership or modes', 'BAD_AUTHORIZED_KEYS_PERMISSIONS'),
+            ('permission denied (publickey)', 'PUBLICKEY_REJECTED'),
+            ('too many authentication failures', 'TOO_MANY_AUTH_FAILURES'),
+            ('host key verification failed', 'HOST_KEY_REJECTED'),
+            ('remote host identification has changed', 'HOST_KEY_REJECTED'),
+            ('connection reset by', 'CONNECTION_RESET'),
+            ('connection closed by', 'CONNECTION_CLOSED'),
+            ('connection refused', 'CONNECTION_REFUSED'),
+            ('connection timed out', 'CONNECTION_TIMEOUT'),
+            ('operation timed out', 'CONNECTION_TIMEOUT'),
+            ('no route to host', 'ROUTE_UNAVAILABLE'),
+            ('network is unreachable', 'ROUTE_UNAVAILABLE'),
+            ('controlpath', 'MUX_SOCKET_FAILURE'),
+            ('mux_client', 'MUX_SOCKET_FAILURE'),
+            ('kex_exchange_identification', 'KEX_FAILURE'),
+            ('banner exchange', 'KEX_FAILURE'),
+        )
+        return next((code for token, code in rules if token in message), 'UNKNOWN')
     # Authenticate the persistent connection, not a disposable 'true' session.
     # Retry only before any payload has been sent.
     for attempt in range(8):
@@ -120,7 +146,9 @@ def run_native(action,request_id):
         if r is not None and r.returncode==0 and sock.exists():
             MASTER=common+['-O','exit',host]
             break
+        reason = 'PROCESS_TIMEOUT' if r is None else ssh_failure_class(r.stderr)
         print('NOX_MAINT_AUTH_ATTEMPT='+str(attempt+1)+'_RETRY',flush=True)
+        print('NOX_MAINT_SSH_FAILURE_CLASS='+reason,flush=True)
         time.sleep(5)
     else:raise RuntimeError('HOLD_SSH_AUTHENTICATION')
     check=subprocess.run(common+['-O','check',host],capture_output=True,text=True,timeout=8)
