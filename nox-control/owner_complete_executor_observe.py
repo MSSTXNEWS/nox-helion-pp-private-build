@@ -646,7 +646,7 @@ def project_execution_readback():
                     if evidence.get('state')=='INTEGRATED' and plan.get('review_origin')=='MODEL_CANDIDATE':
                         verified=proof_verified
                         if verified:
-                            row['model_export'],used=export_model_postimages(tid,plan,project,exported,80000-export_bytes)
+                            row['model_export'],used=export_model_postimages(tid,plan,project,exported,131072-export_bytes)
                             export_bytes+=used
                         else:row['model_export']={'complete':False,'state':'PROOF_UNVERIFIED'}
                         emit('PROJECT_MODEL_EXPORT_SUMMARY',{'task_id':tid,**row['model_export']})
