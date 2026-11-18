@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location(
-    "nox_owner_inspect_safety", Path(__file__).with_name("owner_native_inspect.py"))
+    "nox_owner_inspect_safety", Path(__file__).with_name("owner_native_legacy_inspect.py"))
 INSPECT = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(INSPECT)
 
