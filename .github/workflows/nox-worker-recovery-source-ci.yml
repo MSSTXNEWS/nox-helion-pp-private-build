@@ -1,0 +1,47 @@
+name: NOX focused worker recovery source CI
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_native_operator_scoped_bundle.py'
+      - 'nox-control/owner_subagent_fresh_install_entry.py'
+      - 'nox-control/owner_subagent_hash_recovery_entry.py'
+      - 'nox-control/owner_subagent_install_entry.py'
+      - 'nox-control/owner_subagent_dispatcher_fresh.py'
+      - 'nox-control/owner_autonomy_pool.py'
+      - 'nox-control/owner_subagent_processes.py'
+      - 'nox-control/owner_dispatcher_mentor.py'
+      - 'nox_runpod/teacher_mesh/v51/**'
+      - 'nox-control/test_owner_subagent_*.py'
+      - 'nox-control/test_owner_autonomy_pool.py'
+      - '.github/workflows/nox-owner-maintenance-command.yml'
+      - '.github/workflows/nox-worker-recovery-source-ci.yml'
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Compile the pinned source closure
+        run: |
+          python3 -m py_compile \
+            nox-control/owner_native_operator_scoped_bundle.py \
+            nox-control/owner_subagent_fresh_install_entry.py \
+            nox-control/owner_subagent_hash_recovery_entry.py \
+            nox-control/owner_subagent_install_entry.py \
+            nox-control/owner_subagent_dispatcher_fresh.py \
+            nox-control/owner_autonomy_pool.py \
+            nox-control/owner_subagent_processes.py \
+            nox-control/owner_dispatcher_mentor.py \
+            nox-control/owner_task_lifecycle.py \
+            nox-control/owner_senior_gateway.py \
+            nox_runpod/teacher_mesh/v51/__init__.py \
+            nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py \
+            nox-control/test_owner_subagent_source_pin_closure.py
+      - name: Verify pins and worker recovery behavior
+        run: |
+          python3 -m unittest discover -s nox-control -p 'test_owner_subagent_*.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_autonomy_pool.py' -v

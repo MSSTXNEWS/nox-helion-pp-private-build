@@ -26,7 +26,7 @@ jobs:
           python3 - <<'PY'
           import json,os,re
           e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
-          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|deploy|backup)',e['comment']['body'])
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|deploy|backup|subagent)',e['comment']['body'])
           assert m, 'Invalid bounded maintenance command'
           assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
           assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
@@ -56,13 +56,20 @@ jobs:
           import os,py_compile
           from pathlib import Path
           a=os.environ['NOX_ACTION']
-          assert a in ('audit','inspect','stage','repair','lifeline','deploy','backup')
-          py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
-          if a=='backup':
-              for name in ('owner_cp55_cipher','owner_cp55_scope','owner_cp55_native','owner_cp55_runner','auth_prefix_reuse'):
+          assert a in ('audit','inspect','stage','repair','lifeline','deploy','backup','subagent')
+          if a=='subagent':
+              for name in ('owner_subagent_fresh_install_entry','owner_subagent_hash_recovery_entry',
+                           'owner_subagent_install_entry','owner_subagent_dispatcher_fresh',
+                           'owner_autonomy_pool','owner_subagent_processes','owner_dispatcher_mentor'):
                   py_compile.compile('nox-control/'+name+'.py',doraise=True)
+              py_compile.compile('nox-control/owner_native_operator_scoped_bundle.py',doraise=True)
           else:
-              py_compile.compile('nox-control/owner_native_'+a+'.py',doraise=True)
+              py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
+              if a=='backup':
+                  for name in ('owner_cp55_cipher','owner_cp55_scope','owner_cp55_native','owner_cp55_runner','auth_prefix_reuse'):
+                      py_compile.compile('nox-control/'+name+'.py',doraise=True)
+              else:
+                  py_compile.compile('nox-control/owner_native_'+a+'.py',doraise=True)
           PY
       - name: Validate encrypted backup dependency before credentials
         if: steps.request.outputs.action == 'backup'
@@ -80,6 +87,8 @@ jobs:
         run: |
           if [ "$NOX_ACTION" = "backup" ]; then
             /usr/bin/python3 nox-control/owner_cp55_runner.py
+          elif [ "$NOX_ACTION" = "subagent" ]; then
+            python3 nox-control/owner_native_operator_scoped_bundle.py "$NOX_ACTION"
           else
             python3 nox-control/owner_native_operator.py "$NOX_ACTION"
           fi
