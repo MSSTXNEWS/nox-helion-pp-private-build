@@ -32,6 +32,10 @@ class GatewayTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.root_patch = patch.object(gateway, 'ROOT', self.root)
         self.root_patch.start()
+        # Existing protocol tests use mocked network replies, never real paid requests.
+        self.policy_patch = patch.object(gateway, 'PAID_PROVIDER_EGRESS_ALLOWED', True)
+        self.policy_patch.start()
+        self.addCleanup(self.policy_patch.stop)
         self.env_patch = patch.dict(os.environ, {}, clear=True)
         self.env_patch.start()
         self.addCleanup(self.env_patch.stop)
@@ -60,6 +64,19 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(result['models_verified'], 3)
         self.assertEqual(gateway.status()['state'], 'READY')
         return config
+
+    def test_no_paid_policy_blocks_status_consult_verify_and_direct_http(self):
+        self.configure()
+        self.credentials()
+        with patch.object(gateway, 'PAID_PROVIDER_EGRESS_ALLOWED', False), patch.object(gateway, 'request_contract') as request_contract:
+            self.assertEqual(gateway.status()['state'], 'NO_PAID_API_POLICY')
+            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'NO_PAID_API_POLICY')
+            self.assertEqual(gateway.verify_access()['state'], 'NO_PAID_API_POLICY')
+            result = asyncio.run(gateway._request('openai', 'private-key', '{}', gateway.DEFAULT_CONFIG))
+            self.assertEqual(result['state'], 'NO_PAID_API_POLICY')
+            request_contract.assert_not_called()
+        self.assertFalse((self.root / 'state/owner_senior/access.json').exists())
+        self.assertFalse((self.root / 'state/owner_senior/budget.json').exists())
 
     def test_absent_and_missing_credentials_are_read_only_and_never_call_provider(self):
         self.assertEqual(gateway.status()['state'], 'MISSING_SENIOR_GATEWAY')
