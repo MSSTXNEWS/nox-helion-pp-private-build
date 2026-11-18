@@ -138,11 +138,17 @@ def gguf_metadata(stream):
     if n_kv > MAX_KV:
         raise EvidenceUnavailable('GGUF_KV_BUDGET')
     found = {}
+    seen_keys = set()
     tokenizer_digest = hashlib.sha256()
     tokenizer_fields = 0
     for _ in range(n_kv):
         key_bytes = reader.string(True)
         key = key_bytes.decode('utf-8', 'strict')
+        # Different parsers may choose a different value for a repeated key.
+        # Identity evidence must not certify such an ambiguous header.
+        if key in seen_keys:
+            raise EvidenceUnavailable('GGUF_DUPLICATE_METADATA_KEY')
+        seen_keys.add(key)
         kind = reader.scalar('I')
         # Include *all* tokenizer.* metadata (vocab, merges, scores, types,
         # templates and extension keys), not just the short display fields.
