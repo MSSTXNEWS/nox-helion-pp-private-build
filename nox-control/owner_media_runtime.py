@@ -104,7 +104,11 @@ def update_job(job, **fields):
     fd = os.open(lockpath, os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        current = read_json(job_path(job['id'])) or job
+        # Never reconstruct a missing/corrupt durable job from stale worker RAM.
+        # The prior `or job` fallback silently replaced S03 evidence on errors.
+        current = read_json(job_path(job['id']))
+        if not isinstance(current, dict) or current.get('id') != job['id']:
+            raise MediaHold('HOLD_MEDIA_JOB_STATE_UNREADABLE')
         current.update(fields, updated_at=now())
         if job.get('cancel_requested'):
             current['cancel_requested'] = True
