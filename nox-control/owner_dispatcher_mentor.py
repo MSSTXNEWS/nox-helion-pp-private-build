@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import stat
 import sys
 import tempfile
 import threading
@@ -40,6 +41,21 @@ SHA = re.compile(r'^[0-9a-f]{64}$')
 SERVICE_STATES = {'RUNNING', 'STOPPED', 'STARTING', 'STOPPING', 'BACKOFF', 'EXITED', 'FATAL', 'UNKNOWN'}
 EVENT_LOG_MAX_BYTES = 4 * 1024 * 1024
 QUARANTINE_LOG_MAX_BYTES = 2 * 1024 * 1024
+
+# These limits are covered by the exact source pin. Entries are never evicted:
+# a full ledger holds new incidents instead of forgetting consultation keys.
+INCIDENT_LEDGER_POLICY = {
+    'schema': 'NOX_MENTOR_INCIDENT_LEDGER_POLICY_V1',
+    'max_records': 1024,
+    'max_bytes': 16 * 1024 * 1024,
+    'max_record_bytes': 64 * 1024,
+    'eviction': 'none',
+}
+INCIDENT_LEDGER_POLICY_SHA256 = hashlib.sha256(json.dumps(
+    INCIDENT_LEDGER_POLICY, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+INCIDENT_LEDGER_MAX_RECORDS = INCIDENT_LEDGER_POLICY['max_records']
+INCIDENT_LEDGER_MAX_BYTES = INCIDENT_LEDGER_POLICY['max_bytes']
+INCIDENT_LEDGER_MAX_RECORD_BYTES = INCIDENT_LEDGER_POLICY['max_record_bytes']
 
 
 def timestamp():
@@ -436,6 +452,70 @@ def validate_advice(advice, services):
     return dict(advice)
 
 
+def _incident_record_size(record):
+    try:
+        return len((json.dumps(record, sort_keys=True, ensure_ascii=False,
+                               allow_nan=False) + '\n').encode('utf-8'))
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _incident_ledger_usage():
+    directory = ROOT / 'memory/dispatcher_mentor/incidents'
+    flags = os.O_RDONLY | os.O_DIRECTORY | getattr(os, 'O_NOFOLLOW', 0)
+    try:
+        fd = os.open(directory, flags)
+    except FileNotFoundError:
+        return (0, 0)
+    except OSError:
+        return None
+    count = total_bytes = 0
+    try:
+        with os.scandir(fd) as entries:
+            for entry in entries:
+                if re.fullmatch(r'[0-9a-f]{64}\.json', entry.name) is None:
+                    return None
+                info = entry.stat(follow_symlinks=False)
+                if not stat.S_ISREG(info.st_mode):
+                    return None
+                count += 1
+                total_bytes += info.st_size
+                if (count > INCIDENT_LEDGER_MAX_RECORDS
+                        or total_bytes > INCIDENT_LEDGER_MAX_BYTES):
+                    return count, total_bytes
+        return count, total_bytes
+    except OSError:
+        return None
+    finally:
+        os.close(fd)
+
+
+def _incident_capacity_hold(usage, path, record, *, is_new):
+    if usage is None:
+        return 'HOLD_MENTOR_INCIDENT_LEDGER_UNTRUSTED'
+    count, total_bytes = usage
+    new_size = _incident_record_size(record)
+    if (new_size is None or new_size > INCIDENT_LEDGER_MAX_RECORD_BYTES
+            or count > INCIDENT_LEDGER_MAX_RECORDS
+            or total_bytes > INCIDENT_LEDGER_MAX_BYTES):
+        return 'HOLD_MENTOR_INCIDENT_LEDGER_FULL'
+    old_size = 0
+    if is_new:
+        if count >= INCIDENT_LEDGER_MAX_RECORDS:
+            return 'HOLD_MENTOR_INCIDENT_LEDGER_FULL'
+    else:
+        try:
+            info = path.lstat()
+            if not stat.S_ISREG(info.st_mode):
+                return 'HOLD_MENTOR_INCIDENT_LEDGER_UNTRUSTED'
+            old_size = info.st_size
+        except OSError:
+            return 'HOLD_MENTOR_INCIDENT_LEDGER_UNTRUSTED'
+    if total_bytes - old_size + new_size > INCIDENT_LEDGER_MAX_BYTES:
+        return 'HOLD_MENTOR_INCIDENT_LEDGER_FULL'
+    return None
+
+
 def _valid_incident_completion(value):
     if (not isinstance(value, dict) or set(value) != {'request_sha256', 'config_sha256', 'completed_at', 'advice'}
             or not SHA.fullmatch(str(value.get('request_sha256', '')))
@@ -472,7 +552,8 @@ def store_incident_advice(incident, request_sha256, config_sha256, advice):
         advice = validate_advice(advice, list(FIXED_SERVICE_HANDLERS.values()))
     except (RuntimeError, TypeError):
         return False
-    if not SHA.fullmatch(str(request_sha256)) or not SHA.fullmatch(str(config_sha256)):
+    if (not SHA.fullmatch(str(incident)) or not SHA.fullmatch(str(request_sha256))
+            or not SHA.fullmatch(str(config_sha256))):
         return False
     path = ROOT / 'memory/dispatcher_mentor/incidents' / (incident + '.json')
     lockpath = ROOT / 'memory/dispatcher_mentor/ledger.lock'
@@ -489,21 +570,24 @@ def store_incident_advice(incident, request_sha256, config_sha256, advice):
             return False
         old['completed'] = {'request_sha256': request_sha256, 'config_sha256': config_sha256,
                             'completed_at': time.time(), 'advice': advice}
+        hold = _incident_capacity_hold(_incident_ledger_usage(), path, old, is_new=False)
+        if hold:
+            return hold
         atomic_json(path, old)
         fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-        return True
+        return 'STORED'
 
 
 def reserve_incident(incident):
+    if not SHA.fullmatch(str(incident)):
+        return 'HOLD_MENTOR_INCIDENT_LEDGER_IDENTITY'
     path = ROOT / 'memory/dispatcher_mentor/incidents' / (incident + '.json')
     lockpath = ROOT / 'memory/dispatcher_mentor/ledger.lock'
     lockpath.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(lockpath, os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     with _THREAD_LOCK, os.fdopen(fd, 'r+') as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX)
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         old = read_json(path)
-        # A missing record starts a new budget; a corrupt, replaced or
-        # unreadable existing record MUST NOT reset a spent recovery budget.
         if old is None:
             if path.exists() or path.is_symlink():
                 return False
@@ -523,9 +607,11 @@ def reserve_incident(incident):
             if not _valid_incident_completion(old['completed']):
                 return False
             record['completed'] = old['completed']
+        hold = _incident_capacity_hold(_incident_ledger_usage(), path, record, is_new=old is None)
+        if hold:
+            return hold
         atomic_json(path, record)
-        return True
-
+        return 'RESERVED'
 
 def _apply_advice(task, handler, service, advice, result):
     if stop_active():
@@ -576,14 +662,16 @@ def on_failure(task, error):
             # status checks after transient transport faults. No shell,
             # service mutations, training, downloads, merge or model swaps.
             # The incident budget is durable and never reset by retrying.
-            if (handler in ('wait_q4', 'verify_q4', 'holdout_gate')
-                    and category in ('timeout', 'service_unavailable')
-                    and reserve_incident(incident)
-                    and not stop_active()):
+            eligible = (handler in ('wait_q4', 'verify_q4', 'holdout_gate')
+                        and category in ('timeout', 'service_unavailable'))
+            reservation = reserve_incident(incident) if eligible else False
+            if reservation == 'RESERVED' and not stop_active():
                 task['status'] = 'pending'
                 task['next_try'] = time.time() + 30
                 result['state'] = 'BOUNDED_READ_ONLY_RETRY_NO_SENIOR'
                 result['auto_retry'] = True
+            elif isinstance(reservation, str) and reservation.startswith('HOLD_'):
+                result['state'] = reservation
             else:
                 result['state'] = 'BLOCKED_SENIOR_NOT_CONFIGURED_OR_UNSAFE'
         else:
@@ -611,21 +699,28 @@ def on_failure(task, error):
                     if admission_hold:
                         result.update(state='BLOCKED_RESOURCE_ADMISSION',
                                       resource_admission_hold=admission_hold)
-                    elif not reserve_incident(incident):
-                        result['state'] = 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET'
                     else:
-                        advice = consult(config, context, idempotency_key=request_sha256, resource_admitted=True)
-                        append_bounded_json(ROOT / 'memory/dispatcher_mentor/quarantine.jsonl',
-                                            {'kind': 'unverified_senior_advice', 'incident': incident,
-                                             'advice': advice, 'accepted': False, 'at': timestamp()},
-                                            QUARANTINE_LOG_MAX_BYTES)
-                        if not store_incident_advice(incident, request_sha256,
-                                                     str(config.get('config_sha256') or ''), advice):
-                            result['state'] = 'BLOCKED_ADVICE_RESULT_NOT_DURABLE'
+                        reservation = reserve_incident(incident)
+                        if reservation != 'RESERVED':
+                            result['state'] = (reservation if isinstance(reservation, str)
+                                               and reservation.startswith('HOLD_')
+                                               else 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET')
                         else:
-                            result.update(senior_model=config['model'], senior_config_sha256=config['config_sha256'],
-                                          advice=advice)
-                            _apply_advice(task, handler, service, advice, result)
+                            advice = consult(config, context, idempotency_key=request_sha256, resource_admitted=True)
+                            append_bounded_json(ROOT / 'memory/dispatcher_mentor/quarantine.jsonl',
+                                                {'kind': 'unverified_senior_advice', 'incident': incident,
+                                                 'advice': advice, 'accepted': False, 'at': timestamp()},
+                                                QUARANTINE_LOG_MAX_BYTES)
+                            stored = store_incident_advice(incident, request_sha256,
+                                                           str(config.get('config_sha256') or ''), advice)
+                            if stored != 'STORED':
+                                result['state'] = (stored if isinstance(stored, str)
+                                                   and stored.startswith('HOLD_')
+                                                   else 'BLOCKED_ADVICE_RESULT_NOT_DURABLE')
+                            else:
+                                result.update(senior_model=config['model'], senior_config_sha256=config['config_sha256'],
+                                              advice=advice)
+                                _apply_advice(task, handler, service, advice, result)
                 except Exception as exc:
                     result['state'] = 'BLOCKED_SENIOR_OR_REPAIR_' + type(exc).__name__
                 finally:

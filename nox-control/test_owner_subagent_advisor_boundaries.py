@@ -100,5 +100,64 @@ class AdvisorBoundaryTests(unittest.TestCase):
             lifecycle.patch_dispatcher(duplicate, digest(duplicate.encode()).hexdigest(), pins)
 
 
+    def test_incident_ledger_caps_keep_existing_readback_and_hold_new_without_eviction(self):
+        import tempfile
+
+        incident = "a" * 64
+        request_sha = "c" * 64
+        config_sha = "d" * 64
+        advice = {"action": "escalate", "reason_code": "capacity", "service": None}
+        record = {
+            "incident": incident,
+            "attempts": 1,
+            "last_attempt": 123.0,
+            "completed": {
+                "request_sha256": request_sha,
+                "config_sha256": config_sha,
+                "completed_at": 123.0,
+                "advice": advice,
+            },
+        }
+        new_incident = "b" * 64
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            ledger = root / "memory/dispatcher_mentor/incidents"
+            path = ledger / (incident + ".json")
+            with patch.object(mentor, "ROOT", root):
+                mentor.atomic_json(path, record)
+                original = path.read_bytes()
+                self.assertEqual(
+                    mentor.completed_incident_advice(incident, request_sha, config_sha, []),
+                    advice,
+                )
+
+                with patch.object(mentor, "INCIDENT_LEDGER_MAX_RECORDS", 1):
+                    self.assertEqual(
+                        mentor.completed_incident_advice(incident, request_sha, config_sha, []),
+                        advice,
+                    )
+                    self.assertEqual(
+                        mentor.reserve_incident(new_incident),
+                        "HOLD_MENTOR_INCIDENT_LEDGER_FULL",
+                    )
+                self.assertEqual(path.read_bytes(), original)
+                self.assertFalse((ledger / (new_incident + ".json")).exists())
+
+                with patch.object(mentor, "INCIDENT_LEDGER_MAX_RECORDS", 2), patch.object(
+                    mentor, "INCIDENT_LEDGER_MAX_BYTES", len(original)
+                ):
+                    self.assertEqual(
+                        mentor.completed_incident_advice(incident, request_sha, config_sha, []),
+                        advice,
+                    )
+                    self.assertEqual(
+                        mentor.reserve_incident(new_incident),
+                        "HOLD_MENTOR_INCIDENT_LEDGER_FULL",
+                    )
+                self.assertEqual(path.read_bytes(), original)
+                self.assertFalse((ledger / (new_incident + ".json")).exists())
+
+
 if __name__ == "__main__":
     unittest.main()
