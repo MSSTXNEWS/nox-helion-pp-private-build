@@ -73,6 +73,37 @@ class GatewayTests(unittest.TestCase):
         with patch.object(g,'stop_active',REAL_STOP_ACTIVE):
             self.assertFalse(g.stop_active())
 
+    def test_owner_maintenance_flag_blocks_s03_index(self):
+        # Native owner preflight treats this flag as a hard maintenance STOP.
+        # A regular flag, dangling symlink, or unreadable flag must all
+        # forbid a background S03/BGE model call before any SQLite writes.
+        flag = self.root/'state'/'OWNER_MAINTENANCE.flag'
+        flag.parent.mkdir(parents=True, exist_ok=True)
+        real_lstat = g.os.lstat
+        for kind in ('regular', 'dangling_symlink', 'unreadable'):
+            with self.subTest(kind=kind):
+                if kind == 'regular':
+                    flag.write_text('OWNER_MAINTENANCE\\n', encoding='utf8')
+                elif kind == 'dangling_symlink':
+                    flag.symlink_to(self.root/'nonexistent-maintenance')
+                def protected_lstat(path, *args, **kwargs):
+                    if kind == 'unreadable' and Path(path) == flag:
+                        raise PermissionError('maintenance flag denied')
+                    return real_lstat(path, *args, **kwargs)
+                try:
+                    with patch.object(g, 'stop_active', REAL_STOP_ACTIVE), \\
+                         patch.object(g.os, 'lstat', side_effect=protected_lstat):
+                        self.assertTrue(g.stop_active())
+                        with self.assertRaisesRegex(g.MemoryHold, 'HOLD_S03_OWNER_STOP'):
+                            g.index_batch(self.db, identity_fn=lambda: 'a'*64,
+                                          embedder=lambda *args, **kwargs:
+                                          self.fail('embedding must not run'))
+                finally:
+                    if flag.is_symlink() or flag.exists():
+                        flag.unlink()
+        with patch.object(g, 'stop_active', REAL_STOP_ACTIVE):
+            self.assertFalse(g.stop_active())
+
     def test_unreadable_owner_stop_cannot_admit_index(self):
         # EACCES/ELOOP on an owner STOP alias must not look like owner consent.
         flag=self.root/'state/STOP.flag'

@@ -140,7 +140,8 @@ def stop_active():
     # lstat sees dangling symlinks as deliberate flags; never follow them.
     for path in (ROOT/'STOP',ROOT/'STOP.flag',ROOT/'stop.flag',ROOT/'.stop',
                  ROOT/'program/STOP',ROOT/'state/STOP',ROOT/'state/STOP.flag',
-                 ROOT/'state/MEMORY_STOP.flag',Path('/workspace/NOX_STOP')):
+                 ROOT/'state/MEMORY_STOP.flag',ROOT/'state/OWNER_MAINTENANCE.flag',
+                 Path('/workspace/NOX_STOP')):
         try:
             os.lstat(path)
         except FileNotFoundError:
