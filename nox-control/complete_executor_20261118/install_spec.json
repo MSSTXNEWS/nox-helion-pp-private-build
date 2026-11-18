@@ -52,7 +52,7 @@
     "ce_plans_9b80e2075b52602ac9e1.json": "9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee",
     "ce_blobs_f336c58fb5062aec6d5b.source": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81",
     "ce_contracts_b40696685ca2b7c848a2.json": "b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7",
-    "ce_manifests_a1a62c3b43d63e28f49e.json": "a1a62c3b43d63e28f49eb4a0794e5efc4898d303c2b6544a597ab2f5626b2618",
+    "ce_manifests_79a8efb2d344479471bd.json": "79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d",
     "ce_manifests_e040c40bd8ee3d29b0cc.json": "e040c40bd8ee3d29b0ccc2240322975da37cacff73b3752b32a34d5a2a9beacb"
   },
   "runtime_paths": {
@@ -81,7 +81,7 @@
     "plans/9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee.json": "ce_plans_9b80e2075b52602ac9e1.json",
     "blobs/f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81": "ce_blobs_f336c58fb5062aec6d5b.source",
     "contracts/b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7.json": "ce_contracts_b40696685ca2b7c848a2.json",
-    "manifests/a1a62c3b43d63e28f49eb4a0794e5efc4898d303c2b6544a597ab2f5626b2618.json": "ce_manifests_a1a62c3b43d63e28f49e.json",
+    "manifests/79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d.json": "ce_manifests_79a8efb2d344479471bd.json",
     "manifests/e040c40bd8ee3d29b0ccc2240322975da37cacff73b3752b32a34d5a2a9beacb.json": "ce_manifests_e040c40bd8ee3d29b0cc.json"
   },
   "expected_native": {
@@ -328,8 +328,8 @@
       }
     },
     "dependency_manifest": {
-      "path": "/root/nox/state/dispatcher/project_executor/package/manifests/a1a62c3b43d63e28f49eb4a0794e5efc4898d303c2b6544a597ab2f5626b2618.json",
-      "sha256": "a1a62c3b43d63e28f49eb4a0794e5efc4898d303c2b6544a597ab2f5626b2618"
+      "path": "/root/nox/state/dispatcher/project_executor/package/manifests/79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d.json",
+      "sha256": "79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d"
     }
   },
   "startup_observe_seconds": 45
