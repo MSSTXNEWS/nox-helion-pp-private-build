@@ -50,6 +50,17 @@ class SmokeSourceTests(TestCase):
         self.assertEqual(outcome["slot_port"],8098)
         self.assertEqual(outcome["slots"],1)
 
+    def test_sse_and_ndjson_frame_parsing(self):
+        self.assertEqual(m.parse_frame_line(b'data: {"type":"delta","text":"test"}\n'),
+                         {"type":"delta","text":"test"})
+        self.assertEqual(m.parse_frame_line(b'{"type":"done","status":"done"}\n'),
+                         {"type":"done","status":"done"})
+        self.assertEqual(m.parse_frame_line(b'data: [DONE]\n'), {"type":"sentinel"})
+        self.assertIsNone(m.parse_frame_line(b'event: message\n'))
+        self.assertIsNone(m.parse_frame_line(b'\n'))
+        with self.assertRaisesRegex(RuntimeError,"HOLD_LIVE_SMOKE_SSE_JSON"):
+            m.parse_frame_line(b'data: unfinished JSON\n')
+
     def test_qa_is_bounded_and_not_exposing_output(self):
         source=path.read_text()
         self.assertIn("result+=token",source)
