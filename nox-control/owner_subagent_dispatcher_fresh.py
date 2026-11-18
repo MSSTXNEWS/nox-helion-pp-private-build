@@ -634,10 +634,17 @@ class Native:
         """Rebuild one exact completed result from S03; never call the worker."""
         claim = task.get('owner_claim')
         params = task.get('params') or {}
-        required = {'task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id',
-                    'state', 'result_sha256', 's03_receipt_sha256'}
+        base_required = {'task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id', 'state'}
+        verified_required = base_required | {'result_sha256', 's03_receipt_sha256'}
+        intent_state = intent.get('state') if isinstance(intent, dict) else None
+        required = verified_required if intent_state == 'S03_VERIFIED' else base_required
+        hashes_present = (
+            intent_state != 'S03_VERIFIED'
+            or (isinstance(intent, dict)
+                and SHA.fullmatch(str(intent.get('result_sha256', ''))) is not None
+                and SHA.fullmatch(str(intent.get('s03_receipt_sha256', ''))) is not None))
         if (not isinstance(intent, dict) or set(intent) != required
-                or intent.get('state') != 'S03_VERIFIED'
+                or intent_state not in ('UNCERTAIN', 'S03_VERIFIED')
                 or task.get('handler') != HANDLER
                 or not isinstance(claim, dict)
                 or not CLAIM.fullmatch(str(claim.get('nonce', '')))
@@ -649,8 +656,7 @@ class Native:
                 or intent.get('role') not in ROLES
                 or intent.get('policy_sha') != self.policy.get('sha256')
                 or not re.fullmatch(r'nox-native-[a-f0-9]{24}', str(intent.get('job_id', '')))
-                or not SHA.fullmatch(str(intent.get('result_sha256', '')))
-                or not SHA.fullmatch(str(intent.get('s03_receipt_sha256', '')))):
+                or not hashes_present):
             return None
         prefix = ('NOX native job ' + intent['job_id'] +
                   ' NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED receipt_sha256 ')
@@ -679,8 +685,9 @@ class Native:
         receipt_sha = digest(encoded(receipt)) if isinstance(receipt, dict) else None
         if (not isinstance(receipt, dict) or memory_text(receipt) != text_value
                 or receipt_sha != row_receipt_sha
-                or receipt_sha != intent.get('result_sha256')
-                or receipt_sha != intent.get('s03_receipt_sha256')
+                or (intent_state == 'S03_VERIFIED'
+                    and (receipt_sha != intent.get('result_sha256')
+                         or receipt_sha != intent.get('s03_receipt_sha256')))
                 or receipt.get('schema') != RECEIPT
                 or receipt.get('phase') != 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED'
                 or receipt.get('task_id') != task.get('id')
@@ -743,7 +750,8 @@ class Native:
                 intent = task.get('native_submit_intent')
                 if (not isinstance(claim, dict) or type(claim.get('pid')) is not int
                         or claim.get('pid') == os.getpid()
-                        or not isinstance(intent, dict) or intent.get('state') != 'S03_VERIFIED'):
+                        or not isinstance(intent, dict)
+                        or intent.get('state') not in ('UNCERTAIN', 'S03_VERIFIED')):
                     continue
                 with self.ns['_qlock']:
                     durable = document(self.ns['STATE'], 16*1024*1024)
@@ -758,6 +766,36 @@ class Native:
                 verification = self.verify(task, evidence)
                 if not verification:
                     continue
+                if intent.get('state') == 'UNCERTAIN':
+                    # A crash may occur after the exact S03 write but before
+                    # the queue intent is promoted. Promote only the unique,
+                    # fully bound receipt already reconstructed above.
+                    promoted = {**intent, 'state': 'S03_VERIFIED',
+                                'result_sha256': evidence['receipt_sha256'],
+                                's03_receipt_sha256': evidence['s03']['receipt_sha256']}
+                    with self.ns['_qlock']:
+                        durable = document(self.ns['STATE'], 16*1024*1024)
+                        persisted = durable.get('tasks', {}).get(task_id, {})
+                        current = state.get('tasks', {}).get(task_id)
+                        if (not isinstance(current, dict) or current.get('status') != 'running'
+                                or current.get('owner_claim') != claim
+                                or current.get('native_submit_intent') != intent
+                                or persisted.get('status') != 'running'
+                                or persisted.get('owner_claim') != claim
+                                or persisted.get('native_submit_intent') != intent
+                                or (current.get('result') is not None
+                                    and current.get('result') != evidence)
+                                or (current.get('verification') is not None
+                                    and current.get('verification') != verification)):
+                            continue
+                        current['native_submit_intent'] = promoted
+                        self.ns['save_state'](state)
+                        readback = document(self.ns['STATE'], 16*1024*1024).get('tasks', {}).get(task_id, {})
+                        if (readback.get('status') != 'running'
+                                or readback.get('owner_claim') != claim
+                                or readback.get('native_submit_intent') != promoted):
+                            continue
+                    intent = promoted
                 if (not self.owner_allowed() or self.stop_active()
                         or chat_priority_active() or not self.writer_lease()):
                     continue
