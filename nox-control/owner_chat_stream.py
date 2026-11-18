@@ -50,6 +50,16 @@ def _executor_status_reply(user_text,path=None):
     unknown=('Сейчас не могу подтвердить число и занятость исполнителей: '
              'свежий корректный статус диспетчера недоступен. '
              'NOX — отдельный координатор и чат; неподтверждённые цифры не привожу.')
+    # Preserve the already-source-tested MODEL_UPDATE fence in this successor.
+    # Source: c4e628c4ce81b75cc055e53a6e18d5388f1065e6.
+    try:
+        from owner_chat_ui import owner_maintenance_gate
+        maintenance=owner_maintenance_gate()
+    except Exception:
+        return unknown
+    if maintenance!='ABSENT':
+        return ('Сейчас выполняется MODEL_UPDATE; статус исполнителей временно недоступен.'
+                if maintenance=='PRESENT' else unknown)
     target=Path(path) if path is not None else EXECUTOR_STATUS
     try:
         # O_NOFOLLOW rejects symlinks; O_NONBLOCK prevents a FIFO from
@@ -78,6 +88,7 @@ def _executor_status_reply(user_text,path=None):
                 if task is not None:return unknown
             else:return unknown
             ids.append(name)
+        if owner_maintenance_gate()!='ABSENT':return unknown
         observed=datetime.fromtimestamp(meta.st_mtime,timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         return (f'Сейчас у диспетчера настроено {n} исполнителей: занято {busy}, свободно {n-busy}. '
                 f'NOX — отдельный координатор и чат (1). Схема: {n} исполнителей + NOX.\n'
