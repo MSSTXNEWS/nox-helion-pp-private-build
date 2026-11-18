@@ -308,10 +308,12 @@ def plan_task(contract, snapshot, model_call, verify_candidate, stop_check,
              'acceptance_scope': contract['acceptance_scope']}
     # Small complete source contexts save model round-trips without truncating code.
     excerpts = {}
-    room = 4000
+    # Focus regions already supply the relevant source. Adding an unrelated
+    # complete test here consumed almost the entire native 4096-token context.
+    room = 0 if contract.get('focus_regions') else 4000
     for path in [*sorted(editable), *sorted(set(candidate) - editable)]:
         value = candidate[path].decode()
-        if len(value.encode()) <= room:
+        if room and len(value.encode()) <= room:
             excerpts[path] = value
             room -= len(value.encode())
     intro['initial_source_files'] = excerpts

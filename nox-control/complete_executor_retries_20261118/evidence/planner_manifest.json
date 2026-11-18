@@ -5,7 +5,7 @@
   "source_pins": {
     "owner_project_model_client.py": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
     "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
-    "owner_project_planner.py": "5f3221e2ab59ff2d8c787b38661844468c5207805441d3d8b929fbc36c2ef27c"
+    "owner_project_planner.py": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420"
   },
   "model": {
     "expected_model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
@@ -14,7 +14,7 @@
     "source_pins": {
       "owner_project_model_client.py": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
       "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
-      "owner_project_planner.py": "5f3221e2ab59ff2d8c787b38661844468c5207805441d3d8b929fbc36c2ef27c"
+      "owner_project_planner.py": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420"
     }
   },
   "tests": {

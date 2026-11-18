@@ -5,7 +5,7 @@
   "source_pins": {
     "owner_project_model_client.py": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
     "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
-    "owner_project_planner.py": "5f3221e2ab59ff2d8c787b38661844468c5207805441d3d8b929fbc36c2ef27c"
+    "owner_project_planner.py": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420"
   },
   "protected_context_unchanged": true,
   "protected_tests": 30,
@@ -30,5 +30,13 @@
     }
   ],
   "model_fix_implemented_by_owner": false,
-  "behavior": "Keep current original source excerpts and actual progress together across tokenizer-budget compaction; model must produce and test its own source changes."
+  "behavior": "Keep current original source excerpts and actual progress together across tokenizer-budget compaction; model must produce and test its own source changes.",
+  "optional_whole_files_suppressed_when_focus_present": true,
+  "native_first_prompt_failure": {
+    "request": "6966911133",
+    "input_tokens": 3097,
+    "budget": 3068,
+    "runtime_updated": false,
+    "cause": "Optional full test source included alongside focused source."
+  }
 }

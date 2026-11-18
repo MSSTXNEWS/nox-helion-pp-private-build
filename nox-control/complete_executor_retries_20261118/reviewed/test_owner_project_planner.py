@@ -125,7 +125,7 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(result['state'], 'PLAN_READY')
         intro = json.loads(seen[1][1]['content'])
         self.assertIn('return 2', intro['focused_source'][0]['content'])
-        self.assertNotIn('return 1', intro['initial_source_files']['app.py'])
+        self.assertEqual(intro['initial_source_files'], {})
         self.assertEqual(intro['progress']['changed_paths'], ['app.py'])
         compacted = copy.deepcopy(seen[1])
         while compact(compacted):
