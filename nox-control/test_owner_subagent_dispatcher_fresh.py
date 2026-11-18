@@ -321,13 +321,14 @@ class FreshSubmissionTests(unittest.TestCase):
         native.pool.active = {'runtime': task['id']}
         native.pool.poll.return_value = None
         native.pool.shutdown_and_drain = Mock(return_value=[event])
+        closed_pool = native.pool
         native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
         native.close_pool('WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
         self.assertEqual(native.completed[task['id']], event)
         self.assertEqual(native.interrupted[task['id']],
                          'WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
+        closed_pool.__exit__.assert_not_called()
         self.assertIsNone(native.pool)
-        native.pool.__exit__.assert_not_called()
 
     def test_new_pool_rechecks_after_process_creation(self):
         native, task = native_with_pool()
