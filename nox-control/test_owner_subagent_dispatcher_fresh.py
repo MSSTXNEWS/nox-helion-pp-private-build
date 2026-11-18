@@ -341,8 +341,7 @@ class FreshSubmissionTests(unittest.TestCase):
         row = native.state['tasks'][task['id']]
         row['owner_claim'] = claim
         intent = admitted_intent(task['id'], claim['nonce'], 'runtime',
-            'a' * 64, job_id, source_sha256=native.source,
-            lease_owner={'pid': 4242, 'ppid': 1, 'process_starttime': 4243})
+            'a' * 64, job_id, source_sha256=native.source)
         task['native_submit_intent'] = intent
         row['native_submit_intent'] = intent
         native.ns['save_state'](native.state)
@@ -440,7 +439,8 @@ class FreshSubmissionTests(unittest.TestCase):
         task.update(handler=binding.HANDLER, owner_claim=claim)
         task['params']['job_id'] = job_id
         intent = admitted_intent(task['id'], claim['nonce'], 'runtime',
-            'a' * 64, job_id, source_sha256=native.source)
+            'a' * 64, job_id, source_sha256=native.source,
+            lease_owner={'pid': 4242, 'ppid': 1, 'process_starttime': 4243})
         task['native_submit_intent'] = intent
         native.state['tasks'][task['id']] = task
         native.ns['save_state'](native.state)
