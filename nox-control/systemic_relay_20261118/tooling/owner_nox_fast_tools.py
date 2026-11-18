@@ -33,7 +33,7 @@ import tokenize
 
 ROOT = Path('/root/nox/projects/owner_executor/source_workspace')
 CONFIG = Path('/root/nox/config/owner_native_subagents.json')
-RELEASE = Path('/root/nox/tools/acceleration/releases/20261118-v1')
+RELEASE = Path('/root/nox/owner_tools_acceleration/releases/20261118-v1')
 VERSIONS = {'uv': '0.13.9', 'uvx': '0.13.9', 'ruff': '0.17.5', 'rg': '15.2.0'}
 MAX_SOURCE = 512 * 1024
 MAX_TOTAL = 16 * 1024 * 1024

@@ -32,7 +32,7 @@ import time
 import types
 
 ROOT = Path('/root/nox')
-TOOLS = ROOT / 'tools/acceleration'
+TOOLS = ROOT / 'owner_tools_acceleration'
 RELEASE = TOOLS / 'releases/20261118-v1'
 CURRENT = TOOLS / 'current.json'
 SHIM = TOOLS / 'bin/nox-fast'
@@ -75,7 +75,8 @@ FOREIGN_RELEASE_FILE HELPER_PIN INSTALLED_TOOL_SET INSTALL_LOCK NATIVE_OWNER_SCO
 NONFINITE_JSON OWNER_CONTEXT PERMANENT_ENTRYPOINT_PROOF PLATFORM PROJECT_SOURCE_SCOPE
 PUBLISHED_READBACK PYTHON_PATH READ_ONLY_TOOL_PROOF REGULAR_FILE RELEASE_FILESET
 RELEASE_FILE_COUNT RELEASE_PREIMAGE RENAME_NOREPLACE_UNAVAILABLE SHIM_PIN SHORT_WRITE
-SPEC_SCHEMA STAGED_BINARY_PIN STAGING_IDENTITY TOOL_BINARY_PROOF TOOL_PROFILE TOOL_SET
+SPEC_SCHEMA STAGED_BINARY_PIN STAGING_CLEANUP_IMPLEMENTATION STAGING_IDENTITY
+TOOL_BINARY_PROOF TOOL_PROFILE TOOL_SET
 UPSTREAM_PIN
 '''.split())
 SAFE_HELPER_HOLDS = frozenset('''
@@ -142,13 +143,13 @@ def directory(path, create=False):
     path = Path(path)
     require(path.is_absolute() and '..' not in path.parts, 'DIRECTORY_SCOPE')
     if create:
-        require(path == ROOT / 'tools' or path.is_relative_to(TOOLS), 'CREATE_SCOPE')
+        require(path.is_relative_to(TOOLS), 'CREATE_SCOPE')
     fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
     current = Path('/')
     try:
         for part in path.parts[1:]:
             current /= part
-            if create and (current == ROOT / 'tools' or current.is_relative_to(TOOLS)):
+            if create and current.is_relative_to(TOOLS):
                 try:
                     os.mkdir(part, 0o700, dir_fd=fd)
                 except FileExistsError:
@@ -156,7 +157,7 @@ def directory(path, create=False):
             child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=fd)
             os.close(fd)
             fd = child
-            if current == ROOT / 'tools' or current.is_relative_to(TOOLS):
+            if current == ROOT or current.is_relative_to(TOOLS):
                 info = os.fstat(fd)
                 require(info.st_uid == os.geteuid() and not info.st_mode & 0o022, 'DIRECTORY_OWNER')
         return fd
@@ -791,8 +792,14 @@ def run(bundle, spec, diagnostic=None):
     finally:
         if stage is not None:
             try:
-                require(identity(os.stat(stage,follow_symlinks=False))[:2] == stage_identity, 'STAGING_IDENTITY')
-                shutil.rmtree(stage.name,dir_fd=root_fd)
+                require(shutil.rmtree.avoids_symlink_attacks is True, 'STAGING_CLEANUP_IMPLEMENTATION')
+                info = os.stat(stage.name,dir_fd=root_fd,follow_symlinks=False)
+                require(stat.S_ISDIR(info.st_mode) and info.st_uid == os.geteuid()
+                        and not info.st_mode & 0o022 and identity(info)[:2] == stage_identity,
+                        'STAGING_IDENTITY')
+                # Python 3.10 has fd-safe rmtree but no public dir_fd keyword.
+                # The held parent descriptor anchors this owned staging name.
+                shutil.rmtree('/proc/self/fd/'+str(root_fd)+'/'+stage.name)
             except FileNotFoundError:
                 pass
             except BaseException:

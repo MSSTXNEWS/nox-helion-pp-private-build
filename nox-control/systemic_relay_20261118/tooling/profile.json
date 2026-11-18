@@ -2,37 +2,37 @@
   "schema": "NOX_ACCELERATION_PROFILE_V1",
   "profile_id": "20261118-v1",
   "state": "REVIEWED_INSTALL_PROFILE",
-  "release_root": "/root/nox/tools/acceleration/releases/20261118-v1",
-  "current_pointer": "/root/nox/tools/acceleration/current.json",
-  "permanent_cli": "/root/nox/tools/acceleration/bin/nox-fast",
+  "release_root": "/root/nox/owner_tools_acceleration/releases/20261118-v1",
+  "current_pointer": "/root/nox/owner_tools_acceleration/current.json",
+  "permanent_cli": "/root/nox/owner_tools_acceleration/bin/nox-fast",
   "installed_manifest_schema": "NOX_ACCELERATION_INSTALLED_V1",
   "upstream_lock": "toolchain.lock.json",
   "providers": {
     "uv": {
       "provider": "astral-sh/uv",
       "version": "0.13.9",
-      "path": "/root/nox/tools/acceleration/releases/20261118-v1/uv/0.13.9/uv",
+      "path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/uv/0.13.9/uv",
       "archive_sha256": "58ccf5f1792b8a5a88d01bc910ea131a8b3db4a319a17ad5fad75e0845a3e271",
       "installed_binary_sha256": null
     },
     "uvx": {
       "provider": "astral-sh/uv",
       "version": "0.13.9",
-      "path": "/root/nox/tools/acceleration/releases/20261118-v1/uv/0.13.9/uvx",
+      "path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/uv/0.13.9/uvx",
       "archive_sha256": "58ccf5f1792b8a5a88d01bc910ea131a8b3db4a319a17ad5fad75e0845a3e271",
       "installed_binary_sha256": null
     },
     "ruff": {
       "provider": "astral-sh/ruff",
       "version": "0.17.5",
-      "path": "/root/nox/tools/acceleration/releases/20261118-v1/ruff/0.17.5/ruff",
+      "path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/ruff/0.17.5/ruff",
       "archive_sha256": "dc94b7e225b8910fb6f55298ada32d00e356dbd195a5ffb647847f388cb54f84",
       "installed_binary_sha256": null
     },
     "rg": {
       "provider": "BurntSushi/ripgrep",
       "version": "15.2.0",
-      "path": "/root/nox/tools/acceleration/releases/20261118-v1/rg/15.2.0/rg",
+      "path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/rg/15.2.0/rg",
       "archive_sha256": "33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c",
       "installed_binary_sha256": null
     }
@@ -80,7 +80,7 @@
     "wall_seconds_max": 10,
     "source_snapshot_reused_for_tools": true,
     "partial_output_is_success": false,
-    "cache_root": "/root/nox/tools/acceleration/cache",
+    "cache_root": "/root/nox/owner_tools_acceleration/cache",
     "ruff_cache_enabled": false
   },
   "uv_policy": {
@@ -96,7 +96,7 @@
       "UV_PYTHON_DOWNLOADS": "never",
       "UV_OFFLINE": "true",
       "UV_NO_CONFIG": "true",
-      "UV_CACHE_DIR": "/root/nox/tools/acceleration/cache/uv"
+      "UV_CACHE_DIR": "/root/nox/owner_tools_acceleration/cache/uv"
     }
   },
   "validation_claims": {

@@ -2,7 +2,7 @@
   "schema": "NOX_ACCELERATION_TOOLCHAIN_LOCK_V1",
   "observed_at": "2026-11-18 18:22:24 UTC",
   "source_scope": "OFFICIAL_UPSTREAM_RELEASE_METADATA",
-  "release_root": "/root/nox/tools/acceleration/releases/20261118-v1",
+  "release_root": "/root/nox/owner_tools_acceleration/releases/20261118-v1",
   "tools": [
     {
       "name": "uv",
@@ -24,13 +24,13 @@
         {
           "archive_path": "uv-x86_64-unknown-linux-musl/uv",
           "relative_install_path": "uv/0.13.9/uv",
-          "installed_path": "/root/nox/tools/acceleration/releases/20261118-v1/uv/0.13.9/uv",
+          "installed_path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/uv/0.13.9/uv",
           "binary": "uv"
         },
         {
           "archive_path": "uv-x86_64-unknown-linux-musl/uvx",
           "relative_install_path": "uv/0.13.9/uvx",
-          "installed_path": "/root/nox/tools/acceleration/releases/20261118-v1/uv/0.13.9/uvx",
+          "installed_path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/uv/0.13.9/uvx",
           "binary": "uvx"
         }
       ],
@@ -64,7 +64,7 @@
         {
           "archive_path": "ruff-x86_64-unknown-linux-musl/ruff",
           "relative_install_path": "ruff/0.17.5/ruff",
-          "installed_path": "/root/nox/tools/acceleration/releases/20261118-v1/ruff/0.17.5/ruff",
+          "installed_path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/ruff/0.17.5/ruff",
           "binary": "ruff"
         }
       ],
@@ -98,7 +98,7 @@
         {
           "archive_path": "ripgrep-15.2.0-x86_64-unknown-linux-musl/rg",
           "relative_install_path": "rg/15.2.0/rg",
-          "installed_path": "/root/nox/tools/acceleration/releases/20261118-v1/rg/15.2.0/rg",
+          "installed_path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/rg/15.2.0/rg",
           "binary": "rg"
         }
       ],
