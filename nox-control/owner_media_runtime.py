@@ -798,7 +798,20 @@ def ingest_media_tasks(state):
         job_id = value.get('job_id') if isinstance(value, dict) else None
         if not isinstance(job_id, str) or not JOB_ID.fullmatch(job_id) or path.stem != job_id:
             continue
-        job = load_job(job_id)
+        try:
+            job = load_job(job_id)
+        except MediaHold as exc:
+            if str(exc) != 'MEDIA_JOB_NOT_FOUND':
+                raise
+            # An orphan inbox receipt cannot be executed, but must not
+            # starve unrelated queued jobs. Preserve it for reconciliation.
+            # Only a genuinely absent job file is skippable: corrupted or
+            # symlinked state must retain the existing fail-closed behavior.
+            try:
+                os.lstat(job_path(job_id))
+            except FileNotFoundError:
+                continue
+            raise
         task_id = 'owner.media.' + job_id
         if task_id in state.setdefault('tasks', {}) or job.get('state') != 'QUEUED':
             continue
