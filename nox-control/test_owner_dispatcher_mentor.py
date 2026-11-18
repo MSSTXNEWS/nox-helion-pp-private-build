@@ -119,6 +119,64 @@ class MentorTests(unittest.TestCase):
             self.assertTrue(mentor.reserve_incident(incident))
             self.assertFalse(mentor.reserve_incident(incident))
 
+    def test_failure_consultation_survives_restart_and_logs_are_bounded(self):
+        config = {'model': 'senior', 'config_sha256': 'a' * 64}
+        advice = {'action': 'retry_task', 'reason_code': 'timeout', 'service': None}
+        class Response:
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self, size):
+                return json.dumps({'choices': [{'message': {'content': json.dumps(advice)}}]}).encode()
+        class Opener:
+            def open(self, request, timeout):
+                self.request = request
+                return Response()
+        opener = Opener()
+        with patch.object(mentor.urllib.request, 'build_opener', return_value=opener):
+            mentor.consult({'model': 'senior', 'endpoint': 'https://example.invalid/chat/completions'},
+                           {'allowed_services': []}, idempotency_key='b' * 64)
+        self.assertEqual(opener.request.get_header('Idempotency-key'), 'b' * 64)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            task = {'id': 'durable-advisor', 'handler': 'verify_q4',
+                    'retries': 1, 'max_retries': 3}
+            with patch.object(mentor, 'ROOT', root), patch.object(mentor, 'stop_active', return_value=False), \
+                    patch.object(mentor, 'discover_senior', return_value=config), \
+                    patch.object(mentor, 'EVENT_LOG_MAX_BYTES', 1024), \
+                    patch.object(mentor, 'QUARANTINE_LOG_MAX_BYTES', 1024), \
+                    patch.object(mentor, 'consult', return_value=advice) as first_consult:
+                first = mentor.on_failure(task, 'timeout')
+                self.assertEqual(first['state'], 'READ_ONLY_RETRY_SCHEDULED')
+                first_consult.assert_called_once()
+            restarted = module('owner_dispatcher_mentor')
+            repeated_task = {'id': 'durable-advisor', 'handler': 'verify_q4',
+                             'retries': 1, 'max_retries': 3}
+            with patch.object(restarted, 'ROOT', root), patch.object(restarted, 'stop_active', return_value=False), \
+                    patch.object(restarted, 'discover_senior', return_value=config), \
+                    patch.object(restarted, 'EVENT_LOG_MAX_BYTES', 1024), \
+                    patch.object(restarted, 'QUARANTINE_LOG_MAX_BYTES', 1024), \
+                    patch.object(restarted, 'consult') as repeated_consult:
+                repeated = restarted.on_failure(repeated_task, 'timeout')
+                self.assertEqual(repeated['state'], 'BLOCKED_DUPLICATE_CONSULTATION')
+                self.assertTrue(repeated['consultation_reused'])
+                repeated_consult.assert_not_called()
+                incident = repeated['incident']
+                stored = json.loads((root / 'memory/dispatcher_mentor/incidents' / (incident + '.json')).read_text())
+                self.assertEqual(stored['completed']['advice'], advice)
+                for index in range(80):
+                    restarted.journal('bounded_probe', index=index, payload='x' * 40)
+                    restarted.append_bounded_json(root / 'memory/dispatcher_mentor/quarantine.jsonl',
+                                                  {'kind': 'bounded_probe', 'index': index,
+                                                   'payload': 'x' * 40}, 1024)
+            events = root / 'memory/dispatcher_mentor/events.jsonl'
+            quarantine = root / 'memory/dispatcher_mentor/quarantine.jsonl'
+            self.assertLessEqual(events.stat().st_size, 1024)
+            self.assertLessEqual(quarantine.stat().st_size, 1024)
+            self.assertIn('"index": 79', events.read_text())
+            self.assertIn('"index": 79', quarantine.read_text())
+
     def test_no_senior_config_means_explicit_block_and_no_fake_consult(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'consult') as call:
             task = {'id': 'fixture', 'handler': 'verify_q4', 'retries': 1, 'max_retries': 3}
