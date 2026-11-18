@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -82,6 +83,51 @@ class LeafShapeReadOnlyTests(unittest.TestCase):
         self.assertEqual(rows[0]["leaf"]["blockers"], ["UNKNOWN_BLOCKERS_SCHEMA"])
         self.assertEqual(rows[1]["leaf"]["blockers"], ["HOLD_RESOURCE_PRESSURE"])
 
+
+
+    def test_nonfinite_receipt_fails_closed_without_hiding_following_task(self):
+        """NaN/Infinity in untrusted JSON must not truncate queue readback."""
+        valid_leaf = {"operation": "read_only", "blockers": ["HOLD_RESOURCE_PRESSURE"]}
+        for bad_value in (float("nan"), float("inf"), -float("inf")):
+            with self.subTest(nonfinite=str(bad_value)):
+                bad = {"id": "bad", "handler": "owner_native_typed_leaf", "status": "DONE",
+                       "result": {"receipt": {"metric": bad_value, "worker_result": {
+                           "leaf_evidence": valid_leaf}}}}
+                good = {"id": "good", "handler": "owner_native_typed_leaf", "status": "DONE",
+                        "result": {"receipt": {"job_id": "good-job", "worker_result": {
+                            "leaf_evidence": valid_leaf}}}}
+                path = self.root / "state" / "dispatcher" / "state.json"
+                path.write_text(json.dumps({"tasks": {"bad": bad, "good": good}},
+                                           allow_nan=True), encoding="utf-8")
+                out = io.StringIO()
+                with patch.object(INSPECT, "s03_receipt_check", return_value={"verified": False}):
+                    with contextlib.redirect_stdout(out):
+                        INSPECT.leaf_queue_summary()
+                rows = [json.loads(line.split("=", 1)[1]) for line in out.getvalue().splitlines()
+                        if line.startswith("NOX_MAINT_SCOPE_POST_TASK=")]
+                self.assertEqual(len(rows), 2)
+                self.assertEqual(rows[0]["receipt_state"], "UNKNOWN_RECEIPT_SCHEMA")
+                self.assertIs(rows[0]["receipt_schema_valid"], False)
+                self.assertIs(rows[1]["receipt_schema_valid"], True)
+                self.assertEqual(rows[1]["leaf"]["blockers"], ["HOLD_RESOURCE_PRESSURE"])
+
+    def test_invalid_module_pins_are_unknown_not_inspector_crash(self):
+        """Wrong module_pins type emits UNKNOWN instead of aborting snapshot."""
+        for malformed in (None, [], "unexpected", 123):
+            with self.subTest(shape=type(malformed).__name__):
+                metadata = SimpleNamespace(st_uid=0, st_mode=0o100644)
+                records = []
+                with patch.object(INSPECT, "obj",
+                                  return_value=({"module_pins": malformed}, b"{}", metadata)):
+                    with patch.object(INSPECT, "emit",
+                                      side_effect=lambda name, value: records.append((name, value))):
+                        INSPECT.configuration()
+                self.assertEqual(len(records), 1)
+                name, row = records[0]
+                self.assertEqual(name, "CONFIG")
+                self.assertIs(row["module_pins_schema_valid"], False)
+                self.assertEqual(row["status"], "UNKNOWN_MODULE_PINS_SCHEMA")
+                self.assertEqual(row["module_pins"], {})
 
 class WorkerStatusShapeTests(unittest.TestCase):
     """A malformed native worker snapshot must not abort read-only inspection."""
