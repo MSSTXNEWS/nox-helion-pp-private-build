@@ -138,6 +138,25 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('_agent_final',payload)
         self.assertTrue(chunks.closed)
 
+    async def test_large_metadata_bytes_cannot_starve_chat_or_certify_s03(self):
+        # Six comments are under the line-count and per-line caps, but their
+        # aggregate 360k-byte record must never consume unbounded chat work.
+        metadata=(b': '+b'x'*60000+b'\n')*6+b'\n'
+        chunks=Chunks([frame('Partial'),metadata,frame(finish='stop'),
+                       b'data: [DONE]\n\n'])
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertIn('HOLD_MODEL_SSE_FRAME',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertEqual(len(requests),1)
+        self.assertTrue(chunks.closed)
+
     async def test_untrusted_sse_event_or_id_metadata_fails_closed(self):
         cases=((b'event: error\n\n','HOLD_MODEL_SSE_EVENT'),
                (b'id: '+b'x'*257+b'\n\n','HOLD_MODEL_SSE_FRAME'))
