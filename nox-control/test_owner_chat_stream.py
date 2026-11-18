@@ -268,6 +268,57 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(first.closed)
         self.assertTrue(second.closed)
 
+    async def test_direct_admin_multiple_actions_holds_before_pool_or_dispatch(self):
+        native=self.native()
+        calls={'prepare':0,'deterministic':0,'heuristic':0,'dispatch':0}
+        native['_POOL']=True
+        native['_direct_admin_calls']=lambda text:[
+            {'name':'run_admin','arguments':{'action':'pause'}},
+            {'name':'run_admin','arguments':{'action':'resume'}},
+        ]
+        def prepare(req,cache=False):
+            calls['prepare']+=1
+            return req
+        def deterministic(text):
+            calls['deterministic']+=1
+            return None
+        def heuristic(text):
+            calls['heuristic']+=1
+            return []
+        def dispatch(name,args):
+            calls['dispatch']+=1
+            self.dispatched.append((name,args))
+            return {'ok':True,'text':'unexpected dispatch'}
+        native['prepare_payload']=prepare
+        native['try_deterministic']=deterministic
+        native['heuristic_tools']=heuristic
+        native['dispatch']=dispatch
+        payload={'messages':[
+            {'role':'system','content':'Keep all input intact.'},
+            {'role':'user','content':'Пауза и возобновление: проверь оба действия.'},
+            {'role':'assistant','content':'История 🧠','tool_calls':[
+                {'id':'prior_call','type':'function','function':{
+                    'name':'calculate','arguments':'{"tail":"полный"}'}}]},
+        ]}
+        original_messages=json.loads(json.dumps(payload['messages'],ensure_ascii=False))
+        evidence_dispatch=patch.object(
+            stream._current,'dispatch',
+            side_effect=AssertionError('no evidence dispatch'))
+        model_client=patch.object(
+            stream.httpx,'AsyncClient',
+            side_effect=AssertionError('no model request'))
+        with evidence_dispatch as evidence, model_client as model:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Пауза и возобновление',True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertIn('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS',wire)
+        self.assertEqual(calls,{'prepare':0,'deterministic':0,'heuristic':0,'dispatch':0})
+        evidence.assert_not_called()
+        model.assert_not_called()
+        self.assertEqual(self.dispatched,[])
+        self.assertEqual(payload,{'messages':original_messages})
+        self.assertNotIn('_agent_final',payload)
+
     async def test_confirmation_stops_before_model_and_preserves_real_marker(self):
         native=self.native([{'name':'run_admin','arguments':{'action':'pause'}}],
                            {'ok':False,'needs_confirmation':True,'text':'Confirm pause'})

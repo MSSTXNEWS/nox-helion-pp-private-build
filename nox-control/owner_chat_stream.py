@@ -267,6 +267,12 @@ async def _run(native,url,payload,user_text):
     if executor_reply is not None:
         yield 'token',executor_reply
         return
+    # Refuse ambiguous direct-admin turns before payload preparation, model
+    # requests, deterministic routing, or any tool dispatch can begin.
+    calls=native['_direct_admin_calls'](user_text or '') or []
+    if len(calls)>1:
+        raise StreamFailure('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS')
+    direct=bool(calls)
     turn={}
     intent=_current.explicit_media_request(user_text)
     status_id=_current.media_status_query(user_text)
@@ -301,9 +307,6 @@ async def _run(native,url,payload,user_text):
     steps=0
     # Resolve existing deterministic routes before any model text is shown.
     # Never reinterpret already-streamed prose as an executable command.
-    calls=native['_direct_admin_calls'](user_text or '') or []
-    direct=bool(calls)
-    if direct:calls=calls[:1]
     if not calls and native.get('_POOL'):
         deterministic=native['try_deterministic'](user_text or '')
         if deterministic and deterministic.get('name')=='clock' and deterministic.get('text'):
