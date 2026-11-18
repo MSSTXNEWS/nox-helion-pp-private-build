@@ -134,24 +134,73 @@ class PoolLifecycleTests(unittest.TestCase):
         self.assertTrue(all(row['native_heartbeat_verified'] is True for row in rows))
         self.assertTrue(all(0 <= row['heartbeat_age_seconds'] <= 600 for row in rows))
 
-    def test_idle_failed_worker_restarts_pool_and_preserves_parent_results(self):
+    def test_idle_failed_worker_replaces_only_dead_role_after_result_reconciliation(self):
         native, children = self.native()
-        children['runtime'].alive = False
-        native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
-        new = Mock()
-        new.processes = {role: self.Child(200+i) for i, role in enumerate(binding.ROLES)}
-        new.active = {}
-        new.heartbeats = {role: time.time() for role in binding.ROLES}
-        new.poll.return_value = None
-        identities = {child.pid: {'pid': child.pid, 'ppid': 999, 'process_starttime': child.pid+1}
-                      for child in new.processes.values()}
-        with patch.object(binding, 'process_identity', side_effect=lambda pid: identities.get(pid.pid if hasattr(pid, 'pid') else pid)), \
+        pool = native.pool
+        old_runtime, old_memory, old_weights = (
+            children['runtime'], children['memory'], children['weights'])
+        old_runtime.alive = False
+        replacement = self.Child(999)
+        identities = {
+            child.pid: {'pid': child.pid, 'ppid': 999,
+                        'process_starttime': child.pid + 1}
+            for child in (*children.values(), replacement)
+        }
+        def replace_dead_only():
+            children['runtime'] = replacement
+            pool.heartbeats['runtime'] = time.time()
+        pool._replace_idle_dead_pool.side_effect = replace_dead_only
+        native.close_pool = Mock(side_effect=AssertionError('No full pool restart'))
+        with patch.object(binding, 'process_identity',
+                          side_effect=lambda pid: identities.get(pid)), \
              patch.object(binding.os, 'getpid', return_value=999), \
              patch.object(binding, 'Subagents') as ctor:
-            ctor.return_value.__enter__.return_value = new
+            self.assertFalse(native.ensure_processes(3))
+            pool._replace_idle_dead_pool.assert_not_called()
+            self.assertIn('kept', native.completed)
+            native.completed.clear()  # Simulated owner readback/settlement.
             self.assertTrue(native.ensure_processes(3))
-        ctor.assert_called_once_with(list(binding.ROLES), timeout=60, worker_prepare=binding.worker_input)
-        self.assertEqual(native.completed['kept']['id'], 'kept')
+            ctor.assert_not_called()
+        pool._replace_idle_dead_pool.assert_called_once_with()
+        native.close_pool.assert_not_called()
+        self.assertIs(children['runtime'], replacement)
+        self.assertIs(children['memory'], old_memory)
+        self.assertIs(children['weights'], old_weights)
+        self.assertFalse(old_runtime.is_alive())
+
+    def test_stale_heartbeat_without_proven_death_holds_existing_peers(self):
+        native, children = self.native()
+        native.completed.clear()
+        native.pool.heartbeats['runtime'] = time.time() - 601
+        identities = {
+            child.pid: {'pid': child.pid, 'ppid': 999,
+                        'process_starttime': child.pid + 1}
+            for child in children.values()
+        }
+        with patch.object(binding, 'process_identity',
+                          side_effect=lambda pid: identities.get(pid)), \
+             patch.object(binding.os, 'getpid', return_value=999), \
+             patch.object(binding, 'Subagents') as ctor:
+            self.assertFalse(native.ensure_processes(3))
+            ctor.assert_not_called()
+        native.pool._replace_idle_dead_pool.assert_not_called()
+
+    def test_replacement_hold_keeps_live_pool_intact(self):
+        native, children = self.native()
+        native.completed.clear()
+        children['runtime'].alive = False
+        healthy = (children['memory'], children['weights'])
+        native.pool._replace_idle_dead_pool.side_effect = GateError(
+            'HOLD_SUBAGENT_POOL_NOT_READY')
+        native.close_pool = Mock(side_effect=AssertionError('No destructive fallback'))
+        with patch.object(binding, 'process_identity', return_value=None), \
+             patch.object(binding.os, 'getpid', return_value=999), \
+             patch.object(binding, 'Subagents') as ctor:
+            self.assertFalse(native.ensure_processes(3))
+            ctor.assert_not_called()
+        self.assertIs(native.pool.processes['memory'], healthy[0])
+        self.assertIs(native.pool.processes['weights'], healthy[1])
+        native.close_pool.assert_not_called()
 
     def test_active_worker_failure_holds_without_pool_replacement(self):
         native, children = self.native(active={'runtime': 'job-1'})
