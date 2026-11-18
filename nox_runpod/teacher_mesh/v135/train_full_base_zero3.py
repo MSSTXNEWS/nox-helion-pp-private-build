@@ -151,6 +151,65 @@ def _stop_callback(TrainerCallback,stop_file:Path):
     return _NOXStopCallback()
 
 
+def _claim_resume_submit(output:Path,resumed:dict,native:dict)->str:
+    """Persist an exclusive claim before training from one verified checkpoint.
+
+    A retried queue item cannot apply optimizer updates twice from the same
+    checkpoint. A partial or stale claim intentionally blocks automatic retry;
+    only a newly verified checkpoint can be resumed.
+    """
+    if output.is_symlink() or not output.is_dir():
+        raise RuntimeError('HOLD_RESUME_SUBMIT_OUTPUT')
+    if (not isinstance(resumed,dict) or
+        resumed.get('state')!='VERIFIED_SIGNED_FULL_OPTIMIZER_RESUME'):
+        raise RuntimeError('HOLD_RESUME_SUBMIT_UNVERIFIED')
+    checkpoint_value=resumed.get('checkpoint')
+    checkpoint_sha=resumed.get('checkpoint_sha256')
+    step=resumed.get('start_step')
+    if (not isinstance(checkpoint_value,str) or type(step) is not int or step<1
+            or not _SHA.fullmatch(str(checkpoint_sha))):
+        raise RuntimeError('HOLD_RESUME_SUBMIT_IDENTITY')
+    checkpoint=Path(checkpoint_value)
+    if (checkpoint.is_symlink() or checkpoint.parent!=output
+            or checkpoint.name!=f'checkpoint-{step}'):
+        raise RuntimeError('HOLD_RESUME_SUBMIT_SCOPE')
+    for key in ('student_base_sha256','train_dataset_sha256','holdout_dataset_sha256'):
+        if not _SHA.fullmatch(str(native.get(key))):
+            raise RuntimeError('HOLD_RESUME_SUBMIT_NATIVE_IDENTITY')
+    claim_path=output/f'NOX_V135_RESUME_CLAIM_{checkpoint_sha}.json'
+    payload={
+        'schema':'NOX_V135_RESUME_SUBMIT_CLAIM_V1',
+        'state':'CLAIMED_ONCE_BEFORE_TRAIN',
+        'checkpoint_path':str(checkpoint),
+        'checkpoint_sha256':checkpoint_sha,
+        'start_step':step,
+        'student_base_sha256':native['student_base_sha256'],
+        'train_dataset_sha256':native['train_dataset_sha256'],
+        'holdout_dataset_sha256':native['holdout_dataset_sha256'],
+        'claimed_at_unix':int(time.time()),
+    }
+    flags=os.O_WRONLY|os.O_CREAT|os.O_EXCL
+    flags|=getattr(os,'O_CLOEXEC',0)|getattr(os,'O_NOFOLLOW',0)
+    try:
+        fd=os.open(str(claim_path),flags,0o600)
+    except FileExistsError as ex:
+        raise RuntimeError('HOLD_DUPLICATE_RESUME_SUBMIT') from ex
+    try:
+        with os.fdopen(fd,'w',encoding='utf8') as file:
+            json.dump(payload,file,sort_keys=True,separators=(',',':'))
+            file.write('\n')
+            file.flush()
+            os.fsync(file.fileno())
+        dir_fd=os.open(str(output),os.O_RDONLY|getattr(os,'O_DIRECTORY',0))
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except Exception as ex:
+        # Keep any uncertain/partial claim: fail closed on automatic resubmit.
+        raise RuntimeError('HOLD_RESUME_SUBMIT_CLAIM_UNCERTAIN') from ex
+    return _file_sha(claim_path)
+
 def make_dataset(file:Path,tokenizer,max_len:int):
     from torch.utils.data import Dataset
     items=[]
@@ -314,6 +373,9 @@ def run(args)->dict:
     trainer.add_callback(_HoldoutBaselineCallback())
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_BEFORE_TRAIN')
+    resume_submit_claim_sha256=None
+    if resumed:
+        resume_submit_claim_sha256=_claim_resume_submit(out,resumed,native)
     result=trainer.train(resume_from_checkpoint=resumed['checkpoint'] if resumed else None)
     if not before:
         raise RuntimeError('HOLD_HOLDOUT_BASELINE_NOT_CAPTURED')
@@ -349,6 +411,8 @@ def run(args)->dict:
         'resumed_from_checkpoint':resumed['checkpoint'] if resumed else None,
         'resume_original_step':resumed['start_step'] if resumed else None,
         'resume_tree_sha256':resumed['checkpoint_sha256'] if resumed else None,
+        'resume_submit_claim_sha256':resume_submit_claim_sha256,
+        'resume_submit_policy':'ONE_CLAIM_PER_CHECKPOINT_TREE',
         'all_base_requires_grad':True,'uses_adapters':False,
         'deepspeed_zero3_cpu_offload':True,'gpu0_chat_untouched':True,
         'p0_existing_runtime_compat':p0_runtime,
