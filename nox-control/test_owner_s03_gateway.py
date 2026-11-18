@@ -91,7 +91,7 @@ class GatewayTests(unittest.TestCase):
                         raise PermissionError('maintenance flag denied')
                     return real_lstat(path, *args, **kwargs)
                 try:
-                    with patch.object(g, 'stop_active', REAL_STOP_ACTIVE), \\
+                    with patch.object(g, 'stop_active', REAL_STOP_ACTIVE), \
                          patch.object(g.os, 'lstat', side_effect=protected_lstat):
                         self.assertTrue(g.stop_active())
                         with self.assertRaisesRegex(g.MemoryHold, 'HOLD_S03_OWNER_STOP'):
