@@ -314,6 +314,17 @@ def worker_status_sample():
             row['project'][name]={k:v for k,v in (project.get(name) or {}).items() if identifier(k) and type(v) is int}
     admission=native.get('last_admission')
     row['admission']=scalar_projection(admission,('state','jobs_started','process_count','process_target')) if isinstance(admission,dict) else None
+    resource=native.get('resource_admission')
+    if isinstance(resource,dict):
+        row['resource_admission']=scalar_projection(resource,('native_verified','instance_id',
+            'stop_active','source_sha_verified','owner_scope_verified','cgroup_memory_ratio',
+            'raw_cgroup_memory_ratio','effective_cgroup_memory_ratio','projected_cgroup_memory_ratio',
+            'cpu_pressure','admission_class'))
+        for key in ('bounded_cpu_budget','bounded_cpu_decision'):
+            value=resource.get(key)
+            if isinstance(value,dict):row['resource_admission'][key]=scalar_projection(value,tuple(value))
+    row['pool_lifecycle']=scalar_projection(native.get('pool_lifecycle') or {},
+        ('last_started_at','last_closed_at','last_close_reason'))
     emit('POST_WORKERS',row)
 
 
@@ -399,22 +410,84 @@ def old_claim_comparison():
         emit('INSTALL_RECEIPT',{'state':'UNAVAILABLE','error':type(exc).__name__})
 
 
+def project_receipt_source(task,receipt,config,current_source):
+    source=receipt.get('source_sha256')
+    current_pin=(config.get('module_pins') or {}).get('owner_subagent_dispatcher.py')
+    historical=config.get('historical_project_source_sha256') or []
+    matched=(task.get('params') or {}).get('source_sha256')==source
+    scope=('CURRENT' if current_source==current_pin==source else
+           'HISTORICAL_VERIFY_ONLY' if source in historical and matched
+                and task.get('status') in ('done','blocked','failed','cancelled') else 'UNREVIEWED_OR_CHANGED')
+    return {'source_sha256':source,'current_callback_sha256':current_source,
+            'matches_config_callback_pin':current_source==current_pin,
+            'matches_durable_task_source':matched,'scope':scope,
+            'source_authorized':scope in ('CURRENT','HISTORICAL_VERIFY_ONLY')}
+
+
+def export_model_postimages(tid,plan,project,exported,remaining):
+    import base64
+    files=plan.get('files')
+    if not isinstance(files,list) or not 1<=len(files)<=32:
+        return {'complete':False,'state':'PLAN_FILES_INVALID','files':[]},0
+    root_spec=project['roots'][plan['root_id']];root=Path(root_spec['path'])
+    results=[];used=0
+    for changed in files:
+        row={'path':changed.get('path'),'sha256':changed.get('after_sha256')}
+        try:
+            path=changed['path'];p=Path(path);expected=changed['after_sha256']
+            if (not isinstance(path,str) or p.is_absolute() or str(p)!=path
+                    or any(x in ('','..','.') or x.startswith('.') for x in p.parts)
+                    or path not in root_spec.get('allowed_paths',[])
+                    or not isinstance(expected,str) or not re.fullmatch(r'[a-f0-9]{64}',expected)):
+                row['state']='UNAPPROVED_PATH_OR_HASH'
+            else:
+                source,_=safe_read(root/path,100000);actual=hashlib.sha256(source).hexdigest()
+                row.update(bytes=len(source),actual_sha256=actual)
+                if actual!=expected:row['state']='POSTIMAGE_CHANGED'
+                elif (path,actual) in exported:row['state']='ALREADY_EXPORTED'
+                elif used+len(source)>remaining:row['state']='EXPORT_BYTE_LIMIT'
+                elif redact_source(source.decode('utf-8'))!=source.decode('utf-8'):
+                    row['state']='REDACTION_REQUIRED'
+                else:
+                    emit('PROJECT_MODEL_POSTIMAGE',{'task_id':tid,'path':path,'bytes':len(source),
+                        'sha256':actual,'before_sha256':changed.get('before_sha256'),
+                        'base64':base64.b64encode(source).decode()})
+                    used+=len(source);exported.add((path,actual));row['state']='EXPORTED'
+        except (OSError,ValueError,KeyError,TypeError) as exc:
+            row.update(state='UNAVAILABLE',error=type(exc).__name__)
+        results.append(row)
+    complete=all(row['state'] in ('EXPORTED','ALREADY_EXPORTED') for row in results)
+    return {'complete':complete,'state':'COMPLETE' if complete else 'INCOMPLETE',
+            'expected_files':len(files),'exported_bytes':used,'files':results},used
+
+
 def project_execution_readback():
     import base64
     config, config_raw, _ = obj(ROOT/'config/owner_native_subagents.json')
     emit('PROJECT_EXECUTOR_CONFIG', {'sha256':hashlib.sha256(config_raw).hexdigest(),
         'mode':config.get('execution_mode'),'worker_cap':config.get('global_worker_cap'),
         'source_pins':config.get('project_executor',{}).get('source_pins'),
-        'model_pins':config.get('project_executor',{}).get('model',{}).get('source_pins')})
+        'model_pins':config.get('project_executor',{}).get('model',{}).get('source_pins'),
+        'historical_project_source_sha256':config.get('historical_project_source_sha256',[]),
+        'historical_leaf_source_sha256':config.get('historical_leaf_source_sha256',[])})
     project=config.get('project_executor') or {}
     if not project:
         return
-    for name in ('owner_project_executor.py','owner_project_test_runner.py','owner_project_native.py',
+    current_source=hashlib.sha256(safe_read(SCRIPTS/'owner_subagent_dispatcher.py',500000)[0]).hexdigest()
+    for name in ('owner_subagent_dispatcher.py','owner_autonomy_pool.py',
+                 'owner_subagent_instruction_truth.py','owner_subagent_processes.py',
+                 'owner_project_executor.py','owner_project_test_runner.py','owner_project_native.py',
                  'owner_project_planner.py','owner_project_model_client.py','owner_project_model_bridge.py'):
         try:
             raw,_=safe_read(SCRIPTS/name,500000)
-            emit('PROJECT_RUNTIME_SOURCE',{'name':name,'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),
-                'matches_module_pin':hashlib.sha256(raw).hexdigest()==config.get('module_pins',{}).get(name)})
+            pin=config.get('module_pins',{}).get(name)
+            source_row={'name':name,'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),
+                'configured_sha256':pin,'matches_module_pin':hashlib.sha256(raw).hexdigest()==pin if pin else None}
+            if name=='owner_subagent_instruction_truth.py':
+                match=re.search(rb"^CALLBACK_SHA = '([a-f0-9]{64})'$",raw,re.M)
+                source_row['callback_pin']=match[1].decode() if match else None
+                source_row['matches_current_callback']=source_row['callback_pin']==current_source
+            emit('PROJECT_RUNTIME_SOURCE',source_row)
         except (OSError,ValueError) as exc:
             emit('PROJECT_RUNTIME_SOURCE',{'name':name,'state':'UNAVAILABLE','error':type(exc).__name__})
     state, state_raw, _ = obj(ROOT/'state/dispatcher/state.json',32*1024*1024)
@@ -438,6 +511,7 @@ def project_execution_readback():
             row['receipt_sha_matches']=hashlib.sha256(encoded(receipt)).hexdigest()==result.get('receipt_sha256')
             row['receipt_claim_matches']=receipt.get('claim')==task.get('owner_claim')
             row['s03']=s03_receipt_check(receipt)
+            row['receipt_source']=project_receipt_source(task,receipt,config,current_source)
             event=receipt.get('worker_result') or {};evidence=event.get('project_evidence') or {}
             row['worker_event']={key:event.get(key) for key in ('kind','role','pid','id','state','elapsed_ms','reason')}
             row['project_evidence']={key:evidence.get(key) for key in ('schema','state','task_id','claim',
@@ -462,23 +536,17 @@ def project_execution_readback():
                         'files':plan.get('files'), 'review_origin':plan.get('review_origin'),
                         'contract_sha256':plan.get('contract_sha256')}
                     if evidence.get('state')=='INTEGRATED' and plan.get('review_origin')=='MODEL_CANDIDATE':
-                        root=Path(project['roots'][plan['root_id']]['path'])
-                        for changed in plan.get('files',[]):
-                            path=changed['path'];p=Path(path)
-                            if (path in exported or p.is_absolute() or any(x in ('','..','.') for x in p.parts)
-                                or str(p)!=path):continue
-                            source,_=safe_read(root/path,100000)
-                            digest=hashlib.sha256(source).hexdigest()
-                            if digest!=changed['after_sha256']:continue
-                            if export_bytes+len(source)>80000:continue
-                            text=source.decode('utf-8')
-                            if redact_source(text)!=text:
-                                emit('PROJECT_MODEL_POSTIMAGE',{'path':path,'sha256':digest,'export_state':'REDACTION_REQUIRED'})
-                                continue
-                            export_bytes+=len(source);exported.add(path)
-                            emit('PROJECT_MODEL_POSTIMAGE',{'task_id':tid,'path':path,'bytes':len(source),
-                                'sha256':digest,'before_sha256':changed.get('before_sha256'),
-                                'base64':base64.b64encode(source).decode()})
+                        verified=(row['plan']['matches_reference'] and row['receipt_sha_matches']
+                            and row['receipt_claim_matches'] and row['s03'].get('verified') is True
+                            and row['receipt_source']['source_authorized']
+                            and row.get('project_evidence_sha_matches') is True
+                            and evidence.get('integration_verified') is True and tests.get('passed') is True
+                            and plan.get('task_id')==tid and plan.get('parent_task_id')==task.get('parent_task_id'))
+                        if verified:
+                            row['model_export'],used=export_model_postimages(tid,plan,project,exported,80000-export_bytes)
+                            export_bytes+=used
+                        else:row['model_export']={'complete':False,'state':'PROOF_UNVERIFIED'}
+                        emit('PROJECT_MODEL_EXPORT_SUMMARY',{'task_id':tid,**row['model_export']})
                 except (OSError,ValueError,KeyError) as exc:
                     row['plan']={'state':'UNAVAILABLE','error':type(exc).__name__}
         # The full receipt remains canonical in native state and S03. This
