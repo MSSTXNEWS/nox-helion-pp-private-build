@@ -210,7 +210,7 @@ def _ast(value):
 def _function(source, name):
     nodes=[n for n in ast.parse(source).body
            if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name==name]
-    if len(nodes)!=1:raise ValueError('HOLD_CHAT_SEMANTICS_FUNCTION_'+name)
+    if len(nodes)!=1:raise ValueError('HOLD_CHAT_SEMANTICS_FUNCTION_'+name.upper())
     return nodes[0]
 
 
@@ -236,7 +236,7 @@ def _replace_statement(source, scope, old, new):
     if len(needle)!=1:raise ValueError('HOLD_CHAT_SEMANTICS_PATCH_SHAPE')
     target=_function(source,scope)
     matches=[n for n in ast.walk(target) if isinstance(n,ast.stmt) and _ast(n)==_ast(needle[0])]
-    if len(matches)!=1:raise ValueError('HOLD_CHAT_SEMANTICS_ANCHOR_'+scope)
+    if len(matches)!=1:raise ValueError('HOLD_CHAT_SEMANTICS_ANCHOR_'+scope.upper())
     return _splice(source,matches[0],new)
 
 
@@ -268,8 +268,14 @@ def _transform(source):
     value=ast.get_source_segment(source,model_status[0].value)
     source=_splice(source,model_status[0],
         'model_status=('+value+') or continuation_query(user_text)')
-    for scope,old,new in _PATCHES:
-        source=_replace_statement(source,scope,old,new)
+    for patch_index,(scope,old,new) in enumerate(_PATCHES,1):
+        try:
+            source=_replace_statement(source,scope,old,new)
+        except ValueError as error:
+            reason=str(error)
+            if reason.startswith('HOLD_CHAT_SEMANTICS_'):
+                raise ValueError(reason+'_P'+str(patch_index).zfill(2)) from None
+            raise ValueError('HOLD_CHAT_SEMANTICS_UNCLASSIFIED_P'+str(patch_index).zfill(2)) from None
     tree=ast.parse(source)
     failure=[n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='StreamFailure']
     if len(failure)!=1:raise ValueError('HOLD_CHAT_SEMANTICS_EXCEPTION_CLASS')
@@ -292,4 +298,9 @@ def transform(source:bytes)->bytes:
     """Exact native preimage only; no file/network/process operations or imports."""
     if not isinstance(source,bytes) or hashlib.sha256(source).hexdigest()!=SOURCE_SHA256:
         raise ValueError('HOLD_CHAT_SEMANTICS_PREIMAGE_SHA')
-    return _transform(source.decode('utf-8')).encode('utf-8')
+    try:
+        return _transform(source.decode('utf-8')).encode('utf-8')
+    except ValueError as error:
+        if str(error).startswith('HOLD_CHAT_SEMANTICS_'):
+            raise
+        raise ValueError('HOLD_CHAT_SEMANTICS_UNCLASSIFIED_OUTSIDE_PATCH') from None

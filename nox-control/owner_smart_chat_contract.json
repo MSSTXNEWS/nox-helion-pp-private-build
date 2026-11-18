@@ -32,7 +32,7 @@
     "stream": {
       "module": "owner_chat_semantics_patch.py",
       "postimage_sha256": null,
-      "sha256": "e2fc011bc1068ae7799aa275059d71d904e4e82a9aaab6dde2c215d9890bb86b"
+      "sha256": "d55858fd7f4f4e6abf7d212cb382e8643510e2a8118daa795c5552f158064d59"
     },
     "ui": {
       "module": "owner_smart_chat_ui_patch.py",

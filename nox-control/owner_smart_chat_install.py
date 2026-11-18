@@ -31,7 +31,7 @@ except NameError:
     BUNDLE = {}
 
 # Freeze this to the reviewed, public metadata-only contract before deployment.
-CONTRACT_SHA256 = '723b08cbef57ca1b3d0eaac48f5bd6a98e29c237a3f030c8fb289f9f3a48f1d4'
+CONTRACT_SHA256 = 'e3c256297e3d50111dc7679b291908ec7a293c8331a60423b5dfa83bc47daeb4'
 CONTRACT_NAME = 'owner_smart_chat_contract.json'
 ROOT = Path('/root/nox')
 STATE = ROOT / 'state'
@@ -415,6 +415,19 @@ def contract():
     return value
 
 
+def reload_resource_admission():
+    """Fail closed on a depleted raw cgroup margin before any proxy reload."""
+    try:
+        maximum = (Path('/sys/fs/cgroup/memory.max').read_text().strip())
+        current = (Path('/sys/fs/cgroup/memory.current').read_text().strip())
+        require(maximum.isdigit() and current.isdigit(), 'CGROUP_MEMORY_UNMEASURED')
+        margin = int(maximum) - int(current)
+        require(margin >= 1024 * 1024 * 1024, 'CGROUP_RAW_HEADROOM_BELOW_1GIB')
+        return {'raw_margin_bytes': margin, 'minimum_raw_margin_bytes': 1024 * 1024 * 1024}
+    except OSError:
+        raise Hold('HOLD_SMART_CHAT_CGROUP_MEMORY_UNAVAILABLE') from None
+
+
 def candidate(label, raw, spec, executable):
     transform_source = bundle(spec['module'], spec['sha256'])
     module = types.ModuleType('_reviewed_smart_chat_' + label)
@@ -502,6 +515,7 @@ def main():
                     except Exception as transform_error:
                         record['transform_preflight'].append({'label': label, 'state': 'HELD', 'reason': safe(transform_error)})
                 require(len(rows) == len(TARGETS), 'TRANSFORM_PREFLIGHT')
+                record['reload_resource_admission'] = reload_resource_admission()
                 private_directory(AREA); journal = AREA / request
                 require(not os.path.lexists(journal), 'REQUEST_REUSED'); private_directory(journal)
                 for row in rows:
