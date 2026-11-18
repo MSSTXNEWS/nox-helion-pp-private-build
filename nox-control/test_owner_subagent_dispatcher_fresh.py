@@ -423,6 +423,7 @@ class FreshSubmissionTests(unittest.TestCase):
                   'job_id': JOB_ID, 'state': 'UNCERTAIN'}
         task['native_submit_intent'] = intent
         row['native_submit_intent'] = intent
+        native.ns['save_state'](native.state)
         native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
         event = {'kind': 'RESULT', 'role': 'runtime', 'id': task['id'],
                  'state': 'CANDIDATE_NOT_APPLIED', 'pid': 1234,
