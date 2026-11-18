@@ -17,7 +17,8 @@ MAX_CMDLINE = 8192
 MAX_MAPS = 8 * 1024 * 1024
 MAX_GGUF_HEADER = 16 * 1024 * 1024
 MAX_KV = 256
-MAX_ARRAY_ITEMS = 262144
+MAX_ARRAY_ITEMS = 262144  # Per individual array, not combined across all fields.
+MAX_TOTAL_VALUES = 4194304  # CPU bound; accommodates multi-array tokenizers.
 MAX_STRING = 131072
 TARGET_KEYS = {"general.name", "tokenizer.ggml.model", "tokenizer.ggml.pre", "tokenizer.chat_template"}
 
@@ -78,6 +79,7 @@ class HeaderReader:
         self.stream = stream
         self.offset = 0
         self.actions = 0
+        self.digest = None  # Only selected metadata bytes, never tensor data.
 
     def read(self, n):
         if n < 0 or self.offset + n > MAX_GGUF_HEADER:
@@ -86,6 +88,8 @@ class HeaderReader:
         if len(data) != n:
             raise EvidenceUnavailable('TRUNCATED_GGUF')
         self.offset += n
+        if self.digest is not None:
+            self.digest.update(data)
         return data
 
     def scalar(self, fmt):
@@ -100,8 +104,8 @@ class HeaderReader:
 
     def value(self, kind, store=False):
         self.actions += 1
-        if self.actions > MAX_ARRAY_ITEMS:
-            raise EvidenceUnavailable('GGUF_VALUE_COUNT_BUDGET')
+        if self.actions > MAX_TOTAL_VALUES:
+            raise EvidenceUnavailable('GGUF_TOTAL_VALUE_BUDGET')
         fmt = {0:'B', 1:'b', 2:'H', 3:'h', 4:'I', 5:'i', 6:'f', 7:'B',
                10:'Q', 11:'q', 12:'d'}
         if kind in fmt:
@@ -131,17 +135,36 @@ def gguf_metadata(stream):
     if n_kv > MAX_KV:
         raise EvidenceUnavailable('GGUF_KV_BUDGET')
     found = {}
+    tokenizer_digest = hashlib.sha256()
+    tokenizer_fields = 0
     for _ in range(n_kv):
-        key = reader.string(True).decode('utf-8', 'strict')
+        key_bytes = reader.string(True)
+        key = key_bytes.decode('utf-8', 'strict')
         kind = reader.scalar('I')
-        value = reader.value(kind, key in TARGET_KEYS)
+        # Include *all* tokenizer.* metadata (vocab, merges, scores, types,
+        # templates and extension keys), not just the short display fields.
+        # The digest is a bounded GGUF metadata fingerprint, NOT a tokenizer
+        # file SHA, weight SHA, or proof of which tokenizer serving uses.
+        if key.startswith('tokenizer.'):
+            tokenizer_digest.update(struct.pack('<Q', len(key_bytes)))
+            tokenizer_digest.update(key_bytes)
+            tokenizer_digest.update(struct.pack('<I', kind))
+            tokenizer_fields += 1
+            reader.digest = tokenizer_digest
+        try:
+            value = reader.value(kind, key in TARGET_KEYS)
+        finally:
+            reader.digest = None
         if key in TARGET_KEYS and isinstance(value, bytes):
             found[key] = {'sha256': hashlib.sha256(value).hexdigest(),
                           'length': len(value)}
             if key != 'tokenizer.chat_template':
                 found[key]['value'] = value.decode('utf-8', 'replace')[:160]
     return {'version': version, 'tensor_count': n_tensors,
-            'kv_count': n_kv, 'metadata': found, 'header_bytes_parsed': reader.offset}
+            'kv_count': n_kv, 'metadata': found, 'header_bytes_parsed': reader.offset,
+            'tokenizer_metadata_fields': tokenizer_fields,
+            'tokenizer_metadata_sha256': tokenizer_digest.hexdigest() if tokenizer_fields else None,
+            'tokenizer_metadata_scope': 'GGUF_TOKENIZER_FIELDS_ONLY_NOT_RUNTIME_TOKENIZER_FILE'}
 
 
 def witness(pid: int, expected_start_ticks: int, model_file: str | None = None,
