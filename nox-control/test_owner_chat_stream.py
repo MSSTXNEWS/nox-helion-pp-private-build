@@ -175,6 +175,25 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[1]['messages'][-2]['tool_calls'][0]['id'],'call_fixture')
         self.assertEqual(payload['_agent_final'],'323')
 
+    async def test_multiple_direct_admin_calls_hold_before_dispatch_or_model_request(self):
+        native=self.native()
+        native['_direct_admin_calls']=lambda text:[
+            {'name':'run_admin','arguments':{'action':'status'}},
+            {'name':'run_admin','arguments':{'action':'status'}},
+        ]
+        payload={'messages':[{'role':'user','content':'Check status twice'}],
+                 '_agent_final':'previous complete result'}
+        requests,factory=self.transport([])
+        with factory:
+            with self.assertRaises(stream.StreamFailure) as held:
+                async for _ in stream._run(
+                        native,'http://native/model',payload,'Check status twice'):
+                    self.fail('multiple direct-admin calls must HOLD before yielding')
+        self.assertEqual(str(held.exception),'HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS')
+        self.assertEqual(self.dispatched,[])
+        self.assertEqual(requests,[])
+        self.assertEqual(payload['_agent_final'],'previous complete result')
+
     async def test_complete_tool_observation_is_not_silently_clipped(self):
         # Prior adapter sent only the first 8000 characters to the model.
         # Preserve real RU/ES evidence, including its final non-ASCII suffix.
