@@ -409,6 +409,12 @@ def _recent_provenance_rank(row):
         return 0
     if not isinstance(value, dict):
         return 0
+    # SQLite's json_type() uses the FIRST occurrence of a duplicate key,
+    # while json.loads() normally keeps the LAST. A repeated provenance
+    # marker must be untrusted in both SQL's 256-row window and Python.
+    pairs = json.loads(raw, object_pairs_hook=list)
+    if sum(key == 'history_import' for key, _ in pairs) > 1:
+        return 0
     # A syntactically valid JSON scalar is not necessarily an authenticated
     # history marker. Numeric/string/null history_import must not be current.
     if 'history_import' in value and type(value['history_import']) is not bool:
@@ -459,7 +465,9 @@ def recent_rows(conn, limit=12):
     candidates = [dict(row) for row in conn.execute(
         """SELECT * FROM s03_items WHERE segment=?
            ORDER BY CASE WHEN json_valid(COALESCE(meta,'')) THEN
-             CASE WHEN json_type(meta)='object' THEN
+             CASE WHEN json_type(meta)='object'
+                  AND (SELECT COUNT(*) FROM json_each(meta)
+                       WHERE key='history_import') <= 1 THEN
                CASE WHEN json_type(meta,'$.history_import')='true' THEN 1
                     WHEN json_type(meta,'$.history_import')='false'
                          OR json_type(meta,'$.history_import') IS NULL THEN 2
