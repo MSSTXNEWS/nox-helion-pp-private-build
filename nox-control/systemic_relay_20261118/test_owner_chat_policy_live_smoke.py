@@ -25,6 +25,31 @@ class SmokeSourceTests(TestCase):
             self.assertTrue(m.process_same(242298,183262723))
             self.assertFalse(m.process_same(242298,183262724))
 
+    def test_legacy_model_port_falls_back_to_existing_8098_without_network(self):
+        import subprocess
+        from urllib.error import URLError
+        class Response:
+            status=200
+            def __init__(self,body):self.body=body
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def read(self,maximum=None):return self.body
+        class Opener:
+            def open(self,url,timeout=None):
+                if url.endswith(":8080/health"):return Response(b"OK")
+                if url.endswith(":8081/slots"):raise URLError("offline")
+                if url.endswith(":8098/slots"):return Response(b'[{"is_processing": false}]')
+                raise AssertionError("unexpected target")
+        proc=subprocess.CompletedProcess([],0,stdout="nox-proxy RUNNING\nnox-ds41-8098 RUNNING\nnox-dispatcher-t855u RUNNING\n",stderr="")
+        with patch.object(m.os.path,"lexists",return_value=False), patch.object(
+            m,"source_status",return_value=True
+        ), patch.object(m,"process_same",return_value=True), patch.object(
+            m.subprocess,"run",return_value=proc
+        ), patch.object(m.urllib.request,"build_opener",return_value=Opener()):
+            outcome=m.guards()
+        self.assertEqual(outcome["slot_port"],8098)
+        self.assertEqual(outcome["slots"],1)
+
     def test_qa_is_bounded_and_not_exposing_output(self):
         source=path.read_text()
         self.assertIn("result+=token",source)
