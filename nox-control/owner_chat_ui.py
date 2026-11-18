@@ -1,6 +1,7 @@
 """Activate the existing graphical Resonance for authenticated NOX owners."""
 from __future__ import annotations
 import asyncio,json,os,re,stat,time
+from html.parser import HTMLParser
 from pathlib import Path
 from fastapi import Request
 from fastapi.responses import JSONResponse,RedirectResponse
@@ -10,6 +11,46 @@ ROOT=Path('/root/nox')
 DEST='/nox-web-v29/pc/resonance.html'
 PAGES={'pc/resonance.html','pc/v22/resonance.template.html'}
 BUILD='NOX_OWNER_LIVE_RESONANCE_20261116'
+
+_OWNER_SCRIPTS = (
+    'nox-v135-resonance-owner-bridge.js', 'nox-v137-owner-self-status.js',
+    'owner-chat-ui.js', 'owner-presence.js',
+)
+
+
+class _ActiveOwnerTagScanner(HTMLParser):
+    """Only real executable HTML tags, not comments, templates or noscript."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.inert_depth = 0
+        self.meta_seen = False
+        self.script_seen = set()
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ('template', 'noscript'):
+            self.inert_depth += 1
+            return
+        if self.inert_depth:
+            return
+        # Browsers honor the first duplicate attribute; keep that interpretation.
+        values = {}
+        for key, value in attrs:
+            values.setdefault(key, value)
+        if tag == 'meta' and (values.get('name') or '').lower() == 'nox-live-build':
+            self.meta_seen = True
+        elif tag == 'script':
+            src = values.get('src')
+            if isinstance(src, str):
+                for name in _OWNER_SCRIPTS:
+                    if re.fullmatch(r'/nox-web-v29/' + re.escape(name)
+                                    + r'(?:\?[^"\'<>]*)?', src, re.I):
+                        self.script_seen.add(name)
+
+    def handle_endtag(self, tag):
+        if tag in ('template', 'noscript') and self.inert_depth:
+            self.inert_depth -= 1
+
 
 def decorate_html(raw,path):
     if path.lstrip('/') not in PAGES:return raw
@@ -29,17 +70,18 @@ def decorate_html(raw,path):
     # A single stale marker does not prove that all live owner handlers exist.
     # Check each actual script tag: preserve already-mounted scripts and restore
     # only missing pieces. This is idempotent for partially decorated archives.
-    # Comments in retained archives are not live <meta> or <script> elements.
-    # Inspect a non-comment view but preserve the exact original HTML bytes.
-    active_markup=re.sub(r'<!--.*?(?:-->|$)', '', raw, flags=re.S)
-    extra=''
-    if not re.search(r'<meta\b[^>]*\bname\s*=\s*(["\'])nox-live-build\1',active_markup,re.I):
-        extra='\n<meta name="nox-live-build" content="'+BUILD+'">\n'
-    for name in ('nox-v135-resonance-owner-bridge.js','nox-v137-owner-self-status.js','owner-chat-ui.js','owner-presence.js'):
-        if re.search(r'<script\b[^>]*\bsrc\s*=\s*(["\'])/nox-web-v29/'
-                     +re.escape(name)+r'(?:\?[^"\']*)?\1',active_markup,re.I):
+    # HTML comments, template descendants, noscript and script text are inert.
+    # Parse only to discover existing live tags; never rewrite the archived HTML.
+    scanner = _ActiveOwnerTagScanner()
+    scanner.feed(raw)
+    scanner.close()
+    extra = ''
+    if not scanner.meta_seen:
+        extra = '\n<meta name="nox-live-build" content="' + BUILD + '">\n'
+    for name in _OWNER_SCRIPTS:
+        if name in scanner.script_seen:
             continue
-        extra+='<script defer src="/nox-web-v29/'+name+'" data-nox-live-owner="1"></script>\n'
+        extra += '<script defer src="/nox-web-v29/' + name + '" data-nox-live-owner="1"></script>\n'
     return raw.replace('</head>',extra+'</head>',1) if extra else raw
 
 def owner_maintenance_gate():
