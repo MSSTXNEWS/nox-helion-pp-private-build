@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -379,6 +380,27 @@ def consult(config, context, idempotency_key):
     return validate_advice(advice, context['allowed_services'])
 
 
+def advisor_resource_admission_hold():
+    """Require the exact live dispatcher binding and fresh shared resource decision."""
+    dispatcher = sys.modules.get('owner_subagent_dispatcher_fresh')
+    native = getattr(dispatcher, '_BOUND', None)
+    namespace = getattr(native, 'ns', None)
+    autonomy = getattr(dispatcher, 'autonomy', None)
+    verify = getattr(autonomy, 'verify_resource_admission', None)
+    if (dispatcher is None or native is None or not isinstance(namespace, dict)
+            or namespace.get('_nox_owner_autonomy_native') is not native
+            or namespace.get('_owner_lifecycle_bound') is not True
+            or not callable(getattr(native, 'read_resource_snapshot', None))
+            or not callable(verify)):
+        return 'HOLD_ADVISOR_RESOURCE_GATE_UNBOUND'
+    try:
+        verify(native.read_resource_snapshot())
+    except Exception as exc:
+        reason = str(exc)
+        return reason if re.fullmatch(r'HOLD_[A-Z0-9_]+', reason) else 'HOLD_ADVISOR_RESOURCE_GATE_FAILED'
+    return None
+
+
 def validate_advice(advice, services):
     if not isinstance(advice, dict) or set(advice) != {'action', 'reason_code', 'service'}:
         raise RuntimeError('BLOCKED_ADVICE_SCHEMA')
@@ -561,24 +583,29 @@ def on_failure(task, error):
                 result.update(senior_model=config['model'], senior_config_sha256=config['config_sha256'],
                               advice=cached, consultation_reused=True,
                               state='BLOCKED_DUPLICATE_CONSULTATION')
-            elif not reserve_incident(incident):
-                result['state'] = 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET'
             elif not _ADVISOR_SLOT.acquire(timeout=2):
                 result['state'] = 'BLOCKED_SENIOR_BUSY'
             else:
                 try:
-                    advice = consult(config, context, idempotency_key=request_sha256)
-                    append_bounded_json(ROOT / 'memory/dispatcher_mentor/quarantine.jsonl',
-                                        {'kind': 'unverified_senior_advice', 'incident': incident,
-                                         'advice': advice, 'accepted': False, 'at': timestamp()},
-                                        QUARANTINE_LOG_MAX_BYTES)
-                    if not store_incident_advice(incident, request_sha256,
-                                                 str(config.get('config_sha256') or ''), advice):
-                        result['state'] = 'BLOCKED_ADVICE_RESULT_NOT_DURABLE'
+                    admission_hold = advisor_resource_admission_hold()
+                    if admission_hold:
+                        result.update(state='BLOCKED_RESOURCE_ADMISSION',
+                                      resource_admission_hold=admission_hold)
+                    elif not reserve_incident(incident):
+                        result['state'] = 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET'
                     else:
-                        result.update(senior_model=config['model'], senior_config_sha256=config['config_sha256'],
-                                      advice=advice)
-                        _apply_advice(task, handler, service, advice, result)
+                        advice = consult(config, context, idempotency_key=request_sha256)
+                        append_bounded_json(ROOT / 'memory/dispatcher_mentor/quarantine.jsonl',
+                                            {'kind': 'unverified_senior_advice', 'incident': incident,
+                                             'advice': advice, 'accepted': False, 'at': timestamp()},
+                                            QUARANTINE_LOG_MAX_BYTES)
+                        if not store_incident_advice(incident, request_sha256,
+                                                     str(config.get('config_sha256') or ''), advice):
+                            result['state'] = 'BLOCKED_ADVICE_RESULT_NOT_DURABLE'
+                        else:
+                            result.update(senior_model=config['model'], senior_config_sha256=config['config_sha256'],
+                                          advice=advice)
+                            _apply_advice(task, handler, service, advice, result)
                 except Exception as exc:
                     result['state'] = 'BLOCKED_SENIOR_OR_REPAIR_' + type(exc).__name__
                 finally:

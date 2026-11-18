@@ -21,10 +21,45 @@ def module(name):
     return value
 
 mentor = module('owner_dispatcher_mentor')
+autonomy = module('owner_autonomy_pool')
 FIXTURE = Path('/tmp/nox_native_sources/nox_dispatcher_t855u.py')
 
 
 class MentorTests(unittest.TestCase):
+    def setUp(self):
+        class NativeGate:
+            def __init__(self):
+                self.read_calls = 0
+                self.ns = {}
+
+            def read_resource_snapshot(self):
+                self.read_calls += 1
+                snapshot = {
+                    'native_verified': True, 'instance_id': 60509551,
+                    'stop_active': False, 'source_sha_verified': True,
+                    'owner_scope_verified': True, 'task_status': {},
+                    'cgroup_memory_ratio': 0.1,
+                    'cgroup_memory_working_set_bytes': 1024,
+                    'cgroup_memory_inactive_file_bytes': 0,
+                    'cpu_pressure': 0.0, 'io_pressure': 0.0,
+                    'disk_free_ratio': 0.5, 'disk_free_bytes': 2 * 1024**3,
+                    'gpu_available': False, 'resource_admission_allowed': True,
+                    'resource_admission_observed_at': time.time(),
+                }
+                snapshot['resource_admission_snapshot_sha256'] = autonomy.fingerprint(snapshot)
+                return snapshot
+
+        native = NativeGate()
+        native.ns.update({'_nox_owner_autonomy_native': native,
+                          '_owner_lifecycle_bound': True})
+        dispatcher = type('BoundDispatcher', (), {})()
+        dispatcher._BOUND = native
+        dispatcher.autonomy = autonomy
+        self.advisor_native = native
+        self._advisor_binding = patch.dict(
+            sys.modules, {'owner_subagent_dispatcher_fresh': dispatcher})
+        self._advisor_binding.start()
+        self.addCleanup(self._advisor_binding.stop)
     def test_stop_active_fails_closed_on_state_aliases_and_dangling_flags(self):
         """Mirror canonical owner state STOP aliases; a broken symlink is still STOP."""
         with tempfile.TemporaryDirectory() as directory, patch.object(mentor, 'ROOT', Path(directory)):
@@ -148,6 +183,7 @@ class MentorTests(unittest.TestCase):
                 first = mentor.on_failure(task, 'timeout')
                 self.assertEqual(first['state'], 'READ_ONLY_RETRY_SCHEDULED')
                 first_consult.assert_called_once()
+                self.assertEqual(self.advisor_native.read_calls, 1)
             restarted = module('owner_dispatcher_mentor')
             repeated_task = {'id': 'durable-advisor', 'handler': 'verify_q4',
                              'retries': 1, 'max_retries': 3}
@@ -161,6 +197,25 @@ class MentorTests(unittest.TestCase):
                 incident = repeated['incident']
                 stored = json.loads((root / 'memory/dispatcher_mentor/incidents' / (incident + '.json')).read_text())
                 self.assertEqual(stored['completed']['advice'], advice)
+
+    def test_advisor_consult_holds_without_bound_native_resource_gate(self):
+        config = {'model': 'senior', 'config_sha256': 'a' * 64}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(mentor, 'ROOT', Path(directory)), \
+                    patch.object(mentor, 'stop_active', return_value=False), \
+                    patch.object(mentor, 'discover_senior', return_value=config), \
+                    patch.object(mentor, 'consult') as consult, \
+                    patch.object(mentor, 'reserve_incident') as reserve, \
+                    patch.dict(sys.modules, {'owner_subagent_dispatcher_fresh': None}):
+                task = {'id': 'unbound-resource-gate', 'handler': 'verify_q4',
+                        'retries': 0, 'max_retries': 3}
+                result = mentor.on_failure(task, 'timeout')
+                self.assertEqual(result['state'], 'BLOCKED_RESOURCE_ADMISSION')
+                self.assertEqual(result['resource_admission_hold'],
+                                 'HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+                self.assertEqual(task['status'], 'blocked')
+                reserve.assert_not_called()
+                consult.assert_not_called()
 
     def test_event_log_hard_cap_holds_without_valid_cursor_and_quarantine_compacts(self):
         for cursor_state in ('missing', 'malformed'):

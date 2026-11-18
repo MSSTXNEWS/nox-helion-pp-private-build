@@ -52,7 +52,7 @@ SUBAGENT_BUNDLE_PINS = {
     'owner_subagent_dispatcher_fresh.py': '93d082fe8f6180754ace4c0505a6dfb5c99ea0ed9a0cf10c494da5355f37d05a',
     'owner_autonomy_pool.py': 'c4f0a178d22f47c1e1b2575f6b9c3280165eb0cf13920053c7b427ada3d8f8a9',
     'owner_subagent_processes.py': '8805da8d99c7d5fe38db6c9a100fb86cc052e1c795418fd78284a5cb7a84d276',
-    'owner_dispatcher_mentor.py': 'b1143626aee7b74e1e3f8fa39d2035d4e29d0a5ec1882fae6efb8cab46260193',
+    'owner_dispatcher_mentor.py': '8f6b154b43a5b050cca0df63e5d3e695cf130c587103311145f14e8e73afc084',
     'owner_task_lifecycle.py': 'b09e02663f11c30e39a15b44ad2b12271219ec25bf0af9937bdf3a5fcfdebe5e',
     'owner_senior_gateway.py': '1fd1556009ce62fa806bdee0a9a34577d276344e728fe9d94b33f44eb151346e',
 }

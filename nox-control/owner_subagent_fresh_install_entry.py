@@ -46,7 +46,7 @@ NEW_DEPENDENCIES = {
     'owner_subagent_dispatcher.py': NEW_CALLBACK,
 }
 OLD_MENTOR_SHA = '12211a29f77de8e5181d4dd78c35d5da2ed5de0dc6ea529149d32f0896809292'
-NEW_MENTOR_SHA = 'b1143626aee7b74e1e3f8fa39d2035d4e29d0a5ec1882fae6efb8cab46260193'
+NEW_MENTOR_SHA = '8f6b154b43a5b050cca0df63e5d3e695cf130c587103311145f14e8e73afc084'
 ASSETS = {
     'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
     'owner_subagent_install_entry.py': 'a210182012d8872390b27a1f0fa8a5668016f06cd94d5557aad2b242d67eb806',
