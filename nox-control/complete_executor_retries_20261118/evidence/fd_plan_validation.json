@@ -1,0 +1,69 @@
+{
+  "state": "PREPARED",
+  "passed": true,
+  "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9",
+  "sandbox_verified": true,
+  "trusted_tests_unchanged": true,
+  "tests_run": 36,
+  "project_evidence": {
+    "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+    "task_id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+    "parent_task_id": "6V14-04",
+    "queue_id": "Q1_RUNTIME_CHAT",
+    "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9",
+    "claim": "cccccccccccccccccccccccc",
+    "root_id": "NOX_PROJECT_SOURCE",
+    "acceptance_scope": "SOURCE_PATCH_TESTED",
+    "original_task_accepted": false,
+    "worker": {
+      "pid": 5,
+      "ppid": 2,
+      "process_starttime": 4254629
+    },
+    "started_at": 1794967677.4773195,
+    "project_source_changed": false,
+    "model_commands_executed": false,
+    "state": "PREPARED",
+    "tests": {
+      "completed": true,
+      "elapsed_ms": 51,
+      "errors": 0,
+      "failed_tests": [],
+      "failures": 0,
+      "log_bytes": 135,
+      "log_sha256": "1315247e95eda5492e8e853d61fd5e0be308585ccb47f794def46a681ea6c27d",
+      "modules": [
+        "test_work_progress_changes",
+        "test_work_progress_durable_write",
+        "test_work_progress_pinned_read",
+        "test_nox_work_progress_time_order"
+      ],
+      "output": "....................................\n----------------------------------------------------------------------\nRan 36 tests in 0.018s\n\nOK\n",
+      "passed": true,
+      "sandbox": {
+        "exec_denied": true,
+        "fork_denied": true,
+        "gid": 65534,
+        "host_path_hidden": true,
+        "network_denied": true,
+        "no_new_privs": true,
+        "seccomp_filter": true,
+        "uid": 65534,
+        "workdir": "/work/project/source"
+      },
+      "schema": "NOX_PROJECT_TEST_REPORT_V1",
+      "skipped": 0,
+      "tests_discovered": 36,
+      "tests_run": 36
+    },
+    "tests_sha256": "044fcb64f08fd23bfd95e25aec37163f413c56df8c5ab3990c58d56f7d3edea6",
+    "trusted_tests_unchanged": true,
+    "postimages": {
+      "work_progress.py": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d",
+      "test_work_progress_pinned_read.py": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e"
+    },
+    "finished_at": 1794967677.62414
+  },
+  "project_evidence_sha256": "d095bb54a1f0d1d563697c719396ba3f1acc181c79681f06516761f35294bafb",
+  "shared_source_preimages_unchanged": true
+}

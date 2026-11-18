@@ -1,0 +1,134 @@
+{
+  "3A02": {
+    "state": "PREPARED",
+    "passed": true,
+    "plan_sha256": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc",
+    "sandbox_verified": true,
+    "trusted_tests_unchanged": true,
+    "tests_run": 13,
+    "project_evidence": {
+      "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+      "task_id": "3A02.project.readback_revoke.layout_retry.20261118",
+      "parent_task_id": "3A02",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "plan_sha256": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc",
+      "claim": "dddddddddddddddddddddddd",
+      "root_id": "NOX_PROJECT_SOURCE",
+      "acceptance_scope": "SOURCE_PATCH_TESTED",
+      "original_task_accepted": false,
+      "worker": {
+        "pid": 5,
+        "ppid": 2,
+        "process_starttime": 4260472
+      },
+      "started_at": 1794967735.899986,
+      "project_source_changed": false,
+      "model_commands_executed": false,
+      "state": "PREPARED",
+      "tests": {
+        "completed": true,
+        "elapsed_ms": 8,
+        "errors": 0,
+        "failed_tests": [],
+        "failures": 0,
+        "log_bytes": 112,
+        "log_sha256": "19ce4c3fe936ba5a289b545d890b7ffce48ced29d4b7b20a8c6b10a871321dd4",
+        "modules": [
+          "test_s03_readback_contract",
+          "test_nox_s03_readback_revoke"
+        ],
+        "output": ".............\n----------------------------------------------------------------------\nRan 13 tests in 0.002s\n\nOK\n",
+        "passed": true,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534,
+          "workdir": "/work/project/source"
+        },
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "skipped": 0,
+        "tests_discovered": 13,
+        "tests_run": 13
+      },
+      "tests_sha256": "578670b42afa8fa445311498d1274b4bb0a34901b016204c5c515858a973ea65",
+      "trusted_tests_unchanged": true,
+      "postimages": {
+        "s03_existing_readback.py": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5"
+      },
+      "finished_at": 1794967736.0077302
+    },
+    "project_evidence_sha256": "c0e13f8e80cafc464926521ffc625c90c438f4ad091a707f78304e9e53c7824e",
+    "shared_source_preimages_unchanged": true
+  },
+  "3B05": {
+    "state": "PREPARED",
+    "passed": true,
+    "plan_sha256": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d",
+    "sandbox_verified": true,
+    "trusted_tests_unchanged": true,
+    "tests_run": 10,
+    "project_evidence": {
+      "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+      "task_id": "3B05.project.strict_skill_json.layout_retry.20261118",
+      "parent_task_id": "3B05",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "plan_sha256": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d",
+      "claim": "dddddddddddddddddddddddd",
+      "root_id": "NOX_PROJECT_SOURCE",
+      "acceptance_scope": "SOURCE_PATCH_TESTED",
+      "original_task_accepted": false,
+      "worker": {
+        "pid": 5,
+        "ppid": 2,
+        "process_starttime": 4260472
+      },
+      "started_at": 1794967736.043936,
+      "project_source_changed": false,
+      "model_commands_executed": false,
+      "state": "PREPARED",
+      "tests": {
+        "completed": true,
+        "elapsed_ms": 42,
+        "errors": 0,
+        "failed_tests": [],
+        "failures": 0,
+        "log_bytes": 109,
+        "log_sha256": "69d3092e799b33eb7dca64bf94a3536ab4fa9fc5969f0629675edb863629b707",
+        "modules": [
+          "test_3b05_skill_ancestor_swap",
+          "test_nox_skill_evidence_strict_json"
+        ],
+        "output": "..........\n----------------------------------------------------------------------\nRan 10 tests in 0.004s\n\nOK\n",
+        "passed": true,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534,
+          "workdir": "/work/project/source"
+        },
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "skipped": 0,
+        "tests_discovered": 10,
+        "tests_run": 10
+      },
+      "tests_sha256": "95329da7df4d3c95a0db12032e56ce91b375f86e61c601bfa801ef5b4d2d75b0",
+      "trusted_tests_unchanged": true,
+      "postimages": {
+        "owner_dispatcher_mentor.py": "b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6"
+      },
+      "finished_at": 1794967736.1666124
+    },
+    "project_evidence_sha256": "7bf6c0c7cc647fcf1af9100137101cb834b354f5c6dab2f2e43c457c6f8e3b88",
+    "shared_source_preimages_unchanged": true
+  }
+}

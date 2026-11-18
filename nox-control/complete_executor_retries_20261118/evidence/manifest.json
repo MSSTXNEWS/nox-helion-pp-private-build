@@ -1,0 +1,130 @@
+{
+  "schema": "NOX_PROJECT_RUNTIME_SOURCE_PACKAGE_V1",
+  "files": {
+    "owner_subagent_processes.py": {
+      "sha256": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
+      "bytes": 18199,
+      "native_path": "/root/nox/scripts/owner_subagent_processes.py"
+    },
+    "owner_subagent_dispatcher.py": {
+      "sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "bytes": 77216,
+      "native_path": "/root/nox/scripts/owner_subagent_dispatcher.py"
+    },
+    "owner_autonomy_pool.py": {
+      "sha256": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+      "bytes": 33076,
+      "native_path": "/root/nox/scripts/owner_autonomy_pool.py"
+    },
+    "owner_project_executor.py": {
+      "sha256": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+      "bytes": 43335,
+      "native_path": "/root/nox/scripts/owner_project_executor.py"
+    },
+    "owner_project_native.py": {
+      "sha256": "d0ff44d4752128c267799202620c34d2503241dad1f7008f8b3539f49efc18b5",
+      "bytes": 25583,
+      "native_path": "/root/nox/scripts/owner_project_native.py"
+    },
+    "owner_project_test_runner.py": {
+      "sha256": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595",
+      "bytes": 12395,
+      "native_path": "/root/nox/scripts/owner_project_test_runner.py"
+    },
+    "owner_subagent_instruction_truth_project.py": {
+      "sha256": "485d4a4a571c434afb98512547a7f2a2198606eb1e168b749ae607aaf3c2133f",
+      "bytes": 2888,
+      "native_path": "/root/nox/scripts/owner_subagent_instruction_truth.py"
+    }
+  },
+  "unchanged_dependencies": {
+    "owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+    "owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
+    "owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+    "test_owner_four_queue.py": "4334ec2e2047c34ed7ee5d1f24152a1a2468b07f4bdfc8ebf592d13a64648ac9",
+    "test_owner_normal3_continuity.py": "409411abe7a828d2633cd9c2e4792629a00925b4a6a8dfcead27f80dd3f75641"
+  },
+  "base_native": {
+    "callback": "5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5",
+    "processes": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
+    "pool": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+    "truth_wrapper": "95ba80a1175c545032a13ff0fd8942ebd39280dec3283f244d200527629ad048"
+  },
+  "execution_mode": "NATIVE_PROJECT_V1",
+  "handler": "owner_native_project_work",
+  "original_acceptance_added": 0,
+  "source_rebase": {
+    "original_base_callback": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+    "previous_candidate_callback": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+    "foreign_callback": "5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5",
+    "merge_text_conflicts_resolved": 2,
+    "foreign_methods_preserved_exact_ast": [
+      "Native._recovery_fence",
+      "Native._recovery_save",
+      "Native._maintenance_idle_pool",
+      "Native._fresh_admission_reason"
+    ],
+    "project_recovery_join": "settled exact S03/no-active project proof; unknown/pending project claims hold"
+  },
+  "base_installed_source_commit": "a74261c74195c91b7dd5c6cfcabd919dd9f9ded9",
+  "base_runtime_manifest_sha256": "8cbe45189b031940cefc8628c915f965f2969262073eb9a734a17d563ea9a312",
+  "incremental_change": {
+    "reason": "Native pinned tests require real ancestor depth; FD fixture needs read-only own rlimits; 8-thread model regression needs bounded glibc arenas.",
+    "updated_native_files": {
+      "owner_project_executor.py": {
+        "before_sha256": "687ea3b3548badf9b7babd8c5d420b5270e0fb4d82a72bcaa9a4cee1be44d306",
+        "after_sha256": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6"
+      },
+      "owner_project_test_runner.py": {
+        "before_sha256": "35b0e94f9c883da017e444162d1f84b9c0f8ad7bc4c92354bebd12551ae6c3b1",
+        "after_sha256": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595"
+      }
+    },
+    "sandbox_workdir": "/work/project/source",
+    "allocator_env": {
+      "MALLOC_ARENA_MAX": "2"
+    },
+    "memory_cap_increased": false,
+    "prlimit64_allowed": "pid=0 AND new_limit=NULL only",
+    "host_proc_added": false,
+    "callback_wrapper_config_schema_changed": false,
+    "native_restart_required": true,
+    "native_updated": false,
+    "tests": {
+      "test_owner_project_executor.py": "5acf7803fe560c9cadf307bc21bf5e376b07bed475f1b20c9f218dd5dfebff56"
+    },
+    "diff_sha256": "28fd64e81124ecde8c571f2aa2be9bcfb2371b7fe6edc2016f4e49293f8eab17"
+  },
+  "prior_qa": {
+    "strict_reviewed_plans_validated": 6,
+    "model_bridge_fixture_real_sandbox_passed": true,
+    "native_chroot_verified": false,
+    "native_preflight_required": true,
+    "post_hardening_real_sandbox_smoke_passed": true,
+    "pre_rebase_full_suite_passed": 44,
+    "rebase_native_focused_passed": 7,
+    "rebase_truth_wrapper_passed": 2,
+    "rebase_missing_dependency_diagnostic_passed": 1
+  },
+  "qa": {
+    "local_backend": "bwrap_seccomp",
+    "native_chroot_verified": false,
+    "native_preflight_required": true,
+    "focused_outer_tests_passed": 2,
+    "focused_inner_portability_tests_passed": 3,
+    "exact_retry_plan_tests": {
+      "3A02": 13,
+      "3B05": 10,
+      "6V14-04": 36
+    },
+    "model_protected_tests_passed": 30,
+    "test_skips": 0,
+    "model_reference_local_only": true,
+    "model_reference_published": false,
+    "evidence": {
+      "layout_retry_final_validation.json": "0748f4e81acc90c573ec7e62d7335eb37864e875b37ceb6f37962294303fd068",
+      "fd_plan_validation.json": "32fffeced0c0354dadd5827524084b430ddb3e1bf72f6d767d411205188f40df",
+      "model30_final_validation.json": "e8e8fd6e5aad90281df656f296fa32528129a4315074e72de012048010eee113"
+    }
+  }
+}

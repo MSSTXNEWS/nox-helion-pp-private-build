@@ -1,0 +1,22 @@
+{
+  "schema": "NOX_PROJECT_RUNTIME_UPDATE_LOCAL_QA_V1",
+  "at": "2026-11-18T02:09:27.610429+00:00",
+  "scope": "LOCAL_ONLY_NATIVE_PREFLIGHT_REQUIRED",
+  "tests_run": 8,
+  "tests_passed": 8,
+  "source_sha256": {
+    "owner_project_runtime_update.py": "2be2752f4e784e94db08159e39b852ec2f22a513f080247740eaf6bdc625c640",
+    "runtime_update_body.py": "cb66ba9238415a3a916250bf712e0a61b993d0f16574863befe5e38eda211103",
+    "build_runtime_update_entry.py": "c2448e356b6fef049c968ed7ba849a2ae1fb28cd2e3ba9ba7783ae765bc24e87",
+    "test_owner_project_runtime_update.py": "7546cce9e63a12b57a7bd7cae85fcf6e5c194bac48aa3d210aa868be61c61838"
+  },
+  "native_actions": 0,
+  "native_preflight_gates": [
+    "fixed 4-test chroot/seccomp fixture with exact /work/project/source depth",
+    "private prepare of three reviewed retry plans against current source",
+    "first model prompt actual template/tokenize with no inference; no compaction",
+    "exact four current terminal claim and S03 receipts",
+    "all 28 source postimages and Git marker snapshot unchanged before admission"
+  ],
+  "native_acceptance": "PENDING_ROOT_PUBLISHED_EXACT_SOURCE"
+}

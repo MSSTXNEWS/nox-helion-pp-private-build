@@ -1,0 +1,34 @@
+{
+  "schema": "NOX_PLANNER_FOCUS_RETRY_REVIEW_V1",
+  "task_id": "1A03.project.cursor_admission.focus_retry.20261118",
+  "contract_sha256": "eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4",
+  "source_pins": {
+    "owner_project_model_client.py": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
+    "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+    "owner_project_planner.py": "5f3221e2ab59ff2d8c787b38661844468c5207805441d3d8b929fbc36c2ef27c"
+  },
+  "protected_context_unchanged": true,
+  "protected_tests": 30,
+  "focused_source": [
+    {
+      "path": "owner_chat_request_ledger.py",
+      "sha256": "006fc038f43682fa36d2310f2343c83a42fd28897e7debfbe0d63536ee069729",
+      "start_line": 111,
+      "content": "    def accept(self,rid,question,dialog_id,payload,session_scope):\n        rid=request_id(rid);wanted=fingerprint(payload);native=identity()\n        if native is None:raise LedgerError('HOLD_PRODUCER_PROCESS_IDENTITY',503)\n        with self.db(True) as db:\n            db.execute('BEGIN IMMEDIATE')\n            old=db.execute('SELECT * FROM nox_chat_requests WHERE owner=? AND request_id=?',(self.owner,rid)).fetchone()\n            if old is not None:\n                prior=dict(old)\n                # A request ID is scoped to its ORIGINAL session and exchange.\n                # A matching payload hash alone must not replay another tab's\n                # owner session, dialog, or question. Check before _recover:\n                # a cross-scope collision must not mutate the original row.\n                if (prior['session_scope']!=session_scope or\n                        prior['dialog_id']!=dialog_id or prior['question']!=question):\n                    raise LedgerError('REQUEST_ID_CONTEXT_CONFLICT')\n                if prior['payload_sha256']!=wanted:\n                    raise LedgerError('REQUEST_ID_PAYLOAD_CONFLICT')\n                row=self._recover(db,prior)\n                return self._public(row),None\n            others=db.execute(\"SELECT * FROM nox_chat_requests WHERE owner=? AND state IN ('accepted','running') AND (session_scope=? OR (dialog_id IS NOT NULL AND dialog_id=?))\",\n                              (self.owner,session_scope,dialog_id)).fetchall()\n            for other in others:\n                if self._recover(db,dict(other))['state'] not in TERMINAL:\n                    raise LedgerError('HOLD_ACTIVE_SESSION_STREAM')\n            token=uuid.uuid4().hex;stamp=time.time()\n            db.execute('INSERT INTO nox_chat_requests(owner,request_id,payload_sha256,dialog_id,exchange_id,question,state,session_scope,producer_token,producer_pid,producer_ticks,producer_boot,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',\n                (self.owner,rid,wanted,dialog_id,uuid.uuid4().hex,question,'accepted',session_scope,token,*native,stamp,stamp))\n            row=self._get(db,rid)\n            self._append(db,row,{'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM'})\n            return self._public(self._get(db,rid)),token\n\n"
+    },
+    {
+      "path": "native_v29_full_bridge.py",
+      "sha256": "d9ec6a8250a167d774ba5090219cfaac3ad2995ddd88228d1abe5514fc9dd791",
+      "start_line": 807,
+      "content": "        after=data.get('after_event_id',0)\n        # Reject invalid SQLite cursors BEFORE ledger.accept creates a durable\n        # request or starts inference. A reconnect error must have no side effects.\n        if type(after) is not int or not 0 <= after <= 2**63-1:\n            return JSONResponse({'error':'INVALID_EVENT_CURSOR'},status_code=422)\n"
+    },
+    {
+      "path": "native_v29_full_bridge.py",
+      "sha256": "d9ec6a8250a167d774ba5090219cfaac3ad2995ddd88228d1abe5514fc9dd791",
+      "start_line": 959,
+      "content": "        async def begin():\n            snapshot,token=await asyncio.to_thread(ledger.accept,rid,question,dialog_id,request_payload,key)\n            if token is not None:\n                cancel=asyncio.Event();active[key]=rid;active_requests[rid]=cancel\n                job=asyncio.create_task(produce(rid,token,cancel))\n                producer_jobs.add(job);job.add_done_callback(producer_jobs.discard)\n            return snapshot\n        # Admission/start survives an HTTP disconnect at the await boundary.\n        admission=asyncio.create_task(begin());producer_jobs.add(admission)\n        admission.add_done_callback(producer_jobs.discard)\n        try:await asyncio.shield(admission)\n        except LedgerError as error:return JSONResponse({'error':error.code,'request_id':rid},status_code=error.status)\n        except (RuntimeError,sqlite3.Error,OSError):return JSONResponse({'error':'HOLD_REQUEST_LEDGER_UNAVAILABLE'},status_code=503)\n        return await event_response(rid,after)\n\n"
+    }
+  ],
+  "model_fix_implemented_by_owner": false,
+  "behavior": "Keep current original source excerpts and actual progress together across tokenizer-budget compaction; model must produce and test its own source changes."
+}
