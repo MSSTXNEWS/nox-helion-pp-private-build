@@ -19,6 +19,7 @@ MAX_GGUF_HEADER = 16 * 1024 * 1024
 MAX_KV = 256
 MAX_ARRAY_ITEMS = 262144  # Per individual array, not combined across all fields.
 MAX_TOTAL_VALUES = 4194304  # CPU bound; accommodates multi-array tokenizers.
+MAX_ARRAY_DEPTH = 32  # Reject recursive metadata nesting before Python stack overflow.
 MAX_STRING = 131072
 TARGET_KEYS = {"general.name", "tokenizer.ggml.model", "tokenizer.ggml.pre", "tokenizer.chat_template"}
 
@@ -102,7 +103,7 @@ class HeaderReader:
         raw = self.read(size)
         return raw if store else None
 
-    def value(self, kind, store=False):
+    def value(self, kind, store=False, depth=0):
         self.actions += 1
         if self.actions > MAX_TOTAL_VALUES:
             raise EvidenceUnavailable('GGUF_TOTAL_VALUE_BUDGET')
@@ -114,12 +115,14 @@ class HeaderReader:
         if kind == 8:
             return self.string(store)
         if kind == 9:
+            if depth >= MAX_ARRAY_DEPTH:
+                raise EvidenceUnavailable('GGUF_ARRAY_DEPTH_BUDGET')
             child_kind = self.scalar('I')
             count = self.scalar('Q')
             if count > MAX_ARRAY_ITEMS:
                 raise EvidenceUnavailable('GGUF_ARRAY_COUNT_BUDGET')
             for _ in range(count):
-                self.value(child_kind, False)
+                self.value(child_kind, False, depth + 1)
             return None
         raise EvidenceUnavailable('UNSUPPORTED_GGUF_TYPE')
 

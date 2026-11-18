@@ -146,6 +146,36 @@ class WitnessTests(unittest.TestCase):
         self.assertEqual(out['reason'], 'MODEL_FILE_CHANGED_DURING_PROBE')
         self.assertNotIn('gguf', out)
 
+    def test_nested_array_within_depth_bound_is_parseable(self):
+        # GGUF spec permits nested metadata arrays; a bounded legitimate
+        # value must still be accepted rather than banned wholesale.
+        depth = w.MAX_ARRAY_DEPTH
+        key = b'tokenizer.ggml.tokens'
+        b = bytearray(b'GGUF' + struct.pack('<IQQ', 3, 0, 1))
+        b += struct.pack('<Q', len(key)) + key + struct.pack('<I', 9)
+        for level in range(depth):
+            b += struct.pack('<IQ', 9 if level + 1 < depth else 8, 1)
+        b += struct.pack('<Q', 1) + b'x'
+        self.file.write_bytes(b)
+        out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(out['state'], 'MAPPED_GGUF_METADATA_VERIFIED', out.get('reason'))
+
+    def test_excessively_nested_gguf_array_returns_unknown_not_recursion_error(self):
+        # A malformed header with deep self-nesting must fail closed with
+        # a stable reason, not crash the owner inspector or touch model data.
+        depth = w.MAX_ARRAY_DEPTH + 1024
+        key = b'tokenizer.ggml.tokens'
+        b = bytearray(b'GGUF' + struct.pack('<IQQ', 3, 0, 1))
+        b += struct.pack('<Q', len(key)) + key + struct.pack('<I', 9)
+        for level in range(depth):
+            b += struct.pack('<IQ', 9 if level + 1 < depth else 8, 1)
+        b += struct.pack('<Q', 1) + b'x'
+        self.file.write_bytes(b)
+        out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(out['state'], 'UNKNOWN')
+        self.assertEqual(out['reason'], 'GGUF_ARRAY_DEPTH_BUDGET')
+        self.assertNotIn('gguf', out)
+
     def test_budget_prevents_large_token_array(self):
         b = b'GGUF' + struct.pack('<IQQ', 3, 0, 1)
         k = b'tokenizer.ggml.tokens'
