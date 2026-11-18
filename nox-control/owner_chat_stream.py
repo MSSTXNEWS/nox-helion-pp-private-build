@@ -93,23 +93,38 @@ async def _model_events(client, url, payload):
     async with client.stream('POST',url,json=request,timeout=180.0) as response:
         if response.status_code!=200:
             raise StreamFailure('HOLD_MODEL_HTTP')
+        # A data: line is a field, not an event; dispatch only on a blank line.
+        # Preserve valid multi-line JSON without allowing unbounded frames.
+        parts=[]
+        frame_size=0
         async for line in response.aiter_lines():
-            if not line or line.startswith(':'):
+            if line=='':
+                if not parts:
+                    continue
+                wire='\n'.join(parts).strip()
+                parts=[]
+                frame_size=0
+            elif line.startswith(':'):
                 continue
-            # SSE permits bounded metadata before the data field. Common
-            # OpenAI-compatible proxies emit event: message and id: per chunk.
-            # Other event types (including error) fail closed, not as tokens.
-            if line.startswith('event:'):
+            elif line.startswith('event:'):
                 if line[6:].strip()!='message':
                     raise StreamFailure('HOLD_MODEL_SSE_EVENT')
                 continue
-            if line.startswith('id:'):
+            elif line.startswith('id:'):
                 if len(line)>256 or '\x00' in line:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
                 continue
-            if not line.startswith('data:'):
+            elif line.startswith('data:'):
+                value=line[5:]
+                if value.startswith(' '):
+                    value=value[1:]
+                frame_size+=len(value)+1
+                if frame_size>300000:
+                    raise StreamFailure('HOLD_MODEL_SSE_SIZE')
+                parts.append(value)
+                continue
+            else:
                 raise StreamFailure('HOLD_MODEL_SSE_FRAME')
-            wire=line[5:].strip()
             if wire=='[DONE]':
                 complete=True
                 break

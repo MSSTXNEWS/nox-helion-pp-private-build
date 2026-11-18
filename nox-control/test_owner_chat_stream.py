@@ -82,6 +82,24 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload['_agent_final'],'Hola')
         self.assertTrue(chunks.closed)
 
+    async def test_multiline_sse_data_fields_are_one_json_frame(self):
+        # A newline between two JSON fields is legal SSE data continuation.
+        whole=frame('Hola').decode('utf-8').split('data: ',1)[1].strip()
+        first,rest=whole.split(', "finish_reason"',1)
+        wire=(f'event: message\nid: multiline-1\n'
+              f'data: {first}\ndata: , "finish_reason"{rest}\n\n').encode('utf-8')
+        chunks=Chunks([wire,frame(finish='stop'),b'data: [DONE]\n\n'])
+        _,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion']('http://native/model',payload,'Hola',True)
+            answer=''.join([part async for part in response.body_iterator])
+        self.assertIn('Hola',answer)
+        self.assertIn('[DONE]',answer)
+        self.assertEqual(payload.get('_agent_final'),'Hola')
+        self.assertTrue(chunks.closed)
+
     async def test_untrusted_sse_event_or_id_metadata_fails_closed(self):
         cases=((b'event: error\n\n','HOLD_MODEL_SSE_EVENT'),
                (b'id: '+b'x'*257+b'\n\n','HOLD_MODEL_SSE_FRAME'))
