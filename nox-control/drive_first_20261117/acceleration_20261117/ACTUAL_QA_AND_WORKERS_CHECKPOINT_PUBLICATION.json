@@ -1,0 +1,55 @@
+{
+  "instructions_version": "0.0.6",
+  "commit": "470d81ce344115d344b7ee3ad926b46724e7225e",
+  "branch": "work/nox-resonance-direct-launch-20261117",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "files": [
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/EXECUTION_PROGRAM.md",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/VERIFIED_PROGRESS_20261118.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/MODEL_REFERENCE_CONTINUATION_RESULT_44207277921.raw.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/MODEL_REFERENCE_CONTINUATION_ACCEPTANCE_44207277921.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/NATIVE_SEMANTIC_ACCEPTANCE_44207277921.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/FOUR_QUEUE_RESULT_44206349844.raw.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/FOUR_QUEUE_QA_COMPATIBILITY_REVIEW.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/MODEL_REFERENCE_CONTINUATION_SOURCE_PUBLICATION.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/acceleration_20261117/TRAINING_CURRENT_REBASE_PUBLICATION.json",
+      "exact": true,
+      "blob_exact": true
+    }
+  ],
+  "source_only_checkpoint": true,
+  "native_install": false
+}

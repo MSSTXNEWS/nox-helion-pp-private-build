@@ -1,0 +1,138 @@
+{
+  "instructions_version": "0.0.6",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "work/nox-context-wording-install-20261118",
+  "commit": "2b6f338342bdd7eb0e9ef0e64c6c65bccb7e60cb",
+  "tree": "2c79b7b4470ea64b16e71c311723450bb00a668d",
+  "parent": "06666bd638579bb3d95317004bf293c299b79daa",
+  "files": [
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/native_context_counter_installer.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/native_v24_dialog_transform.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/model_reference_wording_transform.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/build_install_payload.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/BUILD_MANIFEST.json",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/SOURCE_GATE.json",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/SCOPED_INSTALLER_EDITS.json",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/INSTALLER_SCOPE_DELTA.patch",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/test_context_install_transaction.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/PEER_INPUT_FREEZE.json",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/SOURCE_RECEIPT.json",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/INSTALL_READINESS.md",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/INDEPENDENT_WORDING_REVIEW.json",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/owner_resonance_canary_v3_20261117.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/native_v24_dialog_installer.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/context_source_transform.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/context_install_artifacts.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/owner_context_budget.py",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/INDEPENDENT_COMPOSITION_REVIEW.json",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/ROOT_COMPLETE_PUBLICATION_MANIFEST.json",
+      "exact": true,
+      "blob_exact": true,
+      "error": false
+    }
+  ],
+  "full_files_exact": 20,
+  "operator_full_body_exact": true,
+  "operator_sha256": "6284cd40858d5fcd58a2cbfcd5a82241c6f7719ed95ced4eb861cd9ebb8beed6",
+  "operator_git_blob": "4a6c8a8bfc4301c7a7b1c78cf6ceb212b899a432",
+  "payload_sha256": "0ebcf254853bc48a471b88ee7ca8caf256e5f20a63af438a9f729a8d3f1cda27",
+  "payload_bytes": 39959,
+  "root_peer_sha256": "37bc0522fe6b0cb8cf90b2e910e9c4ffb82dec9ac19f5b0de9ff3b5c77a65229",
+  "ref_publication_error": "update_ref new branch returned422 Reference does not exist; create_branch succeeded; no native side effect"
+}

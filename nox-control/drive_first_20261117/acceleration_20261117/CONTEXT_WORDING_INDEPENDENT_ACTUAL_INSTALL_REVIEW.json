@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_CONTEXT_WORDING_ACTUAL_INSTALL_INDEPENDENT_REVIEW_V1",
+  "verdict": "PASS_REPORTED_NATIVE_INSTALL_AND_RELOAD_USE_PENDING",
+  "reviewer": "integrations_completion",
+  "actual_result": {
+    "path": "nox_refresh/context_counter_install_20261118/NATIVE_RESULT_44211768497.raw.json",
+    "sha256": "65dd412015e4f8e9ea4900f0818e857e2cb4f7df78dfb80f4fa91d8928440f45",
+    "bytes": 19212,
+    "run": 44211768497,
+    "request": "6965635795",
+    "source": "2b6f338342bdd7eb0e9ef0e64c6c65bccb7e60cb"
+  },
+  "payload": {
+    "sha256": "0ebcf254853bc48a471b88ee7ca8caf256e5f20a63af438a9f729a8d3f1cda27",
+    "bytes": 39959
+  },
+  "installed_sources": {
+    "owner_model_reference_binding.py": {
+      "sha256": "78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4",
+      "bytes": 19122
+    },
+    "chat_proxy.py": {
+      "sha256": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62",
+      "bytes": 100684
+    }
+  },
+  "new_artifact": {
+    "path": "/root/nox/scripts/owner_context_budget.py",
+    "expected": {
+      "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+      "bytes": 15511
+    },
+    "originally_absent": true,
+    "link_attempted": true,
+    "created_by_request": true,
+    "removed_by_rollback": false,
+    "after": {
+      "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+      "bytes": 15511,
+      "dev": 36,
+      "ino": 50052627,
+      "mode": "0o600",
+      "uid": 0,
+      "gid": 0,
+      "nlink": 1
+    }
+  },
+  "proxy_before": {
+    "pid": 3648425,
+    "start_ticks": 175058217
+  },
+  "proxy_after": {
+    "pid": 3703386,
+    "start_ticks": 175609570,
+    "script_bound": true
+  },
+  "supervisor_and_launcher_config_unchanged": true,
+  "completed_native_phases": [
+    "preflight",
+    "staged_verified_and_backed_up",
+    "proxy_stopped",
+    "four_postimages_verified",
+    "proxy_reloaded"
+  ],
+  "inherited_phase_label_caveat": "four_postimages_verified is an unchanged inherited label; actual change set is two existing sources plus one new artifact, not four changed files.",
+  "scope_reported": {
+    "model_calls": 0,
+    "model_reloads": 0,
+    "auth_modified": false,
+    "s03_source_modified": false,
+    "database_migrations": 0,
+    "permissions_changed": false,
+    "new_services": 0,
+    "counter_resets": 0,
+    "queue_resets": 0,
+    "history_resets": 0
+  },
+  "unchanged_runtime_dependencies": {
+    "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+    "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+    "owner_chat_stream.py": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+    "nox_v29_chat_bridge.py": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a"
+  },
+  "used": false,
+  "semantic_qa_accepted": false,
+  "loaded_module_memory_identity_verified": false,
+  "changed_context_counter_path_runtime_qa": "PENDING_TARGETED_USE",
+  "exact_final_model_input_token_fit": "NOT_OBSERVED",
+  "evidence_boundary": [
+    "Independently parsed and asserted the lossless saved native result; no fresh server access or model question.",
+    "Exact result request/source and actual target hashes match the approved payload and prior wording source review.",
+    "Process restart is reported with a new PID/start and unchanged launcher config. This is not a direct in-memory module hash measurement.",
+    "Outer workflow cleanup PASS is supplied by root; this selected native JSON does not itself carry a cleanup field.",
+    "Historical BUILD_MANIFEST/SOURCE_GATE publication/runtime-PENDING labels remain build-time records, not current native state."
+  ],
+  "additional_native_calls": 0,
+  "additional_provider_calls": 0,
+  "additional_model_calls": 0
+}

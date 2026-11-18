@@ -1,0 +1,68 @@
+{
+  "instructions_version": "0.0.6",
+  "run": 44211768497,
+  "job": 134491636891,
+  "request": "6965635795",
+  "source": "2b6f338342bdd7eb0e9ef0e64c6c65bccb7e60cb",
+  "state": "PASS_INSTALLED_PROXY_RELOADED_CHANGED_PATH_USE_PENDING",
+  "actual_raw_sha256": "65dd412015e4f8e9ea4900f0818e857e2cb4f7df78dfb80f4fa91d8928440f45",
+  "actual_raw_bytes": 19212,
+  "existing_sources_readback_exact": {
+    "owner_model_reference_binding.py": {
+      "sha256": "78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4",
+      "bytes": 19122
+    },
+    "chat_proxy.py": {
+      "sha256": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62",
+      "bytes": 100684
+    }
+  },
+  "new_helper_readback": {
+    "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+    "bytes": 15511,
+    "dev": 36,
+    "ino": 50052627,
+    "mode": "0o600",
+    "uid": 0,
+    "gid": 0,
+    "nlink": 1
+  },
+  "proxy_after": {
+    "pid": 3703386,
+    "state": "S",
+    "ppid": 114,
+    "pgrp": 3703386,
+    "start_ticks": 175609570,
+    "service": "nox-proxy",
+    "script_bound": true,
+    "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+    "exe": "/usr/bin/python3.12",
+    "cwd": "/root/nox/scripts"
+  },
+  "supervisor_config_unchanged": true,
+  "known_proxy_lifetimes": [
+    {
+      "pid": 3648425,
+      "start_ticks": 175058217
+    },
+    {
+      "pid": 3703386,
+      "start_ticks": 175609570
+    }
+  ],
+  "model_calls": 0,
+  "model_reloads": 0,
+  "queue_resets": 0,
+  "history_resets": 0,
+  "runtime_dependencies_unchanged": {
+    "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+    "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+    "owner_chat_stream.py": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+    "nox_v29_chat_bridge.py": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a"
+  },
+  "cleanup": "DETACHED_AND_VERIFIED",
+  "used": false,
+  "accepted_behavior": false,
+  "runtime_acceptance": "pending new scoped question and ordinary context measurement",
+  "repeat_allowed": false
+}

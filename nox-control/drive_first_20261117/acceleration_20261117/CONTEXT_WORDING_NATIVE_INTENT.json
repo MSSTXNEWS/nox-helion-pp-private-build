@@ -1,0 +1,29 @@
+{
+  "instructions_version": "0.0.6",
+  "state": "RECONCILED_COMPLETED_NO_REPLAY",
+  "created_utc": "2026-11-18T00:54:21.893445+00:00",
+  "source": "2b6f338342bdd7eb0e9ef0e64c6c65bccb7e60cb",
+  "instance": 60509551,
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "issue": 256,
+  "command": "/nox-maintain 60509551 2b6f338342bdd7eb0e9ef0e64c6c65bccb7e60cb repair",
+  "action": "repair",
+  "request": "6965635795",
+  "run": 44211768497,
+  "native_effect": "THREE_FILES_INSTALLED_PROXY_RELOADED_USE_PENDING",
+  "payload_sha256": "0ebcf254853bc48a471b88ee7ca8caf256e5f20a63af438a9f729a8d3f1cda27",
+  "scope": "two CAS source files plus one absent-only context helper; one nox-proxy restart; no model/common/worker/queue/history mutation",
+  "pre_proxy_pid": 3648425,
+  "pre_proxy_start_ticks": 175058217,
+  "latest_known_native_run": 44207277921,
+  "unknown_delivery_replay_allowed": false,
+  "source_files": [
+    "/root/nox/scripts/owner_model_reference_binding.py",
+    "/root/nox/scripts/chat_proxy.py"
+  ],
+  "new_file": "/root/nox/scripts/owner_context_budget.py",
+  "dispatch_started_utc": "2026-11-18T00:55:24.602788+00:00",
+  "job": 134491636891,
+  "result_path": "nox_refresh/context_counter_install_20261118/NATIVE_RESULT_44211768497.raw.json",
+  "cleanup": "DETACHED_AND_VERIFIED"
+}

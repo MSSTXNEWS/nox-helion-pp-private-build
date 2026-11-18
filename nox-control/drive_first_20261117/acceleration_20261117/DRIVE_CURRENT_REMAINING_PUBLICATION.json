@@ -1,0 +1,16 @@
+{
+  "instructions_version": "0.0.6",
+  "file_id": "1Ez0JSlLmb51GdzeV1-Nls0TF8dWczM_E",
+  "old_bytes": 960516,
+  "old_sha256": "8b9e4cc18ad49f0ee06ac4627c25dc0816ec911c83a13a231bd159d46577b564",
+  "new_bytes": 964087,
+  "new_sha256": "ade0666d114714fc2a970734c8c925c06268648670f84e4813a136e846ae343d",
+  "prefix_unchanged": true,
+  "suffix_unchanged": true,
+  "status_block_only": true,
+  "local_path": "/workspace/scratch/4136374a0419/nox_refresh/acceleration_20261118/drive_concept_current_remaining_20261118.md",
+  "uploaded": true,
+  "full_raw_exact": true,
+  "verified_bytes": 964087,
+  "verified_sha256": "ade0666d114714fc2a970734c8c925c06268648670f84e4813a136e846ae343d"
+}
