@@ -535,6 +535,43 @@ def director_child_census():
         'close_reason':native.get('close_reason'),'state':native.get('state')})
 
 
+def project_active_progress():
+    import urllib.request
+    try:
+        req=urllib.request.Request('http://127.0.0.1:8098/slots',method='GET')
+        opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req,timeout=5) as response:
+            raw=response.read(200001)
+        if len(raw)>200000:raise ValueError('SLOT_SIZE')
+        slots=json.loads(raw)
+        if not isinstance(slots,list):raise ValueError('SLOT_SHAPE')
+        rows=[]
+        keys=('id','id_task','is_processing','n_ctx','n_prompt_tokens','n_decoded','n_predict','n_past','state')
+        for slot in slots[:4]:
+            row=scalar_projection(slot,keys)
+            for field in ('timings','next_token','params'):
+                if isinstance(slot.get(field),dict):
+                    row[field]=scalar_projection(slot[field],(
+                        'n_predict','n_ctx','n_decoded','n_remaining','has_next_token',
+                        'prompt_n','prompt_ms','predicted_n','predicted_ms',
+                        'predicted_per_token_ms','predicted_per_second'))
+            rows.append(row)
+        emit('PROJECT_MODEL_SLOT_PROGRESS',{'slots':rows,'scope':'READ_ONLY_NO_PROMPT_OR_COMPLETION_CONTENT'})
+    except (OSError,ValueError,TypeError) as exc:
+        emit('PROJECT_MODEL_SLOT_PROGRESS',{'state':'UNAVAILABLE','error':type(exc).__name__})
+    base=ROOT/'state/dispatcher/project_executor/run/attempts'
+    rows=[]
+    if base.exists() and not base.is_symlink():
+        for path in sorted(base.glob('*/*/*/journal.json'))[-40:]:
+            try:
+                value,raw,info=obj(path,2000000)
+                row=scalar_projection(value,('schema','state','task_id','claim','plan_sha256','reason','started_at','finished_at'))
+                row.update({'journal_sha256':hashlib.sha256(raw).hexdigest(),'mtime_ns':info.st_mtime_ns})
+                rows.append(row)
+            except (OSError,ValueError):continue
+    emit('PROJECT_ATTEMPT_PROGRESS',{'attempts':rows})
+
+
 def main():
     emit('SNAPSHOT_A',runtime_snapshot())
     worker_status_sample()
@@ -542,6 +579,7 @@ def main():
     project_summary()
     project_install_preservation()
     project_execution_readback()
+    project_active_progress()
     emit('LOCKS',locks())
     time.sleep(6)
     worker_status_sample()
