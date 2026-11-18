@@ -145,16 +145,19 @@ def _atomic_bytes(path, value):
 def _journal_pending_offset(path, info):
     cursor_path = ROOT / 'state/owner_events/journal_cursor.json'
     if not cursor_path.exists() and not cursor_path.is_symlink():
-        return None
+        return False
     cursor = read_json(cursor_path, 16384)
-    if (isinstance(cursor, dict) and cursor.get('schema') == 'NOX_OWNER_JOURNAL_CURSOR_V1'
-            and cursor.get('inode') == info.st_ino and cursor.get('device') == info.st_dev
-            and type(cursor.get('offset')) is int and 0 <= cursor['offset'] <= info.st_size):
+    if (not isinstance(cursor, dict) or cursor.get('schema') != 'NOX_OWNER_JOURNAL_CURSOR_V1'
+            or cursor.get('inode') is not None and type(cursor.get('inode')) is not int
+            or cursor.get('device') is not None and type(cursor.get('device')) is not int
+            or type(cursor.get('offset')) is not int or cursor['offset'] < 0):
+        return False
+    if (cursor.get('inode') == info.st_ino and cursor.get('device') == info.st_dev
+            and cursor['offset'] <= info.st_size):
         return cursor['offset']
     # A live reader resets to offset zero when the journal inode changes. Keep
     # the whole retained file until that reader advances on the replacement.
     return 0
-
 
 def _compact_jsonl(path, max_bytes):
     try:
@@ -165,7 +168,11 @@ def _compact_jsonl(path, max_bytes):
             info = os.fstat(stream.fileno())
             if not os.path.isfile(path) or info.st_size <= max_bytes:
                 return False
-            pending_offset = _journal_pending_offset(path, info) if path.name == 'events.jsonl' else None
+            pending_offset = None
+            if path.name == 'events.jsonl':
+                pending_offset = _journal_pending_offset(path, info)
+                if pending_offset is False:
+                    return False
             tail, tail_bytes = deque(), 0
             pending = bytearray()
             while True:
@@ -194,7 +201,6 @@ def _compact_jsonl(path, max_bytes):
     except (OSError, ValueError, RuntimeError):
         return False
 
-
 def append_bounded_json(path, value, max_bytes):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -208,17 +214,29 @@ def append_bounded_json(path, value, max_bytes):
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         if path.is_symlink():
             raise RuntimeError('HOLD_JOURNAL_SYMLINK')
+        try:
+            current_size = path.stat().st_size
+        except FileNotFoundError:
+            current_size = 0
+        if current_size + len(line) > max_bytes:
+            target_size = max_bytes - len(line)
+            if not _compact_jsonl(path, target_size):
+                raise RuntimeError('HOLD_JOURNAL_RETENTION_PENDING')
+            try:
+                current_size = path.stat().st_size
+            except FileNotFoundError:
+                current_size = 0
+            if current_size + len(line) > max_bytes:
+                raise RuntimeError('HOLD_JOURNAL_RETENTION_PENDING')
         flags = os.O_APPEND | os.O_WRONLY | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0)
         fd = os.open(path, flags, 0o600)
         with os.fdopen(fd, 'ab') as handle:
             handle.write(line)
             handle.flush()
             os.fsync(handle.fileno())
-            size = os.fstat(handle.fileno()).st_size
-        if size > max_bytes:
-            _compact_jsonl(path, max_bytes)
+            if os.fstat(handle.fileno()).st_size > max_bytes:
+                raise RuntimeError('HOLD_JOURNAL_SIZE_RACE')
         fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
-
 
 def journal(kind, **fields):
     event = {'schema': 'NOX_DISPATCHER_MENTOR_V1', 'at': timestamp(), 'kind': kind, **fields}

@@ -144,8 +144,6 @@ class MentorTests(unittest.TestCase):
                     'retries': 1, 'max_retries': 3}
             with patch.object(mentor, 'ROOT', root), patch.object(mentor, 'stop_active', return_value=False), \
                     patch.object(mentor, 'discover_senior', return_value=config), \
-                    patch.object(mentor, 'EVENT_LOG_MAX_BYTES', 1024), \
-                    patch.object(mentor, 'QUARANTINE_LOG_MAX_BYTES', 1024), \
                     patch.object(mentor, 'consult', return_value=advice) as first_consult:
                 first = mentor.on_failure(task, 'timeout')
                 self.assertEqual(first['state'], 'READ_ONLY_RETRY_SCHEDULED')
@@ -155,8 +153,6 @@ class MentorTests(unittest.TestCase):
                              'retries': 1, 'max_retries': 3}
             with patch.object(restarted, 'ROOT', root), patch.object(restarted, 'stop_active', return_value=False), \
                     patch.object(restarted, 'discover_senior', return_value=config), \
-                    patch.object(restarted, 'EVENT_LOG_MAX_BYTES', 1024), \
-                    patch.object(restarted, 'QUARANTINE_LOG_MAX_BYTES', 1024), \
                     patch.object(restarted, 'consult') as repeated_consult:
                 repeated = restarted.on_failure(repeated_task, 'timeout')
                 self.assertEqual(repeated['state'], 'BLOCKED_DUPLICATE_CONSULTATION')
@@ -165,17 +161,31 @@ class MentorTests(unittest.TestCase):
                 incident = repeated['incident']
                 stored = json.loads((root / 'memory/dispatcher_mentor/incidents' / (incident + '.json')).read_text())
                 self.assertEqual(stored['completed']['advice'], advice)
-                for index in range(80):
-                    restarted.journal('bounded_probe', index=index, payload='x' * 40)
-                    restarted.append_bounded_json(root / 'memory/dispatcher_mentor/quarantine.jsonl',
-                                                  {'kind': 'bounded_probe', 'index': index,
-                                                   'payload': 'x' * 40}, 1024)
-            events = root / 'memory/dispatcher_mentor/events.jsonl'
-            quarantine = root / 'memory/dispatcher_mentor/quarantine.jsonl'
-            self.assertLessEqual(events.stat().st_size, 1024)
-            self.assertLessEqual(quarantine.stat().st_size, 1024)
-            self.assertIn('"index": 79', events.read_text())
-            self.assertIn('"index": 79', quarantine.read_text())
+
+    def test_event_log_hard_cap_holds_without_valid_cursor_and_quarantine_compacts(self):
+        for cursor_state in ('missing', 'malformed'):
+            with self.subTest(cursor_state=cursor_state), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                event_path = root / 'memory/dispatcher_mentor/events.jsonl'
+                event_path.parent.mkdir(parents=True)
+                prior = json.dumps({'schema': 'NOX_DISPATCHER_MENTOR_V1', 'kind': 'retained',
+                                    'payload': 'x' * 700}, sort_keys=True) + '\n'
+                event_path.write_text(prior)
+                cursor_path = root / 'state/owner_events/journal_cursor.json'
+                if cursor_state == 'malformed':
+                    cursor_path.parent.mkdir(parents=True)
+                    cursor_path.write_text('{broken')
+                before = event_path.read_bytes()
+                with patch.object(mentor, 'ROOT', root), patch.object(mentor, 'EVENT_LOG_MAX_BYTES', 1024):
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_JOURNAL_RETENTION_PENDING'):
+                        mentor.journal('new_event', payload='y' * 300)
+                    self.assertEqual(event_path.read_bytes(), before)
+                    quarantine = root / 'memory/dispatcher_mentor/quarantine.jsonl'
+                    for index in range(80):
+                        mentor.append_bounded_json(quarantine, {'kind': 'bounded_probe', 'index': index,
+                                                               'payload': 'y' * 40}, 1024)
+                    self.assertLessEqual(quarantine.stat().st_size, 1024)
+                    self.assertIn('"index": 79', quarantine.read_text())
 
     def test_no_senior_config_means_explicit_block_and_no_fake_consult(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'consult') as call:
@@ -292,7 +302,7 @@ class MentorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'discover_senior', return_value={'model': 'configured-senior', 'config_sha256': 'a' * 64}), patch.object(mentor, 'consult', return_value={'action': 'retry_task', 'reason_code': 'transient', 'service': None}) as call:
             task = {'id': 'fixture', 'handler': 'exec_plan', 'retries': 1, 'max_retries': 3}
             self.assertEqual(mentor.on_failure(task, 'timeout')['state'], 'BLOCKED_ESCALATED')
-            self.assertEqual(mentor.on_failure(task, 'timeout')['state'], 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET')
+            self.assertEqual(mentor.on_failure(task, 'timeout')['state'], 'BLOCKED_DUPLICATE_CONSULTATION')
             self.assertEqual(call.call_count, 1)
             context = call.call_args.args[1]
             self.assertNotIn('error_text', context)
