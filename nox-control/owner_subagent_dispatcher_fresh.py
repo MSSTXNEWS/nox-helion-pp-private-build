@@ -630,6 +630,168 @@ class Native:
                 raise GateError('HOLD_SUBAGENT_SUBMIT_RESULT_UNVERIFIED')
         return advanced
 
+    def _s03_verified_evidence(self, task, intent):
+        """Rebuild one exact completed result from S03; never call the worker."""
+        claim = task.get('owner_claim')
+        params = task.get('params') or {}
+        required = {'task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id',
+                    'state', 'result_sha256', 's03_receipt_sha256'}
+        if (not isinstance(intent, dict) or set(intent) != required
+                or intent.get('state') != 'S03_VERIFIED'
+                or task.get('handler') != HANDLER
+                or not isinstance(claim, dict)
+                or not CLAIM.fullmatch(str(claim.get('nonce', '')))
+                or claim.get('nonce') != intent.get('claim_nonce')
+                or task.get('id') != intent.get('task_id')
+                or params.get('role') != intent.get('role')
+                or params.get('policy_sha256') != intent.get('policy_sha')
+                or params.get('job_id') != intent.get('job_id')
+                or intent.get('role') not in ROLES
+                or intent.get('policy_sha') != self.policy.get('sha256')
+                or not re.fullmatch(r'nox-native-[a-f0-9]{24}', str(intent.get('job_id', '')))
+                or not SHA.fullmatch(str(intent.get('result_sha256', '')))
+                or not SHA.fullmatch(str(intent.get('s03_receipt_sha256', '')))):
+            return None
+        prefix = ('NOX native job ' + intent['job_id'] +
+                  ' NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED receipt_sha256 ')
+        with s03_connection() as conn:
+            rows = conn.execute(
+                "SELECT id,text,meta,sha256 FROM s03_items "
+                "WHERE segment='M2' AND provenance=? AND substr(text,1,?)=? LIMIT 2",
+                ('owner_native_subagents', len(prefix), prefix)).fetchall()
+        if len(rows) != 1:
+            return None
+        item_id, text_value, meta_raw, item_sha = rows[0]
+        if (not isinstance(text_value, str) or not text_value.startswith(prefix)
+                or item_sha != digest(('M2|' + text_value).encode())):
+            return None
+        row_receipt_sha = text_value[len(prefix):]
+        if not SHA.fullmatch(row_receipt_sha):
+            return None
+        try:
+            meta = json.loads(meta_raw)
+        except (TypeError, ValueError):
+            return None
+        receipt = meta.get('receipt') if isinstance(meta, dict) else None
+        observation = (receipt.get('worker_result') or {}).get('native_observation') if isinstance(receipt, dict) else None
+        worker = observation.get('worker') if isinstance(observation, dict) else None
+        policy_ack = observation.get('policy_ack') if isinstance(observation, dict) else None
+        receipt_sha = digest(encoded(receipt)) if isinstance(receipt, dict) else None
+        if (not isinstance(receipt, dict) or memory_text(receipt) != text_value
+                or receipt_sha != row_receipt_sha
+                or receipt_sha != intent.get('result_sha256')
+                or receipt_sha != intent.get('s03_receipt_sha256')
+                or receipt.get('schema') != RECEIPT
+                or receipt.get('phase') != 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED'
+                or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != intent.get('job_id')
+                or receipt.get('claim') != claim
+                or receipt.get('source_sha256') != self.source
+                or receipt.get('policy_sha256') != intent.get('policy_sha')
+                or receipt.get('training_started') is not False
+                or receipt.get('optimizer_steps_verified') is not False
+                or receipt.get('service_or_weights_changed') is not False
+                or not isinstance(observation, dict)
+                or observation.get('claim') != claim.get('nonce')
+                or not isinstance(policy_ack, dict)
+                or policy_ack.get('sha256') != intent.get('policy_sha')
+                or policy_ack.get('full_file_read') is not True
+                or not isinstance(worker, dict)
+                or worker.get('pid') != (receipt.get('worker_result') or {}).get('pid')):
+            return None
+        proof = s03_readback(receipt)
+        if (not proof or proof.get('task_id') != task.get('id')
+                or proof.get('job_id') != intent.get('job_id')
+                or proof.get('receipt_sha256') != receipt_sha
+                or proof.get('s03_item_id') != item_id):
+            return None
+        evidence = {'schema': RECEIPT, 'verified': True,
+                    'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT',
+                    'receipt': receipt, 's03': proof,
+                    'receipt_sha256': receipt_sha, 'candidate_applied': False}
+        return evidence if self.verify(task, evidence) else None
+
+    def _reconcile_s03_verified_queue(self, state):
+        """Complete only a dead parent's exact S03-verified claim; no resubmit."""
+        if (not self.owner_allowed() or self.stop_active()
+                or chat_priority_active() or not self.writer_lease()):
+            return 0
+        fd = None
+        try:
+            fd = os.open(plain(ROOT/'state/owner_maintenance.lock'),
+                         os.O_RDONLY | os.O_NOFOLLOW)
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except (OSError, GateError):
+            if fd is not None:
+                os.close(fd)
+            return 0
+        recovered = 0
+        try:
+            tasks = state.get('tasks') if isinstance(state, dict) else None
+            if not isinstance(tasks, dict):
+                return 0
+            active_ids = set(self.pool.active.values()) if self.pool is not None else set()
+            for task_id, task in list(tasks.items()):
+                if (not isinstance(task, dict) or task.get('id') != task_id
+                        or task.get('handler') != HANDLER or task.get('status') != 'running'
+                        or task_id in active_ids):
+                    continue
+                claim = task.get('owner_claim') or {}
+                intent = task.get('native_submit_intent')
+                if (not isinstance(claim, dict) or type(claim.get('pid')) is not int
+                        or claim.get('pid') == os.getpid()
+                        or not isinstance(intent, dict) or intent.get('state') != 'S03_VERIFIED'):
+                    continue
+                with self.ns['_qlock']:
+                    durable = document(self.ns['STATE'], 16*1024*1024)
+                    persisted = durable.get('tasks', {}).get(task_id, {})
+                    if (persisted.get('status') != 'running'
+                            or persisted.get('owner_claim') != claim
+                            or persisted.get('native_submit_intent') != intent):
+                        continue
+                evidence = self._s03_verified_evidence(task, intent)
+                if evidence is None:
+                    continue
+                verification = self.verify(task, evidence)
+                if not verification:
+                    continue
+                if (not self.owner_allowed() or self.stop_active()
+                        or chat_priority_active() or not self.writer_lease()):
+                    continue
+                with self.ns['_qlock']:
+                    durable = document(self.ns['STATE'], 16*1024*1024)
+                    persisted = durable.get('tasks', {}).get(task_id, {})
+                    current = state.get('tasks', {}).get(task_id)
+                    if (not isinstance(current, dict) or current.get('status') != 'running'
+                            or current.get('owner_claim') != claim
+                            or current.get('native_submit_intent') != intent
+                            or persisted.get('status') != 'running'
+                            or persisted.get('owner_claim') != claim
+                            or persisted.get('native_submit_intent') != intent
+                            or (current.get('result') is not None and current.get('result') != evidence)
+                            or (current.get('verification') is not None
+                                and current.get('verification') != verification)):
+                        continue
+                    current.update(status='done', result=evidence, verification=verification,
+                                   note='S03_VERIFIED_RECOVERED')
+                    self.ns['save_state'](state)
+                    readback = document(self.ns['STATE'], 16*1024*1024).get('tasks', {}).get(task_id, {})
+                    if (readback.get('status') == 'done'
+                            and readback.get('owner_claim') == claim
+                            and readback.get('native_submit_intent') == intent
+                            and readback.get('result') == evidence
+                            and readback.get('verification') == verification):
+                        recovered += 1
+        except (OSError, ValueError, TypeError, sqlite3.Error, GateError):
+            return recovered
+        finally:
+            if fd is not None:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+                finally:
+                    os.close(fd)
+        return recovered
+
     def _drain(self):
         if self.pool is None:
             return
@@ -806,7 +968,10 @@ class Native:
             if time.monotonic()-self.last_tick < 5:
                 return
             self.last_tick = time.monotonic()
+            recovered = self._reconcile_s03_verified_queue(state)
             self.last_status = autonomy.tick_existing_dispatcher(self.ns, state, mode='NORMAL')
+            if recovered:
+                self.last_status['s03_verified_queue_recovered'] = recovered
         except Exception as exc:
             self.last_status = {'state': str(exc) if isinstance(exc, GateError) else 'HOLD_NATIVE_SUBAGENT_TICK',
                                 'jobs_started': 0}
