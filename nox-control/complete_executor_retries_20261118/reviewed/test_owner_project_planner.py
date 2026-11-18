@@ -149,6 +149,48 @@ class PlannerTests(unittest.TestCase):
         with self.assertRaisesRegex(p.PlannerHold,'FOCUS_PATH'):
             p.validate_contract(self.contract,self.source)
 
+    def test_shadowed_json_keys_and_overflow_cannot_select_actions(self):
+        for raw in ('{"action":"shell","action":"test"}',
+                    '{"action":"patch","changes":[{"path":"test_app.py","path":"app.py"}]}',
+                    '{"action":"read","count":1e999}'):
+            with self.subTest(raw=raw), self.assertRaisesRegex(p.PlannerHold, 'MODEL_JSON'):
+                p.parse_action(raw)
+
+    def test_repeated_exact_test_reuses_measured_candidate(self):
+        verify = mock.Mock(side_effect=self.verify)
+        result, seen = self.run_actions([self.patch(), {'action': 'test'},
+            {'action': 'test'}, {'action': 'finish'}], verify)
+        self.assertEqual(result['state'], 'PLAN_READY')
+        self.assertEqual(verify.call_count, 1)
+        self.assertIn('"exact_candidate_result_reused": true', seen[-1][-1]['content'])
+        self.assertTrue(result['planner_receipt']['trace'][2]['exact_candidate_result_reused'])
+
+    def test_changed_candidate_requires_a_new_real_test(self):
+        verify = mock.Mock(side_effect=self.verify)
+        result, _ = self.run_actions([self.patch(), {'action': 'test'},
+            self.patch('return 2', 'return 3', b'def value():\n    return 2\n'),
+            {'action': 'test'}, {'action': 'finish'}], verify)
+        self.assertEqual(result['state'], 'PLAN_READY')
+        self.assertEqual(verify.call_count, 2)
+
+    def test_failed_exact_test_is_not_replayed_or_accepted(self):
+        def failed(plan, payloads):
+            return {**self.verify(plan, payloads), 'passed': False, 'failures': 1}
+        verify = mock.Mock(side_effect=failed)
+        result, seen = self.run_actions([self.patch(), {'action': 'test'},
+            {'action': 'test'}, {'action': 'finish'}], verify)
+        self.assertNotEqual(result['state'], 'PLAN_READY')
+        self.assertEqual(verify.call_count, 1)
+        self.assertIn('Correct the source', seen[3][-1]['content'])
+
+    def test_repeated_read_loop_stops_with_exact_trace(self):
+        read = {'action': 'read', 'path': 'app.py', 'start_line': 1, 'count': 2}
+        result, seen = self.run_actions([read] * 12)
+        self.assertEqual(result['state'], 'PLANNER_REPEATED_ACTION_NO_PROGRESS')
+        self.assertEqual(len(seen), 4)
+        self.assertEqual(len(result['trace']), 4)
+        self.assertFalse(result['original_task_accepted'])
+
 
 class ModelClientTests(unittest.TestCase):
     def test_busy_model_slot_waits_with_heartbeat_and_stop(self):

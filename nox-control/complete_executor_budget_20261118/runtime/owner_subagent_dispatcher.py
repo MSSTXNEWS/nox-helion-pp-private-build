@@ -648,6 +648,67 @@ class Native:
                 'model_answers_authoritative': False, 'candidate_actions_applied': False,
                 'training_updates_verified': False, 'capacity_maximum_measured': False}
 
+    def catalog_progress(self):
+        """Explain work demand from the existing reviewed catalog and queue.
+
+        Catalog exhaustion is not original-project completion. This projection
+        cannot reset a claim, approve a plan, or convert a failed attempt into
+        a retry; the next catalog must still pass read_reviewed_catalog().
+        """
+        names = ('not_admitted', 'pending', 'running', 'done', 'blocked',
+                 'failed', 'cancelled', 'unknown')
+        handlers = (HANDLER, LEAF_HANDLER, PROJECT_HANDLER)
+        counts = {handler:dict.fromkeys(names, 0) for handler in handlers}
+        ready, waiting, parents = [], [], set()
+        with self.ns['_qlock']:
+            tasks = (self.state or {}).get('tasks', {})
+            for row in self.catalog['tasks']:
+                handler, task_id = row['handler'], row['id']
+                value = tasks.get(task_id)
+                status = ('not_admitted' if task_id not in tasks else
+                          value.get('status') if isinstance(value, dict) else None)
+                counts[handler][status if status in names else 'unknown'] += 1
+                if handler == PROJECT_HANDLER:
+                    parents.add(row['params']['parent_task_id'])
+                if status == 'not_admitted':
+                    deps = row.get('deps', [])
+                    blocked = [dep for dep in deps if not isinstance(tasks.get(dep), dict)
+                               or tasks[dep].get('status') not in ('done', 'completed')]
+                    (waiting if blocked else ready).append(task_id)
+        absent = sum(value['not_admitted'] for value in counts.values())
+        return {'schema':'NOX_REVIEWED_CATALOG_PROGRESS_V1',
+                'scope':'CATALOG_COVERAGE_NOT_ORIGINAL_TASK_ACCEPTANCE',
+                'catalog_sha256':digest(encoded(self.catalog)),
+                'catalog_tasks':len(self.catalog['tasks']), 'counts':counts,
+                'project_parent_ids':sorted(parents),
+                'not_admitted':absent, 'dependency_ready':len(ready),
+                'dependency_waiting':len(waiting),
+                'dependency_ready_sample':sorted(ready)[:3],
+                'dependency_waiting_sample':sorted(waiting)[:3],
+                'next_action':('ADMIT_NEXT_REVIEWED_TASK' if ready else
+                    'RESOLVE_REVIEWED_DEPENDENCIES' if waiting else
+                    'REFILL_REVIEWED_CATALOG_AFTER_CLAIMS_SETTLE'),
+                'refill_requires_reviewed_contracts':True,
+                'automatic_replay_allowed':False}
+
+    def _explain_idle(self, admission):
+        # Enrich only a successful native idle census. STOP, resource pressure,
+        # unknown claims and all other admission outcomes remain authoritative.
+        if admission.get('state') != 'NATIVE_QUEUE_IDLE' or not self.projects:
+            return admission
+        progress = self.catalog_progress()
+        if progress['not_admitted'] == 0:
+            state, action = ('NATIVE_QUEUE_REVIEWED_CATALOG_EXHAUSTED',
+                             'REFILL_REVIEWED_CATALOG')
+        elif progress['dependency_ready'] == 0:
+            state, action = ('NATIVE_QUEUE_DEPENDENCY_WAIT',
+                             'RESOLVE_REVIEWED_DEPENDENCIES')
+        else:
+            state, action = ('NATIVE_QUEUE_ADMISSION_WAIT',
+                             'RECHECK_NATIVE_ADMISSION')
+        return {**admission, 'state':state, 'next_action':action,
+                'catalog_progress':progress, 'original_completion_proven':False}
+
     def project_status(self):
         pins = self.config.get('project_handoff')
         if not isinstance(pins, dict) or set(pins) != set(PROJECT_FILES):
@@ -670,17 +731,19 @@ class Native:
             raise GateError('HOLD_PROJECT_REGISTRY_COVERAGE')
         leaves = [row for row in self.catalog['tasks'] if row['handler'] == LEAF_HANDLER]
         projects = [row for row in self.catalog['tasks'] if row['handler'] == PROJECT_HANDLER]
-        with self.ns['_qlock']:
-            counts = {name:sum((self.state or {}).get('tasks', {}).get(row['id'], {}).get('status') == name
-                               for row in leaves) for name in ('pending', 'running', 'done', 'blocked')}
-            project_counts = {name:sum((self.state or {}).get('tasks', {}).get(row['id'], {}).get('status') == name
-                               for row in projects) for name in ('pending', 'running', 'done', 'blocked')}
+        progress = self.catalog_progress()
+        original_ids = {row['task_id'] for row in rows}
+        represented = original_ids & set(progress['project_parent_ids'])
+        progress.update(original_ids_with_current_project_plan=len(represented),
+            original_ids_without_current_project_plan=len(original_ids-represented),
+            original_acceptance_known=False)
         return {'state':'HANDOFF_RECEIVED_PROJECT_EXECUTION_BOUND' if self.projects else 'HANDOFF_RECEIVED_LEAF_EXECUTION_BOUND',
                 'received_unique_tasks':295,
                 'dispatch_cap':3, 'queues':{qid:sum(row['queue_id'] == qid for row in rows)
                                            for qid in autonomy.QUEUE_IDS},
-                'bound_leaf_subtasks':len(leaves), 'leaf_status':counts,
-                'bound_project_subtasks':len(projects), 'project_status':project_counts,
+                'bound_leaf_subtasks':len(leaves), 'leaf_status':progress['counts'][LEAF_HANDLER],
+                'bound_project_subtasks':len(projects), 'project_status':progress['counts'][PROJECT_HANDLER],
+                'catalog_progress':progress,
                 'original_task_acceptance_added':0,
                 'scope':'SUBTASK_COMPLETED_ORIGINAL_NOT_ACCEPTED',
                 'source_sha256':pins}
@@ -1342,7 +1405,8 @@ class Native:
             if time.monotonic()-self.last_tick < 5:
                 return
             self.last_tick = time.monotonic()
-            self.last_status = autonomy.tick_existing_dispatcher(self.ns, state, mode='NORMAL')
+            self.last_status = self._explain_idle(
+                autonomy.tick_existing_dispatcher(self.ns, state, mode='NORMAL'))
         except Exception as exc:
             self.last_status = {'state': str(exc) if isinstance(exc, GateError) else 'HOLD_NATIVE_SUBAGENT_TICK',
                                 'jobs_started': 0}
@@ -1355,7 +1419,7 @@ def bind_dispatcher(namespace):
     if namespace.get('_nox_owner_autonomy_native') is not None:
         raise GateError('HOLD_NATIVE_SUBAGENT_ALREADY_BOUND')
     if (not isinstance(namespace.get('HANDLERS'), dict) or '_qlock' not in namespace
-            or any(not callable(namespace.get(name)) for name in ('save_state', 'write_status', 'write_agents_status', '_nox_owner_task_admitted'))
+            or any(not callable(namespace.get(name)) for name in ('save_state', 'write_status', 'write_agents_status', 'atomic_write', '_nox_owner_task_admitted'))
             or namespace.get('owner_mentor') is None or namespace.get('_owner_lifecycle_bound') is not True):
         raise GateError('HOLD_NATIVE_SUBAGENT_DISPATCHER_CONTRACT')
     native = Native(namespace)
@@ -1381,30 +1445,57 @@ def bind_dispatcher(namespace):
             return False
         return old_admission(task)
     namespace['_nox_owner_task_admitted'] = admission
-    old_status, old_agents = namespace['write_status'], namespace['write_agents_status']
+    old_status, old_agents, old_atomic = (namespace[name] for name in
+                                         ('write_status', 'write_agents_status', 'atomic_write'))
+    publication = threading.local()
     def status(state):
         value = old_status(state)
         native.tick(state)  # Existing main/ticker only; no new scheduler thread.
         return value
     def agents():
-        value = old_agents()
-        path = namespace['AGENT_STATUS']
-        row = document(path, 750000)
-        row['native_subexecutors'] = {'mode': 'NORMAL', 'target': 3,
-            'director': process_identity(os.getpid()), 'observed_at': time.time(),
-            'workers': native.process_readback(), 'last_admission': native.last_status,
-            'resource_admission':native.last_resource_admission,
-            'pool_lifecycle':{'last_started_at':native.last_pool_started_at,
-                              'last_closed_at':native.last_pool_closed_at,
-                              'last_close_reason':native.last_pool_close_reason},
-            'thread_runner_count':sum(thread.is_alive() and thread.name.startswith('steal')
-                                      for thread in threading.enumerate()),
-            'declared_worker_contract_slots':namespace['WORKERS'],
-            'same_model_shared':True, 'leaf_model_calls_required':False,
-            'review_status': native.review_status(), 'project_queues':native.project_status()}
-        namespace['atomic_write'](path, row)
-        return value
-    namespace['write_status'], namespace['write_agents_status'] = status, agents
+        # The original writer used to publish a base-only JSON before this
+        # wrapper read and rewrote it. Readers could observe NO_NATIVE_STATUS
+        # while the same workers were alive. Enrich before its single atomic
+        # publish. Collect before entering old_agents and its writer locks, so
+        # adding the native lock/queue lock cannot invert their acquisition order.
+        # A projection error becomes explicit unavailable observation metadata.
+        try:
+            snapshot = {'mode': 'NORMAL', 'target': 3,
+                'director': process_identity(os.getpid()), 'observed_at': time.time(),
+                'workers': native.process_readback(), 'last_admission': native.last_status,
+                'resource_admission':native.last_resource_admission,
+                'pool_lifecycle':{'last_started_at':native.last_pool_started_at,
+                                  'last_closed_at':native.last_pool_closed_at,
+                                  'last_close_reason':native.last_pool_close_reason},
+                'thread_runner_count':sum(thread.is_alive() and thread.name.startswith('steal')
+                                          for thread in threading.enumerate()),
+                'declared_worker_contract_slots':namespace['WORKERS'],
+                'same_model_shared':True, 'leaf_model_calls_required':False,
+                'review_status': native.review_status(), 'project_queues':native.project_status()}
+            encoded(snapshot)  # Reject non-JSON or non-finite telemetry before writing.
+        except Exception as exc:
+            reason = str(exc) if isinstance(exc, GateError) and re.fullmatch(r'HOLD_[A-Z0-9_]+', str(exc)) else type(exc).__name__
+            snapshot = {'state':'HOLD_NATIVE_STATUS_PROJECTION', 'reason':reason,
+                'observed_at':time.time(), 'mode':'NORMAL', 'target':3,
+                'worker_observation_valid':False, 'original_completion_proven':False}
+        previous = getattr(publication, 'snapshot', None)
+        publication.snapshot = snapshot
+        try:
+            return old_agents()
+        finally:
+            publication.snapshot = previous
+    def atomic_with_native_status(path, row):
+        if Path(path) != Path(namespace['AGENT_STATUS']):
+            return old_atomic(path, row)
+        if not isinstance(row, dict):
+            raise GateError('HOLD_NATIVE_AGENT_STATUS_SCHEMA')
+        snapshot = getattr(publication, 'snapshot', None)
+        if snapshot is None:
+            snapshot = {'state':'HOLD_NATIVE_STATUS_PUBLICATION_CONTEXT',
+                'observed_at':time.time(), 'worker_observation_valid':False,
+                'original_completion_proven':False}
+        return old_atomic(path, {**row, 'native_subexecutors':snapshot})
+    namespace['write_status'], namespace['write_agents_status'], namespace['atomic_write'] = status, agents, atomic_with_native_status
     atexit.register(native.close)
 
 

@@ -8,8 +8,10 @@ performed by the existing project executor, outside the model interface.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+import math
 from pathlib import PurePosixPath
 import re
 import time
@@ -134,8 +136,22 @@ def parse_action(reply):
     text = reply.strip()
     if text.startswith('```json\n') and text.endswith('\n```'):
         text = text[8:-4]
+    def unique_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('duplicate model JSON key')
+            result[key] = value
+        return result
+    def finite_float(value):
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError('nonfinite model JSON value')
+        return result
     try:
-        action = json.loads(text, parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+        action = json.loads(text, object_pairs_hook=unique_keys,
+            parse_float=finite_float,
+            parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
     except (ValueError, TypeError) as exc:
         raise PlannerHold('HOLD_PROJECT_PLANNER_MODEL_JSON') from exc
     require(isinstance(action, dict) and isinstance(action.get('action'), str),
@@ -322,6 +338,8 @@ def plan_task(contract, snapshot, model_call, verify_candidate, stop_check,
     trace = []
     progress = []
     read_counts = {}
+    observed_actions = {}
+    checked_candidates = {}
     last_check = None
     verified_hash = None
     started = time.time()
@@ -356,6 +374,7 @@ def plan_task(contract, snapshot, model_call, verify_candidate, stop_check,
             reply = reply.get('content')
         require(stop_check() is False, 'OWNER_STOP_OR_CLAIM_LOST')
         heartbeat()
+        action = None
         try:
             action = parse_action(reply)
             kind = action['action']
@@ -404,11 +423,23 @@ def plan_task(contract, snapshot, model_call, verify_candidate, stop_check,
                 require(set(action) == {'action'}, 'TEST_SCHEMA')
                 plan, payloads = candidate_plan(contract, base, candidate)
                 digest = sha(canonical(plan))
-                last_check = verify_candidate(plan, payloads)
+                # The plan hash includes the complete pinned contract, source
+                # preimages, changed postimages and immutable verifier. Reuse
+                # only a measured result for that exact candidate in this
+                # claim; repeated model requests must not rerun the sandbox.
+                reused = digest in checked_candidates
+                last_check = (copy.deepcopy(checked_candidates[digest]) if reused
+                              else verify_candidate(plan, payloads))
                 passed = _test_result(last_check, digest, contract['verification']['min_tests'])
+                if not reused:
+                    checked_candidates[digest] = copy.deepcopy(last_check)
                 verified_hash = digest if passed else None
                 observation = {key: last_check.get(key) for key in
                     ('passed', 'tests_run', 'failures', 'errors', 'output', 'reason', 'sandbox_verified')}
+                observation['exact_candidate_result_reused'] = reused
+                if reused and not passed:
+                    observation['next_action'] = 'Correct the source before testing this candidate again.'
+                event['exact_candidate_result_reused'] = reused
                 progress_row.update({key: observation[key] for key in ('passed', 'tests_run', 'failures', 'errors')})
             elif kind == 'finish':
                 require(set(action) == {'action'}, 'FINISH_SCHEMA')
@@ -441,6 +472,20 @@ def plan_task(contract, snapshot, model_call, verify_candidate, stop_check,
             observation = {'rejected': str(exc)}
             trace.append({'turn': turn + 1, 'action': 'REJECTED', 'reason': str(exc)})
             progress.append({'turn': turn + 1, 'action': 'REJECTED', 'reason': str(exc)})
+        # Four repeats of the same action against unchanged source are an
+        # observed loop, not useful work. Release the bounded model slot with
+        # evidence so a reviewed follow-up can change the approach. Fresh reads
+        # and every real source edit receive their own identity.
+        if action is None or action.get('action') != 'patch' or trace[-1]['action'] == 'REJECTED':
+            action_identity = sha(canonical({'action': action if action is not None else reply,
+                                            'files': _summary(candidate)}))
+            observed_actions[action_identity] = observed_actions.get(action_identity, 0) + 1
+            if observed_actions[action_identity] >= 4:
+                return {'state': 'PLANNER_REPEATED_ACTION_NO_PROGRESS',
+                        'task_id': contract['task_id'], 'original_task_accepted': False,
+                        'reason': 'Same action repeated four times against unchanged source.',
+                        'changed_candidate_paths': [path for path in candidate
+                            if candidate[path] != base.get(path)], 'trace': trace}
         messages.append({'role': 'assistant', 'content': reply[:MAX_OUTPUT] if isinstance(reply, str) else '{}'})
         encoded_observation = json.dumps(observation, ensure_ascii=False, allow_nan=False)
         require(len(encoded_observation.encode()) <= MAX_MESSAGE, 'OBSERVATION_SIZE')

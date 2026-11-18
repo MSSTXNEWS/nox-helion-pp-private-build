@@ -338,11 +338,14 @@ def worker_status_sample():
         row['workers'].append({'claimed':claimed,'observed':identity,'verified':verified})
     project=native.get('project_queues')
     if isinstance(project,dict):
-        row['project']=scalar_projection(project,('state','received_unique_tasks','dispatch_cap','bound_leaf_subtasks','original_task_acceptance_added','scope'))
-        for name in ('queues','leaf_status'):
+        row['project']=scalar_projection(project,('state','received_unique_tasks','dispatch_cap','bound_leaf_subtasks','bound_project_subtasks','original_task_acceptance_added','scope'))
+        for name in ('queues','leaf_status','project_status'):
             row['project'][name]={k:v for k,v in (project.get(name) or {}).items() if identifier(k) and type(v) is int}
+        progress=project.get('catalog_progress')
+        if isinstance(progress,dict):
+            row['project']['catalog_progress']=scalar_projection(progress,tuple(progress))
     admission=native.get('last_admission')
-    row['admission']=scalar_projection(admission,('state','jobs_started','process_count','process_target')) if isinstance(admission,dict) else None
+    row['admission']=scalar_projection(admission,('state','jobs_started','process_count','process_target','next_action')) if isinstance(admission,dict) else None
     resource=native.get('resource_admission')
     if isinstance(resource,dict):
         row['resource_admission']=scalar_projection(resource,('native_verified','instance_id',
