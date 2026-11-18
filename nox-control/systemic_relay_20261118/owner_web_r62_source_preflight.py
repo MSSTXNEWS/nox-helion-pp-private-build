@@ -75,7 +75,7 @@ def main():
       "target_site":str(ROOT),"native_writes":0,"service_restarts":0,
       "credentials_accessed":False,"contents_exported":False,
       "observed_at":time.time(),"files":rows,
-      "all_navigable_pages_match_r5":all(rows[p]["version"]==["R5_BASE"] for p in SOURCE if "/pages/" in p and rows[p].get("state")=="KNOWN"),
+      "all_navigable_pages_match_r5":all(rows[p].get("version")==["R5_BASE"] for p in SOURCE if "/pages/" in p),
       "unrecognized_count":sum(r["state"]=="UNRECOGNIZED" for r in rows.values())
     }
     print("NOX_MAINT_WEB_R62_PREFLIGHT="+json.dumps(result,separators=(",",":"),sort_keys=True,allow_nan=False),flush=True)
