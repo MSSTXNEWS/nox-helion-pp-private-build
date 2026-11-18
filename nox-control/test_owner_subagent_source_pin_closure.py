@@ -21,6 +21,8 @@ class SourcePinClosureTests(unittest.TestCase):
         installer = load("owner_subagent_fresh_install_entry_test",
                          "owner_subagent_fresh_install_entry.py")
         pins = bundle.SUBAGENT_BUNDLE_PINS
+        self.assertEqual(pins["owner_dispatcher_mentor.py"],
+                         "d6fb298a9bfa8d3a81127848cc9f4e42ff276e2d8dcf89fbf63512cc7ec6359e")
         for filename, expected in pins.items():
             with self.subTest(filename=filename):
                 actual = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
