@@ -1,0 +1,838 @@
+{
+  "NOX_MAINT_REMOTE_EXIT_CODE": [
+    0
+  ],
+  "NOX_MAINT_REPAIR_COMPLETE": [
+    true
+  ],
+  "NOX_MAINT_TRAINING_RUNTIME_DIAGNOSTIC": [
+    {
+      "checkpoint_payloads_verified": false,
+      "config": {
+        "bytes": 654,
+        "hash_scope": "WHOLE_FILE",
+        "mtime_ns": 1794596794270904800,
+        "present": true,
+        "read_bytes": 654,
+        "sha256": "6f9562bf9a159b380875c35731b9ae5b8161bd4fa803ceccaec59be8f697f3e4",
+        "stable": true
+      },
+      "elapsed_seconds": 3.155,
+      "files_written": 0,
+      "live_optimizer_steps_verified": false,
+      "logs": [
+        {
+          "events": [
+            {
+              "hold_codes": [
+                "HOLD_TRAINING_STOP_REQUESTED"
+              ]
+            }
+          ],
+          "raw_logs_exported": false,
+          "return_code": 0,
+          "source": "supervisorctl:stdout"
+        },
+        {
+          "events": [],
+          "raw_logs_exported": false,
+          "return_code": 0,
+          "source": "supervisorctl:stderr"
+        },
+        {
+          "present": false,
+          "source": "train_volta_t866u.log"
+        },
+        {
+          "bytes": 7880478,
+          "events": [],
+          "hash_scope": "TAIL_ONLY",
+          "mtime_ns": 1794833575331472400,
+          "raw_logs_exported": false,
+          "read_bytes": 65536,
+          "sha256": "d739a84948563d2728627e7506ffcf7a3d6f226014a48339f37932033df29c71",
+          "source": "train_volta_t866u.supervisor.err",
+          "stable": true
+        },
+        {
+          "bytes": 844529,
+          "events": [
+            {
+              "patterns": [
+                "MEMFD_UNAVAILABLE"
+              ]
+            },
+            {
+              "hold_codes": [
+                "HOLD_TRAINING_STOP_REQUESTED"
+              ]
+            }
+          ],
+          "hash_scope": "TAIL_ONLY",
+          "mtime_ns": 1794929215414470400,
+          "raw_logs_exported": false,
+          "read_bytes": 65536,
+          "sha256": "4e719bba3e650b8bdf7fa491511b2725c9a67fac3c1569d7867d4ca6928e1f61",
+          "source": "train_volta_t866u.supervisor.log",
+          "stable": true
+        }
+      ],
+      "memory": {
+        "additional_owner_rollups": [
+          {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 0,
+                "memfd": 1
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 75266239716,
+              "memfd_unique_inodes": 1,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 4,
+              "unavailable": 0
+            },
+            "expected_start_ticks": 168416044,
+            "identity": {
+              "pid": 498569,
+              "ppid": 498567,
+              "start_ticks": 168416044
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              498569
+            ],
+            "pid": 498569,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 47923200,
+              "FilePmdMapped": 0,
+              "Locked": 0,
+              "Private_Clean": 0,
+              "Private_Dirty": 47923200,
+              "Pss": 48472064,
+              "Pss_Anon": 47923200,
+              "Pss_File": 548864,
+              "Pss_Shmem": 0,
+              "Rss": 57212928,
+              "Shared_Clean": 9289728,
+              "Shared_Dirty": 0,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          }
+        ],
+        "anonymous_owner_census": {
+          "census_complete": false,
+          "fd_limit": 16384,
+          "fds_examined": 506,
+          "file_rows_truncated": false,
+          "files": [
+            {
+              "device": 1,
+              "inode": 131095,
+              "kind": "memfd",
+              "logical_bytes": 75266239716,
+              "owner_count": 1,
+              "owners": [
+                {
+                  "pid": 498569,
+                  "start_ticks": 168416044
+                }
+              ],
+              "size_changed": false
+            }
+          ],
+          "logical_file_bytes_are_resident_memory": false,
+          "owner_rows_truncated": false,
+          "owners": [
+            {
+              "fd_scan_complete": true,
+              "logical_bytes": 75266239716,
+              "pid": 498569,
+              "start_ticks": 168416044,
+              "unique_inodes": 1
+            }
+          ],
+          "owners_total": 1,
+          "partial_fd_scans": 1,
+          "per_process_logical_bytes_sum": 75266239716,
+          "pid_limit": 512,
+          "pids_examined": 60,
+          "sample_is_atomic": false,
+          "scope": "BOUNDED_NUMERIC_PID_ANONYMOUS_FD_CENSUS",
+          "shared_inodes": 0,
+          "unavailable_processes": 2,
+          "unique_inodes": 1,
+          "unique_logical_bytes": 75266239716,
+          "unstable_processes": 0
+        },
+        "cgroup_after": {
+          "active_file_bytes": 107871105024,
+          "anon_bytes": 2837704704,
+          "current_bytes": 194023075840,
+          "file_bytes": 190010925056,
+          "file_mapped_bytes": 141607706624,
+          "inactive_file_bytes": 6736384000,
+          "kernel_bytes": 1168322560,
+          "max_bytes": 194065203200,
+          "shmem_bytes": 75403436032,
+          "sock_bytes": 8192,
+          "state": "OBSERVED"
+        },
+        "cgroup_before": {
+          "active_file_bytes": 107871105024,
+          "anon_bytes": 2837688320,
+          "current_bytes": 194024800256,
+          "file_bytes": 190012882944,
+          "file_mapped_bytes": 141607706624,
+          "inactive_file_bytes": 6738337792,
+          "kernel_bytes": 1168211968,
+          "max_bytes": 194065203200,
+          "shmem_bytes": 75403436032,
+          "sock_bytes": 8192,
+          "state": "OBSERVED"
+        },
+        "cmdline_environ_maps_read": false,
+        "fd_payloads_read": false,
+        "full_cgroup_memory_attribution": false,
+        "processes": {
+          "chat": {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 5,
+                "memfd": 0
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 0,
+              "memfd_unique_inodes": 0,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 69,
+              "unavailable": 1
+            },
+            "expected_start_ticks": 172046662,
+            "identity": {
+              "pid": 3266857,
+              "ppid": 114,
+              "start_ticks": 172046662
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              3266857
+            ],
+            "pid": 3266857,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 1265549312,
+              "FilePmdMapped": 0,
+              "Locked": 0,
+              "Private_Clean": 111425507328,
+              "Private_Dirty": 30970626048,
+              "Pss": 142403217408,
+              "Pss_Anon": 1265549312,
+              "Pss_File": 111462463488,
+              "Pss_Shmem": 29675204608,
+              "Rss": 142421659648,
+              "Shared_Clean": 25526272,
+              "Shared_Dirty": 0,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          },
+          "director": {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 0,
+                "memfd": 0
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 0,
+              "memfd_unique_inodes": 0,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 20,
+              "unavailable": 0
+            },
+            "expected_start_ticks": 180803640,
+            "identity": {
+              "pid": 27386,
+              "ppid": 114,
+              "start_ticks": 180803640
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              27386
+            ],
+            "pid": 27386,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 156762112,
+              "FilePmdMapped": 0,
+              "Locked": 0,
+              "Private_Clean": 4096,
+              "Private_Dirty": 156778496,
+              "Pss": 158146560,
+              "Pss_Anon": 156762112,
+              "Pss_File": 1348608,
+              "Pss_Shmem": 35840,
+              "Rss": 169951232,
+              "Shared_Clean": 13127680,
+              "Shared_Dirty": 40960,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          },
+          "embedding": {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 1,
+                "memfd": 0
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 0,
+              "memfd_unique_inodes": 0,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 9,
+              "unavailable": 0
+            },
+            "expected_start_ticks": 172255944,
+            "identity": {
+              "pid": 3353067,
+              "ppid": 114,
+              "start_ticks": 172255944
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              3353067
+            ],
+            "pid": 3353067,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 394653696,
+              "FilePmdMapped": 0,
+              "Locked": 0,
+              "Private_Clean": 473612288,
+              "Private_Dirty": 394653696,
+              "Pss": 874932224,
+              "Pss_Anon": 394653696,
+              "Pss_File": 480278528,
+              "Pss_Shmem": 0,
+              "Rss": 888594432,
+              "Shared_Clean": 20328448,
+              "Shared_Dirty": 0,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          },
+          "proxy": {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 2,
+                "memfd": 0
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 0,
+              "memfd_unique_inodes": 0,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 21,
+              "unavailable": 0
+            },
+            "expected_start_ticks": 175609570,
+            "identity": {
+              "pid": 3703386,
+              "ppid": 114,
+              "start_ticks": 175609570
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              3703386
+            ],
+            "pid": 3703386,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 446148608,
+              "FilePmdMapped": 0,
+              "Locked": 16384,
+              "Private_Clean": 270192640,
+              "Private_Dirty": 446152704,
+              "Pss": 725111808,
+              "Pss_Anon": 446148608,
+              "Pss_File": 278959104,
+              "Pss_Shmem": 4096,
+              "Rss": 749948928,
+              "Shared_Clean": 33603584,
+              "Shared_Dirty": 0,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          },
+          "web": {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 1,
+                "memfd": 0
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 0,
+              "memfd_unique_inodes": 0,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 8,
+              "unavailable": 0
+            },
+            "expected_start_ticks": 173653097,
+            "identity": {
+              "pid": 3505392,
+              "ppid": 114,
+              "start_ticks": 173653097
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              3505392
+            ],
+            "pid": 3505392,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 29564928,
+              "FilePmdMapped": 0,
+              "Locked": 0,
+              "Private_Clean": 24576,
+              "Private_Dirty": 29564928,
+              "Pss": 30843904,
+              "Pss_Anon": 29564928,
+              "Pss_File": 1278976,
+              "Pss_Shmem": 0,
+              "Rss": 41959424,
+              "Shared_Clean": 12369920,
+              "Shared_Dirty": 0,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          },
+          "worker_memory": {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 0,
+                "memfd": 0
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 0,
+              "memfd_unique_inodes": 0,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 11,
+              "unavailable": 0
+            },
+            "expected_start_ticks": 180804769,
+            "identity": {
+              "pid": 27519,
+              "ppid": 27386,
+              "start_ticks": 180804769
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              27519
+            ],
+            "pid": 27519,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 20496384,
+              "FilePmdMapped": 0,
+              "Locked": 0,
+              "Private_Clean": 0,
+              "Private_Dirty": 20500480,
+              "Pss": 21598208,
+              "Pss_Anon": 20496384,
+              "Pss_File": 1089536,
+              "Pss_Shmem": 12288,
+              "Rss": 32645120,
+              "Shared_Clean": 12124160,
+              "Shared_Dirty": 20480,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          },
+          "worker_runtime": {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 0,
+                "memfd": 0
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 0,
+              "memfd_unique_inodes": 0,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 11,
+              "unavailable": 0
+            },
+            "expected_start_ticks": 180804769,
+            "identity": {
+              "pid": 27518,
+              "ppid": 27386,
+              "start_ticks": 180804769
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              27518
+            ],
+            "pid": 27518,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 28229632,
+              "FilePmdMapped": 0,
+              "Locked": 0,
+              "Private_Clean": 20480,
+              "Private_Dirty": 28233728,
+              "Pss": 29498368,
+              "Pss_Anon": 28229632,
+              "Pss_File": 1256448,
+              "Pss_Shmem": 12288,
+              "Rss": 41168896,
+              "Shared_Clean": 12894208,
+              "Shared_Dirty": 20480,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          },
+          "worker_weights": {
+            "descriptors": {
+              "anonymous_file_logical_bytes": 0,
+              "anonymous_file_unique_inodes": 0,
+              "fd_counts": {
+                "anonymous_file": 0,
+                "anonymous_inode": 0,
+                "memfd": 0
+              },
+              "logical_file_bytes_are_resident_memory": false,
+              "memfd_logical_bytes": 0,
+              "memfd_unique_inodes": 0,
+              "names_exported": false,
+              "scan_complete": true,
+              "scanned": 11,
+              "unavailable": 0
+            },
+            "expected_start_ticks": 180804769,
+            "identity": {
+              "pid": 27520,
+              "ppid": 27386,
+              "start_ticks": 180804769
+            },
+            "namespace_ids": {
+              "ipc": 4026533187,
+              "mnt": 4026533020,
+              "pid": 4026533828,
+              "user": 4026531837
+            },
+            "namespace_pids": [
+              27520
+            ],
+            "pid": 27520,
+            "smaps_rollup_bytes": {
+              "AnonHugePages": 0,
+              "Anonymous": 20480000,
+              "FilePmdMapped": 0,
+              "Locked": 0,
+              "Private_Clean": 0,
+              "Private_Dirty": 20484096,
+              "Pss": 21561344,
+              "Pss_Anon": 20480000,
+              "Pss_File": 1069056,
+              "Pss_Shmem": 12288,
+              "Rss": 32550912,
+              "Shared_Clean": 12046336,
+              "Shared_Dirty": 20480,
+              "ShmemPmdMapped": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "state": "OBSERVED_STABLE_IDENTITY"
+          }
+        },
+        "reclaimable_memory_proven": false,
+        "scope": "PINNED_PROCESS_MEMORY_AND_BOUNDED_ANONYMOUS_FD_CENSUS",
+        "smaps_field_process_counts": {
+          "Private_Dirty": 8,
+          "Pss": 8,
+          "Pss_Anon": 8,
+          "Pss_File": 8,
+          "Pss_Shmem": 8
+        },
+        "smaps_sums_bytes": {
+          "Private_Dirty": 32066994176,
+          "Pss": 144264909824,
+          "Pss_Anon": 2361884672,
+          "Pss_File": 112227743744,
+          "Pss_Shmem": 29675281408
+        },
+        "stable_processes_observed": 8,
+        "unique_open_anonymous_files": {
+          "inodes": 0,
+          "logical_bytes": 0,
+          "resident_bytes_proven": false,
+          "scope": "EXPLICIT_PROCESS_IDENTITIES_ONLY",
+          "shared_fds_deduplicated": true
+        }
+      },
+      "metadata": {
+        "admission": {
+          "bytes": 2850,
+          "fields": {},
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794832279897545200,
+          "present": true,
+          "read_bytes": 2850,
+          "sha256": "a461be9ccedcac461ba87dcd88f89c970ee2eefd4b29159ec6a8e3f51bdc852a",
+          "stable": true
+        },
+        "checkpoint_pointer": {
+          "bytes": 163,
+          "fields": {},
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794833905202373000,
+          "present": true,
+          "read_bytes": 163,
+          "sha256": "192d07c459c7ad7c89d30d2803fea574e1bc407d37ad755c1f61294748d4ece0",
+          "stable": true
+        },
+        "execution_config": {
+          "bytes": 373,
+          "fields": {
+            "enabled": true
+          },
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794832279899545000,
+          "present": true,
+          "read_bytes": 373,
+          "sha256": "9c6238fddd1faeac4a980163a9179fdfabf63798b93e9ba2958617104a765cd5",
+          "stable": true
+        },
+        "guard": {
+          "bytes": 5221,
+          "fields": {},
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794885728393073700,
+          "present": true,
+          "read_bytes": 5221,
+          "sha256": "fe2dc1c27c8fe5f71ee157190dccdcf91a5487edd4d3dc73168d98b062ec1b96",
+          "stable": true
+        },
+        "legacy_heartbeat": {
+          "bytes": 310,
+          "fields": {
+            "max_steps": 20,
+            "phase": "loading_owner_hybrid",
+            "step": 5
+          },
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794800522372274700,
+          "present": true,
+          "read_bytes": 310,
+          "sha256": "8a86cb56aa7ffd016f2b907f8f49fea05f04582bef6031c1259e3ae255b539e2",
+          "stable": true
+        },
+        "policy": {
+          "bytes": 528,
+          "fields": {
+            "enabled": true,
+            "mode": "TASK_BOOST",
+            "training_allowed": true,
+            "training_gpu": 1
+          },
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794793945067674000,
+          "present": true,
+          "read_bytes": 528,
+          "sha256": "621116d1c10d2d9bc864c1e61fa64fcf43947144606e271e18008bc08d8cced8",
+          "stable": true
+        },
+        "student_progress": {
+          "bytes": 1287,
+          "fields": {
+            "loss": 0.9270691573619843,
+            "state": "NATIVE_STUDENT_UPDATE_OBSERVED",
+            "successful_optimizer_steps": 55
+          },
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794833906418358300,
+          "present": true,
+          "read_bytes": 1287,
+          "sha256": "4790cd8d12760cc1229d7318d352978667f8ceafea021949f81a33c82a904ad7",
+          "stable": true
+        },
+        "student_result": {
+          "bytes": 59919,
+          "fields": {
+            "state": "EXISTING_TRAINER_HOLD_OR_PAUSE",
+            "successful_optimizer_steps": 55
+          },
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794833908240336100,
+          "present": true,
+          "read_bytes": 59919,
+          "sha256": "762c0defa9d924e175b719ef2248a9b17b63664066e996161fa6c8df21e6d604",
+          "stable": true
+        }
+      },
+      "observed_at": 1795015875.4471142,
+      "raw_logs_exported": false,
+      "schema": "NOX_TRAINING_RUNTIME_DIAGNOSTIC_V1",
+      "scope": "CURRENT_SERVICE_AND_BOUNDED_MEMORY_METADATA",
+      "service": "nox-train-volta-t866u",
+      "service_mutations": 0,
+      "service_sample_stable": true,
+      "sources": {
+        "owner_qwen_execution_revision.py": {
+          "bytes": 45406,
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794832279879545300,
+          "present": true,
+          "read_bytes": 45406,
+          "sha256": "d3b2905c568d088cde2d8267f02f9e913f9fe1d3e46f590992c3a7fcb138ae14",
+          "stable": true
+        },
+        "owner_qwen_memfd.py": {
+          "bytes": 10598,
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794803158833489700,
+          "present": true,
+          "read_bytes": 10598,
+          "sha256": "938335009efe691a9cef7b41daa7c55f3c8d3d8618a10a5eb5db125fd45afa82",
+          "stable": true
+        },
+        "owner_qwen_training_contract.py": {
+          "bytes": 12332,
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794803158831489500,
+          "present": true,
+          "read_bytes": 12332,
+          "sha256": "7108da4d4949887414f33f5693fe901e3eb5fc63eb97f2b98d1371fed912f50a",
+          "stable": true
+        },
+        "qwen35_9b_manifest.json": {
+          "bytes": 11531,
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794803158836489500,
+          "present": true,
+          "read_bytes": 11531,
+          "sha256": "2275fc88370ca8ba409a791819e13c8ab7d4e38cce4576a13170b05bcb8b839b",
+          "stable": true
+        },
+        "qwen_student_training_entry_revision.py": {
+          "bytes": 71831,
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794832279882545400,
+          "present": true,
+          "read_bytes": 71831,
+          "sha256": "0982a4ab5e28d1217d5f4ee02d13a8a349cd53c27824dcbb3b5d93ed60042d03",
+          "stable": true
+        },
+        "run_train_volta_t866u.sh": {
+          "bytes": 2023,
+          "hash_scope": "WHOLE_FILE",
+          "mtime_ns": 1794832279898545200,
+          "present": true,
+          "read_bytes": 2023,
+          "sha256": "6498017a4fc91d10465648a4917cac1fe254713f04fe3080cf7ba13cb26f8356",
+          "stable": true
+        }
+      },
+      "state": "READ_ONLY_DIAGNOSIS_COMPLETE",
+      "supervisor_after": {
+        "pid": null,
+        "return_code": 3,
+        "state": "FATAL"
+      },
+      "supervisor_before": {
+        "pid": null,
+        "return_code": 3,
+        "state": "FATAL"
+      },
+      "trainer_imported": false
+    }
+  ]
+}
