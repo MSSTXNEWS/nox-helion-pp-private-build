@@ -1,3 +1,14 @@
+## A6 · 18.11.2026 10:47–10:52 МСК · V24 voice reads latest answer (source-only)
+
+- **TaskID/op:** `5V14-24` / `5b1ad586adde2cf5c8b8d7b62824063d19b647b34e85fdfe07be5e01f35f9682`; `instructions_version=0.0.6`. `SUBAGENTS_UNAVAILABLE_NO_DIRECT_COLLABORATION_NAMESPACE`: actual child IDs **0/3**, no invented workers.
+- **Cause:** connected `v24/nox-v24-chat.js` `speakLast()` used `querySelector('.v24-msg.nox:not(.v24-whisper) .body')`, which returns the **oldest** eligible answer, so voice read an outdated reply instead of the latest.
+- **Patch:** [GitLab source+test b0e6f057](https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/commit/b0e6f057ce761c168c0051a81cff8e7b47c0bf83), Git blob `32794f61fd1875fdfc8ce80d52d0509846e4be76 → d7d6c16b20ab1e79f9990a7783bfb82cbf707ed8`; new test blob `84aae489517444d7a939e0e2e3c784a264804609`. Only the eligible selector changed; S03/STOP/SSE/OneHost and cinematic assets untouched.
+- **Focused evidence:** Node v22.16.0 original callback mirror **3/4** with latest-answer RED; patched callback mirror **4/4 PASS**. Committed original test and complete V24 module were **not run together**, nor CI/browser/native. [Durable receipt and scoped claim RELEASED / readback](https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/commit/c1071b2319b53810398dbe626a12c52181712a7a). GitHub machine receipt and error journal appended with same operation and IncidentID `NOX-A6-V24-VOICE-OLDEST-REPLY-20261118`.
+- **Scope:** `SOURCE_TESTED_FOCUSED`; INSTALLED/SERVED/USED/ACCEPTED **HOLD**, new accepted native TaskIDs **0**; native owner lease not acquired, model POST 0, no remote runs, OWNER STOP/PAUSED_SOURCE/schedules untouched. Claim released after explicit result, no UNKNOWN effect.
+- **NEXT_CURSOR:** `A6/5V14-24/VOICE_LATEST_SOURCE4_NODE22_MIRROR_PASS_NATIVE_HOLD`. **NEXT_READY:** O1/O2/O5 current owner/writer/STOP/fence/resource lease + exact installed/served V24 SHA; run exact original committed Node test against full pinned source, then one admitted browser witness latest voice, NewChat, SSE, scoped STOP, history and durable S03. Do not replay earlier unknown model POST. Keep optional radio/voice/book/Cinema/shared characters/photo/video gated after live chat.
+
+---
+
 ## A6 · 18.11.2026 09:50–09:54 МСК · V24 optional reminder callback crash fixed (source only)
 
 - **TaskID/op:** `5V14-24` / `64b7a3132b70ae728ad02c88b79e58c75d3bbe5dfcb98124370ce0e7ffb50c1d`, instructions_version `0.0.6`. Real direct collaboration API absent: `SUBAGENTS_UNAVAILABLE`, **0** child agent IDs. No nested or fake workers.
