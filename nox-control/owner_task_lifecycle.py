@@ -349,7 +349,24 @@ def technical_details(task, local_recall, plan, memory):
             'public_error_codes': sorted(codes)}
 
 
-def shared_context(task, local_recall, plan, gateway=None):
+def _verify_advisor_resource_admission(namespace):
+    """Reuse the bound native chat/resource gate before any senior request."""
+    if not isinstance(namespace, dict):
+        raise LifecycleHold('HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+    dispatcher = namespace.get('owner_subagent_dispatcher')
+    native = namespace.get('_nox_owner_autonomy_native')
+    autonomy = getattr(dispatcher, 'autonomy', None)
+    verify = getattr(autonomy, 'verify_resource_admission', None)
+    if (dispatcher is None or native is None
+            or getattr(dispatcher, '_BOUND', None) is not native
+            or not callable(getattr(native, 'read_resource_snapshot', None))
+            or not callable(verify)):
+        raise LifecycleHold('HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+    snapshot = native.read_resource_snapshot()
+    verify(snapshot)
+
+
+def shared_context(task, local_recall, plan, gateway=None, resource_namespace=None):
     parent = task.get('owner_parent_id')
     group = {'parent': parent, 'plan': task.get('owner_plan_id')} if parent else {
         'task': task.get('id'), 'handler': task.get('handler'), 'params_sha256': outbox.digest(task.get('params') or {})}
@@ -368,7 +385,7 @@ def shared_context(task, local_recall, plan, gateway=None):
     now = time.time()
     with _CACHE_LOCK:
         cached = _CACHE.get(key)
-        transient = {'PENDING', 'RATE_LIMITED', 'SENIOR_CONSULTATION_UNAVAILABLE'}
+        transient = {'PENDING', 'RATE_LIMITED', 'SENIOR_CONSULTATION_UNAVAILABLE', 'RESOURCE_ADMISSION_HOLD'}
         missing = {'MISSING_SENIOR_GATEWAY', 'MISSING_CREDENTIALS', 'UNVERIFIED_ACCESS', 'DISABLED'}
         senior_state = cached['value']['senior'].get('state') if cached else None
         ttl = 2 if senior_state in transient else (15 if senior_state in missing else CACHE_SECONDS)
@@ -378,27 +395,43 @@ def shared_context(task, local_recall, plan, gateway=None):
         return {'memory': {'state': 'S03_RECALL_BUSY'}, 'senior': {'state': 'SENIOR_CONTEXT_BUSY',
                 'research_state': 'INTERNET_RESEARCH_NOT_VERIFIED'}, 'cache_reused': False, 'context_sha256': key}
     try:
-        memory = semantic_recall(task)
-        details = technical_details(task, local_recall, plan, memory)
-        technical = {'schema': 'NOX_TASK_TECHNICAL_CONTEXT_V2',
-                     'handler': outbox.safe_id(task.get('handler')),
-                     'task_evidence_sha256': key,
-                     'prior_verified_count': local_recall['verified'], 'prior_error_count': local_recall['errors'],
-                     'error_categories': local_recall['error_categories'],
-                     'mode': plan.get('mode', 'UNKNOWN'), 'global_worker_cap': 6,
-                     'plan_policy': 'EXISTING_AUTHORIZED_NATIVE_HANDLER_WITH_RESOURCE_LOCKS',
-                     'memory_text_included': False, **details}
-        if cached and senior_state == 'PENDING' and isinstance(cached.get('technical'), dict):
-            # Poll the same distinct provider work, not a new context made by
-            # normal memory-usage changes during a two-second pending interval.
-            technical = cached['technical']
-        if gateway is None:
-            senior = {'state': 'MISSING_SENIOR_GATEWAY', 'research_state': 'MISSING_INTERNET_RESEARCH_GATEWAY', 'models_consulted': 0}
-        else:
+        admission_blocked = False
+        if gateway is not None:
             try:
-                senior = _gateway_result(gateway.consult_plan(technical, deadline_seconds=2.0))
+                if resource_namespace is None:
+                    raise LifecycleHold('HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+                _verify_advisor_resource_admission(resource_namespace)
             except Exception:
-                senior = {'state': 'SENIOR_CONSULTATION_UNAVAILABLE', 'research_state': 'INTERNET_RESEARCH_NOT_VERIFIED', 'models_consulted': 0}
+                admission_blocked = True
+        if admission_blocked:
+            memory = {'state': 'NOT_CALLED_RESOURCE_ADMISSION'}
+            senior = {'state': 'RESOURCE_ADMISSION_HOLD',
+                      'research_state': 'NOT_STARTED_RESOURCE_ADMISSION', 'models_consulted': 0}
+            technical = None
+        else:
+            memory = semantic_recall(task)
+            details = technical_details(task, local_recall, plan, memory)
+            technical = {'schema': 'NOX_TASK_TECHNICAL_CONTEXT_V2',
+                         'handler': outbox.safe_id(task.get('handler')),
+                         # Stable across restarts for identical task/attempt; gateway persists this context digest.
+                         'task_evidence_sha256': key,
+                         'prior_verified_count': local_recall['verified'], 'prior_error_count': local_recall['errors'],
+                         'error_categories': local_recall['error_categories'],
+                         'mode': plan.get('mode', 'UNKNOWN'), 'global_worker_cap': 6,
+                         'plan_policy': 'EXISTING_AUTHORIZED_NATIVE_HANDLER_WITH_RESOURCE_LOCKS',
+                         'memory_text_included': False, **details}
+            if cached and senior_state == 'PENDING' and isinstance(cached.get('technical'), dict):
+                # Poll the same distinct provider work, not a new context made by
+                # normal memory-usage changes during a two-second pending interval.
+                technical = cached['technical']
+            if gateway is None:
+                senior = {'state': 'MISSING_SENIOR_GATEWAY', 'research_state': 'MISSING_INTERNET_RESEARCH_GATEWAY', 'models_consulted': 0}
+            else:
+                try:
+                    # Gateway persists dedup on context, config and provider bindings across restarts.
+                    senior = _gateway_result(gateway.consult_plan(technical, deadline_seconds=2.0))
+                except Exception:
+                    senior = {'state': 'SENIOR_CONSULTATION_UNAVAILABLE', 'research_state': 'INTERNET_RESEARCH_NOT_VERIFIED', 'models_consulted': 0}
         value = {'memory': memory, 'senior': senior, 'cache_reused': False, 'context_sha256': key,
                  'context_observed_at': now, 'technical_context': technical}
         with _CACHE_LOCK:
@@ -436,13 +469,13 @@ def _plan_projection(value):
     return result
 
 
-def preflight(task, state, mentor, plans=None, gateway=None):
+def preflight(task, state, mentor, plans=None, gateway=None, resource_namespace=None):
     stopped = mentor.stop_active()
     plan = _plan_projection(plans.plan_metadata(task, state) if plans is not None else default_plan_metadata(task, state))
     local = journal_recall(task)
     context = ({'memory': {'state': 'NOT_CALLED_OWNER_STOP'}, 'senior': {'state': 'NOT_CALLED_OWNER_STOP',
                 'research_state': 'NOT_CALLED_OWNER_STOP'}, 'cache_reused': False} if stopped else
-               shared_context(task, local, plan, gateway))
+               shared_context(task, local, plan, gateway, resource_namespace))
     return {'schema': LIFECYCLE_SCHEMA, 'phase': 'PREFLIGHT', 'task_id': outbox.safe_id(task.get('id')),
             'handler': outbox.safe_id(task.get('handler')), 'claim': (task.get('owner_claim') or {}).get('nonce'),
             'at': time.time(), 'execution': 'BLOCKED_OWNER_STOP' if stopped else 'EXISTING_ADMISSION_REQUIRED',
@@ -579,7 +612,7 @@ class Coordinator:
             with self.namespace['_qlock']:
                 snapshot = {'tasks': {key: copy.deepcopy({name: value for name, value in row.items() if not name.startswith('_')})
                                       for key, row in (state.get('tasks') or {}).items()}}
-            pre = preflight(task, snapshot, self.mentor, self.plans, self.gateway)
+            pre = preflight(task, snapshot, self.mentor, self.plans, self.gateway, self.namespace)
             self.mentor.journal('owner_task_preflight', lifecycle=pre, task_id=pre['task_id'],
                                 handler=pre['handler'], accepted=False)
         except Exception:
