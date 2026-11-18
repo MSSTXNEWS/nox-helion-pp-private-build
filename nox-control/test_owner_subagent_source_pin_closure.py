@@ -56,7 +56,7 @@ class SourcePinClosureTests(unittest.TestCase):
                           "owner_senior_gateway.py": None,
                           "nox_dispatcher_t855u.py": None})
         self.assertEqual(installer.UNVERIFIED_NATIVE_PREIMAGES,
-                         {"owner_subagent_processes.py", "owner_dispatcher_mentor.py"})
+                         {"owner_autonomy_pool.py", "owner_subagent_processes.py", "owner_dispatcher_mentor.py"})
         self.assertEqual(set(installer.NATIVE_PREIMAGE_RECEIPTS),
                          installer.REQUIRED_PREIMAGE_FILES - installer.UNVERIFIED_NATIVE_PREIMAGES)
         for filename, expected in installer.ASSETS.items():

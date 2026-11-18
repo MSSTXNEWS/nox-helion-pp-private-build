@@ -201,6 +201,23 @@ class FreshInstallerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'NATIVE_PREIMAGE_RECEIPT_INCOMPLETE'):
             entry.require_native_preimages()
 
+    def test_preimage_receipts_require_path_and_exact_file_hash(self):
+        preimages = {name: (value if isinstance(value, str) else 'f' * 64)
+                     for name, value in entry.NATIVE_PREIMAGES.items()}
+        preimages.update({name: 'f' * 64 for name in entry.REQUIRED_PREIMAGE_FILES})
+        receipts = {
+            name: {'run_id': 'fixture', 'source_sha': 'a' * 40,
+                   'path': entry.NATIVE_PREIMAGE_PATHS[name],
+                   'file_sha256': preimages[name]}
+            for name in entry.REQUIRED_PREIMAGE_FILES
+        }
+        receipts['owner_autonomy_pool.py'] = {'run_id': '44364416448'}
+        with patch.object(entry, 'NATIVE_PREIMAGES', preimages), \
+             patch.object(entry, 'NATIVE_PREIMAGE_RECEIPTS', receipts), \
+             patch.object(entry, 'UNVERIFIED_NATIVE_PREIMAGES', set()):
+            with self.assertRaisesRegex(RuntimeError, 'NATIVE_PREIMAGE_RECEIPT_INCOMPLETE'):
+                entry.require_native_preimages()
+
     def test_bundle_failure_is_before_native_operations(self):
         with patch.object(entry, 'BUNDLE', {}):
             with self.assertRaisesRegex(RuntimeError, 'BUNDLE_BOUND'):
@@ -331,7 +348,13 @@ def main():
                 return sample['admission_allowed']
             stack.enter_context(patch.object(entry, 'resource_admission', side_effect=fresh_resource_sample))
             stack.enter_context(patch.object(entry, 'OLD_MENTOR_SHA', entry.digest(helper.before_mentor)))
-            stack.enter_context(patch.object(entry, 'NATIVE_PREIMAGE_RECEIPTS', {name: {'run_id': 'fixture'} for name in entry.REQUIRED_PREIMAGE_FILES}))
+            fixture_receipts = {
+                name: {'run_id': 'fixture', 'source_sha': 'a' * 40,
+                       'path': entry.NATIVE_PREIMAGE_PATHS[name],
+                       'file_sha256': fake_preimages[name]}
+                for name in entry.REQUIRED_PREIMAGE_FILES
+            }
+            stack.enter_context(patch.object(entry, 'NATIVE_PREIMAGE_RECEIPTS', fixture_receipts))
             stack.enter_context(patch.object(entry, 'prior_receipt', return_value=helper.prior))
             stack.enter_context(patch.object(entry, 'old_callback', return_value=helper.callback))
             stack.enter_context(patch.object(entry, 'training_snapshot', side_effect=snapshots))

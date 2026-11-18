@@ -48,7 +48,8 @@ OLD_CONFIG_MODULE_PINS = {
     'owner_senior_gateway.py': None,
     'nox_dispatcher_t855u.py': None,
 }
-UNVERIFIED_NATIVE_PREIMAGES = {'owner_subagent_processes.py', 'owner_dispatcher_mentor.py'}
+UNVERIFIED_NATIVE_PREIMAGES = {
+    'owner_autonomy_pool.py', 'owner_subagent_processes.py', 'owner_dispatcher_mentor.py'}
 NEW_DEPENDENCIES = {
     'owner_subagent_processes.py': '060247b16ef98dfd68fe09965ef7b8472512ab10d42d619ea3a72c57e739fc5f',
     'owner_autonomy_pool.py': 'a3f5f1d1081ecce84815005a4dcf1cf0d46fd0b8c023a4ee56dd68c8097f89ce',
@@ -129,24 +130,55 @@ REQUIRED_PREIMAGE_FILES = {
     'owner_task_lifecycle.py', 'owner_senior_gateway.py',
     'nox_dispatcher_t855u.py', 'config/owner_native_subagents.json',
 }
+NATIVE_PREIMAGE_PATHS = {
+    'owner_subagent_dispatcher.py': '/root/nox/scripts/owner_subagent_dispatcher.py',
+    'owner_subagent_processes.py': '/root/nox/scripts/owner_subagent_processes.py',
+    'owner_autonomy_pool.py': '/root/nox/scripts/owner_autonomy_pool.py',
+    'owner_dispatcher_mentor.py': '/root/nox/scripts/owner_dispatcher_mentor.py',
+    'owner_task_lifecycle.py': '/root/nox/scripts/owner_task_lifecycle.py',
+    'owner_senior_gateway.py': '/root/nox/scripts/owner_senior_gateway.py',
+    'nox_dispatcher_t855u.py': '/root/nox/scripts/nox_dispatcher_t855u.py',
+    'config/owner_native_subagents.json': '/root/nox/config/owner_native_subagents.json',
+}
 NATIVE_PREIMAGE_RECEIPTS = {
-    'owner_subagent_dispatcher.py': {'run_id': '44361087833',
-        'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46'},
-    'owner_task_lifecycle.py': {'run_id': '44361087833',
-        'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46'},
-    'owner_senior_gateway.py': {'run_id': '44361087833',
-        'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46'},
-    'nox_dispatcher_t855u.py': {'run_id': '44361087833',
-        'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46'},
-    'config/owner_native_subagents.json': {'run_id': '44361087833',
-        'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46'},
-    'owner_autonomy_pool.py': {'run_id': '44364416448'},
+    'owner_subagent_dispatcher.py': {
+        'run_id': '44361087833', 'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46',
+        'path': NATIVE_PREIMAGE_PATHS['owner_subagent_dispatcher.py'],
+        'file_sha256': OLD_CALLBACK},
+    'owner_task_lifecycle.py': {
+        'run_id': '44361087833', 'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46',
+        'path': NATIVE_PREIMAGE_PATHS['owner_task_lifecycle.py'],
+        'file_sha256': '909502a75799096e094a622639fe959ecfa835cc70db705a4062541940cea27e'},
+    'owner_senior_gateway.py': {
+        'run_id': '44361087833', 'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46',
+        'path': NATIVE_PREIMAGE_PATHS['owner_senior_gateway.py'],
+        'file_sha256': '1fd1556009ce62fa806bdee0a9a34577d276344e728fe9d94b33f44eb151346e'},
+    'nox_dispatcher_t855u.py': {
+        'run_id': '44361087833', 'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46',
+        'path': NATIVE_PREIMAGE_PATHS['nox_dispatcher_t855u.py'],
+        'file_sha256': DISPATCHER_SHA},
+    'config/owner_native_subagents.json': {
+        'run_id': '44361087833', 'source_sha': '0db7cc0087ca6e50bfc38241cb43cc4d21cbed46',
+        'path': NATIVE_PREIMAGE_PATHS['config/owner_native_subagents.json'],
+        'file_sha256': OLD_CONFIG},
 }
 
 
 def require_native_preimages():
-    # Static candidate pins are not substitutes for path-bound live receipts.
-    missing_receipts = sorted(REQUIRED_PREIMAGE_FILES - set(NATIVE_PREIMAGE_RECEIPTS))
+    # Every trusted preimage must be bound to its installed path and source revision.
+    missing_receipts = []
+    for name in sorted(REQUIRED_PREIMAGE_FILES):
+        receipt = NATIVE_PREIMAGE_RECEIPTS.get(name)
+        if not isinstance(receipt, dict):
+            missing_receipts.append(name)
+            continue
+        if (receipt.get('path') != NATIVE_PREIMAGE_PATHS[name]
+                or not isinstance(receipt.get('source_sha'), str)
+                or not re.fullmatch('[a-f0-9]{40}', receipt['source_sha'])
+                or not isinstance(receipt.get('file_sha256'), str)
+                or not re.fullmatch('[a-f0-9]{64}', receipt['file_sha256'])
+                or receipt['file_sha256'] != NATIVE_PREIMAGES.get(name)):
+            missing_receipts.append(name)
     missing_hashes = sorted(name for name in REQUIRED_PREIMAGE_FILES
                             if not isinstance(NATIVE_PREIMAGES.get(name), str)
                             or not re.fullmatch('[a-f0-9]{64}', NATIVE_PREIMAGES[name]))
