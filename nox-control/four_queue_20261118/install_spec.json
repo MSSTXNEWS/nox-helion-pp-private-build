@@ -1,0 +1,124 @@
+{
+  "assets": {
+    "owner_autonomy_pool.py": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+    "owner_subagent_dispatcher.py": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+    "owner_subagent_processes.py": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
+    "owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+    "test_owner_four_queue.py": "4334ec2e2047c34ed7ee5d1f24152a1a2468b07f4bdfc8ebf592d13a64648ac9",
+    "test_owner_normal3_continuity.py": "409411abe7a828d2633cd9c2e4792629a00925b4a6a8dfcead27f80dd3f75641",
+    "work_tasks.json": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+    "work_ideas.json": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+    "work_receipts.json": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+    "NOX_FOUR_QUEUE_ROUTING_20261118.json": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671"
+  },
+  "expected_native": {
+    "scripts/nox_dispatcher_t855u.py": "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21",
+    "scripts/owner_subagent_dispatcher.py": "179e50b71377e007d32a39d0558ff77dbe02267f43045a4c14763b3d4abd6114",
+    "scripts/owner_subagent_processes.py": "117842bc8f0f9adf825213403ebcd2139f80db692d4589ac05b3359381551164",
+    "scripts/owner_autonomy_pool.py": "8e14f7f7909cefb38686420638621ebf0903e337070ad95d733d86632064ef95",
+    "scripts/owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+    "scripts/owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
+    "config/owner_native_subagents.json": "e988316fc3f6a7600fbce088c4aa7de72c44f2bfcce097def8942fa93b9b9da9",
+    "state/dispatcher/policies/NOX_WEB_WEIGHTS_V06.md": "84780aaf911a229a654995f38972cdad5d99c72ab38842f76f787ec280acb46f"
+  },
+  "install_paths": {
+    "owner_autonomy_pool.py": "scripts/owner_autonomy_pool.py",
+    "owner_subagent_dispatcher.py": "scripts/owner_subagent_dispatcher.py",
+    "owner_subagent_processes.py": "scripts/owner_subagent_processes.py",
+    "owner_resource_policy.py": "scripts/owner_resource_policy.py",
+    "test_owner_four_queue.py": "scripts/test_owner_four_queue.py",
+    "test_owner_normal3_continuity.py": "scripts/test_owner_normal3_continuity.py",
+    "work_tasks.json": "state/dispatcher/project_work_tasks.json",
+    "work_ideas.json": "state/dispatcher/project_work_ideas.json",
+    "work_receipts.json": "state/dispatcher/project_work_receipts_source.json",
+    "NOX_FOUR_QUEUE_ROUTING_20261118.json": "state/dispatcher/project_routing_4q.json"
+  },
+  "leaf_catalog": [
+    {
+      "id": "1V14-01.native4q.chat_health.20261118",
+      "handler": "owner_native_typed_leaf",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "source_sha256": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+      "params": {
+        "operation": "chat_health",
+        "parent_task_id": "1V14-01"
+      },
+      "title": "Chat and current model health check",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "estimated_cost": 1
+    },
+    {
+      "id": "3A02.native4q.memory_schema.20261118",
+      "handler": "owner_native_typed_leaf",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "source_sha256": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+      "params": {
+        "operation": "memory_schema",
+        "parent_task_id": "3A02"
+      },
+      "title": "S03 schema and service status check",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "estimated_cost": 1
+    },
+    {
+      "id": "4A03.native4q.training_prerequisites.20261118",
+      "handler": "owner_native_typed_leaf",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "source_sha256": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+      "params": {
+        "operation": "training_prerequisites",
+        "parent_task_id": "4A03"
+      },
+      "title": "Training prerequisites read-only check",
+      "queue_id": "Q3_TRAINING_WEIGHTS",
+      "estimated_cost": 1
+    },
+    {
+      "id": "I-48.native4q.queue_regression.20261118",
+      "handler": "owner_native_typed_leaf",
+      "deps": [],
+      "priority": "P1",
+      "resource": "CPU_LIGHT",
+      "source_sha256": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+      "params": {
+        "operation": "queue_regression",
+        "parent_task_id": "I-48"
+      },
+      "title": "Four-queue and persistent-process focused regression",
+      "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
+      "estimated_cost": 1
+    }
+  ],
+  "leaf_source_pins": {
+    "test_owner_four_queue.py": "4334ec2e2047c34ed7ee5d1f24152a1a2468b07f4bdfc8ebf592d13a64648ac9",
+    "test_owner_normal3_continuity.py": "409411abe7a828d2633cd9c2e4792629a00925b4a6a8dfcead27f80dd3f75641",
+    "owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+    "owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
+    "owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773"
+  },
+  "project_handoff": {
+    "work_tasks_sha256": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+    "work_ideas_sha256": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+    "routing_sha256": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671"
+  },
+  "protected_processes": {
+    "chat": {
+      "pid": 3266857,
+      "start_ticks": 172046662
+    },
+    "proxy": {
+      "pid": 3648425,
+      "start_ticks": 175058217
+    },
+    "web": {
+      "pid": 3505392,
+      "start_ticks": 173653097
+    }
+  }
+}

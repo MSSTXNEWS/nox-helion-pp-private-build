@@ -1,0 +1,655 @@
+{
+  "schema": "nox-work-ideas-v1",
+  "ideas": [
+    {
+      "id": "I-01",
+      "group": 1,
+      "title": "Подхват поручения после reload по тому же ID",
+      "evidence": "native",
+      "acceptance": "Патч reconnect наблюдает уже принятую медиазадачу",
+      "source_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/raw/8ada721249a3d584545675b32ffc49004c2a496d/handoff/20261117/nox-v15-kit/patches/media-reconnect.patch",
+      "source_label": "Патч",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-02",
+      "group": 3,
+      "title": "Эхо памяти",
+      "evidence": "native",
+      "acceptance": "Ответ открывает источник, дату и версию воспоминания",
+      "source_url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-v2/tree/main",
+      "source_label": "Данные",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-03",
+      "group": 3,
+      "title": "Быстрый ответ из S03",
+      "evidence": "native",
+      "acceptance": "Точная выборка и кэш в пределах текущего пользователя",
+      "source_url": "https://sqlite.org/fts5.html",
+      "source_label": "Пример FTS5",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-04",
+      "group": 1,
+      "title": "Три разных STOP",
+      "evidence": "native",
+      "acceptance": "Ответ, медиа и аварийный контур с отдельными квитанциями",
+      "source_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/aa75e3a32916621f2729d885e41536fd5a923b05",
+      "source_label": "Исходник",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-05",
+      "group": 1,
+      "title": "Живой RU/ES с перебиванием",
+      "evidence": "native",
+      "acceptance": "При начале речи приглушать TTS и принимать следующий ввод",
+      "source_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
+      "source_label": "Вес STT",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-06",
+      "group": 3,
+      "title": "Устойчивая личность NOX",
+      "evidence": "native",
+      "acceptance": "Биографию, тон и границы брать из существующего C05 и S03",
+      "source_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/raw/8ada721249a3d584545675b32ffc49004c2a496d/handoff/20261117/nox-v15-kit/server/BRAIN_BIND_RU.md",
+      "source_label": "Привязка C05",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-07",
+      "group": 0,
+      "title": "Что изменилось с прошлого раза",
+      "evidence": "native",
+      "acceptance": "Показать факты, результаты и источники из журнала",
+      "source_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/raw/8ada721249a3d584545675b32ffc49004c2a496d/handoff/20261117/nox-v15-kit/DRIVE_JOURNAL_RU.md",
+      "source_label": "Шаблон журнала",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-08",
+      "group": 5,
+      "title": "D02 отражает реальный этап",
+      "evidence": "native",
+      "acceptance": "Сцена реагирует на подтверждённые события ожидания и работы",
+      "source_url": "https://drive.google.com/file/d/1IgZk-TwxdfoD2MhFUv8m-CYP7naa6SZX/view",
+      "source_label": "WEB-кандидат",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-09",
+      "group": 5,
+      "title": "Studio управляет оригинальным HOME",
+      "evidence": "native",
+      "acceptance": "Встроены мир, палитра и графическое качество",
+      "source_url": "https://drive.google.com/file/d/1IgZk-TwxdfoD2MhFUv8m-CYP7naa6SZX/view",
+      "source_label": "WEB-кандидат",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-10",
+      "group": 6,
+      "title": "Восемь цветных шкал",
+      "evidence": "native",
+      "acceptance": "Семь потоков и общий процент из квитанций OneHost",
+      "source_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/raw/8ada721249a3d584545675b32ffc49004c2a496d/handoff/20261117/nox-v15-kit/site/nox-v15-progress.js",
+      "source_label": "Исходник",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-11",
+      "group": 5,
+      "title": "Открыть фото в Painterro",
+      "evidence": "native",
+      "acceptance": "Вернуть сохранённую правку в исходный диалог",
+      "source_url": "https://registry.npmjs.org/painterro/-/painterro-1.2.92.tgz",
+      "source_label": "Пакет",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-12",
+      "group": 5,
+      "title": "Монтаж видео в «Резонансе»",
+      "evidence": "native",
+      "acceptance": "Обрезка, звук, субтитры и экспорт через существующий маршрут",
+      "source_url": "https://ffmpeg.org/releases/ffmpeg-8.0.1.tar.xz",
+      "source_label": "FFmpeg",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-13",
+      "group": 3,
+      "title": "Непрерывный Hunter",
+      "evidence": "native",
+      "acceptance": "Проверенные обновления источников проходят в текущую S03",
+      "source_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/raw/8ada721249a3d584545675b32ffc49004c2a496d/handoff/20261117/nox-v15-kit/server/knowledge_sources.json",
+      "source_label": "Конфиг",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-14",
+      "group": 0,
+      "title": "Три внешних советника",
+      "evidence": "native",
+      "acceptance": "Код, исследования и независимая проверка по бюджету",
+      "source_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/raw/8ada721249a3d584545675b32ffc49004c2a496d/handoff/20261117/nox-v15-kit/server/knowledge_sources.json",
+      "source_label": "Конфиг",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-15",
+      "group": 4,
+      "title": "Физические доказательства обучения",
+      "evidence": "native",
+      "acceptance": "Изменение тензоров, restore и сравнение с независимым holdout",
+      "source_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build/-/raw/8ada721249a3d584545675b32ffc49004c2a496d/handoff/20261117/nox-v15-kit/server/forge_admission.py",
+      "source_label": "CLI",
+      "stage": "foundation"
+    },
+    {
+      "id": "I-16",
+      "group": 5,
+      "title": "Палитра D02 из фото или кадра",
+      "evidence": "native",
+      "acceptance": "Извлечь цвета и предложить ближайший существующий скин",
+      "source_url": "https://registry.npmjs.org/colorthief/-/colorthief-3.5.0.tgz",
+      "source_label": "ColorThief",
+      "stage": "express"
+    },
+    {
+      "id": "I-17",
+      "group": 5,
+      "title": "Портрет без фона в один клик",
+      "evidence": "native",
+      "acceptance": "Получить прозрачный PNG и сразу открыть его в Painterro",
+      "source_url": "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite",
+      "source_label": "Маска MediaPipe",
+      "stage": "express"
+    },
+    {
+      "id": "I-18",
+      "group": 5,
+      "title": "Раскадровка видео за один клик",
+      "evidence": "native",
+      "acceptance": "6–8 кадров, переход к таймкоду и экспорт кадра в редактор",
+      "source_url": "https://registry.npmjs.org/mediabunny/-/mediabunny-1.66.0.tgz",
+      "source_label": "Mediabunny",
+      "stage": "express"
+    },
+    {
+      "id": "I-19",
+      "group": 5,
+      "title": "Экспорт живого D02 в GIF",
+      "evidence": "native",
+      "acceptance": "Двухсекундный луп из существующего canvas, кодирование в worker",
+      "source_url": "https://registry.npmjs.org/gifenc/-/gifenc-1.0.3.tgz",
+      "source_label": "gifenc",
+      "stage": "express"
+    },
+    {
+      "id": "I-20",
+      "group": 5,
+      "title": "Облегчить изображение прямо в чате",
+      "evidence": "native",
+      "acceptance": "WebP с предпросмотром качества и размером до/после",
+      "source_url": "https://registry.npmjs.org/@jsquash/webp/-/webp-1.5.0.tgz",
+      "source_label": "jSquash WebP",
+      "stage": "express"
+    },
+    {
+      "id": "I-21",
+      "group": 1,
+      "title": "Слышать только голос",
+      "evidence": "native",
+      "acceptance": "Переключатель шумоподавления с прослушиванием A/B в браузере",
+      "source_url": "https://registry.npmjs.org/@jitsi/rnnoise-wasm/-/rnnoise-wasm-0.2.1.tgz",
+      "source_label": "RNNoise WASM",
+      "stage": "express"
+    },
+    {
+      "id": "I-22",
+      "group": 5,
+      "title": "Отправить скин NOX на телефон через QR",
+      "evidence": "native",
+      "acceptance": "QR передаёт только ID мира, цвет и качество",
+      "source_url": "https://registry.npmjs.org/qrcode/-/qrcode-1.5.4.tgz",
+      "source_label": "QRCode",
+      "stage": "express"
+    },
+    {
+      "id": "I-23",
+      "group": 5,
+      "title": "Копирование текста из кадра RU/ES/EN",
+      "evidence": "native",
+      "acceptance": "Выделить область, распознать локально, открыть текст в чате",
+      "source_url": "https://registry.npmjs.org/tesseract.js/-/tesseract.js-6.0.1.tgz",
+      "source_label": "Tesseract.js",
+      "stage": "express"
+    },
+    {
+      "id": "I-24",
+      "group": 1,
+      "title": "PDF с кликабельной страницей-цитатой",
+      "evidence": "native",
+      "acceptance": "Переход из ответа к выделенному фрагменту PDF",
+      "source_url": "https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-6.5.438.tgz",
+      "source_label": "PDF.js",
+      "stage": "express"
+    },
+    {
+      "id": "I-25",
+      "group": 1,
+      "title": "Разбор и экспорт XLSX/CSV в чате",
+      "evidence": "native",
+      "acceptance": "Просмотр выбранных листов, фильтры и выгрузка результата",
+      "source_url": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+      "source_label": "SheetJS CE",
+      "stage": "express"
+    },
+    {
+      "id": "I-26",
+      "group": 1,
+      "title": "План или протокол одним DOCX",
+      "evidence": "native",
+      "acceptance": "Скачать артефакт «Резонанса» в одном шаблоне",
+      "source_url": "https://registry.npmjs.org/docx/-/docx-9.6.0.tgz",
+      "source_label": "docx",
+      "stage": "express"
+    },
+    {
+      "id": "I-27",
+      "group": 1,
+      "title": "Мгновенный поиск внутри загруженного проекта",
+      "evidence": "native",
+      "acceptance": "Поиск по заголовкам, выдержкам и артефактам прямо в вкладке",
+      "source_url": "https://registry.npmjs.org/minisearch/-/minisearch-7.2.0.tgz",
+      "source_label": "MiniSearch",
+      "stage": "express"
+    },
+    {
+      "id": "I-28",
+      "group": 1,
+      "title": "Сравнение доказательств и файлов до/после",
+      "evidence": "native",
+      "acceptance": "Визуальный diff ответа, конфигурации или проекта",
+      "source_url": "https://registry.npmjs.org/diff2html/-/diff2html-3.4.52.tgz",
+      "source_label": "diff2html",
+      "stage": "express"
+    },
+    {
+      "id": "I-29",
+      "group": 3,
+      "title": "Показать вероятные дубли памяти",
+      "evidence": "native",
+      "acceptance": "Подсветить возможные совпадения внутри проекта перед объединением",
+      "source_url": "https://files.pythonhosted.org/packages/18/97/226c43b7b5d957bc3840ed52ea99eed261f99834c4619be7a4742cbaeafa/rapidfuzz-3.14.6.tar.gz",
+      "source_label": "RapidFuzz",
+      "stage": "express"
+    },
+    {
+      "id": "I-30",
+      "group": 3,
+      "title": "Понимать «в прошлый четверг» на RU/ES",
+      "evidence": "native",
+      "acceptance": "Показать точную дату запроса и дать исправить неоднозначность",
+      "source_url": "https://files.pythonhosted.org/packages/a9/30/064144f0df1749e7bb5faaa7f52b007d7c2d08ec08fed8411aba87207f68/dateparser-1.2.2.tar.gz",
+      "source_label": "dateparser",
+      "stage": "express"
+    },
+    {
+      "id": "I-31",
+      "group": 3,
+      "title": "Локальный поиск похожих воспоминаний в SQLite",
+      "evidence": "native",
+      "acceptance": "Один S03, ускорять векторный поиск после сравнения с текущим",
+      "source_url": "https://files.pythonhosted.org/packages/80/76/97f33b1a2446f6ae55e59b33869bed4eafaf59b7f4c662c8d9491b6a714a/sqlite_vec-0.1.6-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux1_x86_64.whl",
+      "source_label": "sqlite-vec",
+      "stage": "express"
+    },
+    {
+      "id": "I-32",
+      "group": 3,
+      "title": "Мгновенный повтор вопроса после уточнения",
+      "evidence": "native",
+      "acceptance": "Кэшировать отбор источников по ревизии и правам в существующем WarmS03Cache",
+      "source_url": "https://files.pythonhosted.org/packages/bc/1d/ede8680603f6016887c062a2cf4fc8fdba905866a3ab8831aa8aa651320c/cachetools-6.2.4.tar.gz",
+      "source_label": "cachetools",
+      "stage": "express"
+    },
+    {
+      "id": "I-33",
+      "group": 3,
+      "title": "Лента находок Hunter",
+      "evidence": "native",
+      "acceptance": "Показывать новые релизы и исследования с датой, ссылкой и статусом",
+      "source_url": "https://files.pythonhosted.org/packages/4e/eb/c96d64137e29ae17d83ad2552470bafe3a7a915e85434d9942077d7fd011/feedparser-6.0.12-py3-none-any.whl",
+      "source_label": "feedparser",
+      "stage": "express"
+    },
+    {
+      "id": "I-34",
+      "group": 3,
+      "title": "Чтение статьи без мусора в «Резонансе»",
+      "evidence": "native",
+      "acceptance": "Выделить основной текст и автора из загруженной страницы",
+      "source_url": "https://files.pythonhosted.org/packages/f5/20/e95d135c417aceaa3d34d1b4dff9aceb85e98800480eca1b033933717169/trafilatura-2.3.1-py3-none-any.whl",
+      "source_label": "Trafilatura",
+      "stage": "express"
+    },
+    {
+      "id": "I-35",
+      "group": 0,
+      "title": "Квитанция советника с проверяемыми полями",
+      "evidence": "native",
+      "acceptance": "Отобразить кто ответил, на что опирался и сколько занял ответ",
+      "source_url": "https://files.pythonhosted.org/packages/69/90/f63fb5873511e014207a475e2bb4e8b2e570d655b00ac19a9a0ca0a385ee/jsonschema-4.26.0-py3-none-any.whl",
+      "source_label": "jsonschema",
+      "stage": "express"
+    },
+    {
+      "id": "I-36",
+      "group": 3,
+      "title": "Цитата ведёт к точному абзацу",
+      "evidence": "native",
+      "acceptance": "Anchors на заголовок, секцию и выдержку из Markdown",
+      "source_url": "https://files.pythonhosted.org/packages/c9/31/5f0ac2f1a1c67423c995c731a11cd4ad05d081a2be969d74f868bdb9cc70/markdown_it_py-4.3.0-py3-none-any.whl",
+      "source_label": "Markdown AST",
+      "stage": "express"
+    },
+    {
+      "id": "I-37",
+      "group": 3,
+      "title": "Загрузить готовый набор контрольных вопросов памяти",
+      "evidence": "source",
+      "acceptance": "Быстрый повторяемый прогон перед каждым изменением S03",
+      "source_url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-v2/resolve/f152293e235517d504809563c833d7190b8c713b/questions.jsonl",
+      "source_label": "Вопросы JSONL",
+      "stage": "express"
+    },
+    {
+      "id": "I-38",
+      "group": 0,
+      "title": "Проверить Hunter на реально трудном поиске",
+      "evidence": "native",
+      "acceptance": "Фиксированный набор публичных вопросов и отчёт источников",
+      "source_url": "https://openaipublic.blob.core.windows.net/simple-evals/browse_comp_test_set.csv",
+      "source_label": "BrowseComp CSV",
+      "stage": "express"
+    },
+    {
+      "id": "I-39",
+      "group": 4,
+      "title": "Отсечь дубли до записи и обучения",
+      "evidence": "source",
+      "acceptance": "MinHash по источникам и отдельный контроль утечки train→holdout",
+      "source_url": "https://files.pythonhosted.org/packages/54/df/9e79bf1fb2f660507dbd00d24730d107595a2f599f2524a96344149c95f1/datasketch-2.0.0-py3-none-any.whl",
+      "source_label": "datasketch",
+      "stage": "express"
+    },
+    {
+      "id": "I-40",
+      "group": 2,
+      "title": "Радар задержки ответа",
+      "evidence": "native",
+      "acceptance": "Измерить p95 первого видимого токена и равномерность потока под нагрузкой",
+      "source_url": "https://files.pythonhosted.org/packages/e3/95/ecc9c131ff800e434f6c52dec2ef8ab44ce15f473a2bbc2809ed945eda07/aiperf-0.12.0-py3-none-any.whl",
+      "source_label": "AIPerf",
+      "stage": "express"
+    },
+    {
+      "id": "I-41",
+      "group": 6,
+      "title": "Две карты в живом Dashboard",
+      "evidence": "native",
+      "acceptance": "VRAM, загрузка и температура по UUID рядом с полезным прогрессом",
+      "source_url": "https://files.pythonhosted.org/packages/7f/96/d6d25a4c307d6645f4a9b91d620c0151c544ad38b5e371313a87d2761004/nvidia_ml_py-13.580.82-py3-none-any.whl",
+      "source_label": "NVML",
+      "stage": "express"
+    },
+    {
+      "id": "I-42",
+      "group": 2,
+      "title": "Выбрать режим mmap по скорости диска",
+      "evidence": "native",
+      "acceptance": "Короткий read-only тест существующего файла показывает задержку чтения",
+      "source_url": "https://api.github.com/repos/axboe/fio/tarball/fio-3.41",
+      "source_label": "fio",
+      "stage": "express"
+    },
+    {
+      "id": "I-43",
+      "group": 2,
+      "title": "Откуда взялась задержка чата",
+      "evidence": "native",
+      "acceptance": "Отдельно показать очередь, SQLite, сериализацию и ожидание событий",
+      "source_url": "https://github.com/benfred/py-spy/releases/download/v0.4.1/py_spy-0.4.1-py2.py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.whl",
+      "source_label": "py-spy",
+      "stage": "express"
+    },
+    {
+      "id": "I-44",
+      "group": 2,
+      "title": "Ускорить отправку событий при узком event loop",
+      "evidence": "native",
+      "acceptance": "Проверить в A/B действующего worker с неизменным поведением STOP и S03",
+      "source_url": "https://files.pythonhosted.org/packages/5f/6f/e62b4dfc7ad6518e7eff2516f680d02a0f6eb62c0c212e152ca708a0085e/uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "source_label": "uvloop",
+      "stage": "express"
+    },
+    {
+      "id": "I-45",
+      "group": 6,
+      "title": "Ускоренная доставка журналов и исходников",
+      "evidence": "native",
+      "acceptance": "Сжать текстовые пакеты с проверкой SHA после распаковки",
+      "source_url": "https://github.com/meta/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz",
+      "source_label": "zstd",
+      "stage": "express"
+    },
+    {
+      "id": "I-46",
+      "group": 4,
+      "title": "Прямое сравнение интеллекта до/после",
+      "evidence": "native",
+      "acceptance": "Один holdout, один шаблон и один доступный endpoint",
+      "source_url": "https://files.pythonhosted.org/packages/7d/e8/e90272ef920d5a77c91bf0473e325113950f37bfeaca2fa3b98e16142961/lm_eval-0.4.13-py3-none-any.whl",
+      "source_label": "LM Eval",
+      "stage": "express"
+    },
+    {
+      "id": "I-47",
+      "group": 4,
+      "title": "Реальная карта времени обучения",
+      "evidence": "native",
+      "acceptance": "Короткий trace разделяет CPU, GPU, I/O и пики памяти",
+      "source_url": "https://docs.pytorch.org/docs/2.6/profiler.html#torch.profiler.profile",
+      "source_label": "Шаблон torch.profiler",
+      "stage": "express"
+    },
+    {
+      "id": "I-48",
+      "group": 6,
+      "title": "Проверить очередь на неожиданные цепочки событий",
+      "evidence": "source",
+      "acceptance": "Автогенерация STOP→yield→reconnect→restore локально",
+      "source_url": "https://files.pythonhosted.org/packages/96/ec/59f14eb701087710888b66bfef2dc8bee9dd4a364c69a732db0cc1d3d2dc/hypothesis-6.170.15.tar.gz",
+      "source_label": "Hypothesis",
+      "stage": "express"
+    },
+    {
+      "id": "I-49",
+      "group": 4,
+      "title": "Сравнить тензоры двух checkpoints на CPU",
+      "evidence": "source",
+      "acceptance": "Проверить разрешённые параметры выборочно, без загрузки полной модели",
+      "source_url": "https://files.pythonhosted.org/packages/28/50/f203ff3a3ddfe19308efc83c5a3a29ed02bf786732ec35e68bf9162f3365/safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "source_label": "Safetensors",
+      "stage": "express"
+    },
+    {
+      "id": "I-50",
+      "group": 1,
+      "title": "Проверка точности распознавания RU/ES",
+      "evidence": "source",
+      "acceptance": "Отдельно по языкам и шуму измерить ошибки до и после голосового патча",
+      "source_url": "https://pypi.org/project/jiwer/4.0.0/#files",
+      "source_label": "JiWER",
+      "stage": "express"
+    },
+    {
+      "id": "I-51",
+      "group": 3,
+      "title": "Память с машиной времени",
+      "evidence": "native",
+      "acceptance": "NOX воспроизводит, что было известно на конкретную дату, и показывает документ, отменивший факт. Сравнить точность текущих и исторических ответов с last-write, включая отзыв доступа.",
+      "source_url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-v2/tree/main",
+      "source_label": "LongMemEval‑V2",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-52",
+      "group": 3,
+      "title": "Проверяемое ассоциативное вспоминание",
+      "evidence": "native",
+      "acceptance": "Связывает факт, проект и навык через два разрешённых перехода и раскрывает цепочку. Сравнить Recall@5 с FTS+BGE при равных токенах, проверить изоляцию PersonaID.",
+      "source_url": "https://github.com/OSU-NLP-Group/HippoRAG/archive/refs/heads/main.zip",
+      "source_label": "HippoRAG",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-53",
+      "group": 3,
+      "title": "NOX опровергает своё вчерашнее решение",
+      "evidence": "native",
+      "acceptance": "Строит конкурирующие версии, ищет независимое подтверждение и показывает, какой вывод изменил. Мерить поддержку цитат и устойчивость к повторным пересказам одного источника.",
+      "source_url": "https://github.com/princeton-nlp/ALCE/archive/refs/heads/main.zip",
+      "source_label": "ALCE",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-54",
+      "group": 1,
+      "title": "Ум под заданную задержку",
+      "evidence": "native",
+      "acceptance": "Одна Maya выбирает быстрый FTS, семантику или глубокий поиск с бюджетом. A/B по p95 первого токена, Recall@5 и доле ответов без подтверждения.",
+      "source_url": "https://aclanthology.org/2024.naacl-long.389.pdf",
+      "source_label": "Adaptive‑RAG",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-55",
+      "group": 3,
+      "title": "Память сама перепроверяет исправления",
+      "evidence": "native",
+      "acceptance": "Одна подтверждённая поправка предлагает обновить зависимые факты и навыки с правом отмены. Проверить каскад на LoCoMo и защиту несвязанных фактов.",
+      "source_url": "https://raw.githubusercontent.com/snap-research/locomo/main/data/locomo10.json",
+      "source_label": "LoCoMo JSON",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-56",
+      "group": 3,
+      "title": "Навык из одного видимого действия",
+      "evidence": "native",
+      "acceptance": "По успешной демонстрации NOX формирует параметризованный навык с предусловиями и проверкой. Допуск после повторения на трёх новых вариантах задачи.",
+      "source_url": "https://github.com/MineDojo/Voyager/archive/refs/heads/main.zip",
+      "source_label": "Voyager",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-57",
+      "group": 4,
+      "title": "Ночной разбор повторяющихся ошибок",
+      "evidence": "native",
+      "acceptance": "Из неудачных запусков делает проверяемую гипотезу и короткую подсказку в M4. Сравнить повторные сбои с веткой, где подсказки перемешаны.",
+      "source_url": "https://github.com/noahshinn/reflexion/archive/refs/heads/main.zip",
+      "source_label": "Reflexion",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-58",
+      "group": 4,
+      "title": "Два темпа самообучения",
+      "evidence": "native",
+      "acceptance": "Кандидат сразу попадает в эпизоды и навыки, затем только доказанное обобщение допускается к FORGE. Мерить усвоение нового знания и удержание старого.",
+      "source_url": "https://arxiv.org/pdf/2512.24695",
+      "source_label": "Nested Learning",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-59",
+      "group": 4,
+      "title": "NOX готовит собственный учебный экзамен",
+      "evidence": "native",
+      "acceptance": "Отдельная ветка порождает контрпримеры к реальным ошибкам. Фиксированный закрытый holdout оценивает результат. Сравнить с обычным пакетом при том же бюджете.",
+      "source_url": "https://github.com/Continual-Intelligence/SEAL/archive/refs/heads/main.zip",
+      "source_label": "SEAL",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-60",
+      "group": 0,
+      "title": "Советники с измеримой репутацией",
+      "evidence": "native",
+      "acceptance": "NOX распределяет задачи по фактической результативности, времени и цене каждого советника. Проверка против стратегии «всегда спрашивать одного лидера».",
+      "source_url": "https://openai.com/index/browsecomp/",
+      "source_label": "BrowseComp",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-61",
+      "group": 1,
+      "title": "Перемотка поручения и пробный ход",
+      "evidence": "native",
+      "acceptance": "Перейти к подтверждённому этапу и проверить другой план на копии разрешённой среды. Сравнить сохранение цели, побочные эффекты и время после восстановления.",
+      "source_url": "https://osworld-v2.xlang.ai/",
+      "source_label": "OSWorld 2.0",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-62",
+      "group": 1,
+      "title": "Экранный напарник с указанием на доказательство",
+      "evidence": "native",
+      "acceptance": "В разрешённой экранной сессии NOX указывает объект, объясняет следующее действие и возвращает проверяемый результат. Проверка визуальных ошибок и остановок.",
+      "source_url": "https://github.com/xlang-ai/OSWorld/archive/refs/heads/main.zip",
+      "source_label": "Стенд OSWorld",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-63",
+      "group": 6,
+      "title": "Чат забирает GPU к своему дедлайну",
+      "evidence": "native",
+      "acceptance": "Прогноз длины следующего GPU-блока даёт диспетчеру решить, запускать ли его. Сравнить TTFT p95 и полезные шаги с FIFO при одинаковых 85% настройки.",
+      "source_url": "https://docs.nvidia.com/datacenter/dcgm/latest/learn/modules/profiling.html",
+      "source_label": "DCGM",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-64",
+      "group": 4,
+      "title": "Память или веса. Честный экзамен 2×2",
+      "evidence": "native",
+      "acceptance": "Один вопрос до/после checkpoint, в каждом варианте с S03 и без S03. Раздельно измерить вклад памяти, тензоров и сочетания на закрытом RU/ES holdout.",
+      "source_url": "https://arxiv.org/pdf/2605.12493",
+      "source_label": "LongMemEval‑V2 PDF",
+      "stage": "experiment"
+    },
+    {
+      "id": "I-65",
+      "group": 0,
+      "title": "Длинное поручение с доказательством результата",
+      "evidence": "native",
+      "acceptance": "Несколько часов работы выражены в проверяемых этапах одной цели. После прерывания восстанавливается последний факт, владелец видит итоговый артефакт и проверку.",
+      "source_url": "https://metr.org/time-horizons/",
+      "source_label": "METR",
+      "stage": "experiment"
+    }
+  ]
+}

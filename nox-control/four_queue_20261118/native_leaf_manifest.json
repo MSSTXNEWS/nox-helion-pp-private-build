@@ -1,0 +1,34 @@
+{
+  "files": {
+    "owner_autonomy_pool.py": {
+      "sha256": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+      "bytes": 33076
+    },
+    "owner_subagent_dispatcher.py": {
+      "sha256": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+      "bytes": 58287
+    },
+    "owner_subagent_processes.py": {
+      "sha256": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
+      "bytes": 16073
+    },
+    "owner_resource_policy.py": {
+      "sha256": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+      "bytes": 13467
+    },
+    "test_owner_four_queue.py": {
+      "sha256": "4334ec2e2047c34ed7ee5d1f24152a1a2468b07f4bdfc8ebf592d13a64648ac9",
+      "bytes": 7584
+    },
+    "test_owner_normal3_continuity.py": {
+      "sha256": "409411abe7a828d2633cd9c2e4792629a00925b4a6a8dfcead27f80dd3f75641",
+      "bytes": 5522
+    },
+    "test_owner_native_leaf.py": {
+      "sha256": "81a1db34c00d51179278213ed0e48845a509a789602f68c1da9412eff6db67cd",
+      "bytes": 8704
+    }
+  },
+  "local_tests": "30/30 PASS: 23 pool + 7 leaf including 3 actual LOCAL processes and same-PID fourth task; OneHost NOT YET INSTALLED",
+  "independent_review": "runtime_access and task_inventory completed; lock order and sanitized S03 hash corrected"
+}
