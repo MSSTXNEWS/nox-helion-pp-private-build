@@ -119,7 +119,18 @@ def run(bundle, spec):
         'state': 'PREFLIGHT', 'workers_restarted': 0, 'queue_writes': 0,
         'source_writes': 0, 'test_writes': 0, 'original_tasks_accepted': 0}
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        deadline = time.monotonic() + 8
+        while True:
+            require(h.stop_clear(ROOT), 'OWNER_STOP')
+            waiting, named = os.fstat(fd), lock.stat()
+            require(stat.S_ISREG(waiting.st_mode) and waiting.st_nlink == 1
+                    and (waiting.st_dev, waiting.st_ino) == (named.st_dev, named.st_ino), 'LEASE_IDENTITY')
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                require(time.monotonic() < deadline, 'MAINTENANCE_BUSY')
+                time.sleep(.05)
         info, named = os.fstat(fd), lock.stat()
         require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid() and info.st_nlink == 1
                 and not info.st_mode & 0o022 and (info.st_dev, info.st_ino) == (named.st_dev, named.st_ino), 'LEASE_IDENTITY')

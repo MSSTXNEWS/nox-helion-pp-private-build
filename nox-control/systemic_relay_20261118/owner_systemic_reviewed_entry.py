@@ -175,7 +175,18 @@ def run(bundle, spec):
                'workers_restarted': 0, 'queue_writes': 0, 'source_writes': 0, 'test_writes': 0,
                'model_calls': 0, 'original_tasks_accepted': 0, 'review_origin': 'OWNER_REVIEWED'}
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        deadline = time.monotonic() + 8
+        while True:
+            require(helper.stop_clear(ROOT), 'OWNER_STOP')
+            waiting, named = os.fstat(fd), lock.stat()
+            require(stat.S_ISREG(waiting.st_mode) and waiting.st_nlink == 1
+                    and (waiting.st_dev, waiting.st_ino) == (named.st_dev, named.st_ino), 'LEASE_IDENTITY')
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                require(time.monotonic() < deadline, 'MAINTENANCE_BUSY')
+                time.sleep(.05)
         def guard():
             info, named = os.fstat(fd), lock.stat()
             require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid() and info.st_nlink == 1
@@ -186,8 +197,9 @@ def run(bundle, spec):
         processes, protected = guard()
         baseline, active = helper.queue_idle(ROOT)
         require(not active and not any(row.get('status') == 'pending'
-                or row.get('native_worker_lease', {}).get('phase') == 'ACTIVE'
-                for row in baseline['tasks'].values() if isinstance(row, dict)), 'WAIT_ACTIVE_CLAIMS_SETTLE')
+                or row.get('native_worker_lease', {}).get('phase') in ('ACTIVE', 'RETIRING')
+                for row in baseline['tasks'].values() if isinstance(row, dict)
+                and row.get('handler') == 'owner_native_project_work'), 'WAIT_ACTIVE_CLAIMS_SETTLE')
         old_raw = helper.read_regular(CONFIG, 2 * 1024 * 1024)
         require(digest(old_raw) == spec['expected_config_sha256'], 'CONFIG_PREDECESSOR')
         old = json.loads(old_raw)
