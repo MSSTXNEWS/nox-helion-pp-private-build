@@ -120,7 +120,8 @@ def process_identity(pid):
 def chat_priority_active():
     path = ROOT/'state/chat_active'
     try:
-        return path.is_symlink() or 0 <= time.time()-path.stat().st_mtime < 3
+        # A future-dated marker is uncertain: preserve priority for owner chat.
+        return path.is_symlink() or time.time()-path.stat().st_mtime < 3
     except FileNotFoundError:
         return False
     except OSError:
