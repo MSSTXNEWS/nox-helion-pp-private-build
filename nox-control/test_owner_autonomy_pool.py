@@ -182,6 +182,11 @@ class PoolTests(unittest.TestCase):
         r=pool.tick_existing_dispatcher({'_nox_owner_autonomy_native':n},{},mode='NORMAL')
         self.assertEqual(r['state'],'NATIVE_POOL_READY_IDLE')
         self.assertEqual(r['active_subexecutor_processes'],3)
+        idle=r['idle_diagnostics']
+        self.assertEqual(idle['schema'],'NOX_POOL_IDLE_DIAGNOSTICS_V1')
+        self.assertEqual(idle['reason_codes'],['EMPTY_CATALOG'])
+        self.assertEqual(idle['catalog_task_count'],0)
+        self.assertEqual(idle['selected_task_count'],0)
 
     def test_native_gates_hold_or_verified(self):
         task=pool.validate_page({'schema':pool.SCHEMA,'tasks':self.make_rows(3)},allowed_handlers={'owner_component'})

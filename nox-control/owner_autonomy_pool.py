@@ -240,9 +240,9 @@ def tick_existing_dispatcher(namespace, state, *, mode):
         return {'state':'HOLD_NATIVE_AUTONOMY_CALLBACK_EXCEPTION','jobs_started':0}
 
 
-def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
-                 gpu_available=False, verified_native=True):
-    """Default three process claims, boost six; independent from queue length."""
+def _choose_ready_with_diagnostics(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
+                                     gpu_available=False, verified_native=True):
+    """Select with an explanation snapshot; diagnostics never alter selection."""
     if mode not in MODES:
         raise AutoHold('HOLD_MODE')
     if verified_native is not True:
@@ -254,10 +254,11 @@ def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
     if type(cpu_pressure) not in (float, int) or not math.isfinite(cpu_pressure) or cpu_pressure < 0:
         raise AutoHold('HOLD_CPU_PRESSURE')
     budget = MODES[mode]
-    if memory_ratio >= 0.95: budget = 0
-    elif memory_ratio >= 0.85: budget = min(budget,3)
+    if memory_ratio >= .95: budget = 0
+    elif memory_ratio >= .85: budget = min(budget,3)
     if cpu_pressure >= 50: budget = min(budget,1)
     elif cpu_pressure >= 20:budget = min(budget,3)
+    pressure_limited_budget = budget
     # Reservation is native queue state, not only a lowercase "running".
     # A lost ACK can leave an admitted/queued/unknown job consuming a slot.
     # Fail closed for unknown/null/structured statuses; release capacity only
@@ -268,17 +269,26 @@ def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
         if not (isinstance(state, str) and state.casefold() in terminal))
     budget = max(0, budget-existing_claims)
     ranked=[]
+    known_task_count=0
+    dependency_blocked_count=0
+    gpu_blocked_count=0
     for task in tasks:
         tid=task['id']
         # Presence is authoritative even when an uncertain native claim has
         # status None. Distinguish absent from unresolved before any replay.
-        if tid in status:continue   # never reenqueue known/unknown/running/done jobs
-        # The verified native snapshot may use DONE or COMPLETED case variants.
+        if tid in status:
+            known_task_count+=1
+            continue   # never reenqueue known/unknown/running/done jobs
         # Only explicit successful terminals release DAG dependents; failures,
         # cancellations and unresolved claims must never unlock new work.
-        if any(not (isinstance(status.get(d), str) and status[d].casefold() in ('done', 'completed')) for d in task['deps']): continue
-        if task['resource']=='GPU_EXCLUSIVE' and not gpu_available: continue
+        if any(not (isinstance(status.get(d), str) and status[d].casefold() in ('done', 'completed')) for d in task['deps']):
+            dependency_blocked_count+=1
+            continue
+        if task['resource']=='GPU_EXCLUSIVE' and not gpu_available:
+            gpu_blocked_count+=1
+            continue
         heapq.heappush(ranked,(PRIORITIES[task['priority']],task['estimated_cost'],tid,task))
+    eligible_candidate_count=len(ranked)
     selected=[];gpu_used=False
     while ranked and len(selected)<budget:
         *_, row=heapq.heappop(ranked)
@@ -286,8 +296,48 @@ def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
             if gpu_used:continue
             gpu_used=True
         selected.append(row)
-    return selected
+    if selected:
+        reason_codes=[]
+    elif not tasks:
+        reason_codes=['EMPTY_CATALOG']
+    else:
+        reason_codes=[]
+        if known_task_count==len(tasks):
+            reason_codes.append('ALL_CATALOG_TASKS_ALREADY_KNOWN')
+        elif known_task_count:
+            reason_codes.append('KNOWN_TASKS_NOT_REPLAYED')
+        if dependency_blocked_count:
+            reason_codes.append('DEPENDENCIES_UNSATISFIED')
+        if gpu_blocked_count:
+            reason_codes.append('GPU_UNAVAILABLE')
+        if eligible_candidate_count and budget==0:
+            reason_codes.append('NO_DISPATCH_BUDGET')
+        if not reason_codes:
+            reason_codes=['NO_ELIGIBLE_TASK']
+    diagnostics={
+        'schema':'NOX_POOL_IDLE_DIAGNOSTICS_V1',
+        'reason_codes':reason_codes,
+        'catalog_task_count':len(tasks),
+        'known_task_count':known_task_count,
+        'dependency_blocked_count':dependency_blocked_count,
+        'gpu_blocked_count':gpu_blocked_count,
+        'eligible_candidate_count':eligible_candidate_count,
+        'configured_budget':MODES[mode],
+        'pressure_limited_budget':pressure_limited_budget,
+        'reserved_claim_count':existing_claims,
+        'remaining_budget':budget,
+        'selected_task_count':len(selected),
+    }
+    return selected,diagnostics
 
+
+def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
+                 gpu_available=False, verified_native=True):
+    """Default three process claims, boost six; independent from queue length."""
+    return _choose_ready_with_diagnostics(
+        tasks,status=status,mode=mode,memory_ratio=memory_ratio,
+        cpu_pressure=cpu_pressure,gpu_available=gpu_available,
+        verified_native=verified_native)[0]
 
 
 def classify_native_job_proof(proof):
@@ -346,8 +396,9 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
     if (native.owner_allowed() is not True or native.stop_active() is not False
         or native.writer_lease() is not True):
         return {'state':'HOLD_OWNER_STOP_OR_WRITER_LEASE','jobs_started':0}
-    ready=choose_ready(tasks,status=status,mode=mode,memory_ratio=memory_ratio,
-                       cpu_pressure=cpu_pressure,gpu_available=gpu_available)
+    ready,idle_diagnostics=_choose_ready_with_diagnostics(
+        tasks,status=status,mode=mode,memory_ratio=memory_ratio,
+        cpu_pressure=cpu_pressure,gpu_available=gpu_available)
     # Keep a fixed pool of actual OS workers ready even if the queue is idle.
     # Resource pressure can temporarily reduce the target; do not fake workers.
     target=MODES[mode]
@@ -355,7 +406,8 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
     elif memory_ratio>=.85:target=min(target,3)
     if cpu_pressure>=50:target=min(target,1)
     elif cpu_pressure>=20:target=min(target,3)
-    if target==0:return {'state':'HOLD_RESOURCE_PRESSURE','jobs_started':0}
+    if target==0:return {'state':'HOLD_RESOURCE_PRESSURE','jobs_started':0,
+                            'idle_diagnostics':idle_diagnostics}
     # This MUST be a native process-supervisor operation, not a Python thread.
     if native.ensure_processes(target) is not True:
         return {'state':'HOLD_NATIVE_PROCESS_START','jobs_started':0}
@@ -436,7 +488,10 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
         if not still_authorized:
             return {'state':'HOLD_STOP_OR_LEASE_CHANGED',
                     'jobs_started':len(receipts),'receipts':receipts}
-    return {'state':'NATIVE_QUEUE_READBACK_VERIFIED' if receipts else 'NATIVE_POOL_READY_IDLE',
+    result={'state':'NATIVE_QUEUE_READBACK_VERIFIED' if receipts else 'NATIVE_POOL_READY_IDLE',
             'jobs_started':len(receipts),  # legacy counter: CLAIMS, not executed jobs
             'jobs_completed_verified':sum(r['execution_evidence']=='DONE_NATIVE' for r in receipts),
             'active_subexecutor_processes':len(workers),'receipts':receipts}
+    if not receipts:
+        result['idle_diagnostics']=idle_diagnostics
+    return result
