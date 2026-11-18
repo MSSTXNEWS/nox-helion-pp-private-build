@@ -24,4 +24,4 @@ jobs:
         run: python -m py_compile nox-control/owner_media_runtime.py nox-control/owner_media_idempotency.py nox-control/test_owner_media_dedup_integration.py
       - name: Original B5 helper integration and replay contract
         working-directory: nox-control
-        run: python -m unittest -v test_owner_media_dedup_integration.py
+        run: python -m unittest -v test_owner_media_idempotency.py test_owner_media_idempotency_multiprocess.py test_owner_media_dedup_integration.py
