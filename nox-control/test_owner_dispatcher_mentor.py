@@ -472,6 +472,33 @@ class SharedOptimizationCacheV14Tests(unittest.TestCase):
                 'owner_plan_id': 'plan-123', 'handler': 'verify_q4',
                 'params': {'operation': 'worker_verify'}, 'note': ''}
         gateway = Gateway()
+        autonomy = module('owner_autonomy_pool')
+
+        class NativeGate:
+            def read_resource_snapshot(self):
+                snapshot = {
+                    'native_verified': True, 'instance_id': 60509551,
+                    'stop_active': False, 'source_sha_verified': True,
+                    'owner_scope_verified': True, 'task_status': {},
+                    'cgroup_memory_ratio': 0.1,
+                    'cgroup_memory_working_set_bytes': 1024,
+                    'cgroup_memory_inactive_file_bytes': 0,
+                    'cpu_pressure': 0.0, 'io_pressure': 0.0,
+                    'disk_free_ratio': 0.5, 'disk_free_bytes': 2 * 1024**3,
+                    'gpu_available': False,
+                    'resource_admission_allowed': True,
+                    'resource_admission_observed_at': time.time(),
+                }
+                snapshot['resource_admission_snapshot_sha256'] = autonomy.fingerprint(snapshot)
+                return snapshot
+        native = NativeGate()
+        dispatcher = type('BoundDispatcher', (), {})()
+        dispatcher.autonomy = autonomy
+        dispatcher._BOUND = native
+        resource_namespace = {
+            'owner_subagent_dispatcher': dispatcher,
+            '_nox_owner_autonomy_native': native,
+        }
         with patch.object(lifecycle, 'semantic_recall', return_value={'state': 'HOLD_NATIVE'}), \
              patch.object(lifecycle, 'technical_details',
                           side_effect=lambda task, *_: {
@@ -480,9 +507,9 @@ class SharedOptimizationCacheV14Tests(unittest.TestCase):
                               'error_note': task.get('note', '')}):
             lifecycle._CACHE.clear()
             try:
-                first = lifecycle.shared_context(base, local, plan, gateway)
+                first = lifecycle.shared_context(base, local, plan, gateway, resource_namespace)
                 sibling = {**base, 'id': 'child-b'}
-                repeated = lifecycle.shared_context(sibling, local, plan, gateway)
+                repeated = lifecycle.shared_context(sibling, local, plan, gateway, resource_namespace)
                 self.assertTrue(repeated['cache_reused'])
                 self.assertEqual(first['context_sha256'], repeated['context_sha256'])
                 self.assertEqual(len(gateway.calls), 1)
@@ -493,7 +520,7 @@ class SharedOptimizationCacheV14Tests(unittest.TestCase):
                     {**base, 'note': 'CUDA out of memory'},
                 ]
                 for task in variations:
-                    result = lifecycle.shared_context(task, local, plan, gateway)
+                    result = lifecycle.shared_context(task, local, plan, gateway, resource_namespace)
                     self.assertFalse(result['cache_reused'])
                     self.assertNotEqual(result['context_sha256'], first['context_sha256'])
                     self.assertEqual(result['technical_context']['task_intent'], task['handler'])
