@@ -69,8 +69,22 @@ class GatewayTests(unittest.TestCase):
         # Use the actual module default: patching False would hide a future unsafe default.
         self.policy_patch.stop()
         self.assertIs(gateway.PAID_PROVIDER_EGRESS_ALLOWED, False)
+        # No config, credential file, terminal prompt or network setup on a denied policy.
+        self.assertEqual(gateway.initialize()['state'], 'NO_PAID_API_POLICY')
+        self.assertEqual(gateway.set_credential('openai', 'unit-test-credential-value')['state'],
+                         'NO_PAID_API_POLICY')
+        with patch.object(gateway.getpass, 'getpass', side_effect=AssertionError('secret prompt')) as secret_prompt:
+            with patch('builtins.print') as printed:
+                self.assertEqual(gateway.main(['set-key', 'openai']), 0)
+                self.assertIn('NO_PAID_API_POLICY', printed.call_args[0][0])
+            secret_prompt.assert_not_called()
+        self.assertEqual(list(self.root.iterdir()), [])
+
+        # Even pre-existing valid configuration and keys cannot reopen paid egress.
         self.configure()
-        self.credentials()
+        gateway._write('config/owner_senior_credentials.json', {
+            'schema': 'NOX_OWNER_SENIOR_CREDENTIALS_V1',
+            'keys': {name: 'unit-test-credential-value-' + name for name in gateway.PROVIDERS}})
         with patch.object(gateway, 'request_contract') as request_contract:
             self.assertEqual(gateway.status()['state'], 'NO_PAID_API_POLICY')
             self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'NO_PAID_API_POLICY')
