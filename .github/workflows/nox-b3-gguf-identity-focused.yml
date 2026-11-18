@@ -1,0 +1,23 @@
+name: NOX B3 GGUF identity focused source gate
+on:
+  push:
+    branches:
+      - b3/runtime-model-identity-readonly-20261118
+    paths:
+      - 'nox-control/systemic_relay_20261118/owner_model_identity_witness.py'
+      - 'nox-control/systemic_relay_20261118/test_owner_model_identity_witness.py'
+      - '.github/workflows/nox-b3-gguf-identity-focused.yml'
+permissions:
+  contents: read
+jobs:
+  exact-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exact B3 parser syntax and focused regressions only
+        run: |
+          python3 -B -m py_compile nox-control/systemic_relay_20261118/owner_model_identity_witness.py nox-control/systemic_relay_20261118/test_owner_model_identity_witness.py
+          python3 -B -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_owner_model_identity_witness.py' -v
