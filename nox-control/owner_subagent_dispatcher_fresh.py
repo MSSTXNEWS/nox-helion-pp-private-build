@@ -786,8 +786,19 @@ class Native:
                                                      'WORKER_HOLD_CHECKPOINTED')):
                     return existing
                 raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
-            if (set(intent) != set(base_keys) | {'state'}
+            if (set(intent) != set(base_keys) | {'state', 'resource_admission'}
                     or intent.get('state') != 'UNCERTAIN'
+                    or not isinstance(admission, dict)
+                    or admission.get('resource_admission_allowed') is not True
+                    or not isinstance(admission_sha, str)
+                    or SHA.fullmatch(admission_sha) is None
+                    or autonomy.fingerprint(admission_body) != admission_sha
+                    or resource_wait_reason(admission) is not None
+                    or not isinstance(admission_lease, dict)
+                    or admission_lease.get('task_id') != task_id
+                    or admission_lease.get('claim_nonce') != claim.get('nonce')
+                    or admission_lease.get('source_sha256') != self.source
+                    or admission_lease.get('owner') != process_identity(os.getpid())
                     or intent.get('task_id') != task_id
                     or intent.get('claim_nonce') != claim.get('nonce')
                     or intent.get('role') != clean_event.get('role')
@@ -799,6 +810,11 @@ class Native:
                     or (self.state.get('tasks', {}).get(task_id, {}).get('native_submit_intent')
                         if isinstance(self.state, dict) else None) != intent):
                 raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            admission = intent.get('resource_admission')
+            admission_lease = (admission.get('writer_lease')
+                               if isinstance(admission, dict) else None)
+            admission_body = dict(admission) if isinstance(admission, dict) else {}
+            admission_sha = admission_body.pop('resource_admission_snapshot_sha256', None)
             state = clean_event.get('state')
             receipt = None
             if state == 'CANDIDATE_NOT_APPLIED':
