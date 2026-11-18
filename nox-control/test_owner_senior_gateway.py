@@ -198,7 +198,14 @@ class GatewayTests(unittest.TestCase):
         with patch.object(gateway, '_request', delayed):
             with ThreadPoolExecutor(max_workers=6) as pool:
                 values = list(pool.map(lambda _: gateway.consult_plan(CONTEXT, 0.5), range(6)))
-            result = gateway.consult_plan(CONTEXT, 0.5)
+            # Completion is asynchronous: wait for the durable cache, not for an arbitrary wall-clock delay.
+            deadline = time.monotonic() + 2.0
+            while True:
+                result = gateway.consult_plan(CONTEXT, 0.05)
+                if result['state'] == 'CONSULTED' or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+        self.assertEqual(result['state'], 'CONSULTED')
         self.assertEqual(len(seen), 3)
         self.assertEqual({p for p, _ in seen}, set(gateway.PROVIDERS))
         self.assertTrue(all(context == CONTEXT for _, context in seen))
@@ -223,8 +230,14 @@ class GatewayTests(unittest.TestCase):
             self.assertLess(time.monotonic() - start, 0.15)
             self.assertEqual(result['state'], 'PENDING')
             self.assertIsNone(gateway._lock())
-            time.sleep(0.25)
-            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'CONSULTED')
+            # The background thread has a bounded deadline but no guaranteed 250-ms scheduling slot.
+            deadline = time.monotonic() + 2.0
+            while True:
+                final = gateway.consult_plan(CONTEXT, 0.05)
+                if final['state'] == 'CONSULTED' or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+            self.assertEqual(final['state'], 'CONSULTED')
         fd = gateway._lock()
         self.assertIsNotNone(fd)
         gateway._unlock(fd)
