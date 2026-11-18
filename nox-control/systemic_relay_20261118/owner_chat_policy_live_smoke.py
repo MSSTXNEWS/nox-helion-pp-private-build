@@ -17,6 +17,8 @@ import sys
 import time
 import urllib.request
 
+sys.dont_write_bytecode = True
+
 ROOT = Path("/root/nox")
 STOP_FILES = (
     ROOT / "STOP", ROOT / "STOP.flag", ROOT / "stop.flag", ROOT / ".stop",
