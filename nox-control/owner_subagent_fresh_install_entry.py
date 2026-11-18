@@ -55,7 +55,7 @@ ASSETS = {
     'owner_autonomy_pool.py': NEW_DEPENDENCIES['owner_autonomy_pool.py'],
     'owner_dispatcher_mentor.py': NEW_MENTOR_SHA,
     'owner_task_lifecycle.py': 'b09e02663f11c30e39a15b44ad2b12271219ec25bf0af9937bdf3a5fcfdebe5e',
-    'owner_senior_gateway.py': '1fd1556009ce62fa806bdee0a9a34577d276344e728fe9d94b33f44eb151346e',
+    'owner_senior_gateway.py': '50d147bb92d50fe56030bdd03d219fe4b1f5ca546b391700ef1eec02cd664401',
 }
 HANDLER = 'owner_native_subagent_review'
 TASKS = {'owner.native.v06.' + role + '.84780aaf911a' for role in ('runtime', 'memory', 'weights')}

@@ -54,7 +54,7 @@ SUBAGENT_BUNDLE_PINS = {
     'owner_subagent_processes.py': '8805da8d99c7d5fe38db6c9a100fb86cc052e1c795418fd78284a5cb7a84d276',
     'owner_dispatcher_mentor.py': 'd6fb298a9bfa8d3a81127848cc9f4e42ff276e2d8dcf89fbf63512cc7ec6359e',
     'owner_task_lifecycle.py': 'b09e02663f11c30e39a15b44ad2b12271219ec25bf0af9937bdf3a5fcfdebe5e',
-    'owner_senior_gateway.py': '1fd1556009ce62fa806bdee0a9a34577d276344e728fe9d94b33f44eb151346e',
+    'owner_senior_gateway.py': '50d147bb92d50fe56030bdd03d219fe4b1f5ca546b391700ef1eec02cd664401',
 }
 
 def repair_bundle_paths(action,entrypoint,paths):
