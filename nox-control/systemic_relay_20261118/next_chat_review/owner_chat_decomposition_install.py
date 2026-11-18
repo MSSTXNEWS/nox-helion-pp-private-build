@@ -31,7 +31,7 @@ SITE = ROOT / 'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site'
 TARGETS = {'slim': SCRIPTS / 'slim_chat_t885u.py', 'ui': SITE / 'pc/v24/nox-v24-chat.js'}
 BACKUP = ROOT / 'backup/owner_chat_decomposition'
 CONFIG = ROOT / 'config/owner_native_subagents.json'
-PUBLIC_ASSET_PATH = '/pc/v24/nox-v24-chat.js'
+PUBLIC_ASSET_PATH = '/nox-web-v29/pc/v24/nox-v24-chat.js'
 HELPER_SHA = 'b3d1887b92cb805076301f6631e56b6e42c48e7dae02d62f2a272c10669644e0'
 SPEC = {}
 try:
