@@ -297,31 +297,46 @@ def worker_status_sample():
     if not isinstance(native,dict):
         emit('POST_WORKERS', {'state':'NO_NATIVE_STATUS'})
         return
-    director=native.get('director') or {}
+    director_value=native.get('director')
+    director_schema_valid=isinstance(director_value,dict)
+    director=director_value if director_schema_valid else {}
     observed_director=process(director.get('pid')) if type(director.get('pid')) is int else None
+    workers=native.get('workers',[])
+    workers_schema_valid=isinstance(workers,list) and len(workers)<=64
     row={'time_unix':time.time(), 'observed_at':native.get('observed_at'),
          'claimed_director':scalar_projection(director,('pid','ppid','process_starttime')),
-         'observed_director':observed_director,'workers':[]}
-    for worker in native.get('workers',[])[:10]:
-        if not isinstance(worker,dict):
-            continue
-        claimed=scalar_projection(worker,('pid','ppid','process_starttime','role','state','heartbeat_at','current_task','native_pid_verified'))
-        identity=process(worker['pid']) if type(worker.get('pid')) is int else None
-        verified=(isinstance(identity,dict) and identity.get('state') in ('R','S','D','I')
-                  and identity.get('start_ticks')==worker.get('process_starttime')
-                  and identity.get('ppid')==director.get('pid')
-                  and isinstance(observed_director,dict)
-                  and observed_director.get('start_ticks')==director.get('process_starttime'))
-        row['workers'].append({'claimed':claimed,'observed':identity,'verified':verified})
+         'director_schema_valid':director_schema_valid,
+         'observed_director':observed_director,
+         'workers_schema_valid':workers_schema_valid, 'workers':[]}
+    if not workers_schema_valid:
+        row['state']='UNKNOWN_WORKERS_SCHEMA'
+    else:
+        for worker in workers[:10]:
+            if not isinstance(worker,dict):
+                row['workers'].append({'state':'UNKNOWN_WORKER_ENTRY','verified':False})
+                continue
+            claimed=scalar_projection(worker,('pid','ppid','process_starttime','role','state','heartbeat_at','current_task','native_pid_verified'))
+            identity=process(worker['pid']) if type(worker.get('pid')) is int else None
+            verified=(isinstance(identity,dict) and identity.get('state') in ('R','S','D','I')
+                      and identity.get('start_ticks')==worker.get('process_starttime')
+                      and identity.get('ppid')==director.get('pid')
+                      and isinstance(observed_director,dict)
+                      and observed_director.get('start_ticks')==director.get('process_starttime'))
+            row['workers'].append({'claimed':claimed,'observed':identity,'verified':verified})
     project=native.get('project_queues')
     if isinstance(project,dict):
         row['project']=scalar_projection(project,('state','received_unique_tasks','dispatch_cap','bound_leaf_subtasks','original_task_acceptance_added','scope'))
         for name in ('queues','leaf_status'):
-            row['project'][name]={k:v for k,v in (project.get(name) or {}).items() if identifier(k) and type(v) is int}
+            values=project.get(name)
+            valid=isinstance(values,dict) and len(values)<=128
+            row['project'][name+'_schema_valid']=valid
+            row['project'][name]={k:v for k,v in values.items()
+                                  if identifier(k) and type(v) is int} if valid else {}
+            if not valid:
+                row['project'][name+'_state']='UNKNOWN_SCHEMA'
     admission=native.get('last_admission')
     row['admission']=scalar_projection(admission,('state','jobs_started','process_count','process_target')) if isinstance(admission,dict) else None
     emit('POST_WORKERS',row)
-
 
 INSTALL_REQUEST = '6964933277'
 INSTALL_SOURCE = '32546b26b03019169c22f440af5c9f6ed5b0e09c'
