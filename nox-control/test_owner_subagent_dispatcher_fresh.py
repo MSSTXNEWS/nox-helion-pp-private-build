@@ -32,7 +32,8 @@ with patch.dict('sys.modules', {'owner_autonomy_pool': autonomy,
 def snapshot(**changes):
     return {'native_verified': True, 'instance_id': 60509551, 'stop_active': False,
             'source_sha_verified': True, 'owner_scope_verified': True,
-            'cgroup_memory_ratio': .50, 'cpu_pressure': 1.0, **changes}
+            'cgroup_memory_ratio': .50, 'cpu_pressure': 1.0, 'io_pressure': 1.0,
+            'disk_free_ratio': .25, 'disk_free_bytes': 16 * 1024**3, **changes}
 
 
 def native_with_pool():
@@ -75,6 +76,28 @@ class FreshSubmissionTests(unittest.TestCase):
         native.read_resource_snapshot.return_value = snapshot(cpu_pressure=50)
         self.assertEqual(native._handle(task), ('wait', 'HOLD_NATIVE_SUBAGENT_RESOURCE_PRESSURE'))
         native.pool.submit.assert_not_called()
+
+    def test_existing_pool_does_not_bypass_new_io_pressure(self):
+        native, task = native_with_pool()
+        native.read_resource_snapshot.return_value = snapshot(io_pressure=50)
+        self.assertEqual(native._handle(task), ('wait', 'HOLD_NATIVE_SUBAGENT_RESOURCE_PRESSURE'))
+        native.pool.submit.assert_not_called()
+
+    def test_existing_pool_does_not_bypass_low_disk_headroom(self):
+        native, task = native_with_pool()
+        native.read_resource_snapshot.return_value = snapshot(
+            disk_free_ratio=.04, disk_free_bytes=4 * 1024**3)
+        self.assertEqual(native._handle(task), ('wait', 'HOLD_NATIVE_SUBAGENT_RESOURCE_PRESSURE'))
+        native.pool.submit.assert_not_called()
+
+    def test_reclaimable_file_cache_is_not_counted_as_working_set(self):
+        working, inactive, ratio = binding.cgroup_memory_working_set(
+            194_034_532_352, 194_065_203_200,
+            'anon 3000000000\ninactive_file 190000000000\n')
+        self.assertEqual(inactive, 190_000_000_000)
+        self.assertEqual(working, 4_034_532_352)
+        self.assertLess(ratio, .05)
+        self.assertIsNone(binding.resource_wait_reason(snapshot(cgroup_memory_ratio=ratio)))
 
     def test_existing_pool_does_not_bypass_chat_or_slot_hold(self):
         native, task = native_with_pool()

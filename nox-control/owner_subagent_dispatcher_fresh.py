@@ -264,19 +264,68 @@ def remember(receipt):
     return proof
 
 
+MEMORY_PRESSURE_LIMIT = .95
+CPU_PRESSURE_LIMIT = 50.0
+IO_PRESSURE_LIMIT = 50.0
+DISK_FREE_RATIO_LIMIT = .05
+DISK_FREE_BYTES_LIMIT = 5 * 1024**3
+
+
+def cgroup_memory_working_set(current, maximum, stat_text):
+    """Exclude reclaimable inactive file cache from cgroup memory pressure."""
+    if type(current) is not int or current < 0 or type(maximum) is not int or maximum <= 0:
+        raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+    if not isinstance(stat_text, str):
+        raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+    inactive_file = None
+    for line in stat_text.splitlines():
+        fields = line.split()
+        if fields and fields[0] == 'inactive_file':
+            if len(fields) != 2 or inactive_file is not None:
+                raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+            try:
+                inactive_file = int(fields[1])
+            except ValueError as exc:
+                raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA') from exc
+    if inactive_file is None or inactive_file < 0:
+        raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+    inactive_file = min(inactive_file, current)
+    working_set = max(0, current - inactive_file)
+    return working_set, inactive_file, working_set / maximum
+
+
+def psi_avg10(text):
+    """Return Linux PSI some avg10 in percentage points, fail closed."""
+    if not isinstance(text, str):
+        raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+    match = re.search(r'^some\s+avg10=([0-9]+(?:\.[0-9]+)?)', text, re.M)
+    if not match:
+        raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+    value = float(match[1])
+    if not math.isfinite(value) or value < 0:
+        raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+    return value
+
+
 def resource_wait_reason(snapshot):
-    """A fresh local observation admits only this one pending IPC submit."""
+    """One fresh chat/RAM/CPU/I/O/disk observation gates each native submit."""
     if (not isinstance(snapshot, dict) or snapshot.get('native_verified') is not True
             or snapshot.get('instance_id') != 60509551
             or snapshot.get('stop_active') is not False
             or snapshot.get('owner_scope_verified') is not True
             or snapshot.get('source_sha_verified') is not True):
         return 'HOLD_NATIVE_SUBAGENT_ADMISSION'
-    values = [snapshot.get('cgroup_memory_ratio'), snapshot.get('cpu_pressure')]
+    numeric = ('cgroup_memory_ratio', 'cpu_pressure', 'io_pressure', 'disk_free_ratio')
+    values = [snapshot.get(key) for key in numeric]
     if any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
            for value in values):
         return 'HOLD_NATIVE_SUBAGENT_RESOURCE_METADATA'
-    if values[0] >= .95 or values[1] >= 50:
+    free_bytes = snapshot.get('disk_free_bytes')
+    if type(free_bytes) is not int or free_bytes < 0 or values[3] > 1:
+        return 'HOLD_NATIVE_SUBAGENT_RESOURCE_METADATA'
+    if (values[0] >= MEMORY_PRESSURE_LIMIT or values[1] >= CPU_PRESSURE_LIMIT
+            or values[2] >= IO_PRESSURE_LIMIT or values[3] <= DISK_FREE_RATIO_LIMIT
+            or free_bytes <= DISK_FREE_BYTES_LIMIT):
         return 'HOLD_NATIVE_SUBAGENT_RESOURCE_PRESSURE'
     return None
 
@@ -367,19 +416,38 @@ class Native:
         if sum(flags) > owned:
             raise autonomy.AutoHold('HOLD_NATIVE_CHAT_PRIORITY')
         current = int(Path('/sys/fs/cgroup/memory.current').read_text().strip())
-        maximum = int(Path('/sys/fs/cgroup/memory.max').read_text().strip())
-        pressure = Path('/sys/fs/cgroup/cpu.pressure').read_text()
-        match = re.search(r'^some\s+avg10=([0-9.]+)', pressure, re.M)
-        if not match or maximum <= 0:
+        maximum_text = Path('/sys/fs/cgroup/memory.max').read_text().strip()
+        if maximum_text == 'max':
+            raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+        maximum = int(maximum_text)
+        memory_stat = Path('/sys/fs/cgroup/memory.stat').read_text()
+        working_set, inactive_file, memory_ratio = cgroup_memory_working_set(
+            current, maximum, memory_stat)
+        cpu_pressure = psi_avg10(Path('/sys/fs/cgroup/cpu.pressure').read_text())
+        io_pressure = psi_avg10(Path('/sys/fs/cgroup/io.pressure').read_text())
+        disk = os.statvfs(ROOT)
+        if disk.f_blocks <= 0 or disk.f_frsize <= 0:
+            raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+        disk_total_bytes = disk.f_blocks * disk.f_frsize
+        disk_free_bytes = disk.f_bavail * disk.f_frsize
+        if disk_free_bytes < 0 or disk_free_bytes > disk_total_bytes:
             raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
         with self.ns['_qlock']:
             status = {key: value.get('status') for key, value in self.state['tasks'].items()
                       if value.get('handler') == HANDLER}
-        return {'native_verified': True, 'instance_id': 60509551,
-                'stop_active': self.stop_active(), 'source_sha_verified': True,
-                'owner_scope_verified': self.owner_allowed(), 'task_status': status,
-                'cgroup_memory_ratio': current/maximum, 'cpu_pressure': float(match[1]),
-                'gpu_available': False}
+        snapshot = {'native_verified': True, 'instance_id': 60509551,
+                    'stop_active': self.stop_active(), 'source_sha_verified': True,
+                    'owner_scope_verified': self.owner_allowed(), 'task_status': status,
+                    'cgroup_memory_ratio': memory_ratio,
+                    'cgroup_memory_working_set_bytes': working_set,
+                    'cgroup_memory_inactive_file_bytes': inactive_file,
+                    'cpu_pressure': cpu_pressure, 'io_pressure': io_pressure,
+                    'disk_free_ratio': disk_free_bytes/disk_total_bytes,
+                    'disk_free_bytes': disk_free_bytes, 'gpu_available': False}
+        reason = resource_wait_reason(snapshot)
+        if reason:
+            raise autonomy.AutoHold(reason)
+        return snapshot
 
     def _fresh_admission_reason(self):
         # read_resource_snapshot also checks the real local chat/slot gate.
