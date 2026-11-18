@@ -1,0 +1,71 @@
+{
+  "run": 44205428678,
+  "job": 134470011629,
+  "records": {
+    "NOX_MAINT_AUTHORIZED_COMMENT_ID": 6964812562,
+    "NOX_MAINT_INSTANCE_STATE": {
+      "actual_status": "running",
+      "cur_state": "running",
+      "found": true,
+      "instance": 60509551,
+      "intended_status": "running",
+      "num_gpus": 2,
+      "provider_mutations": 0,
+      "read_only_provider_lookup": true
+    },
+    "NOX_MAINT_HOST_PIN": "VERIFIED",
+    "NOX_MAINT_AUTH_ATTEMPT": "2_RETRY",
+    "NOX_MAINT_AUTHENTICATED_INSTANCE": 60509551,
+    "NOX_MAINT_FOUR_QUEUE_INSTALL": {
+      "schema": "NOX_FOUR_QUEUE_NATIVE_INSTALL_V1",
+      "request": "6964812562",
+      "source_sha": "d1ce0d01cfbd3e09828be5cc9befebccf7258ddb",
+      "handoff": {
+        "original_task_ids": 295,
+        "queue_counts": {
+          "Q1_RUNTIME_CHAT": 145,
+          "Q2_MEMORY_KNOWLEDGE": 71,
+          "Q3_TRAINING_WEIGHTS": 34,
+          "Q4_INTEGRATION_ACCEPTANCE": 45
+        },
+        "original_tasks_accepted": 0,
+        "scope": "FULL_PROJECT_SPECIFICATION_HANDOFF_WITH_SCOPED_EXECUTION_LEAVES"
+      },
+      "state": "HOLD_FOUR_QUEUE_STARTUP_NOT_VERIFIED",
+      "original_tasks_accepted": 0,
+      "training_started": false,
+      "model_restarted": false,
+      "started_at": 1794960575.2609417,
+      "previous_director": {
+        "pid": 3361714,
+        "start_ticks": 172341279,
+        "ppid": 114,
+        "pgrp": 3361714
+      },
+      "backup_path": "/root/nox/state/dispatcher/four_queue_rollback/6964812562",
+      "previous_queue_entries": 1452,
+      "final_stopped_queue_sha256": "1d836ba8555c1eda2fa59e17b4b4196c4dbfc1e565dc965c4d235516453ef46f",
+      "rollback": {
+        "config/owner_native_subagents.json": "PREIMAGE_RESTORED",
+        "state/dispatcher/project_routing_4q.json": "ADDITIVE_FILE_RETAINED_UNREFERENCED",
+        "state/dispatcher/project_work_receipts_source.json": "ADDITIVE_FILE_RETAINED_UNREFERENCED",
+        "state/dispatcher/project_work_ideas.json": "ADDITIVE_FILE_RETAINED_UNREFERENCED",
+        "state/dispatcher/project_work_tasks.json": "ADDITIVE_FILE_RETAINED_UNREFERENCED",
+        "scripts/test_owner_normal3_continuity.py": "ADDITIVE_FILE_RETAINED_UNREFERENCED",
+        "scripts/test_owner_four_queue.py": "ADDITIVE_FILE_RETAINED_UNREFERENCED",
+        "scripts/owner_resource_policy.py": "ADDITIVE_FILE_RETAINED_UNREFERENCED",
+        "scripts/owner_subagent_processes.py": "PREIMAGE_RESTORED",
+        "scripts/owner_subagent_dispatcher.py": "PREIMAGE_RESTORED",
+        "scripts/owner_autonomy_pool.py": "PREIMAGE_RESTORED"
+      },
+      "restart_original": "RUNNING_VERIFIED"
+    },
+    "NOX_MAINT_FOUR_QUEUE_ERROR": {
+      "error": "HOLD_FOUR_QUEUE_STARTUP_NOT_VERIFIED"
+    },
+    "NOX_MAINT_REMOTE_EXIT_CODE": 1,
+    "NOX_MAINT_FAILURE_CLASS": "PAYLOAD",
+    "NOX_MAINT_RESULT": "HOLD_NATIVE_PAYLOAD_INCOMPLETE",
+    "TEMP_SSH_CLEANUP": "NOT_ATTACHED"
+  }
+}

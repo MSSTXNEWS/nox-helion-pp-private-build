@@ -25,13 +25,15 @@ CPU-only typed leaves use measured working set and pressure, retaining shared-me
 
 ## Installation and evidence
 
-`../owner_four_queue_handoff_entry.py` contains the reviewed SPEC with exact native preimages, ten bundled assets, fixed native destinations and protected chat/proxy/web process identities. `install_spec.json` is its readable counterpart. The operator's bounded repair entry and asset allowlist are updated; owner authentication, source checkout verification, host pin and SSH key cleanup are unchanged.
+`../owner_four_queue_handoff_entry.py` contains the reviewed SPEC with exact native preimages, eleven bundled assets, fixed native destinations and protected chat/proxy/web process identities. `install_spec.json` is its readable counterpart. The operator's bounded repair entry and asset allowlist are updated; owner authentication, source checkout verification, host pin and SSH key cleanup are unchanged.
 
 Installation acquires the existing maintenance lease, drains active work, backs up its own files and the queue, stops only the dispatcher, rechecks the final stopped queue, installs the pinned sources and manifests, and verifies the restarted dispatcher. Compare-and-swap rollback preserves concurrent foreign writes. No training, model, web or proxy service is restarted. Existing task state, claims and historical receipts are not rewritten by the installer.
 
 Acceptance requires independent `/proc` identities, fresh heartbeats across two samples, exact S03 receipt readback, four completed scoped operations, and preservation of the original queue IDs and historical claims/results. A completed installation alone is not native acceptance. The resulting receipt is written under `/root/nox/state/dispatcher/four_queue_install_<owner_request_id>.json` and emitted through the existing owner-maintenance workflow.
 
 Local validation before deployment: 30 focused runtime tests passed, including three actual local OS processes and a fourth task served by a continuing process; seven installation/rollback fixtures passed. These are local source checks, not server evidence. Native results must be recorded separately after the owner command executes.
+
+The first native install attempt, owner request `6964812562`, correctly stopped at startup verification and restored all preexisting source/configuration bytes. A fresh read-only probe identified the exact cause: the existing prompt-truth wrapper still pinned the old callback SHA. The revised bundle changes only that wrapper's `CALLBACK_SHA` to the reviewed new callback; all other wrapper behavior and source checking remain intact. Two focused tests confirm the truthful prompts for all three roles and rejection of an unpinned callback. Acceptance also requires completed tasks to originate from the observed persistent worker identities and at least two successive tasks in the same process. Failure and compatibility evidence are retained in `evidence/`.
 
 `candidate_not_installed/` contains a separately tested planner cap correction. It is intentionally not installed here: changing that module's hash requires compatibility work for historical typed-plan manifests. Unchanged native task-plan/component modules are included solely to reproduce source tests and are excluded from the installation bundle.
 
@@ -41,5 +43,6 @@ Local validation before deployment: 30 focused runtime tests passed, including t
 - Owner maintenance transport base: [GitHub c5f9fd6](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/c5f9fd684f43f9ca2a861efd1f4ac4a15f3e0482).
 - Read-only native module snapshot: [workflow run 44201626238](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44201626238).
 - Full queue snapshot before installation: [workflow run 44202087922](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44202087922), 1,452 existing runtime task rows. This runtime queue count is distinct from the 295 project specification IDs.
+- Startup rollback and exact compatibility cause: [first install run 44205428678](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44205428678) and [read-only probe 44205996608](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44205996608).
 
 All native mutations are tied to an exact source commit and owner-command request ID. No source-only or diagnostic result may be reported as completion of an original project requirement.

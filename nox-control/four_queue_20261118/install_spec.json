@@ -9,7 +9,8 @@
     "work_tasks.json": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
     "work_ideas.json": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
     "work_receipts.json": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
-    "NOX_FOUR_QUEUE_ROUTING_20261118.json": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671"
+    "NOX_FOUR_QUEUE_ROUTING_20261118.json": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671",
+    "owner_subagent_instruction_truth_four_queue.py": "d03691b84954402558f1e23e1403043eb9c7d115eb57be575524c05502d0529a"
   },
   "expected_native": {
     "scripts/nox_dispatcher_t855u.py": "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21",
@@ -19,7 +20,8 @@
     "scripts/owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
     "scripts/owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
     "config/owner_native_subagents.json": "e988316fc3f6a7600fbce088c4aa7de72c44f2bfcce097def8942fa93b9b9da9",
-    "state/dispatcher/policies/NOX_WEB_WEIGHTS_V06.md": "84780aaf911a229a654995f38972cdad5d99c72ab38842f76f787ec280acb46f"
+    "state/dispatcher/policies/NOX_WEB_WEIGHTS_V06.md": "84780aaf911a229a654995f38972cdad5d99c72ab38842f76f787ec280acb46f",
+    "scripts/owner_subagent_instruction_truth.py": "daccac22beaa5f76a5fc0dcad780eb1a19e8fbf8df66df1d653656852c0173d9"
   },
   "install_paths": {
     "owner_autonomy_pool.py": "scripts/owner_autonomy_pool.py",
@@ -31,7 +33,8 @@
     "work_tasks.json": "state/dispatcher/project_work_tasks.json",
     "work_ideas.json": "state/dispatcher/project_work_ideas.json",
     "work_receipts.json": "state/dispatcher/project_work_receipts_source.json",
-    "NOX_FOUR_QUEUE_ROUTING_20261118.json": "state/dispatcher/project_routing_4q.json"
+    "NOX_FOUR_QUEUE_ROUTING_20261118.json": "state/dispatcher/project_routing_4q.json",
+    "owner_subagent_instruction_truth_four_queue.py": "scripts/owner_subagent_instruction_truth.py"
   },
   "leaf_catalog": [
     {

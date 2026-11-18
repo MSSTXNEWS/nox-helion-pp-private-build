@@ -15,7 +15,7 @@ FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_
 MASTER=None
 
 SCOPED_REPAIR_BUNDLES={
-    'nox-control/owner_four_queue_handoff_entry.py':('owner_autonomy_pool.py', 'owner_subagent_dispatcher.py', 'owner_subagent_processes.py', 'owner_resource_policy.py', 'test_owner_four_queue.py', 'test_owner_normal3_continuity.py', 'work_tasks.json', 'work_ideas.json', 'work_receipts.json', 'NOX_FOUR_QUEUE_ROUTING_20261118.json'),
+    'nox-control/owner_four_queue_handoff_entry.py':('owner_autonomy_pool.py', 'owner_subagent_dispatcher.py', 'owner_subagent_processes.py', 'owner_resource_policy.py', 'test_owner_four_queue.py', 'test_owner_normal3_continuity.py', 'work_tasks.json', 'work_ideas.json', 'work_receipts.json', 'NOX_FOUR_QUEUE_ROUTING_20261118.json', 'owner_subagent_instruction_truth_four_queue.py'),
     'nox-control/owner_post_reset_state_observe.py':(),
     'nox-control/owner_chat_markdown_asset_install_v2.py':('owner_chat_stream_asset_install_v2.py','owner_media_acceptance_entry.py','owner_native_repair.py','nox-v24-chat-markdown-final.js'),
     'nox-control/owner_chat_markdown_metadata.py':(),
@@ -87,7 +87,7 @@ SCOPED_REPAIR_BUNDLES={
         'owner_download_status_entry.py','owner_native_repair.py','owner_qwen_disk_rearm_entry.py'),
 }
 SCOPED_REPAIR_EXTRA_PATHS={
-    'nox-control/owner_four_queue_handoff_entry.py':('nox-control/four_queue_20261118/owner_autonomy_pool.py', 'nox-control/four_queue_20261118/owner_subagent_dispatcher.py', 'nox-control/four_queue_20261118/owner_subagent_processes.py', 'nox-control/four_queue_20261118/owner_resource_policy.py', 'nox-control/four_queue_20261118/test_owner_four_queue.py', 'nox-control/four_queue_20261118/test_owner_normal3_continuity.py', 'nox-control/four_queue_20261118/work_tasks.json', 'nox-control/four_queue_20261118/work_ideas.json', 'nox-control/four_queue_20261118/work_receipts.json', 'nox-control/four_queue_20261118/NOX_FOUR_QUEUE_ROUTING_20261118.json'),
+    'nox-control/owner_four_queue_handoff_entry.py':('nox-control/four_queue_20261118/owner_autonomy_pool.py', 'nox-control/four_queue_20261118/owner_subagent_dispatcher.py', 'nox-control/four_queue_20261118/owner_subagent_processes.py', 'nox-control/four_queue_20261118/owner_resource_policy.py', 'nox-control/four_queue_20261118/test_owner_four_queue.py', 'nox-control/four_queue_20261118/test_owner_normal3_continuity.py', 'nox-control/four_queue_20261118/work_tasks.json', 'nox-control/four_queue_20261118/work_ideas.json', 'nox-control/four_queue_20261118/work_receipts.json', 'nox-control/four_queue_20261118/NOX_FOUR_QUEUE_ROUTING_20261118.json', 'nox-control/four_queue_20261118/owner_subagent_instruction_truth_four_queue.py'),
     'nox-control/owner_chat_markdown_asset_install_v2.py':('nox-control/owner_chat_stream_asset_install_v2.py','coordination/onepass/nox-v24-chat-markdown-final.js'),
     'nox-control/owner_chat_markdown_asset_install.py':('nox-control/owner_chat_stream_asset_install_v2.py','coordination/onepass/nox-v24-chat-markdown-final.js'),
     'nox-control/owner_workspace_browser_acceptance_v6.py':('nox-control/owner_workspace_browser_acceptance_v5.py','nox-control/owner_workspace_browser_acceptance_v2.py','nox-control/owner_workspace_browser_acceptance.py','nox-control/owner_chat_page_diagnose.py'),
