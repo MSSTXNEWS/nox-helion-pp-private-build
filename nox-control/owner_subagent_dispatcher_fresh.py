@@ -932,10 +932,18 @@ class Native:
     def close_pool(self, reason=None):
         with self.lock:
             if self.pool is not None:
+                # Collect result messages already published before stopping workers.
+                # Their owning handlers still need to persist exact S03 readback.
+                try:
+                    self._drain()
+                except Exception:
+                    # Shutdown must proceed; unresolved submissions stay fenced by
+                    # their durable intent and are never replayed.
+                    pass
                 if reason is not None:
                     for task_id in set(self.pool.active.values()) | set(self.completed):
                         self.interrupted[task_id] = reason
-                    self.completed.clear()
+                    # Keep completed events until their handlers commit them to S03.
                 self.pool.__exit__(None, None, None)
                 self.pool = None
 
