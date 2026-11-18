@@ -117,7 +117,7 @@ class V61StreamingDecryptRegression(unittest.TestCase):
     def test_stream_rejects_manifest_missing(self):
         with self.assertRaisesRegex(RuntimeError,"HOLD_TAR_MEMBER_COUNT"):
             verify_plaintext_tar_stream(io.BytesIO(make_archive(
-                [f"checkpoint_{i:02d}.pt" for i in range(9))))
+                [f"checkpoint_{i:02d}.pt" for i in range(9)])))
 
 
 class V61TransportRetryBoundary(unittest.TestCase):
