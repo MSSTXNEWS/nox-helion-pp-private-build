@@ -137,7 +137,7 @@ def main():
             connection.close()
     except OSError:
         result["proxy_health"] = {"code": None}
-    print("NOX_OWNER_COUNTER_POLICY_INCIDENT="+json.dumps(result,sort_keys=True,separators=(",",":"),
+    print("NOX_MAINT_COUNTER_POLICY_INCIDENT="+json.dumps(result,sort_keys=True,separators=(",",":"),
                                                        allow_nan=False), flush=True)
     print("NOX_MAINT_INSPECT_COMPLETE=true",flush=True)
     return 0
