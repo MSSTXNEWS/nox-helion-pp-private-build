@@ -118,6 +118,13 @@ def evaluate_resources(snapshot, demand, *, now=None):
     headroom = budget['max_bytes'] - (budget['current_bytes'] - reclaim + reserve)
     if headroom < 2 * GIB:
         return _hold('HOLD_RELAY_CPU_HEADROOM')
+    # Reclaimable page-cache is an estimate, not immediately free allocation.
+    # Keep a hard raw cgroup buffer for the interactive chat before new work.
+    raw_headroom = budget['max_bytes'] - budget['current_bytes']
+    raw_floor = max(512 * MIB, budget['sandbox_limit_bytes'] + budget['planner_reserve_bytes'])
+    if raw_headroom < raw_floor:
+        return _hold('HOLD_RELAY_RAW_CGROUP_HEADROOM',
+                     raw_headroom_bytes=raw_headroom, required_raw_headroom_bytes=raw_floor)
     return {'schema': 'NOX_RELAY_RESOURCE_ADMISSION_V1', 'admit': True, 'reason': None,
             'scope': 'BOUNDED_SOURCE_WORK_NOT_GPU_OR_WEIGHT_ADMISSION',
             'limits': {key: limits[key] for key in bounds}, 'maximum_workers': 3,
