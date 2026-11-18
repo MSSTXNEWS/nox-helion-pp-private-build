@@ -1,0 +1,30 @@
+name: NOX B4 paired benchmark comparator source gate
+on:
+  push:
+    branches:
+      - b4/paired-quality-latency-gate-20261118
+    paths:
+      - nox-control/systemic_relay_20261118/b4_paired_benchmark_receipts.py
+      - nox-control/systemic_relay_20261118/test_b4_paired_benchmark_receipts.py
+      - .github/workflows/nox-b4-paired-source-gate.yml
+permissions:
+  contents: read
+jobs:
+  focused-b4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: One focused offline comparator suite, no native mutation
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s nox-control/systemic_relay_20261118 -p 'test_b4_paired_benchmark_receipts.py' -v
+          echo 'NOX_B4_SOURCE_TESTED_ONLY=true'
+          echo 'NOX_B4_NATIVE_ACCEPTED=0'
