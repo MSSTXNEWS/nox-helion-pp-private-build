@@ -223,39 +223,54 @@ def prepare_schema(conn):
 
 
 def snapshot_database(source,destination,seconds=12):
-    """A consistent SQLite byte artifact including committed WAL content."""
+    """A consistent SQLite artifact, published only after validation succeeds."""
     source = plain(source);destination = plain(destination)
     regular(source)
     if destination.exists():hold('HOLD_S03_SNAPSHOT_ALREADY_EXISTS')
     destination.parent.mkdir(parents=True,mode=0o700,exist_ok=True)
     deadline = time.monotonic()+seconds
-    with connection(source,seconds=seconds) as src:
-        # Establish the read snapshot before sizing it: page_count includes
-        # committed WAL pages that are absent from the main-file st_size.
-        src.execute('BEGIN')
-        src.execute('SELECT count(*) FROM sqlite_master').fetchone()
-        pages=src.execute('PRAGMA page_count').fetchone()[0]
-        page_size=src.execute('PRAGMA page_size').fetchone()[0]
-        logical_bytes=pages*page_size
-        if not 0<logical_bytes<=512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
-        if shutil.disk_usage(destination.parent).free<6*1024**3+logical_bytes:
-            hold('HOLD_S03_BACKUP_DISK_RESERVE')
-        fd=os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
-        def progress(status,remaining,total):
-            if time.monotonic()>deadline:hold('HOLD_S03_BACKUP_BUDGET')
-            if total*page_size>512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
-            if shutil.disk_usage(destination.parent).free<6*1024**3+remaining*page_size:
+    # A failed/aborted SQLite backup must never leave a destination that looks
+    # like a completed backup or prevents a safe retry. Work in a private file
+    # on the same filesystem, then publish with a no-overwrite hard link.
+    temporary = None
+    try:
+        with connection(source,seconds=seconds) as src:
+            src.execute('BEGIN')
+            src.execute('SELECT count(*) FROM sqlite_master').fetchone()
+            pages=src.execute('PRAGMA page_count').fetchone()[0]
+            page_size=src.execute('PRAGMA page_size').fetchone()[0]
+            logical_bytes=pages*page_size
+            if not 0<logical_bytes<=512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
+            if shutil.disk_usage(destination.parent).free<6*1024**3+logical_bytes:
                 hold('HOLD_S03_BACKUP_DISK_RESERVE')
-        with sqlite3.connect(destination) as dst:
-            src.backup(dst,pages=128,progress=progress,sleep=.01)
-            if dst.execute('PRAGMA quick_check').fetchone()[0]!='ok':hold('HOLD_S03_BACKUP_INTEGRITY')
-    fd = os.open(destination,os.O_RDONLY|os.O_NOFOLLOW)
-    try:os.fsync(fd)
-    finally:os.close(fd)
-    value = file_sha(destination)
-    if file_sha(destination)!=value:hold('HOLD_S03_BACKUP_READBACK')
-    return {'path':str(destination),'sha256':value,'bytes':destination.stat().st_size,
-            'kind':'CONSISTENT_SQLITE_SNAPSHOT','original_retained':True}
+            fd,temporary=tempfile.mkstemp(prefix='.s03-backup-',suffix='.partial',dir=destination.parent)
+            os.fchmod(fd,0o600)
+            os.close(fd)
+            def progress(status,remaining,total):
+                if time.monotonic()>deadline:hold('HOLD_S03_BACKUP_BUDGET')
+                if total*page_size>512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
+                if shutil.disk_usage(destination.parent).free<6*1024**3+remaining*page_size:
+                    hold('HOLD_S03_BACKUP_DISK_RESERVE')
+            with sqlite3.connect(temporary) as dst:
+                src.backup(dst,pages=128,progress=progress,sleep=.01)
+                if dst.execute('PRAGMA quick_check').fetchone()[0]!='ok':hold('HOLD_S03_BACKUP_INTEGRITY')
+        fd=os.open(temporary,os.O_RDONLY|os.O_NOFOLLOW)
+        try:os.fsync(fd)
+        finally:os.close(fd)
+        value=file_sha(temporary)
+        if file_sha(temporary)!=value:hold('HOLD_S03_BACKUP_READBACK')
+        # link() fails rather than overwriting a backup concurrently published
+        # by another owner. It exposes only a fully verified inode.
+        os.link(temporary,destination,follow_symlinks=False)
+        directory=os.open(destination.parent,os.O_RDONLY|os.O_DIRECTORY)
+        try:os.fsync(directory)
+        finally:os.close(directory)
+        if file_sha(destination)!=value:hold('HOLD_S03_BACKUP_PUBLISHED_READBACK')
+        return {'path':str(destination),'sha256':value,'bytes':destination.stat().st_size,
+                'kind':'CONSISTENT_SQLITE_SNAPSHOT','original_retained':True}
+    finally:
+        if temporary is not None:
+            os.unlink(temporary)
 
 
 def _request_json(path,payload=None,timeout=.7,maximum=1024*1024):
