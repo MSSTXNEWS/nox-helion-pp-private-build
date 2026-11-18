@@ -276,14 +276,39 @@ def rollback_files(h, file_transitions):
             'ROLLBACK_READBACK')
 
 
+def cgroup_memory_working_set(current, maximum, stat_text):
+    """Match dispatcher's fail-closed treatment of reclaimable inactive cache."""
+    if type(current) is not int or current < 0 or type(maximum) is not int or maximum <= 0:
+        raise ValueError('HOLD_RESOURCE_METADATA')
+    if not isinstance(stat_text, str):
+        raise ValueError('HOLD_RESOURCE_METADATA')
+    inactive_file = None
+    for line in stat_text.splitlines():
+        fields = line.split()
+        if fields and fields[0] == 'inactive_file':
+            if len(fields) != 2 or inactive_file is not None:
+                raise ValueError('HOLD_RESOURCE_METADATA')
+            try:
+                inactive_file = int(fields[1])
+            except ValueError as exc:
+                raise ValueError('HOLD_RESOURCE_METADATA') from exc
+    if inactive_file is None or inactive_file < 0:
+        raise ValueError('HOLD_RESOURCE_METADATA')
+    inactive_file = min(inactive_file, current)
+    working_set = max(0, current - inactive_file)
+    return working_set, inactive_file, working_set / maximum
+
+
 def resource_admission(h):
-    """Fail closed below the existing RAM and disk maintenance floor."""
+    """Keep the 4 GiB floor after only reclaimable inactive-file cache is discounted."""
     try:
         current = int(Path('/sys/fs/cgroup/memory.current').read_text())
         maximum = int(Path('/sys/fs/cgroup/memory.max').read_text())
+        memory_stat = Path('/sys/fs/cgroup/memory.stat').read_text()
+        working_set, _, _ = cgroup_memory_working_set(current, maximum, memory_stat)
         disk = os.statvfs(str(h.ROOT))
-        return maximum - current >= 4 * 1024**3 and disk.f_bavail * disk.f_frsize >= 1024**3
-    except (OSError, ValueError, TypeError):
+        return maximum - working_set >= 4 * 1024**3 and disk.f_bavail * disk.f_frsize >= 1024**3
+    except (OSError, ValueError, TypeError, OverflowError):
         return False
 
 

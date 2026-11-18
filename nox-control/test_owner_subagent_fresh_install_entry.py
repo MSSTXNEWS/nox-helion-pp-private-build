@@ -300,6 +300,28 @@ def main():
         return rc, helper, helper.outputs[-1][1]
 
 
+    def test_resource_admission_uses_reclaimable_cache_and_holds_on_bad_stats(self):
+        gib = 1024 ** 3
+        values = {'memory.current': str(8 * gib), 'memory.max': str(8 * gib),
+                  'memory.stat': 'inactive_file ' + str(5 * gib) + '\\n'}
+
+        class FakePath:
+            def __init__(self, value):
+                self.name = str(value).rsplit('/', 1)[-1]
+            def read_text(self):
+                return values[self.name]
+
+        disk = types.SimpleNamespace(f_bavail=gib, f_frsize=1)
+        native = types.SimpleNamespace(ROOT='/nox')
+        with patch.object(entry, 'Path', FakePath), \\
+                patch.object(entry.os, 'statvfs', return_value=disk):
+            # Raw free is zero, but 5 GiB of inactive cache leaves 5 GiB usable.
+            self.assertTrue(entry.resource_admission(native))
+            values['memory.stat'] = 'inactive_file ' + str(3 * gib) + '\\n'
+            self.assertFalse(entry.resource_admission(native))
+            values['memory.stat'] = 'inactive_file invalid\\n'
+            self.assertFalse(entry.resource_admission(native))
+
     def test_resource_floor_is_rechecked_after_claim_drain_before_backup_and_stop(self):
         rc, helper, result = self.run_fixture(resource_checks=[True, False])
         self.assertEqual(rc, 2)
