@@ -50,6 +50,36 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def wait_settled_queue(helper, guard, expected, receipt):
+    """Allow an already-running task to settle without resetting any claim."""
+    deadline = time.monotonic() + 8
+    while True:
+        require(guard() == expected, 'PROCESS_IDENTITY_CHANGED')
+        state, active = helper.queue_idle(ROOT)
+        busy = set(active)
+        for task_id, row in state['tasks'].items():
+            if (isinstance(row, dict) and row.get('handler') == 'owner_native_project_work'
+                    and (row.get('status') == 'pending'
+                         or (row.get('native_worker_lease') or {}).get('phase') in ('ACTIVE', 'RETIRING'))):
+                busy.add(task_id)
+        receipt['busy_count'] = len(busy)
+        receipt['busy_tasks'] = []
+        for task_id in sorted(busy)[:12]:
+            row = state['tasks'][task_id]
+            lease = row.get('native_worker_lease') or {}
+            receipt['busy_tasks'].append({
+                'id': str(task_id)[:128],
+                'status': row.get('status')[:64] if isinstance(row.get('status'), str) else None,
+                'handler': row.get('handler')[:128] if isinstance(row.get('handler'), str) else None,
+                'lease_phase': lease.get('phase')[:64] if isinstance(lease.get('phase'), str) else None,
+            })
+        if not busy:
+            return state
+        remaining = deadline - time.monotonic()
+        require(remaining > 0, 'WAIT_ACTIVE_CLAIMS_SETTLE')
+        time.sleep(min(.05, remaining))
+
+
 def exact_s03(receipt, helper):
     path = ROOT / 'kb/knowledge.sqlite'
     require(not any(p.is_symlink() for p in (path, *path.parents))
@@ -195,11 +225,7 @@ def run(bundle, spec):
             require(helper.stop_clear(ROOT), 'OWNER_STOP')
             return helper.expected_processes(spec), helper.protected_snapshot(spec)
         processes, protected = guard()
-        baseline, active = helper.queue_idle(ROOT)
-        require(not active and not any(row.get('status') == 'pending'
-                or row.get('native_worker_lease', {}).get('phase') in ('ACTIVE', 'RETIRING')
-                for row in baseline['tasks'].values() if isinstance(row, dict)
-                and row.get('handler') == 'owner_native_project_work'), 'WAIT_ACTIVE_CLAIMS_SETTLE')
+        baseline = wait_settled_queue(helper, guard, (processes, protected), receipt)
         old_raw = helper.read_regular(CONFIG, 2 * 1024 * 1024)
         require(digest(old_raw) == spec['expected_config_sha256'], 'CONFIG_PREDECESSOR')
         old = json.loads(old_raw)

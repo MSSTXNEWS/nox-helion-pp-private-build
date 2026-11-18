@@ -42,6 +42,30 @@ def encoded(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
 
 
+def wait_settled_queue(helper, guard, expected, receipt):
+    """Wait for the existing all-running guard without changing queue state."""
+    deadline = time.monotonic() + 8
+    while True:
+        require(guard() == expected, 'PROCESS_IDENTITY_CHANGED')
+        state, active = helper.queue_idle(ROOT)
+        receipt['busy_count'] = len(active)
+        receipt['busy_tasks'] = []
+        for task_id in sorted(active)[:12]:
+            row = state['tasks'][task_id]
+            lease = row.get('native_worker_lease') or {}
+            receipt['busy_tasks'].append({
+                'id': str(task_id)[:128],
+                'status': row.get('status')[:64] if isinstance(row.get('status'), str) else None,
+                'handler': row.get('handler')[:128] if isinstance(row.get('handler'), str) else None,
+                'lease_phase': lease.get('phase')[:64] if isinstance(lease.get('phase'), str) else None,
+            })
+        if not active:
+            return state
+        remaining = deadline - time.monotonic()
+        require(remaining > 0, 'WAIT_ACTIVE_CLAIMS_SETTLE')
+        time.sleep(min(.05, remaining))
+
+
 def module(name, raw):
     result = types.ModuleType(name)
     result.__file__ = '<reviewed-publisher>/' + name + '.py'
@@ -131,14 +155,14 @@ def run(bundle, spec):
             except BlockingIOError:
                 require(time.monotonic() < deadline, 'MAINTENANCE_BUSY')
                 time.sleep(.05)
-        info, named = os.fstat(fd), lock.stat()
-        require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid() and info.st_nlink == 1
-                and not info.st_mode & 0o022 and (info.st_dev, info.st_ino) == (named.st_dev, named.st_ino), 'LEASE_IDENTITY')
-        require(h.stop_clear(ROOT), 'OWNER_STOP')
-        protected = h.protected_snapshot(spec)
-        processes = h.expected_processes(spec)
-        baseline, active = h.queue_idle(ROOT)
-        require(not active, 'WAIT_ACTIVE_CLAIMS_SETTLE')
+        def guard():
+            info, named = os.fstat(fd), lock.stat()
+            require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid() and info.st_nlink == 1
+                    and not info.st_mode & 0o022 and (info.st_dev, info.st_ino) == (named.st_dev, named.st_ino), 'LEASE_IDENTITY')
+            require(h.stop_clear(ROOT), 'OWNER_STOP')
+            return h.expected_processes(spec), h.protected_snapshot(spec)
+        processes, protected = guard()
+        baseline = wait_settled_queue(h, guard, (processes, protected), receipt)
         old_raw = h.read_regular(CONFIG, 2 * 1024 * 1024)
         require(sha(old_raw) == spec.get('expected_config_sha256'), 'CONFIG_PREDECESSOR')
         old = json.loads(old_raw)
