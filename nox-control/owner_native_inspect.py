@@ -584,7 +584,7 @@ print(json.dumps(versions, separators=(',', ':')))
 def controls():
     configs=supervisor_config()
     names=['train_qlora_35b_t866u.py','run_train_volta_t866u.sh',
-           'nox_autoscale_t877u.py','nox_dispatcher_t855u.py',
+           'nox_autoscale_t877u.py','owner_dispatcher_mentor.py','nox_dispatcher_t855u.py',
            'teacher_serve_t811u.sh','vram_guard_t829u.py','gpu_hang_watchdog_t865u.py']
     # Only exact training-service script references inside the known scripts root.
     for config in configs:
