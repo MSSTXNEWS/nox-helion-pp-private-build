@@ -1,0 +1,75 @@
+{
+  "acceptance_limit": "Source-workspace correction only. The existing six tests remain immutable and must run through the admitted native verifier; this artifact does not grant original-task or live-WEB acceptance.",
+  "artifact_kind": "LOCAL_BUILD_INPUTS_NOT_NATIVE_PUBLISH_SPEC",
+  "asset_sources": {
+    "merge_web_source.py": "nox-control/systemic_relay_20261118/next_reviewed_source/merge_web_source.py",
+    "reviewed_merge_plan.json": "nox-control/systemic_relay_20261118/next_reviewed_source/reviewed_merge_plan.json"
+  },
+  "contract": {
+    "path": "nox-control/systemic_relay_20261118/next_pack_44368502183/package/contracts/847f2aca0998b4029061c94ebc60bbf989c07a32b174720aa955239cae2d86fd.json",
+    "predecessor_task_id": "0V14-14.relay.merge_verified_descriptors.0b806763b859497e",
+    "sha256": "847f2aca0998b4029061c94ebc60bbf989c07a32b174720aa955239cae2d86fd"
+  },
+  "fresh_publisher_inputs_required": [
+    "Current native config and full source census hashes, with matching plan context preimages.",
+    "Settled predecessor receipt, exact S03 evidence, same approved contract and unchanged original registry.",
+    "Current callback, director, three worker identities and protected service identities; no active claims.",
+    "A newly assembled publish SPEC and catalog row bound to those fresh observations."
+  ],
+  "last_observed_predecessor": {
+    "lease_phase": "SETTLED",
+    "project_source_changed": false,
+    "readback_file": "systemic-next3-current-readback.json",
+    "readback_sha256": "c7492997b49ac80d2dc752905a24e34de1434edceb2d003119b6d29508253ce5",
+    "reason": "HOLD_PROJECT_PLANNER_MODEL_INCOMPLETE_RESPONSE",
+    "receipt_sha256": "43a0c7cbdd588a867c709609f8acdae6692d850edc32c45405747ae06acf5fca",
+    "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44372610166",
+    "status": "blocked",
+    "task_id": "0V14-14.relay.merge_verified_descriptors.0b806763b859497e",
+    "valid_for_future_admission": false
+  },
+  "model_calls_required": 0,
+  "native_publish_performed": false,
+  "native_verification_performed": false,
+  "operator_modified": false,
+  "original_task_accepted": false,
+  "payload": {
+    "bytes": 5492,
+    "path": "nox-control/systemic_relay_20261118/next_reviewed_source/merge_web_source.py",
+    "sha256": "a580a7d9f3efd570cf4e84396ceb3e6f980fe2dc846d0fda633b6e65b4c36b54"
+  },
+  "plan": {
+    "bytes": 1061,
+    "path": "nox-control/systemic_relay_20261118/next_reviewed_source/reviewed_merge_plan.json",
+    "schema": "NOX_PROJECT_WORK_PLAN_V1",
+    "sha256": "bb6d20856fd56583e8440d85faac57ba8da9751440d487c5540b8e2896f9db96",
+    "task_id": "0V14-14.project.systemic_reviewed_merge.20261118"
+  },
+  "publish_spec_created": false,
+  "recipe": {
+    "note": "Only the established plan construction format is reused. The old three-task builder is not executed.",
+    "path": "nox-control/systemic_relay_20261118/build_reviewed_recovery.py",
+    "plan_example_path": "nox-control/systemic_relay_20261118/reviewed_recovery/assets/reviewed_forge_budget_plan.json",
+    "plan_example_sha256": "86c1f916da8194f49231a32b0e2899f6bfbea9a7d7622561280ac130352795ce",
+    "sha256": "26cef4c038e4145a634b007501fd3a7e0704aac02d81d9db964dde4e49568074"
+  },
+  "registry": {
+    "manifest_path": "nox-control/systemic_relay_20261118/next_pack_44368502183/package/relay/d58ed9b020a78c3c8fcbfd476b3b0eecfd235e50f3a6ded29c8cec550e1a4212.json",
+    "manifest_sha256": "d58ed9b020a78c3c8fcbfd476b3b0eecfd235e50f3a6ded29c8cec550e1a4212",
+    "parent_required_evidence": "native",
+    "parent_task_id": "0V14-14",
+    "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
+    "spec_sha256": "3ace28409839c1e1259e5a24b7d40c11bf9dec3445b2b0073ef90ecc22b2216e"
+  },
+  "state": "EXACT_REVIEWED_PLAN_WAITING_FOR_FRESH_NATIVE_PUBLICATION_BINDINGS",
+  "syntax_checked": true,
+  "unit_tests_executed": false,
+  "verification_declared": {
+    "kind": "python_unittest",
+    "min_tests": 6,
+    "modules": [
+      "test_nox_merge_overlay_paths"
+    ],
+    "timeout_sec": 120
+  }
+}
