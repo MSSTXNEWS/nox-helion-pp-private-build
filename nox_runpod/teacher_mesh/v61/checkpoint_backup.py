@@ -161,12 +161,154 @@ def verify_plaintext_tar(plaintext:bytes)->dict:
                 'functional_optimizer_restore_verified':False}
 
 
+def verify_plaintext_tar_stream(source)->dict:
+    """Validate a decrypted gzip tar sequentially, keeping plaintext off disk/RAM.
+
+    The V61 exporter writes regular checkpoint files then RESTORE_MANIFEST.json.
+    Read at most 1 MiB per file chunk and compare the final manifest to observed
+    bytes; never load the up-to-1.3-GB decrypted archive with capture_output.
+    """
+    class DigestReader:
+        def __init__(self,raw):
+            self.raw=raw
+            self.digest=hashlib.sha256()
+            self.total=0
+
+        def read(self,n=1048576):
+            if type(n) is not int or n<=0:
+                raise RuntimeError('HOLD_TAR_UNBOUNDED_READ')
+            part=self.raw.read(min(n,1048576))
+            self.total+=len(part)
+            if self.total>1_400_000_000:
+                raise RuntimeError('HOLD_TAR_COMPRESSED_SIZE_LIMIT')
+            self.digest.update(part)
+            return part
+
+    import re
+    reader=DigestReader(source)
+    found={}
+    manifest=None
+    total=0
+    count=0
+    try:
+        with tarfile.open(fileobj=reader,mode='r|gz') as archive:
+            for member in archive:
+                count+=1
+                if count>91:
+                    raise RuntimeError('HOLD_TAR_MEMBER_COUNT')
+                if not member.isfile():
+                    raise RuntimeError('HOLD_TAR_UNSAFE_MEMBER')
+                name=member.name
+                if name=='RESTORE_MANIFEST.json':
+                    if manifest is not None or not 0<member.size<=1_000_000:
+                        raise RuntimeError('HOLD_TAR_MANIFEST_MISSING_OR_OVERSIZED')
+                    with archive.extractfile(member) as input_file:
+                        try:
+                            manifest=json.loads(input_file.read().decode('utf-8'))
+                        except (UnicodeError,ValueError) as exc:
+                            raise RuntimeError('HOLD_MANIFEST_JSON') from exc
+                    continue
+                if manifest is not None:
+                    raise RuntimeError('HOLD_TAR_MANIFEST_NOT_LAST')
+                if (not isinstance(name,str) or len(name)>4096 or
+                    name.startswith('/') or '\\' in name or '\x00' in name or
+                    name.split('/')[0]!='NOX_CHECKPOINTS' or
+                    len(name.split('/'))<2 or
+                    any(part in ('','.', '..') for part in name.split('/')[1:])):
+                    raise RuntimeError('HOLD_MANIFEST_PATH')
+                if name in found:
+                    raise RuntimeError('HOLD_TAR_DUPLICATE_MEMBER')
+                if member.size<0 or member.size>2_000_000_000:
+                    raise RuntimeError('HOLD_MANIFEST_RECORD')
+                total+=member.size
+                if total>1_300_000_000:
+                    raise RuntimeError('HOLD_MANIFEST_TOTAL_BYTES')
+                digest=hashlib.sha256()
+                bytes_read=0
+                with archive.extractfile(member) as input_file:
+                    while True:
+                        chunk=input_file.read(1048576)
+                        if not chunk:
+                            break
+                        digest.update(chunk)
+                        bytes_read+=len(chunk)
+                if bytes_read!=member.size:
+                    raise RuntimeError('HOLD_CHECKPOINT_RESTORE_HASH')
+                found[name]=(member.size,digest.hexdigest())
+    except (tarfile.TarError,EOFError,OSError) as exc:
+        raise RuntimeError('HOLD_TAR_STREAM_INVALID') from exc
+    # tarfile stops at the end-of-archive marker; hash remaining padding/trailer
+    # too, so the digest exactly matches the old full decrypted tar.gz SHA.
+    while reader.read(1048576):
+        pass
+    if not 11<=count<=91 or manifest is None or not 10<=len(found)<=90:
+        raise RuntimeError('HOLD_TAR_MEMBER_COUNT')
+    if (not isinstance(manifest,dict) or
+        manifest.get('schema')!='NOX_V61_CHECKPOINT_OPTIMIZER_MANIFEST_V1' or
+        manifest.get('origin_instance_id')!=60509551 or
+        manifest.get('original_files_deleted') is not False):
+        raise RuntimeError('HOLD_MANIFEST_SCHEMA')
+    items=manifest.get('files')
+    if not isinstance(items,list) or len(items)!=len(found):
+        raise RuntimeError('HOLD_TAR_MEMBER_COVERAGE')
+    expected=set()
+    for item in items:
+        if not isinstance(item,dict) or set(item)!={'path','size_bytes','sha256'}:
+            raise RuntimeError('HOLD_MANIFEST_RECORD')
+        name=item['path'];size=item['size_bytes'];digest=item['sha256']
+        if (not isinstance(name,str) or name in expected or name not in found or
+            type(size) is not int or size<0 or
+            not isinstance(digest,str) or re.fullmatch('[0-9a-f]{64}',digest) is None):
+            raise RuntimeError('HOLD_MANIFEST_RECORD')
+        expected.add(name)
+        if found[name]!=(size,digest):
+            raise RuntimeError('HOLD_CHECKPOINT_RESTORE_HASH')
+    if set(found)!=expected:
+        raise RuntimeError('HOLD_TAR_MEMBER_COVERAGE')
+    names_lower=[name.rsplit('/',1)[-1].lower() for name in found]
+    hints={
+        'optimizer':any('optimizer' in name or name.startswith('optim.') for name in names_lower),
+        'rng':any('rng' in name or 'random_state' in name for name in names_lower),
+        'scaler':any('scaler' in name or 'grad_scaler' in name for name in names_lower),
+    }
+    return {'count':len(found),'total_bytes':total,'resume_name_hints':hints,
+            'functional_optimizer_restore_verified':False,
+            'plaintext_sha256':reader.digest.hexdigest()}
+
+
 def verify(encrypted:Path,test_identity:Path)->dict:
-    p=subprocess.run(['age','-d','-i',str(test_identity),str(encrypted)],
-                     capture_output=True,timeout=180)
-    if p.returncode:raise RuntimeError('HOLD_TEST_RESTORE_DECRYPT')
-    verified=verify_plaintext_tar(p.stdout)
-    return {**verified,'plaintext_sha256':hashlib.sha256(p.stdout).hexdigest()}
+    # The legacy subprocess.run(capture_output=True) retained up to 1.3 GB of
+    # plaintext. Consume age's stdout as a pipe, without disk spooling.
+    import threading
+    process=subprocess.Popen(['age','-d','-i',str(test_identity),str(encrypted)],
+                             stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+    timed_out=threading.Event()
+    def abort_timeout():
+        if process.poll() is None:
+            timed_out.set()
+            process.kill()
+    timer=threading.Timer(180,abort_timeout)
+    timer.daemon=True
+    timer.start()
+    try:
+        try:
+            with process.stdout:
+                verified=verify_plaintext_tar_stream(process.stdout)
+        except Exception:
+            if process.poll() is None:
+                process.kill()
+            raise
+        code=process.wait(timeout=15)
+        if timed_out.is_set():
+            raise RuntimeError('HOLD_TEST_RESTORE_TIMEOUT')
+        if code:
+            raise RuntimeError('HOLD_TEST_RESTORE_DECRYPT')
+        return verified
+    finally:
+        timer.cancel()
+        if process.poll() is None:
+            process.kill()
+        process.wait(timeout=15)
 
 
 def transport_retry_delay(error_class: str, attempt_index: int) -> int | None:
