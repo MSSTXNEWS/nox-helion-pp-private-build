@@ -1,0 +1,30 @@
+name: NOX D3 taskpack publisher preflight focused gate
+on:
+  push:
+    branches:
+      - d3-taskpack-preflight-atomic-20261119
+    paths:
+      - 'nox-control/systemic_relay_20261118/owner_systemic_taskpack.py'
+      - 'nox-control/systemic_relay_20261118/test_owner_systemic_taskpack_cli_preflight.py'
+      - '.github/workflows/nox-d3-taskpack-preflight-focused.yml'
+  pull_request:
+    paths:
+      - 'nox-control/systemic_relay_20261118/owner_systemic_taskpack.py'
+      - 'nox-control/systemic_relay_20261118/test_owner_systemic_taskpack_cli_preflight.py'
+      - '.github/workflows/nox-d3-taskpack-preflight-focused.yml'
+permissions:
+  contents: read
+jobs:
+  taskpack-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify only exact taskpack publisher preflight
+        run: |
+          set -euo pipefail
+          python3 -B nox-control/systemic_relay_20261118/test_owner_systemic_taskpack_cli_preflight.py -v
+          echo 'NOX_D3_TASKPACK_SOURCE_ONLY=true'
+          echo 'NOX_NATIVE_PUBLISH_PERFORMED=false'
