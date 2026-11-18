@@ -14,7 +14,7 @@ PLAN_SPEC = importlib.util.spec_from_file_location(
 PLAN = importlib.util.module_from_spec(PLAN_SPEC)
 PLAN_SPEC.loader.exec_module(PLAN)
 INSPECT_SPEC = importlib.util.spec_from_file_location(
-    "owner_native_inspect_linkage_test", HERE / "owner_native_inspect.py")
+    "owner_native_inspect_linkage_test", HERE / "owner_native_legacy_inspect.py")
 INSPECT = importlib.util.module_from_spec(INSPECT_SPEC)
 INSPECT_SPEC.loader.exec_module(INSPECT)
 
