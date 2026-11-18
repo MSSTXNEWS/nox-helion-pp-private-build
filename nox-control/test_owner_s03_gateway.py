@@ -584,8 +584,31 @@ class GatewayTests(unittest.TestCase):
         self.assertLess(result.index(g.MARKER),result.index('if __name__'))
         with self.assertRaises(g.MemoryHold):g.patch_s03(source,'a'*64)
 
+    def test_oversize_embedding_holds_instead_of_silently_losing_tail(self):
+        original='🙂'*1800+'TAIL_MARKER'
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_EMBEDDING_TEXT_TOO_LONG'):
+            g.embedding_text(original)
+        with g.connection(self.db,write=True) as c:
+            item(c,'oversized',original)
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_EMBEDDING_TEXT_TOO_LONG'):
+            g.index_batch(self.db,identity_fn=lambda:'a'*64,
+                          embedder=lambda *args,**kwargs:self.fail('no lossy embedding request'))
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT text FROM s03_items WHERE id=?',
+                                       ('oversized',)).fetchone()[0],original)
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_vectors').fetchone()[0],0)
+
+    def test_long_recall_query_preserves_keyword_after_old_cutoff(self):
+        with g.connection(self.db,write=True) as c:
+            item(c,'tail_fact','safetytailmarker')
+        query='?'*8001+' safetytailmarker'
+        found=g.recall(query,db=self.db,
+                       identity_fn=lambda:(_ for _ in ()).throw(OSError('offline')))
+        self.assertEqual(found[0]['id'],'tail_fact')
+        self.assertTrue(found[0]['query_evidence'])
+
     def test_index_obeys_joint_utf8_batch_budget_without_erasing_original(self):
-        text='🙂'*1800
+        text='🙂'*1200
         with g.connection(self.db,write=True) as c:
             item(c,'a',text);item(c,'b',text+'different')
         observed=[]

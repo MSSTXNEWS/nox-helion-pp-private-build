@@ -397,10 +397,12 @@ def embed(texts,timeout=.7):
 
 
 def embedding_text(text):
-    # UTF-8 bytes are a conservative tokenizer budget for the observed8192
-    # context. The original complete record stays in S03/FTS and the snapshot.
-    raw=text.encode('utf-8')
-    return raw[:6000].decode('utf-8','ignore')
+    # Never turn a full-content hash into evidence for a truncated vector.
+    # Until separately reviewed multi-vector support exists, oversized input
+    # must HOLD instead of silently losing its ending.
+    if not isinstance(text,str):hold('HOLD_S03_EMBEDDING_TEXT_TYPE')
+    if len(text.encode('utf-8'))>6000:hold('HOLD_S03_EMBEDDING_TEXT_TOO_LONG')
+    return text
 
 
 def text_sha(text):
@@ -705,7 +707,9 @@ def select_results(lexical_rows,semantic_rows,pin_rows,recent_rows,k=6,semantic_
 
 def recall(query,k=6,db=DB,embedder=embed,identity_fn=model_identity):
     if not isinstance(query,str) or not query.strip():return []
-    query=query[:8000];semantic_rows=[];semantic_available=False;identity=None;query_vector=None
+    # Lexical fallback must receive the full query, including its ending.
+    # The optional embedding budget is enforced independently.
+    semantic_rows=[];semantic_available=False;identity=None;query_vector=None
     try:
         identity=identity_fn();query_vector=embedder([embedding_text(query)],timeout=.65)[0]
     except Exception:
