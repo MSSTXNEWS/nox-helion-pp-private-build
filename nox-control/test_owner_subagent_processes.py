@@ -415,6 +415,25 @@ class TestRealSubagentProcesses(unittest.TestCase):
         with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TASK_REUSE'):
             pool.submit(task)
 
+        pool, child, inbox, outbox = make_pool(True)
+        def fail_checkpoint(_event):
+            raise OSError('checkpoint unavailable')
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_RESULT_CHECKPOINT'):
+            pool.shutdown_and_drain(on_validated_result=fail_checkpoint)
+        self.assertFalse(inbox.closed)
+        self.assertFalse(outbox.closed)
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_RESULT_CHECKPOINT_REQUIRED'):
+            pool.__exit__(None, None, None)
+        self.assertFalse(inbox.closed)
+        self.assertFalse(outbox.closed)
+        retried = []
+        recovered = pool.shutdown_and_drain(
+            on_validated_result=lambda event: retried.append(event['id']))
+        self.assertEqual(retried, ['native-1'])
+        self.assertEqual([row['id'] for row in recovered], ['native-1'])
+        self.assertTrue(inbox.closed)
+        self.assertTrue(outbox.closed)
+
         pool, child, inbox, outbox = make_pool(False)
         events = pool.shutdown_and_drain()
         self.assertEqual([(row['id'], row['state']) for row in events],
