@@ -289,10 +289,10 @@ class FreshSubmissionTests(unittest.TestCase):
         lock_path = state_root / 'state' / 'owner_maintenance.lock'
         lock_path.parent.mkdir(parents=True)
         lock_path.touch()
-        with patch.object(binding, 'ROOT', state_root), \\
-             patch.object(binding, 's03_connection', return_value=ConnectionContext()), \\
-             patch.object(binding, 'chat_priority_active', return_value=False):
-            recovered = native._reconcile_s03_verified_queue(native.state)
+        with patch.object(binding, 'ROOT', state_root):
+            with patch.object(binding, 's03_connection', return_value=ConnectionContext()):
+                with patch.object(binding, 'chat_priority_active', return_value=False):
+                    recovered = native._reconcile_s03_verified_queue(native.state)
 
         self.assertEqual(recovered, 1)
         row = native.state['tasks'][task['id']]
