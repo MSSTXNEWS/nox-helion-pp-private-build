@@ -498,6 +498,9 @@ def _owner_control_projection(owner_request_id, source_sha, now):
             and isinstance(lease.get('lease_id'), str)
             and re.fullmatch(r'[A-Za-z0-9._:-]{1,128}', lease['lease_id']) is not None
             and _fresh(lease.get('sampled_at_unix'), now)
+            and _timestamp(lease.get('issued_at_unix')) and _timestamp(lease.get('expires_at_unix'))
+            and lease['issued_at_unix'] <= now < lease['expires_at_unix']
+            and lease['expires_at_unix'] - lease['issued_at_unix'] <= 1800
         )
         if not required:
             raise ReadHold('LEASE_EVIDENCE_SCHEMA')
