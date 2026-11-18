@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_ROOT_CONTINUATION_SOURCE_DISPATCH_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "status": "PASS_EXACT_SOURCE_READY_FOR_ONE_ROOT_DISPATCH",
+  "main": {
+    "sha256": "b57e535e36ec9185a623722c1139d062283121e45c661b2465f9beb70414abc6",
+    "bytes": 43832
+  },
+  "payload": {
+    "path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+    "sha256": "b8e58dc4fe8ca968311e7189d324df0d5290c4f5cfbcb44147ed299e73d6c343",
+    "bytes": 38173
+  },
+  "peer_review_sha256": "d5a6a9e69274553627cee029e200f0f782b169b987953cfc73dccf014bbc76bc",
+  "five_frozen_modules": {
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "p0_login_idle_wait.py": {
+      "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+      "bytes": 12459
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+      "bytes": 1936
+    },
+    "model_reference_changed_path_qa.py": {
+      "sha256": "b57e535e36ec9185a623722c1139d062283121e45c661b2465f9beb70414abc6",
+      "bytes": 43832
+    }
+  },
+  "operator": {
+    "parent_source": "6dd20a0aac59742138918840c3b4bb1963142928",
+    "sha256": "6284cd40858d5fcd58a2cbfcd5a82241c6f7719ed95ced4eb861cd9ebb8beed6",
+    "blob": "4a6c8a8bfc4301c7a7b1c78cf6ceb212b899a432",
+    "bytes": 32486,
+    "immutable_remote_full_readback": true,
+    "repair_timeout_seconds": 900,
+    "entry": "nox-control/owner_resonance_canary_v3_20261117.py"
+  },
+  "root_static_checks": [
+    "Exact failed prior receipt; no unknown delivery reused",
+    "Original directory and outcome/reservation bytes+inodes stay unchanged",
+    "One exclusive child and prior nonce; durable intent precedes only POST",
+    "Single login and unchanged accepted LoginIdleWait; current writer passed dynamically",
+    "Private-only exact counter before/after; public projection has actual key-presence and no extra legacy contents",
+    "STOP, selected model slots, source, process and history checks retained"
+  ],
+  "native_calls": 0,
+  "runtime_acceptance": false,
+  "remaining": [
+    "Immutable full publication readback",
+    "Single exact-source owner intent and dispatch",
+    "Actual response, persistence and semantic review"
+  ]
+}

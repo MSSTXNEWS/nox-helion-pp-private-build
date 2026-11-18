@@ -1,0 +1,125 @@
+{
+  "schema": "NOX_INDEPENDENT_KNOWN_ZERO_SEND_CONTINUATION_REVIEW_V1",
+  "status": "PASS_SOURCE_AND_ONE_TARGETED_OFFLINE_REGRESSION",
+  "reviewer": "/root/resonance_native",
+  "created_utc": "2026-11-18T00:16:17.660878+00:00",
+  "freeze": {
+    "sha256": "f8ade7ae8712adad5e5de778f12d9d3caaf13a013a286630924f4c5c670bbc1a",
+    "bytes": 2294
+  },
+  "modules": {
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "p0_login_idle_wait.py": {
+      "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+      "bytes": 12459
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+      "bytes": 1936
+    },
+    "model_reference_changed_path_qa.py": {
+      "sha256": "b57e535e36ec9185a623722c1139d062283121e45c661b2465f9beb70414abc6",
+      "bytes": 43832
+    }
+  },
+  "payload": {
+    "path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+    "sha256": "b8e58dc4fe8ca968311e7189d324df0d5290c4f5cfbcb44147ed299e73d6c343",
+    "bytes": 38173
+  },
+  "actual_prior_outcome": {
+    "request": "6964382138",
+    "source_sha": "6dd20a0aac59742138918840c3b4bb1963142928",
+    "run": 44202127965,
+    "sha256": "f0224c15acf37aaad4b45380ce174a27ae2acbafbdf361f036f07eca846e4fd9",
+    "bytes": 3534,
+    "owner_chat_posts": 0,
+    "unknown_delivery_possible": false
+  },
+  "static_checks": {
+    "five_embedded_modules_exact_to_frozen_inputs": true,
+    "all_embedded_modules_compile": true,
+    "wrapper_deterministically_reconstructed_byte_exact": true,
+    "entry_count": 1,
+    "payload_not_executed": true,
+    "original_main": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+    "existing_qualified_definitions_changed": [
+      "Journal.write",
+      "run"
+    ],
+    "all_other_prior_qualified_definitions_ast_unchanged": true,
+    "Journal_write_statements_after_fixed_name_allowlist_ast_unchanged": true,
+    "new_fixed_private_names": [
+      "counter_before.json",
+      "counter_after.json"
+    ],
+    "source_writer_history_stop_maintenance_slots_gates_preserved": true,
+    "same_prior_nonce_and_fixed_exclusive_child": true,
+    "prior_outcome_and_reservation_held_descriptor_inode_body_checks": true,
+    "prior_intent_absent_required_before_child": true,
+    "child_never_deleted_or_reused_after_ambiguous_outcome": true,
+    "durable_model_intent_fsynced_and_read_back_before_only_chat_POST": true,
+    "waiter_exact_c69fa4d8_no_old_PID_literal": true,
+    "waiter_caller_passes_actual_current_service_identity_and_maintenance_lock": true,
+    "current_proxy_pid": 3648425,
+    "current_proxy_start_ticks": 175058217,
+    "single_login_then_bounded_actual_idle_wait_then_final_source_history_writer_fences": true,
+    "private_counter_evidence_before_intent_and_after_EOF_fullM1_HTTP_SQL_history": true,
+    "counter_unknown_legacy_fields_do_not_block_and_are_never_publicly_exported": true,
+    "writer_key_present_and_activity_schema_key_present_are_presence_only": true,
+    "full_terminal_frame_plus_old_prefix_two_to_four_rows_and_new_full_M1_required": true,
+    "owner_chat_POST_count_distinct_from_unobserved_backend_HTTP": true,
+    "model_input_prefix_completion_source_inferred_not_measured": true
+  },
+  "independent_targeted_regression": {
+    "file": "test_private_counter_current_writer.py",
+    "sha256": "6eea2896aa686ac943f6c8b756b84024384e6f0d62357f94007d0e7bb9903ec7",
+    "bytes": 7850,
+    "command": "python -m unittest -v test_private_counter_current_writer.py",
+    "test_count": 1,
+    "result": "PASS",
+    "elapsed_test_seconds": 0.039,
+    "actual_prior_outcome_and_actual_arbiter_oracles_sha_verified": true,
+    "unchanged_real_waiter_virtual_idle_seconds": 182,
+    "all_process_checks_use_actual_PID3648425": true,
+    "unknown_nested_legacy_counter_value_private_only": true,
+    "private_evidence_0600_nlink1_exact_raw_readback": true,
+    "late_current_process_start_ticks_change": "HOLD_PROXY_LIFETIME_DURING_IDLE_WAIT",
+    "owner_chat_POSTs": 0,
+    "send_intent_written": false,
+    "existing_child_blocks_new_request_retry": true,
+    "prior_files_bytes_and_inodes_and_original_counter_preserved": true,
+    "author_full_suite_repeated": false
+  },
+  "bounds": {
+    "outer_hard_deadline_seconds": 420,
+    "waiter_max_seconds": 240,
+    "SSE_total_cooperative_deadline_seconds": 90,
+    "socket_timeout_seconds": 20,
+    "output_max_bytes": 65536,
+    "counter_raw_max_bytes": 4096,
+    "login_POST_max": 1,
+    "owner_chat_POST_max": 1,
+    "dialog_create_POSTs": 0,
+    "provider_calls": 0
+  },
+  "scope_limits": [
+    "Source and offline regression acceptance only; root owns publication and single native dispatch.",
+    "Runtime priority is a fresh observed guard, not an atomic global owner admission lease.",
+    "Prior busy-versus-stale live subcause remains UNKNOWN; source login cooldown mechanism alone is verified.",
+    "Counter snapshots are observations; no expected inflight is assigned and no legacy history is resolved.",
+    "Actual model reply semantics and persistence are accepted only after the one native result."
+  ],
+  "native_calls": 0,
+  "model_calls": 0,
+  "service_mutations": 0,
+  "counter_resets": 0,
+  "next_READY": "Root publishes exact final freeze and performs the single authorized continuation; reviewer then accepts actual request/source/result/answer/fullM1 without replay."
+}

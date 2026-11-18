@@ -1,0 +1,93 @@
+{
+  "schema": "NOX_CONTINUATION_PUBLISH_MANIFEST_V1",
+  "native_calls": 0,
+  "provider_calls": 0,
+  "source_only_until_root_dispatch": true,
+  "files": [
+    {
+      "path": "model_reference_changed_path_qa.py",
+      "sha256": "b57e535e36ec9185a623722c1139d062283121e45c661b2465f9beb70414abc6",
+      "bytes": 43832
+    },
+    {
+      "path": "p0_login_idle_wait.py",
+      "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+      "bytes": 12459
+    },
+    {
+      "path": "p0_native_helpers.py",
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    {
+      "path": "p0_witness_protocol.py",
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    {
+      "path": "model_reference_qa_release.py",
+      "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+      "bytes": 1936
+    },
+    {
+      "path": "build_payload.py",
+      "sha256": "0ffca7372582e3dd699c7d7d47d0d67aaa5f61e5d2e96f3d088001e2391ccd23",
+      "bytes": 4804
+    },
+    {
+      "path": "test_known_zero_send_continuation.py",
+      "sha256": "0658559e6bbdf16736796738c2385b09a2bcd5743273a9c00f6cc3b47765bd56",
+      "bytes": 19930
+    },
+    {
+      "path": "inputs/ACTUAL_PRIOR_OUTCOME_CANONICAL.json",
+      "sha256": "f0224c15acf37aaad4b45380ce174a27ae2acbafbdf361f036f07eca846e4fd9",
+      "bytes": 3534
+    },
+    {
+      "path": "inputs/actual_arbiter_source.py",
+      "sha256": "4c9df9bbdaa2d788766090b466e3aff226d3c214ce936ac1559e7856a9190be0",
+      "bytes": 8815
+    },
+    {
+      "path": "inputs/BASE_PINS.json",
+      "sha256": "4b04632001f645f7ea4cc11b39865f5332dbcf0d44277883d588aa51934696f9",
+      "bytes": 404
+    },
+    {
+      "path": "KNOWN_ZERO_SEND_CONTINUATION.patch",
+      "sha256": "752904fa31683d971fc2183e9721af7b768b1d565b429c1edba86a700d72bb5d",
+      "bytes": 23880
+    },
+    {
+      "path": "README.md",
+      "sha256": "efd8c750e4dd87566ef81c254233ce74cae0af275f76af986e8691ab183b3a21",
+      "bytes": 9062
+    },
+    {
+      "path": "SOURCE_GATE.json",
+      "sha256": "7371392503c6cfc0b28c4f23c3bdc25ce4aff647765e44df4f91010c3b925d14",
+      "bytes": 2900
+    },
+    {
+      "path": "SOURCE_RECEIPT.json",
+      "sha256": "1d2cf063a56fe4e87cd751086344042e85a02b82cd151d663cc0582b923410b1",
+      "bytes": 3367
+    },
+    {
+      "path": "PEER_INPUT_FREEZE.json",
+      "sha256": "f8ade7ae8712adad5e5de778f12d9d3caaf13a013a286630924f4c5c670bbc1a",
+      "bytes": 2294
+    },
+    {
+      "path": "BUILD_MANIFEST.json",
+      "sha256": "9f3ba93ab07f0645d080148cffe46f8d8c95508dc6a80d4ef15793407b42ce09",
+      "bytes": 3382
+    },
+    {
+      "path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+      "sha256": "b8e58dc4fe8ca968311e7189d324df0d5290c4f5cfbcb44147ed299e73d6c343",
+      "bytes": 38173
+    }
+  ]
+}

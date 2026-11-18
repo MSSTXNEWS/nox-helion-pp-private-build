@@ -1,0 +1,79 @@
+{
+  "schema": "NOX_CONTINUATION_LOCAL_SOURCE_GATE_V1",
+  "payload_sha256": "b8e58dc4fe8ca968311e7189d324df0d5290c4f5cfbcb44147ed299e73d6c343",
+  "payload_bytes": 38173,
+  "decoded_modules": {
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "p0_login_idle_wait.py": {
+      "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+      "bytes": 12459
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "ea90115ba715c928e6b9b97dd3b3ba2736d30c69640750ebf3c426b4ea7371ee",
+      "bytes": 1936
+    },
+    "model_reference_changed_path_qa.py": {
+      "sha256": "b57e535e36ec9185a623722c1139d062283121e45c661b2465f9beb70414abc6",
+      "bytes": 43832
+    }
+  },
+  "decoded_exact": true,
+  "compiled_not_executed": true,
+  "entry_calls": 1,
+  "native_calls": 0,
+  "provider_calls": 0,
+  "unchanged_baseline_functions_classes": [
+    "Client",
+    "body",
+    "canonical",
+    "database_binding",
+    "db_identity",
+    "deadline",
+    "document",
+    "entry",
+    "installed_release",
+    "own_database_snapshot",
+    "runtime_projection",
+    "source_readback",
+    "status_code",
+    "verify_appended_pair",
+    "verify_history_response",
+    "verify_old_prefix"
+  ],
+  "changed_baseline_functions_classes": [
+    "Journal",
+    "run"
+  ],
+  "journal_only_delta": "Two exact evidence names added to existing write allowlist; every other statement/method AST unchanged",
+  "added_functions_classes": [
+    "ZeroSendContinuation",
+    "counter_snapshot",
+    "safe_priority_diagnostic",
+    "write_counter_evidence"
+  ],
+  "base_main_sha256": "a0c53fa5c3a6c9b82a9e42e4821d8d01c4155083cabfadd1af0987b8f7a6d11d",
+  "immutable_prior_outcome_sha256": "f0224c15acf37aaad4b45380ce174a27ae2acbafbdf361f036f07eca846e4fd9",
+  "author_tests": {
+    "initial_command": "python -m unittest -v test_known_zero_send_continuation",
+    "initial_functions": 2,
+    "journal_subcases": 5,
+    "initial_chunk_id": "e82119",
+    "initial_result": "PASS",
+    "final_counter_delta_command": "python -m unittest -v test_known_zero_send_continuation.ContinuationTests.test_real_wait_adapter_sse_sql_and_raw_counter_in_one_attempt",
+    "final_delta_chunk_id": "3967c1",
+    "final_delta_result": "PASS",
+    "broad_suite_repeated": false,
+    "native_http": 0,
+    "wait_fixture": "Actual unchanged LoginIdleWait with virtual clock; observed 182 seconds; one login",
+    "orchestration": "Real TempFS journal, SQLite and SSE parser; mocked deployment identity and HTTP only",
+    "reported_counter_value": 9,
+    "legacy_extras": "Nested opaque field accepted; raw private0600 readback; not exported; writer/schema presence observed including null"
+  }
+}
