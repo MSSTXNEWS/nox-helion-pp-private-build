@@ -269,5 +269,17 @@ class ExistingOwnerBridgePartialHtmlTests(unittest.TestCase):
         self.assertEqual(result.count('src="/nox-web-v29/nox-v135-resonance-owner-bridge.js"'), 1)
         self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
 
+
+    def test_case_mismatched_script_url_does_not_hide_live_owner_handler(self):
+        # Linux-mounted /nox-web-v29 paths are case sensitive, unlike HTML tag names.
+        raw = ('<html><head><script src="/NOX-web-v29/Owner-Chat-UI.js">'
+               '</script></head><body></body></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        expected = ('<script defer src="/nox-web-v29/owner-chat-ui.js" '
+                    'data-nox-live-owner="1"></script>')
+        self.assertIn(expected, out)
+        self.assertEqual(ui.decorate_html(out, "pc/resonance.html"), out)
+
+
 if __name__ == "__main__":
     unittest.main()
