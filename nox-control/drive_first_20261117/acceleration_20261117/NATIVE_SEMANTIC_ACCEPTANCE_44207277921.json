@@ -1,0 +1,98 @@
+{
+  "schema": "NOX_INDEPENDENT_MODEL_REFERENCE_NATIVE_ACCEPTANCE_V1",
+  "reviewer": "/root/resonance_native",
+  "reviewed_utc": "2026-11-18T00:30:42.401332+00:00",
+  "status": "TRANSPORT_AND_PERSISTENCE_PASS_SELF_MODEL_WORDING_PARTIAL",
+  "run": 44207277921,
+  "job": 134476356859,
+  "request": "6965055656",
+  "source_sha": "06666bd638579bb3d95317004bf293c299b79daa",
+  "raw_receipt": {
+    "path": "nox_refresh/acceleration_20261118/MODEL_REFERENCE_CONTINUATION_RESULT_44207277921.raw.json",
+    "sha256": "92908c7255e8d6ffa60b4e9736f575e900537d3876d92850b26f513af063b8a1",
+    "bytes": 12303,
+    "lossless_python_json_read": true
+  },
+  "payload_sha256": "b8e58dc4fe8ca968311e7189d324df0d5290c4f5cfbcb44147ed299e73d6c343",
+  "transport": {
+    "accepted": true,
+    "owner_UI_chat_POSTs": 1,
+    "login_POSTs": 1,
+    "dialog_create_POSTs": 0,
+    "normal_EOF": true,
+    "unknown_delivery_possible": false,
+    "backend_model_HTTP_posts": "NOT_DIRECTLY_OBSERVED"
+  },
+  "history_and_memory": {
+    "accepted": true,
+    "answer_sha256": "530ee3f3c484614766bc886531172d82ef8d042a78c06b5d5d1f104a65fbeba3",
+    "application_data_sql_writes_by_qa": 0,
+    "full_frame_verified": true,
+    "new_exchange_id": "S03-9fad6998423e475c",
+    "new_full_frame_chars": 490,
+    "new_messages": 2,
+    "new_record_sha256": "37ebf757bbe4e7f059d9ee6dc430017221731061b602f97d6cc053f31a8d126c",
+    "prior_history_preserved": true,
+    "prior_messages": 2,
+    "prior_prefix_sha256": "2abccd3b98bc45ee14c384c8866f9b55ab797b34233c38537512af43e45eb5e0",
+    "provenance": "chat_turn",
+    "question_sha256": "59a3a13c7cc953ceede5618d59db077499a57cc9d1af42b849537c2769ce0762",
+    "segment": "M1",
+    "sqlite_auxiliary_file_writes": "POSSIBLE_WAL_SHM_CREATE_OR_UPDATE",
+    "total_own_messages": 4,
+    "independent_M1_digest_reconstructed": true,
+    "HTTP_SQL_before_after_exact": true
+  },
+  "answer": {
+    "sha256": "530ee3f3c484614766bc886531172d82ef8d042a78c06b5d5d1f104a65fbeba3",
+    "bytes": 563,
+    "observed_GGUF_basename_present": true,
+    "obsolete_status_model_asserted": false,
+    "semantic_acceptance": "PARTIAL",
+    "findings": [
+      "Correctly identifies the current observed GGUF runtime reference and route.",
+      "Final statement incorrectly collapses unverified weight contents/architecture into unverified runtime file name.",
+      "Internal implementation flags are copied into the user-facing answer."
+    ],
+    "secrets_or_prior_dialog_contents_observed": false
+  },
+  "latency": {
+    "first_content_ms": 22885,
+    "completed_ms": 35825,
+    "idle_wait_seconds": 182.777,
+    "generation_tokens_observed": null,
+    "transport_token_frames": 121,
+    "token_frames_are_not_generation_tokens": true
+  },
+  "counter": {
+    "before_inflight": 4,
+    "after_inflight": 4,
+    "numeric_delta": 0,
+    "private_before_after_evidence_0600_readback_exact": true,
+    "legacy_extra_field_count": 5,
+    "raw_values_exported_by_review": false,
+    "counter_reset": false,
+    "historical_requests_resolved": false
+  },
+  "current_proxy": {
+    "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+    "cwd": "/root/nox/scripts",
+    "exe": "/usr/bin/python3.12",
+    "pgrp": 3648425,
+    "pid": 3648425,
+    "ppid": 114,
+    "script_bound": true,
+    "service": "nox-proxy",
+    "start_ticks": 175058217
+  },
+  "claims_not_made": [
+    "Verified model weight contents or architecture.",
+    "Measured exact input prefix bytes/tokens.",
+    "Atomic owner admission against all future work.",
+    "Global legacy counter closure.",
+    "Finished response-quality correction or its native acceptance."
+  ],
+  "next_ready": "Minimal wording-only change inside prepare_identity_request; keep current_reference guards and evidence unchanged; never repeat the completed question automatically.",
+  "native_calls_by_reviewer": 0,
+  "question_replays": 0
+}

@@ -1,0 +1,191 @@
+{
+  "schema": "NOX_FOUR_QUEUE_EXISTING_QA_COMPATIBILITY_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "verdict": "COMPATIBLE_WITH_UNCHANGED_FROZEN_QA_GUARDS_NO_NEW_NATIVE_PROBE",
+  "actual_install": {
+    "run": 44206349844,
+    "job": 134473152588,
+    "request": "6964933277",
+    "source_sha": "32546b26b03019169c22f440af5c9f6ed5b0e09c",
+    "raw_sha256": "485e19a27d229499db992d6039e47d3b8214239db3401b714e92facd418a3d6c",
+    "raw_bytes": 10468
+  },
+  "qa_source_sha256": "b57e535e36ec9185a623722c1139d062283121e45c661b2465f9beb70414abc6",
+  "qa_payload_sha256": "b8e58dc4fe8ca968311e7189d324df0d5290c4f5cfbcb44147ed299e73d6c343",
+  "source_input": {
+    "installer_sha256": "6da67a3f32dd14b068815a375f093af84d1f703f529a2c4c5cd2fd201940fd87",
+    "installer_bytes": 33318,
+    "local_package": "/workspace/scratch/552ada07ed4f/native_install/source_package/nox-control",
+    "native_assets_exactly_matched": [
+      {
+        "native_path": "scripts/owner_autonomy_pool.py",
+        "asset": "owner_autonomy_pool.py",
+        "sha256": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+        "bytes": 33076
+      },
+      {
+        "native_path": "scripts/owner_subagent_dispatcher.py",
+        "asset": "owner_subagent_dispatcher.py",
+        "sha256": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+        "bytes": 58287
+      },
+      {
+        "native_path": "scripts/owner_subagent_processes.py",
+        "asset": "owner_subagent_processes.py",
+        "sha256": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
+        "bytes": 16073
+      },
+      {
+        "native_path": "scripts/owner_resource_policy.py",
+        "asset": "owner_resource_policy.py",
+        "sha256": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+        "bytes": 13467
+      },
+      {
+        "native_path": "scripts/test_owner_four_queue.py",
+        "asset": "test_owner_four_queue.py",
+        "sha256": "4334ec2e2047c34ed7ee5d1f24152a1a2468b07f4bdfc8ebf592d13a64648ac9",
+        "bytes": 7584
+      },
+      {
+        "native_path": "scripts/test_owner_normal3_continuity.py",
+        "asset": "test_owner_normal3_continuity.py",
+        "sha256": "409411abe7a828d2633cd9c2e4792629a00925b4a6a8dfcead27f80dd3f75641",
+        "bytes": 5522
+      },
+      {
+        "native_path": "state/dispatcher/project_work_tasks.json",
+        "asset": "work_tasks.json",
+        "sha256": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+        "bytes": 67790
+      },
+      {
+        "native_path": "state/dispatcher/project_work_ideas.json",
+        "asset": "work_ideas.json",
+        "sha256": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+        "bytes": 32764
+      },
+      {
+        "native_path": "state/dispatcher/project_work_receipts_source.json",
+        "asset": "work_receipts.json",
+        "sha256": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+        "bytes": 104321
+      },
+      {
+        "native_path": "state/dispatcher/project_routing_4q.json",
+        "asset": "NOX_FOUR_QUEUE_ROUTING_20261118.json",
+        "sha256": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671",
+        "bytes": 128862
+      },
+      {
+        "native_path": "scripts/owner_subagent_instruction_truth.py",
+        "asset": "owner_subagent_instruction_truth_four_queue.py",
+        "sha256": "d03691b84954402558f1e23e1403043eb9c7d115eb57be575524c05502d0529a",
+        "bytes": 2888
+      }
+    ],
+    "provenance_boundary": "Installed asset hashes matched the actual receipt. The local installer source was inspected and frozen; it was not fetched again from the remote commit by this reviewer."
+  },
+  "compatibility": {
+    "installed_paths": {
+      "scripts/owner_autonomy_pool.py": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+      "scripts/owner_subagent_dispatcher.py": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+      "scripts/owner_subagent_processes.py": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
+      "scripts/owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+      "scripts/test_owner_four_queue.py": "4334ec2e2047c34ed7ee5d1f24152a1a2468b07f4bdfc8ebf592d13a64648ac9",
+      "scripts/test_owner_normal3_continuity.py": "409411abe7a828d2633cd9c2e4792629a00925b4a6a8dfcead27f80dd3f75641",
+      "state/dispatcher/project_work_tasks.json": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+      "state/dispatcher/project_work_ideas.json": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+      "state/dispatcher/project_work_receipts_source.json": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+      "state/dispatcher/project_routing_4q.json": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671",
+      "scripts/owner_subagent_instruction_truth.py": "d03691b84954402558f1e23e1403043eb9c7d115eb57be575524c05502d0529a",
+      "config/owner_native_subagents.json": "f283db153b763b8bc8e77dd57fedc3cd091c3a5336f40a6d9c805efbdf95d900"
+    },
+    "qa_source_path_overlap": [],
+    "qa_source_pins_unmodified_by_declared_install": {
+      "chat_proxy.py": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+      "owner_chat_stream.py": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+      "nox_v29_chat_bridge.py": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
+      "owner_model_reference_binding.py": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+      "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+      "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+      "s03_memory.py": "776a6dc25726540d75ec51216d1e333ca89b24e803ba3620f9b5e470a3c81476",
+      "nox_web29_onehost_18775.py": "7ab86eee77a36a0f933e6221a069d1c5741059022d0f12494fd2a2ab8d48893a"
+    },
+    "qa_arbiter_pin": "4c9df9bbdaa2d788766090b466e3aff226d3c214ce936ac1559e7856a9190be0",
+    "protected_runtime_identities": {
+      "chat": {
+        "pid": 3266857,
+        "start_ticks": 172046662,
+        "ppid": 114,
+        "pgrp": 3266857
+      },
+      "proxy": {
+        "pid": 3648425,
+        "start_ticks": 175058217,
+        "ppid": 114,
+        "pgrp": 3648425
+      },
+      "web": {
+        "pid": 3505392,
+        "start_ticks": 173653097,
+        "ppid": 114,
+        "pgrp": 3505392
+      }
+    },
+    "supervisor_mutation_scope_in_source": "nox-dispatcher-t855u only",
+    "common_proxy_arbiter_snapshot_supervisor_proxy_config_not_in_write_set": true,
+    "fresh_source_bytes_reobserved_by_this_review": false,
+    "next_authority": "The unchanged native QA retains exact source/inode/proxy/config/old-history/priority/slot guards at execution."
+  },
+  "observed_worker_state": {
+    "director": {
+      "state": "RUNNING",
+      "pid": 3680815
+    },
+    "stable_worker_identities": [
+      {
+        "pid": 3680900,
+        "start_ticks": 175371710
+      },
+      {
+        "pid": 3680901,
+        "start_ticks": 175371710
+      },
+      {
+        "pid": 3680902,
+        "start_ticks": 175371710
+      }
+    ],
+    "two_snapshots_current_task_null": true,
+    "heartbeat_freshness_seconds_max": 20,
+    "new_leaf_done": 4,
+    "new_leaf_pending_or_running": 0,
+    "prior_review_done": 3,
+    "observed_owned_model_requests_active": 0,
+    "original_task_count": 295,
+    "original_tasks_accepted": 0,
+    "training_started": false,
+    "model_restarted": false
+  },
+  "source_semantics": [
+    "All four newly catalogued tasks use _native_leaf_context and execute_native_leaf; that worker branch does not call _model_reply.",
+    "chat_health uses loopback health GETs8098/8080; memory_schema uses status/schema reads; training prerequisites read package metadata/AST/checkpoint inventory; queue regression uses pinned in-memory tests.",
+    "Leaf admission/result receipts are persisted through S03 remember with segment M2; they are not owner-dialog chat/M1 exchanges.",
+    "The existing model-capable review branch remains present. Its three reviewed tasks are reported done; this is not a permanent ban on future model calls.",
+    "Native.handle acquires SH owner_maintenance.lock around the full handler submit/poll lifecycle. The unchanged QA obtains EX nonblocking lease; existing active handler holds it, and new handlers cannot submit while QA owns it.",
+    "Idle worker loop waits on IPC and emits heartbeats; process existence alone does not initiate inference or load model weights."
+  ],
+  "limits": [
+    "No global future-idle guarantee: assertions describe the receipt and inspected exact sources.",
+    "S03 receipt writes were observed; downstream background work outside these sources is not claimed absent.",
+    "No benchmark, capacity or all295-project-task acceptance inferred.",
+    "Do not activate the old whole-file NORMAL3 candidate against newly changed pool/dispatcher/processes sources."
+  ],
+  "native_calls": 0,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "network_calls": 0,
+  "foreign_writes": 0
+}

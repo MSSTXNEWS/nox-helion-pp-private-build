@@ -1,0 +1,121 @@
+{
+  "schema": "NOX_CONTINUATION_SOURCE_PUBLICATION_READBACK_V1",
+  "instructions_version": "0.0.6",
+  "commit": "06666bd638579bb3d95317004bf293c299b79daa",
+  "tree": "64a461e251209436771a6abe15324862022be980",
+  "checks": [
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/model_reference_changed_path_qa.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/p0_login_idle_wait.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/p0_native_helpers.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/p0_witness_protocol.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/model_reference_qa_release.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/build_payload.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/test_known_zero_send_continuation.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/inputs/ACTUAL_PRIOR_OUTCOME_CANONICAL.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/inputs/actual_arbiter_source.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/inputs/BASE_PINS.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/KNOWN_ZERO_SEND_CONTINUATION.patch",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/README.md",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/SOURCE_GATE.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/SOURCE_RECEIPT.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/PEER_INPUT_FREEZE.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/BUILD_MANIFEST.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/owner_resonance_canary_v3_20261117.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/PUBLISH_MANIFEST.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/INDEPENDENT_CONTINUATION_REVIEW.json",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/test_private_counter_current_writer.py",
+      "exact": true,
+      "blob_exact": true
+    },
+    {
+      "path": "nox-control/drive_first_20261117/model_reference_continuation_20261118/ROOT_DISPATCH_REVIEW.json",
+      "exact": true,
+      "blob_exact": true
+    }
+  ],
+  "operator_verified": {
+    "sha256": "6284cd40858d5fcd58a2cbfcd5a82241c6f7719ed95ced4eb861cd9ebb8beed6",
+    "bytes": 32486,
+    "blob": "4a6c8a8bfc4301c7a7b1c78cf6ceb212b899a432",
+    "exact": true,
+    "repair_timeout_900": true
+  },
+  "created_at": "2026-11-18T03:17:41.240529+03:00"
+}

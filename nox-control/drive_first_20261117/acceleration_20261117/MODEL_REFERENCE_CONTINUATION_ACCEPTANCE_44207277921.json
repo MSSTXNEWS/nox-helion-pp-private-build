@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_ROOT_CURRENT_CHAT_NATIVE_ACCEPTANCE_V1",
+  "instructions_version": "0.0.6",
+  "state": "PASS_TRANSPORT_HISTORY_S03_COUNTER_SEMANTIC_WORDING_PARTIAL",
+  "run_id": 44207277921,
+  "job_id": 134476356859,
+  "request_id": 6965055656,
+  "source_sha": "06666bd638579bb3d95317004bf293c299b79daa",
+  "raw_sha256": "92908c7255e8d6ffa60b4e9736f575e900537d3876d92850b26f513af063b8a1",
+  "raw_bytes": 12303,
+  "peer_semantic_review_sha256": "739b4d455be22e47f85d50252e97abbc7ac4ead80e6f1878b1497f6c58e720f6",
+  "completed": true,
+  "used": true,
+  "transport_history_s03_accepted": true,
+  "full_semantic_quality_accepted": false,
+  "owner_ui_chat_posts": 1,
+  "backend_model_HTTP_count": "NOT_DIRECTLY_OBSERVED",
+  "automatic_replay_allowed": false,
+  "unknown_delivery_possible": false,
+  "history": {
+    "answer_sha256": "530ee3f3c484614766bc886531172d82ef8d042a78c06b5d5d1f104a65fbeba3",
+    "application_data_sql_writes_by_qa": 0,
+    "full_frame_verified": true,
+    "new_exchange_id": "S03-9fad6998423e475c",
+    "new_full_frame_chars": 490,
+    "new_messages": 2,
+    "new_record_sha256": "37ebf757bbe4e7f059d9ee6dc430017221731061b602f97d6cc053f31a8d126c",
+    "prior_history_preserved": true,
+    "prior_messages": 2,
+    "prior_prefix_sha256": "2abccd3b98bc45ee14c384c8866f9b55ab797b34233c38537512af43e45eb5e0",
+    "provenance": "chat_turn",
+    "question_sha256": "59a3a13c7cc953ceede5618d59db077499a57cc9d1af42b849537c2769ce0762",
+    "segment": "M1",
+    "sqlite_auxiliary_file_writes": "POSSIBLE_WAL_SHM_CREATE_OR_UPDATE",
+    "total_own_messages": 4
+  },
+  "answer": {
+    "bytes": 563,
+    "full_observed_basename_present": true,
+    "model_alias_present": false,
+    "obsolete_status_name_present": false,
+    "prior_history_included": false,
+    "sha256": "530ee3f3c484614766bc886531172d82ef8d042a78c06b5d5d1f104a65fbeba3",
+    "text": "Текущая основа по runtime-данным: файл `DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf` указан в аргументах процесса на маршруте `127.0.0.1:8098`. Однако содержимое весов, архитектура и обучение не проверены (`weight_contents_verified=false`, `architecture_or_training_verified=false`), поэтому имя текущей модели как подтверждённая модель основы — **не подтверждено**."
+  },
+  "timing": {
+    "first_content_ms": 22885,
+    "completed_ms": 35825,
+    "generation_tokens_observed": null,
+    "stream_frames_are_not_tokens": true,
+    "comparative_speedup_proven": false
+  },
+  "counter": {
+    "before": 4,
+    "after": 4,
+    "numeric_delta": 0,
+    "extra_key_count": 5,
+    "raw_publicly_exported": false,
+    "private_before": {
+      "bytes": 1029,
+      "counter_bytes": 226,
+      "counter_file_writes": 0,
+      "counter_sha256": "9284bae59a92ad6d48ac2a8e3fe39aa6bfd68b9b50cc70b4a08b603aadda4926",
+      "metadata": {
+        "ctime_ns": 1794961575374020434,
+        "dev": 36,
+        "gid": 0,
+        "ino": 3271884703,
+        "mode": 33152,
+        "mtime_ns": 1794961575374020434,
+        "size": 1029,
+        "uid": 0
+      },
+      "path": "/root/nox/state/owner_model_reference_acceptance_20261118/continuation_6964382138/counter_before.json",
+      "raw_contents_exported": false,
+      "readback_exact": true,
+      "sha256": "a72f2f04823d83ff65ecadd495ca1affd442f3473ee209c9e7050331fdecc8be"
+    },
+    "private_after": {
+      "bytes": 1029,
+      "counter_bytes": 226,
+      "counter_file_writes": 0,
+      "counter_sha256": "0ff94ba864d70b46d0a57d3beabc68fa1841c232aeb95983e7e5f7f312631000",
+      "metadata": {
+        "ctime_ns": 1794961611365628679,
+        "dev": 36,
+        "gid": 0,
+        "ino": 3271884706,
+        "mode": 33152,
+        "mtime_ns": 1794961611365628679,
+        "size": 1029,
+        "uid": 0
+      },
+      "path": "/root/nox/state/owner_model_reference_acceptance_20261118/continuation_6964382138/counter_after.json",
+      "raw_contents_exported": false,
+      "readback_exact": true,
+      "sha256": "04147cbd9b2fdd91e7b6bbdfc811ca10226774c1571d75e53e42cd450bee5ba2"
+    },
+    "historical_inflight_resolved": false
+  },
+  "login_idle_wait_seconds": 182.777,
+  "cleanup": "DETACHED_AND_VERIFIED",
+  "same_proxy_generation": {
+    "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+    "cwd": "/root/nox/scripts",
+    "exe": "/usr/bin/python3.12",
+    "pgrp": 3648425,
+    "pid": 3648425,
+    "ppid": 114,
+    "script_bound": true,
+    "service": "nox-proxy",
+    "start_ticks": 175058217
+  },
+  "current_worker_deployment_preserved": {
+    "run_id": 44206349844,
+    "source_sha": "32546b26b03019169c22f440af5c9f6ed5b0e09c"
+  },
+  "next": [
+    "Minimal runtime-label wording fix; keep architecture/content honesty",
+    "One combined proxy/context/helper installation",
+    "Current four-queue recovery fix; old whole NORMAL3 installer not replayed"
+  ]
+}

@@ -60,12 +60,12 @@
     "native_installed": false
   },
   "remaining": {
-    "native_NORMAL3": false,
-    "model_identity": "CURRENT_PRIMARY_LISTENER_ARGV_REFERENCE_VERIFIED_ONLY",
+    "native_NORMAL3": "THREE_WORKERS_RUNNING_FOUR_SCOPED_LEAVES_DONE_RECOVERY_AND_ATOMIC_ADMISSION_NOT_VERIFIED",
+    "model_identity": "ACTUAL_REPLY_NAMES_CURRENT_RUNTIME_REFERENCE_WORDING_PARTIAL",
     "direct_main_url": "https://clarity-sit-efficient-has.trycloudflare.com/nox-web-v29/chat.html",
     "browser_status": "BLOCKED_IN_LAST_OBSERVATION",
     "menu_source_tested": true,
-    "menu_native_installed": false,
+    "menu_native_installed": true,
     "native_remote_two_slots": false,
     "current_arbiter_cpu_light_is_not_remote_lease": true,
     "source_bodies_obtained": 10,
@@ -74,11 +74,18 @@
     "last_chat_backend_identity": "UNKNOWN",
     "weight_content_identity": "UNKNOWN",
     "next_source_review": [
-      "owner_qwen_execution_revision.py",
-      "nox_kb_bootstrap.py",
-      "Supervisor exact command binding",
-      "opaque parent lifetime containment"
-    ]
+      "Actual one-question QA outcome",
+      "Current four-queue worker recovery delta",
+      "Context-counter minimal current-source installation"
+    ],
+    "menu_install_run": 44198936370,
+    "menu_authenticated_served": true,
+    "menu_served_qa_run": 44202127965,
+    "menu_visual_click_accepted": false,
+    "source_body_inventory_scope": "INITIAL_AUDIT_ONLY_NOT_CURRENT_TOTAL",
+    "native_worker_count_verified": 3,
+    "native_worker_mode": "NORMAL",
+    "old_whole_NORMAL3_payload_eligible": false
   },
   "reconciled_native_attempts": [
     {
@@ -684,7 +691,7 @@
       }
     ]
   },
-  "verified_at": "2026-11-18T02:57:01.904812+03:00",
+  "verified_at": "2026-11-18T03:32:25.502331+03:00",
   "owned_transport_cancellation": {
     "run": 44187317953,
     "job": 134407197678,
@@ -1511,7 +1518,7 @@
     "does_not_delay_current_cpu_only_baseline": true
   },
   "smart_resonance_install_candidate": {
-    "state": "NATIVE_INSTALLED_PROXY_RESTARTED_USE_PENDING",
+    "state": "NATIVE_INSTALLED_USED_WORDING_PARTIAL",
     "payload_sha256": "18582aff7f7a4e6a292aa14382ee2f09c36b1873f816ad41f1baa53b7b724b25",
     "payload_bytes": 45869,
     "main_sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
@@ -1521,12 +1528,12 @@
     "proxy_restart_only": true,
     "native_dispatched": true,
     "issue_fixed": "Source rollback now proves staged/postimage inode ownership before restore; foreign identical bytes HOLD",
-    "next": "Current installed version: completed known-zero-send history/menu check; bounded immutable continuation pending one actual answer"
+    "next": "One combined minimal wording/context source installation; current4queue recovery in parallel"
   },
   "smart_resonance_native_install": {
     "schema": "NOX_MODEL_REFERENCE_NATIVE_INSTALL_ACCEPTANCE_V1",
     "instructions_version": "0.0.6",
-    "state": "PASS_INSTALLED_AND_PROXY_RESTARTED_USE_PENDING",
+    "state": "INSTALLED_AND_USED_HISTORY_S03_VERIFIED_WORDING_PARTIAL",
     "run_id": 44198936370,
     "job_id": 134447651037,
     "request_id": 6963969126,
@@ -1537,8 +1544,8 @@
     "status": "APPLIED_RELOADED_USE_PENDING",
     "completed": true,
     "installed": true,
-    "used": false,
-    "accepted_chat_behavior": false,
+    "used": true,
+    "accepted_chat_behavior": "TRANSPORT_HISTORY_PASS_WORDING_PARTIAL",
     "source_files": {
       "owner_chat_stream.py": {
         "sha256": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
@@ -1650,12 +1657,14 @@
     "independent_composition_review_sha256": "3ddb9116f200ce74f0843b1d324fd378dc92e0d2516779f4fa8260b29ea77f09"
   },
   "current_optional_remote2_compatibility": {
-    "cpu_kb_parent_sha256": "4bf31b216bdfa67ae7172d2e268fba2ca03d084513102150dca6cbbd39c032c0",
-    "parent_bytes": 56954,
+    "cpu_kb_parent_sha256": "3223d0cd8f2e2354722da6cf06b2adcd8651425f239d9c8d9b7c334686d09153",
+    "parent_bytes": 57575,
     "root_confirmed_kb_hooks_and_backend_permissions": true,
     "whole_11f12_replace_allowed": false,
     "next": "Exact ONLY_REMOTE2 delta onto current KB-aware parent; optional and does not delay CPU path",
-    "native": false
+    "native": false,
+    "state": "SOURCE_DELTA_REVIEWED_AND_PUBLISHED",
+    "candidate_sha256": "9f8634e245c736b7cc531b301942a9ccd7be12f20adebeb6f311348bf5543881"
   },
   "model_reference_qa_attempts": [
     {
@@ -1832,5 +1841,331 @@
     ],
     "verified": true,
     "native_installed": false
+  },
+  "context_counter_source_publication": {
+    "schema": "NOX_CONTEXT_AND_PROGRAM_SOURCE_PUBLICATION_V1",
+    "instructions_version": "0.0.6",
+    "commit": "491f5c80af6191149ecaa9bb0ebb1e95df9c91b8",
+    "tree": "2cc3fc3c0e21246516e4afa43d3a7b7b139507eb",
+    "checks": [
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/owner_context_budget.py",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/source_transform.py",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/test_context_counter.py",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/actual_counter_functions.py",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/CONTEXT_COUNTER.patch",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/SOURCE_INPUT_PIN.json",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/SOURCE_TRANSFORM_RECEIPT.json",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/PEER_INPUT_FREEZE.json",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/README.md",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/DEPENDENCY_DELTA.json",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/SOURCE_RECEIPT.json",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/INDEPENDENT_CONTEXT_COUNTER_REVIEW.json",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/context_counter_20261118/test_context_cache_and_protected_tail.py",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/acceleration_20261117/EXECUTION_PROGRAM.md",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/acceleration_20261117/VERIFIED_PROGRESS_20261118.json",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/acceleration_20261117/MODEL_REFERENCE_QA_RECONCILED_44202127965.json",
+        "exact": true,
+        "blob_exact": true
+      },
+      {
+        "path": "nox-control/drive_first_20261117/acceleration_20261117/TRAINING_AND_FINITE_CONTAINMENT_PUBLICATION.json",
+        "exact": true,
+        "blob_exact": true
+      }
+    ],
+    "native_installed": false
+  },
+  "remote2_current_kb_source_publication": {
+    "schema": "NOX_REMOTE2_CURRENT_KB_PUBLICATION_V1",
+    "instructions_version": "0.0.6",
+    "commit": "0282bdc5c0b9dadcf8e8f16ccbe89e78b6e895e5",
+    "checks": [
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/current_kb_reader_rebase/ONLY_REMOTE2_READER_CURRENT.patch",
+        "exact": true
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/current_kb_reader_rebase/test_current_reader_composition.py",
+        "exact": true
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/current_kb_reader_rebase/INPUT_PINS.json",
+        "exact": true
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/current_kb_reader_rebase/SOURCE_DELTA_GATE.json",
+        "exact": true
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/current_kb_reader_rebase/SOURCE_RECEIPT.json",
+        "exact": true
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/current_kb_reader_rebase/INTEGRATION.md",
+        "exact": true
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/current_kb_reader_rebase/PUBLISH_MANIFEST.json",
+        "exact": true
+      },
+      {
+        "path": "handoff/20261117/nox-v15-kit/execution/optimization/O5/adviser_native_contract/remote2_candidate_20261118/current_kb_reader_rebase/ROOT_INDEPENDENT_REVIEW.json",
+        "exact": true
+      }
+    ],
+    "native_installed": false
+  },
+  "shared_four_queue_native": {
+    "state": "THREE_NATIVE_WORKERS_FOUR_SCOPED_LEAVES_COMPLETED",
+    "source_sha": "32546b26b03019169c22f440af5c9f6ed5b0e09c",
+    "run_id": 44206349844,
+    "job_id": 134473152588,
+    "request_id": 6964933277,
+    "raw_sha256": "485e19a27d229499db992d6039e47d3b8214239db3401b714e92facd418a3d6c",
+    "installed_by_parallel_team": true,
+    "actual_workers": [
+      {
+        "current_task": null,
+        "heartbeat_at": 1794960995.4963293,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 3680900,
+        "ppid": 3680815,
+        "process_starttime": 175371710,
+        "role": "runtime",
+        "state": "RUNNING"
+      },
+      {
+        "current_task": null,
+        "heartbeat_at": 1794960994.4153905,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 3680901,
+        "ppid": 3680815,
+        "process_starttime": 175371710,
+        "role": "memory",
+        "state": "RUNNING"
+      },
+      {
+        "current_task": null,
+        "heartbeat_at": 1794960993.5550628,
+        "instance_id": 60509551,
+        "native_pid_verified": true,
+        "origin": "existing_onehost",
+        "pid": 3680902,
+        "ppid": 3680815,
+        "process_starttime": 175371710,
+        "role": "weights",
+        "state": "RUNNING"
+      }
+    ],
+    "director": {
+      "pid": 3680815,
+      "ppid": 114,
+      "process_starttime": 175371075
+    },
+    "scoped_leaves_done": 4,
+    "distinct_completing_workers": 2,
+    "original_project_acceptance_added": 0,
+    "project_tasks_received": 295,
+    "queue_counts": {
+      "Q1_RUNTIME_CHAT": 145,
+      "Q2_MEMORY_KNOWLEDGE": 71,
+      "Q3_TRAINING_WEIGHTS": 34,
+      "Q4_INTEGRATION_ACCEPTANCE": 45
+    },
+    "prior_queue_ids_preserved": 1453,
+    "prior_claim_receipts_unchanged": 404,
+    "model_restarted": false,
+    "training_started": false,
+    "legacy_pressure_admission_only": true,
+    "atomic_CPU_adoption_verified": false,
+    "continuous_recovery_verified": false
+  },
+  "model_reference_continuation_actual": {
+    "schema": "NOX_ROOT_CURRENT_CHAT_NATIVE_ACCEPTANCE_V1",
+    "instructions_version": "0.0.6",
+    "state": "PASS_TRANSPORT_HISTORY_S03_COUNTER_SEMANTIC_WORDING_PARTIAL",
+    "run_id": 44207277921,
+    "job_id": 134476356859,
+    "request_id": 6965055656,
+    "source_sha": "06666bd638579bb3d95317004bf293c299b79daa",
+    "raw_sha256": "92908c7255e8d6ffa60b4e9736f575e900537d3876d92850b26f513af063b8a1",
+    "raw_bytes": 12303,
+    "peer_semantic_review_sha256": "739b4d455be22e47f85d50252e97abbc7ac4ead80e6f1878b1497f6c58e720f6",
+    "completed": true,
+    "used": true,
+    "transport_history_s03_accepted": true,
+    "full_semantic_quality_accepted": false,
+    "owner_ui_chat_posts": 1,
+    "backend_model_HTTP_count": "NOT_DIRECTLY_OBSERVED",
+    "automatic_replay_allowed": false,
+    "unknown_delivery_possible": false,
+    "history": {
+      "answer_sha256": "530ee3f3c484614766bc886531172d82ef8d042a78c06b5d5d1f104a65fbeba3",
+      "application_data_sql_writes_by_qa": 0,
+      "full_frame_verified": true,
+      "new_exchange_id": "S03-9fad6998423e475c",
+      "new_full_frame_chars": 490,
+      "new_messages": 2,
+      "new_record_sha256": "37ebf757bbe4e7f059d9ee6dc430017221731061b602f97d6cc053f31a8d126c",
+      "prior_history_preserved": true,
+      "prior_messages": 2,
+      "prior_prefix_sha256": "2abccd3b98bc45ee14c384c8866f9b55ab797b34233c38537512af43e45eb5e0",
+      "provenance": "chat_turn",
+      "question_sha256": "59a3a13c7cc953ceede5618d59db077499a57cc9d1af42b849537c2769ce0762",
+      "segment": "M1",
+      "sqlite_auxiliary_file_writes": "POSSIBLE_WAL_SHM_CREATE_OR_UPDATE",
+      "total_own_messages": 4
+    },
+    "answer": {
+      "bytes": 563,
+      "full_observed_basename_present": true,
+      "model_alias_present": false,
+      "obsolete_status_name_present": false,
+      "prior_history_included": false,
+      "sha256": "530ee3f3c484614766bc886531172d82ef8d042a78c06b5d5d1f104a65fbeba3",
+      "text": "Текущая основа по runtime-данным: файл `DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf` указан в аргументах процесса на маршруте `127.0.0.1:8098`. Однако содержимое весов, архитектура и обучение не проверены (`weight_contents_verified=false`, `architecture_or_training_verified=false`), поэтому имя текущей модели как подтверждённая модель основы — **не подтверждено**."
+    },
+    "timing": {
+      "first_content_ms": 22885,
+      "completed_ms": 35825,
+      "generation_tokens_observed": null,
+      "stream_frames_are_not_tokens": true,
+      "comparative_speedup_proven": false
+    },
+    "counter": {
+      "before": 4,
+      "after": 4,
+      "numeric_delta": 0,
+      "extra_key_count": 5,
+      "raw_publicly_exported": false,
+      "private_before": {
+        "bytes": 1029,
+        "counter_bytes": 226,
+        "counter_file_writes": 0,
+        "counter_sha256": "9284bae59a92ad6d48ac2a8e3fe39aa6bfd68b9b50cc70b4a08b603aadda4926",
+        "metadata": {
+          "ctime_ns": 1794961575374020434,
+          "dev": 36,
+          "gid": 0,
+          "ino": 3271884703,
+          "mode": 33152,
+          "mtime_ns": 1794961575374020434,
+          "size": 1029,
+          "uid": 0
+        },
+        "path": "/root/nox/state/owner_model_reference_acceptance_20261118/continuation_6964382138/counter_before.json",
+        "raw_contents_exported": false,
+        "readback_exact": true,
+        "sha256": "a72f2f04823d83ff65ecadd495ca1affd442f3473ee209c9e7050331fdecc8be"
+      },
+      "private_after": {
+        "bytes": 1029,
+        "counter_bytes": 226,
+        "counter_file_writes": 0,
+        "counter_sha256": "0ff94ba864d70b46d0a57d3beabc68fa1841c232aeb95983e7e5f7f312631000",
+        "metadata": {
+          "ctime_ns": 1794961611365628679,
+          "dev": 36,
+          "gid": 0,
+          "ino": 3271884706,
+          "mode": 33152,
+          "mtime_ns": 1794961611365628679,
+          "size": 1029,
+          "uid": 0
+        },
+        "path": "/root/nox/state/owner_model_reference_acceptance_20261118/continuation_6964382138/counter_after.json",
+        "raw_contents_exported": false,
+        "readback_exact": true,
+        "sha256": "04147cbd9b2fdd91e7b6bbdfc811ca10226774c1571d75e53e42cd450bee5ba2"
+      },
+      "historical_inflight_resolved": false
+    },
+    "login_idle_wait_seconds": 182.777,
+    "cleanup": "DETACHED_AND_VERIFIED",
+    "same_proxy_generation": {
+      "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+      "cwd": "/root/nox/scripts",
+      "exe": "/usr/bin/python3.12",
+      "pgrp": 3648425,
+      "pid": 3648425,
+      "ppid": 114,
+      "script_bound": true,
+      "service": "nox-proxy",
+      "start_ticks": 175058217
+    },
+    "current_worker_deployment_preserved": {
+      "run_id": 44206349844,
+      "source_sha": "32546b26b03019169c22f440af5c9f6ed5b0e09c"
+    },
+    "next": [
+      "Minimal runtime-label wording fix; keep architecture/content honesty",
+      "One combined proxy/context/helper installation",
+      "Current four-queue recovery fix; old whole NORMAL3 installer not replayed"
+    ]
   }
 }
