@@ -838,7 +838,14 @@ PINNED_PREIMAGE_NAMES = (
     'owner_event_outbox.py', 'owner_task_plans.py',
     'owner_media_runtime.py', 'owner_s03_gateway.py',
     'owner_senior_gateway.py', 'owner_task_lifecycle.py',
-    's03_memory.py', 'nox_dispatcher_t855u.py',
+    's03_memory.py', 'owner_s03_activate_entry.py',
+    'owner_s03_recover_activate.py', 'owner_s03_content_reindex_entry.py',
+    'nox_dispatcher_t855u.py',
+)
+S03_SOURCE_NAMES = (
+    's03_memory.py', 'owner_s03_gateway.py',
+    'owner_s03_activate_entry.py', 'owner_s03_recover_activate.py',
+    'owner_s03_content_reindex_entry.py',
 )
 SOURCE_ALIAS = {'owner_dispatcher_mentor.py': 'owner_mentor'}
 S03_PREPARE = ROOT / 'state/owner_s03/prepare_6904379098.json'
@@ -1278,7 +1285,12 @@ def bounded_config_projection(path, kind):
 
 
 def bounded_s03_projection():
-    return {'source_names': ['s03_memory.py', 'owner_s03_gateway.py'],
+    # These are bounded disk preimages only. Without authenticated
+    # PID/starttime, loaded digest, and route evidence, load/use is UNKNOWN.
+    return {'source_names': list(S03_SOURCE_NAMES),
+            'source_paths': [str(SCRIPTS / name) for name in S03_SOURCE_NAMES],
+            'loaded_state': 'UNKNOWN',
+            'loaded_evidence': None,
             'prepare_receipt': bounded_s03_json(S03_PREPARE, 'prepare'),
             'manifest': bounded_s03_json(S03_MANIFEST, 'manifest'),
             'canonical_snapshot': bounded_lstat(S03_CANONICAL)}

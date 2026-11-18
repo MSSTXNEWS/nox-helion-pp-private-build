@@ -72,5 +72,26 @@ class BoundedProjectionRegression(unittest.TestCase):
                          'UNKNOWN_NO_FIXED_ALLOWLISTED_V135_RECEIPT_PATH')
 
 
+    def test_s03_source_preimages_are_allowlisted_but_loaded_state_stays_unknown(self):
+        expected = (
+            's03_memory.py', 'owner_s03_gateway.py',
+            'owner_s03_activate_entry.py', 'owner_s03_recover_activate.py',
+            'owner_s03_content_reindex_entry.py',
+        )
+        self.assertEqual(inspect.S03_SOURCE_NAMES, expected)
+        self.assertTrue(set(expected).issubset(inspect.PINNED_PREIMAGE_NAMES))
+        with mock.patch.object(inspect, 'bounded_s03_json',
+                               side_effect=lambda path, kind: {'path': str(path), 'kind': kind}), \
+             mock.patch.object(inspect, 'bounded_lstat',
+                               side_effect=lambda path: {'path': str(path), 'exists': True, 'size': 4096}):
+            projected = inspect.bounded_s03_projection()
+        self.assertEqual(projected['source_names'], list(expected))
+        self.assertEqual(projected['source_paths'],
+                         [str(inspect.SCRIPTS / name) for name in expected])
+        self.assertEqual(projected['loaded_state'], 'UNKNOWN')
+        self.assertIsNone(projected['loaded_evidence'])
+        self.assertNotIn('sha256', projected['canonical_snapshot'])
+
+
 if __name__ == '__main__':
     unittest.main()
