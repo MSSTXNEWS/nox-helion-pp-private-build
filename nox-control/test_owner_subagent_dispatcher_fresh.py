@@ -267,6 +267,34 @@ class FreshSubmissionTests(unittest.TestCase):
         self.assertEqual(native.state['tasks'][task['id']]['native_submit_intent']['state'], 'S03_VERIFIED')
         self.assertIsNone(native.pool)
 
+    def test_s03_attempt_marker_authorizes_only_one_poster(self):
+        native, task = native_with_pool()
+        claim = {'nonce': 'a' * 24}
+        job_id = task['params']['job_id']
+        task.update(handler=binding.HANDLER, owner_claim=claim)
+        row = native.state['tasks'][task['id']]
+        row['owner_claim'] = claim
+        intent = {'task_id': task['id'], 'claim_nonce': claim['nonce'],
+                  'role': 'runtime', 'policy_sha': 'a' * 64,
+                  'job_id': job_id, 'state': 'UNCERTAIN'}
+        task['native_submit_intent'] = intent
+        row['native_submit_intent'] = intent
+        native.ns['save_state'](native.state)
+        native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
+        event = {'kind': 'RESULT', 'role': 'runtime', 'id': task['id'],
+                 'state': 'CANDIDATE_NOT_APPLIED', 'pid': 1234,
+                 'elapsed_ms': 1, 'answer': 'bounded candidate',
+                 'native_observation': {'claim': claim['nonce'], 'operation': 'runtime',
+                     'policy_ack': {'sha256': 'a' * 64, 'full_file_read': True},
+                     'worker': {'pid': 1234}}}
+        checkpoint = native._checkpoint_pending_result(event)
+        first, first_poster = native._mark_s03_write_attempted(task, checkpoint)
+        second, second_poster = native._mark_s03_write_attempted(task, checkpoint)
+        self.assertEqual(first['state'], 'S03_WRITE_ATTEMPTED')
+        self.assertEqual(second, first)
+        self.assertTrue(first_poster)
+        self.assertFalse(second_poster)
+
     def test_same_parent_reconciles_checkpoint_after_pool_yield(self):
         native, task = native_with_pool()
         claim = {'nonce': 'a' * 24, 'pid': 4242}

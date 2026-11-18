@@ -746,7 +746,7 @@ class Native:
                 raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
             if (isinstance(intent, dict) and intent.get('state') == 'S03_WRITE_ATTEMPTED'
                     and intent.get('pending_result_sha256') == checkpoint_sha):
-                return intent
+                return intent, False
             if (not isinstance(intent, dict) or intent.get('state') != 'RESULT_CHECKPOINTED'
                     or intent.get('pending_result_sha256') != checkpoint_sha
                     or any(intent.get(key) != checkpoint['intent'].get(key)
@@ -762,7 +762,7 @@ class Native:
                     or readback.get('native_pending_result') != checkpoint
                     or readback.get('native_submit_intent') != attempted):
                 raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
-        return attempted
+        return attempted, True
 
     def _mark_submit_result_s03_verified(self, task, intent, receipt, proof):
         if (not isinstance(proof, dict) or proof.get('native_verified') is not True
@@ -1014,8 +1014,11 @@ class Native:
                     continue
                 if intent.get('state') == 'RESULT_CHECKPOINTED':
                     try:
-                        attempted = self._mark_s03_write_attempted(task, checkpoint)
-                        proof = remember(receipt)
+                        attempted, post_authorized = self._mark_s03_write_attempted(task, checkpoint)
+                        if post_authorized:
+                            proof = remember(receipt)
+                        else:
+                            proof = s03_readback(receipt)
                     except (OSError, ValueError, sqlite3.Error, GateError):
                         continue
                 else:
@@ -1281,10 +1284,10 @@ class Native:
                 raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
             if not self._claim_current(task, durable=True):
                 raise GateError('HOLD_NATIVE_OWNER_CLAIM_CHANGED')
-            attempted = self._mark_s03_write_attempted(task, checkpoint)
-            # The durable attempted marker precedes the only POST. A restart
-            # after this point may read back, but must never invoke remember again.
-            proof = remember(result)
+            attempted, post_authorized = self._mark_s03_write_attempted(task, checkpoint)
+            # Only the CAS winner may issue the one POST. A stale caller that
+            # sees S03_WRITE_ATTEMPTED is limited to exact readback.
+            proof = remember(result) if post_authorized else s03_readback(result)
             self._mark_submit_result_s03_verified(task, attempted, result, proof)
             # A durable result already found by the drain is committed to S03
             # before workers are torn down to yield to chat/STOP.
