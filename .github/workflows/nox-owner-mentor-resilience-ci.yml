@@ -41,6 +41,7 @@ jobs:
         run: python3 -m py_compile nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py nox-control/owner_dispatcher_reciprocal_health.py nox-control/test_owner_dispatcher_reciprocal_health.py
       - name: Run lifecycle binding and no-paid gateway regressions
         run: |
+          python3 -m pip install -q httpx==0.28.1
           python3 -m py_compile nox-control/owner_task_lifecycle.py nox-control/owner_senior_gateway.py nox-control/test_owner_senior_gateway.py
           python3 -m unittest discover -s nox-control -p 'test_owner_senior_gateway.py' -v
       - name: Run original mentor regressions plus bounded offline recovery
