@@ -1,0 +1,133 @@
+{
+  "schema": "NOX_BOTTOM_DOCK_SOURCE_FINDING_V1",
+  "scope": "HISTORICAL_UI_AND_CURRENT_SOURCE_ROUTE_NOT_ACTUAL_VISUAL_PASS",
+  "archive": {
+    "path": "nox_refresh/web29_original_chat_audit_20261117/materialized/NOX_HELION_WEB_WOW_MAX_V13_UNIFIED_20261117.zip",
+    "sha256": "f12a6f36e9718ee483e0d9d2e3f16aa41c3911ec9ef6e2bc03502a5da0d62fe4",
+    "bytes": 84526089
+  },
+  "inputs": [
+    {
+      "archive_path": "site/pc/v25/nox-shell-v25.js",
+      "sha256": "922f824d94a09f08c5b7ab5ed3fc866ca0bbc8bce8260a969f6cca38cdea9343",
+      "bytes": 14027
+    },
+    {
+      "archive_path": "site/pc/v25/nox-shell-v25.css",
+      "sha256": "c710c7f583ec03b1eea2c0861be1767f7682f96d74386df656f749543f7ffdee",
+      "bytes": 13863
+    },
+    {
+      "archive_path": "site/pc/resonance.html",
+      "sha256": "0a98b69bb6c51462133e5ac796746e2e11d13cbfa945af4caaf8c5f6c71c56c8",
+      "bytes": 15533
+    },
+    {
+      "archive_path": "site/chat.html",
+      "sha256": "99b909ea77df8384d5e64fbd59c86cf3a1ed7793227ea9db8879e1a21d75b118",
+      "bytes": 16422
+    },
+    {
+      "archive_path": "site/nox-ui.js",
+      "sha256": "c5f6b23d5fc6c31c4c388a574bfa8c61243cda6000cefb0026732ebe4183b765",
+      "bytes": 42684
+    },
+    {
+      "archive_path": "site/nox-v9-interface.css",
+      "sha256": "b16b13d89b17b2fb80782757b990de50b564a1fca45a3710a4847a3cd9e7305c",
+      "bytes": 13394
+    },
+    {
+      "archive_path": "site/nox-shared-chrome-v10.css",
+      "sha256": "8ba53074b493f07f2b45886d9b81104b3fe95901c2348b4a6bc9d2342499ae69",
+      "bytes": 12284
+    }
+  ],
+  "dock": {
+    "selector": "nav.n25-dock",
+    "creator": "site/pc/v25/nox-shell-v25.js:dock",
+    "items": [
+      "Главная",
+      "Меню",
+      "чат",
+      "поиск",
+      "назад"
+    ],
+    "style": "position:fixed;left:14px;bottom:14px;z-index:2147483000;display:flex",
+    "creation": "legacyNav creates dock after 21 attempts at 500 ms only if .n25-navbtn is absent; existing .n25-dock prevents duplicate creation",
+    "other_boot_routes": "Standalone pages return; exact / or /index.html uses HOME; exact /resonance.html or /chat.html uses railNav; /pages/* uses hookPagesKit. Nested /nox-web-v29/pc/resonance.html falls into legacyNav in this historical source.",
+    "explicit_hide": "Only @media print hides .n25-dock in the inspected archive. V9/shared-chrome hide .nox-master-floating-dock, a different class."
+  },
+  "page_difference": {
+    "pc_resonance": "Historical pc/resonance.html includes ./v25/nox-shell-v25.js and CSS.",
+    "v29_chat": "Historical site/chat.html does not include the V25 shell; its common nox-ui.js does not create this dock."
+  },
+  "actual_evidence_limit": {
+    "served_common_ui_sha256": "13897495d7c9c628ef4f3094fafdad5f5932a3570d21c650112ba7138ab3c2f0",
+    "served_common_ui_bytes": 43021,
+    "meaning": "Previously authenticated native readback of common UI, not proof that bottom dock rendered.",
+    "root_live_browser": "Root reported /nox-web-v29/chat.html displayed Your request was blocked. No UI visibility verdict or cause of blocking inferred."
+  },
+  "next_if_accessible": "Inspect actual page URL, presence/computed visibility of .n25-dock and actual loaded pc/v25/nox-shell-v25.js before applying a UI change.",
+  "native_calls": 0,
+  "ui_changes": 0,
+  "current_route_proof": {
+    "source_pins": {
+      "nox_web29_onehost_18775.py": {
+        "sha256": "7ab86eee77a36a0f933e6221a069d1c5741059022d0f12494fd2a2ab8d48893a",
+        "bytes": 2841,
+        "provenance": "EXACT_EXISTING_TRANSFORM_OF_ACTUAL_PREIMAGE_MATCHES_ACCEPTED_NATIVE_PIN",
+        "preimage": {
+          "path": "/workspace/scratch/a0bb3ea3693a/nox_optimization/O2/source-encrypted-readback-private/native_sources_44142530315/scripts/nox_web29_onehost_18775.py",
+          "sha256": "0a0165e5b061f88ec60009c49a3c12e9823a45b89044604186e307c81fb701e6",
+          "bytes": 2825
+        },
+        "existing_transform": {
+          "path": "/workspace/scratch/a0bb3ea3693a/nox_optimization/O0/wrapper-query-fix/wrapper_query_transform.py",
+          "sha256": "84e7995aeec48df2fcba6b343ccd8791b5b41140b3bcb4a29990c43664692f11",
+          "bytes": 848
+        }
+      },
+      "chat_proxy.py": {
+        "path": "nox_refresh/context_counter_20261118/private_postimage/chat_proxy.py",
+        "sha256": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62",
+        "bytes": 100684
+      },
+      "nox_v29_chat_bridge.py": {
+        "path": "/workspace/scratch/a0bb3ea3693a/nox_optimization/O1/model-reference-source-rebase-441989/repo/sources/scripts/nox_v29_chat_bridge.py",
+        "sha256": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
+        "bytes": 51865
+      }
+    },
+    "onehost": "Current full front source preserves request URL.path, forwards to http://127.0.0.1:8080, and ASCII-decodes only query bytes. No path translation in this function.",
+    "proxy_registration": "Current proxy calls register_native_v29_chat(app, globals()) with no site_dir override.",
+    "static_mount": "Current bridge defaults directory to literal SITE, mounts authenticated _OwnerStatic at /nox-web-v29, and inserts that mount at route index0.",
+    "site_literal": "/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site",
+    "path_mapping": {
+      "/nox-web-v29/chat.html": "/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/chat.html",
+      "/nox-web-v29/pc/resonance.html": "/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/pc/resonance.html",
+      "/nox-web-v29/pc/v25/nox-shell-v25.js": "/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/pc/v25/nox-shell-v25.js"
+    },
+    "overlay_scope": "The V25 shell JS is not an owner overlay key, nox-ui.js, or nox-function-catalog.js. It follows the static file path. HTML receives native-owner.js injection and calls owner_chat_ui.decorate_html.",
+    "limits": "Source route proof is not an in-memory route trace. Raw file script inclusions do not prove final decorated DOM, dynamic imports or actual visibility. Historical pc/resonance and current requested chat are distinct HTML files in the same source-defined mount."
+  },
+  "proposed_current_projection": {
+    "source": "UI_CURRENT_SOURCE_PROJECTION.py",
+    "api": "project(existing_reader)",
+    "readset": [
+      {
+        "path": "/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/chat.html",
+        "max_bytes": 131072
+      },
+      {
+        "path": "/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site/pc/v25/nox-shell-v25.js",
+        "max_bytes": 131072
+      }
+    ],
+    "total_content_limit_bytes": 262144,
+    "reader": "Current readonly inspector Reader.read(relative,limit), retained no-follow directory chain, owned regular single-link files, stable descriptor/path identity. Reader.guard before and after; no new lease or Reader.",
+    "public_fields": "SHA/size/file metadata; bounded local script-src path list without query/fragment/authority; named lexical dock markers. No raw HTML/JS or exception messages.",
+    "visibility_proven": false,
+    "deployment_plan": "Compose only after ordinary QA in the next same-worker readonly reconciliation. Do not edit or delay the pending first inspector."
+  }
+}

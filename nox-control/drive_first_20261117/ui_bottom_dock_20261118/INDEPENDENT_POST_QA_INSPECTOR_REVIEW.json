@@ -1,0 +1,42 @@
+{
+  "schema": "NOX_SAME_WORKERS_UI_PROJECTION_NARROW_PEER_V1",
+  "verdict": "PASS_SOURCE_ONLY_ROOT_SINGLE_READONLY_PENDING",
+  "derived": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/ui_bottom_dock_20261118/derived/owner_native_inspect.py",
+    "sha256": "3e7e85a33c3f7f67730662f0050ab5965efd57b50698fed9080ab83794b988aa",
+    "bytes": 24931
+  },
+  "base": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/delivery/owner_native_inspect.py",
+    "sha256": "df01f939195a4222e0f7a4ef20eda0770273967901468592a4c49ed69db2bc07",
+    "bytes": 18969
+  },
+  "freeze": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/ui_bottom_dock_20261118/POST_QA_INSPECTOR_FREEZE.json",
+    "sha256": "819109106bf54f432f9eee075e4e28850ab3845832552fb7f802c90a1915380e",
+    "bytes": 2866
+  },
+  "ui_helper": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/ui_bottom_dock_20261118/UI_CURRENT_SOURCE_PROJECTION.py",
+    "sha256": "5ba6af82a8fed7732d39fdaddcf403d067c4b4f760cdce09e2e4e179cf9bd24f",
+    "bytes": 4984
+  },
+  "actual_worker_anchor": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/READBACK_RESULT_44217878336.raw.json",
+    "sha256": "55c37fb7a3d9e1f1b9cff54db8233468647ffc416c07710c86f71eb6cf1d6a52",
+    "bytes": 4026
+  },
+  "checked": [
+    "Seven existing top-level functions and13 Reader methods are AST-identical to actual-accepted df01; only run adds exact pre-question PID/start set and post-UI lifetime recheck. Same install/director/health/source/lease/STOP/queue/S03 gates and existing operator markers remain.",
+    "Expected3723162/3723164/3723165 with start175820222 independently derived from actual442178 second snapshot; PID reuse or replacement cannot satisfy continuity. Fresh native processes must also retain director PPID after optional UI reading.",
+    "UI helper5ba6 is embedded verbatim. Exactly two fixed existing UI paths, each<=131072B, through existing Reader. No HTTP/DOM/browser execution, service/process/file mutations or extra lease.",
+    "Only local script asset paths are projected; query/fragment/authority/userinfo/data/blob/encoded attributes and inline bodies are withheld.48 path cap and192-byte path cap bound output. Raw HTML/JS not exported.",
+    "Missing optional UI file stays PARTIAL_FILE_PROJECTION inside a valid worker result; lifetime/STOP/deadline failures still block acceptance. Visibility/rendered/served-HTML claims explicitly false."
+  ],
+  "new_dynamic_tests": 0,
+  "author_UI_test_attribution": "Author one focused case/two subcases PASS; not repeated. Existing Reader suite not repeated.",
+  "native_calls": 0,
+  "model_calls": 0,
+  "provider_calls": 0,
+  "ordering_boundary": "Root coordinates inspection after the ordinary attempt; the inspector proves worker continuity and static UI source projections. It does not itself prove that an ordinary model question was sent/completed. Actual442184 ordinary attempt was known-zero-send HOLD and must not be labeled semantic acceptance."
+}

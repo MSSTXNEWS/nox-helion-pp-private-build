@@ -1,0 +1,105 @@
+{
+  "schema": "NOX_POST_ORDINARY_READONLY_PEER_FREEZE_V1",
+  "state": "SOURCE_READY_PEER_PENDING",
+  "files": {
+    "UI_CURRENT_SOURCE_PROJECTION.py": {
+      "sha256": "5ba6af82a8fed7732d39fdaddcf403d067c4b4f760cdce09e2e4e179cf9bd24f",
+      "bytes": 4984
+    },
+    "test_current_ui_projection.py": {
+      "sha256": "3b595c28cd667574ab06bd58847db5f8f0dd020ef3e7082f6b1538b2e548278d",
+      "bytes": 2619
+    },
+    "SOURCE_ONLY_FINDING.json": {
+      "sha256": "c944181f37f199aa38f850e418c8040409c52a7053d1aab01d90537b22303525",
+      "bytes": 7319
+    },
+    "build_post_qa_inspector.py": {
+      "sha256": "b0d09c08e1c8ea830dcb368a34866df4f8aa0842afbb42ad1e95d2791d4e10fc",
+      "bytes": 4323
+    },
+    "POST_QA_INSPECTOR_BUILD.json": {
+      "sha256": "8891a52af811e313817082a0432f224dcf16b23fd835d3497d044fccd8bb3477",
+      "bytes": 1395
+    },
+    "POST_QA_INSPECTOR.patch": {
+      "sha256": "c78756fc89265a0f249f1590127a4855566dba1175547ae266569f169e84d932",
+      "bytes": 7533
+    },
+    "derived/owner_native_inspect.py": {
+      "sha256": "3e7e85a33c3f7f67730662f0050ab5965efd57b50698fed9080ab83794b988aa",
+      "bytes": 24931
+    }
+  },
+  "accepted_base": {
+    "path": "nox_refresh/four_queue_recovery_20261118/delivery/owner_native_inspect.py",
+    "sha256": "df01f939195a4222e0f7a4ef20eda0770273967901468592a4c49ed69db2bc07",
+    "bytes": 18969,
+    "modified": false
+  },
+  "actual_pre_qa_evidence": {
+    "run": 44217878336,
+    "path": "nox_refresh/four_queue_recovery_20261118/READBACK_RESULT_44217878336.raw.json",
+    "sha256": "55c37fb7a3d9e1f1b9cff54db8233468647ffc416c07710c86f71eb6cf1d6a52",
+    "bytes": 4026,
+    "same_expected_worker_set": [
+      [
+        3723162,
+        175820222
+      ],
+      [
+        3723164,
+        175820222
+      ],
+      [
+        3723165,
+        175820222
+      ]
+    ]
+  },
+  "unchanged_top_level_functions": [
+    "digest",
+    "encoded",
+    "fingerprint",
+    "main",
+    "metadata",
+    "process_identity",
+    "require"
+  ],
+  "unchanged_reader_methods": [
+    "__init__",
+    "acquire",
+    "check",
+    "close",
+    "directory",
+    "guard",
+    "leaf_proof",
+    "native_status",
+    "prepare",
+    "queue_proof",
+    "read",
+    "record",
+    "source_guard"
+  ],
+  "changed_reader_methods": [
+    "run"
+  ],
+  "ui_helper_embedded_verbatim": true,
+  "compile_pass": true,
+  "focused_UI_test": {
+    "result": "PASS",
+    "tests": 1,
+    "subcases": 2
+  },
+  "previous_reader_suites_repeated": false,
+  "readonly_semantics": {
+    "fixed_pre_QA_worker_set_required": true,
+    "same_director_and_install_and_health_anchor": true,
+    "no_journal_creation_or_modification": true,
+    "UI_partial_does_not_relabel_worker_proof": true,
+    "actual_visibility_proven": false,
+    "additional_http": 0,
+    "native_model_calls": 0
+  },
+  "root_dispatch_only_after_completed_ordinary_qa": true
+}

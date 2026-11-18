@@ -1,0 +1,45 @@
+{
+  "schema": "NOX_POST_ORDINARY_READONLY_INSPECTOR_BUILD_V1",
+  "base": {
+    "sha256": "df01f939195a4222e0f7a4ef20eda0770273967901468592a4c49ed69db2bc07",
+    "bytes": 18969,
+    "local_source_modified": false
+  },
+  "ui_projection": {
+    "sha256": "5ba6af82a8fed7732d39fdaddcf403d067c4b4f760cdce09e2e4e179cf9bd24f",
+    "bytes": 4984,
+    "embedded_verbatim": true
+  },
+  "derived": {
+    "path": "derived/owner_native_inspect.py",
+    "sha256": "3e7e85a33c3f7f67730662f0050ab5965efd57b50698fed9080ab83794b988aa",
+    "bytes": 24931
+  },
+  "repository_execution_path": "nox-control/owner_native_inspect.py",
+  "pre_qa_evidence": {
+    "run": 44217878336,
+    "raw_sha256": "55c37fb7a3d9e1f1b9cff54db8233468647ffc416c07710c86f71eb6cf1d6a52",
+    "last_observed_at": 1794966208.4635143
+  },
+  "fixed_worker_lifetimes": [
+    [
+      3723162,
+      175820222
+    ],
+    [
+      3723164,
+      175820222
+    ],
+    [
+      3723165,
+      175820222
+    ]
+  ],
+  "new_read_scope": "TWO_UI_FILES_AND_FINAL_READONLY_LIFETIME_RECHECK_OF_THE_SAME_THREE_WORKERS",
+  "unchanged_scope": "Reader IO, SH lock, STOP/source/PID guards, two advancing-heartbeat observations, queue/M2 proof, transport output",
+  "operator_action": "inspect",
+  "operator_modified": false,
+  "coordinator_dispatch_after_completed_ordinary_qa": true,
+  "actual_UI_visibility_proven": false,
+  "native_execution_by_builder": 0
+}
