@@ -584,6 +584,26 @@ class GatewayTests(unittest.TestCase):
         Path(result['receipt_path']).write_text('{}')
         self.assertIsNone(g.verify_success(task,result))
 
+    def test_partial_index_cannot_claim_completed_s03(self):
+        task={'id':'owner.memory.index.partial','handler':'owner_memory_sync',
+              'owner_claim':{'nonce':'partial_a3'}}
+        partial={'indexed':1,'stale_remaining':1,'model_identity':'b'*64}
+        with patch.object(g,'resource_admission'), patch.object(g,'index_batch',return_value=partial), \\
+             patch.object(g.time,'monotonic',side_effect=[0., .5, 1.5]):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_INDEX_INCOMPLETE'):
+                g.sync(task,db=self.db,seconds=1.)
+        receipt=g.STATE/'receipts'/'index_partial_a3.json'
+        self.assertFalse(receipt.exists())
+        # Even a legacy source-signed hash of a partial receipt is not DONE.
+        g.atomic_json(receipt,{'schema':g.SCHEMA,'task_id':task['id'],
+            'claim_nonce':'partial_a3','scope':'BOUNDED_S03_VECTOR_INDEX',
+            'verified':True,'source_sha256':g.file_sha(g.__file__),
+            'indexed':1,'stale_remaining':1,'training_examples_accepted':0,
+            'private_text_exported':False})
+        evidence={'schema':g.SCHEMA,'verified':True,'receipt_path':str(receipt),
+                  'receipt_sha256':g.file_sha(receipt)}
+        self.assertIsNone(g.verify_success(task,evidence))
+
     def test_low_disk_prevents_backup_and_mutation(self):
         with patch.object(g.shutil,'disk_usage',return_value=SimpleNamespace(free=5*1024**3)):
             with self.assertRaisesRegex(g.MemoryHold,'DISK_RESERVE'):g.snapshot_database(self.db,self.root/'refused.sqlite')
