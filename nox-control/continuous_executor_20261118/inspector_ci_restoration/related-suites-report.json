@@ -1,0 +1,198 @@
+[
+  {
+    "suite": "test_nox_native_lifeline.py",
+    "exit_code": 0,
+    "test_methods": 30,
+    "output_sha256": "bb208756ab5f2a17f7808be11864820adbcdcf569b3b8f3967bd4d1d191d47df",
+    "tail": null
+  },
+  {
+    "suite": "test_nox_agent_status.py",
+    "exit_code": 0,
+    "test_methods": 4,
+    "output_sha256": "3bf89f5db888372f4856859a3d9bc33e8695511021f88fb56aff42be70c1c922",
+    "tail": null
+  },
+  {
+    "suite": "test_nox_neuro_evolution_ingress.py",
+    "exit_code": 0,
+    "test_methods": 6,
+    "output_sha256": "8ce969c77b7d5702a79327f1d897fc692a12b980b00dd3ba0166ac3dc3d9f65e",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_lifeline.py",
+    "exit_code": 0,
+    "test_methods": 18,
+    "output_sha256": "7f33f70ccd988712be9c6892b797b60f8ef98f8641e205ff7597173db54ca517",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_audit_mount_inventory.py",
+    "exit_code": 0,
+    "test_methods": 16,
+    "output_sha256": "811fb0464a1348eb2044782fe845860fd051e88261b4eb5db4329f683c9b7872",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_inspect_safety.py",
+    "exit_code": 0,
+    "test_methods": 18,
+    "output_sha256": "1942bd492718c353094f9acc90859ea51122a46762caadd6760d1b115c95e1e0",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_inspect_inventory.py",
+    "exit_code": 0,
+    "test_methods": 8,
+    "output_sha256": "89f49dc82223c52fb91e8318cb404c8af3e013b422fe6f700bd91e803ab5d5ff",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_inspect_receipt_privacy.py",
+    "exit_code": 0,
+    "test_methods": 10,
+    "output_sha256": "996bdc99b9e8eb4adcf11d32a7957ea00867a6f2a8fe31cac3a15b18d9d4467b",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_dispatcher_mentor.py",
+    "exit_code": 0,
+    "test_methods": 27,
+    "output_sha256": "4ff8d848a2c5fcac08c4b7fdc57baeb6bfb7453725be44667f409c627c9071cd",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_inspect_compat_privacy.py",
+    "exit_code": 0,
+    "test_methods": 20,
+    "output_sha256": "246b0cb10f945e5e8f6739f1c73a730918a19ad8a547a7aef739b943576e1b80",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_inspect_maya_read_bounds.py",
+    "exit_code": 0,
+    "test_methods": 6,
+    "output_sha256": "3d766298da1b33cd830ed958cb6f2b7520f11c629b596580279284d540378e58",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_inspect_pinned_python_v13.py",
+    "exit_code": 0,
+    "test_methods": 11,
+    "output_sha256": "393d18e52cd5dc3a2c173b1bfc6d1cced05819ea850a044c395031bbb212ce66",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_native_mounts.py",
+    "exit_code": 0,
+    "test_methods": 4,
+    "output_sha256": "df2debeba2ccde10a9ac4534536ffe3e1069f7de407d5d5cfe281975969a72c9",
+    "tail": null
+  },
+  {
+    "suite": "test_deepseek_owner_range_v10.py",
+    "exit_code": 0,
+    "test_methods": 67,
+    "output_sha256": "7de71dc73d7becf6e621b3e4f464eb9bc10f378a891203860b89b3519bd5294a",
+    "tail": null
+  },
+  {
+    "suite": "test_maya_ds4_source_compat_v10.py",
+    "exit_code": 0,
+    "test_methods": 4,
+    "output_sha256": "3a135f9784c0fd3d99ecb907c4a74473ba1de92b4a963e486ad939ec2cc150bd",
+    "tail": null
+  },
+  {
+    "suite": "test_maya_ds4_launch_preflight_v1.py",
+    "exit_code": 0,
+    "test_methods": 21,
+    "output_sha256": "c9c5a2dd8d49bdbd4f7fcecaa5c32c7827e1cb6c256e686829d4820e4e273f3b",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_s03_gateway.py",
+    "exit_code": 0,
+    "test_methods": 33,
+    "output_sha256": "d48b3bef026c5fb83137feb27e4c9ce37b59e557453f8fac452df2e244a975e0",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_s03_diagnostic.py",
+    "exit_code": 0,
+    "test_methods": 8,
+    "output_sha256": "cff010dfddaa9db6645be719dc9222ba66ba30ae253a6b50bdd11d4d63720dce",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_media_install.py",
+    "exit_code": 0,
+    "test_methods": 21,
+    "output_sha256": "9e88c1c4a998ccfd3464f48d9dba2d67998f8dd825584ca71d9fdcd88cc01873",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_chat_ui_workers.py",
+    "exit_code": 0,
+    "test_methods": 20,
+    "output_sha256": "c033ef72c60f93c4ed0772f0c7667c824c776e27b2dd46603913934923710066",
+    "tail": null
+  },
+  {
+    "suite": "test_owner_training_config_preflight.py",
+    "exit_code": 0,
+    "test_methods": 10,
+    "output_sha256": "4e3b6b24383359dc120369b34869083a8d0fd6f9a5e04c1a82c4047b9429767b",
+    "tail": null
+  },
+  {
+    "suite": "test_hybrid_training_dataset_reader.py",
+    "exit_code": 0,
+    "test_methods": 4,
+    "output_sha256": "505ac8ab9ae731074e31bb1b3cd90878ed6f7f3b5d29b27d1e2f6fabaf36cdbe",
+    "tail": null
+  },
+  {
+    "suite": "v38_control_memory",
+    "exit_code": 0,
+    "test_methods": 39,
+    "output_sha256": "1630d0b5e1a93108304104978e7241144996237bcb526cf2489432ccc4dd21ed",
+    "tail": null
+  },
+  {
+    "suite": "native_job_gate_audit_tests",
+    "exit_code": 0,
+    "test_methods": 6,
+    "output_sha256": "a8ef2db220390d9d91b80e9f94ec4060c8ff536508a13bae4f348eebe0e5cf87",
+    "tail": null
+  },
+  {
+    "suite": "native_job_gate_strict",
+    "exit_code": 0,
+    "test_methods": null,
+    "output_sha256": "566283cf4b37d3d9ddd6cab8469bdfe5b62e6011c1c911b08988663fe13eb703",
+    "tail": null
+  },
+  {
+    "suite": "hybrid_hf_metadata",
+    "exit_code": 0,
+    "test_methods": null,
+    "output_sha256": "318f5c31c71b20ea15ed01563a4dff114c6b795d7595ea75fab5ac495d30cbfc",
+    "tail": null
+  },
+  {
+    "suite": "js_owner_chat",
+    "exit_code": 0,
+    "test_methods": null,
+    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tail": null
+  },
+  {
+    "suite": "js_owner_presence",
+    "exit_code": 0,
+    "test_methods": null,
+    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tail": null
+  }
+]

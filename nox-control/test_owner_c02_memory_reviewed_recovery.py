@@ -282,7 +282,12 @@ class RestartSafetyTests(unittest.TestCase):
             marker = b'unchanged bootstrap fixture'
             for path, raw in {**before, install.MARKER: marker, 'state/owner_maintenance.lock': b'fixture'}.items():
                 frozen.atomic(root / path, raw)
-            frozen.atomic(root / install.SOURCE / install.C02_SOURCE, (HERE.parent / install.C02_SOURCE).read_bytes())
+            # This fixture represents the native state before recovery. The
+            # canonical repository source now contains the verified fix, so
+            # use the exact preserved bootstrap preimage for the CAS scenario.
+            preimage = (HERE / 'complete_executor_20261118/assets/ce_baseline_8657ad367e6dd25b48ca.source').read_bytes()
+            self.assertEqual(install.digest(preimage), install.SOURCE_PREIMAGE_SHA256)
+            frozen.atomic(root / install.SOURCE / install.C02_SOURCE, preimage)
             for name in install.TRUSTED_TESTS:
                 frozen.atomic(root / install.SOURCE / name, (BATCH / 'trusted_tests' / name).read_bytes())
             snapshot = {'files_sha256': 'e' * 64, 'bootstrap_sha256': install.digest(marker), 'files': {}, 'git_pins': {}}

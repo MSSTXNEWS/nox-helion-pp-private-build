@@ -17,6 +17,8 @@ on:
       - 'nox-control/test_owner_native_inspect_safety.py'
       - 'nox-control/test_owner_native_inspect_inventory.py'
       - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
+      - 'nox-control/test_owner_native_inspect_compat_privacy.py'
+      - 'nox-control/test_owner_native_inspect_maya_read_bounds.py'
       - 'nox-control/owner_native_audit.py'
       - 'nox-control/test_owner_native_audit_mount_inventory.py'
       - '.github/workflows/nox-native-lifeline-ci.yml'
@@ -37,6 +39,8 @@ on:
       - 'nox-control/test_owner_native_inspect_safety.py'
       - 'nox-control/test_owner_native_inspect_inventory.py'
       - 'nox-control/test_owner_native_inspect_receipt_privacy.py'
+      - 'nox-control/test_owner_native_inspect_compat_privacy.py'
+      - 'nox-control/test_owner_native_inspect_maya_read_bounds.py'
       - 'nox-control/owner_native_audit.py'
       - 'nox-control/test_owner_native_audit_mount_inventory.py'
       - '.github/workflows/nox-native-lifeline-ci.yml'
@@ -73,3 +77,7 @@ jobs:
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_receipt_privacy.py' -v
       - name: Existing mentor Supervisor recovery safety gates (source only)
         run: python3 -m unittest discover -s nox-control -p 'test_owner_dispatcher_mentor.py' -v
+      - name: Read-only compatibility privacy and bounded identity regressions
+        run: |
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_compat_privacy.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_maya_read_bounds.py' -v

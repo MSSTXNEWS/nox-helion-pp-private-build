@@ -1,0 +1,42 @@
+[
+  {
+    "suite": "test_owner_native_inspect_compat_privacy.py",
+    "exit_code": 1,
+    "summary": "Ran 20 tests in 0.029s\n\nFAILED (failures=17, errors=2)\n",
+    "failure_methods": [
+      "test_huge_and_nonfinite_numeric_metrics_are_omitted_without_crash",
+      "test_huge_and_nonfinite_numeric_metrics_are_omitted_without_crash",
+      "test_controls_does_not_export_source_literals_or_follow_parent_symlinks",
+      "test_controls_withholds_innocuously_named_private_configuration",
+      "test_hf_metadata_never_follows_a_symlinked_model_directory",
+      "test_pinned_metadata_children_disable_bytecode_before_third_party_imports",
+      "test_queue_parent_symlink_cannot_publish_task_status",
+      "test_queue_result_code_cannot_publish_token_or_private_text",
+      "test_qwen_codes_are_recognized_values_not_lexical_secrets",
+      "test_qwen_lora_symlink_is_not_an_approved_run_directory",
+      "test_receipt_codes_cannot_publish_token_or_private_text",
+      "test_receipt_counter_boolean_is_not_an_optimizer_step",
+      "test_receipt_exponent_overflow_fails_closed",
+      "test_slot_projection_checks_numeric_bounds_and_exact_boolean_type",
+      "test_slot_projection_rejects_nested_private_state_and_context",
+      "test_partial_inode_ownership_is_not_a_complete_listener_map",
+      "test_pid_recycled_during_gpu_query_cannot_be_attributed",
+      "test_pid_recycled_while_reading_argv_cannot_be_attributed",
+      "test_recycled_pid_during_socket_scan_is_not_complete"
+    ],
+    "output_sha256": "2fe80d5f69715c2a6097ece2ff1887f8b550a556e841965b2244915036ebd09f"
+  },
+  {
+    "suite": "test_owner_native_inspect_maya_read_bounds.py",
+    "exit_code": 1,
+    "summary": "Ran 6 tests in 1.016s\n\nFAILED (failures=5)\n",
+    "failure_methods": [
+      "test_expired_read_deadline_does_not_start_hashing",
+      "test_fifo_does_not_block_before_regular_file_rejection",
+      "test_growing_file_is_not_followed_to_eof_or_hashed_past_initial_size",
+      "test_regular_leaf_replaced_by_fifo_before_open_still_does_not_block",
+      "test_symlink_above_explicit_root_is_not_followed"
+    ],
+    "output_sha256": "c490b6fb16e53880aa413c717144e0e4ec835bd5519efe99e2f70193e02a2d43"
+  }
+]

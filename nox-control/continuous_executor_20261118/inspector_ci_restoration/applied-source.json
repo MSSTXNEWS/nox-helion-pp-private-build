@@ -1,0 +1,18 @@
+{
+  "current_default_main_changed": false,
+  "existing_test_assertions_changed": false,
+  "files": {
+    ".github/workflows/nox-native-lifeline-ci.yml": "2a1498f4e4340339dcb2da13aad522b970373763708f05fdbd1e701afa5eb203",
+    "nox-control/owner_native_inspect.py": "eb809b6e61dd11f094d963c85005ed329c022ffcbb62bcffc4df4e2b68cae83c",
+    "nox-control/test_owner_native_inspect_compat_privacy.py": "c205069148dab8ed7bd1cec3d5be4a7f1f9613e287a9d96a82aa999af56379b7",
+    "nox-control/test_owner_native_inspect_maya_read_bounds.py": "3ec9888ecf491ed2def4db1c44219fb448700e45ef7d621aee49d47a23f62a93"
+  },
+  "native_api_deployment": false,
+  "remote_workflow_verified": false,
+  "reviewers": [
+    "root",
+    "backlog_planner",
+    "runtime_resources"
+  ],
+  "schema": "NOX_INSPECTOR_API_RESTORATION_APPLIED_V1"
+}

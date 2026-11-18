@@ -1,18 +1,19 @@
-# Required CI baseline remains failing
+# Historical CI baseline and validated compatibility repair
 
-Audit date: 2026-11-18 UTC. The **NOX native Supervisor lifeline safety regression**
-workflow is not green. Its inspector failure predates this repair and remains
-unfixed. Passing focused tests for the new runtime and successful native install
-receipts establish their respective limited scopes; they do not make this whole
-required CI workflow pass.
+Audit date: 2026-11-18 UTC. The baseline measurement below was taken before the
+additive compatibility repair. The baseline inspector had 36 affected methods in
+the 137-test required lifeline suite. The compatibility candidate subsequently
+passed all 137 unchanged methods and 26 new safety/privacy methods, plus the
+related workflow commands listed in `compactci_baseline_report.json`.
 
-The structured results are in `compactci_baseline_report.json` in this directory.
-This audit changes documentation only. No workflow, test expectation, inspector,
-runtime, or source-workspace file was changed to obtain these results.
+This is local source validation. A successful native installation and focused
+runtime tests do not make unrelated repository CI green; remote CI status must
+be taken from its actual run. The historical baseline findings below are retained
+for provenance and do not assert that a later repaired source still fails.
 
 ## Exact baseline and cause
 
-The current `nox-control/owner_native_inspect.py` is byte-identical to that file
+The pre-repair `nox-control/owner_native_inspect.py` was byte-identical to that file
 at native-lineage commit `0c576e88c7f4ee5ef1c4ff1a8dc438dd5566278a`:
 
 ```text
@@ -20,8 +21,8 @@ SHA-256: 6b9604ef3d7e4d2123a1f7cceebf452487c5b4b8e5d128a030d517854cfd4525
 Size: 22147 bytes; 417 lines
 ```
 
-The comparison used the current file bytes and `git show` at the exact baseline
-commit. The file now implements queue and process-pool inspection. It does not
+The baseline comparison used the then-current file bytes and `git show` at the exact baseline
+commit. That baseline file implements queue and process-pool inspection. It does not
 provide the earlier `PROC`, `run`, `owner_safety_snapshot`, Maya binary readback,
 memory inventory, receipt-privacy, or training-metadata APIs expected by the
 existing tests.
@@ -69,7 +70,7 @@ The repository tests were **not redirected** to the legacy copy, and this
 control does not count as fixing current CI. Replacing their subject with a
 historical fixture would hide the missing API in the current subject.
 
-## Remaining source work
+## Initial restoration scope and completed candidate validation
 
 Static dependency review found approximately **544 source lines across 27
 transitive module functions/constants** needed to restore the tested APIs.
@@ -82,8 +83,17 @@ The scope includes:
 - Privacy-preserving receipt projections, Qwen progress metadata, and strict
   native TRL signature parsing.
 
-This needs a separately reviewed compatibility change that preserves the current
-queue/pool inspector, followed by the complete required workflow. No such source
-restoration has been applied by this audit. Native task progress and tested
-source patches must continue to be reported independently from this unresolved
-repository CI gate.
+The subsequent candidate also restores APIs exercised by related workflows:
+pinned Python signature/version probes, controls metadata, mount inventory,
+Maya ELF/dependency readback and HF tensor metadata. The final candidate adds
+1,154 lines while preserving the original 417 lines, AST bindings and default
+`main()`. It includes strict privacy projections, bounded nofollow reads and
+PID identity fixes discovered during independent review.
+
+Local validation passed 28 commands / 411 unittest methods, the hybrid helper's
+13 HF metadata and 6 signature checks, a 269-file `SOURCE_POLICY_PASS` audit,
+and JavaScript syntax checks. The original tests and commands were unchanged;
+26 new regression methods were added to the lifeline workflow. The v38 39-test
+measurement in this report used the original canonical source; the newly
+integrated C02 source is verified separately. No native inspector deployment is
+part of this CI compatibility change.

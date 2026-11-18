@@ -137,6 +137,8 @@ class SynapticBrain:
         self.pool = ThreadPoolExecutor(max_workers=config.max_workers,
                                        thread_name_prefix="nox-v38-cortex")
         self.inflight = threading.BoundedSemaphore(config.max_inflight)
+        # Optional callbacks can outlive a pulse; retain capacity for the next C02.
+        self.optional_inflight = threading.BoundedSemaphore(config.max_workers - 1)
         self._closed = False
 
     def close(self) -> None:
@@ -262,19 +264,36 @@ class SynapticBrain:
         deadline = (self.cfg.deep_deadline_ms if deep else self.cfg.fast_deadline_ms) / 1000
         utc = datetime.now(timezone.utc).isoformat()
         submitted = {}
-        # C02 is a hard dependency: reserve the first worker/queue slot for
-        # indexed S03 recall instead of letting optional sensors starve memory.
+        # Reserve one existing worker and queue credit across requests for C02.
+        # A timed-out optional callback may still be running in this same pool.
         for name in ('C02', *(k for k in CORE_NAMES if k != 'C02')):
+            optional = name != 'C02'
+            if optional and not self.optional_inflight.acquire(blocking=False):
+                submitted[name] = None
+                continue
             if not self.inflight.acquire(blocking=False):
+                if optional:
+                    self.optional_inflight.release()
                 submitted[name] = None
                 continue
             try:
                 task = self.pool.submit(self._core, name, session, prompt, utc)
-                task.add_done_callback(lambda _task: self.inflight.release())
-                submitted[name] = task
-            except RuntimeError:
+            except BaseException as error:
+                # Admission belongs to this attempted submission, including
+                # unexpected resource errors. Preserve their original failure.
                 self.inflight.release()
+                if optional:
+                    self.optional_inflight.release()
+                if not isinstance(error, RuntimeError):
+                    raise
                 submitted[name] = None
+                continue
+            def release_credit(_task, optional=optional):
+                self.inflight.release()
+                if optional:
+                    self.optional_inflight.release()
+            task.add_done_callback(release_credit)
+            submitted[name] = task
         futures = [f for f in submitted.values() if f is not None]
         wait(futures, timeout=deadline)
         # C02 is a correctness dependency. Wait a bounded grace period for real

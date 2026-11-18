@@ -79,11 +79,52 @@ The original claim nonce is `724c94a7150fa8f9415e0a28`, receipt SHA-256
 `399e3dc5f153ac8832dfb41d74fead6b30f76f2be5257820af39a6e86dea7599`,
 and exact S03 item `S03-1460ca0811874a9c`. The immutable test set contains eight
 new concurrency cases and 14 unchanged existing cognition/memory test bodies;
-baseline has two failures, while the independently reviewed candidate passes
-all 22 locally. A separately identified reviewed recovery is being prepared;
-it must not be described as model-generated work.
+baseline has two failures. Before admission, independent review also found
+that unexpected submission exceptions could leak the acquired capacity credits.
+The revised recovery releases those credits and propagates the original
+unexpected exception; expected shutdown errors retain the existing explicit
+unavailable state. Three added local tests cover memory/optional submissions,
+including ValueError, MemoryError and interruption. The older reserve fails
+six subcases; the corrected reserve passes these and all 22 immutable tests.
 
-At that readback, all 33 allowed source files were read twice with no change
+### Reviewed recovery completed
+
+[Recovery installation 44348598506](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44348598506)
+used exact source
+[`aa6bc7b44657b25fc993b454b3c8883428f463ed`](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/aa6bc7b44657b25fc993b454b3c8883428f463ed).
+It preserved all 20 existing terminal project receipts and 28 catalog rows,
+staged only one reviewed plan and one payload, and appended one separate task.
+Runtime modules, bootstrap and immutable tests were unchanged. The installer
+itself made zero project-source writes; the existing native executor performed
+verification and integration after admission.
+
+[Independent result readback 44348913250](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44348913250)
+verified `3A01.project.c02_memory_capacity.20261118.reviewed_reserve` as
+**INTEGRATED**, with **22 tests passed, zero failures, errors or skips**,
+unchanged trusted tests and verified source integration. Execution took 2279 ms;
+its test report measured 165 ms. Provenance is **OWNER_REVIEWED** and no model
+planner receipt exists for this recovery.
+
+| Binding | Exact value |
+| --- | --- |
+| Reviewed plan SHA-256 | `5d05ba50d058981ce8baeef6ba05a70a7d718709a84a4224a8adccfbf90df268` |
+| `synaptic_brain.py` postimage SHA-256 | `b504248ac1ae4a09338236fd7ad2402ca43cd561e2cc801f127ce221eb8cf44a` |
+| Receipt SHA-256 | `fd2e10aeb25f76a3cc991724099b905fc0e15c161f59f72feff551d85f37b847` |
+| Exact S03 item | `S03-6f0ad4d2437445f1` |
+| Current config SHA-256 | `da355cfbd8bb07d543d388e6de19cfb05850c1ca7f5f28d75936507d540917b9` |
+| Current 33-file source census SHA-256 | `884a4696bb821a5a82dc672d796a9fe69e2586aa8c8f4ce795a5c99eb3dde8fc` |
+
+Both final observations verified director PID 67824/start ticks 181238400 and
+workers 67960–67962/start ticks 181239693. Source reads matched twice, with no
+unattributed changes. The original failed model claim and exact S03 receipt
+remain unchanged. The workers are alive and idle after completing the admitted
+catalog; the next action is `REFILL_REVIEWED_CATALOG`, not automatic replay.
+
+The four completed source tasks therefore have **95 passing native tests**:
+73 for model-generated work and 22 for the independently reviewed C02 recovery.
+This is a count of executed task tests, not 95 distinct model capabilities.
+
+At the earlier failed-model readback, all 33 allowed source files were read twice with no change
 between reads or unattributed source changes. Census SHA-256 was
 `cd8458a5f28420e3281c108e7fd27804aea02c726c10f8793e3e10588a095757`.
 Config SHA-256 was
@@ -97,7 +138,12 @@ The installed runtime repairs above are live. The project fixes have the
 of deployment into serving chat processes**. The native source lineage differs
 from several repository paths, so exact postimages are retained as explicit
 source artifacts rather than copied over an unrelated repository revision.
-Original parent-task acceptance added by this work is **zero**. Catalog
+For C02 specifically, the canonical repository source had the exact native
+preimage `8657ad...`; it now contains the verified native postimage `b504248...`.
+The existing 39 V38 tests, 22 immutable C02 tests, three submission-error tests
+and 12 recovery-installer tests pass against this repository state. The V38
+workflow includes the new checks and this repair branch without removing its
+previous commands. Original parent-task acceptance added by this work is **zero**. Catalog
 exhaustion must not be presented as completion of the 295 original requirements.
 
 The original chat, proxy and web processes retained their identities during
@@ -113,6 +159,14 @@ and its linked native diagnostics for exact values and checkpoint limitations.
 
 The repository lifeline CI baseline had 101 passing and 36 failing test
 methods because the current inspector omitted APIs used by unchanged tests.
-An additive API restoration is undergoing related-suite and privacy review.
-Until its actual workflow succeeds, the whole repository CI is not reported
-as green. The baseline evidence remains in [CI_BASELINE_STATUS.md](CI_BASELINE_STATUS.md).
+The missing read-only APIs have now been restored in the repository, while all
+40 original top-level AST nodes, bindings and default main remain unchanged.
+Independent review caught and fixed privacy leaks, unsafe special-file reads,
+PID-reuse attribution and incomplete socket maps in the restored code. The
+unchanged 137 lifeline tests and 26 added regressions pass locally; all 28
+related verification commands passed, including 411 unittest-method executions.
+The new API has not been installed into native service paths. The historical
+baseline and source-restoration evidence are in
+[CI_BASELINE_STATUS.md](CI_BASELINE_STATUS.md) and
+[inspector_ci_restoration/FINAL_REVIEW.md](inspector_ci_restoration/FINAL_REVIEW.md).
+Remote workflow evidence will be recorded after publication of this source snapshot.
