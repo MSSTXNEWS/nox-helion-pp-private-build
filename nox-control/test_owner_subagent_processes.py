@@ -323,6 +323,7 @@ class TestRealSubagentProcesses(unittest.TestCase):
     def test_shutdown_and_drain_keeps_joined_result_and_holds_missing_result(self):
         from collections import deque
         from queue import Queue
+        import time
         from owner_subagent_processes import Subagents
 
         claim = 'a' * 24
