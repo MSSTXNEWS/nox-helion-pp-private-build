@@ -248,6 +248,36 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(g._recent_provenance_rank(rows[0]), 2)
         self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
 
+    def test_duplicate_history_import_keys_cannot_evict_current_m1(self):
+        # SQLite JSON1 resolves the first duplicate key, whereas Python's
+        # json.loads resolves the last. The two trust ranks must agree before
+        # the 256-row candidate cutoff, including a larger late import.
+        now = datetime.now(timezone.utc)
+        deceptive = '{"history_import":false,"history_import":true}'
+        reversed_marker = '{"history_import":true,"history_import":false}'
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current_owner', 'actual owner decision', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ((now - timedelta(seconds=20)).isoformat(), 'current_owner'))
+            for i in range(300):
+                key = 'duplicated_marker_' + str(i)
+                item(c, key, 'duplicate marker import ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET ts=?,meta=? WHERE id=?',
+                          ((now - timedelta(seconds=1)).isoformat(), deceptive, key))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        self.assertEqual(g._recent_provenance_rank({'meta': deceptive}), 0)
+        self.assertEqual(g._recent_provenance_rank({'meta': reversed_marker}), 0)
+        with g.connection(self.db) as c:
+            self.assertEqual(g.recent_rows(c)[0]['id'], 'current_owner')
+        answer = g.recall('unmatched-owner-context-query', db=self.db,
+                          identity_fn=lambda: (_ for _ in ()).throw(OSError('BGE offline')))
+        self.assertEqual(answer[0]['id'], 'current_owner')
+        impostors = [row for row in answer if row['id'].startswith('duplicated_marker_')]
+        self.assertTrue(impostors)
+        self.assertTrue(all(row['historical_unverified'] and not row['training_verified']
+                            for row in impostors))
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
     def test_recent_rejects_future_clock_and_oversized_request(self):
         with g.connection(self.db, write=True) as c:
             item(c, 'valid', 'valid current fact', 'M1')
