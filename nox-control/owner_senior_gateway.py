@@ -838,7 +838,11 @@ def main(argv=None):
     except (GatewayHold, OSError, ValueError, TypeError):
         result = {'state': 'CONFIGURATION_OR_ACCESS_CHECK_FAILED'}
     print(json.dumps(result, sort_keys=True))
-    return 0 if result.get('state') not in ('CONFIGURATION_OR_ACCESS_CHECK_FAILED', 'CONFIGURATION_ERROR') else 2
+    if result.get('state') in ('CONFIGURATION_OR_ACCESS_CHECK_FAILED', 'CONFIGURATION_ERROR'):
+        return 2
+    if result.get('state') == 'NO_PAID_API_POLICY' and args.command != 'status':
+        return 2
+    return 0
 
 
 if __name__ == '__main__':

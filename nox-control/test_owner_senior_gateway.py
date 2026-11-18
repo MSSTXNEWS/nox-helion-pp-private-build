@@ -75,8 +75,11 @@ class GatewayTests(unittest.TestCase):
                          'NO_PAID_API_POLICY')
         with patch.object(gateway.getpass, 'getpass', side_effect=AssertionError('secret prompt')) as secret_prompt:
             with patch('builtins.print') as printed:
-                self.assertEqual(gateway.main(['set-key', 'openai']), 0)
+                self.assertEqual(gateway.main(['set-key', 'openai']), 2)
                 self.assertIn('NO_PAID_API_POLICY', printed.call_args[0][0])
+                self.assertEqual(gateway.main(['init-config']), 2)
+                self.assertEqual(gateway.main(['verify-access']), 2)
+                self.assertEqual(gateway.main(['status']), 0)
             secret_prompt.assert_not_called()
         self.assertEqual(list(self.root.iterdir()), [])
 
