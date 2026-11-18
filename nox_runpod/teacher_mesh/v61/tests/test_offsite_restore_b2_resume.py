@@ -9,7 +9,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-from nox_runpod.teacher_mesh.v61.checkpoint_backup import REMOTE, verify_plaintext_tar, transport_retry_delay
+from nox_runpod.teacher_mesh.v61.checkpoint_backup import (REMOTE, verify_plaintext_tar,
+    verify_plaintext_tar_stream, verify, transport_retry_delay)
+from unittest.mock import patch
 
 
 def make_archive(names):
@@ -77,6 +79,45 @@ class V61RemoteBoundedMemory(unittest.TestCase):
             self.assertEqual(checked["count"], 10)
             self.assertEqual(checked["total_bytes"], 40960)
             self.assertFalse(checked["functional_optimizer_restore_verified"])
+
+
+class V61StreamingDecryptRegression(unittest.TestCase):
+    def test_archive_stream_does_not_read_all_plaintext_or_write_tempfile(self):
+        archive=make_archive(["optimizer.pt","rng_state.pt","scaler.pt"] +
+                             [f"checkpoint_{i:02d}.pt" for i in range(9)])
+        class BoundedSource(io.BytesIO):
+            def read(self,n=-1):
+                if n<=0 or n>1048576:
+                    raise AssertionError("unbounded_stream_read")
+                return super().read(n)
+        verified=verify_plaintext_tar_stream(BoundedSource(archive))
+        self.assertEqual(verified["plaintext_sha256"],hashlib.sha256(archive).hexdigest())
+        self.assertEqual(verified["count"],12)
+        self.assertEqual(verified["resume_name_hints"],
+                         {"optimizer":True,"rng":True,"scaler":True})
+        self.assertIs(verified["functional_optimizer_restore_verified"],False)
+
+    def test_actual_verify_uses_pipe_not_capture_output(self):
+        archive=make_archive([f"checkpoint_{i:02d}.pt" for i in range(12)])
+        class StubProcess:
+            def __init__(self):
+                self.stdout=io.BytesIO(archive)
+            def poll(self):
+                return 0
+            def wait(self,timeout=None):
+                return 0
+        with patch("nox_runpod.teacher_mesh.v61.checkpoint_backup.subprocess.Popen",
+                   return_value=StubProcess()) as create:
+            verified=verify(Path("unused.age"),Path("unused.key"))
+        self.assertEqual(verified["plaintext_sha256"],hashlib.sha256(archive).hexdigest())
+        self.assertEqual(verified["count"],12)
+        self.assertNotIn("capture_output",create.call_args.kwargs)
+        self.assertEqual(create.call_args.kwargs["stdout"],subprocess.PIPE)
+
+    def test_stream_rejects_manifest_missing(self):
+        with self.assertRaisesRegex(RuntimeError,"HOLD_TAR_MEMBER_COUNT"):
+            verify_plaintext_tar_stream(io.BytesIO(make_archive(
+                [f"checkpoint_{i:02d}.pt" for i in range(9))))
 
 
 class V61TransportRetryBoundary(unittest.TestCase):
