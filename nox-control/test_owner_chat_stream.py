@@ -17,6 +17,7 @@ import httpx
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT))
 import owner_chat_stream as stream
+import owner_chat_ui as ui
 import owner_chat_source_patch as transforms
 
 
@@ -278,6 +279,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_current_executor_count_is_actual_snapshot_without_model_or_action(self):
         with tempfile.TemporaryDirectory() as folder:
+            (Path(folder)/'state').mkdir()
             path=Path(folder)/'agents.json'
             doc={'n':6,'workers':[{'id':f'nox-agent-{i:02d}','status':'idle','current_task':None}
                                   for i in range(1,7)]}
@@ -285,7 +287,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             path.write_text(json.dumps(doc))
             native=self.native();payload={'messages':[{'role':'user','content':'Сколько сейчас исполнителей и агентов?'}]}
             native['_direct_admin_calls']=lambda text:(_ for _ in ()).throw(AssertionError('no actions'))
-            with patch.object(stream,'EXECUTOR_STATUS',path),patch.object(stream.httpx,'AsyncClient',side_effect=AssertionError('no model')):
+            with patch.object(stream,'EXECUTOR_STATUS',path),patch.object(stream.httpx,'AsyncClient',side_effect=AssertionError('no model')),patch.object(ui,'ROOT',Path(folder)):
                 response=await native['owner_completion']('http://native/model',payload,payload['messages'][0]['content'],True)
                 wire=''.join([chunk async for chunk in response.body_iterator])
             self.assertIn('настроено 6',wire)
@@ -294,6 +296,30 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn('nox-agent-06',wire)
             self.assertEqual(self.dispatched,[])
             self.assertIn('настроено 6',payload['_agent_final'])
+
+    def test_executor_reply_respects_owner_maintenance_and_read_transition(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            (root/'state').mkdir()
+            path=root/'agents.json'
+            path.write_text(json.dumps({
+                'n':1,'workers':[{'id':'nox-agent-01','status':'idle','current_task':None}]
+            }))
+            question='Сколько сейчас агентов?'
+            with patch.object(ui,'ROOT',root):
+                self.assertIn('настроено 1',stream._executor_status_reply(question,path))
+                (root/'state'/'OWNER_MAINTENANCE.flag').touch()
+                blocked=stream._executor_status_reply(question,path)
+                self.assertIn('MODEL_UPDATE',blocked)
+                self.assertNotIn('настроено',blocked)
+                (root/'state').rename(root/'detached')
+                self.assertIn('не могу подтвердить',stream._executor_status_reply(question,path))
+                (root/'detached').rename(root/'state')
+                (root/'state'/'OWNER_MAINTENANCE.flag').unlink()
+                with patch.object(ui,'owner_maintenance_gate',side_effect=['ABSENT','PRESENT']):
+                    transition=stream._executor_status_reply(question,path)
+                self.assertIn('не могу подтвердить',transition)
+                self.assertNotIn('настроено',transition)
 
     @unittest.skipUnless(hasattr(os,'mkfifo') and hasattr(os,'O_NONBLOCK'),
                          'POSIX FIFO nonblocking admission regression')
