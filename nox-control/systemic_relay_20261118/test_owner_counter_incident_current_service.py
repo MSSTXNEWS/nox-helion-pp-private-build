@@ -13,7 +13,7 @@ spec.loader.exec_module(m)
 
 class CurrentSupervisorIdentityTests(unittest.TestCase):
     def test_current_pid_discovered_from_supervisor_not_old_pin(self):
-        values = [b"S", b"0", b"114", b"242298", b"0"]
+        values = [b"S", b"114", b"242298"]
         values += [b"0"] * (19 - len(values))
         values += [b"183262723"]
         raw = b"242298 (python3) " + b" ".join(values) + b"\n"
