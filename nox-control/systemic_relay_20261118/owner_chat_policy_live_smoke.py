@@ -103,6 +103,26 @@ def guards():
         raise RuntimeError("HOLD_LIVE_SMOKE_MODEL_BUSY")
     return {"stable_pids":6,"slots":len(slots),"slot_port":slot_port,"source_pins":3}
 
+def parse_frame_line(raw):
+    """Accept the existing NOX browser SSE data frames or legacy NDJSON."""
+    if not isinstance(raw,bytes) or len(raw)>100000:
+        raise RuntimeError("HOLD_LIVE_SMOKE_FRAME_LENGTH")
+    line=raw.strip()
+    if not line or line.startswith((b":",b"event:",b"id:",b"retry:")):
+        return None
+    if line.startswith(b"data:"):
+        line=line[5:].strip()
+    if line==b"[DONE]":
+        return {"type":"sentinel"}
+    try:
+        result=json.loads(line)
+    except (ValueError,UnicodeError):
+        raise RuntimeError("HOLD_LIVE_SMOKE_SSE_JSON") from None
+    if not isinstance(result,dict):
+        raise RuntimeError("HOLD_LIVE_SMOKE_FRAME")
+    return result
+
+
 def main():
     record={"schema":"NOX_CHAT_POLICY_LIVE_SMOKE_V1","native_source_writes":0,
             "service_restarts":0,"model_loads":0,"raw_content_exported":False,
@@ -153,9 +173,12 @@ def main():
             for i,line in enumerate(response):
                 if i>=500 or len(line)>100000 or time.monotonic()-start>105:
                     raise RuntimeError("HOLD_LIVE_SMOKE_BUDGET")
-                frame=json.loads(line)
-                if not isinstance(frame,dict):raise RuntimeError("HOLD_LIVE_SMOKE_FRAME")
+                frame=parse_frame_line(line)
+                if frame is None:
+                    continue
                 kind=frame.get("type")
+                if kind=="sentinel":
+                    break
                 if kind=="delta":
                     token=frame.get("text")
                     if not isinstance(token,str):raise RuntimeError("HOLD_LIVE_SMOKE_DELTA")
