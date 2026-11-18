@@ -1,0 +1,197 @@
+"""0B04: pinned source reads must HOLD on unsafe evidence and changing files."""
+import os
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+import work_progress as progress
+
+
+class PinnedReadTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.path = self.root / 'receipts.json'
+        self.path.write_text('{"schema":"ok"}', encoding='utf-8')
+
+    def test_regular_file(self):
+        self.assertEqual(progress.read_json(self.path)['schema'], 'ok')
+
+    def test_json_float_exponent_overflow_fails_closed(self):
+        for number in ('1e999', '-1e999', '1.8e308'):
+            with self.subTest(number=number):
+                self.path.write_text('{"metric":' + number + '}', encoding='utf-8')
+                with self.assertRaisesRegex(ValueError, 'WORK_PROGRESS_NONFINITE_JSON'):
+                    progress.read_json(self.path)
+        self.path.write_text('{"metric":1e308}', encoding='utf-8')
+        self.assertEqual(progress.read_json(self.path)['metric'], 1e308)
+        self.path.write_text('{"metric":"1e999"}', encoding='utf-8')
+        self.assertEqual(progress.read_json(self.path)['metric'], '1e999')
+
+    def test_symlink_rejected(self):
+        link = self.root / 'link.json'
+        link.symlink_to(self.path)
+        with self.assertRaises(OSError):
+            progress.read_json(link)
+
+    def test_symlinked_parent_directory_rejected(self):
+        actual = self.root / 'actual'
+        actual.mkdir()
+        (actual / 'receipts.json').write_text('{"schema":"unexpected"}', encoding='utf-8')
+        alias = self.root / 'dir-alias'
+        alias.symlink_to(actual, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'WORK_PROGRESS_UNSAFE_PARENT_LINK'):
+            progress.read_json(alias / 'receipts.json')
+
+    def test_parent_link_swap_during_read_rejected(self):
+        actual = self.root / 'to-swap'
+        actual.mkdir()
+        file = actual / 'receipts.json'
+        file.write_text('{"schema":"ok"}', encoding='utf-8')
+        moved = self.root / 'moved-folder'
+        original_read = os.read
+        swapped = [False]
+
+        def switch_parent(fd, size):
+            data = original_read(fd, size)
+            if data and not swapped[0]:
+                swapped[0] = True
+                actual.rename(moved)
+                actual.symlink_to(moved, target_is_directory=True)
+            return data
+
+        with patch.object(progress.os, 'read', side_effect=switch_parent):
+            with self.assertRaisesRegex(ValueError, 'WORK_PROGRESS_UNSAFE_PARENT_LINK'):
+                progress.read_json(file)
+
+    def test_dirfd_open_rejects_symlinked_ancestor(self):
+        actual = self.root / 'anchored-real'
+        actual.mkdir()
+        (actual / 'r.json').write_text('{"schema":"ok"}', encoding='utf-8')
+        alias = self.root / 'anchored-link'
+        alias.symlink_to(actual, target_is_directory=True)
+        with self.assertRaises(OSError):
+            progress._open_registry_no_follow(alias / 'r.json', os.O_RDONLY | os.O_NOFOLLOW)
+
+    def test_dirfd_walk_swap_fails_closed_and_closes_fd(self):
+        actual = self.root / 'walk-swap'
+        actual.mkdir()
+        source = actual / 'r.json'
+        source.write_text('{"schema":"ok"}', encoding='utf-8')
+        moved = self.root / 'walk-moved'
+        original_open = os.open
+        switched = [False]
+        before_fds = len(os.listdir('/proc/self/fd'))
+
+        def switch_during_open(path, flags, *args, **kwargs):
+            if path == actual.name and not switched[0]:
+                switched[0] = True
+                actual.rename(moved)
+                actual.symlink_to(moved, target_is_directory=True)
+            return original_open(path, flags, *args, **kwargs)
+
+        with patch.object(progress.os, 'open', side_effect=switch_during_open):
+            with self.assertRaises(OSError):
+                progress._open_registry_no_follow(source, os.O_RDONLY | os.O_NOFOLLOW)
+        self.assertTrue(switched[0])
+        self.assertEqual(len(os.listdir('/proc/self/fd')), before_fds)
+
+    def test_fifo_rejected_without_blocking(self):
+        fifo = self.root / 'read.fifo'
+        os.mkfifo(fifo)
+        with self.assertRaisesRegex(ValueError, 'WORK_PROGRESS_UNSAFE_FILE_TYPE'):
+            progress.read_json(fifo)
+
+    def test_hardlink_rejected(self):
+        alias = self.root / 'alias.json'
+        os.link(self.path, alias)
+        with self.assertRaisesRegex(ValueError, 'WORK_PROGRESS_UNSAFE_FILE_TYPE'):
+            progress.read_json(self.path)
+
+    def test_oversized_file_rejected(self):
+        self.path.write_bytes(b'x' * (progress.MAX_JSON_BYTES + 1))
+        with self.assertRaisesRegex(ValueError, 'WORK_PROGRESS_FILE_LIMIT'):
+            progress.read_json(self.path)
+
+    def test_swapped_path_rejected_after_read(self):
+        replacement = self.root / 'replacement.json'
+        replacement.write_text('{"schema":"replacement"}', encoding='utf-8')
+        original_read = os.read
+        swapped = [False]
+
+        def swap(fd, size):
+            data = original_read(fd, size)
+            if data and not swapped[0]:
+                swapped[0] = True
+                os.replace(replacement, self.path)
+            return data
+
+        with patch.object(progress.os, 'read', side_effect=swap):
+            with self.assertRaisesRegex(ValueError, 'WORK_PROGRESS_FILE_CHANGED_DURING_READ'):
+                progress.read_json(self.path)
+
+    def test_in_place_change_rejected_after_read(self):
+        original_read = os.read
+        mutated = [False]
+
+        def mutate(fd, size):
+            data = original_read(fd, size)
+            if data and not mutated[0]:
+                mutated[0] = True
+                self.path.write_text('{"schema":"no"}', encoding='utf-8')
+            return data
+
+        with patch.object(progress.os, 'read', side_effect=mutate):
+            with self.assertRaisesRegex(ValueError, 'WORK_PROGRESS_FILE_CHANGED_DURING_READ'):
+                progress.read_json(self.path)
+
+    def test_dangling_idea_symlink_is_not_empty_registry(self):
+        self.path.unlink()
+        self.path.symlink_to(self.root / 'missing-ideas.json')
+        self.assertTrue(progress._path_entry_exists(self.path))
+        with self.assertRaises(OSError):
+            progress.read_ideas(self.path)
+
+    def test_dangling_receipt_symlink_is_not_empty_receipts(self):
+        self.path.unlink()
+        self.path.symlink_to(self.root / 'missing-receipts.json')
+        self.assertTrue(progress._path_entry_exists(self.path))
+        with self.assertRaises(OSError):
+            progress.read_receipt_payload(self.path)
+
+    def test_writer_lock_rejects_symlinked_parent_without_touching_target(self):
+        real = self.root / 'writer-real'
+        real.mkdir()
+        alias = self.root / 'writer-alias'
+        alias.symlink_to(real, target_is_directory=True)
+        with self.assertRaises(OSError):
+            with progress.receipt_writer_lock(alias):
+                pass
+        self.assertFalse((real / '.work_receipts.lock').exists())
+
+    def test_writer_lock_rejects_parent_swap_during_descriptor_walk(self):
+        original = self.root / 'writer-swap'
+        original.mkdir()
+        moved = self.root / 'writer-moved'
+        original_open = os.open
+        swapped = [False]
+
+        def swap_before_open(component, flags, *args, **kwargs):
+            if component == original.name and not swapped[0]:
+                swapped[0] = True
+                original.rename(moved)
+                original.symlink_to(moved, target_is_directory=True)
+            return original_open(component, flags, *args, **kwargs)
+
+        with patch.object(progress.os, 'open', side_effect=swap_before_open):
+            with self.assertRaises(OSError):
+                with progress.receipt_writer_lock(original):
+                    pass
+        self.assertTrue(swapped[0])
+        self.assertFalse((moved / '.work_receipts.lock').exists())
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,0 +1,15 @@
+{
+  "schema": "NOX_COMPLETE_EXECUTOR_INSTALLER_LOCAL_QA_V1",
+  "tests_run": 9,
+  "failures": 0,
+  "errors": 0,
+  "passed": true,
+  "scope": "LOCAL_GIT_CAS_CONFIG_PROCESS_CENSUS_AND_IDENTITY_TESTS_NOT_NATIVE_SANDBOX_PROOF",
+  "installer_sha256": "03e470377422e26517e73ed25604c48122446885964fb674d2ba296ea3336abb",
+  "test_source_sha256": "0e7f375eb6662be99931290da02290e05b5c47ea7ccc9f3c362a6c82f3528834",
+  "independent_review": {
+    "agent": "task_inventory",
+    "scope": "bootstrap_source+prepare_config no-loss",
+    "blockers": []
+  }
+}

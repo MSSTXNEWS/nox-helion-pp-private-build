@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_PROJECT_PLANNER_PACKAGE_V1",
+  "contract_sha256": "b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7",
+  "contract_path": "/workspace/scratch/552ada07ed4f/complete_executor/planner/contract_1a03_b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7.json",
+  "source_pins": {
+    "owner_project_model_client.py": "119115603be6dba84121dc2c9c3460482e85fe59f4e5b2598551bcd62ffbdff1",
+    "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+    "owner_project_planner.py": "126c77c1281b7467693063bfe33d17c89eb0d553a1e8ff112ae058994e0a30ba"
+  },
+  "model": {
+    "expected_model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+    "max_tokens": 900,
+    "lock_path": "/root/nox/state/dispatcher/project_model_slot.lock",
+    "source_pins": {
+      "owner_project_model_client.py": "119115603be6dba84121dc2c9c3460482e85fe59f4e5b2598551bcd62ffbdff1",
+      "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+      "owner_project_planner.py": "126c77c1281b7467693063bfe33d17c89eb0d553a1e8ff112ae058994e0a30ba"
+    }
+  },
+  "tests": {
+    "count": 13,
+    "result": "PASS",
+    "scope": "local unit tests, no live model inference"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "schema": "NOX_PROJECT_RUNTIME_SOURCE_PACKAGE_V1",
+  "files": {
+    "owner_subagent_processes.py": {
+      "sha256": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
+      "bytes": 18199,
+      "native_path": "/root/nox/scripts/owner_subagent_processes.py"
+    },
+    "owner_subagent_dispatcher.py": {
+      "sha256": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+      "bytes": 61781,
+      "native_path": "/root/nox/scripts/owner_subagent_dispatcher.py"
+    },
+    "owner_autonomy_pool.py": {
+      "sha256": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+      "bytes": 33076,
+      "native_path": "/root/nox/scripts/owner_autonomy_pool.py"
+    },
+    "owner_project_executor.py": {
+      "sha256": "79a4797dfc06776455f6d530baeabcab5c1cb77f925bac82d2ace740c150d91d",
+      "bytes": 42922,
+      "native_path": "/root/nox/scripts/owner_project_executor.py"
+    },
+    "owner_project_native.py": {
+      "sha256": "d0ff44d4752128c267799202620c34d2503241dad1f7008f8b3539f49efc18b5",
+      "bytes": 25583,
+      "native_path": "/root/nox/scripts/owner_project_native.py"
+    },
+    "owner_project_test_runner.py": {
+      "sha256": "b745dece2bccbf632d26c694d664e6b3c6d780b72a395bab4d845ef389437c0a",
+      "bytes": 11771,
+      "native_path": "/root/nox/scripts/owner_project_test_runner.py"
+    },
+    "owner_subagent_instruction_truth_project.py": {
+      "sha256": "7fc312fccf354d01f69a65b2090fb6eeaa78b72c2ca479d640dab9c6f1f119a6",
+      "bytes": 2888,
+      "native_path": "/root/nox/scripts/owner_subagent_instruction_truth.py"
+    }
+  },
+  "unchanged_dependencies": {
+    "owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+    "owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
+    "owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+    "test_owner_four_queue.py": "4334ec2e2047c34ed7ee5d1f24152a1a2468b07f4bdfc8ebf592d13a64648ac9",
+    "test_owner_normal3_continuity.py": "409411abe7a828d2633cd9c2e4792629a00925b4a6a8dfcead27f80dd3f75641"
+  },
+  "base_native": {
+    "callback": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+    "processes": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
+    "pool": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+    "truth_wrapper": "d03691b84954402558f1e23e1403043eb9c7d115eb57be575524c05502d0529a"
+  },
+  "qa": {
+    "local_suite_passed": 44,
+    "strict_reviewed_plans_validated": 6,
+    "model_bridge_fixture_real_sandbox_passed": true,
+    "native_chroot_verified": false,
+    "native_preflight_required": true,
+    "post_hardening_real_sandbox_smoke_passed": true
+  },
+  "execution_mode": "NATIVE_PROJECT_V1",
+  "handler": "owner_native_project_work",
+  "original_acceptance_added": 0
+}
