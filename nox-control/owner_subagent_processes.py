@@ -241,6 +241,7 @@ class Subagents:
         self._submitted_ids = set()
         self._terminal_ids = set()
         self._pending_events = deque()
+        self._pending_checkpoint_events = deque()
         self._new_channels()
 
     def _new_channels(self):
@@ -592,11 +593,22 @@ class Subagents:
                 'task_count': len(tasks), 'results': outcomes, 'live_onehost_deployed': False,
                 'queue_committed': False, 'model_weights_changed': False}
 
-    def shutdown_and_drain(self):
-        """Stop workers, then validate every queued task result before closing IPC."""
+    def shutdown_and_drain(self, on_validated_result=None):
+        """Stop workers and checkpoint each validated result before closing IPC.
+
+        A callback must persist the exact task-bound RESULT idempotently. If it
+        fails, the result stays queued in memory, IPC remains open, and the
+        caller receives HOLD; retrying the callback must be safe.
+        """
+        if on_validated_result is not None and not callable(on_validated_result):
+            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT_CALLBACK')
         with self._abi_lock:
             if getattr(self, '_shutdown_complete', False):
                 return []
+            if not hasattr(self, '_pending_checkpoint_events'):
+                self._pending_checkpoint_events = deque()
+            if self._pending_checkpoint_events and on_validated_result is None:
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT_REQUIRED')
             for box in self.inboxes.values():
                 try: box.put_nowait(None)
                 except Exception: pass
@@ -610,6 +622,16 @@ class Subagents:
                     process.join(timeout=2)
 
             events = []
+            while self._pending_checkpoint_events:
+                event = self._pending_checkpoint_events.popleft()
+                if on_validated_result is not None:
+                    try:
+                        on_validated_result(event)
+                    except Exception as exc:
+                        self._pending_checkpoint_events.appendleft(event)
+                        raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT') from exc
+                events.append(event)
+
             while True:
                 try:
                     event = self.outbox.get_nowait()
@@ -621,6 +643,12 @@ class Subagents:
                     continue
                 accepted = self._accept_result(event, allow_exited=True)
                 if accepted is not None:
+                    if on_validated_result is not None:
+                        try:
+                            on_validated_result(accepted)
+                        except Exception as exc:
+                            self._pending_checkpoint_events.append(accepted)
+                            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT') from exc
                     events.append(accepted)
                 while self._pending_events:
                     events.append(self._pending_events.popleft())

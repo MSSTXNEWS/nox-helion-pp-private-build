@@ -384,6 +384,7 @@ class TestRealSubagentProcesses(unittest.TestCase):
             pool._submitted_ids = {'native-1'}
             pool._terminal_ids = set()
             pool._pending_events = deque()
+            pool._pending_checkpoint_events = deque()
             pool.inboxes = {'runtime': inbox}
             pool.outbox = outbox
             pool.processes = {'runtime': child}
@@ -396,7 +397,14 @@ class TestRealSubagentProcesses(unittest.TestCase):
                                                'sha256': policy_sha},
                                     'operation': 'runtime', 'claim': claim}}
         pool, child, inbox, outbox = make_pool(True)
-        events = pool.shutdown_and_drain()
+        callback_events = []
+        def checkpoint(event):
+            self.assertTrue(child.joined)
+            self.assertFalse(inbox.closed)
+            self.assertFalse(outbox.closed)
+            callback_events.append(event['id'])
+        events = pool.shutdown_and_drain(on_validated_result=checkpoint)
+        self.assertEqual(callback_events, ['native-1'])
         self.assertTrue(child.joined)
         self.assertEqual(inbox.get_nowait(), None)
         self.assertEqual([row['id'] for row in events], ['native-1'])
