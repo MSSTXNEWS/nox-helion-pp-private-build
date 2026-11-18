@@ -1,0 +1,97 @@
+{
+  "schema": "NOX_CURRENT_RECOVERY_FINAL_NARROW_PEER_V2",
+  "verdict": "PASS_EXACT_SOURCE_AND_FINAL_BUNDLE_ROOT_NATIVE_PENDING",
+  "reviewer": "integrations_completion",
+  "payload": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_install_review_20261118/inputs_current/payload.py",
+    "sha256": "18233bbc4f569c2d20caea6990c42394eaa47715c881fce194f805885e8774ea",
+    "bytes": 59417
+  },
+  "sources": {
+    "installer": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/delivery/native_current_recovery_install.py",
+      "sha256": "5fe28f37a81069c4e0b69d78e0ef9c41e9eade3fb7c4d94b2f8e7e7ef7f293ce",
+      "bytes": 37502
+    },
+    "composer": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/delivery/prepare_current_recovery_install.py",
+      "sha256": "a6f1eac524e026fd424af7fb59a9132f53017d2653111b7e58cb665bc2e44f47",
+      "bytes": 6706
+    },
+    "dispatcher": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/repo/owner_subagent_dispatcher.py",
+      "sha256": "5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5",
+      "bytes": 72630
+    }
+  },
+  "decoded_bytes": 155834,
+  "wrapper_control_flow_ast_unchanged": true,
+  "decoded_exact_three_sources": true,
+  "wrapper_executed": false,
+  "installer_changed_defs_from_previous_review": [
+    "Installer.__init__",
+    "Installer.stop_service",
+    "Installer.prepare",
+    "Installer.install_sources",
+    "Installer.acceptance"
+  ],
+  "installer_added_defs_from_previous_review": [
+    "lifetime_present",
+    "Installer.running_effects",
+    "Installer.zero_pool_proof"
+  ],
+  "supersedes_payload": "565ce80c7e60cb909ddcbfaf53954f9e907b251043922ffafea7a86ab1d87637",
+  "reviewed_current_eligibility": [
+    "Fixed current director and protected proxy/chat/web lifetimes; zero-worker branch requires fresh empty native status, all seven native catalog tasks DONE, and all three previously accepted lifetimes gone.",
+    "State-independent bounded lifetime_present retains T/t/Z as present; only actual absence or different start proves old lifetime gone. Unknown proc read/parse fails closed. Same lifetime check is used by stop_service for director and owned children.",
+    "Source-pinned 9ae0c675 main confirms track is constant wait and startup quarantines running rows as blocked without replay. Only exact non-native inert track rows with well-formed claim and current director or truly absent owner are exempt; unrelated live/stopped owners remain blockers.",
+    "Composer updates only dispatcher/truth/config bindings, preserves seven-row catalog and adds one new genuine recovery health task; no replay of old DONE tasks or direct queue/counter/S03 writes.",
+    "Runtime 5f134 retains only known idle owned pool during exact maintenance EX contention; explicit STOP and unresolved work keep existing close/HOLD semantics.",
+    "Owned inode/body CAS, pre-stop backup+staging, rollback set ownership and release boundary remain covered by previous source review. After unlock, failures stay reconciliation-only without service stop/source rollback or EX reacquisition."
+  ],
+  "meaningful_independent_tests": [
+    {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_install_review_20261118/test_stopped_lifetime_current_pool.py",
+      "result": "PASS",
+      "cases": 1,
+      "seconds": 0.025,
+      "exec_chunk": "5c41fe",
+      "scope": "Real local SIGSTOP child remains present, zero_pool rejects it, wrong start proves old lifetime gone, stopped foreign track owner remains active; exact actual main track binding checked."
+    },
+    {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_review_20261118/test_maintenance_idle_retention.py",
+      "result": "RED_TO_GREEN",
+      "before_exec_chunk": "bd1c85",
+      "after_exec_chunk": "4d98f0",
+      "after_seconds": 0.179,
+      "scope": "Real flock+three local workers: EX retains same idle PIDs with no submit/ensure; explicit STOP while EX held still closes them; queue/S03 bytes preserved."
+    },
+    {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_install_review_20261118/test_release_receipt_uncertainty.py",
+      "result": "PASS_PREVIOUS_REVIEW_UNCHANGED_BOUNDARY",
+      "exec_chunk": "49672b",
+      "seconds": 0.005,
+      "scope": "Receipt ACK loss after unlock/UNKNOWN claim causes no EX reacquisition, stop, rollback, or claim/history loss; no broad rerun."
+    }
+  ],
+  "prior_review": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_install_review_20261118/INDEPENDENT_NATIVE_INSTALL_REVIEW.json",
+    "sha256": "3f50ea09db8e39a4e47fd4c0e5bab761212a9c3008fe1542dc5f2517c13b018a",
+    "bytes": 4395
+  },
+  "maintenance_review": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_review_20261118/INDEPENDENT_MAINTENANCE_RETENTION_REVIEW.json",
+    "sha256": "189996c566c6ffe18db512422c86d8217d40e64d97c678bdd6878dd2888fed85",
+    "bytes": 2399
+  },
+  "acceptance_limits": [
+    "This is exact source/bundle review, not a native execution claim. Root must recheck current source/config/lifetimes and use one coordinated native dispatch.",
+    "Actual private f283 configuration is transformed only from pinned native bytes; no local positive was fabricated.",
+    "Accept only typed accepted=true with final exact new director/three workers/health leaf/S03/readback evidence; COMPLETE marker alone is not acceptance.",
+    "Historical unrelated UNKNOWN/claims/history are preserved, not relabeled completed. No production fault injection."
+  ],
+  "native_calls": 0,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "remaining": "Root publication/readback, reconciliation of latest other runs, one native install and actual receipt acceptance."
+}

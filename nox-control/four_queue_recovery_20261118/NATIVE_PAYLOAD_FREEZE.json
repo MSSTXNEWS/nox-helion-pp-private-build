@@ -29,7 +29,11 @@
     "elapsed_seconds": 0.008
   },
   "native_effects": 0,
-  "peer_review": "PENDING_FINAL_LIFETIME_DELTA",
+  "peer_review": {
+    "status": "PASS",
+    "local_path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_install_review_20261118/FINAL_INDEPENDENT_NATIVE_INSTALL_REVIEW.json",
+    "sha256": "0074ed3ac4cf7be3246499b40e22094816ee341c446c026d44def4c276617a4c"
+  },
   "operator_max_seconds": 900,
   "installer_cooperative_deadline_seconds": 240,
   "mutating_repair_route": "nox-control/owner_resonance_canary_v3_20261117.py",
