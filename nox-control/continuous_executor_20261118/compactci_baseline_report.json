@@ -1,0 +1,124 @@
+{
+  "audit_date_utc": "2026-11-18",
+  "baseline_commit": "0c576e88c7f4ee5ef1c4ff1a8dc438dd5566278a",
+  "cause": {
+    "compatible_current_lineage_subject_found": false,
+    "kind": "CURRENT_INSPECTOR_API_REPLACED_WITH_QUEUE_POOL_INSPECTOR",
+    "missing_api_groups": [
+      "Owner STOP flags, writer-lease non-authorization, supervisor PID and 8081 listener identity",
+      "Maya P0 binary SHA and ELF readback",
+      "Memory/storage metadata inventory and process/GPU identity",
+      "Private receipt projection, Qwen progress metadata, strict native TRL signature parsing"
+    ],
+    "wrong_test_import_found": false
+  },
+  "claims": {
+    "native_install_success_overrides_failure": false,
+    "new_runtime_focused_tests_override_failure": false,
+    "source_only_audit": true,
+    "tests_weakened_or_removed": false,
+    "whole_required_ci_green": false,
+    "workflow_or_test_or_inspector_changed_for_audit": false
+  },
+  "inspector": {
+    "byte_identical_to_baseline": true,
+    "bytes": 22147,
+    "lines": 417,
+    "repository_path": "nox-control/owner_native_inspect.py",
+    "sha256": "6b9604ef3d7e4d2123a1f7cceebf452487c5b4b8e5d128a030d517854cfd4525"
+  },
+  "legacy_control": {
+    "current_test_files_unchanged": true,
+    "exit_code": 0,
+    "inspector_repository_path": "nox-control/owner_native_inspect.py",
+    "inspector_sha256": "70f1d29a5c1512d9905c4a98bb2dc0e1d5081214376b855e9801c0699a5a0861",
+    "passed_methods": 36,
+    "repository_commit": "9b06eef5968ddbbad48f43e5416528565f221640",
+    "scope": "DIAGNOSTIC_ONLY_NOT_A_CI_FIX",
+    "test_methods": 36,
+    "test_subject_rerouted_in_repository": false
+  },
+  "required_compatibility_review": {
+    "approximate_source_lines": 544,
+    "implemented": false,
+    "scope": "RESTORE_MISSING_READ_ONLY_APIS_WITHOUT_REPLACING_CURRENT_QUEUE_POOL_INSPECTION",
+    "transitive_module_globals": 27
+  },
+  "schema": "NOX_NATIVE_LIFELINE_CI_BASELINE_STATUS_V1",
+  "status": "PREEXISTING_REQUIRED_CI_FAILURE_NOT_FIXED",
+  "verification": {
+    "error_entries": 40,
+    "errored_methods": 36,
+    "passing_methods": 101,
+    "scope": "LOCAL_REQUIRED_WORKFLOW_TEST_COMMANDS_RUN_INDEPENDENTLY",
+    "suites": [
+      {
+        "error_entries": 0,
+        "exit_code": 0,
+        "passed": true,
+        "test_file": "nox-control/test_nox_native_lifeline.py",
+        "test_methods": 30
+      },
+      {
+        "error_entries": 0,
+        "exit_code": 0,
+        "passed": true,
+        "test_file": "nox-control/test_nox_agent_status.py",
+        "test_methods": 4
+      },
+      {
+        "error_entries": 0,
+        "exit_code": 0,
+        "passed": true,
+        "test_file": "nox-control/test_nox_neuro_evolution_ingress.py",
+        "test_methods": 6
+      },
+      {
+        "error_entries": 0,
+        "exit_code": 0,
+        "passed": true,
+        "test_file": "nox-control/test_owner_native_lifeline.py",
+        "test_methods": 18
+      },
+      {
+        "error_entries": 0,
+        "exit_code": 0,
+        "passed": true,
+        "test_file": "nox-control/test_owner_native_audit_mount_inventory.py",
+        "test_methods": 16
+      },
+      {
+        "error_entries": 18,
+        "exit_code": 1,
+        "passed": false,
+        "test_file": "nox-control/test_owner_native_inspect_safety.py",
+        "test_methods": 18
+      },
+      {
+        "error_entries": 8,
+        "exit_code": 1,
+        "passed": false,
+        "test_file": "nox-control/test_owner_native_inspect_inventory.py",
+        "test_methods": 8
+      },
+      {
+        "error_entries": 14,
+        "exit_code": 1,
+        "passed": false,
+        "test_file": "nox-control/test_owner_native_inspect_receipt_privacy.py",
+        "test_methods": 10
+      },
+      {
+        "error_entries": 0,
+        "exit_code": 0,
+        "passed": true,
+        "test_file": "nox-control/test_owner_dispatcher_mentor.py",
+        "test_methods": 27
+      }
+    ],
+    "syntax_errors": [],
+    "test_methods": 137
+  },
+  "workflow": ".github/workflows/nox-native-lifeline-ci.yml",
+  "workflow_sha256": "281871c27da43816068746dfd50b7d1540e8c0b136d90aab52b8c05cfa7a2194"
+}

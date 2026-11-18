@@ -1,0 +1,1043 @@
+{
+  "inspection_run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44345381616",
+  "instructions_version": "0.0.6",
+  "original_acceptance_added": 0,
+  "row": {
+    "id": "3A01.project.c02_memory_capacity.20261118",
+    "native_queue_sequence": 25,
+    "note": "{'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'verified': True, 'scope': 'SOURCE_PATCH_TESTED', 'receipt': {'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'phase': 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED', 'task_id': '3A01.project.c02_memory_capacity.20261118', 'parent_task_id': '3A01', 'queue_id': 'Q2_MEMORY_KNOWLEDGE', 'job_id': 'nox-project-a4fd720ef33ad332e23ab255', 'claim': {'worker': 'nox-agent-01', 'pid': 49091, 'nonce': '724c94a7150fa8f9415e0a28', 'at': '2026-11-18 19:02:31 Europe/Moscow",
+    "original_task_accepted": false,
+    "owner_claim": {
+      "at": "2026-11-18 19:02:31 Europe/Moscow (UTC+3)",
+      "nonce": "724c94a7150fa8f9415e0a28",
+      "pid": 49091,
+      "worker": "nox-agent-01"
+    },
+    "parent_task_id": "3A01",
+    "planner_receipt": {
+      "contract_sha256": "4a8f20c371f3211c2351294bbe106a69a53f7a31e7051a039de9b227bcfd7f98",
+      "finished_at": 1795018361.145532,
+      "original_task_accepted": false,
+      "reason": "Same action repeated four times against unchanged source.",
+      "schema": "NOX_PROJECT_PLANNER_RECEIPT_V1",
+      "started_at": 1795017752.2640302,
+      "state": "PLANNER_REPEATED_ACTION_NO_PROGRESS",
+      "task_id": "3A01.project.c02_memory_capacity.20261118",
+      "trace": [
+        {
+          "action": "read",
+          "count": 140,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 0,
+            "duration_ms": 25336,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 1317,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "036c24d24fd453881d8a58a6670cbb6584eaa15f20fbf9f3410da691b820e6a6",
+            "response_sha256": "fc2e274965a0f876bf42c5f8693622740a34a76fb4f147d2247641b1dd893e00",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 1,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "0bed50539733160256d8a842d03a607d7a005e58e28f271a2749734cc3afad32",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 1,
+          "turn": 1
+        },
+        {
+          "action": "read",
+          "count": 180,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 1,
+            "duration_ms": 63880,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 2657,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "645c6420c2ffdb3bedf5578cfb4464e3fff378fc4086e3aa649147f97943e3b7",
+            "response_sha256": "544bdc515953f8e53dec6bf61086166d6218cff7a5a8b705fe563c1bf53e46d4",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 1,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "c8788cfab54f7d11335c6ba533f83a608a3df341c1fe6547d01d921733117399",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 140,
+          "turn": 2
+        },
+        {
+          "action": "read",
+          "count": 120,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 2,
+            "duration_ms": 68506,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 2873,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "e9ba69f234cd4bf4a1c0f9816e0a2cf2935ccdca643eff99cd1d5d1c7b8af12e",
+            "response_sha256": "ba88aa35944343ccd16c045b6b0346b4d5feeccc62ee5e13ebf623bdb1ed397a",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 2,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "fcfb17d86d5db5f64dedcb732e2970af77ea4189dd97bc858976bf63d82f1113",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 230,
+          "turn": 3
+        },
+        {
+          "action": "read",
+          "count": 80,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 3,
+            "duration_ms": 59472,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 2557,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "46fb420b14f8b8333b6e4845e8e9b8633c131cfd562beee5fb1d090c260c1b66",
+            "response_sha256": "bbaf44eb1217d64efdd2bf541b6178aae18c2c03a999003d3cb2d6eb7c3ac2a8",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 2,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "8bcc46a501583cd92edb887ec1c8b5dd68b3fe5b5424b6e44165a6382ccb3954",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 290,
+          "turn": 4
+        },
+        {
+          "action": "read",
+          "count": 60,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 3,
+            "duration_ms": 70595,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 3004,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "15f504d17b4270cac29bff3daccd247fe7ecff94fd6eaaf01d60f32f95b6c08e",
+            "response_sha256": "2caffb67aa77359b590274a26bf31f012c4659dc97312843d20239fc664212c3",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 2,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "bf48813da92dfd1d2c5bcfa075e84b0558bf98d82274d51d19755bf5b5dbcaee",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 230,
+          "turn": 5
+        },
+        {
+          "action": "read",
+          "count": 80,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 4,
+            "duration_ms": 58466,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 2584,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "2c1814ec32f3b166a76a9f6cef423902caf9ea0450f10482e9190fe4e27171b5",
+            "response_sha256": "5d1388d10c63b93d1bb7c06445cb9003e77b90dab18313298e5860e586ea02a4",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 2,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "8bcc46a501583cd92edb887ec1c8b5dd68b3fe5b5424b6e44165a6382ccb3954",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 290,
+          "turn": 6
+        },
+        {
+          "action": "read",
+          "count": 60,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 5,
+            "duration_ms": 70750,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 3004,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "7e76819d9cc6426dbf29169bf00d45ed20883a5f4b7f854b193fb43d0bfb1613",
+            "response_sha256": "55630098b5e14b0462068b51353b3c1f8ab02e6c629f9fad12b1ce5fd1dbc608",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 2,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "bf48813da92dfd1d2c5bcfa075e84b0558bf98d82274d51d19755bf5b5dbcaee",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 230,
+          "turn": 7
+        },
+        {
+          "action": "read",
+          "count": 80,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 6,
+            "duration_ms": 58326,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 2584,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "1299d9603709fffaa2dba70509d59b17d5b86cab6eee12dbc9e8d7b1f92856de",
+            "response_sha256": "c696dd38a6a41755e62a1072975e22c6cd40e3a722cbaf7b13734fb83dd05162",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 2,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "8bcc46a501583cd92edb887ec1c8b5dd68b3fe5b5424b6e44165a6382ccb3954",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 290,
+          "turn": 8
+        },
+        {
+          "action": "read",
+          "count": 60,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 7,
+            "duration_ms": 70473,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 3004,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "55a84bd08f4bb77928d4026a1cd6ce841c0f4e472b119c7281b6afa851b4c135",
+            "response_sha256": "91fc241a1141a477eb5aae554f62d4fc095d569936eb4dc6ad4dd7b37441dcf7",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 2,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "bf48813da92dfd1d2c5bcfa075e84b0558bf98d82274d51d19755bf5b5dbcaee",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 230,
+          "turn": 9
+        },
+        {
+          "action": "read",
+          "count": 80,
+          "model": {
+            "completion_budget": 900,
+            "context_compactions": 8,
+            "duration_ms": 58262,
+            "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+            "finish_reason": "stop",
+            "input_tokens_measured": "[REDACTED]",
+            "max_output_tokens": "[REDACTED]",
+            "measured_prompt_size": 2584,
+            "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+            "model_weights_identity_verified": false,
+            "n_ctx": 4096,
+            "request_sha256": "2e4eaeffda9397ffb40df26c308354d077962b325ab7319fe5b319ce31e7bfb2",
+            "response_sha256": "41ec5cc562402a1db00f5006192da0ae54e7523945323a5d933668cf52ae17d8",
+            "slot_policy": "BOUNDED_FIFO_THREE_NATIVE_WORKERS",
+            "slot_wait_ms": 2,
+            "usage": {
+              "completion_tokens": "[REDACTED]",
+              "prompt_tokens": "[REDACTED]",
+              "total_tokens": "[REDACTED]"
+            }
+          },
+          "model_response_sha256": "8bcc46a501583cd92edb887ec1c8b5dd68b3fe5b5424b6e44165a6382ccb3954",
+          "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+          "start_line": 290,
+          "turn": 10
+        }
+      ]
+    },
+    "project_evidence": {
+      "acceptance_scope": "SOURCE_PATCH_TESTED",
+      "claim": "724c94a7150fa8f9415e0a28",
+      "integration_verified": null,
+      "plan_sha256": null,
+      "postimages": null,
+      "project_source_changed": false,
+      "reason": "PLANNER_REPEATED_ACTION_NO_PROGRESS",
+      "root_id": "NOX_PROJECT_SOURCE",
+      "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+      "state": "BLOCKED_PLANNER",
+      "task_id": "3A01.project.c02_memory_capacity.20261118",
+      "tests_sha256": null,
+      "trusted_tests_unchanged": null,
+      "worker": {
+        "pid": 49289,
+        "ppid": 49091,
+        "process_starttime": 181047780
+      }
+    },
+    "project_evidence_sha_matches": true,
+    "queue_id": "Q2_MEMORY_KNOWLEDGE",
+    "receipt": {
+      "finished_at": 1795018361.3043807,
+      "job_id": "nox-project-a4fd720ef33ad332e23ab255",
+      "live_service_deployed": false,
+      "original_task_accepted": false,
+      "parent_task_id": "3A01",
+      "phase": "PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED",
+      "plan_sha256": null,
+      "project_source_changed": false,
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+      "scope": "SOURCE_PATCH_TESTED",
+      "source_sha256": "84c08283fc3e0e0714704b8bf540eaacb979ec6618f8c1920eb5d75062561c6b",
+      "task_id": "3A01.project.c02_memory_capacity.20261118"
+    },
+    "receipt_claim_matches": true,
+    "receipt_sha_matches": true,
+    "receipt_source": {
+      "current_callback_sha256": "84c08283fc3e0e0714704b8bf540eaacb979ec6618f8c1920eb5d75062561c6b",
+      "matches_config_callback_pin": true,
+      "matches_durable_task_source": true,
+      "scope": "CURRENT",
+      "source_authorized": true,
+      "source_sha256": "84c08283fc3e0e0714704b8bf540eaacb979ec6618f8c1920eb5d75062561c6b"
+    },
+    "result": {
+      "receipt_sha256": "399e3dc5f153ac8832dfb41d74fead6b30f76f2be5257820af39a6e86dea7599",
+      "scope": "SOURCE_PATCH_TESTED",
+      "verified": true
+    },
+    "retries": 1,
+    "s03": {
+      "receipt_sha256": "399e3dc5f153ac8832dfb41d74fead6b30f76f2be5257820af39a6e86dea7599",
+      "s03_item_id": "S03-1460ca0811874a9c",
+      "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH",
+      "verified": true
+    },
+    "status": "blocked",
+    "tests": {
+      "completed": null,
+      "elapsed_ms": null,
+      "errors": null,
+      "failures": null,
+      "log_bytes": null,
+      "log_sha256": null,
+      "modules": null,
+      "output_tail": "",
+      "passed": null,
+      "sandbox": null,
+      "schema": null,
+      "skipped": null,
+      "tests_run": null
+    },
+    "worker_event": {
+      "elapsed_ms": 608882,
+      "id": "3A01.project.c02_memory_capacity.20261118",
+      "kind": "RESULT",
+      "pid": 49289,
+      "reason": "Same action repeated four times against unchanged source.",
+      "role": "runtime",
+      "state": "PLANNER_REPEATED_ACTION_NO_PROGRESS"
+    }
+  },
+  "schema": "NOX_C02_FAILED_MODEL_ATTEMPT_V1",
+  "source_census": {
+    "allowed_file_count": 33,
+    "atomic_snapshot": false,
+    "bootstrap": {
+      "file_count": 33,
+      "manifest_digest_matches_marker": true,
+      "manifest_sha256": "039e9fb5a50a3321e07707bc11da85b217360cfb6a0140eae56941d49f868c21",
+      "recorded_manifest_sha256": "039e9fb5a50a3321e07707bc11da85b217360cfb6a0140eae56941d49f868c21",
+      "scope": "RECORDED_INSTALL_BASELINE_NOT_CURRENT_ACCEPTANCE",
+      "sha256": "4140c8476a52d9d5e4f0f79f5ed3130acd8c3068b93d7ea0475c90771ceb7767"
+    },
+    "bootstrap_unchanged_during_census": true,
+    "changed_between_reads": [],
+    "complete_allowed_files_read": true,
+    "config_sha256": "84b0f78f6d7042b58f6ef003b5bd1ba3423e5244f635dded87b7affd617a3869",
+    "config_unchanged_during_census": true,
+    "count": 33,
+    "current_cas_recheck_required": true,
+    "file_comparisons": [
+      {
+        "bootstrap_sha256": "bb2c543979ad58801d97290e9edf1fe035435c8e9e5f0ebaced4abf3ecbf9053",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "forge_split_guard.py",
+        "sha256": "cfecaba18466b6a4c6cab6745b1a718bd95b7b2ee87fdb02d26df7e51b630838",
+        "size": 11234,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": true,
+            "receipt_sha256": "cc3fdacf5c0e236a82839f9ff86f8b6106910269b60b3b9175cf0f33d2c879ad",
+            "sha256": "cfecaba18466b6a4c6cab6745b1a718bd95b7b2ee87fdb02d26df7e51b630838",
+            "task_id": "4A02.project.bilingual_task_matrix.slot_retry.20261118"
+          },
+          {
+            "matches_current": false,
+            "receipt_sha256": "27d01a1f58dde560c98f139707a6e683ca5df5bb4b5f1ad6504d5b8ba1bd3fa1",
+            "sha256": "06940cb13bd568d4cfaa893aab9e43c6d0b03010163cba13f2f5bf5ea144db00",
+            "task_id": "4A02.project.forge_split_coverage.20261118"
+          }
+        ]
+      },
+      {
+        "bootstrap_sha256": "4d1274059d034bb9b96a445e26601d33da54ea309c8a5233df6512a2d546020f",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "merge_web_source.py",
+        "sha256": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81",
+        "size": 2083,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": true,
+            "receipt_sha256": "14a4568e19be8a14f25ba27d65e00acdb7664f5ebaddc88ab3177cf793aaa480",
+            "sha256": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81",
+            "task_id": "0V14-14.project.overlay_paths.20261118"
+          }
+        ]
+      },
+      {
+        "bootstrap_sha256": "d9ec6a8250a167d774ba5090219cfaac3ad2995ddd88228d1abe5514fc9dd791",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "native_v29_full_bridge.py",
+        "sha256": "f5c8eb6b42e71efa38745bc6f729a989b4a199999d7c3b9aa45cebbde36f851a",
+        "size": 51947,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": true,
+            "receipt_sha256": "1d9709ec2c7fa36d1b04bf3420e29af3f92684b90c30295221f440ec214d815e",
+            "sha256": "f5c8eb6b42e71efa38745bc6f729a989b4a199999d7c3b9aa45cebbde36f851a",
+            "task_id": "1A02.project.exchange_receipt_order.reviewed_followup.20261118"
+          },
+          {
+            "matches_current": false,
+            "receipt_sha256": "333f591ee568a084f2754e3a41203cf8b3de585ed5ad6f734764aa0359aadf92",
+            "sha256": "4329f7389b24cfbb1fbb47c91b43eb7407bf18c95d15064fc7ea8166cde0a821",
+            "task_id": "1A03.project.cursor_admission.proc_retry.20261118"
+          }
+        ]
+      },
+      {
+        "bootstrap_sha256": "c676fdda4fa47d316eb10572c5718868a01408d450a5a0d91a7133ff20507799",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "nox_runpod/teacher_mesh/v38/durable_runtime.py",
+        "sha256": "f20917432ddfbedd2287d6894a94ed0fdbe1309d88c64490be47d1bdcedca006",
+        "size": 18876,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": true,
+            "receipt_sha256": "51e4581aa76528f832c5c27471d119eccff859f30f2eefa027db7c0416b82c3d",
+            "sha256": "f20917432ddfbedd2287d6894a94ed0fdbe1309d88c64490be47d1bdcedca006",
+            "task_id": "3A03.project.cache_limit_contract.20261118"
+          },
+          {
+            "matches_current": false,
+            "receipt_sha256": "4c76bcd9bda6ab8f104d7d79ad52ef4cc154d3a67f8f838e746cd26a79b173e9",
+            "sha256": "f7b69405224c63868b767792d68c3b0d73e2561b37216e2e855ca34ec93d5f2f",
+            "task_id": "3A03.project.cache_revision_lock.20261118"
+          }
+        ]
+      },
+      {
+        "bootstrap_sha256": "8657ad367e6dd25b48ca8d6d7c4a947c0e1b0d4b979d63fbdaaf2a8e9ba5e74c",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "nox_runpod/teacher_mesh/v38/synaptic_brain.py",
+        "sha256": "8657ad367e6dd25b48ca8d6d7c4a947c0e1b0d4b979d63fbdaaf2a8e9ba5e74c",
+        "size": 22851,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "006fc038f43682fa36d2310f2343c83a42fd28897e7debfbe0d63536ee069729",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "owner_chat_request_ledger.py",
+        "sha256": "a71051c085f8bfdbeda93f3f4c16501444ca35942ac4ca7f3a46d7bd16acfbbc",
+        "size": 14419,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": true,
+            "receipt_sha256": "1d9709ec2c7fa36d1b04bf3420e29af3f92684b90c30295221f440ec214d815e",
+            "sha256": "a71051c085f8bfdbeda93f3f4c16501444ca35942ac4ca7f3a46d7bd16acfbbc",
+            "task_id": "1A02.project.exchange_receipt_order.reviewed_followup.20261118"
+          },
+          {
+            "matches_current": false,
+            "receipt_sha256": "333f591ee568a084f2754e3a41203cf8b3de585ed5ad6f734764aa0359aadf92",
+            "sha256": "5201af0115e1ead68d3369794e33bbc97d7b7b2f00762c5c2ecfdaa7dda45926",
+            "task_id": "1A03.project.cursor_admission.proc_retry.20261118"
+          }
+        ]
+      },
+      {
+        "bootstrap_sha256": "d35064a3fc5707dfc174852fc4de5030ee6ea2276fd0a4d06850ffff71ee0c64",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "owner_dispatcher_mentor.py",
+        "sha256": "65553f8923a6871f19fc67fb38575897260ab0e74f66bd6ed5e267c5cc8043f8",
+        "size": 57049,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": false,
+            "receipt_sha256": "8bcf4efea429a04146246cedd08ebc589c2e6c464e7a94435527d0cfb382b6ac",
+            "sha256": "b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6",
+            "task_id": "3B05.project.strict_skill_json.layout_retry.20261118"
+          },
+          {
+            "matches_current": true,
+            "receipt_sha256": "fd2c5ce088364e2f8f2a8a854149a764dcde383380129b3718fb7cbcea802dd3",
+            "sha256": "65553f8923a6871f19fc67fb38575897260ab0e74f66bd6ed5e267c5cc8043f8",
+            "task_id": "6V14-12.project.readonly_transient_retry.slot_retry.20261118"
+          }
+        ]
+      },
+      {
+        "bootstrap_sha256": "66a6617d6f582876dbdcb9791273c5eca724e3633a65bf1c93ecb4b2f2b14947",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "s03_existing_readback.py",
+        "sha256": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5",
+        "size": 2805,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": true,
+            "receipt_sha256": "2f3f9bf6308488b30bdc18c68550c061c6158179ef60e47843cac95910685064",
+            "sha256": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5",
+            "task_id": "3A02.project.readback_revoke.layout_retry.20261118"
+          }
+        ]
+      },
+      {
+        "bootstrap_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "source_tests/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "source_tests/test_cache_race.py",
+        "sha256": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582",
+        "size": 4231,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "dc19594b45a7fae32bf9bdde665620c2eec1a29bb02ba03758baa53a8158c509",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "source_tests/test_owner_chat_request_scope.py",
+        "sha256": "dc19594b45a7fae32bf9bdde665620c2eec1a29bb02ba03758baa53a8158c509",
+        "size": 3503,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "b4ece67144248808a12c7c84450d61a919984ad756f6f15b46e0686c6d65ff96",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "source_tests/test_request_ledger.py",
+        "sha256": "b4ece67144248808a12c7c84450d61a919984ad756f6f15b46e0686c6d65ff96",
+        "size": 18304,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_3b05_skill_ancestor_swap.py",
+        "sha256": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd",
+        "size": 4045,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_forge_split_guard.py",
+        "sha256": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080",
+        "size": 11822,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_1a03_cursor_admission.py",
+        "sha256": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+        "size": 8865,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "a88d35436d6ae9b1b3a368d7fd9e79ef907635067a92f53e1037486ccb3d5ab9",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_c02_existing_cognition.py",
+        "sha256": "a88d35436d6ae9b1b3a368d7fd9e79ef907635067a92f53e1037486ccb3d5ab9",
+        "size": 10217,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "02fdfef831c66c114d17840b3a212f5e6604f6a0d3c03acb9a9c0de7878d4e64",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_c02_optional_starvation.py",
+        "sha256": "02fdfef831c66c114d17840b3a212f5e6604f6a0d3c03acb9a9c0de7878d4e64",
+        "size": 7389,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_exchange_receipt_order.py",
+        "sha256": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+        "size": 6764,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_existing_cache_race.py",
+        "sha256": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+        "size": 683,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "7f44a17db729ac2a4e74c6581e47db538880bc83fc386a02a753c6dc89434de1",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_forge_language_task_coverage.py",
+        "sha256": "7f44a17db729ac2a4e74c6581e47db538880bc83fc386a02a753c6dc89434de1",
+        "size": 1370,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_forge_split_coverage.py",
+        "sha256": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+        "size": 1388,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_merge_overlay_paths.py",
+        "sha256": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667",
+        "size": 3774,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "98075e700bac561c814155a60a6448d2b78f0c52ccad22f6b3e62f311fd4479f",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_readonly_retry_backoff.py",
+        "sha256": "98075e700bac561c814155a60a6448d2b78f0c52ccad22f6b3e62f311fd4479f",
+        "size": 4534,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_s03_readback_revoke.py",
+        "sha256": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+        "size": 2962,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_skill_evidence_strict_json.py",
+        "sha256": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+        "size": 3096,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_warm_cache_final_revision.py",
+        "sha256": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+        "size": 2620,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "ab0a21c9f2399444afadc1621e9de074d6bbb879103fb11d3f77f77deffcaeba",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_warm_cache_limit_contract.py",
+        "sha256": "ab0a21c9f2399444afadc1621e9de074d6bbb879103fb11d3f77f77deffcaeba",
+        "size": 3112,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_nox_work_progress_time_order.py",
+        "sha256": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+        "size": 2070,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_s03_readback_contract.py",
+        "sha256": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391",
+        "size": 3198,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_work_progress_changes.py",
+        "sha256": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+        "size": 3981,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd",
+        "comparison": "MATCHES_BOOTSTRAP_BASELINE",
+        "matches_bootstrap": true,
+        "mode": 420,
+        "path": "test_work_progress_durable_write.py",
+        "sha256": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd",
+        "size": 6106,
+        "verified_receipt_postimages": []
+      },
+      {
+        "bootstrap_sha256": "8d2070c2f0819e7d1c2b5cf2bdb5acb0e9a7f1c027a180ba0528e89ead3f894d",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "test_work_progress_pinned_read.py",
+        "sha256": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e",
+        "size": 8761,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": true,
+            "receipt_sha256": "bf37f57979635e69289d69a648e19d2f89c0a341827c44d74b442caad463c66f",
+            "sha256": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e",
+            "task_id": "6V14-04.project.receipt_time_order.fd_retry.20261118"
+          }
+        ]
+      },
+      {
+        "bootstrap_sha256": "60e28219f670a8449a56f6f9ab8641624c424d01447c9d156b1ecf5ce914d1fa",
+        "comparison": "MATCHES_VERIFIED_RECEIPT_POSTIMAGE",
+        "matches_bootstrap": false,
+        "mode": 420,
+        "path": "work_progress.py",
+        "sha256": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d",
+        "size": 23548,
+        "verified_receipt_postimages": [
+          {
+            "matches_current": true,
+            "receipt_sha256": "bf37f57979635e69289d69a648e19d2f89c0a341827c44d74b442caad463c66f",
+            "sha256": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d",
+            "task_id": "6V14-04.project.receipt_time_order.fd_retry.20261118"
+          }
+        ]
+      }
+    ],
+    "files": {
+      "forge_split_guard.py": {
+        "mode": 420,
+        "sha256": "cfecaba18466b6a4c6cab6745b1a718bd95b7b2ee87fdb02d26df7e51b630838",
+        "size": 11234
+      },
+      "merge_web_source.py": {
+        "mode": 420,
+        "sha256": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81",
+        "size": 2083
+      },
+      "native_v29_full_bridge.py": {
+        "mode": 420,
+        "sha256": "f5c8eb6b42e71efa38745bc6f729a989b4a199999d7c3b9aa45cebbde36f851a",
+        "size": 51947
+      },
+      "nox_runpod/teacher_mesh/v38/durable_runtime.py": {
+        "mode": 420,
+        "sha256": "f20917432ddfbedd2287d6894a94ed0fdbe1309d88c64490be47d1bdcedca006",
+        "size": 18876
+      },
+      "nox_runpod/teacher_mesh/v38/synaptic_brain.py": {
+        "mode": 420,
+        "sha256": "8657ad367e6dd25b48ca8d6d7c4a947c0e1b0d4b979d63fbdaaf2a8e9ba5e74c",
+        "size": 22851
+      },
+      "owner_chat_request_ledger.py": {
+        "mode": 420,
+        "sha256": "a71051c085f8bfdbeda93f3f4c16501444ca35942ac4ca7f3a46d7bd16acfbbc",
+        "size": 14419
+      },
+      "owner_dispatcher_mentor.py": {
+        "mode": 420,
+        "sha256": "65553f8923a6871f19fc67fb38575897260ab0e74f66bd6ed5e267c5cc8043f8",
+        "size": 57049
+      },
+      "s03_existing_readback.py": {
+        "mode": 420,
+        "sha256": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5",
+        "size": 2805
+      },
+      "source_tests/__init__.py": {
+        "mode": 420,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0
+      },
+      "source_tests/test_cache_race.py": {
+        "mode": 420,
+        "sha256": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582",
+        "size": 4231
+      },
+      "source_tests/test_owner_chat_request_scope.py": {
+        "mode": 420,
+        "sha256": "dc19594b45a7fae32bf9bdde665620c2eec1a29bb02ba03758baa53a8158c509",
+        "size": 3503
+      },
+      "source_tests/test_request_ledger.py": {
+        "mode": 420,
+        "sha256": "b4ece67144248808a12c7c84450d61a919984ad756f6f15b46e0686c6d65ff96",
+        "size": 18304
+      },
+      "test_3b05_skill_ancestor_swap.py": {
+        "mode": 420,
+        "sha256": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd",
+        "size": 4045
+      },
+      "test_forge_split_guard.py": {
+        "mode": 420,
+        "sha256": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080",
+        "size": 11822
+      },
+      "test_nox_1a03_cursor_admission.py": {
+        "mode": 420,
+        "sha256": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+        "size": 8865
+      },
+      "test_nox_c02_existing_cognition.py": {
+        "mode": 420,
+        "sha256": "a88d35436d6ae9b1b3a368d7fd9e79ef907635067a92f53e1037486ccb3d5ab9",
+        "size": 10217
+      },
+      "test_nox_c02_optional_starvation.py": {
+        "mode": 420,
+        "sha256": "02fdfef831c66c114d17840b3a212f5e6604f6a0d3c03acb9a9c0de7878d4e64",
+        "size": 7389
+      },
+      "test_nox_exchange_receipt_order.py": {
+        "mode": 420,
+        "sha256": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+        "size": 6764
+      },
+      "test_nox_existing_cache_race.py": {
+        "mode": 420,
+        "sha256": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+        "size": 683
+      },
+      "test_nox_forge_language_task_coverage.py": {
+        "mode": 420,
+        "sha256": "7f44a17db729ac2a4e74c6581e47db538880bc83fc386a02a753c6dc89434de1",
+        "size": 1370
+      },
+      "test_nox_forge_split_coverage.py": {
+        "mode": 420,
+        "sha256": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+        "size": 1388
+      },
+      "test_nox_merge_overlay_paths.py": {
+        "mode": 420,
+        "sha256": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667",
+        "size": 3774
+      },
+      "test_nox_readonly_retry_backoff.py": {
+        "mode": 420,
+        "sha256": "98075e700bac561c814155a60a6448d2b78f0c52ccad22f6b3e62f311fd4479f",
+        "size": 4534
+      },
+      "test_nox_s03_readback_revoke.py": {
+        "mode": 420,
+        "sha256": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+        "size": 2962
+      },
+      "test_nox_skill_evidence_strict_json.py": {
+        "mode": 420,
+        "sha256": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+        "size": 3096
+      },
+      "test_nox_warm_cache_final_revision.py": {
+        "mode": 420,
+        "sha256": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+        "size": 2620
+      },
+      "test_nox_warm_cache_limit_contract.py": {
+        "mode": 420,
+        "sha256": "ab0a21c9f2399444afadc1621e9de074d6bbb879103fb11d3f77f77deffcaeba",
+        "size": 3112
+      },
+      "test_nox_work_progress_time_order.py": {
+        "mode": 420,
+        "sha256": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+        "size": 2070
+      },
+      "test_s03_readback_contract.py": {
+        "mode": 420,
+        "sha256": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391",
+        "size": 3198
+      },
+      "test_work_progress_changes.py": {
+        "mode": 420,
+        "sha256": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+        "size": 3981
+      },
+      "test_work_progress_durable_write.py": {
+        "mode": 420,
+        "sha256": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd",
+        "size": 6106
+      },
+      "test_work_progress_pinned_read.py": {
+        "mode": 420,
+        "sha256": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e",
+        "size": 8761
+      },
+      "work_progress.py": {
+        "mode": 420,
+        "sha256": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d",
+        "size": 23548
+      }
+    },
+    "files_sha256": "cd8458a5f28420e3281c108e7fd27804aea02c726c10f8793e3e10588a095757",
+    "finished_at": 1795018658.5038514,
+    "live_deployment_verified": false,
+    "original_task_accepted": false,
+    "read_errors": [],
+    "receipt_comparison_config_matches": true,
+    "receipt_queue_snapshot_sha256": "5766b2f516b4492f9fa8f03612b826057866a3f43ed4f3900efda581283677e9",
+    "repository_commit_verified": false,
+    "root": "/root/nox/projects/owner_executor/source_workspace",
+    "scope": "CONFIG_ALLOWED_FILES_ONLY_NOT_DIRECTORY_INVENTORY",
+    "source_payloads_exported": false,
+    "started_at": 1795018658.4978309,
+    "state": "CENSUS_OBSERVED",
+    "total_bytes": 327607,
+    "two_reads_match": true,
+    "unattributed_changed_paths": []
+  },
+  "source_sha": "3f9453a9b35f4a30b841077e4b668f5ad9126b54"
+}

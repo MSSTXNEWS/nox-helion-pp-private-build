@@ -1,0 +1,11 @@
+{
+  "native_admitted": false,
+  "payload_path": "nox-control/c02_memory_progress_20261118/reserve/blobs/b504248ac1ae4a09338236fd7ad2402ca43cd561e2cc801f127ce221eb8cf44a",
+  "plan_path": "nox-control/c02_memory_progress_20261118/reserve/plans/5d05ba50d058981ce8baeef6ba05a70a7d718709a84a4224a8adccfbf90df268.json",
+  "reason": "Release the exact acquired credits on unexpected submit exceptions, re-raise the original exception; preserve RuntimeError unavailable behavior. Callback registration is outside the submission exception handler to avoid catching completion callbacks as submission failures.",
+  "reviewed_payload_sha256": "b504248ac1ae4a09338236fd7ad2402ca43cd561e2cc801f127ce221eb8cf44a",
+  "reviewed_plan_sha256": "5d05ba50d058981ce8baeef6ba05a70a7d718709a84a4224a8adccfbf90df268",
+  "schema": "NOX_C02_REVIEWED_RECOVERY_REVISION_V1",
+  "supersedes_reserve_plan_sha256": "76aba928bb5e6598e60c47f8f5ee6abb5653ab92fd63eacf25319aeebf4c3acb",
+  "trusted_tests_changed": false
+}
