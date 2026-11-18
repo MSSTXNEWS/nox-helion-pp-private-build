@@ -230,17 +230,29 @@ def queue_capabilities():
     disk=os.statvfs(ROOT);emit('CAP_DISK',{'path':str(ROOT),'available_bytes':disk.f_bavail*disk.f_frsize})
 
 DEPENDENCY_SCRIPT = r'''
-import hashlib, importlib.metadata as md, importlib.util, json, os, pathlib, re, stat, sys, sysconfig
-NAMES=('fastapi','starlette','pydantic','pydantic-core','annotated-types','annotated-doc','typing-extensions','typing-inspection','anyio','sniffio','idna','httpx','httpcore','h11','certifi','exceptiongroup','packaging')
+import hashlib, importlib.metadata as md, importlib.machinery, importlib.util, json, os, pathlib, re, stat, sys, sysconfig
+from packaging.requirements import Requirement
+NAMES=['fastapi','httpx','packaging']
 MODULES=('fastapi','httpx','starlette','pydantic','pydantic_core','anyio','httpcore','h11','typing_extensions','certifi','idna')
 result={'python':sys.executable,'version':list(sys.version_info[:3]),'stdlib':sysconfig.get_path('stdlib'),'modules':{},'distributions':[]}
-roots=[]; files={};total=0
+roots=[]; files={};total=0;missing=[];done=set()
 for name in MODULES:
     spec=importlib.util.find_spec(name)
     result['modules'][name]={'origin':spec.origin if spec else None,'locations':list(spec.submodule_search_locations or []) if spec else []}
 for name in NAMES:
+    key=name.lower().replace('_','-')
+    if key in done:continue
+    done.add(key)
     try:d=md.distribution(name)
-    except md.PackageNotFoundError:continue
+    except md.PackageNotFoundError:missing.append(name);continue
+    for requirement in d.requires or []:
+        req=Requirement(requirement)
+        if req.marker is not None and not req.marker.evaluate({'extra':''}):continue
+        if req.url:raise ValueError('DEPENDENCY_URL_UNSUPPORTED')
+        try:actual=md.version(req.name)
+        except md.PackageNotFoundError:missing.append(req.name);continue
+        if req.specifier and actual not in req.specifier:raise ValueError('DEPENDENCY_VERSION_MISMATCH')
+        if req.name.lower().replace('_','-') not in done:NAMES.append(req.name)
     root=pathlib.Path(d.locate_file('')).resolve()
     if not root.is_absolute() or any(p.is_symlink() for p in (root,*root.parents)):raise ValueError('DEPENDENCY_ROOT')
     if str(root) not in roots:roots.append(str(root))
@@ -261,7 +273,8 @@ for name in NAMES:
         files[relative]=row;count+=1
         if len(files)>3000 or total>96*1024*1024:raise ValueError('DEPENDENCY_TOTAL_BOUND')
     result['distributions'].append({'name':d.metadata['Name'],'version':d.version,'root':str(root),'files':count,'requires':[x for x in d.requires or [] if 'extra ==' not in x][:20]})
-result['complete']=all(x['origin'] for x in result['modules'].values()) and sys.version_info[:2]==(3,12)
+result['complete']=all(x['origin'] for x in result['modules'].values()) and sys.version_info[:2]==(3,12) and not missing
+result['missing_requirements']=sorted(set(missing))
 result['file_count']=len(files);result['total_bytes']=total
 if sys.argv[1]=='full' and result['complete']:
     result['manifest']={'schema':'NOX_PROJECT_TEST_DEPENDENCIES_V1','roots':roots,'files':sorted(files.values(),key=lambda x:x['path']),'preload_modules':['pydantic_core._pydantic_core','fastapi','fastapi.responses','fastapi.routing','fastapi.staticfiles','httpx','httpx._transports.asgi','anyio._backends._asyncio']}
@@ -271,7 +284,7 @@ print(json.dumps(result,separators=(',',':'),sort_keys=True))
 def dependencies():
     env={'PATH':'/usr/bin:/bin','LANG':'C.UTF-8','PYTHONDONTWRITEBYTECODE':'1'}
     selected=False
-    for python in ('/usr/bin/python3.12','/root/venv_volta/bin/python','/root/nox/venv/bin/python'):
+    for python in ('/root/nox/venv/bin/python',):
         row={'invoked_python':python}
         if not Path(python).exists():row['state']='ABSENT';emit('DEP_ENV',row);continue
         try:
