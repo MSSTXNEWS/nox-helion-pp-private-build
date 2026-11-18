@@ -1,0 +1,37 @@
+{
+  "scope": "RECORDED_NATIVE_SNAPSHOT_POLICY_REPLAY_NOT_CURRENT_NATIVE_ADMISSION",
+  "snapshot_path": "complete_executor/observe_134526473766.json",
+  "snapshot_sha256": "bacb3032057d9e1b9984bbbf799baeac1df5be200869fe964162b9d157bd9cf2",
+  "evaluated_at_sample_time": true,
+  "budget": {
+    "schema": "NOX_BOUNDED_CPU_BUDGET_V1",
+    "source": "cgroup_v2",
+    "instance_id": 60509551,
+    "observed_at": 1794968312.3774352,
+    "worker_slots": 3,
+    "current_bytes": 193828540416,
+    "max_bytes": 194065203200,
+    "inactive_file_bytes": 9657630720,
+    "file_bytes": 190234734592,
+    "shmem_bytes": 75403325440,
+    "sandbox_limit_bytes": 268435456,
+    "planner_reserve_bytes": 134217728,
+    "minimum_headroom_bytes": 2147483648,
+    "memory_psi_some_avg10": 0.0,
+    "memory_psi_full_avg10": 0.0,
+    "cpu_pressure": 0.0
+  },
+  "decision": {
+    "reclaimable_bytes": 9657630720,
+    "effective_bytes": 184170909696,
+    "reserved_bytes": 1207959552,
+    "projected_bytes": 185378869248,
+    "headroom_bytes": 8686333952,
+    "raw_memory_ratio": 0.9987804986154262,
+    "effective_memory_ratio": 0.9490156228893691,
+    "projected_memory_ratio": 0.955240126468999,
+    "eligible": true,
+    "reason": null
+  },
+  "fresh_native_preflight_required": true
+}

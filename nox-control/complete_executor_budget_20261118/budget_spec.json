@@ -1,0 +1,63 @@
+{
+  "schema": "NOX_BOUNDED_CPU_POLICY_INSTALL_SPEC_V1",
+  "assets": {
+    "bc_runtime_d5fb476f53e64d2014f2.py": "d5fb476f53e64d2014f27465c7bd64192158b5bcdd79a72ff7c962d853602339",
+    "bc_runtime_6c67e567e669b993d016.py": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+    "bc_runtime_2c83ec53f7ee7c2d76bc.py": "2c83ec53f7ee7c2d76bc1fac21c80adf76c58f83c5a219ba0294f9b3f713d707",
+    "bc_runtime_294473d35d4870f50467.py": "294473d35d4870f50467d843c551c9b9fd7c4644e4b615e92403dc916ed109e4"
+  },
+  "runtime_paths": {
+    "bc_runtime_d5fb476f53e64d2014f2.py": "scripts/owner_autonomy_pool.py",
+    "bc_runtime_6c67e567e669b993d016.py": "scripts/owner_subagent_dispatcher.py",
+    "bc_runtime_2c83ec53f7ee7c2d76bc.py": "scripts/owner_project_native.py",
+    "bc_runtime_294473d35d4870f50467.py": "scripts/owner_subagent_instruction_truth.py"
+  },
+  "expected_native": {
+    "scripts/nox_dispatcher_t855u.py": "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21",
+    "scripts/owner_subagent_dispatcher.py": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+    "scripts/owner_subagent_processes.py": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
+    "scripts/owner_autonomy_pool.py": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+    "scripts/owner_subagent_instruction_truth.py": "485d4a4a571c434afb98512547a7f2a2198606eb1e168b749ae607aaf3c2133f",
+    "scripts/owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+    "scripts/owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
+    "scripts/owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+    "config/owner_native_subagents.json": "db6a773a09af6de6a1c4d01a188a08c845f1874f3198ea2fd50a2877048d60aa",
+    "scripts/owner_project_executor.py": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+    "scripts/owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+    "scripts/owner_project_model_client.py": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
+    "scripts/owner_project_native.py": "d0ff44d4752128c267799202620c34d2503241dad1f7008f8b3539f49efc18b5",
+    "scripts/owner_project_planner.py": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420",
+    "scripts/owner_project_test_runner.py": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595"
+  },
+  "expected_director": {
+    "pid": 3748557,
+    "start_ticks": 176081802
+  },
+  "expected_no_children": true,
+  "protected_processes": {
+    "chat": {
+      "pgrp": 3266857,
+      "pid": 3266857,
+      "ppid": 114,
+      "start_ticks": 172046662
+    },
+    "proxy": {
+      "pgrp": 3703386,
+      "pid": 3703386,
+      "ppid": 114,
+      "start_ticks": 175609570
+    },
+    "web": {
+      "pgrp": 3505392,
+      "pid": 3505392,
+      "ppid": 114,
+      "start_ticks": 173653097
+    }
+  },
+  "rebind_task_ids": [
+    "3A02.project.readback_revoke.layout_retry.20261118",
+    "3B05.project.strict_skill_json.layout_retry.20261118",
+    "6V14-04.project.receipt_time_order.fd_retry.20261118",
+    "1A03.project.cursor_admission.focus_retry.20261118"
+  ]
+}

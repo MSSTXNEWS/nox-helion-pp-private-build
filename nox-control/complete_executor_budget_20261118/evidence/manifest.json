@@ -1,0 +1,65 @@
+{
+  "schema": "NOX_BOUNDED_CPU_RUNTIME_UPDATE_V1",
+  "files": {
+    "owner_autonomy_pool.py": {
+      "sha256": "d5fb476f53e64d2014f27465c7bd64192158b5bcdd79a72ff7c962d853602339",
+      "before_sha256": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
+      "bytes": 38299,
+      "native_path": "/root/nox/scripts/owner_autonomy_pool.py"
+    },
+    "owner_subagent_dispatcher.py": {
+      "sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+      "before_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+      "bytes": 80335,
+      "native_path": "/root/nox/scripts/owner_subagent_dispatcher.py"
+    },
+    "owner_project_native.py": {
+      "sha256": "2c83ec53f7ee7c2d76bc1fac21c80adf76c58f83c5a219ba0294f9b3f713d707",
+      "before_sha256": "d0ff44d4752128c267799202620c34d2503241dad1f7008f8b3539f49efc18b5",
+      "bytes": 26241,
+      "native_path": "/root/nox/scripts/owner_project_native.py"
+    },
+    "owner_subagent_instruction_truth_project.py": {
+      "sha256": "294473d35d4870f50467d843c551c9b9fd7c4644e4b615e92403dc916ed109e4",
+      "before_sha256": "485d4a4a571c434afb98512547a7f2a2198606eb1e168b749ae607aaf3c2133f",
+      "bytes": 2888,
+      "native_path": "/root/nox/scripts/owner_subagent_instruction_truth.py"
+    }
+  },
+  "unchanged_current_runtime": {
+    "owner_project_executor.py": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+    "owner_project_test_runner.py": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595",
+    "owner_subagent_processes.py": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
+    "owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
+    "owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
+    "owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
+    "owner_project_planner.py": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420",
+    "owner_project_model_client.py": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
+    "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9"
+  },
+  "pure_preflight_api": "owner_autonomy_pool.bounded_cpu_decision(budget, *, memory_ratio=None, cpu_pressure=None, now=None)",
+  "snapshot_schema": "NOX_BOUNDED_CPU_BUDGET_V1",
+  "native_preflight_required": true,
+  "maximum_worker_slots": 3,
+  "minimum_remaining_headroom_bytes": 2147483648,
+  "minimum_total_reservation_bytes": 1207959552,
+  "freshness_seconds": 5,
+  "ratio_clamped": false,
+  "legacy_memory_threshold": 0.95,
+  "memory_pressure_max_exclusive": 1,
+  "cpu_pressure_max_exclusive": 50,
+  "migration": {
+    "historical_project_source_sha256_append": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+    "historical_leaf_source_sha256_append": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+    "terminal_catalog_rows_preserve": true,
+    "terminal_receipts_preserve": true,
+    "queue_state_reset": false,
+    "unadmitted_retry_catalog_rebind_requires_exact_queue_absence": true,
+    "rebind_count": 4
+  },
+  "qa_sha256": "c407bdd73868df03e6769ca051e35605059dd7f3e50310ace6557a00c76610f0",
+  "recorded_budget_replay_sha256": "2ac7dbc9ac106007e3576cbfb462fd985c30b6c9b626af697b9a5e93ebf2b6ac",
+  "diff_sha256": "5b0adb88d59c66aef91626fb194465e4684a1a01124920dfc5de9f53ebf149e7",
+  "source_acceptance_added": 0,
+  "native_mutations": 0
+}
