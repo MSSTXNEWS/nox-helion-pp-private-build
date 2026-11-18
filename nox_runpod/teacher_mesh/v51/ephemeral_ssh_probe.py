@@ -8,6 +8,8 @@ Run only in ephemeral GitHub Actions environment; never embed NOX2 in code.
 from __future__ import annotations
 import json
 import ipaddress
+import math
+import random
 import socket
 import os
 from pathlib import Path
@@ -370,12 +372,34 @@ def api(method: str, path: str, key: str, data: dict | None = None):
         headers["Content-Type"] = "application/json"
     endpoint = LIST_API if method == "GET" and path == "/instances/" else API + path
     request = urllib.request.Request(endpoint, headers=headers, data=raw, method=method)
-    try:
-        with urllib.request.urlopen(request, timeout=22) as response:
-            body = response.read(250000)
-        value = json.loads(body)
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError("HOLD_VAST_API_HTTP_" + str(exc.code)) from None
+    # Vast documents HTTP 429 as a rejected rate-limited request. Retry only
+    # that explicit response, never an ambiguous timeout/5xx or native payload.
+    # https://docs.vast.ai/sdk/python/rate-limits
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(request, timeout=22) as response:
+                body = response.read(250000)
+            value = json.loads(body)
+            break
+        except urllib.error.HTTPError as exc:
+            code = exc.code
+            retry_after = exc.headers.get("Retry-After") if exc.headers else None
+            exc.close()
+            if code != 429 or attempt == 3:
+                raise RuntimeError("HOLD_VAST_API_HTTP_" + str(code)) from None
+            delay = 2 ** (attempt + 1) + random.uniform(0, 1)
+            if retry_after is not None:
+                try:
+                    requested = float(retry_after)
+                except (ValueError, TypeError):
+                    raise RuntimeError("HOLD_VAST_API_RETRY_AFTER_INVALID") from None
+                if not math.isfinite(requested) or requested < 0 or requested > 60:
+                    raise RuntimeError("HOLD_VAST_API_RETRY_AFTER_BOUND") from None
+                delay = max(delay, requested)
+            print("NOX_MAINT_PROVIDER_BACKOFF=" + json.dumps({
+                "http_status": 429, "attempt": attempt + 1,
+                "wait_seconds": round(delay, 3)}), flush=True)
+            time.sleep(delay)
     if isinstance(value, dict) and value.get("success") is False:
         raise RuntimeError("HOLD_VAST_API_REJECTED_" + method)
     return value

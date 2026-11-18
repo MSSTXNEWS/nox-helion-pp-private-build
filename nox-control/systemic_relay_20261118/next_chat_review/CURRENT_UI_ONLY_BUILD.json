@@ -1,0 +1,41 @@
+{
+  "assets": {
+    "native_helpers.py": {
+      "sha256": "b3d1887b92cb805076301f6631e56b6e42c48e7dae02d62f2a272c10669644e0",
+      "source": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/owner_native_repair.py"
+    },
+    "official_auth.py": {
+      "sha256": "73107aed7d1eaa72d92fe15d4f91c8c5878e560e9efcffaf4dbf583f500fbf60",
+      "source": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/owner_media_acceptance_entry.py"
+    },
+    "public_chat.js": {
+      "sha256": "646fe556bb446aa0a7b30abd44f1ed41865877553ceef2bb703c85f6b112d5a2",
+      "source": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/systemic_relay_20261118/next_chat_review/nox-v24-chat-nonempty-current.js"
+    }
+  },
+  "behavioral_acceptance_verified": false,
+  "embedding_required": "Replace __NOX_BUNDLE_JSON__ with the decoded JSON mapping from install_bundle.json; preserve all three asset pins.",
+  "entry": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/systemic_relay_20261118/next_chat_review/package_ui_only_v1/owner_chat_ui_only_entry.py",
+  "entry_sha256": "a85365b5a733cdb0668473dd1234b8a2d9ca108984ab18407215b737dbefdf6e",
+  "foreground_idle_required": false,
+  "original_task_accepted": false,
+  "output_sha256": {
+    "install_bundle.json": "a739f9db14af3bc885ab279a761bfc4b63f1345d686f65f98a56b6f24cd5be47",
+    "install_spec.json": "db95609c3ca70b38d4282e7f1259bb2325c320f51b8183abf561f755305b873f",
+    "owner_chat_ui_only_entry.py": "a85365b5a733cdb0668473dd1234b8a2d9ca108984ab18407215b737dbefdf6e"
+  },
+  "package": "nox-control/systemic_relay_20261118/next_chat_review/package_ui_only_v1",
+  "peer_review": {
+    "native_execution_performed": false,
+    "result": "NO_DEPLOYMENT_BLOCKER_FOUND",
+    "reviewer": "runtime_resources",
+    "scope": "exact one-target exchange, rollback, auth HTTP, source and process preservation",
+    "tests_executed": false
+  },
+  "policy_write_or_reload": false,
+  "previous_two_file_v5_after_ui_success": "Will fail its old UI SHA precondition; requires a separately reviewed policy-only specification.",
+  "schema": "NOX_CHAT_UI_ONLY_CURRENT_BUILD_V1",
+  "state": "PREPARED_PEER_REVIEWED_NOT_DEPLOYED",
+  "template": "/workspace/scratch/d89c44a8751d/nox-live/nox-control/systemic_relay_20261118/next_chat_review/owner_chat_ui_only_install.py",
+  "template_sha256": "954234734f466072a5767cd8452dd36e2daa5c2b660f249b782a516979780b09"
+}

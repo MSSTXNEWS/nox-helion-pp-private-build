@@ -1,0 +1,125 @@
+{
+  "schema": "NOX_ACCELERATION_TOOLCHAIN_LOCK_V1",
+  "observed_at": "2026-11-18 18:22:24 UTC",
+  "source_scope": "OFFICIAL_UPSTREAM_RELEASE_METADATA",
+  "release_root": "/root/nox/owner_tools_acceleration/releases/20261118-v1",
+  "tools": [
+    {
+      "name": "uv",
+      "provider": "astral-sh/uv",
+      "version": "0.13.9",
+      "architecture": "x86_64",
+      "operating_system": "linux",
+      "target": "x86_64-unknown-linux-musl",
+      "archive_format": "tar.gz",
+      "archive_name": "uv-x86_64-unknown-linux-musl.tar.gz",
+      "url": "https://github.com/astral-sh/uv/releases/download/0.13.9/uv-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "58ccf5f1792b8a5a88d01bc910ea131a8b3db4a319a17ad5fad75e0845a3e271",
+      "size_bytes": 18735070,
+      "release_url": "https://github.com/astral-sh/uv/releases/tag/0.13.9",
+      "asset_api": "https://api.github.com/repos/astral-sh/uv/releases/assets/758513984",
+      "checksum_url": "https://github.com/astral-sh/uv/releases/download/0.13.9/uv-x86_64-unknown-linux-musl.tar.gz.sha256",
+      "upstream_evidence": "tooling/upstream/uv-0.13.9.asset.json",
+      "members": [
+        {
+          "archive_path": "uv-x86_64-unknown-linux-musl/uv",
+          "relative_install_path": "uv/0.13.9/uv",
+          "installed_path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/uv/0.13.9/uv",
+          "binary": "uv"
+        },
+        {
+          "archive_path": "uv-x86_64-unknown-linux-musl/uvx",
+          "relative_install_path": "uv/0.13.9/uvx",
+          "installed_path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/uv/0.13.9/uvx",
+          "binary": "uvx"
+        }
+      ],
+      "archive_member_names_verified": false,
+      "required_native_checks": [
+        "EXACT_ARCHIVE_SHA256_AND_SIZE",
+        "EXACT_ALLOWED_REGULAR_MEMBER_NAMES",
+        "NO_ARCHIVE_LINK_OR_TRAVERSAL",
+        "ELF64_LITTLE_ENDIAN_X86_64",
+        "NO_ELF_PT_INTERP",
+        "EXPECTED_VERSION_OUTPUT"
+      ]
+    },
+    {
+      "name": "ruff",
+      "provider": "astral-sh/ruff",
+      "version": "0.17.5",
+      "architecture": "x86_64",
+      "operating_system": "linux",
+      "target": "x86_64-unknown-linux-musl",
+      "archive_format": "tar.gz",
+      "archive_name": "ruff-x86_64-unknown-linux-musl.tar.gz",
+      "url": "https://github.com/astral-sh/ruff/releases/download/0.17.5/ruff-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "dc94b7e225b8910fb6f55298ada32d00e356dbd195a5ffb647847f388cb54f84",
+      "size_bytes": 10400704,
+      "release_url": "https://github.com/astral-sh/ruff/releases/tag/0.17.5",
+      "asset_api": "https://api.github.com/repos/astral-sh/ruff/releases/assets/740497223",
+      "checksum_url": "https://github.com/astral-sh/ruff/releases/download/0.17.5/ruff-x86_64-unknown-linux-musl.tar.gz.sha256",
+      "upstream_evidence": "tooling/upstream/ruff-0.17.5.asset.json",
+      "members": [
+        {
+          "archive_path": "ruff-x86_64-unknown-linux-musl/ruff",
+          "relative_install_path": "ruff/0.17.5/ruff",
+          "installed_path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/ruff/0.17.5/ruff",
+          "binary": "ruff"
+        }
+      ],
+      "archive_member_names_verified": false,
+      "required_native_checks": [
+        "EXACT_ARCHIVE_SHA256_AND_SIZE",
+        "EXACT_ALLOWED_REGULAR_MEMBER_NAMES",
+        "NO_ARCHIVE_LINK_OR_TRAVERSAL",
+        "ELF64_LITTLE_ENDIAN_X86_64",
+        "NO_ELF_PT_INTERP",
+        "EXPECTED_VERSION_OUTPUT"
+      ]
+    },
+    {
+      "name": "rg",
+      "provider": "BurntSushi/ripgrep",
+      "version": "15.2.0",
+      "architecture": "x86_64",
+      "operating_system": "linux",
+      "target": "x86_64-unknown-linux-musl",
+      "archive_format": "tar.gz",
+      "archive_name": "ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz",
+      "url": "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c",
+      "size_bytes": 2265718,
+      "release_url": "https://github.com/BurntSushi/ripgrep/releases/tag/15.2.0",
+      "asset_api": "https://api.github.com/repos/BurntSushi/ripgrep/releases/assets/478120097",
+      "checksum_url": "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz.sha256",
+      "upstream_evidence": "tooling/upstream/rg-15.2.0.asset.json",
+      "members": [
+        {
+          "archive_path": "ripgrep-15.2.0-x86_64-unknown-linux-musl/rg",
+          "relative_install_path": "rg/15.2.0/rg",
+          "installed_path": "/root/nox/owner_tools_acceleration/releases/20261118-v1/rg/15.2.0/rg",
+          "binary": "rg"
+        }
+      ],
+      "archive_member_names_verified": false,
+      "required_native_checks": [
+        "EXACT_ARCHIVE_SHA256_AND_SIZE",
+        "EXACT_ALLOWED_REGULAR_MEMBER_NAMES",
+        "NO_ARCHIVE_LINK_OR_TRAVERSAL",
+        "ELF64_LITTLE_ENDIAN_X86_64",
+        "NO_ELF_PT_INTERP",
+        "EXPECTED_VERSION_OUTPUT"
+      ]
+    }
+  ],
+  "total_download_bytes": 31401492,
+  "python_packages_required": [],
+  "python_downloads_allowed": false,
+  "model_downloads_allowed": false,
+  "paid_apis_required": false,
+  "automatic_updates": false,
+  "native_installation_verified": false,
+  "archive_payloads_downloaded_in_this_research": false,
+  "execution_claim": "INSTALLATION_AND_NATIVE_BINARY_CHECKS_REQUIRED"
+}
