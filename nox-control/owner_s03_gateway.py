@@ -773,6 +773,11 @@ def sync(task=None,db=DB,seconds=25):
             resource_admission()
             result=index_batch(db);count+=result['indexed']
             if result['stale_remaining']==0:break
+    # A time-bounded run may index only some rows. Durable partial vectors are
+    # resumable, but never a verified completed S03 memory index.
+    if (not isinstance(result,dict) or type(result.get('stale_remaining')) is not int
+            or result['stale_remaining'] != 0):
+        hold('HOLD_S03_INDEX_INCOMPLETE')
     identity=(task or {}).get('owner_claim',{}).get('nonce')
     task_id=(task or {}).get('id','owner.memory.index')
     if not isinstance(identity,str) or not re.fullmatch('[A-Za-z0-9_-]{1,128}',identity):identity='manual_'+str(int(started))
@@ -814,6 +819,7 @@ def verify_success(task,evidence):
                 or value.get('scope')!='BOUNDED_S03_VECTOR_INDEX' or value.get('verified') is not True
                 or value.get('source_sha256')!=file_sha(__file__)
                 or any(type(value.get(key)) is not int or value[key]<0 for key in ('indexed','stale_remaining'))
+                or value.get('stale_remaining')!=0
                 or value.get('training_examples_accepted')!=0 or value.get('private_text_exported') is not False):return None
         return {'kind':'bounded_native_s03_index','receipt_sha256':file_sha(path),'source_sha256':value['source_sha256'],
                 'scope':value['scope'],'indexed':value['indexed'],'stale_remaining':value['stale_remaining'],
