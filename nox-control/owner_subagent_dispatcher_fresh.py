@@ -786,6 +786,11 @@ class Native:
                                                      'WORKER_HOLD_CHECKPOINTED')):
                     return existing
                 raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            admission = intent.get('resource_admission')
+            admission_lease = (admission.get('writer_lease')
+                               if isinstance(admission, dict) else None)
+            admission_body = dict(admission) if isinstance(admission, dict) else {}
+            admission_sha = admission_body.pop('resource_admission_snapshot_sha256', None)
             if (set(intent) != set(base_keys) | {'state', 'resource_admission'}
                     or intent.get('state') != 'UNCERTAIN'
                     or not isinstance(admission, dict)
@@ -810,11 +815,6 @@ class Native:
                     or (self.state.get('tasks', {}).get(task_id, {}).get('native_submit_intent')
                         if isinstance(self.state, dict) else None) != intent):
                 raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
-            admission = intent.get('resource_admission')
-            admission_lease = (admission.get('writer_lease')
-                               if isinstance(admission, dict) else None)
-            admission_body = dict(admission) if isinstance(admission, dict) else {}
-            admission_sha = admission_body.pop('resource_admission_snapshot_sha256', None)
             state = clean_event.get('state')
             receipt = None
             if state == 'CANDIDATE_NOT_APPLIED':
