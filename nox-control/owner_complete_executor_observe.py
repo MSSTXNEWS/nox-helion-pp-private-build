@@ -1236,6 +1236,14 @@ def bounded_training_lease():
             'expires_at': None}
 
 
+def bounded_training_checkpoint():
+    return {'state': 'UNKNOWN_NO_FIXED_ALLOWLISTED_V135_RECEIPT_PATH',
+            'receipt_path': None, 'optimizer_steps_actual': None,
+            'optimizer_step_delta_verified': None, 'checkpoint_tree_sha256': None,
+            'resume_optimizer_scheduler_rng_verified': None,
+            'resume_offsite_restore_verified': None}
+
+
 def bounded_config_projection(path, kind):
     record, raw = bounded_file(path, 128_000)
     selected = {}
@@ -1320,6 +1328,7 @@ def bounded_preimage_snapshot():
         'resources': bounded_resources(),
         'training_lease': bounded_training_lease(),
         'training_inputs': bounded_training_inputs(),
+        'training_checkpoint': bounded_training_checkpoint(),
         's03': bounded_s03_projection(),
     }
 

@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 from pathlib import Path
@@ -45,6 +46,30 @@ class BoundedProjectionRegression(unittest.TestCase):
             snapshot = inspect.bounded_lstat('/root/nox/state/owner_s03/backups/6904379098/canonical.sqlite')
         self.assertEqual(snapshot['size'], 4096)
         self.assertNotIn('sha256', snapshot)
+
+        tree = ast.parse(Path(inspect.__file__).read_text(encoding='utf-8'))
+        functions = {node.name: node for node in tree.body
+                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        reachable = set()
+        pending = ['main']
+        while pending:
+            name = pending.pop()
+            if name in reachable or name not in functions:
+                continue
+            reachable.add(name)
+            for node in ast.walk(functions[name]):
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                    if node.func.id in functions and node.func.id not in reachable:
+                        pending.append(node.func.id)
+        self.assertNotIn('s03_receipt_check', reachable)
+        for name in reachable:
+            for node in ast.walk(functions[name]):
+                if isinstance(node, ast.Import):
+                    self.assertFalse(any(alias.name == 'sqlite3' for alias in node.names))
+                if isinstance(node, ast.ImportFrom):
+                    self.assertNotEqual(node.module, 'sqlite3')
+        self.assertEqual(inspect.bounded_training_checkpoint()['state'],
+                         'UNKNOWN_NO_FIXED_ALLOWLISTED_V135_RECEIPT_PATH')
 
 
 if __name__ == '__main__':
