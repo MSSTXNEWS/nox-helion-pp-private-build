@@ -256,7 +256,8 @@ class FreshSubmissionTests(unittest.TestCase):
     def test_stop_after_submit_persists_one_shot_intent_and_prevents_replay(self):
         native, task = native_with_pool()
         events = native._test_events
-        native.read_resource_snapshot.side_effect = lambda: events.append('snapshot') or snapshot()
+        sample = snapshot()
+        native.read_resource_snapshot.side_effect = lambda *args, **kwargs: events.append('snapshot') or sample
         native.stop_active.side_effect = [False, True]
         native.pool.submit.side_effect = lambda _: events.append('submit')
         native.pool.poll.return_value = None
@@ -268,9 +269,12 @@ class FreshSubmissionTests(unittest.TestCase):
         native.pool.submit.assert_called_once()
         native.ensure_processes.assert_not_called()
         intent = native.state['tasks'][task['id']]['native_submit_intent']
-        self.assertEqual(intent, {'task_id': task['id'], 'claim_nonce': 'a' * 24,
-                                  'role': 'runtime', 'policy_sha': 'a' * 64,
-                                  'job_id': JOB_ID, 'state': 'UNCERTAIN'})
+        self.assertEqual({key: intent[key] for key in
+                          ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id', 'state')},
+                         {'task_id': task['id'], 'claim_nonce': 'a' * 24,
+                          'role': 'runtime', 'policy_sha': 'a' * 64,
+                          'job_id': JOB_ID, 'state': 'UNCERTAIN'})
+        self.assertEqual(intent['resource_admission'], sample)
         # Simulate the original queue claiming the same task again with a new nonce.
         new_claim = {'nonce': 'b' * 24}
         task['owner_claim'] = new_claim
@@ -286,7 +290,8 @@ class FreshSubmissionTests(unittest.TestCase):
     def test_stop_commits_result_from_final_close_pool_drain(self):
         native, task = native_with_pool()
         events = native._test_events
-        native.read_resource_snapshot.side_effect = lambda: events.append('snapshot') or snapshot()
+        sample = snapshot()
+        native.read_resource_snapshot.side_effect = lambda *args, **kwargs: events.append('snapshot') or sample
         native.stop_active.side_effect = [False, True, True]
         result_event = {'kind': 'RESULT', 'role': 'runtime',
             'id': task['id'], 'state': 'CANDIDATE_NOT_APPLIED', 'pid': 1234,
@@ -554,9 +559,11 @@ class FreshSubmissionTests(unittest.TestCase):
         pool.submit.assert_not_called()
 
     def test_invalid_fresh_observations_never_admit(self):
-        cases = [snapshot(cgroup_memory_ratio=float('nan')),
-                 snapshot(cpu_pressure=float('inf')),
-                 snapshot(cpu_pressure=True), snapshot(cgroup_memory_ratio=-1),
+        bad_nan = snapshot()
+        bad_nan['cgroup_memory_ratio'] = float('nan')
+        bad_inf = snapshot()
+        bad_inf['cpu_pressure'] = float('inf')
+        cases = [bad_nan, bad_inf, snapshot(cpu_pressure=True), snapshot(cgroup_memory_ratio=-1),
                  snapshot(stop_active=True), snapshot(owner_scope_verified=False),
                  snapshot(native_verified='true'), snapshot(disk_total_bytes=0),
                  snapshot(disk_total_bytes=32 * 1024**3), None]

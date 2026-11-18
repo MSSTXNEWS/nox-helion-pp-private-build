@@ -424,16 +424,16 @@ def main():
         self.assertEqual(result['error'], 'HOLD_SUBAGENT_FRESH_RESOURCE_HEADROOM')
         self.assertEqual(helper.target.read_bytes(), helper.before)
         self.assertFalse((helper.ROOT/'backup/owner_subagent_fresh_gate/1234').exists())
-        self.assertEqual([sample['admission_allowed'] for sample in helper.resource_admission_samples], [True, False])
-        self.assertTrue(all('observed_at' in sample for sample in helper.resource_admission_samples))
+        self.assertEqual([sample['resource_admission_allowed'] for sample in helper.resource_admission_samples], [True, False])
+        self.assertTrue(all('resource_admission_observed_at' in sample for sample in helper.resource_admission_samples))
 
     def test_install_reloads_only_dispatcher_and_accepts_zero_idle_pool(self):
         rc, helper, result = self.run_fixture()
         self.assertEqual(rc, 0)
-        self.assertEqual([sample['admission_allowed'] for sample in helper.resource_admission_samples],
+        self.assertEqual([sample['resource_admission_allowed'] for sample in helper.resource_admission_samples],
                          [True, True, True, True])
         self.assertEqual(len(helper.resource_admission_samples), 4)
-        self.assertTrue(all('observed_at' in sample for sample in helper.resource_admission_samples))
+        self.assertTrue(all('resource_admission_observed_at' in sample for sample in helper.resource_admission_samples))
         self.assertEqual([row[1] for row in helper.commands], ['stop', 'start'])
         self.assertEqual(result['acceptance']['thread_runners'], 6)
         self.assertEqual(result['acceptance']['reviewer_pool_actual'], 0)
