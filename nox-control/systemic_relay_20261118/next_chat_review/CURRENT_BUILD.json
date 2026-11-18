@@ -1,37 +1,53 @@
 {
-  "schema": "NOX_CHAT_CURRENT_REVIEWED_BUILD_V1",
-  "state": "PREPARED_REVIEWED_NATIVE_EXECUTION_PENDING",
-  "entry": "package_v4/owner_chat_decomposition_entry.py",
-  "entry_sha256": "1e746965e8542bfaac39392c91ae89d0dca6e3c0d395bbcfad4e1790fbe8df25",
-  "template": "owner_chat_decomposition_install.py",
-  "template_sha256": "613f76bcc9119c3fd2132d1ada50bedb0205acdc64d569f37f0bee69ab4ad9a5",
-  "spec": "package_v4/install_spec.json",
-  "spec_sha256": "a507670debe0704b14a9c8226c0fbf537e7e1cfc8ae79ef18f904f9f7cfbd4bc",
-  "bundle": "package_v4/install_bundle.json",
-  "bundle_sha256": "603e3409930c93e0ea437f4abffdda101ab82fbdbb58921a0f9d6e19181b8f95",
-  "build_metadata": "package_v4/build.json",
-  "superseded_unexecuted_builds": ["package", "package_v2", "package_v3"],
+  "atomic_admission_fence": false,
+  "behavioral_acceptance_verified": false,
+  "build_metadata": "package_v5/build.json",
+  "bundle": "package_v5/install_bundle.json",
+  "bundle_sha256": "d0d4b6fa700785c1f92973cee4ebf9069e3edffc2e77f8898988054227d4ddb8",
+  "entry": "package_v5/owner_chat_decomposition_entry.py",
+  "entry_sha256": "28cd97f0bc8d42f37635a1c4d2e4e64554dac95ed999904decb12477cbaa1105",
   "independent_review": {
-    "reviewer": "/root/dispatcher_repair",
-    "template_sha256": "613f76bcc9119c3fd2132d1ada50bedb0205acdc64d569f37f0bee69ab4ad9a5",
     "blocking_findings_remaining": 0,
+    "reviewer": "/root/dispatcher_repair",
+    "template_sha256": "900a69dafb49981c022fcfe713ff70ae80eb5bd5a478c7ac4ce54519e7b0cd10",
     "verified_final_corrections": [
-      "Exact proxy lifetime is checked again after idle sampling before supervisor stop.",
-      "Original and captured replacement lifetimes must be absent before rollback source restoration or restart when supervisor reports stopped."
+      "Pinned official owner authentication helper; partial client cleanup and fresh logout around each asset request.",
+      "Canonical8080 asset readpoint bound to the original/new proxy lifetime; exact body SHA and length remain mandatory.",
+      "V4 idle and original/replacement rollback lifetime guards preserved."
     ]
   },
+  "native_deployment_performed": false,
+  "native_idle_gate": "Pinned common.py AST resolves the existing chat_state.json; require stable inflight=0 immediately before every supervisor stop.",
+  "original_task_accepted": false,
+  "prior_native_attempt": {
+    "build": "package_v4",
+    "changed": [],
+    "proxy_stop_attempted": false,
+    "reason": "HOLD_CHAT_DECOMPOSITION_PUBLIC_ASSET_HTTP",
+    "request": "6988994355",
+    "run": 44379248410,
+    "state": "HOLD_CHAT_DECOMPOSITION_INSTALL",
+    "superseded_by": "package_v5"
+  },
+  "proxy_health": "Owned listener 8080, GET /health.",
+  "public_asset_http": "Owned proxy listener8080, official owner session GET /nox-web-v29/pc/v24/nox-v24-chat.js; exact SHA and length before/after; separate closed sessions.",
+  "rules_utf8_bytes": 3980,
+  "schema": "NOX_CHAT_CURRENT_REVIEWED_BUILD_V1",
+  "source_provenance": "route_proof_44380854311.json",
   "source_scope": [
     "One SLIM_RULES assignment in the exact observed slim_chat_t885u.py; every other source byte is preserved.",
     "The exact current public nox-v24-chat.js with visible nonempty stream-failure handling."
   ],
-  "rules_utf8_bytes": 3980,
-  "native_idle_gate": "Pinned common.py AST resolves the existing chat_state.json; require stable inflight=0 immediately before every supervisor stop.",
-  "atomic_admission_fence": false,
-  "proxy_health": "Owned listener 8080, GET /health.",
-  "public_asset_http": "Owned listener 18775, nonauthenticated GET /pc/v24/nox-v24-chat.js, exact SHA before and after exchange.",
-  "native_deployment_performed": false,
-  "tests_executed": false,
+  "spec": "package_v5/install_spec.json",
+  "spec_sha256": "0b3db4a0912660fae50db76b0239b77e73885f788cb8d113b0ce4797816cbd6c",
+  "state": "V5_PREPARED_REVIEWED_NATIVE_EXECUTION_PENDING",
+  "superseded_unexecuted_builds": [
+    "package",
+    "package_v2",
+    "package_v3"
+  ],
   "syntax_verified": true,
-  "behavioral_acceptance_verified": false,
-  "original_task_accepted": false
+  "template": "owner_chat_decomposition_install_v5.py",
+  "template_sha256": "900a69dafb49981c022fcfe713ff70ae80eb5bd5a478c7ac4ce54519e7b0cd10",
+  "tests_executed": false
 }
