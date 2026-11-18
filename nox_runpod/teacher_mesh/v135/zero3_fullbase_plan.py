@@ -199,12 +199,18 @@ def native_checkpoint_acceptance(receipt:Mapping|None)->dict:
     if not isinstance(receipt,Mapping):
         return {'state':'HOLD_CHECKPOINT_RECEIPT','weights_changed_verified':False}
     required=('native_signed_owner_receipt','full_base_parameters_updated',
-              'optimizer_state_present','s03_untouched','main_chat_healthy',
+              'optimizer_state_present','optimizer_step_delta_verified',
+              's03_untouched','main_chat_healthy',
               'student_hf_checkpoint_sha_verified','checkpoint_external_restored',
               'model_reloaded_heldout_verified','no_adapters')
     problems=[x for x in required if receipt.get(x) is not True]
     steps=receipt.get('optimizer_steps_actual')
     if type(steps) is not int or steps<1:problems.append('optimizer_steps_actual')
+    step_before=receipt.get('trainer_global_step_before')
+    step_after=receipt.get('trainer_global_step_after')
+    if (type(step_before) is not int or type(step_after) is not int
+            or step_after-step_before != steps):
+        problems.append('trainer_global_step_delta')
     for sha in ('before_base_weight_sha256','after_base_weight_sha256',
                 'restored_base_weight_sha256','checkpoint_manifest_sha256'):
         if not _valid_sha(receipt.get(sha)):problems.append(sha)
