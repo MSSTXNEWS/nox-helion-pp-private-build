@@ -1,0 +1,95 @@
+{
+  "schema": "NOX_ORDINARY_QA_SOURCE_GATE_V1",
+  "result": "PASS_SOURCE_ONLY",
+  "base_main": {
+    "sha256": "037c3b3c30ea76496f1fb1ad842e94239931134a3b03cbfdb494c069eea754d5",
+    "bytes": 35745
+  },
+  "candidate_main": {
+    "sha256": "18a5ab248022ab899f4ae91db256e3d90f1aa317e22251e65bb021257371bbbd",
+    "bytes": 43089
+  },
+  "payload": {
+    "sha256": "cea5a4adc8bf5f191ac7a1a27ee995843b7a7b93e383e1476ba26908ad531ce8",
+    "bytes": 38826
+  },
+  "unchanged_helpers": {
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "p0_login_idle_wait.py": {
+      "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+      "bytes": 12459
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "b2892b7bb7cd86adf42ea60fc0c6b33cee14205032226a13de1cfd82397c1791",
+      "bytes": 1864
+    }
+  },
+  "unchanged_top_level_definitions": [
+    "Client",
+    "canonical",
+    "counter_snapshot",
+    "database_binding",
+    "db_identity",
+    "deadline",
+    "document",
+    "installed_release",
+    "runtime_projection",
+    "safe_priority_diagnostic",
+    "source_readback",
+    "status_code",
+    "verify_history_response",
+    "write_counter_evidence"
+  ],
+  "changed_top_level_definitions": [
+    "Journal",
+    "body",
+    "entry",
+    "own_database_snapshot",
+    "run",
+    "verify_appended_pair",
+    "verify_old_prefix"
+  ],
+  "new_top_level_class": "TimingLogWindow",
+  "journal_delta": "ONLY server_prior_messages metadata 4 to 6; all journal IO, intent and send guards unchanged",
+  "actual_prior_qa": {
+    "run": 44214744070,
+    "raw_sha256": "065d938aabe3cdd68e60af4a891c03dfbdf6b140385974ae677a74edf61d16c8",
+    "new_exchange_id": "S03-eb3abcc1321949b3",
+    "new_record_sha256": "c9bd7a7f70b8204ef74c018d5c54a0197bf2a8a632644b196e0291eabd85e1e1",
+    "prior_four_prefix_sha256": "a71db0a2951958d361c8167e38511865d2fd7b9deaab4b8811cdd1b4f540d6f1",
+    "anchor_literals_exact": true
+  },
+  "identity_matcher": {
+    "source_sha256": "78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4",
+    "pure_definitions_only": true,
+    "question": "В одном коротком предложении объясни, почему резервная копия должна храниться отдельно от рабочей копии.",
+    "matches": false
+  },
+  "new_focused_regression": {
+    "path": "test_ordinary_log_binding.py",
+    "result": "PASS",
+    "tests": 1,
+    "seconds": 0.001,
+    "cases": [
+      "matching held inode marker, no foreign log export",
+      "same-byte replacement inode rejected"
+    ],
+    "full_previous_suites_repeated": false
+  },
+  "five_decoded_modules_exact": true,
+  "compile_pass": true,
+  "payload_executed": false,
+  "native_model_or_provider_calls": 0,
+  "remaining": [
+    "independent narrow source review",
+    "root-coordinated single native run after recovery",
+    "semantic answer and TTFT acceptance; no claim of speedup without comparable baseline"
+  ]
+}

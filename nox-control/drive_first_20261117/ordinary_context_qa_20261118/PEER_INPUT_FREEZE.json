@@ -1,0 +1,63 @@
+{
+  "schema": "NOX_ORDINARY_CONTEXT_QA_PEER_FREEZE_V1",
+  "state": "SOURCE_READY_INDEPENDENT_REVIEW_PENDING",
+  "files": {
+    "model_reference_changed_path_qa.py": {
+      "sha256": "18a5ab248022ab899f4ae91db256e3d90f1aa317e22251e65bb021257371bbbd",
+      "bytes": 43089
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "b2892b7bb7cd86adf42ea60fc0c6b33cee14205032226a13de1cfd82397c1791",
+      "bytes": 1864
+    },
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "p0_login_idle_wait.py": {
+      "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+      "bytes": 12459
+    },
+    "build_payload.py": {
+      "sha256": "23235c959e17e43dcacbf45c7120091cf07658a4c36d09af2d8294962a9aca97",
+      "bytes": 5491
+    },
+    "BUILD_MANIFEST.json": {
+      "sha256": "c396e421a22c05796714c25625acc10665fe4bd83837ead69b340dfed9d16462",
+      "bytes": 4365
+    },
+    "SOURCE_GATE.json": {
+      "sha256": "910471295a3acf873b2b55833d77c6a32db47957fdae64c292aed8c435369036",
+      "bytes": 3199
+    },
+    "ORDINARY_QA_REUSE.patch": {
+      "sha256": "9386628f86a7f02f78574be064f0efd142cefa92859205d099276f3fe3336704",
+      "bytes": 21292
+    },
+    "test_ordinary_log_binding.py": {
+      "sha256": "34747209ad6863287aa6b79ebdd6966a2505a37f98c94f9274a077878fd2412f",
+      "bytes": 2486
+    },
+    "README.md": {
+      "sha256": "4b8815193d4d63bbd9b206090d461e43cc96f88e51424afe4697ee331ead24da",
+      "bytes": 891
+    }
+  },
+  "payload": {
+    "path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+    "sha256": "cea5a4adc8bf5f191ac7a1a27ee995843b7a7b93e383e1476ba26908ad531ce8",
+    "bytes": 38826
+  },
+  "new_purpose": "owner_ordinary_context_acceptance_20261118",
+  "question": "В одном коротком предложении объясни, почему резервная копия должна храниться отдельно от рабочей копии.",
+  "old_journals_reused": false,
+  "prior_messages": 6,
+  "after_messages": 8,
+  "max_owner_chat_posts": 1,
+  "native_calls": 0,
+  "native_dispatch_owner": "/root"
+}

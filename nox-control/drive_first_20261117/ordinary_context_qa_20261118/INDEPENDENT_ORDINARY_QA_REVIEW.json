@@ -1,0 +1,52 @@
+{
+  "schema": "NOX_ORDINARY_CONTEXT_QA_NARROW_INDEPENDENT_REVIEW_V1",
+  "verdict": "PASS_EXACT_SOURCE_BUNDLE_ROOT_SINGLE_NATIVE_PENDING",
+  "main": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/ordinary_context_qa_20261118/model_reference_changed_path_qa.py",
+    "sha256": "18a5ab248022ab899f4ae91db256e3d90f1aa317e22251e65bb021257371bbbd",
+    "bytes": 43089
+  },
+  "payload": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/ordinary_context_qa_20261118/public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+    "sha256": "cea5a4adc8bf5f191ac7a1a27ee995843b7a7b93e383e1476ba26908ad531ce8",
+    "bytes": 38826
+  },
+  "input_freeze": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/ordinary_context_qa_20261118/PEER_INPUT_FREEZE.json",
+    "sha256": "a8c9d5ffe572e0b71ea454922e47af19c6f1d7c6ba9d5d41ce93c4795334abe3",
+    "bytes": 2338
+  },
+  "checked": [
+    "Fresh exclusive owner_ordinary_context_acceptance_20261118 purpose; prior completed QA/continuation journal is not reused. Client and all Journal I/O/intent/send logic unchanged; only prior-message metadata becomes six.",
+    "Exact three previous pairs and full M1 anchors are verified before send; newest opaque S03 ID, full M1 digest, question/answer digests and prior-four prefix were independently compared to lossless actual442147 raw. Only one appended pair takes history6 to8; no dialog creation.",
+    "Current proxy3703386/start175609570 and exact installed1b468/787045/b405 source+inode gates remain. Four helper/release modules unchanged. Single-login c69 wait, STOP, final source/writer/history/slots and durable one-send guards remain.",
+    "Question is an ordinary backup explanation, outside reviewed identity matcher. In installed1b468 source, matching fresh chat_timing marker follows ordinary trim helper return; evidence explicitly remains source-inferred and not a function/input trace or exact tokenizer/cache measurement.",
+    "Timing reader holds directory/file inode, reads only bounded128B old tail and <=65536B fresh append twice, total<=131328B. It rejects inode replacement/truncation/changed ranges, unfinished boundary lines and missing/ambiguous own markers. No other log lines or question fragments are exported.",
+    "Missing/ambiguous timing after completed transport+fullM1/history is reported UNOBSERVED without altering the successful pair or repeating the question. One observation only; source/transport uncertainty still retains no replay.",
+    "Five decoded embedded modules exactly match source/full pins and compile; one QA entry. Wrapper never executed by reviewer."
+  ],
+  "actual_prior_evidence": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/model_wording_qa_20261118/NATIVE_RESULT_44214744070.raw.json",
+    "sha256": "065d938aabe3cdd68e60af4a891c03dfbdf6b140385974ae677a74edf61d16c8",
+    "bytes": 11706
+  },
+  "independent_regression": {
+    "test": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/ordinary_context_qa_review_20261118/test_ambiguous_timing_boundary.py",
+      "sha256": "3a2c062b6b4862af4556c2214cfe023ab821cc528d814454cb46352e202a7ba2",
+      "bytes": 2115
+    },
+    "result": "PASS",
+    "cases": 1,
+    "subcases": 2,
+    "seconds": 0.001,
+    "exec_chunk": "4a3860",
+    "scope": "A complete-looking marker appended to an old unfinished line and two fresh identical markers both stay unobserved; repeat observation blocked; files unchanged and FDs closed."
+  },
+  "author_suite_repeated": false,
+  "old_suites_repeated": false,
+  "native_calls": 0,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "acceptance_boundary": "Root runs once after recovery reconciliation. Actual semantic answer/TTFT/context evidence require actual result; no speedup or exact token-count claim from this source review."
+}
