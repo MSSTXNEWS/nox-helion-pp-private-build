@@ -35,6 +35,7 @@ ROLES = ('runtime', 'memory', 'weights')
 HANDLER = 'owner_native_subagent_review'
 SCHEMA = 'NOX_NATIVE_SUBAGENT_BINDING_V1'
 RECEIPT = 'NOX_NATIVE_SUBAGENT_RECEIPT_V1'
+PENDING_RESULT_SCHEMA = 'NOX_NATIVE_SUBAGENT_PENDING_RESULT_V1'
 MARKER = 'NOX_NATIVE_SUBAGENTS_BIND_V1'
 SHA = re.compile(r'^[a-f0-9]{64}$')
 CLAIM = re.compile(r'^[a-f0-9]{24}$')
@@ -605,28 +606,192 @@ class Native:
                 raise GateError('HOLD_SUBAGENT_SUBMIT_INTENT_UNVERIFIED')
         return intent
 
+    def _checkpoint_pending_result(self, event):
+        """Persist one adapter-validated event before IPC can be closed."""
+        if not isinstance(event, dict):
+            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+        task_id = event.get('id')
+        if not isinstance(task_id, str):
+            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+        mentor = self.ns.get('owner_mentor')
+        if mentor is None or not callable(getattr(mentor, 'clean', None)):
+            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+        clean_event = mentor.clean(event)
+        if (not isinstance(clean_event, dict) or clean_event.get('id') != task_id
+                or clean_event.get('kind') != 'RESULT'
+                or clean_event.get('role') not in ROLES
+                or type(clean_event.get('elapsed_ms')) is not int
+                or clean_event.get('elapsed_ms') < 0):
+            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+        event_sha = digest(encoded(clean_event))
+        base_keys = ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id')
+        with self.ns['_qlock']:
+            durable = document(self.ns['STATE'], 16*1024*1024)
+            durable_row = durable.get('tasks', {}).get(task_id, {})
+            memory_row = (self.state or {}).get('tasks', {}).get(task_id, {})
+            if (durable_row.get('status') != 'running'
+                    or memory_row.get('status') != 'running'
+                    or durable_row.get('handler') != HANDLER
+                    or memory_row.get('handler') != HANDLER
+                    or durable_row.get('owner_claim') != memory_row.get('owner_claim')
+                    or durable_row.get('params') != memory_row.get('params')
+                    or not isinstance(durable_row.get('owner_claim'), dict)
+                    or durable_row.get('owner_claim') != (self.state.get('tasks', {}).get(task_id, {}).get('owner_claim')
+                                                          if isinstance(self.state, dict) else None)):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            claim = durable_row['owner_claim']
+            if not CLAIM.fullmatch(str(claim.get('nonce', ''))):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            intent = durable_row.get('native_submit_intent')
+            if not isinstance(intent, dict):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            existing = durable_row.get('native_pending_result')
+            if existing is not None:
+                if (isinstance(existing, dict)
+                        and existing.get('event_sha256') == event_sha
+                        and existing.get('task_id') == task_id
+                        and existing.get('claim') == claim
+                        and intent.get('pending_result_sha256') == digest(encoded(existing))
+                        and intent.get('state') in ('RESULT_CHECKPOINTED', 'S03_WRITE_ATTEMPTED',
+                                                     'WORKER_HOLD_CHECKPOINTED')):
+                    return existing
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            if (set(intent) != set(base_keys) | {'state'}
+                    or intent.get('state') != 'UNCERTAIN'
+                    or intent.get('task_id') != task_id
+                    or intent.get('claim_nonce') != claim.get('nonce')
+                    or intent.get('role') != clean_event.get('role')
+                    or intent.get('policy_sha') != self.policy.get('sha256')
+                    or intent.get('role') not in ROLES
+                    or not re.fullmatch(r'nox-native-[a-f0-9]{24}', str(intent.get('job_id', '')))
+                    or intent.get('job_id') != (memory_row.get('params') or {}).get('job_id')
+                    or intent.get('role') != (memory_row.get('params') or {}).get('role')
+                    or (self.state.get('tasks', {}).get(task_id, {}).get('native_submit_intent')
+                        if isinstance(self.state, dict) else None) != intent):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            state = clean_event.get('state')
+            receipt = None
+            if state == 'CANDIDATE_NOT_APPLIED':
+                observation = clean_event.get('native_observation')
+                ack = observation.get('policy_ack') if isinstance(observation, dict) else None
+                worker = observation.get('worker') if isinstance(observation, dict) else None
+                if (not isinstance(clean_event.get('answer'), str)
+                        or not clean_event['answer'].strip()
+                        or not isinstance(observation, dict)
+                        or observation.get('claim') != claim.get('nonce')
+                        or observation.get('operation') != intent.get('role')
+                        or not isinstance(ack, dict)
+                        or ack.get('sha256') != intent.get('policy_sha')
+                        or ack.get('full_file_read') is not True
+                        or not isinstance(worker, dict)
+                        or worker.get('pid') != clean_event.get('pid')):
+                    raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+                receipt = {'schema': RECEIPT,
+                           'phase': 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED',
+                           'task_id': task_id, 'job_id': intent['job_id'], 'claim': claim,
+                           'source_sha256': self.source, 'policy_sha256': intent['policy_sha'],
+                           'worker_result': clean_event, 'finished_at': time.time(),
+                           'training_started': False, 'optimizer_steps_verified': False,
+                           'service_or_weights_changed': False}
+                next_state = 'RESULT_CHECKPOINTED'
+            elif isinstance(state, str) and state.startswith('HOLD_') and len(state) <= 128:
+                next_state = 'WORKER_HOLD_CHECKPOINTED'
+            else:
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            checkpoint = {'schema': PENDING_RESULT_SCHEMA, 'task_id': task_id,
+                          'claim': claim, 'intent': {key: intent[key] for key in base_keys},
+                          'event': clean_event, 'event_sha256': event_sha,
+                          'receipt': receipt,
+                          'receipt_sha256': digest(encoded(receipt)) if receipt is not None else None}
+            checkpoint_sha = digest(encoded(checkpoint))
+            advanced = {**intent, 'state': next_state,
+                        'pending_result_sha256': checkpoint_sha}
+            row = self.state['tasks'][task_id]
+            row['native_pending_result'] = checkpoint
+            row['native_submit_intent'] = advanced
+            self.ns['save_state'](self.state)
+            readback = document(self.ns['STATE'], 16*1024*1024).get('tasks', {}).get(task_id, {})
+            if (readback.get('status') != 'running'
+                    or readback.get('owner_claim') != claim
+                    or readback.get('native_pending_result') != checkpoint
+                    or readback.get('native_submit_intent') != advanced):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+        return checkpoint
+
+    def _mark_s03_write_attempted(self, task, checkpoint):
+        if (not isinstance(checkpoint, dict)
+                or checkpoint.get('schema') != PENDING_RESULT_SCHEMA
+                or checkpoint.get('task_id') != task.get('id')
+                or not isinstance(checkpoint.get('receipt'), dict)):
+            raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+        task_id = task['id']
+        checkpoint_sha = digest(encoded(checkpoint))
+        with self.ns['_qlock']:
+            durable = document(self.ns['STATE'], 16*1024*1024)
+            durable_row = durable.get('tasks', {}).get(task_id, {})
+            memory_row = self.state.get('tasks', {}).get(task_id, {})
+            intent = durable_row.get('native_submit_intent')
+            claim = task.get('owner_claim')
+            if (not isinstance(intent, dict)
+                    or durable_row.get('status') != 'running'
+                    or memory_row.get('status') != 'running'
+                    or durable_row.get('handler') != HANDLER
+                    or memory_row.get('handler') != HANDLER
+                    or durable_row.get('owner_claim') != claim
+                    or memory_row.get('owner_claim') != claim
+                    or checkpoint.get('claim') != claim
+                    or checkpoint.get('intent') != {key: intent.get(key) for key in
+                        ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id')}
+                    or durable_row.get('native_pending_result') != checkpoint):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            if (isinstance(intent, dict) and intent.get('state') == 'S03_WRITE_ATTEMPTED'
+                    and intent.get('pending_result_sha256') == checkpoint_sha):
+                return intent
+            if (not isinstance(intent, dict) or intent.get('state') != 'RESULT_CHECKPOINTED'
+                    or intent.get('pending_result_sha256') != checkpoint_sha
+                    or any(intent.get(key) != checkpoint['intent'].get(key)
+                           for key in ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id'))):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+            attempted = {**checkpoint['intent'], 'state': 'S03_WRITE_ATTEMPTED',
+                         'pending_result_sha256': checkpoint_sha}
+            memory_row['native_submit_intent'] = attempted
+            self.ns['save_state'](self.state)
+            readback = document(self.ns['STATE'], 16*1024*1024).get('tasks', {}).get(task_id, {})
+            if (readback.get('status') != 'running'
+                    or readback.get('owner_claim') != claim
+                    or readback.get('native_pending_result') != checkpoint
+                    or readback.get('native_submit_intent') != attempted):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+        return attempted
+
     def _mark_submit_result_s03_verified(self, task, intent, receipt, proof):
         if (not isinstance(proof, dict) or proof.get('native_verified') is not True
                 or proof.get('task_id') != task['id']
-                or proof.get('job_id') != intent['job_id']):
+                or proof.get('job_id') != intent['job_id']
+                or intent.get('state') != 'S03_WRITE_ATTEMPTED'
+                or proof.get('receipt_sha256') != digest(encoded(receipt))):
             raise GateError('HOLD_SUBAGENT_S03_RESULT_READBACK')
         with self.ns['_qlock']:
             durable = document(self.ns['STATE'], 16*1024*1024)
             durable_row = durable.get('tasks', {}).get(task['id'], {})
             saved_intent = durable_row.get('native_submit_intent')
-            if (not isinstance(saved_intent, dict)
-                    or any(saved_intent.get(key) != intent.get(key)
-                           for key in ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id'))
+            pending = durable_row.get('native_pending_result')
+            if (saved_intent != intent
+                    or not isinstance(pending, dict)
+                    or intent.get('pending_result_sha256') != digest(encoded(pending))
+                    or pending.get('receipt') != receipt
                     or durable_row.get('owner_claim') != task.get('owner_claim')):
                 raise GateError('HOLD_SUBAGENT_SUBMIT_INTENT_MISMATCH')
             row = self.state.get('tasks', {}).get(task['id'], {})
-            advanced = {**saved_intent, 'state': 'S03_VERIFIED',
+            advanced = {**pending['intent'], 'state': 'S03_VERIFIED',
                         'result_sha256': digest(encoded(receipt)),
                         's03_receipt_sha256': proof['receipt_sha256']}
             row['native_submit_intent'] = advanced
+            row.pop('native_pending_result', None)
             self.ns['save_state'](self.state)
-            readback = document(self.ns['STATE'], 16*1024*1024)
-            if readback.get('tasks', {}).get(task['id'], {}).get('native_submit_intent') != advanced:
+            readback = document(self.ns['STATE'], 16*1024*1024).get('tasks', {}).get(task['id'], {})
+            if (readback.get('native_submit_intent') != advanced
+                    or readback.get('native_pending_result') is not None):
                 raise GateError('HOLD_SUBAGENT_SUBMIT_RESULT_UNVERIFIED')
         return advanced
 
@@ -718,6 +883,168 @@ class Native:
                     'receipt': receipt, 's03': proof,
                     'receipt_sha256': receipt_sha, 'candidate_applied': False}
         return evidence if self.verify(task, evidence) else None
+
+    def _reconcile_pending_result_queue(self, state):
+        """Resume only an exact durable worker RESULT; never submit the task again."""
+        if (not self.owner_allowed() or self.stop_active()
+                or chat_priority_active() or not self.writer_lease()):
+            return 0
+        fd = None
+        try:
+            fd = os.open(plain(ROOT/'state/owner_maintenance.lock'),
+                         os.O_RDONLY | os.O_NOFOLLOW)
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except (OSError, GateError):
+            if fd is not None:
+                os.close(fd)
+            return 0
+        recovered = 0
+        try:
+            tasks = state.get('tasks') if isinstance(state, dict) else None
+            if not isinstance(tasks, dict):
+                return 0
+            active_ids = set(self.pool.active.values()) if self.pool is not None else set()
+            core_keys = ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id')
+            for task_id, task in list(tasks.items()):
+                if (not isinstance(task, dict) or task.get('id') != task_id
+                        or task.get('handler') != HANDLER or task.get('status') != 'running'
+                        or task_id in active_ids):
+                    continue
+                claim = task.get('owner_claim') or {}
+                intent = task.get('native_submit_intent')
+                if (not isinstance(claim, dict) or type(claim.get('pid')) is not int
+                        or claim.get('pid') == os.getpid()
+                        or not isinstance(intent, dict)
+                        or intent.get('state') not in ('RESULT_CHECKPOINTED',
+                                                       'S03_WRITE_ATTEMPTED',
+                                                       'WORKER_HOLD_CHECKPOINTED')):
+                    continue
+                with self.ns['_qlock']:
+                    durable = document(self.ns['STATE'], 16*1024*1024)
+                    persisted = durable.get('tasks', {}).get(task_id, {})
+                    checkpoint = persisted.get('native_pending_result')
+                    if (persisted.get('status') != 'running'
+                            or persisted.get('owner_claim') != claim
+                            or persisted.get('params') != task.get('params')
+                            or persisted.get('native_submit_intent') != intent
+                            or task.get('native_submit_intent') != intent
+                            or not isinstance(checkpoint, dict)):
+                        continue
+                if (set(checkpoint) != {'schema', 'task_id', 'claim', 'intent',
+                                        'event', 'event_sha256', 'receipt', 'receipt_sha256'}
+                        or checkpoint.get('schema') != PENDING_RESULT_SCHEMA
+                        or checkpoint.get('task_id') != task_id
+                        or checkpoint.get('claim') != claim
+                        or checkpoint.get('intent') != {key: intent.get(key) for key in core_keys}
+                        or intent.get('pending_result_sha256') != digest(encoded(checkpoint))
+                        or not isinstance(checkpoint.get('event'), dict)
+                        or checkpoint.get('event_sha256') != digest(encoded(checkpoint['event']))):
+                    continue
+                event = checkpoint['event']
+                params = task.get('params') or {}
+                if (event.get('id') != task_id or event.get('kind') != 'RESULT'
+                        or event.get('role') != intent.get('role')
+                        or params.get('role') != intent.get('role')
+                        or params.get('policy_sha256') != intent.get('policy_sha')
+                        or params.get('job_id') != intent.get('job_id')
+                        or intent.get('policy_sha') != self.policy.get('sha256')
+                        or intent.get('role') not in ROLES
+                        or not re.fullmatch(r'nox-native-[a-f0-9]{24}', str(intent.get('job_id', '')))):
+                    continue
+                worker_state = event.get('state')
+                if worker_state != 'CANDIDATE_NOT_APPLIED':
+                    if (intent.get('state') != 'WORKER_HOLD_CHECKPOINTED'
+                            or not isinstance(worker_state, str)
+                            or not worker_state.startswith('HOLD_')
+                            or checkpoint.get('receipt') is not None
+                            or checkpoint.get('receipt_sha256') is not None):
+                        continue
+                    with self.ns['_qlock']:
+                        durable = document(self.ns['STATE'], 16*1024*1024)
+                        persisted = durable.get('tasks', {}).get(task_id, {})
+                        current = state.get('tasks', {}).get(task_id)
+                        if (not isinstance(current, dict) or current.get('status') != 'running'
+                                or current.get('owner_claim') != claim
+                                or current.get('native_submit_intent') != intent
+                                or current.get('native_pending_result') != checkpoint
+                                or persisted.get('status') != 'running'
+                                or persisted.get('owner_claim') != claim
+                                or persisted.get('native_submit_intent') != intent
+                                or persisted.get('native_pending_result') != checkpoint):
+                            continue
+                        current.update(status='blocked', note=worker_state)
+                        self.ns['save_state'](state)
+                        readback = document(self.ns['STATE'], 16*1024*1024).get('tasks', {}).get(task_id, {})
+                        if (readback.get('status') == 'blocked'
+                                and readback.get('owner_claim') == claim
+                                and readback.get('native_submit_intent') == intent
+                                and readback.get('native_pending_result') == checkpoint):
+                            recovered += 1
+                    continue
+                receipt = checkpoint.get('receipt')
+                receipt_sha = digest(encoded(receipt)) if isinstance(receipt, dict) else None
+                observation = receipt.get('worker_result', {}).get('native_observation') if isinstance(receipt, dict) else None
+                ack = observation.get('policy_ack') if isinstance(observation, dict) else None
+                worker = observation.get('worker') if isinstance(observation, dict) else None
+                if (intent.get('state') not in ('RESULT_CHECKPOINTED', 'S03_WRITE_ATTEMPTED')
+                        or not isinstance(receipt, dict)
+                        or checkpoint.get('receipt_sha256') != receipt_sha
+                        or receipt.get('schema') != RECEIPT
+                        or receipt.get('phase') != 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED'
+                        or receipt.get('task_id') != task_id
+                        or receipt.get('job_id') != intent.get('job_id')
+                        or receipt.get('claim') != claim
+                        or receipt.get('source_sha256') != self.source
+                        or receipt.get('policy_sha256') != intent.get('policy_sha')
+                        or receipt.get('worker_result') != event
+                        or receipt.get('training_started') is not False
+                        or receipt.get('optimizer_steps_verified') is not False
+                        or receipt.get('service_or_weights_changed') is not False
+                        or not isinstance(observation, dict)
+                        or observation.get('operation') != intent.get('role')
+                        or observation.get('claim') != claim.get('nonce')
+                        or not isinstance(ack, dict)
+                        or ack.get('sha256') != intent.get('policy_sha')
+                        or ack.get('full_file_read') is not True
+                        or not isinstance(worker, dict)
+                        or worker.get('pid') != event.get('pid')):
+                    continue
+                if intent.get('state') == 'RESULT_CHECKPOINTED':
+                    try:
+                        attempted = self._mark_s03_write_attempted(task, checkpoint)
+                        proof = remember(receipt)
+                    except (OSError, ValueError, sqlite3.Error, GateError):
+                        continue
+                else:
+                    attempted = intent
+                    # Once S03_WRITE_ATTEMPTED is durable, restart performs
+                    # readback only. It never retries an ambiguous write.
+                    try:
+                        proof = s03_readback(receipt)
+                    except (OSError, ValueError, sqlite3.Error, GateError):
+                        continue
+                if not isinstance(proof, dict) or proof.get('native_verified') is not True:
+                    continue
+                evidence = {'schema': RECEIPT, 'verified': True,
+                            'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT',
+                            'receipt': receipt, 's03': proof,
+                            'receipt_sha256': receipt_sha, 'candidate_applied': False}
+                if not self.verify(task, evidence):
+                    continue
+                try:
+                    self._mark_submit_result_s03_verified(task, attempted, receipt, proof)
+                    recovered += 1
+                except (OSError, ValueError, sqlite3.Error, GateError):
+                    continue
+        except (OSError, ValueError, TypeError, sqlite3.Error, GateError):
+            return recovered
+        finally:
+            if fd is not None:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+                finally:
+                    os.close(fd)
+        return recovered
 
     def _reconcile_s03_verified_queue(self, state):
         """Complete only a dead parent's exact S03-verified claim; no resubmit."""
@@ -931,26 +1258,20 @@ class Native:
             if event is None:
                 self.close_pool()
                 return False, 'HOLD_SUBAGENT_RESULT_TIMEOUT'
+            checkpoint = self._checkpoint_pending_result(event)
             if event.get('state') != 'CANDIDATE_NOT_APPLIED':
                 raise GateError(event.get('state', 'HOLD_SUBAGENT_RESULT'))
-            # Redact with the same queue function before storing the receipt.
-            event = self.ns['owner_mentor'].clean(event)
-            observation = event.get('native_observation', {})
-            if (observation.get('claim') != task['owner_claim']['nonce']
-                    or observation.get('policy_ack', {}).get('sha256') != self.policy['sha256']
-                    or observation.get('policy_ack', {}).get('full_file_read') is not True
-                    or observation.get('worker', {}).get('pid') != event['pid']):
-                raise GateError('HOLD_SUBAGENT_WORKER_PROOF')
-            result = {'schema': RECEIPT, 'phase': 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED',
-                      'task_id': task['id'], 'job_id': params['job_id'], 'claim': task['owner_claim'],
-                      'source_sha256': self.source, 'policy_sha256': self.policy['sha256'],
-                      'worker_result': event, 'finished_at': time.time(),
-                      'training_started': False, 'optimizer_steps_verified': False,
-                      'service_or_weights_changed': False}
+            event = checkpoint['event']
+            result = checkpoint.get('receipt')
+            if not isinstance(result, dict):
+                raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
             if not self._claim_current(task, durable=True):
                 raise GateError('HOLD_NATIVE_OWNER_CLAIM_CHANGED')
+            attempted = self._mark_s03_write_attempted(task, checkpoint)
+            # The durable attempted marker precedes the only POST. A restart
+            # after this point may read back, but must never invoke remember again.
             proof = remember(result)
-            self._mark_submit_result_s03_verified(task, intent, result, proof)
+            self._mark_submit_result_s03_verified(task, attempted, result, proof)
             # A durable result already found by the drain is committed to S03
             # before workers are torn down to yield to chat/STOP.
             if self.stop_active() or chat_priority_active():
@@ -981,44 +1302,42 @@ class Native:
 
     def close_pool(self, reason=None):
         with self.lock:
-            if self.pool is not None:
-                # Collect result messages already published before stopping workers.
-                # Their owning handlers still need to persist exact S03 readback.
-                try:
-                    self._drain()
-                except Exception:
-                    # Shutdown must proceed; unresolved submissions stay fenced by
-                    # their durable intent and are never replayed.
-                    pass
-                if reason is not None:
-                    for task_id in set(self.pool.active.values()) | set(self.completed):
-                        self.interrupted[task_id] = reason
-                    # Keep completed events until their handlers commit them to S03.
-                pool = self.pool
-                active_ids = set(pool.active.values())
-                shutdown_events = []
-                try:
-                    shutdown = getattr(pool, 'shutdown_and_drain', None)
-                    if callable(shutdown):
-                        shutdown_events = shutdown()
-                    else:
-                        pool.__exit__(None, None, None)
-                except Exception:
-                    # Failed IPC shutdown is still uncertain; preserve the
-                    # durable submit intent and never retry the task.
-                    try:
-                        pool.__exit__(None, None, None)
-                    except Exception:
-                        pass
-                finally:
-                    if isinstance(shutdown_events, (list, tuple)):
-                        for event in shutdown_events:
-                            if not isinstance(event, dict) or event.get('id') not in active_ids:
-                                continue
-                            self.completed[event['id']] = event
-                            if reason is not None:
-                                self.interrupted[event['id']] = reason
-                    self.pool = None
+            if self.pool is None:
+                return
+            pool = self.pool
+            try:
+                self._drain()
+            except Exception:
+                # A later result may still be recovered by shutdown's validated drain.
+                pass
+            if reason is not None:
+                for task_id in set(pool.active.values()) | set(self.completed):
+                    self.interrupted[task_id] = reason
+            # Results already accepted by poll are no longer in the adapter
+            # outbox, so checkpoint them before asking the adapter to close IPC.
+            try:
+                for event in list(self.completed.values()):
+                    self._checkpoint_pending_result(event)
+                shutdown = getattr(pool, 'shutdown_and_drain', None)
+                if not callable(shutdown):
+                    raise GateError('HOLD_SUBAGENT_SHUTDOWN_ABI')
+                shutdown_events = shutdown(on_validated_result=self._checkpoint_pending_result)
+            except Exception as exc:
+                reason_code = str(exc) if isinstance(exc, GateError) else 'HOLD_SUBAGENT_RESULT_CHECKPOINT'
+                self.last_status = {'state': reason_code, 'jobs_started': 0}
+                # In particular, never call __exit__ without the checkpoint
+                # callback after a callback failure: the adapter retains that
+                # exact accepted event and keeps its IPC open for retry.
+                return
+            active_ids = set(pool.active.values())
+            if isinstance(shutdown_events, (list, tuple)):
+                for event in shutdown_events:
+                    if not isinstance(event, dict) or event.get('id') not in active_ids:
+                        continue
+                    self.completed[event['id']] = event
+                    if reason is not None:
+                        self.interrupted[event['id']] = reason
+            self.pool = None
 
     def close(self):
         self.close_pool()
@@ -1046,11 +1365,20 @@ class Native:
                         with self.ns['_qlock']:
                             task.update(status='pending', note='ADMITTED_NOT_EXECUTED', native_admission_s03=proof)
                             self.ns['save_state'](state)
+            pending_recovered = self._reconcile_pending_result_queue(state)
+            recovered = self._reconcile_s03_verified_queue(state) if pending_recovered else 0
             if time.monotonic()-self.last_tick < 5:
+                if pending_recovered or recovered:
+                    self.last_status = {'state': 'S03_PENDING_RESULT_RECOVERED',
+                                        'jobs_started': 0,
+                                        'pending_results_recovered': pending_recovered,
+                                        's03_verified_queue_recovered': recovered}
                 return
             self.last_tick = time.monotonic()
-            recovered = self._reconcile_s03_verified_queue(state)
+            recovered += self._reconcile_s03_verified_queue(state)
             self.last_status = autonomy.tick_existing_dispatcher(self.ns, state, mode='NORMAL')
+            if pending_recovered:
+                self.last_status['pending_results_recovered'] = pending_recovered
             if recovered:
                 self.last_status['s03_verified_queue_recovered'] = recovered
         except Exception as exc:

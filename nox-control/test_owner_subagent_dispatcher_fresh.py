@@ -50,8 +50,8 @@ def native_with_pool():
     task = {'id': 'review.runtime', 'status': 'running', 'title': 'Review resources',
             'owner_claim': {'nonce': 'a' * 24},
             'params': {'role': 'runtime', 'policy_sha256': 'a' * 64, 'job_id': 'review-job'}}
-    row = {'id': task['id'], 'status': 'running', 'owner_claim': task['owner_claim'],
-           'params': task['params']}
+    row = {'id': task['id'], 'handler': binding.HANDLER, 'status': 'running',
+           'owner_claim': task['owner_claim'], 'params': task['params']}
     native.state = {'tasks': {task['id']: row}}
     def save_state(state):
         native._test_events.append('save_state')
@@ -85,7 +85,31 @@ class PoolLifecycleTests(unittest.TestCase):
         value = binding.Native.__new__(binding.Native)
         value.lock = threading.RLock()
         value.stop_active = Mock(return_value=False)
-        value.completed = {'kept': {'id': 'kept', 'state': 'CANDIDATE_NOT_APPLIED'}}
+        claim = {'nonce': 'a' * 24, 'pid': 999}
+        params = {'role': 'runtime', 'policy_sha256': 'a' * 64,
+                  'job_id': 'review-job'}
+        intent = {'task_id': 'kept', 'claim_nonce': claim['nonce'], 'role': 'runtime',
+                  'policy_sha': params['policy_sha256'], 'job_id': params['job_id'],
+                  'state': 'UNCERTAIN'}
+        row = {'id': 'kept', 'handler': binding.HANDLER, 'status': 'running',
+               'owner_claim': claim, 'params': params, 'native_submit_intent': intent}
+        value.policy = {'sha256': 'a' * 64}
+        value.source = 'c' * 64
+        value.state = {'tasks': {'kept': row}}
+        value._test_tmpdir = tempfile.TemporaryDirectory()
+        state_path = Path(value._test_tmpdir.name) / 'state.json'
+        def save_state(state):
+            state_path.write_text(json.dumps(state, sort_keys=True), encoding='utf-8')
+        value.ns = {'_qlock': threading.RLock(), 'STATE': state_path,
+                    'save_state': save_state,
+                    'owner_mentor': types.SimpleNamespace(clean=lambda item: item)}
+        save_state(value.state)
+        value.completed = {'kept': {'kind': 'RESULT', 'role': 'runtime', 'id': 'kept',
+            'state': 'CANDIDATE_NOT_APPLIED', 'pid': 100, 'elapsed_ms': 1,
+            'answer': 'bounded candidate',
+            'native_observation': {'claim': claim['nonce'], 'operation': 'runtime',
+                'policy_ack': {'sha256': params['policy_sha256'], 'full_file_read': True},
+                'worker': {'pid': 100}}}}
         value.interrupted = {}
         children = {role: self.Child(100+i) for i, role in enumerate(binding.ROLES)}
         value.pool = Mock()
@@ -218,8 +242,10 @@ class FreshSubmissionTests(unittest.TestCase):
         events = native._test_events
         native.read_resource_snapshot.side_effect = lambda: events.append('snapshot') or snapshot()
         native.stop_active.side_effect = [False, True, True]
-        result_event = {'id': task['id'], 'state': 'CANDIDATE_NOT_APPLIED', 'pid': 1234,
-            'native_observation': {'claim': 'a' * 24,
+        result_event = {'kind': 'RESULT', 'role': 'runtime',
+            'id': task['id'], 'state': 'CANDIDATE_NOT_APPLIED', 'pid': 1234,
+            'elapsed_ms': 1, 'answer': 'bounded candidate',
+            'native_observation': {'claim': 'a' * 24, 'operation': 'runtime',
                 'policy_ack': {'sha256': 'a' * 64, 'full_file_read': True},
                 'worker': {'pid': 1234}}}
         native.pool.submit.side_effect = lambda _: events.append('submit')
@@ -229,15 +255,87 @@ class FreshSubmissionTests(unittest.TestCase):
         native.pool.__exit__ = Mock()
         native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
         native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
-        proof = {'native_verified': True, 'task_id': task['id'], 'job_id': 'review-job',
-                 'receipt_sha256': 'b' * 64}
         with patch.object(binding, 'chat_priority_active', return_value=False), \
-             patch.object(binding, 'remember', return_value=proof):
+             patch.object(binding, 'remember', side_effect=lambda receipt: {
+                 'native_verified': True, 'task_id': task['id'], 'job_id': 'review-job',
+                 'receipt_sha256': binding.digest(binding.encoded(receipt))}):
             accepted, evidence = native._handle(task)
         self.assertTrue(accepted)
         self.assertEqual(evidence['receipt']['worker_result'], result_event)
         self.assertEqual(native.state['tasks'][task['id']]['native_submit_intent']['state'], 'S03_VERIFIED')
         self.assertIsNone(native.pool)
+
+    def test_shutdown_checkpoint_recovers_after_parent_restart_before_s03(self):
+        native, task = native_with_pool()
+        claim = {'nonce': 'a' * 24, 'pid': 4242}
+        job_id = 'nox-native-' + 'd' * 24
+        task.update(handler=binding.HANDLER, owner_claim=claim)
+        task['params']['job_id'] = job_id
+        intent = {'task_id': task['id'], 'claim_nonce': claim['nonce'],
+                  'role': 'runtime', 'policy_sha': 'a' * 64,
+                  'job_id': job_id, 'state': 'UNCERTAIN'}
+        task['native_submit_intent'] = intent
+        native.state['tasks'][task['id']] = task
+        native.ns['save_state'](native.state)
+        native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
+        event = {'kind': 'RESULT', 'role': 'runtime', 'id': task['id'],
+                 'state': 'CANDIDATE_NOT_APPLIED', 'pid': 1234,
+                 'elapsed_ms': 1, 'answer': 'bounded candidate',
+                 'native_observation': {'claim': claim['nonce'], 'operation': 'runtime',
+                     'policy_ack': {'sha256': 'a' * 64, 'full_file_read': True},
+                     'worker': {'pid': 1234}}}
+        old_pool = native.pool
+        old_pool.active = {'runtime': task['id']}
+        old_pool.poll.return_value = None
+        def shutdown_and_drain(*, on_validated_result):
+            on_validated_result(event)
+            return [event]
+        old_pool.shutdown_and_drain.side_effect = shutdown_and_drain
+        native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
+        native.close_pool('WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
+        self.assertIsNone(native.pool)
+        persisted = json.loads(native.ns['STATE'].read_text(encoding='utf-8'))
+        checkpointed = persisted['tasks'][task['id']]
+        self.assertEqual(checkpointed['native_submit_intent']['state'], 'RESULT_CHECKPOINTED')
+        self.assertEqual(checkpointed['native_pending_result']['event'], event)
+
+        restarted = binding.Native.__new__(binding.Native)
+        restarted.ns = dict(native.ns)
+        restarted.ns['_qlock'] = threading.RLock()
+        restarted.state = persisted
+        restarted.lock = threading.RLock()
+        restarted.policy = native.policy
+        restarted.source = native.source
+        restarted.pool = None
+        restarted.completed = {}
+        restarted.interrupted = {}
+        restarted.owner_allowed = Mock(return_value=True)
+        restarted.stop_active = Mock(return_value=False)
+        restarted.writer_lease = Mock(return_value=True)
+        restarted.verify = Mock(return_value={'kind': 'exact_s03_receipt'})
+        root = Path(native._test_tmpdir.name) / 'root'
+        (root / 'state').mkdir(parents=True)
+        (root / 'state' / 'owner_maintenance.lock').touch()
+        proof = {'native_verified': True, 'task_id': task['id'],
+                 'job_id': job_id,
+                 'receipt_sha256': binding.digest(binding.encoded(
+                     checkpointed['native_pending_result']['receipt']))}
+        def one_s03_write(receipt):
+            disk = json.loads(native.ns['STATE'].read_text(encoding='utf-8'))
+            self.assertEqual(disk['tasks'][task['id']]['native_submit_intent']['state'],
+                             'S03_WRITE_ATTEMPTED')
+            self.assertEqual(receipt, checkpointed['native_pending_result']['receipt'])
+            return proof
+        remember_once = Mock(side_effect=one_s03_write)
+        with patch.object(binding, 'ROOT', root), \
+             patch.object(binding, 'chat_priority_active', return_value=False), \
+             patch.object(binding, 'remember', remember_once):
+            self.assertEqual(restarted._reconcile_pending_result_queue(restarted.state), 1)
+        row = restarted.state['tasks'][task['id']]
+        self.assertEqual(row['native_submit_intent']['state'], 'S03_VERIFIED')
+        self.assertNotIn('native_pending_result', row)
+        remember_once.assert_called_once()
+        old_pool.submit.assert_not_called()
 
     def test_uncertain_intent_with_exact_s03_receipt_completes_without_replay(self):
         native, task = native_with_pool()

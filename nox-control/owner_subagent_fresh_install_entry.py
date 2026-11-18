@@ -27,7 +27,7 @@ except NameError:
     BUNDLE = {}
 
 OLD_CALLBACK = '0193c511168489637b6df041bee2daf79bd42bd338c4ff5f9a6b129652dc4a13'
-NEW_CALLBACK = '61c7bdc0f30f73182c0d2698f1f395ae15b7eebbc174e31f69a6253635c87b4a'
+NEW_CALLBACK = 'ef0a24160673074f448e1f89a303c07ae128d9835e20d5d20311cada866a1d63'
 OLD_CONFIG = 'ad7a2ba87ab184c1ea0871932cf9686d3dce7813cb469fd2f1a5c2bf18ac9366'
 DISPATCHER_SHA = '9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21'
 POLICY_SHA = '84780aaf911a229a654995f38972cdad5d99c72ab38842f76f787ec280acb46f'
@@ -51,7 +51,7 @@ OLD_CONFIG_MODULE_PINS = {
 UNVERIFIED_NATIVE_PREIMAGES = {
     'owner_autonomy_pool.py', 'owner_subagent_processes.py', 'owner_dispatcher_mentor.py'}
 NEW_DEPENDENCIES = {
-    'owner_subagent_processes.py': '060247b16ef98dfd68fe09965ef7b8472512ab10d42d619ea3a72c57e739fc5f',
+    'owner_subagent_processes.py': '64ce9f0025d96e01b1148ea6984fee4927d9f77b9d2e585c82b224f3abae37fe',
     'owner_autonomy_pool.py': 'a3f5f1d1081ecce84815005a4dcf1cf0d46fd0b8c023a4ee56dd68c8097f89ce',
     'owner_subagent_dispatcher.py': NEW_CALLBACK,
 }
