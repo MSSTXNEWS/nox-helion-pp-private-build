@@ -1,0 +1,133 @@
+{
+  "schema": "NOX_CONTEXT_WORDING_COMPLETE_SOURCE_PUBLICATION_V1",
+  "instructions_version": "0.0.6",
+  "parent": "06666bd638579bb3d95317004bf293c299b79daa",
+  "base_tree": "64a461e251209436771a6abe15324862022be980",
+  "operator_unchanged_blob": "4a6c8a8bfc4301c7a7b1c78cf6ceb212b899a432",
+  "operator_unchanged_sha256": "6284cd40858d5fcd58a2cbfcd5a82241c6f7719ed95ced4eb861cd9ebb8beed6",
+  "action": "repair",
+  "timeout_seconds": 900,
+  "source_gate": "ROOT_INDEPENDENT_COMPOSITION_PASS",
+  "root_review_sha256": "37bc0522fe6b0cb8cf90b2e910e9c4ffb82dec9ac19f5b0de9ff3b5c77a65229",
+  "author_manifest_sha256": "0cb473a0d4bcbcc321d8ac8ccdab67df8503cc101248ecbfafef36fed9ffdf39",
+  "build_sibling_dependencies_all_included": true,
+  "files": [
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/native_context_counter_installer.py",
+      "sha256": "8a46befa730e70a8ba57b4a90a8dafc2fd288a23afe6bb1a4975d241990f5acb",
+      "bytes": 16621,
+      "blob": "b2b26bde0f4b35b9b90e59b6d246104fcf7264ce"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/native_v24_dialog_transform.py",
+      "sha256": "28723e5e30bd81951a753c4f4b92a0b9d49c1661b32d0fb9a79d415f1359860b",
+      "bytes": 1376,
+      "blob": "6362d56ad59e81b82559ebe37ed639f981b64407"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/model_reference_wording_transform.py",
+      "sha256": "e793db215f49d302709bf847f2eacc5d39066e840bde6e0d36f7e835d914fee6",
+      "bytes": 3096,
+      "blob": "bd7b9cba4213497ebfbf7592a94410e404ab3008"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/build_install_payload.py",
+      "sha256": "5bcf704a30b8c34a10fb8c88b18acd4b8c3602d9526c3c87d551b3d41b6a12a6",
+      "bytes": 3937,
+      "blob": "de1ffcbed9ca89e570f1be2c14f5617a2d724b26"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/BUILD_MANIFEST.json",
+      "sha256": "b3dcb5a2e52131212e8b191c7d7cba58b110db2fe6129fb42aabfb03a0636feb",
+      "bytes": 1906,
+      "blob": "4bc77ea89543b164dd987b9b426a46a3dcb237ca"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/SOURCE_GATE.json",
+      "sha256": "70b8751bc970b106a0c1da34ba1fb1a3ace3fd12d8d921dc7986d87cb9536bd9",
+      "bytes": 2546,
+      "blob": "d25ff6ba7e9a803edd4e10e2213fad9cf7eaeb2f"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/SCOPED_INSTALLER_EDITS.json",
+      "sha256": "e995b24767020b355133a191082a7d6de8ee27bc674f6f7d9e52255de720341c",
+      "bytes": 4433,
+      "blob": "811a3f2416072dbd52ec2a0f80cf9afbcf03fecf"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/INSTALLER_SCOPE_DELTA.patch",
+      "sha256": "6cfbbb564b0c8fe947e90e758f1bba9ac1ffe3fd74d2f8f4eef21989877c782b",
+      "bytes": 6922,
+      "blob": "f0012988ad700959a74c7973dad39fd06568348d"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/test_context_install_transaction.py",
+      "sha256": "849769d89388965431cab91b28c8e0470fc91bab227d123c715019001ca41688",
+      "bytes": 5555,
+      "blob": "638d69902933227ab3abbf928fb25375cd976632"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/PEER_INPUT_FREEZE.json",
+      "sha256": "ce6042611dcfbcbe266895777a40ddff90b8f427c497a52f560c2a5a24ce7b09",
+      "bytes": 3193,
+      "blob": "6cddcf70911a7c413a88c4960d0ef40e91eb1cbc"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/SOURCE_RECEIPT.json",
+      "sha256": "eaea0d1df9942b527d563dc524d20400618842fbc7bb332bc8e954dd57a8b024",
+      "bytes": 2863,
+      "blob": "2282b53c68850a0ab7ffb723dd3aef23ba698855"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/INSTALL_READINESS.md",
+      "sha256": "cce38a9f66879f8cc820a23799d559a932f4c6a630c868be5fc4463893acfedf",
+      "bytes": 4296,
+      "blob": "f4b95a051972ce9a4ed24feeac1c631b8c57bfa8"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/INDEPENDENT_WORDING_REVIEW.json",
+      "sha256": "663ab08350f8d093e9f23856d8fb72e44c1dd6c5d53682a41c02c81739ffbf6c",
+      "bytes": 2444,
+      "blob": "29fe2abaa5c8b9a10554791d5c58f7bd42ff4ac8"
+    },
+    {
+      "path": "nox-control/owner_resonance_canary_v3_20261117.py",
+      "sha256": "0ebcf254853bc48a471b88ee7ca8caf256e5f20a63af438a9f729a8d3f1cda27",
+      "bytes": 39959,
+      "blob": "5a7a3089e612f422dd757a0ef3cda5cd7045ccad"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/native_v24_dialog_installer.py",
+      "sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+      "bytes": 38058,
+      "blob": "ed481ea6d3d6ece7c3f3f75e27394bb8806d405d"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/context_source_transform.py",
+      "sha256": "b88af796086821a397d27469d5549e24af7cf38bc4430c281b64b8ab760e88bd",
+      "bytes": 5596,
+      "blob": "8a04b8681cb8b6329eb2d5aea162c14634fd7f0f"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/context_install_artifacts.py",
+      "sha256": "def7de979a2b16d0fc996ef6c4b85e0f554b2c5c9303403560122c8f76907d79",
+      "bytes": 20980,
+      "blob": "6d593d51e35fd82079d9cd9ead43f8a117199a09"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/owner_context_budget.py",
+      "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+      "bytes": 15511,
+      "blob": "0d0947739e5cf0aa133d51dbf67815695bcafa33"
+    },
+    {
+      "path": "nox-control/drive_first_20261117/context_counter_install_20261118/INDEPENDENT_COMPOSITION_REVIEW.json",
+      "sha256": "37bc0522fe6b0cb8cf90b2e910e9c4ffb82dec9ac19f5b0de9ff3b5c77a65229",
+      "bytes": 6168,
+      "blob": "c6c787c47205f926b028e6ebce023588e2a7d953"
+    }
+  ],
+  "native_dispatch_count": 0,
+  "native_install": "PENDING",
+  "runtime_qa": "PENDING"
+}

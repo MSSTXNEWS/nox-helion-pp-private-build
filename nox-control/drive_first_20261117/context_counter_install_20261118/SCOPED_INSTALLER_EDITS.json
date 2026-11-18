@@ -1,0 +1,114 @@
+{
+  "schema": "NOX_CONTEXT_INSTALL_SCOPED_EDITS_V1",
+  "reviewed_base_sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+  "edits": [
+    [
+      "Five-file owner repair, reusing the exact previously successful lifecycle.",
+      "Two-file context-counter update using the verified proxy-only lifecycle.",
+      1
+    ],
+    [
+      "guards remain active. New helper+snapshot must be absent; existing unknown\nfiles are never adopted or overwritten. No counter, queue, model or S03 reset.",
+      "guards remain active. The new helper must be absent. Existing unknown files\nare never adopted. No model/common/queue configuration/history/S03 changes.",
+      1
+    ],
+    [
+      "from binding_install_artifacts import ARTIFACTS, ARTIFACT_PINS",
+      "from context_install_artifacts import ARTIFACTS, ARTIFACT_PINS",
+      1
+    ],
+    [
+      "SOURCE_ORDER = ('owner_chat_stream.py', 'nox_v29_chat_bridge.py', 'chat_proxy.py')",
+      "SOURCE_ORDER = ('chat_proxy.py',)",
+      1
+    ],
+    [
+      "NEW_ORDER = ('owner_model_reference_binding.py', 'verified_model_reference.json')",
+      "NEW_ORDER = ('owner_context_budget.py',)",
+      1
+    ],
+    [
+      "OLD_PROXY = {'pid': 3550426, 'start_ticks': 174075151,",
+      "OLD_PROXY = {'pid': 3648425, 'start_ticks': 175058217,",
+      1
+    ],
+    [
+      "    if name == NEW_ORDER[1]:\n        return base.STATE / name\n",
+      "",
+      1
+    ],
+    [
+      "'.owner-model-reference-'",
+      "'.owner-context-budget-'",
+      1
+    ],
+    [
+      "# Restore source first while the proxy is stopped; then remove only the\n        # two files provably created by this request. Original paths were absent.",
+      "# Restore source while the proxy is stopped; remove only the helper\n        # provably created by this request. Its original path was absent.",
+      1
+    ],
+    [
+      "NOX_MODEL_REFERENCE_PROXY_INSTALL_V1",
+      "NOX_CONTEXT_COUNTER_PROXY_INSTALL_V1",
+      2
+    ],
+    [
+      "actual_system_prefix_byte_fit='UNKNOWN_UNTIL_CHANGED_PATH_QA'",
+      "exact_final_model_input_token_fit='NOT_OBSERVED'",
+      1
+    ],
+    [
+      "history_preservation_runtime_qa='PENDING_CHANGED_PATH_QA'",
+      "changed_context_counter_path_runtime_qa='PENDING_TARGETED_USE'",
+      1
+    ],
+    [
+      "status='HOLD_FIVE_FILE_FINAL_READBACK'",
+      "status='HOLD_TWO_FILE_FINAL_READBACK'",
+      1
+    ],
+    [
+      "# owner_chat_stream is now a CAS-transformed source, not an unchanged dependency.\n    base.DEPENDENCY_SHA = {'agent_loop.py': base.AGENT_SHA,\n                           'common.py': '618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167'}",
+      "# Preserve the installed identity/menu route and existing runtime imports.\n    base.DEPENDENCY_SHA = {\n        'agent_loop.py': base.AGENT_SHA,\n        'common.py': '618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167',\n        'owner_chat_stream.py': '38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09',\n        'nox_v29_chat_bridge.py': '9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a',\n        'owner_model_reference_binding.py': 'b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad',\n    }",
+      1
+    ],
+    [
+      "    source.UI_READER = base.stable_read\n",
+      "",
+      1
+    ],
+    [
+      "'kind': 'native_model_reference_install'",
+      "'kind': 'native_context_counter_install'",
+      2
+    ],
+    [
+      "Two-file context-counter update using the verified proxy-only lifecycle.",
+      "Three-file context and model-reference update using the verified proxy-only lifecycle.",
+      1
+    ],
+    [
+      "SOURCE_ORDER = ('chat_proxy.py',)",
+      "SOURCE_ORDER = ('owner_model_reference_binding.py', 'chat_proxy.py')",
+      1
+    ],
+    [
+      "status='HOLD_TWO_FILE_FINAL_READBACK'",
+      "status='HOLD_THREE_FILE_FINAL_READBACK'",
+      1
+    ],
+    [
+      "        'owner_model_reference_binding.py': 'b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad',\n",
+      "",
+      1
+    ],
+    [
+      "# Preserve the installed identity/menu route and existing runtime imports.",
+      "# Existing identity helper is a CAS source; preserve other runtime imports.",
+      1
+    ]
+  ],
+  "native_calls": 0,
+  "scope": "THREE_FILES_ONE_PROXY_RESTART",
+  "model_reference_wording_after_sha256": "78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4"
+}

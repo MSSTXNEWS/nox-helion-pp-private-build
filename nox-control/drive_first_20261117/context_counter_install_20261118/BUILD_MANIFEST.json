@@ -1,0 +1,56 @@
+{
+  "schema": "NOX_CONTEXT_WORDING_OWNER_INSTALL_PAYLOAD_V1",
+  "instructions_version": "0.0.6",
+  "operator_base": "8b7f431f419a3618bed7a9442ccf1072a48e747a",
+  "operator_changes": false,
+  "action": "repair",
+  "entrypoint": "nox-control/owner_resonance_canary_v3_20261117.py",
+  "successful_lifecycle_base_sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+  "modules": {
+    "context_source_transform": {
+      "sha256": "b88af796086821a397d27469d5549e24af7cf38bc4430c281b64b8ab760e88bd",
+      "bytes": 5596
+    },
+    "model_reference_wording_transform": {
+      "sha256": "e793db215f49d302709bf847f2eacc5d39066e840bde6e0d36f7e835d914fee6",
+      "bytes": 3096
+    },
+    "native_v24_dialog_transform": {
+      "sha256": "28723e5e30bd81951a753c4f4b92a0b9d49c1661b32d0fb9a79d415f1359860b",
+      "bytes": 1376
+    },
+    "native_v24_dialog_installer": {
+      "sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+      "bytes": 38058
+    },
+    "context_install_artifacts": {
+      "sha256": "def7de979a2b16d0fc996ef6c4b85e0f554b2c5c9303403560122c8f76907d79",
+      "bytes": 20980
+    },
+    "native_context_counter_installer": {
+      "sha256": "8a46befa730e70a8ba57b4a90a8dafc2fd288a23afe6bb1a4975d241990f5acb",
+      "bytes": 16621
+    }
+  },
+  "artifacts": {
+    "owner_context_budget.py": {
+      "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+      "bytes": 15511
+    }
+  },
+  "payload": {
+    "sha256": "0ebcf254853bc48a471b88ee7ca8caf256e5f20a63af438a9f729a8d3f1cda27",
+    "bytes": 39959
+  },
+  "native_calls_during_build": 0,
+  "payload_executed": false,
+  "automatic_retry_allowed": false,
+  "source_install_count": 2,
+  "new_file_count": 1,
+  "service": "nox-proxy",
+  "model_posts": 0,
+  "model_restarts": 0,
+  "counter_or_queue_resets": 0,
+  "publication": "NOT_DONE",
+  "runtime_acceptance": "PENDING"
+}

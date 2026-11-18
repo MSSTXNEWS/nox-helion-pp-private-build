@@ -1,0 +1,69 @@
+{
+  "schema": "NOX_CONTEXT_WORDING_INSTALL_SOURCE_RECEIPT_V1",
+  "state": "SOURCE_FROZEN_COMPOSITION_PEER_PENDING_NATIVE_NOT_RUN",
+  "instructions_version": "0.0.6",
+  "created_utc": "2026-11-18T00:49:46.581747+00:00",
+  "freeze_sha256": "ce6042611dcfbcbe266895777a40ddff90b8f427c497a52f560c2a5a24ce7b09",
+  "payload": {
+    "path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+    "sha256": "0ebcf254853bc48a471b88ee7ca8caf256e5f20a63af438a9f729a8d3f1cda27",
+    "bytes": 39959
+  },
+  "existing_targets": {
+    "chat_proxy.py": {
+      "before": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+      "after": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62"
+    },
+    "owner_model_reference_binding.py": {
+      "before": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+      "after": "78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4"
+    }
+  },
+  "new_absent_only_target": {
+    "owner_context_budget.py": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0"
+  },
+  "runtime_anchor": {
+    "run": 44207277921,
+    "job": 134476356859,
+    "request": "6965055656",
+    "source_sha": "06666bd638579bb3d95317004bf293c299b79daa",
+    "raw_sha256": "92908c7255e8d6ffa60b4e9736f575e900537d3876d92850b26f513af063b8a1",
+    "semantic_receipt_sha256": "739b4d455be22e47f85d50252e97abbc7ac4ead80e6f1878b1497f6c58e720f6",
+    "proxy_pid": 3648425,
+    "proxy_start_ticks": 175058217,
+    "completed_question_replays": 0
+  },
+  "reviews": {
+    "context_logic": "992564facbbc4531faf188dda3d491fe190ea9ad0fa73aef6201a399c16372a3",
+    "wording_delta": "663ab08350f8d093e9f23856d8fb72e44c1dd6c5d53682a41c02c81739ffbf6c",
+    "composition": "PENDING"
+  },
+  "tests": {
+    "focused_tests": 3,
+    "foreign_inode_existing_target_subcases": 2,
+    "result": "PASS",
+    "native_service_or_model_calls": 0
+  },
+  "runtime_scope": {
+    "restart_service_only": "nox-proxy",
+    "current_four_queue_three_worker_pool_modified": false,
+    "common_modified": false,
+    "model_restart": false,
+    "counter_reset": false,
+    "S03_or_history_modified_by_installer": false,
+    "new_model_request": false
+  },
+  "limits": [
+    "No exact final context-window fit or measured speedup is claimed.",
+    "Improved wording has source projection tests; resulting live prose remains to be observed.",
+    "Maintenance lock and fresh owner guards require root-coordinated quiet window; they are not an atomic owner-chat admission system.",
+    "Unknown results are reconciled, never blindly repeated."
+  ],
+  "remaining_gates": [
+    "Independent composition review",
+    "Root immutable publication and one authorized native repair",
+    "Exact native postimages/lifetime/recovery receipt reconciliation"
+  ],
+  "native_calls_by_author": 0,
+  "publication_by_author": false
+}

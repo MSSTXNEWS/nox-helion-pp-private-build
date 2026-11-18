@@ -1,0 +1,83 @@
+{
+  "schema": "NOX_CONTEXT_WORDING_INSTALL_PEER_FREEZE_V1",
+  "status": "SOURCE_ONLY_PEER_COMPOSITION_REVIEW_PENDING",
+  "files": {
+    "native_context_counter_installer.py": {
+      "sha256": "8a46befa730e70a8ba57b4a90a8dafc2fd288a23afe6bb1a4975d241990f5acb",
+      "bytes": 16621
+    },
+    "native_v24_dialog_installer.py": {
+      "sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+      "bytes": 38058
+    },
+    "native_v24_dialog_transform.py": {
+      "sha256": "28723e5e30bd81951a753c4f4b92a0b9d49c1661b32d0fb9a79d415f1359860b",
+      "bytes": 1376
+    },
+    "context_source_transform.py": {
+      "sha256": "b88af796086821a397d27469d5549e24af7cf38bc4430c281b64b8ab760e88bd",
+      "bytes": 5596
+    },
+    "model_reference_wording_transform.py": {
+      "sha256": "e793db215f49d302709bf847f2eacc5d39066e840bde6e0d36f7e835d914fee6",
+      "bytes": 3096
+    },
+    "context_install_artifacts.py": {
+      "sha256": "def7de979a2b16d0fc996ef6c4b85e0f554b2c5c9303403560122c8f76907d79",
+      "bytes": 20980
+    },
+    "owner_context_budget.py": {
+      "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+      "bytes": 15511
+    },
+    "build_install_payload.py": {
+      "sha256": "5bcf704a30b8c34a10fb8c88b18acd4b8c3602d9526c3c87d551b3d41b6a12a6",
+      "bytes": 3937
+    },
+    "BUILD_MANIFEST.json": {
+      "sha256": "b3dcb5a2e52131212e8b191c7d7cba58b110db2fe6129fb42aabfb03a0636feb",
+      "bytes": 1906
+    },
+    "SOURCE_GATE.json": {
+      "sha256": "70b8751bc970b106a0c1da34ba1fb1a3ace3fd12d8d921dc7986d87cb9536bd9",
+      "bytes": 2546
+    },
+    "SCOPED_INSTALLER_EDITS.json": {
+      "sha256": "e995b24767020b355133a191082a7d6de8ee27bc674f6f7d9e52255de720341c",
+      "bytes": 4433
+    },
+    "INSTALLER_SCOPE_DELTA.patch": {
+      "sha256": "6cfbbb564b0c8fe947e90e758f1bba9ac1ffe3fd74d2f8f4eef21989877c782b",
+      "bytes": 6922
+    },
+    "test_context_install_transaction.py": {
+      "sha256": "849769d89388965431cab91b28c8e0470fc91bab227d123c715019001ca41688",
+      "bytes": 5555
+    },
+    "INDEPENDENT_WORDING_REVIEW.json": {
+      "sha256": "663ab08350f8d093e9f23856d8fb72e44c1dd6c5d53682a41c02c81739ffbf6c",
+      "bytes": 2444
+    }
+  },
+  "payload": {
+    "path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+    "sha256": "0ebcf254853bc48a471b88ee7ca8caf256e5f20a63af438a9f729a8d3f1cda27",
+    "bytes": 39959
+  },
+  "existing_targets": {
+    "chat_proxy.py": {
+      "before": "30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343",
+      "after": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62"
+    },
+    "owner_model_reference_binding.py": {
+      "before": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+      "after": "78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4"
+    }
+  },
+  "new_absent_only_target": {
+    "owner_context_budget.py": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0"
+  },
+  "native_dispatch_owner": "/root",
+  "native_calls": 0,
+  "hard_runtime_boundary": "Existing repair runner timeout900s; service command timeouts remain inherited; no new audit or model request."
+}

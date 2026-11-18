@@ -1,0 +1,44 @@
+{
+  "schema": "NOX_MODEL_REFERENCE_WORDING_INDEPENDENT_REVIEW_V1",
+  "instructions_version": "0.0.6",
+  "reviewer": "/root/integrations_completion",
+  "status": "PASS_WORDING_SOURCE_SCOPE_RUNTIME_QUALITY_PENDING",
+  "base_sha256": "b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad",
+  "candidate_sha256": "78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4",
+  "candidate_bytes": 19122,
+  "only_changed_function": "prepare_identity_request",
+  "exact_block_replacement_verified": true,
+  "all_bytes_outside_fact_block_unchanged": true,
+  "compiled_not_executed": true,
+  "observations": [
+    "Verified branch distinguishes verified process argv/listener file reference from unverified weight contents, architecture and training.",
+    "Unverified/fallback branch never inserts the known primary basename or stale status name.",
+    "current_reference always returns state and selected_route; verified model_file_reference comes only from unchanged validated snapshot plus fresh PID/start/argv/socket observations.",
+    "Basename ASCII/no-newline allowlist and fixed selected-route vocabulary unchanged; no new untrusted field exported.",
+    "Raw flag dictionary no longer enters the model fact block. Brief ordinary-language instruction does not overstate architecture or training evidence.",
+    "Question full-match matcher,0.25s reader bound,MAX_FACT1536,MAX_CONTEXT8192,prefix slicing,tool exclusion,token cap256 and thinking setting unchanged.",
+    "The source still asks the model to generate the answer; no fixed-response substitution was added."
+  ],
+  "author_test_evidence": {
+    "file": "test_wording_projection.py",
+    "sha256": "7bcf1b198fe556a13d0b7b37cf6e169096c1e594381f8e6ac38dba115f9267d2",
+    "functions": 1,
+    "subcases": 3,
+    "result": "PASS_ATTRIBUTED_NOT_RERUN",
+    "scope": "verified, maximum allowed basename, fallback unverified; bounded payload and no raw flags"
+  },
+  "representative_byte_delta_not_native_measurement": {
+    "before": 985,
+    "after": 923
+  },
+  "limits": [
+    "No claim that the revised text has yet been produced by the native model.",
+    "No second QA question sent; completed442072 remains the sole acceptance exchange.",
+    "Three-file installation composition and protected-proxy reload are a separate root-coordinated gate."
+  ],
+  "native_calls": 0,
+  "provider_calls": 0,
+  "network_calls": 0,
+  "model_questions": 0,
+  "foreign_writes": 0
+}

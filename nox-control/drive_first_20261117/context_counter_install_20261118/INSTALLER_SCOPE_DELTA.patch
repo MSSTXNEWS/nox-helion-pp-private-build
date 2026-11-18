@@ -1,0 +1,126 @@
+--- reviewed_binding_installer40b.py
++++ native_context_counter_installer.py
+@@ -1,8 +1,8 @@
+-"""Five-file owner repair, reusing the exact previously successful lifecycle.
++"""Three-file context and model-reference update using the verified proxy-only lifecycle.
+ 
+ Only nox-proxy is stopped/started. Existing maintenance/STOP/idle/service/CAS
+-guards remain active. New helper+snapshot must be absent; existing unknown
+-files are never adopted or overwritten. No counter, queue, model or S03 reset.
++guards remain active. The new helper must be absent. Existing unknown files
++are never adopted. No model/common/queue configuration/history/S03 changes.
+ """
+ from __future__ import annotations
+ 
+@@ -13,11 +13,11 @@
+ 
+ import native_v24_dialog_installer as base
+ import native_v24_dialog_transform as source
+-from binding_install_artifacts import ARTIFACTS, ARTIFACT_PINS
+-
+-SOURCE_ORDER = ('owner_chat_stream.py', 'nox_v29_chat_bridge.py', 'chat_proxy.py')
+-NEW_ORDER = ('owner_model_reference_binding.py', 'verified_model_reference.json')
+-OLD_PROXY = {'pid': 3550426, 'start_ticks': 174075151,
++from context_install_artifacts import ARTIFACTS, ARTIFACT_PINS
++
++SOURCE_ORDER = ('owner_model_reference_binding.py', 'chat_proxy.py')
++NEW_ORDER = ('owner_context_budget.py',)
++OLD_PROXY = {'pid': 3648425, 'start_ticks': 175058217,
+              'argv_sha256': 'da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f',
+              'exe': '/usr/bin/python3.12', 'cwd': '/root/nox/scripts',
+              'config_sha256': 'ddec2af7e644f9bfae231ae47d1975542b9eddf6f2bee1d2e14a0ff34db3c18b'}
+@@ -34,8 +34,6 @@
+ def target(name):
+     if name == NEW_ORDER[0]:
+         return base.SCRIPTS / name
+-    if name == NEW_ORDER[1]:
+-        return base.STATE / name
+     raise base.Hold('HOLD_NEW_ARTIFACT_SCOPE')
+ 
+ 
+@@ -97,7 +95,7 @@
+         if rollback:
+             raise base.Hold('HOLD_EXPLICIT_ROLLBACK_REQUIRES_INSTALL_RECEIPT')
+         super().__init__(request, rollback=False)
+-        self.stage = base.SCRIPTS / ('.owner-model-reference-' + request)
++        self.stage = base.SCRIPTS / ('.owner-context-budget-' + request)
+         self.backup = self.stage / 'originals'
+         self.new_stage = {}
+         self.new_stage_metadata = {}
+@@ -224,8 +222,8 @@
+         self._verify_new_current()
+ 
+     def undo(self, quiescent):
+-        # Restore source first while the proxy is stopped; then remove only the
+-        # two files provably created by this request. Original paths were absent.
++        # Restore source while the proxy is stopped; remove only the helper
++        # provably created by this request. Its original path was absent.
+         expected = {name: self.prepared[name] if name in self.replaced else self.original[name]
+                     for name in SOURCE_ORDER}
+         self.verify_current(expected)
+@@ -275,12 +273,12 @@
+ 
+ 
+ def finalize_report(report):
+-    report.update(schema='NOX_MODEL_REFERENCE_PROXY_INSTALL_V1', s03_source_modified=False,
++    report.update(schema='NOX_CONTEXT_COUNTER_PROXY_INSTALL_V1', s03_source_modified=False,
+                   source_files_modified=list(SOURCE_ORDER), new_artifact_paths=[str(target(n)) for n in NEW_ORDER],
+                   new_services=0, model_calls=0, model_reloads=0, counter_resets=0, queue_resets=0,
+                   history_resets=0, s03_reset_or_migration_requested=False,
+-                  history_preservation_runtime_qa='PENDING_CHANGED_PATH_QA',
+-                  actual_system_prefix_byte_fit='UNKNOWN_UNTIL_CHANGED_PATH_QA',
++                  changed_context_counter_path_runtime_qa='PENDING_TARGETED_USE',
++                  exact_final_model_input_token_fit='NOT_OBSERVED',
+                   optional_o2_pending_is_blocker=False,
+                   inherited_process_metadata_reader='Bounded environ read for Supervisor service identity; values never exported')
+     if _transaction is not None:
+@@ -301,7 +299,7 @@
+         extras_absent = all(extras.get(n, {}).get('after', {}).get('absent') is True for n in NEW_ORDER)
+         report['installed'] = True if new and extras_new else False if old and extras_absent else None
+         if report.get('completed') is True and report['installed'] is not True:
+-            report.update(completed=False, status='HOLD_FIVE_FILE_FINAL_READBACK')
++            report.update(completed=False, status='HOLD_THREE_FILE_FINAL_READBACK')
+     return report
+ 
+ 
+@@ -316,12 +314,15 @@
+         raise base.Hold('HOLD_INSTALLER_REENTRY')
+     _configured = True
+     base.ORDER = SOURCE_ORDER
+-    # owner_chat_stream is now a CAS-transformed source, not an unchanged dependency.
+-    base.DEPENDENCY_SHA = {'agent_loop.py': base.AGENT_SHA,
+-                           'common.py': '618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167'}
++    # Existing identity helper is a CAS source; preserve other runtime imports.
++    base.DEPENDENCY_SHA = {
++        'agent_loop.py': base.AGENT_SHA,
++        'common.py': '618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167',
++        'owner_chat_stream.py': '38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09',
++        'nox_v29_chat_bridge.py': '9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a',
++    }
+     base.TRANSFORMS = source.TRANSFORMS
+     base.transform = source.transform
+-    source.UI_READER = base.stable_read
+     base.FileTransaction = BindingTransaction
+     base.metadata_preflight = metadata_preflight
+     base.service_identity = service_identity
+@@ -334,7 +335,7 @@
+         configure()
+         report = base.run(rollback=False)
+     except BaseException as error:
+-        report = {'schema': 'NOX_MODEL_REFERENCE_PROXY_INSTALL_V1',
++        report = {'schema': 'NOX_CONTEXT_COUNTER_PROXY_INSTALL_V1',
+                   'status': str(error) if isinstance(error, base.Hold) else 'HOLD_' + type(error).__name__.upper(),
+                   'completed': False, 'installed': None, 'used': False, 'accepted': False,
+                   'model_calls': 0, 'model_reloads': 0}
+@@ -349,9 +350,9 @@
+                 values = config.pop('values')
+                 config['command_sha256'] = base.digest(values['command'].encode())
+                 config['stop_settings'] = {k: values[k] for k in ('stopasgroup', 'killasgroup', 'stopsignal', 'stopwaitsecs')}
+-    raw = json.dumps({'kind': 'native_model_reference_install', 'data': public}, separators=(',', ':'))
++    raw = json.dumps({'kind': 'native_context_counter_install', 'data': public}, separators=(',', ':'))
+     if len(raw.encode()) > 120000:
+-        raw = json.dumps({'kind': 'native_model_reference_install', 'data': {
++        raw = json.dumps({'kind': 'native_context_counter_install', 'data': {
+             'status': 'HOLD_PUBLIC_RECEIPT_BOUND', 'completed': False, 'manual_readback_required': True}})
+         report['completed'] = False
+     print('NOX_MAINT_REPAIR=' + raw, flush=True)

@@ -1,0 +1,72 @@
+{
+  "schema": "NOX_CONTEXT_WORDING_INSTALL_SOURCE_GATE_V1",
+  "status": "SOURCE_FROZEN_PEER_COMPOSITION_REVIEW_PENDING",
+  "created_utc": "2026-11-18T00:48:08.479070+00:00",
+  "payload": {
+    "sha256": "0ebcf254853bc48a471b88ee7ca8caf256e5f20a63af438a9f729a8d3f1cda27",
+    "bytes": 39959
+  },
+  "modules": {
+    "context_source_transform": {
+      "sha256": "b88af796086821a397d27469d5549e24af7cf38bc4430c281b64b8ab760e88bd",
+      "bytes": 5596
+    },
+    "model_reference_wording_transform": {
+      "sha256": "e793db215f49d302709bf847f2eacc5d39066e840bde6e0d36f7e835d914fee6",
+      "bytes": 3096
+    },
+    "native_v24_dialog_transform": {
+      "sha256": "28723e5e30bd81951a753c4f4b92a0b9d49c1661b32d0fb9a79d415f1359860b",
+      "bytes": 1376
+    },
+    "native_v24_dialog_installer": {
+      "sha256": "dff6a3841d76a07de5552e81476a8f322179091b641a3b14a3795ee120b6ef27",
+      "bytes": 38058
+    },
+    "context_install_artifacts": {
+      "sha256": "def7de979a2b16d0fc996ef6c4b85e0f554b2c5c9303403560122c8f76907d79",
+      "bytes": 20980
+    },
+    "native_context_counter_installer": {
+      "sha256": "8a46befa730e70a8ba57b4a90a8dafc2fd288a23afe6bb1a4975d241990f5acb",
+      "bytes": 16621
+    }
+  },
+  "base_successful_lifecycle_unchanged": true,
+  "reviewed_binding_transaction_base_sha256": "40b932795001f197a9ffdad7c092d55daba190c5ba3e6e891699ef0b86467b09",
+  "scoped_edits_reconstruct_exact": true,
+  "existing_qualified_definitions_changed": [
+    "target",
+    "BindingTransaction.__init__",
+    "finalize_report",
+    "configure",
+    "entry"
+  ],
+  "owned_source_and_new_file_mutation_rollback_methods_AST_unchanged": true,
+  "current_proxy_pins_match_actual_QA442072": true,
+  "six_modules_decode_exact": true,
+  "all_compile": true,
+  "payload_executed": false,
+  "transaction_tests": {
+    "count": 3,
+    "foreign_existing_inode_subcases": 2,
+    "result": "PASS",
+    "runtime": "real TempFS actual preimage bytes",
+    "scope": [
+      "three target apply/postreadback/exact source rollback",
+      "same bytes on foreign inode for each existing target are protected",
+      "absent-only helper collision is preserved"
+    ],
+    "native_calls": 0
+  },
+  "wording_peer_receipt": {
+    "sha256": "663ab08350f8d093e9f23856d8fb72e44c1dd6c5d53682a41c02c81739ffbf6c",
+    "bytes": 2444
+  },
+  "native_calls": 0,
+  "model_calls": 0,
+  "queue_configuration_changes": 0,
+  "common_source_changes": 0,
+  "standalone_explicit_rollback_without_owned_receipt": "REJECTED",
+  "automatic_same_process_rollback": "OWNED_BACKUPS_ONLY"
+}
