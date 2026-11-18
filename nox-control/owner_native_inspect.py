@@ -301,7 +301,7 @@ def worker_status_sample():
     director_schema_valid=isinstance(director_value,dict)
     director=director_value if director_schema_valid else {}
     observed_director=process(director.get('pid')) if type(director.get('pid')) is int else None
-    workers=native.get('workers',[])
+    workers=native.get('workers')
     workers_schema_valid=isinstance(workers,list) and len(workers)<=64
     row={'time_unix':time.time(), 'observed_at':native.get('observed_at'),
          'claimed_director':scalar_projection(director,('pid','ppid','process_starttime')),

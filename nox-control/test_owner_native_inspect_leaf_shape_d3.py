@@ -96,6 +96,11 @@ class WorkerStatusShapeTests(unittest.TestCase):
         self.assertEqual([name for name, _ in records], ['POST_WORKERS'])
         return records[0][1]
 
+    def test_missing_workers_field_is_unknown(self):
+        row = self.sample({'director': {}})
+        self.assertIs(row['workers_schema_valid'], False)
+        self.assertEqual(row['state'], 'UNKNOWN_WORKERS_SCHEMA')
+
     def test_null_or_dict_workers_is_explicit_unknown(self):
         for value in (None, {'bad': 'shape'}, 'bad', list(range(65))):
             with self.subTest(value_type=type(value).__name__):
