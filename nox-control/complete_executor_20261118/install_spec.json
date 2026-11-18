@@ -2,15 +2,15 @@
   "schema": "NOX_COMPLETE_EXECUTOR_INSTALL_SPEC_V1",
   "assets": {
     "ce_runtime_2c4735938dacd2a062ed.py": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
-    "ce_runtime_391e1178dc8a65e8f1bc.py": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+    "ce_runtime_71dd03dee52f1673c297.py": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
     "ce_runtime_f6b2f98ac5c7c291ffef.py": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
-    "ce_runtime_79a4797dfc06776455f6.py": "79a4797dfc06776455f6d530baeabcab5c1cb77f925bac82d2ace740c150d91d",
-    "ce_runtime_b745dece2bccbf632d26.py": "b745dece2bccbf632d26c694d664e6b3c6d780b72a395bab4d845ef389437c0a",
+    "ce_runtime_687ea3b3548badf9b7ba.py": "687ea3b3548badf9b7babd8c5d420b5270e0fb4d82a72bcaa9a4cee1be44d306",
+    "ce_runtime_35b0e94f9c883da017e4.py": "35b0e94f9c883da017e444162d1f84b9c0f8ad7bc4c92354bebd12551ae6c3b1",
     "ce_runtime_d0ff44d4752128c26779.py": "d0ff44d4752128c267799202620c34d2503241dad1f7008f8b3539f49efc18b5",
     "ce_runtime_119115603be6dba84121.py": "119115603be6dba84121dc2c9c3460482e85fe59f4e5b2598551bcd62ffbdff1",
     "ce_runtime_7f18d69529582b65f7b8.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
     "ce_runtime_126c77c1281b74676930.py": "126c77c1281b7467693063bfe33d17c89eb0d553a1e8ff112ae058994e0a30ba",
-    "ce_runtime_7fc312fccf354d01f69a.py": "7fc312fccf354d01f69a65b2090fb6eeaa78b72c2ca479d640dab9c6f1f119a6",
+    "ce_runtime_485d4a4a571c434afb98.py": "485d4a4a571c434afb98512547a7f2a2198606eb1e168b749ae607aaf3c2133f",
     "ce_baseline_bb2c543979ad58801d97.source": "bb2c543979ad58801d97290e9edf1fe035435c8e9e5f0ebaced4abf3ecbf9053",
     "ce_baseline_4d1274059d034bb9b96a.source": "4d1274059d034bb9b96a445e26601d33da54ea309c8a5233df6512a2d546020f",
     "ce_baseline_d9ec6a8250a167d774ba.source": "d9ec6a8250a167d774ba5090219cfaac3ad2995ddd88228d1abe5514fc9dd791",
@@ -26,6 +26,7 @@
     "ce_baseline_21f8538fec15d39b4dbc.source": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd",
     "ce_baseline_3efe025681c3a54cbfac.source": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080",
     "ce_baseline_b3c5d26011400b110a1b.source": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+    "ce_baseline_f299d32099c25ea1822c.source": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
     "ce_baseline_0fff97b7e758e3e43073.source": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
     "ce_baseline_fd815f9a743bfcdf6e71.source": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
     "ce_baseline_97c433b8893514f5812b.source": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667",
@@ -56,15 +57,15 @@
   },
   "runtime_paths": {
     "ce_runtime_2c4735938dacd2a062ed.py": "scripts/owner_autonomy_pool.py",
-    "ce_runtime_391e1178dc8a65e8f1bc.py": "scripts/owner_subagent_dispatcher.py",
+    "ce_runtime_71dd03dee52f1673c297.py": "scripts/owner_subagent_dispatcher.py",
     "ce_runtime_f6b2f98ac5c7c291ffef.py": "scripts/owner_subagent_processes.py",
-    "ce_runtime_79a4797dfc06776455f6.py": "scripts/owner_project_executor.py",
-    "ce_runtime_b745dece2bccbf632d26.py": "scripts/owner_project_test_runner.py",
+    "ce_runtime_687ea3b3548badf9b7ba.py": "scripts/owner_project_executor.py",
+    "ce_runtime_35b0e94f9c883da017e4.py": "scripts/owner_project_test_runner.py",
     "ce_runtime_d0ff44d4752128c26779.py": "scripts/owner_project_native.py",
     "ce_runtime_119115603be6dba84121.py": "scripts/owner_project_model_client.py",
     "ce_runtime_7f18d69529582b65f7b8.py": "scripts/owner_project_model_bridge.py",
     "ce_runtime_126c77c1281b74676930.py": "scripts/owner_project_planner.py",
-    "ce_runtime_7fc312fccf354d01f69a.py": "scripts/owner_subagent_instruction_truth.py"
+    "ce_runtime_485d4a4a571c434afb98.py": "scripts/owner_subagent_instruction_truth.py"
   },
   "package_files": {
     "plans/283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a.json": "ce_plans_283ff826ba1180398888.json",
@@ -85,14 +86,14 @@
   },
   "expected_native": {
     "scripts/nox_dispatcher_t855u.py": "9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21",
-    "scripts/owner_subagent_dispatcher.py": "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e",
+    "scripts/owner_subagent_dispatcher.py": "5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5",
     "scripts/owner_subagent_processes.py": "c1d5adfcc83300d749b42f66d50f41d5c62c4df52215e43cfc0b891e7c91101b",
     "scripts/owner_autonomy_pool.py": "2c4735938dacd2a062ed2ee0b20477a6191d39b0fcf2b6c49686c10133047102",
-    "scripts/owner_subagent_instruction_truth.py": "d03691b84954402558f1e23e1403043eb9c7d115eb57be575524c05502d0529a",
+    "scripts/owner_subagent_instruction_truth.py": "95ba80a1175c545032a13ff0fd8942ebd39280dec3283f244d200527629ad048",
     "scripts/owner_task_plans.py": "7eb207b361086d3c34299b44fb36d96758cf824a7bf68a05e7868408d646f773",
     "scripts/owner_component_tasks.py": "190bf9948dbe821b5fe3512e3edbc0a7a9348b14aa2a154274e78f058d5d6d5d",
     "scripts/owner_resource_policy.py": "3a7b02a269508472b2a950f28cb067045913842261f8e80bc0804c7cc7cab834",
-    "config/owner_native_subagents.json": "f283db153b763b8bc8e77dd57fedc3cd091c3a5336f40a6d9c805efbdf95d900"
+    "config/owner_native_subagents.json": "0a4df8b0c6c4bf0f6175872a8731cccdc3e387aba1e5bd1ab2ef74302c5e8f98"
   },
   "protected_processes": {
     "chat": {
@@ -127,6 +128,7 @@
       "test_3b05_skill_ancestor_swap.py": "ce_baseline_21f8538fec15d39b4dbc.source",
       "test_forge_split_guard.py": "ce_baseline_3efe025681c3a54cbfac.source",
       "test_nox_1a03_cursor_admission.py": "ce_baseline_b3c5d26011400b110a1b.source",
+      "test_nox_exchange_receipt_order.py": "ce_baseline_f299d32099c25ea1822c.source",
       "test_nox_existing_cache_race.py": "ce_baseline_0fff97b7e758e3e43073.source",
       "test_nox_forge_split_coverage.py": "ce_baseline_fd815f9a743bfcdf6e71.source",
       "test_nox_merge_overlay_paths.py": "ce_baseline_97c433b8893514f5812b.source",
@@ -150,14 +152,14 @@
         "commit": "895c5ed3f5e08b8c473e873aed768ac56e60767f"
       }
     ],
-    "manifest_sha256": "abcde7635a603c8297499d62706d3c3232504f9b3e99446897f13cad25a0a566"
+    "manifest_sha256": "0db34c871ef80c67dcaeabea6225dfd34aed3b5500be3c2a1a3c78d491d272f2"
   },
   "catalog_append": [
     {
       "id": "1A03.project.cursor_admission.20261118",
       "handler": "owner_native_project_work",
       "queue_id": "Q1_RUNTIME_CHAT",
-      "source_sha256": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
       "deps": [],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -172,7 +174,7 @@
       "id": "3A02.project.readback_revoke.20261118",
       "handler": "owner_native_project_work",
       "queue_id": "Q2_MEMORY_KNOWLEDGE",
-      "source_sha256": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
       "deps": [],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -187,7 +189,7 @@
       "id": "3A03.project.cache_revision_lock.20261118",
       "handler": "owner_native_project_work",
       "queue_id": "Q2_MEMORY_KNOWLEDGE",
-      "source_sha256": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
       "deps": [],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -202,7 +204,7 @@
       "id": "6V14-04.project.receipt_time_order.20261118",
       "handler": "owner_native_project_work",
       "queue_id": "Q1_RUNTIME_CHAT",
-      "source_sha256": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
       "deps": [],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -217,7 +219,7 @@
       "id": "3B05.project.strict_skill_json.20261118",
       "handler": "owner_native_project_work",
       "queue_id": "Q2_MEMORY_KNOWLEDGE",
-      "source_sha256": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
       "deps": [],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -232,7 +234,7 @@
       "id": "4A02.project.forge_split_coverage.20261118",
       "handler": "owner_native_project_work",
       "queue_id": "Q3_TRAINING_WEIGHTS",
-      "source_sha256": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
       "deps": [],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -247,7 +249,7 @@
       "id": "0V14-14.project.overlay_paths.20261118",
       "handler": "owner_native_project_work",
       "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
-      "source_sha256": "391e1178dc8a65e8f1bc256ce1608dbb5167e0029bd4443b77b000e78d22694b",
+      "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
       "deps": [],
       "priority": "P1",
       "resource": "CPU_LIGHT",
@@ -285,6 +287,7 @@
           "test_3b05_skill_ancestor_swap.py",
           "test_forge_split_guard.py",
           "test_nox_1a03_cursor_admission.py",
+          "test_nox_exchange_receipt_order.py",
           "test_nox_existing_cache_race.py",
           "test_nox_forge_split_coverage.py",
           "test_nox_merge_overlay_paths.py",
@@ -311,8 +314,8 @@
       "memory_mb": 256
     },
     "source_pins": {
-      "owner_project_executor.py": "79a4797dfc06776455f6d530baeabcab5c1cb77f925bac82d2ace740c150d91d",
-      "owner_project_test_runner.py": "b745dece2bccbf632d26c694d664e6b3c6d780b72a395bab4d845ef389437c0a"
+      "owner_project_executor.py": "687ea3b3548badf9b7babd8c5d420b5270e0fb4d82a72bcaa9a4cee1be44d306",
+      "owner_project_test_runner.py": "35b0e94f9c883da017e444162d1f84b9c0f8ad7bc4c92354bebd12551ae6c3b1"
     },
     "model": {
       "expected_model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",

@@ -510,7 +510,7 @@ def project_install_preservation():
             **{key:receipt.get(key) for key in ('schema','state','request','source_sha','started_at',
                 'finished_at','previous_director','new_director','original_tasks_accepted',
                 'protected_processes','training_started','model_restarted','preflight',
-                'sandbox_preflight','source_bootstrap')}})
+                'sandbox_preflight','native_sandbox_preflight','source_bootstrap')}})
     except (OSError,ValueError,KeyError) as exc:
         emit('PROJECT_QUEUE_PRESERVATION',{'request':request,'state':'UNAVAILABLE','error':type(exc).__name__})
 

@@ -435,6 +435,9 @@ class Native:
         self.last_pool_started_at = None
         self.last_pool_closed_at = None
         self.last_pool_close_reason = None
+        self._pool_workers = []
+        self._pool_recovery = None
+        self._pool_recovery_uncertain = False
 
     def allowed_handlers(self):
         if self.config.get('execution_mode') == PROJECT_MODE:
@@ -577,6 +580,8 @@ class Native:
     def _fresh_admission_reason(self, leaf_only=False):
         # read_resource_snapshot also checks the real local chat/slot gate.
         # A previously created pool is never permission to reuse a stale check.
+        if self._pool_recovery_uncertain:
+            return 'HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN'
         try:
             return resource_wait_reason(self.read_resource_snapshot(leaf_only=leaf_only))
         except (OSError, ValueError, TypeError, KeyError, GateError):
@@ -639,14 +644,194 @@ class Native:
                 'scope':'SUBTASK_COMPLETED_ORIGINAL_NOT_ACCEPTED',
                 'source_sha256':pins}
 
+    def _recovery_fence(self):
+        if (self._pool_recovery_uncertain or self.owner_allowed() is not True
+                or self.stop_active() is not False or self.writer_lease() is not True):
+            raise GateError('HOLD_NATIVE_POOL_RECOVERY_OWNER_OR_UNKNOWN')
+        self.read_reviewed_catalog()
+        for name, expected in self.config['module_pins'].items():
+            if digest(read(Path(__file__).parent/name)) != expected:
+                raise GateError('HOLD_NATIVE_POOL_RECOVERY_SOURCE')
+        reason = self._fresh_admission_reason(leaf_only=self._leaf_only_work())
+        if reason:
+            raise GateError(reason)
+
+    def _recovery_save(self, anchor, marker):
+        # Existing queue writer and task metadata only: no second journal/queue.
+        self.state['tasks'][anchor]['native_pool_recovery'] = marker
+        try:
+            self.ns['save_state'](self.state)
+            saved = document(self.ns['STATE'], 16*1024*1024)
+            if saved['tasks'][anchor].get('native_pool_recovery') != marker:
+                raise GateError('HOLD_NATIVE_POOL_RECOVERY_READBACK')
+        except Exception:
+            self._pool_recovery_uncertain = True
+            raise GateError('HOLD_NATIVE_POOL_RECOVERY_READBACK') from None
+
+    def _settled_project_failure(self, row):
+        """A failed attempt settles only with its exact inactive/S03 proof."""
+        projects = getattr(self, 'projects', None)
+        if not projects or row.get('handler') != PROJECT_HANDLER:
+            return False
+        evidence = row.get('result')
+        if not isinstance(evidence, dict) or evidence != row.get('native_project_terminal'):
+            return False
+        receipt = evidence.get('receipt') or {}
+        return (receipt.get('source_sha256') == self.source
+                and receipt.get('claim') == row.get('owner_claim')
+                and projects.terminal_for_capacity(row))
+
+    def reconcile_worker_claims(self):
+        """Retire only this idle, owned generation after durable claim proof.
+
+        Death, timeout or a terminal label alone never settles an execution.
+        The existing result/S03 contract supplies progress; an acknowledged
+        replacement can subsequently recover while idle without replaying it.
+        """
+        fd = None
+        with self.lock:
+            pool = self.pool
+            if self._pool_recovery_uncertain or pool is None:
+                return False
+            if set(pool.processes) != set(ROLES):
+                raise GateError('HOLD_NATIVE_POOL_RECOVERY_WORKERS')
+            dead = [child for child in pool.processes.values() if not child.is_alive()]
+            if not dead:
+                return False
+            if (pool.active or pool.started or self.completed or self.interrupted
+                    or any(type(child.exitcode) is not int for child in dead)):
+                raise GateError('HOLD_NATIVE_POOL_RECOVERY_BUSY_OR_UNKNOWN')
+            known = {row['role']: row for row in self._pool_workers}
+            if set(known) != set(ROLES) or len({row['pid'] for row in known.values()}) != 3:
+                raise GateError('HOLD_NATIVE_POOL_RECOVERY_WORKERS')
+            for role, child in pool.processes.items():
+                if child.pid != known[role]['pid']:
+                    raise GateError('HOLD_NATIVE_POOL_RECOVERY_LIFETIME')
+                if child.is_alive() and process_identity(child.pid) != {
+                        key: known[role][key] for key in ('pid', 'ppid', 'process_starttime')}:
+                    raise GateError('HOLD_NATIVE_POOL_RECOVERY_LIFETIME')
+            try:
+                fd = os.open(plain(ROOT/'state/owner_maintenance.lock'), os.O_RDONLY | os.O_NOFOLLOW)
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                self._recovery_fence()
+                with self.ns['_qlock']:
+                    saved = document(self.ns['STATE'], 16*1024*1024)['tasks']
+                    current = self.state['tasks']
+                    if len(current) > 20000 or len(saved) > 20000:
+                        raise GateError('HOLD_NATIVE_POOL_RECOVERY_STATE')
+                    candidates = []
+                    for task_id in set(current) | set(saved):
+                        row, durable = current.get(task_id), saved.get(task_id)
+                        if not any(isinstance(value, dict) and value.get('handler') in
+                                   self.allowed_handlers() for value in (row, durable)):
+                            continue
+                        project_failure_settled = isinstance(row, dict) and self._settled_project_failure(row)
+                        if (not isinstance(row, dict) or not isinstance(durable, dict)
+                                or durable != {key: value for key, value in row.items() if not key.startswith('_')}
+                                or row.get('_held_locks') or (autonomy._in_flight(row.get('status'))
+                                                            and not project_failure_settled)):
+                            raise GateError('HOLD_NATIVE_POOL_RECOVERY_CLAIM_UNSETTLED')
+                        prior = row.get('native_pool_recovery')
+                        if prior is not None and (not isinstance(prior, dict)
+                                or prior.get('schema') != 'NOX_NATIVE_POOL_RECOVERY_V1'
+                                or prior.get('phase') != 'ACTIVE'):
+                            raise GateError('HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN')
+                        evidence = row.get('result')
+                        receipt = evidence.get('receipt', {}) if isinstance(evidence, dict) else {}
+                        if (row.get('status') != 'done' and not project_failure_settled) or receipt.get('source_sha256') != self.source:
+                            continue  # Historical terminal rows remain untouched, not new proof.
+                        if not project_failure_settled and not self.verify(row, evidence):
+                            raise GateError('HOLD_NATIVE_POOL_RECOVERY_RESULT_UNKNOWN')
+                        result = receipt.get('worker_result') or {}
+                        worker = (result.get('leaf_evidence') or result.get('native_observation')
+                                  or result.get('project_evidence') or {}).get('worker') or {}
+                        same_worker = any(worker.get('pid') == item['pid'] and
+                            worker.get('process_starttime') == item['process_starttime'] for item in known.values())
+                        same_replacement = (isinstance(prior, dict) and prior.get('director') == process_identity(os.getpid())
+                            and prior.get('replacement_workers') == self._pool_workers
+                            and prior.get('claim_sha256') == digest(encoded(row.get('owner_claim')))
+                            and prior.get('result_sha256') == evidence.get('receipt_sha256'))
+                        if ((row.get('owner_claim') or {}).get('pid') == os.getpid()
+                                and (same_worker or same_replacement)):
+                            candidates.append(task_id)
+                    if not candidates:
+                        raise GateError('HOLD_NATIVE_POOL_RECOVERY_NO_SETTLED_PROGRESS')
+                    anchor = sorted(candidates)[-1]
+                    row = current[anchor]
+                    prior = row.get('native_pool_recovery')
+                    marker = {'schema':'NOX_NATIVE_POOL_RECOVERY_V1', 'phase':'INTENT',
+                        'task_id':anchor, 'director':process_identity(os.getpid()),
+                        'claim_sha256':digest(encoded(row['owner_claim'])),
+                        'result_sha256':row['result']['receipt_sha256'],
+                        'workers':list(self._pool_workers), 'replacement_workers':[],
+                        'previous_receipt_sha256':digest(encoded(prior)) if prior else None,
+                        'created_at':time.time(), 'tasks_replayed':0}
+                    self._recovery_save(anchor, marker)
+                    self._pool_recovery = anchor
+                    self._recovery_fence()
+                    pool.__exit__(None, None, None)  # Existing owned Process objects only.
+                    if any(child.is_alive() or type(child.exitcode) is not int for child in pool.processes.values()):
+                        raise GateError('HOLD_NATIVE_POOL_RECOVERY_RETIREMENT_UNKNOWN')
+                    self.pool = None
+                    marker = {**marker, 'phase':'RETIRED', 'retired_at':time.time()}
+                    self._recovery_save(anchor, marker)
+                    return True
+            except Exception:
+                # A persisted intent is never a licence to repeat an ambiguous close.
+                if self._pool_recovery is not None:
+                    self._pool_recovery_uncertain = True
+                raise
+            finally:
+                if fd is not None:
+                    os.close(fd)
+
     def ensure_processes(self, count):
         if count != 3 or self.stop_active():
             return False
-        with self.lock:
+        with self.lock, contextlib.ExitStack() as cleanup:
             if self.pool is None:
-                # Start only for real ready jobs, never to inflate a PID count.
-                self.pool = Subagents(list(ROLES), timeout=180 if self.projects else 60).__enter__()
-                self.last_pool_started_at = time.time()
+                fd = os.open(plain(ROOT/'state/owner_maintenance.lock'), os.O_RDONLY | os.O_NOFOLLOW)
+                cleanup.callback(os.close, fd)
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                self._recovery_fence()
+                with self.ns['_qlock']:
+                    saved = document(self.ns['STATE'], 16*1024*1024)['tasks']
+                    for task_id, row in saved.items():
+                        marker = row.get('native_pool_recovery') if isinstance(row, dict) else None
+                        if marker is not None and (not isinstance(marker, dict) or
+                                marker.get('phase') != 'ACTIVE') and task_id != self._pool_recovery:
+                            raise GateError('HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN')
+                    anchor = self._pool_recovery
+                    marker = saved.get(anchor, {}).get('native_pool_recovery') if anchor else None
+                    if anchor:
+                        if (not isinstance(marker, dict) or marker.get('phase') != 'RETIRED'
+                                or marker.get('director') != process_identity(os.getpid())
+                                or marker != self.state['tasks'][anchor].get('native_pool_recovery')
+                                or (saved[anchor].get('status') != 'done'
+                                    and not self._settled_project_failure(saved[anchor]))
+                                or marker.get('claim_sha256') != digest(encoded(saved[anchor].get('owner_claim')))
+                                or marker.get('result_sha256') != (saved[anchor].get('result') or {}).get('receipt_sha256')):
+                            raise GateError('HOLD_NATIVE_POOL_RECOVERY_REPLACEMENT_UNKNOWN')
+                        marker = {**marker, 'phase':'REPLACEMENT_INTENT'}
+                        self._recovery_save(anchor, marker)
+                    try:
+                        self._recovery_fence()
+                        # Cold start still requires a real ready job. Only a
+                        # verified retirement permits an idle replacement.
+                        self.pool = Subagents(list(ROLES), timeout=180 if self.projects else 60).__enter__()
+                        self.last_pool_started_at = time.time()
+                        rows = self.process_readback()
+                        autonomy.verify_distinct_native_processes(rows, requested=3, instance_id=60509551)
+                        self._pool_workers = [{key: row[key] for key in
+                            ('role', 'pid', 'ppid', 'process_starttime')} for row in rows]
+                        if anchor:
+                            self._recovery_save(anchor, {**marker, 'phase':'ACTIVE',
+                                'replacement_workers':list(self._pool_workers), 'activated_at':time.time()})
+                            self._pool_recovery = None
+                    except Exception:
+                        if anchor:
+                            self._pool_recovery_uncertain = True
+                        raise
             return len(self.process_readback()) == 3
 
     def process_readback(self):
@@ -1024,16 +1209,76 @@ class Native:
             os.close(self.lease_fd)
             self.lease_fd = None
 
+    def _maintenance_idle_pool(self):
+        """Retain owned idle IPC children during EX maintenance; admit nothing."""
+        if (self.pool is None or self._pool_recovery_uncertain or self.pool.active
+                or self.pool.started or self.completed or self.interrupted):
+            return False
+        flags = ('STOP','STOP.flag','stop.flag','.stop','program/STOP',
+                 'state/STOP','state/STOP.flag','state/OWNER_MAINTENANCE.flag')
+        try:
+            if any(p.exists() or p.is_symlink() for p in
+                   [*(ROOT/name for name in flags), Path('/workspace/NOX_STOP')]):
+                return False
+            known = {row['role']:row for row in self._pool_workers}
+            if set(known) != set(ROLES) or set(self.pool.processes) != set(ROLES):
+                return False
+            for role,child in self.pool.processes.items():
+                if child.pid != known[role]['pid']:
+                    return False
+                if child.is_alive():
+                    if process_identity(child.pid) != {key:known[role][key]
+                            for key in ('pid','ppid','process_starttime')}:
+                        return False
+                elif type(child.exitcode) is not int:
+                    return False
+            path = plain(ROOT/'state/owner_maintenance.lock')
+            fd = os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+            try:
+                info = os.fstat(fd)
+                named = path.stat()
+                if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+                        or info.st_nlink != 1 or info.st_mode & 0o022
+                        or (info.st_dev,info.st_ino) != (named.st_dev,named.st_ino)):
+                    return False
+                try:
+                    fcntl.flock(fd,fcntl.LOCK_SH|fcntl.LOCK_NB)
+                except BlockingIOError:
+                    return True  # Original stop_active remains true; no submit/ensure.
+                return False
+            finally:
+                os.close(fd)
+        except (OSError,ValueError,KeyError,GateError):
+            return False
+
     def tick(self, state):
         if not self.tick_lock.acquire(blocking=False):
             return
         try:
             self.state = state
             if self.stop_active():
+                with self.lock:
+                    if self._maintenance_idle_pool():
+                        self.last_status = {'state':'HOLD_MAINTENANCE_IDLE_POOL_RETAINED',
+                            'jobs_started':0,'active_subexecutor_processes':len(self.process_readback())}
+                        return
                 self.close_pool('WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
                 self.last_status = {'state': 'HOLD_OWNER_STOP_OR_MAINTENANCE', 'jobs_started': 0}
                 return
             with self.lock:
+                if self._pool_recovery_uncertain:
+                    raise GateError('HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN')
+                if self.pool is not None and any(not child.is_alive() for child in self.pool.processes.values()):
+                    if not self.reconcile_worker_claims():
+                        raise GateError('HOLD_OWNER_WORKER_RECONCILIATION_REQUIRED')
+                    self.last_status = {'state':'WAIT_RECONCILED_POOL_FRESH_ADMISSION', 'jobs_started':0}
+                    return
+                if self.pool is None and self._pool_recovery is not None:
+                    if not self.ensure_processes(3):
+                        raise GateError('HOLD_NATIVE_PROCESS_START')
+                    self.last_status = {'state':'NATIVE_IDLE_POOL_RECOVERED', 'jobs_started':0,
+                        'active_subexecutor_processes':len(self.process_readback())}
+                    return
                 self._drain()
             if self.projects:
                 self.projects.reconcile()

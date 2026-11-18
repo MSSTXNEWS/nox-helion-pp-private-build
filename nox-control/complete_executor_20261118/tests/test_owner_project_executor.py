@@ -99,6 +99,14 @@ class ProjectExecutorTests(unittest.TestCase):
             executor.integrate_prepared(ref, self.config, 'a' * 24, gate=lambda:True)
         self.assertEqual((Path(self.config['roots']['TEST_SOURCE']['path']) / 'source.py').read_bytes(), BASE)
 
+    def test_import_failure_reports_the_missing_dependency(self):
+        plan, blobs = plan_for(self.config, test=b'import nox_missing_fixture_dependency\n')
+        _, _, result = self.prepare(plan, blobs)
+        self.assertEqual(result['state'], 'BLOCKED_SANDBOX')
+        self.assertIn('ModuleNotFoundError', result['project_evidence']['reason'])
+        self.assertIn('nox_missing_fixture_dependency', result['project_evidence']['reason'])
+        self.assertFalse(result['passed'])
+
     def test_model_test_fix_test_uses_distinct_plan_journals(self):
         failed, blobs = plan_for(self.config, target=b'def value():\n    return 3\n')
         _, _, result = self.prepare(failed, blobs)

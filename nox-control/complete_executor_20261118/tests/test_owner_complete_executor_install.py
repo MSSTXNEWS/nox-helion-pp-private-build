@@ -76,10 +76,11 @@ class InstallerTests(unittest.TestCase):
         self.assertNotIn('PREIMAGE_RESTORED',result.values())
 
     def test_config_preserves_catalog_and_supports_autonomous_contract(self):
-        tasks=[{'id':'old.'+str(i),'opaque':{'keep':i}} for i in range(7)]
+        tasks=[{'id':'old.'+str(i),'opaque':{'keep':i}} for i in range(8)]
         catalog={'schema':'NOX_AUTONOMY_PROCESS_POOL_V1','tasks':tasks}
         config={'schema':'NOX_NATIVE_SUBAGENT_BINDING_V1','instance_id':60509551,'owner_authorized':True,
-                'mode':'NORMAL','target':3,'catalog':catalog,'catalog_sha256':installer.digest(installer.encoded(catalog))}
+                'mode':'NORMAL','target':3,'catalog':catalog,'catalog_sha256':installer.digest(installer.encoded(catalog)),
+                'module_pins':{'owner_subagent_dispatcher.py':'5'*64}}
         runtime={'scripts/owner_subagent_dispatcher.py':b'callback',
                  'scripts/owner_project_executor.py':b'executor','scripts/owner_project_test_runner.py':b'runner'}
         reference='f'*64
@@ -94,13 +95,17 @@ class InstallerTests(unittest.TestCase):
                  'source_pins':{name:installer.digest(runtime['scripts/'+name])
                                 for name in ('owner_project_executor.py','owner_project_test_runner.py')}}
         specification={'catalog_append':[row],'project_executor':project,
+                       'expected_native':{'scripts/owner_subagent_dispatcher.py':'5'*64},
                        'package_files':{'contracts/'+reference+'.json':'contract.json'}}
         changed=json.loads(installer.prepare_config(installer.encoded(config),runtime,specification,self.root,'123','a'*40))
-        self.assertEqual(changed['catalog']['tasks'][:7],tasks)
-        self.assertEqual(len(changed['catalog']['tasks']),8)
+        self.assertEqual(changed['catalog']['tasks'][:8],tasks)
+        self.assertEqual(len(changed['catalog']['tasks']),9)
         self.assertEqual(changed['global_worker_cap'],3)
         self.assertEqual(changed['execution_mode'],'NATIVE_PROJECT_V1')
-        self.assertIn(installer.LEGACY_LEAF_SHA,changed['historical_leaf_source_sha256'])
+        self.assertEqual(set(changed['historical_leaf_source_sha256']),{installer.LEGACY_LEAF_SHA,'5'*64})
+        mismatch=copy.deepcopy(specification);mismatch['expected_native']['scripts/owner_subagent_dispatcher.py']='6'*64
+        with self.assertRaisesRegex(installer.Hold,'PREVIOUS_CALLBACK_SOURCE_PIN'):
+            installer.prepare_config(installer.encoded(config),runtime,mismatch,self.root,'123','a'*40)
         invalid=copy.deepcopy(specification);invalid['catalog_append'][0]['params']['contract_sha256']='0'*64
         with self.assertRaises(installer.Hold):installer.prepare_config(installer.encoded(config),runtime,invalid,self.root,'123','a'*40)
 

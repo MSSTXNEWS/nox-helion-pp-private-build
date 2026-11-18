@@ -167,6 +167,16 @@
       }
     },
     {
+      "path": "test_nox_exchange_receipt_order.py",
+      "sha256": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+      "payload_sha256": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+      "bytes": 6764,
+      "source": {
+        "origin": "OWNER_REVIEWED_GOLDEN_TEST_OR_NAMESPACE",
+        "path": "test_nox_exchange_receipt_order.py"
+      }
+    },
+    {
       "path": "test_nox_existing_cache_race.py",
       "sha256": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
       "payload_sha256": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
@@ -292,9 +302,9 @@
       }
     }
   ],
-  "file_count": 27,
-  "bytes": 289901,
-  "files_sha256": "337bb0d35d44fcfb8d2e7e4eab36b3141145b371837049ef4438ba22c040cf8d",
+  "file_count": 28,
+  "bytes": 296665,
+  "files_sha256": "3f074f8ce68c5fff0b1cc39d3b24dde5329d04ef0e55b6a815f359f52cda4f3f",
   "model_reference_excluded": true,
   "native_runtime_mutations": false
 }

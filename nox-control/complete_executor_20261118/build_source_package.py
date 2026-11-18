@@ -52,9 +52,12 @@ def main():
         runtime[name]=raw
     callback=sha(runtime['owner_subagent_dispatcher.py'])
     wrapper=(WORK/'queue_work/native_leaf/owner_subagent_instruction_truth_four_queue.py').read_bytes()
-    assert sha(wrapper)==environment['expected_native']['scripts/owner_subagent_instruction_truth.py']
+    current_callback=environment['expected_native']['scripts/owner_subagent_dispatcher.py']
     assert wrapper.count(LEGACY.encode())==1
-    runtime['owner_subagent_instruction_truth.py']=wrapper.replace(LEGACY.encode(),callback.encode())
+    wrapper=wrapper.replace(LEGACY.encode(),current_callback.encode())
+    assert sha(wrapper)==environment['expected_native']['scripts/owner_subagent_instruction_truth.py']
+    assert wrapper.count(current_callback.encode())==1
+    runtime['owner_subagent_instruction_truth.py']=wrapper.replace(current_callback.encode(),callback.encode())
     assert sha(runtime['owner_subagent_instruction_truth.py'])==runtime_manifest['files']['owner_subagent_instruction_truth_project.py']['sha256']
     for name,raw in runtime.items():
         compile(raw,name,'exec');runtime_paths[asset(raw,'runtime','.py')]='scripts/'+name

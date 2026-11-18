@@ -271,6 +271,8 @@ def main():
         report = {'schema':'NOX_PROJECT_TEST_REPORT_V1', 'completed':False,
                   'passed':False, 'reason':str(exc) if isinstance(exc, RunnerHold)
                   else 'HOLD_PROJECT_TEST_RUNNER_'+type(exc).__name__}
+        if not isinstance(exc, RunnerHold):
+            report['exception_detail'] = re.sub(r'[\x00-\x1f\x7f]', ' ', str(exc))[:300]
     print(REPORT_PREFIX + json.dumps(report, sort_keys=True, separators=(',', ':')), flush=True)
     return 0 if report.get('passed') is True else 2
 

@@ -653,7 +653,9 @@ def _test_report(attempt, work, plan, config, stop_check, heartbeat):
     if report.get('schema') != 'NOX_PROJECT_TEST_REPORT_V1':
         raise ProjectHold('HOLD_PROJECT_TEST_REPORT_SCHEMA')
     if report.get('completed') is not True:
-        raise ProjectHold(report.get('reason', 'HOLD_PROJECT_TEST_INCOMPLETE'))
+        reason = report.get('reason', 'HOLD_PROJECT_TEST_INCOMPLETE')
+        detail = report.get('exception_detail')
+        raise ProjectHold(reason + (': ' + str(detail)[:300] if detail else ''))
     facts = report.get('sandbox') or {}
     if (facts.get('uid') != sandbox['uid'] or facts.get('gid') != sandbox['gid']
             or any(facts.get(key) is not True for key in ('network_denied', 'fork_denied',

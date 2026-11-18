@@ -130,3 +130,22 @@ All six reviewed plans passed strict schema and content-address validation.
 The manifest lists exact runtime bytes for the owner's staged native preflight,
 atomic source-pin migration and deployment. Existing leaf receipts remain
 verify-only under the explicitly listed historical callback source hash.
+
+## Concurrent native update reconciliation
+
+The first guarded installation stopped on its callback preimage check before
+changing native files. A concurrent operation had installed callback
+`5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5`,
+adding durable idle-pool recovery and preservation of idle children during an
+exclusive maintenance lease. This version was merged against the common
+`88af9c11…` base, preserving those features and adapting their claim census and
+receipt proof to project work. Explicit STOP still closes the pool.
+
+Seven focused native tests passed after the merge, including actual idle-worker
+retirement/replacement after a project receipt without replay, maintenance
+retention, explicit STOP and refusal to retire with pending project claims.
+Two exact wrapper-pin tests and a real confined missing-dependency diagnostic
+test also passed. The earlier 44-test result is retained as pre-rebase evidence,
+not relabelled as a full run on the merged bytes. The manifest records both
+source parents and the final candidate hashes. The native chroot preflight is
+still required before deployment.
