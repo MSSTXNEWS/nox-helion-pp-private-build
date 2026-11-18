@@ -112,5 +112,55 @@ class CounterLifecycleSourceTests(unittest.TestCase):
             patch('common.py', MARK.encode(), '0' * 64)
 
 
+    def test_concurrent_requests_no_lost_increments(self):
+        import concurrent.futures
+        import json
+        import tempfile
+        import time
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'chat_state.json'
+            def read_json(location, default):
+                if not location.exists():
+                    return default
+                return json.loads(location.read_text())
+            def write_json(location, value):
+                location.write_text(json.dumps(value))
+            env = {'CHAT_STATE': path, 'load_json': read_json,
+                   'atomic_write_json': write_json, 'time': time}
+            source = patch('common.py', MARK.encode(), digest(MARK.encode()), digest(MARK.encode()))
+            exec(compile(source, '<test_counter>', 'exec'), env)
+            def increment(_):
+                env['mark_chat'](True)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+                list(pool.map(increment, range(160)))
+            self.assertEqual(read_json(path, {})['inflight'], 160)
+            for _ in range(160):
+                env['mark_chat'](False)
+            self.assertEqual(read_json(path, {})['inflight'], 0)
+
+    def test_failed_async_iterator_close_releases_one_count(self):
+        import asyncio
+        source = patch('chat_proxy.py', CLASS.encode(), digest(CLASS.encode()), digest(CLASS.encode()))
+        context = {}
+        exec(compile(source, '<test_stream>', 'exec'), context)
+        class Broken:
+            def __aiter__(self):
+                return self
+            async def __anext__(self):
+                raise StopAsyncIteration
+            async def aclose(self):
+                raise RuntimeError('upstream close failed')
+        calls = []
+        async def scenario():
+            stream = context['_ChatActivityStream'](Broken(), lambda: calls.append('release'))
+            with self.assertRaisesRegex(RuntimeError, 'upstream close failed'):
+                await stream.aclose()
+            self.assertTrue(stream._closed)
+            await stream.aclose()
+        asyncio.run(scenario())
+        self.assertEqual(calls, ['release'])
+
+
 if __name__ == '__main__':
     unittest.main()
