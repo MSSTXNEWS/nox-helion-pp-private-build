@@ -29,6 +29,7 @@ LOCK_PATHS = (ROOT/'state/owner_maintenance.lock', ROOT/'state/dispatcher/native
 IDENTIFIER = re.compile(r'^[A-Za-z0-9_.:/@ -]{1,250}$')
 SHA = re.compile(r'^[0-9a-f]{40,64}$')
 PLANNER_MEMORY_TRACE_SHAS = frozenset((
+    'fecce4cc6345b6d686f3053753645f97d57f22f68e5de405c66027c19712e15c',
     'aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420',
     'e7bc83e4dea75f08ecb4e92fedf6ef98e0620f17c7b3b28ccb4728c6ddda68ac',
 ))
