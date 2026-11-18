@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from .zero3_fullbase_plan import fullbase_admission,zero3_cpu_config,sha256_manifest,STOP_PATHS
 from .curate_teacher_distillation import _file_sha
 from .verified_resume import admit_resume
+from .verified_resume import checkpoint_tree_sha256
 
 INSTANCE=60509551
 SIGN_ENV='NOX_EXISTING_ONEHOST_OWNER_HMAC'
@@ -210,6 +211,45 @@ def _claim_resume_submit(output:Path,resumed:dict,native:dict)->str:
         raise RuntimeError('HOLD_RESUME_SUBMIT_CLAIM_UNCERTAIN') from ex
     return _file_sha(claim_path)
 
+
+def _verify_written_checkpoint(output:Path,step:int)->dict:
+    """Bind the native receipt to the exact full-state checkpoint just written."""
+    if type(step) is not int or step<1 or output.is_symlink() or not output.is_dir():
+        raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_SCOPE')
+    checkpoint=output/f'checkpoint-{step}'
+    if checkpoint.is_symlink() or not checkpoint.is_dir():
+        raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_MISSING')
+    state_file=checkpoint/'trainer_state.json'
+    if (state_file.is_symlink() or not state_file.is_file()
+            or state_file.stat().st_size>2_000_000):
+        raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_TRAINER_STATE')
+    try:
+        state=json.loads(state_file.read_text(encoding='utf8'))
+    except (OSError,ValueError,UnicodeError) as ex:
+        raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_TRAINER_STATE') from ex
+    if not isinstance(state,dict) or type(state.get('global_step')) is not int or state['global_step']!=step:
+        raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_STEP_MISMATCH')
+    names=[]
+    for entry in checkpoint.rglob('*'):
+        if entry.is_symlink():
+            raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_SYMLINK')
+        if entry.is_file():
+            names.append(entry.name)
+            if len(names)>2048:
+                raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_TOO_MANY_FILES')
+    if not any(name.endswith('optim_states.pt') for name in names):
+        raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_OPTIMIZER_MISSING')
+    if not any(name.endswith('model_states.pt') for name in names):
+        raise RuntimeError('HOLD_WRITTEN_CHECKPOINT_MODEL_MISSING')
+    return {
+        'path':str(checkpoint),
+        'global_step':step,
+        'tree_sha256':checkpoint_tree_sha256(checkpoint),
+        'optimizer_state_files_verified':True,
+        'model_state_files_verified':True,
+    }
+
+
 def make_dataset(file:Path,tokenizer,max_len:int):
     from torch.utils.data import Dataset
     items=[]
@@ -398,6 +438,9 @@ def run(args)->dict:
         raise RuntimeError('HOLD_ZERO3_CHECKPOINT_NOT_WRITTEN')
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_BEFORE_RECEIPT')
+    written_checkpoint=_verify_written_checkpoint(out,steps)
+    if _stop_active(Path(args.stop_file)):
+        raise RuntimeError('HOLD_STOP_DURING_CHECKPOINT_RECEIPT')
     receipt={
         'schema':'NOX_V135_NATIVE_BASE_WEIGHT_OPTIMIZER_LOCAL_RECEIPT_V1',
         'student_original_sha256':native['student_base_sha256'],
@@ -418,6 +461,11 @@ def run(args)->dict:
         'p0_existing_runtime_compat':p0_runtime,
         'holdout_before_loss':float(x),'holdout_after_loss':float(y),
         'checkpoint_dirs_created':len(checkpoints),
+        'new_checkpoint_path':written_checkpoint['path'],
+        'new_checkpoint_global_step':written_checkpoint['global_step'],
+        'new_checkpoint_tree_sha256':written_checkpoint['tree_sha256'],
+        'new_checkpoint_optimizer_state_files_verified':written_checkpoint['optimizer_state_files_verified'],
+        'new_checkpoint_model_state_files_verified':written_checkpoint['model_state_files_verified'],
         'checkpoint_policy':'FIRST_STEP_OR_300_SECONDS_OR_FINAL',
         'new_checkpoint_external_restore_verified':False,
         'new_student_weights_sha_delta_verified':False,
