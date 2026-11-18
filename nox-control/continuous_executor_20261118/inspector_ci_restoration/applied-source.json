@@ -8,11 +8,24 @@
     "nox-control/test_owner_native_inspect_maya_read_bounds.py": "3ec9888ecf491ed2def4db1c44219fb448700e45ef7d621aee49d47a23f62a93"
   },
   "native_api_deployment": false,
-  "remote_workflow_verified": false,
+  "remote_workflow_verified": true,
+  "remote_workflows": [
+    {
+      "conclusion": "success",
+      "run": 44350542332,
+      "tests": 163
+    },
+    {
+      "conclusion": "success",
+      "run": 44350542287,
+      "tests": 177
+    }
+  ],
   "reviewers": [
     "root",
     "backlog_planner",
     "runtime_resources"
   ],
-  "schema": "NOX_INSPECTOR_API_RESTORATION_APPLIED_V1"
+  "schema": "NOX_INSPECTOR_API_RESTORATION_APPLIED_V1",
+  "source_commit": "db260689c5720a0d1ea654e1a86c03edf91dabcd"
 }

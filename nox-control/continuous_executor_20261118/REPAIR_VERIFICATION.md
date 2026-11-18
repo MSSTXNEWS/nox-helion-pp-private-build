@@ -169,4 +169,12 @@ The new API has not been installed into native service paths. The historical
 baseline and source-restoration evidence are in
 [CI_BASELINE_STATUS.md](CI_BASELINE_STATUS.md) and
 [inspector_ci_restoration/FINAL_REVIEW.md](inspector_ci_restoration/FINAL_REVIEW.md).
-Remote workflow evidence will be recorded after publication of this source snapshot.
+Both affected GitHub workflows passed on exact source commit
+[`db260689c5720a0d1ea654e1a86c03edf91dabcd`](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/db260689c5720a0d1ea654e1a86c03edf91dabcd):
+
+- [Lifeline safety regression 44350542332](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44350542332): **163 test-method executions passed**, comprising the original 137 and 26 added regressions.
+- [V38 source acceptance 44350542287](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44350542287): **177 test-method executions passed**, including canonical C02, immutable task tests, submission failures, recovery admission and the existing S03/media/chat checks.
+
+The exact command counts and workflow/job URLs are retained in
+[remote_ci_verification.json](remote_ci_verification.json). These are two affected
+source workflows; they do not establish new native deployment or weight training.

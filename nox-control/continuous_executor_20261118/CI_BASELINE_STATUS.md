@@ -6,10 +6,15 @@ the 137-test required lifeline suite. The compatibility candidate subsequently
 passed all 137 unchanged methods and 26 new safety/privacy methods, plus the
 related workflow commands listed in `compactci_baseline_report.json`.
 
-This is local source validation. A successful native installation and focused
-runtime tests do not make unrelated repository CI green; remote CI status must
-be taken from its actual run. The historical baseline findings below are retained
-for provenance and do not assert that a later repaired source still fails.
+Remote verification is now complete on source commit
+`db260689c5720a0d1ea654e1a86c03edf91dabcd`:
+[Lifeline run 44350542332](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44350542332)
+passed all **163** methods, and
+[V38 run 44350542287](https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44350542287)
+passed **177** methods. The machine-readable record is `remote_ci_verification.json`.
+These results come from the published source workflows, independently of native
+installation receipts. The historical baseline findings below are retained for
+provenance and do not assert that the repaired source still fails.
 
 ## Exact baseline and cause
 
