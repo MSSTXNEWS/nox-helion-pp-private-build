@@ -1,22 +1,5 @@
 name: NOX focused worker recovery source CI
 on:
-  push:
-    branches:
-      - feature/nox-recovery-boundary-347b-20261118
-    paths:
-      - 'nox-control/owner_native_operator_scoped_bundle.py'
-      - 'nox-control/owner_subagent_fresh_install_entry.py'
-      - 'nox-control/owner_subagent_hash_recovery_entry.py'
-      - 'nox-control/owner_subagent_install_entry.py'
-      - 'nox-control/owner_subagent_dispatcher_fresh.py'
-      - 'nox-control/owner_autonomy_pool.py'
-      - 'nox-control/owner_subagent_processes.py'
-      - 'nox-control/owner_dispatcher_mentor.py'
-      - 'nox_runpod/teacher_mesh/v51/**'
-      - 'nox-control/test_owner_subagent_*.py'
-      - 'nox-control/test_owner_autonomy_pool.py'
-      - '.github/workflows/nox-owner-maintenance-command.yml'
-      - '.github/workflows/nox-worker-recovery-source-ci.yml'
   pull_request:
     paths:
       - 'nox-control/owner_native_operator_scoped_bundle.py'

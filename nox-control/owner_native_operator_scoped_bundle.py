@@ -49,7 +49,7 @@ SUBAGENT_BUNDLE_PATHS = (
 SUBAGENT_BUNDLE_PINS = {
     'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
     'owner_subagent_install_entry.py': '9f23ac936d16fc019abf8e2ecb9d8aede919827f4c8f41d629d353903db04e51',
-    'owner_subagent_dispatcher_fresh.py': '93d082fe8f6180754ace4c0505a6dfb5c99ea0ed9a0cf10c494da5355f37d05a',
+    'owner_subagent_dispatcher_fresh.py': 'f4442c3b0b094c4d3afea19f4455144e1c12a9131d210cfe5c9c25d0ae5ab3a9',
     'owner_autonomy_pool.py': 'c4f0a178d22f47c1e1b2575f6b9c3280165eb0cf13920053c7b427ada3d8f8a9',
     'owner_subagent_processes.py': '8805da8d99c7d5fe38db6c9a100fb86cc052e1c795418fd78284a5cb7a84d276',
     'owner_dispatcher_mentor.py': 'b1143626aee7b74e1e3f8fa39d2035d4e29d0a5ec1882fae6efb8cab46260193',

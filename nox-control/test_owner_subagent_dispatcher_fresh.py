@@ -221,6 +221,7 @@ class FreshSubmissionTests(unittest.TestCase):
                 'worker': {'pid': 1234}}}
         native.pool.submit.side_effect = lambda _: events.append('submit')
         native.pool.poll.side_effect = [None] * 32 + [result_event] + [None] * 31
+        native.pool.__exit__ = Mock()
         native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
         native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
         proof = {'native_verified': True, 'task_id': task['id'], 'job_id': 'review-job',

@@ -273,16 +273,25 @@ def main():
                 'NOX_OWNER_SOURCE_SHA': 'a' * 40}))
             stack.enter_context(patch.object(entry, 'load_helpers', return_value=(helper, recovery, assets)))
             stack.enter_context(patch.object(entry, 'check_sources'))
-            resource_patch = (patch.object(entry, 'resource_admission', return_value=True)
-                              if resource_checks is None else
-                              patch.object(entry, 'resource_admission', side_effect=resource_checks))
-            stack.enter_context(resource_patch)
+            resource_samples = []
+            def fresh_resource_sample(_helper):
+                if resource_checks is None:
+                    allowed = True
+                else:
+                    if not resource_checks:
+                        raise AssertionError('Missing fresh resource admission sample')
+                    allowed = resource_checks.pop(0)
+                sample = {'observed_at': time.time(), 'admission_allowed': allowed}
+                resource_samples.append(sample)
+                return sample['admission_allowed']
+            stack.enter_context(patch.object(entry, 'resource_admission', side_effect=fresh_resource_sample))
             stack.enter_context(patch.object(entry, 'OLD_MENTOR_SHA', entry.digest(helper.before_mentor)))
             stack.enter_context(patch.object(entry, 'prior_receipt', return_value=helper.prior))
             stack.enter_context(patch.object(entry, 'old_callback', return_value=helper.callback))
             stack.enter_context(patch.object(entry, 'training_snapshot', side_effect=snapshots))
             stack.enter_context(redirect_stdout(io.StringIO()))
             rc = entry.main()
+        helper.resource_admission_samples = resource_samples
         self.assertEqual(helper.queue, original_queue)
         self.assertTrue(all(args[2] == helper.SERVICE for args in helper.commands))
         self.assertFalse(any(path.name in ('TRAIN_HOLD.flag', 'TRAIN_PAUSE_REQUEST.flag',
@@ -298,10 +307,16 @@ def main():
         self.assertEqual(result['error'], 'HOLD_SUBAGENT_FRESH_RESOURCE_HEADROOM')
         self.assertEqual(helper.target.read_bytes(), helper.before)
         self.assertFalse((helper.ROOT/'backup/owner_subagent_fresh_gate/1234').exists())
+        self.assertEqual([sample['admission_allowed'] for sample in helper.resource_admission_samples], [True, False])
+        self.assertTrue(all('observed_at' in sample for sample in helper.resource_admission_samples))
 
     def test_install_reloads_only_dispatcher_and_accepts_zero_idle_pool(self):
         rc, helper, result = self.run_fixture()
         self.assertEqual(rc, 0)
+        self.assertEqual([sample['admission_allowed'] for sample in helper.resource_admission_samples],
+                         [True, True, True, True])
+        self.assertEqual(len(helper.resource_admission_samples), 4)
+        self.assertTrue(all('observed_at' in sample for sample in helper.resource_admission_samples))
         self.assertEqual([row[1] for row in helper.commands], ['stop', 'start'])
         self.assertEqual(result['acceptance']['thread_runners'], 6)
         self.assertEqual(result['acceptance']['reviewer_pool_actual'], 0)
