@@ -359,20 +359,73 @@ class Subagents:
                 self._failure(role, 'HOLD_SUBAGENT_PROCESS_EXIT')
 
     def _replace_idle_dead_pool(self):
-        if all(process.is_alive() for process in self.processes.values()):
-            return
+        """Replace only proved-dead idle roles; retain every live peer and its IPC."""
         self._notice_dead_workers()
+        dead = [role for role, process in self.processes.items()
+                if not process.is_alive()]
+        if not dead:
+            return
+        # An in-flight or just-fenced result must first be read by the owner.
+        # Never restart a worker to replay an uncertain submitted TaskID.
         if self.active or self._pending_events:
             raise GateError('HOLD_SUBAGENT_POOL_NOT_READY')
-        # The completed queue belongs to the dispatcher and is not touched.
-        # Replace all workers and IPC channels only after no task is active.
-        self.__exit__(None, None, None)
-        self._new_channels()
-        try:
-            self._start_workers()
-        except BaseException:
-            self.__exit__(None, None, None)
-            raise
+        for role in dead:
+            previous = self.processes[role]
+            if previous.is_alive():
+                continue
+            try:
+                previous.join(timeout=0)
+            except (AssertionError, OSError, ValueError) as exc:
+                raise GateError('HOLD_SUBAGENT_PROCESS_REAP') from exc
+            inbound = self.ctx.Queue()
+            replacement = None
+            try:
+                replacement = self.ctx.Process(
+                    target=_worker,
+                    args=(role, inbound, self.outbox, self.url, self.timeout,
+                          self.worker_prepare, os.getpid()),
+                    name='NOX_SUBAGENT_'+role)
+                replacement.start()
+                deadline = time.monotonic() + 15
+                while True:
+                    left = deadline - time.monotonic()
+                    if left <= 0 or not replacement.is_alive():
+                        raise GateError('HOLD_SUBAGENT_PROCESS_START')
+                    try:
+                        msg = self.outbox.get(timeout=min(left, 1))
+                    except queue.Empty:
+                        continue
+                    if self._accept_heartbeat(msg):
+                        continue
+                    if (not isinstance(msg, dict) or msg.get('kind') != 'READY'
+                            or msg.get('role') != role
+                            or msg.get('pid') != replacement.pid):
+                        raise GateError('HOLD_SUBAGENT_READY_SCHEMA')
+                    at = msg.get('heartbeat_at')
+                    if (type(at) not in (int, float) or not math.isfinite(at)
+                            or at <= 0 or at > time.time()+5):
+                        raise GateError('HOLD_SUBAGENT_HEARTBEAT_START')
+                    if (replacement.pid == previous.pid
+                            or replacement.pid in {p.pid for name, p in self.processes.items()
+                                                   if name != role}):
+                        raise GateError('HOLD_SUBAGENT_PID_REUSE')
+                    break
+            except BaseException:
+                # Kill only this unadmitted replacement; never tear down peers.
+                if replacement is not None and replacement.pid is not None:
+                    if replacement.is_alive():
+                        replacement.terminate()
+                        replacement.join(timeout=2)
+                    if replacement.is_alive() and hasattr(replacement, 'kill'):
+                        replacement.kill()
+                        replacement.join(timeout=2)
+                inbound.close()
+                raise
+            old_inbound = self.inboxes[role]
+            self.processes[role] = replacement
+            self.inboxes[role] = inbound
+            self.heartbeats[role] = float(at)
+            old_inbound.close()
 
     def submit(self, task):
         """Submit one owner-claimed job; uncertain IDs stay fenced for pool life."""
