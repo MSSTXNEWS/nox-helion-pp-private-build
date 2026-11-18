@@ -49,8 +49,8 @@ SUBAGENT_BUNDLE_PATHS = (
 SUBAGENT_BUNDLE_PINS = {
     'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
     'owner_subagent_install_entry.py': '9f23ac936d16fc019abf8e2ecb9d8aede919827f4c8f41d629d353903db04e51',
-    'owner_subagent_dispatcher_fresh.py': 'f4442c3b0b094c4d3afea19f4455144e1c12a9131d210cfe5c9c25d0ae5ab3a9',
-    'owner_autonomy_pool.py': 'c4f0a178d22f47c1e1b2575f6b9c3280165eb0cf13920053c7b427ada3d8f8a9',
+    'owner_subagent_dispatcher_fresh.py': '18d3ddaa0c6d0344ee0473f69bdee09cba3c2748eeabf55ea7d502e973dc619b',
+    'owner_autonomy_pool.py': 'a3f5f1d1081ecce84815005a4dcf1cf0d46fd0b8c023a4ee56dd68c8097f89ce',
     'owner_subagent_processes.py': '8805da8d99c7d5fe38db6c9a100fb86cc052e1c795418fd78284a5cb7a84d276',
     'owner_dispatcher_mentor.py': 'd6fb298a9bfa8d3a81127848cc9f4e42ff276e2d8dcf89fbf63512cc7ec6359e',
     'owner_task_lifecycle.py': 'b09e02663f11c30e39a15b44ad2b12271219ec25bf0af9937bdf3a5fcfdebe5e',
