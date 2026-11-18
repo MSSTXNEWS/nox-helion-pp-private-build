@@ -1,0 +1,29 @@
+name: NOX B1 owner chat future marker focused gate
+on:
+  push:
+    branches: [b1-chat-priority-skew-20261118]
+    paths:
+      - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py'
+      - 'nox-control/systemic_relay_20261118/tests/test_b1_chat_priority_future_mtime_20261118.py'
+      - '.github/workflows/nox-b1-chat-priority-once.yml'
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify exact source and owner-chat future-marker behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          from pathlib import Path
+          path=Path('nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py')
+          compile(path.read_bytes(),str(path),'exec')
+          print('B1_DISPATCHER_SYNTAX=PASS SOURCE_ONLY')
+          PY
+          python -B -m unittest discover -s nox-control/systemic_relay_20261118/tests -p 'test_b1_chat_priority_future_mtime_20261118.py' -v
