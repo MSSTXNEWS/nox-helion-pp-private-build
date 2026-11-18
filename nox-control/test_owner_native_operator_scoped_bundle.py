@@ -25,6 +25,20 @@ def load(path, raw=None):
 def original_bytes():
     start, end = RAW.index(b'SCOPED_REPAIR_BUNDLES='), RAW.index(b'def authorize_event(')
     restored = RAW[:start] + RAW[end:]
+    before = b"import argparse, base64, contextlib, hashlib, ipaddress"
+    after = b"import argparse, base64, contextlib, ipaddress"
+    assert restored.count(before) == 1
+    restored = restored.replace(before, after, 1)
+    before = b"       'subagent':'nox-control/owner_subagent_fresh_install_entry.py',\n"
+    assert restored.count(before) == 1
+    restored = restored.replace(before, b"", 1)
+    before = (b"    if action == 'subagent':\n"
+              b"        assets=subagent_bundle_assets(SUBAGENT_BUNDLE_PATHS)\n"
+              b"        payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))\n"
+              b"    elif action == 'lifeline':")
+    after = b"    if action == 'lifeline':"
+    assert restored.count(before) == 1
+    restored = restored.replace(before, after, 1)
     before = b"for path in repair_bundle_paths(action,FILES[action],('nox-control/nox_cold_drive.py'"
     after = b"for path in ('nox-control/nox_cold_drive.py'"
     assert restored.count(before) == 1
@@ -44,6 +58,7 @@ LOOP = max((node for node in ast.walk(TREE) if isinstance(node, ast.For)
 PATHS = ast.literal_eval(LOOP.iter)
 HELD = 'nox-control/owner_qwen_held_media_smoke_entry.py'
 TRANSPORT = 'nox-control/owner_qwen_transport_install_entry.py'
+SUBAGENT = 'nox-control/owner_subagent_fresh_install_entry.py'
 
 
 class ScopeTests(unittest.TestCase):
@@ -57,10 +72,27 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(len({Path(p).name for p in PATHS}), 150)
         tree = ast.parse(RAW)
         class Inverse(ast.NodeTransformer):
+            def visit_Import(self, node):
+                node.names = [alias for alias in node.names if alias.name != 'hashlib']
+                return node if node.names else None
             def visit_Assign(self, node):
-                return None if any(isinstance(t, ast.Name) and t.id in {'SCOPED_REPAIR_BUNDLES', 'SCOPED_REPAIR_EXTRA_PATHS'} for t in node.targets) else node
+                names = {t.id for t in node.targets if isinstance(t, ast.Name)}
+                if names & {'SCOPED_REPAIR_BUNDLES', 'SCOPED_REPAIR_EXTRA_PATHS',
+                            'SUBAGENT_BUNDLE_PATHS', 'SUBAGENT_BUNDLE_PINS'}:
+                    return None
+                if 'FILES' in names:
+                    keep = [i for i, key in enumerate(node.value.keys)
+                            if not (isinstance(key, ast.Constant) and key.value == 'subagent')]
+                    node.value.keys = [node.value.keys[i] for i in keep]
+                    node.value.values = [node.value.values[i] for i in keep]
+                return self.generic_visit(node)
             def visit_FunctionDef(self, node):
-                return None if node.name == 'repair_bundle_paths' else self.generic_visit(node)
+                return None if node.name in {'repair_bundle_paths', 'subagent_bundle_assets'} else self.generic_visit(node)
+            def visit_If(self, node):
+                if ast.dump(node.test) == ast.dump(ast.parse("action == 'subagent'", mode='eval').body):
+                    assert len(node.orelse) == 1 and isinstance(node.orelse[0], ast.If)
+                    return self.visit(node.orelse[0])
+                return self.generic_visit(node)
             def visit_For(self, node):
                 self.generic_visit(node)
                 if isinstance(node.iter, ast.Call) and isinstance(node.iter.func, ast.Name) and node.iter.func.id == 'repair_bundle_paths':
@@ -84,6 +116,23 @@ class ScopeTests(unittest.TestCase):
         for path in selected:
             pin = core.PINS.get(Path(path).name, '51b42fef5455fd041a2cadb19c8ca86b3e35e7ad45b2315cdbe4ae5b82d24200')
             self.assertEqual(hashlib.sha256(Path(path).read_bytes()).hexdigest(), pin)
+
+    def test_subagent_action_bundles_only_exact_sha_pinned_assets(self):
+        entry = load(HERE / 'owner_subagent_fresh_install_entry.py')
+        selected = M.repair_bundle_paths('subagent', SUBAGENT, M.SUBAGENT_BUNDLE_PATHS)
+        self.assertEqual({Path(p).name for p in selected}, set(entry.ASSETS))
+        self.assertEqual(M.SUBAGENT_BUNDLE_PINS, entry.ASSETS)
+        assets = M.subagent_bundle_assets(M.SUBAGENT_BUNDLE_PATHS)
+        self.assertEqual(set(assets), set(entry.ASSETS))
+        for name, encoded in assets.items():
+            raw = base64.b64decode(encoded, validate=True)
+            self.assertEqual(hashlib.sha256(raw).hexdigest(), entry.ASSETS[name])
+        original_read = Path.read_bytes
+        def tampered(path):
+            return b'wrong source' if path.name == 'owner_autonomy_pool.py' else original_read(path)
+        with mock.patch.object(Path, 'read_bytes', tampered):
+            with self.assertRaisesRegex(RuntimeError, 'SOURCE_PIN'):
+                M.subagent_bundle_assets(M.SUBAGENT_BUNDLE_PATHS)
 
     def test_transport_set_derives_from_actual_assets_and_keeps_original_alias_checks(self):
         original = load(HERE / 'owner_qwen_revision_install.py')
