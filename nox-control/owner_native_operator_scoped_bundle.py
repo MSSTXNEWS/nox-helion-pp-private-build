@@ -52,9 +52,9 @@ SUBAGENT_BUNDLE_PINS = {
     'owner_subagent_dispatcher_fresh.py': '93d082fe8f6180754ace4c0505a6dfb5c99ea0ed9a0cf10c494da5355f37d05a',
     'owner_autonomy_pool.py': 'c4f0a178d22f47c1e1b2575f6b9c3280165eb0cf13920053c7b427ada3d8f8a9',
     'owner_subagent_processes.py': '8805da8d99c7d5fe38db6c9a100fb86cc052e1c795418fd78284a5cb7a84d276',
-    'owner_dispatcher_mentor.py': 'd6fb298a9bfa8d3a81127848cc9f4e42ff276e2d8dcf89fbf63512cc7ec6359e',
-    'owner_task_lifecycle.py': 'b09e02663f11c30e39a15b44ad2b12271219ec25bf0af9937bdf3a5fcfdebe5e',
-    'owner_senior_gateway.py': '50d147bb92d50fe56030bdd03d219fe4b1f5ca546b391700ef1eec02cd664401',
+    'owner_dispatcher_mentor.py': 'ed135563c70acb24ce508bbd9f0d53616b5810bd113b1818f677766f751de82a',
+    'owner_task_lifecycle.py': '75d0718bf9986f1a2cdbfa4f42f4fea9a8dad4558f1273c460c62dadb816f2a0',
+    'owner_senior_gateway.py': '40cbaec2e32e43f2aa78a1078ed296d4957c620256081695111b81136d2d3751',
 }
 
 def repair_bundle_paths(action,entrypoint,paths):

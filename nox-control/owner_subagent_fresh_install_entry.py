@@ -46,7 +46,7 @@ NEW_DEPENDENCIES = {
     'owner_subagent_dispatcher.py': NEW_CALLBACK,
 }
 OLD_MENTOR_SHA = '12211a29f77de8e5181d4dd78c35d5da2ed5de0dc6ea529149d32f0896809292'
-NEW_MENTOR_SHA = 'd6fb298a9bfa8d3a81127848cc9f4e42ff276e2d8dcf89fbf63512cc7ec6359e'
+NEW_MENTOR_SHA = 'ed135563c70acb24ce508bbd9f0d53616b5810bd113b1818f677766f751de82a'
 ASSETS = {
     'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
     'owner_subagent_install_entry.py': 'a210182012d8872390b27a1f0fa8a5668016f06cd94d5557aad2b242d67eb806',
@@ -54,8 +54,8 @@ ASSETS = {
     'owner_subagent_processes.py': NEW_DEPENDENCIES['owner_subagent_processes.py'],
     'owner_autonomy_pool.py': NEW_DEPENDENCIES['owner_autonomy_pool.py'],
     'owner_dispatcher_mentor.py': NEW_MENTOR_SHA,
-    'owner_task_lifecycle.py': 'b09e02663f11c30e39a15b44ad2b12271219ec25bf0af9937bdf3a5fcfdebe5e',
-    'owner_senior_gateway.py': '50d147bb92d50fe56030bdd03d219fe4b1f5ca546b391700ef1eec02cd664401',
+    'owner_task_lifecycle.py': '75d0718bf9986f1a2cdbfa4f42f4fea9a8dad4558f1273c460c62dadb816f2a0',
+    'owner_senior_gateway.py': '40cbaec2e32e43f2aa78a1078ed296d4957c620256081695111b81136d2d3751',
 }
 HANDLER = 'owner_native_subagent_review'
 TASKS = {'owner.native.v06.' + role + '.84780aaf911a' for role in ('runtime', 'memory', 'weights')}

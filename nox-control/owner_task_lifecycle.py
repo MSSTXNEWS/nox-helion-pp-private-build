@@ -847,23 +847,63 @@ def patch_dispatcher(source, expected_sha256, source_pins):
         raise LifecycleHold('HOLD_LIFECYCLE_ASSET_PINS')
     if not {'owner_mentor', 'owner_event_outbox'} <= set(source_pins):
         raise LifecycleHold('HOLD_LIFECYCLE_REQUIRED_PINS')
-    if PATCH_MARKER in source:
-        calls = [node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Call)
-                 and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
-                 and node.func.value.id == 'owner_task_lifecycle' and node.func.attr == 'bind_dispatcher']
-        if len(calls) != 1 or len(calls[0].args) != 2 or ast.literal_eval(calls[0].args[1]) != source_pins:
-            raise LifecycleHold('HOLD_LIFECYCLE_BOUND_PINS_CHANGED')
-        compile(source, '<dispatcher-owner-lifecycle>', 'exec')
-        return source
     tree = ast.parse(source)
+    parents = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
+             and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
+             and node.func.value.id == 'owner_task_lifecycle' and node.func.attr == 'bind_dispatcher']
     functions = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
     if not {'run_one', 'write_status', 'owner_claim_ready', '_nox_owner_task_admitted'} <= functions:
         raise LifecycleHold('HOLD_LIFECYCLE_NATIVE_CONTRACT')
     anchor = 'if __name__ == "__main__":'
     if source.count(anchor) != 1:
         raise LifecycleHold('HOLD_LIFECYCLE_MAIN_ANCHOR')
-    addition = ('# ' + PATCH_MARKER + '\nimport owner_task_lifecycle\n'
-                'owner_task_lifecycle.bind_dispatcher(globals(), ' + repr(source_pins) + ')\n\n')
-    updated = source.replace(anchor, addition + anchor, 1)
+    if PATCH_MARKER in source:
+        if source.count(PATCH_MARKER) != 1 or len(calls) != 1:
+            raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_COUNT')
+        call = calls[0]
+        if (not isinstance(parents.get(call), ast.Expr) or len(call.args) != 2 or call.keywords
+                or not isinstance(call.args[0], ast.Call)
+                or not isinstance(call.args[0].func, ast.Name) or call.args[0].func.id != 'globals'
+                or call.args[0].args or call.args[0].keywords):
+            raise LifecycleHold('HOLD_LIFECYCLE_BOUND_PINS_CHANGED')
+        try:
+            bound_pins = ast.literal_eval(call.args[1])
+        except (ValueError, TypeError, SyntaxError):
+            raise LifecycleHold('HOLD_LIFECYCLE_BOUND_PINS_CHANGED')
+        lines = source.splitlines()
+        if (bound_pins != source_pins or call.lineno < 2
+                or lines[call.lineno - 2].strip() != '# ' + PATCH_MARKER):
+            raise LifecycleHold('HOLD_LIFECYCLE_BOUND_PINS_CHANGED')
+        compile(source, '<dispatcher-owner-lifecycle>', 'exec')
+        return source
+    if len(calls) != 1:
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_COUNT')
+    call = calls[0]
+    if (not isinstance(parents.get(call), ast.Expr) or call.args or call.keywords
+            or call.lineno != call.end_lineno):
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_SHAPE')
+    source_lines = source.splitlines(keepends=True)
+    raw_line = source_lines[call.lineno - 1].encode('utf-8')
+    start_col, end_col = call.col_offset, call.end_col_offset
+    try:
+        call_source = raw_line[start_col:end_col].decode('utf-8')
+    except UnicodeError:
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_SHAPE')
+    if call_source != ast.get_source_segment(source, call) or raw_line[:start_col].strip():
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_SHAPE')
+    suffix = raw_line[end_col:].decode('utf-8').rstrip('\r\n').strip()
+    if suffix and not suffix.startswith('#'):
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_SHAPE')
+    indent = raw_line[:start_col]
+    newline = b'\r\n' if raw_line.endswith(b'\r\n') else b'\n' if raw_line.endswith(b'\n') else b''
+    marker = indent + b'# ' + PATCH_MARKER.encode('ascii') + newline
+    replacement = ('owner_task_lifecycle.bind_dispatcher(globals(), ' + repr(source_pins) + ')').encode('utf-8')
+    source_lines[call.lineno - 1] = (raw_line[:start_col] + replacement + raw_line[end_col:]).decode('utf-8')
+    source_lines.insert(call.lineno - 1, marker.decode('utf-8'))
+    updated = ''.join(source_lines)
     compile(updated, '<dispatcher-owner-lifecycle>', 'exec')
     return updated

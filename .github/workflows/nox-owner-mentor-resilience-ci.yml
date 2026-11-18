@@ -6,6 +6,12 @@ on:
       - 'nox-control/test_owner_dispatcher_mentor.py'
       - 'nox-control/owner_dispatcher_reciprocal_health.py'
       - 'nox-control/test_owner_dispatcher_reciprocal_health.py'
+      - 'nox-control/owner_task_lifecycle.py'
+      - 'nox-control/owner_senior_gateway.py'
+      - 'nox-control/owner_senior_gateway.example.json'
+      - 'nox-control/owner_native_operator_scoped_bundle.py'
+      - 'nox-control/owner_subagent_fresh_install_entry.py'
+      - 'nox-control/test_owner_senior_gateway.py'
       - '.github/workflows/nox-owner-mentor-resilience-ci.yml'
   pull_request:
     paths:
@@ -13,6 +19,12 @@ on:
       - 'nox-control/test_owner_dispatcher_mentor.py'
       - 'nox-control/owner_dispatcher_reciprocal_health.py'
       - 'nox-control/test_owner_dispatcher_reciprocal_health.py'
+      - 'nox-control/owner_task_lifecycle.py'
+      - 'nox-control/owner_senior_gateway.py'
+      - 'nox-control/owner_senior_gateway.example.json'
+      - 'nox-control/owner_native_operator_scoped_bundle.py'
+      - 'nox-control/owner_subagent_fresh_install_entry.py'
+      - 'nox-control/test_owner_senior_gateway.py'
       - '.github/workflows/nox-owner-mentor-resilience-ci.yml'
   workflow_dispatch:
 permissions:
@@ -27,6 +39,10 @@ jobs:
           persist-credentials: false
       - name: Parse and compile pinned mentor source and regressions
         run: python3 -m py_compile nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py nox-control/owner_dispatcher_reciprocal_health.py nox-control/test_owner_dispatcher_reciprocal_health.py
+      - name: Run lifecycle binding and no-paid gateway regressions
+        run: |
+          python3 -m py_compile nox-control/owner_task_lifecycle.py nox-control/owner_senior_gateway.py nox-control/test_owner_senior_gateway.py
+          python3 -m unittest discover -s nox-control -p 'test_owner_senior_gateway.py' -v
       - name: Run original mentor regressions plus bounded offline recovery
         run: python3 -m unittest discover -s nox-control -p 'test_owner_dispatcher_mentor.py' -v
       - name: Run reciprocal NOX dispatcher process identity tests

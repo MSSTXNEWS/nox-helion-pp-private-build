@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import copy
 from concurrent.futures import ThreadPoolExecutor
 import importlib.util
@@ -10,6 +11,8 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
+
+import owner_task_lifecycle as lifecycle
 
 SPEC = importlib.util.spec_from_file_location('owner_senior_gateway', Path(__file__).with_name('owner_senior_gateway.py'))
 gateway = importlib.util.module_from_spec(SPEC)
@@ -29,6 +32,10 @@ ADVICE = json.dumps({'assessment': 'HOLD_FOR_REVIEW', 'check_categories': ['resu
 
 class GatewayTests(unittest.TestCase):
     def setUp(self):
+        # Existing provider protocol tests use injected mock transports only.
+        self.test_only_paid_policy = patch.object(gateway, '_PAID_PROVIDER_CALLS_DISABLED', False)
+        self.test_only_paid_policy.start()
+        self.addCleanup(self.test_only_paid_policy.stop)
         self.admission_calls = 0
         def admit():
             self.admission_calls += 1
@@ -50,6 +57,7 @@ class GatewayTests(unittest.TestCase):
 
     def configure(self, **overrides):
         config = copy.deepcopy(gateway.DEFAULT_CONFIG)
+        config.update({'enabled': True})
         config.update(overrides)
         gateway._write('config/owner_senior_gateway.json', config)
         return config
@@ -72,14 +80,62 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(gateway.status()['state'], 'READY')
         return config
 
+    def test_lifecycle_binding_rewrite_is_unique_and_paid_provider_path_is_disabled(self):
+        pins = {'owner_mentor': 'a' * 64, 'owner_event_outbox': 'b' * 64,
+                'owner_senior_gateway': 'c' * 64}
+        source = ("import owner_task_lifecycle\n"
+                  "def run_one(): pass\n"
+                  "def write_status(): pass\n"
+                  "def owner_claim_ready(): pass\n"
+                  "def _nox_owner_task_admitted(): pass\n"
+                  "owner_task_lifecycle.bind_dispatcher()\n"
+                  "if __name__ == \"__main__\":\n    main()\n")
+        digest = lambda value: hashlib.sha256(value.encode()).hexdigest()
+        patched = lifecycle.patch_dispatcher(source, digest(source), pins)
+        call = 'owner_task_lifecycle.bind_dispatcher(globals(), ' + repr(pins) + ')'
+        self.assertEqual(patched.count('owner_task_lifecycle.bind_dispatcher('), 1)
+        self.assertIn(call, patched)
+        self.assertEqual(lifecycle.patch_dispatcher(patched, digest(patched), pins), patched)
+        duplicate = source + '\nowner_task_lifecycle.bind_dispatcher()\n'
+        with self.assertRaisesRegex(lifecycle.LifecycleHold, 'HOLD_LIFECYCLE_BIND_CALL_COUNT'):
+            lifecycle.patch_dispatcher(duplicate, digest(duplicate), pins)
+        argful = source.replace('owner_task_lifecycle.bind_dispatcher()',
+                                'owner_task_lifecycle.bind_dispatcher({})', 1)
+        with self.assertRaisesRegex(lifecycle.LifecycleHold, 'HOLD_LIFECYCLE_BIND_CALL_SHAPE'):
+            lifecycle.patch_dispatcher(argful, digest(argful), pins)
+
+        config = self.configure(enabled=True)
+        self.credentials()
+        credential_path = self.root / 'config/owner_senior_credentials.json'
+        credentials_before = credential_path.read_bytes()
+        with patch.object(gateway, '_PAID_PROVIDER_CALLS_DISABLED', True), \
+                patch.object(gateway, '_credentials') as credentials, \
+                patch.object(gateway, '_request') as request:
+            self.assertEqual(gateway.DEFAULT_CONFIG['enabled'], False)
+            self.assertEqual(gateway.status()['state'], 'DISABLED_NO_PAID_PROVIDER')
+            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'DISABLED_NO_PAID_PROVIDER')
+            self.assertEqual(gateway.verify_access('openai')['state'], 'DISABLED_NO_PAID_PROVIDER')
+            self.assertEqual(gateway.set_credential('openai', 'new-test-value')['state'],
+                             'DISABLED_NO_PAID_PROVIDER')
+            credentials.assert_not_called()
+            request.assert_not_called()
+        with patch.object(gateway, '_PAID_PROVIDER_CALLS_DISABLED', True), \
+                patch.object(gateway, 'request_contract') as contract:
+            direct = asyncio.run(gateway._request('openai', 'unit-test-key', 'prompt', config))
+            self.assertEqual(direct['state'], 'DISABLED_NO_PAID_PROVIDER')
+            contract.assert_not_called()
+        self.assertEqual(credential_path.read_bytes(), credentials_before)
+        self.assertFalse((self.root / 'state/owner_senior/access.json').exists())
+        self.assertFalse((self.root / 'state/owner_senior/budget.json').exists())
+
     def test_absent_and_missing_credentials_are_read_only_and_never_call_provider(self):
         self.assertEqual(gateway.status()['state'], 'MISSING_SENIOR_GATEWAY')
         self.assertEqual(list(self.root.iterdir()), [])
         result = gateway.initialize()
-        self.assertEqual(result['state'], 'MISSING_CREDENTIALS')
+        self.assertEqual(result['state'], 'DISABLED')
         with patch.object(gateway, '_request') as request:
-            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'MISSING_CREDENTIALS')
-            self.assertEqual(gateway.verify_access()['state'], 'MISSING_CREDENTIALS')
+            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'DISABLED')
+            self.assertEqual(gateway.verify_access()['state'], 'DISABLED')
         request.assert_not_called()
         self.assertFalse((self.root / 'config/owner_senior_credentials.json').exists())
 
@@ -250,6 +306,11 @@ class GatewayTests(unittest.TestCase):
     def test_http_redirect_is_not_followed_and_body_limit_is_enforced(self):
         import httpx
         config = self.configure()
+        local_url = 'http://127.0.0.1:9000/v1/responses'
+        with patch.dict(gateway.PROVIDERS, {'openai': {**gateway.PROVIDERS['openai'], 'url': local_url}}):
+            self._exercise_http_redirect_and_body_limit(config, httpx, local_url)
+
+    def _exercise_http_redirect_and_body_limit(self, config, httpx, local_url):
         original = httpx.AsyncClient
         options = []
         seen = []
@@ -275,6 +336,10 @@ class GatewayTests(unittest.TestCase):
         import httpx
         config = self.configure()
         config['request_timeout_seconds'] = 0.02
+        with patch.dict(gateway.PROVIDERS, {'google': {**gateway.PROVIDERS['google'], 'url': 'http://127.0.0.1:9000/v1beta/interactions'}}):
+            self._exercise_total_provider_deadline(config, httpx)
+
+    def _exercise_total_provider_deadline(self, config, httpx):
         original = httpx.AsyncClient
         cancelled = []
         async def slow(request):

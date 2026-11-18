@@ -170,7 +170,7 @@ class MentorTests(unittest.TestCase):
                 return Response()
         opener = Opener()
         with patch.object(mentor.urllib.request, 'build_opener', return_value=opener):
-            mentor.consult({'model': 'senior', 'endpoint': 'https://example.invalid/chat/completions'},
+            mentor.consult({'model': 'senior', 'endpoint': 'http://127.0.0.1:9000/v1/chat/completions'},
                            {'allowed_services': []}, idempotency_key='b' * 64)
         self.assertEqual(opener.request.get_header('Idempotency-key'), 'b' * 64)
         with tempfile.TemporaryDirectory() as directory:
@@ -216,6 +216,40 @@ class MentorTests(unittest.TestCase):
                 self.assertEqual(task['status'], 'blocked')
                 reserve.assert_not_called()
                 consult.assert_not_called()
+
+    def test_senior_remote_and_credentialed_endpoints_hold_before_network(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(mentor, 'ROOT', Path(directory)), \
+                patch.dict(os.environ, {}, clear=True):
+            root = Path(directory)
+            config_path = root / 'config/senior_model.json'
+            config_path.parent.mkdir(parents=True)
+            remote = {'enabled': True, 'role': 'senior', 'base_url': 'https://api.example.invalid/v1',
+                      'model': 'remote-senior', 'api_key_env': 'NOX_TEST_PROVIDER_KEY'}
+            config_path.write_text(json.dumps(remote))
+            self.assertIsNone(mentor.discover_senior())
+            with patch.object(mentor.urllib.request, 'build_opener') as opener:
+                with self.assertRaisesRegex(RuntimeError, 'BLOCKED_SENIOR_ENDPOINT'):
+                    mentor.consult({'endpoint': 'https://api.example.invalid/v1/chat/completions',
+                                    'model': 'remote-senior', '_key': None},
+                                   {'allowed_services': []}, idempotency_key='c' * 64)
+                opener.assert_not_called()
+
+            local_with_credential = dict(remote, base_url='http://127.0.0.1:9000/v1',
+                                          api_key_env='NOX_TEST_PROVIDER_KEY')
+            config_path.write_text(json.dumps(local_with_credential))
+            self.assertIsNone(mentor.discover_senior())
+
+            local = {'enabled': True, 'role': 'senior', 'base_url': 'http://127.0.0.1:9000/v1',
+                     'model': 'local-senior'}
+            config_path.write_text(json.dumps(local))
+            discovered = mentor.discover_senior()
+            self.assertIsNotNone(discovered)
+            self.assertIsNone(discovered['_key'])
+            with patch.dict(sys.modules, {'owner_subagent_dispatcher': None}), \
+                    patch.object(mentor.urllib.request, 'build_opener') as opener:
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_ADVISOR_RESOURCE_GATE_UNBOUND'):
+                    mentor.consult(discovered, {'allowed_services': []}, idempotency_key='d' * 64)
+                opener.assert_not_called()
 
     def test_event_log_hard_cap_holds_without_valid_cursor_and_quarantine_compacts(self):
         for cursor_state in ('missing', 'malformed'):
