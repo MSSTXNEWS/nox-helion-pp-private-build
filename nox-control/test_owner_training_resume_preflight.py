@@ -311,5 +311,73 @@ class ResumePreflightTests(unittest.TestCase):
 
 
 
+    def test_owner_control_requires_one_unexpired_fenced_lease_and_pid_ticks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            now = time.time()
+            lease = {
+                'schema': 'NOX_OWNER_TRAINING_LEASE_V1', 'owner_request_id': '123',
+                'source_sha256': 'a' * 40, 'state': 'ACTIVE', 'fenced': True,
+                'fencing_token': 7, 'active_lease_count': 1, 'lease_id': 'lease-123',
+                'sampled_at_unix': now, 'issued_at_unix': now - 2,
+                'expires_at_unix': now + 30, 'owner_pid': 456,
+                'owner_pid_start_ticks': 789, 'handoff_verified': True,
+                'trainer_state': 'STOPPED', 'training_process_count': 0,
+            }
+            self.write(root / 'state/owner_training_lease.json', lease)
+            with patch.object(preflight, 'LEASE_EVIDENCE', root / 'state/owner_training_lease.json'), \
+                 patch.object(preflight, 'STOP_FLAGS', ()), \
+                 patch.object(preflight, '_proc_start_ticks', return_value=789):
+                good = preflight._owner_control_projection('123', 'a' * 40, now)
+                self.assertTrue(good['single_fenced_lease'])
+                self.assertTrue(good['handoff_verified'])
+                self.assertTrue(good['trainer_stopped'])
+                self.assertTrue(good['pid_start_ticks'][0]['verified'])
+            lease['owner_pid_start_ticks'] = 790
+            self.write(root / 'state/owner_training_lease.json', lease)
+            with patch.object(preflight, 'LEASE_EVIDENCE', root / 'state/owner_training_lease.json'), \
+                 patch.object(preflight, 'STOP_FLAGS', ()), \
+                 patch.object(preflight, '_proc_start_ticks', return_value=789):
+                mismatched = preflight._owner_control_projection('123', 'a' * 40, now)
+            self.assertFalse(mismatched['single_fenced_lease'])
+            self.assertEqual(mismatched['pid_start_ticks'], [])
+
+    def test_rollback_projection_rehashes_independent_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            now = time.time()
+            backup = root / 'state/training_backups/123/checkpoint.bundle'
+            backup.parent.mkdir(parents=True)
+            backup.write_bytes(b'immutable rollback bytes')
+            bundle = 'a' * 64
+            self.write(root / 'state/training_rollback_evidence.json', {
+                'schema': 'NOX_TRAINING_ROLLBACK_EVIDENCE_V1', 'owner_request_id': '123',
+                'sampled_at_unix': now, 'immutable_pre_run_checkpoint_sha256': bundle,
+                'independent_backup_path': 'state/training_backups/123/checkpoint.bundle',
+                'independent_backup_sha256': preflight.digest(backup.read_bytes()),
+                'restore_probe_sha256': 'b' * 64, 'restore_probe_passed': True,
+            })
+            with patch.object(preflight, 'ROOT', root), \
+                 patch.object(preflight, 'ROLLBACK_EVIDENCE', root / 'state/training_rollback_evidence.json'):
+                good = preflight._rollback_projection('123', {'bundle_sha256': bundle}, now)
+                self.assertTrue(good['backup_verified'])
+                self.assertTrue(good['restore_probe_passed'])
+                backup.write_bytes(b'changed bytes')
+                bad = preflight._rollback_projection('123', {'bundle_sha256': bundle}, now)
+            self.assertFalse(bad['backup_verified'])
+
+    def test_stop_flag_is_never_reported_clear(self):
+        with tempfile.TemporaryDirectory() as directory:
+            stop = Path(directory) / 'STOP'
+            stop.write_text('hold')
+            with patch.object(preflight, 'ROOT', Path(directory)), \
+                 patch.object(preflight, 'STOP_FLAGS', (stop,)):
+                result = preflight._stop_projection()
+        self.assertTrue(result['stop_state_verified'])
+        self.assertFalse(result['stop_clear'])
+        self.assertEqual(result['active_stop_flags'], ['STOP'])
+
+
+
 if __name__ == '__main__':
     unittest.main()
