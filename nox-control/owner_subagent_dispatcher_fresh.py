@@ -994,8 +994,31 @@ class Native:
                     for task_id in set(self.pool.active.values()) | set(self.completed):
                         self.interrupted[task_id] = reason
                     # Keep completed events until their handlers commit them to S03.
-                self.pool.__exit__(None, None, None)
-                self.pool = None
+                pool = self.pool
+                active_ids = set(pool.active.values())
+                shutdown_events = []
+                try:
+                    shutdown = getattr(pool, 'shutdown_and_drain', None)
+                    if callable(shutdown):
+                        shutdown_events = shutdown()
+                    else:
+                        pool.__exit__(None, None, None)
+                except Exception:
+                    # Failed IPC shutdown is still uncertain; preserve the
+                    # durable submit intent and never retry the task.
+                    try:
+                        pool.__exit__(None, None, None)
+                    except Exception:
+                        pass
+                finally:
+                    if isinstance(shutdown_events, (list, tuple)):
+                        for event in shutdown_events:
+                            if not isinstance(event, dict) or event.get('id') not in active_ids:
+                                continue
+                            self.completed[event['id']] = event
+                            if reason is not None:
+                                self.interrupted[event['id']] = reason
+                    self.pool = None
 
     def close(self):
         self.close_pool()

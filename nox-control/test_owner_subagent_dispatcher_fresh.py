@@ -62,6 +62,7 @@ def native_with_pool():
     native.pool = Mock()
     native.pool.active = {}
     native.pool.submit.side_effect = GateError('HOLD_TEST_AFTER_SUBMIT')
+    native.pool.shutdown_and_drain = Mock(return_value=[])
     native.interrupted = {}
     native.completed = {}
     native._claim_current = Mock(return_value=True)
@@ -90,6 +91,7 @@ class PoolLifecycleTests(unittest.TestCase):
         value.pool = Mock()
         value.pool.processes = children
         value.pool.active = active or {}
+        value.pool.shutdown_and_drain = Mock(return_value=[])
         value.pool.heartbeats = heartbeats or {role: time.time() for role in binding.ROLES}
         value.pool.poll.return_value = None
         value.pool.__exit__ = Mock()
@@ -221,7 +223,8 @@ class FreshSubmissionTests(unittest.TestCase):
                 'policy_ack': {'sha256': 'a' * 64, 'full_file_read': True},
                 'worker': {'pid': 1234}}}
         native.pool.submit.side_effect = lambda _: events.append('submit')
-        native.pool.poll.side_effect = [None] * 32 + [result_event] + [None] * 31
+        native.pool.poll.side_effect = [None] * 64
+        native.pool.shutdown_and_drain = Mock(return_value=[result_event])
         native.pool.__exit__ = Mock()
         native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
         native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
@@ -305,6 +308,26 @@ class FreshSubmissionTests(unittest.TestCase):
         native.pool.submit.assert_not_called()
         persisted = json.loads(native.ns['STATE'].read_text())
         self.assertEqual(persisted['tasks'][task['id']]['status'], 'done')
+
+
+    def test_shutdown_captures_result_published_after_pre_shutdown_drain(self):
+        native, task = native_with_pool()
+        event = {'id': task['id'], 'state': 'CANDIDATE_NOT_APPLIED',
+                 'role': 'runtime', 'pid': 1234, 'elapsed_ms': 1,
+                 'answer': 'candidate',
+                 'native_observation': {'claim': 'a' * 24,
+                     'policy_ack': {'sha256': 'a' * 64, 'full_file_read': True},
+                     'worker': {'pid': 1234}}}
+        native.pool.active = {'runtime': task['id']}
+        native.pool.poll.return_value = None
+        native.pool.shutdown_and_drain = Mock(return_value=[event])
+        native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
+        native.close_pool('WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
+        self.assertEqual(native.completed[task['id']], event)
+        self.assertEqual(native.interrupted[task['id']],
+                         'WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
+        self.assertIsNone(native.pool)
+        native.pool.__exit__.assert_not_called()
 
     def test_new_pool_rechecks_after_process_creation(self):
         native, task = native_with_pool()
