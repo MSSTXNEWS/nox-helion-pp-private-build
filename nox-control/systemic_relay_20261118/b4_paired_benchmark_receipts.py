@@ -2,6 +2,7 @@
 
 Does not run models or authorize deployment, rank claims, training, or promotion.
 All declared tasks, including failures and timeouts, remain in the denominator.
+The independently assembled full input must match the bytes actually sent to serving.
 """
 from __future__ import annotations
 import math
@@ -68,6 +69,11 @@ def _validated(run):
                  "MISSING_QUALITY_OR_BACKGROUND_PROOF")
         _require(type(event.get("trace_sha256")) is str
                  and SHA.fullmatch(event["trace_sha256"]), "TRACE_PIN")
+        _require(all(type(event.get(key)) is str and SHA.fullmatch(event[key])
+                     for key in ("expected_full_input_sha256", "served_full_input_sha256")),
+                 "FULL_INPUT_PIN")
+        _require(event["expected_full_input_sha256"] == event["served_full_input_sha256"],
+                 "INPUT_TRUNCATED_OR_MODIFIED")
         mapped[task] = event
     _require(set(mapped) == task_ids, "TASK_SET_MISMATCH")
     return mapped
@@ -111,7 +117,7 @@ def compare_paired(baseline, candidate):
     Errors yield HOLD rather than an optimistic partial score. Latency includes
     failed/timed-out runs and uses nearest-rank p95; no Arena or TOP30 mapping.
     """
-    answer = {"schema": "NOX_B4_PAIRED_COMPARISON_V1", "comparable": False,
+    answer = {"schema": "NOX_B4_PAIRED_COMPARISON_V2", "comparable": False,
               "promotion_authorized": False, "rank_claim_authorized": False,
               "measured_nox_gain": False}
     try:
@@ -121,6 +127,10 @@ def compare_paired(baseline, candidate):
                  "EVALUATION_PROTOCOL_MISMATCH")
         _require(baseline["declared_task_ids"] == candidate["declared_task_ids"],
                  "TASK_ORDER_MISMATCH")
+        _require(all(old[task]["expected_full_input_sha256"] ==
+                     new[task]["expected_full_input_sha256"]
+                     for task in baseline["declared_task_ids"]),
+                 "FULL_INPUT_DIFFERENCE")
     except ReceiptHold as err:
         return {**answer, "state": "HOLD", "reason": str(err)}
     before, after = (_metrics(old, baseline["max_task_ms"]),
