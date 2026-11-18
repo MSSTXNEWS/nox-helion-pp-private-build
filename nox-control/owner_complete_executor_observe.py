@@ -28,6 +28,35 @@ FLAGS = (
 LOCK_PATHS = (ROOT/'state/owner_maintenance.lock', ROOT/'state/dispatcher/native_subagents.lock')
 IDENTIFIER = re.compile(r'^[A-Za-z0-9_.:/@ -]{1,250}$')
 SHA = re.compile(r'^[0-9a-f]{40,64}$')
+PLANNER_MEMORY_TRACE_SHA = 'aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420'
+MAX_SOURCE_FILE = 2 * 1024 * 1024
+MAX_SOURCE_TOTAL = 16 * 1024 * 1024
+
+
+def approved_relative(value):
+    if (not isinstance(value,str) or not 1<=len(value)<=240
+            or any(not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_.-]*',part)
+                   or part in ('.','..') for part in value.split('/'))):
+        raise ValueError('UNAPPROVED_RELATIVE_PATH')
+    return value
+
+
+def project_observation_scope(config):
+    project=config.get('project_executor') or {}
+    root=(project.get('roots') or {}).get('NOX_PROJECT_SOURCE') or {}
+    expected=ROOT/'projects/owner_executor/source_workspace'
+    allowed=root.get('allowed_paths')
+    if (config.get('schema')!='NOX_NATIVE_SUBAGENT_BINDING_V1'
+            or project.get('schema')!='NOX_PROJECT_EXECUTOR_CONFIG_V1'
+            or root.get('path')!=str(expected)
+            or root.get('integration_kind')!='SOURCE_WORKSPACE'
+            or project.get('package_root')!=str(ROOT/'state/dispatcher/project_executor/package')
+            or project.get('state_root')!=str(ROOT/'state/dispatcher/project_executor/run')
+            or not isinstance(allowed,list) or not 1<=len(allowed)<=256
+            or not all(isinstance(path,str) for path in allowed)
+            or len(set(allowed))!=len(allowed) or root.get('deny_paths',[])!=[]):
+        raise ValueError('PROJECT_OBSERVATION_SCOPE')
+    return project,expected,sorted(approved_relative(path) for path in allowed)
 
 def emit(name, value):
     print('NOX_MAINT_SCOPE_' + name + '=' + json.dumps(value, ensure_ascii=True,
@@ -496,7 +525,7 @@ def project_execution_readback():
     for task in rows.values():
         key=task.get('status','UNKNOWN');counts[key]=counts.get(key,0)+1
     emit('PROJECT_QUEUE',{'rows':len(rows),'counts':counts,'sha256':hashlib.sha256(state_raw).hexdigest()})
-    exported=set();export_bytes=0
+    exported=set();export_bytes=0;verified_postimages={}
     for tid,task in rows.items():
         if not isinstance(task,dict) or task.get('handler')!='owner_native_project_work':continue
         row={key:task.get(key) for key in ('id','parent_task_id','queue_id','status','note','retries',
@@ -535,6 +564,25 @@ def project_execution_readback():
                         'matches_reference':hashlib.sha256(raw).hexdigest()==reference['plan_sha256'],
                         'files':plan.get('files'), 'review_origin':plan.get('review_origin'),
                         'contract_sha256':plan.get('contract_sha256')}
+                    proof_verified=(task.get('status')=='done' and result.get('verified') is True
+                        and evidence.get('state')=='INTEGRATED' and evidence.get('integration_verified') is True
+                        and tests.get('passed') is True and row['plan']['matches_reference']
+                        and row['receipt_sha_matches'] and row['receipt_claim_matches']
+                        and row['s03'].get('verified') is True and row['receipt_source']['source_authorized']
+                        and row['receipt_source']['matches_durable_task_source']
+                        and row['receipt_source']['matches_config_callback_pin']
+                        and row.get('project_evidence_sha_matches') is True
+                        and plan.get('task_id')==tid and plan.get('parent_task_id')==task.get('parent_task_id')
+                        and plan.get('root_id')=='NOX_PROJECT_SOURCE')
+                    files=plan.get('files')
+                    if proof_verified and isinstance(files,list) and 1<=len(files)<=32:
+                        postimages={approved_relative(f['path']):f['after_sha256'] for f in files}
+                        if (len(postimages)==len(files) and postimages==evidence.get('postimages')
+                                and all(isinstance(v,str) and re.fullmatch(r'[a-f0-9]{64}',v)
+                                        for v in postimages.values())):
+                            for path,sha in postimages.items():
+                                verified_postimages.setdefault(path,[]).append({'task_id':tid,
+                                    'receipt_sha256':result['receipt_sha256'],'sha256':sha})
                     if evidence.get('state')=='INTEGRATED' and plan.get('review_origin')=='MODEL_CANDIDATE':
                         verified=(row['plan']['matches_reference'] and row['receipt_sha_matches']
                             and row['receipt_claim_matches'] and row['s03'].get('verified') is True
@@ -547,7 +595,7 @@ def project_execution_readback():
                             export_bytes+=used
                         else:row['model_export']={'complete':False,'state':'PROOF_UNVERIFIED'}
                         emit('PROJECT_MODEL_EXPORT_SUMMARY',{'task_id':tid,**row['model_export']})
-                except (OSError,ValueError,KeyError) as exc:
+                except (OSError,ValueError,KeyError,TypeError) as exc:
                     row['plan']={'state':'UNAVAILABLE','error':type(exc).__name__}
         # The full receipt remains canonical in native state and S03. This
         # bounded readback retains verification facts and exact source hashes.
@@ -556,6 +604,87 @@ def project_execution_readback():
     emit('PROJECT_CATALOG',{'rows':len(config_rows),'new_project_rows':[
         {key:t.get(key) for key in ('id','queue_id','deps','params','priority','resource')}
         for t in config_rows if t.get('handler')=='owner_native_project_work']})
+    return {'config_sha256':hashlib.sha256(config_raw).hexdigest(),
+            'queue_sha256':hashlib.sha256(state_raw).hexdigest(),'postimages':verified_postimages}
+
+
+def project_workspace_census(proofs):
+    """Per-file stable reads, without locking writers or claiming an atomic tree."""
+    started=time.time()
+    report={'scope':'CONFIG_ALLOWED_FILES_ONLY_NOT_DIRECTORY_INVENTORY',
+        'atomic_snapshot':False,'source_payloads_exported':False,
+        'repository_commit_verified':False,'live_deployment_verified':False,
+        'original_task_accepted':False,'started_at':started}
+    try:
+        config,raw,_=obj(ROOT/'config/owner_native_subagents.json')
+        _,root,allowed=project_observation_scope(config)
+        config_sha=hashlib.sha256(raw).hexdigest()
+        report.update(root=str(root),config_sha256=config_sha,allowed_file_count=len(allowed))
+        owner,marker,_=obj(root/'NOX_EXECUTOR_BOOTSTRAP.json',65536)
+        pins=owner.get('file_pins')
+        if (owner.get('schema')!='NOX_PROJECT_SOURCE_BOOTSTRAP_RECEIPT_V1'
+                or owner.get('root')!=str(root) or not isinstance(pins,dict)
+                or set(pins)!=set(allowed) or owner.get('source_file_count')!=len(allowed)
+                or any(not isinstance(v,str) or not re.fullmatch(r'[a-f0-9]{64}',v)
+                       for v in pins.values())):
+            raise ValueError('BOOTSTRAP_MANIFEST_SCOPE')
+        baseline={'schema':'NOX_PROJECT_SOURCE_BASELINE_V1','files':pins,
+                  'source_refs':owner.get('source_refs',[])}
+        marker_sha=hashlib.sha256(marker).hexdigest()
+        manifest_sha=hashlib.sha256(encoded(baseline)).hexdigest()
+        baseline_matches=manifest_sha==owner.get('manifest_sha256')
+        report['bootstrap']={'sha256':marker_sha,'manifest_sha256':manifest_sha,
+            'recorded_manifest_sha256':owner.get('manifest_sha256'),
+            'manifest_digest_matches_marker':baseline_matches,'file_count':len(pins),
+            'scope':'RECORDED_INSTALL_BASELINE_NOT_CURRENT_ACCEPTANCE'}
+        if not baseline_matches:raise ValueError('BOOTSTRAP_MANIFEST_DIGEST')
+        proof_config_matches=isinstance(proofs,dict) and proofs.get('config_sha256')==config_sha
+        postimages=proofs.get('postimages',{}) if proof_config_matches else {}
+        report['receipt_comparison_config_matches']=proof_config_matches
+        report['receipt_queue_snapshot_sha256']=proofs.get('queue_sha256') if isinstance(proofs,dict) else None
+        files={};details=[];total=0;errors=[]
+        for path in allowed:
+            row={'path':path,'bootstrap_sha256':pins[path]}
+            try:
+                source,info=safe_read(root/path,min(MAX_SOURCE_FILE,MAX_SOURCE_TOTAL-total))
+                total+=len(source);sha=hashlib.sha256(source).hexdigest()
+                files[path]={'sha256':sha,'size':len(source),'mode':stat.S_IMODE(info.st_mode)}
+                references=postimages.get(path,[])[:32]
+                row.update(**files[path],matches_bootstrap=sha==pins[path],
+                    verified_receipt_postimages=[{**item,'matches_current':item['sha256']==sha}
+                                                for item in references])
+                matches=any(item['sha256']==sha for item in references)
+                row['comparison']=('MATCHES_VERIFIED_RECEIPT_POSTIMAGE' if matches else
+                    'MATCHES_BOOTSTRAP_BASELINE' if sha==pins[path] else 'CHANGE_WITHOUT_MATCHING_RECEIPT_IN_SNAPSHOT')
+            except (OSError,ValueError) as exc:
+                row.update(state='UNAVAILABLE',error=type(exc).__name__);errors.append(path)
+            details.append(row)
+        # Independent second reads detect observed churn; they do not form a lock
+        # and cannot prove that no write occurred between two equal observations.
+        changed=[];second_total=0
+        for path,first in files.items():
+            try:
+                source,info=safe_read(root/path,min(MAX_SOURCE_FILE,MAX_SOURCE_TOTAL-second_total))
+                second_total+=len(source)
+                current={'sha256':hashlib.sha256(source).hexdigest(),'size':len(source),
+                         'mode':stat.S_IMODE(info.st_mode)}
+                if current!=first:changed.append(path)
+            except (OSError,ValueError):changed.append(path)
+        config_stable=hashlib.sha256(safe_read(ROOT/'config/owner_native_subagents.json',2000000)[0]).hexdigest()==config_sha
+        marker_stable=hashlib.sha256(safe_read(root/'NOX_EXECUTOR_BOOTSTRAP.json',65536)[0]).hexdigest()==marker_sha
+        complete=not errors and len(files)==len(allowed)
+        report.update(state='CENSUS_OBSERVED',files=files,file_comparisons=details,
+            count=len(files),total_bytes=total,files_sha256=hashlib.sha256(encoded(files)).hexdigest(),
+            complete_allowed_files_read=complete,read_errors=errors,
+            changed_between_reads=changed,two_reads_match=complete and not changed,
+            config_unchanged_during_census=config_stable,bootstrap_unchanged_during_census=marker_stable,
+            current_cas_recheck_required=True,
+            unattributed_changed_paths=[r['path'] for r in details
+                if r.get('comparison')=='CHANGE_WITHOUT_MATCHING_RECEIPT_IN_SNAPSHOT'])
+    except (OSError,ValueError,KeyError,TypeError) as exc:
+        report.update(state='CENSUS_UNAVAILABLE',error=type(exc).__name__)
+    report['finished_at']=time.time()
+    emit('PROJECT_SOURCE_WORKSPACE_CENSUS',report)
 
 
 def project_install_preservation():
@@ -635,9 +764,21 @@ def project_active_progress():
                 value,raw,info=obj(path,2000000)
                 row=scalar_projection(value,('schema','state','task_id','claim','plan_sha256','reason','started_at','finished_at'))
                 row.update({'journal_sha256':hashlib.sha256(raw).hexdigest(),'mtime_ns':info.st_mtime_ns})
+                tests=value.get('tests')
+                if isinstance(tests,dict):
+                    row['tests']=scalar_projection(tests,('schema','completed','passed','tests_run',
+                        'failures','errors','skipped','log_sha256','log_bytes','elapsed_ms'))
+                    row['tests']['report_sha256']=hashlib.sha256(encoded(tests)).hexdigest()
+                    row['tests']['matches_journal_test_pin']=row['tests']['report_sha256']==value.get('tests_sha256')
                 rows.append(row)
             except (OSError,ValueError):continue
-    emit('PROJECT_ATTEMPT_PROGRESS',{'attempts':rows})
+    try:planner_sha=hashlib.sha256(safe_read(SCRIPTS/'owner_project_planner.py',500000)[0]).hexdigest()
+    except (OSError,ValueError):planner_sha=None
+    emit('PROJECT_ATTEMPT_PROGRESS',{'attempts':rows,'planner_sha256':planner_sha,
+        'interim_trace_unavailable':True,
+        'trace_storage':'MEMORY_ONLY_UNTIL_FINAL_RECEIPT' if planner_sha==PLANNER_MEMORY_TRACE_SHA else 'UNREVIEWED_PLANNER_VERSION',
+        'scope':'DURABLE_TEST_ATTEMPTS_ONLY_NOT_IN_MEMORY_EDIT_OR_TURN_PROGRESS',
+        'absence_of_attempt_does_not_prove_no_source_edits':True})
 
 
 def main():
@@ -646,7 +787,8 @@ def main():
     director_child_census()
     project_summary()
     project_install_preservation()
-    project_execution_readback()
+    proofs=project_execution_readback()
+    project_workspace_census(proofs)
     project_active_progress()
     emit('LOCKS',locks())
     time.sleep(6)

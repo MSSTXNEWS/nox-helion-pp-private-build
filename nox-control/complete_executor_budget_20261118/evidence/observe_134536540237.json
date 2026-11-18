@@ -1,0 +1,3159 @@
+[
+  {
+    "kind": "AUTHORIZED_COMMENT_ID",
+    "data": 6967400482
+  },
+  {
+    "kind": "INSTANCE_STATE",
+    "data": {
+      "actual_status": "running",
+      "cur_state": "running",
+      "found": true,
+      "instance": 60509551,
+      "intended_status": "running",
+      "num_gpus": 2,
+      "provider_mutations": 0,
+      "read_only_provider_lookup": true
+    }
+  },
+  {
+    "kind": "HOST_PIN",
+    "data": "VERIFIED"
+  },
+  {
+    "kind": "AUTH_ATTEMPT",
+    "data": "1_RETRY"
+  },
+  {
+    "kind": "AUTH_ATTEMPT",
+    "data": "2_RETRY"
+  },
+  {
+    "kind": "AUTHENTICATED_INSTANCE",
+    "data": 60509551
+  },
+  {
+    "kind": "SNAPSHOT_A",
+    "data": {
+      "time_unix": 1794969776.0662024,
+      "supervisor_rc": 3,
+      "services": [
+        {
+          "service": "nox-agent-architect-t859u",
+          "state": "STOPPED",
+          "identity": null
+        },
+        {
+          "service": "nox-agent-integrator-t859u",
+          "state": "STOPPED",
+          "identity": null
+        },
+        {
+          "service": "nox-agent-tuner-t858u",
+          "state": "STOPPED",
+          "identity": null
+        },
+        {
+          "service": "nox-dispatcher-t855u",
+          "state": "RUNNING",
+          "identity": {
+            "pid": 3760381,
+            "ppid": 114,
+            "pgrp": 3760381,
+            "start_ticks": 176197984,
+            "state": "S",
+            "namespace_pids": [
+              3760381
+            ],
+            "dispatcher_env": {
+              "NOX_DISPATCHER_SAFE": "1",
+              "NOX_DISPATCHER_WORKERS": "3"
+            }
+          }
+        },
+        {
+          "service": "nox-ds41-8098",
+          "state": "RUNNING",
+          "identity": {
+            "pid": 3266857,
+            "ppid": 114,
+            "pgrp": 3266857,
+            "start_ticks": 172046662,
+            "state": "R",
+            "namespace_pids": [
+              3266857
+            ],
+            "dispatcher_env": {}
+          }
+        },
+        {
+          "service": "nox-proxy",
+          "state": "RUNNING",
+          "identity": {
+            "pid": 3703386,
+            "ppid": 114,
+            "pgrp": 3703386,
+            "start_ticks": 175609570,
+            "state": "S",
+            "namespace_pids": [
+              3703386
+            ],
+            "dispatcher_env": {}
+          }
+        },
+        {
+          "service": "nox-web29-18775",
+          "state": "RUNNING",
+          "identity": {
+            "pid": 3505392,
+            "ppid": 114,
+            "pgrp": 3505392,
+            "start_ticks": 173653097,
+            "state": "S",
+            "namespace_pids": [
+              3505392
+            ],
+            "dispatcher_env": {}
+          }
+        }
+      ],
+      "flags": {
+        "/root/nox/STOP": "ABSENT",
+        "/root/nox/STOP.flag": "ABSENT",
+        "/root/nox/stop.flag": "ABSENT",
+        "/root/nox/.stop": "ABSENT",
+        "/root/nox/program/STOP": "ABSENT",
+        "/root/nox/state/STOP": "ABSENT",
+        "/root/nox/state/STOP.flag": "ABSENT",
+        "/workspace/NOX_STOP": "ABSENT",
+        "/root/nox/state/OWNER_MAINTENANCE.flag": "ABSENT",
+        "/root/nox/state/TRAIN_HOLD.flag": "ABSENT",
+        "/root/nox/state/TRAIN_PAUSE_REQUEST.flag": "ABSENT"
+      },
+      "resources": {
+        "memory.current": "194015109120\n",
+        "memory.max": "194065203200\n",
+        "memory.stat": "anon 2694590464\nfile 190266355712\nkernel 1049731072\nkernel_stack 7716864\npagetables 398131200\nsec_pagetables 0\npercpu 105288\nsock 8192\nvmalloc 16384\nshmem 75403436032\nzswap 0\nzswapped 0\nfile_mapped 137223925760\nfile_dirty 2490368\nfile_writeback 0\nswapcached 0\nanon_thp 0\nfile_thp 77594624\nshmem_thp 0\ninactive_anon 43711172608\nactive_anon 34386640896\ninactive_file 9000607744\nactive_file 105862311936\nunevictable 16384\nslab_reclaimable 633714720\nslab_unreclaimable 9379360\nslab 643094080\nworkingset_refault_anon 0\nworkingset_refault_file 590410202\nworkingset_activate_anon 0\nworkingset_activate_file 65330443\nworkingset_restore_anon 0\nworkingset_restore_file 42614326\nworkingset_nodereclaim 0\npgscan 1468313047\npgsteal 860724944\npgscan_kswapd 24570310\npgscan_direct 1443719301\npgscan_khugepaged 23436\npgsteal_kswapd 15844729\npgsteal_direct 844863635\npgsteal_khugepaged 16580\npgfault 6985930235\npgmajfault 2246119\npgrefill 346264559\npgactivate 452063110\npgdeactivate 0\npglazyfree 0\npglazyfreed 0\nzswpin 0\nzswpout 0\nzswpwb 0\nthp_fault_alloc 0\nthp_collapse_alloc 0\nthp_swpout 0\nthp_swpout_fallback 0\n",
+        "memory.events": "low 0\nhigh 0\nmax 680508\noom 0\noom_kill 0\noom_group_kill 0\n",
+        "memory.pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=105885065\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=105531541\n",
+        "cpu.pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=355369574\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=324966551\n",
+        "cpu.stat": "usage_usec 554101064913\nuser_usec 518980976824\nsystem_usec 35120088089\ncore_sched.force_idle_usec 0\nnr_periods 842860\nnr_throttled 12178\nthrottled_usec 14826018140\nnr_bursts 0\nburst_usec 0\n",
+        "cpu.max": "1920000 100000\n",
+        "io.pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=848847605\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=845221726\n"
+      }
+    }
+  },
+  {
+    "kind": "POST_WORKERS",
+    "data": {
+      "time_unix": 1794969776.0668943,
+      "observed_at": 1794969775.347071,
+      "claimed_director": {
+        "pid": 3760381,
+        "ppid": 114,
+        "process_starttime": 176197984
+      },
+      "observed_director": {
+        "pid": 3760381,
+        "ppid": 114,
+        "pgrp": 3760381,
+        "start_ticks": 176197984,
+        "state": "S",
+        "namespace_pids": [
+          3760381
+        ],
+        "dispatcher_env": {
+          "NOX_DISPATCHER_SAFE": "1",
+          "NOX_DISPATCHER_WORKERS": "3"
+        }
+      },
+      "workers": [
+        {
+          "claimed": {
+            "pid": 3760595,
+            "ppid": 3760381,
+            "process_starttime": 176199997,
+            "role": "runtime",
+            "state": "RUNNING",
+            "heartbeat_at": 1794969771.5001793,
+            "current_task": null,
+            "native_pid_verified": true
+          },
+          "observed": {
+            "pid": 3760595,
+            "ppid": 3760381,
+            "pgrp": 3760381,
+            "start_ticks": 176199997,
+            "state": "S",
+            "namespace_pids": [
+              3760595
+            ],
+            "dispatcher_env": {
+              "NOX_DISPATCHER_SAFE": "1",
+              "NOX_DISPATCHER_WORKERS": "3"
+            }
+          },
+          "verified": true
+        },
+        {
+          "claimed": {
+            "pid": 3760596,
+            "ppid": 3760381,
+            "process_starttime": 176199997,
+            "role": "memory",
+            "state": "RUNNING",
+            "heartbeat_at": 1794969770.9003704,
+            "current_task": null,
+            "native_pid_verified": true
+          },
+          "observed": {
+            "pid": 3760596,
+            "ppid": 3760381,
+            "pgrp": 3760381,
+            "start_ticks": 176199997,
+            "state": "S",
+            "namespace_pids": [
+              3760596
+            ],
+            "dispatcher_env": {
+              "NOX_DISPATCHER_SAFE": "1",
+              "NOX_DISPATCHER_WORKERS": "3"
+            }
+          },
+          "verified": true
+        },
+        {
+          "claimed": {
+            "pid": 3760597,
+            "ppid": 3760381,
+            "process_starttime": 176199997,
+            "role": "weights",
+            "state": "RUNNING",
+            "heartbeat_at": 1794969770.973139,
+            "current_task": "1A03.project.cursor_admission.focus_retry.20261118",
+            "native_pid_verified": true
+          },
+          "observed": {
+            "pid": 3760597,
+            "ppid": 3760381,
+            "pgrp": 3760381,
+            "start_ticks": 176199997,
+            "state": "S",
+            "namespace_pids": [
+              3760597
+            ],
+            "dispatcher_env": {
+              "NOX_DISPATCHER_SAFE": "1",
+              "NOX_DISPATCHER_WORKERS": "3"
+            }
+          },
+          "verified": true
+        }
+      ],
+      "project": {
+        "state": "HANDOFF_RECEIVED_PROJECT_EXECUTION_BOUND",
+        "received_unique_tasks": 295,
+        "dispatch_cap": 3,
+        "bound_leaf_subtasks": 5,
+        "original_task_acceptance_added": 0,
+        "scope": "SUBTASK_COMPLETED_ORIGINAL_NOT_ACCEPTED",
+        "queues": {
+          "Q1_RUNTIME_CHAT": 145,
+          "Q2_MEMORY_KNOWLEDGE": 71,
+          "Q3_TRAINING_WEIGHTS": 34,
+          "Q4_INTEGRATION_ACCEPTANCE": 45
+        },
+        "leaf_status": {
+          "blocked": 0,
+          "done": 5,
+          "pending": 0,
+          "running": 0
+        }
+      },
+      "admission": {
+        "state": "NATIVE_POOL_CONTINUING",
+        "jobs_started": 0,
+        "process_count": null,
+        "process_target": null
+      },
+      "resource_admission": {
+        "native_verified": true,
+        "instance_id": 60509551,
+        "stop_active": false,
+        "source_sha_verified": true,
+        "owner_scope_verified": true,
+        "cgroup_memory_ratio": 0.9595244326624341,
+        "raw_cgroup_memory_ratio": 0.9996791419019316,
+        "effective_cgroup_memory_ratio": 0.9532999290828043,
+        "projected_cgroup_memory_ratio": 0.9595244326624341,
+        "cpu_pressure": 0,
+        "admission_class": "BOUNDED_CPU_PROJECT_SOURCE",
+        "bounded_cpu_budget": {
+          "cpu_pressure": 0,
+          "current_bytes": 194002935808,
+          "file_bytes": 190266339328,
+          "inactive_file_bytes": 9000591360,
+          "instance_id": 60509551,
+          "max_bytes": 194065203200,
+          "memory_psi_full_avg10": 0,
+          "memory_psi_some_avg10": 0,
+          "minimum_headroom_bytes": 2147483648,
+          "observed_at": 1794969772.9376512,
+          "planner_reserve_bytes": 134217728,
+          "sandbox_limit_bytes": 268435456,
+          "schema": "NOX_BOUNDED_CPU_BUDGET_V1",
+          "shmem_bytes": 75403436032,
+          "source": "cgroup_v2",
+          "worker_slots": 3
+        },
+        "bounded_cpu_decision": {
+          "effective_bytes": 185002344448,
+          "effective_memory_ratio": 0.9532999290828043,
+          "eligible": true,
+          "headroom_bytes": 7854899200,
+          "projected_bytes": 186210304000,
+          "projected_memory_ratio": 0.9595244326624341,
+          "raw_memory_ratio": 0.9996791419019316,
+          "reason": null,
+          "reclaimable_bytes": 9000591360,
+          "reserved_bytes": 1207959552
+        }
+      },
+      "pool_lifecycle": {
+        "last_started_at": 1794969271.8138034,
+        "last_closed_at": null,
+        "last_close_reason": null
+      }
+    }
+  },
+  {
+    "kind": "PROJECT_DIRECTOR_CHILDREN",
+    "data": {
+      "director_pid": 3760381,
+      "children": [
+        {
+          "pid": 3760487,
+          "ppid": 3760381,
+          "pgrp": 3760381,
+          "start_ticks": 176198953,
+          "state": "S",
+          "namespace_pids": [
+            3760487
+          ],
+          "dispatcher_env": {
+            "NOX_DISPATCHER_SAFE": "1",
+            "NOX_DISPATCHER_WORKERS": "3"
+          },
+          "kind": "MP_RESOURCE_TRACKER"
+        },
+        {
+          "pid": 3760595,
+          "ppid": 3760381,
+          "pgrp": 3760381,
+          "start_ticks": 176199997,
+          "state": "S",
+          "namespace_pids": [
+            3760595
+          ],
+          "dispatcher_env": {
+            "NOX_DISPATCHER_SAFE": "1",
+            "NOX_DISPATCHER_WORKERS": "3"
+          },
+          "kind": "MP_WORKER"
+        },
+        {
+          "pid": 3760596,
+          "ppid": 3760381,
+          "pgrp": 3760381,
+          "start_ticks": 176199997,
+          "state": "S",
+          "namespace_pids": [
+            3760596
+          ],
+          "dispatcher_env": {
+            "NOX_DISPATCHER_SAFE": "1",
+            "NOX_DISPATCHER_WORKERS": "3"
+          },
+          "kind": "MP_WORKER"
+        },
+        {
+          "pid": 3760597,
+          "ppid": 3760381,
+          "pgrp": 3760381,
+          "start_ticks": 176199997,
+          "state": "S",
+          "namespace_pids": [
+            3760597
+          ],
+          "dispatcher_env": {
+            "NOX_DISPATCHER_SAFE": "1",
+            "NOX_DISPATCHER_WORKERS": "3"
+          },
+          "kind": "MP_WORKER"
+        }
+      ],
+      "native_fields": [
+        "declared_worker_contract_slots",
+        "director",
+        "last_admission",
+        "leaf_model_calls_required",
+        "mode",
+        "observed_at",
+        "pool_lifecycle",
+        "project_queues",
+        "resource_admission",
+        "review_status",
+        "same_model_shared",
+        "target",
+        "thread_runner_count",
+        "workers"
+      ],
+      "last_admission": {
+        "active_subexecutor_processes": 3,
+        "jobs_started": 0,
+        "policy_decisions": {},
+        "soft_yield_requests": [],
+        "state": "NATIVE_POOL_CONTINUING"
+      },
+      "close_reason": null,
+      "state": null
+    }
+  },
+  {
+    "kind": "PROJECT_FILE",
+    "data": {
+      "path": "/root/nox/state/dispatcher/project_work_tasks.json",
+      "bytes": 67790,
+      "sha256": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+      "matches_expected_source": true,
+      "row_count": 230
+    }
+  },
+  {
+    "kind": "PROJECT_FILE",
+    "data": {
+      "path": "/root/nox/state/dispatcher/project_work_ideas.json",
+      "bytes": 32764,
+      "sha256": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+      "matches_expected_source": true,
+      "row_count": 65
+    }
+  },
+  {
+    "kind": "PROJECT_FILE",
+    "data": {
+      "path": "/root/nox/state/dispatcher/project_work_receipts_source.json",
+      "bytes": 104321,
+      "sha256": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+      "matches_expected_source": true,
+      "row_count": 60
+    }
+  },
+  {
+    "kind": "PROJECT_FILE",
+    "data": {
+      "path": "/root/nox/state/dispatcher/project_routing_4q.json",
+      "bytes": 128862,
+      "sha256": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671",
+      "matches_expected_source": true,
+      "row_count": 295
+    }
+  },
+  {
+    "kind": "PROJECT_COVERAGE",
+    "data": {
+      "original_count": 295,
+      "original_unique": 295,
+      "routed_count": 295,
+      "routed_unique": 295,
+      "missing_count": 0,
+      "extra_count": 0,
+      "queues": {
+        "Q4_INTEGRATION_ACCEPTANCE": 45,
+        "Q1_RUNTIME_CHAT": 145,
+        "Q3_TRAINING_WEIGHTS": 34,
+        "Q2_MEMORY_KNOWLEDGE": 71
+      },
+      "dispatch_cap": 3,
+      "source_scope": "MANIFEST_HANDOFF_ONLY_NOT_ORIGINAL_TASK_ACCEPTANCE"
+    }
+  },
+  {
+    "kind": "PROJECT_QUEUE_PRESERVATION",
+    "data": {
+      "request": "6966579330",
+      "old_count": 1458,
+      "current_count": 1469,
+      "missing_original_ids": [],
+      "historical_checked": 412,
+      "changed_claim_or_result": [],
+      "verified": true
+    }
+  },
+  {
+    "kind": "PROJECT_INSTALL_RECEIPT",
+    "data": {
+      "sha256": "b311429ab09265b84941076c62258029819a065736aa0af8fd8105b63f568260",
+      "schema": "NOX_COMPLETE_EXECUTOR_INSTALL_V1",
+      "state": "INSTALLED_WORK_RUNNING",
+      "request": "6966579330",
+      "source_sha": "a74261c74195c91b7dd5c6cfcabd919dd9f9ded9",
+      "started_at": 1794966705.7482529,
+      "finished_at": 1794966725.531991,
+      "previous_director": {
+        "pgrp": 3723052,
+        "pid": 3723052,
+        "ppid": 114,
+        "start_ticks": 175819458
+      },
+      "new_director": {
+        "pgrp": 3734446,
+        "pid": 3734446,
+        "ppid": 114,
+        "start_ticks": 175943736
+      },
+      "original_tasks_accepted": 0,
+      "protected_processes": {
+        "chat": {
+          "pgrp": 3266857,
+          "pid": 3266857,
+          "ppid": 114,
+          "start_ticks": 172046662
+        },
+        "proxy": {
+          "pgrp": 3703386,
+          "pid": 3703386,
+          "ppid": 114,
+          "start_ticks": 175609570
+        },
+        "web": {
+          "pgrp": 3505392,
+          "pid": 3505392,
+          "ppid": 114,
+          "start_ticks": 173653097
+        }
+      },
+      "training_started": false,
+      "model_restarted": false,
+      "preflight": null,
+      "sandbox_preflight": null,
+      "native_sandbox_preflight": {
+        "at": 1794966707.6076577,
+        "business_task_completed": false,
+        "dependency_manifest_sha256": "79a8efb2d344479471bd87f9129e1df3aab198586818a5f001e1e2a3a969336d",
+        "evidence_sha256": "6f0c4658dcc1ffc3fb80c59a0277372578518f97f8f28410de91352e6ba29391",
+        "fixture_only": true,
+        "model_inference_called": false,
+        "original_task_accepted": false,
+        "path": "/root/nox/state/dispatcher/complete_executor_preflight/6966579330",
+        "reason": null,
+        "runtime_source_pins": {
+          "owner_project_executor.py": "687ea3b3548badf9b7babd8c5d420b5270e0fb4d82a72bcaa9a4cee1be44d306",
+          "owner_project_test_runner.py": "35b0e94f9c883da017e444162d1f84b9c0f8ad7bc4c92354bebd12551ae6c3b1"
+        },
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534
+        },
+        "schema": "NOX_NATIVE_PROJECT_SANDBOX_PREFLIGHT_V1",
+        "source_unchanged": true,
+        "state": "PREPARED",
+        "tests_run": 4
+      },
+      "source_bootstrap": {
+        "created_at": 1794966707.9861314,
+        "file_pins": {
+          "forge_split_guard.py": "bb2c543979ad58801d97290e9edf1fe035435c8e9e5f0ebaced4abf3ecbf9053",
+          "merge_web_source.py": "4d1274059d034bb9b96a445e26601d33da54ea309c8a5233df6512a2d546020f",
+          "native_v29_full_bridge.py": "d9ec6a8250a167d774ba5090219cfaac3ad2995ddd88228d1abe5514fc9dd791",
+          "nox_runpod/teacher_mesh/v38/durable_runtime.py": "c676fdda4fa47d316eb10572c5718868a01408d450a5a0d91a7133ff20507799",
+          "nox_runpod/teacher_mesh/v38/synaptic_brain.py": "8657ad367e6dd25b48ca8d6d7c4a947c0e1b0d4b979d63fbdaaf2a8e9ba5e74c",
+          "owner_chat_request_ledger.py": "006fc038f43682fa36d2310f2343c83a42fd28897e7debfbe0d63536ee069729",
+          "owner_dispatcher_mentor.py": "d35064a3fc5707dfc174852fc4de5030ee6ea2276fd0a4d06850ffff71ee0c64",
+          "s03_existing_readback.py": "66a6617d6f582876dbdcb9791273c5eca724e3633a65bf1c93ecb4b2f2b14947",
+          "source_tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "source_tests/test_cache_race.py": "092db7d32a048c1706da5fc4cf1fcb04a33781e23bbe42252ea14f990985b582",
+          "source_tests/test_owner_chat_request_scope.py": "dc19594b45a7fae32bf9bdde665620c2eec1a29bb02ba03758baa53a8158c509",
+          "source_tests/test_request_ledger.py": "b4ece67144248808a12c7c84450d61a919984ad756f6f15b46e0686c6d65ff96",
+          "test_3b05_skill_ancestor_swap.py": "21f8538fec15d39b4dbc875a4087be1c911c60b06ba04e2c682e8810f7b8b8fd",
+          "test_forge_split_guard.py": "3efe025681c3a54cbfac10f0da6f20ff7b2e249ed087b8db39d582002f32c080",
+          "test_nox_1a03_cursor_admission.py": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+          "test_nox_exchange_receipt_order.py": "f299d32099c25ea1822c1a10db524b088ec16c38198b7372f362395d39c7c823",
+          "test_nox_existing_cache_race.py": "0fff97b7e758e3e43073c11ea348b73b60a0d47fc406855ba5f0f748e42b18c5",
+          "test_nox_forge_split_coverage.py": "fd815f9a743bfcdf6e71a8ebb035a180c031aa8f0c5e0484164d36aaf309f6cf",
+          "test_nox_merge_overlay_paths.py": "97c433b8893514f5812b69fd53b0bb1e25d1fcd7b290f35c72407ad54b989667",
+          "test_nox_s03_readback_revoke.py": "fc5d6c564c651c2abc818005da461711cdfc2c5cedff9146c6db8b12a6037eb5",
+          "test_nox_skill_evidence_strict_json.py": "623bfb4ba2d28d3dd3dbc5e46852ed5be5c29d516d20a390aed69c2ec5c3089c",
+          "test_nox_warm_cache_final_revision.py": "9201bc3629682a577c80a66c1040ef244b82f89b3b2cab26ce06ba3c95db38b2",
+          "test_nox_work_progress_time_order.py": "d6042e38549360ace8f9136fc2c36e0c195d54666e0dca34944955bf70e9e9c0",
+          "test_s03_readback_contract.py": "2860173d8d6ed7147af2392f82c5fe4df5880ebc781ad359f15dcb30617fc391",
+          "test_work_progress_changes.py": "970d6681ce5dc57156e23746fa8df213eb5746c7a6b19354a0ca864e87830c4f",
+          "test_work_progress_durable_write.py": "6aa9265942695d2b54b33a0192dc1ebfb912277e86c909eeb4f49a1b45477edd",
+          "test_work_progress_pinned_read.py": "8d2070c2f0819e7d1c2b5cf2bdb5acb0e9a7f1c027a180ba0528e89ead3f894d",
+          "work_progress.py": "60e28219f670a8449a56f6f9ab8641624c424d01447c9d156b1ecf5ce914d1fa"
+        },
+        "initial_git_head": "4ef43104985cdc6ab402fca718e1b71890b01e60",
+        "manifest_sha256": "0db34c871ef80c67dcaeabea6225dfd34aed3b5500be3c2a1a3c78d491d272f2",
+        "request": "6966579330",
+        "root": "/root/nox/projects/owner_executor/source_workspace",
+        "schema": "NOX_PROJECT_SOURCE_BOOTSTRAP_RECEIPT_V1",
+        "source_file_count": 28,
+        "source_refs": [
+          {
+            "commit": "78ee41fb4ac1e48128fdce2eb25e52d40c70cc15",
+            "repository": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build"
+          },
+          {
+            "commit": "895c5ed3f5e08b8c473e873aed768ac56e60767f",
+            "repository": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build"
+          }
+        ],
+        "source_scope": "INITIAL_SOURCE_WORKSPACE_NOT_SERVING_DEPLOYMENT"
+      }
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTOR_CONFIG",
+    "data": {
+      "sha256": "26fb86f00dd35cb2b711d275926a4aafb19eb8c22813b12e82df8dcce8a5c8b1",
+      "mode": "NATIVE_PROJECT_V1",
+      "worker_cap": 3,
+      "source_pins": {
+        "owner_project_executor.py": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+        "owner_project_test_runner.py": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595"
+      },
+      "model_pins": {
+        "owner_project_model_bridge.py": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+        "owner_project_model_client.py": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
+        "owner_project_planner.py": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420"
+      },
+      "historical_project_source_sha256": [
+        "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4"
+      ],
+      "historical_leaf_source_sha256": [
+        "5f134b8b1915851de15318e23885951885ca84d6515ca1e48c56286862830db5",
+        "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "88af9c11d54e084ccb868c474d17c2a85511600a0ff6578bfe5490b437fe554e"
+      ]
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_subagent_dispatcher.py",
+      "bytes": 80335,
+      "sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+      "configured_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_autonomy_pool.py",
+      "bytes": 38299,
+      "sha256": "d5fb476f53e64d2014f27465c7bd64192158b5bcdd79a72ff7c962d853602339",
+      "configured_sha256": "d5fb476f53e64d2014f27465c7bd64192158b5bcdd79a72ff7c962d853602339",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_subagent_instruction_truth.py",
+      "bytes": 2888,
+      "sha256": "294473d35d4870f50467d843c551c9b9fd7c4644e4b615e92403dc916ed109e4",
+      "configured_sha256": "294473d35d4870f50467d843c551c9b9fd7c4644e4b615e92403dc916ed109e4",
+      "matches_module_pin": true,
+      "callback_pin": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+      "matches_current_callback": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_subagent_processes.py",
+      "bytes": 18199,
+      "sha256": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
+      "configured_sha256": "f6b2f98ac5c7c291ffef009886442302d407921ad12827044443e72e75eb0aae",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_project_executor.py",
+      "bytes": 43335,
+      "sha256": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+      "configured_sha256": "fcb77cc59eb9a88dde68da62db05195a494fbeda40dad2954c77de95a807eae6",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_project_test_runner.py",
+      "bytes": 12395,
+      "sha256": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595",
+      "configured_sha256": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_project_native.py",
+      "bytes": 26241,
+      "sha256": "2c83ec53f7ee7c2d76bc1fac21c80adf76c58f83c5a219ba0294f9b3f713d707",
+      "configured_sha256": "2c83ec53f7ee7c2d76bc1fac21c80adf76c58f83c5a219ba0294f9b3f713d707",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_project_planner.py",
+      "bytes": 23726,
+      "sha256": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420",
+      "configured_sha256": "aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_project_model_client.py",
+      "bytes": 10320,
+      "sha256": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
+      "configured_sha256": "52e62a143d16f387899ff1737ce4eb698dee5ceca510fc6f97f931c11a0aec10",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_RUNTIME_SOURCE",
+    "data": {
+      "name": "owner_project_model_bridge.py",
+      "bytes": 6628,
+      "sha256": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+      "configured_sha256": "7f18d69529582b65f7b8d1d708f30070839bda7c4eb90719cf66dbc54deb58c9",
+      "matches_module_pin": true
+    }
+  },
+  {
+    "kind": "PROJECT_QUEUE",
+    "data": {
+      "rows": 1469,
+      "counts": {
+        "done": 399,
+        "blocked": 22,
+        "running": 2,
+        "pending": 45,
+        "catalog": 1000,
+        "failed": 1
+      },
+      "sha256": "3bffd0c8842f2a389332ecb27bac87a8705e8e56bb387952a88d6ce050097bc4"
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "0V14-14.project.overlay_paths.20261118",
+      "parent_task_id": "0V14-14",
+      "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
+      "status": "done",
+      "note": "ADMITTED_NOT_EXECUTED",
+      "retries": 0,
+      "native_queue_sequence": 8,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 04:52:00 Europe/Moscow (UTC+3)",
+        "nonce": "c29b5c992ca8cc2af25c2e42",
+        "pid": 3734446,
+        "worker": "nox-agent-03"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "14a4568e19be8a14f25ba27d65e00acdb7664f5ebaddc88ab3177cf793aaa480"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "0V14-14.project.overlay_paths.20261118",
+        "parent_task_id": "0V14-14",
+        "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
+        "job_id": "nox-project-b18cd35e44effdef85530e59",
+        "plan_sha256": "9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee",
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794966724.075611,
+        "project_source_changed": true,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-7b9fb72bb5a7475a",
+        "receipt_sha256": "14a4568e19be8a14f25ba27d65e00acdb7664f5ebaddc88ab3177cf793aaa480",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "HISTORICAL_VERIFY_ONLY",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "memory",
+        "pid": 3734569,
+        "id": "0V14-14.project.overlay_paths.20261118",
+        "state": "INTEGRATED",
+        "elapsed_ms": 1862,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "INTEGRATED",
+        "task_id": "0V14-14.project.overlay_paths.20261118",
+        "claim": "c29b5c992ca8cc2af25c2e42",
+        "plan_sha256": "9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3734569,
+          "ppid": 3734446,
+          "process_starttime": 175944600
+        },
+        "project_source_changed": true,
+        "integration_verified": true,
+        "postimages": {
+          "merge_web_source.py": "f336c58fb5062aec6d5b4d99986adc0386159bc6013f0429cb2dae88daf7eb81"
+        },
+        "tests_sha256": "729276493ec458a94127e51f5e155126e415fc465cef437882927ca2d0ca2180",
+        "reason": null,
+        "trusted_tests_unchanged": true
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "completed": true,
+        "passed": true,
+        "modules": [
+          "test_nox_merge_overlay_paths"
+        ],
+        "tests_run": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534
+        },
+        "log_sha256": "c1de396add63b60b7739446ae754c9af4d1c4c8af85083ffc8071726ef9e4e98",
+        "log_bytes": 104,
+        "elapsed_ms": 46
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "1A03.project.cursor_admission.20261118",
+      "parent_task_id": "1A03",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "status": "blocked",
+      "note": "{'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'verified': True, 'scope': 'SOURCE_PATCH_TESTED', 'receipt': {'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'phase': 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED', 'task_id': '1A03.project.cursor_admission.20261118', 'parent_task_id': '1A03', 'queue_id': 'Q1_RUNTIME_CHAT', 'job_id': 'nox-project-fbc46ce4039295983d40bc20', 'claim': {'worker': 'nox-agent-01', 'pid': 3734446, 'nonce': '2174477c07e4041b86644a6b', 'at': '2026-11-18 04:52:10 Europe/Moscow (UTC",
+      "retries": 1,
+      "native_queue_sequence": 11,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 04:52:10 Europe/Moscow (UTC+3)",
+        "nonce": "2174477c07e4041b86644a6b",
+        "pid": 3734446,
+        "worker": "nox-agent-01"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "cd585f48de5d8947081ebe34982b9ec2be974b97df66e81f073c6c9860267a84"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "1A03.project.cursor_admission.20261118",
+        "parent_task_id": "1A03",
+        "queue_id": "Q1_RUNTIME_CHAT",
+        "job_id": "nox-project-fbc46ce4039295983d40bc20",
+        "plan_sha256": null,
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794967036.5770557,
+        "project_source_changed": false,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-51fdb13a46f541aa",
+        "receipt_sha256": "cd585f48de5d8947081ebe34982b9ec2be974b97df66e81f073c6c9860267a84",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "HISTORICAL_VERIFY_ONLY",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "runtime",
+        "pid": 3734568,
+        "id": "1A03.project.cursor_admission.20261118",
+        "state": "PLANNER_TURN_BUDGET_EXHAUSTED",
+        "elapsed_ms": 304289,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "BLOCKED_PLANNER",
+        "task_id": "1A03.project.cursor_admission.20261118",
+        "claim": "2174477c07e4041b86644a6b",
+        "plan_sha256": null,
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3734568,
+          "ppid": 3734446,
+          "process_starttime": 175944600
+        },
+        "project_source_changed": false,
+        "integration_verified": null,
+        "postimages": null,
+        "tests_sha256": null,
+        "reason": "PLANNER_TURN_BUDGET_EXHAUSTED",
+        "trusted_tests_unchanged": null
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": null,
+        "completed": null,
+        "passed": null,
+        "modules": null,
+        "tests_run": null,
+        "failures": null,
+        "errors": null,
+        "skipped": null,
+        "sandbox": null,
+        "log_sha256": null,
+        "log_bytes": null,
+        "elapsed_ms": null,
+        "output_tail": ""
+      },
+      "planner_receipt": {
+        "contract_sha256": "b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7",
+        "finished_at": 1794967036.495449,
+        "original_task_accepted": false,
+        "reason": null,
+        "schema": "NOX_PROJECT_PLANNER_RECEIPT_V1",
+        "started_at": 1794966732.2075915,
+        "state": "PLANNER_TURN_BUDGET_EXHAUSTED",
+        "task_id": "1A03.project.cursor_admission.20261118",
+        "trace": [
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 63553,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "8e6b879767a341c2f4513299fbc34f5c497a40f1a2c2b2f88de6cc0c6ae4307b",
+              "response_sha256": "819448385753dedb8506b194c4fca0c028eddc2077e0bdc54fc01317d4ec78d7",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "72178ceda61971f2faf386eeaf2c4a3353dc3a3ff24b7c9c12140e817f8538ff",
+            "turn": 1
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 34743,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "d6fe04925fd7329a23ee10bcc4be8692d73f580dc85eabdc583d952bcd64691d",
+              "response_sha256": "65e34ec1568ed7fb70ab2eaef760552b79390027f4e82b04a6b6de481046219b",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "6e07efd88315e79304d05ce44a5da2939318b68412021221d578768153765a5b",
+            "turn": 2
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 44669,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "973ea175499cb90a07d3eb24d08153c46c993d592eb167d939e5691a35794897",
+              "response_sha256": "c1443af38d86373f2da10f15d070cde8afc343c088a865b9f88220eb951d5fca",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 3
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 30631,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "9ff3141ca9aca9bbd8b3009441eb07379e15b33fe3ca64b358c4647f7b5435c9",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 4
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 40084,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "a96eb4e2bfbf86defdee9759ea83d1faa339b7da657ec0e017c75bf8e7509569",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 5
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3092,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "2d81037d885f5a1815520b28d21598f354537473030c65506d23fbacd8400321",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 6
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2868,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "7fb586b9dd16e6be0d696f72c05a4e6b201dc5a494a5a40a0b1f22b31279533f",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 7
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3066,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "87a02941b72e95c206e0068febbd6698990f34502665f6173e6658b5c63c0f00",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 8
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2880,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "917b82089bdd64a31291e35a2cd0969b27b1309308444a9f5cae767c2757a1f7",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 9
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3025,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "493b7d24ed4e83817389a0538ba975478718cbf830ddf61994c4c70ed8926a90",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 10
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2852,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "cd8ab873c4bf8b5a01265cd3eecf01bea54f5c3b6b8d7b90a6e2c12ae5484a1a",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 11
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3063,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "5e4e523789b14f781d22f4ea26f90c3cd950023560b20039eb1f7ed05455510e",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 12
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2852,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "b5e2c7df4b382d99eea760f4ac41fa66590fb1d47ff81e3c960f0c3388bafb45",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 13
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3086,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "566f8779a58f44153e8080cc0ccb92fd4f3ddb6eb1fabe587e9b20536ae41fa8",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 14
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2884,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "78c5b6e5fc060f9b4a3112d57821551c3a7c0fabae7c6bcf45712d0f4b4556d2",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 15
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3062,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "88c2311f0cd6c1ee17717cbe70db26212cbd29d2c5556877604cd14438dc8e8f",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 16
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2877,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "45fe2d920f64bd045ad7a683f105aae3f89ae547f7ee3dd2faa83bf04bc00bf0",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 17
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3063,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "ba31d10a09b9de743d2bcc3b30cea171ed67dda79a1b21857acd0017626af8d1",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 18
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2867,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "c49e7acf5d629d87e1582a255deb4dfe1e1d23c0eab803e427235c6c4b03b3da",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 19
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3039,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "48c29fc3c7aacba350c1cf8cf0c455a8d77cdef49fe4c2cbcb4c6ff72e800017",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 20
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2855,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "f62e7debadb8b0cd3b831c9b226aa9deacdc291d192eaab54af3a9c48397d949",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 21
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3038,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "5d4fa193aa4c9e2cbbf18b66e3a9de0c2d112f2e023dd3b2bac03d734d779a7d",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 22
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 2867,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "a408badc45aaa60ea9e77a60eb64abd0b3604f3a06c94c7c3cfb879785b6804e",
+              "response_sha256": "5a34c50348720651f61171ca3983b54cef233c1aec730296d8a3200f0eda81ba",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "1d812617c4bfe99afc048a4f0fa2506b3bc64407e141534cbbf4396d8480153a",
+            "turn": 23
+          },
+          {
+            "action": "read",
+            "model": {
+              "duration_ms": 3073,
+              "endpoint": "http://127.0.0.1:8098/v1/chat/completions",
+              "finish_reason": "stop",
+              "input_tokens_measured": "[REDACTED]",
+              "max_output_tokens": "[REDACTED]",
+              "model_id": "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+              "model_weights_identity_verified": false,
+              "n_ctx": 4096,
+              "request_sha256": "7a0817b3bff7c6bbf306f44c583879ba98407103c69809fda850679b7a4d750b",
+              "response_sha256": "39d3fb0097039f3d6f493324116287711ed91fab0bdf849e256e9af2ce5b3db3",
+              "usage": {
+                "completion_tokens": "[REDACTED]",
+                "prompt_tokens": "[REDACTED]",
+                "total_tokens": "[REDACTED]"
+              }
+            },
+            "model_response_sha256": "4f031b2619d77a7a682dfb881ab3c59d16523ec1356da7f02f536239a4eb7a48",
+            "turn": 24
+          }
+        ]
+      }
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "1A03.project.cursor_admission.focus_retry.20261118",
+      "parent_task_id": "1A03",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "status": "running",
+      "note": "ADMITTED_NOT_EXECUTED",
+      "retries": 0,
+      "native_queue_sequence": 15,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 05:34:34 Europe/Moscow (UTC+3)",
+        "nonce": "4748cf64d56ca18dfb0ea6d7",
+        "pid": 3760381,
+        "worker": "nox-agent-02"
+      },
+      "result": {
+        "verified": null,
+        "scope": null,
+        "receipt_sha256": null
+      }
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "3A02.project.readback_revoke.20261118",
+      "parent_task_id": "3A02",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "status": "blocked",
+      "note": "{'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'verified': True, 'scope': 'SOURCE_PATCH_TESTED', 'receipt': {'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'phase': 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED', 'task_id': '3A02.project.readback_revoke.20261118', 'parent_task_id': '3A02', 'queue_id': 'Q2_MEMORY_KNOWLEDGE', 'job_id': 'nox-project-65feaac6a0d828beb8045a40', 'claim': {'worker': 'nox-agent-02', 'pid': 3734446, 'nonce': '7c7d4e147c69ade7b82f1742', 'at': '2026-11-18 04:51:59 Europe/Moscow (",
+      "retries": 1,
+      "native_queue_sequence": 6,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 04:51:59 Europe/Moscow (UTC+3)",
+        "nonce": "7c7d4e147c69ade7b82f1742",
+        "pid": 3734446,
+        "worker": "nox-agent-02"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "6b6e7addf886ac52ab6b496d6f1cf3d2097f2eecc765c1667f22281033144970"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "3A02.project.readback_revoke.20261118",
+        "parent_task_id": "3A02",
+        "queue_id": "Q2_MEMORY_KNOWLEDGE",
+        "job_id": "nox-project-65feaac6a0d828beb8045a40",
+        "plan_sha256": "283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a",
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794966722.8308024,
+        "project_source_changed": false,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-f782c4659e4b4a77",
+        "receipt_sha256": "6b6e7addf886ac52ab6b496d6f1cf3d2097f2eecc765c1667f22281033144970",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "HISTORICAL_VERIFY_ONLY",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "runtime",
+        "pid": 3734568,
+        "id": "3A02.project.readback_revoke.20261118",
+        "state": "BLOCKED_SANDBOX",
+        "elapsed_ms": 2222,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "BLOCKED_SANDBOX",
+        "task_id": "3A02.project.readback_revoke.20261118",
+        "claim": "7c7d4e147c69ade7b82f1742",
+        "plan_sha256": "283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3734568,
+          "ppid": 3734446,
+          "process_starttime": 175944600
+        },
+        "project_source_changed": false,
+        "integration_verified": null,
+        "postimages": null,
+        "tests_sha256": null,
+        "reason": "HOLD_PROJECT_TEST_RUNNER_IndexError: 2",
+        "trusted_tests_unchanged": null
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": null,
+        "completed": null,
+        "passed": null,
+        "modules": null,
+        "tests_run": null,
+        "failures": null,
+        "errors": null,
+        "skipped": null,
+        "sandbox": null,
+        "log_sha256": null,
+        "log_bytes": null,
+        "elapsed_ms": null,
+        "output_tail": ""
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "3A02.project.readback_revoke.layout_retry.20261118",
+      "parent_task_id": "3A02",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "status": "done",
+      "note": "ADMITTED_NOT_EXECUTED",
+      "retries": 0,
+      "native_queue_sequence": 14,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 05:34:33 Europe/Moscow (UTC+3)",
+        "nonce": "43dfaa8306f3b03ab8d52617",
+        "pid": 3760381,
+        "worker": "nox-agent-01"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "2f3f9bf6308488b30bdc18c68550c061c6158179ef60e47843cac95910685064"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "3A02.project.readback_revoke.layout_retry.20261118",
+        "parent_task_id": "3A02",
+        "queue_id": "Q2_MEMORY_KNOWLEDGE",
+        "job_id": "nox-project-ea9fa3089778f413c44ca1b9",
+        "plan_sha256": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc",
+        "source_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794969277.834116,
+        "project_source_changed": true,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-523dee470f354ea6",
+        "receipt_sha256": "2f3f9bf6308488b30bdc18c68550c061c6158179ef60e47843cac95910685064",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "CURRENT",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "memory",
+        "pid": 3760596,
+        "id": "3A02.project.readback_revoke.layout_retry.20261118",
+        "state": "INTEGRATED",
+        "elapsed_ms": 1799,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "INTEGRATED",
+        "task_id": "3A02.project.readback_revoke.layout_retry.20261118",
+        "claim": "43dfaa8306f3b03ab8d52617",
+        "plan_sha256": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3760596,
+          "ppid": 3760381,
+          "process_starttime": 176199997
+        },
+        "project_source_changed": true,
+        "integration_verified": true,
+        "postimages": {
+          "s03_existing_readback.py": "fa3d69e506d72729509455f2c26b5974bb5dbbb10a0baf295c66aca92e46a9f5"
+        },
+        "tests_sha256": "235a50e5a087357bcdf81c1f52852510cdd3ebabef58c2798fdab014855f8d6a",
+        "reason": null,
+        "trusted_tests_unchanged": true
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "completed": true,
+        "passed": true,
+        "modules": [
+          "test_s03_readback_contract",
+          "test_nox_s03_readback_revoke"
+        ],
+        "tests_run": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534,
+          "workdir": "/work/project/source"
+        },
+        "log_sha256": "2f7b850c977121d8774a5cdcc47ed550746f0edb17a5b087b7ace1ccd82a6307",
+        "log_bytes": 112,
+        "elapsed_ms": 7
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "3A03.project.cache_revision_lock.20261118",
+      "parent_task_id": "3A03",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "status": "done",
+      "note": "ADMITTED_NOT_EXECUTED",
+      "retries": 0,
+      "native_queue_sequence": 10,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 04:52:10 Europe/Moscow (UTC+3)",
+        "nonce": "3a3e122f985fc89cb5db5219",
+        "pid": 3734446,
+        "worker": "nox-agent-02"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "4c76bcd9bda6ab8f104d7d79ad52ef4cc154d3a67f8f838e746cd26a79b173e9"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "3A03.project.cache_revision_lock.20261118",
+        "parent_task_id": "3A03",
+        "queue_id": "Q2_MEMORY_KNOWLEDGE",
+        "job_id": "nox-project-ef2400f532ba050ddeb236d4",
+        "plan_sha256": "e7c99335a4a790202f229a41ddd6420cc4f8a0d85765af931e00818eb726b13f",
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794966734.6302795,
+        "project_source_changed": true,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-3a7c9020a0754d61",
+        "receipt_sha256": "4c76bcd9bda6ab8f104d7d79ad52ef4cc154d3a67f8f838e746cd26a79b173e9",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "HISTORICAL_VERIFY_ONLY",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "memory",
+        "pid": 3734569,
+        "id": "3A03.project.cache_revision_lock.20261118",
+        "state": "INTEGRATED",
+        "elapsed_ms": 1912,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "INTEGRATED",
+        "task_id": "3A03.project.cache_revision_lock.20261118",
+        "claim": "3a3e122f985fc89cb5db5219",
+        "plan_sha256": "e7c99335a4a790202f229a41ddd6420cc4f8a0d85765af931e00818eb726b13f",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3734569,
+          "ppid": 3734446,
+          "process_starttime": 175944600
+        },
+        "project_source_changed": true,
+        "integration_verified": true,
+        "postimages": {
+          "nox_runpod/teacher_mesh/v38/durable_runtime.py": "f7b69405224c63868b767792d68c3b0d73e2561b37216e2e855ca34ec93d5f2f"
+        },
+        "tests_sha256": "01b1f60010e876330ab58a9794204379647858fa05ea3ab5157e59cb443c50c4",
+        "reason": null,
+        "trusted_tests_unchanged": true
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "completed": true,
+        "passed": true,
+        "modules": [
+          "test_nox_existing_cache_race",
+          "test_nox_warm_cache_final_revision"
+        ],
+        "tests_run": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534
+        },
+        "log_sha256": "8c4b1532288f3c2237a75b4778a19116380135ed2658033225c3d1a1a8446867",
+        "log_bytes": 109,
+        "elapsed_ms": 53
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "3B05.project.strict_skill_json.20261118",
+      "parent_task_id": "3B05",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "status": "blocked",
+      "note": "{'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'verified': True, 'scope': 'SOURCE_PATCH_TESTED', 'receipt': {'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'phase': 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED', 'task_id': '3B05.project.strict_skill_json.20261118', 'parent_task_id': '3B05', 'queue_id': 'Q2_MEMORY_KNOWLEDGE', 'job_id': 'nox-project-cc5f163d0ca0537cbfcbe6bb', 'claim': {'worker': 'nox-agent-03', 'pid': 3734446, 'nonce': '5ea7a2a060f3f61199752abf', 'at': '2026-11-18 04:52:16 Europe/Moscow",
+      "retries": 1,
+      "native_queue_sequence": 12,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 04:52:16 Europe/Moscow (UTC+3)",
+        "nonce": "5ea7a2a060f3f61199752abf",
+        "pid": 3734446,
+        "worker": "nox-agent-03"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "4948d762437c79d9a52dfb26f2f822d1a52bea7bfc07a675604e341fd4240a8e"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "3B05.project.strict_skill_json.20261118",
+        "parent_task_id": "3B05",
+        "queue_id": "Q2_MEMORY_KNOWLEDGE",
+        "job_id": "nox-project-cc5f163d0ca0537cbfcbe6bb",
+        "plan_sha256": "67e819b4ff1b94cc5bdd6547702ce5383f5ea8a0cb42a44428a1b7740c147e09",
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794966739.6807625,
+        "project_source_changed": false,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-613522f8891d484f",
+        "receipt_sha256": "4948d762437c79d9a52dfb26f2f822d1a52bea7bfc07a675604e341fd4240a8e",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "HISTORICAL_VERIFY_ONLY",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "memory",
+        "pid": 3734569,
+        "id": "3B05.project.strict_skill_json.20261118",
+        "state": "BLOCKED_SANDBOX",
+        "elapsed_ms": 1710,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "BLOCKED_SANDBOX",
+        "task_id": "3B05.project.strict_skill_json.20261118",
+        "claim": "5ea7a2a060f3f61199752abf",
+        "plan_sha256": "67e819b4ff1b94cc5bdd6547702ce5383f5ea8a0cb42a44428a1b7740c147e09",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3734569,
+          "ppid": 3734446,
+          "process_starttime": 175944600
+        },
+        "project_source_changed": false,
+        "integration_verified": null,
+        "postimages": null,
+        "tests_sha256": null,
+        "reason": "HOLD_PROJECT_TEST_RUNNER_IndexError: 3",
+        "trusted_tests_unchanged": null
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": null,
+        "completed": null,
+        "passed": null,
+        "modules": null,
+        "tests_run": null,
+        "failures": null,
+        "errors": null,
+        "skipped": null,
+        "sandbox": null,
+        "log_sha256": null,
+        "log_bytes": null,
+        "elapsed_ms": null,
+        "output_tail": ""
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "3B05.project.strict_skill_json.layout_retry.20261118",
+      "parent_task_id": "3B05",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "status": "done",
+      "note": "ADMITTED_NOT_EXECUTED",
+      "retries": 0,
+      "native_queue_sequence": 16,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 05:34:42 Europe/Moscow (UTC+3)",
+        "nonce": "34a7ccbf2e4d57dec3cb9e52",
+        "pid": 3760381,
+        "worker": "nox-agent-01"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "8bcf4efea429a04146246cedd08ebc589c2e6c464e7a94435527d0cfb382b6ac"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "3B05.project.strict_skill_json.layout_retry.20261118",
+        "parent_task_id": "3B05",
+        "queue_id": "Q2_MEMORY_KNOWLEDGE",
+        "job_id": "nox-project-a2c19884c10e98a3f0ee9bc2",
+        "plan_sha256": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d",
+        "source_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794969286.6382399,
+        "project_source_changed": true,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-c7bec831061d4a74",
+        "receipt_sha256": "8bcf4efea429a04146246cedd08ebc589c2e6c464e7a94435527d0cfb382b6ac",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "CURRENT",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "runtime",
+        "pid": 3760595,
+        "id": "3B05.project.strict_skill_json.layout_retry.20261118",
+        "state": "INTEGRATED",
+        "elapsed_ms": 1888,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "INTEGRATED",
+        "task_id": "3B05.project.strict_skill_json.layout_retry.20261118",
+        "claim": "34a7ccbf2e4d57dec3cb9e52",
+        "plan_sha256": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3760595,
+          "ppid": 3760381,
+          "process_starttime": 176199997
+        },
+        "project_source_changed": true,
+        "integration_verified": true,
+        "postimages": {
+          "owner_dispatcher_mentor.py": "b980a61884965f4838f8deafd43dac2ea4642e41dea7870d6a6904ee5a274fc6"
+        },
+        "tests_sha256": "2ac586e6f2ebc498c5191be800575f11a2bab50afb53266b637c9fb845fbde5b",
+        "reason": null,
+        "trusted_tests_unchanged": true
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "completed": true,
+        "passed": true,
+        "modules": [
+          "test_3b05_skill_ancestor_swap",
+          "test_nox_skill_evidence_strict_json"
+        ],
+        "tests_run": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534,
+          "workdir": "/work/project/source"
+        },
+        "log_sha256": "ceea5e339bfb84b2653af263ee2fe0a0e2de2bfaed2f3efd00a6d42b42fde502",
+        "log_bytes": 109,
+        "elapsed_ms": 42
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "4A02.project.forge_split_coverage.20261118",
+      "parent_task_id": "4A02",
+      "queue_id": "Q3_TRAINING_WEIGHTS",
+      "status": "done",
+      "note": "ADMITTED_NOT_EXECUTED",
+      "retries": 0,
+      "native_queue_sequence": 7,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 04:52:00 Europe/Moscow (UTC+3)",
+        "nonce": "b70e78909a03bd421948cd22",
+        "pid": 3734446,
+        "worker": "nox-agent-01"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "27d01a1f58dde560c98f139707a6e683ca5df5bb4b5f1ad6504d5b8ba1bd3fa1"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "4A02.project.forge_split_coverage.20261118",
+        "parent_task_id": "4A02",
+        "queue_id": "Q3_TRAINING_WEIGHTS",
+        "job_id": "nox-project-de20231c0a5bffab70b5e3f2",
+        "plan_sha256": "4037501920f2e9f3ea41c9b623b8a2aae1c942edb1308a186b1398c646e7bee7",
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794966725.0198007,
+        "project_source_changed": true,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-956b8a141d794183",
+        "receipt_sha256": "27d01a1f58dde560c98f139707a6e683ca5df5bb4b5f1ad6504d5b8ba1bd3fa1",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "HISTORICAL_VERIFY_ONLY",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "weights",
+        "pid": 3734570,
+        "id": "4A02.project.forge_split_coverage.20261118",
+        "state": "INTEGRATED",
+        "elapsed_ms": 1912,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "INTEGRATED",
+        "task_id": "4A02.project.forge_split_coverage.20261118",
+        "claim": "b70e78909a03bd421948cd22",
+        "plan_sha256": "4037501920f2e9f3ea41c9b623b8a2aae1c942edb1308a186b1398c646e7bee7",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3734570,
+          "ppid": 3734446,
+          "process_starttime": 175944600
+        },
+        "project_source_changed": true,
+        "integration_verified": true,
+        "postimages": {
+          "forge_split_guard.py": "06940cb13bd568d4cfaa893aab9e43c6d0b03010163cba13f2f5bf5ea144db00"
+        },
+        "tests_sha256": "2355e7664a2cd9e38f95ccc3eb8f37d19bafc2d9d54649fbb4a3045ca511e79f",
+        "reason": null,
+        "trusted_tests_unchanged": true
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "completed": true,
+        "passed": true,
+        "modules": [
+          "test_forge_split_guard",
+          "test_nox_forge_split_coverage"
+        ],
+        "tests_run": 35,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534
+        },
+        "log_sha256": "3fc22ad389fbca77c3e83581dcad409364ef04f2eba8848abee9e4153eae7732",
+        "log_bytes": 134,
+        "elapsed_ms": 127
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "6V14-04.project.receipt_time_order.20261118",
+      "parent_task_id": "6V14-04",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "status": "blocked",
+      "note": "{'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'verified': True, 'scope': 'SOURCE_PATCH_TESTED', 'receipt': {'schema': 'NOX_NATIVE_SUBAGENT_RECEIPT_V1', 'phase': 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED', 'task_id': '6V14-04.project.receipt_time_order.20261118', 'parent_task_id': '6V14-04', 'queue_id': 'Q1_RUNTIME_CHAT', 'job_id': 'nox-project-8a21739e226c7593ceefa04b', 'claim': {'worker': 'nox-agent-02', 'pid': 3734446, 'nonce': '8d213946d2a4b425597a9a0d', 'at': '2026-11-18 04:52:05 Europe/Mos",
+      "retries": 1,
+      "native_queue_sequence": 9,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 04:52:05 Europe/Moscow (UTC+3)",
+        "nonce": "8d213946d2a4b425597a9a0d",
+        "pid": 3734446,
+        "worker": "nox-agent-02"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "6f117bd8ac9f584e5380e4ef494574df19fe2876dfd001e2d18024bb30a31c52"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "6V14-04.project.receipt_time_order.20261118",
+        "parent_task_id": "6V14-04",
+        "queue_id": "Q1_RUNTIME_CHAT",
+        "job_id": "nox-project-8a21739e226c7593ceefa04b",
+        "plan_sha256": "de41f4de77a043c695fe12ccb3a60a389c4cd112102a9257dbf1c7b47c25d5eb",
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794966728.8978157,
+        "project_source_changed": false,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-c2979c639cfc469a",
+        "receipt_sha256": "6f117bd8ac9f584e5380e4ef494574df19fe2876dfd001e2d18024bb30a31c52",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "71dd03dee52f1673c2977fd2abac05c623cea1d1d5049a0645f9eb66314f20e4",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "HISTORICAL_VERIFY_ONLY",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "runtime",
+        "pid": 3734568,
+        "id": "6V14-04.project.receipt_time_order.20261118",
+        "state": "FAILED_TESTS",
+        "elapsed_ms": 1830,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "FAILED_TESTS",
+        "task_id": "6V14-04.project.receipt_time_order.20261118",
+        "claim": "8d213946d2a4b425597a9a0d",
+        "plan_sha256": "de41f4de77a043c695fe12ccb3a60a389c4cd112102a9257dbf1c7b47c25d5eb",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3734568,
+          "ppid": 3734446,
+          "process_starttime": 175944600
+        },
+        "project_source_changed": false,
+        "integration_verified": null,
+        "postimages": {
+          "work_progress.py": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d"
+        },
+        "tests_sha256": "d6ed0ab865cb59d6fb6448677b3f20eac63e8d76ba1585208f4b1eb8d171713f",
+        "reason": null,
+        "trusted_tests_unchanged": true
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "completed": true,
+        "passed": false,
+        "modules": [
+          "test_work_progress_changes",
+          "test_work_progress_durable_write",
+          "test_work_progress_pinned_read",
+          "test_nox_work_progress_time_order"
+        ],
+        "tests_run": 36,
+        "failures": 0,
+        "errors": 1,
+        "skipped": 0,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534
+        },
+        "log_sha256": "e5a2495079f72e2d41419f78c9217c794e0b2a511207ba17b7b27e51fba663a7",
+        "log_bytes": 761,
+        "elapsed_ms": 60,
+        "output_tail": "...................E................\n======================================================================\nERROR: test_dirfd_walk_swap_fails_closed_and_closes_fd (test_work_progress_pinned_read.PinnedReadTests.test_dirfd_walk_swap_fails_closed_and_closes_fd)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/work/test_work_progress_pinned_read.py\", line 86, in test_dirfd_walk_swap_fails_closed_and_closes_fd\n    before_fds = len(os.listdir('/proc/self/fd'))\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/proc/self/fd'\n\n----------------------------------------------------------------------\nRan 36 tests in 0.030s\n\nFAILED (errors=1)\n"
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_EXECUTION",
+    "data": {
+      "id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+      "parent_task_id": "6V14-04",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "status": "done",
+      "note": "ADMITTED_NOT_EXECUTED",
+      "retries": 0,
+      "native_queue_sequence": 13,
+      "original_task_accepted": false,
+      "owner_claim": {
+        "at": "2026-11-18 05:34:33 Europe/Moscow (UTC+3)",
+        "nonce": "84a3e98b1590c2bdca419979",
+        "pid": 3760381,
+        "worker": "nox-agent-03"
+      },
+      "result": {
+        "verified": true,
+        "scope": "SOURCE_PATCH_TESTED",
+        "receipt_sha256": "bf37f57979635e69289d69a648e19d2f89c0a341827c44d74b442caad463c66f"
+      },
+      "receipt": {
+        "schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+        "phase": "PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED",
+        "task_id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+        "parent_task_id": "6V14-04",
+        "queue_id": "Q1_RUNTIME_CHAT",
+        "job_id": "nox-project-f9777f6bf6ca4afe5cecdc21",
+        "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9",
+        "source_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "scope": "SOURCE_PATCH_TESTED",
+        "finished_at": 1794969277.632146,
+        "project_source_changed": true,
+        "live_service_deployed": false,
+        "original_task_accepted": false
+      },
+      "receipt_sha_matches": true,
+      "receipt_claim_matches": true,
+      "s03": {
+        "verified": true,
+        "s03_item_id": "S03-d4b5032e16194976",
+        "receipt_sha256": "bf37f57979635e69289d69a648e19d2f89c0a341827c44d74b442caad463c66f",
+        "scope": "EXACT_READ_ONLY_SQLITE_RECEIPT_MATCH"
+      },
+      "receipt_source": {
+        "source_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "current_callback_sha256": "6c67e567e669b993d016ea1d6137a03f3567e564d2b35696edf665a27e0f4756",
+        "matches_config_callback_pin": true,
+        "matches_durable_task_source": true,
+        "scope": "CURRENT",
+        "source_authorized": true
+      },
+      "worker_event": {
+        "kind": "RESULT",
+        "role": "runtime",
+        "pid": 3760595,
+        "id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+        "state": "INTEGRATED",
+        "elapsed_ms": 1875,
+        "reason": null
+      },
+      "project_evidence": {
+        "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+        "state": "INTEGRATED",
+        "task_id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+        "claim": "84a3e98b1590c2bdca419979",
+        "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9",
+        "root_id": "NOX_PROJECT_SOURCE",
+        "acceptance_scope": "SOURCE_PATCH_TESTED",
+        "worker": {
+          "pid": 3760595,
+          "ppid": 3760381,
+          "process_starttime": 176199997
+        },
+        "project_source_changed": true,
+        "integration_verified": true,
+        "postimages": {
+          "test_work_progress_pinned_read.py": "4b06687bbad8fe6ab0466bdaf06ed9239c70da2232bf14e6820eed4919251f5e",
+          "work_progress.py": "7e625acddd71fe95988e626de71b17f31f992abbfdb3b006e83d4568ce74a03d"
+        },
+        "tests_sha256": "27c892c9d39deab6d1a0f885a53aa45f7ba349c82dc4595bd7deb7343dc44eff",
+        "reason": null,
+        "trusted_tests_unchanged": true
+      },
+      "project_evidence_sha_matches": true,
+      "tests": {
+        "schema": "NOX_PROJECT_TEST_REPORT_V1",
+        "completed": true,
+        "passed": true,
+        "modules": [
+          "test_work_progress_changes",
+          "test_work_progress_durable_write",
+          "test_work_progress_pinned_read",
+          "test_nox_work_progress_time_order"
+        ],
+        "tests_run": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sandbox": {
+          "exec_denied": true,
+          "fork_denied": true,
+          "gid": 65534,
+          "host_path_hidden": true,
+          "network_denied": true,
+          "no_new_privs": true,
+          "seccomp_filter": true,
+          "uid": 65534,
+          "workdir": "/work/project/source"
+        },
+        "log_sha256": "b6c6b05fa2dc320dede9bcd9db72dded544103295db737c68781be1eda312914",
+        "log_bytes": 135,
+        "elapsed_ms": 67
+      },
+      "planner_receipt": {}
+    }
+  },
+  {
+    "kind": "PROJECT_CATALOG",
+    "data": {
+      "rows": 19,
+      "new_project_rows": [
+        {
+          "id": "1A03.project.cursor_admission.20261118",
+          "queue_id": "Q1_RUNTIME_CHAT",
+          "deps": [],
+          "params": {
+            "contract_sha256": "b40696685ca2b7c848a233f2d193d3cb57442d6b1046d2488c7d5b29ac1821b7",
+            "parent_task_id": "1A03"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "3A02.project.readback_revoke.20261118",
+          "queue_id": "Q2_MEMORY_KNOWLEDGE",
+          "deps": [],
+          "params": {
+            "parent_task_id": "3A02",
+            "plan_sha256": "283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "3A03.project.cache_revision_lock.20261118",
+          "queue_id": "Q2_MEMORY_KNOWLEDGE",
+          "deps": [],
+          "params": {
+            "parent_task_id": "3A03",
+            "plan_sha256": "e7c99335a4a790202f229a41ddd6420cc4f8a0d85765af931e00818eb726b13f"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "6V14-04.project.receipt_time_order.20261118",
+          "queue_id": "Q1_RUNTIME_CHAT",
+          "deps": [],
+          "params": {
+            "parent_task_id": "6V14-04",
+            "plan_sha256": "de41f4de77a043c695fe12ccb3a60a389c4cd112102a9257dbf1c7b47c25d5eb"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "3B05.project.strict_skill_json.20261118",
+          "queue_id": "Q2_MEMORY_KNOWLEDGE",
+          "deps": [],
+          "params": {
+            "parent_task_id": "3B05",
+            "plan_sha256": "67e819b4ff1b94cc5bdd6547702ce5383f5ea8a0cb42a44428a1b7740c147e09"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "4A02.project.forge_split_coverage.20261118",
+          "queue_id": "Q3_TRAINING_WEIGHTS",
+          "deps": [],
+          "params": {
+            "parent_task_id": "4A02",
+            "plan_sha256": "4037501920f2e9f3ea41c9b623b8a2aae1c942edb1308a186b1398c646e7bee7"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "0V14-14.project.overlay_paths.20261118",
+          "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
+          "deps": [],
+          "params": {
+            "parent_task_id": "0V14-14",
+            "plan_sha256": "9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "3A02.project.readback_revoke.layout_retry.20261118",
+          "queue_id": "Q2_MEMORY_KNOWLEDGE",
+          "deps": [],
+          "params": {
+            "parent_task_id": "3A02",
+            "plan_sha256": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "3B05.project.strict_skill_json.layout_retry.20261118",
+          "queue_id": "Q2_MEMORY_KNOWLEDGE",
+          "deps": [],
+          "params": {
+            "parent_task_id": "3B05",
+            "plan_sha256": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+          "queue_id": "Q1_RUNTIME_CHAT",
+          "deps": [],
+          "params": {
+            "parent_task_id": "6V14-04",
+            "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        },
+        {
+          "id": "1A03.project.cursor_admission.focus_retry.20261118",
+          "queue_id": "Q1_RUNTIME_CHAT",
+          "deps": [],
+          "params": {
+            "contract_sha256": "eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4",
+            "parent_task_id": "1A03"
+          },
+          "priority": "P1",
+          "resource": "CPU_LIGHT"
+        }
+      ]
+    }
+  },
+  {
+    "kind": "PROJECT_MODEL_SLOT_PROGRESS",
+    "data": {
+      "slots": [
+        {
+          "id": 0,
+          "id_task": 12703096,
+          "is_processing": true,
+          "n_ctx": 4096,
+          "n_prompt_tokens": 2704,
+          "n_decoded": null,
+          "n_predict": null,
+          "n_past": null,
+          "state": null,
+          "params": {
+            "n_predict": 900,
+            "n_ctx": null,
+            "n_decoded": null,
+            "n_remaining": null,
+            "has_next_token": null,
+            "prompt_n": null,
+            "prompt_ms": null,
+            "predicted_n": null,
+            "predicted_ms": null,
+            "predicted_per_token_ms": null,
+            "predicted_per_second": null
+          }
+        },
+        {
+          "id": 1,
+          "id_task": 11893812,
+          "is_processing": false,
+          "n_ctx": 4096,
+          "n_prompt_tokens": 2932,
+          "n_decoded": null,
+          "n_predict": null,
+          "n_past": null,
+          "state": null,
+          "params": {
+            "n_predict": 900,
+            "n_ctx": null,
+            "n_decoded": null,
+            "n_remaining": null,
+            "has_next_token": null,
+            "prompt_n": null,
+            "prompt_ms": null,
+            "predicted_n": null,
+            "predicted_ms": null,
+            "predicted_per_token_ms": null,
+            "predicted_per_second": null
+          }
+        }
+      ],
+      "scope": "READ_ONLY_NO_PROMPT_OR_COMPLETION_CONTENT"
+    }
+  },
+  {
+    "kind": "PROJECT_ATTEMPT_PROGRESS",
+    "data": {
+      "attempts": [
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "FAILED_TESTS",
+          "task_id": "6V14-04.project.receipt_time_order.20261118",
+          "claim": "8d213946d2a4b425597a9a0d",
+          "plan_sha256": "de41f4de77a043c695fe12ccb3a60a389c4cd112102a9257dbf1c7b47c25d5eb",
+          "reason": null,
+          "started_at": 1794966727.1380882,
+          "finished_at": 1794966728.8695807,
+          "journal_sha256": "63c6c83868ac45f7ce4b491781e43fbd91511cc51157a51764a7799c6aea161d",
+          "mtime_ns": 1794966728868529000
+        },
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "BLOCKED_SANDBOX",
+          "task_id": "3A02.project.readback_revoke.20261118",
+          "claim": "7c7d4e147c69ade7b82f1742",
+          "plan_sha256": "283ff826ba11803988884e35aa6b20dfa3d658e9887059e2e604f05062f5ad4a",
+          "reason": "HOLD_PROJECT_TEST_RUNNER_IndexError: 2",
+          "started_at": 1794966720.6185658,
+          "finished_at": 1794966722.772333,
+          "journal_sha256": "06dfeb48c0f101bd3fb2eb1a9fb2051295bd5326114bea8b41badc7b2f7965b2",
+          "mtime_ns": 1794966722772732400
+        },
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "INTEGRATED",
+          "task_id": "4A02.project.forge_split_coverage.20261118",
+          "claim": "b70e78909a03bd421948cd22",
+          "plan_sha256": "4037501920f2e9f3ea41c9b623b8a2aae1c942edb1308a186b1398c646e7bee7",
+          "reason": null,
+          "started_at": 1794966722.4972198,
+          "finished_at": 1794966725.0178032,
+          "journal_sha256": "79ec595f9876e773a1cc1a3d0f36bb86bac649909c53cd1ae6fc50251c3a8edf",
+          "mtime_ns": 1794966725017657300
+        },
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "INTEGRATED",
+          "task_id": "6V14-04.project.receipt_time_order.fd_retry.20261118",
+          "claim": "84a3e98b1590c2bdca419979",
+          "plan_sha256": "dd24421576ae4160fa01ba529bdcd3fa248e5e0386f7d1b5f7b873476bd272e9",
+          "reason": null,
+          "started_at": 1794969275.51214,
+          "finished_at": 1794969277.630361,
+          "journal_sha256": "62c2587d8de4b23dc00a0b5c20d4e69f3708daa0bce7b61415508224cd325384",
+          "mtime_ns": 1794969277629152300
+        },
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "INTEGRATED",
+          "task_id": "3A03.project.cache_revision_lock.20261118",
+          "claim": "3a3e122f985fc89cb5db5219",
+          "plan_sha256": "e7c99335a4a790202f229a41ddd6420cc4f8a0d85765af931e00818eb726b13f",
+          "reason": null,
+          "started_at": 1794966732.4460523,
+          "finished_at": 1794966734.6282635,
+          "journal_sha256": "24d824495b8587cc97c42b4d875af51ba7f85023b6c8ac32b85b2a8af48f5099",
+          "mtime_ns": 1794966734627337700
+        },
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "BLOCKED_SANDBOX",
+          "task_id": "3B05.project.strict_skill_json.20261118",
+          "claim": "5ea7a2a060f3f61199752abf",
+          "plan_sha256": "67e819b4ff1b94cc5bdd6547702ce5383f5ea8a0cb42a44428a1b7740c147e09",
+          "reason": "HOLD_PROJECT_TEST_RUNNER_IndexError: 3",
+          "started_at": 1794966738.0274127,
+          "finished_at": 1794966739.6673932,
+          "journal_sha256": "201e0177042e9c6378901ce98f9fe5a574d35d2f6c4cc1919a02fa9b77fb5cdb",
+          "mtime_ns": 1794966739667171600
+        },
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "INTEGRATED",
+          "task_id": "3A02.project.readback_revoke.layout_retry.20261118",
+          "claim": "43dfaa8306f3b03ab8d52617",
+          "plan_sha256": "a171fa7a94084a1f4b6751d78097257b9ed0755fc1a46cdfb4d34a27838347dc",
+          "reason": null,
+          "started_at": 1794969275.7079911,
+          "finished_at": 1794969277.8313048,
+          "journal_sha256": "473daad8d74e53e60a7744f4ebb9103444fb9df9c365ed2e5d8924be46cbc2de",
+          "mtime_ns": 1794969277831149800
+        },
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "INTEGRATED",
+          "task_id": "3B05.project.strict_skill_json.layout_retry.20261118",
+          "claim": "34a7ccbf2e4d57dec3cb9e52",
+          "plan_sha256": "79b77425ff05d3337c2e46653e2e6e0190c2ec59848d617fa2204876fc89eb0d",
+          "reason": null,
+          "started_at": 1794969284.3512917,
+          "finished_at": 1794969286.6362526,
+          "journal_sha256": "526a5021d3eed97949a186db306365822f93dbc712629887a6143e9c48a21fe3",
+          "mtime_ns": 1794969286635049700
+        },
+        {
+          "schema": "NOX_PROJECT_EXECUTION_EVIDENCE_V1",
+          "state": "INTEGRATED",
+          "task_id": "0V14-14.project.overlay_paths.20261118",
+          "claim": "c29b5c992ca8cc2af25c2e42",
+          "plan_sha256": "9b80e2075b52602ac9e113d9dbe1e2f4458ed555d50abd7623ae5ecb408fb2ee",
+          "reason": null,
+          "started_at": 1794966721.9095721,
+          "finished_at": 1794966724.073498,
+          "journal_sha256": "dc5ee3fa38859ebed6937c2029618927e1d4c2ac414642d151c15104758ec6cd",
+          "mtime_ns": 1794966724073688800
+        }
+      ]
+    }
+  },
+  {
+    "kind": "LOCKS",
+    "data": [
+      {
+        "path": "/root/nox/state/owner_maintenance.lock",
+        "scope": "PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION",
+        "present": true,
+        "inode": 59886214,
+        "device_major": 0,
+        "device_minor": 36,
+        "type_regular": true,
+        "matching_kernel_locks": [
+          "29: FLOCK  ADVISORY  READ 3760381 00:24:59886214 0 EOF"
+        ]
+      },
+      {
+        "path": "/root/nox/state/dispatcher/native_subagents.lock",
+        "scope": "PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION",
+        "present": true,
+        "inode": 3326582169,
+        "device_major": 0,
+        "device_minor": 36,
+        "type_regular": true,
+        "matching_kernel_locks": [
+          "23: FLOCK  ADVISORY  WRITE 3760381 00:24:3326582169 0 EOF"
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "POST_WORKERS",
+    "data": {
+      "time_unix": 1794969782.266479,
+      "observed_at": 1794969781.596225,
+      "claimed_director": {
+        "pid": 3760381,
+        "ppid": 114,
+        "process_starttime": 176197984
+      },
+      "observed_director": {
+        "pid": 3760381,
+        "ppid": 114,
+        "pgrp": 3760381,
+        "start_ticks": 176197984,
+        "state": "S",
+        "namespace_pids": [
+          3760381
+        ],
+        "dispatcher_env": {
+          "NOX_DISPATCHER_SAFE": "1",
+          "NOX_DISPATCHER_WORKERS": "3"
+        }
+      },
+      "workers": [
+        {
+          "claimed": {
+            "pid": 3760595,
+            "ppid": 3760381,
+            "process_starttime": 176199997,
+            "role": "runtime",
+            "state": "RUNNING",
+            "heartbeat_at": 1794969781.5490818,
+            "current_task": null,
+            "native_pid_verified": true
+          },
+          "observed": {
+            "pid": 3760595,
+            "ppid": 3760381,
+            "pgrp": 3760381,
+            "start_ticks": 176199997,
+            "state": "S",
+            "namespace_pids": [
+              3760595
+            ],
+            "dispatcher_env": {
+              "NOX_DISPATCHER_SAFE": "1",
+              "NOX_DISPATCHER_WORKERS": "3"
+            }
+          },
+          "verified": true
+        },
+        {
+          "claimed": {
+            "pid": 3760596,
+            "ppid": 3760381,
+            "process_starttime": 176199997,
+            "role": "memory",
+            "state": "RUNNING",
+            "heartbeat_at": 1794969780.9514976,
+            "current_task": null,
+            "native_pid_verified": true
+          },
+          "observed": {
+            "pid": 3760596,
+            "ppid": 3760381,
+            "pgrp": 3760381,
+            "start_ticks": 176199997,
+            "state": "S",
+            "namespace_pids": [
+              3760596
+            ],
+            "dispatcher_env": {
+              "NOX_DISPATCHER_SAFE": "1",
+              "NOX_DISPATCHER_WORKERS": "3"
+            }
+          },
+          "verified": true
+        },
+        {
+          "claimed": {
+            "pid": 3760597,
+            "ppid": 3760381,
+            "process_starttime": 176199997,
+            "role": "weights",
+            "state": "RUNNING",
+            "heartbeat_at": 1794969780.973512,
+            "current_task": "1A03.project.cursor_admission.focus_retry.20261118",
+            "native_pid_verified": true
+          },
+          "observed": {
+            "pid": 3760597,
+            "ppid": 3760381,
+            "pgrp": 3760381,
+            "start_ticks": 176199997,
+            "state": "S",
+            "namespace_pids": [
+              3760597
+            ],
+            "dispatcher_env": {
+              "NOX_DISPATCHER_SAFE": "1",
+              "NOX_DISPATCHER_WORKERS": "3"
+            }
+          },
+          "verified": true
+        }
+      ],
+      "project": {
+        "state": "HANDOFF_RECEIVED_PROJECT_EXECUTION_BOUND",
+        "received_unique_tasks": 295,
+        "dispatch_cap": 3,
+        "bound_leaf_subtasks": 5,
+        "original_task_acceptance_added": 0,
+        "scope": "SUBTASK_COMPLETED_ORIGINAL_NOT_ACCEPTED",
+        "queues": {
+          "Q1_RUNTIME_CHAT": 145,
+          "Q2_MEMORY_KNOWLEDGE": 71,
+          "Q3_TRAINING_WEIGHTS": 34,
+          "Q4_INTEGRATION_ACCEPTANCE": 45
+        },
+        "leaf_status": {
+          "blocked": 0,
+          "done": 5,
+          "pending": 0,
+          "running": 0
+        }
+      },
+      "admission": {
+        "state": "NATIVE_POOL_CONTINUING",
+        "jobs_started": 0,
+        "process_count": null,
+        "process_target": null
+      },
+      "resource_admission": {
+        "native_verified": true,
+        "instance_id": 60509551,
+        "stop_active": false,
+        "source_sha_verified": true,
+        "owner_scope_verified": true,
+        "cgroup_memory_ratio": 0.9597535416385249,
+        "raw_cgroup_memory_ratio": 0.9997734659935161,
+        "effective_cgroup_memory_ratio": 0.953529038058895,
+        "projected_cgroup_memory_ratio": 0.9597535416385249,
+        "cpu_pressure": 0,
+        "admission_class": "BOUNDED_CPU_PROJECT_SOURCE",
+        "bounded_cpu_budget": {
+          "cpu_pressure": 0,
+          "current_bytes": 194021240832,
+          "file_bytes": 190244626432,
+          "inactive_file_bytes": 8974434304,
+          "instance_id": 60509551,
+          "max_bytes": 194065203200,
+          "memory_psi_full_avg10": 0,
+          "memory_psi_some_avg10": 0,
+          "minimum_headroom_bytes": 2147483648,
+          "observed_at": 1794969777.5863442,
+          "planner_reserve_bytes": 134217728,
+          "sandbox_limit_bytes": 268435456,
+          "schema": "NOX_BOUNDED_CPU_BUDGET_V1",
+          "shmem_bytes": 75403436032,
+          "source": "cgroup_v2",
+          "worker_slots": 3
+        },
+        "bounded_cpu_decision": {
+          "effective_bytes": 185046806528,
+          "effective_memory_ratio": 0.953529038058895,
+          "eligible": true,
+          "headroom_bytes": 7810437120,
+          "projected_bytes": 186254766080,
+          "projected_memory_ratio": 0.9597535416385249,
+          "raw_memory_ratio": 0.9997734659935161,
+          "reason": null,
+          "reclaimable_bytes": 8974434304,
+          "reserved_bytes": 1207959552
+        }
+      },
+      "pool_lifecycle": {
+        "last_started_at": 1794969271.8138034,
+        "last_closed_at": null,
+        "last_close_reason": null
+      }
+    }
+  },
+  {
+    "kind": "PROJECT_DIRECTOR_CHILDREN",
+    "data": {
+      "director_pid": 3760381,
+      "children": [
+        {
+          "pid": 3760487,
+          "ppid": 3760381,
+          "pgrp": 3760381,
+          "start_ticks": 176198953,
+          "state": "S",
+          "namespace_pids": [
+            3760487
+          ],
+          "dispatcher_env": {
+            "NOX_DISPATCHER_SAFE": "1",
+            "NOX_DISPATCHER_WORKERS": "3"
+          },
+          "kind": "MP_RESOURCE_TRACKER"
+        },
+        {
+          "pid": 3760595,
+          "ppid": 3760381,
+          "pgrp": 3760381,
+          "start_ticks": 176199997,
+          "state": "S",
+          "namespace_pids": [
+            3760595
+          ],
+          "dispatcher_env": {
+            "NOX_DISPATCHER_SAFE": "1",
+            "NOX_DISPATCHER_WORKERS": "3"
+          },
+          "kind": "MP_WORKER"
+        },
+        {
+          "pid": 3760596,
+          "ppid": 3760381,
+          "pgrp": 3760381,
+          "start_ticks": 176199997,
+          "state": "S",
+          "namespace_pids": [
+            3760596
+          ],
+          "dispatcher_env": {
+            "NOX_DISPATCHER_SAFE": "1",
+            "NOX_DISPATCHER_WORKERS": "3"
+          },
+          "kind": "MP_WORKER"
+        },
+        {
+          "pid": 3760597,
+          "ppid": 3760381,
+          "pgrp": 3760381,
+          "start_ticks": 176199997,
+          "state": "S",
+          "namespace_pids": [
+            3760597
+          ],
+          "dispatcher_env": {
+            "NOX_DISPATCHER_SAFE": "1",
+            "NOX_DISPATCHER_WORKERS": "3"
+          },
+          "kind": "MP_WORKER"
+        }
+      ],
+      "native_fields": [
+        "declared_worker_contract_slots",
+        "director",
+        "last_admission",
+        "leaf_model_calls_required",
+        "mode",
+        "observed_at",
+        "pool_lifecycle",
+        "project_queues",
+        "resource_admission",
+        "review_status",
+        "same_model_shared",
+        "target",
+        "thread_runner_count",
+        "workers"
+      ],
+      "last_admission": {
+        "active_subexecutor_processes": 3,
+        "jobs_started": 0,
+        "policy_decisions": {},
+        "soft_yield_requests": [],
+        "state": "NATIVE_POOL_CONTINUING"
+      },
+      "close_reason": null,
+      "state": null
+    }
+  },
+  {
+    "kind": "SNAPSHOT_B",
+    "data": {
+      "time_unix": 1794969782.4078789,
+      "supervisor_rc": 3,
+      "services": [
+        {
+          "service": "nox-agent-architect-t859u",
+          "state": "STOPPED",
+          "identity": null
+        },
+        {
+          "service": "nox-agent-integrator-t859u",
+          "state": "STOPPED",
+          "identity": null
+        },
+        {
+          "service": "nox-agent-tuner-t858u",
+          "state": "STOPPED",
+          "identity": null
+        },
+        {
+          "service": "nox-dispatcher-t855u",
+          "state": "RUNNING",
+          "identity": {
+            "pid": 3760381,
+            "ppid": 114,
+            "pgrp": 3760381,
+            "start_ticks": 176197984,
+            "state": "S",
+            "namespace_pids": [
+              3760381
+            ],
+            "dispatcher_env": {
+              "NOX_DISPATCHER_SAFE": "1",
+              "NOX_DISPATCHER_WORKERS": "3"
+            }
+          }
+        },
+        {
+          "service": "nox-ds41-8098",
+          "state": "RUNNING",
+          "identity": {
+            "pid": 3266857,
+            "ppid": 114,
+            "pgrp": 3266857,
+            "start_ticks": 172046662,
+            "state": "R",
+            "namespace_pids": [
+              3266857
+            ],
+            "dispatcher_env": {}
+          }
+        },
+        {
+          "service": "nox-proxy",
+          "state": "RUNNING",
+          "identity": {
+            "pid": 3703386,
+            "ppid": 114,
+            "pgrp": 3703386,
+            "start_ticks": 175609570,
+            "state": "S",
+            "namespace_pids": [
+              3703386
+            ],
+            "dispatcher_env": {}
+          }
+        },
+        {
+          "service": "nox-web29-18775",
+          "state": "RUNNING",
+          "identity": {
+            "pid": 3505392,
+            "ppid": 114,
+            "pgrp": 3505392,
+            "start_ticks": 173653097,
+            "state": "S",
+            "namespace_pids": [
+              3505392
+            ],
+            "dispatcher_env": {}
+          }
+        }
+      ],
+      "flags": {
+        "/root/nox/STOP": "ABSENT",
+        "/root/nox/STOP.flag": "ABSENT",
+        "/root/nox/stop.flag": "ABSENT",
+        "/root/nox/.stop": "ABSENT",
+        "/root/nox/program/STOP": "ABSENT",
+        "/root/nox/state/STOP": "ABSENT",
+        "/root/nox/state/STOP.flag": "ABSENT",
+        "/workspace/NOX_STOP": "ABSENT",
+        "/root/nox/state/OWNER_MAINTENANCE.flag": "ABSENT",
+        "/root/nox/state/TRAIN_HOLD.flag": "ABSENT",
+        "/root/nox/state/TRAIN_PAUSE_REQUEST.flag": "ABSENT"
+      },
+      "resources": {
+        "memory.current": "194016776192\n",
+        "memory.max": "194065203200\n",
+        "memory.stat": "anon 2711293952\nfile 190252883968\nkernel 1049821184\nkernel_stack 7716864\npagetables 398188544\nsec_pagetables 0\npercpu 105288\nsock 8192\nvmalloc 16384\nshmem 75403436032\nzswap 0\nzswapped 0\nfile_mapped 137222139904\nfile_dirty 4640768\nfile_writeback 0\nswapcached 0\nanon_thp 0\nfile_thp 77594624\nshmem_thp 0\ninactive_anon 43711172608\nactive_anon 34403540992\ninactive_file 8976617472\nactive_file 105872797696\nunevictable 16384\nslab_reclaimable 633743136\nslab_unreclaimable 9386464\nslab 643129600\nworkingset_refault_anon 0\nworkingset_refault_file 590411678\nworkingset_activate_anon 0\nworkingset_activate_file 65331919\nworkingset_restore_anon 0\nworkingset_restore_file 42615802\nworkingset_nodereclaim 0\npgscan 1468318900\npgsteal 860730251\npgscan_kswapd 24570310\npgscan_direct 1443725154\npgscan_khugepaged 23436\npgsteal_kswapd 15844729\npgsteal_direct 844868942\npgsteal_khugepaged 16580\npgfault 6986172111\npgmajfault 2246121\npgrefill 346299069\npgactivate 452063461\npgdeactivate 0\npglazyfree 0\npglazyfreed 0\nzswpin 0\nzswpout 0\nzswpwb 0\nthp_fault_alloc 0\nthp_collapse_alloc 0\nthp_swpout 0\nthp_swpout_fallback 0\n",
+        "memory.events": "low 0\nhigh 0\nmax 680513\noom 0\noom_kill 0\noom_group_kill 0\n",
+        "memory.pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=105890112\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=105536589\n",
+        "cpu.pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=355375257\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=324972234\n",
+        "cpu.stat": "usage_usec 554117408499\nuser_usec 518995921951\nsystem_usec 35121486548\ncore_sched.force_idle_usec 0\nnr_periods 842923\nnr_throttled 12178\nthrottled_usec 14826018140\nnr_bursts 0\nburst_usec 0\n",
+        "cpu.max": "1920000 100000\n",
+        "io.pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=848863552\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=845237673\n"
+      }
+    }
+  },
+  {
+    "kind": "INSPECT_COMPLETE",
+    "data": true
+  },
+  {
+    "kind": "REMOTE_EXIT_CODE",
+    "data": 0
+  }
+]
