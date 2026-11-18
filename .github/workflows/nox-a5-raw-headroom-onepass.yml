@@ -1,0 +1,48 @@
+name: NOX A5 raw cgroup admission focused source check
+on:
+  push:
+    branches: [a5-raw-headroom-guard-20261118]
+    paths:
+      - 'nox-control/systemic_relay_20261118/owner_relay_resource_policy.py'
+      - '.github/workflows/nox-a5-raw-headroom-onepass.yml'
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Compile exact changed policy and check raw-memory safety boundary
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          import importlib.util, pathlib, time
+          p=pathlib.Path('nox-control/systemic_relay_20261118/owner_relay_resource_policy.py')
+          compile(p.read_bytes(),str(p),'exec')
+          spec=importlib.util.spec_from_file_location('a5_policy',str(p))
+          m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+          limit=194065203200; now=time.time()
+          def evaluate(raw_free):
+              b=dict(schema='NOX_BOUNDED_CPU_BUDGET_V1',source='cgroup_v2',
+                     instance_id=60509551, observed_at=now, worker_slots=3,
+                     current_bytes=limit-raw_free, max_bytes=limit,
+                     inactive_file_bytes=8*m.GIB, file_bytes=12*m.GIB, shmem_bytes=m.GIB,
+                     sandbox_limit_bytes=256*m.MIB, planner_reserve_bytes=128*m.MIB,
+                     minimum_headroom_bytes=2*m.GIB, memory_psi_some_avg10=0.0,
+                     memory_psi_full_avg10=0.0,cpu_pressure=0.0)
+              snap=dict(instance_id=60509551,stop_active=False,native_verified=True,
+                        owner_scope_verified=True,source_sha_verified=True,
+                        bounded_cpu_budget=b)
+              demand=dict(lane='cpu',paid_api_calls=0,budget=dict(cpu_seconds=10,
+                           max_model_turns=0,max_searches=0,max_output_bytes=4096))
+              return m.evaluate_resources(snap,demand,now=now)
+          low=evaluate(16*m.MIB)
+          assert low['admit'] is False and low['reason']=='HOLD_RELAY_RAW_CGROUP_HEADROOM',low
+          assert low['required_raw_headroom_bytes']==512*m.MIB,low
+          sufficient=evaluate(512*m.MIB)
+          assert sufficient['admit'] is True and sufficient['raw_headroom_bytes']==512*m.MIB,sufficient
+          print('A5_FOCUSED_RAW_HEADROOM_BOUNDARY=2/2 PASS; SOURCE_ONLY; NO_NATIVE_ACTIONS')
+          PY
