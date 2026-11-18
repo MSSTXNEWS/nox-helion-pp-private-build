@@ -103,4 +103,26 @@ class PairedReceiptTests(unittest.TestCase):
         b=example();c=example(); del c["outcomes"][0]["served_full_input_sha256"]
         self.assertEqual(compare_paired(b,c)["reason"],"FULL_INPUT_PIN")
 
+
+    def test_p95_speedup_must_expose_slower_individual_task(self):
+        b=example();c=copy.deepcopy(b)
+        # The p95 gets faster, but a foreground task becomes slower.
+        c["outcomes"][0]["latency_ms"]=25
+        c["outcomes"][1]["latency_ms"]=900
+        out=compare_paired(b,c)
+        self.assertEqual(out["p95_latency_delta_ms"],-100)
+        self.assertEqual(out["latency_regressed_task_ids"],["t1"])
+        self.assertFalse(out["promotion_authorized"])
+
+    def test_max_rss_improvement_must_expose_task_memory_regression(self):
+        b=example();b["outcomes"][0]["peak_rss_bytes"]=100
+        b["outcomes"][1]["peak_rss_bytes"]=1000
+        c=copy.deepcopy(b)
+        c["outcomes"][0]["peak_rss_bytes"]=200
+        c["outcomes"][1]["peak_rss_bytes"]=900
+        out=compare_paired(b,c)
+        self.assertEqual(out["peak_rss_delta_bytes"],-100)
+        self.assertEqual(out["peak_rss_regressed_task_ids"],["t1"])
+        self.assertFalse(out["rank_claim_authorized"])
+
 if __name__ == '__main__': unittest.main()
