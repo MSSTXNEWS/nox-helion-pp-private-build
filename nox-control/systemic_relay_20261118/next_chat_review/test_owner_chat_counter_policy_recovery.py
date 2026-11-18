@@ -56,6 +56,39 @@ class CounterPolicyCandidateTests(unittest.TestCase):
         self.assertEqual(out['samples'],2)
         self.assertEqual(zero.call_count,2)
 
+    def test_idle_path_reads_mutable_preimage_pins_not_static_guards(self):
+        import ast
+        from unittest.mock import patch
+        m = self.m
+        common = ("from pathlib import Path\nROOT=Path('/root/nox')\n"
+                  "STATUS_DIR=ROOT/'status'\nCHAT_STATE=STATUS_DIR/'chat_state.json'\n"
+                  "def mark_chat(busy):\n    return busy\n").encode()
+        proxy = ("class _ChatActivityStream:\n    def aclose(self):\n"
+                 "        return None\n").encode()
+        def symbol_pin(raw, symbol):
+            source = raw.decode()
+            node = next(row for row in ast.parse(source).body
+                        if isinstance(row, (ast.FunctionDef, ast.ClassDef)) and row.name == symbol)
+            return m.sha((ast.get_source_segment(source, node) + '\n').encode())
+        config = dict(m.SPEC)
+        config['idle_gate'] = dict(config['idle_gate'],
+                                   symbols={'common.py:mark_chat': symbol_pin(common, 'mark_chat'),
+                                            'chat_proxy.py:_ChatActivityStream': symbol_pin(proxy, '_ChatActivityStream')})
+        expected = {
+            'common.py': config['before']['common.py'],
+            'chat_proxy.py': config['before']['chat_proxy.py'],
+        }
+        used = []
+        def read(path, pin=None, **kwargs):
+            name = Path(path).name
+            self.assertIn(name, expected)
+            self.assertEqual(pin, expected[name])
+            used.append(name)
+            return (common if name == 'common.py' else proxy), (1, 2, 3)
+        with patch.object(m, 'read', side_effect=read):
+            self.assertEqual(str(m.activity_path(config)), '/root/nox/status/chat_state.json')
+        self.assertEqual(used, ['common.py', 'common.py', 'chat_proxy.py'])
+
     def test_changed_counter_and_foreign_state_fail_closed(self):
         m=self.m
         doc={'inflight':5,'last_start':1.0,'last_end':2.0,'last_ts':2.0}
