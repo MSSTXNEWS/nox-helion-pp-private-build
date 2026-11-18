@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import urllib.error
 
 sys.dont_write_bytecode = True
 
@@ -71,18 +72,36 @@ def guards():
     if r.returncode or len(r.stdout)>4000 or len(re.findall(r"\sRUNNING\s",r.stdout))!=3:
         raise RuntimeError("HOLD_LIVE_SMOKE_SERVICES")
     conn=urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with conn.open("http://127.0.0.1:8080/health",timeout=5) as response:
-        if response.status!=200:raise RuntimeError("HOLD_LIVE_SMOKE_HEALTH")
-        response.read(4097)
-    with conn.open("http://127.0.0.1:8081/slots",timeout=5) as response:
-        if response.status!=200:raise RuntimeError("HOLD_LIVE_SMOKE_SLOTS")
-        raw=response.read(15000)
-    slots=json.loads(raw)
-    if not isinstance(slots,list) or len(slots)>10 or any(
-            not isinstance(row,dict) or bool(row.get("is_processing",row.get("processing",False)))
-            for row in slots):
+    try:
+        with conn.open("http://127.0.0.1:8080/health",timeout=5) as response:
+            if response.status!=200:raise RuntimeError("HOLD_LIVE_SMOKE_HEALTH")
+            response.read(4097)
+    except urllib.error.URLError:
+        raise RuntimeError("HOLD_LIVE_SMOKE_PROXY_UNREACHABLE") from None
+    slots, slot_port = None, None
+    # Both are existing owner-observed local inference endpoints. Do not start a
+    # model or choose an external host when the legacy llama port is unavailable.
+    for port in (8081, 8098):
+        try:
+            with conn.open("http://127.0.0.1:%d/slots" % port,timeout=5) as response:
+                if response.status!=200:
+                    continue
+                raw=response.read(15001)
+            if len(raw)>15000:
+                continue
+            candidate=json.loads(raw)
+            if not isinstance(candidate,list) or len(candidate)>10 or any(
+                    not isinstance(row,dict) for row in candidate):
+                continue
+            slots, slot_port = candidate, port
+            break
+        except (urllib.error.URLError,ValueError):
+            continue
+    if slots is None:
+        raise RuntimeError("HOLD_LIVE_SMOKE_NO_LOCAL_MODEL_SLOTS")
+    if any(bool(row.get("is_processing",row.get("processing",False))) for row in slots):
         raise RuntimeError("HOLD_LIVE_SMOKE_MODEL_BUSY")
-    return {"stable_pids":6,"slots":len(slots),"source_pins":3}
+    return {"stable_pids":6,"slots":len(slots),"slot_port":slot_port,"source_pins":3}
 
 def main():
     record={"schema":"NOX_CHAT_POLICY_LIVE_SMOKE_V1","native_source_writes":0,
