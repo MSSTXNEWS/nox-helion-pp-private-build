@@ -1,0 +1,39 @@
+{
+  "schema": "NOX_INDEPENDENT_KERNEL_SELF_FD_REVIEW_V1",
+  "runner_sha256": "192d0c1b7b87447d4f088073fb6f6bfe9f733cf542df8f9b0eaf911d374f1e3f",
+  "actual_kernel_fd_unit_tests": {
+    "run": 9,
+    "passed": 9,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "additional_real_seccomp_probe": {
+    "passed": true,
+    "fresh_self_stat_and_boot_pread_succeed_after_unchanged_filter": true,
+    "own_pid_start_ticks_verified": true,
+    "foreign_capability_path_rejected": true,
+    "procfs_fd_checks_operational": true
+  },
+  "protected_function_ast_unchanged": [
+    "_seccomp_library",
+    "_restrict_syscalls",
+    "_limits",
+    "_self_test",
+    "ScmpArgCmp",
+    "BoundedText",
+    "main"
+  ],
+  "executor_bytes_unchanged": true,
+  "project_source_and_tests_unchanged": true,
+  "scope": "SELF_STAT_AND_BOOT_ID_ONLY",
+  "full_proc_claimed": false,
+  "foreign_producer_acceptance_claimed": false,
+  "local_chroot_run_claimed": false,
+  "native_preflight_required": [
+    "proc_retry30",
+    "current_integrated_FD36",
+    "generic_isolation4"
+  ],
+  "blockers_found": []
+}

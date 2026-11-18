@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_OWNER_REVIEWED_CHAT_PROC_RETRY_PACKAGE_V1",
+  "task_id": "1A03.project.cursor_admission.proc_retry.20261118",
+  "parent_task_id": "1A03",
+  "plan_sha256": "457dbaf4484cfb5b7e14c5308285a42f01714dcec28358a54e6c926adf787e0b",
+  "plan_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed_chat/1A03_proc_retry/plans/457dbaf4484cfb5b7e14c5308285a42f01714dcec28358a54e6c926adf787e0b.json",
+  "payload_paths": {
+    "5201af0115e1ead68d3369794e33bbc97d7b7b2f00762c5c2ecfdaa7dda45926": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed_chat/1A03/blobs/5201af0115e1ead68d3369794e33bbc97d7b7b2f00762c5c2ecfdaa7dda45926",
+    "4329f7389b24cfbb1fbb47c91b43eb7407bf18c95d15064fc7ea8166cde0a821": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed_chat/1A03/blobs/4329f7389b24cfbb1fbb47c91b43eb7407bf18c95d15064fc7ea8166cde0a821"
+  },
+  "context_equals_failed_contract": true,
+  "verification_equals_failed_contract": true,
+  "catalog_deps": [],
+  "review_origin": "OWNER_REVIEWED",
+  "acceptance_scope": "SOURCE_PATCH_TESTED",
+  "original_task_accepted": false,
+  "native_applied": false,
+  "model_generated": false,
+  "required_predecessor": {
+    "task_id": "1A03.project.cursor_admission.owner_rescue.20261118",
+    "state": "BLOCKED",
+    "receipt_sha256": "c3f293373560fcb1950cc1d134ac94b8c7d4fb8ec16045dc95b868bb39d30d32",
+    "plan_sha256": "379d1c5b50e42fb50165ce1fbe904cf47b1b45b3747878c60f9b1208d6e13e23",
+    "source_changed": false,
+    "exact_s03_required": true
+  },
+  "source_census": {
+    "path": "complete_executor/observe_134539955592.json",
+    "sha256": "f9d914745e8b42bc7d8f45bc5dd0804291a86eacab4edd1cd2dc42d4c17f583f"
+  },
+  "baseline_pins": {
+    "owner_chat_request_ledger.py": "006fc038f43682fa36d2310f2343c83a42fd28897e7debfbe0d63536ee069729",
+    "native_v29_full_bridge.py": "d9ec6a8250a167d774ba5090219cfaac3ad2995ddd88228d1abe5514fc9dd791"
+  },
+  "postimage_pins": {
+    "owner_chat_request_ledger.py": "5201af0115e1ead68d3369794e33bbc97d7b7b2f00762c5c2ecfdaa7dda45926",
+    "native_v29_full_bridge.py": "4329f7389b24cfbb1fbb47c91b43eb7407bf18c95d15064fc7ea8166cde0a821"
+  },
+  "protected_test_pins": {
+    "test_nox_1a03_cursor_admission.py": "b3c5d26011400b110a1b88849c7aebfc0c7d8c636e541f8ab8d89d37ceed0db7",
+    "source_tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_tests/test_request_ledger.py": "b4ece67144248808a12c7c84450d61a919984ad756f6f15b46e0686c6d65ff96",
+    "source_tests/test_owner_chat_request_scope.py": "dc19594b45a7fae32bf9bdde665620c2eec1a29bb02ba03758baa53a8158c509"
+  },
+  "local_test_state": "REUSED_EXACT_CONTEXT_PAYLOAD_TEST_PROOF",
+  "local_proof_path": "/workspace/scratch/552ada07ed4f/complete_executor/bindings/reviewed_chat/1A03/local_proof.json",
+  "local_proof_sha256": "33ec54ce3866a4c90970f3ed586807899992389f5bb39d349f0f89d82ec72cd1",
+  "retry_of": "1A03.project.cursor_admission.owner_rescue.20261118",
+  "retry_of_plan_sha256": "379d1c5b50e42fb50165ce1fbe904cf47b1b45b3747878c60f9b1208d6e13e23",
+  "native_preflight_state": "PENDING_REAL_KERNEL_SCOPE_PREFLIGHT",
+  "required_preserved_model_failure": {
+    "task_id": "1A03.project.cursor_admission.focus_retry.20261118",
+    "state": "BLOCKED",
+    "receipt_sha256": "284d6284b5d088b4dcaa16250f4151ba26cad0b9f20f73bd708e9a60a097b80d",
+    "contract_sha256": "eece310e5608fa9c633d7c75ce280541d9bec6af8a0c35815465ae82679d4ce4",
+    "source_changed": false
+  },
+  "only_plan_field_changed": "task_id"
+}

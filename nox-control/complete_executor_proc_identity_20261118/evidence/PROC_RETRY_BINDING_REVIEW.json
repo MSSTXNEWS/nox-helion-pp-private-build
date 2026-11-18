@@ -1,0 +1,22 @@
+{
+  "schema": "NOX_CHAT_PROC_RETRY_BINDING_REVIEW_V1",
+  "old_plan_sha256": "379d1c5b50e42fb50165ce1fbe904cf47b1b45b3747878c60f9b1208d6e13e23",
+  "new_plan_sha256": "457dbaf4484cfb5b7e14c5308285a42f01714dcec28358a54e6c926adf787e0b",
+  "new_task_id": "1A03.project.cursor_admission.proc_retry.20261118",
+  "only_changed_plan_field": "task_id",
+  "context_equal": true,
+  "verification_equal": true,
+  "payloads_equal": true,
+  "followup_plan_sha256": "3f620116ee563127d7e94bfeac7aae1408aaa4f1752f431fee774c49023e6509",
+  "followup_plan_bytes_unchanged": true,
+  "followup_catalog_deps": [
+    "1A03.project.cursor_admission.proc_retry.20261118"
+  ],
+  "original_receipts_preserved": [
+    "284d6284b5d088b4dcaa16250f4151ba26cad0b9f20f73bd708e9a60a097b80d",
+    "c3f293373560fcb1950cc1d134ac94b8c7d4fb8ec16045dc95b868bb39d30d32"
+  ],
+  "native_preflight_pass_claimed": false,
+  "original_task_accepted": false,
+  "remote_writes": false
+}

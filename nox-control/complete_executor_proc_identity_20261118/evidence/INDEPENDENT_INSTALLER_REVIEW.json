@@ -1,0 +1,22 @@
+{
+  "schema": "NOX_KERNEL_SELF_FD_INSTALLER_INDEPENDENT_REVIEW_V1",
+  "source_pins": {
+    "native/kernel_self_fd_update_body.py": "7b096161336080ec233f86aeee263b77875f85554cb9b1a55b80b7b6ec81e062",
+    "native/owner_kernel_self_fd_install.py": "c1a9a4b2fac0de5ce3a983decfb42a61680aa379206db0092f901156d5930517"
+  },
+  "review_scope": "ordering/current-source FD descriptor/no-loss/rollback only",
+  "blockers_found": [],
+  "verified_from_source": [
+    "exact prior20catalog rows retained; only runner source pins plus append457",
+    "all12 old project receipts exact read-only S03 including284d andc3f",
+    "maintenance lease before drain and native private preflight",
+    "generic4+rescue30+currentintegratedFD36 required before supervisor stop or runtime writes",
+    "FD36 descriptor768 verified againstdd244 afterimages and current shared5context; no oldbefore CAS applied",
+    "current28 files modes/gitmarker checked before/after preflight and before lease release",
+    "only allowlisted dispatcher service stop/start; exact old child identities must exit",
+    "rollback restricted to exact owned newdirector and own postimagebytes before lease release",
+    "postrelease admission readback cannot trigger source/config rollback",
+    "actual new3PID and advancing heartbeat required; originalparents remainunaccepted"
+  ],
+  "scope_caveat": "Native70 preflight and eventual native task receipts are still required; static review is not native acceptance."
+}

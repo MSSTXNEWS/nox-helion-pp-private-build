@@ -1,0 +1,26 @@
+{
+  "schema": "NOX_KERNEL_SELF_FD_ROOT_REVIEW_V1",
+  "candidate_runner_sha256": "192d0c1b7b87447d4f088073fb6f6bfe9f733cf542df8f9b0eaf911d374f1e3f",
+  "base_runner_sha256": "84d54c647b0a63447aca91d34b90372e36dcd59442e3066458a21688fcb5a595",
+  "independent_unittest_run": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "passed": true
+  },
+  "protected_functions_ast_unchanged": [
+    "_seccomp_library",
+    "_restrict_syscalls",
+    "_limits",
+    "_self_test",
+    "ScmpArgCmp",
+    "BoundedText",
+    "main"
+  ],
+  "scope": "Fresh readonly real procfs stat for verifier PID and boot_id only",
+  "full_proc_available": false,
+  "foreign_pid_visibility": false,
+  "native_preflight_required": true,
+  "remote_calls": 0
+}
