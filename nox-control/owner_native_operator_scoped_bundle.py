@@ -117,24 +117,62 @@ def run_native(action,request_id):
         'num_gpus':int(str(target.get('num_gpus'))) if target and re.fullmatch('[0-9]{1,2}',str(target.get('num_gpus'))) else None,
         'read_only_provider_lookup':True,'provider_mutations':0},sort_keys=True),flush=True)
     if not target or target.get('actual_status')!='running' or str(target.get('num_gpus'))!='2':raise RuntimeError('HOLD_EXACT_RUNNING_INSTANCE')
-    ip=target.get('public_ipaddr')
-    if not ipaddress.ip_address(ip).is_global:raise RuntimeError('HOLD_INSTANCE_ROUTE')
-    port=None
-    for m in target.get('ports',{}).get('22/tcp',[]):
-        value=str(m.get('HostPort',''))
-        if not value.isdigit() or not 1<=int(value)<=65535:continue
+    route_host=None;port=None;route_kind=None
+    raw_ip=target.get('public_ipaddr')
+    direct_ip=None
+    if isinstance(raw_ip,str):
         try:
-            with socket.create_connection((ip,int(value)),timeout=6) as sock:
+            candidate_ip=ipaddress.ip_address(raw_ip)
+            if candidate_ip.is_global:direct_ip=raw_ip
+        except ValueError:
+            pass
+    mappings=target.get('ports')
+    direct_rows=mappings.get('22/tcp',[]) if isinstance(mappings,dict) else []
+    if direct_ip is not None and isinstance(direct_rows,list):
+        for mapping in direct_rows:
+            if not isinstance(mapping,dict):continue
+            value=str(mapping.get('HostPort',''))
+            if not value.isdigit() or not 1<=int(value)<=65535:continue
+            try:
+                with socket.create_connection((direct_ip,int(value)),timeout=6) as sock:
+                    sock.settimeout(5)
+                    if sock.recv(128).startswith(b'SSH-2.0'):
+                        route_host=direct_ip;port=int(value);route_kind='DIRECT_MAPPED_PORT';break
+            except OSError:
+                continue
+    if route_host is None:
+        # Vast's authenticated instance record supplies this relay/dynamic
+        # endpoint when no direct 22/tcp mapping is reachable. Never infer it.
+        proxy_host=target.get('ssh_host')
+        proxy_port=target.get('ssh_port')
+        valid_host=False
+        if isinstance(proxy_host,str) and len(proxy_host)<=253:
+            try:
+                parsed_host=ipaddress.ip_address(proxy_host)
+                valid_host=parsed_host.is_global
+            except ValueError:
+                valid_host=(proxy_host==proxy_host.lower()
+                    and re.fullmatch(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+vast\\.ai',proxy_host) is not None)
+        if (not valid_host or type(proxy_port) is not int
+                or not 1<=proxy_port<=65535):
+            raise RuntimeError('HOLD_CURRENT_SSH_ROUTE')
+        try:
+            with socket.create_connection((proxy_host,proxy_port),timeout=6) as sock:
                 sock.settimeout(5)
-                if sock.recv(128).startswith(b'SSH-2.0'):port=int(value);break
-        except OSError:continue
-    if port is None:raise RuntimeError('HOLD_CURRENT_SSH_ROUTE')
+                if not sock.recv(128).startswith(b'SSH-2.0'):
+                    raise RuntimeError('HOLD_CURRENT_SSH_ROUTE')
+        except OSError as exc:
+            raise RuntimeError('HOLD_CURRENT_SSH_ROUTE') from exc
+        route_host=proxy_host;port=proxy_port;route_kind='VAST_API_SSH_HOST_PORT'
+    print('NOX_MAINT_SSH_ROUTE='+route_kind,flush=True)
     s.RUNNER.mkdir(parents=True,mode=0o700,exist_ok=True)
     known=s.RUNNER/'known_hosts'
-    p=subprocess.run(['ssh-keyscan','-T','8','-t','ed25519','-p',str(port),ip],capture_output=True,text=True,timeout=12)
-    known.write_text(p.stdout[:8000]);known.chmod(0o600)
+    p=subprocess.run(['ssh-keyscan','-T','8','-t','ed25519','-p',str(port),route_host],capture_output=True,text=True,timeout=12)
+    if p.returncode or not p.stdout or len(p.stdout)>8000:raise RuntimeError('HOLD_OWNER_HOST_PIN')
+    known.write_text(p.stdout);known.chmod(0o600)
     fp=subprocess.run(['ssh-keygen','-lf',str(known),'-E','sha256'],capture_output=True,text=True,timeout=8)
-    if p.returncode or fp.returncode or PIN not in fp.stdout:raise RuntimeError('HOLD_OWNER_HOST_PIN')
+    fingerprints=[line.split()[1] for line in fp.stdout.splitlines() if len(line.split())>=2]
+    if fp.returncode or not fingerprints or set(fingerprints)!={PIN}:raise RuntimeError('HOLD_OWNER_HOST_PIN')
     print('NOX_MAINT_HOST_PIN=VERIFIED',flush=True)
     subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','nox-owner-maint-'+os.environ.get('GITHUB_RUN_ID','manual'),'-f',str(s.KEY)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=12)
     s.KEY.chmod(0o600);public=s.KEY.with_suffix('.pub').read_text().strip()
@@ -153,7 +191,7 @@ def run_native(action,request_id):
     common=['ssh','-T','-i',str(s.KEY),'-p',str(port),'-o','BatchMode=yes','-o','IdentitiesOnly=yes',
          '-o','ConnectTimeout=15','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=3','-o','NumberOfPasswordPrompts=0',
          '-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile='+str(known),'-o','ControlPath='+str(sock)]
-    host='root@'+ip
+    host='root@'+route_host
     # Authenticate the persistent connection, not a disposable 'true' session.
     # Retry only before any payload has been sent.
     for attempt in range(8):
