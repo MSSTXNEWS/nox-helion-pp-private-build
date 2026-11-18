@@ -15,6 +15,7 @@ import fcntl
 import getpass
 import hashlib
 import importlib.util
+import ipaddress
 import json
 import math
 import os
@@ -25,8 +26,10 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.parse
 
 ROOT = Path('/root/nox')
+_PAID_PROVIDER_CALLS_DISABLED = True
 SCHEMA = 'NOX_OWNER_SENIOR_CONFIG_V1'
 CONTEXT_SCHEMA = 'NOX_TASK_TECHNICAL_CONTEXT_V1'
 DETAILED_CONTEXT_SCHEMA = 'NOX_TASK_TECHNICAL_CONTEXT_V2'
@@ -61,7 +64,7 @@ CHECKS = {'resource_admission', 'identity', 'checkpoint_lineage', 'result_verifi
           'duplicate_execution', 'insufficient_evidence'}
 ASSESSMENTS = {'PROCEED_WITH_EXISTING_GUARDS', 'HOLD_FOR_REVIEW', 'INSUFFICIENT_EVIDENCE'}
 DEFAULT_CONFIG = {
-    'schema': SCHEMA, 'enabled': True, 'providers': list(PROVIDERS),
+    'schema': SCHEMA, 'enabled': False, 'providers': list(PROVIDERS),
     'minimum_verified_providers': 1, 'allowed_handlers': HANDLERS,
     'max_requests_per_hour': 12, 'max_requests_per_day': 48,
     'max_reserved_output_tokens_per_day': 73728,
@@ -277,6 +280,8 @@ def _valid_key(value):
 
 
 def _credentials():
+    if _PAID_PROVIDER_CALLS_DISABLED:
+        return {}
     record = _read('config/owner_senior_credentials.json', 8192,
                    {'schema': 'NOX_OWNER_SENIOR_CREDENTIALS_V1', 'keys': {}})
     if (set(record) != {'schema', 'keys'} or record['schema'] != 'NOX_OWNER_SENIOR_CREDENTIALS_V1'
@@ -329,9 +334,12 @@ def _access(config, credentials):
 
 
 def status():
-    """Read-only, secret-free status. Configured does not mean callable."""
+    """Read-only, secret-free status. Paid providers are disabled in this release."""
     base = {'schema': CONTRACT, 'models_consulted': 0, 'research_state': 'INTERNET_RESEARCH_NOT_PERFORMED',
             'private_content_export_enabled': False, 'advice_execution_enabled': False}
+    if _PAID_PROVIDER_CALLS_DISABLED:
+        return {**base, 'state': 'DISABLED_NO_PAID_PROVIDER', 'providers': {},
+                'verified_provider_count': 0, 'verified_access_mode': 'NONE'}
     try:
         config = _config()
         if config is None:
@@ -499,7 +507,18 @@ def advice_candidate(text):
 
 
 async def _request(provider, credential, prompt, config, verification=False):
-    """One request, no retries or redirects; total deadline bounds all I/O."""
+    """One request, no retries or redirects; paid providers are disabled here."""
+    if _PAID_PROVIDER_CALLS_DISABLED:
+        return {'state': 'DISABLED_NO_PAID_PROVIDER'}
+    try:
+        parsed = urllib.parse.urlparse(PROVIDERS[provider]['url'])
+        address = ipaddress.ip_address(parsed.hostname)
+        parsed.port
+    except (KeyError, TypeError, ValueError):
+        return {'state': 'DISABLED_EXTERNAL_PROVIDER'}
+    if (not address.is_loopback or parsed.scheme not in ('http', 'https')
+            or parsed.username or parsed.password or parsed.query or parsed.fragment):
+        return {'state': 'DISABLED_EXTERNAL_PROVIDER'}
     async def perform():
         import httpx
         url, headers, body = request_contract(provider, credential, prompt, config, verification)
@@ -673,12 +692,10 @@ def candidate_for_evaluation(consultation_sha256):
 
 
 def consult_plan(context, deadline_seconds=2.0):
-    """Validate, deduplicate and consult; caller wait never exceeds two seconds.
-
-    One shared flock admits at most one plan and three provider requests across
-    all native processes. A short-lived daemon thread owns that lock until its
-    bounded HTTP requests end. There is no polling daemon or persistent queue.
-    """
+    """Fail closed; this release does not make paid provider requests."""
+    if _PAID_PROVIDER_CALLS_DISABLED:
+        return {'state': 'DISABLED_NO_PAID_PROVIDER', 'models_consulted': 0,
+                'research_state': 'DISABLED_NO_PAID_PROVIDER', 'advice_execution_enabled': False}
     begin = time.monotonic()
     state = status()
     base = {key: state[key] for key in ('state', 'models_consulted', 'research_state')}
@@ -738,6 +755,8 @@ def initialize():
 
 
 def set_credential(provider, value):
+    if _PAID_PROVIDER_CALLS_DISABLED:
+        return {'state': 'DISABLED_NO_PAID_PROVIDER', 'provider': provider, 'access_verified': False}
     if provider not in PROVIDERS or not _valid_key(value):
         raise GatewayHold('CREDENTIAL_INPUT_INVALID')
     fd = _lock()
@@ -772,7 +791,9 @@ def _require_resource_admission():
 
 
 def verify_access(provider=None):
-    """Explicit paid, synthetic API check. No host context or user text is sent."""
+    """Paid provider checks are disabled in this release."""
+    if _PAID_PROVIDER_CALLS_DISABLED:
+        return {'state': 'DISABLED_NO_PAID_PROVIDER', 'models_verified': 0}
     config = _config()
     if config is None or not config['enabled']:
         return {'state': 'DISABLED', 'models_verified': 0}
