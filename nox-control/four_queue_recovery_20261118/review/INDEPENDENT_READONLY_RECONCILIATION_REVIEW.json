@@ -1,0 +1,42 @@
+{
+  "schema": "NOX_INSTALLED_RECOVERY_READONLY_PEER_V1",
+  "verdict": "PASS_EXACT_READONLY_SOURCE_ROOT_SINGLE_RECONCILIATION_PENDING",
+  "inspector": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/delivery/owner_native_inspect.py",
+    "sha256": "df01f939195a4222e0f7a4ef20eda0770273967901468592a4c49ed69db2bc07",
+    "bytes": 18969
+  },
+  "actual_install_input": {
+    "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_20261118/NATIVE_RESULT_44216304900.raw.json",
+    "sha256": "176ff084b21367176d8c4ba6bd9846937669a759765734b9d6777fa0352cdee2",
+    "bytes": 2253
+  },
+  "checked": [
+    "Exact prior install request6966231483/source9e495, three installed inode/mode/byte/mtime_ns values and new director3723052/start175819458 independently match the lossless actual receipt. No replay, new install, rollback or resubmission.",
+    "Only SH|NB on existing maintenance inode36:59886214; no EX/new lock/attempt/journal. Current director and protected proxy/chat/web, retained directory identities, prior owner STOP flags and global NOX_STOP remain guards.",
+    "Fixed private01_INTENT/09_SOURCE_INSTALLED/12_ADMISSION_RELEASE_INTENT names correspond to exact executed installer record sequence; mode0600/context/phase/postimage binding. Read-only queue_before anchors the preservation proof.",
+    "At most30s cooperative observation: atomic snapshot replacement and missing native_subexecutors retry as transient. No empty-worker synthesis or success on missing data. Complete proof needs current exact3 worker lifetimes/PPID, fresh status/heartbeats and two samples >=2s apart with advancing heartbeats.",
+    "Exact new recovery_health task, claim, dispatcher source, receipt/leaf hashes, no-model check and existing M2 SQLite row match are required. Original IDs/historical claims/results and inert-track quarantine remain preserved; original tasks accepted stays0.",
+    "Only fixed bounded no-follow reads and SELECT with mode=ro/query_only. No network calls, signals, supervisor mutations, source replacements, counter/queue/application-data writes. SQLite auxiliary I/O is explicitly possible, not falsely claimed absent.",
+    "Source pins and installed identities are checked before and immediately before acceptance. Final existing operator markers are compatible; COMPLETE alone does not mean accepted."
+  ],
+  "independent_regression": {
+    "test": {
+      "path": "/workspace/scratch/4136374a0419/nox_refresh/four_queue_recovery_reconcile_review_20261118/test_transient_status_readback.py",
+      "sha256": "dfb917803ed82f3b747ba345b93c856755d3f5b4f5bf0824e3ca13fdb59e5243",
+      "bytes": 5338
+    },
+    "result": "PASS",
+    "cases": 1,
+    "subcases": 2,
+    "seconds": 0.005,
+    "exec_chunk": "001e25",
+    "scope": "Actual Reader.run/native_status/queue_proof with TempFS JSON. Missing field then current3 requires two fresh advancing snapshots and final source guard; permanently missing field reaches30s bound without proof/acceptance. Queue bytes unchanged.",
+    "fixture_boundary": "Native process/lease/source/S03 observations are controlled dependencies; actual native disk/S03 acceptance remains to be observed. First test attempt stopped at the source hash assertion while author changed only stdout markers; final pinned run passed."
+  },
+  "broad_suites_repeated": false,
+  "native_calls": 0,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "remaining": "Root exact publication/readback and one read-only inspect of already installed state; accept typed accepted=true with full evidence, otherwise reconcile without resending install or health task."
+}
