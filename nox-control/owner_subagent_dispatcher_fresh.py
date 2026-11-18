@@ -912,8 +912,11 @@ class Native:
                     continue
                 claim = task.get('owner_claim') or {}
                 intent = task.get('native_submit_intent')
+                # Same-PID recovery is allowed only after the task is
+                # inactive in this pool and the exact durable claim/intent/
+                # checkpoint CAS below succeeds. PID equality alone cannot
+                # distinguish a yielded task from a live active one.
                 if (not isinstance(claim, dict) or type(claim.get('pid')) is not int
-                        or claim.get('pid') == os.getpid()
                         or not isinstance(intent, dict)
                         or intent.get('state') not in ('RESULT_CHECKPOINTED',
                                                        'S03_WRITE_ATTEMPTED',
@@ -1164,9 +1167,20 @@ class Native:
         if self.pool is None:
             return
         for _ in range(32):
-            event = self.pool.poll(timeout=0)
+            # The adapter validates and persists the event before poll returns.
+            # Repeat the idempotent readback here for older test doubles and
+            # publish only the exact event represented by the durable checkpoint.
+            event = self.pool.poll(timeout=0,
+                                   on_validated_result=self._checkpoint_pending_result)
             if event is not None:
-                self.completed[event['id']] = event
+                checkpoint = self._checkpoint_pending_result(event)
+                task_id = event.get('id') if isinstance(event, dict) else None
+                if (not isinstance(checkpoint, dict)
+                        or checkpoint.get('task_id') != task_id
+                        or not isinstance(checkpoint.get('event'), dict)
+                        or checkpoint['event'].get('id') != task_id):
+                    raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
+                self.completed[task_id] = checkpoint['event']
 
     def handle(self, task):
         fd = None

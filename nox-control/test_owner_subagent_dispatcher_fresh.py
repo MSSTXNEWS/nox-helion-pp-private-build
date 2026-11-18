@@ -9,6 +9,8 @@ import types
 import unittest
 from unittest.mock import Mock, patch
 
+JOB_ID = 'nox-native-' + 'd' * 24
+
 
 class GateError(RuntimeError):
     pass
@@ -49,7 +51,7 @@ def native_with_pool():
     state_path = Path(native._test_tmpdir.name) / 'state.json'
     task = {'id': 'review.runtime', 'status': 'running', 'title': 'Review resources',
             'owner_claim': {'nonce': 'a' * 24},
-            'params': {'role': 'runtime', 'policy_sha256': 'a' * 64, 'job_id': 'review-job'}}
+            'params': {'role': 'runtime', 'policy_sha256': 'a' * 64, 'job_id': JOB_ID}}
     row = {'id': task['id'], 'handler': binding.HANDLER, 'status': 'running',
            'owner_claim': task['owner_claim'], 'params': task['params']}
     native.state = {'tasks': {task['id']: row}}
@@ -87,7 +89,7 @@ class PoolLifecycleTests(unittest.TestCase):
         value.stop_active = Mock(return_value=False)
         claim = {'nonce': 'a' * 24, 'pid': 999}
         params = {'role': 'runtime', 'policy_sha256': 'a' * 64,
-                  'job_id': 'review-job'}
+                  'job_id': JOB_ID}
         intent = {'task_id': 'kept', 'claim_nonce': claim['nonce'], 'role': 'runtime',
                   'policy_sha': params['policy_sha256'], 'job_id': params['job_id'],
                   'state': 'UNCERTAIN'}
@@ -224,7 +226,7 @@ class FreshSubmissionTests(unittest.TestCase):
         intent = native.state['tasks'][task['id']]['native_submit_intent']
         self.assertEqual(intent, {'task_id': task['id'], 'claim_nonce': 'a' * 24,
                                   'role': 'runtime', 'policy_sha': 'a' * 64,
-                                  'job_id': 'review-job', 'state': 'UNCERTAIN'})
+                                  'job_id': JOB_ID, 'state': 'UNCERTAIN'})
         # Simulate the original queue claiming the same task again with a new nonce.
         new_claim = {'nonce': 'b' * 24}
         task['owner_claim'] = new_claim
@@ -257,7 +259,7 @@ class FreshSubmissionTests(unittest.TestCase):
         native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
         with patch.object(binding, 'chat_priority_active', return_value=False), \
              patch.object(binding, 'remember', side_effect=lambda receipt: {
-                 'native_verified': True, 'task_id': task['id'], 'job_id': 'review-job',
+                 'native_verified': True, 'task_id': task['id'], 'job_id': JOB_ID,
                  'receipt_sha256': binding.digest(binding.encoded(receipt))}):
             accepted, evidence = native._handle(task)
         self.assertTrue(accepted)
@@ -265,7 +267,7 @@ class FreshSubmissionTests(unittest.TestCase):
         self.assertEqual(native.state['tasks'][task['id']]['native_submit_intent']['state'], 'S03_VERIFIED')
         self.assertIsNone(native.pool)
 
-    def test_shutdown_checkpoint_recovers_after_parent_restart_before_s03(self):
+    def test_same_parent_reconciles_checkpoint_after_pool_yield(self):
         native, task = native_with_pool()
         claim = {'nonce': 'a' * 24, 'pid': 4242}
         job_id = 'nox-native-' + 'd' * 24
@@ -327,7 +329,8 @@ class FreshSubmissionTests(unittest.TestCase):
             self.assertEqual(receipt, checkpointed['native_pending_result']['receipt'])
             return proof
         remember_once = Mock(side_effect=one_s03_write)
-        with patch.object(binding, 'ROOT', root), \
+        with patch.object(binding.os, 'getpid', return_value=4242), \
+             patch.object(binding, 'ROOT', root), \
              patch.object(binding, 'chat_priority_active', return_value=False), \
              patch.object(binding, 'remember', remember_once):
             self.assertEqual(restarted._reconcile_pending_result_queue(restarted.state), 1)
@@ -408,6 +411,39 @@ class FreshSubmissionTests(unittest.TestCase):
         persisted = json.loads(native.ns['STATE'].read_text())
         self.assertEqual(persisted['tasks'][task['id']]['status'], 'done')
 
+
+    def test_drain_checkpoints_polled_result_before_publishing_completed(self):
+        native, task = native_with_pool()
+        claim = {'nonce': 'a' * 24, 'pid': 4242}
+        task.update(handler=binding.HANDLER, owner_claim=claim)
+        row = native.state['tasks'][task['id']]
+        row['owner_claim'] = claim
+        intent = {'task_id': task['id'], 'claim_nonce': claim['nonce'],
+                  'role': 'runtime', 'policy_sha': 'a' * 64,
+                  'job_id': JOB_ID, 'state': 'UNCERTAIN'}
+        task['native_submit_intent'] = intent
+        row['native_submit_intent'] = intent
+        native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
+        event = {'kind': 'RESULT', 'role': 'runtime', 'id': task['id'],
+                 'state': 'CANDIDATE_NOT_APPLIED', 'pid': 1234,
+                 'elapsed_ms': 1, 'answer': 'bounded candidate',
+                 'native_observation': {'claim': claim['nonce'], 'operation': 'runtime',
+                     'policy_ack': {'sha256': 'a' * 64, 'full_file_read': True},
+                     'worker': {'pid': 1234}}}
+        native.pool.active = {'runtime': task['id']}
+        def poll(*, timeout, on_validated_result):
+            self.assertEqual(timeout, 0)
+            checkpoint = on_validated_result(event)
+            disk = json.loads(native.ns['STATE'].read_text(encoding='utf-8'))
+            self.assertEqual(disk['tasks'][task['id']]['native_pending_result'], checkpoint)
+            return event
+        native.pool.poll.side_effect = poll
+        binding.Native._drain(native)
+        self.assertEqual(native.completed[task['id']], event)
+        self.assertEqual(
+            json.loads(native.ns['STATE'].read_text(encoding='utf-8'))
+                ['tasks'][task['id']]['native_submit_intent']['state'],
+            'RESULT_CHECKPOINTED')
 
     def test_shutdown_captures_result_published_after_pre_shutdown_drain(self):
         native, task = native_with_pool()
