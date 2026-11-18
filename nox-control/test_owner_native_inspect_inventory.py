@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-MODULE_PATH = Path(__file__).with_name('owner_native_inspect.py')
+MODULE_PATH = Path(__file__).with_name('owner_native_legacy_inspect.py')
 spec = importlib.util.spec_from_file_location('nox_owner_inspect', MODULE_PATH)
 inspector = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(inspector)
