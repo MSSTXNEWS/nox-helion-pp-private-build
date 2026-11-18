@@ -144,6 +144,22 @@ pins are preserved by the publisher.
 
 ## Evidence and continuation
 
+### Reuse a reviewed solution when model iteration stalls
+
+The first native cache attempt stopped with `PLANNER_REPEATED_ACTION_NO_PROGRESS`.
+Independent source review also found incomplete new behavior in the first Forge
+and skill patches despite their existing regression checks passing. The exact
+receipts are pinned in `reviewed_recovery/publish_spec.json`.
+
+`build_reviewed_recovery.py` freezes the three corrected source candidates and
+their unchanged existing verifiers against a settled native readback.
+`owner_systemic_reviewed_publish.py` adds their immutable plans to the existing
+catalog without restarting any worker. The native executor then performs its
+normal verification, source CAS, and S03 integration. No local model regeneration
+is needed for an already reviewed patch. Prior attempts remain intact.
+This is a separate, explicit `OWNER_REVIEWED` origin, not a claim that the native
+model generated the recovery or that the original tasks were accepted.
+
 `outcomes` exports bounded operational scalar fields and hashes. Reported test
 counts, postimages or `done` are labelled as queue evidence requiring receipt and
 postimage readback. A useful source completion requires the actual executor

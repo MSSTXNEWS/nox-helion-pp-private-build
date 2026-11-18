@@ -41,6 +41,29 @@ REQUIRED = frozenset(('adapter_model.safetensors', 'adapter_config.json', 'optim
                       'student_state.json', 'lineage.json'))
 ALLOWED = REQUIRED | {'README.md'}
 GIB = 1024 ** 3
+DIAGNOSTIC_STAGES = frozenset(('INITIAL', 'QUALITY_GUARD', 'LATEST_POINTER',
+    'CHECKPOINT_LEDGER', 'SELECT_CHECKPOINTS', 'CP55', 'BEST_RETAINED', 'CORPUS',
+    'TRAINING_SOURCE', 'CONTROLLER', 'REVALIDATE_LEDGER', 'REVALIDATE_POINTER',
+    'REVALIDATE_GUARD', 'INPUTSET', 'COMPLETE'))
+DIAGNOSTIC_ITEMS = {
+    'checkpoint_manifest.json': 'CHECKPOINT_MANIFEST',
+    'adapter_model.safetensors': 'ADAPTER_WEIGHTS', 'adapter_config.json': 'ADAPTER_CONFIG',
+    'optimizer.pt': 'OPTIMIZER_STATE', 'scheduler.pt': 'SCHEDULER_STATE',
+    'scaler.pt': 'SCALER_STATE', 'rng_state.pt': 'TORCH_RNG_STATE',
+    'python_rng.json': 'PYTHON_RNG_STATE', 'student_state.json': 'STUDENT_STATE',
+    'lineage.json': 'LINEAGE', 'README.md': 'README',
+    'train.jsonl': 'TRAIN_CORPUS', 'holdout.jsonl': 'HOLDOUT_CORPUS',
+    'corpus_manifest.json': 'CORPUS_MANIFEST',
+    'qwen_student_training_entry_revision.py': 'TRAINER_SOURCE',
+    'owner_qwen_execution_revision.py': 'EXECUTION_GUARD_SOURCE',
+    'owner_qwen_training_guard.py': 'QUALITY_GUARD_SOURCE',
+    'owner_qwen_training_contract.py': 'TRAINING_CONTRACT_SOURCE',
+    'owner_qwen_memfd.py': 'MEMFD_SOURCE',
+}
+DIAGNOSTIC_EXCEPTIONS = frozenset(('Hold', 'FileNotFoundError', 'PermissionError',
+    'NotADirectoryError', 'IsADirectoryError', 'BlockingIOError', 'InterruptedError',
+    'OSError', 'JSONDecodeError', 'UnicodeDecodeError', 'UnicodeEncodeError',
+    'UnicodeError', 'ValueError', 'TypeError', 'KeyError', 'RecursionError', 'OverflowError'))
 
 
 class Hold(RuntimeError):
@@ -73,22 +96,49 @@ class Reader:
     def __init__(self):
         self.deadline = time.monotonic() + 45.0
         self.total = 0
+        self.stage = 'INITIAL'
+        self.item = 'NONE'
+        self.operation = 'SCHEMA_CHECK'
+        self.verified_checkpoint_roles = []
+
+    def mark(self, stage, item='NONE'):
+        require(stage in DIAGNOSTIC_STAGES
+                and item in {'NONE', *DIAGNOSTIC_ITEMS.values()},
+                'HOLD_PREPARE_DIAGNOSTIC_SCOPE')
+        self.stage, self.item, self.operation = stage, item, 'SCHEMA_CHECK'
+
+    def diagnostic(self, exc=None):
+        # Never serialize exception messages, arguments, paths or metadata values.
+        name = type(exc).__name__ if exc is not None else None
+        if name is not None and name not in DIAGNOSTIC_EXCEPTIONS:
+            name = 'OTHER_CAUGHT_EXCEPTION'
+        number = getattr(exc, 'errno', None)
+        return {'stage': self.stage, 'item': self.item, 'operation': self.operation,
+                'exception_class': name,
+                'errno': number if type(number) is int and 0 <= number <= 4095 else None,
+                'verified_checkpoint_roles': list(self.verified_checkpoint_roles)}
 
     def check(self):
+        self.operation = 'DEADLINE_CHECK'
         require(time.monotonic() < self.deadline, 'HOLD_PREPARE_READ_DEADLINE')
 
     def read(self, path, limit, *, materialize=False, expected=None):
         self.check()
+        self.operation = 'PATH_SCOPE'
         path = Path(path)
         require(path.is_absolute() and '..' not in path.parts, 'HOLD_PREPARE_PATH_SCOPE')
         flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+        self.operation = 'OPEN_ROOT'
         parent = os.open('/', flags | os.O_DIRECTORY)
         fd = None
         try:
             for part in path.parts[1:-1]:
+                self.operation = 'OPEN_DIRECTORY'
                 child = os.open(part, flags | os.O_DIRECTORY, dir_fd=parent)
                 os.close(parent); parent = child
+            self.operation = 'OPEN_FILE'
             fd = os.open(path.name, flags | os.O_NONBLOCK, dir_fd=parent)
+            self.operation = 'FSTAT_INITIAL'
             before = os.fstat(fd)
             require(stat.S_ISREG(before.st_mode) and 0 <= before.st_size <= limit,
                     'HOLD_PREPARE_FILE_BOUND')
@@ -97,18 +147,24 @@ class Reader:
             hasher = hashlib.sha256(); chunks = []; remaining = before.st_size
             while remaining:
                 self.check()
+                self.operation = 'READ_BYTES'
                 block = os.read(fd, min(1024 ** 2, remaining))
                 require(bool(block), 'HOLD_PREPARE_FILE_SHRANK')
                 hasher.update(block); remaining -= len(block); self.total += len(block)
                 if materialize:
                     chunks.append(block)
+            self.operation = 'GROWTH_SENTINEL'
             require(not os.read(fd, 1), 'HOLD_PREPARE_FILE_GREW')
+            self.operation = 'FSTAT_FINAL'
             after = os.fstat(fd)
+            self.operation = 'STAT_NAMED'
             named = os.stat(path.name, dir_fd=parent, follow_symlinks=False)
+            self.operation = 'VERIFY_IDENTITY'
             for key in ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns'):
                 require(getattr(before, key) == getattr(after, key) == getattr(named, key),
                         'HOLD_PREPARE_FILE_CHANGED')
             pin = hasher.hexdigest()
+            self.operation = 'VERIFY_SHA'
             require(expected is None or type(expected) is str and SHA.fullmatch(expected)
                     and pin == expected, 'HOLD_PREPARE_FILE_SHA')
             return {'sha256': pin, 'bytes': before.st_size}, b''.join(chunks) if materialize else None
@@ -131,12 +187,15 @@ class Reader:
             value = float(text)
             require(math.isfinite(value), 'HOLD_PREPARE_NONFINITE_JSON')
             return value
+        self.operation = 'PARSE_JSON'
         value = json.loads(raw, object_pairs_hook=pairs, parse_constant=nonfinite, parse_float=finite)
+        self.operation = 'SCHEMA_CHECK'
         require(isinstance(value, dict), 'HOLD_PREPARE_METADATA_OBJECT')
         return value, meta
 
 
-def checkpoint(reader, row):
+def checkpoint(reader, row, role):
+    reader.mark(role, 'CHECKPOINT_MANIFEST')
     name = row.get('directory')
     require(type(name) is str and NAME.fullmatch(name), 'HOLD_PREPARE_CHECKPOINT_NAME')
     require(type(row.get('manifest_sha256')) is str and SHA.fullmatch(row['manifest_sha256'])
@@ -161,10 +220,14 @@ def checkpoint(reader, row):
             'HOLD_PREPARE_PAYLOAD_FILESET')
     files = {}
     for filename in sorted(pins):
+        reader.mark(role, DIAGNOSTIC_ITEMS[filename])
         files[filename], _ = reader.read(path / filename, 2 * GIB, expected=pins[filename])
+    reader.operation = 'SCHEMA_CHECK'
     require(sum(value['bytes'] for value in files.values()) <= 2 * GIB,
             'HOLD_PREPARE_CHECKPOINT_BYTES')
+    reader.mark(role, 'LINEAGE')
     lineage, _ = reader.document(path / 'lineage.json', pins['lineage.json'])
+    reader.mark(role, 'STUDENT_STATE')
     state, _ = reader.document(path / 'student_state.json', pins['student_state.json'])
     require(digest(encoded(lineage)) == LINEAGE_SHA, 'HOLD_PREPARE_ORIGIN_LINEAGE')
     require(all(state.get(key) == manifest[key] for key in counters)
@@ -190,6 +253,7 @@ def checkpoint(reader, row):
                     for key in ('accepted_example_ids_sha256', 'tokenized_labels_sha256')),
             'HOLD_PREPARE_HOLDOUT_PROTOCOL')
     # Re-read the manifest after its full payload set, closing mixed-read windows.
+    reader.mark(role, 'CHECKPOINT_MANIFEST')
     reader.document(path / 'checkpoint_manifest.json', manifest_meta['sha256'])
     return {'directory': name, 'manifest_sha256': manifest_meta['sha256'],
             'successful_total': manifest['successful_total'], 'holdout_loss': manifest['holdout_loss'],
@@ -207,21 +271,25 @@ def prepare():
               'guard_changed': False, 'old_seal_changed': False, 'checkpoint_pointer_changed': False,
               'chat_service_changed': False, 'memfd_released': False, 'raw_content_exported': False}
     try:
+        reader.mark('QUALITY_GUARD')
         guard, _ = reader.document(ROOT / 'state/owner_qwen_training_guard.json', GUARD_SHA)
         policy = guard.get('policy_state')
         require(isinstance(policy, dict) and guard.get('state') == 'INHIBITED' and policy.get('inhibit') is True
                 and policy.get('reason') == 'HOLDOUT_REGRESSION'
                 and policy.get('best_holdout_loss') == EXPECTED_BEST_LOSS,
                 'HOLD_PREPARE_QUALITY_POLICY_CHANGED')
+        reader.mark('LATEST_POINTER')
         pointer, _ = reader.document(OUTPUT / 'latest_checkpoint.json', POINTER_SHA)
         require(pointer == {'directory': CP55, 'manifest_sha256': MANIFEST_SHA},
                 'HOLD_PREPARE_CP55_ANCHOR_CHANGED')
+        reader.mark('CHECKPOINT_LEDGER')
         ledger, ledger_meta = reader.document(OUTPUT / 'owner_checkpoints.json', limit=2 * 1024 ** 2)
         entries = ledger.get('checkpoints')
         require(ledger.get('schema') == 'NOX_QWEN_OWNED_CHECKPOINTS_V1'
                 and ledger.get('lineage_sha256') == LINEAGE_SHA
                 and isinstance(entries, list) and len(entries) <= 2000,
                 'HOLD_PREPARE_CHECKPOINT_LEDGER')
+        reader.mark('SELECT_CHECKPOINTS')
         retained = [row for row in entries if isinstance(row, dict) and row.get('retained') is True]
         require(all(type(row.get('directory')) is str and NAME.fullmatch(row['directory']) for row in retained)
                 and len({row['directory'] for row in retained}) == len(retained),
@@ -233,21 +301,29 @@ def prepare():
         require(best['holdout_loss'] == EXPECTED_BEST_LOSS, 'HOLD_PREPARE_BEST_CHECKPOINT_NOT_RETAINED')
         selected = {}; common_lineage = None
         for role, row in (('cp55', latest[0]), ('best_retained', best)):
-            selected[role], lineage = checkpoint(reader, row)
+            selected[role], lineage = checkpoint(reader, row, role.upper())
             require(common_lineage is None or common_lineage == lineage, 'HOLD_PREPARE_LINEAGE_DIVERGED')
             common_lineage = lineage
+            reader.verified_checkpoint_roles.append(role.upper())
         corpus = {}
         for name, key in (('train.jsonl', 'train_sha256'), ('holdout.jsonl', 'holdout_sha256'),
                           ('corpus_manifest.json', 'dataset_manifest_sha256')):
+            reader.mark('CORPUS', DIAGNOSTIC_ITEMS[name])
             corpus[name], _ = reader.read(CORPUS / name, 32 * 1024 ** 2, expected=common_lineage[key])
         sources = {}
         for name, pin in SOURCE_PINS.items():
+            reader.mark('TRAINING_SOURCE', DIAGNOSTIC_ITEMS[name])
             sources[name], _ = reader.read(ROOT / 'scripts' / name, 300000, expected=pin)
+        reader.mark('CONTROLLER')
         controller, _ = reader.read(ROOT / 'scripts/nox_dispatcher_t855u.py', 300000,
                                     expected=OBSERVED_CONTROLLER_SHA)
+        reader.mark('REVALIDATE_LEDGER')
         reader.document(OUTPUT / 'owner_checkpoints.json', ledger_meta['sha256'], limit=2 * 1024 ** 2)
+        reader.mark('REVALIDATE_POINTER')
         reader.document(OUTPUT / 'latest_checkpoint.json', POINTER_SHA)
+        reader.mark('REVALIDATE_GUARD')
         reader.document(ROOT / 'state/owner_qwen_training_guard.json', GUARD_SHA)
+        reader.mark('INPUTSET')
         result.update(state='PREPARED_INPUTSET_EVALUATION_NOT_ADMITTED', checkpoints=selected,
                       corpus=corpus, source_pins=sources, ledger_sha256=ledger_meta['sha256'],
                       guard_sha256=GUARD_SHA, latest_pointer_sha256=POINTER_SHA,
@@ -268,10 +344,14 @@ def prepare():
         result['inputset_sha256'] = digest(encoded({key: result[key] for key in
             ('checkpoints', 'corpus', 'source_pins', 'ledger_sha256', 'guard_sha256',
              'latest_pointer_sha256', 'observed_controller_sha256', 'protocol')}))
+        reader.mark('COMPLETE')
+        result['diagnostic'] = reader.diagnostic()
     except Hold as exc:
         result['state'] = str(exc)
-    except (OSError, ValueError, TypeError, UnicodeError, KeyError, RecursionError, OverflowError):
+        result['diagnostic'] = reader.diagnostic(exc)
+    except (OSError, ValueError, TypeError, UnicodeError, KeyError, RecursionError, OverflowError) as exc:
         result['state'] = 'HOLD_PREPARE_SAFE_READ_OR_SCHEMA'
+        result['diagnostic'] = reader.diagnostic(exc)
     result['streamed_read_bytes'] = reader.total
     result['elapsed_seconds'] = round(time.monotonic() - started, 3)
     return result
