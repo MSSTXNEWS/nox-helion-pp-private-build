@@ -7,6 +7,7 @@ import contextlib
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import re
 import stat
@@ -832,11 +833,19 @@ def project_active_progress():
 
 
 PINNED_PREIMAGE_NAMES = (
-    'owner_subagent_dispatcher.py',
-    'owner_task_lifecycle.py',
-    'owner_senior_gateway.py',
-    'nox_dispatcher_t855u.py',
+    'owner_subagent_dispatcher.py', 'owner_subagent_processes.py',
+    'owner_autonomy_pool.py', 'owner_dispatcher_mentor.py',
+    'owner_event_outbox.py', 'owner_task_plans.py',
+    'owner_media_runtime.py', 'owner_s03_gateway.py',
+    'owner_senior_gateway.py', 'owner_task_lifecycle.py',
+    's03_memory.py', 'nox_dispatcher_t855u.py',
 )
+SOURCE_ALIAS = {'owner_dispatcher_mentor.py': 'owner_mentor'}
+S03_PREPARE = ROOT / 'state/owner_s03/prepare_6904379098.json'
+S03_MANIFEST = ROOT / 'state/owner_s03/backups/6904379098/manifest.json'
+S03_CANONICAL = ROOT / 'state/owner_s03/backups/6904379098/canonical.sqlite'
+V135_INPUT_STATE = 'UNKNOWN_NO_FIXED_ALLOWLISTED_V135_PATH'
+TRAINING_LEASE_STATE = 'UNKNOWN_NO_FIXED_ALLOWLISTED_TRAINING_LEASE'
 PIN_CONFIG_KEYS = tuple(
     key for name in PINNED_PREIMAGE_NAMES
     for key in (name, 'scripts/' + name, str(SCRIPTS / name))
@@ -852,10 +861,23 @@ def bounded_label(value):
         return value
     return None
 
+def _stat_metadata(info):
+    return {'mode': stat.S_IMODE(info.st_mode), 'uid': info.st_uid,
+            'gid': info.st_gid, 'inode': info.st_ino}
+
+
 def bounded_file(path, limit):
-    result = {'path': str(path), 'exists': None, 'size': None, 'sha256': None}
+    path = Path(path)
+    result = {'path': str(path), 'exists': None, 'size': None, 'sha256': None,
+              'mode': None, 'uid': None, 'gid': None, 'inode': None}
     try:
+        before = os.lstat(path)
+        if not stat.S_ISREG(before.st_mode):
+            result.update({'exists': True, 'state': 'UNKNOWN_NOT_REGULAR'})
+            return result, None
         raw, info = safe_read(path, limit)
+        if (before.st_dev, before.st_ino) != (info.st_dev, info.st_ino):
+            raise ValueError('LSTAT_FSTAT_CHANGED')
     except FileNotFoundError:
         result['exists'] = False
         return result, None
@@ -863,7 +885,9 @@ def bounded_file(path, limit):
         result['state'] = 'UNKNOWN_' + type(exc).__name__
         return result, None
     result.update({'exists': True, 'size': info.st_size,
-                   'sha256': hashlib.sha256(raw).hexdigest()})
+                   'sha256': hashlib.sha256(raw).hexdigest(),
+                   'mode': stat.S_IMODE(info.st_mode), 'uid': info.st_uid,
+                   'gid': info.st_gid, 'inode': info.st_ino})
     return result, raw
 
 def bounded_module_pins(config):
@@ -872,8 +896,11 @@ def bounded_module_pins(config):
     if not isinstance(pins, dict):
         return selected
     for name in PINNED_PREIMAGE_NAMES:
-        raw = next((pins[key] for key in PIN_CONFIG_KEYS if key in pins and
-                    key.rsplit('/', 1)[-1] == name), None)
+        alias = SOURCE_ALIAS.get(name)
+        keys = [name, 'scripts/' + name, str(SCRIPTS / name)]
+        if alias:
+            keys.extend((alias, 'scripts/' + alias, str(SCRIPTS / alias)))
+        raw = next((pins[key] for key in keys if key in pins), None)
         if isinstance(raw, dict):
             raw = raw.get('sha256', raw.get('sha'))
         if isinstance(raw, str) and re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', raw):
@@ -1021,25 +1048,256 @@ def generated_dispatcher_ast_projection(raw):
     result['bind_dispatcher_calls'] = calls
     result['state'] = 'PARSED'
     return result
+def callback_abi_projection(raw):
+    result = {'path': str(SCRIPTS / 'owner_subagent_dispatcher.py'),
+              's03_readback': None, 'state': 'UNAVAILABLE'}
+    if raw is None:
+        return result
+    try:
+        tree = ast.parse(raw.decode('utf-8'))
+    except Exception:
+        result['state'] = 'UNKNOWN_PARSE'
+        return result
+    found = [n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+             and n.name == 's03_readback']
+    if len(found) != 1:
+        result['state'] = 'UNKNOWN_MISSING_OR_AMBIGUOUS'
+        return result
+    args = found[0].args
+    positional = args.posonlyargs + args.args
+    defaults = [x.arg for x in positional[-len(args.defaults):]] if args.defaults else []
+    result['s03_readback'] = {
+        'posonly': [x.arg for x in args.posonlyargs[:16]],
+        'positional': [x.arg for x in args.args[:16]],
+        'kwonly': [x.arg for x in args.kwonlyargs[:16]],
+        'positional_defaults': defaults[:16],
+        'kwonly_defaults': [x.arg for x, v in zip(args.kwonlyargs, args.kw_defaults) if v is not None][:16],
+    }
+    result['state'] = 'PARSED'
+    return result
+
+
+def _safe_sha(value):
+    return value if isinstance(value, str) and re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', value) else None
+
+
+def _safe_count(value):
+    return value if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 10**15 else None
+
+
+def _safe_bool(value):
+    return value if isinstance(value, bool) else None
+
+
+def _safe_identifier(value):
+    if isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9_.:/@+-]{1,120}', value) and not SECRET_MARKER.search(value):
+        return value
+    return None
+
+
+def _selected_s03_proof(value):
+    if not isinstance(value, dict):
+        return None
+    out = {'state': bounded_label(value.get('state')),
+           'source_key': bounded_label(value.get('source_key'))}
+    for key in ('manifest_sha256', 'snapshot_sha256', 'restored_sha256'):
+        out[key] = _safe_sha(value.get(key))
+    out['restored_bytes'] = _safe_count(value.get('restored_bytes'))
+    out['live_database_mutated_by_restore'] = _safe_bool(value.get('live_database_mutated_by_restore'))
+    return out
+
+
+def bounded_s03_json(path, kind):
+    record, raw = bounded_file(path, 64_000)
+    fields = {}
+    if raw is not None:
+        try:
+            obj = json.loads(raw)
+            if not isinstance(obj, dict):
+                raise ValueError('OBJECT_REQUIRED')
+            fields['schema'] = bounded_label(obj.get('schema'))
+            if kind == 'prepare':
+                fields.update({
+                    'request': bounded_request(obj.get('request')),
+                    'state': bounded_label(obj.get('state')),
+                    'source_sha': _safe_sha(obj.get('source_sha')),
+                    'gateway_sha256': _safe_sha(obj.get('gateway_sha256')),
+                    's03_before_sha256': _safe_sha(obj.get('s03_before_sha256')),
+                    'snapshot_manifest_sha256': _safe_sha(obj.get('snapshot_manifest_sha256')),
+                    'canonical_staging_restore': _selected_s03_proof(obj.get('canonical_staging_restore')),
+                })
+            else:
+                snapshots = obj.get('snapshots')
+                canonical = snapshots.get('CANONICAL') if isinstance(snapshots, dict) else None
+                canonical = canonical if isinstance(canonical, dict) else {}
+                fields.update({
+                    'source_mutation': bounded_label(obj.get('source_mutation')),
+                    'canonical_path_matches_allowlist': canonical.get('path') == str(S03_CANONICAL),
+                    'canonical_bytes': _safe_count(canonical.get('bytes')),
+                    'canonical_sha256': _safe_sha(canonical.get('sha256')),
+                    'canonical_kind': bounded_label(canonical.get('kind')),
+                    'canonical_original_retained': _safe_bool(canonical.get('original_retained')),
+                })
+        except Exception:
+            record['selected_state'] = 'UNKNOWN_PARSE'
+    record.update(fields)
+    return record
+
+
+def bounded_lstat(path):
+    path = Path(path)
+    result = {'path': str(path), 'exists': None, 'size': None,
+              'mode': None, 'uid': None, 'gid': None}
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        result['exists'] = False
+        return result
+    except Exception as exc:
+        result['state'] = 'UNKNOWN_' + type(exc).__name__
+        return result
+    result.update({'exists': True, 'size': info.st_size,
+                   'mode': stat.S_IMODE(info.st_mode), 'uid': info.st_uid,
+                   'gid': info.st_gid})
+    return result
+
+
+def _read_cgroup_uint(path):
+    try:
+        raw, _ = safe_read(path, 4096)
+        value = raw.decode('ascii').strip()
+        return int(value) if re.fullmatch(r'[0-9]{1,20}', value) else None
+    except Exception:
+        return None
+
+
+def _read_cpu_max(path):
+    try:
+        raw, _ = safe_read(path, 4096)
+        parts = raw.decode('ascii').split()
+        if len(parts) == 2 and re.fullmatch(r'(?:max|[0-9]{1,20})', parts[0]) and re.fullmatch(r'[0-9]{1,20}', parts[1]):
+            return {'quota_us': None if parts[0] == 'max' else int(parts[0]), 'period_us': int(parts[1])}
+    except Exception:
+        pass
+    return {'quota_us': None, 'period_us': None}
+
+
+def bounded_resources():
+    cgroup = {'memory_current_bytes': _read_cgroup_uint(Path('/sys/fs/cgroup/memory.current')),
+              'memory_max_bytes': _read_cgroup_uint(Path('/sys/fs/cgroup/memory.max')),
+              'cpu': _read_cpu_max(Path('/sys/fs/cgroup/cpu.max'))}
+    disks = {}
+    for label, path in (('nox_root', ROOT), ('nox_state', ROOT / 'state')):
+        try:
+            v = os.statvfs(path)
+            disks[label] = {'available_bytes': v.f_bavail * v.f_frsize,
+                            'free_bytes': v.f_bfree * v.f_frsize,
+                            'total_bytes': v.f_blocks * v.f_frsize}
+        except Exception:
+            disks[label] = {'available_bytes': None, 'free_bytes': None, 'total_bytes': None}
+    gpu = {'state': 'UNKNOWN_NVIDIA_SMI_UNAVAILABLE', 'devices': []}
+    exe = shutil.which('nvidia-smi')
+    if exe:
+        try:
+            p = subprocess.run([exe, '--query-gpu=name,uuid,memory.total,memory.free',
+                                '--format=csv,noheader,nounits'], capture_output=True,
+                               text=True, timeout=2, check=False)
+            out = p.stdout
+            if p.returncode != 0 or len(out) > 4096:
+                gpu['state'] = 'UNKNOWN_NVIDIA_SMI_FAILED_OR_OVERSIZED'
+            else:
+                rows = []
+                for line in out.splitlines()[:8]:
+                    fields = [x.strip() for x in line.split(',')]
+                    if len(fields) != 4:
+                        continue
+                    name, uuid, total, free = fields
+                    if (re.fullmatch(r'[A-Za-z0-9 ._+()-]{1,100}', name)
+                            and re.fullmatch(r'[A-Fa-f0-9-]{8,64}', uuid)
+                            and total.isdigit() and free.isdigit()):
+                        rows.append({'name': name, 'uuid': uuid,
+                                     'memory_total_mib': int(total),
+                                     'memory_free_mib': int(free)})
+                gpu = {'state': 'OBSERVED' if rows else 'UNKNOWN_NO_VALID_ROWS', 'devices': rows}
+        except Exception:
+            gpu['state'] = 'UNKNOWN_NVIDIA_SMI_ERROR'
+    return {'gpu': gpu, 'cgroup': cgroup, 'disk': disks}
+
+
+def bounded_training_inputs():
+    return {'state': V135_INPUT_STATE, 'manifest_path': None,
+            'manifest_sha256': None, 'rows': None, 'rights_verified': None,
+            'privacy_verified': None, 'native_approval_verified': None,
+            'path_allowlist': []}
+
+
+def bounded_training_lease():
+    return {'state': TRAINING_LEASE_STATE, 'path': None, 'owner': None,
+            'expires_at': None}
+
+
+def bounded_config_projection(path, kind):
+    record, raw = bounded_file(path, 128_000)
+    selected = {}
+    if raw is not None:
+        try:
+            obj = json.loads(raw)
+            if not isinstance(obj, dict):
+                raise ValueError('OBJECT_REQUIRED')
+            if kind == 'native':
+                keys = sorted(k for k in obj if isinstance(k, str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', k))[:64]
+                selected = {'schema': bounded_label(obj.get('schema')),
+                            'top_level_keys': keys,
+                            'module_pins': bounded_module_pins(obj)}
+            else:
+                providers = []
+                raw_providers = obj.get('providers')
+                if isinstance(raw_providers, list):
+                    providers = [v for v in (_safe_identifier(x) for x in raw_providers[:8]) if v]
+                elif isinstance(raw_providers, dict):
+                    providers = sorted(k for k in raw_providers if _safe_identifier(k))[:8]
+                for key in ('provider', 'provider_id', 'primary_provider', 'fallback_provider'):
+                    value = _safe_identifier(obj.get(key))
+                    if value is not None:
+                        selected[key] = value
+                selected.update({'enabled': _safe_bool(obj.get('enabled')),
+                                 'providers': providers,
+                                 'minimum_verified_providers': _safe_count(obj.get('minimum_verified_providers'))})
+        except Exception:
+            record['selected_state'] = 'UNKNOWN_PARSE'
+    record.update(selected)
+    return record
+
+
+def bounded_s03_projection():
+    return {'source_names': ['s03_memory.py', 'owner_s03_gateway.py'],
+            'prepare_receipt': bounded_s03_json(S03_PREPARE, 'prepare'),
+            'manifest': bounded_s03_json(S03_MANIFEST, 'manifest'),
+            'canonical_snapshot': bounded_lstat(S03_CANONICAL)}
+
+
 def bounded_preimage_snapshot():
     sources = []
     generated_source = None
+    callback_source = None
+    remaining = MAX_SOURCE_TOTAL
     for name in PINNED_PREIMAGE_NAMES:
-        record, raw = bounded_file(SCRIPTS / name, 8_000_000)
+        limit = min(MAX_SOURCE_FILE, remaining)
+        if limit <= 0:
+            sources.append({'path': str(SCRIPTS / name), 'exists': None,
+                            'size': None, 'sha256': None, 'state': 'UNKNOWN_TOTAL_LIMIT'})
+            continue
+        record, raw = bounded_file(SCRIPTS / name, limit)
         sources.append(record)
+        if raw is not None:
+            remaining -= len(raw)
         if name == 'nox_dispatcher_t855u.py':
             generated_source = raw
+        if name == 'owner_subagent_dispatcher.py':
+            callback_source = raw
 
-    config_record, config_raw = bounded_file(ROOT / 'config/owner_native_subagents.json', 2_000_000)
-    pins = {name: None for name in PINNED_PREIMAGE_NAMES}
-    if config_raw is not None:
-        try:
-            config = json.loads(config_raw)
-        except Exception:
-            config = None
-        pins = bounded_module_pins(config)
-    config_record['module_pins'] = pins
-
+    config_record = bounded_config_projection(ROOT / 'config/owner_native_subagents.json', 'native')
+    senior_config_record = bounded_config_projection(ROOT / 'config/owner_senior_gateway.json', 'senior')
     receipt_record, receipt_raw = bounded_file(ROOT / 'state/owner_native_subagents_recovery_6907376498.json', 256_000)
     receipt_fields = {'state': None, 'request': None}
     if receipt_raw is not None:
@@ -1052,8 +1310,18 @@ def bounded_preimage_snapshot():
         except Exception:
             pass
     receipt_record.update(receipt_fields)
-    return {'sources': sources, 'config': config_record, 'receipt': receipt_record,
-            'generated_dispatcher_ast': generated_dispatcher_ast_projection(generated_source)}
+    return {
+        'sources': sources,
+        'config': config_record,
+        'senior_gateway_config': senior_config_record,
+        'receipt': receipt_record,
+        'generated_dispatcher_ast': generated_dispatcher_ast_projection(generated_source),
+        'callback_abi': callback_abi_projection(callback_source),
+        'resources': bounded_resources(),
+        'training_lease': bounded_training_lease(),
+        'training_inputs': bounded_training_inputs(),
+        's03': bounded_s03_projection(),
+    }
 
 def main():
     emit('ADVISOR_PREIMAGE_SNAPSHOT', bounded_preimage_snapshot())
