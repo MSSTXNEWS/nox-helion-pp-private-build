@@ -877,7 +877,16 @@ class Native:
                     break
                 if stop_reason:
                     self.close_pool(stop_reason)
-                    return False, 'HOLD_SUBAGENT_SUBMIT_OUTCOME_UNRESOLVED'
+                    # A result may arrive during close_pool's final drain. Commit
+                    # that exact event through the normal validation/S03 path;
+                    # otherwise keep the uncertain intent fenced and HOLD.
+                    with self.lock:
+                        event = self.completed.pop(task['id'], None)
+                        if event is not None:
+                            self.interrupted.pop(task['id'], None)
+                    if event is None:
+                        return False, 'HOLD_SUBAGENT_SUBMIT_OUTCOME_UNRESOLVED'
+                    break
                 if reason:
                     return False, 'HOLD_SUBAGENT_SUBMIT_INTERRUPTED'
                 time.sleep(0.1)

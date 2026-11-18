@@ -49,11 +49,13 @@ OLD_MENTOR_SHA = '12211a29f77de8e5181d4dd78c35d5da2ed5de0dc6ea529149d32f08968092
 NEW_MENTOR_SHA = 'b1143626aee7b74e1e3f8fa39d2035d4e29d0a5ec1882fae6efb8cab46260193'
 ASSETS = {
     'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
-    'owner_subagent_install_entry.py': 'a210182012d8872390b27a1f0fa8a5668016f06cd94d5557aad2b242d67eb806',
+    'owner_subagent_install_entry.py': '9f23ac936d16fc019abf8e2ecb9d8aede919827f4c8f41d629d353903db04e51',
     'owner_subagent_dispatcher_fresh.py': NEW_CALLBACK,
     'owner_subagent_processes.py': NEW_DEPENDENCIES['owner_subagent_processes.py'],
     'owner_autonomy_pool.py': NEW_DEPENDENCIES['owner_autonomy_pool.py'],
     'owner_dispatcher_mentor.py': NEW_MENTOR_SHA,
+    'owner_task_lifecycle.py': 'b09e02663f11c30e39a15b44ad2b12271219ec25bf0af9937bdf3a5fcfdebe5e',
+    'owner_senior_gateway.py': '1fd1556009ce62fa806bdee0a9a34577d276344e728fe9d94b33f44eb151346e',
 }
 HANDLER = 'owner_native_subagent_review'
 TASKS = {'owner.native.v06.' + role + '.84780aaf911a' for role in ('runtime', 'memory', 'weights')}
@@ -357,6 +359,7 @@ def main():
         check_sources(h)
         preserve_training(training_before, training_snapshot(h))
         require(completed_proofs(h, callback, prior) == before_proofs and not h.global_stop(), 'DONE_TASKS_OR_STOP')
+        require(resource_admission(h), 'RESOURCE_HEADROOM')
         result['owned_group_before'] = dispatcher_group(h, recovery, training_before)
         for path, (preimage, _) in file_transitions.items():
             backup_path = backup/path.name
@@ -365,12 +368,16 @@ def main():
             require(h.read(backup_path) == preimage
                     and stat.S_IMODE(backup_path.stat().st_mode) == 0o600,
                     'BACKUP_READBACK')
+        require(not h.global_stop(), 'STOP_OR_CHAT_IDENTITY')
+        require(resource_admission(h), 'RESOURCE_HEADROOM')
         stop_attempted = True
         rc = h.command(['supervisorctl', 'stop', h.SERVICE], 25)[0]
         stopped = h.service()['state'] == 'STOPPED'
         require(rc == 0 and stopped, 'DIRECTOR_STOP')
         require(completed_proofs(h, callback, prior) == before_proofs, 'DONE_TASKS_AFTER_STOP')
         check_sources(h)
+        require(not h.global_stop(), 'STOP_OR_CHAT_IDENTITY')
+        require(resource_admission(h), 'RESOURCE_HEADROOM')
         writes_attempted = True
         for path, (_, replacement) in file_transitions.items():
             h.atomic(path, replacement)

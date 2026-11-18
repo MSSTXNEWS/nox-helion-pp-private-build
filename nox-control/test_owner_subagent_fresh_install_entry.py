@@ -250,7 +250,7 @@ def main():
             helper.atomic.assert_not_called()
             self.assertEqual(target.read_bytes(), b'new callback')
 
-    def run_fixture(self, failure=None, training_changed=False):
+    def run_fixture(self, failure=None, training_changed=False, resource_checks=None):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         helper = FakeNative(Path(temporary.name) / 'nox', failure)
@@ -273,7 +273,10 @@ def main():
                 'NOX_OWNER_SOURCE_SHA': 'a' * 40}))
             stack.enter_context(patch.object(entry, 'load_helpers', return_value=(helper, recovery, assets)))
             stack.enter_context(patch.object(entry, 'check_sources'))
-            stack.enter_context(patch.object(entry, 'resource_admission', return_value=True))
+            resource_patch = (patch.object(entry, 'resource_admission', return_value=True)
+                              if resource_checks is None else
+                              patch.object(entry, 'resource_admission', side_effect=resource_checks))
+            stack.enter_context(resource_patch)
             stack.enter_context(patch.object(entry, 'OLD_MENTOR_SHA', entry.digest(helper.before_mentor)))
             stack.enter_context(patch.object(entry, 'prior_receipt', return_value=helper.prior))
             stack.enter_context(patch.object(entry, 'old_callback', return_value=helper.callback))
@@ -286,6 +289,15 @@ def main():
             'owner_training_admission.json', 'run_train_volta_t866u.sh') for path in helper.writes))
         helper.callback.remember.assert_not_called()
         return rc, helper, helper.outputs[-1][1]
+
+
+    def test_resource_floor_is_rechecked_after_claim_drain_before_backup_and_stop(self):
+        rc, helper, result = self.run_fixture(resource_checks=[True, False])
+        self.assertEqual(rc, 2)
+        self.assertEqual(helper.commands, [])
+        self.assertEqual(result['error'], 'HOLD_SUBAGENT_FRESH_RESOURCE_HEADROOM')
+        self.assertEqual(helper.target.read_bytes(), helper.before)
+        self.assertFalse((helper.ROOT/'backup/owner_subagent_fresh_gate/1234').exists())
 
     def test_install_reloads_only_dispatcher_and_accepts_zero_idle_pool(self):
         rc, helper, result = self.run_fixture()

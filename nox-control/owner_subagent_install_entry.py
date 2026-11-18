@@ -156,7 +156,7 @@ def health():
 def global_stop():
     return any(path.exists() or path.is_symlink() for path in (
         ROOT/'STOP', ROOT/'STOP.flag', ROOT/'stop.flag', ROOT/'.stop', ROOT/'program/STOP',
-        STATE/'STOP', Path('/workspace/NOX_STOP')))
+        STATE/'STOP', STATE/'STOP.flag', Path('/workspace/NOX_STOP')))
 
 
 def training_hold_observation():

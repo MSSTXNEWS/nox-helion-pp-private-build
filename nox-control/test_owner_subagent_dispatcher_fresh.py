@@ -209,6 +209,30 @@ class FreshSubmissionTests(unittest.TestCase):
                              (False, 'HOLD_SUBAGENT_SUBMIT_INTENT_MISMATCH'))
         self.assertEqual(native.pool.submit.call_count, calls_before_retry)
 
+
+    def test_stop_commits_result_from_final_close_pool_drain(self):
+        native, task = native_with_pool()
+        events = native._test_events
+        native.read_resource_snapshot.side_effect = lambda: events.append('snapshot') or snapshot()
+        native.stop_active.side_effect = [False, True, True]
+        result_event = {'id': task['id'], 'state': 'CANDIDATE_NOT_APPLIED', 'pid': 1234,
+            'native_observation': {'claim': 'a' * 24,
+                'policy_ack': {'sha256': 'a' * 64, 'full_file_read': True},
+                'worker': {'pid': 1234}}}
+        native.pool.submit.side_effect = lambda _: events.append('submit')
+        native.pool.poll.side_effect = [None] * 32 + [result_event] + [None] * 31
+        native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
+        native.ns['owner_mentor'] = types.SimpleNamespace(clean=lambda value: value)
+        proof = {'native_verified': True, 'task_id': task['id'], 'job_id': 'review-job',
+                 'receipt_sha256': 'b' * 64}
+        with patch.object(binding, 'chat_priority_active', return_value=False), \
+             patch.object(binding, 'remember', return_value=proof):
+            accepted, evidence = native._handle(task)
+        self.assertTrue(accepted)
+        self.assertEqual(evidence['receipt']['worker_result'], result_event)
+        self.assertEqual(native.state['tasks'][task['id']]['native_submit_intent']['state'], 'S03_VERIFIED')
+        self.assertIsNone(native.pool)
+
     def test_new_pool_rechecks_after_process_creation(self):
         native, task = native_with_pool()
         pool = native.pool

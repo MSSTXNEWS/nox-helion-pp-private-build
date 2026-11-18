@@ -39,6 +39,23 @@ class SourcePinClosureTests(unittest.TestCase):
                 actual = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
                 self.assertEqual(actual, expected)
 
+
+    def test_global_stop_detects_state_stop_flag(self):
+        helper = load("owner_subagent_install_entry_stop_test", "owner_subagent_install_entry.py")
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "root"
+            state = root / "state"
+            state.mkdir(parents=True)
+            workspace_stop = Path(folder) / "workspace" / "NOX_STOP"
+            path_factory = lambda value: workspace_stop if str(value) == "/workspace/NOX_STOP" else Path(value)
+            with patch.object(helper, "ROOT", root), patch.object(helper, "STATE", state), \
+                 patch.object(helper, "Path", path_factory):
+                self.assertFalse(helper.global_stop())
+                (state / "STOP.flag").touch()
+                self.assertTrue(helper.global_stop())
+
     def test_manual_subagent_route_skips_missing_legacy_operator_preimage(self):
         workflow = (ROOT.parent / ".github/workflows/nox-owner-maintenance-command.yml").read_text()
         self.assertIn("|backup|subagent)", workflow)

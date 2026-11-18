@@ -53,6 +53,8 @@ jobs:
             nox-control/owner_autonomy_pool.py \
             nox-control/owner_subagent_processes.py \
             nox-control/owner_dispatcher_mentor.py \
+            nox-control/owner_task_lifecycle.py \
+            nox-control/owner_senior_gateway.py \
             nox_runpod/teacher_mesh/v51/__init__.py \
             nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py \
             nox-control/test_owner_subagent_source_pin_closure.py
