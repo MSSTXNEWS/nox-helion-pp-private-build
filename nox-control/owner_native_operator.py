@@ -9,7 +9,7 @@ REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_complete_executor_observe.py',
+FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_project_update_history_observe.py',
        'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_project_runtime_update.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
