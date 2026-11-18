@@ -81,10 +81,13 @@ class FakeNative:
         self.target = self.SCRIPTS / 'owner_subagent_dispatcher.py'
         self.pool_target = self.SCRIPTS / 'owner_autonomy_pool.py'
         self.process_target = self.SCRIPTS / 'owner_subagent_processes.py'
+        self.mentor_target = self.SCRIPTS / 'owner_dispatcher_mentor.py'
         self.config = root / 'config/owner_native_subagents.json'
         self.before = b'original callback fixture\n'
         self.before_pool = b'original pool fixture\n'
         self.before_process = b'original processes fixture\n'
+        self.before_mentor = b'original mentor fixture\n'
+        self.atomic(self.mentor_target, self.before_mentor)
         self.atomic(self.target, self.before)
         self.atomic(self.pool_target, self.before_pool)
         self.atomic(self.process_target, self.before_process)
@@ -195,7 +198,8 @@ def main():
                 'owner_subagent_install_entry.py': helper,
                 'owner_subagent_dispatcher_fresh.py': b'candidate = True\n',
                 'owner_subagent_processes.py': b'processes = True\n',
-                'owner_autonomy_pool.py': b'pool = True\n'}
+                'owner_autonomy_pool.py': b'pool = True\n',
+                'owner_dispatcher_mentor.py': b'mentor = True\n'}
         assets = {key: base64.b64encode(raw).decode() for key, raw in raws.items()}
         source = Path(entry.__file__).read_text().replace('__NOX_BUNDLE_JSON__', json.dumps(assets))
         packed = types.ModuleType('fresh_packaging_test')
@@ -255,6 +259,7 @@ def main():
             'owner_subagent_dispatcher_fresh.py': Path(entry.__file__).with_name('owner_subagent_dispatcher_fresh.py').read_bytes(),
             'owner_autonomy_pool.py': Path(entry.__file__).with_name('owner_autonomy_pool.py').read_bytes(),
             'owner_subagent_processes.py': Path(entry.__file__).with_name('owner_subagent_processes.py').read_bytes(),
+            'owner_dispatcher_mentor.py': Path(entry.__file__).with_name('owner_dispatcher_mentor.py').read_bytes(),
         }
         helper.assets = assets
         original_queue = copy.deepcopy(helper.queue)
@@ -268,6 +273,8 @@ def main():
                 'NOX_OWNER_SOURCE_SHA': 'a' * 40}))
             stack.enter_context(patch.object(entry, 'load_helpers', return_value=(helper, recovery, assets)))
             stack.enter_context(patch.object(entry, 'check_sources'))
+            stack.enter_context(patch.object(entry, 'resource_admission', return_value=True))
+            stack.enter_context(patch.object(entry, 'OLD_MENTOR_SHA', entry.digest(helper.before_mentor)))
             stack.enter_context(patch.object(entry, 'prior_receipt', return_value=helper.prior))
             stack.enter_context(patch.object(entry, 'old_callback', return_value=helper.callback))
             stack.enter_context(patch.object(entry, 'training_snapshot', side_effect=snapshots))
@@ -292,11 +299,16 @@ def main():
         self.assertTrue(result['source_installed'])
         self.assertEqual(helper.pool_target.read_bytes(), helper.assets['owner_autonomy_pool.py'])
         self.assertEqual(helper.process_target.read_bytes(), helper.assets['owner_subagent_processes.py'])
+        self.assertEqual(helper.mentor_target.read_bytes(), helper.assets['owner_dispatcher_mentor.py'])
+        self.assertEqual(result['mentor_file_readback_sha256'], entry.digest(helper.assets['owner_dispatcher_mentor.py']))
+        self.assertEqual(result['mentor_reload_director_pid'], result['acceptance']['director_pid'])
+        self.assertEqual(result['chat_identity_before'], entry.CHAT)
         backup = helper.ROOT/'backup/owner_subagent_fresh_gate/1234'
         before_files = {
             'owner_subagent_dispatcher.py': helper.before,
             'owner_autonomy_pool.py': helper.before_pool,
             'owner_subagent_processes.py': helper.before_process,
+            'owner_dispatcher_mentor.py': helper.before_mentor,
             'owner_native_subagents.json': entry.encoded(configuration()),
         }
         for name, raw in before_files.items():
@@ -313,6 +325,7 @@ def main():
         self.assertEqual(helper.target.read_bytes(), helper.before)
         self.assertEqual(helper.pool_target.read_bytes(), helper.before_pool)
         self.assertEqual(helper.process_target.read_bytes(), helper.before_process)
+        self.assertEqual(helper.mentor_target.read_bytes(), helper.before_mentor)
         self.assertEqual(entry.digest(helper.config.read_bytes()), entry.OLD_CONFIG)
         self.assertTrue(result['rollback_verified'])
         self.assertFalse(result['source_installed'])

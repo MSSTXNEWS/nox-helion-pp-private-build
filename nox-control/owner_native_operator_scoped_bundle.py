@@ -21,7 +21,8 @@ SCOPED_REPAIR_BUNDLES={
         'owner_qwen_revision_install.py','owner_native_repair.py','owner_download_status_entry.py'),
     'nox-control/owner_subagent_fresh_install_entry.py':(
         'owner_subagent_hash_recovery_entry.py','owner_subagent_install_entry.py',
-        'owner_subagent_dispatcher_fresh.py','owner_autonomy_pool.py','owner_subagent_processes.py'),
+        'owner_subagent_dispatcher_fresh.py','owner_autonomy_pool.py','owner_subagent_processes.py',
+        'owner_dispatcher_mentor.py'),
     'nox-control/owner_qwen_transport_install_entry.py':(
         'owner_qwen_revision_install.py','qwen_student_training_entry_revision.py',
         'owner_qwen_transport_revision_install.py','qwen_student_training_entry_transport_candidate.py',
@@ -41,6 +42,7 @@ SUBAGENT_BUNDLE_PATHS = (
     'nox-control/owner_subagent_dispatcher_fresh.py',
     'nox-control/owner_autonomy_pool.py',
     'nox-control/owner_subagent_processes.py',
+    'nox-control/owner_dispatcher_mentor.py',
 )
 SUBAGENT_BUNDLE_PINS = {
     'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
@@ -48,6 +50,7 @@ SUBAGENT_BUNDLE_PINS = {
     'owner_subagent_dispatcher_fresh.py': '08437184fe8bfc287a26283ed0acebb0a513e156c9fb18c9bc96148109003e94',
     'owner_autonomy_pool.py': 'c4f0a178d22f47c1e1b2575f6b9c3280165eb0cf13920053c7b427ada3d8f8a9',
     'owner_subagent_processes.py': '8805da8d99c7d5fe38db6c9a100fb86cc052e1c795418fd78284a5cb7a84d276',
+    'owner_dispatcher_mentor.py': 'b1143626aee7b74e1e3f8fa39d2035d4e29d0a5ec1882fae6efb8cab46260193',
 }
 
 def repair_bundle_paths(action,entrypoint,paths):

@@ -28,7 +28,7 @@ OLD_CALLBACK = 'b60c14db2b3dbef526daf45843aa96f11f70060c90b071a24f8b61ea7c9e1866
 NEW_CALLBACK = '93d082fe8f6180754ace4c0505a6dfb5c99ea0ed9a0cf10c494da5355f37d05a'
 OLD_CONFIG = '52e9252ac363679f52ef52c63f27253a4abcca56eca2c30c9c40a68e901bd490'
 NEW_CONFIG = '83d22d1b48c17eb23e3a7613709d4df9ea84c5a58044b29dff4ab86349aee341'
-DISPATCHER_SHA = '66afe5e6aa5e3a333c21a86c6aee942c3afd0bf9be007d14f9288a4740281e32'
+DISPATCHER_SHA = '9ae0c67523967756206a0da31d1a1cab65281dc2f4f28989f2156cd27da43a21'
 POLICY_SHA = '84780aaf911a229a654995f38972cdad5d99c72ab38842f76f787ec280acb46f'
 PRIOR_REQUEST = '6907376498'
 PRIOR_SOURCE = '6c2d82701ead34c50311b14a48c4b01278ba2879'
@@ -45,12 +45,15 @@ NEW_DEPENDENCIES = {
     'owner_autonomy_pool.py': 'c4f0a178d22f47c1e1b2575f6b9c3280165eb0cf13920053c7b427ada3d8f8a9',
     'owner_subagent_dispatcher.py': NEW_CALLBACK,
 }
+OLD_MENTOR_SHA = '12211a29f77de8e5181d4dd78c35d5da2ed5de0dc6ea529149d32f0896809292'
+NEW_MENTOR_SHA = 'b1143626aee7b74e1e3f8fa39d2035d4e29d0a5ec1882fae6efb8cab46260193'
 ASSETS = {
     'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
     'owner_subagent_install_entry.py': 'a210182012d8872390b27a1f0fa8a5668016f06cd94d5557aad2b242d67eb806',
     'owner_subagent_dispatcher_fresh.py': NEW_CALLBACK,
     'owner_subagent_processes.py': NEW_DEPENDENCIES['owner_subagent_processes.py'],
     'owner_autonomy_pool.py': NEW_DEPENDENCIES['owner_autonomy_pool.py'],
+    'owner_dispatcher_mentor.py': NEW_MENTOR_SHA,
 }
 HANDLER = 'owner_native_subagent_review'
 TASKS = {'owner.native.v06.' + role + '.84780aaf911a' for role in ('runtime', 'memory', 'weights')}
@@ -100,11 +103,13 @@ def checked_config(raw):
 
 
 def check_sources(h, callback_sha=OLD_CALLBACK, config_sha=OLD_CONFIG,
-                  module_pins=OLD_DEPENDENCIES):
+                  module_pins=OLD_DEPENDENCIES, mentor_sha=OLD_MENTOR_SHA):
     require(digest(h.read(h.DISPATCHER)) == DISPATCHER_SHA, 'DISPATCHER_PREIMAGE')
     require(digest(h.read(h.SUPERVISOR_CONFIG, 32768)) == h.SUPERVISOR_SHA, 'SUPERVISOR_PREIMAGE')
     for name, pin in {**h.DEPENDENCY_PINS, **module_pins}.items():
         expected = callback_sha if name == 'owner_subagent_dispatcher.py' else pin
+        if name == 'owner_dispatcher_mentor.py':
+            expected = mentor_sha
         require(digest(h.read(h.SCRIPTS/name)) == expected, 'NATIVE_SOURCE_PIN')
     require(digest(h.read(h.ROOT/'config/owner_native_subagents.json')) == config_sha, 'CONFIG_PREIMAGE')
     require(digest(h.read(h.STATE/'dispatcher/policies/NOX_WEB_WEIGHTS_V06.md', 65536)) == POLICY_SHA,
@@ -269,6 +274,17 @@ def rollback_files(h, file_transitions):
             'ROLLBACK_READBACK')
 
 
+def resource_admission(h):
+    """Fail closed below the existing RAM and disk maintenance floor."""
+    try:
+        current = int(Path('/sys/fs/cgroup/memory.current').read_text())
+        maximum = int(Path('/sys/fs/cgroup/memory.max').read_text())
+        disk = os.statvfs(str(h.ROOT))
+        return maximum - current >= 4 * 1024**3 and disk.f_bavail * disk.f_frsize >= 1024**3
+    except (OSError, ValueError, TypeError):
+        return False
+
+
 def main():
     request, source = os.environ.get('NOX_OWNER_REQUEST_ID', ''), os.environ.get('NOX_OWNER_SOURCE_SHA', '')
     require(re.fullmatch(r'\d{1,24}', request) and re.fullmatch('[a-f0-9]{40}', source), 'OWNER_CONTEXT')
@@ -283,18 +299,24 @@ def main():
     target, config = h.SCRIPTS/'owner_subagent_dispatcher.py', h.ROOT/'config/owner_native_subagents.json'
     pool_target = h.SCRIPTS/'owner_autonomy_pool.py'
     process_target = h.SCRIPTS/'owner_subagent_processes.py'
+    mentor_target = h.SCRIPTS/'owner_dispatcher_mentor.py'
     before_module, before_config = h.read(target), h.read(config)
     before_pool, before_process = h.read(pool_target), h.read(process_target)
+    before_mentor = h.read(mentor_target)
+    require(digest(before_mentor) == OLD_MENTOR_SHA, 'MENTOR_PREIMAGE')
     updated_config = checked_config(before_config)
     file_transitions = {
         pool_target: (before_pool, assets['owner_autonomy_pool.py']),
         process_target: (before_process, assets['owner_subagent_processes.py']),
         target: (before_module, candidate),
         config: (before_config, updated_config),
+        mentor_target: (before_mentor, assets['owner_dispatcher_mentor.py']),
     }
-    require(not h.global_stop() and h.active_model() == CHAT, 'STOP_OR_CHAT_IDENTITY')
+    chat_before = h.active_model()
+    require(not h.global_stop() and chat_before is not None, 'STOP_OR_CHAT_IDENTITY')
     health = h.health()
     require(health == {'8080': 200, '8081': 200, '8082': 200}, 'CORE_HEALTH')
+    require(resource_admission(h), 'RESOURCE_HEADROOM')
     lease = os.open(h.STATE/'owner_maintenance.lock', os.O_RDWR | os.O_NOFOLLOW)
     try:
         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -308,6 +330,7 @@ def main():
     note = ('NOX_SUBAGENT_FRESH_GATE ' + request + ' ' + source + '\n').encode()
     result = {'schema': 'NOX_NATIVE_SUBAGENT_FRESH_GATE_INSTALL_V1', 'request': request,
               'source_sha': source, 'state': 'PREFLIGHT', 'started_at': time.time(),
+              'chat_identity_before': chat_before,
               'callback_before_sha256': OLD_CALLBACK, 'callback_after_sha256': NEW_CALLBACK,
               'config_before_sha256': OLD_CONFIG, 'config_after_sha256': NEW_CONFIG,
               'module_preimages_sha256': {path.name: digest(pair[0]) for path, pair in file_transitions.items()},
@@ -352,7 +375,7 @@ def main():
         for path, (_, replacement) in file_transitions.items():
             h.atomic(path, replacement)
             require(digest(h.read(path)) == digest(replacement), 'INSTALL_READBACK')
-        check_sources(h, NEW_CALLBACK, NEW_CONFIG, NEW_DEPENDENCIES)
+        check_sources(h, NEW_CALLBACK, NEW_CONFIG, NEW_DEPENDENCIES, NEW_MENTOR_SHA)
         rc = h.command(['supervisorctl', 'start', h.SERVICE], 30)[0]
         stopped = h.service()['state'] == 'STOPPED'
         require(rc == 0 and h.service()['state'] == 'RUNNING', 'DIRECTOR_START')
@@ -368,10 +391,12 @@ def main():
         require(after_proofs == before_proofs, 'HISTORICAL_TASKS_CHANGED')
         training_after = training_snapshot(h)
         preserve_training(training_before, training_after)
-        require(h.active_model() == CHAT and h.health() == health and not h.global_stop(), 'CORE_CHANGED_OR_STOP')
-        check_sources(h, NEW_CALLBACK, NEW_CONFIG, NEW_DEPENDENCIES)
+        require(h.active_model() == chat_before and h.health() == health and not h.global_stop(), 'CORE_CHANGED_OR_STOP')
+        check_sources(h, NEW_CALLBACK, NEW_CONFIG, NEW_DEPENDENCIES, NEW_MENTOR_SHA)
         require(h.read(flag, 4096) == note, 'MAINTENANCE_OWNERSHIP')
         result.update(state='FRESH_GATE_INSTALLED_HISTORY_PRESERVED', acceptance=status,
+                      mentor_file_readback_sha256=digest(h.read(mentor_target)),
+                      mentor_reload_director_pid=status['director_pid'],
                       completed_reviews_after=after_proofs, training_after=training_after,
                       training_configuration_and_flags_preserved=True,
                       training_process_identity_same=training_before['process'] == training_after['process'],
