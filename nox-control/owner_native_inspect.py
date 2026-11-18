@@ -279,7 +279,13 @@ def leaf_queue_summary():
                     if isinstance(leaf,dict):
                         row['leaf']=scalar_projection(leaf,('operation','queue_id','parent_task_id','original_task_accepted','scope','check_completed','check_passed','claim','started_at','finished_at','source_sha256','model_called'))
                         row['leaf_sha_matches']=hashlib.sha256(encoded(leaf)).hexdigest()==event.get('leaf_evidence_sha256')
-                        row['leaf']['blockers']=[identifier(x) for x in leaf.get('blockers',[])[:20]]
+                        blockers = leaf.get('blockers', [])
+                        valid_blockers = (
+                            isinstance(blockers, list) and len(blockers) <= 1000
+                            and all(identifier(item) is not None for item in blockers)
+                        )
+                        row['leaf']['blockers'] = blockers[:20] if valid_blockers else ['UNKNOWN_BLOCKERS_SCHEMA']
+                        row['leaf']['blockers_schema_valid'] = valid_blockers
                         worker=leaf.get('worker')
                         row['leaf']['worker']=scalar_projection(worker,('pid','ppid','process_starttime')) if isinstance(worker,dict) else None
                 row['s03']=s03_receipt_check(receipt)
