@@ -15,7 +15,8 @@ def example():
     for task, status, delay in [("t1", "PASS", 20), ("t2", "TIMEOUT", 1000), ("t3", "FAIL", 35)]:
         run["outcomes"].append(dict(task_id=task, status=status, latency_ms=delay,
             peak_rss_bytes=512, output_tokens=12, history_saved=True,
-            background_completed=True, trace_sha256=H))
+            background_completed=True, trace_sha256=H,
+            expected_full_input_sha256=H, served_full_input_sha256=H))
     return run
 
 class PairedReceiptTests(unittest.TestCase):
@@ -50,7 +51,7 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(out["candidate"]["p95_latency_ms_all_tasks"],1450)
     def test_reported_pass_over_budget_counts_as_failure(self):
         b=example();c=copy.deepcopy(b)
-        c["outcomes"][0]["latency_ms"]=1001  # alleged PASS, but over 1000ms budget
+        c["outcomes"][0]["latency_ms"]=1001
         out=compare_paired(b,c)
         self.assertTrue(out["comparable"])
         self.assertEqual(out["baseline"]["passed"],1)
@@ -91,5 +92,15 @@ class PairedReceiptTests(unittest.TestCase):
     def test_order_drift_holds(self):
         b=example();c=example();c["declared_task_ids"].reverse()
         self.assertEqual(compare_paired(b,c)["reason"],"TASK_ORDER_MISMATCH")
+    def test_serving_truncation_holds(self):
+        b=example();c=example();c["outcomes"][0]["served_full_input_sha256"]="b"*64
+        self.assertEqual(compare_paired(b,c)["reason"],"INPUT_TRUNCATED_OR_MODIFIED")
+    def test_changed_full_input_holds(self):
+        b=example();c=example();c["outcomes"][1]["expected_full_input_sha256"]="b"*64
+        c["outcomes"][1]["served_full_input_sha256"]="b"*64
+        self.assertEqual(compare_paired(b,c)["reason"],"FULL_INPUT_DIFFERENCE")
+    def test_missing_input_evidence_holds(self):
+        b=example();c=example(); del c["outcomes"][0]["served_full_input_sha256"]
+        self.assertEqual(compare_paired(b,c)["reason"],"FULL_INPUT_PIN")
 
 if __name__ == '__main__': unittest.main()
