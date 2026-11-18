@@ -60,6 +60,10 @@ CHECKS = {'resource_admission', 'identity', 'checkpoint_lineage', 'result_verifi
           'existing_authorization', 'rollback', 'privacy', 'dependency_readiness',
           'duplicate_execution', 'insufficient_evidence'}
 ASSESSMENTS = {'PROCEED_WITH_EXISTING_GUARDS', 'HOLD_FOR_REVIEW', 'INSUFFICIENT_EVIDENCE'}
+## This built-in provider list is metered. Owner policy: no paid API calls.
+## Re-enable only through a separately reviewed source change; no env/key bypass.
+PAID_PROVIDER_EGRESS_ALLOWED = False
+
 DEFAULT_CONFIG = {
     'schema': SCHEMA, 'enabled': True, 'providers': list(PROVIDERS),
     'minimum_verified_providers': 1, 'allowed_handlers': HANDLERS,
@@ -332,6 +336,8 @@ def status():
     """Read-only, secret-free status. Configured does not mean callable."""
     base = {'schema': CONTRACT, 'models_consulted': 0, 'research_state': 'INTERNET_RESEARCH_NOT_PERFORMED',
             'private_content_export_enabled': False, 'advice_execution_enabled': False}
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {**base, 'state': 'NO_PAID_API_POLICY', 'providers': {}}
     try:
         config = _config()
         if config is None:
@@ -500,6 +506,8 @@ def advice_candidate(text):
 
 async def _request(provider, credential, prompt, config, verification=False):
     """One request, no retries or redirects; total deadline bounds all I/O."""
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {'state': 'NO_PAID_API_POLICY'}
     async def perform():
         import httpx
         url, headers, body = request_contract(provider, credential, prompt, config, verification)
@@ -757,6 +765,8 @@ def set_credential(provider, value):
 
 def verify_access(provider=None):
     """Explicit paid, synthetic API check. No host context or user text is sent."""
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {'state': 'NO_PAID_API_POLICY', 'models_verified': 0}
     config = _config()
     if config is None or not config['enabled']:
         return {'state': 'DISABLED', 'models_verified': 0}
