@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 import time
 import unittest
@@ -28,6 +29,15 @@ ADVICE = json.dumps({'assessment': 'HOLD_FOR_REVIEW', 'check_categories': ['resu
 
 class GatewayTests(unittest.TestCase):
     def setUp(self):
+        self.admission_calls = 0
+        def admit():
+            self.admission_calls += 1
+            return None
+        mentor = type('MentorAdmission', (), {})()
+        mentor.advisor_resource_admission_hold = admit
+        self.mentor_binding = patch.dict(sys.modules, {'owner_dispatcher_mentor': mentor})
+        self.mentor_binding.start()
+        self.addCleanup(self.mentor_binding.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.root_patch = patch.object(gateway, 'ROOT', self.root)
@@ -58,6 +68,7 @@ class GatewayTests(unittest.TestCase):
         with patch.object(gateway, '_request', self.verified):
             result = gateway.verify_access()
         self.assertEqual(result['models_verified'], 3)
+        self.assertGreater(self.admission_calls, 0)
         self.assertEqual(gateway.status()['state'], 'READY')
         return config
 
@@ -152,6 +163,17 @@ class GatewayTests(unittest.TestCase):
         config['max_output_tokens'] = 2048
         gateway._write('config/owner_senior_gateway.json', config)
         self.assertEqual(gateway.status()['verified_provider_count'], 0)
+
+    def test_verify_access_holds_without_resource_admission_before_provider_or_budget(self):
+        self.configure()
+        self.credentials()
+        with patch.dict(sys.modules, {'owner_dispatcher_mentor': None}), \
+                patch.object(gateway, '_request') as request:
+            with self.assertRaisesRegex(gateway.GatewayHold, 'HOLD_ADVISOR_RESOURCE_GATE_UNBOUND'):
+                gateway.verify_access('openai')
+        request.assert_not_called()
+        self.assertFalse((self.root / 'state/owner_senior/access.json').exists())
+        self.assertFalse((self.root / 'state/owner_senior/budget.json').exists())
 
     def test_failed_real_verification_never_certifies_access(self):
         self.ready(minimum_verified_providers=2)

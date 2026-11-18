@@ -755,6 +755,22 @@ def set_credential(provider, value):
     return {'state': 'CREDENTIAL_STORED', 'provider': provider, 'access_verified': False}
 
 
+def _require_resource_admission():
+    """Use the already-bound mentor gate; standalone CLI has no admission context."""
+    mentor = sys.modules.get('owner_dispatcher_mentor')
+    verify = getattr(mentor, 'advisor_resource_admission_hold', None)
+    if not callable(verify):
+        raise GatewayHold('HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+    try:
+        hold = verify()
+    except Exception:
+        raise GatewayHold('HOLD_ADVISOR_RESOURCE_GATE_FAILED')
+    if hold:
+        if not isinstance(hold, str) or not re.fullmatch(r'HOLD_[A-Z0-9_]+', hold):
+            hold = 'HOLD_ADVISOR_RESOURCE_GATE_FAILED'
+        raise GatewayHold(hold)
+
+
 def verify_access(provider=None):
     """Explicit paid, synthetic API check. No host context or user text is sent."""
     config = _config()
@@ -766,6 +782,7 @@ def verify_access(provider=None):
         return {'state': 'MISSING_CREDENTIALS', 'models_verified': 0}
     if importlib.util.find_spec('httpx') is None:
         return {'state': 'HTTP_CLIENT_MISSING', 'models_verified': 0}
+    _require_resource_admission()
     fd = _lock()
     if fd is None:
         return {'state': 'PENDING', 'models_verified': 0}
