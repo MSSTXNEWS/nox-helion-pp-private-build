@@ -152,7 +152,7 @@ def run_native(action,request_id):
                 valid_host=parsed_host.is_global
             except ValueError:
                 valid_host=(proxy_host==proxy_host.lower()
-                    and re.fullmatch(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+vast\\.ai',proxy_host) is not None)
+                    and re.fullmatch(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+vast\.ai',proxy_host) is not None)
         if (not valid_host or type(proxy_port) is not int
                 or not 1<=proxy_port<=65535):
             raise RuntimeError('HOLD_CURRENT_SSH_ROUTE')
