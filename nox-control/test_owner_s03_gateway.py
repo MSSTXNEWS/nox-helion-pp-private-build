@@ -398,6 +398,22 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(backup.execute('SELECT text FROM s03_items WHERE id=?',('wal',)).fetchone()[0],'PRIVATE_WAL_RECORD')
         self.assertNotIn('PRIVATE_WAL_RECORD',json.dumps(result));c.close()
 
+    def test_failed_snapshot_readback_is_not_published_and_can_retry(self):
+        destination=self.root/'retry-after-failed-backup.sqlite'
+        source_before=g.file_sha(self.db)
+        # The failure occurs after SQLite has already written the private
+        # backup, but before its SHA can be verified and published.
+        with patch.object(g,'file_sha',side_effect=RuntimeError('READBACK_FAULT')):
+            with self.assertRaisesRegex(RuntimeError,'READBACK_FAULT'):
+                g.snapshot_database(self.db,destination)
+        self.assertFalse(destination.exists())
+        self.assertEqual(list(self.root.glob('.s03-backup-*.partial')),[])
+        self.assertEqual(g.file_sha(self.db),source_before)
+        result=g.snapshot_database(self.db,destination)
+        self.assertEqual(result['sha256'],g.file_sha(destination))
+        with sqlite3.connect(destination) as restored:
+            self.assertEqual(restored.execute('PRAGMA quick_check').fetchone()[0],'ok')
+
     def test_migration_keeps_sources_byte_identical_and_dialog_provenance(self):
         legacy=self.root/'cores';(legacy/'C01').mkdir(parents=True)
         path=legacy/'C01/ltm.sqlite'
