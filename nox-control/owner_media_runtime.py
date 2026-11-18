@@ -780,7 +780,12 @@ def lookup_media_request(owner, client_request_id):
 
 def ingest_media_tasks(state):
     count = 0
-    for path in sorted((ROOT / 'state/media/inbox').glob('*.json'))[:3]:
+    # Scan past durable inbox receipts for already-ingested or terminal jobs.
+    # Cap only NEW admissions; limiting the candidate scan to three starves
+    # later requests after three older inbox records survive in S03.
+    for path in sorted((ROOT / 'state/media/inbox').glob('*.json')):
+        if count >= 3:
+            break
         value = read_json(path)
         job_id = value.get('job_id') if isinstance(value, dict) else None
         if not isinstance(job_id, str) or not JOB_ID.fullmatch(job_id) or path.stem != job_id:
