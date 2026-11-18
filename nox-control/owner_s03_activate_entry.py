@@ -32,8 +32,8 @@ except NameError:BUNDLE={}
 ROOT=Path('/root/nox');SCRIPTS=ROOT/'scripts';STATE=ROOT/'state'
 HELPER_SHA='b3d1887b92cb805076301f6631e56b6e42c48e7dae02d62f2a272c10669644e0'
 PREPARE_GATEWAY_SHA='40caff3109111d971ff2d37cb81c0c2050ead08ae42d1f631a245778dd1a7a4d'
-GATEWAY_SHA='cb7f373cf2d3c4f01d47ed4ef0c48b0a89af7a05eb92a06530752c40453fdf20'
-REINDEX_ENTRY_SHA='8fceef538e00e0c6f240e2cd95c7b046f3d3c0c33093d6da6d790d350f1ef6c4'
+GATEWAY_SHA='20b9f6b4ad504671eaee24c3a27a44d3a9dd74e6279af463779421da2ee16f0b'
+REINDEX_ENTRY_SHA='1ca061458b8c5a59ce425567ec08153b53ef84ddabc1e5235e3a2ce043017732'
 S03_BEFORE='82c592ea5a59281fb5fc1061d133ac4e149b8e95a6d0947a254882715cba7f91'
 S03_AFTER='3ebdc3585f32bafbd0e1210ceee286b174a657c37696e16fce9fcafb57c43e10'
 DISPATCHER_BEFORE='d4e665915ae2a9f0be8ae4603be3768467e0f88be876e408465c3a7cc156c243'
@@ -154,6 +154,8 @@ def verify_reindex(request,source,expected_sha,gateway):
         fail('HOLD_S03_REINDEX_NO_LONGER_CURRENT')
     return {'schema':reindex.SCHEMA,'request':request,'source_sha':source,'receipt_sha256':expected_sha,
             'state':value['state'],'gateway_sha256':GATEWAY_SHA,
+            'snapshot_manifest_sha256':value['snapshot_manifest_sha256'],
+            'canonical_staging_restore':value['canonical_staging_restore'],
             'model_identity':value['content_identity']['identity'],
             'model_content_sha256':value['content_identity']['content_sha256'],
             'indexed_in_action':value['indexed_in_action'],'current_embeddings':current['current_embeddings'],
