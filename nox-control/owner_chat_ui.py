@@ -54,7 +54,7 @@ class _ActiveOwnerTagScanner(HTMLParser):
             if isinstance(src, str):
                 for name in _OWNER_SCRIPTS:
                     if re.fullmatch(r'/nox-web-v29/' + re.escape(name)
-                                    + r'(?:\?[^"\'<>]*)?', src, re.I):
+                                    + r'(?:\?[^"\'<>]*)?', src):
                         self.script_seen.add(name)
 
     def handle_endtag(self, tag):
