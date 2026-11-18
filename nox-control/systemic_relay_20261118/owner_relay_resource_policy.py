@@ -121,7 +121,8 @@ def evaluate_resources(snapshot, demand, *, now=None):
     # Reclaimable page-cache is an estimate, not immediately free allocation.
     # Keep a hard raw cgroup buffer for the interactive chat before new work.
     raw_headroom = budget['max_bytes'] - budget['current_bytes']
-    raw_floor = max(512 * MIB, budget['sandbox_limit_bytes'] + budget['planner_reserve_bytes'])
+    # Cover the full 3-worker reservation plus an independent 512-MiB chat buffer.
+    raw_floor = reserve + 512 * MIB
     if raw_headroom < raw_floor:
         return _hold('HOLD_RELAY_RAW_CGROUP_HEADROOM',
                      raw_headroom_bytes=raw_headroom, required_raw_headroom_bytes=raw_floor)

@@ -25,12 +25,12 @@ jobs:
           spec=importlib.util.spec_from_file_location('a5_policy',str(p))
           m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
           limit=194065203200; now=time.time()
-          def evaluate(raw_free):
+          def evaluate(raw_free, sandbox_mib=256):
               b=dict(schema='NOX_BOUNDED_CPU_BUDGET_V1',source='cgroup_v2',
                      instance_id=60509551, observed_at=now, worker_slots=3,
                      current_bytes=limit-raw_free, max_bytes=limit,
                      inactive_file_bytes=8*m.GIB, file_bytes=12*m.GIB, shmem_bytes=m.GIB,
-                     sandbox_limit_bytes=256*m.MIB, planner_reserve_bytes=128*m.MIB,
+                     sandbox_limit_bytes=sandbox_mib*m.MIB, planner_reserve_bytes=128*m.MIB,
                      minimum_headroom_bytes=2*m.GIB, memory_psi_some_avg10=0.0,
                      memory_psi_full_avg10=0.0,cpu_pressure=0.0)
               snap=dict(instance_id=60509551,stop_active=False,native_verified=True,
@@ -39,10 +39,14 @@ jobs:
               demand=dict(lane='cpu',paid_api_calls=0,budget=dict(cpu_seconds=10,
                            max_model_turns=0,max_searches=0,max_output_bytes=4096))
               return m.evaluate_resources(snap,demand,now=now)
-          low=evaluate(16*m.MIB)
-          assert low['admit'] is False and low['reason']=='HOLD_RELAY_RAW_CGROUP_HEADROOM',low
-          assert low['required_raw_headroom_bytes']==512*m.MIB,low
-          sufficient=evaluate(512*m.MIB)
-          assert sufficient['admit'] is True and sufficient['raw_headroom_bytes']==512*m.MIB,sufficient
-          print('A5_FOCUSED_RAW_HEADROOM_BOUNDARY=2/2 PASS; SOURCE_ONLY; NO_NATIVE_ACTIONS')
+          for sandbox_mib in (256,512):
+              reserve=3*(max(256,sandbox_mib)+128)*m.MIB
+              required=reserve+512*m.MIB
+              low=evaluate(16*m.MIB,sandbox_mib)
+              assert low['admit'] is False and low['reason']=='HOLD_RELAY_RAW_CGROUP_HEADROOM',low
+              short=evaluate(required-1,sandbox_mib)
+              assert short['admit'] is False and short['required_raw_headroom_bytes']==required,short
+              enough=evaluate(required,sandbox_mib)
+              assert enough['admit'] is True and enough['raw_headroom_bytes']==required,enough
+          print('A5_FOCUSED_THREE_WORKER_RAW_BUFFER_BOUNDARY=6/6 PASS; SOURCE_ONLY; NO_NATIVE_ACTIONS')
           PY
