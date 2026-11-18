@@ -447,6 +447,9 @@ class Native:
         reason = resource_wait_reason(snapshot)
         if reason:
             raise autonomy.AutoHold(reason)
+        snapshot['resource_admission_allowed'] = True
+        snapshot['resource_admission_observed_at'] = time.time()
+        snapshot['resource_admission_snapshot_sha256'] = autonomy.fingerprint(snapshot)
         return snapshot
 
     def _fresh_admission_reason(self):
@@ -481,9 +484,17 @@ class Native:
         if count != 3 or self.stop_active():
             return False
         with self.lock:
+            if self.pool is not None:
+                self._drain()
+                if len(self.process_readback()) != 3:
+                    # Replace the pool only after all task-bound results have
+                    # been drained and no worker owns an uncertain in-flight job.
+                    if self.pool.active:
+                        return False
+                    self.close_pool()
             if self.pool is None:
-                # Start only for real ready jobs, never to inflate a PID count.
-                self.pool = Subagents(list(ROLES), timeout=60).__enter__()
+                self.pool = Subagents(list(ROLES), timeout=60,
+                                      worker_prepare=worker_input).__enter__()
             return len(self.process_readback()) == 3
 
     def process_readback(self):
@@ -491,13 +502,21 @@ class Native:
             if self.pool is None:
                 return []
             rows = []
+            now = time.time()
             for role, child in self.pool.processes.items():
                 identity = process_identity(child.pid)
-                if identity and child.is_alive() and identity['ppid'] == os.getpid():
-                    rows.append({**identity, 'role': role, 'native_pid_verified': True,
-                        'state': 'RUNNING', 'instance_id': 60509551, 'origin': 'existing_onehost',
-                        'heartbeat_at': self.pool.heartbeats.get(role),
-                        'current_task': self.pool.active.get(role)})
+                heartbeat = self.pool.heartbeats.get(role)
+                if (type(heartbeat) not in (int, float) or not math.isfinite(heartbeat)
+                        or identity is None or not child.is_alive()
+                        or identity['ppid'] != os.getpid()):
+                    continue
+                age = now - heartbeat
+                if not 0 <= age <= 600:
+                    continue
+                rows.append({**identity, 'role': role, 'native_pid_verified': True,
+                    'native_heartbeat_verified': True, 'heartbeat_age_seconds': age,
+                    'state': 'RUNNING', 'instance_id': 60509551, 'origin': 'existing_onehost',
+                    'heartbeat_at': heartbeat, 'current_task': self.pool.active.get(role)})
             return rows
 
     def native_duplicate_check(self, task_id):

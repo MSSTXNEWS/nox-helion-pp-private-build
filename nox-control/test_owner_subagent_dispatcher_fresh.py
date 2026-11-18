@@ -3,6 +3,7 @@ from pathlib import Path
 import importlib.util
 import json
 import threading
+import time
 import types
 import unittest
 from unittest.mock import Mock, patch
@@ -58,6 +59,69 @@ def native_with_pool():
             'owner_claim': {'nonce': 'a' * 24},
             'params': {'role': 'runtime', 'policy_sha256': 'a' * 64, 'job_id': 'review-job'}}
     return native, task
+
+
+class PoolLifecycleTests(unittest.TestCase):
+    class Child:
+        def __init__(self, pid, alive=True):
+            self.pid, self.alive = pid, alive
+        def is_alive(self):
+            return self.alive
+
+    def native(self, active=None, heartbeats=None):
+        value = binding.Native.__new__(binding.Native)
+        value.lock = threading.RLock()
+        value.stop_active = Mock(return_value=False)
+        value.completed = {'kept': {'id': 'kept', 'state': 'CANDIDATE_NOT_APPLIED'}}
+        value.interrupted = {}
+        children = {role: self.Child(100+i) for i, role in enumerate(binding.ROLES)}
+        value.pool = Mock()
+        value.pool.processes = children
+        value.pool.active = active or {}
+        value.pool.heartbeats = heartbeats or {role: time.time() for role in binding.ROLES}
+        value.pool.poll.return_value = None
+        value.pool.__exit__ = Mock()
+        return value, children
+
+    def test_process_readback_reports_fresh_heartbeat_proof(self):
+        native, children = self.native()
+        identities = {child.pid: {'pid': child.pid, 'ppid': 999, 'process_starttime': child.pid+1}
+                      for child in children.values()}
+        with patch.object(binding, 'process_identity', side_effect=lambda pid: identities[pid]), \
+             patch.object(binding.os, 'getpid', return_value=999):
+            rows = native.process_readback()
+        self.assertEqual(len(rows), 3)
+        self.assertTrue(all(row['native_heartbeat_verified'] is True for row in rows))
+        self.assertTrue(all(0 <= row['heartbeat_age_seconds'] <= 600 for row in rows))
+
+    def test_idle_failed_worker_restarts_pool_and_preserves_parent_results(self):
+        native, children = self.native()
+        children['runtime'].alive = False
+        native.close_pool = binding.Native.close_pool.__get__(native, binding.Native)
+        new = Mock()
+        new.processes = {role: self.Child(200+i) for i, role in enumerate(binding.ROLES)}
+        new.active = {}
+        new.heartbeats = {role: time.time() for role in binding.ROLES}
+        new.poll.return_value = None
+        identities = {child.pid: {'pid': child.pid, 'ppid': 999, 'process_starttime': child.pid+1}
+                      for child in new.processes.values()}
+        with patch.object(binding, 'process_identity', side_effect=lambda pid: identities.get(pid.pid if hasattr(pid, 'pid') else pid)), \
+             patch.object(binding.os, 'getpid', return_value=999), \
+             patch.object(binding, 'Subagents') as ctor:
+            ctor.return_value.__enter__.return_value = new
+            self.assertTrue(native.ensure_processes(3))
+        ctor.assert_called_once_with(list(binding.ROLES), timeout=60, worker_prepare=binding.worker_input)
+        self.assertEqual(native.completed['kept']['id'], 'kept')
+
+    def test_active_worker_failure_holds_without_pool_replacement(self):
+        native, children = self.native(active={'runtime': 'job-1'})
+        children['runtime'].alive = False
+        with patch.object(binding, 'process_identity', return_value=None), \
+             patch.object(binding.os, 'getpid', return_value=999), \
+             patch.object(binding, 'Subagents') as ctor:
+            self.assertFalse(native.ensure_processes(3))
+        ctor.assert_not_called()
+        self.assertIn('runtime', native.pool.processes)
 
 
 class FreshSubmissionTests(unittest.TestCase):
