@@ -10,10 +10,14 @@ This module is not auto-installed and does not bypass owner STOP/writer lease.
 from __future__ import annotations
 
 import json
+import ctypes
+import math
 import multiprocessing as mp
 import os
 import queue
 import re
+import signal
+import sys
 import threading
 import time
 import urllib.request
@@ -25,6 +29,10 @@ SAFE_ROLE = re.compile(r'^[A-Za-z][A-Za-z0-9_.-]{0,63}$')
 MAX_TASK_TEXT_BYTES = 8192
 MAX_OUTPUT_BYTES = 16384
 HOSTS = {'127.0.0.1', 'localhost'}
+DISPATCHER_CONTEXT_KEYS = {'policy', 'operation', 'claim'}
+POLICY_REFERENCE_KEYS = {'path', 'sha256'}
+CLAIM_ID = re.compile(r'^[a-f0-9]{24}$')
+SHA256 = re.compile(r'^[a-f0-9]{64}$')
 # The original pool has one outbox. Never reuse it across batches: a failed
 # long-running request may leave an old RESULT with a replayed TaskID.
 _POOL_CLAIM_LOCK = threading.Lock()
@@ -115,18 +123,89 @@ def _model_reply(task, url, timeout):
     return answer
 
 
-def _worker(role, inbox, outbox, local_model_url, timeout):
+def _arm_parent_death_signal(expected_parent_pid):
+    """Arrange prompt child exit when the dispatcher parent disappears."""
+    if os.getppid() != expected_parent_pid:
+        os._exit(70)
+    if sys.platform == 'linux':
+        libc = ctypes.CDLL(None, use_errno=True)
+        if libc.prctl(1, signal.SIGTERM, 0, 0, 0) != 0:  # PR_SET_PDEATHSIG
+            err = ctypes.get_errno()
+            raise OSError(err, os.strerror(err))
+        # Close the race where the parent exits between getppid() and prctl().
+        if os.getppid() != expected_parent_pid:
+            os._exit(70)
+
+
+def _watch_parent(role, pid, expected_parent_pid, outbox, stopped):
+    """Emit epoch heartbeats and bound non-Linux parent-death detection."""
+    while not stopped.wait(1.0):
+        if os.getppid() != expected_parent_pid:
+            os._exit(70)
+        try:
+            outbox.put({'kind': 'HEARTBEAT', 'role': role, 'pid': pid,
+                        'at': time.time()})
+        except (OSError, ValueError):
+            return
+
+
+def _worker(role, inbox, outbox, local_model_url, timeout,
+            worker_prepare=None, expected_parent_pid=None):
     # These are CPU/IPC subagent processes; the existing NOX model stays on GPU0.
     os.environ['CUDA_VISIBLE_DEVICES'] = ''
+    if expected_parent_pid is not None:
+        try:
+            _arm_parent_death_signal(expected_parent_pid)
+        except OSError:
+            return
     outbox.put({'kind':'READY','role':role,'pid':os.getpid()})
+    heartbeat_stop = None
+    if worker_prepare is not None:
+        heartbeat_stop = threading.Event()
+        threading.Thread(target=_watch_parent,
+                         args=(role, os.getpid(), expected_parent_pid, outbox, heartbeat_stop),
+                         name='NOX_SUBAGENT_HEARTBEAT_'+role, daemon=True).start()
     while True:
-        item = inbox.get()
+        try:
+            item = inbox.get(timeout=1 if worker_prepare is not None else None)
+        except queue.Empty:
+            continue
         if item is None:
+            if heartbeat_stop is not None:
+                heartbeat_stop.set()
             return
         started = time.monotonic()
         try:
+            native_observation = None
+            if worker_prepare is not None:
+                prepared, native_observation = worker_prepare(item)
+                context = item.get('_native_context')
+                ack = (native_observation.get('policy_ack')
+                       if isinstance(native_observation, dict) else None)
+                worker = (native_observation.get('worker')
+                          if isinstance(native_observation, dict) else None)
+                if (not isinstance(prepared, dict)
+                        or prepared.get('id') != item.get('id')
+                        or prepared.get('subagent') != item.get('subagent')
+                        or prepared.get('depends_on') != item.get('depends_on')
+                        or prepared.get('_native_context') != context
+                        or not isinstance(prepared.get('task'), str)
+                        or len(prepared['task'].encode('utf-8')) > MAX_TASK_TEXT_BYTES
+                        or not isinstance(context, dict)
+                        or not isinstance(ack, dict)
+                        or ack.get('sha256') != context.get('policy', {}).get('sha256')
+                        or ack.get('full_file_read') is not True
+                        or not isinstance(worker, dict)
+                        or worker.get('pid') != os.getpid()
+                        or native_observation.get('claim') != context.get('claim')
+                        or len(json.dumps(native_observation, ensure_ascii=False,
+                                          allow_nan=False).encode('utf-8')) > 65536):
+                    raise GateError('HOLD_SUBAGENT_WORKER_PROOF')
+                item = prepared
             result = _model_reply(item,local_model_url,timeout)
             out = {'state':'CANDIDATE_NOT_APPLIED','answer':result}
+            if worker_prepare is not None:
+                out['native_observation'] = native_observation
         except Exception as exc:
             out = {'state':str(exc) if isinstance(exc,GateError) else 'HOLD_SUBAGENT_EXCEPTION'}
         outbox.put({'kind':'RESULT','role':role,'pid':os.getpid(),
@@ -134,52 +213,269 @@ def _worker(role, inbox, outbox, local_model_url, timeout):
 
 
 class Subagents:
-    def __init__(self, roles, *, model_url='http://127.0.0.1:8081/v1/chat/completions', timeout=60):
+    def __init__(self, roles, *, model_url='http://127.0.0.1:8081/v1/chat/completions',
+                 timeout=60, worker_prepare=None):
         if not isinstance(roles,list) or not roles or any(not isinstance(x,str) or not SAFE_ROLE.fullmatch(x) for x in roles) or len(set(roles)) != len(roles):
             raise GateError('HOLD_ROLE_ID')
         if not isinstance(timeout,(int,float)) or not 1 <= timeout <= 300:
             raise GateError('HOLD_TIMEOUT')
+        if worker_prepare is not None and (
+                not callable(worker_prepare)
+                or getattr(worker_prepare, '__module__', None) != 'owner_subagent_dispatcher'
+                or getattr(worker_prepare, '__name__', None) != 'worker_input'):
+            raise GateError('HOLD_SUBAGENT_WORKER_PREPARE')
         self.roles = roles
         self.url = model_url
         self.timeout = timeout
+        self.worker_prepare = worker_prepare
+        self._persistent = worker_prepare is not None
         self.ctx = mp.get_context('spawn')
+        self._abi_lock = threading.RLock()
+        self.active = {}
+        self.heartbeats = {}
+        self._active_started = {}
+        self._active_context = {}
+        self._submitted_ids = set()
+        self._terminal_ids = set()
+        self._pending_events = deque()
+        self._new_channels()
+
+    def _new_channels(self):
         self.outbox = self.ctx.Queue()
-        self.inboxes = {r:self.ctx.Queue() for r in roles}
+        self.inboxes = {r:self.ctx.Queue() for r in self.roles}
         self.processes = {}
+        self.heartbeats = {}
 
     def __enter__(self):
         try:
-            for role in self.roles:
-                p = self.ctx.Process(target=_worker,args=(role,self.inboxes[role],self.outbox,self.url,self.timeout),name='NOX_SUBAGENT_'+role)
-                p.start()
-                self.processes[role] = p
-            confirmed = {}
-            deadline = time.monotonic()+15
-            while len(confirmed) < len(self.roles):
-                left = deadline-time.monotonic()
-                if left <= 0:
-                    raise GateError('HOLD_SUBAGENT_PROCESS_START')
-                try:
-                    msg = self.outbox.get(timeout=min(left,1))
-                except queue.Empty:
-                    if not all(p.is_alive() for p in self.processes.values()):
-                        raise GateError('HOLD_SUBAGENT_PROCESS_EXIT')
-                    continue
-                if msg.get('kind')!='READY' or msg.get('role') not in self.processes:
-                    raise GateError('HOLD_SUBAGENT_READY_SCHEMA')
-                role = msg['role']
-                if role in confirmed or msg['pid'] != self.processes[role].pid:
-                    raise GateError('HOLD_SUBAGENT_PID_MISMATCH')
-                confirmed[role] = msg['pid']
-            if len(set(confirmed.values())) != len(self.roles):
-                raise GateError('HOLD_SUBAGENT_NONUNIQUE_PID')
+            self._start_workers()
             return self
         except BaseException:
             self.__exit__(None,None,None)
             raise
 
+    def _accept_heartbeat(self, msg):
+        if not isinstance(msg, dict) or msg.get('kind') != 'HEARTBEAT':
+            return False
+        role, pid, at = msg.get('role'), msg.get('pid'), msg.get('at')
+        process = self.processes.get(role)
+        if (process is None or pid != process.pid or type(at) not in (int, float)
+                or not math.isfinite(at) or at <= 0 or at > time.time()+5):
+            return True  # Consume malformed/stale heartbeat without treating it as work.
+        self.heartbeats[role] = max(float(at), self.heartbeats.get(role, 0.0))
+        return True
+
+    def _start_workers(self):
+        for role in self.roles:
+            p = self.ctx.Process(target=_worker,
+                args=(role,self.inboxes[role],self.outbox,self.url,self.timeout,
+                      self.worker_prepare,os.getpid()),
+                name='NOX_SUBAGENT_'+role)
+            p.start()
+            self.processes[role] = p
+        confirmed = {}
+        deadline = time.monotonic()+15
+        while len(confirmed) < len(self.roles):
+            left = deadline-time.monotonic()
+            if left <= 0:
+                raise GateError('HOLD_SUBAGENT_PROCESS_START')
+            try:
+                msg = self.outbox.get(timeout=min(left,1))
+            except queue.Empty:
+                if not all(p.is_alive() for p in self.processes.values()):
+                    raise GateError('HOLD_SUBAGENT_PROCESS_EXIT')
+                continue
+            if self._accept_heartbeat(msg):
+                continue
+            if not isinstance(msg, dict) or msg.get('kind')!='READY' or msg.get('role') not in self.processes:
+                raise GateError('HOLD_SUBAGENT_READY_SCHEMA')
+            role = msg['role']
+            if role in confirmed or msg.get('pid') != self.processes[role].pid:
+                raise GateError('HOLD_SUBAGENT_PID_MISMATCH')
+            confirmed[role] = msg['pid']
+        if len(set(confirmed.values())) != len(self.roles):
+            raise GateError('HOLD_SUBAGENT_NONUNIQUE_PID')
+
+    def _persistent_task(self, task):
+        if not self._persistent:
+            raise GateError('HOLD_SUBAGENT_DISPATCHER_MODE')
+        if (not isinstance(task, dict)
+                or set(task) != {'id', 'subagent', 'task', 'depends_on', '_native_context'}):
+            raise GateError('HOLD_SUBAGENT_TASK_SCHEMA')
+        tid, role, instruction = task['id'], task['subagent'], task['task']
+        context = task['_native_context']
+        if (not isinstance(tid, str) or not TASK_ID.fullmatch(tid)
+                or role not in self.roles or not isinstance(instruction, str)
+                or not instruction.strip() or len(instruction.encode('utf-8')) > MAX_TASK_TEXT_BYTES
+                or type(task['depends_on']) is not list or task['depends_on']):
+            raise GateError('HOLD_SUBAGENT_TASK_SCOPE')
+        if (not isinstance(context, dict) or set(context) != DISPATCHER_CONTEXT_KEYS
+                or context.get('operation') != role
+                or not isinstance(context.get('claim'), str)
+                or not CLAIM_ID.fullmatch(context['claim'])):
+            raise GateError('HOLD_SUBAGENT_NATIVE_CONTEXT')
+        policy = context.get('policy')
+        if (not isinstance(policy, dict) or set(policy) != POLICY_REFERENCE_KEYS
+                or not isinstance(policy.get('path'), str) or not policy['path'].startswith('/')
+                or not isinstance(policy.get('sha256'), str)
+                or not SHA256.fullmatch(policy['sha256'])):
+            raise GateError('HOLD_SUBAGENT_POLICY_REFERENCE')
+
+    def _failure(self, role, state):
+        tid = self.active.pop(role, None)
+        if tid is None or tid in self._terminal_ids:
+            return False
+        self._terminal_ids.add(tid)
+        started = self._active_started.pop(role, time.monotonic())
+        self._active_context.pop(role, None)
+        process = self.processes.get(role)
+        event = {'kind': 'RESULT', 'role': role,
+                 'pid': getattr(process, 'pid', None), 'id': tid,
+                 'elapsed_ms': max(0, round((time.monotonic()-started)*1000)),
+                 'state': state}
+        self._pending_events.append(event)
+        return True
+
+    def _notice_dead_workers(self):
+        for role, process in list(self.processes.items()):
+            try:
+                alive = process.is_alive()
+            except Exception:
+                alive = False
+            if not alive and role in self.active:
+                # A dead child may have completed the model call but failed
+                # before a complete IPC result was synchronized. Never accept
+                # a late queue fragment or replay this task.
+                self._failure(role, 'HOLD_SUBAGENT_PROCESS_EXIT')
+
+    def _replace_idle_dead_pool(self):
+        if all(process.is_alive() for process in self.processes.values()):
+            return
+        self._notice_dead_workers()
+        if self.active or self._pending_events:
+            raise GateError('HOLD_SUBAGENT_POOL_NOT_READY')
+        # The completed queue belongs to the dispatcher and is not touched.
+        # Replace all workers and IPC channels only after no task is active.
+        self.__exit__(None, None, None)
+        self._new_channels()
+        self._start_workers()
+
+    def submit(self, task):
+        """Submit one owner-claimed job; uncertain IDs stay fenced for pool life."""
+        self._persistent_task(task)
+        # Queue.put serializes asynchronously. Snapshot the exact admitted
+        # claim/policy before enqueue so a caller cannot mutate it afterward.
+        try:
+            task = json.loads(json.dumps(task, ensure_ascii=False, allow_nan=False))
+        except (TypeError, ValueError) as exc:
+            raise GateError('HOLD_SUBAGENT_TASK_SCHEMA') from exc
+        tid, role = task['id'], task['subagent']
+        with self._abi_lock:
+            if tid in self._submitted_ids or tid in self._terminal_ids:
+                raise GateError('HOLD_SUBAGENT_TASK_REUSE')
+            self._notice_dead_workers()
+            if self._pending_events:
+                raise GateError('HOLD_SUBAGENT_POOL_NOT_READY')
+            self._replace_idle_dead_pool()
+            if role in self.active:
+                raise GateError('HOLD_SUBAGENT_WORKER_BUSY')
+            process = self.processes.get(role)
+            if process is None or not process.is_alive():
+                raise GateError('HOLD_SUBAGENT_PROCESS_EXIT')
+            self._submitted_ids.add(tid)
+            self.active[role] = tid
+            self._active_started[role] = time.monotonic()
+            self._active_context[role] = task['_native_context']
+            try:
+                self.inboxes[role].put(task)
+            except Exception as exc:
+                self._failure(role, 'HOLD_SUBAGENT_SUBMIT_UNCERTAIN')
+                raise GateError('HOLD_SUBAGENT_SUBMIT_UNCERTAIN') from exc
+        return True
+
+    def _accept_result(self, event):
+        if not isinstance(event, dict):
+            if len(self.active) == 1:
+                self._failure(next(iter(self.active)), 'HOLD_SUBAGENT_RESULT_IDENTITY')
+                return self._pending_events.popleft()
+            for role in list(self.active):
+                self._failure(role, 'HOLD_SUBAGENT_RESULT_IDENTITY')
+            return self._pending_events.popleft() if self._pending_events else None
+        role = event.get('role')
+        if role not in self.active:
+            return None  # Stale RESULT from an already-fenced task.
+        assigned_id = self.active[role]
+        process = self.processes.get(role)
+        if (not process or not process.is_alive()
+                or event.get('kind') != 'RESULT'
+                or event.get('pid') != process.pid
+                or event.get('id') != assigned_id):
+            self._failure(role, 'HOLD_SUBAGENT_RESULT_IDENTITY')
+            return self._pending_events.popleft()
+        common = {'kind', 'role', 'pid', 'id', 'elapsed_ms', 'state'}
+        elapsed, state = event.get('elapsed_ms'), event.get('state')
+        valid = type(elapsed) is int and elapsed >= 0
+        if state == 'CANDIDATE_NOT_APPLIED':
+            answer = event.get('answer')
+            observation = event.get('native_observation')
+            task_context = getattr(self, '_active_context', {}).get(role)
+            ack = observation.get('policy_ack') if isinstance(observation, dict) else None
+            worker = observation.get('worker') if isinstance(observation, dict) else None
+            valid = (valid and set(event) == common | {'answer', 'native_observation'}
+                     and isinstance(answer, str) and bool(answer.strip())
+                     and len(answer.encode('utf-8')) <= MAX_OUTPUT_BYTES
+                     and isinstance(observation, dict)
+                     and isinstance(task_context, dict)
+                     and observation.get('claim') == task_context.get('claim')
+                     and isinstance(ack, dict)
+                     and ack.get('sha256') == task_context.get('policy', {}).get('sha256')
+                     and ack.get('full_file_read') is True
+                     and isinstance(worker, dict) and worker.get('pid') == process.pid)
+        elif isinstance(state, str) and state.startswith('HOLD_') and len(state) <= 128:
+            valid = valid and set(event) == common
+        else:
+            valid = False
+        if not valid:
+            self._failure(role, 'HOLD_SUBAGENT_RESULT_SCHEMA')
+            return self._pending_events.popleft()
+        self.active.pop(role, None)
+        self._active_started.pop(role, None)
+        self._active_context.pop(role, None)
+        self._terminal_ids.add(assigned_id)
+        return event
+
+    def poll(self, timeout=0):
+        """Return one task-bound event; heartbeat messages stay internal."""
+        if not self._persistent:
+            raise GateError('HOLD_SUBAGENT_DISPATCHER_MODE')
+        if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 <= timeout <= 300:
+            raise GateError('HOLD_SUBAGENT_POLL_TIMEOUT')
+        deadline = time.monotonic()+timeout
+        with self._abi_lock:
+            while True:
+                self._notice_dead_workers()
+                if self._pending_events:
+                    return self._pending_events.popleft()
+                left = deadline-time.monotonic()
+                if left <= 0 and timeout > 0:
+                    return None
+                try:
+                    event = (self.outbox.get_nowait() if timeout == 0
+                             else self.outbox.get(timeout=min(left, 0.25)))
+                except queue.Empty:
+                    if timeout == 0:
+                        return None
+                    continue
+                if self._accept_heartbeat(event):
+                    continue
+                accepted = self._accept_result(event)
+                if accepted is not None:
+                    return accepted
+
     def run(self,batch, *, stop_active, authorize, lease_current):
         """One request, any task count; only candidates, not queue/S03 commits."""
+        if getattr(self, '_persistent', False):
+            raise GateError('HOLD_SUBAGENT_DISPATCHER_MODE')
         tasks = validate(batch)
         if batch['subagents'] != self.roles:
             raise GateError('HOLD_BATCH_ROLE_DRIFT')
@@ -291,6 +587,9 @@ class Subagents:
             if p.is_alive():
                 p.terminate()
                 p.join(timeout=2)
+            if p.is_alive() and hasattr(p, 'kill'):
+                p.kill()
+                p.join(timeout=2)
         for q in [*self.inboxes.values(),self.outbox]:
             q.close()
 
@@ -299,3 +598,4 @@ if __name__=='__main__':
     # Only an explicit owner-native binding should ever call Subagents.run.
     # No CLI route accepts arbitrary instructions or bypasses STOP/lease.
     print('NOX_SUBAGENTS_SOURCE_AVAILABLE_NOT_NATIVE_INSTALLED')
+

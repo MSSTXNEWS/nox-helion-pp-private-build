@@ -250,6 +250,76 @@ class TestRealSubagentProcesses(unittest.TestCase):
         with self.assertRaisesRegex(GateError, 'HOLD_NONLOCAL'):
             _model_reply({'task': 'x'}, 'https://example.com/v1/chat/completions', 1)
 
+    def test_dispatcher_submit_poll_is_task_bound_and_never_replays(self):
+        # Exercise only the new persistent ABI with in-memory IPC; no model or
+        # child process is started by this focused contract check.
+        from collections import deque
+        from queue import Queue
+        from types import SimpleNamespace
+        import time
+
+        def worker_input(item):
+            raise AssertionError('worker_prepare belongs in the child')
+        worker_input.__module__ = 'owner_subagent_dispatcher'
+        claim = 'a' * 24
+        policy_sha = 'b' * 64
+        pid = 940
+        process = SimpleNamespace(pid=pid, alive=True)
+        process.is_alive = lambda: process.alive
+        pool = Subagents.__new__(Subagents)
+        pool.roles = ['runtime']
+        pool.timeout = 1
+        pool.worker_prepare = worker_input
+        pool._persistent = True
+        pool._abi_lock = threading.RLock()
+        pool.active = {}
+        pool.heartbeats = {}
+        pool._active_started = {}
+        pool._active_context = {}
+        pool._submitted_ids = set()
+        pool._terminal_ids = set()
+        pool._pending_events = deque()
+        pool.inboxes = {'runtime': Queue()}
+        pool.outbox = Queue()
+        pool.processes = {'runtime': process}
+        task = {'id': 'native-1', 'subagent': 'runtime', 'task': 'review',
+                'depends_on': [],
+                '_native_context': {'policy': {'path': '/owner/policy.md',
+                                               'sha256': policy_sha},
+                                    'operation': 'runtime', 'claim': claim}}
+        self.assertTrue(pool.submit(task))
+        self.assertEqual(pool.active, {'runtime': 'native-1'})
+        self.assertEqual(pool.inboxes['runtime'].get_nowait()['id'], 'native-1')
+        pool.outbox.put({'kind': 'HEARTBEAT', 'role': 'runtime', 'pid': pid,
+                         'at': time.time()})
+        observation = {'claim': claim,
+                       'policy_ack': {'sha256': policy_sha, 'full_file_read': True},
+                       'worker': {'pid': pid}}
+        pool.outbox.put({'kind': 'RESULT', 'role': 'runtime', 'pid': pid,
+                         'id': 'native-1', 'elapsed_ms': 4,
+                         'state': 'CANDIDATE_NOT_APPLIED', 'answer': 'candidate',
+                         'native_observation': observation})
+        event = pool.poll(timeout=0)
+        self.assertEqual(event['id'], 'native-1')
+        self.assertEqual(event['native_observation'], observation)
+        self.assertEqual(pool.active, {})
+        self.assertGreater(pool.heartbeats['runtime'], 0)
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TASK_REUSE'):
+            pool.submit(task)
+
+        task2 = {**task, 'id': 'native-2'}
+        self.assertTrue(pool.submit(task2))
+        self.assertEqual(pool.active, {'runtime': 'native-2'})
+        process.alive = False
+        failed = pool.poll(timeout=0)
+        self.assertEqual((failed['id'], failed['state']),
+                         ('native-2', 'HOLD_SUBAGENT_PROCESS_EXIT'))
+        self.assertEqual(pool.active, {})
+        self.assertIsNone(pool.poll(timeout=0))
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TASK_REUSE'):
+            pool.submit(task2)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
