@@ -60,6 +60,24 @@ class MediaCreateDedupIntegration(unittest.TestCase):
         self.assertNotEqual(media.create_job({'kind':'image','prompt':'same'},'alice')['id'],
                             media.create_job({'kind':'image','prompt':'same'},'alice')['id'])
 
+    def test_old_inbox_records_do_not_starve_a_new_job(self):
+        # Real inbox files are durable even after the task is integrated;
+        # three lexically earlier stale entries must not hide the next job.
+        inbox = self.root / 'state/media/inbox'
+        for char in ('0', '1', '2'):
+            job_id = char * 32
+            media.atomic(media.job_path(job_id), {
+                'id': job_id, 'state': 'COMPLETED', 'request': {'kind': 'image'}})
+            media.atomic(inbox / (job_id + '.json'), {'job_id': job_id})
+        fresh = 'f' * 32
+        media.atomic(media.job_path(fresh), {
+            'id': fresh, 'state': 'QUEUED', 'request': {'kind': 'image'}})
+        media.atomic(inbox / (fresh + '.json'), {'job_id': fresh})
+        state = {'tasks': {}}
+        self.assertEqual(media.ingest_media_tasks(state), 1)
+        self.assertIn('owner.media.' + fresh, state['tasks'])
+        self.assertEqual(len(list(inbox.glob('*.json'))), 4)
+
     def test_invalid_id_fails_closed(self):
         with self.assertRaisesRegex(media.MediaHold, 'INVALID_MEDIA_CLIENT_REQUEST_ID'):
             media.create_job(self.body(key='../'), 'alice')
