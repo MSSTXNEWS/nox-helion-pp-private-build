@@ -173,6 +173,7 @@ class MentorTests(unittest.TestCase):
             mentor.consult({'model': 'senior', 'endpoint': 'http://127.0.0.1:9000/v1/chat/completions'},
                            {'allowed_services': []}, idempotency_key='b' * 64)
         self.assertEqual(opener.request.get_header('Idempotency-key'), 'b' * 64)
+        self.assertEqual(self.advisor_native.read_calls, 1)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             task = {'id': 'durable-advisor', 'handler': 'verify_q4',
@@ -183,7 +184,7 @@ class MentorTests(unittest.TestCase):
                 first = mentor.on_failure(task, 'timeout')
                 self.assertEqual(first['state'], 'READ_ONLY_RETRY_SCHEDULED')
                 first_consult.assert_called_once()
-                self.assertEqual(self.advisor_native.read_calls, 1)
+                self.assertEqual(self.advisor_native.read_calls, 2)
             restarted = module('owner_dispatcher_mentor')
             repeated_task = {'id': 'durable-advisor', 'handler': 'verify_q4',
                              'retries': 1, 'max_retries': 3}
