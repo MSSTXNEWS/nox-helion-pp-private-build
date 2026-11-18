@@ -292,7 +292,8 @@ async def _run(native,url,payload,user_text):
     # Never reinterpret already-streamed prose as an executable command.
     calls=native['_direct_admin_calls'](user_text or '') or []
     direct=bool(calls)
-    if direct:calls=calls[:1]
+    if direct and len(calls)>1:
+        raise StreamFailure('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS')
     if not calls and native.get('_POOL'):
         deterministic=native['try_deterministic'](user_text or '')
         if deterministic and deterministic.get('name')=='clock' and deterministic.get('text'):
