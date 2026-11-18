@@ -10,7 +10,8 @@ import tempfile
 from pathlib import Path
 
 from nox_runpod.teacher_mesh.v61.checkpoint_backup import (REMOTE, verify_plaintext_tar,
-    verify_plaintext_tar_stream, verify, transport_retry_delay)
+    verify_plaintext_tar_stream, verify, transport_retry_delay,
+    classify_ssh_timeout)
 from unittest.mock import patch
 
 
@@ -121,16 +122,32 @@ class V61StreamingDecryptRegression(unittest.TestCase):
 
 
 class V61TransportRetryBoundary(unittest.TestCase):
-    def test_only_bounded_readonly_timeout_may_retry(self):
-        self.assertEqual(transport_retry_delay('SSH_NETWORK_TIMEOUT', 0), 10)
-        self.assertEqual(transport_retry_delay('SSH_NETWORK_TIMEOUT', 1), 30)
-        self.assertIsNone(transport_retry_delay('SSH_NETWORK_TIMEOUT', 2))
+    def test_only_pre_execution_connect_timeout_may_retry(self):
+        preexec='SSH_CONNECT_TIMEOUT_PRE_EXEC'
+        self.assertEqual(transport_retry_delay(preexec, 0), 10)
+        self.assertEqual(transport_retry_delay(preexec, 1), 30)
+        self.assertIsNone(transport_retry_delay(preexec, 2))
         for status in ('CHECKPOINT_CHANGED_DURING_STREAM',
                        'CHECKPOINT_TOTAL_SIZE_LIMIT', 'CHECKPOINT_FILE_COUNT',
-                       'SSH_AUTH_DENIED', 'REMOTE_PYTHON', 'OTHER'):
+                       'SSH_AUTH_DENIED', 'REMOTE_PYTHON', 'OTHER',
+                       'SSH_NETWORK_TIMEOUT', 'SSH_TIMEOUT_REMOTE_STATE_UNKNOWN'):
             self.assertIsNone(transport_retry_delay(status, 0))
-        self.assertIsNone(transport_retry_delay('SSH_NETWORK_TIMEOUT', -1))
-        self.assertIsNone(transport_retry_delay('SSH_NETWORK_TIMEOUT', True))
+        self.assertIsNone(transport_retry_delay(preexec, -1))
+        self.assertIsNone(transport_retry_delay(preexec, True))
+
+    def test_ambiguous_timeout_must_not_replay_remote_export(self):
+        connect=b'ssh: connect to host example port 22: Connection timed out'
+        self.assertEqual(classify_ssh_timeout(255, connect),
+                         'SSH_CONNECT_TIMEOUT_PRE_EXEC')
+        for rc, stderr in [
+            (1, connect),
+            (255, b'Connection to example timed out during key exchange'),
+            (255, b'remote checkpoint exporter timed out'),
+            (0, b'checkpoint timed out after writing tar'),
+        ]:
+            self.assertEqual(classify_ssh_timeout(rc, stderr),
+                             'SSH_TIMEOUT_REMOTE_STATE_UNKNOWN')
+        self.assertIsNone(classify_ssh_timeout(255,b'permission denied'))
 
 
 if __name__ == "__main__":

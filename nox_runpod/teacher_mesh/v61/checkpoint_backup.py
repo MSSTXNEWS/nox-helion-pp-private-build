@@ -311,9 +311,24 @@ def verify(encrypted:Path,test_identity:Path)->dict:
         process.wait(timeout=15)
 
 
+def classify_ssh_timeout(rc: int, stderr: bytes) -> str | None:
+    """Retry only an OpenSSH TCP *connect* timeout before a session exists.
+
+    A generic 'timed out' from a running remote exporter is UNKNOWN, because
+    the checkpoint stream or another remote effect may still be in flight.
+    """
+    if not isinstance(stderr, bytes) or b'timed out' not in stderr.lower():
+        return None
+    detail = stderr.lower()
+    if (rc == 255 and b'ssh: connect to host ' in detail and
+        b' port ' in detail and b': connection timed out' in detail):
+        return 'SSH_CONNECT_TIMEOUT_PRE_EXEC'
+    return 'SSH_TIMEOUT_REMOTE_STATE_UNKNOWN'
+
+
 def transport_retry_delay(error_class: str, attempt_index: int) -> int | None:
-    """Retry only a classified read-only SSH timeout; never replay an unknown HOLD."""
-    if error_class != 'SSH_NETWORK_TIMEOUT' or type(attempt_index) is not int:
+    """No replay after session establishment or unknown remote outcome."""
+    if error_class != 'SSH_CONNECT_TIMEOUT_PRE_EXEC' or type(attempt_index) is not int:
         return None
     return (10, 30)[attempt_index] if 0 <= attempt_index < 2 else None
 
@@ -375,7 +390,7 @@ def run():
             elif rc==28:cls='CHECKPOINT_ITEM_SIZE_LIMIT'
             elif rc==31:cls='CHECKPOINT_CHANGED_DURING_STREAM'
             elif b'permission denied' in emsg:cls='SSH_AUTH_DENIED'
-            elif b'timed out' in emsg:cls='SSH_NETWORK_TIMEOUT'
+            elif (timeout_class := classify_ssh_timeout(rc, emsg)) is not None:cls=timeout_class
             elif b'traceback' in emsg:cls='REMOTE_PYTHON'
             else:cls='OTHER'
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_CLASS='+cls)
