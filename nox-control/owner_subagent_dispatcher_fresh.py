@@ -321,9 +321,28 @@ def resource_wait_reason(snapshot):
     if any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
            for value in values):
         return 'HOLD_NATIVE_SUBAGENT_RESOURCE_METADATA'
-    free_bytes = snapshot.get('disk_free_bytes')
-    if type(free_bytes) is not int or free_bytes < 0 or values[3] > 1:
+    free_bytes, total_bytes = snapshot.get('disk_free_bytes'), snapshot.get('disk_total_bytes')
+    if (type(free_bytes) is not int or type(total_bytes) is not int
+            or free_bytes < 0 or total_bytes <= 0 or free_bytes > total_bytes or values[3] > 1
+            or not math.isclose(values[3], free_bytes/total_bytes, rel_tol=1e-9, abs_tol=1e-12)):
         return 'HOLD_NATIVE_SUBAGENT_RESOURCE_METADATA'
+    lease = snapshot.get('writer_lease')
+    if lease is not None and (not isinstance(lease, dict)
+            or lease.get('schema') != 'NOX_SUBAGENT_WRITER_LEASE_V1'
+            or lease.get('acquired') is not True
+            or lease.get('scope') != 'EXCLUSIVE_NATIVE_SUBAGENT_WRITER'
+            or lease.get('lock_path') != '/root/nox/state/dispatcher/native_subagents.lock'
+            or not isinstance(lease.get('task_id'), str) or not lease.get('task_id')
+            or type(lease.get('acquired_at')) not in (int, float)
+            or not math.isfinite(lease.get('acquired_at'))
+            or type(lease.get('device')) is not int or lease.get('device') < 0 or type(lease.get('inode')) is not int
+            or lease.get('inode') <= 0 or not SHA.fullmatch(str(lease.get('lease_id', '')))
+            or not CLAIM.fullmatch(str(lease.get('claim_nonce', '')))
+            or not isinstance(lease.get('owner'), dict)
+            or type(lease['owner'].get('pid')) is not int
+            or type(lease['owner'].get('process_starttime')) is not int
+            or not SHA.fullmatch(str(lease.get('source_sha256', '')))):
+        return 'HOLD_NATIVE_SUBAGENT_ADMISSION'
     if (values[0] >= MEMORY_PRESSURE_LIMIT or values[1] >= CPU_PRESSURE_LIMIT
             or values[2] >= IO_PRESSURE_LIMIT or values[3] <= DISK_FREE_RATIO_LIMIT
             or free_bytes <= DISK_FREE_BYTES_LIMIT):
@@ -359,6 +378,10 @@ class Native:
         self.last_tick = 0.0
         self.last_status = {'state': 'NOT_YET_ADMITTED', 'jobs_started': 0}
         self.admissions = {}
+        self.lease_identity = None
+        self.task_lease_receipt = None
+        self.last_admission_snapshot = None
+        self.loaded_binding = self._make_loaded_binding(namespace)
 
     def allowed_handlers(self):
         return {HANDLER}
@@ -366,11 +389,37 @@ class Native:
     def owner_allowed(self):
         return self.config.get('owner_authorized') is True and self.config.get('instance_id') == 60509551
 
+    def _make_loaded_binding(self, namespace):
+        director = process_identity(os.getpid())
+        dispatcher_path = namespace.get('__file__')
+        pins = self.config.get('module_pins')
+        if (director is None or not isinstance(dispatcher_path, str) or not isinstance(pins, dict)
+                or self.source != pins.get('owner_subagent_dispatcher.py')):
+            raise GateError('HOLD_SUBAGENT_LOADED_BINDING')
+        dispatcher_sha = digest(read(Path(dispatcher_path)))
+        if dispatcher_sha != pins.get('nox_dispatcher_t855u.py'):
+            raise GateError('HOLD_SUBAGENT_LOADED_BINDING')
+        config_raw = read(CONFIG)
+        if json.loads(config_raw) != self.config:
+            raise GateError('HOLD_SUBAGENT_CONFIG_CHANGED')
+        config_sha = digest(config_raw)
+        for name, value in pins.items():
+            if (not isinstance(name, str) or Path(name).name != name
+                    or not SHA.fullmatch(str(value))):
+                raise GateError('HOLD_SUBAGENT_LOADED_BINDING')
+            path = Path(dispatcher_path) if name == 'nox_dispatcher_t855u.py' else Path(__file__).parent/name
+            if digest(read(path)) != value:
+                raise GateError('HOLD_SUBAGENT_LOADED_BINDING')
+        return {'schema': 'NOX_SUBAGENT_LOADED_BINDING_V1', 'director': director,
+                'callback_sha256': self.source, 'dispatcher_sha256': dispatcher_sha,
+                'config_sha256': config_sha, 'module_pins': dict(pins),
+                'loaded_at': time.time()}
+
     def stop_active(self):
         path = ROOT/'state/STOP'
         return self.ns['owner_mentor'].stop_active() is not False or path.exists() or path.is_symlink()
 
-    def writer_lease(self):
+    def writer_lease(self, task_id=None, claim_nonce=None):
         with self.lock:
             if self.lease_fd is None:
                 path = plain(ROOT/'state/dispatcher/native_subagents.lock')
@@ -380,7 +429,45 @@ class Native:
                 except BlockingIOError:
                     os.close(fd)
                     return False
+                info = os.fstat(fd)
+                path_info = os.lstat(path)
+                if (not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) & 0o077
+                        or stat.S_ISLNK(path_info.st_mode)
+                        or (info.st_dev, info.st_ino) != (path_info.st_dev, path_info.st_ino)):
+                    os.close(fd)
+                    return False
                 self.lease_fd = fd
+                self.lease_identity = {'device': info.st_dev, 'inode': info.st_ino,
+                                       'acquired_at': time.time(),
+                                       'owner': process_identity(os.getpid()),
+                                       'lock_path': '/root/nox/state/dispatcher/native_subagents.lock'}
+                self.lease_identity['lease_id'] = digest(encoded(self.lease_identity))
+            if (self.lease_identity is None or self.lease_identity.get('owner') is None
+                    or self.lease_identity.get('owner') != process_identity(os.getpid())):
+                return False
+            try:
+                info = os.fstat(self.lease_fd)
+                path = plain(ROOT/'state/dispatcher/native_subagents.lock')
+                path_info = os.lstat(path)
+                if stat.S_ISLNK(path_info.st_mode):
+                    return False
+            except OSError:
+                return False
+            if (info.st_dev, info.st_ino) != (path_info.st_dev, path_info.st_ino):
+                return False
+            if task_id is not None:
+                if (not isinstance(task_id, str) or not task_id
+                        or not CLAIM.fullmatch(str(claim_nonce or ''))):
+                    return False
+                self.task_lease_receipt = {
+                    'schema': 'NOX_SUBAGENT_WRITER_LEASE_V1', 'acquired': True,
+                    'scope': 'EXCLUSIVE_NATIVE_SUBAGENT_WRITER',
+                    'lock_path': '/root/nox/state/dispatcher/native_subagents.lock',
+                    'device': info.st_dev, 'inode': info.st_ino, 'task_id': task_id,
+                    'claim_nonce': claim_nonce, 'lease_id': self.lease_identity['lease_id'],
+                    'owner': dict(self.lease_identity['owner']),
+                    'acquired_at': self.lease_identity['acquired_at'],
+                    'source_sha256': self.source}
             return True
 
     def read_reviewed_catalog(self):
@@ -390,6 +477,9 @@ class Native:
                 'schema', 'policy', 'policy_id', 'owner_request', 'owner_source_sha',
                 'module_pins', 'instance_id', 'owner_authorized', 'mode', 'target')):
             raise GateError('HOLD_SUBAGENT_CONFIG_SCOPE_CHANGED')
+        if (not isinstance(getattr(self, 'loaded_binding', None), dict)
+                or digest(read(CONFIG)) != self.loaded_binding.get('config_sha256')):
+            raise GateError('HOLD_SUBAGENT_CONFIG_CHANGED')
         catalog = latest.get('catalog')
         if digest(encoded(catalog)) != latest.get('catalog_sha256'):
             raise GateError('HOLD_SUBAGENT_CATALOG_CHANGED')
@@ -400,7 +490,7 @@ class Native:
         self.catalog = catalog
         return self.catalog
 
-    def read_resource_snapshot(self):
+    def read_resource_snapshot(self, task_id=None, claim_nonce=None):
         if chat_priority_active():
             raise autonomy.AutoHold('HOLD_NATIVE_CHAT_PRIORITY')
         with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
@@ -431,8 +521,13 @@ class Native:
             raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
         disk_total_bytes = disk.f_blocks * disk.f_frsize
         disk_free_bytes = disk.f_bavail * disk.f_frsize
-        if disk_free_bytes < 0 or disk_free_bytes > disk_total_bytes:
+        if disk_free_bytes < 0 or disk_total_bytes <= 0 or disk_free_bytes > disk_total_bytes:
             raise GateError('HOLD_SUBAGENT_RESOURCE_METADATA')
+        lease = None
+        if task_id is not None:
+            if not self.writer_lease(task_id, claim_nonce):
+                raise GateError('HOLD_SUBAGENT_WRITER_LEASE')
+            lease = self.task_lease_receipt
         with self.ns['_qlock']:
             status = {key: value.get('status') for key, value in self.state['tasks'].items()
                       if value.get('handler') == HANDLER}
@@ -443,8 +538,11 @@ class Native:
                     'cgroup_memory_working_set_bytes': working_set,
                     'cgroup_memory_inactive_file_bytes': inactive_file,
                     'cpu_pressure': cpu_pressure, 'io_pressure': io_pressure,
+                    'disk_total_bytes': disk_total_bytes,
                     'disk_free_ratio': disk_free_bytes/disk_total_bytes,
                     'disk_free_bytes': disk_free_bytes, 'gpu_available': False}
+        if lease is not None:
+            snapshot['writer_lease'] = lease
         reason = resource_wait_reason(snapshot)
         if reason:
             raise autonomy.AutoHold(reason)
@@ -453,11 +551,34 @@ class Native:
         snapshot['resource_admission_snapshot_sha256'] = autonomy.fingerprint(snapshot)
         return snapshot
 
-    def _fresh_admission_reason(self):
+    def _fresh_admission_reason(self, task_id=None, claim_nonce=None):
         # read_resource_snapshot also checks the real local chat/slot gate.
         # A previously created pool is never permission to reuse a stale check.
         try:
-            return resource_wait_reason(self.read_resource_snapshot())
+            snapshot = self.read_resource_snapshot(task_id, claim_nonce)
+            reason = resource_wait_reason(snapshot)
+            if reason:
+                return reason
+            observed = snapshot.get('resource_admission_observed_at')
+            expected_sha = snapshot.get('resource_admission_snapshot_sha256')
+            body = dict(snapshot)
+            body.pop('resource_admission_snapshot_sha256', None)
+            age = time.time() - observed if type(observed) in (int, float) else float('inf')
+            if (snapshot.get('resource_admission_allowed') is not True
+                    or not math.isfinite(age) or age < -1
+                    or age > getattr(autonomy, 'RESOURCE_ADMISSION_MAX_AGE_SECONDS', 5.0)
+                    or not isinstance(expected_sha, str)
+                    or autonomy.fingerprint(body) != expected_sha):
+                return 'HOLD_NATIVE_SUBAGENT_ADMISSION'
+            if task_id is not None:
+                lease = snapshot.get('writer_lease')
+                if (not isinstance(lease, dict) or lease.get('task_id') != task_id
+                        or lease.get('claim_nonce') != claim_nonce
+                        or lease.get('source_sha256') != self.source
+                        or lease.get('owner') != process_identity(os.getpid())):
+                    return 'HOLD_NATIVE_SUBAGENT_WRITER_LEASE'
+            self.last_admission_snapshot = snapshot
+            return None
         except (OSError, ValueError, TypeError, KeyError, GateError):
             return 'HOLD_NATIVE_SUBAGENT_ADMISSION'
 
@@ -478,6 +599,8 @@ class Native:
                 'catalog_tasks': len(ids), 'queue_counts': counts,
                 'owned_model_requests_active': active,
                 'fresh_resource_check': 'BEFORE_EVERY_SUBMIT',
+                'loaded_binding': getattr(self, 'loaded_binding', None),
+                'last_resource_admission': getattr(self, 'last_admission_snapshot', None),
                 'model_answers_authoritative': False, 'candidate_actions_applied': False,
                 'training_updates_verified': False, 'capacity_maximum_measured': False}
 
@@ -584,9 +707,16 @@ class Native:
 
     def _persist_submit_intent(self, task):
         claim = task.get('owner_claim') or {}
+        admission = getattr(self, 'last_admission_snapshot', None)
+        if (not isinstance(admission, dict) or admission.get('resource_admission_allowed') is not True
+                or not isinstance(admission.get('writer_lease'), dict)
+                or admission['writer_lease'].get('task_id') != task.get('id')
+                or admission['writer_lease'].get('claim_nonce') != claim.get('nonce')):
+            raise GateError('HOLD_SUBAGENT_ADMISSION_RECEIPT')
         intent = {'task_id': task['id'], 'claim_nonce': claim.get('nonce'),
                   'role': task['params']['role'], 'policy_sha': task['params']['policy_sha256'],
-                  'job_id': task['params']['job_id'], 'state': 'UNCERTAIN'}
+                  'job_id': task['params']['job_id'], 'state': 'UNCERTAIN',
+                  'resource_admission': admission}
         with self.ns['_qlock']:
             durable = document(self.ns['STATE'], 16*1024*1024)
             durable_row = durable.get('tasks', {}).get(task['id'], {})
@@ -1216,11 +1346,12 @@ class Native:
             return False, str(exc)
         except (OSError, ValueError):
             return False, 'HOLD_SUBAGENT_SUBMIT_INTENT_UNREADABLE'
-        if self.stop_active() or not self.writer_lease():
+        claim_nonce = (task.get('owner_claim') or {}).get('nonce')
+        if self.stop_active() or not self.writer_lease(task['id'], claim_nonce):
             return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
         if self.pool is None:
             try:
-                reason = self._fresh_admission_reason()
+                reason = self._fresh_admission_reason(task['id'], claim_nonce)
                 if reason:
                     return 'wait', reason
                 if not self.ensure_processes(3):
@@ -1232,7 +1363,9 @@ class Native:
                 if self.pool is None:
                     raise GateError('HOLD_SUBAGENT_POOL_NOT_READY')
                 # Recheck resource admission immediately before the sole submit.
-                reason = self._fresh_admission_reason()
+                if not self.writer_lease(task['id'], claim_nonce):
+                    return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
+                reason = self._fresh_admission_reason(task['id'], claim_nonce)
                 if reason:
                     return 'wait', reason
                 self.interrupted.pop(task['id'], None)

@@ -453,19 +453,45 @@ def dispatcher_group(h, recovery, training):
     return group
 
 
-def loaded_status(h):
+def expected_loaded_binding(h):
+    config_raw = h.read(h.ROOT/'config/owner_native_subagents.json', 262144)
+    config = json.loads(config_raw)
+    pins = config.get('module_pins')
+    callback_sha = digest(h.read(h.SCRIPTS/'owner_subagent_dispatcher.py'))
+    dispatcher_sha = digest(h.read(h.DISPATCHER))
+    require(isinstance(pins, dict)
+            and all(isinstance(value, str) and re.fullmatch('[a-f0-9]{64}', value)
+                    for value in pins.values())
+            and callback_sha == pins.get('owner_subagent_dispatcher.py')
+            and dispatcher_sha == pins.get('nox_dispatcher_t855u.py'),
+            'LOADED_SOURCE_BINDING')
+    return {'callback_sha256': callback_sha, 'dispatcher_sha256': dispatcher_sha,
+            'config_sha256': digest(config_raw), 'module_pins': pins}
+
+
+def loaded_status(h, expected_binding):
     state = json.loads(h.read(h.ROOT/'status/agents_t856u.json', 750000))
     native = state.get('native_subexecutors') or {}
     view = native.get('review_status') or {}
     expected_counts = {key: 3 if key == 'done' else 0 for key in
                        ('not_admitted', 'pending', 'running', 'done', 'blocked', 'failed', 'unknown')}
     director = native.get('director') or {}
+    binding = view.get('loaded_binding') or {}
     current = h.service()
     process = h.process(current['pid']) if current.get('pid') else None
     require(state.get('n') == 6 and native.get('thread_runner_count') == 6
             and native.get('target') == 3 and native.get('workers') == []
             and current['state'] == 'RUNNING' and director.get('pid') == current.get('pid')
             and process and director.get('process_starttime') == process['starttime']
+            and binding.get('schema') == 'NOX_SUBAGENT_LOADED_BINDING_V1'
+            and binding.get('director') == director
+            and binding.get('callback_sha256') == expected_binding['callback_sha256']
+            and binding.get('dispatcher_sha256') == expected_binding['dispatcher_sha256']
+            and binding.get('config_sha256') == expected_binding['config_sha256']
+            and binding.get('module_pins') == expected_binding['module_pins']
+            and type(binding.get('loaded_at')) in (int, float)
+            and 0 <= time.time() - binding.get('loaded_at', 0) <= 15
+            and type(native.get('observed_at')) in (int, float)
             and 0 <= time.time() - native.get('observed_at', 0) <= 15
             and view.get('queue_counts') == expected_counts and view.get('catalog_tasks') == 3
             and view.get('owned_model_requests_active') == 0
@@ -475,7 +501,8 @@ def loaded_status(h):
             'LOADED_CALLBACK_STATUS')
     return {'thread_runners': 6, 'completed_reviews': 3, 'reviewer_target': 3,
             'reviewer_pool_actual': 0, 'pool_state': 'WAITING_READY_TASK',
-            'director_pid': current['pid'], 'fresh_resource_check': 'BEFORE_EVERY_SUBMIT'}
+            'director_pid': current['pid'], 'fresh_resource_check': 'BEFORE_EVERY_SUBMIT',
+            'loaded_binding': binding}
 
 
 def rollback_files(h, file_transitions, metadata_before=None, metadata_after=None):
@@ -529,17 +556,50 @@ def cgroup_memory_working_set(current, maximum, stat_text):
     return working_set, inactive_file, working_set / maximum
 
 
-def resource_admission(h):
-    """Keep the 4 GiB floor after only reclaimable inactive-file cache is discounted."""
+def resource_admission_snapshot(h):
+    """Return one fail-closed RAM/disk sample without changing admission floors."""
+    observed_at = time.time()
     try:
-        current = int(Path('/sys/fs/cgroup/memory.current').read_text())
-        maximum = int(Path('/sys/fs/cgroup/memory.max').read_text())
+        current = int(Path('/sys/fs/cgroup/memory.current').read_text().strip())
+        maximum_text = Path('/sys/fs/cgroup/memory.max').read_text().strip()
+        if maximum_text == 'max':
+            raise ValueError('HOLD_RESOURCE_METADATA')
+        maximum = int(maximum_text)
         memory_stat = Path('/sys/fs/cgroup/memory.stat').read_text()
-        working_set, _, _ = cgroup_memory_working_set(current, maximum, memory_stat)
+        working_set, inactive_file, ratio = cgroup_memory_working_set(current, maximum, memory_stat)
         disk = os.statvfs(str(h.ROOT))
-        return maximum - working_set >= 4 * 1024**3 and disk.f_bavail * disk.f_frsize >= 1024**3
+        if (type(disk.f_blocks) is not int or type(disk.f_frsize) is not int
+                or type(disk.f_bavail) is not int or disk.f_blocks <= 0 or disk.f_frsize <= 0):
+            raise ValueError('HOLD_RESOURCE_METADATA')
+        disk_total_bytes = disk.f_blocks * disk.f_frsize
+        disk_free_bytes = disk.f_bavail * disk.f_frsize
+        if disk_total_bytes <= 0 or disk_free_bytes < 0 or disk_free_bytes > disk_total_bytes:
+            raise ValueError('HOLD_RESOURCE_METADATA')
+        raw_headroom = maximum - current
+        effective_headroom = maximum - working_set
+        return {'schema': 'NOX_RESOURCE_ADMISSION_SNAPSHOT_V1',
+                'memory_current_bytes': current, 'memory_max_bytes': maximum,
+                'memory_raw_headroom_bytes': raw_headroom,
+                'memory_inactive_file_bytes': inactive_file,
+                'memory_working_set_bytes': working_set,
+                'memory_effective_headroom_bytes': effective_headroom,
+                'memory_working_set_ratio': ratio,
+                'disk_total_bytes': disk_total_bytes, 'disk_free_bytes': disk_free_bytes,
+                'disk_free_ratio': disk_free_bytes/disk_total_bytes,
+                'resource_admission_observed_at': observed_at,
+                'resource_admission_allowed': (effective_headroom >= 4 * 1024**3
+                                               and disk_free_bytes >= 1024**3)}
     except (OSError, ValueError, TypeError, OverflowError):
-        return False
+        return {'schema': 'NOX_RESOURCE_ADMISSION_SNAPSHOT_V1',
+                'resource_admission_observed_at': observed_at,
+                'resource_admission_allowed': False, 'hold_reason': 'RESOURCE_METADATA'}
+
+
+def resource_admission(h, receipts=None):
+    snapshot = resource_admission_snapshot(h)
+    if receipts is not None:
+        receipts.append(snapshot)
+    return snapshot.get('resource_admission_allowed') is True
 
 
 def main():
@@ -595,7 +655,8 @@ def main():
     require(not h.global_stop() and chat_before is not None, 'STOP_OR_CHAT_IDENTITY')
     health = h.health()
     require(health == {'8080': 200, '8081': 200, '8082': 200}, 'CORE_HEALTH')
-    require(resource_admission(h), 'RESOURCE_HEADROOM')
+    resource_checks = []
+    require(resource_admission(h, resource_checks), 'RESOURCE_HEADROOM')
     lease = os.open(h.STATE/'owner_maintenance.lock', os.O_RDWR | os.O_NOFOLLOW)
     try:
         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -618,6 +679,7 @@ def main():
               'module_transition_states': {path.name: 'PENDING' for path in file_transitions},
               'preimage_receipts': NATIVE_PREIMAGE_RECEIPTS,
               'preimage_receipt_gaps': sorted(UNVERIFIED_NATIVE_PREIMAGES),
+              'resource_admission_checks': resource_checks,
               'dispatcher_before_sha256': digest(before_core), 'dispatcher_after_sha256': core_after_sha,
               'prior_receipt_sha256': PRIOR_RECEIPT_SHA,
               'completed_reviews_before': before_proofs, 'training_control_performed': False,
@@ -642,7 +704,7 @@ def main():
         check_sources(h)
         preserve_training(training_before, training_snapshot(h))
         require(completed_proofs(h, callback, prior) == before_proofs and not h.global_stop(), 'DONE_TASKS_OR_STOP')
-        require(resource_admission(h), 'RESOURCE_HEADROOM')
+        require(resource_admission(h, resource_checks), 'RESOURCE_HEADROOM')
         result['owned_group_before'] = dispatcher_group(h, recovery, training_before)
         for path, (preimage, _) in file_transitions.items():
             backup_path = backup/path.name
@@ -652,7 +714,7 @@ def main():
                     and stat.S_IMODE(backup_path.stat().st_mode) == 0o600,
                     'BACKUP_READBACK')
         require(not h.global_stop(), 'STOP_OR_CHAT_IDENTITY')
-        require(resource_admission(h), 'RESOURCE_HEADROOM')
+        require(resource_admission(h, resource_checks), 'RESOURCE_HEADROOM')
         stop_attempted = True
         rc = h.command(['supervisorctl', 'stop', h.SERVICE], 25)[0]
         stopped = h.service()['state'] == 'STOPPED'
@@ -660,7 +722,7 @@ def main():
         require(completed_proofs(h, callback, prior) == before_proofs, 'DONE_TASKS_AFTER_STOP')
         check_sources(h)
         require(not h.global_stop(), 'STOP_OR_CHAT_IDENTITY')
-        require(resource_admission(h), 'RESOURCE_HEADROOM')
+        require(resource_admission(h, resource_checks), 'RESOURCE_HEADROOM')
         writes_attempted = True
         for path, (preimage, replacement) in file_transitions.items():
             after_meta = atomic_replace_existing(h, path, preimage, replacement,
@@ -676,9 +738,10 @@ def main():
         stopped = h.service()['state'] == 'STOPPED'
         require(rc == 0 and h.service()['state'] == 'RUNNING', 'DIRECTOR_START')
         deadline = time.monotonic() + 15
+        expected_binding = expected_loaded_binding(h)
         while True:
             try:
-                status = loaded_status(h)
+                status = loaded_status(h, expected_binding)
                 break
             except (RuntimeError, OSError, ValueError, TypeError):
                 require(time.monotonic() < deadline and not h.global_stop(), 'CALLBACK_STATUS_TIMEOUT')

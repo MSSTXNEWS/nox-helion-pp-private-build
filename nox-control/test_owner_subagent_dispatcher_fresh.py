@@ -1,7 +1,9 @@
 """Local tests of per-submit admission; no model, native files or worker spawn."""
 from pathlib import Path
+import hashlib
 import importlib.util
 import json
+import os
 import tempfile
 import threading
 import time
@@ -22,6 +24,10 @@ class AutoHold(ValueError):
 
 autonomy = types.ModuleType('owner_autonomy_pool')
 autonomy.AutoHold = AutoHold
+autonomy.RESOURCE_ADMISSION_MAX_AGE_SECONDS = 5.0
+autonomy.fingerprint = lambda value: hashlib.sha256(json.dumps(
+    value, sort_keys=True, ensure_ascii=False, separators=(',', ':'),
+    allow_nan=False).encode()).hexdigest()
 processes = types.ModuleType('owner_subagent_processes')
 processes.GateError = GateError
 processes.Subagents = Mock(side_effect=AssertionError('No real worker may spawn in this test'))
@@ -34,10 +40,23 @@ with patch.dict('sys.modules', {'owner_autonomy_pool': autonomy,
 
 
 def snapshot(**changes):
-    return {'native_verified': True, 'instance_id': 60509551, 'stop_active': False,
-            'source_sha_verified': True, 'owner_scope_verified': True,
-            'cgroup_memory_ratio': .50, 'cpu_pressure': 1.0, 'io_pressure': 1.0,
-            'disk_free_ratio': .25, 'disk_free_bytes': 16 * 1024**3, **changes}
+    value = {'native_verified': True, 'instance_id': 60509551, 'stop_active': False,
+             'source_sha_verified': True, 'owner_scope_verified': True,
+             'cgroup_memory_ratio': .50, 'cpu_pressure': 1.0, 'io_pressure': 1.0,
+             'disk_free_ratio': .25, 'disk_free_bytes': 16 * 1024**3,
+             'disk_total_bytes': 64 * 1024**3,
+             'writer_lease': {'schema': 'NOX_SUBAGENT_WRITER_LEASE_V1',
+                 'acquired': True, 'scope': 'EXCLUSIVE_NATIVE_SUBAGENT_WRITER',
+                 'lock_path': '/root/nox/state/dispatcher/native_subagents.lock',
+                 'device': 1, 'inode': 2, 'task_id': 'review.runtime',
+                 'claim_nonce': 'a' * 24, 'lease_id': 'd' * 64,
+                 'owner': binding.process_identity(os.getpid()),
+                 'acquired_at': time.time(), 'source_sha256': 'c' * 64},
+             **changes}
+    value['resource_admission_allowed'] = True
+    value['resource_admission_observed_at'] = time.time()
+    value['resource_admission_snapshot_sha256'] = autonomy.fingerprint(value)
+    return value
 
 
 def native_with_pool():
@@ -190,7 +209,8 @@ class FreshSubmissionTests(unittest.TestCase):
     def test_existing_pool_does_not_bypass_low_disk_headroom(self):
         native, task = native_with_pool()
         native.read_resource_snapshot.return_value = snapshot(
-            disk_free_ratio=.04, disk_free_bytes=4 * 1024**3)
+            disk_free_ratio=.04, disk_free_bytes=4 * 1024**3,
+            disk_total_bytes=100 * 1024**3)
         self.assertEqual(native._handle(task), ('wait', 'HOLD_NATIVE_SUBAGENT_RESOURCE_PRESSURE'))
         native.pool.submit.assert_not_called()
 
@@ -202,6 +222,30 @@ class FreshSubmissionTests(unittest.TestCase):
         self.assertEqual(working, 4_034_532_352)
         self.assertLess(ratio, .05)
         self.assertIsNone(binding.resource_wait_reason(snapshot(cgroup_memory_ratio=ratio)))
+
+    def test_writer_lease_receipt_binds_successful_flock_to_task_and_claim(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root/'state/dispatcher').mkdir(parents=True)
+            native = binding.Native.__new__(binding.Native)
+            native.lock = threading.RLock()
+            native.lease_fd = None
+            native.lease_identity = None
+            native.task_lease_receipt = None
+            native.source = 'c' * 64
+            with patch.object(binding, 'ROOT', root):
+                self.assertTrue(native.writer_lease('review.runtime', 'a' * 24))
+            lease = native.task_lease_receipt
+            self.assertIsInstance(lease, dict)
+            self.assertIs(lease['acquired'], True)
+            self.assertEqual(lease['scope'], 'EXCLUSIVE_NATIVE_SUBAGENT_WRITER')
+            self.assertEqual((lease['task_id'], lease['claim_nonce']),
+                             ('review.runtime', 'a' * 24))
+            self.assertEqual((lease['device'], lease['inode']),
+                             (native.lease_identity['device'], native.lease_identity['inode']))
+            self.assertEqual(lease['owner'], binding.process_identity(os.getpid()))
+            self.assertEqual(lease['source_sha256'], native.source)
+            os.close(native.lease_fd)
 
     def test_existing_pool_does_not_bypass_chat_or_slot_hold(self):
         native, task = native_with_pool()
@@ -514,7 +558,8 @@ class FreshSubmissionTests(unittest.TestCase):
                  snapshot(cpu_pressure=float('inf')),
                  snapshot(cpu_pressure=True), snapshot(cgroup_memory_ratio=-1),
                  snapshot(stop_active=True), snapshot(owner_scope_verified=False),
-                 snapshot(native_verified='true'), None]
+                 snapshot(native_verified='true'), snapshot(disk_total_bytes=0),
+                 snapshot(disk_total_bytes=32 * 1024**3), None]
         for value in cases:
             with self.subTest(value=value):
                 native, task = native_with_pool()

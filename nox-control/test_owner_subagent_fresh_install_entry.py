@@ -151,12 +151,20 @@ class FakeNative:
             self.state, self.pid, self.starttime = 'RUNNING', 789, 888
             counts = {key: 3 if key == 'done' else 0 for key in
                       ('not_admitted', 'pending', 'running', 'done', 'blocked', 'failed', 'unknown')}
+            director = {'pid': self.pid, 'process_starttime': self.starttime}
+            try:
+                expected = entry.expected_loaded_binding(self)
+            except RuntimeError:
+                binding = None  # Rollback starts the original service, not the candidate binding.
+            else:
+                binding = {'schema': 'NOX_SUBAGENT_LOADED_BINDING_V1', 'director': director,
+                           **expected, 'loaded_at': time.time()}
             view = {'queue_counts': counts, 'catalog_tasks': 3, 'owned_model_requests_active': 0,
-                    'fresh_resource_check': 'BEFORE_EVERY_SUBMIT',
+                    'fresh_resource_check': 'BEFORE_EVERY_SUBMIT', 'loaded_binding': binding,
                     **{key: False for key in ('model_answers_authoritative',
                         'candidate_actions_applied', 'training_updates_verified', 'capacity_maximum_measured')}}
             value = {'n': 6, 'native_subexecutors': {'thread_runner_count': 6, 'target': 3,
-                'workers': [], 'director': {'pid': self.pid, 'process_starttime': self.starttime},
+                'workers': [], 'director': director,
                 'observed_at': time.time(), 'review_status': view}}
             self.atomic(self.ROOT / 'status/agents_t856u.json', entry.encoded(value))
         else:
@@ -328,6 +336,11 @@ def main():
             'config/owner_native_subagents.json': entry.digest(helper.config.read_bytes()),
         })
         with ExitStack() as stack:
+            new_callback = entry.digest(assets['owner_subagent_dispatcher_fresh.py'])
+            new_dependencies = dict(entry.NEW_DEPENDENCIES)
+            new_dependencies['owner_subagent_dispatcher.py'] = new_callback
+            stack.enter_context(patch.object(entry, 'NEW_CALLBACK', new_callback))
+            stack.enter_context(patch.object(entry, 'NEW_DEPENDENCIES', new_dependencies))
             stack.enter_context(patch.object(entry, 'NATIVE_PREIMAGES', fake_preimages))
             stack.enter_context(patch.object(entry, 'UNVERIFIED_NATIVE_PREIMAGES', set()))
             stack.enter_context(patch.object(entry, 'OLD_CONFIG', entry.digest(helper.config.read_bytes())))
@@ -336,16 +349,26 @@ def main():
             stack.enter_context(patch.object(entry, 'load_helpers', return_value=(helper, recovery, assets)))
             stack.enter_context(patch.object(entry, 'check_sources'))
             resource_samples = []
-            def fresh_resource_sample(_helper):
+            def fresh_resource_sample(_helper, receipts=None):
                 if resource_checks is None:
                     allowed = True
                 else:
                     if not resource_checks:
                         raise AssertionError('Missing fresh resource admission sample')
                     allowed = resource_checks.pop(0)
-                sample = {'observed_at': time.time(), 'admission_allowed': allowed}
+                sample = {'schema': 'NOX_RESOURCE_ADMISSION_SNAPSHOT_V1',
+                    'memory_current_bytes': 8 * 1024**3, 'memory_max_bytes': 16 * 1024**3,
+                    'memory_inactive_file_bytes': 0, 'memory_working_set_bytes': 8 * 1024**3,
+                    'memory_raw_headroom_bytes': 8 * 1024**3,
+                    'memory_effective_headroom_bytes': 8 * 1024**3,
+                    'memory_working_set_ratio': .5, 'disk_total_bytes': 20 * 1024**3,
+                    'disk_free_bytes': 10 * 1024**3, 'disk_free_ratio': .5,
+                    'resource_admission_observed_at': time.time(),
+                    'resource_admission_allowed': allowed}
                 resource_samples.append(sample)
-                return sample['admission_allowed']
+                if receipts is not None:
+                    receipts.append(sample)
+                return sample['resource_admission_allowed']
             stack.enter_context(patch.object(entry, 'resource_admission', side_effect=fresh_resource_sample))
             stack.enter_context(patch.object(entry, 'OLD_MENTOR_SHA', entry.digest(helper.before_mentor)))
             fixture_receipts = {
@@ -380,12 +403,15 @@ def main():
             def read_text(self):
                 return values[self.name]
 
-        disk = types.SimpleNamespace(f_bavail=gib, f_frsize=1)
+        disk = types.SimpleNamespace(f_bavail=gib, f_frsize=1, f_blocks=4*gib)
         native = types.SimpleNamespace(ROOT='/nox')
         with patch.object(entry, 'Path', FakePath):
             with patch.object(entry.os, 'statvfs', return_value=disk):
                 # Raw free is zero, but 5 GiB of inactive cache leaves 5 GiB usable.
                 self.assertTrue(entry.resource_admission(native))
+                sample = entry.resource_admission_snapshot(native)
+                self.assertEqual(sample['disk_total_bytes'], 4 * gib)
+                self.assertEqual(sample['memory_effective_headroom_bytes'], 5 * gib)
                 values['memory.stat'] = 'inactive_file ' + str(3 * gib) + '\n'
                 self.assertFalse(entry.resource_admission(native))
                 values['memory.stat'] = 'inactive_file invalid\n'
@@ -412,6 +438,14 @@ def main():
         self.assertEqual(result['acceptance']['thread_runners'], 6)
         self.assertEqual(result['acceptance']['reviewer_pool_actual'], 0)
         self.assertEqual(result['acceptance']['pool_state'], 'WAITING_READY_TASK')
+        self.assertEqual(result['acceptance']['loaded_binding']['director']['pid'],
+                         result['acceptance']['director_pid'])
+        self.assertEqual(result['acceptance']['loaded_binding']['callback_sha256'],
+                         entry.digest(helper.target.read_bytes()))
+        self.assertEqual(len(result['resource_admission_checks']), 4)
+        self.assertTrue(all('disk_total_bytes' in row and 'memory_raw_headroom_bytes' in row
+                            and 'memory_effective_headroom_bytes' in row
+                            for row in result['resource_admission_checks']))
         self.assertEqual(result['tasks_posted'], 0)
         self.assertEqual(result['tasks_requeued'], 0)
         self.assertTrue(result['source_installed'])
@@ -443,6 +477,12 @@ def main():
             saved = backup/name
             self.assertEqual(saved.read_bytes(), raw)
             self.assertEqual(saved.stat().st_mode & 0o777, 0o600)
+        status_path = helper.ROOT/'status/agents_t856u.json'
+        status = json.loads(helper.read(status_path))
+        status['native_subexecutors']['review_status']['loaded_binding']['config_sha256'] = '0' * 64
+        helper.atomic(status_path, entry.encoded(status))
+        with self.assertRaisesRegex(RuntimeError, 'HOLD_SUBAGENT_FRESH_LOADED_CALLBACK_STATUS'):
+            entry.loaded_status(helper, entry.expected_loaded_binding(helper))
         self.assertTrue(result['training_configuration_and_flags_preserved'])
         self.assertFalse((helper.STATE / 'OWNER_MAINTENANCE.flag').exists())
 
