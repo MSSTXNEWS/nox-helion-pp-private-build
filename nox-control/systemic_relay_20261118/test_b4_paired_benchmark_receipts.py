@@ -48,6 +48,25 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(out["candidate"]["over_budget_walltime"],1)
         self.assertEqual(out["candidate"]["failures_including_timeouts"],2)
         self.assertEqual(out["candidate"]["p95_latency_ms_all_tasks"],1450)
+    def test_reported_pass_over_budget_counts_as_failure(self):
+        b=example();c=copy.deepcopy(b)
+        c["outcomes"][0]["latency_ms"]=1001  # alleged PASS, but over 1000ms budget
+        out=compare_paired(b,c)
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["baseline"]["passed"],1)
+        self.assertEqual(out["candidate"]["passed"],0)
+        self.assertEqual(out["candidate"]["failures_including_timeouts"],3)
+        self.assertEqual(out["candidate"]["over_budget_reported_passes"],1)
+        self.assertEqual(out["candidate"]["timed_out_or_exhausted"],2)
+        self.assertEqual(out["candidate"]["p95_latency_ms_all_tasks"],1001)
+        self.assertEqual(out["regressed_task_ids"],["t1"])
+        self.assertTrue(out["quality_or_history_regression"])
+    def test_recovered_over_budget_pass_is_a_fixed_task(self):
+        b=example();b["outcomes"][0]["latency_ms"]=1001
+        c=copy.deepcopy(b);c["outcomes"][0]["latency_ms"]=999
+        out=compare_paired(b,c)
+        self.assertEqual(out["fixed_task_ids"],["t1"])
+        self.assertEqual(out["pass_rate_delta"],1/3)
     def test_rejected_boolean_latency(self):
         b=example();c=example();c["outcomes"][0]["latency_ms"]=True
         self.assertEqual(compare_paired(b,c)["reason"],"INVALID_LATENCY")
