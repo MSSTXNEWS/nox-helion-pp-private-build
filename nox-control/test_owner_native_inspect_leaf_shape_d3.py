@@ -83,5 +83,52 @@ class LeafShapeReadOnlyTests(unittest.TestCase):
         self.assertEqual(rows[1]["leaf"]["blockers"], ["HOLD_RESOURCE_PRESSURE"])
 
 
+class WorkerStatusShapeTests(unittest.TestCase):
+    """A malformed native worker snapshot must not abort read-only inspection."""
+    def sample(self, native):
+        records = []
+        def fake_process(pid):
+            return {'pid': pid, 'ppid': 4, 'start_ticks': 42, 'state': 'S'}
+        with patch.object(INSPECT, 'obj', return_value=({'native_subexecutors': native}, b'{}', None)):
+            with patch.object(INSPECT, 'process', side_effect=fake_process):
+                with patch.object(INSPECT, 'emit', side_effect=lambda name, value: records.append((name, value))):
+                    INSPECT.worker_status_sample()
+        self.assertEqual([name for name, _ in records], ['POST_WORKERS'])
+        return records[0][1]
+
+    def test_missing_workers_field_is_unknown(self):
+        row = self.sample({'director': {}})
+        self.assertIs(row['workers_schema_valid'], False)
+        self.assertEqual(row['state'], 'UNKNOWN_WORKERS_SCHEMA')
+
+    def test_null_or_dict_workers_is_explicit_unknown(self):
+        for value in (None, {'bad': 'shape'}, 'bad', list(range(65))):
+            with self.subTest(value_type=type(value).__name__):
+                row = self.sample({'director': {}, 'workers': value})
+                self.assertIs(row['workers_schema_valid'], False)
+                self.assertEqual(row['state'], 'UNKNOWN_WORKERS_SCHEMA')
+
+    def test_bad_worker_entry_is_preserved_as_unknown(self):
+        row = self.sample({'director': {}, 'workers': [None, 12]})
+        self.assertTrue(row['workers_schema_valid'])
+        self.assertEqual(len(row['workers']), 2)
+        self.assertTrue(all(x['state'] == 'UNKNOWN_WORKER_ENTRY' and not x['verified'] for x in row['workers']))
+
+    def test_malformed_director_and_project_counts_fail_closed(self):
+        row = self.sample({'director': 'invalid', 'workers': [],
+                           'project_queues': {'queues': ['bad'], 'leaf_status': {'ok': 3, 'bool': True}}})
+        self.assertIs(row['director_schema_valid'], False)
+        self.assertIs(row['project']['queues_schema_valid'], False)
+        self.assertEqual(row['project']['queues_state'], 'UNKNOWN_SCHEMA')
+        self.assertEqual(row['project']['leaf_status'], {'ok': 3})
+
+    def test_valid_worker_identity_still_verified(self):
+        row = self.sample({'director': {'pid': 4, 'process_starttime': 42},
+                           'workers': [{'pid': 5, 'ppid': 4, 'process_starttime': 42}]})
+        self.assertIs(row['director_schema_valid'], True)
+        self.assertIs(row['workers_schema_valid'], True)
+        self.assertTrue(row['workers'][0]['verified'])
+
+
 if __name__ == "__main__":
     unittest.main()

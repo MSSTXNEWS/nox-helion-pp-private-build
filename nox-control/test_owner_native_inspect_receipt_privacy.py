@@ -10,7 +10,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from test_owner_native_inspect_leaf_shape_d3 import LeafShapeReadOnlyTests  # D3 queue shape gate
+from test_owner_native_inspect_leaf_shape_d3 import LeafShapeReadOnlyTests, WorkerStatusShapeTests  # D3/D2 queue+worker shape gates
 
 SPEC = importlib.util.spec_from_file_location(
     "nox_inspect_privacy_under_test", Path(__file__).with_name("owner_native_legacy_inspect.py"))
