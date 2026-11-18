@@ -227,6 +227,41 @@ class ExistingOwnerBridgePartialHtmlTests(unittest.TestCase):
                       'data-nox-live-owner="1"></script>', result)
         self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
 
+    def test_json_data_script_cannot_fake_executable_owner_handler(self):
+        raw = ('<html><head><script type="application/json" '
+               'src="/nox-web-v29/owner-chat-ui.js"></script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/owner-chat-ui.js" '
+                      'data-nox-live-owner="1"></script>', out)
+        self.assertEqual(ui.decorate_html(out, "pc/resonance.html"), out)
+
+    def test_importmap_data_script_cannot_hide_owner_presence(self):
+        raw = ('<html><head><script type="importmap" '
+               'src="/nox-web-v29/owner-presence.js"></script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/owner-presence.js" '
+                      'data-nox-live-owner="1"></script>', out)
+
+    def test_nomodule_legacy_script_does_not_suppress_modern_handler(self):
+        raw = ('<html><head><script nomodule '
+               'src="/nox-web-v29/nox-v137-owner-self-status.js">'
+               '</script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/nox-v137-owner-self-status.js" '
+                      'data-nox-live-owner="1"></script>', out)
+
+    def test_executable_javascript_type_not_duplicated(self):
+        raw = ('<html><head><script type="text/javascript" '
+               'src="/nox-web-v29/owner-chat-ui.js"></script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertEqual(out.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
+
+    def test_executable_module_type_not_duplicated(self):
+        raw = ('<html><head><script type="module" '
+               'src="/nox-web-v29/owner-chat-ui.js"></script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertEqual(out.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
+
     def test_unrelated_marked_script_cannot_suppress_live_owner_bridge(self):
         raw = ('<html><head><script data-nox-live-owner="1" '
                'src="/nox-web-v29/unrelated.js"></script></head></html>')
