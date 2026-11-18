@@ -538,6 +538,113 @@ def import_records(conn,records,source_key,snapshot_sha):
     return counts
 
 
+def verify_snapshot_restore_staging(manifest_path,manifest_sha256,request,db=DB):
+    """Restore only the pinned canonical snapshot into a temporary staging DB.
+
+    The live S03 database and original snapshot are never opened for writing.
+    This verifies that the exact manifest-selected backup can be copied back,
+    read as SQLite, and removed before history migration mutates the canonical DB.
+    """
+    if not re.fullmatch('[0-9]{1,24}',str(request)):hold('HOLD_S03_RESTORE_REQUEST')
+    if not isinstance(manifest_sha256,str) or not re.fullmatch('[a-f0-9]{64}',manifest_sha256):
+        hold('HOLD_S03_RESTORE_MANIFEST_PIN')
+    folder=plain(STATE/'backups'/str(request))
+    manifest_path=plain(manifest_path)
+    if manifest_path!=folder/'manifest.json':hold('HOLD_S03_RESTORE_MANIFEST_PATH')
+    fd=os.open(manifest_path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    try:
+        before=os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size>65536:
+            hold('HOLD_S03_RESTORE_MANIFEST_FILE')
+        raw=bytearray()
+        while len(raw)<=before.st_size:
+            block=os.read(fd,min(8192,before.st_size+1-len(raw)))
+            if not block:break
+            raw.extend(block)
+        after=os.fstat(fd);named=os.stat(manifest_path,follow_symlinks=False)
+        fields=('st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns')
+        if (len(raw)!=before.st_size or any(getattr(before,key)!=getattr(after,key)
+                or getattr(before,key)!=getattr(named,key) for key in fields)):
+            hold('HOLD_S03_RESTORE_MANIFEST_CHANGED')
+    finally:os.close(fd)
+    if digest(raw)!=manifest_sha256:hold('HOLD_S03_RESTORE_MANIFEST_HASH')
+    def unique_object(pairs):
+        result={}
+        for key,value in pairs:
+            if key in result:hold('HOLD_S03_RESTORE_MANIFEST_DUPLICATE')
+            result[key]=value
+        return result
+    try:manifest=json.loads(bytes(raw),object_pairs_hook=unique_object)
+    except (TypeError,ValueError):hold('HOLD_S03_RESTORE_MANIFEST_JSON')
+    if (not isinstance(manifest,dict) or set(manifest)!={'schema','snapshots','source_mutation'}
+            or manifest.get('schema')!=SCHEMA or manifest.get('source_mutation') is not False):
+        hold('HOLD_S03_RESTORE_MANIFEST_SCHEMA')
+    snapshots=manifest.get('snapshots')
+    if not isinstance(snapshots,dict) or 'CANONICAL' not in snapshots:
+        hold('HOLD_S03_RESTORE_CANONICAL_MISSING')
+    allowed={'CANONICAL'}|{'C'+str(number).zfill(2) for number in range(1,9)}
+    if len(snapshots)>9 or set(snapshots)-allowed:hold('HOLD_S03_RESTORE_SOURCE_KEYS')
+    row=snapshots['CANONICAL']
+    if (not isinstance(row,dict) or set(row)!={'path','sha256','bytes','kind','original_retained'}
+            or row.get('kind')!='CONSISTENT_SQLITE_SNAPSHOT' or row.get('original_retained') is not True
+            or not isinstance(row.get('path'),str)
+            or not isinstance(row.get('sha256'),str) or not re.fullmatch('[a-f0-9]{64}',row['sha256'])
+            or type(row.get('bytes')) is not int or not 0<row['bytes']<=512*1024*1024):
+        hold('HOLD_S03_RESTORE_CANONICAL_RECORD')
+    source=plain(folder/'canonical.sqlite')
+    if row['path']!=str(source):hold('HOLD_S03_RESTORE_CANONICAL_PATH')
+    source_info=regular(source)
+    if source_info.st_size!=row['bytes']:hold('HOLD_S03_RESTORE_CANONICAL_SIZE')
+    state=plain(STATE)
+    state.mkdir(parents=True,mode=0o700,exist_ok=True)
+    state=plain(state)
+    if shutil.disk_usage(state).free<6*1024**3+row['bytes']:
+        hold('HOLD_S03_RESTORE_DISK_RESERVE')
+    stage_root=None
+    restored_sha=None
+    item_count=0
+    with tempfile.TemporaryDirectory(prefix='.restore-',dir=state) as temporary:
+        stage_root=Path(temporary)
+        target=plain(stage_root/'canonical.sqlite')
+        src_fd=os.open(source,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        dst_fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+        source_hash=hashlib.sha256();copied=0
+        try:
+            src_before=os.fstat(src_fd)
+            if (not stat.S_ISREG(src_before.st_mode) or src_before.st_size!=row['bytes']
+                    or (src_before.st_dev,src_before.st_ino)!=(source_info.st_dev,source_info.st_ino)):
+                hold('HOLD_S03_RESTORE_SOURCE_CHANGED')
+            while True:
+                block=os.read(src_fd,1024*1024)
+                if not block:break
+                copied+=len(block)
+                if copied>row['bytes']:hold('HOLD_S03_RESTORE_SOURCE_SIZE')
+                source_hash.update(block)
+                offset=0
+                while offset<len(block):offset+=os.write(dst_fd,block[offset:])
+            os.fsync(dst_fd)
+            src_after=os.fstat(src_fd);source_named=os.stat(source,follow_symlinks=False)
+            if (copied!=row['bytes'] or source_hash.hexdigest()!=row['sha256']
+                    or any(getattr(src_before,key)!=getattr(src_after,key)
+                           or getattr(src_before,key)!=getattr(source_named,key) for key in fields)):
+                hold('HOLD_S03_RESTORE_SOURCE_HASH')
+        finally:
+            os.close(src_fd);os.close(dst_fd)
+        restored_sha=file_sha(target)
+        if restored_sha!=row['sha256']:hold('HOLD_S03_RESTORE_READBACK_HASH')
+        with connection(target,seconds=12) as restored:
+            if restored.execute('PRAGMA quick_check').fetchone()[0]!='ok':
+                hold('HOLD_S03_RESTORE_QUICK_CHECK')
+            item_count=validate_base(restored)
+    if stage_root.exists():hold('HOLD_S03_RESTORE_STAGE_NOT_REMOVED')
+    return {'state':'STAGING_RESTORE_VERIFIED','source_key':'CANONICAL',
+            'manifest_sha256':manifest_sha256,'snapshot_sha256':row['sha256'],
+            'restored_sha256':restored_sha,'restored_bytes':row['bytes'],
+            'quick_check':'ok','canonical_items':item_count,
+            'staging_removed':True,'source_retained':True,
+            'live_database_mutated_by_restore':False}
+
+
 def migrate_history(request,db=DB,legacy_root=None):
     if not re.fullmatch('[0-9]{1,24}',str(request)):hold('HOLD_S03_OWNER_REQUEST')
     if stop_active():hold('HOLD_S03_OWNER_STOP')
@@ -549,7 +656,11 @@ def migrate_history(request,db=DB,legacy_root=None):
     for number in range(1,9):
         key='C'+str(number).zfill(2);source=legacy_root/key/'ltm.sqlite'
         if source.exists():snapshots[key]=snapshot_database(source,folder/(key+'.sqlite'))
-    atomic_json(folder/'manifest.json',{'schema':SCHEMA,'snapshots':snapshots,'source_mutation':False})
+    manifest={'schema':SCHEMA,'snapshots':snapshots,'source_mutation':False}
+    manifest_path=folder/'manifest.json'
+    atomic_json(manifest_path,manifest)
+    manifest_sha256=digest(encoded(manifest))
+    staging_restore=verify_snapshot_restore_staging(manifest_path,manifest_sha256,request,db)
     summary={};start=time.monotonic()
     # Snapshot completion is mandatory before the first canonical mutation.
     with connection(db,write=True,seconds=15) as target:
@@ -580,8 +691,9 @@ def migrate_history(request,db=DB,legacy_root=None):
                     or any(ord(ch) < 32 for ch in owner) for owner in owners)):
                 hold('HOLD_S03_DIALOG_OWNER_SCOPE')
         summary['CANONICAL_DIALOGS']=import_records(target,rows,'CANONICAL_DIALOGS',snapshots['CANONICAL']['sha256'])
-        target.execute('INSERT OR REPLACE INTO nox_s03_gateway_meta VALUES(?,?)',('history_migration',encoded({'request':str(request),'summary':summary,'snapshot_manifest_sha256':file_sha(folder/'manifest.json')}).decode()))
-    return {'state':'HISTORICAL_RECORDS_IMPORTED','sources':summary,'snapshot_manifest_sha256':file_sha(folder/'manifest.json'),
+        target.execute('INSERT OR REPLACE INTO nox_s03_gateway_meta VALUES(?,?)',('history_migration',encoded({'request':str(request),'summary':summary,'snapshot_manifest_sha256':manifest_sha256,'canonical_staging_restore':staging_restore}).decode()))
+    return {'state':'HISTORICAL_RECORDS_IMPORTED','sources':summary,'snapshot_manifest_sha256':manifest_sha256,
+            'canonical_staging_restore':staging_restore,
             'source_databases_retained':True,'training_examples_accepted':0,'private_text_exported':False}
 
 
