@@ -155,14 +155,22 @@ def media_stop():
 
 
 @contextmanager
-def exclusive(path):
+def exclusive(path, *, wait_seconds=0):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise MediaHold('WAIT_RESOURCE_LEASE') from None
+        # The default is unchanged: nonblocking for other exclusive leases.
+        # Media jobs alone may wait briefly for another request's short commit.
+        deadline = time.monotonic() + wait_seconds
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise MediaHold('WAIT_RESOURCE_LEASE') from None
+                time.sleep(min(0.02, remaining))
         yield fd
     finally:
         os.close(fd)
@@ -695,7 +703,7 @@ def capabilities():
 @contextmanager
 def _media_jobs_lock():
     # Reuse the only existing inter-process media.jobs lock, never a second ledger.
-    with _LOCK, exclusive(ROOT / 'state/media/jobs.lock'):
+    with _LOCK, exclusive(ROOT / 'state/media/jobs.lock', wait_seconds=0.25):
         yield
 
 
