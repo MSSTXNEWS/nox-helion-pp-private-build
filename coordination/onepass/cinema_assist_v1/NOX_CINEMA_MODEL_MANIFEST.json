@@ -1,0 +1,176 @@
+{
+  "schema": "NOX_CINEMA_LOCAL_MODEL_SNAPSHOT_V1",
+  "created_date": "2026-11-18",
+  "benchmark_note": "No local ASR/MT/TTS benchmark has been run. Public scores are not directly comparable and do not establish film-dialogue quality or latency.",
+  "models": [
+    {
+      "id": "Systran/faster-whisper-small",
+      "revision": "536b0662742c02347bc0e980a01041f333bce120",
+      "directory": "ASR_faster_whisper_small",
+      "license": "MIT",
+      "role": "Spanish streaming ASR baseline through WhisperLiveKit/faster-whisper.",
+      "files": [
+        {
+          "file": "config.json",
+          "bytes": 2370,
+          "sha256": "b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828"
+        },
+        {
+          "file": "model.bin",
+          "bytes": 483546902,
+          "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+          "drive_part_size_bytes": 94371840,
+          "drive_parts": [
+            "model.bin.part0001",
+            "model.bin.part0002",
+            "model.bin.part0003",
+            "model.bin.part0004",
+            "model.bin.part0005",
+            "model.bin.part0006"
+          ]
+        },
+        {
+          "file": "tokenizer.json",
+          "bytes": 2203239,
+          "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+        },
+        {
+          "file": "vocabulary.txt",
+          "bytes": 459861,
+          "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+        }
+      ],
+      "drive_folder": "ASR_FASTER_WHISPER_SMALL"
+    },
+    {
+      "id": "Helsinki-NLP/opus-mt-es-ru",
+      "revision": "e49a0dcda47b05820133446d8db89d3b5f4dec5a",
+      "directory": "MT_opus_mt_es_ru",
+      "license": "Apache-2.0",
+      "role": "Local Spanish-to-Russian sentence translation; model-card scores are general test sets, not film-dialogue evaluation.",
+      "files": [
+        {
+          "file": "README.md",
+          "bytes": 898,
+          "sha256": "ba28eb0cd443cc5ee07267bf3a3ed98982e33f0f581568a673bdb058a9c52805"
+        },
+        {
+          "file": "config.json",
+          "bytes": 1381,
+          "sha256": "4f69697599b73038d40f2eb343f72b665c805f4e46176f9d88e1b1f1caab03a6"
+        },
+        {
+          "file": "generation_config.json",
+          "bytes": 293,
+          "sha256": "fbf8d15e07cacafbeeee6914a84eda94a653628b75231c1d45c91e459cd5088b"
+        },
+        {
+          "file": "pytorch_model.bin",
+          "bytes": 308863317,
+          "sha256": "e4e20329bfb36500841b37f1fb165b80fedef95739d38c385aae8451eef2ab44",
+          "drive_part_size_bytes": 94371840,
+          "drive_parts": [
+            "pytorch_model.bin.part0001",
+            "pytorch_model.bin.part0002",
+            "pytorch_model.bin.part0003",
+            "pytorch_model.bin.part0004"
+          ]
+        },
+        {
+          "file": "source.spm",
+          "bytes": 829382,
+          "sha256": "b309d8a58c506172b66c39fdd552a89792f3fb256f09e0e9a3dbfc0faefa636f"
+        },
+        {
+          "file": "target.spm",
+          "bytes": 1060731,
+          "sha256": "581d0ce357f10ff41e4ab32b5771068257470676ec0d555ba73f36e7e7a1c99c"
+        },
+        {
+          "file": "tokenizer_config.json",
+          "bytes": 42,
+          "sha256": "c1227e1bc071749bd4807cd3b9b5e06021b5750a50d2faac8f6437220aba3751"
+        },
+        {
+          "file": "vocab.json",
+          "bytes": 2619455,
+          "sha256": "394d9f7711c621b460487a72d82bf01c3eb72f6d4a73809d529f95e8a674bcac"
+        }
+      ],
+      "drive_folder": "MT_OPUS_ES_RU_APACHE"
+    },
+    {
+      "id": "coqui/XTTS-v2",
+      "revision": "6c2b0d75eae4b7047358e3b6bd9325f857d43f77",
+      "directory": "TTS_xtts_v2",
+      "license": "Coqui Public Model License (CPML; non-commercial use only for model and outputs)",
+      "role": "Optional Spanish-to-Russian cross-language voice cloning; requires per-character clean WAV sample and manual diarization/profile mapping.",
+      "files": [
+        {
+          "file": "LICENSE.txt",
+          "bytes": 4014,
+          "sha256": "190f6d7c19b8984f91b97712b94ce92d2b2e640fc677dacab966e955ece9d043"
+        },
+        {
+          "file": "README.md",
+          "bytes": 4263,
+          "sha256": "1cfa85b3293f685b3a6537f8da3d94820fd111270e553589073885dea3facfb7"
+        },
+        {
+          "file": "config.json",
+          "bytes": 4368,
+          "sha256": "ef262b1454dd2a77e1461b0b2cd53e19b8a7624cc131b837d36df67356bc75e8"
+        },
+        {
+          "file": "dvae.pth",
+          "bytes": 50511773,
+          "sha256": "2b37702d943b47070ea2a86c8b31eef24a219086e040ce61b2ffec3b0a78dbc5"
+        },
+        {
+          "file": "mel_stats.pth",
+          "bytes": 1067,
+          "sha256": "1f69422a8a8f344c4fca2f0c6b8d41d2151d6615b7321e48e6bb15ae949b119c"
+        },
+        {
+          "file": "model.pth",
+          "bytes": 1867929118,
+          "sha256": "c7ea20001c6a0a841c77e252d8409f6a74fb423e79b3206a0771ba5989776187",
+          "drive_part_size_bytes": 94371840,
+          "drive_parts": [
+            "model.pth.part0001",
+            "model.pth.part0002",
+            "model.pth.part0003",
+            "model.pth.part0004",
+            "model.pth.part0005",
+            "model.pth.part0006",
+            "model.pth.part0007",
+            "model.pth.part0008",
+            "model.pth.part0009",
+            "model.pth.part0010",
+            "model.pth.part0011",
+            "model.pth.part0012",
+            "model.pth.part0013",
+            "model.pth.part0014",
+            "model.pth.part0015",
+            "model.pth.part0016",
+            "model.pth.part0017",
+            "model.pth.part0018",
+            "model.pth.part0019",
+            "model.pth.part0020"
+          ]
+        },
+        {
+          "file": "speakers_xtts.pth",
+          "bytes": 7754818,
+          "sha256": "f0f6137c19a4eab0cbbe4c99b5babacf68b1746e50da90807708c10e645b943b"
+        },
+        {
+          "file": "vocab.json",
+          "bytes": 361219,
+          "sha256": "928260878a59da8a72a2a5b7687fea29d5106137669d90945430fe17e415304a"
+        }
+      ],
+      "drive_folder": "TTS_XTTS_V2_NONCOMMERCIAL"
+    }
+  ]
+}

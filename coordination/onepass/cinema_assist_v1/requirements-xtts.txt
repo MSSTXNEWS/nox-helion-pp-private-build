@@ -1,0 +1,2 @@
+# Optional non-commercial XTTS-v2 backend. Coqui TTS 0.22.0 requires Python >=3.9,<3.12.
+TTS==0.22.0
