@@ -1,0 +1,31 @@
+name: NOX V51 sanitized SSH failure diagnostics source tests
+on:
+  push:
+    branches: [codex/nox-01ae-ssh-diagnostic-20261116]
+    paths:
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/test_owner_native_operator_ssh_failure.py'
+      - '.github/workflows/nox-v51-ssh-diagnostic-source-ci.yml'
+  pull_request:
+    paths:
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/test_owner_native_operator_ssh_failure.py'
+      - '.github/workflows/nox-v51-ssh-diagnostic-source-ci.yml'
+permissions:
+  contents: read
+jobs:
+  source-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run sanitized SSH diagnostics fixtures
+        run: |
+          python -m py_compile nox-control/owner_native_operator.py nox-control/test_owner_native_operator_ssh_failure.py
+          cd nox-control
+          python -m unittest -v test_owner_native_operator_ssh_failure
+      - name: Mark native boundary
+        run: echo 'SOURCE TESTS ONLY. No Vast API, SSH, keys, OneHost, STOP, or service actions.'
