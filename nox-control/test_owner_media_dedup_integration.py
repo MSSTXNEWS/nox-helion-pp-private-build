@@ -1,5 +1,7 @@
 """Focused source-only integration gate for the existing authenticated NOX media create."""
+import fcntl
 import json
+import threading
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -81,6 +83,40 @@ class MediaCreateDedupIntegration(unittest.TestCase):
     def test_invalid_id_fails_closed(self):
         with self.assertRaisesRegex(media.MediaHold, 'INVALID_MEDIA_CLIENT_REQUEST_ID'):
             media.create_job(self.body(key='../'), 'alice')
+
+    def test_actual_runtime_lock_waits_for_short_competing_commit(self):
+        # Exercise the production lock path, not the blocking helper test lease.
+        lock_path = self.root / 'state/media/jobs.lock'
+        with lock_path.open('a+b') as guard:
+            fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            released = threading.Event()
+            def release():
+                fcntl.flock(guard, fcntl.LOCK_UN)
+                released.set()
+            timer = threading.Timer(0.06, release)
+            timer.start()
+            try:
+                job = media.create_job(self.body(), 'alice')
+            finally:
+                timer.join(timeout=1)
+                fcntl.flock(guard, fcntl.LOCK_UN)
+        self.assertTrue(released.is_set())
+        self.assertEqual(media.lookup_media_request('alice', 'a' * 32)['id'], job['id'])
+        self.assertEqual(len(list((self.root / 'state/media/jobs').glob('*.json'))), 1)
+
+    def test_actual_runtime_lock_timeout_does_not_commit_partial_job(self):
+        lock_path = self.root / 'state/media/jobs.lock'
+        with lock_path.open('a+b') as guard:
+            fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaisesRegex(media.MediaHold, 'WAIT_RESOURCE_LEASE'):
+                media.create_job(self.body(), 'alice')
+            self.assertEqual(list((self.root / 'state/media/jobs').glob('*.json')), [])
+            fcntl.flock(guard, fcntl.LOCK_UN)
+        # A subsequent deliberate owner operation with the SAME pinned key
+        # can reconcile safely: no second job can be created for that key.
+        first = media.create_job(self.body(), 'alice')
+        self.assertEqual(media.create_job(self.body(), 'alice')['id'], first['id'])
+        self.assertEqual(len(list((self.root / 'state/media/jobs').glob('*.json'))), 1)
 
 if __name__ == '__main__':
     unittest.main()
