@@ -15,7 +15,7 @@ import time
 ROOT=Path("/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site")
 SOURCE={
   "pc/pages/cinema/index.html":"3522533b08da046d732fd2317299d757d255ed31b5d1c984acdab4985605613c",
-  "pc/pages/games/index.html":"1e51ad6eed10136922cea1a2fb4e5e422f8785cbc2eaff2a",
+  "pc/pages/games/index.html":"1e51ad6eed10136922cea1a2f0380b61caef11a2fb4e5e422f8785cbc2eaff2a",
   "pc/pages/graph/index.html":"1deb4365f105c41e9ed04ec96d5b3233bfeacc43f8d686e87b17e5b22c8c1c9e",
   "pc/pages/music/index.html":"462b289417f75164bd651aae8cbe398b75202ae61821ee791f679346763182ca",
   "pc/pages/voice/index.html":"3eeeb035ce0518fb5913281f0671734588dc9231223b049baa4f11079ae5ed39",
