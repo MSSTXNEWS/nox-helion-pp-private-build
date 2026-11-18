@@ -6,6 +6,8 @@ single batch. Children share the EXISTING local NOX model over loopback; none
 loads a second model, starts a trainer, owns the authoritative queue or S03.
 Results are untrusted candidate answers, never privileged commands or PASS.
 This module is not auto-installed and does not bypass owner STOP/writer lease.
+The separate dispatcher mode uses owner-claimed submit/poll events, child-side
+policy preparation, bounded heartbeats and a no-replay rule for uncertain work.
 """
 from __future__ import annotations
 
@@ -158,7 +160,8 @@ def _worker(role, inbox, outbox, local_model_url, timeout,
             _arm_parent_death_signal(expected_parent_pid)
         except OSError:
             return
-    outbox.put({'kind':'READY','role':role,'pid':os.getpid()})
+    outbox.put({'kind':'READY','role':role,'pid':os.getpid(),
+                'heartbeat_at':time.time()})
     heartbeat_stop = None
     if worker_prepare is not None:
         heartbeat_stop = threading.Event()
@@ -292,7 +295,13 @@ class Subagents:
             role = msg['role']
             if role in confirmed or msg.get('pid') != self.processes[role].pid:
                 raise GateError('HOLD_SUBAGENT_PID_MISMATCH')
+            heartbeat_at = msg.get('heartbeat_at')
+            if (type(heartbeat_at) not in (int, float)
+                    or not math.isfinite(heartbeat_at) or heartbeat_at <= 0
+                    or heartbeat_at > time.time()+5):
+                raise GateError('HOLD_SUBAGENT_HEARTBEAT_START')
             confirmed[role] = msg['pid']
+            self.heartbeats[role] = float(heartbeat_at)
         if len(set(confirmed.values())) != len(self.roles):
             raise GateError('HOLD_SUBAGENT_NONUNIQUE_PID')
 
@@ -358,7 +367,11 @@ class Subagents:
         # Replace all workers and IPC channels only after no task is active.
         self.__exit__(None, None, None)
         self._new_channels()
-        self._start_workers()
+        try:
+            self._start_workers()
+        except BaseException:
+            self.__exit__(None, None, None)
+            raise
 
     def submit(self, task):
         """Submit one owner-claimed job; uncertain IDs stay fenced for pool life."""
