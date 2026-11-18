@@ -325,7 +325,8 @@ class FreshSubmissionTests(unittest.TestCase):
         row['owner_claim'] = claim
         intent = {'task_id': task['id'], 'claim_nonce': claim['nonce'],
                   'role': 'runtime', 'policy_sha': 'a' * 64,
-                  'job_id': job_id, 'state': 'UNCERTAIN'}
+                  'job_id': job_id, 'state': 'UNCERTAIN',
+                  'resource_admission': snapshot()}
         task['native_submit_intent'] = intent
         row['native_submit_intent'] = intent
         native.ns['save_state'](native.state)
