@@ -1,0 +1,42 @@
+{
+  "schema": "NOX_DISTINCT_WORDING_QA_SOURCE_RECEIPT_V1",
+  "state": "SOURCE_FROZEN_PEER_PENDING_NATIVE_NOT_RUN",
+  "instructions_version": "0.0.6",
+  "freeze_sha256": "ad2294dcd40de1b28262604407fd0d55a49a97c2e6adc879cb027b628d042dac",
+  "payload": {
+    "path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+    "sha256": "1d6511da4a56de1d591050a29900eae90bfc0499b9d820326379380426dbb4c4",
+    "bytes": 36181
+  },
+  "actual_install": {
+    "run": 44211768497,
+    "job": 134491636891,
+    "request": "6965635795",
+    "source_sha": "2b6f338342bdd7eb0e9ef0e64c6c65bccb7e60cb",
+    "raw_sha256": "65dd412015e4f8e9ea4900f0818e857e2cb4f7df78dfb80f4fa91d8928440f45",
+    "proxy_pid": 3703386,
+    "proxy_start_ticks": 175609570
+  },
+  "distinct_scope": {
+    "journal": "owner_model_wording_acceptance_20261118",
+    "previous_completed_qa_run": 44207277921,
+    "previous_exchange_id": "S03-9fad6998423e475c",
+    "previous_record_sha256": "37ebf757bbe4e7f059d9ee6dc430017221731061b602f97d6cc053f31a8d126c",
+    "prior_messages": 4,
+    "after_messages": 6,
+    "fresh_exclusive_purpose": true,
+    "old_journal_reused": false,
+    "new_question": "На какой модели ты работаешь?",
+    "max_owner_chat_posts_in_this_purpose": 1
+  },
+  "same_accepted_waiter_and_durable_Journal_write": true,
+  "one_targeted_offline_regression": "PASS",
+  "peer_review": "PENDING",
+  "native_calls": 0,
+  "model_calls": 0,
+  "source_or_service_changes": 0,
+  "previous_completed_question_replayed": false,
+  "full_prior_pair_metadata_limit": "First two-message prefix is pinned to actual prior receipt; second pair content/exchange/M1 is pinned. Full current four-message metadata is captured and preserved for this new operation.",
+  "ordinary_context_path_runtime_speedup_measured": false,
+  "next_READY": "Root reviews/publishes exact payload and performs one coordinated fresh-purpose native QA, then semantic acceptance of the actual answer and new M1."
+}

@@ -1,0 +1,94 @@
+{
+  "schema": "NOX_MODEL_REFERENCE_QA_PAYLOAD_V1",
+  "payload_path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+  "repository_payload_path": "nox-control/owner_resonance_canary_v3_20261117.py",
+  "payload_sha256": "1d6511da4a56de1d591050a29900eae90bfc0499b9d820326379380426dbb4c4",
+  "payload_bytes": 36181,
+  "modules": {
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "p0_login_idle_wait.py": {
+      "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+      "bytes": 12459
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "b2892b7bb7cd86adf42ea60fc0c6b33cee14205032226a13de1cfd82397c1791",
+      "bytes": 1864
+    },
+    "model_reference_changed_path_qa.py": {
+      "sha256": "037c3b3c30ea76496f1fb1ad842e94239931134a3b03cbfdb494c069eea754d5",
+      "bytes": 35745
+    }
+  },
+  "deterministic_gzip_mtime": 0,
+  "entry_count": 1,
+  "entry": "model_reference_changed_path_qa.entry",
+  "native_execution_by_builder": 0,
+  "operator": "UNCHANGED_EXISTING_OWNER_REPAIR_ROUTE",
+  "actual_install_source": "2b6f338342bdd7eb0e9ef0e64c6c65bccb7e60cb",
+  "actual_install_request": "6965635795",
+  "actual_proxy_pid": 3703386,
+  "actual_proxy_start_ticks": 175609570,
+  "hard_deadline_seconds": 420,
+  "sse_total_cooperative_deadline_seconds": 90,
+  "socket_timeout_seconds": 20,
+  "max_output_bytes": 65536,
+  "allowed_http": {
+    "127.0.0.1:18775": {
+      "POST /chat/login": 1,
+      "POST /api/nox/chat": 1,
+      "GET /nox-web-v29/nox-ui.js": 1,
+      "GET /api/ui/memory/dialogs/history?dialog_id=12092579cf5144419cfa4fadc2e3a03b&limit=6": 2
+    },
+    "127.0.0.1:8098": {
+      "GET /slots": 3
+    }
+  },
+  "dialog_create_posts": 0,
+  "model_reloads": 0,
+  "service_mutations": 0,
+  "counter_resets": 0,
+  "automatic_retry_allowed": false,
+  "native_dispatch_owner": "/root",
+  "distinct_wording_acceptance": {
+    "journal": "owner_model_wording_acceptance_20261118",
+    "previous_completed_qa_run": 44207277921,
+    "previous_exchange_id": "S03-9fad6998423e475c",
+    "previous_record_sha256": "37ebf757bbe4e7f059d9ee6dc430017221731061b602f97d6cc053f31a8d126c",
+    "prior_messages": 4,
+    "after_messages": 6,
+    "fresh_exclusive_purpose": true,
+    "old_journal_reused": false,
+    "new_question": "\u041d\u0430 \u043a\u0430\u043a\u043e\u0439 \u043c\u043e\u0434\u0435\u043b\u0438 \u0442\u044b \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0448\u044c?",
+    "max_owner_chat_posts_in_this_purpose": 1
+  },
+  "login_idle_wait": {
+    "module": "p0_login_idle_wait.py",
+    "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+    "bytes": 12459,
+    "unchanged": true,
+    "max_seconds": 240,
+    "source": "nox_refresh/launcher_parent_file_fix_20261118/frozen_22302/p0_login_idle_wait.py",
+    "previous_accepted_native_run": 44207277921,
+    "observed_wait_seconds": 182.777,
+    "repeated_login_allowed": false,
+    "priority_writes": 0
+  },
+  "counter_raw_snapshot_max_bytes": 4096,
+  "counter_expected_value_assigned": false,
+  "counter_raw_publicly_exported": false,
+  "counter_private_evidence_files": [
+    "counter_before.json",
+    "counter_after.json"
+  ],
+  "counter_observed_identity_presence_fields": [
+    "writer_key_present",
+    "activity_schema_key_present"
+  ]
+}

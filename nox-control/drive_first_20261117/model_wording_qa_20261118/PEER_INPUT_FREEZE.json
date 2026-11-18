@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_DISTINCT_WORDING_QA_PEER_FREEZE_V1",
+  "state": "SOURCE_ONLY_PEER_PENDING",
+  "files": {
+    "model_reference_changed_path_qa.py": {
+      "sha256": "037c3b3c30ea76496f1fb1ad842e94239931134a3b03cbfdb494c069eea754d5",
+      "bytes": 35745
+    },
+    "model_reference_qa_release.py": {
+      "sha256": "b2892b7bb7cd86adf42ea60fc0c6b33cee14205032226a13de1cfd82397c1791",
+      "bytes": 1864
+    },
+    "p0_witness_protocol.py": {
+      "sha256": "9052ee04c1128829f47f6f530fec6debea884b907ff8e606760460adfd626475",
+      "bytes": 8414
+    },
+    "p0_native_helpers.py": {
+      "sha256": "aaa8a5472b0ceb03571b1a73d224eb5ad1a7c09269d02aeebb21960a76993e49",
+      "bytes": 20690
+    },
+    "p0_login_idle_wait.py": {
+      "sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+      "bytes": 12459
+    },
+    "build_payload.py": {
+      "sha256": "c8a83bce43eda5d902bbd969d4d764fa1874a20adbadef0bcdd4d59ba39f6058",
+      "bytes": 4877
+    },
+    "BUILD_MANIFEST.json": {
+      "sha256": "61e8f4dda22607d4f443b0b3571955b7b614093fe2f25d2ee740bfafd02ed3a4",
+      "bytes": 3518
+    },
+    "SOURCE_GATE.json": {
+      "sha256": "b7b6fe23a4700787c3d90f9def56c91eb0a027de7eda97c6251d2101a98e9aa6",
+      "bytes": 1804
+    },
+    "SCOPED_QA_REUSE.patch": {
+      "sha256": "6ee4ef149ea1f47e0210feef168db7915fff1106f89983a4afd4c254662467c7",
+      "bytes": 23943
+    },
+    "test_distinct_wording_scope.py": {
+      "sha256": "6bbc01e6e5c530c3cbc48cc65e2d750f0bf31d8237007b68f69dca7ec97d7bfa",
+      "bytes": 8163
+    },
+    "NATIVE_INSTALL_ACCEPTANCE_44211768497.json": {
+      "sha256": "04a3c54a64c3895fea4b9225fdfa656ee180eb23a6490899fde0b0ac981c1fb9",
+      "bytes": 2623
+    }
+  },
+  "payload": {
+    "path": "public_payload/nox-control/owner_resonance_canary_v3_20261117.py",
+    "sha256": "1d6511da4a56de1d591050a29900eae90bfc0499b9d820326379380426dbb4c4",
+    "bytes": 36181
+  },
+  "native_dispatch_owner": "/root",
+  "new_purpose": "owner_model_wording_acceptance_20261118",
+  "new_question": "На какой модели ты работаешь?",
+  "completed_question_replay": false,
+  "max_owner_chat_POSTs": 1,
+  "native_calls": 0
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "NOX_WORDING_QA_NARROW_PEER_V1",
+  "verdict": "PASS_EXACT_SOURCE_AND_BUNDLE_ROOT_DISPATCH_ONLY",
+  "reviewer": "integrations_completion",
+  "main": {
+    "path": "nox_refresh/model_wording_qa_review_20261118/inputs/model_reference_changed_path_qa.py",
+    "sha256": "037c3b3c30ea76496f1fb1ad842e94239931134a3b03cbfdb494c069eea754d5",
+    "bytes": 35745
+  },
+  "payload": {
+    "path": "nox_refresh/model_wording_qa_review_20261118/inputs/payload.py",
+    "sha256": "1d6511da4a56de1d591050a29900eae90bfc0499b9d820326379380426dbb4c4",
+    "bytes": 36181
+  },
+  "release": {
+    "path": "nox_refresh/model_wording_qa_review_20261118/inputs/model_reference_qa_release.py",
+    "sha256": "b2892b7bb7cd86adf42ea60fc0c6b33cee14205032226a13de1cfd82397c1791",
+    "bytes": 1864
+  },
+  "checked": [
+    "Fresh exclusive owner_model_wording_acceptance_20261118 purpose; the completed old journal/child is never opened for writing or reused.",
+    "Distinct question is exactly На какой модели ты работаешь?, recognized by installed helper full-match route.",
+    "Actual442117 receipt matches current proxy3703386/start175609570 and all three source/inode pins.",
+    "Actual442072 receipt supplies full S03-prefixed second exchange and exact question/answer/full-M1 hashes. Original first pair and both M1 rows must be verified privately.",
+    "Four existing messages remain exact; only one pair may append, giving6. No dialog create, old pair replay, history reset or raw private history export.",
+    "Client, durable Journal.write, no-redirect HTTP allowlist, source/STOP/slot/current-proxy checks and accepted c69 login-once idle wait are preserved.",
+    "Exactly5 embedded modules decode to reviewed files; wrapper AST is identical to prior accepted wrapper except packed data and hashes. Payload not executed."
+  ],
+  "independent_regression": {
+    "test": {
+      "path": "nox_refresh/model_wording_qa_review_20261118/test_fresh_purpose_uncertainty.py",
+      "sha256": "7dbbfebe8553cb71fc3409669ec0bc201b2d87b48152cd82a35d0eedb8a5f89f",
+      "bytes": 5610
+    },
+    "result": "PASS",
+    "cases": 1,
+    "subcases": [
+      "durable intent ACK lost before any POST",
+      "socket outcome unknown after one attempted POST"
+    ],
+    "exec_chunk": "117a1f",
+    "seconds": 0.002,
+    "assertions": "Both cases retain exclusive purpose+intent; no replay under same or new request; old journal inode/bytes unchanged. Actual result anchors asserted first.",
+    "http_requests": 0
+  },
+  "author_suite_repeated": false,
+  "limits": {
+    "hard_deadline_seconds": 420,
+    "login_POST_max": 1,
+    "owner_chat_POST_max": 1,
+    "dialog_create_POST": 0,
+    "raw_counter_bytes_max": 4096,
+    "raw_counter_public": false
+  },
+  "semantics": "Output still requires actual human/root semantic review; no claim of exact tokenizer count or directly observed backend HTTP count.",
+  "native_calls": 0,
+  "provider_calls": 0,
+  "model_calls": 0,
+  "remaining_gate": "Root publication/exact readback and one fresh-purpose native execution; no automatic retry."
+}

@@ -1,0 +1,79 @@
+{
+  "schema": "NOX_CONTEXT_WORDING_NATIVE_INSTALL_ACCEPTANCE_V1",
+  "status": "APPLIED_RELOADED_POSTIMAGES_ACCEPTED_USE_PENDING",
+  "reviewer": "/root/resonance_native",
+  "reviewed_utc": "2026-11-18T00:57:51.561080+00:00",
+  "run": 44211768497,
+  "job": 134491636891,
+  "request": "6965635795",
+  "source_sha": "2b6f338342bdd7eb0e9ef0e64c6c65bccb7e60cb",
+  "raw": {
+    "path": "nox_refresh/context_counter_install_20261118/NATIVE_RESULT_44211768497.raw.json",
+    "sha256": "65dd412015e4f8e9ea4900f0818e857e2cb4f7df78dfb80f4fa91d8928440f45",
+    "bytes": 19212
+  },
+  "proxy_generation": {
+    "pid": 3703386,
+    "start_ticks": 175609570,
+    "ppid": 114,
+    "pgrp": 3703386,
+    "service": "nox-proxy",
+    "script_bound": true,
+    "argv_sha256": "da23c227363412f8a37b8bd043594d7b087c4fc9441af97e10f63bc32cf0e60f",
+    "exe": "/usr/bin/python3.12",
+    "cwd": "/root/nox/scripts"
+  },
+  "postimages": {
+    "chat_proxy.py": {
+      "sha256": "1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62",
+      "bytes": 100684
+    },
+    "owner_model_reference_binding.py": {
+      "sha256": "78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4",
+      "bytes": 19122
+    },
+    "owner_context_budget.py": {
+      "sha256": "b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0",
+      "bytes": 15511,
+      "dev": 36,
+      "ino": 50052627,
+      "mode": "0o600",
+      "uid": 0,
+      "gid": 0,
+      "nlink": 1
+    }
+  },
+  "owned_source_metadata": {
+    "owner_model_reference_binding.py": {
+      "dev": 36,
+      "ino": 49800575,
+      "uid": 0,
+      "gid": 0,
+      "mode": 33152,
+      "size": 19122
+    },
+    "chat_proxy.py": {
+      "dev": 36,
+      "ino": 50052621,
+      "uid": 0,
+      "gid": 0,
+      "mode": 33188,
+      "size": 100684
+    }
+  },
+  "runtime_dependencies": {
+    "agent_loop.py": "0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa",
+    "common.py": "618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167",
+    "owner_chat_stream.py": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
+    "nox_v29_chat_bridge.py": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a"
+  },
+  "model_calls": 0,
+  "model_reloads": 0,
+  "counter_resets": 0,
+  "queue_resets": 0,
+  "completion_QA_replayed": false,
+  "new_context_counter_runtime_performance_observed": false,
+  "new_wording_prose_accepted": false,
+  "next_ready": "One distinct wording-path QA with fresh purpose journal and preserved current four-message history; not a performance test of ordinary context path.",
+  "native_calls_by_reviewer": 0
+}

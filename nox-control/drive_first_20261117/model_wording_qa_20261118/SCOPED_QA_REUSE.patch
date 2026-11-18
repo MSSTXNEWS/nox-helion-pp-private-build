@@ -1,0 +1,407 @@
+--- completed_b57e_continuation.py
++++ distinct_wording_path_qa.py
+@@ -1,6 +1,6 @@
+-"""One proven-zero-send continuation in the already-owned QA dialog.
+-
+-The two prior messages stay private and must remain byte-for-byte unchanged.
++"""One distinct wording-path acceptance in the already-owned QA dialog.
++
++The four prior messages stay private and must remain byte-for-byte unchanged.
+ No dialog creation, app imports, source edits, service mutation, counter reset,
+ external HTTP or automatic retry. Only the new synthetic answer may be returned.
+ """
+@@ -29,28 +29,28 @@
+ DIALOG = '12092579cf5144419cfa4fadc2e3a03b'
+ OLD_EXCHANGE = 'S03-48140046c4684fe5'
+ OLD_RECORD_SHA = 'b7513f8177f4ec65b9dd65f248097108bf4e2a2cb364e407e3cb191f98e4bdec'
+-QUESTION = 'Какая модель в твоей основе сейчас?'
++QUESTION = 'На какой модели ты работаешь?'
+ MODEL_REFERENCE = 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf'
+-HISTORY_PATH = '/api/ui/memory/dialogs/history?dialog_id=' + DIALOG + '&limit=4'
++HISTORY_PATH = '/api/ui/memory/dialogs/history?dialog_id=' + DIALOG + '&limit=6'
+ MENU_PATH = '/nox-web-v29/nox-ui.js'
+ MENU_SHA = '13897495d7c9c628ef4f3094fafdad5f5932a3570d21c650112ba7138ab3c2f0'
+ DB = native.ROOT / 'kb/knowledge.sqlite'
+-JOURNAL = 'owner_model_reference_acceptance_20261118'
++JOURNAL = 'owner_model_wording_acceptance_20261118'
+ MAX_WALL = 420.0
+ MAX_RECEIPT = 65536
+-PRIOR_REQUEST = '6964382138'
+-PRIOR_SOURCE = '6dd20a0aac59742138918840c3b4bb1963142928'
+-PRIOR_OUTCOME_SHA = 'f0224c15acf37aaad4b45380ce174a27ae2acbafbdf361f036f07eca846e4fd9'
+-PRIOR_OUTCOME_BYTES = 3534
++PREVIOUS_EXCHANGE = 'S03-9fad6998423e475c'
++PREVIOUS_RECORD_SHA = '37ebf757bbe4e7f059d9ee6dc430017221731061b602f97d6cc053f31a8d126c'
++PREVIOUS_QUESTION_SHA = '59a3a13c7cc953ceede5618d59db077499a57cc9d1af42b849537c2769ce0762'
++PREVIOUS_ANSWER_SHA = '530ee3f3c484614766bc886531172d82ef8d042a78c06b5d5d1f104a65fbeba3'
+ PRIOR_PREFIX_SHA = '2abccd3b98bc45ee14c384c8866f9b55ab797b34233c38537512af43e45eb5e0'
+-CONTINUATION = 'continuation_6964382138'
+ COUNTER = native.ROOT / 'status/chat_state.json'
+ MAX_COUNTER_BYTES = 4096
+ SOURCE_PINS = {
+-    'chat_proxy.py': '30207a85eed6c87df4a6ee4dd8614442a62622eefacac7fae822b23ad385b343',
++    'chat_proxy.py': '1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62',
+     'owner_chat_stream.py': '38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09',
+     'nox_v29_chat_bridge.py': '9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a',
+-    'owner_model_reference_binding.py': 'b9f4addc252c8a0339e2123680fe5a0ab47cef15e725ecec0747f5934a2759ad',
++    'owner_model_reference_binding.py': '78704531d8fab73357cf66302fde0c31f785e341de5c1ac66a5fb0fd36fdb7a4',
++    'owner_context_budget.py': 'b405e62883a73dc0681fa254eb792333589b959193aadcbd651a3fa48e43c4e0',
+     'common.py': '618b2b24ffdf780e64a5d09955438dec5a9b6b8b04b3346b29c57fc750403167',
+     'agent_loop.py': '0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa',
+     's03_memory.py': '776a6dc25726540d75ec51216d1e333ca89b24e803ba3620f9b5e470a3c81476',
+@@ -81,7 +81,7 @@
+     # The exact question is a full-match identity route. A tag in its text would
+     # exercise the generic route, so the nonce belongs only in request metadata.
+     return {'message': QUESTION, 'history': [], 'dialog_id': DIALOG,
+-            'request_id': 'model-reference-' + nonce, 'max_tokens': 256}
++            'request_id': 'model-wording-' + nonce, 'max_tokens': 256}
+ 
+ 
+ def runtime_projection(identity):
+@@ -100,7 +100,7 @@
+     path = native.STATE / ('owner_v24_dialog_' + RELEASE['install_request'] + '.json')
+     raw, metadata = native.stable_read(path, 120000)
+     value = document(raw)
+-    require(value.get('schema') == 'NOX_MODEL_REFERENCE_PROXY_INSTALL_V1'
++    require(value.get('schema') == 'NOX_CONTEXT_COUNTER_PROXY_INSTALL_V1'
+             and value.get('request') == RELEASE['install_request']
+             and value.get('source_sha') == RELEASE['install_source']
+             and value.get('status') == 'APPLIED_RELOADED_USE_PENDING'
+@@ -109,10 +109,10 @@
+     after = [x.get('after') for x in value.get('steps', []) if x.get('phase') == 'proxy_reloaded']
+     require(len(after) == 1 and runtime_projection(after[0]) == RELEASE['runtime_identity'],
+             'HOLD_RECEIPT_PROXY_GENERATION')
+-    for name, expected in RELEASE['five_postimages'].items():
++    for name, expected in RELEASE['postimages'].items():
+         observed = value.get('files_after', {}).get(name) if name in value.get('files_after', {}) else \
+                    value.get('new_artifacts', {}).get(name, {}).get('after')
+-        require(observed == expected, 'HOLD_INSTALL_FIVE_POSTIMAGES')
++        require(observed == expected, 'HOLD_INSTALL_THREE_POSTIMAGES')
+     return {'install_request': RELEASE['install_request'], 'install_source': RELEASE['install_source'],
+             'private_receipt_sha256': digest(raw), 'private_receipt_bytes': len(raw),
+             'proxy_generation': runtime_projection(identity), 'loaded_module_memory_identity_verified': False}
+@@ -127,14 +127,14 @@
+             required = RELEASE['source_owned_identity'][name]
+             require(all(info[k] == required[k] for k in ('dev', 'ino', 'uid', 'gid', 'mode', 'size')),
+                     'HOLD_INSTALLED_SOURCE_INODE_DRIFT')
+-        if name == 'owner_model_reference_binding.py':
+-            required = RELEASE['five_postimages'][name]
++        if name == 'owner_context_budget.py':
++            required = RELEASE['postimages'][name]
+             require((info['dev'], info['ino'], info['uid'], info['gid'], stat.S_IMODE(info['mode'])) ==
+                     (required['dev'], required['ino'], 0, 0, 0o600), 'HOLD_INSTALLED_HELPER_INODE_DRIFT')
+         private[name] = raw
+         public[name] = {'sha256': expected, 'bytes': len(raw)}
+     raw, info = native.stable_read(native.STATE / 'verified_model_reference.json', 8192)
+-    required = RELEASE['five_postimages']['verified_model_reference.json']
++    required = RELEASE['preserved_snapshot']
+     require(digest(raw) == required['sha256'] and len(raw) == required['bytes']
+             and (info['dev'], info['ino'], info['uid'], info['gid'], stat.S_IMODE(info['mode'])) ==
+             (required['dev'], required['ino'], 0, 0, 0o600), 'HOLD_INSTALLED_MODEL_SNAPSHOT_DRIFT')
+@@ -180,11 +180,11 @@
+             (DIALOG, 'nox-single-owner')).fetchall()
+         rows = db.execute('SELECT row_id,role,substr(content,1,8001),substr(ts,1,65),'
+             'substr(exchange_id,1,129),length(content) FROM nox_v29_dialog_messages '
+-            'WHERE dialog_id=? ORDER BY row_id LIMIT 5', (DIALOG,)).fetchall()
++            'WHERE dialog_id=? ORDER BY row_id LIMIT 7', (DIALOG,)).fetchall()
+         require(len(dialog) == 1 and dialog[0][3] == 0 and type(dialog[0][4]) is int
+                 and 1 <= dialog[0][4] <= 1000000 and len(dialog[0][2]) <= 140
+                 and len(dialog[0][5]) <= 64, 'HOLD_OWN_DIALOG_SCOPE')
+-        require(len(rows) in (2, 4), 'HOLD_OWN_DIALOG_ROW_COUNT')
++        require(len(rows) in (4, 6), 'HOLD_OWN_DIALOG_ROW_COUNT')
+         for row in rows:
+             require(type(row[0]) is int and row[0] > 0 and row[1] in ('user', 'assistant')
+                     and isinstance(row[2], str) and len(row[2]) == row[5] <= 8000
+@@ -199,30 +199,38 @@
+ 
+ def verify_old_prefix(snapshot, binding):
+     rows = snapshot['rows']
+-    require(len(rows) == 2 and [r[1] for r in rows] == ['user', 'assistant']
+-            and all(r[4] == OLD_EXCHANGE for r in rows), 'HOLD_PRIOR_QA_PAIR_BINDING')
+-    frame = native.full_turn_episode(rows[0][2], rows[1][2])
+-    require(frame is not None and digest(('M1|' + frame).encode()) == OLD_RECORD_SHA,
+-            'HOLD_PRIOR_QA_RECORD_DIGEST')
+-    with contextlib.closing(sqlite3.connect('file:' + str(DB) + '?mode=ro', uri=True, timeout=3)) as db:
+-        db.execute('PRAGMA query_only=ON')
+-        matches = db.execute('SELECT id FROM s03_items WHERE id=? AND segment=? AND provenance=? '
+-            'AND sha256=? AND text=? LIMIT 2', (OLD_EXCHANGE, 'M1', 'chat_turn', OLD_RECORD_SHA, frame)).fetchall()
+-    require(matches == [(OLD_EXCHANGE,)], 'HOLD_PRIOR_QA_S03_ROW')
+-    db_identity(binding)
+-    return {'dialog_id': DIALOG, 'messages': 2, 'exchange_id': OLD_EXCHANGE,
+-            'record_sha256': OLD_RECORD_SHA, 'prefix_sha256': digest(canonical(rows)),
+-            'history_contents_exported': False}
++    require(len(rows) == 4 and [r[1] for r in rows] == ['user', 'assistant', 'user', 'assistant'],
++            'HOLD_PRIOR_QA_PAIR_BINDING')
++    require(digest(canonical(rows[:2])) == PRIOR_PREFIX_SHA, 'HOLD_ORIGINAL_QA_PREFIX_CHANGED')
++    require(digest(rows[2][2].encode()) == PREVIOUS_QUESTION_SHA
++            and digest(rows[3][2].encode()) == PREVIOUS_ANSWER_SHA,
++            'HOLD_PREVIOUS_QA_CONTENT_CHANGED')
++    for pair, exchange, record in ((rows[:2], OLD_EXCHANGE, OLD_RECORD_SHA),
++                                   (rows[2:], PREVIOUS_EXCHANGE, PREVIOUS_RECORD_SHA)):
++        require(all(r[4] == exchange for r in pair), 'HOLD_PRIOR_QA_PAIR_BINDING')
++        frame = native.full_turn_episode(pair[0][2], pair[1][2])
++        require(frame is not None and digest(('M1|' + frame).encode()) == record,
++                'HOLD_PRIOR_QA_RECORD_DIGEST')
++        with contextlib.closing(sqlite3.connect('file:' + str(DB) + '?mode=ro', uri=True, timeout=3)) as db:
++            db.execute('PRAGMA query_only=ON')
++            matches = db.execute('SELECT id FROM s03_items WHERE id=? AND segment=? AND provenance=? '
++                'AND sha256=? AND text=? LIMIT 2', (exchange, 'M1', 'chat_turn', record, frame)).fetchall()
++        require(matches == [(exchange,)], 'HOLD_PRIOR_QA_S03_ROW')
++        db_identity(binding)
++    return {'dialog_id': DIALOG, 'messages': 4, 'original_exchange_id': OLD_EXCHANGE,
++            'original_record_sha256': OLD_RECORD_SHA, 'original_prefix_sha256': PRIOR_PREFIX_SHA,
++            'previous_exchange_id': PREVIOUS_EXCHANGE, 'previous_record_sha256': PREVIOUS_RECORD_SHA,
++            'prefix_sha256': digest(canonical(rows)), 'history_contents_exported': False}
+ 
+ 
+ def verify_appended_pair(before, after, turn, binding):
+-    require(after['rows'][:2] == before['rows'] and len(after['rows']) == 4,
++    require(after['rows'][:4] == before['rows'] and len(after['rows']) == 6,
+             'HOLD_PRIOR_HISTORY_CHANGED')
+     old, new = before['dialog'], after['dialog']
+     require(new[:4] == old[:4] and new[5] == old[5] and new[4] == old[4] + 1,
+             'HOLD_DIALOG_METADATA_CHANGED')
+-    require(turn.exchange_id != OLD_EXCHANGE, 'HOLD_NEW_EXCHANGE_NOT_NEW')
+-    pair = after['rows'][2:]
++    require(turn.exchange_id not in (OLD_EXCHANGE, PREVIOUS_EXCHANGE), 'HOLD_NEW_EXCHANGE_NOT_NEW')
++    pair = after['rows'][4:]
+     require([r[1] for r in pair] == ['user', 'assistant'] and
+             [r[2] for r in pair] == [QUESTION, turn.answer] and
+             all(r[4] == turn.exchange_id for r in pair) and pair[0][0] > before['rows'][-1][0],
+@@ -238,7 +246,7 @@
+     require(row == [(turn.exchange_id,)], 'HOLD_NEW_S03_FRAME')
+     db_identity(binding)
+     return {'prior_history_preserved': True, 'prior_prefix_sha256': digest(canonical(before['rows'])),
+-            'prior_messages': 2, 'new_messages': 2, 'total_own_messages': 4,
++            'prior_messages': 4, 'new_messages': 2, 'total_own_messages': 6,
+             'new_exchange_id': turn.exchange_id, 'new_record_sha256': expected,
+             'new_full_frame_chars': len(frame), 'segment': 'M1', 'provenance': 'chat_turn',
+             'question_sha256': digest(QUESTION.encode()), 'answer_sha256': digest(turn.answer.encode()),
+@@ -358,7 +366,7 @@
+         value = body(self.context['nonce'])
+         self.write('model_post_intent.json', self.context | {
+             'body_sha256': digest(canonical(value)), 'question_sha256': digest(QUESTION.encode()),
+-            'client_history_messages': 0, 'server_prior_messages': 2, 'create_posts': 0,
++            'client_history_messages': 0, 'server_prior_messages': 4, 'create_posts': 0,
+             'max_tokens': 256, 'single_send_attempt': True, 'uncertain_result_never_retried': True})
+         self.check()
+         self.sent = True
+@@ -369,165 +377,6 @@
+             os.close(self.fd); self.fd = None
+ 
+ 
+-class ZeroSendContinuation(Journal):
+-    """One fixed child of one proven-unsent purpose; old records stay intact."""
+-    def __init__(self, request, source):
+-        super().__init__(request, source, '0' * 32)
+-        self.prior_path, self.path = self.path, self.path / CONTINUATION
+-        self.chain = []
+-        self.prior_fd = None
+-        self.prior_identity = None
+-        self.original_files = {}
+-        self.child_created = False
+-
+-    @staticmethod
+-    def directory_identity(info):
+-        return tuple(getattr(info, name) for name in
+-                     ('st_dev', 'st_ino', 'st_uid', 'st_gid', 'st_mode'))
+-
+-    @staticmethod
+-    def file_identity(info):
+-        return tuple(getattr(info, name) for name in ('st_dev', 'st_ino', 'st_uid',
+-            'st_gid', 'st_mode', 'st_nlink', 'st_size', 'st_mtime_ns', 'st_ctime_ns'))
+-
+-    def open_prior(self):
+-        require(self.prior_fd is None and not self.chain, 'HOLD_CONTINUATION_OPEN_REENTRY')
+-        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+-        root_fd = os.open('/', flags)
+-        self.chain.append((None, None, root_fd, self.directory_identity(os.fstat(root_fd))))
+-        parent = root_fd
+-        try:
+-            for part in native.STATE.parts[1:]:
+-                require(part not in ('', '.', '..'), 'HOLD_CONTINUATION_PARENT_PATH')
+-                child = os.open(part, flags, dir_fd=parent)
+-                self.chain.append((parent, part, child, self.directory_identity(os.fstat(child))))
+-                parent = child
+-            self.prior_fd = os.open(JOURNAL, flags, dir_fd=parent)
+-            self.prior_identity = self.directory_identity(os.fstat(self.prior_fd))
+-            self.check_prior()
+-        except BaseException:
+-            self.close_prior()
+-            raise
+-
+-    def read_prior(self, name, maximum):
+-        require(name in ('reservation.json', 'outcome.json'), 'HOLD_CONTINUATION_PRIOR_PATH')
+-        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+-                     dir_fd=self.prior_fd)
+-        try:
+-            before = os.fstat(fd)
+-            require(stat.S_ISREG(before.st_mode) and before.st_uid == os.geteuid()
+-                    and before.st_gid == os.getegid() and stat.S_IMODE(before.st_mode) == 0o600
+-                    and before.st_nlink == 1 and 0 < before.st_size <= maximum,
+-                    'HOLD_CONTINUATION_PRIOR_FILE_TYPE')
+-            raw = os.pread(fd, maximum + 1, 0)
+-            after = os.fstat(fd)
+-            named = os.stat(name, dir_fd=self.prior_fd, follow_symlinks=False)
+-            identity = self.file_identity(before)
+-            require(len(raw) == before.st_size and identity == self.file_identity(after)
+-                    == self.file_identity(named), 'HOLD_CONTINUATION_PRIOR_FILE_DRIFT')
+-            previous = self.original_files.get(name)
+-            require(previous is None or previous == (identity, raw),
+-                    'HOLD_CONTINUATION_PRIOR_FILE_REPLACED')
+-            self.original_files[name] = (identity, raw)
+-            return document(raw)
+-        finally:
+-            os.close(fd)
+-
+-    def check_prior(self):
+-        require(self.prior_fd is not None and self.chain, 'HOLD_CONTINUATION_PRIOR_CLOSED')
+-        for parent, name, fd, expected in self.chain:
+-            require(self.directory_identity(os.fstat(fd)) == expected,
+-                    'HOLD_CONTINUATION_PARENT_IDENTITY')
+-            if parent is not None:
+-                require(self.directory_identity(os.stat(name, dir_fd=parent, follow_symlinks=False))
+-                        == expected, 'HOLD_CONTINUATION_PARENT_REPLACED')
+-        info = os.fstat(self.prior_fd)
+-        require(self.directory_identity(info) == self.prior_identity ==
+-                self.directory_identity(os.stat(JOURNAL, dir_fd=self.chain[-1][2], follow_symlinks=False))
+-                and stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700
+-                and info.st_uid == os.geteuid() and info.st_gid == os.getegid(),
+-                'HOLD_CONTINUATION_PRIOR_DIRECTORY')
+-        names = set()
+-        with os.scandir(self.prior_fd) as entries:
+-            for entry in entries:
+-                names.add(entry.name)
+-                require(len(names) <= 3, 'HOLD_CONTINUATION_PRIOR_SCOPE')
+-        require('model_post_intent.json' not in names, 'HOLD_CONTINUATION_PRIOR_SEND_INTENT')
+-        if not self.child_created and CONTINUATION in names:
+-            raise Hold('HOLD_CONTINUATION_ALREADY_RESERVED_NO_RETRY')
+-        expected = {'reservation.json', 'outcome.json'} | ({CONTINUATION} if self.child_created else set())
+-        require(names == expected, 'HOLD_CONTINUATION_PRIOR_SCOPE')
+-        outcome = self.read_prior('outcome.json', MAX_RECEIPT)
+-        raw = self.original_files['outcome.json'][1]
+-        require(len(raw) == PRIOR_OUTCOME_BYTES and digest(raw) == PRIOR_OUTCOME_SHA,
+-                'HOLD_CONTINUATION_PRIOR_OUTCOME_PIN')
+-        require(outcome.get('request') == PRIOR_REQUEST and outcome.get('source_sha') == PRIOR_SOURCE
+-                and outcome.get('status') == 'HOLD_OWNER_PRIORITY_BUSY_OR_STALE'
+-                and outcome.get('unknown_delivery_possible') is False
+-                and outcome.get('used') is False and outcome.get('completed') is False
+-                and type(outcome.get('owner_chat_posts')) is int and outcome['owner_chat_posts'] == 0
+-                and type(outcome.get('model_posts')) is int and outcome['model_posts'] == 0
+-                and outcome.get('http_counts') == {
+-                    'dialog_create_post': 0, 'get': 2, 'login_post': 1, 'model_post': 0},
+-                'HOLD_CONTINUATION_PRIOR_NOT_PROVEN_UNSENT')
+-        reservation = self.read_prior('reservation.json', 4096)
+-        require(type(reservation) is dict and set(reservation) == {'request', 'source_sha', 'nonce',
+-                'install_request', 'dialog_id', 'automatic_retry_allowed'}
+-                and reservation['request'] == PRIOR_REQUEST and reservation['source_sha'] == PRIOR_SOURCE
+-                and reservation['install_request'] == RELEASE['install_request']
+-                and reservation['dialog_id'] == DIALOG and reservation['automatic_retry_allowed'] is False
+-                and type(reservation['nonce']) is str
+-                and re.fullmatch('[a-f0-9]{32}', reservation['nonce']),
+-                'HOLD_CONTINUATION_PRIOR_RESERVATION')
+-        self.context['nonce'] = reservation['nonce']
+-        self.context.update(prior_request=PRIOR_REQUEST, prior_source_sha=PRIOR_SOURCE,
+-                            prior_outcome_sha256=PRIOR_OUTCOME_SHA)
+-
+-    def preflight(self):
+-        self.open_prior()
+-        return {'prior_request': PRIOR_REQUEST, 'prior_source_sha': PRIOR_SOURCE,
+-                'prior_outcome_sha256': PRIOR_OUTCOME_SHA, 'prior_outcome_bytes': PRIOR_OUTCOME_BYTES,
+-                'prior_owner_chat_posts': 0, 'prior_unknown_delivery_possible': False,
+-                'prior_root_send_intent_absent': True, 'continuation_slots': 1,
+-                'old_journal_preserved': True, 'automatic_retry_allowed': False}
+-
+-    def __enter__(self):
+-        self.check_prior()
+-        try:
+-            os.mkdir(CONTINUATION, 0o700, dir_fd=self.prior_fd)
+-        except FileExistsError:
+-            raise Hold('HOLD_CONTINUATION_ALREADY_RESERVED_NO_RETRY') from None
+-        self.child_created = True  # An ambiguous later failure never removes this reservation.
+-        try:
+-            os.fsync(self.prior_fd)
+-            self.fd = os.open(CONTINUATION, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+-                              dir_fd=self.prior_fd)
+-            self.identity = os.fstat(self.fd)
+-            self.check()
+-            self.write('reservation.json', self.context | {'automatic_retry_allowed': False,
+-                       'known_zero_send_continuation': True, 'max_owner_chat_posts_across_attempts': 1})
+-            os.fsync(self.prior_fd)
+-            return self
+-        except BaseException:
+-            self.__exit__(None, None, None)
+-            raise
+-
+-    def check(self):
+-        self.check_prior()
+-        super().check()
+-
+-    def close_prior(self):
+-        if self.prior_fd is not None:
+-            os.close(self.prior_fd); self.prior_fd = None
+-        for _, _, fd, _ in reversed(self.chain):
+-            os.close(fd)
+-        self.chain = []
+-
+-    def __exit__(self, *args):
+-        try:
+-            super().__exit__(*args)
+-        finally:
+-            self.close_prior()
+ 
+ 
+ def counter_snapshot():
+@@ -630,9 +479,9 @@
+         'owner_chat_posts': 0, 'backend_model_http_posts': 'NOT_DIRECTLY_OBSERVED',
+         'http_count_scope': 'OWNER_UI_CLIENT_ONLY; SLOT_GETS_ARE_SEPARATE_OWNER_IDLE_OBSERVATIONS',
+         'atomic_owner_admission_lease': False,
+-        'scope': 'ONE_KNOWN_ZERO_SEND_CONTINUATION_EXISTING_OWN_QA_DIALOG',
+-        'known_prior_http_counts': {'login_post': 1, 'get': 2, 'model_post': 0, 'dialog_create_post': 0},
+-        'owner_chat_posts_across_known_attempts': 0}
++        'scope': 'ONE_DISTINCT_WORDING_PATH_QA_EXISTING_OWN_DIALOG',
++        'prior_completed_qa_run': 44207277921,
++        'owner_chat_posts_in_this_purpose': 0}
+     client = Client()
+     journal = None
+     waiter = None
+@@ -642,10 +491,8 @@
+             for path in (native.ROOT.parent, native.ROOT, native.SCRIPTS, native.STATE):
+                 native.checked_directory(path)
+             native.global_stop_guard()
+-            journal = ZeroSendContinuation(request, source)
+-            # Read and pin the real existing outcome before any new HTTP or
+-            # continuation ownership write. A copied report alone is no grant.
+-            report['zero_send_continuation'] = journal.preflight()
++            # Fresh purpose; the completed continuation journal is never reused.
++            journal = Journal(request, source, os.urandom(16).hex())
+             report['source_readback'], sources = source_readback()
+             identity = native.service_identity()
+             report['installed_release'] = installed_release(identity)
+@@ -653,8 +500,6 @@
+             report['database_binding'] = binding
+             before = own_database_snapshot(binding)
+             report['prior_history'] = verify_old_prefix(before, binding)
+-            require(report['prior_history']['prefix_sha256'] == PRIOR_PREFIX_SHA,
+-                    'HOLD_CONTINUATION_PRIOR_HISTORY_CHANGED')
+             report['owner_admission'] = native.owner_idle()
+             baseline_counter, report['counter_before_login'] = counter_snapshot()
+             with journal:
+@@ -744,7 +589,7 @@
+                     report['http_counts'] = dict(client.counts)
+                     report['model_posts'] = client.counts['model_post']
+                     report['owner_chat_posts'] = client.counts['model_post']
+-                    report['owner_chat_posts_across_known_attempts'] = client.counts['model_post']
++                    report['owner_chat_posts_in_this_purpose'] = client.counts['model_post']
+                     report['private_receipt_path'] = str(journal.path / 'outcome.json')
+                     journal.write('outcome.json', report)
+     except BaseException as error:
+@@ -756,8 +601,6 @@
+     finally:
+         if waiter is not None:
+             waiter.close()
+-        if journal is not None:
+-            journal.close_prior()
+     return report
+ 
+ 

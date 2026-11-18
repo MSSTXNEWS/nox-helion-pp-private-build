@@ -1,0 +1,47 @@
+{
+  "schema": "NOX_DISTINCT_WORDING_QA_SOURCE_GATE_V1",
+  "status": "SOURCE_FROZEN_PEER_REVIEW_PENDING",
+  "actual_install_run": 44211768497,
+  "actual_install_receipt_sha256": "65dd412015e4f8e9ea4900f0818e857e2cb4f7df78dfb80f4fa91d8928440f45",
+  "release": {
+    "sha256": "b2892b7bb7cd86adf42ea60fc0c6b33cee14205032226a13de1cfd82397c1791",
+    "bytes": 1864
+  },
+  "five_module_decode_exact": true,
+  "all_compile": true,
+  "wrapper_executed": false,
+  "base_successful_main_sha256": "b57e535e36ec9185a623722c1139d062283121e45c661b2465f9beb70414abc6",
+  "changed_existing_functions": [
+    "body",
+    "installed_release",
+    "source_readback",
+    "own_database_snapshot",
+    "verify_old_prefix",
+    "verify_appended_pair",
+    "Journal.send",
+    "run"
+  ],
+  "removed_class_only": "ZeroSendContinuation",
+  "previous_scope_class_unused_not_reused": true,
+  "journal_ownership_and_durable_write_primitive_AST_unchanged": true,
+  "HTTP_caps_unknown_delivery_and_deadline_AST_unchanged": true,
+  "request_question_matches_actual_787045_identity_route": true,
+  "runtime_pid_bound_only_from_actual_install": true,
+  "prior_history_count": 4,
+  "after_history_count": 6,
+  "old_purpose_journal_and_child_not_reused": true,
+  "focused_test": {
+    "file": "test_distinct_wording_scope.py",
+    "sha256": "6bbc01e6e5c530c3cbc48cc65e2d750f0bf31d8237007b68f69dca7ec97d7bfa",
+    "bytes": 8163,
+    "count": 1,
+    "result": "PASS",
+    "actual_second_accepted_pair_fixture": true,
+    "first_pair_fixture_is_synthetic_and_production_constants_are_not_changed": true,
+    "real_TempFS_and_SQLite": true,
+    "real_HTTP": 0
+  },
+  "shared_waiter_unchanged_sha256": "c69fa4d8ec05a6d147ef1172581fd00ff28fc24705fca8502fd2bca909afd3ad",
+  "native_calls": 0,
+  "ordinary_context_counter_speedup_proven": false
+}
