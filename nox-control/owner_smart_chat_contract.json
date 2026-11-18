@@ -2,8 +2,7 @@
   "idle_wait_seconds": 45,
   "preimages": {
     "bridge": "9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a",
-    "stream": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09",
-    "ui": "92b952b6c7ee31f22ed74912d9444a88989c014694424083336660dce21a8a5b"
+    "stream": "38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09"
   },
   "schema": "NOX_SMART_CHAT_CONTRACT_V1",
   "services": {
@@ -13,14 +12,14 @@
       "start_ticks": 172046662
     },
     "nox-proxy": {
-      "pgrp": 3703386,
-      "pid": 3703386,
-      "start_ticks": 175609570
+      "pid": 242298,
+      "pgrp": 242298,
+      "start_ticks": 183262723
     },
     "nox-web29-18775": {
-      "pgrp": 3505392,
-      "pid": 3505392,
-      "start_ticks": 173653097
+      "pid": 242414,
+      "pgrp": 242414,
+      "start_ticks": 183263966
     }
   },
   "transforms": {
@@ -33,12 +32,6 @@
       "module": "owner_chat_semantics_patch.py",
       "postimage_sha256": null,
       "sha256": "d55858fd7f4f4e6abf7d212cb382e8643510e2a8118daa795c5552f158064d59"
-    },
-    "ui": {
-      "module": "owner_smart_chat_ui_patch.py",
-      "node_syntax_verified": true,
-      "postimage_sha256": "4568a5075fca9c13ad535814059df933d2642835d2a4db0be755ee0c7904a22d",
-      "sha256": "1780c79663734f645b75bf5010303c872c97ab13b292cdd17581f760639d8711"
     }
   }
 }

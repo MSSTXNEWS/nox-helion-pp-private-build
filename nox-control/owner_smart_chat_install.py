@@ -31,7 +31,7 @@ except NameError:
     BUNDLE = {}
 
 # Freeze this to the reviewed, public metadata-only contract before deployment.
-CONTRACT_SHA256 = 'e3c256297e3d50111dc7679b291908ec7a293c8331a60423b5dfa83bc47daeb4'
+CONTRACT_SHA256 = 'eda1606e691597daf5054b7318560627d8c41ca29d7fd22b5abe9d8409dd66e8'
 CONTRACT_NAME = 'owner_smart_chat_contract.json'
 ROOT = Path('/root/nox')
 STATE = ROOT / 'state'
@@ -41,20 +41,19 @@ AREA = ROOT / 'backup/owner_smart_chat'
 TARGETS = {
     'stream': SCRIPTS / 'owner_chat_stream.py',
     'bridge': SCRIPTS / 'nox_v29_chat_bridge.py',
-    'ui': SITE / 'pc/v24/nox-v24-chat.js',
 }
 PREIMAGES = {
     'stream': '38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09',
     'bridge': '9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a',
-    'ui': '92b952b6c7ee31f22ed74912d9444a88989c014694424083336660dce21a8a5b',
 }
 PROTECTED = {
-    'chat_proxy.py': '1b468ebda8cdae0dce3fd1b9df4f7def64c56d708796b05e5bd7f88fbc76af62',
+    'chat_proxy.py': 'cc1437ce8c3bfbbc4259ffdbe299bf3b8721d4b1bb09c88565ccb6cb9fdb95eb',
     'agent_loop.py': '0ecec93bcf3239b7decc768862d27fbdc60fe2b613103f201406761bb4850aaa',
     'nox_tools.py': '2c17b7684275b532d4cc710322588ce178c9b23866630b11c778d1863bc448aa',
     'owner_chat_evidence.py': 'ea66e05f30472b066444058ac18d0c7af74def410bde760396d1e2431161e8b2',
 }
 SERVICES = ('nox-proxy', 'nox-ds41-8098', 'nox-web29-18775')
+PRESERVED_UI_SHA256 = '55e4445443cd0d4cfa4d2a8775dcd8c7689890daad492b58e01c298691ac7e20'
 DISPATCHER = 'nox-dispatcher-t855u'
 DISPATCHER_IDENTITY = {'pid': 106058, 'pgrp': 106058, 'start_ticks': 181620214}
 FLAGS = tuple(ROOT / name for name in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
@@ -246,6 +245,9 @@ def preserved():
     flags = {}
     for path in PRESERVE_FLAGS:
         flags[str(path)] = sha(read(path, 16384)[0]) if os.path.lexists(path) else None
+    current_ui, _ = read(SITE / 'pc/v24/nox-v24-chat.js')
+    require(sha(current_ui) == PRESERVED_UI_SHA256, 'FOREIGN_UI_CHANGED')
+    files['nox-v24-chat.js'] = PRESERVED_UI_SHA256
     return {'source_pins': files, 'training_flags': flags}
 
 
@@ -549,7 +551,7 @@ def main():
                 assert_services(expected, include_proxy=False)
                 for port in (8080, 8082, 8098):
                     http(port, '/health')
-                record.update(state='THREE_SOURCE_TRANSFORMS_AND_PROXY_RELOAD_VERIFIED',
+                record.update(state='TWO_SOURCE_TRANSFORMS_AND_PROXY_RELOAD_VERIFIED',
                     source_install_verified=True, preserved_state_verified=True, finished_at=time.time())
                 save(); success = True
             except BaseException as exc:
