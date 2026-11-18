@@ -70,6 +70,21 @@ class WitnessTests(unittest.TestCase):
         self.assertEqual(out['state'], 'UNKNOWN')
         self.assertEqual(out['reason'], 'NOT_GGUF')
 
+    def test_duplicate_metadata_key_fails_closed_instead_of_last_value_wins(self):
+        # Repeated GGUF keys can be interpreted differently by readers.
+        # Do not attest a tokenizer or general.name for ambiguous headers.
+        for key in (b'tokenizer.chat_template', b'general.name'):
+            with self.subTest(key=key):
+                b = bytearray(b'GGUF' + struct.pack('<IQQ', 3, 0, 2))
+                for value in (b'first', b'second'):
+                    b += struct.pack('<Q', len(key)) + key
+                    b += struct.pack('<IQ', 8, len(value)) + value
+                self.file.write_bytes(b)
+                out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+                self.assertEqual(out['state'], 'UNKNOWN')
+                self.assertEqual(out['reason'], 'GGUF_DUPLICATE_METADATA_KEY')
+                self.assertNotIn('gguf', out)
+
     def test_large_vocab_before_template(self):
         k = b'tokenizer.ggml.tokens'
         b = b'GGUF' + struct.pack('<IQQ', 3, 0, 2)
