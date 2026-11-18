@@ -182,6 +182,56 @@ def protected():
     return rows
 
 
+
+def proxy_tcp_counts():
+    """Bounded counts only, never peer addresses or session contents.
+
+    Observing zero sockets does not grant a write or prove an atomic idle fence.
+    """
+    pid = EXPECTED['proxy']['pid']
+    before = process_once(pid)
+    require(before['start_ticks'] == EXPECTED['proxy']['start_ticks'], 'PROXY_IDENTITY')
+    found = set()
+    entries = list((Path('/proc') / str(pid) / 'fd').iterdir())
+    require(len(entries) <= 4096, 'PROXY_FD_COUNT')
+    for entry in entries:
+        try:
+            target = os.readlink(entry)
+        except FileNotFoundError:
+            continue
+        found_inode = re.fullmatch(r'socket:\[(\d+)\]', target)
+        if found_inode:
+            found.add(found_inode.group(1))
+    count = {'LISTEN': 0, 'ESTABLISHED': 0, 'CLOSE_WAIT': 0,
+             'SYN_RECV': 0, 'OTHER_OWNED': 0}
+    matched = 0
+    for name in ('tcp', 'tcp6'):
+        with open('/proc/net/' + name, 'rb', buffering=0) as stream:
+            data = stream.read(2 * 1024 * 1024 + 1)
+        require(len(data) <= 2 * 1024 * 1024, 'TCP_TABLE_BOUND')
+        for row in data.decode('ascii').splitlines()[1:]:
+            fields = row.split()
+            if len(fields) < 10 or fields[9] not in found:
+                continue
+            try:
+                local_port = int(fields[1].rsplit(':', 1)[1], 16)
+            except (IndexError, ValueError):
+                raise Hold('TCP_PORT_SCHEMA')
+            if local_port != 8080:
+                continue
+            matched += 1
+            category = {'0A': 'LISTEN', '01': 'ESTABLISHED',
+                        '08': 'CLOSE_WAIT', '03': 'SYN_RECV'}.get(fields[3], 'OTHER_OWNED')
+            count[category] += 1
+    after = process_once(pid)
+    require(before == after and before['state'] not in ('Z', 'X'), 'PROXY_IDENTITY_CHANGED')
+    require(count['LISTEN'] >= 1, 'PROXY_LISTENER_MISSING')
+    return {'port': 8080, 'owned_connections': matched, 'state_counts': count,
+            'nonlistener_connections': matched - count['LISTEN'],
+            'identity_stable': True, 'peer_addresses_exported': False,
+            'idle_permission': False}
+
+
 def sample(index):
     result = {'sample': index, 'observed_at': time.time(), 'path': str(COUNTER),
               'state': 'UNAVAILABLE', 'raw_content_exported': False}
@@ -204,6 +254,10 @@ def sample(index):
         result['state'] = 'OBSERVED'
     except (OSError, ValueError, UnicodeError, Hold) as error:
         result['error'] = safe_error(error)
+    try:
+        result['proxy_tcp'] = proxy_tcp_counts()
+    except (OSError, ValueError, UnicodeError, Hold) as error:
+        result['proxy_tcp_error'] = safe_error(error)
     return result
 
 
@@ -234,6 +288,9 @@ def main():
         observed = first['state'] == second['state'] == 'OBSERVED'
         record['counter_unchanged_between_samples'] = observed and first['sha256'] == second['sha256']
         record['both_observed_zero'] = observed and first['inflight'] == second['inflight'] == 0
+        record['proxy_tcp_stable'] = (first.get('proxy_tcp') == second.get('proxy_tcp') and
+                                     isinstance(first.get('proxy_tcp'), dict))
+        record['reconciliation_authorized'] = False
         complete = observed and record['protected_stable'] and record['sources_unchanged']
         record['state'] = 'READ_ONLY_COUNTER_OBSERVED' if complete else 'INCOMPLETE_COUNTER_OBSERVATION'
     except BaseException as error:
