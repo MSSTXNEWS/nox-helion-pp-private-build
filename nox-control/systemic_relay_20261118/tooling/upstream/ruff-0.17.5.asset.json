@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_UPSTREAM_RELEASE_ASSET_EVIDENCE_V1",
+  "retrieved_at": "2026-11-18 18:22:24 UTC",
+  "source_api": "https://api.github.com/repos/astral-sh/ruff/releases/tags/0.17.5",
+  "release": {
+    "id": 443318906,
+    "tag_name": "0.17.5",
+    "html_url": "https://github.com/astral-sh/ruff/releases/tag/0.17.5",
+    "published_at": "2026-11-12T17:55:55Z",
+    "draft": false,
+    "prerelease": false,
+    "immutable": true
+  },
+  "asset": {
+    "url": "https://api.github.com/repos/astral-sh/ruff/releases/assets/740497223",
+    "id": 740497223,
+    "node_id": "RA_kwDOHy0Bzc4sIxdH",
+    "name": "ruff-x86_64-unknown-linux-musl.tar.gz",
+    "label": "",
+    "uploader": {
+      "login": "astral-automations-bot[bot]",
+      "id": 305554984,
+      "node_id": "BOT_kgDOEjZmKA",
+      "avatar_url": "https://avatars.githubusercontent.com/in/4307167?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D",
+      "html_url": "https://github.com/apps/astral-automations-bot",
+      "followers_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/followers",
+      "following_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/following{/other_user}",
+      "gists_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/subscriptions",
+      "organizations_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/orgs",
+      "repos_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/repos",
+      "events_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/astral-automations-bot%5Bbot%5D/received_events",
+      "type": "Bot",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "content_type": "application/x-gtar",
+    "state": "uploaded",
+    "size": 10400704,
+    "digest": "sha256:dc94b7e225b8910fb6f55298ada32d00e356dbd195a5ffb647847f388cb54f84",
+    "download_count": 14081,
+    "created_at": "2026-11-12T17:55:52Z",
+    "updated_at": "2026-11-12T17:55:53Z",
+    "browser_download_url": "https://github.com/astral-sh/ruff/releases/download/0.17.5/ruff-x86_64-unknown-linux-musl.tar.gz"
+  }
+}

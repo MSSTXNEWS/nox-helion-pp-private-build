@@ -269,4 +269,7 @@ def main():
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    exit_code = main()
+    if exit_code == 0:
+        print('NOX_MAINT_INSPECT_COMPLETE=true', flush=True)
+    raise SystemExit(exit_code)
