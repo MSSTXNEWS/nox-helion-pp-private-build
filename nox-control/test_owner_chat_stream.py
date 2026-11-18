@@ -83,6 +83,27 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload['_agent_final'],'Hola')
         self.assertTrue(chunks.closed)
 
+    async def test_standard_sse_bom_retry_and_bare_id_metadata_does_not_drop_chat(self):
+        # WHATWG allows one leading UTF-8 BOM, retry fields, and fields without
+        # a colon (empty value). None may cause a new POST or enter S03 text.
+        prelude=b'\xef\xbb\xbf: upstream heartbeat\nretry: 2500\nid\nevent\n\n'
+        chunks=Chunks([prelude,frame('Hola completo'),frame(finish='stop'),
+                       b'data: [DONE]\n\n'])
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('Hola completo',wire)
+        self.assertIn('[DONE]',wire)
+        self.assertNotIn('2500',wire)
+        self.assertNotIn('heartbeat',wire)
+        self.assertEqual(payload.get('_agent_final'),'Hola completo')
+        self.assertEqual(len(requests),1)
+        self.assertTrue(chunks.closed)
+
     async def test_multiline_sse_data_fields_are_one_json_frame(self):
         # A newline between two JSON fields is legal SSE data continuation.
         whole=frame('Hola').decode('utf-8').split('data: ',1)[1].strip()
