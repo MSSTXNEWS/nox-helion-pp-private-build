@@ -28,7 +28,10 @@ FLAGS = (
 LOCK_PATHS = (ROOT/'state/owner_maintenance.lock', ROOT/'state/dispatcher/native_subagents.lock')
 IDENTIFIER = re.compile(r'^[A-Za-z0-9_.:/@ -]{1,250}$')
 SHA = re.compile(r'^[0-9a-f]{40,64}$')
-PLANNER_MEMORY_TRACE_SHA = 'aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420'
+PLANNER_MEMORY_TRACE_SHAS = frozenset((
+    'aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420',
+    'e7bc83e4dea75f08ecb4e92fedf6ef98e0620f17c7b3b28ccb4728c6ddda68ac',
+))
 MAX_SOURCE_FILE = 2 * 1024 * 1024
 MAX_SOURCE_TOTAL = 16 * 1024 * 1024
 
@@ -784,6 +787,29 @@ def director_child_census():
         'close_reason':native.get('close_reason'),'state':native.get('state')})
 
 
+def continuous_install_receipts():
+    base=ROOT/'state/dispatcher'
+    paths=[path for path in base.glob('continuous_executor_install_*.json')
+           if re.fullmatch(r'continuous_executor_install_[0-9]{1,24}\.json',path.name)]
+    for path in sorted(paths,key=lambda item:int(item.stem.rsplit('_',1)[1]))[-4:]:
+        request=path.stem.rsplit('_',1)[1]
+        try:
+            receipt,raw,_=obj(path,4*1024*1024)
+            if (receipt.get('schema')!='NOX_CONTINUOUS_EXECUTOR_INSTALL_RECEIPT_V1'
+                    or receipt.get('request')!=request):
+                raise ValueError('CONTINUOUS_RECEIPT_BINDING')
+            row=scalar_projection(receipt,('schema','state','request','source_sha','config_sha256',
+                'started_at','finished_at','original_tasks_accepted','training_started',
+                'model_restarted','queue_writes','old_catalog_rows_preserved','preserved_project_receipts'))
+            row['sha256']=hashlib.sha256(raw).hexdigest()
+            row['new_director']=scalar_projection(receipt.get('new_director') or {},
+                ('pid','ppid','pgrp','start_ticks'))
+            row['batch_task_ids']=[identifier(task) for task in (receipt.get('batch_task_ids') or [])[:32]]
+            emit('CONTINUOUS_INSTALL_RECEIPT',row)
+        except (OSError,ValueError,TypeError) as exc:
+            emit('CONTINUOUS_INSTALL_RECEIPT',{'request':request,'state':'UNAVAILABLE','error':type(exc).__name__})
+
+
 def project_active_progress():
     import urllib.request
     try:
@@ -828,7 +854,7 @@ def project_active_progress():
     except (OSError,ValueError):planner_sha=None
     emit('PROJECT_ATTEMPT_PROGRESS',{'attempts':rows,'planner_sha256':planner_sha,
         'interim_trace_unavailable':True,
-        'trace_storage':'MEMORY_ONLY_UNTIL_FINAL_RECEIPT' if planner_sha==PLANNER_MEMORY_TRACE_SHA else 'UNREVIEWED_PLANNER_VERSION',
+        'trace_storage':'MEMORY_ONLY_UNTIL_FINAL_RECEIPT' if planner_sha in PLANNER_MEMORY_TRACE_SHAS else 'UNREVIEWED_PLANNER_VERSION',
         'scope':'DURABLE_TEST_ATTEMPTS_ONLY_NOT_IN_MEMORY_EDIT_OR_TURN_PROGRESS',
         'absence_of_attempt_does_not_prove_no_source_edits':True})
 
@@ -839,6 +865,7 @@ def main():
     director_child_census()
     project_summary()
     project_install_preservation()
+    continuous_install_receipts()
     proofs=project_execution_readback()
     project_workspace_census(proofs)
     project_active_progress()

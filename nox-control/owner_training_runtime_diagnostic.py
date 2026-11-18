@@ -2,6 +2,7 @@
 """Bounded read-only diagnosis of the current native training service.
 
 Only fixed Supervisor status/tail commands and bounded metadata reads occur.
+Memory reads cover pinned identities and a bounded census of anonymous FD owners.
 No trainer import, CUDA context, service mutation, checkpoint load, flag write,
 or raw log/training content is emitted. Stored counters are not live proof.
 """
@@ -24,6 +25,27 @@ CONFIG = Path('/etc/supervisor/conf.d/nox-train-volta-t866u.conf')
 OUTPUT = ROOT / 'lora/qwen35_9b/6907283384'
 LIMIT = 262144
 LOG_LIMIT = 65536
+PROC = Path('/proc')
+CGROUP = Path('/sys/fs/cgroup')
+FD_LIMIT = 512
+PID_LIMIT = 512
+CENSUS_FD_LIMIT = 16384
+# Chat/proxy/web were preserved by the verified continuous executor deployment.
+# The director/worker identities come from its final native acceptance on Nov 18.
+# Any reuse or replacement is reported as unavailable; it does not widen this scope.
+MEMORY_PROCESSES = {
+    'chat': (3266857, 172046662),
+    'embedding': (3353067, 172255944),
+    'proxy': (3703386, 175609570),
+    'web': (3505392, 173653097),
+    'director': (27386, 180803640),
+    'worker_runtime': (27518, 180804769),
+    'worker_memory': (27519, 180804769),
+    'worker_weights': (27520, 180804769),
+}
+SMAPS_FIELDS = frozenset(('Rss', 'Pss', 'Pss_Anon', 'Pss_File', 'Pss_Shmem',
+    'Shared_Clean', 'Shared_Dirty', 'Private_Clean', 'Private_Dirty', 'Anonymous',
+    'AnonHugePages', 'ShmemPmdMapped', 'FilePmdMapped', 'Swap', 'SwapPss', 'Locked'))
 SOURCES = ('run_train_volta_t866u.sh', 'qwen_student_training_entry_revision.py',
            'owner_qwen_execution_revision.py', 'owner_qwen_training_contract.py',
            'owner_qwen_memfd.py', 'qwen35_9b_manifest.json')
@@ -211,10 +233,243 @@ def log_paths():
     return sorted(paths)
 
 
+def process_identity(pid):
+    if type(pid) is not int or not 0 < pid < 2 ** 31:
+        raise ReadHold('PID_SCOPE')
+    raw, _ = regular_read(PROC / str(pid) / 'stat', 4096)
+    # The process name can contain arbitrary text; only numeric fields leave here.
+    fields = raw[raw.rindex(b')') + 2:].split()
+    if (int(raw.split(b' ', 1)[0]) != pid or len(fields) < 20
+            or fields[0] not in (b'R', b'S', b'D', b'I') or int(fields[19]) <= 0):
+        raise ReadHold('PROCESS_IDENTITY')
+    return {'pid': pid, 'ppid': int(fields[1]), 'start_ticks': int(fields[19])}
+
+
+def memory_cgroup():
+    result = {}
+    try:
+        for name in ('current', 'max'):
+            raw, _ = regular_read(CGROUP / ('memory.' + name), 128)
+            value = raw.strip()
+            result[name + '_bytes'] = int(value) if value.isdigit() else None
+        raw, _ = regular_read(CGROUP / 'memory.stat', 16384)
+        for line in raw.splitlines():
+            pair = line.split()
+            if len(pair) == 2 and pair[0] in (b'anon', b'file', b'shmem', b'inactive_file',
+                    b'active_file', b'file_mapped', b'kernel', b'sock') and pair[1].isdigit():
+                result[pair[0].decode() + '_bytes'] = int(pair[1])
+        result['state'] = 'OBSERVED'
+    except (OSError, ReadHold, ValueError):
+        result['state'] = 'UNAVAILABLE_SAFE_READ'
+    return result
+
+
+def fd_memory(pid, deadline, limit=FD_LIMIT):
+    """Read link types and inode sizes only, never the contents of an open FD."""
+    counts = {'memfd': 0, 'anonymous_file': 0, 'anonymous_inode': 0}
+    # Keep device/inode pairs private, using them only to deduplicate shared FDs.
+    unique = {}
+    scanned = unavailable = 0
+    complete = True
+    directory = os.open(PROC / str(pid) / 'fd', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                if not re.fullmatch(r'[0-9]{1,10}', entry.name):
+                    continue
+                if scanned >= min(FD_LIMIT, limit) or time.monotonic() >= deadline:
+                    complete = False
+                    break
+                scanned += 1
+                try:
+                    target = os.readlink(entry.name, dir_fd=directory)
+                    kind = ('memfd' if target.startswith(('/memfd:', 'memfd:')) else
+                            'anonymous_inode' if target.startswith('anon_inode:') else
+                            'anonymous_file' if target.startswith('/SYSV') or target == '/dev/zero (deleted)' else None)
+                    if kind is None:
+                        continue
+                    info = os.stat(entry.name, dir_fd=directory)
+                    if os.readlink(entry.name, dir_fd=directory) != target:
+                        unavailable += 1
+                        continue
+                    counts[kind] += 1
+                    if kind != 'anonymous_inode' and stat.S_ISREG(info.st_mode) and info.st_size >= 0:
+                        unique[(info.st_dev, info.st_ino)] = (kind, info.st_size)
+                except OSError:
+                    unavailable += 1
+        summary = {'scanned': scanned, 'scan_complete': complete, 'unavailable': unavailable,
+                   'fd_counts': counts, 'names_exported': False,
+                   'logical_file_bytes_are_resident_memory': False}
+        for kind in ('memfd', 'anonymous_file'):
+            values = [size for observed_kind, size in unique.values() if observed_kind == kind]
+            summary[kind + '_unique_inodes'] = len(values)
+            summary[kind + '_logical_bytes'] = sum(values)
+        return summary, unique
+    finally:
+        os.close(directory)
+
+
+def anonymous_owner_census(deadline):
+    """Find detached keepers without reading names, arguments, maps or contents."""
+    result = {'scope': 'BOUNDED_NUMERIC_PID_ANONYMOUS_FD_CENSUS',
+              'pid_limit': PID_LIMIT, 'fd_limit': CENSUS_FD_LIMIT,
+              'pids_examined': 0, 'fds_examined': 0, 'unavailable_processes': 0,
+              'partial_fd_scans': 0, 'unstable_processes': 0,
+              'census_complete': True, 'owners': [], 'files': [],
+              'logical_file_bytes_are_resident_memory': False}
+    files = {}
+    owners = []
+    try:
+        with os.scandir(PROC) as entries:
+            for entry in entries:
+                if not re.fullmatch(r'[0-9]{1,10}', entry.name):
+                    continue
+                if (result['pids_examined'] >= PID_LIMIT or result['fds_examined'] >= CENSUS_FD_LIMIT
+                        or time.monotonic() >= deadline):
+                    result['census_complete'] = False
+                    break
+                result['pids_examined'] += 1
+                pid = int(entry.name)
+                try:
+                    before = process_identity(pid)
+                    summary, unique = fd_memory(pid, deadline, CENSUS_FD_LIMIT - result['fds_examined'])
+                    result['fds_examined'] += summary['scanned']
+                    if not summary['scan_complete'] or summary['unavailable']:
+                        result['partial_fd_scans'] += 1
+                        result['census_complete'] = False
+                    if process_identity(pid) != before:
+                        result['unstable_processes'] += 1
+                        result['census_complete'] = False
+                        continue
+                    if not unique:
+                        continue
+                    owner = {'pid': pid, 'start_ticks': before['start_ticks']}
+                    owners.append({**owner, 'unique_inodes': len(unique),
+                                   'logical_bytes': sum(size for _, size in unique.values()),
+                                   'fd_scan_complete': summary['scan_complete'] and not summary['unavailable']})
+                    for identity, (kind, size) in unique.items():
+                        if identity not in files:
+                            files[identity] = {'kind': kind, 'logical_bytes': size,
+                                               'size_changed': False, 'owners': []}
+                        item = files[identity]
+                        item['size_changed'] |= item['logical_bytes'] != size
+                        item['logical_bytes'] = max(item['logical_bytes'], size)
+                        item['owners'].append(owner)
+                except (OSError, ReadHold, ValueError, IndexError):
+                    result['unavailable_processes'] += 1
+                    result['census_complete'] = False
+    except OSError:
+        result['census_complete'] = False
+        result['state'] = 'UNAVAILABLE_SAFE_READ'
+    ranked = sorted(files.items(), key=lambda item: item[1]['logical_bytes'], reverse=True)
+    result['unique_inodes'] = len(files)
+    result['unique_logical_bytes'] = sum(item['logical_bytes'] for item in files.values())
+    result['per_process_logical_bytes_sum'] = sum(row['logical_bytes'] for row in owners)
+    result['shared_inodes'] = sum(len(item['owners']) > 1 for item in files.values())
+    result['owners_total'] = len(owners)
+    result['owners'] = sorted(owners, key=lambda item: item['logical_bytes'], reverse=True)[:64]
+    result['owner_rows_truncated'] = len(owners) > len(result['owners'])
+    result['files'] = [{'device': identity[0], 'inode': identity[1], **item,
+                       'owners': item['owners'][:64], 'owner_count': len(item['owners'])}
+                      for identity, item in ranked[:64]]
+    result['file_rows_truncated'] = len(files) > len(result['files'])
+    result['sample_is_atomic'] = False
+    return result
+
+
+def process_memory(pid, start_ticks, deadline):
+    result = {'pid': pid, 'expected_start_ticks': start_ticks}
+    try:
+        before = process_identity(pid)
+        if before['start_ticks'] != start_ticks:
+            return {**result, 'state': 'IDENTITY_CHANGED_NO_MEMORY_READ'}, {}
+        result['identity'] = before
+        raw, _ = regular_read(PROC / str(pid) / 'smaps_rollup', 65536)
+        metrics = {}
+        for line in raw.decode('ascii', 'replace').splitlines():
+            match = re.fullmatch(r'([A-Za-z_]+):\s+([0-9]{1,18})\s+kB', line.strip())
+            if match and match[1] in SMAPS_FIELDS:
+                if match[1] in metrics:
+                    raise ReadHold('DUPLICATE_SMAPS_FIELD')
+                metrics[match[1]] = int(match[2]) * 1024
+        if not {'Rss', 'Pss'} <= metrics.keys():
+            raise ReadHold('SMAPS_FIELDS')
+        raw, _ = regular_read(PROC / str(pid) / 'status', 65536)
+        namespace_pids = []
+        for line in raw.splitlines():
+            if line.startswith(b'NSpid:'):
+                fields = line.split()[1:]
+                if 0 < len(fields) <= 16 and all(x.isdigit() and 0 < int(x) < 2 ** 31 for x in fields):
+                    namespace_pids = [int(x) for x in fields]
+        namespaces = {}
+        for name in ('pid', 'mnt', 'ipc', 'user'):
+            try:
+                target = os.readlink(PROC / str(pid) / 'ns' / name)
+                match = re.fullmatch(re.escape(name) + r':\[([0-9]{1,20})\]', target)
+                if match:
+                    namespaces[name] = int(match[1])
+            except OSError:
+                pass
+        try:
+            descriptors, unique = fd_memory(pid, deadline)
+        except OSError:
+            descriptors, unique = {'state': 'UNAVAILABLE_SAFE_READ'}, {}
+        if process_identity(pid) != before:
+            return {**result, 'state': 'IDENTITY_CHANGED_DURING_READ'}, {}
+        result.update(state='OBSERVED_STABLE_IDENTITY', smaps_rollup_bytes=metrics,
+                      namespace_pids=namespace_pids, namespace_ids=namespaces,
+                      descriptors=descriptors)
+        return result, unique
+    except (OSError, ReadHold, ValueError, IndexError):
+        return {**result, 'state': 'UNAVAILABLE_SAFE_READ'}, {}
+
+
+def memory_observation():
+    """Bounded attribution does not authorize reclaiming or account for all shmem."""
+    deadline = time.monotonic() + 12
+    result = {'scope': 'PINNED_PROCESS_MEMORY_AND_BOUNDED_ANONYMOUS_FD_CENSUS', 'processes': {},
+              'cgroup_before': memory_cgroup(), 'fd_payloads_read': False,
+              'cmdline_environ_maps_read': False, 'reclaimable_memory_proven': False,
+              'full_cgroup_memory_attribution': False}
+    unique = {}
+    for label, (pid, ticks) in MEMORY_PROCESSES.items():
+        if time.monotonic() >= deadline:
+            result['processes'][label] = {'pid': pid, 'state': 'READ_BUDGET_EXHAUSTED'}
+            continue
+        row, descriptors = process_memory(pid, ticks, deadline)
+        result['processes'][label] = row
+        unique.update(descriptors)
+    rows = [row['smaps_rollup_bytes'] for row in result['processes'].values()
+            if row['state'] == 'OBSERVED_STABLE_IDENTITY']
+    result['stable_processes_observed'] = len(rows)
+    result['smaps_sums_bytes'] = {name: sum(row[name] for row in rows if name in row)
+        for name in ('Pss', 'Pss_Anon', 'Pss_File', 'Pss_Shmem', 'Private_Dirty')}
+    result['smaps_field_process_counts'] = {name: sum(name in row for row in rows)
+        for name in result['smaps_sums_bytes']}
+    result['unique_open_anonymous_files'] = {
+        'scope': 'EXPLICIT_PROCESS_IDENTITIES_ONLY',
+        'inodes': len(unique), 'logical_bytes': sum(size for _, size in unique.values()),
+        'resident_bytes_proven': False, 'shared_fds_deduplicated': True}
+    census = anonymous_owner_census(deadline)
+    result['anonymous_owner_census'] = census
+    result['additional_owner_rollups'] = []
+    known = set(MEMORY_PROCESSES.values())
+    for owner in census['owners'][:8]:
+        if (owner['pid'], owner['start_ticks']) in known:
+            continue
+        if time.monotonic() >= deadline:
+            result['additional_owner_rollup_budget_exhausted'] = True
+            break
+        row, _ = process_memory(owner['pid'], owner['start_ticks'], deadline)
+        result['additional_owner_rollups'].append(row)
+    result['cgroup_after'] = memory_cgroup()
+    return result
+
+
 def observe():
     started = time.time()
     result = {'schema': 'NOX_TRAINING_RUNTIME_DIAGNOSTIC_V1', 'observed_at': started,
-              'service': SERVICE, 'scope': 'CURRENT_SERVICE_AND_BOUNDED_METADATA_ONLY',
+              'service': SERVICE, 'scope': 'CURRENT_SERVICE_AND_BOUNDED_MEMORY_METADATA',
               'files_written': 0, 'service_mutations': 0, 'trainer_imported': False,
               'checkpoint_payloads_verified': False, 'live_optimizer_steps_verified': False,
               'raw_logs_exported': False, 'supervisor_before': supervisor('status'),
@@ -243,6 +498,7 @@ def observe():
             result['logs'].append({'source': path.name, 'state': 'UNAVAILABLE_SAFE_READ'})
     result['supervisor_after'] = supervisor('status')
     result['service_sample_stable'] = result['supervisor_before'] == result['supervisor_after']
+    result['memory'] = memory_observation()
     result['elapsed_seconds'] = round(time.time() - started, 3)
     result['state'] = 'READ_ONLY_DIAGNOSIS_COMPLETE'
     return result
@@ -256,6 +512,7 @@ def main():
     result = observe()
     print('NOX_MAINT_TRAINING_RUNTIME_DIAGNOSTIC=' + json.dumps(result, sort_keys=True, allow_nan=False), flush=True)
     print('NOX_MAINT_TRAINING_RUNTIME_DIAGNOSTIC_COMPLETE=true', flush=True)
+    print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
     return result
 
 
