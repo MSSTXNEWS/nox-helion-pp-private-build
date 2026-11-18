@@ -498,7 +498,10 @@ def chunks(text):
     # Overlap keeps a fact straddling a chunk boundary available to retrieval.
     if not isinstance(text,str) or len(text.encode('utf-8'))>MAX_IMPORT_TEXT:hold('HOLD_S03_IMPORT_RECORD_SIZE')
     if not text.strip():return []
-    return [text[start:start+1800] for start in range(0,len(text),1640)]
+    # Embedding input has a strict 6000-byte UTF-8 ceiling; 1800 Unicode
+    # codepoints can require 7200 bytes and strand imported memories.
+    # Preserve all characters and the original 160-character overlap.
+    return [text[start:start+1500] for start in range(0,len(text),1340)]
 
 
 def import_records(conn,records,source_key,snapshot_sha):
