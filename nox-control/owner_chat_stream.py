@@ -333,8 +333,14 @@ async def _run(native,url,payload,user_text):
                         if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
                         yield 'token',text
                         return
+                    # Tool evidence is part of the complete conversation. Never
+                    # silently replace it with an 8k-character prefix; without
+                    # proven context capacity, fail closed rather than fabricate
+                    # a shortened observation for the model/S03 record.
+                    if len(text)>2000000:
+                        raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
                     messages.append({'role':'tool','tool_call_id':call['id'],
-                                     'name':call['name'],'content':text[:8000]})
+                                     'name':call['name'],'content':text})
             calls=[]
             model_request=dict(req,messages=messages,cache_prompt=True)
             if steps>=int(native.get('MAX_STEPS',8)):
