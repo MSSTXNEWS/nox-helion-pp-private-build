@@ -248,6 +248,7 @@ class Subagents:
         self.inboxes = {r:self.ctx.Queue() for r in self.roles}
         self.processes = {}
         self.heartbeats = {}
+        self._shutdown_complete = False
 
     def __enter__(self):
         try:
@@ -406,7 +407,7 @@ class Subagents:
                 raise GateError('HOLD_SUBAGENT_SUBMIT_UNCERTAIN') from exc
         return True
 
-    def _accept_result(self, event):
+    def _accept_result(self, event, *, allow_exited=False):
         if not isinstance(event, dict):
             if len(self.active) == 1:
                 self._failure(next(iter(self.active)), 'HOLD_SUBAGENT_RESULT_IDENTITY')
@@ -419,7 +420,7 @@ class Subagents:
             return None  # Stale RESULT from an already-fenced task.
         assigned_id = self.active[role]
         process = self.processes.get(role)
-        if (not process or not process.is_alive()
+        if (not process or (not process.is_alive() and not allow_exited)
                 or event.get('kind') != 'RESULT'
                 or event.get('pid') != process.pid
                 or event.get('id') != assigned_id):
@@ -591,20 +592,57 @@ class Subagents:
                 'task_count': len(tasks), 'results': outcomes, 'live_onehost_deployed': False,
                 'queue_committed': False, 'model_weights_changed': False}
 
+    def shutdown_and_drain(self):
+        """Stop workers, then validate every queued task result before closing IPC."""
+        with self._abi_lock:
+            if getattr(self, '_shutdown_complete', False):
+                return []
+            for box in self.inboxes.values():
+                try: box.put_nowait(None)
+                except Exception: pass
+            for process in self.processes.values():
+                process.join(timeout=2)
+                if process.is_alive():
+                    process.terminate()
+                    process.join(timeout=2)
+                if process.is_alive() and hasattr(process, 'kill'):
+                    process.kill()
+                    process.join(timeout=2)
+
+            events = []
+            while True:
+                try:
+                    event = self.outbox.get_nowait()
+                except queue.Empty:
+                    break
+                except (EOFError, OSError, ValueError):
+                    break
+                if self._accept_heartbeat(event):
+                    continue
+                accepted = self._accept_result(event, allow_exited=True)
+                if accepted is not None:
+                    events.append(accepted)
+                while self._pending_events:
+                    events.append(self._pending_events.popleft())
+
+            # Anything still active has no complete, validated result. Fence it
+            # as HOLD so the owner cannot retry the same submitted task.
+            for role in list(self.active):
+                process = self.processes.get(role)
+                reason = ('HOLD_SUBAGENT_PROCESS_EXIT'
+                          if process is None or not process.is_alive()
+                          else 'HOLD_SUBAGENT_SHUTDOWN_UNRESOLVED')
+                self._failure(role, reason)
+            while self._pending_events:
+                events.append(self._pending_events.popleft())
+            for channel in [*self.inboxes.values(), self.outbox]:
+                try: channel.close()
+                except Exception: pass
+            self._shutdown_complete = True
+            return events
+
     def __exit__(self,*_):
-        for box in self.inboxes.values():
-            try: box.put_nowait(None)
-            except Exception: pass
-        for p in self.processes.values():
-            p.join(timeout=2)
-            if p.is_alive():
-                p.terminate()
-                p.join(timeout=2)
-            if p.is_alive() and hasattr(p, 'kill'):
-                p.kill()
-                p.join(timeout=2)
-        for q in [*self.inboxes.values(),self.outbox]:
-            q.close()
+        self.shutdown_and_drain()
 
 
 if __name__=='__main__':

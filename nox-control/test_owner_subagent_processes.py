@@ -320,6 +320,102 @@ class TestRealSubagentProcesses(unittest.TestCase):
             pool.submit(task2)
 
 
+    def test_shutdown_and_drain_keeps_joined_result_and_holds_missing_result(self):
+        from collections import deque
+        from queue import Queue
+        from owner_subagent_processes import Subagents
+
+        claim = 'a' * 24
+        policy_sha = 'b' * 64
+
+        class Channel(Queue):
+            def __init__(self):
+                super().__init__()
+                self.closed = False
+            def close(self):
+                self.closed = True
+
+        class Child:
+            def __init__(self, pid, outbox, event=None):
+                self.pid = pid
+                self.outbox = outbox
+                self.event = event
+                self.alive = True
+                self.exitcode = None
+                self.joined = False
+            def is_alive(self):
+                return self.alive
+            def join(self, timeout=None):
+                self.joined = True
+                if self.outbox.closed:
+                    raise AssertionError('outbox closed before worker join')
+                if self.event is not None:
+                    self.outbox.put(self.event)
+                self.alive = False
+                self.exitcode = 0
+            def terminate(self):
+                self.alive = False
+                self.exitcode = -15
+            def kill(self):
+                self.alive = False
+                self.exitcode = -9
+
+        def make_pool(with_result):
+            inbox, outbox = Channel(), Channel()
+            observation = {'claim': claim,
+                           'policy_ack': {'sha256': policy_sha, 'full_file_read': True},
+                           'worker': {'pid': 940}}
+            event = ({'kind': 'RESULT', 'role': 'runtime', 'pid': 940,
+                      'id': 'native-1', 'elapsed_ms': 4,
+                      'state': 'CANDIDATE_NOT_APPLIED', 'answer': 'candidate',
+                      'native_observation': observation} if with_result else None)
+            child = Child(940, outbox, event)
+            pool = Subagents.__new__(Subagents)
+            pool._persistent = True
+            pool.roles = ['runtime']
+            pool.timeout = 1
+            pool._abi_lock = threading.RLock()
+            pool.active = {'runtime': 'native-1'}
+            pool.heartbeats = {}
+            pool._active_started = {'runtime': time.monotonic()}
+            pool._active_context = {'runtime': {'claim': claim,
+                'policy': {'sha256': policy_sha}}}
+            pool._submitted_ids = {'native-1'}
+            pool._terminal_ids = set()
+            pool._pending_events = deque()
+            pool.inboxes = {'runtime': inbox}
+            pool.outbox = outbox
+            pool.processes = {'runtime': child}
+            pool._shutdown_complete = False
+            return pool, child, inbox, outbox
+
+        task = {'id': 'native-1', 'subagent': 'runtime', 'task': 'review',
+                'depends_on': [],
+                '_native_context': {'policy': {'path': '/owner/policy.md',
+                                               'sha256': policy_sha},
+                                    'operation': 'runtime', 'claim': claim}}
+        pool, child, inbox, outbox = make_pool(True)
+        events = pool.shutdown_and_drain()
+        self.assertTrue(child.joined)
+        self.assertEqual(inbox.get_nowait(), None)
+        self.assertEqual([row['id'] for row in events], ['native-1'])
+        self.assertEqual(events[0]['state'], 'CANDIDATE_NOT_APPLIED')
+        self.assertTrue(inbox.closed)
+        self.assertTrue(outbox.closed)
+        self.assertIn('native-1', pool._terminal_ids)
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TASK_REUSE'):
+            pool.submit(task)
+
+        pool, child, inbox, outbox = make_pool(False)
+        events = pool.shutdown_and_drain()
+        self.assertEqual([(row['id'], row['state']) for row in events],
+                         [('native-1', 'HOLD_SUBAGENT_PROCESS_EXIT')])
+        self.assertTrue(inbox.closed)
+        self.assertTrue(outbox.closed)
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TASK_REUSE'):
+            pool.submit(task)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 
