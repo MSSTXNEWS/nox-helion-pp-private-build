@@ -22,7 +22,7 @@ class SourcePinClosureTests(unittest.TestCase):
                          "owner_subagent_fresh_install_entry.py")
         pins = bundle.SUBAGENT_BUNDLE_PINS
         self.assertEqual(pins["owner_dispatcher_mentor.py"],
-                         "0b0d257c0db6bba7c0348c20af24b3c2389ea7cc8fc6bf003eb363af40c8f0c1")
+                         "d9368e7dc5b80c86a73c90eb2f92ff13cb3a61e8b915861a19be414d1e2808f4")
         self.assertEqual(pins["owner_task_lifecycle.py"],
                          "75d0718bf9986f1a2cdbfa4f42f4fea9a8dad4558f1273c460c62dadb816f2a0")
         self.assertEqual(pins["owner_senior_gateway.py"],
