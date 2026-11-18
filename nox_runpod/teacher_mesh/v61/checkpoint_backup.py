@@ -161,6 +161,13 @@ def verify(encrypted:Path,test_identity:Path)->dict:
     return {**verified,'plaintext_sha256':hashlib.sha256(p.stdout).hexdigest()}
 
 
+def transport_retry_delay(error_class: str, attempt_index: int) -> int | None:
+    """Retry only a classified read-only SSH timeout; never replay an unknown HOLD."""
+    if error_class != 'SSH_NETWORK_TIMEOUT' or type(attempt_index) is not int:
+        return None
+    return (10, 30)[attempt_index] if 0 <= attempt_index < 2 else None
+
+
 def run():
     owner,fingerprint=v60.existing_owner_recipient()
     host,port=v60.live_direct_route()
@@ -179,7 +186,7 @@ def run():
     known=RUN/'known_hosts'
     try:
         time.sleep(12)
-        for i in range(10):
+        for i in range(3):
             FINAL.unlink(missing_ok=True)
             command=['ssh','-T','-i',str(v60.conn.KEY),'-p',str(port),
                      '-o','BatchMode=yes','-o','IdentitiesOnly=yes',
@@ -225,9 +232,11 @@ def run():
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_SSH_RC='+str(rc))
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_AGE_RC='+str(encrypted.returncode))
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_CIPHERTEXT_BYTES='+str(FINAL.stat().st_size if FINAL.exists() else 0))
-            time.sleep(5)
-        else:
-            raise RuntimeError('HOLD_CHECKPOINT_STREAM_TRANSPORT')
+            delay = transport_retry_delay(cls, i)
+            if delay is None:
+                raise RuntimeError('HOLD_CHECKPOINT_STREAM_' + cls)
+            time.sleep(delay)
+
         restored=verify(FINAL,identity)
         receipt={
             'schema':'NOX_V61_ENCRYPTED_CHECKPOINT_RECEIPT_V1',

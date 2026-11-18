@@ -5,7 +5,7 @@ import json
 import tarfile
 import unittest
 
-from nox_runpod.teacher_mesh.v61.checkpoint_backup import verify_plaintext_tar
+from nox_runpod.teacher_mesh.v61.checkpoint_backup import verify_plaintext_tar, transport_retry_delay
 
 
 def make_archive(names):
@@ -49,6 +49,19 @@ class V61ResumeProofBoundary(unittest.TestCase):
         self.assertEqual(result["resume_name_hints"],
                          {"optimizer": True, "rng": True, "scaler": True})
         self.assertIs(result["functional_optimizer_restore_verified"], False)
+
+
+class V61TransportRetryBoundary(unittest.TestCase):
+    def test_only_bounded_readonly_timeout_may_retry(self):
+        self.assertEqual(transport_retry_delay('SSH_NETWORK_TIMEOUT', 0), 10)
+        self.assertEqual(transport_retry_delay('SSH_NETWORK_TIMEOUT', 1), 30)
+        self.assertIsNone(transport_retry_delay('SSH_NETWORK_TIMEOUT', 2))
+        for status in ('CHECKPOINT_CHANGED_DURING_STREAM',
+                       'CHECKPOINT_TOTAL_SIZE_LIMIT', 'CHECKPOINT_FILE_COUNT',
+                       'SSH_AUTH_DENIED', 'REMOTE_PYTHON', 'OTHER'):
+            self.assertIsNone(transport_retry_delay(status, 0))
+        self.assertIsNone(transport_retry_delay('SSH_NETWORK_TIMEOUT', -1))
+        self.assertIsNone(transport_retry_delay('SSH_NETWORK_TIMEOUT', True))
 
 
 if __name__ == "__main__":
