@@ -182,8 +182,13 @@ def configuration():
         row = scalar_projection(data, ('schema','mode','target','owner_authorized','instance_id','policy_id','catalog_sha256'))
         row.update({'path':str(path),'sha256':hashlib.sha256(raw).hexdigest(),
                     'owner_uid':info.st_uid,'mode_bits':oct(stat.S_IMODE(info.st_mode))})
-        row['module_pins'] = {k:v for k,v in data.get('module_pins',{}).items()
-                              if identifier(k) and isinstance(v,str) and SHA.fullmatch(v)}
+        pins = data.get('module_pins', {})
+        pins_valid = isinstance(pins, dict) and len(pins) <= 2048
+        row['module_pins_schema_valid'] = pins_valid
+        row['module_pins'] = {k:v for k,v in pins.items()
+                              if identifier(k) and isinstance(v,str) and SHA.fullmatch(v)} if pins_valid else {}
+        if not pins_valid:
+            row['status'] = 'UNKNOWN_MODULE_PINS_SCHEMA'
         policy = data.get('policy',{})
         row['policy'] = scalar_projection(policy, ('path','sha256')) if isinstance(policy,dict) else None
         catalog = data.get('catalog')
@@ -270,7 +275,15 @@ def leaf_queue_summary():
             receipt=result.get('receipt')
             if isinstance(receipt,dict):
                 row['receipt']=scalar_projection(receipt,('schema','phase','task_id','job_id','source_sha256','parent_task_id','queue_id','original_task_accepted','training_started','service_or_weights_changed','finished_at'))
-                row['receipt_sha_matches']=hashlib.sha256(encoded(receipt)).hexdigest()==result.get('receipt_sha256')
+                try:
+                    receipt_bytes = encoded(receipt)
+                except (ValueError, TypeError, RecursionError, OverflowError):
+                    row['receipt_schema_valid'] = False
+                    row['receipt_state'] = 'UNKNOWN_RECEIPT_SCHEMA'
+                    emit('POST_TASK', row)
+                    continue
+                row['receipt_schema_valid'] = True
+                row['receipt_sha_matches']=hashlib.sha256(receipt_bytes).hexdigest()==result.get('receipt_sha256')
                 row['receipt_claim_matches']=receipt.get('claim')==claim
                 event=receipt.get('worker_result')
                 if isinstance(event,dict):
