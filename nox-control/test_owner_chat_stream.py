@@ -175,6 +175,49 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[1]['messages'][-2]['tool_calls'][0]['id'],'call_fixture')
         self.assertEqual(payload['_agent_final'],'323')
 
+    async def test_complete_tool_observation_is_not_silently_clipped(self):
+        # Prior adapter sent only the first 8000 characters to the model.
+        # Preserve real RU/ES evidence, including its final non-ASCII suffix.
+        observation='RU начало:'+'я'*8050+'\\nES final: contexto completo 🦊'
+        call=Chunks([
+            frame(calls=[{'index':0,'id':'full_context_call','type':'function',
+                          'function':{'name':'calculate','arguments':'{}'}}]),
+            frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+        answer=Chunks([frame('Respuesta completa'),frame(finish='stop'),
+                       b'data: [DONE]\\n\\n'])
+        requests,factory=self.transport([call,answer])
+        native=self.native(result={'ok':True,'text':observation})
+        payload={'messages':[{'role':'user','content':'Usa el resultado completo'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Usa el resultado completo',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertEqual(requests[1]['messages'][-1]['content'],observation)
+        self.assertEqual(payload['_agent_final'],'Respuesta completa')
+        self.assertNotIn(observation,wire)
+        self.assertTrue(call.closed)
+        self.assertTrue(answer.closed)
+
+        # Beyond the current safe source envelope, HOLD rather than send a
+        # forged prefix as if it were the complete tool result.
+        too_large='x'*2000001
+        upstream=Chunks([
+            frame(calls=[{'index':0,'id':'oversized_tool','type':'function',
+                          'function':{'name':'calculate','arguments':'{}'}}]),
+            frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+        requests,factory=self.transport([upstream])
+        native=self.native(result={'ok':True,'text':too_large})
+        payload={'messages':[{'role':'user','content':'Preserva todo'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Preserva todo',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertIn('HOLD_TOOL_RESULT_FULL_CONTEXT',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertEqual(len(requests),1)
+        self.assertTrue(upstream.closed)
+
     async def test_untrusted_model_tool_id_overflow_never_dispatches_or_saves(self):
         # A tool-call ID may be streamed incrementally by Maya/llama.cpp.
         # The limit is cumulative, not a per-frame cap.
