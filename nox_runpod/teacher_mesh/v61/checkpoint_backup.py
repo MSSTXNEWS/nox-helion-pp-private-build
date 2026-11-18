@@ -41,10 +41,18 @@ for directory,dirs,files in os.walk(root,followlinks=False):
 if len(selected)<10 or len(selected)>90:raise SystemExit(21)
 if sum(s for p,s in selected)>1_300_000_000:raise SystemExit(22)
 selected.sort(key=lambda x:str(x[0]))
+# Hash in bounded chunks: a checkpoint can approach 1.3 GB while the
+# native host has only a narrow cgroup RAM margin.
+def sha256_path(path):
+    digest=hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024*1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
 manifest=[]
 for p,size in selected:
     rel=p.relative_to(root)
-    sha=hashlib.sha256(p.read_bytes()).hexdigest()
+    sha=sha256_path(p)
     manifest.append({'path':'NOX_CHECKPOINTS/'+str(rel),'size_bytes':size,'sha256':sha})
 raw=json.dumps({'schema':'NOX_V61_CHECKPOINT_OPTIMIZER_MANIFEST_V1',
                 'origin_instance_id':60509551,
@@ -59,7 +67,7 @@ with tarfile.open(fileobj=sys.stdout.buffer,mode='w|gz') as archive:
 sys.stdout.flush()
 # Snapshot safety: abort if the source changed while it was being streamed.
 for (p,_),saved in zip(selected,manifest):
-    if not p.exists() or hashlib.sha256(p.read_bytes()).hexdigest()!=saved['sha256']:
+    if not p.exists() or sha256_path(p)!=saved['sha256']:
         raise SystemExit(31)
 """
 
