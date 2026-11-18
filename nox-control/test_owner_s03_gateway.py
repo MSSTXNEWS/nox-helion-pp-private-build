@@ -393,7 +393,8 @@ class GatewayTests(unittest.TestCase):
         original='🙂'*4200+'TAIL_PRESERVED'
         with g.connection(self.db,write=True) as conn:
             result=g.import_records(conn,[{'id':42,'text':original}],'C08','f'*64)
-        self.assertGreater(result['new_items'],2)
+        # Repeated emoji chunks deduplicate intentionally; every origin remains.
+        self.assertGreater(result['origin_links'],2)
         with g.connection(self.db) as conn:
             pieces=[row[0] for row in conn.execute(
                 'SELECT s.text FROM nox_s03_origins o JOIN s03_items s ON s.id=o.item_id '
