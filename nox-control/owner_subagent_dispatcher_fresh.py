@@ -564,6 +564,72 @@ class Native:
                 and CLAIM.fullmatch(str(claim.get('nonce', ''))) is not None
                 and persisted.get('owner_claim') == claim and claim.get('pid') == os.getpid())
 
+    def _submit_intent_from_disk(self, task):
+        with self.ns['_qlock']:
+            persisted = document(self.ns['STATE'], 16*1024*1024)
+            row = persisted.get('tasks', {}).get(task['id'], {})
+            intent = row.get('native_submit_intent')
+        if intent is None:
+            return None
+        claim = task.get('owner_claim') or {}
+        expected = {'task_id': task['id'], 'claim_nonce': claim.get('nonce'),
+                    'role': task.get('params', {}).get('role'),
+                    'policy_sha': task.get('params', {}).get('policy_sha256'),
+                    'job_id': task.get('params', {}).get('job_id')}
+        if not isinstance(intent, dict) or any(intent.get(key) != value
+                                               for key, value in expected.items()):
+            raise GateError('HOLD_SUBAGENT_SUBMIT_INTENT_MISMATCH')
+        return intent
+
+    def _persist_submit_intent(self, task):
+        claim = task.get('owner_claim') or {}
+        intent = {'task_id': task['id'], 'claim_nonce': claim.get('nonce'),
+                  'role': task['params']['role'], 'policy_sha': task['params']['policy_sha256'],
+                  'job_id': task['params']['job_id'], 'state': 'UNCERTAIN'}
+        with self.ns['_qlock']:
+            durable = document(self.ns['STATE'], 16*1024*1024)
+            durable_row = durable.get('tasks', {}).get(task['id'], {})
+            row = self.state.get('tasks', {}).get(task['id'], {})
+            if (durable_row.get('status') != 'running'
+                    or durable_row.get('owner_claim') != claim
+                    or row.get('status') != 'running'
+                    or row.get('owner_claim') != claim):
+                raise GateError('HOLD_NATIVE_OWNER_CLAIM_CHANGED')
+            if durable_row.get('native_submit_intent') is not None or row.get('native_submit_intent') is not None:
+                raise GateError('HOLD_SUBAGENT_SUBMIT_INTENT_EXISTS')
+            row['native_submit_intent'] = intent
+            self.ns['save_state'](self.state)
+            readback = document(self.ns['STATE'], 16*1024*1024)
+            saved = readback.get('tasks', {}).get(task['id'], {}).get('native_submit_intent')
+            if saved != intent:
+                raise GateError('HOLD_SUBAGENT_SUBMIT_INTENT_UNVERIFIED')
+        return intent
+
+    def _mark_submit_result_s03_verified(self, task, intent, receipt, proof):
+        if (not isinstance(proof, dict) or proof.get('native_verified') is not True
+                or proof.get('task_id') != task['id']
+                or proof.get('job_id') != intent['job_id']):
+            raise GateError('HOLD_SUBAGENT_S03_RESULT_READBACK')
+        with self.ns['_qlock']:
+            durable = document(self.ns['STATE'], 16*1024*1024)
+            durable_row = durable.get('tasks', {}).get(task['id'], {})
+            saved_intent = durable_row.get('native_submit_intent')
+            if (not isinstance(saved_intent, dict)
+                    or any(saved_intent.get(key) != intent.get(key)
+                           for key in ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id'))
+                    or durable_row.get('owner_claim') != task.get('owner_claim')):
+                raise GateError('HOLD_SUBAGENT_SUBMIT_INTENT_MISMATCH')
+            row = self.state.get('tasks', {}).get(task['id'], {})
+            advanced = {**saved_intent, 'state': 'S03_VERIFIED',
+                        'result_sha256': digest(encoded(receipt)),
+                        's03_receipt_sha256': proof['receipt_sha256']}
+            row['native_submit_intent'] = advanced
+            self.ns['save_state'](self.state)
+            readback = document(self.ns['STATE'], 16*1024*1024)
+            if readback.get('tasks', {}).get(task['id'], {}).get('native_submit_intent') != advanced:
+                raise GateError('HOLD_SUBAGENT_SUBMIT_RESULT_UNVERIFIED')
+        return advanced
+
     def _drain(self):
         if self.pool is None:
             return
@@ -594,6 +660,15 @@ class Native:
                 or params.get('policy_sha256') != self.policy['sha256']
                 or not self._claim_current(task, durable=True)):
             return False, 'HOLD_SUBAGENT_NATIVE_CLAIM'
+        try:
+            # A persisted intent means pool.submit may already have happened.
+            # Never replay it under this or a later owner claim.
+            if self._submit_intent_from_disk(task) is not None:
+                return False, 'HOLD_SUBAGENT_SUBMIT_INTENT_EXISTS'
+        except GateError as exc:
+            return False, str(exc)
+        except (OSError, ValueError):
+            return False, 'HOLD_SUBAGENT_SUBMIT_INTENT_UNREADABLE'
         if self.stop_active() or not self.writer_lease():
             return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
         if self.pool is None:
@@ -609,13 +684,12 @@ class Native:
             with self.lock:
                 if self.pool is None:
                     raise GateError('HOLD_SUBAGENT_POOL_NOT_READY')
-                # Recheck immediately before EACH submit, including an existing
-                # pool and the time spent creating a new one. Keep idle workers
-                # intact on pressure; the original queue retains the pending job.
+                # Recheck resource admission immediately before the sole submit.
                 reason = self._fresh_admission_reason()
                 if reason:
                     return 'wait', reason
                 self.interrupted.pop(task['id'], None)
+                intent = self._persist_submit_intent(task)
                 self.pool.submit({'id': task['id'], 'subagent': role, 'task': task['title'], 'depends_on': [],
                     '_native_context': {'policy': self.policy, 'operation': role,
                                         'claim': task['owner_claim']['nonce']}})
@@ -625,26 +699,29 @@ class Native:
                 if not self._claim_current(task):
                     self.close_pool()
                     raise GateError('HOLD_NATIVE_OWNER_CLAIM_CHANGED')
-                if self.stop_active() or chat_priority_active():
-                    self.close_pool('WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
-                    return 'wait', 'WAIT_OWNER_STOP_OR_CHAT_PRIORITY'
                 with self.lock:
                     reason = self.interrupted.pop(task['id'], None)
-                    if reason:
-                        return 'wait', reason
                     self._drain()
                     event = self.completed.pop(task['id'], None)
+                stop_reason = None
+                if self.stop_active():
+                    stop_reason = 'WAIT_OWNER_STOP_OR_CHAT_PRIORITY'
+                elif chat_priority_active():
+                    stop_reason = 'WAIT_OWNER_STOP_OR_CHAT_PRIORITY'
                 if event is not None:
                     break
+                if stop_reason:
+                    self.close_pool(stop_reason)
+                    return False, 'HOLD_SUBAGENT_SUBMIT_OUTCOME_UNRESOLVED'
+                if reason:
+                    return False, 'HOLD_SUBAGENT_SUBMIT_INTERRUPTED'
                 time.sleep(0.1)
             if event is None:
                 self.close_pool()
-                raise GateError('HOLD_SUBAGENT_RESULT_TIMEOUT')
+                return False, 'HOLD_SUBAGENT_RESULT_TIMEOUT'
             if event.get('state') != 'CANDIDATE_NOT_APPLIED':
                 raise GateError(event.get('state', 'HOLD_SUBAGENT_RESULT'))
-            # The original queue redacts every result with this same function.
-            # Hash/store its stable public form so later S03 verification does
-            # not compare an unredacted object with a transformed queue value.
+            # Redact with the same queue function before storing the receipt.
             event = self.ns['owner_mentor'].clean(event)
             observation = event.get('native_observation', {})
             if (observation.get('claim') != task['owner_claim']['nonce']
@@ -660,9 +737,12 @@ class Native:
                       'service_or_weights_changed': False}
             if not self._claim_current(task, durable=True):
                 raise GateError('HOLD_NATIVE_OWNER_CLAIM_CHANGED')
-            if self.stop_active() or chat_priority_active():
-                return 'wait', 'WAIT_OWNER_STOP_OR_CHAT_PRIORITY'
             proof = remember(result)
+            self._mark_submit_result_s03_verified(task, intent, result, proof)
+            # A durable result already found by the drain is committed to S03
+            # before workers are torn down to yield to chat/STOP.
+            if self.stop_active() or chat_priority_active():
+                self.close_pool('WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
             return True, {'schema': RECEIPT, 'verified': True, 'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT',
                           'receipt': result, 's03': proof, 'receipt_sha256': digest(encoded(result)),
                           'candidate_applied': False}

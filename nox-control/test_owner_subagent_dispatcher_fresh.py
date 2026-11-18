@@ -2,6 +2,7 @@
 from pathlib import Path
 import importlib.util
 import json
+import tempfile
 import threading
 import time
 import types
@@ -39,11 +40,24 @@ def snapshot(**changes):
 
 def native_with_pool():
     native = binding.Native.__new__(binding.Native)
-    native.ns = {'_qlock': threading.RLock()}
     native.lock = threading.RLock()
     native.policy = {'sha256': 'a' * 64}
     native.catalog = {'tasks': [{'id': 'review.runtime', 'params': {'role': 'runtime'}}]}
-    native.state = {'tasks': {}}
+    native._test_events = []
+    native._test_tmpdir = tempfile.TemporaryDirectory()
+    state_path = Path(native._test_tmpdir.name) / 'state.json'
+    task = {'id': 'review.runtime', 'status': 'running', 'title': 'Review resources',
+            'owner_claim': {'nonce': 'a' * 24},
+            'params': {'role': 'runtime', 'policy_sha256': 'a' * 64, 'job_id': 'review-job'}}
+    row = {'id': task['id'], 'status': 'running', 'owner_claim': task['owner_claim'],
+           'params': task['params']}
+    native.state = {'tasks': {task['id']: row}}
+    def save_state(state):
+        native._test_events.append('save_state')
+        state_path.write_text(json.dumps(state, sort_keys=True), encoding='utf-8')
+    native.ns = {'_qlock': threading.RLock(), 'STATE': state_path, 'save_state': save_state}
+    save_state(native.state)
+    native._test_events.clear()
     native.pool = Mock()
     native.pool.active = {}
     native.pool.submit.side_effect = GateError('HOLD_TEST_AFTER_SUBMIT')
@@ -55,9 +69,6 @@ def native_with_pool():
     native.read_resource_snapshot = Mock(return_value=snapshot())
     native.ensure_processes = Mock(side_effect=AssertionError('Existing pool must be retained'))
     native.close_pool = Mock(side_effect=AssertionError('Resource hold must not kill existing workers'))
-    task = {'id': 'review.runtime', 'status': 'running', 'title': 'Review resources',
-            'owner_claim': {'nonce': 'a' * 24},
-            'params': {'role': 'runtime', 'policy_sha256': 'a' * 64, 'job_id': 'review-job'}}
     return native, task
 
 
@@ -169,19 +180,34 @@ class FreshSubmissionTests(unittest.TestCase):
         self.assertEqual(native._handle(task), ('wait', 'HOLD_NATIVE_SUBAGENT_ADMISSION'))
         native.pool.submit.assert_not_called()
 
-    def test_clear_existing_pool_checks_before_exactly_one_submit(self):
+    def test_stop_after_submit_persists_one_shot_intent_and_prevents_replay(self):
         native, task = native_with_pool()
-        events = []
+        events = native._test_events
         native.read_resource_snapshot.side_effect = lambda: events.append('snapshot') or snapshot()
-        def submit(_):
-            events.append('submit')
-            raise GateError('HOLD_TEST_AFTER_SUBMIT')
-        native.pool.submit.side_effect = submit
+        native.stop_active.side_effect = [False, True]
+        native.pool.submit.side_effect = lambda _: events.append('submit')
+        native.pool.poll.return_value = None
+        native.close_pool = Mock()
         with patch.object(binding, 'chat_priority_active', return_value=False):
-            self.assertEqual(native._handle(task), (False, 'HOLD_TEST_AFTER_SUBMIT'))
-        self.assertEqual(events, ['snapshot', 'submit'])
+            self.assertEqual(native._handle(task),
+                             (False, 'HOLD_SUBAGENT_SUBMIT_OUTCOME_UNRESOLVED'))
+        self.assertEqual(events, ['snapshot', 'save_state', 'submit'])
         native.pool.submit.assert_called_once()
         native.ensure_processes.assert_not_called()
+        intent = native.state['tasks'][task['id']]['native_submit_intent']
+        self.assertEqual(intent, {'task_id': task['id'], 'claim_nonce': 'a' * 24,
+                                  'role': 'runtime', 'policy_sha': 'a' * 64,
+                                  'job_id': 'review-job', 'state': 'UNCERTAIN'})
+        # Simulate the original queue claiming the same task again with a new nonce.
+        new_claim = {'nonce': 'b' * 24}
+        task['owner_claim'] = new_claim
+        native.state['tasks'][task['id']]['owner_claim'] = new_claim
+        native.ns['save_state'](native.state)
+        calls_before_retry = native.pool.submit.call_count
+        with patch.object(binding, 'chat_priority_active', return_value=False):
+            self.assertEqual(native._handle(task),
+                             (False, 'HOLD_SUBAGENT_SUBMIT_INTENT_MISMATCH'))
+        self.assertEqual(native.pool.submit.call_count, calls_before_retry)
 
     def test_new_pool_rechecks_after_process_creation(self):
         native, task = native_with_pool()
