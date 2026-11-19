@@ -103,7 +103,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const window={NOX_NATIVE_OWNER:owner,fetch:old,dispatchEvent:event=>{uiEvents.push(event);return true;}};
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   function CustomEvent(type,init){this.type=type;this.detail=init?.detail||{};}
-  const context={window,location,URL,Request,Response,ReadableStream,CustomEvent,
+  const context={window,location,URL,URLSearchParams,Request,Response,ReadableStream,CustomEvent,
     TextDecoder,TextEncoder,AbortController,performance,console,setTimeout,clearTimeout,
     requestAnimationFrame:raf};
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
