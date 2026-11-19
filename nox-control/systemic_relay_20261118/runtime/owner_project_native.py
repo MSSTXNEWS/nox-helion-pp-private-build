@@ -107,21 +107,27 @@ class ProjectBinding:
                 or not isinstance(evidence.get('tests'), dict)
                 or evidence['tests'].get('passed') is not True):
             raise GateError('HOLD_PROJECT_INTEGRATION_PROOF')
-        # Sanitization must never transform verified integration identity or
-        # verdict. Re-hashing modified evidence without this check could turn
-        # an invalid post-clean event into a durable S03 receipt.
-        cleaned = native.ns['owner_mentor'].clean(event)
-        if not isinstance(cleaned, dict) or not isinstance(cleaned.get('project_evidence'), dict):
-            raise GateError('HOLD_PROJECT_SANITIZED_EVIDENCE')
-        sanitized = cleaned['project_evidence']
+        # The sanitizer is not required to return a new object: it may
+        # mutate event and evidence in place. Snapshot signed verdict bytes
+        # BEFORE calling it, so an in-place rewrite cannot self-validate.
         protected = ('task_id', 'parent_task_id', 'queue_id', 'plan_sha256',
                      'contract_sha256', 'claim', 'acceptance_scope', 'state',
                      'original_task_accepted', 'project_source_changed',
                      'integration_verified')
-        if (any(type(sanitized.get(key)) is not type(evidence.get(key))
-                or sanitized.get(key) != evidence.get(key) for key in protected)
+        signed_fields = {key: (type(evidence.get(key)),
+                                binding.encoded(evidence.get(key)))
+                         for key in protected}
+        signed_tests = binding.encoded(evidence.get('tests')) if integrated else None
+        cleaned = native.ns['owner_mentor'].clean(event)
+        if not isinstance(cleaned, dict) or not isinstance(cleaned.get('project_evidence'), dict):
+            raise GateError('HOLD_PROJECT_SANITIZED_EVIDENCE')
+        sanitized = cleaned['project_evidence']
+        if (any(type(sanitized.get(key)) is not field_type
+                or binding.encoded(sanitized.get(key)) != signed_value
+                for key, (field_type, signed_value) in signed_fields.items())
                 or (integrated and (not isinstance(sanitized.get('tests'), dict)
-                    or sanitized['tests'].get('passed') is not True))):
+                    or sanitized['tests'].get('passed') is not True
+                    or binding.encoded(sanitized['tests']) != signed_tests))):
             raise GateError('HOLD_PROJECT_SANITIZED_EVIDENCE')
         event = cleaned
         evidence = sanitized
