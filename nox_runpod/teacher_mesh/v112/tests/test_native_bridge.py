@@ -600,6 +600,24 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
         self.assertEqual(self.calls,[])
 
+    def test_dialog_context_embedded_nul_cannot_bypass_message_limit(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db,_save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'NUL length guard','confirmed':True}).json()['dialog_id']
+        oversized='\\0'+'x'*8001
+        self.assertTrue(_save_exchange(dialog,oversized,'saved reply','nul-message'))
+        with _db() as db:
+            stored=db.execute('SELECT content,length(content) AS sqlite_chars '
+                              'FROM nox_v29_dialog_messages WHERE dialog_id=? '
+                              "AND role='user'",(dialog,)).fetchone()
+            self.assertEqual(stored['sqlite_chars'],0)
+            self.assertEqual(len(stored['content']),8002)
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
+        self.assertEqual(self.calls,[])
+
     def test_dialog_context_budget_overflow_holds_before_model(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
