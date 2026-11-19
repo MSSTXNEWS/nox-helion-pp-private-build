@@ -10,16 +10,20 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
-GPU_INVENTORY_BLOB_SHA='cccdd726fc8de79f8ebe449bac537aba07a3cbcf'
+GPU_INVENTORY_BLOB_SHA='1eeb0674a45ef7ad7fba4ade6569bcee258c59e6'
 GPU_INVENTORY_MARKER='NOX_MAINT_GPU_INVENTORY='
 GPU_INVENTORY_COMPLETE='NOX_MAINT_GPU_INVENTORY_COMPLETE=true'
 GPU_INVENTORY_RESULT_PREFIX='NOX_MAINT_GPU_INVENTORY_RESULT='
+GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX='NOX_MAINT_GPU_INVENTORY_MEMORY_DIAGNOSTIC='
+GPU_INVENTORY_MAX_MEMORY_MIB=1048576
 GPU_INVENTORY_HELPER_HOLDS=frozenset((
     'HOLD_GPU_INVENTORY_INVALID','HOLD_GPU_INVENTORY_HOST_CLOCK',
     'HOLD_GPU_INVENTORY_OUTPUT_BOUND','HOLD_GPU_INVENTORY_CSV',
     'HOLD_GPU_INVENTORY_ROW_SHAPE','HOLD_GPU_INVENTORY_INDEX',
     'HOLD_GPU_INVENTORY_MODEL','HOLD_GPU_INVENTORY_IDENTITY',
-    'HOLD_GPU_INVENTORY_MEMORY','HOLD_GPU_INVENTORY_GPU_COUNT',
+    'HOLD_GPU_INVENTORY_MEMORY','HOLD_GPU_INVENTORY_MEMORY_FORMAT',
+    'HOLD_GPU_INVENTORY_MEMORY_RANGE','HOLD_GPU_INVENTORY_MEMORY_SUM',
+    'HOLD_GPU_INVENTORY_GPU_COUNT',
     'HOLD_GPU_INVENTORY_DUPLICATE_INDEX','HOLD_GPU_INVENTORY_DUPLICATE_UUID',
     'HOLD_GPU_INVENTORY_NVIDIA_SMI','HOLD_GPU_INVENTORY_NVIDIA_SMI_RC',
     'HOLD_GPU_INVENTORY_CLOCK_DRIFT','HOLD_GPU_INVENTORY_BOOT_OR_UPTIME',
@@ -925,15 +929,46 @@ def _gpu_inventory_ssh_failure_class(stderr):
     return next((code for token,code in rules if token in message),'SSH_EXIT_255')
 
 
+def _validate_gpu_inventory_memory_diagnostic(line):
+    """Validate and canonicalize bounded numeric-only memory evidence."""
+    prefix=GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX
+    if not isinstance(line,str) or not line.startswith(prefix) or len(line)>1024:
+        raise ValueError("invalid diagnostic line")
+    value=json.loads(line[len(prefix):])
+    if (not isinstance(value,dict) or set(value)!={"schema","rows"}
+            or value.get("schema")!="NOX_GPU_MEMORY_DIAGNOSTIC_V1"
+            or not isinstance(value.get("rows"),list)
+            or not 1<=len(value["rows"])<=2):
+        raise ValueError("invalid diagnostic schema")
+    rows=[];seen=set()
+    for row in value["rows"]:
+        if not isinstance(row,dict) or set(row)!={"index","total_mib","used_mib","free_mib","residual_mib"}:
+            raise ValueError("invalid diagnostic row")
+        for field in ("index","total_mib","used_mib","free_mib","residual_mib"):
+            if type(row[field]) is not int:
+                raise ValueError("invalid diagnostic number")
+        index=row["index"];total=row["total_mib"];used=row["used_mib"]
+        free=row["free_mib"];residual=row["residual_mib"]
+        if (not 0<=index<=99 or index in seen
+                or not 0<total<=GPU_INVENTORY_MAX_MEMORY_MIB
+                or not 0<=used<=total or not 0<=free<=total
+                or residual!=total-used-free or residual==0
+                or abs(residual)>2*GPU_INVENTORY_MAX_MEMORY_MIB):
+            raise ValueError("diagnostic value out of bounds")
+        seen.add(index)
+        rows.append({"index":index,"total_mib":total,"used_mib":used,
+                     "free_mib":free,"residual_mib":residual})
+    normalized={"schema":"NOX_GPU_MEMORY_DIAGNOSTIC_V1","rows":rows}
+    return prefix+json.dumps(normalized,sort_keys=True,separators=(",",":"))
+
+
 def _gpu_inventory_remote_failure(stdout,stderr,remote_exit_code):
-    """Classify GPU helper/SSH failure before success-marker schema validation."""
+    """Classify GPU helper/SSH failures; forward only validated numeric diagnostics."""
     if type(remote_exit_code) is not int or not 0<=remote_exit_code<=255:
         return _gpu_inventory_diagnostic(
             'REMOTE_HELPER','INVALID','REMOTE_EXIT_INVALID',
             'HOLD_GPU_INVENTORY_REMOTE_EXIT_INVALID')
     if remote_exit_code==255:
-        # OpenSSH reserves 255 for client/transport failures; partial remote
-        # stdout is untrusted and must never override this classification.
         return _gpu_inventory_diagnostic(
             'SSH',remote_exit_code,_gpu_inventory_ssh_failure_class(stderr),
             'HOLD_GPU_INVENTORY_SSH_FAILURE')
@@ -942,15 +977,18 @@ def _gpu_inventory_remote_failure(stdout,stderr,remote_exit_code):
             'REMOTE_HELPER',remote_exit_code,'REMOTE_OUTPUT_INVALID',
             'HOLD_GPU_INVENTORY_REMOTE_OUTPUT_INVALID')
     if len(stdout)>=MAX_FORWARD_LINE_CHARS:
-        origin='SSH' if remote_exit_code==255 else 'REMOTE_HELPER'
         return _gpu_inventory_diagnostic(
-            origin,remote_exit_code,'REMOTE_OUTPUT_OVERSIZE',
+            'REMOTE_HELPER',remote_exit_code,'REMOTE_OUTPUT_OVERSIZE',
             'HOLD_GPU_INVENTORY_REMOTE_OUTPUT_OVERSIZE')
     lines=stdout.splitlines()
     markers=[line for line in lines if line.startswith('NOX_MAINT_')]
     result_lines=[line for line in markers if line.startswith(GPU_INVENTORY_RESULT_PREFIX)]
+    diagnostic_lines=[line for line in markers
+                      if line.startswith(GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX)]
     if result_lines:
-        if len(result_lines)!=1 or len(markers)!=1:
+        if (len(result_lines)!=1 or len(diagnostic_lines)>1
+                or len(markers)!=len(result_lines)+len(diagnostic_lines)
+                or (diagnostic_lines and markers.index(result_lines[0])>markers.index(diagnostic_lines[0]))):
             return _gpu_inventory_diagnostic(
                 'REMOTE_HELPER',remote_exit_code,'MALFORMED_HELPER_OUTPUT',
                 'HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE')
@@ -959,10 +997,29 @@ def _gpu_inventory_remote_failure(stdout,stderr,remote_exit_code):
             return _gpu_inventory_diagnostic(
                 'REMOTE_HELPER',remote_exit_code,'UNRECOGNIZED_HELPER_HOLD',
                 'HOLD_GPU_INVENTORY_HELPER_FAILURE')
-        if remote_exit_code==2:
+        safe_diagnostic=None
+        if diagnostic_lines:
+            if helper_hold!='HOLD_GPU_INVENTORY_MEMORY_SUM':
+                return _gpu_inventory_diagnostic(
+                    'REMOTE_HELPER',remote_exit_code,'MALFORMED_HELPER_OUTPUT',
+                    'HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE')
+            try:
+                safe_diagnostic=_validate_gpu_inventory_memory_diagnostic(diagnostic_lines[0])
+            except (TypeError,ValueError):
+                return _gpu_inventory_diagnostic(
+                    'REMOTE_HELPER',remote_exit_code,'MALFORMED_HELPER_OUTPUT',
+                    'HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE')
+        elif helper_hold=='HOLD_GPU_INVENTORY_MEMORY_SUM':
             return _gpu_inventory_diagnostic(
+                'REMOTE_HELPER',remote_exit_code,'MALFORMED_HELPER_OUTPUT',
+                'HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE')
+        if remote_exit_code==2:
+            failure=_gpu_inventory_diagnostic(
                 'REMOTE_HELPER',remote_exit_code,'HELPER_HOLD',helper_hold,
                 helper_hold=helper_hold)
+            if safe_diagnostic is not None:
+                failure['records'].append(safe_diagnostic)
+            return failure
         return _gpu_inventory_diagnostic(
             'REMOTE_HELPER',remote_exit_code,'HELPER_EXIT_MISMATCH',
             'HOLD_GPU_INVENTORY_HELPER_EXIT_MISMATCH',
