@@ -391,6 +391,27 @@ class GatewayTests(unittest.TestCase):
         self.assertLess(time.monotonic() - begin, 0.25)
         self.assertEqual(cancelled, [True])
 
+    def test_private_adviser_receipts_reject_duplicate_and_nonfinite_json(self):
+        # Local JSON evidence must never silently choose a duplicate key or
+        # normalize non-finite numeric fields before its SHA/claim is reviewed.
+        path = self.root / 'state/owner_senior/consultations.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        invalid = (
+            '{"entries":{},"entries":{"forged":true}}',
+            '{"entries":{"record":{"state":"PENDING","state":"CONSULTED"}}}',
+            '{"entries":{"record":{"at":NaN}}}',
+            '{"entries":{"record":{"at":Infinity}}}',
+            '{"entries":{"record":{"at":-Infinity}}}',
+        )
+        for raw in invalid:
+            with self.subTest(receipt=raw):
+                path.write_text(raw, encoding='utf-8')
+                path.chmod(0o600)
+                with self.assertRaisesRegex(gateway.GatewayHold, 'PRIVATE_JSON_INVALID'):
+                    gateway._cache()
+        gateway._write('state/owner_senior/consultations.json', {'entries': {}})
+        self.assertEqual(gateway._cache(), {})
+
     def test_secret_file_symlink_fifo_and_broad_permissions_are_rejected(self):
         self.configure()
         credential = self.root / 'config/owner_senior_credentials.json'
