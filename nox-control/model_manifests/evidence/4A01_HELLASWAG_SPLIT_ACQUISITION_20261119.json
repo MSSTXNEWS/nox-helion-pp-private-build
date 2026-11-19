@@ -152,6 +152,7 @@
   "pending_requirements": [
     "Owner-confirmed semantics for the train/validation splits and deterministic sample selection.",
     "A retained dataset artifact at an approved location with a provenance receipt.",
-    "A reproducible sampled-manifest file/hash for the recipe's 16,384/128 caps."
+    "A reproducible sampled-manifest file/hash for the recipe's 16,384/128 caps.",
+    "Inspect split content/schema and confirm training suitability; the byte hash receipt alone proves byte identity only."
   ]
 }
