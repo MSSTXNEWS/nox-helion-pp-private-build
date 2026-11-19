@@ -36,6 +36,53 @@ def require(condition, code):
         raise RefillHold('HOLD_SYSTEMIC_RELAY_' + code)
 
 
+def acceptance_mapping_valid(acceptance, mapping, modules, context_paths, editable_paths):
+    """Check full acceptance-text coverage and bind every criterion to a pinned verifier.
+
+    Criteria fragments are an ordered, gap-free partition of the registered
+    acceptance string. Each fragment names a verifier module that is included
+    in the immutable test set and pinned in the mission context, outside the
+    editable set. This proves traceable coverage, not that a test passes; the
+    exact source remains subject to OWNER_REVIEWED verification.
+    """
+    if type(acceptance) is not str or not acceptance or not isinstance(mapping,dict):
+        return False
+    if set(mapping) != {'registered_acceptance','registered_acceptance_sha256','criteria'}:
+        return False
+    acceptance_sha = hashlib.sha256(acceptance.encode('utf-8')).hexdigest()
+    if (mapping.get('registered_acceptance') != acceptance
+            or mapping.get('registered_acceptance_sha256') != acceptance_sha
+            or not isinstance(modules,list) or not isinstance(context_paths,(list,set,tuple))
+            or not isinstance(editable_paths,(list,set,tuple))):
+        return False
+    criteria = mapping.get('criteria')
+    if not isinstance(criteria,list) or not 1 <= len(criteria) <= 12:
+        return False
+    context,editable = set(context_paths),set(editable_paths)
+    cursor,criterion_ids = 0,set()
+    for criterion in criteria:
+        if (not isinstance(criterion,dict)
+                or set(criterion) != {'id','acceptance_fragment','verifier_module','verifier_anchor'}
+                or type(criterion.get('id')) is not str or not ID.fullmatch(criterion['id'])
+                or criterion['id'] in criterion_ids):
+            return False
+        fragment = criterion.get('acceptance_fragment')
+        module = criterion.get('verifier_module')
+        anchor = criterion.get('verifier_anchor')
+        if (type(fragment) is not str or not 0 < len(fragment) <= 240
+                or not acceptance.startswith(fragment,cursor)
+                or type(module) is not str or module not in modules
+                or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.]*',module)
+                or module.replace('.','/') + '.py' not in context
+                or module.replace('.','/') + '.py' in editable
+                or type(anchor) is not str or not 0 < len(anchor) <= 180
+                or any(ord(char) < 32 for char in anchor)):
+            return False
+        criterion_ids.add(criterion['id'])
+        cursor += len(fragment)
+    return cursor == len(acceptance)
+
+
 def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(',', ':'),
                       ensure_ascii=False, allow_nan=False).encode('utf-8')
@@ -64,6 +111,32 @@ def validate_manifest(manifest):
             and manifest.get('original_task_accepted') is False, 'AUTHORITY_SCOPE')
     previous = manifest.get('previous_manifest_sha256')
     require(previous is None or type(previous) is str and SHA.fullmatch(previous), 'PREDECESSOR')
+    producer = manifest.get('producer_evidence',{})
+    refill_binding = producer.get('refill_request_binding') if isinstance(producer,dict) else None
+    if refill_binding is not None:
+        require(isinstance(refill_binding,dict)
+                and set(refill_binding) == {'request_id','source_pins','outcomes',
+                    'original_task_states','original_task_states_sha256'}
+                and type(refill_binding.get('request_id')) is str
+                and SHA.fullmatch(refill_binding['request_id'])
+                and isinstance(refill_binding.get('source_pins'),dict)
+                and isinstance(refill_binding.get('outcomes'),list)
+                and isinstance(refill_binding.get('original_task_states'),list)
+                and len(refill_binding['original_task_states']) <= 8192,
+                'REFILL_REQUEST_BINDING')
+        original_states = refill_binding['original_task_states']
+        require(refill_binding.get('original_task_states_sha256') == digest(original_states),
+                'REFILL_ORIGINAL_STATE_SHA')
+        require(refill_binding['request_id'] == digest({'manifest_sha256':previous,
+                'source_pins':refill_binding['source_pins'],'outcomes':refill_binding['outcomes'],
+                'original_task_states':original_states}), 'REFILL_REQUEST_ID')
+        original_ids = set()
+        for row in original_states:
+            require(isinstance(row,dict) and set(row) == {'task_id','status'}
+                    and type(row.get('task_id')) is str and ID.fullmatch(row['task_id'])
+                    and row.get('status') in ACTIVE|TERMINAL|{'unknown'}
+                    and row['task_id'] not in original_ids, 'REFILL_ORIGINAL_STATE_ROW')
+            original_ids.add(row['task_id'])
     registry = manifest.get('registry')
     require(isinstance(registry, dict) and registry.get('total_original_ids') == 295,
             'ORIGINAL_DENOMINATOR')
@@ -78,6 +151,14 @@ def validate_manifest(manifest):
                 and type(parent.get('spec_sha256')) is str and SHA.fullmatch(parent['spec_sha256'])
                 and parent.get('queue_id') in QUEUES
                 and parent.get('required_evidence') in ('source','native'), 'PARENT')
+        if 'registered_acceptance' in parent:
+            acceptance = parent.get('registered_acceptance')
+            require(type(acceptance) is str and 0 < len(acceptance) <= 1800
+                    and parent.get('registered_acceptance_sha256') ==
+                        hashlib.sha256(acceptance.encode('utf-8')).hexdigest(),
+                    'PARENT_ACCEPTANCE')
+        else:
+            require('registered_acceptance_sha256' not in parent, 'PARENT_ACCEPTANCE_SHA_WITHOUT_TEXT')
     missions = manifest.get('missions')
     require(isinstance(missions, list) and len(missions) <= 128, 'MISSIONS')
     seen = set()
@@ -90,6 +171,18 @@ def validate_manifest(manifest):
         seen.add((name,revision))
         parent = parents.get(mission.get('parent_task_id'))
         require(parent is not None and mission.get('queue_id') == parent['queue_id'], 'PARENT_BINDING')
+        if refill_binding is not None:
+            parent_id = mission.get('parent_task_id')
+            observed_child = any(isinstance(row,dict) and type(row.get('task_id')) is str
+                and row['task_id'].split('.',1)[0] == parent_id
+                for row in refill_binding['outcomes'])
+            observed_original = any(task_id.split('.',1)[0] == parent_id
+                                    for task_id in original_ids)
+            require(not observed_original and not observed_child,
+                    'REFILL_PARENT_ALREADY_OBSERVED')
+        parent_spec_sha = mission.get('parent_spec_sha256')
+        require(parent_spec_sha is None or parent_spec_sha == parent['spec_sha256'],
+                'PARENT_SPEC_BINDING')
         require(mission.get('priority') in ('P0','P1','P2','P3')
                 and mission.get('repeat_policy') == 'ONCE_PER_REVIEWED_REVISION', 'MISSION_POLICY')
         require(type(mission.get('root_id')) is str and ID.fullmatch(mission['root_id']), 'ROOT')
@@ -129,6 +222,24 @@ def validate_manifest(manifest):
                     'TEST_MODULE')
             target = module.replace('.','/') + '.py'
             require(target in context_pins and target not in editable, 'TEST_PIN')
+        if 'registered_acceptance' in parent:
+            acceptance = parent.get('registered_acceptance')
+            acceptance_sha = hashlib.sha256(acceptance.encode('utf-8')).hexdigest() \
+                if type(acceptance) is str else None
+            require(parent.get('required_evidence') == 'source'
+                    and isinstance(acceptance,str) and bool(acceptance)
+                    and parent.get('registered_acceptance_sha256') == acceptance_sha,
+                    'PARENT_ACCEPTANCE_REGISTRY_BINDING')
+            require(mission.get('parent_spec_sha256') == parent['spec_sha256']
+                    and mission.get('registered_acceptance') == acceptance,
+                    'MISSION_ACCEPTANCE_BINDING')
+            mapping = mission.get('acceptance_mapping')
+            require(acceptance_mapping_valid(acceptance,mapping,modules,
+                    list(context_pins),editable), 'ACCEPTANCE_MAPPING_FULL_COVERAGE_AND_VERIFIER_BINDING')
+        else:
+            require(not any(key in mission for key in
+                ('registered_acceptance','acceptance_mapping')),
+                'UNREGISTERED_ACCEPTANCE_MAPPING')
         require(type(verification.get('min_tests')) is int and 1 <= verification['min_tests'] <= 10000
                 and type(verification.get('timeout_sec')) is int
                 and 1 <= verification['timeout_sec'] <= 120, 'VERIFICATION_BUDGET')
@@ -248,10 +359,14 @@ def _outcomes(tasks):
 
 
 def _input(mission):
-    return digest({'mission_id':mission['mission_id'],'revision':mission['revision'],
+    identity = {'mission_id':mission['mission_id'],'revision':mission['revision'],
                    'root_id':mission['root_id'],'context':mission['context'],
                    'instruction_sha256':hashlib.sha256(mission['instruction'].encode()).hexdigest(),
-                   'verification':mission['verification']})
+                   'verification':mission['verification']}
+    for key in ('parent_spec_sha256','registered_acceptance','acceptance_mapping'):
+        if key in mission:
+            identity[key] = deepcopy(mission[key])
+    return digest(identity)
 
 
 def _contract(mission, task_id):
@@ -261,6 +376,9 @@ def _contract(mission, task_id):
         'context':deepcopy(mission['context']),'editable_paths':list(mission['editable_paths']),
         'allowed_new_paths':[],'verification':deepcopy(mission['verification']),
         'acceptance_scope':'SOURCE_PATCH_TESTED','original_task_accepted':False}
+    for key in ('parent_spec_sha256','registered_acceptance','acceptance_mapping'):
+        if key in mission:
+            contract[key] = deepcopy(mission[key])
     for key in ('focus_regions','experience'):
         if mission.get(key): contract[key] = deepcopy(mission[key])
     return contract
@@ -383,10 +501,14 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
     outcomes = _outcomes(tasks)
     outcome_by_mission = {}
     for outcome in outcomes:
-        key = outcome.get('mission_id')
-        if isinstance(key, str):
+        key = (outcome.get('mission_id'),outcome.get('mission_revision'))
+        if (type(key[0]) is str and type(key[1]) is int and key[1] > 0):
             outcome_by_mission.setdefault(key, []).append(outcome)
-    blocked = {item['mission_id']:item['reason'] for item in deferred}
+    blocked = {(item.get('mission_id'),item.get('mission_revision')):item.get('reason')
+               for item in deferred if isinstance(item,dict)}
+    source_drift = {(item.get('mission_id'),item.get('mission_revision')):item['source_drift']
+                    for item in deferred if isinstance(item,dict)
+                    and isinstance(item.get('source_drift'),list) and item['source_drift']}
     parents = manifest['registry']['parents']
     states = {'not_seen':0, 'ready':len(admitted_rows), 'pending':0,
               'running':0, 'terminal':0, 'blocked':0, 'unknown':0}
@@ -414,12 +536,15 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
     suggestions = []
     seen = set()
     for mission in sorted(manifest['missions'], key=lambda m:
-                          (m['priority'],m['parent_task_id'],m['mission_id'])):
+                          (m['priority'],m['parent_task_id'],m['mission_id'],m['revision'])):
         source = source_pins.get(mission['root_id'], {})
-        evidence = outcome_by_mission.get(mission['mission_id'], [])
+        evidence = outcome_by_mission.get((mission['mission_id'],mission['revision']), [])
         last = evidence[-1] if evidence else {}
-        reason = blocked.get(mission['mission_id'])
-        if last.get('status') in ('failed','blocked','cancelled'):
+        mission_key = (mission['mission_id'],mission['revision'])
+        reason = blocked.get(mission_key)
+        if mission_key in source_drift:
+            hypothesis = 'REBASE_AGAINST_OBSERVED_SOURCE_DRIFT'
+        elif last.get('status') in ('failed','blocked','cancelled'):
             hypothesis = 'ANALYZE_FAILED_TERMINAL_RECEIPT'
         elif reason == 'SOURCE_PIN_DRIFT_REVIEW_REQUIRED':
             hypothesis = 'REBASE_AGAINST_OBSERVED_SOURCE_DRIFT'
@@ -437,6 +562,7 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
             continue
         identity = {'parent_task_id':mission['parent_task_id'],
                     'mission_id':mission['mission_id'],
+                    'mission_revision':mission['revision'],
                     'hypothesis':hypothesis, 'source':pinned,
                     'receipt_sha256':last.get('receipt_sha256'),
                     'planner_receipt_sha256':last.get('planner_receipt_sha256')}
@@ -448,9 +574,13 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
             'fingerprint':signature,'queue_id':mission['queue_id'],
             'parent_task_id':mission['parent_task_id'],
             'root_id':mission['root_id'], 'mission_id':mission['mission_id'],
+            'mission_revision':mission['revision'],
             'hypothesis':hypothesis,'observed_sources':pinned[:8],
             'receipt_sha256':last.get('receipt_sha256'),
             'required_next_step':'SOURCE_INSPECTION_THEN_INDEPENDENT_REVIEW',
+            'source_drift':source_drift.get(mission_key,[]),
+            'replay_forbidden':True,'requires_new_owner_reviewed_revision':True,
+            'original_task_accepted':False,
             'authority':'RESEARCH_PROPOSAL_ONLY',
             'new_native_job_created':False})
         if len(suggestions) == 3:
@@ -592,6 +722,10 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
         name = mission['mission_id']; input_sha = _input(mission)
         task_id = mission['parent_task_id'] + '.relay.' + name + '.' + input_sha[:16]
         reason = None
+        drift = [{'path':row['path'],'expected_sha256':row['sha256'],
+                  'observed_sha256':source_pins.get(mission['root_id'],{}).get(row['path'])}
+                 for row in mission['context']
+                 if source_pins.get(mission['root_id'],{}).get(row['path']) != row['sha256']]
         if task_id in state_snapshot or (name,mission['revision']) in admitted_missions:
             reason = 'ALREADY_ADMITTED_NO_REPLAY'
         elif any(state_snapshot.get(task_id,{}).get('status') not in ('done','verified')
@@ -605,8 +739,13 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
         elif len(rows) >= slots:
             reason = 'CAPACITY_WAIT'
         if reason:
-            rejected.append({'mission_id':name,'mission_revision':mission['revision'],
-                             'input_sha256':input_sha,'reason':reason})
+            rejected_row = {'mission_id':name,'mission_revision':mission['revision'],
+                            'input_sha256':input_sha,'reason':reason}
+            if drift:
+                rejected_row['source_drift'] = drift
+                rejected_row['replay_forbidden'] = True
+                rejected_row['required_next_step'] = 'INSPECT_DRIFT_THEN_NEW_OWNER_REVIEWED_PLAN'
+            rejected.append(rejected_row)
             continue
         contract = _contract(mission, task_id)
         contract_sha = digest(contract)
@@ -622,7 +761,22 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
             'spec_sha256':manifest['registry']['parents'][mission['parent_task_id']]['spec_sha256']}
         reserved.update((mission['root_id'],target) for target in mission['editable_paths'])
     outcomes = _outcomes(state_snapshot)
-    fingerprint = digest({'manifest_sha256':manifest_sha,'source_pins':source_pins,'outcomes':outcomes})
+    # Preserve the current state of any original TaskID that the reviewed
+    # catalog knows about. The successor producer needs this compact list to
+    # avoid proposing an original task that is already present in the native
+    # queue, even when that task has no systemic-relay binding yet.
+    original_task_states = []
+    parents = manifest['registry']['parents']
+    for task_id in sorted(state_snapshot):
+        if type(task_id) is not str or task_id.split('.',1)[0] not in parents:
+            continue
+        task = state_snapshot[task_id]
+        status = task.get('status') if isinstance(task,dict) else None
+        original_task_states.append({'task_id':task_id,
+            'status':status if status in ACTIVE|TERMINAL else 'unknown'})
+    original_task_states_sha256 = digest(original_task_states)
+    fingerprint = digest({'manifest_sha256':manifest_sha,'source_pins':source_pins,
+        'outcomes':outcomes,'original_task_states':original_task_states})
     waits = {'CAPACITY_WAIT','SOURCE_ALREADY_RESERVED','DEPENDENCY_NOT_VERIFIED'}
     waiting = any(row['reason'] in waits for row in rejected)
     state = 'REVIEWED_BATCH_READY' if rows else 'WAIT_EXISTING_WORK' if waiting else 'REFILL_REQUIRED'
@@ -631,7 +785,18 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
         request = {'schema':'NOX_SYSTEMIC_REFILL_REQUEST_V1','request_id':fingerprint,
             'previous_manifest_sha256':manifest_sha,'manifest_revision':manifest['revision'],
             'registry_pins':deepcopy(manifest['registry']['source_registry_sha256']),
-            'source_pins':deepcopy(source_pins),'outcomes':outcomes,'blocked_missions':rejected,
+            'source_pins':deepcopy(source_pins),'outcomes':outcomes,
+            'original_task_states':original_task_states,
+            'original_task_states_sha256':original_task_states_sha256,
+            'blocked_missions':rejected,
+            'source_drift_reviews':[{'mission_id':row['mission_id'],
+                'mission_revision':row['mission_revision'],
+                'parent_task_id':next(m['parent_task_id'] for m in manifest['missions']
+                    if m['mission_id']==row['mission_id'] and m['revision']==row['mission_revision']),
+                'drift':row['source_drift'],'replay_forbidden':True,
+                'required_next_step':row['required_next_step'],
+                'original_task_accepted':False}
+                for row in rejected if row.get('source_drift')],
             'research_topics':deepcopy(manifest.get('research_topics',[])),
             'required_next_step':'GROUNDED_PROPOSAL_TO_PINNED_TASKPACK_TO_EXISTING_FENCED_MANIFEST_CAS',
             'max_next_missions':3,'original_task_accepted':False,
