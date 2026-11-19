@@ -434,4 +434,28 @@ class PairedReceiptTests(unittest.TestCase):
                     measure_openai_sse_wire(chunks)
 
 
+    def test_sse_wire_finality_is_immutable_until_done(self):
+        visible = b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\n\n'
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        usage = (b'data: {"choices":[],"usage":{"prompt_tokens":17,'
+                 b'"completion_tokens":2,"total_tokens":19}}\n\n')
+        late_text = b'data: {"choices":[{"delta":{"content":"oops"},"finish_reason":null}]}\n\n'
+        duplicate_final = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b"data: [DONE]\n\n"
+        for suffix, reason in (
+            (late_text, "SSE_POST_FINISH_EVENT"),
+            (duplicate_final, "SSE_POST_FINISH_EVENT"),
+            (usage + usage, "SSE_DUPLICATE_USAGE"),
+            (usage + late_text, "SSE_POST_FINISH_EVENT"),
+        ):
+            with self.subTest(reason=reason, suffix=suffix[:20]):
+                with self.assertRaisesRegex(ReceiptHold, reason):
+                    measure_openai_sse_wire([
+                        (2, visible), (4, stop), (8, suffix), (10, done)])
+        accepted = measure_openai_sse_wire([
+            (2, visible), (4, stop), (8, usage), (10, done)])
+        self.assertTrue(accepted["wire_completed_normally"])
+        self.assertEqual(accepted["visible_utf8_bytes"], 5)
+        self.assertEqual(accepted["completion_ms"], 10)
+
 if __name__ == '__main__': unittest.main()
