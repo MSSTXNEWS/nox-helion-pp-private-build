@@ -148,12 +148,34 @@ class RefillSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(snapshot.SnapshotHold, 'MANIFEST_ORIGINAL_PARENT_BINDING'):
             snapshot.read_registry(self.root, self.helper, json.loads(self.disposition), registry)
 
-    def test_existing_maintenance_holder_is_preserved(self):
+    def test_dispatcher_shared_maintenance_lease_allows_readonly_snapshot(self):
         lock = self.root / 'state/owner_maintenance.lock'
         with lock.open('rb') as handle:
             fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            owner, checkpoint, request, census, readback = self.capture()
+            self.assertFalse(readback['publication_authorized'])
+            self.assertFalse(readback['native_write_performed'])
+            self.assertEqual(checkpoint['owner_snapshot_sha256'],
+                             snapshot.sha(snapshot.encode(owner)))
+            self.assertEqual(census['atomic_snapshot'], True)
+
+    def test_exclusive_maintenance_writer_still_blocks_snapshot(self):
+        lock = self.root / 'state/owner_maintenance.lock'
+        with lock.open('rb') as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             with self.assertRaisesRegex(snapshot.SnapshotHold, 'MAINTENANCE_BUSY'):
                 self.capture()
+
+    def test_low_ram_readonly_snapshot_cannot_authorize_publishing(self):
+        self.helper.read_budget_snapshot = lambda *_: {
+            'max_bytes': 10 << 30, 'current_bytes': (10 << 30) - (96 << 20),
+            'minimum_headroom_bytes': 2 << 30,
+            'memory_psi_full_avg10': 0.0, 'memory_psi_some_avg10': 0.0,
+        }
+        _, _, _, _, readback = self.capture()
+        self.assertEqual(readback['minimum_observed_raw_headroom_bytes'], 96 << 20)
+        self.assertFalse(readback['publication_authorized'])
+        self.assertFalse(readback['native_write_performed'])
 
     def test_worker_current_task_holds_even_if_durable_queue_looks_idle(self):
         self.native['workers'][0]['current_task'] = 'active'
