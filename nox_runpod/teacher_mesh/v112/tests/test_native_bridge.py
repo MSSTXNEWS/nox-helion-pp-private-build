@@ -569,14 +569,49 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(history[0],{'role':'user','content':'Вопрос 2'})
         self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 13'})
         self.assertTrue(all(row['content']!='Незавершённая пара' for row in history))
-        for index in range(4):
-            self.assertTrue(_save_exchange(dialog,'😀'*8000,'😀'*9000,
-                                          f'large-{index}'))
-        issue,history=_dialog_context(dialog)
-        self.assertIsNone(issue)
-        self.assertEqual(len(history),2)
-        self.assertLessEqual(sum(len(row['content'].encode('utf-8')) for row in history),121000)
-        self.assertTrue(all(len(row['content'])<=8000 for row in history))
+    def test_dialog_context_preserves_full_multibyte_ru_and_es_text(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Полный многоязычный контекст','confirmed':True}).json()['dialog_id']
+        question='Русский вопрос: '+('ёжик ' * 900)
+        answer='Respuesta española: '+('niño café ☕ ' * 400)
+        self.assertLessEqual(len(question),8000)
+        self.assertLessEqual(len(answer),8000)
+        self.assertTrue(_save_exchange(dialog,question,answer,'multibyte-full-context'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Продолжи','history':[]})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(self.calls[-1]['messages'],[
+            {'role':'user','content':question},
+            {'role':'assistant','content':answer},
+            {'role':'user','content':'Продолжи'}])
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1]['type'],'done')
+
+    def test_dialog_context_oversized_message_holds_before_model(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Слишком длинный контекст','confirmed':True}).json()['dialog_id']
+        oversized='Я'*1000000
+        self.assertTrue(_save_exchange(dialog,oversized,'saved reply','oversized-message'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
+        self.assertEqual(self.calls,[])
+
+    def test_dialog_context_budget_overflow_holds_before_model(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Бюджет полного контекста','confirmed':True}).json()['dialog_id']
+        for index in range(8):
+            self.assertTrue(_save_exchange(dialog,'q'*8000,'a'*8000,
+                                           f'budget-pair-{index}'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_BUDGET'})
+        self.assertEqual(self.calls,[])
 
     def test_dialog_context_keeps_owner_and_archive_guards(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db
