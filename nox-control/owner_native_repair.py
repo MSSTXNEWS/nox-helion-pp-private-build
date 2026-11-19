@@ -1,6 +1,8 @@
 """Owner-authorized, one-group NOX cache service installation."""
 
 import base64
+from contextlib import ExitStack
+import fcntl
 import hashlib
 import json
 import os
@@ -19,6 +21,9 @@ PID1 = 167790899
 SUPERVISOR = (114, 167791115)
 MAIN = 'fcead12b4dcb7f56b31d223f1cfa89792bd6e8008f78708a831b41fab9ece25d'
 CACHE_LOG = Path('/root/nox/logs/nox-cache-maintenance.log')
+OWNER_LOCK = Path('/root/nox/state/owner_maintenance.lock')
+PERMISSIONS = (('/etc', 36, 3342532375), ('/root/nox/ops', 36, 3342536509),
+               ('/root/nox/models/deepseek_v41_flash_iq2xxs', 36, 2214601745))
 
 
 def need(condition, reason):
@@ -108,14 +113,84 @@ def stage_directory_facts():
     print('NOX_MAINT_STAGE_DIRECTORY_FACTS=' + json.dumps(facts, separators=(',', ':')), flush=True)
 
 
-def remove_warm_hook(warm):
-    deadline = time.monotonic() + 32
+def require_owner_flags_clear():
     root = Path('/root/nox')
     stops = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
              'state/STOP', 'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag')
+    need(not any(os.path.lexists(root / item) for item in stops)
+         and not os.path.lexists('/workspace/NOX_STOP'), 'OWNER_STOP')
+
+
+def harden_exact_directories(native):
+    need(native.process(1)[:2] == (PID1, 0)
+         and Path('/proc/sys/kernel/random/boot_id').read_text().strip() == BOOT, 'PERMISSIONS_EPOCH')
+    with ExitStack() as stack:
+        lease = os.open(OWNER_LOCK, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK)
+        stack.callback(os.close, lease)
+
+        def bound_lock():
+            info = os.fstat(lease)
+            published = OWNER_LOCK.lstat()
+            need(stat.S_ISREG(info.st_mode) and (info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_nlink)
+                 == (36, 59886214, 0, 0, 1)
+                 and (info.st_dev, info.st_ino) == (published.st_dev, published.st_ino)
+                 and stat.S_IMODE(info.st_mode) == 0o600, 'PERMISSIONS_LEASE')
+
+        bound_lock()
+        deadline = time.monotonic() + 28
+        while True:
+            require_owner_flags_clear()
+            try:
+                fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.2)
+        bound_lock()
+
+        def scope(fd, path, dev, ino):
+            info, current = os.fstat(fd), os.lstat(path)
+            expected = (dev, ino, 0, 0)
+            need(stat.S_ISDIR(info.st_mode) and stat.S_ISDIR(current.st_mode)
+                 and (info.st_dev, info.st_ino, info.st_uid, info.st_gid) == expected
+                 and (current.st_dev, current.st_ino, current.st_uid, current.st_gid) == expected,
+                 'PERMISSIONS_PATH_IDENTITY')
+            return stat.S_IMODE(info.st_mode)
+
+        targets = []
+        for path, dev, ino in PERMISSIONS:
+            fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+            stack.callback(os.close, fd)
+            mode = scope(fd, path, dev, ino)
+            need(mode in (0o775, 0o755), 'PERMISSIONS_PREIMAGE')
+            targets.append((fd, path, dev, ino, mode))
+        changed = []
+        try:
+            for fd, path, dev, ino, mode in targets:
+                require_owner_flags_clear()
+                bound_lock()
+                need(scope(fd, path, dev, ino) == mode, 'PERMISSIONS_PREIMAGE')
+                if mode == 0o775:
+                    os.fchmod(fd, 0o755)
+                    changed.append((fd, path, dev, ino))
+                    os.fsync(fd)
+                need(scope(fd, path, dev, ino) == 0o755, 'PERMISSIONS_READBACK')
+        except (OSError, RuntimeError):
+            for fd, path, dev, ino in reversed(changed):
+                need(scope(fd, path, dev, ino) == 0o755, 'PERMISSIONS_ROLLBACK_IDENTITY')
+                os.fchmod(fd, 0o775)
+                os.fsync(fd)
+            raise
+    return {'changed': [path for _, path, _, _ in changed], 'mode': '0755',
+            'group_write_removed_only': True}
+
+
+def remove_warm_hook(warm):
+    deadline = time.monotonic() + 32
     while True:
-        need(warm.pid1_start() == PID1 and not any(os.path.lexists(root / path) for path in stops)
-             and not os.path.lexists('/workspace/NOX_STOP'), 'TEACHER_OWNER_SCOPE')
+        need(warm.pid1_start() == PID1, 'TEACHER_OWNER_SCOPE')
+        require_owner_flags_clear()
         try:
             return warm.remove_exact_teacher_line(
                 instance_id=60509551, phase2_request='7011341488',
@@ -171,6 +246,13 @@ def main():
          and re.fullmatch(r'[1-9][0-9]{0,19}', request), 'OWNER_REQUEST')
     data = sources()
     stage_directory_facts()
+    safe_modes = None
+    try:
+        probe = module('owner_supervisor_background_release', data)
+        safe_modes = harden_exact_directories(probe)
+        print('NOX_MAINT_SERVICE_PATH_MODES=' + json.dumps(safe_modes, separators=(',', ':')), flush=True)
+    except Exception as error:
+        record_hold('SERVICE_PATH_MODES', error)
     diag = None
     try:
         launch = module('owner_ds41_launcher_diagnostic', data)
@@ -199,7 +281,7 @@ def main():
 
     if result and result['added']:
         print('NOX_MAINT_CACHE_FIRST_CYCLE=' + json.dumps(service_receipt(now), separators=(',', ':')), flush=True)
-    need(result is not None or teacher is not None, 'SERVICE_CHANGES_HELD')
+    need(result is not None or teacher is not None or safe_modes is not None, 'SERVICE_CHANGES_HELD')
     print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
 
 
