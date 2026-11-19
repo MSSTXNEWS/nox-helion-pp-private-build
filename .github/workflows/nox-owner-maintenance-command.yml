@@ -34,10 +34,12 @@ jobs:
           python3 - <<'PY'
           import json,os,re
           e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
-          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop_preflight|emergency_stop|deploy|backup|drive_probe|memfd_audit)',e['comment']['body'])
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop_preflight|emergency_stop|deploy|backup|drive_probe|memfd_audit|page_cache_reclaim)',e['comment']['body'])
           assert m, 'Invalid bounded maintenance command'
           assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
           assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
+          if m[2]=='page_cache_reclaim' and m[1]!='af6103681132c1b88ef4f91d00c4e0d41f15caa5':
+              raise SystemExit('HOLD_PAGE_CACHE_APPROVED_SOURCE')
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:
               f.write('sha='+m[1]+'\naction='+m[2]+'\n')
           PY
@@ -91,13 +93,16 @@ jobs:
           import os,py_compile
           from pathlib import Path
           a=os.environ['NOX_ACTION']
-          assert a in ('audit','inspect','stage','repair','lifeline','emergency_stop','emergency_stop_preflight','deploy','backup','drive_probe','memfd_audit')
+          assert a in ('audit','inspect','stage','repair','lifeline','emergency_stop','emergency_stop_preflight','deploy','backup','drive_probe','memfd_audit','page_cache_reclaim')
           py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
           if a=='backup':
               for name in ('owner_cp55_cipher','owner_cp55_scope','owner_cp55_native','owner_cp55_runner','auth_prefix_reuse'):
                   py_compile.compile('nox-control/'+name+'.py',doraise=True)
           elif a=='memfd_audit':
               py_compile.compile('nox-control/owner_native_memfd_audit.py',doraise=True)
+          elif a=='page_cache_reclaim':
+              py_compile.compile('nox-control/owner_page_cache_reclaim_entry.py',doraise=True)
+              py_compile.compile('nox-control/owner_storage_reclaim.py',doraise=True)
           else:
               source=('nox-control/owner_native_lifeline_observer.py' if a=='lifeline'
                       else 'nox-control/owner_native_'+a+'.py')
