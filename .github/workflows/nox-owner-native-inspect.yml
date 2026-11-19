@@ -102,6 +102,20 @@ jobs:
           authorize_event('audit')
           print('NOX_OWNER_AUDIT_SOURCE_AUTH=PASS')
           PY
+      - name: Run the fixed read-only inspect action
+        if: success() && steps.owner-command.outputs.action == 'inspect'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py inspect
+      - name: Run the fixed read-only audit action
+        if: success() && steps.owner-command.outputs.action == 'audit'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py audit
       - name: Recheck pinned source-attest command without credentials
         if: success() && steps.owner-command.outputs.action == 'source_attest'
         working-directory: source
@@ -121,17 +135,3 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
         run: python -B nox-control/owner_native_operator.py source_attest
-      - name: Run the fixed read-only inspect action
-        if: success() && steps.owner-command.outputs.action == 'inspect'
-        working-directory: source
-        env:
-          NOX2: ${{ secrets.NOX2 }}
-          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
-        run: python -B nox-control/owner_native_operator.py inspect
-      - name: Run the fixed read-only audit action
-        if: success() && steps.owner-command.outputs.action == 'audit'
-        working-directory: source
-        env:
-          NOX2: ${{ secrets.NOX2 }}
-          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
-        run: python -B nox-control/owner_native_operator.py audit
