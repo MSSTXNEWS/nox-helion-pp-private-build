@@ -121,6 +121,9 @@ def run():
     # Original dispatcher requires the shared lock; don't hold EX while booting.
     sup=status()
     require(sup['state'] in ('STOPPED','BACKOFF','FATAL','EXITED'),'START_STATE')
+    if sup['state']!='STOPPED':
+        subprocess.run(['supervisorctl','stop',SERVICE],capture_output=True,text=True,timeout=15)
+        require(status()['state'] in ('STOPPED','EXITED','FATAL'),'STOP_RECONCILE')
     res=subprocess.run(['supervisorctl','start',SERVICE],capture_output=True,text=True,timeout=28)
     deadline=time.monotonic()+35
     observed=None
