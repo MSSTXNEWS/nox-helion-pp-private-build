@@ -195,11 +195,16 @@ def witness(pid: int, expected_start_ticks: int, model_file: str | None = None,
         chosen = model_file if model_file is not None else arg
         if not chosen:
             raise EvidenceUnavailable('MODEL_PATH_NOT_IN_CMDLINE')
-        # Relative -m/--model arguments are resolved against the serving PID's
-        # CWD, not the inspector's CWD. Never change the inspector process CWD.
-        # Missing/inaccessible /proc/PID/cwd fails closed as UNKNOWN.
+        # Absolute -m paths belong to the serving process's root namespace,
+        # not necessarily to the inspector's root. Relative -m paths belong
+        # to the serving process CWD. Neither probe changes our own CWD.
+        # Inaccessible /proc/PID/root or cwd fails closed as UNKNOWN.
         is_absolute = os.path.isabs(chosen)
-        probe_path = chosen if is_absolute else os.fspath(proc_root / str(pid) / 'cwd' / chosen)
+        if is_absolute:
+            root_relative = os.path.normpath(chosen).lstrip(os.sep)
+            probe_path = os.fspath(proc_root / str(pid) / 'root' / root_relative)
+        else:
+            probe_path = os.fspath(proc_root / str(pid) / 'cwd' / chosen)
         # Opening a FIFO read-only can block indefinitely before fstat; use
         # nonblocking open, then accept only a regular file before reading.
         flags = os.O_RDONLY | getattr(os, 'O_CLOEXEC', 0) | getattr(os, 'O_NONBLOCK', 0)
