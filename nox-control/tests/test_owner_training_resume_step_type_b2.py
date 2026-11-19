@@ -19,7 +19,7 @@ from unittest import mock
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "owner_training_resume.py"
-FN_NAMES = {"read_json", "file_sha", "verify_paused_result"}
+FN_NAMES = {"read_json", "file_sha", "verify_paused_result", "resource_admission"}
 
 
 def load_pinned_verifier(output):
@@ -31,7 +31,11 @@ def load_pinned_verifier(output):
     namespace = {
         "Path": Path, "hashlib": hashlib, "json": json, "math": math,
         "os": os, "stat": stat,
-        "re": re, "OUTPUT": output, "NATIVE_SHA": "a" * 64,
+        "re": re, "OUTPUT": output, "STATE": output,
+        "STOPPED": ("STOPPED", "EXITED", "FATAL"),
+        "global_stop": lambda: False, "lease_free": lambda: True,
+        "native_training": lambda helper: False,
+        "NATIVE_SHA": "a" * 64,
     }
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"),
          namespace)
@@ -193,6 +197,39 @@ class CheckpointStepProvenance(unittest.TestCase):
             os.mkfifo(fifo)
             with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_PATH"):
                 file_sha(fifo)
+
+
+    def test_resource_admission_requires_actual_proxy_8080_not_legacy_8081(self):
+        # Owner-confirmed 2026-11-19: proxy /health=200 on 8080; 8081 closed.
+        # This source-only test never contacts the host or starts training.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            verifier = load_pinned_verifier(root)["resource_admission"]
+
+            def fake_read_text(path, *args, **kwargs):
+                contents = {
+                    "/sys/fs/cgroup/cpu.max": "400000 100000",
+                    "/sys/fs/cgroup/memory.max": "194065203200",
+                    "/sys/fs/cgroup/memory.current": "188662734848",
+                    str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\\n",
+                }
+                return contents[str(path)]
+
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "STOPPED"},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 30000}]},
+                resource_budget=lambda *args: {"train_cpu_gib": 64},
+                health=lambda: {"8080": 200, "8081": "ConnectionRefusedError"},
+            )
+            with (mock.patch.object(Path, "read_text", autospec=True,
+                                    side_effect=fake_read_text),
+                  mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
+                admitted = verifier(helper)
+                self.assertEqual(admitted["budget"]["configured_train_cpu_gib"], 64)
+                # Legacy 8081 cannot stand in for failed actual serving.
+                helper.health = lambda: {"8080": "ConnectionRefusedError", "8081": 200}
+                with self.assertRaisesRegex(RuntimeError, "HOLD_CHAT_HEALTH_BEFORE_TRAINING"):
+                    verifier(helper)
 
 
     def test_checkpoint_hash_rejects_regular_file_growth_during_read(self):
