@@ -314,45 +314,126 @@ def mapped_inode(rows: str, device: int, inode: int) -> bool:
     return False
 
 
-def reject_model_context_selectors(args: list[str]) -> None:
-    """Reject alternate model and context selectors from llama.cpp server CLI.
+def _selector_option(token: str) -> str:
+    return token.split("=", 1)[0]
 
-    The option families are based on ggml-org/llama.cpp tools/server/README.md
-    and common/arg.cpp; unlisted non-selector options remain permitted.
-    """
+
+def _canonical_long_option(option: str) -> str:
+    return option.replace("_", "-") if option.startswith("--") else option
+
+
+def _expected_extra_model_shards() -> tuple[tuple[str, ...], int]:
+    match = re.fullmatch(r"(.+-)([0-9]{5})-of-([0-9]{5})(\.gguf)", MODEL_PATH)
+    if match is None:
+        fail("PINNED_MODEL_SHARD_PATTERN_INVALID")
+    prefix, first_raw, total_raw, suffix = match.groups()
+    first, total = int(first_raw), int(total_raw)
+    if first != 1 or not 2 <= total <= 64:
+        fail("PINNED_MODEL_SHARD_RANGE_INVALID")
+    return (tuple(f"{prefix}{index:05d}-of-{total:05d}{suffix}"
+                  for index in range(first + 1, total + 1)), total)
+
+
+def _selector_preflight_hold(reason: str, options: list[str]) -> None:
+    # Values are deliberately absent; only validated option spellings leave the host.
+    safe = sorted({option for option in options
+                   if re.fullmatch(r"-{1,2}[A-Za-z0-9][A-Za-z0-9_-]*", option)})
+    emit({"phase": "preflight_rejected", "reason": reason,
+          "matched_selector_options": safe})
+    fail(reason)
+
+
+def reject_model_context_selectors(args: list[str]) -> dict:
+    """Validate selectors while allowing only the pinned shard set and parallel bound."""
     short_selectors = {
         "-mu", "-dr", "-hf", "-hfr", "-hff", "-mm", "-mmu",
-        "-md", "-hfd", "-hfrd", "-np", "-ns", "-ctx", "-ctxcp",
+        "-md", "-hfd", "-hfrd", "-ns", "-ctx", "-ctxcp",
         "-kvu", "-no-kvu", "-fit", "-fitc",
     }
     long_prefixes = (
-        "--model", "--hf", "--mmproj", "--models-", "--spec-draft-",
-        "--ctx-size", "--kv-unified", "--rope-", "--yarn-",
+        "--model", "--base-model", "--student", "--draft-model", "--hf",
+        "--mmproj", "--models-", "--spec-draft-",
+        "--ctx-size", "--kv-unified", "--rope-", "--yarn-", "--parallel-",
+        "--lora-", "--control-vector-", "--override-kv-",
     )
     long_exact = {
         "--docker-repo", "--shard", "--ple", "--kv-unified-per-slot",
-        "--no-kv-unified", "--mtp", "--dflash", "--eagle3", "--spec-type", "--parallel",
-        "--sequences", "--ctx-checkpoints", "--swa-checkpoints",
-        "--swa-full", "--fit", "--fit-ctx",
+        "--no-kv-unified", "--mtp", "--dflash", "--eagle3", "--spec-type",
+        "--parallel", "--sequences", "--ctx-checkpoints", "--swa-checkpoints",
+        "--swa-full", "--fit", "--fit-ctx", "--override-kv", "--lora",
+        "--control-vector", "--control-vector-scaled", "--control-vector-layer-range",
     }
-    preset_prefixes = (
-        "--embd-", "--fim-", "--gpt-oss-", "--vision-gemma-",
-    )
-    matched = []
-    for token in args:
-        option = token.split("=", 1)[0]
-        if (token.startswith("-c=") or token.startswith("-m=") or
-                option in short_selectors or option in long_exact or
-                option.startswith(long_prefixes) or
-                option.startswith(preset_prefixes)):
-            # Report only the option spelling. Never retain or emit its value.
-            if re.fullmatch(r"-{1,2}[A-Za-z0-9][A-Za-z0-9-]*", option):
-                matched.append(option)
-    if matched:
-        emit({"phase": "preflight_rejected",
-              "reason": "MODEL_OR_CONTEXT_SELECTOR_ALIAS",
-              "matched_selector_options": sorted(set(matched))})
-        fail("MODEL_OR_CONTEXT_SELECTOR_ALIAS")
+    preset_prefixes = ("--embd-", "--fim-", "--gpt-oss-", "--vision-gemma-")
+    shard_values = []
+    shard_options = []
+    parallel_options = []
+    parallel_value = None
+    rejected = []
+    index = 0
+    while index < len(args):
+        token = args[index]
+        raw_option = _selector_option(token)
+        option = _canonical_long_option(raw_option)
+        inline_value = token.partition("=")[2] if "=" in token else None
+        if option in ("--shard", "--ple"):
+            shard_options.append(raw_option)
+            if inline_value is None:
+                if index + 1 >= len(args):
+                    _selector_preflight_hold("MODEL_SHARD_VALUE_MISSING", shard_options)
+                index += 1
+                value = args[index]
+            else:
+                value = inline_value
+            values = value.split(",")
+            if not value or any(not item for item in values):
+                _selector_preflight_hold("MODEL_SHARD_VALUE_INVALID", shard_options)
+            shard_values.extend(values)
+            index += 1
+            continue
+        if option in ("-np", "--parallel"):
+            parallel_options.append(raw_option)
+            if len(parallel_options) > 1:
+                _selector_preflight_hold("MODEL_PARALLEL_SELECTOR_REPEATED", parallel_options)
+            if inline_value is None:
+                if index + 1 >= len(args):
+                    _selector_preflight_hold("MODEL_PARALLEL_VALUE_MISSING", parallel_options)
+                index += 1
+                value = args[index]
+            else:
+                value = inline_value
+            if value == "-1":
+                parallel_value = -1
+            elif re.fullmatch(r"[1-9][0-9]?", value):
+                parsed_parallel = int(value)
+                if not 1 <= parsed_parallel <= 64:
+                    _selector_preflight_hold("MODEL_PARALLEL_VALUE_OUT_OF_RANGE", parallel_options)
+                parallel_value = parsed_parallel
+            else:
+                _selector_preflight_hold("MODEL_PARALLEL_VALUE_INVALID", parallel_options)
+            index += 1
+            continue
+
+        blocked = (token.startswith("-c=") or token.startswith("-m=") or
+                   option in short_selectors or
+                   (option in long_exact and option not in ("--shard", "--ple", "--parallel")) or
+                   option.startswith(long_prefixes) or option.startswith(preset_prefixes))
+        if blocked:
+            rejected.append(raw_option)
+        index += 1
+
+    if rejected:
+        _selector_preflight_hold("MODEL_OR_CONTEXT_SELECTOR_ALIAS", rejected)
+    expected_shards, shard_total = _expected_extra_model_shards()
+    if shard_values and tuple(shard_values) != expected_shards:
+        _selector_preflight_hold("MODEL_SHARD_SELECTION_MISMATCH", shard_options)
+    return {
+        "shard_mode": "explicit_exact_rest" if shard_values else "pinned_first_shard_only",
+        "explicit_shard_count": len(shard_values),
+        "pinned_model_shard_total": shard_total,
+        "parallel_mode": ("default" if not parallel_options else
+                          "auto" if parallel_value == -1 else "explicit"),
+        "parallel_count": (parallel_value if parallel_value not in (None, -1) else None),
+    }
 
 
 def model_environment_identity(pid: int, expected_ticks: int) -> dict:
@@ -445,7 +526,7 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
                 context_index + 1 >= len(model_args) or
                 model_args[context_index + 1] != "8192"):
             fail("MODEL_EXECUTABLE_OR_ARGV_MISMATCH")
-        reject_model_context_selectors(model_args)
+        selector_policy = reject_model_context_selectors(model_args)
         environment_overrides = model_environment_identity(pid, expected_ticks)
     elif role == "HOLDER":
         try:
@@ -494,6 +575,7 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
             "ppid": stat_before["ppid"], "pgrp": stat_before["pgrp"],
             "argv_sha256": hashlib.sha256(b"\0".join(raw_argv)).hexdigest(),
             "environment_overrides": environment_overrides if role == "MODEL" else None,
+            "model_selector_policy": selector_policy if role == "MODEL" else None,
             "cgroup": str(group)}
 
 
