@@ -276,7 +276,11 @@ def observe_inputs(root, helper, disposition, get_services, now):
     request = verify_refill_request(native, manifest, manifest_sha, tasks, pins, relay, now)
     budget = helper.read_budget_snapshot(config)
     headroom = budget['max_bytes'] - budget['current_bytes']
-    require(headroom >= budget['minimum_headroom_bytes'], 'RAW_CGROUP_HEADROOM')
+    # This endpoint is evidence-only. The owner/CAS publisher independently
+    # requires fresh >=minimum_headroom_bytes at EACH immutable package write
+    # and again before config CAS. Do not suppress a valid low-memory snapshot
+    # needed to prepare the NEXT reviewed taskpack.
+    require(0 <= headroom <= budget['max_bytes'], 'RAW_CGROUP_HEADROOM')
     return {
         'config_sha256': sha(config_raw), 'previous_manifest_sha256': manifest_sha,
         'source': source, 'source_pins': pins, 'registry_pins': registry_pins,
@@ -300,7 +304,10 @@ def capture(root, helper, disposition_raw, publisher_sha, request_id, owner_sour
     try:
         maintenance_identity(fd, lock_path)
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # Compatible with dispatcher's normal SH owner lease. A publisher
+            # taking EX still blocks us; two identical complete snapshots
+            # must be observed before encrypting the evidence.
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
         except BlockingIOError:
             raise SnapshotHold('HOLD_REFILL_SNAPSHOT_MAINTENANCE_BUSY') from None
         start = time.monotonic()
