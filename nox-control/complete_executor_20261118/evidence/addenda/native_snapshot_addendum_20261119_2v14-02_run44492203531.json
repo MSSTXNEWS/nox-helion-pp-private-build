@@ -196,12 +196,6 @@
             "start_ticks": null
           },
           {
-            "name": "nox-agent-tuner-t858u",
-            "state": "STOPPED",
-            "pid": null,
-            "start_ticks": null
-          },
-          {
             "name": "nox-dispatcher-t855u",
             "state": "RUNNING",
             "pid": 359172,
