@@ -74,6 +74,31 @@ class ColdStreamingTests(unittest.TestCase):
                     cold.upload(args)
             self.assertEqual(src.read_bytes(), b"no-delete")
 
+    def test_cgroup_ram_reserve_allows_only_real_headroom(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            (p / "memory.max").write_text(str(16 * cold.GIB))
+            (p / "memory.current").write_text(str(4 * cold.GIB))
+            self.assertEqual(cold.assert_cgroup_ram_reserve(6 * cold.GIB, 4, root=p), 12 * cold.GIB)
+            with self.assertRaisesRegex(RuntimeError, "Insufficient current cgroup"):
+                cold.assert_cgroup_ram_reserve(9 * cold.GIB, 4, root=p)
+
+    def test_unknown_cgroup_limit_cannot_load_ram(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            (p / "memory.max").write_text("max")
+            (p / "memory.current").write_text("1024")
+            with self.assertRaisesRegex(RuntimeError, "Cannot verify cgroup"):
+                cold.assert_cgroup_ram_reserve(0, 4, root=p)
+
+    def test_stop_flag_blocks_warm_load(self):
+        with tempfile.TemporaryDirectory() as d:
+            stop = Path(d) / "STOP"
+            stop.write_text("owner")
+            with patch.object(cold, "STOP_FLAGS", (stop,)):
+                with self.assertRaisesRegex(RuntimeError, "STOP"):
+                    cold.assert_nox_running()
+
     def test_verified_upload_preserves_source_by_default(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
