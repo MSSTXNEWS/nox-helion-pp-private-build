@@ -27,8 +27,8 @@ SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor
 FILES['repair'] = 'nox-control/owner_service_sizing_entry.py'
 # One exact owner-approved cache service and warm-hook transaction.
 FILES['repair'] = 'nox-control/owner_native_repair.py'
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = tuple(["owner_scoped_s03_pair_repair.py","owner_refresh_cognition_c04.py","nox_s03_scoped_pair.py","native-bridge.patch"])
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = tuple(["nox-control/onehost-external-resonance/owner_scoped_s03_pair_repair.py","nox-control/onehost-external-resonance/owner_refresh_cognition_c04.py","nox-control/onehost-external-resonance/nox_s03_scoped_pair.py","nox-control/onehost-external-resonance/native-bridge.patch"])
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_advise_staged_wow_cache.py',)
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/onehost-external-resonance/owner_advise_staged_wow_cache.py',)
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
@@ -313,7 +313,8 @@ def run_native(action,request_id):
                 instructions = Path('nox-control/onehost-external-resonance/owner_quick_chat_receipt.py').read_bytes()
                 namespace = {}
                 exec(compile(instructions, 'owner_quick_chat_receipt.py', 'exec'), namespace)
-                proof = namespace['prove'](secret['tunnel'], internal)
+                proof = namespace['prove'](secret['tunnel'], internal, allow_model=secret['admit_model'] is True)
+                proof['headroom_bytes']=secret['headroom_bytes']
                 print('NOX_MAINT_HTTPS_RESONANCE='+json.dumps(proof,separators=(',',':')),flush=True)
         except Exception as issue:
             code=str(issue)

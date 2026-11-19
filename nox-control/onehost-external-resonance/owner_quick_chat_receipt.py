@@ -15,7 +15,7 @@ def require(condition, reason):
         raise RuntimeError('HOLD_NOX_HTTPS_' + reason)
 
 
-def prove(tunnel, owner_client):
+def prove(tunnel, owner_client, *, allow_model=True):
     route = urlsplit(tunnel['url'])
     host = route.hostname or ''
     require(route.scheme == 'https' and SAFE_HOST.fullmatch(host) and route.netloc == host
@@ -59,6 +59,10 @@ def prove(tunnel, owner_client):
                if row.get('title') == 'NOX V38 — приёмка 7013673520']
     require(len(matches) == 1 and re.fullmatch(r'[0-9a-f]{32}', matches[0]), 'PRODUCT_DIALOG_SCOPE')
     dialog_id = matches[0]
+    if not allow_model:
+        return {'url': origin + '/chat', 'https': True, 'anonymous_protected': True, 'authenticated': True,
+                'external_stream_verified': False, 'retained_dialog_verified': True,
+                'reason': 'MEMORY_RESERVE', 'expires_unix': tunnel['expires_unix']}
     question = 'Из текущего диалога назови штабной проект одним словом. Это продолжение разговора.'
     started = time.monotonic()
     conn, response = request('/api/nox/chat/stream', cookie,

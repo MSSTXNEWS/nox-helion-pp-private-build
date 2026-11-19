@@ -14,17 +14,15 @@ from types import ModuleType
 
 BUNDLE = __NOX_BUNDLE_JSON__
 
-def activate():
-    name = 'owner_scoped_s03_pair_repair.py'
-    repair = ModuleType(name.removesuffix('.py'))
-    sys.modules[repair.__name__] = repair
-    repair.__dict__['__NOX_' + 'BUNDLE_JSON__'] = {key: value for key, value in BUNDLE.items() if key != name}
-    exec(compile(base64.b64decode(BUNDLE[name], validate=True), name, 'exec'), repair.__dict__)
+def release_wow_cache():
+    name = 'owner_advise_staged_wow_cache.py'
+    module = {}
+    exec(compile(base64.b64decode(BUNDLE[name], validate=True), name, 'exec'), module)
     try:
-        repair.main()
+        print('NOX_MAINT_WOW_CACHE=' + json.dumps(module['advice'](),separators=(',',':')),flush=True)
     except Exception as error:
         code = str(error)
-        print('NOX_MAINT_SCOPED_S03_PAIR_HOLD=' + (code if re.fullmatch(r'HOLD_[A-Z0-9_]{1,120}', code) else type(error).__name__), flush=True)
+        print('NOX_MAINT_WOW_CACHE_HOLD=' + (code if re.fullmatch(r'HOLD_[A-Z0-9_]{1,120}',code) else type(error).__name__),flush=True)
 
 def relay_session():
     receipt = Path('/root/nox/ops/nox-quick-chat/active.json')
@@ -38,8 +36,7 @@ def relay_session():
         raise RuntimeError('HOLD_EDGE_RECEIPT_PIN')
     current = int(Path('/sys/fs/cgroup/memory.current').read_text())
     maximum = int(Path('/sys/fs/cgroup/memory.max').read_text())
-    if maximum - current < 2 * 1024**3:
-        raise RuntimeError('HOLD_EDGE_RESERVE')
+    admit_model = maximum - current >= 2 * 1024**3
     if sha256(Path('/root/nox/scripts/chat_proxy.py').read_bytes()).hexdigest() != '9fedaefbe39f4cac8a47d77bb0dada2ccf09c43ec38a5624869d3a00c0fbe5a3':
         raise RuntimeError('HOLD_EDGE_AUTH_SOURCE')
     key = Path('/root/nox/secrets/chat_session_key')
@@ -52,10 +49,10 @@ def relay_session():
             raise RuntimeError('HOLD_EDGE_KEY_SIZE')
     value = str(int(time.time()) + 150) + '.' + secrets.token_urlsafe(16)
     cookie = value + '.' + hmac.new(secret, value.encode(), sha256).hexdigest()
-    print('NOX_PRIVATE_HTTPS_RELAY=' + json.dumps({'cookie':cookie, 'tunnel':active}, separators=(',', ':')), flush=True)
+    print('NOX_PRIVATE_HTTPS_RELAY=' + json.dumps({'cookie':cookie, 'tunnel':active, 'admit_model':admit_model, 'headroom_bytes':maximum-current}, separators=(',', ':')), flush=True)
 
 if __name__ == '__main__':
-    activate()
+    release_wow_cache()
     try:
         relay_session()
     except Exception as exc:
