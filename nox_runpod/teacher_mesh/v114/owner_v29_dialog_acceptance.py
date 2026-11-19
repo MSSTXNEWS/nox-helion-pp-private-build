@@ -36,6 +36,24 @@ def req(opener,path,method='GET',data=None,timeout=8):
 def body(result,limit=10000):
  if result.status!=200:raise RuntimeError('HOLD_RESPONSE_HTTP_'+str(result.status))
  return json.loads(result.read(limit))
+def canonical_s03_receipt(receipt,dialog_id):
+ return (isinstance(receipt,dict) and receipt.get('saved') is True
+  and receipt.get('s03_integrated') is True and receipt.get('dialog_id')==dialog_id
+  and receipt.get('store_scope')=='S03_ITEMS'
+  and receipt.get('canonical_s03_write_verified') is True
+  and isinstance(receipt.get('exchange_id'),str)
+  and 6<=len(receipt['exchange_id'])<=160)
+def canonical_s03_history(history,dialog_id,prompt,answer,exchange_id):
+ if (not isinstance(history,dict) or history.get('status')!='READY'
+  or history.get('dialog_id')!=dialog_id or history.get('store_scope')!='S03_ITEMS'
+  or history.get('canonical_s03_readback_verified') is not True):return False
+ rows=history.get('messages')
+ return (isinstance(rows,list) and len(rows)>=2
+  and isinstance(rows[-2],dict) and isinstance(rows[-1],dict)
+  and rows[-2].get('role')=='user' and rows[-2].get('content')==prompt
+  and rows[-1].get('role')=='assistant' and rows[-1].get('content')==answer
+  and rows[-2].get('exchange_id')==exchange_id
+  and rows[-1].get('exchange_id')==exchange_id)
 opener=None;owner=False
 try:
  if stop():raise RuntimeError('HOLD_STOP_FLAG')
@@ -114,19 +132,12 @@ try:
    raise RuntimeError('HOLD_UNKNOWN_STREAM_EVENT')
   if time.monotonic()-start>100:raise RuntimeError('HOLD_STREAM_TIMEOUT')
  answer=''.join(answer_parts)
- if (receipt is None or receipt.get('saved') is not True or
-     receipt.get('s03_integrated') is not True or
-     receipt.get('dialog_id')!=dialog_id or
-     not receipt.get('exchange_id') or
+ if (not canonical_s03_receipt(receipt,dialog_id) or
      not re.search(r'(?<!\d)323(?!\d)',answer)):
-  raise RuntimeError('HOLD_FULL_S03_DIALOG_STREAM_RECEIPT')
+  raise RuntimeError('HOLD_CANONICAL_S03_DIALOG_SCOPE_AND_WRITE_PROOF')
  history=body(req(opener,'/api/ui/memory/dialogs/history?dialog_id='+dialog_id+'&limit=20',timeout=8))
- messages=history.get('messages')
- if (history.get('dialog_id')!=dialog_id or
-     not isinstance(messages,list) or len(messages)<2 or
-     messages[-2].get('content')!=prompt or
-     messages[-1].get('content')!=answer):
-  raise RuntimeError('HOLD_OWNER_S03_DIALOG_READBACK')
+ if not canonical_s03_history(history,dialog_id,prompt,answer,receipt['exchange_id']):
+  raise RuntimeError('HOLD_CANONICAL_S03_DIALOG_SCOPE_AND_READBACK_PROOF')
  listing=body(req(opener,'/api/ui/memory/dialogs?archived=false',timeout=7))
  if dialog_id not in [x.get('dialog_id') for x in listing.get('dialogs',[])]:
   raise RuntimeError('HOLD_OWNER_DIALOG_LIST_READBACK')

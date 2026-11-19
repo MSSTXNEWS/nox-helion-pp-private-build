@@ -319,7 +319,8 @@ def technical_details(task, local_recall, plan, memory):
         if candidates:
             stamp, path = max(candidates, key=lambda item: item[0])
             receipt = bounded_json(path, 1024 * 1024)
-            accepted = {'LIVE_RESONANCE_REAL_STREAM_S03_HISTORY_ACCEPTED', 'LIVE_RESONANCE_FUNCTIONAL_PERFORMANCE_PENDING'}
+            accepted = {'LIVE_RESONANCE_OWNER_DIALOG_HISTORY_ACCEPTED_CANONICAL_S03_HOLD',
+                        'LIVE_RESONANCE_OWNER_DIALOG_FUNCTIONAL_PERFORMANCE_PENDING_CANONICAL_S03_HOLD'}
             if isinstance(receipt, dict) and receipt.get('schema') == 'NOX_OWNER_CHAT_UPGRADE_V1' and receipt.get('state') in accepted and -5 <= time.time() - stamp <= 3600:
                 for row in (receipt.get('acceptance') or [])[:100]:
                     if not isinstance(row, dict) or not isinstance(row.get('data'), dict):
