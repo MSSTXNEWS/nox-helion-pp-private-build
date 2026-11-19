@@ -44,8 +44,19 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
                  review, review_sha, source_documents, source_raw_sha256):
     registry = strict_parent_registry(disposition,source_documents,source_raw_sha256)
     ledger = eligibility_ledger(registry,previous,refill_request)
-    diffs = proposal_predicate_diff(proposal.get('missions'),registry,
-        census.get('roots',{}),refill_request,previous)
+    missions = proposal.get('missions') if isinstance(proposal, dict) else None
+    reviewed_ids_expected = None
+    if isinstance(missions, list) and all(
+            isinstance(m, dict) and type(m.get('mission_id')) is str for m in missions):
+        reviewed_ids_expected = sorted(m['mission_id'] for m in missions)
+        diffs = proposal_predicate_diff(missions,registry,
+            census.get('roots',{}),refill_request,previous)
+    else:
+        # Malformed proposals must produce HOLD evidence, never crash the reviewer.
+        diffs = [{'parent_task_id': None, 'all_passed': False,
+                  'predicates': [_check('mission_ids_well_formed', True, False, False,
+                                        'proposal.missions[].mission_id')],
+                  'native_publish_performed': False, 'original_task_accepted': False}]
     request_validation = []
     try:
         _validate_refill_request(refill_request,previous,previous_sha)
@@ -62,12 +73,6 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
         request_validation.append(_check('proposal_request_binding',
             refill_request.get('request_id'),proposal.get('request_id'),False,
             'proposal.request_id matching the validated 64-hex REFILL_REQUIRED ID'))
-
-    missions = proposal.get('missions') if isinstance(proposal, dict) else None
-    reviewed_ids_expected = None
-    if isinstance(missions, list) and all(
-            isinstance(m, dict) and type(m.get('mission_id')) is str for m in missions):
-        reviewed_ids_expected = sorted(m['mission_id'] for m in missions)
 
     review_checks = [
         _check('review_origin','OWNER_REVIEWED',review.get('review_origin'),
