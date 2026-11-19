@@ -105,34 +105,6 @@ def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, sec
                for row, (role, content) in zip(rows, expected))
 
 
-def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages):
-    """Fail closed unless a trusted canonical writer receipt matches exact independent S03 readback."""
-    if not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict):
-        return False
-    event_id = writer_receipt.get('event_id')
-    turn_id = writer_receipt.get('turn_id')
-    sequence = writer_receipt.get('sequence')
-    if (writer_receipt.get('source') != 'canonical_s03'
-            or writer_receipt.get('verified') is not True
-            or writer_receipt.get('durable') is not True
-            or not isinstance(event_id, str) or not event_id
-            or not isinstance(turn_id, str) or not turn_id
-            or isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 1
-            or writer_receipt.get('dialog_id') != dialog_id):
-        return False
-    if (independent_readback.get('source') != 'canonical_s03'
-            or independent_readback.get('independent') is not True
-            or independent_readback.get('event_id') != event_id
-            or independent_readback.get('turn_id') != turn_id
-            or independent_readback.get('sequence') != sequence
-            or independent_readback.get('dialog_id') != dialog_id
-            or independent_readback.get('messages') != expected_messages):
-        return False
-    answer = expected_messages[-1].get('content') if expected_messages else None
-    expected_hash = digest(answer.encode('utf-8')) if isinstance(answer, str) else None
-    return bool(expected_hash and independent_readback.get('full_answer_sha256') == expected_hash)
-
-
 def progressive_stream_valid(value):
     """Require growing visible prefixes while the real native stream is open."""
     if not isinstance(value, dict):
@@ -621,6 +593,8 @@ def require_screenshot_captures(report):
 
 
 async def browser_run(report, directory, available):
+    if report.get('two_turn_mode') is True:
+        raise RuntimeError('HOLD_CANONICAL_S03_WRITER_AND_INDEPENDENT_READBACK_NOT_WIRED')
     from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
     base=local_base()
     origin=urllib.parse.urlsplit(base).netloc
@@ -951,6 +925,10 @@ async def browser_run(report, directory, available):
 
 
 def main():
+    # Two-turn mode is blocked before any host/browser work until the real
+    # canonical writer receipt and independent S03 readback provider are bound.
+    if os.environ.get('NOX_BROWSER_QA_MODE') == 'multiturn':
+        raise RuntimeError('HOLD_CANONICAL_S03_WRITER_AND_INDEPENDENT_READBACK_NOT_WIRED')
     os.environ.pop('DEBUG',None)
     os.environ.pop('PWDEBUG',None)
     available=inventory()
