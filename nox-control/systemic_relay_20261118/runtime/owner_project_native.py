@@ -104,7 +104,8 @@ class ProjectBinding:
         integrated = evidence.get('state') == 'INTEGRATED'
         if integrated and (evidence.get('integration_verified') is not True
                 or evidence.get('project_source_changed') is not True
-                or evidence.get('tests', {}).get('passed') is not True):
+                or not isinstance(evidence.get('tests'), dict)
+                or evidence['tests'].get('passed') is not True):
             raise GateError('HOLD_PROJECT_INTEGRATION_PROOF')
         # Sanitization is performed before the final digest and exact S03 write,
         # matching the existing native queue's own result sanitization.
@@ -542,7 +543,8 @@ class ProjectBinding:
                 or worker.get('state') != 'INTEGRATED'
                 or worker.get('project_source_changed') is not True
                 or worker.get('integration_verified') is not True
-                or (worker.get('tests') or {}).get('passed') is not True):
+                or not isinstance(worker.get('tests'), dict)
+                or worker['tests'].get('passed') is not True):
             return None
         proof = binding.s03_readback(receipt)
         if not proof:
