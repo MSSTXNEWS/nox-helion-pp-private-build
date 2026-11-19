@@ -1,0 +1,38 @@
+name: NOX Relay35 canonical scope check
+on:
+  push:
+    branches: [coord/nox-relay35-20261119]
+    paths:
+      - 'coordination/NOX_RELAY35_20261119.json'
+      - 'coordination/NOX_RELAY35_RUNBOOK.md'
+      - '.github/workflows/nox-relay35-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Single bounded provenance check
+        run: |
+          python3 - <<'PY'
+          import json,re,collections
+          d=json.load(open('coordination/NOX_RELAY35_20261119.json'))
+          assert d['schema']=='NOX_RELAY35_CANONICAL_PROPOSAL_V1'
+          assert d['instructions_version']=='0.0.6'
+          assert d['source_registry_total']==295
+          assert d['role'].startswith('NON_EXECUTABLE_HANDOFF')
+          a=d['tasks']
+          assert len(a)==35 and len(set(t['task_id'] for t in a))==35
+          assert [t['rank'] for t in a]==list(range(1,36))
+          lanes=[f'A{i}' for i in range(7)]
+          assert dict(collections.Counter(t['seed_lane'] for t in a))=={x:5 for x in lanes}
+          assert all(t['seed_lane']==lanes[i%7] for i,t in enumerate(a))
+          assert all(re.fullmatch(r'[0-9a-f]{64}',t['spec_sha256']) for t in a)
+          assert all(t['original_acceptance_added'] is False and t['execution_state']=='PLANNED_NOT_NATIVE_CLAIMED' for t in a)
+          print('RELAY35_SOURCE_SCOPE_PASS count=35 lanes=7 each=5 original_acceptance_delta=0')
+          PY
