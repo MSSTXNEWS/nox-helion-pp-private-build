@@ -55,10 +55,10 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
         spec=importlib.util.spec_from_file_location('a3_program_stop', SOURCE)
         module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
         name='owner_s03_recover_activate.py'
-        raw=(b'BUNDLE=__NOX_BUNDLE_JSON__\\n'
-             b'def main():\\n'
-             b'    BUNDLE["s03_stage_executed"]=True\\n'
-             b'    return 0\\n')
+        raw=(b'BUNDLE=__NOX_BUNDLE_JSON__\n'
+             b'def main():\n'
+             b'    BUNDLE["s03_stage_executed"]=True\n'
+             b'    return 0\n')
         # Deliberately fail if the S03 stage is entered at all.
         module.STAGES=((name,hashlib.sha256(raw).hexdigest()),)
         module.BUNDLE={name:base64.b64encode(raw).decode()}
