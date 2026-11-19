@@ -674,5 +674,48 @@ class RefillEligibilityTests(unittest.TestCase):
                 {'mission_id': 'b'}, {'mission_id': 'a'}])['passed'])
 
 
+    def test_readonly_refill_review_holds_on_nonobject_documents(self):
+        from unittest.mock import patch
+        import owner_systemic_refill_producer as diagnostic
+
+        registry = {'parents': {}, 'total_original_ids': 295,
+                    'source_registry_sha256': {}}
+        inputs = {
+            'refill_request': {'request_id': 'a' * 64},
+            'proposal': {'missions': []},
+            'census': {'roots': {}},
+            'review': {'reviewed_mission_ids': []},
+        }
+        with (patch.object(diagnostic, 'strict_parent_registry', return_value=registry),
+              patch.object(diagnostic, 'eligibility_ledger', return_value=[]),
+              patch.object(diagnostic, '_validate_refill_request'),
+              patch.object(diagnostic, '_validate_proposal_request'),
+              patch.object(diagnostic, 'immutable_verifier_sha256', return_value='b' * 64),
+              patch.object(diagnostic, 'special_candidate_gaps', return_value=[])):
+            def run(documents):
+                report = diagnostic.build_report(
+                    {}, '1' * 64, documents['refill_request'], '2' * 64,
+                    documents['proposal'], '3' * 64, documents['census'], '4' * 64,
+                    {}, '5' * 64, documents['review'], '6' * 64, {}, {})
+                self.assertFalse(report['native_publish_performed'])
+                self.assertEqual(report['native_jobs_created'], 0)
+                self.assertEqual(report['original_task_acceptance_added'], 0)
+                return report
+
+            control = run(inputs)
+            shape = next(row for row in control['refill_request_predicates']
+                         if row['predicate'] == 'input_document_objects')
+            self.assertTrue(shape['passed'])
+            for key in inputs:
+                with self.subTest(document=key):
+                    malformed = dict(inputs, **{key: None})
+                    report = run(malformed)
+                    self.assertEqual(report['state'], 'HOLD_NO_REVIEWED_TASKPACK')
+                    shape = next(row for row in report['refill_request_predicates']
+                                 if row['predicate'] == 'input_document_objects')
+                    self.assertFalse(shape['passed'])
+                    self.assertFalse(shape['actual'][key])
+
+
 if __name__ == "__main__":
     unittest.main()
