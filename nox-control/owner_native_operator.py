@@ -24,7 +24,6 @@ SCOPED_REPAIR_BUNDLES[FILES['repair']] = (
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
     'nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py',
     'nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py',
-    'nox-control/systemic_relay_20261118/runtime/owner_subagent_instruction_truth.py',
     'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py')
 FROZEN_REFLEX_DEPENDENCIES = {
     'owner_subagent_instruction_truth.py':
