@@ -9,6 +9,7 @@ import chat_resource_admission as admission
 
 NOW = 1_795_057_000.0
 MODEL_SHA = 'a' * 64
+RUNTIME_SHA = 'b' * 64
 GPU0 = 'GPU-00000000-0000-0000-0000-000000000001'
 GPU1 = 'GPU-00000000-0000-0000-0000-000000000002'
 
@@ -21,6 +22,7 @@ def sample(at, *, current=99_900_000_000, pss=18_000_000_000,
         'observed_at': at,
         'instance_id': 60509551,
         'model': {'model_id': 'nox-ds41-8098', 'weights_sha256': MODEL_SHA,
+                  'runtime_sha256': RUNTIME_SHA,
                   'pid': 3266857, 'start_ticks': 172046662},
         'cgroup': {'memory_current_bytes': current, 'memory_max_bytes': 100_000_000_000,
                    'file_bytes': 85_000_000_000, 'inactive_file_bytes': 50_000_000_000,
@@ -42,8 +44,13 @@ def valid_snapshot():
     return {
         'schema': admission.SCHEMA,
         'instance_id': 60509551,
-        'model': {'model_id': 'nox-ds41-8098', 'weights_sha256': MODEL_SHA},
-        'request': {'input_tokens': 2048, 'output_tokens': 512},
+        'model': {'model_id': 'nox-ds41-8098', 'weights_sha256': MODEL_SHA,
+                  'runtime_sha256': RUNTIME_SHA},
+        'request': {'input_tokens': 2048, 'output_tokens': 512,
+                    'reservation_lease_id': 'lease-001'},
+        'reservation': {'lease_id': 'lease-001', 'exclusive': True,
+                        'acquired_at': NOW - 3, 'expires_at': NOW + 10,
+                        'active_inferences': 0},
         'baseline': sample(NOW - 2, current=99_850_000_000, pss=17_900_000_000,
                            rss=19_900_000_000, gpu_used=28_900_000_000,
                            model_gpu=26_900_000_000),
@@ -51,6 +58,7 @@ def valid_snapshot():
         'calibration': {
             'schema': admission.CALIBRATION_SCHEMA,
             'model_id': 'nox-ds41-8098', 'weights_sha256': MODEL_SHA,
+            'runtime_sha256': RUNTIME_SHA,
             'measured_at': NOW - 100, 'sample_count': 3,
             'max_input_tokens': 4096, 'max_output_tokens': 1024,
             'peak_cgroup_delta_bytes': 4_000_000_000,
@@ -124,6 +132,30 @@ class ChatResourceAdmissionTests(unittest.TestCase):
         value['current']['model']['start_ticks'] += 1
         with self.assertRaisesRegex(admission.ChatResourceHold, 'PROCESS_IDENTITY'):
             admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
+        value = valid_snapshot()
+        value['calibration']['runtime_sha256'] = 'c' * 64
+        with self.assertRaisesRegex(admission.ChatResourceHold, 'CALIBRATION_IDENTITY_OR_COUNT'):
+            admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
+        value = valid_snapshot()
+        value['reservation']['exclusive'] = False
+        with self.assertRaisesRegex(admission.ChatResourceHold, 'RESERVATION_NOT_EXCLUSIVE'):
+            admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
+        value = valid_snapshot()
+        value['reservation']['active_inferences'] = 1
+        with self.assertRaisesRegex(admission.ChatResourceHold, 'RESERVATION_BUSY'):
+            admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
+        value = valid_snapshot()
+        value['request']['reservation_lease_id'] = 'other-lease'
+        with self.assertRaisesRegex(admission.ChatResourceHold, 'RESERVATION_IDENTITY'):
+            admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
+        value = valid_snapshot()
+        value.pop('reservation')
+        with self.assertRaisesRegex(admission.ChatResourceHold, 'SNAPSHOT_FIELDS'):
+            admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
+        value = valid_snapshot()
+        value['reservation']['expires_at'] = NOW
+        with self.assertRaisesRegex(admission.ChatResourceHold, 'RESERVATION_EXPIRED_OR_UNBOUNDED'):
+            admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
 
     def test_request_must_fit_calibrated_context_and_policy_is_required(self):
         value = valid_snapshot()
@@ -134,6 +166,10 @@ class ChatResourceAdmissionTests(unittest.TestCase):
             admission.evaluate_chat_admission(valid_snapshot(), policy={}, now=NOW)
         with self.assertRaisesRegex(admission.ChatResourceHold, 'POLICY_FIELDS'):
             admission.evaluate_chat_admission(valid_snapshot(), policy=None, now=NOW)
+        unsafe_policy = dict(POLICY, minimum_projected_headroom_bytes=0,
+                             minimum_gpu_free_bytes=0)
+        with self.assertRaisesRegex(admission.ChatResourceHold, 'POLICY_HEADROOM'):
+            admission.evaluate_chat_admission(valid_snapshot(), policy=unsafe_policy, now=NOW)
 
 
 if __name__ == '__main__':
