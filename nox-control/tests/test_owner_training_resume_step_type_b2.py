@@ -441,5 +441,52 @@ class CheckpointStepProvenance(unittest.TestCase):
 
 
 
+    def test_checkpoint_hash_rejects_path_rebind_during_open_read(self):
+        # Previous file_sha hashed a stable descriptor, but its pathname
+        # could be rebound to another inode while hashing and still pass.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / "adapter_model.safetensors"
+            replacement = root / "replacement.safetensors"
+            original = b"checkpoint-a"
+            changed = b"checkpoint-b"
+            path.write_bytes(original)
+            replacement.write_bytes(changed)
+            file_sha = load_pinned_verifier(root)["file_sha"]
+            self.assertEqual(file_sha(path), hashlib.sha256(original).hexdigest())
+            real_fdopen = os.fdopen
+
+            class RenameBetweenOpenAndRead:
+                def __init__(self, stream):
+                    self.stream = stream
+                    self.rebound = False
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def fileno(self):
+                    return self.stream.fileno()
+
+                def read(self, n):
+                    if not self.rebound:
+                        self.rebound = True
+                        os.replace(path, root / "old-inode.safetensors")
+                        os.replace(replacement, path)
+                    return self.stream.read(n)
+
+            with mock.patch("os.fdopen", side_effect=lambda fd, mode:
+                            RenameBetweenOpenAndRead(real_fdopen(fd, mode))):
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_CHECKPOINT_FILE_MUTATED"):
+                    file_sha(path)
+            self.assertEqual(path.read_bytes(), changed)
+            self.assertEqual((root / "old-inode.safetensors").read_bytes(), original)
+
+
+
 if __name__ == "__main__":
     unittest.main()
