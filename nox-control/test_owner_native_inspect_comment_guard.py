@@ -17,6 +17,7 @@ from owner_native_inspect_comment_guard import (
     REPOSITORY,
     authorize_event,
     main,
+    parse_command,
 )
 
 
@@ -255,26 +256,23 @@ class OwnerCommentGuardTests(unittest.TestCase):
                 self.assertEqual(main(), 2)
             self.assertEqual(output_path.read_text(encoding="utf-8"), "")
 
-    def test_source_export_is_exact_sha_bounded_and_owner_only(self) -> None:
-        key = "AbC_012-def"
-        body = f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}"
+    def test_source_export_comment_has_no_key_argument_or_key_output(self) -> None:
+        key = "public-key-payload-must-not-appear"
+        body = f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export"
         self.assertEqual(SOURCE_EXPORT_SHA,
-                         "845c76d44676d56157125e729db81b45e006cf92")
+                         "7e0df12af5d60895f141a01eda84b3e2ffdf9a74")
+        self.assertEqual(parse_command(body), ("source_export", SOURCE_EXPORT_SHA))
         self.assertEqual(authorize_event(event_for(body), REPOSITORY, "issue_comment"),
                          ("source_export", SOURCE_EXPORT_SHA))
         for invalid in (
-            f"/nox-maintain 60509551 {'b' * 40} source_export {key}",
+            f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}",
             f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}=",
-            f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key} extra",
-            f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export " + "a" * 12001,
+            f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export extra",
+            body + " extra",
         ):
             with self.subTest(body=invalid[:90]), self.assertRaisesRegex(
                     RuntimeError, "HOLD_EXACT_OWNER_COMMAND"):
                 authorize_event(event_for(invalid), REPOSITORY, "issue_comment")
-        altered = event_for(body)
-        altered["sender"]["id"] = OWNER_ID + 1
-        with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_COMMAND_IDENTITY"):
-            authorize_event(altered, REPOSITORY, "issue_comment")
 
         with tempfile.TemporaryDirectory() as temp:
             event_path = Path(temp) / "event.json"
@@ -286,13 +284,14 @@ class OwnerCommentGuardTests(unittest.TestCase):
             with mock.patch.dict(os.environ, env, clear=False), \
                     contextlib.redirect_stdout(stdout):
                 self.assertEqual(main(), 0)
-            self.assertEqual(output_path.read_text(encoding="utf-8"),
-                             f"action=source_export\nsource_sha={SOURCE_EXPORT_SHA}\n"
-                             f"export_key_b64={key}\n")
+            emitted = output_path.read_text(encoding="utf-8")
+            self.assertEqual(emitted,
+                             f"action=source_export\nsource_sha={SOURCE_EXPORT_SHA}\n")
+            self.assertNotIn(key, emitted)
             self.assertNotIn(key, stdout.getvalue())
 
             output_path.write_text("", encoding="utf-8")
-            event_path.write_text(json.dumps(event_for("not a command")),
+            event_path.write_text(json.dumps(event_for(body + " " + key)),
                                   encoding="utf-8")
             with mock.patch.dict(os.environ, env, clear=False), \
                     contextlib.redirect_stderr(io.StringIO()):
@@ -385,10 +384,6 @@ class WorkflowScopeTests(unittest.TestCase):
             workflow.rindex("NOX2: ${{ secrets.NOX2 }}"),
         )
         self.assertLess(
-            workflow.index("Recheck exact pinned #415 source-export command before credentials"),
-            workflow.index("Run the exact pinned #415 encrypted source-export action"),
-        )
-        self.assertLess(
             workflow.index("Compile and test exact pinned #415 encrypted export source before credentials"),
             workflow.index("Run the exact pinned #415 encrypted source-export action"),
         )
@@ -436,7 +431,8 @@ class WorkflowScopeTests(unittest.TestCase):
                   / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
         self.assertIn(f'"source_export": "{SOURCE_EXPORT_SHA}"', guard)
         self.assertIn(f"ref: {SOURCE_EXPORT_SHA}", workflow)
-        self.assertIn("steps.owner-command.outputs.export_key_b64", workflow)
+        self.assertNotIn("steps.owner-command.outputs.export_key_b64", workflow)
+        self.assertNotIn("export_key_b64=", guard)
         self.assertIn("path: source/artifacts/nox-s03-source-export.enc", workflow)
         self.assertNotIn("path: artifacts/", workflow.replace(
             "path: source/artifacts/nox-s03-source-export.enc", ""))
@@ -459,6 +455,17 @@ class WorkflowScopeTests(unittest.TestCase):
                         workflow.index("Compile and test exact pinned #415 encrypted export source before credentials"))
         self.assertLess(workflow.index("Install crypto dependency before #415 owner credential staging"),
                         workflow.index(stage_name))
+        preflight_name = "Validate #415 export key secret before staging NOX2"
+        self.assertLess(workflow.index(preflight_name), workflow.index(stage_name))
+        preflight_block = workflow.split(preflight_name, 1)[1].split(
+            "Install crypto dependency before #415 owner credential staging", 1)[0]
+        self.assertIn("NOX_OWNER_EXPORT_KEY_B64: ${{ secrets.NOX_OWNER_EXPORT_KEY_B64 }}", preflight_block)
+        self.assertIn("preflight_source_export_key()", preflight_block)
+        self.assertNotIn("authorize_event", preflight_block)
+        self.assertNotIn("subprocess", preflight_block)
+        self.assertNotIn("print(", preflight_block)
+        self.assertLess(workflow.index(preflight_name),
+                        workflow.index("Install crypto dependency before #415 owner credential staging"))
         self.assertLess(workflow.index(stage_name), workflow.index(run_name))
         self.assertLess(workflow.index(run_name), workflow.index(clean_name))
         self.assertLess(workflow.index(clean_name), workflow.index(upload_name))
@@ -473,6 +480,9 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertNotIn("credential_file", stage_block)
         self.assertNotIn("NOX2: ${{ secrets.NOX2 }}", run_block)
         self.assertIn("NOX2_FILE:", run_block)
+        self.assertIn("NOX_OWNER_EXPORT_KEY_B64: ${{ secrets.NOX_OWNER_EXPORT_KEY_B64 }}", run_block)
+        self.assertIn("run: python -B nox-control/owner_native_operator.py source_export", run_block)
+        self.assertNotIn("$NOX_OWNER_EXPORT_KEY_B64", run_block)
         self.assertIn("if: always()", cleanup_block)
         self.assertNotIn("NOX2: ${{ secrets.NOX2 }}", cleanup_block)
         self.assertIn("if: success()", upload_block)

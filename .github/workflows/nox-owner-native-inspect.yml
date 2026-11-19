@@ -88,7 +88,7 @@ jobs:
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 845c76d44676d56157125e729db81b45e006cf92
+          ref: 7e0df12af5d60895f141a01eda84b3e2ffdf9a74
           path: source-export
           persist-credentials: false
       - name: Compile and test exact pinned S03 export source, provider manifest, and secret-gated operator
@@ -238,19 +238,16 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
         run: python -B nox-control/owner_native_operator.py browser_qa
-      - name: Recheck exact pinned #415 source-export command before credentials
+      - name: Validate #415 export key secret before staging NOX2
         if: success() && steps.owner-command.outputs.action == 'source_export'
         working-directory: source
         env:
-          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
-          NOX_OWNER_EXPORT_KEY_B64: ${{ steps.owner-command.outputs.export_key_b64 }}
+          NOX_OWNER_EXPORT_KEY_B64: ${{ secrets.NOX_OWNER_EXPORT_KEY_B64 }}
           PYTHONPATH: nox-control
         run: |
           python -B - <<'PY'
-          import os
-          from owner_native_operator import authorize_event
-          authorize_event('source_export', os.environ.get('NOX_OWNER_EXPORT_KEY_B64'))
-          print('NOX_OWNER_SOURCE_EXPORT_SOURCE_AUTH=PASS')
+          from owner_native_operator import preflight_source_export_key
+          preflight_source_export_key()
           PY
       - name: Install crypto dependency before #415 owner credential staging
         if: success() && steps.owner-command.outputs.action == 'source_export'
@@ -277,8 +274,8 @@ jobs:
         env:
           NOX2_FILE: ${{ runner.temp }}/nox2-s03-${{ github.run_id }}-${{ github.run_attempt }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
-          NOX_OWNER_EXPORT_KEY_B64: ${{ steps.owner-command.outputs.export_key_b64 }}
-        run: python -B nox-control/owner_native_operator.py source_export "$NOX_OWNER_EXPORT_KEY_B64"
+          NOX_OWNER_EXPORT_KEY_B64: ${{ secrets.NOX_OWNER_EXPORT_KEY_B64 }}
+        run: python -B nox-control/owner_native_operator.py source_export
       - name: Remove staged #415 owner credential
         if: always() && steps.owner-command.outputs.action == 'source_export'
         env:
