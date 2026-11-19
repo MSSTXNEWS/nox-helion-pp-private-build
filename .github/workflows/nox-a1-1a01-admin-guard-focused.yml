@@ -24,6 +24,7 @@ jobs:
             test_owner_chat_stream.StreamTests.test_model_admin_batch_never_partly_executes_or_certifies_s03 \
             test_owner_chat_stream.StreamTests.test_falsey_non_object_tool_arguments_hold_before_model_and_dispatch \
             test_owner_chat_stream.StreamTests.test_falsey_malformed_model_delta_or_tool_calls_cannot_certify_s03 \
+            test_owner_chat_stream.StreamTests.test_falsey_model_tool_function_fragment_holds_before_dispatch \
             test_owner_chat_stream.StreamTests.test_duplicate_sse_and_tool_argument_json_keys_hold_before_dispatch
           echo 'NOX_A1_SOURCE_ONLY=true'
           echo 'NOX_A1_NATIVE_ACCEPTANCE=false'
