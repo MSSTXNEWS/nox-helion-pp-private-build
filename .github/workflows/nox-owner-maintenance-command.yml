@@ -62,7 +62,9 @@ jobs:
               for name in ('owner_cp55_cipher','owner_cp55_scope','owner_cp55_native','owner_cp55_runner','auth_prefix_reuse'):
                   py_compile.compile('nox-control/'+name+'.py',doraise=True)
           else:
-              py_compile.compile('nox-control/owner_native_'+a+'.py',doraise=True)
+              source=('nox-control/owner_native_lifeline_observer.py' if a=='lifeline'
+                      else 'nox-control/owner_native_'+a+'.py')
+              py_compile.compile(source,doraise=True)
           PY
       - name: Validate encrypted backup dependency before credentials
         if: steps.request.outputs.action == 'backup'
