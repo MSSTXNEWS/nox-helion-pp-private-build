@@ -25,7 +25,7 @@ The owner-reviewed planner must expose the native tool descriptor from
 - `restore_ssd`: Drive WARM → verified SSD, **not** RAM/GPU loaded.
 
 The model is **not** the approver. NOX's existing authenticated owner must
-approve a private manifest under `/root/nox/private/drive-tasks` (mode 0600) and its exact SHA-256.
+approve a private manifest under `/root/nox/ops/drive-auth/private/drive-tasks` (mode 0600) and its exact SHA-256.
 TaskID is bound into the manifest for ingest/offload; for restore_ssd one asset
 and remote `noxchunks:WARM` are required. These are only proposed, not executed,
 until the existing dispatcher takes a real owner/CAS lease and claims the job.
