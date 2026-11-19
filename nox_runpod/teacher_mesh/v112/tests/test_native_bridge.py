@@ -604,7 +604,7 @@ class V112Tests(unittest.TestCase):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db,_save_exchange
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
             json={'title':'NUL length guard','confirmed':True}).json()['dialog_id']
-        oversized='\\0'+'x'*8001
+        oversized='\0'+'x'*8001
         self.assertTrue(_save_exchange(dialog,oversized,'saved reply','nul-message'))
         with _db() as db:
             stored=db.execute('SELECT content,length(content) AS sqlite_chars '
