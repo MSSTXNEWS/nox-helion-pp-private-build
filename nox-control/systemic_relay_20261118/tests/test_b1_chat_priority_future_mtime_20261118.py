@@ -312,7 +312,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         scope = {"LEAF_HANDLER": "leaf", "ROLES": ("runtime", "memory", "weights"),
                  "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
                  "sqlite3": sqlite3, "time": time, "GateError": RuntimeError,
-                 "encoded": encoded, "digest": digest,
+                 "encoded": encoded, "digest": digest, "chat_priority_active": lambda: False,
                  "remember": lambda *_: self.fail("lost lease must block S03")}
         exec(compile(ast.fix_missing_locations(
             ast.Module(body=[method], type_ignores=[])), str(SOURCE), "exec"), scope)
