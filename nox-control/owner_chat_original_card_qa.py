@@ -15,7 +15,7 @@ import runpy
 import shutil
 
 CORE = Path(__file__).with_name('owner_chat_browser_qa.py')
-CORE_SHA256 = '4b15b3b3d3ae227663c8eb0bb8404b3550c205fede9b36baf1381d660582c126'
+CORE_SHA256 = '6a726580313e3deaefbca82ab4e1e1bf80b83ee4459f2e980d62a0be0da63ba2'
 ROOT = Path('/root/nox')
 
 
