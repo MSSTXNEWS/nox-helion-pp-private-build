@@ -56,6 +56,17 @@ def _supervisor_is_quiescent(snapshot):
             and snapshot.get('state') in ('STOPPED', 'BACKOFF', 'FATAL', 'EXITED'))
 
 
+def _settle_supervisor_before_restore(helper):
+    """After a failed boot, a no-PID BACKOFF must be reset before restore."""
+    previous = helper.supervisor('status')
+    require(_supervisor_is_quiescent(previous), 'RESTORE_DIRECTOR_NOT_QUIESCENT')
+    if previous['state'] != 'STOPPED':
+        helper.stop_checked()
+    ready = helper.supervisor('status')
+    require(ready.get('state') == 'STOPPED' and ready.get('pid') is None,
+            'RESTORE_SUPERVISOR_NOT_STOPPED')
+
+
 def encoding(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
 
@@ -261,6 +272,7 @@ def run():
             if stopped and _supervisor_is_quiescent(h.supervisor('status')) and receipt.get('rollback_verified', True):
                 h.wait_previous_descendants_stopped(children, timeout=10)
                 require(h.stop_clear(ROOT), 'RESTORE_OWNER_STOP')
+                _settle_supervisor_before_restore(h)
                 # Restoration also boots under a shared owner lease, never EX.
                 maintenance_released = True
                 receipt['restored_director'] = _start_after_lease_release(fd, h)
