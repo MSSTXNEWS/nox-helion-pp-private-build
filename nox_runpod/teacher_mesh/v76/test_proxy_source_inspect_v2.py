@@ -115,8 +115,7 @@ async def chat_route(request):
     def test_request_model_selector_requires_direct_allowlisted_expression(self):
         raw = b'''
 def prepare_payload(payload):
-    selected = payload.get("model")
-    return {"model": selected}
+    return {"model": payload.get("model")}
 @app.post("/api/nox/chat")
 def chat_route(body):
     return prepare_payload(body)
@@ -128,6 +127,24 @@ def chat_route(body):
                 "state": "OBSERVED_SOURCE_EXPRESSION",
                 "field": "model",
                 "expression": 'body.get("model")',
+            },
+        )
+
+    def test_request_model_selector_accepts_direct_subscript(self):
+        raw = b'''
+def prepare_payload(payload):
+    return {"model": payload["model"]}
+@app.post("/api/nox/chat")
+def chat_route(body):
+    return prepare_payload(body)
+'''
+        route = analyzer()(raw)["chat_routes"][0]
+        self.assertEqual(
+            route["request_model_selector"],
+            {
+                "state": "OBSERVED_SOURCE_EXPRESSION",
+                "field": "model",
+                "expression": 'body["model"]',
             },
         )
 
