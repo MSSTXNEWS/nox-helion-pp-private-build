@@ -39,6 +39,22 @@ class CredentialPathAstShapeTests(unittest.TestCase):
         self.assertNotIn("TOKEN_NAME", rendered)
         self.assertNotIn("load_secret", rendered)
 
+    def test_static_path_hold_transfers_only_sanitized_shape_to_receipt(self):
+        expr = ast.parse("resolve_password('/private/secret-token', CREDENTIAL_NAME)").body[0].value
+        error = QA.credential_path_not_static(expr)
+        status = {"outcome": str(error)}
+        QA.add_credential_path_ast_shape(status, error)
+        receipt = {"kind": "smart_chat_owner_e2e_qa", "data": status}
+        rendered = json.dumps(receipt, sort_keys=True)
+        self.assertEqual(status["outcome"], "HOLD_SMART_CHAT_QA_CREDENTIAL_PATH_NOT_STATIC")
+        self.assertIn("credential_path_ast_shape", status)
+        self.assertNotIn("resolve_password", rendered)
+        self.assertNotIn("/private/secret-token", rendered)
+        self.assertNotIn("CREDENTIAL_NAME", rendered)
+        shape = status["credential_path_ast_shape"]
+        self.assertLessEqual(shape["node_count"], 64)
+        self.assertLessEqual(max(row["children"] for row in shape["nodes"]), 64)
+
     def test_shape_is_bounded_for_large_ast(self):
         expr = ast.parse("f(" + ",".join("x" for _ in range(100)) + ")").body[0].value
         shape = QA.safe_ast_shape(expr, max_nodes=8, max_depth=12)
