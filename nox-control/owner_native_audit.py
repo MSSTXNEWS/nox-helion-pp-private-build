@@ -166,16 +166,19 @@ def _fd_evidence(pid_path):
     rows = []
     scanned = 0
     truncated = False
+    entries = []
     try:
-        entries = sorted((pid_path / "fd").iterdir(), key=lambda p: p.name)
+        with os.scandir(pid_path / "fd") as directory:
+            for entry in directory:
+                if len(entries) >= PROC_EVIDENCE_LIMITS["fd_entries"]:
+                    truncated = True
+                    break
+                if entry.name.isdecimal():
+                    entries.append(Path(entry.path))
+        entries.sort(key=lambda p: int(p.name))
     except OSError:
         return {"status": "FD_DIRECTORY_UNAVAILABLE", "rows": [], "scanned": 0}
-    if len(entries) > PROC_EVIDENCE_LIMITS["fd_entries"]:
-        entries = entries[:PROC_EVIDENCE_LIMITS["fd_entries"]]
-        truncated = True
     for fd in entries:
-        if not fd.name.isdecimal():
-            continue
         scanned += 1
         try:
             target = os.readlink(fd)
