@@ -39,11 +39,13 @@ def s03_proof(transcript):
         "source": "canonical_s03", "verified": True, "durable": True,
         "event_id": "evt-02", "turn_id": "turn-02", "sequence": 2,
         "dialog_id": DIALOG,
+        "full_transcript_sha256": multiturn_transcript_sha256(transcript),
     }
     readback = {
         "source": "canonical_s03", "independent": True,
         "event_id": "evt-02", "turn_id": "turn-02", "sequence": 2,
         "dialog_id": DIALOG, "messages": transcript,
+        "full_transcript_sha256": multiturn_transcript_sha256(transcript),
         "full_answer_sha256": hashlib.sha256(LAST.encode("utf-8")).hexdigest(),
     }
     return writer, readback
@@ -72,6 +74,27 @@ class OwnerRuEsContinuity(unittest.TestCase):
         invalid_roles = [dict(item) for item in transcript]
         invalid_roles[2]['role'] = 'assistant'
         self.assertIsNone(multiturn_transcript_sha256(invalid_roles))
+
+    def test_s03_full_history_sha_is_bound_to_both_native_witnesses(self):
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(
+            {key: value for key, value in writer.items()
+             if key != "full_transcript_sha256"}, readback, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(
+            writer, dict(readback, full_transcript_sha256="0" * 64),
+            DIALOG, transcript))
+        # Matching event ID and final answer cannot authenticate a different
+        # previous Russian user/assistant exchange.
+        forged = [dict(item) for item in transcript]
+        forged[0]["content"] += " другой вопрос"
+        forged[1]["content"] = "3,8,1,9,5,10,6,4,2,7"
+        forged_readback = dict(
+            readback, messages=forged,
+            full_transcript_sha256=multiturn_transcript_sha256(forged))
+        self.assertFalse(canonical_s03_proof_valid(
+            writer, forged_readback, DIALOG, forged))
 
     def test_s03_two_turn_receipt_requires_second_sequence_and_distinct_readback(self):
         # One first-turn writer receipt cannot prove a two-turn S03 persist.
