@@ -27,7 +27,7 @@ PINS = {
     'owner_chat_browser_qa.py': '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9',
     'owner_chat_browser_transport_qa.py': '360c155642ccdb43f39acf7b493068d3d2ac906bfd761c60d8c5ee51d48507fe',
     'owner_chat_browser_release_qa.py': 'eaa8af0e229c9ce0a730b7b472f8b9b8a1018fbd5cf7b8518890342d9d7047cb',
-    'owner_chat_stream_only_qa.py': 'cfad3a0eee1728d89dd1ab7d6e451af284bc3ae12688f38f53955090b7bfe241',
+    'owner_chat_stream_only_qa.py': '64008d3965c29717a8236a12d817ac27fbf2f288f990b03f799409fcfe54ee1e',
 }
 ENV_SPEC = {'schema': 'NOX_OWNER_BROWSER_ENV_V1', 'playwright': '1.65.2',
             'base_python': '/root/nox/venv/bin/python', 'torch_modified': False}
@@ -130,7 +130,7 @@ def owner_context():
 
 def stop_present():
     paths = [ROOT / name for name in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP', 'state/STOP')]
-    paths.append(Path('/workspace/NOX_STOP'))
+    paths.extend((Path('/workspace/NOX_STOP'), ROOT / 'state' / 'OWNER_MAINTENANCE.flag'))
     return any(path.exists() or path.is_symlink() for path in paths)
 
 
