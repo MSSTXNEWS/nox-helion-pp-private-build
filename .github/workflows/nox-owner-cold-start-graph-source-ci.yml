@@ -1,0 +1,23 @@
+name: NOX owner cold startup graph source gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/nox-owner-cold-start-graph-source-ci.yml'
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_native_repair.py'
+      - 'nox-control/test_owner_cold_startup_projection.py'
+
+permissions:
+  contents: read
+
+jobs:
+  graph-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_repair.py
+      - run: python3 -B -m unittest discover -s nox-control -p 'test_owner_cold_startup_projection.py'
