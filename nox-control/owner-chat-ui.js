@@ -131,7 +131,8 @@
           ||!Number.isFinite(age)||age < -5||age>45
           ||value.read_only!==true||value.supervisor_rpc_calls!==0
           ||value.process_signals!==0||value.host_writes!==0
-          ||value.stop_command_sent!==false||value.live_stop_acceptance_proven!==false)
+          ||value.stop_command_sent!==false||value.live_stop_acceptance_proven!==false
+          ||value.evidence_scope!=='CONFIG_PREDICATES_ONLY')
           throw Error('UNAVAILABLE');
         if(value.state!=='OBSERVED'){
           const hold=typeof value.hold_reason==='string'
@@ -145,8 +146,10 @@
         const config=value.config_predicates,endpoint=value.endpoint_predicates;
         if(!config||!endpoint||stopConfigLabels.some(([,key])=>typeof (key in config?config[key]:endpoint[key])!=='boolean'))
           throw Error('UNVERIFIED');
+        const predicatesPass=Object.values(config).every(flag=>flag===true)
+          &&endpoint.endpoint_config_predicates_all_pass===true;
         stopConfigTitle.textContent='RPC конфигурация STOP · '
-          +(endpoint.endpoint_config_predicates_all_pass?'предикаты конфигурации прошли':'HOLD');
+          +(predicatesPass?'предикаты конфигурации прошли':'HOLD');
         stopConfigBody.replaceChildren();
         for(const [label,key] of stopConfigLabels){
           const pass=key in config?config[key]:endpoint[key];
