@@ -42,6 +42,33 @@ def tick(m=None, state=None, deferred=None, source=None, rows=None):
 
 
 class NativeReflexTests(unittest.TestCase):
+    def test_memory_projection_distinguishes_file_cache_and_shmem(self):
+        budget = {'current_bytes': 193*1024**3, 'max_bytes':194*1024**3,
+                  'file_bytes':188*1024**3, 'shmem_bytes':75*1024**3,
+                  'inactive_file_bytes':105*1024**3,
+                  'memory_psi_some_avg10':0, 'memory_psi_full_avg10':0}
+        decision = {'projected_memory_ratio': .462, 'eligible': True}
+        result = refill.memory_governor_projection(
+            {'bounded_cpu_budget':budget, 'bounded_cpu_decision':decision})
+        self.assertEqual(result['state'], 'CACHE_HEALTHY')
+        self.assertTrue(result['native_bounded_cpu_eligible'])
+        self.assertEqual(result['shmem_protected_bytes'], 75*1024**3)
+        self.assertFalse(result['global_cache_eviction'])
+
+    def test_memory_governor_pressure_and_missing_metadata_hold(self):
+        budget = {'current_bytes': 191*1024**3, 'max_bytes':194*1024**3,
+                  'file_bytes':150*1024**3, 'shmem_bytes':75*1024**3,
+                  'inactive_file_bytes':55*1024**3,
+                  'memory_psi_some_avg10':12, 'memory_psi_full_avg10':3}
+        decision = {'projected_memory_ratio':.97, 'eligible':False}
+        result = refill.memory_governor_projection(
+            {'bounded_cpu_budget':budget,'bounded_cpu_decision':decision})
+        self.assertEqual(result['state'],'PRESSURE_CRITICAL')
+        self.assertFalse(result['native_bounded_cpu_eligible'])
+        self.assertFalse(result['auto_reclaim'])
+        self.assertEqual(refill.memory_governor_projection({})['state'],
+                         'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE')
+
     def test_exhaustion_is_not_fake_job_or_approval(self):
         result = tick()
         self.assertEqual(result['state'], 'REFILL_REQUIRED')
@@ -64,6 +91,7 @@ class NativeReflexTests(unittest.TestCase):
 
     def test_failed_terminal_produces_new_review_not_replay(self):
         result = tick(state={'a':{
+            'handler':'owner_native_project_work',
             'status':'failed','systemic_relay':{'binding':{
                 'mission_id':'cache_fill_ttl','mission_revision':1,
                 'input_sha256':'f'*64}}}},
@@ -105,7 +133,8 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(tick(m=m,deferred=problems)['staged_count'],3)
 
     def test_active_jobs_do_not_report_idle(self):
-        state={'a': {'status':'running'},'b': {'status':'pending'}}
+        state={'a': {'handler':'owner_native_project_work','status':'running'},
+               'b': {'handler':'owner_native_typed_leaf','status':'pending'}}
         result=tick(state=state)
         self.assertEqual(result['state'],'EXECUTION_OR_ADMISSION_IN_PROGRESS')
 

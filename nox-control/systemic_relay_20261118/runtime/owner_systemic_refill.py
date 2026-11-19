@@ -300,6 +300,58 @@ def validate_binding(manifest, binding, row, contract):
 
 
 
+def memory_governor_projection(capacity):
+    """Cheap observation already captured by the existing native resource gate.
+
+    This never reloads model memory or reclaims the page cache. The resource
+    gate, STOP and lease retain exclusive permission to admit new jobs.
+    """
+    if not isinstance(capacity, dict):
+        return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
+                'state': 'RESOURCE_SNAPSHOT_UNKNOWN',
+                'auto_reclaim': False}
+    budget = capacity.get('bounded_cpu_budget')
+    decision = capacity.get('bounded_cpu_decision')
+    if not isinstance(budget, dict) or not isinstance(decision, dict):
+        return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
+                'state': 'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE',
+                'auto_reclaim': False}
+    fields = (budget.get('current_bytes'), budget.get('max_bytes'),
+              budget.get('inactive_file_bytes'), budget.get('shmem_bytes'),
+              decision.get('projected_memory_ratio'),
+              budget.get('memory_psi_some_avg10'),
+              budget.get('memory_psi_full_avg10'))
+    if (any(type(v) not in (int, float) or not math.isfinite(v) or v < 0
+            for v in fields)
+            or not 0 < budget['max_bytes']
+            or budget['shmem_bytes'] > budget.get('file_bytes', -1)):
+        return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
+                'state': 'RESOURCE_METADATA_HOLD',
+                'auto_reclaim': False}
+    raw_ratio = budget['current_bytes'] / budget['max_bytes']
+    psi_some = budget['memory_psi_some_avg10']
+    psi_full = budget['memory_psi_full_avg10']
+    if psi_full >= 2 or psi_some >= 10 or decision['projected_memory_ratio'] >= .94:
+        condition = 'PRESSURE_CRITICAL'
+    elif psi_full >= .2 or psi_some >= 2 or decision['projected_memory_ratio'] >= .85:
+        condition = 'PRESSURE_ELEVATED'
+    else:
+        condition = 'CACHE_HEALTHY'
+    return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
+            'state': condition,
+            'raw_cgroup_memory_ratio': raw_ratio,
+            'projected_memory_ratio': decision['projected_memory_ratio'],
+            'memory_psi_some_avg10': psi_some, 'memory_psi_full_avg10': psi_full,
+            'inactive_file_bytes': budget['inactive_file_bytes'],
+            'shmem_protected_bytes': budget['shmem_bytes'],
+            'native_bounded_cpu_eligible': decision.get('eligible') is True,
+            'next_action': ('REUSE_EXISTING_OWNER_ADMISSION' if decision.get('eligible') is True
+                            else 'RESPECT_EXISTING_RESOURCE_HOLD'),
+            'safe_disk_cleanup': 'OWNER_SHA_PINNED_AUDIT_AND_EXACT_EPHEMERAL_RECLAIM',
+            'auto_reclaim': False, 'global_cache_eviction': False,
+            'model_or_s03_mutation': False}
+
+
 def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_rows):
     """Continuous *read-only* NOX self-observation and task discovery.
 
@@ -318,9 +370,15 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
     parents = manifest['registry']['parents']
     states = {'not_seen':0, 'ready':len(admitted_rows), 'pending':0,
               'running':0, 'terminal':0, 'blocked':0, 'unknown':0}
+    # The outer NOX dispatcher also tracks many legacy catalog/track entries.
+    # Only these three native execution handlers count as native workload.
+    native_handlers = {'owner_native_subagent_review',
+                       'owner_native_typed_leaf', 'owner_native_project_work'}
+    native_observed = 0
     for row in tasks.values():
-        if not isinstance(row, dict):
+        if not isinstance(row, dict) or row.get('handler') not in native_handlers:
             continue
+        native_observed += 1
         status = row.get('status')
         if status in ('pending','admitted','prepared','retry','wait'):
             states['pending'] += 1
@@ -411,6 +469,8 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
         'state':('REFILL_REQUIRED' if exhausted else 'EXECUTION_OR_ADMISSION_IN_PROGRESS'),
         'worker_cap':3,'available_slots':capacity['slots_available'],
         'observed_task_counts':states,
+        'native_records_observed':native_observed,
+        'legacy_or_non_native_records_ignored':len(tasks)-native_observed,
         'registry_original_total':manifest['registry']['total_original_ids'],
         'registry_parents_indexed':len(parents),
         'unindexed_original_count':manifest['registry']['total_original_ids']-len(parents),
@@ -421,7 +481,8 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
         'new_native_jobs':len(admitted_rows),
         'next_action':('RUN_ADMITTED_VERIFIED_MISSIONS' if admitted_rows else
             'VERIFY_AND_PUBLISH_NEW_GROUNDED_TASKPACK'),
-        'performance_or_training_success_claimed':False}
+        'performance_or_training_success_claimed':False,
+        'memory_governor':memory_governor_projection(capacity)}
 
 def select_next(manifest, state_snapshot, source_pins, capacity):
     """Produce a bounded deterministic batch; never reset/reclaim an existing task."""
