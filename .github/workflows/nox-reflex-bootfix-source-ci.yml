@@ -4,6 +4,7 @@ on:
     branches: [repair/nox-reflex-bootfix-20261119]
     paths:
       - 'nox-control/systemic_relay_20261118/runtime/**'
+      - 'nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py'
       - 'nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py'
       - 'nox-control/owner_native_operator.py'
       - '.github/workflows/nox-reflex-bootfix-source-ci.yml'
