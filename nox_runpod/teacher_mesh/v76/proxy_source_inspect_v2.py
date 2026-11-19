@@ -19,6 +19,7 @@ MAX_SOURCE_BYTES = 1_000_000
 TARGETS = ("_trim_ctx", "_build_messages", "prepare_payload")
 MAX_KEYS_PER_SCOPE = 32
 MAX_DIRECT_CALLS = 32
+MODEL_SELECTOR_FIELDS = ("model",)
 KEY_PATTERN = __import__("re").compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
 CALL_SYMBOL_PATTERN = __import__("re").compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}(?:[.][A-Za-z_][A-Za-z0-9_]{0,63}){0,5}$")
 CALLBACK_CODES = tuple("C%02d" % n for n in range(1, 9))
@@ -70,17 +71,76 @@ def _call_symbol(node):
     symbol = ".".join(reversed(parts))
     return symbol if CALL_SYMBOL_PATTERN.fullmatch(symbol) else None
 
+def _walk_scope(statements):
+    # Traverse one lexical function scope; do not attribute nested function,
+    # class, or lambda expressions to the enclosing route/payload builder.
+    stack = list(reversed(statements))
+    while stack:
+        node = stack.pop()
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef,
+                             ast.ClassDef, ast.Lambda)):
+            continue
+        yield node
+        stack.extend(reversed(list(ast.iter_child_nodes(node))))
+
 def _direct_call_symbols(node):
     symbols = set()
-    # Walk function bodies only; route decorators and defaults are not calls
-    # made when the handler services a request.
-    for statement in node.body:
-        for child in ast.walk(statement):
-            if isinstance(child, ast.Call):
-                symbol = _call_symbol(child.func)
-                if symbol:
-                    symbols.add(symbol)
+    for child in _walk_scope(node.body):
+        if isinstance(child, ast.Call):
+            symbol = _call_symbol(child.func)
+            if symbol:
+                symbols.add(symbol)
     return sorted(symbols)[:MAX_DIRECT_CALLS]
+
+def _unknown_model_selector():
+    return {"state": "UNKNOWN", "field": "UNKNOWN", "expression": "UNKNOWN"}
+
+def _request_model_selector(route_node, payload_defs):
+    # Report only a direct route call to one unique prepare_payload function,
+    # with a simple Name argument mapped to that function's first parameter,
+    # and exactly one allow-listed direct dict access to the literal "model".
+    # Dynamic aliases, fallback literals, defaults, and multiple selectors
+    # deliberately remain UNKNOWN.
+    if len(payload_defs) != 1:
+        return _unknown_model_selector()
+    calls = []
+    for child in _walk_scope(route_node.body):
+        if (isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+                and child.func.id == "prepare_payload"
+                and len(child.args) == 1 and not child.keywords
+                and isinstance(child.args[0], ast.Name)):
+            calls.append(child)
+    if len(calls) != 1:
+        return _unknown_model_selector()
+    builder = payload_defs[0]
+    params = builder.args.posonlyargs + builder.args.args
+    if not params:
+        return _unknown_model_selector()
+    caller_arg = calls[0].args[0].id
+    payload_param = params[0].arg
+    selectors = set()
+    for child in _walk_scope(builder.body):
+        if isinstance(child, ast.Subscript) and isinstance(child.value, ast.Name):
+            key = child.slice
+            if (child.value.id == payload_param and isinstance(key, ast.Constant)
+                    and isinstance(key.value, str) and key.value in MODEL_SELECTOR_FIELDS):
+                selectors.add((child.value.id, "subscript"))
+        elif (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)
+              and child.func.attr == "get" and isinstance(child.func.value, ast.Name)
+              and child.func.value.id == payload_param and len(child.args) == 1
+              and not child.keywords and isinstance(child.args[0], ast.Constant)
+              and isinstance(child.args[0].value, str)
+              and child.args[0].value in MODEL_SELECTOR_FIELDS):
+            selectors.add((child.func.value.id, "get"))
+    if len(selectors) != 1:
+        return _unknown_model_selector()
+    _, access = next(iter(selectors))
+    suffix = '.get("model")' if access == "get" else '["model"]'
+    return {
+        "state": "OBSERVED_SOURCE_EXPRESSION",
+        "field": "model",
+        "expression": caller_arg + suffix,
+    }
 
 def _unknown_serving_bindings():
     return {
@@ -119,6 +179,11 @@ def analyze_source(raw):
 
     definitions = {name: [] for name in TARGETS}
     calls = {name: [] for name in TARGETS}
+    payload_defs = [
+        node for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "prepare_payload"
+    ]
     routes = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -157,7 +222,7 @@ def analyze_source(raw):
                         and path.value.startswith("/api/nox/chat")
                         and len(path.value) <= 120 and len(routes) < 24):
                     route_calls = []
-                    for child in ast.walk(node):
+                    for child in _walk_scope(node.body):
                         if isinstance(child, ast.Call):
                             called = (child.func.id if isinstance(child.func, ast.Name)
                                       else child.func.attr if isinstance(child.func, ast.Attribute)
@@ -171,6 +236,7 @@ def analyze_source(raw):
                         "handler_line": node.lineno,
                         "context_calls": route_calls[:3],
                         "direct_call_symbols": _direct_call_symbols(node),
+                        "request_model_selector": _request_model_selector(node, payload_defs),
                         "serving_bindings": _unknown_serving_bindings(),
                         "body_key_reads": _literal_body_keys(node),
                         "hydration_call_presence": _hydration_presence(node),
@@ -187,7 +253,7 @@ def analyze_source(raw):
         "functions": {name: rows for name, rows in definitions.items()},
         "callsites": {name: rows for name, rows in calls.items()},
         "chat_routes": routes,
-        "analysis_note": "AST-only; direct calls are explicit Name/Attribute symbols, not resolved bindings; bridge/model identity and C01-C08 callbacks remain UNKNOWN without a trusted runtime registry; no source text emitted",
+        "analysis_note": "AST-only; direct calls and request selector are narrowly allow-listed source expressions, not runtime bindings; loaded model identity and C01-C08 callbacks remain UNKNOWN; no literal values or source text emitted",
     }
 """
 
