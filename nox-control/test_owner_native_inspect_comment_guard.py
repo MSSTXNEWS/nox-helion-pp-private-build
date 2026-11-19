@@ -55,7 +55,7 @@ def event_for(body: str = f"/nox-maintain 60509551 {INSPECT_SHA} inspect") -> di
 class OwnerCommentGuardTests(unittest.TestCase):
     def test_mapped_memory_source_is_additive_and_read_only(self) -> None:
         self.assertEqual(MAPPED_MEMORY_INSPECT_SHA,
-                         "d882708c4ea7a8b7f4834b3b92168649845b33a7")
+                         "ad76f877bb1df29d360b5c885217024e4773725f")
         body = f"/nox-maintain 60509551 {MAPPED_MEMORY_INSPECT_SHA} inspect"
         self.assertEqual(authorize_event(event_for(body), REPOSITORY, "issue_comment"),
                          ("inspect", MAPPED_MEMORY_INSPECT_SHA))

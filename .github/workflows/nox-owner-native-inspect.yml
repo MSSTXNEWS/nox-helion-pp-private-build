@@ -124,7 +124,7 @@ jobs:
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: d882708c4ea7a8b7f4834b3b92168649845b33a7
+          ref: ad76f877bb1df29d360b5c885217024e4773725f
           path: mapped-memory-source
           persist-credentials: false
       - name: Test exact read-only mapped-memory attribution source
