@@ -104,6 +104,16 @@
     try{return await Promise.race([reader.read(),aborted]);}
     finally{signal.removeEventListener('abort',onAbort);}
   }
+  // JSON permits escaped lone UTF-16 surrogates even when the wire bytes
+  // are valid UTF-8. Never certify those decoded non-scalar strings as text.
+  function validUnicodeScalars(value) {
+    if(typeof value!=='string')return true;
+    for(const glyph of value){
+      const cp=glyph.codePointAt(0);
+      if(cp>=0xd800&&cp<=0xdfff)return false;
+    }
+    return true;
+  }
   async function consume(response,emit,signal) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
     const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
@@ -118,6 +128,8 @@
       let e;
       try{e=JSON.parse(str);}catch{throw Error('HOLD_NATIVE_FRAME_JSON');}
       if(!e||typeof e!=='object'||Array.isArray(e))throw Error('HOLD_NATIVE_FRAME_TYPE');
+      if(![e.type,e.text,e.model,e.exchange_id,e.stream_mode,e.error]
+          .every(validUnicodeScalars))throw Error('HOLD_NATIVE_FRAME_UNICODE');
       if(doneSeen){
         if(e.type==='done')throw Error('HOLD_DUPLICATE_DONE');
         throw Error('HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE');
