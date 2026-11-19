@@ -65,6 +65,7 @@ MAX_FD_ENTRIES_PER_PID = 16_384
 MAX_HOLDER_FD_BYTES = 1 * 1024 * 1024
 MAX_FD_LINK_BYTES = 4_096
 MAX_MAPS_BYTES = 2 * 1024 * 1024
+OWNER_LOCK_WAIT_SECONDS = 5.0
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 STATUS_LINE = re.compile(r"^([A-Za-z0-9_.:-]+)\s+(RUNNING|STOPPED|EXITED)(?:\s+pid\s+([0-9]+))?(?:,.*)?$")
 
@@ -110,10 +111,15 @@ def acquire_lock() -> int:
         if (not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or
                 st.st_nlink != 1 or st.st_mode & 0o022):
             fail("OWNER_LOCK_UNSAFE")
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            fail("OWNER_LOCK_BUSY")
+        deadline = time.monotonic() + OWNER_LOCK_WAIT_SECONDS
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    fail("OWNER_LOCK_BUSY_TIMEOUT")
+                time.sleep(min(0.1, max(0.0, deadline - time.monotonic())))
         PHASE["owner_lock"] = True
         return fd
     except BaseException:
@@ -227,11 +233,15 @@ def cgroup_path(pid: int) -> Path:
     return result
 
 
-def proc_start_ticks(pid: int, missing_ok: bool = False):
+def proc_stat_identity(pid: int, missing_ok: bool = False):
     path = Path("/proc") / str(pid) / "stat"
     try:
-        with path.open("rb") as stream:
-            raw = stream.read(MAX_STAT_BYTES + 1)
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
+                     getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+        try:
+            raw = os.read(fd, MAX_STAT_BYTES + 1)
+        finally:
+            os.close(fd)
     except FileNotFoundError:
         if missing_ok:
             return None
@@ -248,9 +258,17 @@ def proc_start_ticks(pid: int, missing_ok: bool = False):
         fields = text.rsplit(")", 1)[1].split()
         if len(fields) <= 19:
             fail("PROC_STAT_FIELDS_INCOMPLETE")
-        return int(fields[19])
+        if not fields[1].isdigit() or not fields[2].isdigit() or not fields[19].isdigit():
+            fail("PROC_STAT_FIELDS_INVALID")
+        return {"pid": pid, "ppid": int(fields[1]), "pgrp": int(fields[2]),
+                "start_ticks": int(fields[19])}
     except (ValueError, IndexError):
         fail("PROC_STAT_PARSE_FAILED")
+
+
+def proc_start_ticks(pid: int, missing_ok: bool = False):
+    identity = proc_stat_identity(pid, missing_ok=missing_ok)
+    return identity["start_ticks"] if identity is not None else None
 
 
 def stable_start_ticks(pid: int, expected_ticks: int = None, missing_ok: bool = False):
@@ -383,7 +401,10 @@ def model_environment_identity(pid: int, expected_ticks: int) -> dict:
 
 
 def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
+    stat_before = proc_stat_identity(pid)
     ticks = stable_start_ticks(pid, expected_ticks)
+    if stat_before["start_ticks"] != ticks:
+        fail(role + "_IDENTITY_CHANGED_DURING_READ")
     proc = Path("/proc") / str(pid)
     try:
         exe = os.readlink(proc / "exe")
@@ -438,17 +459,22 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
         exe_after = os.readlink(proc / "exe")
         with (proc / "cmdline").open("rb") as stream:
             raw_cmdline_after = stream.read(MAX_CMDLINE_BYTES + 1)
+        cwd_after = os.readlink(proc / "cwd") if role == "HOLDER" else None
     except OSError:
         fail(role + "_IDENTITY_REREAD_UNAVAILABLE")
+    stat_after = proc_stat_identity(pid)
     if (len(raw_cmdline_after) > MAX_CMDLINE_BYTES or
             not raw_cmdline_after.endswith(b"\0") or
             exe_after != exe or
+            (role == "HOLDER" and cwd_after != cwd) or
             hashlib.sha256(raw_cmdline_after).digest() !=
-            hashlib.sha256(raw_cmdline).digest()):
+            hashlib.sha256(raw_cmdline).digest() or
+            stat_after != stat_before):
         fail(role + "_EXEC_IDENTITY_CHANGED_DURING_READ")
     if stable_start_ticks(pid, expected_ticks) != ticks:
         fail(role + "_IDENTITY_CHANGED_DURING_READ")
     return {"pid": pid, "start_ticks": ticks, "exe": exe_name,
+            "ppid": stat_before["ppid"], "pgrp": stat_before["pgrp"],
             "argv_sha256": hashlib.sha256(b"\0".join(raw_argv)).hexdigest(),
             "environment_overrides": environment_overrides if role == "MODEL" else None,
             "cgroup": str(group)}
@@ -503,15 +529,29 @@ def fd_memfd_identity(pid: int, expected_ticks: int = HOLDER_START_TICKS) -> dic
 def model_maps_memfd(
     pid: int, memfd_device: int, expected_ticks: int = MODEL_START_TICKS
 ) -> bool:
-    before = stable_start_ticks(pid, expected_ticks)
+    before = proc_stat_identity(pid)
+    if before["start_ticks"] != expected_ticks:
+        fail("MODEL_MAPS_PROCESS_CHANGED")
     rows = read_maps_bounded(pid)
     if rows is None:
         fail("MODEL_MAPS_UNAVAILABLE_OR_OVER_LIMIT")
     if not mapped_inode(rows, memfd_device, MEMFD_INODE):
         fail("MODEL_MEMFD_MAPPING_NOT_PRESENT")
-    if stable_start_ticks(pid, expected_ticks) != before:
+    after = proc_stat_identity(pid)
+    if after != before:
         fail("MODEL_MAPS_PROCESS_CHANGED")
     return True
+
+
+def require_holder_outside_model_group(model: dict, holder: dict) -> None:
+    if (type(model.get("pgrp")) is not int or type(holder.get("pgrp")) is not int or
+            model["pgrp"] == holder["pgrp"]):
+        fail("HOLDER_IN_MODEL_PROCESS_GROUP")
+
+
+def require_same_process_identity(before: dict, after: dict, role: str) -> None:
+    if before != after:
+        fail(role + "_FULL_IDENTITY_CHANGED")
 
 
 def memory_headroom(group: Path) -> dict:
@@ -572,10 +612,16 @@ def run_action(request_id: int, source_sha: str) -> dict:
     status = require_model_running()
     model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
     holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
+    require_holder_outside_model_group(model, holder)
     if model["cgroup"] != holder["cgroup"]:
         fail("TARGETS_NOT_IN_SAME_CGROUP")
     memfd = fd_memfd_identity(HOLDER_PID)
     model_maps_memfd(MODEL_PID, memfd["device"])
+    model_after_maps = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
+    holder_after_maps = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
+    require_same_process_identity(model, model_after_maps, "MODEL_AFTER_MAPS")
+    require_same_process_identity(holder, holder_after_maps, "HOLDER_AFTER_MAPS")
+    require_holder_outside_model_group(model_after_maps, holder_after_maps)
     before = memory_headroom(Path(model["cgroup"]))
     if before["headroom"] >= MIN_HEADROOM:
         fail("HEADROOM_ALREADY_SAFE")
@@ -591,8 +637,11 @@ def run_action(request_id: int, source_sha: str) -> dict:
             model["environment_overrides"]["environment_map_sha256"]):
         fail("MODEL_IDENTITY_OR_ENVIRONMENT_CHANGED_BEFORE_STOP")
     latest_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
+    require_holder_outside_model_group(latest_model, latest_holder)
     if latest_holder["cgroup"] != holder["cgroup"]:
         fail("HOLDER_CGROUP_CHANGED_BEFORE_STOP")
+    require_same_process_identity(model, latest_model, "MODEL_PRE_STOP")
+    require_same_process_identity(holder, latest_holder, "HOLDER_PRE_STOP")
     latest_memfd = fd_memfd_identity(HOLDER_PID)
     if (latest_memfd["device"] != memfd["device"] or
             latest_memfd["inode"] != memfd["inode"] or
@@ -604,12 +653,21 @@ def run_action(request_id: int, source_sha: str) -> dict:
         fail("HEADROOM_RECOVERED_BEFORE_STOP")
     # Re-read relevant environment after the cgroup check; only a digest is retained.
     final_model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
+    final_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
+    require_holder_outside_model_group(final_model, final_holder)
     if (final_model["cgroup"] != model["cgroup"] or
             final_model["environment_overrides"]["environment_map_sha256"] !=
             model["environment_overrides"]["environment_map_sha256"]):
         fail("MODEL_IDENTITY_OR_ENVIRONMENT_CHANGED_IMMEDIATELY_BEFORE_STOP")
-    # Recheck the attested memfd mapping at the last point before Supervisor stop.
+    require_same_process_identity(model, final_model, "MODEL_IMMEDIATELY_BEFORE_STOP")
+    require_same_process_identity(holder, final_holder, "HOLDER_IMMEDIATELY_BEFORE_STOP")
+    # Recheck mapping, then reread both full identities at the final admission point.
     model_maps_memfd(MODEL_PID, memfd["device"], MODEL_START_TICKS)
+    last_model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
+    last_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
+    require_same_process_identity(model, last_model, "MODEL_AFTER_FINAL_MAPS")
+    require_same_process_identity(holder, last_holder, "HOLDER_AFTER_FINAL_MAPS")
+    require_holder_outside_model_group(last_model, last_holder)
 
     PHASE["model_stop_requested"] = True
     stopped = command(["supervisorctl", "stop", SUPERVISOR_SERVICE], timeout=35)
@@ -633,6 +691,8 @@ def run_action(request_id: int, source_sha: str) -> dict:
                       after_model["headroom"] >= MIN_HEADROOM else
                       "MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_STILL_SHORT"),
             "model": model, "holder": holder, "memfd": memfd,
+            "process_groups": {"model": model["pgrp"], "holder": holder["pgrp"],
+                               "holder_separate_from_model": True},
             "before": before, "pre_stop": pre_stop,
             "after_model": after_model, "minimum_headroom": MIN_HEADROOM,
             "model_pid_state": model_pid_state, "markers": fence,
