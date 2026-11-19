@@ -120,7 +120,8 @@ def process_identity(pid):
 def chat_priority_active():
     path = ROOT/'state/chat_active'
     try:
-        return path.is_symlink() or 0 <= time.time()-path.stat().st_mtime < 3
+        # A future-dated marker is uncertain: preserve priority for owner chat.
+        return path.is_symlink() or time.time()-path.stat().st_mtime < 3
     except FileNotFoundError:
         return False
     except OSError:
@@ -350,7 +351,7 @@ def s03_readback(receipt):
         meta = json.loads(rows[0][2])
     except (ValueError, TypeError):
         return None
-    if meta.get('receipt') != receipt:
+    if not isinstance(meta, dict) or meta.get('receipt') != receipt:
         return None
     return {'native_verified': True, 'task_id': receipt['task_id'], 'job_id': receipt['job_id'],
             'receipt_sha256': digest(encoded(receipt)), 's03_item_id': rows[0][0],
@@ -852,6 +853,10 @@ class Native:
         if self._pool_recovery_uncertain:
             return 'HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN'
         try:
+            # Re-check immediately before every native submit, including CPU
+            # leaf/project work: the owner chat may start after queue admission.
+            if chat_priority_active():
+                return 'HOLD_NATIVE_CHAT_PRIORITY'
             return resource_wait_reason(self.read_resource_snapshot(leaf_only=leaf_only))
         except (OSError, ValueError, TypeError, KeyError, GateError):
             return 'HOLD_NATIVE_SUBAGENT_ADMISSION'
@@ -1375,6 +1380,208 @@ class Native:
                 and CLAIM.fullmatch(str(claim.get('nonce', ''))) is not None
                 and persisted.get('owner_claim') == claim and claim.get('pid') == os.getpid())
 
+    def _durable_submit_fence(self, task):
+        """Write/read back one original-queue intent BEFORE potentially ambiguous IPC.
+
+        An intent is not proof of worker execution, completion or S03 commit.
+        On restart it deliberately blocks replay until an owner can reconcile
+        the exact claim, worker lifetime and terminal S03 receipt.
+        """
+        task_id = task['id']
+        with self.ns['_qlock']:
+            persisted = document(self.ns['STATE'], 16*1024*1024)
+            disk_row = (persisted.get('tasks') or {}).get(task_id)
+            live_row = (self.state or {}).get('tasks', {}).get(task_id)
+            if not isinstance(disk_row, dict) or not isinstance(live_row, dict):
+                raise GateError('HOLD_NATIVE_SUBMIT_STATE_MISSING')
+            # Existing queue is the only writer; never overwrite newer state.
+            if (disk_row != live_row or disk_row.get('status') != 'running'
+                    or task.get('status') != 'running'
+                    or disk_row.get('owner_claim') != task.get('owner_claim')
+                    or disk_row.get('handler') != task.get('handler')
+                    or disk_row.get('params') != task.get('params')):
+                raise GateError('HOLD_NATIVE_SUBMIT_OWNER_CAS')
+            if 'native_worker_submit_intent' in disk_row:
+                raise GateError('HOLD_NATIVE_SUBMIT_INTENT_UNSETTLED')
+            marker = {'schema': 'NOX_NATIVE_WORKER_SUBMIT_INTENT_V1',
+                      'task_id': task_id, 'handler': task['handler'],
+                      'owner_claim': task['owner_claim'],
+                      'job_id': task['params']['job_id'],
+                      'source_sha256': self.source,
+                      'created_at': time.time()}
+            live_row['native_worker_submit_intent'] = marker
+            try:
+                self.ns['save_state'](self.state)
+                readback = document(self.ns['STATE'], 16*1024*1024)
+                saved = readback['tasks'][task_id]
+                if (saved.get('native_worker_submit_intent') != marker
+                        or saved.get('owner_claim') != task['owner_claim']
+                        or saved.get('status') != 'running'):
+                    raise GateError('HOLD_NATIVE_SUBMIT_INTENT_READBACK')
+            except Exception:
+                # A failed save/readback may still have committed the marker.
+                # Never allow IPC after that uncertainty.
+                self._pool_recovery_uncertain = True
+                raise GateError('HOLD_NATIVE_SUBMIT_INTENT_READBACK') from None
+            return marker
+
+    def _durable_terminal_fence(self, task, receipt):
+        """Preserve COMPLETE validated terminal receipt before uncertain S03.
+
+        Existing owner queue is the only writer. This is evidence, never
+        permission to replay IPC or bypass STOP, owner, lease or resource gates.
+        """
+        phase = ({HANDLER: 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED',
+                  LEAF_HANDLER: 'NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED'}
+                 .get(task.get('handler')))
+        if (phase is None or not isinstance(receipt, dict)
+                or receipt.get('schema') != RECEIPT or receipt.get('phase') != phase
+                or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
+                or receipt.get('claim') != task.get('owner_claim')
+                or receipt.get('source_sha256') != self.source):
+            raise GateError('HOLD_NATIVE_TERMINAL_CONTRACT')
+        with self.ns['_qlock']:
+            disk = document(self.ns['STATE'], 16*1024*1024)
+            stored = (disk.get('tasks') or {}).get(task['id'])
+            live = (self.state or {}).get('tasks', {}).get(task['id'])
+            if (not isinstance(stored, dict) or not isinstance(live, dict)
+                    or stored != live or stored.get('status') != 'running'
+                    or stored.get('owner_claim') != task.get('owner_claim')):
+                raise GateError('HOLD_NATIVE_TERMINAL_OWNER_CAS')
+            intent = stored.get('native_worker_submit_intent')
+            if (not isinstance(intent, dict)
+                    or intent.get('schema') != 'NOX_NATIVE_WORKER_SUBMIT_INTENT_V1'
+                    or intent.get('task_id') != task['id']
+                    or intent.get('handler') != task['handler']
+                    or intent.get('owner_claim') != task['owner_claim']
+                    or intent.get('job_id') != receipt['job_id']
+                    or intent.get('source_sha256') != self.source
+                    or 'native_worker_terminal_evidence' in stored):
+                raise GateError('HOLD_NATIVE_TERMINAL_INTENT_UNSETTLED')
+            evidence = {'schema': 'NOX_NATIVE_WORKER_TERMINAL_EVIDENCE_V1',
+                        'submit_intent_sha256': digest(encoded(intent)),
+                        'receipt_sha256': digest(encoded(receipt)),
+                        'receipt': receipt}
+            live['native_worker_terminal_evidence'] = evidence
+            try:
+                # Never clip the receipt: oversized state is a fail-closed HOLD.
+                if len(encoded(self.state)) > 16*1024*1024:
+                    raise GateError('HOLD_NATIVE_TERMINAL_STATE_SCOPE')
+                self.ns['save_state'](self.state)
+                saved = (document(self.ns['STATE'], 16*1024*1024)
+                         .get('tasks') or {}).get(task['id'], {})
+                if (saved.get('native_worker_terminal_evidence') != evidence
+                        or saved.get('native_worker_submit_intent') != intent
+                        or saved.get('owner_claim') != task['owner_claim']
+                        or saved.get('status') != 'running'):
+                    raise GateError('HOLD_NATIVE_TERMINAL_READBACK')
+            except Exception:
+                self._pool_recovery_uncertain = True
+                raise GateError('HOLD_NATIVE_TERMINAL_READBACK') from None
+            return evidence
+
+    def _durable_terminal_s03_readback(self, task_id):
+        """Read-only exact receipt/S03 reconciliation; never clears a claim."""
+        # A damaged or partially written original queue must not throw during
+        # STOP/reconnect recovery or be mistaken for permission to replay IPC.
+        try:
+            with self.ns['_qlock']:
+                snapshot = document(self.ns['STATE'], 16*1024*1024)
+                tasks = snapshot.get('tasks') if isinstance(snapshot, dict) else None
+                row = tasks.get(task_id) if isinstance(tasks, dict) else None
+        except (OSError, ValueError, TypeError, KeyError, GateError):
+            return None
+        if not isinstance(row, dict) or not isinstance(row.get('params'), dict):
+            return None
+        intent = row.get('native_worker_submit_intent')
+        terminal = row.get('native_worker_terminal_evidence')
+        if not isinstance(intent, dict) or not isinstance(terminal, dict):
+            return None
+        receipt = terminal.get('receipt')
+        # A damaged JSON value may be valid JSON but invalid canonical proof.
+        # Do not allow a serializer exception to interrupt restart recovery.
+        try:
+            intent_hash = digest(encoded(intent))
+            receipt_hash = digest(encoded(receipt)) if isinstance(receipt, dict) else None
+        except (TypeError, ValueError, OverflowError):
+            return None
+        phase = ({HANDLER: 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED',
+                  LEAF_HANDLER: 'NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED'}
+                 .get(row.get('handler')))
+        if (terminal.get('schema') != 'NOX_NATIVE_WORKER_TERMINAL_EVIDENCE_V1'
+                or intent.get('schema') != 'NOX_NATIVE_WORKER_SUBMIT_INTENT_V1'
+                or not isinstance(receipt, dict) or phase is None
+                or terminal.get('submit_intent_sha256') != intent_hash
+                or terminal.get('receipt_sha256') != receipt_hash
+                or intent.get('task_id') != task_id
+                or intent.get('owner_claim') != row.get('owner_claim')
+                or intent.get('handler') != row.get('handler')
+                or intent.get('job_id') != (row.get('params') or {}).get('job_id')
+                or intent.get('source_sha256') != receipt.get('source_sha256')
+                or receipt.get('schema') != RECEIPT or receipt.get('phase') != phase
+                or receipt.get('task_id') != task_id
+                or receipt.get('job_id') != intent.get('job_id')
+                or receipt.get('claim') != row.get('owner_claim')
+                # A leaf may never transform a child technical check into an
+                # accepted parent job, or reconcile a different queue claim.
+                or (row.get('handler') == LEAF_HANDLER and
+                    (receipt.get('parent_task_id') != row.get('parent_task_id')
+                     or receipt.get('queue_id') != row.get('queue_id')
+                     or receipt.get('original_task_accepted') is not False
+                     or receipt.get('scope') != 'SUBTASK_COMPLETED_ORIGINAL_NOT_ACCEPTED'))):
+            return None
+        try:
+            proof = s03_readback(receipt)
+        except (OSError, ValueError, sqlite3.Error, GateError):
+            # An unavailable/ambiguous S03 reader is not terminal settlement.
+            # Preserve the original claim and never authorize a fresh IPC.
+            return None
+        # A matching digest alone is not a verified canonical S03 receipt:
+        # bind the independent reader's task, job, phase, row and DB identity.
+        # Missing/falsey/mismatched fields must never settle an interrupted IPC.
+        if (not isinstance(proof, dict)
+                or proof.get('native_verified') is not True
+                or proof.get('receipt_sha256') != terminal['receipt_sha256']
+                or proof.get('task_id') != task_id
+                or proof.get('job_id') != intent['job_id']
+                or proof.get('phase') != phase
+                or type(proof.get('s03_item_id')) is not int
+                or proof['s03_item_id'] <= 0
+                or proof.get('database') != str(DB)):
+            return None
+        # S03 may have blocked while a lease/claim writer changed the row.
+        # Never report a terminal result against an outdated queue snapshot.
+        try:
+            with self.ns['_qlock']:
+                refreshed = document(self.ns['STATE'], 16*1024*1024)
+                tasks = refreshed.get('tasks') if isinstance(refreshed, dict) else None
+                current = tasks.get(task_id) if isinstance(tasks, dict) else None
+        except (OSError, ValueError, TypeError, KeyError, GateError):
+            return None
+        if current != row:
+            return None
+        return {'receipt': receipt, 's03': proof,
+                'submit_intent_sha256': terminal['submit_intent_sha256']}
+
+    def _durable_completion_fence(self, task, receipt, proof):
+        """Final read-only claim/S03 gate after the potentially blocking S03 POST.
+
+        A correct S03 row cannot settle a task if the owner, STOP or chat
+        priority changed while the receipt was being written/read. Never
+        resubmit the worker or issue another S03 POST from this method.
+        """
+        settled = self._durable_terminal_s03_readback(task['id'])
+        if (not isinstance(settled, dict)
+                or settled.get('receipt') != receipt
+                or settled.get('s03') != proof):
+            raise GateError('HOLD_NATIVE_TERMINAL_FINAL_READBACK')
+        if (self.stop_active() or chat_priority_active()
+                or not self.writer_lease()
+                or not self._claim_current(task, durable=True)):
+            raise GateError('HOLD_NATIVE_TERMINAL_FINAL_OWNER')
+        return settled
+
     def _drain(self):
         if self.pool is None:
             return
@@ -1411,6 +1618,9 @@ class Native:
             return False, 'HOLD_SUBAGENT_NATIVE_CLAIM'
         if self.stop_active() or not self.writer_lease():
             return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
+        with self.lock:
+            if task['id'] in self.interrupted:
+                return 'wait', 'HOLD_NATIVE_INTERRUPTED_UNSETTLED'
         if self.pool is None:
             try:
                 reason = self._fresh_admission_reason()
@@ -1420,6 +1630,7 @@ class Native:
                     return 'wait', 'HOLD_SUBAGENT_POOL_NOT_READY'
             except (OSError, ValueError, autonomy.AutoHold):
                 return 'wait', 'HOLD_NATIVE_SUBAGENT_ADMISSION'
+        worker_submit_attempted = False
         try:
             with self.lock:
                 if self.pool is None:
@@ -1430,7 +1641,13 @@ class Native:
                 reason = self._fresh_admission_reason()
                 if reason:
                     return 'wait', reason
-                self.interrupted.pop(task['id'], None)
+                if task['id'] in self.interrupted:
+                    return 'wait', 'HOLD_NATIVE_INTERRUPTED_UNSETTLED'
+                try:
+                    self._durable_submit_fence(task)
+                except GateError as exc:
+                    return 'wait', str(exc)
+                worker_submit_attempted = True  # IPC delivery is ambiguous on submit failure.
                 self.pool.submit({'id': task['id'], 'subagent': role, 'task': task['title'], 'depends_on': [],
                     '_native_context': {'policy': self.policy, 'operation': role,
                                         'claim': task['owner_claim']['nonce']}})
@@ -1444,7 +1661,7 @@ class Native:
                     self.close_pool('WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
                     return 'wait', 'WAIT_OWNER_STOP_OR_CHAT_PRIORITY'
                 with self.lock:
-                    reason = self.interrupted.pop(task['id'], None)
+                    reason = self.interrupted.get(task['id'])
                     if reason:
                         return 'wait', reason
                     self._drain()
@@ -1453,8 +1670,14 @@ class Native:
                     break
                 time.sleep(0.1)
             if event is None:
-                self.close_pool()
+                self.close_pool('HOLD_SUBAGENT_RESULT_TIMEOUT')
+                with self.lock:
+                    self.interrupted[task['id']] = 'HOLD_SUBAGENT_RESULT_TIMEOUT'
                 raise GateError('HOLD_SUBAGENT_RESULT_TIMEOUT')
+            # IPC may deliver a truncated/non-object completion after worker execution.
+            # The event was already popped: preserve the claim's no-replay HOLD.
+            if not isinstance(event, dict):
+                raise GateError('HOLD_NATIVE_REVIEW_RESULT_SHAPE')
             if event.get('state') != 'CANDIDATE_NOT_APPLIED':
                 raise GateError(event.get('state', 'HOLD_SUBAGENT_RESULT'))
             # The original queue redacts every result with this same function.
@@ -1474,14 +1697,27 @@ class Native:
                       'training_started': False, 'optimizer_steps_verified': False,
                       'service_or_weights_changed': False}
             if not self._claim_current(task, durable=True):
+                with self.lock:
+                    self.interrupted[task['id']] = 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
                 raise GateError('HOLD_NATIVE_OWNER_CLAIM_CHANGED')
             if self.stop_active() or chat_priority_active():
-                return 'wait', 'WAIT_OWNER_STOP_OR_CHAT_PRIORITY'
+                # The worker result has already left the IPC completed map.
+                # Without this marker, the next tick could submit it again.
+                with self.lock:
+                    self.interrupted[task['id']] = 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
+                return 'wait', 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
+            self._durable_terminal_fence(task, result)
             proof = remember(result)
+            self._durable_completion_fence(task, result, proof)
             return True, {'schema': RECEIPT, 'verified': True, 'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT',
                           'receipt': result, 's03': proof, 'receipt_sha256': digest(encoded(result)),
                           'candidate_applied': False}
         except (OSError, ValueError, sqlite3.Error, GateError) as exc:
+            if worker_submit_attempted:
+                # S03 write/readback may have committed before raising. A second
+                # worker call would duplicate an unresolved owner claim.
+                with self.lock:
+                    self.interrupted.setdefault(task['id'], 'HOLD_NATIVE_REVIEW_ERROR_UNSETTLED')
             return False, str(exc) if isinstance(exc, GateError) else 'HOLD_SUBAGENT_NATIVE_IO'
 
     def _handle_leaf(self, task):
@@ -1494,10 +1730,15 @@ class Native:
                 or task.get('queue_id') != approved['queue_id']
                 or not self._claim_current(task, durable=True)):
             return False, 'HOLD_NATIVE_LEAF_CLAIM'
+        worker_submit_attempted = False
         try:
             if self.stop_active() or not self.writer_lease() or not self.owner_allowed():
                 return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
             with self.lock:
+                # An earlier interrupted execution may have produced an unobserved
+                # result. Never replay the same claim without owner reconciliation.
+                if task['id'] in self.interrupted:
+                    return 'wait', 'HOLD_NATIVE_INTERRUPTED_UNSETTLED'
                 reason = self._fresh_admission_reason(leaf_only=True)
                 if reason:
                     return 'wait', reason
@@ -1508,10 +1749,19 @@ class Native:
                 role = next((role for role in ROLES if role not in self.pool.active), None)
                 if role is None:
                     return 'wait', 'WAIT_NATIVE_LEAF_WORKER'
-                self.interrupted.pop(task['id'], None)
                 identity = next((row for row in self.process_readback() if row['role'] == role), None)
                 if identity is None:
                     return 'wait', 'HOLD_NATIVE_LEAF_WORKER_IDENTITY'
+                # Pool boot and process readback can take time. A new owner
+                # chat after the first gate must prevent any worker submit.
+                reason = self._fresh_admission_reason(leaf_only=True)
+                if reason:
+                    return 'wait', reason
+                try:
+                    self._durable_submit_fence(task)
+                except GateError as exc:
+                    return 'wait', str(exc)
+                worker_submit_attempted = True  # IPC delivery is ambiguous on submit failure.
                 self.pool.submit({'id':task['id'], 'subagent':role, 'task':task['title'], 'depends_on':[],
                     '_native_leaf_context':{'operation':params['operation'],
                         'parent_task_id':params['parent_task_id'], 'queue_id':task['queue_id'],
@@ -1521,10 +1771,19 @@ class Native:
             event = None
             while time.monotonic() < deadline:
                 if not self._claim_current(task) or self.stop_active() or not self.writer_lease():
+                    # Worker submission is ambiguous even if its active slot cleared.
+                    with self.lock:
+                        self.interrupted[task['id']] = 'HOLD_NATIVE_LEAF_EXECUTION_UNSETTLED'
                     self.close_pool('WAIT_OWNER_STOP_OR_CLAIM_CHANGED')
                     return 'wait', 'WAIT_OWNER_STOP_OR_CLAIM_CHANGED'
+                if chat_priority_active():
+                    # Yield to a newly arrived chat; never replay an unknown IPC outcome.
+                    with self.lock:
+                        self.interrupted[task['id']] = 'HOLD_NATIVE_LEAF_CHAT_UNSETTLED'
+                    self.close_pool('WAIT_OWNER_CHAT_PRIORITY')
+                    return 'wait', 'WAIT_OWNER_CHAT_PRIORITY'
                 with self.lock:
-                    reason = self.interrupted.pop(task['id'], None)
+                    reason = self.interrupted.get(task['id'])
                     if reason:
                         return 'wait', reason
                     self._drain()
@@ -1535,6 +1794,10 @@ class Native:
             if event is None:
                 self.close_pool('HOLD_NATIVE_LEAF_TIMEOUT')
                 raise GateError('HOLD_NATIVE_LEAF_TIMEOUT')
+            # Invalid IPC payload after pop must enter the caught unsettled
+            # path, not escape as AttributeError and discard replay evidence.
+            if not isinstance(event, dict):
+                raise GateError('HOLD_NATIVE_LEAF_RESULT_SHAPE')
             leaf = event.get('leaf_evidence') or {}
             worker = leaf.get('worker') or {}
             if (event.get('state') != 'NATIVE_LEAF_COMPLETED'
@@ -1567,9 +1830,16 @@ class Native:
                       'source_sha256':self.source, 'worker_result':event, 'finished_at':time.time(),
                       'original_task_accepted':False, 'training_started':False,
                       'optimizer_steps_verified':False, 'service_or_weights_changed':False}
-            if not self._claim_current(task, durable=True) or self.stop_active() or not self.writer_lease():
-                return 'wait', 'HOLD_NATIVE_LEAF_FINAL_CLAIM'
+            if (not self._claim_current(task, durable=True) or self.stop_active()
+                    or not self.writer_lease() or chat_priority_active()):
+                # Post-pop loss of owner admission/chat cannot discard a completed
+                # result or authorize a second worker call for the same claim.
+                with self.lock:
+                    self.interrupted[task['id']] = 'HOLD_NATIVE_LEAF_RESULT_UNSETTLED'
+                return 'wait', 'HOLD_NATIVE_LEAF_RESULT_UNSETTLED'
+            self._durable_terminal_fence(task, result)
             proof = remember(result)
+            self._durable_completion_fence(task, result, proof)
             # Only the explicitly named read/check subtask is completed. A
             # failed check remains check_passed=False, with its blockers; the
             # original project task is never accepted or rewritten here.
@@ -1578,6 +1848,10 @@ class Native:
                 's03':proof, 'receipt_sha256':digest(encoded(result)),
                 'original_task_accepted':False, 'check_passed':leaf['check_passed']}
         except (OSError, ValueError, sqlite3.Error, GateError) as exc:
+            if worker_submit_attempted:
+                # Fail closed on uncertain S03 commit or worker result proof.
+                with self.lock:
+                    self.interrupted.setdefault(task['id'], 'HOLD_NATIVE_LEAF_ERROR_UNSETTLED')
             return False, str(exc) if isinstance(exc, GateError) else 'HOLD_NATIVE_LEAF_IO'
 
     def verify(self, task, evidence):
@@ -1588,13 +1862,21 @@ class Native:
         if task.get('handler') != HANDLER or not isinstance(evidence, dict):
             return None
         receipt = evidence.get('receipt')
-        if (not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
+        if (not isinstance(receipt, dict) or evidence.get('verified') is not True
+                or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
                 or receipt.get('phase') != 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED'
                 or receipt.get('claim') != task.get('owner_claim')
                 or receipt.get('source_sha256') != self.source
                 or digest(encoded(receipt)) != evidence.get('receipt_sha256')):
             return None
-        proof = s03_readback(receipt)
+        # The final verifier must not downgrade the earlier STOP/chat/claim
+        # fence to a standalone S03 existence check after run_one resumes.
+        try:
+            settled = self._durable_completion_fence(task, receipt, evidence.get('s03'))
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error, GateError):
+            return None
+        proof = settled.get('s03') if isinstance(settled, dict) else None
         if proof:
             return {'kind': 'bounded_native_component_check', 'task_id': task['id'],
                     'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT', 'receipt_sha256': proof['receipt_sha256'],
@@ -1606,7 +1888,9 @@ class Native:
         if not isinstance(evidence, dict):
             return None
         receipt = evidence.get('receipt')
-        if (not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
+        if (not isinstance(receipt, dict) or evidence.get('verified') is not True
+                or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
                 or receipt.get('phase') != 'NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED'
                 or receipt.get('claim') != task.get('owner_claim')
                 or receipt.get('parent_task_id') != task.get('parent_task_id')
@@ -1615,7 +1899,11 @@ class Native:
                 or not self.receipt_source_allowed(task, receipt)
                 or digest(encoded(receipt)) != evidence.get('receipt_sha256')):
             return None
-        proof = s03_readback(receipt)
+        try:
+            settled = self._durable_completion_fence(task, receipt, evidence.get('s03'))
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error, GateError):
+            return None
+        proof = settled.get('s03') if isinstance(settled, dict) else None
         if proof:
             return {'kind':'bounded_native_component_check', 'task_id':task['id'],
                     'parent_task_id':task['parent_task_id'],
@@ -1762,7 +2050,11 @@ def bind_dispatcher(namespace):
     namespace['owner_mentor'].verify_success = verify
     old_admission = namespace['_nox_owner_task_admitted']
     def admission(task):
-        if task.get('handler') == HANDLER and (native.stop_active() or chat_priority_active()):
+        # Chat priority applies to every native job type, including CPU-only
+        # leaf and project jobs; existing STOP/claim/resource gates remain.
+        if task.get('handler') in (HANDLER, LEAF_HANDLER, PROJECT_HANDLER) and chat_priority_active():
+            return False
+        if task.get('handler') == HANDLER and native.stop_active():
             return False  # Keep paused jobs pending until the original gate opens.
         if task.get('handler') == LEAF_HANDLER and native.stop_active():
             return False
