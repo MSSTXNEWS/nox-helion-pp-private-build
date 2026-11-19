@@ -231,7 +231,8 @@ function sseChat(data,signal) {
 					if(detail?.error==='HOLD_ACTIVE_SESSION_STREAM')throw Error('HOLD_NATIVE_STREAM_HOLD_ACTIVE_SESSION_STREAM');
 					if(timed)throw Error('HOLD_409');
 					throw Error('HOLD_409_REJECTED');
-				}				const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
+				}
+				const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
 				const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
 				let trailing='';
 				const emitPieces=async t=>{
