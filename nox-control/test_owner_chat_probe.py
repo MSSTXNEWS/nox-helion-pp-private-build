@@ -244,8 +244,16 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(http.call_args.args[1], '/slots')
         self.assertEqual(http.call_args.kwargs['base'], 'http://127.0.0.1:8098')
         self.assertTrue(good.closed)
+        both = SlotsResponse([{'is_processing': False, 'processing': False},
+                              {'is_processing': True, 'processing': True}])
+        with patch.object(probe, 'request', return_value=both):
+            self.assertEqual(probe.model_slots_state(object()), {'count': 2, 'busy': 1})
+        self.assertTrue(both.closed)
         for invalid in ([], {}, [{'id': 1}], [{'is_processing': 0}],
-                        [{'is_processing': 'false'}], [None]):
+                        [{'is_processing': 'false'}], [None],
+                        [{'is_processing': False, 'processing': True}],
+                        [{'is_processing': True, 'processing': False}],
+                        [{'is_processing': False, 'processing': 0}]):
             with self.subTest(invalid=invalid), patch.object(
                     probe, 'request', return_value=SlotsResponse(invalid)):
                 with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_SLOTS_STATE_UNVERIFIED$'):
