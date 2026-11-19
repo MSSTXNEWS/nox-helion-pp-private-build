@@ -1,0 +1,90 @@
+{
+  "schema": "NOX_GGUF_INFERENCE_ROUTE_MANIFEST_V1",
+  "task_id": "4A01",
+  "task_spec_sha256": "c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486",
+  "status": "SOURCE_PINNED_INFERENCE_ONLY_WEIGHTS_NOT_DOWNLOADED_RUNTIME_UNVERIFIED",
+  "separation": {
+    "canonical_training_source": "deepseek-ai/DeepSeek-V4.1-Flash-1017@08c8657f02291e11b6f6b63e0e16014f8e748518 (source-adapted BF16 LoRA recipe in the training manifest)",
+    "gguf_route_role": "separate inference-only quantized route; GGUF files are not training weights and do not replace the pinned HF training source",
+    "route_source": "The frozen 4A01 title explicitly declares a separate GGUF inference route; this manifest records it without claiming runtime installation or acceptance."
+  },
+  "gguf_model": {
+    "repo_id": "ggml-org/DeepSeek-V4.1-Flash-1017-GGUF",
+    "repo_revision": "6bc1f89d4b7ae7125ce9a795ea20ef6b5d0e8099",
+    "repository_url": "https://huggingface.co/ggml-org/DeepSeek-V4.1-Flash-1017-GGUF/tree/6bc1f89d4b7ae7125ce9a795ea20ef6b5d0e8099",
+    "source_pointer_file": ".src_sha",
+    "source_model_revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+    "license": "MIT",
+    "license_basis": "Pinned model card declares MIT; GGUF is a conversion/quantization of the pinned DeepSeek 1017 checkpoint.",
+    "model_card_route_command": "llama serve -hf ggml-org/DeepSeek-V4.1-Flash-1017-GGUF:Q2_K",
+    "smallest_complete_published_quant_observed": "Q2_K_S",
+    "smallest_quant_qualification": "The pinned repo lists six Q2_K and six Q2_K_S shards; Q2_K_S is the smaller complete set in this repository snapshot."
+  },
+  "quant_set": {
+    "quantization": "Q2_K_S",
+    "shard_count": 6,
+    "shards": [
+      {
+        "file": "DeepSeek-V4.1-Flash-1017-Q2_K_S-00001-of-00006.gguf",
+        "size_bytes": 5778688,
+        "sha256": "3e3804c31203832b572e45b635830edeb381e4b4733e17eabd1ea4000f54c934"
+      },
+      {
+        "file": "DeepSeek-V4.1-Flash-1017-Q2_K_S-00002-of-00006.gguf",
+        "size_bytes": 60940618816,
+        "sha256": "c22eaf93afe1c66a983d8ef15087ddb881b6d9f7514ecfabf2f6520c46428ff9"
+      },
+      {
+        "file": "DeepSeek-V4.1-Flash-1017-Q2_K_S-00003-of-00006.gguf",
+        "size_bytes": 60940618848,
+        "sha256": "440fb6329fa5fea17ad7c439502f360af82319e16f681a981322b2ae39fe89e1"
+      },
+      {
+        "file": "DeepSeek-V4.1-Flash-1017-Q2_K_S-00004-of-00006.gguf",
+        "size_bytes": 56481549184,
+        "sha256": "2f1c4d173a6e16cf59a5e76dbd0ccb18706f9e631615e54d30d6096b0952c597"
+      },
+      {
+        "file": "DeepSeek-V4.1-Flash-1017-Q2_K_S-00005-of-00006.gguf",
+        "size_bytes": 110595290592,
+        "sha256": "7b04016a36e58ed17c814ebdb5c15406aa96f6a4c41cc6e1ea5579ca592d8a0f"
+      },
+      {
+        "file": "DeepSeek-V4.1-Flash-1017-Q2_K_S-00006-of-00006.gguf",
+        "size_bytes": 9050416192,
+        "sha256": "c4754167b34f594b72c0a863118e5e008daadcd5ac666bae4df557e8439c5844"
+      }
+    ],
+    "total_bytes": 298014272320,
+    "source_revision": "6bc1f89d4b7ae7125ce9a795ea20ef6b5d0e8099"
+  },
+  "runtime": {
+    "engine": "ggml-org/llama.cpp",
+    "repository": "https://github.com/ggml-org/llama.cpp",
+    "pinned_commit": "9a080f44b503c64f66c84a6274b9d9ee5d5b09d5",
+    "implementation_path": "src/models/deepseek41.cpp",
+    "implementation_git_blob_sha1": "96de9041270c515d911c2841d37fa57ad89e5a65",
+    "license": "MIT",
+    "license_file_git_blob_sha1": "e7dca554bcb802f98408383a864404e3aa4eacca",
+    "source_url": "https://github.com/ggml-org/llama.cpp/blob/9a080f44b503c64f66c84a6274b9d9ee5d5b09d5/src/models/deepseek41.cpp",
+    "route_command": "llama serve -hf ggml-org/DeepSeek-V4.1-Flash-1017-GGUF:Q2_K"
+  },
+  "resource_check": {
+    "storage_snapshot_run_id": "44460035858",
+    "snapshot_observed_at_utc": "2026-11-19T04:42:13Z",
+    "free_bytes": 17111969792,
+    "smallest_quant_total_bytes": 298014272320,
+    "approximate_deficit_bytes": 280902302528,
+    "deficit_decimal_gb": 280.902302528,
+    "calculation": "298,014,272,320 - 17,111,969,792",
+    "storage_snapshot_is_stale": true,
+    "weights_downloaded": false,
+    "download_admission": "HOLD: full six-shard Q2_K_S set exceeds observed free storage by about 280.9 GB, before cache/temporary/reserve space."
+  },
+  "acceptance_boundary": {
+    "inference_route_source_pinned": true,
+    "gguf_source_is_not_training_input": true,
+    "no_gguf_runtime_test_or_install_claimed": true,
+    "scope": "4A01 covers this route definition as source metadata; runtime installation, actual inference, and capacity admission remain unverified."
+  }
+}

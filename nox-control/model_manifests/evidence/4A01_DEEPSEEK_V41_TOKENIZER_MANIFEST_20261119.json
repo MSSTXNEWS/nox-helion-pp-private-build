@@ -1,0 +1,36 @@
+{
+  "schema": "NOX_TOKENIZER_ASSET_MANIFEST_V1",
+  "task_id": "4A01",
+  "model_repo_id": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "model_revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+  "tokenizer_repo_id": "deepseek-ai/deepseek-recipe",
+  "tokenizer_revision": "935817c66f5d6e64838f419692545f06787e485f",
+  "path": "tokenizer.json",
+  "local_path": "nox-control/model_manifests/evidence/assets/deepseek_v41_1017/tokenizer.json",
+  "source_git_blob_sha1": "3abdf13e3488acc65e11e6a57f073f6673175c3a",
+  "size_bytes": 6367247,
+  "sha256": "81f64d1248a68ce3663e07ab3ee48b851e5df0e32d27cb98e4c9a268151e8d99",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2023 DeepSeek",
+  "provenance": "modified V4.1 tokenizer copy; image token ID 129264 maps to <｜image｜>; all other entries match comparison revision 6821d6ad3681a4b137b066b76094fa82ebd0a380; original import revision not recorded.",
+  "upstream_readme_url": "https://github.com/deepseek-ai/deepseek-recipe/blob/935817c66f5d6e64838f419692545f06787e485f/static/tokenizers/v41/README.md",
+  "upstream_license_url": "https://github.com/deepseek-ai/deepseek-recipe/blob/935817c66f5d6e64838f419692545f06787e485f/static/tokenizers/LICENSE",
+  "model_repo_tokenizer_asset_check": {
+    "repo": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+    "tree_url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/tree/08c8657f02291e11b6f6b63e0e16014f8e748518",
+    "checked_at_utc": "2026-11-19",
+    "files_checked": [
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ],
+    "result": "not present at the pinned model revision"
+  },
+  "byte_identity_to_1017_tokenizer_file": "NOT_CLAIMED: the 1017 repository pin does not expose tokenizer.json or tokenizer_config.json. This asset is the pinned deepseek-recipe V4.1 modified copy; upstream says its original import revision was not recorded.",
+  "compatibility_basis": "The official vLLM recipe says 1017 and launch share tokenizer/prompt encoding, and the pinned 1017 config uses image_token_id 129264. This is compatibility evidence only; it is not a byte-identity proof for this modified copy.",
+  "prompt_reference_at_model_pin": {
+    "encoding_readme": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/encoding/README.md",
+    "encoding_python": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/08c8657f02291e11b6f6b63e0e16014f8e748518/encoding/encoding.py",
+    "note": "Pinned model reference sources; not copied into this PR."
+  }
+}
