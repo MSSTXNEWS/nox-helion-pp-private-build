@@ -2,6 +2,7 @@
 import copy
 import contextlib
 import io
+import importlib.util
 import json
 from pathlib import Path
 import sys
@@ -18,6 +19,12 @@ from owner_systemic_refill_eligibility import (
 )
 from owner_systemic_refill import acceptance_mapping_valid
 import owner_systemic_refill as refill
+
+OPERATOR_SPEC = importlib.util.spec_from_file_location(
+    "owner_native_operator_marker_check", ROOT.parent / "owner_native_operator.py")
+OPERATOR = importlib.util.module_from_spec(OPERATOR_SPEC)
+assert OPERATOR_SPEC.loader is not None
+OPERATOR_SPEC.loader.exec_module(OPERATOR)
 
 PACK = ROOT / "next_pack_44368502183"
 SOURCES = ROOT.parent / "four_queue_20261118"
@@ -107,6 +114,17 @@ class RefillEligibilityTests(unittest.TestCase):
                 raise
         self.assertEqual(json.loads(sink.raw)['state'],'HOLD_SYSTEMIC_PUBLISH_OWNER_SNAPSHOT_STALE_OR_IDENTITY')
         self.assertIn('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=',output.getvalue())
+
+    def test_publish_completion_marker_matches_reflex_action_only(self):
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output):
+            publisher.emit_publish_complete_marker()
+        stdout=output.getvalue()
+        expected='NOX_MAINT_REFLEX_PUBLISH_COMPLETE=true'
+        repair='NOX_MAINT_REPAIR_COMPLETE=true'
+        self.assertTrue(OPERATOR._has_exact_terminal_completion_marker(stdout,expected))
+        self.assertFalse(OPERATOR._has_exact_terminal_completion_marker(stdout,repair))
+        self.assertFalse(OPERATOR._has_exact_terminal_completion_marker(repair+'\n',expected))
 
     def test_successor_route_rejects_zero_or_multiple_parent_missions(self):
         for proposals in ([],[{},{}]):

@@ -26,6 +26,7 @@ OWNER_SNAPSHOT_SCHEMA = 'NOX_SYSTEMIC_OWNER_PUBLISH_SNAPSHOT_V1'
 NATIVE_RECEIPT_CONTRACT_SCHEMA = 'NOX_OWNER_REVIEWED_NATIVE_RECEIPT_CONTRACT_V1'
 OWNER_SNAPSHOT_MAX_AGE_SEC = 600
 GIB = 1024 ** 3
+PUBLISH_COMPLETE_MARKER = 'NOX_MAINT_REFLEX_PUBLISH_COMPLETE=true'
 SPEC = {}
 try:
     BUNDLE = __NOX_BUNDLE_JSON__
@@ -103,6 +104,10 @@ def persist_receipt(helper, request, receipt):
             receipt['state'] = 'HOLD_SYSTEMIC_PUBLISH_RECEIPT_WRITE'
     print('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=' + encoded(receipt).decode(), flush=True)
     return receipt['receipt_persisted']
+
+
+def emit_publish_complete_marker():
+    print(PUBLISH_COMPLETE_MARKER, flush=True)
 
 
 def native_receipt_contract(mission, *, manifest_revision, previous_sha,
@@ -506,7 +511,7 @@ def run(bundle, spec):
         os.close(fd)
         if not persist_receipt(h,request,receipt):
             raise RuntimeError('HOLD_SYSTEMIC_PUBLISH_RECEIPT_WRITE')
-    print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
+    emit_publish_complete_marker()
     return receipt
 
 
