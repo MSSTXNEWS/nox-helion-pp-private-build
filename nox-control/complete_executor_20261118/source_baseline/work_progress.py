@@ -900,7 +900,7 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
 
 
 def _validate_i49_post_merge_receipt(document, manifest_rows, manifest_titles,
-                                      manifest_records, control_root,
+                                      manifest_records, control_root, existing_receipts,
                                       source_path, source_hash, source_blob):
     """Validate the exact post-merge I-49 source receipt as a 295 supplemental item."""
     task = document.get('task')
@@ -942,6 +942,8 @@ def _validate_i49_post_merge_receipt(document, manifest_rows, manifest_titles,
             or matches[0].get('evidence') != 'source'
             or matches[0].get('acceptance') != I49_CRITERION):
         raise ValueError('I49_WORK_IDEA_ROW_MISMATCH')
+    receipt_record = existing_receipts.get('I-49') if isinstance(existing_receipts, dict) else None
+    receipt_already_verified = is_verified(matches[0], receipt_record)
 
     if (task.get('required_evidence') != 'source'
             or task.get('criterion') != I49_CRITERION
@@ -1001,6 +1003,18 @@ def _validate_i49_post_merge_receipt(document, manifest_rows, manifest_titles,
     artifact_comparator = artifact.get('comparator') if isinstance(artifact, dict) else None
     pair = comparison_receipt.get('pair')
     artifact_sources = artifact.get('sources') if isinstance(artifact, dict) else None
+    artifact_source_by_label = {
+        row.get('label'): row for row in artifact_sources
+        if isinstance(row, dict) and isinstance(row.get('label'), str)
+    } if isinstance(artifact_sources, list) else {}
+    pair_before = pair.get('before') if isinstance(pair, dict) else None
+    pair_after = pair.get('after') if isinstance(pair, dict) else None
+    def source_matches_pair(label, pair_row):
+        source_row = artifact_source_by_label.get(label)
+        return (isinstance(source_row, dict) and isinstance(pair_row, dict)
+                and source_row.get('drive_folder_id') == pair_row.get('drive_folder_id')
+                and source_row.get('assembled_bytes') == pair_row.get('assembled_bytes')
+                and source_row.get('assembled_sha256') == pair_row.get('assembled_sha256'))
     if (git_blob_sha(artifact_raw) != I49_COMPARISON_BLOB
             or artifact_hash != I49_COMPARISON_SHA256
             or artifact.get('schema') != 'NOX_I49_ALL_SHARED_TENSORS_CPU_DELTA_V2'
@@ -1013,10 +1027,16 @@ def _validate_i49_post_merge_receipt(document, manifest_rows, manifest_titles,
             or comparator.get('revision') != 'e10c80f64e3fd88298be2776c58d03939e6e71f6'
             or comparator.get('source_sha256') != 'f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0'
             or comparator.get('git_blob_sha') != '93a5963b0951a38c00438ced561b1077fd8bf7ca'
-            or comparator != artifact_comparator
+            or comparator.get('local_executable_sha256') != artifact_comparator.get('local_executable_sha256')
+            or artifact_comparator.get('revision') != comparator.get('revision')
+            or artifact_comparator.get('source_sha256') != comparator.get('source_sha256')
+            or artifact_comparator.get('git_blob_sha1') != comparator.get('git_blob_sha')
+            or comparator.get('local_executable_sha256') != comparator.get('source_sha256')
             or not isinstance(pair, dict)
             or pair.get('pair_sha256') != '1df59f1bd9fc4712b8ba01c429af5aa19895ea9ed907d1f807b99b9195a87bd1'
-            or not isinstance(artifact_sources, list) or len(artifact_sources) != 2):
+            or len(artifact_source_by_label) != 2
+            or not source_matches_pair('before', pair_before)
+            or not source_matches_pair('after', pair_after)):
         raise ValueError('I49_COMPARISON_ARTIFACT_BINDING_MISMATCH')
     names = artifact.get('tensor_name_set')
     summary = artifact.get('summary')
@@ -1080,11 +1100,12 @@ def _validate_i49_post_merge_receipt(document, manifest_rows, manifest_titles,
         'original_acceptance_added': 0,
         'training_started': False,
         'full_base_model_loaded': False,
+        'already_in_receipt_count': receipt_already_verified,
     }
 
 
 
-def supplemental_acceptance(directory, existing_receipt_count):
+def supplemental_acceptance(directory, existing_receipt_count, existing_receipts=None):
     """Read append-only sidecars; never mutate or add them to original receipts."""
     directory = Path(directory)
     evidence_dir = directory.parent / 'complete_executor_20261118' / 'evidence'
@@ -1092,6 +1113,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
     addenda_dir = evidence_dir / 'addenda'
     excluded = []
     items = []
+    evidence_refreshes = []
     scan_complete = True
     try:
         manifest_raw, manifest = read_json_with_raw(manifest_path)
@@ -1103,6 +1125,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
             raise ValueError('FROZEN_295_MANIFEST_MISMATCH')
         manifest_rows = {}
         manifest_titles = {}
+        manifest_records = {}
         manifest_records = {}
         for row in manifest['tasks']:
             if not isinstance(row, dict):
@@ -1117,6 +1140,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
             manifest_rows[task_id] = spec_sha
             manifest_titles[task_id] = row['spec'].get('title')
             manifest_records[task_id] = row
+            manifest_records[task_id] = row
         if len(manifest_rows) != 295:
             raise ValueError('FROZEN_295_TASK_IDS_INVALID')
     except (OSError, KeyError, ValueError, TypeError, AttributeError) as exc:
@@ -1130,6 +1154,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
             'original_acceptance_added': 0,
             'scan_complete': False,
             'items': [],
+            'evidence_refreshes': [],
             'excluded': [{'path': str(manifest_path), 'reason': str(exc)}],
         }
     if not _path_entry_exists(addenda_dir):
@@ -1143,6 +1168,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
             'original_acceptance_added': 0,
             'scan_complete': False,
             'items': [],
+            'evidence_refreshes': [],
             'excluded': [{'path': str(addenda_dir), 'reason': 'ADDENDA_DIRECTORY_MISSING'}],
         }
     try:
@@ -1167,6 +1193,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
             'original_acceptance_added': 0,
             'scan_complete': False,
             'items': [],
+            'evidence_refreshes': [],
             'excluded': [{'path': str(addenda_dir), 'reason': str(exc)}],
         }
     for name in names:
@@ -1190,6 +1217,28 @@ def supplemental_acceptance(directory, existing_receipt_count):
                         directory.parent, source_path, source_hash, git_blob_sha(raw)
                     )
                     items.append(item)
+                except (OSError, KeyError, TypeError, ValueError, AttributeError) as exc:
+                    excluded.append({'path': source_path, 'task_id': source_task_id, 'reason': str(exc)})
+                continue
+            if document.get('schema') == I49_POST_MERGE_SCHEMA:
+                source_task = document.get('task')
+                source_task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
+                try:
+                    if source_path != I49_POST_MERGE_PATH:
+                        raise ValueError('I49_POST_MERGE_PATH_MISMATCH')
+                    item = _validate_i49_post_merge_receipt(
+                        document, manifest_rows, manifest_titles, manifest_records,
+                        directory.parent, existing_receipts,
+                        source_path, source_hash, git_blob_sha(raw)
+                    )
+                    if item.pop('already_in_receipt_count'):
+                        item['counting_status'] = 'ALREADY_PRESENT_IN_RECEIPT_COUNT'
+                        item['supplemental_count_increment'] = 0
+                        evidence_refreshes.append(item)
+                    else:
+                        item['counting_status'] = 'SUPPLEMENTAL_295_ACCEPTANCE'
+                        item['supplemental_count_increment'] = 1
+                        items.append(item)
                 except (OSError, KeyError, TypeError, ValueError, AttributeError) as exc:
                     excluded.append({'path': source_path, 'task_id': source_task_id, 'reason': str(exc)})
                 continue
@@ -1253,6 +1302,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
         'original_acceptance_added': 0,
         'scan_complete': scan_complete,
         'items': items,
+        'evidence_refreshes': evidence_refreshes,
         'excluded': excluded,
     }
 
@@ -1288,7 +1338,7 @@ def summarize(directory: Path):
                      'active_task': (task['id'] + ' · ' + task['title'])[:160] if task else None})
     updated_at = latest.isoformat() if latest else None
     done = sum(row['completed'] for row in rows)
-    supplemental = supplemental_acceptance(directory, done)
+    supplemental = supplemental_acceptance(directory, done, receipts)
     if len(base) != BASE_TOTAL:
         total = counts(done, len(tasks))
         total['percent'] = min(99, total['percent'])
@@ -1297,6 +1347,7 @@ def summarize(directory: Path):
                 'supplemental_accepted_count': supplemental['supplemental_accepted_count'],
                 'supplemental_accepted_task_ids': supplemental['accepted_task_ids'],
                 'supplemental_acceptance': supplemental,
+                'supplemental_evidence_refreshes': supplemental.get('evidence_refreshes', []),
                 'original_acceptance_added': 0,
                 'total': total, 'groups': rows, 'updated_at': updated_at}
     ideas_done = sum(is_verified(idea, receipts.get(key)) for key, idea in ideas.items())
@@ -1316,6 +1367,7 @@ def summarize(directory: Path):
             'supplemental_accepted_count': supplemental['supplemental_accepted_count'],
             'supplemental_accepted_task_ids': supplemental['accepted_task_ids'],
             'supplemental_acceptance': supplemental,
+            'supplemental_evidence_refreshes': supplemental.get('evidence_refreshes', []),
             'original_acceptance_added': 0,
             'final_acceptance': acceptance, 'groups': rows, 'updated_at': updated_at}
     wave = optional_wave_view(directory, base, ideas, payload)
