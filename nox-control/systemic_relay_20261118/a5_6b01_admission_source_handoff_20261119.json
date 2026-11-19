@@ -1,0 +1,75 @@
+{
+  "schema": "NOX_A5_6B01_FENCED_ADMISSION_SOURCE_HANDOFF_V1",
+  "instructions_version": "0.0.6",
+  "task_id": "6B01-ADMISSION-SNAPSHOT-REFILL-PIN-20261119",
+  "parent_task_id": "6B01",
+  "spec_sha256": "2c3e7a20c9b2c94d10477283f44725258cdfaf872e5e1386c847387d974ead79",
+  "queue": "Q1_RUNTIME_CHAT",
+  "automation_id": "Automation_26409201a5f88191875878544488d623",
+  "claim": "OWN_ISOLATED_PR423_NEW_HANDOFF_BLOB_ONLY",
+  "authority": "D3_REVIEW_REQUIRED",
+  "status": "BLOCKED_BEFORE_NATIVE_PUBLISH",
+  "original295_accepted_delta": 0,
+  "new_native_jobs": 0,
+  "worker_cap": 3,
+  "repo_commit_at_inspection": "9f0557b6035e340124166c924f88a867aad45c52",
+  "source_pins": [
+    {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+      "role": "original295"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py",
+      "git_blob": "5c6ae643d53d289ec4c1fda05044442aecd62ef1",
+      "role": "native_selector_current_repair_branch"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py",
+      "git_blob": "cd613d8c7bef35469e319046ee6ea689b64c4a34",
+      "role": "existing_focused_verifier"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/owner_systemic_taskpack.py",
+      "git_blob": "181ea2c4e03da9746532ca28dcbe27cbe95c5755",
+      "role": "existing_compiler"
+    },
+    {
+      "path": "nox-control/systemic_relay_20261118/owner_systemic_reviewed_publish.py",
+      "git_blob": "66e169a65dfacbfe28e6205f88c61eea94723512",
+      "role": "existing_publisher"
+    }
+  ],
+  "original_registry_disposition": {
+    "required_evidence": "native",
+    "execution_binding": "UNBOUND_PENDING_REAL_EXECUTION_PLAN",
+    "prior_receipt": "blocked/source_only",
+    "accepted": false
+  },
+  "grounded_scope": "6B01 queue fairness and hot/cold hysteresis: chat inference remains foreground, safe CPU_LIGHT candidate only under verified RAM/PSI/VRAM and STOP/lease/CAS, no duplicate tasks, max 3 native workers",
+  "prior_server_evidence": {
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44554548950",
+    "observed_at": "2026-11-19T15:26:00Z",
+    "native_ready": 0,
+    "worker_cap": 3,
+    "raw_cgroup_free_gib": 4.532,
+    "dispatcher_lock_held": true,
+    "admission_valid_now": false
+  },
+  "required_before_publish": [
+    "Atomic current original295/source/test/config snapshot and acceptance binding",
+    "Exclusive active native owner claim, independent verifier, manifest CAS",
+    "Fresh STOP/lease/dispatcher flock/process check and safe quiescence",
+    "Fresh memory/PSI/OOM, process RAM+VRAM and measured foreground chat peak",
+    "Current manifest predecessor and duplicate/terminal-claim dedup",
+    "One existing publisher transition READY→RUNNING→terminal",
+    "Independent 2-turn streaming+4-message canonical S03 readback and installed exact SHA"
+  ],
+  "acceptance_limit": "SCOPED_SOURCE_HANDOFF_ONLY. No source test executed on host, no native integration receipt, no S03/serving readback, no original 295 acceptance.",
+  "next_task_id": "6B01-D3-OWNER-REVIEWED-CAS-ONE-NEW-MISSION-20261119",
+  "no_server_mutation": true,
+  "no_new_queue": true,
+  "no_new_schedule": true,
+  "no_new_worker": true,
+  "no_model_change": true
+}
