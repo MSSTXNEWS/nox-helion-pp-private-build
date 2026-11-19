@@ -46,7 +46,7 @@ def output(data):
 def source_status():
     # Exact source observed on the owner host; no untrusted script injection.
     path=ROOT/"scripts"/"chat_proxy.py"
-    pin="cc1437ce8c3bfbbc4259ffdbe299bf3b8721d4b1bb09c88565ccb6cb9fdb95eb"
+    pin="9fedaefbe39f4cac8a47d77bb0dada2ccf09c43ec38a5624869d3a00c0fbe5a3"
     if path.is_symlink() or not path.is_file() or path.stat().st_size>150000:
         raise RuntimeError("HOLD_LIVE_SMOKE_SOURCE_SCOPE")
     digest=hashlib.sha256(path.read_bytes()).hexdigest()
