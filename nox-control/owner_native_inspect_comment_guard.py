@@ -16,6 +16,7 @@ REPOSITORY = "MSSTXNEWS/nox-helion-pp-private-build"
 OWNER_ID = 340718567
 ISSUE_NUMBER = 256
 INSTANCE_ID = 60509551
+APPROVED_SOURCE_SHA = "80fc87881036462cfbe0aa27bb02b69daf8bfe6a"
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) inspect\Z"
 )
@@ -55,7 +56,10 @@ def authorize_event(event: object, repository: str | None,
     match = COMMAND.fullmatch(body)
     if match is None:
         raise RuntimeError("HOLD_EXACT_OWNER_COMMAND")
-    return match.group(1)
+    source_sha = match.group(1)
+    if source_sha != APPROVED_SOURCE_SHA:
+        raise RuntimeError("HOLD_SOURCE_SHA_NOT_APPROVED")
+    return source_sha
 
 
 def main() -> int:

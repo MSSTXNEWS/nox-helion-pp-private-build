@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from owner_native_inspect_comment_guard import (
+    APPROVED_SOURCE_SHA,
     ISSUE_NUMBER,
     OWNER_ID,
     REPOSITORY,
@@ -19,7 +20,8 @@ from owner_native_inspect_comment_guard import (
 )
 
 
-SOURCE_SHA = "a" * 40
+SOURCE_SHA = APPROVED_SOURCE_SHA
+UNAPPROVED_SOURCE_SHA = "a" * 40
 
 
 def event_for(body: str = f"/nox-maintain 60509551 {SOURCE_SHA} inspect") -> dict:
@@ -39,6 +41,8 @@ def event_for(body: str = f"/nox-maintain 60509551 {SOURCE_SHA} inspect") -> dic
 
 class OwnerInspectCommentGuardTests(unittest.TestCase):
     def test_exact_owner_inspect_command_returns_only_source_sha(self) -> None:
+        self.assertEqual(APPROVED_SOURCE_SHA,
+                         "80fc87881036462cfbe0aa27bb02b69daf8bfe6a")
         self.assertEqual(
             authorize_event(event_for(), REPOSITORY, "issue_comment"),
             SOURCE_SHA,
@@ -60,6 +64,12 @@ class OwnerInspectCommentGuardTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError,
                                             "HOLD_EXACT_OWNER_COMMAND"):
                     authorize_event(event_for(body), REPOSITORY, "issue_comment")
+
+    def test_well_formed_but_unapproved_source_sha_holds(self) -> None:
+        body = f"/nox-maintain 60509551 {UNAPPROVED_SOURCE_SHA} inspect"
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_SOURCE_SHA_NOT_APPROVED"):
+            authorize_event(event_for(body), REPOSITORY, "issue_comment")
 
     def test_wrong_event_repository_issue_or_owner_holds(self) -> None:
         cases = (
@@ -134,6 +144,8 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("github.event.comment.author_association == 'OWNER'", workflow)
         self.assertIn("github.event.comment.user.id == 340718567", workflow)
         self.assertIn("github.event.sender.id == 340718567", workflow)
+        self.assertIn("APPROVED_SOURCE_SHA", (Path(__file__).with_name(
+            "owner_native_inspect_comment_guard.py")).read_text(encoding="utf-8"))
         self.assertIn("python -B nox-control/owner_native_operator.py inspect",
                       workflow)
         self.assertNotIn("owner_native_operator.py $", workflow)
