@@ -268,18 +268,22 @@ def tick_existing_dispatcher(namespace, state, *, mode):
             or runtime.get('source_sha_verified') is not True
             or runtime.get('owner_scope_verified') is not True):
             return {'state':'HOLD_AUTONOMY_NATIVE_SNAPSHOT','jobs_started':0}
-        budget = runtime.get('bounded_cpu_budget')
-        if not isinstance(budget, Mapping):
-            return {'state':'HOLD_BOUNDED_CPU_BUDGET_SCHEMA','jobs_started':0}
-        decision = bounded_cpu_decision(budget,
-            memory_ratio=runtime.get('cgroup_memory_ratio'),
-            cpu_pressure=runtime.get('cpu_pressure', 0))
-        if decision['reason'] is not None:
-            return {'state':decision['reason'], 'jobs_started':0,
-                    'resource_admission':decision}
         tasks=([] if isinstance(catalog,Mapping) and catalog.get('schema')==SCHEMA
                and catalog.get('tasks')==[] else
                validate_submission(catalog,allowed_handlers=native.allowed_handlers())['ordered'])
+        bounded_admission = (runtime.get('admission_class') in
+            ('BOUNDED_CPU_PROJECT_SOURCE', 'BOUNDED_CPU_READ_ONLY_LEAF')
+            or any(bounded_cpu_task(task) for task in tasks))
+        if bounded_admission:
+            budget = runtime.get('bounded_cpu_budget')
+            if not isinstance(budget, Mapping):
+                return {'state':'HOLD_BOUNDED_CPU_BUDGET_SCHEMA','jobs_started':0}
+            decision = bounded_cpu_decision(budget,
+                memory_ratio=runtime.get('cgroup_memory_ratio'),
+                cpu_pressure=runtime.get('cpu_pressure', 0))
+            if decision['reason'] is not None:
+                return {'state':decision['reason'], 'jobs_started':0,
+                        'resource_admission':decision}
         status=runtime.get('task_status')
         return admit_native_tick(native,tasks=tasks,status=status,
             mode=mode,memory_ratio=runtime.get('cgroup_memory_ratio'),
