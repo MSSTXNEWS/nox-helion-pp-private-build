@@ -1,0 +1,90 @@
+name: NOX owner-authenticated native inspect
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/owner_native_inspect_comment_guard.py'
+      - 'nox-control/test_owner_native_inspect_comment_guard.py'
+      - '.github/workflows/nox-owner-native-inspect.yml'
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nox-owner-inspect-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  source:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Compile guard and run offline authorization tests
+        run: |
+          set -euo pipefail
+          python -B -m py_compile \
+            nox-control/owner_native_inspect_comment_guard.py \
+            nox-control/test_owner_native_inspect_comment_guard.py
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_native_inspect_comment_guard.py \
+            -v
+
+  owner-inspect:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.event.issue.number == 256 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Validate exact owner command before source checkout or secrets
+        id: owner-command
+        run: python -B nox-control/owner_native_inspect_comment_guard.py
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: success()
+        with:
+          ref: ${{ steps.owner-command.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+      - name: Recheck owner event and exact source pin without credentials
+        if: success()
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('inspect')
+          print('NOX_OWNER_INSPECT_SOURCE_AUTH=PASS')
+          PY
+      - name: Run the fixed read-only inspect action
+        if: success()
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py inspect
