@@ -123,11 +123,25 @@
     }
     async function watch(job, slot) {
       if(!ID.test(job.id)) throw Error('HOLD_MEDIA_JOB_ID');
-      const cancel=make('button','nox-media-cancel','STOP');cancel.type='button';slot.actions.append(cancel);
+      let watching=true;
+      let cancelConfirmed=false;
+      const cancel=make('button','nox-media-cancel','Стоп медиа');cancel.type='button';slot.actions.append(cancel);
       cancel.addEventListener('click',async()=>{
         cancel.disabled=true;
-        try{await request(`${API}/jobs/${job.id}/cancel`,{method:'POST'});slot.info.textContent='Остановка запрошена';}
-        catch(e){slot.info.textContent='STOP: '+plain(e.message);cancel.disabled=false;}
+        try{
+          const receipt=await request(`${API}/jobs/${job.id}/cancel`,{method:'POST'});
+          if(!watching)return;
+          if(receipt?.id!==job.id||receipt.kind!==job.kind)throw Error('HOLD_MEDIA_STOP_SCOPE');
+          if(TERMINAL.has(receipt.state)){
+            slot.info.textContent=description(receipt.state);
+            return;
+          }
+          if(receipt.cancel_requested!==true)throw Error('HOLD_MEDIA_STOP_UNCONFIRMED');
+          cancelConfirmed=true;
+          slot.info.textContent='Запрос на остановку медиа принят';
+        }catch(e){
+          if(watching){slot.info.textContent='Стоп медиа: '+plain(e.message);cancel.disabled=false;}
+        }
       });
       let pause=1800;let last='';
       const until=Date.now()+36*60*1000;
@@ -136,7 +150,9 @@
           if(document.visibilityState==='hidden')pause=Math.min(8000,pause*1.2);
           const snapshot=await request(`${API}/jobs/${job.id}`);
           if(snapshot.id!==job.id||snapshot.kind!==job.kind)throw Error('HOLD_MEDIA_JOB_SCOPE');
-          const message=description(snapshot.state)+' · '+plain(snapshot.reason||'');
+          if(snapshot.cancel_requested===true){cancelConfirmed=true;cancel.disabled=true;}
+          const state=cancelConfirmed&&!TERMINAL.has(snapshot.state)?'CANCEL_REQUESTED':snapshot.state;
+          const message=description(state)+' · '+plain(snapshot.reason||'');
           if(message!==last){slot.info.textContent=message;last=message;}
           if(TERMINAL.has(snapshot.state)){
             if(snapshot.state==='COMPLETED'){
@@ -154,7 +170,7 @@
           pause=Math.min(5000,pause*1.07);
         }
         throw Error('HOLD_MEDIA_POLL_TIMEOUT_CHECK_JOB');
-      } finally { cancel.remove(); }
+      } finally { watching=false;cancel.remove(); }
     }
     const postMedia = body => request(API+'/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body});
     async function reconnect(receipt, slot) {

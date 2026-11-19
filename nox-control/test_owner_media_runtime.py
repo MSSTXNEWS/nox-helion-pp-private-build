@@ -69,6 +69,16 @@ class MediaTests(unittest.TestCase):
             media.update_job(stale, state='RUNNING')
             self.assertTrue(media.load_job(job['id'])['cancel_requested'])
 
+    def test_late_cancel_does_not_mark_completed_media_as_stop_requested(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(media, 'ROOT', Path(root)):
+            pending = fixture_job()
+            media.atomic(media.job_path(pending['id']), pending)
+            stale = copy.deepcopy(pending)
+            media.update_job(pending, state='COMPLETED', generation_verified=True)
+            result = media.update_job(stale, only_active=True, cancel_requested=True)
+            self.assertEqual(result['state'], 'COMPLETED')
+            self.assertNotIn('cancel_requested', media.load_job(stale['id']))
+
     def test_pending_cancellation_deletes_only_owned_prompt_never_global_interrupt(self):
         with tempfile.TemporaryDirectory() as root, patch.object(media, 'ROOT', Path(root)):
             job = fixture_job(); job.update(prompt_id='owned-prompt-123456', cancel_requested=True)

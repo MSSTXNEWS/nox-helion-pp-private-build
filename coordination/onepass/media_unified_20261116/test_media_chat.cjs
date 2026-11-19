@@ -19,7 +19,7 @@ class Element {
   scrollIntoView(){}
   remove(){if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(x=>x!==this);}
 }
-function fixture(available=true, lostReceipt=false, saved=new Map()){
+function fixture(available=true, lostReceipt=false, saved=new Map(), mediaPoll=null){
   const form=new Element('form'),input=new Element('textarea'),stream=new Element('section'),parent=new Element('div');
   form.id='chatForm';input.id='prompt';stream.id='messages';parent.append(stream,form);
   const calls=[];let jobRequests=0;
@@ -34,7 +34,11 @@ function fixture(available=true, lostReceipt=false, saved=new Map()){
       return response({id:ID,kind:JSON.parse(init.body).kind,state:'QUEUED'});
     }
     if(url.startsWith('/api/ui/media/requests/'))return response({id:ID,kind:'image'});
-    if(url==='/api/ui/media/jobs/'+ID)return response({id:ID,kind:jobRequests===2?'video':'image',state:'COMPLETED',generation_verified:true,outputs:[{url:'/api/ui/media/jobs/'+ID+'/outputs/0'}]});
+    if(url==='/api/ui/media/jobs/'+ID+'/cancel')return response({id:ID,kind:'image',state:'COMPLETED'});
+    if(url==='/api/ui/media/jobs/'+ID){
+      if(mediaPoll)await mediaPoll;
+      return response({id:ID,kind:jobRequests===2?'video':'image',state:'COMPLETED',generation_verified:true,outputs:[{url:'/api/ui/media/jobs/'+ID+'/outputs/0'}]});
+    }
     throw Error('unexpected fetch '+url);
   };
   const sessionStorage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
@@ -78,4 +82,21 @@ test('without backend weights no success is fabricated and old chat stays availa
  assert.equal(find(f.stream,x=>x.tag==='video'),null);
  assert(find(f.stream,x=>x.tag==='p'&&x.textContent.includes('HOLD')));
  f.input.value='обычный вопрос';const e=await submit(f.form);assert.equal(e.prevented,undefined);
+});
+test('a completed job returned by media STOP is not called a stop request',async()=>{
+ let release;
+ const f=fixture(true,false,new Map(),new Promise(resolve=>{release=resolve;}));
+ f.input.value='/image safe scene';
+ const submission=submit(f.form);
+ try {
+   await new Promise(resolve=>setImmediate(resolve));
+   const stop=find(f.stream,x=>x.className==='nox-media-cancel');assert(stop);
+   await stop.click();
+   const state=find(f.stream,x=>x.className==='nox-media-status');
+   assert.equal(state.textContent,'Готово');
+ } finally {
+   release();
+ }
+ await submission;
+ assert(find(f.stream,x=>x.tag==='img'));
 });

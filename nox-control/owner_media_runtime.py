@@ -97,13 +97,18 @@ def load_job(job_id):
     return value
 
 
-def update_job(job, **fields):
+def update_job(job, *, only_active=False, **fields):
     lockpath = job_path(job['id']).with_suffix('.lock')
     lockpath.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(lockpath, os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        current = read_json(job_path(job['id'])) or job
+        current = load_job(job['id']) if only_active else read_json(job_path(job['id'])) or job
+        if only_active and current.get('owner') != job.get('owner'):
+            raise MediaHold('MEDIA_JOB_NOT_FOUND')
+        if only_active and current.get('state') in TERMINAL:
+            job.clear(); job.update(current)
+            return job
         current.update(fields, updated_at=now())
         if job.get('cancel_requested'):
             current['cancel_requested'] = True
@@ -916,7 +921,7 @@ def register_media(app, trusted):
         try:
             job = await asyncio.to_thread(scoped, request, job_id)
             if job['state'] not in TERMINAL:
-                await asyncio.to_thread(update_job, job, cancel_requested=True)
+                await asyncio.to_thread(update_job, job, only_active=True, cancel_requested=True)
             return public_job(job)
         except MediaHold as exc:
             return error(exc)
