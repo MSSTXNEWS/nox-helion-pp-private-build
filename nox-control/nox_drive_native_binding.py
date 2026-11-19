@@ -19,8 +19,8 @@ import nox_drive_prefetch as cache
 
 SCHEMA = "NOX_DRIVE_NATIVE_TASK_V1"
 HANDLER_KIND = "nox.drive.first.native.v1"
-MANIFEST_DIR = Path("/root/nox/private/drive-tasks")
-SSD_ROOT = Path("/root/nox/cache/warm-ssd")
+MANIFEST_DIR = Path("/root/nox/ops/drive-auth/private/drive-tasks")
+SSD_ROOT = Path("/var/lib/nox-drive-reconnect/cache/warm-ssd")
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 TASK = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}\Z")
 OPERATIONS = ("offload", "ingest", "restore_ssd")
