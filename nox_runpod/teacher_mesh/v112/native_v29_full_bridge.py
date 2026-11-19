@@ -660,8 +660,6 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     return JSONResponse({'error':issue},status_code=409)
             except (OSError,RuntimeError,sqlite3.Error):
                 return JSONResponse({'error':'HOLD_DIALOG_SCOPE_NOT_VERIFIED'},status_code=503)
-        elif dialog_id is not None and not isinstance(dialog_id,str):
-            return JSONResponse({'error':'INVALID_DIALOG_ID'},status_code=422)
         key=scope(request)
         if key is None:
             return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
