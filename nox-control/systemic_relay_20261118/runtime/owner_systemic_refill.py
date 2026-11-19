@@ -359,12 +359,12 @@ def memory_governor_projection(capacity):
         condition = 'PRESSURE_ELEVATED'
     else:
         condition = 'CACHE_HEALTHY'
-    # This is read-only advice, not a new owner admission. Never recommend
-    # background work when measured PSI or projected RAM is already critical,
-    # even if an inconsistent upstream decision claims eligible=True.
+    # This is read-only advice, not a new owner admission. Preserve chat
+    # priority: any elevated PSI or projected-memory pressure means the
+    # upstream eligible flag alone cannot justify background-work advice.
     observed_eligible = (decision.get('eligible') is True
                          and chat_buffer_available and owner_raw_admission_available
-                         and condition != 'PRESSURE_CRITICAL')
+                         and condition == 'CACHE_HEALTHY')
     return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
             'state': condition,
             'raw_cgroup_memory_ratio': raw_ratio,
