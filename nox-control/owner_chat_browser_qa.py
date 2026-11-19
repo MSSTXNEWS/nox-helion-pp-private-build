@@ -139,10 +139,18 @@ def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, bod
             and body.get('dialog_id') == dialog_id)
 
 
-def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer):
-    """Require four exact ordered messages from one already-scoped dialog."""
+def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer,
+                            dialog_id=None):
+    """Require four exact role/text turns; reject cross-dialog row metadata."""
     if not isinstance(rows, list) or len(rows) != 4 or not all(isinstance(row, dict) for row in rows):
         return False
+    # Legacy rows may omit per-message dialog_id. If supplied, a wrong/null
+    # identifier must never certify continuity of the current browser session.
+    if dialog_id is not None:
+        if not isinstance(dialog_id, str) or not dialog_id.strip():
+            return False
+        if any('dialog_id' in row and row['dialog_id'] != dialog_id for row in rows):
+            return False
     expected = (('user', first_prompt), ('assistant', first_answer),
                 ('user', second_prompt), ('assistant', second_answer))
     return all(row.get('role') == role and row.get('content') == content
@@ -1000,8 +1008,12 @@ async def browser_run(report, directory, available):
                                and len(second_rows)==4 and isinstance(second_rows[3],dict) else '')
                 second_native_equal=await page.evaluate(
                     '(value)=>window.__NOX_BROWSER_QA.answer===value',second_answer)
-                second_saved=multiturn_history_valid(
-                    second_rows,prompt,answer,second_prompt,second_answer)
+                # Query scope alone is insufficient if the response/row
+                # explicitly reports a different dialog identity.
+                second_scope_valid=('dialog_id' not in second_history
+                                    or second_history['dialog_id']==did)
+                second_saved=(second_scope_valid and multiturn_history_valid(
+                    second_rows,prompt,answer,second_prompt,second_answer,dialog_id=did))
                 # Preserve a full four-turn browser-history fingerprint for
                 # future independent S03 comparison, without false acceptance.
                 browser_transcript_sha = (multiturn_transcript_sha256(second_rows)
