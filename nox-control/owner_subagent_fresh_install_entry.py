@@ -52,7 +52,7 @@ UNVERIFIED_NATIVE_PREIMAGES = {
     'owner_autonomy_pool.py', 'owner_subagent_processes.py', 'owner_dispatcher_mentor.py'}
 NEW_DEPENDENCIES = {
     'owner_subagent_processes.py': '50e28ed83a349afb38f3e6f9d691c8bcd4211b4fd88469a879379e575b3d1731',
-    'owner_autonomy_pool.py': 'fbf06d9c16936370e82e46eba836351df4a81be5f81fa99994878dd394514a48',
+    'owner_autonomy_pool.py': 'f033886245fe12d147361c7285b559c789839bab043e9c3299e6b8c866dcfcb8',
     'owner_subagent_dispatcher.py': NEW_CALLBACK,
 }
 OLD_MENTOR_SHA = '12211a29f77de8e5181d4dd78c35d5da2ed5de0dc6ea529149d32f0896809292'
