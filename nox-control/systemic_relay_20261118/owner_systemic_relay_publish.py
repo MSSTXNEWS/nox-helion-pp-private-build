@@ -288,8 +288,14 @@ def atomic_owner_config(helper, raw, expected_raw, owner_snapshot, lock_fd,
         os.close(config_dir_fd)
 
 
-def write_package_with_budget_gate(helper, path, raw, config):
+def write_package_with_budget_gate(helper, path, raw, config, owner_snapshot,
+                                   owner_snapshot_sha256, lock_fd, lock,
+                                   state_dir_fd):
     budget = require_budget_headroom(helper.read_budget_snapshot(config), max_age_sec=5)
+    validate_owner_snapshot(owner_snapshot)
+    require(sha(encoded(owner_snapshot)) == owner_snapshot_sha256,
+            'OWNER_SNAPSHOT_BINDING')
+    verify_owner_lock_identity(lock_fd, lock, state_dir_fd)
     helper.atomic(path, raw)
     return budget
 
@@ -677,7 +683,9 @@ def run(bundle, spec):
                 existing = None
             require(existing is None or existing == raw, 'CONTENT_ADDRESS_COLLISION')
             if existing is None:
-                prewrite = write_package_with_budget_gate(h, path, raw, old)
+                prewrite = write_package_with_budget_gate(
+                    h, path, raw, old, owner_snapshot,
+                    spec.get('owner_snapshot_sha256'), fd, lock, state_dir_fd)
                 receipt.setdefault('resource_prewrite_checks', []).append({
                     'package_path':str(path.relative_to(PACKAGE)), **prewrite})
             require(h.read_regular(path, 2 * 1024 * 1024) == raw, 'PACKAGE_READBACK')

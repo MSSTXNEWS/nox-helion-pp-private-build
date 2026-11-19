@@ -102,24 +102,70 @@ class RefillEligibilityTests(unittest.TestCase):
 
     def test_package_write_reads_fresh_budget_immediately_before_atomic_write(self):
         class RecordingHelper:
-            def __init__(self, headroom): self.events=[]; self.headroom=headroom
+            def __init__(self, headroom):
+                self.events=[]; self.headroom=headroom; self.replace_lock=False
+                self.lock=None; self.directory=None
             def read_budget_snapshot(self, config):
                 self.events.append('budget')
+                if self.replace_lock:
+                    replacement=Path(self.directory)/'replacement'
+                    replacement.write_bytes(b'other-owner')
+                    replacement.chmod(0o600)
+                    os.replace(replacement,self.lock)
                 now=time.time()
                 return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
                     'instance_id':60509551,'observed_at':now,
                     'current_bytes':10*1024**3,'max_bytes':10*1024**3+self.headroom,
                     'minimum_headroom_bytes':2*1024**3}
             def atomic(self, path, raw): self.events.append('atomic')
+        now=time.time()
+        snapshot={'schema':publisher.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-1,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        snapshot_sha=publisher.sha(publisher.encoded(snapshot))
+        original_root=publisher.ROOT
+        with tempfile.TemporaryDirectory() as directory:
+            publisher.ROOT=Path(directory)
+            state=Path(directory)/'state'; state.mkdir(mode=0o700)
+            lock=state/'owner_maintenance.lock'; lock.write_bytes(b'lock')
+            lock.chmod(0o600)
+            state_dir_fd=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            fd=os.open(lock.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=state_dir_fd)
+            try:
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                healthy=RecordingHelper(3*1024**3)
+                gate=publisher.write_package_with_budget_gate(
+                    healthy,'pkg',b'bytes',{},snapshot,snapshot_sha,fd,lock,state_dir_fd)
+                self.assertEqual(gate['state'],'PASS')
+                self.assertEqual(healthy.events,['budget','atomic'])
 
-        healthy=RecordingHelper(3*1024**3)
-        gate=publisher.write_package_with_budget_gate(healthy,'pkg',b'bytes',{})
-        self.assertEqual(gate['state'],'PASS')
-        self.assertEqual(healthy.events,['budget','atomic'])
-        low=RecordingHelper(27*1024**2)
-        with self.assertRaisesRegex(RuntimeError,'RESOURCE_HEADROOM_BELOW_MINIMUM'):
-            publisher.write_package_with_budget_gate(low,'pkg',b'bytes',{})
-        self.assertEqual(low.events,['budget'])
+                low=RecordingHelper(27*1024**2)
+                with self.assertRaisesRegex(RuntimeError,'RESOURCE_HEADROOM_BELOW_MINIMUM'):
+                    publisher.write_package_with_budget_gate(
+                        low,'pkg',b'bytes',{},snapshot,snapshot_sha,fd,lock,state_dir_fd)
+                self.assertEqual(low.events,['budget'])
+
+                stale={**snapshot,'observed_at':time.time()-601}
+                stale_sha=publisher.sha(publisher.encoded(stale))
+                old=RecordingHelper(3*1024**3)
+                with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
+                    publisher.write_package_with_budget_gate(
+                        old,'pkg',b'bytes',{},stale,stale_sha,fd,lock,state_dir_fd)
+                self.assertEqual(old.events,['budget'])
+
+                replaced=RecordingHelper(3*1024**3)
+                replaced.replace_lock=True; replaced.lock=lock; replaced.directory=directory
+                with self.assertRaisesRegex(RuntimeError,'LEASE_IDENTITY'):
+                    publisher.write_package_with_budget_gate(
+                        replaced,'pkg',b'bytes',{},snapshot,snapshot_sha,fd,lock,state_dir_fd)
+                self.assertEqual(replaced.events,['budget'])
+            finally:
+                os.close(fd)
+                os.close(state_dir_fd)
+                publisher.ROOT=original_root
 
     def test_publish_cas_rechecks_budget_then_snapshot_age_and_lock_identity(self):
         class BudgetReader:
