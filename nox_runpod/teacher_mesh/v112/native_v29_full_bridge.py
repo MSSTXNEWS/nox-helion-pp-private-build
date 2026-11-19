@@ -879,11 +879,17 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         question=data.get('message')
         if not isinstance(question,str) or not 1<=len(question.strip())<=8000:
             return JSONResponse({'error':'INVALID_MESSAGE'},status_code=422)
-        try:history=_validated_history(data)
-        except ValueError as ex:return JSONResponse({'error':str(ex)},status_code=422)
         dialog_id=data.get('dialog_id')
         if dialog_id=='':
             dialog_id=None
+        if dialog_id is None:
+            try:history=_validated_history(data)
+            except ValueError as ex:return JSONResponse({'error':str(ex)},status_code=422)
+        else:
+            # Browser history is untrusted and not the source of truth for a
+            # bound dialogue. Validate and load its exact persisted receipts
+            # below; a stale client cache must not reject a valid second turn.
+            history=[]
         if dialog_id is not None:
             if not isinstance(dialog_id,str) or not ID_PATTERN.fullmatch(dialog_id):
                 return JSONResponse({'error':'INVALID_DIALOG_ID'},status_code=422)
