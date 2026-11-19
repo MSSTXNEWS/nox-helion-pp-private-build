@@ -47,13 +47,16 @@ class ProbeTests(unittest.TestCase):
     def test_full_two_turn_durable_history_and_fail_closed_completion(self):
         first, answer, second = '17 * 19?', '323', 'What number?'
         expected = [(first, answer), (second, answer)]
-        messages = [{'content': first}, {'content': answer},
-                    {'content': second}, {'content': answer}]
+        messages = [{'role': 'user', 'content': first}, {'role': 'assistant', 'content': answer},
+                    {'role': 'user', 'content': second}, {'role': 'assistant', 'content': answer}]
         self.assertTrue(probe.history_matches_turns(messages, expected))
         for corrupted in (
             [{'content': 'foreign session'}, *messages[1:]],
             messages[2:],
             [messages[0], messages[1], messages[3], messages[2]],
+            [dict(messages[0], role='assistant'), *messages[1:]],
+            [*messages[:3], dict(messages[3], role='user')],
+            [{'content': first}, *messages[1:]],
             {'messages': messages},
             messages[:3],
         ):
