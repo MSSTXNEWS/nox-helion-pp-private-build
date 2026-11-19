@@ -106,7 +106,7 @@ def run():
         'original_295_accepted':0,'weights_changed':False,
         'chat_or_web_restarted':False,'new_worker_pool':False}
     def emit():
-        print('NOX_MAINT_CGROUP_REFILL_INSTALL=' + encoding(receipt).decode(), flush=True)
+        print('NOX_MAINT_REFLEX_RESTORE=' + encoding(receipt).decode(), flush=True)
 
     try:
         # Existing native readers may hold SH briefly on the same owner lock.
@@ -258,5 +258,5 @@ if __name__ == '__main__':
         reason = str(exc)
         if not re.fullmatch(r'HOLD_[A-Z0-9_]{1,110}', reason):
             reason = 'HOLD_OWNER_CGROUP_REFILL_' + type(exc).__name__.upper()
-        print('NOX_MAINT_CGROUP_REFILL_DIAGNOSTIC=' + reason, flush=True)
+        print('NOX_MAINT_REFLEX_RESTORE=' + reason, flush=True)
         raise SystemExit(2)
