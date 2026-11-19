@@ -417,6 +417,12 @@ def measure_openai_sse_wire(timed_chunks):
         if value.startswith(":"):
             return  # heartbeat/comment is not visible text or completion
         field, sep, data = value.partition(":")
+        if field == "event":
+            # OpenAI-compatible data chunks use the default/message event.
+            # An explicit SSE error is a transport failure, not an ordinary
+            # completion even if its data looks like [DONE] or a valid delta.
+            event_name = data[1:] if sep and data.startswith(" ") else data
+            _require(event_name != "error", "SSE_ERROR_EVENT")
         if field == "data":
             if sep and data.startswith(" "):
                 data = data[1:]
