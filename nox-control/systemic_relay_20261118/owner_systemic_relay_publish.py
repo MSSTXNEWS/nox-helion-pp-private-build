@@ -401,11 +401,15 @@ def verify_registry(manifest, helper):
     specs = [*docs['tasks']['tasks'], *docs['ideas']['ideas']]
     by_id = {row['id']: row for row in specs}
     routing = {row['task_id']: row['queue_id'] for row in docs['routing']['tasks']}
-    require(len(specs) == len(by_id) == len(routing) == 295 and set(by_id) == set(routing), 'REGISTRY_NATIVE_DENOMINATOR')
-    for task_id, parent in manifest['registry']['parents'].items():
+    parents = manifest['registry']['parents']
+    require(len(specs) == len(by_id) == len(routing) == len(parents) == 295
+            and by_id.keys() == routing.keys() == parents.keys(), 'REGISTRY_NATIVE_DENOMINATOR')
+    for task_id, parent in parents.items():
         spec = by_id.get(task_id)
         require(spec is not None and hashlib.sha256(encoded(spec)).hexdigest() == parent['spec_sha256']
-                and routing[task_id] == parent['queue_id'] and spec.get('evidence') == parent['required_evidence'], 'REGISTRY_NATIVE_PARENT')
+                and routing[task_id] == parent['queue_id']
+                and spec.get('evidence') == parent['required_evidence']
+                and spec.get('title') == parent['title'], 'REGISTRY_NATIVE_PARENT')
         if 'acceptance' in spec:
             acceptance = spec.get('acceptance')
             require(type(acceptance) is str and parent.get('registered_acceptance') == acceptance
@@ -415,6 +419,50 @@ def verify_registry(manifest, helper):
             require('registered_acceptance' not in parent
                     and 'registered_acceptance_sha256' not in parent,
                     'REGISTRY_NATIVE_UNREGISTERED_ACCEPTANCE')
+
+
+def verify_manifest_lineage(manifest, predecessor):
+    """The current registry may enrich its pinned predecessor without changing it."""
+    current = manifest['registry']
+    previous = predecessor['registry']
+    parents = current['parents']
+    previous_parents = previous['parents']
+    require(manifest['revision'] == predecessor['revision'] + 1
+            and current['total_original_ids'] == previous['total_original_ids']
+            and current['source_registry_sha256'] == previous['source_registry_sha256']
+            and parents.keys() == previous_parents.keys(), 'MANIFEST_LINEAGE')
+    require(all(key in parents[task_id] and parents[task_id][key] == value
+                for task_id, parent in previous_parents.items()
+                for key, value in parent.items()), 'MANIFEST_LINEAGE')
+
+
+def verify_project_scope(config, helper, processes, *, now=None):
+    require(config.get('schema') == 'NOX_NATIVE_SUBAGENT_BINDING_V1'
+            and config.get('owner_authorized') is True and config.get('instance_id') == 60509551
+            and config.get('mode') == 'NORMAL' and config.get('target') == 3
+            and config.get('execution_mode') == 'NATIVE_PROJECT_V1', 'OWNER_SCOPE')
+    if 'global_worker_cap' in config:
+        require(config['global_worker_cap'] == 3, 'OWNER_SCOPE')
+        return
+
+    # Historical configs may omit the cap. The running, pinned dispatcher must
+    # independently prove the same project scope and process identities.
+    status = json.loads(helper.read_regular(ROOT / helper.STATUS, 2 * 1024 * 1024))
+    native = status.get('native_subexecutors') or {}
+    project = native.get('project_queues') or {}
+    observed_at = native.get('observed_at')
+    current = time.time() if now is None else now
+    director = native.get('director') or {}
+    workers = native.get('workers') or []
+    require(type(observed_at) in (int, float) and -5 <= current - observed_at <= 60
+            and project.get('state') == 'HANDOFF_RECEIVED_PROJECT_EXECUTION_BOUND'
+            and project.get('dispatch_cap') == 3 and project.get('received_unique_tasks') == 295
+            and (director.get('pid'), director.get('process_starttime')) ==
+                (processes['director']['pid'], processes['director']['start_ticks'])
+            and len(workers) == 3
+            and all(isinstance(row, dict) and row.get('native_pid_verified') is True for row in workers)
+            and {(row.get('pid'), row.get('process_starttime')) for row in workers} ==
+                {(row['pid'], row['start_ticks']) for row in processes['workers']}, 'OWNER_SCOPE')
 
 
 def verify_acceptance_anchors(contract, source_files):
@@ -604,10 +652,7 @@ def run(bundle, spec):
         require(sha(old_raw) == spec.get('expected_config_sha256'), 'CONFIG_PREDECESSOR')
         require(sha(old_raw) == owner_snapshot['config_sha256'], 'OWNER_SNAPSHOT_CONFIG_CHANGED')
         old = json.loads(old_raw)
-        require(old.get('schema') == 'NOX_NATIVE_SUBAGENT_BINDING_V1'
-                and old.get('owner_authorized') is True and old.get('instance_id') == 60509551
-                and old.get('mode') == 'NORMAL' and old.get('target') == 3
-                and old.get('global_worker_cap') == 3 and old.get('execution_mode') == 'NATIVE_PROJECT_V1', 'OWNER_SCOPE')
+        verify_project_scope(old, h, processes)
         receipt['resource_preflight'] = require_budget_headroom(h.read_budget_snapshot(old))
         previous = old.get('systemic_relay', {}).get('sha256')
         require(previous == spec.get('previous_manifest_sha256')
@@ -645,8 +690,7 @@ def run(bundle, spec):
             prior = json.loads(prior_raw)
             refill.validate_manifest(prior)
             if ancestor == previous:
-                require(manifest['revision'] == prior['revision'] + 1
-                        and manifest['registry'] == prior['registry'], 'MANIFEST_LINEAGE')
+                verify_manifest_lineage(manifest, prior)
             ancestor = prior['previous_manifest_sha256']
         project = old['project_executor']
         root = project['roots']['NOX_PROJECT_SOURCE']

@@ -10,6 +10,7 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+from types import SimpleNamespace
 import unittest
 
 ROOT = Path(__file__).parent
@@ -58,6 +59,53 @@ def exact_registry():
 
 
 class RefillEligibilityTests(unittest.TestCase):
+    def test_legacy_cap_accepts_only_a_matching_live_three_worker_scope(self):
+        config = {'schema': 'NOX_NATIVE_SUBAGENT_BINDING_V1', 'owner_authorized': True,
+                  'instance_id': 60509551, 'mode': 'NORMAL', 'target': 3,
+                  'execution_mode': 'NATIVE_PROJECT_V1'}
+        processes = {'director': {'pid': 12, 'start_ticks': 100},
+                     'workers': [{'pid': pid, 'start_ticks': 120} for pid in (13, 14, 15)]}
+        native = {'director': {'pid': 12, 'process_starttime': 100}, 'observed_at': 200,
+                  'workers': [{'pid': pid, 'process_starttime': 120, 'native_pid_verified': True}
+                              for pid in (13, 14, 15)],
+                  'project_queues': {'state': 'HANDOFF_RECEIVED_PROJECT_EXECUTION_BOUND',
+                                     'dispatch_cap': 3, 'received_unique_tasks': 295}}
+        helper = SimpleNamespace(STATUS='status', read_regular=lambda *args: json.dumps(
+            {'native_subexecutors': native}).encode())
+        publisher.verify_project_scope(config, helper, processes, now=210)
+        with self.assertRaisesRegex(RuntimeError, 'OWNER_SCOPE'):
+            publisher.verify_project_scope(dict(config, global_worker_cap=4), helper, processes, now=210)
+        with self.assertRaisesRegex(RuntimeError, 'OWNER_SCOPE'):
+            publisher.verify_project_scope(config, helper, processes, now=261)
+        native['workers'][2]['process_starttime'] += 1
+        with self.assertRaisesRegex(RuntimeError, 'OWNER_SCOPE'):
+            publisher.verify_project_scope(config, helper, processes, now=210)
+
+    def test_legacy_lineage_preserves_both_historical_registries(self):
+        _, _, _, registry = exact_registry()
+        for path in [PREVIOUS, *sorted(PACK.glob('package/relay/*.json'))]:
+            predecessor, _ = read(path)
+            successor = {'revision': predecessor['revision'] + 1, 'registry': registry}
+            with self.subTest(predecessor=path.stem):
+                self.assertNotEqual(registry, predecessor['registry'])
+                publisher.verify_manifest_lineage(successor, predecessor)
+
+                for parent_key in ('spec_sha256', 'title', 'required_evidence', 'queue_id'):
+                    altered = copy.deepcopy(successor)
+                    altered['registry']['parents']['I-39'][parent_key] = 'changed'
+                    with self.assertRaisesRegex(RuntimeError, 'MANIFEST_LINEAGE'):
+                        publisher.verify_manifest_lineage(altered, predecessor)
+
+                removed = copy.deepcopy(successor)
+                del removed['registry']['parents']['I-39']
+                with self.assertRaisesRegex(RuntimeError, 'MANIFEST_LINEAGE'):
+                    publisher.verify_manifest_lineage(removed, predecessor)
+
+                altered_pins = copy.deepcopy(successor)
+                altered_pins['registry']['source_registry_sha256']['ideas'] = 'a' * 64
+                with self.assertRaisesRegex(RuntimeError, 'MANIFEST_LINEAGE'):
+                    publisher.verify_manifest_lineage(altered_pins, predecessor)
+
     def test_owner_snapshot_is_recent_exactly_bound_and_claim_free(self):
         now = 1800000000
         snapshot = {'schema':producer.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
