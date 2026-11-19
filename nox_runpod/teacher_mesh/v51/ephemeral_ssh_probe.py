@@ -86,7 +86,7 @@ def api(method: str, path: str, key: str, body=None):
     else:
         allowed = (
             method == "DELETE" and body is None
-            and bool(re.fullmatch(rf"/instances/{INSTANCE_ID}/ssh/[0-9]{1,20}", path))
+            and bool(re.fullmatch(rf"/instances/{INSTANCE_ID}/ssh/[0-9]{{1,20}}", path))
         )
     if not allowed:
         raise RuntimeError("HOLD_PROVIDER_REQUEST_SCOPE")

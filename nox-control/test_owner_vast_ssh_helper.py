@@ -71,6 +71,21 @@ class OwnerVastHelperTests(unittest.TestCase):
                 probe.api("DELETE", "/instances/60509551/ssh/23", TOKEN)
         request.assert_not_called()
 
+    def test_delete_route_uses_the_exact_ssh_key_id_path(self):
+        seen = {}
+
+        def fake_open(request):
+            seen["url"] = request.full_url
+            seen["method"] = request.get_method()
+            return _Response(b"")
+
+        with mock.patch.object(probe, "_open", side_effect=fake_open):
+            self.assertEqual(probe.api("DELETE", "/instances/60509551/ssh/23", TOKEN), {})
+        self.assertEqual(seen, {
+            "url": "https://console.vast.ai/api/v0/instances/60509551/ssh/23",
+            "method": "DELETE",
+        })
+
     def test_attach_body_is_restricted_to_one_valid_public_key(self):
         seen = {}
 
