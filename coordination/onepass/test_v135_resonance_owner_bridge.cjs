@@ -234,6 +234,8 @@ test('V135 upstream transport failure requests scoped STOP before closing the fa
   assert.equal(model.signal.aborted,true,'the failed upstream fetch must be aborted after STOP');
   assert.equal(frames.filter(e=>e.type==='done').length,0,'a dropped stream cannot be accepted');
   assert(frames.some(e=>e.type==='error'),'the caller must receive a terminal error');
+  assert.equal(frames.find(e=>e.type==='error')?.error,'upstream connection lost',
+    'requesting STOP must preserve the original upstream failure reason');
   assert(!f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')),
     'a failed stream cannot certify S03 history');
   assert.notEqual(JSON.parse(stops[0].body).gpu_stop_verified,true,

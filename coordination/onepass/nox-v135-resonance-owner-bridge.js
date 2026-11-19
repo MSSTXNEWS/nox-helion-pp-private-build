@@ -171,9 +171,9 @@
     let state='not_requested';
     const started=performance.now();let firstVisibleMs=null;
     const upstreamAbort=new AbortController();
-    const stopThenAbort=()=>{
+    const stopThenAbort=caller=>{
       if(finished)return;
-      canceling=true;
+      if(caller)canceling=true;
       return stopJob||(stopJob=(async()=>{
         if(modelStarted&&!streamDone){
           const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
@@ -196,7 +196,7 @@
       })());
     };
     const onAbort=stopThenAbort;
-    if(signal?.aborted)onAbort();
+    if(signal?.aborted)onAbort(true);
     else signal?.addEventListener?.('abort',onAbort,{once:true});
     const nativeSignal=upstreamAbort.signal;
     const body=new ReadableStream({
@@ -269,7 +269,7 @@
         }catch(e){
           if(modelStarted&&!streamDone)await stopThenAbort();
           event({type:'error',
-            error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+            error:canceling?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
             gpu_stop_verified:false,
             stop_transport_outcome:state});
         }finally{
@@ -280,7 +280,7 @@
       },
       cancel(){
         closed=true;
-        const stopping=stopThenAbort();
+        const stopping=stopThenAbort(true);
         if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
           window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopping'}}));
         signal?.removeEventListener?.('abort',onAbort);
