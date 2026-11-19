@@ -1,0 +1,39 @@
+name: NOX owner memory cleanup one-shot source gate
+on:
+  pull_request:
+    paths:
+      - nox-control/owner_native_operator.py
+      - nox-control/owner_memory_cleanup_entry.py
+      - nox-control/owner_memory_governor.py
+      - nox-control/owner_storage_reclaim.py
+      - .github/workflows/nox-memory-safe-cleanup-ci.yml
+permissions:
+  contents: read
+jobs:
+  memory-safe-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Compile and verify strictly bounded maintenance route and governor
+        run: |
+          python - <<'PY'
+          import ast, pathlib
+          root=pathlib.Path('nox-control')
+          for file in ('owner_native_operator.py','owner_memory_cleanup_entry.py','owner_memory_governor.py','owner_storage_reclaim.py'):
+              compile((root/file).read_text(),str(root/file),'exec')
+          s=(root/'owner_native_operator.py').read_text()
+          tree=ast.parse(s)
+          assert "FILES['repair'] = 'nox-control/owner_memory_cleanup_entry.py'" in s
+          assert "SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_memory_governor.py', 'owner_storage_reclaim.py')" in s
+          assert "SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor.py', 'nox-control/owner_storage_reclaim.py')" in s
+          assert "AUDIT_THEN_EXACT_EPHEMERAL_RECLAIM" in (root/'owner_memory_cleanup_entry.py').read_text()
+          assert "NOX_MEMORY_GOVERNOR" in (root/'owner_memory_governor.py').read_text()
+          PY
+          python -m unittest discover -s nox-control -p 'test_owner_memory_governor.py' -v
+          python -m unittest discover -s nox-control -p 'test_owner_storage_reclaim.py' -v
