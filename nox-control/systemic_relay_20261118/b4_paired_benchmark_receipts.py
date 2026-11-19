@@ -381,6 +381,12 @@ def measure_openai_sse_wire(timed_chunks):
         _require(len(obj["choices"]) == 1 and isinstance(obj["choices"][0], dict),
                  "SSE_CHOICE_SCHEMA")
         choice = obj["choices"][0]
+        # If the upstream OpenAI choice index is supplied, it must denote
+        # the sole selected choice (0), not another completion candidate.
+        # Keep index-omitting legacy fixtures compatible; reject bool/float.
+        _require("index" not in choice or
+                 (type(choice["index"]) is int and choice["index"] == 0),
+                 "SSE_CHOICE_INDEX_SCHEMA")
         delta = choice.get("delta")
         _require(isinstance(delta, dict), "SSE_DELTA_SCHEMA")
         content = delta.get("content")

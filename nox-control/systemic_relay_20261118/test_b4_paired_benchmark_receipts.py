@@ -510,6 +510,41 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(with_text["visible_text_sha256"],
                          hashlib.sha256(" \n\tready".encode()).hexdigest())
 
+    def test_sse_wire_choice_index_must_be_zero_when_present(self):
+        # A one-choice response with index=1 belongs to a different choice;
+        # bool/float/string indices must not pass integer equality for zero.
+        delta = {"content": "ready"}
+        finish = {"delta": {}, "finish_reason": "stop"}
+        done = b"data: [DONE]\\n\\n"
+        def frame(choice):
+            return ("data: " + json.dumps(
+                {"choices": [choice]}) + "\\n\\n").encode("utf-8")
+        for bad_index in (-1, 1, True, False, 0.0, "0", None):
+            with self.subTest(index=bad_index):
+                bad = {"index": bad_index, "delta": delta,
+                       "finish_reason": None}
+                with self.assertRaisesRegex(
+                        ReceiptHold, "SSE_CHOICE_INDEX_SCHEMA"):
+                    measure_openai_sse_wire([(2, frame(bad)),
+                                             (5, frame({"index": 0, **finish})),
+                                             (7, done)])
+        # Explicitly correct index and historic index-absent receipts remain
+        # usable, with preserved first visible text and terminal clock.
+        for with_index in (True, False):
+            with self.subTest(with_index=with_index):
+                content = {"delta": delta, "finish_reason": None}
+                last = dict(finish)
+                if with_index:
+                    content["index"] = 0
+                    last["index"] = 0
+                receipt = measure_openai_sse_wire([
+                    (2, frame(content)), (5, frame(last)), (7, done)])
+                self.assertTrue(receipt["wire_completed_normally"])
+                self.assertEqual(receipt["first_text_ms"], 2)
+                self.assertEqual(receipt["completion_ms"], 7)
+                self.assertEqual(receipt["visible_text_sha256"],
+                                 hashlib.sha256(b"ready").hexdigest())
+
     def test_sse_wire_unsupported_named_event_cannot_forge_finality(self):
         # EventSource delivers named events separately from default/message.
         # They are not trusted chat/completions data even if the bytes match.
