@@ -145,9 +145,9 @@ def work_progress_snapshot():
     """Read the frozen rollup without changing receipts or asserting installation."""
     unavailable={'schema':'NOX_OWNER_WORK_PROGRESS_V1','state':'UNAVAILABLE',
                  'frozen_295_count':295,'receipt_done_count':None,
-                 'supplemental_verified_count':None,'supplemental_verified_task_ids':[],
+                 'supplemental_accepted_count':None,'supplemental_accepted_task_ids':[],
                  'supplemental_state':'UNAVAILABLE','original_acceptance_added':0,
-                 'source_scope':'RECEIPTS_AND_APPEND_ONLY_SOURCE_EVIDENCE',
+                 'source_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
                  'observed_at':time.time()}
     try:
         spec=importlib.util.spec_from_file_location(
@@ -178,11 +178,11 @@ def work_progress_snapshot():
             return unavailable
         return {'schema':'NOX_OWNER_WORK_PROGRESS_V1','state':'OBSERVED',
                 'frozen_295_count':295,'receipt_done_count':receipt_done,
-                'supplemental_verified_count':count,
-                'supplemental_verified_task_ids':ids,
+                'supplemental_accepted_count':count,
+                'supplemental_accepted_task_ids':ids,
                 'supplemental_state':supplemental.get('state','UNKNOWN'),
                 'original_acceptance_added':0,
-                'source_scope':'RECEIPTS_AND_APPEND_ONLY_SOURCE_EVIDENCE',
+                'source_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
                 'observed_at':time.time()}
     except Exception:
         return unavailable
