@@ -1072,7 +1072,9 @@ def main():
             result['native_workers_after'] = worker_readback(helper)
         except Exception as exc:
             result['native_workers_readback_error'] = str(exc) if str(exc).startswith('HOLD_') else type(exc).__name__
-        if result['chat_after'].get('8081') != 200:
+        # Use the live serving proxy on 8080 for the final receipt too; 8081
+        # is a retired endpoint and must not turn healthy serving into failure.
+        if result['chat_after'].get('8080') != 200:
             result['chat_health_regression'] = True; success = False
         save(); helper.emit('native_training_resume_receipt', result); os.close(fd)
     if success:
