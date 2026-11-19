@@ -22,7 +22,7 @@ APPROVED_SOURCE_BY_ACTION = {
     "audit": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",  # merged PR #485
     "source_attest": "3e399979e5b2e5ac16c1504542bd5cace989ddd3",  # updated chat/S03 static scope #520
     "gpu_inventory": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",  # exact-head source tests green
-    "browser_qa": "9ddb3730f8db1b7b598eaf58ab0aa5973485f6c6",  # immutable one-stream owner browser source bundle
+    "browser_qa": "ccc9697a6a30a0e38e22303da822a449d41693a3",  # merged PR #528: bundled SSH helper
 }
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) (inspect|audit|source_attest|gpu_inventory|browser_qa)\Z"
