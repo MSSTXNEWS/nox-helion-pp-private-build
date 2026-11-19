@@ -81,6 +81,8 @@ def _validate_sample(sample, *, model, now: float, baseline: bool) -> dict:
         _hold('CGROUP_FIELDS')
     current = _integer(cgroup['memory_current_bytes'], 'CGROUP_CURRENT')
     maximum = _integer(cgroup['memory_max_bytes'], 'CGROUP_MAX', minimum=1)
+    if current > maximum:
+        _hold('CGROUP_OVER_LIMIT')
     file_bytes = _integer(cgroup['file_bytes'], 'CGROUP_FILE')
     inactive_file = _integer(cgroup['inactive_file_bytes'], 'CGROUP_INACTIVE_FILE')
     shmem = _integer(cgroup['shmem_bytes'], 'CGROUP_SHMEM')
