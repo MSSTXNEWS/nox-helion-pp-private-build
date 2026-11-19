@@ -432,7 +432,7 @@ def filesystem_budget():
     try:
         limit = int((CGROUP / 'memory.max').read_text())
         current = int((CGROUP / 'memory.current').read_text())
-        if limit <= 0 or current < 0:
+        if limit <= 0 or current < 0 or current > limit:
             raise ValueError('invalid cgroup memory values')
         result['cgroup'] = {'limit_bytes': limit, 'current_bytes': current,
                             'headroom_bytes': max(0, limit - current), 'state': 'VERIFIED'}
@@ -451,8 +451,8 @@ def verified_cgroup_budget(budget):
     current = cgroup.get('current_bytes')
     headroom = cgroup.get('headroom_bytes')
     return (type(limit) is int and type(current) is int and type(headroom) is int
-            and limit > 0 and current >= 0 and 0 <= headroom <= limit
-            and headroom == max(0, limit - current))
+            and limit > 0 and 0 <= current <= limit
+            and headroom == limit - current)
 
 
 def placement(budget, categories):
