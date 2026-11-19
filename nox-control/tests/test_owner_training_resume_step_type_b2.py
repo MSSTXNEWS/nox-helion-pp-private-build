@@ -218,6 +218,33 @@ class CheckpointStepProvenance(unittest.TestCase):
                     read_json(state, limit=64)
 
 
+    def test_json_exponent_overflow_fails_closed_with_signed_sha(self):
+        # parse_constant rejects literal NaN/Infinity, but json.loads
+        # converts valid JSON numeric exponents like 1e999 to float('inf').
+        # A matching signed checkpoint SHA must not legalize that value.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            read_json = load_pinned_verifier(root)["read_json"]
+            state = root / "trainer_state.json"
+            for document in (
+                '{"global_step":1,"loss":1e999}',
+                '{"global_step":1,"loss":-1e999}',
+                '{"global_step":1,"history":[0.4,1e100000]}',
+            ):
+                with self.subTest(document=document):
+                    raw = document.encode("utf-8")
+                    state.write_bytes(raw)
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "HOLD_NONFINITE_STATE_JSON"):
+                        read_json(state, limit=128,
+                                  expected_sha256=hashlib.sha256(raw).hexdigest())
+            valid = b'{"global_step":1,"loss":0.25}'
+            state.write_bytes(valid)
+            self.assertEqual(read_json(
+                state, limit=128, expected_sha256=hashlib.sha256(valid).hexdigest()
+            )["loss"], 0.25)
+
+
     def test_checkpoint_file_hash_is_descriptor_scoped(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
