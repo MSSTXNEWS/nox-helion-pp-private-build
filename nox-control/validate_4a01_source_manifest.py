@@ -31,6 +31,18 @@ def at(obj: Any, dotted: str) -> Any:
 
 
 def validate(path: Path) -> dict[str, Any]:
+    if path.stat().st_size > MAX_MANIFEST_BYTES:
+        return {
+            "validator_schema": "NOX_4A01_SOURCE_PIN_VALIDATION_V1",
+            "manifest_path": str(path),
+            "state": "HOLD",
+            "execution_authorized": False,
+            "weights_loaded": False,
+            "network_used": False,
+            "missing_fields": [],
+            "invalid_fields": ["manifest: exceeds 256 KiB bound"],
+            "verified_fields": [],
+        }
     raw = path.read_bytes()
     report: dict[str, Any] = {
         "validator_schema": "NOX_4A01_SOURCE_PIN_VALIDATION_V1",
