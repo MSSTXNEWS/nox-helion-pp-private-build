@@ -156,7 +156,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                                   'type':'function','function':{
                                       'name':'calculate',
                                       'arguments':'{"value":1}'}}]),
-                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                    frame(finish='tool_calls'),b'data: [DONE]\n\n'])
                 native=self.native()
                 native['parse_tool_calls']=lambda message,content:[
                     {'id':'call_integrity','name':name,'arguments':args}]
