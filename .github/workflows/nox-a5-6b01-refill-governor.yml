@@ -1,0 +1,32 @@
+name: NOX A5 6B01 memory projection focused source verifier
+on:
+  push:
+    branches:
+      - a5-6b01-refill-cgroup-metadata-20261119
+    paths:
+      - 'nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py'
+      - 'nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py'
+      - '.github/workflows/nox-a5-6b01-refill-governor.yml'
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Exact changed module syntax and resource projection cases
+        working-directory: nox-control/systemic_relay_20261118
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          from pathlib import Path
+          p = Path('runtime/owner_systemic_refill.py')
+          compile(p.read_bytes(), str(p), 'exec')
+          PY
+          python -B -m unittest -v \
+            test_owner_reflex_cycle.NativeReflexTests.test_memory_projection_distinguishes_file_cache_and_shmem \
+            test_owner_reflex_cycle.NativeReflexTests.test_memory_governor_pressure_and_missing_metadata_hold \
+            test_owner_reflex_cycle.NativeReflexTests.test_memory_projection_inconsistent_cgroup_counters_fail_closed
