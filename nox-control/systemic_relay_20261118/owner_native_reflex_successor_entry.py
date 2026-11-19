@@ -106,6 +106,7 @@ def run():
     applied = []
     stopped = False
     started = None
+    maintenance_released = False
     old_director = None
     children = []
     backup = ROOT/'state/dispatcher/reflex_upgrade_backups'/owner_request
@@ -180,6 +181,10 @@ def run():
             require(h.read_regular(ROOT/rel) == raw, 'WRITE_POSTIMAGE')
         started = h.start_checked(ROOT, require_native_status=True)
         require(h.stop_clear(ROOT) and service_guard() == protected, 'PROTECTED_SERVICE_CHANGED')
+        # The director must acquire the maintenance lock in SH mode to refill.
+        # Release our upgrade lock only after exact new source and director are live.
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        maintenance_released = True
         native_status = {}
         deadline = time.monotonic()+25
         while time.monotonic() < deadline:
@@ -216,6 +221,11 @@ def run():
     except BaseException as exc:
         receipt['state'] = str(exc) if str(exc).startswith('HOLD_') else 'HOLD_NATIVE_REFLEX_'+type(exc).__name__
         try:
+            if maintenance_released:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    raise RuntimeError('HOLD_NATIVE_REFLEX_ROLLBACK_LEASE_BUSY')
             if applied:
                 present = h.supervisor('status')
                 live = h.process_identity(present.get('pid'))
