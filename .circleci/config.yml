@@ -1,0 +1,25 @@
+# NOX HELION — actual deterministic tests of the existing Reflex resource+refill code.
+# No server credentials, service starts, database resets, or production writes.
+version: 2.1
+jobs:
+  native-refill-memory:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Parse and compile existing cgroup governor and dispatcher refill
+          command: |
+            set -eu
+            python -B -m py_compile nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py nox-control/owner_memory_governor.py nox-control/test_owner_memory_governor.py
+      - run:
+          name: Source regressions — exact-295 handoff, refills, cgroup pressure
+          command: |
+            set -eu
+            python -B -m unittest discover -s nox-control/systemic_relay_20261118 -p test_owner_reflex_cycle.py -v
+            python -B -m unittest discover -s nox-control -p test_owner_memory_governor.py -v
+workflows:
+  reviewed-source:
+    jobs:
+      - native-refill-memory
