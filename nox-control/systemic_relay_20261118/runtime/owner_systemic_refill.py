@@ -481,6 +481,48 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
                 break
 
     exhausted = (states['pending'] + states['running'] + states['ready'] == 0)
+    # An empty reviewed catalog used to yield zero suggestions even though
+    # the immutable 295-ID source registry still had unrepresented parents.
+    # This is only a *research handoff*; it cannot mint an approved task,
+    # invoke a model, reserve a source or bypass the native publisher/CAS.
+    if exhausted and len(suggestions) < 3:
+        represented = {m['parent_task_id'] for m in manifest['missions']}
+        represented.update(topic['parent_task_id'] for topic in
+                           manifest.get('research_topics', []))
+        for parent_id in sorted(parents):
+            if parent_id in represented:
+                continue
+            parent = parents[parent_id]
+            if not isinstance(parent, dict) or parent.get('queue_id') not in QUEUES:
+                continue
+            spec = parent.get('spec_sha256')
+            if type(spec) is not str or not SHA.fullmatch(spec):
+                continue
+            # Never hide finished original requirements behind a proposal.
+            current = tasks.get(parent_id)
+            if (isinstance(current, dict)
+                    and current.get('original_task_accepted') is True
+                    and current.get('status') in ('done', 'verified')):
+                continue
+            identity = {'parent_task_id': parent_id,
+                        'spec_sha256': spec,
+                        'manifest_sha256': capacity['manifest_sha256'],
+                        'hypothesis': 'INSPECT_UNREPRESENTED_ORIGINAL'}
+            signature = digest(identity)
+            if signature in seen:
+                continue
+            seen.add(signature)
+            suggestions.append({
+                'schema': 'NOX_NATIVE_REFLEX_CANDIDATE_V1',
+                'fingerprint': signature, 'queue_id': parent['queue_id'],
+                'parent_task_id': parent_id, 'spec_sha256': spec,
+                'hypothesis': 'INSPECT_UNREPRESENTED_ORIGINAL',
+                'required_next_step':
+                    'PIN_CURRENT_SOURCE_AND_IMMUTABLE_TEST_THEN_INDEPENDENT_REVIEW',
+                'authority': 'RESEARCH_PROPOSAL_ONLY',
+                'new_native_job_created': False})
+            if len(suggestions) == 3:
+                break
     context = {'manifest_sha256':capacity['manifest_sha256'],
                'source_pins':source_pins,
                'task_outcomes':outcomes[-32:], 'deferred':deferred}
