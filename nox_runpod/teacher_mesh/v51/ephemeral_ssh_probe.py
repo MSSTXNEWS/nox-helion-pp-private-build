@@ -427,34 +427,62 @@ def match(key: str, public: str) -> list[int]:
     return found
 
 
-def cleanup() -> bool:
+def cleanup(*, require_tracked_id: bool = False) -> bool:
+    """Detach only the exact per-instance key recorded in TRACK."""
     key = os.environ.get("NOX2", "")
     if not TRACK.exists():
+        if require_tracked_id:
+            print("TEMP_SSH_CLEANUP=HOLD_TRACKED_RECORD_REQUIRED")
+            return False
         print("TEMP_SSH_CLEANUP=NOT_ATTACHED")
         return True
-    record = json.loads(TRACK.read_text())
-    pub = record.get("public", "")
-    if not pub.startswith("ssh-ed25519 "):
+    if TRACK.is_symlink() or not TRACK.is_file():
         print("TEMP_SSH_CLEANUP=HOLD_BAD_RECORD")
         return False
+    try:
+        record = json.loads(TRACK.read_text())
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        print("TEMP_SSH_CLEANUP=HOLD_BAD_RECORD")
+        return False
+    pub = record.get("public", "") if isinstance(record, dict) else ""
+    if not isinstance(pub, str) or not pub.startswith("ssh-ed25519 "):
+        print("TEMP_SSH_CLEANUP=HOLD_BAD_RECORD")
+        return False
+    expected = record.get("key_id")
+    if expected is not None and (type(expected) is not int or expected <= 0):
+        print("TEMP_SSH_CLEANUP=HOLD_BAD_KEY_ID")
+        return False
+    if require_tracked_id and expected is None:
+        print("TEMP_SSH_CLEANUP=HOLD_TRACKED_KEY_ID_REQUIRED")
+        return False
+
     ids = match(key, pub)
-    # If attach was accepted and the key is missing already, cleanup succeeded.
+    # A GET that returns no matching public-key bytes verifies an already-absent key.
     if not ids:
+        try:
+            TRACK.unlink(missing_ok=True)
+        except OSError:
+            print("TEMP_SSH_CLEANUP=HOLD_TRACK_REMOVE")
+            return False
         print("TEMP_SSH_CLEANUP=ALREADY_ABSENT")
-        TRACK.unlink(missing_ok=True)
         return True
     if len(ids) != 1:
         print("TEMP_SSH_CLEANUP=HOLD_AMBIGUOUS_KEY_ID")
         return False
-    expected = record.get("key_id")
-    if expected is not None and int(expected) != ids[0]:
+    if expected is not None and expected != ids[0]:
         print("TEMP_SSH_CLEANUP=HOLD_KEY_ID_CHANGED")
         return False
+
+    # DELETE is scoped to this instance and the one ID matched to the tracked key.
     api("DELETE", f"/instances/{INSTANCE}/ssh/{ids[0]}/", key)
     for attempt in range(4):
         if not match(key, pub):
+            try:
+                TRACK.unlink(missing_ok=True)
+            except OSError:
+                print("TEMP_SSH_CLEANUP=HOLD_TRACK_REMOVE")
+                return False
             print("TEMP_SSH_CLEANUP=DETACHED_AND_VERIFIED")
-            TRACK.unlink(missing_ok=True)
             return True
         time.sleep(1.5)
     print("TEMP_SSH_CLEANUP=HOLD_STILL_ATTACHED")
@@ -601,7 +629,7 @@ def probe() -> bool:
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "probe"
-    if mode not in ("probe","cleanup"):
+    if mode not in ("probe", "cleanup", "cleanup-only"):
         raise SystemExit("HOLD_MODE")
     good = False
     if mode == "probe":
@@ -619,7 +647,8 @@ if __name__ == "__main__":
                 good = False
     else:
         try:
-            good = cleanup()
+            # cleanup-only requires both the numeric tracked key ID and public key.
+            good = cleanup(require_tracked_id=(mode == "cleanup-only"))
         except Exception:
             print("TEMP_SSH_CLEANUP=HOLD_UNEXPECTED_FAILURE")
     raise SystemExit(0 if good else 2)
