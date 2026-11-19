@@ -378,7 +378,7 @@ def reject_model_context_selectors(args: list[str]) -> dict:
     long_prefixes = (
         "--model", "--base-model", "--student", "--draft-model", "--hf",
         "--mmproj", "--models-", "--spec-draft-",
-        "--ctx-size", "--kv-unified", "--rope-", "--yarn-", "--parallel-",
+        "--config", "--ctx-size", "--kv-unified", "--rope-", "--yarn-", "--parallel-",
         "--lora-", "--control-vector-", "--override-kv-",
     )
     long_exact = {
