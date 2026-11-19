@@ -297,7 +297,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             {'index':1,'id':'call_b','type':'function',
              'function':{'name':'calculate','arguments':'{}'}}]
         first=Chunks([frame(calls=model_calls),frame(finish='tool_calls'),
-                      b'data: [DONE]\\n\\n'])
+                      b'data: [DONE]\n\n'])
         requests,factory=self.transport([first])
         native=self.native()
         native['_POOL']=True
