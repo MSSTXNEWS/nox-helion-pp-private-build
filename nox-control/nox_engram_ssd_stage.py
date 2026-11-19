@@ -91,13 +91,17 @@ class SourceRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(request, fp, code, msg, headers, url)
 
 
-def discard_synced_cache(fd, start, end):
-    os.fdatasync(fd)
+def discard_cache(fd, start, end):
     page = os.sysconf('SC_PAGESIZE')
     end -= end % page
     if end > start:
         os.posix_fadvise(fd, start, end - start, os.POSIX_FADV_DONTNEED)
     return end
+
+
+def discard_synced_cache(fd, start, end):
+    os.fdatasync(fd)
+    return discard_cache(fd, start, end)
 
 
 def stream_parts(output, opener):
@@ -135,6 +139,61 @@ def stream_parts(output, opener):
 
 def identity(info):
     return info.st_dev, info.st_ino
+
+
+def file_stamp(info):
+    return (identity(info), info.st_mode, info.st_uid, info.st_gid, info.st_nlink,
+            info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+
+def verify(path):
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOATIME
+    with directory(path) as parent:
+        disk_type = filesystem(parent)
+        require(disk_type in LOCAL_FILESYSTEMS, 'LOCAL_DISK_FILESYSTEM')
+        check_admission()
+        require(hasattr(os, 'posix_fadvise'), 'CACHE_CONTROL')
+        fd = os.open(TARGET, flags, dir_fd=parent)
+        try:
+            before = os.fstat(fd)
+            require(stat.S_ISREG(before.st_mode) and before.st_uid == os.geteuid()
+                    and stat.S_IMODE(before.st_mode) == 0o400 and before.st_nlink == 1
+                    and before.st_size == SIZE, 'VERIFY_FILE_SCOPE')
+            digest = hashlib.sha256()
+            offset = cached_from = 0
+            for _, (size, expected) in sorted(ENGRAM_PARTS.items()):
+                current = hashlib.sha256()
+                remaining = size
+                while remaining:
+                    check_admission()
+                    data = os.pread(fd, min(BLOCK, remaining), offset)
+                    require(0 < len(data) <= remaining, 'VERIFY_PART_LENGTH')
+                    if offset == 0:
+                        require(data.startswith(b'GGUF'), 'FORMAT')
+                    current.update(data)
+                    digest.update(data)
+                    offset += len(data)
+                    remaining -= len(data)
+                    if offset - cached_from >= CACHE_WINDOW:
+                        cached_from = discard_cache(fd, cached_from, offset)
+                require(current.hexdigest() == expected, 'VERIFY_PART_INTEGRITY')
+            require(offset == SIZE and not os.pread(fd, 1, offset), 'VERIFY_TOTAL_LENGTH')
+            discard_cache(fd, cached_from, offset)
+            named = os.stat(TARGET, dir_fd=parent, follow_symlinks=False)
+            require(file_stamp(before) == file_stamp(os.fstat(fd)) == file_stamp(named),
+                    'VERIFY_FILE_CHANGED')
+            with directory(path) as current_parent:
+                require(identity(os.fstat(parent)) == identity(os.fstat(current_parent)),
+                        'DESTINATION_CHANGED')
+            check_admission()
+        finally:
+            os.close(fd)
+    return {'state': 'SSD_READBACK_VERIFIED_NOT_LOADED', 'source_revision': REVISION,
+            'sha256': digest.hexdigest(), 'size_bytes': SIZE, 'file': TARGET,
+            'filesystem': disk_type, 'device': before.st_dev, 'inode': before.st_ino,
+            'mtime_ns': before.st_mtime_ns, 'ctime_ns': before.st_ctime_ns,
+            'verified_part_sha256': {name: sha for name, (_, sha) in ENGRAM_PARTS.items()},
+            'activation_performed': False, 'disk_readback_verified': True}
 
 
 def unlink_owned(fd, name, inode):
@@ -218,7 +277,7 @@ def stage(path, *, execute=False):
                 os.fchmod(output.fileno(), 0o400)
                 os.fsync(output.fileno())
                 info.update(state='VERIFIED_SSD_STAGE_NOT_LOADED', sha256=digest, file=TARGET,
-                            device=st.st_dev, inode=st.st_ino,
+                            device=st.st_dev, inode=st.st_ino, disk_readback_verified=False,
                             verified_part_sha256={name: sha for name, (_, sha) in ENGRAM_PARTS.items()})
                 raw = (json.dumps(info, sort_keys=True) + '\n').encode()
                 require(receipt.write(raw) == len(raw), 'SHORT_RECEIPT')
@@ -247,10 +306,12 @@ def stage(path, *, execute=False):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--destination', type=Path, required=True, help='Private local disk directory')
-    parser.add_argument('--execute', action='store_true', help='Transfer and verify the four pinned parts')
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument('--execute', action='store_true', help='Transfer and verify the four pinned parts')
+    action.add_argument('--verify', action='store_true', help='Reread and verify the existing SSD file')
     args = parser.parse_args(argv)
     try:
-        result = stage(args.destination, execute=args.execute)
+        result = verify(args.destination) if args.verify else stage(args.destination, execute=args.execute)
     except Hold as error:
         result = {'state': 'HOLD', 'reason': str(error)}
     except (OSError, ValueError, http.client.HTTPException):
