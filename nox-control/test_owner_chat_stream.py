@@ -479,6 +479,33 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('_agent_final',payload)
                 self.assertTrue(chunks.closed)
 
+    async def test_falsey_malformed_model_delta_or_tool_calls_cannot_certify_s03(self):
+        # A falsey but non-null malformed SSE field must never be treated as
+        # an empty valid delta and certify a preceding partial assistant reply.
+        docs=(
+            *({'choices':[{'delta':bad,'finish_reason':'stop'}]}
+              for bad in (False, [], 0)),
+            *({'choices':[{'delta':{'tool_calls':bad},'finish_reason':'stop'}]}
+              for bad in (False, 0, {})),
+        )
+        for doc in docs:
+            with self.subTest(doc=doc):
+                bad_frame=('data: '+json.dumps(doc)+'\\n\\n').encode()
+                chunks=Chunks([frame('partial'),bad_frame,b'data: [DONE]\\n\\n'])
+                requests,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Question'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Question',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_MODEL_SSE_INVALID',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
     async def test_usage_only_after_terminal_still_completes_normally(self):
         usage=b'data: {"choices":[],"usage":{"completion_tokens":1}}\n\n'
         chunks=Chunks([frame('¡Respuesta!'),frame(finish='stop'),usage,
