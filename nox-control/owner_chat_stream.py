@@ -112,7 +112,16 @@ def _executor_status_reply(user_text,path=None):
 
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
-    request=dict(payload,model='maya',stream=True,cache_prompt=True)
+    # The native OneHost request is authoritative about its selected model.
+    # Never substitute a different model for an explicitly selected one.
+    request=dict(payload,stream=True,cache_prompt=True)
+    if 'model' in request:
+        model=request['model']
+        if type(model) is not str or not 0<len(model.strip())<=200:
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+    else:
+        # Preserve the pre-existing alias for legacy callers without a model.
+        request['model']='maya'
     text=[];calls={};finished=None;complete=False;size=0
     async with client.stream('POST',url,json=request,timeout=180.0) as response:
         if response.status_code!=200:
