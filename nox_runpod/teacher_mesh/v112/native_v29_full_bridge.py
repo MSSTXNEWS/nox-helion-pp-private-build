@@ -275,10 +275,13 @@ def _dialog_context(dialog_id):
             return 'HOLD_HISTORY_CONTENT',[]
         if total_bytes>121000:
             return 'HOLD_HISTORY_SIZE',[]
-        pair_count=db.execute(
-            'SELECT COUNT(DISTINCT exchange_id) FROM nox_v29_dialog_messages '
-            'WHERE dialog_id=?',(dialog_id,)).fetchone()[0]
-        if message_count!=2*pair_count:
+        invalid_pair=db.execute(
+            'SELECT 1 FROM nox_v29_dialog_messages WHERE dialog_id=? '
+            'GROUP BY exchange_id HAVING COUNT(*)!=2 OR '
+            'SUM(CASE WHEN role=\'user\' THEN 1 ELSE 0 END)!=1 OR '
+            'SUM(CASE WHEN role=\'assistant\' THEN 1 ELSE 0 END)!=1 LIMIT 1',
+            (dialog_id,)).fetchone()
+        if invalid_pair is not None:
             return 'HOLD_HISTORY_PAIR_INCOMPLETE',[]
         rows=db.execute(
             'SELECT u.content AS question, a.content AS answer '
