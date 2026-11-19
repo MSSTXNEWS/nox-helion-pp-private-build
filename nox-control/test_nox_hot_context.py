@@ -30,6 +30,21 @@ class HotContextTests(unittest.TestCase):
         self.assertLessEqual(out["token_count"],512)
         self.assertFalse(out["native_installed"])
 
+
+    def test_s03_selected_ids_are_not_forged_by_other_fact_text(self):
+        # The long A fact cannot fit, but B quotes "[A]" in its content.
+        # Source provenance must come from accepted item identity, not text.
+        facts=[
+            {"id":"A","source_sha256":"a"*64,"text":"X"*4000},
+            {"id":"B","source_sha256":"b"*64,
+             "text":"The second verified fact mentions [A] in its body."},
+        ]
+        out=call(conversation=[],verified_s03=facts)
+        self.assertEqual(out["selected_s03_ids"],["B"])
+        self.assertEqual(sum("S03 verified" in r["content"] for r in out["messages"]),1)
+        with self.assertRaisesRegex(m.ContextHold,"HOLD_CONTEXT_S03"):
+            call(conversation=[],verified_s03=[facts[1],{**facts[1],"text":"same id different source"}])
+
     def test_too_large_protected_context_holds_not_truncates_persona(self):
         with self.assertRaisesRegex(m.ContextHold,"CORE_TOO_LARGE"):
             call(persona="identity"*10000)
