@@ -139,6 +139,19 @@ def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, bod
             and body.get('dialog_id') == dialog_id)
 
 
+def exact_native_post_fence(snapshot, admitted, expected):
+    """Require observed browser POSTs AND owner route admission to agree exactly.
+
+    A streamed answer and history rows alone do not prove that only the
+    allowed native generation occurred before the next RU/ES message.
+    """
+    return (type(expected) is int and expected in (1, 2)
+            and type(admitted) is int and admitted == expected
+            and isinstance(snapshot, dict)
+            and type(snapshot.get('native_calls')) is int
+            and snapshot['native_calls'] == expected)
+
+
 def empty_dialog_history_valid(history, dialog_id):
     """Reject an empty-history response scoped to another dialog before the FIRST POST.
 
@@ -1010,6 +1023,8 @@ async def browser_run(report, directory, available):
                 raise RuntimeError('HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED')
             if not first_numeric_pass:
                 raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
+            if not exact_native_post_fence(final, stream_admitted, 1):
+                raise RuntimeError('HOLD_FIRST_TURN_POST_ADMISSION')
             if report.get('two_turn_mode') is True:
                 # The owner-scoped second request is allowed only after a full
                 # first-turn browser/S03 proof. Never replay an ambiguous POST.
@@ -1079,14 +1094,14 @@ async def browser_run(report, directory, available):
                               multiturn_second_numeric_pass=second_public==expected_second,
                               multiturn_native_post_count=second_final['native_calls'],
                               multiturn_second_elapsed_ms=round((time.monotonic()-second_started)*1000))
+                if not exact_native_post_fence(second_final, stream_admitted, 2):
+                    raise RuntimeError('HOLD_MULTITURN_POST_ADMISSION')
                 if not (second_saved and second_native_equal and second_done
                         and second_progressive and second_stop
                         and second_public==expected_second):
                     raise RuntimeError('HOLD_MULTITURN_BROWSER')
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
-                if stream_admitted!=2:
-                    raise RuntimeError('HOLD_MULTITURN_POST_ADMISSION')
                 report['multiturn_browser_acceptance_verified']=True
         finally:
             report['network']=network

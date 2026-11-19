@@ -15,6 +15,7 @@ from owner_chat_browser_qa import (
     click_send,
     firstturn_history_valid,
     empty_dialog_history_valid,
+    exact_native_post_fence,
     multiturn_followup_prompt,
     ru_es_context_challenge,
     ru_es_unleaked_first_prompt,
@@ -57,6 +58,27 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_two_turn_native_post_accounting_fences_before_s03_proof(self):
+        for turn in (1, 2):
+            self.assertTrue(exact_native_post_fence(
+                {'native_calls': turn}, turn, turn))
+            # Either the browser observer or the owner guard may be stale:
+            # neither witness by itself is sufficient to admit the turn.
+            for observed, admitted in ((turn + 1, turn), (turn, turn + 1),
+                                       (turn - 1, turn), (turn, turn - 1)):
+                with self.subTest(turn=turn, observed=observed, admitted=admitted):
+                    self.assertFalse(exact_native_post_fence(
+                        {'native_calls': observed}, admitted, turn))
+            for malformed in (True, float(turn), str(turn), None, [], {}):
+                with self.subTest(turn=turn, malformed=repr(malformed)):
+                    self.assertFalse(exact_native_post_fence(
+                        {'native_calls': malformed}, turn, turn))
+                    self.assertFalse(exact_native_post_fence(
+                        {'native_calls': turn}, malformed, turn))
+        self.assertFalse(exact_native_post_fence({}, 1, 1))
+        self.assertFalse(exact_native_post_fence(None, 1, 1))
+        self.assertFalse(exact_native_post_fence({'native_calls': 3}, 3, 3))
+
     def test_empty_history_scope_must_match_before_first_native_post(self):
         # An empty list from another dialog must not authorize the first POST.
         self.assertTrue(empty_dialog_history_valid(
