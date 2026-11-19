@@ -224,6 +224,69 @@ class NativeReflexTests(unittest.TestCase):
                    'reason':'SOURCE_PIN_DRIFT_REVIEW_REQUIRED'} for x in m['missions']]
         self.assertEqual(tick(m=m,deferred=problems)['staged_count'],3)
 
+    def test_native_ready_and_unknown_status_do_not_fake_refill(self):
+        ready = tick(state={'native-ready': {
+            'handler': 'owner_native_project_work', 'status': 'ready'}})
+        self.assertEqual(ready['observed_task_counts']['ready'], 1)
+        self.assertEqual(ready['observed_task_counts']['unknown'], 0)
+        self.assertEqual(ready['state'], 'EXECUTION_OR_ADMISSION_IN_PROGRESS')
+        self.assertEqual(ready['next_action'], 'WAIT_EXISTING_NATIVE_WORK')
+
+        unknown = tick(state={'native-unknown': {
+            'handler': 'owner_native_project_work', 'status': 'unexpected'}})
+        self.assertEqual(unknown['observed_task_counts']['unknown'], 1)
+        self.assertEqual(unknown['state'], 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+        self.assertEqual(unknown['next_action'], 'INSPECT_UNKNOWN_NATIVE_TASK_STATUS')
+        self.assertEqual(unknown['new_native_jobs'], 0)
+
+        # Exercise the actual select_next publisher boundary, not only the
+        # read-only monitor. Unknown native work must not mint a new refill
+        # request even if the supplied capacity advertises a free slot.
+        reviewed = {'schema': refill.SCHEMA, 'revision': 1,
+            'review_origin': 'OWNER_REVIEWED',
+            'acceptance_scope': 'SOURCE_PATCH_TESTED',
+            'original_task_accepted': False, 'previous_manifest_sha256': None,
+            'registry': {'total_original_ids': 295,
+                'source_registry_sha256': {
+                    k: PIN for k in ('tasks', 'ideas', 'receipts', 'routing')},
+                'parents': {PARENT: {
+                    'spec_sha256': PIN, 'queue_id': 'Q1_RUNTIME_CHAT',
+                    'required_evidence': 'source'}}},
+            'missions': [{
+                'mission_id': 'unknown_native_guard', 'revision': 1,
+                'parent_task_id': PARENT, 'root_id': ROOT,
+                'priority': 'P0', 'queue_id': 'Q1_RUNTIME_CHAT',
+                'repeat_policy': 'ONCE_PER_REVIEWED_REVISION',
+                'title': 'Preserve native queue integrity',
+                'instruction': 'Inspect unknown native state before dispatch.',
+                'context': [{'path': 'code/cache.py', 'sha256': PIN},
+                            {'path': 'test_cache.py', 'sha256': PIN}],
+                'editable_paths': ['code/cache.py'],
+                'verification': {'kind': 'python_unittest',
+                                 'modules': ['test_cache'],
+                                 'min_tests': 1, 'timeout_sec': 60},
+                'budget': {'lane': 'model', 'max_model_turns': 24,
+                           'cpu_seconds': 60, 'max_searches': 0,
+                           'max_output_bytes': 8192},
+                'defect': {'observed_source_sha256': PIN,
+                           'finding': 'Unknown native state',
+                           'expected_delta': 'No concurrent refill',
+                           'verification_limit': 'Source regression'}}]}
+        result = refill.select_next(
+            reviewed,
+            {'native-unknown': {
+                'handler': 'owner_native_project_work',
+                'status': 'unexpected'}},
+            {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+            {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+        self.assertEqual(result['state'], 'WAIT_EXISTING_WORK')
+        self.assertEqual(result['rows'], [])
+        self.assertIsNone(result['refill_request'])
+        self.assertEqual(result['self_monitor']['state'],
+                         'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+        self.assertEqual(result['deferred'][0]['reason'],
+                         'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+
     def test_active_jobs_do_not_report_idle(self):
         state={'a': {'handler':'owner_native_project_work','status':'running'},
                'b': {'handler':'owner_native_typed_leaf','status':'pending'}}
