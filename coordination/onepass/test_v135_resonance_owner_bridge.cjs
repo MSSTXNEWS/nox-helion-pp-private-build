@@ -1610,3 +1610,20 @@ test('V188 long single native delta limits browser token enqueue fanout without 
   assert.equal(s03Read,true,'independent native history fixture readback still required');
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
 });
+
+test('V189 paint budget short-circuits repeated matchMedia lookups after two waits',async()=>{
+  const reply='Ж'.repeat(4096)+'🧠 español';
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    undefined,false,reply.length,undefined,'verified-exchange-01',[],false,false,prompt,
+    undefined,{document:{visibilityState:'visible'}});
+  let queries=0;
+  f.window.matchMedia=()=>{queries++;return {matches:false};};
+  const out=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v189-media-shortcircuit'})}));
+  assert.equal(queries,2,'query reduced-motion only while visible frame budget remains');
+  assert.equal(out.filter(e=>e.type==='token').map(e=>e.t).join(''),reply);
+  assert.equal(out.filter(e=>e.type==='done').length,1);
+  assert.equal(out.filter(e=>e.type==='error').length,0);
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')));
+});
