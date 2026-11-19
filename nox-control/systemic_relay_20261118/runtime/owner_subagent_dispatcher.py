@@ -351,7 +351,7 @@ def s03_readback(receipt):
         meta = json.loads(rows[0][2])
     except (ValueError, TypeError):
         return None
-    if meta.get('receipt') != receipt:
+    if not isinstance(meta, dict) or meta.get('receipt') != receipt:
         return None
     return {'native_verified': True, 'task_id': receipt['task_id'], 'job_id': receipt['job_id'],
             'receipt_sha256': digest(encoded(receipt)), 's03_item_id': rows[0][0],
