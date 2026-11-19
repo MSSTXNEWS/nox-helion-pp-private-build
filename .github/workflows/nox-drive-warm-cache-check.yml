@@ -1,0 +1,27 @@
+name: NOX Drive warm cache source checks
+on:
+  push:
+    branches: [feature/nox-warm-drive-cache-clean-20261119]
+    paths:
+      - 'nox-control/nox_drive_prefetch.py'
+      - 'nox-control/test_nox_drive_prefetch.py'
+      - 'nox-control/NOX_DRIVE_WARM_CACHE.md'
+      - '.github/workflows/nox-drive-warm-cache-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-safe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python syntax and focused unit tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_drive_prefetch.py nox-control/test_nox_drive_prefetch.py
+          python3 -m unittest discover -s nox-control -p test_nox_drive_prefetch.py -v
+      - name: Document no host credentials or deployments
+        run: echo 'Offline tests only; not Google Drive authorization or Vast install'
