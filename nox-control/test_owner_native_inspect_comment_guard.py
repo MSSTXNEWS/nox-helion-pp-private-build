@@ -57,7 +57,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
                          "3e399979e5b2e5ac16c1504542bd5cace989ddd3")
         self.assertEqual(GPU_INVENTORY_SHA,
                          "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e")
-        self.assertEqual(BROWSER_QA_SHA, "ccc9697a6a30a0e38e22303da822a449d41693a3")
+        self.assertEqual(BROWSER_QA_SHA, "ae8dd10cbbf27d4c18e597e59bb5b693d51f044f")
         self.assertEqual(authorize_event(event_for(), REPOSITORY, "issue_comment"),
                          ("inspect", INSPECT_SHA))
         audit_body = f"/nox-maintain 60509551 {AUDIT_SHA} audit"

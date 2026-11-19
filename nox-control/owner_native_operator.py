@@ -63,9 +63,9 @@ def run_native(action,request_id):
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
     key=os.environ.get('NOX2','')
     if not key:raise RuntimeError('HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE')
-    values=s.api('GET','/instances/',key)
-    values=values.get('instances',values) if isinstance(values,dict) else values
-    target=next((x for x in values if isinstance(x,dict) and str(x.get('id'))==str(INSTANCE)),None) if isinstance(values,list) else None
+    instance_result=s.api('GET',f'/instances/{INSTANCE}/',key)
+    target=instance_result.get('instances') if isinstance(instance_result,dict) else None
+    if not isinstance(target,dict) or str(target.get('id'))!=str(INSTANCE):target=None
     def public_state(value):
         return value if isinstance(value,str) and re.fullmatch('[a-zA-Z0-9_-]{1,40}',value) else None
     print('NOX_MAINT_INSTANCE_STATE='+json.dumps({'instance':INSTANCE,'found':target is not None,
