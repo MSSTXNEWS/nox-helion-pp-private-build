@@ -716,6 +716,27 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_BUDGET'})
         self.assertEqual(self.calls,[])
 
+    def test_dialog_context_archive_and_receipts_share_read_snapshot(self):
+        from unittest.mock import patch
+        from nox_runpod.teacher_mesh.v112 import native_v29_full_bridge as bridge
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Atomic context snapshot','confirmed':True}).json()['dialog_id']
+        self.assertTrue(bridge._save_exchange(
+            dialog,'Точный вопрос','Respuesta exacta','snapshot-context-pair'))
+        original=bridge._get_dialog
+        observed=[]
+        def inspect_snapshot(db,dialog_id):
+            # The owner/archive lookup MUST already be inside the same
+            # transaction used for message and receipt SELECTs.
+            observed.append(db.in_transaction)
+            return original(db,dialog_id)
+        with patch.object(bridge,'_get_dialog',side_effect=inspect_snapshot):
+            issue,history=bridge._dialog_context(dialog)
+        self.assertIsNone(issue)
+        self.assertEqual(observed,[True])
+        self.assertEqual(history,[{'role':'user','content':'Точный вопрос'},
+                                  {'role':'assistant','content':'Respuesta exacta'}])
+
     def test_dialog_context_keeps_owner_and_archive_guards(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
