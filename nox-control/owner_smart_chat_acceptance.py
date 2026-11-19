@@ -26,8 +26,8 @@ import urllib.request
 
 ROOT = Path('/root/nox')
 SCRIPTS = ROOT / 'scripts'
-PINS = {'owner_chat_stream.py': 'a26ec83aadac240d7284959b53cf7e59575e8e487d27c962cec7236892ccc7af',
-        'nox_v29_chat_bridge.py': '2d7145293fa5566fee38a61e772780b4b0dd0e2d1bcad71b5ceedf77974a75a7'}
+PINS = {'owner_chat_stream.py': '38f4dc2995dd2c31f1f4d6a816d485721267d7add1c789cc4693aca54233fe09',
+        'nox_v29_chat_bridge.py': '9d7475428ad8c553c756ca50280ac2363e7c03854abab285de560ae066d4586a'}
 STOPS = tuple(ROOT / name for name in
     ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'state/STOP', 'program/STOP'))
 SCHEMA = 'NOX_SMART_CHAT_OWNER_E2E_ACCEPTANCE_V1'
@@ -94,7 +94,7 @@ def process_state(service):
         stderr=subprocess.DEVNULL, timeout=6)
     lines = run.stdout.decode('utf-8', 'replace').strip().splitlines()
     if run.returncode != 0 or len(lines) != 1 or not lines[0].startswith(service + ' RUNNING '):
-        fail('SERVICE_NOT_RUNNING')
+        fail('SERVICE_NOT_RUNNING_' + service.upper().replace('-','_'))
     return True
 
 
