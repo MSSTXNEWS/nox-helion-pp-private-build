@@ -96,16 +96,38 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                 self.assertEqual(emitted[0][1]['reason'],'HOLD_BROWSER_QA_RECEIPT_MISSING')
                 proof={'schema':'NOX_OWNER_NATIVE_BROWSER_QA_V1','request':request,'source_sha':source,
                        'state':'PASSED','functional_acceptance_verified':True,
-                       'actual_native_model_stream_verified':True,'s03_readback_verified':False,
+                       'actual_native_model_stream_verified':True,'s03_readback_verified':True,
                        'screenshot_capture_verified':True,'synthetic_backend_used':False,
                        'private_text_or_credentials_exported':False}
+                # This receipt was written BEFORE the browser stage; all fields
+                # match, but accepting it would replay a prior acceptance.
                 receipt.write_text(json.dumps(proof))
+                emitted.clear()
+                with redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(module.main(),2)
+                self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true',output.getvalue())
+                self.assertEqual(emitted[0][1]['reason'],'HOLD_BROWSER_QA_RECEIPT_STALE')
+
+                def install_fresh_receipt_stage(payload):
+                    # Synthetic writer only: no claim of live serving acceptance.
+                    raw_fresh=(
+                        'import json\nfrom pathlib import Path\n'
+                        'def main():\n'
+                        f'    Path({str(receipt)!r}).write_text({json.dumps(payload)!r})\n'
+                        '    return None\n'
+                    ).encode()
+                    module.STAGES=((name,hashlib.sha256(raw_fresh).hexdigest()),)
+                    module.BUNDLE={name:base64.b64encode(raw_fresh).decode()}
+
+                proof['s03_readback_verified']=False
+                install_fresh_receipt_stage(proof)
                 emitted.clear()
                 with redirect_stdout(io.StringIO()):
                     self.assertEqual(module.main(),2)
                 self.assertEqual(emitted[0][1]['reason'],'HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
+
                 proof['s03_readback_verified']=True
-                receipt.write_text(json.dumps(proof))
+                install_fresh_receipt_stage(proof)
                 emitted.clear()
                 with redirect_stdout(io.StringIO()) as output:
                     self.assertEqual(module.main(),0)
