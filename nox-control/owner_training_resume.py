@@ -132,14 +132,18 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
             after = os.fstat(stream.fileno())
         if len(raw) > limit:
             raise RuntimeError('HOLD_BOUNDED_STATE_READ')
-        # Even a legacy caller without a receipt SHA must never parse an
-        # unstable descriptor. Trailing whitespace in appended JSON would
-        # otherwise be accepted silently as a coherent trainer snapshot.
+        # A stable FD is insufficient if the named state file was rebound
+        # during reading; the next checkpoint stage will reopen this path.
+        # Reject a missing, swapped, symlinked or concurrently changed name.
+        try:
+            named = os.stat(path, follow_symlinks=False)
+        except OSError as exc:
+            raise RuntimeError('HOLD_STATE_FILE_MUTATED') from exc
+        fields = ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
         if (len(raw) != info.st_size
-                or (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns,
-                    info.st_ctime_ns)
-                != (after.st_dev, after.st_ino, after.st_size,
-                    after.st_mtime_ns, after.st_ctime_ns)):
+                or any(getattr(info, field) != getattr(after, field)
+                       or getattr(info, field) != getattr(named, field)
+                       for field in fields)):
             raise RuntimeError('HOLD_STATE_FILE_MUTATED')
     finally:
         if fd >= 0:
