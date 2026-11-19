@@ -208,11 +208,28 @@
                 // Browsers with suspended rAF (including headless/hidden tabs)
                 // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
-                  let settled=false;
-                  const finish=()=>{if(!settled){settled=true;resolve();}};
-                  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
-                  if(typeof setTimeout==='function')setTimeout(finish,18);
-                  else if(typeof requestAnimationFrame!=='function')finish();
+                  let settled=false,frameId,timerId;
+                  const finish=()=>{
+                    if(settled)return;
+                    settled=true;
+                    // The losing callback must not wake a hidden tab later:
+                    // keep the 18ms fallback, but cancel unused schedules.
+                    if(frameId!==undefined&&typeof cancelAnimationFrame==='function')
+                      cancelAnimationFrame(frameId);
+                    if(timerId!==undefined&&typeof clearTimeout==='function')
+                      clearTimeout(timerId);
+                    resolve();
+                  };
+                  if(typeof requestAnimationFrame==='function'){
+                    frameId=requestAnimationFrame(finish);
+                    if(settled&&typeof cancelAnimationFrame==='function')
+                      cancelAnimationFrame(frameId);
+                  }
+                  if(typeof setTimeout==='function'){
+                    timerId=setTimeout(finish,18);
+                    if(settled&&typeof clearTimeout==='function')
+                      clearTimeout(timerId);
+                  } else if(typeof requestAnimationFrame!=='function')finish();
                 });
               }
             }
