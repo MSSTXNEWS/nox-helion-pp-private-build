@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Finite owner transition: semantic memory, original chat layout, browser proof."""
 import base64
+from contextlib import redirect_stdout
 import hashlib
 import json
 import os
@@ -93,6 +94,36 @@ def verify_browser_receipt(browser_started_ns):
             or proof.get('multiturn_native_post_count') != 2):
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
 
+class _StageOutputFilter:
+    """Forward child evidence, never forward a premature child COMPLETE marker."""
+    _marker = 'NOX_MAINT_REPAIR_COMPLETE=true'
+
+    def __init__(self, destination):
+        self.destination = destination
+        self.pending = ''
+
+    def write(self, value):
+        if not isinstance(value, str):
+            raise TypeError('stage output must be text')
+        self.pending += value
+        while '\\n' in self.pending:
+            line, self.pending = self.pending.split('\\n', 1)
+            if line.rstrip('\\r') != self._marker:
+                self.destination.write(line + '\\n')
+        if len(self.pending) > 65536:
+            raise RuntimeError('HOLD_ACCEPTANCE_COMPONENT_LOG_SIZE')
+        return len(value)
+
+    def flush(self):
+        self.destination.flush()
+
+    def finish(self):
+        if self.pending and self.pending.rstrip('\\r') != self._marker:
+            self.destination.write(self.pending)
+        self.pending = ''
+        self.destination.flush()
+
+
 def main():
     failed = []
     for name, expected in STAGES:
@@ -116,8 +147,13 @@ def main():
             module.__file__ = '/root/nox/scripts/' + name
             module.__dict__['__NOX_' + 'BUNDLE_JSON__'] = BUNDLE
             sys.modules[module.__name__] = module
-            exec(compile(raw, module.__file__, 'exec'), module.__dict__)
-            result = module.main()
+            stage_output = _StageOutputFilter(sys.stdout)
+            try:
+                with redirect_stdout(stage_output):
+                    exec(compile(raw, module.__file__, 'exec'), module.__dict__)
+                    result = module.main()
+            finally:
+                stage_output.finish()
             conventional_main = name == 'owner_browser_qa_entry.py' and result is None
             if not conventional_main and (type(result) is not int or result != 0):
                 raise RuntimeError('HOLD_ACCEPTANCE_COMPONENT_RESULT')
