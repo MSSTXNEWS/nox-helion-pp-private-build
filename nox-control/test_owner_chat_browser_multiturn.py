@@ -1,7 +1,8 @@
 """Exact A1 continuation contract; no browser, network, GPU or S03 writes."""
 import unittest
 
-from owner_chat_browser_qa import admitted_qa_prompt, multiturn_history_valid, progressive_stream_valid
+from owner_chat_browser_qa import (admitted_qa_prompt, allowed_qa_request,
+                                   multiturn_history_valid, progressive_stream_valid)
 
 
 FIRST = 'Числа 1-10'
@@ -43,6 +44,19 @@ class SameDialogFourMessageContract(unittest.TestCase):
         self.assertIsNone(admitted_qa_prompt(1, False, FIRST, SECOND))
         self.assertEqual(admitted_qa_prompt(1, True, FIRST, SECOND), SECOND)
         self.assertIsNone(admitted_qa_prompt(2, True, FIRST, SECOND))
+
+    def test_no_null_or_missing_message_can_bypass_exhausted_admission(self):
+        good_first={'message': FIRST, 'dialog_id': 'synthetic-dialog'}
+        good_second={'message': SECOND, 'dialog_id': 'synthetic-dialog'}
+        self.assertTrue(allowed_qa_request(0, False, FIRST, SECOND, good_first, 'synthetic-dialog'))
+        self.assertFalse(allowed_qa_request(1, False, FIRST, SECOND, good_second, 'synthetic-dialog'))
+        self.assertTrue(allowed_qa_request(1, True, FIRST, SECOND, good_second, 'synthetic-dialog'))
+        for bad in ({'message':None,'dialog_id':'synthetic-dialog'},
+                    {'dialog_id':'synthetic-dialog'}, {}, None):
+            self.assertFalse(allowed_qa_request(1, False, FIRST, SECOND, bad, 'synthetic-dialog'))
+            self.assertFalse(allowed_qa_request(2, True, FIRST, SECOND, bad, 'synthetic-dialog'))
+        self.assertFalse(allowed_qa_request(2, True, FIRST, SECOND, good_second, 'synthetic-dialog'))
+        self.assertFalse(allowed_qa_request(0, False, FIRST, SECOND, good_first, 'other-dialog'))
 
     def test_second_turn_progress_requires_two_real_visible_prefixes(self):
         proof={'ui_measurement_kind':'CUMULATIVE_VISIBLE_ASSISTANT_BODY',
