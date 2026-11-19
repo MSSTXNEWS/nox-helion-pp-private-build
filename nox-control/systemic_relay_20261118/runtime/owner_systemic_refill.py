@@ -321,7 +321,11 @@ def memory_governor_projection(capacity):
               budget.get('shmem_bytes'), decision.get('projected_memory_ratio'),
               budget.get('memory_psi_some_avg10'),
               budget.get('memory_psi_full_avg10'))
-    if (any(type(v) not in (int, float) or v < 0
+    # cgroup memory.stat and memory.current/max are byte counters, never
+    # floating-point measurements. Fractional/coerced counters are not a
+    # trustworthy basis for a green background-work recommendation.
+    if (any(type(v) is not int for v in fields[:5])
+            or any(type(v) not in (int, float) or v < 0
             or v > (1 << 63) - 1 or not math.isfinite(v)
             for v in fields)
             or not 0 < budget['max_bytes']
