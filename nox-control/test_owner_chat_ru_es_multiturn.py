@@ -6,6 +6,8 @@ multiturn canonical-S03 HOLD remains mandatory until real writer/readback wiring
 import asyncio
 import hashlib
 import json
+import shutil
+import subprocess
 import unittest
 from unittest.mock import AsyncMock
 
@@ -23,6 +25,8 @@ from owner_chat_browser_qa import (
     ru_es_unleaked_first_answer_valid,
     multiturn_history_valid,
     multiturn_transcript_sha256,
+    native_terminal_stream_valid,
+    OBSERVER_JS,
 )
 
 TOKEN = "gmnop"
@@ -59,6 +63,40 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_native_stream_done_is_not_terminal_until_clean_eof_for_each_turn(self):
+        complete = {"native_stream_complete": True, "native_terminal_count": 1,
+                    "done": {"saved": True, "s03_integrated": True,
+                             "dialog_matches": True}, "error": None}
+        for turn in (1, 2):
+            self.assertTrue(native_terminal_stream_valid(dict(complete,
+                native_calls=turn)))
+        for invalid in (
+            dict(complete, native_stream_complete=False),
+            dict(complete, native_stream_complete=None),
+            dict(complete, native_terminal_count=0),
+            dict(complete, native_terminal_count=2),
+            dict(complete, native_terminal_count=1.0),
+            dict(complete, native_terminal_count=True),
+            dict(complete, error="HOLD_QA_TRAILING_AFTER_DONE"),
+            dict(complete, error="HOLD_QA_STREAM_NOT_TERMINAL"),
+            dict(complete, done=None),
+        ):
+            with self.subTest(case=str(invalid)[:90]):
+                self.assertFalse(native_terminal_stream_valid(invalid))
+        self.assertFalse(native_terminal_stream_valid(None))
+        self.assertFalse(native_terminal_stream_valid({}))
+        # The JS observer is the actual witness producer. Check its syntax on
+        # CI (Node is on ubuntu-latest); no browser/model/network side effects.
+        self.assertIn("HOLD_QA_TRAILING_AFTER_DONE", OBSERVER_JS)
+        self.assertIn("HOLD_QA_STREAM_NOT_TERMINAL", OBSERVER_JS)
+        self.assertIn("q.nativeStreamComplete=true", OBSERVER_JS)
+        if shutil.which("node"):
+            check = subprocess.run(["node", "--check", "-"],
+                input=OBSERVER_JS.replace('__CONFIG__', '{"did":"synthetic"}'),
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=12, check=False)
+            self.assertEqual(check.returncode, 0, check.stderr[:500])
+
     def test_canonical_s03_four_rows_are_bound_to_own_dialog(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
         legacy = rows(es)

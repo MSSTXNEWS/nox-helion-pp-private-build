@@ -152,6 +152,20 @@ def exact_native_post_fence(snapshot, admitted, expected):
             and snapshot['native_calls'] == expected)
 
 
+def native_terminal_stream_valid(snapshot):
+    """A single DONE frame is not proof of a completed native response.
+
+    Require the cloned browser observer to read clean EOF with exactly one
+    terminal frame before admitting the Spanish follow-up or final result.
+    """
+    return (isinstance(snapshot, dict)
+            and snapshot.get('native_stream_complete') is True
+            and type(snapshot.get('native_terminal_count')) is int
+            and snapshot['native_terminal_count'] == 1
+            and snapshot.get('error') is None
+            and isinstance(snapshot.get('done'), dict))
+
+
 def distinct_explicit_message_ids(rows):
     """Optional row IDs must not claim multiple distinct turns with one identity.
 
@@ -454,7 +468,7 @@ OBSERVER_JS = r"""
  'use strict';
  const cfg=__CONFIG__;
  const q=window.__NOX_BROWSER_QA={started:null,nativeFirst:null,nativeDone:null,
-   nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,nativeCalls:0,
+   nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,nativeCalls:0,nativeTerminalCount:0,nativeStreamComplete:false,
    uiFirst:null,uiBeforeDone:false,uiLengths:[],uiPrefixLengthsBeforeDone:[],uiBody:null,
    uiVisible:false,uiMaxTokenSpans:0,contexts:[],draws:0,
    stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};
@@ -539,10 +553,10 @@ OBSERVER_JS = r"""
  const fetch0=window.fetch.bind(window);
  async function observe(response){
    if(!response.body){q.error='HOLD_NO_NATIVE_RESPONSE_BODY';return;}
-   const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
+   const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',sawEof=false;
    try{
      for(let count=0;count<2048;count++){
-       const part=await reader.read();if(part.done)break;
+       const part=await reader.read();if(part.done){sawEof=true;break;}
        q.nativeBytes+=part.value.length;
        if(q.nativeBytes>65536)throw Error('HOLD_QA_STREAM_LIMIT');
        buffer+=decoder.decode(part.value,{stream:true});
@@ -551,6 +565,8 @@ OBSERVER_JS = r"""
          const line=buffer.slice(0,end);buffer=buffer.slice(end+1);
          if(!line.trim())continue;
          const frame=JSON.parse(line);
+         // A DONE frame is terminal: reject duplicate DONE or trailing data.
+         if(q.nativeTerminalCount!==0)throw Error('HOLD_QA_TRAILING_AFTER_DONE');
          if(frame.type==='delta'){
            if(typeof frame.text!=='string'||q.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');
            q.answer+=frame.text;q.nativeDeltas++;
@@ -559,12 +575,17 @@ OBSERVER_JS = r"""
            // may precede this clone's frame; retry on the next real paint.
            queueUi();
          }else if(frame.type==='done'){
+           q.nativeTerminalCount++;
            q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,
                    dialog_matches:frame.dialog_id===cfg.did};
            q.nativeDone=performance.now()-q.started;
          }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}
        }
      }
+     if(!sawEof||buffer.trim()||q.nativeTerminalCount!==1)
+       throw Error('HOLD_QA_STREAM_NOT_TERMINAL');
+     if(q.error)throw Error(q.error);
+     q.nativeStreamComplete=true;
    }catch(e){q.error=/^HOLD_[A-Z_]+$/.test(e.message)?e.message:'HOLD_QA_STREAM_OBSERVER';}
    finally{try{await reader.cancel();}catch{}}
  }
@@ -576,7 +597,8 @@ OBSERVER_JS = r"""
      if(q.nativeCalls===2){
        // Independent second POST measurement without clearing cumulative calls.
        q.nativeFirst=null;q.nativeDone=null;q.nativeDeltas=0;q.nativeBytes=0;
-       q.answer='';q.done=null;q.error=null;q.uiFirst=null;q.uiBeforeDone=false;
+       q.answer='';q.done=null;q.error=null;q.nativeTerminalCount=0;q.nativeStreamComplete=false;
+       q.uiFirst=null;q.uiBeforeDone=false;
        q.uiLengths=[];q.uiPrefixLengthsBeforeDone=[];q.uiBody=null;
        q.uiVisible=false;q.uiMaxTokenSpans=0;q.stopSamples=0;
        q.stopVisibleSamples=0;q.stopOccludedSamples=0;
@@ -611,6 +633,7 @@ SNAPSHOT_JS = r"""() => {
  }).slice(0,8);
  return {native_first_ms:q.nativeFirst,native_done_ms:q.nativeDone,native_delta_count:q.nativeDeltas,
    native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,
+   native_terminal_count:q.nativeTerminalCount,native_stream_complete:q.nativeStreamComplete,
    ui_first_ms:q.uiFirst,ui_before_native_done:q.uiBeforeDone,ui_lengths:q.uiLengths,
    ui_prefix_lengths_before_done:q.uiPrefixLengthsBeforeDone,ui_body_visible:q.uiVisible,
    ui_token_span_peak:q.uiMaxTokenSpans,
@@ -1010,10 +1033,12 @@ async def browser_run(report, directory, available):
                 final=await page.evaluate(SNAPSHOT_JS)
                 if final and final.get('error'):
                     raise RuntimeError(final['error'])
-                if final and final.get('done') and final.get('dom_answer_matches_native'):
+                if (final and final.get('done') and final.get('dom_answer_matches_native')
+                        and native_terminal_stream_valid(final)):
                     break
                 await page.wait_for_timeout(120)
-            if not final or not final.get('done') or not final.get('dom_answer_matches_native'):
+            if (not final or not final.get('done') or not final.get('dom_answer_matches_native')
+                    or not native_terminal_stream_valid(final)):
                 raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
             # V135 performs its own real S03 readback after native done; wait for
             # the original submit button to be usable again before final proof.
@@ -1091,11 +1116,13 @@ async def browser_run(report, directory, available):
                     if second_final and second_final.get('error'):
                         raise RuntimeError(second_final['error'])
                     if (second_final and second_final.get('native_calls')==2
-                            and second_final.get('done') and second_final.get('dom_answer_matches_native')):
+                            and second_final.get('done') and second_final.get('dom_answer_matches_native')
+                            and native_terminal_stream_valid(second_final)):
                         break
                     await page.wait_for_timeout(120)
                 if (not second_final or second_final.get('native_calls')!=2
-                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')):
+                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')
+                        or not native_terminal_stream_valid(second_final)):
                     raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')
                 await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
                 second_history=await json_response(await context.request.get(
