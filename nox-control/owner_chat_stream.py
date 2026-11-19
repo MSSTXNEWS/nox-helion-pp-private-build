@@ -309,7 +309,7 @@ async def _run(native,url,payload,user_text):
                         yield 'token',text
                         return
                     messages.append({'role':'tool','tool_call_id':call['id'],
-                                     'name':call['name'],'content':text[:8000]})
+                                     'name':call['name'],'content':text})
             calls=[]
             model_request=dict(req,messages=messages,cache_prompt=True)
             if steps>=int(native.get('MAX_STEPS',8)):
