@@ -9,11 +9,13 @@ ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "runtime"))
 import owner_systemic_taskpack as producer
+import owner_systemic_relay_publish as publisher
 from owner_systemic_refill_eligibility import (
     strict_parent_registry, eligibility_ledger, proposal_predicate_diff,
     special_candidate_gaps,
 )
 from owner_systemic_refill import acceptance_mapping_valid
+import owner_systemic_refill as refill
 
 PACK = ROOT / "next_pack_44368502183"
 SOURCES = ROOT.parent / "four_queue_20261118"
@@ -43,6 +45,66 @@ def exact_registry():
 
 
 class RefillEligibilityTests(unittest.TestCase):
+    def test_owner_snapshot_is_recent_exactly_bound_and_claim_free(self):
+        now = 1800000000
+        snapshot = {'schema':producer.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-60,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        self.assertEqual(producer.validate_owner_snapshot(snapshot,now=now,
+            expected_previous_sha='b'*64,expected_refill_request='e'*64,
+            expected_registry_sha='c'*64,expected_source_sha='d'*64,
+            expected_native_readback_sha='2'*64),snapshot)
+        for changed,reason in (({**snapshot,'observed_at':now-601},'OWNER_SNAPSHOT_STALE'),
+            ({**snapshot,'active_claim_count':1},'OWNER_SNAPSHOT_ACTIVE_CLAIMS'),
+            ({**snapshot,'previous_manifest_sha256':'9'*64},'OWNER_SNAPSHOT_BINDING'),
+            ({**snapshot,'extra':'ignored'},'OWNER_SNAPSHOT_SHAPE')):
+            with self.subTest(reason=reason),self.assertRaisesRegex(ValueError,reason):
+                producer.validate_owner_snapshot(changed,now=now,
+                    expected_previous_sha='b'*64,expected_refill_request='e'*64,
+                    expected_registry_sha='c'*64,expected_source_sha='d'*64,
+                    expected_native_readback_sha='2'*64)
+        with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
+            publisher.validate_owner_snapshot(snapshot,now=now+601)
+
+    def test_successor_route_rejects_zero_or_multiple_parent_missions(self):
+        for proposals in ([],[{},{}]):
+            with self.subTest(count=len(proposals)),self.assertRaisesRegex(
+                    ValueError,'EXACTLY_ONE_SUCCESSOR_REQUIRED'):
+                producer.bind_missions(proposals,{}, {'parents':{}},{})
+        with self.assertRaisesRegex(RuntimeError,'EXACTLY_ONE_SUCCESSOR_REQUIRED'):
+            publisher.require_exactly_one_successor({'missions':[]})
+        with self.assertRaisesRegex(RuntimeError,'EXACTLY_ONE_SUCCESSOR_REQUIRED'):
+            publisher.require_exactly_one_successor({'missions':[{},{}]})
+
+    def test_native_receipt_contract_binds_original_source_and_test_shas(self):
+        mission={'parent_task_id':'I-39','mission_id':'minhash_guard','revision':1,
+            'root_id':'NOX_PROJECT_SOURCE','context':[
+                {'path':'forge_split_guard.py','sha256':'a'*64},
+                {'path':'test_forge_split_guard.py','sha256':'b'*64}],
+            'editable_paths':['forge_split_guard.py'],
+            'instruction':'Add the grounded MinHash leakage check.',
+            'verification':{'modules':['test_forge_split_guard'],'min_tests':1},
+            'registered_acceptance':'MinHash split without leakage',
+            'parent_spec_sha256':'c'*64}
+        contract=producer.native_receipt_contract(mission,manifest_revision=4,
+            previous_sha='d'*64,registry_sha='e'*64,review_sha='f'*64)
+        self.assertEqual(contract['original_task_id'],'I-39')
+        self.assertEqual(contract['successor_task_id'].split('.relay.')[0],'I-39')
+        self.assertEqual(contract['source_sha256'],producer.digest(contract['source_pins']))
+        self.assertEqual(contract['test_sha256'],producer.digest(contract['test_pins']))
+        self.assertEqual(contract['test_pins'][0]['sha256'],'b'*64)
+        self.assertFalse(contract['acceptance_recorded'])
+        self.assertFalse(contract['required_receipt']['original_task_accepted'])
+        self.assertTrue(contract['required_receipt']['s03']['native_verified'])
+        self.assertTrue(contract['required_receipt']['receipt'][
+            'worker_result.project_evidence.tests.passed'])
+        native=publisher.native_receipt_contract(mission,manifest_revision=4,
+            previous_sha='d'*64,registry_sha='e'*64,review_sha='f'*64,refill=refill)
+        self.assertEqual(native,contract)
+
     def test_reconstructs_exact_295_original_specs_and_acceptance(self):
         disposition,docs,raw_sha,registry = exact_registry()
         self.assertEqual(registry["total_original_ids"],295)

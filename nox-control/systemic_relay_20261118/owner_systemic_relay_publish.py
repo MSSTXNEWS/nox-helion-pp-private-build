@@ -22,6 +22,9 @@ ROOT = Path('/root/nox')
 CONFIG = ROOT / 'config/owner_native_subagents.json'
 PACKAGE = ROOT / 'state/dispatcher/project_executor/package'
 HELPER_SHA = '8470a6720ca69864bbc4e6e630a1f853344839af424d3829dcdf1774442db609'
+OWNER_SNAPSHOT_SCHEMA = 'NOX_SYSTEMIC_OWNER_PUBLISH_SNAPSHOT_V1'
+NATIVE_RECEIPT_CONTRACT_SCHEMA = 'NOX_OWNER_REVIEWED_NATIVE_RECEIPT_CONTRACT_V1'
+OWNER_SNAPSHOT_MAX_AGE_SEC = 600
 SPEC = {}
 try:
     BUNDLE = __NOX_BUNDLE_JSON__
@@ -40,6 +43,68 @@ def sha(raw):
 
 def encoded(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
+
+
+def validate_owner_snapshot(snapshot, now=None):
+    require(isinstance(snapshot,dict) and set(snapshot) == {
+        'schema','owner_id','observed_at','config_sha256','previous_manifest_sha256',
+        'registry_sha256','source_files_sha256','refill_request_id',
+        'original_task_states_sha256','process_identity_sha256',
+        'native_readback_sha256','active_claim_count'}, 'OWNER_SNAPSHOT_SHAPE')
+    current = time.time() if now is None else now
+    observed = snapshot.get('observed_at')
+    require(snapshot.get('schema') == OWNER_SNAPSHOT_SCHEMA
+            and snapshot.get('owner_id') == 60509551
+            and type(observed) in (int,float) and 0 <= observed <= 10**12
+            and type(current) in (int,float) and -30 <= current-observed <= OWNER_SNAPSHOT_MAX_AGE_SEC,
+            'OWNER_SNAPSHOT_STALE_OR_IDENTITY')
+    for key in ('config_sha256','previous_manifest_sha256','registry_sha256',
+                'source_files_sha256','refill_request_id','original_task_states_sha256',
+                'process_identity_sha256','native_readback_sha256'):
+        require(type(snapshot.get(key)) is str and re.fullmatch(r'[a-f0-9]{64}',snapshot[key]),
+                'OWNER_SNAPSHOT_PIN')
+    require(type(snapshot.get('active_claim_count')) is int
+            and snapshot['active_claim_count'] == 0,'OWNER_SNAPSHOT_ACTIVE_CLAIMS')
+    return snapshot
+
+
+def native_receipt_contract(mission, *, manifest_revision, previous_sha,
+                             registry_sha, review_sha, refill):
+    context = {row['path']:row['sha256'] for row in mission['context']}
+    source_pins = [{'path':path,'sha256':context[path]}
+                   for path in sorted(mission['editable_paths'])]
+    test_pins = [{'module':module,'path':module.replace('.','/')+'.py',
+                  'sha256':context[module.replace('.','/')+'.py']}
+                 for module in sorted(mission['verification']['modules'])]
+    input_sha = refill._input(mission)
+    task_id = mission['parent_task_id'] + '.relay.' + mission['mission_id'] + '.' + input_sha[:16]
+    acceptance = mission['registered_acceptance']
+    return {'schema':NATIVE_RECEIPT_CONTRACT_SCHEMA,
+        'manifest_revision':manifest_revision,'previous_manifest_sha256':previous_sha,
+        'owner_review_sha256':review_sha,'registry_sha256':registry_sha,
+        'original_task_id':mission['parent_task_id'],'successor_task_id':task_id,
+        'original_task_spec_sha256':mission['parent_spec_sha256'],
+        'registered_acceptance_sha256':sha(acceptance.encode('utf-8')),
+        'source_pins':source_pins,'source_sha256':sha(encoded(source_pins)),
+        'test_pins':test_pins,'test_sha256':sha(encoded(test_pins)),
+        'required_receipt':{'schema':'NOX_NATIVE_SUBAGENT_RECEIPT_V1',
+            'verified':True,'scope':'SOURCE_PATCH_TESTED',
+            'receipt':{'schema':'NOX_NATIVE_SUBAGENT_RECEIPT_V1',
+                'phase':'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED',
+                'original_task_accepted':False,
+                'worker_result.project_evidence.state':'INTEGRATED',
+                'worker_result.project_evidence.integration_verified':True,
+                'worker_result.project_evidence.tests.passed':True},
+            's03':{'native_verified':True,'receipt_sha256_matches_receipt':True},
+            'original_task_accepted':False},
+        'acceptance_recorded':False}
+
+
+def require_exactly_one_successor(manifest):
+    missions = manifest.get('missions') if isinstance(manifest,dict) else None
+    require(isinstance(missions,list) and len(missions) == 1,
+            'EXACTLY_ONE_SUCCESSOR_REQUIRED')
+    return missions[0]
 
 
 def wait_settled_queue(helper, guard, expected, receipt):
@@ -211,6 +276,26 @@ def run(bundle, spec):
     manifest_path = PACKAGE / 'relay' / (manifest_sha + '.json')
     require(manifest_path in payloads, 'MANIFEST_MISSING')
     manifest = json.loads(payloads[manifest_path])
+    require_exactly_one_successor(manifest)
+    evidence = manifest.get('producer_evidence')
+    require(isinstance(evidence,dict),'PRODUCER_EVIDENCE')
+    owner_snapshot = validate_owner_snapshot(spec.get('owner_snapshot'))
+    require(evidence.get('owner_snapshot') == owner_snapshot
+            and evidence.get('owner_snapshot_sha256') == sha(encoded(owner_snapshot))
+            and spec.get('owner_snapshot_sha256') == sha(encoded(owner_snapshot))
+            and owner_snapshot.get('config_sha256') == spec.get('expected_config_sha256')
+            and owner_snapshot.get('previous_manifest_sha256') == spec.get('previous_manifest_sha256')
+            and owner_snapshot.get('source_files_sha256') == spec.get('expected_source_files_sha256')
+            and owner_snapshot.get('registry_sha256') == evidence.get('registry_sha256')
+            and owner_snapshot.get('refill_request_id') == evidence.get('refill_request_id')
+            and owner_snapshot.get('original_task_states_sha256') ==
+                evidence.get('refill_request_binding',{}).get('original_task_states_sha256'),
+            'OWNER_SNAPSHOT_BINDING')
+    process_identity_sha = sha(encoded({'director':spec.get('expected_director'),
+        'workers':spec.get('expected_workers'),
+        'protected_processes':spec.get('protected_processes')}))
+    require(owner_snapshot.get('process_identity_sha256') == process_identity_sha,
+            'OWNER_SNAPSHOT_PROCESS_BINDING')
     lock = ROOT / 'state/owner_maintenance.lock'
     require(not lock.is_symlink(), 'LEASE_PATH')
     fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -241,8 +326,10 @@ def run(bundle, spec):
             return h.expected_processes(spec), h.protected_snapshot(spec)
         processes, protected = guard()
         baseline = wait_settled_queue(h, guard, (processes, protected), receipt)
+        require(receipt['busy_count'] == 0,'OWNER_SNAPSHOT_ACTIVE_CLAIMS')
         old_raw = h.read_regular(CONFIG, 2 * 1024 * 1024)
         require(sha(old_raw) == spec.get('expected_config_sha256'), 'CONFIG_PREDECESSOR')
+        require(sha(old_raw) == owner_snapshot['config_sha256'], 'OWNER_SNAPSHOT_CONFIG_CHANGED')
         old = json.loads(old_raw)
         require(old.get('schema') == 'NOX_NATIVE_SUBAGENT_BINDING_V1'
                 and old.get('owner_authorized') is True and old.get('instance_id') == 60509551
@@ -264,6 +351,15 @@ def run(bundle, spec):
         verify_registry(manifest, h)
         verify_refill_request_state(manifest, baseline, refill)
         expected_contracts, expected_task_ids = mission_contracts(manifest, refill)
+        receipt_contract = evidence.get('native_receipt_contract')
+        expected_receipt_contract = native_receipt_contract(manifest['missions'][0],
+            manifest_revision=manifest['revision'],
+            previous_sha=manifest['previous_manifest_sha256'],
+            registry_sha=evidence.get('registry_sha256'),
+            review_sha=evidence.get('review_sha256'),refill=refill)
+        require(receipt_contract == expected_receipt_contract
+                and spec.get('native_receipt_contract_sha256') == sha(encoded(receipt_contract)),
+                'NATIVE_RECEIPT_CONTRACT')
         bundled = {path.stem: raw for path, raw in payloads.items() if path.parent.name == 'contracts'}
         require(bundled == expected_contracts, 'MANIFEST_CONTRACT_SET')
         ancestor, seen = previous, {manifest_sha}
@@ -284,6 +380,8 @@ def run(bundle, spec):
                 and root.get('integration_kind') == 'SOURCE_WORKSPACE', 'SOURCE_ROOT')
         snapshot = h.source_snapshot(ROOT, old)
         require(snapshot['files_sha256'] == spec.get('expected_source_files_sha256'), 'SOURCE_PREIMAGE')
+        require(snapshot['files_sha256'] == owner_snapshot['source_files_sha256'],
+                'OWNER_SNAPSHOT_SOURCE_CHANGED')
         for path, raw in payloads.items():
             if path.parent.name != 'contracts':
                 continue
@@ -302,7 +400,8 @@ def run(bundle, spec):
             {'slots_available': 3, 'callback_sha256': old['module_pins']['owner_subagent_dispatcher.py'],
              'manifest_sha256': manifest_sha, 'now': time.time()})
         require(sorted(row['id'] for row in proposed['rows']) == sorted(expected_task_ids)
-                and 1 <= len(expected_task_ids) <= 3, 'NEXT_MISSIONS_NOT_READY')
+                and len(expected_task_ids) == len(proposed['rows']) == 1,
+                'NEXT_MISSIONS_NOT_READY')
         for path, raw in payloads.items():
             try:
                 existing = h.read_regular(path, 2 * 1024 * 1024)
@@ -330,9 +429,15 @@ def run(bundle, spec):
         changed = True
         h.atomic(CONFIG, new_raw)
         require(h.read_regular(CONFIG, 2 * 1024 * 1024) == new_raw, 'CONFIG_READBACK')
-        receipt.update(state='PUBLISHED_HOT_REFILL_PENDING', previous_manifest_sha256=previous,
+        receipt.update(state='PUBLISHED_ONE_OWNER_REVIEWED_SUCCESSOR_PENDING_NATIVE_ADMISSION',
+            previous_manifest_sha256=previous,
             previous_config_sha256=sha(old_raw), config_sha256=sha(new_raw),
-            preserved_task_count=len(baseline['tasks']), director=processes['director'])
+            preserved_task_count=len(baseline['tasks']), director=processes['director'],
+            original_task_id=receipt_contract['original_task_id'],
+            successor_task_id=receipt_contract['successor_task_id'],
+            owner_snapshot_sha256=sha(encoded(owner_snapshot)),
+            native_receipt_contract_sha256=sha(encoded(receipt_contract)),
+            original_task_accepted=False, native_job_created=False)
     except BaseException as exc:
         receipt['state'] = str(exc) if str(exc).startswith('HOLD_') else 'HOLD_SYSTEMIC_PUBLISH_' + type(exc).__name__
         if changed and old_raw is not None and new_raw is not None:

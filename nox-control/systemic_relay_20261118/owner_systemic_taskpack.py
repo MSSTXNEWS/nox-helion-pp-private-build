@@ -23,6 +23,7 @@ from pathlib import Path
 import re
 import stat
 import sys
+import time
 
 sys.path.insert(0,str(Path(__file__).parent / 'runtime'))
 from owner_systemic_refill import (SCHEMA, RefillHold, canonical, digest, require,
@@ -34,6 +35,9 @@ PROPOSAL_SCHEMA = 'NOX_SYSTEMIC_GROUNDED_PROPOSALS_V1'
 REVIEW_SCHEMA = 'NOX_SYSTEMIC_TASKPACK_REVIEW_V1'
 REFILL_SCHEMA = 'NOX_SYSTEMIC_REFILL_REQUEST_V1'
 HELPER_SHA = '8470a6720ca69864bbc4e6e630a1f853344839af424d3829dcdf1774442db609'
+OWNER_SNAPSHOT_SCHEMA = 'NOX_SYSTEMIC_OWNER_PUBLISH_SNAPSHOT_V1'
+NATIVE_RECEIPT_CONTRACT_SCHEMA = 'NOX_OWNER_REVIEWED_NATIVE_RECEIPT_CONTRACT_V1'
+OWNER_SNAPSHOT_MAX_AGE_SEC = 600
 
 
 def read_raw(path, limit=4*1024*1024):
@@ -150,7 +154,10 @@ def parent_registry(disposition):
 
 def bind_missions(proposals, roots, registry, execution_states=None, *, require_acceptance_binding=False):
     execution_states = execution_states or {}
-    require(isinstance(proposals,list) and 1 <= len(proposals) <= 3,'NEXT_BATCH_BOUND')
+    # This route is intentionally a one-successor publisher. A larger batch
+    # expands the review, claim and rollback surface and cannot be approved by
+    # the exact-one owner command.
+    require(isinstance(proposals,list) and len(proposals) == 1,'EXACTLY_ONE_SUCCESSOR_REQUIRED')
     missions = []
     for proposal in proposals:
         require(isinstance(proposal,dict),'PROPOSAL')
@@ -272,6 +279,81 @@ def immutable_verifier_sha256(missions, roots):
     return digest(rows)
 
 
+def validate_owner_snapshot(snapshot, *, now=None, expected_previous_sha=None,
+                            expected_refill_request=None, expected_registry_sha=None,
+                            expected_source_sha=None, expected_native_readback_sha=None):
+    """Validate a recent owner readback bound to this exact candidate input set.
+
+    The snapshot is preflight evidence only. The native publisher still repeats
+    config, source, owner/process, queue and claim checks under its canonical
+    lease/CAS transaction immediately before changing the relay pointer.
+    """
+    require(isinstance(snapshot,dict) and set(snapshot) == {
+        'schema','owner_id','observed_at','config_sha256','previous_manifest_sha256',
+        'registry_sha256','source_files_sha256','refill_request_id',
+        'original_task_states_sha256','process_identity_sha256',
+        'native_readback_sha256','active_claim_count'},'OWNER_SNAPSHOT_SHAPE')
+    require(snapshot.get('schema') == OWNER_SNAPSHOT_SCHEMA
+            and snapshot.get('owner_id') == 60509551,'OWNER_SNAPSHOT_IDENTITY')
+    observed_at = snapshot.get('observed_at')
+    require(type(observed_at) in (int,float) and 0 <= observed_at <= 10**12,
+            'OWNER_SNAPSHOT_TIME')
+    current = time.time() if now is None else now
+    require(type(current) in (int,float) and 0 <= current <= 10**12
+            and -30 <= current-observed_at <= OWNER_SNAPSHOT_MAX_AGE_SEC,
+            'OWNER_SNAPSHOT_STALE')
+    for key in ('config_sha256','previous_manifest_sha256','registry_sha256',
+                'source_files_sha256','refill_request_id','original_task_states_sha256',
+                'process_identity_sha256','native_readback_sha256'):
+        require(type(snapshot.get(key)) is str and SHA.fullmatch(snapshot[key]),
+                'OWNER_SNAPSHOT_PIN')
+    require(type(snapshot.get('active_claim_count')) is int
+            and snapshot['active_claim_count'] == 0,'OWNER_SNAPSHOT_ACTIVE_CLAIMS')
+    checks = ((expected_previous_sha,'previous_manifest_sha256'),
+              (expected_refill_request,'refill_request_id'),
+              (expected_registry_sha,'registry_sha256'),
+              (expected_source_sha,'source_files_sha256'),
+              (expected_native_readback_sha,'native_readback_sha256'))
+    for expected,key in checks:
+        if expected is not None:
+            require(snapshot[key] == expected,'OWNER_SNAPSHOT_BINDING')
+    return snapshot
+
+
+def native_receipt_contract(mission, *, manifest_revision, previous_sha,
+                             registry_sha, review_sha):
+    """Pin the single successor's source/tests and its future native receipt."""
+    context = {row['path']:row['sha256'] for row in mission['context']}
+    source_pins = [{'path':path,'sha256':context[path]}
+                   for path in sorted(mission['editable_paths'])]
+    test_pins = [{'module':module,'path':module.replace('.','/')+'.py',
+                  'sha256':context[module.replace('.','/')+'.py']}
+                 for module in sorted(mission['verification']['modules'])]
+    input_sha = _input(mission)
+    task_id = mission['parent_task_id'] + '.relay.' + mission['mission_id'] + '.' + input_sha[:16]
+    acceptance = mission['registered_acceptance']
+    acceptance_sha = hashlib.sha256(acceptance.encode('utf-8')).hexdigest()
+    return {'schema':NATIVE_RECEIPT_CONTRACT_SCHEMA,
+        'manifest_revision':manifest_revision,'previous_manifest_sha256':previous_sha,
+        'owner_review_sha256':review_sha,'registry_sha256':registry_sha,
+        'original_task_id':mission['parent_task_id'],'successor_task_id':task_id,
+        'original_task_spec_sha256':mission['parent_spec_sha256'],
+        'registered_acceptance_sha256':acceptance_sha,
+        'source_pins':source_pins,'source_sha256':digest(source_pins),
+        'test_pins':test_pins,'test_sha256':digest(test_pins),
+        'required_receipt':{'schema':'NOX_NATIVE_SUBAGENT_RECEIPT_V1',
+            'verified':True,'scope':'SOURCE_PATCH_TESTED',
+            'receipt':{'schema':'NOX_NATIVE_SUBAGENT_RECEIPT_V1',
+                'phase':'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED',
+                'original_task_accepted':False,
+                'worker_result.project_evidence.state':'INTEGRATED',
+                'worker_result.project_evidence.integration_verified':True,
+                'worker_result.project_evidence.tests.passed':True},
+            's03':{'native_verified':True,'receipt_sha256_matches_receipt':True},
+            'original_task_accepted':False},
+        'acceptance_recorded':False}
+
+
 def compile_taskpack(previous, previous_sha, proposal, proposal_sha, census, census_sha,
                      refill_request, refill_request_sha, disposition, disposition_sha, review,
                      source_documents=None, source_raw_sha256=None):
@@ -302,6 +384,12 @@ def compile_taskpack(previous, previous_sha, proposal, proposal_sha, census, cen
                         for row in disposition['tasks']}
     missions = bind_missions(proposal.get('missions'),census['roots'],registry,execution_states,
                              require_acceptance_binding=True)
+    snapshot = validate_owner_snapshot(review.get('owner_snapshot'),
+        expected_previous_sha=previous_sha,
+        expected_refill_request=refill_request['request_id'],
+        expected_registry_sha=disposition_sha,
+        expected_source_sha=census.get('observed_files_sha256'),
+        expected_native_readback_sha=review['native_readback_sha256'])
     require(review.get('reviewed_mission_ids') == sorted(row['mission_id'] for row in missions),
             'REVIEWED_MISSION_SET')
     prior_parents = {row['parent_task_id'] for row in previous['missions']}
@@ -333,6 +421,11 @@ def compile_taskpack(previous, previous_sha, proposal, proposal_sha, census, cen
                 'outcomes':deepcopy(refill_request['outcomes']),
                 'original_task_states':deepcopy(refill_request['original_task_states']),
                 'original_task_states_sha256':refill_request['original_task_states_sha256']},
+            'owner_snapshot':deepcopy(snapshot),
+            'owner_snapshot_sha256':digest(snapshot),
+            'native_receipt_contract':native_receipt_contract(missions[0],
+                manifest_revision=previous['revision']+1,previous_sha=previous_sha,
+                registry_sha=disposition_sha,review_sha=digest(review)),
             'original_task_spec_pins':[{'task_id':row['parent_task_id'],
                 'spec_sha256':row['parent_spec_sha256'],'queue_id':row['queue_id'],
                 'registered_acceptance_sha256':registry['parents'][row['parent_task_id']].get(
@@ -380,6 +473,8 @@ def write_package(manifest, output, *, previous_sha=None):
         'registry_sha256':manifest['producer_evidence']['registry_sha256'],
         'immutable_verifier_sha256':manifest['producer_evidence']['immutable_verifier_sha256'],
         'owner_review_sha256':manifest['producer_evidence']['review_sha256'],
+        'owner_snapshot_sha256':manifest['producer_evidence']['owner_snapshot_sha256'],
+        'native_receipt_contract_sha256':digest(manifest['producer_evidence']['native_receipt_contract']),
         'new_manifest_path':'state/dispatcher/project_executor/package/relay/' + manifest_sha + '.json',
         'contracts':contracts,'scope':'EXISTING_SOURCE_WORKSPACE_ONLY',
         'original_task_accepted':False,'native_write_performed':False,
@@ -401,6 +496,23 @@ def publisher_entry(manifest, package, checkpoint, template_path, helper_path):
                 'CHECKPOINT_PIN')
     require(checkpoint['previous_manifest_sha256'] == manifest['previous_manifest_sha256'],
             'PUBLISH_PREDECESSOR')
+    require(len(manifest.get('missions',[])) == 1,'EXACTLY_ONE_SUCCESSOR_REQUIRED')
+    evidence = manifest.get('producer_evidence',{})
+    snapshot = validate_owner_snapshot(evidence.get('owner_snapshot'),
+        expected_previous_sha=manifest['previous_manifest_sha256'],
+        expected_refill_request=evidence.get('refill_request_id'),
+        expected_registry_sha=evidence.get('registry_sha256'),
+        expected_source_sha=checkpoint.get('expected_source_files_sha256'))
+    require(evidence.get('owner_snapshot_sha256') == digest(snapshot)
+            and checkpoint.get('owner_snapshot_sha256') == digest(snapshot)
+            and snapshot.get('config_sha256') == checkpoint['expected_config_sha256'],
+            'PUBLISH_OWNER_SNAPSHOT_PIN')
+    receipt_contract = evidence.get('native_receipt_contract')
+    expected_receipt_contract = native_receipt_contract(manifest['missions'][0],
+        manifest_revision=manifest['revision'],previous_sha=manifest['previous_manifest_sha256'],
+        registry_sha=evidence.get('registry_sha256'),review_sha=evidence.get('review_sha256'))
+    require(receipt_contract == expected_receipt_contract,
+            'PUBLISH_NATIVE_RECEIPT_CONTRACT')
     director,workers = checkpoint.get('expected_director'),checkpoint.get('expected_workers')
     def identity(value):
         return (isinstance(value,dict) and type(value.get('pid')) is int
@@ -413,6 +525,10 @@ def publisher_entry(manifest, package, checkpoint, template_path, helper_path):
     protected = checkpoint.get('protected_processes')
     require(isinstance(protected,dict) and set(protected) == {'chat','proxy','web'}
             and all(identity(row) for row in protected.values()),'CHECKPOINT_PROTECTED')
+    process_identity_sha = digest({'director':director,'workers':workers,
+                                   'protected_processes':protected})
+    require(snapshot.get('process_identity_sha256') == process_identity_sha,
+            'PUBLISH_OWNER_PROCESS_SNAPSHOT')
     template,helper = read_raw(template_path),read_raw(helper_path)
     require(hashlib.sha256(template).hexdigest() == checkpoint['publisher_template_sha256']
             and hashlib.sha256(helper).hexdigest() == HELPER_SHA,'PUBLISHER_CODE_PIN')
@@ -438,6 +554,9 @@ def publisher_entry(manifest, package, checkpoint, template_path, helper_path):
         'assets':{name:hashlib.sha256(raw).hexdigest() for name,raw in assets.items()},
         'helper_asset':'transaction_helpers.py','package_paths':paths,
         'manifest_sha256':manifest_sha,
+        'owner_snapshot':deepcopy(snapshot),
+        'owner_snapshot_sha256':digest(snapshot),
+        'native_receipt_contract_sha256':digest(receipt_contract),
         **{key:deepcopy(checkpoint[key]) for key in ('expected_config_sha256',
             'previous_manifest_sha256','expected_source_files_sha256','expected_director',
             'expected_workers','protected_processes')}}
