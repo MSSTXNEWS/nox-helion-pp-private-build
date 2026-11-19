@@ -4,8 +4,13 @@ import ast
 from hashlib import sha256
 
 
-EDGE_PIN = "4dfc48d178de35c1ba3b6625fd2cd7e2df891b3dac6c515947971e4863a97eeb"
-PAGE_PIN = "a3864e371dd38b0ffbbb11ba23ba8da7615de8e7af320aebe0d2118566880e5f"
+PAGE_BY_EDGE = {
+    "4dfc48d178de35c1ba3b6625fd2cd7e2df891b3dac6c515947971e4863a97eeb":
+        "a3864e371dd38b0ffbbb11ba23ba8da7615de8e7af320aebe0d2118566880e5f",
+    # Output of the reviewed same-origin adviser transform.
+    "6697fd91f95d951815ba46f3bc619151499e767c297d8a358cc815aeb03a136e":
+        "b4c4270a1b976d2f114725c9a2f1b8853dbd534657a4d32ef3534c3f010b0bc7",
+}
 SCRIPT_PIN = "c2718756179876b8cd329ccecbe0cda678cc4e4c13535d5f29b3fb755d68ae9d"
 STYLE_PIN = "46ed48242750e7eba067398e185e4861882919ff073c93a4e98be8a7f694974a"
 
@@ -139,13 +144,14 @@ def replace_once(source, anchor, value):
 
 def attach_media_edge(edge: bytes, script: bytes, style: bytes) -> bytes:
     """Return one exact source candidate with all media assets embedded locally."""
-    if tuple(sha256(raw).hexdigest() for raw in (edge, script, style)) != (EDGE_PIN, SCRIPT_PIN, STYLE_PIN):
+    expected_page = PAGE_BY_EDGE.get(sha256(edge).hexdigest())
+    if expected_page is None or (sha256(script).hexdigest(), sha256(style).hexdigest()) != (SCRIPT_PIN, STYLE_PIN):
         raise ValueError("HOLD_MEDIA_EDGE_SOURCE_PINS")
     source, js, css = (raw.decode("utf-8") for raw in (edge, script, style))
     assignment = next(node for node in ast.parse(source).body if isinstance(node, ast.Assign)
                       and any(isinstance(target, ast.Name) and target.id == "PAGE" for target in node.targets))
     page = assignment.value.func.value.value
-    if sha256(page.encode()).hexdigest() != PAGE_PIN:
+    if sha256(page.encode()).hexdigest() != expected_page:
         raise ValueError("HOLD_MEDIA_EDGE_PAGE_PIN")
     for old, new in (("chatForm", "send"), ("prompt", "question"), ("messages", "history")):
         js = replace_once(js, "getElementById(" + repr(old) + ")", "getElementById(" + repr(new) + ")")
