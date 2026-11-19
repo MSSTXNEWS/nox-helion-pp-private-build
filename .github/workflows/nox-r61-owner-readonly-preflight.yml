@@ -52,7 +52,7 @@ jobs:
       - name: Validate the read-only gap fixture
         run: python -B -m unittest coordination.onepass.test_owner_r61_readonly_preflight -v
       - name: Read control-plane status and report the host-access gate
-        run: python -B coordination/onepass/owner_r61_readonly_preflight.py
+        run: python -B -m coordination.onepass.owner_r61_readonly_preflight
       - name: Upload minimal HOLD receipt
         if: always()
         uses: actions/upload-artifact@v4
