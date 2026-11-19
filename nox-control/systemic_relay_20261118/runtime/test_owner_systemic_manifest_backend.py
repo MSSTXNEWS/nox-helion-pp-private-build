@@ -4,7 +4,10 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parents[2] / 'complete_executor_20261118' / 'runtime'))
 from unittest.mock import patch
 
 import owner_systemic_refill as relay
@@ -26,7 +29,7 @@ class Native:
         self.stopped = False
 
     def owner_allowed(self): return True
-    def stop_active(self): return self.stopped is False and False
+    def stop_active(self): return self.stopped
     def writer_lease(self): return True
 
 
@@ -103,17 +106,17 @@ class BackendAdapterTests(unittest.TestCase):
         }
         self.config_path.write_bytes(dispatcher.encoded(self.config))
         self.config_path.chmod(0o600)
-        dispatcher.PROJECT_FILES = {
-            "work_tasks_sha256": self.registry_paths["project_work_tasks.json"],
-            "work_ideas_sha256": self.registry_paths["project_work_ideas.json"],
-            "routing_sha256": self.registry_paths["project_routing_4q.json"],
-        }
-        self.native = Native(self.config)
         self.patches = [
             patch.object(dispatcher, "ROOT", self.root),
             patch.object(dispatcher, "CONFIG", self.config_path),
             patch.object(dispatcher, "DB", self.db_path),
+            patch.object(dispatcher, "PROJECT_FILES", {
+                "work_tasks_sha256": self.registry_paths["project_work_tasks.json"],
+                "work_ideas_sha256": self.registry_paths["project_work_ideas.json"],
+                "routing_sha256": self.registry_paths["project_routing_4q.json"],
+            }),
         ]
+        self.native = Native(self.config)
         for item in self.patches: item.start()
 
     def tearDown(self):
