@@ -162,19 +162,31 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
 
 
 def file_sha(path):
-    """Hash an opened regular-file descriptor, not a separately checked path."""
+    """Hash only a stable, initially bounded regular file from one descriptor."""
     try:
         fd = os.open(Path(path), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
         raise RuntimeError('HOLD_SOURCE_PATH') from exc
     try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size < 0:
             raise RuntimeError('HOLD_SOURCE_PATH')
         digest = hashlib.sha256()
         with os.fdopen(fd, 'rb') as stream:
             fd = -1
-            for block in iter(lambda: stream.read(8 * 1024 * 1024), b''):
+            remaining = before.st_size
+            while remaining:
+                block = stream.read(min(8 * 1024 * 1024, remaining))
+                if not block:
+                    raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
                 digest.update(block)
+                remaining -= len(block)
+            if stream.read(1):
+                raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
+            after = os.fstat(stream.fileno())
+            if ((before.st_size, before.st_mtime_ns, before.st_ctime_ns)
+                    != (after.st_size, after.st_mtime_ns, after.st_ctime_ns)):
+                raise RuntimeError('HOLD_CHECKPOINT_FILE_MUTATED')
         return digest.hexdigest()
     finally:
         if fd >= 0:
