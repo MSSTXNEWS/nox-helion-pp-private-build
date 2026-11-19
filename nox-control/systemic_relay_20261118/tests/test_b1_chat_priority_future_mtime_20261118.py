@@ -874,6 +874,91 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                                     "HOLD_NATIVE_TERMINAL_FINAL_OWNER"):
             fence(owner, task, receipt, proof)
 
+    def test_terminal_verifier_never_downgrades_post_stop_s03_fence(self):
+        # Execute both production verification callbacks without host modules.
+        # Old verifier accepted truthy S03 independently of lost owner/STOP.
+        import hashlib
+        import json
+        import sqlite3
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                      and n.name == "Native")
+        methods = [n for n in native.body if isinstance(n, ast.FunctionDef)
+                   and n.name in ("verify", "_verify_leaf")]
+        self.assertEqual(len(methods), 2)
+        def encoded(obj):
+            return json.dumps(obj, sort_keys=True, ensure_ascii=False,
+                              separators=(",", ":"), allow_nan=False).encode()
+        def digest(data):
+            return hashlib.sha256(data).hexdigest()
+        scope = {
+            "HANDLER": "review", "LEAF_HANDLER": "leaf",
+            "PROJECT_HANDLER": "project", "sqlite3": sqlite3,
+            "GateError": RuntimeError, "digest": digest, "encoded": encoded,
+            "s03_readback": lambda _: self.fail(
+                "standalone S03 proof must not bypass durable owner CAS"),
+        }
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=methods, type_ignores=[])), str(SOURCE), "exec"), scope)
+        proof = {"native_verified": True, "s03_item_id": 19,
+                 "receipt_sha256": "trusted"}
+        flags = {"hold": False}
+        calls = []
+        def fence(task, receipt, candidate):
+            calls.append(task["handler"])
+            if flags["hold"]:
+                raise RuntimeError("HOLD_NATIVE_TERMINAL_FINAL_OWNER")
+            if candidate != proof:
+                raise RuntimeError("HOLD_NATIVE_TERMINAL_FINAL_READBACK")
+            return {"receipt": receipt, "s03": proof}
+        owner = SimpleNamespace(
+            source="pinned-source", projects=None,
+            _durable_completion_fence=fence,
+            receipt_source_allowed=lambda *args: True)
+        owner._verify_leaf = lambda task, evidence: scope["_verify_leaf"](
+            owner, task, evidence)
+        for handler, phase in (("review",
+                               "NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED"),
+                              ("leaf",
+                               "NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED")):
+            with self.subTest(handler=handler):
+                task = {"id": "B1-VERIFY-" + handler, "handler": handler,
+                        "owner_claim": {"nonce": "owned"}, "status": "running",
+                        "params": {"job_id": "job-" + handler},
+                        "parent_task_id": "6V14-03", "queue_id": "Q1"}
+                receipt = {
+                    "task_id": task["id"], "job_id": task["params"]["job_id"],
+                    "phase": phase, "claim": task["owner_claim"],
+                    "source_sha256": owner.source,
+                    "scope": "SUBTASK_COMPLETED_ORIGINAL_NOT_ACCEPTED",
+                    "parent_task_id": task["parent_task_id"],
+                    "queue_id": task["queue_id"],
+                    "original_task_accepted": False,
+                    "worker_result": {"leaf_evidence": {"blockers": ["BROWSER_REQUIRED"]}},
+                }
+                evidence = {"verified": True, "receipt": receipt,
+                            "receipt_sha256": digest(encoded(receipt)),
+                            "s03": proof}
+                verify = scope["verify"]
+                accepted = verify(owner, task, evidence)
+                self.assertIsInstance(accepted, dict)
+                self.assertEqual(accepted["s03_item_id"], 19)
+                flags["hold"] = True
+                self.assertIsNone(verify(owner, task, evidence),
+                                  "STOP/owner revocation must block verify")
+                flags["hold"] = False
+                self.assertIsNone(verify(owner, task, {**evidence, "s03": {}}),
+                                  "unbound S03 proof must not pass")
+                self.assertIsNone(verify(owner, task, {**evidence, "verified": False}),
+                                  "candidate result is not accepted")
+                foreign = {**receipt, "job_id": "foreign-job"}
+                self.assertIsNone(verify(owner, task, {
+                    **evidence, "receipt": foreign,
+                    "receipt_sha256": digest(encoded(foreign))}),
+                    "foreign job must not settle owner claim")
+        self.assertGreaterEqual(calls.count("review"), 3)
+        self.assertGreaterEqual(calls.count("leaf"), 3)
+
     def test_s03_readback_nonobject_metadata_fails_closed(self):
         # Execute the actual S03 receipt reader without a live host connection.
         # Valid JSON with a non-dict root must not crash interrupted recovery.
