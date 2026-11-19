@@ -259,10 +259,14 @@ class V112Tests(unittest.TestCase):
             json={'title':'Two turn source fixture','confirmed':True}).json()['dialog_id']
         prompts=('first exact prompt','second exact prompt')
         receipts=[];expected=[]
+        model_messages=[]
         for prompt in prompts:
+            model_messages.append({'role':'user','content':prompt})
             response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
                 json={'message':prompt,'dialog_id':dialog,'history':[]})
             self.assertEqual(response.status_code,200,response.text[:200])
+            # The next inference must receive the durable prior pair, not browser history.
+            self.assertEqual(self.calls[-1]['messages'],model_messages)
             frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
             done=frames[-1]
             self.assertEqual(done['type'],'done')
@@ -273,6 +277,7 @@ class V112Tests(unittest.TestCase):
             self.assertEqual([row['role'] for row in messages],['user','assistant'])
             self.assertEqual(messages[0]['content'],prompt)
             self.assertEqual(messages[1]['content'],'Готов. Это проверенный ответ.')
+            model_messages.append({'role':'assistant','content':'Готов. Это проверенный ответ.'})
             self.assertTrue(proof.json()['durable']);self.assertTrue(proof.json()['verified'])
             self.assertEqual(proof.json()['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
             self.assertFalse(proof.json()['canonical_s03_verified'])
