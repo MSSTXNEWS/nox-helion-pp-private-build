@@ -1,134 +1,56 @@
-"""Install the version-pinned V38 modules beside the existing NOX chat."""
+"""Activate the native NOX V38 owner dialog in an authenticated maintenance run."""
 
 import base64
-import fcntl
-import hashlib
+from contextlib import ExitStack
+from hashlib import sha256
 import json
-import os
 from pathlib import Path
-import re
-import stat
-import tempfile
+import sys
+from types import ModuleType
 
 
 BUNDLE = __NOX_BUNDLE_JSON__
-PINS = {"brain_init.py":"01178973745df411a15bd452f925b9c5234d2566b5e4a1ab0a2fcc586d3a1a22","synaptic_brain.py":"5f5c5778c4c92bdc9c81e5d434d5df5434b4a29dfceaf52fb8584a8a60595732","native_bridge_v38.py":"270dc33a33e8323f9762106db1547139af738d5f26c89e48daeecb565be8d463","durable_runtime.py":"83a34c33aad6f0597b2ef2825427fc3b539da576b19c2169aef9408b6916bea7"}
-OPS = Path('/root/nox/ops')
-TARGET = OPS / 'nox-brain-v38'
-LOCK = Path('/root/nox/state/owner_maintenance.lock')
-PATHS = {
-    'brain_init.py': 'v38/__init__.py',
-    'synaptic_brain.py': 'v38/synaptic_brain.py',
-    'native_bridge_v38.py': 'v38/native_bridge_v38.py',
-    'durable_runtime.py': 'v38/durable_runtime.py',
-}
-
-
-def require(condition, code):
-    if not condition:
-        raise RuntimeError('HOLD_COGNITION_INSTALL_' + code)
-
-
-def trusted(path):
-    for part in (path, *path.parents):
-        info = part.lstat()
-        require(stat.S_ISDIR(info.st_mode) and info.st_uid == info.st_gid == 0
-                and not info.st_mode & 0o022, 'DIRECTORY')
+BUNDLE_MANIFEST = {'assets': {'owner_activate_native_cognition.py': 'eed24dfb7bebb104e43b9c1010d05c20f6179c4150717c4cdc3e2e808d346422', 'owner_cognition_patch.py': '43b08f711bc4a9c80f9dc470fbc1987166d70a195a61d2359dea7d53df04ae38', 'nox_v38_native_context.py': '175a44a09746beade0950fb9411ceb262bd6b2f7a69bf730a362cfd330004ccf', 'nox_v38_s03_native.py': 'c700f675f8b70a95bad04b0d58b4c836f4e0137797aaa89a18f8f46f64e8e44f'}, 'installed': {'chat_proxy.py': '9fedaefbe39f4cac8a47d77bb0dada2ccf09c43ec38a5624869d3a00c0fbe5a3', 'nox_v29_chat_bridge.py': '29121089891a27a0ae28795d1240788421320743a17370858c4d53aca1789e8b', 'nox_v38_native_context.py': '175a44a09746beade0950fb9411ceb262bd6b2f7a69bf730a362cfd330004ccf', 'nox_v38_s03_native.py': 'c700f675f8b70a95bad04b0d58b4c836f4e0137797aaa89a18f8f46f64e8e44f'}}
+INSTALLED_MANIFEST = '1b296411a4b9e297f285fb8a67c8cd0555e85bbed561d1a55fdcb94b6cdcd683'
+BRAIN = Path('/root/nox/ops/nox-brain-v38')
+BRAIN_FILES = frozenset(('__init__.py', 'synaptic_brain.py', 'native_bridge_v38.py', 'durable_runtime.py'))
 
 
 def digest(raw):
-    return hashlib.sha256(raw).hexdigest()
+    return sha256(raw).hexdigest()
 
 
-def sync_dir(path):
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-
-
-def contents():
-    require(set(BUNDLE) == set(PINS) == set(PATHS), 'ASSET_SET')
-    data = {}
-    for name, destination in PATHS.items():
-        raw = base64.b64decode(BUNDLE[name], validate=True)
-        require(len(raw) <= 256 * 1024 and digest(raw) == PINS[name], 'ASSET_SHA')
-        compile(raw, destination, 'exec')
-        data[destination] = raw
-    data['release.json'] = (json.dumps({'schema': 'NOX_V38_STAGE_V1', 'files_sha256': {
-        path: digest(raw) for path, raw in data.items()}}, sort_keys=True) + '\n').encode()
-    return data
-
-
-def readback(root, data):
-    trusted(root / 'v38')
-    for relative, raw in data.items():
-        path = root / relative
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
-        with os.fdopen(fd, 'rb') as stream:
-            info = os.fstat(stream.fileno())
-            require(stat.S_ISREG(info.st_mode) and info.st_uid == info.st_gid == 0
-                    and not info.st_mode & 0o022 and info.st_nlink == 1
-                    and stream.read(len(raw) + 1) == raw, 'READBACK')
-
-
-def stage(source):
-    if os.path.lexists(TARGET):
-        readback(TARGET, source)
-        return False
-    with tempfile.TemporaryDirectory(prefix='.nox-v38-stage-', dir=OPS) as temporary:
-        release = Path(temporary) / 'release'
-        release.mkdir(mode=0o755)
-        (release / 'v38').mkdir(mode=0o755)
-        for relative, raw in source.items():
-            fd = os.open(release / relative, os.O_WRONLY | os.O_CREAT | os.O_EXCL
-                         | os.O_NOFOLLOW | os.O_CLOEXEC, 0o644)
-            with os.fdopen(fd, 'wb') as output:
-                output.write(raw)
-                output.flush()
-                os.fsync(output.fileno())
-        sync_dir(release / 'v38')
-        sync_dir(release)
-        readback(release, source)
-        require(not os.path.lexists(TARGET), 'TARGET_APPEARED')
-        os.rename(release, TARGET)
-        sync_dir(OPS)
-    readback(TARGET, source)
-    return True
+def module(name, source):
+    value = ModuleType(name)
+    sys.modules[name] = value
+    exec(compile(source, name + '.py', 'exec'), value.__dict__)
+    return value
 
 
 def main():
-    labels = {os.environ[key].removeprefix('C.') for key in ('VAST_CONTAINERLABEL', 'CONTAINER_ID')
-              if os.environ.get(key)}
-    require(os.geteuid() == os.getegid() == 0 and labels == {'60509551'}
-            and re.fullmatch('[1-9][0-9]{0,19}', os.environ.get('NOX_OWNER_REQUEST_ID', ''))
-            and re.fullmatch('[a-f0-9]{40}', os.environ.get('NOX_OWNER_SOURCE_SHA', '')), 'OWNER')
-    trusted(OPS)
-    trusted(LOCK.parent)
-    fd = os.open(LOCK, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
-    try:
-        info = os.fstat(fd)
-        require(stat.S_ISREG(info.st_mode) and info.st_uid == info.st_gid == 0
-                and not info.st_mode & 0o077 and info.st_nlink == 1, 'LEASE')
-        fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
-        current = LOCK.lstat()
-        require((info.st_dev, info.st_ino) == (current.st_dev, current.st_ino), 'LEASE_CHANGED')
-        source = contents()
-        created = stage(source)
-    finally:
-        os.close(fd)
-    result = {'created': created, 'module_count': len(PATHS), 'release_dir': str(TARGET),
-              'manifest_sha256': digest(source['release.json']), 'live_route_activated': False}
-    print('NOX_MAINT_COGNITION_INSTALLED=' + json.dumps(result, separators=(',', ':')), flush=True)
-    print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
+    if set(BUNDLE) != set(BUNDLE_MANIFEST['assets']):
+        raise RuntimeError('HOLD_COGNITION_BUNDLE_SCOPE')
+    raw = {name: base64.b64decode(value, validate=True) for name, value in BUNDLE.items()}
+    if any(digest(data) != BUNDLE_MANIFEST['assets'][name] for name, data in raw.items()):
+        raise RuntimeError('HOLD_COGNITION_BUNDLE_PIN')
+    control = module('owner_activate_native_cognition', raw.pop('owner_activate_native_cognition.py'))
+    patch = module('owner_cognition_patch', raw.pop('owner_cognition_patch.py'))
+    with ExitStack() as stack:
+        release = control.directory(stack, BRAIN)
+        manifest, _ = control.read(release, 'release.json')
+        if manifest is None or digest(manifest) != INSTALLED_MANIFEST:
+            raise RuntimeError('HOLD_COGNITION_BRAIN_MANIFEST')
+        package = control.directory(stack, BRAIN / 'v38')
+        pins = json.loads(manifest)['files_sha256']
+        for name in BRAIN_FILES:
+            data, _ = control.read(package, name)
+            if data is None or digest(data) != pins['v38/' + name]:
+                raise RuntimeError('HOLD_COGNITION_BRAIN_MODULE')
+    for name, old in control.current_patch_preimages().items():
+        raw[name] = patch.transform(name, old)
+    receipt = control.activate(payloads=raw, sha256=BUNDLE_MANIFEST['installed'])
+    print('NOX_MAINT_COGNITION_ACTIVE=' + json.dumps(receipt, separators=(',', ':'), sort_keys=True))
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except (OSError, ValueError, RuntimeError) as error:
-        value = str(error)
-        print('NOX_MAINT_COGNITION_HOLD=' + (value if re.fullmatch('HOLD_[A-Z0-9_]+', value)
-                                               else type(error).__name__), flush=True)
-        raise SystemExit(2) from None
+    main()
