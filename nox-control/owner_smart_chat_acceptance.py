@@ -142,21 +142,43 @@ def owner_password_without_proxy_import():
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             definitions[node.target.id] = node.value
 
-    def literal_path(expr, seen=()):
+    # The owner path is `SECRETS / <filename>`; SECRETS is imported from
+    # common.py. Resolve just its pinned static AST, never import common.
+    common = SCRIPTS / 'common.py'
+    common_meta = common.lstat()
+    if (not stat.S_ISREG(common_meta.st_mode) or common_meta.st_nlink != 1 or
+            common_meta.st_uid != os.geteuid() or common_meta.st_size > 1048576):
+        fail('COMMON_SOURCE_SCOPE')
+    common_raw = common.read_bytes()
+    if hashlib.sha256(common_raw).hexdigest() != '177fbe5df042ba75a94cf9b7c03c8ffe58bde99f12599193db0cf383cc1305dd':
+        fail('COMMON_SOURCE_CAS')
+    common_defs = {}
+    for node in ast.parse(common_raw).body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            if node.targets[0].id in ('ROOT', 'SECRETS'):
+                common_defs[node.targets[0].id] = node.value
+    if set(common_defs) != {'ROOT', 'SECRETS'}:
+        fail('COMMON_SECRET_BINDING_SCOPE')
+
+    def literal_path(expr, seen=(), scope='proxy'):
+
         if len(seen) >= 8:
             fail('CREDENTIAL_PATH_DEPTH')
+        defs = definitions if scope == 'proxy' else common_defs
         if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
             return Path(expr.value)
         if (isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name)
                 and expr.func.id == 'Path' and len(expr.args) == 1 and not expr.keywords):
-            return literal_path(expr.args[0], seen)
+            return literal_path(expr.args[0], seen, scope)
         if isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Div):
-            left, right = literal_path(expr.left, seen), literal_path(expr.right, seen)
+            left, right = literal_path(expr.left, seen, scope), literal_path(expr.right, seen, scope)
             if right.is_absolute():
                 fail('CREDENTIAL_PATH_ESCAPE')
             return left / right
-        if isinstance(expr, ast.Name) and expr.id not in seen and expr.id in definitions:
-            return literal_path(definitions[expr.id], seen + (expr.id,))
+        if isinstance(expr, ast.Name) and expr.id not in seen and expr.id in defs:
+            return literal_path(defs[expr.id], seen + (expr.id,), scope)
+        if isinstance(expr, ast.Name) and expr.id == 'SECRETS' and 'SECRETS' not in seen and scope == 'proxy':
+            return literal_path(common_defs['SECRETS'], seen + ('SECRETS',), 'common')
         fail('CREDENTIAL_PATH_NOT_STATIC')
 
     if 'CHAT_PASSWORD_PATH' not in definitions:
