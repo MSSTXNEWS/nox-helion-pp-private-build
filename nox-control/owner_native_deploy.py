@@ -290,7 +290,7 @@ def collect_gate(request_id, source_sha, lock_held):
         'pool_idle': True, 'service': SERVICE, 'pid': current['pid'],
         'start_ticks': current['start_ticks'], 'pgrp': current['pgrp'],
         'service_config_sha256': config_sha, 'pgid_members_exact': True,
-        'pgid_members': group, 'queue_state_sha256': queue_sha,
+        'pgid_members': group, 'pgid_processes': group_rows,\n        'children': child_rows, 'queue_state_sha256': queue_sha,
         'config_sha256': digest(raw_config), 'signal_mode': 'SINGLE_PID_SIGTERM_NO_FALLBACK',
         'workers': sorted(expected - {current['pid']}),
     })
