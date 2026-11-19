@@ -483,9 +483,19 @@ def response_text(provider, value):
     return text
 
 
+def _unique_json_object(pairs):
+    """Reject ambiguous duplicate keys in every untrusted JSON object, including nested ones."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise GatewayHold('MODEL_RESPONSE_DUPLICATE_JSON_KEY')
+        result[key] = value
+    return result
+
+
 def advice_candidate(text):
     try:
-        value = json.loads(text)
+        value = json.loads(text, object_pairs_hook=_unique_json_object)
     except ValueError:
         raise GatewayHold('ADVICE_SCHEMA_INVALID') from None
     required = {'assessment', 'check_categories', 'rationale'}
@@ -533,7 +543,7 @@ async def _request(provider, credential, prompt, config, verification=False):
                     data.extend(block)
                     if len(data) > 262144:
                         raise GatewayHold('MODEL_RESPONSE_SIZE')
-                value = json.loads(data)
+                value = json.loads(data, object_pairs_hook=_unique_json_object)
                 return {'state': 'RECEIVED', 'text': response_text(provider, value),
                         'response_sha256': hashlib.sha256(data).hexdigest()}
     try:
