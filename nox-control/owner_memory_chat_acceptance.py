@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -29,6 +30,14 @@ def main():
     for name, expected in STAGES:
         if any((Path('/root/nox') / flag).exists() for flag in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'state/STOP')):
             failed.append({'component': name, 'reason': 'HOLD_OWNER_STOP'})
+            break
+        # The nested browser QA accepts inventory mode with exit 0 but no
+        # real streaming/browser/S03 acceptance. Never run an owner batch in
+        # this mode, even if the inventory-only stage would return success.
+        if os.environ.get('NOX_BROWSER_QA_MODE') == 'inventory':
+            failed.append({'component': 'owner_browser_qa_entry.py',
+                           'reason': 'HOLD_BROWSER_QA_INVENTORY_MODE'})
+            emit('memory_chat_component_hold', failed[-1])
             break
         try:
             raw = base64.b64decode(BUNDLE.get(name, ''), validate=True)
