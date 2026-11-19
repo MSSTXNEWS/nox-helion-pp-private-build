@@ -1,7 +1,7 @@
 name: NOX Drive warm cache source checks
 on:
   push:
-    branches: [feature/nox-warm-drive-cache-20261119]
+    branches: [feature/nox-warm-drive-cache-clean-20261119]
     paths:
       - 'nox-control/nox_drive_prefetch.py'
       - 'nox-control/test_nox_drive_prefetch.py'
