@@ -76,7 +76,7 @@ def process_rows(proc_root=Path('/proc')):
 EXACT_MEMFD_CANDIDATE = (498569, 168416044)
 PROC_EVIDENCE_LIMITS = {
     "fd_entries": 256, "maps_bytes": 1048576, "maps_lines": 8192,
-    "memfd_maps": 32, "smaps_rollup_bytes": 8192,
+    "memfd_maps": 16, "fd_rows": 16, "smaps_rollup_bytes": 8192,
 }
 MEMFD_LABEL = re.compile(r"^/?memfd:([A-Za-z0-9_.+@=-]{1,96}) \(deleted\)$")
 NVIDIA_FD = re.compile(r"^/dev/(?:nvidiactl|nvidia-uvm(?:-tools)?|nvidia[0-9]+)$")
@@ -201,8 +201,8 @@ def _fd_evidence(pid_path):
             rows.append(row)
         except (OSError, ValueError):
             continue
-    return {"status": "OK", "rows": rows[:64], "scanned": scanned,
-            "truncated": truncated or len(rows) > 64}
+    return {"status": "OK", "rows": rows[:PROC_EVIDENCE_LIMITS["fd_rows"]], "scanned": scanned,
+            "truncated": truncated or len(rows) > PROC_EVIDENCE_LIMITS["fd_rows"]}
 
 def _deleted_memfd_maps(pid_path):
     """Bound /proc/PID/maps bytes and export parsed deleted-memfd rows only."""
@@ -274,7 +274,8 @@ def process_pid_evidence(pid, expected_start_ticks=None, label="GPU_APP"):
     base = {"pid": pid, "label": label, "stat": first_stat,
             "start_ticks": first_ticks, "expected_start_ticks": expected_start_ticks}
     if expected_start_ticks is not None and first_ticks != expected_start_ticks:
-        return {**base, "status": "PID_REUSE_OR_EXPECTED_START_TICK_MISMATCH"}
+        return {"pid": pid, "label": label, "status": "PID_REUSE_OR_EXPECTED_START_TICK_MISMATCH",
+                "observed_start_ticks": first_ticks, "expected_start_ticks": expected_start_ticks}
     try:
         status_raw, cut = _read_bounded(p / "status", 65536)
         nspid = []
