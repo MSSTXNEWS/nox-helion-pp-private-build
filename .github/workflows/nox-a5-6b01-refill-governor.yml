@@ -30,4 +30,5 @@ jobs:
             test_owner_reflex_cycle.NativeReflexTests.test_memory_projection_distinguishes_file_cache_and_shmem \
             test_owner_reflex_cycle.NativeReflexTests.test_memory_governor_pressure_and_missing_metadata_hold \
             test_owner_reflex_cycle.NativeReflexTests.test_memory_projection_inconsistent_cgroup_counters_fail_closed \
-            test_owner_reflex_cycle.NativeReflexTests.test_raw_chat_buffer_below_512mib_never_reports_cache_healthy
+            test_owner_reflex_cycle.NativeReflexTests.test_raw_chat_buffer_below_512mib_never_reports_cache_healthy \
+            test_owner_reflex_cycle.NativeReflexTests.test_native_ready_and_unknown_status_do_not_fake_refill
