@@ -119,7 +119,37 @@ def upload(a):
         receipt_path.write_text(json.dumps(receipt, indent=2))
         print("EVICTED VERIFIED INACTIVE MODEL:", src)
 
+STOP_FLAGS = (
+    Path("/root/nox/STOP"),
+    Path("/root/nox/STOP.flag"),
+    Path("/root/nox/state/STOP"),
+    Path("/root/nox/state/OWNER_MAINTENANCE.flag"),
+    Path("/workspace/NOX_STOP"),
+)
+
+
+def assert_cgroup_ram_reserve(size, reserve_gib, *, root=Path("/sys/fs/cgroup")):
+    """Refuse tmpfs copies if the actual cgroup cannot admit their full footprint."""
+    try:
+        limit_text = (root / "memory.max").read_text().strip()
+        current_text = (root / "memory.current").read_text().strip()
+        if limit_text == "max":
+            raise ValueError("unbounded memory.max is not an admission receipt")
+        limit, current = int(limit_text), int(current_text)
+    except (OSError, ValueError) as exc:
+        raise RuntimeError("Cannot verify cgroup RAM admission") from exc
+    if limit <= 0 or current < 0 or current > limit or limit - current < size + reserve_gib * GIB:
+        raise RuntimeError("Insufficient current cgroup RAM headroom for warm model")
+    return limit - current
+
+
+def assert_nox_running():
+    if any(os.path.lexists(str(flag)) for flag in STOP_FLAGS):
+        raise RuntimeError("NOX STOP/maintenance active: cold transfer not admitted")
+
+
 def load(a):
+    assert_nox_running()
     remote = assert_remote(a.remote)
     if "/" not in remote.split(":", 1)[1]:
         raise ValueError("Specify the complete remote file path")
@@ -133,6 +163,7 @@ def load(a):
     size = int(json.loads(size_text)["bytes"])
     if size <= 0 or shutil.disk_usage(dest_dir).free < size + a.reserve_gib * GIB:
         raise RuntimeError("Insufficient tmpfs free space after RAM reserve")
+    assert_cgroup_ram_reserve(size, a.reserve_gib)
     dest = dest_dir / name
     if dest.exists():
         raise FileExistsError(dest)
@@ -147,6 +178,8 @@ def load(a):
             raise RuntimeError("RAM download SHA256 mismatch")
         if not a.sha256:
             raise ValueError("Expected SHA256 from verified receipt required")
+        assert_nox_running()
+        assert_cgroup_ram_reserve(0, a.reserve_gib)
         tmp.rename(dest)
         print(json.dumps({"ram_model": str(dest), "bytes": size, "sha256": a.sha256}))
     finally:
