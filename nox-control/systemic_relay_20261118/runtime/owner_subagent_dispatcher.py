@@ -610,6 +610,14 @@ class Native:
             return
         self._resource_pressure_latch_sha256 = observed_sha256
         if value is None:
+            # A missing file is not evidence that the previous process was
+            # healthy: it may have crashed after a failed PAUSED write. Only
+            # the owner may seed an exact-contract RECOVERED baseline.
+            self._resource_pressure_paused = True
+            self._resource_pressure_latch_uncertain = True
+            self._resource_pressure_release = {
+                'state':'HOLD_RESOURCE_PRESSURE_LATCH_BASELINE_REQUIRED',
+                'chat_model_proxy_web_training_s03_touched':False}
             return
         if (value['source_sha256'] != self.source
                 or value['policy_sha256'] != self.policy['sha256']

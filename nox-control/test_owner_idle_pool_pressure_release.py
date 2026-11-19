@@ -253,6 +253,90 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertEqual(result['state'],'WAIT_RESOURCE_RECOVERY_STABILITY')
         self.assertEqual(calls, [])
 
+    def test_missing_latch_after_restart_holds_until_owner_baseline_is_seeded(self):
+        dispatcher = load_dispatcher()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'native_subagent_resource_latch.json'
+            native = dispatcher.Native.__new__(dispatcher.Native)
+            native.source = 'a'*64
+            native.policy = {'sha256':'b'*64}
+            native.config = {'owner_request':'request-1'}
+            native.lock = threading.RLock()
+            native._resource_pressure_paused = False
+            native._resource_pressure_latch_uncertain = False
+            native._resource_pressure_release = None
+            native._resource_pressure_latch_generation = 0
+            native._resource_pressure_latch_state = None
+            native._resource_pressure_latch_reason = None
+            native._resource_pressure_latch_sha256 = None
+            with patch.object(dispatcher,'RESOURCE_PRESSURE_LATCH',path):
+                # Models a restart after an earlier PAUSED write failed: the
+                # absent file cannot clear the uncertain in-memory state.
+                native._load_resource_pressure_latch()
+                self.assertTrue(native._resource_pressure_paused)
+                self.assertTrue(native._resource_pressure_latch_uncertain)
+                self.assertEqual(native._resource_pressure_release['state'],
+                    'HOLD_RESOURCE_PRESSURE_LATCH_BASELINE_REQUIRED')
+                self.assertFalse(native._resource_recovery_ready())
+
+                calls = []
+                refill = types.SimpleNamespace(
+                    owner_allowed=lambda:True, stop_active=lambda:False,
+                    writer_lease=lambda:True, ensure_processes=lambda _:calls.append('start'),
+                    process_readback=lambda:[], native_duplicate_check=lambda _:False,
+                    native_queue_claim=lambda **_:calls.append('claim'),
+                    s03_readback=lambda _:None, _resource_pressure_paused=True,
+                    _resource_pressure_latch_uncertain=True)
+                result = autonomy_pool.admit_native_tick(
+                    refill, tasks=[], status={}, mode='NORMAL', memory_ratio=0.1)
+                self.assertEqual(result['state'],'WAIT_RESOURCE_RECOVERY_STABILITY')
+                self.assertEqual(calls, [])
+
+                baseline = {'schema':dispatcher.RESOURCE_PRESSURE_LATCH_SCHEMA,
+                    'instance_id':60509551, 'state':'RECOVERED', 'generation':1,
+                    'reason':'HOLD_BOUNDED_CPU_HEADROOM', 'source_sha256':'a'*64,
+                    'policy_sha256':'b'*64, 'owner_request':'request-1',
+                    'updated_at':100.0,
+                    'healthy_snapshots':dispatcher.RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS}
+                dispatcher.write_resource_pressure_latch(path, baseline, None)
+                native._resource_pressure_paused = False
+                native._resource_pressure_latch_uncertain = False
+                native._resource_pressure_release = None
+                with patch.object(dispatcher,'RESOURCE_PRESSURE_LATCH',path):
+                    native._load_resource_pressure_latch()
+                self.assertFalse(native._resource_pressure_paused)
+                self.assertFalse(native._resource_pressure_latch_uncertain)
+                self.assertEqual(native._resource_pressure_latch_state,'RECOVERED')
+
+    def test_owner_seeded_recovered_baseline_must_match_runtime_contract(self):
+        dispatcher = load_dispatcher()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'native_subagent_resource_latch.json'
+            baseline = {'schema':dispatcher.RESOURCE_PRESSURE_LATCH_SCHEMA,
+                'instance_id':60509551, 'state':'RECOVERED', 'generation':1,
+                'reason':'HOLD_BOUNDED_CPU_HEADROOM', 'source_sha256':'c'*64,
+                'policy_sha256':'b'*64, 'owner_request':'request-1',
+                'updated_at':100.0,
+                'healthy_snapshots':dispatcher.RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS}
+            dispatcher.write_resource_pressure_latch(path, baseline, None)
+            native = dispatcher.Native.__new__(dispatcher.Native)
+            native.source = 'a'*64
+            native.policy = {'sha256':'b'*64}
+            native.config = {'owner_request':'request-1'}
+            native._resource_pressure_paused = False
+            native._resource_pressure_latch_uncertain = False
+            native._resource_pressure_release = None
+            native._resource_pressure_latch_generation = 0
+            native._resource_pressure_latch_state = None
+            native._resource_pressure_latch_reason = None
+            native._resource_pressure_latch_sha256 = None
+            with patch.object(dispatcher,'RESOURCE_PRESSURE_LATCH',path):
+                native._load_resource_pressure_latch()
+            self.assertTrue(native._resource_pressure_paused)
+            self.assertTrue(native._resource_pressure_latch_uncertain)
+            self.assertEqual(native._resource_pressure_release['state'],
+                'HOLD_RESOURCE_PRESSURE_LATCH_CONTRACT_CHANGED')
+
     def test_project_handler_pressure_pause_vetoes_before_refill_or_submit(self):
         dispatcher = load_dispatcher()
         executor_stub = types.ModuleType('owner_project_executor')
