@@ -1,0 +1,22 @@
+{
+  "schema": "NOX_CHAT_TRACE_METRICS_TEST_RECEIPT_V1",
+  "executed_at": "2026-11-19T02:51:56.003Z",
+  "status": "PASS",
+  "command": "python3 -m unittest -v test_chat_trace_metrics.py",
+  "tests_passed": 5,
+  "tests_failed": 0,
+  "verification_scope": "offline parser and percentile calculations only",
+  "live_requests_sent": 0,
+  "model_or_cache_touched": false,
+  "s03_touched": false,
+  "source_files": [
+    {
+      "path": "coordination/onepass/acceleration/chat_trace_metrics.py",
+      "blob_sha": "71fa3fb19461333c335a8d6fbc5c05050d58a58c"
+    },
+    {
+      "path": "coordination/onepass/acceleration/test_chat_trace_metrics.py",
+      "blob_sha": "7cf00f5ce3a9143d0e014bb85e222300d3d367e3"
+    }
+  ]
+}
