@@ -1462,7 +1462,9 @@ class Native:
                     break
                 time.sleep(0.1)
             if event is None:
-                self.close_pool()
+                self.close_pool('HOLD_SUBAGENT_RESULT_TIMEOUT')
+                with self.lock:
+                    self.interrupted[task['id']] = 'HOLD_SUBAGENT_RESULT_TIMEOUT'
                 raise GateError('HOLD_SUBAGENT_RESULT_TIMEOUT')
             if event.get('state') != 'CANDIDATE_NOT_APPLIED':
                 raise GateError(event.get('state', 'HOLD_SUBAGENT_RESULT'))
@@ -1483,9 +1485,15 @@ class Native:
                       'training_started': False, 'optimizer_steps_verified': False,
                       'service_or_weights_changed': False}
             if not self._claim_current(task, durable=True):
+                with self.lock:
+                    self.interrupted[task['id']] = 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
                 raise GateError('HOLD_NATIVE_OWNER_CLAIM_CHANGED')
             if self.stop_active() or chat_priority_active():
-                return 'wait', 'WAIT_OWNER_STOP_OR_CHAT_PRIORITY'
+                # The worker result has already left the IPC completed map.
+                # Without this marker, the next tick could submit it again.
+                with self.lock:
+                    self.interrupted[task['id']] = 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
+                return 'wait', 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
             proof = remember(result)
             return True, {'schema': RECEIPT, 'verified': True, 'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT',
                           'receipt': result, 's03': proof, 'receipt_sha256': digest(encoded(result)),
@@ -1585,7 +1593,11 @@ class Native:
                       'original_task_accepted':False, 'training_started':False,
                       'optimizer_steps_verified':False, 'service_or_weights_changed':False}
             if not self._claim_current(task, durable=True) or self.stop_active() or not self.writer_lease():
-                return 'wait', 'HOLD_NATIVE_LEAF_FINAL_CLAIM'
+                # Post-pop loss of owner admission cannot discard a completed
+                # result or authorize a second worker call for the same claim.
+                with self.lock:
+                    self.interrupted[task['id']] = 'HOLD_NATIVE_LEAF_RESULT_UNSETTLED'
+                return 'wait', 'HOLD_NATIVE_LEAF_RESULT_UNSETTLED'
             proof = remember(result)
             # Only the explicitly named read/check subtask is completed. A
             # failed check remains check_passed=False, with its blockers; the
