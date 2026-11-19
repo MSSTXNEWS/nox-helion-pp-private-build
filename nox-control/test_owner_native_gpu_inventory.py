@@ -120,15 +120,22 @@ class GpuInventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "IDENTITY"):
             gpu.parse_gpu_rows(output(name_a="NVIDIA A100-SXM4-40GB"))
 
-    def test_rejects_memory_inconsistency_and_malformed_rows(self):
-        with self.assertRaisesRegex(RuntimeError, "MEMORY"):
+    def test_memory_holds_separate_format_range_and_sum_with_safe_numeric_diagnostic(self):
+        with self.assertRaisesRegex(RuntimeError, "MEMORY_SUM") as caught:
             gpu.parse_gpu_rows(output(used_a=20000, free_a=20000))
-        with self.assertRaisesRegex(RuntimeError, "MEMORY"):
-            gpu.parse_gpu_rows(output(used_a=100, free_a=32000))
-        with self.assertRaisesRegex(RuntimeError, "ROW_SHAPE"):
-            gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100\n")
-        with self.assertRaisesRegex(RuntimeError, "MEMORY"):
+        diagnostic = caught.exception.memory_diagnostic
+        self.assertEqual(diagnostic, [{
+            "index": 0, "total_mib": 32768, "used_mib": 20000,
+            "free_mib": 20000, "residual_mib": -7232,
+        }])
+        self.assertNotIn(GPU_A, repr(diagnostic))
+        self.assertNotIn("model", repr(diagnostic))
+        with self.assertRaisesRegex(RuntimeError, "MEMORY_RANGE"):
+            gpu.parse_gpu_rows(output(used_a=32769, free_a=1))
+        with self.assertRaisesRegex(RuntimeError, "MEMORY_FORMAT"):
             gpu.parse_gpu_rows(output(used_a="N/A", free_a=100))
+        with self.assertRaisesRegex(RuntimeError, "ROW_SHAPE"):
+            gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100\\n")
 
     def test_rejects_oversized_output_and_nonzero_nvidia_smi(self):
         with self.assertRaisesRegex(RuntimeError, "OUTPUT_BOUND"):
