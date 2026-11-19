@@ -126,6 +126,16 @@ async def _bounded_sse_lines(response):
         yield pending
 
 
+def _reject_duplicate_json_keys(pairs):
+    """Reject ambiguous model/tool JSON before dispatch or S03 certification."""
+    result={}
+    for key,value in pairs:
+        if key in result:
+            raise ValueError('duplicate JSON key')
+        result[key]=value
+    return result
+
+
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
     request=dict(payload,model='maya',stream=True,cache_prompt=True)
@@ -202,7 +212,7 @@ async def _model_events(client, url, payload):
             if len(wire)>300000:
                 raise StreamFailure('HOLD_MODEL_SSE_SIZE')
             try:
-                doc=json.loads(wire)
+                doc=json.loads(wire,object_pairs_hook=_reject_duplicate_json_keys)
                 if not isinstance(doc,dict) or doc.get('error'):
                     raise ValueError('error')
                 choices=doc.get('choices')
@@ -298,7 +308,7 @@ def _normal_calls(rows,step):
         # Falsey non-objects ([], false, 0) must never become {} and dispatch.
         if args is None or (isinstance(args,str) and not args):args={}
         if isinstance(args,str):
-            try:args=json.loads(args)
+            try:args=json.loads(args,object_pairs_hook=_reject_duplicate_json_keys)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         if not isinstance(args,dict):raise StreamFailure('HOLD_TOOL_ARGUMENTS')
         # Native parser / deterministic routes share the same bounded ID rule.
