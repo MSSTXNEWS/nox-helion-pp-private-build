@@ -93,8 +93,15 @@ def process_state(service):
         stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL, timeout=6)
     lines = run.stdout.decode('utf-8', 'replace').strip().splitlines()
-    if run.returncode != 0 or len(lines) != 1 or not lines[0].startswith(service + ' RUNNING '):
+    # supervisorctl right-pads service names with spaces. Match columns, not
+    # a literal single-space prefix, and pin the actual reported PID.
+    match = (re.fullmatch(re.escape(service) + r'\\s+RUNNING\\s+pid\\s+([0-9]{1,10}),.*',
+                        lines[0]) if len(lines) == 1 else None)
+    if run.returncode != 0 or match is None:
         fail('SERVICE_NOT_RUNNING_' + service.upper().replace('-','_'))
+    pid = int(match.group(1))
+    if not Path('/proc', str(pid), 'stat').is_file():
+        fail('SERVICE_PID_NOT_LIVE_' + service.upper().replace('-','_'))
     return True
 
 
