@@ -168,6 +168,22 @@ class OwnerRuEsContinuity(unittest.TestCase):
         writer, readback = s03_proof(malformed)
         self.assertFalse(canonical_s03_proof_valid(writer, readback, DIALOG, malformed))
 
+    def test_four_turn_scope_rejects_cross_dialog_metadata_without_breaking_legacy_rows(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        transcript = rows(es)
+        # The authenticated endpoint can return legacy rows without per-row scope.
+        self.assertTrue(multiturn_history_valid(transcript, RU, FIRST, es, LAST, DIALOG))
+        scoped = [dict(message, dialog_id=DIALOG) for message in transcript]
+        self.assertTrue(multiturn_history_valid(scoped, RU, FIRST, es, LAST, DIALOG))
+        for index in range(4):
+            for invalid in ("other-dialog", "", None):
+                with self.subTest(turn=index, invalid=repr(invalid)):
+                    mixed = [dict(message) for message in scoped]
+                    mixed[index]["dialog_id"] = invalid
+                    self.assertFalse(multiturn_history_valid(
+                        mixed, RU, FIRST, es, LAST, DIALOG))
+        self.assertFalse(multiturn_history_valid(scoped, RU, FIRST, es, LAST, "  "))
+
     def test_default_russian_prompt_byte_equivalent(self):
         self.assertEqual(
             multiturn_followup_prompt(TOKEN, "multiturn"),
