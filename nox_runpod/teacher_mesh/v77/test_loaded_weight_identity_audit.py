@@ -118,6 +118,16 @@ class LoadedWeightIdentityTests(unittest.TestCase):
         self.assertEqual(receipt["reason"], "HOLD_WEIGHT_OPEN")
         self.assertIsNone(receipt["weight_sha256"])
 
+    def test_parent_symlink_weight_path_is_rejected(self):
+        alias = self.cwd / "manifest-linked-dir"
+        alias.symlink_to(self.weight_dir, target_is_directory=True)
+        self.write_process_facts(candidate="manifest-linked-dir/model-00001-of-00004.gguf")
+        receipt = self.inspect()
+        self.assertEqual(receipt["state"], "UNKNOWN")
+        self.assertEqual(receipt["reason"], "HOLD_WEIGHT_OPEN")
+        self.assertIsNone(receipt["weight_sha256"])
+        self.assertNotIn("manifest-linked-dir", json.dumps(receipt))
+
     def test_weight_size_bound_returns_unknown(self):
         ns = remote_namespace()
         ns["MAX_WEIGHT_BYTES"] = len(self.payload) - 1
