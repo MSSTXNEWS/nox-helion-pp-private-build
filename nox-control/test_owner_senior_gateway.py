@@ -101,8 +101,7 @@ class GatewayTests(unittest.TestCase):
     def test_model_text_fragments_are_not_rewritten(self):
         # Provider text fragments may split inside JSON strings. No added newline
         # or stripped final newline is permitted before evaluating the answer.
-        raw = '{"assessment":"HOLD_FOR_REVIEW","check_categories":[],"rationale":"split"}\\n'
-        raw = raw.replace('\\\\n', '\\n')
+        raw = '{"assessment":"HOLD_FOR_REVIEW","check_categories":[],"rationale":"split"}' + chr(10)
         value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
                  'output': [{'type': 'message', 'role': 'assistant', 'content': [
                      {'type': 'output_text', 'text': raw[:28]},
