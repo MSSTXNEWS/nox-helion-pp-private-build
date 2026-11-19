@@ -461,81 +461,58 @@ def _cgroup_snapshot():
 
 
 def reload_resource_admission(expected, protected_before, record):
-    """Bounded swappiness=0 file-cache reclaim; no RAM-limit removal or blind restart."""
-    reserve = 1024 * 1024 * 1024
-    step_bytes = 256 * 1024 * 1024
-    maximum_steps = 8
-    gate(); assert_services(expected)
-    first = _cgroup_snapshot()
-    history = {'method': 'CGROUP_V2_FILE_CACHE_RECLAIM_ONLY', 'initial': first,
-               'required_raw_margin': reserve, 'max_reclaim_requests': maximum_steps,
-               'request_bytes_each': step_bytes, 'swappiness': 0, 'attempts': [],
-               'model_or_training_restarted': False, 'stop_flags_changed': False}
-    record['cache_reclaim'] = history
-    require(first['max'] > reserve and first['raw_margin'] >= 0, 'CGROUP_LIMIT')
-    if first['raw_margin'] >= reserve:
-        history['status'] = 'RAW_ADMITTED_NO_RECLAIM'
-        return history
-    # The exposed inactive_file value is only a candidate. The kernel determines
-    # what actually gets reclaimed; the resulting raw margin is the sole admission.
-    require(first['potential_inactive_file'] >= 8 * 1024**3, 'CGROUP_INACTIVE_FILE_INSUFFICIENT')
-    require(first['oom'] == 0 and first['oom_kill'] == 0 and
-            first['psi_some_avg10'] < 1.0 and first['psi_full_avg10'] < 0.2,
-            'CGROUP_PREEXISTING_OOM_OR_PRESSURE')
-    require(preserved() == protected_before, 'RESOURCE_PRESERVED_CHANGED')
-    http(8080, '/health'); http(8098, '/health')
-    for _ in range(3):
-        require(slots_idle(), 'RESOURCE_MODEL_ACTIVE')
-        time.sleep(.3)
-    # Do not touch global drop_caches, swap or the model memory map. Each
-    # reclamation is capped at 256 MiB and must restore an actual raw margin.
-    path = '/sys/fs/cgroup/memory.reclaim'
-    previous = first
-    for index in range(maximum_steps):
+    """Inspect actual working set; rely on kernel page eviction, not read-only memory.reclaim."""
+    minimum_raw = 16 * 1024 * 1024
+    minimum_inactive = 16 * 1024**3
+    samples = []
+    result = {'mode': 'KERNEL_AUTOMATIC_RECLAIM_ON_ALLOCATION',
+        'cgroup_memory_reclaim_attempted': False, 'memory_max_changed': False,
+        'model_or_training_restarted': False, 'service_changes': False,
+        'requires_raw_margin_after_proxy_stop': 64 * 1024 * 1024,
+        'samples': samples}
+    record['resource_admission'] = result
+    for index in range(3):
         gate(); assert_services(expected)
         require(preserved() == protected_before, 'RESOURCE_PRESERVED_CHANGED')
+        sample = _cgroup_snapshot(); samples.append(sample)
+        require(sample['raw_margin'] >= minimum_raw, 'CGROUP_RAW_MARGIN_BELOW_16MIB')
+        require(sample['max'] > 1024**3 and
+                sample['potential_inactive_file'] >= minimum_inactive,
+                'CGROUP_INACTIVE_CACHE_INSUFFICIENT')
+        require(sample['oom'] == 0 and sample['oom_kill'] == 0 and
+                sample['psi_some_avg10'] < 1.0 and sample['psi_full_avg10'] < 0.2,
+                'CGROUP_PRESSURE_OR_OOM')
+        if index:
+            require(sample['max'] == samples[0]['max'] and
+                sample['max_events'] - samples[0]['max_events'] <= 5,
+                'CGROUP_UNSTABLE_MEMORY_EVENTS')
         require(slots_idle(), 'RESOURCE_MODEL_ACTIVE')
-        current = _cgroup_snapshot()
-        require(current['max'] == first['max'] and current['oom'] == first['oom'] and
-                current['oom_kill'] == first['oom_kill'] and
-                current['max_events'] - first['max_events'] <= 5,
-                'CGROUP_RESOURCE_EVENT_CHANGED')
-        require(current['psi_some_avg10'] < 1.0 and current['psi_full_avg10'] < 0.2,
-                'CGROUP_PRESSURE_RISING')
-        if current['raw_margin'] >= reserve:
-            history.update(status='RECLAIMED_AND_RAW_ADMITTED', final=current)
-            return history
-        try:
-            descriptor = os.open(path, os.O_WRONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
-            try:
-                # Kernel may legitimately return EAGAIN after partial reclaim.
-                os.write(descriptor, b'256M swappiness=0')
-                outcome = 'RECLAIM_REQUEST_ACCEPTED'
-            finally:
-                os.close(descriptor)
-        except OSError as error:
-            if error.errno == errno.EAGAIN:
-                outcome = 'RECLAIM_PARTIAL_EAGAIN'
-            else:
-                history['status'] = 'RECLAIM_UNAVAILABLE'
-                history['error_class'] = type(error).__name__
-                history['errno'] = error.errno
-                raise Hold('HOLD_SMART_CHAT_CGROUP_RECLAIM_UNAVAILABLE') from None
-        time.sleep(.6)
-        measured = _cgroup_snapshot()
-        history['attempts'].append({'index': index + 1, 'result': outcome,
-            'raw_margin_after': measured['raw_margin'], 'current_after': measured['current'],
-            'oom_after': measured['oom'], 'oom_kill_after': measured['oom_kill']})
-        require(measured['oom'] == first['oom'] and measured['oom_kill'] == first['oom_kill'],
-                'CGROUP_RECLAIM_OOM_EVENT')
-        previous = measured
-        if measured['raw_margin'] >= reserve:
-            gate(); assert_services(expected)
-            require(slots_idle(), 'RESOURCE_MODEL_BECAME_ACTIVE')
-            history.update(status='RECLAIMED_AND_RAW_ADMITTED', final=measured)
-            return history
-    history.update(status='RECLAIM_INSUFFICIENT', final=previous)
-    raise Hold('HOLD_SMART_CHAT_CGROUP_RECLAIM_INSUFFICIENT')
+        time.sleep(.5)
+    http(8080, '/health'); http(8098, '/health')
+    result.update(status='CACHE_BACKED_ADMITTED_FOR_SINGLE_PROXY_REPLACEMENT',
+        raw_margin_first=samples[0]['raw_margin'],
+        raw_margin_last=samples[-1]['raw_margin'],
+        no_double_proxy=True)
+    return result
+
+
+def post_stop_resource_admission(before, record):
+    """Old proxy is already stopped: measure freed RAM before swapping any file."""
+    gate()
+    current = _cgroup_snapshot()
+    record['post_stop_resource'] = current
+    require(current['max'] == before['max'], 'CGROUP_LIMIT_CHANGED')
+    require(current['oom'] == before['oom'] and current['oom_kill'] == before['oom_kill'],
+            'CGROUP_POSTSTOP_OOM_EVENT')
+    require(current['psi_some_avg10'] < 1.0 and current['psi_full_avg10'] < 0.2,
+            'CGROUP_POSTSTOP_PRESSURE')
+    require(current['raw_margin'] >= 64 * 1024 * 1024,
+            'CGROUP_PROXY_RELEASE_INSUFFICIENT')
+    require(current['potential_inactive_file'] >= 16 * 1024**3,
+            'CGROUP_POSTSTOP_INACTIVE_CACHE_INSUFFICIENT')
+    http(8098, '/health')
+    require(slots_idle(), 'RESOURCE_MODEL_BECAME_ACTIVE')
+    return current
 
 
 
@@ -644,6 +621,7 @@ def main():
                 require(all(pair(row) == 'ORIGINAL' for row in rows), 'PRESTOP_FILE_CHANGED')
                 gate(); record['proxy_stop_attempted'] = True; save()
                 stop_proxy(expected['nox-proxy'])
+                record['post_stop_resource_admission'] = post_stop_resource_admission(record['resource_admission']['samples'][0], record)
                 gate(); assert_services(expected, include_proxy=False)
                 require(preserved() == before, 'POSTSTOP_PRESERVED_CHANGED')
                 for row in rows:
@@ -660,6 +638,8 @@ def main():
                 assert_services(expected, include_proxy=False)
                 for port in (8080, 8082, 8098):
                     http(port, '/health')
+                record['resource_after_restart'] = _cgroup_snapshot()
+                require(record['resource_after_restart']['oom_kill'] == record['resource_admission']['samples'][0]['oom_kill'], 'CGROUP_POSTRESTART_OOM_KILL')
                 record.update(state='TWO_SOURCE_TRANSFORMS_AND_PROXY_RELOAD_VERIFIED',
                     source_install_verified=True, preserved_state_verified=True, finished_at=time.time())
                 save(); success = True
