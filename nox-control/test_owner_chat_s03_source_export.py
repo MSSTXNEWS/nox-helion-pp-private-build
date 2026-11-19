@@ -182,6 +182,8 @@ class SourceExportTests(unittest.TestCase):
                     mock.patch.object(sys, "argv",
                                       ["owner_native_operator.py", "source_export"]),
                     mock.patch.dict(os.environ, safe_env, clear=True),
+                    mock.patch.object(operator, "preflight_source_export_key",
+                                      return_value="validated-public-key"),
                     mock.patch.object(operator, "source_export_key_info", return_value={}),
                     mock.patch.object(operator, "load_source_export_credential_file") as load_credential,
                     auth_patch,
@@ -206,6 +208,37 @@ class SourceExportTests(unittest.TestCase):
         with mock.patch("sys.stderr", new=StringIO()):
             with self.assertRaises(SystemExit):
                 operator.operator_argument_parser().parse_args(["source_export", "public-key"])
+
+    def test_remote_export_script_passes_key_only_on_private_stdin(self):
+        current = int(__import__("time").time())
+        fresh_info = dict(self.key_info, created_at=current, expires_at=current + 1800)
+        key = base64.urlsafe_b64encode(helper.canonical(fresh_info)).decode().rstrip("=")
+        script = operator.build_source_export_remote_script(
+            "print('safe')", "c" * 40, 123459, key)
+        self.assertIn(
+            f"printf '%s' {operator.shlex.quote(key)} | env ", script)
+        self.assertNotIn("NOX_OWNER_EXPORT_KEY_B64=", script)
+        self.assertNotIn("export NOX_OWNER_EXPORT_KEY_B64", script)
+        env_assignments = script.split("| env ", 1)[1].split(" python3", 1)[0]
+        self.assertNotIn(key, env_assignments)
+        self.assertIn("NOX_OWNER_SOURCE_SHA=" + "c" * 40, env_assignments)
+        self.assertIn("NOX_OWNER_REQUEST_ID=123459", env_assignments)
+        self.assertIn("python3 -c", script)
+
+    def test_remote_export_key_reader_rejects_environment_and_bounds_stdin(self):
+        with mock.patch.dict(os.environ, {}, clear=True), \
+                mock.patch.object(helper.sys, "stdin", StringIO(self.key_encoded)):
+            self.assertEqual(helper.read_export_key_stdin(), self.key_encoded)
+        with mock.patch.dict(os.environ, {
+                "NOX_OWNER_EXPORT_KEY_B64": self.key_encoded}, clear=True), \
+                mock.patch.object(helper.sys, "stdin", StringIO("unused")):
+            with self.assertRaisesRegex(ValueError, "HOLD_SOURCE_EXPORT_KEY_ENV_FORBIDDEN"):
+                helper.read_export_key_stdin()
+        oversized = "a" * (helper.MAX_EXPORT_KEY_B64_CHARS + 1)
+        with mock.patch.dict(os.environ, {}, clear=True), \
+                mock.patch.object(helper.sys, "stdin", StringIO(oversized)):
+            with self.assertRaisesRegex(ValueError, "HOLD_SOURCE_EXPORT_KEY_STDIN_BOUNDS"):
+                helper.read_export_key_stdin()
 
     def test_export_key_preflight_is_secret_only_and_fails_closed(self):
         current = int(__import__("time").time())
