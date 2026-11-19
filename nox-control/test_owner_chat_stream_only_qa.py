@@ -58,6 +58,10 @@ class ScopeTests(unittest.TestCase):
         guard = next(value for value in core.browser_run.__code__.co_consts
                      if isinstance(value, types.CodeType) and value.co_name == 'guard')
         self.assertIn('native_admitted', guard.co_freevars)
+        # PR415 introduced a second turn to the general harness; stream-only must
+        # remain one admitted POST even when the core supports multiturn.
+        self.assertIn('allowed_qa_request', guard.co_names)
+        self.assertIn(False, guard.co_consts)
         self.assertIn('duplicate_qa_generation', guard.co_consts)
         self.assertIn('answer_normalized_characters:normalize(q.answer).length', core.SNAPSHOT_JS)
         self.assertIn("window.matchMedia('(prefers-reduced-motion: reduce)').matches", core.SNAPSHOT_JS)
