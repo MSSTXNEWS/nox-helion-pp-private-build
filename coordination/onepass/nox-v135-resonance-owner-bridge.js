@@ -15,7 +15,7 @@
     const glyphs=Array.isArray(text)?text:segmenter
       ?Array.from(segmenter.segment(text),part=>part.segment)
       : [text];
-    const width=Math.max(8,Math.ceil(glyphs.length/16));
+    const width=glyphs.length<1024?24:Math.ceil(glyphs.length/16);
     const pieces=[];
     for(let pos=0;pos<glyphs.length;pos+=width)pieces.push(glyphs.slice(pos,pos+width).join(''));
     return pieces;
