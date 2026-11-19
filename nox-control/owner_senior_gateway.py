@@ -161,6 +161,21 @@ def _private_stat(value):
         raise GatewayHold('UNSAFE_PRIVATE_FILE')
 
 
+def _private_json_object(pairs):
+    """Never normalize duplicate fields in private config, access or evidence receipts."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise GatewayHold('PRIVATE_JSON_INVALID')
+        result[key] = value
+    return result
+
+
+def _private_json_constant(_):
+    # Python's default JSON parser accepts NaN/Infinity; receipts must not.
+    raise GatewayHold('PRIVATE_JSON_INVALID')
+
+
 def _read(relative, maximum=65536, missing=None):
     path = _path(relative)
     try:
@@ -176,7 +191,8 @@ def _read(relative, maximum=65536, missing=None):
         if len(data) > maximum:
             raise GatewayHold('PRIVATE_FILE_TOO_LARGE')
     try:
-        value = json.loads(data, parse_constant=lambda _: None)
+        value = json.loads(data, object_pairs_hook=_private_json_object,
+                           parse_constant=_private_json_constant)
     except (ValueError, UnicodeError):
         raise GatewayHold('PRIVATE_JSON_INVALID') from None
     if not isinstance(value, dict):
