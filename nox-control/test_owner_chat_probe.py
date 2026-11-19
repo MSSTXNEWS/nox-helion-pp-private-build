@@ -148,6 +148,183 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(len(result['answer']), 10000)
         self.assertTrue(boundary.closed)
 
+    def test_slots_read_only_current_model_port_and_fail_closed_schema(self):
+        class SlotsResponse:
+            def __init__(self, rows, status=200):
+                self.status, self.rows, self.closed = status, rows, False
+            def __enter__(self): return self
+            def __exit__(self, *unused): self.closed = True
+            def read(self, limit): return json.dumps(self.rows).encode()
+        good = SlotsResponse([{'is_processing': False}, {'processing': True}])
+        with patch.object(probe, 'request', return_value=good) as http:
+            self.assertEqual(probe.model_slots_state(object()), {'count': 2, 'busy': 1})
+        self.assertEqual(http.call_args.args[1], '/slots')
+        self.assertEqual(http.call_args.kwargs['base'], 'http://127.0.0.1:8098')
+        self.assertTrue(good.closed)
+        for invalid in ([], {}, [{'id': 1}], [{'is_processing': 0}],
+                        [{'is_processing': 'false'}], [None]):
+            with self.subTest(invalid=invalid), patch.object(
+                    probe, 'request', return_value=SlotsResponse(invalid)):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_SLOTS_STATE_UNVERIFIED
+        good_first = {'first_meaningful_delta_ms': 8000, 'stream_total_ms': 25000}
+        good_second = {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25000}
+        self.assertIsNone(probe.require_latency_target(good_first, 'FIRST_TURN', 8000))
+        self.assertIsNone(probe.require_latency_target(good_second, 'SECOND_TURN', 5000))
+        for bad in (
+            {'first_meaningful_delta_ms': 8001, 'stream_total_ms': 25000},
+            {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25001},
+            {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 5000},
+            {'first_meaningful_delta_ms': -1, 'stream_total_ms': 100},
+            {'first_meaningful_delta_ms': float('nan'), 'stream_total_ms': 100},
+            {'first_meaningful_delta_ms': True, 'stream_total_ms': 100},
+            {'stream_total_ms': 100},
+            {},
+            None,
+        ):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_FIRST_TURN_LATENCY_TARGET$'):
+                    probe.require_latency_target(bad, 'FIRST_TURN', 8000)
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_SECOND_TURN_LATENCY_TARGET$'):
+            probe.require_latency_target(
+                {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 10000},
+                'SECOND_TURN', 5000)
+        source = path.read_text()
+        self.assertIn("require_latency_target(turn, 'FIRST_TURN', 8000)", source)
+        self.assertIn("require_latency_target(follow, 'SECOND_TURN', 5000)", source)
+        self.assertLess(source.index("require_durable_result(saved, numeric_public_answer(answer)=='323'"),
+                        source.index("require_latency_target(turn, 'FIRST_TURN', 8000)"))
+        self.assertLess(source.index("require_durable_result(passed, numeric_public_answer(answer2)=='323'"),
+                        source.index("require_latency_target(follow, 'SECOND_TURN', 5000)"))
+
+    def test_truncated_or_error_stream_cannot_pass(self):
+        class Response:
+            status = 200
+            def __init__(self, rows): self.rows = rows; self.closed = False
+            def close(self): self.closed = True
+            def __iter__(self):
+                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
+        for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
+            response = Response(rows)
+            with patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, code):
+                    probe.consume_turn(object(), 'synthetic', '1'*32)
+            self.assertTrue(response.closed)
+
+
+if __name__ == '__main__':
+    unittest.main()
+):
+                    probe.model_slots_state(object())
+        with patch.object(probe, 'request', side_effect=OSError('connection refused')):
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE
+        good_first = {'first_meaningful_delta_ms': 8000, 'stream_total_ms': 25000}
+        good_second = {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25000}
+        self.assertIsNone(probe.require_latency_target(good_first, 'FIRST_TURN', 8000))
+        self.assertIsNone(probe.require_latency_target(good_second, 'SECOND_TURN', 5000))
+        for bad in (
+            {'first_meaningful_delta_ms': 8001, 'stream_total_ms': 25000},
+            {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25001},
+            {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 5000},
+            {'first_meaningful_delta_ms': -1, 'stream_total_ms': 100},
+            {'first_meaningful_delta_ms': float('nan'), 'stream_total_ms': 100},
+            {'first_meaningful_delta_ms': True, 'stream_total_ms': 100},
+            {'stream_total_ms': 100},
+            {},
+            None,
+        ):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_FIRST_TURN_LATENCY_TARGET$'):
+                    probe.require_latency_target(bad, 'FIRST_TURN', 8000)
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_SECOND_TURN_LATENCY_TARGET$'):
+            probe.require_latency_target(
+                {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 10000},
+                'SECOND_TURN', 5000)
+        source = path.read_text()
+        self.assertIn("require_latency_target(turn, 'FIRST_TURN', 8000)", source)
+        self.assertIn("require_latency_target(follow, 'SECOND_TURN', 5000)", source)
+        self.assertLess(source.index("require_durable_result(saved, numeric_public_answer(answer)=='323'"),
+                        source.index("require_latency_target(turn, 'FIRST_TURN', 8000)"))
+        self.assertLess(source.index("require_durable_result(passed, numeric_public_answer(answer2)=='323'"),
+                        source.index("require_latency_target(follow, 'SECOND_TURN', 5000)"))
+
+    def test_truncated_or_error_stream_cannot_pass(self):
+        class Response:
+            status = 200
+            def __init__(self, rows): self.rows = rows; self.closed = False
+            def close(self): self.closed = True
+            def __iter__(self):
+                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
+        for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
+            response = Response(rows)
+            with patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, code):
+                    probe.consume_turn(object(), 'synthetic', '1'*32)
+            self.assertTrue(response.closed)
+
+
+if __name__ == '__main__':
+    unittest.main()
+):
+                probe.model_slots_state(object())
+        with patch.object(probe, 'request', return_value=SlotsResponse([], status=404)):
+            with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE
+        good_first = {'first_meaningful_delta_ms': 8000, 'stream_total_ms': 25000}
+        good_second = {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25000}
+        self.assertIsNone(probe.require_latency_target(good_first, 'FIRST_TURN', 8000))
+        self.assertIsNone(probe.require_latency_target(good_second, 'SECOND_TURN', 5000))
+        for bad in (
+            {'first_meaningful_delta_ms': 8001, 'stream_total_ms': 25000},
+            {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25001},
+            {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 5000},
+            {'first_meaningful_delta_ms': -1, 'stream_total_ms': 100},
+            {'first_meaningful_delta_ms': float('nan'), 'stream_total_ms': 100},
+            {'first_meaningful_delta_ms': True, 'stream_total_ms': 100},
+            {'stream_total_ms': 100},
+            {},
+            None,
+        ):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_FIRST_TURN_LATENCY_TARGET$'):
+                    probe.require_latency_target(bad, 'FIRST_TURN', 8000)
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_SECOND_TURN_LATENCY_TARGET$'):
+            probe.require_latency_target(
+                {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 10000},
+                'SECOND_TURN', 5000)
+        source = path.read_text()
+        self.assertIn("require_latency_target(turn, 'FIRST_TURN', 8000)", source)
+        self.assertIn("require_latency_target(follow, 'SECOND_TURN', 5000)", source)
+        self.assertLess(source.index("require_durable_result(saved, numeric_public_answer(answer)=='323'"),
+                        source.index("require_latency_target(turn, 'FIRST_TURN', 8000)"))
+        self.assertLess(source.index("require_durable_result(passed, numeric_public_answer(answer2)=='323'"),
+                        source.index("require_latency_target(follow, 'SECOND_TURN', 5000)"))
+
+    def test_truncated_or_error_stream_cannot_pass(self):
+        class Response:
+            status = 200
+            def __init__(self, rows): self.rows = rows; self.closed = False
+            def close(self): self.closed = True
+            def __iter__(self):
+                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
+        for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
+            response = Response(rows)
+            with patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, code):
+                    probe.consume_turn(object(), 'synthetic', '1'*32)
+            self.assertTrue(response.closed)
+
+
+if __name__ == '__main__':
+    unittest.main()
+):
+                probe.model_slots_state(object())
+
+
     def test_real_latency_targets_gate_completion_for_first_and_second_turn(self):
         good_first = {'first_meaningful_delta_ms': 8000, 'stream_total_ms': 25000}
         good_second = {'first_meaningful_delta_ms': 5000, 'stream_total_ms': 25000}
