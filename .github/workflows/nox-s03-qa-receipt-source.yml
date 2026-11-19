@@ -1,0 +1,21 @@
+name: NOX S03 exact QA receipt source checks
+
+on:
+  push:
+    branches: [task/nox-s03-canonical-qa-receipt-20261119]
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check the exact QA proof and detached owner payload
+        run: |
+          python -B nox-control/test_owner_s03_qa_receipt_oneshot.py
+          python -B -m py_compile nox-control/owner_s03_qa_receipt_oneshot.py nox-control/owner_native_operator.py
