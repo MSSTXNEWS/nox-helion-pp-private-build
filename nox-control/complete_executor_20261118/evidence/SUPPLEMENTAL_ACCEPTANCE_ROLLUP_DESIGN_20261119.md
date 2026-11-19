@@ -1,10 +1,16 @@
-# Supplemental acceptance rollup design
+# Supplemental acceptance rollup: contract and status
 
 Date: 2026-11-19
 
+## Implementation status
+
+The NOX progress command now reads supported append-only sidecars and reports a separate supplemental acceptance count, accepted task IDs, source paths/URLs, evidence pointers, task spec SHAs, and run bindings. It keeps that count separate from the frozen 295-task registry and the existing receipt-derived completion count. It never writes the sidecars, all295 manifest, or work receipts.
+
+This helper runs only when the NOX progress command calls summarize(). The repository does not wire it into the live UI or native dispatcher.
+
 ## Decision
 
-Do not add supplemental sidecar records to the frozen 295-task receipt count yet. Keep these values separate:
+Keep these values separate:
 
 - **Original receipt count:** derived only from the frozen work_receipts.json acceptance contract.
 - **Supplemental accepted count:** a future, separately labeled count of unique original TaskIDs supported by strictly validated append-only evidence.
@@ -22,7 +28,7 @@ The JSON fields, workflow URLs, run IDs, owner comment IDs, and the word ACCEPTE
 
 ## Required consumer contract
 
-When an active caller and trust policy are established, add a read-only rollup alongside the existing receipt-derived counts. Do not modify all295_execution_disposition.json, work_receipts.json, task rows, or original_acceptance_added.
+The read-only rollup is implemented alongside the existing receipt-derived counts. Do not modify all295_execution_disposition.json, work_receipts.json, task rows, or original_acceptance_added.
 
 For each candidate JSON addendum, count a unique TaskID only when all checks pass:
 
