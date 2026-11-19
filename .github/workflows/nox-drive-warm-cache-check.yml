@@ -7,6 +7,12 @@ on:
       - 'nox-control/test_nox_drive_prefetch.py'
       - 'nox-control/NOX_DRIVE_WARM_CACHE.md'
       - '.github/workflows/nox-drive-warm-cache-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nox-control/nox_drive_prefetch.py'
+      - 'nox-control/test_nox_drive_prefetch.py'
+      - '.github/workflows/nox-drive-warm-cache-check.yml'
   workflow_dispatch:
 permissions:
   contents: read
