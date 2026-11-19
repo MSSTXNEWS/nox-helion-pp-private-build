@@ -103,7 +103,7 @@ def preflight():
     result = prior.get('result') or {} if isinstance(prior, dict) else {}
     receipt = result.get('receipt') or {}
     evidence = (receipt.get('worker_result') or {}).get('project_evidence') or {}
-    require(isinstance(prior, dict) and prior.get('status') == 'blocked'
+    require(isinstance(prior, dict) and prior.get('status') == 'done'
             and result.get('receipt_sha256') == PREDECESSOR_RECEIPT_SHA
             and prior.get('native_worker_lease',{}).get('phase') == 'SETTLED'
             and evidence.get('state') == 'INTEGRATED'
