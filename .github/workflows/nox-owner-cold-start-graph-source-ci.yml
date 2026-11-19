@@ -3,7 +3,7 @@ name: NOX owner cold startup graph source gate
 on:
   push:
     branches:
-      - 'task/nox-vast-cold-readback-exact-unit-20261119'
+      - 'task/nox-vast-cold-preimage-export-20261119'
   pull_request:
     paths:
       - '.github/workflows/nox-owner-cold-start-graph-source-ci.yml'

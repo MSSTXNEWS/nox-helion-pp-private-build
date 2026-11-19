@@ -1,6 +1,7 @@
 """Read-only source evidence for the exact NOX cold Supervisor startup chain."""
 
 import configparser
+import base64
 from contextlib import ExitStack
 import hashlib
 import json
@@ -8,6 +9,7 @@ import os
 import re
 import shlex
 import stat
+import subprocess
 from pathlib import Path, PurePosixPath
 
 
@@ -320,6 +322,54 @@ def collect():
             "host_writes": 0, "provider_mutations": 0, "service_signals": 0, **facts}
 
 
+EXPORT_PATHS = (STARTUP, DISPATCHER, MODEL)
+EXPORT_LIMIT = 16 << 10
+EXPECTED_PID1_TICKS = 167790899
+CREDENTIALS = re.compile(
+    rb"(?i)(?:[a-z0-9_]*(?:token|secret|password|api_key|private_key|authorization)"
+    rb"[a-z0-9_]*[ \t]*[:=]|-----BEGIN [^\r\n]*PRIVATE KEY-----"
+    rb"|://[^:@\s]+:[^@\s]+@|(?:gh[pousr]_|hf_|sk-)[A-Za-z0-9_-]{16,})"
+)
+RECIPIENT_CERTIFICATE = b'-----BEGIN CERTIFICATE-----\nMIIELTCCApWgAwIBAgIUTWp2oUQWGH1QaK2FPrOcA9bK3lkwDQYJKoZIhvcNAQEL\nBQAwJjEkMCIGA1UEAwwbTk9YLUNPTEQtUFJFSU1BR0UtRVBIRU1FUkFMMB4XDTI2\nMTExOTE4NTYxOFoXDTI2MTEyMDE4NTYxOFowJjEkMCIGA1UEAwwbTk9YLUNPTEQt\nUFJFSU1BR0UtRVBIRU1FUkFMMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKC\nAYEApoA9blQqlNfY3HbHm2YoNBVqXTEYltONGHukIMsaUDF1e+Jl48D7nsmq22ju\n/Nm8NYa7FnDSPlvfwlASpIFp7pDPsSCuK855jW4ddVX0m0emdfGIlZr0L2HTPjlE\ne+CcyqER4lwJ8/ppv2Onut12mhdp87YzXA16qM9c08uSHsJQIszqO35oO+gWnXIi\nAul6SiyUQ6BcyhF1lIgx5//XWtrC7EfSberkWKVREX6Y+w4EpgzdImQvn30mnzwE\nP0zl7NmbYjWYextbkNYs13uoa+PeZMgrs+mM8L2ajHNyNFyQ3tNq5JDJl5PyB48b\nsSwNdFaeIBQrOGewObOt45FDBJ6TsDKVas0EmYckY1CHwWiaTg5uAPRnsbXVofVe\nsOS67bAjyGrrW7AOc3emgcnAzGhl8FpgQ8E9ADeI+fWeiEORXcHbtnF010xw/tqi\nEfwGEioRWtjQ+Iyh9UZrS38jekOeh0ql1HO/JgwytcCzu3XB4b6OXvaleyW9bOm1\nFhSnAgMBAAGjUzBRMB0GA1UdDgQWBBRVAZxBgOhIJzTE8kIEIHjXVZW6DjAfBgNV\nHSMEGDAWgBRVAZxBgOhIJzTE8kIEIHjXVZW6DjAPBgNVHRMBAf8EBTADAQH/MA0G\nCSqGSIb3DQEBCwUAA4IBgQB0/24ujfmdVAs8ovwzCE2tBhvLxH7R7g7DtD0xeqIB\n7UyeLHINEDnYx4IcJC0ji8RO8h6ffrR8GnfuGeH3lmOaz8qIv2pnNxazGT0e/Wb3\ncTApjsFGZW+w+e3mK38mCql+1ZML2NrxW4eygj/kv7/mSfyLc+pxKQEYMfLZsgQW\nXXgQ9nNKtTgiWKBMUlZOAIDFTQk20xnN05+vNHOP4pduyMf3+L5YZjGUArvpEy2y\nlfQ9Zr/gt8VxK5jX1FaioYAmyAkYINpIgw32gQ60G28j8bH8F3uvoTV3oDinNZYG\nwWyghKD4b+tIMcqtoH6Mh61LgBPEO7r0iazRtJRryqI9f0BHHYEtKS/bHKwhlmW8\nFaN+qES7ERY+U3wtU7QJ+qa9gsBQWtm4fb8hb0D484oaeWKF7fQsx1Ej5kuQPO1A\n3SnQEsNAc/6Qxu+2K4j2N3qHYvw29YNijbDbrr0Nx39lxSL/47R+ArZEO1HuqXxz\nkqSAFPljObrveY4j9hSCJH8=\n-----END CERTIFICATE-----\n'
+
+
+def collect_export():
+    before = generation()
+    if before != EXPECTED_PID1_TICKS:
+        raise ValueError("EXPORT_EPOCH")
+    files = {}
+    for path in EXPORT_PATHS:
+        raw = read_pinned_root_file(path)
+        if not 0 < len(raw) <= EXPORT_LIMIT or sha(raw) != STARTUP_PINS[path]:
+            raise ValueError("EXPORT_FILE_PIN")
+        if b"\0" in raw or CREDENTIALS.search(raw):
+            raise ValueError("EXPORT_SENSITIVE_FILE")
+        files[path] = raw
+    if any(read_pinned_root_file(path) != raw for path, raw in files.items()) or generation() != before:
+        raise ValueError("EXPORT_CHANGED")
+    return before, files
+
+
+def encrypt_export(payload):
+    if not 0 < len(RECIPIENT_CERTIFICATE) <= 2048 or len(payload) > 70_000:
+        raise ValueError("EXPORT_ENCRYPTION_BOUNDS")
+    with ExitStack() as stack:
+        reader, writer = os.pipe()
+        stack.callback(os.close, reader)
+        with os.fdopen(writer, "wb") as handle:
+            handle.write(RECIPIENT_CERTIFICATE)
+        process = subprocess.run(
+            ["/usr/bin/openssl", "cms", "-encrypt", "-binary", "-aes256", "-outform", "DER",
+             "-recip", f"/proc/self/fd/{reader}", "-keyopt", "rsa_padding_mode:oaep",
+             "-keyopt", "rsa_oaep_md:sha256"],
+            input=payload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            pass_fds=(reader,), env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"}, timeout=12,
+        )
+    if process.returncode or not 128 <= len(process.stdout) <= 100_000:
+        raise ValueError("EXPORT_ENCRYPTION")
+    return process.stdout
+
+
 def main():
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
     source = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
@@ -329,9 +379,18 @@ def main():
             or not re.fullmatch(r"[1-9][0-9]{0,19}", request)
             or not re.fullmatch(r"[0-9a-f]{40}", source)):
         raise ValueError("OWNER_SCOPE")
-    print("NOX_MAINT_COLD_START_GRAPH=" + json.dumps(
-        {"request_id": request, "source_sha": source, **collect()},
-        separators=(",", ":"), sort_keys=True), flush=True)
+    try:
+        ticks, files = collect_export()
+        payload = json.dumps({
+            "schema": "NOX_COLD_PREIMAGES_V1", "instance_id": 60509551,
+            "pid1_start_ticks": ticks, "request_id": request, "source_sha": source,
+            "files": {path: {"sha256": STARTUP_PINS[path], "content_b64": base64.b64encode(raw).decode("ascii")}
+                      for path, raw in files.items()},
+        }, sort_keys=True, separators=(",", ":")).encode("ascii")
+        ciphertext = encrypt_export(payload)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        raise SystemExit("HOLD_COLD_PREIMAGE_EXPORT") from None
+    print("NOX_MAINT_COLD_PREIMAGES_ENCRYPTED=" + base64.b64encode(ciphertext).decode("ascii"), flush=True)
     print("NOX_MAINT_REPAIR_COMPLETE=true", flush=True)
 
 
