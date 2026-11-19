@@ -3,13 +3,13 @@
 No push/PR activation, no secret export, no blind retry of native mutations.
 """
 from __future__ import annotations
-import argparse, base64, contextlib, ipaddress, json, os, re, socket, subprocess, sys, time
+import argparse, base64, contextlib, hashlib, ipaddress, json, os, re, socket, subprocess, sys, time
 from pathlib import Path
 REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
+FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'audit': 'nox-control/owner_native_audit.py', 'audit_gpu_inventory': 'nox-control/owner_native_audit_gpu_inventory_entry.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
 MASTER=None
 
 def _subprocess_env_without_nox2():
@@ -170,6 +170,19 @@ def run_native(action,request_id):
     if check.returncode:raise RuntimeError('HOLD_SSH_MASTER_NOT_ALIVE')
     print('NOX_MAINT_AUTHENTICATED_INSTANCE=60509551',flush=True)
     payload=Path(FILES[action]).read_text()
+    if action=='audit_gpu_inventory':
+        pinned_helpers=(
+            ('__NOX_AUDIT_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_native_audit.py','e5c439c6733fcb276bec58dbf8af5193694645ac'),
+            ('__NOX_GPU_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_native_gpu_inventory.py','3a3ff33e7709539d5ff6ab6b8614d694a9d2becb'),
+        )
+        for placeholder,path,expected_blob in pinned_helpers:
+            raw=Path(path).read_bytes()
+            header=b'blob '+str(len(raw)).encode('ascii')+bytes([0])
+            if len(raw)>256*1024 or hashlib.sha1(header+raw).hexdigest()!=expected_blob:
+                raise RuntimeError('HOLD_COMPOSITE_HELPER_SOURCE_PIN')
+            if payload.count(placeholder)!=1:
+                raise RuntimeError('HOLD_COMPOSITE_HELPER_BUNDLE')
+            payload=payload.replace(placeholder,json.dumps(base64.b64encode(raw).decode('ascii')))
     if action == 'lifeline':
         assets={}
         for path in ('nox-control/nox_native_lifeline.py',
@@ -299,7 +312,7 @@ def run_native(action,request_id):
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
     script=f"set -euo pipefail\nNOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
-    timeout=150 if action in ('audit','inspect','drive_probe','emergency_stop_preflight') else 900
+    timeout=150 if action in ('audit','inspect','drive_probe','emergency_stop_preflight','audit_gpu_inventory') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
     r=_safe_subprocess_run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
