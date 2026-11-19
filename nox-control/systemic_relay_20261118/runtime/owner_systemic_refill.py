@@ -332,7 +332,11 @@ def memory_governor_projection(capacity):
             or budget['current_bytes'] > budget['max_bytes']
             or budget['file_bytes'] > budget['current_bytes']
             or budget['inactive_file_bytes'] > budget['file_bytes']
-            or budget['shmem_bytes'] > budget['file_bytes']):
+            or budget['shmem_bytes'] > budget['file_bytes']
+            # PSI avg10 values are percentages; 'full' stalls are a subset
+            # of 'some'. Contradictory metrics cannot support green advice.
+            or any(v > 100 for v in fields[6:])
+            or budget['memory_psi_full_avg10'] > budget['memory_psi_some_avg10']):
         return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
                 'state': 'RESOURCE_METADATA_HOLD',
                 'auto_reclaim': False}
