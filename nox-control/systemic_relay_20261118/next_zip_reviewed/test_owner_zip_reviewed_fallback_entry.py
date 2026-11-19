@@ -118,7 +118,11 @@ class ZipFastFallbackTests(TestCase):
         helper,bundle=self.prepare()
         spec,payload,publisher=self.invoke(helper,bundle)
         self.assertEqual(spec['expected_config_sha256'],m.CONFIG_SHA)
-        self.assertRegex(m.PARENT_SPEC_SHA,r'^[a-f0-9]{64}        self.assertEqual(len(spec['batches']),1)
+        self.assertRegex(m.PARENT_SPEC_SHA,r'^[a-f0-9]{64}$')
+        self.assertEqual(m.PARENT_SPEC_SHA, '3ace28409839c1e1259e5a24b7d40c11bf9dec3445b2b0073ef90ecc22b2216e')
+        self.assertEqual(spec['expected_source_files_sha256'],m.SOURCE_FILES_SHA)
+        self.assertEqual(len(spec['batches']),1)
+
         self.assertEqual(len(spec['predecessors']),1)
         self.assertEqual(spec['predecessors'][0]['status'],'blocked')
         self.assertEqual(spec['batches'][0]['catalog_row']['id'],m.TASK_ID)
