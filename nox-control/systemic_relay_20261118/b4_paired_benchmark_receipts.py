@@ -87,6 +87,14 @@ def _validated(run):
         _require(all(_integer(event.get(key), 10 ** 10) for key in
                      ("cache_tokens_reused", "prompt_tokens_evaluated")),
                  "PROMPT_CACHE_TIMING_PROOF")
+        # A visible first delta and a saved partial response do not prove
+        # completion. The trusted SSE reader must observe the route's terminal
+        # sentinel/event (e.g. [DONE]) and the model's final finish reason.
+        _require(type(event.get("sse_terminal_seen")) is bool
+                 and type(event.get("model_finish_reason")) is str
+                 and event["model_finish_reason"] in
+                 ("stop", "length", "tool_calls", "content_filter",
+                  "cancelled", "error", "unknown"), "SSE_TERMINAL_PROOF")
         mapped[task] = event
     _require(set(mapped) == task_ids, "TASK_SET_MISMATCH")
     return mapped
@@ -105,7 +113,8 @@ def _within_budget_pass(event, max_task_ms):
     """
     return (event["status"] == "PASS" and event["latency_ms"] <= max_task_ms
             and event["first_text_ms"] is not None
-            and event["output_tokens"] > 0 and event["history_saved"])
+            and event["output_tokens"] > 0 and event["history_saved"]
+            and event["sse_terminal_seen"] and event["model_finish_reason"] == "stop")
 
 
 def _metrics(events, max_task_ms):
@@ -126,6 +135,10 @@ def _metrics(events, max_task_ms):
         "reported_pass_without_usable_chat": sum(
             row["status"] == "PASS" and row["latency_ms"] <= max_task_ms
             and not _within_budget_pass(row, max_task_ms) for row in rows),
+        "reported_pass_without_terminal_sse": sum(
+            row["status"] == "PASS" and row["latency_ms"] <= max_task_ms
+            and (not row["sse_terminal_seen"] or row["model_finish_reason"] != "stop")
+            for row in rows),
         "over_budget_walltime": sum(row["latency_ms"] > max_task_ms for row in rows),
         "history_saved": sum(row["history_saved"] for row in rows),
         "background_completed": sum(row["background_completed"] for row in rows),
@@ -170,6 +183,11 @@ def compare_paired(baseline, candidate):
                          if new[task]["status"] == "PASS"
                          and new[task]["latency_ms"] <= candidate["max_task_ms"]
                          and not _within_budget_pass(new[task], candidate["max_task_ms"])]
+    unfinished_streams = [task for task in baseline["declared_task_ids"]
+                          if new[task]["status"] == "PASS"
+                          and new[task]["latency_ms"] <= candidate["max_task_ms"]
+                          and (not new[task]["sse_terminal_seen"]
+                               or new[task]["model_finish_reason"] != "stop")]
     fixed = [task for task in baseline["declared_task_ids"]
              if not _within_budget_pass(old[task], baseline["max_task_ms"])
              and _within_budget_pass(new[task], candidate["max_task_ms"])]
@@ -190,6 +208,9 @@ def compare_paired(baseline, candidate):
                          or old[task]["prompt_tokens_evaluated"] != new[task]["prompt_tokens_evaluated"])]
     # A constant aggregate token total can hide a shorter answer in one task
     # and a longer answer in another. Neither is equivalent generation work.
+    sse_finality_changed = [task for task in baseline["declared_task_ids"]
+                            if (old[task]["sse_terminal_seen"] != new[task]["sse_terminal_seen"]
+                                or old[task]["model_finish_reason"] != new[task]["model_finish_reason"])]
     output_tokens_changed = [task for task in baseline["declared_task_ids"]
                              if old[task]["output_tokens"] != new[task]["output_tokens"]]
     status_changed = [task for task in baseline["declared_task_ids"]
@@ -220,12 +241,15 @@ def compare_paired(baseline, candidate):
     # This conservative like-for-like latency view is N/A if any observed
     # completion size, terminal status, text coverage, or KV prefill differs.
     # Matching these witnesses still cannot prove identical hidden compute.
-    same_observed_work = (not cache_changed and not output_tokens_changed
+    same_observed_work = (not cache_changed and not sse_finality_changed
+                          and not output_tokens_changed
                           and not status_changed and old_seen == new_seen)
     return {**answer, "comparable": True, "state": "DESCRIPTIVE_ONLY",
             "reason": None, "baseline": before, "candidate": after,
             "fixed_task_ids": fixed, "regressed_task_ids": regressed,
             "candidate_reported_pass_without_usable_chat_task_ids": unusable_reported,
+            "candidate_reported_pass_without_terminal_sse_task_ids": unfinished_streams,
+            "sse_finality_changed_task_ids": sse_finality_changed,
             "latency_regressed_task_ids": latency_regressed,
             "peak_rss_regressed_task_ids": rss_regressed,
             "cache_state_changed_task_ids": cache_changed,

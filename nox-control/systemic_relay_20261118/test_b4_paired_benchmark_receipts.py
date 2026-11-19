@@ -18,13 +18,17 @@ def example():
             background_completed=True, trace_sha256=H,
             expected_full_input_sha256=H, served_full_input_sha256=H,
             first_text_ms=10 if status == "PASS" else None,
-            cache_tokens_reused=3, prompt_tokens_evaluated=60))
+            cache_tokens_reused=3, prompt_tokens_evaluated=60,
+            sse_terminal_seen=(status == "PASS"),
+            model_finish_reason=("stop" if status == "PASS" else "length")))
     return run
 
 class PairedReceiptTests(unittest.TestCase):
     def test_all_outcomes_in_denominator_and_latency(self):
         b = example(); c = copy.deepcopy(b); c["outcomes"][2]["status"] = "PASS"
         c["outcomes"][2]["first_text_ms"] = 10  # a real visible reply
+        c["outcomes"][2]["sse_terminal_seen"] = True
+        c["outcomes"][2]["model_finish_reason"] = "stop"
         result = compare_paired(b, c)
         self.assertTrue(result["comparable"])
         self.assertEqual(result["baseline"]["passed"], 1)
@@ -209,5 +213,38 @@ class PairedReceiptTests(unittest.TestCase):
     def test_missing_kv_timing_evidence_holds(self):
         b=example();c=example();del c["outcomes"][1]["prompt_tokens_evaluated"]
         self.assertEqual(compare_paired(b,c)["reason"],"PROMPT_CACHE_TIMING_PROOF")
+
+    def test_stream_disconnect_after_text_is_not_a_success(self):
+        b = example(); c = copy.deepcopy(b)
+        c["outcomes"][0]["sse_terminal_seen"] = False
+        out = compare_paired(b, c)
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["candidate"]["passed"], 0)
+        self.assertEqual(out["candidate"]["reported_pass_without_terminal_sse"], 1)
+        self.assertEqual(out["candidate_reported_pass_without_terminal_sse_task_ids"], ["t1"])
+        self.assertEqual(out["sse_finality_changed_task_ids"], ["t1"])
+        self.assertEqual(out["regressed_task_ids"], ["t1"])
+        self.assertIsNone(out["p95_latency_delta_ms_same_observed_work"])
+
+    def test_finish_reason_length_is_partial_even_after_done(self):
+        b = example(); c = copy.deepcopy(b)
+        c["outcomes"][0]["model_finish_reason"] = "length"
+        out = compare_paired(b, c)
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["candidate"]["passed"], 0)
+        self.assertEqual(out["candidate_reported_pass_without_terminal_sse_task_ids"], ["t1"])
+        self.assertTrue(out["latency_observed_workload_confounder"])
+        self.assertTrue(out["quality_or_history_regression"])
+
+    def test_missing_or_untyped_stream_finality_holds(self):
+        b = example()
+        for value in ("missing", "yes", None):
+            with self.subTest(value=value):
+                c = copy.deepcopy(b)
+                if value == "missing":
+                    del c["outcomes"][0]["sse_terminal_seen"]
+                else:
+                    c["outcomes"][0]["sse_terminal_seen"] = value
+                self.assertEqual(compare_paired(b, c)["reason"], "SSE_TERMINAL_PROOF")
 
 if __name__ == '__main__': unittest.main()
