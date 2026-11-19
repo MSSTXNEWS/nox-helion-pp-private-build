@@ -61,6 +61,12 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   const context={window,location,URL,Request,Response,ReadableStream,
     TextDecoder,TextEncoder,AbortController,performance,console,requestAnimationFrame:raf};
+  if(raf&&typeof raf==='object'){
+    context.requestAnimationFrame=raf.requestAnimationFrame;
+    context.cancelAnimationFrame=raf.cancelAnimationFrame;
+    context.setTimeout=raf.setTimeout;
+    context.clearTimeout=raf.clearTimeout;
+  }
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
@@ -1253,5 +1259,45 @@ test('V173 legacy RU ES first meaningful delta precedes delayed native done, S03
     assert(done && done.history_persisted===true && Number.isInteger(done.first_visible_token_ms));
     assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
     assert.equal(f.calls.some(x=>x.path==='/api/nox/stop'),false);
+  }
+});
+
+test('V175 SSE pacing cancels the losing callback without changing STOP/S03',async()=>{
+  const ID='abcd1234abcd1234abcd1234abcd1234';
+  const answer='Ж'.repeat(360)+'🧠'+'español';
+  for(const mode of ['frame','timeout']){
+    const frames=new Map(),timers=new Map();
+    let serial=0,cancelledFrames=0,clearedTimers=0;
+    const scheduler={
+      requestAnimationFrame(cb){
+        const id=++serial;frames.set(id,cb);
+        if(mode==='frame')Promise.resolve().then(()=>{
+          if(frames.delete(id))cb(performance.now());
+        });
+        return id;
+      },
+      cancelAnimationFrame(id){if(frames.delete(id))cancelledFrames++;},
+      setTimeout(cb){
+        const id=++serial;timers.set(id,cb);
+        if(mode==='timeout')Promise.resolve().then(()=>{
+          if(timers.delete(id))cb();
+        });
+        return id;
+      },
+      clearTimeout(id){if(timers.delete(id))clearedTimers++;}
+    };
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,scheduler);
+    const r=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:ID,request_id:'v175-cancel-'+mode})});
+    const output=await events(r);
+    assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),answer);
+    assert.equal(output.filter(x=>x.type==='done').length,1);
+    assert.equal(output.filter(x=>x.type==='error').length,0);
+    assert.equal(frames.size,0,'no pending rAF after SSE completion');
+    assert.equal(timers.size,0,'no pending timeout after SSE completion');
+    if(mode==='frame')assert(clearedTimers>0,'frame winner cancels timeout fallback');
+    else assert(cancelledFrames>0,'timeout winner cancels suspended rAF');
+    assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
   }
 });
