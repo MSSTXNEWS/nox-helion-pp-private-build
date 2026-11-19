@@ -1,0 +1,17 @@
+[Unit]
+Description=NOX bounded integration connectivity snapshot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=nox
+Group=nox
+WorkingDirectory=/opt/nox-helion
+EnvironmentFile=-/etc/nox/integrations.env
+ExecStart=/usr/bin/python3 /opt/nox-helion/nox-control/nox_integration_gateway.py status --provider all --output /var/lib/nox/integrations/status.json
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/nox/integrations
