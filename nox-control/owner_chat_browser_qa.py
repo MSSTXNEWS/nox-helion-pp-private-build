@@ -107,6 +107,7 @@ def exact_owner_dialog_readback(value, done, dialog_id, prompt, answer):
             or value.get('writer')!='V112_OWNER_DIALOG_WRITER'
             or done.get('writer')!='V112_OWNER_DIALOG_WRITER'
             or done.get('owner_dialog_saved') is not True
+            or done.get('s03_integrated') is not False
             or done.get('canonical_s03_write_verified') is not False
             or any(not isinstance(done.get(key),str) or not re.fullmatch(r'[a-f0-9]{32}',done[key])
                    for key in ('turn_id','receipt_id','lease_epoch'))
@@ -331,6 +332,7 @@ OBSERVER_JS = r"""
            queueUi();
          }else if(frame.type==='done'){
            t.done={saved:frame.saved===true,owner_dialog_saved:frame.owner_dialog_saved===true,
+                   s03_integrated:frame.s03_integrated,
                    canonical_s03_write_verified:frame.canonical_s03_write_verified,
                    dialog_matches:frame.dialog_id===cfg.did,turn_id:frame.turn_id,
                    writer:frame.writer,

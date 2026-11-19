@@ -99,7 +99,8 @@ class BrowserQaTests(unittest.TestCase):
         self.assertEqual(QA.safe_error(RuntimeError('HOLD_OWNER_STOP')), 'HOLD_OWNER_STOP')
 
     def test_missing_or_unbound_dialog_provider_is_never_accepted_as_s03(self):
-        done={'saved':True,'owner_dialog_saved':True,'canonical_s03_write_verified':False,
+        done={'saved':True,'owner_dialog_saved':True,'s03_integrated':False,
+              'canonical_s03_write_verified':False,
               'dialog_matches':True,'writer':'V112_OWNER_DIALOG_WRITER',
               'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32,
               'exchange_id':'4'*32,'receipt_sha256':'a'*64}
@@ -114,6 +115,8 @@ class BrowserQaTests(unittest.TestCase):
         self.assertFalse(QA.exact_owner_dialog_readback(wrong,done,'d'*32,'prompt','answer'))
         wrong['messages'][1]['content']='answer'
         self.assertTrue(QA.exact_owner_dialog_readback(wrong,done,'d'*32,'prompt','answer'))
+        self.assertFalse(QA.exact_owner_dialog_readback(wrong,dict(done,s03_integrated=True),'d'*32,'prompt','answer'))
+        self.assertIn('s03_integrated:frame.s03_integrated',QA.OBSERVER_JS)
         self.assertFalse(QA.exact_owner_dialog_readback(
             {**wrong,'canonical_s03_verified':True},done,'d'*32,'prompt','answer'))
 

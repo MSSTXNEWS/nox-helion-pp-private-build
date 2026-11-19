@@ -9,10 +9,10 @@ try:BUNDLE=__NOX_BUNDLE_JSON__
 except NameError:BUNDLE={}
 PINS={
  'owner_browser_transport_qa_entry.py':'6919392eaec25ced6b1d3174ad402577239a015a3935a13adedd6ee926678f01',
- 'owner_chat_browser_qa.py':'96671d865167bc71ba9966e245cecb30d355813bf6b0180b2b94a566cd66bfc1',
+ 'owner_chat_browser_qa.py':'8ff983e96951ad6828ab72433a52a4be1249493861d96c8e091ebdb6deb503be',
  'owner_browser_qa_entry.py':'8a756011dde849d818ef335e804f1a487115a08a1b524c863659b86dfeb00565',
- 'owner_chat_browser_transport_qa.py':'7a3cbcff6d075d078da3404b845cb04f7cf641d293cde94d7c7f25f754dc7ac6',
- 'owner_chat_browser_release_qa.py':'c5b93c50b6e0f8a21072c22eef0bfe10bc360df1672782089a6e60a60cdcabe2',
+ 'owner_chat_browser_transport_qa.py':'e072858b427eb78dcd890117ae4fb044e96e8b3110debb546502d95d7991ba68',
+ 'owner_chat_browser_release_qa.py':'7eb16d658474c0a4af15050d63e332a205380e0c52bf55b73092dde35437cf16',
 }
 
 

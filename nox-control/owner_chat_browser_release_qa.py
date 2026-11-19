@@ -12,8 +12,8 @@ import hashlib
 import math
 import time
 
-BASE_SHA = '96671d865167bc71ba9966e245cecb30d355813bf6b0180b2b94a566cd66bfc1'
-TRANSPORT_SHA = '7a3cbcff6d075d078da3404b845cb04f7cf641d293cde94d7c7f25f754dc7ac6'
+BASE_SHA = '8ff983e96951ad6828ab72433a52a4be1249493861d96c8e091ebdb6deb503be'
+TRANSPORT_SHA = 'e072858b427eb78dcd890117ae4fb044e96e8b3110debb546502d95d7991ba68'
 CONTROL_STATE_JS = r"""() => {
  const controls=document.querySelectorAll('#chatForm [type=submit]');
  const node=controls.length===1?controls[0]:null;
