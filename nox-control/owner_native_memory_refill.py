@@ -216,6 +216,7 @@ def run():
             runtime_files_changed=2, installed_runtime_script_sha256=sha(scripts[REFILL]))
         emit()
         print('NOX_MAINT_MEMORY_REFILL_COMPLETE=true', flush=True)
+        print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
         return True
     except BaseException as exc:
         receipt['state'] = str(exc) if str(exc).startswith('HOLD_') else 'HOLD_OWNER_CGROUP_REFILL_'+type(exc).__name__
