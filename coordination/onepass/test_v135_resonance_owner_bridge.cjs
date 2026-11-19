@@ -1627,3 +1627,34 @@ test('V189 paint budget short-circuits repeated matchMedia lookups after two wai
   assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
   assert(f.calls.some(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
+
+
+test('V191 one Intl.Segmenter object reused across sequential streaming requests',async()=>{
+  // Tests browser-side allocation only; native identity and actual S03 are not simulated as accepted.
+  let constructors=0,segmentCalls=0,historyChecks=0;
+  const NativeSegmenter=Intl.Segmenter;
+  const countedIntl={Segmenter:class{
+    constructor(...args){constructors++;this.underlying=new NativeSegmenter(...args);}
+    segment(s){segmentCalls++;return this.underlying.segment(s);}
+  }};
+  const reply='NOX '+('e\u0301👩‍💻 español русский ').repeat(24);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    undefined,false,4,()=>{historyChecks++;},'verified-exchange-01',
+    [],false,false,prompt,countedIntl);
+  for(let turn=0;turn<2;turn++){
+    const response=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v191-browser-'+turn})});
+    const frames=await events(response);
+    assert.equal(frames.filter(x=>x.type==='done').length,1);
+    assert.equal(frames.filter(x=>x.type==='error').length,0);
+    assert.equal(frames.filter(x=>x.type==='token').map(x=>x.t).join(''),reply,
+      'Unicode grapheme-preserving SSE payload must remain lossless');
+    assert.equal(frames.at(-1).model_identity_verified,false,
+      'browser source cannot assert installed tokenizer or weights');
+  }
+  assert.equal(constructors,1,'a single immutable Segmenter should serve the owner page');
+  assert(segmentCalls>2,'both transport coalescing and visual token slicing reuse it');
+  assert.equal(historyChecks,2,'mock owner S03 history gate still called for both requests');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,2,
+    'one native POST per explicit browser request');
+});
