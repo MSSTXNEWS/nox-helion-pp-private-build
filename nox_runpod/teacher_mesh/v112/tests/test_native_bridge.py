@@ -1,9 +1,11 @@
 """V112 regression against fixture SQLite and synthetic SSE. Never a live NOX receipt."""
+import asyncio
 import hashlib
 import json
 import sqlite3
 import sys
 import tempfile
+import threading
 import types
 import unittest
 from pathlib import Path
@@ -43,10 +45,16 @@ class V112Tests(unittest.TestCase):
         async def old_status():
             return {'model':'NOX PRIME 8B','ts':123}
         self.calls=[]
+        self.block_native=False
+        self.native_started=threading.Event()
+        self.native_release=threading.Event()
         self.record=True
         self.bulk_sse=''
         async def native(payload):
             self.calls.append(payload)
+            if self.block_native:
+                self.native_started.set()
+                await asyncio.to_thread(self.native_release.wait,3)
             q=payload['messages'][-1]['content']
             answer='Готов. Это проверенный ответ.'
             async def chunks():
@@ -234,6 +242,81 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(hist['messages'][1]['content'],'Готов. Это проверенный ответ.')
         listed=self.client.get('/api/ui/memory/dialogs',cookies=self.cookie).json()
         self.assertEqual(listed['dialogs'][0]['dialog_id'],d)
+
+    def test_request_id_retry_replays_existing_s03_pair_without_second_inference(self):
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'request replay','confirmed':True}).json()
+        request_id='retry-00000000000000000000000000000001'
+        body={'message':'same user turn','dialog_id':created['dialog_id'],
+              'request_id':request_id,'history':[]}
+        first=self.client.post('/api/nox/chat/stream',cookies=self.cookie,json=body)
+        self.assertEqual(first.status_code,200,first.text[:300])
+        first_frames=[json.loads(x) for x in first.text.splitlines() if x.strip()]
+        self.assertTrue(first_frames[-1]['saved'])
+        self.assertEqual(first_frames[-1]['exchange_id'],request_id)
+        self.assertEqual(len(self.calls),1)
+        replay=self.client.post('/api/nox/chat/stream',cookies=self.cookie,json=body)
+        self.assertEqual(replay.status_code,200,replay.text[:300])
+        replay_frames=[json.loads(x) for x in replay.text.splitlines() if x.strip()]
+        self.assertEqual(''.join(x.get('text','') for x in replay_frames if x['type']=='delta'),
+                         'Готов. Это проверенный ответ.')
+        self.assertEqual(replay_frames[-1]['exchange_id'],request_id)
+        self.assertTrue(replay_frames[-1]['replayed'])
+        self.assertEqual(len(self.calls),1,'a terminal retry must not run model inference again')
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':created['dialog_id']}).json()['messages']
+        pair=[x for x in history if x['exchange_id']==request_id]
+        self.assertEqual([(x['role'],x['content']) for x in pair],
+                         [('user','same user turn'),('assistant','Готов. Это проверенный ответ.')])
+
+    def test_request_id_concurrent_duplicate_is_rejected_before_second_inference(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from fastapi.testclient import TestClient
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'request concurrency','confirmed':True}).json()
+        request_id='concurrent-00000000000000000000000001'
+        body={'message':'one active turn','dialog_id':created['dialog_id'],
+              'request_id':request_id,'history':[]}
+        other=TestClient(self.app)
+        self.addCleanup(other.close)
+        self.block_native=True
+        self.native_release.clear()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            first=pool.submit(self.client.post,'/api/nox/chat/stream',
+                              cookies=self.cookie,json=body)
+            self.assertTrue(self.native_started.wait(2),'first inference must reach provider')
+            second=other.post('/api/nox/chat/stream',
+                cookies={'owner':'yes','session':'other'},json=body)
+            self.assertEqual(second.status_code,409,second.text)
+            self.assertEqual(second.json()['error'],'HOLD_ACTIVE_REQUEST_ID')
+            self.assertEqual(len(self.calls),1,'the duplicate must not reach provider')
+            self.native_release.set()
+            completed=first.result(timeout=4)
+        self.assertEqual(completed.status_code,200,completed.text[:300])
+        self.assertEqual(len(self.calls),1)
+        retry=other.post('/api/nox/chat/stream',
+            cookies={'owner':'yes','session':'other'},json=body)
+        frames=[json.loads(x) for x in retry.text.splitlines() if x.strip()]
+        self.assertEqual(retry.status_code,200,retry.text[:300])
+        self.assertTrue(frames[-1]['replayed'])
+        self.assertEqual(len(self.calls),1,'post-terminal retry must replay the committed pair')
+
+    def test_request_id_collision_and_invalid_values_fail_closed(self):
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'request collision','confirmed':True}).json()
+        request_id='collision-00000000000000000000000000001'
+        body={'message':'first text','dialog_id':created['dialog_id'],'request_id':request_id}
+        first=self.client.post('/api/nox/chat/stream',cookies=self.cookie,json=body)
+        self.assertEqual(first.status_code,200)
+        collision=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'changed text','dialog_id':created['dialog_id'],'request_id':request_id})
+        self.assertEqual(collision.status_code,409)
+        self.assertEqual(collision.json()['error'],'HOLD_REQUEST_ID_COLLISION')
+        invalid=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'invalid id','dialog_id':created['dialog_id'],'request_id':'short'})
+        self.assertEqual(invalid.status_code,422)
+        self.assertEqual(invalid.json()['error'],'INVALID_REQUEST_ID')
+        self.assertEqual(len(self.calls),1)
 
     def test_coalesced_sse_transport_frames_preserve_native_s03_done(self):
         self.bulk_sse='coalesced'
