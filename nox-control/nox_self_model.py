@@ -38,9 +38,9 @@ SENSITIVE_QUERY_KEY = re.compile(
     r"code|state|x-amz-(?:credential|signature|security-token)|x-goog-(?:credential|signature))$"
 )
 SENSITIVE_PATH_MARKERS = {
-    "access_token", "access-token", "api_key", "api-key", "apikey", "auth", "authorization",
-    "client_secret", "client-secret", "credential", "jwt", "password", "secret", "session",
-    "signature", "sig", "token",
+    "access_token", "access-token", "api_key", "api-key", "apikey", "auth", "authorization", "key",
+    "client_secret", "client-secret", "code", "credential", "id_token", "id-token", "jwt", "password",
+    "refresh_token", "refresh-token", "secret", "session", "sid", "signature", "sig", "state", "token",
 }
 PREFIXED_PATH_SECRET = re.compile(
     r"(?i)(?:\bgh[pousr]_[A-Za-z0-9]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|"
