@@ -6,6 +6,8 @@ changed here. One synthetic dialog is created through the real owner API. The
 browser submits its real form and observes the real model stream and exact owner-dialog receipt.
 Screenshots stay in mode-0600 files on NOX; no pixels, credentials, private dialog
 titles, model text, console text, response bodies or cookies go to stdout.
+The separately pinned ``original_card`` mode verifies one frozen-card UI trace;
+its dialog history is supplemental and canonical S03 remains explicitly HOLD.
 """
 from __future__ import annotations
 
@@ -93,6 +95,62 @@ def progressive_stream_valid(value):
             and all(a < b for a, b in zip(lengths, lengths[1:]))
             and type(first) in (int, float) and type(done) in (int, float)
             and 0 <= first < done)
+
+
+def original_card_ui_trace_valid(value):
+    """Require the frozen one-turn UI states in their observed order.
+
+    This is deliberately independent of the dialog receipt/S03 evidence path.
+    The browser-side trace contains only phase labels, booleans and timings.
+    """
+    if not isinstance(value, dict):
+        return False
+    trace = value.get('original_card_ui_states')
+    if not isinstance(trace, list) or len(trace) != 4:
+        return False
+    names = ('accepted_input', 'waiting', 'answer', 'completed')
+    if tuple(row.get('state') for row in trace if isinstance(row, dict)) != names:
+        return False
+    times = [row.get('at_ms') for row in trace]
+    if (any(type(item) not in (int, float) for item in times)
+            or any(not 0 <= item <= 120000 for item in times)
+            or any(left >= right for left, right in zip(times, times[1:]))):
+        return False
+    accepted, waiting, answer, completed = trace
+    native_first = value.get('native_first_ms')
+    native_done = value.get('native_done_ms')
+    if (value.get('native_calls') != 1 or value.get('total_native_calls') != 1
+            or type(value.get('native_delta_count')) is not int or value['native_delta_count'] < 2
+            or value.get('native_eof') is not True
+            or accepted.get('user_bubble_visible') is not True
+            or accepted.get('composer_cleared') is not True
+            or waiting.get('indicator_visible') is not True
+            or waiting.get('phase') not in ('thinking', 'waiting')
+            or type(native_first) not in (int, float)
+            or not times[1] < native_first
+            or answer.get('visible_prefix') is not True
+            or type(answer.get('prefix_characters')) is not int
+            or answer['prefix_characters'] < 3
+            or type(native_done) not in (int, float)
+            or not times[2] < native_done
+            or completed.get('phase') != 'done'
+            or times[3] < native_done
+            or completed.get('native_done') is not True
+            or completed.get('native_eof') is not True
+            or completed.get('send_released') is not True):
+        return False
+    return True
+
+
+def original_card_stream_projection(value):
+    """Keep the original-card receipt free of supplemental dialog/S03 fields."""
+    if not isinstance(value, dict):
+        return {}
+    keys = ('native_calls', 'total_native_calls', 'native_delta_count',
+            'native_first_ms', 'native_done_ms', 'native_eof',
+            'dom_answer_matches_native', 'ui_before_native_done',
+            'ui_prefix_lengths_before_done', 'original_card_ui_states')
+    return {key:value.get(key) for key in keys}
 
 
 def exact_owner_dialog_readback(value, done, dialog_id, prompt, answer):
@@ -273,6 +331,39 @@ OBSERVER_JS = r"""
    }
    return right>left&&bottom>top;
  }
+ function hasState(t,name){return t.originalCardUiStates.some(item=>item.state===name);}
+ function recordState(t,name,fields){
+   if(t.originalCardUiStates.length>=4||hasState(t,name))return;
+   t.originalCardUiStates.push(Object.assign({state:name,
+     at_ms:Math.max(0,Math.round(performance.now()-t.started))},fields));
+ }
+ function lifecycleSample(){
+   const t=q.current,mount=document.getElementById('messages');
+   if(!cfg.originalCard||!t||t.nativeCalls!==1||!mount)return;
+   const prompt=document.getElementById('prompt');
+   const user=[...mount.querySelectorAll('.v24-msg.me .body')]
+     .find(node=>node.textContent===cfg.expectedPrompt&&visibleBody(node,mount));
+   if(!hasState(t,'accepted_input')&&user&&prompt&&prompt.value==='')
+     recordState(t,'accepted_input',{user_bubble_visible:true,composer_cleared:true});
+   const phase=String(document.body?.dataset?.noxPhase||'');
+   const waitingNode=mount.querySelector('.v24-msg.nox.thinking .v24-dots[aria-label="NOX печатает"]');
+   const waitingVisible=!!waitingNode&&visibleBody(waitingNode,mount);
+   const acceptedState=t.originalCardUiStates.find(item=>item.state==='accepted_input');
+   if(acceptedState&&!hasState(t,'waiting')&&performance.now()-t.started>acceptedState.at_ms
+      &&t.nativeFirst===null
+      &&['thinking','waiting'].includes(phase)&&waitingVisible)
+     recordState(t,'waiting',{phase,indicator_visible:true});
+   if(t.originalCardUiStates.length===3&&!hasState(t,'completed')&&t.done&&t.nativeEof
+      &&phase==='done'&&document.querySelector('#chatForm [type=submit]')?.disabled===false){
+     const body=t.uiBody,answerVisible=visibleBody(body,mount)&&typeof body.innerText==='string'
+       &&normalize(body.innerText)===normalize(t.answer);
+     if(answerVisible)recordState(t,'completed',{phase:'done',native_done:true,
+       native_eof:true,send_released:true});
+   }
+   if(hasState(t,'completed')&&t.lifecycleTimer!==null){
+     clearInterval(t.lifecycleTimer);t.lifecycleTimer=null;
+   }
+ }
  function watch(){
    const mount=document.getElementById('messages');if(!mount)return;
    const form=document.getElementById('chatForm'),stop=form?.querySelector('[data-action=stop]');
@@ -286,6 +377,7 @@ OBSERVER_JS = r"""
    };new MutationObserver(sampleStop).observe(form,{subtree:true,attributes:true,attributeFilter:['disabled','style','class']});}
    sampleUi=()=>{
      const t=q.current;if(!t)return;
+     lifecycleSample();
      t.uiVisible=visibleBody(t.uiBody,mount);
      if(t.started===null||t.nativeCalls!==1||!t.answer||!t.uiVisible)return;
      const text=t.uiBody.innerText;
@@ -297,6 +389,8 @@ OBSERVER_JS = r"""
      const actual=normalize(text),wanted=normalize(t.answer);
      if(actual.length<3||!wanted.startsWith(actual))return;
      const now=performance.now()-t.started;
+     if(cfg.originalCard&&t.nativeFirst!==null&&!hasState(t,'answer'))
+       recordState(t,'answer',{visible_prefix:true,prefix_characters:actual.length});
      if(t.uiFirst===null)t.uiFirst=now;
      if(t.nativeDone===null){
        t.uiBeforeDone=true;
@@ -314,7 +408,7 @@ OBSERVER_JS = r"""
    const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
    try{
      for(let count=0;count<2048;count++){
-       const part=await reader.read();if(part.done)break;
+       const part=await reader.read();if(part.done){t.nativeEof=true;lifecycleSample();break;}
        t.nativeBytes+=part.value.length;
        if(t.nativeBytes>65536)throw Error('HOLD_QA_STREAM_LIMIT');
        buffer+=decoder.decode(part.value,{stream:true});
@@ -339,6 +433,7 @@ OBSERVER_JS = r"""
                    receipt_id:frame.receipt_id,lease_epoch:frame.lease_epoch,
                    exchange_id:frame.exchange_id,receipt_sha256:frame.receipt_sha256};
            t.nativeDone=performance.now()-t.started;
+           lifecycleSample();
          }else if(frame.type==='error'){t.error='HOLD_NATIVE_STREAM_ERROR';}
        }
      }
@@ -354,11 +449,17 @@ OBSERVER_JS = r"""
      t={nativeCalls:1,started:performance.now(),nativeFirst:null,nativeDone:null,
        nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,
        uiFirst:null,uiBeforeDone:false,uiLengths:[],uiPrefixLengthsBeforeDone:[],uiBody:null,
-       uiVisible:false,uiMaxTokenSpans:0,stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};
+       uiVisible:false,uiMaxTokenSpans:0,stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0,
+       nativeEof:false,originalCardUiStates:[],lifecycleTimer:null};
      q.turns.push(t);q.current=t;
      const pending=document.querySelectorAll('#messages .v24-msg.nox.streaming .body');
      t.uiBody=pending.length===1?pending[0]:null;
      requestAnimationFrame(sampleStop);
+     lifecycleSample();
+     if(cfg.originalCard){
+       t.lifecycleTimer=setInterval(lifecycleSample,20);
+       setTimeout(()=>{if(t.lifecycleTimer!==null){clearInterval(t.lifecycleTimer);t.lifecycleTimer=null;}},120000);
+     }
    }
    const response=await fetch0(input,init);
    if(own){void observe(response.clone(),t);}
@@ -385,6 +486,7 @@ SNAPSHOT_JS = r"""() => {
  }).slice(0,8);
  return {native_first_ms:t?.nativeFirst??null,native_done_ms:t?.nativeDone??null,native_delta_count:t?.nativeDeltas??0,
    native_bytes:t?.nativeBytes??0,native_calls:t?.nativeCalls??0,total_native_calls:q.totalNativeCalls,
+   native_eof:t?.nativeEof??false,original_card_ui_states:t?.originalCardUiStates??[],
    done:t?.done??null,error:t?.error??null,
    ui_first_ms:t?.uiFirst??null,ui_before_native_done:t?.uiBeforeDone??false,ui_lengths:t?.uiLengths??[],
    ui_prefix_lengths_before_done:t?.uiPrefixLengthsBeforeDone??[],ui_body_visible:t?.uiVisible??false,
@@ -598,10 +700,17 @@ async def browser_run(report, directory, available):
     origin=urllib.parse.urlsplit(base).netloc
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
     title='NOX Browser QA '+token
-    prompts=(
-        '[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.',
-        '[NOX UI QA '+token+'] Повтори дословно последовательность цифр из предыдущего ответа, без других слов.',
-    )
+    original_card=os.environ.get('NOX_BROWSER_QA_MODE')=='original_card'
+    if original_card:
+        prompts=('[NOX 1A01 UI QA '+token+'] Ответь коротко словом ГОТОВО.',)
+        report.update(original_card_one_turn=True,onehost_1a01_original_card_acceptance_state='HOLD_NATIVE_OWNER_RUN_REQUIRED',
+                      canonical_s03_readback_verified=False,
+                      canonical_s03_acceptance_state='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND')
+    else:
+        prompts=(
+            '[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.',
+            '[NOX UI QA '+token+'] Повтори дословно последовательность цифр из предыдущего ответа, без других слов.',
+        )
     report.update(nonloopback_auth=True,resources=budget(),
                   synthetic_prompt_sha256=digest(prompts[0].encode()),
                   synthetic_prompt_sha256s=[digest(item.encode()) for item in prompts])
@@ -645,7 +754,8 @@ async def browser_run(report, directory, available):
             if not isinstance(did,str) or not re.fullmatch(r'[a-f0-9]{32}',did):
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_SCOPE')
             report['synthetic_dialog_created']=True
-            config=json.dumps({'did':did},separators=(',',':'))
+            config=json.dumps({'did':did,'expectedPrompt':prompts[0],
+                               'originalCard':original_card},separators=(',',':'))
             await context.add_init_script(OBSERVER_JS.replace('__CONFIG__',config))
 
             accepted_submits=[]
@@ -761,23 +871,26 @@ async def browser_run(report, directory, available):
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_EMPTY')
             report['empty_owner_dialog_history_verified']=True
             report['canonical_s03_readback_verified']=False
-            report['browser_stage']='QA_EMPTY_SCREENSHOT'
-            masks=[page.locator(selector) for selector in (*SENSITIVE_MASKS,'#messages')]
-            await capture_private_screenshot(page,report,directory,'empty',masks,
-                'EMPTY_QA_VIEW_WITH_PRIVACY_MASKS',(TimeoutError,PlaywrightTimeoutError))
-            report['graphics_before']=before
-            await page.wait_for_timeout(500)
-            graphical=await page.evaluate(SNAPSHOT_JS)
-            report['canvas_animation_observed']=graphical['draw_calls']>before['draw_calls']
-            report['webgl_visible']=any(item['visible'] and item['kind'] in ('webgl','webgl2','experimental-webgl') for item in graphical['contexts'])
+            if not original_card:
+                report['browser_stage']='QA_EMPTY_SCREENSHOT'
+                masks=[page.locator(selector) for selector in (*SENSITIVE_MASKS,'#messages')]
+                await capture_private_screenshot(page,report,directory,'empty',masks,
+                    'EMPTY_QA_VIEW_WITH_PRIVACY_MASKS',(TimeoutError,PlaywrightTimeoutError))
+                report['graphics_before']=before
+                await page.wait_for_timeout(500)
+                graphical=await page.evaluate(SNAPSHOT_JS)
+                report['canvas_animation_observed']=graphical['draw_calls']>before['draw_calls']
+                report['webgl_visible']=any(item['visible'] and item['kind'] in ('webgl','webgl2','experimental-webgl') for item in graphical['contexts'])
             if stop_present():
                 raise RuntimeError('HOLD_OWNER_STOP')
             idle_slots()
-            report['browser_stage']='QA_REPORTS_COMPOSER_LAYOUT'
-            await check_report_layout(page,report)
+            if not original_card:
+                report['browser_stage']='QA_REPORTS_COMPOSER_LAYOUT'
+                await check_report_layout(page,report)
             report['composer_before']=await page.evaluate(COMPOSER_JS)
-            report['status_for_legacy_controls']=status_projection(await json_response(await context.request.get(
-                base+'/api/nox/status',max_redirects=0,timeout=6000)))
+            if not original_card:
+                report['status_for_legacy_controls']=status_projection(await json_response(await context.request.get(
+                    base+'/api/nox/status',max_redirects=0,timeout=6000)))
             verified_turns=[];history_expected=[];progressive=[];final=None
             for turn_index,prompt in enumerate(prompts):
                 if stop_present():
@@ -797,15 +910,48 @@ async def browser_run(report, directory, available):
                     final=await page.evaluate(SNAPSHOT_JS)
                     if final and final.get('error'):
                         raise RuntimeError(final['error'])
-                    if final and final.get('done') and final.get('dom_answer_matches_native'):
+                    if (final and final.get('done') and final.get('dom_answer_matches_native')
+                            and (not original_card or (final.get('native_eof') is True
+                                 and original_card_ui_trace_valid(final)
+                                 and progressive_stream_valid(final)))):
                         break
                     await page.wait_for_timeout(120)
                 if (not final or final.get('native_calls')!=1 or not final.get('done')
                         or not final.get('dom_answer_matches_native')):
                     raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
+                if original_card and (final.get('native_eof') is not True
+                        or final.get('total_native_calls')!=1
+                        or not original_card_ui_trace_valid(final)
+                        or not progressive_stream_valid(final)):
+                    raise RuntimeError('HOLD_1A01_UI_STATE_ORDER_OR_NATIVE_EOF')
                 report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_SEND_RELEASE'
                 await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
                 done=final.get('done')
+                if original_card:
+                    if not isinstance(done,dict):
+                        raise RuntimeError('HOLD_NATIVE_DONE_FRAME_MISSING')
+                    if accepted_submits!=list(prompts):
+                        raise RuntimeError('HOLD_ONE_TURN_SUBMIT_BINDING')
+                    answer=await page.evaluate('()=>window.__NOX_BROWSER_QA.current?.answer||null')
+                    if not isinstance(answer,str) or not answer.strip():
+                        raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
+                    report.update(
+                        original_card_ui_states=final['original_card_ui_states'],
+                        actual_native_model_stream_verified=True,
+                        progressive_stream_render_verified=True,
+                        stream={'native_calls':final.get('native_calls'),
+                                'native_delta_count':final.get('native_delta_count'),
+                                'native_first_ms':final.get('native_first_ms'),
+                                'native_done_ms':final.get('native_done_ms'),
+                                'native_eof':final.get('native_eof'),
+                                'dom_answer_matches_native':final.get('dom_answer_matches_native'),
+                                'answer_sha256':digest(answer.encode()),
+                                'answer_characters':len(answer)},
+                        canonical_s03_readback_verified=False,
+                        canonical_s03_acceptance_state='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
+                        supplemental_dialog_receipt_used_for_acceptance=False,
+                        two_turn_condition='NOT_RUN_SEPARATE_FROM_FROZEN_1A01_CARD')
+                    break
                 if not isinstance(done,dict):
                     raise RuntimeError('HOLD_OWNER_DIALOG_WRITER_RECEIPT_MISSING')
                 if not (done.get('saved') is True and done.get('owner_dialog_saved') is True
@@ -865,17 +1011,18 @@ async def browser_run(report, directory, available):
                     'stream_verified':True,'progressive_stream_render_verified':turn_progressive,
                     'stop_visible_during_generation':stop_visible,
                     'elapsed_turn_ms':round((time.monotonic()-started)*1000)})
-            if (len(verified_turns)!=2
+            if not original_card and (len(verified_turns)!=2
                     or len({item['turn_id'] for item in verified_turns})!=2
                     or len({item['receipt_id'] for item in verified_turns})!=2
                     or len({item['exchange_id'] for item in verified_turns})!=2
                     or accepted_submits!=list(prompts)):
                 raise RuntimeError('HOLD_TWO_DISTINCT_SEQUENTIAL_TURNS')
-            answer=history_expected[-1]['content']
-            public=public_numeric_answer(answer)
-            saved=len(history_expected)==4
-            dialog_readback=all(item['owner_dialog_readback_verified'] for item in verified_turns)
-            report.update(stream=final,turns=verified_turns,
+            if not original_card:
+                answer=history_expected[-1]['content']
+                public=public_numeric_answer(answer)
+                saved=len(history_expected)==4
+                dialog_readback=all(item['owner_dialog_readback_verified'] for item in verified_turns)
+                report.update(stream=final,turns=verified_turns,
                 sequential_two_turns_verified=True,owner_dialog_readback_verified=dialog_readback,
                 owner_dialog_history_readback_verified=all(
                     item['owner_dialog_history_readback_verified'] for item in verified_turns),
@@ -887,23 +1034,23 @@ async def browser_run(report, directory, available):
                 synthetic_public_numeric_answer=public,
                 progressive_stream_render_verified=all(progressive),
                 stop_visible_during_generation=all(item['stop_visible_during_generation'] for item in verified_turns))
-            masks=[page.locator(selector) for selector in SENSITIVE_MASKS]
-            if not saved or public!=EXPECTED:
-                masks.append(page.locator('#messages'))
-            report['browser_stage']='QA_COMPLETED_SCREENSHOT'
-            await capture_private_screenshot(page,report,directory,'completed',masks,
-                'VERIFIED_PUBLIC_NUMERIC_DIALOG_QA' if public==EXPECTED and saved and dialog_readback else 'MASKED_QA_MESSAGES',
-                (TimeoutError,PlaywrightTimeoutError))
-            core=(report['webgl_visible'] and report['canvas_animation_observed']
+                masks=[page.locator(selector) for selector in SENSITIVE_MASKS]
+                if not saved or public!=EXPECTED:
+                    masks.append(page.locator('#messages'))
+                report['browser_stage']='QA_COMPLETED_SCREENSHOT'
+                await capture_private_screenshot(page,report,directory,'completed',masks,
+                    'VERIFIED_PUBLIC_NUMERIC_DIALOG_QA' if public==EXPECTED and saved and dialog_readback else 'MASKED_QA_MESSAGES',
+                    (TimeoutError,PlaywrightTimeoutError))
+                core=(report['webgl_visible'] and report['canvas_animation_observed']
                   and all(final['done'].get(key) is True for key in ('saved','owner_dialog_saved','dialog_matches'))
                   and saved and dialog_readback and report['sequential_two_turns_verified']
                   and final['executor_chips']==6 and final['photo_button'] and final['video_button'])
-            if not core:
-                raise RuntimeError('HOLD_GRAPHICAL_ACCEPTANCE_INCOMPLETE')
-            if not report['progressive_stream_render_verified']:
-                raise RuntimeError('HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED')
-            if public!=EXPECTED:
-                raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
+                if not core:
+                    raise RuntimeError('HOLD_GRAPHICAL_ACCEPTANCE_INCOMPLETE')
+                if not report['progressive_stream_render_verified']:
+                    raise RuntimeError('HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED')
+                if public!=EXPECTED:
+                    raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
         finally:
             report['network']=network
             report['console_counts']=dict(console)
@@ -913,7 +1060,11 @@ async def browser_run(report, directory, available):
             if page is not None:
                 try:
                     report['composer_final']=await page.evaluate(COMPOSER_JS)
-                    report['stream_final']=await page.evaluate(SNAPSHOT_JS)
+                    final_snapshot=await page.evaluate(SNAPSHOT_JS)
+                    if original_card:
+                        report['stream_final']=original_card_stream_projection(final_snapshot)
+                    else:
+                        report['stream_final']=final_snapshot
                     pending=await page.evaluate('!!window.__NOX_BROWSER_QA?.current?.nativeCalls&&!window.__NOX_BROWSER_QA?.current?.done')
                     if pending:
                         await context.request.post(base+'/api/nox/stop',data={},max_redirects=0,timeout=4000)
@@ -928,6 +1079,10 @@ async def browser_run(report, directory, available):
             await browser.close()
     if page_errors or report['failed_static_resources']:
         raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
+    if original_card:
+        report['onehost_1a01_original_card_acceptance_state']='ORIGINAL_CARD_UI_TRACE_VERIFIED'
+        report['accepted_input_waiting_answer_completed_ui_verified']=True
+        return
     report['dialog_ui_functional_checks_verified']=True
     require_screenshot_captures(report)
 
@@ -967,13 +1122,30 @@ def main():
             'screenshots_exported':False,'private_text_or_credentials_exported':False,
             'rendering_mode':'CPU_SWIFTSHADER_FUNCTIONAL_QA_NOT_CLIENT_GPU_BENCHMARK',
             'training_or_service_configuration_changed':False,'diagnostics_content':'COUNTS_PATHS_AND_PUBLIC_SYNTHETIC_NUMBERS_ONLY'}
+    original_card=os.environ.get('NOX_BROWSER_QA_MODE')=='original_card'
+    if original_card:
+        report.update(schema='NOX_1A01_ORIGINAL_CARD_BROWSER_QA_V1',
+            onehost_1a01_original_card_acceptance_state='HOLD_NATIVE_OWNER_RUN_REQUIRED',
+            accepted_input_waiting_answer_completed_ui_verified=False,
+            canonical_s03_readback_verified=False,
+            canonical_s03_acceptance_state='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
+            supplemental_dialog_receipt_used_for_acceptance=False,
+            two_turn_condition='NOT_RUN_SEPARATE_FROM_FROZEN_1A01_CARD')
     try:
         asyncio.run(asyncio.wait_for(browser_run(report,directory,available),timeout=140))
-        report['state']='DIALOG_QA_PASSED_CANONICAL_S03_HOLD'
-        report['onehost_1a01_acceptance_state']='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND'
+        if original_card:
+            report['state']='ORIGINAL_CARD_UI_QA_PASSED_S03_UNEVALUATED'
+            report['onehost_1a01_original_card_acceptance_state']='ORIGINAL_CARD_UI_ACCEPTED'
+        else:
+            report['state']='DIALOG_QA_PASSED_CANONICAL_S03_HOLD'
+            report['onehost_1a01_acceptance_state']='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND'
     except BaseException as exc:
         report['state']='HOLD'
         report['reason']='HOLD_BROWSER_TOTAL_TIMEOUT' if isinstance(exc,TimeoutError) else safe_error(exc)
+        if original_card:
+            report['onehost_1a01_original_card_acceptance_state']='HOLD_NATIVE_OWNER_RUN_REQUIRED'
+            report['accepted_input_waiting_answer_completed_ui_verified']=False
+            report['actual_native_model_stream_verified']=False
     finally:
         report['finished_at']=time.time()
         write_private(directory/'receipt.json',json.dumps(report,separators=(',',':'),allow_nan=False).encode())
@@ -983,6 +1155,10 @@ def main():
         print('NOX_OWNER_DIALOG_QA_COMPLETE=true',flush=True)
         print('NOX_1A01_CANONICAL_S03_ACCEPTED=false',flush=True)
         print('NOX_1A01_HOLD=HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',flush=True)
+        return 0
+    if report['state']=='ORIGINAL_CARD_UI_QA_PASSED_S03_UNEVALUATED':
+        print('NOX_1A01_ORIGINAL_CARD_UI_ACCEPTED=true',flush=True)
+        print('NOX_1A01_CANONICAL_S03_ACCEPTED=false',flush=True)
         return 0
     return 2
 

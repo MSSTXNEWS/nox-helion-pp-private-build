@@ -94,6 +94,75 @@ class BrowserQaTests(unittest.TestCase):
             self.assertFalse(QA.progressive_stream_valid(changed))
         self.assertFalse(QA.progressive_stream_valid(None))
 
+    def test_original_card_requires_four_distinct_ordered_native_ui_states(self):
+        value={'native_first_ms':40.0,'native_done_ms':160.0,'native_eof':True,
+               'native_calls':1,'total_native_calls':1,'native_delta_count':3,
+               'original_card_ui_states':[
+                   {'state':'accepted_input','at_ms':5,'user_bubble_visible':True,'composer_cleared':True},
+                   {'state':'waiting','at_ms':25,'phase':'thinking','indicator_visible':True},
+                   {'state':'answer','at_ms':70,'visible_prefix':True,'prefix_characters':5},
+                   {'state':'completed','at_ms':180,'phase':'done','native_done':True,
+                    'native_eof':True,'send_released':True},
+               ]}
+        self.assertTrue(QA.original_card_ui_trace_valid(value))
+        mutations=(
+            lambda v:v['original_card_ui_states'].reverse(),
+            lambda v:v['original_card_ui_states'][1].update(at_ms=5),
+            lambda v:v['original_card_ui_states'][0].update(user_bubble_visible=False),
+            lambda v:v['original_card_ui_states'][0].update(composer_cleared=False),
+            lambda v:v['original_card_ui_states'][1].update(at_ms=45),
+            lambda v:v['original_card_ui_states'][1].update(indicator_visible=False),
+            lambda v:v['original_card_ui_states'][2].update(visible_prefix=False),
+            lambda v:v['original_card_ui_states'][3].update(phase='idle'),
+            lambda v:v['original_card_ui_states'][3].update(native_eof=False),
+            lambda v:v['original_card_ui_states'][3].update(send_released=False),
+        )
+        for mutate in mutations:
+            changed=copy.deepcopy(value);mutate(changed)
+            self.assertFalse(QA.original_card_ui_trace_valid(changed))
+        for key,problem in [('native_calls',2),('total_native_calls',2),('native_delta_count',1),('native_eof',False)]:
+            changed=dict(value);changed[key]=problem
+            self.assertFalse(QA.original_card_ui_trace_valid(changed))
+        self.assertFalse(QA.original_card_ui_trace_valid({**value,'original_card_ui_states':value['original_card_ui_states'][:3]}))
+        self.assertFalse(QA.original_card_ui_trace_valid(None))
+
+    def test_original_card_report_omits_supplemental_done_receipts(self):
+        value={'native_calls':1,'total_native_calls':1,'native_delta_count':4,
+               'native_first_ms':20,'native_done_ms':70,'native_eof':True,
+               'dom_answer_matches_native':True,'original_card_ui_states':[],
+               'done':{'s03_integrated':True,'canonical_s03_write_verified':False,
+                       'receipt_id':'private'}}
+        projected=QA.original_card_stream_projection(value)
+        self.assertNotIn('done',projected)
+        self.assertNotIn('s03_integrated',projected)
+        self.assertNotIn('receipt_id',json.dumps(projected))
+        self.assertEqual(projected['native_calls'],1)
+
+    def test_original_card_mode_isolated_from_dialog_receipt_acceptance_and_dispatch(self):
+        source=Path(QA.__file__).read_text()
+        self.assertIn("NOX_BROWSER_QA_MODE')=='original_card'",source)
+        self.assertIn("prompts=('[NOX 1A01 UI QA '+token+']",source)
+        self.assertIn("supplemental_dialog_receipt_used_for_acceptance=False",source)
+        self.assertIn("canonical_s03_readback_verified=False",source)
+        self.assertIn("two_turn_condition='NOT_RUN_SEPARATE_FROM_FROZEN_1A01_CARD'",source)
+        operator=Path(QA.__file__).with_name('owner_native_operator.py').read_text()
+        self.assertNotIn('NOX_BROWSER_QA_MODE',operator)
+        self.assertNotIn('owner_chat_original_card_qa.py',operator)
+        workflow=Path(QA.__file__).parents[1]/'.github/workflows/nox-v112-owner-chat-auth-e2e.yml'
+        self.assertNotIn('NOX_BROWSER_QA_MODE',workflow.read_text())
+        self.assertNotIn('owner_chat_original_card_qa.py',workflow.read_text())
+
+    def test_original_card_entry_pins_exact_core_and_requires_owner_context(self):
+        entry=Path(QA.__file__).with_name('owner_chat_original_card_qa.py')
+        tree=ast.parse(entry.read_text())
+        value=next(ast.literal_eval(node.value) for node in tree.body
+                   if isinstance(node,ast.Assign)
+                   and any(isinstance(target,ast.Name) and target.id=='CORE_SHA256'
+                           for target in node.targets))
+        self.assertEqual(value,QA.digest(Path(QA.__file__).read_bytes()))
+        self.assertIn("os.environ['NOX_BROWSER_QA_MODE'] = 'original_card'",entry.read_text())
+        self.assertIn("HOLD_OWNER_CONTEXT",entry.read_text())
+
     def test_exception_text_cannot_leak_credentials(self):
         self.assertEqual(QA.safe_error(RuntimeError('password=opaque credential')), 'RuntimeError')
         self.assertEqual(QA.safe_error(RuntimeError('HOLD_OWNER_STOP')), 'HOLD_OWNER_STOP')
