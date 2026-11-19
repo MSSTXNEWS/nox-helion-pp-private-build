@@ -66,8 +66,8 @@ class V135NoLossTests(unittest.TestCase):
             policy = json.loads(z.read(m.CAP_POLICY))
             self.assertEqual(policy["schema"], "NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2")
             self.assertEqual(meta["owner_bridge_cap_policy"]["sha256"], m.CAP_POLICY_SHA256)
-            self.assertEqual(meta["owner_bridge_cap_policy"]["max_bridge_bytes"], 25670)
-            self.assertEqual(meta["added_js_bytes"], 25158)
+            self.assertEqual(meta["owner_bridge_cap_policy"]["max_bridge_bytes"], 25669)
+            self.assertEqual(meta["added_js_bytes"], 25157)
             self.assertEqual(meta["added_js_sha256"], policy["bridge_sha256"])
             self.assertEqual(z.read(m.OBS_JS),
                              m.OBS_SOURCE.read_bytes())

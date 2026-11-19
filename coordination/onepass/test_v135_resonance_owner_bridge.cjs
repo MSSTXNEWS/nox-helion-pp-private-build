@@ -9,8 +9,8 @@ const JS=fs.readFileSync(file,'utf8');
 const capPolicyPath='coordination/onepass/v135_owner_bridge_cap_policy.json';
 const capPolicyBytes=fs.readFileSync(capPolicyPath);
 const capPolicy=JSON.parse(capPolicyBytes);
-const CAP_POLICY_SHA256='12caea73f6c2fa31ca8e42da829dbbefdb0c0904039b03c08585556c0082a10f';
-const OWNER_BRIDGE_SHA256='a79e967fb5683b90630e0b31f4dec3b6c9556c8baa2b934c66df0105343edb19';
+const CAP_POLICY_SHA256='5904ef67deedb79614e83b60292ee5c68b52ae9e6e568c2e01adfc35daaaefc5';
+const OWNER_BRIDGE_SHA256='d22a9331b38c46790e8b2682178942db81050ecbdece34ae36a58d704f74b22c';
 const V112=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py','utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
@@ -22,11 +22,11 @@ const ownerDialog={turn_id:'11111111111111111111111111111111',
  writer:'V112_OWNER_DIALOG_WRITER',receipt_sha256:'a'.repeat(64)};
 test('V135 staged owner bridge matches the pinned measured cap policy',()=>{
   const n=Buffer.byteLength(JS,'utf8');
-  assert.equal(n,25158);
+  assert.equal(n,25157);
   assert.equal(crypto.createHash('sha256').update(JS,'utf8').digest('hex'),OWNER_BRIDGE_SHA256);
   assert.equal(crypto.createHash('sha256').update(capPolicyBytes).digest('hex'),CAP_POLICY_SHA256);
   assert.deepEqual(capPolicy,{schema:'NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2',
-    measured_bridge_bytes:25158,max_bridge_bytes:25670,reserve_bytes:512,
+    measured_bridge_bytes:25157,max_bridge_bytes:25669,reserve_bytes:512,
     bridge_sha256:OWNER_BRIDGE_SHA256});
   assert.equal(n<=capPolicy.max_bridge_bytes,true);
 });

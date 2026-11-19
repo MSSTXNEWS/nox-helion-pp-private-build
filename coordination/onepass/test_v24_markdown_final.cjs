@@ -62,7 +62,7 @@ const tests = [
       "        if (result && done.status === 'done' && !controller.signal.aborted) renderSafeMarkdown(out.body, result);\n        else if (!result) out.body.textContent = done.status === 'STOP_FLAG' ? '— STOP активен —' : '—';",
       "        const h = result && md(result); if (h) { out.body.innerHTML = h; highlight(out.body); } else if (!result) out.body.textContent = done.status === 'STOP_FLAG' ? '— STOP активен —' : '—';");
     assert.equal(crypto.createHash('sha256').update(original).digest('hex'),
-      '330b4a2d6f1c5d3ec38223cca8f06759f381e94381d2bb6218facab12ae9b603');
+      'f3c51b34eda735950e11bcf6dcfa77e4199ccc9d63c57f65933079dd43386644');
   }],
   ['only a string returned by the sanitizer reaches the HTML sink', () => {
     const r = runtime(), n = r.node(), raw = '<img src=x onerror=alert(1)> **text**';
