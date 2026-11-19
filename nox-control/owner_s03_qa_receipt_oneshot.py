@@ -45,9 +45,9 @@ def digest(value):
 def anchored_regular(path):
     for parent in path.parents:
         row = parent.lstat()
-        require(stat.S_ISDIR(row.st_mode) and row.st_uid == 0 and not row.st_mode & 0o022, 'PATH_SCOPE')
+        require(stat.S_ISDIR(row.st_mode) and row.st_uid == 0 and not row.st_mode & 0o002, 'PATH_SCOPE')
     info = path.lstat()
-    require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o022,
+    require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o002,
             'FILE_SCOPE')
     return info.st_dev, info.st_ino
 
