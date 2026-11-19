@@ -159,13 +159,69 @@ def cognitive_and_budget_metadata():
     return {'budget':namespace['inspect_budget'](include_token_count=True), 'cognitive_sources':namespace['inspect_cognitive_sources']()}
 
 
+
+def cgroup_memory():
+    """Three read-only measurements: raw and potential file-cache reclaim are different."""
+    root = Path('/sys/fs/cgroup')
+    def integer(name):
+        raw = bounded(root / name, 4096).decode('ascii').strip()
+        if not raw.isdigit():
+            raise ValueError('CGROUP_INT_'+name.replace('.', '_').upper())
+        return int(raw)
+    def fields(name, allow):
+        result = {}
+        for line in bounded(root / name, 16384).decode('ascii').splitlines():
+            parts = line.split()
+            if len(parts) == 2 and parts[0] in allow and parts[1].isdigit():
+                result[parts[0]] = int(parts[1])
+        return result
+    try:
+        maximum = integer('memory.max')
+        samples = []
+        for i in range(3):
+            current = integer('memory.current')
+            breakdown = fields('memory.stat', {
+                'anon', 'file', 'shmem', 'inactive_file', 'active_file',
+                'slab_reclaimable', 'slab_unreclaimable', 'kernel', 'file_mapped',
+                'file_dirty', 'file_writeback', 'unevictable'})
+            events = fields('memory.events', {'low', 'high', 'max', 'oom', 'oom_kill', 'oom_group_kill'})
+            pressure = {}
+            try:
+                for line in bounded(root / 'memory.pressure', 4096).decode('ascii').splitlines():
+                    parts = line.split()
+                    if parts and parts[0] in ('some', 'full'):
+                        pressure[parts[0]] = {
+                            key: float(val) for key, val in (p.split('=', 1) for p in parts[1:])
+                            if key in ('avg10', 'avg60', 'avg300')}
+            except (OSError, ValueError):
+                pressure = {'state': 'UNAVAILABLE'}
+            # The following is a heuristic estimate, not claimable free RAM.
+            # Exclude tmpfs/shmem and dirty/written pages from potential cache.
+            cache_candidate = max(0, min(breakdown.get('inactive_file', 0),
+                breakdown.get('file', 0) - breakdown.get('shmem', 0)
+                - breakdown.get('file_dirty', 0) - breakdown.get('file_writeback', 0)))
+            samples.append({'current_bytes': current, 'raw_headroom_bytes': maximum - current,
+                'breakdown_bytes': breakdown, 'events': events, 'pressure': pressure,
+                'inactive_file_candidate_bytes': cache_candidate,
+                'candidate_is_NOT_guaranteed_free': True})
+            if i != 2:
+                time.sleep(1)
+        return {'state': 'READ_ONLY_CGROUP_V2_SAMPLED', 'memory_max_bytes': maximum,
+                'samples': samples, 'samples_seconds_apart': 1,
+                'reclaim_attempted': False, 'drop_caches_called': False,
+                'model_or_services_modified': False}
+    except (OSError, ValueError, UnicodeError) as error:
+        return {'state': 'UNAVAILABLE', 'reason_type': type(error).__name__,
+                'reclaim_attempted': False, 'model_or_services_modified': False}
+
+
 def main():
     signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError()))
     signal.alarm(35)
     report = {'schema': 'NOX_SMART_CHAT_LOCK_PROBE_V1', 'observed_at': time.time(),
               'runtime_modules_imported': False, 'lock_modified': False, 'processes_controlled': False,
               'lock_before': lock_state(), 'files': {name: file_state(path) for name, path in PATHS.items()},
-              'services': services(), 'credential_reader_shape': credential_reader_shape(),
+              'services': services(), 'cgroup_memory': cgroup_memory(), 'credential_reader_shape': credential_reader_shape(),
               'cognitive_and_budget': cognitive_and_budget_metadata(),
               'lock_after': lock_state()}
     signal.alarm(0)
