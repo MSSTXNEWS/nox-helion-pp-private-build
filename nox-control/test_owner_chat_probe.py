@@ -68,6 +68,27 @@ class ProbeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_FIRST_TURN_NOT_ACCEPTED'):
             probe.require_durable_result(False, True, 'FIRST_TURN')
 
+    def test_executor_third_turn_requires_three_durable_pairs_and_owner_truth(self):
+        turns = [('first', '323'), ('second', '323'), ('executor?', '6 executors + NOX')]
+        rows = [{'role': role, 'content': content} for role, content in (
+            ('user', 'first'), ('assistant', '323'), ('user', 'second'),
+            ('assistant', '323'), ('user', 'executor?'), ('assistant', '6 executors + NOX'))]
+        done = {'saved': True, 's03_integrated': True}
+        self.assertIsNone(probe.require_executor_witness(done, rows, turns, True, True))
+        failures = [
+            (dict(done, saved=False), rows, True, True),
+            (dict(done, s03_integrated=False), rows, True, True),
+            (done, rows[2:], True, True),
+            (done, [*rows[:4], dict(rows[4], role='assistant'), rows[5]], True, True),
+            (done, [dict(rows[0], content='foreign'), *rows[1:]], True, True),
+            (done, rows, False, True),
+            (done, rows, True, False),
+        ]
+        for receipt, history, owner_ok, answer_ok in failures:
+            with self.subTest(receipt=receipt, owner=owner_ok, answer=answer_ok, history=len(history)):
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED'):
+                    probe.require_executor_witness(receipt, history, turns, owner_ok, answer_ok)
+
     def test_truncated_or_error_stream_cannot_pass(self):
         class Response:
             status = 200
