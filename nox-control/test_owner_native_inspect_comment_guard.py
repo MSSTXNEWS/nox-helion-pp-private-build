@@ -21,7 +21,10 @@ from owner_native_inspect_comment_guard import (
 
 
 SOURCE_SHA = APPROVED_SOURCE_SHA
-UNAPPROVED_SOURCE_SHA = "a" * 40
+UNAPPROVED_SOURCE_SHAS = (
+    "80fc87881036462cfbe0aa27bb02b69daf8bfe6a",  # prior #437 inspector
+    "a" * 40,
+)
 
 
 def event_for(body: str = f"/nox-maintain 60509551 {SOURCE_SHA} inspect") -> dict:
@@ -42,7 +45,7 @@ def event_for(body: str = f"/nox-maintain 60509551 {SOURCE_SHA} inspect") -> dic
 class OwnerInspectCommentGuardTests(unittest.TestCase):
     def test_exact_owner_inspect_command_returns_only_source_sha(self) -> None:
         self.assertEqual(APPROVED_SOURCE_SHA,
-                         "80fc87881036462cfbe0aa27bb02b69daf8bfe6a")
+                         "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8")
         self.assertEqual(
             authorize_event(event_for(), REPOSITORY, "issue_comment"),
             SOURCE_SHA,
@@ -66,10 +69,11 @@ class OwnerInspectCommentGuardTests(unittest.TestCase):
                     authorize_event(event_for(body), REPOSITORY, "issue_comment")
 
     def test_well_formed_but_unapproved_source_sha_holds(self) -> None:
-        body = f"/nox-maintain 60509551 {UNAPPROVED_SOURCE_SHA} inspect"
-        with self.assertRaisesRegex(RuntimeError,
-                                    "HOLD_SOURCE_SHA_NOT_APPROVED"):
-            authorize_event(event_for(body), REPOSITORY, "issue_comment")
+        for sha in UNAPPROVED_SOURCE_SHAS:
+            body = f"/nox-maintain 60509551 {sha} inspect"
+            with self.subTest(sha=sha), self.assertRaisesRegex(
+                    RuntimeError, "HOLD_SOURCE_SHA_NOT_APPROVED"):
+                authorize_event(event_for(body), REPOSITORY, "issue_comment")
 
     def test_wrong_event_repository_issue_or_owner_holds(self) -> None:
         cases = (

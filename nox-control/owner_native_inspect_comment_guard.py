@@ -16,7 +16,8 @@ REPOSITORY = "MSSTXNEWS/nox-helion-pp-private-build"
 OWNER_ID = 340718567
 ISSUE_NUMBER = 256
 INSTANCE_ID = 60509551
-APPROVED_SOURCE_SHA = "80fc87881036462cfbe0aa27bb02b69daf8bfe6a"
+# PR #477 merge commit: reviewed boot-bound lock/process identity observer.
+APPROVED_SOURCE_SHA = "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8"
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) inspect\Z"
 )
