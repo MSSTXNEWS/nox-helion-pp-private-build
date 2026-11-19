@@ -174,5 +174,138 @@ class OwnerGpuInventoryOperatorTests(unittest.TestCase):
                                            "gpu_inventory", REQUEST, SHA)
 
 
+    def test_remote_success_requires_zero_exit_and_valid_receipt_schema(self):
+        lines = marker_lines()
+        self.assertIsNone(operator._gpu_inventory_remote_failure(lines, "unused", 0))
+        self.assertEqual(
+            operator.forward_remote_stdout(lines, "gpu_inventory", REQUEST, SHA),
+            lines.splitlines(),
+        )
+
+        changed = receipt()
+        changed["inventory"]["instance_id"] = 60509552
+        changed["inventory_sha256"] = gpu.inventory_digest(changed["inventory"])
+        changed_lines = marker_lines(changed)
+        self.assertIsNone(operator._gpu_inventory_remote_failure(changed_lines, "", 0))
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GPU_INVENTORY_RECEIPT_SCHEMA"):
+            operator.forward_remote_stdout(
+                changed_lines, "gpu_inventory", REQUEST, SHA
+            )
+
+        nonzero = operator._gpu_inventory_remote_failure(lines, "private stderr", 2)
+        self.assertEqual(
+            nonzero["hold"], "HOLD_GPU_INVENTORY_RESULT_MISSING"
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_ORIGIN=REMOTE_HELPER",
+            nonzero["records"],
+        )
+
+    def test_remote_helper_hold_is_propagated_with_only_fixed_codes(self):
+        helper_hold = "HOLD_GPU_INVENTORY_NVIDIA_SMI_RC"
+        stdout = (
+            operator.GPU_INVENTORY_RESULT_PREFIX + helper_hold
+            + "\nprivate stdout sentinel"
+        )
+        failure = operator._gpu_inventory_remote_failure(
+            stdout, "private stderr sentinel", 2
+        )
+        self.assertEqual(failure["hold"], helper_hold)
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_ORIGIN=REMOTE_HELPER",
+            failure["records"],
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_REMOTE_EXIT_CODE=2",
+            failure["records"],
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_CLASS=HELPER_HOLD",
+            failure["records"],
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_HELPER_HOLD=" + helper_hold,
+            failure["records"],
+        )
+        self.assertNotIn("private stdout sentinel", str(failure))
+        self.assertNotIn("private stderr sentinel", str(failure))
+
+    def test_ssh_nonzero_and_missing_helper_marker_are_distinct_and_sanitized(self):
+        ssh = operator._gpu_inventory_remote_failure(
+            "NOX_MAINT_SECRET=stdout-secret-sentinel",
+            "Permission denied (publickey): stderr-secret-sentinel",
+            255,
+        )
+        self.assertEqual(ssh["hold"], "HOLD_GPU_INVENTORY_SSH_FAILURE")
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_ORIGIN=SSH", ssh["records"]
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_REMOTE_EXIT_CODE=255", ssh["records"]
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_CLASS=SSH_AUTH_REJECTED",
+            ssh["records"],
+        )
+        self.assertNotIn("stdout-secret-sentinel", str(ssh))
+        self.assertNotIn("stderr-secret-sentinel", str(ssh))
+
+        missing = operator._gpu_inventory_remote_failure(
+            "NOX_MAINT_GPU_INVENTORY_COMPLETE=true\n"
+            "NOX_MAINT_SECRET=missing-result-secret",
+            "private stderr sentinel",
+            2,
+        )
+        self.assertEqual(missing["hold"], "HOLD_GPU_INVENTORY_RESULT_MISSING")
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_ORIGIN=REMOTE_HELPER",
+            missing["records"],
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_CLASS=REMOTE_RESULT_MISSING",
+            missing["records"],
+        )
+        self.assertNotIn("missing-result-secret", str(missing))
+        self.assertNotIn("private stderr sentinel", str(missing))
+
+    def test_malformed_or_mismatched_helper_result_markers_hold_closed(self):
+        helper_line = (
+            operator.GPU_INVENTORY_RESULT_PREFIX
+            + "HOLD_GPU_INVENTORY_NVIDIA_SMI_RC"
+        )
+        duplicate = operator._gpu_inventory_remote_failure(
+            helper_line + "\n" + helper_line, "", 2
+        )
+        self.assertEqual(
+            duplicate["hold"], "HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE"
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_CLASS=MALFORMED_HELPER_OUTPUT",
+            duplicate["records"],
+        )
+
+        unknown = operator._gpu_inventory_remote_failure(
+            operator.GPU_INVENTORY_RESULT_PREFIX
+            + "HOLD_GPU_INVENTORY_SECRET_SENTINEL",
+            "unused",
+            2,
+        )
+        self.assertEqual(unknown["hold"], "HOLD_GPU_INVENTORY_HELPER_FAILURE")
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_CLASS=UNRECOGNIZED_HELPER_HOLD",
+            unknown["records"],
+        )
+        self.assertNotIn("SECRET_SENTINEL", str(unknown))
+
+        wrong_exit = operator._gpu_inventory_remote_failure(helper_line, "", 0)
+        self.assertEqual(
+            wrong_exit["hold"], "HOLD_GPU_INVENTORY_HELPER_EXIT_MISMATCH"
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_CLASS=HELPER_EXIT_MISMATCH",
+            wrong_exit["records"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
