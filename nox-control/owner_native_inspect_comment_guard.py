@@ -25,7 +25,7 @@ APPROVED_SOURCE_BY_ACTION = {
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
     "source_export": "1fe739fa49141805701e8f969b77b536a4e49a4b",  # exact pinned encrypted-only #415 source export
     "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
-    "emergency_stop_preflight": "13fe90bb3e9b3265d7fa66c07909cf2cfa9980f0",  # bounded read-only endpoint facts
+    "emergency_stop_preflight": "a087e3968171ebb338a2fd19736cfa340c30956f",  # bounded read-only endpoint facts
 }
 SOURCE_EXPORT_KEY_MAX_CHARS = 12000
 COMMAND = re.compile(
