@@ -536,6 +536,31 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self.dispatched,[])
                 self.assertTrue(chunks.closed)
 
+    async def test_falsey_model_tool_function_fragment_holds_before_dispatch(self):
+        # A non-object 'function' must not be coalesced into an empty
+        # continuation before a later fragment supplies executable fields.
+        for invalid in (False, [], 0, ''):
+            with self.subTest(invalid=repr(invalid)):
+                first=frame(calls=[{'index':0,'id':'bad_fn','type':'function',
+                                    'function':invalid}])
+                continuation=frame(calls=[{'index':0,'function':{
+                    'name':'calculate','arguments':'{}'}}])
+                chunks=Chunks([first,continuation,frame(finish='tool_calls'),
+                               b'data: [DONE]\\n\\n'])
+                requests,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Calculate'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_MODEL_SSE_INVALID',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
     async def test_usage_only_after_terminal_still_completes_normally(self):
         usage=b'data: {"choices":[],"usage":{"completion_tokens":1}}\n\n'
         chunks=Chunks([frame('¡Respuesta!'),frame(finish='stop'),usage,
