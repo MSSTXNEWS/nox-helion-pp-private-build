@@ -20,7 +20,7 @@ from pathlib import Path
 import re
 import sys
 from typing import Any
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qsl, unquote, urlsplit, urlunsplit
 
 INPUT_SCHEMA = "nox.self_model.input.v1"
 OUTPUT_SCHEMA = "nox.self_model.snapshot.v1"
@@ -32,6 +32,22 @@ TASK_ID_PATTERN = re.compile(r"(?:[0-9]+[A-Z][0-9]{2}(?:-[0-9]{2})?|I-[0-9]+)\Z"
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}\Z")
 ERROR_CODE = re.compile(r"[A-Z][A-Z0-9_]{0,63}\Z")
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+SENSITIVE_QUERY_KEY = re.compile(
+    r"(?i)^(?:access[_-]?token|authorization|auth|api[_-]?key|apikey|client[_-]?secret|secret|password|passwd|"
+    r"credential|session(?:id)?|sid|signature|sig|token|jwt|refresh[_-]?token|id[_-]?token|private[_-]?key|"
+    r"code|state|x-amz-(?:credential|signature|security-token)|x-goog-(?:credential|signature))$"
+)
+SENSITIVE_PATH_MARKERS = {
+    "access_token", "access-token", "api_key", "api-key", "apikey", "auth", "authorization",
+    "client_secret", "client-secret", "credential", "jwt", "password", "secret", "session",
+    "signature", "sig", "token",
+}
+PREFIXED_PATH_SECRET = re.compile(
+    r"(?i)(?:\bgh[pousr]_[A-Za-z0-9]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|"
+    r"\bsk-[A-Za-z0-9_-]{16,}\b|\bAKIA[0-9A-Z]{16}\b|\bAIza[A-Za-z0-9_-]{30,}\b|"
+    r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b)"
+)
+LONG_PATH_TOKEN = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9])")
 MAX_INPUT_BYTES = 262144
 MAX_CAPABILITIES = 100
 MAX_ACTIVE_TASKS = 295
@@ -93,7 +109,25 @@ def _reference_url(value: Any, field: str) -> str:
         address = None
     if address is not None and not address.is_global:
         raise SelfModelError(f"{field} may not point to a non-public IP")
-    return urlunsplit(("https", host, parts.path or "/", parts.query, ""))
+    for key, _ in parse_qsl(parts.query, keep_blank_values=True):
+        if SENSITIVE_QUERY_KEY.fullmatch(unquote(key).strip()):
+            raise SelfModelError(f"{field} may not contain sensitive query keys")
+    decoded_path = unquote(parts.path)
+    segments = [segment for segment in decoded_path.split("/") if segment]
+    for index, segment in enumerate(segments[:-1]):
+        if segment.casefold() in SENSITIVE_PATH_MARKERS and len(segments[index + 1]) >= 12:
+            raise SelfModelError(f"{field} may not contain secret-like path tokens")
+    if PREFIXED_PATH_SECRET.search(decoded_path):
+        raise SelfModelError(f"{field} may not contain secret-like path tokens")
+    for match in LONG_PATH_TOKEN.finditer(decoded_path):
+        token = match.group()
+        if re.fullmatch(r"(?i)(?:[0-9a-f]{40}|[0-9a-f]{64})", token):
+            continue
+        if any(char.isalpha() for char in token) and any(char.isdigit() for char in token):
+            raise SelfModelError(f"{field} may not contain secret-like path tokens")
+    # References are metadata only; strip safe query values and all fragments
+    # so a caller cannot accidentally persist signed or session-bearing URLs.
+    return urlunsplit(("https", host, parts.path or "/", "", ""))
 
 
 def _sha(value: Any, field: str) -> str:
