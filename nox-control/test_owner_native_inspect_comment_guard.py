@@ -1,4 +1,4 @@
-"""Offline authorization tests for fixed inspect/audit/source-attest actions."""
+"""Offline authorization tests for fixed read-only owner actions."""
 from __future__ import annotations
 
 import json
@@ -24,6 +24,7 @@ INSPECT_SHA = APPROVED_SOURCE_BY_ACTION["inspect"]
 AUDIT_SHA = APPROVED_SOURCE_BY_ACTION["audit"]
 SOURCE_ATTEST_SHA = APPROVED_SOURCE_BY_ACTION["source_attest"]
 GPU_INVENTORY_SHA = APPROVED_SOURCE_BY_ACTION["gpu_inventory"]
+BOOT_HOOK_ATTEST_SHA = APPROVED_SOURCE_BY_ACTION["boot_hook_attest"]
 OLD_UNAPPROVED_SHA = "80fc87881036462cfbe0aa27bb02b69daf8bfe6a"  # prior #437
 STALE_AUDIT_SHA = "22efccc957bc72d54899a701e6d09e5ef69b20c2"  # pre-fix #475
 UNAPPROVED_SHA = "a" * 40
@@ -54,6 +55,8 @@ class OwnerCommentGuardTests(unittest.TestCase):
                          "07ebd86b15ae32644bc8bb562a396ec85918b13b")
         self.assertEqual(GPU_INVENTORY_SHA,
                          "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e")
+        self.assertEqual(BOOT_HOOK_ATTEST_SHA,
+                         "0b12c9d1555ddf2b2b54edf8dfdf1a70cf8c6411")
         self.assertEqual(authorize_event(event_for(), REPOSITORY, "issue_comment"),
                          ("inspect", INSPECT_SHA))
         audit_body = f"/nox-maintain 60509551 {AUDIT_SHA} audit"
@@ -71,6 +74,12 @@ class OwnerCommentGuardTests(unittest.TestCase):
             authorize_event(event_for(gpu_body), REPOSITORY, "issue_comment"),
             ("gpu_inventory", GPU_INVENTORY_SHA),
         )
+        startup_body = (f"/nox-maintain 60509551 {BOOT_HOOK_ATTEST_SHA} "
+                        "boot_hook_attest")
+        self.assertEqual(
+            authorize_event(event_for(startup_body), REPOSITORY, "issue_comment"),
+            ("boot_hook_attest", BOOT_HOOK_ATTEST_SHA),
+        )
 
     def test_malformed_or_unavailable_actions_hold(self) -> None:
         bodies = (
@@ -84,6 +93,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
             f"/nox-maintain 60509551 {AUDIT_SHA} repair",
             f"/nox-maintain 60509551 {SOURCE_ATTEST_SHA} source_attest extra",
             f"/nox-maintain 60509551 {GPU_INVENTORY_SHA} gpu_inventory extra",
+            f"/nox-maintain 60509551 {BOOT_HOOK_ATTEST_SHA} boot_hook_attest extra",
         )
         for body in bodies:
             with self.subTest(body=body):
@@ -108,6 +118,12 @@ class OwnerCommentGuardTests(unittest.TestCase):
             (GPU_INVENTORY_SHA, "audit"),
             (GPU_INVENTORY_SHA, "source_attest"),
             (SOURCE_ATTEST_SHA, "gpu_inventory"),
+            (UNAPPROVED_SHA, "boot_hook_attest"),
+            (INSPECT_SHA, "boot_hook_attest"),
+            (BOOT_HOOK_ATTEST_SHA, "inspect"),
+            (BOOT_HOOK_ATTEST_SHA, "audit"),
+            (BOOT_HOOK_ATTEST_SHA, "source_attest"),
+            (BOOT_HOOK_ATTEST_SHA, "gpu_inventory"),
         )
         for sha, action in pairs:
             body = f"/nox-maintain 60509551 {sha} {action}"
@@ -194,6 +210,18 @@ class OwnerCommentGuardTests(unittest.TestCase):
             self.assertEqual(output_path.read_text(encoding="utf-8"),
                              f"action=gpu_inventory\nsource_sha={GPU_INVENTORY_SHA}\n")
 
+            startup_body = (
+                f"/nox-maintain 60509551 {BOOT_HOOK_ATTEST_SHA} "
+                "boot_hook_attest")
+            event_path.write_text(json.dumps(event_for(startup_body)),
+                                  encoding="utf-8")
+            output_path.write_text("", encoding="utf-8")
+            with mock.patch.dict(os.environ, env, clear=False):
+                self.assertEqual(main(), 0)
+            self.assertEqual(output_path.read_text(encoding="utf-8"),
+                             "action=boot_hook_attest\n"
+                             f"source_sha={BOOT_HOOK_ATTEST_SHA}\n")
+
             unapproved_body = (
                 f"/nox-maintain 60509551 {OLD_UNAPPROVED_SHA} audit"
             )
@@ -223,6 +251,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("endsWith(github.event.comment.body, ' audit')", condition)
         self.assertIn("endsWith(github.event.comment.body, ' source_attest')", condition)
         self.assertIn("endsWith(github.event.comment.body, ' gpu_inventory')", condition)
+        self.assertIn("endsWith(github.event.comment.body, ' boot_hook_attest')", condition)
         self.assertLess(condition.index("endsWith(github.event.comment.body, ' inspect')"),
                         owner_job.index("steps:"))
         self.assertLess(condition.index("endsWith(github.event.comment.body, ' audit')"),
@@ -231,8 +260,10 @@ class WorkflowScopeTests(unittest.TestCase):
                         owner_job.index("steps:"))
         self.assertLess(condition.index("endsWith(github.event.comment.body, ' gpu_inventory')"),
                         owner_job.index("steps:"))
+        self.assertLess(condition.index("endsWith(github.event.comment.body, ' boot_hook_attest')"),
+                        owner_job.index("steps:"))
 
-    def test_workflow_runs_only_four_fixed_owner_actions(self) -> None:
+    def test_workflow_runs_only_five_fixed_owner_actions(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
         self.assertIn("issue_comment:", workflow)
@@ -252,6 +283,8 @@ class WorkflowScopeTests(unittest.TestCase):
                       workflow)
         self.assertIn("python -B nox-control/owner_native_operator.py gpu_inventory",
                       workflow)
+        self.assertIn("python -B nox-control/owner_native_operator.py boot_hook_attest",
+                      workflow)
         self.assertNotIn("owner_native_operator.py $", workflow)
         self.assertNotIn("inputs.action", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
@@ -260,7 +293,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertNotIn("actions: write", workflow)
         self.assertNotIn("github-script", workflow)
         self.assertEqual(workflow.count("persist-credentials: false"), 3)
-        self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 4)
+        self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 5)
         self.assertLess(workflow.index("owner_native_inspect_comment_guard.py"),
                         workflow.index("Run the fixed read-only inspect action"))
         self.assertLess(workflow.index("Run the fixed read-only inspect action"),
@@ -269,12 +302,21 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("steps.owner-command.outputs.action == 'audit'", workflow)
         self.assertIn("steps.owner-command.outputs.action == 'source_attest'", workflow)
         self.assertIn("steps.owner-command.outputs.action == 'gpu_inventory'", workflow)
+        self.assertIn("steps.owner-command.outputs.action == 'boot_hook_attest'", workflow)
         self.assertLess(
             workflow.index("Recheck pinned GPU inventory command without credentials"),
             workflow.index("Run the fixed read-only GPU inventory action"),
         )
         self.assertLess(
             workflow.index("Run the fixed read-only GPU inventory action"),
+            workflow.rindex("NOX2: ${{ secrets.NOX2 }}"),
+        )
+        self.assertLess(
+            workflow.index("Recheck pinned boot-hook attestation command without credentials"),
+            workflow.index("Run the fixed read-only boot-hook attestation action"),
+        )
+        self.assertLess(
+            workflow.index("Run the fixed read-only boot-hook attestation action"),
             workflow.rindex("NOX2: ${{ secrets.NOX2 }}"),
         )
         self.assertLess(
@@ -287,7 +329,7 @@ class WorkflowScopeTests(unittest.TestCase):
         )
 
 
-    def test_legacy_workflow_excludes_gpu_inventory_before_secrets(self) -> None:
+    def test_legacy_workflow_excludes_inventory_actions_before_secrets(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
         owner_job = workflow.split("jobs:", 1)[1]
@@ -297,6 +339,7 @@ class WorkflowScopeTests(unittest.TestCase):
             "!contains(github.event.comment.body, ' audit')",
             "!contains(github.event.comment.body, ' source_attest')",
             "!contains(github.event.comment.body, ' gpu_inventory')",
+            "!contains(github.event.comment.body, ' boot_hook_attest')",
         )
         for exclusion in exclusions:
             with self.subTest(exclusion=exclusion):

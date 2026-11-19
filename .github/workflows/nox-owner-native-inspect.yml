@@ -1,4 +1,4 @@
-name: NOX owner-authenticated native inspect, audit, source attestation, and GPU inventory
+name: NOX owner-authenticated native inspect, audit, source attestation, GPU inventory, and boot-hook attestation
 
 on:
   pull_request:
@@ -59,7 +59,8 @@ jobs:
       (endsWith(github.event.comment.body, ' inspect') ||
        endsWith(github.event.comment.body, ' audit') ||
        endsWith(github.event.comment.body, ' source_attest') ||
-       endsWith(github.event.comment.body, ' gpu_inventory'))
+       endsWith(github.event.comment.body, ' gpu_inventory') ||
+       endsWith(github.event.comment.body, ' boot_hook_attest'))
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -156,3 +157,22 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
         run: python -B nox-control/owner_native_operator.py gpu_inventory
+      - name: Recheck pinned boot-hook attestation command without credentials
+        if: success() && steps.owner-command.outputs.action == 'boot_hook_attest'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('boot_hook_attest')
+          print('NOX_OWNER_BOOT_HOOK_ATTEST_SOURCE_AUTH=PASS')
+          PY
+      - name: Run the fixed read-only boot-hook attestation action
+        if: success() && steps.owner-command.outputs.action == 'boot_hook_attest'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py boot_hook_attest

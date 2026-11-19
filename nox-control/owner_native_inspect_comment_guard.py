@@ -22,9 +22,10 @@ APPROVED_SOURCE_BY_ACTION = {
     "audit": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",  # merged PR #485
     "source_attest": "07ebd86b15ae32644bc8bb562a396ec85918b13b",  # reviewed repair pin #489
     "gpu_inventory": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",  # verified #511 merged source+operator pin
+    "boot_hook_attest": "0b12c9d1555ddf2b2b54edf8dfdf1a70cf8c6411",  # read-only boot-hook attestation
 }
 COMMAND = re.compile(
-    rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) (inspect|audit|source_attest|gpu_inventory)\Z"
+    rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) (inspect|audit|source_attest|gpu_inventory|boot_hook_attest)\Z"
 )
 
 
