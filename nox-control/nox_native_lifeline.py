@@ -93,6 +93,13 @@ def policy_load(path):
         raise ValueError("HOLD_POLICY_CORRUPT") from exc
     return policy_check(value)
 
+def observer_only_policy(policy):
+    """Force a strict no-restart view, regardless of the persisted policy."""
+    forced = dict(policy)
+    forced["enabled"] = False
+    forced["services"] = [dict(item, restart=False) for item in policy["services"]]
+    return forced
+
 def atomic(path, obj):
     if path.is_symlink():
         raise ValueError("HOLD_STATE_SYMLINK")
@@ -173,6 +180,8 @@ def cgroup_memory_snapshot():
             "memory.max": maximum,
             "raw_headroom_bytes": headroom,
             "below_2GiB": below_floor,
+            "memory_floor_bytes": MEMORY_FLOOR_BYTES,
+            "severity": "CRITICAL" if below_floor else "OK",
             "status": status}
 
 
@@ -381,6 +390,8 @@ def main():
     parser.add_argument("--state", default="/root/nox/state/lifeline/state.json")
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--observer-only", action="store_true",
+                        help="force enabled=false and restart=false for every service")
     a = parser.parse_args()
     policy_path = Path(a.policy)
     state_path = Path(a.state)
@@ -398,10 +409,14 @@ def main():
             interval = 60
             try:
                 policy = policy_load(policy_path)
+                if a.observer_only:
+                    policy = observer_only_policy(policy)
                 interval = policy["poll_seconds"]
                 state = read_state(state_path)
                 state["_path"] = state_path
                 report = tick(policy, state, dry_run=a.dry_run)
+                report["observer_only_enforced"] = bool(a.observer_only)
+                report["worker_starts_permitted"] = False if a.observer_only else None
                 if not a.dry_run:
                     atomic(state_path, {k:v for k,v in state.items() if k!="_path"})
                 print("NOX_LIFELINE_RESULT=" + json.dumps(report, sort_keys=True), flush=True)

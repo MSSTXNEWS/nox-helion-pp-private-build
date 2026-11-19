@@ -439,13 +439,9 @@ def reconcile_audited_config(script, policy, reviewed_config, request):
         fail("AUDIT_MEMORY_UNKNOWN")
 
     if current_systemd["enabled"] == "disabled":
-        enabled = call(["systemctl", "enable", "supervisor.service"], timeout=20)
-        if enabled.returncode:
-            fail("SUPERVISOR_SYSTEMD_ENABLE")
-        current_systemd = supervisor_systemd_state()
-        if (current_systemd["active"] != "active" or current_systemd["active_rc"] != 0 or
-            current_systemd["enabled"] != "enabled" or current_systemd["enabled_rc"] != 0):
-            fail("SUPERVISOR_SYSTEMD_ENABLE_READBACK")
+        # Never enable global Supervisor here: that could boot-start unrelated
+        # NOX workloads. Use the independent lifeline-observer systemd action.
+        fail("SUPERVISOR_BOOT_DISABLED_GLOBAL_ENABLE_FORBIDDEN")
     elif current_systemd["enabled_rc"] != 0:
         fail("SUPERVISOR_SYSTEMD_ENABLE_STATE")
 
@@ -549,9 +545,9 @@ def recover_audited_preimage():
         if original_enabled not in ("enabled", "disabled"):
             fail("AUDIT_ROLLBACK_SYSTEMD_PREIMAGE")
         if original_enabled == "disabled" and systemd["enabled"] == "enabled":
-            disabled = call(["systemctl", "disable", "supervisor.service"], timeout=20)
-            if disabled.returncode:
-                fail("AUDIT_ROLLBACK_SYSTEMD_DISABLE")
+            # Never repair the global Supervisor unit from this legacy lifeline
+            # transaction; preserve evidence and require a separate owner action.
+            fail("AUDIT_ROLLBACK_GLOBAL_SUPERVISOR_ENABLE_CHANGED")
         systemd = supervisor_systemd_state()
         if (systemd["active"] != "active" or systemd["active_rc"] != 0 or
             systemd["enabled"] != original_enabled or

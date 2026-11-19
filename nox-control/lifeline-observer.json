@@ -1,0 +1,14 @@
+{
+  "schema": "NOX_LIFELINE_V2",
+  "enabled": false,
+  "poll_seconds": 60,
+  "consecutive_failures": 3,
+  "cooldown_seconds": 900,
+  "daily_limit": 2,
+  "services": [
+    {"name": "nox-dispatcher-t855u", "restart": false},
+    {"name": "nox-priority-scheduler", "restart": false},
+    {"name": "nox-selfheal", "restart": false},
+    {"name": "nox-gpu-watchdog-t865u", "restart": false}
+  ]
+}

@@ -1,0 +1,27 @@
+[Unit]
+Description=NOX lifeline observer (forced observer-only)
+After=local-fs.target
+StartLimitIntervalSec=0
+
+# No Wants/Requires/PartOf/After dependency on supervisor.service. This unit
+# must never start global Supervisor or any Supervisor-managed workload.
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/python3 -u /root/nox/scripts/nox_lifeline_observer.py --policy /etc/nox/lifeline-observer.json --state /root/nox/state/lifeline-observer/state.json --observer-only
+Restart=on-failure
+RestartSec=15s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/root/nox/state/lifeline-observer
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
