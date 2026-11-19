@@ -142,6 +142,96 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[1]['messages'][-2]['tool_calls'][0]['id'],'call_fixture')
         self.assertEqual(payload['_agent_final'],'323')
 
+    async def test_complete_tool_observation_is_not_silently_clipped(self):
+        observation='RU начало:'+'я'*8050+'\nES final: contexto completo 🦊'
+        call=Chunks([
+            frame(calls=[{'index':0,'id':'full_context_call','type':'function',
+                          'function':{'name':'calculate','arguments':'{}'}}]),
+            frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+        answer=Chunks([frame('Respuesta completa'),frame(finish='stop'),
+                       b'data: [DONE]\n\n'])
+        requests,factory=self.transport([call,answer])
+        native=self.native(result={'ok':True,'text':observation})
+        payload={'messages':[{'role':'user','content':'Usa el resultado completo'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Usa el resultado completo',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertEqual(requests[1]['messages'][-1]['content'],observation)
+        self.assertEqual(payload['_agent_final'],'Respuesta completa')
+        self.assertNotIn(observation,wire)
+        self.assertTrue(call.closed)
+        self.assertTrue(answer.closed)
+
+        too_large='x'*2000001
+        upstream=Chunks([
+            frame(calls=[{'index':0,'id':'oversized_tool','type':'function',
+                          'function':{'name':'calculate','arguments':'{}'}}]),
+            frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+        requests,factory=self.transport([upstream])
+        native=self.native(result={'ok':True,'text':too_large})
+        payload={'messages':[{'role':'user','content':'Preserva todo'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Preserva todo',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertIn('HOLD_TOOL_RESULT_FULL_CONTEXT',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertEqual(len(requests),1)
+        self.assertTrue(upstream.closed)
+
+    async def test_direct_admin_multiple_actions_holds_before_pool_or_dispatch(self):
+        native=self.native()
+        calls={'prepare':0,'deterministic':0,'heuristic':0,'dispatch':0}
+        native['_POOL']=True
+        native['_direct_admin_calls']=lambda text:[
+            {'name':'run_admin','arguments':{'action':'pause'}},
+            {'name':'run_admin','arguments':{'action':'resume'}},
+        ]
+        def prepare(req,cache=False):
+            calls['prepare']+=1
+            return req
+        def deterministic(text):
+            calls['deterministic']+=1
+            return None
+        def heuristic(text):
+            calls['heuristic']+=1
+            return []
+        def dispatch(name,args):
+            calls['dispatch']+=1
+            self.dispatched.append((name,args))
+            return {'ok':True,'text':'unexpected dispatch'}
+        native['prepare_payload']=prepare
+        native['try_deterministic']=deterministic
+        native['heuristic_tools']=heuristic
+        native['dispatch']=dispatch
+        payload={'messages':[
+            {'role':'system','content':'Keep all input intact.'},
+            {'role':'user','content':'Пауза и возобновление: проверь оба действия.'},
+            {'role':'assistant','content':'История 🧠','tool_calls':[
+                {'id':'prior_call','type':'function','function':{
+                    'name':'calculate','arguments':'{"tail":"полный"}'}}]},
+        ]}
+        original_messages=json.loads(json.dumps(payload['messages'],ensure_ascii=False))
+        evidence_dispatch=patch.object(
+            stream._current,'dispatch',
+            side_effect=AssertionError('no evidence dispatch'))
+        model_client=patch.object(
+            stream.httpx,'AsyncClient',
+            side_effect=AssertionError('no model request'))
+        with evidence_dispatch as evidence, model_client as model:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Пауза и возобновление',True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertIn('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS',wire)
+        self.assertEqual(calls,{'prepare':0,'deterministic':0,'heuristic':0,'dispatch':0})
+        evidence.assert_not_called()
+        model.assert_not_called()
+        self.assertEqual(self.dispatched,[])
+        self.assertEqual(payload,{'messages':original_messages})
+        self.assertNotIn('_agent_final',payload)
+
     async def test_untrusted_model_tool_id_overflow_never_dispatches_or_saves(self):
         # A tool-call ID may be streamed incrementally by Maya/llama.cpp.
         # The limit is cumulative, not a per-frame cap.
