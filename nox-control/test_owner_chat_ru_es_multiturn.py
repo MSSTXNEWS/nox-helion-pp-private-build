@@ -58,6 +58,33 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_explicit_message_ids_do_not_replay_one_row_as_multiple_ru_es_turns(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        legacy = rows(es)
+        self.assertTrue(multiturn_history_valid(
+            legacy, RU, FIRST, es, LAST, dialog_id=DIALOG))
+        unique = [dict(row, message_id=f"msg-{i}") for i, row in enumerate(legacy)]
+        self.assertTrue(firstturn_history_valid(
+            {"dialog_id": DIALOG, "messages": unique[:2]}, RU, FIRST, DIALOG))
+        self.assertTrue(multiturn_history_valid(
+            unique, RU, FIRST, es, LAST, dialog_id=DIALOG))
+        writer, independent = s03_proof(unique)
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, independent, DIALOG, unique))
+        duplicate_first = [dict(row) for row in unique[:2]]
+        duplicate_first[1]["message_id"] = duplicate_first[0]["message_id"]
+        self.assertFalse(firstturn_history_valid(
+            {"messages": duplicate_first}, RU, FIRST, DIALOG))
+        for malformed in ("msg-1", None, "", " ", 7, True):
+            with self.subTest(message_id=repr(malformed)):
+                changed = [dict(row) for row in unique]
+                changed[2]["message_id"] = malformed
+                self.assertFalse(multiturn_history_valid(
+                    changed, RU, FIRST, es, LAST, dialog_id=DIALOG))
+                writer, independent = s03_proof(changed)
+                self.assertFalse(canonical_s03_proof_valid(
+                    writer, independent, DIALOG, changed))
+
     def test_two_turn_native_post_accounting_fences_before_s03_proof(self):
         for turn in (1, 2):
             self.assertTrue(exact_native_post_fence(

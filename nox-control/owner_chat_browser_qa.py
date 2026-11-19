@@ -152,6 +152,17 @@ def exact_native_post_fence(snapshot, admitted, expected):
             and snapshot['native_calls'] == expected)
 
 
+def distinct_explicit_message_ids(rows):
+    """Optional row IDs must not claim multiple distinct turns with one identity.
+
+    Historical S03/dialog-history responses may omit message_id; whenever
+    an ID is explicitly supplied it must be a nonblank string and unique.
+    """
+    ids = [row['message_id'] for row in rows if 'message_id' in row]
+    return (all(isinstance(mid, str) and bool(mid.strip()) for mid in ids)
+            and len(ids) == len(set(ids)))
+
+
 def empty_dialog_history_valid(history, dialog_id):
     """Reject an empty-history response scoped to another dialog before the FIRST POST.
 
@@ -179,6 +190,7 @@ def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
     if (not isinstance(rows, list) or len(rows) != 2
             or not all(isinstance(row, dict) for row in rows)
             or any('dialog_id' in row and row['dialog_id'] != dialog_id for row in rows)
+            or not distinct_explicit_message_ids(rows)
             or not isinstance(first_answer, str) or not first_answer.strip()):
         return False
     return (rows[0].get('role') == 'user'
@@ -190,7 +202,9 @@ def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
 def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer,
                             dialog_id=None):
     """Require four exact role/text turns; reject cross-dialog row metadata."""
-    if not isinstance(rows, list) or len(rows) != 4 or not all(isinstance(row, dict) for row in rows):
+    if (not isinstance(rows, list) or len(rows) != 4
+            or not all(isinstance(row, dict) for row in rows)
+            or not distinct_explicit_message_ids(rows)):
         return False
     # Legacy rows may omit per-message dialog_id. If supplied, a wrong/null
     # identifier must never certify continuity of the current browser session.
@@ -237,6 +251,8 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
            or not isinstance(row.get('content'), str)
            for row, role in zip(expected_messages,
                                 ('user', 'assistant', 'user', 'assistant'))):
+        return False
+    if not distinct_explicit_message_ids(expected_messages):
         return False
     transcript_sha = multiturn_transcript_sha256(expected_messages)
     if transcript_sha is None:
