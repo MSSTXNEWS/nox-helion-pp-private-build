@@ -218,11 +218,7 @@
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              // Bound visual pacing to 8 actual frames per incoming native chunk.
-              // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
-                // Browsers with suspended rAF (including headless/hidden tabs)
-                // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
                   let settled=false;
                   const finish=()=>{if(!settled){settled=true;resolve();}};
