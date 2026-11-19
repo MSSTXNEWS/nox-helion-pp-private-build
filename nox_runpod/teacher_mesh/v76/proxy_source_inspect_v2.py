@@ -95,11 +95,27 @@ def _direct_call_symbols(node):
 def _unknown_model_selector():
     return {"state": "UNKNOWN", "field": "UNKNOWN", "expression": "UNKNOWN"}
 
+def _model_field_access(value, payload_param):
+    if (isinstance(value, ast.Subscript) and isinstance(value.value, ast.Name)
+            and value.value.id == payload_param
+            and isinstance(value.slice, ast.Constant)
+            and isinstance(value.slice.value, str)
+            and value.slice.value in MODEL_SELECTOR_FIELDS):
+        return "subscript"
+    if (isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute)
+            and value.func.attr == "get" and isinstance(value.func.value, ast.Name)
+            and value.func.value.id == payload_param and len(value.args) == 1
+            and not value.keywords and isinstance(value.args[0], ast.Constant)
+            and isinstance(value.args[0].value, str)
+            and value.args[0].value in MODEL_SELECTOR_FIELDS):
+        return "get"
+    return None
+
 def _request_model_selector(route_node, payload_defs):
     # Report only a direct route call to one unique prepare_payload function,
-    # with a simple Name argument mapped to that function's first parameter,
-    # and exactly one allow-listed direct dict access to the literal "model".
-    # Dynamic aliases, fallback literals, defaults, and multiple selectors
+    # with a simple Name argument mapped to its first parameter, and one direct
+    # returned dict "model" value read from that parameter using allow-listed
+    # syntax. Aliases, branches, fallbacks, defaults, and multiple model fields
     # deliberately remain UNKNOWN.
     if len(payload_defs) != 1:
         return _unknown_model_selector()
@@ -118,23 +134,21 @@ def _request_model_selector(route_node, payload_defs):
         return _unknown_model_selector()
     caller_arg = calls[0].args[0].id
     payload_param = params[0].arg
-    selectors = []
-    for child in _walk_scope(builder.body):
-        if isinstance(child, ast.Subscript) and isinstance(child.value, ast.Name):
-            key = child.slice
-            if (child.value.id == payload_param and isinstance(key, ast.Constant)
-                    and isinstance(key.value, str) and key.value in MODEL_SELECTOR_FIELDS):
-                selectors.append((child.value.id, "subscript"))
-        elif (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)
-              and child.func.attr == "get" and isinstance(child.func.value, ast.Name)
-              and child.func.value.id == payload_param and len(child.args) == 1
-              and not child.keywords and isinstance(child.args[0], ast.Constant)
-              and isinstance(child.args[0].value, str)
-              and child.args[0].value in MODEL_SELECTOR_FIELDS):
-            selectors.append((child.func.value.id, "get"))
-    if len(selectors) != 1:
+    returns = [child for child in _walk_scope(builder.body)
+               if isinstance(child, ast.Return)]
+    if len(returns) != 1 or not isinstance(returns[0].value, ast.Dict):
         return _unknown_model_selector()
-    _, access = next(iter(selectors))
+    model_values = []
+    returned = returns[0].value
+    for key, value in zip(returned.keys, returned.values):
+        if (isinstance(key, ast.Constant) and isinstance(key.value, str)
+                and key.value == "model"):
+            model_values.append(value)
+    if len(model_values) != 1:
+        return _unknown_model_selector()
+    access = _model_field_access(model_values[0], payload_param)
+    if access is None:
+        return _unknown_model_selector()
     suffix = '.get("model")' if access == "get" else '["model"]'
     return {
         "state": "OBSERVED_SOURCE_EXPRESSION",
