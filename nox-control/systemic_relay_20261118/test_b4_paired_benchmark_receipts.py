@@ -458,6 +458,33 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(accepted["visible_utf8_bytes"], 5)
         self.assertEqual(accepted["completion_ms"], 10)
 
+    def test_sse_wire_lone_surrogate_is_structured_hold(self):
+        # json.loads accepts escaped unpaired UTF-16 code units, even
+        # though they cannot be encoded as genuine UTF-8 visible text.
+        for codepoint in (0xD800, 0xDC00):
+            with self.subTest(codepoint=hex(codepoint)):
+                payload = ("data: " + json.dumps(
+                    {"choices": [{"delta": {"content": chr(codepoint)},
+                                  "finish_reason": None}]}) + "\n\n").encode("ascii")
+                with self.assertRaisesRegex(
+                        ReceiptHold, "SSE_INVALID_UNICODE_SCALAR"):
+                    measure_openai_sse_wire([(3, payload)])
+
+        # A legitimate supplementary scalar encoded as a surrogate pair
+        # in JSON decodes to one code point and remains fully supported.
+        pair = ("data: " + json.dumps(
+            {"choices": [{"delta": {"content": "😀"},
+                          "finish_reason": None}]}) + "\n\n").encode("ascii")
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b"data: [DONE]\n\n"
+        receipt = measure_openai_sse_wire([
+            (2, pair), (5, stop), (7, done)])
+        self.assertTrue(receipt["wire_completed_normally"])
+        self.assertEqual(receipt["first_text_ms"], 2)
+        self.assertEqual(receipt["completion_ms"], 7)
+        self.assertEqual(receipt["visible_text_sha256"],
+                         hashlib.sha256("😀".encode("utf-8")).hexdigest())
+
     def test_sse_wire_whitespace_does_not_forge_usable_first_text(self):
         # All bytes still contribute to the original text digest, but a
         # blank-only stream is not a successful user-visible chat answer.
