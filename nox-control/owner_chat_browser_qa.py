@@ -134,6 +134,7 @@ def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, bod
     """No missing/null message may satisfy an exhausted one-shot allowance."""
     expected = admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt)
     return (expected is not None and isinstance(body, dict)
+            and isinstance(dialog_id, str) and bool(dialog_id.strip())
             and body.get('message') == expected
             and body.get('dialog_id') == dialog_id)
 
