@@ -233,7 +233,7 @@ def _save_exchange(dialog_id,question,answer,exchange_id):
         return False
 
 def _validated_history(data):
-    history=data.get('history') or []
+    history=data['history'] if 'history' in data else []
     if not isinstance(history,list) or len(history)>24:
         raise ValueError('HOLD_HISTORY_LIMIT')
     clean=[];size=0
@@ -262,15 +262,20 @@ def _dialog_context(dialog_id):
             return 'HOLD_DIALOG_SCOPE_NOT_BOUND',[]
         if bool(found['archived']):
             return 'HOLD_DIALOG_ARCHIVED',[]
+        message_count=db.execute(
+            'SELECT COUNT(*) FROM nox_v29_dialog_messages WHERE dialog_id=?',
+            (dialog_id,)).fetchone()[0]
+        if message_count>24:
+            return 'HOLD_HISTORY_LIMIT',[]
         rows=db.execute(
             'SELECT u.content AS question, a.content AS answer '
             'FROM nox_v29_dialog_messages AS a '
             'JOIN nox_v29_dialog_messages AS u '
             'ON u.dialog_id=a.dialog_id AND u.exchange_id=a.exchange_id '
             "AND u.role='user' WHERE a.dialog_id=? AND a.role='assistant' "
-            'ORDER BY a.row_id DESC LIMIT 13',(dialog_id,)).fetchall()
-    if len(rows)>12:
-        return 'HOLD_HISTORY_LIMIT',[]
+            'ORDER BY a.row_id DESC',(dialog_id,)).fetchall()
+        if message_count!=2*len(rows):
+            return 'HOLD_HISTORY_PAIR_INCOMPLETE',[]
     pairs=[];size=0
     for row in rows:
         question,answer=row['question'],row['answer']
