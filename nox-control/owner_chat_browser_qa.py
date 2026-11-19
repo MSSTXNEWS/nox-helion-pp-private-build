@@ -39,6 +39,7 @@ EXPECTED = '1,2,3,4,5,6,7,8,9,10'
 SAFE_API = {'/api/nox/status','/api/nox/chat/stream','/api/nox/stop',
             '/api/ui/executors','/api/ui/memory/dialogs',
             '/api/ui/memory/dialogs/create','/api/ui/memory/dialogs/history',
+            '/api/ui/memory/dialogs/exchange-readback',
             '/api/nox/self/observations','/chat/login','/chat/logout','/chat/session'}
 SENSITIVE_MASKS = ('#nativeChats','#v24ArchiveList','#noxV22MemoryFull',
                    '#v24System','#chatHold','#noxV22RenameInput')
@@ -92,6 +93,29 @@ def progressive_stream_valid(value):
             and all(a < b for a, b in zip(lengths, lengths[1:]))
             and type(first) in (int, float) and type(done) in (int, float)
             and 0 <= first < done)
+
+
+def exact_receipt_readback(value, done, dialog_id, prompt, answer):
+    """Accept only a receipt-bound exact pair; missing providers remain HOLD."""
+    if not isinstance(value,dict) or not isinstance(done,dict):
+        return False
+    ids=('turn_id','receipt_id','lease_epoch','exchange_id')
+    if (value.get('status')!='READY' or value.get('durable') is not True
+            or value.get('verified') is not True or value.get('dialog_id')!=dialog_id
+            or value.get('writer')!='V112_S03_DIALOG_WRITER'
+            or done.get('writer')!='V112_S03_DIALOG_WRITER'
+            or any(not isinstance(done.get(key),str) or not re.fullmatch(r'[a-f0-9]{32}',done[key])
+                   for key in ('turn_id','receipt_id','lease_epoch'))
+            or not isinstance(done.get('exchange_id'),str)
+            or not 6<=len(done['exchange_id'])<=160
+            or not re.fullmatch(r'[a-f0-9]{64}',str(done.get('receipt_sha256','')))):
+        return False
+    if any(value.get(key)!=done.get(key) for key in ids) or value.get('receipt_sha256')!=done.get('receipt_sha256'):
+        return False
+    messages=value.get('messages')
+    return (isinstance(messages,list) and len(messages)==2
+            and messages[0]=={'role':'user','content':prompt,'exchange_id':done['exchange_id']}
+            and messages[1]=={'role':'assistant','content':answer,'exchange_id':done['exchange_id']})
 
 
 def local_base():
@@ -201,11 +225,7 @@ OBSERVER_JS = r"""
 (() => {
  'use strict';
  const cfg=__CONFIG__;
- const q=window.__NOX_BROWSER_QA={started:null,nativeFirst:null,nativeDone:null,
-   nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,nativeCalls:0,
-   uiFirst:null,uiBeforeDone:false,uiLengths:[],uiPrefixLengthsBeforeDone:[],uiBody:null,
-   uiVisible:false,uiMaxTokenSpans:0,contexts:[],draws:0,
-   stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};
+ const q=window.__NOX_BROWSER_QA={totalNativeCalls:0,turns:[],current:null,contexts:[],draws:0};
  const normalize=s=>s.replace(/\s+/g,'');
  const get=HTMLCanvasElement.prototype.getContext;
  HTMLCanvasElement.prototype.getContext=function(...args){
@@ -224,7 +244,7 @@ OBSERVER_JS = r"""
  }
  let sampleStop=()=>{},sampleUi=()=>{},uiFramePending=false;
  const queueUi=()=>{
-   if(uiFramePending||q.started===null)return;
+   if(uiFramePending||!q.current)return;
    uiFramePending=true;
    requestAnimationFrame(()=>{uiFramePending=false;sampleUi();});
  };
@@ -252,47 +272,46 @@ OBSERVER_JS = r"""
    const mount=document.getElementById('messages');if(!mount)return;
    const form=document.getElementById('chatForm'),stop=form?.querySelector('[data-action=stop]');
    if(form&&stop){sampleStop=()=>{
-     if(q.nativeCalls!==1||stop.disabled||q.stopSamples>=100)return;
+     const t=q.current;if(!t||t.nativeCalls!==1||stop.disabled||t.stopSamples>=100)return;
      const b=stop.getBoundingClientRect(),x=b.x+b.width/2,y=b.y+b.height/2;
      const visible=b.width>0&&b.height>0&&b.top>=0&&b.bottom<=innerHeight&&b.left>=0&&b.right<=innerWidth;
      const hit=visible?document.elementFromPoint(x,y):null;
-     q.stopSamples++;if(visible)q.stopVisibleSamples++;
-     if(!hit||!(hit===stop||stop.contains(hit)))q.stopOccludedSamples++;
+     t.stopSamples++;if(visible)t.stopVisibleSamples++;
+     if(!hit||!(hit===stop||stop.contains(hit)))t.stopOccludedSamples++;
    };new MutationObserver(sampleStop).observe(form,{subtree:true,attributes:true,attributeFilter:['disabled','style','class']});}
    sampleUi=()=>{
-     q.uiVisible=visibleBody(q.uiBody,mount);
-     if(q.started===null||q.nativeCalls!==1||!q.answer||!q.uiVisible)return;
-     // V24 appends each real token as a separate span.tok. Measure the
-     // cumulative rendered body, never one text node or an earlier answer.
-     const text=q.uiBody.innerText;
-     if(typeof text!=='string'||text.length>4096||!/^[0-9,\s]+$/.test(text))return;
-     const spans=q.uiBody.querySelectorAll('.tok');
+     const t=q.current;if(!t)return;
+     t.uiVisible=visibleBody(t.uiBody,mount);
+     if(t.started===null||t.nativeCalls!==1||!t.answer||!t.uiVisible)return;
+     const text=t.uiBody.innerText;
+     if(typeof text!=='string'||text.length>4096)return;
+     const spans=t.uiBody.querySelectorAll('.tok');
      if(spans.length>512)return;
-     q.uiMaxTokenSpans=Math.max(q.uiMaxTokenSpans,spans.length);
+     t.uiMaxTokenSpans=Math.max(t.uiMaxTokenSpans,spans.length);
      if([...spans].some(node=>/[0-9,]/.test(node.textContent)&&!visibleBody(node,mount)))return;
-     const actual=normalize(text),wanted=normalize(q.answer);
-     if(actual.length<3||!actual.includes(',')||!wanted.startsWith(actual))return;
-     const now=performance.now()-q.started;
-     if(q.uiFirst===null)q.uiFirst=now;
-     if(q.nativeDone===null){
-       q.uiBeforeDone=true;
-       const before=q.uiPrefixLengthsBeforeDone;
+     const actual=normalize(text),wanted=normalize(t.answer);
+     if(actual.length<3||!wanted.startsWith(actual))return;
+     const now=performance.now()-t.started;
+     if(t.uiFirst===null)t.uiFirst=now;
+     if(t.nativeDone===null){
+       t.uiBeforeDone=true;
+       const before=t.uiPrefixLengthsBeforeDone;
        if(before.length<80&&actual.length>(before.at(-1)||0))before.push(actual.length);
      }
-     if(q.uiLengths.length<80&&actual.length>(q.uiLengths.at(-1)||0))q.uiLengths.push(actual.length);
+     if(t.uiLengths.length<80&&actual.length>(t.uiLengths.at(-1)||0))t.uiLengths.push(actual.length);
    };
    new MutationObserver(queueUi).observe(mount,{subtree:true,childList:true,characterData:true});
  }
  addEventListener('DOMContentLoaded',watch,{once:true});
  const fetch0=window.fetch.bind(window);
- async function observe(response){
-   if(!response.body){q.error='HOLD_NO_NATIVE_RESPONSE_BODY';return;}
+ async function observe(response,t){
+   if(!response.body){t.error='HOLD_NO_NATIVE_RESPONSE_BODY';return;}
    const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
    try{
      for(let count=0;count<2048;count++){
        const part=await reader.read();if(part.done)break;
-       q.nativeBytes+=part.value.length;
-       if(q.nativeBytes>65536)throw Error('HOLD_QA_STREAM_LIMIT');
+       t.nativeBytes+=part.value.length;
+       if(t.nativeBytes>65536)throw Error('HOLD_QA_STREAM_LIMIT');
        buffer+=decoder.decode(part.value,{stream:true});
        let end;
        while((end=buffer.indexOf('\n'))>=0){
@@ -300,33 +319,42 @@ OBSERVER_JS = r"""
          if(!line.trim())continue;
          const frame=JSON.parse(line);
          if(frame.type==='delta'){
-           if(typeof frame.text!=='string'||q.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');
-           q.answer+=frame.text;q.nativeDeltas++;
-           if(q.nativeFirst===null&&/[^\s.…]/.test(frame.text))q.nativeFirst=performance.now()-q.started;
+           if(typeof frame.text!=='string'||t.answer.length+frame.text.length>4096)throw Error('HOLD_QA_ANSWER_LIMIT');
+           t.answer+=frame.text;t.nativeDeltas++;
+           if(t.nativeFirst===null&&/[^\s.…]/.test(frame.text))t.nativeFirst=performance.now()-t.started;
            // The tee observer and the UI consume independently. A DOM change
            // may precede this clone's frame; retry on the next real paint.
            queueUi();
          }else if(frame.type==='done'){
-           q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,
-                   dialog_matches:frame.dialog_id===cfg.did};
-           q.nativeDone=performance.now()-q.started;
-         }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}
+           t.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,
+                   dialog_matches:frame.dialog_id===cfg.did,turn_id:frame.turn_id,
+                   writer:frame.writer,
+                   receipt_id:frame.receipt_id,lease_epoch:frame.lease_epoch,
+                   exchange_id:frame.exchange_id,receipt_sha256:frame.receipt_sha256};
+           t.nativeDone=performance.now()-t.started;
+         }else if(frame.type==='error'){t.error='HOLD_NATIVE_STREAM_ERROR';}
        }
      }
-   }catch(e){q.error=/^HOLD_[A-Z_]+$/.test(e.message)?e.message:'HOLD_QA_STREAM_OBSERVER';}
+   }catch(e){t.error=/^HOLD_[A-Z_]+$/.test(e.message)?e.message:'HOLD_QA_STREAM_OBSERVER';}
    finally{try{await reader.cancel();}catch{}}
  }
  window.fetch=async function(input,init){
    let url;try{url=new URL(input instanceof Request?input.url:String(input),location.href);}catch{}
    const own=url&&url.origin===location.origin&&url.pathname==='/api/nox/chat/stream';
+   let t=null;
    if(own){
-     q.nativeCalls++;q.started=performance.now();
+     q.totalNativeCalls++;
+     t={nativeCalls:1,started:performance.now(),nativeFirst:null,nativeDone:null,
+       nativeDeltas:0,nativeBytes:0,answer:'',done:null,error:null,
+       uiFirst:null,uiBeforeDone:false,uiLengths:[],uiPrefixLengthsBeforeDone:[],uiBody:null,
+       uiVisible:false,uiMaxTokenSpans:0,stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};
+     q.turns.push(t);q.current=t;
      const pending=document.querySelectorAll('#messages .v24-msg.nox.streaming .body');
-     q.uiBody=q.nativeCalls===1&&pending.length===1?pending[0]:null;
+     t.uiBody=pending.length===1?pending[0]:null;
      requestAnimationFrame(sampleStop);
    }
    const response=await fetch0(input,init);
-   if(own){void observe(response.clone());}
+   if(own){void observe(response.clone(),t);}
    return response;
  };
 })();
@@ -334,11 +362,11 @@ OBSERVER_JS = r"""
 
 SNAPSHOT_JS = r"""() => {
  const q=window.__NOX_BROWSER_QA;if(!q)return null;
+ const t=q.current;
  const normalize=s=>s.replace(/\s+/g,'');
- const mount=document.getElementById('messages'),body=q.uiBody;
- const rendered=!!(mount&&body&&mount.contains(body)&&q.answer&&
-   typeof body.innerText==='string'&&/^[0-9,\s]+$/.test(body.innerText)&&
-   normalize(body.innerText)===normalize(q.answer));
+ const mount=document.getElementById('messages'),body=t?.uiBody;
+ const rendered=!!(mount&&body&&mount.contains(body)&&t?.answer&&
+   typeof body.innerText==='string'&&normalize(body.innerText)===normalize(t.answer));
  const contexts=q.contexts.map(({canvas,kind,ctx})=>{
    let renderer='unknown';
    try{const ext=ctx.getExtension('WEBGL_debug_renderer_info');
@@ -348,15 +376,16 @@ SNAPSHOT_JS = r"""() => {
    const box=canvas.getBoundingClientRect();
    return {kind,width:canvas.width,height:canvas.height,visible:box.width>40&&box.height>40,renderer};
  }).slice(0,8);
- return {native_first_ms:q.nativeFirst,native_done_ms:q.nativeDone,native_delta_count:q.nativeDeltas,
-   native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,
-   ui_first_ms:q.uiFirst,ui_before_native_done:q.uiBeforeDone,ui_lengths:q.uiLengths,
-   ui_prefix_lengths_before_done:q.uiPrefixLengthsBeforeDone,ui_body_visible:q.uiVisible,
-   ui_token_span_peak:q.uiMaxTokenSpans,
+ return {native_first_ms:t?.nativeFirst??null,native_done_ms:t?.nativeDone??null,native_delta_count:t?.nativeDeltas??0,
+   native_bytes:t?.nativeBytes??0,native_calls:t?.nativeCalls??0,total_native_calls:q.totalNativeCalls,
+   done:t?.done??null,error:t?.error??null,
+   ui_first_ms:t?.uiFirst??null,ui_before_native_done:t?.uiBeforeDone??false,ui_lengths:t?.uiLengths??[],
+   ui_prefix_lengths_before_done:t?.uiPrefixLengthsBeforeDone??[],ui_body_visible:t?.uiVisible??false,
+   ui_token_span_peak:t?.uiMaxTokenSpans??0,
    ui_measurement_kind:'CUMULATIVE_VISIBLE_ASSISTANT_BODY',
    intl_segmenter_available:typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function',
-   stop_samples:q.stopSamples,stop_visible_samples:q.stopVisibleSamples,stop_occluded_samples:q.stopOccludedSamples,
-   answer_characters:q.answer.length,dom_answer_matches_native:rendered,contexts,draw_calls:q.draws,
+   stop_samples:t?.stopSamples??0,stop_visible_samples:t?.stopVisibleSamples??0,stop_occluded_samples:t?.stopOccludedSamples??0,
+   answer_characters:t?.answer?.length??0,dom_answer_matches_native:rendered,contexts,draw_calls:q.draws,
    native_owner:window.NOX_NATIVE_OWNER===true,v135:window.__NOX_V135_OWNER_RESONANCE==='OWNER_NATIVE_ONLY',
    v137:window.__NOX_V137_SELF_STATUS==='READ_ONLY',owner_live:window.__NOX_OWNER_LIVE_UI===true,
    build:document.querySelector('meta[name="nox-live-build"]')?.content||null,
@@ -562,8 +591,13 @@ async def browser_run(report, directory, available):
     origin=urllib.parse.urlsplit(base).netloc
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
     title='NOX Browser QA '+token
-    prompt='[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.'
-    report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))
+    prompts=(
+        '[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.',
+        '[NOX UI QA '+token+'] Повтори дословно последовательность цифр из предыдущего ответа, без других слов.',
+    )
+    report.update(nonloopback_auth=True,resources=budget(),
+                  synthetic_prompt_sha256=digest(prompts[0].encode()),
+                  synthetic_prompt_sha256s=[digest(item.encode()) for item in prompts])
     network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None
     sys.path.insert(0,str(ROOT/'scripts'))
     import chat_proxy
@@ -607,6 +641,7 @@ async def browser_run(report, directory, available):
             config=json.dumps({'did':did},separators=(',',':'))
             await context.add_init_script(OBSERVER_JS.replace('__CONFIG__',config))
 
+            accepted_submits=[]
             async def guard(route):
                 request=route.request
                 url=urllib.parse.urlsplit(request.url)
@@ -621,15 +656,27 @@ async def browser_run(report, directory, available):
                     if identifier!=[did]:
                         blocked['non_qa_dialog_history']+=1
                         return await route.abort()
+                if url.path=='/api/ui/memory/dialogs/exchange-readback':
+                    try:
+                        body=request.post_data_json
+                        own=isinstance(body,dict) and body.get('dialog_id')==did
+                    except Exception:
+                        own=False
+                    if not own:
+                        blocked['non_qa_receipt_readback']+=1
+                        return await route.abort()
                 if url.path=='/api/nox/chat/stream':
                     try:
                         body=request.post_data_json
-                        own=isinstance(body,dict) and body.get('message')==prompt and body.get('dialog_id')==did
+                        expected=prompts[len(accepted_submits)] if len(accepted_submits)<len(prompts) else None
+                        own=(isinstance(body,dict) and expected is not None
+                             and body.get('message')==expected and body.get('dialog_id')==did)
                     except Exception:
                         own=False
                     if not own:
                         blocked['non_qa_generation']+=1
                         return await route.abort()
+                    accepted_submits.append(body.get('message'))
                 return await route.continue_()
 
             await context.route('**/*',guard)
@@ -720,60 +767,115 @@ async def browser_run(report, directory, available):
             report['composer_before']=await page.evaluate(COMPOSER_JS)
             report['status_for_legacy_controls']=status_projection(await json_response(await context.request.get(
                 base+'/api/nox/status',max_redirects=0,timeout=6000)))
-            report['browser_stage']='QA_PROMPT_FILL'
-            await page.locator('#prompt').fill(prompt)
-            report['browser_stage']='QA_SEND_ENABLED'
-            await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
-            report['browser_stage']='QA_SEND_CLICK'
-            started=time.monotonic()
-            await click_send(page, report)
-            report['browser_stage']='QA_REAL_STREAM'
-            final=None
-            while time.monotonic()-started<85:
+            verified_turns=[];history_expected=[];progressive=[];final=None
+            for turn_index,prompt in enumerate(prompts):
                 if stop_present():
                     raise RuntimeError('HOLD_OWNER_STOP')
-                final=await page.evaluate(SNAPSHOT_JS)
-                if final and final.get('error'):
-                    raise RuntimeError(final['error'])
-                if final and final.get('done') and final.get('dom_answer_matches_native'):
-                    break
-                await page.wait_for_timeout(120)
-            if not final or not final.get('done') or not final.get('dom_answer_matches_native'):
-                raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
-            # V135 performs its own real S03 readback after native done; wait for
-            # the original submit button to be usable again before final proof.
-            report['browser_stage']='QA_SEND_RELEASE'
-            await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
-            report['browser_stage']='QA_PERSISTED_HISTORY'
-            history=await json_response(await context.request.get(
-                base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
-            rows=history.get('messages')
-            saved=(isinstance(rows,list) and len(rows)==2 and rows[0].get('role')=='user'
-                   and rows[0].get('content')==prompt and rows[1].get('role')=='assistant'
-                   and isinstance(rows[1].get('content'),str))
-            answer=rows[1]['content'] if saved else ''
-            native_equal=await page.evaluate('(value)=>window.__NOX_BROWSER_QA.answer===value',answer)
+                idle_slots()
+                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_PROMPT_FILL'
+                await page.locator('#prompt').fill(prompt)
+                await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_SEND'
+                started=time.monotonic()
+                await click_send(page,report)
+                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_REAL_STREAM'
+                final=None
+                while time.monotonic()-started<85:
+                    if stop_present():
+                        raise RuntimeError('HOLD_OWNER_STOP')
+                    final=await page.evaluate(SNAPSHOT_JS)
+                    if final and final.get('error'):
+                        raise RuntimeError(final['error'])
+                    if final and final.get('done') and final.get('dom_answer_matches_native'):
+                        break
+                    await page.wait_for_timeout(120)
+                if (not final or final.get('native_calls')!=1 or not final.get('done')
+                        or not final.get('dom_answer_matches_native')):
+                    raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
+                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_SEND_RELEASE'
+                await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+                done=final.get('done')
+                if not isinstance(done,dict):
+                    raise RuntimeError('HOLD_CANONICAL_S03_WRITER_RECEIPT_MISSING')
+                if not (done.get('saved') is True and done.get('s03_integrated') is True
+                        and done.get('dialog_matches') is True):
+                    raise RuntimeError('HOLD_CANONICAL_S03_WRITER_RECEIPT_MISSING')
+                answer=await page.evaluate('()=>window.__NOX_BROWSER_QA.current?.answer||null')
+                if not isinstance(answer,str) or not answer.strip():
+                    raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
+                receipt_request={key:done.get(key) for key in ('turn_id','receipt_id','lease_epoch')}
+                receipt_request['dialog_id']=did
+                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_CANONICAL_READBACK'
+                readback_response=await context.request.post(
+                    base+'/api/ui/memory/dialogs/exchange-readback',data=receipt_request,
+                    max_redirects=0,timeout=6000)
+                if readback_response.status!=200:
+                    raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
+                proof=await json_response(readback_response)
+                if not exact_receipt_readback(proof,done,did,prompt,answer):
+                    raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
+                history_expected.extend(({'role':'user','content':prompt},
+                                         {'role':'assistant','content':answer}))
+                history=await json_response(await context.request.get(
+                    base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
+                    max_redirects=0,timeout=6000))
+                rows=history.get('messages')
+                if (not isinstance(rows,list) or len(rows)!=len(history_expected)
+                        or any(not isinstance(row,dict) or row.get('role')!=expected['role']
+                               or row.get('content')!=expected['content']
+                               for row,expected in zip(rows,history_expected))):
+                    raise RuntimeError('HOLD_ORDERED_TWO_TURN_HISTORY_READBACK')
+                public=public_numeric_answer(answer)
+                if public!=EXPECTED:
+                    raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
+                if turn_index==1:
+                    previous_answer=history_expected[-3]['content']
+                    if re.sub(r'\s+','',answer)!=re.sub(r'\s+','',previous_answer):
+                        raise RuntimeError('HOLD_SECOND_TURN_CONTEXT_REPLAY')
+                turn_progressive=progressive_stream_valid(final)
+                progressive.append(turn_progressive)
+                stop_visible=bool(final.get('stop_samples',0)>0
+                    and final.get('stop_samples')==final.get('stop_visible_samples')
+                    and final.get('stop_occluded_samples')==0)
+                if not stop_visible:
+                    raise RuntimeError('HOLD_QA_ACTIVE_STOP_LAYOUT')
+                verified_turns.append({
+                    'turn_id':done['turn_id'],'receipt_id':done['receipt_id'],
+                    'lease_epoch':done['lease_epoch'],'exchange_id':done['exchange_id'],
+                    'receipt_sha256':done['receipt_sha256'],
+                    'prompt_sha256':digest(prompt.encode()),'answer_sha256':digest(answer.encode()),
+                    'answer_characters':len(answer),'s03_readback_verified':True,
+                    'stream_verified':True,'progressive_stream_render_verified':turn_progressive,
+                    'stop_visible_during_generation':stop_visible,
+                    'elapsed_turn_ms':round((time.monotonic()-started)*1000)})
+            if (len(verified_turns)!=2
+                    or len({item['turn_id'] for item in verified_turns})!=2
+                    or len({item['receipt_id'] for item in verified_turns})!=2
+                    or len({item['exchange_id'] for item in verified_turns})!=2
+                    or accepted_submits!=list(prompts)):
+                raise RuntimeError('HOLD_TWO_DISTINCT_SEQUENTIAL_TURNS')
+            answer=history_expected[-1]['content']
             public=public_numeric_answer(answer)
-            report.update(stream=final,s03_readback_verified=bool(saved and native_equal),
-                          actual_native_model_stream_verified=bool(final['native_calls']==1 and all(final['done'].values())),
-                          answer_sha256=digest(answer.encode()),answer_characters=len(answer),
-                          synthetic_number_sequence_pass=public==EXPECTED,
-                          synthetic_public_numeric_answer=public,
-                          progressive_stream_render_verified=progressive_stream_valid(final),
-                          elapsed_turn_ms=round((time.monotonic()-started)*1000))
-            report['stop_visible_during_generation']=bool(final.get('stop_samples',0)>0
-                and final.get('stop_samples')==final.get('stop_visible_samples') and final.get('stop_occluded_samples')==0)
-            if not report['stop_visible_during_generation']:
-                raise RuntimeError('HOLD_QA_ACTIVE_STOP_LAYOUT')
+            saved=len(history_expected)==4
+            native_equal=all(item['s03_readback_verified'] for item in verified_turns)
+            report.update(stream=final,turns=verified_turns,
+                sequential_two_turns_verified=True,s03_readback_verified=native_equal,
+                actual_native_model_stream_verified=bool(len(verified_turns)==2 and accepted_submits==list(prompts)),
+                answer_sha256=digest(answer.encode()),answer_characters=len(answer),
+                synthetic_number_sequence_pass=public==EXPECTED,
+                synthetic_public_numeric_answer=public,
+                progressive_stream_render_verified=all(progressive),
+                stop_visible_during_generation=all(item['stop_visible_during_generation'] for item in verified_turns))
             masks=[page.locator(selector) for selector in SENSITIVE_MASKS]
             if not saved or public!=EXPECTED:
                 masks.append(page.locator('#messages'))
             report['browser_stage']='QA_COMPLETED_SCREENSHOT'
             await capture_private_screenshot(page,report,directory,'completed',masks,
-                'VERIFIED_PUBLIC_NUMERIC_QA' if public==EXPECTED and saved else 'MASKED_QA_MESSAGES',
+                'VERIFIED_PUBLIC_NUMERIC_QA' if public==EXPECTED and saved and native_equal else 'MASKED_QA_MESSAGES',
                 (TimeoutError,PlaywrightTimeoutError))
             core=(report['webgl_visible'] and report['canvas_animation_observed']
-                  and all(final['done'].values()) and saved and native_equal
+                  and all(final['done'].get(key) is True for key in ('saved','s03_integrated','dialog_matches'))
+                  and saved and native_equal and report['sequential_two_turns_verified']
                   and final['executor_chips']==6 and final['photo_button'] and final['video_button'])
             if not core:
                 raise RuntimeError('HOLD_GRAPHICAL_ACCEPTANCE_INCOMPLETE')
@@ -791,7 +893,7 @@ async def browser_run(report, directory, available):
                 try:
                     report['composer_final']=await page.evaluate(COMPOSER_JS)
                     report['stream_final']=await page.evaluate(SNAPSHOT_JS)
-                    pending=await page.evaluate('!!window.__NOX_BROWSER_QA?.nativeCalls&&!window.__NOX_BROWSER_QA?.done')
+                    pending=await page.evaluate('!!window.__NOX_BROWSER_QA?.current?.nativeCalls&&!window.__NOX_BROWSER_QA?.current?.done')
                     if pending:
                         await context.request.post(base+'/api/nox/stop',data={},max_redirects=0,timeout=4000)
                 except Exception:

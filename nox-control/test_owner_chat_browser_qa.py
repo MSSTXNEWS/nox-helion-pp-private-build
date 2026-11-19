@@ -98,6 +98,30 @@ class BrowserQaTests(unittest.TestCase):
         self.assertEqual(QA.safe_error(RuntimeError('password=opaque credential')), 'RuntimeError')
         self.assertEqual(QA.safe_error(RuntimeError('HOLD_OWNER_STOP')), 'HOLD_OWNER_STOP')
 
+    def test_missing_or_unbound_s03_provider_is_never_accepted(self):
+        done={'saved':True,'s03_integrated':True,'dialog_matches':True,'writer':'V112_S03_DIALOG_WRITER',
+              'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32,
+              'exchange_id':'4'*32,'receipt_sha256':'a'*64}
+        self.assertFalse(QA.exact_receipt_readback(None,done,'d'*32,'prompt','answer'))
+        self.assertFalse(QA.exact_receipt_readback({},done,'d'*32,'prompt','answer'))
+        wrong={'status':'READY','durable':True,'verified':True,'writer':'V112_S03_DIALOG_WRITER',
+               'dialog_id':'d'*32,'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32,
+               'exchange_id':'4'*32,'receipt_sha256':'a'*64,
+               'messages':[{'role':'user','content':'prompt','exchange_id':'4'*32},
+                           {'role':'assistant','content':'different','exchange_id':'4'*32}]}
+        self.assertFalse(QA.exact_receipt_readback(wrong,done,'d'*32,'prompt','answer'))
+        wrong['messages'][1]['content']='answer'
+        self.assertTrue(QA.exact_receipt_readback(wrong,done,'d'*32,'prompt','answer'))
+
+    def test_runner_requires_two_distinct_sequential_receipt_readbacks(self):
+        source=Path(QA.__file__).read_text()
+        self.assertIn('QA_TURN_',source)
+        self.assertIn('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK',source)
+        self.assertIn('len(verified_turns)!=2',source)
+        self.assertIn("len({item['receipt_id'] for item in verified_turns})!=2",source)
+        self.assertIn('accepted_submits!=list(prompts)',source)
+        self.assertNotIn('route.fulfill(',source)
+
     def test_click_diagnostic_exports_only_fixed_boolean_flags(self):
         value=QA.click_error_projection(RuntimeError('owner private title: element is not stable; another node intercepts pointer events'))
         self.assertEqual(set(value),{'not_stable','not_visible','outside_viewport','pointer_intercepted','detached'})
@@ -126,7 +150,7 @@ class BrowserQaTests(unittest.TestCase):
     def test_instrumentation_forwards_real_calls_and_masks_private_regions(self):
         self.assertIn('Reflect.apply(original,this,args)',QA.OBSERVER_JS)
         self.assertIn('const response=await fetch0(input,init)',QA.OBSERVER_JS)
-        self.assertIn('observe(response.clone())',QA.OBSERVER_JS)
+        self.assertIn('observe(response.clone(),t)',QA.OBSERVER_JS)
         self.assertIn('#nativeChats',QA.SENSITIVE_MASKS)
         source=Path(QA.__file__).read_text()
         self.assertNotIn('route.fulfill(',source)

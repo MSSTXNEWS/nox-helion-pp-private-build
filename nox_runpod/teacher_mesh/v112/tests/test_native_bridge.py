@@ -94,7 +94,8 @@ class V112Tests(unittest.TestCase):
                     stamp=datetime.now(timezone.utc).isoformat()
                     with sqlite3.connect(self.db) as db:
                         db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',(
-                          'new-exchange-0001',hashlib.sha256((q+answer).encode()).hexdigest(),
+                          'fixture-memory-'+str(len(self.calls)).zfill(4),
+                          hashlib.sha256((q+answer).encode()).hexdigest(),
                           'U:'+q+' A:'+answer,stamp))
                 if self.bulk_sse=='invalid_utf8_comment':
                     # Original model answer and S03 fixture proof exist, but
@@ -189,6 +190,7 @@ class V112Tests(unittest.TestCase):
             ('/api/ui/memory/dialogs/status','get'),
             ('/api/ui/memory/dialogs','get'),
             ('/api/ui/memory/dialogs/create','post'),
+            ('/api/ui/memory/dialogs/exchange-readback','post'),
             ('/api/nox/chat/stream','post'),
             ('/api/nox/stop','post'),
             ('/nox-web-v29/','get'),
@@ -225,15 +227,89 @@ class V112Tests(unittest.TestCase):
         self.assertTrue(frames[-1]['saved'])
         self.assertTrue(frames[-1]['s03_integrated'])
         self.assertEqual(frames[-1]['dialog_id'],d)
-        self.assertEqual(frames[-1]['exchange_id'],'new-exchange-0001')
+        for key in ('turn_id','receipt_id','lease_epoch','exchange_id'):
+            self.assertRegex(frames[-1][key],r'^[a-f0-9]{32}$')
+        self.assertEqual(frames[-1]['writer'],'V112_S03_DIALOG_WRITER')
+        self.assertRegex(frames[-1]['receipt_sha256'],r'^[a-f0-9]{64}$')
         self.assertTrue(self.calls[-1]['_owner'])
         hist=self.client.get('/api/ui/memory/dialogs/history',
              cookies=self.cookie,params={'dialog_id':d}).json()
         self.assertEqual([x['role'] for x in hist['messages']],['user','assistant'])
         self.assertEqual(hist['messages'][0]['content'],'Привет NOX')
         self.assertEqual(hist['messages'][1]['content'],'Готов. Это проверенный ответ.')
+        proof=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,
+            json={key:frames[-1][key] for key in ('dialog_id','turn_id','receipt_id','lease_epoch')})
+        self.assertEqual(proof.status_code,200,proof.text)
+        self.assertEqual(proof.json()['messages'],[
+            {'role':'user','content':'Привет NOX','exchange_id':frames[-1]['exchange_id']},
+            {'role':'assistant','content':'Готов. Это проверенный ответ.','exchange_id':frames[-1]['exchange_id']}])
+        self.assertTrue(proof.json()['durable']);self.assertTrue(proof.json()['verified'])
         listed=self.client.get('/api/ui/memory/dialogs',cookies=self.cookie).json()
         self.assertEqual(listed['dialogs'][0]['dialog_id'],d)
+
+    def test_fixture_two_sequential_turns_have_distinct_receipts_and_exact_readbacks(self):
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Two turn source fixture','confirmed':True}).json()['dialog_id']
+        prompts=('first exact prompt','second exact prompt')
+        receipts=[];expected=[]
+        for prompt in prompts:
+            response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                json={'message':prompt,'dialog_id':dialog,'history':[]})
+            self.assertEqual(response.status_code,200,response.text[:200])
+            frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+            done=frames[-1]
+            self.assertEqual(done['type'],'done')
+            receipt={key:done[key] for key in ('dialog_id','turn_id','receipt_id','lease_epoch')}
+            proof=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=receipt)
+            self.assertEqual(proof.status_code,200,proof.text)
+            messages=proof.json()['messages']
+            self.assertEqual([row['role'] for row in messages],['user','assistant'])
+            self.assertEqual(messages[0]['content'],prompt)
+            self.assertEqual(messages[1]['content'],'Готов. Это проверенный ответ.')
+            self.assertTrue(proof.json()['durable']);self.assertTrue(proof.json()['verified'])
+            receipts.append(done)
+            expected.extend(messages)
+            history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+                params={'dialog_id':dialog,'limit':6}).json()['messages']
+            self.assertEqual([(row['role'],row['content']) for row in history],
+                [(row['role'],row['content']) for row in expected])
+        for key in ('turn_id','receipt_id','exchange_id'):
+            self.assertEqual(len({row[key] for row in receipts}),2)
+        self.assertEqual(receipts[0]['lease_epoch'],receipts[1]['lease_epoch'])
+
+    def test_independent_readback_holds_for_wrong_receipt_or_tampered_pair(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db,_save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Exact readback fixture','confirmed':True}).json()['dialog_id']
+        ids={'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32}
+        exchange='4'*32
+        self.assertTrue(_save_exchange(dialog,'exact user','exact assistant',exchange,
+            turn_id=ids['turn_id'],receipt_id=ids['receipt_id'],lease_epoch=ids['lease_epoch']))
+        body={'dialog_id':dialog,**ids}
+        wrong=dict(body,receipt_id='5'*32)
+        self.assertEqual(self.client.post('/api/ui/memory/dialogs/exchange-readback',
+            cookies=self.cookie,json=wrong).status_code,409)
+        good=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=body)
+        self.assertEqual(good.status_code,200,good.text)
+        self.assertEqual([row['content'] for row in good.json()['messages']],
+                         ['exact user','exact assistant'])
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_dialog_messages SET content=? '
+                       'WHERE dialog_id=? AND exchange_id=? AND role=?',
+                       ('tampered assistant',dialog,exchange,'assistant'))
+        held=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=body)
+        self.assertEqual(held.status_code,409)
+
+    def test_exact_receipt_provider_excludes_fuzzy_matching(self):
+        source=Path(__file__).parents[1]/'native_v29_full_bridge.py'
+        text=source.read_text()
+        provider=text.split('class CanonicalS03ExchangeReadback:',1)[1].split(
+            'def _save_exchange(',1)[0]
+        self.assertNotIn('instr(',provider)
+        self.assertIn('def _legacy_memory_readback(',text)
+        stream=text.split("@app.post('/api/nox/chat/stream')",1)[1]
+        self.assertIn("if not dialog_id:",stream)
+        self.assertIn('CanonicalS03ExchangeReadback(_db).read',stream)
 
     def test_coalesced_sse_transport_frames_preserve_native_s03_done(self):
         self.bulk_sse='coalesced'
@@ -244,7 +320,7 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(r.status_code,200,r.text[:300])
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual([f['type'] for f in frames],['preparing','start','delta','done'])
-        self.assertEqual(frames[-1]['exchange_id'],'new-exchange-0001')
+        self.assertRegex(frames[-1]['exchange_id'],r'^[a-f0-9]{32}$')
         self.assertTrue(frames[-1]['s03_integrated'])
         self.assertEqual(''.join(f['text'] for f in frames if f['type']=='delta'),
                          'Готов. Это проверенный ответ.')
@@ -252,8 +328,10 @@ class V112Tests(unittest.TestCase):
     def test_one_oversized_sse_frame_is_still_rejected(self):
         self.bulk_sse='oversized'
         self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'oversized frame','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-            json={'message':'oversized single frame'})
+            json={'message':'oversized single frame','dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
         self.assertFalse(any(f.get('saved') for f in frames))
@@ -476,14 +554,38 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(response.json()['error'],'HOLD_DIALOG_SCOPE_NOT_BOUND')
         self.assertEqual(self.calls,[])
 
-    def test_no_fresh_s03_row_means_no_fake_done(self):
+    def test_exact_dialog_writer_receipt_does_not_depend_on_legacy_match(self):
+        self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'No fuzzy matcher','confirmed':True}).json()['dialog_id']
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+          json={'message':'Другой уникальный вопрос','dialog_id':dialog})
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual(frames[-1]['type'],'done')
+        proof=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,
+            json={key:frames[-1][key] for key in ('dialog_id','turn_id','receipt_id','lease_epoch')})
+        self.assertEqual(proof.status_code,200,proof.text)
+        self.assertEqual(proof.json()['messages'][0]['content'],'Другой уникальный вопрос')
+
+    def test_no_dialog_legacy_caller_keeps_existing_s03_readback_behavior(self):
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'legacy no-dialog prompt'})
+        self.assertEqual(r.status_code,200,r.text[:200])
+        frames=[json.loads(line) for line in r.text.splitlines() if line.strip()]
+        done=frames[-1]
+        self.assertEqual(done['type'],'done')
+        self.assertTrue(done['saved']);self.assertTrue(done['s03_integrated'])
+        self.assertIsNone(done['dialog_id'])
+        self.assertEqual(done['exchange_id'],'fixture-memory-0001')
+        self.assertNotIn('receipt_id',done)
+
+    def test_no_dialog_legacy_caller_still_holds_without_old_s03_write(self):
         self.record=False
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-          json={'message':'Другой уникальный вопрос'})
-        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
-        self.assertEqual(frames[-1]['type'],'error')
-        self.assertEqual(frames[-1]['error'],'HOLD_S03_COMMIT_NOT_VERIFIED')
-        self.assertFalse(any(x.get('saved') for x in frames))
+            json={'message':'legacy missing S03 write'})
+        frames=[json.loads(line) for line in r.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
+        self.assertFalse(any(frame.get('saved') for frame in frames))
 
     def test_dialog_revision_and_archive(self):
         created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,

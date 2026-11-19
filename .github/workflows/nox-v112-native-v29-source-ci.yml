@@ -4,11 +4,15 @@ on:
     branches: [feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'nox_runpod/teacher_mesh/v112/**'
+      - 'nox-control/owner_chat_browser_qa.py'
+      - 'nox-control/test_owner_chat_browser_qa.py'
       - '.github/workflows/nox-v112-native-v29-source-ci.yml'
   pull_request:
-    branches: [feature/nox-v38-synaptic-brain-20261114]
+    branches: [feature/nox-v38-synaptic-brain-20261114, repair/dispatcher-memory-telemetry-20261119]
     paths:
       - 'nox_runpod/teacher_mesh/v112/**'
+      - 'nox-control/owner_chat_browser_qa.py'
+      - 'nox-control/test_owner_chat_browser_qa.py'
       - '.github/workflows/nox-v112-native-v29-source-ci.yml'
   workflow_dispatch:
 permissions: {contents: read}
@@ -28,7 +32,10 @@ jobs:
           set -euo pipefail
           python -m py_compile nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py
           python -m py_compile nox_runpod/teacher_mesh/v112/tests/test_native_bridge.py
+          python -m py_compile nox-control/owner_chat_browser_qa.py
+          python -m py_compile nox-control/test_owner_chat_browser_qa.py
           python -m unittest discover -s nox_runpod/teacher_mesh/v112/tests -p 'test_*.py' -v
+          PYTHONPATH=nox-control python -m unittest -v test_owner_chat_browser_qa
       - name: Never call fixture evidence a live owner E2E
         run: |
           echo 'NOX_V112_TEST_FIXTURES_ONLY=true'
