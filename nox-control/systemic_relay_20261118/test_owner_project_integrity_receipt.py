@@ -49,13 +49,17 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                   'queue_id': task['queue_id'], 'state': 'INTEGRATED',
                   'project_source_changed': True, 'integration_verified': True,
                   'original_task_accepted': False, 'tests': {'passed': True}}
+        def worker_result(item):
+            return {'project_evidence': item,
+                    'project_evidence_sha256': binding.digest(binding.encoded(item))}
+
         receipt = {'task_id': task['id'], 'parent_task_id': task['parent_task_id'],
                    'queue_id': task['queue_id'],
                    'phase': 'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED',
                    'claim': task['owner_claim'], 'original_task_accepted': False,
                    'source_sha256': 'pinned-source', 'scope': 'SOURCE_PATCH_TESTED',
                    'project_source_changed': True, 'recovery_required': False,
-                   'worker_result': {'project_evidence': worker}}
+                   'worker_result': worker_result(worker)}
         native = types.SimpleNamespace(
             receipt_source_allowed=lambda *_: True)
         subject = module.ProjectBinding.__new__(module.ProjectBinding)
@@ -71,19 +75,15 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
             for label, changes in (
                 ('false_source', {'project_source_changed': False}),
                 ('recovering', {'recovery_required': True}),
-                ('blocked_worker', {'worker_result': {
-                    'project_evidence': {**worker, 'state': 'BLOCKED'}}}),
-                ('nested_original_falsely_accepted', {'worker_result': {
-                    'project_evidence': {**worker, 'original_task_accepted': True}}}),
-                ('failed_test', {'worker_result': {
-                    'project_evidence': {**worker, 'tests': {'passed': False}}}}),
-                ('wrong_task', {'worker_result': {
-                    'project_evidence': {**worker, 'task_id': 'other-task'}}}),
+                ('blocked_worker', {'worker_result': worker_result({**worker, 'state': 'BLOCKED'})}),
+                ('nested_original_falsely_accepted', {'worker_result': worker_result({**worker, 'original_task_accepted': True})}),
+                ('failed_test', {'worker_result': worker_result({**worker, 'tests': {'passed': False}})}),
+                ('wrong_task', {'worker_result': worker_result({**worker, 'task_id': 'other-task'})}),
+                ('nested_digest_mismatch', {'worker_result': {
+                    **worker_result(worker), 'project_evidence_sha256': '0' * 64}}),
                 ('missing_worker', {'worker_result': None}),
-                ('malformed_tests_list', {'worker_result': {
-                    'project_evidence': {**worker, 'tests': [{'passed': True}]}}}),
-                ('malformed_tests_string', {'worker_result': {
-                    'project_evidence': {**worker, 'tests': 'passed'}}}),
+                ('malformed_tests_list', {'worker_result': worker_result({**worker, 'tests': [{'passed': True}]})}),
+                ('malformed_tests_string', {'worker_result': worker_result({**worker, 'tests': 'passed'})}),
             ):
                 with self.subTest(label=label):
                     bad = {**receipt, **changes}
