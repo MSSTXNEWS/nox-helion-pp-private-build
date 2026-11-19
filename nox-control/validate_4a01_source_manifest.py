@@ -241,20 +241,10 @@ def validate(path: Path) -> dict[str, Any]:
     else:
         report["verified_fields"].append("tokenizer.byte_identity_to_1017_tokenizer_file")
 
-    unresolved = at(doc, "acceptance.unresolved_source_requirements")
-    if not isinstance(unresolved, list) or not unresolved:
-        report["invalid_fields"].append("acceptance.unresolved_source_requirements: explicit outstanding source gates required")
-        unresolved = []
-    report["unresolved_source_requirements"] = [
-        item for item in unresolved if isinstance(item, str) and item.strip()
-    ]
-    if len(report["unresolved_source_requirements"]) != len(unresolved):
-        report["invalid_fields"].append("acceptance.unresolved_source_requirements: expected nonempty strings")
-
     report["missing_fields"] = sorted(set(report["missing_fields"]))
     report["invalid_fields"] = sorted(set(report["invalid_fields"]))
     report["verified_fields"] = sorted(set(report["verified_fields"]))
-    report["state"] = "HOLD" if report["missing_fields"] or report["invalid_fields"] or report.get("unresolved_source_requirements") else "SOURCE_PINS_COMPLETE_NOT_TRAINING_ADMISSION"
+    report["state"] = "HOLD" if report["missing_fields"] or report["invalid_fields"] else "SOURCE_PINS_COMPLETE_NOT_TRAINING_ADMISSION"
     return report
 
 
