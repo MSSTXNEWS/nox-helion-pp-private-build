@@ -20,12 +20,13 @@ jobs:
       startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
       !contains(github.event.comment.body, ' inspect') &&
       !contains(github.event.comment.body, ' audit') &&
+      !contains(github.event.comment.body, ' audit_gpu_inventory') &&
       !contains(github.event.comment.body, ' source_attest') &&
       !contains(github.event.comment.body, ' gpu_inventory') &&
-      !contains(github.event.comment.body, ' audit_gpu_inventory') &&
       !contains(github.event.comment.body, ' browser_qa') &&
       !contains(github.event.comment.body, ' refill_snapshot ') &&
-      !contains(github.event.comment.body, ' source_export ')
+      !contains(github.event.comment.body, ' source_export ') &&
+      !contains(github.event.comment.body, ' page_cache_reclaim')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -35,12 +36,10 @@ jobs:
           python3 - <<'PY'
           import json,os,re
           e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
-          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop_preflight|emergency_stop|deploy|backup|drive_probe|memfd_audit|page_cache_reclaim)',e['comment']['body'])
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop_preflight|emergency_stop|deploy|backup|drive_probe|memfd_audit)',e['comment']['body'])
           assert m, 'Invalid bounded maintenance command'
           assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
           assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
-          if m[2]=='page_cache_reclaim' and m[1]!='ad672c0682cab39034bb495ed54cf49fe696c36e':
-              raise SystemExit('HOLD_PAGE_CACHE_APPROVED_SOURCE')
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:
               f.write('sha='+m[1]+'\naction='+m[2]+'\n')
           PY
@@ -94,16 +93,13 @@ jobs:
           import os,py_compile
           from pathlib import Path
           a=os.environ['NOX_ACTION']
-          assert a in ('audit','inspect','stage','repair','lifeline','emergency_stop','emergency_stop_preflight','deploy','backup','drive_probe','memfd_audit','page_cache_reclaim')
+          assert a in ('audit','inspect','stage','repair','lifeline','emergency_stop','emergency_stop_preflight','deploy','backup','drive_probe','memfd_audit')
           py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
           if a=='backup':
               for name in ('owner_cp55_cipher','owner_cp55_scope','owner_cp55_native','owner_cp55_runner','auth_prefix_reuse'):
                   py_compile.compile('nox-control/'+name+'.py',doraise=True)
           elif a=='memfd_audit':
               py_compile.compile('nox-control/owner_native_memfd_audit.py',doraise=True)
-          elif a=='page_cache_reclaim':
-              py_compile.compile('nox-control/owner_page_cache_reclaim_entry.py',doraise=True)
-              py_compile.compile('nox-control/owner_storage_reclaim.py',doraise=True)
           else:
               source=('nox-control/owner_native_lifeline_observer.py' if a=='lifeline'
                       else 'nox-control/owner_native_'+a+'.py')
@@ -471,8 +467,91 @@ jobs:
         env:
           NOX2: ${{ secrets.NOX2 }}
         run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+  owner-page-cache-reclaim:
+    # One exact, separately gated owner command, bound to an immutable reviewed source commit.
+    if: >-
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.actor == 'MSSTXNEWS' &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.issue.number == 256 &&
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      endsWith(github.event.comment.body, ' page_cache_reclaim')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Validate exact owner source pin before checkout
+        id: request
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          body=event.get('comment',{}).get('body','')
+          match=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) page_cache_reclaim',body)
+          if not match or match[1] != '515e9b719067669686205ee6098f866b39f3759d':
+              raise SystemExit('HOLD_PAGE_CACHE_APPROVED_SOURCE')
+          if (event.get('comment',{}).get('user',{}).get('id') != 340718567
+                  or event.get('comment',{}).get('author_association') != 'OWNER'
+                  or event.get('sender',{}).get('id') != 340718567
+                  or event.get('repository',{}).get('owner',{}).get('id') != 340718567
+                  or event.get('repository',{}).get('full_name') != 'MSSTXNEWS/nox-helion-pp-private-build'
+                  or event.get('issue',{}).get('number') != 256):
+              raise SystemExit('HOLD_PAGE_CACHE_OWNER_CONTEXT')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('sha='+match[1]+'\n')
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.request.outputs.sha }}
+          persist-credentials: false
+      - name: Verify exact source, helper blob, and syntax before credentials
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, subprocess
+          from pathlib import Path
+          source='515e9b719067669686205ee6098f866b39f3759d'
+          helper_commit='5fb2c3d91b3c9a241c8b20168d3f674ae13727eb'
+          helper_blob='08ada5def3e96761498a3840445459ee3d672742'
+          if os.environ.get('NOX_PINNED_SOURCE_SHA') != source:
+              raise SystemExit('HOLD_PAGE_CACHE_SOURCE_PIN')
+          if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() != source:
+              raise SystemExit('HOLD_PAGE_CACHE_CHECKOUT_MISMATCH')
+          raw=Path('nox-control/owner_storage_reclaim.py').read_bytes()
+          blob=hashlib.sha1(b'blob '+str(len(raw)).encode('ascii')+b'\0'+raw).hexdigest()
+          if blob != helper_blob:
+              raise SystemExit('HOLD_PAGE_CACHE_HELPER_BLOB')
+          entry=Path('nox-control/owner_page_cache_reclaim_entry.py').read_text(encoding='utf-8')
+          operator=Path('nox-control/owner_native_operator.py').read_text(encoding='utf-8')
+          for marker in ("HELPER_SOURCE_COMMIT = '"+helper_commit+"'", "HELPER_BLOB_SHA = '"+helper_blob+"'"):
+              if marker not in entry:
+                  raise SystemExit('HOLD_PAGE_CACHE_ENTRY_PINS')
+          for marker in ("PAGE_CACHE_RECLAIM_HELPER_SOURCE_COMMIT='"+helper_commit+"'", "PAGE_CACHE_RECLAIM_HELPER_BLOB_SHA='"+helper_blob+"'"):
+              if marker not in operator:
+                  raise SystemExit('HOLD_PAGE_CACHE_OPERATOR_PINS')
+          for path in ('nox-control/owner_storage_reclaim.py',
+                       'nox-control/owner_page_cache_reclaim_entry.py',
+                       'nox-control/owner_native_operator.py'):
+              compile(Path(path).read_bytes(),path,'exec')
+          PY
+      - name: Execute only page_cache_reclaim for this owner request
+        id: execute
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: python3 nox-control/owner_native_operator.py page_cache_reclaim
+      - name: Detach only this run's temporary public key after a failed or cancelled execute
+        if: >-
+          always() &&
+          (steps.execute.outcome == 'failure' ||
+           steps.execute.outcome == 'cancelled')
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
   owner-audit-gpu-inventory:
-    # One approved, read-only audit + GPU inventory action in one authenticated SSH session.
+    # One approved, read-only bounded census + GPU inventory action in one authenticated SSH session.
     if: >-
       github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
       github.actor == 'MSSTXNEWS' &&
@@ -498,15 +577,15 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         if: success()
         with:
-          ref: \${{ steps.approved.outputs.source_sha }}
+          ref: ${{ steps.approved.outputs.source_sha }}
           path: source
           persist-credentials: false
       - name: Validate pinned composite bundle before credentials
         if: success()
         working-directory: source
         env:
-          NOX_PINNED_SOURCE_SHA: \${{ steps.approved.outputs.source_sha }}
-          NOX_ACTION: \${{ steps.approved.outputs.action }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.approved.outputs.source_sha }}
+          NOX_ACTION: ${{ steps.approved.outputs.action }}
         run: |
           python3 - <<'PY'
           import hashlib, os, py_compile, re, subprocess
@@ -521,12 +600,14 @@ jobs:
               'nox-control/owner_native_audit_gpu_inventory_entry.py',
               'nox-control/pinned/owner_audit_gpu_v1/owner_native_audit.py',
               'nox-control/pinned/owner_audit_gpu_v1/owner_native_gpu_inventory.py',
+              'nox-control/pinned/owner_audit_gpu_v1/owner_storage_reclaim.py',
           )
           for path in paths:
               py_compile.compile(path,doraise=True)
           expected={
               'nox-control/pinned/owner_audit_gpu_v1/owner_native_audit.py':'e5c439c6733fcb276bec58dbf8af5193694645ac',
               'nox-control/pinned/owner_audit_gpu_v1/owner_native_gpu_inventory.py':'3a3ff33e7709539d5ff6ab6b8614d694a9d2becb',
+              'nox-control/pinned/owner_audit_gpu_v1/owner_storage_reclaim.py':'569c8f727d1c3b2bee656b03f5766771ea4220ef',
           }
           for path,want in expected.items():
               raw=Path(path).read_bytes()
@@ -538,7 +619,7 @@ jobs:
         if: success()
         working-directory: source
         env:
-          NOX_PINNED_SOURCE_SHA: \${{ steps.approved.outputs.source_sha }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.approved.outputs.source_sha }}
           PYTHONPATH: nox-control
         run: |
           python3 -B - <<'PY'
@@ -546,13 +627,13 @@ jobs:
           authorize_event('audit_gpu_inventory')
           print('NOX_OWNER_AUDIT_GPU_INVENTORY_SOURCE_AUTH=PASS')
           PY
-      - name: Execute pinned read-only audit then GPU inventory in one session
+      - name: Execute bounded process census then GPU inventory in one session
         id: execute
         if: success()
         working-directory: source
         env:
-          NOX2: \${{ secrets.NOX2 }}
-          NOX_PINNED_SOURCE_SHA: \${{ steps.approved.outputs.source_sha }}
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.approved.outputs.source_sha }}
         run: python3 -B nox-control/owner_native_operator.py audit_gpu_inventory
       - name: Always detach only this run temporary public key
         if: >-
@@ -560,6 +641,6 @@ jobs:
           (steps.execute.outcome == 'failure' ||
            steps.execute.outcome == 'cancelled')
         env:
-          NOX2: \${{ secrets.NOX2 }}
+          NOX2: ${{ secrets.NOX2 }}
         run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
 

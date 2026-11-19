@@ -9,8 +9,93 @@ REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'audit': 'nox-control/owner_native_audit.py', 'audit_gpu_inventory': 'nox-control/owner_native_audit_gpu_inventory_entry.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
+PAGE_CACHE_RECLAIM_HELPER_SOURCE_COMMIT='5fb2c3d91b3c9a241c8b20168d3f674ae13727eb'
+PAGE_CACHE_RECLAIM_HELPER_PATH='nox-control/owner_storage_reclaim.py'
+PAGE_CACHE_RECLAIM_HELPER_BLOB_SHA='08ada5def3e96761498a3840445459ee3d672742'
+PAGE_CACHE_RECLAIM_MARKER='NOX_MAINT_PAGE_CACHE_RECLAIM='
+PAGE_CACHE_RECLAIM_COMPLETE='NOX_MAINT_PAGE_CACHE_RECLAIM_COMPLETE=true'
+PAGE_CACHE_RECLAIM_SCHEMA='NOX_OWNER_PAGE_CACHE_RECLAIM_GUARD_V1'
+FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'audit': 'nox-control/owner_native_audit.py', 'audit_gpu_inventory': 'nox-control/owner_native_audit_gpu_inventory_entry.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'page_cache_reclaim': 'nox-control/owner_page_cache_reclaim_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
 MASTER=None
+
+
+def _validate_page_cache_reclaim_receipt(line,request_id,source_sha):
+    if not isinstance(line,str) or not line.startswith(PAGE_CACHE_RECLAIM_MARKER):
+        raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_MARKER')
+    try:value=json.loads(line[len(PAGE_CACHE_RECLAIM_MARKER):])
+    except (TypeError,ValueError):raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_JSON')
+    keys={'schema','action','request','source_sha','helper_source_commit','helper_blob_sha',
+          'audit_request','audit_sha256','state','files_advised','logical_bytes_advised',
+          'actual_reclaimed_bytes_confirmed','reclaim_amount_unverified','files_unlinked',
+          'model_files_touched','weights_or_S03_modified','processes_killed','services_restarted',
+          'native_job_admitted','browser_runtime_admitted','browser_disk_prerequisite_checked',
+          'headroom_at_start_bytes','two_gib_admission_memory_threshold_met_after',
+          'browser_memory_prerequisite_met_after','stop_reason',
+          'public_output_contains_paths_or_private_text'}
+    if not isinstance(value,dict) or set(value)!=keys:
+        raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_SHAPE')
+    if (value.get('schema')!=PAGE_CACHE_RECLAIM_SCHEMA
+            or value.get('action')!='PAGE_CACHE_RECLAIM'
+            or value.get('request')!=str(request_id)
+            or value.get('audit_request')!=str(request_id)
+            or value.get('source_sha')!=source_sha
+            or value.get('helper_source_commit')!=PAGE_CACHE_RECLAIM_HELPER_SOURCE_COMMIT
+            or value.get('helper_blob_sha')!=PAGE_CACHE_RECLAIM_HELPER_BLOB_SHA
+            or not re.fullmatch(r'[0-9]{1,20}',value.get('request',''))
+            or not re.fullmatch(r'[0-9a-f]{40}',value.get('source_sha',''))
+            or not isinstance(value.get('state'),str)
+            or not re.fullmatch(r'[A-Z0-9_]{1,100}',value['state'])
+            or type(value.get('reclaim_amount_unverified')) is not bool
+            or value.get('reclaim_amount_unverified') is not True
+            or value.get('actual_reclaimed_bytes_confirmed')!=0
+            or value.get('files_unlinked')!=0
+            or value.get('model_files_touched') is not False
+            or value.get('weights_or_S03_modified') is not False
+            or value.get('processes_killed')!=0
+            or value.get('services_restarted')!=0
+            or value.get('native_job_admitted') is not False
+            or value.get('browser_runtime_admitted') is not False
+            or value.get('browser_disk_prerequisite_checked') is not False
+            or value.get('public_output_contains_paths_or_private_text') is not False):
+        raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_IDENTITY')
+    if type(value.get('files_advised')) is not int or not 0<=value['files_advised']<=32:
+        raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_FILE_COUNT')
+    if type(value.get('logical_bytes_advised')) is not int or not 0<=value['logical_bytes_advised']<=4*1024**3:
+        raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_BUDGET')
+    headroom=value.get('headroom_at_start_bytes')
+    if headroom is not None and (type(headroom) is not int or headroom<0):
+        raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_HEADROOM')
+    for key in ('two_gib_admission_memory_threshold_met_after','browser_memory_prerequisite_met_after'):
+        if value[key] is not None and type(value[key]) is not bool:
+            raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_RESOURCE_FLAGS')
+    stop_reason=value.get('stop_reason')
+    if stop_reason is not None and (not isinstance(stop_reason,str)
+            or not re.fullmatch(r'[A-Z0-9_]{1,100}',stop_reason)):
+        raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_STOP_REASON')
+    audit_sha=value.get('audit_sha256')
+    if value['state'].startswith('HOLD_'):
+        if audit_sha is not None and not re.fullmatch(r'[0-9a-f]{64}',audit_sha):
+            raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_AUDIT_SHA')
+    elif not isinstance(audit_sha,str) or not re.fullmatch(r'[0-9a-f]{64}',audit_sha):
+        raise RuntimeError('HOLD_PAGE_CACHE_RECEIPT_AUDIT_SHA')
+    return value
+
+def _forward_page_cache_reclaim_stdout(stdout,request_id,source_sha):
+    lines=stdout.splitlines()
+    payloads=[(i,line) for i,line in enumerate(lines) if line.startswith(PAGE_CACHE_RECLAIM_MARKER)]
+    completions=[(i,line) for i,line in enumerate(lines) if line==PAGE_CACHE_RECLAIM_COMPLETE]
+    markers=[(i,line) for i,line in enumerate(lines) if line.startswith('NOX_MAINT_')]
+    if len(payloads)!=1 or len(markers) not in (1,2):
+        raise RuntimeError('HOLD_PAGE_CACHE_OUTPUT_SHAPE')
+    value=_validate_page_cache_reclaim_receipt(payloads[0][1],request_id,source_sha)
+    if completions:
+        if (len(completions)!=1 or len(markers)!=2 or payloads[0][0]>=completions[0][0]
+                or value['state'].startswith('HOLD_')):
+            raise RuntimeError('HOLD_PAGE_CACHE_OUTPUT_SHAPE')
+        return [payloads[0][1],PAGE_CACHE_RECLAIM_COMPLETE]
+    if len(markers)!=1 or not value['state'].startswith('HOLD_'):
+        raise RuntimeError('HOLD_PAGE_CACHE_OUTPUT_SHAPE')
+    return [payloads[0][1]]
 
 def _subprocess_env_without_nox2():
     """Never forward the owner API credential to child processes."""
@@ -174,6 +259,7 @@ def run_native(action,request_id):
         pinned_helpers=(
             ('__NOX_AUDIT_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_native_audit.py','e5c439c6733fcb276bec58dbf8af5193694645ac'),
             ('__NOX_GPU_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_native_gpu_inventory.py','3a3ff33e7709539d5ff6ab6b8614d694a9d2becb'),
+            ('__NOX_STORAGE_RECLAIM_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_storage_reclaim.py','569c8f727d1c3b2bee656b03f5766771ea4220ef'),
         )
         for placeholder,path,expected_blob in pinned_helpers:
             raw=Path(path).read_bytes()
@@ -183,7 +269,18 @@ def run_native(action,request_id):
             if payload.count(placeholder)!=1:
                 raise RuntimeError('HOLD_COMPOSITE_HELPER_BUNDLE')
             payload=payload.replace(placeholder,json.dumps(base64.b64encode(raw).decode('ascii')))
-    if action == 'lifeline':
+    elif action == 'page_cache_reclaim':
+        helper_raw=Path(PAGE_CACHE_RECLAIM_HELPER_PATH).read_bytes()
+        if len(helper_raw)>1024*1024:
+            raise RuntimeError('HOLD_PAGE_CACHE_HELPER_SIZE')
+        header=b'blob '+str(len(helper_raw)).encode('ascii')+bytes([0])
+        if hashlib.sha1(header+helper_raw).hexdigest()!=PAGE_CACHE_RECLAIM_HELPER_BLOB_SHA:
+            raise RuntimeError('HOLD_PAGE_CACHE_HELPER_PIN')
+        placeholder='__NOX_STORAGE_HELPER_B64__'
+        if payload.count(placeholder)!=1:
+            raise RuntimeError('HOLD_PAGE_CACHE_ENTRY_BUNDLE')
+        payload=payload.replace(placeholder,json.dumps(base64.b64encode(helper_raw).decode('ascii')))
+    elif action == 'lifeline':
         assets={}
         for path in ('nox-control/nox_native_lifeline.py',
                      'nox-control/lifeline.example.json',
@@ -312,12 +409,16 @@ def run_native(action,request_id):
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
     script=f"set -euo pipefail\nNOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
-    timeout=150 if action in ('audit','inspect','drive_probe','emergency_stop_preflight','audit_gpu_inventory') else 900
+    timeout=360 if action=='audit_gpu_inventory' else 150 if action in ('audit','inspect','drive_probe','emergency_stop_preflight','page_cache_reclaim') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
     r=_safe_subprocess_run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
-    for line in r.stdout.splitlines():
-        if line.startswith('NOX_MAINT_') and len(line)<180000:print(line,flush=True)
+    if action=='page_cache_reclaim':
+        for line in _forward_page_cache_reclaim_stdout(r.stdout,int(request_id),os.environ.get('NOX_PINNED_SOURCE_SHA','')):
+            print(line,flush=True)
+    else:
+        for line in r.stdout.splitlines():
+            if line.startswith('NOX_MAINT_') and len(line)<180000:print(line,flush=True)
     print('NOX_MAINT_REMOTE_EXIT_CODE='+str(r.returncode),flush=True)
     if r.returncode:
         err=r.stderr.lower()

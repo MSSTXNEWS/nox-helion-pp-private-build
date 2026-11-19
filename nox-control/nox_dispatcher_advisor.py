@@ -27,6 +27,23 @@ def assess(snapshot):
             "Provide authenticated current metrics for: " + ", ".join(missing))
         return issues
     onehost, s03, trainer, gpu, disk = [snapshot[x] for x in required]
+    native = snapshot.get("native_queue")
+    if isinstance(native, dict):
+        workers = native.get("workers")
+        state = native.get("admission_state")
+        if (state == "NATIVE_QUEUE_REVIEWED_CATALOG_EXHAUSTED"
+                and native.get("jobs_started") == 0 and isinstance(workers, list)
+                and workers and all(isinstance(w,dict)
+                                    and w.get("state") == "RUNNING"
+                                    and w.get("current_task") is None for w in workers)):
+            add("IDLE_NATIVE_CATALOG_EXHAUSTED", "urgent",
+                "Keep healthy workers running. Publish one current exact TaskID through the existing owner/CAS reviewed publisher; a relay manifest is not executable. Do not duplicate old or terminal tasks.")
+        if native.get("maintenance_busy") is True or native.get("active_claims") is True:
+            add("NATIVE_OWNER_LEASE_BUSY", "hold",
+                "Do not cancel/replace a live claim or force a second publisher. Reconcile the existing owner lease and exact TaskID receipt, then retry once on new owner state.")
+        if type(native.get("resource_headroom_bytes")) is int and native["resource_headroom_bytes"] < 2*1024**3:
+            add("NATIVE_CGROUP_MEMORY_PRESSURE", "urgent",
+                "Keep the serving model, S03 and STOP intact. Native CPU work only with fresh low-memory admission; defer extra model/worker/RAM staging until measured headroom recovers.")
     if onehost.get("healthy") is not True:
         add("ONEHOST_DEGRADED", "urgent", "Inspect OneHost health and preserve single dispatcher; repair only by local allowlist.")
     if s03.get("readback_verified") is not True:

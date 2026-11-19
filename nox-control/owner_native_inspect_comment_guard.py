@@ -22,7 +22,7 @@ APPROVED_SOURCE_BY_ACTION = {
     "audit": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",  # merged PR #485
     "source_attest": "3e399979e5b2e5ac16c1504542bd5cace989ddd3",  # updated chat/S03 static scope #520
     "gpu_inventory": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",  # exact-head source tests green
-    "audit_gpu_inventory": "c85c6cf63f15838d1b6c02fd72157a507b67eae8",  # composite exact source; helpers remain independently pinned
+    "audit_gpu_inventory": "c85c6cf63f15838d1b6c02fd72157a507b67eae8",  # transitional composite pin; finalized after source commit
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
     "refill_snapshot": "3a0bf379988f5b9b0828822a576461bb8730f12b",
     "source_export": "845c76d44676d56157125e729db81b45e006cf92",  # exact pinned encrypted-only #415 source export
