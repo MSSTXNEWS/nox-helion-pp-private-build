@@ -103,7 +103,8 @@ async def chat_route(request):
     def test_route_direct_call_metadata_is_bounded(self):
         calls = "\\n".join(f"    f{i}()" for i in range(40))
         raw = (
-            '@app.post("/api/nox/chat")\\ndef chat_route():\\n'
+            '@app.post("/api/nox/chat")\\n'
+            'def chat_route():\\n'
             + calls
             + "\\n    return None\\n"
         ).encode()
