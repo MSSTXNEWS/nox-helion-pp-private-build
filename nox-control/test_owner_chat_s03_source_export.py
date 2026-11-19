@@ -215,6 +215,48 @@ class SourceExportTests(unittest.TestCase):
                 self.assertFalse(path.exists())
                 self.assertNotIn("NOX2", os.environ)
 
+    def test_child_process_environments_never_receive_nox2(self):
+        token = "test-owner-api-token"
+        with mock.patch.dict(os.environ, {"NOX2": token, "SAFE_MARKER": "present"}, clear=True):
+            with mock.patch.object(operator.subprocess, "run", return_value=mock.sentinel.child) as run:
+                self.assertIs(operator._safe_subprocess_run(["ssh-keygen"]), mock.sentinel.child)
+            run_env = run.call_args.kwargs["env"]
+            self.assertNotIn("NOX2", run_env)
+            self.assertEqual(run_env["SAFE_MARKER"], "present")
+
+            with mock.patch.object(operator.subprocess, "check_output", return_value="head") as check_output:
+                self.assertEqual(operator._safe_subprocess_check_output(["git", "rev-parse"]), "head")
+            check_env = check_output.call_args.kwargs["env"]
+            self.assertNotIn("NOX2", check_env)
+            self.assertEqual(check_env["SAFE_MARKER"], "present")
+
+    def test_provider_cleanup_uses_explicit_token_without_environment(self):
+        import sys
+        repo_root = ROOT.parent
+        if str(repo_root) not in sys.path:
+            sys.path.insert(0, str(repo_root))
+        from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as provider
+
+        token = "test-owner-api-token"
+        with tempfile.TemporaryDirectory() as td:
+            runner = Path(td)
+            tracked_file = runner / "tracked.json"
+            tracked_file.write_text(json.dumps({"public": "test-public-key", "key_id": 7}), encoding="utf-8")
+            with (
+                mock.patch.object(provider, "RUNNER", runner),
+                mock.patch.object(provider, "TRACK", tracked_file),
+                mock.patch.object(provider, "_valid_public_key", return_value=True),
+                mock.patch.object(provider, "match", side_effect=[[7], []]) as match,
+                mock.patch.object(provider, "api", return_value={"success": True}) as api,
+                mock.patch.object(provider, "_remove_local_files", return_value=True),
+                mock.patch.dict(os.environ, {}, clear=True),
+            ):
+                self.assertTrue(provider.cleanup(token))
+
+        api.assert_called_once_with("DELETE", f"/instances/{provider.INSTANCE_ID}/ssh/7", token)
+        self.assertEqual(match.call_args_list[0].args, (token, "test-public-key"))
+        self.assertEqual(match.call_args_list[1].args, (token, "test-public-key"))
+
     def test_export_artifact_is_exclusive_and_private_mode(self):
         with tempfile.TemporaryDirectory() as td:
             old = os.getcwd()
