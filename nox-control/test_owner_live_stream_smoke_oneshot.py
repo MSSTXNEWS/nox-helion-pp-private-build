@@ -38,6 +38,19 @@ class DirectStreamSmokeTests(unittest.TestCase):
         self.assertIn('pin="9fedaefbe39f4cac8a47d77bb0dada2ccf09c43ec38a5624869d3a00c0fbe5a3"', inner)
         self.assertNotIn('cc1437ce8c3bfbbc4259ffdbe299bf3b8721d4b1bb09c88565ccb6cb9fdb95eb', inner)
 
+    def test_cold_file_cache_profile_preserves_boundaries_and_oom_psi_gates(self):
+        _, inner, _ = embedded_source()
+        self.assertIn('free>=512*1024**2 and cold>=4*1024**3', inner)
+        self.assertIn('free>=256*1024**2 and cold>=12*1024**3', inner)
+        self.assertIn('if not (normal or cold_cache_profile):', inner)
+        self.assertIn('HOLD_LIVE_SMOKE_OOM', inner)
+        self.assertIn('HOLD_LIVE_SMOKE_PRESSURE', inner)
+        self.assertIn('HOLD_LIVE_SMOKE_MODEL_BUSY', inner)
+        self.assertIn('COLD_CACHE_256M_12G', inner)
+        self.assertNotIn('memory.reclaim', inner)
+        self.assertNotIn('drop_caches', inner)
+        self.assertNotIn('supervisorctl restart', inner)
+
     def test_existing_model_route_and_no_server_mutations(self):
         _,inner,_=embedded_source()
         self.assertIn('"/root/nox/venv/bin/python"', (ROOT/'owner_live_stream_smoke_oneshot.py').read_text())
