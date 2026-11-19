@@ -307,7 +307,11 @@ class SynapticBrain:
         if not self._gate(session):
             return {"state": "HOLD_SCOPE_REVOKED"}
         if self.cfg.require_memory and results.get("C02", {}).get("state") != "OBSERVED":
-            return {"state": "HOLD_MEMORY_NOT_READY", "memory_state": results.get("C02", {}).get("state"),
+            memory_state = results.get("C02", {}).get("state")
+            hold_state = ("HOLD_CONTEXT_TOO_LARGE" if memory_state in
+                          ("HOLD_S03_RECORD_TOO_LARGE", "HOLD_S03_SOURCE_TOO_LARGE")
+                          else "HOLD_MEMORY_NOT_READY")
+            return {"state": hold_state, "memory_state": memory_state,
                     "elapsed_ms": round((time.perf_counter() - started) * 1000, 3)}
         compact = {k: {"name": CORE_NAMES[k], "signals": results[k]} for k in CORE_NAMES}
         text = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
