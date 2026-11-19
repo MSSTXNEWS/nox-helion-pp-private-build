@@ -73,6 +73,24 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(contradictory['state'], 'PRESSURE_CRITICAL')
         self.assertFalse(contradictory['native_bounded_cpu_eligible'])
         self.assertEqual(contradictory['next_action'], 'RESPECT_EXISTING_RESOURCE_HOLD')
+        # Even noncritical elevated pressure must yield to foreground chat.
+        # A contradictory upstream eligible=True cannot be promoted to an
+        # advisory background-work approval.
+        for elevated_budget, elevated_ratio in (
+                ({**budget, 'memory_psi_some_avg10': 3,
+                  'memory_psi_full_avg10': .3}, .5),
+                ({**budget, 'memory_psi_some_avg10': 0,
+                  'memory_psi_full_avg10': 0}, .86)):
+            with self.subTest(elevated_ratio=elevated_ratio):
+                elevated = refill.memory_governor_projection({
+                    'bounded_cpu_budget': elevated_budget,
+                    'bounded_cpu_decision': {
+                        'projected_memory_ratio': elevated_ratio,
+                        'eligible': True}})
+                self.assertEqual(elevated['state'], 'PRESSURE_ELEVATED')
+                self.assertFalse(elevated['native_bounded_cpu_eligible'])
+                self.assertEqual(elevated['next_action'],
+                                 'RESPECT_EXISTING_RESOURCE_HOLD')
         self.assertEqual(refill.memory_governor_projection({})['state'],
                          'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE')
 
