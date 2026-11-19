@@ -50,6 +50,7 @@ AUDIT_GUARD_START_TICKS = 172312630
 REVIEWED_COMMAND = ("/usr/bin/python3 -u /root/nox/scripts/nox_native_lifeline.py "
                     "--policy /etc/nox/lifeline.json "
                     "--state /root/nox/state/lifeline/state.json")
+REVIEWED_EXECUTABLE = "/usr/bin/python3"
 REVIEWED_ARGV = ("/usr/bin/python3", "-u", "/root/nox/scripts/nox_native_lifeline.py",
                  "--policy", "/etc/nox/lifeline.json",
                  "--state", "/root/nox/state/lifeline/state.json")
@@ -136,9 +137,14 @@ def process_identity(pid):
             os.close(cmd_fd)
     except OSError:
         fail("GUARD_PROCESS_IDENTITY")
+    try:
+        exe_path = os.readlink(base / "exe")
+        expected_exe = os.path.realpath(REVIEWED_EXECUTABLE)
+    except OSError:
+        fail("GUARD_PROCESS_IDENTITY")
     after_ticks = start_ticks()
     if (before_ticks != after_ticks or len(cmd_raw) > 4096 or
-        not cmd_raw.endswith(b"\0")):
+        not cmd_raw.endswith(b"\0") or exe_path != expected_exe):
         fail("GUARD_PROCESS_IDENTITY")
     try:
         argv = tuple(part.decode("utf-8") for part in cmd_raw[:-1].split(b"\0"))
@@ -146,7 +152,7 @@ def process_identity(pid):
         fail("GUARD_PROCESS_IDENTITY")
     if not argv or any(not part for part in argv):
         fail("GUARD_PROCESS_IDENTITY")
-    return {"pid": pid, "start_ticks": before_ticks, "argv": argv}
+    return {"pid": pid, "start_ticks": before_ticks, "argv": argv, "exe": exe_path}
 
 
 def _path_identity(info):
@@ -345,6 +351,9 @@ def reconcile_audited_config(script, policy, reviewed_config, request):
     if (current_systemd["active"] != "active" or current_systemd["active_rc"] != 0 or
         current_systemd["enabled"] not in ("enabled", "disabled")):
         fail("SUPERVISOR_SYSTEMD_NOT_ACTIVE")
+    if ((current_systemd["enabled"] == "enabled" and current_systemd["enabled_rc"] != 0) or
+        (current_systemd["enabled"] == "disabled" and current_systemd["enabled_rc"] != 1)):
+        fail("SUPERVISOR_SYSTEMD_ENABLE_STATE")
     AUDIT_SYSTEMD_PREIMAGE = current_systemd.copy()
 
     reviewed_command = _config_assignment(reviewed_config, b"command")[1]
@@ -534,7 +543,8 @@ def recover_audited_preimage():
                 fail("AUDIT_ROLLBACK_SYSTEMD_DISABLE")
         systemd = supervisor_systemd_state()
         if (systemd["active"] != "active" or systemd["active_rc"] != 0 or
-            systemd["enabled"] != original_enabled):
+            systemd["enabled"] != original_enabled or
+            systemd["enabled_rc"] != (0 if original_enabled == "enabled" else 1)):
             fail("AUDIT_ROLLBACK_SYSTEMD_READBACK")
 
     AUDIT_SCRIPT_BACKUP = None
@@ -908,6 +918,10 @@ def main():
           "owner_stop_preserved": True, "owner_maintenance_preserved": True,
           "maintenance_lock": "EXCLUSIVE_HELD_THROUGH_INSTALL",
           "guard_pid": active["pid"], "guard_policy_enabled": False,
+          "guard_executable": (final_identity["exe"]
+                               if AUDIT_CONFIG_RECONCILED else None),
+          "reviewed_executable": (REVIEWED_EXECUTABLE
+                                  if AUDIT_CONFIG_RECONCILED else None),
           "guard_start_ticks": (AUDIT_GUARD_IDENTITY["start_ticks"]
                                 if AUDIT_GUARD_IDENTITY else None),
           "supervisor_systemd_active": (AUDIT_SYSTEMD_STATE["active"]
@@ -917,6 +931,21 @@ def main():
           "cgroup_memory": AUDIT_MEMORY_REPORT,
           "cgroup_memory_at": AUDIT_MEMORY_TIMESTAMP,
           "memory_floor_bytes": 2 * 1024 ** 3,
+          "owner_native_audit_required": True,
+          "owner_native_audit_scope": "--lifeline-only read-only pre/post evidence",
+          "owner_native_audit_source": "nox-control/owner_native_audit.py",
+          "source_scope_paths": [
+              "nox-control/owner_native_lifeline.py",
+              "nox-control/nox_native_lifeline.py",
+              "nox-control/owner_native_audit.py"],
+          "source_scope_reason": (
+              "installer reconciles only pinned files; guard reports bounded cgroup telemetry; "
+              "independent audit verifies read-only pre/post process, service, and memory evidence"),
+          "owner_native_audit_reasons": [
+              "independently verify exact /proc/PID/exe, argv, and start ticks",
+              "independently verify Supervisor/systemd state and fresh cgroup telemetry",
+              "capture read-only evidence immediately before and after reconciliation"],
+          "owner_native_audit_completed": False,
           "written_files": len(changes),
           "script_sha256": hashlib.sha256(script).hexdigest(),
           "no_weights_or_training_changed": True})
