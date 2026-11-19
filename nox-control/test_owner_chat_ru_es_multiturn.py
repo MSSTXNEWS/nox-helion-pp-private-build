@@ -62,6 +62,30 @@ class OwnerRuEsContinuity(unittest.TestCase):
         self.assertFalse(canonical_s03_proof_valid(aliased, aliased, DIALOG, transcript))
         self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
 
+    def test_canonical_s03_rejects_later_turn_or_blank_receipt_identity(self):
+        # An event from a third or later turn cannot certify exactly two turns.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        for invalid_sequence in (3, 99, True, "2"):
+            tampered_writer = dict(writer, sequence=invalid_sequence)
+            tampered_readback = dict(readback, sequence=invalid_sequence)
+            self.assertFalse(canonical_s03_proof_valid(
+                tampered_writer, tampered_readback, DIALOG, transcript))
+        for invalid_key in ("event_id", "turn_id"):
+            tampered_writer = dict(writer, **{invalid_key: "  "})
+            tampered_readback = dict(readback, **{invalid_key: "  "})
+            self.assertFalse(canonical_s03_proof_valid(
+                tampered_writer, tampered_readback, DIALOG, transcript))
+        self.assertFalse(canonical_s03_proof_valid(
+            dict(writer, dialog_id="  "), dict(readback, dialog_id="  "),
+            "  ", transcript))
+        empty_reply = [*transcript[:3], {"role": "assistant", "content": ""}]
+        empty_writer, empty_readback = s03_proof(empty_reply)
+        empty_readback["full_answer_sha256"] = hashlib.sha256(b"").hexdigest()
+        self.assertFalse(canonical_s03_proof_valid(
+            empty_writer, empty_readback, DIALOG, empty_reply))
+
     def test_canonical_s03_rejects_single_turn_even_with_matching_receipt_metadata(self):
         # Before this regression, two messages plus a matching last-answer SHA
         # could masquerade as a complete RU/ES multi-turn S03 acceptance.
