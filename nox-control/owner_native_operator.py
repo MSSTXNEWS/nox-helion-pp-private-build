@@ -191,7 +191,7 @@ def run_native(action,request_id):
                      'nox-control/owner_event_outbox.py','nox-control/owner_chat_browser_qa.py',
                      'nox-control/owner_task_plans.py','nox-control/owner_task_lifecycle.py',
                      'nox-control/owner_task_lifecycle.json','nox-control/owner_senior_gateway.py',
-                     'nox-control/owner_storage_reclaim.py','nox-control/owner_browser_diagnostic.py',
+                     'nox-control/owner_browser_diagnostic.py',
                      'nox-control/owner_storage_remaining_audit.py',
                      'nox-control/owner_s03_diagnostic.py','nox-control/owner_ram_duplicate_reclaim.py',
                      'nox-control/owner_browser_qa_entry.py',
