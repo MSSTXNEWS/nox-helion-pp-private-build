@@ -1,0 +1,23 @@
+name: NOX A2 lossless tool evidence source gate
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_chat_stream_action_routing.py'
+      - 'nox-control/test_owner_chat_stream_action_routing.py'
+      - '.github/workflows/nox-a2-tool-evidence-ci.yml'
+permissions:
+  contents: read
+jobs:
+  tool-followup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: One focused offline multi-turn model-tool regression
+        run: |
+          python3 -m venv .a2-ci
+          . .a2-ci/bin/activate
+          python -m pip install --disable-pip-version-check httpx==0.28.1
+          python -m unittest discover -s nox-control -p 'test_owner_chat_stream_action_routing.py' -v
