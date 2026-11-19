@@ -597,10 +597,11 @@ class Subagents:
         deadline = time.monotonic()+timeout
         for process in self.processes.values():
             process.join(timeout=max(0, deadline-time.monotonic()))
-        if any(process.is_alive() or process.exitcode is None
+        if any(process.is_alive() or process.exitcode != 0
                for process in self.processes.values()):
-            # Preserve every object/queue/reservation for owner recovery. No
-            # terminate(), kill(), or channel close on an unknown lifetime.
+            # Preserve every object/queue/reservation for owner recovery. A
+            # nonzero exit is not a successful graceful release. No terminate(),
+            # kill(), or channel close on an unknown or failed generation.
             raise GateError('HOLD_SUBAGENT_GRACEFUL_SHUTDOWN_UNKNOWN')
         for inbox in self.inboxes.values():
             inbox.cancel_join_thread()

@@ -60,9 +60,10 @@ class FakePipe:
 
 
 class FakeProcess:
-    def __init__(self, pid=123, exits=True):
+    def __init__(self, pid=123, exits=True, exitcode=0):
         self.pid = pid
         self.exits = exits
+        self.result_exitcode = exitcode
         self.alive = True
         self.exitcode = None
         self.join_calls = 0
@@ -73,7 +74,7 @@ class FakeProcess:
         self.join_calls += 1
         if self.exits:
             self.alive = False
-            self.exitcode = 0
+            self.exitcode = self.result_exitcode
 
     def is_alive(self):
         return self.alive
@@ -87,9 +88,9 @@ class FakeProcess:
         self.alive = False
 
 
-def idle_subagents(exits=True, queue_empty=True):
+def idle_subagents(exits=True, queue_empty=True, exitcode=0):
     instance = processes.Subagents.__new__(processes.Subagents)
-    process = FakeProcess(exits=exits)
+    process = FakeProcess(exits=exits, exitcode=exitcode)
     instance.active = {}
     instance.started = {}
     instance.deadlines = {'worker': 1}
@@ -143,6 +144,16 @@ class GracefulShutdownTests(unittest.TestCase):
         self.assertEqual(process.terminate_calls, 0)
         self.assertEqual(process.kill_calls, 0)
         self.assertFalse(instance.inboxes['worker'].closed)
+
+    def test_nonzero_exit_is_not_reported_as_graceful_release(self):
+        instance, process = idle_subagents(exitcode=1)
+        with self.assertRaisesRegex(processes.GateError, 'HOLD_SUBAGENT_GRACEFUL_SHUTDOWN_UNKNOWN'):
+            instance.close_idle(timeout=0.1)
+        self.assertFalse(process.alive)
+        self.assertEqual(process.exitcode, 1)
+        self.assertEqual(process.terminate_calls + process.kill_calls, 0)
+        self.assertFalse(instance.inboxes['worker'].closed)
+        self.assertEqual(instance.processes['worker'], process)
 
 
 def load_dispatcher():
