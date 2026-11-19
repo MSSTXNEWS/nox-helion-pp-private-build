@@ -235,6 +235,7 @@ def _normal_calls(rows,step):
     if not isinstance(rows,list) or len(rows)>8:
         raise StreamFailure('HOLD_TOOL_CALL_COUNT')
     result=[]
+    seen_ids=set()
     for index,row in enumerate(rows):
         if not isinstance(row,dict) or not isinstance(row.get('name'),str):
             raise StreamFailure('HOLD_TOOL_CALL_SHAPE')
@@ -249,7 +250,13 @@ def _normal_calls(rows,step):
         call_id=row.get('id')
         if call_id is not None and (not isinstance(call_id,str) or not 1<=len(call_id)<=160):
             raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
-        result.append({'id':call_id or f'owner_call_{step}_{index}',
+        effective_id=call_id or f'owner_call_{step}_{index}'
+        # A duplicate effective tool_call_id makes the next model message
+        # ambiguous even when a different caller supplied the other ID.
+        if effective_id in seen_ids:
+            raise StreamFailure('HOLD_TOOL_CALL_ID')
+        seen_ids.add(effective_id)
+        result.append({'id':effective_id,
                        'name':row['name'],'arguments':args})
     return result
 

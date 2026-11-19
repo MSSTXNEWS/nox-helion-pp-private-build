@@ -266,6 +266,28 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self.dispatched,[])
                 self.assertTrue(chunks.closed)
 
+    async def test_duplicate_effective_direct_tool_ids_hold_before_dispatch(self):
+        # Both repeated native IDs and explicit-versus-generated collisions
+        # must fail before executing either tool or opening a model stream.
+        for rows in (
+            [{'id':'shared','name':'calculate','arguments':{}},
+             {'id':'shared','name':'calculate','arguments':{}}],
+            [{'id':'owner_call_0_1','name':'calculate','arguments':{}},
+             {'name':'calculate','arguments':{}}],
+        ):
+            with self.subTest(ids=[row.get('id') for row in rows]):
+                native=self.native(heuristic=rows)
+                payload={'messages':[{'role':'user','content':'Compute fixture'}]}
+                with patch.object(stream.httpx,'AsyncClient',
+                                  side_effect=AssertionError('no HTTP on duplicate ID')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute fixture',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(self.dispatched,[])
+                self.assertIn('HOLD_TOOL_CALL_ID',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+
     async def test_model_tool_call_id_at_limit_preserves_native_roundtrip(self):
         valid_id='c'*160
         first=Chunks([frame(calls=[{'index':0,'id':valid_id,
