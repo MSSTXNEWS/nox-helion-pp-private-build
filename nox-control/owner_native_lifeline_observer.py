@@ -452,6 +452,10 @@ def restore_state_artifacts():
     # The dedicated service has been stopped before this runs. Restore only
     # root-owned regular files in our private state directory.
     for name, path in STATE_ARTIFACTS.items():
+        if name not in STATE_ARTIFACT_PREIMAGES:
+            # Snapshot reads do not mutate artifacts; if a read failed midway,
+            # uncaptured paths remain outside this transaction.
+            continue
         original, original_identity = STATE_ARTIFACT_PREIMAGES[name]
         current, current_identity = bounded_read(path, 262_144, allow_absent=True)
         if current == original and current_identity == original_identity:
@@ -692,13 +696,19 @@ if __name__ == "__main__":
                         fail("ROLLBACK_SERVICE_STATE_MISMATCH")
                 restore_state_artifacts()
                 rollback = "PREIMAGE_CONTENT_MODE_OWNER_RESTORED;FILE_INODES_NOT_RESTORABLE"
-            except BaseException:
-                rollback = "HOLD_BACKUPS_AND_INSTALLED_BLOBS_PRESERVED"
+            except BaseException as rollback_exc:
+                reason = type(rollback_exc).__name__.upper()
+                rollback = "ROLLBACK_INCOMPLETE_" + (reason if re.fullmatch(
+                    r"[A-Z0-9_]{1,40}", reason) else "UNKNOWN")
         code = str(exc)
         if not re.fullmatch(r"HOLD_LIFELINE_OBSERVER_[A-Z0-9_]+", code):
             code = "HOLD_LIFELINE_OBSERVER_" + type(exc).__name__.upper()
         emit({"state": "HOLD", "reason": code, "rollback": rollback,
               "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+              "state_directory_preimage": STATE_DIR_PREIMAGE,
+              "state_artifact_preimages": {key: value for key, value in
+                                            STATE_ARTIFACT_PREIMAGES.items()
+                                            if key.endswith(".receipt")},
               "global_supervisor_mutated": False,
               "installed_paths": list(INSTALLED)})
         sys.exit(2)
