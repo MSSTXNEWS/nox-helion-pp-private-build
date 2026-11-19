@@ -43,6 +43,9 @@ def main():
             conventional_main = name == 'owner_browser_qa_entry.py' and result is None
             if not conventional_main and (type(result) is not int or result != 0):
                 raise RuntimeError('HOLD_ACCEPTANCE_COMPONENT_RESULT')
+            # A STOP raised while the final stage ran must not produce success.
+            if any((Path('/root/nox') / flag).exists() for flag in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'state/STOP')):
+                raise RuntimeError('HOLD_OWNER_STOP')
         except (Exception, SystemExit) as exc:
             # A bundled stage can call sys.exit(0) before any durable S03
             # receipt is written. Never accept that as owner batch completion.
