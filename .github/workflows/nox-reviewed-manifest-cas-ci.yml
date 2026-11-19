@@ -3,7 +3,10 @@ on:
   pull_request:
     paths:
       - 'nox-control/systemic_relay_20261118/runtime/owner_systemic_manifest_publisher.py'
+      - 'nox-control/systemic_relay_20261118/runtime/owner_systemic_manifest_backend.py'
+      - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py'
       - 'nox-control/systemic_relay_20261118/runtime/test_owner_systemic_manifest_publisher.py'
+      - 'nox-control/systemic_relay_20261118/runtime/test_owner_systemic_manifest_backend.py'
       - '.github/workflows/nox-reviewed-manifest-cas-ci.yml'
   workflow_dispatch:
 permissions:
@@ -20,5 +23,5 @@ jobs:
       - name: Compile and run publisher contract regressions
         working-directory: nox-control/systemic_relay_20261118/runtime
         run: |
-          python -m py_compile owner_systemic_refill.py owner_systemic_manifest_publisher.py test_owner_systemic_manifest_publisher.py
-          python -m unittest -v test_owner_systemic_manifest_publisher
+          python -m py_compile owner_systemic_refill.py owner_systemic_manifest_publisher.py owner_systemic_manifest_backend.py owner_subagent_dispatcher.py test_owner_systemic_manifest_publisher.py test_owner_systemic_manifest_backend.py
+          python -m unittest -v test_owner_systemic_manifest_publisher test_owner_systemic_manifest_backend
