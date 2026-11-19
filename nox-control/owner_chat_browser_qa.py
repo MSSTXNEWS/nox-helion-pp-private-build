@@ -139,6 +139,18 @@ def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, bod
             and body.get('dialog_id') == dialog_id)
 
 
+def empty_dialog_history_valid(history, dialog_id):
+    """Reject an empty-history response scoped to another dialog before the FIRST POST.
+
+    A query-string dialog_id is not proof of the response's identity. Legacy
+    responses lacking a top-level dialog_id remain compatible.
+    """
+    return (isinstance(history, dict)
+            and isinstance(dialog_id, str) and bool(dialog_id.strip())
+            and ('dialog_id' not in history or history['dialog_id'] == dialog_id)
+            and history.get('messages') == [])
+
+
 def firstturn_history_valid(history, first_prompt, first_answer, dialog_id):
     """Require the first persisted turn to belong to the owner QA dialog.
 
@@ -906,7 +918,7 @@ async def browser_run(report, directory, available):
             await page.wait_for_timeout(350)
             initial=await json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
-            if initial.get('messages')!=[]:
+            if not empty_dialog_history_valid(initial, did):
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_EMPTY')
             report['empty_dialog_history_verified']=True
             report['browser_stage']='QA_EMPTY_SCREENSHOT'

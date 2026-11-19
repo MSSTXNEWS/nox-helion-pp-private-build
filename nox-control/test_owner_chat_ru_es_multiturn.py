@@ -14,6 +14,7 @@ from owner_chat_browser_qa import (
     canonical_s03_proof_valid,
     click_send,
     firstturn_history_valid,
+    empty_dialog_history_valid,
     multiturn_followup_prompt,
     ru_es_context_challenge,
     ru_es_unleaked_first_prompt,
@@ -56,6 +57,28 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_empty_history_scope_must_match_before_first_native_post(self):
+        # An empty list from another dialog must not authorize the first POST.
+        self.assertTrue(empty_dialog_history_valid(
+            {"dialog_id": DIALOG, "messages": []}, DIALOG))
+        self.assertTrue(empty_dialog_history_valid({"messages": []}, DIALOG))
+        for value in (
+            {"dialog_id": "another-session", "messages": []},
+            {"dialog_id": None, "messages": []},
+            {"dialog_id": "", "messages": []},
+            {"messages": [{"role": "user", "content": "unexpected"}]},
+            {"messages": None},
+            {"messages": {}},
+            [],
+            None,
+        ):
+            with self.subTest(value=str(value)[:90]):
+                self.assertFalse(empty_dialog_history_valid(value, DIALOG))
+        self.assertFalse(empty_dialog_history_valid(
+            {"messages": []}, None))
+        self.assertFalse(empty_dialog_history_valid(
+            {"messages": []}, "   "))
+
     def test_first_turn_history_requires_own_dialog_before_es_post(self):
         # The query string alone cannot authenticate a returned S03/history row.
         first = [
