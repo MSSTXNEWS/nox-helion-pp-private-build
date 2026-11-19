@@ -38,7 +38,7 @@ jobs:
           assert m, 'Invalid bounded maintenance command'
           assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
           assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
-          if m[2]=='page_cache_reclaim' and m[1]!='af6103681132c1b88ef4f91d00c4e0d41f15caa5':
+          if m[2]=='page_cache_reclaim' and m[1]!='ad672c0682cab39034bb495ed54cf49fe696c36e':
               raise SystemExit('HOLD_PAGE_CACHE_APPROVED_SOURCE')
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:
               f.write('sha='+m[1]+'\naction='+m[2]+'\n')
