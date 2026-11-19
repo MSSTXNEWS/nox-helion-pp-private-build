@@ -88,6 +88,20 @@ def propose_successor(manifest, monitor, source_pins):
         if new_context == old_rows:
             decisions.append({"fingerprint": fingerprint, "state": "HOLD_NO_SOURCE_CHANGE"})
             continue
+        editable = mission.get("editable_paths")
+        if (not isinstance(editable, list) or not editable or
+                len(set(editable)) != len(editable)):
+            decisions.append({"fingerprint": fingerprint, "state": "HOLD_EDITABLE_SCOPE"})
+            continue
+        changed_paths = {row["path"] for old, row in zip(old_rows, new_context)
+                         if old["sha256"] != row["sha256"]}
+        if not changed_paths or not changed_paths.issubset(editable):
+            # Tests and immutable context pins are never silently rebased.
+            decisions.append({"fingerprint": fingerprint, "state": "HOLD_UNREVIEWED_CONTEXT_DRIFT"})
+            continue
+        if not any(r.get("path") in changed_paths for r in observed_in_candidate):
+            decisions.append({"fingerprint": fingerprint, "state": "HOLD_OBSERVATION_MISSING_CHANGED_SOURCE"})
+            continue
         next_revision = mission.get("revision")
         if type(next_revision) is not int or not 1 <= next_revision < 10**9:
             raise ValueError("HOLD_REFLEX_REVISION")
@@ -98,8 +112,32 @@ def propose_successor(manifest, monitor, source_pins):
         decisions.append({"fingerprint": fingerprint, "state": "DRAFT_REQUIRES_OWNER_REVIEW",
                           "mission_id": mission["mission_id"],
                           "source_pins_sha256": _digest(new_context)})
+    base_sha = _digest(manifest)
+    draft = deepcopy(manifest)
+    revision = draft.get("revision")
+    if type(revision) is int and 1 <= revision < 10**9:
+        draft["revision"] = revision + 1
+        draft["previous_manifest_sha256"] = base_sha
+        for proposal in selected:
+            replaced = False
+            for index, mission in enumerate(draft["missions"]):
+                if (mission.get("mission_id") == proposal["mission_id"]
+                        and mission.get("parent_task_id") == proposal["parent_task_id"]):
+                    draft["missions"][index] = proposal
+                    replaced = True
+                    break
+            if not replaced:
+                raise ValueError("HOLD_REFLEX_DRAFT_IDENTITY")
+        draft["review_origin"] = "UNREVIEWED_REFLEX_DRAFT"
+        draft["acceptance_scope"] = "DRAFT_ONLY"
+        draft["original_task_accepted"] = False
+    else:
+        draft = None
     return {"schema": "NOX_NATIVE_REFLEX_DRAFT_TASKPACK_V1",
             "authority": "PROPOSAL_ONLY",
+            "draft_manifest": draft,
+            "draft_manifest_sha256": _digest(draft) if draft is not None else None,
+            "review_origin": "UNREVIEWED_REFLEX_DRAFT",
             "automatic_owner_approval": False,
             "native_jobs_created": 0,
             "base_manifest_sha256": _digest(manifest),
