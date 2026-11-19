@@ -44,8 +44,8 @@ def obj(response,limit=100000):
 def meaningful_delta(text):
     return isinstance(text,str) and re.search(r'[^\s.…]',text) is not None
 
-def history_matches_turns(messages, turns):
-    """Verify every requested turn is present in the same durable dialog tail."""
+def history_matches_turns(messages, turns, dialog_id=None):
+    """Verify ordered roles/content and any present row-level dialog identity."""
     if not isinstance(messages, list) or len(messages) < len(turns) * 2:
         return False
     tail = messages[-len(turns) * 2:]
@@ -53,10 +53,20 @@ def history_matches_turns(messages, turns):
         user, assistant = tail[2 * index:2 * index + 2]
         if not isinstance(user, dict) or not isinstance(assistant, dict):
             return False
+        if dialog_id is not None and any('dialog_id' in row and row['dialog_id'] != dialog_id
+                                         for row in (user, assistant)):
+            return False
         if (user.get('role') != 'user' or assistant.get('role') != 'assistant'
                 or user.get('content') != prompt or assistant.get('content') != answer):
             return False
     return True
+
+
+def scoped_history_matches_turns(history, turns, dialog_id):
+    """Reject a mismatched history session even when its visible rows match."""
+    if not isinstance(history, dict) or history.get('dialog_id', dialog_id) != dialog_id:
+        return False
+    return history_matches_turns(history.get('messages'), turns, dialog_id)
 
 
 def require_durable_result(saved, answered, phase):
@@ -65,11 +75,12 @@ def require_durable_result(saved, answered, phase):
         raise RuntimeError('HOLD_CHAT_PROBE_' + phase + '_NOT_ACCEPTED')
 
 
-def require_executor_witness(done, messages, turns, owner_observed, model_matches):
+def require_executor_witness(done, messages, turns, owner_observed, model_matches, dialog_id=None):
     """Fail closed if an issued third chat turn is not persisted or disagrees with live owner state."""
     durable = (isinstance(done, dict) and done.get('saved') is True
                and done.get('s03_integrated') is True
-               and history_matches_turns(messages, turns))
+               and (scoped_history_matches_turns(messages, turns, dialog_id) if dialog_id is not None
+                    else history_matches_turns(messages, turns)))
     if not (durable and owner_observed and model_matches):
         raise RuntimeError('HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED')
 
@@ -254,7 +265,7 @@ def main():
         turn=consume_turn(client,prompt,did);answer=turn['answer'];receipt=turn['done']
         history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
         saved=bool(receipt and receipt.get('saved') is True and receipt.get('s03_integrated') is True
-                   and history_matches_turns(history.get('messages'), [(prompt, answer)]))
+                   and scoped_history_matches_turns(history, [(prompt, answer)], did))
         first=turn['first_meaningful_delta_ms']
         emit('chat_synthetic_latency',{'events':turn['events'],'total_ms':turn['stream_total_ms'],
             'first_meaningful_delta_ms':first,'placeholder_delta_count':turn['placeholder_delta_count'],
@@ -267,9 +278,9 @@ def main():
         if os.environ.get('NOX_PROBE_SECOND_TURN')=='1':
             followup='Какое число ты только что получил? Ответь только этим числом.'
             follow=consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
-            stored=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')).get('messages',[])
+            stored=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
             passed=bool(done and done.get('saved') is True and done.get('s03_integrated') is True
-                        and history_matches_turns(stored, [(prompt, answer), (followup, answer2)]))
+                        and scoped_history_matches_turns(stored, [(prompt, answer), (followup, answer2)], did))
             emit('chat_history_followup',{'history_model_pass':passed,'client_history_empty':True,
                 'first_delta_ms':follow['first_meaningful_delta_ms'],'first_meaningful_delta_ms':follow['first_meaningful_delta_ms'],
                 'total_ms':follow['stream_total_ms'],'answer_public_synthetic':numeric_public_answer(answer2),
@@ -287,18 +298,18 @@ def main():
                        and len({row.get('id') for row in rows if isinstance(row,dict)})==6)
             phrase=bool(re.search(r'настроено\s+6\s+исполнител',text,re.I)
                         and re.search(r'6\s+исполнителей\s*\+\s*NOX',text))
-            third_history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=8')).get('messages',[])
+            third_history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=8'))
             expected_three=[(prompt,answer),(followup,answer2),(question,text)]
             third_durable=(isinstance(end,dict) and end.get('saved') is True
                            and end.get('s03_integrated') is True
-                           and history_matches_turns(third_history,expected_three))
+                           and scoped_history_matches_turns(third_history,expected_three,did))
             emit('chat_executor_question',{'verified_six_plus_nox':bool(count and phrase and third_durable),
                 'live_api_fresh':count,'native_answer_matches_six_plus_nox':phrase,
                 'saved':end.get('saved') is True,'s03_integrated':end.get('s03_integrated') is True,
                 'three_turn_history_verified':third_durable,
                 'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
                 'answer_sha256':digest(text.encode()),'raw_answer_exported':False})
-            require_executor_witness(end,third_history,expected_three,count,phrase)
+            require_executor_witness(end,third_history,expected_three,count,phrase,did)
             # Third inference and durable-history readback also consume the 210 s budget.
             # A passed pre-POST gate alone must never authorize final COMPLETE.
             require_executor_turn_budget(time.monotonic()-probe_started)
