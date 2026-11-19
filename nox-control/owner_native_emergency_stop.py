@@ -37,8 +37,30 @@ MEMFD_INODE = 131095
 MEMFD_SIZE = 75_266_239_716
 MIN_HEADROOM = 2_147_483_648
 MEMFD_LABEL = "memfd:engram_iq3xxs (deleted)"
+MODEL_SOURCE_ENV_KEYS = {
+    "LLAMA_ARG_MODEL_URL", "LLAMA_ARG_DOCKER_REPO", "LLAMA_ARG_HF_REPO",
+    "LLAMA_ARG_HF_FILE", "LLAMA_ARG_SHARD", "LLAMA_ARG_MMPROJ",
+    "LLAMA_ARG_MMPROJ_URL", "LLAMA_ARG_MMPROJ_AUTO",
+    "LLAMA_ARG_SPEC_DRAFT_MODEL", "LLAMA_ARG_SPEC_DRAFT_HF_REPO",
+    "LLAMA_ARG_MODELS_DIR", "LLAMA_ARG_MODELS_PRESET",
+    "LLAMA_ARG_MODELS_MAX", "LLAMA_ARG_MODELS_MEMORY_MARGIN",
+    "LLAMA_ARG_MODELS_AUTOLOAD",
+}
+MODEL_CONTEXT_ENV_KEYS = {
+    "LLAMA_ARG_KV_UNIFIED_PER_SLOT", "LLAMA_ARG_N_PARALLEL",
+    "LLAMA_ARG_CTX_CHECKPOINTS", "LLAMA_ARG_ROPE_SCALING_TYPE",
+    "LLAMA_ARG_ROPE_SCALE", "LLAMA_ARG_ROPE_FREQ_BASE",
+    "LLAMA_ARG_ROPE_FREQ_SCALE", "LLAMA_ARG_YARN_ORIG_CTX",
+    "LLAMA_ARG_YARN_EXT_FACTOR", "LLAMA_ARG_YARN_ATTN_FACTOR",
+    "LLAMA_ARG_YARN_BETA_SLOW", "LLAMA_ARG_YARN_BETA_FAST",
+    "LLAMA_ARG_FIT", "LLAMA_ARG_FIT_CTX", "LLAMA_ARG_SWA_FULL",
+}
+MODEL_ENV_KEYS = MODEL_SOURCE_ENV_KEYS | MODEL_CONTEXT_ENV_KEYS | {
+    "LLAMA_ARG_MODEL", "LLAMA_ARG_CTX_SIZE",
+}
 MAX_STAT_BYTES = 8_192
 MAX_CMDLINE_BYTES = 16 * 1024
+MAX_ENV_BYTES = 256 * 1024
 MAX_FD_ENTRIES_PER_PID = 16_384
 MAX_HOLDER_FD_BYTES = 1 * 1024 * 1024
 MAX_FD_LINK_BYTES = 4_096
@@ -269,6 +291,84 @@ def mapped_inode(rows: str, device: int, inode: int) -> bool:
     return False
 
 
+def reject_model_context_selectors(args: list[str]) -> None:
+    """Reject alternate model and context selectors from llama.cpp server CLI.
+
+    The option families are based on ggml-org/llama.cpp tools/server/README.md
+    and common/arg.cpp; unlisted non-selector options remain permitted.
+    """
+    short_selectors = {
+        "-mu", "-dr", "-hf", "-hfr", "-hff", "-mm", "-mmu",
+        "-md", "-hfd", "-hfrd", "-np", "-ns", "-ctxcp", "-fit", "-fitc",
+    }
+    long_prefixes = (
+        "--model", "--hf", "--mmproj", "--models-", "--spec-draft-",
+        "--ctx-size", "--rope-", "--yarn-",
+    )
+    long_exact = {
+        "--docker-repo", "--shard", "--ple", "--kv-unified-per-slot",
+        "--mtp", "--dflash", "--eagle3", "--spec-type", "--parallel",
+        "--sequences", "--ctx-checkpoints", "--swa-checkpoints",
+        "--swa-full", "--fit", "--fit-ctx",
+    }
+    preset_prefixes = (
+        "--embd-", "--fim-", "--gpt-oss-", "--vision-gemma-",
+    )
+    for token in args:
+        option = token.split("=", 1)[0]
+        if (token.startswith("-c=") or option in short_selectors or
+                option in long_exact or option.startswith(long_prefixes) or
+                option.startswith(preset_prefixes)):
+            fail("MODEL_OR_CONTEXT_SELECTOR_ALIAS")
+
+
+def model_environment_identity(pid: int, expected_ticks: int) -> dict:
+    """Read bounded relevant env keys; never put their values in a receipt."""
+    proc = Path("/proc") / str(pid)
+    try:
+        with (proc / "environ").open("rb") as stream:
+            raw = stream.read(MAX_ENV_BYTES + 1)
+    except OSError:
+        fail("MODEL_ENVIRONMENT_UNAVAILABLE")
+    if len(raw) > MAX_ENV_BYTES or (raw and not raw.endswith(b"\0")):
+        fail("MODEL_ENVIRONMENT_INVALID_OR_OVER_LIMIT")
+    env = {}
+    for row in raw.split(b"\0"):
+        if not row:
+            continue
+        key, separator, value = row.partition(b"=")
+        if not separator:
+            fail("MODEL_ENVIRONMENT_ENTRY_INVALID")
+        try:
+            name = key.decode("ascii", "strict")
+        except UnicodeDecodeError:
+            fail("MODEL_ENVIRONMENT_KEY_INVALID")
+        if name in MODEL_ENV_KEYS:
+            if name in env:
+                fail("MODEL_ENVIRONMENT_DUPLICATE_KEY")
+            env[name] = value
+    if stable_start_ticks(pid, expected_ticks) != expected_ticks:
+        fail("MODEL_ENVIRONMENT_PROCESS_CHANGED")
+
+    expected = {
+        "LLAMA_ARG_MODEL": MODEL_PATH.encode("ascii"),
+        "LLAMA_ARG_CTX_SIZE": b"8192",
+    }
+    for name, value in expected.items():
+        if name in env and env[name] != value:
+            fail("MODEL_ENVIRONMENT_OVERRIDE_MISMATCH")
+    if any(env.get(name, b"") for name in MODEL_SOURCE_ENV_KEYS):
+        fail("MODEL_ENVIRONMENT_SOURCE_OVERRIDE")
+    if any(env.get(name, b"") for name in MODEL_CONTEXT_ENV_KEYS):
+        fail("MODEL_ENVIRONMENT_CONTEXT_OVERRIDE")
+    return {
+        "model_env_present": "LLAMA_ARG_MODEL" in env,
+        "ctx_env_present": "LLAMA_ARG_CTX_SIZE" in env,
+        "model_source_env_present": any(name in env for name in MODEL_SOURCE_ENV_KEYS),
+        "context_pool_env_present": any(name in env for name in MODEL_CONTEXT_ENV_KEYS),
+    }
+
+
 def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
     ticks = stable_start_ticks(pid, expected_ticks)
     proc = Path("/proc") / str(pid)
@@ -303,6 +403,8 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
                 context_index + 1 >= len(model_args) or
                 model_args[context_index + 1] != "8192"):
             fail("MODEL_EXECUTABLE_OR_ARGV_MISMATCH")
+        reject_model_context_selectors(model_args)
+        environment_overrides = model_environment_identity(pid, expected_ticks)
     elif role == "HOLDER":
         if HOLDER_SCRIPT not in argv:
             try:
@@ -318,6 +420,7 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
         fail(role + "_IDENTITY_CHANGED_DURING_READ")
     return {"pid": pid, "start_ticks": ticks, "exe": exe_name,
             "argv_sha256": hashlib.sha256(b"\0".join(raw_argv)).hexdigest(),
+            "environment_overrides": environment_overrides if role == "MODEL" else None,
             "cgroup": str(group)}
 
 
