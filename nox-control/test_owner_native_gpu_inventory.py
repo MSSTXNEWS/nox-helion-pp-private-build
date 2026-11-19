@@ -135,7 +135,24 @@ class GpuInventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "MEMORY_FORMAT"):
             gpu.parse_gpu_rows(output(used_a="N/A", free_a=100))
         with self.assertRaisesRegex(RuntimeError, "ROW_SHAPE"):
-            gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100\\n")
+            gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100" + chr(10))
+
+    def test_main_emits_only_fixed_hold_and_identity_free_memory_diagnostic(self):
+        diagnostic = [{
+            "index": 0, "total_mib": 32768, "used_mib": 16462,
+            "free_mib": 16300, "residual_mib": 6,
+        }]
+        stdout = io.StringIO()
+        with patch.object(gpu, "run_action",
+                          side_effect=gpu.GPUInventoryHold("HOLD_GPU_INVENTORY_MEMORY_SUM",
+                                                           memory_diagnostic=diagnostic)):
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(gpu.main(), 2)
+        lines = stdout.getvalue().splitlines()
+        self.assertEqual(lines[0], "NOX_MAINT_GPU_INVENTORY_RESULT=HOLD_GPU_INVENTORY_MEMORY_SUM")
+        self.assertTrue(lines[1].startswith(gpu.MEMORY_DIAGNOSTIC_PREFIX))
+        self.assertNotIn(GPU_A, stdout.getvalue())
+        self.assertNotIn("stderr", stdout.getvalue())
 
     def test_rejects_oversized_output_and_nonzero_nvidia_smi(self):
         with self.assertRaisesRegex(RuntimeError, "OUTPUT_BOUND"):
