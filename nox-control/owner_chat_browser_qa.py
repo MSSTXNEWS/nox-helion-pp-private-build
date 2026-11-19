@@ -105,6 +105,34 @@ def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, sec
                for row, (role, content) in zip(rows, expected))
 
 
+def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages):
+    """Fail closed unless a trusted canonical writer receipt matches exact independent S03 readback."""
+    if not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict):
+        return False
+    event_id = writer_receipt.get('event_id')
+    turn_id = writer_receipt.get('turn_id')
+    sequence = writer_receipt.get('sequence')
+    if (writer_receipt.get('source') != 'canonical_s03'
+            or writer_receipt.get('verified') is not True
+            or writer_receipt.get('durable') is not True
+            or not isinstance(event_id, str) or not event_id
+            or not isinstance(turn_id, str) or not turn_id
+            or isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 1
+            or writer_receipt.get('dialog_id') != dialog_id):
+        return False
+    if (independent_readback.get('source') != 'canonical_s03'
+            or independent_readback.get('independent') is not True
+            or independent_readback.get('event_id') != event_id
+            or independent_readback.get('turn_id') != turn_id
+            or independent_readback.get('sequence') != sequence
+            or independent_readback.get('dialog_id') != dialog_id
+            or independent_readback.get('messages') != expected_messages):
+        return False
+    answer = expected_messages[-1].get('content') if expected_messages else None
+    expected_hash = digest(answer.encode('utf-8')) if isinstance(answer, str) else None
+    return bool(expected_hash and independent_readback.get('full_answer_sha256') == expected_hash)
+
+
 def progressive_stream_valid(value):
     """Require growing visible prefixes while the real native stream is open."""
     if not isinstance(value, dict):
@@ -865,13 +893,18 @@ async def browser_run(report, directory, available):
                     '(value)=>window.__NOX_BROWSER_QA.answer===value',second_answer)
                 second_saved=multiturn_history_valid(
                     second_rows,prompt,answer,second_prompt,second_answer)
+                # This endpoint is dialog-history, not the canonical S03 writer/readback.
+                # No trusted S03 receipt provider is wired in this source version.
+                canonical_s03_verified=False
                 second_public=public_numeric_answer(second_answer)
                 second_progressive=progressive_stream_valid(second_final)
                 second_done=all(second_final['done'].values())
                 second_stop=bool(second_final.get('stop_samples',0)>0
                     and second_final.get('stop_samples')==second_final.get('stop_visible_samples')
                     and second_final.get('stop_occluded_samples')==0)
-                report.update(multiturn_same_dialog_s03_verified=second_saved,
+                report.update(multiturn_dialog_history_verified=second_saved,
+                              multiturn_canonical_s03_verified=canonical_s03_verified,
+                              multiturn_s03_hold_reason='CANONICAL_S03_WRITER_AND_INDEPENDENT_READBACK_NOT_WIRED',
                               multiturn_second_native_equal=second_native_equal,
                               multiturn_second_terminal_saved=second_done,
                               multiturn_second_visible_progressive=second_progressive,
@@ -883,7 +916,9 @@ async def browser_run(report, directory, available):
                 if not (second_saved and second_native_equal and second_done
                         and second_progressive and second_stop
                         and second_public=='10,9,8,7,6,5,4,3,2,1'):
-                    raise RuntimeError('HOLD_MULTITURN_BROWSER_OR_S03')
+                    raise RuntimeError('HOLD_MULTITURN_BROWSER')
+                if not canonical_s03_verified:
+                    raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
                 if stream_admitted!=2:
                     raise RuntimeError('HOLD_MULTITURN_POST_ADMISSION')
                 report['multiturn_browser_acceptance_verified']=True
