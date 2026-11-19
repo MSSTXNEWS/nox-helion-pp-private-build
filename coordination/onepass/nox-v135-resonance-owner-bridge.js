@@ -10,7 +10,7 @@
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
   function livePieces(text) {
-    const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
+    const glyphs=Array.isArray(text)?text:typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
       ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
       : [text];
     const width=Math.max(8,Math.ceil(glyphs.length/64));
@@ -245,7 +245,7 @@
             }
             const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
             trailing=glyphs.pop()||'';
-            if(glyphs.length)await emitPieces(glyphs.join(''));
+            if(glyphs.length)await emitPieces(glyphs);
           },nativeSignal);
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');

@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,customIntl){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -68,6 +68,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
     context.clearTimeout=raf.clearTimeout;
   }
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
+  if(customIntl)context.Intl=customIntl;
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
 }
@@ -1329,4 +1330,23 @@ test('V176 scoped SSE cancellation retains stopped phase, never emits post-cance
   await new Promise(ok=>setTimeout(ok,5));
   assert.equal(phases.at(-1),'stopped','cancellation phase must not be overwritten by async catch');
   assert.equal(phases.includes('error'),false,'post-cancel errors must not repaint the owner UI');
+});
+
+test('V177 native chunks reuse already segmented glyphs during browser pacing',async()=>{
+  const Seg=Intl.Segmenter;let segments=0;
+  const countedIntl={Segmenter:class {
+    constructor(...args){this.delegate=new Seg(...args);}
+    segment(str){segments++;return this.delegate.segment(str);}
+  }};
+  const reply='a'.repeat(120)+('NOX 🧠 español русский ').repeat(32);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    undefined,false,120,undefined,'verified-exchange-01',[],false,false,prompt,countedIntl);
+  const output=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v177-single-segment'})}));
+  assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+  assert.equal(output.filter(x=>x.type==='done').length,1);
+  assert.equal(output.filter(x=>x.type==='error').length,0);
+  assert.equal(segments,3,'two native chunks and final tail should each segment once');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
