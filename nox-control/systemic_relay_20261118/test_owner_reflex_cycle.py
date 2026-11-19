@@ -104,8 +104,20 @@ class NativeReflexTests(unittest.TestCase):
                    'reason':'SOURCE_PIN_DRIFT_REVIEW_REQUIRED'} for x in m['missions']]
         self.assertEqual(tick(m=m,deferred=problems)['staged_count'],3)
 
+    def test_legacy_catalog_and_track_do_not_fake_native_activity(self):
+        state={'a':{'status':'running', 'handler':'track'},
+               'b':{'status':'pending', 'handler':'track'},
+               'c':{'status':'catalog', 'handler':'catalog'}}
+        result=tick(state=state)
+        self.assertEqual(result['state'],'REFILL_REQUIRED')
+        self.assertEqual(result['observed_task_counts']['pending'],0)
+        self.assertEqual(result['observed_task_counts']['running'],0)
+        self.assertEqual(result['native_records_observed'],0)
+        self.assertEqual(result['legacy_or_non_native_records_ignored'],3)
+
     def test_active_jobs_do_not_report_idle(self):
-        state={'a': {'status':'running'},'b': {'status':'pending'}}
+        state={'a': {'status':'running', 'handler':'owner_native_project_work'},
+               'b': {'status':'pending', 'handler':'owner_native_typed_leaf'}}
         result=tick(state=state)
         self.assertEqual(result['state'],'EXECUTION_OR_ADMISSION_IN_PROGRESS')
 
