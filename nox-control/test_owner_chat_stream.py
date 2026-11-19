@@ -407,6 +407,44 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self.dispatched,[])
                 self.assertTrue(chunks.closed)
 
+
+    async def test_explicit_invalid_sse_structures_hold_before_native_dispatch(self):
+        # Present falsey values are not missing fields. In particular,
+        # tool_calls=false must not become [] and certify an answer.
+        invalid=(
+            {'choices':[{'delta':False,'finish_reason':'stop'}]},
+            {'choices':[{'delta':None,'finish_reason':'stop'}]},
+            {'choices':[{'delta':{'content':'fabricated','tool_calls':False},
+                         'finish_reason':'stop'}]},
+            {'choices':[{'delta':{'content':'fabricated','tool_calls':0},
+                         'finish_reason':'stop'}]},
+            {'choices':[{'delta':{'content':'fabricated','tool_calls':''},
+                         'finish_reason':'stop'}]},
+            {'choices':[{'delta':{'tool_calls':[{'index':0,'id':'malformed',
+                           'type':'function','function':False}]},
+                         'finish_reason':'tool_calls'}]},
+            {'choices':[{'delta':{'tool_calls':[{'index':0,'id':'malformed',
+                           'type':'function','function':0}]},
+                         'finish_reason':'tool_calls'}]},
+        )
+        for payload_frame in invalid:
+            with self.subTest(payload=payload_frame):
+                chunks=Chunks([frame('partial'),
+                               ('data: '+json.dumps(payload_frame)+'\\n\\n').encode(),
+                               b'data: [DONE]\\n\\n'])
+                _,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Preserve the prior turn'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Preserve the prior turn',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_MODEL_SSE_INVALID',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
     def test_ambiguous_tool_argument_json_rejected_without_default_object(self):
         malformed=(
             '{"action":"read","action":"write"}',
