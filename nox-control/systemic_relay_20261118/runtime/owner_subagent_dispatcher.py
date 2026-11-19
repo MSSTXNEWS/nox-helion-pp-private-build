@@ -21,6 +21,7 @@ import re
 import sqlite3
 import stat
 import threading
+import tempfile
 import time
 import urllib.request
 
@@ -63,6 +64,100 @@ RESOURCE_PRESSURE_REASONS = frozenset({
 })
 RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS = 3
 RESOURCE_RECOVERY_INTERVAL_SEC = 5.0
+RESOURCE_PRESSURE_LATCH = ROOT/'state/dispatcher/native_subagent_resource_latch.json'
+RESOURCE_PRESSURE_LATCH_SCHEMA = 'NOX_NATIVE_SUBAGENT_RESOURCE_PRESSURE_LATCH_V1'
+RESOURCE_PRESSURE_LATCH_MAX_BYTES = 8192
+
+
+def validate_resource_pressure_latch(value):
+    required = {'schema','instance_id','state','generation','reason','source_sha256',
+                'policy_sha256','owner_request','updated_at','healthy_snapshots'}
+    if (not isinstance(value, dict) or set(value) != required
+            or value.get('schema') != RESOURCE_PRESSURE_LATCH_SCHEMA
+            or value.get('instance_id') != 60509551
+            or value.get('state') not in ('PAUSED','RECOVERED')
+            or type(value.get('generation')) is not int or value['generation'] < 1
+            or value.get('reason') not in RESOURCE_PRESSURE_REASONS
+            or not isinstance(value.get('source_sha256'), str)
+            or not SHA.fullmatch(value['source_sha256'])
+            or not isinstance(value.get('policy_sha256'), str)
+            or not SHA.fullmatch(value['policy_sha256'])
+            or not isinstance(value.get('owner_request'), str)
+            or len(value['owner_request']) > 128
+            or type(value.get('updated_at')) not in (int, float)
+            or not math.isfinite(value['updated_at']) or value['updated_at'] <= 0
+            or type(value.get('healthy_snapshots')) is not int
+            or value['healthy_snapshots'] != (0 if value['state'] == 'PAUSED'
+                                              else RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS)):
+        raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_SCHEMA')
+    return value
+
+
+def read_resource_pressure_latch(path=RESOURCE_PRESSURE_LATCH):
+    path = plain(path)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return None, None
+    with os.fdopen(fd, 'rb') as handle:
+        before = os.fstat(handle.fileno())
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.geteuid()
+                or before.st_nlink != 1 or before.st_mode & 0o077
+                or before.st_size > RESOURCE_PRESSURE_LATCH_MAX_BYTES):
+            raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_FILE')
+        raw = handle.read(RESOURCE_PRESSURE_LATCH_MAX_BYTES+1)
+        after = os.fstat(handle.fileno())
+    if (len(raw) > RESOURCE_PRESSURE_LATCH_MAX_BYTES
+            or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+                before.st_ctime_ns) !=
+               (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns,
+                after.st_ctime_ns)):
+        raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_CHANGED')
+    try:
+        value = validate_resource_pressure_latch(json.loads(raw))
+    except (ValueError, TypeError):
+        raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_SCHEMA') from None
+    return value, digest(raw)
+
+
+def write_resource_pressure_latch(path, value, expected_sha256):
+    """CAS-write one tiny owner-only recovery latch; never follow a path link."""
+    path = plain(path)
+    value = validate_resource_pressure_latch(value)
+    parent = path.parent
+    parent_info = parent.stat()
+    if (not stat.S_ISDIR(parent_info.st_mode) or parent_info.st_uid != os.geteuid()
+            or parent_info.st_mode & 0o022):
+        raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_DIRECTORY')
+    _, current_sha256 = read_resource_pressure_latch(path)
+    if current_sha256 != expected_sha256:
+        raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_CAS')
+    raw = encoded(value)
+    fd, temporary = tempfile.mkstemp(prefix='.resource-pressure-latch-', dir=parent)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, 'wb') as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+        # Recheck immediately before replace. The maintenance flock below is
+        # the writer fence; this digest is the file-level compare-and-swap.
+        _, current_sha256 = read_resource_pressure_latch(path)
+        if current_sha256 != expected_sha256:
+            raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_CAS')
+        os.replace(temporary, path)
+        directory_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+        observed, observed_sha256 = read_resource_pressure_latch(path)
+        if observed != value or observed_sha256 != digest(raw):
+            raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_READBACK')
+        return observed_sha256
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def idle_pool_release_gate(snapshot, reason, *, owner_authorized, stop_clear,
@@ -486,7 +581,14 @@ class Native:
         self._resource_pressure_paused = False
         self._resource_recovery_samples = 0
         self._resource_recovery_last_at = 0.0
+        self._resource_recovery_last_monotonic = 0.0
         self._resource_pressure_release = None
+        self._resource_pressure_latch_sha256 = None
+        self._resource_pressure_latch_generation = 0
+        self._resource_pressure_latch_state = None
+        self._resource_pressure_latch_reason = None
+        self._resource_pressure_latch_uncertain = False
+        self._load_resource_pressure_latch()
         self._role_restart_attempts = {role:[] for role in ROLES}
         self._cold_start_attempts = []
         self._role_lifecycle = {}
@@ -494,6 +596,100 @@ class Native:
         self._relay_current_sha256 = None
         self._relay_manifest_cache = {}
         self.relay_status = {'state':'NOT_CONFIGURED'}
+
+    def _load_resource_pressure_latch(self):
+        """Restore a prior pressure pause before any scheduler callback runs."""
+        try:
+            value, observed_sha256 = read_resource_pressure_latch(RESOURCE_PRESSURE_LATCH)
+        except (OSError, ValueError, TypeError, GateError):
+            self._resource_pressure_paused = True
+            self._resource_pressure_latch_uncertain = True
+            self._resource_pressure_release = {
+                'state':'HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN',
+                'chat_model_proxy_web_training_s03_touched':False}
+            return
+        self._resource_pressure_latch_sha256 = observed_sha256
+        if value is None:
+            return
+        if (value['source_sha256'] != self.source
+                or value['policy_sha256'] != self.policy['sha256']
+                or value['owner_request'] != str(self.config.get('owner_request',''))):
+            self._resource_pressure_paused = True
+            self._resource_pressure_latch_uncertain = True
+            self._resource_pressure_release = {
+                'state':'HOLD_RESOURCE_PRESSURE_LATCH_CONTRACT_CHANGED',
+                'latch_generation':value['generation'],
+                'chat_model_proxy_web_training_s03_touched':False}
+            return
+        self._resource_pressure_latch_generation = value['generation']
+        self._resource_pressure_latch_state = value['state']
+        self._resource_pressure_latch_reason = value['reason']
+        if value['state'] == 'PAUSED':
+            self._resource_pressure_paused = True
+            self._resource_pressure_release = {
+                'state':'WAIT_RESOURCE_RECOVERY', 'reason':value['reason'],
+                'healthy_snapshots':0, 'required_snapshots':RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS,
+                'latch_generation':value['generation'], 'restored_after_restart':True,
+                'chat_model_proxy_web_training_s03_touched':False}
+
+    def _write_resource_pressure_latch(self, state, reason, observed_at, healthy_snapshots):
+        """Persist pause/recovery under both owner maintenance and writer fences."""
+        if (state not in ('PAUSED','RECOVERED') or reason not in RESOURCE_PRESSURE_REASONS
+                or type(observed_at) not in (int, float) or not math.isfinite(observed_at)
+                or type(healthy_snapshots) is not int):
+            raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_SCHEMA')
+        maintenance = plain(ROOT/'state/owner_maintenance.lock')
+        fd = os.open(maintenance, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            before = os.fstat(fd)
+            named = maintenance.stat()
+            if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.geteuid()
+                    or before.st_nlink != 1 or before.st_mode & 0o022
+                    or (before.st_dev, before.st_ino) != (named.st_dev, named.st_ino)):
+                raise GateError('HOLD_RESOURCE_PRESSURE_MAINTENANCE_LOCK')
+            try:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise GateError('HOLD_RESOURCE_PRESSURE_MAINTENANCE_LOCK') from None
+            after = os.fstat(fd)
+            named = maintenance.stat()
+            if ((before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)
+                    or (after.st_dev, after.st_ino) != (named.st_dev, named.st_ino)
+                    or self.owner_allowed() is not True or self.stop_active() is not False
+                    or self.writer_lease() is not True):
+                raise GateError('HOLD_RESOURCE_PRESSURE_OWNER_FENCE')
+            generation = self._resource_pressure_latch_generation
+            if state == 'PAUSED' and self._resource_pressure_latch_state != 'PAUSED':
+                generation += 1
+            if generation < 1:
+                generation = 1
+            value = {'schema':RESOURCE_PRESSURE_LATCH_SCHEMA, 'instance_id':60509551,
+                'state':state, 'generation':generation, 'reason':reason,
+                'source_sha256':self.source, 'policy_sha256':self.policy['sha256'],
+                'owner_request':str(self.config.get('owner_request','')),
+                'updated_at':observed_at, 'healthy_snapshots':healthy_snapshots}
+            new_sha256 = write_resource_pressure_latch(
+                RESOURCE_PRESSURE_LATCH, value, self._resource_pressure_latch_sha256)
+            self._resource_pressure_latch_sha256 = new_sha256
+            self._resource_pressure_latch_generation = generation
+            self._resource_pressure_latch_state = state
+            self._resource_pressure_latch_reason = reason
+        finally:
+            os.close(fd)
+
+    def _resource_recovery_ready(self):
+        """Shared gate used by every worker submission path."""
+        with self.lock:
+            if self._resource_pressure_latch_uncertain:
+                return False
+            if not self._resource_pressure_paused:
+                return True
+            try:
+                snapshot = self.read_resource_snapshot(leaf_only=True)
+                reason = resource_wait_reason(snapshot)
+            except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold):
+                snapshot, reason = None, 'HOLD_RESOURCE_RECOVERY_SNAPSHOT'
+            return self._resource_recovery_observation(snapshot, reason)
 
     def allowed_handlers(self):
         if self.config.get('execution_mode') == PROJECT_MODE:
@@ -1038,21 +1234,30 @@ class Native:
         terminal = {'done', 'completed', 'blocked', 'failed', 'cancelled', 'verified'}
         known_handlers = self.allowed_handlers()
         with self.ns['_qlock']:
-            tasks = (self.state or {}).get('tasks', {})
+            if not isinstance(self.state, dict) or 'tasks' not in self.state:
+                return False
+            tasks = self.state['tasks']
             if not isinstance(tasks, dict):
                 return False
             for row in tasks.values():
                 if not isinstance(row, dict):
                     return False
                 if row.get('handler') not in known_handlers:
+                    if any(key in row for key in ('native_worker_lease','native_pool_recovery',
+                                                  'native_admission','native_admission_s03')):
+                        return False
                     continue
                 if row.get('_held_locks'):
                     return False
                 status = row.get('status')
-                if status not in {'pending', 'running', *terminal}:
+                if (status == 'running' or status not in {'pending', *terminal}
+                        or row.get('note') == 'WAIT_S03_ADMISSION_READBACK'):
                     return False
                 claim = row.get('owner_claim')
                 if claim is not None and status not in terminal:
+                    return False
+                if (row.get('native_admission') is not None
+                        and not isinstance(row.get('native_admission_s03'), dict)):
                     return False
                 lease = row.get('native_worker_lease')
                 if lease is not None and (
@@ -1146,50 +1351,86 @@ class Native:
 
     def _resource_recovery_observation(self, snapshot, reason):
         """Require three distinct fresh clean snapshots before one pool restart."""
-        if not self._resource_pressure_paused:
+        with self.lock:
+            if self._resource_pressure_latch_uncertain:
+                return False
+            if not self._resource_pressure_paused:
+                return True
+            if reason is not None or not isinstance(snapshot, dict):
+                self._resource_recovery_samples = 0
+                self._resource_recovery_last_at = 0.0
+                self._resource_recovery_last_monotonic = 0.0
+                self._resource_pressure_release = {
+                    'state':'WAIT_RESOURCE_RECOVERY', 'reason':reason,
+                    'healthy_snapshots':0}
+                return False
+            observed = snapshot.get('observed_at')
+            now = time.time()
+            monotonic_now = time.monotonic()
+            if (type(observed) not in (int, float) or not math.isfinite(observed)
+                    or not 0 <= now-observed <= 5):
+                self._resource_recovery_samples = 0
+                self._resource_recovery_last_at = 0.0
+                self._resource_recovery_last_monotonic = 0.0
+                self._resource_pressure_release = {
+                    'state':'WAIT_RESOURCE_RECOVERY', 'reason':'HOLD_STALE_RESOURCE_SNAPSHOT',
+                    'healthy_snapshots':0}
+                return False
+            if self._resource_recovery_last_at and observed <= self._resource_recovery_last_at:
+                self._resource_recovery_samples = 0
+                self._resource_recovery_last_at = 0.0
+                self._resource_recovery_last_monotonic = 0.0
+                self._resource_pressure_release = {
+                    'state':'WAIT_RESOURCE_RECOVERY', 'reason':'HOLD_DUPLICATE_RESOURCE_SNAPSHOT',
+                    'healthy_snapshots':0}
+                return False
+            if (self._resource_recovery_last_monotonic == 0.0
+                    or monotonic_now-self._resource_recovery_last_monotonic >= RESOURCE_RECOVERY_INTERVAL_SEC):
+                self._resource_recovery_samples += 1
+                self._resource_recovery_last_at = observed
+                self._resource_recovery_last_monotonic = monotonic_now
+            if self._resource_recovery_samples < RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS:
+                self._resource_pressure_release = {
+                    'state':'WAIT_RESOURCE_RECOVERY',
+                    'healthy_snapshots':self._resource_recovery_samples,
+                    'required_snapshots':RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS,
+                    'last_observed_at':self._resource_recovery_last_at}
+                return False
+            pressure_reason = self._resource_pressure_latch_reason
+            if pressure_reason not in RESOURCE_PRESSURE_REASONS:
+                self._resource_pressure_latch_uncertain = True
+                self._resource_pressure_release = {
+                    'state':'HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN',
+                    'chat_model_proxy_web_training_s03_touched':False}
+                return False
+            try:
+                self._write_resource_pressure_latch('RECOVERED', pressure_reason,
+                    observed, RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS)
+            except (OSError, ValueError, TypeError, KeyError, GateError):
+                self._resource_pressure_latch_uncertain = True
+                self._resource_pressure_release = {
+                    'state':'HOLD_RESOURCE_RECOVERY_LATCH_WRITE',
+                    'healthy_snapshots':self._resource_recovery_samples,
+                    'chat_model_proxy_web_training_s03_touched':False}
+                return False
+            self._resource_pressure_paused = False
+            self._resource_recovery_samples = 0
+            self._resource_recovery_last_at = 0.0
+            self._resource_recovery_last_monotonic = 0.0
+            self._resource_pressure_release = {
+                'state':'RESOURCE_RECOVERY_STABLE',
+                'healthy_snapshots':RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS,
+                'observed_at':observed,
+                'latch_generation':self._resource_pressure_latch_generation}
             return True
-        if reason is not None or not isinstance(snapshot, dict):
-            self._resource_recovery_samples = 0
-            self._resource_recovery_last_at = 0.0
-            self._resource_pressure_release = {
-                'state':'WAIT_RESOURCE_RECOVERY', 'reason':reason,
-                'healthy_snapshots':0}
-            return False
-        observed = snapshot.get('observed_at')
-        now = time.time()
-        if (type(observed) not in (int, float) or not math.isfinite(observed)
-                or not 0 <= now-observed <= 5):
-            self._resource_recovery_samples = 0
-            self._resource_recovery_last_at = 0.0
-            self._resource_pressure_release = {
-                'state':'WAIT_RESOURCE_RECOVERY', 'reason':'HOLD_STALE_RESOURCE_SNAPSHOT',
-                'healthy_snapshots':0}
-            return False
-        if (self._resource_recovery_last_at == 0.0
-                or observed-self._resource_recovery_last_at >= RESOURCE_RECOVERY_INTERVAL_SEC):
-            self._resource_recovery_samples += 1
-            self._resource_recovery_last_at = observed
-        if self._resource_recovery_samples < RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS:
-            self._resource_pressure_release = {
-                'state':'WAIT_RESOURCE_RECOVERY',
-                'healthy_snapshots':self._resource_recovery_samples,
-                'required_snapshots':RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS,
-                'last_observed_at':observed}
-            return False
-        self._resource_pressure_paused = False
-        self._resource_recovery_samples = 0
-        self._resource_recovery_last_at = 0.0
-        self._resource_pressure_release = {
-            'state':'RESOURCE_RECOVERY_STABLE',
-            'healthy_snapshots':RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS,
-            'observed_at':observed}
-        return True
 
     def maintain_worker_pool(self):
         """Wake work in place; retire only an idle owned pool on memory pressure."""
         if self.config.get('systemic_relay') is None:
             return
         with self.lock:
+            if self._resource_pressure_latch_uncertain:
+                raise GateError('HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN')
             if self._pool_recovery_uncertain:
                 raise GateError('HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN')
             try:
@@ -1198,13 +1439,33 @@ class Native:
             except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold):
                 snapshot, reason = None, 'HOLD_RESOURCE_SNAPSHOT_UNKNOWN'
             if reason in RESOURCE_PRESSURE_REASONS:
-                self._resource_pressure_paused = True
-                self._resource_recovery_samples = 0
-                self._resource_recovery_last_at = 0.0
+                if self._resource_pressure_latch_uncertain:
+                    self._resource_pressure_release = {
+                        'state':'HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN',
+                        'chat_model_proxy_web_training_s03_touched':False}
+                    return
+                if (not self._resource_pressure_paused
+                        or self._resource_pressure_latch_state != 'PAUSED'):
+                    self._resource_pressure_paused = True
+                    self._resource_recovery_samples = 0
+                    self._resource_recovery_last_at = 0.0
+                    self._resource_recovery_last_monotonic = 0.0
+                    try:
+                        self._write_resource_pressure_latch('PAUSED', reason,
+                            snapshot.get('observed_at') if snapshot else time.time(), 0)
+                    except (OSError, ValueError, TypeError, KeyError, GateError):
+                        self._resource_pressure_latch_uncertain = True
+                        self._resource_pressure_release = {
+                            'state':'HOLD_RESOURCE_PRESSURE_LATCH_WRITE',
+                            'reason':reason,
+                            'chat_model_proxy_web_training_s03_touched':False}
+                        return
                 released = self._retire_idle_pool_for_pressure(snapshot, reason) if self.pool is not None else False
                 self._resource_pressure_release = {
                     **(self._resource_pressure_release or {}),
-                    'state':('IDLE_POOL_RELEASED' if released else 'RESOURCE_PRESSURE_PAUSED'),
+                    'state':('IDLE_POOL_RELEASED' if released else
+                             'HOLD_GRACEFUL_POOL_SHUTDOWN_UNKNOWN' if self._pool_recovery_uncertain else
+                             'RESOURCE_PRESSURE_PAUSED'),
                     'reason':reason, 'observed_at':snapshot.get('observed_at') if snapshot else None,
                     'healthy_snapshots':0,
                     'chat_model_proxy_web_training_s03_touched':False}
@@ -1408,9 +1669,13 @@ class Native:
                     os.close(fd)
 
     def ensure_processes(self, count):
-        if count != 3 or self.stop_active():
+        if (count != 3 or self.stop_active() or self._resource_pressure_paused
+                or self._resource_pressure_latch_uncertain):
             return False
         with self.lock, contextlib.ExitStack() as cleanup:
+            if (self.stop_active() or self._resource_pressure_paused
+                    or self._resource_pressure_latch_uncertain):
+                return False
             if self.pool is None:
                 now = time.monotonic()
                 self._cold_start_attempts = [at for at in self._cold_start_attempts if now-at < 600]
@@ -1491,6 +1756,14 @@ class Native:
             return task_id in self.state['tasks']
 
     def native_queue_claim(self, task, owner_pids):
+        # Serialize the pressure pause with the first durable claim write. A
+        # known pre-write pause veto is distinct from an ambiguous queue ACK.
+        with self.lock:
+            if self._resource_pressure_latch_uncertain or self._resource_pressure_paused:
+                raise GateError('WAIT_RESOURCE_RECOVERY_STABILITY')
+            return self._native_queue_claim_locked(task, owner_pids)
+
+    def _native_queue_claim_locked(self, task, owner_pids):
         if task.get('handler') in (PROJECT_HANDLER, LEAF_HANDLER):
             if task.get('source_sha256') != self.source:
                 raise GateError('HOLD_HISTORICAL_SOURCE_VERIFY_ONLY')
@@ -1621,14 +1894,10 @@ class Native:
             return False, 'HOLD_SUBAGENT_NATIVE_CLAIM'
         if self.stop_active() or not self.writer_lease():
             return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
-        if self._resource_pressure_paused:
-            try:
-                snapshot = self.read_resource_snapshot(leaf_only=True)
-                reason = resource_wait_reason(snapshot)
-            except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold):
-                return 'wait', 'HOLD_RESOURCE_RECOVERY_SNAPSHOT'
-            if not self._resource_recovery_observation(snapshot, reason):
-                return 'wait', 'WAIT_RESOURCE_RECOVERY_STABILITY'
+        if not self._resource_recovery_ready():
+            return 'wait', ('HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN'
+                            if self._resource_pressure_latch_uncertain
+                            else 'WAIT_RESOURCE_RECOVERY_STABILITY')
         if self.pool is None:
             try:
                 reason = self._fresh_admission_reason()
@@ -1640,6 +1909,10 @@ class Native:
                 return 'wait', 'HOLD_NATIVE_SUBAGENT_ADMISSION'
         try:
             with self.lock:
+                if not self._resource_recovery_ready():
+                    return 'wait', ('HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN'
+                                    if self._resource_pressure_latch_uncertain
+                                    else 'WAIT_RESOURCE_RECOVERY_STABILITY')
                 if self.pool is None:
                     raise GateError('HOLD_SUBAGENT_POOL_NOT_READY')
                 # Recheck immediately before EACH submit, including an existing
@@ -1715,15 +1988,15 @@ class Native:
         try:
             if self.stop_active() or not self.writer_lease() or not self.owner_allowed():
                 return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
-            if self._resource_pressure_paused:
-                try:
-                    snapshot = self.read_resource_snapshot(leaf_only=True)
-                    reason = resource_wait_reason(snapshot)
-                except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold):
-                    return 'wait', 'HOLD_RESOURCE_RECOVERY_SNAPSHOT'
-                if not self._resource_recovery_observation(snapshot, reason):
-                    return 'wait', 'WAIT_RESOURCE_RECOVERY_STABILITY'
+            if not self._resource_recovery_ready():
+                return 'wait', ('HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN'
+                                if self._resource_pressure_latch_uncertain
+                                else 'WAIT_RESOURCE_RECOVERY_STABILITY')
             with self.lock:
+                if not self._resource_recovery_ready():
+                    return 'wait', ('HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN'
+                                    if self._resource_pressure_latch_uncertain
+                                    else 'WAIT_RESOURCE_RECOVERY_STABILITY')
                 reason = self._fresh_admission_reason(leaf_only=True)
                 if reason:
                     return 'wait', reason

@@ -4,6 +4,8 @@ on:
     paths:
       - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py'
       - 'nox-control/systemic_relay_20261118/runtime/owner_subagent_processes.py'
+      - 'nox-control/systemic_relay_20261118/runtime/owner_project_native.py'
+      - 'nox-control/owner_autonomy_pool.py'
       - 'nox-control/test_owner_idle_pool_pressure_release.py'
       - '.github/workflows/nox-idle-pool-pressure-ci.yml'
 permissions:
@@ -21,5 +23,5 @@ jobs:
           python-version: '3.11'
       - name: Compile source and run focused no-host-mutation regressions
         run: |
-          python -m py_compile nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py nox-control/systemic_relay_20261118/runtime/owner_subagent_processes.py nox-control/test_owner_idle_pool_pressure_release.py
+          python -m py_compile nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py nox-control/systemic_relay_20261118/runtime/owner_subagent_processes.py nox-control/systemic_relay_20261118/runtime/owner_project_native.py nox-control/owner_autonomy_pool.py nox-control/test_owner_idle_pool_pressure_release.py
           python -m unittest discover -s nox-control -p test_owner_idle_pool_pressure_release.py -v

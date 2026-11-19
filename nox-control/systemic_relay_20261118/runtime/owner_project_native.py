@@ -316,6 +316,15 @@ class ProjectBinding:
                     task.pop('native_project_generated_reference', None)
                     task.pop('native_project_planner_receipt', None)
             with native.lock:
+                # A recovered in-memory flag is insufficient after a process
+                # restart or an overlapping project callback. The dispatcher
+                # owns the durable pressure latch and the serialized recovery
+                # hysteresis; consult it immediately before any pool refill or
+                # submit while holding the same lock as the submit path.
+                if not native._resource_recovery_ready():
+                    return 'wait', ('HOLD_RESOURCE_PRESSURE_LATCH_UNKNOWN'
+                                    if native._resource_pressure_latch_uncertain
+                                    else 'WAIT_RESOURCE_RECOVERY_STABILITY')
                 reason = native._fresh_admission_reason(leaf_only=True)
                 if reason:
                     return 'wait', reason
