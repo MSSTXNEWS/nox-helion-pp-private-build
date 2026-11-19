@@ -315,6 +315,7 @@ def append_remote_range(remote_file, temp, offset, length, digest):
                     view = memoryview(chunk)
                     while view:
                         written = os.write(fd, view)
+                        check(written > 0, "PARTIAL_WRITE")
                         view = view[written:]
             while process.poll() is None:
                 check(not stopped(), "STOP")
@@ -337,8 +338,7 @@ def append_remote_range(remote_file, temp, offset, length, digest):
         os.close(fd)
 
 
-def download_resumable(manifest, asset, manifest_sha, temp, cursor):
-    offset, digest = resume_state(temp, cursor, manifest, asset, manifest_sha)
+def download_resumable(manifest, asset, manifest_sha, temp, cursor, offset, digest):
     remote_file = manifest["remote"] + "/" + asset["name"]
     while offset < asset["size"]:
         length = min(BLOCK, asset["size"] - offset)
@@ -385,11 +385,14 @@ def stage_one(manifest, asset, manifest_sha, dest, *, from_dir=None, ram=False):
             temp.unlink()
         cursor.unlink(missing_ok=True)
         return {"asset": asset["name"], "result": "VERIFIED_RECOVERED"}
-    requires_space(dest, asset["size"], ram=ram)
     if from_dir is None:
         check(bool(shutil.which("rclone")), "RCLONE_MISSING")
-        download_resumable(manifest, asset, manifest_sha, temp, cursor)
+        offset, digest = resume_state(temp, cursor, manifest, asset, manifest_sha)
+        if offset < asset["size"]:
+            requires_space(dest, asset["size"] - offset, ram=ram)
+        download_resumable(manifest, asset, manifest_sha, temp, cursor, offset, digest)
     else:
+        requires_space(dest, asset["size"], ram=ram)
         check(not temp.exists() and not temp.is_symlink(), "PARTIAL_ALREADY_EXISTS")
         check(not cursor.exists() and not cursor.is_symlink(), "RESUME_CURSOR_EXISTS")
         original = from_dir / asset["name"]
