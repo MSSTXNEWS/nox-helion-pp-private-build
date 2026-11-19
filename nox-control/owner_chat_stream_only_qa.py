@@ -482,6 +482,14 @@ def main(core):
             'diagnostics_content': 'COUNTS_PUBLIC_NUMBERS_HASHES_AND_SAFE_ROUTE_CATEGORIES'}
         try:
             asyncio.run(asyncio.wait_for(browser_operation(core, report, directory, available), timeout=TOTAL_TIMEOUT))
+            require(report.get('native_posts_admitted') == 2, 'NATIVE_POST_COUNT')
+            require(report.get('both_terminal_sse_done_records_saved_s03_integrated') is True
+                    and report.get('same_dialog_id') is True, 'TERMINAL_S03_RECORDS')
+            require(report.get('authenticated_s03_history_readback_verified') is True
+                    and report.get('owner_authenticated_history_readback_gets') == 1,
+                    'S03_HISTORY_READBACK')
+            require(report.get('canonical_s03_receipt_verified') is False,
+                    'CANONICAL_S03_RECEIPT_SCOPE')
             require(report.get('stream_only_acceptance_verified') is True, 'ACCEPTANCE_MISSING')
             report['state'] = 'STREAM_ONLY_ACCEPTED'
         except BaseException as exc:
