@@ -2,7 +2,7 @@
   "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
   "created_at_utc": "2026-11-19",
   "append_only": true,
-  "purpose": "Append one owner-authenticated read-only evidence record for the exact 2V14-02 process identity, scoped STOP flag, and kernel-lock observation. Keep historical records and frozen task/receipt ledgers unchanged.",
+  "purpose": "Append one owner-authenticated inspect evidence record for the exact 2V14-02 process identity, scoped STOP flag, and kernel-lock observation. The inspect temporarily attached and then detached an SSH public key; cleanup was verified. Keep historical records and frozen task/receipt ledgers unchanged.",
   "scope": {
     "task_ids": [
       "2V14-02"
@@ -45,10 +45,10 @@
         }
       }
     },
-    "mutation_boundary": "Evidence-only sidecar. The frozen all295 manifest and work_receipts.json remain unchanged; this record does not rewrite either file or authorize service mutation."
+    "mutation_boundary": "Evidence-only sidecar. The frozen all295 manifest and work_receipts.json remain unchanged. During inspect, one temporary SSH public key was attached and then detached with cleanup verified; no instance state change or NOX service start/stop/restart was performed. This record does not rewrite either ledger or authorize later mutation."
   },
   "evidence": {
-    "kind": "owner_authenticated_native_read_only_inspect",
+    "kind": "owner_authenticated_native_inspect_with_temporary_ssh_key_cleanup",
     "workflow_run_id": 44492203531,
     "job_id": 135450409598,
     "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44492203531",
@@ -65,13 +65,14 @@
     "authenticated_instance_id": 60509551,
     "host_pin": "VERIFIED",
     "read_only_provider_lookup": true,
-    "provider_mutations": 0,
+    "provider_mutations": 2,
     "command_scope": "inspect",
     "workflow_markers": {
       "source_auth": "PASS",
       "host_pin": "VERIFIED",
       "snapshot_a_complete": true,
-      "snapshot_b_complete": true
+      "snapshot_b_complete": true,
+      "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
     },
     "supervisor_health": {
       "command_rc": 3,
@@ -358,7 +359,18 @@
         "snapshot_sha256": "f3362f497781ce0db876fa443b7535343ad82dd31108812d5c22aee0510bc31f"
       }
     },
-    "audit_scope": "Read-only; no service start/stop/restart, lock acquisition, training, or queue mutation."
+    "audit_scope": "Remote inspect commands were observational. Provider-side access setup temporarily attached and removed one SSH public key; cleanup was verified. No instance state change or NOX service start/stop/restart, training, or queue mutation was performed.",
+    "instance_state_mutations": 0,
+    "provider_mutation_breakdown": {
+      "temporary_ssh_public_key_attach": 1,
+      "temporary_ssh_public_key_detach": 1
+    },
+    "temporary_ssh_key": {
+      "attached_for_inspect": true,
+      "detached": true,
+      "cleanup_marker": "TEMP_SSH_CLEANUP=DETACHED_AND_VERIFIED",
+      "key_material_recorded": false
+    }
   },
   "acceptance_review": {
     "2V14-02": {
@@ -378,7 +390,7 @@
       "task_id": "2V14-02",
       "title": "Установить владельца процессов и действующие STOP/maintenance locks.",
       "result": "ACCEPTED",
-      "evidence_classification": "OWNER_AUTHENTICATED_NATIVE_READ_ONLY_INSPECT",
+      "evidence_classification": "OWNER_AUTHENTICATED_NATIVE_INSPECT_WITH_TEMPORARY_SSH_KEY_CLEANUP",
       "workflow": {
         "run_id": 44492203531,
         "job_id": 135450409598,
@@ -388,8 +400,10 @@
         "authenticated_instance_id": 60509551,
         "host_pin": "VERIFIED",
         "owner_authorization_comment_id": 7004485291,
-        "provider_mutations": 0,
-        "command_scope": "inspect"
+        "provider_mutations": 2,
+        "command_scope": "inspect",
+        "instance_state_mutations": 0,
+        "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
       },
       "criterion": {
         "registry_path": "nox-control/four_queue_20261118/work_tasks.json",
@@ -407,6 +421,6 @@
     "The command rc=3 and three STOPPED rows remain reported; no service was started to change that result.",
     "This inspect did not claim a complete Supervisor inventory or an exhaustive process census.",
     "The two FLOCK observations are not an acquired owner lease.",
-    "No stop, restart, deployment, training, or queue mutation is claimed."
+    "The inspect temporarily attached and then removed one SSH public key for access; TEMP_SSH_CLEANUP=DETACHED_AND_VERIFIED is present in the run log. No instance state mutation or NOX service mutation is claimed."
   ]
 }
