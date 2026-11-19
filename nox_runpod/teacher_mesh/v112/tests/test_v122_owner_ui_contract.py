@@ -28,7 +28,7 @@ class OwnerUiV122Tests(unittest.TestCase):
             self.assertNotIn(old,text)
             self.assertIn(new,text)
         for needed in ("health.chat_http===200","health.model_http===200",
-                       "core.native_cognitive_memory_bound===true",
+                       "core.native_s03_recall_bound===true",
                        "core.native_dialogs_ready===true",
                        "observedActivity?.source==='ACTUAL_NOX_MODEL_SLOTS'",
                        "age>=-5&&age<=30"):
@@ -60,7 +60,11 @@ class OwnerUiV122Tests(unittest.TestCase):
                       "'chat_http':200","'model_http':200"):
             self.assertIn(field,read)
         for field in ("'backend':'EXISTING_NATIVE_ONEHOST'",
-                      "'native_cognitive_memory_bound':_s03_ready()",
+                      "'native_s03_store_present':s03_store_present",
+                      "'native_s03_recall_bound':False",
+                      "'native_cognitive_memory_bound':False",
+                      "'v38_integration_state':'UNBOUND'",
+                      "'v38_missing_required_host_bindings':list(v38_required)",
                       "'native_dialogs_ready':_schema_ready()"):
             self.assertIn(field,bridge)
 
