@@ -3,6 +3,10 @@ from __future__ import annotations
 import contextlib, io, json, time
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
 
+V129_COMPLETION_MARKERS = ("NATIVE_READ_ONLY_COMPLETE=true",)
+V129_MAX_OUTPUT_LINE_CHARS = 7000
+
+
 REMOTE=r'''set -euo pipefail
 cd /root/nox/scripts
 /root/nox/venv/bin/python - <<'PYREMOTE'
@@ -196,6 +200,14 @@ emit('WRITER_CONTRACT',contract)
 emit('SCHEMA',schema)
 print('NATIVE_READ_ONLY_COMPLETE=true')
 PYREMOTE'''
+def source_read_accepted(transport, clean, lines):
+    return bool(transport and clean and isinstance(lines,(list,tuple))
+      and any(isinstance(x,str) and x.startswith('NATIVE_V129_SOURCE=') for x in lines)
+      and any(isinstance(x,str) and x.startswith('NATIVE_V129_WRITER_CONTRACT=') for x in lines)
+      and any(isinstance(x,str) and x.startswith('NATIVE_V129_SCHEMA=') for x in lines)
+      and 'NATIVE_READ_ONLY_COMPLETE=true' in lines)
+
+
 def main():
     ssh.REMOTE=REMOTE
     old=ssh.api
@@ -211,7 +223,9 @@ def main():
     ssh.api=safe
     stream=io.StringIO();transport=False;clean=False
     try:
-        with contextlib.redirect_stdout(stream):transport=ssh.probe()
+        with contextlib.redirect_stdout(stream):
+            transport=ssh.probe(required_completion_markers=V129_COMPLETION_MARKERS,
+                                 max_output_line_chars=V129_MAX_OUTPUT_LINE_CHARS)
     except Exception as exc:
         msg=str(exc)
         print('NOX_V129_HOLD='+(msg if msg.startswith('HOLD_') and len(msg)<90 else 'HOLD_NATIVE_TRANSPORT'))
@@ -222,11 +236,7 @@ def main():
     lines=stream.getvalue().splitlines()
     for line in lines:
         if line.startswith(('NATIVE_V129_','TEMP_SSH_CLEANUP=')) and len(line)<7000:print(line)
-    accepted=bool(transport and clean and
-      any(x.startswith('NATIVE_V129_SOURCE=') for x in lines)
-      and any(x.startswith('NATIVE_V129_WRITER_CONTRACT=') for x in lines)
-      and any(x.startswith('NATIVE_V129_SCHEMA=') for x in lines)
-      and 'NATIVE_READ_ONLY_COMPLETE=true' in lines)
+    accepted=source_read_accepted(transport,clean,lines)
     print('NOX_V129_S03_SOURCE_READ_ACCEPTED='+str(accepted).lower())
     return 0 if accepted else 2
 
