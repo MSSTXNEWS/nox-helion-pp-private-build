@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Normalized sidecar for the already merged and accepted PR #492 2V14-02 point-in-time evidence. This wrapper adds no new live evidence and does not modify the frozen registries or receipts; it exists for a future strict supplemental rollup consumer.",
+  "scope": {
+    "task_ids": [
+      "2V14-02"
+    ],
+    "task_registry": {
+      "path": "nox-control/four_queue_20261118/work_tasks.json",
+      "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+      "task_title": "Установить владельца процессов и действующие STOP/maintenance locks.",
+      "required_evidence": "native"
+    },
+    "immutable_295_manifest": {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+      "task_record_key": "2V14-02",
+      "spec_sha256": "f353440a6056d219deeafbd1f9554497383cb5367b77447e75e3d603fd7a47c7",
+      "original_acceptance_added": false
+    },
+    "receipts": {
+      "path": "nox-control/four_queue_20261118/work_receipts.json",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+      "receipt_key": "2V14-02",
+      "historical_receipt_preserved": true
+    },
+    "task_criterion": {
+      "task_spec_sha256": "f353440a6056d219deeafbd1f9554497383cb5367b77447e75e3d603fd7a47c7",
+      "task_title": "Установить владельца процессов и действующие STOP/maintenance locks.",
+      "required_evidence": "native",
+      "task_registry": {
+        "path": "nox-control/four_queue_20261118/work_tasks.json",
+        "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+      }
+    },
+    "mutation_boundary": "Additive sidecar only. The frozen all295 manifest, work_tasks.json, and work_receipts.json are unchanged. The cited canonical run was read-only for NOX services, queues, and training; its temporary provider SSH key was detached and verified. A duplicate legacy workflow run from the same owner comment is disclosed and excluded from this acceptance binding."
+  },
+  "criteria": {
+    "2V14-02": {
+      "spec_sha256": "f353440a6056d219deeafbd1f9554497383cb5367b77447e75e3d603fd7a47c7",
+      "addendum_assessment": "ACCEPTED",
+      "result": "ACCEPTED",
+      "acceptance_scope": "Point-in-time identity of explicitly selected NOX service/worker processes plus scoped STOP/maintenance markers and kernel locks.",
+      "acceptance_binding": {
+        "evidence_pointer": "#/additional_evidence_records/0",
+        "workflow_run_id": 44517972435,
+        "workflow_job_id": 135538844060,
+        "owner_authorization_id": 7008196167,
+        "pinned_source_sha": "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8",
+        "scope_limit": "Exact point-in-time evidence only: named service/worker identities, listed STOP/maintenance markers, and the two scoped kernel-lock observations recorded in the cited accepted source sidecar."
+      },
+      "evidence_pointer": "#/evidence",
+      "acceptance_increment": 0
+    }
+  },
+  "evidence": {
+    "run_id": 44517972435,
+    "job_id": 135538844060,
+    "owner_authorization_id": 7008196167,
+    "owner_authorization_comment_id": 7008196167,
+    "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44517972435",
+    "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44517972435/job/135538844060",
+    "conclusion": "success",
+    "head_sha": "54aa2ded6f836530f6be30ab8a82f2bf7575ffe5",
+    "pinned_source_sha": "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8",
+    "host_pin": "VERIFIED",
+    "source_auth": "PASS",
+    "inspect_complete": true,
+    "remote_exit_code": 0,
+    "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED",
+    "kind": "SOURCE_SIDECAR_BINDING",
+    "source_sidecar_binding": {
+      "path": "nox-control/complete_executor_20261118/evidence/addenda/native_snapshot_addendum_20261119_2v14-02_run44517972435.json",
+      "git_blob_sha": "47b2f3f58f51908b3f754c99145646d806be9c68",
+      "merge_commit_sha": "8287795276d686ad39529ef25027b19d00c0ef76",
+      "accepted_record_pointer": "#/additional_evidence_records/0",
+      "source_evidence_pointer": "#/evidence",
+      "source_criterion_pointer": "#/scope/criteria/2V14-02",
+      "source_acceptance_review_pointer": "#/acceptance_review/2V14-02"
+    },
+    "accepted_scope": "Point-in-time identity of explicitly selected NOX service/worker processes plus scoped STOP/maintenance markers and kernel locks.",
+    "original_acceptance_added": false,
+    "duplicate_legacy_run": {
+      "run_id": 44517972448,
+      "source_recorded": true,
+      "counted_as_accepted_evidence": false,
+      "note": "The same owner comment also triggered a legacy workflow execution; it remains separately disclosed in the source sidecar and is not combined with the canonical run."
+    },
+    "health_limits": [
+      "Supervisor rc=3 and three selected agent services were STOPPED; no full Supervisor health claim.",
+      "Only the seven named services, bounded worker snapshot, listed marker paths, and two scoped kernel-lock paths are in scope.",
+      "This is point-in-time observation, not lease acquisition or authorization to mutate services, queues, or training."
+    ],
+    "workflow_run_id": 44517972435,
+    "workflow_job_id": 135538844060,
+    "workflow_run_conclusion": "success",
+    "job_conclusion": "success"
+  },
+  "additional_evidence_records": [
+    {
+      "task_id": "2V14-02",
+      "result": "ACCEPTED",
+      "criterion_spec_sha256": "f353440a6056d219deeafbd1f9554497383cb5367b77447e75e3d603fd7a47c7",
+      "acceptance_scope": "Point-in-time identity of explicitly selected NOX service/worker processes plus scoped STOP/maintenance markers and kernel locks.",
+      "workflow": {
+        "run_id": 44517972435,
+        "job_id": 135538844060,
+        "owner_authorization_id": 7008196167,
+        "owner_authorization_comment_id": 7008196167,
+        "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44517972435",
+        "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44517972435/job/135538844060",
+        "conclusion": "success",
+        "head_sha": "54aa2ded6f836530f6be30ab8a82f2bf7575ffe5",
+        "pinned_source_sha": "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8",
+        "host_pin": "VERIFIED",
+        "source_auth": "PASS",
+        "inspect_complete": true,
+        "remote_exit_code": 0,
+        "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED",
+        "workflow_run_id": 44517972435,
+        "workflow_job_id": 135538844060,
+        "workflow_run_conclusion": "success",
+        "job_conclusion": "success"
+      },
+      "source_sidecar_binding": {
+        "path": "nox-control/complete_executor_20261118/evidence/addenda/native_snapshot_addendum_20261119_2v14-02_run44517972435.json",
+        "git_blob_sha": "47b2f3f58f51908b3f754c99145646d806be9c68",
+        "merge_commit_sha": "8287795276d686ad39529ef25027b19d00c0ef76",
+        "accepted_record_pointer": "#/additional_evidence_records/0",
+        "source_evidence_pointer": "#/evidence",
+        "source_criterion_pointer": "#/scope/criteria/2V14-02",
+        "source_acceptance_review_pointer": "#/acceptance_review/2V14-02"
+      },
+      "evidence_pointer": "#/evidence",
+      "acceptance_increment": 0,
+      "original_all295_ledger_updated": false
+    }
+  ]
+}
