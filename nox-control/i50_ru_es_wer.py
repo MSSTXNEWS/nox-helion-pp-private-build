@@ -206,7 +206,7 @@ def build_report(raw: bytes, before_revision: str, after_revision: str) -> dict:
 
 def revision_label(value: str, name: str) -> str:
     label = value.strip()
-    if not label or len(label) > 80 or any(ord(char) < 32 for char in label):
+    if not label or len(label) > 80 or any(ord(char) < 32 or ord(char) == 127 for char in label):
         raise InputError(f"{name} must be a non-empty printable label of at most 80 characters")
     return label
 
@@ -220,7 +220,10 @@ def main() -> int:
     try:
         before = revision_label(args.before_revision, "before revision")
         after = revision_label(args.after_revision, "after revision")
-        raw = Path(args.input).read_bytes()
+        if before == after:
+            raise InputError("before and after revision labels must differ")
+        with Path(args.input).open("rb") as stream:
+            raw = stream.read(MAX_INPUT_BYTES + 1)
         report = build_report(raw, before, after)
     except (OSError, InputError, csv.Error) as exc:
         parser.error(str(exc))
