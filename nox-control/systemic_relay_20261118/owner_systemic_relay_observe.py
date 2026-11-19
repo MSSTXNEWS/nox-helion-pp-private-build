@@ -166,7 +166,7 @@ def project_ledger_hash_snapshot(root=ROOT, names=PROJECT_LEDGER_NAMES,
         second[name] = hash_regular_file(base / name, limit, deadline)
     if first != second:
         raise ValueError('HOLD_LEDGER_SNAPSHOT_CHANGED')
-    return second
+    return {'pre': first, 'post': second}
 
 def obj(path, limit=2000000):
     raw, info = safe_read(path, limit)
@@ -455,8 +455,10 @@ def project_summary():
             'state': 'STABLE',
             'snapshot_passes': 2,
             'files': [{
-                'name': name, **snapshot[name],
-                'matches_expected_source': snapshot[name]['sha256'] == PROJECT_PINS[name],
+                'name': name,
+                'pre': snapshot['pre'][name],
+                'post': snapshot['post'][name],
+                'matches_expected_source': snapshot['pre'][name]['sha256'] == PROJECT_PINS[name],
             } for name in PROJECT_LEDGER_NAMES],
             'content_included': False,
         })
