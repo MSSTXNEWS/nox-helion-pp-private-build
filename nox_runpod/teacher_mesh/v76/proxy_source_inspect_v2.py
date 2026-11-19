@@ -160,13 +160,16 @@ def process_identity(pid):
 def argv_has_expected_script(pid):
     raw,_=read_small('/proc/%d/cmdline'%pid,32768)
     argv=[x.decode('utf-8','strict') for x in raw.rstrip(b'\0').split(b'\0') if x]
+    if not argv or not re.fullmatch(r'python(?:[0-9]+(?:\.[0-9]+)*)?',os.path.basename(argv[0])):
+        return False
     cwd=os.readlink('/proc/%d/cwd'%pid)
-    for item in argv:
+    matches=[]
+    for item in argv[1:]:
         if item.endswith('chat_proxy.py'):
             candidate=item if os.path.isabs(item) else os.path.join(cwd,item)
             if os.path.normpath(candidate)==EXPECTED:
-                return True
-    return False
+                matches.append(item)
+    return len(matches)==1
 def main():
     pid=supervisor_pid()
     start_before=process_identity(pid)
