@@ -13,6 +13,7 @@ from owner_chat_browser_qa import (
     allowed_qa_request,
     canonical_s03_proof_valid,
     click_send,
+    firstturn_history_valid,
     multiturn_followup_prompt,
     ru_es_context_challenge,
     ru_es_unleaked_first_prompt,
@@ -55,6 +56,36 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_first_turn_history_requires_own_dialog_before_es_post(self):
+        # The query string alone cannot authenticate a returned S03/history row.
+        first = [
+            {"role": "user", "content": RU, "dialog_id": DIALOG},
+            {"role": "assistant", "content": FIRST, "dialog_id": DIALOG},
+        ]
+        self.assertTrue(firstturn_history_valid(
+            {"dialog_id": DIALOG, "messages": first}, RU, FIRST, DIALOG))
+        self.assertTrue(firstturn_history_valid(
+            {"messages": [
+                {"role": "user", "content": RU},
+                {"role": "assistant", "content": FIRST},
+            ]}, RU, FIRST, DIALOG))
+        for tampered in (
+            {"dialog_id": "other-dialog", "messages": first},
+            {"dialog_id": None, "messages": first},
+            {"messages": [dict(first[0], dialog_id="other-dialog"), first[1]]},
+            {"messages": [first[0], dict(first[1], dialog_id=None)]},
+            {"messages": [first[0], dict(first[1], content="")]},
+            {"messages": [first[0], {"role": "assistant", "content": FIRST}, first[1]]},
+            {"messages": [first[0], None]},
+            {"messages": "not-a-turn-list"},
+        ):
+            with self.subTest(case=str(tampered)[:90]):
+                self.assertFalse(firstturn_history_valid(tampered, RU, FIRST, DIALOG))
+        self.assertFalse(firstturn_history_valid(
+            {"messages": first}, RU, FIRST, None))
+        self.assertFalse(firstturn_history_valid(
+            {"messages": first}, RU, FIRST, "other-dialog"))
+
     def test_four_turn_fingerprint_binds_entire_untrimmed_ru_es_utf8_history(self):
         spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
         transcript = rows(spanish)
