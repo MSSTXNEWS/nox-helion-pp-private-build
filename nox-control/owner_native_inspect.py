@@ -848,6 +848,69 @@ def receipts():
     return rows
 
 
+PUBLIC_ACTIVE_METADATA = re.compile(r'^[A-Za-z0-9_.:/@-]{1,200}$')
+
+def safe_active_queue_rows(tasks, row_cap=32):
+    """Bounded allowlist-only view of RUNNING rows; never emits private payloads."""
+    if not isinstance(row_cap, int) or isinstance(row_cap, bool) or not 1 <= row_cap <= 128:
+        return {'state': 'HOLD_INVALID_ROW_CAP', 'rows': []}
+    if not isinstance(tasks, dict) or len(tasks) > 5000:
+        return {'state': 'HOLD_INVALID_QUEUE', 'rows': []}
+    running = []
+    for key, task in tasks.items():
+        if not isinstance(task, dict) or not isinstance(task.get('status'), str) or task['status'].lower() != 'running':
+            continue
+        row = {'status': 'RUNNING'}
+        task_id = task.get('id', key)
+        if isinstance(task_id, str):
+            row['task_id'] = task_id if PUBLIC_TASK_ID.fullmatch(task_id) else 'UNKNOWN'
+            row['task_id_sha256'] = hashlib.sha256(task_id.encode('utf-8')).hexdigest()
+            row['task_id_state'] = 'ALLOWLISTED' if PUBLIC_TASK_ID.fullmatch(task_id) else 'UNKNOWN'
+        else:
+            row['task_id'] = 'UNKNOWN'
+            row['task_id_sha256'] = 'UNKNOWN'
+            row['task_id_state'] = 'UNKNOWN'
+        for field in ('handler', 'queue_id', 'parent_task_id'):
+            value = task.get(field)
+            row[field] = value if isinstance(value, str) and PUBLIC_ACTIVE_METADATA.fullmatch(value) else 'UNKNOWN'
+        try:
+            claim_raw = json.dumps(task.get('owner_claim'), sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode('utf-8')
+            row['claim_sha256'] = hashlib.sha256(claim_raw).hexdigest()
+        except (TypeError, ValueError):
+            row['claim_sha256'] = 'UNKNOWN'
+        params = task.get('params')
+        op_key = params.get('operation_key') if isinstance(params, dict) else None
+        if isinstance(op_key, str):
+            row['operation_key'] = 'UNKNOWN'
+            row['operation_key_sha256'] = hashlib.sha256(op_key.encode('utf-8')).hexdigest()
+            row['operation_key_state'] = 'HASHED'
+        else:
+            row['operation_key'] = 'UNKNOWN'
+            row['operation_key_sha256'] = 'UNKNOWN'
+            row['operation_key_state'] = 'UNKNOWN'
+        result = task.get('result')
+        receipt = result.get('receipt') if isinstance(result, dict) else None
+        supplied_hash = result.get('receipt_sha256') if isinstance(result, dict) else None
+        if isinstance(receipt, dict):
+            try:
+                receipt_raw = json.dumps(receipt, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode('utf-8')
+                receipt_hash = hashlib.sha256(receipt_raw).hexdigest()
+                row['receipt_sha256'] = receipt_hash
+                row['receipt_hash_matches'] = isinstance(supplied_hash, str) and re.fullmatch(r'[0-9a-f]{64}', supplied_hash) is not None and supplied_hash == receipt_hash
+                row['terminal_receipt_state'] = 'HASH_MATCH' if row['receipt_hash_matches'] else 'HASH_MISMATCH_OR_UNKNOWN'
+            except (TypeError, ValueError):
+                row['receipt_sha256'] = 'UNKNOWN'
+                row['receipt_hash_matches'] = 'UNKNOWN'
+                row['terminal_receipt_state'] = 'UNKNOWN'
+        else:
+            row['receipt_sha256'] = 'UNKNOWN'
+            row['receipt_hash_matches'] = 'UNKNOWN'
+            row['terminal_receipt_state'] = 'UNKNOWN_NO_RECEIPT'
+        row['s03_state'] = 'UNKNOWN_NOT_VERIFIED_BY_INSPECTOR'
+        running.append(row)
+    running.sort(key=lambda row: row['task_id'])
+    return {'state': 'OK', 'scope': 'RUNNING_ROWS_ALLOWLIST_AND_HASH_ONLY', 'running_count': len(running), 'rows_truncated': len(running) > row_cap, 'rows': running[:row_cap]}
+
 def owner_component_readback():
     rows = []
     for name in ('owner.training_stack', 'owner.dispatcher', 'owner.chat',
@@ -857,6 +920,7 @@ def owner_component_readback():
             rows.append({'component': name, 'evidence': bounded_receipt_meta(p)})
     queue = ROOT / 'state/dispatcher/state.json'
     tasks = []
+    active_rows = {'state': 'HOLD_NOT_READ', 'rows': []}
     queue_scope = 'HOLD_NOT_READ'
     if queue.is_file() and not queue.is_symlink() and queue.stat().st_size < 3000000:
         try:
@@ -868,12 +932,16 @@ def owner_component_readback():
                          for name, task in state['tasks'].items()
                          if isinstance(name, str) and name.startswith('owner.')
                          and isinstance(task, dict)][:512]
+                active_rows = safe_active_queue_rows(state['tasks'])
+                active_rows['queue_sha256'] = hashlib.sha256(raw).hexdigest()
                 queue_scope = 'OWNER_TASK_STATUS_ONLY_NO_RESULTS'
         except (OSError, ValueError, TypeError):
             queue_scope = 'HOLD_INVALID_QUEUE'
+            active_rows = {'state': 'HOLD_INVALID_QUEUE', 'rows': []}
     print('NOX_MAINT_COMPONENTS=' + json.dumps(
         {'receipts': rows, 'tasks': tasks, 'queue_scope': queue_scope},
         separators=(',', ':'), allow_nan=False), flush=True)
+    print('NOX_MAINT_ACTIVE_QUEUE=' + json.dumps(active_rows, separators=(',', ':'), allow_nan=False), flush=True)
 
 def bounded_capacity_readback():
     probe=ROOT/'scripts/owner_capacity_probe.py'
