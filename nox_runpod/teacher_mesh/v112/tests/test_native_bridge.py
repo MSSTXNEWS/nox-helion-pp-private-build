@@ -439,6 +439,7 @@ class V112Tests(unittest.TestCase):
         one_frames=[json.loads(x) for x in one.text.splitlines() if x.strip()]
         self.assertEqual(one_frames[-1]['type'],'done')
         self.assertEqual(self.calls[0]['messages'],[{'role':'user','content':first}])
+        self.assertEqual(len(self.calls),1)
 
         second='Как называется проект?'
         two=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
