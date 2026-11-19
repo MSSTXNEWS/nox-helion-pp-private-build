@@ -176,6 +176,14 @@ def _private_json_constant(_):
     raise GatewayHold('PRIVATE_JSON_INVALID')
 
 
+def _private_json_float(raw):
+    # A syntactically valid exponent like 1e999 overflows float() to infinity.
+    value = float(raw)
+    if not math.isfinite(value):
+        raise GatewayHold('PRIVATE_JSON_INVALID')
+    return value
+
+
 def _read(relative, maximum=65536, missing=None):
     path = _path(relative)
     try:
@@ -192,7 +200,7 @@ def _read(relative, maximum=65536, missing=None):
             raise GatewayHold('PRIVATE_FILE_TOO_LARGE')
     try:
         value = json.loads(data, object_pairs_hook=_private_json_object,
-                           parse_constant=_private_json_constant)
+                           parse_constant=_private_json_constant, parse_float=_private_json_float)
     except (ValueError, UnicodeError):
         raise GatewayHold('PRIVATE_JSON_INVALID') from None
     if not isinstance(value, dict):
@@ -514,10 +522,18 @@ def _reject_model_nonfinite(_value):
     raise GatewayHold('MODEL_RESPONSE_NONFINITE_JSON')
 
 
+def _model_json_float(raw):
+    # parse_constant does not catch JSON exponent overflow (e.g. 1e999).
+    value = float(raw)
+    if not math.isfinite(value):
+        raise GatewayHold('MODEL_RESPONSE_NONFINITE_JSON')
+    return value
+
+
 def advice_candidate(text):
     try:
         value = json.loads(text, object_pairs_hook=_unique_json_object,
-                           parse_constant=_reject_model_nonfinite)
+                           parse_constant=_reject_model_nonfinite, parse_float=_model_json_float)
     except ValueError:
         raise GatewayHold('ADVICE_SCHEMA_INVALID') from None
     required = {'assessment', 'check_categories', 'rationale'}
@@ -566,7 +582,7 @@ async def _request(provider, credential, prompt, config, verification=False):
                     if len(data) > 262144:
                         raise GatewayHold('MODEL_RESPONSE_SIZE')
                 value = json.loads(data, object_pairs_hook=_unique_json_object,
-                                   parse_constant=_reject_model_nonfinite)
+                                   parse_constant=_reject_model_nonfinite, parse_float=_model_json_float)
                 return {'state': 'RECEIVED', 'text': response_text(provider, value),
                         'response_sha256': hashlib.sha256(data).hexdigest()}
     try:
