@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,customIntl,presentation){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -61,7 +61,20 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   const context={window,location,URL,Request,Response,ReadableStream,
     TextDecoder,TextEncoder,AbortController,performance,console,requestAnimationFrame:raf};
+  if(raf&&typeof raf==='object'){
+    context.requestAnimationFrame=raf.requestAnimationFrame;
+    context.cancelAnimationFrame=raf.cancelAnimationFrame;
+    context.setTimeout=raf.setTimeout;
+    context.clearTimeout=raf.clearTimeout;
+  }
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
+  if(customIntl)context.Intl=customIntl;
+  if(presentation){context.document=presentation.document||{visibilityState:presentation.hidden?'hidden':'visible'};
+    window.matchMedia=()=>({matches:!!presentation.reduced});}
+  if(presentation?.onPhase){
+    window.dispatchEvent=e=>presentation.onPhase(e.detail.phase);
+    context.CustomEvent=class{constructor(type,opts){this.detail=opts.detail;}};
+  }
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
 }
@@ -1254,4 +1267,321 @@ test('V173 legacy RU ES first meaningful delta precedes delayed native done, S03
     assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
     assert.equal(f.calls.some(x=>x.path==='/api/nox/stop'),false);
   }
+});
+
+test('V175 SSE pacing cancels the losing callback without changing STOP/S03',async()=>{
+  const ID='abcd1234abcd1234abcd1234abcd1234';
+  const answer='Ж'.repeat(360)+'🧠'+'español';
+  for(const mode of ['frame','timeout']){
+    const frames=new Map(),timers=new Map();
+    let serial=0,cancelledFrames=0,clearedTimers=0;
+    const scheduler={
+      requestAnimationFrame(cb){
+        const id=++serial;frames.set(id,cb);
+        if(mode==='frame')Promise.resolve().then(()=>{
+          if(frames.delete(id))cb(performance.now());
+        });
+        return id;
+      },
+      cancelAnimationFrame(id){if(frames.delete(id))cancelledFrames++;},
+      setTimeout(cb){
+        const id=++serial;timers.set(id,cb);
+        if(mode==='timeout')Promise.resolve().then(()=>{
+          if(timers.delete(id))cb();
+        });
+        return id;
+      },
+      clearTimeout(id){if(timers.delete(id))clearedTimers++;}
+    };
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,scheduler);
+    const r=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:ID,request_id:'v175-cancel-'+mode})});
+    const output=await events(r);
+    assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),answer);
+    assert.equal(output.filter(x=>x.type==='done').length,1);
+    assert.equal(output.filter(x=>x.type==='error').length,0);
+    assert.equal(frames.size,0,'no pending rAF after SSE completion');
+    assert.equal(timers.size,0,'no pending timeout after SSE completion');
+    if(mode==='frame')assert(clearedTimers>0,'frame winner cancels timeout fallback');
+    else assert(cancelledFrames>0,'timeout winner cancels suspended rAF');
+    assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+  }
+});
+
+
+test('V176 scoped SSE cancellation retains stopped phase, never emits post-cancel error phase',async()=>{
+  const phases=[],frames=[{type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+    {type:'start',model:'NOX HELION'},{type:'delta',text:'SSE first token'}];
+  const native=async path=>{
+    if(String(path)==='/api/nox/chat/stream')return new Response(new ReadableStream({start(c){
+      c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
+      // Open transport: scoped STOP must cancel, not produce a fake completed receipt.
+    }}),{headers:{'content-type':'application/x-ndjson'}});
+    return new Response('NOT_FOUND',{status:404});
+  };
+  const w={NOX_NATIVE_OWNER:true,fetch:native,
+    dispatchEvent(e){phases.push(e.detail.phase);}};
+  const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+    href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+  class CE{constructor(type,opts){this.type=type;this.detail=opts.detail;}}
+  vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,CustomEvent:CE});
+  const res=await w.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:'V176 cancellation',dialog_id:id,request_id:'v176-stop'})});
+  const reader=res.body.getReader();
+  assert.equal(JSON.parse(new TextDecoder().decode((await reader.read()).value).slice(6).trim()).type,'meta');
+  assert.equal(JSON.parse(new TextDecoder().decode((await reader.read()).value).slice(6).trim()).type,'token');
+  await reader.cancel('scoped browser stop');
+  await new Promise(ok=>setTimeout(ok,5));
+  assert.equal(phases.at(-1),'stopped','cancellation phase must not be overwritten by async catch');
+  assert.equal(phases.includes('error'),false,'post-cancel errors must not repaint the owner UI');
+});
+
+test('V177 native chunks reuse already segmented glyphs during browser pacing',async()=>{
+  const Seg=Intl.Segmenter;let segments=0;
+  const countedIntl={Segmenter:class {
+    constructor(...args){this.delegate=new Seg(...args);}
+    segment(str){segments++;return this.delegate.segment(str);}
+  }};
+  const reply='a'.repeat(120)+('NOX 🧠 español русский ').repeat(32);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    undefined,false,120,undefined,'verified-exchange-01',[],false,false,prompt,countedIntl);
+  const output=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v177-single-segment'})}));
+  assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+  assert.equal(output.filter(x=>x.type==='done').length,1);
+  assert.equal(output.filter(x=>x.type==='error').length,0);
+  assert.equal(segments,3,'two native chunks and final tail should each segment once');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+});
+
+test('V178 hidden and reduced-motion SSE skip visual timers but preserve native S03 result',async()=>{
+  const reply='NOX 🧠 español русский '.repeat(25);
+  for(const view of [{hidden:true},{reduced:true},{hidden:false,reduced:false}]){
+    let raf=0,timers=0;
+    const scheduler={
+      requestAnimationFrame(cb){raf++;queueMicrotask(()=>cb(performance.now()));return raf;},
+      cancelAnimationFrame(){},
+      setTimeout(cb){timers++;queueMicrotask(cb);return timers;},
+      clearTimeout(){}
+    };
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+      scheduler,false,5,undefined,'verified-exchange-01',[],false,false,prompt,undefined,view);
+    const output=await events(await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v178-visibility'})}));
+    assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+    assert.equal(output.filter(x=>x.type==='done').length,1);
+    assert.equal(output.filter(x=>x.type==='error').length,0);
+    assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+    if(view.hidden||view.reduced)assert.equal(raf+timers,0,'no visual pacing work while suppressed');
+    else assert(raf+timers>0,'visible motion retains browser pacing');
+  }
+});
+
+test('V179 browser multi-exchange history preserves exact S03 exchange IDs',async()=>{
+  const later=[
+    {role:'user',exchange_id:'verified-exchange-02',content:'Segundo turno'},
+    {role:'assistant',exchange_id:'verified-exchange-02',content:'Respuesta persistida'}
+  ];
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,'verified-exchange-01',later);
+  const response=await f.fetch('/api/nox/history?dialog_id='+id);
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.deepEqual(Array.from(data.messages,m=>m.exchange_id),
+    ['verified-exchange-01','verified-exchange-01','verified-exchange-02','verified-exchange-02']);
+  assert.deepEqual(Array.from(data.messages,m=>m.role),
+    ['user','assistant','user','assistant']);
+  assert.equal(data.messages[3].content,'Respuesta persistida');
+  assert.equal(f.calls.filter(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')).length,1);
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,0);
+});
+
+test('V180 tab hiding during pacing frees queued callbacks and still verifies S03',async()=>{
+  const rafPending=new Map(),timerPending=new Map(),listeners=new Set();
+  let serial=0;
+  const doc={visibilityState:'visible',
+    addEventListener(type,handler){if(type==='visibilitychange')listeners.add(handler);},
+    removeEventListener(type,handler){if(type==='visibilitychange')listeners.delete(handler);}};
+  const scheduler={
+    requestAnimationFrame(cb){let n=++serial;rafPending.set(n,cb);return n;},
+    cancelAnimationFrame(n){rafPending.delete(n);},
+    setTimeout(cb){let n=++serial;timerPending.set(n,cb);return n;},
+    clearTimeout(n){timerPending.delete(n);}
+  };
+  const reply='NOX🧠'.repeat(130);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    scheduler,false,200,undefined,'verified-exchange-01',[],false,false,prompt,undefined,
+    {document:doc,reduced:false});
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v180-visibility-change'})});
+  for(let i=0;i<100&&!rafPending.size;i++)await new Promise(ok=>setTimeout(ok,1));
+  assert(rafPending.size>0,'first visible token must enter browser pacing');
+  doc.visibilityState='hidden';
+  for(const callback of Array.from(listeners))callback();
+  const output=await Promise.race([events(response),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V180_VISIBILITY_STALL')),900))]);
+  assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+  assert.equal(output.filter(x=>x.type==='done').length,1);
+  assert.equal(output.filter(x=>x.type==='error').length,0);
+  assert.equal(rafPending.size,0);
+  assert.equal(timerPending.size,0);
+  assert.equal(listeners.size,0,'visibility listeners must be cleared');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+});
+
+test('V181 visibility becomes hidden as listener attaches without lost pacing wakeup',async()=>{
+  const rafPending=new Map(),timerPending=new Map(),listeners=new Set();
+  let serial=0,rafCalls=0,timerCalls=0;
+  const doc={visibilityState:'visible',
+    addEventListener(type,callback){
+      if(type==='visibilitychange'){
+        listeners.add(callback);
+        // A browser can hide between the initial state check and listener attachment.
+        // It is already hidden when registration finishes, without another event.
+        this.visibilityState='hidden';
+      }
+    },
+    removeEventListener(type,callback){
+      if(type==='visibilitychange')listeners.delete(callback);
+    }
+  };
+  const scheduler={
+    requestAnimationFrame(cb){rafCalls++;const n=++serial;rafPending.set(n,cb);return n;},
+    cancelAnimationFrame(n){rafPending.delete(n);},
+    setTimeout(cb){timerCalls++;const n=++serial;timerPending.set(n,cb);return n;},
+    clearTimeout(n){timerPending.delete(n);}
+  };
+  const reply='NOX 🧠 español русский '.repeat(35);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    scheduler,false,5,undefined,'verified-exchange-01',[],false,false,prompt,undefined,
+    {document:doc,reduced:false});
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v181-visibility-race'})});
+  const output=await Promise.race([events(response),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V181_LOST_VISIBILITY_WAKEUP')),900))]);
+  assert.equal(doc.visibilityState,'hidden');
+  assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+  assert.equal(output.filter(x=>x.type==='done').length,1);
+  assert.equal(output.filter(x=>x.type==='error').length,0);
+  assert.equal(rafPending.size,0,'no stale animation frame after registration race');
+  assert.equal(timerPending.size,0,'no delayed fallback timeout after registration race');
+  assert.equal(listeners.size,0,'registered visibility callback must be removed');
+  assert.equal(rafCalls,0,'V185: settled hidden wait schedules zero animation frames');
+  assert.equal(timerCalls,0,'V185: settled hidden wait schedules zero fallback timers');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+});
+
+test('V182 legacy CJK and Hangul safely stream before native completion with S03 readback',async()=>{
+  for(const reply of ['中文界面实时回答','한국어대답실시간']){
+    let s03Seen=false;
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+      undefined,true,5,()=>{s03Seen=true;});
+    const response=await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v182-legacy-cjk'})});
+    const reader=response.body.getReader(),decoder=new TextDecoder();
+    const meta=JSON.parse(decoder.decode((await reader.read()).value).slice(6).trim());
+    assert.equal(meta.type,'meta');
+    const first=await Promise.race([
+      reader.read(),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V182_LEGACY_UNICODE_BUFFERED')),95))
+    ]);
+    assert.equal(first.done,false);
+    const initial=JSON.parse(decoder.decode(first.value).slice(6).trim());
+    assert.equal(initial.type,'token');
+    assert.equal(initial.t,reply.slice(0,4),'keep final potentially incomplete grapheme');
+    assert.equal(s03Seen,false,'do not fabricate durable receipt before model completion');
+    const frames=[initial];
+    for(;;){
+      const chunk=await reader.read();
+      if(chunk.done)break;
+      frames.push(JSON.parse(decoder.decode(chunk.value).slice(6).trim()));
+    }
+    const tokens=frames.filter(x=>x.type==='token');
+    assert.equal(tokens.map(x=>x.t).join(''),reply,'full native text preserved');
+    const boundaries=new Set(),segmenter=new Intl.Segmenter(undefined,{granularity:'grapheme'});
+    let count=0;
+    for(const g of segmenter.segment(reply)){count+=g.segment.length;boundaries.add(count);}
+    count=0;
+    for(const t of tokens){count+=t.t.length;assert(boundaries.has(count),'no broken grapheme');}
+    assert.equal(frames.filter(x=>x.type==='done').length,1);
+    assert.equal(frames.filter(x=>x.type==='error').length,0);
+    assert.equal(s03Seen,true,'terminal done waits for genuine S03 history');
+    assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  }
+});
+
+
+test('V186 response-global pacing limits rAF waits to two across native chunks with S03 proof',async()=>{
+  const reply='Ж'.repeat(960)+'🧠'+'español';
+  let frames=0,timers=0;
+  const scheduler={
+    requestAnimationFrame(cb){frames++;queueMicrotask(()=>cb(performance.now()));return frames;},
+    cancelAnimationFrame(){},
+    setTimeout(cb,ms){timers++;return setTimeout(cb,ms);},
+    clearTimeout(id){clearTimeout(id);}
+  };
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,scheduler,false,480);
+  const output=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v183-one-frame'})}));
+  assert.equal(output.filter(e=>e.type==='token').map(e=>e.t).join(''),reply);
+  assert.equal(output.filter(e=>e.type==='done').length,1);
+  assert.equal(output.filter(e=>e.type==='error').length,0);
+  assert.equal(frames,2,'at most two paint frames across BOTH native chunks');
+  assert.equal(timers,2,'fallback timers capped for entire response, not per chunk');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+});
+
+
+test('V184 scoped abort wakes frozen paint scheduler without false S03 done',async()=>{
+  const abort=new AbortController(),framesPending=new Map(),timersPending=new Map();
+  let serial=0,abortQueued=false;
+  const scheduler={
+    requestAnimationFrame(cb){
+      const n=++serial;framesPending.set(n,cb);
+      if(!abortQueued){abortQueued=true;queueMicrotask(()=>abort.abort());}
+      return n;
+    },
+    cancelAnimationFrame(n){framesPending.delete(n);},
+    setTimeout(cb){const n=++serial;timersPending.set(n,cb);return n;},
+    clearTimeout(n){timersPending.delete(n);}
+  };
+  const reply='Ж'.repeat(960)+'🧠';
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,scheduler,false,480);
+  const output=await Promise.race([
+    events(await f.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v184-abort-pacing'})})),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V184_FROZEN_PAINT_ABORT')),500))
+  ]);
+  assert.equal(abortQueued,true,'abort actually occurred while visual frame was pending');
+  assert.equal(output.filter(e=>e.type==='done').length,0,'no forged S03 success');
+  assert.equal(output.filter(e=>e.type==='error').at(-1).error,'STREAM_STOP_REQUESTED');
+  assert.equal(framesPending.size,0,'no orphan frame callback');
+  assert.equal(timersPending.size,0,'no orphan fallback timer');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1,'single model POST');
+  assert.equal(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')),false);
+});
+
+
+test('V187 redundant token UI phases are deduplicated without changing SSE or S03 fixture',async()=>{
+  const phases=[];
+  const reply='NOX 🧠 español русский '.repeat(75);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    undefined,false,240,undefined,'verified-exchange-01',[],false,false,prompt,
+    undefined,{onPhase:p=>phases.push(p)});
+  const out=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v187-phase'})}));
+  assert(out.filter(x=>x.type==='token').length>20,'real multi-slice fixture');
+  assert.deepEqual(phases,['waiting','speaking','idle'],'no redundant speaking phase dispatch');
+  assert.equal(out.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+  assert.equal(out.filter(x=>x.type==='done').length,1);
+  assert.equal(out.filter(x=>x.type==='error').length,0);
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });

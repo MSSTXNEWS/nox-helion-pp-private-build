@@ -10,7 +10,7 @@
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
   function livePieces(text) {
-    const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
+    const glyphs=Array.isArray(text)?text:typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
       ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
       : [text];
     const width=Math.max(8,Math.ceil(glyphs.length/64));
@@ -139,7 +139,6 @@
         if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
         preparingSeen=true;
       } else {
-        // Fail closed: an unrecognized native frame cannot precede a
         throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
       }
     };
@@ -149,7 +148,6 @@
         const chunk=await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
-        // Cap unfinished NDJSON frames, not combined chunks.
         let j;while((j=buf.indexOf('\n'))>=0){
           if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
@@ -169,7 +167,7 @@
     }
   }
   function sseChat(data,signal) {
-    let closed=false;const started=performance.now();let firstVisibleMs=null;
+    let closed=false,phase;const started=performance.now();let firstVisibleMs=null;
     const upstreamAbort=new AbortController();
     const onAbort=()=>upstreamAbort.abort();
     if(signal?.aborted)upstreamAbort.abort();
@@ -178,11 +176,12 @@
     const body=new ReadableStream({
       async start(controller){
         const event=payload=>{
+          if(closed)return;
           if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
             firstVisibleMs=Math.round(performance.now()-started);
-          const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
-          if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-            window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
+          const p={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
+          if(p&&p!==phase&&(phase=p)&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+            window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:p}}));
           if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
         };
         try {
@@ -194,25 +193,38 @@
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
-          const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
-          const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
-          let trailing='';
+          const segmenter=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
+          let trailing='',paintWaits=0;
           const emitPieces=async t=>{
             const parts=livePieces(t);
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              // Bound visual pacing to 8 actual frames per incoming native chunk.
-              // This never invents text or changes upstream TTFT.
-              if(index<Math.min(parts.length-1,7)){
-                // Browsers with suspended rAF (including headless/hidden tabs)
-                // must still finish and verify S03. At most 18ms per slice.
+              if(index<parts.length-1&&
+                 (typeof document==='undefined'||document.visibilityState!=='hidden')&&
+                 !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches&&paintWaits++<2){
                 await new Promise(resolve=>{
-                  let settled=false;
-                  const finish=()=>{if(!settled){settled=true;resolve();}};
-                  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
-                  if(typeof setTimeout==='function')setTimeout(finish,18);
-                  else if(typeof requestAnimationFrame!=='function')finish();
+                  let settled=false,frameId,timerId;
+                  const visibility=()=>{if(document.visibilityState==='hidden')finish();};
+                  const finish=()=>{
+                    if(settled)return;
+                    settled=true;
+                    if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
+                    nativeSignal.removeEventListener('abort',finish);
+                    if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+                    if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
+                    resolve();
+                  };
+                  if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
+                  if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}else return;
+                  if(typeof requestAnimationFrame==='function'){
+                    frameId=requestAnimationFrame(finish);
+                    if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+                  }
+                  if(typeof setTimeout==='function'){
+                    timerId=setTimeout(finish,18);
+                    if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
+                  } else if(typeof requestAnimationFrame!=='function')finish();
                 });
               }
             }
@@ -220,10 +232,7 @@
           const {answer,receipt}=await consume(upstream,async t=>{
             trailing+=t;
             if(!segmenter){
-              // Without a segmenter, emit only a known-safe ASCII prefix.
-              // Keep one glyph of lookahead so subsequent combining marks
-              // cannot tear a grapheme across native delta boundaries.
-              const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
+              const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u4e00-\u9fff\uac00-\ud7af\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
               if(ascii){
                 const safe=ascii[0].slice(0,-1);
                 trailing=trailing.slice(safe.length);
@@ -233,7 +242,7 @@
             }
             const glyphs=Array.from(segmenter.segment(trailing),part=>part.segment);
             trailing=glyphs.pop()||'';
-            if(glyphs.length)await emitPieces(glyphs.join(''));
+            if(glyphs.length)await emitPieces(glyphs);
           },nativeSignal);
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
@@ -249,7 +258,6 @@
         }catch(e){
           event({type:'error',
             error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
-            // HTTP cancellation is confirmed; GPU/native execution is not.
             gpu_stop_verified:false});
         }finally{
           signal?.removeEventListener?.('abort',onAbort);
@@ -302,7 +310,7 @@
           if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages))
             throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
           return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
-            role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
+            role:m.role,content:m.content,exchange_id:m.exchange_id||null,created_at:m.ts||'',status:'saved'
           }))});
         }
         const data=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);
