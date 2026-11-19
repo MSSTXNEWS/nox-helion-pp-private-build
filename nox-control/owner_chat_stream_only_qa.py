@@ -136,9 +136,10 @@ def rewrite_browser(body):
     body = replace_once(body, "            async def guard(route):\n",
         "            async def guard(route):\n                nonlocal native_admitted\n")
     body = replace_once(body,
-        "                        own=(request.method=='POST' and allowed_qa_request(\n" 
-        "                             stream_admitted,False,prompt,second_prompt,body,did))\n",
-        "                        own=request.method=='POST' and isinstance(body,dict) and body.get('message')==prompt and body.get('dialog_id')==did\n")
+        "                        own=(request.method=='POST' and allowed_qa_request(\n"
+        "                             stream_admitted,second_permitted,prompt,second_prompt,body,did))\n",
+        "                        own=(request.method=='POST' and allowed_qa_request(\n"
+        "                             stream_admitted,False,prompt,second_prompt,body,did))\n")
     body = replace_once(body,
         "                    if not own:\n                        blocked['non_qa_generation']+=1\n                        return await route.abort()\n",
         "                    if not own:\n                        blocked['non_qa_generation']+=1\n                        return await route.abort()\n"
