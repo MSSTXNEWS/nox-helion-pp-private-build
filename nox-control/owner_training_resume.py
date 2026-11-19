@@ -119,7 +119,7 @@ def read_json(path, limit=4_000_000):
     if type(limit) is not int or limit < 0:
         raise RuntimeError('HOLD_BOUNDED_STATE_READ')
     try:
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     except OSError as exc:
         raise RuntimeError('HOLD_BOUNDED_STATE_READ') from exc
     try:
