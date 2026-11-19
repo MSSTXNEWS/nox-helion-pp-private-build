@@ -56,7 +56,7 @@ def _knowledge(q:str='',facts_only:bool=False,limit:int=32):
             params.extend([q,q,q,escaped])
         where=' WHERE '+' AND '.join(clauses) if clauses else ''
         sql=('SELECT id,segment,text,provenance,sha256,ts,meta FROM s03_items'
-             +where+' ORDER BY ts DESC LIMIT ?')
+             +where+' ORDER BY ts DESC,rowid DESC LIMIT ?')
         params.append(limit)
         rows=db.execute(sql,tuple(params)).fetchall()
     results=[]
@@ -85,6 +85,9 @@ def _knowledge(q:str='',facts_only:bool=False,limit:int=32):
             'source_sha256':source_content_sha if source_content_sha is not None else native_sha,
             'record_sha256':native_sha,
             'submitted_content_sha256':source_content_sha,
+            'schema':str(meta.get('schema') or '')[:80],
+            'owner_scope':str(meta.get('owner_scope') or '')[:80],
+            'valid_from':str(meta.get('valid_from') or '')[:45],
             'recorded_at':str(row['ts'] or '')[:55],
         })
     return results
