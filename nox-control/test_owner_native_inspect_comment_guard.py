@@ -1,4 +1,4 @@
-"""Offline authorization tests for fixed owner inspect/audit actions."""
+"""Offline authorization tests for fixed owner inspect/audit/GPU inventory actions."""
 from __future__ import annotations
 
 import json
@@ -22,6 +22,7 @@ from owner_native_inspect_comment_guard import (
 
 INSPECT_SHA = APPROVED_SOURCE_BY_ACTION["inspect"]
 AUDIT_SHA = APPROVED_SOURCE_BY_ACTION["audit"]
+GPU_INVENTORY_SHA = APPROVED_SOURCE_BY_ACTION["gpu_inventory"]
 OLD_UNAPPROVED_SHA = "80fc87881036462cfbe0aa27bb02b69daf8bfe6a"  # prior #437
 STALE_AUDIT_SHA = "22efccc957bc72d54899a701e6d09e5ef69b20c2"  # pre-fix #475
 UNAPPROVED_SHA = "a" * 40
@@ -43,17 +44,24 @@ def event_for(body: str = f"/nox-maintain 60509551 {INSPECT_SHA} inspect") -> di
 
 
 class OwnerCommentGuardTests(unittest.TestCase):
-    def test_exact_inspect_and_audit_commands_return_pinned_pairs(self) -> None:
+    def test_exact_inspect_audit_and_gpu_commands_return_pinned_pairs(self) -> None:
         self.assertEqual(INSPECT_SHA,
                          "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8")
         self.assertEqual(AUDIT_SHA,
                          "b1e33d60983885a7ebd1979bda4ec640b7ca7047")
+        self.assertEqual(GPU_INVENTORY_SHA,
+                         "f17c520a8c5ea89162446694972ccdcc8ae86b23")
         self.assertEqual(authorize_event(event_for(), REPOSITORY, "issue_comment"),
                          ("inspect", INSPECT_SHA))
         audit_body = f"/nox-maintain 60509551 {AUDIT_SHA} audit"
         self.assertEqual(
             authorize_event(event_for(audit_body), REPOSITORY, "issue_comment"),
             ("audit", AUDIT_SHA),
+        )
+        gpu_body = f"/nox-maintain 60509551 {GPU_INVENTORY_SHA} gpu_inventory"
+        self.assertEqual(
+            authorize_event(event_for(gpu_body), REPOSITORY, "issue_comment"),
+            ("gpu_inventory", GPU_INVENTORY_SHA),
         )
 
     def test_malformed_or_unavailable_actions_hold(self) -> None:
@@ -81,6 +89,10 @@ class OwnerCommentGuardTests(unittest.TestCase):
             (UNAPPROVED_SHA, "audit"),
             (AUDIT_SHA, "inspect"),
             (INSPECT_SHA, "audit"),
+            (UNAPPROVED_SHA, "gpu_inventory"),
+            (GPU_INVENTORY_SHA, "inspect"),
+            (GPU_INVENTORY_SHA, "audit"),
+            (AUDIT_SHA, "gpu_inventory"),
         )
         for sha, action in pairs:
             body = f"/nox-maintain 60509551 {sha} {action}"
@@ -150,6 +162,14 @@ class OwnerCommentGuardTests(unittest.TestCase):
             self.assertEqual(output_path.read_text(encoding="utf-8"),
                              f"action=audit\nsource_sha={AUDIT_SHA}\n")
 
+            gpu_body = f"/nox-maintain 60509551 {GPU_INVENTORY_SHA} gpu_inventory"
+            event_path.write_text(json.dumps(event_for(gpu_body)), encoding="utf-8")
+            output_path.write_text("", encoding="utf-8")
+            with mock.patch.dict(os.environ, env, clear=False):
+                self.assertEqual(main(), 0)
+            self.assertEqual(output_path.read_text(encoding="utf-8"),
+                             f"action=gpu_inventory\nsource_sha={GPU_INVENTORY_SHA}\n")
+
             unapproved_body = (
                 f"/nox-maintain 60509551 {OLD_UNAPPROVED_SHA} audit"
             )
@@ -170,19 +190,22 @@ class OwnerCommentGuardTests(unittest.TestCase):
 
 
 class WorkflowScopeTests(unittest.TestCase):
-    def test_owner_job_prefilter_only_starts_for_fixed_inspect_or_audit_suffixes(self) -> None:
+    def test_owner_job_prefilter_only_starts_for_fixed_read_only_suffixes(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
         owner_job = workflow.split("  owner-inspect:\n", 1)[1]
         condition = owner_job.split("    runs-on:", 1)[0]
         self.assertIn("endsWith(github.event.comment.body, ' inspect')", condition)
         self.assertIn("endsWith(github.event.comment.body, ' audit')", condition)
+        self.assertIn("endsWith(github.event.comment.body, ' gpu_inventory')", condition)
         self.assertLess(condition.index("endsWith(github.event.comment.body, ' inspect')"),
                         owner_job.index("steps:"))
         self.assertLess(condition.index("endsWith(github.event.comment.body, ' audit')"),
                         owner_job.index("steps:"))
+        self.assertLess(condition.index("endsWith(github.event.comment.body, ' gpu_inventory')"),
+                        owner_job.index("steps:"))
 
-    def test_workflow_runs_only_two_fixed_owner_actions(self) -> None:
+    def test_workflow_runs_only_three_fixed_owner_actions(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
         self.assertIn("issue_comment:", workflow)
@@ -198,6 +221,8 @@ class WorkflowScopeTests(unittest.TestCase):
                       workflow)
         self.assertIn("python -B nox-control/owner_native_operator.py audit",
                       workflow)
+        self.assertIn("python -B nox-control/owner_native_operator.py gpu_inventory",
+                      workflow)
         self.assertNotIn("owner_native_operator.py $", workflow)
         self.assertNotIn("inputs.action", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
@@ -206,14 +231,27 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertNotIn("actions: write", workflow)
         self.assertNotIn("github-script", workflow)
         self.assertEqual(workflow.count("persist-credentials: false"), 3)
-        self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 2)
+        self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 3)
         self.assertLess(workflow.index("owner_native_inspect_comment_guard.py"),
                         workflow.index("Run the fixed read-only inspect action"))
         self.assertLess(workflow.index("Run the fixed read-only inspect action"),
                         workflow.index("NOX2: ${{ secrets.NOX2 }}"))
         self.assertIn("steps.owner-command.outputs.action == 'inspect'", workflow)
         self.assertIn("steps.owner-command.outputs.action == 'audit'", workflow)
+        self.assertIn("steps.owner-command.outputs.action == 'gpu_inventory'", workflow)
 
+    def test_legacy_workflow_excludes_gpu_inventory_before_secrets(self) -> None:
+        workflow = (Path(__file__).parents[1] / ".github" / "workflows"
+                    / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
+        owner_job = workflow.split("  owner-maintenance:\n", 1)[1]
+        condition = owner_job.split("    runs-on:", 1)[0]
+        self.assertIn("!contains(github.event.comment.body, ' gpu_inventory')", condition)
+        self.assertIn("!contains(github.event.comment.body, ' inspect')", condition)
+        self.assertIn("!contains(github.event.comment.body, ' audit')", condition)
+        self.assertIn("!contains(github.event.comment.body, ' source_attest')", condition)
+        self.assertNotIn("memfd_audit')", condition)
+        self.assertLess(condition.index("!contains(github.event.comment.body, ' gpu_inventory')"),
+                        owner_job.index("steps:"))
 
 if __name__ == "__main__":
     unittest.main()
