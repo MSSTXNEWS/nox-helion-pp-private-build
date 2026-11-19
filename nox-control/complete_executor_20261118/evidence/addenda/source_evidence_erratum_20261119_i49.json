@@ -1,0 +1,124 @@
+{
+  "schema": "NOX_SOURCE_EVIDENCE_ERRATUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Record the independently verified comparator source digest correction and leave I-49 authorization scope unresolved where no authorization receipt or exact 500-name allowlist is bound. This file is additive; prior evidence and immutable registries remain unchanged.",
+  "scope": {
+    "task_id": "I-49",
+    "frozen_criterion": {
+      "task_registry": {
+        "path": "nox-control/four_queue_20261118/work_ideas.json",
+        "git_blob_sha": "6f84f315d9792cb43f08b72b062dc2f71ce1d4a6"
+      },
+      "all295_manifest": {
+        "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+        "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb"
+      },
+      "work_receipts": {
+        "path": "nox-control/four_queue_20261118/work_receipts.json",
+        "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338"
+      },
+      "title": "Сравнить тензоры двух checkpoints на CPU",
+      "required_evidence": "source",
+      "acceptance_criterion": "Проверить разрешённые параметры выборочно, без загрузки полной модели",
+      "spec_sha256": "c126701e3699969ab557e9fb99f4c2085a0d678f06e11895835d89241f194e1f",
+      "prior_registry_status": "HISTORICAL_VERIFIED"
+    },
+    "prior_acceptance_record": {
+      "path": "nox-control/complete_executor_20261118/evidence/addenda/source_acceptance_addendum_20261119_4a01_i49.json",
+      "git_blob_sha": "19c7521b1b36479224478530bb1d06307967de35",
+      "prior_i49_assessment": "ACCEPTED_SOURCE_CRITERION",
+      "mutation": false
+    },
+    "prior_i49_evidence_commit": "d56f5acae91aa01d2ba65d4bceb7b1715c253dba",
+    "prior_evidence_files": [
+      {
+        "path": "nox-control/i49_checkpoint_compare_20261119/evidence/i49_cpu_comparison.json",
+        "git_blob_sha": "a2f2ff6f52cab8b02b299efda6646a5f5eaae3be",
+        "scope_in_file": "one initially selected shared tensor"
+      },
+      {
+        "path": "nox-control/i49_checkpoint_compare_20261119/evidence/PROVENANCE.md",
+        "git_blob_sha": "c5765c517570b743b1508b865910440b0ead8308"
+      },
+      {
+        "path": "nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta.json",
+        "git_blob_sha": "a5e9fc5d763b2872d4e61cd0f3a95a9324320b19",
+        "content_sha256": "bb2280f10646331b0528599f5d2693779da4076bdbe53e280a09634a45d99ec6",
+        "scope_in_file": "all 500 shared tensors in the selected pair"
+      }
+    ]
+  },
+  "comparator_digest_correction": {
+    "repository": "s-grouptwet/nox-helion-pp-private-build",
+    "path": "handoff/20261117/nox-v15-kit/execution/role4/tensor_delta.py",
+    "revision": "e10c80f64e3fd88298be2776c58d03939e6e71f6",
+    "git_blob_sha": "93a5963b0951a38c00438ced561b1077fd8bf7ca",
+    "file_bytes": 8681,
+    "line_count": 232,
+    "previously_recorded_source_sha256": "a1917cfda4fd012b92332a8b3513fb1ad3e4694050f254d38b3a88f803cfb867",
+    "independently_verified_source_sha256": "f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0",
+    "verified_from": "GitLab repository file read at the exact commit above; SHA-256 computed over the returned 8,681 UTF-8 bytes. Git tree blob ID matches git_blob_sha.",
+    "correction_status": "CORRECTED",
+    "code_scope_summary": "The pinned code validates the Safetensors header and payload offsets, opens each local input once per compare call, and hashes requested tensor ranges in 1 MiB chunks without loading tensor arrays or the base model."
+  },
+  "drive_pair_revalidation": {
+    "source": "Read-only current Google Drive folder, JOIN.txt, and SHA256SUMS metadata/content recheck for this erratum; no adapter parts were re-downloaded.",
+    "before": {
+      "folder_name": "understanding_pref_checkpoint-105",
+      "folder_id": "1PNX-lRLaKVTRPakDOOqctF_rUoPvOu59",
+      "join_file_id": "15cFnblVY95bJuF20a-L9Qy7RLHdHyaug",
+      "assembled_bytes": 306787336,
+      "assembled_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2",
+      "sha256sums_file_id": "1T98w8xTgtMZFJuwvDrAOtJwWD6eAiXHJ",
+      "sha256sums_bytes": 1158,
+      "sha256sums_sha256": "0852c1181534439cc51f241aa091d76cc7fc1c48f3d8a39332c5362192207f9d",
+      "current_folder_parts_match_receipt": true
+    },
+    "after": {
+      "folder_name": "mix_final_sft_checkpoint-383",
+      "folder_id": "1CG_ALzrWsZLyrtuGxvNp4ajyZGfgh6nH",
+      "join_file_id": "1x-DwWsOeRh-j-g9lu_a81WZPWxgSrAWI",
+      "assembled_bytes": 306787336,
+      "assembled_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1",
+      "sha256sums_file_id": "1EWa3HwSr3JGkrRd9azhghfdMuGvBUyZB",
+      "sha256sums_bytes": 574,
+      "sha256sums_sha256": "bb207cd70ea65fc0145d435c135078c39f1a786df8338ea12df3b7c6e729e42a",
+      "current_folder_parts_match_receipt": true
+    },
+    "revalidation_limit": "This check confirms live folder/manifests and their listed part hashes match the committed receipt; it does not re-read or re-hash the large adapter part bytes."
+  },
+  "comparison_result_recheck": {
+    "artifact_path": "nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta.json",
+    "common_tensors": 500,
+    "compared_tensors": 500,
+    "changed_tensors": 500,
+    "unchanged_tensors": 0,
+    "comparison_issues": 0,
+    "dtype": "F32",
+    "changed_payload_bytes": 306708480,
+    "training_started": false,
+    "drive_written": false,
+    "server_written": false,
+    "result_is_fixture": false,
+    "verification_basis": "The linked report's tensor names/hashes and summaries are internally consistent and are bound to the same aggregate adapter SHAs; current Drive JOIN/manifests and all eight part checksum entries match the report."
+  },
+  "authorization_scope": {
+    "original_artifacts_attest_pair_selected_under_current_owner_authorization": true,
+    "separate_owner_authorization_receipt_id": null,
+    "exact_500_tensor_allowlist": null,
+    "state": "UNRESOLVED",
+    "explanation": "The evidence package does not contain a verifiable owner authorization event/receipt or a 500-name tensor allowlist. The original single-tensor receipt and the all-500 extension must not be conflated. No missing ID or allowlist is inferred or invented."
+  },
+  "current_assessment": "HOLD_UNRESOLVED_AUTHORIZATION_BINDING",
+  "acceptance_instruction": "Do not treat the prior I-49 ACCEPTED_SOURCE_CRITERION label as cleared by this erratum until the comparator hash correction and authorization scope receive independent acceptance review.",
+  "mutation_boundary": {
+    "all295_manifest_changed": false,
+    "work_receipts_changed": false,
+    "work_ideas_changed": false,
+    "prior_acceptance_sidecar_changed": false,
+    "prior_i49_evidence_changed": false,
+    "drive_changed": false,
+    "server_changed": false
+  }
+}

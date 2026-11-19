@@ -1,0 +1,177 @@
+{
+  "schema": "NOX_SOURCE_EVIDENCE_ACCEPTANCE_BINDING_V1",
+  "recorded_at_utc": "2026-11-19T11:16:12Z",
+  "append_only": true,
+  "purpose": "Bind the independently reviewed I-49 source criterion to a fresh CPU comparison executed with the exact pinned comparator bytes. The earlier run is preserved as historical and is not used as execution provenance for this current acceptance candidate.",
+  "task": {
+    "task_id": "I-49",
+    "title": "Сравнить тензоры двух checkpoints на CPU",
+    "required_evidence": "source",
+    "criterion": "Проверить разрешённые параметры выборочно, без загрузки полной модели",
+    "spec_sha256": "c126701e3699969ab557e9fb99f4c2085a0d678f06e11895835d89241f194e1f",
+    "work_ideas_path": "nox-control/four_queue_20261118/work_ideas.json",
+    "work_ideas_git_blob_sha": "6f84f315d9792cb43f08b72b062dc2f71ce1d4a6",
+    "all295_path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+    "all295_git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+    "work_receipts_path": "nox-control/four_queue_20261118/work_receipts.json",
+    "work_receipts_git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+    "frozen_files_mutated": false
+  },
+  "current_instruction_binding": {
+    "artifact_path": "nox-control/complete_executor_20261118/evidence/addenda/source_evidence_owner_instruction_20261119_i49.json",
+    "artifact_git_blob_sha": "c1015bffa66c4774e715f691d6bca74fb5e545d0",
+    "authorization_timestamp_utc": "2026-11-19T11:09:41Z",
+    "exact_user_instruction": "измени и сделай все",
+    "pair_sha256": "1df59f1bd9fc4712b8ba01c429af5aa19895ea9ed907d1f807b99b9195a87bd1",
+    "tensor_name_set_sha256": "d0baf44eff8da1fd86afaf812900b0f7ee273d7286a20f49de0237f4689ac7da",
+    "tensor_name_count": 500,
+    "authorization_scope": "This user's instruction authorizes only the exact two Drive checkpoint folders and exactly the existing 500 name strings in the bound comparison artifact. No pre-existing allowlist is asserted.",
+    "historical_authorization_inferred": false
+  },
+  "exact_checkpoint_pair": {
+    "before": {
+      "folder_name": "understanding_pref_checkpoint-105",
+      "drive_folder_id": "1PNX-lRLaKVTRPakDOOqctF_rUoPvOu59",
+      "assembled_bytes": 306787336,
+      "assembled_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2"
+    },
+    "after": {
+      "folder_name": "mix_final_sft_checkpoint-383",
+      "drive_folder_id": "1CG_ALzrWsZLyrtuGxvNp4ajyZGfgh6nH",
+      "assembled_bytes": 306787336,
+      "assembled_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1"
+    },
+    "pair_sha256": "1df59f1bd9fc4712b8ba01c429af5aa19895ea9ed907d1f807b99b9195a87bd1",
+    "pair_sha256_canonicalization": "SHA-256 over UTF-8 JSON with sorted keys and compact separators for before/after objects containing only drive_folder_id, assembled_bytes, assembled_sha256."
+  },
+  "comparison_evidence": {
+    "commit": "6b0fc274499703eb03088a1526799e3d846b7430",
+    "all500": {
+      "path": "nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta_corrected_source_20261119.json",
+      "git_blob_sha": "4b136169a2a8fc76b64cc2001ff66ced393d18c4",
+      "content_sha256": "cde4705f5803e3a23292bd2a1026ac8bbcce08fe3758e9e62d170c203403f8b4",
+      "tensor_name_count": 500,
+      "tensor_name_set_sha256": "d0baf44eff8da1fd86afaf812900b0f7ee273d7286a20f49de0237f4689ac7da",
+      "common_tensors": 500,
+      "compared_tensors": 500,
+      "changed_payload_hashes": 500,
+      "unchanged_payload_hashes": 0,
+      "comparison_issues": 0,
+      "payload_bytes_hashed_per_adapter": 306708480,
+      "training_started": false,
+      "full_base_model_loaded": false,
+      "drive_written": false,
+      "server_written": false
+    },
+    "reissued_run": {
+      "created_at_utc": "2026-11-19T11:39:21Z",
+      "execution_source_sha256": "f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0",
+      "execution_source_git_blob_sha": "93a5963b0951a38c00438ced561b1077fd8bf7ca",
+      "inputs_revalidated": {
+        "before": {
+          "assembled_bytes": 306787336,
+          "assembled_sha256": "924d05894749d2107629549d9d95ca4e5538d33c2eac351d0c0c26919ccbb7a2"
+        },
+        "after": {
+          "assembled_bytes": 306787336,
+          "assembled_sha256": "8c32c5979470018bd260421b7ace2ef681e3c7f0e3dc978b6fecfdd98c25bcd1"
+        }
+      },
+      "selected_name_set_sha256": "d0baf44eff8da1fd86afaf812900b0f7ee273d7286a20f49de0237f4689ac7da",
+      "selected_name_count": 500,
+      "all_results_match_previous_output": true,
+      "caveat": "The prior output is historical only. Its recorded/executed comparator copy hashed to a1917cf... and differed from the exact pinned source by an extra terminal blank line. Matching results do not retroactively prove execution of the pinned bytes; this reissued artifact is the current source-bound evidence."
+    },
+    "historical_prior_run": {
+      "commit": "d56f5acae91aa01d2ba65d4bceb7b1715c253dba",
+      "receipt": {
+        "path": "nox-control/i49_checkpoint_compare_20261119/evidence/i49_cpu_comparison.json",
+        "git_blob_sha": "a2f2ff6f52cab8b02b299efda6646a5f5eaae3be"
+      },
+      "all500": {
+        "path": "nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta.json",
+        "git_blob_sha": "a5e9fc5d763b2872d4e61cd0f3a95a9324320b19",
+        "content_sha256": "bb2280f10646331b0528599f5d2693779da4076bdbe53e280a09634a45d99ec6"
+      },
+      "recorded_comparator_sha256": "a1917cfda4fd012b92332a8b3513fb1ad3e4694050f254d38b3a88f803cfb867",
+      "status": "HISTORICAL_UNVERIFIED_FOR_PINNED_SOURCE",
+      "disposition": "Preserved unchanged. Not used as current acceptance evidence."
+    }
+  },
+  "comparator": {
+    "repository": "s-grouptwet/nox-helion-pp-private-build",
+    "path": "handoff/20261117/nox-v15-kit/execution/role4/tensor_delta.py",
+    "revision": "e10c80f64e3fd88298be2776c58d03939e6e71f6",
+    "git_blob_sha": "93a5963b0951a38c00438ced561b1077fd8bf7ca",
+    "corrected_source_sha256": "f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0",
+    "local_executable_sha256": "f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0",
+    "supersedes_prior_recorded_sha256": "a1917cfda4fd012b92332a8b3513fb1ad3e4694050f254d38b3a88f803cfb867",
+    "method": "CPU-only Safetensors header validation and bounded 1 MiB hashing of the exact 500 supplied payload ranges; no tensor arrays or full base model loaded."
+  },
+  "assessment": {
+    "addendum_assessment": "PENDING_PR_MERGE",
+    "accepted_scope": "Only the frozen I-49 source criterion to compare the currently authorized exact pair and exact name set by bounded CPU byte hashes without loading the full model.",
+    "does_not_assert": [
+      "Elementwise numeric delta magnitudes",
+      "Optimizer step",
+      "Training run or training readiness",
+      "Causal training provenance",
+      "Model quality or benchmark improvement"
+    ],
+    "technical_integrity_review": "PASS",
+    "acceptance_reviewer_signoff": "PENDING_REVIEW_OF_CORRECTED_SOURCE_RUN",
+    "effective_state": "PENDING_PR_MERGE",
+    "supersedes_prior_hold": {
+      "path": "nox-control/complete_executor_20261118/evidence/addenda/source_evidence_erratum_20261119_i49.json",
+      "git_blob_sha": "e283948b2df1b037f2f2dd918de0cee7c7f49da6",
+      "prior_assessment": "HOLD_UNRESOLVED_AUTHORIZATION_BINDING",
+      "scope_of_supersession": "The prior HOLD remains preserved in its original erratum. This sidecar records an independent PASS for the exact bounded current scope; the source-criterion acceptance becomes effective only after the updated head is re-reviewed and PR #486 is merged. No historical authorization is inferred."
+    },
+    "prior_acceptance_record": {
+      "path": "nox-control/complete_executor_20261118/evidence/addenda/source_acceptance_addendum_20261119_4a01_i49.json",
+      "git_blob_sha": "19c7521b1b36479224478530bb1d06307967de35",
+      "assessment_before_correction": "ACCEPTED_SOURCE_CRITERION",
+      "current_status": "This new binding provides the corrected comparator and current scope proof; it does not alter the older record."
+    },
+    "acceptance_claim_for_immutable_295_snapshot": false,
+    "independent_review": {
+      "result": "PENDING",
+      "reviewed_head_sha": null,
+      "review_source": null,
+      "review_timestamp_utc": null,
+      "scope": "Review the corrected-source rerun, exact I-49 frozen source criterion, current instruction binding, pair/name-set fingerprints, source blob/SHA, data minimization, and frozen-ledger boundaries."
+    },
+    "review_binding_recorded_at_utc": "2026-11-19T11:25:56Z",
+    "quick_review_required_for_updated_head": true,
+    "target_assessment_after_merge": "ACCEPTED_SOURCE_CRITERION",
+    "merge_boundary": {
+      "current_pr_number": 486,
+      "current_pr_state": "OPEN_DRAFT",
+      "last_reviewed_head_sha": "c9c7dcfada6b5d9b0cad215c9b0695df4c6f934b",
+      "current_head_requires_independent_review": true,
+      "updated_head_requires_quick_review": true,
+      "target_assessment_activates_only_on_merge": true,
+      "acceptance_must_not_be_reported_before_merge": true,
+      "immutable_295_snapshot_changed": false
+    },
+    "prior_head_review": {
+      "result": "PASS",
+      "reviewed_head_sha": "c9c7dcfada6b5d9b0cad215c9b0695df4c6f934b",
+      "scope": "Prior uncorrected-source evidence binder before corrected-source rerun was added.",
+      "superseded_by_current_evidence": true,
+      "status": "HISTORICAL_REVIEW_ONLY"
+    }
+  },
+  "mutation_boundary": {
+    "all295_changed": false,
+    "work_receipts_changed": false,
+    "work_ideas_changed": false,
+    "previous_i49_errata_changed": false,
+    "previous_i49_acceptance_record_changed": false,
+    "prior_comparison_artifacts_changed": false,
+    "corrected_source_comparison_artifact_added": true,
+    "drive_changed": false,
+    "server_changed": false
+  },
+  "updated_at_utc": "2026-11-19T11:42:43Z"
+}
