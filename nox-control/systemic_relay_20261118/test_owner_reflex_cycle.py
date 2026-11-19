@@ -287,6 +287,24 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(result['deferred'][0]['reason'],
                          'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
 
+        # Non-string status is untrusted telemetry; even an unhashable dict
+        # must return a HOLD rather than crash the read-only refill cycle.
+        for malformed in ({'bad': 'state'}, ['running'], None):
+            with self.subTest(malformed=malformed):
+                native = {'native-unknown': {
+                    'handler': 'owner_native_project_work',
+                    'status': malformed}}
+                status = tick(state=native)
+                self.assertEqual(status['state'],
+                                 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+                guarded = refill.select_next(
+                    reviewed, native,
+                    {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+                    {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+                self.assertEqual(guarded['state'], 'WAIT_EXISTING_WORK')
+                self.assertEqual(guarded['rows'], [])
+                self.assertIsNone(guarded['refill_request'])
+
     def test_active_jobs_do_not_report_idle(self):
         state={'a': {'handler':'owner_native_project_work','status':'running'},
                'b': {'handler':'owner_native_typed_leaf','status':'pending'}}
