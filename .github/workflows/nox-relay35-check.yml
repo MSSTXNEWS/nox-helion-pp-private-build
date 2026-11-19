@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import collections
+          import hashlib
           import json
           import re
           import subprocess
@@ -48,6 +49,8 @@ jobs:
 
           # Pin the allowlisted registry location and immutable commit/blob. Never
           # fetch a path or ref supplied by an untrusted manifest without validation.
+          source_repository = d['source_repository']
+          assert source_repository == 'MSSTXNEWS/nox-helion-pp-private-build'
           source_ref = d['source_ref']
           source_path = d['source_registry_path']
           assert source_ref == 'c4683943fe17368ab2086f6ae7ff27ad21732ef7'
@@ -65,9 +68,15 @@ jobs:
           original_by_id = {t['task_id']: t for t in originals}
           for task in tasks:
               original = original_by_id[task['task_id']]
-              assert task['title'] == original['spec']['title']
+              spec = original['spec']
+              spec_sha = hashlib.sha256(json.dumps(
+                  spec, ensure_ascii=False, sort_keys=True, separators=(',', ':'),
+                  allow_nan=False
+              ).encode('utf-8')).hexdigest()
+              assert spec['id'] == task['task_id']
+              assert spec_sha == original['spec_sha256'] == task['spec_sha256']
+              assert task['title'] == spec['title']
               assert task['queue_id'] == original['queue_id']
-              assert task['spec_sha256'] == original['spec_sha256']
               assert task['original_priority'] == original['routing_source']['priority']
               assert task['required_evidence'] == original['routing_source']['required_evidence']
               assert task['original_execution_binding'] == original['execution_binding']['state']
