@@ -42,6 +42,18 @@ def _input_docs(source_root):
 def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
                  proposal_sha, census, census_sha, disposition, disposition_sha,
                  review, review_sha, source_documents, source_raw_sha256):
+    # Reject malformed JSON document roots before their fields are inspected. A
+    # broken review or census is HOLD evidence, never permission to publish.
+    doc_shapes = {
+        'refill_request': isinstance(refill_request, dict),
+        'proposal': isinstance(proposal, dict),
+        'source_census': isinstance(census, dict),
+        'owner_review': isinstance(review, dict),
+    }
+    refill_request = refill_request if doc_shapes['refill_request'] else {}
+    proposal = proposal if doc_shapes['proposal'] else {}
+    census = census if doc_shapes['source_census'] else {}
+    review = review if doc_shapes['owner_review'] else {}
     registry = strict_parent_registry(disposition,source_documents,source_raw_sha256)
     ledger = eligibility_ledger(registry,previous,refill_request)
     missions = proposal.get('missions') if isinstance(proposal, dict) else None
@@ -57,7 +69,9 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
                   'predicates': [_check('mission_ids_well_formed', True, False, False,
                                         'proposal.missions[].mission_id')],
                   'native_publish_performed': False, 'original_task_accepted': False}]
-    request_validation = []
+    request_validation = [_check('input_document_objects',
+        {name: True for name in doc_shapes}, doc_shapes, all(doc_shapes.values()),
+        'refill_request/proposal/source_census/owner_review must each be a JSON object')]
     try:
         _validate_refill_request(refill_request,previous,previous_sha)
         request_validation.append(_check('refill_request_binding',True,True,True))
