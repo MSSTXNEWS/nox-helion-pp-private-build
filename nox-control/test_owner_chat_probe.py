@@ -126,7 +126,7 @@ class ProbeTests(unittest.TestCase):
             def __iter__(self):
                 rows = ({'type':'delta','text':'x' * self.amount},
                         {'type':'done','dialog_id':'1'*32,'saved':True,'s03_integrated':True})
-                return iter(json.dumps(row).encode()+b'\\n' for row in rows)
+                return iter(json.dumps(row).encode()+b'\n' for row in rows)
         invalid = Response(10001)
         with patch.object(probe, 'request', return_value=invalid):
             with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_TEXT_LIMIT'):
