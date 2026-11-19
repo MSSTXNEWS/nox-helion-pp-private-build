@@ -392,8 +392,8 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         )
         for raw in malformed:
             with self.subTest(raw=raw):
-                chunks=Chunks([('data: '+raw+'\\n\\n').encode(),
-                               frame(finish='stop'),b'data: [DONE]\\n\\n'])
+                chunks=Chunks([('data: '+raw+'\n\n').encode(),
+                               frame(finish='stop'),b'data: [DONE]\n\n'])
                 _,factory=self.transport([chunks])
                 native=self.native()
                 payload={'messages':[{'role':'user','content':'Complete prior context'}]}
