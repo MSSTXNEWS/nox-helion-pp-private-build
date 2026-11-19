@@ -99,14 +99,56 @@
     "data": {
       "dataset": "rowan/hellaswag",
       "license": "MIT",
-      "license_url": "https://huggingface.co/datasets/Rowan/hellaswag",
+      "license_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md",
       "training_split": "train",
       "training_sample_limit": 16384,
       "validation_split": "validation",
       "validation_sample_limit": 128,
-      "snapshot_revision": null,
-      "split_file_sha256": null,
-      "note": "The source recipe supplies exact sample limits but does not pin a dataset commit or byte-level split hashes. Counts are recipe sample caps, not asserted full dataset sizes."
+      "snapshot_revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+      "note": "The NVIDIA recipe caps training at 16,384 train samples and 128 validation samples; these are recipe limits, not full split counts. The immutable train and validation files are pinned by revision, LFS SHA-256 and size. Their temporary downloaded bytes matched those pins, but no payload is retained, no Parquet content/schema or split semantics were inspected, and no reproducible sample manifest/seed receipt exists.",
+      "split_files": {
+        "train": {
+          "path": "data/train-00000-of-00001.parquet",
+          "immutable_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/train-00000-of-00001.parquet",
+          "sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+          "lfs_oid_sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+          "size_bytes": 24365524,
+          "byte_verification": {
+            "evidence_card_path": "nox-control/model_manifests/evidence/4A01_HELLASWAG_SPLIT_ACQUISITION_20261119.json",
+            "result": "BYTE_HASH_AND_SIZE_MATCH",
+            "measured_sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+            "measured_size_bytes": 24365524,
+            "payload_retained": false,
+            "content_inspected": false
+          }
+        },
+        "validation": {
+          "path": "data/validation-00000-of-00001.parquet",
+          "immutable_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/validation-00000-of-00001.parquet",
+          "sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+          "lfs_oid_sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+          "size_bytes": 6315951,
+          "byte_verification": {
+            "evidence_card_path": "nox-control/model_manifests/evidence/4A01_HELLASWAG_SPLIT_ACQUISITION_20261119.json",
+            "result": "BYTE_HASH_AND_SIZE_MATCH",
+            "measured_sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+            "measured_size_bytes": 6315951,
+            "payload_retained": false,
+            "content_inspected": false
+          }
+        }
+      },
+      "license_provenance": {
+        "claim": "MIT",
+        "source_kind": "PINNED_DATASET_CARD_BODY",
+        "dataset_card_revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+        "dataset_card_readme_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md",
+        "statement": "MIT https://github.com/rowanz/hellaswag/blob/master/LICENSE",
+        "direct_license_text_verified": false,
+        "linked_license_url": "https://github.com/rowanz/hellaswag/blob/master/LICENSE",
+        "linked_license_access_result": "GitHub API returned HTTP 451 (DMCA block) on 2026-11-19; no license-file content, immutable revision, or blob hash was verified.",
+        "qualification": "MIT is recorded as dataset-card-stated at the pinned README revision. The linked LICENSE text is not independently verified."
+      }
     },
     "hardware": {
       "nodes": 8,
@@ -142,7 +184,7 @@
     {
       "asset": "HellaSwag dataset",
       "license": "MIT",
-      "source": "Pinned source link above; dataset bytes are not bundled"
+      "source": "Pinned dataset-card README at https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md; MIT is card-stated only, direct LICENSE text not verified (HTTP 451)."
     }
   ],
   "resources": {
@@ -164,7 +206,7 @@
     "idealized_4bit_weight_floor_bytes": 275950000000,
     "idealized_floor_gap_approx_bytes": 258838030208,
     "floor_basis": "551.9B × 4 bits/parameter / 8; excludes scales, metadata, activation, optimizer, and checkpoint copies. A lower bound only, not this recipe's true disk or training requirement.",
-    "admission": "HOLD for native training: no fresh storage/VRAM snapshot, no 64×H100 capacity, no dataset revision/hash, and no checkpoint-resume/training execution evidence."
+    "admission": "HOLD for native training: no fresh storage/VRAM snapshot, no 64×H100 capacity, no retained dataset artifact or reproducible sampled-manifest receipt, and no checkpoint-resume/training execution evidence."
   },
   "acceptance": {
     "original_source_criterion": "The requested source fields are populated from immutable source pins: selected model revision, tokenizer identity/file/hash/prompt format, source-adapted training dtype and target module patterns, licenses, recipe sample counts, reported storage size, and quantified point-in-time resource gaps.",
