@@ -18,6 +18,8 @@ on:
       - 'nox-control/supervisor/nox_lifeline_observer_bootstrap.py'
       - 'nox-control/supervisor/nox-lifeline-observer.conf'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_native_boot_hook_attest.py'
+      - 'nox-control/test_owner_native_boot_hook_attest.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
       - 'nox-control/owner_native_inspect.py'
@@ -47,6 +49,8 @@ on:
       - 'nox-control/supervisor/nox_lifeline_observer_bootstrap.py'
       - 'nox-control/supervisor/nox-lifeline-observer.conf'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_native_boot_hook_attest.py'
+      - 'nox-control/test_owner_native_boot_hook_attest.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
       - 'nox-control/owner_native_inspect.py'
@@ -70,7 +74,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Source syntax
-        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_lifeline_observer.py nox-control/test_owner_lifeline_observer_operator_bundle.py nox-control/test_owner_lifeline_supervisor_fallback.py nox-control/test_owner_native_lifeline_uds.py nox-control/nox_lifeline_observer.py nox-control/supervisor/nox_lifeline_observer_bootstrap.py nox-control/owner_native_operator.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
+        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_lifeline_observer.py nox-control/test_owner_lifeline_observer_operator_bundle.py nox-control/test_owner_lifeline_supervisor_fallback.py nox-control/test_owner_native_lifeline_uds.py nox-control/nox_lifeline_observer.py nox-control/supervisor/nox_lifeline_observer_bootstrap.py nox-control/owner_native_operator.py nox-control/owner_native_boot_hook_attest.py nox-control/test_owner_native_boot_hook_attest.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
       - name: Independent lifeline unit and failure tests
         run: python3 -m unittest discover -s nox-control -p 'test_nox_native_lifeline.py' -v
       - name: Native NOX status truthfulness tests
@@ -82,6 +86,7 @@ jobs:
       - name: Observer fallback activation and rollback regressions
         run: |
           python3 -m unittest discover -s nox-control -p 'test_owner_native_lifeline_uds.py' -v
+          python3 -m unittest discover -s nox-control -p 'test_owner_native_boot_hook_attest.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_lifeline_observer_operator_bundle.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_lifeline_supervisor_fallback.py' -v
       - name: Bounded Linux mountinfo storage inventory tests
