@@ -352,8 +352,26 @@ def deletion_kind(path):
     return None
 
 
-def qualify(path, info, now, usage):
+def cache_advice_kind(path):
     kind = deletion_kind(path)
+    if kind and kind[0] != 'INACTIVE_ELF_CORE':
+        return kind
+    path = Path(path)
+    if (path.suffix.lower() in WEIGHT_SUFFIX or PARTIAL.search(path.name)
+            or LOG_PROTECTED.search(path.name)
+            or any(part.lower() in PROTECTED_WORDS or part.lower().startswith('checkpoint-')
+                   for part in path.parts)):
+        return None
+    if (path.is_relative_to(ROOT / 'logs')
+            or (path.is_relative_to(Path('/var/log/supervisor'))
+                and path.name.lower().startswith(('nox-', 'nox_')))):
+        if re.fullmatch(r'.+\.log\.[1-9][0-9]*(?:\.(?:gz|xz|zst))?', path.name):
+            return 'INACTIVE_DEBUG_LOG_ROTATION', 3600
+    return None
+
+
+def qualify(path, info, now, usage, *, cache_only=False):
+    kind = cache_advice_kind(path) if cache_only else deletion_kind(path)
     if kind is None:
         return None, 'PROTECTED_OR_NOT_ALLOWLISTED'
     if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.geteuid()
@@ -419,7 +437,7 @@ def placement(budget, categories):
             'ram_is_durable_backup': False, 'downloads_started': False, 'model_moved': False}
 
 
-def audit(request, source):
+def audit(request, source, *, cache_only=False):
     started = time.time()
     end = time.monotonic() + AUDIT_SECONDS
     usage = process_usage(min(end, time.monotonic() + 5))
@@ -427,13 +445,15 @@ def audit(request, source):
     seen, candidates, possible_copies = set(), [], defaultdict(set)
     counts, refusals = Counter(), Counter()
     teacher_reviews = {}
-    for teacher_path in LEGACY_TEACHERS:
+    for teacher_path in (() if cache_only else LEGACY_TEACHERS):
         teacher_path = ROOT / Path(teacher_path).relative_to(Path('/root/nox'))
         row = teacher_candidate_review(teacher_path)
         teacher_reviews[row['path_id']] = row
     coverage = []
     now = time.time()
     for label, root in root_specs():
+        if cache_only and label not in ('PIP_CACHE', 'NOX_LOGS', 'SUPERVISOR_LOGS'):
+            continue
         row = {'category': label, 'complete': True, 'entries': 0, 'directories': 0}
         coverage.append(row)
         try:
@@ -491,13 +511,13 @@ def audit(request, source):
                             group['unique_allocated_bytes'] += info.st_blocks * 512
                             if info.st_size >= 8 * 1024 * 1024 and len(possible_copies) < 4096:
                                 possible_copies[(path.name, info.st_size)].add(key)
-                            candidate, reason = qualify(path, info, now, usage)
+                            candidate, reason = qualify(path, info, now, usage, cache_only=cache_only)
                             if candidate is not None:
                                 candidates.append(candidate)
                                 if len(candidates) > MAX_CANDIDATES * 2:
                                     candidates.sort(key=lambda x: x['allocated_bytes'], reverse=True)
                                     candidates = candidates[:MAX_CANDIDATES]
-                            elif deletion_kind(path) is not None:
+                            elif (cache_advice_kind(path) if cache_only else deletion_kind(path)) is not None:
                                 refusals[reason] += 1
                         except (OSError, StorageHold) as exc:
                             counts['unreadable_entries'] += 1; row['complete'] = False
@@ -532,6 +552,9 @@ def audit(request, source):
                    'blockers': ['TWO_INDEPENDENT_SHA_VERIFIED_PC_AND_DRIVE_COPIES_REQUIRED'],
                    'backup_registration_or_ram_copy_is_not_two_copy_proof': True},
                'files_deleted': 0, 'public_output_contains_paths_or_private_text': False}
+    if cache_only:
+        receipt['action'] = 'RAM_CACHE_AUDIT'
+        receipt['cache_advice_candidates'] = receipt.pop('cleanup_candidates')
     return receipt
 
 

@@ -1,11 +1,14 @@
 name: NOX owner memory cleanup one-shot source gate
 on:
+  push:
+    branches: [repair/nox-owner-file-cache-release-20261119]
   pull_request:
     paths:
       - nox-control/owner_native_operator.py
       - nox-control/owner_memory_cleanup_entry.py
       - nox-control/owner_memory_governor.py
       - nox-control/owner_storage_reclaim.py
+      - nox-control/test_owner_memory_cache_release.py
       - .github/workflows/nox-memory-safe-cleanup-ci.yml
 permissions:
   contents: read
@@ -40,8 +43,11 @@ jobs:
               ('nox-control/owner_storage_reclaim.py',))
           assert len(bundle)==2 and {pathlib.Path(x).name for x in bundle}=={
               'owner_memory_governor.py','owner_storage_reclaim.py'}
-          assert "AUDIT_THEN_EXACT_EPHEMERAL_RECLAIM" in (root/'owner_memory_cleanup_entry.py').read_text()
+          entry=(root/'owner_memory_cleanup_entry.py').read_text()
+          assert "NOX_FILE_CACHE_RELEASE_RECEIPT_V1" in entry
+          assert "NOX_MAINT_REPAIR_COMPLETE=true" in entry
           assert "NOX_MEMORY_GOVERNOR" in (root/'owner_memory_governor.py').read_text()
           PY
           python -m unittest discover -s nox-control -p 'test_owner_memory_governor.py' -v
           python -m unittest discover -s nox-control -p 'test_owner_storage_reclaim.py' -v
+          python -m unittest discover -s nox-control -p 'test_owner_memory_cache_release.py' -v
