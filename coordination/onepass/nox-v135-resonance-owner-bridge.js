@@ -212,23 +212,17 @@
                   const finish=()=>{
                     if(settled)return;
                     settled=true;
-                    // The losing callback must not wake a hidden tab later:
-                    // keep the 18ms fallback, but cancel unused schedules.
-                    if(frameId!==undefined&&typeof cancelAnimationFrame==='function')
-                      cancelAnimationFrame(frameId);
-                    if(timerId!==undefined&&typeof clearTimeout==='function')
-                      clearTimeout(timerId);
+                    if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
+                    if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
                     resolve();
                   };
                   if(typeof requestAnimationFrame==='function'){
                     frameId=requestAnimationFrame(finish);
-                    if(settled&&typeof cancelAnimationFrame==='function')
-                      cancelAnimationFrame(frameId);
+                    if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
                   }
                   if(typeof setTimeout==='function'){
                     timerId=setTimeout(finish,18);
-                    if(settled&&typeof clearTimeout==='function')
-                      clearTimeout(timerId);
+                    if(settled&&typeof clearTimeout==='function')clearTimeout(timerId);
                   } else if(typeof requestAnimationFrame!=='function')finish();
                 });
               }
