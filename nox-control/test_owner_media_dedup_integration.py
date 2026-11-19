@@ -164,5 +164,29 @@ class MediaCreateDedupIntegration(unittest.TestCase):
                 self.assertEqual(cached['state'], 'QUEUED')
 
 
+    def test_upstream_export_sha_and_mime_guard_survives_systemic_reconcile(self):
+        # The systemic repair branch added a stricter download guard after the
+        # older B5 preimage. Its logic must survive the clean PR integration.
+        import hashlib
+        asset = self.root / 'frame.png'
+        original = b'PNG-ORIG'
+        asset.write_bytes(original)
+        job = {'id': 'f' * 32, 'request': {'kind': 'image'},
+               'generation_verified': True}
+        item = {'media_type': 'image/png', 'bytes': len(original),
+                'sha256': hashlib.sha256(original).hexdigest()}
+        with patch.object(media, 'output_path', return_value=asset):
+            self.assertEqual(media.verified_export_path({}, job, item), asset)
+            # Same-size tampering must fail by SHA, not only by file length.
+            asset.write_bytes(b'PNG-EDIT')
+            with self.assertRaisesRegex(media.MediaHold, 'HOLD_OUTPUT_CHANGED'):
+                media.verified_export_path({}, job, item)
+            asset.write_bytes(original)
+            with self.assertRaisesRegex(media.MediaHold, 'HOLD_OUTPUT_VERIFICATION_MISSING'):
+                media.verified_export_path({}, job, dict(item, media_type='video/webm'))
+            with self.assertRaisesRegex(media.MediaHold, 'HOLD_OUTPUT_VERIFICATION_MISSING'):
+                media.verified_export_path({}, dict(job, generation_verified=False), item)
+
+
 if __name__ == '__main__':
     unittest.main()
