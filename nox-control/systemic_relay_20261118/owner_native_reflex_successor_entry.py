@@ -25,9 +25,9 @@ DIRECTOR = 'scripts/owner_subagent_dispatcher.py'
 TRUTH = 'scripts/owner_subagent_instruction_truth.py'
 HELPER_SHA = '8470a6720ca69864bbc4e6e630a1f853344839af424d3829dcdf1774442db609'
 OLD = {
-    CONFIG: '30effffe3c8a20c0df4dee936beb2f8183347fb2a5fd51d4543dfbde50efb919',
-    REFILL: '4f0ea3f44ded11d40245de7573c5f48efc2e2f7424f979cec2da3e140a6d1197',
-    DIRECTOR: '0193c511168489637b6df041bee2daf79bd42bd338c4ff5f9a6b129652dc4a13',
+    CONFIG: '5f842d83cea44d74f1f1d125332888bbe5f999a34e401955e0c428a04e3084c9',
+    REFILL: 'f6ef891912634dbfdb17937b5da900d305c9d77aeaac34a0dbb759e2db2ae422',
+    DIRECTOR: 'eac3ce9e2d8c862d1a7917ec447ea72e84454b7775a4260ad1e72e59de96fe11',
 }
 MANIFEST = 'd58ed9b020a78c3c8fcbfd476b3b0eecfd235e50f3a6ded29c8cec550e1a4212'
 try:
@@ -107,7 +107,7 @@ def run():
         require(len(history) <= 31 and all(isinstance(x, str) and re.fullmatch('[a-f0-9]{64}', x) for x in history),
             'HISTORY_BOUND')
         previous = OLD[DIRECTOR]
-        if previous not in history:
+        if previous != candidate_pin and previous not in history:
             history.append(previous)
         require(len(history) <= 32 and len(history) == len(set(history)), 'HISTORY_DUPLICATE')
         new[history_name] = history
@@ -237,7 +237,7 @@ def run():
             observation_sha256=reflex.get('observation_sha256'),
             staged_research_count=reflex.get('staged_count'),
             new_native_jobs=reflex.get('new_native_jobs'),
-            runtime_files_changed=3)
+            runtime_files_changed=sum(current[p] != changes[p] for p in (REFILL,DIRECTOR,TRUTH)))
         emit()
         print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
         return True
