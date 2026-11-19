@@ -791,7 +791,9 @@ def bind_s03(namespace):
     if not callable(original) or not callable(formatter):hold('HOLD_S03_BIND_FUNCTIONS')
     def bounded_recall(query,k=6,db=None):
         target=Path(db) if db is not None else DB
-        if target.absolute()!=DB.absolute():return original(query,k=k,db=target)
+        if target.absolute()!=DB.absolute():
+            # A caller-controlled DB override must never bypass canonical S03.
+            hold('HOLD_S03_UNAUTHORIZED_DATABASE')
         try:return recall(query,k=k,db=target)
         except MemoryHold:
             # A canonical S03 safety HOLD must never be downgraded to an
@@ -801,14 +803,11 @@ def bind_s03(namespace):
             # Missing/denied/corrupt canonical SQLite is not an embedding
             # outage. The original reader cannot validate the same scope.
             raise MemoryHold('HOLD_S03_CANONICAL_READ_UNVERIFIED') from exc
-        except Exception:
-            # The original may prepend up to14 pins. Rerank its wider fallback
-            # through the same fixed pin budget instead of returning those pins.
-            rows=original(query,k=max(16,min(32,int(k)+12)),db=target)
-            if not isinstance(rows,list):return []
-            return select_results([row for row in rows if row.get('how') in ('fts','like')],[],
-                                  [row for row in rows if row.get('how')=='pin'],
-                                  [row for row in rows if row.get('how') not in ('pin','fts','like')],k)
+        except Exception as exc:
+            # Embedding outages already degrade to lexical recall in recall().
+            # Unexpected canonical errors are NOT permission to invoke a
+            # different reader that may lose provenance, ACLs or owner scope.
+            raise MemoryHold('HOLD_S03_CANONICAL_READ_UNVERIFIED') from exc
     def history_format(items):
         prepared=[]
         for row in items:

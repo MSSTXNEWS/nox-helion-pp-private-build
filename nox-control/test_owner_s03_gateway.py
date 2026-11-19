@@ -591,10 +591,16 @@ class GatewayTests(unittest.TestCase):
                     with self.assertRaisesRegex(g.MemoryHold,expected):
                         namespace['recall']('owner session question')
         self.assertEqual(calls,[],'legacy recall must not bypass canonical safety')
-        # Retain a bounded compatibility fallback for non-admission failures.
+        # An unexpected error must also fail closed, rather than substituting
+        # an unscoped legacy reader that cannot verify owner provenance.
         with patch.object(g,'recall',side_effect=RuntimeError('formatting transient')):
-            self.assertEqual(namespace['recall']('owner session question'),[])
-        self.assertEqual(len(calls),1)
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_CANONICAL_READ_UNVERIFIED'):
+                namespace['recall']('owner session question')
+        # A database override is not an alternative authentication route.
+        with patch.object(g,'recall',side_effect=AssertionError('canonical call forbidden')):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_UNAUTHORIZED_DATABASE'):
+                namespace['recall']('owner session question',db=self.root/'other.sqlite')
+        self.assertEqual(calls,[],'no fallback may bypass canonical S03')
 
     def test_plain_never_accepts_unreadable_ancestor_or_leaf(self):
         # This is a source-only regression for Python's suppressed
