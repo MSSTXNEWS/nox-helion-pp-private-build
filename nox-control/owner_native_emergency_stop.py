@@ -2,24 +2,49 @@
 """Owner-only two-step emergency memory relief for one attested NOX model.
 
 This source is inert until called by the pinned owner-maintenance workflow.
-It stops only the exact Supervisor model service when fresh cgroup
-headroom is below 2 GiB. This version always preserves the memfd holder and
-never clears owner markers or restarts services.
+It stops only the exact Supervisor model service when fresh cgroup headroom
+is below 2 GiB. It stops only the exact pinned model service; if that does not
+restore the memory floor, it holds without signaling the holder.
+It never clears owner markers or restarts services.
 """
 from __future__ import annotations
 
 import contextlib
+import configparser
 import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import shlex
+import socket
 import stat
+import struct
 import subprocess
 import time
+import xmlrpc.client
+from urllib.parse import urlsplit
 
 ROOT = Path("/root/nox")
+SUPERVISOR_CONFIG_DIR = Path("/etc/supervisor/conf.d")
+SUPERVISOR_CLIENT_CONFIG = Path("/etc/supervisor/supervisord.conf")
+SUPERVISORCTL_CANDIDATES = (
+    Path("/usr/bin/supervisorctl"),
+    Path("/usr/local/bin/supervisorctl"),
+    Path("/opt/venv/bin/supervisorctl"),
+)
+SUPERVISORCTL_BIN: Path | None = None
+SUPERVISORCTL_SELECTED_IDENTITY: dict | None = None
+SUPERVISORCTL_SELECTED_DAEMON_IDENTITY: dict | None = None
+SUPERVISORCTL_TRANSPORT = "supervisorctl"
+SUPERVISOR_UNIX_ENDPOINT: dict | None = None
+SUPERVISOR_RPC_STOP_DISPATCHED = False
+STOP_REQUEST_DISPATCHED = False
+SYSTEMCTL_BIN = Path("/usr/bin/systemctl")
+SYSTEMCTL_IDENTITY: dict | None = None
+MAX_SUPERVISOR_RPC_BYTES = 65_536
+SUPERVISOR_CONFIG_MAX_FILES = 128
 STOP = ROOT / "STOP"
 MAINTENANCE = ROOT / "state/OWNER_MAINTENANCE.flag"
 LOCK = ROOT / "state/owner_maintenance.lock"
@@ -30,6 +55,11 @@ MODEL_START_TICKS = 172046662
 MODEL_PATH = "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf"
 HOLDER_PID = 498569
 HOLDER_START_TICKS = 168416044
+HOLDER_SCRIPT = "/root/nox/engram_ram/engram_memfd_holder.py"
+HOLDER_CWD = "/root/nox/engram_ram"
+HOLDER_SCRIPT_PATH_SHA256 = "353c37488551c902ee42bc1826068a047195d296c3d5d83ed01d359e88ab6e6d"
+HOLDER_CWD_SHA256 = "3c590f2f120bd22263af64a761d1c04ce54cbf99bbabdb83ce41122d75cc85d1"
+HOLDER_CMDLINE_SHA256 = "35f379354687daac56932bc6cd415f5c83321db4b50b3ccb4766b035cf0e45d2"
 MEMFD_INODE = 131095
 MEMFD_SIZE = 75_266_239_716
 MIN_HEADROOM = 2_147_483_648
@@ -58,6 +88,10 @@ MODEL_ENV_KEYS = MODEL_SOURCE_ENV_KEYS | MODEL_CONTEXT_ENV_KEYS | {
 MAX_STAT_BYTES = 8_192
 MAX_CMDLINE_BYTES = 16 * 1024
 MAX_PROC_PATH_BYTES = 4_096
+MAX_SUPERVISOR_CONFIG_BYTES = 250_000
+MAX_EXECUTABLE_BYTES = 256 * 1024 * 1024
+MAX_PROCESS_TABLE_ENTRIES = 8_192
+MAX_CGROUP_RUNTIME_PROCESSES = 512
 MAX_ENV_BYTES = 256 * 1024
 MAX_FD_ENTRIES_PER_PID = 16_384
 MAX_HOLDER_FD_BYTES = 1 * 1024 * 1024
@@ -73,8 +107,10 @@ PHASE = {
     "maintenance_marker": False,
     "model_stop_requested": False,
     "model_stopped": False,
+    "holder_stopped": False,
 }
 MARKERS = {}
+DIAGNOSTICS = {}
 
 
 def fail(label: str) -> None:
@@ -87,13 +123,808 @@ def emit(payload: dict) -> None:
     ), flush=True)
 
 
-def root_directory(path: Path) -> None:
+def root_directory(path: Path):
     try:
         st = path.lstat()
     except OSError:
         fail("REQUIRED_DIRECTORY_MISSING")
     if not stat.S_ISDIR(st.st_mode) or st.st_uid != 0 or st.st_mode & 0o022:
         fail("UNSAFE_DIRECTORY")
+    return st
+
+
+def read_root_regular(path: Path, limit: int, label: str,
+                      include_ctime: bool = False):
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        fail(label + "_UNAVAILABLE")
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != 0 or
+                before.st_nlink != 1 or before.st_mode & 0o022 or
+                before.st_size > limit):
+            fail(label + "_UNSAFE")
+        chunks = []
+        total = 0
+        while total <= limit:
+            chunk = os.read(fd, min(65_536, limit + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+        after = os.fstat(fd)
+        if (total > limit or any(getattr(before, key) != getattr(after, key) for key in
+                ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns"))):
+            fail(label + "_CHANGED_OR_OVERSIZED")
+        content = b"".join(chunks)
+        return (content, after.st_ctime_ns) if include_ctime else content
+    finally:
+        os.close(fd)
+
+
+def linux_boot_time_ns() -> int:
+    """Read the kernel boot epoch used to translate proc start ticks."""
+    try:
+        fd = os.open("/proc/stat", os.O_RDONLY | os.O_NOFOLLOW |
+                     os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        fail("LINUX_BOOT_TIME_UNAVAILABLE")
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_uid != 0:
+            fail("LINUX_BOOT_TIME_UNSAFE")
+        raw = os.read(fd, 1_048_577)
+        after = os.fstat(fd)
+        if (len(raw) > 1_048_576 or before.st_dev != after.st_dev or
+                before.st_ino != after.st_ino):
+            fail("LINUX_BOOT_TIME_UNSTABLE_OR_OVERSIZED")
+    finally:
+        os.close(fd)
+    try:
+        lines = [line for line in raw.splitlines()
+                 if line.startswith(b"btime ")]
+        if len(lines) != 1:
+            fail("LINUX_BOOT_TIME_INVALID")
+        value = lines[0].split()
+        if len(value) != 2 or not value[1].isdigit():
+            fail("LINUX_BOOT_TIME_INVALID")
+        return int(value[1]) * 1_000_000_000
+    except (ValueError, IndexError):
+        fail("LINUX_BOOT_TIME_INVALID")
+
+
+def supervisor_start_lower_bound_ns(start_ticks: int) -> int:
+    boot_time_ns = linux_boot_time_ns()
+    try:
+        ticks_per_second = int(os.sysconf("SC_CLK_TCK"))
+    except (ValueError, OSError):
+        fail("SUPERVISOR_START_TIME_UNAVAILABLE")
+    if ticks_per_second <= 0:
+        fail("SUPERVISOR_START_TIME_UNAVAILABLE")
+    return (boot_time_ns + start_ticks * 1_000_000_000 // ticks_per_second -
+            1_000_000_000 -
+            (1_000_000_000 + ticks_per_second - 1) // ticks_per_second)
+
+
+def verify_root_executable_path(path_text: str, label: str) -> dict:
+    path = Path(path_text)
+    if not path.is_absolute() or ".." in path.parts:
+        fail(label + "_PATH_INVALID")
+    for parent in reversed(path.parents):
+        try:
+            st = parent.lstat()
+        except OSError:
+            fail(label + "_PARENT_UNAVAILABLE")
+        if (not stat.S_ISDIR(st.st_mode) or st.st_uid != 0 or
+                st.st_mode & 0o022):
+            fail(label + "_PARENT_UNSAFE")
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        fail(label + "_UNAVAILABLE")
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != 0 or
+                before.st_nlink != 1 or before.st_mode & 0o022 or
+                not before.st_mode & 0o111 or
+                before.st_size > MAX_EXECUTABLE_BYTES):
+            fail(label + "_UNSAFE")
+        digest = hashlib.sha256()
+        total = 0
+        while total <= MAX_EXECUTABLE_BYTES:
+            chunk = os.read(fd, min(65_536, MAX_EXECUTABLE_BYTES + 1 - total))
+            if not chunk:
+                break
+            digest.update(chunk)
+            total += len(chunk)
+        after = os.fstat(fd)
+        if (total > MAX_EXECUTABLE_BYTES or any(
+                getattr(before, key) != getattr(after, key) for key in
+                ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns"))):
+            fail(label + "_CHANGED_OR_OVERSIZED")
+        try:
+            entry = path.lstat()
+        except OSError:
+            fail(label + "_PATH_CHANGED")
+        if (not stat.S_ISREG(entry.st_mode) or entry.st_dev != after.st_dev or
+                entry.st_ino != after.st_ino):
+            fail(label + "_PATH_CHANGED")
+        file_stat = {key: getattr(after, key) for key in (
+            "st_dev", "st_ino", "st_uid", "st_gid", "st_mode", "st_nlink",
+            "st_size", "st_mtime_ns", "st_ctime_ns")}
+        return {"path": path_text, "file_type": "REGULAR",
+                "path_sha256": hashlib.sha256(os.fsencode(path_text)).hexdigest(),
+                "sha256": digest.hexdigest(), "stat": file_stat}
+    finally:
+        os.close(fd)
+
+
+def probe_supervisor_daemon_identity(pid: int) -> dict:
+    before = proc_stat_identity(pid)
+    proc = Path("/proc") / str(pid)
+    try:
+        exe = os.readlink(proc / "exe")
+        with (proc / "cmdline").open("rb") as stream:
+            raw_cmdline = stream.read(MAX_CMDLINE_BYTES + 1)
+    except OSError:
+        fail("SUPERVISOR_PROCESS_IDENTITY_UNAVAILABLE")
+    if len(raw_cmdline) > MAX_CMDLINE_BYTES or not raw_cmdline.endswith(b"\0"):
+        fail("SUPERVISOR_PROCESS_ARGV_INVALID")
+    try:
+        argv = [part.decode("utf-8", "strict")
+                for part in raw_cmdline[:-1].split(b"\0")]
+    except UnicodeDecodeError:
+        fail("SUPERVISOR_PROCESS_ARGV_ENCODING_INVALID")
+    if len(argv) < 2 or any(not part for part in argv):
+        fail("SUPERVISOR_PROCESS_ARGV_INVALID")
+    exe_name = Path(exe.removesuffix(" (deleted)")).name
+    argv_names = [Path(part.removesuffix(" (deleted)")).name for part in argv]
+    if exe_name != "supervisord" and not re.fullmatch(r"python3(?:\.[0-9]+)?", exe_name):
+        fail("SUPERVISOR_PROCESS_EXECUTABLE_MISMATCH")
+    script_indexes = [index for index, name in enumerate(argv_names)
+                      if name == "supervisord"]
+    if len(script_indexes) != 1 or not Path(argv[script_indexes[0]]).is_absolute():
+        fail("SUPERVISOR_PROCESS_ARGV_MISMATCH")
+    script_path = argv[script_indexes[0]]
+    configs = []
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in ("-c", "--configuration"):
+            if index + 1 >= len(argv):
+                fail("SUPERVISOR_CONFIG_PATH_MISSING")
+            configs.append(argv[index + 1])
+            index += 2
+            continue
+        if token.startswith("--configuration="):
+            configs.append(token.partition("=")[2])
+        index += 1
+    if len(configs) != 1 or configs[0] != str(SUPERVISOR_CLIENT_CONFIG):
+        fail("SUPERVISOR_CONFIG_PATH_MISMATCH")
+    exe_identity = verify_root_executable_path(
+        exe.removesuffix(" (deleted)"), "SUPERVISOR_DAEMON_EXECUTABLE")
+    script_identity = verify_root_executable_path(
+        script_path, "SUPERVISOR_DAEMON_SCRIPT")
+    try:
+        exe_after = os.readlink(proc / "exe")
+        with (proc / "cmdline").open("rb") as stream:
+            cmdline_after = stream.read(MAX_CMDLINE_BYTES + 1)
+    except OSError:
+        fail("SUPERVISOR_PROCESS_IDENTITY_REREAD_UNAVAILABLE")
+    after = proc_stat_identity(pid)
+    if (before != after or exe_after != exe or cmdline_after != raw_cmdline):
+        fail("SUPERVISOR_PROCESS_IDENTITY_CHANGED")
+    if (verify_root_executable_path(
+            exe.removesuffix(" (deleted)"), "SUPERVISOR_DAEMON_EXECUTABLE_REREAD") !=
+            exe_identity or verify_root_executable_path(
+            script_path, "SUPERVISOR_DAEMON_SCRIPT_REREAD") != script_identity):
+        fail("SUPERVISOR_PROCESS_EXECUTABLE_CHANGED")
+    return {
+        "pid": pid, "start_ticks": before["start_ticks"],
+        "exe": exe_identity, "script": script_identity,
+        "argv_sha256": hashlib.sha256(raw_cmdline).hexdigest(),
+        "config_path": configs[0],
+        "start_lower_bound_ns": supervisor_start_lower_bound_ns(
+            before["start_ticks"]),
+    }
+
+
+def _supervisor_systemd_mainpid() -> int:
+    global SYSTEMCTL_IDENTITY
+
+    def checked_call(args):
+        identity = verify_root_executable_path(str(SYSTEMCTL_BIN), "SYSTEMCTL_EXECUTABLE")
+        if SYSTEMCTL_IDENTITY is None:
+            SYSTEMCTL_IDENTITY = identity
+        elif identity != SYSTEMCTL_IDENTITY:
+            fail("SYSTEMCTL_EXECUTABLE_CHANGED")
+        try:
+            result = subprocess.run([str(SYSTEMCTL_BIN), *args], capture_output=True,
+                                    text=True, shell=False, timeout=10, check=False,
+                                    env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
+                                         "LANG": "C", "LC_ALL": "C", "HOME": "/root"})
+        except (OSError, subprocess.TimeoutExpired):
+            fail("SYSTEMCTL_COMMAND_UNAVAILABLE")
+        reread = verify_root_executable_path(str(SYSTEMCTL_BIN),
+                                             "SYSTEMCTL_EXECUTABLE_REREAD")
+        if reread != identity or reread != SYSTEMCTL_IDENTITY:
+            fail("SYSTEMCTL_EXECUTABLE_CHANGED_DURING_CALL")
+        DIAGNOSTICS["systemctl_executable"] = identity
+        return result
+
+    active = checked_call(["is-active", "supervisor.service"])
+    result = checked_call(["show", "supervisor.service", "--property=MainPID", "--value"])
+    value = result.stdout.strip()
+    if (active.returncode != 0 or active.stdout.strip() != "active" or
+            result.returncode != 0 or not re.fullmatch(r"[1-9][0-9]{0,9}", value)):
+        fail("UNIX_RPC_SUPERVISOR_SYSTEMD_IDENTITY_UNAVAILABLE")
+    return int(value)
+
+
+def _process_effective_credentials(pid: int) -> tuple[int, int]:
+    raw = read_root_regular(Path("/proc") / str(pid) / "status", 65_536,
+                            "UNIX_RPC_SUPERVISOR_STATUS")
+    try:
+        uid_rows = [line.split() for line in raw.decode("ascii").splitlines()
+                    if line.startswith("Uid:")]
+        gid_rows = [line.split() for line in raw.decode("ascii").splitlines()
+                    if line.startswith("Gid:")]
+        if (len(uid_rows) != 1 or len(gid_rows) != 1 or
+                len(uid_rows[0]) != 5 or len(gid_rows[0]) != 5 or
+                any(not x.isdigit() for x in uid_rows[0][1:] + gid_rows[0][1:])):
+            raise ValueError
+        return int(uid_rows[0][2]), int(gid_rows[0][2])
+    except (UnicodeError, ValueError, IndexError):
+        fail("UNIX_RPC_SUPERVISOR_CREDENTIALS_INVALID")
+
+
+def _reject_config_defaults(parser, label: str) -> None:
+    if parser.defaults():
+        fail(label)
+
+
+def _read_effective_supervisor_config(daemon_identity: dict):
+    config_bytes, config_ctime_ns = read_root_regular(
+        SUPERVISOR_CLIENT_CONFIG, MAX_SUPERVISOR_CONFIG_BYTES,
+        "UNIX_RPC_SUPERVISOR_CONFIG", include_ctime=True)
+    try:
+        parser = configparser.ConfigParser(interpolation=None, strict=True)
+        parser.read_string(config_bytes.decode("utf-8", "strict"))
+        _reject_config_defaults(parser, "UNIX_RPC_MAIN_CONFIG_DEFAULTS_UNSUPPORTED")
+        allowed_sections = {"supervisord", "unix_http_server", "rpcinterface:supervisor",
+                            "supervisorctl", "include"}
+        required_sections = {"unix_http_server", "rpcinterface:supervisor",
+                             "supervisorctl", "include"}
+        if (not required_sections.issubset(parser.sections()) or
+                not set(parser.sections()).issubset(allowed_sections) or
+                set(parser["unix_http_server"]) - {"file", "chmod", "chown"} or
+                set(parser["supervisorctl"]) != {"serverurl"} or
+                set(parser["rpcinterface:supervisor"]) !=
+                {"supervisor.rpcinterface_factory"} or
+                set(parser["include"]) != {"files"}):
+            fail("UNIX_RPC_MAIN_CONFIG_SECTIONS_UNSUPPORTED")
+        socket_file = parser.get("unix_http_server", "file")
+        serverurl = parser.get("supervisorctl", "serverurl")
+        rpc_factory = parser.get("rpcinterface:supervisor",
+                                 "supervisor.rpcinterface_factory")
+        configured_mode = parser.get("unix_http_server", "chmod", fallback="0700")
+        configured_owner = parser.get("unix_http_server", "chown", fallback="root:root")
+        include_text = parser.get("include", "files")
+    except (configparser.Error, UnicodeError, ValueError):
+        fail("UNIX_RPC_CONFIG_SECTIONS_UNAVAILABLE")
+    try:
+        include_parts = shlex.split(include_text)
+    except ValueError:
+        fail("UNIX_RPC_INCLUDE_GLOB_INVALID")
+    if include_parts != [str(SUPERVISOR_CONFIG_DIR / "*.conf")]:
+        fail("UNIX_RPC_INCLUDE_GLOB_UNSUPPORTED")
+    supervisor_dir = root_directory(Path("/etc/supervisor"))
+    include_dir = root_directory(SUPERVISOR_CONFIG_DIR)
+    names = []
+    try:
+        with os.scandir(SUPERVISOR_CONFIG_DIR) as entries:
+            for entry in entries:
+                if entry.name.endswith(".conf"):
+                    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}\.conf", entry.name):
+                        fail("UNIX_RPC_CONFIG_FILENAME_UNSAFE")
+                    names.append(entry.name)
+                    if len(names) > SUPERVISOR_CONFIG_MAX_FILES:
+                        fail("UNIX_RPC_CONFIG_FILE_LIMIT")
+    except OSError:
+        fail("UNIX_RPC_CONFIG_DIRECTORY_UNAVAILABLE")
+    inputs = [{"name": SUPERVISOR_CLIENT_CONFIG.name,
+               "sha256": hashlib.sha256(config_bytes).hexdigest(),
+               "ctime_ns": config_ctime_ns}]
+    target_stanzas = []
+    for name in sorted(names):
+        raw, ctime_ns = read_root_regular(SUPERVISOR_CONFIG_DIR / name,
+                                          MAX_SUPERVISOR_CONFIG_BYTES,
+                                          "UNIX_RPC_INCLUDED_CONFIG",
+                                          include_ctime=True)
+        inputs.append({"name": name, "sha256": hashlib.sha256(raw).hexdigest(),
+                       "ctime_ns": ctime_ns})
+        try:
+            included = configparser.ConfigParser(interpolation=None, strict=True)
+            included.read_string(raw.decode("utf-8", "strict"))
+            _reject_config_defaults(included,
+                                    "UNIX_RPC_INCLUDED_CONFIG_DEFAULTS_UNSUPPORTED")
+        except (configparser.Error, UnicodeError):
+            fail("UNIX_RPC_INCLUDED_CONFIG_PARSE_FAILED")
+        for section in included.sections():
+            if not section.startswith("program:"):
+                fail("UNIX_RPC_INCLUDED_SECTION_UNSUPPORTED")
+            if section == "program:" + SUPERVISOR_SERVICE:
+                target_stanzas.append(name)
+    supervisor_dir_after = root_directory(Path("/etc/supervisor"))
+    include_dir_after = root_directory(SUPERVISOR_CONFIG_DIR)
+    dir_fields = ("st_dev", "st_ino", "st_mtime_ns", "st_ctime_ns")
+    if (any(getattr(supervisor_dir, key) != getattr(supervisor_dir_after, key)
+            for key in dir_fields) or
+            any(getattr(include_dir, key) != getattr(include_dir_after, key)
+                for key in dir_fields)):
+        fail("UNIX_RPC_CONFIG_DIRECTORY_CHANGED")
+    if (config_ctime_ns > daemon_identity["start_lower_bound_ns"] or
+            supervisor_dir.st_ctime_ns > daemon_identity["start_lower_bound_ns"] or
+            include_dir.st_ctime_ns > daemon_identity["start_lower_bound_ns"] or
+            any(row["ctime_ns"] > daemon_identity["start_lower_bound_ns"] for row in inputs)):
+        fail("UNIX_RPC_CONFIG_NEWER_THAN_DAEMON")
+    if len(target_stanzas) != 1:
+        fail("UNIX_RPC_TARGET_STANZA_NOT_UNIQUE")
+    effective_sha = hashlib.sha256(json.dumps(
+        inputs, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    config_identity = {"main_sha256": hashlib.sha256(config_bytes).hexdigest(),
+                       "main_ctime_ns": config_ctime_ns,
+                       "include_glob": include_parts[0], "inputs": inputs,
+                       "effective_config_sha256": effective_sha,
+                       "target_stanza_file": target_stanzas[0],
+                       "socket_file": socket_file, "serverurl": serverurl,
+                       "rpc_factory": rpc_factory,
+                       "configured_mode": configured_mode,
+                       "configured_owner": configured_owner}
+    return parser, config_identity
+
+
+def _supervisor_unix_endpoint_snapshot() -> dict:
+    daemon_pid = _supervisor_systemd_mainpid()
+    daemon_identity = probe_supervisor_daemon_identity(daemon_pid)
+    parser, config_identity = _read_effective_supervisor_config(daemon_identity)
+    socket_file = config_identity["socket_file"].replace(
+        "%(here)s", str(SUPERVISOR_CLIENT_CONFIG.parent))
+    serverurl = config_identity["serverurl"]
+    rpc_factory = config_identity["rpc_factory"]
+    configured_mode = config_identity["configured_mode"]
+    configured_owner = config_identity["configured_owner"]
+    parsed_url = urlsplit(serverurl)
+    if (not socket_file.startswith("/") or ".." in Path(socket_file).parts or
+            parsed_url.scheme != "unix" or parsed_url.netloc or
+            parsed_url.query or parsed_url.fragment or
+            not parsed_url.path.startswith("/") or
+            parsed_url.path != socket_file or
+            rpc_factory != "supervisor.rpcinterface:make_main_rpcinterface" or
+            configured_owner != "root:root" or
+            not re.fullmatch(r"0?[0-7]{3,4}", configured_mode)):
+        fail("UNIX_RPC_CONFIG_ENDPOINT_NOT_ALLOWLISTED")
+    try:
+        mode = int(configured_mode, 8)
+    except ValueError:
+        fail("UNIX_RPC_CONFIG_MODE_INVALID")
+    if mode & 0o022 or not mode & 0o200:
+        fail("UNIX_RPC_SOCKET_MODE_NOT_PRIVATE")
+    socket_path = Path(socket_file)
+    try:
+        resolved_socket = socket_path.resolve(strict=True)
+        if socket_path.is_symlink() or not resolved_socket.is_absolute():
+            fail("UNIX_RPC_SOCKET_PATH_UNSAFE")
+        for parent in resolved_socket.parents:
+            root_directory(parent)
+        socket_stat = resolved_socket.lstat()
+    except OSError:
+        fail("UNIX_RPC_SOCKET_UNAVAILABLE")
+    if (not stat.S_ISSOCK(socket_stat.st_mode) or socket_stat.st_uid != 0 or
+            socket_stat.st_gid != 0 or socket_stat.st_nlink != 1 or
+            stat.S_IMODE(socket_stat.st_mode) != mode):
+        fail("UNIX_RPC_SOCKET_METADATA_MISMATCH")
+    socket_identity = {"configured_path": socket_file,
+                       "resolved_path": str(resolved_socket),
+                       "device": socket_stat.st_dev, "inode": socket_stat.st_ino,
+                       "mode": stat.S_IMODE(socket_stat.st_mode),
+                       "uid": socket_stat.st_uid, "gid": socket_stat.st_gid,
+                       "nlink": socket_stat.st_nlink,
+                       "ctime_ns": socket_stat.st_ctime_ns}
+    if (daemon_identity["pid"] != daemon_pid or
+            daemon_identity["config_path"] != str(SUPERVISOR_CLIENT_CONFIG) or
+            config_identity["main_ctime_ns"] > daemon_identity["start_lower_bound_ns"]):
+        fail("UNIX_RPC_CONFIG_NOT_BOUND_TO_LIVE_DAEMON")
+    euid, egid = _process_effective_credentials(daemon_pid)
+    if euid != 0 or egid != 0:
+        fail("UNIX_RPC_DAEMON_NOT_ROOT")
+    return {"transport": "supervisor_unix_xmlrpc", "config_path": str(SUPERVISOR_CLIENT_CONFIG),
+            "config_sha256": config_identity["main_sha256"],
+            "config_ctime_ns": config_identity["main_ctime_ns"],
+            "effective_config_sha256": config_identity["effective_config_sha256"],
+            "config_inputs": config_identity["inputs"], "serverurl": serverurl,
+            "rpc_factory": rpc_factory, "socket": socket_identity,
+            "daemon": daemon_identity, "peer_uid": euid, "peer_gid": egid}
+
+
+def _supervisor_unix_rpc(endpoint: dict, method: str, params: tuple,
+                         timeout: int = 10):
+    global SUPERVISOR_RPC_STOP_DISPATCHED, STOP_REQUEST_DISPATCHED
+    allowed_params = {
+        "supervisor.getPID": (),
+        "supervisor.getState": (),
+        "supervisor.getProcessInfo": (SUPERVISOR_SERVICE,),
+        "supervisor.stopProcess": (SUPERVISOR_SERVICE, True),
+    }
+    if method not in allowed_params or params != allowed_params[method]:
+        fail("UNIX_RPC_METHOD_NOT_ALLOWLISTED")
+    current = _supervisor_unix_endpoint_snapshot()
+    if current != endpoint:
+        fail("UNIX_RPC_ENDPOINT_CHANGED")
+    path = endpoint["socket"]["resolved_path"]
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.settimeout(min(max(timeout, 1), 40))
+    try:
+        sock.connect(path)
+        peer_raw = sock.getsockopt(socket.SOL_SOCKET,
+                                   getattr(socket, "SO_PEERCRED", 17),
+                                   struct.calcsize("3i"))
+        peer_pid, peer_uid, peer_gid = struct.unpack("3i", peer_raw)
+        if (peer_pid != endpoint["daemon"]["pid"] or peer_uid != 0 or peer_gid != 0):
+            fail("UNIX_RPC_PEERCRED_MISMATCH")
+        body = xmlrpc.client.dumps(params, methodname=method,
+                                   allow_none=False).encode("utf-8")
+        if len(body) > 4096:
+            fail("UNIX_RPC_REQUEST_TOO_LARGE")
+        header = (b"POST /RPC2 HTTP/1.0\r\nHost: localhost\r\n"
+                  b"Content-Type: text/xml\r\nConnection: close\r\nContent-Length: " +
+                  str(len(body)).encode("ascii") + b"\r\n\r\n")
+        if method == "supervisor.stopProcess":
+            SUPERVISOR_RPC_STOP_DISPATCHED = True
+            STOP_REQUEST_DISPATCHED = True
+        sock.sendall(header + body)
+        chunks = []
+        total = 0
+        while total <= MAX_SUPERVISOR_RPC_BYTES + 8192:
+            chunk = sock.recv(min(8192, MAX_SUPERVISOR_RPC_BYTES + 8193 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+        raw = b"".join(chunks)
+        if total > MAX_SUPERVISOR_RPC_BYTES + 8192 or b"\r\n\r\n" not in raw:
+            fail("UNIX_RPC_RESPONSE_UNBOUNDED_OR_INVALID")
+        head, response_body = raw.split(b"\r\n\r\n", 1)
+        lines = head.split(b"\r\n")
+        if not lines or not re.fullmatch(rb"HTTP/1\.[01] 200(?: .*)?", lines[0]):
+            fail("UNIX_RPC_HTTP_STATUS_INVALID")
+        content_lengths = []
+        content_types = []
+        transfer_encodings = []
+        for line in lines[1:]:
+            if b":" not in line:
+                fail("UNIX_RPC_HTTP_HEADER_INVALID")
+            key, value = line.split(b":", 1)
+            key = key.strip().lower()
+            value = value.strip()
+            if key == b"content-length":
+                content_lengths.append(value)
+            elif key == b"content-type":
+                content_types.append(value.lower())
+            elif key == b"transfer-encoding":
+                transfer_encodings.append(value.lower())
+        if (len(content_lengths) != 1 or not content_lengths[0].isdigit() or
+                len(content_types) != 1 or not content_types[0].startswith(b"text/xml") or
+                transfer_encodings):
+            fail("UNIX_RPC_HTTP_FRAMING_INVALID")
+        declared = int(content_lengths[0])
+        if (declared > MAX_SUPERVISOR_RPC_BYTES or len(response_body) != declared):
+            fail("UNIX_RPC_RESPONSE_LENGTH_INVALID")
+        peer_after = struct.unpack("3i", sock.getsockopt(
+            socket.SOL_SOCKET, getattr(socket, "SO_PEERCRED", 17),
+            struct.calcsize("3i")))
+        if peer_after != (peer_pid, peer_uid, peer_gid):
+            fail("UNIX_RPC_PEERCRED_CHANGED")
+    except (OSError, socket.timeout, xmlrpc.client.Fault, ValueError):
+        fail("UNIX_RPC_CALL_FAILED")
+    finally:
+        sock.close()
+    if _supervisor_unix_endpoint_snapshot() != endpoint:
+        fail("UNIX_RPC_ENDPOINT_CHANGED_AFTER_CALL")
+    try:
+        values, _method = xmlrpc.client.loads(response_body, use_builtin_types=True)
+    except (xmlrpc.client.Fault, ValueError, TypeError):
+        fail("UNIX_RPC_XML_INVALID")
+    if len(values) != 1:
+        fail("UNIX_RPC_RESULT_CARDINALITY_INVALID")
+    return values[0]
+
+
+def _select_unix_supervisor_fallback(outcomes: list[dict],
+                                    present_paths: list[Path]) -> dict:
+    """Select only a read-only, peer-credential-bound Unix XML-RPC endpoint."""
+    if (len(present_paths) != 1 or len(outcomes) != len(SUPERVISORCTL_CANDIDATES) or
+            any(item.get("outcome") not in ("ABSENT", "UNUSABLE") for item in outcomes) or
+            not any(item.get("outcome") == "UNUSABLE" and
+                    item.get("fail_code") == "SUPERVISORCTL_EXECUTABLE_UNSAFE"
+                    for item in outcomes)):
+        fail("UNIX_RPC_FALLBACK_NOT_SOLE_CLIENT_BLOCKER")
+    unusable = next(item for item in outcomes if item.get("outcome") == "UNUSABLE")
+    rows = unusable.get("metadata", {}).get("metadata_after", [])
+    if not rows:
+        fail("UNIX_RPC_BLOCKED_CLIENT_METADATA_MISSING")
+    candidate = rows[-1]
+    if (candidate.get("path") != "/usr/local/bin/supervisorctl" or
+            candidate.get("file_type") != "REGULAR" or candidate.get("uid") != 0 or
+            candidate.get("gid") != 0 or candidate.get("nlink") != 1 or
+            candidate.get("mode") is None or candidate.get("mode") & 0o022 != 0o020):
+        fail("UNIX_RPC_BLOCKED_CLIENT_NOT_EXPECTED_MODE_CASE")
+    endpoint = _supervisor_unix_endpoint_snapshot()
+    daemon_pid = endpoint["daemon"]["pid"]
+    reported_pid = _supervisor_unix_rpc(endpoint, "supervisor.getPID", ())
+    state = _supervisor_unix_rpc(endpoint, "supervisor.getState", ())
+    process = _supervisor_unix_rpc(endpoint, "supervisor.getProcessInfo",
+                                   (SUPERVISOR_SERVICE,))
+    if (type(reported_pid) is not int or reported_pid != daemon_pid or
+            not isinstance(state, dict) or state.get("statecode") != 1 or
+            state.get("statename") != "RUNNING" or not isinstance(process, dict) or
+            process.get("name") != SUPERVISOR_SERVICE or
+            process.get("statename") != "RUNNING" or
+            process.get("pid") != MODEL_PID or
+            stable_start_ticks(MODEL_PID, MODEL_START_TICKS) != MODEL_START_TICKS):
+        fail("UNIX_RPC_TARGET_PREFLIGHT_MISMATCH")
+    return endpoint
+
+
+def _verify_selected_unix_endpoint() -> dict:
+    if (SUPERVISOR_UNIX_ENDPOINT is None or
+            SUPERVISORCTL_SELECTED_IDENTITY is None or
+            DIAGNOSTICS.get("supervisorctl_client") != SUPERVISORCTL_SELECTED_IDENTITY):
+        fail("UNIX_RPC_SELECTED_ENDPOINT_UNAVAILABLE")
+    reported_pid = _supervisor_unix_rpc(
+        SUPERVISOR_UNIX_ENDPOINT, "supervisor.getPID", (), 10)
+    if reported_pid != SUPERVISOR_UNIX_ENDPOINT["daemon"]["pid"]:
+        fail("UNIX_RPC_SELECTED_DAEMON_PID_CHANGED")
+    return SUPERVISORCTL_SELECTED_IDENTITY
+
+
+def read_supervisor_stop_settings() -> dict:
+    """Read the active daemon config and its one supported include directory."""
+    DIAGNOSTICS["supervisor_stanza"] = {"state": "READ_ONLY_CONFIG_READ_STARTED"}
+    supervisor_dir = root_directory(Path("/etc/supervisor"))
+    include_dir = root_directory(SUPERVISOR_CONFIG_DIR)
+    # Every supervisorctl client call pins this same config path. The daemon's
+    # own argv is checked below against this exact path before its stanza is
+    # treated as the active stop policy.
+    pid_result = command(["supervisorctl", "-c", str(SUPERVISOR_CLIENT_CONFIG), "pid"])
+    pid_lines = pid_result.stdout.strip().splitlines()
+    if pid_result.returncode != 0 or len(pid_lines) != 1 or not pid_lines[0].isdecimal():
+        DIAGNOSTICS["supervisor_stanza"] = {"state": "SUPERVISOR_PID_UNAVAILABLE"}
+        fail("SUPERVISOR_PID_UNAVAILABLE")
+    client_identity = dict(DIAGNOSTICS.get("supervisorctl_client", {}))
+    expected_path = (str(SUPERVISORCTL_BIN) if SUPERVISORCTL_TRANSPORT == "supervisorctl"
+                     else SUPERVISOR_UNIX_ENDPOINT["socket"]["resolved_path"]
+                     if SUPERVISOR_UNIX_ENDPOINT else None)
+    if (client_identity.get("path") != expected_path or
+            not re.fullmatch(r"[0-9a-f]{64}", client_identity.get("sha256", ""))):
+        fail("SUPERVISORCTL_CLIENT_IDENTITY_MISSING")
+    daemon_pid = int(pid_lines[0])
+    daemon_before = proc_stat_identity(daemon_pid)
+    # btime is second-resolution and start_ticks is tick-resolution. Subtract
+    # both rounding bounds so this is an earliest-possible start epoch, not an
+    # optimistic point estimate for the ctime comparison.
+    daemon_start_lower_bound_ns = supervisor_start_lower_bound_ns(
+        daemon_before["start_ticks"])
+    try:
+        daemon_exe = os.readlink(Path("/proc") / str(daemon_pid) / "exe")
+        with (Path("/proc") / str(daemon_pid) / "cmdline").open("rb") as stream:
+            daemon_cmdline = stream.read(MAX_CMDLINE_BYTES + 1)
+    except OSError:
+        fail("SUPERVISOR_CMDLINE_UNAVAILABLE")
+    if len(daemon_cmdline) > MAX_CMDLINE_BYTES or not daemon_cmdline.endswith(b"\0"):
+        fail("SUPERVISOR_CMDLINE_INVALID")
+    try:
+        daemon_argv = [part.decode("utf-8", "strict")
+                       for part in daemon_cmdline[:-1].split(b"\0")]
+    except UnicodeDecodeError:
+        fail("SUPERVISOR_CMDLINE_ENCODING_INVALID")
+    if len(daemon_argv) < 2 or any(not part for part in daemon_argv):
+        fail("SUPERVISOR_ARGV_INVALID")
+    exe_name = Path(daemon_exe.removesuffix(" (deleted)")).name
+    argv_names = [Path(part.removesuffix(" (deleted)")).name
+                  for part in daemon_argv]
+    if exe_name == "supervisord":
+        supervisor_positions = [i for i, name in enumerate(argv_names)
+                                if name == "supervisord"]
+    elif re.fullmatch(r"python3(?:\.[0-9]+)?", exe_name):
+        supervisor_positions = [i for i, name in enumerate(argv_names)
+                                if name == "supervisord"]
+    else:
+        fail("SUPERVISOR_PROCESS_EXECUTABLE_MISMATCH")
+    if len(supervisor_positions) != 1:
+        fail("SUPERVISOR_PROCESS_ARGV_MISMATCH")
+    supervisor_script = daemon_argv[supervisor_positions[0]]
+    if not Path(supervisor_script).is_absolute():
+        fail("SUPERVISOR_SCRIPT_PATH_NOT_ABSOLUTE")
+    daemon_exe_identity = verify_root_executable_path(
+        daemon_exe.removesuffix(" (deleted)"), "SUPERVISOR_DAEMON_EXECUTABLE")
+    daemon_script_identity = verify_root_executable_path(
+        supervisor_script, "SUPERVISOR_DAEMON_SCRIPT")
+    config_paths = []
+    index = 1
+    while index < len(daemon_argv):
+        token = daemon_argv[index]
+        if token in ("-c", "--configuration"):
+            if index + 1 >= len(daemon_argv):
+                fail("SUPERVISOR_CONFIG_PATH_MISSING")
+            config_paths.append(daemon_argv[index + 1])
+            index += 2
+            continue
+        if token.startswith("--configuration="):
+            config_paths.append(token.partition("=")[2])
+        index += 1
+    if len(config_paths) != 1:
+        fail("SUPERVISOR_CONFIG_PATH_AMBIGUOUS")
+    main_path = Path(config_paths[0])
+    if (not main_path.is_absolute() or ".." in main_path.parts or
+            main_path != SUPERVISOR_CLIENT_CONFIG):
+        fail("SUPERVISOR_CONFIG_PATH_OUT_OF_SCOPE")
+    main_raw, main_ctime_ns = read_root_regular(
+        main_path, MAX_SUPERVISOR_CONFIG_BYTES, "SUPERVISOR_MAIN_CONFIG",
+        include_ctime=True)
+    try:
+        main_config = configparser.ConfigParser(interpolation=None, strict=True)
+        main_config.read_string(main_raw.decode("utf-8", "strict"))
+        _reject_config_defaults(main_config,
+                                "SUPERVISOR_MAIN_CONFIG_DEFAULTS_UNSUPPORTED")
+        include_text = main_config.get("include", "files", fallback="").strip()
+        include_parts = shlex.split(include_text)
+    except (configparser.Error, UnicodeError, ValueError):
+        fail("SUPERVISOR_MAIN_CONFIG_PARSE_FAILED")
+    allowed_globs = {str(SUPERVISOR_CONFIG_DIR / "*.conf"), "conf.d/*.conf"}
+    if len(include_parts) != 1 or include_parts[0] not in allowed_globs:
+        DIAGNOSTICS["supervisor_stanza"] = {
+            "state": "SUPERVISOR_INCLUDE_UNSUPPORTED",
+            "main_config_path": str(main_path),
+            "main_config_sha256": hashlib.sha256(main_raw).hexdigest(),
+        }
+        fail("SUPERVISOR_INCLUDE_UNSUPPORTED")
+
+    names = []
+    try:
+        with os.scandir(SUPERVISOR_CONFIG_DIR) as entries:
+            for entry in entries:
+                if entry.name.endswith(".conf"):
+                    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}\.conf", entry.name):
+                        fail("SUPERVISOR_CONFIG_FILENAME_UNSAFE")
+                    names.append(entry.name)
+                    if len(names) > SUPERVISOR_CONFIG_MAX_FILES:
+                        fail("SUPERVISOR_CONFIG_FILE_LIMIT")
+    except OSError:
+        fail("SUPERVISOR_CONFIG_DIRECTORY_UNAVAILABLE")
+    inputs = [{"name": main_path.name,
+               "sha256": hashlib.sha256(main_raw).hexdigest(),
+               "ctime_ns": main_ctime_ns}]
+    matches = []
+    for name in sorted(names):
+        path = SUPERVISOR_CONFIG_DIR / name
+        raw, config_ctime_ns = read_root_regular(
+            path, MAX_SUPERVISOR_CONFIG_BYTES, "SUPERVISOR_INCLUDED_CONFIG",
+            include_ctime=True)
+        digest = hashlib.sha256(raw).hexdigest()
+        inputs.append({"name": name, "sha256": digest,
+                       "ctime_ns": config_ctime_ns})
+        try:
+            parser = configparser.ConfigParser(interpolation=None, strict=True)
+            parser.read_string(raw.decode("utf-8", "strict"))
+            _reject_config_defaults(parser,
+                                    "SUPERVISOR_INCLUDED_CONFIG_DEFAULTS_UNSUPPORTED")
+        except (configparser.Error, UnicodeError):
+            fail("SUPERVISOR_INCLUDED_CONFIG_PARSE_FAILED")
+        section = "program:" + SUPERVISOR_SERVICE
+        if parser.has_section(section):
+            command_text = parser.get(section, "command", fallback="")
+            stopasgroup = parser.get(section, "stopasgroup", fallback="").strip().lower()
+            killasgroup = parser.get(section, "killasgroup", fallback="").strip().lower()
+            stopsignal = parser.get(section, "stopsignal", fallback="").strip().upper()
+            stopwaitsecs = parser.get(section, "stopwaitsecs", fallback="").strip()
+            matches.append({
+                "path": str(path), "config_sha256": digest,
+                "command_sha256": hashlib.sha256(command_text.encode()).hexdigest(),
+                "stopasgroup": stopasgroup if stopasgroup in ("true", "false") else None,
+                "killasgroup": killasgroup if killasgroup in ("true", "false") else None,
+                "stopsignal": stopsignal if re.fullmatch(r"[A-Z0-9]+", stopsignal) else None,
+                "stopwaitsecs": int(stopwaitsecs) if stopwaitsecs.isdecimal() else None,
+            })
+    supervisor_dir_after = root_directory(Path("/etc/supervisor"))
+    include_dir_after = root_directory(SUPERVISOR_CONFIG_DIR)
+    directory_metadata = ("st_dev", "st_ino", "st_mtime_ns", "st_ctime_ns")
+    if (any(getattr(supervisor_dir, key) != getattr(supervisor_dir_after, key)
+            for key in directory_metadata) or
+            any(getattr(include_dir, key) != getattr(include_dir_after, key)
+                for key in directory_metadata)):
+        fail("SUPERVISOR_CONFIG_DIRECTORY_CHANGED_DURING_READ")
+    if (supervisor_dir.st_ctime_ns > daemon_start_lower_bound_ns or
+            include_dir.st_ctime_ns > daemon_start_lower_bound_ns or
+            any(item["ctime_ns"] > daemon_start_lower_bound_ns for item in inputs)):
+        DIAGNOSTICS["supervisor_stanza"] = {
+            "state": "SUPERVISOR_CONFIG_NEWER_THAN_DAEMON_START",
+            "supervisor_start_lower_bound_ns": daemon_start_lower_bound_ns,
+            "config_inputs": inputs,
+            "supervisor_dir_ctime_ns": supervisor_dir.st_ctime_ns,
+            "include_dir_ctime_ns": include_dir.st_ctime_ns,
+        }
+        fail("SUPERVISOR_CONFIG_NEWER_THAN_DAEMON_START")
+    try:
+        exe_after = os.readlink(Path("/proc") / str(daemon_pid) / "exe")
+        with (Path("/proc") / str(daemon_pid) / "cmdline").open("rb") as stream:
+            cmdline_after = stream.read(MAX_CMDLINE_BYTES + 1)
+    except OSError:
+        fail("SUPERVISOR_IDENTITY_REREAD_UNAVAILABLE")
+    daemon_after = proc_stat_identity(daemon_pid)
+    if (len(cmdline_after) > MAX_CMDLINE_BYTES or daemon_before != daemon_after or
+            daemon_cmdline != cmdline_after or exe_after != daemon_exe):
+        fail("SUPERVISOR_IDENTITY_CHANGED_DURING_CONFIG_READ")
+    exe_identity_after = verify_root_executable_path(
+        exe_after.removesuffix(" (deleted)"), "SUPERVISOR_DAEMON_EXECUTABLE_REREAD")
+    script_identity_after = verify_root_executable_path(
+        supervisor_script, "SUPERVISOR_DAEMON_SCRIPT_REREAD")
+    if (exe_identity_after != daemon_exe_identity or
+            script_identity_after != daemon_script_identity):
+        fail("SUPERVISOR_EXECUTABLE_CONTENT_CHANGED_DURING_CONFIG_READ")
+    daemon_identity = {
+        "pid": daemon_pid,
+        "start_ticks": daemon_before["start_ticks"],
+        "exe": daemon_exe_identity,
+        "script": daemon_script_identity,
+        "argv_sha256": hashlib.sha256(daemon_cmdline).hexdigest(),
+        "config_path": str(main_path),
+        "start_lower_bound_ns": daemon_start_lower_bound_ns,
+    }
+    if (SUPERVISORCTL_SELECTED_DAEMON_IDENTITY is None or
+            daemon_identity != SUPERVISORCTL_SELECTED_DAEMON_IDENTITY):
+        fail("SUPERVISORCTL_SELECTED_DAEMON_IDENTITY_CHANGED")
+
+    effective_sha = hashlib.sha256(json.dumps(
+        inputs, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    if (SUPERVISORCTL_TRANSPORT == "unix_xmlrpc" and
+            (SUPERVISOR_UNIX_ENDPOINT is None or
+             effective_sha != SUPERVISOR_UNIX_ENDPOINT.get("effective_config_sha256"))):
+        fail("UNIX_RPC_EFFECTIVE_CONFIG_HASH_MISMATCH")
+    DIAGNOSTICS["supervisor_stanza"] = {
+        "matches": matches,
+        "source": "active_daemon_cmdline_and_all_root_owned_conf_d_inputs",
+        "supervisor_pid": daemon_pid,
+        "supervisor_start_ticks": daemon_before["start_ticks"],
+        "supervisor_start_lower_bound_ns": daemon_start_lower_bound_ns,
+        "supervisor_cmdline_sha256": hashlib.sha256(daemon_cmdline).hexdigest(),
+        "supervisor_argv_sha256": hashlib.sha256(daemon_cmdline).hexdigest(),
+        "supervisor_exe": daemon_exe_identity,
+        "supervisor_script": daemon_script_identity,
+        "supervisorctl_client": client_identity,
+        "main_config_path": str(main_path),
+        "main_config_sha256": hashlib.sha256(main_raw).hexdigest(),
+        "include_glob": include_parts[0], "config_inputs": inputs,
+        "effective_config_sha256": effective_sha,
+    }
+    if len(matches) != 1:
+        fail("SUPERVISOR_STANZA_NOT_UNIQUE")
+    settings = {**matches[0], "effective_config_sha256": effective_sha,
+                "supervisor_pid": daemon_pid,
+                "supervisor_start_ticks": daemon_before["start_ticks"],
+                "daemon_identity": daemon_identity,
+                "supervisorctl_client": client_identity}
+    if (settings["stopasgroup"] not in ("true", "false") or
+            settings["killasgroup"] not in ("true", "false") or
+            settings["stopwaitsecs"] is None or not 1 <= settings["stopwaitsecs"] <= 30 or
+            settings["stopsignal"] != "TERM"):
+        fail("SUPERVISOR_STOP_SEMANTICS_UNKNOWN_OR_UNBOUNDED")
+    if settings["stopasgroup"] != "false" or settings["killasgroup"] != "false":
+        fail("SUPERVISOR_STOP_NOT_DIRECT_PID_ONLY")
+    return settings
 
 
 def acquire_lock() -> int:
@@ -190,16 +1021,343 @@ def ensure_owner_fence(request_id: int, source_sha: str) -> dict:
     }
 
 
-def command(argv: list[str], timeout: int = 15) -> subprocess.CompletedProcess:
+def verify_supervisorctl_executable(path: Path,
+                                   expected_identity: dict | None = None) -> dict:
+    if path not in SUPERVISORCTL_CANDIDATES:
+        fail("SUPERVISORCTL_PATH_NOT_ALLOWLISTED")
+    identity = verify_root_executable_path(str(path), "SUPERVISORCTL_EXECUTABLE")
+    identity["root_owned_nonwritable"] = True
+    if expected_identity is not None and identity != expected_identity:
+        fail("SUPERVISORCTL_SELECTED_IDENTITY_CHANGED")
+    DIAGNOSTICS["supervisorctl_client"] = identity
+    return identity
+
+
+def invoke_supervisorctl_path(path: Path, args: list[str], timeout: int = 15,
+                              expected_identity: dict | None = None):
+    identity = verify_supervisorctl_executable(path, expected_identity)
     try:
-        return subprocess.run(argv, shell=False, capture_output=True, text=True,
-                              timeout=timeout, check=False)
+        result = subprocess.run(
+            [str(path), *args], shell=False, capture_output=True, text=True,
+            timeout=timeout, check=False,
+            env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C",
+                 "LC_ALL": "C", "HOME": "/root"})
     except (OSError, subprocess.TimeoutExpired):
         fail("COMMAND_UNAVAILABLE")
+    return result, identity
+
+
+def supervisorctl_candidate_metadata(path: Path) -> dict:
+    def snapshot():
+        rows = []
+        prefixes = [Path("/")]
+        current = Path("/")
+        for part in path.parts[1:]:
+            current = current / part
+            prefixes.append(current)
+        for index, prefix in enumerate(prefixes):
+            final = index == len(prefixes) - 1
+            try:
+                st = prefix.lstat()
+            except FileNotFoundError:
+                rows.append({"path": str(prefix), "state": "ABSENT"})
+                for skipped in prefixes[index + 1:]:
+                    rows.append({"path": str(skipped),
+                                 "state": "NOT_INSPECTED_PARENT_ABSENT"})
+                break
+            except OSError:
+                rows.append({"path": str(prefix), "state": "STAT_FAILED"})
+                for skipped in prefixes[index + 1:]:
+                    rows.append({"path": str(skipped),
+                                 "state": "NOT_INSPECTED_PARENT_UNAVAILABLE"})
+                break
+            mode = st.st_mode
+            if stat.S_ISDIR(mode):
+                file_type = "DIRECTORY"
+            elif stat.S_ISREG(mode):
+                file_type = "REGULAR"
+            elif stat.S_ISLNK(mode):
+                file_type = "SYMLINK"
+            else:
+                file_type = "OTHER"
+            row = {"path": str(prefix), "state": "PRESENT",
+                   "file_type": file_type, "mode": mode,
+                   "uid": st.st_uid, "gid": st.st_gid,
+                   "nlink": st.st_nlink, "size": st.st_size,
+                   "dev": st.st_dev, "inode": st.st_ino,
+                   "mtime_ns": st.st_mtime_ns, "ctime_ns": st.st_ctime_ns}
+            if stat.S_ISLNK(mode):
+                try:
+                    row["symlink_target"] = os.readlink(prefix)
+                except OSError:
+                    row["symlink_target_state"] = "READLINK_FAILED"
+                rows.append(row)
+                if not final:
+                    for skipped in prefixes[index + 1:]:
+                        rows.append({"path": str(skipped),
+                                     "state": "NOT_INSPECTED_SYMLINK_PARENT"})
+                    break
+            else:
+                rows.append(row)
+                if not final and not stat.S_ISDIR(mode):
+                    for skipped in prefixes[index + 1:]:
+                        rows.append({"path": str(skipped),
+                                     "state": "NOT_INSPECTED_NON_DIRECTORY_PARENT"})
+                    break
+        return rows
+
+    before = snapshot()
+    after = snapshot()
+    return {"path": str(path), "metadata_before": before,
+            "metadata_after": after, "identity_stable": before == after}
+
+
+def select_supervisorctl_candidate() -> None:
+    global SUPERVISORCTL_BIN, SUPERVISORCTL_SELECTED_IDENTITY
+    global SUPERVISORCTL_SELECTED_DAEMON_IDENTITY
+    global SUPERVISORCTL_TRANSPORT, SUPERVISOR_UNIX_ENDPOINT
+    outcomes = []
+    matches = []
+    present_paths = []
+    for path in SUPERVISORCTL_CANDIDATES:
+        metadata = supervisorctl_candidate_metadata(path)
+        final_metadata = metadata["metadata_after"][-1]
+        if not metadata["identity_stable"]:
+            outcomes.append({"path": str(path), "outcome": "UNUSABLE",
+                             "fail_code": "CANDIDATE_METADATA_UNSTABLE",
+                             "metadata": metadata})
+            continue
+        if (final_metadata["state"] == "ABSENT" or
+                final_metadata["state"] == "NOT_INSPECTED_PARENT_ABSENT"):
+            outcomes.append({"path": str(path), "outcome": "ABSENT",
+                             "metadata": metadata})
+            continue
+        present_paths.append(path)
+        if final_metadata["state"] != "PRESENT":
+            outcomes.append({"path": str(path), "outcome": "UNUSABLE",
+                             "fail_code": "CANDIDATE_PARENT_NOT_INSPECTED",
+                             "metadata": metadata})
+            continue
+        if final_metadata.get("file_type") == "SYMLINK":
+            outcomes.append({"path": str(path), "outcome": "UNUSABLE",
+                             "fail_code": "CANDIDATE_IS_SYMLINK",
+                             "metadata": metadata})
+            continue
+        try:
+            identity = verify_supervisorctl_executable(path)
+        except RuntimeError as exc:
+            code = str(exc)
+            if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", code):
+                code = "HOLD_EMERGENCY_STOP_CANDIDATE_VALIDATION_FAILED"
+            candidate_mode = metadata.get("metadata_after", [{}])[-1].get("mode", 0)
+            outcomes.append({"path": str(path), "outcome": "UNUSABLE",
+                             "fail_code": code.removeprefix("HOLD_EMERGENCY_STOP_"),
+                             "metadata": metadata,
+                             "content_read": ("SKIPPED_WRITABLE_MODE"
+                                              if candidate_mode & 0o022 else
+                                              "NOT_READ")})
+            continue
+        post_verify_metadata = supervisorctl_candidate_metadata(path)
+        if (not post_verify_metadata["identity_stable"] or
+                metadata["metadata_after"] !=
+                post_verify_metadata["metadata_before"]):
+            outcomes.append({"path": str(path), "identity": identity,
+                             "outcome": "UNUSABLE",
+                             "fail_code": "CANDIDATE_METADATA_CHANGED",
+                             "metadata_before": metadata,
+                             "metadata_after": post_verify_metadata})
+            continue
+        pid_result = status_result = None
+        rpc_failure = None
+        for args, label in (
+                (["-c", str(SUPERVISOR_CLIENT_CONFIG), "pid"], "PID"),
+                (["-c", str(SUPERVISOR_CLIENT_CONFIG), "status",
+                  SUPERVISOR_SERVICE], "STATUS")):
+            try:
+                result, _ = invoke_supervisorctl_path(
+                    path, args, expected_identity=identity)
+                if label == "PID":
+                    pid_result = result
+                else:
+                    status_result = result
+            except RuntimeError as exc:
+                code = str(exc)
+                if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", code):
+                    code = "HOLD_EMERGENCY_STOP_CANDIDATE_RPC_FAILED"
+                rpc_failure = code.removeprefix("HOLD_EMERGENCY_STOP_")
+        if rpc_failure is not None or pid_result is None or status_result is None:
+            outcomes.append({"path": str(path), "identity": identity,
+                             "metadata": post_verify_metadata,
+                             "outcome": "RPC_FAILED",
+                             "fail_code": rpc_failure or "RPC_RESPONSE_MISSING"})
+            continue
+        pid_lines = pid_result.stdout.strip().splitlines()
+        if (pid_result.returncode != 0 or len(pid_lines) != 1 or
+                not pid_lines[0].isdecimal()):
+            outcomes.append({"path": str(path), "identity": identity,
+                             "metadata": post_verify_metadata,
+                             "outcome": "PID_RESPONSE_MISMATCH",
+                             "fail_code": "PID_RESPONSE_INVALID"})
+            continue
+        daemon_pid = int(pid_lines[0])
+        try:
+            daemon_identity = probe_supervisor_daemon_identity(daemon_pid)
+        except RuntimeError as exc:
+            code = str(exc)
+            if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", code):
+                code = "HOLD_EMERGENCY_STOP_DAEMON_IDENTITY_INVALID"
+            outcomes.append({"path": str(path), "identity": identity,
+                             "metadata": post_verify_metadata,
+                             "pid": daemon_pid, "outcome": "DAEMON_IDENTITY_MISMATCH",
+                             "fail_code": code.removeprefix("HOLD_EMERGENCY_STOP_")})
+            continue
+        status_lines = status_result.stdout.strip().splitlines()
+        status_match = (STATUS_LINE.fullmatch(status_lines[0])
+                        if len(status_lines) == 1 else None)
+        if (status_result.returncode != 0 or status_match is None or
+                status_match.group(1) != SUPERVISOR_SERVICE or
+                status_match.group(2) != "RUNNING" or
+                status_match.group(3) is None or
+                int(status_match.group(3)) != MODEL_PID or
+                daemon_identity["config_path"] != str(SUPERVISOR_CLIENT_CONFIG)):
+            outcomes.append({"path": str(path), "identity": identity,
+                             "metadata": post_verify_metadata,
+                             "daemon_identity": daemon_identity,
+                             "pid": daemon_pid, "outcome": "TARGET_SERVICE_MISMATCH",
+                             "fail_code": "SERVICE_OR_DAEMON_MISMATCH"})
+            continue
+        match = {"path": path, "identity": identity,
+                 "daemon_identity": daemon_identity, "pid": daemon_pid}
+        matches.append(match)
+        outcomes.append({"path": str(path), "identity": identity,
+                         "metadata": post_verify_metadata,
+                         "daemon_identity": daemon_identity,
+                         "pid": daemon_pid, "service_state": "RUNNING",
+                         "service_pid": MODEL_PID, "outcome": "MATCH"})
+    DIAGNOSTICS["supervisorctl_candidates"] = outcomes
+    if not matches:
+        endpoint = _select_unix_supervisor_fallback(outcomes, present_paths)
+        identity = {"transport": "supervisor_unix_xmlrpc",
+                    "path": endpoint["socket"]["resolved_path"],
+                    "sha256": hashlib.sha256(json.dumps(
+                        endpoint, sort_keys=True, separators=(",", ":")
+                    ).encode()).hexdigest(),
+                    "root_owned_nonwritable": True,
+                    "endpoint": endpoint}
+        SUPERVISORCTL_BIN = None
+        SUPERVISORCTL_TRANSPORT = "unix_xmlrpc"
+        SUPERVISOR_UNIX_ENDPOINT = endpoint
+        SUPERVISORCTL_SELECTED_IDENTITY = identity
+        SUPERVISORCTL_SELECTED_DAEMON_IDENTITY = endpoint["daemon"]
+        DIAGNOSTICS["supervisorctl_client"] = identity
+        DIAGNOSTICS["supervisorctl_selected"] = {
+            "transport": SUPERVISORCTL_TRANSPORT, "identity": identity,
+            "daemon_identity": SUPERVISORCTL_SELECTED_DAEMON_IDENTITY}
+        DIAGNOSTICS["supervisor_unix_rpc"] = {
+            "read_only_preflight": True,
+            "methods": ["supervisor.getPID", "supervisor.getState",
+                        "supervisor.getProcessInfo"],
+            "peer_credentials_checked": True}
+        return
+    if not present_paths:
+        fail("SUPERVISORCTL_NO_ALLOWLISTED_CANDIDATE")
+    if len(matches) != 1 or any(item.get("outcome") != "MATCH"
+                                 for item in outcomes
+                                 if item.get("outcome") not in ("ABSENT", "UNUSABLE")):
+        fail("SUPERVISORCTL_CANDIDATE_SELECTION_AMBIGUOUS_OR_MISMATCH")
+    selected = matches[0]
+    SUPERVISORCTL_BIN = selected["path"]
+    SUPERVISORCTL_SELECTED_IDENTITY = selected["identity"]
+    SUPERVISORCTL_SELECTED_DAEMON_IDENTITY = selected["daemon_identity"]
+    DIAGNOSTICS["supervisorctl_selected"] = {
+        "path": str(SUPERVISORCTL_BIN),
+        "identity": SUPERVISORCTL_SELECTED_IDENTITY,
+        "daemon_identity": SUPERVISORCTL_SELECTED_DAEMON_IDENTITY,
+    }
+
+
+def command(argv: list[str], timeout: int = 15,
+            verified_client_sha256: str | None = None) -> subprocess.CompletedProcess:
+    global STOP_REQUEST_DISPATCHED
+    if not argv or argv[0] != "supervisorctl":
+        fail("COMMAND_OUTSIDE_SUPERVISORCTL_SCOPE")
+    if SUPERVISORCTL_BIN is None or SUPERVISORCTL_SELECTED_IDENTITY is None:
+        if SUPERVISORCTL_TRANSPORT != "unix_xmlrpc" or SUPERVISOR_UNIX_ENDPOINT is None:
+            fail("SUPERVISORCTL_CANDIDATE_NOT_SELECTED")
+    if SUPERVISORCTL_TRANSPORT == "unix_xmlrpc":
+        if (SUPERVISOR_UNIX_ENDPOINT is None or
+                DIAGNOSTICS.get("supervisorctl_client") != SUPERVISORCTL_SELECTED_IDENTITY or
+                SUPERVISORCTL_SELECTED_IDENTITY.get("transport") !=
+                "supervisor_unix_xmlrpc"):
+            fail("UNIX_RPC_SELECTED_IDENTITY_UNAVAILABLE")
+        if verified_client_sha256 is not None and (
+                verified_client_sha256 != SUPERVISORCTL_SELECTED_IDENTITY.get("sha256")):
+            fail("UNIX_RPC_VERIFICATION_TOKEN_INVALID")
+        if (len(argv) not in (4, 5) or argv[1] != "-c" or
+                argv[2] != str(SUPERVISOR_CLIENT_CONFIG)):
+            fail("UNIX_RPC_COMMAND_NOT_ALLOWLISTED")
+        operation = argv[3]
+        if operation == "pid" and len(argv) == 4:
+            value = _supervisor_unix_rpc(SUPERVISOR_UNIX_ENDPOINT,
+                                         "supervisor.getPID", (), timeout)
+            if type(value) is not int or value != SUPERVISOR_UNIX_ENDPOINT["daemon"]["pid"]:
+                fail("UNIX_RPC_PID_RESPONSE_MISMATCH")
+            return subprocess.CompletedProcess(argv, 0, stdout=f"{value}\n", stderr="")
+        name = argv[4] if len(argv) == 5 else ""
+        if operation == "status" and name == SUPERVISOR_SERVICE:
+            info = _supervisor_unix_rpc(SUPERVISOR_UNIX_ENDPOINT,
+                                        "supervisor.getProcessInfo", (name,), timeout)
+            if (not isinstance(info, dict) or info.get("name") != SUPERVISOR_SERVICE or
+                    info.get("statename") not in ("RUNNING", "STOPPED", "EXITED") or
+                    type(info.get("pid")) is not int or info["pid"] < 0):
+                fail("UNIX_RPC_PROCESS_INFO_INVALID")
+            state, pid = info["statename"], info["pid"]
+            if state == "RUNNING" and pid <= 0:
+                fail("UNIX_RPC_RUNNING_PID_INVALID")
+            if state in ("STOPPED", "EXITED") and pid != 0:
+                fail("UNIX_RPC_STOPPED_PID_INVALID")
+            line = f"{SUPERVISOR_SERVICE} {state}" + (f" pid {pid}" if pid else "") + "\n"
+            return subprocess.CompletedProcess(argv, 0 if state == "RUNNING" else 3,
+                                               stdout=line, stderr="")
+        if operation == "stop" and name == SUPERVISOR_SERVICE:
+            info = _supervisor_unix_rpc(SUPERVISOR_UNIX_ENDPOINT,
+                                        "supervisor.getProcessInfo", (name,), timeout)
+            if (not isinstance(info, dict) or info.get("name") != SUPERVISOR_SERVICE or
+                    info.get("statename") != "RUNNING" or
+                    type(info.get("pid")) is not int or info["pid"] != MODEL_PID or
+                    stable_start_ticks(MODEL_PID, MODEL_START_TICKS) != MODEL_START_TICKS):
+                fail("UNIX_RPC_STOP_TARGET_CHANGED")
+            STOP_REQUEST_DISPATCHED = True
+            result = _supervisor_unix_rpc(
+                SUPERVISOR_UNIX_ENDPOINT, "supervisor.stopProcess",
+                (SUPERVISOR_SERVICE, True), timeout)
+            if result is not True:
+                fail("UNIX_RPC_STOP_NOT_CONFIRMED")
+            return subprocess.CompletedProcess(argv, 0, stdout="stopped\n", stderr="")
+        fail("UNIX_RPC_COMMAND_NOT_ALLOWLISTED")
+    if verified_client_sha256 is None:
+        verify_supervisorctl_executable(SUPERVISORCTL_BIN,
+                                        SUPERVISORCTL_SELECTED_IDENTITY)
+    elif (not re.fullmatch(r"[0-9a-f]{64}", verified_client_sha256) or
+          DIAGNOSTICS.get("supervisorctl_client", {}).get("sha256") !=
+          verified_client_sha256 or
+          verified_client_sha256 != SUPERVISORCTL_SELECTED_IDENTITY["sha256"]):
+        fail("SUPERVISORCTL_VERIFICATION_TOKEN_INVALID")
+    if DIAGNOSTICS.get("supervisorctl_client") != SUPERVISORCTL_SELECTED_IDENTITY:
+        fail("SUPERVISORCTL_SELECTED_IDENTITY_CHANGED")
+    if (len(argv) == 5 and argv[1] == "-c" and
+            argv[2] == str(SUPERVISOR_CLIENT_CONFIG) and
+            argv[3] == "stop" and argv[4] == SUPERVISOR_SERVICE):
+        STOP_REQUEST_DISPATCHED = True
+    result, _ = invoke_supervisorctl_path(
+        SUPERVISORCTL_BIN, argv[1:], timeout,
+        expected_identity=SUPERVISORCTL_SELECTED_IDENTITY)
+    return result
 
 
 def supervisor_status() -> dict:
-    p = command(["supervisorctl", "status", SUPERVISOR_SERVICE])
+    p = command(["supervisorctl", "-c", str(SUPERVISOR_CLIENT_CONFIG),
+                 "status", SUPERVISOR_SERVICE])
     lines = p.stdout.strip().splitlines()
     m = STATUS_LINE.fullmatch(lines[0]) if len(lines) == 1 else None
     if m is None or m.group(1) != SUPERVISOR_SERVICE:
@@ -548,6 +1706,13 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
             fail("HOLDER_CWD_UNAVAILABLE")
         if len(os.fsencode(cwd)) > MAX_PROC_PATH_BYTES:
             fail("HOLDER_CWD_OVER_LIMIT")
+        if (exe_name not in ("python3", "python3.11", "python3.12", "python3.13") or
+                argv.count(HOLDER_SCRIPT) != 1 or cwd != HOLDER_CWD or
+                hashlib.sha256(os.fsencode(HOLDER_SCRIPT)).hexdigest() !=
+                HOLDER_SCRIPT_PATH_SHA256 or
+                hashlib.sha256(os.fsencode(HOLDER_CWD)).hexdigest() != HOLDER_CWD_SHA256 or
+                hashlib.sha256(raw_cmdline).hexdigest() != HOLDER_CMDLINE_SHA256):
+            fail("HOLDER_EXPECTED_ENGRAM_PROCESS_MISMATCH")
     else:
         fail("UNKNOWN_PROCESS_ROLE")
     group = cgroup_path(pid)
@@ -589,12 +1754,188 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
     return {"pid": pid, "start_ticks": ticks,
             "exe": (exe_name if role == "MODEL" else None),
             "exe_path_sha256": hashlib.sha256(os.fsencode(exe)).hexdigest(),
+            "exe_basename": exe_name,
             "cwd_sha256": (hashlib.sha256(os.fsencode(cwd)).hexdigest()
                            if role == "HOLDER" else None),
+            "cmdline_sha256": hashlib.sha256(raw_cmdline).hexdigest(),
             "ppid": stat_before["ppid"], "pgrp": stat_before["pgrp"],
             "argv_sha256": hashlib.sha256(b"\0".join(raw_argv)).hexdigest(),
             "environment_overrides": environment_overrides if role == "MODEL" else None,
             "cgroup": str(group)}
+
+
+def target_model_argv_fingerprint(args: list[str]) -> tuple[str, str] | None:
+    """Parse only known llama-server option arities; unknown syntax is HOLD."""
+    value_options = {
+        "--alias", "--host", "--port", "--path", "--api-key", "--api-key-file",
+        "--threads", "--threads-http", "--threads-batch", "--n-gpu-layers",
+        "--gpu-layers", "--device", "--devices", "--split-mode", "--tensor-split",
+        "--main-gpu", "--cache-type-k", "--cache-type-v", "--batch-size",
+        "--ubatch-size", "--timeout", "--log-file", "--log-format",
+        "--chat-template", "--chat-template-file", "--chat-template-kwargs",
+        "--reasoning-format", "--hf-token", "--rpc", "--cpu-mask",
+        "--shard", "--ple", "-np", "--parallel",
+    }
+    boolean_options = {
+        "--no-webui", "--metrics", "--embedding", "--reranking", "--jinja",
+        "--no-mmap", "--mlock", "--no-context-shift", "--no-perf",
+        "--cont-batching", "--no-cont-batching", "--no-flash-attn",
+        "--verbose", "--log-disable", "--cache-prompt", "--no-cache-prompt",
+        "--swa-full",
+    }
+    model_values = []
+    context_values = []
+    index = 0
+    while index < len(args):
+        token = args[index]
+        option = _canonical_long_option(_selector_option(token))
+        inline = token.partition("=")[2] if "=" in token else None
+        if option in ("-m", "--model", "-c", "--ctx-size"):
+            if inline is None:
+                if index + 1 >= len(args) or args[index + 1].startswith("-"):
+                    return None
+                value = args[index + 1]
+                index += 2
+            else:
+                if inline == "":
+                    return None
+                value = inline
+                index += 1
+            if option in ("-m", "--model"):
+                model_values.append(value)
+            else:
+                context_values.append(value)
+            continue
+        if option in value_options:
+            if inline is not None:
+                if inline == "":
+                    return None
+                index += 1
+                continue
+            if index + 1 >= len(args):
+                return None
+            operand = args[index + 1]
+            allow_negative_one = option in ("-np", "--parallel") and operand == "-1"
+            if operand.startswith("-") and not allow_negative_one:
+                return None
+            index += 2
+            continue
+        if option in boolean_options:
+            index += 1
+            continue
+        if option in ("--flash-attn", "--log-colors"):
+            if (index + 1 < len(args) and not args[index + 1].startswith("-") and
+                    _selector_option(args[index + 1]) == args[index + 1]):
+                index += 2
+            else:
+                index += 1
+            continue
+        if token.startswith("-") or not token:
+            return None
+        # Positional values are ambiguous unless consumed by a known option.
+        return None
+    if len(model_values) != 1 or len(context_values) != 1:
+        return None
+    return model_values[0], context_values[0]
+
+
+def cgroup_model_runtime_census(group: Path, model: dict) -> list[dict]:
+    """Classify bounded cgroup members against the pinned model runtime fingerprint."""
+    cgroup_before = cgroup_processes(group)
+    if len(cgroup_before) > MAX_CGROUP_RUNTIME_PROCESSES:
+        fail("CGROUP_RUNTIME_PROCESS_LIMIT")
+    table_before = process_table_snapshot()
+    rows = []
+    for pid in cgroup_before:
+        before = table_before.get(pid)
+        if before is None:
+            fail("CGROUP_RUNTIME_PID_IDENTITY_UNAVAILABLE")
+        if before["state"] == "Z":
+            rows.append({"pid": pid, "start_ticks": before["start_ticks"],
+                         "exe_path_sha256": None, "argv_sha256": None,
+                         "classification": "ZOMBIE"})
+            continue
+        proc = Path("/proc") / str(pid)
+        try:
+            exe = os.readlink(proc / "exe")
+            with (proc / "cmdline").open("rb") as stream:
+                raw_cmdline = stream.read(MAX_CMDLINE_BYTES + 1)
+        except OSError:
+            fail("CGROUP_RUNTIME_EXEC_IDENTITY_UNAVAILABLE")
+        if (len(os.fsencode(exe)) > MAX_PROC_PATH_BYTES or
+                len(raw_cmdline) > MAX_CMDLINE_BYTES or
+                not raw_cmdline.endswith(b"\0")):
+            fail("CGROUP_RUNTIME_EXEC_IDENTITY_INVALID")
+        try:
+            argv = [token.decode("utf-8", "strict")
+                    for token in raw_cmdline[:-1].split(b"\0")]
+        except UnicodeDecodeError:
+            fail("CGROUP_RUNTIME_ARGV_ENCODING_INVALID")
+        if not argv or any(not token for token in argv):
+            fail("CGROUP_RUNTIME_ARGV_INVALID")
+        exe_after = os.readlink(proc / "exe")
+        with (proc / "cmdline").open("rb") as stream:
+            raw_cmdline_after = stream.read(MAX_CMDLINE_BYTES + 1)
+        after = process_table_row(pid, missing_ok=True)
+        if (after is None or after["pid"] != pid or
+                any(before[key] != after[key] for key in
+                    ("pid", "start_ticks", "ppid", "pgrp", "state")) or
+                exe_after != exe or raw_cmdline_after != raw_cmdline):
+            fail("CGROUP_RUNTIME_EXEC_IDENTITY_CHANGED")
+        exe_hash = hashlib.sha256(os.fsencode(exe)).hexdigest()
+        argv_hash = hashlib.sha256(b"\0".join(token.encode() for token in argv)).hexdigest()
+        if pid == MODEL_PID:
+            if (before["start_ticks"] != MODEL_START_TICKS or
+                    exe_hash != model["exe_path_sha256"] or
+                    argv_hash != model["argv_sha256"]):
+                fail("CGROUP_RUNTIME_PINNED_MODEL_MISMATCH")
+            classification = "PINNED_TARGET_MODEL_RUNTIME"
+        elif exe_hash != model["exe_path_sha256"]:
+            classification = "OTHER_EXECUTABLE"
+        else:
+            fingerprint = target_model_argv_fingerprint(argv[1:])
+            if fingerprint is None:
+                classification = "SAME_EXECUTABLE_UNCLASSIFIED"
+            elif fingerprint[0] == MODEL_PATH:
+                classification = ("SAME_MODEL_PATH_AND_SERVING_FINGERPRINT"
+                                  if fingerprint[1] == "8192" else
+                                  "SAME_MODEL_PATH_OTHER_SERVING_CONTEXT")
+            else:
+                classification = "SAME_EXECUTABLE_OTHER_MODEL"
+        rows.append({"pid": pid, "start_ticks": before["start_ticks"],
+                     "exe_path_sha256": exe_hash, "argv_sha256": argv_hash,
+                     "classification": classification})
+    cgroup_after = cgroup_processes(group)
+    table_after = process_table_snapshot()
+    if cgroup_after != cgroup_before:
+        fail("CGROUP_RUNTIME_MEMBERSHIP_CHANGED")
+    for pid in cgroup_after:
+        prior, current = table_before.get(pid), table_after.get(pid)
+        if (prior is None or current is None or
+                prior["start_ticks"] != current["start_ticks"] or
+                prior["ppid"] != current["ppid"] or
+                prior["pgrp"] != current["pgrp"] or
+                (prior["state"] == "Z") != (current["state"] == "Z")):
+            fail("CGROUP_RUNTIME_PROCESS_CENSUS_UNSTABLE")
+    matches = [row for row in rows if row["classification"] in (
+        "SAME_MODEL_PATH_AND_SERVING_FINGERPRINT",
+        "SAME_MODEL_PATH_OTHER_SERVING_CONTEXT") and row["pid"] != MODEL_PID]
+    unknown_same_exe = [row for row in rows
+                        if row["classification"] == "SAME_EXECUTABLE_UNCLASSIFIED"]
+    DIAGNOSTICS["model_runtime_cgroup"] = {
+        "members": rows,
+        "member_count": len(rows),
+        "pinned_model_pid": MODEL_PID,
+        "pinned_model_start_ticks": MODEL_START_TICKS,
+        "target_model_exe_path_sha256": model["exe_path_sha256"],
+        "target_model_argv_sha256": model["argv_sha256"],
+        "scope": "PID_START_TICKS_EXE_PATH_AND_ARGV_HASH_CLASSIFICATION_ONLY",
+    }
+    if matches:
+        fail("OTHER_PINNED_MODEL_RUNTIME_IN_CGROUP")
+    if unknown_same_exe:
+        fail("CGROUP_MODEL_RUNTIME_CLASSIFICATION_UNKNOWN")
+    return rows
 
 
 def fd_memfd_identity(pid: int, expected_ticks: int = HOLDER_START_TICKS) -> dict:
@@ -666,19 +2007,10 @@ def require_holder_outside_model_group(model: dict, holder: dict) -> None:
         fail("HOLDER_IN_MODEL_PROCESS_GROUP")
 
 
-def require_same_process_identity(before: dict, after: dict, role: str) -> None:
-    if before != after:
-        fail(role + "_FULL_IDENTITY_CHANGED")
-
-
-def require_exclusive_model_process_group(model: dict) -> None:
-    """Prove by two bounded procfs passes that only the exact model PID shares its PGID."""
-    group = model.get("pgrp")
-    if type(group) is not int or model.get("pid") != MODEL_PID:
-        fail("MODEL_PROCESS_GROUP_IDENTITY_UNKNOWN")
-
+def holder_identity_census(*, allow_none: bool = False) -> list[dict]:
+    """Two bounded procfs passes; fail if any other process has the pinned holder script."""
     def census():
-        members = {}
+        matches = []
         scanned = 0
         try:
             with os.scandir("/proc") as entries:
@@ -686,20 +2018,424 @@ def require_exclusive_model_process_group(model: dict) -> None:
                     if not entry.name.isdecimal():
                         continue
                     scanned += 1
-                    if scanned > 8192:
-                        fail("PROCESS_GROUP_CENSUS_LIMIT")
+                    if scanned > MAX_PROCESS_TABLE_ENTRIES:
+                        fail("HOLDER_IDENTITY_CENSUS_LIMIT")
                     pid = int(entry.name)
-                    identity = proc_stat_identity(pid, missing_ok=True)
-                    if identity is not None and identity["pgrp"] == group:
-                        members[pid] = identity["start_ticks"]
+                    before = proc_stat_identity(pid, missing_ok=True)
+                    if before is None:
+                        continue
+                    cmd_path = Path("/proc") / str(pid) / "cmdline"
+                    try:
+                        fd = os.open(cmd_path, os.O_RDONLY | os.O_NOFOLLOW |
+                                     os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0))
+                    except FileNotFoundError:
+                        continue
+                    except OSError:
+                        fail("HOLDER_IDENTITY_CMDLINE_UNAVAILABLE")
+                    try:
+                        raw = os.read(fd, MAX_CMDLINE_BYTES + 1)
+                        after = os.fstat(fd)
+                    finally:
+                        os.close(fd)
+                    if len(raw) > MAX_CMDLINE_BYTES:
+                        fail("HOLDER_IDENTITY_CMDLINE_LIMIT")
+                    if HOLDER_SCRIPT.encode("utf-8") not in raw:
+                        continue
+                    after_proc = proc_stat_identity(pid, missing_ok=True)
+                    if (after_proc is None or after_proc != before or
+                            after.st_size != len(raw)):
+                        fail("HOLDER_IDENTITY_CENSUS_UNSTABLE")
+                    identity = process_identity(pid, before["start_ticks"], "HOLDER")
+                    matches.append(identity)
         except OSError:
-            fail("PROCESS_GROUP_CENSUS_UNAVAILABLE")
-        return members
+            fail("HOLDER_IDENTITY_CENSUS_UNAVAILABLE")
+        return sorted(matches, key=lambda item: (item["pid"], item["start_ticks"]))
 
     first = census()
     second = census()
-    if (first != second or first != {MODEL_PID: MODEL_START_TICKS}):
-        fail("MODEL_PROCESS_GROUP_NOT_EXCLUSIVE")
+    signature = lambda rows: [(row["pid"], row["start_ticks"], row["exe_path_sha256"],
+                               row["cmdline_sha256"], row["cwd_sha256"], row["cgroup"])
+                              for row in rows]
+    if signature(first) != signature(second):
+        fail("HOLDER_IDENTITY_CENSUS_CHANGED")
+    if allow_none:
+        if second:
+            fail("NEW_HOLDER_IDENTITY_AFTER_TERM")
+    elif (len(second) != 1 or second[0]["pid"] != HOLDER_PID or
+          second[0]["start_ticks"] != HOLDER_START_TICKS):
+        fail("HOLDER_IDENTITY_NOT_UNIQUE")
+    return second
+
+
+def require_same_process_identity(before: dict, after: dict, role: str) -> None:
+    if before != after:
+        fail(role + "_FULL_IDENTITY_CHANGED")
+
+
+def process_table_row(pid: int, missing_ok: bool = True) -> dict | None:
+    path = Path("/proc") / str(pid) / "stat"
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0))
+        try:
+            raw = os.read(fd, MAX_STAT_BYTES + 1)
+        finally:
+            os.close(fd)
+    except FileNotFoundError:
+        if missing_ok:
+            return None
+        fail("PROCESS_TABLE_PID_MISSING")
+    except OSError:
+        fail("PROCESS_TABLE_PID_UNREADABLE")
+    if len(raw) > MAX_STAT_BYTES:
+        fail("PROCESS_TABLE_STAT_TOO_LARGE")
+    text = raw.decode("ascii", "replace")
+    match = re.match(r"^([0-9]+) [(]", text)
+    fields = text.rsplit(")", 1)[1].split()
+    if match is None or int(match.group(1)) != pid or len(fields) <= 19:
+        fail("PROCESS_TABLE_STAT_INVALID")
+    try:
+        if (not re.fullmatch(r"[A-Z]", fields[0]) or
+                not fields[1].isdigit() or not fields[2].isdigit() or
+                not fields[19].isdigit()):
+            fail("PROCESS_TABLE_STAT_FIELDS_INVALID")
+        return {"pid": pid, "state": fields[0], "ppid": int(fields[1]),
+                "pgrp": int(fields[2]), "start_ticks": int(fields[19])}
+    except (ValueError, IndexError):
+        fail("PROCESS_TABLE_STAT_PARSE_FAILED")
+
+
+def process_table_snapshot() -> dict[int, dict]:
+    rows = {}
+    scanned = 0
+    try:
+        with os.scandir("/proc") as entries:
+            for entry in entries:
+                if not entry.name.isdecimal():
+                    continue
+                scanned += 1
+                if scanned > MAX_PROCESS_TABLE_ENTRIES:
+                    fail("PROCESS_TABLE_ENTRY_LIMIT")
+                pid = int(entry.name)
+                row = process_table_row(pid, missing_ok=True)
+                if row is not None:
+                    rows[pid] = row
+    except OSError:
+        fail("PROCESS_TABLE_CENSUS_UNAVAILABLE")
+    return rows
+
+
+def target_descendants(table: dict[int, dict]) -> list[dict]:
+    root = table.get(MODEL_PID)
+    if root is None or root["start_ticks"] != MODEL_START_TICKS:
+        fail("MODEL_MISSING_FROM_PROCESS_TABLE")
+    descendants = []
+    for pid, row in table.items():
+        if pid == MODEL_PID:
+            continue
+        parent = row["ppid"]
+        seen = {pid}
+        depth = 0
+        while parent and parent not in seen and depth < 128:
+            if parent == MODEL_PID:
+                descendants.append(row)
+                break
+            seen.add(parent)
+            parent_row = table.get(parent)
+            if parent_row is None:
+                break
+            parent = parent_row["ppid"]
+            depth += 1
+        if depth >= 128:
+            fail("PROCESS_TREE_DEPTH_LIMIT")
+    return sorted(descendants, key=lambda row: row["pid"])
+
+
+def cgroup_processes(group: Path) -> list[int]:
+    path = group / "cgroup.procs"
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        fail("CGROUP_PROCS_UNAVAILABLE")
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_mode & 0o022:
+            fail("CGROUP_PROCS_UNSAFE")
+        chunks = []
+        total = 0
+        while total <= 512 * 1024:
+            chunk = os.read(fd, min(65_536, 512 * 1024 + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+    finally:
+        os.close(fd)
+    if total > 512 * 1024:
+        fail("CGROUP_PROCS_OVER_LIMIT")
+    raw = b"".join(chunks)
+    rows = raw.splitlines()
+    if len(rows) > MAX_PROCESS_TABLE_ENTRIES or any(
+            not row.isdigit() for row in rows):
+        fail("CGROUP_PROCS_INVALID")
+    values = [int(row) for row in rows]
+    if len(values) != len(set(values)):
+        fail("CGROUP_PROCS_DUPLICATE_PID")
+    return sorted(values)
+
+
+def require_exclusive_model_process_group(model: dict,
+                                          settings: dict | None = None) -> dict:
+    """Prove bounded Supervisor signal scope from stable config/procfs snapshots."""
+    group = model.get("pgrp")
+    if type(group) is not int or model.get("pid") != MODEL_PID:
+        fail("MODEL_PROCESS_GROUP_IDENTITY_UNKNOWN")
+    settings_error = None
+    if settings is None:
+        try:
+            settings = read_supervisor_stop_settings()
+        except RuntimeError as exc:
+            settings_error = str(exc)
+    cgroup = Path(model["cgroup"])
+    cgroup_before = cgroup_processes(cgroup)
+    if cgroup_processes(cgroup) != cgroup_before:
+        fail("CGROUP_PROCS_CHANGED_DURING_PREFLIGHT")
+
+    table_first = process_table_snapshot()
+    descendants_first = target_descendants(table_first)
+    table_second = process_table_snapshot()
+    descendants = target_descendants(table_second)
+    descendant_signature = lambda rows: [
+        (row["pid"], row["start_ticks"], row["ppid"], row["pgrp"])
+        for row in rows
+    ]
+    if descendant_signature(descendants_first) != descendant_signature(descendants):
+        fail("MODEL_DESCENDANT_CENSUS_UNSTABLE")
+    descendant_ids = {row["pid"] for row in descendants}
+    if any(row["pid"] not in cgroup_before for row in descendants):
+        fail("MODEL_DESCENDANT_OUTSIDE_CGROUP")
+    cgroup_identities = []
+    for pid in cgroup_before:
+        row = table_second.get(pid)
+        if row is None:
+            fail("CGROUP_PID_IDENTITY_UNAVAILABLE")
+        cgroup_identities.append({"pid": pid, "start_ticks": row["start_ticks"]})
+    cgroup_identities.sort(key=lambda row: row["pid"])
+    if {row["pid"]: row["start_ticks"] for row in cgroup_identities}.get(MODEL_PID) != MODEL_START_TICKS:
+        fail("MODEL_MISSING_FROM_CGROUP_PROCS")
+
+    def census():
+        members = []
+        scanned = 0
+        try:
+            with os.scandir("/proc") as entries:
+                for entry in entries:
+                    if not entry.name.isdecimal():
+                        continue
+                    scanned += 1
+                    if scanned > MAX_PROCESS_TABLE_ENTRIES:
+                        fail("PROCESS_GROUP_CENSUS_LIMIT")
+                    pid = int(entry.name)
+                    before = process_table_row(pid, missing_ok=True)
+                    if before is None or before["pgrp"] != group:
+                        continue
+                    proc = Path("/proc") / str(pid)
+                    try:
+                        exe = os.readlink(proc / "exe")
+                        with (proc / "cmdline").open("rb") as stream:
+                            raw_cmdline = stream.read(MAX_CMDLINE_BYTES + 1)
+                        exe_after = os.readlink(proc / "exe")
+                        with (proc / "cmdline").open("rb") as stream:
+                            raw_cmdline_after = stream.read(MAX_CMDLINE_BYTES + 1)
+                        after = process_table_row(pid, missing_ok=True)
+                    except FileNotFoundError:
+                        continue
+                    except OSError:
+                        fail("PROCESS_GROUP_MEMBER_IDENTITY_UNAVAILABLE")
+                    if (after is None or
+                            any(before[key] != after[key] for key in
+                                ("pid", "ppid", "pgrp", "start_ticks")) or
+                            exe_after != exe or
+                            raw_cmdline_after != raw_cmdline or
+                            len(os.fsencode(exe)) > MAX_PROC_PATH_BYTES or
+                            len(raw_cmdline) > MAX_CMDLINE_BYTES or
+                            not raw_cmdline.endswith(bytes((0,)))):
+                        fail("PROCESS_GROUP_MEMBER_IDENTITY_CHANGED")
+                    members.append({
+                        "pid": pid, "start_ticks": before["start_ticks"],
+                        "ppid": before["ppid"], "state": before["state"],
+                        "is_zombie": before["state"] == "Z",
+                        "pgrp": before["pgrp"],
+                        "same_model_cgroup": pid in cgroup_before,
+                        "is_target_descendant": pid in descendant_ids,
+                        "exe_basename": Path(exe.removesuffix(" (deleted)")).name,
+                        "exe_path_sha256": hashlib.sha256(os.fsencode(exe)).hexdigest(),
+                        "cmdline_sha256": hashlib.sha256(raw_cmdline).hexdigest(),
+                    })
+        except OSError:
+            fail("PROCESS_GROUP_CENSUS_UNAVAILABLE")
+        return sorted(members, key=lambda row: row["pid"])
+
+    DIAGNOSTICS["model_pgrp_census"] = {"pgrp": group, "state": "CENSUS_STARTED"}
+    first = census()
+    DIAGNOSTICS["model_pgrp_census"]["members_first"] = first
+    second = census()
+    signature = lambda rows: [{key: row[key] for key in (
+        "pid", "start_ticks", "ppid", "is_zombie", "pgrp", "same_model_cgroup",
+        "is_target_descendant", "exe_basename", "exe_path_sha256", "cmdline_sha256")}
+        for row in rows]
+    DIAGNOSTICS["model_pgrp_census"] = {
+        "pgrp": group, "stable_two_passes": signature(first) == signature(second),
+        "members_first": first, "members_second": second,
+        "cgroup_procs_before": cgroup_before,
+        "cgroup_identities_before": cgroup_identities,
+        "target_descendants_before": descendants,
+        "scope": "READ_ONLY_HASHED_CMDLINE_AND_EXE_PATH_NO_RAW_ARGV",
+    }
+    if settings_error is not None:
+        raise RuntimeError(settings_error)
+    if signature(first) != signature(second):
+        fail("MODEL_PROCESS_GROUP_CENSUS_UNSTABLE")
+    model_rows = [row for row in second if row["pid"] == MODEL_PID]
+    if (len(model_rows) != 1 or model_rows[0]["start_ticks"] != MODEL_START_TICKS or
+            model_rows[0]["same_model_cgroup"] is not True):
+        fail("MODEL_PROCESS_GROUP_IDENTITY_MISMATCH")
+
+    live_descendants = [row for row in descendants if row["state"] != "Z"]
+    if settings["stopasgroup"] != "false" or settings["killasgroup"] != "false":
+        fail("SUPERVISOR_STOP_NOT_DIRECT_PID_ONLY")
+    if live_descendants:
+        fail("DIRECT_PID_STOP_HAS_LIVE_TARGET_DESCENDANTS")
+    live_group_members = [row for row in second if row["state"] != "Z"]
+    zombie_group_members = [row for row in second if row["state"] == "Z"]
+    if ([row["pid"] for row in live_group_members] != [MODEL_PID] or
+            live_group_members[0]["start_ticks"] != MODEL_START_TICKS):
+        fail("DIRECT_PID_STOP_HAS_OTHER_LIVE_PGRP_MEMBER")
+    stop_scope = "PINNED_SUPERVISOR_PROGRAM_PID_ONLY_EXCLUSIVE_LIVE_PGRP"
+    model_runtime_members = cgroup_model_runtime_census(cgroup, model)
+    runtime_identities = {row["pid"]: row["start_ticks"]
+                          for row in model_runtime_members}
+    if runtime_identities != {row["pid"]: row["start_ticks"]
+                              for row in cgroup_identities}:
+        fail("CGROUP_RUNTIME_MEMBERSHIP_CHANGED_DURING_CENSUS")
+    return {"settings": settings, "members": second,
+            "cgroup_procs": cgroup_before,
+            "cgroup_identities": cgroup_identities,
+            "descendants": descendants,
+            "model_runtime_members": model_runtime_members,
+            "live_pgrp_member_pids": [row["pid"] for row in live_group_members],
+            "zombie_pgrp_member_pids": [row["pid"] for row in zombie_group_members],
+            "live_pgrp_member_count": len(live_group_members),
+            "zombie_pgrp_member_count": len(zombie_group_members),
+            "stop_scope": stop_scope}
+
+def require_same_stop_preflight(before: dict, after: dict, label: str) -> None:
+    if (before["settings"]["effective_config_sha256"] !=
+            after["settings"]["effective_config_sha256"] or
+            before["settings"].get("daemon_identity") !=
+            after["settings"].get("daemon_identity") or
+            before["settings"].get("supervisorctl_client") !=
+            after["settings"].get("supervisorctl_client") or
+            before.get("model_runtime_members") !=
+            after.get("model_runtime_members") or
+            before["settings"]["path"] != after["settings"]["path"] or
+            before["stop_scope"] != after["stop_scope"]):
+        fail(label + "_SUPERVISOR_CONFIG_CHANGED")
+    before_members = {row["pid"]: row for row in before["members"]}
+    for row in after["members"]:
+        prior = before_members.get(row["pid"])
+        if (prior is None or prior["start_ticks"] != row["start_ticks"] or
+                any(prior[key] != row[key] for key in (
+                    "ppid", "is_zombie", "pgrp", "same_model_cgroup", "is_target_descendant",
+                    "exe_basename", "exe_path_sha256", "cmdline_sha256"))):
+            fail(label + "_NEW_OR_REUSED_PGRP_PID")
+    if set(after["cgroup_procs"]) - set(before["cgroup_procs"]):
+        fail(label + "_NEW_CGROUP_PID")
+    before_cgroup = {row["pid"]: row["start_ticks"]
+                     for row in before["cgroup_identities"]}
+    after_cgroup = {row["pid"]: row["start_ticks"]
+                    for row in after["cgroup_identities"]}
+    if any(pid not in before_cgroup or before_cgroup[pid] != ticks
+           for pid, ticks in after_cgroup.items()):
+        fail(label + "_NEW_OR_REUSED_CGROUP_PID")
+    before_descendants = {row["pid"]: row for row in before["descendants"]}
+    for row in after["descendants"]:
+        prior = before_descendants.get(row["pid"])
+        if prior is None or prior["start_ticks"] != row["start_ticks"]:
+            fail(label + "_NEW_TARGET_DESCENDANT")
+
+
+def process_group_after_stop(group: int, cgroup: Path, before: dict) -> dict:
+    table_first = process_table_snapshot()
+    cgroup_first = cgroup_processes(cgroup)
+    table = process_table_snapshot()
+    cgroup_after = cgroup_processes(cgroup)
+    if cgroup_first != cgroup_after:
+        fail("POST_STOP_CGROUP_PROCS_UNSTABLE")
+    group_first = sorted((row for row in table_first.values()
+                          if row["pgrp"] == group), key=lambda row: row["pid"])
+    group_after = sorted((row for row in table.values() if row["pgrp"] == group),
+                         key=lambda row: row["pid"])
+    group_signature = lambda rows: [(row["pid"], row["start_ticks"], row["ppid"],
+                                     row["pgrp"], row["state"] == "Z")
+                                    for row in rows]
+    if group_signature(group_first) != group_signature(group_after):
+        fail("POST_STOP_PGRP_CENSUS_UNSTABLE")
+    live_members_after = [row for row in group_after if row["state"] != "Z"]
+    zombie_members_after = [row for row in group_after if row["state"] == "Z"]
+    prior_group = {row["pid"]: row for row in before["members"]}
+    unclassified = [row for row in group_after
+                    if row["pid"] not in prior_group or
+                    prior_group[row["pid"]]["start_ticks"] != row["start_ticks"]]
+    prior_descendants = {row["pid"]: row for row in before["descendants"]}
+    remaining_descendants = []
+    for pid, prior in prior_descendants.items():
+        current = table.get(pid)
+        if (current is not None and current["start_ticks"] == prior["start_ticks"] and
+                current["state"] != "Z"):
+            remaining_descendants.append(current)
+    new_cgroup_pids = sorted(set(cgroup_after) - set(before["cgroup_procs"]))
+    before_cgroup = {row["pid"]: row["start_ticks"]
+                     for row in before["cgroup_identities"]}
+    after_cgroup = {pid: table[pid]["start_ticks"] for pid in cgroup_after
+                    if pid in table}
+    reused_cgroup_pids = sorted(pid for pid, ticks in after_cgroup.items()
+                                if pid in before_cgroup and before_cgroup[pid] != ticks)
+    missing_cgroup_identities = sorted(set(cgroup_after) - set(after_cgroup))
+    pinned_runtime = next((row for row in before["model_runtime_members"]
+                           if row["pid"] == MODEL_PID and
+                           row["start_ticks"] == MODEL_START_TICKS), None)
+    if pinned_runtime is None:
+        fail("POST_STOP_PINNED_MODEL_RUNTIME_EVIDENCE_MISSING")
+    model_runtime_members_after = cgroup_model_runtime_census(cgroup, {
+        "exe_path_sha256": pinned_runtime["exe_path_sha256"],
+        "argv_sha256": pinned_runtime["argv_sha256"],
+    })
+    runtime_after_ids = {row["pid"]: row["start_ticks"]
+                         for row in model_runtime_members_after}
+    if runtime_after_ids != after_cgroup:
+        fail("POST_STOP_CGROUP_RUNTIME_CENSUS_MISMATCH")
+    result = {
+        "pgrp": group, "members_after": group_after,
+        "stable_two_passes": True,
+        "live_pgrp_member_pids_after": [row["pid"] for row in live_members_after],
+        "zombie_pgrp_member_pids_after": [row["pid"] for row in zombie_members_after],
+        "live_pgrp_member_count_after": len(live_members_after),
+        "zombie_pgrp_member_count_after": len(zombie_members_after),
+        "cgroup_procs_after": cgroup_after,
+        "new_cgroup_pids": new_cgroup_pids,
+        "reused_cgroup_pids": reused_cgroup_pids,
+        "missing_cgroup_identities": missing_cgroup_identities,
+        "unclassified_pgrp_members": unclassified,
+        "remaining_target_descendants": remaining_descendants,
+        "model_runtime_members_after": model_runtime_members_after,
+    }
+    DIAGNOSTICS["model_process_group_after_stop"] = result
+    if (new_cgroup_pids or reused_cgroup_pids or missing_cgroup_identities or
+            unclassified or remaining_descendants or live_members_after):
+        fail("POST_STOP_PROCESS_SCOPE_NOT_CLOSED")
+    return result
 
 
 def memory_headroom(group: Path) -> dict:
@@ -755,13 +2491,34 @@ def wait_model_stopped() -> dict:
     fail("MODEL_GRACEFUL_STOP_NOT_VERIFIED")
 
 
+def reconcile_dispatched_stop_without_retry(*, acknowledged: bool = False
+                                            ) -> tuple[dict, dict]:
+    """Read-only bounded reconciliation after any stop transport may have run."""
+    DIAGNOSTICS["stop_action_outcome"] = (
+        "ACK_RECONCILING_READ_ONLY" if acknowledged
+        else "UNKNOWN_RECONCILING_WITHOUT_RETRY")
+    try:
+        status = wait_model_stopped()
+        pid_state = require_model_identity_gone()
+        DIAGNOSTICS["stop_action_outcome"] = (
+            "ACK_POST_STOP_STATE_CONFIRMED" if acknowledged
+            else "NO_ACK_POST_STOP_STATE_CONFIRMED")
+        return status, pid_state
+    except Exception:
+        DIAGNOSTICS["stop_action_outcome"] = (
+            "ACK_RECONCILIATION_UNPROVEN" if acknowledged
+            else "UNKNOWN_RECONCILIATION_UNPROVEN")
+        raise
+
+
 def run_action(request_id: int, source_sha: str) -> dict:
     # Fresh read-only identity and memory preflight happens before any marker.
+    select_supervisorctl_candidate()
     status = require_model_running()
     model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
     holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
     require_holder_outside_model_group(model, holder)
-    require_exclusive_model_process_group(model)
+    stop_safety_before = require_exclusive_model_process_group(model)
     if model["cgroup"] != holder["cgroup"]:
         fail("TARGETS_NOT_IN_SAME_CGROUP")
     memfd = fd_memfd_identity(HOLDER_PID)
@@ -771,6 +2528,9 @@ def run_action(request_id: int, source_sha: str) -> dict:
     require_same_process_identity(model, model_after_maps, "MODEL_AFTER_MAPS")
     require_same_process_identity(holder, holder_after_maps, "HOLDER_AFTER_MAPS")
     require_holder_outside_model_group(model_after_maps, holder_after_maps)
+    stop_safety_after_maps = require_exclusive_model_process_group(model_after_maps)
+    require_same_stop_preflight(stop_safety_before, stop_safety_after_maps,
+                                "MODEL_AFTER_MAPS")
     before = memory_headroom(Path(model["cgroup"]))
     if before["headroom"] >= MIN_HEADROOM:
         fail("HEADROOM_ALREADY_SAFE")
@@ -817,33 +2577,70 @@ def run_action(request_id: int, source_sha: str) -> dict:
     require_same_process_identity(model, last_model, "MODEL_AFTER_FINAL_MAPS")
     require_same_process_identity(holder, last_holder, "HOLDER_AFTER_FINAL_MAPS")
     require_holder_outside_model_group(last_model, last_holder)
-    require_exclusive_model_process_group(last_model)
-    # The /proc census costs time; close that admission window with fresh checks.
+    stop_settings_final = read_supervisor_stop_settings()
+    if (stop_settings_final["effective_config_sha256"] !=
+            stop_safety_before["settings"]["effective_config_sha256"]):
+        fail("SUPERVISOR_CONFIG_CHANGED_LAST_PRE_STOP")
+    # Close the config-read window with fresh service, process, holder and memory checks.
     final_status = require_model_running()
     final_model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
     final_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
-    require_same_process_identity(model, final_model, "MODEL_AFTER_FINAL_CENSUS")
-    require_same_process_identity(holder, final_holder, "HOLDER_AFTER_FINAL_CENSUS")
+    require_same_process_identity(model, final_model, "MODEL_LAST_PRE_STOP")
+    require_same_process_identity(holder, final_holder, "HOLDER_LAST_PRE_STOP")
     require_holder_outside_model_group(final_model, final_holder)
     final_memfd = fd_memfd_identity(HOLDER_PID)
     if (final_memfd["device"] != memfd["device"] or
             final_memfd["inode"] != memfd["inode"] or
             final_memfd["size"] != memfd["size"] or
             final_memfd["label"] != MEMFD_LABEL):
-        fail("HOLDER_MEMFD_CHANGED_AFTER_FINAL_CENSUS")
+        fail("HOLDER_MEMFD_CHANGED_LAST_PRE_STOP")
     final_headroom = memory_headroom(Path(model["cgroup"]))
     if final_headroom["headroom"] >= MIN_HEADROOM:
-        fail("HEADROOM_RECOVERED_AFTER_FINAL_CENSUS")
+        fail("HEADROOM_RECOVERED_LAST_PRE_STOP")
+
+    # Verify the fixed client before the process census. Then make the stable
+    # PGRP/cgroup closure scan the last proc/cgroup read before the stop RPC.
+    if SUPERVISORCTL_TRANSPORT == "unix_xmlrpc":
+        stop_client_identity = _verify_selected_unix_endpoint()
+    else:
+        stop_client_identity = verify_supervisorctl_executable(
+            SUPERVISORCTL_BIN, SUPERVISORCTL_SELECTED_IDENTITY)
+    stop_client_sha256 = stop_client_identity["sha256"]
+    if DIAGNOSTICS.get("supervisorctl_client") != stop_settings_final.get(
+            "supervisorctl_client"):
+        fail("SUPERVISORCTL_CLIENT_CHANGED_LAST_PRE_STOP")
+    stop_safety_immediate = require_exclusive_model_process_group(
+        final_model, settings=stop_settings_final)
+    require_same_stop_preflight(stop_safety_before, stop_safety_immediate,
+                                "MODEL_IMMEDIATELY_BEFORE_STOP")
 
     PHASE["model_stop_requested"] = True
-    stopped = command(["supervisorctl", "stop", SUPERVISOR_SERVICE], timeout=35)
-    if stopped.returncode != 0:
-        fail("SUPERVISOR_STOP_COMMAND_FAILED")
-    after_status = wait_model_stopped()
-    model_pid_state = require_model_identity_gone()
+    try:
+        # Conservatively account for both transports: after this point even a
+        # process-spawn or socket-send error may have occurred after dispatch.
+        global STOP_REQUEST_DISPATCHED
+        STOP_REQUEST_DISPATCHED = False
+        stopped = command(["supervisorctl", "-c", str(SUPERVISOR_CLIENT_CONFIG),
+                           "stop", SUPERVISOR_SERVICE], timeout=35,
+                          verified_client_sha256=stop_client_sha256)
+    except Exception:
+        if not STOP_REQUEST_DISPATCHED:
+            raise
+        # Never resend the stop. Perform only bounded read-only reconciliation.
+        after_status, model_pid_state = reconcile_dispatched_stop_without_retry()
+    else:
+        if stopped.returncode != 0:
+            if STOP_REQUEST_DISPATCHED:
+                after_status, model_pid_state = reconcile_dispatched_stop_without_retry()
+            else:
+                fail("SUPERVISOR_STOP_COMMAND_FAILED_BEFORE_DISPATCH")
+        else:
+            DIAGNOSTICS["stop_action_outcome"] = "ACKNOWLEDGED"
+            after_status, model_pid_state = reconcile_dispatched_stop_without_retry(
+                acknowledged=True)
 
-    # This version always preserves the memfd holder. A later owner action
-    # must gather fresh evidence before considering any holder signal.
+    # The holder is preserved through the model stop. No second-stage holder
+    # signal is available; a below-floor result remains a HOLD for owner review.
     latest_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
     latest_memfd = fd_memfd_identity(HOLDER_PID)
     require_same_process_identity(holder, latest_holder, "HOLDER_AFTER_MODEL_STOP")
@@ -854,22 +2651,92 @@ def run_action(request_id: int, source_sha: str) -> dict:
             latest_memfd["size"] != memfd["size"] or
             latest_memfd["label"] != MEMFD_LABEL):
         fail("HOLDER_IDENTITY_CHANGED_AFTER_MODEL_STOP")
+    DIAGNOSTICS["holder_after_model_stop"] = latest_holder
+    DIAGNOSTICS["memfd_after_model_stop"] = latest_memfd
+    DIAGNOSTICS["holder_signal"] = "NONE"
+    process_scope_after = process_group_after_stop(
+        model["pgrp"], Path(model["cgroup"]), stop_safety_immediate)
     after_model = memory_headroom(Path(holder["cgroup"]))
-    return {"state": ("MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_MET" if
-                      after_model["headroom"] >= MIN_HEADROOM else
-                      "MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_STILL_SHORT"),
+    holder_after_emergency = {
+        "state": "IDENTITY_RETAINED_AFTER_MODEL_STOP",
+        "pid": latest_holder["pid"],
+        "start_ticks": latest_holder["start_ticks"],
+        "memfd": latest_memfd,
+        "bound_to_memory_recovery_stage": "MODEL_ONLY"}
+    recovery = {"stage": "MODEL_ONLY" if after_model["headroom"] >= MIN_HEADROOM
+                else "MODEL_STOPPED_HOLD_BELOW_FLOOR",
+                "holder_signal": "NONE",
+                "headroom_after_model": after_model,
+                "holder_after_emergency": holder_after_emergency}
+    final_headroom = after_model
+    DIAGNOSTICS["model_after"] = {"supervisor": after_status,
+                                  "pinned_pid_state": model_pid_state,
+                                  "headroom": after_model}
+    DIAGNOSTICS["memory_recovery_stage"] = recovery
+    DIAGNOSTICS["holder_after_emergency"] = holder_after_emergency
+    if final_headroom["headroom"] < MIN_HEADROOM:
+        fail("EMERGENCY_STOP_MODEL_ONLY_HEADROOM_BELOW_FLOOR")
+    unattributed_before = [row for row in
+                           stop_safety_immediate["model_runtime_members"]
+                           if row["classification"] == "OTHER_EXECUTABLE"]
+    unattributed_after = [row for row in
+                          process_scope_after["model_runtime_members_after"]
+                          if row["classification"] == "OTHER_EXECUTABLE"]
+    return {"state": "EMERGENCY_STOP_HEADROOM_MET",
+            "complete": True,
+            "completion_scope": "PINNED_MODEL_SUPERVISOR_STOP_AND_STABLE_POSTCONDITIONS_VERIFIED",
+            "memory_recovery_stage": recovery,
             "model": model, "holder": holder, "memfd": memfd,
             "process_groups": {"model": model["pgrp"], "holder": holder["pgrp"],
                                "holder_separate_from_model": True,
-                               "model_group_contains_only_model_pid": True},
+                               "model_stop_scope": stop_safety_immediate["stop_scope"],
+                               "model_pgrp_live_member_pids_before":
+                                   stop_safety_immediate["live_pgrp_member_pids"],
+                               "model_pgrp_live_member_count_before":
+                                   stop_safety_immediate["live_pgrp_member_count"],
+                               "model_pgrp_zombie_member_pids_before":
+                                   stop_safety_immediate["zombie_pgrp_member_pids"],
+                               "model_pgrp_zombie_member_count_before":
+                                   stop_safety_immediate["zombie_pgrp_member_count"],
+                               "model_pgrp_live_member_pids_after":
+                                   process_scope_after["live_pgrp_member_pids_after"],
+                               "model_pgrp_live_member_count_after":
+                                   process_scope_after["live_pgrp_member_count_after"],
+                               "model_pgrp_zombie_member_pids_after":
+                                   process_scope_after["zombie_pgrp_member_pids_after"],
+                               "model_pgrp_zombie_member_count_after":
+                                   process_scope_after["zombie_pgrp_member_count_after"],
+                               "stop_target_pid": MODEL_PID,
+                               "stop_target_start_ticks": MODEL_START_TICKS,
+                               "supervisor_group_flags": {
+                                   "stopasgroup": "false", "killasgroup": "false"}},
+            "process_scope_before": stop_safety_immediate,
+            "process_scope_after": process_scope_after,
             "before": before, "pre_stop": pre_stop, "final_headroom": final_headroom,
             "after_model": after_model,
+            "pinned_service_pid_gone": True,
+            "pinned_target_model_signature_gone": True,
+            "model_runtime_members_before":
+                stop_safety_immediate["model_runtime_members"],
+            "model_runtime_members_after":
+                process_scope_after["model_runtime_members_after"],
+            "unattributed_other_executable_pids_before": unattributed_before,
+            "unattributed_other_executable_pids_after": unattributed_after,
+            "unattributed_other_executable_pids": unattributed_after,
+            "model_cgroup_runtime_attribution_complete":
+                not bool(unattributed_before or unattributed_after),
+            "model_runtime_attribution_scope":
+                "TARGET_CGROUP_ANCESTRY_AND_PGRP_ONLY_NOT_GLOBAL",
             "model_after": {"supervisor": after_status,
                             "pinned_pid_state": model_pid_state,
                             "headroom": after_model},
-            "holder_after": latest_holder, "memfd_after": latest_memfd,
+            "holder_after_model_stop": latest_holder,
+            "memfd_after_model_stop": latest_memfd,
+            "holder_after_emergency": holder_after_emergency,
             "holder_identity_basis": [
                 "pinned_pid_and_start_ticks", "stable_pgrp_and_cgroup",
+                "expected_holder_script_path_sha256",
+                "expected_holder_cmdline_sha256", "expected_holder_cwd_sha256",
                 "stable_executable_path_sha256", "stable_full_argv_sha256",
                 "stable_cwd_sha256", "exact_memfd_device_inode_size_label",
             ],
@@ -877,7 +2744,8 @@ def run_action(request_id: int, source_sha: str) -> dict:
             "model_pid_state": model_pid_state,
             "supervisor_immediately_before_stop": final_status,
             "markers": fence,
-            "supervisor_after": after_status, "holder_signal": "NONE"}
+            "supervisor_after": after_status,
+            "holder_signal": recovery.get("holder_signal", "NONE")}
 
 
 def main() -> int:
@@ -891,7 +2759,8 @@ def main() -> int:
     try:
         receipt = run_action(int(request), source_sha)
         emit({"source_sha": source_sha, "request_id": int(request),
-              "owner_fence_retained": True, **receipt})
+              "owner_fence_retained": True,
+              "diagnostics": DIAGNOSTICS, **receipt})
         print("NOX_MAINT_EMERGENCY_STOP_COMPLETE=true", flush=True)
         return 0
     finally:
@@ -908,6 +2777,13 @@ if __name__ == "__main__":
         if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", label):
             label = "HOLD_EMERGENCY_STOP_" + type(exc).__name__.upper()
         emit({"state": label, "phase": PHASE, "markers": MARKERS,
+              "diagnostics": DIAGNOSTICS,
+              "complete": False, "holder_signal": "NOT_TAKEN",
+              "stop_request_dispatched": STOP_REQUEST_DISPATCHED,
+              "stop_action_outcome": DIAGNOSTICS.get(
+                  "stop_action_outcome",
+                  "NOT_DISPATCHED" if not STOP_REQUEST_DISPATCHED
+                  else "DISPATCHED_OUTCOME_UNKNOWN"),
               "owner_fence_retained": bool(PHASE["stop_marker"] or PHASE["maintenance_marker"]),
               "no_rollback_or_restart": True})
         print("NOX_MAINT_EMERGENCY_STOP_RESULT=" + label, flush=True)
