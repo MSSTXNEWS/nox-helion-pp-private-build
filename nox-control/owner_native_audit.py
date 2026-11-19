@@ -1044,9 +1044,17 @@ def worker(task):
 
 def main():
     census = gpu_process_census()
+    hardware_keys = ('gpu_apps_before', 'gpu_apps_after', 'gpu_process_links',
+                     'gpu_consumer_identities', 'supervisor_services', 'reader_pid_namespace')
+    hardware_snapshot = {key: census.get(key) for key in hardware_keys}
+    process_snapshot = {
+        'gpu_consumer_identities': census.get('gpu_consumer_identities', []),
+        'process_identity_inventory': census.get('process_identity_inventory')
+    }
+    tasks = ((0, hardware_snapshot), (1, process_snapshot)) + tuple(
+        (i, None) for i in range(2, 7))
     with ProcessPoolExecutor(max_workers=7) as pool:
-        tasks=((i, census) for i in range(7))
-        for row in pool.map(worker,tasks):
+        for row in pool.map(worker, tasks):
             # One JSON record per bounded result item; never dump env/config secrets.
             print('NOX_MAINT_AUDIT='+json.dumps(row,separators=(',',':')),flush=True)
     print('NOX_MAINT_AUDIT_COMPLETE=true',flush=True)
