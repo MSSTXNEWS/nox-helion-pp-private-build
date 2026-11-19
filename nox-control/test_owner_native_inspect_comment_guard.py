@@ -444,8 +444,17 @@ class WorkflowScopeTests(unittest.TestCase):
         run_name = "Run the exact pinned #415 encrypted source-export action"
         clean_name = "Remove staged #415 owner credential"
         upload_name = "Upload only the encrypted S03 source-export artifact"
-        self.assertIn("umask 077", workflow)
-        self.assertIn("unset NOX2", workflow)
+        staging = (Path(__file__).with_name("owner_secret_staging.py")).read_text(encoding="utf-8")
+        staging_tests = (Path(__file__).with_name("test_owner_secret_staging.py")).read_text(encoding="utf-8")
+        self.assertIn("owner_secret_staging.py", workflow)
+        self.assertIn("test_owner_secret_staging.py", workflow)
+        self.assertIn("O_EXCL", staging)
+        self.assertIn("O_NOFOLLOW", staging)
+        self.assertIn("os.open(name, flags, 0o600, dir_fd=dir_fd)", staging)
+        self.assertIn('os.environ.pop("NOX2", None)', staging)
+        self.assertIn("test_preexisting_regular_file_is_not_replaced", staging_tests)
+        self.assertIn("test_preexisting_symlink_is_not_followed_or_overwritten", staging_tests)
+        self.assertIn("test_competing_creators_have_one_atomic_winner", staging_tests)
         self.assertLess(workflow.index("Install crypto dependency before #415 owner credential staging"),
                         workflow.index("Compile and test exact pinned #415 encrypted export source before credentials"))
         self.assertLess(workflow.index("Install crypto dependency before #415 owner credential staging"),
@@ -453,9 +462,15 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertLess(workflow.index(stage_name), workflow.index(run_name))
         self.assertLess(workflow.index(run_name), workflow.index(clean_name))
         self.assertLess(workflow.index(clean_name), workflow.index(upload_name))
+        stage_block = workflow.split(stage_name, 1)[1].split(run_name, 1)[0]
         run_block = workflow.split(run_name, 1)[1].split(clean_name, 1)[0]
         cleanup_block = workflow.split(clean_name, 1)[1].split(upload_name, 1)[0]
         upload_block = workflow.split(upload_name, 1)[1]
+        self.assertIn("NOX2: ${{ secrets.NOX2 }}", stage_block)
+        self.assertIn("NOX2_FILE:", stage_block)
+        self.assertIn("python -B nox-control/owner_secret_staging.py", stage_block)
+        self.assertNotIn("printf", stage_block)
+        self.assertNotIn("credential_file", stage_block)
         self.assertNotIn("NOX2: ${{ secrets.NOX2 }}", run_block)
         self.assertIn("NOX2_FILE:", run_block)
         self.assertIn("if: always()", cleanup_block)
