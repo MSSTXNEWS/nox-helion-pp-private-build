@@ -54,6 +54,16 @@ CREATE TABLE IF NOT EXISTS nox_v29_exchange_receipts (
  receipt_sha256 TEXT NOT NULL, verified INTEGER NOT NULL CHECK(verified=1),
  UNIQUE(dialog_id,turn_id), UNIQUE(dialog_id,exchange_id)
 );
+CREATE TABLE IF NOT EXISTS nox_v112_chat_request_leases (
+ request_id TEXT PRIMARY KEY, session_scope TEXT NOT NULL, dialog_id TEXT,
+ owner_epoch INTEGER NOT NULL, fence_epoch INTEGER NOT NULL,
+ state TEXT NOT NULL CHECK(state IN ('ACTIVE','STOP_REQUESTED','SUCCEEDED','FAILED','STOPPED')),
+ stop_requested INTEGER NOT NULL CHECK(stop_requested IN (0,1)),
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS nox_v112_active_chat_session
+ ON nox_v112_chat_request_leases(session_scope)
+ WHERE state IN ('ACTIVE','STOP_REQUESTED');
 """
 V112_LEASE_EPOCH = uuid.uuid4().hex
 
@@ -79,6 +89,139 @@ def _db(write=False):
     finally:
         conn.close()
 
+class OwnerChatRequestLease:
+    """Shared SQLite request idempotency and fenced session STOP lease.
+
+    Rows are durable idempotency tombstones. Active slots are not expired
+    automatically: a crashed owner worker leaves the session fail-closed
+    until an explicit owner recovery, rather than risking duplicate inference.
+    """
+    _request_id=re.compile(r'[a-f0-9]{32}\Z')
+    _session_scope=re.compile(r'[a-f0-9]{64}\Z')
+    _terminal={'SUCCEEDED','FAILED','STOPPED'}
+
+    def _lease(self,row):
+        return {'request_id':row['request_id'],'session_scope':row['session_scope'],
+                'dialog_id':row['dialog_id'],'owner_epoch':row['owner_epoch']}
+
+    def acquire(self,request_id,session_scope,dialog_id=None):
+        if (not isinstance(request_id,str) or not self._request_id.fullmatch(request_id)
+                or not isinstance(session_scope,str) or not self._session_scope.fullmatch(session_scope)
+                or (dialog_id is not None and
+                    (not isinstance(dialog_id,str) or not ID_PATTERN.fullmatch(dialog_id)))):
+            return {'status':'INVALID'}
+        try:
+            with _db(True) as db:
+                db.execute('BEGIN IMMEDIATE')
+                prior=db.execute('SELECT request_id,session_scope,dialog_id,state '
+                    'FROM nox_v112_chat_request_leases WHERE request_id=?',(request_id,)).fetchone()
+                if prior is not None:
+                    if prior['session_scope']!=session_scope or prior['dialog_id']!=dialog_id:
+                        return {'status':'COLLISION'}
+                    return {'status':'DUPLICATE','state':prior['state']}
+                busy=db.execute("SELECT request_id,state FROM nox_v112_chat_request_leases "
+                    "WHERE session_scope=? AND state IN ('ACTIVE','STOP_REQUESTED') LIMIT 1",
+                    (session_scope,)).fetchone()
+                if busy is not None:
+                    return {'status':'BUSY'}
+                prior_epoch=db.execute(
+                    'SELECT COALESCE(MAX(fence_epoch),0) FROM nox_v112_chat_request_leases '
+                    'WHERE session_scope=?',(session_scope,)).fetchone()[0]
+                epoch=int(prior_epoch)+1
+                stamp=_now()
+                db.execute('INSERT INTO nox_v112_chat_request_leases '
+                    '(request_id,session_scope,dialog_id,owner_epoch,fence_epoch,state,'
+                    'stop_requested,created_at,updated_at) VALUES(?,?,?,?,?,"ACTIVE",0,?,?)',
+                    (request_id,session_scope,dialog_id,epoch,epoch,stamp,stamp))
+                return {'status':'ACQUIRED','lease':{
+                    'request_id':request_id,'session_scope':session_scope,
+                    'dialog_id':dialog_id,'owner_epoch':epoch}}
+        except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError,TypeError):
+            return {'status':'HOLD'}
+
+    def is_current_in(self,db,lease):
+        if not isinstance(lease,dict):
+            return False
+        row=db.execute('SELECT session_scope,dialog_id,owner_epoch,fence_epoch,state,'
+            'stop_requested FROM nox_v112_chat_request_leases WHERE request_id=?',
+            (lease.get('request_id'),)).fetchone()
+        return bool(row is not None and row['session_scope']==lease.get('session_scope')
+            and row['dialog_id']==lease.get('dialog_id')
+            and row['owner_epoch']==lease.get('owner_epoch')
+            and row['fence_epoch']==lease.get('owner_epoch')
+            and row['state']=='ACTIVE' and row['stop_requested']==0)
+
+    def is_current(self,lease):
+        try:
+            with _db() as db:
+                return self.is_current_in(db,lease)
+        except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError,TypeError):
+            return False
+
+    def renew(self,lease):
+        if not self.is_current(lease):
+            return False
+        try:
+            with _db(True) as db:
+                cur=db.execute("UPDATE nox_v112_chat_request_leases SET updated_at=? "
+                    "WHERE request_id=? AND session_scope=? AND owner_epoch=? AND fence_epoch=? "
+                    "AND state='ACTIVE' AND stop_requested=0",
+                    (_now(),lease['request_id'],lease['session_scope'],
+                     lease['owner_epoch'],lease['owner_epoch']))
+                return cur.rowcount==1
+        except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError,TypeError):
+            return False
+
+    def stop_session(self,session_scope):
+        if not isinstance(session_scope,str) or not self._session_scope.fullmatch(session_scope):
+            return None
+        try:
+            with _db(True) as db:
+                db.execute('BEGIN IMMEDIATE')
+                row=db.execute("SELECT request_id,session_scope,dialog_id,owner_epoch,fence_epoch "
+                    "FROM nox_v112_chat_request_leases WHERE session_scope=? AND state='ACTIVE' "
+                    "ORDER BY owner_epoch DESC LIMIT 1",(session_scope,)).fetchone()
+                if row is None:
+                    return None
+                changed=db.execute("UPDATE nox_v112_chat_request_leases SET "
+                    "fence_epoch=fence_epoch+1,state='STOP_REQUESTED',stop_requested=1,updated_at=? "
+                    "WHERE request_id=? AND owner_epoch=? AND fence_epoch=? AND state='ACTIVE'",
+                    (_now(),row['request_id'],row['owner_epoch'],row['fence_epoch']))
+                if changed.rowcount!=1:
+                    return None
+                return self._lease(row)
+        except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError,TypeError):
+            return None
+
+    def finish(self,lease,terminal='FAILED'):
+        if (not isinstance(lease,dict) or terminal not in self._terminal):
+            return False
+        try:
+            with _db(True) as db:
+                cur=db.execute("UPDATE nox_v112_chat_request_leases SET "
+                    "state=CASE WHEN state='STOP_REQUESTED' THEN 'STOPPED' ELSE ? END,"
+                    "stop_requested=CASE WHEN state='STOP_REQUESTED' THEN 1 ELSE 0 END,updated_at=? "
+                    "WHERE request_id=? AND session_scope=? AND dialog_id IS ? AND owner_epoch=? "
+                    "AND state IN ('ACTIVE','STOP_REQUESTED')",
+                    (terminal,_now(),lease.get('request_id'),lease.get('session_scope'),
+                     lease.get('dialog_id'),lease.get('owner_epoch')))
+                return cur.rowcount==1
+        except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError,TypeError):
+            return False
+
+
+async def _watch_chat_request_lease(lease, cancel, lease_store):
+    """Observe cross-worker STOP and renew the durable fence while streaming."""
+    while not cancel.is_set():
+        if not await asyncio.to_thread(lease_store.renew,lease):
+            cancel.set()
+            return
+        try:
+            await asyncio.wait_for(cancel.wait(),timeout=1.0)
+        except asyncio.TimeoutError:
+            pass
+
+
 def ensure_dialog_schema():
     """Add supplemental owner-dialog tables to the existing database, not s03_items."""
     with _db(True) as db:
@@ -96,11 +239,16 @@ def _schema_ready():
                 return False
             receipt_columns=[row[1] for row in db.execute(
                 'PRAGMA table_info(nox_v29_exchange_receipts)')]
+            lease_columns=[row[1] for row in db.execute(
+                'PRAGMA table_info(nox_v112_chat_request_leases)')]
         if receipt_columns!=['receipt_id','dialog_id','turn_id','lease_epoch','exchange_id',
                 'writer','committed_at','user_sha256','assistant_sha256','receipt_sha256','verified']:
             return False
+        if lease_columns!=['request_id','session_scope','dialog_id','owner_epoch','fence_epoch',
+                'state','stop_requested','created_at','updated_at']:
+            return False
         return {'s03_items','nox_v29_dialogs','nox_v29_dialog_messages',
-                'nox_v29_exchange_receipts'} <= tables
+                'nox_v29_exchange_receipts','nox_v112_chat_request_leases'} <= tables
     except (OSError, RuntimeError, sqlite3.Error, ImportError, ValueError):
         return False
 
@@ -283,7 +431,7 @@ class OwnerDialogExchangeReadback:
                              'exchange_id':row['exchange_id']} for row in rows]}
 
 def _save_exchange(dialog_id,question,answer,exchange_id,*,turn_id=None,
-                   receipt_id=None,lease_epoch=None):
+                   receipt_id=None,lease_epoch=None,chat_lease=None):
     if not dialog_id:
         return True
     if (not isinstance(dialog_id,str) or not ID_PATTERN.fullmatch(dialog_id)
@@ -303,6 +451,8 @@ def _save_exchange(dialog_id,question,answer,exchange_id,*,turn_id=None,
         with _db(True) as db:
             row=_get_dialog(db,dialog_id)
             if row is None or bool(row['archived']):
+                return False
+            if chat_lease is not None and not OwnerChatRequestLease().is_current_in(db,chat_lease):
                 return False
             # A durable S03 exchange_id must never certify DIFFERENT dialog
             # text. INSERT OR IGNORE + COUNT(*)=2 accepted a stale collision.
@@ -341,6 +491,8 @@ def _save_exchange(dialog_id,question,answer,exchange_id,*,turn_id=None,
             payload=_receipt_payload(dialog_id,turn_id,receipt_id,lease_epoch,exchange_id,
                                      stamp,user_sha,assistant_sha)
             receipt_sha=_receipt_sha256(payload)
+            if chat_lease is not None and not OwnerChatRequestLease().is_current_in(db,chat_lease):
+                raise RuntimeError('HOLD_CHAT_LEASE_INVALIDATED')
             db.execute('INSERT INTO nox_v29_exchange_receipts '
                 '(receipt_id,dialog_id,turn_id,lease_epoch,exchange_id,writer,committed_at,'
                 'user_sha256,assistant_sha256,receipt_sha256,verified) '
@@ -692,6 +844,7 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
       if not (isinstance(r,APIRoute) and r.path=='/api/nox/status')
     ]
     active={}
+    lease_store=OwnerChatRequestLease()
 
     def check(request):
         return bool(trusted['_session_ok'](request))
@@ -898,7 +1051,22 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         key=scope(request)
         if key is None:
             return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
+        request_id=data.get('request_id')
+        if request_id is None:
+            request_id=uuid.uuid4().hex
+        elif not isinstance(request_id,str) or not re.fullmatch('[a-f0-9]{32}',request_id):
+            return JSONResponse({'error':'INVALID_REQUEST_ID'},status_code=422)
+        claim=await asyncio.to_thread(lease_store.acquire,request_id,key,dialog_id)
+        if claim.get('status')!='ACQUIRED':
+            reason={'BUSY':'HOLD_ACTIVE_SESSION_STREAM',
+                    'DUPLICATE':'HOLD_DUPLICATE_REQUEST_ID',
+                    'COLLISION':'HOLD_REQUEST_ID_SCOPE_COLLISION'}.get(
+                        claim.get('status'),'HOLD_CHAT_LEASE_UNAVAILABLE')
+            code=409 if claim.get('status') in ('BUSY','DUPLICATE','COLLISION') else 503
+            return JSONResponse({'error':reason},status_code=code)
+        chat_lease=claim['lease']
         if key in active:
+            await asyncio.to_thread(lease_store.finish,chat_lease,'FAILED')
             return JSONResponse({'error':'HOLD_ACTIVE_SESSION_STREAM'},status_code=409)
         cancel=asyncio.Event()
         active[key]=cancel
@@ -914,8 +1082,20 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
 
         async def generate():
             wire=None;buffer='';answer='';complete=False
+            lease_watch=None;lease_terminal='FAILED'
             try:
-                yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM'})
+                if not await asyncio.to_thread(lease_store.is_current,chat_lease):
+                    lease_terminal='STOPPED'
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED','request_id':request_id})
+                    return
+                lease_watch=asyncio.create_task(
+                    _watch_chat_request_lease(chat_lease,cancel,lease_store))
+                yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM',
+                              'request_id':request_id})
+                if cancel.is_set() or not await asyncio.to_thread(lease_store.is_current,chat_lease):
+                    lease_terminal='STOPPED'
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED','request_id':request_id})
+                    return
                 wire=await trusted['_proxy_completion'](payload)
                 if not hasattr(wire,'body_iterator'):
                     yield _jsonl({'type':'error','error':'HOLD_NATIVE_STREAM_MISSING'})
@@ -984,8 +1164,9 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     yield _jsonl({'type':'error','error':
                         'HOLD_SSE_FRAME_AFTER_DONE' if complete else 'HOLD_SSE_UNTERMINATED_FRAME'})
                     return
-                if cancel.is_set():
-                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                if cancel.is_set() or not await asyncio.to_thread(lease_store.is_current,chat_lease):
+                    lease_terminal='STOPPED'
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED','request_id':request_id})
                     return
                 if not complete or not answer.strip():
                     yield _jsonl({'type':'error','error':'HOLD_INCOMPLETE_NATIVE_RESPONSE'})
@@ -999,25 +1180,31 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     if legacy_proof is None:
                         yield _jsonl({'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
                         return
+                    lease_terminal='SUCCEEDED'
                     yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
                                   's03_integrated':True,'dialog_id':None,
                                   'exchange_id':legacy_proof['record_id'],
+                                  'request_id':request_id,
                                   'stream_mode':'NATIVE_TOKEN_STREAM'})
                     return
                 saved=await asyncio.to_thread(_save_exchange,dialog_id,question,answer,exchange_id,
-                    turn_id=turn_id,receipt_id=receipt_id,lease_epoch=lease_epoch)
+                    turn_id=turn_id,receipt_id=receipt_id,lease_epoch=lease_epoch,
+                    chat_lease=chat_lease)
                 if not saved:
                     yield _jsonl({'type':'error','error':'HOLD_OWNER_DIALOG_COMMIT_NOT_VERIFIED'})
                     return
                 proof=await asyncio.to_thread(OwnerDialogExchangeReadback(_db).read,
                     dialog_id=dialog_id,turn_id=turn_id,receipt_id=receipt_id,
-                    lease_epoch=lease_epoch,permit=lambda:not cancel.is_set())
+                    lease_epoch=lease_epoch,
+                    permit=lambda:not cancel.is_set() and lease_store.is_current(chat_lease))
                 if (proof is None or proof.get('messages')!=[
                         {'role':'user','content':question,'exchange_id':exchange_id},
                         {'role':'assistant','content':answer,'exchange_id':exchange_id}]):
                     yield _jsonl({'type':'error','error':'HOLD_OWNER_DIALOG_EXACT_READBACK_NOT_VERIFIED'})
                     return
+                lease_terminal='SUCCEEDED'
                 yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
+                              'request_id':request_id,
                               # Compatibility alias for the existing WEB wire contract only;
                               # it is not canonical s03_items evidence.
                               's03_integrated':False,'owner_dialog_saved':True,
@@ -1032,10 +1219,16 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             except Exception:
                 yield _jsonl({'type':'error','error':'HOLD_EXISTING_ONEHOST_RUNTIME'})
             finally:
-                if active.get(key) is cancel:active.pop(key,None)
+                if lease_watch is not None:
+                    lease_watch.cancel()
+                    await asyncio.gather(lease_watch,return_exceptions=True)
                 if wire is not None and hasattr(getattr(wire,'body_iterator',None),'aclose'):
                     try:await wire.body_iterator.aclose()
                     except Exception:pass
+                if cancel.is_set():
+                    lease_terminal='STOPPED'
+                await asyncio.to_thread(lease_store.finish,chat_lease,lease_terminal)
+                if active.get(key) is cancel:active.pop(key,None)
         return StreamingResponse(generate(),media_type='application/x-ndjson',
             headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})
 
@@ -1044,10 +1237,17 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         if not check(request):
             return trusted['_unauthorized']()
         key=scope(request)
-        if key is None or key not in active:
+        if key is None:
             return JSONResponse({'status':'HOLD','reason':'NO_ACTIVE_SESSION_STREAM'},status_code=409)
-        active[key].set()
-        return {'status':'STOP_REQUESTED','stream_cancellation_signalled':True,
+        stopped=await asyncio.to_thread(lease_store.stop_session,key)
+        if stopped is None:
+            return JSONResponse({'status':'HOLD','reason':'NO_ACTIVE_SESSION_STREAM'},status_code=409)
+        cancel=active.get(key)
+        if cancel is not None:
+            cancel.set()
+        return {'status':'STOP_REQUESTED','request_id':stopped['request_id'],
+                'shared_lease_invalidated':True,
+                'stream_cancellation_signalled':cancel is not None,
                 'gpu_stop_verified':False}
 
     directory=Path(site_dir) if site_dir is not None else SITE
