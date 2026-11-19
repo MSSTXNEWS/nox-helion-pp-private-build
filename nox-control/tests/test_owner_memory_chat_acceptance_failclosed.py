@@ -158,4 +158,22 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
         ])
 
 
+    def test_browser_receipt_fifo_never_blocks_acceptance(self):
+        """The native receipt path must be a regular file, never a FIFO/device."""
+        import time
+        spec=importlib.util.spec_from_file_location('a3_fifo_receipt', SOURCE)
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        request, source='701', 'e'*40
+        with tempfile.TemporaryDirectory() as t:
+            fifo=pathlib.Path(t)/'state/owner_browser_qa'/request/'receipt.json'
+            fifo.parent.mkdir(parents=True)
+            os.mkfifo(fifo)
+            with patch.dict(os.environ,{'NOX_OWNER_REQUEST_ID':request,
+                                       'NOX_OWNER_SOURCE_SHA':source}), patch.object(module,'Path',lambda _:pathlib.Path(t)):
+                started=time.monotonic()
+                with self.assertRaisesRegex(RuntimeError,'^HOLD_BROWSER_QA_RECEIPT_TYPE):
+                    module.verify_browser_receipt(0)
+                self.assertLess(time.monotonic()-started,1.0)
+
+
 if __name__=='__main__':unittest.main()
