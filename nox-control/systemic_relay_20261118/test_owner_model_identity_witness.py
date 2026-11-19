@@ -37,6 +37,8 @@ class WitnessTests(unittest.TestCase):
         p = self.proc / str(self.pid)
         p.mkdir(parents=True)
         self.p = p
+        # /proc/PID/root represents the serving process filesystem root.
+        (p / 'root').symlink_to('/', target_is_directory=True)
         self.ticks = 42
         self._stat(self.ticks)
         (p / 'cmdline').write_bytes(b'llama-server\0-m\0' + os.fsencode(self.file) + b'\0--api-key\0SECRET\0')
@@ -66,6 +68,26 @@ class WitnessTests(unittest.TestCase):
         self.assertEqual(out['state'], 'MAPPED_GGUF_METADATA_VERIFIED', out.get('reason'))
         self.assertEqual(out['model_file'], 'model.gguf')
         self.assertEqual(out['model_path_resolution'], 'PROCESS_CWD')
+        self.assertTrue(out['file_inode_mapped_by_pid'])
+        self.assertIsNone(out['loaded_model_sha256'])
+
+    def test_absolute_model_path_resolves_in_server_root_namespace(self):
+        # Chroot/container model path differs from inspector absolute path.
+        private_root = self.root / 'container_root'
+        (private_root / 'weights').mkdir(parents=True)
+        model = private_root / 'weights' / 'model.gguf'
+        gguf(model)
+        (self.p / 'root').unlink()
+        (self.p / 'root').symlink_to(private_root, target_is_directory=True)
+        (self.p / 'cmdline').write_bytes(b'llama-server\\0-m\\0/weights/model.gguf\\0')
+        st = model.stat()
+        (self.p / 'maps').write_text(
+            f'00400000-00500000 r--p 00000000 '
+            f'{os.major(st.st_dev):02x}:{os.minor(st.st_dev):02x} {st.st_ino} {model}\\n'
+        )
+        out = w.witness(self.pid, self.ticks, proc_root=self.proc)
+        self.assertEqual(out['state'], 'MAPPED_GGUF_METADATA_VERIFIED', out.get('reason'))
+        self.assertEqual(out['model_path_resolution'], 'ABSOLUTE')
         self.assertTrue(out['file_inode_mapped_by_pid'])
         self.assertIsNone(out['loaded_model_sha256'])
 
