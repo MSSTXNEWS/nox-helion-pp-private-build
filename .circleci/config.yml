@@ -1,0 +1,21 @@
+# NOX B0 isolated branch: genuine offline owner chat probe regression gate.
+# This validates source ONLY. Native owner/CAS/STOP/lease/resource/served SHA,
+# browser SSE multi-turn and independent S03 acceptance remain mandatory.
+version: 2.1
+jobs:
+  b0-owner-chat-probe-source:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Compile chat-route probe and 15 focused regressions
+          command: |
+            set -eu
+            python -B -m py_compile nox-control/owner_chat_probe.py nox-control/test_owner_chat_probe.py
+            python -B -m unittest discover -s nox-control -p test_owner_chat_probe.py -v
+workflows:
+  b0-real-source-verification:
+    jobs:
+      - b0-owner-chat-probe-source
