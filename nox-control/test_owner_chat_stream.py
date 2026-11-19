@@ -68,6 +68,36 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_duplicate_sse_and_tool_argument_json_keys_hold_before_dispatch(self):
+        # Duplicate keys make both model envelopes and nested tool arguments
+        # ambiguous; Python's default last-key-wins would alter evidence.
+        bad_envelope=(b'data: {"choices":[],"choices":[{"delta":{"content":"wrong"},'
+                      b'"finish_reason":"stop"}]}\\n\\n')
+        bad_args=frame(calls=[{'index':0,'id':'dup_args','type':'function',
+                               'function':{'name':'calculate',
+                                           'arguments':'{"amount":1,"amount":2}'}}])
+        cases=(
+            ([bad_envelope,b'data: [DONE]\\n\\n'],'HOLD_MODEL_SSE_INVALID'),
+            ([bad_args,frame(finish='tool_calls'),b'data: [DONE]\\n\\n'],
+             'HOLD_TOOL_ARGUMENTS'),
+        )
+        for parts,code in cases:
+            with self.subTest(code=code):
+                chunks=Chunks(parts)
+                requests,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Calculate'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate',True)
+                    wire=''.join([piece async for piece in response.body_iterator])
+                self.assertIn(code,wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(requests and len(requests),1)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
     async def test_bounded_sse_metadata_preserves_real_tokens_and_terminal(self):
         # Some upstream SSE servers prepend standard event/id fields to data.
         chunks=Chunks([b': heartbeat\n\n',b'event: message\nid: reply-7\n',
