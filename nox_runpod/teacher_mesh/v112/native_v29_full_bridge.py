@@ -328,13 +328,30 @@ def _save_exchange(dialog_id,question,answer,exchange_id,*,turn_id=None,
                 observed={r['role']:r['content'] for r in existing}
                 if len(existing)!=2 or observed!=expected:
                     raise RuntimeError('HOLD_DIALOG_RECEIPT_COLLISION')
-                if explicit:
-                    receipt=db.execute('SELECT receipt_id,turn_id,lease_epoch '
-                        'FROM nox_v29_exchange_receipts WHERE dialog_id=? AND exchange_id=?',
-                        (dialog_id,exchange_id)).fetchone()
-                    if receipt is None or (receipt['receipt_id'],receipt['turn_id'],receipt['lease_epoch'])!=(
+                # Exact replay requires the ORIGINAL verified receipt, even
+                # when the caller did not supply explicit receipt identifiers.
+                receipt=db.execute(
+                    'SELECT receipt_id,turn_id,lease_epoch,writer,committed_at,'
+                    'user_sha256,assistant_sha256,receipt_sha256,verified '
+                    'FROM nox_v29_exchange_receipts WHERE dialog_id=? AND exchange_id=?',
+                    (dialog_id,exchange_id)).fetchone()
+                if (receipt is None or receipt['verified']!=1
+                        or receipt['writer']!='V112_OWNER_DIALOG_WRITER'):
+                    return False
+                if explicit and (
+                        receipt['receipt_id'],receipt['turn_id'],receipt['lease_epoch'])!=(
                             receipt_id,turn_id,lease_epoch):
-                        return False
+                    return False
+                user_sha=hashlib.sha256(question.encode('utf-8')).hexdigest()
+                assistant_sha=hashlib.sha256(answer.encode('utf-8')).hexdigest()
+                if (receipt['user_sha256']!=user_sha
+                        or receipt['assistant_sha256']!=assistant_sha):
+                    return False
+                replay_payload=_receipt_payload(dialog_id,receipt['turn_id'],
+                    receipt['receipt_id'],receipt['lease_epoch'],exchange_id,
+                    receipt['committed_at'],user_sha,assistant_sha)
+                if _receipt_sha256(replay_payload)!=receipt['receipt_sha256']:
+                    return False
                 # Exact replay: already persisted; do not fabricate a new
                 # revision or overwrite the original durable exchange.
                 return True
