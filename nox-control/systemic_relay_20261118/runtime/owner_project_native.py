@@ -450,6 +450,7 @@ class ProjectBinding:
         value = task.get('native_project_terminal') or {}
         receipt = value.get('receipt')
         if (not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
                 or receipt.get('phase') != 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED'
                 or receipt.get('original_task_accepted') is not False
                 or receipt.get('claim') != task.get('owner_claim')
