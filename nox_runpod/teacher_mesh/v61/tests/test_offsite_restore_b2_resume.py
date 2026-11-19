@@ -168,6 +168,42 @@ class V61PublishedArtifactPreservation(unittest.TestCase):
             self.assertEqual(receipt.read_text(),'{"sha":"old"}')
 
 
+    def test_existing_export_owner_lock_holds_before_credentials_or_transport(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            final=root/"checkpoint.age"
+            receipt=root/"receipt.json"
+            lock=final.with_name(final.name+".owner.lock")
+            lock.write_text("previous-owner-unknown",encoding="utf-8")
+            with patch("nox_runpod.teacher_mesh.v61.checkpoint_backup.FINAL",final), \
+                 patch("nox_runpod.teacher_mesh.v61.checkpoint_backup.RECEIPT",receipt), \
+                 patch("nox_runpod.teacher_mesh.v61.checkpoint_backup.v60.existing_owner_recipient",
+                       side_effect=AssertionError("owner_credentials_touched")):
+                with self.assertRaisesRegex(RuntimeError,"HOLD_V61_OWNER_LOCK_PRESENT"):
+                    run()
+            self.assertEqual(lock.read_text(encoding="utf-8"),"previous-owner-unknown")
+            self.assertFalse(final.exists())
+            self.assertFalse(receipt.exists())
+
+    def test_own_export_lock_released_on_preflight_hold_without_erasing_stage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            final=root/"checkpoint.age"
+            receipt=root/"receipt.json"
+            lock=final.with_name(final.name+".owner.lock")
+            previous_stage=final.with_name(final.name+".pending")
+            previous_stage.write_bytes(b"older-unknown-ciphertext")
+            with patch("nox_runpod.teacher_mesh.v61.checkpoint_backup.FINAL",final), \
+                 patch("nox_runpod.teacher_mesh.v61.checkpoint_backup.RECEIPT",receipt), \
+                 patch("nox_runpod.teacher_mesh.v61.checkpoint_backup.v60.existing_owner_recipient",
+                       side_effect=RuntimeError("HOLD_OWNER_RECIPIENT_UNAVAILABLE")):
+                with self.assertRaisesRegex(RuntimeError,"HOLD_OWNER_RECIPIENT_UNAVAILABLE"):
+                    run()
+            self.assertFalse(lock.exists())
+            self.assertEqual(previous_stage.read_bytes(),b"older-unknown-ciphertext")
+            self.assertFalse(final.exists())
+            self.assertFalse(receipt.exists())
+
     def test_existing_verified_ciphertext_is_never_replaced_or_deleted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
