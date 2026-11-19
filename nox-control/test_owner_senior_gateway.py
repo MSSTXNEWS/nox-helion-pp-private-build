@@ -98,6 +98,19 @@ class GatewayTests(unittest.TestCase):
         self.assertFalse((self.root / 'state/owner_senior/access.json').exists())
         self.assertFalse((self.root / 'state/owner_senior/budget.json').exists())
 
+    def test_model_text_fragments_are_not_rewritten(self):
+        # Provider text fragments may split inside JSON strings. No added newline
+        # or stripped final newline is permitted before evaluating the answer.
+        raw = '{"assessment":"HOLD_FOR_REVIEW","check_categories":[],"rationale":"split"}\\n'
+        raw = raw.replace('\\\\n', '\\n')
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant', 'content': [
+                     {'type': 'output_text', 'text': raw[:28]},
+                     {'type': 'output_text', 'text': raw[28:]}]}]}
+        result = gateway.response_text('openai', value)
+        self.assertEqual(result, raw)
+        self.assertEqual(gateway.advice_candidate(result)['assessment'], 'HOLD_FOR_REVIEW')
+
     def test_absent_and_missing_credentials_are_read_only_and_never_call_provider(self):
         self.assertEqual(gateway.status()['state'], 'MISSING_SENIOR_GATEWAY')
         self.assertEqual(list(self.root.iterdir()), [])

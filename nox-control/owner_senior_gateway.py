@@ -474,8 +474,10 @@ def response_text(provider, value):
                 parts.append(content.get('text'))
     if not parts or any(not isinstance(p, str) for p in parts):
         raise GatewayHold('MODEL_RESPONSE_EMPTY')
-    text = '\n'.join(parts).strip()
-    if not text or len(text) > 16000:
+    # Text chunks are consecutive fragments, not lines: do not inject a separator
+    # or strip provider whitespace. Preserve exact decoded adviser text.
+    text = ''.join(parts)
+    if not text.strip() or len(text) > 16000:
         raise GatewayHold('MODEL_RESPONSE_SIZE')
     return text
 
