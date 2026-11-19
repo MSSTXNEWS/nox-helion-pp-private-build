@@ -1,0 +1,196 @@
+"""Owner-authenticated, read-only inspection of the live NOX chat proxy.
+
+The host probe resolves the running nox-proxy PID from Supervisor at runtime.
+It never restarts services and never prints source bytes, command-line values,
+environment variables, or exception text.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+
+from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as conn
+
+ANALYZER = r"""
+import ast
+
+MAX_SOURCE_BYTES = 1_000_000
+TARGETS = ("_trim_ctx", "_build_messages", "prepare_payload")
+
+def _bound(node):
+    if isinstance(node, ast.Constant) and type(node.value) is int:
+        return node.value
+    if (isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub)
+            and isinstance(node.operand, ast.Constant)
+            and type(node.operand.value) is int):
+        return -node.operand.value
+    if (isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.UAdd)
+            and isinstance(node.operand, ast.Constant)
+            and type(node.operand.value) is int):
+        return node.operand.value
+    return None
+
+def analyze_source(raw):
+    if not isinstance(raw, bytes):
+        raise ValueError("HOLD_PROXY_SOURCE_TYPE")
+    if len(raw) > MAX_SOURCE_BYTES:
+        raise ValueError("HOLD_PROXY_SOURCE_SIZE")
+    try:
+        text = raw.decode("utf-8")
+        tree = ast.parse(text, filename="chat_proxy.py")
+    except (UnicodeDecodeError, SyntaxError):
+        raise ValueError("HOLD_PROXY_SOURCE_PARSE") from None
+
+    definitions = {name: [] for name in TARGETS}
+    calls = {name: [] for name in TARGETS}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name in definitions and len(definitions[node.name]) < 8:
+                bounds = []
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Subscript) and isinstance(child.slice, ast.Slice):
+                        lower = _bound(child.slice.lower)
+                        upper = _bound(child.slice.upper)
+                        if lower is not None or upper is not None:
+                            bounds.append({
+                                "line": getattr(child, "lineno", 0),
+                                "lower": lower,
+                                "upper": upper,
+                            })
+                definitions[node.name].append({
+                    "line": node.lineno,
+                    "end_line": getattr(node, "end_lineno", node.lineno),
+                    "parameters": [
+                        arg.arg for arg in (node.args.posonlyargs + node.args.args)
+                    ][:24],
+                    "constant_slice_bounds": bounds[:24],
+                })
+        elif isinstance(node, ast.Call):
+            func = node.func
+            name = (func.id if isinstance(func, ast.Name)
+                    else func.attr if isinstance(func, ast.Attribute) else None)
+            if name in calls and len(calls[name]) < 32:
+                calls[name].append({"line": getattr(node, "lineno", 0)})
+
+    return {
+        "source_bytes": len(raw),
+        "functions": {name: rows for name, rows in definitions.items()},
+        "callsites": {name: rows for name, rows in calls.items()},
+        "analysis_note": "AST-only; numeric constant slice bounds are reported; no source text emitted",
+    }
+"""
+
+REMOTE = r"""
+set -euo pipefail
+python3 - <<'PYREMOTE'
+import ast,hashlib,json,os,re,stat,subprocess
+from pathlib import Path
+
+EXPECTED='/root/nox/scripts/chat_proxy.py'
+MAX_SOURCE_BYTES=1_000_000
+def hold(code):
+    print('NATIVE_PROXY_INSPECT='+code, flush=True)
+    raise SystemExit(2)
+def read_small(path, limit):
+    fd=os.open(path, os.O_RDONLY|os.O_CLOEXEC|os.O_NOFOLLOW|os.O_NONBLOCK)
+    with os.fdopen(fd,'rb') as f:
+        st=os.fstat(f.fileno())
+        if not stat.S_ISREG(st.st_mode) or st.st_size>limit:
+            raise ValueError('HOLD_FILE_TYPE_OR_SIZE')
+        raw=f.read(limit+1)
+        after=os.fstat(f.fileno())
+        ident=lambda x:(x.st_dev,x.st_ino,x.st_size,x.st_mtime_ns)
+        if len(raw)>limit or ident(st)!=ident(after) or len(raw)!=st.st_size:
+            raise ValueError('HOLD_FILE_CHANGED')
+        return raw,st
+def supervisor_pid():
+    r=subprocess.run(['supervisorctl','status','nox-proxy'],
+                     stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,
+                     stderr=subprocess.DEVNULL,text=True,timeout=7,check=False)
+    if r.returncode!=0:
+        raise ValueError('HOLD_SUPERVISOR_READ')
+    m=re.fullmatch(r'nox-proxy\s+RUNNING\s+pid\s+([0-9]{1,10}),\s+uptime .+\s*',
+                   r.stdout.strip())
+    if not m:
+        raise ValueError('HOLD_PROXY_NOT_RUNNING')
+    return int(m.group(1))
+def process_identity(pid):
+    raw,_=read_small('/proc/%d/stat'%pid,4096)
+    try:
+        head,tail=raw.rsplit(b')',1)
+        actual=int(head.split(b'(',1)[0].split()[-1])
+        fields=tail.split()
+        if actual!=pid or len(fields)<=19:
+            raise ValueError()
+        return int(fields[19])
+    except (ValueError,IndexError):
+        raise ValueError('HOLD_PID_IDENTITY') from None
+def argv_has_expected_script(pid):
+    raw,_=read_small('/proc/%d/cmdline'%pid,32768)
+    argv=[x.decode('utf-8','strict') for x in raw.rstrip(b'\0').split(b'\0') if x]
+    cwd=os.readlink('/proc/%d/cwd'%pid)
+    for item in argv:
+        if item.endswith('chat_proxy.py'):
+            candidate=item if os.path.isabs(item) else os.path.join(cwd,item)
+            if os.path.normpath(candidate)==EXPECTED:
+                return True
+    return False
+def main():
+    pid=supervisor_pid()
+    start_before=process_identity(pid)
+    if not argv_has_expected_script(pid):
+        raise ValueError('HOLD_PROXY_CMDLINE_PATH')
+    path=Path(EXPECTED)
+    if path.is_symlink():
+        raise ValueError('HOLD_PROXY_SYMLINK')
+    raw,st=read_small(EXPECTED,MAX_SOURCE_BYTES)
+    if not argv_has_expected_script(pid) or process_identity(pid)!=start_before:
+        raise ValueError('HOLD_PROXY_PROCESS_CHANGED')
+    if supervisor_pid()!=pid:
+        raise ValueError('HOLD_PROXY_PID_CHANGED')
+    digest=hashlib.sha256(raw).hexdigest()
+    analysis=analyze_source(raw)
+    print('NATIVE_PROXY_SOURCE_META='+json.dumps({
+        'path':EXPECTED,'pid':pid,'start_ticks':start_before,
+        'bytes':len(raw),'sha256':digest,'owner_uid':st.st_uid,
+    },separators=(',',':')),flush=True)
+    print('NATIVE_PROXY_SOURCE_ANALYSIS='+json.dumps(analysis,
+        ensure_ascii=False,separators=(',',':')),flush=True)
+    print('NATIVE_PROXY_NOT_RESTARTED=true',flush=True)
+    print('NATIVE_PROXY_READ_ONLY_COMPLETE=true',flush=True)
+
+__ANALYZER__
+
+try:
+    main()
+except SystemExit:
+    raise
+except Exception as exc:
+    code=str(exc)
+    if not code.startswith('HOLD_'):
+        code='HOLD_PROXY_INSPECT_RUNTIME'
+    hold(code)
+PYREMOTE
+"""
+REMOTE = REMOTE.replace("__ANALYZER__", ANALYZER)
+
+def probe_source_hash():
+    """Exact digest of the remote program submitted to the existing owner transport."""
+    return hashlib.sha256(REMOTE.encode("utf-8")).hexdigest()
+
+if __name__ == "__main__":
+    ok = False
+    conn.REMOTE = REMOTE
+    try:
+        ok = conn.probe()
+    except Exception as exc:
+        code = str(exc)
+        print("NOX_PROXY_SOURCE_INSPECT=" +
+              (code if code.startswith("HOLD_") else "HOLD_TRANSPORT"))
+    finally:
+        try:
+            if not conn.cleanup():
+                ok = False
+        except Exception:
+            ok = False
+    raise SystemExit(0 if ok else 2)
