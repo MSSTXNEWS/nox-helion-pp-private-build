@@ -1416,6 +1416,9 @@ class Native:
             return False, 'HOLD_SUBAGENT_NATIVE_CLAIM'
         if self.stop_active() or not self.writer_lease():
             return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
+        with self.lock:
+            if task['id'] in self.interrupted:
+                return 'wait', 'HOLD_NATIVE_INTERRUPTED_UNSETTLED'
         if self.pool is None:
             try:
                 reason = self._fresh_admission_reason()
@@ -1435,7 +1438,8 @@ class Native:
                 reason = self._fresh_admission_reason()
                 if reason:
                     return 'wait', reason
-                self.interrupted.pop(task['id'], None)
+                if task['id'] in self.interrupted:
+                    return 'wait', 'HOLD_NATIVE_INTERRUPTED_UNSETTLED'
                 self.pool.submit({'id': task['id'], 'subagent': role, 'task': task['title'], 'depends_on': [],
                     '_native_context': {'policy': self.policy, 'operation': role,
                                         'claim': task['owner_claim']['nonce']}})
@@ -1449,7 +1453,7 @@ class Native:
                     self.close_pool('WAIT_OWNER_STOP_OR_CHAT_PRIORITY')
                     return 'wait', 'WAIT_OWNER_STOP_OR_CHAT_PRIORITY'
                 with self.lock:
-                    reason = self.interrupted.pop(task['id'], None)
+                    reason = self.interrupted.get(task['id'])
                     if reason:
                         return 'wait', reason
                     self._drain()
