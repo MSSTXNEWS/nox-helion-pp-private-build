@@ -372,13 +372,16 @@ def _validated_history(data):
     return clean
 
 def _dialog_context(dialog_id):
-    """Load only the authenticated owner's committed pairs from the existing S03.
+    """Load a bounded recent owner-dialog window without truncating saved text.
 
-    The Resonance client deliberately sends history=[] and a dialog_id. Its
-    displayed history is not an inference payload. Use the durable thread as
-    the authority, with the same 24-message/121 KB context limits as the
-    legacy client path. Incomplete pairs cannot enter model context.
+    The 121000 UTF-8 byte envelope applies to historical pairs only. It is a
+    storage/request policy, not a tokenizer or model-context guarantee; the
+    current prompt is separately limited by the chat route. Keep at most 12
+    complete pairs. Oversized content fails closed before it is sent upstream.
     """
+    max_message_chars=8000
+    max_field_utf8_bytes=max_message_chars*4
+    max_history_utf8_bytes=121000
     with _db() as db:
         found=_get_dialog(db,dialog_id)
         if found is None:
@@ -386,21 +389,33 @@ def _dialog_context(dialog_id):
         if bool(found['archived']):
             return 'HOLD_DIALOG_ARCHIVED',[]
         rows=db.execute(
-            'SELECT substr(u.content,1,8000) AS question, '
-            'substr(a.content,1,8000) AS answer '
+            'SELECT CASE WHEN length(CAST(u.content AS BLOB))<=? THEN u.content END AS question, '
+            'CASE WHEN length(CAST(a.content AS BLOB))<=? THEN a.content END AS answer, '
+            'length(u.content) AS question_chars,length(a.content) AS answer_chars, '
+            'length(CAST(u.content AS BLOB)) AS question_bytes, '
+            'length(CAST(a.content AS BLOB)) AS answer_bytes '
             'FROM nox_v29_dialog_messages AS a '
             'JOIN nox_v29_dialog_messages AS u '
             'ON u.dialog_id=a.dialog_id AND u.exchange_id=a.exchange_id '
             "AND u.role='user' WHERE a.dialog_id=? AND a.role='assistant' "
-            'ORDER BY a.row_id DESC LIMIT 12',(dialog_id,)).fetchall()
+            'ORDER BY a.row_id DESC LIMIT 12',
+            (max_field_utf8_bytes,max_field_utf8_bytes,dialog_id)).fetchall()
     pairs=[];size=0
     for row in rows:
         question,answer=row['question'],row['answer']
-        if not isinstance(question,str) or not isinstance(answer,str):
-            raise RuntimeError('HOLD_S03_DIALOG_CONTEXT_CONTENT')
-        pair_size=len(question.encode('utf-8'))+len(answer.encode('utf-8'))
-        if size+pair_size>121000:
-            break
+        if (not isinstance(row['question_chars'],int) or not isinstance(row['answer_chars'],int)
+                or row['question_chars']>max_message_chars
+                or row['answer_chars']>max_message_chars
+                or not isinstance(question,str) or not isinstance(answer,str)):
+            return 'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT',[]
+        question_bytes,answer_bytes=row['question_bytes'],row['answer_bytes']
+        if (not isinstance(question_bytes,int) or not isinstance(answer_bytes,int)
+                or len(question.encode('utf-8'))!=question_bytes
+                or len(answer.encode('utf-8'))!=answer_bytes):
+            return 'HOLD_DIALOG_CONTEXT_CONTENT',[]
+        pair_size=question_bytes+answer_bytes
+        if size+pair_size>max_history_utf8_bytes:
+            return 'HOLD_DIALOG_CONTEXT_BUDGET',[]
         size+=pair_size
         pairs.append([{'role':'user','content':question},
                       {'role':'assistant','content':answer}])
