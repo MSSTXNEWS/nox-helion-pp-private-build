@@ -74,8 +74,9 @@ claim.
 
 An external existing B4/D3 producer consumes the latest
 `NOX_SYSTEMIC_REFILL_REQUEST_V1` from the normal dispatcher status. The request
-has a deterministic ID derived from the manifest, current source pins and
-bounded task outcomes. Clock-only ticks do not create fresh requests. B4/D3
+has a deterministic ID derived from the manifest, current source pins, bounded
+task outcomes and current states for indexed original TaskIDs. Clock-only ticks
+do not create fresh requests. B4/D3
 schedule changes are outside this package.
 
 The producer must read the actual predecessor manifest, current source census,
@@ -101,12 +102,20 @@ Inputs for a successor build:
 | Previous manifest | Exact canonical bytes and their known raw SHA |
 | Proposal | `schema=NOX_SYSTEMIC_GROUNDED_PROPOSALS_V1`, predecessor SHA, refill `request_id`, 1–3 grounded missions, optional updated research topics |
 | Census | `schema=NOX_SYSTEMIC_SOURCE_CENSUS_V1`, `roots[root_id][path]=sha256`, full native `observed_files_sha256` |
+| Refill request | Exact latest `NOX_SYSTEMIC_REFILL_REQUEST_V1` bytes emitted by `select_next`; its request ID is recomputed from the pinned predecessor, source pins and bounded queue snapshot |
 | Registry | The existing `all295_execution_disposition.json` with all original specs and source-registry pins |
-| Review | `schema=NOX_SYSTEMIC_TASKPACK_REVIEW_V1`, `review_origin=OWNER_REVIEWED`, exact proposal/census/predecessor hashes, `original_task_accepted=false` |
+| Review | `schema=NOX_SYSTEMIC_TASKPACK_REVIEW_V1`, `review_origin=OWNER_REVIEWED`, exact proposal/census/refill-request/registry/predecessor hashes, settled-claims readback, immutable-verifier hash and `original_task_accepted=false` |
 | Publish checkpoint | Exact current config/source hashes, director/worker/protected process identities, current manifest SHA and publisher template SHA |
 
 The review file documents the exact material that was reviewed. It does not
 replace the native owner's existing authorization and publication checks.
+Each proposal pins `parent_spec_sha256` and uses an original ID that remains
+`UNBOUND_PENDING_REAL_EXECUTION_PLAN`. The producer rejects IDs represented in
+the predecessor manifest or current queue snapshot, duplicate parent IDs in a
+batch, stale refill requests and changed test-module pins. Local package output
+is not a native queue write; the existing publisher still enforces current
+owner lease, STOP, resource/process identity, immutable verifier, predecessor
+and config CAS, and publication readback.
 
 ```bash
 python -B nox-control/systemic_relay_20261118/owner_systemic_taskpack.py \
@@ -114,6 +123,7 @@ python -B nox-control/systemic_relay_20261118/owner_systemic_taskpack.py \
   --previous-sha256 CURRENT_MANIFEST_SHA256 \
   --proposal grounded_proposals.json \
   --source-census current_source_census.json \
+  --refill-request current_refill_request.json \
   --registry nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json \
   --review exact_taskpack_review.json \
   --output NEXT_PACKAGE_DIRECTORY \

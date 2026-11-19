@@ -1,0 +1,30 @@
+name: NOX REFILL_REQUIRED reviewed taskpack producer
+
+on:
+  pull_request:
+    paths:
+      - "nox-control/systemic_relay_20261118/owner_systemic_taskpack.py"
+      - "nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py"
+      - "nox-control/systemic_relay_20261118/test_owner_systemic_taskpack.py"
+      - ".github/workflows/nox-systemic-taskpack-producer-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile producer and verifier
+        run: >-
+          python -m py_compile
+          nox-control/systemic_relay_20261118/owner_systemic_taskpack.py
+          nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py
+      - name: Run focused producer tests
+        run: python nox-control/systemic_relay_20261118/test_owner_systemic_taskpack.py
