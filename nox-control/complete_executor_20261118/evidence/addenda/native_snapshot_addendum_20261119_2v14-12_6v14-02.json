@@ -1,0 +1,1251 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Record new owner-authenticated, read-only native audit evidence without altering immutable 295-task disposition, work receipts, or historical receipt bindings.",
+  "scope": {
+    "task_ids": [
+      "2V14-12",
+      "6V14-02",
+      "2V14-02"
+    ],
+    "task_registry": {
+      "path": "nox-control/four_queue_20261118/work_tasks.json",
+      "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+    },
+    "immutable_295_manifest": {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+      "source_registry_sha256": {
+        "tasks": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+        "ideas": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+        "receipts": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+        "routing": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671"
+      }
+    },
+    "receipts": {
+      "path": "nox-control/four_queue_20261118/work_receipts.json",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+      "entries": {
+        "2V14-12": {
+          "state": "verified",
+          "scope": "native",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43928948952/job/133677694991",
+          "updated_at": "2026-11-16T23:02:39.457454+00:00"
+        },
+        "6V14-02": {
+          "state": "verified",
+          "scope": "native",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43989273499/job/133745616688",
+          "updated_at": "2026-11-17T01:24:41.1461361Z"
+        }
+      }
+    },
+    "criteria": {
+      "2V14-12": {
+        "title": "Проверить доступность обеих NVIDIA V100.",
+        "required_evidence": "native",
+        "spec_sha256": "b3f3a9e9120c7d777f594f93a2ed93402e91ce2989c312cf8ce6f2c079c4d2ed",
+        "prior_receipt": {
+          "state": "verified",
+          "scope": "native",
+          "recorded_status": "HISTORICAL_VERIFIED"
+        },
+        "native_binding_before_addendum": "UNBOUND_PENDING_NATIVE_CATALOG",
+        "addendum_assessment": "ACCEPTED",
+        "acceptance_binding": {
+          "evidence_pointer": "#/evidence/hardware",
+          "workflow_run_id": 44460035858,
+          "job_id": 135344296278,
+          "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44460035858",
+          "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44460035858/job/135344296278",
+          "captured_at_utc": "2026-11-19T04:42:09.567Z",
+          "criterion_satisfied": "Owner-authenticated read-only nvidia-smi query returned rc=0 and enumerated two Tesla V100-SXM2-32GB devices with distinct UUIDs and nonzero free VRAM.",
+          "scope_limit": "Point-in-time device availability/visibility only. PID 1964117 was actively using both GPUs; this does not establish capacity or admission for a new training or inference workload."
+        }
+      },
+      "6V14-02": {
+        "title": "Проверить реальный набор фоновых процессов.",
+        "required_evidence": "native",
+        "spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+        "prior_receipt": {
+          "state": "verified",
+          "scope": "native",
+          "recorded_status": "HISTORICAL_VERIFIED"
+        },
+        "native_binding_before_addendum": "UNBOUND_PENDING_NATIVE_CATALOG",
+        "addendum_assessment": "PARTIAL_GPU_CONSUMER_UNATTRIBUTED",
+        "why_not_done": "GPU consumer PID 1964117 is absent from the filtered 48-row process census; separate worker captures are not atomic."
+      },
+      "2V14-02": {
+        "title": "Установить владельца процессов и действующие STOP/maintenance locks.",
+        "required_evidence": "native",
+        "task_registry_git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "added_by_evidence_record": 3,
+        "status": "PARTIAL"
+      }
+    },
+    "mutation_boundary": "Evidence-only file. The all295 manifest and work_receipts.json are unchanged; no DONE/status mutation is represented here."
+  },
+  "evidence": {
+    "kind": "owner_authenticated_native_read_only_audit",
+    "workflow_run_id": 44460035858,
+    "job_id": 135344296278,
+    "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44460035858",
+    "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44460035858/job/135344296278",
+    "job_conclusion": "success",
+    "pinned_source_sha": "52858cdd6612c130f5a70532ede75abb57cc7ed1",
+    "authenticated_instance_id": 60509551,
+    "host_pin": "VERIFIED",
+    "provider_lookup_read_only": true,
+    "provider_mutations": 0,
+    "audit_log_timestamp_utc": "2026-11-19T04:42:09.567Z",
+    "command_scope": "audit",
+    "hardware": {
+      "nvidia_smi_rc": 0,
+      "gpu_count": 2,
+      "gpus": [
+        {
+          "index": 0,
+          "name": "Tesla V100-SXM2-32GB",
+          "uuid": "GPU-58f4970e-117b-ea29-9c68-b65c5ca88fd0",
+          "total_mib": 32768,
+          "used_mib": 16462,
+          "free_mib": 16306
+        },
+        {
+          "index": 1,
+          "name": "Tesla V100-SXM2-32GB",
+          "uuid": "GPU-db9e6c65-6c6a-83c2-8304-e8605c5188bc",
+          "total_mib": 32768,
+          "used_mib": 27738,
+          "free_mib": 5030
+        }
+      ],
+      "gpu_processes": [
+        {
+          "pid": 1964117,
+          "gpu_uuid": "GPU-58f4970e-117b-ea29-9c68-b65c5ca88fd0",
+          "used_mib": 16330
+        },
+        {
+          "pid": 1964117,
+          "gpu_uuid": "GPU-db9e6c65-6c6a-83c2-8304-e8605c5188bc",
+          "used_mib": 27648
+        }
+      ],
+      "task_assessment": "Both requested NVIDIA V100 devices are present and queryable; both report nonzero free VRAM. This is a point-in-time availability check only. PID 1964117 is actively using both devices; no training-resource or model-install admission is claimed."
+    },
+    "process_and_service_census": {
+      "process_rows_count": 48,
+      "process_rows": [
+        {
+          "pid": 114,
+          "comm": "supervisord",
+          "executable": "python3",
+          "arguments": [
+            [
+              "-c",
+              "/etc/supervisor/supervisord.conf"
+            ]
+          ],
+          "start_ticks": 167791115
+        },
+        {
+          "pid": 194,
+          "comm": "caddy.sh",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/opt/supervisor-scripts/caddy.sh"
+          ],
+          "start_ticks": 167791262
+        },
+        {
+          "pid": 196,
+          "comm": "cron.sh",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/opt/supervisor-scripts/cron.sh"
+          ],
+          "start_ticks": 167791262
+        },
+        {
+          "pid": 199,
+          "comm": "instance_portal",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/opt/supervisor-scripts/instance_portal.sh"
+          ],
+          "start_ticks": 167791262
+        },
+        {
+          "pid": 214,
+          "comm": "caddy.sh",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/opt/supervisor-scripts/caddy.sh"
+          ],
+          "start_ticks": 167791262
+        },
+        {
+          "pid": 215,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 167791262
+        },
+        {
+          "pid": 227,
+          "comm": "cron.sh",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/opt/supervisor-scripts/cron.sh"
+          ],
+          "start_ticks": 167791263
+        },
+        {
+          "pid": 228,
+          "comm": "instance_portal",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/opt/supervisor-scripts/instance_portal.sh"
+          ],
+          "start_ticks": 167791263
+        },
+        {
+          "pid": 229,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 167791263
+        },
+        {
+          "pid": 234,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 167791263
+        },
+        {
+          "pid": 257,
+          "comm": "tunnel_manager.",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/opt/supervisor-scripts/tunnel_manager.sh"
+          ],
+          "start_ticks": 167791264
+        },
+        {
+          "pid": 305,
+          "comm": "tunnel_manager.",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/opt/supervisor-scripts/tunnel_manager.sh"
+          ],
+          "start_ticks": 167791265
+        },
+        {
+          "pid": 306,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 167791265
+        },
+        {
+          "pid": 326,
+          "comm": "fastapi",
+          "executable": "python",
+          "arguments": [],
+          "start_ticks": 167791266
+        },
+        {
+          "pid": 374,
+          "comm": "fastapi",
+          "executable": "python",
+          "arguments": [],
+          "start_ticks": 167791269
+        },
+        {
+          "pid": 356544,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/chat_proxy.py"
+          ],
+          "start_ticks": 184602380
+        },
+        {
+          "pid": 356735,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/nox_web29_onehost_18775.py"
+          ],
+          "start_ticks": 184603716
+        },
+        {
+          "pid": 359172,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/nox_dispatcher_t855u.py"
+          ],
+          "start_ticks": 184639742
+        },
+        {
+          "pid": 359265,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "start_ticks": 184640911
+        },
+        {
+          "pid": 359266,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "start_ticks": 184640911
+        },
+        {
+          "pid": 359267,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "start_ticks": 184640911
+        },
+        {
+          "pid": 359268,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "start_ticks": 184640911
+        },
+        {
+          "pid": 437649,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605800
+        },
+        {
+          "pid": 437651,
+          "comm": "supervisorctl",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605802
+        },
+        {
+          "pid": 437652,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605805
+        },
+        {
+          "pid": 437653,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605805
+        },
+        {
+          "pid": 437654,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605805
+        },
+        {
+          "pid": 437655,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605805
+        },
+        {
+          "pid": 437656,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605806
+        },
+        {
+          "pid": 437657,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605806
+        },
+        {
+          "pid": 437658,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "start_ticks": 185605806
+        },
+        {
+          "pid": 462364,
+          "comm": "disk_floor_guar",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/ops/disk_floor_guard_t39u.sh"
+          ],
+          "start_ticks": 168368499
+        },
+        {
+          "pid": 498569,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "engram_memfd_holder.py"
+          ],
+          "start_ticks": 168416044
+        },
+        {
+          "pid": 666701,
+          "comm": "ram_floor_guard",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/ops/ram_floor_guard_t39u.sh"
+          ],
+          "start_ticks": 168635146
+        },
+        {
+          "pid": 836227,
+          "comm": "post8098_chain_",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/post8098_chain_exec09.sh"
+          ],
+          "start_ticks": 168847622
+        },
+        {
+          "pid": 2922729,
+          "comm": "bash",
+          "executable": "bash",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/monitor_t131u.sh"
+          ],
+          "start_ticks": 171594906
+        },
+        {
+          "pid": 3266857,
+          "comm": "llama-server",
+          "executable": "llama-server",
+          "arguments": [
+            [
+              "-m",
+              "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf"
+            ],
+            [
+              "-c",
+              "8192"
+            ]
+          ],
+          "start_ticks": 172046662
+        },
+        {
+          "pid": 3350646,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/nox_priority_arbiter.py"
+          ],
+          "start_ticks": 172209888
+        },
+        {
+          "pid": 3352980,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/nox_cache_watchdog_t166u.py"
+          ],
+          "start_ticks": 172255925
+        },
+        {
+          "pid": 3352981,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/nox_fill_idle_t166u.py"
+          ],
+          "start_ticks": 172255926
+        },
+        {
+          "pid": 3353067,
+          "comm": "llama-server",
+          "executable": "llama-server",
+          "arguments": [
+            [
+              "-m",
+              "/root/nox/models/bge-m3-Q4_K_M.gguf"
+            ],
+            [
+              "-c",
+              "2048"
+            ]
+          ],
+          "start_ticks": 172255944
+        },
+        {
+          "pid": 3355350,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/nox_gpu_idle_t170u.py"
+          ],
+          "start_ticks": 172305444
+        },
+        {
+          "pid": 3355682,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/knowledge_index_t168u.py"
+          ],
+          "start_ticks": 172312297
+        },
+        {
+          "pid": 3355691,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/nox_native_lifeline.py"
+          ],
+          "start_ticks": 172312630
+        },
+        {
+          "pid": 3355733,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "/root/nox_selfheal.py"
+          ],
+          "start_ticks": 172313146
+        },
+        {
+          "pid": 3355768,
+          "comm": "python",
+          "executable": "python",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/dialog_miner.py"
+          ],
+          "start_ticks": 172313519
+        },
+        {
+          "pid": 3355802,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/bootstrap/nox_kb_eventlistener.py"
+          ],
+          "start_ticks": 172313892
+        },
+        {
+          "pid": 3367869,
+          "comm": "python3",
+          "executable": "python3",
+          "arguments": [],
+          "scripts": [
+            "/root/nox/scripts/nox_chat_watchdog_t180u.py"
+          ],
+          "start_ticks": 172388718
+        }
+      ],
+      "supervisor_available": true,
+      "supervisor_rc": 3,
+      "supervisor_service_count": 56,
+      "supervisor_state_counts": {
+        "RUNNING": 20,
+        "STOPPED": 34,
+        "FATAL": 2
+      },
+      "supervisor_services": [
+        {
+          "name": "caddy",
+          "state": "RUNNING",
+          "pid": 194
+        },
+        {
+          "name": "cron",
+          "state": "RUNNING",
+          "pid": 196
+        },
+        {
+          "name": "instance_portal",
+          "state": "RUNNING",
+          "pid": 199
+        },
+        {
+          "name": "jupyter",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-agent-architect-t859u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-agent-integrator-t859u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-agent-tuner-t858u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-cache-watchdog-t166u",
+          "state": "RUNNING",
+          "pid": 3352980
+        },
+        {
+          "name": "nox-chat-8081",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-chat-watchdog-t180u",
+          "state": "RUNNING",
+          "pid": 3367869
+        },
+        {
+          "name": "nox-checklist-worker",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-cores",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-dialog-miner",
+          "state": "RUNNING",
+          "pid": 3355768
+        },
+        {
+          "name": "nox-dispatcher-t855u",
+          "state": "RUNNING",
+          "pid": 359172
+        },
+        {
+          "name": "nox-distill-worm-t811u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-downloads-t802u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-ds41-8098",
+          "state": "RUNNING",
+          "pid": 3266857
+        },
+        {
+          "name": "nox-embed",
+          "state": "RUNNING",
+          "pid": 3353067
+        },
+        {
+          "name": "nox-fill-idle-t166u",
+          "state": "RUNNING",
+          "pid": 3352981
+        },
+        {
+          "name": "nox-gpu-idle-t170u",
+          "state": "RUNNING",
+          "pid": 3355350
+        },
+        {
+          "name": "nox-gpu-watchdog-t865u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-gpumon",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-hidden-router",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-kb-bootstrap",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-kb-eventlistener",
+          "state": "RUNNING",
+          "pid": 3355802
+        },
+        {
+          "name": "nox-kb-test-exit",
+          "state": "FATAL",
+          "pid": null
+        },
+        {
+          "name": "nox-kb-textbook",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-knowledge-index-t168u",
+          "state": "RUNNING",
+          "pid": 3355682
+        },
+        {
+          "name": "nox-lifeline-guard",
+          "state": "RUNNING",
+          "pid": 3355691
+        },
+        {
+          "name": "nox-media-comfyui",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-monitor-t131u",
+          "state": "RUNNING",
+          "pid": 2922729
+        },
+        {
+          "name": "nox-nano",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-offload-t850u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-ops-gpumon30",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-ops-status",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-priority-arbiter",
+          "state": "RUNNING",
+          "pid": 3350646
+        },
+        {
+          "name": "nox-priority-scheduler",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-progress-t131u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-proxy",
+          "state": "RUNNING",
+          "pid": 356544
+        },
+        {
+          "name": "nox-report-heartbeat-t811u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-self-improve-t846u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-self-learning-loop",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-selfheal",
+          "state": "RUNNING",
+          "pid": 3355733
+        },
+        {
+          "name": "nox-teacher-bringup",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-teacher-serve-t811u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-teachers-warm",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-train-qwen9b-t131u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-train-volta-t866u",
+          "state": "FATAL",
+          "pid": null
+        },
+        {
+          "name": "nox-train-worm-t811u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-vram-guard-t829u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-watch-swap-t845u",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "nox-web29-18775",
+          "state": "RUNNING",
+          "pid": 356735
+        },
+        {
+          "name": "pyworker",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "syncthing",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "tensorboard",
+          "state": "STOPPED",
+          "pid": null
+        },
+        {
+          "name": "tunnel_manager",
+          "state": "RUNNING",
+          "pid": 257
+        }
+      ],
+      "owner_fence_readonly": {
+        "scope": "READ_ONLY_MARKER_METADATA",
+        "owner_stop_state": "NOT_OBSERVED_NOT_AUTHORIZED",
+        "train_hold_state": "NOT_FOUND_AT_SNAPSHOT",
+        "markers": {
+          "STOP": "NOT_FOUND_AT_SNAPSHOT",
+          "STOP_FLAG": "NOT_FOUND_AT_SNAPSHOT",
+          "LOWER_STOP_FLAG": "NOT_FOUND_AT_SNAPSHOT",
+          "DOT_STOP": "NOT_FOUND_AT_SNAPSHOT",
+          "PROGRAM_STOP": "NOT_FOUND_AT_SNAPSHOT",
+          "STATE_STOP": "NOT_FOUND_AT_SNAPSHOT",
+          "STATE_STOP_FLAG": "NOT_FOUND_AT_SNAPSHOT",
+          "MEDIA_STOP": "NOT_FOUND_AT_SNAPSHOT",
+          "OWNER_MAINTENANCE": "NOT_FOUND_AT_SNAPSHOT",
+          "WORKSPACE_STOP": "NOT_FOUND_AT_SNAPSHOT",
+          "TRAIN_HOLD": "NOT_FOUND_AT_SNAPSHOT"
+        },
+        "owner_lease_state": "NOT_CHECKED",
+        "may_clear_stop": false,
+        "may_start_nox": false,
+        "may_write_native": false,
+        "pid_starttime_verified": false
+      },
+      "task_assessment": "PARTIAL_GPU_CONSUMER_UNATTRIBUTED: the audit records 56 Supervisor states and 48 filtered process rows, but GPU consumer PID 1964117 is absent from the process rows. The source filters processes using only argv[:3] keywords and gathers hardware/process/Supervisor sections in separate workers rather than one atomic snapshot.",
+      "collection_method": {
+        "source_path": "nox-control/owner_native_audit.py",
+        "source_commit": "52858cdd6612c130f5a70532ede75abb57cc7ed1",
+        "process_rows_filter": {
+          "expression": "argv[:3] joined and lowercased contains any of: nox, llama, train, python, supervisor, rclone, jupyter",
+          "max_returned_rows": 100,
+          "selected_rows_returned": 48,
+          "exhaustive_os_process_census": false
+        },
+        "supervisor_query": {
+          "selected_config": null,
+          "return_code": 3,
+          "service_rows": 56,
+          "state_counts": {
+            "RUNNING": 20,
+            "STOPPED": 34,
+            "FATAL": 2
+          },
+          "service_pid_start_ticks_verified": false,
+          "selection_rule": "Try the default supervisorctl status and configured candidate files; stop after the first result with parsed service rows."
+        },
+        "execution": {
+          "workers": 7,
+          "executor": "ProcessPoolExecutor",
+          "cross_section_atomic_snapshot": false,
+          "section_log_timestamps_utc": {
+            "hardware": "2026-11-19T04:42:09.5670438Z",
+            "process_rows": "2026-11-19T04:42:09.5697458Z",
+            "supervisor": "2026-11-19T04:42:09.5732707Z"
+          },
+          "limitation": "Hardware, /proc process rows, and Supervisor status are collected by separate worker calls; log output timestamps are not a shared atomic snapshot."
+        }
+      },
+      "gpu_consumer_attribution": {
+        "observed_gpu_consumer_pid": 1964117,
+        "observed_gpu_uuids": [
+          "GPU-58f4970e-117b-ea29-9c68-b65c5ca88fd0",
+          "GPU-db9e6c65-6c6a-83c2-8304-e8605c5188bc"
+        ],
+        "present_in_48_process_rows": false,
+        "attributed_to_process_row": false,
+        "assessment": "UNATTRIBUTED; filtered or time-skewed census cannot rule out that the PID was omitted."
+      }
+    }
+  },
+  "acceptance_review": {
+    "2V14-12": {
+      "result": "CRITERION_CONFIRMED_FOR_READ_ONLY_AVAILABILITY_CHECK",
+      "basis": "Canonical criterion is to check both NVIDIA V100. Successful nvidia-smi query shows both V100-SXM2-32GB devices, stable UUIDs and nonzero free VRAM.",
+      "caveats": [
+        "Both GPUs are occupied by PID 1964117.",
+        "Free VRAM is 16,306 MiB on GPU0 and 5,030 MiB on GPU1.",
+        "This does not assert either GPU can run a particular training workload; no such workload threshold is in this task spec."
+      ]
+    },
+    "6V14-02": {
+      "result": "PARTIAL_GPU_CONSUMER_UNATTRIBUTED",
+      "basis": "Direct audit logs show 48 filtered process rows, 56 Supervisor service rows (20 RUNNING, 34 STOPPED, 2 FATAL), and GPU consumer PID 1964117 on both GPUs. PID 1964117 is absent from the process rows. Pinned audit source filters on selected argv[:3] keywords and gathers hardware, process, and Supervisor sections through separate ProcessPoolExecutor workers, so attribution and a single atomic census are not established.",
+      "caveats": [
+        "Supervisor rc=3; the captured output contains 56 services: 20 RUNNING, 34 STOPPED, 2 FATAL.",
+        "The 48 process rows are filtered (argv[:3] keyword matching), not an exhaustive /proc process list.",
+        "GPU PID 1964117 is not present in the filtered process rows and remains unattributed.",
+        "Hardware, process, and Supervisor sections are collected separately; no shared atomic snapshot is claimed.",
+        "No service repair, restart, training, or queue mutation was performed.",
+        "This addendum does not mark 6V14-02 DONE."
+      ]
+    },
+    "2V14-02": {
+      "result": "PARTIAL_NOT_DONE",
+      "basis": "Two owner-authenticated snapshots identify service PIDs and start_ticks; scoped STOP flags are absent, and the FLOCK holder correlates with the dispatcher. The inspect source reads /proc/locks once and suppresses OSError as an empty list; no server boot/restart anchor is captured.",
+      "evidence_record": "additional_evidence_records[0]",
+      "caveats": [
+        "Only worker-pool last_started_at is available as a lifecycle anchor.",
+        "Supervisor rc=3; three named NOX agent services are STOPPED in both snapshots.",
+        "No DONE status is represented."
+      ]
+    }
+  },
+  "source_limits": [
+    "This addendum does not change immutable source receipts or the original 295-task acceptance manifest.",
+    "The evidence represents only the exact snapshot at the recorded time; later resource/process state can differ.",
+    "Owner lease remains NOT_CHECKED and write/start/clear actions are explicitly false.",
+    "The 2V14-02 inspect record is PARTIAL: /proc/locks was read once with silent OSError-to-empty fallback, and no server boot/restart anchor was captured.",
+    "The 6V14-02 audit contains 56 Supervisor rows (20 RUNNING, 34 STOPPED, 2 FATAL) and 48 filtered process rows; the GPU consumer PID 1964117 is absent from those rows.",
+    "The pinned audit filters /proc entries by keywords in argv[:3], collects hardware/process/Supervisor sections in separate ProcessPoolExecutor workers, and does not verify Supervisor service PIDs against start_ticks; therefore 6V14-02 remains PARTIAL."
+  ],
+  "additional_evidence_records": [
+    {
+      "record_number": 3,
+      "task_id": "2V14-02",
+      "title": "Установить владельца процессов и действующие STOP/maintenance locks.",
+      "result": "PARTIAL",
+      "evidence_classification": "OWNER_AUTHENTICATED_NATIVE_READ_ONLY_INSPECT",
+      "workflow": {
+        "run_id": 44459668390,
+        "job_id": 135343086171,
+        "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44459668390",
+        "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44459668390/job/135343086171",
+        "conclusion": "success",
+        "pinned_source_sha": "52858cdd6612c130f5a70532ede75abb57cc7ed1",
+        "inspect_implementation_sha": "d09133253840ea81a2f5b02f1d01390e5c3e88fa",
+        "authenticated_instance_id": 60509551,
+        "host_pin": "VERIFIED",
+        "provider_mutations": 0,
+        "command_scope": "inspect",
+        "source_registry_git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+      },
+      "criterion": {
+        "registry_path": "nox-control/four_queue_20261118/work_tasks.json",
+        "registry_git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "exact_title": "Установить владельца процессов и действующие STOP/maintenance locks.",
+        "evidence_required": "native",
+        "acceptance_scope": "service/process identity plus STOP and maintenance-lock observation"
+      },
+      "snapshots": [
+        {
+          "label": "NOX_MAINT_SCOPE_SNAPSHOT_A",
+          "audit_log_timestamp_utc": "2026-11-19T04:38:58.3122681Z",
+          "time_unix": 1795063131.8101356,
+          "time_unix_utc": "2026-11-19T04:38:51.810Z",
+          "supervisor_rc": 3,
+          "service_count": 7,
+          "services": [
+            {
+              "service": "nox-agent-architect-t859u",
+              "state": "STOPPED",
+              "pid": null,
+              "start_ticks": null
+            },
+            {
+              "service": "nox-agent-integrator-t859u",
+              "state": "STOPPED",
+              "pid": null,
+              "start_ticks": null
+            },
+            {
+              "service": "nox-agent-tuner-t858u",
+              "state": "STOPPED",
+              "pid": null,
+              "start_ticks": null
+            },
+            {
+              "service": "nox-dispatcher-t855u",
+              "state": "RUNNING",
+              "pid": 359172,
+              "start_ticks": 184639742
+            },
+            {
+              "service": "nox-ds41-8098",
+              "state": "RUNNING",
+              "pid": 3266857,
+              "start_ticks": 172046662
+            },
+            {
+              "service": "nox-proxy",
+              "state": "RUNNING",
+              "pid": 356544,
+              "start_ticks": 184602380
+            },
+            {
+              "service": "nox-web29-18775",
+              "state": "RUNNING",
+              "pid": 356735,
+              "start_ticks": 184603716
+            }
+          ],
+          "stop_and_maintenance_flags": {
+            "/root/nox/STOP": "ABSENT",
+            "/root/nox/STOP.flag": "ABSENT",
+            "/root/nox/stop.flag": "ABSENT",
+            "/root/nox/.stop": "ABSENT",
+            "/root/nox/program/STOP": "ABSENT",
+            "/root/nox/state/STOP": "ABSENT",
+            "/root/nox/state/STOP.flag": "ABSENT",
+            "/workspace/NOX_STOP": "ABSENT",
+            "/root/nox/state/OWNER_MAINTENANCE.flag": "ABSENT",
+            "/root/nox/state/TRAIN_HOLD.flag": "ABSENT",
+            "/root/nox/state/TRAIN_PAUSE_REQUEST.flag": "ABSENT"
+          }
+        },
+        {
+          "label": "NOX_MAINT_SCOPE_SNAPSHOT_B",
+          "audit_log_timestamp_utc": "2026-11-19T04:39:01.1509431Z",
+          "time_unix": 1795063138.264878,
+          "time_unix_utc": "2026-11-19T04:38:58.264Z",
+          "supervisor_rc": 3,
+          "service_count": 7,
+          "services": [
+            {
+              "service": "nox-agent-architect-t859u",
+              "state": "STOPPED",
+              "pid": null,
+              "start_ticks": null
+            },
+            {
+              "service": "nox-agent-integrator-t859u",
+              "state": "STOPPED",
+              "pid": null,
+              "start_ticks": null
+            },
+            {
+              "service": "nox-agent-tuner-t858u",
+              "state": "STOPPED",
+              "pid": null,
+              "start_ticks": null
+            },
+            {
+              "service": "nox-dispatcher-t855u",
+              "state": "RUNNING",
+              "pid": 359172,
+              "start_ticks": 184639742
+            },
+            {
+              "service": "nox-ds41-8098",
+              "state": "RUNNING",
+              "pid": 3266857,
+              "start_ticks": 172046662
+            },
+            {
+              "service": "nox-proxy",
+              "state": "RUNNING",
+              "pid": 356544,
+              "start_ticks": 184602380
+            },
+            {
+              "service": "nox-web29-18775",
+              "state": "RUNNING",
+              "pid": 356735,
+              "start_ticks": 184603716
+            }
+          ],
+          "stop_and_maintenance_flags": {
+            "/root/nox/STOP": "ABSENT",
+            "/root/nox/STOP.flag": "ABSENT",
+            "/root/nox/stop.flag": "ABSENT",
+            "/root/nox/.stop": "ABSENT",
+            "/root/nox/program/STOP": "ABSENT",
+            "/root/nox/state/STOP": "ABSENT",
+            "/root/nox/state/STOP.flag": "ABSENT",
+            "/workspace/NOX_STOP": "ABSENT",
+            "/root/nox/state/OWNER_MAINTENANCE.flag": "ABSENT",
+            "/root/nox/state/TRAIN_HOLD.flag": "ABSENT",
+            "/root/nox/state/TRAIN_PAUSE_REQUEST.flag": "ABSENT"
+          }
+        }
+      ],
+      "worker_identities": {
+        "snapshot_label": "NOX_MAINT_SCOPE_POST_WORKERS",
+        "audit_log_timestamp_utc": "2026-11-19T04:38:58.3182449Z",
+        "observed_at_unix": 1795063131.5774584,
+        "director": {
+          "pid": 359172,
+          "start_ticks": 184639742,
+          "verified_against_claim": true
+        },
+        "workers": [
+          {
+            "role": "runtime",
+            "pid": 359266,
+            "start_ticks": 184640911,
+            "state": "RUNNING",
+            "verified": true
+          },
+          {
+            "role": "memory",
+            "pid": 359267,
+            "start_ticks": 184640911,
+            "state": "RUNNING",
+            "verified": true
+          },
+          {
+            "role": "weights",
+            "pid": 359268,
+            "start_ticks": 184640911,
+            "state": "RUNNING",
+            "verified": true
+          }
+        ],
+        "pool_last_started_at_unix": 1795053681.3102293,
+        "pool_last_started_at_utc": "2026-11-19T02:01:21.310Z",
+        "pool_last_closed_at_unix": null
+      },
+      "lock_observation": {
+        "audit_log_timestamp_utc": "2026-11-19T04:39:01.1402706Z",
+        "scope": "PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION",
+        "paths": [
+          {
+            "path": "/root/nox/state/owner_maintenance.lock",
+            "present": true,
+            "inode": 59886214,
+            "device_major": 0,
+            "device_minor": 36,
+            "type_regular": true,
+            "matching_kernel_locks": [],
+            "matching_kernel_lock_holder_pids": []
+          },
+          {
+            "path": "/root/nox/state/dispatcher/native_subagents.lock",
+            "present": true,
+            "inode": 3326582169,
+            "device_major": 0,
+            "device_minor": 36,
+            "type_regular": true,
+            "matching_kernel_locks": [
+              "30: FLOCK  ADVISORY  WRITE 359172 00:24:3326582169 0 EOF"
+            ],
+            "matching_kernel_lock_holder_pids": [
+              359172
+            ]
+          }
+        ],
+        "flock_holder_correlation": {
+          "holder_pid": 359172,
+          "kernel_lock_entry": "30: FLOCK  ADVISORY  WRITE 359172 00:24:3326582169 0 EOF",
+          "correlated_service": "nox-dispatcher-t855u",
+          "service_pid": 359172,
+          "service_start_ticks_in_both_snapshots": 184639742,
+          "post_worker_observed_director_pid": 359172,
+          "post_worker_observed_director_start_ticks": 184639742,
+          "correlated": true
+        }
+      },
+      "source_limitations": {
+        "proc_locks_read_count_in_inspect_implementation": 1,
+        "proc_locks_read_expression": "Path('/proc/locks').read_text().splitlines()",
+        "read_error_handling": "OSError is converted to an empty lines list; inspect output does not distinguish read failure from no matching lock.",
+        "server_boot_or_restart_anchor_present": false,
+        "available_lifecycle_anchor": "pool_lifecycle.last_started_at only",
+        "boot_id_or_kernel_boot_time_captured": false
+      },
+      "basis_for_partial": [
+        "Two owner-authenticated snapshots show stable service PIDs and start_ticks; the observed FLOCK holder PID correlates with the dispatcher.",
+        "STOP, maintenance, and training-pause flags in the listed scope were absent in both snapshots.",
+        "The inspect source reads /proc/locks exactly once and converts OSError to an empty list, so a read failure can look like no matching lock.",
+        "No server boot/restart anchor was captured; only worker-pool last_started_at is available."
+      ],
+      "acceptance_boundary": {
+        "accepted_as_done": false,
+        "updates_295_manifest": false,
+        "updates_work_receipts": false,
+        "owner_lease_acquired": false,
+        "service_mutation": false,
+        "training_or_queue_mutation": false
+      },
+      "next_evidence_needed": [
+        "Run a fresh owner-authenticated read-only `inspect` only after the merged source is installed, pinned to repository commit 16c13a20f73374f4e888ff826d5351b403499505 and inspector file blob c61c652ac6295c4f34f51930245004dbfc5304b4.",
+        "Require host_clock_snapshot_status=STABLE with boot_id, uptime, SC_CLK_TCK and wall-clock bracket; require complete repeated /proc/locks reads (`proc_locks_stability=STABLE`, `lock_observation_complete=true`), device/inode matching, and holder PID/start_ticks/boot-epoch identity checks in the same inspect result."
+      ],
+      "next_evidence_source": {
+        "repository_commit_sha": "16c13a20f73374f4e888ff826d5351b403499505",
+        "source_path": "nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py",
+        "source_file_git_blob_sha": "c61c652ac6295c4f34f51930245004dbfc5304b",
+        "source_status": "MERGED_NOT_INSTALLED_AT_EVIDENCE_TIME",
+        "required_action": "A new owner-authenticated read-only inspect pinned to this source; the old run is not evidence for the new observer."
+      }
+    }
+  ]
+}
