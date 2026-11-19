@@ -174,6 +174,32 @@ def load_dispatcher():
 
 
 class ReleaseGateTests(unittest.TestCase):
+    def test_outer_pending_task_stays_durable_and_unclaimed_during_pause(self):
+        dispatcher = load_dispatcher()
+        native = dispatcher.Native.__new__(dispatcher.Native)
+
+        class QueueLock:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+        task = {'handler':dispatcher.HANDLER, 'status':'pending',
+                'owner_claim':None, 'native_worker_lease':None,
+                'native_pool_recovery':None}
+        tasks = {'task-1':task}
+        native.ns = {'_qlock':QueueLock()}
+        native.state = {'tasks':tasks}
+        native.allowed_handlers = lambda: {dispatcher.HANDLER}
+
+        before = dict(task)
+        self.assertTrue(native._native_claims_settled())
+        self.assertEqual(tasks['task-1'], before)
+        self.assertEqual(tasks['task-1']['status'], 'pending')
+        self.assertIsNone(tasks['task-1']['owner_claim'])
+        self.assertIsNone(tasks['task-1']['native_worker_lease'])
+
     def test_release_gate_requires_validated_memory_pressure_and_idle_owned_pool(self):
         dispatcher = load_dispatcher()
         snapshot = {'native_verified': True, 'instance_id': 60509551,
