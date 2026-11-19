@@ -101,7 +101,15 @@ def services():
         match=re.match(r'^'+re.escape(name)+r'\s+RUNNING\s+pid\s+([0-9]+),',p.stdout.strip())
         if p.returncode!=0 or not match:
             hold('SERVICE_NOT_RUNNING')
-        result[name]=int(match.group(1))
+        pid=int(match.group(1))
+        raw=read_text(Path('/proc')/str(pid)/'stat',2048)
+        try:
+            columns=raw.rsplit(') ',1)[1].split()
+            start_ticks=int(columns[19])
+            if columns[0]=='Z' or start_ticks<=0:hold('SERVICE_PID_STATE')
+        except (IndexError,ValueError):
+            hold('SERVICE_PID_STATE')
+        result[name]={'pid':pid,'start_ticks':start_ticks}
     return result
 
 
