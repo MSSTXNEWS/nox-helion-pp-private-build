@@ -72,11 +72,14 @@ def _call_symbol(node):
 
 def _direct_call_symbols(node):
     symbols = set()
-    for child in ast.walk(node):
-        if isinstance(child, ast.Call):
-            symbol = _call_symbol(child.func)
-            if symbol:
-                symbols.add(symbol)
+    # Walk function bodies only; route decorators and defaults are not calls
+    # made when the handler services a request.
+    for statement in node.body:
+        for child in ast.walk(statement):
+            if isinstance(child, ast.Call):
+                symbol = _call_symbol(child.func)
+                if symbol:
+                    symbols.add(symbol)
     return sorted(symbols)[:MAX_DIRECT_CALLS]
 
 def _unknown_serving_bindings():
