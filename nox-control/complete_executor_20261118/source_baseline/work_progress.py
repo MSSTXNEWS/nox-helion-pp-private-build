@@ -329,6 +329,17 @@ TOKENIZER_MANIFEST_PATH = 'nox-control/model_manifests/evidence/4A01_DEEPSEEK_V4
 TOKENIZER_MANIFEST_BLOB = '7e0f848c89c3f57e0ec31f9c0c79e229d01cd81a'
 GGUF_MANIFEST_PATH = 'nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_1017_GGUF_INFERENCE_ROUTE_20261119.json'
 GGUF_MANIFEST_BLOB = '19684cbe1b524df8c11b7b177b5773cb2dc0cc60'
+I49_POST_MERGE_SCHEMA = 'NOX_SOURCE_POST_MERGE_ACCEPTANCE_RECEIPT_V1'
+I49_POST_MERGE_PATH = 'nox-control/complete_executor_20261118/evidence/addenda/i49_post_merge_acceptance_receipt_20261119_pr486.json'
+I49_POST_MERGE_BLOB = 'ed36a4d374565437d8c298e2a7eeddcebec79534'
+I49_WORK_IDEAS_PATH = 'nox-control/four_queue_20261118/work_ideas.json'
+I49_WORK_IDEAS_BLOB = '6f84f315d9792cb43f08b72b062dc2f71ce1d4a6'
+I49_SPEC_SHA256 = 'c126701e3699969ab557e9fb99f4c2085a0d678f06e11895835d89241f194e1f'
+I49_TITLE = 'Сравнить тензоры двух checkpoints на CPU'
+I49_CRITERION = 'Проверить разрешённые параметры выборочно, без загрузки полной модели'
+I49_COMPARISON_PATH = 'nox-control/i49_checkpoint_compare_20261119/evidence/all500_tensor_delta_corrected_source_20261119.json'
+I49_COMPARISON_BLOB = '4b136169a2a8fc76b64cc2001ff66ced393d18c4'
+I49_COMPARISON_SHA256 = 'cde4705f5803e3a23292bd2a1026ac8bbcce08fe3758e9e62d170c203403f8b4'
 
 
 def git_blob_sha(raw):
@@ -888,6 +899,191 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
     }
 
 
+def _validate_i49_post_merge_receipt(document, manifest_rows, manifest_titles,
+                                      manifest_records, control_root,
+                                      source_path, source_hash, source_blob):
+    """Validate the exact post-merge I-49 source receipt as a 295 supplemental item."""
+    task = document.get('task')
+    if not isinstance(task, dict) or task.get('task_id') != 'I-49':
+        raise ValueError('I49_TASK_BINDING_MISMATCH')
+    if (task.get('spec_sha256') != I49_SPEC_SHA256
+            or manifest_rows.get('I-49') != I49_SPEC_SHA256
+            or task.get('title') != I49_TITLE
+            or manifest_titles.get('I-49') != I49_TITLE):
+        raise ValueError('I49_FROZEN_SPEC_BINDING_MISMATCH')
+    frozen_row = manifest_records.get('I-49')
+    routing = frozen_row.get('routing_source') if isinstance(frozen_row, dict) else None
+    if (not isinstance(frozen_row, dict)
+            or frozen_row.get('original_acceptance_added') is not False
+            or frozen_row.get('prior_receipt_state') != 'verified'
+            or frozen_row.get('prior_receipt_scope') != 'source'
+            or not isinstance(routing, dict)
+            or routing.get('registry') != 'work_ideas.json'
+            or routing.get('native_binding') != 'UNBOUND_PENDING_NATIVE_CATALOG'):
+        raise ValueError('I49_FROZEN_ROW_ROUTING_MISMATCH')
+    if (document.get('schema') != I49_POST_MERGE_SCHEMA
+            or document.get('append_only') is not True
+            or source_path != I49_POST_MERGE_PATH
+            or source_blob != I49_POST_MERGE_BLOB):
+        raise ValueError('I49_POST_MERGE_RECEIPT_PIN_MISMATCH')
+
+    ideas_raw, ideas_doc = read_json_with_raw(
+        Path(control_root) / 'four_queue_20261118' / 'work_ideas.json'
+    )
+    idea_rows = ideas_doc.get('ideas') if isinstance(ideas_doc, dict) else None
+    if (git_blob_sha(ideas_raw) != I49_WORK_IDEAS_BLOB
+            or ideas_doc.get('schema') != 'nox-work-ideas-v1'
+            or not isinstance(idea_rows, list)
+            or len(idea_rows) != IDEA_TOTAL):
+        raise ValueError('I49_WORK_IDEAS_REGISTRY_PIN_MISMATCH')
+    matches = [row for row in idea_rows
+               if isinstance(row, dict) and row.get('id') == 'I-49']
+    if (len(matches) != 1 or matches[0].get('title') != I49_TITLE
+            or matches[0].get('evidence') != 'source'
+            or matches[0].get('acceptance') != I49_CRITERION):
+        raise ValueError('I49_WORK_IDEA_ROW_MISMATCH')
+
+    if (task.get('required_evidence') != 'source'
+            or task.get('criterion') != I49_CRITERION
+            or task.get('work_ideas_path') != I49_WORK_IDEAS_PATH
+            or task.get('work_ideas_git_blob_sha') != I49_WORK_IDEAS_BLOB
+            or task.get('all295_path') != 'nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json'
+            or task.get('all295_git_blob_sha') != FROZEN_295_MANIFEST_BLOB
+            or task.get('work_receipts_path') != 'nox-control/four_queue_20261118/work_receipts.json'
+            or task.get('work_receipts_git_blob_sha') != FROZEN_WORK_RECEIPTS_BLOB
+            or task.get('frozen_files_mutated') is not False):
+        raise ValueError('I49_SOURCE_RECEIPT_TASK_BINDING_MISMATCH')
+
+    merge = document.get('merge_binding')
+    if (not isinstance(merge, dict)
+            or merge.get('pull_request_number') != 486
+            or merge.get('pull_request_url') != REPOSITORY_URL + '/pull/486'
+            or merge.get('state') != 'MERGED'
+            or merge.get('merged_head_sha') != 'a5a999e2705a242d266030ac0b09c29bb215e805'
+            or merge.get('merge_commit_sha') != '4193544b6b7fe4db82d64ef18fc33cc3bc5649ce'
+            or merge.get('base_branch') != REPOSITORY_REF):
+        raise ValueError('I49_MERGE_BINDING_MISMATCH')
+    review = document.get('independent_review')
+    if (not isinstance(review, dict) or review.get('result') != 'PASS'
+            or review.get('reviewed_head_sha') != merge.get('merged_head_sha')):
+        raise ValueError('I49_INDEPENDENT_REVIEW_BINDING_MISMATCH')
+
+    assessment = document.get('assessment')
+    mutation = document.get('mutation_boundary')
+    if (not isinstance(assessment, dict)
+            or assessment.get('status') != 'ACCEPTED_SOURCE_CRITERION'
+            or assessment.get('accepted_scope') != (
+                'Only the frozen I-49 source criterion: bounded CPU payload-byte hash comparison '
+                'for the currently authorized exact checkpoint pair and exact 500-name set without '
+                'loading the full base model.')
+            or assessment.get('acceptance_claim_for_immutable_295_snapshot') is not False
+            or not isinstance(mutation, dict)
+            or mutation.get('all295_changed') is not False
+            or mutation.get('work_ideas_changed') is not False
+            or mutation.get('work_receipts_changed') is not False
+            or mutation.get('drive_changed') is not False
+            or mutation.get('server_changed') is not False):
+        raise ValueError('I49_ACCEPTANCE_OR_MUTATION_BOUNDARY_MISMATCH')
+
+    evidence = document.get('evidence')
+    comparison_receipt = evidence.get('corrected_comparison') if isinstance(evidence, dict) else None
+    if (not isinstance(comparison_receipt, dict)
+            or comparison_receipt.get('path') != I49_COMPARISON_PATH
+            or comparison_receipt.get('git_blob_sha') != I49_COMPARISON_BLOB
+            or comparison_receipt.get('content_sha256') != I49_COMPARISON_SHA256):
+        raise ValueError('I49_COMPARISON_POINTER_MISMATCH')
+    artifact_raw, artifact = read_json_with_raw(
+        Path(control_root) / 'i49_checkpoint_compare_20261119' / 'evidence' /
+        'all500_tensor_delta_corrected_source_20261119.json'
+    )
+    artifact_hash = hashlib.sha256(artifact_raw).hexdigest()
+    comparator = comparison_receipt.get('comparator')
+    artifact_comparator = artifact.get('comparator') if isinstance(artifact, dict) else None
+    pair = comparison_receipt.get('pair')
+    artifact_sources = artifact.get('sources') if isinstance(artifact, dict) else None
+    if (git_blob_sha(artifact_raw) != I49_COMPARISON_BLOB
+            or artifact_hash != I49_COMPARISON_SHA256
+            or artifact.get('schema') != 'NOX_I49_ALL_SHARED_TENSORS_CPU_DELTA_V2'
+            or artifact.get('task_id') != 'I-49'
+            or artifact.get('training_started') is not False
+            or artifact.get('full_base_model_loaded') is not False
+            or artifact.get('drive_written') is not False
+            or artifact.get('server_written') is not False
+            or not isinstance(comparator, dict) or not isinstance(artifact_comparator, dict)
+            or comparator.get('revision') != 'e10c80f64e3fd88298be2776c58d03939e6e71f6'
+            or comparator.get('source_sha256') != 'f71ed5466efed6fe70a19c222df9dc7c97a1a44e5bee82b4747d099c7f65abf0'
+            or comparator.get('git_blob_sha') != '93a5963b0951a38c00438ced561b1077fd8bf7ca'
+            or comparator != artifact_comparator
+            or not isinstance(pair, dict)
+            or pair.get('pair_sha256') != '1df59f1bd9fc4712b8ba01c429af5aa19895ea9ed907d1f807b99b9195a87bd1'
+            or not isinstance(artifact_sources, list) or len(artifact_sources) != 2):
+        raise ValueError('I49_COMPARISON_ARTIFACT_BINDING_MISMATCH')
+    names = artifact.get('tensor_name_set')
+    summary = artifact.get('summary')
+    if (not isinstance(names, dict) or names.get('count') != 500
+            or names.get('sorted_names_sha256') != 'd0baf44eff8da1fd86afaf812900b0f7ee273d7286a20f49de0237f4689ac7da'
+            or names.get('matches_current_owner_instruction_binding') is not True
+            or not isinstance(summary, dict)
+            or summary.get('common_tensor_count') != 500
+            or summary.get('compared_tensor_count') != 500
+            or summary.get('changed_tensor_count') != 500
+            or summary.get('unchanged_tensor_count') != 0
+            or summary.get('all_matching_tensors_compared') is not True):
+        raise ValueError('I49_COMPARISON_SCOPE_NOT_MET')
+    if (comparison_receipt.get('tensor_name_count') != 500
+            or comparison_receipt.get('tensor_name_set_sha256') != names.get('sorted_names_sha256')
+            or comparison_receipt.get('compared_tensors') != summary.get('compared_tensor_count')
+            or comparison_receipt.get('changed_payload_hashes') != summary.get('changed_tensor_count')
+            or comparison_receipt.get('comparison_issues') != 0
+            or comparison_receipt.get('training_started') is not False
+            or comparison_receipt.get('full_base_model_loaded') is not False
+            or comparison_receipt.get('drive_written') is not False
+            or comparison_receipt.get('server_written') is not False):
+        raise ValueError('I49_COMPARISON_RESULT_BINDING_MISMATCH')
+    if not isinstance(document.get('merged_premerge_acceptance_sidecar'), dict):
+        raise ValueError('I49_PREMERGE_SIDECAR_BINDING_MISSING')
+    previous = document['merged_premerge_acceptance_sidecar']
+    if (previous.get('path') != 'nox-control/complete_executor_20261118/evidence/addenda/source_acceptance_addendum_20261119_i49_corrected.json'
+            or previous.get('git_blob_sha') != '564fa0dd1e578e46338a0c1476f09ec63150627d'
+            or previous.get('recorded_premerge_effective_state') != 'PENDING_PR_MERGE'):
+        raise ValueError('I49_PREMERGE_SIDECAR_BINDING_MISMATCH')
+
+    return {
+        'task_id': 'I-49',
+        'title': I49_TITLE,
+        'result': 'ACCEPTED',
+        'evidence_kind': 'SOURCE_POST_MERGE',
+        'acceptance_scope': assessment['accepted_scope'],
+        'acceptance_pointer': '#/assessment/status',
+        'evidence_pointer': '#/evidence/corrected_comparison',
+        'merge_binding_pointer': '#/merge_binding',
+        'review_binding_pointer': '#/independent_review',
+        'workflow_run_id': None,
+        'job_id': None,
+        'owner_authorization_id': None,
+        'merge_commit_sha': merge['merge_commit_sha'],
+        'merged_head_sha': merge['merged_head_sha'],
+        'spec_sha256': I49_SPEC_SHA256,
+        'source_path': source_path,
+        'source_url': REPOSITORY_URL + '/blob/' + REPOSITORY_REF + '/' + source_path,
+        'source_sha256': source_hash,
+        'source_git_blob_sha': source_blob,
+        'work_ideas_path': I49_WORK_IDEAS_PATH,
+        'work_ideas_git_blob_sha': git_blob_sha(ideas_raw),
+        'comparison_path': I49_COMPARISON_PATH,
+        'comparison_git_blob_sha': git_blob_sha(artifact_raw),
+        'comparison_sha256': artifact_hash,
+        'comparator_revision': comparator['revision'],
+        'pair_sha256': pair['pair_sha256'],
+        'tensor_name_count': names['count'],
+        'tensor_name_set_sha256': names['sorted_names_sha256'],
+        'original_acceptance_added': 0,
+        'training_started': False,
+        'full_base_model_loaded': False,
+    }
+
+
+
 def supplemental_acceptance(directory, existing_receipt_count):
     """Read append-only sidecars; never mutate or add them to original receipts."""
     directory = Path(directory)
@@ -907,6 +1103,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
             raise ValueError('FROZEN_295_MANIFEST_MISMATCH')
         manifest_rows = {}
         manifest_titles = {}
+        manifest_records = {}
         for row in manifest['tasks']:
             if not isinstance(row, dict):
                 raise ValueError('FROZEN_295_TASK_ROW_INVALID')
@@ -919,6 +1116,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
                 raise ValueError('FROZEN_295_TASK_ID_OR_SPEC_INVALID')
             manifest_rows[task_id] = spec_sha
             manifest_titles[task_id] = row['spec'].get('title')
+            manifest_records[task_id] = row
         if len(manifest_rows) != 295:
             raise ValueError('FROZEN_295_TASK_IDS_INVALID')
     except (OSError, KeyError, ValueError, TypeError, AttributeError) as exc:
@@ -981,6 +1179,20 @@ def supplemental_acceptance(directory, existing_receipt_count):
             source_hash = hashlib.sha256(raw).hexdigest()
             if document.get('append_only') is not True:
                 raise ValueError('ADDENDUM_NOT_APPEND_ONLY')
+            if document.get('schema') == I49_POST_MERGE_SCHEMA:
+                source_task = document.get('task')
+                source_task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
+                try:
+                    if source_path != I49_POST_MERGE_PATH:
+                        raise ValueError('I49_POST_MERGE_PATH_MISMATCH')
+                    item = _validate_i49_post_merge_receipt(
+                        document, manifest_rows, manifest_titles, manifest_records,
+                        directory.parent, source_path, source_hash, git_blob_sha(raw)
+                    )
+                    items.append(item)
+                except (OSError, KeyError, TypeError, ValueError, AttributeError) as exc:
+                    excluded.append({'path': source_path, 'task_id': source_task_id, 'reason': str(exc)})
+                continue
             if document.get('schema') == SOURCE_ADDENDUM_SCHEMA:
                 source_task = document.get('task')
                 source_task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
