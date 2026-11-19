@@ -133,7 +133,9 @@ def _executor_status_reply(user_text,path=None):
              'NOX — отдельный координатор и чат; неподтверждённые цифры не привожу.')
     target=Path(path) if path is not None else EXECUTOR_STATUS
     try:
-        fd=os.open(target,os.O_RDONLY|os.O_NOFOLLOW)
+        # O_NOFOLLOW rejects symlinks; O_NONBLOCK prevents a FIFO from
+        # wedging chat admission before fstat can reject nonregular files.
+        fd=os.open(target,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
         with os.fdopen(fd,'rb') as source:
             meta=os.fstat(source.fileno())
             if not stat.S_ISREG(meta.st_mode) or not 0<meta.st_size<=750000:return unknown
