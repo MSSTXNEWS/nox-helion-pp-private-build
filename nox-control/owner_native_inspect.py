@@ -142,16 +142,20 @@ def _parse_cgroup_procs(raw):
         lines = raw.decode('ascii').splitlines()
     except UnicodeDecodeError:
         raise CgroupPinHold('CGROUP_PROCS_ENCODING') from None
-    if any(not line.isdecimal() for line in lines):
+    if any(not re.fullmatch(r'[0-9]{1,10}', line) for line in lines):
         raise CgroupPinHold('CGROUP_PROCS_FORMAT')
     pids = [int(line) for line in lines]
-    if any(pid <= 1 for pid in pids) or len(pids) != len(set(pids)):
+    if any(pid > 2**31 - 1 for pid in pids):
         raise CgroupPinHold('CGROUP_PROCS_FORMAT')
+    if 0 in pids:
+        raise CgroupPinHold('CGROUP_PROCS_ZERO_PID')
+    if len(pids) != len(set(pids)):
+        raise CgroupPinHold('CGROUP_PROCS_DUPLICATE_PID')
     return sorted(pids)
 
 
 def _proc_identity(proc_root, pid):
-    if type(pid) is not int or pid <= 1:
+    if type(pid) is not int or pid < 1:
         raise CgroupPinHold('PID')
     try:
         proc_fd = os.open(Path(proc_root) / str(pid), os.O_RDONLY |
@@ -244,7 +248,8 @@ def cgroup_process_pin(pid, expected_start_ticks, *, proc_root=None, cgroup_root
            'cgroup_type': None, 'member_count': None, 'members': [],
            'members_complete': False, 'child_count': None,
            'children_complete': False, 'leaf_cgroup': None,
-           'memory_reclaim_present': False, 'pin_sha256': None,
+           'memory_reclaim_present': False, 'memory_reclaim_state': 'NOT_CHECKED',
+           'pin_sha256': None,
            'read_only': True}
     target_fd = None
     try:
@@ -261,6 +266,24 @@ def cgroup_process_pin(pid, expected_start_ticks, *, proc_root=None, cgroup_root
         if cgroup_type not in ('domain', 'domain threaded', 'threaded', 'domain invalid'):
             raise CgroupPinHold('CGROUP_TYPE')
         row['cgroup_type'] = cgroup_type
+        try:
+            reclaim_info = os.stat('memory.reclaim', dir_fd=target_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            row['memory_reclaim_state'] = 'ABSENT'
+        except OSError:
+            row['memory_reclaim_state'] = 'STAT_UNAVAILABLE'
+        else:
+            row['memory_reclaim_present'] = stat.S_ISREG(reclaim_info.st_mode)
+            if row['memory_reclaim_present']:
+                try:
+                    read_only = bool(os.fstatvfs(target_fd).f_flag & os.ST_RDONLY)
+                except OSError:
+                    row['memory_reclaim_state'] = 'MOUNT_FLAGS_UNAVAILABLE'
+                else:
+                    row['memory_reclaim_state'] = (
+                        'MOUNT_READ_ONLY' if read_only else 'REGULAR_ON_RW_MOUNT')
+            else:
+                row['memory_reclaim_state'] = 'NOT_REGULAR'
         raw_procs = _read_at(target_fd, 'cgroup.procs', CGROUP_MAX_READ,
                              'CGROUP_PROCS')
         pids = _parse_cgroup_procs(raw_procs)
@@ -302,12 +325,6 @@ def cgroup_process_pin(pid, expected_start_ticks, *, proc_root=None, cgroup_root
         row['child_count'] = children
         row['children_complete'] = True
         row['leaf_cgroup'] = children == 0
-        try:
-            reclaim_info = os.stat('memory.reclaim', dir_fd=target_fd,
-                                   follow_symlinks=False)
-            row['memory_reclaim_present'] = stat.S_ISREG(reclaim_info.st_mode)
-        except OSError:
-            row['memory_reclaim_present'] = False
         after_ticks, after_path = _proc_identity(proc_root, pid)
         if after_ticks != expected_start_ticks or after_path != relative:
             raise CgroupPinHold('PROCESS_CHANGED_DURING_SNAPSHOT')
@@ -319,6 +336,8 @@ def cgroup_process_pin(pid, expected_start_ticks, *, proc_root=None, cgroup_root
             raise CgroupPinHold('CGROUP_NOT_LEAF')
         if not row['memory_reclaim_present']:
             raise CgroupPinHold('MEMORY_RECLAIM_ABSENT')
+        if row['memory_reclaim_state'] != 'REGULAR_ON_RW_MOUNT':
+            raise CgroupPinHold('MEMORY_RECLAIM_MOUNT_UNVERIFIED')
         pin = {'cgroup_path': relative, 'device': row['device'],
                'inode': row['inode'], 'members': members}
         pin_raw = json.dumps(pin, sort_keys=True, separators=(',', ':')).encode()

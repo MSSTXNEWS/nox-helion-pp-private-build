@@ -125,6 +125,45 @@ class CgroupPinReceiptTests(unittest.TestCase):
         self.assertTrue(receipt['members_complete'])
         self.assertTrue(receipt['read_only'])
 
+    def test_membership_failure_preserves_independent_control_observation(self):
+        self.add_proc(101, 1001, cgroup_path='/')
+        (self.cgroups / 'cgroup.type').write_text('domain\n')
+        (self.cgroups / 'cgroup.procs').write_text('0\n101\n')
+        (self.cgroups / 'memory.reclaim').write_text('')
+        receipt = self.pin()
+        self.assertEqual(receipt['state'], 'HOLD_CGROUP_PROCS_ZERO_PID')
+        self.assertTrue(receipt['memory_reclaim_present'])
+        self.assertEqual(receipt['memory_reclaim_state'], 'REGULAR_ON_RW_MOUNT')
+        self.assertFalse(receipt['members_complete'])
+        self.assertIsNone(receipt['pin_sha256'])
+
+    def test_pid_one_is_valid_membership_but_cannot_be_the_target_process(self):
+        self.add_proc(1, 1000)
+        self.add_proc(101, 1001)
+        (self.target / 'cgroup.procs').write_text('101\n1\n')
+        receipt = self.pin()
+        self.assertEqual(receipt['state'], 'PINNED_READ_ONLY')
+        self.assertEqual(receipt['members'][0], {'pid': 1, 'start_ticks': 1000})
+        self.assertEqual(self.pin(pid=1, start_ticks=1000)['state'], 'HOLD_CGROUP_PIN_INPUT')
+
+    def test_duplicate_member_format_has_a_distinct_hold(self):
+        self.add_proc(101, 1001)
+        (self.target / 'cgroup.procs').write_text('101\n101\n')
+        receipt = self.pin()
+        self.assertEqual(receipt['state'], 'HOLD_CGROUP_PROCS_DUPLICATE_PID')
+        self.assertIsNone(receipt['pin_sha256'])
+
+    def test_read_only_control_mount_cannot_produce_a_target_pin(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        self.add_proc(101, 1001)
+        (self.target / 'cgroup.procs').write_text('101\n')
+        with patch.object(INSPECT.os, 'fstatvfs', return_value=SimpleNamespace(f_flag=INSPECT.os.ST_RDONLY)):
+            receipt = self.pin()
+        self.assertEqual(receipt['state'], 'HOLD_CGROUP_MEMORY_RECLAIM_MOUNT_UNVERIFIED')
+        self.assertEqual(receipt['memory_reclaim_state'], 'MOUNT_READ_ONLY')
+        self.assertIsNone(receipt['pin_sha256'])
+
     def test_claimed_process_start_ticks_are_required(self):
         self.add_proc(101, 1002)
         (self.target / 'cgroup.procs').write_text('101\n')
