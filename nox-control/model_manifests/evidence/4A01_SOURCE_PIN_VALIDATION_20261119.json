@@ -88,5 +88,6 @@
       "sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd"
     },
     "qualification": "Metadata-only candidate. Local files were not downloaded or byte-verified; owner confirmation is required before manifest pins are promoted."
-  }
+  },
+  "supersession_note": "Historical validation record only: its HOLD result and missing dataset pins describe the pre-acquisition manifest state. The later source update pins the dataset revision and two split hashes; no current validator invocation was run after that update, so this file is not evidence that the current manifest passes the validator."
 }
