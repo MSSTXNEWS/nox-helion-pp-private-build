@@ -1,0 +1,24 @@
+name: NOX B1 exchange reconnect contract
+on:
+  push:
+    branches:
+      - b1/reconnect-exchange-contract-20261120-0019
+  pull_request:
+    paths:
+      - 'nox-control/owner_exchange_idempotency_contract.py'
+      - 'nox-control/test_b1_exchange_contract.py'
+      - '.github/workflows/nox-b1-exchange-contract-ci.yml'
+permissions:
+  contents: read
+jobs:
+  b1-exchange:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: One focused B1 exchange claim regression
+        run: |
+          python3 -m py_compile nox-control/owner_exchange_idempotency_contract.py nox-control/test_b1_exchange_contract.py
+          PYTHONPATH=nox-control python3 -m unittest -v test_b1_exchange_contract.B1ExchangeContractTests
