@@ -55,6 +55,8 @@ class ReviewedPreflightOwner(unittest.TestCase):
     def test_done_predecessor_never_replayed(self):
         t=ENTRY.read_text()
         self.assertIn("DONE_PREDECESSOR_READBACK",t)
+        self.assertIn("prior.get('status') == 'done'",t)
+        self.assertNotIn("prior.get('status') == 'blocked'",t)
         self.assertIn("'status':'done'",t)
         self.assertIn("'postimages':{'merge_web_source.py':SOURCE_SHA}",t)
         self.assertIn("ONE_SHOT_NO_REPLAY",t)
