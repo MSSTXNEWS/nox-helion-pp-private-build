@@ -37,6 +37,11 @@ class InstallContractTests(unittest.TestCase):
             backups=list(Path(d).glob('.script.py.previous-*'))
             self.assertEqual(len(backups),1)
             self.assertEqual(backups[0].read_bytes(),b'old')
+    def test_drive_first_private_receipt_root_created(self):
+        content=src.read_text()
+        self.assertIn("DRIVE_FIRST_STATE = Path('/var/lib/nox-drive-first')",content)
+        self.assertIn("private_dir(DRIVE_FIRST_STATE,create=True)",content)
+
     def test_native_workspace_does_not_modify_shared_nox_cache(self):
         content=src.read_text()
         self.assertNotIn("private_dir(ROOT/'cache'", content)

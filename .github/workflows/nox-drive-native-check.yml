@@ -1,7 +1,7 @@
 name: NOX Drive native task binding
 on:
   push:
-    branches: [feat/nox-drive-native-task-handler-20261120, fix/nox-drive-native-private-dirs-20261120, main]
+    branches: [feat/nox-drive-native-task-handler-20261120, fix/nox-drive-native-private-dirs-20261120, fix/nox-drive-native-state-root-20261120, main]
     paths:
       - 'nox-control/nox_drive_native_binding.py'
       - 'nox-control/test_nox_drive_native_binding.py'

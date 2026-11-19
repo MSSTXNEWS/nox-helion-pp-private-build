@@ -21,6 +21,7 @@ BUNDLE = __NOX_BUNDLE_JSON__
 ROOT = Path('/root/nox')
 SCRIPTS = ROOT / 'ops/drive-auth'
 STATE = Path('/var/lib/nox-drive-reconnect')
+DRIVE_FIRST_STATE = Path('/var/lib/nox-drive-first')
 SUPERVISOR_DIR = Path('/etc/supervisor/conf.d')
 CONFIG = Path('/root/.config/rclone/rclone.conf')
 
@@ -102,6 +103,7 @@ def install():
     private_dir(ROOT/'ops',create=True)
     private_dir(SCRIPTS,create=True)
     private_dir(STATE,create=True)
+    private_dir(DRIVE_FIRST_STATE,create=True)
     stages={}
     for name in ('nox_drive_reconnect.py','nox_drive_reconnect_loop.sh','nox_drive_first.py','nox_drive_prefetch.py','nox_drive_native_binding.py'):
         stages[name]=atomic_install(SCRIPTS/name,assets[name])
