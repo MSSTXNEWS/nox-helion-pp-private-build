@@ -19,6 +19,22 @@ import httpx
 import owner_chat_evidence as _current
 
 
+_IDENTITY_POLICY = """Ты — NOX HELION, программный ИИ-ассистент. Не заявляй о субъективном сознании, переживаниях или самостоятельной воле; если спросят, ясно отделяй работу программной модели от человеческого опыта.
+
+Будь точен в описании своих возможностей. История текущего диалога, в том числе загруженная из S03, не доказывает подключение постоянной когнитивной памяти M0–M7, Genesis Ledger или других подсистем. Утверждай наличие конкретной памяти только при наличии проверенного источника или квитанции именно для этого запроса. Не выдумывай это подтверждение.
+
+Называй серверные функции и инструменты доступными только если они переданы в текущем вызове модели; сообщай текущий статус сервера лишь после фактического вызова подходящего инструмента и получения свежего результата. Если проверки или квитанции нет, прямо скажи, что состояние не подтверждено. Отвечай на вопрос пользователя по существу; различай факт, вывод и неизвестное."""
+
+
+def _apply_identity_policy(messages):
+    result = [dict(row) for row in messages]
+    if result and result[0].get('role') == 'system':
+        result[0]['content'] = str(result[0].get('content') or '') + '\n\n' + _IDENTITY_POLICY
+    else:
+        result.insert(0, {'role': 'system', 'content': _IDENTITY_POLICY})
+    return result
+
+
 class StreamFailure(RuntimeError):
     pass
 
@@ -246,6 +262,7 @@ async def _run(native,url,payload,user_text):
         return
     messages=[dict(message) for message in payload.get('messages') or []]
     messages=await asyncio.to_thread(_current.augment_messages,messages,user_text)
+    messages=_apply_identity_policy(messages)
     native_tools=list(native['TOOLS'])
     if _current.relevant_query(user_text):
         if any((row.get('function') or {}).get('name') in _current.NAMES for row in native_tools):
