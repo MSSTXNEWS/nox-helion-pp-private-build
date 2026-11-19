@@ -3,7 +3,7 @@
 from __future__ import annotations
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-import json, os, re, shutil, subprocess, sys, time, stat
+import hashlib, json, os, re, shutil, subprocess, sys, time, stat
 
 SAFE=re.compile(r'^[A-Za-z0-9_./+@:= -]{1,300}$')
 ROOTS=('/root/nox','/root/nox_learn','/workspace')
@@ -382,12 +382,237 @@ def v13_owner_fence_metadata(root=Path('/root/nox'), workspace_stop=Path('/works
     }
 
 
+
+LIFELINE_SERVICE = "nox-lifeline-guard"
+LIFELINE_EXPECTED_ARGV = [
+    "/usr/bin/python3", "-u", "/root/nox/scripts/nox_native_lifeline.py",
+    "--policy", "/etc/nox/lifeline.json",
+    "--state", "/root/nox/state/lifeline/state.json",
+]
+LIFELINE_FILES = {
+    "script": ("/root/nox/scripts/nox_native_lifeline.py", 32768),
+    "policy": ("/etc/nox/lifeline.json", 32768),
+    "supervisor_config": ("/etc/supervisor/conf.d/nox-lifeline-guard.conf", 8192),
+    "state": ("/root/nox/state/lifeline/state.json", 1048576),
+}
+LIFELINE_SERVICES = {
+    "nox-dispatcher-t855u", "nox-priority-scheduler",
+    "nox-selfheal", "nox-gpu-watchdog-t865u",
+}
+
+def _lifeline_unique_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("DUPLICATE_JSON_KEY")
+        result[key] = value
+    return result
+
+def _lifeline_reject_constant(value):
+    raise ValueError("NONFINITE_JSON_VALUE")
+
+def _lifeline_read_allowlisted_file(name):
+    """Read one fixed file with no-follow, bounded regular-file semantics."""
+    entry = LIFELINE_FILES.get(name)
+    if entry is None:
+        return {"file": name, "status": "NOT_ALLOWLISTED"}, None
+    path_text, limit = entry
+    path = Path(path_text)
+    for parent in reversed(path.parents):
+        if parent == Path("/"):
+            continue
+        try:
+            if stat.S_ISLNK(parent.lstat().st_mode):
+                return {"file": name, "path": path_text, "status": "UNSAFE_PARENT"}, None
+        except OSError:
+            return {"file": name, "path": path_text, "status": "UNREADABLE_PARENT"}, None
+    if not hasattr(os, "O_NOFOLLOW"):
+        return {"file": name, "path": path_text, "status": "NOFOLLOW_UNAVAILABLE"}, None
+    flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        fd = os.open(path_text, flags)
+    except FileNotFoundError:
+        return {"file": name, "path": path_text, "status": "NOT_FOUND"}, None
+    except OSError:
+        return {"file": name, "path": path_text, "status": "OPEN_REFUSED_OR_UNREADABLE"}, None
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+            return {"file": name, "path": path_text, "status": "NOT_REGULAR_OR_HARDLINKED"}, None
+        metadata = {"file": name, "path": path_text,
+                    "mode": format(stat.S_IMODE(before.st_mode), "04o"),
+                    "uid": int(before.st_uid), "size_bytes": int(before.st_size)}
+        if before.st_size > limit:
+            return {**metadata, "status": "SIZE_LIMIT"}, None
+        raw = os.read(fd, limit + 1)
+        after = os.fstat(fd)
+        signature_before = (before.st_dev, before.st_ino, before.st_size,
+                            before.st_mtime_ns, before.st_ctime_ns)
+        signature_after = (after.st_dev, after.st_ino, after.st_size,
+                           after.st_mtime_ns, after.st_ctime_ns)
+        if (len(raw) > limit or len(raw) != before.st_size or
+                signature_before != signature_after):
+            return {**metadata, "status": "CHANGED_OR_SIZE_LIMIT"}, None
+        return {**metadata, "sha256": hashlib.sha256(raw).hexdigest(),
+                "status": "READ_OK_METADATA_ONLY"}, raw
+    except OSError:
+        return {"file": name, "path": path_text, "status": "READ_FAILED"}, None
+    finally:
+        os.close(fd)
+
+def _lifeline_policy_fields(raw):
+    result = {"parse_status": "INVALID_OR_UNREADABLE", "enabled": None,
+              "poll_seconds": None, "restart_flags": {}}
+    if raw is None:
+        return result
+    try:
+        value = json.loads(raw.decode("utf-8", errors="strict"),
+                           object_pairs_hook=_lifeline_unique_pairs,
+                           parse_constant=_lifeline_reject_constant)
+        if not isinstance(value, dict) or value.get("schema") != "NOX_LIFELINE_V2":
+            result["parse_status"] = "SCHEMA_MISMATCH"
+            return result
+        enabled = value.get("enabled")
+        poll = value.get("poll_seconds")
+        if type(enabled) is not bool or type(poll) is not int or not 15 <= poll <= 600:
+            result["parse_status"] = "POLICY_FIELDS_INVALID"
+            return result
+        flags = {}
+        services = value.get("services")
+        if not isinstance(services, list) or not 1 <= len(services) <= len(LIFELINE_SERVICES):
+            result["parse_status"] = "POLICY_SERVICES_INVALID"
+            return result
+        seen = set()
+        for item in services:
+            if (not isinstance(item, dict) or set(item) != {"name", "restart"}
+                    or item.get("name") not in LIFELINE_SERVICES
+                    or item.get("name") in seen or type(item.get("restart")) is not bool):
+                result["parse_status"] = "POLICY_SERVICE_FIELDS_INVALID"
+                return result
+            seen.add(item["name"])
+            flags[item["name"]] = item["restart"]
+        result.update({"parse_status": "POLICY_FIELDS_PARSED",
+                       "enabled": enabled, "poll_seconds": poll,
+                       "restart_flags": flags})
+        return result
+    except (ValueError, TypeError, UnicodeError):
+        return result
+
+def _lifeline_supervisor_service(binary, config):
+    if not binary:
+        return {"status": "SUPERVISORCTL_UNAVAILABLE"}
+    argv = [binary] + (["-c", config] if config else []) + ["status", LIFELINE_SERVICE]
+    rc, output = run(argv, seconds=12)
+    lines = output.strip().splitlines()
+    if rc not in (0, 3) or len(lines) != 1:
+        return {"status": "SUPERVISOR_STATUS_UNKNOWN", "rc": rc}
+    match = re.match(r"^([A-Za-z0-9_.:-]+)\s+(RUNNING|STARTING|STOPPED|FATAL|BACKOFF|EXITED|STOPPING|UNKNOWN)\b(.*)$", lines[0])
+    if not match or match[1] != LIFELINE_SERVICE:
+        return {"status": "SUPERVISOR_ROW_NOT_EXACT", "rc": rc}
+    state, tail = match[2], match[3]
+    pid_tokens = re.findall(r"\bpid\s+([0-9]+)", tail)
+    if re.search(r"\bpid\b", tail, re.IGNORECASE) and len(pid_tokens) != 1:
+        return {"status": "SUPERVISOR_PID_MALFORMED", "rc": rc}
+    if pid_tokens and (len(pid_tokens[0]) > 10 or int(pid_tokens[0]) <= 0):
+        return {"status": "SUPERVISOR_PID_OUT_OF_RANGE", "rc": rc}
+    pid = int(pid_tokens[0]) if pid_tokens else None
+    if rc == 3 and state not in ("STOPPED", "EXITED"):
+        return {"status": "SUPERVISOR_RC_STATE_CONFLICT", "rc": rc}
+    if (state == "RUNNING" and not pid) or (state in ("STOPPED", "EXITED") and pid is not None):
+        return {"status": "SUPERVISOR_PID_STATE_CONFLICT", "rc": rc}
+    result = {"status": "EXACT_SERVICE_ROW", "service": LIFELINE_SERVICE,
+              "state": state, "pid": pid, "rc": rc}
+    if state != "RUNNING" or pid is None:
+        return result
+    proc = Path("/proc") / str(pid)
+    try:
+        before = _proc_stat_identity(proc, pid)
+        cmdline, truncated = _read_bounded(proc / "cmdline", 8192)
+        if truncated:
+            return {**result, "status": "PROCESS_CMDLINE_TRUNCATED",
+                    "start_ticks": before["start_ticks"]}
+        raw_argv = [arg.decode("utf-8", errors="replace")
+                    for arg in cmdline.rstrip(b"\0").split(b"\0")]
+        after = _proc_stat_identity(proc, pid)
+        if before["start_ticks"] != after["start_ticks"]:
+            return {**result, "status": "PID_CHANGED_DURING_READ",
+                    "start_ticks_before": before["start_ticks"],
+                    "start_ticks_after": after["start_ticks"]}
+        result.update({"start_ticks": before["start_ticks"],
+                       "stat_state": before["state"], "ppid": before["ppid"],
+                       "pgrp": before["pgrp"],
+                       "argv_status": ("EXACT_ALLOWLISTED_COMMAND"
+                                       if raw_argv == LIFELINE_EXPECTED_ARGV
+                                       else "MISMATCH_REDACTED"),
+                       "identity_stable_during_read": True})
+        return result
+    except (OSError, ValueError, UnicodeError):
+        return {**result, "status": "PROCESS_IDENTITY_UNREADABLE"}
+
+def _lifeline_supervisor_config_fields(raw):
+    out = {"parse_status": "CONFIG_INVALID_OR_UNREADABLE",
+           "autostart": None, "autorestart": None,
+           "command_matches_allowlist": None}
+    if raw is None:
+        return out
+    try:
+        text = raw.decode("utf-8", errors="strict")
+    except UnicodeError:
+        return out
+    section = None
+    found = {}
+    duplicates = set()
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", ";")):
+            continue
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped[1:-1]
+            continue
+        if section != "program:nox-lifeline-guard" or "=" not in stripped:
+            continue
+        key, value = (part.strip() for part in stripped.split("=", 1))
+        if key in ("autostart", "autorestart", "command"):
+            if key in found:
+                duplicates.add(key)
+            found[key] = value
+    if duplicates:
+        out["parse_status"] = "DUPLICATE_CONFIG_KEYS"
+        return out
+    for key in ("autostart", "autorestart"):
+        value = found.get(key, "").lower()
+        out[key] = True if value == "true" else False if value == "false" else None
+    expected_command = ("/usr/bin/python3 -u /root/nox/scripts/nox_native_lifeline.py "
+                        "--policy /etc/nox/lifeline.json "
+                        "--state /root/nox/state/lifeline/state.json")
+    out["command_matches_allowlist"] = found.get("command") == expected_command
+    out["parse_status"] = ("CONFIG_FIELDS_PARSED"
+                           if out["autostart"] is not None and out["autorestart"] is not None
+                           else "CONFIG_FIELDS_PARTIAL")
+    return out
+
+def lifeline_evidence(binary=None, config=None):
+    """Narrow read-only status + path hashes; never expose policy/state contents."""
+    file_rows = {}
+    raw_files = {}
+    for label in ("script", "policy", "supervisor_config", "state"):
+        file_rows[label], raw_files[label] = _lifeline_read_allowlisted_file(label)
+    return {
+        "schema": "NOX_LIFELINE_EVIDENCE_V1",
+        "read_only": True,
+        "file_contents_exported": False,
+        "files": file_rows,
+        "policy": _lifeline_policy_fields(raw_files.get("policy")),
+        "supervisor_config": _lifeline_supervisor_config_fields(raw_files.get("supervisor_config")),
+        "service": _lifeline_supervisor_service(binary, config),
+    }
+
 def supervisor():
     fence=v13_owner_fence_metadata()
     binary=shutil.which('supervisorctl')
     if not binary:
         binary=next((x for x in ('/opt/venv/bin/supervisorctl','/usr/local/bin/supervisorctl') if Path(x).is_file()),None)
-    if not binary:return {'available':False,'owner_fence_readonly':fence}
+    if not binary:return {'available':False,'owner_fence_readonly':fence,'lifeline_evidence':lifeline_evidence()}
     candidates=[None]+[x for x in ('/etc/supervisor/supervisord.conf','/etc/supervisord.conf','/root/nox/supervisord.conf') if Path(x).is_file()]
     results=[]
     for c in candidates:
@@ -401,7 +626,7 @@ def supervisor():
                 rows.append({'name':m.group(1),'state':m.group(2),'pid':int(pid[1]) if pid else None})
         results.append({'config':c,'rc':rc,'services':rows})
         if rows:break
-    return {'available':True,'results':results,'owner_fence_readonly':fence}
+    return {'available':True,'results':results,'owner_fence_readonly':fence,'lifeline_evidence':lifeline_evidence(binary, c)}
 
 def v13_wheelhouse_admission(record):
     """Metadata-only ABI gate for the Drive CP311/cu126 wheelhouse, never an installer.
