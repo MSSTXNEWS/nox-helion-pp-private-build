@@ -322,6 +322,7 @@ def rewrite_browser(body):
                 raise RuntimeError('HOLD_FIRST_TURN_ANSWER_BOUND')
             first_done=final.get('done') if isinstance(final,dict) else None
             first_terminal=_nox_terminal_s03_records_valid(final,1)
+            saved=first_terminal
             native_equal=final.get('dom_answer_matches_native') is True
             public=public_numeric_answer(answer)
             report.update(stream=final,first_turn_terminal_sse_verified=first_terminal,
@@ -334,7 +335,6 @@ def rewrite_browser(body):
                           synthetic_public_numeric_answer=public,
                           progressive_stream_render_verified=progressive_stream_valid(final),
                           elapsed_turn_ms=round((time.monotonic()-started)*1000))
-            report['s03_readback_verified']=False
 """)
     body = replace_once(body,
         """                report['browser_stage']='QA_SECOND_TURN_SEND'
@@ -467,7 +467,10 @@ def main(core):
             'owner_lease_held': True,
             'actual_native_backend': False, 'authenticated_native_endpoint_stream_verified': False,
             'authenticated_s03_history_readback_verified': False, 'canonical_s03_receipt_verified': False,
-            'owner_authenticated_history_readback_gets': 0,
+            'canonical_s03_receipt_provider_present': False, 'owner_authenticated_history_readback_gets': 0,
+            'first_turn_terminal_sse_verified': False,
+            'both_terminal_sse_done_records_saved_s03_integrated': False, 'same_dialog_id': False,
+            'native_terminal_done_records': [], 'native_posts_admitted': 0,
             'upstream_model_inference_verified': False, 'upstream_model_request_bound': False,
             'synthetic_backend_used': False, 'stream_only_acceptance_verified': False,
             'strict_progressive_gate_unchanged': True, 'two_parts_observed': False,

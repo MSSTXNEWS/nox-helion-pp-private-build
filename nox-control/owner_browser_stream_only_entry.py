@@ -27,7 +27,7 @@ PINS = {
     'owner_chat_browser_qa.py': '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9',
     'owner_chat_browser_transport_qa.py': '360c155642ccdb43f39acf7b493068d3d2ac906bfd761c60d8c5ee51d48507fe',
     'owner_chat_browser_release_qa.py': 'eaa8af0e229c9ce0a730b7b472f8b9b8a1018fbd5cf7b8518890342d9d7047cb',
-    'owner_chat_stream_only_qa.py': '4e5fbc0f74388397f77282220e52c2f7cd4dfb4c9c7a25d8fb7ea19dcf5b96db',
+    'owner_chat_stream_only_qa.py': 'cfad3a0eee1728d89dd1ab7d6e451af284bc3ae12688f38f53955090b7bfe241',
 }
 ENV_SPEC = {'schema': 'NOX_OWNER_BROWSER_ENV_V1', 'playwright': '1.65.2',
             'base_python': '/root/nox/venv/bin/python', 'torch_modified': False}
@@ -191,13 +191,50 @@ def run_child(python, program, request, source):
     require(len(rows) == 1 and isinstance(rows[0].get('data'), dict), 'CHILD_RESULT')
     row = rows[0]; value = row['data']
     if row['kind'] == 'browser_stream_only_receipt':
-        require(value.get('schema') == 'NOX_OWNER_BROWSER_STREAM_ONLY_QA_V1'
+        records = value.get('native_terminal_done_records')
+        records_shape = (isinstance(records, list) and len(records) in (0, 2)
+                         and all(isinstance(item, dict)
+                                 and set(item) == {'saved', 's03_integrated', 'dialog_id_matches'}
+                                 and type(item.get('saved')) is bool
+                                 and type(item.get('s03_integrated')) is bool
+                                 and type(item.get('dialog_id_matches')) is bool
+                                 for item in records))
+        require(value.get('schema') == 'NOX_OWNER_BROWSER_STREAM_ONLY_QA_V2'
                 and value.get('request') == request and value.get('source_sha') == source
                 and value.get('full_browser_qa_promoted') is False
-                and value.get('upstream_model_inference_verified') is False, 'CHILD_SCOPE')
+                and value.get('upstream_model_inference_verified') is False
+                and value.get('two_turn_mode') is True
+                and value.get('maximum_new_dialogs') == 1
+                and value.get('maximum_native_posts') == 2
+                and type(value.get('first_turn_terminal_sse_verified')) is bool
+                and type(value.get('authenticated_s03_history_readback_verified')) is bool
+                and value.get('canonical_s03_receipt_verified') is False
+                and value.get('canonical_s03_receipt_provider_present') is False
+                and type(value.get('owner_authenticated_history_readback_gets')) is int
+                and value.get('owner_authenticated_history_readback_gets') in (0, 1)
+                and type(value.get('native_posts_admitted')) is int
+                and 0 <= value.get('native_posts_admitted') <= 2
+                and type(value.get('both_terminal_sse_done_records_saved_s03_integrated')) is bool
+                and type(value.get('same_dialog_id')) is bool
+                and records_shape, 'CHILD_SCOPE')
     if proc.returncode == 0:
-        require(row['kind'] == 'browser_stream_only_receipt' and value.get('state') == 'STREAM_ONLY_ACCEPTED'
-                and value.get('stream_only_acceptance_verified') is True, 'CHILD_ACCEPTANCE')
+        records = value['native_terminal_done_records']
+        require(row['kind'] == 'browser_stream_only_receipt'
+                and value.get('state') == 'STREAM_ONLY_ACCEPTED'
+                and value.get('stream_only_acceptance_verified') is True
+                and value.get('native_posts_admitted') == 2
+                and value.get('first_turn_terminal_sse_verified') is True
+                and value.get('both_terminal_sse_done_records_saved_s03_integrated') is True
+                and value.get('same_dialog_id') is True
+                and len(records) == 2
+                and all(item['saved'] is True and item['s03_integrated'] is True
+                        and item['dialog_id_matches'] is True for item in records)
+                and value.get('authenticated_s03_history_readback_verified') is True
+                and value.get('owner_authenticated_history_readback_gets') == 1
+                and value.get('canonical_s03_receipt_verified') is False
+                and value.get('owner_auth_verified') ==
+                    {'anonymous_status': 401, 'login_status': 200, 'session_status': 200},
+                'CHILD_ACCEPTANCE')
     emit(row['kind'], value)
     return 0 if proc.returncode == 0 else 2
 
