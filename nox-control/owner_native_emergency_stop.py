@@ -47,7 +47,7 @@ MODEL_SOURCE_ENV_KEYS = {
     "LLAMA_ARG_MODELS_AUTOLOAD",
 }
 MODEL_CONTEXT_ENV_KEYS = {
-    "LLAMA_ARG_KV_UNIFIED_PER_SLOT", "LLAMA_ARG_N_PARALLEL",
+    "LLAMA_ARG_KV_UNIFIED", "LLAMA_ARG_KV_UNIFIED_PER_SLOT", "LLAMA_ARG_N_PARALLEL",
     "LLAMA_ARG_CTX_CHECKPOINTS", "LLAMA_ARG_ROPE_SCALING_TYPE",
     "LLAMA_ARG_ROPE_SCALE", "LLAMA_ARG_ROPE_FREQ_BASE",
     "LLAMA_ARG_ROPE_FREQ_SCALE", "LLAMA_ARG_YARN_ORIG_CTX",
@@ -198,10 +198,15 @@ def supervisor_status() -> dict:
     p = command(["supervisorctl", "status", SUPERVISOR_SERVICE])
     lines = p.stdout.strip().splitlines()
     m = STATUS_LINE.fullmatch(lines[0]) if len(lines) == 1 else None
-    if m is None or m.group(1) != SUPERVISOR_SERVICE or p.returncode not in (0, 3):
+    if m is None or m.group(1) != SUPERVISOR_SERVICE:
         fail("SUPERVISOR_STATUS_UNTRUSTED")
-    return {"state": m.group(2), "pid": int(m.group(3)) if m.group(3) else None,
-            "rc": p.returncode}
+    state = m.group(2)
+    pid = int(m.group(3)) if m.group(3) else None
+    if ((state == "RUNNING" and (p.returncode != 0 or pid is None)) or
+            (state in ("STOPPED", "EXITED") and
+             (p.returncode != 3 or pid is not None))):
+        fail("SUPERVISOR_RC_STATE_PID_CONTRADICTION")
+    return {"state": state, "pid": pid, "rc": p.returncode}
 
 
 def cgroup_path(pid: int) -> Path:
@@ -299,15 +304,16 @@ def reject_model_context_selectors(args: list[str]) -> None:
     """
     short_selectors = {
         "-mu", "-dr", "-hf", "-hfr", "-hff", "-mm", "-mmu",
-        "-md", "-hfd", "-hfrd", "-np", "-ns", "-ctxcp", "-fit", "-fitc",
+        "-md", "-hfd", "-hfrd", "-np", "-ns", "-ctx", "-ctxcp",
+        "-kvu", "-no-kvu", "-fit", "-fitc",
     }
     long_prefixes = (
         "--model", "--hf", "--mmproj", "--models-", "--spec-draft-",
-        "--ctx-size", "--rope-", "--yarn-",
+        "--ctx-size", "--kv-unified", "--rope-", "--yarn-",
     )
     long_exact = {
         "--docker-repo", "--shard", "--ple", "--kv-unified-per-slot",
-        "--mtp", "--dflash", "--eagle3", "--spec-type", "--parallel",
+        "--no-kv-unified", "--mtp", "--dflash", "--eagle3", "--spec-type", "--parallel",
         "--sequences", "--ctx-checkpoints", "--swa-checkpoints",
         "--swa-full", "--fit", "--fit-ctx",
     }
@@ -316,8 +322,9 @@ def reject_model_context_selectors(args: list[str]) -> None:
     )
     for token in args:
         option = token.split("=", 1)[0]
-        if (token.startswith("-c=") or option in short_selectors or
-                option in long_exact or option.startswith(long_prefixes) or
+        if (token.startswith("-c=") or token.startswith("-m=") or
+                option in short_selectors or option in long_exact or
+                option.startswith(long_prefixes) or
                 option.startswith(preset_prefixes)):
             fail("MODEL_OR_CONTEXT_SELECTOR_ALIAS")
 
@@ -416,6 +423,18 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
     else:
         fail("UNKNOWN_PROCESS_ROLE")
     group = cgroup_path(pid)
+    try:
+        exe_after = os.readlink(proc / "exe")
+        with (proc / "cmdline").open("rb") as stream:
+            raw_cmdline_after = stream.read(MAX_CMDLINE_BYTES + 1)
+    except OSError:
+        fail(role + "_IDENTITY_REREAD_UNAVAILABLE")
+    if (len(raw_cmdline_after) > MAX_CMDLINE_BYTES or
+            not raw_cmdline_after.endswith(b"\0") or
+            exe_after != exe or
+            hashlib.sha256(raw_cmdline_after).digest() !=
+            hashlib.sha256(raw_cmdline).digest()):
+        fail(role + "_EXEC_IDENTITY_CHANGED_DURING_READ")
     if stable_start_ticks(pid, expected_ticks) != ticks:
         fail(role + "_IDENTITY_CHANGED_DURING_READ")
     return {"pid": pid, "start_ticks": ticks, "exe": exe_name,
