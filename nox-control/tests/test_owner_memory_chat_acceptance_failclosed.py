@@ -1,4 +1,5 @@
-import base64, hashlib, importlib.util, os, pathlib, tempfile, unittest
+import base64, hashlib, importlib.util, io, json, os, pathlib, tempfile, unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 SOURCE=pathlib.Path(__file__).resolve().parents[1]/'owner_memory_chat_acceptance.py'
@@ -73,6 +74,43 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                 'failed':[{'component':name,'reason':'HOLD_OWNER_STOP'}],
                 'training_started':False,'private_content_exported':False}),
         ])
+
+    def test_browser_receipt_requires_native_stream_and_s03_readback(self):
+        spec=importlib.util.spec_from_file_location('a3_receipt_acceptance', SOURCE)
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        name='owner_browser_qa_entry.py'
+        raw=b'def main():\\n    return None\\n'
+        # Use a real source payload; only the private synthetic receipt is simulated.
+        module.STAGES=((name, hashlib.sha256(raw).hexdigest()),)
+        module.BUNDLE={name:base64.b64encode(raw).decode()}
+        emitted=[]
+        module.emit=lambda kind,data:emitted.append((kind,data))
+        request, source='701', 'e'*40
+        with tempfile.TemporaryDirectory() as t:
+            receipt=pathlib.Path(t)/'state/owner_browser_qa'/request/'receipt.json'
+            receipt.parent.mkdir(parents=True)
+            with patch.dict(os.environ,{'NOX_OWNER_REQUEST_ID':request,'NOX_OWNER_SOURCE_SHA':source}), patch.object(module,'Path',lambda _:pathlib.Path(t)):
+                with redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(module.main(),2)
+                self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true',output.getvalue())
+                self.assertEqual(emitted[0][1]['reason'],'HOLD_BROWSER_QA_RECEIPT_MISSING')
+                proof={'schema':'NOX_OWNER_NATIVE_BROWSER_QA_V1','request':request,'source_sha':source,
+                       'state':'PASSED','functional_acceptance_verified':True,
+                       'actual_native_model_stream_verified':True,'s03_readback_verified':False,
+                       'screenshot_capture_verified':True,'synthetic_backend_used':False,
+                       'private_text_or_credentials_exported':False}
+                receipt.write_text(json.dumps(proof))
+                emitted.clear()
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(module.main(),2)
+                self.assertEqual(emitted[0][1]['reason'],'HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
+                proof['s03_readback_verified']=True
+                receipt.write_text(json.dumps(proof))
+                emitted.clear()
+                with redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(module.main(),0)
+                self.assertIn('NOX_MAINT_REPAIR_COMPLETE=true',output.getvalue())
+                self.assertEqual(emitted[-1][1]['failed'],[])
 
     def test_inventory_mode_cannot_masquerade_as_browser_acceptance(self):
         spec=importlib.util.spec_from_file_location('a3_inventory_acceptance', SOURCE)
