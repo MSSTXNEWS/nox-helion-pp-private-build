@@ -383,6 +383,24 @@ def memory_governor_projection(capacity):
             'model_or_s03_mutation': False}
 
 
+def _native_handler_scope(row):
+    """Fail closed for malformed native-marked handlers, ignore legacy noise.
+
+    The global legacy catalog may contain records without a native handler.
+    An explicit malformed handler *with* a native receipt/binding marker is
+    not proof that the native worker has released its job.
+    """
+    if not isinstance(row, dict):
+        return 'legacy'
+    handler = row.get('handler')
+    if type(handler) is str:
+        return 'native' if handler in NATIVE_HANDLERS else 'legacy'
+    if 'handler' in row and (isinstance(row.get('systemic_relay'), dict)
+                             or isinstance(row.get('native_project_terminal'), dict)):
+        return 'unknown'
+    return 'legacy'
+
+
 def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_rows):
     """Continuous *read-only* NOX self-observation and task discovery.
 
@@ -405,7 +423,12 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
     # Only these three native execution handlers count as native workload.
     native_observed = 0
     for row in tasks.values():
-        if not isinstance(row, dict) or row.get('handler') not in NATIVE_HANDLERS:
+        scope = _native_handler_scope(row)
+        if scope == 'unknown':
+            # Malformed native-bound handler metadata cannot prove the queue idle.
+            states['unknown'] += 1
+            continue
+        if scope != 'native':
             continue
         native_observed += 1
         status = row.get('status')
@@ -543,11 +566,14 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
     rows, contracts, bindings, rejected = [], {}, {}, []
     # Unknown native states cannot be interpreted as an empty queue. Preserve
     # existing work and withhold new missions until the owner reconciles it.
-    unknown_native = any(isinstance(task, dict)
-        and task.get('handler') in NATIVE_HANDLERS
-        and (type(task.get('status')) is not str
-             or task['status'] not in ACTIVE | TERMINAL)
-        for task in state_snapshot.values())
+    unknown_native = False
+    for task in state_snapshot.values():
+        scope = _native_handler_scope(task)
+        if scope == 'unknown' or (scope == 'native'
+                and (type(task.get('status')) is not str
+                     or task['status'] not in ACTIVE | TERMINAL)):
+            unknown_native = True
+            break
     reserved = set()
     external_reservations = capacity.get('reserved_sources',[])
     require(isinstance(external_reservations,list) and len(external_reservations) <= 512,
