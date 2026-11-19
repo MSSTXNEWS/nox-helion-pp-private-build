@@ -777,6 +777,62 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                 save(tampered)
                 self.assertIsNone(scope["_durable_terminal_s03_readback"](restarted, task["id"]))
 
+    def test_s03_readback_nonobject_metadata_fails_closed(self):
+        # Execute the actual S03 receipt reader without a live host connection.
+        # Valid JSON with a non-dict root must not crash interrupted recovery.
+        import contextlib
+        import hashlib
+        import json
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        functions = [node for node in tree.body
+                     if isinstance(node, ast.FunctionDef)
+                     and node.name == "s03_readback"]
+        self.assertEqual(len(functions), 1)
+
+        class LocalCursor:
+            def __init__(self, marker):
+                self.marker = marker
+                self.meta = None
+            def execute(self, _sql, _args):
+                return self
+            def fetchall(self):
+                return [(9, self.marker, self.meta,
+                         hashlib.sha256(("M2|" + self.marker).encode()).hexdigest())]
+
+        marker = "NOX durable terminal receipt TEST"
+        cursor = LocalCursor(marker)
+        @contextlib.contextmanager
+        def local_s03_connection():
+            yield cursor
+
+        def encoded(value):
+            return json.dumps(value, sort_keys=True,
+                              separators=(",", ":")).encode()
+        scope = {
+            "json": json,
+            "DB": Path("/nonexistent/isolated/readback.sqlite"),
+            "encoded": encoded,
+            "digest": lambda data: hashlib.sha256(data).hexdigest(),
+            "memory_text": lambda _: marker,
+            "s03_connection": local_s03_connection,
+        }
+        exec(compile(ast.fix_missing_locations(ast.Module(
+            body=functions, type_ignores=[])), str(SOURCE), "exec"), scope)
+        reader = scope["s03_readback"]
+        receipt = {"task_id": "B1", "job_id": "job", "phase": "terminal"}
+        for payload in ([], None, "not a dict", 7, True, {},
+                        {"receipt": {"task_id": "foreign"}}):
+            with self.subTest(meta=repr(payload)):
+                cursor.meta = json.dumps(payload)
+                self.assertIsNone(reader(receipt))
+        cursor.meta = "{invalid-json"
+        self.assertIsNone(reader(receipt))
+        cursor.meta = json.dumps({"receipt": receipt})
+        proof = reader(receipt)
+        self.assertTrue(proof["native_verified"])
+        self.assertEqual(proof["task_id"], "B1")
+        self.assertEqual(proof["job_id"], "job")
+
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
