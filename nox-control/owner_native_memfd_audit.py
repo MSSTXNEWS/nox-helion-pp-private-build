@@ -36,7 +36,7 @@ SHA40 = re.compile(r"^[0-9a-f]{40}$")
 IDENTITY_HOLD_ALLOWLIST = {
     "HOLD_PROC_STAT_IDENTITY", "HOLD_PROC_STAT_FIELDS", "HOLD_READ_LIMIT",
     "HOLD_HOLDER_SCRIPT_SHAPE", "HOLD_HOLDER_PATH_IDENTITY",
-    "HOLD_HOLDER_CWD_SHAPE", "HOLD_HOLDER_CGROUP_UNAVAILABLE",
+    "HOLD_HOLDER_EXECUTABLE_SHAPE", "HOLD_HOLDER_CGROUP_UNAVAILABLE",
     "HOLD_HOLDER_IDENTITY_UNSTABLE",
 }
 HISTORICAL_HOLDER_PID_PRIORITY = 498569
@@ -115,8 +115,8 @@ def proc_identity(proc_root: Path, pid: int) -> dict:
         raise Hold("HOLD_HOLDER_PATH_IDENTITY") from exc
     exe_name = Path(os.fsdecode(exe).removesuffix(" (deleted)")).name
     if exe_name not in {
-            "python3", "python3.11", "python3.12", "python3.13"}:
-        raise Hold("HOLD_HOLDER_CWD_SHAPE")
+            "python", "python3", "python3.11", "python3.12", "python3.13"}:
+        raise Hold("HOLD_HOLDER_EXECUTABLE_SHAPE")
     try:
         cgroup = _read(base / "cgroup", MAX_CGROUP_BYTES)
     except (OSError, Hold) as exc:

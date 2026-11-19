@@ -19,14 +19,14 @@ FIXTURE_INODE = 131095
 
 def write_proc(root: Path, pid: int, *, argv: bytes,
                ticks: int = 12345, memfd: Path | None = None,
-               maps: bool = False) -> Path:
+               maps: bool = False, exe_path: str = "/usr/bin/python3") -> Path:
     base = root / str(pid)
     (base / "fd").mkdir(parents=True)
     fields = ["S", "1", "1"] + ["0"] * 16 + [str(ticks)]
     (base / "stat").write_text(f"{pid} (python3) " + " ".join(fields) + "\n")
     (base / "cmdline").write_bytes(argv)
     (base / "cgroup").write_text("0::/user.slice/nox.scope\n")
-    (base / "exe").symlink_to("/usr/bin/python3")
+    (base / "exe").symlink_to(exe_path)
     (base / "cwd").symlink_to("/relocated/engram-holder")
     if memfd is not None:
         (base / "fd" / "9").symlink_to(memfd)
@@ -53,6 +53,23 @@ def holder_argv(path: str = "/moved/location/engram_memfd_holder.py") -> bytes:
 
 
 class MemfdAuditTests(unittest.TestCase):
+    def test_python_executable_basename_is_accepted_for_holder(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "proc"
+            root.mkdir()
+            write_proc(root, 777010, argv=holder_argv(), exe_path="/opt/python/bin/python")
+            identity = audit.proc_identity(root, 777010)
+        self.assertEqual(identity["pid"], 777010)
+        self.assertEqual(identity["start_ticks"], 12345)
+
+    def test_arbitrary_executable_basename_is_rejected_for_holder(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "proc"
+            root.mkdir()
+            write_proc(root, 777011, argv=holder_argv(), exe_path="/opt/bin/custom-runtime")
+            with self.assertRaisesRegex(audit.Hold, "HOLD_HOLDER_EXECUTABLE_SHAPE"):
+                audit.proc_identity(root, 777011)
+
     def test_holder_path_is_matched_by_basename(self):
         self.assertEqual(audit._script_path_token(holder_argv()),
                          b"/moved/location/engram_memfd_holder.py")
