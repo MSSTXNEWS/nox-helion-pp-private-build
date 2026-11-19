@@ -171,13 +171,7 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
             with patch.dict(os.environ,{'NOX_OWNER_REQUEST_ID':request,
                                        'NOX_OWNER_SOURCE_SHA':source}), patch.object(module,'Path',lambda _:pathlib.Path(t)):
                 started=time.monotonic()
-                with self.assertRaisesRegex(RuntimeError, r'^HOLD_BROWSER_QA_RECEIPT_TYPE
-                    module.verify_browser_receipt(0)
-                self.assertLess(time.monotonic()-started,1.0)
-
-
-if __name__=='__main__':unittest.main()
-):
+                with self.assertRaisesRegex(RuntimeError, r'^HOLD_BROWSER_QA_RECEIPT_TYPE$'):
                     module.verify_browser_receipt(0)
                 self.assertLess(time.monotonic()-started,1.0)
 
