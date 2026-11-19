@@ -399,6 +399,40 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(stream._executor_status_reply(question))
 
 
+    async def test_deterministic_falsy_arguments_hold_before_native_dispatch(self):
+        # Deterministic calls used to coalesce present falsey arguments into {},
+        # bypassing the shared _normal_calls shape guard.
+        for value in (None, [], False, 0, '', 'null', '[]', 'false'):
+            with self.subTest(argument=repr(value)):
+                native=self.native()
+                native['_POOL']=True
+                native['prepare_payload']=lambda req,cache=False:req
+                native['try_deterministic']=lambda text:{'tool':'calculate','arguments':value}
+                payload={'messages':[{'role':'user','content':'Calculate'}]}
+                with patch.object(stream.httpx,'AsyncClient',
+                                  side_effect=AssertionError('no model call allowed')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn('HOLD_TOOL_ARGUMENTS',wire)
+                self.assertEqual(self.dispatched,[])
+                self.assertNotIn('_agent_final',payload)
+        native=self.native()
+        native['_POOL']=True
+        native['prepare_payload']=lambda req,cache=False:req
+        native['try_deterministic']=lambda text:{'tool':'calculate'}
+        payload={'messages':[{'role':'user','content':'Calculate'}]}
+        requests,factory=self.transport([])
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Calculate',True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertEqual(self.dispatched,[('calculate',{})])
+        self.assertEqual(requests,[])
+        self.assertEqual(payload['_agent_final'],'323')
+        self.assertIn('[DONE]',wire)
+
+
 class TransformTests(unittest.IsolatedAsyncioTestCase):
     def test_unknown_native_source_is_rejected(self):
         for transform in (transforms.patch_agent_loop,transforms.patch_slim,transforms.patch_proxy):
