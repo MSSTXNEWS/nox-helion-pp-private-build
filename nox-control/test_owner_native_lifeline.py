@@ -214,3 +214,8 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(n.info("nox-dispatcher-t855u")["state"],"UNKNOWN")
 
 if __name__=="__main__":unittest.main()
+
+
+# Include the bounded owner GPU inventory regressions in the existing operator safety CI.
+from test_owner_native_gpu_inventory import GpuInventoryTests as GpuInventorySourceTests
+from test_owner_native_operator_gpu_inventory import OwnerGpuInventoryOperatorTests as GpuInventoryOperatorSourceTests
