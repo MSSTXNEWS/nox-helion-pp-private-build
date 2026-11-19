@@ -255,6 +255,38 @@ test('V135 active-session retry conflict never sends session-wide STOP',async()=
     'a rejected retry cannot read back or certify another request');
 });
 
+test('V135 409 classification is bounded and preserves STOP for non-exact bodies',async()=>{
+  const encoder=new TextEncoder();
+  const slow409=(delay,body)=>new Response(new ReadableStream({start(c){
+    setTimeout(()=>{c.enqueue(encoder.encode(body));c.close();},delay);
+  }}),{status:409});
+  const cases=[
+    {name:'exact delayed before timeout',make:()=>slow409(850,'{"error":"HOLD_ACTIVE_SESSION_STREAM"}'),abort:true,stops:0},
+    {name:'exact body after timeout',make:()=>slow409(1200,'{"error":"HOLD_ACTIVE_SESSION_STREAM"}'),abort:true,stops:0},
+    {name:'malformed body',make:()=>new Response('{',{status:409}),stops:1},
+    {name:'oversized body',make:()=>Response.json({error:'HOLD_ACTIVE_SESSION_STREAM',padding:'x'.repeat(700)},{status:409}),stops:1},
+    {name:'different error code',make:()=>Response.json({error:'HOLD_OTHER_CONFLICT'},{status:409}),stops:1}
+  ];
+  for(const item of cases){
+    const caller=new AbortController();let modelSignal;
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+      undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,undefined,
+      (_calls,opts)=>{modelSignal=opts.signal;return item.make();});
+    const response=await f.fetch('/api/nox/chat',{method:'POST',signal:caller.signal,
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v449-'+item.name})});
+    if(item.abort)setTimeout(()=>caller.abort(),20);
+    const frames=await Promise.race([events(response),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_409_CASE_'+item.name)),2500))]);
+    assert.equal(frames.filter(e=>e.type==='done').length,0,item.name+' cannot certify a rejected stream');
+    assert(frames.some(e=>e.type==='error'),item.name+' must terminate with an error');
+    assert.equal(f.calls.filter(c=>c.path==='/api/nox/stop').length,item.stops,item.name+' STOP count');
+    assert.equal(f.calls.some(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')),false,
+      item.name+' cannot read/certify history');
+    if(item.stops)assert.equal(modelSignal.aborted,true,item.name+' preserves STOP-then-abort');
+    if(item.abort)assert.equal(modelSignal.aborted,true,item.name+' must locally abort after classification');
+  }
+});
+
 test('V135 already-aborted caller never starts a native inference',async()=>{
   const f=fake(),abort=new AbortController();
   abort.abort();
