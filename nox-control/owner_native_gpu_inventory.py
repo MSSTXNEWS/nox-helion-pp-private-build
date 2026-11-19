@@ -28,13 +28,24 @@ QUERY = (
 MAX_OUTPUT_BYTES = 4096
 MAX_ROW_BYTES = 512
 MAX_GPUS = 2
+MAX_MEMORY_MIB = 1_048_576
+MEMORY_DIAGNOSTIC_PREFIX = "NOX_MAINT_GPU_INVENTORY_MEMORY_DIAGNOSTIC="
 UUID_RE = re.compile(r"GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z")
 SOURCE_RE = re.compile(r"[0-9a-f]{40}\Z")
 BOOT_RE = re.compile(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z")
 
 
-def _hold(code: str) -> RuntimeError:
-    return RuntimeError(code if re.fullmatch(r"HOLD_[A-Z0-9_]+", code) else "HOLD_GPU_INVENTORY_INVALID")
+class GPUInventoryHold(RuntimeError):
+    """A fixed helper hold with optional bounded, identity-free numeric evidence."""
+
+    def __init__(self, code: str, memory_diagnostic=None):
+        self.memory_diagnostic = memory_diagnostic
+        super().__init__(code)
+
+
+def _hold(code: str, memory_diagnostic=None) -> RuntimeError:
+    safe_code = code if re.fullmatch(r"HOLD_[A-Z0-9_]+", code) else "HOLD_GPU_INVENTORY_INVALID"
+    return GPUInventoryHold(safe_code, memory_diagnostic=memory_diagnostic)
 
 
 def _read_host_clock(read_text):
@@ -55,6 +66,7 @@ def parse_gpu_rows(output: str):
     if not isinstance(output, str) or len(output.encode("utf-8")) > MAX_OUTPUT_BYTES:
         raise _hold("HOLD_GPU_INVENTORY_OUTPUT_BOUND")
     rows = []
+    memory_sum_diagnostics = []
     try:
         parsed = list(csv.reader(io.StringIO(output, newline=""), strict=True))
     except (csv.Error, TypeError, ValueError) as exc:
@@ -75,10 +87,20 @@ def parse_gpu_rows(output: str):
             raise _hold("HOLD_GPU_INVENTORY_IDENTITY")
         numbers = (total_text, used_text, free_text)
         if any(not re.fullmatch(r"[0-9]{1,7}", value) for value in numbers):
-            raise _hold("HOLD_GPU_INVENTORY_MEMORY")
+            raise _hold("HOLD_GPU_INVENTORY_MEMORY_FORMAT")
         total, used, free = (int(value) for value in numbers)
-        if total <= 0 or used < 0 or free < 0 or used > total or free > total or used + free != total:
-            raise _hold("HOLD_GPU_INVENTORY_MEMORY")
+        if (total <= 0 or used < 0 or free < 0 or used > total or free > total
+                or max(total, used, free) > MAX_MEMORY_MIB):
+            raise _hold("HOLD_GPU_INVENTORY_MEMORY_RANGE")
+        residual = total - used - free
+        if residual != 0:
+            memory_sum_diagnostics.append({
+                "index": index,
+                "total_mib": total,
+                "used_mib": used,
+                "free_mib": free,
+                "residual_mib": residual,
+            })
         rows.append({
             "index": index,
             "model": name,
@@ -93,6 +115,8 @@ def parse_gpu_rows(output: str):
         raise _hold("HOLD_GPU_INVENTORY_DUPLICATE_INDEX")
     if len({row["uuid"] for row in rows}) != MAX_GPUS:
         raise _hold("HOLD_GPU_INVENTORY_DUPLICATE_UUID")
+    if memory_sum_diagnostics:
+        raise _hold("HOLD_GPU_INVENTORY_MEMORY_SUM", memory_diagnostic=memory_sum_diagnostics)
     return sorted(rows, key=lambda row: row["index"])
 
 
@@ -203,6 +227,13 @@ def main():
         if not re.fullmatch(r"HOLD_[A-Z0-9_]+", code):
             code = "HOLD_GPU_INVENTORY_" + type(exc).__name__.upper()
         print("NOX_MAINT_GPU_INVENTORY_RESULT=" + code, flush=True)
+        diagnostic = getattr(exc, "memory_diagnostic", None)
+        if (code == "HOLD_GPU_INVENTORY_MEMORY_SUM" and isinstance(diagnostic, list)
+                and 1 <= len(diagnostic) <= MAX_GPUS):
+            print(MEMORY_DIAGNOSTIC_PREFIX + json.dumps({
+                "schema": "NOX_GPU_MEMORY_DIAGNOSTIC_V1",
+                "rows": diagnostic,
+            }, sort_keys=True, separators=(",", ":")), flush=True)
         return 2
     print("NOX_MAINT_GPU_INVENTORY=" + json.dumps(receipt, sort_keys=True, separators=(",", ":")), flush=True)
     print("NOX_MAINT_GPU_INVENTORY_COMPLETE=true", flush=True)
