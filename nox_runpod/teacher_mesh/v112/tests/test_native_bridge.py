@@ -314,6 +314,17 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(response.json()['reason'],'HOLD_ADMISSION_STATE_UNAVAILABLE')
         self.assertEqual(self.calls,[])
 
+    def test_stream_lease_write_failure_aborts_before_native_generation(self):
+        store=self.app.state._nox_v112_admission_store
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Lease write failure','confirmed':True}).json()['dialog_id']
+        with mock.patch.object(store,'mark_stream',side_effect=OSError('fixture state write failure')):
+            response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+                json={'message':'must not reach native model','dialog_id':dialog})
+        self.assertEqual(response.status_code,503,response.text)
+        self.assertEqual(response.json()['reason'],'HOLD_ADMISSION_STATE_UNAVAILABLE')
+        self.assertEqual(self.calls,[],'native completion must not start after stream admission state failed')
+
     def test_quiesce_timeout_keeps_fence_until_exact_owner_resume(self):
         store=self.app.state._nox_v112_admission_store
         token=store.admit()

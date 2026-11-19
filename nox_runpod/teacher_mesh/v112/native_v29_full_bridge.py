@@ -63,6 +63,10 @@ class _AdmissionHold(RuntimeError):
     """Stable, non-secret admission-controller hold reason."""
 
 
+class _AdmissionMiddlewareAbort(Exception):
+    """Stop a response before its streaming body can start after a state failure."""
+
+
 def _proc_start_ticks(pid):
     """Return Linux /proc start ticks, distinguishing PID reuse from a live lease."""
     try:
@@ -422,14 +426,18 @@ class _GlobalAdmissionMiddleware:
                 except Exception:
                     state_error=True
                     if response_started:
-                        raise _AdmissionHold('HOLD_ADMISSION_STATE_UNAVAILABLE')
+                        raise _AdmissionMiddlewareAbort()
                     await self._reject(scope,send,'HOLD_ADMISSION_STATE_UNAVAILABLE')
-                    return
+                    raise _AdmissionMiddlewareAbort()
                 stream_marked=True
             if message.get('type')=='http.response.start':response_started=True
             await send(message)
         try:
             await self.app(scope,receive,tracked_send)
+        except _AdmissionMiddlewareAbort:
+            # In particular, do not let StreamingResponse start its generator
+            # after we've returned a fail-closed response to the caller.
+            pass
         finally:
             try:self.store.release(token)
             except Exception:pass
@@ -871,15 +879,15 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None, *,
             raise RuntimeError('HOLD_NATIVE_OWNER_CALLBACK_'+name)
     if getattr(app.state,'_nox_v112_admission_middleware',False):
         raise RuntimeError('HOLD_ADMISSION_MIDDLEWARE_ALREADY_REGISTERED')
+    existing={getattr(r,'path','') for r in app.routes}
+    if '/api/nox/chat/stream' in existing or '/api/nox/stop' in existing:
+        raise RuntimeError('HOLD_V29_STREAM_ALREADY_REGISTERED')
     admission_store=_AdmissionStore(
         _admission_state_dir if _admission_state_dir is not None else ADMISSION_STATE_DIR,
         owner_uid=_admission_owner_uid)
     app.add_middleware(_GlobalAdmissionMiddleware,store=admission_store)
     app.state._nox_v112_admission_middleware=True
     app.state._nox_v112_admission_store=admission_store
-    existing={getattr(r,'path','') for r in app.routes}
-    if '/api/nox/chat/stream' in existing or '/api/nox/stop' in existing:
-        raise RuntimeError('HOLD_V29_STREAM_ALREADY_REGISTERED')
     # V108 calls register *after* legacy callbacks are defined, and adds one
     # extra status decorator after this call. Remove only previous status
     # APIRoute, replacing it with a compatible superset that comes first.
