@@ -1669,3 +1669,29 @@ test('V192 queued native history fetch does not start after scoped STOP',async()
   assert.equal(f.calls.filter(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')).length,0,
     'an aborted queued native fetch must not execute a stale network request');
 });
+
+test('V194 scoped AbortSignal STOP reports stopped UI phase without S03 success',async()=>{
+  const abort=new AbortController(),phases=[];let stopped=false,historyCalled=false;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,()=>{historyCalled=true;},'verified-exchange-01',
+    [],false,false,prompt,undefined,{onPhase:p=>{
+      phases.push(p);
+      if(p==='speaking'&&!stopped){stopped=true;abort.abort();}
+    }});
+  const out=await events(await f.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v194-signal-stop'})}));
+  assert.equal(stopped,true,'abort must occur after live speaking phase');
+  assert.equal(out.filter(e=>e.type==='done').length,0,'no forged persisted completion');
+  assert.equal(out.filter(e=>e.type==='error').at(-1).error,'STREAM_STOP_REQUESTED');
+  assert.equal(phases.at(-1),'stopped','scoped STOP must not repaint error UI');
+  assert.equal(phases.includes('error'),false,'STOP is not a model error');
+  assert.equal(historyCalled,false,'aborted turn cannot claim S03 readback');
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+  const failure=fake(true,'/nox-web-v29/pc/resonance.html',true,answer,3,
+    undefined,false,5,undefined,'verified-exchange-01',
+    [],false,false,prompt,undefined,{onPhase:p=>phases.push(p)});
+  const frames=await events(await failure.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v194-genuine-error'})}));
+  assert.equal(frames.some(e=>e.type==='error'&&/HOLD_S03_COMMIT_RECEIPT/.test(e.error)),true);
+  assert.equal(phases.at(-1),'error','genuine S03 failure still reports error');
+});
