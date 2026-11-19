@@ -311,6 +311,48 @@ def assert_services(expected, include_proxy=True):
                 'SERVICE_PREDECESSOR_' + name.replace('-', '_').upper())
 
 
+
+def current_scoped_predecessors(spec):
+    """Pin current managed processes once; never trust stale PIDs across relays.
+
+    This is only an admission renewal. Original exact preimage and protected
+    source hashes, STOP, owner lock, resource and model-idle guards still apply.
+    """
+    global DISPATCHER_IDENTITY
+    gate()
+    require(preserved()['source_pins']['chat_proxy.py'] == PROTECTED['chat_proxy.py'],
+            'PROXY_SOURCE_CHANGED')
+    original = spec['services']
+    require(service('nox-ds41-8098').get('identity') == original['nox-ds41-8098'],
+            'MODEL_IDENTITY_CHANGED')
+    fresh = {'nox-ds41-8098': dict(original['nox-ds41-8098'])}
+    scripts = {
+        'nox-proxy': SCRIPTS / 'chat_proxy.py',
+        'nox-web29-18775': SCRIPTS / 'nox_web29_onehost_18775.py',
+        DISPATCHER: SCRIPTS / 'nox_dispatcher_t855u.py',
+    }
+    for name, script in scripts.items():
+        row = service(name)
+        require(row.get('state') == 'RUNNING', 'FRESH_SERVICE_DOWN_' + name.replace('-', '_').upper())
+        proc = process(row['identity']['pid'])
+        require(os.fsencode(str(script)) in proc['argv'],
+                'FRESH_SERVICE_ARGV_' + name.replace('-', '_').upper())
+        require(proc['pid'] == proc['pgrp'] and
+                all(proc[key] == row['identity'][key] for key in ('pid','pgrp','start_ticks')),
+                'FRESH_SERVICE_PROCESS_CHANGED_' + name.replace('-', '_').upper())
+        if name == DISPATCHER:
+            DISPATCHER_IDENTITY = dict(row['identity'])
+        else:
+            fresh[name] = dict(row['identity'])
+    for name in SERVICES:
+        require(service(name).get('identity') == fresh[name],
+                'FRESH_SERVICE_RACE_' + name.replace('-', '_').upper())
+    require(service(DISPATCHER).get('identity') == DISPATCHER_IDENTITY,
+            'FRESH_DISPATCHER_RACE')
+    return fresh
+
+
+
 def proxy_group_alone(expected):
     _, raw = command(['ps', '-eo', 'pid=,pgid=,stat='], timeout=5)
     members = []
@@ -549,7 +591,7 @@ def pair(row):
 def main():
     request, source_sha = (os.environ.get(k, '') for k in ('NOX_OWNER_REQUEST_ID', 'NOX_OWNER_SOURCE_SHA'))
     require(re.fullmatch(r'[0-9]{1,24}', request) and re.fullmatch(r'[a-f0-9]{40}', source_sha), 'OWNER_CONTEXT')
-    spec = contract(); expected = spec['services']; rows = []; journal = None; previous = None; new_proxy = None
+    spec = contract(); expected = current_scoped_predecessors(spec); rows = []; journal = None; previous = None; new_proxy = None
     before = None; original_executable = None
     record = {'schema': SCHEMA, 'request': request, 'source_sha': source_sha, 'contract_sha256': CONTRACT_SHA256,
         'state': 'PREFLIGHT', 'source_changed': [], 'proxy_stop_attempted': False, 'proxy_start_attempted': False,
