@@ -12,6 +12,7 @@ from unittest import mock
 
 from owner_native_inspect_comment_guard import (
     APPROVED_SOURCE_BY_ACTION,
+    CGROUP_CONTROL_INSPECT_SHA,
     ISSUE_NUMBER,
     OWNER_ID,
     REPOSITORY,
@@ -51,6 +52,19 @@ def event_for(body: str = f"/nox-maintain 60509551 {INSPECT_SHA} inspect") -> di
 
 
 class OwnerCommentGuardTests(unittest.TestCase):
+    def test_cgroup_control_sha_is_additive_and_only_accepts_read_only_inspect(self) -> None:
+        self.assertEqual(CGROUP_CONTROL_INSPECT_SHA,
+                         "4d0698a4222d765dc56b5525843d7d633c767584")
+        body = f"/nox-maintain 60509551 {CGROUP_CONTROL_INSPECT_SHA} inspect"
+        self.assertEqual(authorize_event(event_for(body), REPOSITORY, "issue_comment"),
+                         ("inspect", CGROUP_CONTROL_INSPECT_SHA))
+        for action in ("audit", "source_attest", "gpu_inventory", "browser_qa",
+                       "emergency_stop", "emergency_stop_preflight"):
+            with self.subTest(action=action), self.assertRaisesRegex(
+                    RuntimeError, "HOLD_SOURCE_ACTION_NOT_APPROVED"):
+                body = f"/nox-maintain 60509551 {CGROUP_CONTROL_INSPECT_SHA} {action}"
+                authorize_event(event_for(body), REPOSITORY, "issue_comment")
+
     def test_exact_inspect_audit_and_attestation_commands_return_pinned_pairs(self) -> None:
         self.assertEqual(INSPECT_SHA,
                          "1d76f3fbce0b9e9258f77cdc181b038acc4d69c9")
