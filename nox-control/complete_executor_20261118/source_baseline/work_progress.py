@@ -479,11 +479,16 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
         record_workflow.get('owner_authorization_comment_id',
         record_workflow.get('request_id',
         record.get('owner_authorization_id', record.get('owner_comment_id')))))
-    evidence_run = evidence.get('workflow_run_id')
-    evidence_job = evidence.get('workflow_job_id', evidence.get('job_id'))
-    evidence_owner = evidence.get(
+    evidence_binding = document.get('evidence') if task_id == '2V14-12' else evidence
+    if not isinstance(evidence_binding, dict):
+        raise ValueError('EVIDENCE_RUN_BINDING_MISSING')
+    if task_id == '2V14-12' and evidence_binding.get('inventory') is not evidence:
+        raise ValueError('GPU_INVENTORY_POINTER_MISMATCH')
+    evidence_run = evidence_binding.get('workflow_run_id')
+    evidence_job = evidence_binding.get('workflow_job_id', evidence_binding.get('job_id'))
+    evidence_owner = evidence_binding.get(
         'owner_authorization_id',
-        evidence.get('owner_authorization_comment_id', evidence.get('owner_comment_id')))
+        evidence_binding.get('owner_authorization_comment_id', evidence_binding.get('owner_comment_id')))
     if (record_run != run_id or record_job != job_id or record_owner != owner_id
             or evidence_run != run_id or evidence_job != job_id or evidence_owner != owner_id):
         raise ValueError('WORKFLOW_EVIDENCE_BINDING_MISMATCH')
@@ -497,7 +502,7 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
             raise ValueError('AUDIT_BINDING_RUN_OR_OWNER_MISMATCH')
     run_url = 'https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/%d' % run_id
     job_url = run_url + '/job/' + str(job_id)
-    for row in (binding, record_workflow, record, evidence, audit_workflow):
+    for row in (binding, record_workflow, record, evidence_binding, audit_workflow):
         if row.get('run_url') is not None and row.get('run_url') != run_url:
             raise ValueError('WORKFLOW_RUN_URL_MISMATCH')
         if row.get('job_url') is not None and row.get('job_url') != job_url:
@@ -545,11 +550,11 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
             raise ValueError('AUDIT_RESULT_BINDING_MISMATCH')
 
     if task_id == '2V14-12':
-        inventory = evidence.get('inventory')
-        if (evidence.get('source_auth') != 'PASS'
-                or evidence.get('workflow_run_conclusion') != 'success'
-                or evidence.get('inventory_complete') is not True
-                or evidence.get('temporary_ssh_key_cleanup') != 'DETACHED_AND_VERIFIED'
+        inventory = evidence
+        if (evidence_binding.get('source_auth') != 'PASS'
+                or evidence_binding.get('workflow_run_conclusion') != 'success'
+                or evidence_binding.get('inventory_complete') is not True
+                or evidence_binding.get('temporary_ssh_key_cleanup') != 'DETACHED_AND_VERIFIED'
                 or not isinstance(inventory, dict)
                 or inventory.get('schema') != 'NOX_GPU_INVENTORY_V1'
                 or inventory.get('identity_stable') is not True):
@@ -582,14 +587,14 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
                 or checks.get('stable_uuids_across_snapshots') is not True
                 or checks.get('all_nvidia_smi_calls_successful') is not True
                 or checks.get('positive_free_memory_both_devices') is not True
-                or not _hex_digest(evidence.get('inventory_sha256'))
-                or record_workflow.get('inventory_sha256') != evidence.get('inventory_sha256')
-                or record_workflow.get('pinned_source_sha') != evidence.get('pinned_source_sha')
-                or binding.get('pinned_source_sha') != evidence.get('pinned_source_sha')
-                or evidence.get('request_id') != owner_id):
+                or not _hex_digest(evidence_binding.get('inventory_sha256'))
+                or record_workflow.get('inventory_sha256') != evidence_binding.get('inventory_sha256')
+                or record_workflow.get('pinned_source_sha') != evidence_binding.get('pinned_source_sha')
+                or binding.get('pinned_source_sha') != evidence_binding.get('pinned_source_sha')
+                or evidence_binding.get('request_id') != owner_id):
             raise ValueError('GPU_INVENTORY_CHECKS_INVALID')
         conclusion = record_workflow.get('conclusion')
-        result_status = evidence.get('workflow_run_conclusion')
+        result_status = evidence_binding.get('workflow_run_conclusion')
         if conclusion != 'success' or result_status != 'success':
             raise ValueError('GPU_WORKFLOW_STATUS_NOT_SUCCESS')
     elif task_id == '6V14-02':
