@@ -1,5 +1,7 @@
 """Fail-closed source-only tests for REFILL_REQUIRED diagnostics and compilation."""
 import copy
+import contextlib
+import io
 import json
 from pathlib import Path
 import sys
@@ -68,6 +70,43 @@ class RefillEligibilityTests(unittest.TestCase):
                     expected_native_readback_sha='2'*64)
         with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
             publisher.validate_owner_snapshot(snapshot,now=now+601)
+
+    def test_live_cgroup_budget_holds_below_two_gib_headroom(self):
+        now=1800000000
+        sample={'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+            'instance_id':60509551,'observed_at':now-1,
+            'current_bytes':10*1024**3,'max_bytes':10*1024**3+27*1024**2,
+            'minimum_headroom_bytes':2*1024**3}
+        with self.assertRaisesRegex(RuntimeError,
+                'HOLD_SYSTEMIC_PUBLISH_RESOURCE_HEADROOM_BELOW_MINIMUM'):
+            publisher.require_budget_headroom(sample,now=now)
+        sample['max_bytes']=sample['current_bytes']+3*1024**3
+        self.assertEqual(publisher.require_budget_headroom(sample,now=now)['headroom_bytes'],
+                         3*1024**3)
+
+    def test_hold_receipt_is_emitted_for_stale_candidate(self):
+        class ReceiptSink:
+            def __init__(self): self.raw=None
+            def atomic(self,path,raw): self.raw=raw
+        now=1800000000
+        snapshot={'schema':producer.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-601,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        receipt={'state':'PREFLIGHT','manifest_sha256':'3'*64}
+        sink=ReceiptSink();output=io.StringIO()
+        with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
+            try:
+                publisher.validate_owner_snapshot(snapshot,now=now)
+            except BaseException as exc:
+                receipt['state']='HOLD_SYSTEMIC_PUBLISH_' + str(exc).removeprefix('HOLD_SYSTEMIC_PUBLISH_')
+                with contextlib.redirect_stdout(output):
+                    publisher.persist_receipt(sink,'42',receipt)
+                raise
+        self.assertEqual(json.loads(sink.raw)['state'],'HOLD_SYSTEMIC_PUBLISH_OWNER_SNAPSHOT_STALE_OR_IDENTITY')
+        self.assertIn('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=',output.getvalue())
 
     def test_successor_route_rejects_zero_or_multiple_parent_missions(self):
         for proposals in ([],[{},{}]):

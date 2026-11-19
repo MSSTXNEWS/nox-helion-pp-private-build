@@ -25,6 +25,7 @@ HELPER_SHA = '8470a6720ca69864bbc4e6e630a1f853344839af424d3829dcdf1774442db609'
 OWNER_SNAPSHOT_SCHEMA = 'NOX_SYSTEMIC_OWNER_PUBLISH_SNAPSHOT_V1'
 NATIVE_RECEIPT_CONTRACT_SCHEMA = 'NOX_OWNER_REVIEWED_NATIVE_RECEIPT_CONTRACT_V1'
 OWNER_SNAPSHOT_MAX_AGE_SEC = 600
+GIB = 1024 ** 3
 SPEC = {}
 try:
     BUNDLE = __NOX_BUNDLE_JSON__
@@ -66,6 +67,42 @@ def validate_owner_snapshot(snapshot, now=None):
     require(type(snapshot.get('active_claim_count')) is int
             and snapshot['active_claim_count'] == 0,'OWNER_SNAPSHOT_ACTIVE_CLAIMS')
     return snapshot
+
+
+def require_budget_headroom(snapshot, now=None):
+    """Require a fresh live cgroup-v2 sample with at least two GiB free."""
+    require(isinstance(snapshot,dict) and snapshot.get('schema') == 'NOX_BOUNDED_CPU_BUDGET_V1'
+            and snapshot.get('source') == 'cgroup_v2'
+            and snapshot.get('instance_id') == 60509551,
+            'RESOURCE_SNAPSHOT_SCHEMA')
+    current, maximum, minimum = (snapshot.get('current_bytes'),snapshot.get('max_bytes'),
+                                 snapshot.get('minimum_headroom_bytes'))
+    observed = snapshot.get('observed_at')
+    clock = time.time() if now is None else now
+    require(type(current) is int and type(maximum) is int and type(minimum) is int
+            and 0 <= current < maximum <= 2**63-1 and minimum == 2*GIB
+            and type(observed) in (int,float) and 0 <= observed <= 10**12
+            and type(clock) in (int,float) and -5 <= clock-observed <= 30,
+            'RESOURCE_SNAPSHOT_FIELDS_OR_STALE')
+    headroom = maximum-current
+    require(headroom >= minimum,'RESOURCE_HEADROOM_BELOW_MINIMUM')
+    return {'schema':'NOX_SYSTEMIC_PUBLISH_RESOURCE_GATE_V1','state':'PASS',
+            'headroom_bytes':headroom,'minimum_headroom_bytes':minimum,
+            'observed_at':observed}
+
+
+def persist_receipt(helper, request, receipt):
+    receipt['finished_at'] = time.time()
+    receipt['receipt_persisted'] = True
+    try:
+        helper.atomic(ROOT / 'state/dispatcher' / ('systemic_relay_publish_' + request + '.json'),
+                      encoded(receipt))
+    except BaseException:
+        receipt['receipt_persisted'] = False
+        if not str(receipt.get('state','')).startswith('HOLD_'):
+            receipt['state'] = 'HOLD_SYSTEMIC_PUBLISH_RECEIPT_WRITE'
+    print('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=' + encoded(receipt).decode(), flush=True)
+    return receipt['receipt_persisted']
 
 
 def native_receipt_contract(mission, *, manifest_revision, previous_sha,
@@ -276,35 +313,51 @@ def run(bundle, spec):
     manifest_path = PACKAGE / 'relay' / (manifest_sha + '.json')
     require(manifest_path in payloads, 'MANIFEST_MISSING')
     manifest = json.loads(payloads[manifest_path])
-    require_exactly_one_successor(manifest)
-    evidence = manifest.get('producer_evidence')
-    require(isinstance(evidence,dict),'PRODUCER_EVIDENCE')
-    owner_snapshot = validate_owner_snapshot(spec.get('owner_snapshot'))
-    require(evidence.get('owner_snapshot') == owner_snapshot
-            and evidence.get('owner_snapshot_sha256') == sha(encoded(owner_snapshot))
-            and spec.get('owner_snapshot_sha256') == sha(encoded(owner_snapshot))
-            and owner_snapshot.get('config_sha256') == spec.get('expected_config_sha256')
-            and owner_snapshot.get('previous_manifest_sha256') == spec.get('previous_manifest_sha256')
-            and owner_snapshot.get('source_files_sha256') == spec.get('expected_source_files_sha256')
-            and owner_snapshot.get('registry_sha256') == evidence.get('registry_sha256')
-            and owner_snapshot.get('refill_request_id') == evidence.get('refill_request_id')
-            and owner_snapshot.get('original_task_states_sha256') ==
-                evidence.get('refill_request_binding',{}).get('original_task_states_sha256'),
-            'OWNER_SNAPSHOT_BINDING')
-    process_identity_sha = sha(encoded({'director':spec.get('expected_director'),
-        'workers':spec.get('expected_workers'),
-        'protected_processes':spec.get('protected_processes')}))
-    require(owner_snapshot.get('process_identity_sha256') == process_identity_sha,
-            'OWNER_SNAPSHOT_PROCESS_BINDING')
-    lock = ROOT / 'state/owner_maintenance.lock'
-    require(not lock.is_symlink(), 'LEASE_PATH')
-    fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    changed = False
-    old_raw = new_raw = None
     receipt = {'schema': 'NOX_SYSTEMIC_RELAY_PUBLISH_RECEIPT_V1', 'request': request,
         'source_sha': commit, 'manifest_sha256': manifest_sha, 'started_at': time.time(),
         'state': 'PREFLIGHT', 'workers_restarted': 0, 'queue_writes': 0,
         'source_writes': 0, 'test_writes': 0, 'original_tasks_accepted': 0}
+    try:
+        require_exactly_one_successor(manifest)
+        evidence = manifest.get('producer_evidence')
+        require(isinstance(evidence,dict),'PRODUCER_EVIDENCE')
+        owner_snapshot = validate_owner_snapshot(spec.get('owner_snapshot'))
+        require(evidence.get('owner_snapshot') == owner_snapshot
+                and evidence.get('owner_snapshot_sha256') == sha(encoded(owner_snapshot))
+                and spec.get('owner_snapshot_sha256') == sha(encoded(owner_snapshot))
+                and owner_snapshot.get('config_sha256') == spec.get('expected_config_sha256')
+                and owner_snapshot.get('previous_manifest_sha256') == spec.get('previous_manifest_sha256')
+                and owner_snapshot.get('source_files_sha256') == spec.get('expected_source_files_sha256')
+                and owner_snapshot.get('registry_sha256') == evidence.get('registry_sha256')
+                and owner_snapshot.get('refill_request_id') == evidence.get('refill_request_id')
+                and owner_snapshot.get('original_task_states_sha256') ==
+                    evidence.get('refill_request_binding',{}).get('original_task_states_sha256'),
+                'OWNER_SNAPSHOT_BINDING')
+        process_identity_sha = sha(encoded({'director':spec.get('expected_director'),
+            'workers':spec.get('expected_workers'),
+            'protected_processes':spec.get('protected_processes')}))
+        require(owner_snapshot.get('process_identity_sha256') == process_identity_sha,
+                'OWNER_SNAPSHOT_PROCESS_BINDING')
+    except BaseException as exc:
+        receipt['state'] = str(exc) if str(exc).startswith('HOLD_') else \
+            'HOLD_SYSTEMIC_PUBLISH_' + type(exc).__name__
+        raise
+    finally:
+        if str(receipt.get('state','')).startswith('HOLD_'):
+            persist_receipt(h,request,receipt)
+    lock = ROOT / 'state/owner_maintenance.lock'
+    try:
+        require(not lock.is_symlink(), 'LEASE_PATH')
+        fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except BaseException as exc:
+        receipt['state'] = str(exc) if str(exc).startswith('HOLD_') else \
+            'HOLD_SYSTEMIC_PUBLISH_' + type(exc).__name__
+        raise
+    finally:
+        if str(receipt.get('state','')).startswith('HOLD_'):
+            persist_receipt(h,request,receipt)
+    changed = False
+    old_raw = new_raw = None
     try:
         deadline = time.monotonic() + 8
         while True:
@@ -335,6 +388,7 @@ def run(bundle, spec):
                 and old.get('owner_authorized') is True and old.get('instance_id') == 60509551
                 and old.get('mode') == 'NORMAL' and old.get('target') == 3
                 and old.get('global_worker_cap') == 3 and old.get('execution_mode') == 'NATIVE_PROJECT_V1', 'OWNER_SCOPE')
+        receipt['resource_preflight'] = require_budget_headroom(h.read_budget_snapshot(old))
         previous = old.get('systemic_relay', {}).get('sha256')
         require(previous == spec.get('previous_manifest_sha256')
                 and previous == manifest.get('previous_manifest_sha256') and previous != manifest_sha, 'MANIFEST_PREDECESSOR')
@@ -427,6 +481,8 @@ def run(bundle, spec):
         require(not backup.exists() and not backup.is_symlink(), 'BACKUP_EXISTS')
         h.atomic(backup / 'config.json', old_raw)
         changed = True
+        validate_owner_snapshot(owner_snapshot)
+        receipt['resource_precommit'] = require_budget_headroom(h.read_budget_snapshot(old))
         h.atomic(CONFIG, new_raw)
         require(h.read_regular(CONFIG, 2 * 1024 * 1024) == new_raw, 'CONFIG_READBACK')
         receipt.update(state='PUBLISHED_ONE_OWNER_REVIEWED_SUCCESSOR_PENDING_NATIVE_ADMISSION',
@@ -448,9 +504,8 @@ def run(bundle, spec):
         raise
     finally:
         os.close(fd)
-        receipt['finished_at'] = time.time()
-        h.atomic(ROOT / 'state/dispatcher' / ('systemic_relay_publish_' + request + '.json'), encoded(receipt))
-        print('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=' + encoded(receipt).decode(), flush=True)
+        if not persist_receipt(h,request,receipt):
+            raise RuntimeError('HOLD_SYSTEMIC_PUBLISH_RECEIPT_WRITE')
     print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
     return receipt
 
