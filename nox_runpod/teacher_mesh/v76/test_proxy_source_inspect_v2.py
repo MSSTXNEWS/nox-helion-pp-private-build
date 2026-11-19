@@ -58,6 +58,12 @@ def route(body):
         with self.assertRaisesRegex(ValueError, "HOLD_PROXY_SOURCE_PARSE"):
             analyzer()(b'password = "sensitive"\ndef broken(:\n')
 
+    def test_remote_python_payload_compiles_without_host_execution(self):
+        remote_python = probe.REMOTE.split("python3 - <<'PYREMOTE'\n", 1)[1].split("\nPYREMOTE", 1)[0]
+        compile(remote_python, "<remote-proxy-inspector>", "exec")
+        self.assertIn("st_size=0", remote_python)
+        self.assertIn("start_ticks", remote_python)
+
     def test_remote_probe_payload_has_a_stable_exact_sha256_pin(self):
         digest = probe.probe_source_hash()
         self.assertRegex(digest, re.compile(r"^[0-9a-f]{64}$"))
