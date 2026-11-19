@@ -78,6 +78,15 @@ def public_numeric_answer(value):
     return re.sub(r'\s+','',value)
 
 
+def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
+    """A second native POST cannot start before terminal S03; a third never starts."""
+    if count == 0:
+        return first_prompt
+    if count == 1 and second_permitted:
+        return second_prompt
+    return None
+
+
 def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer):
     """Require four exact ordered messages from one already-scoped dialog."""
     if not isinstance(rows, list) or len(rows) != 4 or not all(isinstance(row, dict) for row in rows):
@@ -503,7 +512,7 @@ async def click_send(page, report, expected_before=0):
     """Physical send, with the same fresh hit gate as the dialog selection."""
     target=page.locator('#chatForm [type=submit]')
     detail={'before':await target.evaluate(CONTROL_JS)}
-    report['qa_send_control']=detail
+    report['qa_send_control' if expected_before==0 else 'qa_second_send_control']=detail
     try:
         await target.click(timeout=3500)
     except Exception as exc:
@@ -585,6 +594,7 @@ async def browser_run(report, directory, available):
     second_prompt=('[NOX UI QA '+token+'] Используя предыдущий ответ, перечисли '
                    'те же числа в обратном порядке через запятую. Без пояснений.')
     second_permitted=False
+    stream_admitted=0
     report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))
     network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None
     sys.path.insert(0,str(ROOT/'scripts'))
@@ -630,6 +640,7 @@ async def browser_run(report, directory, available):
             await context.add_init_script(OBSERVER_JS.replace('__CONFIG__',config))
 
             async def guard(route):
+                nonlocal stream_admitted
                 request=route.request
                 url=urllib.parse.urlsplit(request.url)
                 if url.scheme not in ('http','https') or url.netloc!=origin:
@@ -647,13 +658,17 @@ async def browser_run(report, directory, available):
                     try:
                         body=request.post_data_json
                         own=(request.method=='POST' and isinstance(body,dict)
-                             and body.get('message')==(second_prompt if second_permitted else prompt)
+                             and body.get('message')==admitted_qa_prompt(
+                                 stream_admitted,second_permitted,prompt,second_prompt)
                              and body.get('dialog_id')==did)
                     except Exception:
                         own=False
                     if not own:
                         blocked['non_qa_generation']+=1
                         return await route.abort()
+                    # Consume admission before any uncertain network delivery:
+                    # never retry or double-submit an ambiguous native POST.
+                    stream_admitted+=1
                 return await route.continue_()
 
             await context.route('**/*',guard)
@@ -863,6 +878,8 @@ async def browser_run(report, directory, available):
                         and second_progressive and second_stop
                         and second_public=='10,9,8,7,6,5,4,3,2,1'):
                     raise RuntimeError('HOLD_MULTITURN_BROWSER_OR_S03')
+                if stream_admitted!=2:
+                    raise RuntimeError('HOLD_MULTITURN_POST_ADMISSION')
                 report['multiturn_browser_acceptance_verified']=True
         finally:
             report['network']=network
