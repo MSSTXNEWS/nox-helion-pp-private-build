@@ -82,6 +82,11 @@ class ChatResourceAdmissionTests(unittest.TestCase):
         value['current']['cgroup']['inactive_file_bytes'] = 0
         with self.assertRaisesRegex(admission.ChatResourceHold, 'PROJECTED_HEADROOM'):
             admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
+        value = valid_snapshot()
+        value['current']['cgroup']['memory_current_bytes'] = (
+            value['current']['cgroup']['memory_max_bytes'] + 1)
+        with self.assertRaisesRegex(admission.ChatResourceHold, 'CGROUP_OVER_LIMIT'):
+            admission.evaluate_chat_admission(value, policy=POLICY, now=NOW)
 
     def test_missing_measurements_calibration_or_process_scoped_vram_hold(self):
         for edit, reason in (
