@@ -16,7 +16,7 @@ import subprocess
 import sys
 
 SCHEMA = 'NOX_OWNER_DRIVE_RECONNECT_INSTALL_V1'
-EXPECTED = {'nox_drive_reconnect.py','nox_drive_reconnect_loop.sh','nox_drive_first.py','nox-drive-reconnect.conf'}
+EXPECTED = {'nox_drive_reconnect.py','nox_drive_reconnect_loop.sh','nox_drive_first.py','nox_drive_prefetch.py','nox_drive_native_binding.py','nox-drive-first.skill.md','nox-drive-reconnect.conf'}
 BUNDLE = __NOX_BUNDLE_JSON__
 ROOT = Path('/root/nox')
 SCRIPTS = ROOT / 'ops/drive-auth'
@@ -55,6 +55,9 @@ def decode_bundle(bundle):
         files[name]=raw
     require(files['nox_drive_reconnect.py'].startswith(b'#!/usr/bin/env python3'), 'PY_SOURCE')
     require(files['nox_drive_first.py'].startswith(b'#!/usr/bin/env python3'), 'DRIVE_FIRST_SOURCE')
+    require(files['nox_drive_prefetch.py'].startswith(b'#!/usr/bin/env python3'), 'PREFETCH_SOURCE')
+    require(files['nox_drive_native_binding.py'].startswith(b'#!/usr/bin/env python3'), 'NATIVE_BINDING_SOURCE')
+    require(b'NOX Drive-first skill' in files['nox-drive-first.skill.md'], 'SKILL_SOURCE')
     require(files['nox_drive_reconnect_loop.sh'].startswith(b'#!/bin/sh'), 'SHELL_SOURCE')
     require(b'[program:nox-drive-reconnect]' in files['nox-drive-reconnect.conf'], 'SUPERVISOR_SOURCE')
     return files
@@ -100,8 +103,14 @@ def install():
     private_dir(SCRIPTS,create=True)
     private_dir(STATE,create=True)
     stages={}
-    for name in ('nox_drive_reconnect.py','nox_drive_reconnect_loop.sh','nox_drive_first.py'):
+    for name in ('nox_drive_reconnect.py','nox_drive_reconnect_loop.sh','nox_drive_first.py','nox_drive_prefetch.py','nox_drive_native_binding.py'):
         stages[name]=atomic_install(SCRIPTS/name,assets[name])
+    private_dir(SCRIPTS/'skills',create=True)
+    stages['nox-drive-first.skill.md']=atomic_install(SCRIPTS/'skills/nox-drive-first.skill.md',assets['nox-drive-first.skill.md'])
+    private_dir(ROOT/'private',create=True)
+    private_dir(ROOT/'private/drive-tasks',create=True)
+    private_dir(ROOT/'cache',create=True)
+    private_dir(ROOT/'cache/warm-ssd',create=True)
     monitor='MONITOR_NOT_CONFIGURED'
     if SUPERVISOR_DIR.is_dir() and shutil.which('supervisorctl'):
         # Only this new program is updated. Do not restart the dispatcher, chat or S03.
@@ -121,6 +130,8 @@ def install():
             'monitor':monitor,'source_sha256':os.environ['NOX_OWNER_SOURCE_SHA'],
             'script_sha256':hashlib.sha256(assets['nox_drive_reconnect.py']).hexdigest(),
             'stages':stages,'drive_first_source_installed':True,
+            'native_drive_binding_source_installed':True,
+            'native_dispatcher_handler_registered':False,
             'google_oauth_ready':False,'google_read_connected':False,
             'google_write_tested':False,'active_model_restarted':False,
             'other_services_restarted':False,'s03_modified':False,'weights_modified':False}
