@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
 import types
 
 try:
@@ -25,7 +26,7 @@ def emit(kind, data):
     print('NOX_MAINT_REPAIR=' + json.dumps({'kind': kind, 'data': data}, separators=(',', ':')), flush=True)
 
 
-def verify_browser_receipt():
+def verify_browser_receipt(browser_started_ns):
     """Require native stream and durable S03 proof, not just a zero exit code."""
     request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
     source = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
@@ -37,8 +38,13 @@ def verify_browser_receipt():
     try:
         with path.open('rb') as stream:
             raw = stream.read(262145)
+            receipt_mtime_ns = os.fstat(stream.fileno()).st_mtime_ns
     except OSError:
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_MISSING') from None
+    # A prior successful run must not satisfy a new browser/S03 acceptance.
+    # Inspect the same opened inode used to read the actual receipt bytes.
+    if receipt_mtime_ns < browser_started_ns:
+        raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_STALE')
     if len(raw) > 262144:
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_SIZE')
     try:
@@ -70,6 +76,7 @@ def main():
             emit('memory_chat_component_hold', failed[-1])
             break
         try:
+            browser_started_ns = time.time_ns() if name == 'owner_browser_qa_entry.py' else None
             raw = base64.b64decode(BUNDLE.get(name, ''), validate=True)
             if len(raw) > 200000 or hashlib.sha256(raw).hexdigest() != expected:
                 raise RuntimeError('HOLD_ACCEPTANCE_COMPONENT_PIN')
@@ -85,7 +92,7 @@ def main():
             # Browser entry returns None even after a subprocess exit. A real
             # native/S03 acceptance receipt for this exact owner request is mandatory.
             if name == 'owner_browser_qa_entry.py':
-                verify_browser_receipt()
+                verify_browser_receipt(browser_started_ns)
             # A STOP raised while the final stage ran must not produce success.
             if any((Path('/root/nox') / flag).exists() for flag in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'state/STOP')):
                 raise RuntimeError('HOLD_OWNER_STOP')
