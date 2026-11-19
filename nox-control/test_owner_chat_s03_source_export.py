@@ -10,7 +10,7 @@ import builtins
 import sys
 from unittest import mock
 import zipfile
-from io import BytesIO
+from io import BytesIO, StringIO
 
 try:
     from cryptography.hazmat.primitives import hashes, serialization
@@ -177,9 +177,10 @@ class SourceExportTests(unittest.TestCase):
                 safe_env = dict(os.environ)
                 safe_env.pop("NOX2", None)
                 safe_env["NOX2_FILE"] = "/tmp/nox2-s03-unused"
+                safe_env["NOX_OWNER_EXPORT_KEY_B64"] = "public-key"
                 with (
                     mock.patch.object(sys, "argv",
-                                      ["owner_native_operator.py", "source_export", "public-key"]),
+                                      ["owner_native_operator.py", "source_export"]),
                     mock.patch.dict(os.environ, safe_env, clear=True),
                     mock.patch.object(operator, "source_export_key_info", return_value={}),
                     mock.patch.object(operator, "load_source_export_credential_file") as load_credential,
@@ -201,6 +202,24 @@ class SourceExportTests(unittest.TestCase):
                 if failure != "provider_import":
                     self.assertEqual(sys.path, original_path)
 
+    def test_operator_rejects_cli_export_key_argument(self):
+        with mock.patch("sys.stderr", new=StringIO()):
+            with self.assertRaises(SystemExit):
+                operator.operator_argument_parser().parse_args(["source_export", "public-key"])
+
+    def test_export_key_preflight_is_secret_only_and_fails_closed(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_EXPORT_KEY_UNAVAILABLE"):
+                operator.preflight_source_export_key()
+        with mock.patch.dict(os.environ, {"NOX_OWNER_EXPORT_KEY_B64": "not-a-key"}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_EXPORT_KEY"):
+                operator.preflight_source_export_key()
+        current = int(__import__("time").time())
+        fresh_info = dict(self.key_info, created_at=current, expires_at=current + 1800)
+        fresh_key = base64.urlsafe_b64encode(helper.canonical(fresh_info)).decode().rstrip("=")
+        with mock.patch.dict(os.environ, {"NOX_OWNER_EXPORT_KEY_B64": fresh_key}, clear=True):
+            self.assertEqual(operator.preflight_source_export_key(), fresh_key)
+
     def test_staged_owner_credential_is_private_single_use_and_never_env_injected(self):
         token = "test-owner-api-token"
         with tempfile.TemporaryDirectory() as td:
@@ -215,19 +234,24 @@ class SourceExportTests(unittest.TestCase):
                 self.assertFalse(path.exists())
                 self.assertNotIn("NOX2", os.environ)
 
-    def test_child_process_environments_never_receive_nox2(self):
+    def test_child_process_environments_never_receive_owner_secrets(self):
         token = "test-owner-api-token"
-        with mock.patch.dict(os.environ, {"NOX2": token, "SAFE_MARKER": "present"}, clear=True):
+        export_key = "test-export-key-payload"
+        with mock.patch.dict(os.environ, {"NOX2": token,
+                                          "NOX_OWNER_EXPORT_KEY_B64": export_key,
+                                          "SAFE_MARKER": "present"}, clear=True):
             with mock.patch.object(operator.subprocess, "run", return_value=mock.sentinel.child) as run:
                 self.assertIs(operator._safe_subprocess_run(["ssh-keygen"]), mock.sentinel.child)
             run_env = run.call_args.kwargs["env"]
             self.assertNotIn("NOX2", run_env)
+            self.assertNotIn("NOX_OWNER_EXPORT_KEY_B64", run_env)
             self.assertEqual(run_env["SAFE_MARKER"], "present")
 
             with mock.patch.object(operator.subprocess, "check_output", return_value="head") as check_output:
                 self.assertEqual(operator._safe_subprocess_check_output(["git", "rev-parse"]), "head")
             check_env = check_output.call_args.kwargs["env"]
             self.assertNotIn("NOX2", check_env)
+            self.assertNotIn("NOX_OWNER_EXPORT_KEY_B64", check_env)
             self.assertEqual(check_env["SAFE_MARKER"], "present")
 
     def test_provider_cleanup_uses_explicit_token_without_environment(self):
