@@ -356,7 +356,7 @@ class TestRealSubagentProcesses(unittest.TestCase):
                 return Channel()
             def Process(self, *, target, args, name):
                 self.spawned.append((args[0], target, name))
-                self.last = Child(9914, False, args[0], args[2])
+                self.last = Child(9913 + len(self.spawned), False, args[0], args[2])
                 return self.last
 
         ctx = Context()
