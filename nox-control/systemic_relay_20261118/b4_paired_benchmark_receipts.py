@@ -167,6 +167,20 @@ def compare_paired(baseline, candidate):
                          if new[task]["latency_ms"] > old[task]["latency_ms"]]
     rss_regressed = [task for task in baseline["declared_task_ids"]
                      if new[task]["peak_rss_bytes"] > old[task]["peak_rss_bytes"]]
+    # Aggregate cache_n/prompt_n deltas can cancel out across task IDs:
+    # one dialogue loses its cached prefix while another gains reuse.
+    # Mark such comparisons as cache-confounded, without claiming causality.
+    cache_changed = [task for task in baseline["declared_task_ids"]
+                     if (old[task]["cache_tokens_reused"] != new[task]["cache_tokens_reused"]
+                         or old[task]["prompt_tokens_evaluated"] != new[task]["prompt_tokens_evaluated"])]
+    cache_reuse_regressed = [task for task in baseline["declared_task_ids"]
+                             if new[task]["cache_tokens_reused"] < old[task]["cache_tokens_reused"]]
+    cache_reuse_lost = [task for task in baseline["declared_task_ids"]
+                        if old[task]["cache_tokens_reused"] > 0 and
+                        new[task]["cache_tokens_reused"] == 0]
+    prefill_regressed = [task for task in baseline["declared_task_ids"]
+                         if new[task]["prompt_tokens_evaluated"] >
+                         old[task]["prompt_tokens_evaluated"]]
     first_text_lost = [task for task in baseline["declared_task_ids"]
                        if old[task]["first_text_ms"] is not None
                        and new[task]["first_text_ms"] is None]
@@ -187,6 +201,11 @@ def compare_paired(baseline, candidate):
             "fixed_task_ids": fixed, "regressed_task_ids": regressed,
             "latency_regressed_task_ids": latency_regressed,
             "peak_rss_regressed_task_ids": rss_regressed,
+            "cache_state_changed_task_ids": cache_changed,
+            "cache_reuse_regressed_task_ids": cache_reuse_regressed,
+            "cache_reuse_lost_task_ids": cache_reuse_lost,
+            "prompt_prefill_regressed_task_ids": prefill_regressed,
+            "latency_cache_state_confounder": bool(cache_changed),
             "first_text_lost_task_ids": first_text_lost,
             "first_text_regressed_task_ids": first_text_regressed,
             "p95_first_text_delta_ms_same_coverage": first_text_p95_delta,

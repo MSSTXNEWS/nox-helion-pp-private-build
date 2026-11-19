@@ -127,6 +127,24 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(out["peak_rss_regressed_task_ids"],["t1"])
         self.assertFalse(out["rank_claim_authorized"])
 
+    def test_cache_collapse_not_masked_by_unchanged_aggregate(self):
+        b=example();c=copy.deepcopy(b)
+        # Opposite per-task changes cancel: total cache and prefill stay equal.
+        c["outcomes"][0]["cache_tokens_reused"]=0
+        c["outcomes"][1]["cache_tokens_reused"]=6
+        c["outcomes"][0]["prompt_tokens_evaluated"]=63
+        c["outcomes"][1]["prompt_tokens_evaluated"]=57
+        out=compare_paired(b,c)
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["cache_tokens_reused_delta"],0)
+        self.assertEqual(out["prompt_tokens_evaluated_delta"],0)
+        self.assertEqual(out["cache_state_changed_task_ids"],["t1","t2"])
+        self.assertEqual(out["cache_reuse_regressed_task_ids"],["t1"])
+        self.assertEqual(out["cache_reuse_lost_task_ids"],["t1"])
+        self.assertEqual(out["prompt_prefill_regressed_task_ids"],["t1"])
+        self.assertTrue(out["latency_cache_state_confounder"])
+        self.assertFalse(out["measured_nox_gain"])
+
     def test_first_text_regression_and_cache_evidence(self):
         b=example();c=copy.deepcopy(b)
         c["outcomes"][0]["first_text_ms"]=15
