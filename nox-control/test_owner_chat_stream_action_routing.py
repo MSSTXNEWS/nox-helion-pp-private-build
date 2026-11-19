@@ -16,7 +16,7 @@ sys.path.insert(0, str(HERE))
 import owner_chat_stream as frozen
 import owner_chat_stream_action_routing as candidate
 
-FROZEN_SHA = '5b7bafde0c25fa26d6b8f98dfbb4958f0faa42ee77292da561834a63097a2e8e'
+FROZEN_SHA = '1df48966046095005e0859fad85626dac95730e4f7f64ddf1cc50b526bd9357e'
 STATUS = {'id': 'legacy-status', 'name': 'run_admin', 'arguments': {'action': 'status'}}
 QUEUE = {'id': 'legacy-queue', 'name': 'run_admin', 'arguments': {'action': 'queue_status'}}
 
@@ -211,6 +211,40 @@ class PredicateAndSourceTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertTrue(candidate.action_request(text))
 
+    def test_broad_imperative_after_refusal_gets_no_duplicate_safe_progress_contract(self):
+        # Screenshot sequence: status/why question, broad explicit authorization,
+        # then an ambiguous "done?" follow-up after NOX's generic refusal.
+        history = [
+            {'role': 'user', 'content': 'Почему NOX не понимает контекст?'},
+            {'role': 'assistant', 'content': 'Не могу подтвердить done. Уточните конкретное действие.'},
+            {'role': 'user', 'content': 'Исправь всё сейчас'},
+            {'role': 'assistant', 'content': 'Не могу подтвердить done. Уточните конкретное действие.'},
+        ]
+        command = history[-2]['content']
+        self.assertTrue(candidate.action_request(command))
+        self.assertTrue(candidate.broad_action_request(command))
+        context = candidate.action_progress_context(history, command)
+        system = context[0]['content']
+        self.assertIn('Do not ask them to restate or choose the task', system)
+        self.assertIn('next safe operation (read-only owner preflight)', system)
+        self.assertIn('Do not repeat a generic “specify a concrete action” response', system)
+        self.assertIn('never claim “done” without a completion receipt', system)
+        self.assertEqual(context[-2], history[-2])
+        # The same guard remains active for the owner's "did you finish?" check.
+        followup = history + [{'role': 'user', 'content': 'Сделал?'}]
+        context = candidate.action_progress_context(followup, 'Сделал?')
+        self.assertIn('Do not repeat a generic “specify a concrete action” response', context[0]['content'])
+        self.assertIn('never claim “done” without a completion receipt', context[0]['content'])
+        self.assertFalse(candidate.broad_action_request('Почему ты не можешь исправить всё?'))
+
+    def test_broad_action_context_requires_receipt_for_exact_counts(self):
+        context = candidate.action_progress_context(
+            [{'role': 'user', 'content': 'Fix all this now'}], 'Fix all this now')
+        self.assertIn('Use exact counts only from a current receipt in this conversation', context[0]['content'])
+        self.assertIn('otherwise say that the current receipt is unavailable', context[0]['content'])
+        self.assertNotIn('READY=0', context[0]['content'])
+        self.assertNotIn('done.', context[0]['content'].lower())
+
     def test_mentions_negations_questions_and_style_are_not_action_instructions(self):
         no = ('Почему не получилось запустить GPU?', 'Что нужно сделать, чтобы запустить агентов?',
               'Когда ты сможешь настроить сервер?', 'Как скачать веса на сервер?',
@@ -230,7 +264,7 @@ class PredicateAndSourceTests(unittest.TestCase):
         old_tree, new_tree = ast.parse(base), ast.parse(newer)
         old_defs = {node.name: node for node in old_tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         new_defs = {node.name: node for node in new_tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
-        allowed = {'owner_request_query', 'executor_status_query', '_run'}
+        allowed = {'owner_request_query', 'executor_status_query', '_executor_status_reply', '_model_events', '_normal_calls', '_run'}
         for name, node in old_defs.items():
             if name not in allowed:
                 self.assertEqual(ast.dump(node), ast.dump(new_defs[name]), name)
@@ -243,3 +277,4 @@ class PredicateAndSourceTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

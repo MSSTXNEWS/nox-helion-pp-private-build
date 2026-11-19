@@ -58,6 +58,11 @@ _STATUS_EXPLANATION = re.compile(
     r'what\s+(?:happened|should|does)|json|markdown|таблиц\w*|одним\s+словом|'
     r'кратко|подробно|формате|стиле)\b', re.I)
 
+_BROAD_ACTION_SCOPE = re.compile(
+    r'\b(?:все|всё|вс[её]\s+(?:это|задачи|проблемы|по\s+списку)|'
+    r'всё\s+(?:это|найденное|по\s+списку)|это\s+всё|'
+    r'all\s+(?:this|of\s+this|the\s+tasks)|everything|all\s+issues)\b', re.I)
+
 
 def _routing_text(text):
     if not isinstance(text, str) or not 1 <= len(text) <= 8000:
@@ -91,6 +96,43 @@ def status_needs_model(text):
     # not the action label. Genuine status aliases keep their existing fast path.
     value = _routing_text(text)
     return action_request(text) or bool(value and _STATUS_TOPIC.search(text) and _STATUS_EXPLANATION.search(value))
+
+
+def broad_action_request(text):
+    """An explicit broad imperative asks NOX to make bounded progress from its queue."""
+    value = _routing_text(text)
+    return bool(value and action_request(text) and _BROAD_ACTION_SCOPE.search(value))
+
+
+def action_progress_context(messages, user_text):
+    """Prevent broad owner commands and their completion checks from looping."""
+    broad_now = broad_action_request(user_text)
+    recent_broad = any(
+        row.get('role') == 'user' and broad_action_request(row.get('content'))
+        for row in (messages or [])[-12:] if isinstance(row, dict)
+    )
+    completion_check = bool(re.search(
+        r'\b(?:сделал|сделано|готово|закончил|выполнено|done|finished|complete)\b|'
+        r'\b(?:уже|результат|статус)\b', _routing_text(user_text), re.I))
+    if not broad_now and not (recent_broad and completion_check):
+        return messages
+    note = (
+        'Owner task-routing contract: the owner has explicitly authorized progress with a broad '
+        'imperative. Do not ask them to restate or choose the task. Select only the next grounded, '
+        'bounded READY item from the existing queue and use its existing guarded dispatcher. '
+        'Never create or publish queue work from this instruction. If no current READY item or '
+        'current owner/CAS publisher receipt is present, stop and explain the precise blocker, '
+        'the next safe operation (read-only owner preflight), and that no job was started. '
+        'Use exact counts only from a current receipt in this conversation; otherwise say that '
+        'the current receipt is unavailable. Do not repeat a generic “specify a concrete action” '
+        'response, and never claim “done” without a completion receipt.'
+    )
+    result = [dict(row) for row in messages]
+    if result and result[0].get('role') == 'system':
+        result[0]['content'] = str(result[0].get('content') or '') + '\n\n' + note
+    else:
+        result.insert(0, {'role': 'system', 'content': note})
+    return result
 
 
 def _readonly_status_call(call):
@@ -302,6 +344,7 @@ async def _run(native,url,payload,user_text):
         return
     messages=[dict(message) for message in payload.get('messages') or []]
     messages=await asyncio.to_thread(_current.augment_messages,messages,user_text)
+    messages=action_progress_context(messages,user_text)
     native_tools=list(native['TOOLS'])
     if _current.relevant_query(user_text):
         if any((row.get('function') or {}).get('name') in _current.NAMES for row in native_tools):
@@ -447,3 +490,4 @@ def install(native):
             return JSONResponse({'error':{'code':'HOLD_OWNER_STREAM_RUNTIME'}},status_code=502)
 
     native['owner_completion']=owner_completion
+
