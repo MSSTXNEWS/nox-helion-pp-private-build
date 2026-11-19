@@ -858,8 +858,8 @@ def lifeline_only(phase):
     return {"schema": "NOX_LIFELINE_INDEPENDENT_AUDIT_V1",
             "read_only": True, "phase_requested": requested_phase, "phase": phase,
             "observed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-            "host_mutations": 0, "processes_started": 0,
-            "workers_started": 0, "status": status,
+            "host_mutations": 0, "worker_pool_started": False,
+            "read_only_subprocess_probes": True, "status": status,
             "evidence": evidence}
 
 def supervisor():
