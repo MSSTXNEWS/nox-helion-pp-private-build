@@ -97,19 +97,59 @@ def progressive_stream_valid(value):
             and 0 <= first < done)
 
 
-def original_card_ui_trace_valid(value):
-    """Require the frozen one-turn UI states in their observed order.
+def original_card_ui_trace_projection(trace):
+    """Return only fixed, typed fields from the page-controlled UI trace."""
+    if not isinstance(trace, list) or len(trace) != 4:
+        return []
+    specs = (
+        ('accepted_input', ('state', 'at_ms', 'user_bubble_visible', 'composer_cleared')),
+        ('waiting', ('state', 'at_ms', 'phase', 'indicator_visible')),
+        ('answer', ('state', 'at_ms', 'visible_prefix', 'prefix_characters')),
+        ('completed', ('state', 'at_ms', 'phase', 'native_done', 'native_eof', 'send_released')),
+    )
+    projected = []
+    for row, (state, fields) in zip(trace, specs):
+        if not isinstance(row, dict) or row.get('state') != state:
+            return []
+        item = {'state': state}
+        at_ms = row.get('at_ms')
+        if type(at_ms) not in (int, float) or not 0 <= at_ms <= 120000:
+            return []
+        item['at_ms'] = at_ms
+        for key in fields[2:]:
+            value = row.get(key)
+            if key in ('user_bubble_visible', 'composer_cleared', 'indicator_visible',
+                       'visible_prefix', 'native_done', 'native_eof', 'send_released'):
+                if type(value) is not bool:
+                    return []
+            elif key == 'phase':
+                allowed = ('thinking', 'waiting') if state == 'waiting' else ('done',)
+                if value not in allowed:
+                    return []
+            elif key == 'prefix_characters':
+                if type(value) is not int or not 3 <= value <= 4096:
+                    return []
+            item[key] = value
+        projected.append(item)
+    return projected
 
-    This is deliberately independent of the dialog receipt/S03 evidence path.
-    The browser-side trace contains only phase labels, booleans and timings.
-    """
+
+def original_card_ui_trace_valid(value):
+    """Require exact, typed, ordered UI-state rows; reject injected extra fields."""
     if not isinstance(value, dict):
         return False
     trace = value.get('original_card_ui_states')
     if not isinstance(trace, list) or len(trace) != 4:
         return False
     names = ('accepted_input', 'waiting', 'answer', 'completed')
-    if tuple(row.get('state') for row in trace if isinstance(row, dict)) != names:
+    expected_keys = (
+        {'state', 'at_ms', 'user_bubble_visible', 'composer_cleared'},
+        {'state', 'at_ms', 'phase', 'indicator_visible'},
+        {'state', 'at_ms', 'visible_prefix', 'prefix_characters'},
+        {'state', 'at_ms', 'phase', 'native_done', 'native_eof', 'send_released'},
+    )
+    if any(not isinstance(row, dict) or row.get('state') != name or set(row) != keys
+           for row, name, keys in zip(trace, names, expected_keys)):
         return False
     times = [row.get('at_ms') for row in trace]
     if (any(type(item) not in (int, float) for item in times)
@@ -119,19 +159,22 @@ def original_card_ui_trace_valid(value):
     accepted, waiting, answer, completed = trace
     native_first = value.get('native_first_ms')
     native_done = value.get('native_done_ms')
-    if (value.get('native_calls') != 1 or value.get('total_native_calls') != 1
-            or type(value.get('native_delta_count')) is not int or value['native_delta_count'] < 2
+    if (type(value.get('native_calls')) is not int or value['native_calls'] != 1
+            or type(value.get('total_native_calls')) is not int or value['total_native_calls'] != 1
+            or type(value.get('native_delta_count')) is not int or not 2 <= value['native_delta_count'] <= 2048
             or value.get('native_eof') is not True
             or accepted.get('user_bubble_visible') is not True
             or accepted.get('composer_cleared') is not True
             or waiting.get('indicator_visible') is not True
             or waiting.get('phase') not in ('thinking', 'waiting')
             or type(native_first) not in (int, float)
+            or not 0 <= native_first <= 120000
             or not times[1] < native_first
             or answer.get('visible_prefix') is not True
             or type(answer.get('prefix_characters')) is not int
-            or answer['prefix_characters'] < 3
+            or not 3 <= answer['prefix_characters'] <= 4096
             or type(native_done) not in (int, float)
+            or not 0 <= native_done <= 120000
             or not times[2] < native_done
             or completed.get('phase') != 'done'
             or times[3] < native_done
@@ -143,15 +186,35 @@ def original_card_ui_trace_valid(value):
 
 
 def original_card_stream_projection(value):
-    """Keep the original-card receipt free of supplemental dialog/S03 fields."""
+    """Build a bounded report from fixed scalar types and a projected UI trace."""
     if not isinstance(value, dict):
         return {}
-    keys = ('native_calls', 'total_native_calls', 'native_delta_count',
-            'native_first_ms', 'native_done_ms', 'native_eof',
-            'dom_answer_matches_native', 'ui_before_native_done',
-            'ui_prefix_lengths_before_done', 'original_card_ui_states')
-    return {key:value.get(key) for key in keys}
-
+    def number(key):
+        item = value.get(key)
+        return item if type(item) in (int, float) and 0 <= item <= 120000 else None
+    def count(key, maximum):
+        item = value.get(key)
+        return item if type(item) is int and 0 <= item <= maximum else 0
+    def boolean(key):
+        item = value.get(key)
+        return item if type(item) is bool else False
+    lengths = value.get('ui_prefix_lengths_before_done')
+    if (not isinstance(lengths, list) or len(lengths) > 80
+            or any(type(item) is not int or not 3 <= item <= 4096 for item in lengths)):
+        lengths = []
+    return {
+        'native_calls': count('native_calls', 1),
+        'total_native_calls': count('total_native_calls', 1),
+        'native_delta_count': count('native_delta_count', 2048),
+        'native_first_ms': number('native_first_ms'),
+        'native_done_ms': number('native_done_ms'),
+        'native_eof': boolean('native_eof'),
+        'dom_answer_matches_native': boolean('dom_answer_matches_native'),
+        'ui_before_native_done': boolean('ui_before_native_done'),
+        'ui_prefix_lengths_before_done': list(lengths),
+        'original_card_ui_states': original_card_ui_trace_projection(
+            value.get('original_card_ui_states')),
+    }
 
 def exact_owner_dialog_readback(value, done, dialog_id, prompt, answer):
     """Accept exact supplemental dialog rows; never treat them as canonical S03."""
@@ -196,8 +259,14 @@ def local_base():
     raise RuntimeError('HOLD_NONLOOPBACK_OWNER_AUTH_REQUIRED')
 
 
+def stop_paths():
+    return tuple(ROOT/name for name in
+                 ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP', 'state/STOP')) + (
+                     Path('/workspace/NOX_STOP'),)
+
+
 def stop_present():
-    return any((ROOT/path).exists() for path in ('STOP','STOP.flag','stop.flag','.stop','program/STOP','state/STOP'))
+    return any(path.exists() or path.is_symlink() for path in stop_paths())
 
 
 def idle_slots():
@@ -936,7 +1005,7 @@ async def browser_run(report, directory, available):
                     if not isinstance(answer,str) or not answer.strip():
                         raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
                     report.update(
-                        original_card_ui_states=final['original_card_ui_states'],
+                        original_card_ui_states=original_card_ui_trace_projection(final.get('original_card_ui_states')),
                         actual_native_model_stream_verified=True,
                         progressive_stream_render_verified=True,
                         stream={'native_calls':final.get('native_calls'),
