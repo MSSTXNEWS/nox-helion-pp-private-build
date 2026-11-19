@@ -1,0 +1,34 @@
+name: NOX B3 5A05 owner Resonance real Node source verification
+on:
+  push:
+    branches: [b3/5a05-browser-pacing-cancel-20261119]
+    paths:
+      - '.circleci/config.yml'
+      - '.github/workflows/nox-b3-5a05-source-ci.yml'
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+  pull_request:
+    paths:
+      - '.github/workflows/nox-b3-5a05-source-ci.yml'
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  b3-real-node-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Exact source syntax and hard owner JS budget
+        run: |
+          set -euo pipefail
+          node --version
+          node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+          node --check coordination/onepass/test_v135_resonance_owner_bridge.cjs
+          node -e "const fs=require('fs');const p='coordination/onepass/nox-v135-resonance-owner-bridge.js';const n=fs.statSync(p).size;console.log('bytes='+n);if(n>20000)process.exit(1)"
+      - name: Owner SSE Unicode STOP and S03 fixture Node regressions (SOURCE ONLY)
+        run: node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
