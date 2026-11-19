@@ -2880,7 +2880,6 @@ def main():
                                         if key.endswith(".receipt")},
           "rollback": "PREIMAGE_CONTENT_MODE_OWNER_CAS;FILE_INODES_NOT_RESTORABLE",
           "weights_training_supervisor_workloads_changed": False})
-    print("NOX_MAINT_LIFELINE_COMPLETE=true", flush=True)
     return 0
 
 
@@ -3027,10 +3026,22 @@ def run_owner_entrypoint(main_fn=None):
 
     signal.signal(signal.SIGTERM, _owner_abort)
     signal.signal(signal.SIGINT, _owner_abort)
+    installation_verified = False
     try:
         result = (main_fn or main)()
-        if result == 0 and OWNER_FENCES_CREATED:
-            if not cleanup_owner_fences("SUCCESS"):
+        if result == 0:
+            # From here on the installed observer has passed its runtime and
+            # readback gates. Report finalization failures as HOLD; never roll
+            # back an already verified install after fences may be removed.
+            installation_verified = True
+            if not OWNER_FENCES_CREATED:
+                emit({"state": "HOLD", "reason": "HOLD_LIFELINE_OBSERVER_OWNER_FENCE_MISSING",
+                      "rollback": "INSTALL_VERIFIED_WITHOUT_OWNED_FENCES",
+                      "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+                      "native_mutation_attempted": NATIVE_MUTATION_ATTEMPTED,
+                      "owner_fences": _owner_fence_receipt()})
+                result = 2
+            elif not cleanup_owner_fences("SUCCESS"):
                 emit({"state": "HOLD", "reason": "HOLD_LIFELINE_OBSERVER_OWNER_FENCE_CLEANUP",
                       "rollback": "INSTALL_VERIFIED_FENCES_RETAINED",
                       "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
@@ -3041,6 +3052,7 @@ def run_owner_entrypoint(main_fn=None):
                 emit({"state": "OWNER_FENCES_RELEASED", "reason": None,
                       "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
                       "owner_fences": _owner_fence_receipt()})
+                print("NOX_MAINT_LIFELINE_COMPLETE=true", flush=True)
         elif result != 0 and OWNER_FENCES_CREATED:
             if not NATIVE_MUTATION_ATTEMPTED:
                 if not cleanup_owner_fences("NO_WRITE_FAILURE"):
@@ -3061,6 +3073,25 @@ def run_owner_entrypoint(main_fn=None):
                       "owner_fences": _owner_fence_receipt()})
                 result = 2
     except BaseException as exc:
+        if installation_verified:
+            # Fence cleanup may already have removed the markers. Do not
+            # initiate rollback from this post-verification reporting path.
+            if OWNER_FENCES_CREATED:
+                OWNER_FENCE_STATUS = dict(OWNER_FENCE_STATUS, state="RETAINED",
+                                          cleanup="INSTALL_VERIFIED_FINALIZATION_HOLD",
+                                          retained=True)
+            code = str(exc)
+            if not re.fullmatch(r"HOLD_LIFELINE_OBSERVER_[A-Z0-9_]+", code):
+                code = "HOLD_LIFELINE_OBSERVER_" + type(exc).__name__.upper()
+            try:
+                emit({"state": "HOLD", "reason": code,
+                      "rollback": "INSTALL_VERIFIED_NO_POST_RELEASE_ROLLBACK",
+                      "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+                      "native_mutation_attempted": NATIVE_MUTATION_ATTEMPTED,
+                      "owner_fences": _owner_fence_receipt()})
+            except BaseException:
+                pass
+            return 2
         rollback = "NOT_NEEDED"
         rollback_verified = not NATIVE_MUTATION_ATTEMPTED
         if SUPERVISOR_BACKEND_ACTIVE:

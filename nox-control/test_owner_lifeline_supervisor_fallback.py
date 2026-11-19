@@ -319,6 +319,82 @@ class SupervisorFallbackTests(unittest.TestCase):
         finally:
             self.close_owner_fence_paths(paths, patches)
 
+    def test_complete_marker_is_emitted_only_after_verified_fence_cleanup(self):
+        paths, patches = self.owner_fence_paths()
+        observed_release = []
+
+        def install_successfully():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            return 0
+
+        def capture_receipt(value):
+            if value.get("state") == "OWNER_FENCES_RELEASED":
+                observed_release.append((paths.stop.exists(), paths.maintenance.exists(),
+                                         observer.OWNER_FENCE_STATUS.get("state")))
+
+        try:
+            from contextlib import redirect_stdout
+            import io
+            output = io.StringIO()
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "emit", side_effect=capture_receipt),
+                  redirect_stdout(output)):
+                result = observer.run_owner_entrypoint(install_successfully)
+            self.assertEqual(result, 0)
+            self.assertEqual(observed_release, [(False, False, "RELEASED")])
+            self.assertIn("NOX_MAINT_LIFELINE_COMPLETE=true", output.getvalue())
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_post_release_emit_failure_does_not_start_unfenced_rollback(self):
+        paths, patches = self.owner_fence_paths()
+
+        def install_successfully():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            observer.SUPERVISOR_BACKEND_ACTIVE = True
+            observer.INSTALLED["injected"] = b"installed"
+            return 0
+
+        try:
+            from contextlib import redirect_stdout
+            import io
+            output = io.StringIO()
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "emit", side_effect=RuntimeError("output failed")),
+                  patch.object(observer, "rollback_supervisor_fallback") as rollback,
+                  redirect_stdout(output)):
+                result = observer.run_owner_entrypoint(install_successfully)
+            self.assertEqual(result, 2)
+            rollback.assert_not_called()
+            self.assertFalse(paths.stop.exists())
+            self.assertFalse(paths.maintenance.exists())
+            self.assertNotIn("NOX_MAINT_LIFELINE_COMPLETE=true", output.getvalue())
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
+    def test_cleanup_failure_holds_and_does_not_emit_complete(self):
+        paths, patches = self.owner_fence_paths()
+
+        def install_successfully():
+            observer.acquire_owner_lock(owner_uid=paths.owner_uid)
+            return 0
+
+        try:
+            from contextlib import redirect_stdout
+            import io
+            output = io.StringIO()
+            with (patch.object(observer.signal, "signal"),
+                  patch.object(observer, "cleanup_owner_fences", return_value=False),
+                  patch.object(observer, "emit"),
+                  redirect_stdout(output)):
+                result = observer.run_owner_entrypoint(install_successfully)
+            self.assertEqual(result, 2)
+            self.assertTrue(paths.stop.exists())
+            self.assertTrue(paths.maintenance.exists())
+            self.assertNotIn("NOX_MAINT_LIFELINE_COMPLETE=true", output.getvalue())
+        finally:
+            self.close_owner_fence_paths(paths, patches)
+
     def test_config_is_one_bounded_root_observer_group(self):
         raw = (ROOT / "supervisor/nox-lifeline-observer.conf").read_bytes()
         options = observer.validate_supervisor_program_config(raw)
