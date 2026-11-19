@@ -9,6 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   owner-maintenance:
+    # Reserve standalone native actions for the canonical route; keep memfd_audit legacy.
     if: >-
       github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
       github.actor == 'MSSTXNEWS' &&
