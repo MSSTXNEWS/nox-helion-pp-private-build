@@ -399,6 +399,15 @@ def old_claim_comparison():
         emit('INSTALL_RECEIPT',{'state':'UNAVAILABLE','error':type(exc).__name__})
 
 def main():
+    readonly_action = os.environ.get('NOX_READONLY_ACTION', '')
+    if readonly_action and readonly_action != 'supervisor-config':
+        raise SystemExit('HOLD_UNKNOWN_READONLY_ACTION')
+    if readonly_action == 'supervisor-config':
+        row = supervisor_config_readonly()
+        print('NOX_MAINT_SUPERVISOR_CONFIG=' + json.dumps(
+            row, ensure_ascii=True, separators=(',', ':'), allow_nan=False), flush=True)
+        print('NOX_MAINT_SUPERVISOR_CONFIG_COMPLETE=true', flush=True)
+        return
     emit('SNAPSHOT_A',runtime_snapshot())
     worker_status_sample()
     hash_summary()
@@ -796,6 +805,90 @@ def qwen_training_readback():
                 row['state'] = 'READ_OR_PARSE_HOLD'
             rows.append(row)
     return rows or [{'record': 'qwen35_student', 'state': 'NO_RUN_RECEIPTS_OBSERVED'}]
+
+SUPERVISOR_CONFIG_PATH = Path('/etc/supervisor/conf.d/nox-dispatcher-t855u.conf')
+SUPERVISOR_CONFIG_DIR = Path('/etc/supervisor/conf.d')
+SUPERVISOR_TARGET_SERVICE = 'nox-dispatcher-t855u'
+SUPERVISOR_EXPECTED_SCRIPT = '/root/nox/scripts/nox_dispatcher_t855u.py'
+
+
+def supervisor_config_readonly(config_path=SUPERVISOR_CONFIG_PATH,
+                               conf_dir=SUPERVISOR_CONFIG_DIR, now=time.time):
+    """Read one known dispatcher config and fail closed on ambiguity.
+
+    Only a canonical interpreter + dispatcher script command is emitted. Other
+    command text is replaced with a marker; its digest and token count remain.
+    """
+    config_path = Path(config_path)
+    conf_dir = Path(conf_dir)
+    if (config_path.name != 'nox-dispatcher-t855u.conf'
+            or config_path.parent != conf_dir or not conf_dir.is_dir()
+            or conf_dir.is_symlink()):
+        raise ValueError('HOLD_SUPERVISOR_CONFIG_PATH')
+    names = sorted(path for path in conf_dir.iterdir() if path.name.endswith('.conf'))
+    if len(names) > 128 or config_path not in names:
+        raise ValueError('HOLD_SUPERVISOR_CONFIG_MISSING_OR_UNBOUNDED')
+    sections = []
+    selected = None
+    for path in names:
+        raw, _ = safe_read(path, 250000)
+        parser = configparser.ConfigParser(interpolation=None, strict=True)
+        parser.read_string(raw.decode('utf-8'))
+        section = 'program:' + SUPERVISOR_TARGET_SERVICE
+        if parser.has_section(section):
+            sections.append(path)
+            if path == config_path:
+                selected = (raw, parser)
+    if len(sections) != 1 or sections[0] != config_path or selected is None:
+        raise ValueError('HOLD_SUPERVISOR_CONFIG_DUPLICATE_OR_WRONG_PATH')
+    raw, parser = selected
+    section = 'program:' + SUPERVISOR_TARGET_SERVICE
+    command_raw = parser.get(section, 'command', fallback='').strip()
+    if not command_raw or len(command_raw) > 4096:
+        raise ValueError('HOLD_SUPERVISOR_COMMAND_MISSING_OR_OVERSIZED')
+    try:
+        tokens = shlex.split(command_raw, posix=True)
+    except ValueError as exc:
+        raise ValueError('HOLD_SUPERVISOR_COMMAND_PARSE') from exc
+    if not tokens or len(tokens) > 64:
+        raise ValueError('HOLD_SUPERVISOR_COMMAND_SCHEMA')
+    executable = Path(tokens[0]).name
+    interpreter_ok = (Path(tokens[0]).is_absolute()
+                      and re.fullmatch(r'python(?:3(?:\.[0-9]{1,2})?)?', executable) is not None)
+    command_matches = interpreter_ok and len(tokens) >= 2 and tokens[1] == SUPERVISOR_EXPECTED_SCRIPT
+    command_public = (' '.join(tokens[:2]) if command_matches
+                      else '[REDACTED_UNRECOGNIZED_COMMAND]')
+    restart = parser.get(section, 'autorestart', fallback='unexpected').strip().lower()
+    if restart not in ('true', 'false', 'unexpected'):
+        raise ValueError('HOLD_SUPERVISOR_AUTORESTART')
+    stop_signal = parser.get(section, 'stopsignal', fallback='TERM').strip().upper()
+    if not re.fullmatch(r'(?:TERM|INT|QUIT|HUP|USR1|USR2|KILL|[0-9]{1,3})', stop_signal):
+        stop_signal = 'UNRECOGNIZED'
+    try:
+        stop_as_group = parser.getboolean(section, 'stopasgroup', fallback=False)
+        kill_as_group = parser.getboolean(section, 'killasgroup', fallback=False)
+    except ValueError as exc:
+        raise ValueError('HOLD_SUPERVISOR_GROUP_FLAGS') from exc
+    return {
+        'schema': 'NOX_SUPERVISOR_CONFIG_READONLY_V1',
+        'state': 'VERIFIED',
+        'observed_at': float(now()),
+        'path': str(config_path),
+        'service': SUPERVISOR_TARGET_SERVICE,
+        'config_sha256': hashlib.sha256(raw).hexdigest(),
+        'command': command_public,
+        'command_sha256': hashlib.sha256(command_raw.encode('utf-8')).hexdigest(),
+        'command_matches_expected': bool(command_matches),
+        'command_token_count': len(tokens),
+        'command_extra_args_redacted': max(0, len(tokens) - 2),
+        'stopsignal': stop_signal,
+        'stopasgroup': bool(stop_as_group),
+        'killasgroup': bool(kill_as_group),
+        'autorestart': restart,
+        'duplicates_found': 0,
+        'scope': 'ONE_FIXED_SERVICE_CONFIG_COMMAND_REDACTED_UNLESS_CANONICAL',
+    }
+
 
 def supervisor_config():
     """Return recognized service settings; command, environment and text withheld."""
