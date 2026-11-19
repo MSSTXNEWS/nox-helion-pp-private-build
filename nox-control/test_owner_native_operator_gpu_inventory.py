@@ -307,6 +307,35 @@ class OwnerGpuInventoryOperatorTests(unittest.TestCase):
         )
 
 
+    def test_memory_sum_failure_forwards_only_bounded_numeric_diagnostic(self):
+        diagnostic = {
+            "schema": "NOX_GPU_MEMORY_DIAGNOSTIC_V1",
+            "rows": [{
+                "index": 0, "total_mib": 32768, "used_mib": 16462,
+                "free_mib": 16300, "residual_mib": 6,
+            }],
+        }
+        stdout = (
+            operator.GPU_INVENTORY_RESULT_PREFIX + "HOLD_GPU_INVENTORY_MEMORY_SUM"
+            + "\\n" + operator.GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX
+            + json.dumps(diagnostic, sort_keys=True, separators=(",", ":"))
+        )
+        failure = operator._gpu_inventory_remote_failure(stdout, "", 2)
+        self.assertEqual(failure["hold"], "HOLD_GPU_INVENTORY_MEMORY_SUM")
+        self.assertIn(operator.GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX, failure["records"][-1])
+        self.assertNotIn(GPU_A, str(failure))
+        self.assertNotIn("uuid", str(failure).lower())
+
+        unsafe = dict(diagnostic)
+        unsafe["rows"] = [dict(diagnostic["rows"][0], serial="secret-sentinel")]
+        bad = operator._gpu_inventory_remote_failure(
+            operator.GPU_INVENTORY_RESULT_PREFIX + "HOLD_GPU_INVENTORY_MEMORY_SUM"
+            + "\\n" + operator.GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX
+            + json.dumps(unsafe), "", 2
+        )
+        self.assertEqual(bad["hold"], "HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE")
+        self.assertNotIn("secret-sentinel", str(bad))
+
     def test_ssh_exit_255_wins_over_partial_helper_result_marker(self):
         partial = (
             operator.GPU_INVENTORY_RESULT_PREFIX
