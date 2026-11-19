@@ -1,0 +1,255 @@
+name: M2.3 persona memory STOP build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/m23-persona-memory-stop-e199
+
+permissions:
+  contents: write
+
+concurrency:
+  group: m23-persona-stop-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Install Tk, Pillow, and Xvfb
+        run: sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-tk python3-pil python3-venv xvfb
+
+      - name: Prepare frozen source plus M2.3 overlay
+        run: python3 tools/m23_prepare_source.py --dest "$RUNNER_TEMP/m23-source"
+
+      - name: Test persona isolation and STOP
+        run: |
+          cd "$RUNNER_TEMP/m23-source"
+          xvfb-run -a python3 -m unittest tests.test_m23_persona_memory_stop -q
+
+      - name: Build the Linux self-test binary
+        run: |
+          python3 -m venv "$RUNNER_TEMP/linux-venv"
+          "$RUNNER_TEMP/linux-venv/bin/pip" install --disable-pip-version-check 'pyinstaller==6.16.0' 'pillow==11.3.0'
+          cd "$RUNNER_TEMP/m23-source"
+          "$RUNNER_TEMP/linux-venv/bin/pyinstaller" --noconfirm --onefile --console --noupx \
+            --name NOX_HELION_M23_PERSONA_STOP \
+            --distpath "$RUNNER_TEMP/linux-dist" \
+            --workpath "$RUNNER_TEMP/linux-work" \
+            --specpath "$RUNNER_TEMP/linux-spec" \
+            --paths "$RUNNER_TEMP/m23-source" \
+            run_m23_entry.py
+
+      - name: Run the Linux binary self-test
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/linux-dist/NOX_HELION_M23_PERSONA_STOP"
+          out="$RUNNER_TEMP/linux-evidence"
+          mkdir -p "$out/shots"
+          xvfb-run -a "$bin" --m23-self-test \
+            --m23-receipt "$out/M23_LINUX_BINARY_RECEIPT.json" \
+            --m23-screenshot-dir "$out/shots" \
+            --data-dir "$out/data"
+          python3 - << 'PY'
+          import hashlib, json, os, pathlib, sys
+          root = pathlib.Path(os.environ["RUNNER_TEMP"])
+          out = root / "linux-evidence"
+          receipt = json.loads((out / "M23_LINUX_BINARY_RECEIPT.json").read_text(encoding="utf-8"))
+          binary = root / "linux-dist" / "NOX_HELION_M23_PERSONA_STOP"
+          digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+          reference = "93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8"
+          if digest == reference:
+              sys.exit("linux binary matches the reference EXE hash")
+          if receipt.get("live_ai") is not False or receipt.get("logic_pass") is not True:
+              sys.exit("linux binary logic did not pass: " + str(receipt.get("overall")))
+          if receipt.get("frozen_executable") is not True:
+              sys.exit("linux process was not a frozen executable")
+          (out / "SHA256SUMS.txt").write_text(digest + "  NOX_HELION_M23_PERSONA_STOP\n", encoding="utf-8")
+          print(receipt["overall"], digest)
+          PY
+
+      - name: Pack the patched source tarball
+        run: |
+          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/linux-evidence/NOX_HELION_M23_SOURCE.tar.gz" m23-source
+          sha256sum "$RUNNER_TEMP/linux-evidence/NOX_HELION_M23_SOURCE.tar.gz" >> "$RUNNER_TEMP/linux-evidence/SHA256SUMS.txt"
+          cp "$RUNNER_TEMP/linux-dist/NOX_HELION_M23_PERSONA_STOP" "$RUNNER_TEMP/linux-evidence/"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-HELION-M23-linux-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/linux-evidence/NOX_HELION_M23_PERSONA_STOP
+            ${{ runner.temp }}/linux-evidence/NOX_HELION_M23_SOURCE.tar.gz
+            ${{ runner.temp }}/linux-evidence/M23_LINUX_BINARY_RECEIPT.json
+            ${{ runner.temp }}/linux-evidence/SHA256SUMS.txt
+            ${{ runner.temp }}/linux-evidence/shots/**
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-exe:
+    runs-on: windows-2025
+    timeout-minutes: 90
+    steps:
+      - name: Check out
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+
+      - name: Prepare frozen source plus M2.3 overlay
+        shell: pwsh
+        run: python tools/m23_prepare_source.py --dest "$env:RUNNER_TEMP\m23-source"
+
+      - name: Install pinned offline build wheels
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = (Resolve-Path .).Path
+          $wheel = Join-Path $env:RUNNER_TEMP 'NOX_PP_BUILD_WHEELHOUSE_18.zip'
+          $stream = [IO.File]::Open($wheel, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+          try {
+            foreach ($name in @('wheelhouse_00.part','wheelhouse_01.part','wheelhouse_02.part')) {
+              $part = [IO.File]::OpenRead((Join-Path $root $name))
+              try { $part.CopyTo($stream) } finally { $part.Dispose() }
+            }
+          } finally { $stream.Dispose() }
+          $expected = '2b6291a45f7c03c583e2073d069f6a1de5832d3bc54b33150f940b4aa53598ff'
+          $actual = (Get-FileHash -LiteralPath $wheel -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -cne $expected) { throw "wheelhouse hash mismatch $actual" }
+          $deps = Join-Path $env:RUNNER_TEMP 'wheelhouse'
+          Expand-Archive -LiteralPath $wheel -DestinationPath $deps
+          $venv = Join-Path $env:RUNNER_TEMP 'm23-venv'
+          py -3.12 -m venv $venv
+          & (Join-Path $venv 'Scripts\python.exe') -m pip --isolated install --disable-pip-version-check --no-index --only-binary=:all: --find-links (Join-Path $deps 'wheels') --require-hashes -r (Join-Path $deps 'requirements-build-win64-hashed.txt')
+          "M23_VENV=$venv" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8NoBOM
+
+      - name: Test persona isolation and STOP
+        shell: pwsh
+        run: |
+          Set-Location "$env:RUNNER_TEMP\m23-source"
+          & "$env:M23_VENV\Scripts\python.exe" -m unittest tests.test_m23_persona_memory_stop -q
+
+      - name: Build a separate Windows EXE
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Join-Path $env:RUNNER_TEMP 'm23-source'
+          $dist = Join-Path $env:RUNNER_TEMP 'win-dist'
+          $assets = Join-Path $source 'assets'
+          $seed = Join-Path $source 'helion\data\traits_seed_64.json'
+          $weights = Join-Path $source 'helion\ai_weights\weights'
+          & "$env:M23_VENV\Scripts\python.exe" -m PyInstaller --noconfirm --onefile --console --noupx `
+            --name NOX_HELION_M23_PERSONA_STOP `
+            --distpath $dist `
+            --workpath (Join-Path $env:RUNNER_TEMP 'win-work') `
+            --specpath (Join-Path $env:RUNNER_TEMP 'win-spec') `
+            --paths $source `
+            --add-data "$assets;assets" `
+            --add-data "$seed;helion/data" `
+            --add-data "$weights;helion/ai_weights/weights" `
+            (Join-Path $source 'run_first_release.py')
+          $exe = Join-Path $dist 'NOX_HELION_M23_PERSONA_STOP.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw 'M23 exe missing' }
+          $sha = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $reference = '93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8'
+          if ($sha -ceq $reference) { throw 'REFUSING_REFERENCE_EXE_HASH' }
+          if ((Split-Path -Leaf $exe) -eq 'NOX_HELION_PRIVATE_CANDIDATE.exe') { throw 'REFUSING_REFERENCE_EXE_NAME' }
+          Write-Host "M23_EXE_SHA256=$sha"
+
+      - name: Run the EXE self-test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $env:RUNNER_TEMP 'win-dist\NOX_HELION_M23_PERSONA_STOP.exe'
+          $out = Join-Path $env:RUNNER_TEMP 'win-evidence'
+          New-Item -ItemType Directory -Path $out, (Join-Path $out 'shots'), (Join-Path $out 'data') -Force | Out-Null
+          $env:NOX_M23_PROBE_SHELL = '1'
+          & $exe --m23-self-test `
+            --m23-receipt (Join-Path $out 'M23_WINDOWS_EXE_RECEIPT.json') `
+            --m23-screenshot-dir (Join-Path $out 'shots') `
+            --data-dir (Join-Path $out 'data')
+          if ($LASTEXITCODE -ne 0) { throw "EXE self-test exit $LASTEXITCODE" }
+          $receipt = Get-Content -LiteralPath (Join-Path $out 'M23_WINDOWS_EXE_RECEIPT.json') -Raw | ConvertFrom-Json
+          if ($receipt.live_ai -ne $false) { throw 'LIVE_AI_CLAIM_FORBIDDEN' }
+          if ($receipt.logic_pass -ne $true -or $receipt.hud_pass -ne $true -or $receipt.frozen_executable -ne $true) {
+            throw ("EXE_RECEIPT_NOT_PROVEN:" + $receipt.overall)
+          }
+          if ($null -eq $receipt.shell_probe -or $receipt.shell_probe.pass -ne $true) {
+            throw ("EXE_SHELL_PROBE_NOT_PROVEN:" + $receipt.overall)
+          }
+          if ($receipt.reference_exe_executed -ne $false -or $receipt.reference_sha_matches_this_binary -eq $true) {
+            throw 'REFERENCE_EXE_WAS_TOUCHED_OR_MATCHED'
+          }
+          $sha = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          @(
+            "$sha  NOX_HELION_M23_PERSONA_STOP.exe"
+          ) | Set-Content -LiteralPath (Join-Path $out 'SHA256SUMS.txt') -Encoding ascii
+          Copy-Item -LiteralPath $exe -Destination (Join-Path $out 'NOX_HELION_M23_PERSONA_STOP.exe')
+          Write-Host ("OVERALL=" + $receipt.overall)
+          Write-Host ("SCREENSHOT_PROVEN=" + $receipt.screenshot_proven)
+
+      - name: Upload Windows EXE evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NOX-HELION-M23-windows-exe-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/win-evidence/NOX_HELION_M23_PERSONA_STOP.exe
+            ${{ runner.temp }}/win-evidence/M23_WINDOWS_EXE_RECEIPT.json
+            ${{ runner.temp }}/win-evidence/SHA256SUMS.txt
+            ${{ runner.temp }}/win-evidence/shots/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    needs: [linux-build, windows-exe]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          path: release-files
+
+      - name: Publish a pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p publish
+          find release-files -type f -print
+          find release-files -type f \( -name 'NOX_HELION_M23*' -o -name 'M23_*RECEIPT.json' -o -name '*.png' -o -name '*.bmp' \) -exec cp {} publish/ \;
+          python3 - << 'PY'
+          import hashlib, pathlib
+          lines = []
+          for path in sorted(pathlib.Path('publish').iterdir()):
+              if not path.is_file() or path.name == 'SHA256SUMS.txt':
+                  continue
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              lines.append(f'{digest}  {path.name}')
+          pathlib.Path('publish/SHA256SUMS.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          print('\n'.join(lines))
+          PY
+          tag="m23-persona-stop-${GITHUB_RUN_ID}"
+          gh release create "$tag" publish/* \
+            --prerelease \
+            --title "M2.3 persona/memory/STOP candidate ${GITHUB_RUN_ID}" \
+            --notes "$(printf '%s\n' \
+              'Separate M2.3 build. This is not the reference EXE sha256 93a329ba1ece9cfd66951b377e04e9c1166ec6ba3ce13a5911ba8e36de99dfb8.' \
+              'live_ai is false. Read M23_WINDOWS_EXE_RECEIPT.json and M23_LINUX_BINARY_RECEIPT.json for what the binaries actually proved.' \
+              'SHA256SUMS.txt covers every file in this pre-release.' \
+              "Workflow: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")"

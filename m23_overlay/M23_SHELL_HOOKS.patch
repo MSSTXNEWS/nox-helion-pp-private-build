@@ -1,0 +1,264 @@
+--- a/run_first_release.py
++++ b/run_first_release.py
+@@ -1,6 +1,9 @@
+ """Private source candidate entrypoint; native acceptance is still separate."""
+ import sys
+ def main():
++    if '--m23-self-test' in sys.argv[1:]:
++        from helion.m23_selftest import main as m23_main
++        return m23_main(sys.argv[1:])
+     if '--maxlife' in sys.argv[1:]:
+         from helion.maxlife.__main__ import main as maxlife_main
+         args=[arg for arg in sys.argv[1:] if arg != '--maxlife']
+--- a/helion/e08_desktop_ui.py
++++ b/helion/e08_desktop_ui.py
+@@ -37,6 +37,7 @@
+ from .sb4_media_runtime import (SB4MediaHold, EmbeddedVideoPlayback, read_sb4_media_manifest,
+                                 load_approved_mesh, project_wireframe)
+ from .personas import PERSONAS
++from .m23_persona_stop import TurnGate
+ from .hf_facades import FACADES, FACADES_BY_SCREEN, FacadeDrafts, FacadeSessionLog, facade_prompt
+ from .storage import Store
+ from .contracts import RouteResult, RouteStatus
+@@ -187,6 +188,9 @@
+             self.nav.bind_reply_verifier(verifier)
+         self.project = tk.StringVar(value='default')
+         self.persona = tk.StringVar(value=PERSONAS[0].persona_id)
++        self.m23_gate = TurnGate(self.data_dir / 'm23_persona_buckets.sqlite3')
++        self.m23_gate.switch_persona(self.persona.get())
++        self._m23_physical_latch = False
+         self.model = tk.StringVar(value='')
+         self.route_query = tk.StringVar(value='')
+         self.core_draft = tk.StringVar(value='')
+@@ -452,7 +456,7 @@
+         self.top_sections_button=ttk.Button(top,text='Разделы',command=lambda:self.open_screen('screen.menu'))
+         self.top_work_button=ttk.Button(top,text='Работа',command=self.open_workbench)
+         self.top_search_button=ttk.Button(top,text='Поиск  Ctrl+K',command=self.open_palette)
+-        self.top_stop_button=ttk.Button(top,text='STOP',command=self.stop)
++        self.top_stop_button=ttk.Button(top,text='STOP',command=self.m23_physical_stop)
+         self.top_status_label=ttk.Label(top,textvariable=self.status)
+         self.top_status_label.configure(wraplength=280,justify='right')
+         self._layout_topbar(900)
+@@ -517,6 +521,7 @@
+                      values=[p.persona_id for p in PERSONAS]).pack(fill='x')
+         ttk.Label(sidebar,text='Запрос локального маршрута').pack(anchor='w')
+         ttk.Entry(sidebar,textvariable=self.route_query).pack(fill='x')
++        self._mount_m23_hud(sidebar)
+         self.title=ttk.Label(self.content,text='',font=('Segoe UI',18,'bold'),wraplength=750)
+         self.title.pack(anchor='w')
+         self.content.bind('<Configure>', self._on_content_resize, add='+')
+@@ -2042,6 +2047,7 @@
+         # important scope-revocation result above.
+         self.status.set(self.active_screen+(' · SCOPE_CHANGED/STOP_HOLD'
+             if scope_held else ' · SCOPE_CHANGED/IDLE'))
++        self._m23_on_scope()
+ 
+     def open_screen(self,screen_id:str, *, track_history:bool=True) -> None:
+         # Preserve the committed ScreenID from the screen/action contract.
+@@ -2556,6 +2562,10 @@
+ 
+     def ask_core(self) -> None:
+         spec=BY_SCREEN_ID[self.active_screen]
++        if getattr(self, 'm23_gate', None) is not None and self.m23_gate.halted:
++            self.status.set(self.active_screen+' · STOP_BLOCKS_SEND')
++            self._render_output({'state':'STOP_BLOCKS_SEND','dispatch':False,'live_ai':False})
++            return
+         if (not spec.core_id or self._active_request is not None
+                 or E08Desktop._stop_gate_held(self)):
+             return
+@@ -2652,6 +2662,14 @@
+         self._hf_request_user_text=text if is_hf else None
+         self._model_request_model=model
+         self._poll_generation+=1
++        try:
++            self.m23_gate.arm_inflight(self.persona.get(), self._poll_generation)
++        except (PermissionError, ValueError):
++            self.stop()
++            self.status.set(self.active_screen+' · STOP_BLOCKS_SEND')
++            self._render_output({'state':'STOP_BLOCKS_SEND','dispatch':False,'live_ai':False})
++            return
++        self._m23_refresh_hud()
+         self.status.set(self.active_screen+' · LOADING · '+rid)
+         self.request_button.configure(state='disabled')
+         try:
+@@ -2826,8 +2844,16 @@
+         self._model_request_scope=None
+         self._model_request_model=None
+         self._model_request_screen=None
+-        self.request_button.configure(state='normal')
+-        if displayed and self.active_screen==displayed_for_screen:
++        late_blocked = not self._m23_allow_assistant(generation)
++        if getattr(self, 'm23_gate', None) is not None and self.m23_gate.halted:
++            self.request_button.configure(state='disabled')
++        else:
++            self.request_button.configure(state='normal')
++        if late_blocked:
++            self._m23_finish(generation, response, allow_text=False)
++            self._render_output({'state':'LATE_WRITE_BLOCKED','appended':False,'live_ai':False})
++            self.status.set(self.active_screen+' · LATE_WRITE_BLOCKED')
++        elif displayed and self.active_screen==displayed_for_screen:
+             if (displayed_for_screen in FACADES_BY_SCREEN and
+                     response.get('outcome') == 'DONE' and
+                     response.get('real_local_reply') is True and
+@@ -2837,10 +2863,13 @@
+                 self._hf_sessions.add(facade_id=facade.facade_id,
+                     project_id=self.project.get(), persona_id=self.persona.get(),
+                     question=hf_question, response=response['response'][:24000])
++            self._m23_finish(generation, response, allow_text=True)
+             self._render_output(response)
+             self.status.set(self.active_screen+' · '+response.get('outcome','ERROR'))
++            self._m23_refresh_hud()
+         elif not displayed:
+             reason=self.nav.screen.state.value
++            self._m23_finish(generation, response, allow_text=False)
+             self._render_output('Ответ не показан: '+reason+' · STOP, проверка fake backend или несовпадение request_id/CoreID.')
+             if self.active_screen==displayed_for_screen:
+                 self.status.set(self.active_screen+' · '+reason)
+@@ -2859,7 +2888,108 @@
+                 or type(receipt.get('epoch')) is not int or receipt['epoch'] < 1):
+             raise RuntimeError('pc_revocation_unconfirmed')
+ 
++    def _mount_m23_hud(self, parent) -> None:
++        from .m23_hud import PersonaStopHud
++        reduced = bool(self.s08_reduced_motion.get()) if hasattr(self, 's08_reduced_motion') else False
++        self.m23_hud = PersonaStopHud(
++            parent, self.m23_gate,
++            physical_stop=self.m23_physical_stop,
++            resume=self.m23_resume,
++            reduced_motion=reduced)
++        if hasattr(self, 's08_reduced_motion'):
++            self.s08_reduced_motion.trace_add('write', self._m23_sync_motion)
++
++    def _m23_sync_motion(self, *_ignored) -> None:
++        hud = getattr(self, 'm23_hud', None)
++        if hud is not None and hasattr(self, 's08_reduced_motion'):
++            hud.reduced_motion = bool(self.s08_reduced_motion.get())
++
++    def _m23_refresh_hud(self) -> None:
++        hud = getattr(self, 'm23_hud', None)
++        if hud is not None:
++            try:
++                hud.refresh()
++            except self.tk.TclError:
++                pass
++
++    def _m23_on_scope(self) -> None:
++        gate = getattr(self, 'm23_gate', None)
++        if gate is None:
++            return
++        try:
++            gate.switch_persona(self.persona.get())
++        except ValueError:
++            return
++        hud = getattr(self, 'm23_hud', None)
++        if hud is not None:
++            try:
++                hud.animate_to(self.persona.get())
++            except self.tk.TclError:
++                pass
++
++    def _m23_allow_assistant(self, generation: int) -> bool:
++        gate = getattr(self, 'm23_gate', None)
++        if gate is None:
++            return True
++        try:
++            return gate.allow_assistant_write(self.persona.get(), generation)
++        except ValueError:
++            return False
++
++    def _m23_finish(self, generation: int, response, *, allow_text: bool) -> None:
++        gate = getattr(self, 'm23_gate', None)
++        if gate is None:
++            return
++        persona = self.persona.get()
++        text = response.get('response') if isinstance(response, dict) else None
++        if (allow_text and isinstance(response, dict)
++                and response.get('outcome') == 'DONE'
++                and response.get('real_local_reply') is True
++                and isinstance(text, str) and text.strip()):
++            gate.try_commit_assistant(
++                persona, text[:8000], generation, source='verified_local_reply')
++            return
++        try:
++            gate.settle_without_reply(persona, generation)
++        except ValueError:
++            return
++
++    def m23_physical_stop(self, _event=None):
++        """Button and Alt+S. Latch HALTED before the backend cancel."""
++        gate = getattr(self, 'm23_gate', None)
++        if gate is not None:
++            gate.halt()
++        try:
++            self.stop()
++        finally:
++            try:
++                self.request_button.configure(state='disabled')
++            except self.tk.TclError:
++                pass
++            hud = getattr(self, 'm23_hud', None)
++            if hud is not None:
++                hud.show_halted()
++        return 'break'
++
++    def m23_resume(self, _event=None):
++        gate = getattr(self, 'm23_gate', None)
++        if gate is None:
++            return 'break'
++        gate.resume()
++        try:
++            self.request_button.configure(
++                state='disabled' if E08Desktop._stop_gate_held(self) else 'normal')
++        except self.tk.TclError:
++            pass
++        hud = getattr(self, 'm23_hud', None)
++        if hud is not None:
++            hud.show_ready()
++        return 'break'
++
+     def stop(self) -> None:
++        gate = getattr(self, 'm23_gate', None)
++        if gate is not None:
++            gate.invalidate_inflight()
+         if self._closed is True:
+             # A failed final reader/Core cleanup leaves Tk alive and a
+             # deferred root destroy in _close_pending. STOP must remain a
+@@ -2970,6 +3100,7 @@
+                 self._render_output('STOP: поздний ответ скрыт. '+
+                     ('Остановка ещё не подтверждена; повтор STOP доступен.' if held else
+                      'Backend может завершать подтверждённую отмену асинхронно.'))
++                self._m23_refresh_hud()
+             except self.tk.TclError:
+                 pass
+ 
+@@ -3069,6 +3200,8 @@
+         self.root.bind_all('<Alt-Home>',lambda e:self.open_screen('screen.home'))
+         self.root.bind_all('<Alt-Left>',lambda e:self.back())
+         self.root.bind_all('<Escape>',lambda e:self.stop())
++        self.root.bind_all('<Alt-s>',lambda e:self.m23_physical_stop())
++        self.root.bind_all('<Alt-S>',lambda e:self.m23_physical_stop())
+         self.root.bind_all('<F5>',lambda e:self.refresh())
+         self.root.bind_all('<Control-m>',lambda e:self.open_screen('screen.route.mini'))
+         for i,cid in enumerate(CORE_IDS,1):
+@@ -3307,6 +3440,9 @@
+ 
+     def close(self):
+         if not self._closed:
++            hud = getattr(self, 'm23_hud', None)
++            if hud is not None:
++                hud.shutdown()
+             self._cancel_visual_animation()
+             self._sb4_cancel_animation()
+             try:
+--- a/helion/s08_v28_desktop.py
++++ b/helion/s08_v28_desktop.py
+@@ -278,6 +278,9 @@
+             # Unlike add='+', this replaces inherited bind_all for the same
+             # sequence and prevents a second, unguarded E08 dispatch.
+             self.root.bind_all(sequence, guarded)
++        # STOP is a safety control, not navigation: it stays live in child windows.
++        self.root.bind_all('<Alt-s>', lambda _event: self.m23_physical_stop())
++        self.root.bind_all('<Alt-S>', lambda _event: self.m23_physical_stop())
+ 
+     def _s08_e11_local_service(self):
+         from .e11.service import E11Service
