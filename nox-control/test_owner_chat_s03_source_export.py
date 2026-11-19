@@ -128,6 +128,18 @@ class SourceExportTests(unittest.TestCase):
         self.assertEqual(helper.resolve_db_path(static), "/root/nox/kb/knowledge.sqlite")
         self.assertIsNone(helper.resolve_db_path(dynamic))
 
+    def test_pinned_provider_manifest_and_import(self):
+        self.assertTrue(operator.verify_source_export_dependencies())
+        import sys
+        repo_root = ROOT.parent
+        if str(repo_root) not in sys.path:
+            sys.path.insert(0, str(repo_root))
+        from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe
+        self.assertTrue(callable(ephemeral_ssh_probe.api))
+        self.assertTrue(callable(ephemeral_ssh_probe.match))
+        self.assertTrue(callable(ephemeral_ssh_probe.cleanup))
+        self.assertEqual(ephemeral_ssh_probe.INSTANCE_ID, 60509551)
+
     def test_export_artifact_is_exclusive_and_private_mode(self):
         with tempfile.TemporaryDirectory() as td:
             old = os.getcwd()

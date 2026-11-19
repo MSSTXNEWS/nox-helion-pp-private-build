@@ -1094,8 +1094,58 @@ SOURCE_EXPORT_CHUNK='NOX_MAINT_SOURCE_EXPORT_CHUNK='
 SOURCE_EXPORT_COMPLETE='NOX_MAINT_SOURCE_EXPORT_COMPLETE=true'
 SOURCE_EXPORT_RECEIPT='NOX_MAINT_SOURCE_EXPORT_RECEIPT='
 SOURCE_EXPORT_SCHEMA='NOX_ENCRYPTED_SOURCE_EXPORT_ENVELOPE_V1'
+SOURCE_EXPORT_DEPENDENCY_MANIFEST='nox-control/owner_chat_s03_source_export_manifest.json'
+SOURCE_EXPORT_DEPENDENCY_MANIFEST_SHA256='abbd044237816411ecdbc81e7887099a3937caeb445504afe606887e22d34eb2'
+SOURCE_EXPORT_SUPPORT_PATHS=frozenset(('nox_runpod/__init__.py','nox_runpod/teacher_mesh/__init__.py',
+    'nox_runpod/teacher_mesh/v51/__init__.py','nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py'))
 SOURCE_EXPORT_MAX_BYTES=1024*1024
 SOURCE_EXPORT_MAX_CHUNKS=120
+
+
+def verify_source_export_dependencies():
+    """Pin the local, read-only SSH provider needed by the source-export action."""
+    manifest_path=Path(SOURCE_EXPORT_DEPENDENCY_MANIFEST)
+    try:
+        manifest_raw=manifest_path.read_bytes()
+    except OSError:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_MANIFEST_MISSING')
+    if hashlib.sha256(manifest_raw).hexdigest()!=SOURCE_EXPORT_DEPENDENCY_MANIFEST_SHA256:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_MANIFEST_HASH')
+    try:
+        manifest=json.loads(manifest_raw)
+        canonical=json.dumps(manifest,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()
+    except Exception:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_MANIFEST_JSON')
+    if (canonical!=manifest_raw or not isinstance(manifest,dict)
+            or set(manifest)!={'schema','files'}
+            or manifest.get('schema')!='NOX_S03_EXPORT_RUNTIME_MANIFEST_V1'
+            or not isinstance(manifest.get('files'),list) or len(manifest['files'])!=len(SOURCE_EXPORT_SUPPORT_PATHS)):
+        raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_MANIFEST_SCHEMA')
+    seen=set()
+    for record in manifest['files']:
+        if not isinstance(record,dict) or set(record)!={'path','sha256'}:
+            raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_RECORD')
+        path=record.get('path');expected=record.get('sha256')
+        if (path not in SOURCE_EXPORT_SUPPORT_PATHS or path in seen
+                or not isinstance(expected,str) or not re.fullmatch('[0-9a-f]{64}',expected)):
+            raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_SCOPE')
+        seen.add(path)
+        candidate=Path(path)
+        try:
+            info=candidate.lstat()
+            if (not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode)
+                    or info.st_nlink!=1 or info.st_size>32768 or info.st_mode&0o022):
+                raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_FILE_UNSAFE')
+            raw=candidate.read_bytes()
+        except RuntimeError:
+            raise
+        except OSError:
+            raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_FILE_MISSING')
+        if hashlib.sha256(raw).hexdigest()!=expected:
+            raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_FILE_HASH')
+    if seen!=SOURCE_EXPORT_SUPPORT_PATHS:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_DEPENDENCY_FILE_MISSING')
+    return True
 
 def source_export_key_info(encoded,now=None):
     if not isinstance(encoded,str) or len(encoded)>12000 or not re.fullmatch('[A-Za-z0-9_-]+',encoded):
@@ -1226,6 +1276,7 @@ def run_native(action,request_id,export_key_b64=None):
     elif export_key_b64 is not None:raise RuntimeError('HOLD_UNEXPECTED_EXPORT_KEY')
     global MASTER
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+    if action=='source_export':verify_source_export_dependencies()
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
     key=os.environ.get('NOX2','')
     if not key:raise RuntimeError('HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE')
