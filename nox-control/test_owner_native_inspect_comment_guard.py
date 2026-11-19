@@ -177,6 +177,19 @@ class OwnerCommentGuardTests(unittest.TestCase):
                     RuntimeError, "HOLD_SOURCE_ACTION_NOT_APPROVED"):
                 authorize_event(event_for(body), REPOSITORY, "issue_comment")
 
+    def test_refill_snapshot_requires_exact_pin_and_public_key_token(self) -> None:
+        recipient = "b" * 700
+        command = f"/nox-maintain 60509551 {UNAPPROVED_SHA} refill_snapshot {recipient}"
+        with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_ACTION_NOT_APPROVED"):
+            authorize_event(event_for(command), REPOSITORY, "issue_comment")
+        pinned = APPROVED_SOURCE_BY_ACTION["refill_snapshot"]
+        command = f"/nox-maintain 60509551 {pinned} refill_snapshot {recipient}"
+        self.assertEqual(authorize_event(event_for(command), REPOSITORY, "issue_comment"),
+                         ("refill_snapshot", pinned))
+        for malformed in (command + "\n", command + " extra", command.removesuffix(recipient)):
+            with self.assertRaisesRegex(RuntimeError, "HOLD_EXACT_OWNER_COMMAND"):
+                authorize_event(event_for(malformed), REPOSITORY, "issue_comment")
+
     def test_wrong_event_repository_issue_or_owner_holds(self) -> None:
         cases = (
             (event_for(), "other/repo", "issue_comment",
@@ -386,7 +399,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertNotIn("actions: write", workflow)
         self.assertNotIn("github-script", workflow)
         self.assertEqual(workflow.count("persist-credentials: false"), 4)
-        self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 6)
+        self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 8)
         self.assertLess(workflow.index("owner_native_inspect_comment_guard.py"),
                         workflow.index("Run the fixed read-only inspect action"))
         self.assertLess(workflow.index("Run the fixed read-only inspect action"),
@@ -514,6 +527,21 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("if: success()", upload_block)
         self.assertIn("!contains(github.event.comment.body, ' source_export ')", legacy)
 
+    def test_refill_snapshot_checks_source_before_secrets_and_uploads_only_ciphertext(self) -> None:
+        workflow = (Path(__file__).parents[1] / ".github" / "workflows"
+                    / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
+        preflight = workflow.index("Recheck exact refill snapshot command before credentials")
+        execute = workflow.index("Run the fixed read-only refill snapshot action")
+        cleanup = workflow.index("Always detach only the refill snapshot temporary public key")
+        upload = workflow.index("Upload only the encrypted refill snapshot")
+        self.assertLess(preflight, execute)
+        self.assertLess(execute, cleanup)
+        self.assertLess(cleanup, upload)
+        self.assertNotIn("secrets.NOX2", workflow[preflight:execute])
+        self.assertIn("test_owner_refill_snapshot_transport.py", workflow[preflight:execute])
+        self.assertIn("test_owner_systemic_refill_snapshot.py", workflow[preflight:execute])
+        self.assertIn("path: ${{ runner.temp }}/nox-refill-snapshot.enc", workflow[upload:])
+
 
     def test_legacy_workflow_excludes_canonical_actions_before_secrets(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
@@ -526,6 +554,7 @@ class WorkflowScopeTests(unittest.TestCase):
             "!contains(github.event.comment.body, ' source_attest')",
             "!contains(github.event.comment.body, ' gpu_inventory')",
             "!contains(github.event.comment.body, ' browser_qa')",
+            "!contains(github.event.comment.body, ' refill_snapshot ')",
             "!contains(github.event.comment.body, ' source_export ')",
         )
         for exclusion in exclusions:
