@@ -4,7 +4,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 ENTRY = ROOT / 'owner_native_deploy.py'
 SPEC = importlib.util.spec_from_file_location('owner_native_deploy', ENTRY)
 MOD = importlib.util.module_from_spec(SPEC)
