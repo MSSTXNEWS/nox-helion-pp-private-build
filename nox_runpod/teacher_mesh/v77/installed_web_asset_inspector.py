@@ -362,10 +362,10 @@ def main() -> int:
     import argparse
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--receipt", required=True, help="owner admission receipt JSON")
-    p.add_argument("--proc-root", default="/proc", help=argparse.SUPPRESS)
     args = p.parse_args()
     try:
-        result = inspect(args.proc_root, args.receipt)
+        # Offline tests may inject proc_root through inspect(); production CLI is pinned to the real procfs.
+        result = inspect("/proc", args.receipt)
     except Hold as exc:
         print(json.dumps({"result": "HOLD", "reason": str(exc)}, sort_keys=True))
         return 2
