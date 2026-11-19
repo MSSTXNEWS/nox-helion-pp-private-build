@@ -683,8 +683,16 @@ def _control_file_path(control_root, repository_path):
     return Path(control_root) / relative
 
 
-def _safe_regular_size(path):
+MAX_TOKENIZER_ASSET_BYTES = 8 * 1024 * 1024
+
+
+def _hash_regular_file(path, expected_size, max_size):
+    """Hash a bounded regular file twice through a no-follow descriptor."""
     path = Path(path)
+    if (type(expected_size) is not int or expected_size <= 0
+            or type(max_size) is not int or not expected_size <= max_size
+            or max_size > 16 * 1024 * 1024):
+        raise ValueError('SOURCE_ASSET_SIZE_INVALID')
     if any(parent.is_symlink() for parent in path.parents):
         raise ValueError('SOURCE_ASSET_UNSAFE_PARENT')
     fd = _open_registry_no_follow(
@@ -692,11 +700,37 @@ def _safe_regular_size(path):
     )
     try:
         before = os.fstat(fd)
-        after = path.lstat()
+        on_path = path.lstat()
         if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
-                or _file_identity(before) != _file_identity(after)):
+                or before.st_size != expected_size
+                or _file_identity(before) != _file_identity(on_path)):
             raise ValueError('SOURCE_ASSET_UNSAFE_FILE')
-        return before.st_size
+        def digest_pass():
+            os.lseek(fd, 0, os.SEEK_SET)
+            sha256 = hashlib.sha256()
+            blob_sha1 = hashlib.sha1(
+                b'blob ' + str(expected_size).encode('ascii') + b'\\0'
+            )
+            remaining = expected_size
+            while remaining:
+                chunk = os.read(fd, min(131072, remaining))
+                if not chunk:
+                    raise ValueError('SOURCE_ASSET_SIZE_CHANGED')
+                remaining -= len(chunk)
+                sha256.update(chunk)
+                blob_sha1.update(chunk)
+            if os.read(fd, 1):
+                raise ValueError('SOURCE_ASSET_SIZE_CHANGED')
+            return sha256.hexdigest(), blob_sha1.hexdigest()
+        first = digest_pass()
+        second = digest_pass()
+        after = os.fstat(fd)
+        final_path = path.lstat()
+        if (first != second or _file_identity(before) != _file_identity(after)
+                or _file_identity(after) != _file_identity(final_path)
+                or any(parent.is_symlink() for parent in path.parents)):
+            raise ValueError('SOURCE_ASSET_CHANGED_DURING_READ')
+        return expected_size, first[0], first[1]
     finally:
         os.close(fd)
 
@@ -785,9 +819,18 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
     asset_path = tokenizer.get('local_path')
     if asset_path != 'nox-control/model_manifests/evidence/assets/deepseek_v41_1017/tokenizer.json':
         raise ValueError('TOKENIZER_ASSET_PATH_MISMATCH')
-    if (_safe_regular_size(_control_file_path(control_root, asset_path)) != tokenizer.get('size_bytes')
-            or not _hex_digest(tokenizer.get('sha256'))
-            or not _hex_digest(tokenizer.get('source_git_blob_sha1'), 40)):
+    declared_size = tokenizer.get('size_bytes')
+    declared_sha256 = tokenizer.get('sha256')
+    declared_blob_sha1 = tokenizer.get('source_git_blob_sha1')
+    if (not _hex_digest(declared_sha256)
+            or not _hex_digest(declared_blob_sha1, 40)):
+        raise ValueError('TOKENIZER_ASSET_HASH_INVALID')
+    actual_size, actual_sha256, actual_blob_sha1 = _hash_regular_file(
+        _control_file_path(control_root, asset_path), declared_size,
+        MAX_TOKENIZER_ASSET_BYTES
+    )
+    if (actual_size != declared_size or actual_sha256 != declared_sha256
+            or actual_blob_sha1 != declared_blob_sha1):
         raise ValueError('TOKENIZER_ASSET_FILE_BINDING_MISMATCH')
 
     gguf_path = document.get('gguf_inference_route_manifest_path')
