@@ -1335,7 +1335,7 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
 }
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_media_acceptance_entry.py', 'nox-v135-resonance-owner-bridge.js')
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('coordination/onepass/nox-v135-resonance-owner-bridge.js',)
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
