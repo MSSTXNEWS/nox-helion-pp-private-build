@@ -79,7 +79,7 @@ def route(body):
 API_KEY = "DO_NOT_PRINT_BINDING_SECRET"
 @app.post("/api/nox/chat")
 async def chat_route(request):
-    return model_bridge.stream(load_model(request))
+    return model_bridge.stream(load_model(request), model="candidate-not-serving")
 '''
         report = analyzer()(raw)
         route = report["chat_routes"][0]
