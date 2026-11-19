@@ -119,7 +119,7 @@
       "Model quality or benchmark improvement"
     ],
     "technical_integrity_review": "PASS",
-    "acceptance_reviewer_signoff": "PENDING_REVIEW_OF_CORRECTED_SOURCE_RUN",
+    "acceptance_reviewer_signoff": "PASS_ON_REVIEWED_HEAD_a5a999e2705a242d266030ac0b09c29bb215e805",
     "effective_state": "PENDING_PR_MERGE",
     "supersedes_prior_hold": {
       "path": "nox-control/complete_executor_20261118/evidence/addenda/source_evidence_erratum_20261119_i49.json",
@@ -135,20 +135,19 @@
     },
     "acceptance_claim_for_immutable_295_snapshot": false,
     "independent_review": {
-      "result": "PENDING",
-      "reviewed_head_sha": null,
-      "review_source": null,
+      "result": "PASS",
+      "reviewed_head_sha": "a5a999e2705a242d266030ac0b09c29bb215e805",
+      "review_source": "Independent review by /root/acceptance_review; exact-head result communicated to task owner, no GitHub review submission attached.",
       "review_timestamp_utc": null,
-      "scope": "Review the corrected-source rerun, exact I-49 frozen source criterion, current instruction binding, pair/name-set fingerprints, source blob/SHA, data minimization, and frozen-ledger boundaries."
+      "scope": "Corrected-source rerun, exact I-49 frozen source criterion, current instruction binding, pair/name-set fingerprints, exact source blob/SHA, data minimization, historical-run caveat, and frozen-ledger boundaries."
     },
-    "review_binding_recorded_at_utc": "2026-11-19T11:25:56Z",
+    "review_binding_recorded_at_utc": "2026-11-19T11:49:30Z",
     "quick_review_required_for_updated_head": true,
     "target_assessment_after_merge": "ACCEPTED_SOURCE_CRITERION",
     "merge_boundary": {
       "current_pr_number": 486,
       "current_pr_state": "OPEN_DRAFT",
-      "last_reviewed_head_sha": "c9c7dcfada6b5d9b0cad215c9b0695df4c6f934b",
-      "current_head_requires_independent_review": true,
+      "reviewed_head_sha": "a5a999e2705a242d266030ac0b09c29bb215e805",
       "updated_head_requires_quick_review": true,
       "target_assessment_activates_only_on_merge": true,
       "acceptance_must_not_be_reported_before_merge": true,
@@ -173,5 +172,5 @@
     "drive_changed": false,
     "server_changed": false
   },
-  "updated_at_utc": "2026-11-19T11:42:43Z"
+  "updated_at_utc": "2026-11-19T11:49:30Z"
 }
