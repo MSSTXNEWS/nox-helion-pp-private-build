@@ -779,10 +779,10 @@ class PairedReceiptTests(unittest.TestCase):
         # Reporting 12 ms total latency would detach walltime from raw trace
         # even though TTFT, finality, [DONE] and all hashes agree.
         chunks = [
-            (5, b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\\n\\n'),
-            (8, b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\\n\\n'),
-            (10, b'data: [DONE]\\n\\n'),
-            (18, b': heartbeat\\n\\n'),
+            (5, b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\n\n'),
+            (8, b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'),
+            (10, b'data: [DONE]\n\n'),
+            (18, b': heartbeat\n\n'),
         ]
         wire = measure_openai_sse_wire(chunks)
         self.assertTrue(wire["wire_completed_normally"])
