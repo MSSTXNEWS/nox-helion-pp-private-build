@@ -113,22 +113,32 @@ class ScopeTests(unittest.TestCase):
         with patch.object(entry, 'BUNDLE', bundle), self.assertRaisesRegex(RuntimeError, 'BUNDLE_PIN'):
             entry.sources()
 
-    def test_reviewed_pr415_pin_matches_and_mismatch_still_holds(self):
-        browser_raw=(HERE/'owner_chat_browser_qa.py').read_bytes()
-        transport_raw=(HERE/'owner_chat_browser_transport_qa.py').read_bytes()
-        release_raw=(HERE/'owner_chat_browser_release_qa.py').read_bytes()
+    def test_reviewed_pr415_dependencies_match_and_each_mismatch_holds(self):
+        files={
+            'owner_chat_browser_qa.py':(HERE/'owner_chat_browser_qa.py').read_bytes(),
+            'owner_chat_browser_transport_qa.py':(HERE/'owner_chat_browser_transport_qa.py').read_bytes(),
+            'owner_chat_browser_release_qa.py':(HERE/'owner_chat_browser_release_qa.py').read_bytes(),
+        }
         reviewed='9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9'
         self.assertEqual(scope.BASE_SHA, reviewed)
-        self.assertEqual(hashlib.sha256(browser_raw).hexdigest(), reviewed)
-        with self.assertRaisesRegex(RuntimeError, 'DEPENDENCY_PIN'):
-            scope.install(types.ModuleType('x'), browser_raw+b' ',
-                          types.ModuleType('y'), transport_raw,
-                          types.ModuleType('z'), release_raw)
-        bundle={name:base64.b64encode((HERE/name).read_bytes()).decode()
-                for name in entry.PINS}
-        bundle['owner_chat_browser_qa.py']=base64.b64encode(browser_raw+b' ').decode()
-        with patch.object(entry, 'BUNDLE', bundle), self.assertRaisesRegex(RuntimeError, 'BUNDLE_PIN'):
-            entry.sources()
+        self.assertEqual(hashlib.sha256(files['owner_chat_browser_qa.py']).hexdigest(), reviewed)
+        self.assertEqual(hashlib.sha256(files['owner_chat_browser_transport_qa.py']).hexdigest(),
+                         scope.TRANSPORT_SHA)
+        self.assertEqual(hashlib.sha256(files['owner_chat_browser_release_qa.py']).hexdigest(),
+                         scope.RELEASE_SHA)
+        module_types=(types.ModuleType('core'),types.ModuleType('transport'),types.ModuleType('release'))
+        names=('owner_chat_browser_qa.py','owner_chat_browser_transport_qa.py','owner_chat_browser_release_qa.py')
+        for index,name in enumerate(names):
+            values=[files[item] for item in names]
+            values[index]+=b' '
+            args=(module_types[0],values[0],module_types[1],values[1],module_types[2],values[2])
+            with self.subTest(dependency=name), self.assertRaisesRegex(RuntimeError, 'DEPENDENCY_PIN'):
+                scope.install(*args)
+            bundle={item:base64.b64encode((HERE/item).read_bytes()).decode() for item in entry.PINS}
+            bundle[name]=base64.b64encode(values[index]).decode()
+            with self.subTest(bundle_dependency=name), patch.object(entry, 'BUNDLE', bundle), \
+                    self.assertRaisesRegex(RuntimeError, 'BUNDLE_PIN'):
+                entry.sources()
 
     def test_dangling_stop_is_not_treated_as_absent(self):
         with tempfile.TemporaryDirectory() as folder:
