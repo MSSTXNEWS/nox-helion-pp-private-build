@@ -55,6 +55,21 @@ class PairedReceiptTests(unittest.TestCase):
                 self.assertTrue(out["quality_or_history_regression"])
                 self.assertFalse(out["promotion_authorized"])
 
+    def test_reported_pass_cannot_skip_required_background_completion(self):
+        b = example(); c = copy.deepcopy(b)
+        # A visible final SSE + S03 history is not a complete owner turn
+        # if the required background operation was silently skipped.
+        c["outcomes"][0]["background_completed"] = False
+        out = compare_paired(b, c)
+        self.assertTrue(out["comparable"])
+        self.assertEqual(out["baseline"]["passed"], 1)
+        self.assertEqual(out["candidate"]["passed"], 0)
+        self.assertEqual(out["candidate"]["reported_pass_without_usable_chat"], 1)
+        self.assertEqual(out["candidate_reported_pass_without_usable_chat_task_ids"], ["t1"])
+        self.assertEqual(out["background_completion_changed_task_ids"], ["t1"])
+        self.assertTrue(out["quality_or_history_regression"])
+        self.assertFalse(out["promotion_authorized"])
+
     def test_missing_task_holds(self):
         b=example(); c=example();c["outcomes"].pop()
         self.assertEqual(compare_paired(b,c)["reason"],"OUTCOME_COUNT")
