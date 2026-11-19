@@ -92,7 +92,11 @@
       "Supervisor rc=3 and three selected agent services were STOPPED; no full Supervisor health claim.",
       "Only the seven named services, bounded worker snapshot, listed marker paths, and two scoped kernel-lock paths are in scope.",
       "This is point-in-time observation, not lease acquisition or authorization to mutate services, queues, or training."
-    ]
+    ],
+    "workflow_run_id": 44517972435,
+    "workflow_job_id": 135538844060,
+    "workflow_run_conclusion": "success",
+    "job_conclusion": "success"
   },
   "additional_evidence_records": [
     {
@@ -114,7 +118,11 @@
         "source_auth": "PASS",
         "inspect_complete": true,
         "remote_exit_code": 0,
-        "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
+        "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED",
+        "workflow_run_id": 44517972435,
+        "workflow_job_id": 135538844060,
+        "workflow_run_conclusion": "success",
+        "job_conclusion": "success"
       },
       "source_sidecar_binding": {
         "path": "nox-control/complete_executor_20261118/evidence/addenda/native_snapshot_addendum_20261119_2v14-02_run44517972435.json",
