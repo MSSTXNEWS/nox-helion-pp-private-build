@@ -45,10 +45,28 @@ class V112Tests(unittest.TestCase):
         self.calls=[]
         self.record=True
         self.bulk_sse=''
+        self.context_nonce=None
         async def native(payload):
             self.calls.append(payload)
-            q=payload['messages'][-1]['content']
+            messages=payload['messages']
+            q=messages[-1]['content']
             answer='Готов. Это проверенный ответ.'
+            if self.context_nonce:
+                nonce=self.context_nonce
+                first_q='first exact prompt '+nonce
+                first_a='first exchange stores nonce '+nonce
+                if q==first_q:
+                    answer=first_a
+                elif q=='second exact prompt':
+                    exact_first_pair=[
+                        {'role':'user','content':first_q},
+                        {'role':'assistant','content':first_a},
+                    ]
+                    # The nonce is emitted only when the complete first pair
+                    # is present immediately before the second prompt.
+                    answer=('recovered nonce '+nonce
+                            if messages[-3:-1]==exact_first_pair
+                            else 'MISSING_CONTEXT')
             async def chunks():
                 if self.bulk_sse=='coalesced':
                     # Two individually valid 160 KB SSE comment frames in
@@ -257,10 +275,13 @@ class V112Tests(unittest.TestCase):
     def test_fixture_two_sequential_turns_have_distinct_receipts_and_exact_readbacks(self):
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
             json={'title':'Two turn source fixture','confirmed':True}).json()['dialog_id']
-        prompts=('first exact prompt','second exact prompt')
+        nonce='NOX-3A02-SAVED-TURN-7f83c'
+        self.context_nonce=nonce
+        prompts=('first exact prompt '+nonce,'second exact prompt')
+        expected_answers=('first exchange stores nonce '+nonce,'recovered nonce '+nonce)
         receipts=[];expected=[]
         model_messages=[]
-        for prompt in prompts:
+        for prompt_index,prompt in enumerate(prompts):
             model_messages.append({'role':'user','content':prompt})
             response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
                 json={'message':prompt,'dialog_id':dialog,'history':[]})
@@ -276,8 +297,8 @@ class V112Tests(unittest.TestCase):
             messages=proof.json()['messages']
             self.assertEqual([row['role'] for row in messages],['user','assistant'])
             self.assertEqual(messages[0]['content'],prompt)
-            self.assertEqual(messages[1]['content'],'Готов. Это проверенный ответ.')
-            model_messages.append({'role':'assistant','content':'Готов. Это проверенный ответ.'})
+            self.assertEqual(messages[1]['content'],expected_answers[prompt_index])
+            model_messages.append({'role':'assistant','content':expected_answers[prompt_index]})
             self.assertTrue(proof.json()['durable']);self.assertTrue(proof.json()['verified'])
             self.assertEqual(proof.json()['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
             self.assertFalse(proof.json()['canonical_s03_verified'])
