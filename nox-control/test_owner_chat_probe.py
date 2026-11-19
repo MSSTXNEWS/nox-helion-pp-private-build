@@ -89,6 +89,14 @@ class ProbeTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED'):
                     probe.require_executor_witness(receipt, history, turns, owner_ok, answer_ok)
 
+    def test_skipped_executor_turn_is_not_success(self):
+        self.assertIsNone(probe.require_executor_turn_budget(0))
+        self.assertIsNone(probe.require_executor_turn_budget(209.999))
+        for elapsed in (210, 210.001, 999):
+            with self.subTest(elapsed=elapsed):
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_EXECUTOR_TURN_BUDGET_EXHAUSTED'):
+                    probe.require_executor_turn_budget(elapsed)
+
     def test_truncated_or_error_stream_cannot_pass(self):
         class Response:
             status = 200
