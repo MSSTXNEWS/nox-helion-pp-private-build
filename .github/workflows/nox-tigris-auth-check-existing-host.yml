@@ -1,0 +1,111 @@
+name: NOX Tigris existing-host credentials and bucket read-only check
+on:
+  push:
+    branches: [feature/nox-tigris-warm-20261115]
+    paths: ['.github/workflows/nox-tigris-auth-check-existing-host.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: nox-tigris-auth-readonly-60509551
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+      NOX_TIGRIS_ID_PRESENT: ${{ secrets.TIGRIS_ACCESS_KEY_ID != '' }}
+      NOX_TIGRIS_SECRET_PRESENT: ${{ secrets.TIGRIS_SECRET_ACCESS_KEY != '' }}
+      NOX_TIGRIS_S3_ID_PRESENT: ${{ secrets.TIGRIS_S3_ACCESS_KEY_ID != '' }}
+      NOX_TIGRIS_S3_SECRET_PRESENT: ${{ secrets.TIGRIS_S3_SECRET_ACCESS_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Check configured GitHub secret NAMES only, never read values
+        run: |
+          set -euo pipefail
+          if [ "$NOX_TIGRIS_ID_PRESENT" = "true" ] && [ "$NOX_TIGRIS_SECRET_PRESENT" = "true" ]; then
+            echo "NOX_TIGRIS_GITHUB_SCOPED_PAIR_PRESENT=true"
+          elif [ "$NOX_TIGRIS_S3_ID_PRESENT" = "true" ] && [ "$NOX_TIGRIS_S3_SECRET_PRESENT" = "true" ]; then
+            echo "NOX_TIGRIS_GITHUB_SCOPED_PAIR_PRESENT=true"
+          else
+            echo "NOX_TIGRIS_GITHUB_SCOPED_PAIR_PRESENT=false"
+          fi
+      - name: Existing Vast instance safe read-only credentials and S3 probe
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "HOLD_NOX2_MISSING"; exit 2; }
+          python3 - <<'PY'
+          import contextlib, io, json
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as bridge
+          bridge.REMOTE = r"""
+          set -euo pipefail
+          python3 - <<'PYREMOTE'
+          import importlib, os, pathlib, urllib.request
+          print('NOX_NATIVE_V51_SSH_EXECUTED=true')
+          print('NATIVE_TIGRIS_PROBE_MODE=READ_ONLY')
+          stops=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
+                 '/root/nox/.stop','/workspace/NOX_STOP','/root/nox/program/STOP')
+          try:
+              if any(pathlib.Path(x).exists() for x in stops):
+                  print('NATIVE_TIGRIS_STOP=ACTIVE')
+                  raise SystemExit(2)
+              print('NATIVE_TIGRIS_STOP=CLEAR')
+          except (OSError,PermissionError):
+              print('NATIVE_TIGRIS_STOP=UNREADABLE')
+              raise SystemExit(2)
+          for port in (8080, 8081):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:'+str(port)+'/health',timeout=3) as resp:
+                      good=resp.status==200
+              except Exception: good=False
+              print('NATIVE_TIGRIS_CHAT_HEALTH_'+str(port)+'='+('PASS' if good else 'HOLD'))
+          pairs=(('AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY'),
+                 ('TIGRIS_ACCESS_KEY_ID','TIGRIS_SECRET_ACCESS_KEY'),
+                 ('TIGRIS_S3_ACCESS_KEY_ID','TIGRIS_S3_SECRET_ACCESS_KEY'))
+          present=next(((a,b) for a,b in pairs if os.environ.get(a) and os.environ.get(b)),None)
+          print('NATIVE_TIGRIS_SHELL_ENV_PAIR_PRESENT='+str(bool(present)).lower())
+          staged=pathlib.Path('/root/nox/NOX_TOOLS/TIGRIS_STAGE/tigris_warm_8588d2e2af3dd7da.py')
+          print('NATIVE_TIGRIS_SOURCE_STAGED='+str(staged.is_file()).lower())
+          # Do not read/disclose credential files or process environments;
+          # only attempt a list with the current authorized shell env.
+          if present is None:
+              print('NATIVE_TIGRIS_AUTHENTICATED_S3=HOLD_NO_SHELL_CREDENTIALS')
+          else:
+              try:
+                  import boto3
+                  options=dict(endpoint_url='https://t3.storage.dev', region_name='auto',
+                               aws_access_key_id=os.environ[present[0]],
+                               aws_secret_access_key=os.environ[present[1]],
+                               config=__import__('botocore.config',fromlist=['Config']).Config(
+                                   retries={'max_attempts':1}, connect_timeout=5,read_timeout=10))
+                  s3=boto3.client('s3',**options)
+                  s3.list_objects_v2(Bucket='nox',MaxKeys=1)
+                  print('NATIVE_TIGRIS_AUTHENTICATED_S3=PASS')
+              except ImportError:
+                  print('NATIVE_TIGRIS_AUTHENTICATED_S3=HOLD_NO_BOTO3')
+              except Exception as e:
+                  print('NATIVE_TIGRIS_AUTHENTICATED_S3=HOLD_REMOTE_AUTH_OR_NETWORK')
+          print('NATIVE_TIGRIS_KEYS_EXPORTED=false')
+          print('NATIVE_TIGRIS_MODELS_MODIFIED=false')
+          print('NATIVE_TIGRIS_SERVICE_RESTARTED=false')
+          print('NATIVE_READ_ONLY_COMPLETE=true')
+          PYREMOTE
+          """
+          buf=io.StringIO()
+          ok=False; cleaned=False
+          try:
+              with contextlib.redirect_stdout(buf):ok=bridge.probe()
+          except Exception:
+              pass
+          finally:
+              try:
+                  with contextlib.redirect_stdout(buf):cleaned=bridge.cleanup()
+              except Exception:
+                  cleaned=False
+          for line in buf.getvalue().splitlines():
+              if line.startswith(('NATIVE_TIGRIS_','TEMP_SSH_CLEANUP=')) and len(line)<180:
+                  print(line)
+          print('NOX_TIGRIS_READONLY_CHECK='+('PASS' if ok and cleaned else 'HOLD'))
+          raise SystemExit(0 if ok and cleaned else 2)
+          PY

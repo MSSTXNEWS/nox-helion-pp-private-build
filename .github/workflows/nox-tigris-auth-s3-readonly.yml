@@ -1,0 +1,64 @@
+name: NOX Tigris S3 read-only authentication (existing bucket)
+on:
+  push:
+    branches: [feature/nox-tigris-warm-20261115]
+    paths: ['.github/workflows/nox-tigris-auth-s3-readonly.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: nox-tigris-s3-auth-readonly
+  cancel-in-progress: false
+jobs:
+  read-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      TIGRIS_ACCESS_KEY_ID: ${{ secrets.TIGRIS_ACCESS_KEY_ID }}
+      TIGRIS_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Verify S3 identity pair exists without printing values
+        run: |
+          test -n "$TIGRIS_ACCESS_KEY_ID" && test -n "$TIGRIS_SECRET_ACCESS_KEY" || {
+            echo 'TIGRIS_AUTH=HOLD_MISSING_CREDENTIAL'; exit 2;
+          }
+      - name: Install read-only S3 library
+        run: python3 -m pip -q install 'boto3>=1.35,<2'
+      - name: Tigris read-only list with 1 object limit
+        run: |
+          python3 - <<'PY'
+          import os,sys
+          import boto3
+          from botocore.config import Config
+          key=os.environ['TIGRIS_ACCESS_KEY_ID']
+          secret=os.environ['TIGRIS_SECRET_ACCESS_KEY']
+          s3=boto3.client('s3',
+              endpoint_url='https://t3.storage.dev',
+              region_name='auto',
+              aws_access_key_id=key,
+              aws_secret_access_key=secret,
+              config=Config(connect_timeout=8,read_timeout=15,retries={'max_attempts':2}))
+          try:
+              result=s3.list_objects_v2(Bucket='nox',MaxKeys=1)
+              if not isinstance(result,dict):
+                  raise RuntimeError('HOLD_RESPONSE_SHAPE')
+              print('NOX_TIGRIS_AUTHENTICATED_BUCKET_READ=PASS')
+              print('NOX_TIGRIS_ENDPOINT=t3.storage.dev')
+              print('NOX_TIGRIS_BUCKET=nox')
+              print('NOX_TIGRIS_SECRET_VALUES_PRINTED=false')
+              print('NOX_TIGRIS_REMOTE_OBJECTS_MODIFIED=false')
+          except Exception as exc:
+              # Print only constrained error codes (never error messages or values).
+              from botocore.exceptions import ClientError
+              known={'AccessDenied','InvalidAccessKeyId','SignatureDoesNotMatch',
+                     'NoSuchBucket','AuthorizationHeaderMalformed',
+                     'InvalidToken','ExpiredToken','Forbidden','InvalidRequest'}
+              code=''
+              if isinstance(exc, ClientError):
+                  raw=str(exc.response.get('Error',{}).get('Code',''))
+                  code=raw if raw in known else 'OTHER_S3_ERROR'
+              print('NOX_TIGRIS_AUTHENTICATED_BUCKET_READ=HOLD')
+              print('NOX_TIGRIS_KEY_ID_FORMAT_OK='+str(key.startswith('tid_')).lower())
+              print('NOX_TIGRIS_SECRET_FORMAT_OK='+str(secret.startswith('tsec_')).lower())
+              print('NOX_TIGRIS_ERROR_CODE='+(code or 'NON_S3_ERROR'))
+              sys.exit(2)
+          PY

@@ -1,0 +1,66 @@
+name: NOX Vast V1 account instances discovery read only
+on:
+  push:
+    branches: [feature/nox-tigris-warm-20261115]
+    paths: ['.github/workflows/nox-vast-v1-account-discovery.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - name: Query official Vast v1 existing instances only
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo 'NOX_VAST_V1=HOLD_NOX2'; exit 2; }
+          python3 - <<'PY'
+          import json,os,urllib.request,urllib.error
+          hosts=('https://cloud.vast.ai','https://console.vast.ai')
+          data=None
+          for host in hosts:
+              url=host+'/api/v1/instances?limit=25'
+              req=urllib.request.Request(url,headers={
+                 'Authorization':'Bearer '+os.environ['NOX2'],
+                 'Accept':'application/json'},method='GET')
+              try:
+                  with urllib.request.urlopen(req,timeout=15) as response:
+                      data=json.load(response)
+                  print('NOX_VAST_V1_ENDPOINT='+host.split('/')[2])
+                  break
+              except urllib.error.HTTPError as exc:
+                  print('NOX_VAST_V1_'+host.split('/')[2]+'_HTTP='+str(exc.code))
+              except Exception:
+                  print('NOX_VAST_V1_'+host.split('/')[2]+'_NETWORK=HOLD')
+          if data is None:
+              print('NOX_VAST_V1=HOLD_API_UNREACHABLE')
+              raise SystemExit(2)
+          items=data
+          if isinstance(data,dict):
+              for key in ('instances','results','items','data'):
+                  if isinstance(data.get(key),list):
+                      items=data[key];break
+          if not isinstance(items,list):
+              print('NOX_VAST_V1=HOLD_SCHEMA')
+              print('NOX_VAST_V1_SCHEMA_KEYS='+','.join(sorted(k for k in data if k in ('instances','results','items','data','next_token','pagination','status','total'))))
+              raise SystemExit(2)
+          print('NOX_VAST_V1=READ_ONLY_PASS')
+          print('NOX_VAST_V1_COUNT='+str(len(items)))
+          present=False
+          for row in items[:25]:
+              if not isinstance(row,dict):continue
+              identifier=str(row.get('id',''))
+              if not identifier.isdigit():continue
+              if identifier=='60509551':present=True
+              status=str(row.get('actual_status','unknown'))[:30]
+              gpu=str(row.get('gpu_name','unknown'))[:45]
+              gpu_count=str(row.get('num_gpus','unknown'))[:8]
+              scrub=lambda v:''.join(x for x in v if x.isalnum() or x in ' _-')[:45]
+              print('NOX_VAST_V1_INSTANCE='+json.dumps({
+                'id':identifier,'status':scrub(status),'gpu':scrub(gpu),'count':scrub(gpu_count)},
+                 separators=(',',':')))
+          print('NOX_VAST_V1_OLD_ID_PRESENT='+str(present).lower())
+          print('NOX_VAST_V1_MUTATIONS=false')
+          PY

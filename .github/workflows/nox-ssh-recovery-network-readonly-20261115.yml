@@ -1,0 +1,66 @@
+name: NOX SSH network diagnostic — existing host only, no changes
+on:
+  push:
+    branches: [feature/nox-tigris-warm-20261115]
+    paths: ['.github/workflows/nox-ssh-recovery-network-readonly-20261115.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - name: Probe supplied direct SSH and proxy SSH TCP route without credentials
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import socket,json,urllib.request,urllib.error,os
+          target=[('direct','166.113.48.41',11234),('vast_proxy','ssh9.vast.ai',26623)]
+          print('NOX_DIAGNOSTIC=READ_ONLY_SSH_CONNECTIVITY')
+          for label,host,port in target:
+              out={'route':label,'tcp':'HOLD','ssh_banner':False}
+              try:
+                  with socket.create_connection((host,port),timeout=6) as sock:
+                      sock.settimeout(3)
+                      out['tcp']='CONNECTED'
+                      banner=sock.recv(128)
+                      out['ssh_banner']=banner.startswith(b'SSH-2.0')
+              except (OSError,TimeoutError) as ex:
+                  out['error_kind']=type(ex).__name__
+              print('NOX_SSH_NETWORK='+json.dumps(out,separators=(',',':')))
+          print('NOX_REMOTE_COMMANDS_EXECUTED=false')
+          print('NOX_SSH_KEYS_MODIFIED=false')
+          key=os.getenv('NOX2','')
+          if not key:
+              print('NOX_VAST_AUTH=HOLD_MISSING_NOX2')
+          else:
+              request=urllib.request.Request(
+                 'https://console.vast.ai/api/v0/instances/',
+                 headers={'Authorization':'Bearer '+key,'Accept':'application/json'},
+                 method='GET')
+              try:
+                  with urllib.request.urlopen(request,timeout=12) as response:
+                      data=json.load(response)
+                      if isinstance(data,dict) and isinstance(data.get('instances'),list):
+                          rows=data['instances']
+                      elif isinstance(data,list):
+                          rows=data
+                      else:
+                          rows=[]
+                      same=[r for r in rows if isinstance(r,dict) and str(r.get('id'))=='60509551']
+                      print('NOX_VAST_AUTH=HTTP_200')
+                      if same:
+                          row=same[0]
+                          print('NOX_VAST_INSTANCE='+json.dumps({'id':60509551,'status':row.get('actual_status','unknown'),'gpus':row.get('num_gpus','unknown')},separators=(',',':')))
+                      else:
+                          print('NOX_VAST_TARGET_IN_LIST=false')
+              except urllib.error.HTTPError as exc:
+                  print('NOX_VAST_AUTH=HTTP_'+str(exc.code))
+              except Exception as exc:
+                  print('NOX_VAST_AUTH=HOLD_'+type(exc).__name__)
+          print('NOX_NO_GPU_CHANGES=true')
+          print('NOX_NO_PROCESS_CHANGES=true')
+          print('NOX_NO_CHECKPOINT_CHANGES=true')
+          PY

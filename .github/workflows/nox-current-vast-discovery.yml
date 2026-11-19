@@ -1,0 +1,55 @@
+name: NOX discover existing Vast instances - read only
+on:
+  push:
+    branches: [feature/nox-tigris-warm-20261115]
+    paths: ['.github/workflows/nox-current-vast-discovery.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - name: Query account instance inventory without SSH or changes
+        run: |
+          set -euo pipefail
+          test -n "$NOX2" || { echo "NOX_VAST=HOLD_NOX2"; exit 2; }
+          python3 - <<'PY'
+          import json,os,urllib.request,urllib.error
+          api='https://console.vast.ai/api/v0/instances/'
+          req=urllib.request.Request(api,headers={'Authorization':'Bearer '+os.environ['NOX2'],
+                'Accept':'application/json'},method='GET')
+          try:
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  obj=json.load(r)
+          except urllib.error.HTTPError as ex:
+              print('NOX_VAST_LIST=HOLD_HTTP_'+str(ex.code));raise SystemExit(2)
+          except Exception:
+              print('NOX_VAST_LIST=HOLD_NETWORK');raise SystemExit(2)
+          if isinstance(obj,dict):
+              data=obj.get('instances',obj.get('results',obj))
+          else:data=obj
+          if isinstance(data,dict):data=list(data.values())
+          if not isinstance(data,list):
+              print('NOX_VAST_LIST=HOLD_SCHEMA');raise SystemExit(2)
+          seen=False
+          print('NOX_VAST_LIST=READ_ONLY_PASS')
+          print('NOX_VAST_COUNT='+str(len(data)))
+          for row in data[:30]:
+              if not isinstance(row,dict):continue
+              identifier=str(row.get('id',''))
+              if not identifier.isdigit():continue
+              if identifier=='60509551':seen=True
+              status=str(row.get('actual_status','unknown'))[:30]
+              status=''.join(c for c in status if c.isalnum() or c in '_-')[:30]
+              gpu=str(row.get('gpu_name',''))[:45]
+              gpu=''.join(c for c in gpu if c.isalnum() or c in '_ -')[:45]
+              count=str(row.get('num_gpus',''))[:3]
+              print('NOX_VAST_INSTANCE='+json.dumps({'id':identifier,'status':status,'gpu':gpu,
+                    'num_gpus':count},separators=(',',':')))
+          print('NOX_VAST_OLD_ID_60509551_PRESENT='+str(seen).lower())
+          print('NOX_VAST_NO_SERVERS_CREATED=true')
+          print('NOX_VAST_NO_ACTIONS_PERFORMED=true')
+          PY
