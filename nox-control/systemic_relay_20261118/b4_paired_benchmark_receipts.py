@@ -139,6 +139,13 @@ def _metrics(events, max_task_ms):
             row["status"] == "PASS" and row["latency_ms"] <= max_task_ms
             and (not row["sse_terminal_seen"] or row["model_finish_reason"] != "stop")
             for row in rows),
+        # Count every declared task, not just upstream PASS labels: a broken
+        # stream on a FAIL/TIMEOUT must still show in the reliability denominator.
+        "sse_terminal_seen": sum(row["sse_terminal_seen"] for row in rows),
+        "sse_terminal_missing": sum(not row["sse_terminal_seen"] for row in rows),
+        "sse_normal_completion": sum(row["sse_terminal_seen"] and
+                                     row["model_finish_reason"] == "stop"
+                                     for row in rows),
         "over_budget_walltime": sum(row["latency_ms"] > max_task_ms for row in rows),
         "history_saved": sum(row["history_saved"] for row in rows),
         "background_completed": sum(row["background_completed"] for row in rows),
@@ -211,6 +218,17 @@ def compare_paired(baseline, candidate):
     sse_finality_changed = [task for task in baseline["declared_task_ids"]
                             if (old[task]["sse_terminal_seen"] != new[task]["sse_terminal_seen"]
                                 or old[task]["model_finish_reason"] != new[task]["model_finish_reason"])]
+    # Report stream reliability independently of PASS; a failed task may still
+    # lose its terminal event while the aggregate pass count stays constant.
+    sse_terminal_lost = [task for task in baseline["declared_task_ids"]
+                         if old[task]["sse_terminal_seen"] and not new[task]["sse_terminal_seen"]]
+    sse_terminal_restored = [task for task in baseline["declared_task_ids"]
+                             if not old[task]["sse_terminal_seen"] and new[task]["sse_terminal_seen"]]
+    sse_normal_completion_regressed = [task for task in baseline["declared_task_ids"]
+                                       if old[task]["sse_terminal_seen"]
+                                       and old[task]["model_finish_reason"] == "stop"
+                                       and (not new[task]["sse_terminal_seen"] or
+                                            new[task]["model_finish_reason"] != "stop")]
     output_tokens_changed = [task for task in baseline["declared_task_ids"]
                              if old[task]["output_tokens"] != new[task]["output_tokens"]]
     status_changed = [task for task in baseline["declared_task_ids"]
@@ -250,6 +268,12 @@ def compare_paired(baseline, candidate):
             "candidate_reported_pass_without_usable_chat_task_ids": unusable_reported,
             "candidate_reported_pass_without_terminal_sse_task_ids": unfinished_streams,
             "sse_finality_changed_task_ids": sse_finality_changed,
+            "sse_terminal_lost_task_ids": sse_terminal_lost,
+            "sse_terminal_restored_task_ids": sse_terminal_restored,
+            "sse_normal_completion_regressed_task_ids": sse_normal_completion_regressed,
+            "sse_terminal_coverage_delta": (after["sse_terminal_seen"] -
+                                             before["sse_terminal_seen"]) / before["denominator"],
+            "sse_reliability_regression": bool(sse_normal_completion_regressed),
             "latency_regressed_task_ids": latency_regressed,
             "peak_rss_regressed_task_ids": rss_regressed,
             "cache_state_changed_task_ids": cache_changed,
@@ -275,7 +299,8 @@ def compare_paired(baseline, candidate):
             "pass_rate_delta": (after["passed"] - before["passed"]) / before["denominator"],
             "p95_latency_delta_ms": (after["p95_latency_ms_all_tasks"]
                                      - before["p95_latency_ms_all_tasks"]),
-            "quality_or_history_regression": bool(regressed or first_text_lost or any(
+            "quality_or_history_regression": bool(regressed or first_text_lost or
+                                                  sse_normal_completion_regressed or any(
                 (old[task]["history_saved"] and not new[task]["history_saved"]) or
                 (old[task]["background_completed"] and not new[task]["background_completed"])
                 for task in baseline["declared_task_ids"]))}
