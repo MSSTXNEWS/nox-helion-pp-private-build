@@ -43,9 +43,13 @@ def main():
             conventional_main = name == 'owner_browser_qa_entry.py' and result is None
             if not conventional_main and (type(result) is not int or result != 0):
                 raise RuntimeError('HOLD_ACCEPTANCE_COMPONENT_RESULT')
-        except Exception as exc:
+        except (Exception, SystemExit) as exc:
+            # A bundled stage can call sys.exit(0) before any durable S03
+            # receipt is written. Never accept that as owner batch completion.
             value = str(exc)
-            failed.append({'component': name, 'reason': value if re.fullmatch('(HOLD|WAIT)_[A-Z0-9_]+', value) else type(exc).__name__})
+            reason = ('HOLD_ACCEPTANCE_COMPONENT_SYSTEM_EXIT' if isinstance(exc, SystemExit)
+                      else value if re.fullmatch('(HOLD|WAIT)_[A-Z0-9_]+', value) else type(exc).__name__)
+            failed.append({'component': name, 'reason': reason})
             emit('memory_chat_component_hold', failed[-1])
             # All later stages depend on S03 recovery and ordered owner acceptance.
             # Never mutate the chat layout or start browser QA after a failed stage.
