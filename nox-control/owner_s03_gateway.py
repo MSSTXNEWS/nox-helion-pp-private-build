@@ -655,19 +655,36 @@ def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identit
 
 
 def lexical(conn,query,limit=48):
-    terms=list(dict.fromkeys(re.findall(r'[^\W_]{2,}',query.casefold(),re.UNICODE)))[:16]
+    # Every distinct query term must be considered. A former [:16] silently
+    # discarded the end of long owner questions even when S03 held the answer.
+    terms=list(dict.fromkeys(re.findall(r'[^\\W_]{2,}',query.casefold(),re.UNICODE)))
+    if len(terms)>64:hold('HOLD_S03_LEXICAL_QUERY_BUDGET')
     if not terms:return []
-    expression=' OR '.join('"'+term+'"' for term in terms)
+    groups=[terms[index:index+16] for index in range(0,len(terms),16)]
     try:
-        # Reject stale FTS hits after a canonical item was corrected. The FTS
-        # table is an index, never an authority for current decision text.
-        return [dict(row) for row in conn.execute('SELECT s.*,bm25(s03_fts) AS lexical_rank FROM s03_fts JOIN s03_items s ON s.id=s03_fts.id AND s.text=s03_fts.text AND s.segment=s03_fts.segment WHERE s03_fts MATCH ? ORDER BY bm25(s03_fts) LIMIT ?', (expression,limit))]
+        pages=[]
+        for group in groups:
+            expression=' OR '.join('"'+term+'"' for term in group)
+            pages.append([dict(row) for row in conn.execute(
+                'SELECT s.*,bm25(s03_fts) AS lexical_rank FROM s03_fts JOIN s03_items s ON s.id=s03_fts.id AND s.text=s03_fts.text AND s.segment=s03_fts.segment WHERE s03_fts MATCH ? ORDER BY bm25(s03_fts) LIMIT ?',
+                (expression,limit))])
+        # Round robin, rather than concatenating: later query terms get
+        # candidate slots even when the earliest group has many matches.
+        found=[];seen=set()
+        for rank in range(limit):
+            for page in pages:
+                if rank>=len(page):continue
+                row=page[rank]
+                if row['id'] in seen:continue
+                seen.add(row['id']);found.append(row)
+                if len(found)>=limit:return found
+        return found
     except sqlite3.OperationalError:
-        # LIKE is parameterized and bounded; no FTS control operators from text.
-        escaped=[term.replace('\\','\\\\').replace('%','\\%').replace('_','\\_') for term in terms[:8]]
-        query_sql='SELECT * FROM s03_items WHERE '+ ' OR '.join("text LIKE ? ESCAPE '\\'" for _ in escaped)+' ORDER BY salience DESC LIMIT ?'
+        # The bounded LIKE recovery route covers ALL terms, not only the
+        # first eight. SQLite's existing progress deadline remains in force.
+        escaped=[term.replace('\\\\','\\\\\\\\').replace('%','\\\\%').replace('_','\\\\_') for term in terms]
+        query_sql='SELECT * FROM s03_items WHERE '+ ' OR '.join("text LIKE ? ESCAPE '\\\\'" for _ in escaped)+' ORDER BY salience DESC LIMIT ?'
         return [dict(row) for row in conn.execute(query_sql,tuple('%'+term+'%' for term in escaped)+(limit,))]
-
 
 def select_results(lexical_rows,semantic_rows,pin_rows,recent_rows,k=6,semantic_available=False):
     k=max(1,min(16,int(k)));total=max(k+4,8)
