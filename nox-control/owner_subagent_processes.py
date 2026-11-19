@@ -359,8 +359,17 @@ class Subagents:
                 # a late queue fragment or replay this task.
                 self._failure(role, 'HOLD_SUBAGENT_PROCESS_EXIT')
 
-    def _replace_idle_dead_pool(self):
+    def _replace_idle_dead_pool(self, *, allow_replacement=None):
         """Replace only proved-dead idle roles; retain every live peer and its IPC."""
+        def require_admission():
+            if allow_replacement is None:
+                return
+            try:
+                allowed = allow_replacement() is True
+            except Exception:
+                allowed = False
+            if not allowed:
+                raise GateError('HOLD_OWNER_STOP_OR_CHAT_PRIORITY')
         self._notice_dead_workers()
         dead = [role for role, process in self.processes.items()
                 if not process.is_alive()]
@@ -371,6 +380,7 @@ class Subagents:
         if self.active or self._pending_events:
             raise GateError('HOLD_SUBAGENT_POOL_NOT_READY')
         for role in dead:
+            require_admission()
             previous = self.processes[role]
             if previous.is_alive():
                 continue
@@ -386,9 +396,11 @@ class Subagents:
                     args=(role, inbound, self.outbox, self.url, self.timeout,
                           self.worker_prepare, os.getpid()),
                     name='NOX_SUBAGENT_'+role)
+                require_admission()
                 replacement.start()
                 deadline = time.monotonic() + 15
                 while True:
+                    require_admission()
                     left = deadline - time.monotonic()
                     if left <= 0 or not replacement.is_alive():
                         raise GateError('HOLD_SUBAGENT_PROCESS_START')
@@ -410,6 +422,7 @@ class Subagents:
                             or replacement.pid in {p.pid for name, p in self.processes.items()
                                                    if name != role}):
                         raise GateError('HOLD_SUBAGENT_PID_REUSE')
+                    require_admission()  # READY can arrive after STOP/chat changes.
                     break
             except BaseException:
                 # Kill only this unadmitted replacement; never tear down peers.

@@ -356,7 +356,8 @@ class TestRealSubagentProcesses(unittest.TestCase):
                 return Channel()
             def Process(self, *, target, args, name):
                 self.spawned.append((args[0], target, name))
-                return Child(9914, False, args[0], args[2])
+                self.last = Child(9914, False, args[0], args[2])
+                return self.last
 
         ctx = Context()
         pool = Subagents.__new__(Subagents)
@@ -405,6 +406,24 @@ class TestRealSubagentProcesses(unittest.TestCase):
         self.assertFalse(pool.outbox.closed)
         self.assertEqual(pool.active, {})
         self.assertIn('native-old', pool._submitted_ids)
+
+        # Admission may flip after the replacement sends READY. Never publish
+        # that child as the active process; two existing healthy peers survive.
+        just_replaced = pool.processes['memory']
+        just_replaced.alive = False
+        admission_checks = []
+        def allow_until_ready():
+            admission_checks.append(True)
+            return len(admission_checks) < 4
+        with self.assertRaisesRegex(GateError, 'HOLD_OWNER_STOP_OR_CHAT_PRIORITY'):
+            pool._replace_idle_dead_pool(allow_replacement=allow_until_ready)
+        self.assertEqual(len(admission_checks), 4)
+        self.assertIs(pool.processes['memory'], just_replaced)
+        self.assertIs(pool.processes['runtime'], live_runtime)
+        self.assertIs(pool.processes['weights'], live_weights)
+        self.assertFalse(ctx.last.is_alive())
+        self.assertEqual(ctx.last.terminations, 1)
+        self.assertEqual((live_runtime.terminations, live_weights.terminations), (0, 0))
 
     def test_shutdown_and_drain_keeps_joined_result_and_holds_missing_result(self):
         from collections import deque
