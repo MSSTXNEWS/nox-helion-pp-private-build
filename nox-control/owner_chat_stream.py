@@ -305,6 +305,12 @@ def _normal_calls(rows,step):
     return result
 
 
+def _refuse_multi_admin_batch(calls):
+    """A model/tool batch must not silently execute one admin action and drop the rest."""
+    if len(calls)>1 and any(call['name']=='run_admin' for call in calls):
+        raise StreamFailure('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS')
+
+
 def _assistant_tools(calls,content=''):
     return {'role':'assistant','content':content,'tool_calls':[
         {'id':call['id'],'type':'function','function':{
@@ -369,6 +375,7 @@ async def _run(native,url,payload,user_text):
     if not calls:
         calls=native['heuristic_tools'](user_text or '') or []
     calls=_normal_calls(calls,steps)
+    _refuse_multi_admin_batch(calls)
     if calls:messages.append(_assistant_tools(calls))
     async with httpx.AsyncClient(timeout=180.0,trust_env=False) as client:
         while True:
@@ -436,6 +443,7 @@ async def _run(native,url,payload,user_text):
             calls=[by_id[row['id']] for row in message['tool_calls']]
             if native.get('_POOL'):calls=native['dedup_calls'](calls)
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
+            _refuse_multi_admin_batch(calls)
             messages.append(_assistant_tools(calls,message['content']))
 
 
