@@ -338,6 +338,32 @@ class V112Tests(unittest.TestCase):
         held=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=body)
         self.assertEqual(held.status_code,409)
 
+    def test_revoked_receipt_between_reader_connections_cannot_certify_pair(self):
+        from contextlib import contextmanager
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
+            _db, _save_exchange, OwnerDialogExchangeReadback)
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Revocation race fixture','confirmed':True}).json()['dialog_id']
+        ids={'turn_id':'a'*32,'receipt_id':'b'*32,'lease_epoch':'c'*32}
+        self.assertTrue(_save_exchange(dialog,'точный вопрос','respuesta exacta','d'*32,**ids))
+        connections=[]
+        @contextmanager
+        def revoke_between_reads(write=False):
+            connections.append(1)
+            if len(connections)==2:
+                with _db(True) as writer:
+                    writer.execute('DELETE FROM nox_v29_exchange_receipts '
+                                   'WHERE receipt_id=?',(ids['receipt_id'],))
+            with _db(write) as db:
+                yield db
+        result=OwnerDialogExchangeReadback(revoke_between_reads).read(
+            dialog_id=dialog,**ids)
+        self.assertEqual(len(connections),2)
+        self.assertIsNone(result)
+        with _db() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM nox_v29_dialog_messages '
+                'WHERE dialog_id=?',(dialog,)).fetchone()[0],2)
+
     def test_owner_dialog_receipt_provider_excludes_fuzzy_matching_and_s03_claims(self):
         source=Path(__file__).parents[1]/'native_v29_full_bridge.py'
         text=source.read_text()
