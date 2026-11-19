@@ -93,11 +93,19 @@ const ADMISSION_WAIT_MS=250;
       ID.test(done.exchange_id)&&/^[a-f0-9]{64}$/.test(done.receipt_sha256)&&
       done.stream_mode==='NATIVE_TOKEN_STREAM';
   }
+  function canonicalS03Receipt(done) {
+    return done?.s03_integrated===true&&done.owner_dialog_saved!==true&&
+      done.canonical_s03_write_verified!==false&&
+      done.canonical_s03_readback_verified!==false&&
+      done.history_scope!=='OWNER_DIALOG_TABLES_ONLY'&&
+      done.store_scope!=='OWNER_DIALOG_TABLES_ONLY'&&
+      done.writer!=='V112_OWNER_DIALOG_WRITER';
+  }
   function accepted(done,id) {
     return done?.type==='done'&&done.saved===true&&done.dialog_id===id&&
       typeof done.exchange_id==='string'&&done.exchange_id.length>=6&&
       done.exchange_id.length<=160&&
-      (done.s03_integrated===true||ownerDialogReceipt(done,id));
+      (canonicalS03Receipt(done)||ownerDialogReceipt(done,id));
   }
   async function checkOwnerDialog(done,prompt,answer,signal) {
     const r=await nativePost('/api/ui/memory/dialogs/exchange-readback',{
