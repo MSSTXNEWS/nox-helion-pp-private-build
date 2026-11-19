@@ -113,7 +113,7 @@ CONTROLLER_SERVICES = {
 STOPPED = ('STOPPED', 'EXITED', 'FATAL')
 
 
-def read_json(path, limit=4_000_000):
+def read_json(path, limit=4_000_000, expected_sha256=None):
     """Bounded descriptor read: an untrusted state path cannot be swapped to a symlink."""
     path = Path(path)
     if type(limit) is not int or limit < 0:
@@ -134,6 +134,13 @@ def read_json(path, limit=4_000_000):
     finally:
         if fd >= 0:
             os.close(fd)
+    # Bind the parsed trainer state to the exact bytes hashed in the checkpoint receipt.
+    # A writer may replace or modify the inode after the earlier file_sha() sweep.
+    if expected_sha256 is not None:
+        if (not isinstance(expected_sha256, str)
+                or not re.fullmatch('[0-9a-f]{64}', expected_sha256)
+                or hashlib.sha256(raw).hexdigest() != expected_sha256):
+            raise RuntimeError('HOLD_PAUSED_CHECKPOINT_HASH')
     value = json.loads(raw)
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
@@ -680,7 +687,7 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_SCOPE')
     if any(file_sha(path/name) != hashes[name] for name in helper.CHECKPOINT_NAMES):
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_HASH')
-    state = read_json(path/'trainer_state.json')
+    state = read_json(path/'trainer_state.json', expected_sha256=hashes['trainer_state.json'])
     if type(state.get('global_step')) is not int or state['global_step'] != step:
         raise RuntimeError('HOLD_PAUSED_CHECKPOINT_STEP')
     return True
