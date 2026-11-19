@@ -78,6 +78,10 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                 ('wrong_task', {'worker_result': {
                     'project_evidence': {**worker, 'task_id': 'other-task'}}}),
                 ('missing_worker', {'worker_result': None}),
+                ('malformed_tests_list', {'worker_result': {
+                    'project_evidence': {**worker, 'tests': [{'passed': True}]}}}),
+                ('malformed_tests_string', {'worker_result': {
+                    'project_evidence': {**worker, 'tests': 'passed'}}}),
             ):
                 with self.subTest(label=label):
                     bad = {**receipt, **changes}
@@ -92,6 +96,14 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                      'project_evidence_sha256': binding.digest(binding.encoded(inconsistent))}
             with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_INTEGRATION_PROOF'):
                 subject._finish(task, event, 'pinned-claim')
+
+            for malformed in ([{'passed': True}], 'passed', True):
+                with self.subTest(malformed_tests=repr(malformed)):
+                    invalid = {**worker, 'tests': malformed}
+                    invalid_event = {'project_evidence': invalid,
+                        'project_evidence_sha256': binding.digest(binding.encoded(invalid))}
+                    with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_INTEGRATION_PROOF'):
+                        subject._finish(task, invalid_event, 'pinned-claim')
 
 
 if __name__ == '__main__':
