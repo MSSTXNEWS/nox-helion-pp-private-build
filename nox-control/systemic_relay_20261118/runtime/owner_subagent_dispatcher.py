@@ -1550,6 +1550,24 @@ class Native:
         return {'receipt': receipt, 's03': proof,
                 'submit_intent_sha256': terminal['submit_intent_sha256']}
 
+    def _durable_completion_fence(self, task, receipt, proof):
+        """Final read-only claim/S03 gate after the potentially blocking S03 POST.
+
+        A correct S03 row cannot settle a task if the owner, STOP or chat
+        priority changed while the receipt was being written/read. Never
+        resubmit the worker or issue another S03 POST from this method.
+        """
+        settled = self._durable_terminal_s03_readback(task['id'])
+        if (not isinstance(settled, dict)
+                or settled.get('receipt') != receipt
+                or settled.get('s03') != proof):
+            raise GateError('HOLD_NATIVE_TERMINAL_FINAL_READBACK')
+        if (self.stop_active() or chat_priority_active()
+                or not self.writer_lease()
+                or not self._claim_current(task, durable=True)):
+            raise GateError('HOLD_NATIVE_TERMINAL_FINAL_OWNER')
+        return settled
+
     def _drain(self):
         if self.pool is None:
             return
@@ -1672,6 +1690,7 @@ class Native:
                 return 'wait', 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
             self._durable_terminal_fence(task, result)
             proof = remember(result)
+            self._durable_completion_fence(task, result, proof)
             return True, {'schema': RECEIPT, 'verified': True, 'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT',
                           'receipt': result, 's03': proof, 'receipt_sha256': digest(encoded(result)),
                           'candidate_applied': False}
@@ -1798,6 +1817,7 @@ class Native:
                 return 'wait', 'HOLD_NATIVE_LEAF_RESULT_UNSETTLED'
             self._durable_terminal_fence(task, result)
             proof = remember(result)
+            self._durable_completion_fence(task, result, proof)
             # Only the explicitly named read/check subtask is completed. A
             # failed check remains check_passed=False, with its blockers; the
             # original project task is never accepted or rewritten here.
