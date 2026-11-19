@@ -9,7 +9,7 @@ REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
+FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/owner_native_repair.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
 MASTER=None
 
 def _subprocess_env_without_nox2():
@@ -39,6 +39,8 @@ FROZEN_BROWSER_DEPENDENCIES={
 }
 FROZEN_BROWSER_ENTRIES=('nox-control/owner_browser_normal_motion_entry.py',
                         'nox-control/owner_browser_asset_identity_entry.py')
+
+SCOPED_REPAIR_BUNDLES['nox-control/owner_native_repair.py'] = ()
 
 def repair_bundle_paths(action,entrypoint,paths):
     if action not in ('repair','browser_qa') or entrypoint not in SCOPED_REPAIR_BUNDLES:return paths
