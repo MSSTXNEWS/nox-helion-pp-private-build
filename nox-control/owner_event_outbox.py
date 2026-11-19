@@ -359,6 +359,171 @@ def events_after(cursor=None, limit=20):
                 'initial_snapshot': cursor is None, 'delivery': 'OWNER_SESSION_POLL_ONLY'}
 
 
+
+def _readonly_flags(directory=False):
+    # Require O_NOATIME so this reader does not update event-store access times.
+    noatime=getattr(os,'O_NOATIME',0)
+    if not noatime:
+        raise OutboxHold('HOLD_OWNER_EVENTS_NOATIME_UNAVAILABLE')
+    flags=os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|getattr(os,'O_CLOEXEC',0)|noatime
+    if directory:
+        flags|=os.O_DIRECTORY
+    return flags
+
+
+def _readonly_identity(info):
+    return (info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_nlink,
+            info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+
+
+def _readonly_directory(parent_fd,name):
+    fd=os.open(name,_readonly_flags(True),dir_fd=parent_fd)
+    info=os.fstat(fd)
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid!=os.geteuid():
+        os.close(fd)
+        raise OutboxHold('HOLD_OWNER_EVENTS_DIRECTORY')
+    return fd
+
+
+@contextmanager
+def _readonly_event_directories():
+    """Anchor existing directories only; never mkdir, create a lock or recover."""
+    fds=[]
+    try:
+        root_fd=os.open('/',_readonly_flags(True)); fds.append(root_fd)
+        home_fd=_readonly_directory(root_fd,'root'); fds.append(home_fd)
+        nox_fd=_readonly_directory(home_fd,'nox'); fds.append(nox_fd)
+        state_fd=_readonly_directory(nox_fd,'state'); fds.append(state_fd)
+        owner_fd=_readonly_directory(state_fd,'owner_events'); fds.append(owner_fd)
+        events_fd=_readonly_directory(owner_fd,'events'); fds.append(events_fd)
+        for fd in (owner_fd,events_fd):
+            if stat.S_IMODE(os.fstat(fd).st_mode)&0o077:
+                raise OutboxHold('HOLD_OWNER_EVENTS_DIRECTORY_MODE')
+        yield (root_fd,home_fd,nox_fd,state_fd,owner_fd,events_fd)
+        for parent_fd,name,fd in (
+            (root_fd,'root',home_fd),(home_fd,'nox',nox_fd),
+            (nox_fd,'state',state_fd),(state_fd,'owner_events',owner_fd),
+            (owner_fd,'events',events_fd)):
+            current=os.stat(name,dir_fd=parent_fd,follow_symlinks=False)
+            if (not stat.S_ISDIR(current.st_mode)
+                    or _readonly_identity(current)!=_readonly_identity(os.fstat(fd))):
+                raise OutboxHold('HOLD_OWNER_EVENTS_DIRECTORY_CHANGED')
+    except OSError as exc:
+        raise OutboxHold('HOLD_OWNER_EVENTS_READONLY_OPEN') from exc
+    finally:
+        for fd in reversed(fds):
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+
+
+def _readonly_json_at(dir_fd,name,limit=MAX_EVENT_BYTES):
+    fd=os.open(name,_readonly_flags(False),dir_fd=dir_fd)
+    try:
+        before=os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid!=os.geteuid()
+                or before.st_nlink!=1 or stat.S_IMODE(before.st_mode)&0o077
+                or before.st_size<0 or before.st_size>limit):
+            raise OutboxHold('HOLD_OWNER_EVENTS_FILE')
+        raw=os.read(fd,limit+1)
+        after=os.fstat(fd)
+        try:
+            current=os.stat(name,dir_fd=dir_fd,follow_symlinks=False)
+        except OSError as exc:
+            raise OutboxHold('HOLD_OWNER_EVENTS_FILE_CHANGED') from exc
+        if (len(raw)>limit or len(raw)!=before.st_size
+                or _readonly_identity(before)!=_readonly_identity(after)
+                or _readonly_identity(after)!=_readonly_identity(current)):
+            raise OutboxHold('HOLD_OWNER_EVENTS_FILE_CHANGED')
+        def unique_pairs(pairs):
+            result={}
+            for key,value in pairs:
+                if key in result:
+                    raise OutboxHold('HOLD_OWNER_EVENTS_DUPLICATE_KEY')
+                result[key]=value
+            return result
+        try:
+            value=json.loads(raw,object_pairs_hook=unique_pairs,
+                             parse_constant=lambda _value: (_ for _ in ()).throw(
+                                 OutboxHold('HOLD_OWNER_EVENTS_NONFINITE')))
+        except (ValueError,UnicodeDecodeError) as exc:
+            if isinstance(exc,OutboxHold):
+                raise
+            raise OutboxHold('HOLD_OWNER_EVENTS_JSON') from exc
+        return value,raw,_readonly_identity(after)
+    finally:
+        os.close(fd)
+
+
+def _readonly_entry_exists(dir_fd,name):
+    try:
+        os.stat(name,dir_fd=dir_fd,follow_symlinks=False)
+        return True
+    except FileNotFoundError:
+        return False
+    except OSError as exc:
+        raise OutboxHold('HOLD_OWNER_EVENTS_ENTRY') from exc
+
+
+def _readonly_validate_event(row,sequence):
+    if (not isinstance(row,dict) or row.get('schema')!=SCHEMA
+            or row.get('sequence')!=sequence
+            or not SHA.fullmatch(str(row.get('dedup_sha256','')))):
+        raise OutboxHold('HOLD_OWNER_EVENT_READBACK')
+    return row
+
+
+def events_snapshot_readonly(cursor=None,limit=20):
+    """Bounded optimistic snapshot; no _recover, index writes, lock creation or event writes."""
+    if cursor is not None and (type(cursor) is not int or not 0<=cursor<10**15):
+        raise ValueError('INVALID_EVENT_CURSOR')
+    if type(limit) is not int or not 1<=limit<=50:
+        raise ValueError('INVALID_EVENT_LIMIT')
+    with _readonly_event_directories() as (_root_fd,_home_fd,_nox_fd,
+                                           _state_fd,owner_fd,events_fd):
+        try:
+            before_value,before_raw,before_identity=_readonly_json_at(owner_fd,'cursor.json')
+        except FileNotFoundError:
+            before_value,before_raw,before_identity=None,None,None
+        if before_value is None:
+            latest=0
+        else:
+            if (not isinstance(before_value,dict)
+                    or before_value.get('schema')!='NOX_OWNER_EVENT_CURSOR_V1'
+                    or type(before_value.get('last_sequence')) is not int
+                    or not 0<=before_value['last_sequence']<10**15):
+                raise OutboxHold('HOLD_OWNER_EVENT_CURSOR')
+            latest=before_value['last_sequence']
+        next_name=str(latest+1).zfill(16)+'.json'
+        if _readonly_entry_exists(events_fd,next_name):
+            raise OutboxHold('HOLD_OWNER_EVENT_RECOVERY_PENDING')
+        if latest:
+            _readonly_validate_event(
+                _readonly_json_at(events_fd,str(latest).zfill(16)+'.json')[0],latest
+            )
+        start=max(0,latest-limit) if cursor is None else min(cursor,latest)
+        rows=[]
+        for sequence in range(start+1,min(latest,start+limit)+1):
+            row=_readonly_json_at(events_fd,str(sequence).zfill(16)+'.json')[0]
+            rows.append(_readonly_validate_event(row,sequence))
+        try:
+            after_value,after_raw,after_identity=_readonly_json_at(owner_fd,'cursor.json')
+        except FileNotFoundError:
+            after_value,after_raw,after_identity=None,None,None
+        if ((before_value is None)!=(after_value is None)
+                or before_raw!=after_raw or before_identity!=after_identity
+                or _readonly_entry_exists(events_fd,next_name)):
+            raise OutboxHold('HOLD_OWNER_EVENT_SNAPSHOT_CHANGED')
+        return {'schema':'NOX_OWNER_EVENTS_V1','state':'OBSERVED','events':rows,
+                'next_cursor':rows[-1]['sequence'] if rows else start,
+                'latest_cursor':latest,
+                'has_more':bool(rows and rows[-1]['sequence']<latest),
+                'initial_snapshot':cursor is None,'delivery':'OWNER_SESSION_POLL_ONLY',
+                'read_only_snapshot':True,'recovery_performed':False,
+                'event_outbox_writes':0}
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise OutboxHold('HOLD_LOCAL_HEALTH_REDIRECT')
