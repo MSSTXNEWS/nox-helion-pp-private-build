@@ -25,8 +25,11 @@ class ProjectLedgerHashSnapshotTest(unittest.TestCase):
 
     def test_stable_snapshot_is_hash_and_metadata_only(self):
         result = observe.project_ledger_hash_snapshot(root=self.root)
-        self.assertEqual(tuple(result), observe.PROJECT_LEDGER_NAMES)
-        for name, row in result.items():
+        self.assertEqual(set(result), {'pre', 'post'})
+        self.assertEqual(tuple(result['pre']), observe.PROJECT_LEDGER_NAMES)
+        for name in observe.PROJECT_LEDGER_NAMES:
+            self.assertEqual(result['pre'][name], result['post'][name])
+            row = result['pre'][name]
             self.assertEqual(set(row), {'sha256', 'size_bytes', 'mtime_ns', 'device', 'inode'})
             self.assertEqual(row['size_bytes'], len((self.ledger_dir / name).read_bytes()))
             self.assertEqual(len(row['sha256']), 64)
