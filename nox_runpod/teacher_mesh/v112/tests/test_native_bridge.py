@@ -67,6 +67,8 @@ class V112Tests(unittest.TestCase):
                     answer=('recovered nonce '+nonce
                             if messages[-3:-1]==exact_first_pair
                             else 'MISSING_CONTEXT')
+            if self.bulk_sse=='dialog_reply_above_context_limit':
+                answer='¡'*8001
             async def chunks():
                 if self.bulk_sse=='coalesced':
                     # Two individually valid 160 KB SSE comment frames in
@@ -429,6 +431,29 @@ class V112Tests(unittest.TestCase):
         self.assertFalse(frames[-1]['canonical_s03_write_verified'])
         self.assertEqual(''.join(f['text'] for f in frames if f['type']=='delta'),
                          'Готов. Это проверенный ответ.')
+
+    def test_dialog_reply_over_context_limit_never_claims_recoverable_done(self):
+        # Previous streaming limit was 2M chars, but the next turn can only
+        # restore an <=8000-char message. A >8k reply falsely finished as DONE.
+        self.bulk_sse='dialog_reply_above_context_limit'
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Long reply recovery guard','confirmed':True}).json()['dialog_id']
+        first=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'Keep second turn possible','dialog_id':dialog})
+        frames=[json.loads(row) for row in first.text.splitlines() if row.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
+        self.assertFalse(any(row.get('type')=='done' or row.get('saved') for row in frames))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()
+        self.assertEqual(history['messages'],[])
+        # An aborted overlong reply must not poison a subsequent real exchange.
+        self.bulk_sse=''
+        second=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'Retry with a short answer','dialog_id':dialog})
+        final=json.loads(second.text.splitlines()[-1])
+        self.assertEqual(final['type'],'done')
+        self.assertTrue(final['owner_dialog_saved'])
+        self.assertFalse(final['s03_integrated'])
 
     def test_one_oversized_sse_frame_is_still_rejected(self):
         self.bulk_sse='oversized'
