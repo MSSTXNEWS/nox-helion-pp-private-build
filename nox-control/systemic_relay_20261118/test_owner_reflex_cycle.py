@@ -80,6 +80,7 @@ class NativeReflexTests(unittest.TestCase):
 
     def test_source_drift_creates_pinned_investigation_only(self):
         result = tick(deferred=[{'mission_id':'cache_fill_ttl',
+                                 'mission_revision':1,
                                  'reason':'SOURCE_PIN_DRIFT_REVIEW_REQUIRED'}])
         self.assertEqual(result['staged_count'],1)
         candidate=result['staged_research_candidates'][0]
@@ -89,13 +90,48 @@ class NativeReflexTests(unittest.TestCase):
         self.assertFalse(candidate['new_native_job_created'])
         self.assertEqual(candidate['authority'],'RESEARCH_PROPOSAL_ONLY')
 
+    def test_admitted_source_drift_is_reported_without_replay(self):
+        changed = 'c' * 64
+        drift = [{'path':'code/cache.py','expected_sha256':PIN,
+                  'observed_sha256':changed}]
+        result = tick(source={ROOT:{'code/cache.py':changed}},deferred=[{
+            'mission_id':'cache_fill_ttl','mission_revision':1,
+            'reason':'ALREADY_ADMITTED_NO_REPLAY','source_drift':drift,
+            'replay_forbidden':True}])
+        candidate = result['staged_research_candidates'][0]
+        self.assertEqual(candidate['hypothesis'],'REBASE_AGAINST_OBSERVED_SOURCE_DRIFT')
+        self.assertEqual(candidate['mission_revision'],1)
+        self.assertEqual(candidate['source_drift'],drift)
+        self.assertTrue(candidate['replay_forbidden'])
+        self.assertTrue(candidate['requires_new_owner_reviewed_revision'])
+        self.assertFalse(candidate['new_native_job_created'])
+        self.assertFalse(candidate['original_task_accepted'])
+
+    def test_stale_revision_failure_cannot_replace_current_revision_drift(self):
+        current = mission('cache_fill_ttl')
+        current['revision'] = 2
+        changed = 'c' * 64
+        state = {'old-child':{'handler':'owner_native_project_work','status':'failed',
+            'systemic_relay':{'binding':{'mission_id':'cache_fill_ttl',
+                'mission_revision':1,'input_sha256':'f'*64}}}}
+        result = tick(m=manifest(missions=[current]),state=state,
+            source={ROOT:{'code/cache.py':changed}},
+            deferred=[{'mission_id':'cache_fill_ttl','mission_revision':2,
+                'reason':'ALREADY_ADMITTED_NO_REPLAY','source_drift':[{
+                    'path':'code/cache.py','expected_sha256':PIN,'observed_sha256':changed}]}])
+        self.assertEqual(result['staged_count'],1)
+        candidate = result['staged_research_candidates'][0]
+        self.assertEqual(candidate['mission_revision'],2)
+        self.assertEqual(candidate['hypothesis'],'REBASE_AGAINST_OBSERVED_SOURCE_DRIFT')
+
     def test_failed_terminal_produces_new_review_not_replay(self):
         result = tick(state={'a':{
             'handler':'owner_native_project_work',
             'status':'failed','systemic_relay':{'binding':{
                 'mission_id':'cache_fill_ttl','mission_revision':1,
                 'input_sha256':'f'*64}}}},
-            deferred=[{'mission_id':'cache_fill_ttl','reason':'ALREADY_ADMITTED_NO_REPLAY'}])
+            deferred=[{'mission_id':'cache_fill_ttl','mission_revision':1,
+                       'reason':'ALREADY_ADMITTED_NO_REPLAY'}])
         self.assertEqual(result['observed_task_counts']['blocked'],1)
         self.assertEqual(result['staged_count'],1)
         self.assertEqual(result['staged_research_candidates'][0]['hypothesis'],
@@ -105,7 +141,8 @@ class NativeReflexTests(unittest.TestCase):
         result = tick(state={'a':{
             'status':'done','systemic_relay':{'binding':{
                 'mission_id':'cache_fill_ttl','mission_revision':1}}}},
-            deferred=[{'mission_id':'cache_fill_ttl','reason':'ALREADY_ADMITTED_NO_REPLAY'}])
+            deferred=[{'mission_id':'cache_fill_ttl','mission_revision':1,
+                       'reason':'ALREADY_ADMITTED_NO_REPLAY'}])
         self.assertEqual(result['staged_count'],0)
         self.assertEqual(result['new_native_jobs'],0)
 
@@ -119,8 +156,10 @@ class NativeReflexTests(unittest.TestCase):
 
     def test_repeated_observation_idempotent(self):
         a=tick(deferred=[{'mission_id':'cache_fill_ttl',
+                           'mission_revision':1,
                            'reason':'SOURCE_PIN_DRIFT_REVIEW_REQUIRED'}])
         b=tick(deferred=[{'mission_id':'cache_fill_ttl',
+                           'mission_revision':1,
                            'reason':'SOURCE_PIN_DRIFT_REVIEW_REQUIRED'}])
         self.assertEqual(a,b)
 
@@ -129,6 +168,7 @@ class NativeReflexTests(unittest.TestCase):
             mission('cache_fill_ttl'),mission('forge_read_budget'),
             mission('skill_journal_budget'),mission('fourth_issue')])
         problems=[{'mission_id':x['mission_id'],
+                   'mission_revision':x['revision'],
                    'reason':'SOURCE_PIN_DRIFT_REVIEW_REQUIRED'} for x in m['missions']]
         self.assertEqual(tick(m=m,deferred=problems)['staged_count'],3)
 
