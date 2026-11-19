@@ -106,6 +106,43 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(result['unindexed_original_count'],292)
         self.assertEqual(result['staged_count'],0)
 
+    def test_exhausted_catalog_yields_reviewable_originals_not_jobs(self):
+        review = manifest()
+        for parent_id in review['registry']['parents']:
+            review['registry']['parents'][parent_id]['spec_sha256'] = PIN
+        a = tick(m=review)
+        b = tick(m=review)
+        self.assertEqual(a['state'], 'REFILL_REQUIRED')
+        self.assertEqual(a['staged_count'], 2)
+        self.assertEqual(a['new_native_jobs'], 0)
+        self.assertFalse(a['automatic_owner_approval'])
+        self.assertEqual(a['staged_research_candidates'], b['staged_research_candidates'])
+        for row in a['staged_research_candidates']:
+            self.assertEqual(row['hypothesis'], 'INSPECT_UNREPRESENTED_ORIGINAL')
+            self.assertEqual(row['spec_sha256'], PIN)
+            self.assertEqual(row['authority'], 'RESEARCH_PROPOSAL_ONLY')
+            self.assertFalse(row['new_native_job_created'])
+            self.assertNotIn('editable_paths', row)
+        self.assertEqual(
+            {row['parent_task_id'] for row in a['staged_research_candidates']},
+            {'4A02', '3B05'})
+
+    def test_no_backlog_research_when_native_claim_active_or_accepted(self):
+        review = manifest()
+        for parent_id in review['registry']['parents']:
+            review['registry']['parents'][parent_id]['spec_sha256'] = PIN
+        accepted = {'id': '3B05', 'handler': 'owner_native_project_work',
+                    'status': 'done', 'original_task_accepted': True}
+        pending = {'id': 'live', 'handler': 'owner_native_project_work',
+                   'status': 'running'}
+        result = tick(m=review, state={'3B05': accepted, 'live': pending})
+        self.assertEqual(result['state'], 'EXECUTION_OR_ADMISSION_IN_PROGRESS')
+        self.assertEqual(result['staged_count'], 0)
+        self.assertEqual(result['new_native_jobs'], 0)
+        exhausted = tick(m=review, state={'3B05': accepted})
+        self.assertEqual([x['parent_task_id'] for x in exhausted['staged_research_candidates']],
+                         ['4A02'])
+
     def test_source_drift_creates_pinned_investigation_only(self):
         result = tick(deferred=[{'mission_id':'cache_fill_ttl',
                                  'reason':'SOURCE_PIN_DRIFT_REVIEW_REQUIRED'}])
