@@ -37,7 +37,8 @@
     "request": {
       "github_issue_comment_id": 7012555110,
       "request_kind": "owner-authenticated explicit read-only audit",
-      "command": "/nox-maintain 60509551 b1e33d60983885a7ebd1979bda4ec640b7ca7047 audit"
+      "command": "/nox-maintain 60509551 b1e33d60983885a7ebd1979bda4ec640b7ca7047 audit",
+      "owner_authorization_id": 7012555110
     },
     "workflow": {
       "run_id": 44547824185,
@@ -141,5 +142,73 @@
       "Both GPU links remain unmatched; no GPU-to-process attribution is established.",
       "This is one point-in-time census and makes no claim about ongoing state, later process changes, or general system health."
     ]
+  },
+  "overall_audit": "HOLD",
+  "criteria": {
+    "6V14-02": {
+      "spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+      "addendum_assessment": "ACCEPTED",
+      "result": "ACCEPTED",
+      "acceptance_scope": "POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY",
+      "acceptance_binding": {
+        "evidence_pointer": "#/additional_evidence_records/0",
+        "workflow_run_id": 44547824185,
+        "workflow_job_id": 135643082464,
+        "owner_authorization_id": 7012555110
+      },
+      "evidence_pointer": "#/audit_evidence/point_in_time_census",
+      "acceptance_increment": 0
+    }
+  },
+  "additional_evidence_records": [
+    {
+      "task_id": "6V14-02",
+      "criterion_spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+      "result": "ACCEPTED",
+      "acceptance_scope": "POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY",
+      "workflow_run_id": 44547824185,
+      "workflow_job_id": 135643082464,
+      "owner_authorization_id": 7012555110,
+      "audit_pin_commit_sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
+      "source_head_sha": "9b52736047f46bc1873f1b3f9dbf3822d9e0753b",
+      "evidence_pointer": "#/audit_evidence/point_in_time_census",
+      "source_artifact_blobs": {
+        "task_registry": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "all295_manifest": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+        "work_receipts": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+        "workflow": "6eb00db24604395591e0aa59808271dc5b7fbbd6",
+        "owner_guard": "ac49388329343289de3ebedafa77563ce237124a",
+        "operator_source": "32459885f2f6de545fcd53c3242aaaff242702f3",
+        "audit_source": "e5c439c6733fcb276bec58dbf8af5193694645ac",
+        "transfer_bundle": "d8708f7f3919446ec64a5b453bb609ebae444c501b50672cf6151eb736d61c98",
+        "process_rows": "c20d2f549970366e0d0729b3ee93e877c2ed3605ce2031c1c9a60e2c930c68cb"
+      }
+    }
+  ],
+  "audit_evidence": {
+    "point_in_time_census": {
+      "workflow_run_id": 44547824185,
+      "workflow_job_id": 135643082464,
+      "owner_authorization_id": 7012555110,
+      "run_attempt": 1,
+      "source_head_sha": "9b52736047f46bc1873f1b3f9dbf3822d9e0753b",
+      "audit_pin_commit_sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
+      "source_artifact_blobs": {
+        "task_registry": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "all295_manifest": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+        "work_receipts": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+        "workflow": "6eb00db24604395591e0aa59808271dc5b7fbbd6",
+        "owner_guard": "ac49388329343289de3ebedafa77563ce237124a",
+        "operator_source": "32459885f2f6de545fcd53c3242aaaff242702f3",
+        "audit_source": "e5c439c6733fcb276bec58dbf8af5193694645ac",
+        "transfer_bundle": "d8708f7f3919446ec64a5b453bb609ebae444c501b50672cf6151eb736d61c98",
+        "process_rows": "c20d2f549970366e0d0729b3ee93e877c2ed3605ce2031c1c9a60e2c930c68cb"
+      },
+      "process_census_pointer": "#/process_census",
+      "supervisor_pointer": "#/supervisor",
+      "gpu_census_pointer": "#/gpu_census",
+      "overall_audit": "HOLD",
+      "comment": "This evidence confirms the frozen title criterion only for the bounded point-in-time process census. It does not claim full process identity, GPU attribution, Supervisor health, ongoing state, or general system health."
+    }
   }
 }
