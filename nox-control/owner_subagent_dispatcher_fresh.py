@@ -623,7 +623,8 @@ class Native:
                         if not any(not p.is_alive() for p in self.pool.processes.values()):
                             return False
                         # One dead role only; retain live PIDs, IPC, and replay fences.
-                        self.pool._replace_idle_dead_pool()
+                        self.pool._replace_idle_dead_pool(
+                            allow_replacement=lambda: not self.stop_active() and not chat_priority_active())
                     except (GateError, OSError, ValueError):
                         return False
                 return len(self.process_readback()) == 3

@@ -180,7 +180,8 @@ class PoolLifecycleTests(unittest.TestCase):
                         'process_starttime': child.pid + 1}
             for child in (*children.values(), replacement)
         }
-        def replace_dead_only():
+        def replace_dead_only(*, allow_replacement):
+            self.assertTrue(allow_replacement())
             children['runtime'] = replacement
             pool.heartbeats['runtime'] = time.time()
         pool._replace_idle_dead_pool.side_effect = replace_dead_only
@@ -196,7 +197,12 @@ class PoolLifecycleTests(unittest.TestCase):
             native.completed.clear()  # Simulated owner readback/settlement.
             self.assertTrue(native.ensure_processes(3))
             ctor.assert_not_called()
-        pool._replace_idle_dead_pool.assert_called_once_with()
+        pool._replace_idle_dead_pool.assert_called_once()
+        callback = pool._replace_idle_dead_pool.call_args.kwargs['allow_replacement']
+        with patch.object(binding, 'chat_priority_active', return_value=False):
+            self.assertTrue(callback())
+            native.stop_active.return_value = True
+            self.assertFalse(callback())
         native.close_pool.assert_not_called()
         self.assertIs(children['runtime'], replacement)
         self.assertIs(children['memory'], old_memory)
