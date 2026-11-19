@@ -107,6 +107,23 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(requests[0]['messages'][-1]['content'].endswith('|END'))
         self.assertEqual(payload['_agent_final'], 'GROUNDED_FINAL')
 
+    async def test_full_length_action_preserves_every_user_character_and_model_route(self):
+        # Previously _routing_text rejected any request longer than 8K, so
+        # a stale read-only status shortcut replaced the requested model turn.
+        text = 'Оптимизируй сервер и GPU. ' + 'Полные наблюдения и исходные данные. ' * 320 + 'КОНЕЦ_КОНТЕКСТА'
+        self.assertGreater(len(text), 8000)
+        self.assertTrue(candidate.action_request(text))
+        self.assertTrue(candidate.status_needs_model(text))
+        self.assertFalse(candidate.action_request('Не запускай процессы. ' + 'подробности ' * 800))
+        native = self.native(direct=[STATUS], heuristic=[STATUS])
+        _, payload, requests = await self.complete(
+            candidate, native, text, [answer('MODEL_NOT_STATUS_ALIAS')])
+        self.assertEqual(self.dispatched, [])
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(requests[0]['messages'][-1]['content'], text)
+        self.assertTrue(requests[0]['messages'][-1]['content'].endswith('КОНЕЦ_КОНТЕКСТА'))
+        self.assertEqual(payload['_agent_final'], 'MODEL_NOT_STATUS_ALIAS')
+
     async def test_original_bug_and_candidate_action_reaches_model_without_status_substitution(self):
         text = 'Оптимизируй сервер и GPU, скачай все веса'
         native = self.native(frozen, direct=[STATUS], heuristic=[STATUS])
