@@ -14,6 +14,7 @@ from owner_chat_browser_qa import (
     canonical_s03_proof_valid,
     click_send,
     firstturn_history_valid,
+    firstturn_prefix_identity_valid,
     empty_dialog_history_valid,
     exact_native_post_fence,
     multiturn_followup_prompt,
@@ -101,6 +102,44 @@ class OwnerRuEsContinuity(unittest.TestCase):
                 writer, independent = s03_proof(changed)
                 self.assertFalse(canonical_s03_proof_valid(
                     writer, independent, DIALOG, changed))
+
+    def test_firstturn_message_ids_survive_spanish_followup_readback(self):
+        es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
+        final_rows = [
+            dict(row, message_id=f"turn-{i}") for i, row in enumerate(rows(es))
+        ]
+        initial_ids = ("turn-0", "turn-1")
+        self.assertTrue(firstturn_prefix_identity_valid(initial_ids, final_rows))
+        self.assertTrue(multiturn_history_valid(
+            final_rows, RU, FIRST, es, LAST, dialog_id=DIALOG))
+
+        # The preexisting four-row checker accepts matching role/text despite
+        # history-row replacement. The new second-read fence must reject it.
+        for row_index in (0, 1):
+            for changed_id in (f"rewritten-{row_index}", None, "", 19):
+                with self.subTest(row=row_index, changed_id=repr(changed_id)):
+                    replaced = [dict(row) for row in final_rows]
+                    if changed_id is None:
+                        replaced[row_index].pop("message_id")
+                    else:
+                        replaced[row_index]["message_id"] = changed_id
+                    self.assertFalse(firstturn_prefix_identity_valid(
+                        initial_ids, replaced))
+                    if isinstance(changed_id, str) and changed_id:
+                        self.assertTrue(multiturn_history_valid(
+                            replaced, RU, FIRST, es, LAST, dialog_id=DIALOG))
+
+        # Legacy first-turn history without IDs remains usable, even when
+        # durable IDs appear in the second read. Explicit malformed source
+        # snapshots or malformed final history fail closed.
+        self.assertTrue(firstturn_prefix_identity_valid(
+            (None, None), final_rows))
+        self.assertFalse(firstturn_prefix_identity_valid(
+            ("", "turn-1"), final_rows))
+        self.assertFalse(firstturn_prefix_identity_valid(
+            ["turn-0", "turn-1"], final_rows))
+        self.assertFalse(firstturn_prefix_identity_valid(
+            initial_ids, final_rows[:2]))
 
     def test_two_turn_native_post_accounting_fences_before_s03_proof(self):
         for turn in (1, 2):
