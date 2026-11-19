@@ -9,7 +9,7 @@ REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/owner_once_cgroup_refill_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
+FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/owner_native_memory_refill.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
 GPU_INVENTORY_BLOB_SHA='3a3ff33e7709539d5ff6ab6b8614d694a9d2becb'
 GPU_MEMORY_SEMANTICS='nvidia-smi MiB; 0<=total-used-free<=1024 reserved'
 GPU_RESERVED_LIMIT_MIB=1024
