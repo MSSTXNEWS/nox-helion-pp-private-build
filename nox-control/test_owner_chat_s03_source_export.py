@@ -6,6 +6,9 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+import builtins
+import sys
+from unittest import mock
 import zipfile
 from io import BytesIO
 
@@ -139,6 +142,48 @@ class SourceExportTests(unittest.TestCase):
         self.assertTrue(callable(ephemeral_ssh_probe.match))
         self.assertTrue(callable(ephemeral_ssh_probe.cleanup))
         self.assertEqual(ephemeral_ssh_probe.INSTANCE_ID, 60509551)
+
+    def test_failed_owner_auth_or_dependency_never_imports_or_cleans_provider(self):
+        original_import = builtins.__import__
+        for failure in ("authorization", "dependency"):
+            with self.subTest(failure=failure):
+                attempted_provider_imports = []
+
+                def deny_provider_import(name, *args, **kwargs):
+                    if name.startswith("nox_runpod"):
+                        attempted_provider_imports.append(name)
+                        raise AssertionError("provider import attempted before precheck")
+                    return original_import(name, *args, **kwargs)
+
+                auth_patch = (
+                    mock.patch.object(operator, "authorize_event",
+                                      side_effect=RuntimeError("HOLD_OWNER_COMMAND_IDENTITY"))
+                    if failure == "authorization"
+                    else mock.patch.object(operator, "authorize_event", return_value=123458)
+                )
+                dependency_patch = mock.patch.object(
+                    operator, "verify_source_export_dependencies",
+                    side_effect=RuntimeError("HOLD_SOURCE_EXPORT_DEPENDENCY_MANIFEST_HASH"),
+                ) if failure == "dependency" else mock.patch.object(
+                    operator, "verify_source_export_dependencies",
+                    side_effect=AssertionError("dependency check ran before owner authorization"),
+                )
+                original_path = list(sys.path)
+                with (
+                    mock.patch.object(sys, "argv",
+                                      ["owner_native_operator.py", "source_export", "public-key"]),
+                    mock.patch.object(operator, "source_export_key_info", return_value={}),
+                    auth_patch,
+                    dependency_patch,
+                    mock.patch.object(operator, "MASTER", None),
+                    mock.patch("builtins.__import__", side_effect=deny_provider_import),
+                    mock.patch("builtins.print"),
+                ):
+                    result = operator.main()
+
+                self.assertEqual(result, 2)
+                self.assertEqual(attempted_provider_imports, [])
+                self.assertEqual(sys.path, original_path)
 
     def test_export_artifact_is_exclusive_and_private_mode(self):
         with tempfile.TemporaryDirectory() as td:

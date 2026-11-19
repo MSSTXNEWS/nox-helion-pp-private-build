@@ -1270,14 +1270,22 @@ def authorize_event(action,export_key_b64=None):
     if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
     return c['id']
 
-def run_native(action,request_id,export_key_b64=None):
+def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None):
     if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
     if action=='source_export':source_export_key_info(export_key_b64)
     elif export_key_b64 is not None:raise RuntimeError('HOLD_UNEXPECTED_EXPORT_KEY')
     global MASTER
-    sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-    if action=='source_export':verify_source_export_dependencies()
+    provider_root=Path(__file__).resolve().parents[1]
+    verify_source_export_dependencies()
+    provider_root_text=str(provider_root)
+    if provider_root_text not in sys.path:sys.path.insert(0,provider_root_text)
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
+    expected_provider=(provider_root/'nox_runpod'/'teacher_mesh'/'v51'/'ephemeral_ssh_probe.py').resolve()
+    imported_provider=Path(getattr(s,'__file__','')).resolve()
+    if imported_provider!=expected_provider:raise RuntimeError('HOLD_SOURCE_EXPORT_PROVIDER_IMPORT_PATH')
+    if provider_cleanup_sink is not None:
+        if not callable(provider_cleanup_sink):raise RuntimeError('HOLD_SOURCE_EXPORT_PROVIDER_CLEANUP_SINK')
+        provider_cleanup_sink(s.cleanup)
     key=os.environ.get('NOX2','')
     if not key:raise RuntimeError('HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE')
     values=s.api('GET','/instances/',key)
@@ -1534,21 +1542,24 @@ def operator_argument_parser():
 
 def main():
     args=operator_argument_parser().parse_args();good=False
+    verified_provider_cleanup=None
+    def capture_verified_provider_cleanup(cleanup):
+        nonlocal verified_provider_cleanup
+        if not callable(cleanup):raise RuntimeError('HOLD_SOURCE_EXPORT_PROVIDER_CLEANUP_MISSING')
+        verified_provider_cleanup=cleanup
     try:
         request=authorize_event(args.action,args.export_key)
         print('NOX_MAINT_AUTHORIZED_COMMENT_ID='+str(request),flush=True)
-        good=run_native(args.action,request,args.export_key)
+        good=run_native(args.action,request,args.export_key,capture_verified_provider_cleanup)
     except Exception as e:
         code=str(e)
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
     finally:
         if MASTER:
             with contextlib.suppress(Exception):subprocess.run(MASTER,capture_output=True,timeout=8)
-        sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-        from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
-        try:
-            if not s.cleanup():good=False
-        except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
-        with contextlib.suppress(OSError):s.KEY.unlink()
+        if verified_provider_cleanup is not None:
+            try:
+                if not verified_provider_cleanup():good=False
+            except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
     return 0 if good else 2
 if __name__=='__main__':raise SystemExit(main())
