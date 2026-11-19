@@ -1,0 +1,41 @@
+name: NOX Drive reconnect targeted checks
+on:
+  push:
+    branches: [feature/nox-drive-auto-reconnect-20261119, main]
+    paths:
+      - 'nox-control/nox_drive_reconnect.py'
+      - 'nox-control/test_nox_drive_reconnect.py'
+      - 'nox-control/test_owner_native_drive_reconnect_install.py'
+      - 'nox-control/owner_native_drive_reconnect_install.py'
+      - 'nox-control/nox_drive_reconnect_loop.sh'
+      - 'nox-control/systemd/nox-drive-reconnect.*'
+      - 'nox-control/supervisor/nox-drive-reconnect.conf'
+      - '.github/workflows/nox-drive-reconnect-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify reconnect logic without credentials or host access
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_drive_reconnect.py nox-control/owner_native_drive_reconnect_install.py nox-control/test_nox_drive_reconnect.py nox-control/test_owner_native_drive_reconnect_install.py
+          python3 -m unittest discover -s nox-control -p test_nox_drive_reconnect.py -v
+          python3 -m unittest discover -s nox-control -p test_owner_native_drive_reconnect_install.py -v
+          /bin/sh -n nox-control/nox_drive_reconnect_loop.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          op=Path('nox-control/owner_native_operator.py').read_text()
+          yml=Path('.github/workflows/nox-owner-maintenance-command.yml').read_text()
+          assert "'drive_reconnect_install': 'nox-control/owner_native_drive_reconnect_install.py'" in op
+          assert 'drive_reconnect_install' in yml
+          print('OWNER_PINNED_DRIVE_RECONNECT_INSTALL_SOURCE_PASS')
+          PY
+      - name: Source is not host authorization
+        run: echo 'PASS verifies source only; actual Google OAuth and server installation separate'

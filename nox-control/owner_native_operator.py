@@ -15,7 +15,7 @@ PAGE_CACHE_RECLAIM_HELPER_BLOB_SHA='08ada5def3e96761498a3840445459ee3d672742'
 PAGE_CACHE_RECLAIM_MARKER='NOX_MAINT_PAGE_CACHE_RECLAIM='
 PAGE_CACHE_RECLAIM_COMPLETE='NOX_MAINT_PAGE_CACHE_RECLAIM_COMPLETE=true'
 PAGE_CACHE_RECLAIM_SCHEMA='NOX_OWNER_PAGE_CACHE_RECLAIM_GUARD_V1'
-FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'audit': 'nox-control/owner_native_audit.py', 'audit_gpu_inventory': 'nox-control/owner_native_audit_gpu_inventory_entry.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'page_cache_reclaim': 'nox-control/owner_page_cache_reclaim_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
+FILES={'drive_probe': 'nox-control/owner_native_drive_probe.py', 'drive_reconnect_install': 'nox-control/owner_native_drive_reconnect_install.py', 'audit': 'nox-control/owner_native_audit.py', 'audit_gpu_inventory': 'nox-control/owner_native_audit_gpu_inventory_entry.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_chat_policy_live_smoke_entry.py', 'browser_qa': 'nox-control/owner_browser_stream_only_entry.py', 'page_cache_reclaim': 'nox-control/owner_page_cache_reclaim_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py', 'emergency_stop_preflight': 'nox-control/owner_native_emergency_stop_preflight.py'}
 MASTER=None
 
 
@@ -259,7 +259,7 @@ def run_native(action,request_id):
         pinned_helpers=(
             ('__NOX_AUDIT_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_native_audit.py','e5c439c6733fcb276bec58dbf8af5193694645ac'),
             ('__NOX_GPU_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_native_gpu_inventory.py','3a3ff33e7709539d5ff6ab6b8614d694a9d2becb'),
-            ('__NOX_STORAGE_RECLAIM_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_storage_reclaim.py','569c8f727d1c3b2bee656b03f5766771ea4220ef'),
+            ('__NOX_STORAGE_RECLAIM_HELPER_B64__','nox-control/pinned/owner_audit_gpu_v1/owner_storage_reclaim.py','08ada5def3e96761498a3840445459ee3d672742'),
         )
         for placeholder,path,expected_blob in pinned_helpers:
             raw=Path(path).read_bytes()
@@ -292,6 +292,26 @@ def run_native(action,request_id):
             assets[source.name]={'content':base64.b64encode(raw).decode('ascii'),
                                  'sha256':__import__('hashlib').sha256(raw).hexdigest()}
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
+    elif action == 'drive_reconnect_install':
+        assets={}
+        bundle_paths=(
+            'nox-control/nox_drive_reconnect.py',
+            'nox-control/nox_drive_reconnect_loop.sh',
+            'nox-control/supervisor/nox-drive-reconnect.conf',
+        )
+        for path in bundle_paths:
+            target=Path(path)
+            if not target.is_file() or target.stat().st_size > 65536:
+                raise RuntimeError('HOLD_DRIVE_RECONNECT_INSTALL_ASSET')
+            raw=target.read_bytes()
+            assets[target.name]={
+                'content':base64.b64encode(raw).decode('ascii'),
+                'sha256':hashlib.sha256(raw).hexdigest(),
+            }
+        token='__NOX_BUNDLE_JSON__'
+        if payload.count(token)!=1 or len(assets)!=3:
+            raise RuntimeError('HOLD_DRIVE_RECONNECT_INSTALL_BUNDLE')
+        payload=payload.replace(token,json.dumps(assets))
     elif action in ('stage','repair','browser_qa'):
         assets={}
         for path in repair_bundle_paths(action,FILES[action],('nox-control/nox_cold_drive.py','nox-control/owner_native_audit.py',
@@ -408,8 +428,9 @@ def run_native(action,request_id):
             if p.is_file():assets[p.name]=base64.b64encode(p.read_bytes()).decode('ascii')
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
-    script=f"set -euo pipefail\nNOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
-    timeout=360 if action=='audit_gpu_inventory' else 150 if action in ('audit','inspect','drive_probe','emergency_stop_preflight','page_cache_reclaim') else 900
+    remote_python_flags='-S -B ' if action=='audit_gpu_inventory' else ''
+    script=f"set -euo pipefail\nNOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 {remote_python_flags}- <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
+    timeout=480 if action=='audit_gpu_inventory' else 150 if action in ('audit','inspect','drive_probe','emergency_stop_preflight','page_cache_reclaim') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
     r=_safe_subprocess_run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)

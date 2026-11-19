@@ -292,18 +292,7 @@ def rewrite_browser(body):
     body = replace_once(body, "            report['privacy_guard_counts']=dict(blocked)\n",
         "            report['privacy_guard_counts']=dict(blocked)\n"
         "            report['native_posts_admitted']=native_admitted\n")
-    body = replace_once(body,
-        "   stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};",
-        "   stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0,doneRecords:[]};")
-    body = replace_once(body,
-        "           q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,\n"
-        "                   dialog_matches:frame.dialog_id===cfg.did};",
-        "           q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,\n"
-        "                   dialog_matches:frame.dialog_id===cfg.did};\n"
-        "           q.doneRecords.push({...q.done});")
-    body = replace_once(body,
-        "   native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,",
-        "   native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,done_records:q.doneRecords,error:q.error,")
+
     body = replace_once(body,
         """            report['browser_stage']='QA_DIALOG_HISTORY'
             await page.wait_for_timeout(350)
@@ -417,6 +406,18 @@ def install(core, raw, transport, transport_raw, release, release_raw):
     original_rewrite = release.rewrite_browser
     release.rewrite_browser = lambda body: rewrite_browser(original_rewrite(body))
     release.install(core, raw, transport, transport_raw)
+    core.OBSERVER_JS = replace_once(core.OBSERVER_JS,
+        "   stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};",
+        "   stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0,doneRecords:[]};")
+    core.OBSERVER_JS = replace_once(core.OBSERVER_JS,
+        "           q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,\n"
+        "                   dialog_matches:frame.dialog_id===cfg.did};",
+        "           q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,\n"
+        "                   dialog_matches:frame.dialog_id===cfg.did};\n"
+        "           q.doneRecords.push({...q.done});")
+    core.SNAPSHOT_JS = replace_once(core.SNAPSHOT_JS,
+        "   native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,",
+        "   native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,done_records:q.doneRecords,error:q.error,")
     require(core.progressive_stream_valid is original_gate, 'STRICT_GATE_CHANGED')
     core.SNAPSHOT_JS = replace_once(core.SNAPSHOT_JS, '   answer_characters:q.answer.length,',
         "   motion_preference_reduced:window.matchMedia('(prefers-reduced-motion: reduce)').matches,\n"
