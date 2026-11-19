@@ -549,3 +549,97 @@ jobs:
         env:
           NOX2: ${{ secrets.NOX2 }}
         run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+  owner-audit-gpu-inventory:
+    # One approved, read-only bounded census + GPU inventory action in one authenticated SSH session.
+    if: >-
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.actor == 'MSSTXNEWS' &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.issue.number == 256 &&
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      endsWith(github.event.comment.body, ' audit_gpu_inventory')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main approved-source guard
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          path: guard
+          persist-credentials: false
+      - name: Authorize exact composite source pin before credentials
+        id: approved
+        working-directory: guard
+        run: python3 -B nox-control/owner_native_inspect_comment_guard.py
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: success()
+        with:
+          ref: ${{ steps.approved.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+      - name: Validate pinned composite bundle before credentials
+        if: success()
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.approved.outputs.source_sha }}
+          NOX_ACTION: ${{ steps.approved.outputs.action }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, py_compile, re, subprocess
+          from pathlib import Path
+          sha=os.environ['NOX_PINNED_SOURCE_SHA']
+          if os.environ.get('NOX_ACTION')!='audit_gpu_inventory':
+              raise SystemExit('HOLD_ACTION_MISMATCH')
+          if not re.fullmatch(r'[0-9a-f]{40}',sha) or subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:
+              raise SystemExit('HOLD_CHECKOUT_MISMATCH')
+          paths=(
+              'nox-control/owner_native_operator.py',
+              'nox-control/owner_native_audit_gpu_inventory_entry.py',
+              'nox-control/pinned/owner_audit_gpu_v1/owner_native_audit.py',
+              'nox-control/pinned/owner_audit_gpu_v1/owner_native_gpu_inventory.py',
+              'nox-control/pinned/owner_audit_gpu_v1/owner_storage_reclaim.py',
+          )
+          for path in paths:
+              py_compile.compile(path,doraise=True)
+          expected={
+              'nox-control/pinned/owner_audit_gpu_v1/owner_native_audit.py':'e5c439c6733fcb276bec58dbf8af5193694645ac',
+              'nox-control/pinned/owner_audit_gpu_v1/owner_native_gpu_inventory.py':'3a3ff33e7709539d5ff6ab6b8614d694a9d2becb',
+              'nox-control/pinned/owner_audit_gpu_v1/owner_storage_reclaim.py':'08ada5def3e96761498a3840445459ee3d672742',
+          }
+          for path,want in expected.items():
+              raw=Path(path).read_bytes()
+              blob=b'blob '+str(len(raw)).encode('ascii')+bytes([0])+raw
+              if hashlib.sha1(blob).hexdigest()!=want:
+                  raise SystemExit('HOLD_COMPOSITE_HELPER_BLOB_PIN')
+          PY
+      - name: Recheck composite owner event without credentials
+        if: success()
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.approved.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python3 -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('audit_gpu_inventory')
+          print('NOX_OWNER_AUDIT_GPU_INVENTORY_SOURCE_AUTH=PASS')
+          PY
+      - name: Execute bounded process census then GPU inventory in one session
+        id: execute
+        if: success()
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.approved.outputs.source_sha }}
+        run: python3 -B nox-control/owner_native_operator.py audit_gpu_inventory
+      - name: Always detach only this run temporary public key
+        if: >-
+          always() &&
+          (steps.execute.outcome == 'failure' ||
+           steps.execute.outcome == 'cancelled')
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+
