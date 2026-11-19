@@ -69,6 +69,34 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(refill.memory_governor_projection({})['state'],
                          'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE')
 
+    def test_memory_projection_corrupt_or_contradictory_counters_hold_cleanly(self):
+        unit = 1024**3
+        baseline = {'current_bytes': 189*unit, 'max_bytes': 194*unit,
+                    'file_bytes': 183*unit, 'shmem_bytes': 75*unit,
+                    'inactive_file_bytes': 91*unit,
+                    'memory_psi_some_avg10': 0, 'memory_psi_full_avg10': 0}
+        good = refill.memory_governor_projection({
+            'bounded_cpu_budget': baseline,
+            'bounded_cpu_decision': {'projected_memory_ratio': .52, 'eligible': True}})
+        self.assertEqual(good['state'], 'CACHE_HEALTHY')
+        self.assertEqual(good['raw_headroom_bytes'], 5*unit)
+        self.assertEqual(good['reclaimable_file_estimate_bytes'], 91*unit)
+        self.assertEqual(good['effective_headroom_estimate_bytes'], 96*unit)
+        self.assertTrue(good['reclaimable_estimate_is_not_a_guaranteed_allocation'])
+        for changes in ({'file_bytes': '183G'}, {'file_bytes': None},
+                        {'file_bytes': 191*unit}, {'shmem_bytes': 184*unit},
+                        {'inactive_file_bytes': 184*unit},
+                        {'current_bytes': 195*unit}, {'memory_psi_some_avg10': 101},
+                        {'memory_psi_full_avg10': float('nan')}):
+            with self.subTest(changes=changes):
+                row = {**baseline, **changes}
+                got = refill.memory_governor_projection({
+                    'bounded_cpu_budget': row,
+                    'bounded_cpu_decision': {'projected_memory_ratio': .52,
+                                              'eligible': True}})
+                self.assertEqual(got['state'], 'RESOURCE_METADATA_HOLD')
+                self.assertFalse(got['auto_reclaim'])
+
     def test_exhaustion_is_not_fake_job_or_approval(self):
         result = tick()
         self.assertEqual(result['state'], 'REFILL_REQUIRED')
@@ -77,6 +105,43 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(result['registry_original_total'],295)
         self.assertEqual(result['unindexed_original_count'],292)
         self.assertEqual(result['staged_count'],0)
+
+    def test_exhausted_catalog_yields_reviewable_originals_not_jobs(self):
+        review = manifest()
+        for parent_id in review['registry']['parents']:
+            review['registry']['parents'][parent_id]['spec_sha256'] = PIN
+        a = tick(m=review)
+        b = tick(m=review)
+        self.assertEqual(a['state'], 'REFILL_REQUIRED')
+        self.assertEqual(a['staged_count'], 2)
+        self.assertEqual(a['new_native_jobs'], 0)
+        self.assertFalse(a['automatic_owner_approval'])
+        self.assertEqual(a['staged_research_candidates'], b['staged_research_candidates'])
+        for row in a['staged_research_candidates']:
+            self.assertEqual(row['hypothesis'], 'INSPECT_UNREPRESENTED_ORIGINAL')
+            self.assertEqual(row['spec_sha256'], PIN)
+            self.assertEqual(row['authority'], 'RESEARCH_PROPOSAL_ONLY')
+            self.assertFalse(row['new_native_job_created'])
+            self.assertNotIn('editable_paths', row)
+        self.assertEqual(
+            {row['parent_task_id'] for row in a['staged_research_candidates']},
+            {'4A02', '3B05'})
+
+    def test_no_backlog_research_when_native_claim_active_or_accepted(self):
+        review = manifest()
+        for parent_id in review['registry']['parents']:
+            review['registry']['parents'][parent_id]['spec_sha256'] = PIN
+        accepted = {'id': '3B05', 'handler': 'owner_native_project_work',
+                    'status': 'done', 'original_task_accepted': True}
+        pending = {'id': 'live', 'handler': 'owner_native_project_work',
+                   'status': 'running'}
+        result = tick(m=review, state={'3B05': accepted, 'live': pending})
+        self.assertEqual(result['state'], 'EXECUTION_OR_ADMISSION_IN_PROGRESS')
+        self.assertEqual(result['staged_count'], 0)
+        self.assertEqual(result['new_native_jobs'], 0)
+        exhausted = tick(m=review, state={'3B05': accepted})
+        self.assertEqual([x['parent_task_id'] for x in exhausted['staged_research_candidates']],
+                         ['4A02'])
 
     def test_source_drift_creates_pinned_investigation_only(self):
         result = tick(deferred=[{'mission_id':'cache_fill_ttl',
