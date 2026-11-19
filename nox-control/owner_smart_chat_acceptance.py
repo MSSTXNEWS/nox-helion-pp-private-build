@@ -34,6 +34,30 @@ STOPS = tuple(ROOT / name for name in
 SCHEMA = 'NOX_SMART_CHAT_OWNER_E2E_ACCEPTANCE_V1'
 
 
+
+def safe_ast_shape(expr, max_nodes=64, max_depth=12):
+    """Return bounded AST node kinds/shape only; omit identifiers and literals."""
+    rows = []
+    deepest = 0
+    stack = [(expr, 0)]
+    while stack and len(rows) < max_nodes:
+        node, depth = stack.pop()
+        if depth > max_depth:
+            continue
+        children = list(ast.iter_child_nodes(node))
+        rows.append({'type': type(node).__name__, 'depth': depth, 'children': len(children)})
+        deepest = max(deepest, depth)
+        for child in reversed(children):
+            stack.append((child, depth + 1))
+    return {'node_count': len(rows), 'max_depth': deepest,
+            'truncated': bool(stack), 'nodes': rows}
+
+
+def credential_path_not_static(expr):
+    error = RuntimeError('HOLD_SMART_CHAT_QA_CREDENTIAL_PATH_NOT_STATIC')
+    error.safe_ast_shape = safe_ast_shape(expr)
+    return error
+
 def fail(code):
     raise RuntimeError('HOLD_SMART_CHAT_QA_' + code)
 
@@ -179,7 +203,7 @@ def owner_password_without_proxy_import():
             return literal_path(defs[expr.id], seen + (expr.id,), scope)
         if isinstance(expr, ast.Name) and expr.id == 'SECRETS' and 'SECRETS' not in seen and scope == 'proxy':
             return literal_path(common_defs['SECRETS'], seen + ('SECRETS',), 'common')
-        fail('CREDENTIAL_PATH_NOT_STATIC')
+        raise credential_path_not_static(expr)
 
     if 'CHAT_PASSWORD_PATH' not in definitions:
         fail('CREDENTIAL_PATH_NOT_DECLARED')
@@ -370,6 +394,9 @@ def main():
             outcome='NATIVE_OWNER_TWO_TURNS_AND_S03_READBACK_PASS')
         success = True
     except Exception as error:
+        shape = getattr(error, 'safe_ast_shape', None)
+        if isinstance(shape, dict):
+            status['credential_path_ast_shape'] = shape
         code = str(error)
         status['outcome'] = code if re.fullmatch(r'HOLD_SMART_CHAT_QA_[A-Z0-9_]{1,100}', code) else 'HOLD_SMART_CHAT_QA_' + type(error).__name__.upper()
     emit(status)
