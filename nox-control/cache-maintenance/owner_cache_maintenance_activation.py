@@ -247,12 +247,12 @@ class NativeSupervisor:
                 before()
                 need(self.approve(self.pin, approved[1]) is True, "OWNER_RPC_GRANT")
             need(not poll.poll(0) and self.endpoint() == original, "RPC_PEER_CHANGED")
-            http = http.client.HTTPConnection("localhost", timeout=20)
-            stack.callback(http.close)
-            http.sock = channel
+            connection = http.client.HTTPConnection("localhost", timeout=20)
+            stack.callback(connection.close)
+            connection.sock = channel
             body = xmlrpc.client.dumps(params, methodname="supervisor." + method).encode()
-            http.request("POST", "/RPC2", body, {"Content-Type": "text/xml", "Connection": "close"})
-            reply = http.getresponse()
+            connection.request("POST", "/RPC2", body, {"Content-Type": "text/xml", "Connection": "close"})
+            reply = connection.getresponse()
             need(reply.status == 200 and not reply.chunked and type(reply.length) is int
                  and 0 < reply.length <= 32 * 1024, "RPC_HTTP")
             raw = reply.read()
