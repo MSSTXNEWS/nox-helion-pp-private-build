@@ -18,3 +18,7 @@ The canonical model is pinned separately to `deepseek-ai/DeepSeek-V4.1-Flash-101
 ## Training source and limits
 
 The source-adapted NVIDIA recipe and 4A01 source evidence are in [the manifest](../../4A01_DEEPSEEK_V41_1017_TRAINING_SOURCE_20261119.json). That recipe is an 8-node, 64×H100 example, not a V100 training plan. HellaSwag sample limits are pinned in the recipe, but its dataset revision and split-file hashes are not. No model weights, dataset data, or training run are included.
+
+## Separate GGUF inference route
+
+The 4A01 source addendum also pins the separate inference-only GGUF route in [the GGUF manifest](../../4A01_DEEPSEEK_V41_1017_GGUF_INFERENCE_ROUTE_20261119.json). The pinned ggml-org repo provides a six-shard Q2_K_S set totaling 298,014,272,320 bytes, about 280.9 GB above the last observed free storage. No GGUF weights were downloaded or served.

@@ -172,5 +172,14 @@
     "original_295_registry_mutated": false,
     "work_receipts_mutated": false,
     "live_training_claim": false
+  },
+  "gguf_inference_route_manifest_path": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_1017_GGUF_INFERENCE_ROUTE_20261119.json",
+  "gguf_inference_boundary": {
+    "route": "separate GGUF inference-only path",
+    "source_manifest": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_1017_GGUF_INFERENCE_ROUTE_20261119.json",
+    "training_source_unchanged": true,
+    "weights_downloaded": false,
+    "runtime_tested": false,
+    "status": "source pinned; download/runtime HOLD due storage gap"
   }
 }
