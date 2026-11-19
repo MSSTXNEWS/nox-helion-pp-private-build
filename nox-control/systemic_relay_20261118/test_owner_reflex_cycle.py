@@ -309,6 +309,38 @@ class NativeReflexTests(unittest.TestCase):
                 self.assertEqual(guarded['rows'], [])
                 self.assertIsNone(guarded['refill_request'])
 
+        # A native-bound record with an explicit malformed/unhashable
+        # handler cannot establish that the claimed worker is idle. Legacy
+        # rows without a native binding remain outside native counts.
+        for malformed_handler in ({'bad': 'handler'},
+                                  ['owner_native_project_work'], None):
+            with self.subTest(malformed_handler=malformed_handler):
+                malformed_native = {'native-bad-handler': {
+                    'handler': malformed_handler, 'status': 'ready',
+                    'systemic_relay': {'binding': {
+                        'root_id': ROOT, 'editable_paths': ['code/cache.py']}}}}
+                observed = tick(state=malformed_native)
+                self.assertEqual(observed['state'],
+                                 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+                self.assertEqual(observed['observed_task_counts']['unknown'], 1)
+                self.assertEqual(observed['new_native_jobs'], 0)
+                guarded = refill.select_next(
+                    reviewed, malformed_native,
+                    {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+                    {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+                self.assertEqual(guarded['state'], 'WAIT_EXISTING_WORK')
+                self.assertEqual(guarded['rows'], [])
+                self.assertIsNone(guarded['refill_request'])
+                self.assertEqual(guarded['deferred'][0]['reason'],
+                                 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+        # Corrupt legacy catalog rows without a native binding do not become
+        # phantom native work and must not cause a TypeError on set membership.
+        legacy = tick(state={'legacy-bad': {
+            'handler': ['legacy'], 'status': 'running'}})
+        self.assertEqual(legacy['state'], 'REFILL_REQUIRED')
+        self.assertEqual(legacy['native_records_observed'], 0)
+        self.assertEqual(legacy['observed_task_counts']['unknown'], 0)
+
         # Malformed dependency records must not crash the refill producer or
         # turn a prior terminal claim into a new ready mission.
         dependent_reviewed = {**reviewed, 'missions': [
