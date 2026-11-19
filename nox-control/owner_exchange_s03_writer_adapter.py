@@ -14,8 +14,8 @@ from owner_exchange_idempotency_contract import HoldExchange
 # Git blob SHA-1 of the observed source baseline, NOT host file SHA-256.
 WRITER_SOURCE_BLOB = "2f3acd4038f663f150b42f3bdf193507b851371f"
 PROOF_SCHEMA = "NOX_B1_SOURCE_S03_WRITER_CANDIDATE_V1"
-ID_RE = re.compile(r"[A-Za-z0-9._:-]{1,128}\\Z")
-HASH_RE = re.compile(r"[0-9a-f]{64}\\Z")
+ID_RE = re.compile(r"[A-Za-z0-9._:-]{1,128}\Z")
+HASH_RE = re.compile(r"[0-9a-f]{64}\Z")
 
 
 def _id(value):
