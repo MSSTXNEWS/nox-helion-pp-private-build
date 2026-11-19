@@ -1695,3 +1695,34 @@ test('V194 scoped AbortSignal STOP reports stopped UI phase without S03 success'
   assert.equal(frames.some(e=>e.type==='error'&&/HOLD_S03_COMMIT_RECEIPT/.test(e.error)),true);
   assert.equal(phases.at(-1),'error','genuine S03 failure still reports error');
 });
+
+
+test('V195 Request input.signal survives init.body override for stream and JSON STOP',async()=>{
+  const abort=new AbortController(),phases=[];
+  let stopped=false,historyCalled=false;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,()=>{historyCalled=true;},'verified-exchange-01',
+    [],false,false,prompt,undefined,{onPhase:p=>{
+      phases.push(p);
+      if(p==='speaking'&&!stopped){stopped=true;abort.abort();}
+    }});
+  const body=JSON.stringify({message:prompt,dialog_id:id,request_id:'v195-request-signal'});
+  const input=new Request('https://nox.local/api/nox/chat',{method:'POST',body,signal:abort.signal});
+  const out=await events(await f.fetch(input,{method:'POST',body}));
+  assert.equal(stopped,true,'STOP initiated on live token');
+  assert.equal(out.filter(e=>e.type==='done').length,0,'no forged S03 success');
+  assert.equal(out.filter(e=>e.type==='error').at(-1).error,'STREAM_STOP_REQUESTED');
+  assert.equal(phases.at(-1),'stopped');
+  assert.equal(historyCalled,false,'no S03 readback after abort');
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+  const preAbort=new AbortController();preAbort.abort();
+  const jsonBody=JSON.stringify({message:prompt});
+  const jsonRequest=new Request('https://nox.local/api/nox/chat',{
+    method:'POST',body:jsonBody,signal:preAbort.signal
+  });
+  const g=fake();
+  const jsonResult=await g.fetch(jsonRequest,{method:'POST',body:jsonBody});
+  assert.equal(jsonResult.status,503,'JSON STOP is HOLD');
+  assert.match((await jsonResult.json()).error,/STREAM_STOP_REQUESTED/);
+  assert.equal(g.calls.length,0,'aborted Request never creates dialog or model POST');
+});
