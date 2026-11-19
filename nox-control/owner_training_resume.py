@@ -141,14 +141,23 @@ def read_json(path, limit=4_000_000):
 
 
 def file_sha(path):
-    path = Path(path)
-    if path.is_symlink() or not path.is_file():
-        raise RuntimeError('HOLD_SOURCE_PATH')
-    digest = hashlib.sha256()
-    with path.open('rb') as stream:
-        for block in iter(lambda: stream.read(8 * 1024 * 1024), b''):
-            digest.update(block)
-    return digest.hexdigest()
+    """Hash an opened regular-file descriptor, not a separately checked path."""
+    try:
+        fd = os.open(Path(path), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError as exc:
+        raise RuntimeError('HOLD_SOURCE_PATH') from exc
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise RuntimeError('HOLD_SOURCE_PATH')
+        digest = hashlib.sha256()
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            for block in iter(lambda: stream.read(8 * 1024 * 1024), b''):
+                digest.update(block)
+        return digest.hexdigest()
+    finally:
+        if fd >= 0:
+            os.close(fd)
 
 
 def load_helper():
