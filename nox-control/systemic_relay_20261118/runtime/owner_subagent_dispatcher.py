@@ -1674,6 +1674,10 @@ class Native:
                 with self.lock:
                     self.interrupted[task['id']] = 'HOLD_SUBAGENT_RESULT_TIMEOUT'
                 raise GateError('HOLD_SUBAGENT_RESULT_TIMEOUT')
+            # IPC may deliver a truncated/non-object completion after worker execution.
+            # The event was already popped: preserve the claim's no-replay HOLD.
+            if not isinstance(event, dict):
+                raise GateError('HOLD_NATIVE_REVIEW_RESULT_SHAPE')
             if event.get('state') != 'CANDIDATE_NOT_APPLIED':
                 raise GateError(event.get('state', 'HOLD_SUBAGENT_RESULT'))
             # The original queue redacts every result with this same function.
@@ -1790,6 +1794,10 @@ class Native:
             if event is None:
                 self.close_pool('HOLD_NATIVE_LEAF_TIMEOUT')
                 raise GateError('HOLD_NATIVE_LEAF_TIMEOUT')
+            # Invalid IPC payload after pop must enter the caught unsettled
+            # path, not escape as AttributeError and discard replay evidence.
+            if not isinstance(event, dict):
+                raise GateError('HOLD_NATIVE_LEAF_RESULT_SHAPE')
             leaf = event.get('leaf_evidence') or {}
             worker = leaf.get('worker') or {}
             if (event.get('state') != 'NATIVE_LEAF_COMPLETED'
