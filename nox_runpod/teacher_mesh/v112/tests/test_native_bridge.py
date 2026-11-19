@@ -23,7 +23,7 @@ class V112Tests(unittest.TestCase):
         folder=Path(tmp.name)
         self.db=folder/'existing_s03.sqlite3'
         with sqlite3.connect(self.db) as db:
-            db.execute('CREATE TABLE s03_items (id TEXT PRIMARY KEY, sha256 TEXT, text TEXT, ts TEXT)')
+            db.execute('CREATE TABLE s03_items (id TEXT PRIMARY KEY, segment TEXT, text TEXT, provenance TEXT, sha256 TEXT, meta TEXT, ts TEXT)')
         mod=types.ModuleType('s03_memory')
         mod.DB=self.db
         previous=sys.modules.get('s03_memory')
@@ -111,7 +111,7 @@ class V112Tests(unittest.TestCase):
                     from datetime import datetime,timezone
                     stamp=datetime.now(timezone.utc).isoformat()
                     with sqlite3.connect(self.db) as db:
-                        db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',(
+                        db.execute('INSERT INTO s03_items(id,sha256,text,ts) VALUES(?,?,?,?)',(
                           'fixture-memory-'+str(len(self.calls)).zfill(4),
                           hashlib.sha256((q+answer).encode()).hexdigest(),
                           'U:'+q+' A:'+answer,stamp))
@@ -714,6 +714,126 @@ class V112Tests(unittest.TestCase):
 
     def test_s03_timestamp_guard(self):
         self.assertLess(_timestamp('2025-01-01T00:00:00Z'), _timestamp('2026-11-14T00:00:00Z'))
+
+
+    def _seed_owner_fact(self,event_id,fact_key,content,*,owner='nox-single-owner',
+                         source_ref='OWNER-TEST',valid_from='2026-11-19T00:00:00Z',
+                         ts='2026-11-19T00:00:00Z'):
+        source_sha=hashlib.sha256(content.encode('utf-8')).hexdigest()
+        meta={'schema':'NOX_OWNER_CONFIRMED_FACT_V1','owner_scope':owner,
+              'fact_key':fact_key,'source_ref':source_ref,
+              'source_sha256':source_sha,'valid_from':valid_from}
+        provenance='OWNER-CONFIRMED:'+source_ref
+        record_sha=hashlib.sha256(
+            ('M2|'+content+'|'+provenance+'|'+json.dumps(meta,sort_keys=True)).encode('utf-8')
+        ).hexdigest()
+        with sqlite3.connect(self.db) as db:
+            db.execute('INSERT INTO s03_items(id,segment,text,provenance,sha256,meta,ts) '
+                       'VALUES(?,?,?,?,?,?,?)',
+                       (event_id,'M2',content,provenance,record_sha,
+                        json.dumps(meta,ensure_ascii=False),ts))
+        return {'event_id':event_id,'fact_key':fact_key,'source_ref':source_ref,
+                'valid_from':valid_from,'source_sha256':source_sha,
+                'record_sha256':record_sha}
+
+    def _new_dialog(self,title):
+        response=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':title,'confirmed':True})
+        self.assertEqual(response.status_code,200,response.text)
+        return response.json()['dialog_id']
+
+    def _send_in_dialog(self,dialog,message):
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':message,'history':[]})
+        self.assertEqual(response.status_code,200,response.text)
+        return [json.loads(row) for row in response.text.splitlines() if row.strip()]
+
+    def test_cross_dialog_owner_fact_is_exactly_recalled_with_provenance(self):
+        first=self._new_dialog('Первый диалог')
+        second=self._new_dialog('Другой диалог')
+        self._seed_owner_fact('owner-fact-cross-001','PROJECT-NAME',
+                              'Проект называется NOX Helion.')
+        self._send_in_dialog(first,'Закрытая заметка не должна стать S03 fact')
+        frames=self._send_in_dialog(second,'Проект называется NOX Helion')
+        self.assertEqual(frames[-1]['type'],'done')
+        messages=self.calls[-1]['messages']
+        self.assertEqual(messages[0]['role'],'system')
+        self.assertIn('NOX_OWNER_CONFIRMED_FACT_V1',messages[0]['content'])
+        evidence=json.loads(messages[0]['content'].split('\n',1)[1])
+        self.assertEqual(len(evidence),1)
+        self.assertEqual(evidence[0]['fact_key'],'PROJECT-NAME')
+        self.assertEqual(evidence[0]['content'],'Проект называется NOX Helion.')
+        self.assertEqual(evidence[0]['source_ref'],'OWNER-TEST')
+        self.assertEqual(evidence[0]['event_id'],'owner-fact-cross-001')
+        self.assertEqual(evidence[0]['schema'],'NOX_OWNER_CONFIRMED_FACT_V1')
+        self.assertEqual(evidence[0]['owner_scope'],'nox-single-owner')
+        self.assertEqual(evidence[0]['provenance'],'OWNER-CONFIRMED:OWNER-TEST')
+        self.assertNotEqual(first,second)
+        self.assertNotIn('Закрытая заметка',messages[0]['content'])
+
+    def test_cross_dialog_memory_excludes_tampered_other_owner_and_invalid_receipts(self):
+        second=self._new_dialog('Изолированный диалог')
+        self._seed_owner_fact('owner-fact-tampered-01','TAMPERED',
+                              'Секретный маркер XZ-901 tamper')
+        self._seed_owner_fact('owner-fact-otherown-01','OTHER-OWNER',
+                              'Секретный маркер XZ-901 owner',
+                              owner='different-owner')
+        self._seed_owner_fact('owner-fact-invalid-01','INVALID-SOURCE',
+                              'Секретный маркер XZ-901 invalid',
+                              source_ref='not-owner-confirmed')
+        with sqlite3.connect(self.db) as db:
+            db.execute('UPDATE s03_items SET text=? WHERE id=?',
+                       ('Изменённый текст XZ-901', 'owner-fact-tampered-01'))
+            row=db.execute('SELECT meta FROM s03_items WHERE id=?',
+                           ('owner-fact-invalid-01',)).fetchone()
+            metadata=json.loads(row[0]);metadata['source_sha256']='0'*64
+            db.execute('UPDATE s03_items SET meta=? WHERE id=?',
+                       (json.dumps(metadata,ensure_ascii=False),'owner-fact-invalid-01'))
+        frames=self._send_in_dialog(second,'Секретный маркер XZ-901')
+        self.assertEqual(frames[-1]['type'],'done')
+        self.assertFalse(any(row.get('role')=='system'
+                             and 'XZ-901' in row.get('content','')
+                             for row in self.calls[-1]['messages']))
+
+    def test_cross_dialog_memory_has_deterministic_count_and_byte_limits(self):
+        second=self._new_dialog('Bounded S03 facts')
+        for index in range(5):
+            content='Ключевой термин BOUND-77 '+'x'*1450+f' END-{index}'
+            self._seed_owner_fact(f'owner-fact-bound-{index:02d}',f'BOUND-{index}',content,
+                                  source_ref=f'OWNER-BOUND-{index}')
+        frames=self._send_in_dialog(second,'Ключевой термин BOUND-77')
+        self.assertEqual(frames[-1]['type'],'done')
+        system=[row for row in self.calls[-1]['messages'] if row.get('role')=='system']
+        self.assertEqual(len(system),1)
+        raw=system[0]['content']
+        self.assertLessEqual(len(raw.encode('utf-8')),4096)
+        evidence=json.loads(raw.split('\n',1)[1])
+        self.assertLessEqual(len(evidence),3)
+        self.assertEqual([row['event_id'] for row in evidence],
+                         ['owner-fact-bound-04','owner-fact-bound-03'])
+
+
+    def test_cross_dialog_memory_caps_to_three_newest_facts(self):
+        second=self._new_dialog('Count-bounded S03 facts')
+        for index in range(5):
+            self._seed_owner_fact(f'owner-fact-count-{index:02d}',f'COUNT-{index}',
+                f'Неповторимый маркер COUNT-88 факт {index}',
+                source_ref=f'OWNER-COUNT-{index}')
+        frames=self._send_in_dialog(second,'Неповторимый маркер COUNT-88')
+        self.assertEqual(frames[-1]['type'],'done')
+        system=[row for row in self.calls[-1]['messages'] if row.get('role')=='system']
+        self.assertEqual(len(system),1)
+        evidence=json.loads(system[0]['content'].split('\n',1)[1])
+        self.assertEqual([row['event_id'] for row in evidence],
+                         ['owner-fact-count-04','owner-fact-count-03','owner-fact-count-02'])
+
+    def test_cross_dialog_memory_failure_and_no_match_add_no_context(self):
+        second=self._new_dialog('No memory')
+        frames=self._send_in_dialog(second,'ordinary question absent from facts')
+        self.assertEqual(frames[-1]['type'],'done')
+        self.assertFalse(any(row.get('role')=='system'
+                             for row in self.calls[-1]['messages']))
+
 
 if __name__=='__main__':
     unittest.main()
