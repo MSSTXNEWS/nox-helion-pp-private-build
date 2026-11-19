@@ -16,7 +16,11 @@ jobs:
       github.event.comment.user.id == 340718567 &&
       github.event.comment.author_association == 'OWNER' &&
       github.event.issue.number == 256 &&
-      startsWith(github.event.comment.body, '/nox-maintain 60509551 ')
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      !endsWith(github.event.comment.body, ' inspect') &&
+      !endsWith(github.event.comment.body, ' audit') &&
+      !endsWith(github.event.comment.body, ' source_attest') &&
+      !endsWith(github.event.comment.body, ' gpu_inventory')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
