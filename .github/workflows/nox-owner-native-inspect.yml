@@ -88,7 +88,7 @@ jobs:
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 7e0df12af5d60895f141a01eda84b3e2ffdf9a74
+          ref: 37ddb48407aa7f52aeb8b18c9e88436b6060154d
           path: source-export
           persist-credentials: false
       - name: Compile and test exact pinned S03 export source, provider manifest, and secret-gated operator
@@ -238,6 +238,9 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
         run: python -B nox-control/owner_native_operator.py browser_qa
+      - name: Install crypto dependency before #415 owner credential staging
+        if: success() && steps.owner-command.outputs.action == 'source_export'
+        run: "python -m pip install --disable-pip-version-check --only-binary=:all: cryptography"
       - name: Validate #415 export key secret before staging NOX2
         if: success() && steps.owner-command.outputs.action == 'source_export'
         working-directory: source
@@ -249,9 +252,6 @@ jobs:
           from owner_native_operator import preflight_source_export_key
           preflight_source_export_key()
           PY
-      - name: Install crypto dependency before #415 owner credential staging
-        if: success() && steps.owner-command.outputs.action == 'source_export'
-        run: "python -m pip install --disable-pip-version-check --only-binary=:all: cryptography"
       - name: Compile and test exact pinned #415 encrypted export source before credentials
         if: success() && steps.owner-command.outputs.action == 'source_export'
         working-directory: source
