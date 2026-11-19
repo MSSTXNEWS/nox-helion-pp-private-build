@@ -35,7 +35,7 @@ def receipt():
         "instance_id": 60509551,
         "boot_id": BOOT,
         "uptime_scope": "two monotonic host snapshots; point-in-time only",
-        "memory_semantics": "nvidia-smi MiB counters; memory.total=memory.used+memory.free",
+        "memory_semantics": gpu.MEMORY_SEMANTICS,
         "identity_stable": True,
         "snapshots": [
             {"boot_id": BOOT, "uptime_seconds": 100.1, "monotonic_started_ns": 10,
@@ -122,6 +122,25 @@ class OwnerGpuInventoryOperatorTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "HOLD_GPU_INVENTORY_RECEIPT_SCHEMA"):
             operator.forward_remote_stdout(marker_lines(bad_memory), "gpu_inventory", REQUEST, SHA)
 
+    def test_forward_accepts_bounded_nvidia_reserved_memory(self):
+        bounded = receipt()
+        for snapshot in bounded["inventory"]["snapshots"]:
+            row = snapshot["rows"][0]
+            row["memory_free_mib"] -= 400
+        bounded["inventory_sha256"] = gpu.inventory_digest(bounded["inventory"])
+        lines = marker_lines(bounded)
+        self.assertEqual(
+            operator.forward_remote_stdout(lines, "gpu_inventory", REQUEST, SHA),
+            lines.splitlines(),
+        )
+        # Excessive mismatch is still rejected, even with a valid envelope digest.
+        bounded["inventory"]["snapshots"][0]["rows"][0]["memory_free_mib"] -= 700
+        bounded["inventory_sha256"] = gpu.inventory_digest(bounded["inventory"])
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GPU_INVENTORY_RECEIPT_SCHEMA"):
+            operator.forward_remote_stdout(
+                marker_lines(bounded), "gpu_inventory", REQUEST, SHA
+            )
+
     def test_forward_rejects_duplicate_markers_unknown_marker_and_bad_order(self):
         lines = marker_lines()
         with self.assertRaisesRegex(RuntimeError, "HOLD_GPU_INVENTORY_OUTPUT_SHAPE"):
@@ -165,7 +184,7 @@ class OwnerGpuInventoryOperatorTests(unittest.TestCase):
         under_sum_memory = receipt()
         under_sum_memory["inventory"]["snapshots"][0]["rows"][0][
             "memory_free_mib"
-        ] = 16000
+        ] = 15000
         under_sum_memory["inventory_sha256"] = gpu.inventory_digest(
             under_sum_memory["inventory"]
         )
