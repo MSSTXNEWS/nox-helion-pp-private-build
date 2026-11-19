@@ -335,13 +335,16 @@ def main():
                 print('TEMP_SSH_CONTROL_SOCKET=HOLD_EXIT_ERROR',flush=True);good=False
         else:
             print('TEMP_SSH_CONTROL_SOCKET=NOT_OPENED',flush=True)
+            if good:good=False
         sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
         from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
         try:
             cleanup_ok,remote_status,local_status=s.cleanup_with_receipt()
             print('TEMP_SSH_REMOTE_KEY='+remote_status,flush=True)
             print('TEMP_SSH_LOCAL_KEY='+local_status,flush=True)
-            if not cleanup_ok:good=False
+            if not cleanup_ok or remote_status not in (
+                    'DETACHED_AND_VERIFIED','ALREADY_ABSENT_VERIFIED'):
+                good=False
         except Exception:
             print('TEMP_SSH_REMOTE_KEY=HOLD_UNEXPECTED_FAILURE',flush=True)
             print('TEMP_SSH_LOCAL_KEY=HOLD_UNLINK',flush=True)
