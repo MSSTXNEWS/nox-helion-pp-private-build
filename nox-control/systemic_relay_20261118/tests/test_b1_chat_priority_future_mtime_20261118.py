@@ -239,6 +239,123 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
             self.assertIsNone(owner.pool)
             self.assertEqual(owner.interrupted[task["id"]], marker)
 
+    def test_completed_review_yields_to_new_chat_without_replaying_result(self):
+        # Reproduce chat starting AFTER the completed IPC result was removed.
+        # Old code returned WAIT but forgot that this claim was already executed.
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(x for x in tree.body if isinstance(x, ast.ClassDef)
+                      and x.name == "Native")
+        method = next(x for x in native.body if isinstance(x, ast.FunctionDef)
+                      and x.name == "_handle")
+        scope = {"PROJECT_HANDLER": "project", "LEAF_HANDLER": "leaf",
+                 "ROLES": ("runtime", "memory", "weights"),
+                 "sqlite3": sqlite3, "time": time, "GateError": RuntimeError,
+                 "autonomy": SimpleNamespace(AutoHold=RuntimeError),
+                 "remember": lambda *_: self.fail("unadmitted receipt write")}
+        chat_calls = []
+        scope["chat_priority_active"] = (
+            lambda: chat_calls.append(1) is None and len(chat_calls) >= 2)
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=[method], type_ignores=[])), str(SOURCE), "exec"), scope)
+        task = {"id": "B1-POSTPOP-REVIEW", "handler": "review",
+                "owner_claim": {"nonce": "original-claim"},
+                "params": {"role": "runtime", "policy_sha256": "policy-sha",
+                           "job_id": "job-1"}, "title": "review"}
+        event = {"state": "CANDIDATE_NOT_APPLIED", "pid": 17,
+                 "native_observation": {
+                     "claim": "original-claim",
+                     "policy_ack": {"sha256": "policy-sha", "full_file_read": True},
+                     "worker": {"pid": 17}}}
+        submissions = []
+        owner = SimpleNamespace(
+            projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
+            source="source-sha", lock=threading.RLock(), interrupted={},
+            completed={}, _claim_current=lambda *a, **kw: True,
+            stop_active=lambda: False, writer_lease=lambda: True,
+            _fresh_admission_reason=lambda: None, _drain=lambda: None,
+            ns={"owner_mentor": SimpleNamespace(clean=lambda x: x)})
+        def submit(_):
+            submissions.append(_)
+            owner.completed[task["id"]] = event
+        owner.pool = SimpleNamespace(submit=submit)
+        self.assertEqual(scope["_handle"](owner, task),
+                         ("wait", "HOLD_NATIVE_REVIEW_RESULT_UNSETTLED"))
+        self.assertEqual(submissions[0]["id"], task["id"])
+        self.assertEqual(owner.interrupted[task["id"]],
+                         "HOLD_NATIVE_REVIEW_RESULT_UNSETTLED")
+        self.assertNotIn(task["id"], owner.completed)
+        scope["chat_priority_active"] = lambda: False
+        self.assertEqual(scope["_handle"](owner, task),
+                         ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
+        self.assertEqual(len(submissions), 1, "no second native submission")
+
+    def test_completed_leaf_loses_writer_lease_without_replaying(self):
+        # Writer lease can disappear between IPC result pop and S03 admission.
+        # The result must remain unsettled even when lease subsequently returns.
+        import hashlib
+        import json
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(x for x in tree.body if isinstance(x, ast.ClassDef)
+                      and x.name == "Native")
+        method = next(x for x in native.body if isinstance(x, ast.FunctionDef)
+                      and x.name == "_handle_leaf")
+        def encoded(value):
+            return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":"), allow_nan=False).encode()
+        def digest(raw):
+            return hashlib.sha256(raw).hexdigest()
+        scope = {"LEAF_HANDLER": "leaf", "ROLES": ("runtime", "memory", "weights"),
+                 "sqlite3": sqlite3, "time": time, "GateError": RuntimeError,
+                 "encoded": encoded, "digest": digest,
+                 "remember": lambda *_: self.fail("lost lease must block S03")}
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=[method], type_ignores=[])), str(SOURCE), "exec"), scope)
+        task = {
+            "id": "B1-POSTPOP-LEAF", "handler": "leaf", "queue_id": "Q1",
+            "owner_claim": {"nonce": "original-claim"}, "title": "cpu",
+            "params": {"operation": "chat_health", "parent_task_id": "6V14-03",
+                       "source_sha256": "source-sha", "job_id": "job-1"}}
+        pins = {"source.py": "pinned-sha"}
+        leaf = {"worker": {"pid": 17, "process_starttime": 999},
+                "check_completed": True, "check_passed": True,
+                "original_task_accepted": False, "model_called": False,
+                "claim": "original-claim", "operation": "chat_health",
+                "parent_task_id": "6V14-03", "queue_id": "Q1",
+                "source_sha256": "source-sha", "source_pins": pins}
+        event = {"state": "NATIVE_LEAF_COMPLETED", "pid": 17,
+                 "leaf_evidence": leaf, "leaf_evidence_sha256": digest(encoded(leaf))}
+        leases, submissions = [], []
+        def lease():
+            leases.append(True)
+            return len(leases) != 3
+        owner = SimpleNamespace(
+            catalog={"tasks": [task]}, source="source-sha",
+            config={"leaf_source_pins": pins}, lock=threading.RLock(),
+            interrupted={}, completed={}, pool=None,
+            _claim_current=lambda *a, **kw: True, stop_active=lambda: False,
+            writer_lease=lease, owner_allowed=lambda: True,
+            _fresh_admission_reason=lambda **_: None,
+            process_readback=lambda: [{"role": "runtime", "pid": 17,
+                                       "process_starttime": 999}],
+            _drain=lambda: None,
+            ns={"owner_mentor": SimpleNamespace(clean=lambda x: x)})
+        def submit(_):
+            submissions.append(_)
+            owner.completed[task["id"]] = event
+        owner.pool = SimpleNamespace(active={}, submit=submit)
+        self.assertEqual(scope["_handle_leaf"](owner, task),
+                         ("wait", "HOLD_NATIVE_LEAF_RESULT_UNSETTLED"))
+        self.assertEqual(owner.interrupted[task["id"]],
+                         "HOLD_NATIVE_LEAF_RESULT_UNSETTLED")
+        self.assertNotIn(task["id"], owner.completed)
+        self.assertEqual(scope["_handle_leaf"](owner, task),
+                         ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
+        self.assertEqual(len(submissions), 1, "recovered lease is not replay authority")
+
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
