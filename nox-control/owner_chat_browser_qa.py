@@ -162,7 +162,8 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
            for row, role in zip(expected_messages,
                                 ('user', 'assistant', 'user', 'assistant'))):
         return False
-    if not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict):
+    if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
+            or writer_receipt is independent_readback):
         return False
     event_id = writer_receipt.get('event_id')
     turn_id = writer_receipt.get('turn_id')
@@ -172,7 +173,7 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or writer_receipt.get('durable') is not True
             or not isinstance(event_id, str) or not event_id
             or not isinstance(turn_id, str) or not turn_id
-            or isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 1
+            or isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 2
             or writer_receipt.get('dialog_id') != dialog_id):
         return False
     if (independent_readback.get('source') != 'canonical_s03'

@@ -48,6 +48,20 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_s03_two_turn_receipt_requires_second_sequence_and_distinct_readback(self):
+        # One first-turn writer receipt cannot prove a two-turn S03 persist.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        writer["sequence"] = 1
+        readback["sequence"] = 1
+        self.assertFalse(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        # A single, self-declared "independent" dict is not two read operations.
+        writer["sequence"] = readback["sequence"] = 2
+        aliased = {**writer, **readback}
+        self.assertFalse(canonical_s03_proof_valid(aliased, aliased, DIALOG, transcript))
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+
     def test_canonical_s03_rejects_single_turn_even_with_matching_receipt_metadata(self):
         # Before this regression, two messages plus a matching last-answer SHA
         # could masquerade as a complete RU/ES multi-turn S03 acceptance.
