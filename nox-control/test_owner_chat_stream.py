@@ -394,6 +394,34 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload,{'messages':original_messages})
         self.assertNotIn('_agent_final',payload)
 
+    async def test_model_admin_batch_never_partly_executes_or_certifies_s03(self):
+        # Model may propose an administrative action alongside another tool.
+        # The first call must not execute while the remainder is silently dropped.
+        for admin_first in (True,False):
+            with self.subTest(admin_first=admin_first):
+                admin={'index':0 if admin_first else 1,'id':'admin-call',
+                       'type':'function','function':{
+                           'name':'run_admin','arguments':'{"action":"status"}'}}
+                math={'index':1 if admin_first else 0,'id':'math-call',
+                      'type':'function','function':{
+                          'name':'calculate','arguments':'{}'}}
+                pieces=sorted((admin,math),key=lambda x:x['index'])
+                chunks=Chunks([frame(calls=pieces),frame(finish='tool_calls'),
+                               b'data: [DONE]\\n\\n'])
+                requests,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Состояние и расчёт'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Состояние и расчёт',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
     async def test_confirmation_stops_before_model_and_preserves_real_marker(self):
         native=self.native([{'name':'run_admin','arguments':{'action':'pause'}}],
                            {'ok':False,'needs_confirmation':True,'text':'Confirm pause'})
