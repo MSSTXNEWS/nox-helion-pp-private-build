@@ -138,6 +138,20 @@ class OwnerInspectCommentGuardTests(unittest.TestCase):
 
 
 class WorkflowScopeTests(unittest.TestCase):
+    def test_non_inspect_owner_actions_skip_at_job_level(self) -> None:
+        workflow = (Path(__file__).parents[1] / ".github" / "workflows"
+                    / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
+        owner_job = workflow.split("  owner-inspect:\n", 1)[1]
+        job_condition = owner_job.split("    runs-on:", 1)[0]
+        self.assertIn("endsWith(github.event.comment.body, ' inspect')",
+                      job_condition)
+        self.assertLess(owner_job.index("endsWith(github.event.comment.body"),
+                        owner_job.index("steps:"))
+        self.assertLess(
+            owner_job.index("steps:"),
+            owner_job.index("NOX2: ${{ secrets.NOX2 }}"),
+        )
+
     def test_native_workflow_has_no_user_selectable_action_or_dispatch_input(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
