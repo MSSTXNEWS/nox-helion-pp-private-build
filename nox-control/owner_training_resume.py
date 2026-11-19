@@ -129,8 +129,18 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
         with os.fdopen(fd, 'rb') as stream:
             fd = -1
             raw = stream.read(limit + 1)
+            after = os.fstat(stream.fileno())
         if len(raw) > limit:
             raise RuntimeError('HOLD_BOUNDED_STATE_READ')
+        # Even a legacy caller without a receipt SHA must never parse an
+        # unstable descriptor. Trailing whitespace in appended JSON would
+        # otherwise be accepted silently as a coherent trainer snapshot.
+        if (len(raw) != info.st_size
+                or (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns,
+                    info.st_ctime_ns)
+                != (after.st_dev, after.st_ino, after.st_size,
+                    after.st_mtime_ns, after.st_ctime_ns)):
+            raise RuntimeError('HOLD_STATE_FILE_MUTATED')
     finally:
         if fd >= 0:
             os.close(fd)
