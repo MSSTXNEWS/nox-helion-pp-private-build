@@ -572,6 +572,7 @@ class GpuConsumerCensusTests(unittest.TestCase):
         self.assertEqual(result['read_failure_count'], 1)
         self.assertEqual(result['read_failure_pids'], [121])
         self.assertEqual(result['rows'][0]['identity_state'], 'UNAVAILABLE_OR_CHANGED')
+        self.assertEqual(result['rows'][0]['exe_state'], 'UNAVAILABLE')
 
     def test_all_pid_inventory_pid_reuse_during_identity_read_fails_closed(self):
         add_proc(self.proc, 131, start=131)
