@@ -1,0 +1,31 @@
+name: NOX B0 owner chat probe durable two-turn source
+on:
+  push:
+    branches: [b0/chat-probe-durable-two-turn-20261119-0710]
+    paths:
+      - 'nox-control/owner_chat_probe.py'
+      - 'nox-control/test_owner_chat_probe.py'
+      - '.github/workflows/nox-b0-chat-probe-durable-source.yml'
+permissions: {contents: read}
+concurrency:
+  group: nox-b0-chat-probe-durable-source
+  cancel-in-progress: false
+jobs:
+  focused-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Compile and verify one scoped chat-probe test module
+        run: |
+          set -euo pipefail
+          python -m py_compile nox-control/owner_chat_probe.py nox-control/test_owner_chat_probe.py
+          python -m unittest -v nox-control/test_owner_chat_probe.py
+      - name: Declare source-only evidence
+        run: |
+          echo 'NOX_B0_SOURCE_PATCH_TESTED=true'
+          echo 'NOX_B0_NATIVE_INSTALLED=false'
+          echo 'NOX_B0_CHAT_ROUTE_ACCEPTED=false'
