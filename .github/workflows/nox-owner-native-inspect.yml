@@ -9,6 +9,8 @@ on:
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_native_emergency_stop.py'
       - 'nox-control/test_owner_native_emergency_stop_fence.py'
+      - 'nox-control/owner_paired_chat_deploy.py'
+      - 'nox-control/test_owner_paired_chat_deploy.py'
       - 'nox-control/owner_browser_stream_only_entry.py'
       - 'nox-control/owner_chat_stream_only_qa.py'
       - 'nox-control/owner_chat_browser_qa.py'
@@ -46,6 +48,23 @@ jobs:
           ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "#{path}: YAML parsed" }' \
             .github/workflows/nox-owner-native-inspect.yml \
             .github/workflows/nox-owner-maintenance-command.yml
+      - name: Fetch and verify exact paired chat source pins
+        run: |
+          set -euo pipefail
+          source_commit=daf5077bf8f0573ca3a991e7ade9ab733e8195f5
+          git fetch --no-tags --depth=1 origin "$source_commit"
+          python3 - <<'PY'
+          import hashlib, subprocess
+          commit='daf5077bf8f0573ca3a991e7ade9ab733e8195f5'
+          assert subprocess.check_output(['git','rev-parse',commit],text=True).strip()==commit
+          for path,blob_pin,sha_pin,limit in (
+              ('coordination/onepass/nox-v135-resonance-owner-bridge.js','c4b3c870b9b2a8ee6c17c06bdb5866f4967a9ba7','21a2a9eb1d61358021811ab98a8f03932be1c16a0967566cb1e4b5b6d05dc122',22000),
+              ('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py','4976fead0517e9d22ead636b2179f3d9436c0b50','28d3bece361499c9d04425f068833800094346204b9930192c3ad5ce6b2e8e3c',60000),
+          ):
+              raw=subprocess.check_output(['git','show',f'{commit}:{path}'])
+              blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
+              assert 0<len(raw)<=limit and blob==blob_pin and hashlib.sha256(raw).hexdigest()==sha_pin
+          PY
       - name: Compile guard and run offline authorization tests
         run: |
           set -euo pipefail
@@ -55,10 +74,16 @@ jobs:
             nox-control/owner_native_operator.py \
             nox-control/owner_native_emergency_stop.py \
             nox-control/test_owner_native_emergency_stop_fence.py \
+            nox-control/owner_paired_chat_deploy.py \
+            nox-control/test_owner_paired_chat_deploy.py \
             nox-control/owner_browser_stream_only_entry.py \
             nox-control/owner_chat_stream_only_qa.py \
             nox-control/test_owner_chat_stream_only_qa.py \
             nox-control/test_owner_native_operator_browser_qa.py
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_paired_chat_deploy.py \
+            -v
           python -B -m unittest discover \
             -s nox-control \
             -p test_owner_native_inspect_comment_guard.py \
@@ -85,6 +110,7 @@ jobs:
       github.event.sender.id == 340718567 &&
       github.event.comment.author_association == 'OWNER' &&
       startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      !contains(github.event.comment.body, ' paired_chat_deploy inspect') &&
       (endsWith(github.event.comment.body, ' inspect') ||
        endsWith(github.event.comment.body, ' audit') ||
        endsWith(github.event.comment.body, ' source_attest') ||
