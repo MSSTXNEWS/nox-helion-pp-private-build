@@ -91,6 +91,9 @@ class NativeReflexTests(unittest.TestCase):
             {'inactive_file_bytes': 801},
             {'shmem_bytes': 801},
             {'current_bytes': 2001},
+            {'current_bytes': 1000.5},  # cgroup byte counters are integers
+            {'file_bytes': 800.0},      # even integral floats are untrusted
+            {'inactive_file_bytes': 500.5},
             {'max_bytes': 10**400},  # uint64 overflow must HOLD, not throw
             {'memory_psi_some_avg10': 10**400},
         )
