@@ -313,7 +313,7 @@
           if(data.status!=='READY'||data.dialog_id!==did||!Array.isArray(data.messages))
             throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
           return responseJSON({dialog_id:did,messages:data.messages.map(m=>({
-            role:m.role,content:m.content,created_at:m.ts||'',status:'saved'
+            role:m.role,content:m.content,exchange_id:m.exchange_id||null,created_at:m.ts||'',status:'saved'
           }))});
         }
         const data=await nativeJSON('/api/ui/memory/dialogs?limit=80',init);

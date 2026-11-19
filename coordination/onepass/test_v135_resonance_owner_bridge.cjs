@@ -1376,3 +1376,22 @@ test('V178 hidden and reduced-motion SSE skip visual timers but preserve native 
     else assert(raf+timers>0,'visible motion retains browser pacing');
   }
 });
+
+test('V179 browser multi-exchange history preserves exact S03 exchange IDs',async()=>{
+  const later=[
+    {role:'user',exchange_id:'verified-exchange-02',content:'Segundo turno'},
+    {role:'assistant',exchange_id:'verified-exchange-02',content:'Respuesta persistida'}
+  ];
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,'verified-exchange-01',later);
+  const response=await f.fetch('/api/nox/history?dialog_id='+id);
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.deepEqual(Array.from(data.messages,m=>m.exchange_id),
+    ['verified-exchange-01','verified-exchange-01','verified-exchange-02','verified-exchange-02']);
+  assert.deepEqual(Array.from(data.messages,m=>m.role),
+    ['user','assistant','user','assistant']);
+  assert.equal(data.messages[3].content,'Respuesta persistida');
+  assert.equal(f.calls.filter(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')).length,1);
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,0);
+});
