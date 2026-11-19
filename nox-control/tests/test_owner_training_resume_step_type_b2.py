@@ -8,11 +8,14 @@ import copy
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
+import stat
 import tempfile
 import types
 import unittest
+from unittest import mock
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "owner_training_resume.py"
@@ -27,6 +30,7 @@ def load_pinned_verifier(output):
         raise AssertionError("HOLD_EXACT_OWNER_VERIFIER_MISSING")
     namespace = {
         "Path": Path, "hashlib": hashlib, "json": json, "math": math,
+        "os": os, "stat": stat,
         "re": re, "OUTPUT": output, "NATIVE_SHA": "a" * 64,
     }
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"),
@@ -99,6 +103,28 @@ class CheckpointStepProvenance(unittest.TestCase):
             redirected_check = load_pinned_verifier(alias)["verify_paused_result"]
             with self.assertRaisesRegex(RuntimeError, "HOLD_PAUSED_CHECKPOINT_SCOPE"):
                 redirected_check(helper, redirected)
+
+
+    def test_bounded_json_state_rejects_descriptor_symlink_and_oversize(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            read_json = load_pinned_verifier(root)["read_json"]
+            safe = root / "safe.json"
+            safe.write_text('{"global_step": 1}', encoding="utf-8")
+            self.assertEqual(read_json(safe, limit=64), {"global_step": 1})
+
+            oversized = root / "oversized.json"
+            oversized.write_text('{"note":"' + "x" * 128 + '"}', encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "HOLD_BOUNDED_STATE_READ"):
+                read_json(oversized, limit=64)
+
+            # Simulate a stale preliminary symlink check. Opening the path
+            # atomically with O_NOFOLLOW must still reject its redirect.
+            alias = root / "redirected.json"
+            alias.symlink_to(safe)
+            with mock.patch.object(Path, "is_symlink", return_value=False):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_BOUNDED_STATE_READ"):
+                    read_json(alias, limit=64)
 
 
 if __name__ == "__main__":
