@@ -1531,3 +1531,33 @@ test('V183 native-delta pacing limits rAF waits to two while retaining every tok
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
   assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
+
+
+test('V184 scoped abort wakes frozen paint scheduler without false S03 done',async()=>{
+  const abort=new AbortController(),framesPending=new Map(),timersPending=new Map();
+  let serial=0,abortQueued=false;
+  const scheduler={
+    requestAnimationFrame(cb){
+      const n=++serial;framesPending.set(n,cb);
+      if(!abortQueued){abortQueued=true;queueMicrotask(()=>abort.abort());}
+      return n;
+    },
+    cancelAnimationFrame(n){framesPending.delete(n);},
+    setTimeout(cb){const n=++serial;timersPending.set(n,cb);return n;},
+    clearTimeout(n){timersPending.delete(n);}
+  };
+  const reply='Ж'.repeat(960)+'🧠';
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,scheduler,false,480);
+  const output=await Promise.race([
+    events(await f.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v184-abort-pacing'})})),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V184_FROZEN_PAINT_ABORT')),500))
+  ]);
+  assert.equal(abortQueued,true,'abort actually occurred while visual frame was pending');
+  assert.equal(output.filter(e=>e.type==='done').length,0,'no forged S03 success');
+  assert.equal(output.filter(e=>e.type==='error').at(-1).error,'STREAM_STOP_REQUESTED');
+  assert.equal(framesPending.size,0,'no orphan frame callback');
+  assert.equal(timersPending.size,0,'no orphan fallback timer');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1,'single model POST');
+  assert.equal(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')),false);
+});
