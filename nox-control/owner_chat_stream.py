@@ -343,6 +343,14 @@ def _normal_calls(rows,step):
                                 parse_constant=_reject_nonfinite_json_constant)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         if not isinstance(args,dict):raise StreamFailure('HOLD_TOOL_ARGUMENTS')
+        # JSON string arguments were parsed strictly above, but pre-parsed
+        # heuristic/deterministic dicts and nested JSON escapes may still
+        # contain NaN, Infinity or lone UTF-16 surrogates. Validate the exact
+        # object before a native tool can see it.
+        try:
+            json.dumps(args,ensure_ascii=False,allow_nan=False).encode('utf-8','strict')
+        except (UnicodeError,TypeError,ValueError,RecursionError):
+            raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         # Native parser / deterministic routes share the same bounded ID rule.
         call_id=row.get('id')
         if call_id is not None and (not isinstance(call_id,str) or not 1<=len(call_id)<=160):

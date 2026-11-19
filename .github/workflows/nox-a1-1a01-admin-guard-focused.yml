@@ -30,6 +30,7 @@ jobs:
             test_owner_chat_stream.StreamTests.test_disconnect_after_finish_before_done_clears_final \
             test_owner_chat_stream.StreamTests.test_duplicate_sse_and_tool_argument_json_keys_hold_before_dispatch \
             test_owner_chat_stream.StreamTests.test_nonfinite_json_constants_hold_before_dispatch_and_s03 \
+            test_owner_chat_stream.StreamTests.test_nested_invalid_tool_arguments_hold_before_dispatch \
             test_owner_chat_stream.StreamTests.test_invalid_utf8_on_wire_cannot_certify_browser_or_s03 \
             test_owner_chat_stream.StreamTests.test_lone_utf16_surrogate_rejected_before_browser_and_s03 \
             test_owner_chat_stream.StreamTests.test_deterministic_falsey_arguments_never_bypass_call_guard

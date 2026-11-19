@@ -883,6 +883,35 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             path.unlink();path.symlink_to(Path(folder)/'absent')
             self.assertIn('не могу подтвердить',stream._executor_status_reply('Сколько агентов?',path))
 
+    async def test_nested_invalid_tool_arguments_hold_before_dispatch(self):
+        # Strict json.loads(parse_constant=...) misses 1e999 -> Infinity,
+        # and JSON-escaped surrogates only become invalid after json.loads.
+        # Pre-parsed native dict arguments must obey the same boundary.
+        invalid=(
+            {'nested':{'value':float('nan')}},
+            {'nested':[float('inf')]},
+            {'nested':{'value':'\ud800'}},
+            '{"nested":{"value":"\\udfff"}}',
+            '{"nested":{"value":1e999}}',
+        )
+        for value in invalid:
+            with self.subTest(value=repr(value)):
+                native=self.native(heuristic=[{'id':'bad_nested','name':'calculate',
+                                               'arguments':value}])
+                payload={'messages':[{'role':'user','content':'Calculate nested value'}]}
+                with patch.object(stream.httpx,'AsyncClient',
+                                  side_effect=AssertionError('no model POST')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate nested value',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn('HOLD_TOOL_ARGUMENTS',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+        good={'nested':{'greeting':'Привет 🌍 — ¡Hola!','number':123}}
+        self.assertEqual(stream._normal_calls([
+            {'name':'calculate','arguments':good}],0)[0]['arguments'],good)
+
     def test_normalized_tool_ids_are_bounded_for_native_and_heuristic_routes(self):
         for value in ('z'*161, 12, [], ''):
             with self.subTest(value_type=type(value).__name__,size=len(value) if hasattr(value,'__len__') else 0):
