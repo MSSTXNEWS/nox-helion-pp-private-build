@@ -72,13 +72,13 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         # Duplicate keys make both model envelopes and nested tool arguments
         # ambiguous; Python's default last-key-wins would alter evidence.
         bad_envelope=(b'data: {"choices":[],"choices":[{"delta":{"content":"wrong"},'
-                      b'"finish_reason":"stop"}]}\\n\\n')
+                      b'"finish_reason":"stop"}]}\n\n')
         bad_args=frame(calls=[{'index':0,'id':'dup_args','type':'function',
                                'function':{'name':'calculate',
                                            'arguments':'{"amount":1,"amount":2}'}}])
         cases=(
-            ([bad_envelope,b'data: [DONE]\\n\\n'],'HOLD_MODEL_SSE_INVALID'),
-            ([bad_args,frame(finish='tool_calls'),b'data: [DONE]\\n\\n'],
+            ([bad_envelope,b'data: [DONE]\n\n'],'HOLD_MODEL_SSE_INVALID'),
+            ([bad_args,frame(finish='tool_calls'),b'data: [DONE]\n\n'],
              'HOLD_TOOL_ARGUMENTS'),
         )
         for parts,code in cases:
@@ -94,7 +94,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertIn(code,wire)
                 self.assertNotIn('[DONE]',wire)
                 self.assertNotIn('_agent_final',payload)
-                self.assertEqual(requests and len(requests),1)
+                self.assertEqual(len(requests),1)
                 self.assertEqual(self.dispatched,[])
                 self.assertTrue(chunks.closed)
 
