@@ -21,7 +21,7 @@ import time
 
 ROOT=Path('/root/nox')
 STATE=ROOT/'state'
-BACKUPS=STATE/'owner_smart_chat_backups'/'6995452003'
+BACKUPS=STATE/'owner_smart_chat_backups'/'6996280040'
 LOCK=STATE/'owner_maintenance.lock'
 PAIRS={
  'stream':(ROOT/'scripts/owner_chat_stream.py',
@@ -138,7 +138,7 @@ def main():
     commit=os.environ.get('NOX_OWNER_SOURCE_SHA','')
     require(re.fullmatch(r'[0-9]{1,24}',request_id) and re.fullmatch(r'[a-f0-9]{40}',commit), 'OWNER_CONTEXT')
     result={'schema':SCHEMA,'request':request_id,'source_sha':commit,
-        'old_backup_request':'6995452003','source_reverted':[],'model_or_training_restarted':False,
+        'old_backup_request':'6996280040','source_reverted':[],'model_or_training_restarted':False,
         's03_modified':False,'stop_flags_modified':False,'credentials_exported':False,
         'private_source_exported':False,'started_at':time.time()}
     lockfd=None; success=False
