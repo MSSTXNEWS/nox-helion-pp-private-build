@@ -150,6 +150,28 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(out["peak_rss_regressed_task_ids"],["t1"])
         self.assertFalse(out["rank_claim_authorized"])
 
+    def test_dropped_durable_or_background_work_cannot_fake_same_work_speedup(self):
+        b = example()
+        for field, task, expected in (("history_saved", "t1", ["t1"]),
+                                      ("background_completed", "t2", ["t2"])):
+            with self.subTest(field=field):
+                c = copy.deepcopy(b)
+                idx = 0 if task == "t1" else 1
+                c["outcomes"][idx][field] = False
+                c["outcomes"][1]["latency_ms"] = 900  # aggregate p95 improves
+                out = compare_paired(b, c)
+                self.assertTrue(out["comparable"])
+                self.assertEqual(out["p95_latency_delta_ms"], -100)
+                self.assertTrue(out["latency_side_effects_confounder"])
+                self.assertEqual(out["history_durability_changed_task_ids"],
+                                 expected if field == "history_saved" else [])
+                self.assertEqual(out["background_completion_changed_task_ids"],
+                                 expected if field == "background_completed" else [])
+                self.assertTrue(out["latency_observed_workload_confounder"])
+                self.assertIsNone(out["p95_latency_delta_ms_same_observed_work"])
+                self.assertTrue(out["quality_or_history_regression"])
+                self.assertFalse(out["measured_nox_gain"])
+
     def test_cache_collapse_not_masked_by_unchanged_aggregate(self):
         b=example();c=copy.deepcopy(b)
         # Opposite per-task changes cancel: total cache and prefill stay equal.
