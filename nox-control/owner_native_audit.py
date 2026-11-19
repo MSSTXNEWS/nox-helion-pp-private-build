@@ -249,17 +249,30 @@ def _deleted_memfd_maps(pid_path):
     return {"status": "OK", "rows": rows, "scanned_lines": seen_lines,
             "scanned_bytes": total_bytes, "truncated": truncated}
 
+def _proc_stat_identity(pid_path, expected_pid):
+    raw = (Path(pid_path) / "stat").read_text()
+    prefix = str(expected_pid) + " ("
+    boundary = raw.rfind(") ")
+    if not raw.startswith(prefix) or boundary < len(prefix):
+        raise ValueError("PROC_STAT_PID_MISMATCH")
+    fields = raw[boundary + 2:].split()
+    if len(fields) < 20 or not fields[19].isdecimal() or not fields[1].isdecimal() or not fields[2].isdecimal():
+        raise ValueError("PROC_STAT_FIELDS_INVALID")
+    return {"state": fields[0], "ppid": int(fields[1]), "pgrp": int(fields[2]),
+            "start_ticks": int(fields[19])}
+
 def process_pid_evidence(pid, expected_start_ticks=None, label="GPU_APP"):
     """Read-only, bounded process metadata. Never read target-file contents or signal."""
     if type(pid) is not int or pid <= 0:
         return {"pid": pid, "status": "INVALID_PID", "label": label}
     p = Path("/proc") / str(pid)
     try:
-        first_ticks = proc_start_ticks(p, pid)
+        first_stat = _proc_stat_identity(p, pid)
+        first_ticks = first_stat["start_ticks"]
     except (OSError, ValueError):
         return {"pid": pid, "label": label, "status": "NOT_VISIBLE_OR_UNREADABLE"}
-    base = {"pid": pid, "label": label, "start_ticks": first_ticks,
-            "expected_start_ticks": expected_start_ticks}
+    base = {"pid": pid, "label": label, "stat": first_stat,
+            "start_ticks": first_ticks, "expected_start_ticks": expected_start_ticks}
     if expected_start_ticks is not None and first_ticks != expected_start_ticks:
         return {**base, "status": "PID_REUSE_OR_EXPECTED_START_TICK_MISMATCH"}
     try:
@@ -274,7 +287,8 @@ def process_pid_evidence(pid, expected_start_ticks=None, label="GPU_APP"):
                   "namespace_pids": nspid, "status_truncated": cut,
                   "cgroup": _safe_cgroup(p), "smaps_rollup": _smaps_rollup(p),
                   "fds": _fd_evidence(p), "deleted_memfd_maps": _deleted_memfd_maps(p)}
-        last_ticks = proc_start_ticks(p, pid)
+        last_stat = _proc_stat_identity(p, pid)
+        last_ticks = last_stat["start_ticks"]
         if last_ticks != first_ticks:
             return {"pid": pid, "label": label, "status": "PID_CHANGED_DURING_READ",
                     "start_ticks_before": first_ticks, "start_ticks_after": last_ticks}
