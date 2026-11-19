@@ -509,9 +509,15 @@ def _unique_json_object(pairs):
     return result
 
 
+def _reject_model_nonfinite(_value):
+    """Do not silently accept NaN/Infinity in provider envelopes or advice."""
+    raise GatewayHold('MODEL_RESPONSE_NONFINITE_JSON')
+
+
 def advice_candidate(text):
     try:
-        value = json.loads(text, object_pairs_hook=_unique_json_object)
+        value = json.loads(text, object_pairs_hook=_unique_json_object,
+                           parse_constant=_reject_model_nonfinite)
     except ValueError:
         raise GatewayHold('ADVICE_SCHEMA_INVALID') from None
     required = {'assessment', 'check_categories', 'rationale'}
@@ -559,7 +565,8 @@ async def _request(provider, credential, prompt, config, verification=False):
                     data.extend(block)
                     if len(data) > 262144:
                         raise GatewayHold('MODEL_RESPONSE_SIZE')
-                value = json.loads(data, object_pairs_hook=_unique_json_object)
+                value = json.loads(data, object_pairs_hook=_unique_json_object,
+                                   parse_constant=_reject_model_nonfinite)
                 return {'state': 'RECEIVED', 'text': response_text(provider, value),
                         'response_sha256': hashlib.sha256(data).hexdigest()}
     try:
