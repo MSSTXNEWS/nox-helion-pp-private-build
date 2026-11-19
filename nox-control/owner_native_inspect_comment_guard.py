@@ -22,9 +22,10 @@ APPROVED_SOURCE_BY_ACTION = {
     "audit": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",  # merged PR #485
     "source_attest": "07ebd86b15ae32644bc8bb562a396ec85918b13b",  # reviewed repair pin #489
     "gpu_inventory": "efe68732b5c130106f5a931dae59a9210808dc01",  # exact-head source tests green
+    "browser_qa": "23f0a7d7d34e2d35ce58886a435332fb7a0e94fe",  # immutable one-stream owner browser source bundle
 }
 COMMAND = re.compile(
-    rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) (inspect|audit|source_attest|gpu_inventory)\Z"
+    rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) (inspect|audit|source_attest|gpu_inventory|browser_qa)\Z"
 )
 
 
