@@ -165,5 +165,43 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                         subject._finish(task, before, 'pinned-claim')
 
 
+    def test_blocked_terminal_capacity_needs_exact_durable_witness(self):
+        """A truthy S03 result for a different job cannot free this worker slot."""
+        task = {'id': '4V14-07', 'status': 'blocked',
+                'owner_claim': {'nonce': 'claim-4V14-07'}}
+        receipt = {'task_id': task['id'], 'job_id': 'job-4V14-07',
+                   'phase': 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED',
+                   'original_task_accepted': False, 'claim': task['owner_claim'],
+                   'worker_result': {'project_evidence': {
+                       'state': 'BLOCKED_SOURCE_CHANGED'}}}
+        sha = binding.digest(binding.encoded(receipt))
+        task['native_project_terminal'] = {'receipt': receipt,
+                                           'receipt_sha256': sha}
+        subject = module.ProjectBinding.__new__(module.ProjectBinding)
+        subject.native = types.SimpleNamespace(
+            pool=None, receipt_source_allowed=lambda *_: True)
+        subject.terminal_cache = set()
+        good = {'native_verified': True, 'task_id': task['id'],
+                'job_id': receipt['job_id'], 'receipt_sha256': sha,
+                's03_item_id': 'S03-CAPACITY-TEST'}
+        with patch.dict(sys.modules, {'owner_subagent_dispatcher': binding}):
+            with patch.object(executor, 'TERMINAL_WITHOUT_CHANGES',
+                              {'BLOCKED_SOURCE_CHANGED'}, create=True):
+                for invalid in (True, {'native_verified': True},
+                                {**good, 'task_id': 'another-task'},
+                                {**good, 'job_id': 'another-job'},
+                                {**good, 'receipt_sha256': '0' * 64},
+                                {**good, 'native_verified': False},
+                                {**good, 's03_item_id': ''}):
+                    with self.subTest(invalid=invalid):
+                        with patch.object(binding, 's03_readback',
+                                          return_value=invalid):
+                            self.assertFalse(subject.terminal_for_capacity(task))
+                            self.assertNotIn(sha, subject.terminal_cache)
+                with patch.object(binding, 's03_readback', return_value=good):
+                    self.assertTrue(subject.terminal_for_capacity(task))
+                    self.assertIn(sha, subject.terminal_cache)
+
+
 if __name__ == '__main__':
     unittest.main()
