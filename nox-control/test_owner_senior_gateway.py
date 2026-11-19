@@ -32,6 +32,10 @@ class GatewayTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.root_patch = patch.object(gateway, 'ROOT', self.root)
         self.root_patch.start()
+        # Existing protocol tests use mocked network replies, never real paid requests.
+        self.policy_patch = patch.object(gateway, 'PAID_PROVIDER_EGRESS_ALLOWED', True)
+        self.policy_patch.start()
+        self.addCleanup(self.policy_patch.stop)
         self.env_patch = patch.dict(os.environ, {}, clear=True)
         self.env_patch.start()
         self.addCleanup(self.env_patch.stop)
@@ -60,6 +64,39 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(result['models_verified'], 3)
         self.assertEqual(gateway.status()['state'], 'READY')
         return config
+
+    def test_no_paid_policy_blocks_status_consult_verify_and_direct_http(self):
+        # Use the actual module default: patching False would hide a future unsafe default.
+        self.policy_patch.stop()
+        self.assertIs(gateway.PAID_PROVIDER_EGRESS_ALLOWED, False)
+        # No config, credential file, terminal prompt or network setup on a denied policy.
+        self.assertEqual(gateway.initialize()['state'], 'NO_PAID_API_POLICY')
+        self.assertEqual(gateway.set_credential('openai', 'unit-test-credential-value')['state'],
+                         'NO_PAID_API_POLICY')
+        with patch.object(gateway.getpass, 'getpass', side_effect=AssertionError('secret prompt')) as secret_prompt:
+            with patch('builtins.print') as printed:
+                self.assertEqual(gateway.main(['set-key', 'openai']), 2)
+                self.assertIn('NO_PAID_API_POLICY', printed.call_args[0][0])
+                self.assertEqual(gateway.main(['init-config']), 2)
+                self.assertEqual(gateway.main(['verify-access']), 2)
+                self.assertEqual(gateway.main(['status']), 0)
+            secret_prompt.assert_not_called()
+        self.assertEqual(list(self.root.iterdir()), [])
+
+        # Even pre-existing valid configuration and keys cannot reopen paid egress.
+        self.configure()
+        gateway._write('config/owner_senior_credentials.json', {
+            'schema': 'NOX_OWNER_SENIOR_CREDENTIALS_V1',
+            'keys': {name: 'unit-test-credential-value-' + name for name in gateway.PROVIDERS}})
+        with patch.object(gateway, 'request_contract') as request_contract:
+            self.assertEqual(gateway.status()['state'], 'NO_PAID_API_POLICY')
+            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'NO_PAID_API_POLICY')
+            self.assertEqual(gateway.verify_access()['state'], 'NO_PAID_API_POLICY')
+            result = asyncio.run(gateway._request('openai', 'private-key', '{}', gateway.DEFAULT_CONFIG))
+            self.assertEqual(result['state'], 'NO_PAID_API_POLICY')
+            request_contract.assert_not_called()
+        self.assertFalse((self.root / 'state/owner_senior/access.json').exists())
+        self.assertFalse((self.root / 'state/owner_senior/budget.json').exists())
 
     def test_absent_and_missing_credentials_are_read_only_and_never_call_provider(self):
         self.assertEqual(gateway.status()['state'], 'MISSING_SENIOR_GATEWAY')
@@ -178,7 +215,14 @@ class GatewayTests(unittest.TestCase):
         with patch.object(gateway, '_request', delayed):
             with ThreadPoolExecutor(max_workers=6) as pool:
                 values = list(pool.map(lambda _: gateway.consult_plan(CONTEXT, 0.5), range(6)))
-            result = gateway.consult_plan(CONTEXT, 0.5)
+            # Completion is asynchronous: wait for the durable cache, not for an arbitrary wall-clock delay.
+            deadline = time.monotonic() + 2.0
+            while True:
+                result = gateway.consult_plan(CONTEXT, 0.05)
+                if result['state'] == 'CONSULTED' or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+        self.assertEqual(result['state'], 'CONSULTED')
         self.assertEqual(len(seen), 3)
         self.assertEqual({p for p, _ in seen}, set(gateway.PROVIDERS))
         self.assertTrue(all(context == CONTEXT for _, context in seen))
@@ -203,8 +247,14 @@ class GatewayTests(unittest.TestCase):
             self.assertLess(time.monotonic() - start, 0.15)
             self.assertEqual(result['state'], 'PENDING')
             self.assertIsNone(gateway._lock())
-            time.sleep(0.25)
-            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'CONSULTED')
+            # The background thread has a bounded deadline but no guaranteed 250-ms scheduling slot.
+            deadline = time.monotonic() + 2.0
+            while True:
+                final = gateway.consult_plan(CONTEXT, 0.05)
+                if final['state'] == 'CONSULTED' or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+            self.assertEqual(final['state'], 'CONSULTED')
         fd = gateway._lock()
         self.assertIsNotNone(fd)
         gateway._unlock(fd)
