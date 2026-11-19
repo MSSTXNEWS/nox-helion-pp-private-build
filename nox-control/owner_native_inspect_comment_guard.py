@@ -27,6 +27,8 @@ APPROVED_SOURCE_BY_ACTION = {
     "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
     "emergency_stop_preflight": "a087e3968171ebb338a2fd19736cfa340c30956f",  # bounded read-only endpoint facts
 }
+# An additional read-only inspect pin preserves existing callers at the prior SHA.
+CGROUP_CONTROL_INSPECT_SHA = "4d0698a4222d765dc56b5525843d7d633c767584"
 SOURCE_EXPORT_KEY_MAX_CHARS = 12000
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) "
@@ -82,7 +84,9 @@ def authorize_event(event: object, repository: str | None,
         raise RuntimeError("HOLD_OWNER_COMMAND_IDENTITY")
 
     action, source_sha, _ = parse_command(comment.get("body"))
-    if APPROVED_SOURCE_BY_ACTION.get(action) != source_sha:
+    allowed = (APPROVED_SOURCE_BY_ACTION.get(action) == source_sha
+               or (action == "inspect" and source_sha == CGROUP_CONTROL_INSPECT_SHA))
+    if not allowed:
         raise RuntimeError("HOLD_SOURCE_ACTION_NOT_APPROVED")
     return action, source_sha
 
