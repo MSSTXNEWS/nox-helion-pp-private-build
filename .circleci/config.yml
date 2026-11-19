@@ -1,24 +1,46 @@
-# NOX B3 5A05: real source-only gate for the existing Resonance owner bridge.
-# This validates JS contract and Unicode/STOP/S03 fixtures, NOT installed serving,
-# model/tokenizer/weights identity, real browser frame time or native S03 readback.
+# NOX B3 5A05: real source-only CI, separately visible diagnostics.
+# None of these jobs proves installed OneHost, model/tokenizer pins or native S03.
 version: 2.1
 jobs:
-  b3-resonance-owner-source:
+  b3-source-syntax-and-size:
     docker:
       - image: cimg/node:22.16
     resource_class: small
     steps:
       - checkout
       - run:
-          name: Exact-branch owner bridge syntax, hard size budget and Node regressions
+          name: Parse both sources and enforce hard 20000-byte bridge limit
           command: |
             set -eu
             node --version
             node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
             node --check coordination/onepass/test_v135_resonance_owner_bridge.cjs
-            node -e "const fs=require('fs');const p='coordination/onepass/nox-v135-resonance-owner-bridge.js';const n=fs.statSync(p).size;if(n>20000)process.exitCode=1;console.log('owner_bridge_bytes='+n+' hard_limit=20000');"
+            node -e "const fs=require('fs');const n=fs.statSync('coordination/onepass/nox-v135-resonance-owner-bridge.js').size;console.log('owner_bridge_bytes='+n);if(n>20000)process.exit(1)"
+  b3-targeted-stop-regression:
+    docker:
+      - image: cimg/node:22.16
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Actual post-STOP queued fetch safety regression
+          command: |
+            set -eu
+            node --test --test-name-pattern='V192 queued native history fetch' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+  b3-full-owner-regressions:
+    docker:
+      - image: cimg/node:22.16
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Full source SSE Unicode Reduced Motion STOP and S03 fixture suite
+          command: |
+            set -eu
             node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
 workflows:
   b3-real-source-verification:
     jobs:
-      - b3-resonance-owner-source
+      - b3-source-syntax-and-size
+      - b3-targeted-stop-regression
+      - b3-full-owner-regressions
