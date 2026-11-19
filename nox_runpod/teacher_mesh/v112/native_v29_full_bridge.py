@@ -11,6 +11,7 @@ import codecs
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
+import inspect
 import json
 from pathlib import Path
 import re
@@ -28,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 SITE = Path('/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site')
 ID_PATTERN = re.compile(r'^[a-f0-9]{32}$')
 OWNER = 'nox-single-owner'
+S03_REQUEST_RECEIPT_SCHEMA = 'NOX_V112_S03_REQUEST_RECEIPT_V1'
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS nox_v29_dialogs (
  dialog_id TEXT PRIMARY KEY, owner TEXT NOT NULL,
@@ -169,28 +171,70 @@ def _timestamp(value):
     except (TypeError,ValueError,OverflowError):
         return float('-inf')
 
-def _readback(question,answer,started_at):
-    """A new committed S03 record is required; old matching rows are invalid."""
-    if len(question.strip())<1 or len(answer.strip())<2:
+def _validate_s03_request_receipt(receipt,request_id,session_id,question,answer):
+    """Validate the existing request-bound S03 writer receipt contract."""
+    if not isinstance(receipt,Mapping):
         return None
+    if (receipt.get('schema')!=S03_REQUEST_RECEIPT_SCHEMA or
+        receipt.get('committed') is not True or receipt.get('verified') is not True or
+        receipt.get('request_id')!=request_id or receipt.get('session_id')!=session_id):
+        return None
+    record_id=receipt.get('record_id')
+    record_sha=receipt.get('sha256')
+    if (not isinstance(record_id,str) or
+        not re.fullmatch(r'[A-Za-z0-9_.:-]{6,128}',record_id) or
+        not isinstance(record_sha,str) or
+        not re.fullmatch(r'[a-fA-F0-9]{64}',record_sha)):
+        return None
+    q_sha=hashlib.sha256(question.encode('utf-8')).hexdigest()
+    a_sha=hashlib.sha256(answer.encode('utf-8')).hexdigest()
+    if receipt.get('question_sha256')!=q_sha or receipt.get('answer_sha256')!=a_sha:
+        return None
+    for field in ('owner','owner_scope'):
+        if field in receipt and receipt[field]!=OWNER:
+            return None
+    if 'acl' in receipt and receipt['acl'] not in ('owner','owner-only','private'):
+        return None
+    return {'record_id':record_id,'sha256':record_sha.lower()}
+
+
+async def _invoke_s03_provider(callback,args):
     try:
-        with _db() as db:
-            rows = db.execute(
-                'SELECT id,sha256,ts FROM s03_items '
-                'WHERE instr(text,?)>0 AND instr(text,?)>0 '
-                'ORDER BY ts DESC LIMIT 15',
-                (question[:160],answer[:150])
-            ).fetchall()
-        for row in rows:
-            if (_timestamp(row['ts'])+2 < started_at or
-                not isinstance(row['id'],str) or len(row['id'])<6 or
-                not isinstance(row['sha256'],str) or
-                not re.fullmatch('[a-fA-F0-9]{64}',row['sha256'])):
-                continue
-            return {'record_id':row['id'],'sha256':row['sha256']}
-    except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError):
-        pass
-    return None
+        result=(await callback(**args) if asyncio.iscoroutinefunction(callback)
+                else await asyncio.to_thread(callback,**args))
+        if inspect.isawaitable(result):
+            result=await result
+        return result
+    except Exception:
+        return None
+
+
+async def _s03_commit_and_readback(trusted,request_id,session_id,question,answer):
+    """Require writer receipt plus a distinct exact request-scoped S03 readback."""
+    if trusted.get('_s03_request_receipt_schema')!=S03_REQUEST_RECEIPT_SCHEMA:
+        return None
+    writer=trusted.get('_s03_request_receipt')
+    reader=trusted.get('_s03_request_readback')
+    if not callable(writer) or not callable(reader):
+        return None
+    args={
+        'request_id':request_id,
+        'session_id':session_id,
+        'question_sha256':hashlib.sha256(question.encode('utf-8')).hexdigest(),
+        'answer_sha256':hashlib.sha256(answer.encode('utf-8')).hexdigest(),
+        'owner_scope':OWNER,
+    }
+    raw=await _invoke_s03_provider(writer,args)
+    proof=_validate_s03_request_receipt(raw,request_id,session_id,question,answer)
+    if proof is None:
+        return None
+    read_args={**args,'record_id':proof['record_id'],'record_sha256':proof['sha256']}
+    observed=await _invoke_s03_provider(reader,read_args)
+    read_proof=_validate_s03_request_receipt(
+        observed,request_id,session_id,question,answer)
+    if read_proof!=proof:
+        return None
+    return proof
 
 def _save_exchange(dialog_id,question,answer,exchange_id):
     if not dialog_id:
@@ -649,6 +693,11 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
     async def native_v29_stream(request:Request):
         if not check(request):
             return trusted['_unauthorized']()
+        if (trusted.get('_s03_request_receipt_schema')!=S03_REQUEST_RECEIPT_SCHEMA or
+            not callable(trusted.get('_s03_request_receipt')) or
+            not callable(trusted.get('_s03_request_readback'))):
+            return JSONResponse(
+                {'error':'HOLD_S03_CANONICAL_WRITER_READBACK_UNAVAILABLE'},status_code=503)
         try:data=await request.json()
         except Exception:return JSONResponse({'error':'INVALID_JSON'},status_code=400)
         if not isinstance(data,dict):
@@ -677,6 +726,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             return JSONResponse({'error':'HOLD_ACTIVE_SESSION_STREAM'},status_code=409)
         cancel=asyncio.Event()
         active[key]=cancel
+        request_id=uuid.uuid4().hex
+        session_id=key
         payload={'messages':history+[{'role':'user','content':question}],
                  '_owner':True,'stream':True}
         started=time.time()
@@ -765,13 +816,11 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 if not complete or not answer.strip():
                     yield _jsonl({'type':'error','error':'HOLD_INCOMPLETE_NATIVE_RESPONSE'})
                     return
-                proof=None
-                for attempt in range(4):
-                    proof=await asyncio.to_thread(_readback,question,answer,started)
-                    if proof is not None:break
-                    if attempt<3:await asyncio.sleep(.12)
+                proof=await _s03_commit_and_readback(
+                    trusted,request_id,session_id,question,answer)
                 if proof is None:
-                    yield _jsonl({'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
+                    yield _jsonl({'type':'error',
+                        'error':'HOLD_S03_CANONICAL_WRITE_READBACK_NOT_VERIFIED'})
                     return
                 if not await asyncio.to_thread(_save_exchange,dialog_id,question,answer,proof['record_id']):
                     yield _jsonl({'type':'error','error':'HOLD_S03_DIALOG_COMMIT_NOT_VERIFIED'})

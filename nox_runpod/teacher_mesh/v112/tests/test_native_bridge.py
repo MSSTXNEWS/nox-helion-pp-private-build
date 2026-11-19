@@ -89,13 +89,6 @@ class V112Tests(unittest.TestCase):
                     yield 'data: '+json.dumps({'error':{'message':'fixture inference failed'}})+'\n\n'
                 if self.bulk_sse=='invalid_choice_after_delta':
                     yield 'data: '+json.dumps({'choices':[{'delta':42}]})+'\n\n'
-                if self.record:
-                    from datetime import datetime,timezone
-                    stamp=datetime.now(timezone.utc).isoformat()
-                    with sqlite3.connect(self.db) as db:
-                        db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',(
-                          'new-exchange-0001',hashlib.sha256((q+answer).encode()).hexdigest(),
-                          'U:'+q+' A:'+answer,stamp))
                 if self.bulk_sse=='invalid_utf8_comment':
                     # Original model answer and S03 fixture proof exist, but
                     # upstream sends invalid UTF-8 in a syntactically ignorable comment.
@@ -106,12 +99,43 @@ class V112Tests(unittest.TestCase):
                     # Incremental UTF-8 decoder must be finalized at EOF.
                     yield b'\xe2\x82'
             return StreamingResponse(chunks(),media_type='text/event-stream')
-        register_native_v29_chat(self.app,{
+        self.s03_receipts={}
+        def s03_writer(**args):
+            if not self.record:
+                return None
+            receipt={
+              'schema':'NOX_V112_S03_REQUEST_RECEIPT_V1',
+              'committed':True,'verified':True,
+              'request_id':args['request_id'],'session_id':args['session_id'],
+              'record_id':'new-exchange-0001',
+              'sha256':hashlib.sha256(
+                  (args['question_sha256']+args['answer_sha256']).encode()).hexdigest(),
+              'question_sha256':args['question_sha256'],
+              'answer_sha256':args['answer_sha256'],
+              'owner_scope':args['owner_scope'],
+            }
+            self.s03_receipts[args['request_id']]=receipt
+            return receipt
+        def s03_readback(**args):
+            receipt=self.s03_receipts.get(args['request_id'])
+            if (receipt is None or receipt['session_id']!=args['session_id'] or
+                receipt['record_id']!=args['record_id'] or
+                receipt['sha256']!=args['record_sha256'] or
+                receipt['question_sha256']!=args['question_sha256'] or
+                receipt['answer_sha256']!=args['answer_sha256'] or
+                receipt['owner_scope']!=args['owner_scope']):
+                return None
+            return receipt
+        self.trusted={
           '_session_ok':lambda request:request.cookies.get('owner')=='yes',
           '_unauthorized':lambda:JSONResponse({'error':'AUTH'},status_code=401),
           '_proxy_completion':native,
+          '_s03_request_receipt_schema':'NOX_V112_S03_REQUEST_RECEIPT_V1',
+          '_s03_request_receipt':s03_writer,
+          '_s03_request_readback':s03_readback,
           'nox_status':old_status,
-        },site_dir=self.site)
+        }
+        register_native_v29_chat(self.app,self.trusted,site_dir=self.site)
         self.client=TestClient(self.app)
         self.addCleanup(self.client.close)
         self.cookie={'owner':'yes'}
@@ -210,6 +234,35 @@ class V112Tests(unittest.TestCase):
         self.assertTrue(data['native_dialogs_ready'])
         self.assertTrue(self.client.get('/api/ui/memory/dialogs/status',cookies=self.cookie)
                         .json()['persistent_threads'])
+
+    def test_prefix_only_s03_record_cannot_emit_saved(self):
+        # The former fresh-row prefix lookup must not count as canonical S03 proof.
+        from datetime import datetime,timezone
+        question='prefix question with a long unique tail '+('Q'*180)
+        answer='prefix answer with a long unique tail '+('A'*180)
+        stamp=datetime.now(timezone.utc).isoformat()
+        with sqlite3.connect(self.db) as db:
+            db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',(
+              'prefix-only-record','c'*64,
+              'U:'+question[:160]+' unrelated A:'+answer[:150]+' unrelated',stamp))
+        self.trusted.pop('_s03_request_receipt')
+        self.trusted.pop('_s03_request_readback')
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':question})
+        self.assertEqual(response.status_code,503)
+        self.assertEqual(response.json()['error'],
+                         'HOLD_S03_CANONICAL_WRITER_READBACK_UNAVAILABLE')
+        self.assertEqual(self.calls,[])
+        self.assertNotIn('saved',response.text)
+
+    def test_missing_s03_readback_provider_holds_before_inference(self):
+        self.trusted.pop('_s03_request_readback')
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'No canonical reader'})
+        self.assertEqual(response.status_code,503)
+        self.assertEqual(response.json()['error'],
+                         'HOLD_S03_CANONICAL_WRITER_READBACK_UNAVAILABLE')
+        self.assertEqual(self.calls,[])
 
     def test_stream_s03_and_owner_thread_roundtrip(self):
         create=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
@@ -482,7 +535,8 @@ class V112Tests(unittest.TestCase):
           json={'message':'Другой уникальный вопрос'})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1]['type'],'error')
-        self.assertEqual(frames[-1]['error'],'HOLD_S03_COMMIT_NOT_VERIFIED')
+        self.assertEqual(frames[-1]['error'],
+                         'HOLD_S03_CANONICAL_WRITE_READBACK_NOT_VERIFIED')
         self.assertFalse(any(x.get('saved') for x in frames))
 
     def test_dialog_revision_and_archive(self):
