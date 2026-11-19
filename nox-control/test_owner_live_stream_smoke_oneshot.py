@@ -64,7 +64,19 @@ class DirectStreamSmokeTests(unittest.TestCase):
         self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true',inner)
 
     def test_one_shot_owner_operator_exact_route_only(self):
-        self.assertEqual(operator.FILES['repair'],'nox-control/owner_live_stream_smoke_oneshot.py')
+        self.assertEqual(operator.FILES['repair'],'nox-control/owner_s03_qa_continuation_oneshot.py')
+        outer=ast.parse((ROOT/'owner_s03_qa_continuation_oneshot.py').read_text())
+        source=ast.literal_eval(next(node.value for node in outer.body if isinstance(node,ast.Assign)
+            and isinstance(node.targets[0],ast.Name) and node.targets[0].id=='SOURCE'))
+        tree=ast.parse(source)
+        posts=[node for node in ast.walk(tree) if isinstance(node,ast.Call)
+            and isinstance(node.func,ast.Name) and node.func.id=='call'
+            and len(node.args)>=2 and isinstance(node.args[0],ast.Constant)
+            and node.args[0].value=='/api/nox/chat/stream']
+        self.assertEqual(len(posts),1)
+        self.assertEqual(posts[0].args[1].value,'POST')
+        self.assertEqual({key.value for key in posts[0].args[2].keys},{'message','dialog_id'})
+        self.assertIn('snapshot(build,answer,first)',source)
         self.assertEqual(operator.repair_bundle_paths('repair',
             operator.FILES['repair'],('nox-control/unrelated_file.py',)),())
         self.assertNotEqual(operator.FILES['repair'],operator.FILES['browser_qa'])
