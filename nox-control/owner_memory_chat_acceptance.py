@@ -81,9 +81,16 @@ def verify_browser_receipt(browser_started_ns):
                 's03_readback_verified', 'screenshot_capture_verified',
                 'actual_native_backend', 'nonloopback_auth',
                 'empty_dialog_history_verified', 'synthetic_number_sequence_pass',
-                'progressive_stream_render_verified', 'stop_visible_during_generation'))
+                'progressive_stream_render_verified', 'stop_visible_during_generation',
+                'two_turn_mode', 'multiturn_dialog_history_verified',
+                'multiturn_canonical_s03_verified', 'multiturn_second_native_equal',
+                'multiturn_second_terminal_saved', 'multiturn_second_visible_progressive',
+                'multiturn_second_stop_visible', 'multiturn_second_numeric_pass',
+                'multiturn_browser_acceptance_verified'))
             or proof.get('synthetic_backend_used') is not False
-            or proof.get('private_text_or_credentials_exported') is not False):
+            or proof.get('private_text_or_credentials_exported') is not False
+            or type(proof.get('multiturn_native_post_count')) is not int
+            or proof.get('multiturn_native_post_count') != 2):
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
 
 def main():
