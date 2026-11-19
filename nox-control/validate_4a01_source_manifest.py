@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed source-pin validator for the canonical NOX 4A01 manifest.
 
-Reads only the small JSON manifest. It never opens model/tokenizer/data payloads,
-uses the network, or authorizes a training run.
+Reads only the small JSON manifest. It validates fixed source pins and the recorded provenance/byte-check fields structurally; it does not independently inspect URLs, verify downloaded bytes, open model/tokenizer/data payloads, use the network, or authorize a training run.
 """
 from __future__ import annotations
 
@@ -19,6 +18,21 @@ MAX_MANIFEST_BYTES = 256 * 1024
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 EXPECTED_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+EXPECTED_DATASET_REVISION = "218ec52e09a7e7462a5400043bb9a69a41d06b76"
+EXPECTED_DATASET_README = "https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md"
+EXPECTED_DATASET_LICENSE_URL = "https://github.com/rowanz/hellaswag/blob/master/LICENSE"
+EXPECTED_SPLITS = {
+    "train": {
+        "path": "data/train-00000-of-00001.parquet",
+        "sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+        "size_bytes": 24365524,
+    },
+    "validation": {
+        "path": "data/validation-00000-of-00001.parquet",
+        "sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+        "size_bytes": 6315951,
+    },
+}
 
 
 def at(obj: Any, dotted: str) -> Any:
@@ -47,6 +61,7 @@ def validate(path: Path) -> dict[str, Any]:
     report: dict[str, Any] = {
         "validator_schema": "NOX_4A01_SOURCE_PIN_VALIDATION_V1",
         "manifest_path": str(path),
+        "verification_scope": "STRUCTURAL_SOURCE_PIN_CHECK_ONLY; URLs and payload bytes are not independently reverified",
         "manifest_sha256": hashlib.sha256(raw).hexdigest(),
         "execution_authorized": False,
         "weights_loaded": False,
@@ -75,6 +90,7 @@ def validate(path: Path) -> dict[str, Any]:
         "tokenizer.source_repo": "deepseek-ai/deepseek-recipe",
         "training_recipe.source_repo": "NVIDIA-NeMo/Automodel",
         "training_recipe.data.dataset": "rowan/hellaswag",
+        "training_recipe.data.license": "MIT",
     }
     for field, expected in exact.items():
         value = at(doc, field)
@@ -143,17 +159,81 @@ def validate(path: Path) -> dict[str, Any]:
         else:
             report["verified_fields"].append(field)
 
-    for field, pattern in (
-        ("training_recipe.data.snapshot_revision", HEX40),
-        ("training_recipe.data.split_file_sha256", HEX64),
-    ):
-        value = at(doc, field)
-        if value is None or value == "":
-            report["missing_fields"].append(field)
-        elif not isinstance(value, str) or not pattern.fullmatch(value):
-            report["invalid_fields"].append(field + ": expected full immutable pin")
-        else:
-            report["verified_fields"].append(field)
+    revision = at(doc, "training_recipe.data.snapshot_revision")
+    if revision is None or revision == "":
+        report["missing_fields"].append("training_recipe.data.snapshot_revision")
+    elif not isinstance(revision, str) or not HEX40.fullmatch(revision):
+        report["invalid_fields"].append("training_recipe.data.snapshot_revision: expected full immutable revision")
+    elif revision != EXPECTED_DATASET_REVISION:
+        report["invalid_fields"].append("training_recipe.data.snapshot_revision: unexpected pinned dataset revision")
+    else:
+        report["verified_fields"].append("training_recipe.data.snapshot_revision")
+
+    split_files = at(doc, "training_recipe.data.split_files")
+    if not isinstance(split_files, dict):
+        report["missing_fields"].append("training_recipe.data.split_files")
+    else:
+        for split, expected in EXPECTED_SPLITS.items():
+            field = "training_recipe.data.split_files." + split
+            entry = split_files.get(split)
+            if not isinstance(entry, dict):
+                report["missing_fields"].append(field)
+                continue
+            for key, expected_value in (
+                ("path", expected["path"]),
+                ("sha256", expected["sha256"]),
+                ("lfs_oid_sha256", expected["sha256"]),
+                ("size_bytes", expected["size_bytes"]),
+            ):
+                value = entry.get(key)
+                if value is None or value == "":
+                    report["missing_fields"].append(field + "." + key)
+                elif value != expected_value:
+                    report["invalid_fields"].append(field + "." + key + ": unexpected immutable pin")
+            expected_url = (
+                "https://huggingface.co/datasets/Rowan/hellaswag/resolve/"
+                + EXPECTED_DATASET_REVISION + "/" + expected["path"]
+            )
+            if entry.get("immutable_url") != expected_url:
+                report["invalid_fields"].append(field + ".immutable_url: must use the pinned revision and split path")
+            receipt = entry.get("byte_verification")
+            if not isinstance(receipt, dict):
+                report["missing_fields"].append(field + ".byte_verification")
+            else:
+                if receipt.get("result") != "BYTE_HASH_AND_SIZE_MATCH":
+                    report["invalid_fields"].append(field + ".byte_verification.result: unsupported status")
+                if receipt.get("measured_sha256") != expected["sha256"]:
+                    report["invalid_fields"].append(field + ".byte_verification.measured_sha256: does not match pinned LFS OID")
+                if receipt.get("measured_size_bytes") != expected["size_bytes"]:
+                    report["invalid_fields"].append(field + ".byte_verification.measured_size_bytes: does not match pinned size")
+                if receipt.get("payload_retained") is not False:
+                    report["invalid_fields"].append(field + ".byte_verification.payload_retained: expected false")
+                if receipt.get("content_inspected") is not False:
+                    report["invalid_fields"].append(field + ".byte_verification.content_inspected: expected false")
+            report["verified_fields"].append(field + " (fixed source pin and recorded byte-check structure)")
+
+    license_provenance = at(doc, "training_recipe.data.license_provenance")
+    if not isinstance(license_provenance, dict):
+        report["missing_fields"].append("training_recipe.data.license_provenance")
+    else:
+        license_expectations = {
+            "claim": "MIT",
+            "source_kind": "PINNED_DATASET_CARD_BODY",
+            "dataset_card_revision": EXPECTED_DATASET_REVISION,
+            "dataset_card_readme_url": EXPECTED_DATASET_README,
+            "linked_license_url": EXPECTED_DATASET_LICENSE_URL,
+        }
+        for key, expected_value in license_expectations.items():
+            if license_provenance.get(key) != expected_value:
+                report["invalid_fields"].append("training_recipe.data.license_provenance." + key + ": unexpected source claim")
+        if not isinstance(license_provenance.get("statement"), str) or not license_provenance["statement"].startswith("MIT "):
+            report["invalid_fields"].append("training_recipe.data.license_provenance.statement: expected pinned card statement")
+        if license_provenance.get("direct_license_text_verified") is not False:
+            report["invalid_fields"].append("training_recipe.data.license_provenance.direct_license_text_verified: must remain false")
+        access_result = license_provenance.get("linked_license_access_result")
+        if not isinstance(access_result, str) or "HTTP 451" not in access_result:
+            report["invalid_fields"].append("training_recipe.data.license_provenance.linked_license_access_result: preserve access limitation")
+        report["verified_fields"].append("training_recipe.data.license_provenance (dataset-card-stated only; LICENSE text not verified)")
 
     identity = at(doc, "tokenizer.byte_identity_to_1017_tokenizer_file")
     if not isinstance(identity, str) or "NOT_CLAIMED" not in identity:
