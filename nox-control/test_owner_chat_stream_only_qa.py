@@ -76,11 +76,13 @@ class ScopeTests(unittest.TestCase):
         stop = {'present': False}
         report = {}
         blocked = Counter()
-        forwarded = []
+        route = types.SimpleNamespace(abort=AsyncMock(return_value='ABORTED'),
+                                      continue_=AsyncMock(return_value='CONTINUED'))
         stop['present'] = True  # STOP appears after pre-post admission, before route forwarding.
-        if scope.final_route_post_gate(lambda: stop['present'], report, blocked):
-            forwarded.append('POST')
-        self.assertEqual(forwarded, [])
+        result = asyncio.run(scope.final_route_post_gate(lambda: stop['present'], report, blocked, route))
+        self.assertEqual(result, 'ABORTED')
+        route.abort.assert_awaited_once()
+        route.continue_.assert_not_awaited()
         self.assertEqual(report['native_post_route_gate'], {
             'state': 'HOLD', 'reason': 'HOLD_OWNER_STOP', 'request_forwarded': False})
         self.assertEqual(blocked['owner_stop_before_native_post'], 1)
@@ -118,9 +120,9 @@ class ScopeTests(unittest.TestCase):
         # remain one admitted POST even when the core supports multiturn.
         self.assertIn('allowed_qa_request', guard.co_names)
         self.assertIn('_nox_final_route_post_gate', guard.co_names)
-        self.assertIn('continue_', guard.co_names)
-        self.assertIn('abort', guard.co_names)
         self.assertIn(False, guard.co_consts)
+        self.assertIn('continue_', scope.final_route_post_gate.__code__.co_names)
+        self.assertIn('abort', scope.final_route_post_gate.__code__.co_names)
         self.assertIn('duplicate_qa_generation', guard.co_consts)
         self.assertIn('answer_normalized_characters:normalize(q.answer).length', core.SNAPSHOT_JS)
         self.assertIn("window.matchMedia('(prefers-reduced-motion: reduce)').matches", core.SNAPSHOT_JS)

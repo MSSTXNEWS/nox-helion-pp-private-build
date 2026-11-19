@@ -47,8 +47,8 @@ def pre_post_admission(*, owner_authenticated, lease_held, stop_clear, resources
             'served_asset_sha256': served_asset_sha256}
 
 
-async def final_route_post_gate(stop_check, report, blocked):
-    """Recheck STOP at the last network boundary before forwarding the one POST."""
+async def final_route_post_gate(stop_check, report, blocked, route):
+    """Recheck STOP at the last network boundary and abort before the one POST."""
     try:
         stopped = stop_check()
     except Exception:
@@ -58,12 +58,12 @@ async def final_route_post_gate(stop_check, report, blocked):
         report['native_post_route_gate'] = {
             'state': 'HOLD', 'reason': reason, 'request_forwarded': False}
         blocked['owner_stop_before_native_post'] += 1
-        return False
+        return await route.abort()
     report['native_post_route_gate'] = {'state': 'CLEAR', 'stop_clear': True}
-    return True
+    return await route.continue_()
 
 
-def served_bridge_sha256(page):
+async def served_bridge_sha256(page):
     rows = await page.evaluate("""() => Array.from(document.scripts)
       .map(script => script.src ? new URL(script.src, location.href) : null)
       .filter(url => url && url.origin === location.origin
@@ -204,9 +204,7 @@ def rewrite_browser(body):
         "                    # Consume admission before any uncertain network delivery:\n"
         "                    # never retry or double-submit an ambiguous native POST.\n"
         "                    stream_admitted+=1\n"
-        "                    if not _nox_final_route_post_gate(report, blocked):\n"
-        "                        return await route.abort()\n"
-        "                    return await route.continue_()\n"
+        "                    return await _nox_final_route_post_gate(report, blocked, route)\n"
         "                return await route.continue_()\n")
     body = replace_once(body, "            report['actual_native_backend']=True\\n",
         "            report['actual_native_backend']=True\n"
@@ -299,7 +297,7 @@ def install(core, raw, transport, transport_raw, release, release_raw):
     core.stop_present = lambda: stop_present(core.ROOT)
     core._nox_stream_only_viewport = lambda page, report: fixed_viewport(core, transport, page, report)
     core._nox_pre_post_admission = pre_post_admission
-    core._nox_final_route_post_gate = lambda report, blocked: final_route_post_gate(core.stop_present, report, blocked)
+    core._nox_final_route_post_gate = lambda report, blocked, route: final_route_post_gate(core.stop_present, report, blocked, route)
     core._nox_served_bridge_sha256 = served_bridge_sha256
     core._nox_proper_prefixes = proper_prefixes
     core._nox_two_parts_observed = lambda value: two_parts_observed(release, value)
