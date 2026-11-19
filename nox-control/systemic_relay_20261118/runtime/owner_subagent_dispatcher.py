@@ -1425,6 +1425,98 @@ class Native:
                 raise GateError('HOLD_NATIVE_SUBMIT_INTENT_READBACK') from None
             return marker
 
+    def _durable_terminal_fence(self, task, receipt):
+        """Preserve COMPLETE validated terminal receipt before uncertain S03.
+
+        Existing owner queue is the only writer. This is evidence, never
+        permission to replay IPC or bypass STOP, owner, lease or resource gates.
+        """
+        phase = ({HANDLER: 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED',
+                  LEAF_HANDLER: 'NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED'}
+                 .get(task.get('handler')))
+        if (phase is None or not isinstance(receipt, dict)
+                or receipt.get('schema') != RECEIPT or receipt.get('phase') != phase
+                or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
+                or receipt.get('claim') != task.get('owner_claim')
+                or receipt.get('source_sha256') != self.source):
+            raise GateError('HOLD_NATIVE_TERMINAL_CONTRACT')
+        with self.ns['_qlock']:
+            disk = document(self.ns['STATE'], 16*1024*1024)
+            stored = (disk.get('tasks') or {}).get(task['id'])
+            live = (self.state or {}).get('tasks', {}).get(task['id'])
+            if (not isinstance(stored, dict) or not isinstance(live, dict)
+                    or stored != live or stored.get('status') != 'running'
+                    or stored.get('owner_claim') != task.get('owner_claim')):
+                raise GateError('HOLD_NATIVE_TERMINAL_OWNER_CAS')
+            intent = stored.get('native_worker_submit_intent')
+            if (not isinstance(intent, dict)
+                    or intent.get('schema') != 'NOX_NATIVE_WORKER_SUBMIT_INTENT_V1'
+                    or intent.get('task_id') != task['id']
+                    or intent.get('handler') != task['handler']
+                    or intent.get('owner_claim') != task['owner_claim']
+                    or intent.get('job_id') != receipt['job_id']
+                    or intent.get('source_sha256') != self.source
+                    or 'native_worker_terminal_evidence' in stored):
+                raise GateError('HOLD_NATIVE_TERMINAL_INTENT_UNSETTLED')
+            evidence = {'schema': 'NOX_NATIVE_WORKER_TERMINAL_EVIDENCE_V1',
+                        'submit_intent_sha256': digest(encoded(intent)),
+                        'receipt_sha256': digest(encoded(receipt)),
+                        'receipt': receipt}
+            live['native_worker_terminal_evidence'] = evidence
+            try:
+                # Never clip the receipt: oversized state is a fail-closed HOLD.
+                if len(encoded(self.state)) > 16*1024*1024:
+                    raise GateError('HOLD_NATIVE_TERMINAL_STATE_SCOPE')
+                self.ns['save_state'](self.state)
+                saved = (document(self.ns['STATE'], 16*1024*1024)
+                         .get('tasks') or {}).get(task['id'], {})
+                if (saved.get('native_worker_terminal_evidence') != evidence
+                        or saved.get('native_worker_submit_intent') != intent
+                        or saved.get('owner_claim') != task['owner_claim']
+                        or saved.get('status') != 'running'):
+                    raise GateError('HOLD_NATIVE_TERMINAL_READBACK')
+            except Exception:
+                self._pool_recovery_uncertain = True
+                raise GateError('HOLD_NATIVE_TERMINAL_READBACK') from None
+            return evidence
+
+    def _durable_terminal_s03_readback(self, task_id):
+        """Read-only exact receipt/S03 reconciliation; never clears a claim."""
+        with self.ns['_qlock']:
+            row = (document(self.ns['STATE'], 16*1024*1024)
+                   .get('tasks') or {}).get(task_id)
+        if not isinstance(row, dict):
+            return None
+        intent = row.get('native_worker_submit_intent')
+        terminal = row.get('native_worker_terminal_evidence')
+        if not isinstance(intent, dict) or not isinstance(terminal, dict):
+            return None
+        receipt = terminal.get('receipt')
+        phase = ({HANDLER: 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED',
+                  LEAF_HANDLER: 'NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED'}
+                 .get(row.get('handler')))
+        if (terminal.get('schema') != 'NOX_NATIVE_WORKER_TERMINAL_EVIDENCE_V1'
+                or intent.get('schema') != 'NOX_NATIVE_WORKER_SUBMIT_INTENT_V1'
+                or not isinstance(receipt, dict) or phase is None
+                or terminal.get('submit_intent_sha256') != digest(encoded(intent))
+                or terminal.get('receipt_sha256') != digest(encoded(receipt))
+                or intent.get('task_id') != task_id
+                or intent.get('owner_claim') != row.get('owner_claim')
+                or intent.get('handler') != row.get('handler')
+                or intent.get('job_id') != (row.get('params') or {}).get('job_id')
+                or intent.get('source_sha256') != receipt.get('source_sha256')
+                or receipt.get('schema') != RECEIPT or receipt.get('phase') != phase
+                or receipt.get('task_id') != task_id
+                or receipt.get('job_id') != intent.get('job_id')
+                or receipt.get('claim') != row.get('owner_claim')):
+            return None
+        proof = s03_readback(receipt)
+        if not proof or proof.get('receipt_sha256') != terminal['receipt_sha256']:
+            return None
+        return {'receipt': receipt, 's03': proof,
+                'submit_intent_sha256': terminal['submit_intent_sha256']}
+
     def _drain(self):
         if self.pool is None:
             return
@@ -1545,6 +1637,7 @@ class Native:
                 with self.lock:
                     self.interrupted[task['id']] = 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
                 return 'wait', 'HOLD_NATIVE_REVIEW_RESULT_UNSETTLED'
+            self._durable_terminal_fence(task, result)
             proof = remember(result)
             return True, {'schema': RECEIPT, 'verified': True, 'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT',
                           'receipt': result, 's03': proof, 'receipt_sha256': digest(encoded(result)),
@@ -1670,6 +1763,7 @@ class Native:
                 with self.lock:
                     self.interrupted[task['id']] = 'HOLD_NATIVE_LEAF_RESULT_UNSETTLED'
                 return 'wait', 'HOLD_NATIVE_LEAF_RESULT_UNSETTLED'
+            self._durable_terminal_fence(task, result)
             proof = remember(result)
             # Only the explicitly named read/check subtask is completed. A
             # failed check remains check_passed=False, with its blockers; the

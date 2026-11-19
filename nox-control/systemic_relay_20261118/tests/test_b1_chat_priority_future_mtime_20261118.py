@@ -138,6 +138,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                        "source_sha256": "sha-pinned", "job_id": "job-1"},
         }
         owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            _durable_terminal_fence=lambda task, receipt: None,
             
             catalog={"tasks": [task]}, source="sha-pinned", pool=None,
             lock=threading.Lock(), interrupted={},
@@ -186,6 +187,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         }
         marker = "WAIT_OWNER_STOP_OR_CHAT_PRIORITY"
         owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            _durable_terminal_fence=lambda task, receipt: None,
             
             catalog={"tasks": [task]}, source="sha-pinned", pool=None,
             lock=threading.Lock(), interrupted={task["id"]: marker},
@@ -227,6 +229,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         }
         marker = "WAIT_OWNER_STOP_OR_CHAT_PRIORITY"
         owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            _durable_terminal_fence=lambda task, receipt: None,
             
             projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
             lock=threading.RLock(), interrupted={task["id"]: marker}, pool=None,
@@ -274,6 +277,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                      "worker": {"pid": 17}}}
         submissions = []
         owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            _durable_terminal_fence=lambda task, receipt: None,
             
             projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
             source="source-sha", lock=threading.RLock(), interrupted={},
@@ -339,6 +343,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
             leases.append(True)
             return len(leases) != 3
         owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            _durable_terminal_fence=lambda task, receipt: None,
             
             catalog={"tasks": [task]}, source="source-sha",
             config={"leaf_source_pins": pins}, lock=threading.RLock(),
@@ -408,6 +413,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                 event = {"state": "NATIVE_LEAF_COMPLETED", "pid": 17,
                          "leaf_evidence": leaf, "leaf_evidence_sha256": digest(encoded(leaf))}
                 owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            _durable_terminal_fence=lambda task, receipt: None,
             
                     catalog={"tasks": [task]}, source="source-sha",
                     config={"leaf_source_pins": pins}, lock=threading.RLock(),
@@ -475,6 +481,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                      "worker": {"pid": 17}}}
         submits = []
         owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            _durable_terminal_fence=lambda task, receipt: None,
             
             projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
             source="source-sha", lock=threading.RLock(), interrupted={},
@@ -534,6 +541,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                  "leaf_evidence": leaf, "leaf_evidence_sha256": digest(encoded(leaf))}
         submits = []
         owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            _durable_terminal_fence=lambda task, receipt: None,
             
             catalog={"tasks": [task]}, source="source-sha",
             config={"leaf_source_pins": pins}, lock=threading.RLock(),
@@ -636,6 +644,87 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                                         "HOLD_NATIVE_SUBMIT_INTENT_READBACK"):
                 scope["_durable_submit_fence"](owner, task)
             self.assertTrue(owner._pool_recovery_uncertain)
+
+    def test_durable_terminal_exact_receipt_s03_readback_after_restart(self):
+        # AST-extracted methods, real queue JSON, no worker or live S03 POST.
+        import hashlib
+        import json
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                      and n.name == "Native")
+        names = {"_durable_terminal_fence", "_durable_terminal_s03_readback"}
+        methods = [n for n in native.body if isinstance(n, ast.FunctionDef)
+                   and n.name in names]
+        self.assertEqual({n.name for n in methods}, names)
+        def encoded(value):
+            return json.dumps(value, sort_keys=True, ensure_ascii=False,
+                              separators=(",", ":"), allow_nan=False).encode()
+        def digest(value):
+            return hashlib.sha256(value).hexdigest()
+        committed = {"value": False}
+        scope = {
+            "document": lambda path, limit: json.loads(Path(path).read_text()),
+            "encoded": encoded, "digest": digest, "GateError": RuntimeError,
+            "HANDLER": "owner_native_subagent_review",
+            "LEAF_HANDLER": "owner_native_typed_leaf",
+            "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+            "s03_readback": lambda receipt:
+                {"receipt_sha256": digest(encoded(receipt))}
+                if committed["value"] else None,
+        }
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=methods, type_ignores=[])), str(SOURCE), "exec"), scope)
+        self.assertEqual(SOURCE.read_text().count("self._durable_terminal_fence(task, result)"), 2)
+        cases = (("owner_native_subagent_review",
+                  "NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED"),
+                 ("owner_native_typed_leaf",
+                  "NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED"))
+        for handler, phase in cases:
+            with self.subTest(handler=handler), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "state.json"
+                claim = {"nonce": "1234567890ab1234567890ab", "pid": 41}
+                task = {"id": "B1-TERMINAL-EXACT", "status": "running",
+                        "handler": handler, "owner_claim": claim,
+                        "params": {"job_id": "job1"}}
+                intent = {"schema": "NOX_NATIVE_WORKER_SUBMIT_INTENT_V1",
+                          "task_id": task["id"], "handler": handler,
+                          "owner_claim": claim, "job_id": "job1",
+                          "source_sha256": "pinned-source", "created_at": 1.0}
+                task["native_worker_submit_intent"] = intent
+                receipt = {"schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+                           "phase": phase, "task_id": task["id"],
+                           "job_id": "job1", "claim": claim,
+                           "source_sha256": "pinned-source",
+                           "worker_result": {"text": "Привет 🌍", "tokens": [1, 2, 3]}}
+                state = {"tasks": {task["id"]: task}}
+                path.write_text(json.dumps(state, ensure_ascii=False))
+                def save(value):
+                    path.write_text(json.dumps(value, ensure_ascii=False))
+                owner = SimpleNamespace(
+                    ns={"_qlock": threading.RLock(), "STATE": path,
+                        "save_state": save},
+                    state=state, source="pinned-source",
+                    _pool_recovery_uncertain=False)
+                evidence = scope["_durable_terminal_fence"](owner, task, receipt)
+                self.assertEqual(evidence["receipt"], receipt)
+                self.assertEqual(evidence["receipt_sha256"], digest(encoded(receipt)))
+                committed["value"] = False
+                self.assertIsNone(scope["_durable_terminal_s03_readback"](owner, task["id"]))
+                committed["value"] = True
+                restarted = SimpleNamespace(ns=owner.ns)
+                restored = scope["_durable_terminal_s03_readback"](restarted, task["id"])
+                self.assertEqual(restored["receipt"], receipt)
+                self.assertEqual(restored["s03"]["receipt_sha256"],
+                                 evidence["receipt_sha256"])
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_NATIVE_TERMINAL_INTENT_UNSETTLED"):
+                    scope["_durable_terminal_fence"](owner, task, receipt)
+                tampered = json.loads(path.read_text())
+                tampered["tasks"][task["id"]]["native_worker_terminal_evidence"][
+                    "receipt_sha256"] = "0" * 64
+                save(tampered)
+                self.assertIsNone(scope["_durable_terminal_s03_readback"](restarted, task["id"]))
 
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
