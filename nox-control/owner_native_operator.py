@@ -12,6 +12,23 @@ PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'source_export': 'nox-control/owner_chat_s03_source_export.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'reflex_successor': 'nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
+
+def _subprocess_env_without_nox2():
+    """Never pass the owner API credential to child processes."""
+    env = os.environ.copy()
+    env.pop('NOX2', None)
+    return env
+
+
+def _safe_subprocess_run(*args, **kwargs):
+    kwargs['env'] = _subprocess_env_without_nox2()
+    return subprocess.run(*args, **kwargs)
+
+
+def _safe_subprocess_check_output(*args, **kwargs):
+    kwargs['env'] = _subprocess_env_without_nox2()
+    return subprocess.check_output(*args, **kwargs)
+
 # GitHub Actions may omit an individual log line above the operator's historical
 # 180k character threshold. Preserve oversized evidence as small, independently
 # verifiable records so consumers can detect missing, reordered, or corrupt data.
@@ -1095,7 +1112,7 @@ SOURCE_EXPORT_COMPLETE='NOX_MAINT_SOURCE_EXPORT_COMPLETE=true'
 SOURCE_EXPORT_RECEIPT='NOX_MAINT_SOURCE_EXPORT_RECEIPT='
 SOURCE_EXPORT_SCHEMA='NOX_ENCRYPTED_SOURCE_EXPORT_ENVELOPE_V1'
 SOURCE_EXPORT_DEPENDENCY_MANIFEST='nox-control/owner_chat_s03_source_export_manifest.json'
-SOURCE_EXPORT_DEPENDENCY_MANIFEST_SHA256='abbd044237816411ecdbc81e7887099a3937caeb445504afe606887e22d34eb2'
+SOURCE_EXPORT_DEPENDENCY_MANIFEST_SHA256='4430ebb8538743498620c246f31ce75ae500beceb0c7e4b89f403437182dbbc7'
 SOURCE_EXPORT_SUPPORT_PATHS=frozenset(('nox_runpod/__init__.py','nox_runpod/teacher_mesh/__init__.py',
     'nox_runpod/teacher_mesh/v51/__init__.py','nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py'))
 SOURCE_EXPORT_MAX_BYTES=1024*1024
@@ -1320,7 +1337,7 @@ def authorize_event(action,export_key_b64=None):
         expected+=' '+export_key_b64
     elif export_key_b64 is not None:raise RuntimeError('HOLD_UNEXPECTED_EXPORT_KEY')
     if c.get('body')!=expected:raise RuntimeError('HOLD_EXACT_OWNER_COMMAND')
-    if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
+    if _safe_subprocess_check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
     return c['id']
 
 def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None):
@@ -1336,15 +1353,15 @@ def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None)
     expected_provider=(provider_root/'nox_runpod'/'teacher_mesh'/'v51'/'ephemeral_ssh_probe.py').resolve()
     imported_provider=Path(getattr(s,'__file__','')).resolve()
     if imported_provider!=expected_provider:raise RuntimeError('HOLD_SOURCE_EXPORT_PROVIDER_IMPORT_PATH')
-    if provider_cleanup_sink is not None:
-        if not callable(provider_cleanup_sink):raise RuntimeError('HOLD_SOURCE_EXPORT_PROVIDER_CLEANUP_SINK')
-        provider_cleanup_sink(s.cleanup)
     if action=='source_export':
         key=load_source_export_credential_file()
-        os.environ['NOX2']=key
     else:
         key=os.environ.get('NOX2','')
     if not key:raise RuntimeError('HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE')
+    if provider_cleanup_sink is not None:
+        if not callable(provider_cleanup_sink):raise RuntimeError('HOLD_SOURCE_EXPORT_PROVIDER_CLEANUP_SINK')
+        cleanup = (lambda: s.cleanup(key)) if action == 'source_export' else s.cleanup
+        provider_cleanup_sink(cleanup)
     values=s.api('GET','/instances/',key)
     values=values.get('instances',values) if isinstance(values,dict) else values
     target=next((x for x in values if isinstance(x,dict) and str(x.get('id'))==str(INSTANCE)),None) if isinstance(values,list) else None
@@ -1371,12 +1388,12 @@ def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None)
     if port is None:raise RuntimeError('HOLD_CURRENT_SSH_ROUTE')
     s.RUNNER.mkdir(parents=True,mode=0o700,exist_ok=True)
     known=s.RUNNER/'known_hosts'
-    p=subprocess.run(['ssh-keyscan','-T','8','-t','ed25519','-p',str(port),ip],capture_output=True,text=True,timeout=12)
+    p=_safe_subprocess_run(['ssh-keyscan','-T','8','-t','ed25519','-p',str(port),ip],capture_output=True,text=True,timeout=12)
     known.write_text(p.stdout[:8000]);known.chmod(0o600)
-    fp=subprocess.run(['ssh-keygen','-lf',str(known),'-E','sha256'],capture_output=True,text=True,timeout=8)
+    fp=_safe_subprocess_run(['ssh-keygen','-lf',str(known),'-E','sha256'],capture_output=True,text=True,timeout=8)
     if p.returncode or fp.returncode or PIN not in fp.stdout:raise RuntimeError('HOLD_OWNER_HOST_PIN')
     print('NOX_MAINT_HOST_PIN=VERIFIED',flush=True)
-    subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','nox-owner-maint-'+os.environ.get('GITHUB_RUN_ID','manual'),'-f',str(s.KEY)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=12)
+    _safe_subprocess_run(['ssh-keygen','-q','-t','ed25519','-N','','-C','nox-owner-maint-'+os.environ.get('GITHUB_RUN_ID','manual'),'-f',str(s.KEY)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=12)
     s.KEY.chmod(0o600);public=s.KEY.with_suffix('.pub').read_text().strip()
     if not public.startswith('ssh-ed25519 ') or len(public)>700:raise RuntimeError('HOLD_PUBLIC_KEY_FORMAT')
     if s.match(key,public):raise RuntimeError('HOLD_KEY_COLLISION')
@@ -1424,7 +1441,7 @@ def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None)
     # Retry only before any payload has been sent.
     for attempt in range(8):
         try:
-            r=subprocess.run(common+['-o','ControlMaster=yes','-o','ControlPersist=90','-N','-f',host],capture_output=True,text=True,timeout=25)
+            r=_safe_subprocess_run(common+['-o','ControlMaster=yes','-o','ControlPersist=90','-N','-f',host],capture_output=True,text=True,timeout=25)
         except subprocess.TimeoutExpired:r=None
         if r is not None and r.returncode==0 and sock.exists():
             MASTER=common+['-O','exit',host]
@@ -1434,7 +1451,7 @@ def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None)
         print('NOX_MAINT_SSH_FAILURE_CLASS='+reason,flush=True)
         time.sleep(5)
     else:raise RuntimeError('HOLD_SSH_AUTHENTICATION')
-    check=subprocess.run(common+['-O','check',host],capture_output=True,text=True,timeout=8)
+    check=_safe_subprocess_run(common+['-O','check',host],capture_output=True,text=True,timeout=8)
     if check.returncode:raise RuntimeError('HOLD_SSH_MASTER_NOT_ALIVE')
     print('NOX_MAINT_AUTHENTICATED_INSTANCE=60509551',flush=True)
     payload=Path(FILES[action]).read_text()
@@ -1571,7 +1588,7 @@ def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None)
     timeout=150 if action in ('audit','inspect','source_attest','source_export') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
-    r=subprocess.run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
+    r=_safe_subprocess_run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
     source_sha=os.environ.get('NOX_PINNED_SOURCE_SHA','')
     if action=='source_export':
         export_meta,envelope=collect_source_export_stdout(r.stdout,int(request_id),source_sha)
@@ -1613,12 +1630,10 @@ def main():
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
     finally:
         if MASTER:
-            with contextlib.suppress(Exception):subprocess.run(MASTER,capture_output=True,timeout=8)
+            with contextlib.suppress(Exception):_safe_subprocess_run(MASTER,capture_output=True,timeout=8)
         if verified_provider_cleanup is not None:
             try:
                 if not verified_provider_cleanup():good=False
             except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
-        if args.action=='source_export':
-            os.environ.pop('NOX2',None)
     return 0 if good else 2
 if __name__=='__main__':raise SystemExit(main())
