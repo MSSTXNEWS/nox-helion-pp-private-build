@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 from dataclasses import MISSING, fields
 import inspect
+import textwrap
 from pathlib import Path
 import unittest
 
@@ -49,7 +50,7 @@ class V38BindingContractTests(unittest.TestCase):
 
     def test_each_group_reads_only_its_documented_host_ports(self):
         source = inspect.getsource(SynapticBrain._core)
-        tree = ast.parse(source)
+        tree = ast.parse(textwrap.dedent(source))
 
         def branch_for(group):
             for node in ast.walk(tree):
