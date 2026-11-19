@@ -1763,7 +1763,11 @@ def bind_dispatcher(namespace):
     namespace['owner_mentor'].verify_success = verify
     old_admission = namespace['_nox_owner_task_admitted']
     def admission(task):
-        if task.get('handler') == HANDLER and (native.stop_active() or chat_priority_active()):
+        # Chat priority applies to every native job type, including CPU-only
+        # leaf and project jobs; existing STOP/claim/resource gates remain.
+        if task.get('handler') in (HANDLER, LEAF_HANDLER, PROJECT_HANDLER) and chat_priority_active():
+            return False
+        if task.get('handler') == HANDLER and native.stop_active():
             return False  # Keep paused jobs pending until the original gate opens.
         if task.get('handler') == LEAF_HANDLER and native.stop_active():
             return False
