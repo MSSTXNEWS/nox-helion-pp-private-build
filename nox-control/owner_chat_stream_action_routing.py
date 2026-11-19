@@ -177,6 +177,17 @@ async def _model_events(client, url, payload):
         async for line in response.aiter_lines():
             if not line or line.startswith(':'):
                 continue
+            # SSE permits bounded metadata before the data field. Common
+            # OpenAI-compatible proxies emit event: message and id: per chunk.
+            # Other event types (including error) fail closed, not as tokens.
+            if line.startswith('event:'):
+                if line[6:].strip()!='message':
+                    raise StreamFailure('HOLD_MODEL_SSE_EVENT')
+                continue
+            if line.startswith('id:'):
+                if len(line)>256 or '\x00' in line:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+                continue
             if not line.startswith('data:'):
                 raise StreamFailure('HOLD_MODEL_SSE_FRAME')
             wire=line[5:].strip()
@@ -198,6 +209,10 @@ async def _model_events(client, url, payload):
                 delta=choice.get('delta') or {}
                 if not isinstance(delta,dict):
                     raise ValueError('delta')
+                # A valid terminal choice closes the model's content/tool delta.
+                # Usage-only epilogues remain legal, but no content after finish
+                # may be shown to the browser or certified by the S03 postflight.
+                already_finished=finished is not None
                 reason=choice.get('finish_reason')
                 if reason is not None:
                     if reason not in ('stop','tool_calls'):
@@ -206,15 +221,17 @@ async def _model_events(client, url, payload):
                 part=delta.get('content')
                 if part is not None and not isinstance(part,str):
                     raise ValueError('content')
+                fragments=delta.get('tool_calls') or []
+                if not isinstance(fragments,list):
+                    raise ValueError('calls')
+                if already_finished and (reason is not None or part or fragments):
+                    raise StreamFailure('HOLD_MODEL_POST_TERMINAL_DELTA')
                 if part:
                     size+=len(part)
                     if size>2000000:
                         raise StreamFailure('HOLD_MODEL_OUTPUT_SIZE')
                     text.append(part)
                     yield 'token',part
-                fragments=delta.get('tool_calls') or []
-                if not isinstance(fragments,list):
-                    raise ValueError('calls')
                 for fragment in fragments:
                     index=fragment.get('index')
                     if not isinstance(index,int) or isinstance(index,bool) or not 0<=index<8:
@@ -228,6 +245,10 @@ async def _model_events(client, url, payload):
                         if value is not None:
                             if not isinstance(value,str):raise ValueError(field)
                             call[field]+=value
+                            # Model-supplied SSE identifiers are untrusted. A long ID
+                            # must never reach the native tool dispatcher or S03.
+                            if len(call[field])>160:
+                                raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
                     function=fragment.get('function') or {}
                     if not isinstance(function,dict):raise ValueError('function')
                     for field in ('name','arguments'):
@@ -270,7 +291,11 @@ def _normal_calls(rows,step):
             try:args=json.loads(args)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         if not isinstance(args,dict):raise StreamFailure('HOLD_TOOL_ARGUMENTS')
-        result.append({'id':row.get('id') or f'owner_call_{step}_{index}',
+        # Native parser / deterministic routes share the same bounded ID rule.
+        call_id=row.get('id')
+        if call_id is not None and (not isinstance(call_id,str) or not 1<=len(call_id)<=160):
+            raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
+        result.append({'id':call_id or f'owner_call_{step}_{index}',
                        'name':row['name'],'arguments':args})
     return result
 
