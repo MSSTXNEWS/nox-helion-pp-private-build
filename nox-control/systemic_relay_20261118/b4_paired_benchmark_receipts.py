@@ -401,7 +401,11 @@ def measure_openai_sse_wire(timed_chunks):
                 raise ReceiptHold("SSE_INVALID_UNICODE_SCALAR") from exc
             # Keep every transmitted content byte in the digest; whitespace
             # alone is not usable first text or evidence of a meaningful answer.
-            if first_text_ms is None and not content.isspace():
+            # Unicode format/control and zero-width-only deltas are not a
+            # visible first token. Preserve ALL original bytes in text SHA;
+            # use a rendering-aware timestamp, not whitespace alone.
+            if first_text_ms is None and any(
+                    ch.isprintable() and not ch.isspace() for ch in content):
                 first_text_ms = at_ms
             visible_hash.update(encoded)
             visible_bytes += len(encoded)
