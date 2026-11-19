@@ -47,6 +47,14 @@ CREATE TABLE IF NOT EXISTS nox_v29_dialog_messages (
 );
 CREATE INDEX IF NOT EXISTS nox_v29_messages_order
  ON nox_v29_dialog_messages(dialog_id,row_id);
+CREATE TABLE IF NOT EXISTS nox_v29_stop_attempts (
+ session_key TEXT NOT NULL, dialog_id TEXT NOT NULL, request_id TEXT NOT NULL,
+ state TEXT NOT NULL CHECK(state IN ('active','cancelled','terminal')),
+ updated_at REAL NOT NULL, expires_at REAL NOT NULL,
+ PRIMARY KEY(session_key,dialog_id,request_id)
+);
+CREATE INDEX IF NOT EXISTS nox_v29_stop_attempts_expiry
+ ON nox_v29_stop_attempts(expires_at);
 """
 
 @contextmanager
@@ -84,7 +92,7 @@ def _schema_ready():
         with _db() as db:
             tables = {r[0] for r in db.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'")}
-        return {'s03_items','nox_v29_dialogs','nox_v29_dialog_messages'} <= tables
+        return {'s03_items','nox_v29_dialogs','nox_v29_dialog_messages','nox_v29_stop_attempts'} <= tables
     except (OSError, RuntimeError, sqlite3.Error, ImportError, ValueError):
         return False
 
@@ -193,12 +201,20 @@ def _readback(question,answer,started_at):
         pass
     return None
 
-def _save_exchange(dialog_id,question,answer,exchange_id):
+def _save_exchange(dialog_id,question,answer,exchange_id,attempt=None):
     if not dialog_id:
         return True
     stamp=_now()
     try:
         with _db(True) as db:
+            if attempt is not None:
+                session_key,attempt_dialog,request_id=attempt
+                state=db.execute(
+                    'SELECT state FROM nox_v29_stop_attempts '
+                    'WHERE session_key=? AND dialog_id=? AND request_id=? AND expires_at>?',
+                    (session_key,attempt_dialog,request_id,time.time())).fetchone()
+                if state is None or state['state']!='active':
+                    return False
             row=_get_dialog(db,dialog_id)
             if row is None or bool(row['archived']):
                 return False
@@ -215,6 +231,11 @@ def _save_exchange(dialog_id,question,answer,exchange_id):
                     raise RuntimeError('HOLD_DIALOG_RECEIPT_COLLISION')
                 # Exact replay: already persisted; do not fabricate a new
                 # revision or overwrite the original durable exchange.
+                if attempt is not None:
+                    db.execute(
+                        'UPDATE nox_v29_stop_attempts SET state="terminal",updated_at=?,expires_at=? '
+                        'WHERE session_key=? AND dialog_id=? AND request_id=? AND state="active"',
+                        (time.time(),time.time()+600,session_key,attempt_dialog,request_id))
                 return True
             for role,content in expected.items():
                 db.execute(
@@ -229,6 +250,17 @@ def _save_exchange(dialog_id,question,answer,exchange_id):
                 raise RuntimeError('HOLD_DIALOG_RECEIPT_CONTENT')
             db.execute('UPDATE nox_v29_dialogs SET updated_at=?,revision=revision+1 '
                        'WHERE owner=? AND dialog_id=?',(stamp,OWNER,dialog_id))
+            if attempt is not None:
+                db.execute(
+                    'UPDATE nox_v29_stop_attempts SET state="terminal",updated_at=?,expires_at=? '
+                    'WHERE session_key=? AND dialog_id=? AND request_id=? AND state="active"',
+                    (time.time(),time.time()+600,session_key,attempt_dialog,request_id))
+                terminal=db.execute(
+                    'SELECT state FROM nox_v29_stop_attempts '
+                    'WHERE session_key=? AND dialog_id=? AND request_id=?',
+                    (session_key,attempt_dialog,request_id)).fetchone()
+                if terminal is None or terminal['state']!='terminal':
+                    raise RuntimeError('HOLD_STOP_STATE_TERMINAL_COMMIT')
         return True
     except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError):
         return False
@@ -488,23 +520,94 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
     ]
     active={}
     active_request_ids=set()
-    cancelled_attempts={}
-    terminal_attempts={}
     STOP_STATE_TTL=600.0
+    STOP_ACTIVE_TTL=3600.0
     STOP_STATE_LIMIT=2048
+    STOP_POLL_SECONDS=0.20
 
     def prune_attempt_states():
-        now=time.monotonic()
-        for states in (cancelled_attempts,terminal_attempts):
-            for attempt,expires in tuple(states.items()):
-                if expires<=now:states.pop(attempt,None)
+        now=time.time()
+        with _db(True) as db:
+            db.execute('DELETE FROM nox_v29_stop_attempts WHERE expires_at<=?',(now,))
 
-    def remember_attempt(states,attempt):
-        prune_attempt_states()
-        if attempt not in states and len(states)>=STOP_STATE_LIMIT:
-            return False
-        states[attempt]=time.monotonic()+STOP_STATE_TTL
-        return True
+    def attempt_state(attempt):
+        if attempt is None:return None
+        session_key,dialog_id,request_id=attempt
+        with _db() as db:
+            row=db.execute(
+                'SELECT state FROM nox_v29_stop_attempts '
+                'WHERE session_key=? AND dialog_id=? AND request_id=? AND expires_at>?',
+                (session_key,dialog_id,request_id,time.time())).fetchone()
+        return row['state'] if row else None
+
+    def claim_attempt(attempt):
+        session_key,dialog_id,request_id=attempt
+        now=time.time()
+        with _db(True) as db:
+            db.execute('DELETE FROM nox_v29_stop_attempts WHERE expires_at<=?',(now,))
+            row=db.execute(
+                'SELECT state FROM nox_v29_stop_attempts '
+                'WHERE session_key=? AND dialog_id=? AND request_id=?',
+                (session_key,dialog_id,request_id)).fetchone()
+            if row:return row['state'],False
+            count=db.execute('SELECT COUNT(*) FROM nox_v29_stop_attempts').fetchone()[0]
+            if count>=STOP_STATE_LIMIT:return 'full',False
+            cur=db.execute(
+                'INSERT OR IGNORE INTO nox_v29_stop_attempts '
+                '(session_key,dialog_id,request_id,state,updated_at,expires_at) '
+                'VALUES(?,?,?,"active",?,?)',
+                (session_key,dialog_id,request_id,now,now+STOP_ACTIVE_TTL))
+            return ('active',True) if cur.rowcount==1 else ('active',False)
+
+    def cancel_attempt(attempt):
+        session_key,dialog_id,request_id=attempt
+        now=time.time()
+        with _db(True) as db:
+            db.execute('DELETE FROM nox_v29_stop_attempts WHERE expires_at<=?',(now,))
+            row=db.execute(
+                'SELECT state FROM nox_v29_stop_attempts '
+                'WHERE session_key=? AND dialog_id=? AND request_id=?',
+                (session_key,dialog_id,request_id)).fetchone()
+            if row and row['state']=='terminal':return 'terminal'
+            if row and row['state']=='cancelled':return 'cancelled'
+            if row:
+                db.execute(
+                    'UPDATE nox_v29_stop_attempts SET state="cancelled",updated_at=?,expires_at=? '
+                    'WHERE session_key=? AND dialog_id=? AND request_id=? AND state="active"',
+                    (now,now+STOP_STATE_TTL,session_key,dialog_id,request_id))
+                return 'cancelled'
+            count=db.execute('SELECT COUNT(*) FROM nox_v29_stop_attempts').fetchone()[0]
+            if count>=STOP_STATE_LIMIT:return 'full'
+            db.execute(
+                'INSERT OR IGNORE INTO nox_v29_stop_attempts '
+                '(session_key,dialog_id,request_id,state,updated_at,expires_at) '
+                'VALUES(?,?,?,"cancelled",?,?)',
+                (session_key,dialog_id,request_id,now,now+STOP_STATE_TTL))
+            return 'cancelled'
+
+    def terminal_attempt(attempt):
+        if attempt is None:return
+        now=time.time()
+        session_key,dialog_id,request_id=attempt
+        with _db(True) as db:
+            db.execute(
+                'UPDATE nox_v29_stop_attempts SET state="terminal",updated_at=?,expires_at=? '
+                'WHERE session_key=? AND dialog_id=? AND request_id=? AND state="active"',
+                (now,now+STOP_STATE_TTL,session_key,dialog_id,request_id))
+
+    async def watch_attempt(attempt,cancel,check_failed):
+        if attempt is None:return
+        while not cancel.is_set():
+            try:
+                state=await asyncio.to_thread(attempt_state,attempt)
+            except Exception:
+                check_failed.set()
+                cancel.set()
+                return
+            if state=='cancelled':
+                cancel.set()
+                return
+            await asyncio.sleep(STOP_POLL_SECONDS)
 
     def check(request):
         return bool(trusted['_session_ok'](request))
@@ -693,10 +796,13 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         if session_key is None:
             return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
         attempt_key=(session_key,dialog_id,request_id) if request_id is not None else None
-        prune_attempt_states()
-        if attempt_key is not None and attempt_key in cancelled_attempts:
-            return JSONResponse({'error':'STREAM_STOP_REQUESTED',
-                                 'request_id':request_id,'dialog_id':dialog_id},status_code=409)
+        try:
+            prune_attempt_states()
+            if attempt_key is not None and attempt_state(attempt_key)=='cancelled':
+                return JSONResponse({'error':'STREAM_STOP_REQUESTED',
+                                     'request_id':request_id,'dialog_id':dialog_id},status_code=409)
+        except (OSError,RuntimeError,sqlite3.Error,ImportError,ValueError):
+            return JSONResponse({'error':'HOLD_STOP_STATE_READ_FAILED'},status_code=503)
 
         if request_id is not None:
             issue,replay_answer=await asyncio.to_thread(
@@ -714,16 +820,27 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                                   'replayed':True})
                 return StreamingResponse(replay(),media_type='application/x-ndjson',
                     headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})
-        if attempt_key is not None and (
-                len(cancelled_attempts)+len(active_request_ids)>=STOP_STATE_LIMIT or
-                len(terminal_attempts)+len(active_request_ids)>=STOP_STATE_LIMIT):
-            return JSONResponse({'error':'HOLD_STOP_STATE_CAPACITY'},status_code=503)
         key=session_key
         if key in active:
             return JSONResponse({'error':'HOLD_ACTIVE_SESSION_STREAM'},status_code=409)
         request_key=(dialog_id,request_id) if request_id is not None else None
         if request_key is not None and request_key in active_request_ids:
             return JSONResponse({'error':'HOLD_ACTIVE_REQUEST_ID'},status_code=409)
+        if attempt_key is not None:
+            try:
+                claimed_state,claimed=claim_attempt(attempt_key)
+            except (OSError,RuntimeError,sqlite3.Error,ImportError,ValueError):
+                return JSONResponse({'error':'HOLD_STOP_STATE_WRITE_FAILED'},status_code=503)
+            if claimed_state=='full':
+                return JSONResponse({'error':'HOLD_STOP_STATE_CAPACITY'},status_code=503)
+            if claimed_state=='cancelled':
+                return JSONResponse({'error':'STREAM_STOP_REQUESTED',
+                                     'request_id':request_id,'dialog_id':dialog_id},status_code=409)
+            if claimed_state=='terminal':
+                return JSONResponse({'error':'REQUEST_ALREADY_TERMINAL',
+                                     'request_id':request_id,'dialog_id':dialog_id},status_code=409)
+            if not claimed:
+                return JSONResponse({'error':'HOLD_ACTIVE_REQUEST_ID'},status_code=409)
         cancel=asyncio.Event()
         stream_state={'dialog_id':dialog_id,'request_id':request_id,'cancel':cancel}
         active[key]=stream_state
@@ -735,7 +852,17 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
 
         async def generate():
             wire=None;buffer='';answer='';complete=False
+            cancel_check_failed=asyncio.Event()
+            cancel_watch=asyncio.create_task(watch_attempt(attempt_key,cancel,cancel_check_failed)) if attempt_key is not None else None
             try:
+                if attempt_key is not None:
+                    initial_state=await asyncio.to_thread(attempt_state,attempt_key)
+                    if initial_state=='cancelled':
+                        yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                        return
+                    if initial_state!='active':
+                        yield _jsonl({'type':'error','error':'HOLD_STOP_STATE_MISSING'})
+                        return
                 yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM'})
                 wire=await trusted['_proxy_completion'](payload)
                 if not hasattr(wire,'body_iterator'):
@@ -747,7 +874,9 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 while True:
                     event,chunk=await _next_native_chunk_or_stop(upstream,cancel)
                     if event=='stop':
-                        yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                        yield _jsonl({'type':'error','error':
+                            'HOLD_STOP_STATE_READ_FAILED' if cancel_check_failed.is_set()
+                            else 'STREAM_STOP_REQUESTED'})
                         return
                     if event=='eof':
                         break
@@ -806,7 +935,9 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                         'HOLD_SSE_FRAME_AFTER_DONE' if complete else 'HOLD_SSE_UNTERMINATED_FRAME'})
                     return
                 if cancel.is_set():
-                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                    yield _jsonl({'type':'error','error':
+                        'HOLD_STOP_STATE_READ_FAILED' if cancel_check_failed.is_set()
+                        else 'STREAM_STOP_REQUESTED'})
                     return
                 if not complete or not answer.strip():
                     yield _jsonl({'type':'error','error':'HOLD_INCOMPLETE_NATIVE_RESPONSE'})
@@ -820,11 +951,11 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     yield _jsonl({'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
                     return
                 exchange_id=request_id or proof['record_id']
-                if not await asyncio.to_thread(_save_exchange,dialog_id,question,answer,exchange_id):
+                if not await asyncio.to_thread(_save_exchange,dialog_id,question,answer,exchange_id,attempt_key):
                     yield _jsonl({'type':'error','error':'HOLD_S03_DIALOG_COMMIT_NOT_VERIFIED'})
                     return
                 if attempt_key is not None:
-                    remember_attempt(terminal_attempts,attempt_key)
+                    terminal_attempt(attempt_key)
                 yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
                               's03_integrated':True,'dialog_id':dialog_id,
                               'exchange_id':exchange_id,'source_record_id':proof['record_id'],
@@ -834,6 +965,13 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             except Exception:
                 yield _jsonl({'type':'error','error':'HOLD_EXISTING_ONEHOST_RUNTIME'})
             finally:
+                if cancel_watch is not None:
+                    cancel_watch.cancel()
+                    try:await cancel_watch
+                    except asyncio.CancelledError:pass
+                if attempt_key is not None:
+                    try:terminal_attempt(attempt_key)
+                    except (OSError,RuntimeError,sqlite3.Error,ImportError,ValueError):pass
                 if active.get(key) is stream_state:active.pop(key,None)
                 if request_key is not None:active_request_ids.discard(request_key)
                 if wire is not None and hasattr(getattr(wire,'body_iterator',None),'aclose'):
@@ -860,26 +998,26 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         if key is None:
             return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
         attempt=(key,dialog_id,request_id)
-        prune_attempt_states()
-        if attempt in terminal_attempts:
+        try:
+            state=cancel_attempt(attempt)
+        except (OSError,RuntimeError,sqlite3.Error,ImportError,ValueError):
+            return JSONResponse({'status':'HOLD_STOP_STATE_WRITE_FAILED',
+                                 'request_id':request_id,'dialog_id':dialog_id,
+                                 'stream_cancellation_signalled':False,
+                                 'gpu_stop_verified':False},status_code=503)
+        if state=='terminal':
             return JSONResponse({'status':'ALREADY_TERMINAL','request_id':request_id,
                                  'dialog_id':dialog_id,'stream_cancellation_signalled':False,
                                  'gpu_stop_verified':False},status_code=409)
+        if state=='full':
+            return JSONResponse({'status':'HOLD_STOP_STATE_CAPACITY',
+                                 'stream_cancellation_signalled':False,
+                                 'gpu_stop_verified':False},status_code=503)
         record=active.get(key)
         if record is not None and record.get('dialog_id')==dialog_id and record.get('request_id')==request_id:
-            if not remember_attempt(cancelled_attempts,attempt):
-                return JSONResponse({'status':'HOLD_STOP_STATE_CAPACITY','stream_cancellation_signalled':False,
-                                     'gpu_stop_verified':False},status_code=503)
             record['cancel'].set()
             return {'status':'STOP_REQUESTED','request_id':request_id,'dialog_id':dialog_id,
                     'stream_cancellation_signalled':True,'gpu_stop_verified':False}
-        # Preserve one bounded tombstone slot per admitted active request.
-        if len(cancelled_attempts)+len(active_request_ids)>=STOP_STATE_LIMIT:
-            return JSONResponse({'status':'HOLD_STOP_STATE_CAPACITY','stream_cancellation_signalled':False,
-                                 'gpu_stop_verified':False},status_code=503)
-        if not remember_attempt(cancelled_attempts,attempt):
-            return JSONResponse({'status':'HOLD_STOP_STATE_CAPACITY','stream_cancellation_signalled':False,
-                                 'gpu_stop_verified':False},status_code=503)
         return JSONResponse({'status':'STOP_REGISTERED','request_id':request_id,
                              'dialog_id':dialog_id,'stream_cancellation_signalled':False,
                              'gpu_stop_verified':False},status_code=202)
