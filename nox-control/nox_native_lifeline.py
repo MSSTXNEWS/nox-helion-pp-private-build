@@ -31,6 +31,11 @@ STOP_FILES = (
 STATUS = re.compile(r"^([a-zA-Z0-9_.:-]+)\s+([A-Z]+)(?:\s+pid\s+([0-9]+))?")
 REPAIRABLE = frozenset(("STOPPED", "EXITED"))
 MAX_EVENT_ROWS = 100
+CGROUP_MEMORY_CURRENT = Path("/sys/fs/cgroup/memory.current")
+CGROUP_MEMORY_MAX = Path("/sys/fs/cgroup/memory.max")
+MEMORY_READ_MAX_BYTES = 64
+MEMORY_FLOOR_BYTES = 2 * 1024 ** 3
+MAX_CGROUP_COUNTER = (1 << 64) - 1
 
 def policy_check(value):
     if not isinstance(value, dict) or value.get("schema") != SCHEMA:
@@ -122,6 +127,53 @@ def _unique_state_pairs(pairs):
 
 def _reject_state_nonfinite(value):
     raise ValueError("HOLD_STATE_NONFINITE")
+
+
+def _read_cgroup_counter(path, *, allow_unlimited=False):
+    """Read one small cgroup-v2 scalar without following symlinks or unbounded I/O."""
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
+                     getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        return None
+    try:
+        raw = os.read(fd, MEMORY_READ_MAX_BYTES + 1)
+    except OSError:
+        return None
+    finally:
+        os.close(fd)
+    if not raw or len(raw) > MEMORY_READ_MAX_BYTES:
+        return None
+    if raw.endswith(b"\n"):
+        raw = raw[:-1]
+    if not raw or b"\n" in raw or b"\r" in raw:
+        return None
+    if allow_unlimited and raw == b"max":
+        return "max"
+    if not re.fullmatch(rb"(?:0|[1-9][0-9]{0,19})", raw):
+        return None
+    value = int(raw)
+    return value if value <= MAX_CGROUP_COUNTER else None
+
+
+def cgroup_memory_snapshot():
+    """Report raw cgroup-v2 RAM headroom; missing evidence fails closed in the flag."""
+    current = _read_cgroup_counter(CGROUP_MEMORY_CURRENT)
+    maximum = _read_cgroup_counter(CGROUP_MEMORY_MAX, allow_unlimited=True)
+    if type(current) is int and type(maximum) is int:
+        headroom = maximum - current
+        status = "OK" if headroom >= 0 else "INCONSISTENT"
+        below_floor = headroom < MEMORY_FLOOR_BYTES
+    else:
+        headroom = None
+        status = "UNKNOWN"
+        # An unavailable or unlimited limit does not prove the 2 GiB floor.
+        below_floor = True
+    return {"memory.current": current,
+            "memory.max": maximum,
+            "raw_headroom_bytes": headroom,
+            "below_2GiB": below_floor,
+            "status": status}
 
 
 def read_state(path):
@@ -313,7 +365,8 @@ def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn
                                  "approve a bounded recovery after preserving STOP and checkpoints.")
         observed.append(event)
     report = {"schema": SCHEMA, "at": dt.datetime.fromtimestamp(now, dt.timezone.utc).isoformat(),
-              "observer_only": not policy["enabled"], "results": observed[:MAX_EVENT_ROWS]}
+              "observer_only": not policy["enabled"], "results": observed[:MAX_EVENT_ROWS],
+              "cgroup_memory": cgroup_memory_snapshot()}
     state["last_report"] = report
     state["at"] = now
     return report
