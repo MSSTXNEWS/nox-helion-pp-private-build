@@ -118,7 +118,103 @@ class ZipFastFallbackTests(TestCase):
         helper,bundle=self.prepare()
         spec,payload,publisher=self.invoke(helper,bundle)
         self.assertEqual(spec['expected_config_sha256'],m.CONFIG_SHA)
-        self.assertRegex(m.PARENT_SPEC_SHA,r'^[a-f0-9]{64}        self.assertEqual(spec['expected_source_files_sha256'],m.SOURCE_FILES_SHA)
+        self.assertRegex(m.PARENT_SPEC_SHA,r'^[a-f0-9]{64}        self.assertEqual(len(spec['batches']),1)
+        self.assertEqual(len(spec['predecessors']),1)
+        self.assertEqual(spec['predecessors'][0]['status'],'blocked')
+        self.assertEqual(spec['batches'][0]['catalog_row']['id'],m.TASK_ID)
+        self.assertEqual(len(payload),3)
+        plan=json.loads(payload['reviewed_zip_plan.json'])
+        self.assertEqual(plan['files'][0]['before_sha256'],m.BEFORE_SHA)
+        self.assertNotEqual(plan['files'][0]['after_sha256'],m.BEFORE_SHA)
+        self.assertFalse(plan['original_task_accepted'])
+        self.assertEqual(plan['context'],helper.context)
+
+    def test_never_replace_unsettled_claim(self):
+        helper,bundle=self.prepare()
+        helper.active=[m.PREDECESSOR_ID]
+        with self.assertRaisesRegex(RuntimeError,'PRIOR_CLAIM_ACTIVE'):
+            self.invoke(helper,bundle)
+
+    def test_never_replay_terminal_success(self):
+        helper,bundle=self.prepare(blocked=False)
+        with self.assertRaisesRegex(RuntimeError,'PRIOR_NOT_SETTLED_BLOCKED'):
+            self.invoke(helper,bundle)
+
+    def test_never_rebase_changed_source(self):
+        helper,bundle=self.prepare()
+        helper.source['files'][m.SOURCE]['sha256']='b'*64
+        with self.assertRaisesRegex(RuntimeError,'SOURCE_CHANGED'):
+            self.invoke(helper,bundle)
+
+    def test_missing_predecessor_receipt_stops(self):
+        helper,bundle=self.prepare()
+        helper.row['result']['verified']=False
+        with self.assertRaisesRegex(RuntimeError,'PRIOR_RECEIPT_SCOPE'):
+            self.invoke(helper,bundle)
+
+    def test_only_pre_reviewed_candidate_blob(self):
+        helper,bundle=self.prepare()
+        raw=bytearray(base64.b64decode(bundle['merge_web_source.py']))
+        raw[-3]^=1
+        bundle['merge_web_source.py']=base64.b64encode(raw).decode('ascii')
+        with self.assertRaisesRegex(RuntimeError,'REVIEWED_PATCH_PIN'):
+            self.invoke(helper,bundle)
+
+
+if __name__=='__main__':
+    main()
+)
+        self.assertEqual(m.PARENT_SPEC_SHA,
+            '3ace28409839c1e1259e5a24b7d40c11bf9dec3445b2b0073ef90ecc22b2216e')
+        self.assertEqual(spec['expected_source_files_sha256'],m.SOURCE_FILES_SHA)
+        self.assertEqual(len(spec['batches']),1)
+        self.assertEqual(len(spec['predecessors']),1)
+        self.assertEqual(spec['predecessors'][0]['status'],'blocked')
+        self.assertEqual(spec['batches'][0]['catalog_row']['id'],m.TASK_ID)
+        self.assertEqual(len(payload),3)
+        plan=json.loads(payload['reviewed_zip_plan.json'])
+        self.assertEqual(plan['files'][0]['before_sha256'],m.BEFORE_SHA)
+        self.assertNotEqual(plan['files'][0]['after_sha256'],m.BEFORE_SHA)
+        self.assertFalse(plan['original_task_accepted'])
+        self.assertEqual(plan['context'],helper.context)
+
+    def test_never_replace_unsettled_claim(self):
+        helper,bundle=self.prepare()
+        helper.active=[m.PREDECESSOR_ID]
+        with self.assertRaisesRegex(RuntimeError,'PRIOR_CLAIM_ACTIVE'):
+            self.invoke(helper,bundle)
+
+    def test_never_replay_terminal_success(self):
+        helper,bundle=self.prepare(blocked=False)
+        with self.assertRaisesRegex(RuntimeError,'PRIOR_NOT_SETTLED_BLOCKED'):
+            self.invoke(helper,bundle)
+
+    def test_never_rebase_changed_source(self):
+        helper,bundle=self.prepare()
+        helper.source['files'][m.SOURCE]['sha256']='b'*64
+        with self.assertRaisesRegex(RuntimeError,'SOURCE_CHANGED'):
+            self.invoke(helper,bundle)
+
+    def test_missing_predecessor_receipt_stops(self):
+        helper,bundle=self.prepare()
+        helper.row['result']['verified']=False
+        with self.assertRaisesRegex(RuntimeError,'PRIOR_RECEIPT_SCOPE'):
+            self.invoke(helper,bundle)
+
+    def test_only_pre_reviewed_candidate_blob(self):
+        helper,bundle=self.prepare()
+        raw=bytearray(base64.b64decode(bundle['merge_web_source.py']))
+        raw[-3]^=1
+        bundle['merge_web_source.py']=base64.b64encode(raw).decode('ascii')
+        with self.assertRaisesRegex(RuntimeError,'REVIEWED_PATCH_PIN'):
+            self.invoke(helper,bundle)
+
+
+if __name__=='__main__':
+    main()
+)
+        self.assertEqual(m.PARENT_SPEC_SHA, '3ace28409839c1e1259e5a24b7d40c11bf9dec3445b2b0073ef90ecc22b2216e')
+        self.assertEqual(spec['expected_source_files_sha256'],m.SOURCE_FILES_SHA)
         self.assertEqual(len(spec['batches']),1)
         self.assertEqual(len(spec['predecessors']),1)
         self.assertEqual(spec['predecessors'][0]['status'],'blocked')
