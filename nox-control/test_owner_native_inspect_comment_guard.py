@@ -259,7 +259,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
         key = "AbC_012-def"
         body = f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}"
         self.assertEqual(SOURCE_EXPORT_SHA,
-                         "4133cdeda03abbed5b93ebcfa17179aebff668c3")
+                         "845c76d44676d56157125e729db81b45e006cf92")
         self.assertEqual(authorize_event(event_for(body), REPOSITORY, "issue_comment"),
                          ("source_export", SOURCE_EXPORT_SHA))
         for invalid in (
