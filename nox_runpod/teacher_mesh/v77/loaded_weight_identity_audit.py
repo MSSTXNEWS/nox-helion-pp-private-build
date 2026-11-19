@@ -14,9 +14,9 @@ MODEL_SERVICE = "nox-ds41-8098"
 MAX_CMDLINE_BYTES = 8192
 MAX_PROC_FILE_BYTES = 8 * 1024 * 1024
 MAX_MODEL_PATH_CHARS = 4096
-MAX_WEIGHT_BYTES = 64 * 1024 * 1024 * 1024
+MAX_WEIGHT_BYTES = 16 * 1024 * 1024 * 1024
 HASH_CHUNK_BYTES = 1024 * 1024
-MAX_HASH_SECONDS = 900
+MAX_HASH_SECONDS = 45
 
 REMOTE = r"""
 set -euo pipefail
@@ -34,9 +34,9 @@ SERVICE = "nox-ds41-8098"
 MAX_CMDLINE_BYTES = 8192
 MAX_PROC_FILE_BYTES = 8 * 1024 * 1024
 MAX_MODEL_PATH_CHARS = 4096
-MAX_WEIGHT_BYTES = 64 * 1024 * 1024 * 1024
+MAX_WEIGHT_BYTES = 16 * 1024 * 1024 * 1024
 HASH_CHUNK_BYTES = 1024 * 1024
-MAX_HASH_SECONDS = 900
+MAX_HASH_SECONDS = 45
 MODEL_FLAGS = ("-m", "--model", "--model-path", "--model-file")
 REASON_CODES = {
     "HOLD_SUPERVISOR_READ", "HOLD_MODEL_SERVICE_NOT_RUNNING",
@@ -46,7 +46,7 @@ REASON_CODES = {
     "HOLD_WEIGHT_SIZE_BOUNDS", "HOLD_WEIGHT_NOT_MAPPED",
     "HOLD_MAPS_READ", "HOLD_MAPS_BOUNDS", "HOLD_WEIGHT_HASH_BUDGET",
     "HOLD_WEIGHT_CHANGED", "HOLD_SUPERVISOR_PID_CHANGED",
-    "HOLD_MODEL_PROCESS_REUSED", "HOLD_WEIGHT_READ", "HOLD_WEIGHT_SHORT_READ",
+    "HOLD_MODEL_PROCESS_REUSED", "HOLD_MODEL_ARG_CHANGED", "HOLD_WEIGHT_READ", "HOLD_WEIGHT_SHORT_READ",
 }
 
 class ProbeHold(Exception):
@@ -288,6 +288,10 @@ def inspect_loaded_weight(supervisor_reader=supervisor_pid, proc_root=Path("/pro
             raise ProbeHold("HOLD_WEIGHT_CHANGED")
         if not mapped_inode(pid, st_after, proc_root):
             raise ProbeHold("HOLD_WEIGHT_NOT_MAPPED")
+        if model_arg(pid, proc_root) != candidate:
+            raise ProbeHold("HOLD_MODEL_ARG_CHANGED")
+        if absolute_model_path(pid, model_arg(pid, proc_root), proc_root) != path:
+            raise ProbeHold("HOLD_MODEL_ARG_CHANGED")
         if process_start_ticks(pid, proc_root) != start:
             raise ProbeHold("HOLD_MODEL_PROCESS_REUSED")
         if supervisor_reader() != pid:
