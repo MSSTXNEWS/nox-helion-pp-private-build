@@ -677,56 +677,87 @@ def select_supervisorctl_candidate() -> None:
             outcomes.append({"path": str(path), "outcome": "ABSENT"})
             continue
         except OSError:
-            outcomes.append({"path": str(path), "outcome": "STAT_FAILED"})
-            DIAGNOSTICS["supervisorctl_candidates"] = outcomes
-            fail("SUPERVISORCTL_CANDIDATE_STAT_FAILED")
+            outcomes.append({"path": str(path), "outcome": "UNUSABLE",
+                             "fail_code": "CANDIDATE_STAT_FAILED"})
+            continue
         present_paths.append(path)
         try:
             identity = verify_supervisorctl_executable(path)
-            pid_result, _ = invoke_supervisorctl_path(
-                path, ["-c", str(SUPERVISOR_CLIENT_CONFIG), "pid"],
-                expected_identity=identity)
-            status_result, _ = invoke_supervisorctl_path(
-                path, ["-c", str(SUPERVISOR_CLIENT_CONFIG), "status",
-                       SUPERVISOR_SERVICE], expected_identity=identity)
-            pid_lines = pid_result.stdout.strip().splitlines()
-            if (pid_result.returncode != 0 or len(pid_lines) != 1 or
-                    not pid_lines[0].isdecimal()):
-                outcomes.append({"path": str(path), "identity": identity,
-                                 "outcome": "PID_RESPONSE_MISMATCH"})
-                continue
-            daemon_pid = int(pid_lines[0])
+        except RuntimeError as exc:
+            code = str(exc)
+            if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", code):
+                code = "HOLD_EMERGENCY_STOP_CANDIDATE_VALIDATION_FAILED"
+            outcomes.append({"path": str(path), "outcome": "UNUSABLE",
+                             "fail_code": code.removeprefix("HOLD_EMERGENCY_STOP_")})
+            continue
+        pid_result = status_result = None
+        rpc_failure = None
+        for args, label in (
+                (["-c", str(SUPERVISOR_CLIENT_CONFIG), "pid"], "PID"),
+                (["-c", str(SUPERVISOR_CLIENT_CONFIG), "status",
+                  SUPERVISOR_SERVICE], "STATUS")):
+            try:
+                result, _ = invoke_supervisorctl_path(
+                    path, args, expected_identity=identity)
+                if label == "PID":
+                    pid_result = result
+                else:
+                    status_result = result
+            except RuntimeError as exc:
+                code = str(exc)
+                if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", code):
+                    code = "HOLD_EMERGENCY_STOP_CANDIDATE_RPC_FAILED"
+                rpc_failure = code.removeprefix("HOLD_EMERGENCY_STOP_")
+        if rpc_failure is not None or pid_result is None or status_result is None:
+            outcomes.append({"path": str(path), "identity": identity,
+                             "outcome": "RPC_FAILED",
+                             "fail_code": rpc_failure or "RPC_RESPONSE_MISSING"})
+            continue
+        pid_lines = pid_result.stdout.strip().splitlines()
+        if (pid_result.returncode != 0 or len(pid_lines) != 1 or
+                not pid_lines[0].isdecimal()):
+            outcomes.append({"path": str(path), "identity": identity,
+                             "outcome": "PID_RESPONSE_MISMATCH",
+                             "fail_code": "PID_RESPONSE_INVALID"})
+            continue
+        daemon_pid = int(pid_lines[0])
+        try:
             daemon_identity = probe_supervisor_daemon_identity(daemon_pid)
-            status_lines = status_result.stdout.strip().splitlines()
-            status_match = (STATUS_LINE.fullmatch(status_lines[0])
-                            if len(status_lines) == 1 else None)
-            if (status_result.returncode != 0 or status_match is None or
-                    status_match.group(1) != SUPERVISOR_SERVICE or
-                    status_match.group(2) != "RUNNING" or
-                    status_match.group(3) is None or
-                    int(status_match.group(3)) != MODEL_PID or
-                    daemon_identity["config_path"] != str(SUPERVISOR_CLIENT_CONFIG)):
-                outcomes.append({"path": str(path), "identity": identity,
-                                 "daemon_identity": daemon_identity,
-                                 "pid": daemon_pid, "outcome": "TARGET_SERVICE_MISMATCH"})
-                continue
-            match = {"path": path, "identity": identity,
-                     "daemon_identity": daemon_identity, "pid": daemon_pid}
-            matches.append(match)
+        except RuntimeError as exc:
+            code = str(exc)
+            if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", code):
+                code = "HOLD_EMERGENCY_STOP_DAEMON_IDENTITY_INVALID"
+            outcomes.append({"path": str(path), "identity": identity,
+                             "pid": daemon_pid, "outcome": "DAEMON_IDENTITY_MISMATCH",
+                             "fail_code": code.removeprefix("HOLD_EMERGENCY_STOP_")})
+            continue
+        status_lines = status_result.stdout.strip().splitlines()
+        status_match = (STATUS_LINE.fullmatch(status_lines[0])
+                        if len(status_lines) == 1 else None)
+        if (status_result.returncode != 0 or status_match is None or
+                status_match.group(1) != SUPERVISOR_SERVICE or
+                status_match.group(2) != "RUNNING" or
+                status_match.group(3) is None or
+                int(status_match.group(3)) != MODEL_PID or
+                daemon_identity["config_path"] != str(SUPERVISOR_CLIENT_CONFIG)):
             outcomes.append({"path": str(path), "identity": identity,
                              "daemon_identity": daemon_identity,
-                             "pid": daemon_pid, "service_state": "RUNNING",
-                             "service_pid": MODEL_PID, "outcome": "MATCH"})
-        except RuntimeError:
-            outcomes.append({"path": str(path), "outcome": "INSECURE_OR_UNAVAILABLE"})
-            DIAGNOSTICS["supervisorctl_candidates"] = outcomes
-            fail("SUPERVISORCTL_CANDIDATE_PROBE_FAILED")
+                             "pid": daemon_pid, "outcome": "TARGET_SERVICE_MISMATCH",
+                             "fail_code": "SERVICE_OR_DAEMON_MISMATCH"})
+            continue
+        match = {"path": path, "identity": identity,
+                 "daemon_identity": daemon_identity, "pid": daemon_pid}
+        matches.append(match)
+        outcomes.append({"path": str(path), "identity": identity,
+                         "daemon_identity": daemon_identity,
+                         "pid": daemon_pid, "service_state": "RUNNING",
+                         "service_pid": MODEL_PID, "outcome": "MATCH"})
     DIAGNOSTICS["supervisorctl_candidates"] = outcomes
     if not present_paths:
         fail("SUPERVISORCTL_NO_ALLOWLISTED_CANDIDATE")
     if len(matches) != 1 or any(item.get("outcome") != "MATCH"
                                  for item in outcomes
-                                 if item.get("outcome") != "ABSENT"):
+                                 if item.get("outcome") not in ("ABSENT", "UNUSABLE")):
         fail("SUPERVISORCTL_CANDIDATE_SELECTION_AMBIGUOUS_OR_MISMATCH")
     selected = matches[0]
     SUPERVISORCTL_BIN = selected["path"]
