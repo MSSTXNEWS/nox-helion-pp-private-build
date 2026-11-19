@@ -1,0 +1,23 @@
+version: 2.1
+
+jobs:
+  nox-v38-memory-source:
+    docker:
+      - image: cimg/python:3.11.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Run V38 control and S03 memory unit tests
+          command: |
+            set -euo pipefail
+            PYTHONPATH=. python3 -m unittest \
+              nox_runpod.teacher_mesh.v38.tests.test_v38_control \
+              nox_runpod.teacher_mesh.v38.tests.test_v38_memory_speed \
+              -v
+          timeout: 5m
+
+workflows:
+  nox-source-acceptance:
+    jobs:
+      - nox-v38-memory-source
