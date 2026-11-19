@@ -40,6 +40,33 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:
               f.write('sha='+m[1]+'\naction='+m[2]+'\n')
           PY
+      - name: Checkout main owner approval guard
+        if: steps.request.outputs.action == 'emergency_stop'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          path: guard
+          persist-credentials: false
+      - name: Run main approved-source guard
+        if: steps.request.outputs.action == 'emergency_stop'
+        id: approved
+        working-directory: guard
+        run: python3 -B nox-control/owner_native_inspect_comment_guard.py
+      - name: Match approved action and immutable source pin
+        if: steps.request.outputs.action == 'emergency_stop'
+        env:
+          REQUEST_ACTION: ${{ steps.request.outputs.action }}
+          REQUEST_SHA: ${{ steps.request.outputs.sha }}
+          APPROVED_ACTION: ${{ steps.approved.outputs.action }}
+          APPROVED_SHA: ${{ steps.approved.outputs.source_sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          if os.environ['APPROVED_ACTION'] != os.environ['REQUEST_ACTION']:
+              raise SystemExit('HOLD_APPROVED_ACTION_MISMATCH')
+          if os.environ['APPROVED_SHA'] != os.environ['REQUEST_SHA']:
+              raise SystemExit('HOLD_APPROVED_SOURCE_MISMATCH')
+          PY
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ steps.request.outputs.sha }}
