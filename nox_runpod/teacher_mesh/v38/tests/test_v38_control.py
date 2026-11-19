@@ -74,6 +74,35 @@ class CognitionTests(unittest.TestCase):
         try:self.assertEqual(b.pulse(self.s,'remember')['cores']['C02']['hit_count'],0)
         finally:b.close()
 
+    def test_s03_memory_text_and_source_are_not_truncated(self):
+        memory='воспоминание' * 80
+        source='s03://memory/' + 'a' * 300
+        record={'verified':True,'tenant':'nox','principal':'owner','chat_id':'resonance',
+                'segment':'M2','content':memory,'source_uri':source}
+        b=SynapticBrain(self.native(s03_recall=lambda s,p,l:[record]),
+            PulseConfig(fast_deadline_ms=300,deep_deadline_ms=400,max_workers=8))
+        try:
+            result=b.pulse(self.s,'Вспомни подтверждённый факт')
+            self.assertEqual(result['state'],'READY_FOR_ONE_NOX_MODEL')
+            hit=result['cores']['C02']['hits'][0]
+            self.assertEqual(hit['text'],memory)
+            self.assertEqual(hit['source'],source)
+        finally:b.close()
+
+    def test_oversized_memory_holds_before_model_call_without_trimming(self):
+        memory='полный контекст ' * 120
+        record={'verified':True,'tenant':'nox','principal':'owner','chat_id':'resonance',
+                'segment':'M1','content':memory,'source_uri':'s03://memory/full'}
+        called=[]
+        b=SynapticBrain(self.native(s03_recall=lambda s,p,l:[record]),
+            PulseConfig(fast_deadline_ms=300,deep_deadline_ms=400,max_workers=8,
+                        max_context_chars=1000))
+        try:
+            events=list(b.stream(self.s,'Что ты помнишь?',lambda p,m:called.append((p,m)) or iter(['не должен появиться'])))
+            self.assertEqual(events[-1],{'type':'hold','state':'HOLD_CONTEXT_TOO_LARGE'})
+            self.assertEqual(called,[])
+        finally:b.close()
+
     def test_genesis_birth_requires_strict_native_true(self):
         seed={'native_verified':True,'kind':'verified_birth','verified_sha256':'a'*64,
               'occurred_at':'2026-11-15T00:00:00Z'}
