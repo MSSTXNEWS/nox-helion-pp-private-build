@@ -192,6 +192,31 @@ class SourceAttestTests(unittest.TestCase):
         with self.assertRaisesRegex(ATTEST.Hold, 'HOLD_TARGET_NOT_ALLOWLISTED'):
             ATTEST._safe_read(self.root, 'scripts/another.py')
 
+    def test_unrelated_generic_getattr_does_not_mask_verified_s03_link(self):
+        self.chat.write_text(CHAT_SOURCE + """
+def unrelated_preferences(config):
+    return getattr(config, 'theme', 'dark')
+""", encoding='utf-8')
+        report = self.report()
+        self.assertTrue(report['complete'])
+        self.assertFalse(report['targets'][0]['dynamic_access_detected'])
+        self.assertEqual(report['status'], 'SOURCE_STATIC_ATTESTED')
+
+    def test_dynamic_getattr_to_s03_still_fails_closed(self):
+        for expression in (
+            'getattr(memory_api, "remember")',
+            'getattr(memory_api, writer_symbol)',
+            'getattr(unknown_module, "persist_turn")',
+            'getattr(unknown_module, "ledger_append")',
+        ):
+            with self.subTest(expression=expression):
+                self.chat.write_text(CHAT_SOURCE + "\n" + expression + "\n",
+                                     encoding='utf-8')
+                report = self.report()
+                self.assertFalse(report['complete'])
+                self.assertTrue(report['targets'][0]['dynamic_access_detected'])
+                self.assertEqual(report['status'], 'HOLD_STATIC_WRITER_LINK_INCOMPLETE')
+
     def test_dynamic_route_or_unmatched_writer_does_not_claim_complete(self):
         self.chat.write_text('import importlib\nmodule = importlib.import_module("s03_memory")\n', encoding='utf-8')
         report = self.report()
