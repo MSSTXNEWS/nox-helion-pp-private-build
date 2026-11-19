@@ -295,7 +295,7 @@ class ProbeTests(unittest.TestCase):
             def __init__(self, frames):
                 self.frames, self.closed = frames, False
             def __iter__(self):
-                return iter(frame + b'\\n' for frame in self.frames)
+                return iter(frame + b'\n' for frame in self.frames)
             def close(self):
                 self.closed = True
 
@@ -312,55 +312,7 @@ class ProbeTests(unittest.TestCase):
         for frames in invalid_streams:
             response = Response(frames)
             with self.subTest(frame=frames[0]), patch.object(probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_NONFINITE_JSON
-        class Response:
-            status = 200
-            def __init__(self, rows): self.rows = rows; self.closed = False
-            def close(self): self.closed = True
-            def __iter__(self):
-                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
-        for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
-            response = Response(rows)
-            with patch.object(probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, code):
-                    probe.consume_turn(object(), 'synthetic', '1'*32)
-            self.assertTrue(response.closed)
-
-
-    def test_scoped_history_rejects_foreign_dialog_even_with_identical_turns(self):
-        did, other = '1' * 32, '2' * 32
-        turns = [('first', '323'), ('second', '323'), ('third', 'six')]
-        messages = [{'role': role, 'content': content} for role, content in (
-            ('user', 'first'), ('assistant', '323'), ('user', 'second'),
-            ('assistant', '323'), ('user', 'third'), ('assistant', 'six'))]
-        good = {'dialog_id': did, 'messages': messages}
-        self.assertTrue(probe.scoped_history_matches_turns(good, turns, did))
-        self.assertTrue(probe.scoped_history_matches_turns({'messages': messages}, turns, did))
-        tagged = [dict(row, dialog_id=did) for row in messages]
-        self.assertTrue(probe.scoped_history_matches_turns({'dialog_id': did, 'messages': tagged}, turns, did))
-        corrupted = [
-            {'dialog_id': other, 'messages': messages},
-            {'dialog_id': None, 'messages': messages},
-            {'dialog_id': did, 'messages': [dict(messages[0], dialog_id=other), *messages[1:]]},
-            {'dialog_id': did, 'messages': [*messages[:-1], dict(messages[-1], dialog_id=other)]},
-            {'dialog_id': did, 'messages': [*messages[:-1], dict(messages[-1], dialog_id=None)]},
-            {'dialog_id': did, 'messages': tagged[2:]},
-        ]
-        for history in corrupted:
-            with self.subTest(history=history):
-                self.assertFalse(probe.scoped_history_matches_turns(history, turns, did))
-                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED$'):
-                    probe.require_executor_witness(
-                        {'saved': True, 's03_integrated': True}, history, turns, True, True, did)
-        self.assertIsNone(probe.require_executor_witness(
-            {'saved': True, 's03_integrated': True}, good, turns, True, True, did))
-
-
-if __name__ == '__main__':
-    unittest.main()
-):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_STREAM_NONFINITE_JSON$'):
                     probe.consume_turn(object(), 'synthetic', did)
             self.assertTrue(response.closed)
         valid = Response([b'{"type":"status","meta":{"ratio":3.5}}', valid_delta, valid_done])
