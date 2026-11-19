@@ -36,7 +36,8 @@ def plan_prompt(*, persona, system, conversation, verified_s03,
     seen_s03_ids=set()
     for item in verified_s03:
         _guard(isinstance(item,dict) and set(item)=={"id","source_sha256","text"}
-               and isinstance(item["id"],str) and item["id"]
+               and isinstance(item["id"],str) and 1<=len(item["id"])<=128
+               and item["id"].isprintable() and "[" not in item["id"] and "]" not in item["id"]
                and item["id"] not in seen_s03_ids
                and isinstance(item["text"],str) and item["text"]
                and isinstance(item["source_sha256"],str) and len(item["source_sha256"])==64
