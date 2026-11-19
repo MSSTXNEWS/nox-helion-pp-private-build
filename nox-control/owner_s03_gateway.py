@@ -233,6 +233,9 @@ def snapshot_database(source,destination,seconds=12):
     # like a completed backup or prevents a safe retry. Work in a private file
     # on the same filesystem, then publish with a no-overwrite hard link.
     temporary = None
+    published = False
+    verified = False
+    published_inode = None
     try:
         with connection(source,seconds=seconds) as src:
             src.execute('BEGIN')
@@ -259,16 +262,36 @@ def snapshot_database(source,destination,seconds=12):
         finally:os.close(fd)
         value=file_sha(temporary)
         if file_sha(temporary)!=value:hold('HOLD_S03_BACKUP_READBACK')
+        # Preserve the identity of the only inode this operation may clean up.
+        # Other owners' destinations are never eligible for rollback.
+        info=os.stat(temporary,follow_symlinks=False)
+        published_inode=(info.st_dev,info.st_ino)
         # link() fails rather than overwriting a backup concurrently published
         # by another owner. It exposes only a fully verified inode.
         os.link(temporary,destination,follow_symlinks=False)
+        published=True
         directory=os.open(destination.parent,os.O_RDONLY|os.O_DIRECTORY)
         try:os.fsync(directory)
         finally:os.close(directory)
         if file_sha(destination)!=value:hold('HOLD_S03_BACKUP_PUBLISHED_READBACK')
+        verified=True
         return {'path':str(destination),'sha256':value,'bytes':destination.stat().st_size,
                 'kind':'CONSISTENT_SQLITE_SNAPSHOT','original_retained':True}
     finally:
+        # If fsync/readback failed after link(), do not leave an unverified
+        # destination that a later restore could mistake for a verified backup.
+        # Compare inode identity: never remove someone else's replacement.
+        if published and not verified:
+            try:
+                info=os.stat(destination,follow_symlinks=False)
+            except FileNotFoundError:
+                pass
+            else:
+                if (info.st_dev,info.st_ino)==published_inode:
+                    os.unlink(destination)
+                    directory=os.open(destination.parent,os.O_RDONLY|os.O_DIRECTORY)
+                    try:os.fsync(directory)
+                    finally:os.close(directory)
         if temporary is not None:
             os.unlink(temporary)
 
