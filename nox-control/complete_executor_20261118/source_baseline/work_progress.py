@@ -1113,10 +1113,15 @@ def _validate_2v14_02_point_in_time_refresh(document, control_root, existing_rec
             if isinstance(services, list) else {}
         require(len(service_map) == 7 and set(service_map) == expected_service_names,
                 '2V14_02_SELECTED_SERVICE_SET_MISMATCH')
+        expected_running = {
+            'nox-dispatcher-t855u', 'nox-ds41-8098', 'nox-proxy', 'nox-web29-18775',
+        }
         identities = {}
         for name, row in service_map.items():
-            if row.get('state') == 'RUNNING':
-                require(_positive_int(row.get('pid')) and _positive_int(row.get('start_ticks'))
+            if name in expected_running:
+                require(row.get('state') == 'RUNNING'
+                        and _positive_int(row.get('pid'))
+                        and _positive_int(row.get('start_ticks'))
                         and row.get('host_clock_binding_status') == 'VERIFIED',
                         '2V14_02_SELECTED_SERVICE_IDENTITY_MISSING')
                 identities[name] = (row['pid'], row['start_ticks'])
@@ -1124,10 +1129,18 @@ def _validate_2v14_02_point_in_time_refresh(document, control_root, existing_rec
                 require(row.get('state') == 'STOPPED'
                         and row.get('pid') is None and row.get('start_ticks') is None,
                         '2V14_02_SELECTED_SERVICE_STATE_MISMATCH')
-        require(len(identities) == 4
-                and all(row == 'ABSENT' for row in snapshot.get(
-                    'stop_and_maintenance_flags', {}).values())
-                and len(snapshot.get('stop_and_maintenance_flags', {})) == 11,
+        expected_marker_paths = {
+            '/root/nox/STOP', '/root/nox/STOP.flag', '/root/nox/stop.flag',
+            '/root/nox/.stop', '/root/nox/program/STOP', '/root/nox/state/STOP',
+            '/root/nox/state/STOP.flag', '/workspace/NOX_STOP',
+            '/root/nox/state/OWNER_MAINTENANCE.flag',
+            '/root/nox/state/TRAIN_HOLD.flag',
+            '/root/nox/state/TRAIN_PAUSE_REQUEST.flag',
+        }
+        flags = snapshot.get('stop_and_maintenance_flags')
+        require(len(identities) == 4 and isinstance(flags, dict)
+                and set(flags) == expected_marker_paths
+                and all(row == 'ABSENT' for row in flags.values()),
                 '2V14_02_STOP_MARKER_OR_SERVICE_STATE_MISMATCH')
         if dispatcher_identity is None:
             dispatcher_identity = identities.get('nox-dispatcher-t855u')
@@ -1144,6 +1157,7 @@ def _validate_2v14_02_point_in_time_refresh(document, control_root, existing_rec
             and workers.get('scope_limit') ==
                 'Bounded post-worker snapshot; not a complete process inventory.'
             and isinstance(director, dict)
+            and director.get('host_clock_binding_status') == 'VERIFIED'
             and isinstance(dispatcher_identity, tuple)
             and (director.get('pid'), director.get('start_ticks')) == dispatcher_identity
             and isinstance(worker_rows, list) and len(worker_rows) == 3
@@ -1167,9 +1181,13 @@ def _validate_2v14_02_point_in_time_refresh(document, control_root, existing_rec
                 and lock.get('path') == expected_path
                 and lock.get('scope') == 'PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION'
                 and lock.get('present') is True
+                and _positive_int(lock.get('inode'))
+                and lock.get('device_major') == 0 and lock.get('device_minor') == 36
                 and lock.get('type_regular') is True
                 and lock.get('path_identity_status') == 'STABLE'
                 and lock.get('proc_locks_read_status') == 'READ_OK'
+                and lock.get('proc_locks_error') is None
+                and _positive_int(lock.get('proc_locks_line_count'))
                 and lock.get('lock_kind') == 'FLOCK'
                 and lock.get('access') == expected_access
                 and lock.get('lock_pid') == dispatcher_identity[0]
@@ -1195,7 +1213,10 @@ def _validate_2v14_02_point_in_time_refresh(document, control_root, existing_rec
                 and holder.get('pid') == dispatcher_identity[0]
                 and holder.get('start_ticks') == dispatcher_identity[1]
                 and holder.get('host_boot_id') == boot_id
-                and holder.get('host_clock_binding_status') == 'VERIFIED',
+                and holder.get('host_clock_binding_status') == 'VERIFIED'
+                and holder.get('resolution') == 'VERIFIED_PID_START_TICKS_AND_COMMAND'
+                and holder.get('script') == 'nox_dispatcher_t855u.py'
+                and holder.get('command') == 'python3.12 nox_dispatcher_t855u.py',
                 '2V14_02_KERNEL_LOCK_HOLDER_OR_LINE_MISMATCH')
         lock_summary.append({
             'path': expected_path,
@@ -1208,8 +1229,23 @@ def _validate_2v14_02_point_in_time_refresh(document, control_root, existing_rec
     require(isinstance(clock_chain, dict)
             and clock_chain.get('status') == 'STABLE'
             and set(clock_chain.get('boot_ids', [])) == {boot_id}
-            and len(clock_chain.get('boot_ids', [])) == 4,
+            and len(clock_chain.get('boot_ids', [])) == 4
+            and len(clock_chain.get('snapshot_sha256', [])) == 4
+            and all(_hex_digest(value) for value in clock_chain.get('snapshot_sha256', []))
+            and isinstance(clock_chain.get('final_guard'), dict)
+            and clock_chain['final_guard'].get('status') == 'VERIFIED'
+            and clock_chain['final_guard'].get('boot_id') == boot_id,
             '2V14_02_HOST_CLOCK_CHAIN_MISMATCH')
+    effects = source_evidence.get('provider_access_effects')
+    instance = source_evidence.get('instance_state')
+    require(isinstance(effects, dict) and isinstance(instance, dict)
+            and effects.get('host_service_mutations') == 0
+            and effects.get('queue_or_training_mutations') == 0
+            and effects.get('temporary_ssh_key_detached') is True
+            and effects.get('key_material_recorded') is False
+            and instance.get('provider_mutations') == 0
+            and instance.get('read_only_provider_lookup') is True,
+            '2V14_02_READ_ONLY_MUTATION_BOUNDARY_MISMATCH')
 
     control_root = Path(control_root)
     task_raw, task_doc = read_json_with_raw(
