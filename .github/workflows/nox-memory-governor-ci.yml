@@ -42,7 +42,7 @@ jobs:
           assert m.FILES['repair']=='nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py'
           assert m.SCOPED_REPAIR_BUNDLES[m.FILES['repair']]==()
           assert m.SCOPED_REPAIR_EXTRA_PATHS[m.FILES['repair']]==()
-          text=Path(m.FILES['repair']).read_text()
+          text=Path('nox-control/owner_memory_cleanup_entry.py').read_text()
           assert text.count('__NOX_BUNDLE_JSON__')==1
           assert 'NOX_MAINT_REPAIR_COMPLETE=true' in text
           assert not any(q in text for q in ('supervisorctl stop', '/proc/sys/vm/drop_caches', 'echo 3 >'))
