@@ -1546,8 +1546,17 @@ class Native:
             event = None
             while time.monotonic() < deadline:
                 if not self._claim_current(task) or self.stop_active() or not self.writer_lease():
+                    # Worker submission is ambiguous even if its active slot cleared.
+                    with self.lock:
+                        self.interrupted[task['id']] = 'HOLD_NATIVE_LEAF_EXECUTION_UNSETTLED'
                     self.close_pool('WAIT_OWNER_STOP_OR_CLAIM_CHANGED')
                     return 'wait', 'WAIT_OWNER_STOP_OR_CLAIM_CHANGED'
+                if chat_priority_active():
+                    # Yield to a newly arrived chat; never replay an unknown IPC outcome.
+                    with self.lock:
+                        self.interrupted[task['id']] = 'HOLD_NATIVE_LEAF_CHAT_UNSETTLED'
+                    self.close_pool('WAIT_OWNER_CHAT_PRIORITY')
+                    return 'wait', 'WAIT_OWNER_CHAT_PRIORITY'
                 with self.lock:
                     reason = self.interrupted.get(task['id'])
                     if reason:
@@ -1592,8 +1601,9 @@ class Native:
                       'source_sha256':self.source, 'worker_result':event, 'finished_at':time.time(),
                       'original_task_accepted':False, 'training_started':False,
                       'optimizer_steps_verified':False, 'service_or_weights_changed':False}
-            if not self._claim_current(task, durable=True) or self.stop_active() or not self.writer_lease():
-                # Post-pop loss of owner admission cannot discard a completed
+            if (not self._claim_current(task, durable=True) or self.stop_active()
+                    or not self.writer_lease() or chat_priority_active()):
+                # Post-pop loss of owner admission/chat cannot discard a completed
                 # result or authorize a second worker call for the same claim.
                 with self.lock:
                     self.interrupted[task['id']] = 'HOLD_NATIVE_LEAF_RESULT_UNSETTLED'
