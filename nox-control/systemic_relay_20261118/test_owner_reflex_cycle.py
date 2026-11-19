@@ -293,7 +293,11 @@ class NativeReflexTests(unittest.TestCase):
             with self.subTest(malformed=malformed):
                 native = {'native-unknown': {
                     'handler': 'owner_native_project_work',
-                    'status': malformed}}
+                    'status': malformed,
+                    'systemic_relay': {'binding': {
+                        'mission_id': 'unknown_native_guard',
+                        'mission_revision': 1, 'root_id': ROOT,
+                        'editable_paths': ['code/cache.py']}}}}
                 status = tick(state=native)
                 self.assertEqual(status['state'],
                                  'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
