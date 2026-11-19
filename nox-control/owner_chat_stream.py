@@ -489,7 +489,11 @@ def install(native):
                 payload['_agent_final']=final
                 yield native['_sse']('',finish='stop')
                 yield 'data: [DONE]\n\n'
-            except asyncio.CancelledError:
+            except (asyncio.CancelledError, GeneratorExit):
+                # A client may close the SSE stream after the finish chunk but
+                # before [DONE]. Never leave a postflight-ready answer behind
+                # for a response the browser did not fully consume.
+                payload.pop('_agent_final',None)
                 raise
             except Exception as error:
                 payload.pop('_agent_final',None)
