@@ -413,7 +413,8 @@ def request_contract(provider, credential, prompt, config, verification=False):
     spec = PROVIDERS[provider]
     limit = max(1024, config['max_output_tokens']) if verification else config['max_output_tokens']
     system = 'Return the exact public verification token requested, with no other text.' if verification else SYSTEM
-    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json',
+               'Accept-Encoding': 'identity'}
     if provider == 'openai':
         headers['Authorization'] = 'Bearer ' + credential
         body = {'model': spec['model'], 'instructions': system, 'input': prompt,
@@ -523,8 +524,12 @@ async def _request(provider, credential, prompt, config, verification=False):
                             'MODEL_OR_REQUEST_UNAVAILABLE' if response.status_code in (400, 404) else
                             'REDIRECT_REJECTED' if 300 <= response.status_code < 400 else 'PROVIDER_UNAVAILABLE')
                     return {'state': code}
+                # The persisted digest must identify bytes received over HTTP,
+                # never silently decompressed or transformed response bytes.
+                if response.headers.get('content-encoding', 'identity').strip().lower() != 'identity':
+                    raise GatewayHold('MODEL_RESPONSE_CONTENT_ENCODING')
                 data = bytearray()
-                async for block in response.aiter_bytes():
+                async for block in response.aiter_raw():
                     data.extend(block)
                     if len(data) > 262144:
                         raise GatewayHold('MODEL_RESPONSE_SIZE')
