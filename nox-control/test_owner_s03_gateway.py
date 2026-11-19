@@ -433,6 +433,32 @@ class GatewayTests(unittest.TestCase):
         with sqlite3.connect(destination) as restored:
             self.assertEqual(restored.execute('PRAGMA quick_check').fetchone()[0],'ok')
 
+    def test_failed_published_snapshot_readback_cleans_only_own_link(self):
+        destination=self.root/'postpublish-failed.sqlite'
+        source_before=g.file_sha(self.db)
+        original_sha=g.file_sha
+        calls=[]
+        def corrupt_published_readback(path):
+            calls.append(Path(path))
+            if Path(path)==destination:
+                return '0'*64
+            return original_sha(path)
+        # The two private-file SHA checks pass. After link publication,
+        # the final destination readback fails and must not leave a restorable
+        # but unverified destination or private partial files behind.
+        with patch.object(g,'file_sha',side_effect=corrupt_published_readback):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_BACKUP_PUBLISHED_READBACK'):
+                g.snapshot_database(self.db,destination)
+        self.assertEqual(len(calls),3)
+        self.assertFalse(destination.exists())
+        self.assertEqual(list(self.root.glob('.s03-backup-*.partial')),[])
+        self.assertEqual(g.file_sha(self.db),source_before)
+        # The exact same path can be used after the failed publication.
+        retry=g.snapshot_database(self.db,destination)
+        self.assertEqual(retry['sha256'],g.file_sha(destination))
+        with sqlite3.connect(destination) as restored:
+            self.assertEqual(restored.execute('PRAGMA quick_check').fetchone()[0],'ok')
+
     def test_migration_keeps_sources_byte_identical_and_dialog_provenance(self):
         legacy=self.root/'cores';(legacy/'C01').mkdir(parents=True)
         path=legacy/'C01/ltm.sqlite'
