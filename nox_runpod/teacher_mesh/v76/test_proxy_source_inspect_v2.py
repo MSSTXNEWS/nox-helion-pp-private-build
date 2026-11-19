@@ -112,6 +112,61 @@ async def chat_route(request):
         self.assertEqual(len(route["direct_call_symbols"]), 32)
         self.assertEqual(route["direct_call_symbols"], sorted(route["direct_call_symbols"]))
 
+    def test_request_model_selector_requires_direct_allowlisted_expression(self):
+        raw = b'''
+def prepare_payload(payload):
+    selected = payload.get("model")
+    return {"model": selected}
+@app.post("/api/nox/chat")
+def chat_route(body):
+    return prepare_payload(body)
+'''
+        route = analyzer()(raw)["chat_routes"][0]
+        self.assertEqual(
+            route["request_model_selector"],
+            {
+                "state": "OBSERVED_SOURCE_EXPRESSION",
+                "field": "model",
+                "expression": 'body.get("model")',
+            },
+        )
+
+    def test_request_model_selector_rejects_dynamic_aliases_and_redacts_values(self):
+        raw = b'''
+API_KEY = "DO_NOT_PRINT_SELECTOR_SECRET"
+def prepare_payload(payload):
+    return {"model": payload.get(resolve_key(), "candidate-not-serving")}
+@app.post("/api/nox/chat")
+def chat_route(request):
+    aliased = normalize(request)
+    return prepare_payload(aliased)
+'''
+        route = analyzer()(raw)["chat_routes"][0]
+        self.assertEqual(
+            route["request_model_selector"],
+            {"state": "UNKNOWN", "field": "UNKNOWN", "expression": "UNKNOWN"},
+        )
+        encoded = json.dumps(route, ensure_ascii=False)
+        self.assertNotIn("DO_NOT_PRINT_SELECTOR_SECRET", encoded)
+        self.assertNotIn("candidate-not-serving", encoded)
+        self.assertNotIn("resolve_key", encoded)
+
+    def test_request_model_selector_rejects_ambiguous_reads(self):
+        raw = b'''
+def prepare_payload(payload):
+    first = payload.get("model")
+    second = payload["model"]
+    return {"model": first, "fallback": second}
+@app.post("/api/nox/chat")
+def chat_route(body):
+    return prepare_payload(body)
+'''
+        route = analyzer()(raw)["chat_routes"][0]
+        self.assertEqual(
+            route["request_model_selector"],
+            {"state": "UNKNOWN", "field": "UNKNOWN", "expression": "UNKNOWN"},
+        )
+
     def test_missing_context_functions_are_explicitly_reported(self):
         report = analyzer()(b"def health():\n    return True\n")
         self.assertEqual(report["functions"]["_trim_ctx"], [])
