@@ -629,8 +629,10 @@ def resource_admission(helper):
             raise ValueError('invalid CPU period or affinity')
         if cpu_spec[0] == 'max':
             quota_cpus = affinity_cpus
-        elif re.fullmatch('[0-9]+', cpu_spec[0]) and int(cpu_spec[0]) > 0:
-            quota_cpus = max(1, int(cpu_spec[0]) // period)
+        elif re.fullmatch('[0-9]+', cpu_spec[0]) and int(cpu_spec[0]) >= period:
+            # A fractional cgroup CPU cannot be rounded up to an admitted
+            # full CPU: that would overstate headroom protecting live chat.
+            quota_cpus = int(cpu_spec[0]) // period
         else:
             raise ValueError('invalid CPU quota')
     except (OSError, ValueError) as exc:
