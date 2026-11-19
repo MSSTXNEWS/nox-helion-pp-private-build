@@ -1,0 +1,31 @@
+name: NOX owner lock observer source checks
+on:
+  push:
+    paths:
+      - 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py'
+      - 'nox-control/systemic_relay_20261118/test_owner_systemic_relay_observe_locks.py'
+      - '.github/workflows/nox-owner-lock-observer-ci.yml'
+  pull_request:
+    paths:
+      - 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py'
+      - 'nox-control/systemic_relay_20261118/test_owner_systemic_relay_observe_locks.py'
+      - '.github/workflows/nox-owner-lock-observer-ci.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  readonly-lock-observer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Compile inspector and run synthetic lock fixtures
+        run: |
+          set -euo pipefail
+          python3 -B -m py_compile nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py nox-control/systemic_relay_20261118/test_owner_systemic_relay_observe_locks.py
+          python3 -B nox-control/systemic_relay_20261118/test_owner_systemic_relay_observe_locks.py
+      - name: Keep native scope explicit
+        run: |
+          echo "SOURCE_ONLY — synthetic fixtures only; no server operation or native acceptance"
