@@ -1,0 +1,23 @@
+name: NOX A2 fallback lossless context gate
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_chat_stream.py'
+      - 'nox-control/test_owner_chat_stream.py'
+      - '.github/workflows/nox-a2-fallback-context-ci.yml'
+permissions:
+  contents: read
+jobs:
+  fallback-context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: One focused second-turn long-Unicode evidence regression
+        run: |
+          python3 -m venv .a2-ci
+          . .a2-ci/bin/activate
+          python -m pip install --disable-pip-version-check httpx==0.28.1 fastapi==0.116.1
+          PYTHONPATH=nox-control python -m unittest test_owner_chat_stream.StreamTests.test_full_unicode_tool_evidence_survives_model_followup -v
