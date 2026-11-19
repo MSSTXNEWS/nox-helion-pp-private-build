@@ -1,4 +1,4 @@
-import base64, hashlib, importlib.util, pathlib, tempfile, unittest
+import base64, hashlib, importlib.util, os, pathlib, tempfile, unittest
 from unittest.mock import patch
 
 SOURCE=pathlib.Path(__file__).resolve().parents[1]/'owner_memory_chat_acceptance.py'
@@ -73,5 +73,29 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                 'failed':[{'component':name,'reason':'HOLD_OWNER_STOP'}],
                 'training_started':False,'private_content_exported':False}),
         ])
+
+    def test_inventory_mode_cannot_masquerade_as_browser_acceptance(self):
+        spec=importlib.util.spec_from_file_location('a3_inventory_acceptance', SOURCE)
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        names=('owner_s03_recover_activate.py','owner_browser_qa_entry.py')
+        raws=(
+            b'BUNDLE=__NOX_BUNDLE_JSON__\ndef main():\n    BUNDLE["executed_s03"]=True\n    return 0\n',
+            b'BUNDLE=__NOX_BUNDLE_JSON__\ndef main():\n    BUNDLE["executed_browser"]=True\n    return None\n',
+        )
+        module.STAGES=tuple((n,hashlib.sha256(raw).hexdigest()) for n,raw in zip(names,raws))
+        module.BUNDLE={n:base64.b64encode(raw).decode() for n,raw in zip(names,raws)}
+        emitted=[]
+        module.emit=lambda kind,data:emitted.append((kind,data))
+        with tempfile.TemporaryDirectory() as t, patch.dict(os.environ,{'NOX_BROWSER_QA_MODE':'inventory'}), patch.object(module,'Path',lambda _:pathlib.Path(t)):
+            result=module.main()
+        self.assertEqual(result,2)
+        self.assertNotIn('executed_s03',module.BUNDLE)
+        self.assertNotIn('executed_browser',module.BUNDLE)
+        failure={'component':names[-1],'reason':'HOLD_BROWSER_QA_INVENTORY_MODE'}
+        self.assertEqual(emitted,[
+            ('memory_chat_component_hold',failure),
+            ('memory_chat_batch',{'failed':[failure],'training_started':False,'private_content_exported':False}),
+        ])
+
 
 if __name__=='__main__':unittest.main()
