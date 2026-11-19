@@ -46,6 +46,22 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_canonical_s03_rejects_single_turn_even_with_matching_receipt_metadata(self):
+        # Before this regression, two messages plus a matching last-answer SHA
+        # could masquerade as a complete RU/ES multi-turn S03 acceptance.
+        one_turn = [
+            {"role": "user", "content": RU},
+            {"role": "assistant", "content": LAST},
+        ]
+        writer, readback = s03_proof(one_turn)
+        self.assertFalse(canonical_s03_proof_valid(writer, readback, DIALOG, one_turn))
+
+    def test_canonical_s03_rejects_wrong_role_order_even_with_matching_receipt(self):
+        malformed = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        malformed[1]["role"] = "user"
+        writer, readback = s03_proof(malformed)
+        self.assertFalse(canonical_s03_proof_valid(writer, readback, DIALOG, malformed))
+
     def test_default_russian_prompt_byte_equivalent(self):
         self.assertEqual(
             multiturn_followup_prompt(TOKEN, "multiturn"),
