@@ -52,7 +52,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
         self.assertEqual(AUDIT_SHA,
                          "b1e33d60983885a7ebd1979bda4ec640b7ca7047")
         self.assertEqual(SOURCE_ATTEST_SHA,
-                         "07ebd86b15ae32644bc8bb562a396ec85918b13b")
+                         "3e399979e5b2e5ac16c1504542bd5cace989ddd3")
         self.assertEqual(GPU_INVENTORY_SHA,
                          "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e")
         self.assertEqual(BROWSER_QA_SHA, "9ddb3730f8db1b7b598eaf58ab0aa5973485f6c6")
