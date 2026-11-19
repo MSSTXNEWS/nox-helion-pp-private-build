@@ -227,7 +227,7 @@
     void refreshDownloads();setInterval(()=>void refreshDownloads(),20000);
     const validEventCursor=n=>Number.isSafeInteger(n)&&n>=0&&n<1000000000000000;
     let eventCursor=null,eventsBusy=false,eventCount=0;
-    try{const n=Number(localStorage.getItem('nox.owner.events.cursor'));if(validEventCursor(n))eventCursor=n;}catch{}
+    try{const stored=localStorage.getItem('nox.owner.events.cursor');if(stored!==null&&/^[0-9]{1,15}$/.test(stored)){const n=Number(stored);if(validEventCursor(n))eventCursor=n;}}catch{}
     async function refreshEvents(){
       if(eventsBusy||document.hidden)return;eventsBusy=true;
       try{
