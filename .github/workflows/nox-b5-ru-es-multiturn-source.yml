@@ -1,8 +1,8 @@
 name: NOX B5 RU-ES multi-turn source contract
 on:
-  push:
+  pull_request:
     branches:
-      - b5/ru-es-multiturn-20261119-v1
+      - repair/nox-continuous-execution-20261118
     paths:
       - 'nox-control/owner_chat_browser_qa.py'
       - 'nox-control/test_owner_chat_ru_es_multiturn.py'
