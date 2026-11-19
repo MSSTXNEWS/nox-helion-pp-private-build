@@ -1,6 +1,6 @@
-"""Remove the unintended group write bit and call the installed NOX cache pass once."""
+"""Install the version-pinned V38 modules beside the existing NOX chat."""
 
-from contextlib import contextmanager
+import base64
 import fcntl
 import hashlib
 import json
@@ -8,140 +8,118 @@ import os
 from pathlib import Path
 import re
 import stat
-import sys
-import time
-import types
+import tempfile
 
 
-ROOT = Path('/root/nox')
-OPS = Path('ops/cache-maintenance')
-MARKER = Path('state/chat_active')
-LEASE = Path('state/owner_maintenance.lock')
-BOOT = '9c0ecc02-85c1-452b-b8ae-521e9a11fd03'
-MODEL = (3266857, 172046662, 114)
-WORKER = (747159, 189183257, 114)
-ASSETS = {
-    'owner_storage_reclaim': '085403de23d817f1f1307df757901b914115c4745a78dea7ddda53a7fca350f8',
-    'owner_memory_governor': '9cdcc97d333a4b2ea07f3003930f260d567a2b6a7cdebb1adcd36220befe617b',
-    'owner_memory_cleanup_entry': 'a308933a6df312ad6601bebae4e39ef8f0cd9794cea0f9c4ebc325ea45aac403',
-    'nox_cache_maintenance': '5113e633d66026b5821394a3d9e87433ddc14711fe59df1f09ff0dd6974a593c',
+BUNDLE = __NOX_BUNDLE_JSON__
+PINS = {"brain_init.py":"01178973745df411a15bd452f925b9c5234d2566b5e4a1ab0a2fcc586d3a1a22","synaptic_brain.py":"5f5c5778c4c92bdc9c81e5d434d5df5434b4a29dfceaf52fb8584a8a60595732","native_bridge_v38.py":"270dc33a33e8323f9762106db1547139af738d5f26c89e48daeecb565be8d463","durable_runtime.py":"83a34c33aad6f0597b2ef2825427fc3b539da576b19c2169aef9408b6916bea7"}
+OPS = Path('/root/nox/ops')
+TARGET = OPS / 'nox-brain-v38'
+LOCK = Path('/root/nox/state/owner_maintenance.lock')
+PATHS = {
+    'brain_init.py': 'v38/__init__.py',
+    'synaptic_brain.py': 'v38/synaptic_brain.py',
+    'native_bridge_v38.py': 'v38/native_bridge_v38.py',
+    'durable_runtime.py': 'v38/durable_runtime.py',
 }
-SAFE_OPEN = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
 
 
 def require(condition, code):
     if not condition:
-        raise RuntimeError('HOLD_CACHE_MARKER_' + code)
+        raise RuntimeError('HOLD_COGNITION_INSTALL_' + code)
 
 
-def identity(info):
-    return (info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_nlink,
-            info.st_size, info.st_mtime_ns)
+def trusted(path):
+    for part in (path, *path.parents):
+        info = part.lstat()
+        require(stat.S_ISDIR(info.st_mode) and info.st_uid == info.st_gid == 0
+                and not info.st_mode & 0o022, 'DIRECTORY')
 
 
-@contextmanager
-def trusted_open(relative, *, allow_insecure_marker=False):
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
-    directory = os.open('/', flags)
+def digest(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def sync_dir(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
-        path = ROOT / relative
-        for component in path.parts[1:-1]:
-            child = os.open(component, flags, dir_fd=directory)
-            os.close(directory)
-            directory = child
-            info = os.fstat(directory)
-            require(info.st_uid == os.geteuid() and not info.st_mode & 0o022, 'PARENT')
-        fd = os.open(path.name, SAFE_OPEN, dir_fd=directory)
-        with os.fdopen(fd, 'rb') as handle:
-            info = os.fstat(fd)
-            require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid()
-                    and info.st_nlink == 1 and (allow_insecure_marker or not info.st_mode & 0o022), 'FILE')
-
-            def named():
-                return os.stat(path.name, dir_fd=directory, follow_symlinks=False)
-
-            yield handle, named
+        os.fsync(fd)
     finally:
-        os.close(directory)
+        os.close(fd)
 
 
-def fix_marker():
-    with trusted_open(MARKER, allow_insecure_marker=True) as (handle, named):
-        fd = handle.fileno()
-        before = os.fstat(fd)
-        original_name = named()
-        mode = stat.S_IMODE(before.st_mode)
-        require(stat.S_ISREG(original_name.st_mode) and identity(original_name) == identity(before)
-                and stat.S_IMODE(original_name.st_mode) == mode, 'PREIMAGE')
-        require(mode in (0o664, 0o644) and time.time_ns() - before.st_mtime_ns >= 3_000_000_000,
-                'MODE_OR_RECENT_ACTIVITY')
-        if mode == 0o664:
-            os.fchmod(fd, 0o644)
-            os.fsync(fd)
-        after = os.fstat(fd)
-        verified_name = named()
-        require(identity(after) == identity(before) == identity(verified_name)
-                and stat.S_IMODE(after.st_mode) == stat.S_IMODE(verified_name.st_mode) == 0o644, 'READBACK')
-    return {'before_mode': oct(mode), 'after_mode': '0o644', 'mtime_and_inode_unchanged': True,
-            'mode_changed': mode != 0o644}
+def contents():
+    require(set(BUNDLE) == set(PINS) == set(PATHS), 'ASSET_SET')
+    data = {}
+    for name, destination in PATHS.items():
+        raw = base64.b64decode(BUNDLE[name], validate=True)
+        require(len(raw) <= 256 * 1024 and digest(raw) == PINS[name], 'ASSET_SHA')
+        compile(raw, destination, 'exec')
+        data[destination] = raw
+    data['release.json'] = (json.dumps({'schema': 'NOX_V38_STAGE_V1', 'files_sha256': {
+        path: digest(raw) for path, raw in data.items()}}, sort_keys=True) + '\n').encode()
+    return data
 
 
-def exact_process(expected):
-    pid, ticks, parent = expected
-    with Path(f'/proc/{pid}/stat').open('rb') as stream:
-        state = stream.read(8193)
-    fields = state.rpartition(b') ')[2].split()
-    require(len(state) <= 8192 and state.startswith(str(pid).encode() + b' (') and len(fields) >= 20
-            and fields[0] not in (b'Z', b'X') and fields[1] == str(parent).encode()
-            and fields[19] == str(ticks).encode(), 'PROCESS_CHANGED')
+def readback(root, data):
+    trusted(root / 'v38')
+    for relative, raw in data.items():
+        path = root / relative
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+        with os.fdopen(fd, 'rb') as stream:
+            info = os.fstat(stream.fileno())
+            require(stat.S_ISREG(info.st_mode) and info.st_uid == info.st_gid == 0
+                    and not info.st_mode & 0o022 and info.st_nlink == 1
+                    and stream.read(len(raw) + 1) == raw, 'READBACK')
 
 
-def assets():
-    compiled = {}
-    for name, expected in ASSETS.items():
-        relative = OPS / (name + '.py')
-        with trusted_open(relative) as (handle, named):
-            before = os.fstat(handle.fileno())
-            raw = handle.read(256 * 1024 + 1)
-            require(0 < len(raw) <= 256 * 1024 and identity(before) == identity(named())
-                    and identity(before) == identity(os.fstat(handle.fileno()))
-                    and hashlib.sha256(raw).hexdigest() == expected, 'INSTALLED_SOURCE')
-        compiled[name] = str(ROOT / relative), compile(raw, str(ROOT / relative), 'exec')
-    for name, (path, code) in compiled.items():
-        module = types.ModuleType(name)
-        module.__file__ = path
-        sys.modules[name] = module
-        exec(code, module.__dict__)
-    return sys.modules['nox_cache_maintenance']
-
-
-def emit(key, value):
-    print('NOX_MAINT_' + key + '=' + json.dumps(value, separators=(',', ':')), flush=True)
+def stage(source):
+    if os.path.lexists(TARGET):
+        readback(TARGET, source)
+        return False
+    with tempfile.TemporaryDirectory(prefix='.nox-v38-stage-', dir=OPS) as temporary:
+        release = Path(temporary) / 'release'
+        (release / 'v38').mkdir(parents=True, mode=0o755)
+        for relative, raw in source.items():
+            fd = os.open(release / relative, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                         | os.O_NOFOLLOW | os.O_CLOEXEC, 0o644)
+            with os.fdopen(fd, 'wb') as output:
+                output.write(raw)
+                output.flush()
+                os.fsync(output.fileno())
+        sync_dir(release / 'v38')
+        sync_dir(release)
+        readback(release, source)
+        require(not os.path.lexists(TARGET), 'TARGET_APPEARED')
+        os.rename(release, TARGET)
+        sync_dir(OPS)
+    readback(TARGET, source)
+    return True
 
 
 def main():
-    labels = {os.environ[name].removeprefix('C.') for name in ('VAST_CONTAINERLABEL', 'CONTAINER_ID')
-              if os.environ.get(name)}
-    require(os.geteuid() == 0 and labels == {'60509551'}
-            and re.fullmatch(r'[1-9][0-9]{0,19}', os.environ.get('NOX_OWNER_REQUEST_ID', ''))
-            and re.fullmatch(r'[a-f0-9]{40}', os.environ.get('NOX_OWNER_SOURCE_SHA', ''))
-            and Path('/proc/sys/kernel/random/boot_id').read_text().strip() == BOOT, 'OWNER_CONTEXT')
-    with trusted_open(LEASE) as (handle, named):
-        lease = os.fstat(handle.fileno())
-        fcntl.flock(handle.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB)
-        require(identity(lease) == identity(named()), 'LEASE_CHANGED')
-        exact_process(MODEL)
-        exact_process(WORKER)
-        service = assets()
-        service.cache.require_stop_clear()
-        service.current_scope()
-        emit('CACHE_MARKER_FIXED', fix_marker())
-        service.assert_chat_idle()
-        result = service.run_once(ASSETS['nox_cache_maintenance'])
-        exact_process(MODEL)
-        exact_process(WORKER)
-        require(identity(lease) == identity(named()), 'LEASE_CHANGED')
-        emit('CACHE_BOUNDED_PASS', result)
+    labels = {os.environ[key].removeprefix('C.') for key in ('VAST_CONTAINERLABEL', 'CONTAINER_ID')
+              if os.environ.get(key)}
+    require(os.geteuid() == os.getegid() == 0 and labels == {'60509551'}
+            and re.fullmatch('[1-9][0-9]{0,19}', os.environ.get('NOX_OWNER_REQUEST_ID', ''))
+            and re.fullmatch('[a-f0-9]{40}', os.environ.get('NOX_OWNER_SOURCE_SHA', '')), 'OWNER')
+    trusted(OPS)
+    trusted(LOCK.parent)
+    fd = os.open(LOCK, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    try:
+        info = os.fstat(fd)
+        require(stat.S_ISREG(info.st_mode) and info.st_uid == info.st_gid == 0
+                and not info.st_mode & 0o077 and info.st_nlink == 1, 'LEASE')
+        fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        current = LOCK.lstat()
+        require((info.st_dev, info.st_ino) == (current.st_dev, current.st_ino), 'LEASE_CHANGED')
+        source = contents()
+        created = stage(source)
+    finally:
+        os.close(fd)
+    result = {'created': created, 'module_count': len(PATHS), 'release_dir': str(TARGET),
+              'manifest_sha256': digest(source['release.json']), 'live_route_activated': False}
+    print('NOX_MAINT_COGNITION_INSTALLED=' + json.dumps(result, separators=(',', ':')), flush=True)
     print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
 
 
@@ -149,7 +127,7 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, RuntimeError) as error:
-        code = str(error)
-        code = code if re.fullmatch(r'HOLD_[A-Z_0-9]+', code) else type(error).__name__
-        emit('CACHE_MARKER_HOLD', {'reason': code})
+        value = str(error)
+        print('NOX_MAINT_COGNITION_HOLD=' + (value if re.fullmatch('HOLD_[A-Z0-9_]+', value)
+                                               else type(error).__name__), flush=True)
         raise SystemExit(2) from None
