@@ -33,7 +33,7 @@ STOPS = tuple(ROOT / name for name in
 SCHEMA = 'NOX_SMART_CHAT_OWNER_E2E_ACCEPTANCE_V1'
 
 
-_MODULE_NAME_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*){0,15}$')
+_MODULE_NAME_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*){0,15}$')
 
 
 def safe_missing_module_name(error):
