@@ -364,6 +364,22 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             path.unlink();path.symlink_to(Path(folder)/'absent')
             self.assertIn('не могу подтвердить',stream._executor_status_reply('Сколько агентов?',path))
 
+    def test_falsy_tool_arguments_fail_closed_without_rewriting_model_evidence(self):
+        # Explicit malformed model/tool arguments are never equivalent to
+        # an omitted object. Dispatch must not silently replace them with {}.
+        for value in ([], None, False, 0, '', 'null', '[]', 'false'):
+            with self.subTest(argument=repr(value)):
+                with self.assertRaisesRegex(stream.StreamFailure,
+                                            'HOLD_TOOL_ARGUMENTS'):
+                    stream._normal_calls([{'id':'call1',
+                                           'name':'calculate',
+                                           'arguments':value}],0)
+        # Omission was the only legacy/default {} path; valid JSON objects
+        # and the empty object still round-trip without modification.
+        self.assertEqual(stream._normal_calls([{'name':'calculate'}],0)[0]['arguments'],{})
+        self.assertEqual(stream._normal_calls([{'name':'calculate','arguments':'{}'}],0)[0]['arguments'],{})
+        self.assertEqual(stream._normal_calls([{'name':'calculate','arguments':{'value':0}}],0)[0]['arguments'],{'value':0})
+
     def test_normalized_tool_ids_are_bounded_for_native_and_heuristic_routes(self):
         for value in ('z'*161, 12, [], ''):
             with self.subTest(value_type=type(value).__name__,size=len(value) if hasattr(value,'__len__') else 0):
