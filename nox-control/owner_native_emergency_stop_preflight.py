@@ -95,6 +95,12 @@ def _safe_path(value: str, *, allow_here: bool = False) -> str | None:
     return normalized
 
 
+def _normalized_socket_candidate(value: str) -> str:
+    if value.startswith("%(here)s"):
+        return str(SUPERVISOR_CLIENT_CONFIG.parent) + value[len("%(here)s"):]
+    return value
+
+
 def inspect_configuration() -> dict:
     """Return fixed, sanitized facts from a stable bounded config snapshot."""
     supervisor_dir = _root_directory(SUPERVISOR_CLIENT_CONFIG.parent)
@@ -167,10 +173,14 @@ def inspect_configuration() -> dict:
     if not dirs_stable:
         _hold("CONFIG_DIRECTORY_CHANGED")
 
-    socket_path = _safe_path(socket_raw, allow_here=True)
+    socket_candidate = _normalized_socket_candidate(socket_raw)
+    socket_path = _safe_path(socket_candidate)
+    socket_path_sha = hashlib.sha256(socket_candidate.encode("utf-8")).hexdigest()
+    serverurl_path_candidate = None
     try:
         parsed_url = urlsplit(serverurl_raw)
         unix_scheme = parsed_url.scheme == "unix"
+        serverurl_path_candidate = parsed_url.path
         no_authority_query_fragment = (
             not parsed_url.netloc and not parsed_url.query and not parsed_url.fragment
         )
@@ -180,14 +190,17 @@ def inspect_configuration() -> dict:
         unix_scheme = False
         no_authority_query_fragment = False
         serverurl_path = None
+    serverurl_path_sha = (
+        hashlib.sha256(serverurl_path_candidate.encode("utf-8")).hexdigest()
+        if serverurl_path_candidate else None)
 
     try:
         mode_int = int(mode_raw, 8) if MODE_TEXT.fullmatch(mode_raw) else None
     except ValueError:
         mode_int = None
     endpoint = {
-        "normalized_socket_path": socket_path,
-        "serverurl_path": serverurl_path,
+        "normalized_socket_path_sha256": socket_path_sha,
+        "serverurl_path_sha256": serverurl_path_sha,
         "socket_path_absolute_no_traversal": socket_path is not None,
         "serverurl_unix_scheme": unix_scheme,
         "serverurl_has_no_authority_query_fragment": no_authority_query_fragment,
@@ -196,7 +209,6 @@ def inspect_configuration() -> dict:
             socket_path == serverurl_path),
         "rpc_factory_matches_fixed_allowlist": factory_raw == EXPECTED_FACTORY,
         "configured_owner_is_root_root": owner_raw == "root:root",
-        "configured_mode_octal": mode_raw if mode_int is not None else None,
         "configured_mode_format_allowed": mode_int is not None,
         "configured_mode_private": bool(mode_int is not None and not mode_int & 0o022),
         "configured_mode_owner_write_set": bool(mode_int is not None and mode_int & 0o200),

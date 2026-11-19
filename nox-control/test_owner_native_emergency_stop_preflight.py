@@ -52,8 +52,11 @@ class EndpointPreflightTests(unittest.TestCase):
     def test_matching_endpoint_emits_only_fixed_safe_facts_and_hashes(self):
         receipt = P.inspect_configuration()
         endpoint = receipt["endpoint"]
-        self.assertEqual(endpoint["normalized_socket_path"], "/run/supervisor.sock")
-        self.assertEqual(endpoint["serverurl_path"], "/run/supervisor.sock")
+        expected = hashlib.sha256(b"/run/supervisor.sock").hexdigest()
+        self.assertEqual(endpoint["normalized_socket_path_sha256"], expected)
+        self.assertEqual(endpoint["serverurl_path_sha256"], expected)
+        self.assertNotIn("normalized_socket_path", endpoint)
+        self.assertNotIn("serverurl_path", endpoint)
         self.assertTrue(endpoint["socket_serverurl_paths_equal"])
         self.assertTrue(endpoint["rpc_factory_matches_fixed_allowlist"])
         self.assertTrue(endpoint["configured_owner_is_root_root"])
@@ -77,8 +80,10 @@ class EndpointPreflightTests(unittest.TestCase):
         self.write_config("unix:///run/other.sock")
         receipt = P.inspect_configuration()
         endpoint = receipt["endpoint"]
-        self.assertEqual(endpoint["normalized_socket_path"], "/run/supervisor.sock")
-        self.assertEqual(endpoint["serverurl_path"], "/run/other.sock")
+        self.assertEqual(endpoint["normalized_socket_path_sha256"],
+                         hashlib.sha256(b"/run/supervisor.sock").hexdigest())
+        self.assertEqual(endpoint["serverurl_path_sha256"],
+                         hashlib.sha256(b"/run/other.sock").hexdigest())
         self.assertFalse(endpoint["socket_serverurl_paths_equal"])
         self.assertFalse(endpoint["endpoint_config_predicates_all_pass"])
         self.assertEqual(receipt["host_writes"], 0)
@@ -89,9 +94,23 @@ class EndpointPreflightTests(unittest.TestCase):
         rendered = json.dumps(P.inspect_configuration(), sort_keys=True)
         self.assertNotIn(secret, rendered)
         receipt = json.loads(rendered)
-        self.assertIsNone(receipt["endpoint"]["serverurl_path"])
+        self.assertEqual(receipt["endpoint"]["serverurl_path_sha256"],
+                         hashlib.sha256(b"/run/supervisor.sock").hexdigest())
         self.assertFalse(receipt["endpoint"]["serverurl_has_no_authority_query_fragment"])
         self.assertFalse(receipt["endpoint"]["endpoint_config_predicates_all_pass"])
+
+    def test_token_like_path_suffix_is_only_exposed_as_digest(self):
+        secret = "credential-shaped-suffix-43fa91"
+        path = "/run/supervisor.sock/" + secret
+        self.write_config("unix://" + path, socket_file=path)
+        receipt = P.inspect_configuration()
+        rendered = json.dumps(receipt, sort_keys=True)
+        self.assertNotIn(secret, rendered)
+        self.assertNotIn(path, rendered)
+        self.assertTrue(receipt["endpoint"]["socket_serverurl_paths_equal"])
+        expected = hashlib.sha256(path.encode("utf-8")).hexdigest()
+        self.assertEqual(receipt["endpoint"]["normalized_socket_path_sha256"], expected)
+        self.assertEqual(receipt["endpoint"]["serverurl_path_sha256"], expected)
 
     def test_non_allowlisted_factory_owner_and_mode_fail_closed_as_facts(self):
         self.write_config("unix:///run/supervisor.sock", mode="0777",
@@ -106,8 +125,8 @@ class EndpointPreflightTests(unittest.TestCase):
         self.write_config("unix:///run/../etc/passwd",
                           socket_file="%(ENV_SECRET)s/endpoint.sock")
         endpoint = P.inspect_configuration()["endpoint"]
-        self.assertIsNone(endpoint["normalized_socket_path"])
-        self.assertIsNone(endpoint["serverurl_path"])
+        self.assertFalse(endpoint["socket_path_absolute_no_traversal"])
+        self.assertTrue(endpoint["serverurl_path_sha256"])
         self.assertFalse(endpoint["socket_serverurl_paths_equal"])
         self.assertFalse(endpoint["endpoint_config_predicates_all_pass"])
 
