@@ -329,8 +329,11 @@ def main():
         sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
         from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
         try:
-            if not s.cleanup():good=False
-        except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
+            cleanup_status=s.cleanup_result()
+            print('TEMP_SSH_CLEANUP='+cleanup_status,flush=True)
+            if cleanup_status=='HOLD':good=False
+        except Exception:
+            print('TEMP_SSH_CLEANUP=HOLD',flush=True);good=False
         with contextlib.suppress(OSError):s.KEY.unlink()
     return 0 if good else 2
 if __name__=='__main__':raise SystemExit(main())
