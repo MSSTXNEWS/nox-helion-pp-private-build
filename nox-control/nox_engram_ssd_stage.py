@@ -66,9 +66,9 @@ def filesystem(fd):
     raise Hold('HOLD_ENGRAM_SSD_MOUNT_ID')
 
 
-def check_budget(fd, remaining):
+def available_disk_bytes(fd):
     volume = os.fstatvfs(fd)
-    require(volume.f_bavail * volume.f_frsize >= remaining + DISK_RESERVE, 'DISK_SPACE')
+    return volume.f_bavail * volume.f_frsize
 
 
 def check_admission():
@@ -188,15 +188,26 @@ def stage_lock(fd):
 def stage(path, *, execute=False):
     with directory(path) as fd:
         disk_type = filesystem(fd)
-        require(disk_type in LOCAL_FILESYSTEMS, 'LOCAL_DISK_FILESYSTEM')
-        check_budget(fd, SIZE)
-        info = {'state': 'PLAN_ONLY', 'source_revision': REVISION, 'size_bytes': SIZE,
-                'required_free_bytes': SIZE + DISK_RESERVE, 'filesystem': disk_type,
-                'minimum_raw_memory_reserve_bytes': MEMORY_RESERVE, 'activation_performed': False}
-        if not execute:
+        free = available_disk_bytes(fd)
+        required = SIZE + DISK_RESERVE
+        eligible = disk_type in LOCAL_FILESYSTEMS
+        reason = None
+        if not eligible:
+            reason = 'HOLD_ENGRAM_SSD_LOCAL_DISK_FILESYSTEM'
+        elif free < required:
+            reason = 'HOLD_ENGRAM_SSD_DISK_SPACE'
+        info = {'state': 'HOLD' if reason else 'PLAN_ONLY', 'source_revision': REVISION,
+                'size_bytes': SIZE, 'required_free_bytes': required, 'available_free_bytes': free,
+                'filesystem': disk_type, 'filesystem_eligible': eligible,
+                'capacity_fits': free >= required, 'minimum_raw_memory_reserve_bytes': MEMORY_RESERVE,
+                'activation_performed': False}
+        if reason:
+            info['reason'] = reason
+        if not execute or reason:
             return info
         check_admission()
         with stage_lock(fd):
+            require(available_disk_bytes(fd) >= required, 'DISK_SPACE')
             require(absent(fd, TARGET) and absent(fd, RECEIPT), 'ALREADY_STAGED')
             require(hasattr(os, 'posix_fadvise') and hasattr(os, 'fdatasync'), 'CACHE_CONTROL')
             opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), SourceRedirect())
