@@ -132,7 +132,17 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                        'actual_native_backend':True,'nonloopback_auth':True,
                        'empty_dialog_history_verified':True,'synthetic_number_sequence_pass':True,
                        'progressive_stream_render_verified':True,
-                       'stop_visible_during_generation':True}
+                       'stop_visible_during_generation':True,
+                       'two_turn_mode':True,
+                       'multiturn_dialog_history_verified':True,
+                       'multiturn_canonical_s03_verified':True,
+                       'multiturn_second_native_equal':True,
+                       'multiturn_second_terminal_saved':True,
+                       'multiturn_second_visible_progressive':True,
+                       'multiturn_second_stop_visible':True,
+                       'multiturn_second_numeric_pass':True,
+                       'multiturn_browser_acceptance_verified':True,
+                       'multiturn_native_post_count':2}
                 # This receipt was written BEFORE the browser stage; all fields
                 # match, but accepting it would replay a prior acceptance.
                 receipt.write_text(json.dumps(proof))
@@ -176,6 +186,31 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                         self.assertEqual(emitted[0][1]['reason'],
                                          'HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
                     proof[missing_evidence]=True
+                # A green first turn does not establish four-message S03;
+                # the producer requires a separately bound canonical S03 proof.
+                for missing_multiturn in (
+                    'two_turn_mode', 'multiturn_dialog_history_verified',
+                    'multiturn_canonical_s03_verified', 'multiturn_second_native_equal',
+                    'multiturn_second_terminal_saved', 'multiturn_second_visible_progressive',
+                    'multiturn_second_stop_visible', 'multiturn_second_numeric_pass',
+                    'multiturn_browser_acceptance_verified'):
+                    proof[missing_multiturn]=False
+                    install_fresh_receipt_stage(proof)
+                    emitted.clear()
+                    with self.subTest(missing_multiturn=missing_multiturn), redirect_stdout(io.StringIO()):
+                        self.assertEqual(module.main(),2)
+                        self.assertEqual(emitted[0][1]['reason'],
+                                         'HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
+                    proof[missing_multiturn]=True
+                for wrong_native_post_count in (None, 1, 3, True, '2'):
+                    proof['multiturn_native_post_count']=wrong_native_post_count
+                    install_fresh_receipt_stage(proof)
+                    emitted.clear()
+                    with self.subTest(native_posts=wrong_native_post_count), redirect_stdout(io.StringIO()):
+                        self.assertEqual(module.main(),2)
+                        self.assertEqual(emitted[0][1]['reason'],
+                                         'HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
+                proof['multiturn_native_post_count']=2
                 install_fresh_receipt_stage(proof)
                 emitted.clear()
                 with redirect_stdout(io.StringIO()) as output:
