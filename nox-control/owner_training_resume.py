@@ -615,10 +615,29 @@ def resource_admission(helper):
     gpu1 = next((row for row in helper.gpu()['gpus'] if row['index'] == 1), None)
     if not gpu1 or gpu1['free_mib'] < 27000:
         raise RuntimeError('HOLD_GPU1_HEADROOM')
-    quota, period = map(int, Path('/sys/fs/cgroup/cpu.max').read_text().split())
+    # cgroup v2 uses "max PERIOD" when CPU quota is unlimited.  Treat
+    # that as the effective CPU affinity, without silently admitting malformed
+    # or zero quotas/periods or bypassing the existing RAM/VRAM gates.
+    try:
+        cpu_spec = Path('/sys/fs/cgroup/cpu.max').read_text().split()
+        if (len(cpu_spec) != 2 or len(cpu_spec[0]) > 32 or len(cpu_spec[1]) > 32
+                or not re.fullmatch('[0-9]+', cpu_spec[1])):
+            raise ValueError('invalid cpu.max')
+        period = int(cpu_spec[1])
+        affinity_cpus = len(os.sched_getaffinity(0))
+        if period <= 0 or affinity_cpus < 1:
+            raise ValueError('invalid CPU period or affinity')
+        if cpu_spec[0] == 'max':
+            quota_cpus = affinity_cpus
+        elif re.fullmatch('[0-9]+', cpu_spec[0]) and int(cpu_spec[0]) > 0:
+            quota_cpus = max(1, int(cpu_spec[0]) // period)
+        else:
+            raise ValueError('invalid CPU quota')
+    except (OSError, ValueError) as exc:
+        raise RuntimeError('HOLD_CGROUP_CPU_QUOTA') from exc
     budget = helper.resource_budget(int(Path('/sys/fs/cgroup/memory.max').read_text()),
         int(Path('/sys/fs/cgroup/memory.current').read_text()),
-        max(1, quota//period), len(os.sched_getaffinity(0)))
+        quota_cpus, affinity_cpus)
     configured = re.findall(r'^TRAIN_CPU_MAX=([0-9]+)GiB$',
                             (STATE/'train_cpu_max.env').read_text(), re.MULTILINE)
     if len(configured) != 1 or not 56 <= int(configured[0]) <= 64:
