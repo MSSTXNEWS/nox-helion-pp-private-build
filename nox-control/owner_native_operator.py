@@ -1340,6 +1340,25 @@ def preflight_source_export_key():
     return key
 
 
+def build_source_export_remote_script(payload, source_sha, request_id,
+                                      export_key_b64):
+    """Send the public key over remote stdin, never through child env/argv."""
+    source_export_key_info(export_key_b64)
+    if (not isinstance(payload, str) or len(payload) > 65536
+            or not re.fullmatch(r'[0-9a-f]{40}', str(source_sha))
+            or type(request_id) is not int or request_id <= 0):
+        raise RuntimeError('HOLD_SOURCE_EXPORT_REMOTE_SCRIPT_BOUNDS')
+    key_literal = shlex.quote(export_key_b64)
+    python_literal = shlex.quote(payload)
+    return (
+        'set -euo pipefail\\n'
+        f\"printf '%s' {key_literal} | env \"
+        f'NOX_OWNER_SOURCE_SHA={source_sha} '
+        f'NOX_OWNER_REQUEST_ID={request_id} '
+        f'python3 -c {python_literal}\\n'
+    )
+
+
 def authorize_event(action,export_key_b64=None):
     if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
     e=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
@@ -1600,8 +1619,11 @@ def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None)
             if p.is_file():assets[p.name]=base64.b64encode(p.read_bytes()).decode('ascii')
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
-    export_env=(f'NOX_OWNER_EXPORT_KEY_B64={shlex.quote(export_key_b64)} ' if action=='source_export' else '')
-    script=f"set -euo pipefail\n{export_env}NOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
+    if action == 'source_export':
+        script = build_source_export_remote_script(
+            payload, sha, int(request_id), export_key_b64)
+    else:
+        script=f"set -euo pipefail\nNOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
     timeout=150 if action in ('audit','inspect','source_attest','source_export') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
