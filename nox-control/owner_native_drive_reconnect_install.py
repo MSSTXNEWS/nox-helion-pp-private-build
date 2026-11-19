@@ -107,10 +107,12 @@ def install():
         stages[name]=atomic_install(SCRIPTS/name,assets[name])
     private_dir(SCRIPTS/'skills',create=True)
     stages['nox-drive-first.skill.md']=atomic_install(SCRIPTS/'skills/nox-drive-first.skill.md',assets['nox-drive-first.skill.md'])
-    private_dir(ROOT/'private',create=True)
-    private_dir(ROOT/'private/drive-tasks',create=True)
-    private_dir(ROOT/'cache',create=True)
-    private_dir(ROOT/'cache/warm-ssd',create=True)
+    # Never change permissions of preexisting shared NOX directories.
+    # Dedicated subdirectories inherit the already verified private owner roots.
+    private_dir(SCRIPTS/'private',create=True)
+    private_dir(SCRIPTS/'private/drive-tasks',create=True)
+    private_dir(STATE/'cache',create=True)
+    private_dir(STATE/'cache/warm-ssd',create=True)
     monitor='MONITOR_NOT_CONFIGURED'
     if SUPERVISOR_DIR.is_dir() and shutil.which('supervisorctl'):
         # Only this new program is updated. Do not restart the dispatcher, chat or S03.
