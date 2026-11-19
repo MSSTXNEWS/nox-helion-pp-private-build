@@ -49,5 +49,44 @@
     "training_run_or_optimizer_steps_claimed": false
   },
   "scope": "metadata-only validator and evidence; no downloaded payloads, weights, training, registry status edits, or host changes",
-  "validator_sha256": "e473fea23b40d53b358ea8e3b97c947be82159ca1bfc1ff881680a46a514443b"
+  "validator_sha256": "e473fea23b40d53b358ea8e3b97c947be82159ca1bfc1ff881680a46a514443b",
+  "dataset_artifact_search": {
+    "checked_at_utc": "2026-11-19",
+    "drive_search_scope": [
+      "HellaSwag",
+      "rowan/hellaswag",
+      "train-00000-of-00001.parquet",
+      "validation-00000-of-00001.parquet",
+      "hellaswag_train.jsonl",
+      "hellaswag_val.jsonl"
+    ],
+    "drive_result": "No matching HellaSwag dataset file metadata returned; the train basename query returned historical MASTER_CHECKLIST markdown, whose fetched content mentions SWE-Gym parquet but no HellaSwag.",
+    "repository_scope": {
+      "branch": "codex/4a01-source-pin-validator-20261119",
+      "head_before_acquisition_card": "6b0953289c7dad4f04558a070c9590c1ed735dcf",
+      "tree_entries": 2622,
+      "truncated": false,
+      "result": "No HellaSwag parquet/JSONL or split index. The only related named source is the generic nox-control/test_hybrid_training_dataset_reader.py."
+    },
+    "dataset_card_revision_candidate": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "acquisition_card_path": "nox-control/model_manifests/evidence/4A01_HELLASWAG_SPLIT_ACQUISITION_20261119.json",
+    "local_files_found": false,
+    "metadata_candidate_is_not_a_local_receipt": true,
+    "validator_state_unchanged": "HOLD"
+  },
+  "dataset_upstream_metadata_candidate": {
+    "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "source_url": "https://huggingface.co/datasets/Rowan/hellaswag/commit/218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "train": {
+      "path": "data/train-00000-of-00001.parquet",
+      "size_bytes": 24365524,
+      "sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02"
+    },
+    "validation": {
+      "path": "data/validation-00000-of-00001.parquet",
+      "size_bytes": 6315951,
+      "sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd"
+    },
+    "qualification": "Metadata-only candidate. Local files were not downloaded or byte-verified; owner confirmation is required before manifest pins are promoted."
+  }
 }
