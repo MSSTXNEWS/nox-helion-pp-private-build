@@ -1524,7 +1524,18 @@ class Native:
             # An unavailable/ambiguous S03 reader is not terminal settlement.
             # Preserve the original claim and never authorize a fresh IPC.
             return None
-        if not proof or proof.get('receipt_sha256') != terminal['receipt_sha256']:
+        if (not isinstance(proof, dict)
+                or proof.get('receipt_sha256') != terminal['receipt_sha256']):
+            return None
+        # S03 may have blocked while a lease/claim writer changed the row.
+        # Never report a terminal result against an outdated queue snapshot.
+        try:
+            with self.ns['_qlock']:
+                current = (document(self.ns['STATE'], 16*1024*1024)
+                           .get('tasks') or {}).get(task_id)
+        except (OSError, ValueError, TypeError, KeyError, GateError):
+            return None
+        if current != row:
             return None
         return {'receipt': receipt, 's03': proof,
                 'submit_intent_sha256': terminal['submit_intent_sha256']}
