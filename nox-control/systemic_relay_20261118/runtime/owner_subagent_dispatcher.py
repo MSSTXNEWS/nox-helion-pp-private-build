@@ -1517,6 +1517,11 @@ class Native:
                 identity = next((row for row in self.process_readback() if row['role'] == role), None)
                 if identity is None:
                     return 'wait', 'HOLD_NATIVE_LEAF_WORKER_IDENTITY'
+                # Pool boot and process readback can take time. A new owner
+                # chat after the first gate must prevent any worker submit.
+                reason = self._fresh_admission_reason(leaf_only=True)
+                if reason:
+                    return 'wait', reason
                 self.pool.submit({'id':task['id'], 'subagent':role, 'task':task['title'], 'depends_on':[],
                     '_native_leaf_context':{'operation':params['operation'],
                         'parent_task_id':params['parent_task_id'], 'queue_id':task['queue_id'],

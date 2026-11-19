@@ -116,6 +116,52 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         self.assertIsNone(allowed(owner, leaf_only=True))
         self.assertEqual(calls, [True])
 
+    def test_chat_start_during_pool_boot_prevents_leaf_submit(self):
+        # Exercise the actual leaf handler.  Initial resource admission passes;
+        # process start/readback then exposes a new owner chat at the last fence.
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(node for node in tree.body
+                      if isinstance(node, ast.ClassDef) and node.name == "Native")
+        method = next(node for node in native.body
+                      if isinstance(node, ast.FunctionDef) and node.name == "_handle_leaf")
+        module = ast.fix_missing_locations(ast.Module(body=[method], type_ignores=[]))
+        scope = {"LEAF_HANDLER": "leaf", "ROLES": ("runtime", "memory", "weights"),
+                 "time": time, "sqlite3": sqlite3, "GateError": RuntimeError}
+        exec(compile(module, str(SOURCE), "exec"), scope)
+        calls, submissions = [], []
+        task = {
+            "id": "B1-CPU-SUBMIT-TEST", "handler": "leaf", "queue_id": "queue-1",
+            "owner_claim": {"nonce": "original-claim"},
+            "params": {"operation": "source_read", "parent_task_id": "6V14-03",
+                       "source_sha256": "sha-pinned", "job_id": "job-1"},
+        }
+        owner = SimpleNamespace(
+            catalog={"tasks": [task]}, source="sha-pinned", pool=None,
+            lock=threading.Lock(), interrupted={},
+            _claim_current=lambda *a, **k: True,
+            stop_active=lambda: False, writer_lease=lambda: True,
+            owner_allowed=lambda: True,
+            process_readback=lambda: [{"role": "runtime", "pid": 17,
+                                       "process_starttime": 999}],
+        )
+        def gate(*, leaf_only=False):
+            calls.append(leaf_only)
+            return None if len(calls) == 1 else "HOLD_NATIVE_CHAT_PRIORITY"
+        def start_existing_pool(count):
+            self.assertEqual(count, 3)
+            owner.pool = SimpleNamespace(active={}, submit=lambda _: submissions.append(_))
+            return True
+        owner._fresh_admission_reason = gate
+        owner.ensure_processes = start_existing_pool
+        status, reason = scope["_handle_leaf"](owner, task)
+        self.assertEqual((status, reason), ("wait", "HOLD_NATIVE_CHAT_PRIORITY"))
+        self.assertEqual(calls, [True, True], "fresh resource/chat gate after boot")
+        self.assertEqual(submissions, [], "no worker execution after chat begins")
+        self.assertEqual(task["owner_claim"]["nonce"], "original-claim")
+        self.assertEqual(owner.interrupted, {})
+
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
