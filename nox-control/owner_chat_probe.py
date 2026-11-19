@@ -306,6 +306,8 @@ def main():
     finally:
         try:request(client,'/chat/logout','POST',{}).close()
         except Exception:pass
+    # Logout/metrics are part of elapsed probe time; check immediately before COMPLETE.
+    require_executor_turn_budget(time.monotonic()-probe_started)
     print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
 
 if __name__=='__main__':
