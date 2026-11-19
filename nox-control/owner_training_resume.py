@@ -629,7 +629,9 @@ def resource_admission(helper):
     if budget['train_cpu_gib'] < configured_gib:
         raise RuntimeError('HOLD_INSTALLED_TRAIN_CPU_RAM_HEADROOM')
     budget['configured_train_cpu_gib'] = configured_gib
-    if helper.health().get('8081') != 200:
+    # Owner readback 2026-11-19: existing nox-proxy listens on 8080, not 8081.
+    # Fail closed on the serving route's actual /health; never start a new proxy.
+    if helper.health().get('8080') != 200:
         raise RuntimeError('HOLD_CHAT_HEALTH_BEFORE_TRAINING')
     return {'gpu1': gpu1, 'budget': budget}
 
