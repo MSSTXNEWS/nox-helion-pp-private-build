@@ -1,0 +1,20 @@
+name: NOX native queue action check
+on:
+  push:
+    branches: [fix/nox-queue-idle-action-20261119]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Targeted offline check
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_dispatcher_advisor.py nox-control/test_nox_queue_idle_action.py
+          python3 -m unittest discover -s nox-control -p test_nox_queue_idle_action.py -v
