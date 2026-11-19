@@ -64,6 +64,31 @@ class B1ExchangeContractTests(unittest.TestCase):
                                           lambda _: True),
                          'HOLD_EXCHANGE_PROOF_CONFLICT')
 
+    def test_verifier_cannot_certify_a_rebound_mutable_caller_proof(self):
+        """A mutating verifier must not alter the committed S03 witness."""
+        self.assertEqual(claim_once(self.first, C, E, H), 'DISPATCH_ONCE')
+        supplied = proof()
+        originally_verified = supplied.copy()
+
+        def verifier(frozen):
+            self.assertEqual(frozen['s03_record_id'], 'canonical-record-1')
+            # Mutate the original dict after verifier looked at its contents.
+            supplied['s03_record_id'] = 'forged-record-after-check'
+            supplied['response_sha256'] = 'd' * 64
+            with self.assertRaises(TypeError):
+                frozen['s03_record_id'] = 'another-forgery'
+            return True
+
+        self.assertEqual(certify_readback(self.first, C, E, H, supplied,
+                                          verifier), 'READBACK_ONLY')
+        self.assertEqual(certify_readback(self.first, C, E, H,
+                                          originally_verified, lambda _: True),
+                         'READBACK_ONLY')
+        self.assertEqual(certify_readback(self.first, C, E, H, supplied,
+                                          lambda _: True),
+                         'HOLD_EXCHANGE_PROOF_CONFLICT')
+        self.assertEqual(claim_once(self.first, C, E, H), 'READBACK_ONLY')
+
     def test_bad_identity_or_cross_exchange_proof_never_claims_success(self):
         with self.assertRaisesRegex(HoldExchange, 'HOLD_EXCHANGE_IDENTITY'):
             claim_once(self.first, '../chat', E, H)

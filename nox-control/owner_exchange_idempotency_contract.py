@@ -7,6 +7,7 @@ a terminal exchange; this module stores no chat content and never replays POSTs.
 """
 import re
 import sqlite3
+from types import MappingProxyType
 
 
 SCHEMA = """CREATE TABLE IF NOT EXISTS b1_exchange_claims (
@@ -122,16 +123,19 @@ def certify_readback(conn, conversation_id, exchange_id, request_sha256,
     digest = _digest(request_sha256)
     if not isinstance(proof, dict) or not callable(immutable_verifier):
         raise HoldExchange('HOLD_S03_PROOF')
-    if (proof.get('conversation_id') != key[0] or
-            proof.get('exchange_id') != key[1] or
-            proof.get('request_sha256') != digest or
-            type(proof.get('s03_record_id')) is not str or
-            not proof['s03_record_id'] or len(proof['s03_record_id']) > 200):
+    # Freeze caller-owned identity before external verification and CAS commit.
+    # A verifier cannot rebind the persisted S03 witness through the input dict.
+    frozen = MappingProxyType(dict(proof))
+    if (frozen.get('conversation_id') != key[0] or
+            frozen.get('exchange_id') != key[1] or
+            frozen.get('request_sha256') != digest or
+            type(frozen.get('s03_record_id')) is not str or
+            not frozen['s03_record_id'] or len(frozen['s03_record_id']) > 200):
         raise HoldExchange('HOLD_S03_PROOF')
-    psha = _digest(proof.get('s03_proof_sha256'))
-    rsha = _digest(proof.get('response_sha256'))
+    psha = _digest(frozen.get('s03_proof_sha256'))
+    rsha = _digest(frozen.get('response_sha256'))
     try:
-        if immutable_verifier(proof) is not True:
+        if immutable_verifier(frozen) is not True:
             raise HoldExchange('HOLD_S03_PROOF')
     except HoldExchange:
         raise
@@ -146,13 +150,13 @@ def certify_readback(conn, conversation_id, exchange_id, request_sha256,
         if row is None or row[0] != digest:
             return 'HOLD_EXCHANGE_UNKNOWN'
         if row[1] == 'VERIFIED':
-            if row[2:] == (proof['s03_record_id'], psha, rsha):
+            if row[2:] == (frozen['s03_record_id'], psha, rsha):
                 return 'READBACK_ONLY'
             return 'HOLD_EXCHANGE_PROOF_CONFLICT'
         conn.execute(
             "UPDATE b1_exchange_claims SET status='VERIFIED', "
             's03_record_id=?,s03_proof_sha256=?,response_sha256=? '
             'WHERE conversation_id=? AND exchange_id=?',
-            (proof['s03_record_id'], psha, rsha, *key))
+            (frozen['s03_record_id'], psha, rsha, *key))
         return 'READBACK_ONLY'
     return _execute(conn, operation)
