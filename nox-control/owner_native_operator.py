@@ -244,6 +244,12 @@ def _project_service_inventory(services):
         if isinstance(row.get('identity'),dict):item['identity']=_project_identity(row['identity'])
         else:item['identity']=None
         result['services'].append(item)
+    duplicate_names=services.get('duplicate_service_names')
+    if type(duplicate_names) is not bool:
+        raise RuntimeError('HOLD_AUDIT_SUPERVISOR_DUPLICATE_FLAG')
+    names=[row['service'] for row in result['services']]
+    if duplicate_names is False and len(names)!=len(set(names)):
+        raise RuntimeError('HOLD_AUDIT_SUPERVISOR_DUPLICATE_DECLARATION')
     return result
 
 def _project_gpu_link(link):
@@ -600,8 +606,10 @@ def audit_census_status(stdout):
                         normalized.append((name,state,pid))
                     if len({item[0] for item in normalized})!=len(normalized):return None
                     return sorted(normalized)
-                crosscheck_complete=(normalized_service_rows(raw_rows,'name')
-                    ==normalized_service_rows(hardware_rows,'service'))
+                normalized_raw=normalized_service_rows(raw_rows,'name')
+                normalized_hardware=normalized_service_rows(hardware_rows,'service')
+                crosscheck_complete=(normalized_raw is not None and normalized_hardware is not None
+                    and normalized_raw==normalized_hardware)
 
     before=hardware.get('gpu_apps_before') if isinstance(hardware,dict) else None
     after=hardware.get('gpu_apps_after') if isinstance(hardware,dict) else None

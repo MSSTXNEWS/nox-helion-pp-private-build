@@ -335,6 +335,30 @@ class OwnerNativeOutputTransferTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "HOLD_AUDIT_CENSUS_INCOMPLETE"):
             OP.require_audit_census_complete(mismatched_supervisor)
 
+    def test_duplicate_supervisor_service_names_never_pass_crosscheck(self):
+        def duplicate_hardware_and_worker_names(row):
+            hw=row["result"]["supervisor_services"]
+            hw["services"].append(dict(hw["services"][0]))
+        duplicate_hardware=_replace_section(_fixture(2),"hardware",duplicate_hardware_and_worker_names)
+        with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_SUPERVISOR_DUPLICATE_DECLARATION"):
+            OP.audit_bundle_line(duplicate_hardware)
+
+        def duplicate_worker_names(row):
+            services=row["result"]["results"][0]["services"]
+            services.append(dict(services[0]))
+        duplicate_worker=_replace_section(_fixture(2),"supervisor",duplicate_worker_names)
+        gate=OP.audit_census_status(duplicate_worker)
+        self.assertFalse(gate["supervisor_crosscheck_complete"])
+        with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_CENSUS_INCOMPLETE"):
+            OP.require_audit_census_complete(duplicate_worker)
+
+        def duplicate_both(row):
+            services=row["result"]["results"][0]["services"]
+            services.append(dict(services[0]))
+        both=_replace_section(duplicate_hardware,"supervisor",duplicate_both)
+        with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_SUPERVISOR_DUPLICATE_DECLARATION"):
+            OP.audit_bundle_line(both)
+
     def test_parent_chain_service_join_binds_pid_start_ticks_and_pid_namespace(self):
         stdout=_fixture(2,parent_chain=True)
         self.assertTrue(OP.require_audit_census_complete(stdout)["gpu_census_complete"])
