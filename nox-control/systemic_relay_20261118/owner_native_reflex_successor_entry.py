@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One-shot owner-pinned safe upgrade of the existing NOX native director.
 
-Exactly two reviewed script replacements and the existing module-pin config.
+Exactly three reviewed script replacements and the existing module-pin config.
 No new daemon, queue, GPU/model, scheduler, training, source-workspace edits
 or authorization created. Fails closed if live state diverged.
 """
@@ -22,6 +22,7 @@ ROOT = Path('/root/nox')
 CONFIG = 'config/owner_native_subagents.json'
 REFILL = 'scripts/owner_systemic_refill.py'
 DIRECTOR = 'scripts/owner_subagent_dispatcher.py'
+TRUTH = 'scripts/owner_subagent_instruction_truth.py'
 HELPER_SHA = '8470a6720ca69864bbc4e6e630a1f853344839af424d3829dcdf1774442db609'
 OLD = {
     CONFIG: '30effffe3c8a20c0df4dee936beb2f8183347fb2a5fd51d4543dfbde50efb919',
@@ -49,7 +50,8 @@ def encoding(value):
 
 
 def decode():
-    names = {'owner_systemic_refill.py', 'owner_subagent_dispatcher.py', 'continuous_transaction_helpers.py'}
+    names = {'owner_systemic_refill.py', 'owner_subagent_dispatcher.py',
+             'owner_subagent_instruction_truth.py', 'continuous_transaction_helpers.py'}
     require(set(BUNDLE) == names, 'BUNDLE_FILES')
     assets = {}
     for name in names:
@@ -61,7 +63,8 @@ def decode():
     h = types.ModuleType('_nox_reflex_owner_helper')
     h.__file__ = '<verified helper>'
     exec(compile(assets['continuous_transaction_helpers.py'], h.__file__, 'exec'), h.__dict__)
-    return h, {REFILL: assets['owner_systemic_refill.py'], DIRECTOR: assets['owner_subagent_dispatcher.py']}
+    return h, {REFILL: assets['owner_systemic_refill.py'], DIRECTOR: assets['owner_subagent_dispatcher.py'],
+               TRUTH: assets['owner_subagent_instruction_truth.py']}
 
 
 def run():
@@ -80,13 +83,24 @@ def run():
         and (old_config.get('systemic_relay') or {}).get('sha256') == MANIFEST,
         'CURRENT_NATIVE_IDENTITY')
     pins = old_config['module_pins']
+    old_truth_pin = pins.get('owner_subagent_instruction_truth.py')
+    require(type(old_truth_pin) is str and re.fullmatch('[a-f0-9]{64}', old_truth_pin),
+        'CURRENT_TRUTH_PIN')
+    expected = {**OLD, TRUTH:old_truth_pin}
+    current[TRUTH] = h.read_regular(ROOT/TRUTH)
+    require(sha(current[TRUTH]) == old_truth_pin, 'CURRENT_TRUTH_PREIMAGE')
     require(pins.get('owner_systemic_refill.py') == OLD[REFILL]
         and pins.get('owner_subagent_dispatcher.py') == OLD[DIRECTOR],
         'CURRENT_SOURCE_PINS')
+    # Exact callback SHA must agree with the independent truth-wrapper pin.
+    candidate_pin = sha(scripts[DIRECTOR])
+    require(("CALLBACK_SHA = '" + candidate_pin + "'") in scripts[TRUTH].decode('utf-8'),
+        'TRUTH_CALLBACK_BINDING')
     require(h.stop_clear(ROOT), 'OWNER_STOP')
     new = copy.deepcopy(old_config)
     new['module_pins']['owner_systemic_refill.py'] = sha(scripts[REFILL])
-    new['module_pins']['owner_subagent_dispatcher.py'] = sha(scripts[DIRECTOR])
+    new['module_pins']['owner_subagent_dispatcher.py'] = candidate_pin
+    new['module_pins']['owner_subagent_instruction_truth.py'] = sha(scripts[TRUTH])
     # Old terminal receipts have a pinned prior source and must remain verifiable.
     for history_name in ('historical_project_source_sha256', 'historical_leaf_source_sha256'):
         history = list(new.get(history_name, []))
@@ -97,7 +111,8 @@ def run():
             history.append(previous)
         require(len(history) <= 32 and len(history) == len(set(history)), 'HISTORY_DUPLICATE')
         new[history_name] = history
-    changes = {REFILL: scripts[REFILL], DIRECTOR: scripts[DIRECTOR], CONFIG: encoding(new)}
+    changes = {REFILL: scripts[REFILL], DIRECTOR: scripts[DIRECTOR],
+               TRUTH: scripts[TRUTH], CONFIG: encoding(new)}
 
     # Immutable source and verified current queue guard; no owner/admin privilege is minted.
     lock = ROOT/'state/owner_maintenance.lock'
@@ -169,7 +184,7 @@ def run():
             h.atomic(backup / Path(rel).name, raw)
         h.atomic(backup/'queue_sha256.txt', (before_queue_sha+'\n').encode())
         require(h.stop_clear(ROOT) and service_guard() == protected, 'FENCE_CHANGED')
-        h.preimages(ROOT, OLD)
+        h.preimages(ROOT, expected)
         queue_again, active = h.queue_idle(ROOT)
         require(not active and sha(h.read_regular(ROOT/'state/dispatcher/state.json',32*1024*1024)) == before_queue_sha,
             'QUEUE_CHANGED_BEFORE_STOP')
@@ -186,12 +201,12 @@ def run():
             applied.append(rel)
             h.atomic(ROOT/rel, raw, 0o600 if rel == CONFIG else 0o644)
             require(h.read_regular(ROOT/rel) == raw, 'WRITE_POSTIMAGE')
-        started = h.start_checked(ROOT, require_native_status=True)
-        require(h.stop_clear(ROOT) and service_guard() == protected, 'PROTECTED_SERVICE_CHANGED')
-        # The director must acquire the maintenance lock in SH mode to refill.
-        # Release our upgrade lock only after exact new source and director are live.
+        # The new director acquires this same maintenance lease in SH mode.
+        # Release EX before startup to avoid a bootstrap deadlock.
         fcntl.flock(fd, fcntl.LOCK_UN)
         maintenance_released = True
+        started = h.start_checked(ROOT, require_native_status=True)
+        require(h.stop_clear(ROOT) and service_guard() == protected, 'PROTECTED_SERVICE_CHANGED')
         native_status = {}
         deadline = time.monotonic()+25
         while time.monotonic() < deadline:
@@ -212,7 +227,8 @@ def run():
         final_config = h.read_regular(ROOT/CONFIG)
         require(final_config == changes[CONFIG]
             and sha(h.read_regular(ROOT/REFILL)) == sha(scripts[REFILL])
-            and sha(h.read_regular(ROOT/DIRECTOR)) == sha(scripts[DIRECTOR]),
+            and sha(h.read_regular(ROOT/DIRECTOR)) == sha(scripts[DIRECTOR])
+            and sha(h.read_regular(ROOT/TRUTH)) == sha(scripts[TRUTH]),
             'POSTBOOT_SOURCE_OR_CONFIG')
         receipt.update(state='NATIVE_REFLEX_TELEMETRY_VERIFIED',
             old_director=old_director,new_director=started,
@@ -221,7 +237,7 @@ def run():
             observation_sha256=reflex.get('observation_sha256'),
             staged_research_count=reflex.get('staged_count'),
             new_native_jobs=reflex.get('new_native_jobs'),
-            runtime_files_changed=2)
+            runtime_files_changed=3)
         emit()
         print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
         return True
@@ -240,7 +256,13 @@ def run():
                     require(started is not None and live == started, 'FOREIGN_DIRECTOR_NO_ROLLBACK')
                     h.stop_checked()
                 else:
-                    require(present['state'] in ('STOPPED','FATAL','EXITED'), 'UNKNOWN_DIRECTOR_NO_ROLLBACK')
+                    require(present['state'] in ('STOPPED','BACKOFF','FATAL','EXITED'), 'UNKNOWN_DIRECTOR_NO_ROLLBACK')
+                    # BACKOFF does not prove a stopped supervisor: force a checked reset.
+                    if present['state']=='BACKOFF':
+                        import subprocess
+                        subprocess.run(['supervisorctl','stop','nox-dispatcher-t855u'],capture_output=True,timeout=15)
+                        require(h.supervisor('status')['state'] in ('STOPPED','FATAL','EXITED'),
+                            'BACKOFF_RESET_UNVERIFIED')
                 for rel in reversed(applied):
                     post = h.read_regular(ROOT/rel)
                     require(post == changes[rel], 'ROLLBACK_FOREIGN_FILE_CHANGE')
@@ -249,6 +271,9 @@ def run():
             if stopped and h.supervisor('status')['state'] in ('STOPPED','FATAL','EXITED') and receipt.get('rollback_verified',True):
                 h.wait_previous_descendants_stopped(children, timeout=10)
                 require(h.stop_clear(ROOT), 'RESTORE_OWNER_STOP')
+                # Original director requires the same SH lease on startup.
+                fcntl.flock(fd, fcntl.LOCK_UN)
+                maintenance_released = True
                 receipt['restored_director'] = h.start_checked(ROOT, require_native_status=True)
         except BaseException as failure:
             receipt['recovery'] = str(failure) if str(failure).startswith('HOLD_') else 'HOLD_NATIVE_REFLEX_RECOVERY_'+type(failure).__name__
