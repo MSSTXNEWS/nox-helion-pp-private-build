@@ -20,7 +20,7 @@ from pathlib import Path
 import re
 import sys
 from typing import Any
-from urllib.parse import parse_qsl, unquote, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, unquote, urlsplit, urlunsplit
 
 INPUT_SCHEMA = "nox.self_model.input.v1"
 OUTPUT_SCHEMA = "nox.self_model.snapshot.v1"
@@ -33,7 +33,7 @@ IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}\Z")
 ERROR_CODE = re.compile(r"[A-Z][A-Z0-9_]{0,63}\Z")
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 SENSITIVE_QUERY_KEY = re.compile(
-    r"(?i)^(?:access[_-]?token|authorization|auth|api[_-]?key|apikey|client[_-]?secret|secret|password|passwd|"
+    r"(?i)^(?:access[_-]?token|authorization|auth|api[_-]?key|apikey|key|client[_-]?secret|secret|password|passwd|"
     r"credential|session(?:id)?|sid|signature|sig|token|jwt|refresh[_-]?token|id[_-]?token|private[_-]?key|"
     r"code|state|x-amz-(?:credential|signature|security-token)|x-goog-(?:credential|signature))$"
 )
@@ -47,7 +47,7 @@ PREFIXED_PATH_SECRET = re.compile(
     r"\bsk-[A-Za-z0-9_-]{16,}\b|\bAKIA[0-9A-Z]{16}\b|\bAIza[A-Za-z0-9_-]{30,}\b|"
     r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b)"
 )
-LONG_PATH_TOKEN = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9])")
+OPAQUE_PATH_TOKEN = re.compile(r"[A-Za-z0-9_-]{24,}\Z")
 MAX_INPUT_BYTES = 262144
 MAX_CAPABILITIES = 100
 MAX_ACTIVE_TASKS = 295
@@ -110,24 +110,53 @@ def _reference_url(value: Any, field: str) -> str:
     if address is not None and not address.is_global:
         raise SelfModelError(f"{field} may not point to a non-public IP")
     for key, _ in parse_qsl(parts.query, keep_blank_values=True):
-        if SENSITIVE_QUERY_KEY.fullmatch(unquote(key).strip()):
+        decoded_key = key
+        for _ in range(8):
+            next_key = unquote(decoded_key)
+            if next_key == decoded_key:
+                break
+            decoded_key = next_key
+        else:
+            if re.search(r"%[0-9a-fA-F]{2}", decoded_key):
+                raise SelfModelError(f"{field} has excessively nested query encoding")
+        normalized_key = decoded_key.strip().casefold()
+        while normalized_key.endswith("[]"):
+            normalized_key = normalized_key[:-2]
+        if SENSITIVE_QUERY_KEY.fullmatch(normalized_key):
             raise SelfModelError(f"{field} may not contain sensitive query keys")
-    decoded_path = unquote(parts.path)
+
+    decoded_path = parts.path
+    previous_path = None
+    for _ in range(8):
+        if decoded_path == previous_path:
+            break
+        previous_path = decoded_path
+        decoded_path = unquote(decoded_path)
+    else:
+        raise SelfModelError(f"{field} has excessively nested URL encoding")
+    if re.search(r"%[0-9a-fA-F]{2}", decoded_path):
+        raise SelfModelError(f"{field} has excessively nested URL encoding")
+
     segments = [segment for segment in decoded_path.split("/") if segment]
-    for index, segment in enumerate(segments[:-1]):
-        if segment.casefold() in SENSITIVE_PATH_MARKERS and len(segments[index + 1]) >= 12:
+    for index, segment in enumerate(segments):
+        if segment.casefold() in SENSITIVE_PATH_MARKERS and index + 1 < len(segments) and len(segments[index + 1]) >= 12:
             raise SelfModelError(f"{field} may not contain secret-like path tokens")
-    if PREFIXED_PATH_SECRET.search(decoded_path):
-        raise SelfModelError(f"{field} may not contain secret-like path tokens")
-    for match in LONG_PATH_TOKEN.finditer(decoded_path):
-        token = match.group()
-        if re.fullmatch(r"(?i)(?:[0-9a-f]{40}|[0-9a-f]{64})", token):
-            continue
-        if any(char.isalpha() for char in token) and any(char.isdigit() for char in token):
+        if PREFIXED_PATH_SECRET.search(segment):
             raise SelfModelError(f"{field} may not contain secret-like path tokens")
+        if OPAQUE_PATH_TOKEN.fullmatch(segment):
+            public_git_revision = (
+                host in {"github.com", "www.github.com"}
+                and len(segment) in {40, 64}
+                and re.fullmatch(r"[0-9a-fA-F]+", segment)
+                and index > 0
+                and segments[index - 1].casefold() in {"blob", "tree", "commit", "commits"}
+            )
+            if not public_git_revision:
+                raise SelfModelError(f"{field} may not contain secret-like path tokens")
     # References are metadata only; strip safe query values and all fragments
     # so a caller cannot accidentally persist signed or session-bearing URLs.
-    return urlunsplit(("https", host, parts.path or "/", "", ""))
+    normalized_path = quote(decoded_path or "/", safe="/:@-._~!$&'()*+,;=")
+    return urlunsplit(("https", host, normalized_path, "", ""))
 
 
 def _sha(value: Any, field: str) -> str:
