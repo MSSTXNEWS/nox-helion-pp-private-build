@@ -139,7 +139,6 @@
         if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
         preparingSeen=true;
       } else {
-        // Fail closed: an unrecognized native frame cannot precede a
         throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
       }
     };
