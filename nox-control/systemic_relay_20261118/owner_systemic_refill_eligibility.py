@@ -221,8 +221,21 @@ def proposal_predicate_diff(proposals, registry, roots, request, previous):
                        'proposal.missions')]}]
     request_id = request.get('request_id') if isinstance(request, dict) else None
     previous_sha = request.get('previous_manifest_sha256') if isinstance(request, dict) else None
-    previous_parents = {m.get('parent_task_id') for m in previous.get('missions', [])
-                        if isinstance(m, dict)} if isinstance(previous, dict) else set()
+    # A malformed predecessor must never be interpreted as an empty history.
+    # Otherwise a corrupt reviewed manifest can crash or make older work look new.
+    previous_missions = previous.get('missions', []) if isinstance(previous, dict) else []
+    if not isinstance(previous_missions, list) or any(
+            not isinstance(m, dict)
+            or type(m.get('mission_id')) is not str
+            or type(m.get('revision')) is not int
+            or type(m.get('parent_task_id')) is not str
+            for m in previous_missions):
+        return [{'parent_task_id': None, 'predicates': [
+            _predicate('previous_missions_valid', True, False, False,
+                       'previous.missions: reviewed mission ID, revision and parent')],
+            'all_passed': False, 'native_publish_performed': False,
+            'original_task_accepted': False}]
+    previous_parents = {m['parent_task_id'] for m in previous_missions}
     request_outcomes = request.get('outcomes', []) if isinstance(request, dict) else []
     observed_ids = {x.get('task_id') for x in request_outcomes if isinstance(x, dict)}
     observed_parents = {value.split('.', 1)[0] for value in observed_ids
