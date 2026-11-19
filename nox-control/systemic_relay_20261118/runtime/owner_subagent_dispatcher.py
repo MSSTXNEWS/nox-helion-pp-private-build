@@ -60,10 +60,15 @@ SHA = re.compile(r'^[a-f0-9]{64}$')
 CLAIM = re.compile(r'^[a-f0-9]{24}$')
 POLICY_ID = 'NOX_WEB_WEIGHTS_V06'
 RESOURCE_PRESSURE_REASONS = frozenset({
-    'HOLD_BOUNDED_CPU_HEADROOM', 'HOLD_BOUNDED_CPU_MEMORY_PRESSURE'
+    'HOLD_BOUNDED_CPU_HEADROOM', 'HOLD_BOUNDED_CPU_MEMORY_PRESSURE',
+    'HOLD_NATIVE_MEMORY_PRESSURE_CRITICAL', 'HOLD_NATIVE_MEMORY_PRESSURE_ELEVATED',
+    'HOLD_NATIVE_MEMORY_OOM_EVENT', 'HOLD_NATIVE_MEMORY_LIMIT_EVENT'
 })
 RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS = 3
 RESOURCE_RECOVERY_INTERVAL_SEC = 5.0
+# Allow three minimum recovery intervals for event-counter pairing. Current
+# resource/PSI snapshots remain subject to the separate five-second freshness gate.
+MEMORY_EVENT_PAIR_MAX_AGE_SEC = 15.0
 RESOURCE_PRESSURE_LATCH = ROOT/'state/dispatcher/native_subagent_resource_latch.json'
 RESOURCE_PRESSURE_LATCH_SCHEMA = 'NOX_NATIVE_SUBAGENT_RESOURCE_PRESSURE_LATCH_V1'
 RESOURCE_PRESSURE_LATCH_MAX_BYTES = 8192
@@ -181,6 +186,175 @@ def idle_pool_release_gate(snapshot, reason, *, owner_authorized, stop_clear,
            (active, started, completed, interrupted, recovery_uncertain)):
         return False
     return True
+
+
+
+MEMORY_EVENT_REQUIRED = frozenset({'low', 'high', 'max', 'oom', 'oom_kill'})
+MEMORY_EVENT_ALLOWED = MEMORY_EVENT_REQUIRED | frozenset({'oom_group_kill'})
+MEMORY_PSI_FIELDS = frozenset({'avg10', 'avg60', 'avg300', 'total'})
+MEMORY_STAT_REQUIRED = frozenset({'file', 'shmem', 'inactive_file', 'anon'})
+
+
+def parse_memory_telemetry(pressure_raw, events_raw, previous_events=None,
+                           previous_observed_at=None, observed_at=None):
+    """Report absolutes and pair deltas over a bounded monotonic read interval."""
+    if not isinstance(pressure_raw, str) or len(pressure_raw) > 32768:
+        raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+    psi = {}
+    for line in pressure_raw.strip().splitlines():
+        fields = line.split()
+        if len(fields) < 2 or fields[0] not in ('some', 'full') or fields[0] in psi:
+            raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+        values = {}
+        for item in fields[1:]:
+            name, sep, raw = item.partition('=')
+            if not sep or name not in MEMORY_PSI_FIELDS or name in values:
+                raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+            if name == 'total':
+                if not raw.isdecimal() or len(raw) > 24:
+                    raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+                values[name] = int(raw)
+            else:
+                try:
+                    number = float(raw)
+                except (ValueError, OverflowError):
+                    raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN') from None
+                if not math.isfinite(number) or not 0 <= number <= 100:
+                    raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+                values[name] = number
+        if 'avg10' not in values:
+            raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+        psi[fields[0]] = values
+    if set(psi) != {'some', 'full'}:
+        raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+
+    if not isinstance(events_raw, str) or len(events_raw) > 32768:
+        raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+    events = {}
+    for line in events_raw.strip().splitlines():
+        fields = line.split()
+        if (len(fields) != 2 or fields[0] not in MEMORY_EVENT_ALLOWED
+                or fields[0] in events or not fields[1].isdecimal()
+                or len(fields[1]) > 24):
+            raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+        events[fields[0]] = int(fields[1])
+    if not MEMORY_EVENT_REQUIRED.issubset(events):
+        raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN')
+
+    deltas = None
+    delta_interval = None
+    delta_state = 'BASELINE_REQUIRED'
+    if previous_events is not None:
+        if (not isinstance(previous_events, dict) or set(previous_events) != set(events)
+                or any(type(previous_events.get(key)) is not int or previous_events[key] < 0
+                       for key in events)):
+            delta_state = 'BASELINE_INVALID'
+        elif (type(previous_observed_at) not in (int, float)
+                or type(observed_at) not in (int, float)
+                or not math.isfinite(previous_observed_at)
+                or not math.isfinite(observed_at)
+                or not 0 <= observed_at - previous_observed_at <= MEMORY_EVENT_PAIR_MAX_AGE_SEC):
+            delta_state = 'BASELINE_STALE'
+        elif any(events[key] < previous_events[key] for key in events):
+            delta_state = 'COUNTER_RESET'
+        else:
+            deltas = {key: events[key] - previous_events[key] for key in events}
+            delta_interval = observed_at - previous_observed_at
+            delta_state = 'MONOTONIC'
+
+    # The absolutes are telemetry only. Admission uses the paired deltas below;
+    # a lifetime high/oom count alone never creates a fresh pressure event.
+    return {
+        'memory_psi_some_avg10': psi['some']['avg10'],
+        'memory_psi_full_avg10': psi['full']['avg10'],
+        'memory_events': events,
+        'memory_event_deltas': deltas,
+        'memory_event_delta_state': delta_state,
+        'memory_event_delta_interval_seconds': delta_interval,
+        'memory_telemetry_scope': 'CGROUP_V2_NON_ATOMIC_READ_WINDOW',
+    }
+
+
+def parse_memory_accounting(raw, current_bytes):
+    """Estimate only inactive non-shmem file bytes; never reclaim or subtract anon."""
+    if not isinstance(raw, str) or len(raw) > 32768 or type(current_bytes) is not int or current_bytes < 0:
+        raise GateError('HOLD_NATIVE_MEMORY_ACCOUNTING_UNKNOWN')
+    stats = {}
+    for line in raw.strip().splitlines():
+        fields = line.split()
+        if (len(fields) != 2 or not re.fullmatch(r'[a-z_]+', fields[0])
+                or fields[0] in stats or not fields[1].isdecimal()
+                or len(fields[1]) > 24):
+            raise GateError('HOLD_NATIVE_MEMORY_ACCOUNTING_UNKNOWN')
+        stats[fields[0]] = int(fields[1])
+    if not MEMORY_STAT_REQUIRED.issubset(stats) or stats['shmem'] > stats['file']:
+        raise GateError('HOLD_NATIVE_MEMORY_ACCOUNTING_UNKNOWN')
+    # `inactive_file` can include shmem pages. Subtract the full shmem amount
+    # conservatively before using this as a reclaimable-cache estimate.
+    reclaimable = min(current_bytes,
+                      max(0, stats['inactive_file'] - stats['shmem']),
+                      max(0, stats['file'] - stats['shmem']))
+    effective = max(0, current_bytes - reclaimable)
+    return {
+        'memory_file_bytes': stats['file'],
+        'memory_shmem_bytes': stats['shmem'],
+        'memory_inactive_file_bytes': stats['inactive_file'],
+        'memory_anon_bytes': stats['anon'],
+        'reclaimable_file_estimate_bytes': reclaimable,
+        'effective_memory_bytes_estimate': effective,
+    }
+
+
+def memory_telemetry_from_cgroup(previous_events, previous_observed_at,
+                                 current_bytes, observed_at):
+    """Read finite cgroup v2 telemetry files; failures remain explicit holds."""
+    try:
+        pressure = read(Path('/sys/fs/cgroup/memory.pressure'), 32768).decode('ascii')
+        events = read(Path('/sys/fs/cgroup/memory.events'), 32768).decode('ascii')
+        stats = read(Path('/sys/fs/cgroup/memory.stat'), 32768).decode('ascii')
+    except (OSError, UnicodeError, ValueError, TypeError, GateError):
+        raise GateError('HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN') from None
+    return {
+        **parse_memory_telemetry(pressure, events, previous_events,
+                                 previous_observed_at, observed_at),
+        **parse_memory_accounting(stats, current_bytes),
+    }
+
+
+def memory_pressure_assessment(snapshot):
+    """Match governor thresholds; fixed three-worker admission pauses on elevated pressure.
+
+    The governor recommends lower background concurrency at elevated pressure.
+    This dispatcher has no dynamic worker-count cap, so it waits for the next
+    fresh sample before admitting another task while leaving active work intact.
+    Absolute event counts are informational; only validated deltas classify events.
+    """
+    psi_some = snapshot.get('memory_psi_some_avg10')
+    psi_full = snapshot.get('memory_psi_full_avg10')
+    deltas = snapshot.get('memory_event_deltas')
+    ratio = snapshot.get('projected_cgroup_memory_ratio')
+    if type(ratio) not in (int, float) or not math.isfinite(ratio):
+        ratio = snapshot.get('effective_cgroup_memory_ratio')
+    if (type(psi_some) not in (int, float) or type(psi_full) not in (int, float)
+            or not isinstance(deltas, dict)
+            or any(type(value) is not int or value < 0 for value in deltas.values())):
+        return ('PRESSURE_UNKNOWN', 'HOLD_NATIVE_MEMORY_EVENTS_BASELINE',
+                'HOLD_NEW_BACKGROUND_SUBMITS')
+    if any(deltas.get(key, 0) > 0 for key in ('oom', 'oom_kill', 'oom_group_kill')):
+        return ('PRESSURE_CRITICAL', 'HOLD_NATIVE_MEMORY_OOM_EVENT',
+                'HOLD_NEW_BACKGROUND_SUBMITS')
+    if (psi_full >= 2 or psi_some >= 10
+            or (type(ratio) in (int, float) and math.isfinite(ratio) and ratio >= .94)):
+        return ('PRESSURE_CRITICAL', 'HOLD_NATIVE_MEMORY_PRESSURE_CRITICAL',
+                'HOLD_NEW_BACKGROUND_SUBMITS')
+    if any(deltas.get(key, 0) > 0 for key in ('high', 'max')):
+        return ('PRESSURE_ELEVATED', 'HOLD_NATIVE_MEMORY_LIMIT_EVENT',
+                'REDUCE_BACKGROUND_CONCURRENCY')
+    if (psi_some >= 2 or psi_full >= .2
+            or (type(ratio) in (int, float) and math.isfinite(ratio) and ratio >= .85)):
+        return ('PRESSURE_ELEVATED', 'HOLD_NATIVE_MEMORY_PRESSURE_ELEVATED',
+                'REDUCE_BACKGROUND_CONCURRENCY')
+    return 'CACHE_HEALTHY', 'ADMISSION_ALLOWED', 'USE_EXISTING_BOUNDED_ADMISSION'
 
 
 MAX_POLICY = 65536
@@ -506,7 +680,7 @@ def remember(receipt):
 
 
 def resource_wait_reason(snapshot):
-    """A fresh local observation admits only this one pending IPC submit."""
+    """Return an explicit result for one fresh, completely observed admission."""
     if (not isinstance(snapshot, dict) or snapshot.get('native_verified') is not True
             or snapshot.get('instance_id') != 60509551
             or snapshot.get('stop_active') is not False
@@ -517,6 +691,54 @@ def resource_wait_reason(snapshot):
     if any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
            for value in values):
         return 'HOLD_NATIVE_SUBAGENT_RESOURCE_METADATA'
+    observed = snapshot.get('observed_at')
+    if (type(observed) not in (int, float) or not math.isfinite(observed)
+            or not 0 <= time.time()-observed <= 5):
+        return 'HOLD_NATIVE_MEMORY_SNAPSHOT_STALE'
+    psi = [snapshot.get('memory_psi_some_avg10'),
+           snapshot.get('memory_psi_full_avg10')]
+    if any(type(value) not in (int, float) or not math.isfinite(value)
+           or not 0 <= value <= 100 for value in psi):
+        return 'HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN'
+    events = snapshot.get('memory_events')
+    if (not isinstance(events, dict)
+            or not MEMORY_EVENT_REQUIRED.issubset(events)
+            or any(type(events.get(key)) is not int or events[key] < 0
+                   for key in events)):
+        return 'HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN'
+    accounting = [snapshot.get('memory_file_bytes'),
+                  snapshot.get('memory_shmem_bytes'),
+                  snapshot.get('memory_inactive_file_bytes'),
+                  snapshot.get('memory_anon_bytes'),
+                  snapshot.get('reclaimable_file_estimate_bytes'),
+                  snapshot.get('effective_memory_bytes_estimate'),
+                  snapshot.get('effective_cgroup_memory_ratio')]
+    if (any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
+            for value in accounting)
+            or snapshot.get('memory_shmem_bytes') > snapshot.get('memory_file_bytes')):
+        return 'HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN'
+    delta_state = snapshot.get('memory_event_delta_state')
+    deltas = snapshot.get('memory_event_deltas')
+    if delta_state == 'COUNTER_RESET':
+        return 'HOLD_NATIVE_MEMORY_EVENT_COUNTER_RESET'
+    if delta_state == 'BASELINE_INVALID':
+        return 'HOLD_NATIVE_MEMORY_EVENT_BASELINE_INVALID'
+    if delta_state == 'BASELINE_STALE':
+        return 'HOLD_NATIVE_MEMORY_EVENTS_STALE_BASELINE'
+    if delta_state != 'MONOTONIC' or not isinstance(deltas, dict):
+        return 'HOLD_NATIVE_MEMORY_EVENTS_BASELINE'
+    if (set(deltas) != set(events)
+            or any(type(deltas.get(key)) is not int or deltas[key] < 0
+                   for key in events)):
+        return 'HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN'
+    if delta_state == 'MONOTONIC':
+        interval = snapshot.get('memory_event_delta_interval_seconds')
+        if (type(interval) not in (int, float) or not math.isfinite(interval)
+                or not 0 <= interval <= MEMORY_EVENT_PAIR_MAX_AGE_SEC):
+            return 'HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN'
+    pressure_state, pressure_reason, _ = memory_pressure_assessment(snapshot)
+    if pressure_state in ('PRESSURE_CRITICAL', 'PRESSURE_ELEVATED'):
+        return pressure_reason
     budget = snapshot.get('bounded_cpu_budget')
     if budget is not None:
         if snapshot.get('admission_class') not in ('BOUNDED_CPU_PROJECT_SOURCE', 'BOUNDED_CPU_READ_ONLY_LEAF'):
@@ -571,6 +793,7 @@ class Native:
         self.last_tick = 0.0
         self.last_status = {'state': 'NOT_YET_ADMITTED', 'jobs_started': 0}
         self.last_resource_admission = None
+        self.last_resource_admission_reason = 'HOLD_NATIVE_MEMORY_TELEMETRY_NOT_YET_OBSERVED'
         self.admissions = {}
         self.last_pool_started_at = None
         self.last_pool_closed_at = None
@@ -1025,6 +1248,11 @@ class Native:
         observed_at = time.time()
         current = int(Path('/sys/fs/cgroup/memory.current').read_text().strip())
         maximum = int(Path('/sys/fs/cgroup/memory.max').read_text().strip())
+        previous = self.last_resource_admission
+        previous_events = previous.get('memory_events') if isinstance(previous, dict) else None
+        previous_observed_at = previous.get('observed_at') if isinstance(previous, dict) else None
+        memory_telemetry = memory_telemetry_from_cgroup(
+            previous_events, previous_observed_at, current, observed_at)
         pressure = Path('/sys/fs/cgroup/cpu.pressure').read_text()
         match = re.search(r'^some\s+avg10=([0-9.]+)', pressure, re.M)
         if not match or maximum <= 0:
@@ -1035,15 +1263,12 @@ class Native:
             # Count only measured reclaimable inactive file cache separately;
             # never exclude shmem,
             # anonymous/model allocations or measured pressure from this gate.
-            stats = dict(line.split() for line in Path('/sys/fs/cgroup/memory.stat').read_text().splitlines())
-            inactive = int(stats['inactive_file'])
-            file_bytes, shmem = int(stats['file']), int(stats['shmem'])
+            inactive = memory_telemetry['memory_inactive_file_bytes']
+            file_bytes, shmem = memory_telemetry['memory_file_bytes'], memory_telemetry['memory_shmem_bytes']
             if min(current, inactive, file_bytes, shmem) < 0 or shmem > file_bytes:
                 raise GateError('HOLD_NATIVE_LEAF_MEMORY_METADATA')
-            pressure_raw = Path('/sys/fs/cgroup/memory.pressure').read_text()
-            psi = [float(value) for value in re.findall(r'^(?:some|full)\s+avg10=([0-9.]+)', pressure_raw, re.M)]
-            if len(psi) != 2 or any(not math.isfinite(value) or value < 0 for value in psi):
-                raise GateError('HOLD_NATIVE_LEAF_MEMORY_PRESSURE')
+            psi = [memory_telemetry['memory_psi_some_avg10'],
+                   memory_telemetry['memory_psi_full_avg10']]
             # Project verification uses its configured hard address-space cap.
             # Reserve an additional 128 MiB per persistent planner/IPC worker;
             # none of the existing anonymous/model/shmem allocations is removed.
@@ -1071,17 +1296,28 @@ class Native:
             last = max(sequenced, key=lambda row:row['native_queue_sequence'], default=None)
             cursor = (autonomy.QUEUE_IDS.index(last['queue_id'])+1)%4 if last else 0
         snapshot = {'native_verified': True, 'instance_id': 60509551,
+                'observed_at': observed_at,
                 'stop_active': self.stop_active(), 'source_sha_verified': True,
                 'owner_scope_verified': self.owner_allowed(), 'task_status': status,
+                'cgroup_memory_current_bytes': current, 'cgroup_memory_max_bytes': maximum,
                 'cgroup_memory_ratio': admitted_memory/maximum, 'raw_cgroup_memory_ratio':current/maximum,
+                'effective_cgroup_memory_ratio':memory_telemetry['effective_memory_bytes_estimate']/maximum,
                 'cpu_pressure': float(match[1]), 'queue_cursor':cursor,
                 'admission_class':('BOUNDED_CPU_PROJECT_SOURCE' if projects else 'BOUNDED_CPU_READ_ONLY_LEAF')
                                   if leaf_only else 'EXISTING_MODEL_REVIEW',
-                'gpu_available': False}
+                'gpu_available': False, **memory_telemetry}
         if bounded_budget is not None:
             snapshot.update(bounded_cpu_budget=bounded_budget, bounded_cpu_decision=bounded_decision,
                 effective_cgroup_memory_ratio=bounded_decision['effective_memory_ratio'],
                 projected_cgroup_memory_ratio=bounded_decision['projected_memory_ratio'])
+        pressure_state, pressure_reason, pressure_action = memory_pressure_assessment(snapshot)
+        snapshot['memory_pressure_state'] = pressure_state
+        snapshot['memory_pressure_reason'] = pressure_reason
+        snapshot['memory_pressure_recommendation'] = pressure_action
+        snapshot['memory_admission_policy'] = 'FIXED_POOL_HOLDS_NEW_SUBMITS_WHILE_PRESSURE_ELEVATED'
+        reason = resource_wait_reason(snapshot)
+        snapshot['admission_reason'] = reason or 'ADMISSION_ALLOWED'
+        self.last_resource_admission_reason = snapshot['admission_reason']
         self.last_resource_admission = {key:value for key,value in snapshot.items() if key != 'task_status'}
         return snapshot
 
@@ -1089,11 +1325,19 @@ class Native:
         # read_resource_snapshot also checks the real local chat/slot gate.
         # A previously created pool is never permission to reuse a stale check.
         if self._pool_recovery_uncertain:
-            return 'HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN'
+            self.last_resource_admission_reason = 'HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN'
+            return self.last_resource_admission_reason
         try:
-            return resource_wait_reason(self.read_resource_snapshot(leaf_only=leaf_only))
-        except (OSError, ValueError, TypeError, KeyError, GateError):
-            return 'HOLD_NATIVE_SUBAGENT_ADMISSION'
+            snapshot = self.read_resource_snapshot(leaf_only=leaf_only)
+            reason = resource_wait_reason(snapshot)
+            self.last_resource_admission_reason = reason or 'ADMISSION_ALLOWED'
+            return reason
+        except (OSError, ValueError, TypeError, KeyError, GateError) as exc:
+            reason = str(exc)
+            if not re.fullmatch(r'(?:HOLD|WAIT)_[A-Z0-9_]{1,100}', reason):
+                reason = 'HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN'
+            self.last_resource_admission_reason = reason
+            return reason
 
     def review_status(self):
         """Counts of the reviewed catalog only; no model prose becomes status."""
@@ -1368,8 +1612,10 @@ class Native:
                 self._resource_recovery_samples = 0
                 self._resource_recovery_last_at = 0.0
                 self._resource_recovery_last_monotonic = 0.0
+                self.last_resource_admission_reason = reason or 'HOLD_RESOURCE_SNAPSHOT_UNKNOWN'
                 self._resource_pressure_release = {
-                    'state':'WAIT_RESOURCE_RECOVERY', 'reason':reason,
+                    'state':'WAIT_RESOURCE_RECOVERY',
+                    'reason':self.last_resource_admission_reason,
                     'healthy_snapshots':0}
                 return False
             observed = snapshot.get('observed_at')
@@ -1380,6 +1626,7 @@ class Native:
                 self._resource_recovery_samples = 0
                 self._resource_recovery_last_at = 0.0
                 self._resource_recovery_last_monotonic = 0.0
+                self.last_resource_admission_reason = 'HOLD_STALE_RESOURCE_SNAPSHOT'
                 self._resource_pressure_release = {
                     'state':'WAIT_RESOURCE_RECOVERY', 'reason':'HOLD_STALE_RESOURCE_SNAPSHOT',
                     'healthy_snapshots':0}
@@ -1388,6 +1635,7 @@ class Native:
                 self._resource_recovery_samples = 0
                 self._resource_recovery_last_at = 0.0
                 self._resource_recovery_last_monotonic = 0.0
+                self.last_resource_admission_reason = 'HOLD_DUPLICATE_RESOURCE_SNAPSHOT'
                 self._resource_pressure_release = {
                     'state':'WAIT_RESOURCE_RECOVERY', 'reason':'HOLD_DUPLICATE_RESOURCE_SNAPSHOT',
                     'healthy_snapshots':0}
@@ -1398,6 +1646,7 @@ class Native:
                 self._resource_recovery_last_at = observed
                 self._resource_recovery_last_monotonic = monotonic_now
             if self._resource_recovery_samples < RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS:
+                self.last_resource_admission_reason = 'WAIT_RESOURCE_RECOVERY_STABILITY'
                 self._resource_pressure_release = {
                     'state':'WAIT_RESOURCE_RECOVERY',
                     'healthy_snapshots':self._resource_recovery_samples,
@@ -1430,6 +1679,7 @@ class Native:
                 'healthy_snapshots':RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS,
                 'observed_at':observed,
                 'latch_generation':self._resource_pressure_latch_generation}
+            self.last_resource_admission_reason = 'RESOURCE_RECOVERY_STABLE'
             return True
 
     def maintain_worker_pool(self):
@@ -1444,8 +1694,13 @@ class Native:
             try:
                 snapshot = self.read_resource_snapshot(leaf_only=True)
                 reason = resource_wait_reason(snapshot)
-            except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold):
-                snapshot, reason = None, 'HOLD_RESOURCE_SNAPSHOT_UNKNOWN'
+                self.last_resource_admission_reason = reason or snapshot.get('admission_reason', 'ADMISSION_ALLOWED')
+            except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold) as exc:
+                snapshot = None
+                reason = str(exc)
+                if not re.fullmatch(r'(?:HOLD|WAIT)_[A-Z0-9_]{1,100}', reason):
+                    reason = 'HOLD_RESOURCE_SNAPSHOT_UNKNOWN'
+                self.last_resource_admission_reason = reason
             if reason in RESOURCE_PRESSURE_REASONS:
                 if self._resource_pressure_latch_uncertain:
                     self._resource_pressure_release = {
@@ -2309,6 +2564,11 @@ def bind_dispatcher(namespace):
                 'director': process_identity(os.getpid()), 'observed_at': time.time(),
                 'workers': native.process_readback(), 'last_admission': native.last_status,
                 'resource_admission':native.last_resource_admission,
+                'resource_admission_reason':native.last_resource_admission_reason,
+                'resource_pressure_recovery':{
+                    'paused':native._resource_pressure_paused,
+                    'healthy_snapshots':native._resource_recovery_samples,
+                    'details':native._resource_pressure_release or {'state':'NOT_PAUSED'}},
                 'pool_lifecycle':{'last_started_at':native.last_pool_started_at,
                                   'last_closed_at':native.last_pool_closed_at,
                                   'last_close_reason':native.last_pool_close_reason,
