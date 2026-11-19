@@ -1350,13 +1350,11 @@ def build_source_export_remote_script(payload, source_sha, request_id,
         raise RuntimeError('HOLD_SOURCE_EXPORT_REMOTE_SCRIPT_BOUNDS')
     key_literal = shlex.quote(export_key_b64)
     python_literal = shlex.quote(payload)
-    return (
-        'set -euo pipefail\\n'
-        f\"printf '%s' {key_literal} | env \"
-        f'NOX_OWNER_SOURCE_SHA={source_sha} '
-        f'NOX_OWNER_REQUEST_ID={request_id} '
-        f'python3 -c {python_literal}\\n'
-    )
+    command = ("printf '%s' " + key_literal + " | env "
+               + "NOX_OWNER_SOURCE_SHA=" + source_sha + " "
+               + "NOX_OWNER_REQUEST_ID=" + str(request_id) + " "
+               + "python3 -c " + python_literal)
+    return "set -euo pipefail\n" + command + "\n"
 
 
 def authorize_event(action,export_key_b64=None):
