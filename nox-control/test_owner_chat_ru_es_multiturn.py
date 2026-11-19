@@ -99,6 +99,21 @@ class OwnerRuEsContinuity(unittest.TestCase):
         self.assertFalse(canonical_s03_proof_valid(
             writer, forged_readback, DIALOG, forged))
 
+    def test_s03_optional_writer_answer_digest_must_agree_with_fourth_turn(self):
+        # A writer may optionally expose its own final-answer digest. If it
+        # disagrees with the independently verified fourth message, HOLD.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        expected = readback["full_answer_sha256"]
+        # Preserve old writer receipts, which remain source-only witnesses.
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        self.assertTrue(canonical_s03_proof_valid(
+            dict(writer, full_answer_sha256=expected), readback, DIALOG, transcript))
+        for wrong in ("0" * 64, None, ""):
+            with self.subTest(writer_answer_digest=repr(wrong)):
+                self.assertFalse(canonical_s03_proof_valid(
+                    dict(writer, full_answer_sha256=wrong), readback, DIALOG, transcript))
+
     def test_s03_two_turn_receipt_requires_second_sequence_and_distinct_readback(self):
         # One first-turn writer receipt cannot prove a two-turn S03 persist.
         transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
