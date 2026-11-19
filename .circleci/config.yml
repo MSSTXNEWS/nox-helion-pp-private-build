@@ -1,0 +1,18 @@
+version: 2.1
+
+jobs:
+  source-check:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - run:
+          name: Compile and run focused AST receipt tests
+          command: |
+            python3 -m py_compile nox-control/owner_smart_chat_acceptance.py nox-control/test_owner_smart_chat_credential_ast_shape.py
+            python3 -m unittest discover -s nox-control -p 'test_owner_smart_chat_credential_ast_shape.py' -v
+
+workflows:
+  source-only:
+    jobs:
+      - source-check
