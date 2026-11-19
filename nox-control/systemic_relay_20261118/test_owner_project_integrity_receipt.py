@@ -84,6 +84,31 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
             self.assertTrue(subject.verify(task, valid)['project_source_changed'])
             self.assertEqual(len(s03_calls), 1)
 
+            # Contract-only catalog rows obtain a signed plan after the model
+            # preparer. The receipt must match that durable generated reference.
+            generated = copy.deepcopy(task)
+            generated['params'].pop('plan_sha256')
+            generated['native_project_generated_reference'] = {
+                'plan_sha256': 'pinned-plan',
+                'contract_sha256': 'pinned-contract'}
+            self.assertTrue(subject.verify(generated, valid)['project_source_changed'])
+            foreign_plan = copy.deepcopy(generated)
+            foreign_plan['native_project_generated_reference']['plan_sha256'] = 'other-plan'
+            self.assertIsNone(subject.verify(foreign_plan, valid))
+            foreign_contract = copy.deepcopy(generated)
+            foreign_contract['native_project_generated_reference']['contract_sha256'] = 'other-contract'
+            self.assertIsNone(subject.verify(foreign_contract, valid))
+            missing_generated = copy.deepcopy(generated)
+            missing_generated.pop('native_project_generated_reference')
+            self.assertIsNone(subject.verify(missing_generated, valid))
+
+            for mismatched in ({'plan_sha256': 'other-plan'},
+                               {'contract_sha256': 'other-contract'}):
+                with self.subTest(final_evidence_mismatch=mismatched):
+                    invalid_worker = {**worker, **mismatched}
+                    with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_FINAL_EVIDENCE'):
+                        subject._finish(task, worker_result(invalid_worker), 'pinned-claim')
+
             for label, changes in (
                 ('false_source', {'project_source_changed': False}),
                 ('recovering', {'recovery_required': True}),
