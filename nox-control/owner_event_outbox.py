@@ -626,8 +626,28 @@ def register_owner_events(app, trusted):
     check, reject = trusted.get('_session_ok'), trusted.get('_unauthorized')
     if not callable(check) or not callable(reject):
         raise OutboxHold('HOLD_OWNER_EVENTS_AUTH_CALLBACK')
-    if any(getattr(route, 'path', None) == '/api/ui/events' for route in app.routes):
+    if any(getattr(route, 'path', None) in ('/api/ui/events', '/api/ui/events/snapshot') for route in app.routes):
         raise OutboxHold('HOLD_OWNER_EVENTS_ROUTE_EXISTS')
+    @app.get('/api/ui/events/snapshot')
+    async def owner_events_snapshot(request: Request):
+        # Exact owner-session auth; the snapshot reader never creates or repairs outbox state.
+        if not check(request):
+            return reject()
+        try:
+            cursor_text = request.query_params.get('cursor')
+            limit_text = request.query_params.get('limit', '20')
+            if ((cursor_text is not None and not re.fullmatch(r'[0-9]{1,15}', cursor_text))
+                    or not re.fullmatch(r'[0-9]{1,2}', limit_text)):
+                raise ValueError('INVALID_EVENT_QUERY')
+            value = await asyncio.to_thread(
+                events_snapshot_readonly,
+                None if cursor_text is None else int(cursor_text),
+                int(limit_text))
+            return JSONResponse(value, headers={'Cache-Control': 'no-store'})
+        except ValueError:
+            return JSONResponse({'state': 'INVALID_EVENT_QUERY'}, status_code=422, headers={'Cache-Control': 'no-store'})
+        except (OSError, OutboxHold):
+            return JSONResponse({'state': 'EVENTS_TEMPORARILY_UNAVAILABLE'}, status_code=503, headers={'Cache-Control': 'no-store'})
     @app.get('/api/ui/events')
     async def owner_events(request: Request):
         # Check before parsing or opening any private event file.
