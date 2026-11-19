@@ -66,7 +66,7 @@
     const inventory=E('details',undefined,'nox-owner-reports'),inventoryTitle=E('summary','Загрузки · проверяю файлы'),inventoryBody=E('div');
     inventory.dataset.noxDownloadInventory='1';inventory.append(inventoryTitle,inventoryBody);reports.before(inventory);
     const progress=E('details',undefined,'nox-owner-reports'),progressTitle=E('summary','Прогресс программы · проверяю квитанции'),progressBody=E('div');
-    progress.dataset.noxWorkProgress='1';progress.append(progressTitle,progressBody);reports.before(progress);
+    progress.dataset.noxWorkProgress='1';progress.open=true;progress.append(progressTitle,progressBody);reports.before(progress);
     let workProgressBusy=false;
     async function refreshWorkProgress(){
       if(workProgressBusy||document.hidden)return;workProgressBusy=true;
