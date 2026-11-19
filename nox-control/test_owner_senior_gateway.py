@@ -287,6 +287,34 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(len(calls), 3)
         self.assertEqual(len(gateway._read('state/owner_senior/budget.json')['events']), 6)
 
+    def test_duplicate_provider_json_keys_fail_closed_without_normalizing_advice(self):
+        # A duplicated object key is ambiguous evidence, even if both values
+        # happen to be equal. Preserve no normalized adviser recommendation.
+        import httpx
+        config = self.configure()
+        original = httpx.AsyncClient
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant',
+                             'content': [{'type': 'output_text', 'text': ADVICE}]}]}
+        wire = json.dumps(value).replace('"status": "completed"',
+                                         '"status": "completed", "status": "completed"', 1).encode()
+        async def duplicate_reply(request):
+            return httpx.Response(200, stream=httpx.ByteStream(wire))
+        with patch.object(httpx, 'AsyncClient',
+                          lambda **kwargs: original(transport=httpx.MockTransport(duplicate_reply), **kwargs)):
+            rejected = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+        self.assertEqual(rejected, {'state': 'MODEL_RESPONSE_DUPLICATE_JSON_KEY'})
+        for ambiguous in (
+                '{"assessment":"HOLD_FOR_REVIEW","assessment":"PROCEED_WITH_EXISTING_GUARDS",'
+                '"check_categories":[],"rationale":"test"}',
+                '{"assessment":"HOLD_FOR_REVIEW","check_categories":[],"rationale":"test",'
+                '"recommendations":[{"area":"verification","area":"chat_latency","change":"a",'
+                '"expected_effect":"b","evaluation":"c","rollback":"d"}]}'):
+            with self.subTest(ambiguous=ambiguous):
+                with self.assertRaisesRegex(gateway.GatewayHold, 'MODEL_RESPONSE_DUPLICATE_JSON_KEY'):
+                    gateway.advice_candidate(ambiguous)
+        self.assertEqual(gateway.advice_candidate(ADVICE)['assessment'], 'HOLD_FOR_REVIEW')
+
     def test_wire_byte_digest_and_unexpected_compression_hold(self):
         # Mock provider transport only: no paid request or credentials leave the test.
         import gzip
