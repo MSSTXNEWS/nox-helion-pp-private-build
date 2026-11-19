@@ -126,17 +126,59 @@ class BrowserQaTests(unittest.TestCase):
         self.assertFalse(QA.original_card_ui_trace_valid({**value,'original_card_ui_states':value['original_card_ui_states'][:3]}))
         self.assertFalse(QA.original_card_ui_trace_valid(None))
 
-    def test_original_card_report_omits_supplemental_done_receipts(self):
+    def test_original_card_report_omits_supplemental_done_receipts_and_injected_fields(self):
+        trace=[
+            {'state':'accepted_input','at_ms':5,'user_bubble_visible':True,'composer_cleared':True,
+             'private_note':'owner text must not leave the browser'},
+            {'state':'waiting','at_ms':25,'phase':'thinking','indicator_visible':True},
+            {'state':'answer','at_ms':70,'visible_prefix':True,'prefix_characters':5},
+            {'state':'completed','at_ms':180,'phase':'done','native_done':True,
+             'native_eof':True,'send_released':True},
+        ]
         value={'native_calls':1,'total_native_calls':1,'native_delta_count':4,
                'native_first_ms':20,'native_done_ms':70,'native_eof':True,
-               'dom_answer_matches_native':True,'original_card_ui_states':[],
+               'dom_answer_matches_native':True,'ui_before_native_done':True,
+               'ui_prefix_lengths_before_done':[3,5,8],
+               'original_card_ui_states':trace,
                'done':{'s03_integrated':True,'canonical_s03_write_verified':False,
                        'receipt_id':'private'}}
+        self.assertFalse(QA.original_card_ui_trace_valid(value))
         projected=QA.original_card_stream_projection(value)
+        rendered=json.dumps(projected)
         self.assertNotIn('done',projected)
         self.assertNotIn('s03_integrated',projected)
-        self.assertNotIn('receipt_id',json.dumps(projected))
+        self.assertNotIn('receipt_id',rendered)
+        self.assertNotIn('private_note',rendered)
+        self.assertNotIn('owner text must not leave the browser',rendered)
+        self.assertEqual(set(projected['original_card_ui_states'][0]),
+                         {'state','at_ms','user_bubble_visible','composer_cleared'})
         self.assertEqual(projected['native_calls'],1)
+
+    def test_original_card_projection_rejects_arbitrary_scalar_values(self):
+        projected=QA.original_card_stream_projection({
+            'native_calls':'private owner text','total_native_calls':True,
+            'native_delta_count':'99','native_first_ms':'token',
+            'native_done_ms':False,'native_eof':'yes',
+            'dom_answer_matches_native':'answer text',
+            'ui_before_native_done':1,
+            'ui_prefix_lengths_before_done':['private'],
+            'original_card_ui_states':['owner text'],
+        })
+        self.assertEqual(projected, {
+            'native_calls':0,'total_native_calls':0,'native_delta_count':0,
+            'native_first_ms':None,'native_done_ms':None,'native_eof':False,
+            'dom_answer_matches_native':False,'ui_before_native_done':False,
+            'ui_prefix_lengths_before_done':[],'original_card_ui_states':[]})
+
+    def test_workspace_stop_path_is_polled_and_symlinks_count(self):
+        self.assertIn(Path('/workspace/NOX_STOP'),QA.stop_paths())
+        with tempfile.TemporaryDirectory() as folder:
+            marker=Path(folder)/'NOX_STOP'
+            target=Path(folder)/'target'
+            target.write_text('marker')
+            marker.symlink_to(target)
+            with patch.object(QA,'stop_paths',return_value=(marker,)):
+                self.assertTrue(QA.stop_present())
 
     def test_original_card_mode_isolated_from_dialog_receipt_acceptance_and_dispatch(self):
         source=Path(QA.__file__).read_text()
