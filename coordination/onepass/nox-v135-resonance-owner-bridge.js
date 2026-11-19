@@ -9,9 +9,11 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
+  const segmenter=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'
+    ?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
   function livePieces(text) {
-    const glyphs=Array.isArray(text)?text:typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
-      ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
+    const glyphs=Array.isArray(text)?text:segmenter
+      ?Array.from(segmenter.segment(text),part=>part.segment)
       : [text];
     const width=Math.max(8,Math.ceil(glyphs.length/16));
     const pieces=[];
@@ -193,7 +195,6 @@
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
-          const segmenter=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
           let trailing='',waits=0;
           const emitPieces=async t=>{
             const parts=livePieces(t);
