@@ -947,6 +947,12 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                             return
                         if kind=='done':complete=True
                         if kind=='delta':
+                            # The next turn rejects assistant messages longer than 8k.
+                            # Do not report a durable DONE that cannot be recovered.
+                            if dialog_id is not None and len(answer)+len(part)>8000:
+                                yield _jsonl({'type':'error','error':
+                                    'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
+                                return
                             if len(answer)+len(part)>2000000:
                                 yield _jsonl({'type':'error','error':'HOLD_OUTPUT_SIZE'})
                                 return
