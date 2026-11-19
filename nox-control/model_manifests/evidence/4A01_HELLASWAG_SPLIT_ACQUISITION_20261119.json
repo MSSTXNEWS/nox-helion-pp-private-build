@@ -44,7 +44,7 @@
         "immutable_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/train-00000-of-00001.parquet",
         "expected_size_bytes": 24365524,
         "expected_sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
-        "metadata_evidence_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/main/data/train-00000-of-00001.parquet"
+        "metadata_evidence_url": "https://huggingface.co/datasets/Rowan/hellaswag/commit/218ec52e09a7e7462a5400043bb9a69a41d06b76"
       },
       {
         "split": "validation",
@@ -52,11 +52,11 @@
         "immutable_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/validation-00000-of-00001.parquet",
         "expected_size_bytes": 6315951,
         "expected_sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
-        "metadata_evidence_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/main/data/validation-00000-of-00001.parquet"
+        "metadata_evidence_url": "https://huggingface.co/datasets/Rowan/hellaswag/commit/218ec52e09a7e7462a5400043bb9a69a41d06b76"
       }
     ],
     "total_expected_bytes": 30681475,
-    "metadata_proof": "The official dataset commit page lists both added Parquet Git-LFS pointers with SHA-256 and byte sizes; each pointer hash matches the per-file metadata page."
+    "metadata_proof": "Pinned commit diff (not the mutable main branch) lists both added Parquet Git-LFS pointers with SHA-256 and byte sizes."
   },
   "acquisition_steps": [
     "Owner confirms the pinned dataset snapshot and training/validation selection semantics.",
