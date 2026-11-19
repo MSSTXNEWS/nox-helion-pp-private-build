@@ -20,14 +20,6 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
 }
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
-# Memory maintenance is a one-shot scoped owner repair; no native installer.
-# The exact owner comment still pins Git SHA, instance and action.
-FILES['repair'] = 'nox-control/owner_memory_cleanup_entry.py'
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = (
-    'owner_storage_reclaim.py', 'owner_memory_governor.py')
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
-    'nox-control/owner_memory_governor.py',)
-
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
