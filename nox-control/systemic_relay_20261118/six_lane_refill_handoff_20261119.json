@@ -1,0 +1,108 @@
+{
+  "schema": "NOX_SIX_LANE_REVIEWED_WORK_HANDOFF_V1",
+  "instructions_version": "0.0.6",
+  "generated_from": "Owner request: maximum speed, six continually tasked subagents, no falsified PASS",
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "base_branch": "repair/nox-native-reflex-autorefill-20261119",
+    "last_server_readback": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44445804338",
+    "instance_id": 60509551,
+    "manifest_sha256": "d58ed9b020a78c3c8fcbfd476b3b0eecfd235e50f3a6ded29c8cec550e1a4212",
+    "director_pid_last_observed": 359172,
+    "worker_cap_observed": 3,
+    "workers_last_observed": [
+      359266,
+      359267,
+      359268
+    ],
+    "native_refill_state": "REFILL_REQUIRED",
+    "new_executable_jobs_last_observed": 0
+  },
+  "authority": "SOURCE_WORK_ALLOCATION_ONLY",
+  "six_logical_subagents": 6,
+  "max_native_workers_without_separate_owner_admission": 3,
+  "create_new_automation": false,
+  "original_295_accepted_by_this_pack": 0,
+  "scheduling_note": "The six existing hourly scheduled agents remain enabled; schedule does not imply a continuously executing process",
+  "fallback": "If native READY=0, finish one source-scoped task per lane, publish independently verified owner-reviewed taskpack using existing CAS, then verify actual claim, result and S03; do not reset terminal task IDs",
+  "lanes": [
+    {
+      "slot": 1,
+      "agent": "NOX A1 · чат и веб",
+      "automation_id": "6af903a5c1208191a22263faae73d193",
+      "area": "cognition_chat",
+      "parent_task_id": "1A01",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "parent_spec_sha256": "source_registry_required",
+      "repo_file": "nox-control/owner_chat_stream.py",
+      "source_blob_sha": "febc13ba810ec3d4f28c23fe0bb0247690e5b579",
+      "task": "Сверить реальный SSE/token stream + полную историю в существующем Resonance, устранить одну подтвержденную потерю или усечение с exact SHA и текущим контрактом; не вводить prompt[:N] и silently trimmed excerpts.",
+      "acceptance": "Тест истинного полного входа/Unicode/STOP, серверный однократный stream→финальная квитанция без усечения, S03 обмен подтвержден."
+    },
+    {
+      "slot": 2,
+      "agent": "NOX A3 · память и S03",
+      "automation_id": "Automation_c10be790f1cc819192f5678833c2c029",
+      "area": "memory_s03_persona",
+      "parent_task_id": "3A02",
+      "queue_id": "Q2_MEMORY_KNOWLEDGE",
+      "parent_spec_sha256": "source_registry_required",
+      "repo_file": "nox-control/owner_memory_chat_acceptance.py",
+      "source_blob_sha": "97690d9796d5ac66a1ee906cff31d91b811ff5df",
+      "task": "Проверить реальный S03 M0–M7: извлечение незакрепленного 11-го факта после restart и PersonaID границы, исправить один точный источник потери без переписывания базы.",
+      "acceptance": "Точные provenance+PersonaID+readback до и после restart, revoke/forget тест, единый S03 без потери истории."
+    },
+    {
+      "slot": 3,
+      "agent": "NOX A4 · знания и доказательства",
+      "automation_id": "Automation_699343fbe37881919cdb75168812fafe",
+      "area": "tools_forge_pc",
+      "parent_task_id": "4V14-07",
+      "queue_id": "Q4_INTEGRATION_ACCEPTANCE",
+      "parent_spec_sha256": "source_registry_required",
+      "repo_file": "nox-control/systemic_relay_20261118/runtime/owner_project_native.py",
+      "source_blob_sha": "731b9fc3571ca9b9ba4233a018aba7bbf890c694",
+      "task": "Устранить один реально наблюдаемый дефект owner_project/Forge исполнения: безопасная правка существующего файла только через pinned plan/CAS, без arbitrary shell, без изменения чужого claim.",
+      "acceptance": "Проверен ровно один TaskID: immutable verifier, source CAS, integration receipt, S03, STOP и откат."
+    },
+    {
+      "slot": 4,
+      "agent": "NOX B2 · качество ответа",
+      "automation_id": "6afa68fde1988191a33e4029103e6cfe",
+      "area": "training_checkpoints",
+      "parent_task_id": "4A02",
+      "queue_id": "Q3_TRAINING_WEIGHTS",
+      "parent_spec_sha256": "source_registry_required",
+      "repo_file": "nox-control/owner_training_resume.py",
+      "source_blob_sha": "b93b9426b41d11f2e61fba72150d059457737bda",
+      "task": "Проверить действительный optimizer/checkpoint/holdout admission, устранять только документированный дефект. Не объявлять обучение без измеренного шага и full-chain restore.",
+      "acceptance": "Подтвержденные шаги optimizer, tensor SHA before/after, loss+holdout, сохранение и загрузка checkpoint, RAM/VRAM/STOP защита. При недопуске — source-only."
+    },
+    {
+      "slot": 5,
+      "agent": "NOX B3 · serving identity",
+      "automation_id": "6afa6900607c8191a2048d2319fbb4fa",
+      "area": "wow_web_cinema_voice",
+      "parent_task_id": "5A05",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "parent_spec_sha256": "source_registry_required",
+      "repo_file": "coordination/onepass/nox-v135-resonance-owner-bridge.js",
+      "source_blob_sha": "820c31034a1e46c31c89332acac46eb559487ba0",
+      "task": "Сверить актуальный serving веб-код с V140-derived и D02, снизить один измеренный источник render/main-thread latency, сохранить Reduced Motion и все ассеты.",
+      "acceptance": "Визуальный screenshot 320/390/1440+ и замер frame time до/после; работоспособный streaming/STOP/voice маршруты без заглушек."
+    },
+    {
+      "slot": 6,
+      "agent": "NOX A5 · скорость и ресурсы",
+      "automation_id": "Automation_26409201a5f88191875878544488d623",
+      "area": "gpu_ram_refill_recovery",
+      "parent_task_id": "6B01",
+      "queue_id": "Q1_RUNTIME_CHAT",
+      "parent_spec_sha256": "source_registry_required",
+      "repo_file": "nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py",
+      "source_blob_sha": "95d26706fbfeec853867b2b5c2898830871c80b6",
+      "task": "P0: устранить REFILL_REQUIRED через 1–3 новых действительно OWNER_REVIEWED taskpack с текущими source/test SHA; в параллель проверить governor, не трогая горячую модель и 75GB memfd.",
+      "acceptance": "Свежая CAS публикация manifest, native READY→RUNNING→DONE с точной S03 квитанцией, без replay старых blocked/done tasks; 3/3 workers и serving сохранены."
+    }
+  ]
+}
