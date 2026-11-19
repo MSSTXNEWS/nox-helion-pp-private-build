@@ -95,7 +95,16 @@ class ProjectBinding:
         import owner_subagent_dispatcher as binding
         native = self.native
         evidence = event['project_evidence']
-        if (evidence.get('task_id') != task['id']
+        # A contract-only model preparer pins its generated plan in the
+        # persisted task. Do not sign a different plan as a completed result.
+        reference = (task.get('native_project_generated_reference')
+                     or self.reference(task['params']))
+        if (not isinstance(reference, dict)
+                or reference.get('contract_sha256') != task['params'].get('contract_sha256')
+                or evidence.get('plan_sha256') != reference.get('plan_sha256')
+                or ('contract_sha256' in reference
+                    and evidence.get('contract_sha256') != reference['contract_sha256'])
+                or evidence.get('task_id') != task['id']
                 or evidence.get('parent_task_id') != task['parent_task_id']
                 or evidence.get('queue_id') != task['queue_id']
                 or evidence.get('original_task_accepted') is not False
@@ -568,13 +577,19 @@ class ProjectBinding:
         if not isinstance(evidence, dict):
             return None
         receipt = evidence.get('receipt')
-        if (not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
+        # Model-prepared plans are pinned by native_project_generated_reference,
+        # not by the original contract-only catalog params.
+        reference = (task.get('native_project_generated_reference')
+                     or self.reference(task.get('params') or {}))
+        if (not isinstance(reference, dict)
+                or reference.get('contract_sha256') != (task.get('params') or {}).get('contract_sha256')
+                or not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
                 or receipt.get('phase') != 'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED'
                 or receipt.get('claim') != task.get('owner_claim')
                 or receipt.get('parent_task_id') != task.get('parent_task_id')
                 or receipt.get('queue_id') != task.get('queue_id')
                 or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
-                or receipt.get('plan_sha256') != (task.get('params') or {}).get('plan_sha256')
+                or receipt.get('plan_sha256') != reference.get('plan_sha256')
                 or receipt.get('original_task_accepted') is not False
                 or not self.native.receipt_source_allowed(task, receipt)
                 or evidence.get('receipt_sha256') != binding.digest(binding.encoded(receipt))):
