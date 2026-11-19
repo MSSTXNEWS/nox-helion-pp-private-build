@@ -40,13 +40,19 @@ class RequiredMemory(unittest.TestCase):
         self.assertEqual(calls,[])
 
     def test_memory_kept_under_context_pressure(self):
-        b=self._p(lambda s,p,l:[record(text='Реальное воспоминание с источником '+('ж'*200)) for i in range(8)])
+        rows=[record(text='Реальное воспоминание с источником '+('ж'*200)+f' №{i}') for i in range(8)]
+        b=SynapticBrain(NativePorts(authorize=lambda s:True,stop=lambda:False,
+                       s03_recall=lambda s,p,l:rows),
+                       PulseConfig(fast_deadline_ms=100,deep_deadline_ms=180,
+                           memory_deadline_ms=180,max_workers=8,max_context_chars=6400))
+        self.addCleanup(b.close)
         result=b.pulse(S,'Вспомни дату',deep=True)
         self.assertEqual(result['state'],'READY_FOR_ONE_NOX_MODEL')
         data=json.loads(result['context_json'])
-        self.assertEqual(data['C02']['signals']['state'],'OBSERVED')
-        self.assertGreater(data['C02']['signals']['hit_count'],0)
-        self.assertIn('s03://owner/memory/verified',result['context_json'])
+        hits=data['C02']['signals']['hits']
+        self.assertEqual(len(hits),8)
+        self.assertEqual([hit['text'] for hit in hits],[row['content'] for row in rows])
+        self.assertEqual([hit['source'] for hit in hits],[row['source_uri'] for row in rows])
 
     def test_cross_chat_requires_trusted_grant(self):
         foreign=[record(chat='other-chat')]
