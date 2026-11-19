@@ -25,6 +25,7 @@ def hardware():
     _,a=run(['nvidia-smi','--query-compute-apps=pid,gpu_uuid,used_gpu_memory','--format=csv,noheader,nounits'])
     return {'gpu_rc':rc,'gpu':[x for x in g.splitlines() if SAFE.fullmatch(x.replace(',',''))][:4],
       'gpu_apps':[x for x in a.splitlines() if SAFE.fullmatch(x.replace(',',''))][:16],
+      'gpu_pid_evidence':gpu_pid_evidence(a),
       'cpus':os.cpu_count(),'load':list(os.getloadavg()),
       'cgroup_max':num('/sys/fs/cgroup/memory.max'),'cgroup_current':num('/sys/fs/cgroup/memory.current'),
       'cpu_max':num('/sys/fs/cgroup/cpu.max'),
@@ -68,6 +69,271 @@ def process_rows(proc_root=Path('/proc')):
             rows.append(row)
         except (OSError,ValueError):continue
     return rows[:100]
+
+
+# Fixed prior owner audit candidate: reuse this PID only if the kernel start tick
+# still matches. A PID reuse is reported as a mismatch and never inspected.
+EXACT_PID_CANDIDATES = (
+    (498569, 168416044, "EXACT_PRIOR_MEMFD_CANDIDATE"),
+    (3266857, 172046662, "OWNER_CONFIRMED_SERVING_PEER"),
+)
+PROC_EVIDENCE_LIMITS = {
+    "fd_entries": 256, "maps_bytes": 1048576, "maps_lines": 8192,
+    "memfd_maps": 8, "fd_rows": 8, "smaps_rollup_bytes": 8192,
+    "total_processes": 18, "total_json_bytes": 90000,
+}
+MEMFD_LABEL = re.compile(r"^/?memfd:([A-Za-z0-9_.+@=-]{1,96}) \(deleted\)$")
+NVIDIA_FD = re.compile(r"^/dev/(?:nvidiactl|nvidia-uvm(?:-tools)?|nvidia[0-9]+)$")
+CGROUP_COMPONENT = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
+SMAPS_KEYS = {"Rss", "Pss", "Shared_Clean", "Shared_Dirty", "Private_Clean",
+              "Private_Dirty", "Anonymous", "Swap"}
+
+def _read_bounded(path, limit):
+    with Path(path).open("rb") as stream:
+        raw = stream.read(limit + 1)
+    if len(raw) > limit:
+        return raw[:limit], True
+    return raw, False
+
+def _memfd_label(target):
+    m = MEMFD_LABEL.fullmatch(target)
+    return m[1] if m else None
+
+def _safe_cgroup(pid_path):
+    """Read only unified cgroup path and allowlisted memory counters."""
+    try:
+        raw, truncated = _read_bounded(pid_path / "cgroup", 8192)
+        if truncated:
+            return {"status": "CGROUP_RECORD_TRUNCATED"}
+        lines = raw.decode("ascii", errors="strict").splitlines()
+        rows = [line for line in lines if line.startswith("0::")]
+        if len(rows) != 1:
+            return {"status": "CGROUP_V2_NOT_UNIQUE"}
+        rel = rows[0][3:]
+        parts = rel.strip("/").split("/") if rel.strip("/") else []
+        if any(part in (".", "..") or not CGROUP_COMPONENT.fullmatch(part)
+               for part in parts):
+            return {"status": "CGROUP_PATH_NOT_ALLOWLISTED"}
+        root = Path("/sys/fs/cgroup")
+        base = root.joinpath(*parts)
+        try:
+            if os.path.commonpath((str(root.resolve()), str(base.resolve()))) != str(root.resolve()):
+                return {"status": "CGROUP_PATH_ESCAPES_ROOT"}
+        except OSError:
+            return {"status": "CGROUP_PATH_UNAVAILABLE"}
+        result = {"status": "CGROUP_V2", "path": "/" + "/".join(parts)}
+        for name in ("memory.current", "memory.max"):
+            try:
+                value, cut = _read_bounded(base / name, 128)
+                text = value.decode("ascii").strip()
+                if cut or not (text == "max" or text.isdecimal()):
+                    result[name] = "UNKNOWN"
+                else:
+                    result[name] = text if text == "max" else int(text)
+            except OSError:
+                result[name] = "UNAVAILABLE"
+        try:
+            value, cut = _read_bounded(base / "memory.stat", 4096)
+            stats = {}
+            if not cut:
+                for line in value.decode("ascii").splitlines():
+                    fields = line.split()
+                    if len(fields) == 2 and fields[0] in ("anon", "file", "shmem"):
+                        if fields[1].isdecimal():
+                            stats[fields[0]] = int(fields[1])
+            result["memory.stat"] = stats
+            result["memory.stat_truncated"] = cut
+        except (OSError, UnicodeError):
+            result["memory.stat"] = "UNAVAILABLE"
+        return result
+    except (OSError, UnicodeError):
+        return {"status": "CGROUP_UNAVAILABLE"}
+
+def _smaps_rollup(pid_path):
+    try:
+        raw, truncated = _read_bounded(pid_path / "smaps_rollup",
+                                       PROC_EVIDENCE_LIMITS["smaps_rollup_bytes"])
+        values = {}
+        if not truncated:
+            for line in raw.decode("ascii", errors="strict").splitlines():
+                fields = line.split()
+                if len(fields) == 3 and fields[0].rstrip(":") in SMAPS_KEYS:
+                    key = fields[0].rstrip(":")
+                    if fields[1].isdecimal() and fields[2] == "kB":
+                        values[key + "_kB"] = int(fields[1])
+        return {"values": values, "truncated": truncated}
+    except (OSError, UnicodeError):
+        return {"status": "SMAPS_ROLLUP_UNAVAILABLE"}
+
+def _fd_evidence(pid_path):
+    """Export only allowlisted memfd labels or NVIDIA device paths, plus stat."""
+    rows = []
+    scanned = 0
+    truncated = False
+    entries = []
+    try:
+        with os.scandir(pid_path / "fd") as directory:
+            for entry in directory:
+                if len(entries) >= PROC_EVIDENCE_LIMITS["fd_entries"]:
+                    truncated = True
+                    break
+                if entry.name.isdecimal():
+                    entries.append(Path(entry.path))
+        entries.sort(key=lambda p: int(p.name))
+    except OSError:
+        return {"status": "FD_DIRECTORY_UNAVAILABLE", "rows": [], "scanned": 0}
+    for fd in entries:
+        scanned += 1
+        try:
+            target = os.readlink(fd)
+            memfd = _memfd_label(target)
+            if memfd is not None:
+                target_kind = "DELETED_MEMFD"
+                safe_target = "memfd:" + memfd + " (deleted)"
+            elif NVIDIA_FD.fullmatch(target):
+                target_kind = "NVIDIA_DEVICE"
+                safe_target = target
+            else:
+                continue
+            info = os.stat(fd)
+            row = {"fd": int(fd.name), "target_kind": target_kind,
+                   "target": safe_target, "device": int(info.st_dev),
+                   "inode": int(info.st_ino), "size_bytes": int(info.st_size),
+                   "mode": stat.S_IFMT(info.st_mode)}
+            if memfd is not None and not stat.S_ISREG(info.st_mode):
+                row["target_kind"] = "DELETED_MEMFD_NONREGULAR"
+            rows.append(row)
+        except (OSError, ValueError):
+            continue
+    return {"status": "OK", "rows": rows[:PROC_EVIDENCE_LIMITS["fd_rows"]], "scanned": scanned,
+            "truncated": truncated or len(rows) > PROC_EVIDENCE_LIMITS["fd_rows"]}
+
+def _deleted_memfd_maps(pid_path):
+    """Bound /proc/PID/maps bytes and export parsed deleted-memfd rows only."""
+    rows = []
+    seen_lines = 0
+    total_bytes = 0
+    truncated = False
+    try:
+        with (pid_path / "maps").open("rb") as stream:
+            while seen_lines < PROC_EVIDENCE_LIMITS["maps_lines"]:
+                raw = stream.readline(4096)
+                if not raw:
+                    break
+                total_bytes += len(raw)
+                if total_bytes > PROC_EVIDENCE_LIMITS["maps_bytes"]:
+                    truncated = True
+                    break
+                seen_lines += 1
+                try:
+                    fields = raw.decode("utf-8", errors="replace").rstrip("\n").split(None, 5)
+                    if len(fields) != 6:
+                        continue
+                    address, perms, offset, device, inode_text, label = fields
+                    name = _memfd_label(label)
+                    if name is None or not inode_text.isdecimal():
+                        continue
+                    start_text, end_text = address.split("-", 1)
+                    start, end = int(start_text, 16), int(end_text, 16)
+                    if end <= start or not re.fullmatch(r"[0-9a-fA-F]+", offset):
+                        continue
+                    rows.append({"start": start, "end": end, "size_bytes": end - start,
+                                 "permissions": perms[:4], "offset": int(offset, 16),
+                                 "device": device[:16], "inode": int(inode_text),
+                                 "memfd": name + " (deleted)"})
+                    if len(rows) >= PROC_EVIDENCE_LIMITS["memfd_maps"]:
+                        truncated = True
+                        break
+                except (ValueError, UnicodeError):
+                    continue
+            else:
+                truncated = True
+    except OSError:
+        return {"status": "MAPS_UNAVAILABLE", "rows": [], "scanned_lines": seen_lines}
+    return {"status": "OK", "rows": rows, "scanned_lines": seen_lines,
+            "scanned_bytes": total_bytes, "truncated": truncated}
+
+def _proc_stat_identity(pid_path, expected_pid):
+    raw = (Path(pid_path) / "stat").read_text()
+    prefix = str(expected_pid) + " ("
+    boundary = raw.rfind(") ")
+    if not raw.startswith(prefix) or boundary < len(prefix):
+        raise ValueError("PROC_STAT_PID_MISMATCH")
+    fields = raw[boundary + 2:].split()
+    if len(fields) < 20 or not fields[19].isdecimal() or not fields[1].isdecimal() or not fields[2].isdecimal():
+        raise ValueError("PROC_STAT_FIELDS_INVALID")
+    return {"state": fields[0], "ppid": int(fields[1]), "pgrp": int(fields[2]),
+            "start_ticks": int(fields[19])}
+
+def process_pid_evidence(pid, expected_start_ticks=None, label="GPU_APP"):
+    """Read-only, bounded process metadata. Never read target-file contents or signal."""
+    if type(pid) is not int or pid <= 0:
+        return {"pid": pid, "status": "INVALID_PID", "label": label}
+    p = Path("/proc") / str(pid)
+    try:
+        first_stat = _proc_stat_identity(p, pid)
+        first_ticks = first_stat["start_ticks"]
+    except (OSError, ValueError):
+        return {"pid": pid, "label": label, "status": "NOT_VISIBLE_OR_UNREADABLE"}
+    base = {"pid": pid, "label": label, "stat": first_stat,
+            "start_ticks": first_ticks, "expected_start_ticks": expected_start_ticks}
+    if expected_start_ticks is not None and first_ticks != expected_start_ticks:
+        return {"pid": pid, "label": label, "status": "PID_REUSE_OR_EXPECTED_START_TICK_MISMATCH",
+                "observed_start_ticks": first_ticks, "expected_start_ticks": expected_start_ticks}
+    try:
+        status_raw, cut = _read_bounded(p / "status", 65536)
+        nspid = []
+        if not cut:
+            for line in status_raw.decode("ascii", errors="replace").splitlines():
+                if line.startswith("NSpid:"):
+                    nspid = [int(v) for v in line.split()[1:4] if v.isdecimal()]
+                    break
+        result = {**base, "status": "READ_ONLY_SNAPSHOT",
+                  "namespace_pids": nspid, "status_truncated": cut,
+                  "cgroup": _safe_cgroup(p), "smaps_rollup": _smaps_rollup(p),
+                  "fds": _fd_evidence(p), "deleted_memfd_maps": _deleted_memfd_maps(p)}
+        last_stat = _proc_stat_identity(p, pid)
+        last_ticks = last_stat["start_ticks"]
+        if last_ticks != first_ticks:
+            return {"pid": pid, "label": label, "status": "PID_CHANGED_DURING_READ",
+                    "start_ticks_before": first_ticks, "start_ticks_after": last_ticks}
+        result["identity_stable_during_read"] = True
+        return result
+    except (OSError, ValueError, UnicodeError):
+        return {**base, "status": "PARTIAL_OR_UNREADABLE"}
+
+def gpu_pid_evidence(gpu_app_output):
+    """Prioritize exact owner-confirmed candidates, then bounded GPU-app PIDs."""
+    rows = []
+    seen = set()
+    for pid, ticks, label in EXACT_PID_CANDIDATES:
+        rows.append(process_pid_evidence(pid, ticks, label=label))
+        seen.add(pid)
+    truncated = False
+    for line in gpu_app_output.splitlines()[:16]:
+        fields = [part.strip() for part in line.split(",")]
+        if not fields or not fields[0].isdecimal():
+            continue
+        pid = int(fields[0])
+        if pid in seen:
+            continue
+        row = process_pid_evidence(pid, label="NVIDIA_SMI_GPU_APP")
+        candidate = {"schema": "NOX_GPU_PID_PROCESS_EVIDENCE_V1",
+                     "read_only": True, "file_contents_read": False,
+                     "signals_sent": 0, "process_limit": PROC_EVIDENCE_LIMITS["total_processes"],
+                     "processes": rows + [row]}
+        size = len(json.dumps(candidate, separators=(",", ":"), ensure_ascii=True).encode("ascii"))
+        if size > PROC_EVIDENCE_LIMITS["total_json_bytes"]:
+            truncated = True
+            break
+        rows.append(row)
+        seen.add(pid)
+    result = {"schema": "NOX_GPU_PID_PROCESS_EVIDENCE_V1",
+              "read_only": True, "file_contents_read": False,
+              "signals_sent": 0, "process_limit": PROC_EVIDENCE_LIMITS["total_processes"],
+              "processes": rows, "truncated": truncated}
+    result["serialized_bytes"] = len(json.dumps(result, separators=(",", ":"), ensure_ascii=True).encode("ascii"))
+    return result
 
 def v13_owner_fence_metadata(root=Path('/root/nox'), workspace_stop=Path('/workspace/NOX_STOP'), lstat=os.lstat):
     """READ-ONLY marker presence, not authorization to start, stop, or write.
