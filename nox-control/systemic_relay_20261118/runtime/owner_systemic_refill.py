@@ -370,9 +370,15 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
     parents = manifest['registry']['parents']
     states = {'not_seen':0, 'ready':len(admitted_rows), 'pending':0,
               'running':0, 'terminal':0, 'blocked':0, 'unknown':0}
+    # The outer NOX dispatcher also tracks many legacy catalog/track entries.
+    # Only these three native execution handlers count as native workload.
+    native_handlers = {'owner_native_subagent_review',
+                       'owner_native_typed_leaf', 'owner_native_project_work'}
+    native_observed = 0
     for row in tasks.values():
-        if not isinstance(row, dict):
+        if not isinstance(row, dict) or row.get('handler') not in native_handlers:
             continue
+        native_observed += 1
         status = row.get('status')
         if status in ('pending','admitted','prepared','retry','wait'):
             states['pending'] += 1
@@ -463,6 +469,8 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
         'state':('REFILL_REQUIRED' if exhausted else 'EXECUTION_OR_ADMISSION_IN_PROGRESS'),
         'worker_cap':3,'available_slots':capacity['slots_available'],
         'observed_task_counts':states,
+        'native_records_observed':native_observed,
+        'legacy_or_non_native_records_ignored':len(tasks)-native_observed,
         'registry_original_total':manifest['registry']['total_original_ids'],
         'registry_parents_indexed':len(parents),
         'unindexed_original_count':manifest['registry']['total_original_ids']-len(parents),
