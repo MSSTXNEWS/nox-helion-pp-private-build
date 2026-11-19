@@ -388,6 +388,28 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertTrue(terminal_no_stop["sse_terminal_seen"])
         self.assertFalse(terminal_no_stop["wire_completed_normally"])
 
+    def test_sse_wire_rejects_duplicate_json_fields_at_every_depth(self):
+        # json.loads normally uses last-wins and could invent a normal stop.
+        ambiguous = (
+            b'{"choices":[],"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}',
+            b'{"choices":[{"delta":{"content":"ok"},"finish_reason":"length","finish_reason":"stop"}]}',
+            b'{"choices":[{"delta":{"content":"hidden","content":"ok"},"finish_reason":"stop"}]}',
+            b'{"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}],"usage":{"total_tokens":1,"total_tokens":2}}',
+        )
+        for payload in ambiguous:
+            with self.subTest(payload=payload):
+                with self.assertRaisesRegex(ReceiptHold, "SSE_DUPLICATE_JSON_FIELD"):
+                    measure_openai_sse_wire([
+                        (2, b"data: " + payload + b"\n\n"),
+                        (5, b"data: [DONE]\n\n")])
+        # Normal unambiguous streaming still preserves TTFT and finality.
+        ordinary = measure_openai_sse_wire([
+            (2, b'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n'),
+            (5, b"data: [DONE]\n\n")])
+        self.assertTrue(ordinary["wire_completed_normally"])
+        self.assertEqual(ordinary["first_text_ms"], 2)
+        self.assertEqual(ordinary["completion_ms"], 5)
+
     def test_sse_wire_rejects_duplicate_done_invalid_json_and_utf8(self):
         for chunks, reason in (
             ([(1, b"data: [DONE]\n\n"), (2, b"data: [DONE]\n\n")],
