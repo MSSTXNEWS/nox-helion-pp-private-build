@@ -120,7 +120,7 @@ def execute(request, source):
     except Exception:
         raise RuntimeError('HOLD_PAGE_CACHE_HELPER_ENCODING') from None
     if (not helper_raw or len(helper_raw) > 1024 * 1024
-            or hashlib.sha1(b'blob ' + str(len(helper_raw)).encode('ascii') + b'\\x00' + helper_raw).hexdigest() != HELPER_BLOB_SHA):
+            or hashlib.sha1(b'blob ' + str(len(helper_raw)).encode('ascii') + b'\x00' + helper_raw).hexdigest() != HELPER_BLOB_SHA):
         raise RuntimeError('HOLD_PAGE_CACHE_HELPER_PIN')
 
     temporary_root = Path(tempfile.mkdtemp(prefix='nox-page-cache-helper-'))
