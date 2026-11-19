@@ -336,22 +336,6 @@ def _extra_model_file_identity(values: list[str], options: list[str]) -> dict:
         candidate = Path(value)
         if str(candidate) != value:
             _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_NONCANONICAL", options)
-        probe = Path("/")
-        parts = candidate.parts[1:]
-        for position, part in enumerate(parts):
-            probe = probe / part
-            try:
-                metadata = probe.lstat()
-            except FileNotFoundError:
-                break  # The running loader may retain an unlinked model file.
-            except OSError:
-                _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_UNREADABLE", options)
-            if stat.S_ISLNK(metadata.st_mode):
-                _selector_preflight_hold("MODEL_EXTRA_FILE_SYMLINK", options)
-            if position < len(parts) - 1 and not stat.S_ISDIR(metadata.st_mode):
-                _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_COMPONENT", options)
-            if position == len(parts) - 1 and not stat.S_ISREG(metadata.st_mode):
-                _selector_preflight_hold("MODEL_EXTRA_FILE_NOT_REGULAR", options)
         normalized.append(value)
     if len(set(normalized)) != len(normalized):
         _selector_preflight_hold("MODEL_EXTRA_FILE_DUPLICATE", options)
@@ -386,7 +370,8 @@ def reject_model_context_selectors(args: list[str]) -> dict:
         "--no-kv-unified", "--mtp", "--dflash", "--eagle3", "--spec-type",
         "--parallel", "--np", "--n-parallel", "--sequences",
         "--ctx-checkpoints", "--swa-checkpoints",
-        "--swa-full", "--fit", "--fit-ctx", "--override-kv", "--lora",
+        "--swa-full", "--fit", "--fit-ctx", "--spec-draft",
+        "--override-kv", "--lora",
         "--control-vector", "--control-vector-scaled", "--control-vector-layer-range",
     }
     preset_prefixes = ("--embd-", "--fim-", "--gpt-oss-", "--vision-gemma-")
@@ -396,6 +381,15 @@ def reject_model_context_selectors(args: list[str]) -> dict:
         "--gpu-layers", "--device", "--devices", "--split-mode", "--tensor-split",
         "--main-gpu", "--cache-type-k", "--cache-type-v", "--batch-size",
         "--ubatch-size", "--timeout", "--log-file", "--log-format",
+        "--chat-template", "--chat-template-file", "--chat-template-kwargs",
+        "--reasoning-format", "--hf-token", "--rpc", "--cpu-mask",
+    }
+    boolean_options = {
+        "--no-webui", "--metrics", "--embedding", "--reranking", "--jinja",
+        "--no-mmap", "--mlock", "--no-context-shift", "--no-perf",
+        "--cont-batching", "--no-cont-batching", "--flash-attn", "--no-flash-attn",
+        "--verbose", "--log-disable", "--log-colors", "--cache-prompt",
+        "--no-cache-prompt", "--swa-full",
     }
     extra_file_options = []
     extra_file_values = []
@@ -457,6 +451,13 @@ def reject_model_context_selectors(args: list[str]) -> dict:
                    (option in long_exact and option not in ("--parallel",)) or
                    option.startswith(long_prefixes) or option.startswith(preset_prefixes))
         if blocked:
+            if index > 0 and "=" not in args[index - 1]:
+                previous = args[index - 1]
+                previous_option = _canonical_long_option(_selector_option(previous))
+                if (previous.startswith("-") and previous_option not in boolean_options and
+                        previous_option not in value_options and previous_option not in ("-m", "-c")):
+                    _selector_preflight_hold("MODEL_ARGUMENT_ARITY_AMBIGUOUS",
+                                             [_selector_option(previous), raw_option])
             _selector_preflight_hold("MODEL_OR_CONTEXT_SELECTOR_ALIAS", [raw_option])
         if option in value_options and inline_value is None:
             if index + 1 >= len(args):
