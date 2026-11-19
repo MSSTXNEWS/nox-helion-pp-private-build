@@ -1324,11 +1324,19 @@ def write_source_export_artifact(envelope):
 
 
 def preflight_source_export_key():
-    """Validate only the dedicated Actions secret; no subprocesses or output."""
+    """Validate the dedicated key fully before credential staging; no subprocesses or output."""
     key = os.environ.get('NOX_OWNER_EXPORT_KEY_B64', '')
     if not key:
         raise RuntimeError('HOLD_SOURCE_EXPORT_KEY_UNAVAILABLE')
     source_export_key_info(key)
+    try:
+        from owner_chat_s03_source_export import load_export_key
+        load_export_key(key)
+    except Exception as exc:
+        reason = str(exc)
+        if not re.fullmatch(r'HOLD_[A-Z0-9_]+', reason):
+            reason = 'HOLD_SOURCE_EXPORT_KEY_INVALID'
+        raise RuntimeError(reason) from None
     return key
 
 
