@@ -162,6 +162,7 @@ def _remove_local_files():
     """Remove only this runner's temporary files and verify key absence."""
     if RUNNER.is_symlink() or (RUNNER.exists() and not RUNNER.is_dir()):
         return False, "HOLD_UNLINK"
+    key_existed = KEY.exists()
     paths = (KEY, KEY.with_suffix(".pub"), RUNNER / "known_hosts",
              RUNNER / "owner-ssh.sock", TRACK)
     try:
@@ -180,7 +181,7 @@ def _remove_local_files():
             pass
         except OSError:
             pass
-        return True, "ABSENT_AND_VERIFIED"
+        return True, "REMOVED_AND_VERIFIED" if key_existed else "ABSENT_AND_VERIFIED"
     except OSError:
         return False, "HOLD_UNLINK"
 
@@ -250,7 +251,7 @@ def _main(argv):
     ok, remote_status, local_status = cleanup_with_receipt()
     print("TEMP_SSH_REMOTE_KEY=" + remote_status, flush=True)
     print("TEMP_SSH_LOCAL_KEY=" + (
-        "REMOVED_AND_VERIFIED" if local_status == "ABSENT_AND_VERIFIED" else local_status
+        local_status
     ), flush=True)
     print("NOX_MAINT_CLEANUP=" + ("COMPLETE" if ok else "HOLD"), flush=True)
     return 0 if ok else 2
