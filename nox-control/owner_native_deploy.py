@@ -39,9 +39,9 @@ TARGETS = {
     'owner_subagent_instruction_truth.py': ROOT / 'scripts/owner_subagent_instruction_truth.py',
 }
 ASSET_SHA256 = {
-    'owner_subagent_dispatcher.py': '9071db188cee194dcaa8e26d0a6599288d2cf397ebe5bee5357848fd6cc54ede',
+    'owner_subagent_dispatcher.py': 'c3351a89323109bc6f20a02baefa7418ab8d247262190a0f3fd26c1ef24c03b3',
     'owner_subagent_processes.py': 'b6a8980a96fddeb433bd87179aab1817e3e2d1f3315a0c737c738050c7087a9d',
-    'owner_subagent_instruction_truth.py': '3ee5ff3c66d11d19fbd24423bd147411d7ec0b4afac14268f86d0baa0f7a1f20',
+    'owner_subagent_instruction_truth.py': 'e676acb50c4322847806851c704c97d5abc457c44d480931b3d09cef5ba8d9cb',
 }
 STOP_PATHS = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
               'state/STOP', 'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag')
