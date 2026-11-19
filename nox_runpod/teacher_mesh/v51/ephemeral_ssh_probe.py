@@ -68,7 +68,7 @@ def exact_host_key_pin(scan_stdout: str, fingerprint_stdout: str,
     fp_rows = [line.strip() for line in fingerprint_stdout.splitlines() if line.strip()]
     if len(fp_rows) != 1:
         return False
-    fp_tokens = re.findall(r"(?<!\\S)SHA256:[A-Za-z0-9+/]{43}(?=\\s|$)", fp_rows[0])
+    fp_tokens = re.findall(r"(?<!\S)SHA256:[A-Za-z0-9+/]{43}(?=\s|$)", fp_rows[0])
     return len(fp_tokens) == 1 and fp_tokens[0] == expected_pin
 
 
