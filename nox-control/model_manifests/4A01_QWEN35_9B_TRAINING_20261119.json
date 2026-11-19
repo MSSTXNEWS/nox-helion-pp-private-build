@@ -6,7 +6,7 @@
     "required_evidence": "source",
     "title": "Прочитать точные манифесты модели: обучаемая ревизия, tokenizer, dtype, target modules, лицензия, размер тренировки и дефицит. GGUF имеет отдельный маршрут inference."
   },
-  "status": "SOURCE_MANIFEST_RESOLVED_TRAINING_BLOCKED_BY_STORAGE",
+  "status": "SOURCE_MANIFEST_PARTIAL_TARGET_MODULES_UNRESOLVED_TRAINING_BLOCKED_BY_STORAGE",
   "generated_date": "2026-11-19",
   "trainable_candidate": {
     "repo_id": "Qwen/Qwen3.5-9B",
@@ -75,7 +75,24 @@
         "*norm*",
         "linear_attn.conv1d"
       ],
-      "preflight": "Before training, enumerate named_modules() on the pinned Qwen3.5 text decoder, require every configured suffix to match at least one module, reject any match outside decoder layers or under the vision module, and persist the resolved full names. No all-linear fallback."
+      "preflight": "Before training, enumerate named_modules() on the pinned Qwen3.5 text decoder, require every configured suffix to match at least one module, reject any match outside decoder layers or under the vision module, and persist the resolved full names. No all-linear fallback.",
+      "resolved_modules": null,
+      "resolved_modules_status": "NOT_ENUMERATED_ON_PINNED_MODEL",
+      "required_artifact": {
+        "path": "nox-control/model_manifests/evidence/4A01_QWEN35_9B_RESOLVED_TARGET_MODULES_20261119.json",
+        "creation_condition": "Create only after an owner-approved load of the exact pinned base revision; enumerate named_modules() on that loaded model. Do not infer resolved names or classes from suffixes or source code.",
+        "required_fields": [
+          "task_id=4A01",
+          "model_repo_id",
+          "model_revision=c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+          "architecture",
+          "modules[].full_name",
+          "modules[].class",
+          "modules[].matched_suffix",
+          "enumeration_sha256"
+        ],
+        "acceptance_condition": "All configured suffixes have at least one resolved text-decoder module; no result is under visual/vision, embeddings, lm_head, norm, or excluded conv1d paths; artifact includes pinned revision and SHA-256 of the canonical resolved module list."
+      }
     },
     "training_size": {
       "parameters": 9653104368,
@@ -103,7 +120,7 @@
     ],
     "source_resolution_notes": [
       "The exact model revision and tokenizer files are pinned, and safetensors metadata resolves the mixed BF16/F32 base tensor dtype.",
-      "The target-module suffix set is now explicit and text-only; runtime module enumeration remains a mandatory fail-closed preflight before training.",
+      "Configured target-module suffixes are explicit and text-only, but exact full names/classes are unresolved. Add the linked enumeration artifact only after the approved pinned model is loaded; 4A01 remains partial until then.",
       "Dataset storage is not part of the computed model-only deficit because no exact dataset manifest is pinned."
     ]
   },
