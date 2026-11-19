@@ -3,7 +3,7 @@
 from __future__ import annotations
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-import csv, json, os, re, shutil, subprocess, sys, time
+import csv, hashlib, json, os, re, shutil, subprocess, sys, time
 
 SAFE=re.compile(r'^[A-Za-z0-9_./+@:= -]{1,300}$')
 ROOTS=('/root/nox','/root/nox_learn','/workspace')
@@ -86,7 +86,7 @@ def _ns_link(proc_dir, namespace):
 
 def read_proc_identity(proc_root, pid):
     """Read PID, NSpid, PID namespace, start ticks and cgroup with race checks."""
-    if type(pid) is not int or pid <= 1:
+    if type(pid) is not int or pid < 1:
         raise ValueError('HOLD_PROC_PID_RANGE')
     proc_dir = Path(proc_root) / str(pid)
     first = _proc_stat(proc_dir, pid)
@@ -188,6 +188,8 @@ def _capture_services(proc_root, run_fn, clock):
     lines = [line for line in str(output).splitlines() if line.strip()]
     truncated = len(str(output)) >= 200000 or len(lines) > 512
     rejected_lines = max(0, len(lines) - len(services))
+    names = [service['service'] for service in services]
+    duplicate_names = len(names) != len(set(names))
     identities_complete = True
     for service in services:
         service['identity'] = None
@@ -206,12 +208,32 @@ def _capture_services(proc_root, run_fn, clock):
             except (OSError, ValueError, KeyError, TypeError):
                 service['identity_state'] = 'UNAVAILABLE_OR_CHANGED'
                 identities_complete = False
-    return {'return_code': rc, 'started_unix_ns': started,
-            'finished_unix_ns': finished, 'services': services,
+    state_counts = {}
+    for service in services:
+        state = service['state']
+        state_counts[state] = state_counts.get(state, 0) + 1
+    all_running = bool(services) and all(service['state'] == 'RUNNING' for service in services)
+    any_not_running = any(service['state'] != 'RUNNING' for service in services)
+    rows_complete = (bool(services) and not truncated and rejected_lines == 0
+                     and not duplicate_names and identities_complete)
+    status_consistent = ((type(rc) is int and rc == 0 and all_running)
+                         or (type(rc) is int and rc == 3 and any_not_running))
+    command_success = type(rc) is int and rc == 0
+    health = ('UNKNOWN' if not services else
+              'PARTIAL' if not rows_complete else
+              'HEALTHY' if all_running else 'DEGRADED')
+    return {'return_code': rc, 'command_rc': rc, 'command_success': command_success,
+            'started_unix_ns': started, 'finished_unix_ns': finished, 'services': services,
             'truncated': truncated, 'rejected_lines': rejected_lines,
+            'duplicate_service_names': duplicate_names,
             'identity_complete': identities_complete,
-            'complete': type(rc) is int and rc == 0 and bool(services) and not truncated
-                and rejected_lines == 0 and identities_complete,
+            'inventory_complete': rows_complete,
+            'status_consistent': status_consistent,
+            'service_health': {'state': health, 'counts': state_counts,
+                               'running': state_counts.get('RUNNING', 0),
+                               'not_running': sum(count for state, count in state_counts.items()
+                                                  if state != 'RUNNING')},
+            'complete': command_success and rows_complete and all_running and status_consistent,
             'scope': 'SUPERVISOR_STATUS_PLUS_PROC_IDENTITY'}
 
 
@@ -484,6 +506,7 @@ def gpu_process_census(proc_root=Path('/proc'), run_fn=run, clock=time.time_ns):
     before_proc = _capture_proc_targets(proc_root, before_pids, services)
     before_proc['supervisor_complete'] = services.get('complete') is True
     after = _capture_gpu_apps(run_fn, clock)
+    process_inventory = _capture_process_identity_inventory(proc_root, clock)
     after_pids = {row['gpu_pid'] for row in after['apps']}
     after_proc = _capture_proc_targets(proc_root, after_pids, services)
     after_proc['supervisor_complete'] = services.get('complete') is True
@@ -505,7 +528,9 @@ def gpu_process_census(proc_root=Path('/proc'), run_fn=run, clock=time.time_ns):
             'supervisor_services': services, 'gpu_process_links': links,
             'visible_proc_pids': visible,
             'gpu_consumer_identities': gpu_consumer_identities,
+            'process_identity_inventory': process_inventory,
             'reader_pid_namespace': reader_pid_namespace}
+
 
 def _format_gpu_app(row):
     return ', '.join((str(row['gpu_pid']), row['gpu_uuid'], str(row['used_gpu_memory'])))
@@ -547,6 +572,100 @@ def _proc_stat(proc_dir, expected_pid):
 def proc_start_ticks(proc_dir, expected_pid):
     """Read Linux /proc/<pid>/stat field 22; verify PID despite ')' in comm."""
     return _proc_stat(proc_dir, expected_pid)['start_ticks']
+
+def _capture_process_identity_inventory(proc_root=Path('/proc'), clock=time.time_ns):
+    """Capture a bounded identity-only row for every numeric /proc entry.
+
+    This inventory deliberately omits argv, cmdline, environment, and cgroup
+    paths. Any capped scan, enumeration/read error, unstable PID identity, or
+    missing required field makes the snapshot incomplete.
+    """
+    started = clock()
+    rows, failure_pids = [], []
+    entries_seen = 0
+    read_failures = 0
+    truncated = False
+    enumeration_error = None
+    try:
+        with os.scandir(proc_root) as entries:
+            for entry in entries:
+                if not entry.name.isdecimal():
+                    continue
+                entries_seen += 1
+                if entries_seen > MAX_PROC_ENTRIES:
+                    truncated = True
+                    break
+                pid = int(entry.name)
+                try:
+                    identity = read_proc_identity(proc_root, pid)
+                except (OSError, ValueError, KeyError, TypeError):
+                    identity = None
+                if identity is None:
+                    read_failures += 1
+                    if len(failure_pids) < 64:
+                        failure_pids.append(pid)
+                    rows.append({'pid': pid, 'ppid': None, 'uid': None,
+                                 'start_ticks': None, 'nspid': None,
+                                 'namespaces': {'pid': None, 'mnt': None, 'cgroup': None},
+                                 'comm': None, 'exe': None,
+                                 'identity_state': 'UNAVAILABLE_OR_CHANGED'})
+                    continue
+                namespaces = {'pid': identity.get('pid_namespace'),
+                              'mnt': identity.get('mnt_namespace'),
+                              'cgroup': identity.get('cgroup_namespace')}
+                missing = []
+                if identity.get('pid') != pid:
+                    missing.append('pid')
+                if type(identity.get('ppid')) is not int or identity['ppid'] < 0:
+                    missing.append('ppid')
+                if type(identity.get('uid')) is not int or identity['uid'] < 0:
+                    missing.append('uid')
+                if type(identity.get('start_ticks')) is not int or identity['start_ticks'] <= 0:
+                    missing.append('start_ticks')
+                nspid = identity.get('nspid')
+                if (not identity.get('nspid_available') or not isinstance(nspid, list)
+                        or not nspid or len(nspid) > 16
+                        or any(type(value) is not int or value <= 0 for value in nspid)):
+                    missing.append('nspid')
+                for name, value in namespaces.items():
+                    expected = {'pid': 'pid', 'mnt': 'mnt', 'cgroup': 'cgroup'}[name]
+                    if not isinstance(value, str) or not re.fullmatch(
+                            rf'{expected}:\\[[0-9]+\\]', value):
+                        missing.append('namespace_' + name)
+                if not isinstance(identity.get('comm'), str) or not identity['comm']:
+                    missing.append('comm')
+                exe = identity.get('executable')
+                if not isinstance(exe, str) or not exe or exe == '[REDACTED]':
+                    missing.append('exe')
+                row = {'pid': pid, 'ppid': identity.get('ppid'),
+                       'uid': identity.get('uid'), 'start_ticks': identity.get('start_ticks'),
+                       'nspid': nspid if isinstance(nspid, list) else None,
+                       'namespaces': namespaces, 'comm': identity.get('comm'), 'exe': exe,
+                       'identity_state': 'VERIFIED' if not missing else 'IDENTITY_INCOMPLETE'}
+                if missing:
+                    row['missing_fields'] = sorted(set(missing))
+                    read_failures += 1
+                    if len(failure_pids) < 64:
+                        failure_pids.append(pid)
+                rows.append(row)
+    except OSError as exc:
+        enumeration_error = type(exc).__name__
+    finished = clock()
+    rows.sort(key=lambda row: row['pid'])
+    complete = (not truncated and enumeration_error is None and read_failures == 0
+                and entries_seen == len(rows))
+    encoded_rows = json.dumps(rows, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    return {'scope': 'ALL_NUMERIC_PROC_PIDS_MINIMAL_IDENTITY',
+            'started_unix_ns': started, 'finished_unix_ns': finished,
+            'entries_seen': entries_seen, 'row_count': len(rows),
+            'cap': MAX_PROC_ENTRIES, 'truncated': truncated,
+            'enumeration_error': enumeration_error, 'read_failure_count': read_failures,
+            'read_failure_pids': failure_pids, 'complete': complete,
+            'fields': ['pid', 'ppid', 'uid', 'start_ticks', 'nspid',
+                       'namespaces.pid', 'namespaces.mnt', 'namespaces.cgroup', 'comm', 'exe'],
+            'omitted_fields': ['argv', 'cmdline', 'environ', 'cgroup_paths'],
+            'rows_sha256': hashlib.sha256(encoded_rows).hexdigest(), 'rows': rows}
+
 
 def process_rows(proc_root=Path('/proc'), include_gpu_identities=()):
     rows, gpu_rows = [], []
@@ -917,7 +1036,10 @@ def worker(task):
             result = functions[i](include_gpu_identities=include)
         else:
             result = functions[i]()
-        return {'section':functions[i].__name__,'worker_pid':os.getpid(),'result':result}
+        record = {'section':functions[i].__name__,'worker_pid':os.getpid(),'result':result}
+        if i == 1 and isinstance(census, dict):
+            record['bounded_process_identity_inventory'] = census.get('process_identity_inventory')
+        return record
     except Exception as e:return {'section':str(task),'worker_pid':os.getpid(),'error':type(e).__name__}
 
 def main():
