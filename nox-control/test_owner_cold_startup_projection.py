@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import owner_native_repair as target
 import owner_native_operator as operator
+import owner_native_cold_dispatcher_boot as boot
 
 
 MAIN = b"[supervisord]\n[include]\nfiles=/etc/supervisor/conf.d/*.conf\n"
@@ -116,10 +117,17 @@ class ColdStartup(unittest.TestCase):
                 target.read_pinned_root_file("/etc/passwd")
             opened.assert_not_called()
 
-    def test_operator_uses_exact_readonly_entry_without_assets(self):
-        entry = "nox-control/owner_native_repair.py"
+    def test_operator_uses_exact_cold_dispatcher_entry_without_assets(self):
+        entry = "nox-control/owner_native_cold_dispatcher_boot.py"
         self.assertEqual(operator.FILES["repair"], entry)
         self.assertEqual(operator.repair_bundle_paths("repair", entry, ("unused.py",)), ())
+
+    def test_current_generation_never_calls_supervisor(self):
+        with patch.object(boot, "start_ticks", return_value=boot.OLD_EPOCH), \
+                patch.object(boot, "supervisor") as supervisor:
+            with self.assertRaisesRegex(boot.Hold, "CURRENT_GENERATION"):
+                boot.future_boot()
+            supervisor.assert_not_called()
 
 
 if __name__ == "__main__":

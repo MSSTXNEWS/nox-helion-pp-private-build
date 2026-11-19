@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - 'task/nox-vast-cold-preimage-export-20261119'
+      - 'task/nox-vast-dispatcher-boot-v1-20261119'
   pull_request:
     paths:
       - '.github/workflows/nox-owner-cold-start-graph-source-ci.yml'
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_native_repair.py'
+      - 'nox-control/owner_native_cold_dispatcher_boot.py'
       - 'nox-control/test_owner_cold_startup_projection.py'
 
 permissions:
@@ -22,5 +24,5 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - run: python3 -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_repair.py
+      - run: python3 -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_repair.py nox-control/owner_native_cold_dispatcher_boot.py
       - run: python3 -B -m unittest discover -s nox-control -p 'test_owner_cold_startup_projection.py'
