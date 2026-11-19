@@ -340,9 +340,7 @@ def main():
         try:
             cleanup_ok,remote_status,local_status=s.cleanup_with_receipt()
             print('TEMP_SSH_REMOTE_KEY='+remote_status,flush=True)
-            print('TEMP_SSH_LOCAL_KEY='+(
-                'REMOVED_AND_VERIFIED' if local_status=='ABSENT_AND_VERIFIED' else local_status
-            ),flush=True)
+            print('TEMP_SSH_LOCAL_KEY='+local_status,flush=True)
             if not cleanup_ok:good=False
         except Exception:
             print('TEMP_SSH_REMOTE_KEY=HOLD_UNEXPECTED_FAILURE',flush=True)
