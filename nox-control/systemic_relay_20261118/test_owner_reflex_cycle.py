@@ -91,6 +91,7 @@ class NativeReflexTests(unittest.TestCase):
 
     def test_failed_terminal_produces_new_review_not_replay(self):
         result = tick(state={'a':{
+            'handler':'owner_native_project_work',
             'status':'failed','systemic_relay':{'binding':{
                 'mission_id':'cache_fill_ttl','mission_revision':1,
                 'input_sha256':'f'*64}}}},
@@ -132,7 +133,8 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(tick(m=m,deferred=problems)['staged_count'],3)
 
     def test_active_jobs_do_not_report_idle(self):
-        state={'a': {'status':'running'},'b': {'status':'pending'}}
+        state={'a': {'handler':'owner_native_project_work','status':'running'},
+               'b': {'handler':'owner_native_typed_leaf','status':'pending'}}
         result=tick(state=state)
         self.assertEqual(result['state'],'EXECUTION_OR_ADMISSION_IN_PROGRESS')
 
