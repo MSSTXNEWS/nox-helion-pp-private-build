@@ -96,7 +96,10 @@ def evaluate_resources(snapshot, demand, *, now=None):
                       'file_bytes', 'shmem_bytes', 'sandbox_limit_bytes',
                       'planner_reserve_bytes', 'minimum_headroom_bytes')
     if (any(not _integer(budget[key]) for key in integer_fields)
-            or budget['max_bytes'] == 0 or budget['shmem_bytes'] > budget['file_bytes']
+            or budget['max_bytes'] == 0 or budget['current_bytes'] > budget['max_bytes']
+            or budget['file_bytes'] > budget['current_bytes']
+            or budget['inactive_file_bytes'] > budget['file_bytes']
+            or budget['shmem_bytes'] > budget['file_bytes']
             or budget['worker_slots'] != 3 or budget['planner_reserve_bytes'] != 128 * MIB
             or budget['minimum_headroom_bytes'] != 2 * GIB
             or not 96 * MIB <= budget['sandbox_limit_bytes'] <= 512 * MIB
@@ -118,6 +121,14 @@ def evaluate_resources(snapshot, demand, *, now=None):
     headroom = budget['max_bytes'] - (budget['current_bytes'] - reclaim + reserve)
     if headroom < 2 * GIB:
         return _hold('HOLD_RELAY_CPU_HEADROOM')
+    # Reclaimable page-cache is an estimate, not immediately free allocation.
+    # Keep a hard raw cgroup buffer for the interactive chat before new work.
+    raw_headroom = budget['max_bytes'] - budget['current_bytes']
+    # Cover the full 3-worker reservation plus an independent 512-MiB chat buffer.
+    raw_floor = reserve + 512 * MIB
+    if raw_headroom < raw_floor:
+        return _hold('HOLD_RELAY_RAW_CGROUP_HEADROOM',
+                     raw_headroom_bytes=raw_headroom, required_raw_headroom_bytes=raw_floor)
     return {'schema': 'NOX_RELAY_RESOURCE_ADMISSION_V1', 'admit': True, 'reason': None,
             'scope': 'BOUNDED_SOURCE_WORK_NOT_GPU_OR_WEIGHT_ADMISSION',
             'limits': {key: limits[key] for key in bounds}, 'maximum_workers': 3,
