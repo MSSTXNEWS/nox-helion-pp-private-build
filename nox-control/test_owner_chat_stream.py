@@ -171,6 +171,29 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('[DONE]',wire)
         self.assertEqual(self.dispatched,[('calculate',{})])
 
+    async def test_nonstring_tool_evidence_holds_without_second_model_request(self):
+        # Present non-string results must never become empty evidence for the
+        # second model turn or a fabricated S03-eligible final answer.
+        for bad in (None, False, 0, [], {}):
+            with self.subTest(value=repr(bad)):
+                first=Chunks([
+                    frame(calls=[{'index':0,'id':'call_typed','type':'function',
+                                  'function':{'name':'calculate','arguments':'{}'}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                requests,factory=self.transport([first])
+                native=self.native(result={'ok':True,'text':bad})
+                payload={'messages':[{'role':'user','content':'Preserve result type'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Preserve result type',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[('calculate',{})])
+                self.assertIn('HOLD_TOOL_RESULT',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertTrue(first.closed)
+
     async def test_untrusted_model_tool_id_overflow_never_dispatches_or_saves(self):
         # A tool-call ID may be streamed incrementally by Maya/llama.cpp.
         # The limit is cumulative, not a per-frame cap.
