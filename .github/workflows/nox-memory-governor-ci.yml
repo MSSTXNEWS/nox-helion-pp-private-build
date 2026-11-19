@@ -7,6 +7,7 @@ on:
       - '.github/workflows/nox-memory-governor-ci.yml'
       - 'nox-control/owner_memory_cleanup_entry.py'
       - 'nox-control/owner_storage_reclaim.py'
+      - 'nox-control/owner_memory_governor_install_entry.py'
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py'
       - 'nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py'
@@ -25,7 +26,7 @@ jobs:
           python-version: '3.11'
       - name: Compile + bounded cgroup fixtures, no host mutation
         run: |
-          python -m py_compile nox-control/owner_memory_governor.py nox-control/test_owner_memory_governor.py nox-control/owner_memory_cleanup_entry.py nox-control/owner_native_operator.py nox-control/owner_storage_reclaim.py nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py
+          python -m py_compile nox-control/owner_memory_governor.py nox-control/test_owner_memory_governor.py nox-control/owner_memory_cleanup_entry.py nox-control/owner_native_operator.py nox-control/owner_storage_reclaim.py nox-control/owner_memory_governor_install_entry.py nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py
           python -m unittest discover -s nox-control -p test_owner_memory_governor.py -v
           python -m unittest discover -s nox-control/systemic_relay_20261118 -p test_owner_reflex_cycle.py -v
       - name: Assert exact owner transport and no live service mutation
@@ -47,4 +48,31 @@ jobs:
           assert 'NOX_MAINT_REPAIR_COMPLETE=true' in text
           assert not any(q in text for q in ('supervisorctl stop', '/proc/sys/vm/drop_caches', 'echo 3 >'))
           print('OWNER_MEMORY_TRANSPORT_SOURCE_PASS')
+          PY
+      - name: Exact one-module supervisor rollback installer source gate
+        run: |
+          python - <<'PY'
+          import base64,importlib.util,hashlib
+          from pathlib import Path
+          path=Path('nox-control/owner_memory_governor_install_entry.py')
+          spec=importlib.util.spec_from_file_location('memory_install_source',path)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          root=Path('nox-control')
+          sources={
+            'owner_systemic_refill.py':root/'systemic_relay_20261118/runtime/owner_systemic_refill.py',
+            'continuous_transaction_helpers.py':root/'continuous_executor_20261118/assets/continuous_transaction_helpers.py',
+          }
+          m.BUNDLE={name:base64.b64encode(p.read_bytes()).decode('ascii') for name,p in sources.items()}
+          h,scripts=m.decode()
+          assert len(scripts)==1 and set(scripts)=={m.REFILL}
+          assert m.OLD[m.REFILL]=='ea086b450d04bfb9728d199fbd3642b070736d4b14bd6834ab3a8f380dbd4378'
+          assert m.OLD[m.CONFIG]=='7a4458e5200e892b5b39a1265a60b7a6ad58ae23127a8895d12389444c2fca79'
+          assert m.CURRENT_DIRECTOR_SHA=='eac3ce9e2d8c862d1a7917ec447ea72e84454b7775a4260ad1e72e59de96fe11'
+          assert b'memory_governor_projection' in scripts[m.REFILL]
+          assert 'rollback_verified' in path.read_text()
+          assert 'h.stop_checked()' in path.read_text()
+          assert 'NOX_MAINT_MEMORY_INSTALL=' in path.read_text()
+          assert 'NOX_MAINT_REPAIR_COMPLETE=true' in path.read_text()
+          assert h is not None
+          print('MEMORY_GOVERNOR_INSTALL_SOURCE_PASS')
           PY
