@@ -53,7 +53,8 @@ def history_matches_turns(messages, turns):
         user, assistant = tail[2 * index:2 * index + 2]
         if not isinstance(user, dict) or not isinstance(assistant, dict):
             return False
-        if user.get('content') != prompt or assistant.get('content') != answer:
+        if (user.get('role') != 'user' or assistant.get('role') != 'assistant'
+                or user.get('content') != prompt or assistant.get('content') != answer):
             return False
     return True
 
