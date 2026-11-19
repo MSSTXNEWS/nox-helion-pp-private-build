@@ -397,8 +397,8 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
     async def test_model_admin_batch_never_partly_executes_or_certifies_s03(self):
         # Model may propose an administrative action alongside another tool.
         # The first call must not execute while the remainder is silently dropped.
-        for admin_first in (True,False):
-            with self.subTest(admin_first=admin_first):
+        for admin_first,pool_dedup in ((True,False),(False,False),(True,True),(False,True)):
+            with self.subTest(admin_first=admin_first,pool_dedup=pool_dedup):
                 admin={'index':0 if admin_first else 1,'id':'admin-call',
                        'type':'function','function':{
                            'name':'run_admin','arguments':'{"action":"status"}'}}
@@ -410,6 +410,13 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                                b'data: [DONE]\n\n'])
                 requests,factory=self.transport([chunks])
                 native=self.native()
+                native['_POOL']=pool_dedup
+                if pool_dedup:
+                    native['prepare_payload']=lambda req,cache=False:req
+                    native['try_deterministic']=lambda text:None
+                    # A legacy optimization can discard the companion call;
+                    # that must not turn a mixed model batch into one admin act.
+                    native['dedup_calls']=lambda rows:[row for row in rows if row['name']=='run_admin']
                 payload={'messages':[{'role':'user','content':'Состояние и расчёт'}]}
                 with factory:
                     response=await native['owner_completion'](
