@@ -347,6 +347,12 @@ def memory_governor_projection(capacity):
         condition = 'PRESSURE_ELEVATED'
     else:
         condition = 'CACHE_HEALTHY'
+    # This is read-only advice, not a new owner admission. Never recommend
+    # background work when measured PSI or projected RAM is already critical,
+    # even if an inconsistent upstream decision claims eligible=True.
+    observed_eligible = (decision.get('eligible') is True
+                         and chat_buffer_available
+                         and condition != 'PRESSURE_CRITICAL')
     return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
             'state': condition,
             'raw_cgroup_memory_ratio': raw_ratio,
@@ -354,11 +360,9 @@ def memory_governor_projection(capacity):
             'memory_psi_some_avg10': psi_some, 'memory_psi_full_avg10': psi_full,
             'inactive_file_bytes': budget['inactive_file_bytes'],
             'shmem_protected_bytes': budget['shmem_bytes'],
-            'native_bounded_cpu_eligible': decision.get('eligible') is True
-                                           and chat_buffer_available,
+            'native_bounded_cpu_eligible': observed_eligible,
             'next_action': ('REUSE_EXISTING_OWNER_ADMISSION'
-                            if decision.get('eligible') is True and chat_buffer_available
-                            else 'RESPECT_EXISTING_RESOURCE_HOLD'),
+                            if observed_eligible else 'RESPECT_EXISTING_RESOURCE_HOLD'),
             'safe_disk_cleanup': 'OWNER_SHA_PINNED_AUDIT_AND_EXACT_EPHEMERAL_RECLAIM',
             'auto_reclaim': False, 'global_cache_eviction': False,
             'model_or_s03_mutation': False}
