@@ -127,5 +127,28 @@ class CheckpointStepProvenance(unittest.TestCase):
                     read_json(alias, limit=64)
 
 
+    def test_checkpoint_file_hash_is_descriptor_scoped(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            file_sha = load_pinned_verifier(root)["file_sha"]
+            safe = root / "adapter_model.safetensors"
+            safe.write_bytes(b"checkpoint-bytes")
+            self.assertEqual(file_sha(safe), hashlib.sha256(b"checkpoint-bytes").hexdigest())
+
+            # A stale preliminary is_symlink() answer cannot authorize a
+            # symlink-swapped checkpoint file at descriptor-open time.
+            alias = root / "checkpoint-redirect"
+            alias.symlink_to(safe)
+            with mock.patch.object(Path, "is_symlink", return_value=False):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_PATH"):
+                    file_sha(alias)
+
+            # A nonregular filesystem node must not block the SHA reader.
+            fifo = root / "checkpoint-fifo"
+            os.mkfifo(fifo)
+            with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_PATH"):
+                file_sha(fifo)
+
+
 if __name__ == "__main__":
     unittest.main()
