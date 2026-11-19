@@ -10,11 +10,14 @@ import asyncio
 import codecs
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import fcntl
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 import time
 import uuid
 import urllib.request
@@ -26,6 +29,13 @@ from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 
 SITE = Path('/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site')
+ADMISSION_STATE_DIR = Path('/root/nox/state')
+ADMISSION_SCHEMA = 'NOX_V112_GLOBAL_ADMISSION_V1'
+ADMISSION_FILE = 'paired_chat_admission_v1.json'
+ADMISSION_LOCK = 'paired_chat_admission_v1.lock'
+ADMISSION_MAX_BYTES = 1024 * 1024
+ADMISSION_MAX_LEASES = 4096
+ADMISSION_OWNER_REQUEST = re.compile(r'^[0-9]{1,24}$')
 ID_PATTERN = re.compile(r'^[a-f0-9]{32}$')
 OWNER = 'nox-single-owner'
 SCHEMA = """
@@ -47,6 +57,382 @@ CREATE TABLE IF NOT EXISTS nox_v29_dialog_messages (
 CREATE INDEX IF NOT EXISTS nox_v29_messages_order
  ON nox_v29_dialog_messages(dialog_id,row_id);
 """
+
+
+class _AdmissionHold(RuntimeError):
+    """Stable, non-secret admission-controller hold reason."""
+
+
+def _proc_start_ticks(pid):
+    """Return Linux /proc start ticks, distinguishing PID reuse from a live lease."""
+    try:
+        raw=Path(f'/proc/{int(pid)}/stat').read_text(encoding='ascii')
+        # comm is parenthesized and can itself contain spaces or parentheses.
+        fields=raw[raw.rfind(')')+2:].split()
+        # fields[0] is proc stat field 3; starttime is field 22.
+        value=int(fields[19])
+        return value if value>0 else None
+    except FileNotFoundError:
+        return 'DEAD'
+    except (OSError,ValueError,IndexError,TypeError):
+        return None
+
+
+class _AdmissionStore:
+    """Cross-worker, crash-detecting admission fence in one protected state directory."""
+    def __init__(self, state_dir=ADMISSION_STATE_DIR, owner_uid=0):
+        self.state_dir=Path(state_dir)
+        self.owner_uid=int(owner_uid)
+
+    @staticmethod
+    def _identity(st):
+        return (st.st_dev,st.st_ino,st.st_uid,st.st_gid,stat.S_IMODE(st.st_mode),
+                st.st_nlink,st.st_size,st.st_mtime_ns,st.st_ctime_ns)
+
+    def _open_dir(self):
+        path=self.state_dir
+        if not path.is_absolute() or '..' in path.parts:
+            raise _AdmissionHold('HOLD_ADMISSION_STATE_PATH')
+        fd=os.open('/',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+        try:
+            for index,name in enumerate(path.parts[1:]):
+                child=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=fd)
+                os.close(fd); fd=child
+                info=os.fstat(fd)
+                if info.st_uid not in (self.owner_uid,0):
+                    raise _AdmissionHold('HOLD_ADMISSION_PARENT_OWNER')
+                # Permit only a root-owned sticky ancestor such as /tmp for fixture tests.
+                if index<len(path.parts[1:])-1 and info.st_mode&0o022:
+                    if not (info.st_uid==0 and info.st_mode&stat.S_ISVTX):
+                        raise _AdmissionHold('HOLD_ADMISSION_PARENT_PERMISSIONS')
+            info=os.fstat(fd)
+            if (not stat.S_ISDIR(info.st_mode) or info.st_uid!=self.owner_uid
+                    or info.st_mode&0o022):
+                raise _AdmissionHold('HOLD_ADMISSION_STATE_DIRECTORY')
+            return fd
+        except BaseException:
+            os.close(fd)
+            raise
+
+    def _check_file(self, info, *, lock=False):
+        wanted=ADMISSION_LOCK if lock else ADMISSION_FILE
+        mode=stat.S_IMODE(info.st_mode)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid!=self.owner_uid
+                or info.st_nlink!=1 or mode!=0o600 or info.st_size<0
+                or (not lock and info.st_size>ADMISSION_MAX_BYTES)):
+            raise _AdmissionHold('HOLD_ADMISSION_'+wanted.upper()+'_IDENTITY')
+
+    @contextmanager
+    def _locked(self):
+        directory=self._open_dir(); lock_fd=None
+        try:
+            lock_fd=os.open(ADMISSION_LOCK,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC,
+                            0o600,dir_fd=directory)
+            self._check_file(os.fstat(lock_fd),lock=True)
+            # The lock lives in a root-owned, non-writable state directory.
+            # Wait for short cross-worker transactions instead of spuriously
+            # rejecting valid chat traffic under ordinary request concurrency.
+            fcntl.flock(lock_fd,fcntl.LOCK_EX)
+            held=os.fstat(lock_fd)
+            named=os.stat(ADMISSION_LOCK,dir_fd=directory,follow_symlinks=False)
+            self._check_file(named,lock=True)
+            if self._identity(held)!=self._identity(named):
+                raise _AdmissionHold('HOLD_ADMISSION_LOCK_REPLACED')
+            state,raw=self._read(directory)
+            yield directory,state,raw
+        finally:
+            if lock_fd is not None:
+                try:fcntl.flock(lock_fd,fcntl.LOCK_UN)
+                except OSError:pass
+                os.close(lock_fd)
+            os.close(directory)
+
+    @staticmethod
+    def _empty():
+        return {'schema':ADMISSION_SCHEMA,'revision':0,'fence':None,'active':{}}
+
+    def _read(self,directory):
+        try:
+            before=os.stat(ADMISSION_FILE,dir_fd=directory,follow_symlinks=False)
+        except FileNotFoundError:
+            return self._empty(),b''
+        self._check_file(before)
+        fd=os.open(ADMISSION_FILE,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=directory)
+        try:
+            opened=os.fstat(fd)
+            if self._identity(before)!=self._identity(opened):
+                raise _AdmissionHold('HOLD_ADMISSION_STATE_CHANGED')
+            chunks=[]; size=0
+            while size<=ADMISSION_MAX_BYTES:
+                block=os.read(fd,min(65536,ADMISSION_MAX_BYTES+1-size))
+                if not block:break
+                chunks.append(block); size+=len(block)
+            raw=b''.join(chunks)
+            after=os.fstat(fd)
+            named=os.stat(ADMISSION_FILE,dir_fd=directory,follow_symlinks=False)
+            if (len(raw)>ADMISSION_MAX_BYTES or self._identity(before)!=self._identity(after)
+                    or self._identity(before)!=self._identity(named)):
+                raise _AdmissionHold('HOLD_ADMISSION_STATE_CHANGED')
+        finally:
+            os.close(fd)
+        try:
+            state=json.loads(raw)
+        except (UnicodeDecodeError,json.JSONDecodeError,TypeError) as ex:
+            raise _AdmissionHold('HOLD_ADMISSION_STATE_INVALID') from ex
+        if (not isinstance(state,dict) or set(state)!={'schema','revision','fence','active'}
+                or state.get('schema')!=ADMISSION_SCHEMA or type(state.get('revision')) is not int
+                or state['revision']<1 or not isinstance(state.get('active'),dict)
+                or len(state['active'])>ADMISSION_MAX_LEASES):
+            raise _AdmissionHold('HOLD_ADMISSION_STATE_INVALID')
+        fence=state.get('fence')
+        if fence is not None and (not isinstance(fence,dict) or set(fence)!={'request_id','epoch'}
+                or not isinstance(fence.get('request_id'),str)
+                or not ADMISSION_OWNER_REQUEST.fullmatch(fence['request_id'])
+                or not isinstance(fence.get('epoch'),str)
+                or not re.fullmatch(r'[a-f0-9]{32}',fence['epoch'])):
+            raise _AdmissionHold('HOLD_ADMISSION_STATE_INVALID')
+        for token,row in state['active'].items():
+            if (not isinstance(token,str) or not re.fullmatch(r'[a-f0-9]{32}',token)
+                    or not isinstance(row,dict) or set(row)!={'pid','start_ticks','stream'}
+                    or type(row.get('pid')) is not int or row['pid']<1
+                    or type(row.get('start_ticks')) is not int or row['start_ticks']<1
+                    or type(row.get('stream')) is not bool):
+                raise _AdmissionHold('HOLD_ADMISSION_STATE_INVALID')
+        return state,raw
+
+    def _write(self,directory,state):
+        state['revision']+=1
+        raw=(json.dumps(state,sort_keys=True,separators=(',',':'),allow_nan=False)+'\n').encode('ascii')
+        if len(raw)>ADMISSION_MAX_BYTES:
+            raise _AdmissionHold('HOLD_ADMISSION_STATE_TOO_LARGE')
+        temp='.'+ADMISSION_FILE+'.'+uuid.uuid4().hex+'.tmp'
+        fd=os.open(temp,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_CLOEXEC,
+                   0o600,dir_fd=directory)
+        try:
+            self._check_file(os.fstat(fd))
+            view=memoryview(raw)
+            while view:
+                written=os.write(fd,view)
+                if written<=0:raise _AdmissionHold('HOLD_ADMISSION_STATE_WRITE')
+                view=view[written:]
+            os.fsync(fd)
+            self._check_file(os.fstat(fd))
+        finally:
+            os.close(fd)
+        try:
+            os.rename(temp,ADMISSION_FILE,src_dir_fd=directory,dst_dir_fd=directory)
+            os.fsync(directory)
+        except BaseException:
+            try:os.unlink(temp,dir_fd=directory)
+            except OSError:pass
+            raise
+        return raw
+
+    @staticmethod
+    def _prune(state):
+        removed=[]
+        for token,row in state['active'].items():
+            observed=_proc_start_ticks(row['pid'])
+            # A missing/unreadable /proc entry cannot prove death; preserve the lease.
+            if observed=='DEAD' or (isinstance(observed,int) and observed!=row['start_ticks']):
+                removed.append(token)
+        for token in removed:state['active'].pop(token,None)
+        return bool(removed)
+
+    @staticmethod
+    def _counts(state):
+        return (len(state['active']),sum(1 for row in state['active'].values() if row['stream']))
+
+    def admit(self):
+        with self._locked() as (directory,state,raw):
+            changed=self._prune(state)
+            if state['fence'] is not None:
+                if changed:self._write(directory,state)
+                return None
+            if len(state['active'])>=ADMISSION_MAX_LEASES:
+                raise _AdmissionHold('HOLD_ADMISSION_LEASE_LIMIT')
+            pid=os.getpid(); start=_proc_start_ticks(pid)
+            if not isinstance(start,int):raise _AdmissionHold('HOLD_ADMISSION_PROCESS_IDENTITY')
+            token=uuid.uuid4().hex
+            state['active'][token]={'pid':pid,'start_ticks':start,'stream':False}
+            self._write(directory,state)
+            return token
+
+    def mark_stream(self,token):
+        with self._locked() as (directory,state,raw):
+            row=state['active'].get(token)
+            if row is None:raise _AdmissionHold('HOLD_ADMISSION_LEASE_MISSING')
+            if not row['stream']:
+                row['stream']=True
+                self._write(directory,state)
+
+    def release(self,token):
+        with self._locked() as (directory,state,raw):
+            if token in state['active']:
+                state['active'].pop(token)
+                self._write(directory,state)
+
+    def snapshot(self,request_id):
+        with self._locked() as (directory,state,raw):
+            changed=self._prune(state)
+            if changed:raw=self._write(directory,state)
+            total,streams=self._counts(state)
+            fence=state['fence']
+            if fence is not None and fence['request_id']!=request_id:
+                raise _AdmissionHold('HOLD_ADMISSION_FENCE_OWNED')
+            return {'schema':ADMISSION_SCHEMA,'request_id':request_id,
+                    'fence_active':fence is not None,
+                    'fence_epoch':fence['epoch'] if fence else None,
+                    'in_flight_count':total,'active_stream_count':streams,
+                    'state_sha256':hashlib.sha256(raw).hexdigest(),
+                    'status':'QUIESCED' if fence is not None and total==0 else 'DRAINING'}
+
+    def set_fence(self,request_id):
+        with self._locked() as (directory,state,raw):
+            self._prune(state)
+            fence=state['fence']
+            if fence is not None and fence['request_id']!=request_id:
+                raise _AdmissionHold('HOLD_ADMISSION_FENCE_OWNED')
+            if fence is None:
+                state['fence']={'request_id':request_id,'epoch':uuid.uuid4().hex}
+                self._write(directory,state)
+            return state['fence']['epoch']
+
+    def clear_fence(self,request_id,epoch):
+        with self._locked() as (directory,state,raw):
+            changed=self._prune(state)
+            fence=state['fence']
+            if fence is None or fence['request_id']!=request_id or fence['epoch']!=epoch:
+                raise _AdmissionHold('HOLD_ADMISSION_FENCE_CHANGED')
+            total,streams=self._counts(state)
+            if total or streams:
+                if changed:self._write(directory,state)
+                raise _AdmissionHold('HOLD_ADMISSION_RESUME_BUSY')
+            state['fence']=None
+            raw=self._write(directory,state)
+            return {'schema':ADMISSION_SCHEMA,'request_id':request_id,
+                    'fence_active':False,'fence_epoch':epoch,'in_flight_count':0,
+                    'active_stream_count':0,'state_sha256':hashlib.sha256(raw).hexdigest(),
+                    'status':'OPEN'}
+
+
+def _require_admission_owner():
+    if not hasattr(os,'geteuid') or os.geteuid()!=0:
+        raise _AdmissionHold('HOLD_ADMISSION_OWNER_REQUIRED')
+
+
+def owner_quiesce_admission(request_id,timeout_seconds=30,*,_store=None):
+    """Root-only durable global fence; success requires two separate zero readbacks."""
+    _require_admission_owner()
+    if not isinstance(request_id,str) or not ADMISSION_OWNER_REQUEST.fullmatch(request_id):
+        raise _AdmissionHold('HOLD_ADMISSION_REQUEST_ID')
+    if (isinstance(timeout_seconds,bool) or not isinstance(timeout_seconds,(int,float))
+            or not 0<timeout_seconds<=120):
+        raise _AdmissionHold('HOLD_ADMISSION_TIMEOUT')
+    store=_store or _AdmissionStore()
+    epoch=store.set_fence(request_id)
+    deadline=time.monotonic()+timeout_seconds
+    zero_reads=0;last=None
+    while time.monotonic()<deadline:
+        receipt=store.snapshot(request_id)
+        if (not receipt['fence_active'] or receipt['fence_epoch']!=epoch):
+            raise _AdmissionHold('HOLD_ADMISSION_FENCE_CHANGED')
+        if receipt['in_flight_count']==0 and receipt['active_stream_count']==0:
+            zero_reads+=1
+            last=receipt
+            if zero_reads>=2:
+                return {**receipt,'status':'QUIESCED','zero_readbacks':zero_reads}
+        else:
+            zero_reads=0
+        time.sleep(min(.1,max(0,deadline-time.monotonic())))
+    raise _AdmissionHold('HOLD_ADMISSION_DRAIN_TIMEOUT')
+
+
+def owner_admission_readback(request_id,*,_store=None):
+    """Root-only independent readback for a still-owned admission fence."""
+    _require_admission_owner()
+    if not isinstance(request_id,str) or not ADMISSION_OWNER_REQUEST.fullmatch(request_id):
+        raise _AdmissionHold('HOLD_ADMISSION_REQUEST_ID')
+    receipt=(_store or _AdmissionStore()).snapshot(request_id)
+    if not receipt['fence_active']:
+        raise _AdmissionHold('HOLD_ADMISSION_FENCE_NOT_SET')
+    return receipt
+
+
+def owner_resume_admission(request_id,fence_epoch,*,_store=None):
+    """Root-only resume, requiring the exact fence epoch and a drained service."""
+    _require_admission_owner()
+    if (not isinstance(request_id,str) or not ADMISSION_OWNER_REQUEST.fullmatch(request_id)
+            or not isinstance(fence_epoch,str) or not re.fullmatch(r'[a-f0-9]{32}',fence_epoch)):
+        raise _AdmissionHold('HOLD_ADMISSION_RESUME_ID')
+    return (_store or _AdmissionStore()).clear_fence(request_id,fence_epoch)
+
+
+class _GlobalAdmissionMiddleware:
+    """Gate every HTTP/WebSocket route and hold a lease for its complete ASGI lifetime."""
+    def __init__(self,app,store):
+        self.app=app; self.store=store
+
+    @staticmethod
+    async def _reject(scope,send,reason):
+        if scope['type']=='websocket':
+            await send({'type':'websocket.close','code':1013,'reason':reason})
+            return
+        body=json.dumps({'status':'HOLD','reason':reason},separators=(',',':')).encode()
+        await send({'type':'http.response.start','status':503,'headers':[
+            (b'content-type',b'application/json'),(b'content-length',str(len(body)).encode()),
+            (b'cache-control',b'no-store')]})
+        await send({'type':'http.response.body','body':body,'more_body':False})
+
+    async def __call__(self,scope,receive,send):
+        if scope['type'] not in ('http','websocket'):
+            await self.app(scope,receive,send); return
+        # The owner-only STOP route only signals an existing generation and
+        # must remain callable while quiesced; its own route still authenticates it.
+        path=scope.get('path','')
+        method=scope.get('method','').upper()
+        if scope['type']=='http' and path=='/api/nox/stop' and method=='POST':
+            await self.app(scope,receive,send); return
+        # All chat/generation and service control APIs are under /api; avoid
+        # turning static UI asset downloads into per-request disk fsyncs.
+        if scope['type']=='http' and not path.startswith('/api/'):
+            await self.app(scope,receive,send); return
+        try:
+            token=self.store.admit()
+        except Exception:
+            await self._reject(scope,send,'HOLD_ADMISSION_STATE_UNAVAILABLE'); return
+        if token is None:
+            await self._reject(scope,send,'HOLD_ADMISSION_FENCED'); return
+        state_error=False;response_started=False;stream_marked=False
+        async def tracked_send(message):
+            nonlocal state_error,response_started,stream_marked
+            if state_error:return
+            is_stream=False
+            if scope['type']=='http':
+                if message.get('type')=='http.response.start':
+                    headers={k.lower():v.lower() for k,v in message.get('headers',[])}
+                    content_type=headers.get(b'content-type',b'').split(b';',1)[0].strip()
+                    is_stream=content_type in (b'text/event-stream',b'application/x-ndjson',b'application/jsonl')
+                elif message.get('type')=='http.response.body':
+                    is_stream=bool(message.get('more_body',False))
+            else:
+                is_stream=message.get('type')=='websocket.accept'
+            if is_stream and not stream_marked:
+                try:self.store.mark_stream(token)
+                except Exception:
+                    state_error=True
+                    if response_started:
+                        raise _AdmissionHold('HOLD_ADMISSION_STATE_UNAVAILABLE')
+                    await self._reject(scope,send,'HOLD_ADMISSION_STATE_UNAVAILABLE')
+                    return
+                stream_marked=True
+            if message.get('type')=='http.response.start':response_started=True
+            await send(message)
+        try:
+            await self.app(scope,receive,tracked_send)
+        finally:
+            try:self.store.release(token)
+            except Exception:pass
 
 @contextmanager
 def _db(write=False):
@@ -477,11 +863,20 @@ class _OwnerStatic(StaticFiles):
             'X-Content-Type-Options':'nosniff',
             'Referrer-Policy':'same-origin'})
 
-def register_native_v29_chat(app, trusted:dict, site_dir=None):
+def register_native_v29_chat(app, trusted:dict, site_dir=None, *,
+                             _admission_state_dir=None, _admission_owner_uid=0):
     """Replace only V29 bridge handlers and augment status, preserving legacy OneHost."""
     for name in ('_session_ok','_unauthorized','_proxy_completion','nox_status'):
         if not callable(trusted.get(name)):
             raise RuntimeError('HOLD_NATIVE_OWNER_CALLBACK_'+name)
+    if getattr(app.state,'_nox_v112_admission_middleware',False):
+        raise RuntimeError('HOLD_ADMISSION_MIDDLEWARE_ALREADY_REGISTERED')
+    admission_store=_AdmissionStore(
+        _admission_state_dir if _admission_state_dir is not None else ADMISSION_STATE_DIR,
+        owner_uid=_admission_owner_uid)
+    app.add_middleware(_GlobalAdmissionMiddleware,store=admission_store)
+    app.state._nox_v112_admission_middleware=True
+    app.state._nox_v112_admission_store=admission_store
     existing={getattr(r,'path','') for r in app.routes}
     if '/api/nox/chat/stream' in existing or '/api/nox/stop' in existing:
         raise RuntimeError('HOLD_V29_STREAM_ALREADY_REGISTERED')
