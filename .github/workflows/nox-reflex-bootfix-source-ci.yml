@@ -1,5 +1,11 @@
 name: NOX Reflex bootfix source-only compatibility gate
 on:
+  pull_request:
+    branches: [repair/nox-reflex-bootfix-20261119]
+    paths:
+      - 'nox-control/owner_chat_stream_action_routing.py'
+      - 'nox-control/test_owner_chat_stream_action_routing.py'
+      - '.github/workflows/nox-reflex-bootfix-source-ci.yml'
   push:
     branches: [repair/nox-reflex-bootfix-20261119]
     paths:
@@ -7,6 +13,8 @@ on:
       - 'nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py'
       - 'nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/owner_chat_stream_action_routing.py'
+      - 'nox-control/test_owner_chat_stream_action_routing.py'
       - '.github/workflows/nox-reflex-bootfix-source-ci.yml'
   workflow_dispatch:
 permissions: {contents: read}
@@ -24,6 +32,12 @@ jobs:
           set -euo pipefail
           python -B -m py_compile nox-control/systemic_relay_20261118/runtime/owner_subagent_instruction_truth.py nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py nox-control/owner_native_operator.py
           python -B -m unittest discover -s nox-control/systemic_relay_20261118 -p test_owner_reflex_cycle.py -v
+      - name: Owner chat broad-action completion contract
+        run: |
+          set -euo pipefail
+          python -m pip install httpx fastapi
+          python -B -m py_compile nox-control/owner_chat_stream_action_routing.py
+          python -B -m unittest nox-control/test_owner_chat_stream_action_routing.py -v
       - name: Independently validate source-pin identity and owner bundle
         run: |
           set -euo pipefail
@@ -70,3 +84,4 @@ jobs:
           print('NOX_REFLEX_OWNER_REPAIR_BUNDLE=PASS')
           print('NOX_REFLEX_SOURCE_ONLY=TRUE')
           PY
+
