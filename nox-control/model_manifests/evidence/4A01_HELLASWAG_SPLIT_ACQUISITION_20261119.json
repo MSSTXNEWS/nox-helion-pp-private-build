@@ -10,8 +10,19 @@
     "train_sample_limit": 16384,
     "validation_split": "validation",
     "validation_sample_limit": 128,
-    "snapshot_revision": null,
-    "split_file_sha256": null
+    "snapshot_revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "split_files": {
+      "train": {
+        "path": "data/train-00000-of-00001.parquet",
+        "sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+        "size_bytes": 24365524
+      },
+      "validation": {
+        "path": "data/validation-00000-of-00001.parquet",
+        "sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+        "size_bytes": 6315951
+      }
+    }
   },
   "local_artifact_search": {
     "drive_metadata_search_terms": [
@@ -36,7 +47,7 @@
     "dataset_repo": "Rowan/hellaswag",
     "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
     "revision_url": "https://huggingface.co/datasets/Rowan/hellaswag/commit/218ec52e09a7e7462a5400043bb9a69a41d06b76",
-    "revision_qualification": "Metadata candidate only. Both immutable split files were temporarily downloaded and matched the pinned commit's LFS SHA-256 and byte-size metadata; temporary files were removed after verification. No payload is retained and owner confirmation is still required before promoting this snapshot into the canonical training manifest.",
+    "revision_qualification": "Pinned in the canonical source manifest under the owner-directed 4A01 work. Both immutable split files were temporarily downloaded and matched the pinned commit's LFS SHA-256 and byte-size metadata; temporary files were removed after verification. No payload is retained; this does not establish Parquet content/schema, split semantics, sample order/seed, or training suitability.",
     "files": [
       {
         "split": "train",
@@ -92,16 +103,16 @@
     }
   },
   "acquisition_steps": [
-    "Owner confirms the pinned dataset snapshot and training/validation selection semantics.",
-    "Fetch only the two immutable URLs above; verify exact byte length and SHA-256 locally, and record a receipt containing source revision, source path, local artifact ID/path, measured size/hash, timestamp, and provenance.",
-    "Record that the source files contain full splits; apply the recipe's 16,384/128 sample caps only with an explicit reproducible sampling/shuffle seed and record the resulting sample manifest/hash.",
-    "Update the canonical manifest with per-split snapshot/hash fields or an owner-approved immutable split-index manifest; do not fill the existing singular split_file_sha256 field by guessing how it should represent two files.",
-    "Keep training_admission=HOLD until independent data receipt and separate resource/runtime gates pass."
+    "The immutable dataset snapshot is pinned for source analysis. Before training, establish split semantics and a reproducible sampling/shuffle policy; the source pin alone does not establish sample selection.",
+    "The two immutable split files were temporarily fetched and their exact byte lengths/SHA-256 matched the pinned LFS metadata, as recorded in local_byte_verification. Those temporary files were removed. Before training, place source files in an approved retained artifact location and record local artifact ID/path, source revision/path, measured size/hash, timestamp, and provenance.",
+    "Apply the recipe's 16,384/128 sample caps only with an explicit reproducible sampling/shuffle seed and record the resulting sample manifest/hash; no such receipt is currently present.",
+    "The canonical manifest now binds per-split revision, URL, LFS SHA-256, size, and the qualified historical byte-verification record. Do not collapse the two file hashes into a singular field.",
+    "Keep training_admission=HOLD until retained data/sampling evidence and separate resource/runtime gates pass."
   ],
   "licensing": {
     "canonical_manifest_claim": "MIT",
     "review_note": "MIT is stated in the README at the pinned Hugging Face dataset snapshot and links to the original dataset LICENSE. The linked LICENSE file text/blob could not be independently verified (GitHub API returned HTTP 451 on 2026-11-19); record this as dataset-card-stated, not direct license-text verified.",
-    "dataset_card_url": "https://huggingface.co/datasets/Rowan/hellaswag",
+    "dataset_card_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md",
     "legacy_metadata_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/f47cd9941619738721e299cf3a72a47d1b01744e/dataset_infos.json",
     "dataset_card_snapshot": {
       "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
@@ -132,7 +143,7 @@
     "downloaded_bytes": 30681475,
     "weights_touched": false,
     "training_started": false,
-    "canonical_manifest_mutated": false,
+    "canonical_manifest_mutated": true,
     "validator_hold_cleared": false,
     "task_status_changed": false,
     "temporary_files_removed": true,
