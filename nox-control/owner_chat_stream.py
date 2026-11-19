@@ -86,7 +86,13 @@ def _executor_status_reply(user_text,path=None):
             age=time.time()-meta.st_mtime
             if not 0<=age<=45:return unknown
             raw=source.read(750001)
-            if len(raw)>750000:return unknown
+            if len(raw)!=meta.st_size or len(raw)>750000:return unknown
+            # In-place writers can replace a valid JSON snapshot while it is
+            # being read. A torn but parseable read is not owner evidence.
+            post=os.fstat(source.fileno())
+            fields=('st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns')
+            if any(getattr(meta,key)!=getattr(post,key) for key in fields):
+                return unknown
         # Duplicate owner evidence keys must not silently rewrite worker facts.
         doc=_strict_json(raw)
         if not isinstance(doc,dict):return unknown

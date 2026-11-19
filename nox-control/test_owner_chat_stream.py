@@ -475,6 +475,27 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.dispatched,[])
             self.assertIn('настроено 6',payload['_agent_final'])
 
+    def test_executor_status_rejects_inplace_mutation_during_read(self):
+        # A concurrent writer may change the opened inode after read().
+        # Even valid pre-read JSON is not a coherent post-read owner receipt.
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'agents.json'
+            path.write_text(json.dumps({'n':1,'workers':[{
+                'id':'nox-agent-01','status':'idle','current_task':None}]}))
+            original_fstat=os.fstat
+            called=0
+            def racing_fstat(fd):
+                nonlocal called
+                called+=1
+                if called==2:
+                    with path.open('ab') as writer:
+                        writer.write(b' ')
+                return original_fstat(fd)
+            with patch.object(stream.os,'fstat',side_effect=racing_fstat):
+                answer=stream._executor_status_reply('Сколько агентов сейчас?',path)
+            self.assertIn('не могу подтвердить',answer)
+            self.assertNotIn('настроено 1',answer)
+
     @unittest.skipUnless(hasattr(os,'mkfifo') and hasattr(os,'O_NONBLOCK'),
                          'POSIX FIFO nonblocking admission regression')
     def test_executor_fifo_status_path_cannot_block_chat(self):
