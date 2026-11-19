@@ -1814,8 +1814,135 @@ def main():
     return 0
 
 
+_RECEIPT_PRIVATE_FIELDS = frozenset({
+    "argv", "cmdline", "command", "serverurl", "rpc_factory", "rpc_url",
+    "legacy_pid", "model_pid", "model_group", "owner_pid", "fd",
+})
+_RECEIPT_FILE_SUFFIXES = (".conf", ".ini", ".cfg", ".json", ".service", ".py", ".lock")
+_RECEIPT_FILE_TOKEN = re.compile(r"\.(?:conf|ini|cfg|json|service|py|lock)(?:\.|$)", re.I)
+
+
+def _receipt_path_kind(path, hint=""):
+    text = os.fspath(path)
+    if text.startswith("unix://"):
+        text = text[7:]
+    normalized = text.lower()
+    if normalized.startswith("/sys/fs/cgroup/") or normalized == "/sys/fs/cgroup":
+        return "shared_memory_scope"
+    if "socket" in hint.lower() or normalized.endswith(".sock"):
+        return "unix_socket"
+    if "supervisor" in normalized and normalized.endswith(_RECEIPT_FILE_SUFFIXES):
+        return "supervisor_config"
+    if "supervisor" in normalized and not normalized.endswith(_RECEIPT_FILE_SUFFIXES):
+        return "supervisor_process_path"
+    if "lifeline" in normalized:
+        return "lifeline_artifact"
+    return "filesystem_path"
+
+
+def _receipt_path_digest(path, hint=""):
+    raw = os.fsencode(os.fspath(path))
+    return {"path_kind": _receipt_path_kind(path, hint),
+            "path_sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def _receipt_key_name(key):
+    text = str(key)
+    if text.startswith("/") or _RECEIPT_FILE_TOKEN.search(text):
+        return "artifact_" + hashlib.sha256(os.fsencode(text)).hexdigest()[:16]
+    return text
+
+
+def _public_memory_scope(snapshot):
+    if not isinstance(snapshot, dict):
+        return None
+    target = snapshot.get("target")
+    model = snapshot.get("model")
+    model = model if isinstance(model, dict) else {}
+    census = model.get("census")
+    census = census if isinstance(census, dict) else {}
+    rows = census.get("matches")
+    rows = rows if isinstance(rows, list) else []
+    safe_rows = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        safe_row = {key: row[key] for key in (
+            "pid", "start_ticks", "exe_path_sha256", "argv_sha256",
+            "environment_sha256") if key in row}
+        if "in_memory_target_cgroup" in row:
+            safe_row["in_target_memory_scope"] = row["in_memory_target_cgroup"]
+        safe_rows.append(safe_row)
+    result = {"scope_kind": "shared_memory_limit_scope",
+              "mapping": snapshot.get("mapping"),
+              "model_state": model.get("state"),
+              "model_anchor": model.get("anchor"),
+              "model_runtime_count": census.get("count", len(safe_rows)),
+              "model_runtime_scan_scope": census.get("scope"),
+              "model_runtime_matches_sha256": hashlib.sha256(json.dumps(
+                  safe_rows, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
+    if isinstance(target, str):
+        result.update(_receipt_path_digest(target, "memory_scope"))
+    return result
+
+
+def _public_receipt_value(value, key_hint=""):
+    if isinstance(value, dict):
+        result = {}
+        for raw_key, item in value.items():
+            key = str(raw_key)
+            lower = key.lower()
+            if lower in _RECEIPT_PRIVATE_FIELDS or "serverurl" in lower or "rpc_factory" in lower:
+                continue
+            if "cgroup" in lower:
+                continue
+            if lower in ("path", "configured_path", "include_glob", "filename",
+                         "target", "config") or lower.endswith("_path"):
+                if isinstance(item, str):
+                    digest = _receipt_path_digest(item, key)
+                    safe_name = "path" if key == "path" else key.removesuffix("_path")
+                    result[safe_name + "_kind"] = digest["path_kind"]
+                    result[safe_name + "_sha256"] = digest["path_sha256"]
+                elif isinstance(item, dict):
+                    result[_receipt_key_name(key)] = _public_receipt_value(item, key)
+                continue
+            safe_key = _receipt_key_name(key)
+            if isinstance(item, str) and (item.startswith("/") or item.startswith("unix://") or
+                                          item.startswith("file://")):
+                digest = _receipt_path_digest(item, key_hint or key)
+                result[safe_key + "_kind"] = digest["path_kind"]
+                result[safe_key + "_sha256"] = digest["path_sha256"]
+            else:
+                result[safe_key] = _public_receipt_value(item, key)
+        return result
+    if isinstance(value, (list, tuple)):
+        return [_public_receipt_value(item, key_hint) for item in value]
+    if isinstance(value, str) and (value.startswith("/") or value.startswith("unix://") or
+                                   value.startswith("file://")):
+        return _receipt_path_digest(value, key_hint)
+    return value
+
+
+def _public_receipt(value):
+    if not isinstance(value, dict):
+        return _public_receipt_value(value)
+    result = {}
+    for key, item in value.items():
+        if key.startswith("cgroup_target_"):
+            result["memory_scope_" + key.removeprefix("cgroup_target_")] = _public_memory_scope(item)
+        elif key == "cgroup_memory":
+            result["memory_snapshot"] = _public_receipt_value(item, "memory_snapshot")
+        elif key == "cgroup_memory_at":
+            result["memory_snapshot_at"] = item
+        else:
+            result[key] = _public_receipt_value(item, key)
+    return result
+
+
 def emit(value):
-    print("NOX_MAINT_LIFELINE_OBSERVER_RECEIPT=" + json.dumps(value, sort_keys=True), flush=True)
+    public_value = _public_receipt(value)
+    print("NOX_MAINT_LIFELINE_OBSERVER_RECEIPT=" +
+          json.dumps(public_value, sort_keys=True), flush=True)
 
 
 if __name__ == "__main__":
