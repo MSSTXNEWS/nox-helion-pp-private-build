@@ -322,6 +322,13 @@ SIDECAR_SCHEMA = 'NOX_NATIVE_EVIDENCE_ADDENDUM_V1'
 SUPPLEMENTAL_MAX_FILES = 512
 REPOSITORY_REF = 'repair/nox-native-reflex-autorefill-20261119'
 REPOSITORY_URL = 'https://github.com/MSSTXNEWS/nox-helion-pp-private-build'
+SOURCE_ADDENDUM_SCHEMA = 'NOX_SOURCE_EVIDENCE_ADDENDUM_V1'
+SOURCE_MANIFEST_PATH = 'nox-control/model_manifests/4A01_DEEPSEEK_V41_1017_TRAINING_SOURCE_20261119.json'
+SOURCE_MANIFEST_BLOB = 'f3e11cfc92bb75fe7ef13589a35fb127a81fceea'
+TOKENIZER_MANIFEST_PATH = 'nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_TOKENIZER_MANIFEST_20261119.json'
+TOKENIZER_MANIFEST_BLOB = '7e0f848c89c3f57e0ec31f9c0c79e229d01cd81a'
+GGUF_MANIFEST_PATH = 'nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_1017_GGUF_INFERENCE_ROUTE_20261119.json'
+GGUF_MANIFEST_BLOB = '19684cbe1b524df8c11b7b177b5773cb2dc0cc60'
 
 
 def git_blob_sha(raw):
@@ -746,7 +753,8 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
     acceptance = source_manifest.get('acceptance')
     tokenizer = source_manifest.get('tokenizer')
     target = source_manifest.get('canonical_target')
-    if (source_manifest.get('schema') != 'NOX_MODEL_SOURCE_MANIFEST_V1'
+    if (git_blob_sha(source_manifest_raw) != SOURCE_MANIFEST_BLOB
+            or source_manifest.get('schema') != 'NOX_MODEL_SOURCE_MANIFEST_V1'
             or source_manifest.get('task_id') != task_id
             or source_manifest.get('task_spec_sha256') != spec_sha
             or source_manifest.get('source_status') != 'SOURCE_CRITERION_COMPLETE'
@@ -763,7 +771,8 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
     tokenizer_manifest_raw, tokenizer_manifest = read_json_with_raw(
         _control_file_path(control_root, tokenizer_manifest_path)
     )
-    if (tokenizer_manifest.get('schema') != 'NOX_TOKENIZER_ASSET_MANIFEST_V1'
+    if (git_blob_sha(tokenizer_manifest_raw) != TOKENIZER_MANIFEST_BLOB
+            or tokenizer_manifest.get('schema') != 'NOX_TOKENIZER_ASSET_MANIFEST_V1'
             or tokenizer_manifest.get('task_id') != task_id
             or tokenizer_manifest.get('model_revision') != target.get('model_revision')
             or tokenizer_manifest.get('tokenizer_revision') != tokenizer.get('source_revision')
@@ -787,7 +796,8 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
         raise ValueError('GGUF_MANIFEST_PATH_MISMATCH')
     gguf_raw, gguf_manifest = read_json_with_raw(_control_file_path(control_root, gguf_path))
     sidecar_gguf = document.get('gguf_inference_boundary')
-    if (gguf_manifest.get('schema') != 'NOX_GGUF_INFERENCE_ROUTE_MANIFEST_V1'
+    if (git_blob_sha(gguf_raw) != GGUF_MANIFEST_BLOB
+            or gguf_manifest.get('schema') != 'NOX_GGUF_INFERENCE_ROUTE_MANIFEST_V1'
             or gguf_manifest.get('task_id') != task_id
             or gguf_manifest.get('task_spec_sha256') != spec_sha
             or not isinstance(sidecar_gguf, dict)
@@ -1032,6 +1042,7 @@ def summarize(directory: Path):
                 'supplemental_accepted_count': supplemental['supplemental_accepted_count'],
                 'supplemental_accepted_task_ids': supplemental['accepted_task_ids'],
                 'supplemental_acceptance': supplemental,
+                'original_acceptance_added': 0,
                 'total': total, 'groups': rows, 'updated_at': updated_at}
     ideas_done = sum(is_verified(idea, receipts.get(key)) for key, idea in ideas.items())
     total = counts(done, BASE_TOTAL + IDEA_TOTAL)
@@ -1050,6 +1061,7 @@ def summarize(directory: Path):
             'supplemental_accepted_count': supplemental['supplemental_accepted_count'],
             'supplemental_accepted_task_ids': supplemental['accepted_task_ids'],
             'supplemental_acceptance': supplemental,
+            'original_acceptance_added': 0,
             'final_acceptance': acceptance, 'groups': rows, 'updated_at': updated_at}
     wave = optional_wave_view(directory, base, ideas, payload)
     if wave is not None:
