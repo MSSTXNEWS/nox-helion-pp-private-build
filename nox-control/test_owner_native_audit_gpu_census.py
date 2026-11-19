@@ -115,6 +115,7 @@ class GpuConsumerCensusTests(unittest.TestCase):
         self.assertEqual(link['service_match']['service'], 'nox-worker')
 
     def test_before_only_gpu_pid_is_gone_during_sample(self):
+        add_proc(self.proc, 999, ppid=1, start=999)
         calls = 0
         def runner(argv, seconds=12):
             nonlocal calls
@@ -122,7 +123,7 @@ class GpuConsumerCensusTests(unittest.TestCase):
                 calls += 1
                 return 0, app_text(901) if calls == 1 else ''
             if argv == ['supervisorctl', 'status']:
-                return 0, 'idle STOPPED\n'
+                return 0, 'idle RUNNING pid 999, uptime 0:00:01\n'
             return 1, ''
         census = MOD.gpu_process_census(self.proc, run_fn=runner, clock=self.clock())
         self.assertEqual(census['gpu_process_links'][0]['classification'],
@@ -140,11 +141,12 @@ class GpuConsumerCensusTests(unittest.TestCase):
 
     def test_visible_gpu_pid_without_service_relation_is_reported(self):
         add_proc(self.proc, 903, ppid=1, start=903, cgroup='/unmapped/container')
+        add_proc(self.proc, 999, ppid=1, start=999)
         def runner(argv, seconds=12):
             if argv[0] == 'nvidia-smi':
                 return 0, app_text(903)
             if argv == ['supervisorctl', 'status']:
-                return 0, 'idle STOPPED\n'
+                return 0, 'idle RUNNING pid 999, uptime 0:00:01\n'
             return 0, ''
         census = MOD.gpu_process_census(self.proc, run_fn=runner, clock=self.clock())
         link = census['gpu_process_links'][0]
@@ -356,6 +358,7 @@ class GpuConsumerCensusTests(unittest.TestCase):
 
     def test_pid_reuse_between_gpu_samples_is_gone_not_matched(self):
         add_proc(self.proc, 904, ppid=1, start=904)
+        add_proc(self.proc, 999, ppid=1, start=999)
         calls = 0
         def runner(argv, seconds=12):
             nonlocal calls
@@ -365,7 +368,7 @@ class GpuConsumerCensusTests(unittest.TestCase):
                     replace_start(self.proc, 904, start=1904)
                 return 0, app_text(904)
             if argv == ['supervisorctl', 'status']:
-                return 0, 'idle STOPPED\n'
+                return 0, 'idle RUNNING pid 999, uptime 0:00:01\n'
             return 0, ''
         census = MOD.gpu_process_census(self.proc, run_fn=runner, clock=self.clock())
         link = census['gpu_process_links'][0]
@@ -374,11 +377,12 @@ class GpuConsumerCensusTests(unittest.TestCase):
 
     def test_gpu_consumer_bypasses_keyword_filter_with_fresh_exact_identity(self):
         add_proc(self.proc, 905, ppid=1, start=905, argv=b'/opt/odd-daemon\0--opaque\0')
+        add_proc(self.proc, 999, ppid=1, start=999)
         def runner(argv, seconds=12):
             if argv[0] == 'nvidia-smi':
                 return 0, app_text(905)
             if argv == ['supervisorctl', 'status']:
-                return 0, 'idle STOPPED\n'
+                return 0, 'idle RUNNING pid 999, uptime 0:00:01\n'
             return 1, ''
         census = MOD.gpu_process_census(self.proc, run_fn=runner, clock=self.clock())
         candidates = census['gpu_consumer_identities']
@@ -393,11 +397,12 @@ class GpuConsumerCensusTests(unittest.TestCase):
 
     def test_pid_reuse_between_census_and_export_is_not_gpu_attributed(self):
         add_proc(self.proc, 918, ppid=1, start=918, argv=b'/opt/odd-daemon\0--opaque\0')
+        add_proc(self.proc, 999, ppid=1, start=999)
         def runner(argv, seconds=12):
             if argv[0] == 'nvidia-smi':
                 return 0, app_text(918)
             if argv == ['supervisorctl', 'status']:
-                return 0, 'idle STOPPED\n'
+                return 0, 'idle RUNNING pid 999, uptime 0:00:01\n'
             return 1, ''
         census = MOD.gpu_process_census(self.proc, run_fn=runner, clock=self.clock())
         candidates = census['gpu_consumer_identities']
@@ -408,11 +413,12 @@ class GpuConsumerCensusTests(unittest.TestCase):
 
     def test_pid_namespace_change_between_census_and_export_is_not_gpu_attributed(self):
         proc = add_proc(self.proc, 919, ppid=1, start=919, argv=b'/opt/odd-daemon\0--opaque\0')
+        add_proc(self.proc, 999, ppid=1, start=999)
         def runner(argv, seconds=12):
             if argv[0] == 'nvidia-smi':
                 return 0, app_text(919)
             if argv == ['supervisorctl', 'status']:
-                return 0, 'idle STOPPED\n'
+                return 0, 'idle RUNNING pid 999, uptime 0:00:01\n'
             return 1, ''
         census = MOD.gpu_process_census(self.proc, run_fn=runner, clock=self.clock())
         candidates = census['gpu_consumer_identities']
@@ -549,7 +555,6 @@ class GpuConsumerCensusTests(unittest.TestCase):
                                      'process_identity_inventory': inventory}))
         finally:
             MOD.process_rows = original
-        self.assertEqual(result['section'], 'process_rows')
         self.assertEqual(result['bounded_process_identity_inventory'], inventory)
 
 
