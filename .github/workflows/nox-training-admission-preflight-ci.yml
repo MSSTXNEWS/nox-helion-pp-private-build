@@ -1,0 +1,19 @@
+name: NOX training admission preflight source checks
+on:
+  pull_request:
+    paths:
+      - "nox-control/owner_training_resume_preflight.py"
+      - "nox-control/test_owner_training_resume_preflight.py"
+      - ".github/workflows/nox-training-admission-preflight-ci.yml"
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile source and focused test
+        run: python -m py_compile nox-control/owner_training_resume_preflight.py nox-control/test_owner_training_resume_preflight.py
+      - name: Run focused source contract tests
+        run: python -m unittest discover -s nox-control -p 'test_owner_training_resume_preflight.py' -v

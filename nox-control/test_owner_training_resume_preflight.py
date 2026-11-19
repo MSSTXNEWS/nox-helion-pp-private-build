@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -144,6 +145,238 @@ class ResumePreflightTests(unittest.TestCase):
         self.assertIn('RAW_CGROUP_HEADROOM_INSUFFICIENT_OR_UNKNOWN', findings)
         self.assertIn('GPU1_HEADROOM_INSUFFICIENT_OR_UNKNOWN', findings)
         self.assertNotIn('CHECKPOINT_DISK_HEADROOM_INSUFFICIENT_OR_UNKNOWN', findings)
+
+
+    def ready_evidence(self, now):
+        files = []
+        for index, name in enumerate(preflight.CHECKPOINT_FILES):
+            files.append({'name': name, 'bytes': 100 + index, 'sha256': f'{index + 1:064x}'})
+        bundle = preflight.digest(json.dumps(files, sort_keys=True, separators=(',', ':')).encode())
+        return {
+            'resources': {
+                'sampled_at_unix': now, 'telemetry_complete': True,
+                'chat_inflight_observed': True, 'chat_inflight': False,
+                'raw_cgroup_headroom_bytes': preflight.FULL_RESTAGE_BYTES,
+                'disk_free_bytes': 12 * preflight.GIB, 'required_disk_bytes': 10 * preflight.GIB,
+                'gpu1_free_mib': preflight.GPU1_FLOOR_MIB,
+            },
+            'checkpoint': {
+                'pointer_sha256': 'a' * 64, 'manifest_sha256': 'b' * 64,
+                'payload_files': files, 'payload_hashes_verified': True,
+                'optimizer_scaler_rng_verified': True, 'bundle_sha256': bundle,
+            },
+            'holdout': {
+                'dataset_sha256': 'c' * 64, 'sample_sha256': 'd' * 64,
+                'sampled_at_unix': now, 'fresh': True, 'best_loss': 1.0,
+                'candidate_loss': 0.9, 'regression_streak': 0,
+                'guard_state': 'MONITORING', 'inhibit': False,
+            },
+            'source_seal': {'all_pins_match': True},
+            'owner_control': {
+                'stop_state_verified': True, 'stop_clear': True,
+                'single_fenced_lease': True, 'lease_fresh': True,
+                'handoff_verified': True,
+                'pid_start_ticks': [{'role': 'lease_owner', 'pid': 123, 'start_ticks': 456, 'verified': True}],
+                'trainer_stopped': True,
+            },
+            'rollback': {
+                'immutable_pre_run_checkpoint_sha256': bundle,
+                'independent_backup_sha256': 'e' * 64,
+                'backup_verified': True, 'restore_probe_sha256': 'f' * 64,
+                'restore_probe_passed': True, 'fresh': True,
+            },
+        }
+
+    def test_default_admission_is_hold_and_never_issues_permission(self):
+        decision = preflight.assess_admission({}, time.time())
+        self.assertEqual(decision['state'], 'HOLD')
+        self.assertTrue(decision['blockers'])
+        self.assertFalse(decision['all_gates_pass'])
+        self.assertTrue(decision['owner_gate_required'])
+        self.assertFalse(decision['training_permission_issued'])
+
+    def test_complete_evidence_still_requires_separate_owner_gate(self):
+        now = time.time()
+        decision = preflight.assess_admission(self.ready_evidence(now), now)
+        self.assertEqual(decision, {
+            'state': 'OWNER_GATE_REQUIRED', 'blockers': [],
+            'all_gates_pass': True, 'owner_gate_required': True,
+            'training_permission_issued': False,
+        })
+
+    def test_stale_or_unsafe_gate_evidence_fails_closed(self):
+        now = time.time()
+        mutations = (
+            ('resource age', lambda e: e['resources'].update(sampled_at_unix=now - 31)),
+            ('resource floor', lambda e: e['resources'].update(raw_cgroup_headroom_bytes=preflight.FULL_RESTAGE_BYTES - 1)),
+            ('checkpoint omission', lambda e: e['checkpoint'].update(payload_files=e['checkpoint']['payload_files'][:-1])),
+            ('holdout regression', lambda e: e['holdout'].update(regression_streak=2, candidate_loss=1.2)),
+            ('STOP', lambda e: e['owner_control'].update(stop_clear=False)),
+            ('unfenced lease', lambda e: e['owner_control'].update(single_fenced_lease=False)),
+            ('PID reuse', lambda e: e['owner_control']['pid_start_ticks'][0].update(verified=False)),
+            ('rollback missing', lambda e: e['rollback'].update(backup_verified=False)),
+            ('source mismatch', lambda e: e['source_seal'].update(all_pins_match=False)),
+        )
+        for label, mutate in mutations:
+            with self.subTest(gate=label):
+                evidence = json.loads(json.dumps(self.ready_evidence(now)))
+                mutate(evidence)
+                decision = preflight.assess_admission(evidence, now)
+                self.assertEqual(decision['state'], 'HOLD')
+                self.assertFalse(decision['all_gates_pass'])
+                self.assertFalse(decision['training_permission_issued'])
+
+    def test_checkpoint_projection_hashes_every_required_payload(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            cp = output / preflight.CP55
+            cp.mkdir()
+            hashes = {}
+            for name in preflight.CHECKPOINT_FILES:
+                payload = ('payload:' + name).encode()
+                (cp / name).write_bytes(payload)
+                hashes[name] = preflight.digest(payload)
+            manifest_raw = json.dumps({'files_sha256': hashes}, sort_keys=True).encode()
+            (cp / 'checkpoint_manifest.json').write_bytes(manifest_raw)
+            manifest_sha = preflight.digest(manifest_raw)
+            pointer_raw = json.dumps({'directory': preflight.CP55, 'manifest_sha256': manifest_sha},
+                                     sort_keys=True).encode()
+            (output / 'latest_checkpoint.json').write_bytes(pointer_raw)
+            with patch.object(preflight, 'OUTPUT', output), \
+                 patch.object(preflight, 'CP55_POINTER', preflight.digest(pointer_raw)), \
+                 patch.object(preflight, 'CP55_MANIFEST', manifest_sha):
+                result = preflight._checkpoint_payloads(time.time())
+                self.assertTrue(result['payload_hashes_verified'])
+                self.assertTrue(result['optimizer_scaler_rng_verified'])
+                self.assertEqual({row['name'] for row in result['payload_files']}, set(preflight.CHECKPOINT_FILES))
+                (cp / 'optimizer.pt').write_bytes(b'changed')
+                changed = preflight._checkpoint_payloads(time.time())
+        self.assertFalse(changed['payload_hashes_verified'])
+        self.assertEqual(changed['state'], 'CHECKPOINT_PAYLOADS_UNVERIFIED')
+
+    def test_holdout_requires_fresh_hashes_and_zero_regression_streak(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            now = time.time()
+            self.write(root / 'state/owner_qwen_training_guard.json', {
+                'state': 'MONITORING',
+                'policy_state': {'holdout_dataset_sha256': 'a' * 64, 'holdout_sample_sha256': 'b' * 64,
+                    'holdout_sampled_at': now, 'best_holdout_loss': 0.8,
+                    'regression_streak': 0, 'inhibit': False},
+                'checkpoint': {'holdout_loss': 0.7},
+            })
+            with patch.object(preflight, 'ROOT', root):
+                result = preflight._holdout_projection(now)
+            self.assertTrue(result['fresh'])
+            self.assertEqual(result['dataset_sha256'], 'a' * 64)
+            self.assertEqual(result['candidate_loss'], 0.7)
+            with patch.object(preflight, 'ROOT', root):
+                self.write(root / 'state/owner_qwen_training_guard.json', {
+                    'state': 'INHIBITED', 'policy_state': {'regression_streak': 2},
+                    'checkpoint': {'holdout_loss': 1.2},
+                })
+                stale = preflight._holdout_projection(now)
+            self.assertFalse(stale['fresh'])
+            self.assertIsNone(stale['sample_sha256'])
+
+    def test_streaming_hash_is_bounded_and_rejects_symlink(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            leaf = root / 'payload'
+            leaf.write_bytes(b'abc')
+            self.assertEqual(preflight.file_digest(leaf, 3),
+                             {'bytes': 3, 'sha256': preflight.digest(b'abc')})
+            with self.assertRaises(preflight.ReadHold):
+                preflight.file_digest(leaf, 2)
+            link = root / 'link'
+            link.symlink_to(leaf)
+            with self.assertRaises(OSError):
+                preflight.file_digest(link, 10)
+
+    def test_receipt_write_is_private_atomic_and_once_per_request(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = {
+                'schema': preflight.ADMISSION_SCHEMA, 'owner_request_id': '123',
+                'state': 'HOLD', 'training_permission_issued': False,
+                'decision': {'training_permission_issued': False},
+            }
+            result = preflight.write_admission_receipt(receipt, Path(directory))
+            path = Path(result['path'])
+            self.assertEqual(path.read_bytes(), json.dumps(receipt, sort_keys=True,
+                separators=(',', ':'), allow_nan=False).encode())
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(result['sha256'], preflight.digest(path.read_bytes()))
+            with self.assertRaises(FileExistsError):
+                preflight.write_admission_receipt(receipt, Path(directory))
+
+
+
+    def test_owner_control_requires_one_unexpired_fenced_lease_and_pid_ticks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            now = time.time()
+            lease = {
+                'schema': 'NOX_OWNER_TRAINING_LEASE_V1', 'owner_request_id': '123',
+                'source_sha256': 'a' * 40, 'state': 'ACTIVE', 'fenced': True,
+                'fencing_token': 7, 'active_lease_count': 1, 'lease_id': 'lease-123',
+                'sampled_at_unix': now, 'issued_at_unix': now - 2,
+                'expires_at_unix': now + 30, 'owner_pid': 456,
+                'owner_pid_start_ticks': 789, 'handoff_verified': True,
+                'trainer_state': 'STOPPED', 'training_process_count': 0,
+            }
+            self.write(root / 'state/owner_training_lease.json', lease)
+            with patch.object(preflight, 'LEASE_EVIDENCE', root / 'state/owner_training_lease.json'), \
+                 patch.object(preflight, 'STOP_FLAGS', ()), \
+                 patch.object(preflight, '_proc_start_ticks', return_value=789):
+                good = preflight._owner_control_projection('123', 'a' * 40, now)
+                self.assertTrue(good['single_fenced_lease'])
+                self.assertTrue(good['handoff_verified'])
+                self.assertTrue(good['trainer_stopped'])
+                self.assertTrue(good['pid_start_ticks'][0]['verified'])
+            lease['owner_pid_start_ticks'] = 790
+            self.write(root / 'state/owner_training_lease.json', lease)
+            with patch.object(preflight, 'LEASE_EVIDENCE', root / 'state/owner_training_lease.json'), \
+                 patch.object(preflight, 'STOP_FLAGS', ()), \
+                 patch.object(preflight, '_proc_start_ticks', return_value=789):
+                mismatched = preflight._owner_control_projection('123', 'a' * 40, now)
+            self.assertFalse(mismatched['single_fenced_lease'])
+            self.assertEqual(mismatched['pid_start_ticks'], [])
+
+    def test_rollback_projection_rehashes_independent_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            now = time.time()
+            backup = root / 'state/training_backups/123/checkpoint.bundle'
+            backup.parent.mkdir(parents=True)
+            backup.write_bytes(b'immutable rollback bytes')
+            bundle = 'a' * 64
+            self.write(root / 'state/training_rollback_evidence.json', {
+                'schema': 'NOX_TRAINING_ROLLBACK_EVIDENCE_V1', 'owner_request_id': '123',
+                'sampled_at_unix': now, 'immutable_pre_run_checkpoint_sha256': bundle,
+                'independent_backup_path': 'state/training_backups/123/checkpoint.bundle',
+                'independent_backup_sha256': preflight.digest(backup.read_bytes()),
+                'restore_probe_sha256': 'b' * 64, 'restore_probe_passed': True,
+            })
+            with patch.object(preflight, 'ROOT', root), \
+                 patch.object(preflight, 'ROLLBACK_EVIDENCE', root / 'state/training_rollback_evidence.json'):
+                good = preflight._rollback_projection('123', {'bundle_sha256': bundle}, now)
+                self.assertTrue(good['backup_verified'])
+                self.assertTrue(good['restore_probe_passed'])
+                backup.write_bytes(b'changed bytes')
+                bad = preflight._rollback_projection('123', {'bundle_sha256': bundle}, now)
+            self.assertFalse(bad['backup_verified'])
+
+    def test_stop_flag_is_never_reported_clear(self):
+        with tempfile.TemporaryDirectory() as directory:
+            stop = Path(directory) / 'STOP'
+            stop.write_text('hold')
+            with patch.object(preflight, 'ROOT', Path(directory)), \
+                 patch.object(preflight, 'STOP_FLAGS', (stop,)):
+                result = preflight._stop_projection()
+        self.assertTrue(result['stop_state_verified'])
+        self.assertFalse(result['stop_clear'])
+        self.assertEqual(result['active_stop_flags'], ['STOP'])
+
 
 
 if __name__ == '__main__':
