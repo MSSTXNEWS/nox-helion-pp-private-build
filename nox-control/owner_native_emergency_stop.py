@@ -322,27 +322,6 @@ def _canonical_long_option(option: str) -> str:
     return option.replace("_", "-") if option.startswith("--") else option
 
 
-def _extra_model_file_identity(values: list[str], options: list[str]) -> dict:
-    if not values:
-        return {"count": 0, "paths_sha256": hashlib.sha256(b"").hexdigest()}
-    if len(values) > 32:
-        _selector_preflight_hold("MODEL_EXTRA_FILE_COUNT_LIMIT", options)
-    root = "/root/nox/models"
-    normalized = []
-    for value in values:
-        if (not value.startswith(root + "/") or not value.endswith(".gguf") or
-                any(part in ("", ".", "..") for part in value.split("/")[1:])):
-            _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_UNAPPROVED", options)
-        candidate = Path(value)
-        if str(candidate) != value:
-            _selector_preflight_hold("MODEL_EXTRA_FILE_PATH_NONCANONICAL", options)
-        normalized.append(value)
-    if len(set(normalized)) != len(normalized):
-        _selector_preflight_hold("MODEL_EXTRA_FILE_DUPLICATE", options)
-    digest = hashlib.sha256(b"\0".join(path.encode("utf-8") for path in normalized)).hexdigest()
-    return {"count": len(normalized), "paths_sha256": digest}
-
-
 def _selector_preflight_hold(reason: str, options: list[str]) -> None:
     # Values are deliberately absent; only validated option spellings leave the host.
     safe = sorted({option for option in options
@@ -352,8 +331,8 @@ def _selector_preflight_hold(reason: str, options: list[str]) -> None:
     fail(reason)
 
 
-def reject_model_context_selectors(args: list[str]) -> dict:
-    """Validate exact base selectors and bounded extra-file/parallel options."""
+def reject_model_context_selectors(args: list[str]) -> None:
+    """Reject direct model/context overrides; shard/parallel operands stay opaque."""
     short_selectors = {
         "-mu", "-dr", "-hf", "-hfr", "-hff", "-mm", "-mmu",
         "-md", "-hfd", "-hfrd", "-ns", "-ctx", "-ctxcp",
@@ -387,59 +366,31 @@ def reject_model_context_selectors(args: list[str]) -> dict:
     boolean_options = {
         "--no-webui", "--metrics", "--embedding", "--reranking", "--jinja",
         "--no-mmap", "--mlock", "--no-context-shift", "--no-perf",
-        "--cont-batching", "--no-cont-batching", "--flash-attn", "--no-flash-attn",
-        "--verbose", "--log-disable", "--log-colors", "--cache-prompt",
+        "--cont-batching", "--no-cont-batching", "--no-flash-attn",
+        "--verbose", "--log-disable", "--cache-prompt",
         "--no-cache-prompt", "--swa-full",
     }
-    extra_file_options = []
-    extra_file_values = []
-    parallel_options = []
-    parallel_value = None
+    opaque_options = {"--shard", "--ple", "-np", "--parallel"}
     index = 0
     while index < len(args):
         token = args[index]
         raw_option = _selector_option(token)
         option = _canonical_long_option(raw_option)
         inline_value = token.partition("=")[2] if "=" in token else None
-        if option in ("--shard", "--ple"):
-            if extra_file_options:
-                _selector_preflight_hold("MODEL_EXTRA_FILE_ALIAS_MIXED_OR_DUPLICATE",
-                                         extra_file_options + [raw_option])
-            extra_file_options.append(raw_option)
-            if inline_value is None:
-                if index + 1 >= len(args):
-                    _selector_preflight_hold("MODEL_EXTRA_FILE_VALUE_MISSING", extra_file_options)
-                index += 1
-                value = args[index]
-            else:
-                value = inline_value
-            values = value.split(",")
-            if not value or any(not item for item in values):
-                _selector_preflight_hold("MODEL_EXTRA_FILE_VALUE_INVALID", extra_file_options)
-            extra_file_values.extend(values)
-            index += 1
-            continue
-        if option in ("-np", "--parallel"):
-            parallel_options.append(raw_option)
-            if len(parallel_options) > 1:
-                _selector_preflight_hold("MODEL_PARALLEL_ALIAS_MIXED_OR_DUPLICATE", parallel_options)
-            if inline_value is None:
-                if index + 1 >= len(args):
-                    _selector_preflight_hold("MODEL_PARALLEL_VALUE_MISSING", parallel_options)
-                index += 1
-                value = args[index]
-            else:
-                value = inline_value
-            if value == "-1":
-                parallel_value = -1
-            elif re.fullmatch(r"[1-9][0-9]?", value):
-                parsed_parallel = int(value)
-                if not 1 <= parsed_parallel <= 64:
-                    _selector_preflight_hold("MODEL_PARALLEL_VALUE_OUT_OF_RANGE", parallel_options)
-                parallel_value = parsed_parallel
-            else:
-                _selector_preflight_hold("MODEL_PARALLEL_VALUE_INVALID", parallel_options)
-            index += 1
+        selector_like = (option in opaque_options or
+                         token.startswith("-c=") or token.startswith("-m=") or
+                         option in short_selectors or option in long_exact or
+                         option.startswith(long_prefixes) or
+                         option.startswith(preset_prefixes))
+        if selector_like and index > 0 and "=" not in args[index - 1]:
+            previous = args[index - 1]
+            previous_option = _canonical_long_option(_selector_option(previous))
+            if (previous.startswith("-") and previous_option not in boolean_options and
+                    previous_option not in value_options and previous_option not in ("-m", "-c")):
+                _selector_preflight_hold("MODEL_ARGUMENT_ARITY_AMBIGUOUS",
+                                         [_selector_option(previous), raw_option])
+        if option in opaque_options:
+            index += 1 if inline_value is not None or index + 1 >= len(args) else 2
             continue
         if option in ("-m", "-c") and inline_value is None:
             if index + 1 >= len(args):
@@ -451,13 +402,6 @@ def reject_model_context_selectors(args: list[str]) -> dict:
                    (option in long_exact and option not in ("--parallel",)) or
                    option.startswith(long_prefixes) or option.startswith(preset_prefixes))
         if blocked:
-            if index > 0 and "=" not in args[index - 1]:
-                previous = args[index - 1]
-                previous_option = _canonical_long_option(_selector_option(previous))
-                if (previous.startswith("-") and previous_option not in boolean_options and
-                        previous_option not in value_options and previous_option not in ("-m", "-c")):
-                    _selector_preflight_hold("MODEL_ARGUMENT_ARITY_AMBIGUOUS",
-                                             [_selector_option(previous), raw_option])
             _selector_preflight_hold("MODEL_OR_CONTEXT_SELECTOR_ALIAS", [raw_option])
         if option in value_options and inline_value is None:
             if index + 1 >= len(args):
@@ -466,13 +410,7 @@ def reject_model_context_selectors(args: list[str]) -> dict:
             continue
         index += 1
 
-    extra_files = _extra_model_file_identity(extra_file_values, extra_file_options)
-    return {
-        "extra_model_files": extra_files,
-        "parallel_mode": ("default" if not parallel_options else
-                          "auto" if parallel_value == -1 else "explicit"),
-        "parallel_count": (parallel_value if parallel_value not in (None, -1) else None),
-    }
+    return None
 
 
 def model_environment_identity(pid: int, expected_ticks: int) -> dict:
@@ -565,7 +503,7 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
                 context_index + 1 >= len(model_args) or
                 model_args[context_index + 1] != "8192"):
             fail("MODEL_EXECUTABLE_OR_ARGV_MISMATCH")
-        selector_policy = reject_model_context_selectors(model_args)
+        reject_model_context_selectors(model_args)
         environment_overrides = model_environment_identity(pid, expected_ticks)
     elif role == "HOLDER":
         try:
@@ -614,7 +552,6 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
             "ppid": stat_before["ppid"], "pgrp": stat_before["pgrp"],
             "argv_sha256": hashlib.sha256(b"\0".join(raw_argv)).hexdigest(),
             "environment_overrides": environment_overrides if role == "MODEL" else None,
-            "model_selector_policy": selector_policy if role == "MODEL" else None,
             "cgroup": str(group)}
 
 
