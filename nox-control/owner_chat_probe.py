@@ -169,6 +169,26 @@ def metrics():
         if values:rows.append(dict(values))
     return rows[-35:]
 
+def model_slots_state(client):
+    """Read only the active model slots. Unknown/missing state is never idle."""
+    try:
+        with request(client, '/slots', base='http://127.0.0.1:8098') as response:
+            slots = obj(response, limit=100000)
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise RuntimeError('HOLD_CHAT_SLOTS_ENDPOINT_UNAVAILABLE') from exc
+    if not isinstance(slots, list) or not slots or len(slots) > 1024:
+        raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+    busy = 0
+    for slot in slots:
+        if not isinstance(slot, dict):
+            raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+        flag = slot.get('is_processing', slot.get('processing'))
+        if type(flag) is not bool:
+            raise RuntimeError('HOLD_CHAT_SLOTS_STATE_UNVERIFIED')
+        busy += int(flag)
+    return {'count': len(slots), 'busy': busy}
+
+
 def main():
     global BASE
     if os.environ.get('NOX_PROBE_NONLOOPBACK','1')=='1':BASE=nonloopback_base()
@@ -215,8 +235,7 @@ def main():
             report['owner_executors']={'state':executors.get('state'),'configured':executors.get('configured'),
                 'observed_workers':len(rows) if isinstance(rows,list) else None,
                 'worker_ids':[str(row.get('id',''))[:60] for row in rows if isinstance(row,dict)] if isinstance(rows,list) else []}
-        slot=obj(request(client,'/slots',base='http://127.0.0.1:8081'))
-        report['slots']={'count':len(slot),'busy':sum(bool(s.get('is_processing',s.get('processing',False))) for s in slot)}
+        report['slots']=model_slots_state(client)
         emit('chat_before_probe',report)
         if not report['nonloopback_peer']:raise RuntimeError('HOLD_NONLOOPBACK_ACCEPTANCE_REQUIRED')
         if not report.get('owner_status_bound') or not report.get('owner_executors_access') or not report.get('owner_events_access'):
