@@ -1257,6 +1257,9 @@ SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
     'nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py',
     'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py',
 )
+# The exact source commit on this branch serves only the read-only I-39 census.
+FILES['repair'] = 'nox-control/systemic_relay_20261118/owner_i39_preupgrade_census.py'
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
