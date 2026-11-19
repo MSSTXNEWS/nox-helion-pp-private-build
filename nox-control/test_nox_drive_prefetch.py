@@ -93,8 +93,8 @@ class DrivePrefetchTests(unittest.TestCase):
     def test_unbounded_or_unknown_cgroup_ram_is_held(self):
         cgroup = self.root / "cgroup"
         cgroup.mkdir(mode=0o700)
-        (cgroup / "memory.max").write_text("max\\n")
-        (cgroup / "memory.current").write_text("1\\n")
+        (cgroup / "memory.max").write_text("max\n")
+        (cgroup / "memory.current").write_text("1\n")
         self.assertEqual(mod.cgroup_raw_free(cgroup), 0)
 
         class Usage:
