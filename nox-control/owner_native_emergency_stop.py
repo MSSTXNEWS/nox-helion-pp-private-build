@@ -27,12 +27,7 @@ CGROUP_ROOT = Path("/sys/fs/cgroup")
 SUPERVISOR_SERVICE = "nox-ds41-8098"
 MODEL_PID = 3266857
 MODEL_START_TICKS = 172046662
-MODEL_ARGV_TAIL = (
-    "-m",
-    "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
-    "-c",
-    "8192",
-)
+MODEL_PATH = "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf"
 HOLDER_PID = 498569
 HOLDER_SCRIPT_NAME = "engram_memfd_holder.py"
 HOLDER_CWD = "/root/nox/engram_ram"
@@ -295,8 +290,18 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
     exe_name = Path(exe.removesuffix(" (deleted)")).name
     argv0_name = Path(argv[0].removesuffix(" (deleted)")).name
     if role == "MODEL":
+        model_args = argv[1:]
+        model_positions = [i for i, token in enumerate(model_args) if token == "-m"]
+        context_positions = [i for i, token in enumerate(model_args) if token == "-c"]
         if (exe_name != "llama-server" or argv0_name != "llama-server" or
-                tuple(argv[1:]) != MODEL_ARGV_TAIL):
+                len(model_positions) != 1 or len(context_positions) != 1):
+            fail("MODEL_EXECUTABLE_OR_ARGV_MISMATCH")
+        model_index = model_positions[0]
+        context_index = context_positions[0]
+        if (model_index + 1 >= len(model_args) or
+                model_args[model_index + 1] != MODEL_PATH or
+                context_index + 1 >= len(model_args) or
+                model_args[context_index + 1] != "8192"):
             fail("MODEL_EXECUTABLE_OR_ARGV_MISMATCH")
     elif role == "HOLDER":
         if HOLDER_SCRIPT not in argv:
