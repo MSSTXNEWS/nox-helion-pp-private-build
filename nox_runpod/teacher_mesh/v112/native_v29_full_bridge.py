@@ -488,6 +488,23 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
     ]
     active={}
     active_request_ids=set()
+    cancelled_attempts={}
+    terminal_attempts={}
+    STOP_STATE_TTL=600.0
+    STOP_STATE_LIMIT=2048
+
+    def prune_attempt_states():
+        now=time.monotonic()
+        for states in (cancelled_attempts,terminal_attempts):
+            for attempt,expires in tuple(states.items()):
+                if expires<=now:states.pop(attempt,None)
+
+    def remember_attempt(states,attempt):
+        prune_attempt_states()
+        if attempt not in states and len(states)>=STOP_STATE_LIMIT:
+            return False
+        states[attempt]=time.monotonic()+STOP_STATE_TTL
+        return True
 
     def check(request):
         return bool(trusted['_session_ok'](request))
@@ -672,6 +689,15 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         elif dialog_id is not None and not isinstance(dialog_id,str):
             return JSONResponse({'error':'INVALID_DIALOG_ID'},status_code=422)
 
+        session_key=scope(request)
+        if session_key is None:
+            return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
+        attempt_key=(session_key,dialog_id,request_id) if request_id is not None else None
+        prune_attempt_states()
+        if attempt_key is not None and attempt_key in cancelled_attempts:
+            return JSONResponse({'error':'STREAM_STOP_REQUESTED',
+                                 'request_id':request_id,'dialog_id':dialog_id},status_code=409)
+
         if request_id is not None:
             issue,replay_answer=await asyncio.to_thread(
                 _request_replay,dialog_id,request_id,question)
@@ -688,16 +714,19 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                                   'replayed':True})
                 return StreamingResponse(replay(),media_type='application/x-ndjson',
                     headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})
-        key=scope(request)
-        if key is None:
-            return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
+        if attempt_key is not None and (
+                len(cancelled_attempts)+len(active_request_ids)>=STOP_STATE_LIMIT or
+                len(terminal_attempts)+len(active_request_ids)>=STOP_STATE_LIMIT):
+            return JSONResponse({'error':'HOLD_STOP_STATE_CAPACITY'},status_code=503)
+        key=session_key
         if key in active:
             return JSONResponse({'error':'HOLD_ACTIVE_SESSION_STREAM'},status_code=409)
         request_key=(dialog_id,request_id) if request_id is not None else None
         if request_key is not None and request_key in active_request_ids:
             return JSONResponse({'error':'HOLD_ACTIVE_REQUEST_ID'},status_code=409)
         cancel=asyncio.Event()
-        active[key]=cancel
+        stream_state={'dialog_id':dialog_id,'request_id':request_id,'cancel':cancel}
+        active[key]=stream_state
         if request_key is not None:
             active_request_ids.add(request_key)
         payload={'messages':history+[{'role':'user','content':question}],
@@ -794,6 +823,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 if not await asyncio.to_thread(_save_exchange,dialog_id,question,answer,exchange_id):
                     yield _jsonl({'type':'error','error':'HOLD_S03_DIALOG_COMMIT_NOT_VERIFIED'})
                     return
+                if attempt_key is not None:
+                    remember_attempt(terminal_attempts,attempt_key)
                 yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
                               's03_integrated':True,'dialog_id':dialog_id,
                               'exchange_id':exchange_id,'source_record_id':proof['record_id'],
@@ -803,7 +834,7 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             except Exception:
                 yield _jsonl({'type':'error','error':'HOLD_EXISTING_ONEHOST_RUNTIME'})
             finally:
-                if active.get(key) is cancel:active.pop(key,None)
+                if active.get(key) is stream_state:active.pop(key,None)
                 if request_key is not None:active_request_ids.discard(request_key)
                 if wire is not None and hasattr(getattr(wire,'body_iterator',None),'aclose'):
                     try:await wire.body_iterator.aclose()
@@ -815,12 +846,39 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
     async def stream_stop(request:Request):
         if not check(request):
             return trusted['_unauthorized']()
+        try:data=await request.json()
+        except Exception:return JSONResponse({'error':'INVALID_JSON'},status_code=400)
+        if not isinstance(data,dict):
+            return JSONResponse({'error':'INVALID_BODY'},status_code=400)
+        dialog_id=data.get('dialog_id')
+        request_id=data.get('request_id')
+        if not isinstance(dialog_id,str) or not ID_PATTERN.fullmatch(dialog_id):
+            return JSONResponse({'error':'INVALID_DIALOG_ID'},status_code=422)
+        if not isinstance(request_id,str) or not REQUEST_ID_PATTERN.fullmatch(request_id):
+            return JSONResponse({'error':'REQUEST_ID_REQUIRED'},status_code=422)
         key=scope(request)
-        if key is None or key not in active:
-            return JSONResponse({'status':'HOLD','reason':'NO_ACTIVE_SESSION_STREAM'},status_code=409)
-        active[key].set()
-        return {'status':'STOP_REQUESTED','stream_cancellation_signalled':True,
-                'gpu_stop_verified':False}
+        if key is None:
+            return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
+        attempt=(key,dialog_id,request_id)
+        prune_attempt_states()
+        if attempt in terminal_attempts:
+            return JSONResponse({'status':'ALREADY_TERMINAL','request_id':request_id,
+                                 'dialog_id':dialog_id,'stream_cancellation_signalled':False,
+                                 'gpu_stop_verified':False},status_code=409)
+        record=active.get(key)
+        if record is not None and record.get('dialog_id')==dialog_id and record.get('request_id')==request_id:
+            if not remember_attempt(cancelled_attempts,attempt):
+                return JSONResponse({'status':'HOLD_STOP_STATE_CAPACITY','stream_cancellation_signalled':False,
+                                     'gpu_stop_verified':False},status_code=503)
+            record['cancel'].set()
+            return {'status':'STOP_REQUESTED','request_id':request_id,'dialog_id':dialog_id,
+                    'stream_cancellation_signalled':True,'gpu_stop_verified':False}
+        if not remember_attempt(cancelled_attempts,attempt):
+            return JSONResponse({'status':'HOLD_STOP_STATE_CAPACITY','stream_cancellation_signalled':False,
+                                 'gpu_stop_verified':False},status_code=503)
+        return JSONResponse({'status':'STOP_REGISTERED','request_id':request_id,
+                             'dialog_id':dialog_id,'stream_cancellation_signalled':False,
+                             'gpu_stop_verified':False},status_code=202)
 
     directory=Path(site_dir) if site_dir is not None else SITE
     if directory.is_dir() and (directory/'nox-chat.js').is_file():

@@ -53,6 +53,18 @@
   const responseJSON=(data,status=200)=>new Response(JSON.stringify(data),{
     status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
   });
+  const REQUEST_ID=/^[A-Za-z0-9_-]{1,128}$/;
+  function newRequestId(){
+    if(!window.crypto?.getRandomValues)throw Error('SECURE_RANDOM_UNAVAILABLE');
+    const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
+    return Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  function requestIdFor(data){
+    if(data.request_id===undefined||data.request_id===null||data.request_id==='')return newRequestId();
+    if(typeof data.request_id!=='string'||!REQUEST_ID.test(data.request_id))
+      throw Error('INVALID_REQUEST_ID');
+    return data.request_id;
+  }
   async function nativeJSON(path,init) {
     const r=await waitOrAbort(()=>nativeFetch(path,options(init)),init?.signal);
     if (!r.ok)throw Error('HOLD_NATIVE_ROUTE_'+await reason(r,init?.signal));
@@ -167,6 +179,10 @@
     }
   }
   function sseChat(data,signal) {
+    let requestId;
+    try{requestId=requestIdFor(data);}
+    catch(e){return errorResponse(String(e.message||'INVALID_REQUEST_ID').slice(0,100),422);}
+    let attemptDialogId=null,preAdmissionConflict=false;
     let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
     let state='not_requested';
     const started=performance.now();let firstVisibleMs=null;
@@ -175,15 +191,20 @@
       if(finished)return;
       canceling=true;
       return stopJob||(stopJob=(async()=>{
-        if(modelStarted&&!streamDone){
+        if(modelStarted&&!streamDone&&!preAdmissionConflict){
           const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
           try{
-            const r=await nativePost('/api/nox/stop',{},c.signal);
+            const r=await nativePost('/api/nox/stop',{
+              request_id:requestId,dialog_id:attemptDialogId
+            },c.signal);
             if(!r.ok)state='rejected';
             else{
               const x=await nativeBodyJSON(r,c.signal);
-              state=x?.status==='STOP_REQUESTED'&&x?.stream_cancellation_signalled===true
-                ?'signal_accepted':'unconfirmed';
+              state=x?.status==='STOP_REQUESTED'&&x?.request_id===requestId&&
+                x?.dialog_id===attemptDialogId&&x?.stream_cancellation_signalled===true
+                ?'signal_accepted'
+                :x?.status==='STOP_REGISTERED'&&x?.request_id===requestId&&
+                  x?.dialog_id===attemptDialogId?'attempt_registered':'unconfirmed';
             }
           }catch{state=c.signal.aborted?'timeout':'unknown';}
           finally{if(typeof clearTimeout==='function')clearTimeout(t);}
@@ -213,13 +234,15 @@
         try {
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           const id=await dialogId(data,nativeSignal);
+          attemptDialogId=id;
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
             answer_source:'NATIVE_PENDING',model_identity_verified:false});
           modelStarted=true;
           const upstream=await nativePost('/api/nox/chat/stream',{
-            message:data.message,dialog_id:id,request_id:data.request_id
+            message:data.message,dialog_id:id,request_id:requestId
           },nativeSignal);
+          if(upstream.status===409)preAdmissionConflict=true;
           const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
           const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
           let trailing='';
@@ -294,9 +317,10 @@
   }});
   async function jsonChat(data,signal) {
     try{
+      const requestId=requestIdFor(data);
       const id=await dialogId(data,signal);
       const upstream=await nativePost('/api/nox/chat/stream',{
-        message:data.message,dialog_id:id,history:[],task:'general'
+        message:data.message,dialog_id:id,request_id:requestId,history:[],task:'general'
       },signal);
       const {answer,receipt,nativeModel}=await consume(upstream,()=>{},signal);
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
