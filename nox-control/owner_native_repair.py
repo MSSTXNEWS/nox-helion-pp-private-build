@@ -172,6 +172,39 @@ def process_census():
             'reclaimable_bytes_verified': 0, 'largest_anon_processes': rows[:20]}
 
 
+def index_memory_metadata():
+    result = {'weights_or_index_loaded': False, 'raw_content_exported': False}
+    path = ROOT / 'kb/faiss.index'
+    try:
+        require(not any(base.is_symlink() for base in path.parents), 'INDEX_PARENT_SCOPE')
+        with os.fdopen(os.open(path, READ), 'rb') as stream:
+            before = os.fstat(stream.fileno())
+            require(stat.S_ISREG(before.st_mode) and before.st_uid == 0 and not before.st_mode & 0o022,
+                    'INDEX_FILE_SCOPE')
+            kind = stream.read(4)
+            require(same_file(before, path.lstat()), 'INDEX_FILE_CHANGED')
+        result['size_bytes'] = before.st_size
+        result['fourcc'] = kind.decode('ascii') if re.fullmatch(rb'[A-Za-z0-9_]{4}', kind) else 'unknown'
+    except (Hold, OSError):
+        result['index_status'] = 'UNAVAILABLE'
+    installs = []
+    for site in sorted((ROOT / 'venv/lib').glob('python*/site-packages'))[:4]:
+        for metadata in sorted(site.glob('faiss*.dist-info'))[:5]:
+            match = re.fullmatch(r'faiss(?:[_-](?:cpu|gpu))?[-_]([0-9][A-Za-z0-9_.+-]{0,32})\.dist-info', metadata.name)
+            if match:
+                installs.append(match[1])
+        for wrapper in sorted((site / 'faiss').glob('swigfaiss*.py'))[:6]:
+            try:
+                text = scoped_file(wrapper, 2 * MIB)
+            except (Hold, OSError):
+                continue
+            if re.search(rb'^IO_FLAG_MMAP_IFC\s*=', text, re.M):
+                result['mmap_ifc_binding'] = True
+    result['local_faiss_versions'] = sorted(set(installs))
+    result.setdefault('mmap_ifc_binding', False)
+    return result
+
+
 def guard(receipt, identity, *, require_idle):
     require(not any(os.path.lexists(path) for path in STOP_MARKS), 'STOP')
     require(digest(scoped_file(PROXY, 256 * 1024)) == PROXY_SHA and active_proxy() == identity, 'PROXY_CHANGED')
@@ -324,6 +357,7 @@ def main():
         report['reason'] = str(failure)
         if str(failure) == 'HOLD_CONTEXT_MODEL_MEMORY':
             report['memory_owners'] = process_census()
+            report['index_metadata'] = index_memory_metadata()
     except urllib.error.HTTPError as failure:
         report['reason'] = f'HOLD_CONTEXT_HTTP_{failure.code}'
     except (OSError, ValueError, KeyError, TypeError, IndexError) as failure:
