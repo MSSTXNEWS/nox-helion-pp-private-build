@@ -13,7 +13,7 @@ from pathlib import PurePosixPath
 
 import owner_systemic_refill as relay
 
-SHA = re.compile(r"[0-9a-f]{64}\\Z")
+SHA = re.compile(r"[0-9a-f]{64}\Z")
 MAX_MANIFEST_BYTES = 1024 * 1024
 RECEIPT_SCHEMA = "NOX_OWNER_REVIEW_RECEIPT_V1"
 
