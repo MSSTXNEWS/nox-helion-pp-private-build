@@ -110,10 +110,15 @@ class ProbeTests(unittest.TestCase):
         # the same wall-clock budget must be enforced before any COMPLETE.
         source = path.read_text()
         gate = 'require_executor_turn_budget(time.monotonic()-probe_started)'
-        self.assertEqual(source.count(gate), 2)
-        self.assertLess(source.index(gate), source.index('turn3=consume_turn('))
-        self.assertLess(source.index('require_executor_witness(end,third_history,'), source.rindex(gate))
-        self.assertLess(source.rindex(gate), source.index("emit('chat_recent_timing_after'"))
+        self.assertEqual(source.count(gate), 3)
+        first_gate = source.index(gate)
+        second_gate = source.index(gate, first_gate + 1)
+        final_gate = source.rindex(gate)
+        self.assertLess(first_gate, source.index('turn3=consume_turn('))
+        self.assertLess(source.index('require_executor_witness(end,third_history,'), second_gate)
+        self.assertLess(second_gate, source.index("emit('chat_recent_timing_after'"))
+        self.assertGreater(final_gate, source.index("request(client,'/chat/logout'"))
+        self.assertLess(final_gate, source.index("print('NOX_MAINT_REPAIR_COMPLETE=true'"))
 
     def test_stream_terminal_done_must_bind_to_requested_dialog(self):
         class Response:
