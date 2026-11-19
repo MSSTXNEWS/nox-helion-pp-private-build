@@ -10,6 +10,10 @@ const V112=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
+test('V135 staged owner bridge remains within byte bounds',()=>{
+  const n=Buffer.byteLength(JS,'utf8');
+  assert(n>=5000&&n<=20000, 'staging bridge byte bound');
+});
 function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,onStop,onModel){
   const calls=[];
   let old=async (path,opts={})=>{
