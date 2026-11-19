@@ -1,6 +1,8 @@
 import copy
+import hashlib
+import json
 import unittest
-from b4_paired_benchmark_receipts import compare_paired
+from b4_paired_benchmark_receipts import ReceiptHold, compare_paired, measure_openai_sse_wire
 
 H = "a" * 64
 
@@ -339,6 +341,63 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertTrue(out["quality_or_history_regression"])
         self.assertIsNone(out["p95_latency_delta_ms_same_observed_work"])
         self.assertFalse(out["promotion_authorized"])
+
+
+    def test_sse_wire_ttft_fragmented_unicode_heartbeat_and_terminal(self):
+        reasoning = ("data: " + json.dumps(
+            {"choices": [{"delta": {"reasoning_content": "hidden"},
+                          "finish_reason": None}]}) + "\r\n\r\n").encode()
+        visible = ("data: " + json.dumps(
+            {"choices": [{"delta": {"content": "Привет 😀"},
+                          "finish_reason": None}]}, ensure_ascii=False) + "\r\n\r\n").encode()
+        split = visible.index("😀".encode()) + 2  # split inside UTF-8 scalar
+        end = ("data: " + json.dumps(
+            {"choices": [{"delta": {}, "finish_reason": "stop"}]}) + "\r\n\r\n").encode()
+        chunks = [(1, b": heartbeat\r\n\r\n"), (5, reasoning),
+                  (10, visible[:split]), (16, visible[split:]),
+                  (22, end), (25, b"data: [DONE]\r\n\r\n")]
+        witness = measure_openai_sse_wire(chunks)
+        self.assertEqual(witness["first_text_ms"], 16)
+        self.assertEqual(witness["completion_ms"], 25)
+        self.assertEqual(witness["model_finish_reason"], "stop")
+        self.assertTrue(witness["sse_terminal_seen"])
+        self.assertTrue(witness["wire_completed_normally"])
+        self.assertEqual(witness["visible_text_sha256"],
+                         hashlib.sha256("Привет 😀".encode()).hexdigest())
+        self.assertEqual(witness["raw_wire_sha256"],
+                         hashlib.sha256(b"".join(x for _, x in chunks)).hexdigest())
+        self.assertFalse(witness["native_verified"])
+        self.assertFalse(witness["s03_durable_verified"])
+        # Timings are sealed separately: same bytes at different times != same receipt.
+        shifted = [(ms + 7, chunk) for ms, chunk in chunks]
+        self.assertEqual(measure_openai_sse_wire(shifted)["raw_wire_sha256"],
+                         witness["raw_wire_sha256"])
+        self.assertNotEqual(measure_openai_sse_wire(shifted)["timed_trace_sha256"],
+                            witness["timed_trace_sha256"])
+
+    def test_sse_wire_eof_cannot_forge_terminal_or_stop(self):
+        visible = b'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n'
+        witness = measure_openai_sse_wire([(7, visible), (8, b"data: [DONE]\n")])
+        self.assertEqual(witness["first_text_ms"], 7)
+        self.assertFalse(witness["sse_terminal_seen"])
+        self.assertTrue(witness["partial_frame_at_eof"])
+        self.assertFalse(witness["wire_completed_normally"])
+        terminal_no_stop = measure_openai_sse_wire([
+            (1, visible.replace(b'"stop"', b'"length"')),
+            (2, b"data: [DONE]\n\n")])
+        self.assertTrue(terminal_no_stop["sse_terminal_seen"])
+        self.assertFalse(terminal_no_stop["wire_completed_normally"])
+
+    def test_sse_wire_rejects_duplicate_done_invalid_json_and_utf8(self):
+        for chunks, reason in (
+            ([(1, b"data: [DONE]\n\n"), (2, b"data: [DONE]\n\n")],
+             "SSE_AFTER_TERMINAL"),
+            ([(1, b"data: {bad json}\n\n")], "SSE_INVALID_JSON"),
+            ([(1, b"data: \xff\n\n")], "SSE_INVALID_UTF8"),
+        ):
+            with self.subTest(reason=reason):
+                with self.assertRaisesRegex(ReceiptHold, reason):
+                    measure_openai_sse_wire(chunks)
 
 
 if __name__ == '__main__': unittest.main()
