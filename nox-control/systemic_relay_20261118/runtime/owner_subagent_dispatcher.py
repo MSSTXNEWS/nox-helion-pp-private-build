@@ -53,6 +53,23 @@ PROJECT_FILES = {
     'work_ideas_sha256': ROOT/'state/dispatcher/project_work_ideas.json',
     'routing_sha256': ROOT/'state/dispatcher/project_routing_4q.json',
 }
+REFILL_PREVIEW_CONFIG_KEYS = (
+    'schema', 'policy', 'policy_id', 'owner_request', 'owner_source_sha',
+    'module_pins', 'instance_id', 'owner_authorized', 'mode', 'target',
+    'execution_mode', 'leaf_source_pins', 'project_handoff', 'project_executor',
+    'historical_leaf_source_sha256', 'historical_project_source_sha256',
+    'catalog', 'catalog_sha256', 'systemic_relay',
+)
+REFILL_PREVIEW_REASONS = frozenset((
+    'ALREADY_ADMITTED_NO_REPLAY', 'DEPENDENCY_NOT_VERIFIED',
+    'SOURCE_PIN_DRIFT_REVIEW_REQUIRED', 'SOURCE_ALREADY_RESERVED', 'CAPACITY_WAIT',
+))
+REFILL_PREVIEW_STATUSES = frozenset((
+    'pending', 'running', 'wait', 'retry', 'admitted', 'prepared',
+    'done', 'verified', 'blocked', 'failed', 'cancelled', 'unsettled',
+))
+REFILL_PREVIEW_MAX_SECONDS = 10.0
+REFILL_PREVIEW_MAX_BYTES = 65536
 SCHEMA = 'NOX_NATIVE_SUBAGENT_BINDING_V1'
 RECEIPT = 'NOX_NATIVE_SUBAGENT_RECEIPT_V1'
 MARKER = 'NOX_NATIVE_SUBAGENTS_BIND_V1'
@@ -854,6 +871,250 @@ class Native:
                 handle.assert_current()
         return result
 
+    def _preview_writer_lease_current(self):
+        """Verify an already-held dispatcher lease without creating or taking one."""
+        if self.lease_fd is None:
+            return False
+        path = plain(ROOT/'state/dispatcher/native_subagents.lock')
+        fd = None
+        try:
+            fd = os.open(path, os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+            held, named = os.fstat(self.lease_fd), os.fstat(fd)
+            return (stat.S_ISREG(held.st_mode) and stat.S_ISREG(named.st_mode)
+                    and held.st_uid == named.st_uid == os.geteuid()
+                    and held.st_nlink == named.st_nlink == 1
+                    and not held.st_mode & 0o077 and not named.st_mode & 0o077
+                    and (held.st_dev,held.st_ino) == (named.st_dev,named.st_ino))
+        except (OSError, ValueError):
+            return False
+        finally:
+            if fd is not None:
+                os.close(fd)
+
+    @contextlib.contextmanager
+    def _preview_maintenance_lease(self):
+        """Take the existing shared maintenance read lease; never create its file."""
+        path = plain(ROOT/'state/owner_maintenance.lock')
+        fd = os.open(path, os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+        try:
+            info, named = os.fstat(fd), path.lstat()
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+                    or info.st_nlink != 1 or info.st_mode & 0o022
+                    or (info.st_dev,info.st_ino) != (named.st_dev,named.st_ino)):
+                raise GateError('HOLD_REFILL_PREVIEW_MAINTENANCE_IDENTITY')
+            try:
+                fcntl.flock(fd, fcntl.LOCK_SH|fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise GateError('HOLD_REFILL_PREVIEW_MAINTENANCE_BUSY') from None
+            yield
+        finally:
+            os.close(fd)
+
+    def _preview_current_state(self):
+        with self.ns['_qlock']:
+            tasks = (self.state or {}).get('tasks') if isinstance(self.state,dict) else None
+            if not isinstance(tasks,dict) or len(tasks) > 100000:
+                raise GateError('HOLD_REFILL_PREVIEW_STATE_SHAPE')
+            if any(not isinstance(key,str) or not isinstance(row,dict) for key,row in tasks.items()):
+                raise GateError('HOLD_REFILL_PREVIEW_TASK_SHAPE')
+            snapshot = {key:{field:value for field,value in row.items() if not field.startswith('_')}
+                        for key,row in tasks.items()}
+        raw = encoded(snapshot)
+        if len(raw) > 32*1024*1024:
+            raise GateError('HOLD_REFILL_PREVIEW_STATE_SIZE')
+        return json.loads(raw), digest(raw)
+
+    @staticmethod
+    def _sanitize_refill_preview(request, fingerprint, manifest_sha, source_pins):
+        if (not isinstance(request,dict) or request.get('schema') != 'NOX_SYSTEMIC_REFILL_REQUEST_V1'
+                or request.get('request_id') != fingerprint
+                or request.get('previous_manifest_sha256') != manifest_sha):
+            raise GateError('HOLD_REFILL_PREVIEW_REQUEST_BINDING')
+        outcomes, blocked = request.get('outcomes'), request.get('blocked_missions')
+        if not isinstance(outcomes,list) or len(outcomes)>128 or not isinstance(blocked,list) or len(blocked)>128:
+            raise GateError('HOLD_REFILL_PREVIEW_REQUEST_BOUND')
+        clean_outcomes = []
+        for row in outcomes:
+            if (not isinstance(row,dict) or not isinstance(row.get('task_id'),str)
+                    or not autonomy.ID.fullmatch(row['task_id'])
+                    or row.get('status') not in REFILL_PREVIEW_STATUSES):
+                raise GateError('HOLD_REFILL_PREVIEW_OUTCOME')
+            clean = {'task_id':row['task_id'],'status':row['status']}
+            for key in ('mission_id','mission_revision','input_sha256','receipt_sha256',
+                         'planner_receipt_sha256','artifact_sha256'):
+                value = row.get(key)
+                if value is None:
+                    continue
+                if key.endswith('sha256'):
+                    if not isinstance(value,str) or not SHA.fullmatch(value):
+                        raise GateError('HOLD_REFILL_PREVIEW_OUTCOME_HASH')
+                elif key == 'mission_id':
+                    if not isinstance(value,str) or not re.fullmatch(r'[a-z][a-z0-9_]{0,39}',value):
+                        raise GateError('HOLD_REFILL_PREVIEW_OUTCOME_ID')
+                elif type(value) is not int or not 1 <= value <= 10**9:
+                    raise GateError('HOLD_REFILL_PREVIEW_OUTCOME_REVISION')
+                clean[key] = value
+            clean_outcomes.append(clean)
+        clean_blocked = []
+        for row in blocked:
+            if (not isinstance(row,dict) or not isinstance(row.get('mission_id'),str)
+                    or not re.fullmatch(r'[a-z][a-z0-9_]{0,39}',row['mission_id'])
+                    or type(row.get('mission_revision')) is not int
+                    or not 1 <= row['mission_revision'] <= 10**9
+                    or not isinstance(row.get('input_sha256'),str)
+                    or not SHA.fullmatch(row['input_sha256'])
+                    or row.get('reason') not in REFILL_PREVIEW_REASONS):
+                raise GateError('HOLD_REFILL_PREVIEW_BLOCKED_MISSION')
+            clean_blocked.append({key:row[key] for key in
+                ('mission_id','mission_revision','input_sha256','reason')})
+        registry_pins = request.get('registry_pins')
+        revision = request.get('manifest_revision')
+        if (not isinstance(registry_pins,dict) or set(registry_pins) != {'tasks','ideas','receipts','routing'}
+                or any(not isinstance(value,str) or not SHA.fullmatch(value) for value in registry_pins.values())
+                or type(revision) is not int or not 1 <= revision <= 10**9):
+            raise GateError('HOLD_REFILL_PREVIEW_REGISTRY_PINS')
+        return {
+            'schema':request['schema'],'request_id':fingerprint,
+            'previous_manifest_sha256':manifest_sha,
+            'manifest_revision':revision,
+            'registry_pins':registry_pins,
+            'source_pins_sha256':digest(encoded(source_pins)),
+            'outcomes':clean_outcomes,'outcome_count':len(outcomes),
+            'blocked_missions':clean_blocked,'blocked_count':len(blocked),
+            'full_request_sha256':digest(encoded(request)),
+            'original_task_accepted':False,
+        }
+
+    def preview_refill_request(self):
+        """Preview current REFILL_REQUIRED state without writing packages or queue rows."""
+        started = time.monotonic()
+        with self.lock:
+            if not self.projects:
+                raise GateError('HOLD_REFILL_PREVIEW_PROJECT_MODE')
+            latest = owner_config()
+            if (any(latest.get(key) != self.config.get(key) for key in REFILL_PREVIEW_CONFIG_KEYS)
+                    or not self.owner_allowed() or latest.get('owner_authorized') is not True
+                    or latest.get('instance_id') != 60509551):
+                raise GateError('HOLD_REFILL_PREVIEW_OWNER_OR_CONFIG')
+            if (digest(encoded(latest.get('catalog'))) != latest.get('catalog_sha256')
+                    or latest.get('module_pins',{}).get('owner_subagent_dispatcher.py') != self.source
+                    or not SHA.fullmatch(str(self.source))):
+                raise GateError('HOLD_REFILL_PREVIEW_CALLBACK_OR_CATALOG')
+            reference = latest.get('systemic_relay')
+            if (not isinstance(reference,dict) or set(reference) != {'path','sha256'}
+                    or not SHA.fullmatch(str(reference.get('sha256','')))
+                    or reference.get('path') != str(Path(latest['project_executor']['package_root'])/
+                        'relay'/(reference['sha256']+'.json'))):
+                raise GateError('HOLD_REFILL_PREVIEW_MANIFEST_REFERENCE')
+            if self.stop_active() or not self._preview_writer_lease_current():
+                raise GateError('HOLD_REFILL_PREVIEW_STOP_OR_WRITER_LEASE')
+            with self._preview_maintenance_lease():
+                # Recheck after acquiring the existing read lease.
+                latest = owner_config()
+                if (any(latest.get(key) != self.config.get(key) for key in REFILL_PREVIEW_CONFIG_KEYS)
+                        or self.stop_active() or not self._preview_writer_lease_current()):
+                    raise GateError('HOLD_REFILL_PREVIEW_STALE_OWNER_GATE')
+                base = latest['catalog']
+                self._validate_catalog(base)
+                module = self._relay_module()
+                cache_before = dict(self._relay_manifest_cache)
+                try:
+                    manifests = self._relay_manifests(reference,module)
+                finally:
+                    # The read-only path must not update even the in-memory manifest cache.
+                    self._relay_manifest_cache = cache_before
+                manifest_sha = reference['sha256']
+                manifest = manifests.get(manifest_sha)
+                if manifest is None:
+                    raise GateError('HOLD_REFILL_PREVIEW_MANIFEST_MISSING')
+                snapshot, state_sha = self._preview_current_state()
+                runtime_before = self.last_resource_admission
+                try:
+                    runtime = self.read_resource_snapshot(leaf_only=True)
+                finally:
+                    # read_resource_snapshot records its observation for admission;
+                    # preview restores that dispatcher field after the read.
+                    self.last_resource_admission = runtime_before
+                observed_at = runtime.get('observed_at') if isinstance(runtime,dict) else None
+                if (type(observed_at) not in (int,float) or not math.isfinite(observed_at)
+                        or time.time()-observed_at < 0 or time.time()-observed_at > 5):
+                    raise GateError('HOLD_REFILL_PREVIEW_RESOURCE_STALE')
+                resource_reason = resource_wait_reason(runtime)
+                if resource_reason is not None:
+                    raise GateError('HOLD_REFILL_PREVIEW_RESOURCE_GATE')
+                inflight = 0
+                reservations = set()
+                for task in snapshot.values():
+                    if not isinstance(task,dict):
+                        raise GateError('HOLD_REFILL_PREVIEW_TASK_SHAPE')
+                    if task.get('status') in module.ACTIVE and task.get('handler') in self.allowed_handlers():
+                        if not (self.projects and self.projects.terminal_for_capacity(task)):
+                            inflight += 1
+                    if task.get('handler') != PROJECT_HANDLER or task.get('status') not in module.ACTIVE:
+                        continue
+                    if self.projects.terminal_for_capacity(task):
+                        continue
+                    ref = self.projects.reference(task.get('params',{}))
+                    plan = (project_executor.load_plan(ref,self.projects.config) if 'plan_sha256' in ref
+                            else project_executor.load_contract_metadata(ref,self.projects.config))
+                    paths = plan.get('editable_paths',[item['path'] for item in plan.get('files',[])])
+                    reservations.update((plan['root_id'],target) for target in paths)
+                if inflight > 100000 or len(reservations)>512:
+                    raise GateError('HOLD_REFILL_PREVIEW_CAPACITY_BOUND')
+                capacity = {**runtime,'slots_available':max(0,3-inflight),
+                    'now':time.time(),'callback_sha256':self.source,
+                    'manifest_sha256':manifest_sha,
+                    'reserved_sources':[{'root_id':root,'path':target}
+                                        for root,target in sorted(reservations)]}
+                source_pins = self._relay_source_pins(module,manifest)
+                if self.stop_active() or not self._preview_writer_lease_current():
+                    raise GateError('HOLD_REFILL_PREVIEW_GATE_CHANGED')
+                current_snapshot,current_state_sha = self._preview_current_state()
+                if current_state_sha != state_sha or current_snapshot != snapshot:
+                    raise GateError('HOLD_REFILL_PREVIEW_STATE_CHANGED')
+                now_after_inputs = time.monotonic()
+                if now_after_inputs-started > REFILL_PREVIEW_MAX_SECONDS:
+                    raise GateError('HOLD_REFILL_PREVIEW_TIME_BOUND')
+                proposed = module.select_next(manifest,snapshot,source_pins,capacity)
+                if (not isinstance(proposed,dict) or proposed.get('state') not in
+                        ('REVIEWED_BATCH_READY','WAIT_EXISTING_WORK','REFILL_REQUIRED')
+                        or not isinstance(proposed.get('fingerprint'),str)
+                        or not SHA.fullmatch(proposed['fingerprint'])):
+                    raise GateError('HOLD_REFILL_PREVIEW_SELECTOR_RESULT')
+                if (self.stop_active() or not self._preview_writer_lease_current()
+                        or time.monotonic()-started > REFILL_PREVIEW_MAX_SECONDS):
+                    raise GateError('HOLD_REFILL_PREVIEW_FINAL_GATE')
+                final_snapshot,final_state_sha = self._preview_current_state()
+                if final_state_sha != state_sha or final_snapshot != snapshot:
+                    raise GateError('HOLD_REFILL_PREVIEW_FINAL_STATE_CHANGED')
+                result = {
+                    'schema':'NOX_SYSTEMIC_REFILL_PREVIEW_V1',
+                    'state':proposed['state'],'fingerprint':proposed['fingerprint'],
+                    'manifest_sha256':manifest_sha,'manifest_revision':manifest['revision'],
+                    'state_sha256':state_sha,'source_pins_sha256':digest(encoded(source_pins)),
+                    'slots_available':capacity['slots_available'],'inflight_count':inflight,
+                    'reserved_source_count':len(reservations),
+                    'resource_observed_at':observed_at,'original_task_accepted':False,
+                    'refill_request':None,
+                }
+                if proposed['state'] == 'REFILL_REQUIRED':
+                    result['refill_request'] = self._sanitize_refill_preview(
+                        proposed.get('refill_request'),proposed['fingerprint'],manifest_sha,source_pins)
+                latest_after = owner_config()
+                source_pins_after = self._relay_source_pins(module,manifest)
+                if (any(latest_after.get(key) != self.config.get(key) for key in REFILL_PREVIEW_CONFIG_KEYS)
+                        or digest(encoded(source_pins_after)) != digest(encoded(source_pins))
+                        or time.monotonic()-started > REFILL_PREVIEW_MAX_SECONDS
+                        or time.time()-observed_at > 5 or self.stop_active()
+                        or not self._preview_writer_lease_current()):
+                    raise GateError('HOLD_REFILL_PREVIEW_FINAL_INPUT_CHANGED')
+                final_snapshot,final_state_sha = self._preview_current_state()
+                if final_state_sha != state_sha or final_snapshot != snapshot:
+                    raise GateError('HOLD_REFILL_PREVIEW_FINAL_STATE_CHANGED')
+                if len(encoded(result)) > REFILL_PREVIEW_MAX_BYTES:
+                    raise GateError('HOLD_REFILL_PREVIEW_OUTPUT_BOUND')
+                return result
+
     def _refill_reviewed_catalog(self, reference, base):
         """Compile reviewed missions into the same catalog/claims; no new queue."""
         path = plain(ROOT/'state/owner_maintenance.lock')
@@ -1071,6 +1332,7 @@ class Native:
             last = max(sequenced, key=lambda row:row['native_queue_sequence'], default=None)
             cursor = (autonomy.QUEUE_IDS.index(last['queue_id'])+1)%4 if last else 0
         snapshot = {'native_verified': True, 'instance_id': 60509551,
+                'observed_at': observed_at,
                 'stop_active': self.stop_active(), 'source_sha_verified': True,
                 'owner_scope_verified': self.owner_allowed(), 'task_status': status,
                 'cgroup_memory_ratio': admitted_memory/maximum, 'raw_cgroup_memory_ratio':current/maximum,
