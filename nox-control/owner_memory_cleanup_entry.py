@@ -43,6 +43,54 @@ def decode(name):
     return raw
 
 
+def deleted_open_census():
+    """Bounded aggregate of unlinked-but-open inodes, without path/PID export."""
+    proc = Path("/proc")
+    classes = {"NOX_SSD": set(), "TMPFS_SHM": set(), "OTHER": set()}
+    total = {"NOX_SSD":0, "TMPFS_SHM":0, "OTHER":0}
+    counts = {"NOX_SSD":0, "TMPFS_SHM":0, "OTHER":0}
+    incomplete, fds = False, 0
+    root_device, shm_device = ROOT.stat().st_dev, Path("/dev/shm").stat().st_dev
+    try:
+        pids = [x.name for x in os.scandir(proc) if x.name.isdecimal()]
+        if len(pids) > 2048:
+            incomplete = True
+            pids = pids[:2048]
+        for pid in pids:
+            try:
+                for fd in os.scandir(proc / pid / "fd"):
+                    fds += 1
+                    if fds > 40000:
+                        incomplete = True
+                        break
+                    try:
+                        if not os.readlink(fd.path).endswith(" (deleted)"):
+                            continue
+                        info = os.stat(fd.path)
+                        if not stat.S_ISREG(info.st_mode):
+                            continue
+                        key = (info.st_dev, info.st_ino)
+                        category = ("NOX_SSD" if info.st_dev == root_device else
+                                    "TMPFS_SHM" if info.st_dev == shm_device else "OTHER")
+                        if key not in classes[category]:
+                            classes[category].add(key)
+                            total[category] += max(0, info.st_blocks * 512)
+                            counts[category] += 1
+                    except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+                        continue
+                if incomplete:
+                    break
+            except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+                incomplete = True
+    except OSError:
+        incomplete = True
+    return {"schema": "NOX_OWNER_DELETED_OPEN_AGGREGATE_V1",
+            "allocated_bytes_by_device": total, "unique_inodes_by_device":counts,
+            "observed_fd_count":fds, "scan_complete":not incomplete,
+            "no_file_paths_or_process_ids_exported":True,
+            "reclaim_requires_exact_process_handoff_not_killall":True}
+
+
 def go():
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
     commit = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
@@ -72,6 +120,9 @@ def go():
         spec.loader.exec_module(g)
         before = g.sample()
         decision = g.decide(before)
+        deleted_open = deleted_open_census()
+        print("NOX_MAINT_MEMORY_DELETED_OPEN=" + json.dumps(
+            deleted_open, separators=(",", ":"), allow_nan=False), flush=True)
         # A new native sibling process is not an always-on daemon.
         print("NOX_MAINT_MEMORY_CGROUP=" + json.dumps(
             {"schema": before["schema"], "memory_bytes": before["memory_bytes"],
