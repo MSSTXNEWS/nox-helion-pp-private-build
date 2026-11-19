@@ -133,14 +133,20 @@ def write_receipt(path, value, replace=False):
 
 
 def root_specs():
-    return [('NOX', ROOT), ('PIP_CACHE', HOME_ROOT / '.cache/pip'),
+    # Reclaimable owner-approved areas first: NOX and venv can each contain
+    # >100k protected files and exhaust the bounded audit budget before logs.
+    # The same inode is counted only once by audit(); no new deletion kind.
+    return [('PIP_CACHE', HOME_ROOT / '.cache/pip'),
+            ('NOX_LOGS', ROOT / 'logs'), ('NOX_TMP', ROOT / 'tmp'),
+            ('SUPERVISOR_LOGS', Path('/var/log/supervisor')),
+            ('RAM_TMPFS', SHM),
+            ('NOX', ROOT),
             ('HF_CACHE_PROTECTED', HOME_ROOT / '.cache/huggingface'),
             ('TORCH_CACHE_PROTECTED', HOME_ROOT / '.cache/torch'),
             ('UV_CACHE_PROTECTED', HOME_ROOT / '.cache/uv'),
             ('VOLTA_ENVIRONMENT', HOME_ROOT / 'venv_volta'),
             ('OTHER_ENVIRONMENTS', HOME_ROOT / 'venv_v100'),
-            ('OTHER_ENVIRONMENTS', HOME_ROOT / 'venv_new'),
-            ('SUPERVISOR_LOGS', Path('/var/log/supervisor')), ('RAM_TMPFS', SHM)]
+            ('OTHER_ENVIRONMENTS', HOME_ROOT / 'venv_new')]
 
 
 def category(label, path):
