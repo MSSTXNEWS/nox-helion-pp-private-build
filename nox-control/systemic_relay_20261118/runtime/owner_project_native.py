@@ -103,6 +103,7 @@ class ProjectBinding:
             raise GateError('HOLD_PROJECT_FINAL_EVIDENCE')
         integrated = evidence.get('state') == 'INTEGRATED'
         if integrated and (evidence.get('integration_verified') is not True
+                or evidence.get('project_source_changed') is not True
                 or evidence.get('tests', {}).get('passed') is not True):
             raise GateError('HOLD_PROJECT_INTEGRATION_PROOF')
         # Sanitization is performed before the final digest and exact S03 write,
@@ -526,6 +527,22 @@ class ProjectBinding:
                 or receipt.get('original_task_accepted') is not False
                 or not self.native.receipt_source_allowed(task, receipt)
                 or evidence.get('receipt_sha256') != binding.digest(binding.encoded(receipt))):
+            return None
+        # A signed/S03-readable receipt is insufficient if its own execution
+        # evidence denies an actual integrated source change. Fail closed rather
+        # than manufacturing a positive project_source_changed result.
+        result = receipt.get('worker_result')
+        worker = result.get('project_evidence') if isinstance(result, dict) else None
+        if (receipt.get('project_source_changed') is not True
+                or receipt.get('recovery_required') is not False
+                or not isinstance(worker, dict)
+                or worker.get('task_id') != task.get('id')
+                or worker.get('parent_task_id') != task.get('parent_task_id')
+                or worker.get('queue_id') != task.get('queue_id')
+                or worker.get('state') != 'INTEGRATED'
+                or worker.get('project_source_changed') is not True
+                or worker.get('integration_verified') is not True
+                or (worker.get('tests') or {}).get('passed') is not True):
             return None
         proof = binding.s03_readback(receipt)
         if not proof:
