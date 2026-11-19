@@ -45,6 +45,7 @@ def mission():
         "parent_task_id": "1A03",
         "queue_id": "Q1_RUNTIME_CHAT",
         "priority": "P0",
+        "repeat_policy": "ONCE_PER_REVIEWED_REVISION",
         "root_id": "root1",
         "title": "Preserve chat context",
         "instruction": "Use the pinned source evidence to preserve context.",
