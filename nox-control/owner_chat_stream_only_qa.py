@@ -16,7 +16,7 @@ import re
 import stat
 import time
 
-BASE_SHA = 'b76198d8117c3912fb7e1a1ef19c01abc41aa3ac87f4ad919612342edf593587'
+BASE_SHA = '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9'
 TRANSPORT_SHA = 'e8d256f4ab4de1d53859c1da74237622871354b5d84442bdff1171631f9f05f0'
 RELEASE_SHA = '42abf7b769b4103f9f3799048fe68da5c93937dbef9b56a8e4a2b5aac2072bc7'
 SCHEMA = 'NOX_OWNER_BROWSER_STREAM_ONLY_QA_V1'
@@ -136,7 +136,8 @@ def rewrite_browser(body):
     body = replace_once(body, "            async def guard(route):\n",
         "            async def guard(route):\n                nonlocal native_admitted\n")
     body = replace_once(body,
-        "                        own=isinstance(body,dict) and body.get('message')==prompt and body.get('dialog_id')==did\n",
+        "                        own=(request.method=='POST' and allowed_qa_request(\n" 
+        "                             stream_admitted,False,prompt,second_prompt,body,did))\n",
         "                        own=request.method=='POST' and isinstance(body,dict) and body.get('message')==prompt and body.get('dialog_id')==did\n")
     body = replace_once(body,
         "                    if not own:\n                        blocked['non_qa_generation']+=1\n                        return await route.abort()\n",
