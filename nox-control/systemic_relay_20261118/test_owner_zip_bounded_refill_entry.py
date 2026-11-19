@@ -5,6 +5,7 @@ No SSH, native queue writes, restarts, content mutation or claim of runtime PASS
 from copy import deepcopy
 import hashlib
 import importlib.util
+import os
 import json
 from pathlib import Path
 import sys
@@ -58,10 +59,16 @@ class OneShotRefillTests(unittest.TestCase):
         self.assertEqual(
             OPERATOR.SCOPED_REPAIR_BUNDLES[OPERATOR.FILES['repair']],
             ('owner_systemic_relay_publish.py','continuous_transaction_helpers.py'))
-        self.assertEqual(
-            {p.name for p in map(Path,OPERATOR.repair_bundle_paths(
-                'repair',OPERATOR.FILES['repair'],()))},
-            {'owner_systemic_relay_publish.py','continuous_transaction_helpers.py'})
+        old_cwd=os.getcwd()
+        try:
+            os.chdir(ROOT.parent)  # Native owner transport runs at the repository root.
+            selected=OPERATOR.repair_bundle_paths(
+                'repair',OPERATOR.FILES['repair'],())
+        finally:
+            os.chdir(old_cwd)
+        self.assertEqual({Path(p).name for p in selected},
+                         {'owner_systemic_relay_publish.py',
+                          'continuous_transaction_helpers.py'})
         helper=ROOT/'continuous_executor_20261118/assets/continuous_transaction_helpers.py'
         self.assertEqual(hashlib.sha256(helper.read_bytes()).hexdigest(),ENTRY.HELPER_SHA)
 
