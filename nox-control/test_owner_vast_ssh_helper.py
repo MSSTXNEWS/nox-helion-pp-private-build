@@ -68,7 +68,7 @@ class OwnerVastHelperTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "HOLD_PROVIDER_REQUEST_SCOPE"):
                 probe.api("POST", "/instances/60509551/ssh", TOKEN, {"unexpected": "value"})
             with self.assertRaisesRegex(RuntimeError, "HOLD_PROVIDER_REQUEST_SCOPE"):
-                probe.api("DELETE", "/instances/60509551/ssh/23", TOKEN)
+                probe.api("GET", "/instances/60509551/ssh/23", TOKEN)
         request.assert_not_called()
 
     def test_delete_route_uses_the_exact_ssh_key_id_path(self):
