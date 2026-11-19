@@ -333,6 +333,38 @@ class NativeReflexTests(unittest.TestCase):
                 self.assertIsNone(guarded['refill_request'])
                 self.assertEqual(guarded['deferred'][0]['reason'],
                                  'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+        # A string handler that is absent from native handler registry is
+        # ambiguous if the task still carries a native binding or terminal.
+        # Treat it as UNKNOWN, not as harmless global-legacy RUNNING noise:
+        # otherwise both monitor and producer could announce idle/refill.
+        for unexpected_handler in ('owner_native_project_wrok',
+                                   'legacy_queue_worker', ''):
+            with self.subTest(unexpected_handler=unexpected_handler):
+                native_bound = {'native-handler-mismatch': {
+                    'handler': unexpected_handler, 'status': 'running',
+                    'systemic_relay': {'binding': {
+                        'root_id': ROOT, 'editable_paths': ['code/cache.py']}}}}
+                observed = tick(state=native_bound)
+                self.assertEqual(observed['state'],
+                                 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+                self.assertEqual(observed['observed_task_counts']['unknown'], 1)
+                self.assertEqual(observed['observed_task_counts']['running'], 0)
+                self.assertEqual(observed['new_native_jobs'], 0)
+                guarded = refill.select_next(
+                    reviewed, native_bound,
+                    {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+                    {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+                self.assertEqual(guarded['state'], 'WAIT_EXISTING_WORK')
+                self.assertEqual(guarded['rows'], [])
+                self.assertIsNone(guarded['refill_request'])
+                self.assertEqual(guarded['deferred'][0]['reason'],
+                                 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+        # Same unfamiliar string handler with no native binding stays legacy.
+        unbound = tick(state={'ordinary-legacy': {
+            'handler': 'legacy_queue_worker', 'status': 'running'}})
+        self.assertEqual(unbound['state'], 'REFILL_REQUIRED')
+        self.assertEqual(unbound['observed_task_counts']['unknown'], 0)
+
         # Corrupt legacy catalog rows without a native binding do not become
         # phantom native work and must not cause a TypeError on set membership.
         legacy = tick(state={'legacy-bad': {
