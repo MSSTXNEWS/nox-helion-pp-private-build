@@ -148,6 +148,14 @@ class ScopeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'SOURCE_ANCHOR'):
             scope.rewrite_browser(changed)
 
+    def test_unrecognized_pr415_composer_context_anchor_holds(self):
+        body=(HERE/'owner_chat_browser_qa.py').read_text(encoding='utf-8')
+        old="            report['composer_before']=await page.evaluate(COMPOSER_JS)\\n"
+        self.assertEqual(body.count(old), 1)
+        changed=body.replace(old, "            report['composer_before']=await page.evaluate(CONTENT_JS)\\n", 1)
+        with self.assertRaisesRegex(RuntimeError, 'SOURCE_ANCHOR'):
+            scope.rewrite_browser(changed)
+
     def test_dangling_stop_is_not_treated_as_absent(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
