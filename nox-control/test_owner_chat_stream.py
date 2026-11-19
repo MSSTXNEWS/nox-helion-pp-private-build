@@ -587,6 +587,25 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn('_agent_final',payload)
             self.assertTrue(chunks.closed)
 
+    async def test_disconnect_after_finish_before_done_clears_final(self):
+        # A finish chunk is not the end-to-end [DONE] sentinel. Closing the
+        # browser stream here must not leave S03 postflight-ready state.
+        chunks=Chunks([frame('Visible'),frame(finish='stop'),b'data: [DONE]\\n\\n'])
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Question'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Question',True)
+            self.assertIn('Visible',await anext(response.body_iterator))
+            self.assertIn('stop',await anext(response.body_iterator))
+            self.assertEqual(payload.get('_agent_final'),'Visible')
+            await response.body_iterator.aclose()
+        self.assertNotIn('_agent_final',payload)
+        self.assertTrue(chunks.closed)
+        self.assertEqual(len(requests),1)
+        self.assertEqual(self.dispatched,[])
+
     async def test_reasoning_field_is_never_answer(self):
         reasoning=b'data: {"choices":[{"delta":{"reasoning_content":"private reasoning"},"finish_reason":null}]}\n\n'
         _,factory=self.transport([Chunks([reasoning,frame('Answer'),frame(finish='stop'),b'data: [DONE]\n\n'])])
