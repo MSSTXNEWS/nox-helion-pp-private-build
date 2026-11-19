@@ -4,7 +4,7 @@ Status: SOURCE ONLY, NOT installed or OAuth-authorized on Vast.ai.
 
 ## Purpose
 - Authenticated rclone Drive -> SSD cache -> RAM /dev/shm -> GPU consumption only by existing NOX serving route.
-- SHA-256 per approved asset, manifest SHA pin, private receipts, no overwrite, no delete, STOP flags.
+- SHA-256 per approved asset, manifest SHA pin, private per-range resume cursors, an atomic complete-set receipt, no overwrite, no delete, STOP flags.
 - Default transport 4 streams, 8 MiB buffer, 4 TPS. Adjust from observed data, not theory.
 - RAM cache stage requires raw cgroup headroom >= model bytes + 4 GiB; do not count inactive_file as directly free RAM.
 
@@ -24,7 +24,7 @@ Use real model filenames, exact bytes and SHA-256 from verified manifests. Never
 Precreate private 0700 directories and exact manifest in owner-only location.
 Disk command: python3 nox-control/nox_drive_prefetch.py --manifest /root/nox/private/allowlist.json --manifest-sha EXPECTED_SHA256 --destination /root/nox/cache/warm-ssd --mode disk --execute
 RAM command: python3 nox-control/nox_drive_prefetch.py --manifest /root/nox/private/allowlist.json --manifest-sha EXPECTED_SHA256 --destination /dev/shm/nox_models --ssd /root/nox/cache/warm-ssd --mode ram --execute
-Without --execute, no model transfer occurs.
+Without --execute, no model transfer occurs. Drive reads resume only from a private cursor bound to the exact manifest, asset SHA and remote path; each range is bounded and the full asset SHA is checked before no-replace publication. A complete-set receipt is written atomically only after every staged member is rechecked. Consumers must require that receipt; this tool does not switch the active model path.
 
 ## Native gates
 The new source deliberately DOES NOT replace already pinned owner_drive_ram_bridge.py, owner_native_drive.py or existing dispatcher. It cannot grant OAuth or load a model onto GPU. Only native owner/CAS, STOP, cgroup, S03 and source-hash gated installation may integrate these components.
