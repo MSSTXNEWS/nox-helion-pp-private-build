@@ -1,0 +1,25 @@
+name: NOX A1 1A01 isolated admin guard source check
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_chat_stream.py'
+      - 'nox-control/test_owner_chat_stream.py'
+      - '.github/workflows/nox-a1-1a01-admin-guard-focused.yml'
+permissions: {contents: read}
+jobs:
+  focused-source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Verify only 1A01 premodel ambiguous-admin HOLD source
+        run: |
+          set -euo pipefail
+          python3 -m pip install -q "httpx==0.28.1" "fastapi==0.128.2"
+          python3 -m py_compile nox-control/owner_chat_stream.py nox-control/test_owner_chat_stream.py
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_chat_stream.StreamTests.test_direct_admin_multiple_actions_holds_before_model_or_dispatch
+          echo 'NOX_A1_SOURCE_ONLY=true'
+          echo 'NOX_A1_NATIVE_ACCEPTANCE=false'
