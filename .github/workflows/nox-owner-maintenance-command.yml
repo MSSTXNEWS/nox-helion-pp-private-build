@@ -465,7 +465,8 @@ jobs:
            steps.execute.outcome == 'cancelled')
         env:
           NOX2: ${{ secrets.NOX2 }}
-        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup\n  owner-page-cache-reclaim:
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+  owner-page-cache-reclaim:
     # One exact, separately gated owner command, bound to an immutable reviewed source commit.
     if: >-
       github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
