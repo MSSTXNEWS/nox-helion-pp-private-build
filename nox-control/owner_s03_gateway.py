@@ -657,7 +657,7 @@ def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identit
 def lexical(conn,query,limit=48):
     # Every distinct query term must be considered. A former [:16] silently
     # discarded the end of long owner questions even when S03 held the answer.
-    terms=list(dict.fromkeys(re.findall(r'[^\\W_]{2,}',query.casefold(),re.UNICODE)))
+    terms=list(dict.fromkeys(re.findall(r'[^\W_]{2,}',query.casefold(),re.UNICODE)))
     if len(terms)>64:hold('HOLD_S03_LEXICAL_QUERY_BUDGET')
     if not terms:return []
     groups=[terms[index:index+16] for index in range(0,len(terms),16)]
@@ -682,8 +682,8 @@ def lexical(conn,query,limit=48):
     except sqlite3.OperationalError:
         # The bounded LIKE recovery route covers ALL terms, not only the
         # first eight. SQLite's existing progress deadline remains in force.
-        escaped=[term.replace('\\\\','\\\\\\\\').replace('%','\\\\%').replace('_','\\\\_') for term in terms]
-        query_sql='SELECT * FROM s03_items WHERE '+ ' OR '.join("text LIKE ? ESCAPE '\\\\'" for _ in escaped)+' ORDER BY salience DESC LIMIT ?'
+        escaped=[term.replace('\\','\\\\').replace('%','\\%').replace('_','\\_') for term in terms]
+        query_sql='SELECT * FROM s03_items WHERE '+ ' OR '.join("text LIKE ? ESCAPE '\\'" for _ in escaped)+' ORDER BY salience DESC LIMIT ?'
         return [dict(row) for row in conn.execute(query_sql,tuple('%'+term+'%' for term in escaped)+(limit,))]
 
 def select_results(lexical_rows,semantic_rows,pin_rows,recent_rows,k=6,semantic_available=False):
