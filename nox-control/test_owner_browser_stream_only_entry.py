@@ -55,7 +55,6 @@ class BrowserRuntimeBootstrapTests(unittest.TestCase):
         self.assertIn('--only-binary=:all:', pip)
         self.assertEqual(self.calls[2][0][-2:], ['install', 'chromium'])
         self.assertEqual(self.calls[2][1]['PLAYWRIGHT_BROWSERS_PATH'],
-                         str(self.root / '.not-yet-promoted') if False else
                          self.calls[1][1]['PLAYWRIGHT_BROWSERS_PATH'])
         self.assertEqual(list(self.root.glob('.nox-browserqa-*')), [])
 
