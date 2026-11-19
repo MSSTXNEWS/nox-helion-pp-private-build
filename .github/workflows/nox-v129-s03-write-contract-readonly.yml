@@ -1,7 +1,7 @@
 name: NOX V129 original S03 writer signature schema read-only
 on:
   pull_request:
-    branches: [feature/nox-v37-v100-firsthour-14d-20261113]
+    branches: [feature/nox-v37-v100-firsthour-14d-20261113, feature/nox-v38-synaptic-brain-20261114]
     paths:
       - 'nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py'
       - 'nox_runpod/teacher_mesh/v129/tests/test_read_native_s03_writer_contract.py'
@@ -48,7 +48,7 @@ jobs:
           print('NOX_V129_S03_SOURCE_ONLY_PASS=true')
           PY
   native-readonly:
-    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && (github.event_name == 'workflow_dispatch' && github.actor == 'MSSTXNEWS' && github.event.pull_request.head.repo.full_name == github.repository) }}"
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
     needs: source
     runs-on: ubuntu-latest
     timeout-minutes: 12
