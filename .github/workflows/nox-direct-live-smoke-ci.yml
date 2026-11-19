@@ -1,0 +1,25 @@
+name: NOX direct local model stream smoke source checks
+on:
+  pull_request:
+    paths:
+      - "nox-control/owner_live_stream_smoke_oneshot.py"
+      - "nox-control/test_owner_live_stream_smoke_oneshot.py"
+      - "nox-control/owner_native_operator.py"
+      - ".github/workflows/nox-direct-live-smoke-ci.yml"
+permissions:
+  contents: read
+jobs:
+  direct-stream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - name: Compile embedded source and verify exact bounded route
+        run: |
+          python -B -m py_compile nox-control/owner_live_stream_smoke_oneshot.py nox-control/owner_native_operator.py nox-control/test_owner_live_stream_smoke_oneshot.py
+          python -B nox-control/test_owner_live_stream_smoke_oneshot.py -v
