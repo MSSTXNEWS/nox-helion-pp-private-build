@@ -33,7 +33,7 @@ jobs:
           python3 - <<'PY'
           import json,os,re
           e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
-          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop|deploy|backup|memfd_audit)',e['comment']['body'])
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop_preflight|emergency_stop|deploy|backup|memfd_audit)',e['comment']['body'])
           assert m, 'Invalid bounded maintenance command'
           assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
           assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
@@ -41,19 +41,19 @@ jobs:
               f.write('sha='+m[1]+'\naction='+m[2]+'\n')
           PY
       - name: Checkout main owner approval guard
-        if: steps.request.outputs.action == 'emergency_stop'
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'emergency_stop_preflight'
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: main
           path: guard
           persist-credentials: false
       - name: Run main approved-source guard
-        if: steps.request.outputs.action == 'emergency_stop'
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'emergency_stop_preflight'
         id: approved
         working-directory: guard
         run: python3 -B nox-control/owner_native_inspect_comment_guard.py
       - name: Match approved action and immutable source pin
-        if: steps.request.outputs.action == 'emergency_stop'
+        if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'emergency_stop_preflight'
         env:
           REQUEST_ACTION: ${{ steps.request.outputs.action }}
           REQUEST_SHA: ${{ steps.request.outputs.sha }}
@@ -90,7 +90,7 @@ jobs:
           import os,py_compile
           from pathlib import Path
           a=os.environ['NOX_ACTION']
-          assert a in ('audit','inspect','stage','repair','lifeline','emergency_stop','deploy','backup','memfd_audit')
+          assert a in ('audit','inspect','stage','repair','lifeline','emergency_stop','emergency_stop_preflight','deploy','backup','memfd_audit')
           py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
           if a=='backup':
               for name in ('owner_cp55_cipher','owner_cp55_scope','owner_cp55_native','owner_cp55_runner','auth_prefix_reuse'):

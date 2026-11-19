@@ -423,7 +423,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("source=(", workflow)
         self.assertIn("owner_native_'+a+'.py", workflow)
         self.assertEqual(
-            workflow.count("if: steps.request.outputs.action == 'emergency_stop'"),
+            workflow.count("if: steps.request.outputs.action == 'emergency_stop' || steps.request.outputs.action == 'emergency_stop_preflight'"),
             3,
         )
 

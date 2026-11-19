@@ -147,7 +147,7 @@ class EmergencyStopFenceTests(unittest.TestCase):
                          "30517fa6b03457fabdcf8a3b402d7fbc790ee826")
         self.assertIn("'emergency_stop': 'nox-control/owner_native_emergency_stop.py'",
                       operator)
-        self.assertIn("emergency_stop|deploy", workflow)
+        self.assertIn("emergency_stop_preflight|emergency_stop|deploy", workflow)
         self.assertIn("nox-control/owner_native_'+a+'.py", workflow)
         self.assertIn('"stop", SUPERVISOR_SERVICE', SOURCE.read_text())
 
