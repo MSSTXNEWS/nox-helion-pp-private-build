@@ -725,6 +725,25 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                 self.assertEqual(restored["receipt"], receipt)
                 self.assertEqual(restored["s03"]["receipt_sha256"],
                                  evidence["receipt_sha256"])
+                # The owner claim can change while a canonical S03 read is in
+                # flight. A valid S03 digest of the old receipt must not settle
+                # the newly persisted queue row. No actual worker/S03 POST.
+                original_reader = scope["s03_readback"]
+                try:
+                    scope["s03_readback"] = lambda _: "invalid S03 shape"
+                    self.assertIsNone(scope["_durable_terminal_s03_readback"](
+                        restarted, task["id"]))
+                    def claim_change_during_s03(candidate):
+                        changed = json.loads(path.read_text())
+                        changed["tasks"][task["id"]]["owner_claim"]["pid"] = 98765
+                        save(changed)
+                        return {"receipt_sha256": digest(encoded(candidate))}
+                    scope["s03_readback"] = claim_change_during_s03
+                    self.assertIsNone(scope["_durable_terminal_s03_readback"](
+                        restarted, task["id"]))
+                finally:
+                    scope["s03_readback"] = original_reader
+                    save(state)
                 # Recompute the forged receipt digest and accept its fake S03
                 # digest. Exact leaf queue/parent/scope must STILL reject it.
                 if handler == "owner_native_typed_leaf":
