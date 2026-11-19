@@ -217,7 +217,7 @@
                     resolve();
                   };
                   if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
-                  if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}
+                  if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}else return;
                   if(typeof requestAnimationFrame==='function'){
                     frameId=requestAnimationFrame(finish);
                     if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
