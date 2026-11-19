@@ -10,7 +10,9 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
-GPU_INVENTORY_BLOB_SHA='cccdd726fc8de79f8ebe449bac537aba07a3cbcf'
+GPU_INVENTORY_BLOB_SHA='3a3ff33e7709539d5ff6ab6b8614d694a9d2becb'
+GPU_MEMORY_SEMANTICS='nvidia-smi MiB; 0<=total-used-free<=1024 reserved'
+GPU_RESERVED_LIMIT_MIB=1024
 GPU_INVENTORY_MARKER='NOX_MAINT_GPU_INVENTORY='
 GPU_INVENTORY_COMPLETE='NOX_MAINT_GPU_INVENTORY_COMPLETE=true'
 GPU_INVENTORY_RESULT_PREFIX='NOX_MAINT_GPU_INVENTORY_RESULT='
@@ -85,7 +87,7 @@ def _validate_gpu_inventory_receipt(line,request_id,source_sha):
             or inventory.get('action')!='gpu_inventory'
             or type(inventory.get('instance_id')) is not int or inventory.get('instance_id')!=60509551
             or inventory.get('uptime_scope')!='two monotonic host snapshots; point-in-time only'
-            or inventory.get('memory_semantics')!='nvidia-smi MiB counters; memory.total=memory.used+memory.free'
+            or inventory.get('memory_semantics')!=GPU_MEMORY_SEMANTICS
             or inventory.get('identity_stable') is not True
             or not isinstance(inventory.get('boot_id'),str)
             or not GPU_INVENTORY_BOOT_RE.fullmatch(inventory['boot_id'])
@@ -129,7 +131,9 @@ def _validate_gpu_inventory_receipt(line,request_id,source_sha):
             if (row['memory_total_mib']<=0
                     or row['memory_used_mib']>row['memory_total_mib']
                     or row['memory_free_mib']>row['memory_total_mib']
-                    or row['memory_used_mib']+row['memory_free_mib']!=row['memory_total_mib']):
+                    or row['memory_used_mib']+row['memory_free_mib']>row['memory_total_mib']
+                    or row['memory_total_mib']-row['memory_used_mib']-row['memory_free_mib'] > min(
+                        GPU_RESERVED_LIMIT_MIB, row['memory_total_mib']//10)):
                 _gpu_inventory_hold()
             if row['index'] in indices or row['uuid'] in uuids:
                 _gpu_inventory_hold()
