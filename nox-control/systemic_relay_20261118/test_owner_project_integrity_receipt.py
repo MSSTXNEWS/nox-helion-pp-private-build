@@ -73,6 +73,8 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                 ('recovering', {'recovery_required': True}),
                 ('blocked_worker', {'worker_result': {
                     'project_evidence': {**worker, 'state': 'BLOCKED'}}}),
+                ('nested_original_falsely_accepted', {'worker_result': {
+                    'project_evidence': {**worker, 'original_task_accepted': True}}}),
                 ('failed_test', {'worker_result': {
                     'project_evidence': {**worker, 'tests': {'passed': False}}}}),
                 ('wrong_task', {'worker_result': {
