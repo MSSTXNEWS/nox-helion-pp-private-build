@@ -1380,6 +1380,51 @@ class Native:
                 and CLAIM.fullmatch(str(claim.get('nonce', ''))) is not None
                 and persisted.get('owner_claim') == claim and claim.get('pid') == os.getpid())
 
+    def _durable_submit_fence(self, task):
+        """Write/read back one original-queue intent BEFORE potentially ambiguous IPC.
+
+        An intent is not proof of worker execution, completion or S03 commit.
+        On restart it deliberately blocks replay until an owner can reconcile
+        the exact claim, worker lifetime and terminal S03 receipt.
+        """
+        task_id = task['id']
+        with self.ns['_qlock']:
+            persisted = document(self.ns['STATE'], 16*1024*1024)
+            disk_row = (persisted.get('tasks') or {}).get(task_id)
+            live_row = (self.state or {}).get('tasks', {}).get(task_id)
+            if not isinstance(disk_row, dict) or not isinstance(live_row, dict):
+                raise GateError('HOLD_NATIVE_SUBMIT_STATE_MISSING')
+            # Existing queue is the only writer; never overwrite newer state.
+            if (disk_row != live_row or disk_row.get('status') != 'running'
+                    or task.get('status') != 'running'
+                    or disk_row.get('owner_claim') != task.get('owner_claim')
+                    or disk_row.get('handler') != task.get('handler')
+                    or disk_row.get('params') != task.get('params')):
+                raise GateError('HOLD_NATIVE_SUBMIT_OWNER_CAS')
+            if 'native_worker_submit_intent' in disk_row:
+                raise GateError('HOLD_NATIVE_SUBMIT_INTENT_UNSETTLED')
+            marker = {'schema': 'NOX_NATIVE_WORKER_SUBMIT_INTENT_V1',
+                      'task_id': task_id, 'handler': task['handler'],
+                      'owner_claim': task['owner_claim'],
+                      'job_id': task['params']['job_id'],
+                      'source_sha256': self.source,
+                      'created_at': time.time()}
+            live_row['native_worker_submit_intent'] = marker
+            try:
+                self.ns['save_state'](self.state)
+                readback = document(self.ns['STATE'], 16*1024*1024)
+                saved = readback['tasks'][task_id]
+                if (saved.get('native_worker_submit_intent') != marker
+                        or saved.get('owner_claim') != task['owner_claim']
+                        or saved.get('status') != 'running'):
+                    raise GateError('HOLD_NATIVE_SUBMIT_INTENT_READBACK')
+            except Exception:
+                # A failed save/readback may still have committed the marker.
+                # Never allow IPC after that uncertainty.
+                self._pool_recovery_uncertain = True
+                raise GateError('HOLD_NATIVE_SUBMIT_INTENT_READBACK') from None
+            return marker
+
     def _drain(self):
         if self.pool is None:
             return
@@ -1441,6 +1486,10 @@ class Native:
                     return 'wait', reason
                 if task['id'] in self.interrupted:
                     return 'wait', 'HOLD_NATIVE_INTERRUPTED_UNSETTLED'
+                try:
+                    self._durable_submit_fence(task)
+                except GateError as exc:
+                    return 'wait', str(exc)
                 worker_submit_attempted = True  # IPC delivery is ambiguous on submit failure.
                 self.pool.submit({'id': task['id'], 'subagent': role, 'task': task['title'], 'depends_on': [],
                     '_native_context': {'policy': self.policy, 'operation': role,
@@ -1545,6 +1594,10 @@ class Native:
                 reason = self._fresh_admission_reason(leaf_only=True)
                 if reason:
                     return 'wait', reason
+                try:
+                    self._durable_submit_fence(task)
+                except GateError as exc:
+                    return 'wait', str(exc)
                 worker_submit_attempted = True  # IPC delivery is ambiguous on submit failure.
                 self.pool.submit({'id':task['id'], 'subagent':role, 'task':task['title'], 'depends_on':[],
                     '_native_leaf_context':{'operation':params['operation'],
