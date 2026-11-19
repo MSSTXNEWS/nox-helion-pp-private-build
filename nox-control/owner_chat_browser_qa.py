@@ -186,7 +186,7 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
         return False
     answer = expected_messages[-1].get('content') if expected_messages else None
     expected_hash = (digest(answer.encode('utf-8'))
-                     if isinstance(answer, str) and answer.strip() else None
+                     if isinstance(answer, str) and answer.strip() else None)
     return bool(expected_hash and independent_readback.get('full_answer_sha256') == expected_hash)
 
 
