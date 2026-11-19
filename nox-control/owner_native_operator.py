@@ -13,20 +13,21 @@ FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/own
 MASTER=None
 
 
-def _subprocess_env_without_nox2():
-    """Never pass the owner API credential to child processes."""
+def _subprocess_env_without_owner_secrets():
+    """Never pass owner API or export-key secrets to child processes."""
     env = os.environ.copy()
     env.pop('NOX2', None)
+    env.pop('NOX_OWNER_EXPORT_KEY_B64', None)
     return env
 
 
 def _safe_subprocess_run(*args, **kwargs):
-    kwargs['env'] = _subprocess_env_without_nox2()
+    kwargs['env'] = _subprocess_env_without_owner_secrets()
     return subprocess.run(*args, **kwargs)
 
 
 def _safe_subprocess_check_output(*args, **kwargs):
-    kwargs['env'] = _subprocess_env_without_nox2()
+    kwargs['env'] = _subprocess_env_without_owner_secrets()
     return subprocess.check_output(*args, **kwargs)
 
 # GitHub Actions may omit an individual log line above the operator's historical
@@ -1322,6 +1323,15 @@ def write_source_export_artifact(envelope):
     else:os.close(fd)
 
 
+def preflight_source_export_key():
+    """Validate only the dedicated Actions secret; no subprocesses or output."""
+    key = os.environ.get('NOX_OWNER_EXPORT_KEY_B64', '')
+    if not key:
+        raise RuntimeError('HOLD_SOURCE_EXPORT_KEY_UNAVAILABLE')
+    source_export_key_info(key)
+    return key
+
+
 def authorize_event(action,export_key_b64=None):
     if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
     e=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
@@ -1334,7 +1344,6 @@ def authorize_event(action,export_key_b64=None):
     expected=f'/nox-maintain {INSTANCE} {sha} {action}'
     if action=='source_export':
         source_export_key_info(export_key_b64)
-        expected+=' '+export_key_b64
     elif export_key_b64 is not None:raise RuntimeError('HOLD_UNEXPECTED_EXPORT_KEY')
     if c.get('body')!=expected:raise RuntimeError('HOLD_EXACT_OWNER_COMMAND')
     if _safe_subprocess_check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
@@ -1612,7 +1621,7 @@ def run_native(action,request_id,export_key_b64=None,provider_cleanup_sink=None)
     return True
 
 def operator_argument_parser():
-    parser=argparse.ArgumentParser();parser.add_argument('action',choices=FILES);parser.add_argument('export_key',nargs='?');return parser
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=FILES);return parser
 
 def main():
     args=operator_argument_parser().parse_args();good=False
@@ -1622,9 +1631,10 @@ def main():
         if not callable(cleanup):raise RuntimeError('HOLD_SOURCE_EXPORT_PROVIDER_CLEANUP_MISSING')
         verified_provider_cleanup=cleanup
     try:
-        request=authorize_event(args.action,args.export_key)
+        export_key = preflight_source_export_key() if args.action == 'source_export' else None
+        request=authorize_event(args.action,export_key)
         print('NOX_MAINT_AUTHORIZED_COMMENT_ID='+str(request),flush=True)
-        good=run_native(args.action,request,args.export_key,capture_verified_provider_cleanup)
+        good=run_native(args.action,request,export_key,capture_verified_provider_cleanup)
     except Exception as e:
         code=str(e)
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
