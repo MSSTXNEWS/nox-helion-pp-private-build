@@ -69,6 +69,31 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(refill.memory_governor_projection({})['state'],
                          'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE')
 
+    def test_memory_projection_inconsistent_cgroup_counters_fail_closed(self):
+        # Telemetry may be partial or contradictory; never label it CACHE_HEALTHY.
+        base = {'current_bytes': 1000, 'max_bytes': 2000,
+                'file_bytes': 800, 'inactive_file_bytes': 500,
+                'shmem_bytes': 200, 'memory_psi_some_avg10': 0,
+                'memory_psi_full_avg10': 0}
+        decision = {'projected_memory_ratio': .4, 'eligible': True}
+        invalid = (
+            {'file_bytes': None},
+            {'file_bytes': '800'},
+            {'file_bytes': -1},
+            {'file_bytes': 1001},
+            {'inactive_file_bytes': 801},
+            {'shmem_bytes': 801},
+            {'current_bytes': 2001},
+        )
+        for update in invalid:
+            with self.subTest(invalid=update):
+                budget = {**base, **update}
+                result = refill.memory_governor_projection(
+                    {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+                self.assertEqual(result['state'], 'RESOURCE_METADATA_HOLD')
+                self.assertFalse(result['auto_reclaim'])
+                self.assertNotIn('native_bounded_cpu_eligible', result)
+
     def test_exhaustion_is_not_fake_job_or_approval(self):
         result = tick()
         self.assertEqual(result['state'], 'REFILL_REQUIRED')
