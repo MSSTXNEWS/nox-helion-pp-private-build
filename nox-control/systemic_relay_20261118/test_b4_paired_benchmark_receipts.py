@@ -515,10 +515,10 @@ class PairedReceiptTests(unittest.TestCase):
         # bool/float/string indices must not pass integer equality for zero.
         delta = {"content": "ready"}
         finish = {"delta": {}, "finish_reason": "stop"}
-        done = b"data: [DONE]\\n\\n"
+        done = b"data: [DONE]\n\n"
         def frame(choice):
             return ("data: " + json.dumps(
-                {"choices": [choice]}) + "\\n\\n").encode("utf-8")
+                {"choices": [choice]}) + "\n\n").encode("utf-8")
         for bad_index in (-1, 1, True, False, 0.0, "0", None):
             with self.subTest(index=bad_index):
                 bad = {"index": bad_index, "delta": delta,
