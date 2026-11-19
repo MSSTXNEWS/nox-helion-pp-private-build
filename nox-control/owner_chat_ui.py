@@ -252,6 +252,8 @@ def work_progress_snapshot():
         spec.loader.exec_module(module)
         disposition=_frozen_receipt_disposition(module)
         value=module.summarize(WORK_PROGRESS_DIRECTORY)
+        disposition_after_summary=_frozen_receipt_disposition(module)
+        if disposition_after_summary!=disposition:return unavailable
         total=value.get('total') if isinstance(value,dict) else None
         supplemental=value.get('supplemental_acceptance') if isinstance(value,dict) else None
         receipt_count=value.get('existing_receipt_count') if isinstance(value,dict) else None
