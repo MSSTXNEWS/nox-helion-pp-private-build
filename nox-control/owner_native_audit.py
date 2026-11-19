@@ -73,10 +73,14 @@ def process_rows(proc_root=Path('/proc')):
 
 # Fixed prior owner audit candidate: reuse this PID only if the kernel start tick
 # still matches. A PID reuse is reported as a mismatch and never inspected.
-EXACT_MEMFD_CANDIDATE = (498569, 168416044)
+EXACT_PID_CANDIDATES = (
+    (498569, 168416044, "EXACT_PRIOR_MEMFD_CANDIDATE"),
+    (3266857, 172046662, "OWNER_CONFIRMED_SERVING_PEER"),
+)
 PROC_EVIDENCE_LIMITS = {
     "fd_entries": 256, "maps_bytes": 1048576, "maps_lines": 8192,
-    "memfd_maps": 16, "fd_rows": 16, "smaps_rollup_bytes": 8192,
+    "memfd_maps": 8, "fd_rows": 8, "smaps_rollup_bytes": 8192,
+    "total_processes": 18, "total_json_bytes": 90000,
 }
 MEMFD_LABEL = re.compile(r"^/?memfd:([A-Za-z0-9_.+@=-]{1,96}) \(deleted\)$")
 NVIDIA_FD = re.compile(r"^/dev/(?:nvidiactl|nvidia-uvm(?:-tools)?|nvidia[0-9]+)$")
@@ -299,23 +303,37 @@ def process_pid_evidence(pid, expected_start_ticks=None, label="GPU_APP"):
         return {**base, "status": "PARTIAL_OR_UNREADABLE"}
 
 def gpu_pid_evidence(gpu_app_output):
-    """Join nvidia-smi app PIDs with /proc and the one exact prior candidate."""
+    """Prioritize exact owner-confirmed candidates, then bounded GPU-app PIDs."""
     rows = []
     seen = set()
+    for pid, ticks, label in EXACT_PID_CANDIDATES:
+        rows.append(process_pid_evidence(pid, ticks, label=label))
+        seen.add(pid)
+    truncated = False
     for line in gpu_app_output.splitlines()[:16]:
         fields = [part.strip() for part in line.split(",")]
-        if fields and fields[0].isdecimal():
-            pid = int(fields[0])
-            if pid not in seen:
-                rows.append(process_pid_evidence(pid, label="NVIDIA_SMI_GPU_APP"))
-                seen.add(pid)
-    candidate_pid, candidate_ticks = EXACT_MEMFD_CANDIDATE
-    if candidate_pid not in seen:
-        rows.append(process_pid_evidence(candidate_pid, candidate_ticks,
-                                         label="EXACT_PRIOR_MEMFD_CANDIDATE"))
-    return {"schema": "NOX_GPU_PID_PROCESS_EVIDENCE_V1",
-            "read_only": True, "file_contents_read": False,
-            "signals_sent": 0, "process_limit": 17, "processes": rows}
+        if not fields or not fields[0].isdecimal():
+            continue
+        pid = int(fields[0])
+        if pid in seen:
+            continue
+        row = process_pid_evidence(pid, label="NVIDIA_SMI_GPU_APP")
+        candidate = {"schema": "NOX_GPU_PID_PROCESS_EVIDENCE_V1",
+                     "read_only": True, "file_contents_read": False,
+                     "signals_sent": 0, "process_limit": PROC_EVIDENCE_LIMITS["total_processes"],
+                     "processes": rows + [row]}
+        size = len(json.dumps(candidate, separators=(",", ":"), ensure_ascii=True).encode("ascii"))
+        if size > PROC_EVIDENCE_LIMITS["total_json_bytes"]:
+            truncated = True
+            break
+        rows.append(row)
+        seen.add(pid)
+    result = {"schema": "NOX_GPU_PID_PROCESS_EVIDENCE_V1",
+              "read_only": True, "file_contents_read": False,
+              "signals_sent": 0, "process_limit": PROC_EVIDENCE_LIMITS["total_processes"],
+              "processes": rows, "truncated": truncated}
+    result["serialized_bytes"] = len(json.dumps(result, separators=(",", ":"), ensure_ascii=True).encode("ascii"))
+    return result
 
 def v13_owner_fence_metadata(root=Path('/root/nox'), workspace_stop=Path('/workspace/NOX_STOP'), lstat=os.lstat):
     """READ-ONLY marker presence, not authorization to start, stop, or write.
