@@ -11,6 +11,7 @@ on:
       - 'nox-control/owner_native_lifeline.py'
       - 'nox-control/test_owner_native_lifeline.py'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/test_owner_native_operator_output_transfer.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
       - 'nox-control/owner_native_inspect.py'
@@ -34,6 +35,7 @@ on:
       - 'nox-control/owner_native_lifeline.py'
       - 'nox-control/test_owner_native_lifeline.py'
       - 'nox-control/owner_native_operator.py'
+      - 'nox-control/test_owner_native_operator_output_transfer.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
       - 'nox-control/owner_native_inspect.py'
@@ -58,7 +60,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Source syntax
-        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_operator.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
+        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_operator.py nox-control/test_owner_native_operator_output_transfer.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
       - name: Independent lifeline unit and failure tests
         run: python3 -m unittest discover -s nox-control -p 'test_nox_native_lifeline.py' -v
       - name: Native NOX status truthfulness tests
@@ -84,3 +86,5 @@ jobs:
         run: |
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_compat_privacy.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_maya_read_bounds.py' -v
+      - name: Owner native audit output transfer completeness and SHA gates
+        run: python3 -m unittest discover -s nox-control -p 'test_owner_native_operator_output_transfer.py' -v
