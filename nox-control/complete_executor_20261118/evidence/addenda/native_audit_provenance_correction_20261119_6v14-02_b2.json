@@ -46,11 +46,31 @@
     "run_job_binding_check": {
       "receipt_url_run_id": 43989273499,
       "receipt_url_job_id": 133745616688,
-      "jobs_returned_for_receipt_url_run": [
-        134453840539
-      ],
-      "job_id_matches_run_job_list": false,
-      "interpretation": "The job ID embedded in the receipt URL is not the job returned by the run's job-list API. The two job IDs must be treated as separate observations unless a canonical binding is reissued."
+      "api_run_attempt_latest": 3,
+      "exact_attempts_api": {
+        "attempt_2_jobs_url": "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43989273499/attempts/2/jobs",
+        "attempt_3_jobs_url": "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43989273499/attempts/3/jobs"
+      },
+      "receipt_job": {
+        "job_id": 133745616688,
+        "run_id": 43989273499,
+        "run_attempt": 2,
+        "workflow_name": "NOX owner maintenance - explicit command only",
+        "started_at_utc": "2026-11-17T01:23:55Z",
+        "completed_at_utc": "2026-11-17T01:24:43Z",
+        "conclusion": "success",
+        "belongs_to_receipt_run": true
+      },
+      "later_job": {
+        "job_id": 134453840539,
+        "run_id": 43989273499,
+        "run_attempt": 3,
+        "workflow_name": "NOX owner maintenance - explicit command only",
+        "started_at_utc": "2026-11-17T23:35:41Z",
+        "completed_at_utc": "2026-11-17T23:36:44Z",
+        "conclusion": "success"
+      },
+      "interpretation": "The receipt URL correctly binds job 133745616688 to attempt 2 of run 43989273499. The run's latest attempt is 3 with a different job ID; attempt 3 is a later observation, not a correction to the attempt-2 receipt link."
     },
     "observed_linked_job": {
       "job_id": 133745616688,
@@ -67,7 +87,10 @@
       "caveat": "The GPU mapping record itself says namespace ambiguity is unresolved; an empty unresolved-link list is not an identity join.",
       "nvidia_smi_app_count": 0,
       "gpu_link_state": "NOT_OBSERVED_CANNOT_VERIFY",
-      "gpu_identity_join_complete": false
+      "gpu_identity_join_complete": false,
+      "run_id": 43989273499,
+      "run_attempt": 2,
+      "workflow_name": "NOX owner maintenance - explicit command only"
     },
     "observed_job_list_entry": {
       "run_id": 43989273499,
@@ -77,9 +100,10 @@
       "supervisor_rc": 3,
       "gpu_unresolved_link_count": 2,
       "gpu_mapping_assessment": "INCOMPLETE_TWO_UNMAPPED_GPU_LINKS",
-      "gpu_identity_join_complete": false
+      "gpu_identity_join_complete": false,
+      "run_attempt": 3
     },
-    "corrected_status": "HISTORICAL_GPU_PID_MAPPING_CLAIM_NOT_VERIFIED_FROM_BOUND_EVIDENCE",
+    "corrected_status": "HISTORICAL_GPU_PID_MAPPING_CLAIM_NOT_VERIFIED_FROM_ATTEMPT_2_LOGS_AND_SUBSEQUENT_PARTIAL_AUDITS",
     "prior_additional_native_evidence": {
       "addendum_path": "nox-control/complete_executor_20261118/evidence/addenda/native_snapshot_addendum_20261119_2v14-12_6v14-02.json",
       "merged_commit_sha": "89ae4dd7d870758bcdd74942a6581d5631371efd",
@@ -151,7 +175,7 @@
     "accepted": false,
     "acceptance_increment": 0,
     "current_status": "HOLD_PROVENANCE_AND_CENSUS_INCOMPLETE",
-    "rationale": "The frozen card names a native background-process-set check. The later #473 addendum already classifies 6V14-02 PARTIAL: 48 filtered process rows omit a GPU consumer, with hardware/process/Supervisor captured non-atomically. The current #499 all-numeric-PID census is also incomplete and has unmatched GPU links. The prior B2 receipt is preserved historically, but its linked run/job pairing does not match the run job list; the linked job has an empty nvidia-smi apps list and no namespace identity join, while the #473 audit confirms an unattributed GPU consumer. This sidecar corrects provenance only and does not claim full task completion.",
+    "rationale": "The frozen card names a native background-process-set check. The B2 receipt correctly links to attempt 2 of run #43989273499, but those logs show 12 process rows, an empty nvidia-smi apps list, and a namespace ambiguity caveat; they do not establish a GPU identity join. Attempt 3 of the same run later shows two unmapped GPU links. The later #473 addendum classifies 6V14-02 PARTIAL_GPU_CONSUMER_UNATTRIBUTED (48 filtered rows, separate non-atomic sections), and fresh #499 remains HOLD with an incomplete all-numeric-PID census and unmatched GPU links. This sidecar corrects the evidentiary interpretation only; it preserves the historical receipt and does not claim full task completion.",
     "next_safe_evidence": "Obtain a fresh owner-authenticated read-only audit with one unambiguous run/job binding; enumerate the declared in-scope process universe completely; join GPU links to exact process identities and Supervisor/service identity; preserve Supervisor rc/health separately. Append the resulting sanitized evidence in another sidecar."
   }
 }
