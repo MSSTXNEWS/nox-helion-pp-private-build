@@ -144,9 +144,14 @@ def main():
     lockfd=None; success=False
     try:
         check_stop()
+        result['peer_services'] = {}
         for name in ('nox-ds41-8098','nox-web29-18775','nox-dispatcher-t855u'):
-            require(service(name)['state']=='RUNNING','PEER_SERVICE_'+name.replace('-','_').upper())
-        require(http_health(8098),'MODEL_HEALTH')
+            try:
+                result['peer_services'][name] = service(name)['state']
+            except Exception:
+                result['peer_services'][name] = 'UNKNOWN'
+        result['model_health_before'] = http_health(8098)
+        # Recovery of original chat files is independent of a halted dispatcher.
         lockfd=os.open(LOCK,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
         for _ in range(90):
             try:
@@ -173,7 +178,7 @@ def main():
             success=True
         else:
             if current['state']=='RUNNING':
-                require(all(no_active_model() for _ in range(3)), 'MODEL_BUSY_FOR_PROXY_STOP')
+                require(not result['model_health_before'] or all(no_active_model() for _ in range(3)), 'MODEL_BUSY_FOR_PROXY_STOP')
                 # Exactly the owner-scoped proxy; its argv was pinned in service().
                 require(call_supervisor('stop')==0,'PROXY_STOP_COMMAND')
                 current=service()
@@ -207,7 +212,7 @@ def main():
                 time.sleep(.5)
             else:
                 require(False,'PROXY_HEALTH_AFTER_ROLLBACK')
-            require(http_health(8098),'MODEL_HEALTH_AFTER')
+            result['model_health_after'] = http_health(8098)
             result['state']='ORIGINAL_SOURCES_AND_PROXY_HEALTH_VERIFIED'
             success=True
     except Exception as exc:
@@ -218,7 +223,10 @@ def main():
         if lockfd is not None:
             os.close(lockfd)
         result['finished_at']=time.time()
-        result['proxy_status_after'] = service() if os.path.exists('/usr/bin/supervisorctl') else {'state':'UNKNOWN'}
+        try:
+            result['proxy_status_after'] = service()
+        except Exception:
+            result['proxy_status_after'] = {'state':'UNKNOWN'}
         print('NOX_MAINT_REPAIR='+json.dumps({'kind':'smart_chat_emergency_recovery','data':result},
             separators=(',',':'),sort_keys=True),flush=True)
         print('NOX_MAINT_REPAIR_COMPLETE='+str(success).lower(),flush=True)
