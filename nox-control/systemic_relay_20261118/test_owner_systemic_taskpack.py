@@ -1,11 +1,15 @@
 """Fail-closed source-only tests for REFILL_REQUIRED diagnostics and compilation."""
 import copy
 import contextlib
+import fcntl
 import io
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).parent
@@ -87,9 +91,88 @@ class RefillEligibilityTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,
                 'HOLD_SYSTEMIC_PUBLISH_RESOURCE_HEADROOM_BELOW_MINIMUM'):
             publisher.require_budget_headroom(sample,now=now)
+        stale={**sample,'observed_at':now-6,
+               'max_bytes':sample['current_bytes']+3*1024**3}
+        with self.assertRaisesRegex(RuntimeError,
+                'HOLD_SYSTEMIC_PUBLISH_RESOURCE_SNAPSHOT_FIELDS_OR_STALE'):
+            publisher.require_budget_headroom(stale,now=now)
         sample['max_bytes']=sample['current_bytes']+3*1024**3
         self.assertEqual(publisher.require_budget_headroom(sample,now=now)['headroom_bytes'],
                          3*1024**3)
+
+    def test_package_write_reads_fresh_budget_immediately_before_atomic_write(self):
+        class RecordingHelper:
+            def __init__(self, headroom): self.events=[]; self.headroom=headroom
+            def read_budget_snapshot(self, config):
+                self.events.append('budget')
+                now=time.time()
+                return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+                    'instance_id':60509551,'observed_at':now,
+                    'current_bytes':10*1024**3,'max_bytes':10*1024**3+self.headroom,
+                    'minimum_headroom_bytes':2*1024**3}
+            def atomic(self, path, raw): self.events.append('atomic')
+
+        healthy=RecordingHelper(3*1024**3)
+        gate=publisher.write_package_with_budget_gate(healthy,'pkg',b'bytes',{})
+        self.assertEqual(gate['state'],'PASS')
+        self.assertEqual(healthy.events,['budget','atomic'])
+        low=RecordingHelper(27*1024**2)
+        with self.assertRaisesRegex(RuntimeError,'RESOURCE_HEADROOM_BELOW_MINIMUM'):
+            publisher.write_package_with_budget_gate(low,'pkg',b'bytes',{})
+        self.assertEqual(low.events,['budget'])
+
+    def test_publish_cas_rechecks_budget_then_snapshot_age_and_lock_identity(self):
+        class BudgetReader:
+            def __init__(self): self.calls=0
+            def read_budget_snapshot(self, config):
+                self.calls+=1; now=time.time()
+                return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+                    'instance_id':60509551,'observed_at':now,
+                    'current_bytes':10*1024**3,'max_bytes':13*1024**3,
+                    'minimum_headroom_bytes':2*1024**3}
+        now=time.time()
+        snapshot={'schema':producer.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-1,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        with tempfile.TemporaryDirectory() as directory:
+            lock=Path(directory)/'owner.lock'; lock.write_bytes(b'lock')
+            lock.chmod(0o600)
+            fd=os.open(lock,os.O_RDONLY)
+            try:
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                helper=BudgetReader()
+                result=publisher.verify_publish_cas_preconditions(
+                    helper,{},snapshot,fd,lock)
+                self.assertEqual(result['state'],'PASS')
+                self.assertEqual(helper.calls,1)
+                stale={**snapshot,'observed_at':time.time()-601}
+                with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
+                    publisher.verify_publish_cas_preconditions(helper,{},stale,fd,lock)
+                self.assertEqual(helper.calls,2)
+
+                moved=Path(directory)/'replacement'; moved.write_bytes(b'foreign')
+                moved.chmod(0o600); os.replace(moved,lock)
+                with self.assertRaisesRegex(RuntimeError,'LEASE_IDENTITY'):
+                    publisher.verify_publish_cas_preconditions(helper,{},snapshot,fd,lock)
+                self.assertEqual(helper.calls,3)
+            finally:
+                os.close(fd)
+
+    def test_persist_receipt_rejects_hostile_hold_suffix(self):
+        class ReceiptSink:
+            def __init__(self): self.raw=None
+            def atomic(self,path,raw): self.raw=raw
+        sink=ReceiptSink();output=io.StringIO()
+        receipt={'state':'HOLD_SYSTEMIC_PUBLISH_OWNER_STOP:injected-suffix',
+                 'manifest_sha256':'3'*64}
+        with contextlib.redirect_stdout(output):
+            publisher.persist_receipt(sink,'42',receipt)
+        stored=json.loads(sink.raw)
+        self.assertEqual(stored['state'],'HOLD_SYSTEMIC_PUBLISH_INTERNAL')
+        self.assertIn('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=',output.getvalue())
 
     def test_hold_receipt_is_emitted_for_stale_candidate(self):
         class ReceiptSink:

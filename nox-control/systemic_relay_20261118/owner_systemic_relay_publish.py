@@ -27,6 +27,30 @@ NATIVE_RECEIPT_CONTRACT_SCHEMA = 'NOX_OWNER_REVIEWED_NATIVE_RECEIPT_CONTRACT_V1'
 OWNER_SNAPSHOT_MAX_AGE_SEC = 600
 GIB = 1024 ** 3
 PUBLISH_COMPLETE_MARKER = 'NOX_MAINT_REFLEX_PUBLISH_COMPLETE=true'
+HOLD_PREFIX = 'HOLD_SYSTEMIC_PUBLISH_'
+HOLD_CODES = frozenset('''
+ACCEPTANCE_MAPPING ACCEPTANCE_VERIFIER_ANCHOR ACCEPTANCE_VERIFIER_BINDING
+ANCESTOR_PIN ASSETS ASSET_BOUND ASSET_PIN BACKUP_EXISTS CONFIG_PREDECESSOR
+CONFIG_READBACK CONTENT_ADDRESS_COLLISION CONTRACT_SCOPE EXACTLY_ONE_SUCCESSOR_REQUIRED
+FINAL_CAS_CHANGED HELPER_PIN LEASE_IDENTITY LEASE_PATH MAINTENANCE_BUSY
+MANIFEST_CHAIN_BOUND MANIFEST_CONTRACT_SET MANIFEST_DERIVED_DUPLICATE MANIFEST_LINEAGE
+MANIFEST_MISSING MANIFEST_PREDECESSOR MANIFEST_SHA MODULE_NAME NATIVE_RECEIPT_CONTRACT
+NEXT_MISSIONS_NOT_READY ORIGINAL_PARENT_ALREADY_PRESENT ORIGINAL_QUEUE_STATE_CHANGED
+OWNER_CONTEXT OWNER_SCOPE OWNER_SNAPSHOT_ACTIVE_CLAIMS OWNER_SNAPSHOT_BINDING
+OWNER_SNAPSHOT_CONFIG_CHANGED OWNER_SNAPSHOT_PIN OWNER_SNAPSHOT_PROCESS_BINDING
+OWNER_SNAPSHOT_SHAPE OWNER_SNAPSHOT_SOURCE_CHANGED OWNER_SNAPSHOT_STALE_OR_IDENTITY
+OWNER_STOP PACKAGE_PATH PACKAGE_READBACK PACKAGE_SET PROCESS_IDENTITY_CHANGED
+PRODUCER_EVIDENCE QUEUE_CHANGED QUEUE_STATE_SHAPE REFILL_REQUEST_BINDING_MISSING
+REFILL_REQUEST_ID REFILL_REQUEST_OUTCOME REFILL_REQUEST_OUTCOME_STATE_MISMATCH
+REFILL_REQUEST_STATE_DUPLICATE REFILL_REQUEST_STATE_PIN REGISTRY_NATIVE_ACCEPTANCE
+REGISTRY_NATIVE_DENOMINATOR REGISTRY_NATIVE_PARENT REGISTRY_NATIVE_PIN
+REGISTRY_NATIVE_UNREGISTERED_ACCEPTANCE RESOURCE_HEADROOM_BELOW_MINIMUM
+RESOURCE_SNAPSHOT_FIELDS_OR_STALE RESOURCE_SNAPSHOT_SCHEMA RUNTIME_PIN SOURCE_PREIMAGE
+SOURCE_ROOT SPEC_SCHEMA UNREGISTERED_ACCEPTANCE_MAPPING WAIT_ACTIVE_CLAIMS_SETTLE
+'''.split()) | {'RECEIPT_WRITE', 'INTERNAL'}
+HOLD_RECEIPT_STATES = frozenset(HOLD_PREFIX + code for code in HOLD_CODES)
+SUCCESS_RECEIPT_STATES = frozenset({
+    'PREFLIGHT', 'PUBLISHED_ONE_OWNER_REVIEWED_SUCCESSOR_PENDING_NATIVE_ADMISSION'})
 SPEC = {}
 try:
     BUNDLE = __NOX_BUNDLE_JSON__
@@ -70,8 +94,8 @@ def validate_owner_snapshot(snapshot, now=None):
     return snapshot
 
 
-def require_budget_headroom(snapshot, now=None):
-    """Require a fresh live cgroup-v2 sample with at least two GiB free."""
+def require_budget_headroom(snapshot, now=None, max_age_sec=5):
+    """Require a live cgroup-v2 sample with at least two GiB free."""
     require(isinstance(snapshot,dict) and snapshot.get('schema') == 'NOX_BOUNDED_CPU_BUDGET_V1'
             and snapshot.get('source') == 'cgroup_v2'
             and snapshot.get('instance_id') == 60509551,
@@ -83,7 +107,8 @@ def require_budget_headroom(snapshot, now=None):
     require(type(current) is int and type(maximum) is int and type(minimum) is int
             and 0 <= current < maximum <= 2**63-1 and minimum == 2*GIB
             and type(observed) in (int,float) and 0 <= observed <= 10**12
-            and type(clock) in (int,float) and -5 <= clock-observed <= 30,
+            and type(clock) in (int,float) and type(max_age_sec) is int
+            and 1 <= max_age_sec <= 30 and -5 <= clock-observed <= max_age_sec,
             'RESOURCE_SNAPSHOT_FIELDS_OR_STALE')
     headroom = maximum-current
     require(headroom >= minimum,'RESOURCE_HEADROOM_BELOW_MINIMUM')
@@ -92,7 +117,25 @@ def require_budget_headroom(snapshot, now=None):
             'observed_at':observed}
 
 
+def safe_receipt_state(value):
+    if type(value) is not str:
+        return HOLD_PREFIX + 'INTERNAL'
+    if value in SUCCESS_RECEIPT_STATES or value in HOLD_RECEIPT_STATES:
+        return value
+    return HOLD_PREFIX + 'INTERNAL'
+
+
+def hold_state_from_exception(exc):
+    value = str(exc)
+    if value in HOLD_RECEIPT_STATES:
+        return value
+    if value.startswith(HOLD_PREFIX) and value[len(HOLD_PREFIX):] in HOLD_CODES:
+        return value
+    return HOLD_PREFIX + 'INTERNAL'
+
+
 def persist_receipt(helper, request, receipt):
+    receipt['state'] = safe_receipt_state(receipt.get('state'))
     receipt['finished_at'] = time.time()
     receipt['receipt_persisted'] = True
     try:
@@ -100,14 +143,44 @@ def persist_receipt(helper, request, receipt):
                       encoded(receipt))
     except BaseException:
         receipt['receipt_persisted'] = False
-        if not str(receipt.get('state','')).startswith('HOLD_'):
-            receipt['state'] = 'HOLD_SYSTEMIC_PUBLISH_RECEIPT_WRITE'
+        if receipt.get('state') not in HOLD_RECEIPT_STATES:
+            receipt['state'] = HOLD_PREFIX + 'RECEIPT_WRITE'
     print('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=' + encoded(receipt).decode(), flush=True)
     return receipt['receipt_persisted']
 
 
 def emit_publish_complete_marker():
     print(PUBLISH_COMPLETE_MARKER, flush=True)
+
+
+def verify_owner_lock_identity(fd, lock):
+    require(not lock.is_symlink(), 'LEASE_PATH')
+    try:
+        opened = os.fstat(fd)
+        named = lock.lstat()
+    except OSError:
+        require(False, 'LEASE_IDENTITY')
+    require(stat.S_ISREG(opened.st_mode) and opened.st_uid == os.geteuid()
+            and opened.st_nlink == 1 and not opened.st_mode & 0o022
+            and (opened.st_dev, opened.st_ino) == (named.st_dev, named.st_ino),
+            'LEASE_IDENTITY')
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        require(False, 'LEASE_IDENTITY')
+
+
+def verify_publish_cas_preconditions(helper, config, owner_snapshot, fd, lock):
+    budget = require_budget_headroom(helper.read_budget_snapshot(config), max_age_sec=5)
+    validate_owner_snapshot(owner_snapshot)
+    verify_owner_lock_identity(fd, lock)
+    return budget
+
+
+def write_package_with_budget_gate(helper, path, raw, config):
+    budget = require_budget_headroom(helper.read_budget_snapshot(config), max_age_sec=5)
+    helper.atomic(path, raw)
+    return budget
 
 
 def native_receipt_contract(mission, *, manifest_revision, previous_sha,
@@ -344,22 +417,20 @@ def run(bundle, spec):
         require(owner_snapshot.get('process_identity_sha256') == process_identity_sha,
                 'OWNER_SNAPSHOT_PROCESS_BINDING')
     except BaseException as exc:
-        receipt['state'] = str(exc) if str(exc).startswith('HOLD_') else \
-            'HOLD_SYSTEMIC_PUBLISH_' + type(exc).__name__
+        receipt['state'] = hold_state_from_exception(exc)
         raise
     finally:
-        if str(receipt.get('state','')).startswith('HOLD_'):
+        if receipt.get('state') in HOLD_RECEIPT_STATES:
             persist_receipt(h,request,receipt)
     lock = ROOT / 'state/owner_maintenance.lock'
     try:
         require(not lock.is_symlink(), 'LEASE_PATH')
         fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except BaseException as exc:
-        receipt['state'] = str(exc) if str(exc).startswith('HOLD_') else \
-            'HOLD_SYSTEMIC_PUBLISH_' + type(exc).__name__
+        receipt['state'] = hold_state_from_exception(exc)
         raise
     finally:
-        if str(receipt.get('state','')).startswith('HOLD_'):
+        if receipt.get('state') in HOLD_RECEIPT_STATES:
             persist_receipt(h,request,receipt)
     changed = False
     old_raw = new_raw = None
@@ -468,7 +539,9 @@ def run(bundle, spec):
                 existing = None
             require(existing is None or existing == raw, 'CONTENT_ADDRESS_COLLISION')
             if existing is None:
-                h.atomic(path, raw)
+                prewrite = write_package_with_budget_gate(h, path, raw, old)
+                receipt.setdefault('resource_prewrite_checks', []).append({
+                    'package_path':str(path.relative_to(PACKAGE)), **prewrite})
             require(h.read_regular(path, 2 * 1024 * 1024) == raw, 'PACKAGE_READBACK')
         new = copy.deepcopy(old)
         new['systemic_relay'] = {'path': str(manifest_path), 'sha256': manifest_sha}
@@ -486,8 +559,8 @@ def run(bundle, spec):
         require(not backup.exists() and not backup.is_symlink(), 'BACKUP_EXISTS')
         h.atomic(backup / 'config.json', old_raw)
         changed = True
-        validate_owner_snapshot(owner_snapshot)
-        receipt['resource_precommit'] = require_budget_headroom(h.read_budget_snapshot(old))
+        receipt['resource_precommit'] = verify_publish_cas_preconditions(
+            h, old, owner_snapshot, fd, lock)
         h.atomic(CONFIG, new_raw)
         require(h.read_regular(CONFIG, 2 * 1024 * 1024) == new_raw, 'CONFIG_READBACK')
         receipt.update(state='PUBLISHED_ONE_OWNER_REVIEWED_SUCCESSOR_PENDING_NATIVE_ADMISSION',
@@ -500,7 +573,7 @@ def run(bundle, spec):
             native_receipt_contract_sha256=sha(encoded(receipt_contract)),
             original_task_accepted=False, native_job_created=False)
     except BaseException as exc:
-        receipt['state'] = str(exc) if str(exc).startswith('HOLD_') else 'HOLD_SYSTEMIC_PUBLISH_' + type(exc).__name__
+        receipt['state'] = hold_state_from_exception(exc)
         if changed and old_raw is not None and new_raw is not None:
             # Never overwrite a newer owner's config during recovery.
             if h.read_regular(CONFIG, 2 * 1024 * 1024) == new_raw:
