@@ -114,6 +114,29 @@ class DrivePrefetchTests(unittest.TestCase):
             with self.assertRaisesRegex(mod.Hold, "STOP"):
                 mod.stage_one(self.m, self.asset, self.expected, self.dest, from_dir=self.disk)
 
+    def test_stop_during_hash_does_not_publish_weight(self):
+        name = self.asset["name"]
+        source = self.disk / name
+        source.write_bytes(self.contents)
+        mod.receipt(source, self.asset, self.expected)
+        hash_file = mod.sha_file
+        stopped = False
+
+        def arm_stop_during_hash(path):
+            nonlocal stopped
+            digest = hash_file(path)
+            stopped = True
+            return digest
+
+        with patch.object(mod, "requires_space"), \
+             patch.object(mod, "stopped", side_effect=lambda: stopped), \
+             patch.object(mod, "sha_file", side_effect=arm_stop_during_hash):
+            with self.assertRaisesRegex(mod.Hold, "HOLD_DRIVE_STOP"):
+                mod.stage_one(self.m, self.asset, self.expected, self.dest, from_dir=self.disk)
+
+        self.assertEqual(list(self.dest.iterdir()), [])
+        self.assertEqual(source.read_bytes(), self.contents)
+
 
 if __name__ == "__main__":
     unittest.main()
