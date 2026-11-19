@@ -33,6 +33,7 @@ FILES = (
      "776a6dc25726540d75ec51216d1e333ca89b24e803ba3620f9b5e470a3c81476"),
 )
 MAX_FILE_BYTES = 256 * 1024
+MAX_EXPORT_KEY_B64_CHARS = 12000
 MAX_TOTAL_BYTES = 512 * 1024
 MAX_ENVELOPE_BYTES = 1024 * 1024
 CHUNK_BYTES = 9000
@@ -339,9 +340,19 @@ def make_envelope(encoded_key, request_id, source_sha, sources, schema=None, now
                      "file_count": len(sources), "sqlite_schema_status": schema.get("status")}
 
 
+def read_export_key_stdin():
+    """Read the bounded public-key payload only from private stdin."""
+    if "NOX_OWNER_EXPORT_KEY_B64" in os.environ:
+        raise ValueError("HOLD_SOURCE_EXPORT_KEY_ENV_FORBIDDEN")
+    encoded_key = sys.stdin.read(MAX_EXPORT_KEY_B64_CHARS + 1)
+    if not encoded_key or len(encoded_key) > MAX_EXPORT_KEY_B64_CHARS:
+        raise ValueError("HOLD_SOURCE_EXPORT_KEY_STDIN_BOUNDS")
+    return encoded_key
+
+
 def run():
-    # The private key is never accepted here; key is public material only.
-    encoded_key = os.environ.get("NOX_OWNER_EXPORT_KEY_B64", "")
+    # The private key is never accepted here; public material arrives only on stdin.
+    encoded_key = read_export_key_stdin()
     request_id_raw = os.environ.get("NOX_OWNER_REQUEST_ID", "")
     source_sha = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
     if not request_id_raw.isdigit() or not SHA_RE.fullmatch(source_sha):
