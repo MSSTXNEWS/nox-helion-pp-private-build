@@ -225,15 +225,23 @@
       finally{downloadsBusy=false;}
     }
     void refreshDownloads();setInterval(()=>void refreshDownloads(),20000);
+    const validEventCursor=n=>Number.isSafeInteger(n)&&n>=0&&n<1000000000000000;
     let eventCursor=null,eventsBusy=false,eventCount=0;
-    try{const n=Number(localStorage.getItem('nox.owner.events.cursor'));if(Number.isSafeInteger(n)&&n>0)eventCursor=n;}catch{}
+    try{const stored=localStorage.getItem('nox.owner.events.cursor');if(stored!==null&&/^[0-9]{1,15}$/.test(stored)){const n=Number(stored);if(validEventCursor(n))eventCursor=n;}}catch{}
     async function refreshEvents(){
       if(eventsBusy||document.hidden)return;eventsBusy=true;
       try{
-        const value=await api('/api/ui/events?limit=20'+(eventCursor===null?'':'&cursor='+eventCursor));
-        if(value.schema!=='NOX_OWNER_EVENTS_V1'||!Array.isArray(value.events)||!Number.isSafeInteger(value.next_cursor))return;
+        if(eventCursor!==null&&!validEventCursor(eventCursor)){reportTitle.textContent='Отчёты NOX · снимок недоступен';return;}
+        const value=await api('/api/ui/events/snapshot?limit=20'+(eventCursor===null?'':'&cursor='+eventCursor));
+        const validEvents=value&&value.schema==='NOX_OWNER_EVENTS_V1'&&Array.isArray(value.events)
+          &&value.events.length<=20&&validEventCursor(value.next_cursor)&&validEventCursor(value.latest_cursor)
+          &&value.next_cursor<=value.latest_cursor
+          &&value.events.every((event,index)=>event&&Number.isSafeInteger(event.sequence)
+            &&event.sequence>0&&event.sequence<=value.latest_cursor
+            &&(index===0||event.sequence>value.events[index-1].sequence)
+            &&typeof event.title==='string'&&typeof event.message==='string');
+        if(!validEvents){reportTitle.textContent='Отчёты NOX · снимок недоступен';return;}
         for(const event of value.events){
-          if(!Number.isSafeInteger(event.sequence)||typeof event.title!=='string'||typeof event.message!=='string')continue;
           if(reportList.querySelector('[data-event-sequence="'+event.sequence+'"]'))continue;
           const card=E('article',undefined,'nox-owner-report');card.dataset.eventSequence=String(event.sequence);
           const heading=E('b',event.title),message=E('p',event.message);
@@ -245,7 +253,7 @@
         eventCursor=value.next_cursor;try{localStorage.setItem('nox.owner.events.cursor',String(eventCursor));}catch{}
         const nextTitle=eventCount?'Отчёты NOX · '+eventCount:'Отчёты NOX · ожидаю события';
         if(reportTitle.textContent!==nextTitle)reportTitle.textContent=nextTitle;
-      }catch{if(!eventCount)reportTitle.textContent='Отчёты NOX · подключение';}
+      }catch{reportTitle.textContent='Отчёты NOX · снимок недоступен';}
       finally{eventsBusy=false;}
     }
     void refreshEvents();setInterval(()=>void refreshEvents(),5000);
