@@ -251,7 +251,7 @@ def validate_gate(gate, now=None):
 
 
 def collect_gate(request_id, source_sha, lock_held):
-    require(os.geteuid() == 0 and Path.cwd().resolve() == Path('/root'), 'OWNER_RUNTIME')
+    require(os.geteuid() == 0, 'OWNER_RUNTIME')
     require(stop_flags_clear(), 'STOP_FLAG')
     raw_config, config = config_doc()
     config_sha = supervisor_config()
