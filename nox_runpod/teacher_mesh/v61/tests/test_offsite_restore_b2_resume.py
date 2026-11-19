@@ -11,7 +11,7 @@ from pathlib import Path
 
 from nox_runpod.teacher_mesh.v61.checkpoint_backup import (REMOTE, verify_plaintext_tar,
     verify_plaintext_tar_stream, verify, transport_retry_delay,
-    classify_ssh_timeout)
+    classify_ssh_timeout, publish_verified_backup, run)
 from unittest.mock import patch
 
 
@@ -148,6 +148,53 @@ class V61TransportRetryBoundary(unittest.TestCase):
             self.assertEqual(classify_ssh_timeout(rc, stderr),
                              'SSH_TIMEOUT_REMOTE_STATE_UNKNOWN')
         self.assertIsNone(classify_ssh_timeout(255,b'permission denied'))
+
+
+
+class V61PublishedArtifactPreservation(unittest.TestCase):
+    def test_existing_final_holds_before_owner_keys_or_transport(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            final=root/'prior.age'
+            receipt=root/'prior.json'
+            final.write_bytes(b'preserved-owner-backup')
+            receipt.write_text('{"sha":"old"}')
+            with patch('nox_runpod.teacher_mesh.v61.checkpoint_backup.FINAL', final), \
+                 patch('nox_runpod.teacher_mesh.v61.checkpoint_backup.RECEIPT', receipt), \
+                 patch('nox_runpod.teacher_mesh.v61.checkpoint_backup.v60.existing_owner_recipient', side_effect=AssertionError('owner_credentials_touched')):
+                with self.assertRaisesRegex(RuntimeError,'HOLD_V61_EXISTING_PUBLISHED_ARTIFACT'):
+                    run()
+            self.assertEqual(final.read_bytes(),b'preserved-owner-backup')
+            self.assertEqual(receipt.read_text(),'{"sha":"old"}')
+
+
+    def test_existing_verified_ciphertext_is_never_replaced_or_deleted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            final=root/"checkpoint.age"
+            receipt_path=root/"receipt.json"
+            candidate=root/"checkpoint.age.pending"
+            final.write_bytes(b"previous-encrypted-checkpoint")
+            receipt_path.write_text('{"old":true}')
+            candidate.write_bytes(b"new-candidate")
+            with self.assertRaisesRegex(RuntimeError,"HOLD_V61_EXISTING_PUBLISHED_ARTIFACT"):
+                publish_verified_backup(candidate,final,receipt_path,{"new":True})
+            self.assertEqual(final.read_bytes(),b"previous-encrypted-checkpoint")
+            self.assertEqual(receipt_path.read_text(),'{"old":true}')
+            self.assertEqual(candidate.read_bytes(),b"new-candidate")
+
+    def test_verified_candidate_publishes_with_corresponding_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            final=root/"checkpoint.age"
+            receipt_path=root/"receipt.json"
+            candidate=root/"checkpoint.age.pending"
+            candidate.write_bytes(b"candidate-ciphertext")
+            publish_verified_backup(candidate,final,receipt_path,{"archive_hash_integrity_verified":True})
+            self.assertFalse(candidate.exists())
+            self.assertEqual(final.read_bytes(),b"candidate-ciphertext")
+            self.assertTrue(json.loads(receipt_path.read_text())["archive_hash_integrity_verified"])
+            self.assertFalse((root/"receipt.json.pending").exists())
 
 
 if __name__ == "__main__":

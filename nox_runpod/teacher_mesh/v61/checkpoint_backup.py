@@ -13,6 +13,9 @@ from nox_runpod.teacher_mesh.v60 import encrypted_backup as v60
 RUN=Path(os.environ.get('RUNNER_TEMP','/tmp'))/'nox-v61-checkpoints'
 FINAL=Path('NOX_V61_CHECKPOINT_OPTIMIZER_ENCRYPTED_20261114.tar.age')
 RECEIPT=Path('NOX_V61_CHECKPOINT_OPTIMIZER_RECEIPT.json')
+CANDIDATE=FINAL.with_name(FINAL.name+'.pending')
+RECEIPT_PENDING=RECEIPT.with_name(RECEIPT.name+'.pending')
+ATTACH_ATTEMPTED=False
 
 REMOTE=r"""
 import hashlib,io,json,os,stat,sys,tarfile
@@ -333,7 +336,33 @@ def transport_retry_delay(error_class: str, attempt_index: int) -> int | None:
     return (10, 30)[attempt_index] if 0 <= attempt_index < 2 else None
 
 
+def publish_verified_backup(candidate:Path, final:Path, receipt_path:Path, receipt:dict)->None:
+    """Promote only a successfully verified candidate; preserve prior evidence.
+
+    Never replace existing ciphertext/receipt, including when a previous run
+    ended ambiguously. Both staged files live beside their destination.
+    """
+    if final.exists() or receipt_path.exists():
+        raise RuntimeError('HOLD_V61_EXISTING_PUBLISHED_ARTIFACT')
+    if not candidate.is_file():
+        raise RuntimeError('HOLD_V61_CANDIDATE_MISSING')
+    pending=receipt_path.with_name(receipt_path.name+'.pending')
+    pending.write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+    try:
+        # Refuse an unexpected second publisher rather than overwrite it.
+        if final.exists() or receipt_path.exists():
+            raise RuntimeError('HOLD_V61_PUBLISH_RACE')
+        candidate.replace(final)
+        pending.replace(receipt_path)
+    finally:
+        pending.unlink(missing_ok=True)
+
+
 def run():
+    global ATTACH_ATTEMPTED
+    # V61 is an owner-reviewed one-shot: never erase a prior published proof.
+    if FINAL.exists() or RECEIPT.exists():
+        raise RuntimeError('HOLD_V61_EXISTING_PUBLISHED_ARTIFACT')
     owner,fingerprint=v60.existing_owner_recipient()
     host,port=v60.live_direct_route()
     v60.RUN=RUN
@@ -347,12 +376,13 @@ def run():
         raise RuntimeError('HOLD_RECIPIENT_KEY')
     recipients=RUN/'recipients'
     recipients.write_text(owner+'\n'+r.stdout.strip()+'\n')
+    ATTACH_ATTEMPTED=True
     v60.attach_temporary_key()
     known=RUN/'known_hosts'
     try:
         time.sleep(12)
         for i in range(3):
-            FINAL.unlink(missing_ok=True)
+            CANDIDATE.unlink(missing_ok=True)
             command=['ssh','-T','-i',str(v60.conn.KEY),'-p',str(port),
                      '-o','BatchMode=yes','-o','IdentitiesOnly=yes',
                      '-o','ConnectTimeout=10',
@@ -360,7 +390,7 @@ def run():
                      '-o','UserKnownHostsFile='+str(known),
                      'root@'+host,'python3 -c '+shlex.quote(REMOTE)]
             ssh=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-            encrypted=subprocess.Popen(['age','-R',str(recipients),'-o',str(FINAL)],
+            encrypted=subprocess.Popen(['age','-R',str(recipients),'-o',str(CANDIDATE)],
                 stdin=ssh.stdout,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             ssh.stdout.close()
             try:
@@ -370,7 +400,7 @@ def run():
                 ssh.kill();encrypted.kill()
                 ssh.communicate();encrypted.communicate()
                 raise RuntimeError('HOLD_CHECKPOINT_STREAM_TIMEOUT')
-            if rc==0 and encrypted.returncode==0 and FINAL.is_file() and FINAL.stat().st_size>1024:
+            if rc==0 and encrypted.returncode==0 and CANDIDATE.is_file() and CANDIDATE.stat().st_size>1024:
                 break
             emsg=(ssh.stderr.read(10000) if ssh.stderr is not None else b'').lower()
             if rc==1 and b'traceback' in emsg:
@@ -396,18 +426,18 @@ def run():
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_CLASS='+cls)
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_SSH_RC='+str(rc))
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_AGE_RC='+str(encrypted.returncode))
-            print('NOX_V61_ATTEMPT_'+str(i+1)+'_CIPHERTEXT_BYTES='+str(FINAL.stat().st_size if FINAL.exists() else 0))
+            print('NOX_V61_ATTEMPT_'+str(i+1)+'_CIPHERTEXT_BYTES='+str(CANDIDATE.stat().st_size if CANDIDATE.exists() else 0))
             delay = transport_retry_delay(cls, i)
             if delay is None:
                 raise RuntimeError('HOLD_CHECKPOINT_STREAM_' + cls)
             time.sleep(delay)
 
-        restored=verify(FINAL,identity)
+        restored=verify(CANDIDATE,identity)
         receipt={
             'schema':'NOX_V61_ENCRYPTED_CHECKPOINT_RECEIPT_V1',
             'instance_id':60509551,
-            'ciphertext_sha256':v60.sha256_file(FINAL),
-            'ciphertext_bytes':FINAL.stat().st_size,
+            'ciphertext_sha256':v60.sha256_file(CANDIDATE),
+            'ciphertext_bytes':CANDIDATE.stat().st_size,
             'checkpoint_optimizer_files':restored['count'],
             'original_total_bytes':restored['total_bytes'],
             'restored_plain_sha256':restored['plaintext_sha256'],
@@ -422,7 +452,7 @@ def run():
             'remote_cleanup_performed':False,
             'live_training_restarted':False,
         }
-        RECEIPT.write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
+        publish_verified_backup(CANDIDATE,FINAL,RECEIPT,receipt)
         print('NOX_V61_CHECKPOINT_COUNT='+str(restored['count']))
         print('NOX_V61_SOURCE_BYTES='+str(restored['total_bytes']))
         print('NOX_V61_CIPHERTEXT_SHA256='+receipt['ciphertext_sha256'])
@@ -442,7 +472,9 @@ if __name__=='__main__':
     except Exception as exc:
         print(str(exc) if str(exc).startswith('HOLD_') else 'HOLD_V61_UNKNOWN',file=sys.stderr)
         try:
-            if v60.conn.TRACK.exists():v60.conn.cleanup()
+            if ATTACH_ATTEMPTED and v60.conn.TRACK.exists():v60.conn.cleanup()
         except Exception:print('HOLD_V61_KEY_CLEANUP',file=sys.stderr)
-        FINAL.unlink(missing_ok=True)
+        if ATTACH_ATTEMPTED:
+            CANDIDATE.unlink(missing_ok=True)
+            RECEIPT_PENDING.unlink(missing_ok=True)
         raise SystemExit(2)
