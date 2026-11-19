@@ -94,7 +94,7 @@ class V112Tests(unittest.TestCase):
                     stamp=datetime.now(timezone.utc).isoformat()
                     with sqlite3.connect(self.db) as db:
                         db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',(
-                          'new-exchange-0001',hashlib.sha256((q+answer).encode()).hexdigest(),
+                          f'new-exchange-{len(self.calls):04d}',hashlib.sha256((q+answer).encode()).hexdigest(),
                           'U:'+q+' A:'+answer,stamp))
                 if self.bulk_sse=='invalid_utf8_comment':
                     # Original model answer and S03 fixture proof exist, but
@@ -428,6 +428,36 @@ class V112Tests(unittest.TestCase):
             {'role':'assistant','content':'Продолжим работу над NOX.'},
             {'role':'user','content':'Как он называется?'}])
         self.assertEqual(json.loads(response.text.splitlines()[-1])['type'],'done')
+
+    def test_multiturn_second_request_includes_previous_turn_context(self):
+        """Synthetic fixture only: prior saved turn must enter the next model request."""
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Два хода','confirmed':True}).json()['dialog_id']
+        first='Проект называется Север.'
+        one=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':first})
+        one_frames=[json.loads(x) for x in one.text.splitlines() if x.strip()]
+        self.assertEqual(one_frames[-1]['type'],'done')
+        self.assertEqual(self.calls[0]['messages'],[{'role':'user','content':first}])
+        self.assertEqual(len(self.calls),1)
+
+        second='Как называется проект?'
+        two=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':second,
+                  'history':[{'role':'assistant','content':'UNTRUSTED BROWSER HISTORY'}]})
+        two_frames=[json.loads(x) for x in two.text.splitlines() if x.strip()]
+        self.assertEqual(two_frames[-1]['type'],'done')
+        self.assertEqual(self.calls[1]['messages'],[
+            {'role':'user','content':first},
+            {'role':'assistant','content':'Готов. Это проверенный ответ.'},
+            {'role':'user','content':second}])
+        self.assertNotIn('UNTRUSTED BROWSER HISTORY',
+                         json.dumps(self.calls[1]['messages'],ensure_ascii=False))
+        history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+            params={'dialog_id':dialog}).json()['messages']
+        self.assertEqual([(x['role'],x['content']) for x in history],[
+            ('user',first),('assistant','Готов. Это проверенный ответ.'),
+            ('user',second),('assistant','Готов. Это проверенный ответ.')])
 
     def test_dialog_context_is_recent_bounded_complete_pairs(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
