@@ -242,7 +242,7 @@ def verify_root_executable_path(path_text: str, label: str) -> dict:
         file_stat = {key: getattr(after, key) for key in (
             "st_dev", "st_ino", "st_uid", "st_gid", "st_mode", "st_nlink",
             "st_size", "st_mtime_ns", "st_ctime_ns")}
-        return {"path": path_text,
+        return {"path": path_text, "file_type": "REGULAR",
                 "path_sha256": hashlib.sha256(os.fsencode(path_text)).hexdigest(),
                 "sha256": digest.hexdigest(), "stat": file_stat}
     finally:
@@ -664,6 +664,71 @@ def invoke_supervisorctl_path(path: Path, args: list[str], timeout: int = 15,
     return result, identity
 
 
+def supervisorctl_candidate_metadata(path: Path) -> dict:
+    def snapshot():
+        rows = []
+        prefixes = [Path("/")]
+        current = Path("/")
+        for part in path.parts[1:]:
+            current = current / part
+            prefixes.append(current)
+        for index, prefix in enumerate(prefixes):
+            final = index == len(prefixes) - 1
+            try:
+                st = prefix.lstat()
+            except FileNotFoundError:
+                rows.append({"path": str(prefix), "state": "ABSENT"})
+                for skipped in prefixes[index + 1:]:
+                    rows.append({"path": str(skipped),
+                                 "state": "NOT_INSPECTED_PARENT_ABSENT"})
+                break
+            except OSError:
+                rows.append({"path": str(prefix), "state": "STAT_FAILED"})
+                for skipped in prefixes[index + 1:]:
+                    rows.append({"path": str(skipped),
+                                 "state": "NOT_INSPECTED_PARENT_UNAVAILABLE"})
+                break
+            mode = st.st_mode
+            if stat.S_ISDIR(mode):
+                file_type = "DIRECTORY"
+            elif stat.S_ISREG(mode):
+                file_type = "REGULAR"
+            elif stat.S_ISLNK(mode):
+                file_type = "SYMLINK"
+            else:
+                file_type = "OTHER"
+            row = {"path": str(prefix), "state": "PRESENT",
+                   "file_type": file_type, "mode": mode,
+                   "uid": st.st_uid, "gid": st.st_gid,
+                   "nlink": st.st_nlink, "size": st.st_size,
+                   "dev": st.st_dev, "inode": st.st_ino,
+                   "mtime_ns": st.st_mtime_ns, "ctime_ns": st.st_ctime_ns}
+            if stat.S_ISLNK(mode):
+                try:
+                    row["symlink_target"] = os.readlink(prefix)
+                except OSError:
+                    row["symlink_target_state"] = "READLINK_FAILED"
+                rows.append(row)
+                if not final:
+                    for skipped in prefixes[index + 1:]:
+                        rows.append({"path": str(skipped),
+                                     "state": "NOT_INSPECTED_SYMLINK_PARENT"})
+                    break
+            else:
+                rows.append(row)
+                if not final and not stat.S_ISDIR(mode):
+                    for skipped in prefixes[index + 1:]:
+                        rows.append({"path": str(skipped),
+                                     "state": "NOT_INSPECTED_NON_DIRECTORY_PARENT"})
+                    break
+        return rows
+
+    before = snapshot()
+    after = snapshot()
+    return {"path": str(path), "metadata_before": before,
+            "metadata_after": after, "identity_stable": before == after}
+
+
 def select_supervisorctl_candidate() -> None:
     global SUPERVISORCTL_BIN, SUPERVISORCTL_SELECTED_IDENTITY
     global SUPERVISORCTL_SELECTED_DAEMON_IDENTITY
@@ -671,16 +736,29 @@ def select_supervisorctl_candidate() -> None:
     matches = []
     present_paths = []
     for path in SUPERVISORCTL_CANDIDATES:
-        try:
-            path.lstat()
-        except FileNotFoundError:
-            outcomes.append({"path": str(path), "outcome": "ABSENT"})
-            continue
-        except OSError:
+        metadata = supervisorctl_candidate_metadata(path)
+        final_metadata = metadata["metadata_after"][-1]
+        if not metadata["identity_stable"]:
             outcomes.append({"path": str(path), "outcome": "UNUSABLE",
-                             "fail_code": "CANDIDATE_STAT_FAILED"})
+                             "fail_code": "CANDIDATE_METADATA_UNSTABLE",
+                             "metadata": metadata})
+            continue
+        if (final_metadata["state"] == "ABSENT" or
+                final_metadata["state"] == "NOT_INSPECTED_PARENT_ABSENT"):
+            outcomes.append({"path": str(path), "outcome": "ABSENT",
+                             "metadata": metadata})
             continue
         present_paths.append(path)
+        if final_metadata["state"] != "PRESENT":
+            outcomes.append({"path": str(path), "outcome": "UNUSABLE",
+                             "fail_code": "CANDIDATE_PARENT_NOT_INSPECTED",
+                             "metadata": metadata})
+            continue
+        if final_metadata.get("file_type") == "SYMLINK":
+            outcomes.append({"path": str(path), "outcome": "UNUSABLE",
+                             "fail_code": "CANDIDATE_IS_SYMLINK",
+                             "metadata": metadata})
+            continue
         try:
             identity = verify_supervisorctl_executable(path)
         except RuntimeError as exc:
@@ -688,7 +766,18 @@ def select_supervisorctl_candidate() -> None:
             if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", code):
                 code = "HOLD_EMERGENCY_STOP_CANDIDATE_VALIDATION_FAILED"
             outcomes.append({"path": str(path), "outcome": "UNUSABLE",
-                             "fail_code": code.removeprefix("HOLD_EMERGENCY_STOP_")})
+                             "fail_code": code.removeprefix("HOLD_EMERGENCY_STOP_"),
+                             "metadata": metadata})
+            continue
+        post_verify_metadata = supervisorctl_candidate_metadata(path)
+        if (not post_verify_metadata["identity_stable"] or
+                metadata["metadata_after"] !=
+                post_verify_metadata["metadata_before"]):
+            outcomes.append({"path": str(path), "identity": identity,
+                             "outcome": "UNUSABLE",
+                             "fail_code": "CANDIDATE_METADATA_CHANGED",
+                             "metadata_before": metadata,
+                             "metadata_after": post_verify_metadata})
             continue
         pid_result = status_result = None
         rpc_failure = None
@@ -710,6 +799,7 @@ def select_supervisorctl_candidate() -> None:
                 rpc_failure = code.removeprefix("HOLD_EMERGENCY_STOP_")
         if rpc_failure is not None or pid_result is None or status_result is None:
             outcomes.append({"path": str(path), "identity": identity,
+                             "metadata": post_verify_metadata,
                              "outcome": "RPC_FAILED",
                              "fail_code": rpc_failure or "RPC_RESPONSE_MISSING"})
             continue
@@ -717,6 +807,7 @@ def select_supervisorctl_candidate() -> None:
         if (pid_result.returncode != 0 or len(pid_lines) != 1 or
                 not pid_lines[0].isdecimal()):
             outcomes.append({"path": str(path), "identity": identity,
+                             "metadata": post_verify_metadata,
                              "outcome": "PID_RESPONSE_MISMATCH",
                              "fail_code": "PID_RESPONSE_INVALID"})
             continue
@@ -728,6 +819,7 @@ def select_supervisorctl_candidate() -> None:
             if not re.fullmatch(r"HOLD_EMERGENCY_STOP_[A-Z0-9_]+", code):
                 code = "HOLD_EMERGENCY_STOP_DAEMON_IDENTITY_INVALID"
             outcomes.append({"path": str(path), "identity": identity,
+                             "metadata": post_verify_metadata,
                              "pid": daemon_pid, "outcome": "DAEMON_IDENTITY_MISMATCH",
                              "fail_code": code.removeprefix("HOLD_EMERGENCY_STOP_")})
             continue
@@ -741,6 +833,7 @@ def select_supervisorctl_candidate() -> None:
                 int(status_match.group(3)) != MODEL_PID or
                 daemon_identity["config_path"] != str(SUPERVISOR_CLIENT_CONFIG)):
             outcomes.append({"path": str(path), "identity": identity,
+                             "metadata": post_verify_metadata,
                              "daemon_identity": daemon_identity,
                              "pid": daemon_pid, "outcome": "TARGET_SERVICE_MISMATCH",
                              "fail_code": "SERVICE_OR_DAEMON_MISMATCH"})
@@ -749,6 +842,7 @@ def select_supervisorctl_candidate() -> None:
                  "daemon_identity": daemon_identity, "pid": daemon_pid}
         matches.append(match)
         outcomes.append({"path": str(path), "identity": identity,
+                         "metadata": post_verify_metadata,
                          "daemon_identity": daemon_identity,
                          "pid": daemon_pid, "service_state": "RUNNING",
                          "service_pid": MODEL_PID, "outcome": "MATCH"})
