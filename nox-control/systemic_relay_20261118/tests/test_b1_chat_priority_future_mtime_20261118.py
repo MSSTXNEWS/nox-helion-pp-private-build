@@ -813,6 +813,67 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                 save(tampered)
                 self.assertIsNone(scope["_durable_terminal_s03_readback"](restarted, task["id"]))
 
+    def test_post_s03_completion_rechecks_claim_stop_chat_before_success(self):
+        # Invoke the real completion method only, without importing live
+        # dispatcher / opening a browser / issuing S03 or worker POSTs.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(node for node in tree.body
+                      if isinstance(node, ast.ClassDef) and node.name == "Native")
+        methods = [node for node in native.body
+                   if isinstance(node, ast.FunctionDef)
+                   and node.name == "_durable_completion_fence"]
+        self.assertEqual(len(methods), 1)
+        self.assertEqual(SOURCE.read_text().count(
+            "self._durable_completion_fence(task, result, proof)"), 2,
+            "both review and leaf must recheck after S03")
+        flags = {"chat": False, "stop": False, "lease": True, "claim": True}
+        task = {"id": "B1-COMPLETION-FENCE"}
+        receipt = {"job_id": "job1", "phase": "terminal"}
+        proof = {"native_verified": True, "receipt_sha256": "abc"}
+        returned = {"receipt": receipt, "s03": proof}
+        state = {"returned": returned}
+        namespace = {
+            "GateError": RuntimeError,
+            "chat_priority_active": lambda: flags["chat"],
+        }
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=methods, type_ignores=[])), str(SOURCE), "exec"),
+            namespace)
+        owner = SimpleNamespace(
+            _durable_terminal_s03_readback=lambda _: state["returned"],
+            stop_active=lambda: flags["stop"],
+            writer_lease=lambda: flags["lease"],
+            _claim_current=lambda _, durable=False: flags["claim"],
+        )
+        fence = namespace["_durable_completion_fence"]
+        self.assertEqual(fence(owner, task, receipt, proof), returned)
+        for flag, invalid in (("stop", True), ("chat", True),
+                              ("lease", False), ("claim", False)):
+            with self.subTest(guard=flag):
+                flags[flag] = invalid
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_NATIVE_TERMINAL_FINAL_OWNER"):
+                    fence(owner, task, receipt, proof)
+                flags[flag] = not invalid
+        for changed in (None,
+                        {"receipt": {"job_id": "other"}, "s03": proof},
+                        {"receipt": receipt, "s03": {"native_verified": True}}):
+            with self.subTest(readback=changed):
+                state["returned"] = changed
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_NATIVE_TERMINAL_FINAL_READBACK"):
+                    fence(owner, task, receipt, proof)
+        state["returned"] = returned
+
+        # Owner lease can be revoked specifically while the S03 read blocks.
+        def revoke_during_readback(_):
+            flags["lease"] = False
+            return returned
+        owner._durable_terminal_s03_readback = revoke_during_readback
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_NATIVE_TERMINAL_FINAL_OWNER"):
+            fence(owner, task, receipt, proof)
+
     def test_s03_readback_nonobject_metadata_fails_closed(self):
         # Execute the actual S03 receipt reader without a live host connection.
         # Valid JSON with a non-dict root must not crash interrupted recovery.
