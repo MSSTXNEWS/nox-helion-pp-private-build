@@ -1,68 +1,94 @@
-name: NOX V129 original S03 writer signature schema read-only
+name: NOX V129 S03 source-only contract checks
 on:
   pull_request:
-    branches: [feature/nox-v37-v100-firsthour-14d-20261113, feature/nox-v38-synaptic-brain-20261114]
+    branches: [feature/nox-v38-synaptic-brain-20261114, repair/v129-s03-writer-introspection-v2-20261119]
     paths:
+      - 'nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py'
       - 'nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py'
       - 'nox_runpod/teacher_mesh/v129/tests/test_read_native_s03_writer_contract.py'
+      - 'nox_runpod/teacher_mesh/v129/tests/test_v129_owner_probe_contract.py'
       - '.github/workflows/nox-v129-s03-write-contract-readonly.yml'
   workflow_dispatch:
     inputs:
-      allow_native:
-        description: 'Owner-approved original NOX OneHost access only'
-        type: choice
+      source_ref:
+        description: 'Exact selected repository branch name'
+        type: string
         required: true
-        options: ['NO', 'YES']
-        default: 'NO'
+      source_sha:
+        description: 'Full 40-character commit SHA to check out and verify'
+        type: string
+        required: true
 permissions:
   contents: read
 concurrency:
-  group: nox-v129-s03-native-readonly
+  group: nox-v129-s03-source-only
   cancel-in-progress: false
 jobs:
   source:
+    if: "${{ github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' && (github.event_name != 'workflow_dispatch' || github.actor == 'MSSTXNEWS') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.source_sha }}
+          fetch-depth: 1
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
         with:
           python-version: '3.11'
-      - name: Compile read-only contract and assert no record reads
+      - name: Verify repository, selected ref, and exact commit
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          SOURCE_REF: ${{ inputs.source_ref || '' }}
+          SOURCE_SHA: ${{ inputs.source_sha || '' }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || '' }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref || '' }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
         run: |
-          set -euo pipefail
-          python -m py_compile nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py
-          python -m unittest nox_runpod.teacher_mesh.v129.tests.test_read_native_s03_writer_contract -v
           python - <<'PY'
-          from nox_runpod.teacher_mesh.v129.read_native_s03_write_contract import REMOTE
-          src=REMOTE.partition("<<'PYREMOTE'")[2].rpartition('PYREMOTE')[0]
-          compile(src,'<NATIVE_S03_READONLY>','exec')
-          for k in ('PRAGMA query_only=ON','mode=ro','O_NOFOLLOW','MODULE_ALLOWLIST','MAX_SOURCE_BYTES',
-                    'PRAGMA table_info','PRAGMA index_list','PRAGMA index_info','private_rows_exported',
-                    'TEMP_SSH_CLEANUP','NATIVE_READ_ONLY_COMPLETE=true'):
-              assert k in (src+REMOTE if k!='TEMP_SSH_CLEANUP' else open('nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py').read()),k
-          assert 'SELECT * FROM s03_items' not in src
-          assert 'SELECT text FROM s03_items' not in src
-          print('NOX_V129_S03_SOURCE_ONLY_PASS=true')
+          import os
+          import re
+          import subprocess
+
+          repo = os.environ.get("REPOSITORY", "")
+          if repo != "MSSTXNEWS/nox-helion-pp-private-build":
+              raise SystemExit("HOLD_REPOSITORY_SCOPE")
+          event = os.environ.get("EVENT_NAME", "")
+          if event == "pull_request":
+              if os.environ.get("PR_HEAD_REPOSITORY") != repo:
+                  raise SystemExit("HOLD_FORK_HEAD")
+              expected_sha = os.environ.get("PR_HEAD_SHA", "")
+              if not os.environ.get("PR_HEAD_REF"):
+                  raise SystemExit("HOLD_PR_REF")
+          elif event == "workflow_dispatch":
+              if os.environ.get("ACTOR") != "MSSTXNEWS":
+                  raise SystemExit("HOLD_OWNER_ACTOR")
+              expected_sha = os.environ.get("SOURCE_SHA", "")
+              expected_ref = os.environ.get("SOURCE_REF", "")
+              if re.fullmatch(r"[0-9a-f]{40}", expected_sha) is None:
+                  raise SystemExit("HOLD_SOURCE_SHA")
+              if (re.fullmatch(r"[A-Za-z0-9._/-]{1,200}", expected_ref) is None
+                      or expected_ref.startswith(("/", ".", "-"))
+                      or ".." in expected_ref):
+                  raise SystemExit("HOLD_SOURCE_REF")
+              if os.environ.get("GITHUB_REF_VALUE") != "refs/heads/" + expected_ref:
+                  raise SystemExit("HOLD_SOURCE_REF_MISMATCH")
+          else:
+              raise SystemExit("HOLD_EVENT_SCOPE")
+          if re.fullmatch(r"[0-9a-f]{40}", expected_sha) is None:
+              raise SystemExit("HOLD_SOURCE_SHA")
+          actual_sha = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], text=True, timeout=5
+          ).strip()
+          if actual_sha != expected_sha:
+              raise SystemExit("HOLD_CHECKOUT_SHA_MISMATCH")
+          print("NOX_V129_SOURCE_REF_SHA_VERIFIED=true")
           PY
-  native-readonly:
-    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' }}"
-    needs: source
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      NOX2: ${{ secrets.NOX2 }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Native S03 live source/schema inspection without private records
-        run: python -m nox_runpod.teacher_mesh.v129.read_native_s03_write_contract
-      - name: Revoke ephemeral SSH key
-        if: always()
-        run: python -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Compile and run offline source regressions
+        run: |
+          python -m py_compile nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py nox_runpod/teacher_mesh/v129/tests/test_read_native_s03_writer_contract.py nox_runpod/teacher_mesh/v129/tests/test_v129_owner_probe_contract.py
+          python -m unittest nox_runpod.teacher_mesh.v129.tests.test_read_native_s03_writer_contract nox_runpod.teacher_mesh.v129.tests.test_v129_owner_probe_contract -v
