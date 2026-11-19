@@ -27,15 +27,15 @@ NATIVE_RESPONSE_SOURCE = Path("nox_runpod/teacher_mesh/v137/owner_response_contr
 MANIFEST = "NOX_V135_OWNER_RESONANCE_STREAM_MANIFEST.json"
 CAP_POLICY = "NOX_V135_OWNER_BRIDGE_CAP_POLICY.json"
 CAP_POLICY_SOURCE = Path("coordination/onepass/v135_owner_bridge_cap_policy.json")
-CAP_POLICY_SHA256 = "6a7a36ce35d5a41032f13fce70bcd9290b5027cdf787832324beb9de9ecc1112"
+CAP_POLICY_SHA256 = "5025aaf9e84171e891a96040b815bf33ee43e81645237a6e7dd715d9219c982c"
 PAGES = ("site/pc/resonance.html", "site/pc/v22/resonance.template.html")
 ROLLBACK = "rollback/v135/"
 SCRIPT_URL = "/nox-web-v29/nox-v135-resonance-owner-bridge.js"
 SCRIPT_TAG = '<script defer src="' + SCRIPT_URL + '" data-nox-owner-v135="1"></script>'
 # Immutable v2 policy pins the measured compatibility bridge and a 512-byte reserve.
-MAX_OWNER_BRIDGE_BYTES = 25315
-EXPECTED_BRIDGE_BYTES = 24803
-EXPECTED_BRIDGE_SHA256 = "241c940cd9d45d7783ca53e1e5bab4fdc2ea1627005ec60840f165ca105762a4"
+MAX_OWNER_BRIDGE_BYTES = 25454
+EXPECTED_BRIDGE_BYTES = 24942
+EXPECTED_BRIDGE_SHA256 = "a1b0b0e2475c40e55586f5c14f9afccb0b88b38382876ed9690ad4bd3c9e4537"
 OBS_SCRIPT_URL = "/nox-web-v29/nox-v137-owner-self-status.js"
 OBS_SCRIPT_TAG = '<script defer src="' + OBS_SCRIPT_URL + '" data-nox-owner-v137="1"></script>'
 

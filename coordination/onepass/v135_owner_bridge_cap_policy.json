@@ -1,7 +1,7 @@
 {
   "schema": "NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2",
-  "measured_bridge_bytes": 24803,
-  "max_bridge_bytes": 25315,
+  "measured_bridge_bytes": 24942,
+  "max_bridge_bytes": 25454,
   "reserve_bytes": 512,
-  "bridge_sha256": "241c940cd9d45d7783ca53e1e5bab4fdc2ea1627005ec60840f165ca105762a4"
+  "bridge_sha256": "a1b0b0e2475c40e55586f5c14f9afccb0b88b38382876ed9690ad4bd3c9e4537"
 }

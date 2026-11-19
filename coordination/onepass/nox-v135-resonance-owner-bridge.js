@@ -370,6 +370,7 @@ function sseChat(data,signal) {
 					first_visible_token_ms:firstVisibleMs,
 					seconds:+((performance.now()-started)/1000).toFixed(2)});
 			}catch(e){
+				const invalidUtf8=e.message==='HOLD_NATIVE_FRAME_UTF8'&&!canceling&&!nativeSignal.aborted;
 				if(modelStarted&&!streamDone){
 					if(preAdmissionRejected){
 						if(stopJob)await stopJob;
@@ -380,6 +381,7 @@ function sseChat(data,signal) {
 				}
 				event({type:'error',
 					error:preAdmissionRejected?String(e.message||'HOLD_409_REJECTED').slice(0,150):
+						invalidUtf8?'HOLD_NATIVE_FRAME_UTF8':
 						(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
 					gpu_stop_verified:false,
 					stop_transport_outcome:state,
