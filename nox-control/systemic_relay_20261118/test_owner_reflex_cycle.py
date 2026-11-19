@@ -43,7 +43,7 @@ def tick(m=None, state=None, deferred=None, source=None, rows=None):
 
 class NativeReflexTests(unittest.TestCase):
     def test_memory_projection_distinguishes_file_cache_and_shmem(self):
-        budget = {'current_bytes': 193*1024**3, 'max_bytes':194*1024**3,
+        budget = {'current_bytes': 191*1024**3, 'max_bytes':194*1024**3,
                   'file_bytes':188*1024**3, 'shmem_bytes':75*1024**3,
                   'inactive_file_bytes':105*1024**3,
                   'memory_psi_some_avg10':0, 'memory_psi_full_avg10':0}
@@ -119,7 +119,19 @@ class NativeReflexTests(unittest.TestCase):
         self.assertFalse(result['native_bounded_cpu_eligible'])
         self.assertEqual(result['next_action'], 'RESPECT_EXISTING_RESOURCE_HOLD')
         self.assertFalse(result['auto_reclaim'])
+        # 512 MiB protects chat response, not owner 2 GiB task-admission floor.
         budget['current_bytes'] = budget['max_bytes'] - 512*mib
+        below_owner_floor = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+        self.assertEqual(below_owner_floor['state'], 'RAW_CGROUP_ADMISSION_HEADROOM_HOLD')
+        self.assertFalse(below_owner_floor['native_bounded_cpu_eligible'])
+        self.assertEqual(below_owner_floor['next_action'], 'RESPECT_EXISTING_RESOURCE_HOLD')
+        budget['current_bytes'] = budget['max_bytes'] - 2*1024**3 + 1
+        one_byte_short = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+        self.assertEqual(one_byte_short['state'], 'RAW_CGROUP_ADMISSION_HEADROOM_HOLD')
+        self.assertFalse(one_byte_short['native_bounded_cpu_eligible'])
+        budget['current_bytes'] = budget['max_bytes'] - 2*1024**3
         boundary = refill.memory_governor_projection(
             {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
         self.assertEqual(boundary['state'], 'CACHE_HEALTHY')
