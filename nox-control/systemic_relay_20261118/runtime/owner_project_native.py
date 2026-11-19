@@ -107,10 +107,24 @@ class ProjectBinding:
                 or not isinstance(evidence.get('tests'), dict)
                 or evidence['tests'].get('passed') is not True):
             raise GateError('HOLD_PROJECT_INTEGRATION_PROOF')
-        # Sanitization is performed before the final digest and exact S03 write,
-        # matching the existing native queue's own result sanitization.
-        event = native.ns['owner_mentor'].clean(event)
-        evidence = event['project_evidence']
+        # Sanitization must never transform verified integration identity or
+        # verdict. Re-hashing modified evidence without this check could turn
+        # an invalid post-clean event into a durable S03 receipt.
+        cleaned = native.ns['owner_mentor'].clean(event)
+        if not isinstance(cleaned, dict) or not isinstance(cleaned.get('project_evidence'), dict):
+            raise GateError('HOLD_PROJECT_SANITIZED_EVIDENCE')
+        sanitized = cleaned['project_evidence']
+        protected = ('task_id', 'parent_task_id', 'queue_id', 'plan_sha256',
+                     'contract_sha256', 'claim', 'acceptance_scope', 'state',
+                     'original_task_accepted', 'project_source_changed',
+                     'integration_verified')
+        if (any(type(sanitized.get(key)) is not type(evidence.get(key))
+                or sanitized.get(key) != evidence.get(key) for key in protected)
+                or (integrated and (not isinstance(sanitized.get('tests'), dict)
+                    or sanitized['tests'].get('passed') is not True))):
+            raise GateError('HOLD_PROJECT_SANITIZED_EVIDENCE')
+        event = cleaned
+        evidence = sanitized
         event['project_evidence_sha256'] = binding.digest(binding.encoded(evidence))
         result = {'schema':binding.RECEIPT,
                   'phase':'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED' if integrated
