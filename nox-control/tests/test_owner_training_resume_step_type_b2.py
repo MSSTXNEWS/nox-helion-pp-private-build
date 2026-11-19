@@ -267,8 +267,14 @@ class CheckpointStepProvenance(unittest.TestCase):
                 sources["/sys/fs/cgroup/cpu.max"] = "400000 100000"
                 verifier(helper)
                 self.assertEqual(cpu_calls[-1], (4, 4))
+                sources["/sys/fs/cgroup/cpu.max"] = "100000 100000"
+                verifier(helper)
+                self.assertEqual(cpu_calls[-1], (1, 4))
+                # Regression: preimage rounded 0.5 or 0.00001 CPU up to a
+                # falsely admitted full CPU and overstated the chat budget.
                 for invalid in ("max 0", "0 100000", "bogus 100000",
-                                "max", "max 100000 extra", "max -1"):
+                                "max", "max 100000 extra", "max -1",
+                                "50000 100000", "1 100000", "99999 100000"):
                     with self.subTest(cpu_max=invalid):
                         sources["/sys/fs/cgroup/cpu.max"] = invalid
                         with self.assertRaisesRegex(RuntimeError, "HOLD_CGROUP_CPU_QUOTA"):
