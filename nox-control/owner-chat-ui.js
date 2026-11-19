@@ -294,17 +294,79 @@
     cancel.addEventListener('click',async()=>{if(job&&running){cancel.disabled=true;try{show(await api('/api/ui/media/jobs/'+job.id+'/cancel',{}));}catch(e){status.textContent=e.message;cancel.disabled=false;}}});
     async function refresh(){
       if(document.visibilityState==='hidden')return;
-      try{const value=await api('/api/ui/executors');chips.replaceChildren();
-        if(value.state==='MODEL_UPDATE'||value.state==='HOLD_MAINTENANCE_UNKNOWN'){
-          label.textContent=value.state==='MODEL_UPDATE'?'Модель обновляется · состояние процессов требует проверки':'Обслуживание · статус STOP не подтверждён';
-          window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0,state:value.state}}));
+      try{
+        const value=await api('/api/ui/executors');chips.replaceChildren();
+        const states=['OBSERVED','STALE','UNAVAILABLE','MODEL_UPDATE','HOLD_MAINTENANCE_UNKNOWN'];
+        const maintenanceStates=['ABSENT','PRESENT','UNKNOWN'];
+        const state=value&&value.state;
+        const maintenance=value&&value.owner_maintenance;
+        const rows=value&&value.workers;
+        const observedAt=value&&value.observed_at;
+        const maintenanceOk=maintenanceStates.includes(maintenance);
+        const observedState=state==='OBSERVED'||state==='STALE';
+        const observedAge=typeof observedAt==='number'&&Number.isFinite(observedAt)?Date.now()/1000-observedAt:NaN;
+        const rowsOk=Array.isArray(rows)&&rows.length<=64&&rows.every(row=>row
+          &&typeof row.id==='string'&&/^nox-agent-[0-9]{2}$/.test(row.id)
+          &&(row.status==='idle'||row.status==='busy')
+          &&(row.status==='busy'?typeof row.task_id==='string'&&row.task_id.length>0&&row.task_id.length<=100:row.task_id===null))
+          &&new Set(rows.map(row=>row.id)).size===rows.length
+          &&new Set(rows.filter(row=>row.status==='busy').map(row=>row.task_id)).size
+            ===rows.filter(row=>row.status==='busy').length;
+        const snapshotFieldsOk=observedState
+          ?maintenance==='ABSENT'&&rows.length>=1&&Number.isSafeInteger(value.configured)
+            &&value.configured===rows.length&&typeof observedAt==='number'&&Number.isFinite(observedAt)
+            &&(state==='OBSERVED'?observedAge>=-5&&observedAge<=45:observedAge < -5||observedAge>45)
+          :state==='MODEL_UPDATE'
+            ?maintenance==='PRESENT'&&rows.length===0&&value.configured===null&&observedAt===null
+            :state==='HOLD_MAINTENANCE_UNKNOWN'
+              ?maintenance==='UNKNOWN'&&rows.length===0&&value.configured===null&&observedAt===null
+              :state==='UNAVAILABLE'
+                ?maintenance==='ABSENT'&&rows.length===0&&value.configured===null&&observedAt===null
+                :false;
+        if(value.schema!=='NOX_OWNER_EXECUTORS_V1'||!states.includes(state)
+          ||!maintenanceOk||typeof value.training_held!=='boolean'||!rowsOk||!snapshotFieldsOk){
+          label.textContent='Исполнители · HOLD_INVALID_SNAPSHOT';
+          label.dataset.state='HOLD_INVALID_SNAPSHOT';
+          label.title='Данные не соответствуют контракту ограниченного снимка.';
+          window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0,state:'HOLD_INVALID_SNAPSHOT'}}));
           return;
         }
-        label.textContent=value.state==='OBSERVED'?'Исполнители · по файлу статуса':'Состояние обновляется';
-        window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:value.state==='OBSERVED',busy:(value.workers||[]).filter(x=>x.status==='busy').length}}));
-        for(const [index,worker] of (value.workers||[]).entries()){
-          const known=value.state==='OBSERVED',busy=worker.status==='busy';const chip=E('span',String(index+1)+' · '+(known?(busy?'работает':'свободен'):'нет свежих данных'),'nox-live-chip');chip.dataset.state=known&&busy?'busy':'idle';chip.title=worker.task_id||worker.id;chips.append(chip);
-        }}catch{label.textContent='Исполнители · нет связи';window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0}}));}
+        const stamp=typeof observedAt==='number'?new Date(observedAt*1000):null;
+        const timeText=stamp&&Number.isFinite(stamp.getTime())?stamp.toLocaleString():'время неизвестно';
+        const stateLabel={
+          OBSERVED:'OBSERVED · снимок актуален',
+          STALE:'STALE · снимок устарел',
+          UNAVAILABLE:'UNAVAILABLE · снимок недоступен',
+          MODEL_UPDATE:'MODEL_UPDATE · maintenance присутствует',
+          HOLD_MAINTENANCE_UNKNOWN:'HOLD_MAINTENANCE_UNKNOWN · maintenance неизвестен'
+        }[state];
+        const trainHold='training_held='+String(value.training_held);
+        label.textContent='Исполнители · '+stateLabel+' · maintenance='+maintenance
+          +(observedState?' · '+timeText:'')+' · '+trainHold;
+        label.dataset.state=state;
+        label.title='Ограниченный снимок status-файла; PID и факт приёма STOP здесь не проверяются.';
+        const busy=state==='OBSERVED'?rows.filter(row=>row.status==='busy').length:0;
+        window.dispatchEvent(new CustomEvent('nox:workers',{detail:{
+          online:state==='OBSERVED',busy,state,configured:observedState?value.configured:null,
+          observed_at:observedState?observedAt:null,owner_maintenance:maintenance,
+          training_held:value.training_held
+        }}));
+        for(const [index,worker] of rows.entries()){
+          const fresh=state==='OBSERVED',busyRow=fresh&&worker.status==='busy';
+          const chipText=state==='OBSERVED'
+            ?String(index+1)+' · '+(busyRow?'busy · снимок':'idle · снимок')
+            :'нет свежих данных · '+String(index+1);
+          const chip=E('span',chipText,'nox-live-chip');
+          chip.dataset.state=busyRow?'busy':state.toLowerCase();
+          chip.title=worker.task_id?worker.id+' · '+worker.task_id:worker.id;
+          chips.append(chip);
+        }
+      }catch{
+        label.textContent='Исполнители · UNAVAILABLE';
+        label.dataset.state='UNAVAILABLE';
+        label.title='Снимок status-файла сейчас недоступен.';
+        window.dispatchEvent(new CustomEvent('nox:workers',{detail:{online:false,busy:0,state:'UNAVAILABLE'}}));
+      }
     }
     void refresh();setInterval(()=>void refresh(),10000);
   }
