@@ -569,6 +569,29 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(history[0],{'role':'user','content':'Вопрос 2'})
         self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 13'})
         self.assertTrue(all(row['content']!='Незавершённая пара' for row in history))
+    def test_dialog_context_rejects_tampered_receipt_bound_assistant_before_inference(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
+            _db,_dialog_context,_save_exchange,
+        )
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Receipt-bound context','confirmed':True}).json()['dialog_id']
+        self.assertTrue(_save_exchange(dialog,'Original user prompt',
+                                       'Original assistant answer','receipt-integrity-test'))
+        issue,history=_dialog_context(dialog)
+        self.assertIsNone(issue)
+        self.assertEqual(history[-1]['content'],'Original assistant answer')
+        # Simulate a partial restore/edit: plain messages are readable but no
+        # longer match the durable exchange receipt. Never feed them to model.
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_dialog_messages SET content=? '
+                       'WHERE dialog_id=? AND role=?',
+                       ('Changed assistant answer',dialog,'assistant'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Second turn must not see drift'})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_RECEIPT_MISMATCH'})
+        self.assertEqual(self.calls,[])
+
     def test_dialog_context_preserves_full_multibyte_ru_and_es_text(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,

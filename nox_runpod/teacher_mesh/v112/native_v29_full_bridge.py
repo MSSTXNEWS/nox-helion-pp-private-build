@@ -393,11 +393,16 @@ def _dialog_context(dialog_id):
             'CASE WHEN length(CAST(a.content AS BLOB))<=? THEN a.content END AS answer, '
             'length(u.content) AS question_chars,length(a.content) AS answer_chars, '
             'length(CAST(u.content AS BLOB)) AS question_bytes, '
-            'length(CAST(a.content AS BLOB)) AS answer_bytes '
+            'length(CAST(a.content AS BLOB)) AS answer_bytes, '
+            'r.receipt_id,r.turn_id,r.lease_epoch,r.writer,r.committed_at,'
+            'r.user_sha256,r.assistant_sha256,r.receipt_sha256,r.verified,a.exchange_id '
             'FROM nox_v29_dialog_messages AS a '
             'JOIN nox_v29_dialog_messages AS u '
             'ON u.dialog_id=a.dialog_id AND u.exchange_id=a.exchange_id '
-            "AND u.role='user' WHERE a.dialog_id=? AND a.role='assistant' "
+            "AND u.role='user' "
+            'LEFT JOIN nox_v29_exchange_receipts AS r '
+            'ON r.dialog_id=a.dialog_id AND r.exchange_id=a.exchange_id '
+            "WHERE a.dialog_id=? AND a.role='assistant' "
             'ORDER BY a.row_id DESC LIMIT 12',
             (max_field_utf8_bytes,max_field_utf8_bytes,dialog_id)).fetchall()
     pairs=[];size=0
@@ -414,6 +419,20 @@ def _dialog_context(dialog_id):
                 or len(question.encode('utf-8'))!=question_bytes
                 or len(answer.encode('utf-8'))!=answer_bytes):
             return 'HOLD_DIALOG_CONTEXT_CONTENT',[]
+        # A readable pair is not proof that it was ever committed by the
+        # owner writer. Verify the exact receipt and both full-text hashes
+        # before admitting the pair into the NEXT model inference.
+        receipt_fields=('receipt_id','turn_id','lease_epoch','exchange_id',
+                        'committed_at','user_sha256','assistant_sha256','receipt_sha256')
+        if (row['writer']!='V112_OWNER_DIALOG_WRITER' or row['verified']!=1
+                or any(not isinstance(row[key],str) for key in receipt_fields)
+                or hashlib.sha256(question.encode('utf-8')).hexdigest()!=row['user_sha256']
+                or hashlib.sha256(answer.encode('utf-8')).hexdigest()!=row['assistant_sha256']
+                or _receipt_sha256(_receipt_payload(dialog_id,row['turn_id'],
+                   row['receipt_id'],row['lease_epoch'],row['exchange_id'],
+                   row['committed_at'],row['user_sha256'],
+                   row['assistant_sha256']))!=row['receipt_sha256']):
+            return 'HOLD_DIALOG_CONTEXT_RECEIPT_MISMATCH',[]
         pair_size=question_bytes+answer_bytes
         if size+pair_size>max_history_utf8_bytes:
             return 'HOLD_DIALOG_CONTEXT_BUDGET',[]
