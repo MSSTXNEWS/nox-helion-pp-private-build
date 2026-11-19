@@ -263,17 +263,22 @@ def _dialog_context(dialog_id):
             return 'HOLD_DIALOG_SCOPE_NOT_BOUND',[]
         if bool(found['archived']):
             return 'HOLD_DIALOG_ARCHIVED',[]
-        stats=db.execute(
-            'SELECT COUNT(*), '
-            'COALESCE(SUM(length(CAST(content AS BLOB))),0), '
-            'COALESCE(MAX(length(content)),0) '
-            'FROM nox_v29_dialog_messages WHERE dialog_id=?',
-            (dialog_id,)).fetchone()
-        message_count,total_bytes,max_chars=stats[0],stats[1],stats[2]
+        message_count=db.execute(
+            'SELECT COUNT(*) FROM ('
+            'SELECT row_id FROM nox_v29_dialog_messages WHERE dialog_id=? '
+            'ORDER BY row_id LIMIT 25)',(dialog_id,)).fetchone()[0]
         if message_count>24:
             return 'HOLD_HISTORY_LIMIT',[]
-        if max_chars>8000:
-            return 'HOLD_HISTORY_CONTENT',[]
+        encoding=db.execute('PRAGMA encoding').fetchone()[0]
+        if not isinstance(encoding,str) or encoding.upper()!='UTF-8':
+            return 'HOLD_HISTORY_ENCODING_UNSUPPORTED',[]
+        try:
+            total_bytes=db.execute(
+                'SELECT COALESCE(SUM(octet_length(content)),0) '
+                'FROM nox_v29_dialog_messages WHERE dialog_id=?',
+                (dialog_id,)).fetchone()[0]
+        except sqlite3.OperationalError:
+            return 'HOLD_HISTORY_BYTE_LENGTH_UNAVAILABLE',[]
         if total_bytes>121000:
             return 'HOLD_HISTORY_SIZE',[]
         invalid_pair=db.execute(
