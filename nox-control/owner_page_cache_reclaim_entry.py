@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path('/root/nox')
 STOP_NAMES = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
-              'state/STOP', 'state/STOP.flag')
+              'state/STOP', 'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag')
 HELPER_SOURCE_COMMIT = 'e35f194fc62fc3b91ea573dfc0149f8bb8c84258'
 HELPER_BLOB_SHA = '569c8f727d1c3b2bee656b03f5766771ea4220ef'
 RECEIPT_SCHEMA = 'NOX_OWNER_PAGE_CACHE_RECLAIM_GUARD_V1'
