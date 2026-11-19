@@ -358,6 +358,86 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                          ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
         self.assertEqual(len(submissions), 1, "recovered lease is not replay authority")
 
+
+    def test_chat_arrives_after_leaf_submit_or_event_pop_no_duplicate(self):
+        # Two chat races exercised against the actual AST-extracted leaf handler.
+        import hashlib
+        import json
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "Native")
+        method = next(n for n in native.body
+                      if isinstance(n, ast.FunctionDef) and n.name == "_handle_leaf")
+        def encoded(value):
+            return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":"), allow_nan=False).encode()
+        def digest(raw):
+            return hashlib.sha256(raw).hexdigest()
+        for chat_call in (1, 2):
+            with self.subTest(chat_call=chat_call):
+                seen, submits, closes = [], [], []
+                scope = {
+                    "LEAF_HANDLER": "leaf", "ROLES": ("runtime", "memory", "weights"),
+                    "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1", "sqlite3": sqlite3,
+                    "time": time, "GateError": RuntimeError,
+                    "encoded": encoded, "digest": digest,
+                    "remember": lambda _: self.fail("chat forbids S03 admission"),
+                    "chat_priority_active": lambda: (
+                        seen.append(1) is None and len(seen) >= chat_call),
+                }
+                exec(compile(ast.fix_missing_locations(
+                    ast.Module(body=[method], type_ignores=[])), str(SOURCE), "exec"), scope)
+                task = {
+                    "id": "B1-INFLIGHT-CHAT", "handler": "leaf", "queue_id": "Q1",
+                    "owner_claim": {"nonce": "original-claim"}, "title": "cpu",
+                    "params": {"operation": "chat_health", "parent_task_id": "6V14-03",
+                               "source_sha256": "source-sha", "job_id": "job-1"}}
+                pins = {"source.py": "pinned-sha"}
+                leaf = {"worker": {"pid": 17, "process_starttime": 999},
+                        "check_completed": True, "check_passed": True,
+                        "original_task_accepted": False, "model_called": False,
+                        "claim": "original-claim", "operation": "chat_health",
+                        "parent_task_id": "6V14-03", "queue_id": "Q1",
+                        "source_sha256": "source-sha", "source_pins": pins}
+                event = {"state": "NATIVE_LEAF_COMPLETED", "pid": 17,
+                         "leaf_evidence": leaf, "leaf_evidence_sha256": digest(encoded(leaf))}
+                owner = SimpleNamespace(
+                    catalog={"tasks": [task]}, source="source-sha",
+                    config={"leaf_source_pins": pins}, lock=threading.RLock(),
+                    interrupted={}, completed={}, pool=None,
+                    _claim_current=lambda *a, **kw: True, stop_active=lambda: False,
+                    writer_lease=lambda: True, owner_allowed=lambda: True,
+                    _fresh_admission_reason=lambda **_: None,
+                    process_readback=lambda: [
+                        {"role": "runtime", "pid": 17, "process_starttime": 999}],
+                    _drain=lambda: None,
+                    ns={"owner_mentor": SimpleNamespace(clean=lambda x: x)})
+                def submit(payload):
+                    submits.append(payload)
+                    owner.completed[task["id"]] = event
+                def close(reason):
+                    closes.append(reason)
+                    owner.pool = None  # The handler must retain the HOLD itself.
+                owner.pool = SimpleNamespace(active={}, submit=submit)
+                owner.close_pool = close
+                first = scope["_handle_leaf"](owner, task)
+                if chat_call == 1:
+                    self.assertEqual(first, ("wait", "WAIT_OWNER_CHAT_PRIORITY"))
+                    self.assertEqual(closes, ["WAIT_OWNER_CHAT_PRIORITY"])
+                    self.assertEqual(owner.interrupted[task["id"]],
+                                     "HOLD_NATIVE_LEAF_CHAT_UNSETTLED")
+                else:
+                    self.assertEqual(first, ("wait", "HOLD_NATIVE_LEAF_RESULT_UNSETTLED"))
+                    self.assertEqual(closes, [])
+                    self.assertEqual(owner.interrupted[task["id"]],
+                                     "HOLD_NATIVE_LEAF_RESULT_UNSETTLED")
+                self.assertEqual(len(submits), 1)
+                scope["chat_priority_active"] = lambda: False
+                self.assertEqual(scope["_handle_leaf"](owner, task),
+                                 ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
+                self.assertEqual(len(submits), 1)
+
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
