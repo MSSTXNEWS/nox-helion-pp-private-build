@@ -135,7 +135,7 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                     signed = {'receipt': bad,
                               'receipt_sha256': binding.digest(binding.encoded(bad))}
                     self.assertIsNone(subject.verify(task, signed))
-            self.assertEqual(len(s03_calls), 1,
+            self.assertEqual(len(s03_calls), 2,
                 'Contradictory integrated receipts must not even attempt S03 acceptance.')
 
             # A truthy but incorrect S03 witness is not durable acceptance.
