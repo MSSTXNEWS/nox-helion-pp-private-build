@@ -1509,3 +1509,25 @@ test('V182 legacy CJK and Hangul safely stream before native completion with S03
     assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
   }
 });
+
+
+test('V183 native-delta pacing limits rAF waits while retaining every token and S03 proof',async()=>{
+  const reply='Ж'.repeat(960)+'🧠'+'español';
+  let frames=0,timers=0;
+  const scheduler={
+    requestAnimationFrame(cb){frames++;queueMicrotask(()=>cb(performance.now()));return frames;},
+    cancelAnimationFrame(){},
+    setTimeout(cb,ms){timers++;return setTimeout(cb,ms);},
+    clearTimeout(id){clearTimeout(id);}
+  };
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,scheduler,false,480);
+  const output=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v183-one-frame'})}));
+  assert.equal(output.filter(e=>e.type==='token').map(e=>e.t).join(''),reply);
+  assert.equal(output.filter(e=>e.type==='done').length,1);
+  assert.equal(output.filter(e=>e.type==='error').length,0);
+  assert.equal(frames,2,'one visual frame wait per each of the two real native chunks');
+  assert.equal(timers,2,'fallback timers do not multiply per chunk');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+});
