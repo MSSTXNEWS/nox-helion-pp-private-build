@@ -13,6 +13,21 @@ FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/own
 GPU_INVENTORY_BLOB_SHA='cccdd726fc8de79f8ebe449bac537aba07a3cbcf'
 GPU_INVENTORY_MARKER='NOX_MAINT_GPU_INVENTORY='
 GPU_INVENTORY_COMPLETE='NOX_MAINT_GPU_INVENTORY_COMPLETE=true'
+GPU_INVENTORY_RESULT_PREFIX='NOX_MAINT_GPU_INVENTORY_RESULT='
+GPU_INVENTORY_HELPER_HOLDS=frozenset((
+    'HOLD_GPU_INVENTORY_INVALID','HOLD_GPU_INVENTORY_HOST_CLOCK',
+    'HOLD_GPU_INVENTORY_OUTPUT_BOUND','HOLD_GPU_INVENTORY_CSV',
+    'HOLD_GPU_INVENTORY_ROW_SHAPE','HOLD_GPU_INVENTORY_INDEX',
+    'HOLD_GPU_INVENTORY_MODEL','HOLD_GPU_INVENTORY_IDENTITY',
+    'HOLD_GPU_INVENTORY_MEMORY','HOLD_GPU_INVENTORY_GPU_COUNT',
+    'HOLD_GPU_INVENTORY_DUPLICATE_INDEX','HOLD_GPU_INVENTORY_DUPLICATE_UUID',
+    'HOLD_GPU_INVENTORY_NVIDIA_SMI','HOLD_GPU_INVENTORY_NVIDIA_SMI_RC',
+    'HOLD_GPU_INVENTORY_CLOCK_DRIFT','HOLD_GPU_INVENTORY_BOOT_OR_UPTIME',
+    'HOLD_GPU_INVENTORY_DEVICE_DRIFT','HOLD_GPU_INVENTORY_ACTION_PIN',
+    'HOLD_GPU_INVENTORY_INSTANCE_PIN','HOLD_GPU_INVENTORY_SOURCE_PIN',
+    'HOLD_GPU_INVENTORY_REQUEST_PIN',
+))
+
 GPU_INVENTORY_UUID_RE=re.compile(r'^GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 GPU_INVENTORY_BOOT_RE=re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 MASTER=None
@@ -845,6 +860,118 @@ def _has_exact_terminal_completion_marker(stdout,marker):
     return not any(line.startswith('NOX_MAINT_') and index>marker_index
                    for index,line in enumerate(lines))
 
+def _gpu_inventory_diagnostic(origin,exit_code,failure_class,hold,helper_hold=None):
+    """Build only fixed, bounded diagnostics for a failed GPU inventory action."""
+    allowed_origins={'SSH','REMOTE_HELPER'}
+    allowed_classes={
+        'HELPER_HOLD','HELPER_EXIT_MISMATCH','MALFORMED_HELPER_OUTPUT',
+        'UNRECOGNIZED_HELPER_HOLD','SSH_EXIT_255','SSH_AUTH_REJECTED',
+        'SSH_TOO_MANY_AUTH_FAILURES','SSH_HOST_KEY_REJECTED',
+        'SSH_CONNECTION_RESET','SSH_CONNECTION_CLOSED','SSH_CONNECTION_REFUSED',
+        'SSH_CONNECTION_TIMEOUT','SSH_ROUTE_UNAVAILABLE','SSH_MUX_SOCKET_FAILURE',
+        'SSH_KEX_FAILURE','REMOTE_RESULT_MISSING','REMOTE_OUTPUT_OVERSIZE',
+        'REMOTE_OUTPUT_INVALID','REMOTE_EXIT_INVALID',
+    }
+    allowed_operator_holds={
+        'HOLD_GPU_INVENTORY_HELPER_FAILURE',
+        'HOLD_GPU_INVENTORY_HELPER_EXIT_MISMATCH',
+        'HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE',
+        'HOLD_GPU_INVENTORY_SSH_FAILURE',
+        'HOLD_GPU_INVENTORY_RESULT_MISSING',
+        'HOLD_GPU_INVENTORY_REMOTE_OUTPUT_OVERSIZE',
+        'HOLD_GPU_INVENTORY_REMOTE_OUTPUT_INVALID',
+        'HOLD_GPU_INVENTORY_REMOTE_EXIT_INVALID',
+    }
+    if origin not in allowed_origins or failure_class not in allowed_classes:
+        origin='REMOTE_HELPER';failure_class='MALFORMED_HELPER_OUTPUT'
+    if hold not in GPU_INVENTORY_HELPER_HOLDS and hold not in allowed_operator_holds:
+        hold='HOLD_GPU_INVENTORY_HELPER_FAILURE'
+    if helper_hold not in GPU_INVENTORY_HELPER_HOLDS:
+        helper_hold=None
+    if not (type(exit_code) is int and 0<=exit_code<=255):
+        exit_code='INVALID'
+    records=[
+        'NOX_MAINT_GPU_INVENTORY_FAILURE_ORIGIN='+origin,
+        'NOX_MAINT_GPU_INVENTORY_REMOTE_EXIT_CODE='+str(exit_code),
+        'NOX_MAINT_GPU_INVENTORY_FAILURE_CLASS='+failure_class,
+    ]
+    if helper_hold is not None:
+        records.append('NOX_MAINT_GPU_INVENTORY_HELPER_HOLD='+helper_hold)
+    records.append('NOX_MAINT_GPU_INVENTORY_HOLD='+hold)
+    return {'records':records,'hold':hold}
+
+
+def _gpu_inventory_ssh_failure_class(stderr):
+    """Map stderr to fixed SSH classes; never return or log its text."""
+    if not isinstance(stderr,str):return 'SSH_EXIT_255'
+    message=stderr[:2048].lower()
+    rules=(
+        ('permission denied (publickey)','SSH_AUTH_REJECTED'),
+        ('too many authentication failures','SSH_TOO_MANY_AUTH_FAILURES'),
+        ('host key verification failed','SSH_HOST_KEY_REJECTED'),
+        ('remote host identification has changed','SSH_HOST_KEY_REJECTED'),
+        ('connection reset by','SSH_CONNECTION_RESET'),
+        ('connection closed by','SSH_CONNECTION_CLOSED'),
+        ('connection refused','SSH_CONNECTION_REFUSED'),
+        ('connection timed out','SSH_CONNECTION_TIMEOUT'),
+        ('operation timed out','SSH_CONNECTION_TIMEOUT'),
+        ('no route to host','SSH_ROUTE_UNAVAILABLE'),
+        ('network is unreachable','SSH_ROUTE_UNAVAILABLE'),
+        ('controlpath','SSH_MUX_SOCKET_FAILURE'),
+        ('mux_client','SSH_MUX_SOCKET_FAILURE'),
+        ('kex_exchange_identification','SSH_KEX_FAILURE'),
+        ('banner exchange','SSH_KEX_FAILURE'),
+    )
+    return next((code for token,code in rules if token in message),'SSH_EXIT_255')
+
+
+def _gpu_inventory_remote_failure(stdout,stderr,remote_exit_code):
+    """Classify GPU helper/SSH failure before success-marker schema validation."""
+    if type(remote_exit_code) is not int or not 0<=remote_exit_code<=255:
+        return _gpu_inventory_diagnostic(
+            'REMOTE_HELPER','INVALID','REMOTE_EXIT_INVALID',
+            'HOLD_GPU_INVENTORY_REMOTE_EXIT_INVALID')
+    if not isinstance(stdout,str):
+        return _gpu_inventory_diagnostic(
+            'REMOTE_HELPER',remote_exit_code,'REMOTE_OUTPUT_INVALID',
+            'HOLD_GPU_INVENTORY_REMOTE_OUTPUT_INVALID')
+    if len(stdout)>=MAX_FORWARD_LINE_CHARS:
+        origin='SSH' if remote_exit_code==255 else 'REMOTE_HELPER'
+        return _gpu_inventory_diagnostic(
+            origin,remote_exit_code,'REMOTE_OUTPUT_OVERSIZE',
+            'HOLD_GPU_INVENTORY_REMOTE_OUTPUT_OVERSIZE')
+    lines=stdout.splitlines()
+    markers=[line for line in lines if line.startswith('NOX_MAINT_')]
+    result_lines=[line for line in markers if line.startswith(GPU_INVENTORY_RESULT_PREFIX)]
+    if result_lines:
+        if len(result_lines)!=1 or len(markers)!=1:
+            return _gpu_inventory_diagnostic(
+                'REMOTE_HELPER',remote_exit_code,'MALFORMED_HELPER_OUTPUT',
+                'HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE')
+        helper_hold=result_lines[0][len(GPU_INVENTORY_RESULT_PREFIX):]
+        if helper_hold not in GPU_INVENTORY_HELPER_HOLDS:
+            return _gpu_inventory_diagnostic(
+                'REMOTE_HELPER',remote_exit_code,'UNRECOGNIZED_HELPER_HOLD',
+                'HOLD_GPU_INVENTORY_HELPER_FAILURE')
+        if remote_exit_code==2:
+            return _gpu_inventory_diagnostic(
+                'REMOTE_HELPER',remote_exit_code,'HELPER_HOLD',helper_hold,
+                helper_hold=helper_hold)
+        return _gpu_inventory_diagnostic(
+            'REMOTE_HELPER',remote_exit_code,'HELPER_EXIT_MISMATCH',
+            'HOLD_GPU_INVENTORY_HELPER_EXIT_MISMATCH',
+            helper_hold=helper_hold)
+    if remote_exit_code==0:
+        return None
+    if remote_exit_code==255:
+        return _gpu_inventory_diagnostic(
+            'SSH',remote_exit_code,_gpu_inventory_ssh_failure_class(stderr),
+            'HOLD_GPU_INVENTORY_SSH_FAILURE')
+    return _gpu_inventory_diagnostic(
+        'REMOTE_HELPER',remote_exit_code,'REMOTE_RESULT_MISSING',
+        'HOLD_GPU_INVENTORY_RESULT_MISSING')
+
+
 def forward_remote_stdout(stdout,action,request_id,source_sha):
     """Return only bounded marker lines; oversized audit records become a verified bundle."""
     if action=='source_attest':return forward_source_attestation_stdout(stdout)[0]
@@ -1404,6 +1531,11 @@ def run_native(action,request_id):
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
     r=subprocess.run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
     source_sha=os.environ.get('NOX_PINNED_SOURCE_SHA','')
+    if action=='gpu_inventory':
+        failure=_gpu_inventory_remote_failure(r.stdout,r.stderr,r.returncode)
+        if failure is not None:
+            for line in failure['records']:print(line,flush=True)
+            raise RuntimeError(failure['hold'])
     forwarded=forward_remote_stdout(r.stdout,action,int(request_id),source_sha)
     for line in forwarded:print(line,flush=True)
     print('NOX_MAINT_REMOTE_EXIT_CODE='+str(r.returncode),flush=True)
