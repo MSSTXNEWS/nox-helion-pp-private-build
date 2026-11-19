@@ -55,6 +55,38 @@ class CredentialPathAstShapeTests(unittest.TestCase):
         self.assertLessEqual(shape["node_count"], 64)
         self.assertLessEqual(max(row["children"] for row in shape["nodes"]), 64)
 
+    def test_unresolved_name_receipt_uses_only_binding_enum_and_scope(self):
+        expr = ast.parse("PRIVATE_BINDING_IDENTIFIER").body[0].value
+        diagnostic = QA.safe_name_binding_diagnostic(
+            expr.id, seen=(), definitions={}, common_defs={}, scope="proxy")
+        error = QA.credential_path_not_static(expr, diagnostic)
+        status = {"outcome": str(error)}
+        QA.add_credential_path_ast_shape(status, error)
+        receipt_text = json.dumps(status, sort_keys=True)
+        self.assertEqual(status["credential_path_name_binding"], {
+            "binding_state": "unbound", "scope": "proxy"})
+        self.assertNotIn("PRIVATE_BINDING_IDENTIFIER", receipt_text)
+        self.assertNotIn("PRIVATE_BINDING_IDENTIFIER", json.dumps(error.safe_ast_shape))
+
+    def test_binding_enum_classifies_without_serializing_identifiers(self):
+        secret_name = "REDACTED_ALIAS"
+        cases = (
+            ((), {secret_name: object()}, {}, "proxy", "defined"),
+            ((), {}, {}, "proxy", "unbound"),
+            ((secret_name,), {secret_name: object()}, {}, "proxy", "cycle"),
+            ((), {}, {secret_name: object()}, "proxy", "ambiguous"),
+            ((), {}, {}, "local", "unbound"),
+            ((), {}, {}, "common", "unbound"),
+        )
+        for seen, definitions, common_defs, scope, expected in cases:
+            with self.subTest(scope=scope, expected=expected):
+                result = QA.safe_name_binding_diagnostic(
+                    secret_name, seen, definitions, common_defs, scope)
+                self.assertEqual(result["binding_state"], expected)
+                self.assertEqual(result["scope"], scope)
+                self.assertEqual(set(result), {"binding_state", "scope"})
+                self.assertNotIn(secret_name, json.dumps(result))
+
     def test_shape_is_bounded_for_large_ast(self):
         expr = ast.parse("f(" + ",".join("x" for _ in range(100)) + ")").body[0].value
         shape = QA.safe_ast_shape(expr, max_nodes=8, max_depth=12)
