@@ -322,10 +322,14 @@ def tick(policy, state, *, dry_run=False, now=None, status_fn=supervise, stop_fn
         if current.get("state") in ("UNKNOWN", "FATAL", "BACKOFF", "STARTING", "STOPPING"):
             action = "owner_investigation_required"
         elif bad and row["failures"] >= policy["consecutive_failures"]:
-            if stop_fn():
-                action = "stop_or_maintenance_lock"
-            elif not policy["enabled"] or spec["restart"] is not True:
+            # Disabled observation and per-service restart=False are true
+            # no-op modes. Do not touch the shared owner lock on this path;
+            # the observer can still persist telemetry while an owner action
+            # holds the exclusive maintenance lock.
+            if not policy["enabled"] or spec["restart"] is not True:
                 action = "owner_authorization_required"
+            elif stop_fn():
+                action = "stop_or_maintenance_lock"
             elif len(attempts) >= policy["daily_limit"]:
                 action = "daily_repair_budget_exhausted"
             elif sum(now - x < 3600 for x in attempts) >= 2:
