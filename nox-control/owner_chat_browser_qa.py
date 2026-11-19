@@ -78,14 +78,25 @@ def public_numeric_answer(value):
     return re.sub(r'\s+','',value)
 
 
+def ru_es_context_challenge(token):
+    """Per-dialog order so a second answer cannot pass by reciting 10..1."""
+    if not isinstance(token, str) or not re.fullmatch(r'[a-p]{5,32}', token):
+        raise RuntimeError('HOLD_QA_CHALLENGE_TOKEN')
+    order = sorted(range(1, 11),
+                   key=lambda number: digest((token + ':' + str(number)).encode('ascii')))
+    if order in (list(range(1, 11)), list(range(10, 0, -1))):
+        order = order[1:] + order[:1]
+    return ','.join(map(str, order))
+
+
 def multiturn_followup_prompt(token, mode):
     """Optional RU->ES owner QA, never enabled for normal or legacy runs."""
     if mode not in ('multiturn', 'multiturn_ru_es'):
         raise RuntimeError('HOLD_QA_LANGUAGE_MODE')
     prefix = '[NOX UI QA ' + token + '] '
     if mode == 'multiturn_ru_es':
-        return (prefix + 'Usando únicamente la respuesta anterior en ruso, '
-                'escribe los mismos números del diez al uno, separados por comas. '
+        return (prefix + 'Usando únicamente la respuesta a la pregunta anterior en ruso, '
+                'escribe esa misma secuencia de números en orden inverso, separados por comas. '
                 'Sin explicaciones ni otras palabras.')
     return (prefix + 'Используя предыдущий ответ, перечисли '
             'те же числа в обратном порядке через запятую. Без пояснений.')
@@ -639,7 +650,12 @@ async def browser_run(report, directory, available):
     origin=urllib.parse.urlsplit(base).netloc
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
     title='NOX Browser QA '+token
-    prompt='[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.'
+    ru_es=report.get('language_pair')=='RU_ES'
+    expected_first=ru_es_context_challenge(token) if ru_es else EXPECTED
+    prompt=('[NOX UI QA '+token+'] Повтори числа точно в том же порядке через запятую: '
+            +expected_first+'. Без пояснений и других слов.') if ru_es else (
+            '[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.')
+    expected_second=','.join(reversed(expected_first.split(','))) if ru_es else '10,9,8,7,6,5,4,3,2,1'
     second_prompt=multiturn_followup_prompt(
         token, 'multiturn_ru_es' if report.get('language_pair') == 'RU_ES' else 'multiturn')
     second_permitted=False
@@ -843,7 +859,7 @@ async def browser_run(report, directory, available):
             report.update(stream=final,s03_readback_verified=bool(saved and native_equal),
                           actual_native_model_stream_verified=bool(final['native_calls']==1 and all(final['done'].values())),
                           answer_sha256=digest(answer.encode()),answer_characters=len(answer),
-                          synthetic_number_sequence_pass=public==EXPECTED,
+                          synthetic_number_sequence_pass=public==expected_first,
                           synthetic_public_numeric_answer=public,
                           progressive_stream_render_verified=progressive_stream_valid(final),
                           elapsed_turn_ms=round((time.monotonic()-started)*1000))
@@ -852,11 +868,11 @@ async def browser_run(report, directory, available):
             if not report['stop_visible_during_generation']:
                 raise RuntimeError('HOLD_QA_ACTIVE_STOP_LAYOUT')
             masks=[page.locator(selector) for selector in SENSITIVE_MASKS]
-            if not saved or public!=EXPECTED:
+            if not saved or public!=expected_first:
                 masks.append(page.locator('#messages'))
             report['browser_stage']='QA_COMPLETED_SCREENSHOT'
             await capture_private_screenshot(page,report,directory,'completed',masks,
-                'VERIFIED_PUBLIC_NUMERIC_QA' if public==EXPECTED and saved else 'MASKED_QA_MESSAGES',
+                'VERIFIED_PUBLIC_NUMERIC_QA' if public==expected_first and saved else 'MASKED_QA_MESSAGES',
                 (TimeoutError,PlaywrightTimeoutError))
             core=(report['webgl_visible'] and report['canvas_animation_observed']
                   and all(final['done'].values()) and saved and native_equal
@@ -865,7 +881,7 @@ async def browser_run(report, directory, available):
                 raise RuntimeError('HOLD_GRAPHICAL_ACCEPTANCE_INCOMPLETE')
             if not report['progressive_stream_render_verified']:
                 raise RuntimeError('HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED')
-            if public!=EXPECTED:
+            if public!=expected_first:
                 raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
             if report.get('two_turn_mode') is True:
                 # The owner-scoped second request is allowed only after a full
@@ -923,12 +939,12 @@ async def browser_run(report, directory, available):
                               multiturn_second_visible_progressive=second_progressive,
                               multiturn_second_stop_visible=second_stop,
                               multiturn_second_answer_sha256=digest(second_answer.encode()),
-                              multiturn_second_numeric_pass=second_public=='10,9,8,7,6,5,4,3,2,1',
+                              multiturn_second_numeric_pass=second_public==expected_second,
                               multiturn_native_post_count=second_final['native_calls'],
                               multiturn_second_elapsed_ms=round((time.monotonic()-second_started)*1000))
                 if not (second_saved and second_native_equal and second_done
                         and second_progressive and second_stop
-                        and second_public=='10,9,8,7,6,5,4,3,2,1'):
+                        and second_public==expected_second):
                     raise RuntimeError('HOLD_MULTITURN_BROWSER')
                 if not canonical_s03_verified:
                     raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
