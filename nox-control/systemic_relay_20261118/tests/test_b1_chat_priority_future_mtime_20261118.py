@@ -959,6 +959,85 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         self.assertGreaterEqual(calls.count("review"), 3)
         self.assertGreaterEqual(calls.count("leaf"), 3)
 
+    def test_restart_corrupt_queue_schema_stays_unsettled_without_replay(self):
+        # Exercise the actual restart reconciliation method, not a mock
+        # implementation; an invalid original queue is never S03 acceptance.
+        import hashlib
+        import json
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                      and n.name == "Native")
+        method = next(n for n in native.body if isinstance(n, ast.FunctionDef)
+                      and n.name == "_durable_terminal_s03_readback")
+        encoded = lambda obj: json.dumps(
+            obj, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        digest = lambda data: hashlib.sha256(data).hexdigest()
+        db = Path("/isolated/B1-restart-proof.sqlite")
+        calls = []
+        scope = {
+            "document": lambda path, limit: json.loads(Path(path).read_text()),
+            "encoded": encoded, "digest": digest, "GateError": RuntimeError,
+            "sqlite3": sqlite3, "DB": db,
+            "HANDLER": "review", "LEAF_HANDLER": "leaf",
+            "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+            "s03_readback": lambda receipt: calls.append(receipt) or None,
+        }
+        exec(compile(ast.fix_missing_locations(ast.Module(
+            body=[method], type_ignores=[])), str(SOURCE), "exec"), scope)
+        reconcile = scope["_durable_terminal_s03_readback"]
+        task_id = "B1-RESTART-SCHEMA"
+        with tempfile.TemporaryDirectory() as tmp:
+            statefile = Path(tmp) / "queue.json"
+            owner = SimpleNamespace(ns={"STATE": statefile,
+                                        "_qlock": threading.RLock()})
+            for bad in ([], None, {"tasks": []}, {"tasks": "wrong"},
+                        {"tasks": {task_id: {"params": ["not", "a", "dict"]}}},
+                        {"tasks": {task_id: {"params": {}}}}):
+                with self.subTest(shape=repr(bad)):
+                    statefile.write_text(json.dumps(bad))
+                    self.assertIsNone(reconcile(owner, task_id))
+                    self.assertEqual(calls, [], "corrupt queue cannot reach S03")
+            claim = {"nonce": "1234567890ab1234567890ab"}
+            intent = {"schema": "NOX_NATIVE_WORKER_SUBMIT_INTENT_V1",
+                      "task_id": task_id, "handler": "review",
+                      "owner_claim": claim, "job_id": "job-1",
+                      "source_sha256": "pinned", "created_at": 1.0}
+            receipt = {"schema": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+                       "phase": "NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED",
+                       "task_id": task_id, "job_id": "job-1",
+                       "claim": claim, "source_sha256": "pinned"}
+            terminal = {"schema": "NOX_NATIVE_WORKER_TERMINAL_EVIDENCE_V1",
+                        "submit_intent_sha256": digest(encoded(intent)),
+                        "receipt_sha256": digest(encoded(receipt)),
+                        "receipt": receipt}
+            row = {"status": "running", "handler": "review",
+                   "params": {"job_id": "job-1"}, "owner_claim": claim,
+                   "native_worker_submit_intent": intent,
+                   "native_worker_terminal_evidence": terminal}
+            # Even a valid initial state cannot settle if the second queue
+            # readback discovers schema corruption DURING the S03 call.
+            statefile.write_text(json.dumps({"tasks": {task_id: row}}))
+            def revoke_during_s03(_):
+                calls.append("s03-read")
+                statefile.write_text(json.dumps({"tasks": []}))
+                return {"native_verified": True, "task_id": task_id,
+                        "job_id": "job-1", "phase": receipt["phase"],
+                        "receipt_sha256": digest(encoded(receipt)),
+                        "s03_item_id": 9, "database": str(db)}
+            scope["s03_readback"] = revoke_during_s03
+            self.assertIsNone(reconcile(owner, task_id))
+            self.assertEqual(calls, ["s03-read"])
+            # A structurally valid queue with NaN intent cannot be hashed,
+            # and must remain unresolved instead of raising ValueError.
+            calls.clear()
+            malformed = json.loads(json.dumps({"tasks": {task_id: row}}))
+            malformed["tasks"][task_id]["native_worker_submit_intent"]["created_at"] = float("nan")
+            statefile.write_text(json.dumps(malformed))
+            self.assertIsNone(reconcile(owner, task_id))
+            self.assertEqual(calls, [], "noncanonical intent must not reach S03")
+
     def test_s03_readback_nonobject_metadata_fails_closed(self):
         # Execute the actual S03 receipt reader without a live host connection.
         # Valid JSON with a non-dict root must not crash interrupted recovery.

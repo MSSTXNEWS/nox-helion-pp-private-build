@@ -1483,24 +1483,37 @@ class Native:
 
     def _durable_terminal_s03_readback(self, task_id):
         """Read-only exact receipt/S03 reconciliation; never clears a claim."""
-        with self.ns['_qlock']:
-            row = (document(self.ns['STATE'], 16*1024*1024)
-                   .get('tasks') or {}).get(task_id)
-        if not isinstance(row, dict):
+        # A damaged or partially written original queue must not throw during
+        # STOP/reconnect recovery or be mistaken for permission to replay IPC.
+        try:
+            with self.ns['_qlock']:
+                snapshot = document(self.ns['STATE'], 16*1024*1024)
+                tasks = snapshot.get('tasks') if isinstance(snapshot, dict) else None
+                row = tasks.get(task_id) if isinstance(tasks, dict) else None
+        except (OSError, ValueError, TypeError, KeyError, GateError):
+            return None
+        if not isinstance(row, dict) or not isinstance(row.get('params'), dict):
             return None
         intent = row.get('native_worker_submit_intent')
         terminal = row.get('native_worker_terminal_evidence')
         if not isinstance(intent, dict) or not isinstance(terminal, dict):
             return None
         receipt = terminal.get('receipt')
+        # A damaged JSON value may be valid JSON but invalid canonical proof.
+        # Do not allow a serializer exception to interrupt restart recovery.
+        try:
+            intent_hash = digest(encoded(intent))
+            receipt_hash = digest(encoded(receipt)) if isinstance(receipt, dict) else None
+        except (TypeError, ValueError, OverflowError):
+            return None
         phase = ({HANDLER: 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED',
                   LEAF_HANDLER: 'NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED'}
                  .get(row.get('handler')))
         if (terminal.get('schema') != 'NOX_NATIVE_WORKER_TERMINAL_EVIDENCE_V1'
                 or intent.get('schema') != 'NOX_NATIVE_WORKER_SUBMIT_INTENT_V1'
                 or not isinstance(receipt, dict) or phase is None
-                or terminal.get('submit_intent_sha256') != digest(encoded(intent))
-                or terminal.get('receipt_sha256') != digest(encoded(receipt))
+                or terminal.get('submit_intent_sha256') != intent_hash
+                or terminal.get('receipt_sha256') != receipt_hash
                 or intent.get('task_id') != task_id
                 or intent.get('owner_claim') != row.get('owner_claim')
                 or intent.get('handler') != row.get('handler')
@@ -1541,8 +1554,9 @@ class Native:
         # Never report a terminal result against an outdated queue snapshot.
         try:
             with self.ns['_qlock']:
-                current = (document(self.ns['STATE'], 16*1024*1024)
-                           .get('tasks') or {}).get(task_id)
+                refreshed = document(self.ns['STATE'], 16*1024*1024)
+                tasks = refreshed.get('tasks') if isinstance(refreshed, dict) else None
+                current = tasks.get(task_id) if isinstance(tasks, dict) else None
         except (OSError, ValueError, TypeError, KeyError, GateError):
             return None
         if current != row:
