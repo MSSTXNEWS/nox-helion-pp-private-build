@@ -232,7 +232,8 @@ test('V135 upstream transport failure requests scoped STOP before closing the fa
   assert(frames.some(e=>e.type==='error'),'the caller must receive a terminal error');
   assert(!f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')),
     'a failed stream cannot certify S03 history');
-  assert.equal(JSON.parse(stops[0].body).gpu_stop_verified,true,false);
+  assert.notEqual(JSON.parse(stops[0].body).gpu_stop_verified,true,
+    'transport STOP receipt is not proof that GPU execution stopped');
 });
 
 test('V135 already-aborted caller never starts a native inference',async()=>{
