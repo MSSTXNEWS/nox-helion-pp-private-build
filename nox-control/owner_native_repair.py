@@ -1,356 +1,65 @@
-#!/usr/bin/env python3
-"""One real owner-authenticated NOX model stream and S03 dialog readback.
+"""Activate the native NOX V38 owner dialog in an authenticated maintenance run."""
 
-No browser install, GPU allocation, app reload, credentials export or destructive
-change. A uniquely labelled synthetic test dialog is the only persistent write.
-"""
-from __future__ import annotations
-import ast
-import fcntl
-import hashlib
-import http.cookiejar
-import ipaddress
+import base64
+from contextlib import ExitStack
+from hashlib import sha256
 import json
-import os
 from pathlib import Path
-import re
-import signal
-import socket
-import stat
-import struct
-import subprocess
 import sys
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
-
-ROOT = Path('/root/nox')
-SCRIPTS = ROOT / 'scripts'
-PINS = {'owner_chat_stream.py': 'a26ec83aadac240d7284959b53cf7e59575e8e487d27c962cec7236892ccc7af',
-        'nox_v29_chat_bridge.py': '29121089891a27a0ae28795d1240788421320743a17370858c4d53aca1789e8b'}
-STOPS = tuple(ROOT / name for name in
-    ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'state/STOP', 'program/STOP'))
-SCHEMA = 'NOX_V38_OWNER_DIALOG_RECEIPT_V1'
+from types import ModuleType
 
 
-def fail(code):
-    raise RuntimeError('HOLD_SMART_CHAT_QA_' + code)
+BUNDLE = __NOX_BUNDLE_JSON__
+BUNDLE_MANIFEST = {'assets': {'owner_refresh_cognition_c02_stop.py': '2a6f8c1655af53b03f0e29b5c64616ebff8a525e7581b5b3fa1501c8a489cbee', 'owner_ndjson_stop_patch.py': '6dc38439d3688c1575ceabdb68c1ec158ab8a13960e777d1cd09ae1e43258ce5', 'nox_v38_native_context.py': '1c45cedb5a775a550563107f16707b7c667113d811f48604d5b75d9259aa8390', 'nox_v38_s03_native.py': 'ea4cea470c196973d0c83f4edc0172b5758992febc63d231f1235e18364ab7f0', 'owner_previous_product_dialog.py': 'bdfb1f585222eb4ee4ded231f1ebbbaefa87ee2061edca5a646927e1ff50f940'}, 'installed': {'nox_v29_chat_bridge.py': 'f9163a748c969198b990cd98d7366fa2eaba69eb97c44f5fa8ea4d5d7a10bdcf', 'nox_v38_native_context.py': '1c45cedb5a775a550563107f16707b7c667113d811f48604d5b75d9259aa8390', 'nox_v38_s03_native.py': 'ea4cea470c196973d0c83f4edc0172b5758992febc63d231f1235e18364ab7f0'}}
+INSTALLED_MANIFEST = '1b296411a4b9e297f285fb8a67c8cd0555e85bbed561d1a55fdcb94b6cdcd683'
+BRAIN = Path('/root/nox/ops/nox-brain-v38')
+BRAIN_FILES = frozenset(('__init__.py', 'synaptic_brain.py', 'native_bridge_v38.py', 'durable_runtime.py'))
 
 
-def emit(data):
-    print('NOX_MAINT_REPAIR=' + json.dumps({'kind': 'smart_chat_owner_e2e_qa', 'data': data},
-        separators=(',', ':'), sort_keys=True, allow_nan=False), flush=True)
+def digest(raw):
+    return sha256(raw).hexdigest()
 
 
-def check_stop():
-    if any(os.path.lexists(x) for x in STOPS):
-        fail('OWNER_STOP')
-
-
-def local_base():
-    for _, name in socket.if_nameindex():
-        if name == 'lo':
-            continue
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                raw = fcntl.ioctl(sock.fileno(), 0x8915,
-                    struct.pack('256s', name.encode()[:15]))
-            host = socket.inet_ntoa(raw[20:24])
-            if ipaddress.ip_address(host).is_private:
-                return 'http://' + host + ':8080'
-        except (OSError, ValueError):
-            continue
-    fail('SCOPED_OWNER_ORIGIN_UNAVAILABLE')
-
-
-def http_request(opener, url, method='GET', payload=None, timeout=9, stream=False):
-    data = json.dumps(payload, ensure_ascii=False, separators=(',', ':')).encode() if payload is not None else None
-    headers = {'Accept': 'application/json', 'Connection': 'close'}
-    if data is not None:
-        headers['Content-Type'] = 'application/json'
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
-    response = opener.open(request, timeout=timeout)
-    if stream:
-        return response
-    with response:
-        raw = response.read(262145)
-        if len(raw) > 262144:
-            fail('HTTP_RESPONSE_OVERSIZE')
-        if response.status != 200:
-            fail('HTTP_STATUS')
-        if urllib.parse.urlsplit(url).path in ('/chat/login', '/chat/session'):
-            return {'http_status': response.status}
-        return json.loads(raw)
-
-
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *args, **kwargs):
-        return None
-
-
-def process_state(service):
-    run = subprocess.run(['supervisorctl', 'status', service],
-        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL, timeout=6)
-    lines = run.stdout.decode('utf-8', 'replace').strip().splitlines()
-    # supervisorctl right-pads service names with spaces. Match columns, not
-    # a literal single-space prefix, and pin the actual reported PID.
-    match = (re.fullmatch(re.escape(service) + r'\s+RUNNING\s+pid\s+([0-9]{1,10}),.*',
-                        lines[0]) if len(lines) == 1 else None)
-    if run.returncode != 0 or match is None:
-        fail('SERVICE_NOT_RUNNING_' + service.upper().replace('-','_'))
-    pid = int(match.group(1))
-    if not Path('/proc', str(pid), 'stat').is_file():
-        fail('SERVICE_PID_NOT_LIVE_' + service.upper().replace('-','_'))
-    return True
-
-
-def snapshots():
-    maximum = (Path('/sys/fs/cgroup/memory.max')).read_text().strip()
-    current = (Path('/sys/fs/cgroup/memory.current')).read_text().strip()
-    events = {}
-    for line in Path('/sys/fs/cgroup/memory.events').read_text().splitlines():
-        parts = line.split()
-        if len(parts) == 2 and parts[0] in ('oom','oom_kill') and parts[1].isdigit():
-            events[parts[0]] = int(parts[1])
-    if not maximum.isdigit() or not current.isdigit() or events.get('oom', -1) < 0:
-        fail('CGROUP_UNKNOWN')
-    return {'raw_margin_bytes': int(maximum)-int(current), 'oom': events['oom'],
-            'oom_kill': events.get('oom_kill', -1)}
-
-
-
-def owner_password_without_proxy_import():
-    """Read only the literal owner password path in the pinned native source.
-
-    Never execute chat_proxy.py and never log or export the password bytes.
-    """
-    proxy = SCRIPTS / 'chat_proxy.py'
-    meta = proxy.lstat()
-    if (not stat.S_ISREG(meta.st_mode) or meta.st_nlink != 1 or
-            meta.st_uid != os.geteuid() or meta.st_size > 1048576):
-        fail('PROXY_SOURCE_SCOPE')
-    raw = proxy.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != '9fedaefbe39f4cac8a47d77bb0dada2ccf09c43ec38a5624869d3a00c0fbe5a3':
-        fail('PROXY_SOURCE_CAS')
-    tree = ast.parse(raw)
-    definitions = {}
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-            definitions[node.targets[0].id] = node.value
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            definitions[node.target.id] = node.value
-
-    # The owner path is `SECRETS / <filename>`; SECRETS is imported from
-    # common.py. Resolve just its pinned static AST, never import common.
-    common = SCRIPTS / 'common.py'
-    common_meta = common.lstat()
-    if (not stat.S_ISREG(common_meta.st_mode) or common_meta.st_nlink != 1 or
-            common_meta.st_uid != os.geteuid() or common_meta.st_size > 1048576):
-        fail('COMMON_SOURCE_SCOPE')
-    common_raw = common.read_bytes()
-    if hashlib.sha256(common_raw).hexdigest() != '177fbe5df042ba75a94cf9b7c03c8ffe58bde99f12599193db0cf383cc1305dd':
-        fail('COMMON_SOURCE_CAS')
-    common_defs = {}
-    for node in ast.parse(common_raw).body:
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-            if node.targets[0].id in ('ROOT', 'SECRETS'):
-                common_defs[node.targets[0].id] = node.value
-    if set(common_defs) != {'ROOT', 'SECRETS'}:
-        fail('COMMON_SECRET_BINDING_SCOPE')
-
-    def literal_path(expr, seen=(), scope='proxy'):
-
-        if len(seen) >= 8:
-            fail('CREDENTIAL_PATH_DEPTH')
-        defs = definitions if scope == 'proxy' else common_defs
-        if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
-            return Path(expr.value)
-        if (isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name)
-                and expr.func.id == 'Path' and len(expr.args) == 1 and not expr.keywords):
-            return literal_path(expr.args[0], seen, scope)
-        if isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Div):
-            left, right = literal_path(expr.left, seen, scope), literal_path(expr.right, seen, scope)
-            if right.is_absolute():
-                fail('CREDENTIAL_PATH_ESCAPE')
-            return left / right
-        if isinstance(expr, ast.Name) and expr.id not in seen and expr.id in defs:
-            return literal_path(defs[expr.id], seen + (expr.id,), scope)
-        if isinstance(expr, ast.Name) and expr.id == 'SECRETS' and 'SECRETS' not in seen and scope == 'proxy':
-            return literal_path(common_defs['SECRETS'], seen + ('SECRETS',), 'common')
-        fail('CREDENTIAL_PATH_NOT_STATIC')
-
-    if 'CHAT_PASSWORD_PATH' not in definitions:
-        fail('CREDENTIAL_PATH_NOT_DECLARED')
-    path = literal_path(definitions['CHAT_PASSWORD_PATH'])
-    if not path.is_absolute() or '..' in path.parts or path.parts[:3] != ('/', 'root', 'nox'):
-        fail('CREDENTIAL_PATH_NOT_OWNER_SCOPED')
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
-    try:
-        meta = os.fstat(descriptor)
-        if (not stat.S_ISREG(meta.st_mode) or meta.st_uid != os.geteuid() or
-                meta.st_nlink != 1 or (meta.st_mode & 0o077) != 0 or
-                not 1 <= meta.st_size <= 4096):
-            fail('CREDENTIAL_FILE_SCOPE')
-        raw_password = os.read(descriptor, 4097)
-        if len(raw_password) != meta.st_size:
-            fail('CREDENTIAL_FILE_CHANGED')
-        return raw_password.decode('utf-8').strip()
-    finally:
-        os.close(descriptor)
-
-
-
-def accept_turn(base, opener, status, dialog_id, question):
-    check_stop()
-    status['actual_generation_requests'] += 1
-    response = http_request(opener, base + '/api/nox/chat/stream', 'POST',
-        {'message': question, 'dialog_id': dialog_id}, timeout=150, stream=True)
-    seen = []; answer = []; error = None; done = None; total = 0
-    with response:
-        if response.status != 200:
-            fail('CHAT_STREAM_HTTP')
-        while True:
-            line = response.readline(65537)
-            if not line:
-                break
-            total += len(line)
-            if len(line) > 65536 or total > 262144:
-                fail('CHAT_STREAM_SIZE')
-            if not line.strip():
-                continue
-            frame = json.loads(line)
-            if not isinstance(frame, dict):
-                fail('CHAT_FRAME_SHAPE')
-            kind = frame.get('type')
-            if kind == 'delta' and isinstance(frame.get('text'), str):
-                answer.append(frame['text'])
-                if sum(len(x) for x in answer) > 4000:
-                    fail('CHAT_OUTPUT_SCOPE')
-            if kind == 'error':
-                error = frame.get('error')
-                break
-            if kind == 'done':
-                done = frame
-                break
-            if kind in ('preparing','start','delta'):
-                seen.append(kind)
-    final = ''.join(answer)
-    status['stream_types_seen'] = sorted(set(seen))
-    status['answer_characters'] = len(final)
-    status['answer_sha256'] = hashlib.sha256(final.encode()).hexdigest() if final else None
-    status['done_received'] = bool(done)
-    status['upstream_error_code'] = error if isinstance(error, str) and re.fullmatch(
-        r'[A-Z0-9_]{3,100}', error) else type(error).__name__ if error else None
-    if error or not done or not final.strip() or final.strip() in ('—','-','...'):
-        fail('MODEL_STREAM_INCOMPLETE')
-    if done.get('saved') is not True or done.get('s03_integrated') is not True:
-        fail('S03_TERMINAL_RECEIPT')
-    if done.get('dialog_id') != dialog_id:
-        fail('DIALOG_SCOPE_CHANGED')
-    return final, done
+def module(name, source):
+    value = ModuleType(name)
+    sys.modules[name] = value
+    exec(compile(source, name + '.py', 'exec'), value.__dict__)
+    return value
 
 
 def main():
-    request_id = os.environ.get('NOX_OWNER_REQUEST_ID', '')
-    sha = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
-    labels = {os.environ[key].removeprefix('C.') for key in ('VAST_CONTAINERLABEL', 'CONTAINER_ID') if os.environ.get(key)}
-    if os.geteuid() != 0 or labels != {'60509551'} or not re.fullmatch(r'[0-9]{1,24}', request_id) or not re.fullmatch(r'[0-9a-f]{40}', sha):
-        fail('OWNER_CONTEXT')
-    status = {'schema': SCHEMA, 'request': request_id, 'source_sha': sha,
-        'actual_generation_requests': 0, 'chat_behavior_verified': False,
-        's03_dialog_readback_verified': False, 'private_bodies_exported': False,
-        'credentials_exported': False, 'services_modified': False,
-        'stop_flags_changed': False}
-    success = False
+    if set(BUNDLE) != set(BUNDLE_MANIFEST['assets']):
+        raise RuntimeError('HOLD_COGNITION_BUNDLE_SCOPE')
+    raw = {name: base64.b64decode(value, validate=True) for name, value in BUNDLE.items()}
+    if any(digest(data) != BUNDLE_MANIFEST['assets'][name] for name, data in raw.items()):
+        raise RuntimeError('HOLD_COGNITION_BUNDLE_PIN')
+    control = module('owner_refresh_cognition_c02_stop', raw.pop('owner_refresh_cognition_c02_stop.py'))
+    patch = module('owner_ndjson_stop_patch', raw.pop('owner_ndjson_stop_patch.py'))
+    dialog_module = module('owner_previous_product_dialog', raw.pop('owner_previous_product_dialog.py'))
+    with ExitStack() as stack:
+        release = control.directory(stack, BRAIN)
+        manifest, _ = control.read(release, 'release.json')
+        if manifest is None or digest(manifest) != INSTALLED_MANIFEST:
+            raise RuntimeError('HOLD_COGNITION_BRAIN_MANIFEST')
+        package = control.directory(stack, BRAIN / 'v38')
+        pins = json.loads(manifest)['files_sha256']
+        for name in BRAIN_FILES:
+            data, _ = control.read(package, name)
+            if data is None or digest(data) != pins['v38/' + name]:
+                raise RuntimeError('HOLD_COGNITION_BRAIN_MODULE')
+    bridge = 'nox_v29_chat_bridge.py'
+    raw[bridge] = patch.transform(bridge, control.current_patch_preimages()[bridge])
+    receipt = control.activate(payloads=raw, sha256=BUNDLE_MANIFEST['installed'])
+    print('NOX_MAINT_COGNITION_ACTIVE=' + json.dumps(receipt, separators=(',', ':'), sort_keys=True))
     try:
-        check_stop()
-        for name, pin in PINS.items():
-            path = SCRIPTS / name
-            meta = path.lstat()
-            if not stat.S_ISREG(meta.st_mode) or meta.st_nlink != 1:
-                fail('SOURCE_SCOPE')
-            if hashlib.sha256(path.read_bytes()).hexdigest() != pin:
-                fail('SOURCE_IDENTITY')
-        for name in ('nox-proxy','nox-ds41-8098','nox-web29-18775'):
-            process_state(name)
-        before = snapshots()
-        status['resource_before'] = before
-        if before['oom'] != 0 or before['oom_kill'] != 0 or before['raw_margin_bytes'] < 8*1024*1024:
-            fail('RESOURCE_ADMISSION')
-        # Separate cookies from the owner's real browser. No user dialog read.
-        jar = http.cookiejar.CookieJar()
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
-            urllib.request.HTTPCookieProcessor(jar), NoRedirect())
-        base = local_base()
-        try:
-            http_request(opener, base + '/api/ui/executors', timeout=6)
-            fail('ANONYMOUS_SCOPE_LEAK')
-        except urllib.error.HTTPError as error:
-            if error.code != 401:
-                fail('ANONYMOUS_SCOPE_UNVERIFIED')
-        password = owner_password_without_proxy_import()
-        if not isinstance(password, str) or not 6 <= len(password) <= 4096:
-            fail('NATIVE_OWNER_CREDENTIAL')
-        login = http_request(opener, base + '/chat/login', 'POST', {'password': password}, timeout=9)
-        password = None
-        status['owner_login_verified'] = isinstance(login, dict)
-        session = http_request(opener, base + '/chat/session', timeout=9)
-        status['owner_session_verified'] = isinstance(session, dict)
-        if not status['owner_login_verified'] or not status['owner_session_verified']:
-            fail('OWNER_SESSION')
-        title = 'NOX V38 — приёмка ' + request_id
-        created = http_request(opener, base + '/api/ui/memory/dialogs/create',
-            'POST', {'title': title, 'confirmed': True}, timeout=9)
-        dialog_id = created.get('dialog_id') if isinstance(created, dict) else None
-        if not isinstance(dialog_id, str) or not re.fullmatch(r'[0-9a-f]{32}', dialog_id):
-            fail('QA_DIALOG_NOT_CREATED')
-        status['synthetic_dialog_created'] = True
-        log = ROOT / 'logs' / 'proxy.log'
-        before_log = log.stat()
-        questions = (
-            'В этом отдельном диалоге кодовое название штабного проекта — МаякСевер. Ответь одним словом: принято.',
-            'Какое кодовое название у штабного проекта из первого сообщения? Мне тревожно. Назови только название.',
-        )
-        turns = [accept_turn(base, opener, status, dialog_id, prompt) for prompt in questions]
-        history = http_request(opener, base + '/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=10', timeout=9)
-        messages = history.get('messages', []) if isinstance(history, dict) else []
-        if len(messages) != 4 or any(
-            pair.get('role') != role or pair.get('content') != value or pair.get('exchange_id') != exchange
-            for index, (answer, done) in enumerate(turns)
-            for pair, (role, value, exchange) in zip(messages[2*index:2*index+2], (
-                ('user', questions[index], done.get('exchange_id')), ('assistant', answer, done.get('exchange_id'))))
-        ):
-            fail('S03_DIALOG_READBACK_MISMATCH')
-        status['same_dialog_context_answered'] = 'маяксевер' in turns[-1][0].casefold()
-        after_log = log.stat()
-        if before_log.st_ino == after_log.st_ino and 0 <= after_log.st_size - before_log.st_size <= 262144:
-            with log.open('rb') as stream:
-                stream.seek(before_log.st_size)
-                fresh = stream.read(after_log.st_size - before_log.st_size).decode('utf-8', 'replace')
-            markers = re.findall(r'nox_v38_context state=([A-Z_]+) hits=(\d+) affect=(True|False) persona=([A-Z_]+|None) cores=(\{[^\r\n]*\})', fresh)
-            if len(markers) == 2:
-                status['v38_turn_receipts'] = [
-                    {'state': state, 'hits': int(hits), 'affect': affect == 'True', 'persona': persona,
-                     'cores': {k: v for k, v in ast.literal_eval(cores).items()
-                               if re.fullmatch(r'C0[1-8]', k) and re.fullmatch(r'[A-Z_]+', v)}}
-                    for state, hits, affect, persona, cores in markers]
-        check_stop()
-        after = snapshots()
-        status['resource_after'] = after
-        if after['oom_kill'] != before['oom_kill']:
-            fail('OOM_KILL_AFTER_GENERATION')
-        status.update(chat_behavior_verified=True, s03_dialog_readback_verified=True,
-            outcome='NATIVE_OWNER_TWO_TURNS_AND_EXACT_S03_DIALOG_READBACK')
-        success = True
+        status = dialog_module.resume_product_dialog()
+        print('NOX_MAINT_COGNITION_DIALOG=' + json.dumps(status, separators=(',', ':'), sort_keys=True), flush=True)
     except Exception as error:
-        code = str(error)
-        status['outcome'] = code if re.fullmatch(r'HOLD_SMART_CHAT_QA_[A-Z0-9_]{1,100}', code) else 'HOLD_SMART_CHAT_QA_' + type(error).__name__.upper()
-    emit(status)
-    print('NOX_MAINT_REPAIR_COMPLETE=' + str(success).lower(), flush=True)
-    return 0 if success else 2
+        reason = str(error)
+        import re
+        print('NOX_MAINT_COGNITION_DIALOG_HOLD=' + (reason if re.fullmatch(r'HOLD_SMART_CHAT_QA_[A-Z0-9_]{1,100}', reason) else type(error).__name__), flush=True)
+    print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    main()
