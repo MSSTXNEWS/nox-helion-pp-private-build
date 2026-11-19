@@ -46,9 +46,9 @@ def decode(name):
 def deleted_open_census():
     """Bounded aggregate of unlinked-but-open inodes, without path/PID export."""
     proc = Path("/proc")
-    classes = {"NOX_SSD": set(), "TMPFS_SHM": set(), "OTHER": set()}
-    total = {"NOX_SSD":0, "TMPFS_SHM":0, "OTHER":0}
-    counts = {"NOX_SSD":0, "TMPFS_SHM":0, "OTHER":0}
+    classes = {key: set() for key in ("MEMFD_SHMEM", "NOX_SSD", "TMPFS_SHM", "OTHER")}
+    total = {key:0 for key in classes}
+    counts = {key:0 for key in classes}
     incomplete, fds = False, 0
     root_device, shm_device = ROOT.stat().st_dev, Path("/dev/shm").stat().st_dev
     try:
@@ -64,13 +64,15 @@ def deleted_open_census():
                         incomplete = True
                         break
                     try:
-                        if not os.readlink(fd.path).endswith(" (deleted)"):
+                        link = os.readlink(fd.path)
+                        if not link.endswith(" (deleted)"):
                             continue
                         info = os.stat(fd.path)
                         if not stat.S_ISREG(info.st_mode):
                             continue
                         key = (info.st_dev, info.st_ino)
-                        category = ("NOX_SSD" if info.st_dev == root_device else
+                        category = ("MEMFD_SHMEM" if link.startswith(("memfd:", "/memfd:")) else
+                                    "NOX_SSD" if info.st_dev == root_device else
                                     "TMPFS_SHM" if info.st_dev == shm_device else "OTHER")
                         if key not in classes[category]:
                             classes[category].add(key)
