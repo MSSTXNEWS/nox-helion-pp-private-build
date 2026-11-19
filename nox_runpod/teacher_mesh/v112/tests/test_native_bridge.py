@@ -550,6 +550,212 @@ class V112Tests(unittest.TestCase):
             {'role':'user','content':'Как он называется?'}])
         self.assertEqual(json.loads(response.text.splitlines()[-1])['type'],'done')
 
+    def test_owner_dialog_history_cursor_pages_all_messages_once_in_order(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'История страницами','confirmed':True}).json()['dialog_id']
+        for index in range(130):
+            self.assertTrue(_save_exchange(dialog,f'Вопрос {index}',f'Ответ {index}',
+                                          f'page-{index}'))
+        collected=[]
+        cursor=None
+        page_count=0
+        while True:
+            query={'dialog_id':dialog,'limit':100}
+            if cursor is not None:
+                query['cursor']=cursor
+            response=self.client.get('/api/ui/memory/dialogs/history',
+                                     params=query,cookies=self.cookie)
+            self.assertEqual(response.status_code,200)
+            page=response.json()
+            self.assertEqual(page['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+            self.assertFalse(page['canonical_s03_readback_verified'])
+            self.assertEqual(page['dialog_id'],dialog)
+            collected=page['messages']+collected
+            page_count+=1
+            next_cursor=page['next_cursor']
+            if next_cursor is None:
+                break
+            self.assertRegex(next_cursor,r'^[1-9][0-9]{0,18}        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
+            _db,_dialog_context,_save_exchange,
+        )
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Ограниченный контекст','confirmed':True}).json()['dialog_id']
+        for index in range(14):
+            self.assertTrue(_save_exchange(dialog,f'Вопрос {index}',f'Ответ {index}',
+                                          f'bounded-{index}'))
+        with _db(True) as db:
+            db.execute('INSERT INTO nox_v29_dialog_messages '
+                       '(dialog_id,exchange_id,role,content,ts) VALUES(?,?,?,?,?)',
+                       (dialog,'orphan','assistant','Незавершённая пара','2026-11-15'))
+        issue,history=_dialog_context(dialog)
+        self.assertIsNone(issue)
+        self.assertEqual(len(history),24)
+        self.assertEqual(history[0],{'role':'user','content':'Вопрос 2'})
+        self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 13'})
+        self.assertTrue(all(row['content']!='Незавершённая пара' for row in history))
+    def test_dialog_context_preserves_full_multibyte_ru_and_es_text(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Полный многоязычный контекст','confirmed':True}).json()['dialog_id']
+        question='Русский вопрос: '+('ёжик ' * 900)
+        answer='Respuesta española: '+('niño café ☕ ' * 400)
+        self.assertLessEqual(len(question),8000)
+        self.assertLessEqual(len(answer),8000)
+        self.assertTrue(_save_exchange(dialog,question,answer,'multibyte-full-context'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Продолжи','history':[]})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(self.calls[-1]['messages'],[
+            {'role':'user','content':question},
+            {'role':'assistant','content':answer},
+            {'role':'user','content':'Продолжи'}])
+        frames=[json.loads(line) for line in response.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1]['type'],'done')
+
+    def test_dialog_context_oversized_message_holds_before_model(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Слишком длинный контекст','confirmed':True}).json()['dialog_id']
+        oversized='Я'*1000000
+        self.assertTrue(_save_exchange(dialog,oversized,'saved reply','oversized-message'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
+        self.assertEqual(self.calls,[])
+
+    def test_dialog_context_embedded_nul_cannot_bypass_message_limit(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db,_save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'NUL length guard','confirmed':True}).json()['dialog_id']
+        oversized='\0'+'x'*8001
+        self.assertTrue(_save_exchange(dialog,oversized,'saved reply','nul-message'))
+        with _db() as db:
+            stored=db.execute('SELECT content,length(content) AS sqlite_chars '
+                              'FROM nox_v29_dialog_messages WHERE dialog_id=? '
+                              "AND role='user'",(dialog,)).fetchone()
+            self.assertEqual(stored['sqlite_chars'],0)
+            self.assertEqual(len(stored['content']),8002)
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT'})
+        self.assertEqual(self.calls,[])
+
+    def test_dialog_context_budget_overflow_holds_before_model(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Бюджет полного контекста','confirmed':True}).json()['dialog_id']
+        for index in range(8):
+            self.assertTrue(_save_exchange(dialog,'q'*8000,'a'*8000,
+                                           f'budget-pair-{index}'))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не отправлять модели','history':[]})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json(),{'error':'HOLD_DIALOG_CONTEXT_BUDGET'})
+        self.assertEqual(self.calls,[])
+
+    def test_dialog_context_keeps_owner_and_archive_guards(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Владелец','confirmed':True}).json()['dialog_id']
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_dialogs SET archived=1 WHERE dialog_id=?',(dialog,))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не начинать вывод'})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json()['error'],'HOLD_DIALOG_ARCHIVED')
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_dialogs SET archived=0,owner=? WHERE dialog_id=?',
+                       ('different-owner',dialog))
+        response=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'dialog_id':dialog,'message':'Не читать чужой контекст'})
+        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.json()['error'],'HOLD_DIALOG_SCOPE_NOT_BOUND')
+        self.assertEqual(self.calls,[])
+
+    def test_exact_dialog_writer_receipt_does_not_depend_on_legacy_match(self):
+        self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'No fuzzy matcher','confirmed':True}).json()['dialog_id']
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+          json={'message':'Другой уникальный вопрос','dialog_id':dialog})
+        frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
+        self.assertEqual(frames[-1]['type'],'done')
+        proof=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,
+            json={key:frames[-1][key] for key in ('dialog_id','turn_id','receipt_id','lease_epoch')})
+        self.assertEqual(proof.status_code,200,proof.text)
+        self.assertEqual(proof.json()['messages'][0]['content'],'Другой уникальный вопрос')
+
+    def test_no_dialog_legacy_caller_keeps_existing_s03_readback_behavior(self):
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'legacy no-dialog prompt'})
+        self.assertEqual(r.status_code,200,r.text[:200])
+        frames=[json.loads(line) for line in r.text.splitlines() if line.strip()]
+        done=frames[-1]
+        self.assertEqual(done['type'],'done')
+        self.assertTrue(done['saved']);self.assertTrue(done['s03_integrated'])
+        self.assertIsNone(done['dialog_id'])
+        self.assertEqual(done['exchange_id'],'fixture-memory-0001')
+        self.assertNotIn('receipt_id',done)
+
+    def test_no_dialog_legacy_caller_still_holds_without_old_s03_write(self):
+        self.record=False
+        r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
+            json={'message':'legacy missing S03 write'})
+        frames=[json.loads(line) for line in r.text.splitlines() if line.strip()]
+        self.assertEqual(frames[-1],{'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
+        self.assertFalse(any(frame.get('saved') for frame in frames))
+
+    def test_dialog_revision_and_archive(self):
+        created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+          json={'title':'Вопрос','confirmed':True}).json()
+        changed=self.client.post('/api/ui/memory/dialogs/update',cookies=self.cookie,
+          json={'dialog_id':created['dialog_id'],'revision':created['revision'],
+                'archived':True,'confirmed':True})
+        self.assertTrue(changed.json()['archived'])
+        duplicate=self.client.post('/api/ui/memory/dialogs/update',cookies=self.cookie,
+          json={'dialog_id':created['dialog_id'],'revision':created['revision'],
+                'archived':False,'confirmed':True})
+        self.assertEqual(duplicate.status_code,409)
+
+    def test_owner_only_static_html_bootstrap(self):
+        ok=self.client.get('/nox-web-v29/chat.html',cookies=self.cookie)
+        self.assertEqual(ok.status_code,200)
+        self.assertIn('src="/nox-web-v29/native-owner.js"',ok.text)
+        js=self.client.get('/nox-web-v29/native-owner.js',cookies=self.cookie)
+        self.assertEqual(js.status_code,200)
+        self.assertIn('NOX_NATIVE_OWNER = true',js.text)
+        nested=self.client.get('/nox-web-v29/pc/pages/cinema/index.html',cookies=self.cookie)
+        self.assertEqual(nested.status_code,200)
+        self.assertIn('src="/nox-web-v29/native-owner.js"',nested.text)
+        self.assertNotIn('src="./native-owner.js"',nested.text)
+
+    def test_no_false_gpu_stop(self):
+        r=self.client.post('/api/nox/stop',cookies=self.cookie,json={})
+        self.assertEqual(r.status_code,409)
+        self.assertNotIn('gpu_stop_verified',r.json())
+
+    def test_s03_timestamp_guard(self):
+        self.assertLess(_timestamp('2025-01-01T00:00:00Z'), _timestamp('2026-11-14T00:00:00Z'))
+
+if __name__=='__main__':
+    unittest.main()
+)
+            self.assertTrue(cursor is None or int(next_cursor)<int(cursor))
+            cursor=next_cursor
+            self.assertLessEqual(page_count,4)
+        self.assertEqual(page_count,3)
+        self.assertEqual(len(collected),260)
+        self.assertEqual([(m['role'],m['content']) for m in collected],
+            [(role,content) for index in range(130) for role,content in
+             (('user',f'Вопрос {index}'),('assistant',f'Ответ {index}'))])
+        bad=self.client.get('/api/ui/memory/dialogs/history',
+            params={'dialog_id':dialog,'cursor':'0'},cookies=self.cookie)
+        self.assertEqual(bad.status_code,422)
+        self.assertEqual(bad.json()['error'],'INVALID_CURSOR')
+
     def test_dialog_context_is_recent_bounded_complete_pairs(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
             _db,_dialog_context,_save_exchange,

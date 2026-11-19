@@ -702,6 +702,14 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         id=request.query_params.get('dialog_id','')
         try:limit=max(1,min(int(request.query_params.get('limit','100')),100))
         except ValueError:return JSONResponse({'error':'INVALID_LIMIT'},status_code=422)
+        cursor_text=request.query_params.get('cursor')
+        cursor=None
+        if cursor_text is not None:
+            if not re.fullmatch(r'[1-9][0-9]{0,18}',cursor_text):
+                return JSONResponse({'error':'INVALID_CURSOR'},status_code=422)
+            cursor=int(cursor_text)
+            if cursor>9223372036854775807:
+                return JSONResponse({'error':'INVALID_CURSOR'},status_code=422)
         if not _schema_ready():
             return JSONResponse({'status':'HOLD','reason':'OWNER_DIALOG_SCHEMA_MISSING'},status_code=503)
         try:
@@ -709,15 +717,25 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 row=_get_dialog(db,id)
                 if row is None:
                     return JSONResponse({'error':'DIALOG_NOT_FOUND'},status_code=404)
-                msgs=db.execute(
-                   'SELECT role,content,ts,exchange_id FROM nox_v29_dialog_messages '
-                   'WHERE dialog_id=? ORDER BY row_id DESC LIMIT ?',
-                   (id,limit)).fetchall()
+                if cursor is None:
+                    msgs=db.execute(
+                       'SELECT row_id,role,content,ts,exchange_id FROM nox_v29_dialog_messages '
+                       'WHERE dialog_id=? ORDER BY row_id DESC LIMIT ?',
+                       (id,limit+1)).fetchall()
+                else:
+                    msgs=db.execute(
+                       'SELECT row_id,role,content,ts,exchange_id FROM nox_v29_dialog_messages '
+                       'WHERE dialog_id=? AND row_id<? ORDER BY row_id DESC LIMIT ?',
+                       (id,cursor,limit+1)).fetchall()
+            has_more=len(msgs)>limit
+            msgs=msgs[:limit]
+            next_cursor=str(msgs[-1]['row_id']) if has_more and msgs else None
             return {'status':'READY','dialog_id':id,'revision':row['revision'],
                     'store_scope':'OWNER_DIALOG_TABLES_ONLY',
                     'canonical_s03_readback_verified':False,
                     'messages':[{'role':x['role'],'content':x['content'],'ts':x['ts'],
-                                 'exchange_id':x['exchange_id']} for x in reversed(msgs)]}
+                                 'exchange_id':x['exchange_id']} for x in reversed(msgs)],
+                    'next_cursor':next_cursor}
         except (OSError,RuntimeError,sqlite3.Error):
             return JSONResponse({'status':'HOLD','reason':'OWNER_DIALOG_HISTORY_FAILED'},status_code=503)
 

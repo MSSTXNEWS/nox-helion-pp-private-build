@@ -9,8 +9,8 @@ const JS=fs.readFileSync(file,'utf8');
 const capPolicyPath='coordination/onepass/v135_owner_bridge_cap_policy.json';
 const capPolicyBytes=fs.readFileSync(capPolicyPath);
 const capPolicy=JSON.parse(capPolicyBytes);
-const CAP_POLICY_SHA256='74f16458cd7c2e295403d6569c289ec4861b036c60c72065d0ad8560164f2218';
-const OWNER_BRIDGE_SHA256='3de9f87874534e603e4040f4fc10a018679820569431a7a0b230bda035552af3';
+const CAP_POLICY_SHA256='12caea73f6c2fa31ca8e42da829dbbefdb0c0904039b03c08585556c0082a10f';
+const OWNER_BRIDGE_SHA256='a79e967fb5683b90630e0b31f4dec3b6c9556c8baa2b934c66df0105343edb19';
 const V112=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py','utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
@@ -22,11 +22,11 @@ const ownerDialog={turn_id:'11111111111111111111111111111111',
  writer:'V112_OWNER_DIALOG_WRITER',receipt_sha256:'a'.repeat(64)};
 test('V135 staged owner bridge matches the pinned measured cap policy',()=>{
   const n=Buffer.byteLength(JS,'utf8');
-  assert.equal(n,24669);
+  assert.equal(n,25158);
   assert.equal(crypto.createHash('sha256').update(JS,'utf8').digest('hex'),OWNER_BRIDGE_SHA256);
   assert.equal(crypto.createHash('sha256').update(capPolicyBytes).digest('hex'),CAP_POLICY_SHA256);
   assert.deepEqual(capPolicy,{schema:'NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2',
-    measured_bridge_bytes:24669,max_bridge_bytes:25181,reserve_bytes:512,
+    measured_bridge_bytes:25158,max_bridge_bytes:25670,reserve_bytes:512,
     bridge_sha256:OWNER_BRIDGE_SHA256});
   assert.equal(n<=capPolicy.max_bridge_bytes,true);
 });
@@ -54,11 +54,14 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       return Response.json({status:'READY',dialogs:[{dialog_id:id,title:'Тест',revision:2}]});
     }
     if(u.pathname==='/api/ui/memory/dialogs/history'){
-      onHistory?.();
+      const page=onHistory?.(u);
+      if(page instanceof Response)return page;
       if(stallHistoryBody)return new Response(new ReadableStream({start(){}}));
-      return Response.json({status:'READY',dialog_id:id,messages:[
-        {role:'user',exchange_id:historyExchangeId,content:expectedQuestion,ts:'2026-11-15T00:00:00Z'},
-        {role:'assistant',exchange_id:historyExchangeId,content:reply,ts:'2026-11-15T00:00:01Z'}, ...historyTail]});
+      return Response.json({status:'READY',dialog_id:id,
+        ...(page||{messages:[
+          {role:'user',exchange_id:historyExchangeId,content:expectedQuestion,ts:'2026-11-15T00:00:00Z'},
+          {role:'assistant',exchange_id:historyExchangeId,content:reply,ts:'2026-11-15T00:00:01Z'}, ...historyTail],
+          next_cursor:null})});
     }
     if(u.pathname==='/api/ui/memory/dialogs/update'){
       const b=JSON.parse(opts.body);
@@ -243,6 +246,30 @@ test('legacy dialogs use original real owner S03 and no invented message counts'
   assert.equal(n.dialog_id,id);
   assert.equal(n.status,'READY','original V24 requires READY');
   assert.equal(n.revision,3);
+});
+test('legacy owner history forwards cursor and returns the next page cursor',async()=>{
+  let nativeCursor;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,u=>{
+      nativeCursor=u.searchParams.get('cursor');
+      return {messages:[{role:'assistant',exchange_id:'old',content:'Старая запись',
+        ts:'2026-11-15T00:00:00Z'}],next_cursor:'17'};
+    },ownerDialog.exchange_id,[],false,false,prompt);
+  const response=await f.fetch('/api/nox/history?dialog_id='+id+'&limit=100&cursor=29');
+  const page=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(nativeCursor,'29');
+  assert(page.messages[0].content==='Старая запись');
+  assert.equal(page.next_cursor,'17');
+  assert(f.calls.some(c=>c.path==='/api/ui/memory/dialogs/history?dialog_id='+id+
+    '&limit=100&cursor=29'));
+});
+test('legacy owner history rejects malformed cursor before native read',async()=>{
+  const f=fake();
+  const response=await f.fetch('/api/nox/history?dialog_id='+id+'&cursor=0');
+  assert.equal(response.status,422);
+  assert.equal((await response.json()).error,'HOLD_INVALID_HISTORY_CURSOR');
+  assert.equal(f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')),false);
 });
 test('V24 rename rejects unchanged S03 revision and never reports false READY',async()=>{
   const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,2);

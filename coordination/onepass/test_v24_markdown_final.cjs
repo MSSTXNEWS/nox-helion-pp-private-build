@@ -42,6 +42,16 @@ function runtime() {
 }
 
 const tests = [
+  ['dialog history follows every older cursor page without truncation', () => {
+    const start = source.indexOf('  async function loadDialog(id) {');
+    const end = source.indexOf('  function startRename', start);
+    assert.ok(start > 0 && end > start);
+    const loader = source.slice(start, end);
+    assert.match(loader, /URLSearchParams\(\{ dialog_id: id, limit: '100' \}\)/);
+    assert.match(loader, /params\.set\('cursor', cursor\)/);
+    assert.match(loader, /all\.unshift\(\.\.\.h\.messages\)/);
+    assert.match(loader, /INVALID_HISTORY_CURSOR/);
+  }],
   ['all unrelated V24 behavior remains the exact verified preimage', () => {
     const helperStart = source.indexOf('  // Final formatting owns only its original message node');
     assert.ok(helperStart > begin && helperStart < end);
@@ -52,7 +62,7 @@ const tests = [
       "        if (result && done.status === 'done' && !controller.signal.aborted) renderSafeMarkdown(out.body, result);\n        else if (!result) out.body.textContent = done.status === 'STOP_FLAG' ? '— STOP активен —' : '—';",
       "        const h = result && md(result); if (h) { out.body.innerHTML = h; highlight(out.body); } else if (!result) out.body.textContent = done.status === 'STOP_FLAG' ? '— STOP активен —' : '—';");
     assert.equal(crypto.createHash('sha256').update(original).digest('hex'),
-      '3427be9e0a497ad0dd120daaa5007f0daa32f3c97271a10ee3b5f1567abcdd8a');
+      '330b4a2d6f1c5d3ec38223cca8f06759f381e94381d2bb6218facab12ae9b603');
   }],
   ['only a string returned by the sanitizer reaches the HTML sink', () => {
     const r = runtime(), n = r.node(), raw = '<img src=x onerror=alert(1)> **text**';
