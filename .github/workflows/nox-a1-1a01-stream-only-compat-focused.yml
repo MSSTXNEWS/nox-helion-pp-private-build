@@ -1,0 +1,31 @@
+name: NOX A1 1A01 stream-only compatibility exact focused test
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_chat_stream_only_qa.py'
+      - 'nox-control/owner_chat_browser_transport_qa.py'
+      - 'nox-control/owner_chat_browser_release_qa.py'
+      - 'nox-control/owner_browser_stream_only_entry.py'
+      - 'nox-control/test_owner_chat_stream_only_qa.py'
+      - '.github/workflows/nox-a1-1a01-stream-only-compat-focused.yml'
+permissions:
+  contents: read
+jobs:
+  source-only-focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact current browser harness pin and one-POST gate
+        run: |
+          set -euo pipefail
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=nox-control python3 -m unittest -v \
+            test_owner_chat_stream_only_qa.ScopeTests.test_exact_compilation_skips_layout_stages_without_altering_frozen_gate \
+            test_owner_chat_stream_only_qa.ScopeTests.test_changed_source_is_rejected_before_composition
+          echo 'NOX_A1_SOURCE_ONLY=true'
+          echo 'NOX_A1_NATIVE_ACCEPTANCE=false'
