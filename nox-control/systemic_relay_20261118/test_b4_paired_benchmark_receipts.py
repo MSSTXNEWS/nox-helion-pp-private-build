@@ -421,6 +421,37 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertFalse(before_done["wire_completed_normally"])
         self.assertFalse(before_done["sse_terminal_seen"])
 
+    def test_sse_wire_usage_counts_must_add_up(self):
+        visible = b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":"stop"}]}\n\n'
+        done = b"data: [DONE]\n\n"
+        def usage_frame(prompt, completion, total):
+            return ("data: " + json.dumps(
+                {"choices": [], "usage": {"prompt_tokens": prompt,
+                 "completion_tokens": completion, "total_tokens": total}}
+            ) + "\n\n").encode("utf-8")
+
+        for prompt, completion, total in ((17, 2, 18), (17, 2, 20),
+                                          (0, 1, 0)):
+            with self.subTest(prompt=prompt, completion=completion, total=total):
+                with self.assertRaisesRegex(ReceiptHold,
+                                            "SSE_USAGE_COUNT_MISMATCH"):
+                    measure_openai_sse_wire([
+                        (3, visible), (5, usage_frame(prompt, completion, total)),
+                        (8, done)])
+
+        good = [(3, visible), (5, usage_frame(17, 2, 19)), (8, done)]
+        receipt = measure_openai_sse_wire(good)
+        self.assertTrue(receipt["wire_completed_normally"])
+        self.assertEqual(receipt["first_text_ms"], 3)
+        self.assertEqual(receipt["completion_ms"], 8)
+        self.assertEqual(receipt["raw_wire_sha256"],
+                         hashlib.sha256(b"".join(chunk for _, chunk in good)).hexdigest())
+        zero = measure_openai_sse_wire([
+            (3, visible), (5, usage_frame(0, 0, 0)), (8, done)])
+        self.assertTrue(zero["wire_completed_normally"])
+        no_usage = measure_openai_sse_wire([(3, visible), (8, done)])
+        self.assertTrue(no_usage["wire_completed_normally"])
+
     def test_sse_wire_empty_choices_requires_valid_final_usage_and_prior_finish(self):
         visible = b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":"stop"}]}\n\n'
         good_usage = (b'data: {"choices":[],"usage":{"prompt_tokens":17,'

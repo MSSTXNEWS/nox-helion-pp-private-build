@@ -372,6 +372,11 @@ def measure_openai_sse_wire(timed_chunks):
                      and all(_integer(usage.get(key), 10 ** 10) for key in
                              ("prompt_tokens", "completion_tokens", "total_tokens")),
                      "SSE_USAGE_CHUNK_SCHEMA")
+            # Both counters are individually well-formed, but a fabricated
+            # aggregate must never pass as trustworthy completion statistics.
+            _require(usage["total_tokens"] ==
+                     usage["prompt_tokens"] + usage["completion_tokens"],
+                     "SSE_USAGE_COUNT_MISMATCH")
             usage_seen = True
             event_count += 1
             return
