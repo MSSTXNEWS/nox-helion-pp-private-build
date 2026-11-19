@@ -317,7 +317,7 @@ class OwnerGpuInventoryOperatorTests(unittest.TestCase):
         }
         stdout = (
             operator.GPU_INVENTORY_RESULT_PREFIX + "HOLD_GPU_INVENTORY_MEMORY_SUM"
-            + "\\n" + operator.GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX
+            + chr(10) + operator.GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX
             + json.dumps(diagnostic, sort_keys=True, separators=(",", ":"))
         )
         failure = operator._gpu_inventory_remote_failure(stdout, "", 2)
@@ -330,7 +330,7 @@ class OwnerGpuInventoryOperatorTests(unittest.TestCase):
         unsafe["rows"] = [dict(diagnostic["rows"][0], serial="secret-sentinel")]
         bad = operator._gpu_inventory_remote_failure(
             operator.GPU_INVENTORY_RESULT_PREFIX + "HOLD_GPU_INVENTORY_MEMORY_SUM"
-            + "\\n" + operator.GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX
+            + chr(10) + operator.GPU_INVENTORY_MEMORY_DIAGNOSTIC_PREFIX
             + json.dumps(unsafe), "", 2
         )
         self.assertEqual(bad["hold"], "HOLD_GPU_INVENTORY_HELPER_RESULT_SHAPE")
