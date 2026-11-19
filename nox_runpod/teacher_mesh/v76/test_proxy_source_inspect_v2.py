@@ -39,7 +39,7 @@ def route(body):
         self.assertIn("AST-only", report["analysis_note"])
 
     def test_missing_context_functions_are_explicitly_reported(self):
-        report = analyzer()(b"def health():\\n    return True\\n")
+        report = analyzer()(b"def health():\n    return True\n")
         self.assertEqual(report["functions"]["_trim_ctx"], [])
         self.assertEqual(report["functions"]["_build_messages"], [])
         self.assertEqual(report["functions"]["prepare_payload"], [])
@@ -50,7 +50,7 @@ def route(body):
 
     def test_rejects_invalid_source_without_echoing_contents(self):
         with self.assertRaisesRegex(ValueError, "HOLD_PROXY_SOURCE_PARSE"):
-            analyzer()(b'password = "sensitive"\\ndef broken(:\\n')
+            analyzer()(b'password = "sensitive"\ndef broken(:\n')
 
 
 if __name__ == "__main__":
