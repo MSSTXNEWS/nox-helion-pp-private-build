@@ -497,7 +497,7 @@ class GpuConsumerCensusTests(unittest.TestCase):
         row = result['rows'][1]
         self.assertEqual(row['identity_state'], 'VERIFIED')
         self.assertEqual(set(row), {'pid', 'ppid', 'uid', 'start_ticks', 'nspid',
-                                    'namespaces', 'comm', 'exe', 'identity_state'})
+                                    'namespaces', 'comm', 'exe', 'exe_state', 'identity_state'})
         self.assertNotIn('argv', row)
         self.assertNotIn('cmdline', row)
         self.assertNotIn('environ', row)
@@ -516,6 +516,53 @@ class GpuConsumerCensusTests(unittest.TestCase):
         self.assertFalse(result['complete'])
         self.assertEqual(result['row_count'], 1)
         self.assertEqual(result['cap'], 1)
+
+    def test_missing_exe_link_is_explicit_but_does_not_break_stable_identity(self):
+        proc = add_proc(self.proc, 122, start=122)
+        (proc / 'exe').unlink()
+        result = MOD._capture_process_identity_inventory(self.proc, self.clock())
+        row = next(row for row in result['rows'] if row['pid'] == 122)
+        self.assertTrue(result['complete'])
+        self.assertEqual(row['identity_state'], 'VERIFIED')
+        self.assertIsNone(row['exe'])
+        self.assertEqual(row['exe_state'], 'MISSING')
+
+    def test_unreadable_exe_link_fails_inventory_closed(self):
+        add_proc(self.proc, 123, start=123)
+        original_readlink = MOD.os.readlink
+        def deny_exe(path, *args, **kwargs):
+            if Path(path).name == 'exe':
+                raise PermissionError('fixture')
+            return original_readlink(path, *args, **kwargs)
+        MOD.os.readlink = deny_exe
+        try:
+            result = MOD._capture_process_identity_inventory(self.proc, self.clock())
+        finally:
+            MOD.os.readlink = original_readlink
+        self.assertFalse(result['complete'])
+        row = next(row for row in result['rows'] if row['pid'] == 123)
+        self.assertEqual(row['exe_state'], 'UNREADABLE')
+        self.assertIn('exe_read', row['missing_fields'])
+
+    def test_rc3_valid_stopped_rows_keep_degraded_health_and_identity_links(self):
+        add_proc(self.proc, 200, ppid=1, start=200)
+        add_proc(self.proc, 101, ppid=200, start=101)
+        def runner(argv, seconds=12):
+            if argv[0] == 'nvidia-smi':
+                return 0, app_text(101)
+            if argv == ['supervisorctl', 'status']:
+                return 3, ('nox-worker RUNNING pid 200, uptime 0:00:01\\n'
+                           'idle STOPPED\\n')
+            return 0, ''
+        census = MOD.gpu_process_census(self.proc, run_fn=runner, clock=self.clock())
+        services = census['supervisor_services']
+        self.assertEqual(services['command_rc'], 3)
+        self.assertFalse(services['complete'])
+        self.assertTrue(services['inventory_complete'])
+        self.assertEqual(services['service_health']['state'], 'DEGRADED')
+        self.assertTrue(census['process_identity_inventory']['complete'])
+        self.assertEqual(census['gpu_process_links'][0]['classification'], 'MATCHED')
+        self.assertEqual(census['gpu_process_links'][0]['evidence_state'], 'COMPLETE')
 
     def test_all_pid_inventory_read_failure_is_explicit_and_incomplete(self):
         proc = add_proc(self.proc, 121, start=121)
