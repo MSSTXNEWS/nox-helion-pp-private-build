@@ -68,6 +68,65 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_nonfinite_json_constants_hold_before_dispatch_and_s03(self):
+        # Python json.loads accepts NaN/Infinity by default although these
+        # are not JSON. Neither SSE envelopes nor tool arguments may use them.
+        for marker in ('NaN', 'Infinity', '-Infinity'):
+            with self.subTest(marker=marker, route='SSE'):
+                invalid=(b'data: {"choices":[{"delta":{},"finish_reason":"stop"}],'
+                         b'"usage":{"completion_tokens":' + marker.encode() +
+                         b'}}\n\n')
+                chunks=Chunks([frame('Partial'), invalid, b'data: [DONE]\n\n'])
+                requests, factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Question'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Question',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_MODEL_SSE_INVALID',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
+            with self.subTest(marker=marker, route='model_tool'):
+                arguments='{"value":'+marker+'}'
+                chunks=Chunks([frame(calls=[{
+                    'index':0,'id':'nonfinite','type':'function',
+                    'function':{'name':'calculate','arguments':arguments}
+                }]),frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+                requests, factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Calculate'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_TOOL_ARGUMENTS',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
+            with self.subTest(marker=marker, route='heuristic_tool'):
+                native=self.native(heuristic=[{
+                    'id':'nonfinite','name':'calculate',
+                    'arguments':'{"value":'+marker+'}'
+                }])
+                payload={'messages':[{'role':'user','content':'Calculate'}]}
+                with patch.object(stream.httpx,'AsyncClient',
+                                  side_effect=AssertionError('no model POST')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_TOOL_ARGUMENTS',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+
     async def test_duplicate_sse_and_tool_argument_json_keys_hold_before_dispatch(self):
         # Duplicate keys make both model envelopes and nested tool arguments
         # ambiguous; Python's default last-key-wins would alter evidence.
