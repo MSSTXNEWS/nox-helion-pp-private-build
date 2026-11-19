@@ -1253,6 +1253,16 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
 }
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
+# Exact one-shot inspected preflight successor; must never merge with base repair.
+FILES['repair'] = 'nox-control/systemic_relay_20261118/next_zip_preflight/owner_zip_reviewed_preflight_entry.py'
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = (
+    'merge_web_source.py', 'owner_systemic_reviewed_publish.py',
+    'continuous_transaction_helpers.py')
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
+    'nox-control/systemic_relay_20261118/next_zip_preflight/merge_web_source.py',
+    'nox-control/systemic_relay_20261118/owner_systemic_reviewed_publish.py',
+    'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py')
+
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
