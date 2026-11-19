@@ -233,9 +233,19 @@ def tick_existing_dispatcher(namespace, state, *, mode):
             mode=mode,memory_ratio=runtime.get('cgroup_memory_ratio'),
             cpu_pressure=runtime.get('cpu_pressure',0),
             gpu_available=runtime.get('gpu_available') is True)
-    except (AutoHold,TypeError,ValueError,OverflowError) as exc:
-        return {'state':str(exc) if isinstance(exc,AutoHold) else 'HOLD_AUTONOMY_INPUT',
-                'jobs_started':0}
+    except AutoHold as exc:
+        reason = str(exc)
+        if reason == 'HOLD_NATIVE_SUBAGENT_RESOURCE_PRESSURE':
+            pause = getattr(native, 'pause_for_resource_hold', None)
+            if callable(pause):
+                try:
+                    if pause(reason) is not True:
+                        return {'state':'HOLD_RESOURCE_PAUSE_FAILED','jobs_started':0}
+                except Exception:
+                    return {'state':'HOLD_RESOURCE_PAUSE_FAILED','jobs_started':0}
+        return {'state':reason,'jobs_started':0}
+    except (TypeError,ValueError,OverflowError):
+        return {'state':'HOLD_AUTONOMY_INPUT','jobs_started':0}
     except Exception:
         return {'state':'HOLD_NATIVE_AUTONOMY_CALLBACK_EXCEPTION','jobs_started':0}
 
