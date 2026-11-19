@@ -13,7 +13,7 @@ import math
 import time
 
 BASE_SHA = '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9'
-TRANSPORT_SHA = 'e8d256f4ab4de1d53859c1da74237622871354b5d84442bdff1171631f9f05f0'
+TRANSPORT_SHA = '360c155642ccdb43f39acf7b493068d3d2ac906bfd761c60d8c5ee51d48507fe'
 CONTROL_STATE_JS = r"""() => {
  const controls=document.querySelectorAll('#chatForm [type=submit]');
  const node=controls.length===1?controls[0]:null;
