@@ -250,5 +250,55 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
             self.assertEqual(saves, ['blocked'])
 
 
+    def test_remember_ack_is_not_independent_s03_terminal_proof(self):
+        """A write acknowledgement must not bypass the exact S03 readback gate."""
+        from contextlib import nullcontext
+        task = {'id': '4V14-07', 'parent_task_id': '4V14',
+                'queue_id': 'Q4_INTEGRATION_ACCEPTANCE', 'status': 'blocked',
+                'owner_claim': {'nonce': 'claim-4V14-07'},
+                'params': {'job_id': 'job-4V14-07',
+                           'plan_sha256': 'pinned-plan',
+                           'contract_sha256': 'pinned-contract'}}
+        worker = {'task_id': task['id'],
+                  'parent_task_id': task['parent_task_id'],
+                  'queue_id': task['queue_id'],
+                  'plan_sha256': task['params']['plan_sha256'],
+                  'contract_sha256': task['params']['contract_sha256'],
+                  'claim': 'claim-4V14-07',
+                  'acceptance_scope': 'SOURCE_PATCH_TESTED',
+                  'state': 'STOPPED', 'original_task_accepted': False,
+                  'project_source_changed': False,
+                  'integration_verified': False}
+        event = {'project_evidence': worker,
+                 'project_evidence_sha256': binding.digest(binding.encoded(worker))}
+        native = types.SimpleNamespace(
+            source='pinned-source', state={}, pool=None,
+            writer_lease=lambda: True,
+            _claim_current=lambda *_args, **_kwargs: True,
+            receipt_source_allowed=lambda *_args: True,
+            ns={'_qlock': nullcontext(),
+                'save_state': lambda _state: None,
+                'owner_mentor': types.SimpleNamespace(clean=lambda value: value)})
+        subject = module.ProjectBinding.__new__(module.ProjectBinding)
+        subject.native = native
+        subject.terminal_cache = set()
+        with patch.dict(sys.modules, {'owner_subagent_dispatcher': binding}):
+            with patch.object(binding, 'remember',
+                              return_value={'write_ack': True}, create=True):
+                integrated, info = subject._finish(task, event, 'claim-4V14-07')
+            self.assertFalse(integrated)
+            self.assertEqual(info['s03'], {'write_ack': True})
+            self.assertNotIn(info['receipt_sha256'], subject.terminal_cache)
+            # Even though the local worker reached STOPPED, an unrelated
+            # readback cannot free its capacity.
+            with patch.object(executor, 'TERMINAL_WITHOUT_CHANGES',
+                              {'STOPPED'}, create=True):
+                with patch.object(binding, 's03_readback',
+                                  return_value={'native_verified': True,
+                                                'task_id': 'other-task'}) as read:
+                    self.assertFalse(subject.terminal_for_capacity(task))
+                    read.assert_called_once()
+
+
 if __name__ == '__main__':
     unittest.main()
