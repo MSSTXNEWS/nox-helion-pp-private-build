@@ -163,6 +163,25 @@ def distinct_explicit_message_ids(rows):
             and len(ids) == len(set(ids)))
 
 
+
+def firstturn_prefix_identity_valid(firstturn_ids, completed_rows):
+    """A second history read must retain the first two persisted message IDs.
+
+    If a first-turn row carried an explicit message_id, its identity must
+    survive the Spanish follow-up. Legacy first-turn rows without IDs may
+    acquire IDs later; absent metadata alone never proves persistence.
+    """
+    if (not isinstance(firstturn_ids, tuple) or len(firstturn_ids) != 2
+            or not isinstance(completed_rows, list) or len(completed_rows) != 4
+            or not all(isinstance(row, dict) for row in completed_rows[:2])):
+        return False
+    return all(
+        initial is None or (
+            isinstance(initial, str) and bool(initial.strip())
+            and row.get('message_id') == initial)
+        for initial, row in zip(firstturn_ids, completed_rows[:2]))
+
+
 def empty_dialog_history_valid(history, dialog_id):
     """Reject an empty-history response scoped to another dialog before the FIRST POST.
 
@@ -1050,6 +1069,10 @@ async def browser_run(report, directory, available):
                 # The owner-scoped second request is allowed only after a full
                 # first-turn browser/S03 proof. Never replay an ambiguous POST.
                 report['browser_stage']='QA_SECOND_TURN_PREP'
+                # Freeze the first persisted identities before the second POST.
+                # Text equivalence alone cannot prove a row was not replaced.
+                firstturn_id_snapshot=tuple(
+                    row['message_id'] if 'message_id' in row else None for row in rows)
                 second_permitted=True
                 if stop_present():
                     raise RuntimeError('HOLD_OWNER_STOP')
@@ -1087,7 +1110,10 @@ async def browser_run(report, directory, available):
                 # explicitly reports a different dialog identity.
                 second_scope_valid=('dialog_id' not in second_history
                                     or second_history['dialog_id']==did)
-                second_saved=(second_scope_valid and multiturn_history_valid(
+                second_saved=(second_scope_valid
+                              and firstturn_prefix_identity_valid(
+                                  firstturn_id_snapshot,second_rows)
+                              and multiturn_history_valid(
                     second_rows,prompt,answer,second_prompt,second_answer,dialog_id=did))
                 # Preserve a full four-turn browser-history fingerprint for
                 # future independent S03 comparison, without false acceptance.
