@@ -17,10 +17,10 @@ jobs:
       github.event.comment.author_association == 'OWNER' &&
       github.event.issue.number == 256 &&
       startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
-      !contains(github.event.comment.body, 'inspect') &&
-      !contains(github.event.comment.body, 'audit') &&
-      !contains(github.event.comment.body, 'source_attest') &&
-      !contains(github.event.comment.body, 'gpu_inventory')
+      !contains(github.event.comment.body, ' inspect') &&
+      !contains(github.event.comment.body, ' audit') &&
+      !contains(github.event.comment.body, ' source_attest') &&
+      !contains(github.event.comment.body, ' gpu_inventory')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -81,6 +81,7 @@ jobs:
           fi
           /usr/bin/python3 -m unittest discover -s nox-control -p test_owner_cp55_cipher.py -v
       - name: Execute only this owner-approved original-instance operation
+        id: execute
         env:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
@@ -92,7 +93,11 @@ jobs:
             python3 nox-control/owner_native_operator.py "$NOX_ACTION"
           fi
       - name: Always detach only this run temporary public key
-        if: always()
+        if: >-
+          always() &&
+          (steps.execute.outcome == 'success' ||
+           steps.execute.outcome == 'failure' ||
+           steps.execute.outcome == 'cancelled')
         env:
           NOX2: ${{ secrets.NOX2 }}
         run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
