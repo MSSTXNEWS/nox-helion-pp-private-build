@@ -518,12 +518,25 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         except Exception:
             base={}
         model=_model_name(base)
+        s03_store_present=_s03_ready()
+        # The current V112 route does not attach V38 or call its Session-scoped
+        # S03 recall/append/model callbacks. A database table existing is only
+        # storage presence; it is not evidence that C01-C08 memory is bound.
+        v38_required=('authorize','stop','s03_recall','s03_append','model_stream')
         return JSONResponse({
            **base, 'backend':'EXISTING_NATIVE_ONEHOST',
            'native_p02_bound':bool(model and callable(trusted['_proxy_completion'])),
            'primary_model':model or None,
-           'native_cognitive_memory_bound':_s03_ready(),
+           'native_s03_store_present':s03_store_present,
+           'native_s03_recall_bound':False,
+           'native_cognitive_memory_bound':False,
+           'native_cognitive_memory_state':'UNBOUND',
            'native_dialogs_ready':_schema_ready(),
+           'v38_integration_state':'UNBOUND',
+           'v38_adapter_registered':False,
+           'v38_required_host_bindings':list(v38_required),
+           'v38_bound_host_bindings':[],
+           'v38_missing_required_host_bindings':list(v38_required),
         },headers={'Cache-Control':'no-store'})
 
     @app.get('/api/ui/capabilities')
