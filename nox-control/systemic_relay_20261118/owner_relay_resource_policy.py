@@ -96,7 +96,10 @@ def evaluate_resources(snapshot, demand, *, now=None):
                       'file_bytes', 'shmem_bytes', 'sandbox_limit_bytes',
                       'planner_reserve_bytes', 'minimum_headroom_bytes')
     if (any(not _integer(budget[key]) for key in integer_fields)
-            or budget['max_bytes'] == 0 or budget['shmem_bytes'] > budget['file_bytes']
+            or budget['max_bytes'] == 0 or budget['current_bytes'] > budget['max_bytes']
+            or budget['file_bytes'] > budget['current_bytes']
+            or budget['inactive_file_bytes'] > budget['file_bytes']
+            or budget['shmem_bytes'] > budget['file_bytes']
             or budget['worker_slots'] != 3 or budget['planner_reserve_bytes'] != 128 * MIB
             or budget['minimum_headroom_bytes'] != 2 * GIB
             or not 96 * MIB <= budget['sandbox_limit_bytes'] <= 512 * MIB

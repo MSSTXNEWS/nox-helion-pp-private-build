@@ -25,7 +25,7 @@ jobs:
           spec=importlib.util.spec_from_file_location('a5_policy',str(p))
           m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
           limit=194065203200; now=time.time()
-          def evaluate(raw_free, sandbox_mib=256):
+          def evaluate(raw_free, sandbox_mib=256, invalid=None):
               b=dict(schema='NOX_BOUNDED_CPU_BUDGET_V1',source='cgroup_v2',
                      instance_id=60509551, observed_at=now, worker_slots=3,
                      current_bytes=limit-raw_free, max_bytes=limit,
@@ -33,6 +33,8 @@ jobs:
                      sandbox_limit_bytes=sandbox_mib*m.MIB, planner_reserve_bytes=128*m.MIB,
                      minimum_headroom_bytes=2*m.GIB, memory_psi_some_avg10=0.0,
                      memory_psi_full_avg10=0.0,cpu_pressure=0.0)
+              if invalid:
+                  b.update(invalid)
               snap=dict(instance_id=60509551,stop_active=False,native_verified=True,
                         owner_scope_verified=True,source_sha_verified=True,
                         bounded_cpu_budget=b)
@@ -48,5 +50,12 @@ jobs:
               assert short['admit'] is False and short['required_raw_headroom_bytes']==required,short
               enough=evaluate(required,sandbox_mib)
               assert enough['admit'] is True and enough['raw_headroom_bytes']==required,enough
-          print('A5_FOCUSED_THREE_WORKER_RAW_BUFFER_BOUNDARY=6/6 PASS; SOURCE_ONLY; NO_NATIVE_ACTIONS')
+          for label, invalid in (
+              ('over_limit', {'current_bytes':limit+1}),
+              ('file_gt_current', {'file_bytes':limit*2}),
+              ('inactive_gt_file', {'inactive_file_bytes':13*m.GIB}),
+          ):
+              denied=evaluate(3*m.GIB, invalid=invalid)
+              assert denied['admit'] is False and denied['reason']=='HOLD_RELAY_BOUNDED_CPU_BYTES',(label,denied)
+          print('A5_FOCUSED_RAW_BUFFER_AND_TELEMETRY_CONSISTENCY=9/9 PASS; SOURCE_ONLY; NO_NATIVE_ACTIONS')
           PY
