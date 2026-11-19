@@ -10,6 +10,9 @@ on:
       - 'nox-control/test_nox_neuro_evolution_ingress.py'
       - 'nox-control/owner_native_lifeline.py'
       - 'nox-control/test_owner_native_lifeline.py'
+      - 'nox-control/owner_native_lifeline_observer.py'
+      - 'nox-control/lifeline-observer.json'
+      - 'nox-control/systemd/nox-lifeline-observer.service'
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
@@ -32,6 +35,9 @@ on:
       - 'nox-control/test_nox_neuro_evolution_ingress.py'
       - 'nox-control/owner_native_lifeline.py'
       - 'nox-control/test_owner_native_lifeline.py'
+      - 'nox-control/owner_native_lifeline_observer.py'
+      - 'nox-control/lifeline-observer.json'
+      - 'nox-control/systemd/nox-lifeline-observer.service'
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_dispatcher_mentor.py'
       - 'nox-control/test_owner_dispatcher_mentor.py'
@@ -56,7 +62,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Source syntax
-        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_operator.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
+        run: python3 -m py_compile nox-control/nox_native_lifeline.py nox-control/test_nox_native_lifeline.py nox-control/nox_agent.py nox-control/test_nox_agent_status.py nox-control/nox_neuro_evolution_ingress.py nox-control/test_nox_neuro_evolution_ingress.py nox-control/owner_native_lifeline.py nox-control/test_owner_native_lifeline.py nox-control/owner_native_lifeline_observer.py nox-control/owner_native_operator.py nox-control/owner_dispatcher_mentor.py nox-control/test_owner_dispatcher_mentor.py
       - name: Independent lifeline unit and failure tests
         run: python3 -m unittest discover -s nox-control -p 'test_nox_native_lifeline.py' -v
       - name: Native NOX status truthfulness tests

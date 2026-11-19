@@ -33,6 +33,7 @@ UNIT = Path("/etc/systemd/system/nox-lifeline-observer.service")
 STATE_DIR = ROOT / "state/lifeline-observer"
 STATE = STATE_DIR / "state.json"
 SERVICE = "nox-lifeline-observer.service"
+UNIT_SHA256 = "ed9fd4f1b83043123f656163c49714592e59f6e27dcf015847a24f3d29435ac3"
 OWNER_STOP = ROOT / "STOP"
 OWNER_MAINTENANCE = ROOT / "state/OWNER_MAINTENANCE.flag"
 OWNER_LOCK = ROOT / "state/owner_maintenance.lock"
@@ -48,6 +49,11 @@ PREIMAGES = {}
 INSTALLED = {}
 UNIT_ENABLED_BEFORE = None
 UNIT_ACTIVE_BEFORE = None
+STATE_DIR_PREIMAGE = None
+STATE_ARTIFACT_PREIMAGES = {}
+STATE_ARTIFACTS = {"state.json": STATE, "lifeline.lock": STATE_DIR / "lifeline.lock"}
+REQUEST_ID = None
+SOURCE_SHA_VALUE = None
 
 
 class Hold(RuntimeError):
@@ -119,6 +125,8 @@ def checked_bundle(name):
 
 
 def validate_unit(raw):
+    if hashlib.sha256(raw).hexdigest() != UNIT_SHA256:
+        fail("UNIT_PIN_MISMATCH")
     lines = [line.strip() for line in raw.decode("utf-8", "strict").splitlines()
              if line.strip() and not line.lstrip().startswith("#") and
              not line.lstrip().startswith(";")]
@@ -392,18 +400,103 @@ def save_backup(request, path, raw):
 
 
 def ensure_private_directory(path: Path):
+    global STATE_DIR_PREIMAGE
+    created = False
     try:
         path.mkdir(mode=0o700)
+        created = True
     except FileExistsError:
-        pass
+        created = False
     try:
         info = path.lstat()
     except OSError:
+        if created:
+            try:
+                check = path.lstat()
+                if stat.S_ISDIR(check.st_mode) and not stat.S_ISLNK(check.st_mode):
+                    path.rmdir()
+            except OSError:
+                STATE_DIR_PREIMAGE = {"created": True, "capture_failed": True}
         fail("STATE_DIRECTORY_UNAVAILABLE")
     if (not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode) or
             info.st_uid != 0 or info.st_mode & 0o022):
         fail("STATE_DIRECTORY_UNSAFE")
-    os.chmod(path, 0o700)
+    if created:
+        info = path.lstat()
+    STATE_DIR_PREIMAGE = {"created": created, "mode": stat.S_IMODE(info.st_mode),
+                          "uid": info.st_uid, "gid": info.st_gid,
+                          "device": info.st_dev, "inode": info.st_ino}
+
+
+def snapshot_state_artifacts(request):
+    for name, path in STATE_ARTIFACTS.items():
+        raw, identity = bounded_read(path, 262_144, allow_absent=True)
+        if raw is not None:
+            backup = save_backup(request, path, raw)
+        else:
+            backup = None
+        STATE_ARTIFACT_PREIMAGES[name] = (raw, identity)
+        STATE_ARTIFACT_PREIMAGES[name + ".receipt"] = {
+            "sha256": hashlib.sha256(raw).hexdigest() if raw is not None else None,
+            "absent": raw is None,
+            "mode": stat.S_IMODE(identity[2]) if identity else None,
+            "uid": identity[4] if identity else None,
+            "gid": identity[5] if identity else None,
+            "device": identity[0] if identity else None,
+            "inode": identity[1] if identity else None,
+            "backup": backup,
+        }
+
+
+def restore_state_artifacts():
+    # The dedicated service has been stopped before this runs. Restore only
+    # root-owned regular files in our private state directory.
+    for name, path in STATE_ARTIFACTS.items():
+        original, original_identity = STATE_ARTIFACT_PREIMAGES[name]
+        current, current_identity = bounded_read(path, 262_144, allow_absent=True)
+        if current == original and current_identity == original_identity:
+            continue
+        if current is not None and (current_identity is None or current_identity[4] != 0):
+            fail("STATE_ARTIFACT_ROLLBACK_UNSAFE")
+        if original is None:
+            if current is not None:
+                path.unlink()
+        else:
+            parent = path.parent
+            fd, temp = tempfile.mkstemp(prefix=".nox-lifeline-restore-", dir=parent)
+            try:
+                os.fchown(fd, original_identity[4], original_identity[5])
+                os.fchmod(fd, stat.S_IMODE(original_identity[2]))
+                with os.fdopen(fd, "wb") as stream:
+                    stream.write(original)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                check, check_identity = bounded_read(path, 262_144, allow_absent=True)
+                if check != current or check_identity != current_identity:
+                    fail("STATE_ARTIFACT_ROLLBACK_CAS")
+                os.replace(temp, path)
+            finally:
+                if os.path.exists(temp):
+                    os.unlink(temp)
+        dirfd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dirfd)
+        finally:
+            os.close(dirfd)
+    if STATE_DIR_PREIMAGE is not None:
+        info = STATE_DIR.lstat()
+        expected = STATE_DIR_PREIMAGE
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != expected["uid"] or
+                info.st_gid != expected["gid"] or info.st_dev != expected["device"] or
+                info.st_ino != expected["inode"]):
+            fail("STATE_DIRECTORY_ROLLBACK_UNSAFE")
+        if expected["created"]:
+            try:
+                STATE_DIR.rmdir()
+            except OSError:
+                fail("STATE_DIRECTORY_NOT_EMPTY_ON_ROLLBACK")
+        elif stat.S_IMODE(info.st_mode) != expected["mode"]:
+            os.chmod(STATE_DIR, expected["mode"])
 
 
 def restore_exact_preimages():
@@ -436,11 +529,13 @@ def restore_exact_preimages():
 
 
 def main():
-    global UNIT_ENABLED_BEFORE, UNIT_ACTIVE_BEFORE
+    global UNIT_ENABLED_BEFORE, UNIT_ACTIVE_BEFORE, REQUEST_ID, SOURCE_SHA_VALUE
     source_sha = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
+    SOURCE_SHA_VALUE = source_sha if SOURCE_SHA.fullmatch(source_sha) else None
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
     if not SOURCE_SHA.fullmatch(source_sha) or not request.isdigit():
         fail("OWNER_CONTEXT")
+    REQUEST_ID = request
     if os.geteuid() != 0:
         fail("ROOT_REQUIRED")
     if not Path("/run/systemd/system").is_dir():
@@ -452,6 +547,8 @@ def main():
             unit_before["enabled"] not in ("enabled", "disabled", "not-found")):
         fail("OBSERVER_PREIMAGE_UNIT_STATE_UNSUPPORTED")
     UNIT_ENABLED_BEFORE, UNIT_ACTIVE_BEFORE = unit_before["enabled"], unit_before["active"]
+    if UNIT_ACTIVE_BEFORE == "active":
+        fail("OBSERVER_ALREADY_ACTIVE")
 
     bundle = {name: checked_bundle(name) for name in MAX_BYTES}
     policy = json.loads(bundle["lifeline-observer.json"])
@@ -484,6 +581,7 @@ def main():
 
     protect_parents(STATE_DIR / "state.json")
     ensure_private_directory(STATE_DIR)
+    snapshot_state_artifacts(request)
     started_at = time.time()
     for name, path in FILES.items():
         desired = bundle[name]
@@ -503,18 +601,35 @@ def main():
     if state["active"] != "active" or state["enabled"] != "enabled":
         fail("OBSERVER_SYSTEMD_READBACK")
     show = run(["systemctl", "show", SERVICE, "--property=MainPID", "--value"], timeout=10)
+    if show.returncode != 0:
+        fail("OBSERVER_MAINPID_QUERY")
     try:
         pid = int(show.stdout.strip())
     except ValueError:
         fail("OBSERVER_MAINPID")
     identity = process_identity(pid)
     report = fresh_receipt(started_at)
+    final_state = unit_state(SERVICE)
+    final_show = run(["systemctl", "show", SERVICE, "--property=MainPID", "--value"], timeout=10)
+    if final_show.returncode != 0:
+        fail("OBSERVER_FINAL_MAINPID_QUERY")
+    try:
+        final_pid = int(final_show.stdout.strip())
+    except ValueError:
+        fail("OBSERVER_FINAL_MAINPID")
+    final_identity = process_identity(final_pid)
+    if (final_state["active"] != "active" or final_state["enabled"] != "enabled" or
+            final_pid != pid or final_identity["start_ticks"] != identity["start_ticks"] or
+            final_identity["argv"] != identity["argv"] or
+            final_identity["exe"] != identity["exe"]):
+        fail("OBSERVER_IDENTITY_CHANGED_AFTER_RECEIPT")
     after_supervisor = supervisor_unit_state()
     if before_supervisor != after_supervisor:
         fail("GLOBAL_SUPERVISOR_STATE_CHANGED")
 
     memory = report["cgroup_memory"]
     emit({"state": "OBSERVER_ACTIVE_CRITICAL_MEMORY" if memory["below_2GiB"] else "OBSERVER_ACTIVE",
+          "source_sha": source_sha, "request_id": request,
           "service": SERVICE, "service_active": state["active"],
           "service_enabled": state["enabled"], "pid": pid,
           "start_ticks": identity["start_ticks"], "argv_sha256": hashlib.sha256(
@@ -529,7 +644,11 @@ def main():
           "memory_floor_bytes": 2 * 1024**3,
           "preimages_backed_up": True,
           "preimages": preimage_receipts,
-          "rollback": "EXACT_INSTALLED_BLOB_CAS_ONLY",
+          "state_directory_preimage": STATE_DIR_PREIMAGE,
+          "state_artifact_preimages": {key: value for key, value in
+                                        STATE_ARTIFACT_PREIMAGES.items()
+                                        if key.endswith(".receipt")},
+          "rollback": "PREIMAGE_CONTENT_MODE_OWNER_CAS;FILE_INODES_NOT_RESTORABLE",
           "weights_training_supervisor_workloads_changed": False})
     print("NOX_MAINT_LIFELINE_COMPLETE=true", flush=True)
     return 0
@@ -552,29 +671,34 @@ if __name__ == "__main__":
         result = main()
     except BaseException as exc:
         rollback = "NOT_NEEDED"
-        if INSTALLED:
+        if INSTALLED or STATE_DIR_PREIMAGE is not None:
             try:
-                if UNIT_ACTIVE_BEFORE != "active":
-                    stopped = run(["systemctl", "stop", SERVICE], timeout=20)
-                    current = unit_state(SERVICE)
-                    if current["active"] == "active":
-                        fail("ROLLBACK_SERVICE_STILL_ACTIVE")
-                if UNIT_ENABLED_BEFORE != "enabled":
-                    disabled = run(["systemctl", "disable", SERVICE], timeout=20)
-                    if disabled.returncode:
-                        fail("ROLLBACK_SERVICE_DISABLE")
-                restore_exact_preimages()
-                restored_state = unit_state(SERVICE)
-                if (restored_state["active"] != UNIT_ACTIVE_BEFORE or
-                        restored_state["enabled"] != UNIT_ENABLED_BEFORE):
-                    fail("ROLLBACK_SERVICE_STATE_MISMATCH")
-                rollback = "EXACT_PREIMAGE_RESTORED"
+                if INSTALLED:
+                    if UNIT_ACTIVE_BEFORE != "active":
+                        stopped = run(["systemctl", "stop", SERVICE], timeout=20)
+                        if stopped.returncode:
+                            fail("ROLLBACK_SERVICE_STOP")
+                        current = unit_state(SERVICE)
+                        if current["active"] == "active":
+                            fail("ROLLBACK_SERVICE_STILL_ACTIVE")
+                    if UNIT_ENABLED_BEFORE != "enabled":
+                        disabled = run(["systemctl", "disable", SERVICE], timeout=20)
+                        if disabled.returncode:
+                            fail("ROLLBACK_SERVICE_DISABLE")
+                    restore_exact_preimages()
+                    restored_state = unit_state(SERVICE)
+                    if (restored_state["active"] != UNIT_ACTIVE_BEFORE or
+                            restored_state["enabled"] != UNIT_ENABLED_BEFORE):
+                        fail("ROLLBACK_SERVICE_STATE_MISMATCH")
+                restore_state_artifacts()
+                rollback = "PREIMAGE_CONTENT_MODE_OWNER_RESTORED;FILE_INODES_NOT_RESTORABLE"
             except BaseException:
                 rollback = "HOLD_BACKUPS_AND_INSTALLED_BLOBS_PRESERVED"
         code = str(exc)
         if not re.fullmatch(r"HOLD_LIFELINE_OBSERVER_[A-Z0-9_]+", code):
             code = "HOLD_LIFELINE_OBSERVER_" + type(exc).__name__.upper()
         emit({"state": "HOLD", "reason": code, "rollback": rollback,
+              "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
               "global_supervisor_mutated": False,
               "installed_paths": list(INSTALLED)})
         sys.exit(2)
