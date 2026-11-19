@@ -28,6 +28,10 @@ QUERY = (
 MAX_OUTPUT_BYTES = 4096
 MAX_ROW_BYTES = 512
 MAX_GPUS = 2
+# NVIDIA FB memory includes a driver-reserved segment not counted as used/free.
+# V100-only conservative envelope; larger unknown gaps still HOLD.
+MAX_DRIVER_RESERVED_MIB = 1024
+MEMORY_SEMANTICS = "nvidia-smi MiB; 0<=total-used-free<=1024 reserved"
 UUID_RE = re.compile(r"GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z")
 SOURCE_RE = re.compile(r"[0-9a-f]{40}\Z")
 BOOT_RE = re.compile(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z")
@@ -77,7 +81,9 @@ def parse_gpu_rows(output: str):
         if any(not re.fullmatch(r"[0-9]{1,7}", value) for value in numbers):
             raise _hold("HOLD_GPU_INVENTORY_MEMORY")
         total, used, free = (int(value) for value in numbers)
-        if total <= 0 or used < 0 or free < 0 or used > total or free > total or used + free != total:
+        if (total <= 0 or used < 0 or free < 0 or used > total or free > total
+                or total - used - free < 0
+                or total - used - free > min(MAX_DRIVER_RESERVED_MIB, total // 10)):
             raise _hold("HOLD_GPU_INVENTORY_MEMORY")
         rows.append({
             "index": index,
@@ -156,7 +162,7 @@ def build_inventory(run=subprocess.run, read_text=None, monotonic_ns=time.monoto
         "instance_id": INSTANCE_ID,
         "boot_id": before["boot_id"],
         "uptime_scope": "two monotonic host snapshots; point-in-time only",
-        "memory_semantics": "nvidia-smi MiB counters; memory.total=memory.used+memory.free",
+        "memory_semantics": MEMORY_SEMANTICS,
         "identity_stable": True,
         "snapshots": [before, after],
     }
