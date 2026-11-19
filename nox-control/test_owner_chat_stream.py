@@ -83,6 +83,27 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload['_agent_final'],'Hola')
         self.assertTrue(chunks.closed)
 
+    async def test_standard_sse_bom_retry_and_bare_id_metadata_does_not_drop_chat(self):
+        # WHATWG allows one leading UTF-8 BOM, retry fields, and fields without
+        # a colon (empty value). None may cause a new POST or enter S03 text.
+        prelude=b'\xef\xbb\xbf: upstream heartbeat\nretry: 2500\nid\nevent\n\n'
+        chunks=Chunks([prelude,frame('Hola completo'),frame(finish='stop'),
+                       b'data: [DONE]\n\n'])
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('Hola completo',wire)
+        self.assertIn('[DONE]',wire)
+        self.assertNotIn('2500',wire)
+        self.assertNotIn('heartbeat',wire)
+        self.assertEqual(payload.get('_agent_final'),'Hola completo')
+        self.assertEqual(len(requests),1)
+        self.assertTrue(chunks.closed)
+
     async def test_multiline_sse_data_fields_are_one_json_frame(self):
         # A newline between two JSON fields is legal SSE data continuation.
         whole=frame('Hola').decode('utf-8').split('data: ',1)[1].strip()
@@ -115,6 +136,45 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('HOLD_MODEL_SSE_FRAME',wire)
         self.assertNotIn('[DONE]',wire)
         self.assertNotIn('_agent_final',payload)
+        self.assertTrue(chunks.closed)
+
+    async def test_unterminated_oversized_sse_line_holds_before_next_network_chunk(self):
+        # A 350k-byte comment without a newline made httpx.aiter_lines()
+        # await another network read before the adapter's line limit ran.
+        gate=asyncio.Event()
+        chunks=Chunks([b': '+b'x'*350000,frame('unreachable')],gate)
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            async def collect():
+                return ''.join([part async for part in response.body_iterator])
+            wire=await asyncio.wait_for(collect(),2.0)
+        self.assertIn('HOLD_MODEL_SSE_FRAME',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertEqual(len(requests),1)
+        self.assertTrue(chunks.closed)
+
+    async def test_large_metadata_bytes_cannot_starve_chat_or_certify_s03(self):
+        # Six comments are under the line-count and per-line caps, but their
+        # aggregate 360k-byte record must never consume unbounded chat work.
+        metadata=(b': '+b'x'*60000+b'\n')*6+b'\n'
+        chunks=Chunks([frame('Partial'),metadata,frame(finish='stop'),
+                       b'data: [DONE]\n\n'])
+        requests,factory=self.transport([chunks])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Hola',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertIn('HOLD_MODEL_SSE_FRAME',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertEqual(len(requests),1)
         self.assertTrue(chunks.closed)
 
     async def test_untrusted_sse_event_or_id_metadata_fails_closed(self):

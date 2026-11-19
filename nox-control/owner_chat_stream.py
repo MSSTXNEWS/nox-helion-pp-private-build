@@ -97,6 +97,35 @@ def _executor_status_reply(user_text,path=None):
         return unknown
 
 
+async def _bounded_sse_lines(response):
+    """Bound partial SSE fields before a newline; httpx.aiter_lines() does not.
+
+    Preserve CR, LF, CRLF (including split CRLF) and UTF-8 chunk boundaries.
+    No buffering of untrusted unterminated model output beyond 300k chars.
+    """
+    pending=''
+    after_cr=False
+    # Un-sized chunks preserve immediate first-token delivery. Fixed-size
+    # HTTPX text chunking can wait for 8 KiB and stall a live SSE response.
+    async for chunk in response.aiter_text():
+        for offset in range(0,len(chunk),8192):
+            for part in re.split(r'(\r\n|\r|\n)',chunk[offset:offset+8192]):
+                if part in ('\r\n','\r','\n'):
+                    if part=='\n' and after_cr:
+                        after_cr=False
+                        continue
+                    yield pending
+                    pending=''
+                    after_cr=(part=='\r')
+                elif part:
+                    after_cr=False
+                    pending+=part
+                    if len(pending)>300000:
+                        raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+    if pending:
+        yield pending
+
+
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
     request=dict(payload,model='maya',stream=True,cache_prompt=True)
@@ -108,17 +137,29 @@ async def _model_events(client, url, payload):
         # Preserve valid multi-line JSON without allowing unbounded frames.
         parts=[]
         frame_size=0
+        record_size=0
         frame_lines=0
-        async for line in response.aiter_lines():
+        first_line=True
+        async for line in _bounded_sse_lines(response):
+            # WHATWG SSE decoding ignores one leading UTF-8 BOM, and only
+            # at the start of the stream. Do not erase later payload bytes.
+            if first_line:
+                first_line=False
+                if line.startswith('\ufeff'):
+                    line=line[1:]
             if line:
                 # A legal stream may send keepalives, but an unbounded single
                 # record of comments/ids can otherwise starve chat indefinitely.
                 frame_lines+=1
-                if frame_lines>1024 or len(line)>300000:
+                # Comments and id/retry/event metadata also consume memory and
+                # parsing time. Cap aggregate record bytes, not only data:.
+                record_size+=len(line)+1
+                if frame_lines>1024 or len(line)>300000 or record_size>300000:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
             else:
                 # Each empty line ends one SSE record (including keepalives).
                 frame_lines=0
+                record_size=0
             if line=='':
                 if not parts:
                     continue
@@ -127,12 +168,19 @@ async def _model_events(client, url, payload):
                 frame_size=0
             elif line.startswith(':'):
                 continue
-            elif line.startswith('event:'):
-                if line[6:].strip()!='message':
+            elif line.startswith('event:') or line=='event':
+                if line!='event' and line[6:].strip()!='message':
                     raise StreamFailure('HOLD_MODEL_SSE_EVENT')
                 continue
-            elif line.startswith('id:'):
+            elif line.startswith('id:') or line=='id':
                 if len(line)>256 or '\x00' in line:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+                continue
+            elif line.startswith('retry:') or line=='retry':
+                # A provider may supply SSE reconnection advice. This adapter
+                # never reconnects model POSTs (no risk of duplicate tool use).
+                # Ignore the bounded metadata while retaining event framing.
+                if len(line)>256:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
                 continue
             elif line.startswith('data:'):
