@@ -168,7 +168,7 @@ async function consume(response,emit,signal) {
 }
 function sseChat(data,signal) {
 	let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
-	let activeConflictRejected=false;
+	let conflictRejected=false;
 	let state='not_requested';
 	let stopAdmission=true;
 	const started=performance.now();let firstVisibleMs=null;
@@ -226,7 +226,7 @@ function sseChat(data,signal) {
 					let resolveAdmission,reader,timed=false,timer;stopAdmission=new Promise(resolve=>{resolveAdmission=resolve;});
 					const detail=await Promise.race([(async()=>{reader=upstream.clone().body.getReader();let n=0,s='',d=new TextDecoder();for(;;){const c=await reader.read();if(c.done)return JSON.parse(s+d.decode());if((n+=c.value.byteLength)>512){reader.cancel().catch(()=>{});return null;}s+=d.decode(c.value,{stream:true});}})().catch(()=>null),new Promise(resolve=>{timer=setTimeout(()=>{timed=true;reader?.cancel().catch(()=>{});resolve(null);},1000);})]);clearTimeout(timer);
 					const activeConflict=detail?.error==='HOLD_ACTIVE_SESSION_STREAM';resolveAdmission(!activeConflict&&!timed);
-					if(activeConflict){activeConflictRejected=true;throw Error('HOLD_NATIVE_STREAM_HOLD_ACTIVE_SESSION_STREAM');}
+					if(activeConflict){conflictRejected=true;throw Error('HOLD_NATIVE_STREAM_HOLD_ACTIVE_SESSION_STREAM');}
 					if(timed)throw Error('HOLD_409_TIMEOUT');
 				}
 				const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
@@ -276,7 +276,7 @@ function sseChat(data,signal) {
 					first_visible_token_ms:firstVisibleMs,
 					seconds:+((performance.now()-started)/1000).toFixed(2)});
 			}catch(e){
-				if(modelStarted&&!streamDone&&!activeConflictRejected)await stopThenAbort();
+				if(modelStarted&&!streamDone&&!conflictRejected)await stopThenAbort();
 				event({type:'error',
 					error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
 					gpu_stop_verified:false,
