@@ -65,7 +65,7 @@
     const reportStyle=E('style');reportStyle.textContent='.nox-owner-reports{margin:0 12px 10px;color:#cbd7e3;font:12px system-ui}.nox-owner-reports summary{padding:8px;cursor:pointer;color:#d8bc87}.nox-owner-report{border-left:2px solid #a3824e;background:#111b25b8;border-radius:0 9px 9px 0;padding:11px 13px;margin:7px 0;line-height:1.55}.nox-owner-report p{margin:5px 0}.nox-owner-report small{color:#90a2b5}';document.head.append(reportStyle);
     const inventory=E('details',undefined,'nox-owner-reports'),inventoryTitle=E('summary','Загрузки · проверяю файлы'),inventoryBody=E('div');
     inventory.dataset.noxDownloadInventory='1';inventory.append(inventoryTitle,inventoryBody);reports.before(inventory);
-    const progress=E('details',undefined,'nox-owner-reports'),progressTitle=E('summary','Прогресс программы · проверяю квитанции'),progressBody=E('div');
+    const progress=E('details',undefined,'nox-owner-reports'),progressTitle=E('summary','Прогресс · сверяю frozen 295'),progressBody=E('div');
     progress.dataset.noxWorkProgress='1';progress.open=true;progress.append(progressTitle,progressBody);reports.before(progress);
     let workProgressBusy=false;
     async function refreshWorkProgress(){
@@ -73,34 +73,61 @@
       try{
         const value=await api('/api/ui/work-progress');
         const age=Date.now()/1000-Number(value.observed_at);
-        const ids=value.supplemental_accepted_task_ids,groups=value.receipt_groups;
+        const criterionIds=value.criterion_verified_task_ids;
+        const deferredIds=value.evidence_only_deferred_task_ids;
+        const verifiedIds=value.verified_receipt_record_ids;
+        const groups=value.receipt_groups;
+        const expectedCriterion=['0B01','2V14-01','2V14-02','2V14-12','4A01','5A03','6V14-02','I-37','I-49'];
+        const expectedDeferred=['0A04','5A01'];
+        const expectedVerified=[...expectedCriterion,...expectedDeferred].sort();
         if(value.schema!=='NOX_OWNER_WORK_PROGRESS_V1'||value.state!=='OBSERVED'
-          ||value.frozen_295_count!==295||!Number.isSafeInteger(value.receipt_done_count)
-          ||value.receipt_done_count<0||value.receipt_done_count>295
+          ||value.receipt_disposition_state!=='OBSERVED'||value.frozen_295_count!==295
+          ||value.criterion_verified_count!==9
+          ||!Array.isArray(criterionIds)||criterionIds.join('|')!==expectedCriterion.join('|')
+          ||value.evidence_only_deferred_count!==2
+          ||!Array.isArray(deferredIds)||deferredIds.join('|')!==expectedDeferred.join('|')
+          ||value.verified_receipt_record_count!==11
+          ||!Array.isArray(verifiedIds)||verifiedIds.join('|')!==expectedVerified.join('|')
+          ||value.receipt_manifest_git_blob_sha!=='f5c45dc8919b1b800e89a421676a3627e75fb3bb'
+          ||value.receipt_snapshot_git_blob_sha!=='6a9c71393735dbc4b5c1577272f22cef38ab6338'
           ||!Number.isSafeInteger(value.supplemental_accepted_count)
-          ||!Array.isArray(ids)||ids.length!==value.supplemental_accepted_count
+          ||!Array.isArray(value.supplemental_accepted_task_ids)
+          ||value.supplemental_accepted_task_ids.length!==value.supplemental_accepted_count
           ||!Array.isArray(groups)||groups.length!==7
           ||groups.some(row=>!row||typeof row.label!=='string'
-            ||!Number.isSafeInteger(row.done)||!Number.isSafeInteger(row.total)
-            ||row.done<0||row.done>row.total)
-          ||groups.reduce((n,row)=>n+row.done,0)!==value.receipt_done_count
+            ||!Number.isSafeInteger(row.verified_receipts)||!Number.isSafeInteger(row.total)
+            ||row.verified_receipts<0||row.verified_receipts>row.total)
+          ||groups.reduce((n,row)=>n+row.verified_receipts,0)!==value.verified_receipt_record_count
           ||groups.reduce((n,row)=>n+row.total,0)!==295
           ||!Number.isFinite(age)||age < -5||age>45)throw Error('UNAVAILABLE');
-        progressTitle.textContent='Прогресс · квитанции '+value.receipt_done_count+'/295';
+        progressTitle.textContent='Критерии · '+value.criterion_verified_count+'/295';
         progressBody.replaceChildren();
-        progressBody.append(E('p','Зафиксированная база: 295 требований.'));
-        progressBody.append(E('p','Подтверждено квитанциями: '+value.receipt_done_count+' / 295.'));
+        progressBody.append(E('p','По точному снимку реестра подтверждены критерии: '
+          +value.criterion_verified_count+' / 295.'));
+        progressBody.append(E('p','Verified-квитанций в снимке: '
+          +value.verified_receipt_record_count+'; из них отложены отдельно: '
+          +value.evidence_only_deferred_count+' ('+deferredIds.join(', ')
+          +') — они не входят в числитель 9/295.'));
+        progressBody.append(E('small','Подтверждённые TaskID: '+criterionIds.join(', ')));
+        const groupHeading=E('p','Квитанции по группам (включая отложенные записи; всего '
+          +value.verified_receipt_record_count+').');
         const groupGrid=E('div');groupGrid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:2px 12px;margin:4px 0 10px';
-        for(const row of groups)groupGrid.append(E('span',row.label+': '+row.done+'/'+row.total));
-        progressBody.append(groupGrid);
+        for(const row of groups)groupGrid.append(E('span',row.label+': '
+          +row.verified_receipts+'/'+row.total+' квитанций'));
+        progressBody.append(groupHeading,groupGrid);
         progressBody.append(E('p','Дополнительные подтверждённые критерии, отдельно от квитанций: '
-          +value.supplemental_accepted_count+(ids.length?' · '+ids.join(', '):' · нет')));
-        progressBody.append(E('p','Эти данные не подтверждают установку на сервере или live-приёмку.'));
+          +value.supplemental_accepted_count+(value.supplemental_accepted_task_ids.length
+            ?' · '+value.supplemental_accepted_task_ids.join(', '):' · нет')));
+        progressBody.append(E('small','Закреплённые источники: all295 '
+          +value.receipt_manifest_git_blob_sha.slice(0,12)+' · квитанции '
+          +value.receipt_snapshot_git_blob_sha.slice(0,12)+'.'));
+        progressBody.append(E('p','Это не общий процент программы и не подтверждение установки на сервере или live-приёмки.'));
         const stamp=new Date(Number(value.observed_at)*1000);
-        progressBody.append(E('small','Снимок: '+stamp.toLocaleString()+' · supplemental scan: '+value.supplemental_state));
+        progressBody.append(E('small','Снимок: '+stamp.toLocaleString()
+          +' · supplemental scan: '+value.supplemental_state));
       }catch{
         progressTitle.textContent='Прогресс программы · нет свежего подтверждения';
-        progressBody.replaceChildren(E('p','Квитанции и supplemental-подтверждения сейчас недоступны.'));
+        progressBody.replaceChildren(E('p','Сверка frozen 295 и квитанций сейчас недоступна.'));
       }finally{workProgressBusy=false;}
     }
     void refreshWorkProgress();setInterval(()=>void refreshWorkProgress(),30000);
