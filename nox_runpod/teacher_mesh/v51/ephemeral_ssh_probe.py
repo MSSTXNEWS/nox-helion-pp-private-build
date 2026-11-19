@@ -362,6 +362,11 @@ PYREMOTE
 """
 
 
+class _ExactInstanceNoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def api(method: str, path: str, key: str, data: dict | None = None):
     if not key:
         raise RuntimeError("HOLD_NOX2_MISSING")
@@ -370,14 +375,20 @@ def api(method: str, path: str, key: str, data: dict | None = None):
     if data is not None:
         raw = json.dumps(data, separators=(",", ":")).encode()
         headers["Content-Type"] = "application/json"
+    exact_instance = method == "GET" and path == f"/instances/{INSTANCE}/" and data is None
+    exact_ssh = re.fullmatch(rf"/instances/{INSTANCE}/ssh(?:/[0-9]{{1,20}})?/", path)
     endpoint = LIST_API if method == "GET" and path == "/instances/" else API + path
+    if exact_instance:
+        endpoint += "?owner=me"
+    open_request = (urllib.request.build_opener(_ExactInstanceNoRedirect()).open
+                    if exact_instance or exact_ssh else urllib.request.urlopen)
     request = urllib.request.Request(endpoint, headers=headers, data=raw, method=method)
     # Vast documents HTTP 429 as a rejected rate-limited request. Retry only
     # that explicit response, never an ambiguous timeout/5xx or native payload.
     # https://docs.vast.ai/sdk/python/rate-limits
     for attempt in range(4):
         try:
-            with urllib.request.urlopen(request, timeout=22) as response:
+            with open_request(request, timeout=22) as response:
                 body = response.read(250000)
             value = json.loads(body)
             break

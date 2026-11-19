@@ -10,6 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
+FILES['refill_snapshot'] = 'nox-control/systemic_relay_20261118/owner_systemic_refill_snapshot.py'
 GPU_INVENTORY_BLOB_SHA='3a3ff33e7709539d5ff6ab6b8614d694a9d2becb'
 GPU_MEMORY_SEMANTICS='nvidia-smi MiB; 0<=total-used-free<=1024 reserved'
 GPU_RESERVED_LIMIT_MIB=1024
@@ -33,6 +34,22 @@ GPU_INVENTORY_HELPER_HOLDS=frozenset((
 GPU_INVENTORY_UUID_RE=re.compile(r'^GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 GPU_INVENTORY_BOOT_RE=re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 MASTER=None
+
+
+def _subprocess_env_without_nox2():
+    env = os.environ.copy()
+    env.pop('NOX2', None)
+    return env
+
+
+def _safe_subprocess_run(*args, **kwargs):
+    kwargs['env'] = _subprocess_env_without_nox2()
+    return subprocess.run(*args, **kwargs)
+
+
+def _safe_subprocess_check_output(*args, **kwargs):
+    kwargs['env'] = _subprocess_env_without_nox2()
+    return subprocess.check_output(*args, **kwargs)
 
 # GitHub Actions may omit an individual log line above the operator's historical
 # 180k character threshold. Preserve oversized evidence as small, independently
@@ -1281,6 +1298,9 @@ def repair_bundle_paths(action,entrypoint,paths):
 
 def _load_action_payload(action):
     if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
+    if action == 'refill_snapshot':
+        from owner_refill_snapshot_transport import build_payload
+        return build_payload(Path(FILES[action]))
     payload=Path(FILES[action]).read_text(encoding='utf-8')
     if action=='gpu_inventory':
         raw=payload.encode('utf-8')
@@ -1290,7 +1310,7 @@ def _load_action_payload(action):
     return payload
 
 
-def authorize_event(action):
+def authorize_event(action, recipient=None):
     if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
     e=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
     if os.environ.get('GITHUB_REPOSITORY')!=REPO or os.environ.get('GITHUB_EVENT_NAME')!='issue_comment':raise RuntimeError('HOLD_EVENT_SCOPE')
@@ -1299,20 +1319,30 @@ def authorize_event(action):
             or e.get('issue',{}).get('number')!=256 or e.get('sender',{}).get('id')!=OWNER_ID):raise RuntimeError('HOLD_OWNER_COMMAND_IDENTITY')
     sha=os.environ.get('NOX_PINNED_SOURCE_SHA','')
     if not re.fullmatch('[0-9a-f]{40}',sha):raise RuntimeError('HOLD_SOURCE_PIN')
-    if c.get('body')!=f'/nox-maintain {INSTANCE} {sha} {action}':raise RuntimeError('HOLD_EXACT_OWNER_COMMAND')
-    if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
+    command=f'/nox-maintain {INSTANCE} {sha} {action}'
+    if action=='refill_snapshot':
+        from owner_refill_snapshot_transport import load_recipient_key
+        load_recipient_key(recipient)
+        command += ' ' + recipient
+    if c.get('body')!=command:raise RuntimeError('HOLD_EXACT_OWNER_COMMAND')
+    if _safe_subprocess_check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
     return c['id']
 
-def run_native(action,request_id):
+def run_native(action,request_id,recipient=None):
     if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
     global MASTER
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
     key=os.environ.get('NOX2','')
     if not key:raise RuntimeError('HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE')
-    values=s.api('GET','/instances/',key)
-    values=values.get('instances',values) if isinstance(values,dict) else values
-    target=next((x for x in values if isinstance(x,dict) and str(x.get('id'))==str(INSTANCE)),None) if isinstance(values,list) else None
+    if action == 'refill_snapshot':
+        instance=s.api('GET',f'/instances/{INSTANCE}/',key)
+        target=instance.get('instances') if isinstance(instance,dict) else None
+        if not isinstance(target,dict) or str(target.get('id'))!=str(INSTANCE):target=None
+    else:
+        values=s.api('GET','/instances/',key)
+        values=values.get('instances',values) if isinstance(values,dict) else values
+        target=next((x for x in values if isinstance(x,dict) and str(x.get('id'))==str(INSTANCE)),None) if isinstance(values,list) else None
     def public_state(value):
         return value if isinstance(value,str) and re.fullmatch('[a-zA-Z0-9_-]{1,40}',value) else None
     print('NOX_MAINT_INSTANCE_STATE='+json.dumps({'instance':INSTANCE,'found':target is not None,
@@ -1336,12 +1366,12 @@ def run_native(action,request_id):
     if port is None:raise RuntimeError('HOLD_CURRENT_SSH_ROUTE')
     s.RUNNER.mkdir(parents=True,mode=0o700,exist_ok=True)
     known=s.RUNNER/'known_hosts'
-    p=subprocess.run(['ssh-keyscan','-T','8','-t','ed25519','-p',str(port),ip],capture_output=True,text=True,timeout=12)
+    p=_safe_subprocess_run(['ssh-keyscan','-T','8','-t','ed25519','-p',str(port),ip],capture_output=True,text=True,timeout=12)
     known.write_text(p.stdout[:8000]);known.chmod(0o600)
-    fp=subprocess.run(['ssh-keygen','-lf',str(known),'-E','sha256'],capture_output=True,text=True,timeout=8)
+    fp=_safe_subprocess_run(['ssh-keygen','-lf',str(known),'-E','sha256'],capture_output=True,text=True,timeout=8)
     if p.returncode or fp.returncode or PIN not in fp.stdout:raise RuntimeError('HOLD_OWNER_HOST_PIN')
     print('NOX_MAINT_HOST_PIN=VERIFIED',flush=True)
-    subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','nox-owner-maint-'+os.environ.get('GITHUB_RUN_ID','manual'),'-f',str(s.KEY)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=12)
+    _safe_subprocess_run(['ssh-keygen','-q','-t','ed25519','-N','','-C','nox-owner-maint-'+os.environ.get('GITHUB_RUN_ID','manual'),'-f',str(s.KEY)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True,timeout=12)
     s.KEY.chmod(0o600);public=s.KEY.with_suffix('.pub').read_text().strip()
     if not public.startswith('ssh-ed25519 ') or len(public)>700:raise RuntimeError('HOLD_PUBLIC_KEY_FORMAT')
     if s.match(key,public):raise RuntimeError('HOLD_KEY_COLLISION')
@@ -1389,7 +1419,7 @@ def run_native(action,request_id):
     # Retry only before any payload has been sent.
     for attempt in range(8):
         try:
-            r=subprocess.run(common+['-o','ControlMaster=yes','-o','ControlPersist=90','-N','-f',host],capture_output=True,text=True,timeout=25)
+            r=_safe_subprocess_run(common+['-o','ControlMaster=yes','-o','ControlPersist=90','-N','-f',host],capture_output=True,text=True,timeout=25)
         except subprocess.TimeoutExpired:r=None
         if r is not None and r.returncode==0 and sock.exists():
             MASTER=common+['-O','exit',host]
@@ -1399,7 +1429,7 @@ def run_native(action,request_id):
         print('NOX_MAINT_SSH_FAILURE_CLASS='+reason,flush=True)
         time.sleep(5)
     else:raise RuntimeError('HOLD_SSH_AUTHENTICATION')
-    check=subprocess.run(common+['-O','check',host],capture_output=True,text=True,timeout=8)
+    check=_safe_subprocess_run(common+['-O','check',host],capture_output=True,text=True,timeout=8)
     if check.returncode:raise RuntimeError('HOLD_SSH_MASTER_NOT_ALIVE')
     print('NOX_MAINT_AUTHENTICATED_INSTANCE=60509551',flush=True)
     payload=_load_action_payload(action)
@@ -1532,11 +1562,16 @@ def run_native(action,request_id):
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
     script=f"set -euo pipefail\nNOX_OWNER_ACTION={action} NOX_OWNER_INSTANCE_ID={INSTANCE} NOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
-    timeout=150 if action in ('audit','inspect','source_attest','gpu_inventory') else 900
+    timeout=150 if action in ('audit','inspect','source_attest','gpu_inventory','refill_snapshot') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
-    r=subprocess.run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
+    r=_safe_subprocess_run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
     source_sha=os.environ.get('NOX_PINNED_SOURCE_SHA','')
+    if action=='refill_snapshot':
+        from owner_refill_snapshot_transport import save_encrypted_snapshot
+        receipt=save_encrypted_snapshot(r.stdout,r.returncode,recipient,int(request_id),source_sha)
+        print('NOX_MAINT_REFILL_SNAPSHOT_EXPORT='+json.dumps(receipt,separators=(',',':')),flush=True)
+        return True
     if action=='gpu_inventory':
         failure=_gpu_inventory_remote_failure(r.stdout,r.stderr,r.returncode)
         if failure is not None:
@@ -1565,15 +1600,18 @@ def operator_argument_parser():
 def main():
     args=operator_argument_parser().parse_args();good=False
     try:
-        request=authorize_event(args.action)
+        kwargs={}
+        if args.action=='refill_snapshot':
+            kwargs['recipient']=os.environ.get('NOX_REFILL_SNAPSHOT_RECIPIENT')
+        request=authorize_event(args.action,**kwargs)
         print('NOX_MAINT_AUTHORIZED_COMMENT_ID='+str(request),flush=True)
-        good=run_native(args.action,request)
+        good=run_native(args.action,request,**kwargs)
     except Exception as e:
         code=str(e)
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
     finally:
         if MASTER:
-            with contextlib.suppress(Exception):subprocess.run(MASTER,capture_output=True,timeout=8)
+            with contextlib.suppress(Exception):_safe_subprocess_run(MASTER,capture_output=True,timeout=8)
         sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
         from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
         try:
