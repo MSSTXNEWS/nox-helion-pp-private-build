@@ -20,6 +20,17 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
 }
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
+# A ONE-SHOT owner-pinned fallback after prior blocked ZIP claim. Never merge
+# this temporary route into the permanent owner's original repair command.
+FILES['repair'] = 'nox-control/systemic_relay_20261118/next_zip_reviewed/owner_zip_reviewed_fallback_entry.py'
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = (
+    'owner_systemic_reviewed_publish.py', 'continuous_transaction_helpers.py',
+    'merge_web_source.py')
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
+    'nox-control/systemic_relay_20261118/owner_systemic_reviewed_publish.py',
+    'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py',
+    'nox-control/systemic_relay_20261118/next_zip_reviewed/merge_web_source.py')
+
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
