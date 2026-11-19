@@ -1,0 +1,23 @@
+name: NOX B1 pinned S03 writer adapter source gate
+on:
+  push:
+    branches:
+      - b1/s03-writer-adapter-20261120-0218
+  pull_request:
+    paths:
+      - 'nox-control/owner_exchange_s03_writer_adapter.py'
+      - 'nox-control/test_b1_exchange_s03_writer_adapter.py'
+permissions:
+  contents: read
+jobs:
+  b1-s03-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: B1 S03 writer single focused source regression
+        run: |
+          python3 -m py_compile nox-control/owner_exchange_s03_writer_adapter.py nox-control/test_b1_exchange_s03_writer_adapter.py
+          PYTHONPATH=nox-control python3 -m unittest -v test_b1_exchange_s03_writer_adapter.B1WriterAdapterTests
