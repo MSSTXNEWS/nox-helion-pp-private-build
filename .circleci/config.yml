@@ -5,7 +5,7 @@ version: 2.1
 jobs:
   b3-resonance-owner-source:
     docker:
-      - image: cimg/node:20.19
+      - image: cimg/node:22.16
     resource_class: small
     steps:
       - checkout
