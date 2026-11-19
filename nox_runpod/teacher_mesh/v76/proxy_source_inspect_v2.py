@@ -17,6 +17,14 @@ import ast
 
 MAX_SOURCE_BYTES = 1_000_000
 TARGETS = ("_trim_ctx", "_build_messages", "prepare_payload")
+MAX_KEYS_PER_SCOPE = 32
+KEY_PATTERN = __import__("re").compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
+HYDRATION_TERMS = {
+    "s03": ("s03",),
+    "history": ("history", "messages"),
+    "dialog": ("dialog", "conversation", "thread", "session"),
+    "storage": ("load", "fetch", "read", "select", "query", "store", "db", "database"),
+}
 
 def _bound(node):
     if isinstance(node, ast.Constant) and type(node.value) is int:
@@ -30,6 +38,36 @@ def _bound(node):
             and type(node.operand.value) is int):
         return node.operand.value
     return None
+
+def _literal_body_keys(node):
+    # Return only bounded identifier-like literal keys, never their values.
+    keys = set()
+    for child in ast.walk(node):
+        value = None
+        if isinstance(child, ast.Subscript) and isinstance(child.slice, ast.Constant):
+            value = child.slice.value
+        elif (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)
+              and child.func.attr == "get" and child.args
+              and isinstance(child.args[0], ast.Constant)):
+            value = child.args[0].value
+        if isinstance(value, str) and KEY_PATTERN.fullmatch(value):
+            keys.add(value)
+    return sorted(keys)[:MAX_KEYS_PER_SCOPE]
+
+def _hydration_presence(node):
+    # Static name-presence signals only; these do not prove data flow.
+    found = {key: [] for key in HYDRATION_TERMS}
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Call):
+            continue
+        func = child.func
+        name = (func.id if isinstance(func, ast.Name)
+                else func.attr if isinstance(func, ast.Attribute) else "")
+        lowered = name.lower()
+        for category, terms in HYDRATION_TERMS.items():
+            if any(term in lowered for term in terms):
+                found[category].append(getattr(child, "lineno", 0))
+    return {key: sorted(set(lines))[:32] for key, lines in found.items()}
 
 def analyze_source(raw):
     if not isinstance(raw, bytes):
@@ -66,6 +104,8 @@ def analyze_source(raw):
                         arg.arg for arg in (node.args.posonlyargs + node.args.args)
                     ][:24],
                     "constant_slice_bounds": bounds[:24],
+                    "body_key_reads": _literal_body_keys(node),
+                    "hydration_call_presence": _hydration_presence(node),
                 })
             for decorator in node.decorator_list:
                 if not isinstance(decorator, ast.Call):
@@ -92,6 +132,8 @@ def analyze_source(raw):
                         "path": path.value,
                         "handler_line": node.lineno,
                         "context_calls": route_calls[:3],
+                        "body_key_reads": _literal_body_keys(node),
+                        "hydration_call_presence": _hydration_presence(node),
                     })
         elif isinstance(node, ast.Call):
             func = node.func
@@ -105,7 +147,7 @@ def analyze_source(raw):
         "functions": {name: rows for name, rows in definitions.items()},
         "callsites": {name: rows for name, rows in calls.items()},
         "chat_routes": routes,
-        "analysis_note": "AST-only; bounded line/symbol/slice metadata; no source text emitted",
+        "analysis_note": "AST-only; body keys are literal identifier names; hydration fields are call-name presence, not proof of data flow; no source text emitted",
     }
 """
 
@@ -230,3 +272,4 @@ if __name__ == "__main__":
         except Exception:
             ok = False
     raise SystemExit(0 if ok else 2)
+
