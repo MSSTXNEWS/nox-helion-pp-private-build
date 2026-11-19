@@ -1,0 +1,27 @@
+name: A4 pinned evidence span proof
+on:
+  push:
+    branches:
+      - repair/a4-source-span-proof-20261119
+    paths:
+      - nox-control/owner_source_span_proof.py
+      - nox-control/test_owner_source_span_proof.py
+      - .github/workflows/a4-source-span-proof.yml
+  pull_request:
+    paths:
+      - nox-control/owner_source_span_proof.py
+      - nox-control/test_owner_source_span_proof.py
+      - .github/workflows/a4-source-span-proof.yml
+
+permissions:
+  contents: read
+
+jobs:
+  exact-provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exact owner-pinned citation proof regression
+        run: |
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_source_span_proof
