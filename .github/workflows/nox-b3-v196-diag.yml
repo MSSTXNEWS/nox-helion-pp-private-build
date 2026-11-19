@@ -1,0 +1,16 @@
+name: B3 V196 Node source diagnostics
+on:
+  push:
+    branches:
+      - b3/5a05-browser-pacing-cancel-20261119
+  workflow_dispatch:
+jobs:
+  b3-node22-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run exact full owner source regressions
+        run: node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
