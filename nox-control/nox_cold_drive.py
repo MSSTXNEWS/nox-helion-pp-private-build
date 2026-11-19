@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """NOX cold model storage: rclone Drive -> verified staging -> optional RAM cache.
-No credentials are logged or embedded. No automatic deletion or training launch.
+No credentials are logged or embedded. Eviction requires fresh owner evidence.
 """
 import argparse
 import hashlib
@@ -9,7 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
+import time
 from pathlib import Path
 
 BLOCKED_PARTS = {"s03", "checkpoint", "checkpoints", "optimizer", "training", "sqlite", "database", "db"}
@@ -27,12 +27,46 @@ def command(args):
     subprocess.run(args, check=True)
 
 def assert_model(p):
-    p = Path(p).resolve(strict=True)
-    if not p.is_file() or p.is_symlink() or p.suffix.lower() not in ALLOWED_SUFFIX:
-        raise ValueError("Not an eligible regular model file")
+    # resolve() before is_symlink() would silently allow linked targets.
+    p = Path(os.path.abspath(p))
+    if any(part.is_symlink() for part in (p, *p.parents)):
+        raise ValueError("Symlinked model or parent rejected")
+    if not p.is_file() or p.stat().st_nlink != 1 or p.suffix.lower() not in ALLOWED_SUFFIX:
+        raise ValueError("Not an eligible unlinked regular model file")
     if any(part.lower() in BLOCKED_PARTS for part in p.parts):
         raise ValueError("Protected training, checkpoint or S03 path")
     return p
+
+def verify_remote_stream(remote_file, expected_sha256, expected_size):
+    """Read remote bytes back through rclone cat using O(8MiB) local memory."""
+    h = hashlib.sha256()
+    size = 0
+    proc = subprocess.Popen(
+        ["rclone", "cat", remote_file, "--retries", "3", "--low-level-retries", "3"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+    )
+    try:
+        while True:
+            chunk = proc.stdout.read(8 * 1024 * 1024)
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > expected_size:
+                raise RuntimeError("Remote size exceeds local source; retained")
+            h.update(chunk)
+        if proc.wait() != 0 or size != expected_size or h.hexdigest() != expected_sha256:
+            raise RuntimeError("Remote readback SHA256/size mismatch; original retained")
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        if proc.stdout:
+            proc.stdout.close()
+
 
 def assert_remote(remote):
     if ":" not in remote or remote.startswith(":") or ".." in remote.split(":")[-1].split("/"):
@@ -50,15 +84,8 @@ def upload(a):
     digest = sha256(src)
     size = src.stat().st_size
     command(["rclone", "copyto", "--retries", "3", "--checkers", "4", str(src), dest])
-    # Stream back from remote to local hash; do not trust Drive MD5 for non-MD5 backends.
-    with tempfile.TemporaryDirectory(prefix="nox_cold_verify_") as tmp:
-        check = Path(tmp) / src.name
-        free = shutil.disk_usage(tmp).free
-        if free < size + GIB:
-            raise RuntimeError("Not enough local space to independently verify uploaded model")
-        command(["rclone", "copyto", dest, str(check)])
-        if check.stat().st_size != size or sha256(check) != digest:
-            raise RuntimeError("Remote readback hash mismatch: original retained")
+    # Stream remote readback without another model-sized SSD copy.
+    verify_remote_stream(dest, digest, size)
     receipt = {"source": str(src), "destination": dest, "size": size,
                "sha256": digest, "readback_verified": True, "source_deleted": False}
     receipt_path = Path(a.receipt_dir).resolve() / (src.name + "." + digest[:16] + ".json")
@@ -72,7 +99,21 @@ def upload(a):
         # Require operator supplied manifest generated from live process inspection.
         if not a.active_manifest:
             raise RuntimeError("Verified upload complete; eviction requires --active-manifest")
-        # Only source from completed receipt; never recursive deletion.
+        # Require current owner-produced active-file evidence for any eviction.
+        manifest_path = Path(os.path.abspath(a.active_manifest))
+        if manifest_path.is_symlink() or not manifest_path.is_file():
+            raise RuntimeError("Eviction requires a regular owner active manifest")
+        st = manifest_path.stat()
+        if st.st_mode & 0o077 or st.st_uid != os.geteuid():
+            raise RuntimeError("Eviction active manifest permissions/owner invalid")
+        manifest = json.loads(manifest_path.read_text())
+        when = manifest.get("checked_at_unix")
+        if type(when) is not int or abs(time.time() - when) > 60:
+            raise RuntimeError("Eviction requires a fresh owner process snapshot")
+        if str(src) in {str(Path(os.path.abspath(x))) for x in manifest.get("active_paths", [])}:
+            raise RuntimeError("Eviction refused: source became active")
+        if src.stat().st_size != size or sha256(src) != digest:
+            raise RuntimeError("Eviction refused: source changed after upload")
         src.unlink()
         receipt["source_deleted"] = True
         receipt_path.write_text(json.dumps(receipt, indent=2))
