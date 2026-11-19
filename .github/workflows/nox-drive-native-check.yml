@@ -1,0 +1,37 @@
+name: NOX Drive native task binding
+on:
+  push:
+    branches: [feat/nox-drive-native-task-handler-20261120, main]
+    paths:
+      - 'nox-control/nox_drive_native_binding.py'
+      - 'nox-control/test_nox_drive_native_binding.py'
+      - 'nox-control/owner_native_drive_reconnect_install.py'
+      - 'nox-control/test_owner_native_drive_reconnect_install.py'
+      - 'nox-control/owner_native_operator.py'
+      - 'nox-control/NOX_DRIVE_NATIVE_BINDING.md'
+      - '.github/workflows/nox-drive-native-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Native Drive handler and owner installer exact checks
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_drive_native_binding.py nox-control/nox_drive_first.py nox-control/nox_drive_prefetch.py nox-control/test_nox_drive_native_binding.py
+          python3 -m unittest discover -s nox-control -p test_nox_drive_native_binding.py -v
+          python3 -m unittest discover -s nox-control -p test_owner_native_drive_reconnect_install.py -v
+          python3 - <<'PY'
+          from pathlib import Path
+          op=Path('nox-control/owner_native_operator.py').read_text()
+          ins=Path('nox-control/owner_native_drive_reconnect_install.py').read_text()
+          for name in ('nox_drive_native_binding.py','nox_drive_prefetch.py','nox-drive-first.skill.md'):
+              assert name in op and name in ins
+          print('NATIVE_DRIVE_SOURCE_BINDING_PASS__NOT_HOST_HANDLER_REGISTRATION')
+          PY
