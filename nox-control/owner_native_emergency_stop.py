@@ -427,7 +427,8 @@ def _read_effective_supervisor_config(daemon_identity: dict | None):
         SUPERVISOR_CLIENT_CONFIG, MAX_SUPERVISOR_CONFIG_BYTES,
         "UNIX_RPC_SUPERVISOR_CONFIG", include_ctime=True)
     try:
-        parser = configparser.ConfigParser(interpolation=None, strict=True)
+        parser = configparser.ConfigParser(interpolation=None, strict=True,
+                                           inline_comment_prefixes=(";",))
         parser.read_string(config_bytes.decode("utf-8", "strict"))
         _reject_config_defaults(parser, "UNIX_RPC_MAIN_CONFIG_DEFAULTS_UNSUPPORTED")
         allowed_sections = {"supervisord", "unix_http_server", "rpcinterface:supervisor",
