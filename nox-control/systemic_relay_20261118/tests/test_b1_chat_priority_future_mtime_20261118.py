@@ -164,6 +164,66 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         self.assertEqual(task["owner_claim"]["nonce"], "original-claim")
         self.assertEqual(owner.interrupted, {})
 
+    def test_nonobject_ipc_reply_after_submit_stays_unsettled_no_replay(self):
+        # A malformed event is still a worker execution attempt.  The result
+        # has been popped from completed, so a second tick MUST NOT resubmit.
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body
+                      if isinstance(n, ast.ClassDef) and n.name == "Native")
+        for handler, method, malformed in (
+                ("review", "_handle", "truncated ipc"),
+                ("leaf", "_handle_leaf", ["non-object ipc"])):
+            with self.subTest(handler=handler):
+                fn = next(n for n in native.body
+                          if isinstance(n, ast.FunctionDef) and n.name == method)
+                scope = {
+                    "HANDLER": "review", "PROJECT_HANDLER": "project",
+                    "LEAF_HANDLER": "leaf", "ROLES": ("runtime", "memory", "weights"),
+                    "sqlite3": sqlite3, "time": time, "GateError": RuntimeError,
+                    "autonomy": SimpleNamespace(AutoHold=RuntimeError),
+                    "chat_priority_active": lambda: False,
+                }
+                exec(compile(ast.fix_missing_locations(
+                    ast.Module(body=[fn], type_ignores=[])),
+                    str(SOURCE), "exec"), scope)
+                params = ({"role": "runtime", "policy_sha256": "policy",
+                           "job_id": "job-1"} if handler == "review" else
+                          {"operation": "source_read", "parent_task_id": "6V14-03",
+                           "source_sha256": "source", "job_id": "job-1"})
+                task = {"id": "B1-IPC-MALFORMED-" + handler, "handler": handler,
+                        "owner_claim": {"nonce": "claim-1"}, "queue_id": "Q1",
+                        "params": params, "title": "no replay"}
+                sends = []
+                owner = SimpleNamespace(
+                    projects=None, catalog={"tasks": [task]},
+                    policy={"sha256": "policy"}, source="source",
+                    config={"leaf_source_pins": {}}, lock=threading.RLock(),
+                    completed={}, interrupted={},
+                    _claim_current=lambda *args, **kwargs: True,
+                    stop_active=lambda: False, writer_lease=lambda: True,
+                    owner_allowed=lambda: True,
+                    _fresh_admission_reason=lambda **kwargs: None,
+                    _durable_submit_fence=lambda _: None,
+                    _drain=lambda: None,
+                    process_readback=lambda: [
+                        {"role": "runtime", "pid": 17, "process_starttime": 999}],
+                )
+                def submit(payload):
+                    sends.append(payload)
+                    owner.completed[task["id"]] = malformed
+                owner.pool = SimpleNamespace(active={}, submit=submit)
+                reason = ("HOLD_NATIVE_REVIEW_RESULT_SHAPE" if handler == "review"
+                          else "HOLD_NATIVE_LEAF_RESULT_SHAPE")
+                self.assertEqual(scope[method](owner, task), (False, reason))
+                self.assertIn(task["id"], owner.interrupted)
+                self.assertNotIn(task["id"], owner.completed)
+                self.assertEqual(scope[method](owner, task),
+                                 ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
+                self.assertEqual(len(sends), 1, "never re-execute ambiguous IPC")
+                self.assertEqual(owner.pool.active, {})
+
     def test_interrupted_leaf_claim_fails_closed_without_resubmit(self):
         # An earlier STOP/chat teardown may have lost a late result.  Reusing
         # the same claim must not submit again until durable reconciliation.
