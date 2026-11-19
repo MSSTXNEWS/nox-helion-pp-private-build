@@ -624,6 +624,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             ('nox-ds41-current','nox-ds41-current',True),
             ('nox-ds41-current','different-model',False),
             ('nox-ds41-current',None,False),
+            ('nox-ds41-current','__INPLACE_DROP__',False),
             (None,'pool-resolved-model',True),
         )
         for selected,pooled,allowed in cases:
@@ -631,7 +632,12 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 native=self.native()
                 native['_POOL']=True
                 native['try_deterministic']=lambda user:None
-                native['prepare_payload']=lambda req,cache:dict(req,model=pooled)
+                def prepare(req,cache):
+                    if pooled=='__INPLACE_DROP__':
+                        req.pop('model',None)
+                        return req
+                    return dict(req,model=pooled)
+                native['prepare_payload']=prepare
                 payload={'messages':[{'role':'user','content':'Say ready'}]}
                 if selected is not None:payload['model']=selected
                 streams=[Chunks([frame('ready'),frame(finish='stop'),
