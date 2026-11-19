@@ -136,6 +136,7 @@ jobs:
        endsWith(github.event.comment.body, ' source_attest') ||
        endsWith(github.event.comment.body, ' gpu_inventory') ||
        endsWith(github.event.comment.body, ' browser_qa') ||
+       contains(github.event.comment.body, ' refill_snapshot ') ||
        contains(github.event.comment.body, ' source_export '))
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -252,6 +253,55 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
         run: python -B nox-control/owner_native_operator.py browser_qa
+      - name: Recheck exact refill snapshot command before credentials
+        if: success() && steps.owner-command.outputs.action == 'refill_snapshot'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          NOX_REFILL_SNAPSHOT_RECIPIENT: ${{ steps.owner-command.outputs.export_key_b64 }}
+          PYTHONPATH: nox-control
+        run: |
+          if ! /usr/bin/python3 -c 'import cryptography'; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-cryptography
+          fi
+          /usr/bin/python3 -B - <<'PY'
+          import os
+          from owner_native_operator import authorize_event, _load_action_payload
+          authorize_event('refill_snapshot', os.environ['NOX_REFILL_SNAPSHOT_RECIPIENT'])
+          compile(_load_action_payload('refill_snapshot'), '<refill_snapshot>', 'exec')
+          print('NOX_OWNER_REFILL_SNAPSHOT_SOURCE_AUTH=PASS')
+          PY
+          /usr/bin/python3 -B nox-control/test_owner_refill_snapshot_transport.py
+          /usr/bin/python3 -B nox-control/systemic_relay_20261118/test_owner_systemic_refill_snapshot.py
+      - name: Run the fixed read-only refill snapshot action
+        if: success() && steps.owner-command.outputs.action == 'refill_snapshot'
+        id: refill-snapshot
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          NOX_REFILL_SNAPSHOT_RECIPIENT: ${{ steps.owner-command.outputs.export_key_b64 }}
+        run: /usr/bin/python3 -B nox-control/owner_native_operator.py refill_snapshot
+      - name: Always detach only the refill snapshot temporary public key
+        if: >-
+          always() &&
+          (steps.refill-snapshot.outcome == 'success' ||
+           steps.refill-snapshot.outcome == 'failure' ||
+           steps.refill-snapshot.outcome == 'cancelled')
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: /usr/bin/python3 -B -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
+      - name: Upload only the encrypted refill snapshot
+        if: success() && steps.owner-command.outputs.action == 'refill_snapshot'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_REFILL_SNAPSHOT_${{ github.run_id }}
+          path: ${{ runner.temp }}/nox-refill-snapshot.enc
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
       - name: Recheck exact pinned #415 source-export command before credentials
         if: success() && steps.owner-command.outputs.action == 'source_export'
         working-directory: source

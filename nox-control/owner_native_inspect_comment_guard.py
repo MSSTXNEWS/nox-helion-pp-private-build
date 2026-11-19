@@ -23,6 +23,7 @@ APPROVED_SOURCE_BY_ACTION = {
     "source_attest": "3e399979e5b2e5ac16c1504542bd5cace989ddd3",  # updated chat/S03 static scope #520
     "gpu_inventory": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",  # exact-head source tests green
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
+    "refill_snapshot": "c4683943fe17368ab2086f6ae7ff27ad21732ef7",
     "source_export": "845c76d44676d56157125e729db81b45e006cf92",  # exact pinned encrypted-only #415 source export
     "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
     "emergency_stop_preflight": "26d20a37c0ec1c9ca1addd373d89baec29ebb632",  # bounded read-only endpoint facts
@@ -38,6 +39,10 @@ SOURCE_EXPORT_COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ({re.escape(APPROVED_SOURCE_BY_ACTION['source_export'])}) "
     rf"source_export ([A-Za-z0-9_-]{{1,{SOURCE_EXPORT_KEY_MAX_CHARS}}})\Z"
 )
+REFILL_SNAPSHOT_COMMAND = re.compile(
+    rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) "
+    r"refill_snapshot ([A-Za-z0-9_-]{500,900})\Z"
+)
 
 
 def parse_command(body: object) -> tuple[str, str, str | None]:
@@ -52,6 +57,10 @@ def parse_command(body: object) -> tuple[str, str, str | None]:
     if export_match is not None:
         source_sha, key_b64 = export_match.groups()
         return "source_export", source_sha, key_b64
+    refill_match = REFILL_SNAPSHOT_COMMAND.fullmatch(body)
+    if refill_match is not None:
+        source_sha, recipient_b64 = refill_match.groups()
+        return "refill_snapshot", source_sha, recipient_b64
     raise RuntimeError("HOLD_EXACT_OWNER_COMMAND")
 
 
