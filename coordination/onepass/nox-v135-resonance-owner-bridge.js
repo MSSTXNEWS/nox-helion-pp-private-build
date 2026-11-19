@@ -203,19 +203,21 @@
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              // Pace visible animation only; keep every S03 readback.
               if(index<Math.min(parts.length-1,7)&&
                  (typeof document==='undefined'||document.visibilityState!=='hidden')&&
                  !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
                 await new Promise(resolve=>{
                   let settled=false,frameId,timerId;
+                  const visibility=()=>{if(document.visibilityState==='hidden')finish();};
                   const finish=()=>{
                     if(settled)return;
                     settled=true;
+                    if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
                     if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
                     if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
                     resolve();
                   };
+                  if(typeof document!=='undefined')document.addEventListener?.('visibilitychange',visibility);
                   if(typeof requestAnimationFrame==='function'){
                     frameId=requestAnimationFrame(finish);
                     if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
@@ -231,9 +233,6 @@
           const {answer,receipt}=await consume(upstream,async t=>{
             trailing+=t;
             if(!segmenter){
-              // Without a segmenter, emit only a known-safe ASCII prefix.
-              // Keep one glyph of lookahead so subsequent combining marks
-              // cannot tear a grapheme across native delta boundaries.
               const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
               if(ascii){
                 const safe=ascii[0].slice(0,-1);
