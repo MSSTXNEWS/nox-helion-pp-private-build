@@ -488,5 +488,55 @@ class CheckpointStepProvenance(unittest.TestCase):
 
 
 
+
+    def test_bounded_json_rejects_path_rebind_during_read(self):
+        # A writer can rename a stable, SHA-matching descriptor and bind a
+        # different state file to the path while read_json is still reading.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            state = root / "trainer_state.json"
+            replacement = root / "replacement.json"
+            original = b'{"global_step":1}'
+            changed = b'{"global_step":2}'
+            state.write_bytes(original)
+            replacement.write_bytes(changed)
+            read_json = load_pinned_verifier(root)["read_json"]
+            expected_sha = hashlib.sha256(original).hexdigest()
+            self.assertEqual(read_json(state, limit=64,
+                                       expected_sha256=expected_sha),
+                             {"global_step": 1})
+            real_fdopen = os.fdopen
+
+            class RebindOnRead:
+                def __init__(self, stream):
+                    self.stream = stream
+                    self.rebound = False
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def fileno(self):
+                    return self.stream.fileno()
+
+                def read(self, n):
+                    if not self.rebound:
+                        self.rebound = True
+                        os.replace(state, root / "old-state.json")
+                        os.replace(replacement, state)
+                    return self.stream.read(n)
+
+            with mock.patch("os.fdopen", side_effect=lambda fd, mode:
+                            RebindOnRead(real_fdopen(fd, mode))):
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_STATE_FILE_MUTATED"):
+                    read_json(state, limit=64, expected_sha256=expected_sha)
+            self.assertEqual(state.read_bytes(), changed)
+            self.assertEqual((root / "old-state.json").read_bytes(), original)
+
+
 if __name__ == "__main__":
     unittest.main()
