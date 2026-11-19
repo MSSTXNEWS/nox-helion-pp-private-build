@@ -211,6 +211,7 @@ def stage_one(manifest, asset, manifest_sha, dest, *, from_dir=None, ram=False):
               "FILE_HASH_MISMATCH")
         os.chmod(temp, 0o600)
         # Hard-link exposes completed bytes atomically and refuses to replace existing file.
+        check(not stopped(), "STOP")
         os.link(temp, target, follow_symlinks=False)
         temp.unlink()
         receipt(target, asset, manifest_sha)
