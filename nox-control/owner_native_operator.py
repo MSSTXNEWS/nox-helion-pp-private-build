@@ -9,7 +9,7 @@ REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/systemic_relay_20261118/owner_systemic_relay_observe.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline_observer.py', 'memfd_audit': 'nox-control/owner_native_memfd_audit.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py'}
+FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline_observer.py', 'memfd_audit': 'nox-control/owner_native_memfd_audit.py', 'emergency_stop': 'nox-control/owner_native_emergency_stop.py'}
 LIFELINE_OBSERVER_ASSET_PINS=(
     ('nox_lifeline_observer.py','nox-control/nox_lifeline_observer.py',
      'acb7a0174d02ac106e33c4f5c35abfa1a571526454ac65ef70b241247d602990',262144),
