@@ -66,6 +66,23 @@ class CheckpointStepProvenance(unittest.TestCase):
             check = verifier["verify_paused_result"]
             self.assertTrue(check(helper, receipt))
 
+            # A concurrent writer can change the JSON after the checkpoint
+            # hash sweep. The parsed bytes must still match the signed receipt,
+            # even when both old/new documents claim the same global_step.
+            original_file_sha = verifier["file_sha"]
+
+            def mutate_state_after_hash(filename):
+                observed = original_file_sha(filename)
+                if Path(filename) == state:
+                    state.write_text('{"global_step":1,"changed_after_hash":true}',
+                                     encoding="utf-8")
+                return observed
+
+            with mock.patch.dict(verifier, {"file_sha": mutate_state_after_hash}):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_PAUSED_CHECKPOINT_HASH"):
+                    check(helper, receipt)
+            state.write_text('{"global_step": 1}', encoding="utf-8")
+
             # A single optimizer step cannot honestly claim two successful steps.
             impossible_count = copy.deepcopy(receipt)
             impossible_count["successful_optimizer_steps"] = 2
