@@ -1,0 +1,157 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Corrective provenance sidecar for the historical 6V14-02 B2 receipt and the fresh #499 native audit. It preserves the frozen receipt and records why the historical GPU PID mapping claim is not sufficiently bound or complete.",
+  "scope": {
+    "task_ids": [
+      "6V14-02"
+    ],
+    "task_criterion": {
+      "task_spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+      "task_registry": {
+        "path": "nox-control/four_queue_20261118/work_tasks.json",
+        "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "task_title": "Проверить реальный набор фоновых процессов.",
+        "required_evidence": "native"
+      }
+    },
+    "frozen_ledgers": {
+      "all295_manifest": {
+        "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+        "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+        "task_record_key": "6V14-02",
+        "spec_sha256": "00b403c24775060bb39c6d81f177c6c73073f1168538ca35a94a0213858f3d73",
+        "recorded_status": "HISTORICAL_VERIFIED",
+        "native_binding": "UNBOUND_PENDING_NATIVE_CATALOG",
+        "execution_binding": "HISTORICAL_EVIDENCE_PRESERVED_NO_NEW_EXECUTION_PLAN",
+        "original_acceptance_added": false
+      },
+      "work_receipts": {
+        "path": "nox-control/four_queue_20261118/work_receipts.json",
+        "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+        "receipt_key": "6V14-02",
+        "prior_state_preserved": "verified",
+        "prior_scope": "native",
+        "original_acceptance_claim_preserved_unchanged": true
+      },
+      "mutation_boundary": "This addendum is additive only. It does not update work_tasks.json, all295_execution_disposition.json, or work_receipts.json."
+    }
+  },
+  "historical_b2_receipt_correction": {
+    "receipt_owner": "B2",
+    "receipt_run_label": "NOX-B49-20261117-01",
+    "receipt_evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43989273499/job/133745616688",
+    "receipt_claim": "Native relevant-process census, 28 NOX service states and GPU PID mapping verified; not service health or restore acceptance.",
+    "run_job_binding_check": {
+      "receipt_url_run_id": 43989273499,
+      "receipt_url_job_id": 133745616688,
+      "jobs_returned_for_receipt_url_run": [
+        134453840539
+      ],
+      "job_id_matches_run_job_list": false,
+      "interpretation": "The job ID embedded in the receipt URL is not the job returned by the run's job-list API. The two job IDs must be treated as separate observations unless a canonical binding is reissued."
+    },
+    "observed_linked_job": {
+      "job_id": 133745616688,
+      "log_window_utc": "2026-11-17T01:23:55Z–2026-11-17T01:24:41Z",
+      "logged_process_rows": 12,
+      "supervisor_service_lines": 28,
+      "supervisor_rc": 3,
+      "supervisor_states": {
+        "STOPPED": 27,
+        "FATAL": 1
+      },
+      "gpu_query_rc": 0,
+      "gpu_mapping_assessment": "NOT_PROVEN_EMPTY_NVIDIA_SMI_APPS_AND_NO_NAMESPACE_IDENTITY_JOIN",
+      "caveat": "The GPU mapping record itself says namespace ambiguity is unresolved; an empty unresolved-link list is not an identity join.",
+      "nvidia_smi_app_count": 0,
+      "gpu_link_state": "NOT_OBSERVED_CANNOT_VERIFY",
+      "gpu_identity_join_complete": false
+    },
+    "observed_job_list_entry": {
+      "run_id": 43989273499,
+      "job_id": 134453840539,
+      "logged_process_rows": 29,
+      "supervisor_service_lines": 48,
+      "supervisor_rc": 3,
+      "gpu_unresolved_link_count": 2,
+      "gpu_mapping_assessment": "INCOMPLETE_TWO_UNMAPPED_GPU_LINKS",
+      "gpu_identity_join_complete": false
+    },
+    "corrected_status": "HISTORICAL_GPU_PID_MAPPING_CLAIM_NOT_VERIFIED_FROM_BOUND_EVIDENCE",
+    "prior_additional_native_evidence": {
+      "addendum_path": "nox-control/complete_executor_20261118/evidence/addenda/native_snapshot_addendum_20261119_2v14-12_6v14-02.json",
+      "merged_commit_sha": "89ae4dd7d870758bcdd74942a6581d5631371efd",
+      "recorded_result": "PARTIAL_GPU_CONSUMER_UNATTRIBUTED",
+      "run_id": 44460035858,
+      "job_id": 135344296278,
+      "process_rows": 48,
+      "process_scope": "FILTERED_BY_ARGV_FIRST_THREE_ELEMENTS_NOT_EXHAUSTIVE",
+      "supervisor_rows": 56,
+      "supervisor_rc": 3,
+      "supervisor_states": {
+        "RUNNING": 20,
+        "STOPPED": 34,
+        "FATAL": 2
+      },
+      "gpu_links": 2,
+      "unmatched_gpu_links": 2,
+      "unique_unattributed_gpu_consumer_count": 1,
+      "gpu_consumer_identity_value_omitted": true,
+      "collection_atomicity": "NON_ATOMIC_SEPARATE_WORKER_CALLS",
+      "note": "This prior addendum already classifies 6V14-02 as PARTIAL_GPU_CONSUMER_UNATTRIBUTED; it documents a filtered process view and does not establish a complete or atomic census."
+    }
+  },
+  "fresh_audit_hold": {
+    "sidecar_path": "nox-control/complete_executor_20261118/evidence/addenda/native_audit_hold_addendum_20261119_6v14-02_run44524355480.json",
+    "sidecar_git_blob_sha": "e497842f7058c57ef63fd6bd86a0411a53ffbbcc",
+    "workflow_run_id": 44524355480,
+    "workflow_job_id": 135560889713,
+    "workflow_run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44524355480",
+    "workflow_job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44524355480/job/135560889713",
+    "pinned_audit_source_sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
+    "process_census": {
+      "scope": "ALL_NUMERIC_PROC_PIDS_MINIMAL_IDENTITY",
+      "row_count": 60,
+      "complete": false,
+      "truncated": false,
+      "read_failure_count": 2,
+      "read_failure_fields": [
+        "namespace_cgroup",
+        "namespace_mnt"
+      ]
+    },
+    "gpu_census": {
+      "link_count": 2,
+      "unmatched_link_count": 2,
+      "identity_join_complete": false,
+      "evidence_state": "INCOMPLETE"
+    },
+    "supervisor": {
+      "inventory_complete": true,
+      "crosscheck_complete": true,
+      "rows_complete": true,
+      "identity_complete": true,
+      "status_consistent": true,
+      "command_rc": 3,
+      "command_success": false,
+      "service_health": "DEGRADED",
+      "service_counts": {
+        "RUNNING": 20,
+        "STOPPED": 34,
+        "FATAL": 2
+      }
+    },
+    "result": "HOLD_AUDIT_CENSUS_INCOMPLETE",
+    "accepted": false,
+    "acceptance_increment": 0
+  },
+  "acceptance": {
+    "accepted": false,
+    "acceptance_increment": 0,
+    "current_status": "HOLD_PROVENANCE_AND_CENSUS_INCOMPLETE",
+    "rationale": "The frozen card names a native background-process-set check. The later #473 addendum already classifies 6V14-02 PARTIAL: 48 filtered process rows omit a GPU consumer, with hardware/process/Supervisor captured non-atomically. The current #499 all-numeric-PID census is also incomplete and has unmatched GPU links. The prior B2 receipt is preserved historically, but its linked run/job pairing does not match the run job list; the linked job has an empty nvidia-smi apps list and no namespace identity join, while the #473 audit confirms an unattributed GPU consumer. This sidecar corrects provenance only and does not claim full task completion.",
+    "next_safe_evidence": "Obtain a fresh owner-authenticated read-only audit with one unambiguous run/job binding; enumerate the declared in-scope process universe completely; join GPU links to exact process identities and Supervisor/service identity; preserve Supervisor rc/health separately. Append the resulting sanitized evidence in another sidecar."
+  }
+}
