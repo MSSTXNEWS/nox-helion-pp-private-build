@@ -104,6 +104,67 @@
       }finally{workProgressBusy=false;}
     }
     void refreshWorkProgress();setInterval(()=>void refreshWorkProgress(),30000);
+    const stopConfig=E('details',undefined,'nox-owner-reports'),stopConfigTitle=E('summary','RPC конфигурация STOP · проверяю'),stopConfigBody=E('div');
+    stopConfig.dataset.noxStopConfigPreflight='1';stopConfig.append(stopConfigTitle,stopConfigBody);reports.before(stopConfig);
+    let stopConfigBusy=false;
+    const stopConfigLabels=[
+      ['Форма конфигурации','config_shape_supported'],
+      ['Снимок конфигурации стабилен','config_snapshot_stable'],
+      ['Include glob соответствует фиксированной области','include_glob_matches_fixed_scope'],
+      ['UNIX serverurl','serverurl_unix_scheme'],
+      ['Нет authority, query или fragment','serverurl_has_no_authority_query_fragment'],
+      ['Путь абсолютный, без traversal','socket_path_absolute_no_traversal'],
+      ['Socket path совпадает с serverurl','socket_serverurl_paths_equal'],
+      ['RPC factory в allowlist','rpc_factory_matches_fixed_allowlist'],
+      ['Владелец root:root','configured_owner_is_root_root'],
+      ['Формат режима допустим','configured_mode_format_allowed'],
+      ['Режим приватный','configured_mode_private'],
+      ['Owner write установлен','configured_mode_owner_write_set'],
+      ['Все endpoint predicates прошли','endpoint_config_predicates_all_pass']
+    ];
+    async function refreshStopConfig(){
+      if(stopConfigBusy||document.hidden)return;stopConfigBusy=true;
+      try{
+        const value=await api('/api/ui/emergency-stop-config');
+        const age=Date.now()/1000-Number(value.observed_at);
+        if(value.schema!=='NOX_OWNER_STOP_CONFIG_PREFLIGHT_V1'
+          ||!Number.isFinite(age)||age < -5||age>45
+          ||value.read_only!==true||value.supervisor_rpc_calls!==0
+          ||value.process_signals!==0||value.host_writes!==0
+          ||value.stop_command_sent!==false||value.live_stop_acceptance_proven!==false
+          ||value.evidence_scope!=='CONFIG_PREDICATES_ONLY')
+          throw Error('UNAVAILABLE');
+        if(value.state!=='OBSERVED'){
+          const hold=typeof value.hold_reason==='string'
+            &&/^HOLD_ENDPOINT_PREFLIGHT_[A-Z0-9_]+$/.test(value.hold_reason)
+            ?' · '+value.hold_reason:'';
+          stopConfigTitle.textContent='RPC конфигурация STOP · '+(value.state==='HOLD'?'HOLD':'нет свежих данных');
+          stopConfigBody.replaceChildren(E('p','Предикаты конфигурации не подтверждены'+hold+'.'));
+          stopConfigBody.append(E('p','Проверяется только конфигурация; STOP не отправлялся, live acceptance не подтверждён.'));
+          return;
+        }
+        const config=value.config_predicates,endpoint=value.endpoint_predicates;
+        if(!config||!endpoint||stopConfigLabels.some(([,key])=>typeof (key in config?config[key]:endpoint[key])!=='boolean'))
+          throw Error('UNVERIFIED');
+        const predicatesPass=Object.values(config).every(flag=>flag===true)
+          &&endpoint.endpoint_config_predicates_all_pass===true;
+        stopConfigTitle.textContent='RPC конфигурация STOP · '
+          +(predicatesPass?'предикаты конфигурации прошли':'HOLD');
+        stopConfigBody.replaceChildren();
+        for(const [label,key] of stopConfigLabels){
+          const pass=key in config?config[key]:endpoint[key];
+          stopConfigBody.append(E('p',label+': '+(pass?'PASS':'HOLD')));
+        }
+        stopConfigBody.append(E('p','Только конфигурационные predicates. Проверка не выполняет Supervisor RPC и не отправляет STOP.'));
+        stopConfigBody.append(E('p','Эти данные не подтверждают live STOP acceptance или установку.'));
+        const stamp=new Date(Number(value.observed_at)*1000);
+        stopConfigBody.append(E('small','Снимок конфигурации: '+stamp.toLocaleString()+'.'));
+      }catch{
+        stopConfigTitle.textContent='RPC конфигурация STOP · нет свежего подтверждения';
+        stopConfigBody.replaceChildren(E('p','Read-only endpoint preflight сейчас недоступен. STOP не отправлялся.'));
+      }finally{stopConfigBusy=false;}
+    }
+    void refreshStopConfig();setInterval(()=>void refreshStopConfig(),30000);
     let downloadsBusy=false;
     const size=value=>(Number(value)/1073741824).toLocaleString(undefined,{maximumFractionDigits:2})+' ГиБ';
     async function refreshDownloads(){

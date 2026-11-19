@@ -205,6 +205,67 @@ def work_progress_snapshot():
         return unavailable
 
 
+STOP_CONFIG_PREFLIGHT_SCHEMA='NOX_OWNER_STOP_CONFIG_PREFLIGHT_V1'
+STOP_CONFIG_PREDICATES=(
+    'serverurl_unix_scheme',
+    'serverurl_has_no_authority_query_fragment',
+    'socket_path_absolute_no_traversal',
+    'socket_serverurl_paths_equal',
+    'rpc_factory_matches_fixed_allowlist',
+    'configured_owner_is_root_root',
+    'configured_mode_format_allowed',
+    'configured_mode_private',
+    'configured_mode_owner_write_set',
+    'endpoint_config_predicates_all_pass',
+)
+
+
+def emergency_stop_config_snapshot():
+    """Expose only read-only Supervisor config predicates; never dispatch STOP."""
+    unavailable={'schema':STOP_CONFIG_PREFLIGHT_SCHEMA,'state':'UNAVAILABLE',
+                 'observed_at':time.time(),'config_predicates':{},
+                 'endpoint_predicates':{},'read_only':True,
+                 'supervisor_rpc_calls':0,'process_signals':0,'host_writes':0,
+                 'stop_command_sent':False,'live_stop_acceptance_proven':False,
+                 'evidence_scope':'CONFIG_PREDICATES_ONLY'}
+    try:
+        from owner_native_emergency_stop_preflight import inspect_configuration
+        value=inspect_configuration()
+        config_predicates={
+            'config_shape_supported':value.get('config_shape_supported'),
+            'config_snapshot_stable':value.get('config_snapshot_stable'),
+            'include_glob_matches_fixed_scope':value.get('include_glob_matches_fixed_scope'),
+        }
+        endpoint=value.get('endpoint')
+        if (value.get('state')!='ENDPOINT_PREFLIGHT_READ_ONLY'
+                or value.get('read_only') is not True
+                or value.get('raw_config_values_included') is not False
+                or value.get('credentials_included') is not False
+                or value.get('argv_included') is not False
+                or value.get('supervisor_rpc_calls')!=0
+                or value.get('process_signals')!=0
+                or value.get('host_writes')!=0
+                or not isinstance(endpoint,dict)
+                or any(type(flag) is not bool for flag in config_predicates.values())
+                or any(type(endpoint.get(name)) is not bool
+                       for name in STOP_CONFIG_PREDICATES)):
+            return unavailable
+        return {'schema':STOP_CONFIG_PREFLIGHT_SCHEMA,'state':'OBSERVED',
+                'observed_at':time.time(),'config_predicates':config_predicates,
+                'endpoint_predicates':{name:endpoint[name]
+                                       for name in STOP_CONFIG_PREDICATES},
+                'read_only':True,'supervisor_rpc_calls':0,'process_signals':0,
+                'host_writes':0,'stop_command_sent':False,
+                'live_stop_acceptance_proven':False,
+                'evidence_scope':'CONFIG_PREDICATES_ONLY'}
+    except Exception as exc:
+        hold=str(exc)
+        if re.fullmatch(r'HOLD_ENDPOINT_PREFLIGHT_[A-Z0-9_]+',hold):
+            unavailable['state']='HOLD'
+            unavailable['hold_reason']=hold
+        return unavailable
+
+
 def register_owner_chat_ui(app,trusted):
     check=trusted.get('_session_ok');reject=trusted.get('_unauthorized');legacy=trusted.get('chat_page')
     if not all(callable(x) for x in (check,reject,legacy)):raise RuntimeError('HOLD_ORIGINAL_CHAT_CALLBACKS')
@@ -230,5 +291,10 @@ def register_owner_chat_ui(app,trusted):
     async def owner_work_progress(request:Request):
         if not check(request):return reject()
         return JSONResponse(await asyncio.to_thread(work_progress_snapshot),
+                            headers={'Cache-Control':'no-store'})
+    @app.get('/api/ui/emergency-stop-config')
+    async def owner_emergency_stop_config(request:Request):
+        if not check(request):return reject()
+        return JSONResponse(await asyncio.to_thread(emergency_stop_config_snapshot),
                             headers={'Cache-Control':'no-store'})
     return {'home':DEST,'build':BUILD,'authentication':'EXISTING_OWNER_SESSION'}
