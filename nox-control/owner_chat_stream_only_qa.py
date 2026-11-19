@@ -94,7 +94,8 @@ def replace_between(source, start, end, replacement):
 
 def stop_present(root):
     paths = [root / name for name in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP', 'state/STOP')]
-    paths.append(Path('/workspace/NOX_STOP'))
+    paths.extend((Path('/workspace/NOX_STOP'),
+                  Path('/root/nox/state/OWNER_MAINTENANCE.flag')))
     return any(path.exists() or path.is_symlink() for path in paths)
 
 
