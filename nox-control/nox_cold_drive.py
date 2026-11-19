@@ -148,6 +148,16 @@ def assert_nox_running():
         raise RuntimeError("NOX STOP/maintenance active: cold transfer not admitted")
 
 
+def publish_verified_cache(partial, destination):
+    """Create-only atomic publication: never overwrite a concurrently activated model.
+
+    The verified partial and destination are in the same tmpfs directory.
+    A hard link either creates the final name or fails with FileExistsError.
+    The caller unlinks the partial in its finally block after publication.
+    """
+    os.link(partial, destination)
+
+
 def load(a):
     assert_nox_running()
     remote = assert_remote(a.remote)
@@ -180,7 +190,7 @@ def load(a):
             raise ValueError("Expected SHA256 from verified receipt required")
         assert_nox_running()
         assert_cgroup_ram_reserve(0, a.reserve_gib)
-        tmp.rename(dest)
+        publish_verified_cache(tmp, dest)
         print(json.dumps({"ram_model": str(dest), "bytes": size, "sha256": a.sha256}))
     finally:
         tmp.unlink(missing_ok=True)
