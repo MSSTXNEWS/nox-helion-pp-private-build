@@ -1,0 +1,260 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Bind the verified OneHost dispatcher restoration and independent current-state readback to the original 6V14-01 acceptance criterion.",
+  "scope": {
+    "task_ids": [
+      "6V14-01"
+    ],
+    "task_registry": {
+      "path": "nox-control/four_queue_20261118/work_tasks.json",
+      "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+    },
+    "immutable_295_manifest": {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+      "source_registry_sha256": {
+        "tasks": "5347258ca08500d61173d9b36f69cc0632eff36d3ea1e10fcbbc420de69be000",
+        "ideas": "e1c84397506c6e46fdc3ce71b63cc5eba2f5cc0cd290f8d1e32d4840e25972ae",
+        "receipts": "b40c012a7280889722f446083c4cbe878db15fd6da34ac19855a99a0a099af71",
+        "routing": "f98ab106e16116a88947f6be207f73ec2bf9215ae107d415077b79479e91c671"
+      },
+      "source_commit_sha": "c4683943fe17368ab2086f6ae7ff27ad21732ef7",
+      "base_commit_sha": "0c72a4c65373c5b256ff027dcc8a2d5009973b11",
+      "sha256": "e040c40bd8ee3d29b0ccc2240322975da37cacff73b3752b32a34d5a2a9beacb"
+    },
+    "receipts": {
+      "path": "nox-control/four_queue_20261118/work_receipts.json",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338"
+    },
+    "criteria": {
+      "6V14-01": {
+        "title": "Восстановить существующий диспетчер OneHost.",
+        "required_evidence": "native",
+        "spec_sha256": "955f4e1445af77b2eb0b4db17ac3997d9536934e29dbc946a6310fdb316d42d2",
+        "prior_receipt": {
+          "state": "blocked",
+          "scope": "source_only",
+          "recorded_status": "HOLD_NATIVE_OR_DEPENDENCY"
+        },
+        "native_binding_before_addendum": "UNBOUND_PENDING_NATIVE_CATALOG",
+        "addendum_assessment": "ACCEPTED",
+        "acceptance_binding": {
+          "evidence_pointers": [
+            "#/evidence/before_repair",
+            "#/evidence/restoration",
+            "#/evidence/independent_readback"
+          ],
+          "criterion_satisfied": "The existing OneHost Supervisor service was observed in BACKOFF, restored on the original instance, and independently verified running with three native workers.",
+          "scope_limit": "The acceptance covers a point-in-time native restoration of the existing dispatcher."
+        }
+      }
+    },
+    "mutation_boundary": {
+      "append_only_evidence_file": true,
+      "immutable_295_manifest_updated": false,
+      "historical_work_receipts_updated": false,
+      "native_queue_written_by_addendum": false
+    }
+  },
+  "evidence": {
+    "kind": "owner_authenticated_native_repair_and_independent_readback",
+    "before_repair": {
+      "workflow_run_id": 44428549422,
+      "job_id": 135239673780,
+      "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44428549422",
+      "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44428549422/job/135239673780",
+      "job_conclusion": "success",
+      "owner_comment_id": "6995694287",
+      "authenticated_instance_id": 60509551,
+      "host_pin": "VERIFIED",
+      "pinned_source_sha": "9a14a4608677f5ccb199c3a5dd7be3d7094447b0",
+      "command_scope": "inspect",
+      "snapshots": [
+        {
+          "label": "A",
+          "host_observed_at_utc": "2026-11-19T00:23:50.798Z",
+          "log_at_utc": "2026-11-19T00:23:57.2574096Z",
+          "service": "nox-dispatcher-t855u",
+          "state": "BACKOFF",
+          "pid": null,
+          "start_ticks": null
+        },
+        {
+          "label": "B",
+          "host_observed_at_utc": "2026-11-19T00:23:57.214Z",
+          "log_at_utc": "2026-11-19T00:23:58.5508409Z",
+          "service": "nox-dispatcher-t855u",
+          "state": "BACKOFF",
+          "pid": null,
+          "start_ticks": null
+        }
+      ]
+    },
+    "restoration": {
+      "workflow_run_id": 44429100824,
+      "job_id": 135241542168,
+      "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44429100824",
+      "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44429100824/job/135241542168",
+      "job_conclusion": "success",
+      "owner_comment_id": "6995774159",
+      "authenticated_instance_id": 60509551,
+      "host_pin": "VERIFIED",
+      "pinned_source_sha": "b317c410f291d6ff7418951b42b6af64ae41f54f",
+      "command_scope": "repair",
+      "log_at_utc": "2026-11-19T00:28:02.9189715Z",
+      "receipt": {
+        "director": {
+          "pid": 311420,
+          "workers": 3
+        },
+        "finished_at": 1795048082.893276,
+        "model_restarted": false,
+        "previous_request": "6995658656",
+        "request": "6995774159",
+        "s03_changed": false,
+        "schema": "NOX_NATIVE_REFLEX_RESTORE_RECEIPT_V1",
+        "source_sha": "b317c410f291d6ff7418951b42b6af64ae41f54f",
+        "started_at": 1795048071.464391,
+        "state": "ORIGINAL_DIRECTOR_THREE_WORKERS_RESTORED",
+        "web_or_proxy_restarted": false,
+        "weights_changed": false,
+        "written": [
+          "scripts/owner_systemic_refill.py",
+          "scripts/owner_subagent_dispatcher.py",
+          "config/owner_native_subagents.json"
+        ]
+      },
+      "receipt_json_sha256": "6b38b613448ec07b1dc2b806054d86e45d89d3ba3a558583a85e242edf822bc8",
+      "receipt_digest_input": "Exact UTF-8 JSON payload following NOX_MAINT_REFLEX_RESTORE= without trailing newline",
+      "remote_exit_code": 0,
+      "temp_ssh_cleanup": "DETACHED_AND_VERIFIED"
+    },
+    "independent_readback": {
+      "workflow_run_id": 44592809021,
+      "job_id": 135803040263,
+      "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44592809021",
+      "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44592809021/job/135803040263",
+      "job_conclusion": "success",
+      "owner_comment_id": "7018905486",
+      "authenticated_instance_id": 60509551,
+      "host_pin": "VERIFIED",
+      "pinned_source_sha": "1d76f3fbce0b9e9258f77cdc181b038acc4d69c9",
+      "command_scope": "inspect",
+      "snapshots": [
+        {
+          "label": "A",
+          "host_observed_at_utc": "2026-11-19T18:55:45.663Z",
+          "log_at_utc": "2026-11-19T18:55:52.1018537Z",
+          "service": "nox-dispatcher-t855u",
+          "state": "RUNNING",
+          "pid": 762906,
+          "start_ticks": 189372583
+        },
+        {
+          "label": "B",
+          "host_observed_at_utc": "2026-11-19T18:55:52.053Z",
+          "log_at_utc": "2026-11-19T18:55:52.1387979Z",
+          "service": "nox-dispatcher-t855u",
+          "state": "RUNNING",
+          "pid": 762906,
+          "start_ticks": 189372583
+        }
+      ],
+      "worker_snapshots": [
+        {
+          "label": "A",
+          "host_observed_at_utc": "2026-11-19T18:55:45.664Z",
+          "log_at_utc": "2026-11-19T18:55:52.1045498Z",
+          "director_pid": 762906,
+          "director_start_ticks": 189372583,
+          "workers": [
+            {
+              "role": "runtime",
+              "pid": 763015,
+              "start_ticks": 189374028,
+              "verified": true,
+              "current_task": null
+            },
+            {
+              "role": "memory",
+              "pid": 763016,
+              "start_ticks": 189374028,
+              "verified": true,
+              "current_task": null
+            },
+            {
+              "role": "weights",
+              "pid": 763017,
+              "start_ticks": 189374028,
+              "verified": true,
+              "current_task": null
+            }
+          ],
+          "new_native_jobs_started": 0,
+          "native_queue_state": "NATIVE_QUEUE_REVIEWED_CATALOG_EXHAUSTED"
+        },
+        {
+          "label": "B",
+          "host_observed_at_utc": "2026-11-19T18:55:51.854Z",
+          "log_at_utc": "2026-11-19T18:55:52.1264454Z",
+          "director_pid": 762906,
+          "director_start_ticks": 189372583,
+          "workers": [
+            {
+              "role": "runtime",
+              "pid": 763015,
+              "start_ticks": 189374028,
+              "verified": true,
+              "current_task": null
+            },
+            {
+              "role": "memory",
+              "pid": 763016,
+              "start_ticks": 189374028,
+              "verified": true,
+              "current_task": null
+            },
+            {
+              "role": "weights",
+              "pid": 763017,
+              "start_ticks": 189374028,
+              "verified": true,
+              "current_task": null
+            }
+          ],
+          "new_native_jobs_started": 0,
+          "native_queue_state": "NATIVE_QUEUE_REVIEWED_CATALOG_EXHAUSTED"
+        }
+      ],
+      "same_director_generation_within_sample_pair": true,
+      "same_generation_as_restoration": false,
+      "remote_exit_code": 0
+    },
+    "supplementary_native_leaf": {
+      "task_id": "1V14-01.native4q.recovery_health.20261118",
+      "parent_task_id": "1V14-01",
+      "queue_status": "done",
+      "receipt_sha256": "0e3123d66eafad511371fbf16f53d176b38131de470a95c3f827014d199686f8",
+      "receipt_verified": true,
+      "evidence_role": "Related historical health check under 1V14-01"
+    }
+  },
+  "acceptance_review": {
+    "6V14-01": {
+      "result": "CRITERION_CONFIRMED_FOR_POINT_IN_TIME_NATIVE_RESTORATION",
+      "basis": "Direct owner-authenticated failure and restoration receipts establish recovery of the same named OneHost service. Independent paired snapshots establish that a later generation of the service and all three native workers were operating on the same original instance.",
+      "accepted_as_done_in_addendum": true,
+      "global_counter_updated": false,
+      "cold_boot_exercised": false,
+      "new_native_task_published": false,
+      "new_s03_receipt_claimed": false,
+      "continuous_process_identity_between_runs_verified": false
+    }
+  },
+  "source_limits": [
+    "The recovery and latest readback describe different dispatcher generations. Each recorded PID and start tick is scoped to its own observation.",
+    "The latest paired readback covers the existing dispatcher and three workers over the stated interval. Resource admission and cold boot have separate acceptance criteria."
+  ]
+}
