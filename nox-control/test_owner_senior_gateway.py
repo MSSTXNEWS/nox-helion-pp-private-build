@@ -315,6 +315,31 @@ class GatewayTests(unittest.TestCase):
                     gateway.advice_candidate(ambiguous)
         self.assertEqual(gateway.advice_candidate(ADVICE)['assessment'], 'HOLD_FOR_REVIEW')
 
+    def test_nonfinite_provider_envelope_and_advice_are_not_normalized(self):
+        # Raw JSON that Python normally accepts as NaN/Infinity is ambiguous
+        # evidence. No decoded candidate or receipt may be accepted from it.
+        import httpx
+        config = self.configure()
+        original = httpx.AsyncClient
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant',
+                             'content': [{'type': 'output_text', 'text': ADVICE}]}]}
+        base = json.dumps(value)
+        for constant in ('NaN', 'Infinity', '-Infinity'):
+            with self.subTest(constant=constant):
+                wire = (base[:-1] + ', "usage": {"input_tokens": ' + constant + '}}').encode()
+                async def mock_response(request):
+                    return httpx.Response(200, stream=httpx.ByteStream(wire))
+                with patch.object(httpx, 'AsyncClient',
+                                  lambda **kwargs: original(transport=httpx.MockTransport(mock_response), **kwargs)):
+                    rejected = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+                self.assertEqual(rejected, {'state': 'MODEL_RESPONSE_NONFINITE_JSON'})
+                candidate = ('{"assessment":"HOLD_FOR_REVIEW","check_categories":[],'
+                             '"rationale":' + constant + '}')
+                with self.assertRaisesRegex(gateway.GatewayHold, 'MODEL_RESPONSE_NONFINITE_JSON'):
+                    gateway.advice_candidate(candidate)
+        self.assertEqual(gateway.advice_candidate(ADVICE)['assessment'], 'HOLD_FOR_REVIEW')
+
     def test_wire_byte_digest_and_unexpected_compression_hold(self):
         # Mock provider transport only: no paid request or credentials leave the test.
         import gzip
