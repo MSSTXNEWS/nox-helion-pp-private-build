@@ -490,8 +490,8 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         )
         for doc in docs:
             with self.subTest(doc=doc):
-                bad_frame=('data: '+json.dumps(doc)+'\\n\\n').encode()
-                chunks=Chunks([frame('partial'),bad_frame,b'data: [DONE]\\n\\n'])
+                bad_frame=('data: '+json.dumps(doc)+'\n\n').encode()
+                chunks=Chunks([frame('partial'),bad_frame,b'data: [DONE]\n\n'])
                 requests,factory=self.transport([chunks])
                 native=self.native()
                 payload={'messages':[{'role':'user','content':'Question'}]}
