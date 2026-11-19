@@ -136,7 +136,7 @@ def validate_unit(raw):
         if key == "After" and any(token == "supervisor.service" or token.startswith("nox-")
                                    for token in value.split()):
             fail("UNIT_WORKLOAD_ORDERING_FORBIDDEN")
-    if ("Restart=on-failure" not in lines or "StartLimitIntervalSec=0" not in lines or
+    if ("Restart=always" not in lines or "StartLimitIntervalSec=0" not in lines or
             "WantedBy=multi-user.target" not in lines or
             "--observer-only" not in exec_line):
         fail("UNIT_OBSERVER_POLICY_INVALID")
