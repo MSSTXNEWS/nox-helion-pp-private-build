@@ -30,6 +30,18 @@ STOP_FILES=('STOP','STOP.flag','stop.flag','.stop','program/STOP','state/STOP',
             'state/STOP.flag','state/OWNER_MAINTENANCE.flag')
 REQ=re.compile(r'[0-9]{1,24}\Z')
 SRC=re.compile(r'[a-f0-9]{40}\Z')
+STAGE = 'INIT'
+
+
+def internal_hold(exc):
+    # Do not expose messages, paths, cgroup values, or credentials.
+    klass = type(exc).__name__.upper()
+    if klass not in ('PERMISSIONERROR', 'FILENOTFOUNDERROR', 'OSERROR',
+                     'ISADIRECTORYERROR', 'TYPEERROR', 'VALUEERROR', 'KEYERROR',
+                     'ATTRIBUTEERROR', 'RUNTIMEERROR', 'TIMEOUTERROR'):
+        klass = 'EXCEPTION'
+    stage = STAGE if re.fullmatch(r'[A-Z_]{1,48}', STAGE) else 'UNKNOWN'
+    return 'HOLD_SAFE_CGROUP_INTERNAL_' + stage + '_' + klass
 
 
 def hold(reason):
@@ -127,10 +139,13 @@ def check(before):
 
 
 def execute():
+    global STAGE
+    STAGE='OWNER_CONTEXT'
     request=os.environ.get('NOX_OWNER_REQUEST_ID','')
     source=os.environ.get('NOX_OWNER_SOURCE_SHA','')
     if not REQ.fullmatch(request) or not SRC.fullmatch(source):
         hold('OWNER_CONTEXT')
+    STAGE='ACQUIRE_LOCK'
     lock_path=ROOT/'state/owner_maintenance.lock'
     if lock_path.is_symlink():
         hold('LOCK_SYMLINK')
@@ -138,8 +153,11 @@ def execute():
     try:
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except OSError:hold('LOCK_BUSY')
+        STAGE='SERVICE_SNAPSHOT'
         original_services=services()
+        STAGE='MEMORY_SNAPSHOT'
         before=cgroup_memory()
+        STAGE='ADMISSION'
         check(before)
         if before['raw']>=TARGET_RAW:
             print('NOX_MAINT_SAFE_RECLAIM='+json.dumps({
@@ -153,6 +171,7 @@ def execute():
         require_cold=reclaim_bytes+2*GIB
         if before['cold_lower_bound']<require_cold:
             hold('COLD_CACHE_RESERVE')
+        STAGE='RECLAIM_PATH'
         path=CGROUP/'memory.reclaim'
         if path.is_symlink():
             hold('RECLAIM_SYMLINK')
@@ -160,8 +179,10 @@ def execute():
         if not stat.S_ISREG(info.st_mode):
             hold('RECLAIM_TYPE')
         # The file is scoped to this cgroup, not the host's global drop_caches.
+        STAGE='RECLAIM_OPEN'
         fd=os.open(path,os.O_WRONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
         try:
+            STAGE='RECLAIM_WRITE'
             payload=str(reclaim_bytes).encode('ascii')
             if os.write(fd,payload)!=len(payload):
                 hold('RECLAIM_SHORT_WRITE')
@@ -170,7 +191,9 @@ def execute():
         finally:
             os.close(fd)
         time.sleep(0.5)
+        STAGE='POST_MEMORY_SNAPSHOT'
         after=cgroup_memory()
+        STAGE='POST_IDENTITY'
         if after['max']!=before['max'] or stopped() or services()!=original_services:
             hold('POST_IDENTITY')
         if after['events']['oom']!=before['events']['oom'] or (
@@ -197,7 +220,7 @@ if __name__=='__main__':
     except Exception as exc:
         code=str(exc)
         if not re.fullmatch(r'HOLD_SAFE_CGROUP_[A-Z0-9_]{1,100}',code):
-            code='HOLD_SAFE_CGROUP_INTERNAL'
+            code=internal_hold(exc)
         print('NOX_MAINT_SAFE_RECLAIM='+json.dumps({
             'state':'HOLD','reason':code,'model_restarted':False,
             'data_deleted':False,'kernel_reclaim_completed':False},sort_keys=True),flush=True)
