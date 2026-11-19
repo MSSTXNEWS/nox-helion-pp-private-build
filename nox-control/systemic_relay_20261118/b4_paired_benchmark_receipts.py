@@ -423,6 +423,10 @@ def measure_openai_sse_wire(timed_chunks):
             # completion even if its data looks like [DONE] or a valid delta.
             event_name = data[1:] if sep and data.startswith(" ") else data
             _require(event_name != "error", "SSE_ERROR_EVENT")
+            # This witness is explicitly OpenAI chat/completions data SSE.
+            # Named non-message events (e.g. ping, status) must never
+            # impersonate model deltas or the terminal [DONE] marker.
+            _require(event_name in ("", "message"), "SSE_UNSUPPORTED_EVENT_TYPE")
         if field == "data":
             if sep and data.startswith(" "):
                 data = data[1:]

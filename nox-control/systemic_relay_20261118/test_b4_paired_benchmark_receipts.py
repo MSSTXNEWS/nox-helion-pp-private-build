@@ -510,6 +510,35 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(with_text["visible_text_sha256"],
                          hashlib.sha256(" \n\tready".encode()).hexdigest())
 
+    def test_sse_wire_unsupported_named_event_cannot_forge_finality(self):
+        # EventSource delivers named events separately from default/message.
+        # They are not trusted chat/completions data even if the bytes match.
+        visible = b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\n\n'
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b"data: [DONE]\n\n"
+        for named in (b"event: ping\n", b"event: status\n",
+                      b"event: done\n", b"event: error \n"):
+            with self.subTest(event=named):
+                # Pretending that [DONE] is a model terminal is fail-closed.
+                with self.assertRaisesRegex(
+                        ReceiptHold, "SSE_UNSUPPORTED_EVENT_TYPE"):
+                    measure_openai_sse_wire([
+                        (3, visible), (5, stop), (7, named + done)])
+                # Nor can non-message events impersonate a visible delta.
+                with self.assertRaisesRegex(
+                        ReceiptHold, "SSE_UNSUPPORTED_EVENT_TYPE"):
+                    measure_openai_sse_wire([(2, named + visible)])
+
+        valid = [(2, b"event: message\n" + visible),
+                 (5, b"event: message\n" + stop),
+                 (7, b"event: message\n" + done)]
+        result = measure_openai_sse_wire(valid)
+        self.assertTrue(result["wire_completed_normally"])
+        self.assertEqual(result["first_text_ms"], 2)
+        self.assertEqual(result["completion_ms"], 7)
+        self.assertEqual(result["raw_wire_sha256"],
+                         hashlib.sha256(b"".join(data for _, data in valid)).hexdigest())
+
     def test_sse_wire_explicit_error_event_never_forges_terminal(self):
         # OpenAI-compatible stream payloads are default/message SSE events.
         # event: error is an error signal, even if payload impersonates
