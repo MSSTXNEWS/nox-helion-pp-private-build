@@ -29,6 +29,14 @@ SHA = re.compile(r"[0-9a-f]{64}\Z")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 REMOTE = re.compile(r"[A-Za-z0-9_-]+:[A-Za-z0-9_./-]+\Z")
 SUFFIXES = {".gguf", ".safetensors", ".bin", ".pt", ".pth"}
+# Exact parts consumed by the existing IQ3_XXS cold holder. The revision is
+# 81fd6e0a6f063344001bdecc6119ac53c80c8e63 and each SHA is its LFS object ID.
+ENGRAM_PARTS = {
+    "engram.part00": (21474836480, "eecf98d8cd45239811f8f7b881b6e7175feacf1cd1f53aeb8bc5bce30be08429"),
+    "engram.part01": (21474836480, "b9834592fda5eecedeed545adc802e2f1d68e2442680aca2e20f87c4ae669271"),
+    "engram.part02": (21474836480, "97d483a3da717acb155eec046b1347c0060e06cd6e8337c294ab27363a61a203"),
+    "engram.part03": (10841730276, "286828e9f44bd80093856f27c55611068baa6b168fd2a6738533d615ec2b9357"),
+}
 BLOCKED = {"s03", "checkpoints", "checkpoint", "optimizer", "training", "database", "sqlite"}
 STOP = ["/root/nox/STOP", "/root/nox/STOP.flag", "/root/nox/state/STOP",
         "/root/nox/state/DRIVE_STOP.flag", "/root/nox/state/OWNER_MAINTENANCE.flag",
@@ -86,12 +94,17 @@ def read_manifest(path, digest):
     for a in assets:
         check(isinstance(a, dict) and set(a) == {"name", "size", "sha256"}, "ASSET_SCHEMA")
         n = a["name"]
-        check(isinstance(n, str) and NAME.fullmatch(n) and Path(n).suffix.lower() in SUFFIXES
+        check(isinstance(n, str) and NAME.fullmatch(n)
+              and (Path(n).suffix.lower() in SUFFIXES or n in ENGRAM_PARTS)
               and not any(word in n.lower().split(".") for word in BLOCKED), "ASSET_NAME")
         check(n not in seen, "ASSET_DUPLICATE")
         seen.add(n)
         check(type(a["size"]) is int and 0 < a["size"] <= 512 * GiB, "ASSET_SIZE")
         check(isinstance(a["sha256"], str) and SHA.fullmatch(a["sha256"]), "ASSET_HASH")
+        if n in ENGRAM_PARTS:
+            check((a["size"], a["sha256"]) == ENGRAM_PARTS[n], "ENGRAM_PART_PIN")
+    if seen.intersection(ENGRAM_PARTS):
+        check(ENGRAM_PARTS.keys() <= seen, "ENGRAM_PARTS_INCOMPLETE")
     return m
 
 
@@ -226,6 +239,8 @@ def run(args):
     dest = check_directory(args.destination)
     ram = args.mode == "ram"
     if ram:
+        # Engram RAM is assembled and verified as one memfd by the cold holder.
+        check(not any(a["name"] in ENGRAM_PARTS for a in m["assets"]), "ENGRAM_PARTS_DISK_ONLY")
         check(dest.is_relative_to(Path("/dev/shm")), "RAM_DEST")
         check(args.ssd is not None, "RAM_REQUIRES_SSD")
     source = check_directory(args.ssd) if args.ssd else None
