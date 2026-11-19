@@ -137,11 +137,11 @@ def evaluate_chat_admission(snapshot, *, policy, now: float) -> dict:
 
     Raw free bytes remain visible. Inactive file cache is only included in a
     projection; this function never asks the OS to reclaim or drop it. A low
-    raw margin can pass only when a fresh, matching calibration plus current
-    PSI and per-process VRAM measurements show the request fits. A caller may
-    act on an eligible result only while holding the matching exclusive
-    resource lease across this decision and inference; this pure function
-    validates the lease evidence but cannot acquire or enforce that lock.
+    raw margin returns HOLD even if a measured projection would fit. The owner
+    must separately authorize reclaim, then collect a fresh snapshot under the
+    same lease and reevaluate. A caller may act on an eligible raw-headroom
+    result only while holding the matching exclusive resource lease across
+    this decision and inference; this pure function cannot enforce that lock.
     """
     snapshot = _mapping(snapshot, 'SNAPSHOT_MISSING')
     if set(snapshot) != {'schema', 'instance_id', 'model', 'request', 'reservation',
@@ -248,13 +248,15 @@ def evaluate_chat_admission(snapshot, *, policy, now: float) -> dict:
         if free_after < gpu_floor:
             _hold('GPU_HEADROOM')
 
-    state = 'ELIGIBLE_PROJECTED_CACHE_RECLAIM' if raw_headroom < projected_floor else 'ELIGIBLE_RAW_HEADROOM'
+    cache_reclaim_required = raw_headroom < projected_floor
+    state = 'HOLD_CACHE_RECLAIM_REQUIRED' if cache_reclaim_required else 'ELIGIBLE_RAW_HEADROOM'
     return {'schema': 'NOX_CHAT_RESOURCE_DECISION_V1', 'state': state,
             'request_tokens': {'input': input_tokens, 'output': output_tokens},
             'raw_headroom_bytes': raw_headroom, 'reclaimable_file_bytes': reclaimable,
             'measured_ram_request_peak_bytes': ram_peak,
             'projected_headroom_bytes': projected_headroom,
             'minimum_projected_headroom_bytes': projected_floor,
+            'cache_reclaim_required': cache_reclaim_required,
             'baseline_to_current': {
                 'cgroup_current_delta_bytes': current['cgroup']['current_bytes'] - baseline['cgroup']['current_bytes'],
                 'model_pss_delta_bytes': current['process']['pss_bytes'] - baseline['process']['pss_bytes'],
