@@ -2,16 +2,20 @@
 from contextlib import contextmanager
 import fcntl
 import hashlib
+import http.client
 import http.cookiejar
 import json
 import os
 from pathlib import Path
 import re
 import secrets
+import socket
+import struct
 import stat
 import time
 import urllib.error
 import urllib.request
+import xmlrpc.client
 
 
 ROOT = Path('/root/nox')
@@ -96,6 +100,76 @@ def active_proxy():
             continue
     require(len(identities) == 1, 'PROXY_PROCESS')
     return identities[0]
+
+
+class SupervisorHTTP(http.client.HTTPConnection):
+    def connect(self):
+        path = Path('/run/supervisor.sock')
+        info = path.lstat()
+        require(stat.S_ISSOCK(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o077, 'SUPERVISOR_SOCKET')
+        with socket.socket(socket.AF_UNIX) as channel:
+            channel.settimeout(self.timeout)
+            channel.connect(str(path))
+            pid, uid, gid = struct.unpack('3i', channel.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+            require(pid > 1 and uid == gid == 0 and same_file(info, path.lstat()), 'SUPERVISOR_PEER')
+            self.sock = channel.dup()
+
+
+def supervisor_names():
+    connection = SupervisorHTTP('localhost', timeout=3)
+    try:
+        body = xmlrpc.client.dumps((), methodname='supervisor.getAllProcessInfo')
+        connection.request('POST', '/RPC2', body, {'Content-Type': 'text/xml'})
+        response = connection.getresponse()
+        raw = response.read(131073)
+        require(response.status == 200 and len(raw) <= 131072, 'SUPERVISOR_RESPONSE')
+        (rows,), _ = xmlrpc.client.loads(raw)
+        return {r['pid']: r['name'] for r in rows if type(r['pid']) is int and r['pid'] > 1
+                and re.fullmatch(r'[A-Za-z0-9_.:-]{1,64}', r['name'])}
+    finally:
+        connection.close()
+
+
+def process_census():
+    try:
+        names = supervisor_names()
+        supervisor_read = True
+    except (Hold, OSError, http.client.HTTPException, ValueError, xmlrpc.client.Error):
+        names = {}
+        supervisor_read = False
+    cgroup = (Path('/proc/self/cgroup')).read_bytes()
+    deadline = time.monotonic() + 5
+    rows = []
+    for process in Path('/proc').iterdir():
+        if time.monotonic() > deadline:
+            break
+        if not process.name.isdigit():
+            continue
+        try:
+            start = (process / 'stat').read_bytes().rsplit(b') ', 1)[1].split()
+            if start[0] in (b'Z', b'X') or (process / 'cgroup').read_bytes() != cgroup:
+                continue
+            with (process / 'status').open() as stream:
+                status = stream.read(16385)
+            rss = re.search(r'^RssAnon:\s+(\d+) kB$', status, re.M)
+            if not rss or int(rss[1]) < 8192:
+                continue
+            comm = (process / 'comm').read_text().strip()
+            pid = int(process.name)
+            if not re.fullmatch(r'[A-Za-z0-9_.:-]{1,24}', comm):
+                comm = 'other'
+            with (process / 'smaps_rollup').open() as stream:
+                mem = stream.read(8193)
+            anon = re.search(r'^Pss_Anon:\s+(\d+) kB$', mem, re.M)
+            if (process / 'stat').read_bytes().rsplit(b') ', 1)[1].split()[19] == start[19]:
+                rows.append({'pid': pid, 'start_ticks': int(start[19]), 'comm': comm,
+                             'service': names.get(pid) or names.get(int(start[1])),
+                             'rss_anon_kib': int(rss[1]), 'pss_anon_kib': int(anon[1]) if anon else None})
+        except (OSError, ValueError, IndexError):
+            continue
+    rows.sort(key=lambda row: row['rss_anon_kib'], reverse=True)
+    return {'supervisor_read': supervisor_read, 'complete_within_budget': time.monotonic() <= deadline,
+            'reclaimable_bytes_verified': 0, 'largest_anon_processes': rows[:20]}
 
 
 def guard(receipt, identity, *, require_idle):
@@ -248,6 +322,8 @@ def main():
             accepted = True
     except Hold as failure:
         report['reason'] = str(failure)
+        if str(failure) == 'HOLD_CONTEXT_MODEL_MEMORY':
+            report['memory_owners'] = process_census()
     except urllib.error.HTTPError as failure:
         report['reason'] = f'HOLD_CONTEXT_HTTP_{failure.code}'
     except (OSError, ValueError, KeyError, TypeError, IndexError) as failure:
