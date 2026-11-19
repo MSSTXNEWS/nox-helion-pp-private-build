@@ -338,6 +338,42 @@ class V112Tests(unittest.TestCase):
         held=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=body)
         self.assertEqual(held.status_code,409)
 
+    def test_browser_history_recovery_requires_exact_receipt_and_both_messages(self):
+        # A next-turn inference already fails closed on drift. Browser reload
+        # must not tell the user that forged/orphaned dialog text was restored.
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db,_save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Verified browser reload','confirmed':True}).json()['dialog_id']
+        self.assertTrue(_save_exchange(dialog,'Вопрос café ☕','Respuesta ñ точная',
+                                       'browser-history-receipt'))
+        url='/api/ui/memory/dialogs/history'
+        read=lambda: self.client.get(url,cookies=self.cookie,params={'dialog_id':dialog})
+        recovered=read()
+        self.assertEqual(recovered.status_code,200,recovered.text)
+        self.assertEqual([r['content'] for r in recovered.json()['messages']],
+                         ['Вопрос café ☕','Respuesta ñ точная'])
+        self.assertEqual(recovered.json()['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+        self.assertFalse(recovered.json()['canonical_s03_readback_verified'])
+        self.assertEqual(self.client.get(url,cookies=self.cookie,
+            params={'dialog_id':dialog,'limit':1}).status_code,422)
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_dialog_messages SET content=? '
+                       'WHERE dialog_id=? AND role=?',
+                       ('Forged assistant text',dialog,'assistant'))
+        tampered=read()
+        self.assertEqual(tampered.status_code,409,tampered.text)
+        self.assertEqual(tampered.json()['reason'],
+                         'HOLD_OWNER_DIALOG_HISTORY_RECEIPT_MISMATCH')
+        with _db(True) as db:
+            db.execute('UPDATE nox_v29_dialog_messages SET content=? '
+                       'WHERE dialog_id=? AND role=?',
+                       ('Respuesta ñ точная',dialog,'assistant'))
+            db.execute('DELETE FROM nox_v29_exchange_receipts WHERE dialog_id=?',(dialog,))
+        revoked=read()
+        self.assertEqual(revoked.status_code,409,revoked.text)
+        self.assertEqual(revoked.json()['reason'],
+                         'HOLD_OWNER_DIALOG_HISTORY_RECEIPT_MISMATCH')
+
     def test_revoked_receipt_between_reader_connections_cannot_certify_pair(self):
         from contextlib import contextmanager
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
