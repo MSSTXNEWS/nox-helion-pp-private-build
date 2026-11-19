@@ -277,7 +277,7 @@ async def _run(native,url,payload,user_text):
             return
         if deterministic and deterministic.get('tool'):
             calls=[{'name':deterministic['tool'],
-                    'arguments':deterministic.get('arguments') or {}}]
+                    'arguments':(deterministic['arguments'] if 'arguments' in deterministic else {})}]
             direct=True
     if not calls:
         calls=native['heuristic_tools'](user_text or '') or []
