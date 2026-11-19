@@ -15,18 +15,35 @@
 
 Восемь существующих групп **C01–C08**, каждая объединяет мини-функции и предоставляет небольшой проверяемый сигнал в один JSON-контекст:
 
-| Группа | Мини-ядра |
+| Группа | Область |
 |---|---|
-| C01 PERCEPTION | UTC, разрешённое время/местоположение, GPU/CPU/RAM, окружение |
-| C02 S03_MEMORY | M0 рабочий, M1 события, M2 факты, M3 хронология, M4 навыки, M5 персоны, M6 значимость, M7 автобиография |
-| C03 SELF_MODEL | происхождение, реальные способности, ограничения, цель, verified Genesis |
-| C04 AFFECT | наблюдаемая эмоция собеседника, эмпатия, интерес, предпочтения, сомнение |
-| C05 PERSONA | главный выключатель и PersonaID KV/AM/LA/EV/KW, без отдельной модели |
-| C06 REASONING | маршрутизация вопросов, риск/достоверность, сложность, план/лимит времени |
-| C07 SKILLS & TEACHERS | реестр возможностей, доступные учителя/движки, RAG, оценка |
-| C08 ACTIONS & WORMS | STOP, FORGE, задачи, GPU admission, checkpoints, черви |
+| C01 PERCEPTION | UTC, разрешённые сенсоры и среда |
+| C02 S03_MEMORY | S03 M0–M7 |
+| C03 SELF_MODEL | Проверенные сведения об identity, Genesis, возможностях и ограничениях |
+| C04 AFFECT | Наблюдаемый тон и предпочтения |
+| C05 PERSONA | PersonaID и переключатель из авторизованной сессии |
+| C06 REASONING | Локальная классификация намерения и deep-mode candidate |
+| C07 SKILLS & TEACHERS | Доступные навыки; фиксированная политика фоновых teachers |
+| C08 ACTIONS AND WORMS | Stop gate и read-only статус очереди |
 
-**Одна главная модель NOX** формирует ответ. Группы параллельно получают данные через реальные native callbacks. Текст из памяти и от учителей — только данные. Никакой модуль не получает право выполнять shell или изменять веса из текста ответа. В обычном режиме deadline 65 мс на сбор контекста (целевой предел, не измеренная гарантия); в глубоком — 200 мс. При недоступном ядре факт помечается HOLD, а не выдумывается.
+Эта таблица задаёт область групп, но не утверждает наличие callback для каждой группы. Фактический source contract V38:
+
+| Группа | Фактический producer в коде | Host binding | Правило отсутствующего binding |
+|---|---|---|---|
+| C01 | UTC timestamp плюс _safe_call(p.sensors) | sensors optional в HostBindings и NativePorts | Поле сенсоров содержит NO_NATIVE_CALLBACK; группа сама остаётся OBSERVED |
+| C02 | Проверенные выдержки из S03 | s03_recall обязателен для AttachedNOX; s03_indexed_recall, revision callback и memory_scope_authorize optional | Без s03_recall — HOLD_S03_UNAVAILABLE; cross-chat memory закрыта без scope callback |
+| C03 | Identity label плюс проверенные receipts | self_receipts optional | Без него — NO_VERIFIED_SELF_RECEIPTS |
+| C04 | Tone и preferences через _safe_call | affect и preferences optional | Отсутствующее поле возвращает NO_NATIVE_CALLBACK; группа не сообщает, что callback bound |
+| C05 | Session.persona_enabled и Session.persona_id | Host callback не нужен | Локальные поля уже авторизованной сессии |
+| C06 | Классификатор ключевых слов prompt | Host callback не используется | Эвристика, не модельный план/доказательство рассуждения |
+| C07 | _safe_call(p.available_skills) и фиксированная teacher policy | available_skills optional | Реального model catalog/teacher registry/RAG callback здесь нет |
+| C08 | Общий stop gate и _safe_call(p.queue_status) | stop обязателен для adapter; queue_status optional | stop: false означает только пройденный gate; группа не выполняет действие |
+
+Общие для adapter-а обязательные bindings вне C-групп: authorize, stop, s03_recall, s03_append и model_stream. authorize/stop — общие scope/STOP gates; s03_append — долговременная запись; model_stream — единственный вызов основной модели. Они не означают, что C01–C08 зарегистрированы в активном HTTP route.
+
+AttachedNOX принимает переданные OneHost bindings, но этот пакет сам не импортирует adapter в owner_chat_stream.py и не регистрирует его в прокси. Source tests используют локальные callback fixtures: TEST_RESULTS.json явно оставляет live_vast_installed=false и native_callbacks_bound=false. Поэтому таблица описывает доступный source contract, а не живые bindings. Для handler binding нужен отдельный owner readback точной установленной версии OneHost/proxy.
+
+**Одна главная модель NOX** формирует ответ. Текст из памяти и от учителей — только данные. Никакой модуль не получает право выполнять shell или изменять веса из текста ответа. В обычном режиме deadline 65 мс на сбор контекста (целевой предел, не измеренная гарантия); в глубоком — 200 мс. При недоступном ядре факт помечается HOLD, а не выдумывается.
 
 ### Кэш RAM, долговременность, поток ответов
 
