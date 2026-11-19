@@ -729,6 +729,58 @@ def supervisorctl_candidate_metadata(path: Path) -> dict:
             "metadata_after": after, "identity_stable": before == after}
 
 
+def read_candidate_diagnostic_preview(path: Path, metadata: dict) -> dict:
+    """Read, hash, and report a tiny untrusted candidate without executing it."""
+    rows = metadata.get("metadata_after", [])
+    if not rows or not metadata.get("identity_stable"):
+        return {"state": "SKIPPED_UNSTABLE_METADATA"}
+    final = rows[-1]
+    parents = rows[:-1]
+    if (final.get("state") != "PRESENT" or
+            final.get("file_type") != "REGULAR" or
+            final.get("uid") != 0 or final.get("gid") != 0 or
+            final.get("nlink") != 1 or final.get("size", 513) > 512 or
+            final.get("mode", 0) & 0o002 or
+            any(row.get("state") != "PRESENT" or
+                row.get("file_type") != "DIRECTORY" or
+                row.get("uid") != 0 or row.get("mode", 0) & 0o022
+                for row in parents)):
+        return {"state": "SKIPPED_UNSAFE_OR_UNBOUNDED"}
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        return {"state": "OPEN_FAILED_READ_ONLY"}
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != 0 or
+                before.st_gid != 0 or before.st_nlink != 1 or
+                before.st_dev != final.get("dev") or
+                before.st_ino != final.get("inode") or
+                before.st_size != final.get("size") or before.st_size > 512):
+            return {"state": "SKIPPED_FSTAT_MISMATCH"}
+        raw = os.read(fd, 513)
+        after = os.fstat(fd)
+        if (len(raw) > 512 or len(raw) != before.st_size or any(
+                getattr(before, key) != getattr(after, key) for key in
+                ("st_dev", "st_ino", "st_uid", "st_gid", "st_mode", "st_nlink",
+                 "st_size", "st_mtime_ns", "st_ctime_ns"))):
+            return {"state": "SKIPPED_UNSTABLE_READ"}
+        entry = path.lstat()
+        if (not stat.S_ISREG(entry.st_mode) or entry.st_dev != after.st_dev or
+                entry.st_ino != after.st_ino or entry.st_size != after.st_size):
+            return {"state": "SKIPPED_PATH_CHANGED"}
+        return {"state": "READ_ONLY_PREVIEW",
+                "size": len(raw),
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                "preview_utf8": raw.decode("utf-8", "replace")[:512],
+                "executed": False, "written": False}
+    except OSError:
+        return {"state": "READ_FAILED_READ_ONLY"}
+    finally:
+        os.close(fd)
+
+
 def select_supervisorctl_candidate() -> None:
     global SUPERVISORCTL_BIN, SUPERVISORCTL_SELECTED_IDENTITY
     global SUPERVISORCTL_SELECTED_DAEMON_IDENTITY
@@ -767,7 +819,9 @@ def select_supervisorctl_candidate() -> None:
                 code = "HOLD_EMERGENCY_STOP_CANDIDATE_VALIDATION_FAILED"
             outcomes.append({"path": str(path), "outcome": "UNUSABLE",
                              "fail_code": code.removeprefix("HOLD_EMERGENCY_STOP_"),
-                             "metadata": metadata})
+                             "metadata": metadata,
+                             "content_preview": read_candidate_diagnostic_preview(
+                                 path, metadata)})
             continue
         post_verify_metadata = supervisorctl_candidate_metadata(path)
         if (not post_verify_metadata["identity_stable"] or
