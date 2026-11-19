@@ -111,7 +111,8 @@ def _cgroup_hold_state(code):
 
 def _read_at(fd, name, limit, code):
     if name not in ('stat', 'status', 'environ', 'cgroup', 'cgroup.controllers',
-                    'cgroup.type', 'cgroup.procs', 'memory.reclaim'):
+                    'cgroup.type', 'cgroup.procs', 'memory.reclaim', 'maps',
+                    'smaps', 'smaps_rollup'):
         raise CgroupPinHold('FILE_NAME')
     try:
         child = os.open(name, os.O_RDONLY | os.O_NONBLOCK |
@@ -355,6 +356,202 @@ def cgroup_process_pin(pid, expected_start_ticks, *, proc_root=None, cgroup_root
         if target_fd is not None:
             os.close(target_fd)
     return row
+
+
+ATTRIBUTION_SERVICES = frozenset((
+    'nox-dispatcher-t855u', 'nox-ds41-8098', 'nox-proxy', 'nox-web29-18775',
+    'nox-cache-maintenance', 'nox-dialog-miner', 'nox-fill-idle-t166u',
+    'nox-gpu-idle-t170u', 'nox-kb-eventlistener', 'nox-lifeline-guard', 'nox-selfheal',
+))
+ATTRIBUTION_ROLES = frozenset(('runtime', 'memory', 'weights'))
+ATTRIBUTION_PSS_FIELDS = ('Pss', 'Pss_Anon', 'Pss_File', 'Pss_Shmem')
+ATTRIBUTION_VMA = re.compile(
+    rb'([0-9a-f]{1,16})-([0-9a-f]{1,16}) ([r-][w-][x-][ps]) '
+    rb'([0-9a-f]{1,16}) ([0-9a-f]{1,8}):([0-9a-f]{1,8}) ([0-9]{1,20})(?: +(\S.*))? *$'
+)
+ATTRIBUTION_INODE_MIN_FILE_KIB = 64 * 1024
+ATTRIBUTION_SMAPS_BYTES = 4 * 1024 * 1024
+ATTRIBUTION_MAX_SMAPS_TOTAL = 24 * 1024 * 1024
+ATTRIBUTION_MAX_MAPS = 512 * 1024
+
+
+def _attribution_roles(now=None):
+    status = subprocess.run(['supervisorctl', 'status'], capture_output=True, text=True,
+                            timeout=8, check=False)
+    if status.returncode not in (0, 3) or len(status.stdout) > 65536:
+        raise CgroupPinHold('ATTRIBUTION_SUPERVISOR_SCOPE')
+    services = {}
+    for line in status.stdout.splitlines():
+        match = re.match(r'^([A-Za-z0-9_.:-]+)\s+RUNNING\s+pid\s+(\d+),', line)
+        if match and match[1] in ATTRIBUTION_SERVICES:
+            pid = int(match[2])
+            if match[1] in services or pid in services.values():
+                raise CgroupPinHold('ATTRIBUTION_DUPLICATE_ROLE')
+            services[match[1]] = pid
+    director_pid = services.get('nox-dispatcher-t855u')
+    if director_pid is None or 'nox-ds41-8098' not in services:
+        raise CgroupPinHold('ATTRIBUTION_CORE_SERVICE')
+    data, _, _ = obj(ROOT/'status/agents_t856u.json', 2 * 1024 * 1024)
+    native = data.get('native_subexecutors') or {}
+    observed = native.get('observed_at')
+    current = time.time() if now is None else now
+    if type(observed) not in (float, int) or not -5 <= current - observed <= 45:
+        raise CgroupPinHold('ATTRIBUTION_STALE_ROLES')
+    director = native.get('director') or {}
+    workers = native.get('workers')
+    if (director.get('pid') != director_pid
+            or type(director.get('process_starttime')) is not int
+            or not isinstance(workers, list) or len(workers) != len(ATTRIBUTION_ROLES)):
+        raise CgroupPinHold('ATTRIBUTION_ROLE_SHAPE')
+    roles = {pid: (name, None) for name, pid in services.items()}
+    roles[director_pid] = ('nox-dispatcher-t855u', director['process_starttime'])
+    seen = set()
+    for row in workers:
+        role, pid, ticks = row.get('role'), row.get('pid'), row.get('process_starttime')
+        if (role not in ATTRIBUTION_ROLES or role in seen or type(pid) is not int or pid in roles
+                or type(ticks) is not int or row.get('ppid') != director_pid
+                or row.get('native_pid_verified') is not True):
+            raise CgroupPinHold('ATTRIBUTION_ROLE_SHAPE')
+        roles[pid] = ('worker_' + role, ticks)
+        seen.add(role)
+    return director_pid, roles
+
+
+def _attribution_members(proc_root, cgroup_root, director_pid, ticks):
+    pin = cgroup_process_pin(director_pid, ticks, proc_root=proc_root, cgroup_root=cgroup_root)
+    if (pin['state'] not in ('PINNED_READ_ONLY', 'HOLD_CGROUP_ROOT_NOT_TARGETABLE',
+                             'HOLD_CGROUP_MEMORY_RECLAIM_ABSENT',
+                             'HOLD_CGROUP_MEMORY_RECLAIM_MOUNT_UNVERIFIED')
+            or pin['cgroup_type'] != 'domain' or pin['leaf_cgroup'] is not True
+            or not pin['members_complete'] or not pin['children_complete']):
+        raise CgroupPinHold('ATTRIBUTION_INCOMPLETE_MEMBERSHIP')
+    return ((pin['cgroup_path'], pin['device'], pin['inode']),
+            {row['pid']: row['start_ticks'] for row in pin['members']})
+
+
+def _attribution_metrics(lines, required):
+    found = {}
+    for line in lines:
+        key, _, value = line.partition(b':')
+        if key in required:
+            match = re.fullmatch(rb'\s*([0-9]{1,16})\s+kB', value)
+            if key in found or match is None:
+                raise CgroupPinHold('ATTRIBUTION_PSS_FORMAT')
+            found[key] = int(match[1])
+    if found.keys() != set(required):
+        raise CgroupPinHold('ATTRIBUTION_PSS_MISSING')
+    return found
+
+
+def _attribution_inode_rows(maps, smaps):
+    headers = []
+    inode_rows = {}
+    current = None
+    fields = []
+
+    def accumulate(header, body):
+        metrics = _attribution_metrics(body, (b'Pss', b'Anonymous'))
+        ino = int(header[7])
+        if ino == 0:
+            return
+        hint = (header[8] or b'').startswith((b'/memfd:', b'/dev/shm/', b'/SYSV'))
+        # PSS already divides shared physical pages by mapcount. Subtracting
+        # full anonymous KiB is a conservative bound for inode-backed PSS.
+        conservative = max(0, metrics[b'Pss'] - metrics[b'Anonymous'])
+        identity = b'%x:%x:%d' % (int(header[5], 16), int(header[6], 16), ino)
+        digest = hashlib.sha256(identity).hexdigest()
+        prior, seen_shmem = inode_rows.get(digest, (0, False))
+        inode_rows[digest] = (prior + conservative, seen_shmem or hint)
+
+    for line in smaps.splitlines():
+        row = ATTRIBUTION_VMA.fullmatch(line)
+        if row:
+            if current is not None:
+                accumulate(current, fields)
+            current, fields = row, []
+            headers.append(line)
+        elif current is not None:
+            fields.append(line)
+    if current is not None:
+        accumulate(current, fields)
+    if headers != maps.splitlines():
+        raise CgroupPinHold('ATTRIBUTION_MAP_LAYOUT_CHANGED')
+    return inode_rows
+
+
+def mapped_memory_attribution(*, proc_root=None, cgroup_root=None, read_roles=None):
+    proc_root = PROC if proc_root is None else Path(proc_root)
+    cgroup_root = CGROUP_ROOT if cgroup_root is None else Path(cgroup_root)
+    read_roles = _attribution_roles if read_roles is None else read_roles
+    receipt = {'schema': 'NOX_MAPPED_MEMORY_ATTRIBUTION_V1', 'read_only': True}
+    try:
+        deadline = time.monotonic() + 20
+        director, roles = read_roles()
+        group, members = _attribution_members(proc_root, cgroup_root, director, roles[director][1])
+        if any(pid not in members or ticks is not None and members[pid] != ticks
+               for pid, (_, ticks) in roles.items()):
+            raise CgroupPinHold('ATTRIBUTION_ROLE_BIRTH_CHANGED')
+        totals, inodes = {}, {}
+        scanned = smaps_bytes = observer_excluded = 0
+        for pid, ticks in members.items():
+            if time.monotonic() >= deadline:
+                raise CgroupPinHold('ATTRIBUTION_TIME_BOUND')
+            if pid == os.getpid() and pid not in roles:
+                observer_excluded = 1
+                continue
+            if _proc_identity(proc_root, pid) != (ticks, group[0]):
+                raise CgroupPinHold('ATTRIBUTION_MEMBER_CHANGED')
+            fd = os.open(proc_root / str(pid), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                layout = _read_at(fd, 'maps', ATTRIBUTION_MAX_MAPS, 'ATTRIBUTION_MAPS')
+                role = roles.get(pid, ('other_cgroup_members', None))[0]
+                row = totals.setdefault(role, {'processes': 0, 'pss_anon_kib': 0,
+                                               'pss_file_kib': 0, 'pss_shmem_kib': 0})
+                row['processes'] += 1
+                if layout:
+                    raw = _read_at(fd, 'smaps_rollup', 8192, 'ATTRIBUTION_ROLLUP')
+                    pss = _attribution_metrics(raw.splitlines(), tuple(
+                        field.encode() for field in ATTRIBUTION_PSS_FIELDS))
+                    if abs(sum(pss[k.encode()] for k in ATTRIBUTION_PSS_FIELDS[1:]) - pss[b'Pss']) > 3:
+                        raise CgroupPinHold('ATTRIBUTION_PSS_SUM')
+                    for field in ATTRIBUTION_PSS_FIELDS[1:]:
+                        row[field.lower() + '_kib'] += pss[field.encode()]
+                    if pss[b'Pss_File'] >= ATTRIBUTION_INODE_MIN_FILE_KIB:
+                        remaining = ATTRIBUTION_MAX_SMAPS_TOTAL - smaps_bytes
+                        raw = _read_at(fd, 'smaps', min(ATTRIBUTION_SMAPS_BYTES, remaining),
+                                       'ATTRIBUTION_SMAPS_BOUND')
+                        scanned += 1
+                        smaps_bytes += len(raw)
+                        for digest, (kib, shmem) in _attribution_inode_rows(layout, raw).items():
+                            item = inodes.setdefault(digest, {'inode_sha256': digest, 'pss_lower_kib': 0,
+                                'shmem_hint': False, 'by_role_pss_lower_kib': {}})
+                            item['pss_lower_kib'] += kib
+                            item['shmem_hint'] |= shmem
+                            by_role = item['by_role_pss_lower_kib']
+                            by_role[role] = by_role.get(role, 0) + kib
+                if _read_at(fd, 'maps', ATTRIBUTION_MAX_MAPS, 'ATTRIBUTION_MAPS') != layout:
+                    raise CgroupPinHold('ATTRIBUTION_MAP_LAYOUT_CHANGED')
+            finally:
+                os.close(fd)
+            if _proc_identity(proc_root, pid) != (ticks, group[0]):
+                raise CgroupPinHold('ATTRIBUTION_MEMBER_CHANGED')
+        if (read_roles() != (director, roles)
+                or _attribution_members(proc_root, cgroup_root, director, roles[director][1]) != (group, members)
+                or time.monotonic() >= deadline):
+            raise CgroupPinHold('ATTRIBUTION_SNAPSHOT_CHANGED')
+        reported = sorted(inodes.values(), key=lambda row: (
+            row['shmem_hint'], -row['pss_lower_kib'], row['inode_sha256']))
+        receipt.update(state='OBSERVED', verified_members=len(members), by_role=totals,
+                       accounting='KERNEL_PROPORTIONAL_PSS_POINT_SAMPLES_NOT_CGROUP_CHARGE',
+                       inode_scan_minimum_file_pss_kib=ATTRIBUTION_INODE_MIN_FILE_KIB,
+                       inode_scanned_members=scanned, inode_candidates=reported[:16],
+                       observer_excluded=observer_excluded)
+    except CgroupPinHold as error:
+        code = str(error)
+        receipt['state'] = 'HOLD_' + code if re.fullmatch(r'ATTRIBUTION_[A-Z_]+', code) else 'HOLD_ATTRIBUTION_READ'
+    except (OSError, ValueError, TypeError, KeyError, AttributeError, subprocess.SubprocessError):
+        receipt['state'] = 'HOLD_ATTRIBUTION_READ'
+    return receipt
 
 
 def process(pid, *, include_cgroup=False, expected_start_ticks=None,
@@ -1847,4 +2044,9 @@ def maya_dependency_path_readback(linkage=None):
     return result
 
 if __name__ == '__main__':
-    main()
+    # This immutable owner route is solely a mapped-memory attribution action.
+    receipt = mapped_memory_attribution()
+    emit('MAPPED_MEMORY_ATTRIBUTION', receipt)
+    if receipt['state'] != 'OBSERVED':
+        raise SystemExit(2)
+    print('NOX_MAINT_INSPECT_COMPLETE=true', flush=True)
