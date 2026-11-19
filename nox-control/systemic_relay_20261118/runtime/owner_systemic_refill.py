@@ -393,10 +393,16 @@ def _native_handler_scope(row):
     if not isinstance(row, dict):
         return 'legacy'
     handler = row.get('handler')
+    # A native-bound row with a misspelled/unrecognized *string* handler
+    # is not a legacy job: its owner claim may still be outstanding. Do not
+    # infer an idle native queue or mint a replacement task from that row.
+    native_marked = (isinstance(row.get('systemic_relay'), dict)
+                     or isinstance(row.get('native_project_terminal'), dict))
     if type(handler) is str:
-        return 'native' if handler in NATIVE_HANDLERS else 'legacy'
-    if 'handler' in row and (isinstance(row.get('systemic_relay'), dict)
-                             or isinstance(row.get('native_project_terminal'), dict)):
+        if handler in NATIVE_HANDLERS:
+            return 'native'
+        return 'unknown' if native_marked else 'legacy'
+    if 'handler' in row and native_marked:
         return 'unknown'
     return 'legacy'
 
