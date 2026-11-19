@@ -755,8 +755,18 @@ def supplemental_acceptance(directory, existing_receipt_count):
                 raise ValueError('ADDENDUM_FILENAME_INVALID')
             raw, document = read_json_with_raw(path)
             source_hash = hashlib.sha256(raw).hexdigest()
-            if document.get('schema') != SIDECAR_SCHEMA or document.get('append_only') is not True:
-                raise ValueError('ADDENDUM_SCHEMA_OR_APPEND_ONLY_INVALID')
+            if document.get('append_only') is not True:
+                raise ValueError('ADDENDUM_NOT_APPEND_ONLY')
+            if document.get('schema') != SIDECAR_SCHEMA:
+                if document.get('schema') == 'NOX_SOURCE_EVIDENCE_ADDENDUM_V1':
+                    source_task = document.get('task')
+                    task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
+                    increment = document.get('original_295_acceptance_increment')
+                    reason = ('SOURCE_ADDENDUM_CLAIMS_ORIGINAL_ACCEPTANCE_INCREMENT'
+                              if increment != 0 else 'SOURCE_ADDENDUM_RUN_BINDING_UNSUPPORTED')
+                    excluded.append({'path': source_path, 'task_id': task_id, 'reason': reason})
+                    continue
+                raise ValueError('UNSUPPORTED_ADDENDUM_SCHEMA')
             declared = document.get('scope', {}).get('task_ids') if isinstance(document.get('scope'), dict) else None
             if not isinstance(declared, list) or not declared:
                 raise ValueError('ADDENDUM_TASK_IDS_MISSING')
