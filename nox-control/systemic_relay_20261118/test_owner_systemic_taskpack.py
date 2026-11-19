@@ -137,29 +137,158 @@ class RefillEligibilityTests(unittest.TestCase):
             'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
             'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
             'native_readback_sha256':'2'*64,'active_claim_count':0}
+        original_root=publisher.ROOT
         with tempfile.TemporaryDirectory() as directory:
-            lock=Path(directory)/'owner.lock'; lock.write_bytes(b'lock')
+            publisher.ROOT=Path(directory)
+            state=Path(directory)/'state'; state.mkdir(mode=0o700)
+            lock=state/'owner_maintenance.lock'; lock.write_bytes(b'lock')
             lock.chmod(0o600)
-            fd=os.open(lock,os.O_RDONLY)
+            state_dir_fd=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            fd=os.open(lock.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=state_dir_fd)
             try:
                 fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
                 helper=BudgetReader()
                 result=publisher.verify_publish_cas_preconditions(
-                    helper,{},snapshot,fd,lock)
+                    helper,{},snapshot,fd,lock,state_dir_fd)
                 self.assertEqual(result['state'],'PASS')
                 self.assertEqual(helper.calls,1)
                 stale={**snapshot,'observed_at':time.time()-601}
                 with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
-                    publisher.verify_publish_cas_preconditions(helper,{},stale,fd,lock)
+                    publisher.verify_publish_cas_preconditions(
+                        helper,{},stale,fd,lock,state_dir_fd)
                 self.assertEqual(helper.calls,2)
 
                 moved=Path(directory)/'replacement'; moved.write_bytes(b'foreign')
                 moved.chmod(0o600); os.replace(moved,lock)
                 with self.assertRaisesRegex(RuntimeError,'LEASE_IDENTITY'):
-                    publisher.verify_publish_cas_preconditions(helper,{},snapshot,fd,lock)
+                    publisher.verify_publish_cas_preconditions(
+                        helper,{},snapshot,fd,lock,state_dir_fd)
                 self.assertEqual(helper.calls,3)
             finally:
                 os.close(fd)
+                os.close(state_dir_fd)
+                publisher.ROOT=original_root
+
+    def test_config_cas_rechecks_lease_after_staging_and_uses_anchored_dirfd(self):
+        class BudgetReader:
+            def read_budget_snapshot(self, config):
+                now=time.time()
+                return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+                    'instance_id':60509551,'observed_at':now,
+                    'current_bytes':10*1024**3,'max_bytes':13*1024**3,
+                    'minimum_headroom_bytes':2*1024**3}
+        now=time.time()
+        snapshot={'schema':publisher.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-1,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        original_root,original_config=publisher.ROOT,publisher.CONFIG
+        with tempfile.TemporaryDirectory() as directory:
+            publisher.ROOT=Path(directory)
+            config_dir=Path(directory)/'config'; config_dir.mkdir(mode=0o700)
+            state=Path(directory)/'state'; state.mkdir(mode=0o700)
+            publisher.CONFIG=config_dir/'owner_native_subagents.json'
+            old=b'{"before":true}'
+            new=b'{"after":true}'
+            publisher.CONFIG.write_bytes(old); publisher.CONFIG.chmod(0o600)
+            lock=state/'owner_maintenance.lock'; lock.write_bytes(b'lock')
+            lock.chmod(0o600)
+            state_dir_fd=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            fd=os.open(lock.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=state_dir_fd)
+            try:
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                budget=publisher.atomic_owner_config(
+                    BudgetReader(),new,old,snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(budget['state'],'PASS')
+                self.assertEqual(publisher.CONFIG.read_bytes(),new)
+
+                publisher.CONFIG.write_bytes(old)
+                def replace_lease_between_early_check_and_cas():
+                    replacement=Path(directory)/'replacement'
+                    replacement.write_bytes(b'other-owner')
+                    replacement.chmod(0o600)
+                    os.replace(replacement,lock)
+                with self.assertRaisesRegex(RuntimeError,'LEASE_IDENTITY'):
+                    publisher.atomic_owner_config(
+                        BudgetReader(),new,old,snapshot,fd,lock,state_dir_fd,
+                        before_final_gate=replace_lease_between_early_check_and_cas)
+                self.assertEqual(publisher.CONFIG.read_bytes(),old)
+            finally:
+                os.close(fd)
+                os.close(state_dir_fd)
+                publisher.ROOT, publisher.CONFIG=original_root,original_config
+
+    def test_backup_gate_and_exact_retry_survive_precommit_hold(self):
+        class BackupHelper:
+            def __init__(self):
+                self.budget_calls=0; self.atomic_calls=0; self.headroom=3*1024**3
+            def read_budget_snapshot(self, config):
+                self.budget_calls+=1; now=time.time()
+                return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+                    'instance_id':60509551,'observed_at':now,
+                    'current_bytes':10*1024**3,
+                    'max_bytes':10*1024**3+self.headroom,
+                    'minimum_headroom_bytes':2*1024**3}
+            def atomic(self, path, raw):
+                self.atomic_calls+=1; path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_bytes(raw); path.chmod(0o600)
+            def read_regular(self, path, maximum):
+                raw=Path(path).read_bytes()
+                if len(raw)>maximum: raise RuntimeError('oversized')
+                return raw
+        now=time.time()
+        snapshot={'schema':publisher.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-1,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        original_root=publisher.ROOT
+        with tempfile.TemporaryDirectory() as directory:
+            publisher.ROOT=Path(directory)
+            state=Path(directory)/'state'; state.mkdir(mode=0o700)
+            lock=state/'owner_maintenance.lock'; lock.write_bytes(b'lock')
+            lock.chmod(0o600)
+            state_dir_fd=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            fd=os.open(lock.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=state_dir_fd)
+            helper=BackupHelper(); backup=state/'dispatcher'/'rollback'/'request-123'
+            try:
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                helper.headroom=27*1024**2
+                with self.assertRaisesRegex(RuntimeError,'RESOURCE_HEADROOM_BELOW_MINIMUM'):
+                    publisher.ensure_exact_backup(
+                        helper,backup,b'old-config',{},snapshot,fd,lock,state_dir_fd)
+                self.assertFalse(backup.exists())
+                self.assertEqual(helper.atomic_calls,0)
+                helper.headroom=3*1024**3
+                first=publisher.ensure_exact_backup(
+                    helper,backup,b'old-config',{},snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(first['state'],'WRITTEN')
+                self.assertEqual(first['resource_gate']['state'],'PASS')
+                self.assertEqual(helper.budget_calls,2)
+                self.assertEqual(helper.atomic_calls,1)
+                helper.headroom=27*1024**2
+                with self.assertRaisesRegex(RuntimeError,'RESOURCE_HEADROOM_BELOW_MINIMUM'):
+                    publisher.verify_publish_cas_preconditions(
+                        helper,{},snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(backup.joinpath('config.json').read_bytes(),b'old-config')
+                helper.headroom=3*1024**3
+                # A pre-CAS HOLD leaves an exact backup which a retry may reuse.
+                second=publisher.ensure_exact_backup(
+                    helper,backup,b'old-config',{},snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(second,{'state':'REUSED_EXACT','resource_gate':None})
+                self.assertEqual(helper.budget_calls,3)
+                self.assertEqual(helper.atomic_calls,1)
+                (backup/'config.json').write_bytes(b'foreign-config')
+                with self.assertRaisesRegex(RuntimeError,'BACKUP_CONTENT_CHANGED'):
+                    publisher.ensure_exact_backup(
+                        helper,backup,b'old-config',{},snapshot,fd,lock,state_dir_fd)
+            finally:
+                os.close(fd)
+                os.close(state_dir_fd)
+                publisher.ROOT=original_root
 
     def test_persist_receipt_rejects_hostile_hold_suffix(self):
         class ReceiptSink:

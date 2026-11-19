@@ -30,8 +30,9 @@ PUBLISH_COMPLETE_MARKER = 'NOX_MAINT_REFLEX_PUBLISH_COMPLETE=true'
 HOLD_PREFIX = 'HOLD_SYSTEMIC_PUBLISH_'
 HOLD_CODES = frozenset('''
 ACCEPTANCE_MAPPING ACCEPTANCE_VERIFIER_ANCHOR ACCEPTANCE_VERIFIER_BINDING
-ANCESTOR_PIN ASSETS ASSET_BOUND ASSET_PIN BACKUP_EXISTS CONFIG_PREDECESSOR
-CONFIG_READBACK CONTENT_ADDRESS_COLLISION CONTRACT_SCOPE EXACTLY_ONE_SUCCESSOR_REQUIRED
+ANCESTOR_PIN ASSETS ASSET_BOUND ASSET_PIN BACKUP_CONTENT_CHANGED BACKUP_EXISTS
+BACKUP_READBACK CONFIG_PREDECESSOR CONFIG_READBACK CONTENT_ADDRESS_COLLISION CONTRACT_SCOPE
+EXACTLY_ONE_SUCCESSOR_REQUIRED
 FINAL_CAS_CHANGED HELPER_PIN LEASE_IDENTITY LEASE_PATH MAINTENANCE_BUSY
 MANIFEST_CHAIN_BOUND MANIFEST_CONTRACT_SET MANIFEST_DERIVED_DUPLICATE MANIFEST_LINEAGE
 MANIFEST_MISSING MANIFEST_PREDECESSOR MANIFEST_SHA MODULE_NAME NATIVE_RECEIPT_CONTRACT
@@ -153,34 +154,164 @@ def emit_publish_complete_marker():
     print(PUBLISH_COMPLETE_MARKER, flush=True)
 
 
-def verify_owner_lock_identity(fd, lock):
-    require(not lock.is_symlink(), 'LEASE_PATH')
+def owner_lock_path_matches(fd, lock, state_dir_fd):
     try:
+        parent_opened = os.fstat(state_dir_fd)
+        parent_named = lock.parent.lstat()
         opened = os.fstat(fd)
-        named = lock.lstat()
+        named = os.stat(lock.name, dir_fd=state_dir_fd, follow_symlinks=False)
     except OSError:
-        require(False, 'LEASE_IDENTITY')
-    require(stat.S_ISREG(opened.st_mode) and opened.st_uid == os.geteuid()
+        return False
+    return (stat.S_ISDIR(parent_opened.st_mode) and parent_opened.st_uid == os.geteuid()
+            and not parent_opened.st_mode & 0o022
+            and (parent_opened.st_dev, parent_opened.st_ino) ==
+                (parent_named.st_dev, parent_named.st_ino)
+            and stat.S_ISREG(opened.st_mode) and opened.st_uid == os.geteuid()
             and opened.st_nlink == 1 and not opened.st_mode & 0o022
-            and (opened.st_dev, opened.st_ino) == (named.st_dev, named.st_ino),
-            'LEASE_IDENTITY')
+            and (opened.st_dev, opened.st_ino) == (named.st_dev, named.st_ino))
+
+
+def verify_owner_lock_identity(fd, lock, state_dir_fd):
+    require(lock.parent == ROOT / 'state' and owner_lock_path_matches(
+        fd, lock, state_dir_fd), 'LEASE_IDENTITY')
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         require(False, 'LEASE_IDENTITY')
 
 
-def verify_publish_cas_preconditions(helper, config, owner_snapshot, fd, lock):
+def verify_publish_cas_preconditions(helper, config, owner_snapshot, fd, lock, state_dir_fd):
     budget = require_budget_headroom(helper.read_budget_snapshot(config), max_age_sec=5)
     validate_owner_snapshot(owner_snapshot)
-    verify_owner_lock_identity(fd, lock)
+    verify_owner_lock_identity(fd, lock, state_dir_fd)
     return budget
+
+
+def secure_dirfd_matches(fd, path):
+    path = Path(path)
+    if any(part.is_symlink() for part in (path, *path.parents)):
+        return False
+    try:
+        opened = os.fstat(fd)
+        named = path.lstat()
+    except OSError:
+        return False
+    return (stat.S_ISDIR(opened.st_mode) and opened.st_uid == os.geteuid()
+            and not opened.st_mode & 0o022
+            and (opened.st_dev, opened.st_ino) == (named.st_dev, named.st_ino))
+
+
+def read_regular_at(directory_fd, name, maximum):
+    fd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW,
+                 dir_fd=directory_fd)
+    try:
+        before = os.fstat(fd)
+        require(stat.S_ISREG(before.st_mode) and before.st_size <= maximum,
+                'CONFIG_READBACK')
+        chunks = []
+        remaining = maximum + 1
+        while remaining:
+            chunk = os.read(fd, min(65536, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        after = os.fstat(fd)
+        raw = b''.join(chunks)
+        require(len(raw) <= maximum and (before.st_dev, before.st_ino,
+                before.st_size, before.st_mtime_ns) == (after.st_dev, after.st_ino,
+                after.st_size, after.st_mtime_ns), 'CONFIG_READBACK')
+        return raw
+    finally:
+        os.close(fd)
+
+
+def atomic_owner_config(helper, raw, expected_raw, owner_snapshot, lock_fd,
+                        lock, state_dir_fd, before_final_gate=None):
+    """CAS the config through pinned dirfds while holding the maintenance lease.
+
+    Both parents must be euid-owned and non-writable by group/others. All known
+    config writers take this same flock; the protected state directory prevents
+    an unprivileged actor from pruning/replacing its lock pathname. The final
+    lease identity check is deliberately adjacent to the anchored rename.
+    """
+    config_dir_fd = os.open(CONFIG.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    temp_name = None
+    try:
+        require(secure_dirfd_matches(config_dir_fd, CONFIG.parent)
+                and secure_dirfd_matches(state_dir_fd, lock.parent), 'LEASE_PATH')
+        require(read_regular_at(config_dir_fd, CONFIG.name, 2 * 1024 * 1024)
+                == expected_raw, 'CONFIG_PREDECESSOR')
+        for attempt in range(3):
+            candidate = '.nox-systemic-publish-' + str(os.getpid()) + '-' + str(time.time_ns()) + '-' + str(attempt)
+            try:
+                temp_fd = os.open(candidate,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                    0o600, dir_fd=config_dir_fd)
+                temp_name = candidate
+                break
+            except FileExistsError:
+                continue
+        require(temp_name is not None, 'CONFIG_READBACK')
+        try:
+            view = memoryview(raw)
+            while view:
+                written = os.write(temp_fd, view)
+                require(written > 0, 'CONFIG_READBACK')
+                view = view[written:]
+            os.fsync(temp_fd)
+        finally:
+            os.close(temp_fd)
+        if before_final_gate is not None:
+            before_final_gate()
+        require(secure_dirfd_matches(config_dir_fd, CONFIG.parent)
+                and secure_dirfd_matches(state_dir_fd, lock.parent), 'LEASE_PATH')
+        budget = require_budget_headroom(
+            helper.read_budget_snapshot(json.loads(expected_raw)), max_age_sec=5)
+        validate_owner_snapshot(owner_snapshot)
+        require(read_regular_at(config_dir_fd, CONFIG.name, 2 * 1024 * 1024)
+                == expected_raw, 'CONFIG_PREDECESSOR')
+        verify_owner_lock_identity(lock_fd, lock, state_dir_fd)
+        os.replace(temp_name, CONFIG.name,
+                   src_dir_fd=config_dir_fd, dst_dir_fd=config_dir_fd)
+        temp_name = None
+        os.fsync(config_dir_fd)
+        require(read_regular_at(config_dir_fd, CONFIG.name, 2 * 1024 * 1024)
+                == raw, 'CONFIG_READBACK')
+        return budget
+    finally:
+        if temp_name is not None:
+            try:
+                os.unlink(temp_name, dir_fd=config_dir_fd)
+            except FileNotFoundError:
+                pass
+        os.close(config_dir_fd)
 
 
 def write_package_with_budget_gate(helper, path, raw, config):
     budget = require_budget_headroom(helper.read_budget_snapshot(config), max_age_sec=5)
     helper.atomic(path, raw)
     return budget
+
+
+def ensure_exact_backup(helper, backup, old_raw, config, owner_snapshot,
+                        fd, lock, state_dir_fd):
+    config_path = backup / 'config.json'
+    require(not backup.is_symlink(), 'BACKUP_EXISTS')
+    if backup.exists():
+        require(backup.is_dir(), 'BACKUP_EXISTS')
+        require({path.name for path in backup.iterdir()} == {'config.json'},
+                'BACKUP_CONTENT_CHANGED')
+        existing = helper.read_regular(config_path, 2 * 1024 * 1024)
+        require(existing == old_raw, 'BACKUP_CONTENT_CHANGED')
+        return {'state':'REUSED_EXACT', 'resource_gate':None}
+    resource = require_budget_headroom(helper.read_budget_snapshot(config), max_age_sec=5)
+    validate_owner_snapshot(owner_snapshot)
+    verify_owner_lock_identity(fd, lock, state_dir_fd)
+    helper.atomic(config_path, old_raw)
+    require(helper.read_regular(config_path, 2 * 1024 * 1024) == old_raw,
+            'BACKUP_READBACK')
+    return {'state':'WRITTEN', 'resource_gate':resource}
 
 
 def native_receipt_contract(mission, *, manifest_revision, previous_sha,
@@ -423,10 +554,21 @@ def run(bundle, spec):
         if receipt.get('state') in HOLD_RECEIPT_STATES:
             persist_receipt(h,request,receipt)
     lock = ROOT / 'state/owner_maintenance.lock'
+    state_dir_fd = -1
+    fd = -1
     try:
-        require(not lock.is_symlink(), 'LEASE_PATH')
-        fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        require(lock.parent == ROOT / 'state' and not lock.parent.is_symlink()
+                and not lock.is_symlink(), 'LEASE_PATH')
+        state_dir_fd = os.open(lock.parent,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        fd = os.open(lock.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     dir_fd=state_dir_fd)
+        require(owner_lock_path_matches(fd,lock,state_dir_fd), 'LEASE_IDENTITY')
     except BaseException as exc:
+        if fd >= 0:
+            os.close(fd)
+        if state_dir_fd >= 0:
+            os.close(state_dir_fd)
         receipt['state'] = hold_state_from_exception(exc)
         raise
     finally:
@@ -438,9 +580,7 @@ def run(bundle, spec):
         deadline = time.monotonic() + 8
         while True:
             require(h.stop_clear(ROOT), 'OWNER_STOP')
-            waiting, named = os.fstat(fd), lock.stat()
-            require(stat.S_ISREG(waiting.st_mode) and waiting.st_nlink == 1
-                    and (waiting.st_dev, waiting.st_ino) == (named.st_dev, named.st_ino), 'LEASE_IDENTITY')
+            require(owner_lock_path_matches(fd,lock,state_dir_fd), 'LEASE_IDENTITY')
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 break
@@ -448,9 +588,7 @@ def run(bundle, spec):
                 require(time.monotonic() < deadline, 'MAINTENANCE_BUSY')
                 time.sleep(.05)
         def guard():
-            info, named = os.fstat(fd), lock.stat()
-            require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid() and info.st_nlink == 1
-                    and not info.st_mode & 0o022 and (info.st_dev, info.st_ino) == (named.st_dev, named.st_ino), 'LEASE_IDENTITY')
+            verify_owner_lock_identity(fd,lock,state_dir_fd)
             require(h.stop_clear(ROOT), 'OWNER_STOP')
             return h.expected_processes(spec), h.protected_snapshot(spec)
         processes, protected = guard()
@@ -556,13 +694,16 @@ def run(bundle, spec):
         # Existing queues, source roots, model and module pins remain byte-for-byte
         # equivalent. Only the next reviewed immutable manifest pointer changes.
         backup = ROOT / 'state/dispatcher/systemic_relay_publish_rollback' / request
-        require(not backup.exists() and not backup.is_symlink(), 'BACKUP_EXISTS')
-        h.atomic(backup / 'config.json', old_raw)
+        backup_result = ensure_exact_backup(
+            h,backup,old_raw,old,owner_snapshot,fd,lock,state_dir_fd)
+        receipt['backup_state'] = backup_result['state']
+        if backup_result['resource_gate'] is not None:
+            receipt['resource_prebackup'] = backup_result['resource_gate']
         changed = True
         receipt['resource_precommit'] = verify_publish_cas_preconditions(
-            h, old, owner_snapshot, fd, lock)
-        h.atomic(CONFIG, new_raw)
-        require(h.read_regular(CONFIG, 2 * 1024 * 1024) == new_raw, 'CONFIG_READBACK')
+            h, old, owner_snapshot, fd, lock, state_dir_fd)
+        receipt['resource_precommit'] = atomic_owner_config(
+            h, new_raw, old_raw, owner_snapshot, fd, lock, state_dir_fd)
         receipt.update(state='PUBLISHED_ONE_OWNER_REVIEWED_SUCCESSOR_PENDING_NATIVE_ADMISSION',
             previous_manifest_sha256=previous,
             previous_config_sha256=sha(old_raw), config_sha256=sha(new_raw),
@@ -576,12 +717,19 @@ def run(bundle, spec):
         receipt['state'] = hold_state_from_exception(exc)
         if changed and old_raw is not None and new_raw is not None:
             # Never overwrite a newer owner's config during recovery.
-            if h.read_regular(CONFIG, 2 * 1024 * 1024) == new_raw:
-                h.atomic(CONFIG, old_raw)
-                receipt['config_restored'] = h.read_regular(CONFIG, 2 * 1024 * 1024) == old_raw
+            try:
+                if h.read_regular(CONFIG, 2 * 1024 * 1024) == new_raw:
+                    atomic_owner_config(h, old_raw, new_raw, owner_snapshot,
+                                        fd, lock, state_dir_fd)
+                    receipt['config_restored'] = h.read_regular(
+                        CONFIG, 2 * 1024 * 1024) == old_raw
+            except BaseException as rollback_exc:
+                receipt['config_restored'] = False
+                receipt['rollback_state'] = hold_state_from_exception(rollback_exc)
         raise
     finally:
         os.close(fd)
+        os.close(state_dir_fd)
         if not persist_receipt(h,request,receipt):
             raise RuntimeError('HOLD_SYSTEMIC_PUBLISH_RECEIPT_WRITE')
     emit_publish_complete_marker()
