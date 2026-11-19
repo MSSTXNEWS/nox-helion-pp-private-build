@@ -126,6 +126,21 @@ class CheckpointStepProvenance(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "HOLD_BOUNDED_STATE_READ"):
                     read_json(alias, limit=64)
 
+            # A FIFO without a writer must be rejected before a blocking open.
+            # Guard the flags in the test itself to bound a regression run.
+            fifo = root / "state-fifo"
+            os.mkfifo(fifo)
+            real_open = os.open
+
+            def checked_open(path, flags, *args, **kwargs):
+                if Path(path) == fifo and not flags & os.O_NONBLOCK:
+                    raise AssertionError("HOLD_BLOCKING_STATE_DESCRIPTOR_OPEN")
+                return real_open(path, flags, *args, **kwargs)
+
+            with mock.patch("os.open", side_effect=checked_open):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_BOUNDED_STATE_READ"):
+                    read_json(fifo, limit=64)
+
 
     def test_checkpoint_file_hash_is_descriptor_scoped(self):
         with tempfile.TemporaryDirectory() as folder:
