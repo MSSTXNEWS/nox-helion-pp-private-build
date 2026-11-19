@@ -76,11 +76,15 @@ class ProbeTests(unittest.TestCase):
             probe.obj(interrupted)
         self.assertTrue(interrupted.closed)
 
-    def test_placeholders_do_not_count_as_model_output_but_zero_does(self):
-        for text in ('', ' ', '\n', '...', '…\n', '. … .'):
-            self.assertFalse(probe.meaningful_delta(text), repr(text))
-        self.assertTrue(probe.meaningful_delta('323'))
-        self.assertTrue(probe.meaningful_delta('0'))
+    def test_placeholders_and_invisible_unicode_do_not_count_as_visible_output(self):
+        for text in ('', ' ', '\n', '...', '…\n', '. … .', '\u200b', '\u200d',
+                     '\u2060', '\ufe0f', '\u034f', '\x00', '\u2028',
+                     '.\u200b… \u200d\ufe0f', '\u200b\u2060'):
+            with self.subTest(text=repr(text)):
+                self.assertFalse(probe.meaningful_delta(text))
+        for text in ('323', '0', 'Привет', 'hola', '😃', '¿', '\u200bОК'):
+            with self.subTest(text=repr(text)):
+                self.assertTrue(probe.meaningful_delta(text))
 
     def test_raw_nonnumeric_model_memory_is_never_exported(self):
         self.assertEqual(probe.numeric_public_answer(' **323**\n'), '323')
