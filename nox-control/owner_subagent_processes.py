@@ -401,7 +401,7 @@ class Subagents:
             raise GateError('HOLD_SUBAGENT_TASK_SCHEMA') from exc
         tid, role = task['id'], task['subagent']
         with self._abi_lock:
-            if self._resource_paused:
+            if getattr(self, '_resource_paused', False):
                 raise GateError('HOLD_SUBAGENT_RESOURCE_PAUSED')
             if tid in self._submitted_ids or tid in self._terminal_ids:
                 raise GateError('HOLD_SUBAGENT_TASK_REUSE')
