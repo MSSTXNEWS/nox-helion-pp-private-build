@@ -145,6 +145,22 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertTrue(out["latency_cache_state_confounder"])
         self.assertFalse(out["measured_nox_gain"])
 
+    def test_same_aggregate_tokens_hides_per_task_workload_drift(self):
+        b=example();c=copy.deepcopy(b)
+        c["outcomes"][0]["output_tokens"]=2
+        c["outcomes"][1]["output_tokens"]=22
+        c["outcomes"][0]["latency_ms"]=5
+        out=compare_paired(b,c)
+        self.assertEqual(out["baseline"]["total_output_tokens"],36)
+        self.assertEqual(out["candidate"]["total_output_tokens"],36)
+        self.assertEqual(out["output_tokens_changed_task_ids"],["t1","t2"])
+        self.assertTrue(out["latency_observed_workload_confounder"])
+        self.assertIsNone(out["p95_latency_delta_ms_same_observed_work"])
+        self.assertFalse(out["measured_nox_gain"])
+        unmodified=compare_paired(b,copy.deepcopy(b))
+        self.assertFalse(unmodified["latency_observed_workload_confounder"])
+        self.assertEqual(unmodified["p95_latency_delta_ms_same_observed_work"],0)
+
     def test_first_text_regression_and_cache_evidence(self):
         b=example();c=copy.deepcopy(b)
         c["outcomes"][0]["first_text_ms"]=15
