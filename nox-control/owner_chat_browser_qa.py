@@ -649,12 +649,13 @@ async def click_send(page, report, expected_before=0):
             # Observe that real request; never submit a duplicate generation.
             detail['native_request_already_started']=True
             return
-        control=await target.evaluate(CONTROL_JS)
-        detail['after_wait']=control
-        if calls!=expected_before or not await target.is_enabled() or not control['in_view'] or not control['pointer_hit_own_button']:
-            raise RuntimeError('HOLD_QA_SEND_POINTER_OR_STATE') from None
-        await page.mouse.click(control['x'],control['y'])
-        detail['physical_pointer_click']=True
+        # A Playwright click failure does not prove that a submit was not
+        # enqueued. A second pointer click could duplicate an already-pending
+        # owner-scoped model generation (first OR second conversational turn).
+        # Observe an already-started request above, otherwise fail closed.
+        detail['native_request_outcome_unknown']=True
+        detail['observed_native_calls']=calls if type(calls) is int else None
+        raise RuntimeError('HOLD_QA_SEND_OUTCOME_UNKNOWN') from None
 
 
 async def json_response(response, limit=200000):
