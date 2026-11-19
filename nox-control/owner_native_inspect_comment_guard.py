@@ -23,33 +23,24 @@ APPROVED_SOURCE_BY_ACTION = {
     "source_attest": "3e399979e5b2e5ac16c1504542bd5cace989ddd3",  # updated chat/S03 static scope #520
     "gpu_inventory": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",  # exact-head source tests green
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
-    "source_export": "845c76d44676d56157125e729db81b45e006cf92",  # exact pinned encrypted-only #415 source export
+    "source_export": "7e0df12af5d60895f141a01eda84b3e2ffdf9a74",  # exact pinned secret-only #415 source export
     "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
 }
-SOURCE_EXPORT_KEY_MAX_CHARS = 12000
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) "
-    rf"(inspect|audit|source_attest|gpu_inventory|browser_qa|emergency_stop)\Z"
-)
-SOURCE_EXPORT_COMMAND = re.compile(
-    rf"/nox-maintain {INSTANCE_ID} ({re.escape(APPROVED_SOURCE_BY_ACTION['source_export'])}) "
-    rf"source_export ([A-Za-z0-9_-]{{1,{SOURCE_EXPORT_KEY_MAX_CHARS}}})\Z"
+    rf"(inspect|audit|source_attest|gpu_inventory|browser_qa|source_export|emergency_stop)\Z"
 )
 
 
-def parse_command(body: object) -> tuple[str, str, str | None]:
-    """Parse one exact owner command; return action, immutable SHA, and key if any."""
+def parse_command(body: object) -> tuple[str, str]:
+    """Parse one exact owner command; return action and immutable SHA only."""
     if not isinstance(body, str):
         raise RuntimeError("HOLD_EXACT_OWNER_COMMAND")
     match = COMMAND.fullmatch(body)
-    if match is not None:
-        source_sha, action = match.groups()
-        return action, source_sha, None
-    export_match = SOURCE_EXPORT_COMMAND.fullmatch(body)
-    if export_match is not None:
-        source_sha, key_b64 = export_match.groups()
-        return "source_export", source_sha, key_b64
-    raise RuntimeError("HOLD_EXACT_OWNER_COMMAND")
+    if match is None:
+        raise RuntimeError("HOLD_EXACT_OWNER_COMMAND")
+    source_sha, action = match.groups()
+    return action, source_sha
 
 
 def authorize_event(event: object, repository: str | None,
@@ -80,7 +71,7 @@ def authorize_event(event: object, repository: str | None,
             or sender.get("id") != OWNER_ID):
         raise RuntimeError("HOLD_OWNER_COMMAND_IDENTITY")
 
-    action, source_sha, _ = parse_command(comment.get("body"))
+    action, source_sha = parse_command(comment.get("body"))
     if APPROVED_SOURCE_BY_ACTION.get(action) != source_sha:
         raise RuntimeError("HOLD_SOURCE_ACTION_NOT_APPROVED")
     return action, source_sha
@@ -97,17 +88,12 @@ def main() -> int:
             os.environ.get("GITHUB_REPOSITORY"),
             os.environ.get("GITHUB_EVENT_NAME"),
         )
-        _, _, export_key_b64 = parse_command(event["comment"]["body"])
         output_path = os.environ.get("GITHUB_OUTPUT", "")
         if not output_path:
             raise RuntimeError("HOLD_OUTPUT_PATH")
         with Path(output_path).open("a", encoding="utf-8") as output:
             output.write(f"action={action}\n")
             output.write(f"source_sha={source_sha}\n")
-            if export_key_b64 is not None:
-                # URL-safe base64 cannot inject an Actions output delimiter or
-                # newline; keep the public key out of stdout and logs.
-                output.write(f"export_key_b64={export_key_b64}\n")
     except (OSError, ValueError, RuntimeError) as exc:
         reason = str(exc)
         if not re.fullmatch(r"HOLD_[A-Z0-9_]+", reason):
