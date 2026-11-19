@@ -255,7 +255,16 @@ def _deleted_memfd_maps(pid_path):
             "scanned_bytes": total_bytes, "truncated": truncated}
 
 def _proc_stat_identity(pid_path, expected_pid):
-    raw = (Path(pid_path) / "stat").read_text()
+    path = Path(pid_path) / "stat"
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
+                 getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+    try:
+        raw_bytes = os.read(fd, 8193)
+    finally:
+        os.close(fd)
+    if len(raw_bytes) > 8192:
+        raise ValueError("PROC_STAT_OVER_LIMIT")
+    raw = raw_bytes.decode("ascii", errors="strict")
     prefix = str(expected_pid) + " ("
     boundary = raw.rfind(") ")
     if not raw.startswith(prefix) or boundary < len(prefix):
@@ -393,8 +402,13 @@ LIFELINE_EXPECTED_ARGV = [
 LIFELINE_EXPECTED_EXE = os.path.realpath("/usr/bin/python3")
 LIFELINE_MEMORY_FLOOR = 2 * 1024 ** 3
 LIFELINE_REPORT_MAX_AGE_SECONDS = 180
+LIFELINE_PRE_SCRIPT_SHA256 = "a2503c1463738c215bf3cd4eb5cdcb29f5ff65a85128160728033a80e9af1f66"
+LIFELINE_PRE_CONFIG_SHA256 = "266d75d12cb3203dd8200a6b382231105a0fd3fd9ea37379531d86c413ddfba6"
+LIFELINE_EXPECTED_SCRIPT_SHA256 = "d10b12461cdf08a309ea7ac08c81a6d465d254f95b78b1d3b441e7f59f01e69f"
 LIFELINE_POLICY_SHA256 = "e06d45654fd664f9d15a057fbb5290dd862c4087dba383764283dbaab51edc5b"
 LIFELINE_RECONCILED_CONFIG_SHA256 = "a7f3da89d408f9c9b1f261b0b5c58d55d0a7a095e36a2a22d6e378370b9c6bdf"
+LIFELINE_PRE_GUARD_PID = 3355691
+LIFELINE_PRE_GUARD_START_TICKS = 172312630
 LIFELINE_FILES = {
     "script": ("/root/nox/scripts/nox_native_lifeline.py", 32768),
     "policy": ("/etc/nox/lifeline.json", 32768),
@@ -540,8 +554,14 @@ def _lifeline_supervisor_service(binary, config):
         raw_argv = [arg.decode("utf-8", errors="replace")
                     for arg in cmdline.rstrip(b"\0").split(b"\0")]
         executable = os.readlink(proc / "exe")
+        cmdline_after, truncated_after = _read_bounded(proc / "cmdline", 8192)
+        executable_after = os.readlink(proc / "exe")
+        if truncated_after or cmdline_after != cmdline or executable_after != executable:
+            return {**result, "status": "PROCESS_EXEC_IDENTITY_CHANGED_DURING_READ",
+                    "start_ticks": before["start_ticks"]}
         after = _proc_stat_identity(proc, pid)
-        if before["start_ticks"] != after["start_ticks"]:
+        if (before["start_ticks"] != after["start_ticks"] or
+                before["pgrp"] != after["pgrp"] or before["ppid"] != after["ppid"]):
             return {**result, "status": "PID_CHANGED_DURING_READ",
                     "start_ticks_before": before["start_ticks"],
                     "start_ticks_after": after["start_ticks"]}
@@ -732,8 +752,9 @@ def lifeline_evidence(binary=None, config=None):
 
 def lifeline_only(phase):
     """Low-overhead independent read-only pre/post Lifeline evidence mode."""
-    if phase not in ("pre", "post"):
-        raise ValueError("--lifeline-only requires --phase pre|post")
+    if phase not in ("pre", "post", "auto"):
+        raise ValueError("--lifeline-only requires --phase pre|post|auto")
+    requested_phase = phase
     binary = shutil.which("supervisorctl")
     if not binary:
         binary = next((x for x in ("/opt/venv/bin/supervisorctl",
@@ -751,10 +772,62 @@ def lifeline_only(phase):
                 config = candidate
                 break
     evidence = lifeline_evidence(binary, config)
+    if phase == "auto":
+        pre_service = evidence["service"]
+        pre_systemd = evidence["supervisor_systemd"]
+        pre_match = (
+            evidence["files"].get("script", {}).get("sha256") == LIFELINE_PRE_SCRIPT_SHA256 and
+            evidence["files"].get("supervisor_config", {}).get("sha256") == LIFELINE_PRE_CONFIG_SHA256 and
+            evidence["files"].get("policy", {}).get("sha256") == LIFELINE_POLICY_SHA256 and
+            evidence["policy"].get("enabled") is False and
+            evidence["policy"].get("poll_seconds") == 60 and
+            bool(evidence["policy"].get("restart_flags")) and
+            all(flag is False for flag in evidence["policy"].get("restart_flags", {}).values()) and
+            evidence["supervisor_config"].get("autostart") is False and
+            evidence["supervisor_config"].get("autorestart") is True and
+            pre_service.get("state") == "RUNNING" and
+            pre_service.get("pid") == LIFELINE_PRE_GUARD_PID and
+            pre_service.get("start_ticks") == LIFELINE_PRE_GUARD_START_TICKS and
+            pre_service.get("argv_status") == "EXACT_ALLOWLISTED_COMMAND" and
+            pre_service.get("exe_status") == "EXACT_REVIEWED_PYTHON3" and
+            pre_service.get("identity_stable_during_read") is True and
+            pre_systemd.get("active") == "active" and pre_systemd.get("active_rc") == 0 and
+            pre_systemd.get("enabled") in ("enabled", "disabled") and
+            pre_systemd.get("enabled_rc") == (0 if pre_systemd.get("enabled") == "enabled" else 1))
+        post_fingerprint = (
+            evidence["files"].get("script", {}).get("sha256") == LIFELINE_EXPECTED_SCRIPT_SHA256 and
+            evidence["files"].get("supervisor_config", {}).get("sha256") == LIFELINE_RECONCILED_CONFIG_SHA256 and
+            evidence["files"].get("policy", {}).get("sha256") == LIFELINE_POLICY_SHA256)
+        if pre_match:
+            phase = "pre"
+        elif post_fingerprint:
+            phase = "post"
+        else:
+            phase = "unknown"
+    else:
+        post_fingerprint = None
     status = "PRECHANGE_SNAPSHOT"
-    if phase == "post":
+    if phase == "pre":
+        current_memory = evidence["cgroup_memory_now"]
+        if current_memory.get("status") != "OK":
+            status = "PRECHANGE_MEMORY_UNKNOWN"
+        else:
+            status = ("PRECHANGE_LOW_MEMORY" if current_memory.get("below_2GiB")
+                      else "PRECHANGE_MEMORY_OK")
+    elif phase == "post":
         service = evidence["service"]
         memory = evidence["state_memory"]
+        current_memory = evidence["cgroup_memory_now"]
+        current_memory_valid = (
+            current_memory.get("status") == "OK" and
+            type(current_memory.get("memory.current")) is int and
+            type(current_memory.get("memory.max")) is int and
+            type(current_memory.get("raw_headroom_bytes")) is int and
+            type(current_memory.get("below_2GiB")) is bool and
+            current_memory["raw_headroom_bytes"] ==
+            current_memory["memory.max"] - current_memory["memory.current"] and
+            current_memory["below_2GiB"] ==
+            (current_memory["raw_headroom_bytes"] < LIFELINE_MEMORY_FLOOR))
         if (service.get("state") == "RUNNING" and
                 service.get("argv_status") == "EXACT_ALLOWLISTED_COMMAND" and
                 service.get("exe_status") == "EXACT_REVIEWED_PYTHON3" and
@@ -773,14 +846,17 @@ def lifeline_only(phase):
                 evidence["supervisor_systemd"].get("active_rc") == 0 and
                 evidence["supervisor_systemd"].get("enabled") == "enabled" and
                 evidence["supervisor_systemd"].get("enabled_rc") == 0 and
-                evidence["files"].get("script", {}).get("sha256") ==
-                "d10b12461cdf08a309ea7ac08c81a6d465d254f95b78b1d3b441e7f59f01e69f" and
-                memory.get("status") == "OK"):
-            status = "MONITOR_ACTIVE_LOW_MEMORY" if memory.get("below_2GiB") else "MONITOR_ACTIVE"
+                evidence["files"].get("script", {}).get("sha256") == LIFELINE_EXPECTED_SCRIPT_SHA256 and
+                memory.get("status") == "OK" and current_memory_valid):
+            status = ("MONITOR_ACTIVE_LOW_MEMORY" if current_memory["below_2GiB"]
+                      else "MONITOR_ACTIVE")
         else:
-            status = "POSTCHECK_HOLD"
+            status = ("POSTCHECK_MEMORY_UNKNOWN" if not current_memory_valid
+                      else "POSTCHECK_HOLD")
+    else:
+        status = "AUTO_PHASE_HOLD"
     return {"schema": "NOX_LIFELINE_INDEPENDENT_AUDIT_V1",
-            "read_only": True, "phase": phase,
+            "read_only": True, "phase_requested": requested_phase, "phase": phase,
             "observed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
             "host_mutations": 0, "processes_started": 0,
             "workers_started": 0, "status": status,
