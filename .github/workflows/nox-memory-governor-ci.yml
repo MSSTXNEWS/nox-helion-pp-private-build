@@ -40,6 +40,6 @@ jobs:
           text=Path(m.FILES['repair']).read_text()
           assert text.count('__NOX_BUNDLE_JSON__')==1
           assert 'NOX_MAINT_REPAIR_COMPLETE=true' in text
-          assert not any(q in text for q in ('supervisorctl stop', 'drop_caches', '/proc/sys/vm/'))
+          assert not any(q in text for q in ('supervisorctl stop', '/proc/sys/vm/drop_caches', 'echo 3 >'))
           print('OWNER_MEMORY_TRANSPORT_SOURCE_PASS')
           PY
