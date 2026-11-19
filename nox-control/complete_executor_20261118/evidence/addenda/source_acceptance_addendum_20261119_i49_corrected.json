@@ -98,8 +98,8 @@
       "Model quality or benchmark improvement"
     ],
     "technical_integrity_review": "PASS",
-    "acceptance_reviewer_signoff": "PENDING",
-    "effective_state": "PENDING_ACCEPTANCE_REVIEW_AND_PR_MERGE",
+    "acceptance_reviewer_signoff": "PASS_ON_REVIEWED_HEAD_62f80c2078c195b82027861185f54538ed1ed21c",
+    "effective_state": "PASS_ON_REVIEWED_HEAD_PENDING_QUICK_REVIEW_OF_UPDATED_HEAD_AND_PR_MERGE",
     "supersedes_prior_hold": {
       "path": "nox-control/complete_executor_20261118/evidence/addenda/source_evidence_erratum_20261119_i49.json",
       "git_blob_sha": "e283948b2df1b037f2f2dd918de0cee7c7f49da6",
@@ -112,7 +112,16 @@
       "assessment_before_correction": "ACCEPTED_SOURCE_CRITERION",
       "current_status": "This new binding provides the corrected comparator and current scope proof; it does not alter the older record."
     },
-    "acceptance_claim_for_immutable_295_snapshot": false
+    "acceptance_claim_for_immutable_295_snapshot": false,
+    "independent_review": {
+      "result": "PASS",
+      "reviewed_head_sha": "62f80c2078c195b82027861185f54538ed1ed21c",
+      "review_source": "Independent reviewer PASS communicated by the task owner; no GitHub review submission was attached to the reviewed head.",
+      "review_timestamp_utc": null,
+      "scope": "Exact I-49 frozen source criterion, current instruction binding, pair/name-set fingerprints, corrected comparator SHA, data minimization, and frozen-ledger boundaries."
+    },
+    "review_binding_recorded_at_utc": "2026-11-19T11:22:09Z",
+    "quick_review_required_for_updated_head": true
   },
   "mutation_boundary": {
     "all295_changed": false,
