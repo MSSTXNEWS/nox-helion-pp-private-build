@@ -2,12 +2,14 @@ name: B5 media idempotency source gate
 on:
   push:
     branches:
-      - 'b5/5b01-owner-media-idempotency-source-20261118'
+      - 'b5/5b01-clean-systemic-media-20261119'
   pull_request:
     paths:
       - 'nox-control/owner_media_runtime.py'
       - 'nox-control/owner_media_idempotency.py'
       - 'nox-control/test_owner_media_dedup_integration.py'
+      - 'nox-control/test_owner_media_idempotency.py'
+      - 'nox-control/test_owner_media_idempotency_multiprocess.py'
       - '.github/workflows/nox-b5-media-idempotency-source.yml'
 permissions:
   contents: read
@@ -21,7 +23,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Compile exact changed source
-        run: python -m py_compile nox-control/owner_media_runtime.py nox-control/owner_media_idempotency.py nox-control/test_owner_media_dedup_integration.py
+        run: python -m py_compile nox-control/owner_media_runtime.py nox-control/owner_media_idempotency.py nox-control/test_owner_media_dedup_integration.py nox-control/test_owner_media_idempotency.py nox-control/test_owner_media_idempotency_multiprocess.py
       - name: Original B5 helper integration and replay contract
         working-directory: nox-control
         run: python -m unittest -v test_owner_media_idempotency.py test_owner_media_idempotency_multiprocess.py test_owner_media_dedup_integration.py
