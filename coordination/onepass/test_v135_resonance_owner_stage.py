@@ -66,8 +66,8 @@ class V135NoLossTests(unittest.TestCase):
             policy = json.loads(z.read(m.CAP_POLICY))
             self.assertEqual(policy["schema"], "NOX_V135_OWNER_BRIDGE_CAP_POLICY_V2")
             self.assertEqual(meta["owner_bridge_cap_policy"]["sha256"], m.CAP_POLICY_SHA256)
-            self.assertEqual(meta["owner_bridge_cap_policy"]["max_bridge_bytes"], 24805)
-            self.assertEqual(meta["added_js_bytes"], 24293)
+            self.assertEqual(meta["owner_bridge_cap_policy"]["max_bridge_bytes"], 25181)
+            self.assertEqual(meta["added_js_bytes"], 24669)
             self.assertEqual(meta["added_js_sha256"], policy["bridge_sha256"])
             self.assertEqual(z.read(m.OBS_JS),
                              m.OBS_SOURCE.read_bytes())
@@ -92,10 +92,10 @@ class V135NoLossTests(unittest.TestCase):
     def test_cap_policy_tampering_is_rejected(self):
         policy = self.frozen.parent / "tampered-policy.json"
         policy.write_text(json.dumps({"schema":"NOX_V135_OWNER_BRIDGE_CAP_POLICY_V3",
-                                      "measured_bridge_bytes":24293,
+                                      "measured_bridge_bytes":24669,
                                       "max_bridge_bytes":999999,
                                       "reserve_bytes":512,
-                                      "bridge_sha256":"dff8fa66d2b822ab0055ccfacbf25f6b1eaa9a96ca02c60f1049f3799f8accd7"}))
+                                      "bridge_sha256":"3de9f87874534e603e4040f4fc10a018679820569431a7a0b230bda035552af3"}))
         with patch.object(m, "CAP_POLICY_SOURCE", policy):
             with self.assertRaisesRegex(ValueError, "HOLD_OWNER_BRIDGE_CAP_POLICY_SHA"):
                 m.build(self.stage, self.frozen, self.js, self.output,
