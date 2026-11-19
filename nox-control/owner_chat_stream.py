@@ -23,6 +23,29 @@ class StreamFailure(RuntimeError):
     pass
 
 
+def _reject_duplicate_keys(pairs):
+    """Never reassign an upstream evidence key (including nested objects)."""
+    result={}
+    for key,value in pairs:
+        if key in result:
+            raise ValueError('duplicate JSON evidence key')
+        result[key]=value
+    return result
+
+
+def _strict_json(text):
+    """Reject ambiguous JSON without clipping the original evidence."""
+    def finite_float(number):
+        value=float(number)
+        if not __import__('math').isfinite(value):
+            raise ValueError('nonfinite JSON number')
+        return value
+    def reject_constant(number):
+        raise ValueError('nonfinite JSON constant')
+    return json.loads(text,object_pairs_hook=_reject_duplicate_keys,
+                      parse_constant=reject_constant,parse_float=finite_float)
+
+
 EXECUTOR_STATUS=Path('/root/nox/status/agents_t856u.json')
 
 
@@ -116,7 +139,7 @@ async def _model_events(client, url, payload):
             if len(wire)>300000:
                 raise StreamFailure('HOLD_MODEL_SSE_SIZE')
             try:
-                doc=json.loads(wire)
+                doc=_strict_json(wire)
                 if not isinstance(doc,dict) or doc.get('error'):
                     raise ValueError('error')
                 choices=doc.get('choices')
@@ -209,7 +232,7 @@ def _normal_calls(rows,step):
         # explicit falsy value ([], null, false, empty string) into {}.
         args=row['arguments'] if 'arguments' in row else {}
         if isinstance(args,str):
-            try:args=json.loads(args)
+            try:args=_strict_json(args)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         if not isinstance(args,dict):raise StreamFailure('HOLD_TOOL_ARGUMENTS')
         # Native parser / deterministic routes share the same bounded ID rule.
