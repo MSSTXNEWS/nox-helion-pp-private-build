@@ -269,6 +269,8 @@ def tick_existing_dispatcher(namespace, state, *, mode):
             or runtime.get('owner_scope_verified') is not True):
             return {'state':'HOLD_AUTONOMY_NATIVE_SNAPSHOT','jobs_started':0}
         budget = runtime.get('bounded_cpu_budget')
+        if not isinstance(budget, Mapping):
+            return {'state':'HOLD_BOUNDED_CPU_BUDGET_SCHEMA','jobs_started':0}
         if budget is not None:
             decision = bounded_cpu_decision(budget,
                 memory_ratio=runtime.get('cgroup_memory_ratio'),
