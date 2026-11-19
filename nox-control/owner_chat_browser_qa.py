@@ -89,6 +89,25 @@ def ru_es_context_challenge(token):
     return ','.join(map(str, order))
 
 
+def ru_es_unleaked_first_prompt(token):
+    """First assistant chooses sequence; first user prompt must not expose it."""
+    if not isinstance(token, str) or not re.fullmatch(r'[a-p]{5,32}', token):
+        raise RuntimeError('HOLD_QA_CHALLENGE_TOKEN')
+    return ('[NOX UI QA ' + token + '] Выбери самостоятельно произвольную перестановку '
+            'чисел от 1 до 10, каждое ровно один раз. Не используй возрастающий '
+            'или убывающий порядок. Ответ: только числа через запятую, без пояснений.')
+
+
+def ru_es_unleaked_first_answer_valid(value):
+    """Accept only a complete, nontrivial first assistant-selected permutation."""
+    if not isinstance(value, str) or not re.fullmatch(r'(?:10|[1-9])(?:,(?:10|[1-9])){9}', value):
+        return False
+    parts = value.split(',')
+    return (set(parts) == {str(number) for number in range(1, 11)}
+            and parts != list(map(str, range(1, 11)))
+            and parts != list(map(str, range(10, 0, -1))))
+
+
 def multiturn_followup_prompt(token, mode):
     """Optional RU->ES owner QA, never enabled for normal or legacy runs."""
     if mode not in ('multiturn', 'multiturn_ru_es'):
@@ -662,11 +681,10 @@ async def browser_run(report, directory, available):
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
     title='NOX Browser QA '+token
     ru_es=report.get('language_pair')=='RU_ES'
-    expected_first=ru_es_context_challenge(token) if ru_es else EXPECTED
-    prompt=('[NOX UI QA '+token+'] Повтори числа точно в том же порядке через запятую: '
-            +expected_first+'. Без пояснений и других слов.') if ru_es else (
+    expected_first=None if ru_es else EXPECTED
+    prompt=ru_es_unleaked_first_prompt(token) if ru_es else (
             '[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.')
-    expected_second=','.join(reversed(expected_first.split(','))) if ru_es else '10,9,8,7,6,5,4,3,2,1'
+    expected_second=None if ru_es else '10,9,8,7,6,5,4,3,2,1'
     second_prompt=multiturn_followup_prompt(
         token, 'multiturn_ru_es' if report.get('language_pair') == 'RU_ES' else 'multiturn')
     second_permitted=False
@@ -867,10 +885,17 @@ async def browser_run(report, directory, available):
             answer=rows[1]['content'] if saved else ''
             native_equal=await page.evaluate('(value)=>window.__NOX_BROWSER_QA.answer===value',answer)
             public=public_numeric_answer(answer)
+            first_numeric_pass=(ru_es_unleaked_first_answer_valid(public) if ru_es
+                                else public==expected_first)
+            if ru_es and first_numeric_pass:
+                # Derive the second-turn answer ONLY from the genuine first
+                # assistant message after stream and dialog-history equality.
+                expected_first=public
+                expected_second=','.join(reversed(public.split(',')))
             report.update(stream=final,s03_readback_verified=bool(saved and native_equal),
                           actual_native_model_stream_verified=bool(final['native_calls']==1 and all(final['done'].values())),
                           answer_sha256=digest(answer.encode()),answer_characters=len(answer),
-                          synthetic_number_sequence_pass=public==expected_first,
+                          synthetic_number_sequence_pass=first_numeric_pass,
                           synthetic_public_numeric_answer=public,
                           progressive_stream_render_verified=progressive_stream_valid(final),
                           elapsed_turn_ms=round((time.monotonic()-started)*1000))
@@ -879,11 +904,11 @@ async def browser_run(report, directory, available):
             if not report['stop_visible_during_generation']:
                 raise RuntimeError('HOLD_QA_ACTIVE_STOP_LAYOUT')
             masks=[page.locator(selector) for selector in SENSITIVE_MASKS]
-            if not saved or public!=expected_first:
+            if not saved or not first_numeric_pass:
                 masks.append(page.locator('#messages'))
             report['browser_stage']='QA_COMPLETED_SCREENSHOT'
             await capture_private_screenshot(page,report,directory,'completed',masks,
-                'VERIFIED_PUBLIC_NUMERIC_QA' if public==expected_first and saved else 'MASKED_QA_MESSAGES',
+                'VERIFIED_PUBLIC_NUMERIC_QA' if first_numeric_pass and saved else 'MASKED_QA_MESSAGES',
                 (TimeoutError,PlaywrightTimeoutError))
             core=(report['webgl_visible'] and report['canvas_animation_observed']
                   and all(final['done'].values()) and saved and native_equal
@@ -892,7 +917,7 @@ async def browser_run(report, directory, available):
                 raise RuntimeError('HOLD_GRAPHICAL_ACCEPTANCE_INCOMPLETE')
             if not report['progressive_stream_render_verified']:
                 raise RuntimeError('HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED')
-            if public!=expected_first:
+            if not first_numeric_pass:
                 raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
             if report.get('two_turn_mode') is True:
                 # The owner-scoped second request is allowed only after a full
