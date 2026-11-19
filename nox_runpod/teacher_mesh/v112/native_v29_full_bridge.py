@@ -264,6 +264,19 @@ class OwnerDialogExchangeReadback:
         if record is None or permit() is not True:
             return None
         with self.connect() as db:
+            # Locate and message read use distinct connections. An exchange
+            # receipt revoked between them must never certify orphaned text.
+            # The second read is one consistent SQLite snapshot.
+            db.execute('BEGIN')
+            current=db.execute(
+                'SELECT receipt_id,dialog_id,turn_id,lease_epoch,exchange_id,writer,'
+                'committed_at,user_sha256,assistant_sha256,receipt_sha256,verified '
+                'FROM nox_v29_exchange_receipts WHERE dialog_id=? AND turn_id=? '
+                'AND receipt_id=? AND lease_epoch=?',
+                (dialog_id,turn_id,receipt_id,lease_epoch)).fetchone()
+            if (current is None or current['verified']!=1
+                    or any(current[key]!=record[key] for key in record)):
+                return None
             rows=db.execute(
                 'SELECT m.role,m.content,m.exchange_id FROM nox_v29_dialog_messages m '
                 'JOIN nox_v29_dialogs d ON d.dialog_id=m.dialog_id '
