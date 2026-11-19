@@ -139,7 +139,6 @@
         if(e.stream_mode!=='NATIVE_TOKEN_STREAM')throw Error('HOLD_NATIVE_STREAM_MODE');
         preparingSeen=true;
       } else {
-        // Fail closed: an unrecognized native frame cannot precede a
         throw Error('HOLD_NATIVE_UNKNOWN_FRAME');
       }
     };
@@ -149,7 +148,6 @@
         const chunk=await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
-        // Cap unfinished NDJSON frames, not combined chunks.
         let j;while((j=buf.indexOf('\n'))>=0){
           if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
@@ -169,21 +167,48 @@
     }
   }
   function sseChat(data,signal) {
-    let closed=false;const started=performance.now();let firstVisibleMs=null;
+    let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
+    let state='not_requested';
+    const started=performance.now();let firstVisibleMs=null;
     const upstreamAbort=new AbortController();
-    const onAbort=()=>upstreamAbort.abort();
-    if(signal?.aborted)upstreamAbort.abort();
+    const stopThenAbort=caller=>{
+      if(finished)return;
+      if(caller)canceling=true;
+      return stopJob||(stopJob=(async()=>{
+        if(modelStarted&&!streamDone){
+          const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
+          try{
+            const r=await nativePost('/api/nox/stop',{},c.signal);
+            if(!r.ok)state='rejected';
+            else{
+              const x=await nativeBodyJSON(r,c.signal);
+              state=x?.status==='STOP_REQUESTED'&&x?.stream_cancellation_signalled===true
+                ?'signal_accepted':'unconfirmed';
+            }
+          }catch{state=c.signal.aborted?'timeout':'unknown';}
+          finally{if(typeof clearTimeout==='function')clearTimeout(t);}
+        }
+        upstreamAbort.abort();
+        if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+          window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
+            transport_outcome:state,gpu_stop_verified:false
+          }}));
+      })());
+    };
+    const onAbort=stopThenAbort;
+    if(signal?.aborted)onAbort(true);
     else signal?.addEventListener?.('abort',onAbort,{once:true});
     const nativeSignal=upstreamAbort.signal;
     const body=new ReadableStream({
       async start(controller){
         const event=payload=>{
+          if(closed||(canceling&&payload.type!=='error'))return;
           if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
             firstVisibleMs=Math.round(performance.now()-started);
           const phase={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
           if(phase&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
             window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase}}));
-          if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
+          controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
         };
         try {
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
@@ -191,6 +216,7 @@
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
             answer_source:'NATIVE_PENDING',model_identity_verified:false});
+          modelStarted=true;
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
@@ -202,11 +228,7 @@
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              // Bound visual pacing to 8 actual frames per incoming native chunk.
-              // This never invents text or changes upstream TTFT.
               if(index<Math.min(parts.length-1,7)){
-                // Browsers with suspended rAF (including headless/hidden tabs)
-                // must still finish and verify S03. At most 18ms per slice.
                 await new Promise(resolve=>{
                   let settled=false;
                   const finish=()=>{if(!settled){settled=true;resolve();}};
@@ -220,9 +242,6 @@
           const {answer,receipt}=await consume(upstream,async t=>{
             trailing+=t;
             if(!segmenter){
-              // Without a segmenter, emit only a known-safe ASCII prefix.
-              // Keep one glyph of lookahead so subsequent combining marks
-              // cannot tear a grapheme across native delta boundaries.
               const ascii=trailing.match(/^[\x20-\x7e\u00a1\u00ab\u00b7\u00bb\u00bf\u00c0-\u024f\u0400-\u052f\u2010-\u2015\u2018-\u201f\u2026]{2,}/);
               if(ascii){
                 const safe=ascii[0].slice(0,-1);
@@ -235,6 +254,7 @@
             trailing=glyphs.pop()||'';
             if(glyphs.length)await emitPieces(glyphs.join(''));
           },nativeSignal);
+          streamDone=true;
           if(trailing)await emitPieces(trailing);
           if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
           if(!accepted(receipt,id))throw Error('HOLD_S03_COMMIT_RECEIPT');
@@ -247,21 +267,24 @@
             first_visible_token_ms:firstVisibleMs,
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
+          if(modelStarted&&!streamDone)await stopThenAbort();
           event({type:'error',
-            error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
-            // HTTP cancellation is confirmed; GPU/native execution is not.
-            gpu_stop_verified:false});
+            error:canceling?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+            gpu_stop_verified:false,
+            stop_transport_outcome:state});
         }finally{
+          finished=true;
           signal?.removeEventListener?.('abort',onAbort);
           if(!closed){closed=true;try{controller.close();}catch{}}
         }
       },
       cancel(){
         closed=true;
-        upstreamAbort.abort();
+        const stopping=stopThenAbort(true);
         if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
-          window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopped'}}));
+          window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:'stopping'}}));
         signal?.removeEventListener?.('abort',onAbort);
+        return stopping;
       }
     });
     return responseJSONStream(body);

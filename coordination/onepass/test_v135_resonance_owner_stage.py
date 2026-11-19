@@ -71,6 +71,18 @@ class V135NoLossTests(unittest.TestCase):
                              m.NATIVE_RESPONSE_SOURCE.read_bytes())
         self.assertEqual(receipt["output_entries"], m.FROZEN_N+2+len(m.PAGES)+5)
 
+    def test_owner_bridge_limit_accepts_current_patch_and_rejects_overflow(self):
+        current = self.js.read_bytes()
+        self.assertLessEqual(len(current), m.MAX_OWNER_BRIDGE_BYTES)
+        oversized = self.frozen.parent / "oversized-owner-bridge.js"
+        oversized.write_bytes(
+            current + b" " * (m.MAX_OWNER_BRIDGE_BYTES - len(current) + 1)
+        )
+        with self.assertRaisesRegex(ValueError, "HOLD_OWNER_BRIDGE_BOUNDS"):
+            m.build(self.stage, self.frozen, oversized, self.output,
+                    expected_source_sha=self.sha)
+        self.assertFalse(self.output.exists())
+
     def test_exact_same_source_is_bitwise_repeatable(self):
         a = m.build(self.stage, self.frozen, self.js, self.output,
                     expected_source_sha=self.sha)
