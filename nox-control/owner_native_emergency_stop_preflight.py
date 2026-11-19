@@ -47,7 +47,7 @@ def _root_directory(path: Path):
     return result
 
 
-def _read_root_regular(path: Path, limit: int) -> tuple[bytes, int]:
+def _read_root_regular(path: Path, limit: int) -> tuple[bytes, os.stat_result]:
     """Read one stable root-owned, non-writable regular file without following links."""
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
@@ -79,7 +79,7 @@ def _read_root_regular(path: Path, limit: int) -> tuple[bytes, int]:
                 any(getattr(before, key) != getattr(current, key)
                     for key in FILE_STABILITY_FIELDS)):
             _hold("CONFIG_FILE_CHANGED_OR_OVERSIZED")
-        return b"".join(chunks), before.st_ctime_ns
+        return b"".join(chunks), before
     finally:
         os.close(fd)
 
@@ -105,9 +105,11 @@ def inspect_configuration() -> dict:
     """Return fixed, sanitized facts from a stable bounded config snapshot."""
     supervisor_dir = _root_directory(SUPERVISOR_CLIENT_CONFIG.parent)
     include_dir = _root_directory(SUPERVISOR_CONFIG_DIR)
-    main_bytes, _ = _read_root_regular(SUPERVISOR_CLIENT_CONFIG, MAX_CONFIG_BYTES)
+    main_bytes, main_identity = _read_root_regular(SUPERVISOR_CLIENT_CONFIG,
+                                                  MAX_CONFIG_BYTES)
     try:
-        parser = configparser.ConfigParser(interpolation=None, strict=True)
+        parser = configparser.ConfigParser(interpolation=None, strict=True,
+                                           inline_comment_prefixes=(";",))
         parser.read_string(main_bytes.decode("utf-8", "strict"))
         sections = set(parser.sections())
         allowed_sections = {
@@ -152,15 +154,27 @@ def inspect_configuration() -> dict:
         _hold("INCLUDE_DIRECTORY_UNAVAILABLE")
 
     include_rows = []
+    file_identities = {SUPERVISOR_CLIENT_CONFIG: main_identity}
     total_bytes = len(main_bytes)
     for name in sorted(names):
-        raw, ctime_ns = _read_root_regular(SUPERVISOR_CONFIG_DIR / name,
-                                           MAX_CONFIG_BYTES)
+        path = SUPERVISOR_CONFIG_DIR / name
+        raw, identity = _read_root_regular(path, MAX_CONFIG_BYTES)
+        file_identities[path] = identity
         total_bytes += len(raw)
         if total_bytes > MAX_TOTAL_CONFIG_BYTES:
             _hold("TOTAL_CONFIG_LIMIT")
-        include_rows.append({"name": name, "sha256": hashlib.sha256(raw).hexdigest(),
-                             "ctime_ns": ctime_ns})
+        include_rows.append({"name": name, "sha256": hashlib.sha256(raw).hexdigest()})
+
+    # An in-place edit need not change parent directory metadata. Recheck every
+    # input after reading the last one so the file stability intervals overlap.
+    for path, before in file_identities.items():
+        try:
+            current = path.lstat()
+        except OSError:
+            _hold("CONFIG_FILE_CHANGED")
+        if any(getattr(before, key) != getattr(current, key)
+               for key in FILE_STABILITY_FIELDS):
+            _hold("CONFIG_FILE_CHANGED")
 
     supervisor_dir_after = _root_directory(SUPERVISOR_CLIENT_CONFIG.parent)
     include_dir_after = _root_directory(SUPERVISOR_CONFIG_DIR)
@@ -220,12 +234,10 @@ def inspect_configuration() -> dict:
     }
     main_sha = hashlib.sha256(main_bytes).hexdigest()
     includes_sha = hashlib.sha256(json.dumps(
-        [{"name": row["name"], "sha256": row["sha256"]} for row in include_rows],
+        include_rows,
         sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
     effective_sha = hashlib.sha256(json.dumps(
-        {"main_sha256": main_sha,
-         "includes": [{"name": row["name"], "sha256": row["sha256"]}
-                      for row in include_rows]},
+        {"main_sha256": main_sha, "includes": include_rows},
         sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
     return {
         "state": "ENDPOINT_PREFLIGHT_READ_ONLY",

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 SOURCE = Path(__file__).with_name("owner_native_emergency_stop_preflight.py")
@@ -87,6 +88,48 @@ class EndpointPreflightTests(unittest.TestCase):
         self.assertFalse(endpoint["socket_serverurl_paths_equal"])
         self.assertFalse(endpoint["endpoint_config_predicates_all_pass"])
         self.assertEqual(receipt["host_writes"], 0)
+
+    def test_snapshot_rejects_in_place_edits_to_already_read_files(self):
+        first_include = self.include_dir / "nox.conf"
+        last_include = self.include_dir / "z-last.conf"
+        last_include.write_text("[program:other]\ncommand=/bin/true\n",
+                                encoding="utf-8")
+        original_read = P._read_root_regular
+
+        for target in (self.main, first_include):
+            with self.subTest(target=target.name):
+                def read_and_edit(path, limit):
+                    result = original_read(path, limit)
+                    if path == last_include:
+                        target.write_bytes(target.read_bytes() + b"\n# changed\n")
+                    return result
+
+                with patch.object(P, "_read_root_regular", side_effect=read_and_edit):
+                    with self.assertRaisesRegex(RuntimeError,
+                                                "HOLD_ENDPOINT_PREFLIGHT_CONFIG_FILE_CHANGED"):
+                        P.inspect_configuration()
+
+    def test_stock_inline_semicolon_comments_leave_exact_endpoint_values(self):
+        self.write_config("unix:///var/run/supervisor.sock ; server URL",
+                          socket_file="/var/run/supervisor.sock   ; socket file",
+                          mode="0700 ; owner-only mode")
+        receipt = P.inspect_configuration()
+        endpoint = receipt["endpoint"]
+        expected = hashlib.sha256(b"/var/run/supervisor.sock").hexdigest()
+        self.assertEqual(endpoint["normalized_socket_path_sha256"], expected)
+        self.assertEqual(endpoint["serverurl_path_sha256"], expected)
+        self.assertTrue(endpoint["endpoint_config_predicates_all_pass"])
+        self.assertEqual(receipt["config"]["main_sha256"],
+                         hashlib.sha256(self.main.read_bytes()).hexdigest())
+
+    def test_unseparated_semicolons_do_not_hide_invalid_endpoint_values(self):
+        self.write_config("unix:///var/run/supervisor.sock;unexpected",
+                          socket_file="/var/run/supervisor.sock;unexpected",
+                          mode="0700;unexpected")
+        endpoint = P.inspect_configuration()["endpoint"]
+        self.assertFalse(endpoint["socket_path_absolute_no_traversal"])
+        self.assertFalse(endpoint["configured_mode_format_allowed"])
+        self.assertFalse(endpoint["endpoint_config_predicates_all_pass"])
 
     def test_secret_bearing_serverurl_is_never_echoed(self):
         secret = "do-not-emit-this-token"
