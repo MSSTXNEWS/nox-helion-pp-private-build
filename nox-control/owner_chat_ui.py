@@ -1,6 +1,7 @@
 """Activate the existing graphical Resonance for authenticated NOX owners."""
 from __future__ import annotations
 import asyncio,json,os,re,stat,time
+import importlib.util
 from pathlib import Path
 from fastapi import Request
 from fastapi.responses import JSONResponse,RedirectResponse
@@ -10,6 +11,8 @@ ROOT=Path('/root/nox')
 DEST='/nox-web-v29/pc/resonance.html'
 PAGES={'pc/resonance.html','pc/v22/resonance.template.html'}
 BUILD='NOX_OWNER_LIVE_RESONANCE_20261116'
+WORK_PROGRESS_DIRECTORY=ROOT/'nox-control'/'four_queue_20261118'
+WORK_PROGRESS_MODULE=ROOT/'nox-control'/'complete_executor_20261118'/'source_baseline'/'work_progress.py'
 
 def decorate_html(raw,path):
     if path.lstrip('/') not in PAGES:return raw
@@ -138,6 +141,53 @@ def workers():
     except (OSError,ValueError,TypeError):pass
     return result
 
+def work_progress_snapshot():
+    """Read the frozen rollup without changing receipts or asserting installation."""
+    unavailable={'schema':'NOX_OWNER_WORK_PROGRESS_V1','state':'UNAVAILABLE',
+                 'frozen_295_count':295,'receipt_done_count':None,
+                 'supplemental_accepted_count':None,'supplemental_accepted_task_ids':[],
+                 'supplemental_state':'UNAVAILABLE','original_acceptance_added':0,
+                 'evidence_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
+                 'observed_at':time.time()}
+    try:
+        spec=importlib.util.spec_from_file_location(
+            '_nox_owner_work_progress_reader',str(WORK_PROGRESS_MODULE))
+        if spec is None or spec.loader is None:return unavailable
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        value=module.summarize(WORK_PROGRESS_DIRECTORY)
+        total=value.get('total') if isinstance(value,dict) else None
+        supplemental=value.get('supplemental_acceptance') if isinstance(value,dict) else None
+        receipt_done=value.get('existing_receipt_count') if isinstance(value,dict) else None
+        ids=value.get('supplemental_accepted_task_ids') if isinstance(value,dict) else None
+        count=value.get('supplemental_accepted_count') if isinstance(value,dict) else None
+        if (value.get('schema')!='nox-work-progress-v2'
+                or value.get('frozen_295_count')!=295
+                or not isinstance(total,dict)
+                or total.get('registered')!=295
+                or total.get('total')!=295
+                or type(receipt_done) is not int or not 0<=receipt_done<=295
+                or type(total.get('completed')) is not int
+                or total['completed']!=receipt_done
+                or not isinstance(ids,list)
+                or any(not isinstance(task_id,str) or len(task_id)>32 for task_id in ids)
+                or ids!=sorted(set(ids))
+                or type(count) is not int or count!=len(ids)
+                or value.get('original_acceptance_added')!=0
+                or not isinstance(supplemental,dict)):
+            return unavailable
+        return {'schema':'NOX_OWNER_WORK_PROGRESS_V1','state':'OBSERVED',
+                'frozen_295_count':295,'receipt_done_count':receipt_done,
+                'supplemental_accepted_count':count,
+                'supplemental_accepted_task_ids':ids,
+                'supplemental_state':supplemental.get('state','UNKNOWN'),
+                'original_acceptance_added':0,
+                'evidence_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
+                'observed_at':time.time()}
+    except Exception:
+        return unavailable
+
+
 def register_owner_chat_ui(app,trusted):
     check=trusted.get('_session_ok');reject=trusted.get('_unauthorized');legacy=trusted.get('chat_page')
     if not all(callable(x) for x in (check,reject,legacy)):raise RuntimeError('HOLD_ORIGINAL_CHAT_CALLBACKS')
@@ -159,4 +209,9 @@ def register_owner_chat_ui(app,trusted):
         if not check(request):return reject()
         from owner_download_status import snapshot
         return JSONResponse(await asyncio.to_thread(snapshot),headers={'Cache-Control':'no-store'})
+    @app.get('/api/ui/work-progress')
+    async def owner_work_progress(request:Request):
+        if not check(request):return reject()
+        return JSONResponse(await asyncio.to_thread(work_progress_snapshot),
+                            headers={'Cache-Control':'no-store'})
     return {'home':DEST,'build':BUILD,'authentication':'EXISTING_OWNER_SESSION'}
