@@ -198,7 +198,8 @@ class ProbeTests(unittest.TestCase):
             def __init__(self, rows, status=200):
                 self.status, self.rows, self.closed = status, rows, False
             def __enter__(self): return self
-            def __exit__(self, *unused): self.closed = True
+            def close(self): self.closed = True
+            def __exit__(self, *unused): self.close()
             def read(self, limit): return json.dumps(self.rows).encode()
         good = SlotsResponse([{'is_processing': False}, {'processing': True}])
         with patch.object(probe, 'request', return_value=good) as http:
