@@ -73,19 +73,19 @@
       try{
         const value=await api('/api/ui/work-progress');
         const age=Date.now()/1000-Number(value.observed_at);
-        const ids=value.supplemental_verified_task_ids;
+        const ids=value.supplemental_accepted_task_ids;
         if(value.schema!=='NOX_OWNER_WORK_PROGRESS_V1'||value.state!=='OBSERVED'
           ||value.frozen_295_count!==295||!Number.isSafeInteger(value.receipt_done_count)
           ||value.receipt_done_count<0||value.receipt_done_count>295
-          ||!Number.isSafeInteger(value.supplemental_verified_count)
-          ||!Array.isArray(ids)||ids.length!==value.supplemental_verified_count
+          ||!Number.isSafeInteger(value.supplemental_accepted_count)
+          ||!Array.isArray(ids)||ids.length!==value.supplemental_accepted_count
           ||!Number.isFinite(age)||age < -5||age>45)throw Error('UNAVAILABLE');
         progressTitle.textContent='Прогресс · квитанции '+value.receipt_done_count+'/295';
         progressBody.replaceChildren();
         progressBody.append(E('p','Зафиксированная база: 295 требований.'));
         progressBody.append(E('p','Подтверждено квитанциями: '+value.receipt_done_count+' / 295.'));
-        progressBody.append(E('p','Дополнительные source-подтверждения, отдельно от квитанций: '
-          +value.supplemental_verified_count+(ids.length?' · '+ids.join(', '):' · нет')));
+        progressBody.append(E('p','Дополнительные supplemental-подтверждения, отдельно от квитанций: '
+          +value.supplemental_accepted_count+(ids.length?' · '+ids.join(', '):' · нет')));
         progressBody.append(E('p','Эти данные не подтверждают установку на сервере или live-приёмку.'));
         const stamp=new Date(Number(value.observed_at)*1000);
         progressBody.append(E('small','Снимок: '+stamp.toLocaleString()+' · supplemental scan: '+value.supplemental_state));
