@@ -33,10 +33,7 @@ STOP_FILES = (
     ROOT / "program/STOP", ROOT / "state/STOP", ROOT / "state/STOP.flag",
     Path("/workspace/NOX_STOP"), ROOT / "state/OWNER_MAINTENANCE.flag",
 )
-SYNTHETIC = (
-    "QA NOX: составь ровно три понятных шага подготовки пустого проекта "
-    "Python с README и одним тестом. Не задавай уточняющих вопросов."
-)
+SYNTHETIC = "Кто ты? Ты голоден? Что сейчас делаешь?"
 
 def output(data):
     print("NOX_MAINT_REPAIR=" + json.dumps({"kind":"chat_policy_live_smoke",
@@ -52,6 +49,12 @@ def source_status():
     digest=hashlib.sha256(path.read_bytes()).hexdigest()
     if digest!=pin:
         raise RuntimeError("HOLD_LIVE_SMOKE_SOURCE_PIN")
+    for name, expected in {"nox_v38_native_context.py":"32fa7c3729bbb7a4ab3e43183f10fec70e4c9254d0f9c2f9458db68c1c4a6deb","nox_v38_s03_native.py":"c1c4d77d86e833c69b5af8cee82bbd83211ca0184f4a63f66dc067eb0b50ebc3","nox_s03_scoped_pair.py":"d347ff7247e2f883b955094ca4e98205346ddb6e39b0fa52e13c360a8144c57f","nox_v38_self_model.py":"b15bf20557601028ecc4e6163d1d6add682616d466fa9fb78b3640411f7c1ada"}.items():
+        item=ROOT/"scripts"/name
+        if item.is_symlink() or not item.is_file() or item.stat().st_size>150000:
+            raise RuntimeError("HOLD_LIVE_SMOKE_RELEASE_SCOPE")
+        if hashlib.sha256(item.read_bytes()).hexdigest()!=expected:
+            raise RuntimeError("HOLD_LIVE_SMOKE_RELEASE_PIN")
     return digest
 
 def process_identity(pid):
@@ -243,7 +246,7 @@ def main():
         record["owner_dialog_pair_verified"]=saved
         record["canonical_s03_write_verified"]=False  # not proven by owner-dialog history
         record["done_claims_s03_integrated"]=done.get("s03_integrated") is True
-        record["planning_format_pass"]=bool(bullets>=3 and "?" not in result)
+        record["self_reference_observed"]=bool(re.search(r"(?i)\b(?:НОКС|NOX)\b",result)); record["knowledge_gap_mentioned"]=bool(re.search(r"(?i)\b(?:знани\w*|данн\w*)\b",result))
         record["status"]="LIVE_STREAM_OWNER_DIALOG_VERIFIED" if saved else "HOLD_OWNER_DIALOG_HISTORY"
         if not saved:raise RuntimeError("HOLD_LIVE_SMOKE_OWNER_DIALOG")
     except Exception as exc:
