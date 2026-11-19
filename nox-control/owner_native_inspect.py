@@ -887,6 +887,110 @@ def bounded_capacity_readback():
     for line in p.stdout.splitlines():
         if line.startswith('NOX_MAINT_CAPACITY') and len(line)<150000:print(line,flush=True)
 
+def native_subagents_writer_lease_readback(root=None, proc_root=None, *,
+        proc_locks_text=None, supervisor_result=None, owner_config=None,
+        starttime_reader=None):
+    """Read-only proof of the existing native-subagents flock and its owner.
+
+    Never opens the lock for writing or attempts to acquire it. Missing or
+    ambiguous /proc, Supervisor, config, or PID evidence is UNKNOWN.
+    """
+    root = ROOT if root is None else Path(root)
+    proc_root = PROC if proc_root is None else Path(proc_root)
+    result = {'schema':'NOX_NATIVE_SUBAGENT_LEASE_READONLY_V1',
+              'state':'UNKNOWN', 'verified':False, 'lease_kind':'FLOCK',
+              'supervisor_service':'nox-dispatcher-t855u',
+              'owner_instance_id':None, 'owner_authorized':False,
+              'lock_device_major':None, 'lock_device_minor':None,
+              'lock_inode':None, 'holder_pid':None, 'holder_start_ticks':None,
+              'supervisor_pid':None, 'supervisor_start_ticks':None,
+              'owner_config_sha256':None}
+    try:
+        lock_path = root/'state/dispatcher/native_subagents.lock'
+        before = lock_path.lstat()
+        if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+            result['state'] = 'HOLD_UNSAFE_LOCK_OBJECT'
+            return result
+        dev_major, dev_minor, inode = os.major(before.st_dev), os.minor(before.st_dev), before.st_ino
+        result.update({'lock_device_major':dev_major, 'lock_device_minor':dev_minor,
+                       'lock_inode':inode})
+        if proc_locks_text is None:
+            proc_locks_text = (proc_root/'locks').read_text()
+        if len(proc_locks_text) > 1_000_000:
+            result['state'] = 'HOLD_PROC_LOCKS_BOUND'
+            return result
+        holders = []
+        for line in proc_locks_text.splitlines():
+            fields = line.split()
+            if len(fields) != 8 or fields[1:4] != ['FLOCK','ADVISORY','WRITE'] or fields[6:] != ['0','EOF']:
+                continue
+            if not fields[0].endswith(':') or not fields[0][:-1].isdigit() or not fields[4].isdigit():
+                continue
+            device = fields[5].split(':')
+            if len(device) != 3:
+                continue
+            try:
+                identity = (int(device[0],16), int(device[1],16), int(device[2]))
+            except ValueError:
+                continue
+            if identity == (dev_major,dev_minor,inode):
+                holders.append(int(fields[4]))
+        if len(holders) != 1:
+            result['state'] = 'HOLD_LOCK_HOLDER_UNKNOWN'
+            return result
+        holder_pid = holders[0]
+        if supervisor_result is None:
+            supervisor_result = run(['supervisorctl','status','nox-dispatcher-t855u'], timeout=8)
+        supervisor_rc, supervisor_text = supervisor_result
+        rows = supervisor_text.strip().splitlines()
+        supervisor_match = (re.fullmatch(
+            r'nox-dispatcher-t855u\s+RUNNING\s+pid\s+(\d+)(?:,\s+uptime\s+[^\r\n]+)?',
+            rows[0]) if len(rows) == 1 else None)
+        if supervisor_rc != 0 or not supervisor_match:
+            result['state'] = 'HOLD_SUPERVISOR_IDENTITY'
+            return result
+        supervisor_pid = int(supervisor_match[1])
+        result.update({'holder_pid':holder_pid, 'supervisor_pid':supervisor_pid})
+        if holder_pid != supervisor_pid:
+            result['state'] = 'HOLD_LEASE_OWNER_MISMATCH'
+            return result
+        if starttime_reader is None:
+            def starttime_reader(pid):
+                raw = (proc_root/str(pid)/'stat').read_text()
+                prefix, tail = raw.rsplit(') ',1)
+                if not prefix.startswith(str(pid)+' ('):
+                    raise ValueError('PID_IDENTITY')
+                fields = tail.split()
+                if len(fields) <= 19 or not fields[19].isdigit():
+                    raise ValueError('PID_STARTTIME')
+                return int(fields[19])
+        start_before = starttime_reader(holder_pid)
+        if owner_config is None:
+            owner_config, raw_config, _ = obj(root/'config/owner_native_subagents.json',1000000)
+            result['owner_config_sha256'] = hashlib.sha256(raw_config).hexdigest()
+        else:
+            raw_config = json.dumps(owner_config,sort_keys=True,separators=(',',':')).encode()
+            result['owner_config_sha256'] = hashlib.sha256(raw_config).hexdigest()
+        if owner_config.get('owner_authorized') is not True or owner_config.get('instance_id') != 60509551:
+            result['state'] = 'HOLD_OWNER_AUTHORIZATION'
+            return result
+        result.update({'owner_instance_id':60509551, 'owner_authorized':True})
+        start_after = starttime_reader(holder_pid)
+        after = lock_path.lstat()
+        if (start_before != start_after or before.st_dev != after.st_dev
+                or before.st_ino != after.st_ino or before.st_ctime_ns != after.st_ctime_ns
+                or stat.S_ISLNK(after.st_mode) or not stat.S_ISREG(after.st_mode)):
+            result['state'] = 'HOLD_IDENTITY_CHANGED'
+            return result
+        result.update({'holder_start_ticks':start_after,
+                       'supervisor_start_ticks':start_after,
+                       'state':'VERIFIED_OWNER_FLOCK_READONLY', 'verified':True})
+        return result
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError):
+        result['state'] = 'HOLD_EVIDENCE_UNAVAILABLE'
+        return result
+
+
 def owner_safety_snapshot():
     """Read-only owner/8081 admission evidence; NEVER interpret a flag absence as a lease."""
     root = ROOT
@@ -988,6 +1092,7 @@ def owner_safety_snapshot():
             'owner_maintenance_flag': owner_maintenance,
             'maintenance_lock_file': maintenance_lock,
             'writer_lease': 'UNKNOWN_NO_OWNER_CAS_READBACK',
+            'native_subagents_writer_lease': native_subagents_writer_lease_readback(root=root),
             'supervisor': services,
             'listener_8081': {'status': net_status,
                               'socket_inodes_observed': len(inodes),
