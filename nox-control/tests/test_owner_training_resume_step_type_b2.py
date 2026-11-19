@@ -195,5 +195,47 @@ class CheckpointStepProvenance(unittest.TestCase):
                 file_sha(fifo)
 
 
+    def test_checkpoint_hash_rejects_regular_file_growth_during_read(self):
+        # The old EOF-loop silently hashed appended bytes, making an unstable
+        # checkpoint appear to be a valid signed snapshot.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / "adapter_model.safetensors"
+            source.write_bytes(b"initial-weights")
+            file_sha = load_pinned_verifier(root)["file_sha"]
+            self.assertEqual(file_sha(source), hashlib.sha256(b"initial-weights").hexdigest())
+            real_fdopen = os.fdopen
+
+            class AppendOnFirstRead:
+                def __init__(self, stream):
+                    self.stream = stream
+                    self.appended = False
+
+                def __enter__(self):
+                    self.stream.__enter__()
+                    return self
+
+                def __exit__(self, *args):
+                    return self.stream.__exit__(*args)
+
+                def fileno(self):
+                    return self.stream.fileno()
+
+                def read(self, size):
+                    if not self.appended:
+                        self.appended = True
+                        with source.open("ab") as writer:
+                            writer.write(b"-concurrent-append")
+                    return self.stream.read(size)
+
+            def concurrent_fdopen(fd, mode):
+                return AppendOnFirstRead(real_fdopen(fd, mode))
+
+            with mock.patch("os.fdopen", side_effect=concurrent_fdopen):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_CHECKPOINT_FILE_MUTATED"):
+                    file_sha(source)
+
+
+
 if __name__ == "__main__":
     unittest.main()
