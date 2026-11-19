@@ -202,7 +202,7 @@
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              if(index<Math.min(parts.length-1,7)&&
+              if(index<Math.min(parts.length-1,1)&&
                  (typeof document==='undefined'||document.visibilityState!=='hidden')&&
                  !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
                 await new Promise(resolve=>{
