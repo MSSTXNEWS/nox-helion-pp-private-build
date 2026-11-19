@@ -617,6 +617,42 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('_agent_final',payload)
 
 
+    async def test_pooled_payload_preserves_explicit_model_before_http(self):
+        # The native pool can rewrite cache settings but must not silently
+        # choose a different model from the one selected for this request.
+        cases=(
+            ('nox-ds41-current','nox-ds41-current',True),
+            ('nox-ds41-current','different-model',False),
+            ('nox-ds41-current',None,False),
+            (None,'pool-resolved-model',True),
+        )
+        for selected,pooled,allowed in cases:
+            with self.subTest(selected=selected,pooled=pooled):
+                native=self.native()
+                native['_POOL']=True
+                native['try_deterministic']=lambda user:None
+                native['prepare_payload']=lambda req,cache:dict(req,model=pooled)
+                payload={'messages':[{'role':'user','content':'Say ready'}]}
+                if selected is not None:payload['model']=selected
+                streams=[Chunks([frame('ready'),frame(finish='stop'),
+                                 b'data: [DONE]\\n\\n'])] if allowed else []
+                requests,factory=self.transport(streams)
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Say ready',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                if allowed:
+                    self.assertEqual(len(requests),1)
+                    self.assertEqual(requests[0]['model'],pooled)
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(payload['_agent_final'],'ready')
+                else:
+                    self.assertEqual(requests,[])
+                    self.assertIn('HOLD_MODEL_IDENTITY',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+
+
 class TransformTests(unittest.IsolatedAsyncioTestCase):
     def test_unknown_native_source_is_rejected(self):
         for transform in (transforms.patch_agent_loop,transforms.patch_slim,transforms.patch_proxy):
