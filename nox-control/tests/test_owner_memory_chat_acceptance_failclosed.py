@@ -79,7 +79,7 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
         spec=importlib.util.spec_from_file_location('a3_receipt_acceptance', SOURCE)
         module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
         name='owner_browser_qa_entry.py'
-        raw=b'def main():\\n    return None\\n'
+        raw=b'def main():\n    return None\n'
         # Use a real source payload; only the private synthetic receipt is simulated.
         module.STAGES=((name, hashlib.sha256(raw).hexdigest()),)
         module.BUNDLE={name:base64.b64encode(raw).decode()}
