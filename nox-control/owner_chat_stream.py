@@ -50,6 +50,16 @@ def _executor_status_reply(user_text,path=None):
     unknown=('Сейчас не могу подтвердить число и занятость исполнителей: '
              'свежий корректный статус диспетчера недоступен. '
              'NOX — отдельный координатор и чат; неподтверждённые цифры не привожу.')
+    # Preserve the already-source-tested MODEL_UPDATE fence in this successor.
+    # Source: c4e628c4ce81b75cc055e53a6e18d5388f1065e6.
+    try:
+        from owner_chat_ui import owner_maintenance_gate
+        maintenance=owner_maintenance_gate()
+    except Exception:
+        return unknown
+    if maintenance!='ABSENT':
+        return ('Сейчас выполняется MODEL_UPDATE; статус исполнителей временно недоступен.'
+                if maintenance=='PRESENT' else unknown)
     target=Path(path) if path is not None else EXECUTOR_STATUS
     try:
         # O_NOFOLLOW rejects symlinks; O_NONBLOCK prevents a FIFO from
@@ -78,12 +88,42 @@ def _executor_status_reply(user_text,path=None):
                 if task is not None:return unknown
             else:return unknown
             ids.append(name)
+        if owner_maintenance_gate()!='ABSENT':return unknown
         observed=datetime.fromtimestamp(meta.st_mtime,timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         return (f'Сейчас у диспетчера настроено {n} исполнителей: занято {busy}, свободно {n-busy}. '
                 f'NOX — отдельный координатор и чат (1). Схема: {n} исполнителей + NOX.\n'
                 f'Исполнители: {", ".join(ids)}.\nИсточник: свежий статус диспетчера, {observed}.')
     except (OSError,ValueError,TypeError,OverflowError):
         return unknown
+
+
+async def _bounded_sse_lines(response):
+    """Bound partial SSE fields before a newline; httpx.aiter_lines() does not.
+
+    Preserve CR, LF, CRLF (including split CRLF) and UTF-8 chunk boundaries.
+    No buffering of untrusted unterminated model output beyond 300k chars.
+    """
+    pending=''
+    after_cr=False
+    # Un-sized chunks preserve immediate first-token delivery. Fixed-size
+    # HTTPX text chunking can wait for 8 KiB and stall a live SSE response.
+    async for chunk in response.aiter_text():
+        for offset in range(0,len(chunk),8192):
+            for part in re.split(r'(\r\n|\r|\n)',chunk[offset:offset+8192]):
+                if part in ('\r\n','\r','\n'):
+                    if part=='\n' and after_cr:
+                        after_cr=False
+                        continue
+                    yield pending
+                    pending=''
+                    after_cr=(part=='\r')
+                elif part:
+                    after_cr=False
+                    pending+=part
+                    if len(pending)>300000:
+                        raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+    if pending:
+        yield pending
 
 
 async def _model_events(client, url, payload):
@@ -93,23 +133,69 @@ async def _model_events(client, url, payload):
     async with client.stream('POST',url,json=request,timeout=180.0) as response:
         if response.status_code!=200:
             raise StreamFailure('HOLD_MODEL_HTTP')
-        async for line in response.aiter_lines():
-            if not line or line.startswith(':'):
+        # A data: line is a field, not an event; dispatch only on a blank line.
+        # Preserve valid multi-line JSON without allowing unbounded frames.
+        parts=[]
+        frame_size=0
+        record_size=0
+        frame_lines=0
+        first_line=True
+        async for line in _bounded_sse_lines(response):
+            # WHATWG SSE decoding ignores one leading UTF-8 BOM, and only
+            # at the start of the stream. Do not erase later payload bytes.
+            if first_line:
+                first_line=False
+                if line.startswith('\ufeff'):
+                    line=line[1:]
+            if line:
+                # A legal stream may send keepalives, but an unbounded single
+                # record of comments/ids can otherwise starve chat indefinitely.
+                frame_lines+=1
+                # Comments and id/retry/event metadata also consume memory and
+                # parsing time. Cap aggregate record bytes, not only data:.
+                record_size+=len(line)+1
+                if frame_lines>1024 or len(line)>300000 or record_size>300000:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+            else:
+                # Each empty line ends one SSE record (including keepalives).
+                frame_lines=0
+                record_size=0
+            if line=='':
+                if not parts:
+                    continue
+                wire='\n'.join(parts).strip()
+                parts=[]
+                frame_size=0
+            elif line.startswith(':'):
                 continue
-            # SSE permits bounded metadata before the data field. Common
-            # OpenAI-compatible proxies emit event: message and id: per chunk.
-            # Other event types (including error) fail closed, not as tokens.
-            if line.startswith('event:'):
-                if line[6:].strip()!='message':
+            elif line.startswith('event:') or line=='event':
+                if line!='event' and line[6:].strip()!='message':
                     raise StreamFailure('HOLD_MODEL_SSE_EVENT')
                 continue
-            if line.startswith('id:'):
+            elif line.startswith('id:') or line=='id':
                 if len(line)>256 or '\x00' in line:
                     raise StreamFailure('HOLD_MODEL_SSE_FRAME')
                 continue
-            if not line.startswith('data:'):
+            elif line.startswith('retry:') or line=='retry':
+                # A provider may supply SSE reconnection advice. This adapter
+                # never reconnects model POSTs (no risk of duplicate tool use).
+                # Ignore the bounded metadata while retaining event framing.
+                if len(line)>256:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+                continue
+            elif line.startswith('data:') or line=='data':
+                # WHATWG: a field without ':' has an empty value. A bare
+                # `data` is still a data field, not an unknown SSE command.
+                value=line[5:] if line!='data' else ''
+                if value.startswith(' '):
+                    value=value[1:]
+                frame_size+=len(value)+1
+                if frame_size>300000:
+                    raise StreamFailure('HOLD_MODEL_SSE_SIZE')
+                parts.append(value)
+                continue
+            else:
                 raise StreamFailure('HOLD_MODEL_SSE_FRAME')
-            wire=line[5:].strip()
             if wire=='[DONE]':
                 complete=True
                 break
@@ -308,8 +394,14 @@ async def _run(native,url,payload,user_text):
                         if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
                         yield 'token',text
                         return
+                    # Tool evidence is part of the complete conversation. Never
+                    # silently replace it with an 8k-character prefix; without
+                    # proven context capacity, fail closed rather than fabricate
+                    # a shortened observation for the model/S03 record.
+                    if len(text)>2000000:
+                        raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
                     messages.append({'role':'tool','tool_call_id':call['id'],
-                                     'name':call['name'],'content':text[:8000]})
+                                     'name':call['name'],'content':text})
             calls=[]
             model_request=dict(req,messages=messages,cache_prompt=True)
             if steps>=int(native.get('MAX_STEPS',8)):
