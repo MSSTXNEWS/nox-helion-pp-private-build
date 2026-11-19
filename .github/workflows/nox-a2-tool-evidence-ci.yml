@@ -19,5 +19,5 @@ jobs:
         run: |
           python3 -m venv .a2-ci
           . .a2-ci/bin/activate
-          python -m pip install --disable-pip-version-check httpx==0.28.1
+          python -m pip install --disable-pip-version-check httpx==0.28.1 fastapi==0.116.1
           python -m unittest discover -s nox-control -p 'test_owner_chat_stream_action_routing.py' -v
