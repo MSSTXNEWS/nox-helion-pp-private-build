@@ -16,6 +16,9 @@ class InstallContractTests(unittest.TestCase):
         for name,text in [('nox_drive_reconnect.py','#!/usr/bin/env python3\npass\n'),
                           ('nox_drive_reconnect_loop.sh','#!/bin/sh\nexit 0\n'),
                           ('nox_drive_first.py','#!/usr/bin/env python3\npass\n'),
+                          ('nox_drive_prefetch.py','#!/usr/bin/env python3\npass\n'),
+                          ('nox_drive_native_binding.py','#!/usr/bin/env python3\npass\n'),
+                          ('nox-drive-first.skill.md','# NOX Drive-first skill\n'),
                           ('nox-drive-reconnect.conf','[program:nox-drive-reconnect]\n')]:
             raw=text.encode()
             good[name]={'content':base64.b64encode(raw).decode(), 'sha256':hashlib.sha256(raw).hexdigest()}

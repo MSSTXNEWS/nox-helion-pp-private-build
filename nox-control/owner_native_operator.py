@@ -284,6 +284,9 @@ def run_native(action,request_id):
             'nox-control/nox_drive_reconnect.py',
             'nox-control/nox_drive_reconnect_loop.sh',
             'nox-control/nox_drive_first.py',
+            'nox-control/nox_drive_prefetch.py',
+            'nox-control/nox_drive_native_binding.py',
+            'nox-control/skills/nox-drive-first.skill.md',
             'nox-control/supervisor/nox-drive-reconnect.conf',
         )
         for path in bundle_paths:
@@ -296,7 +299,7 @@ def run_native(action,request_id):
                 'sha256':hashlib.sha256(raw).hexdigest(),
             }
         token='__NOX_BUNDLE_JSON__'
-        if payload.count(token)!=1 or len(assets)!=4:
+        if payload.count(token)!=1 or len(assets)!=7:
             raise RuntimeError('HOLD_DRIVE_RECONNECT_INSTALL_BUNDLE')
         payload=payload.replace(token,json.dumps(assets))
     elif action in ('stage','repair','browser_qa'):
