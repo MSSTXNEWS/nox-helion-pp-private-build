@@ -20,8 +20,8 @@ from pathlib import Path
 ROOT = Path('/root/nox')
 STOP_NAMES = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
               'state/STOP', 'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag')
-HELPER_SOURCE_COMMIT = '347a040868cc0191c228c800940695d5af6e9fc2'
-HELPER_BLOB_SHA = '9ded582e6ee587898146d31ef259e5404450b748'
+HELPER_SOURCE_COMMIT = '5db596a9052e9ee3bbaaefc97ab631c75baddcff'
+HELPER_BLOB_SHA = 'a4537b8087509773792f38b619d8c5fe2436702d'
 RECEIPT_SCHEMA = 'NOX_OWNER_PAGE_CACHE_RECLAIM_GUARD_V1'
 RECEIPT_MARKER = 'NOX_MAINT_PAGE_CACHE_RECLAIM='
 COMPLETE_MARKER = 'NOX_MAINT_PAGE_CACHE_RECLAIM_COMPLETE=true'
@@ -102,13 +102,9 @@ def receipt(request, source, state, audit_sha=None, result=None):
 def resource_headroom(storage):
     budget = storage.filesystem_budget()
     cgroup = budget.get('cgroup') if isinstance(budget, dict) else None
-    if not isinstance(cgroup, dict) or cgroup.get('state') != 'VERIFIED':
+    if not storage.verified_cgroup_budget(budget):
         raise RuntimeError('HOLD_PAGE_CACHE_RESOURCE_UNVERIFIED')
-    headroom = cgroup.get('headroom_bytes')
-    limit = cgroup.get('limit_bytes')
-    if (type(headroom) is not int or type(limit) is not int
-            or headroom < 0 or limit <= 0 or headroom > limit):
-        raise RuntimeError('HOLD_PAGE_CACHE_RESOURCE_UNVERIFIED')
+    return cgroup['headroom_bytes']
     return headroom
 
 
@@ -147,6 +143,8 @@ def execute(request, source):
             raise RuntimeError('HOLD_PAGE_CACHE_STOP_CHANGED')
 
         audit = storage.audit(request, source)
+        if not storage.verified_cgroup_budget(audit.get('budget') if isinstance(audit, dict) else None):
+            raise RuntimeError('HOLD_PAGE_CACHE_AUDIT_RESOURCE_UNVERIFIED')
         if (not isinstance(audit, dict) or audit.get('schema') != storage.SCHEMA
                 or audit.get('action') != 'AUDIT' or audit.get('instance_id') != storage.INSTANCE
                 or audit.get('request') != request or audit.get('source_sha') != source
