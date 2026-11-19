@@ -129,11 +129,18 @@ def install_cache(source, request, data):
                 and os.environ.get('NOX_OWNER_SOURCE_SHA') == source
                 and os.environ.get('NOX_OWNER_REQUEST_ID') == request)
 
-    result = activate.activate_cache_maintenance(
-        pin, workers={name: data[name] for name in activate.WORKERS},
-        unit=data[activate.UNIT_NAME], authorize=owner,
-    )
-    return result, now
+    until = time.monotonic() + 46
+    while True:
+        try:
+            result = activate.activate_cache_maintenance(
+                pin, workers={name: data[name] for name in activate.WORKERS},
+                unit=data[activate.UNIT_NAME], authorize=owner,
+            )
+            return result, now
+        except activate.Hold as error:
+            if str(error) != 'HOLD_CACHE_ACTIVATION_OWNER_BUSY' or time.monotonic() >= until:
+                raise
+            time.sleep(0.25)
 
 
 def main():
