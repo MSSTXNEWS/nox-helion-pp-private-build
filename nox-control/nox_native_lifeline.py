@@ -18,6 +18,16 @@ import tempfile
 import time
 
 SCHEMA = "NOX_LIFELINE_V2"
+try:
+    SUPERVISORCTL_PATH = __NOX_SUPERVISORCTL_PATH__
+except NameError:
+    # Source-only callers retain PATH lookup; the owner installer replaces
+    # this token with a verified absolute executable path before deployment.
+    SUPERVISORCTL_PATH = "supervisorctl"
+try:
+    SUPERVISORCTL_CONFIG = __NOX_SUPERVISORCTL_CONFIG__
+except NameError:
+    SUPERVISORCTL_CONFIG = "/etc/supervisor/supervisord.conf"
 SERVICES = frozenset({
     "nox-dispatcher-t855u", "nox-priority-scheduler",
     "nox-selfheal", "nox-gpu-watchdog-t865u",
@@ -258,7 +268,8 @@ def supervise(name, command="status"):
     if name not in SERVICES or command not in ("status", "start"):
         raise ValueError("HOLD_UNAPPROVED_OPERATION")
     try:
-        p = subprocess.run(["supervisorctl", command, name], capture_output=True,
+        p = subprocess.run([SUPERVISORCTL_PATH, "-c", SUPERVISORCTL_CONFIG,
+                            command, name], capture_output=True,
                            text=True, shell=False, timeout=12, check=False)
     except (OSError, subprocess.TimeoutExpired):
         return {"state": "UNKNOWN", "pid": None, "rc": 124}

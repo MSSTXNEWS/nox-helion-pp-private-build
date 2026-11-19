@@ -11,10 +11,12 @@ import base64
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
 import signal
+import shlex
 import stat
 import subprocess
 import sys
@@ -33,10 +35,31 @@ UNIT = Path("/etc/systemd/system/nox-lifeline-observer.service")
 STATE_DIR = ROOT / "state/lifeline-observer"
 STATE = STATE_DIR / "state.json"
 SERVICE = "nox-lifeline-observer.service"
-UNIT_SHA256 = "ed9fd4f1b83043123f656163c49714592e59f6e27dcf015847a24f3d29435ac3"
+UNIT_SHA256 = "d23c029063f058b3c3b65116fca25733aea359ebe071a51416c1dd2608c5f806"
 OWNER_STOP = ROOT / "STOP"
 OWNER_MAINTENANCE = ROOT / "state/OWNER_MAINTENANCE.flag"
 OWNER_LOCK = ROOT / "state/owner_maintenance.lock"
+CGROUP_ROOT = Path("/sys/fs/cgroup")
+MODEL_SERVICE = "nox-ds41-8098"
+MEMORY_FLOOR_BYTES = 2 * 1024**3
+MEMORY_RESERVE_BYTES = 512 * 1024**2
+LEGACY_POLICY = Path("/etc/nox/lifeline.json")
+LEGACY_CONFIG = Path("/etc/supervisor/conf.d/nox-lifeline-guard.conf")
+LEGACY_STATE = ROOT / "state/lifeline/state.json"
+LEGACY_GUARD = "nox-lifeline-guard"
+SUPERVISOR_CONFIG = Path("/etc/supervisor/supervisord.conf")
+SUPERVISORCTL_CANDIDATES = (Path("/usr/bin/supervisorctl"),
+                            Path("/usr/local/bin/supervisorctl"),
+                            Path("/opt/venv/bin/supervisorctl"))
+LEGACY_SCRIPT = ROOT / "scripts/nox_native_lifeline.py"
+LEGACY_CONFIG_SHA256 = "266d75d12cb3203dd8200a6b382231105a0fd3fd9ea37379531d86c413ddfba6"
+LEGACY_SCRIPT_SHA256 = "a2503c1463738c215bf3cd4eb5cdcb29f5ff65a85128160728033a80e9af1f66"
+LEGACY_EXPECTED_ARGV = ("/usr/bin/python3", "-u",
+                        "/root/nox/scripts/nox_native_lifeline.py",
+                        "--policy", "/etc/nox/lifeline.json",
+                        "--state", "/root/nox/state/lifeline/state.json")
+LEGACY_SERVICES = frozenset({"nox-dispatcher-t855u", "nox-priority-scheduler",
+                             "nox-selfheal", "nox-gpu-watchdog-t865u"})
 MAX_BYTES = {"nox_native_lifeline.py": 32_768,
              "lifeline-observer.json": 8_192,
              "nox-lifeline-observer.service": 8_192}
@@ -54,6 +77,21 @@ STATE_ARTIFACT_PREIMAGES = {}
 STATE_ARTIFACTS = {"state.json": STATE, "lifeline.lock": STATE_DIR / "lifeline.lock"}
 REQUEST_ID = None
 SOURCE_SHA_VALUE = None
+MEMORY_PREFLIGHT = None
+MEMORY_PRE_ENABLE = None
+MEMORY_POST_ENABLE = None
+MEMORY_POST_ROLLBACK = None
+LEGACY_GUARD_PREIMAGE = None
+LEGACY_GUARD_PRE_ENABLE = None
+LEGACY_GUARD_POSTCHECK = None
+SUPERVISORCTL_PIN = None
+SUPERVISORCTL_PRE_ENABLE = None
+SUPERVISORCTL_POST_ENABLE = None
+SUPERVISORCTL_CANDIDATE_OUTCOMES = []
+LEGACY_CORE_SOURCE_SHA256 = None
+CGROUP_TARGET_EVIDENCE = None
+CGROUP_TARGET_PRE_ENABLE = None
+CGROUP_TARGET_POST_ENABLE = None
 
 
 class Hold(RuntimeError):
@@ -64,12 +102,630 @@ def fail(code: str) -> None:
     raise Hold("HOLD_LIFELINE_OBSERVER_" + code)
 
 
-def run(args, timeout=20):
+def _supervisorctl_snapshot(path: Path, max_size=1_048_576):
+    for parent in (path.parent, *path.parent.parents):
+        try:
+            meta = parent.lstat()
+        except OSError:
+            raise FileNotFoundError("parent")
+        if (stat.S_ISLNK(meta.st_mode) or not stat.S_ISDIR(meta.st_mode) or
+                meta.st_uid != 0 or meta.st_mode & 0o022):
+            fail("SUPERVISORCTL_PARENT_UNSAFE")
     try:
-        return subprocess.run(args, capture_output=True, text=True, shell=False,
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        fail("SUPERVISORCTL_OPEN_FAILED")
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != 0 or
+                before.st_mode & 0o022 or not before.st_mode & 0o111 or
+                before.st_size <= 0 or before.st_size > max_size):
+            fail("SUPERVISORCTL_FILE_UNSAFE")
+        digest = hashlib.sha256()
+        total = 0
+        remaining = max_size + 1
+        while remaining:
+            chunk = os.read(fd, min(65536, remaining))
+            if not chunk:
+                break
+            digest.update(chunk)
+            total += len(chunk)
+            remaining -= len(chunk)
+        after = os.fstat(fd)
+        path_meta = path.lstat()
+        fields = ("st_dev", "st_ino", "st_mode", "st_nlink", "st_uid", "st_gid",
+                  "st_size", "st_mtime_ns", "st_ctime_ns")
+        if (total > max_size or total != before.st_size or
+                any(getattr(before, field) != getattr(after, field) for field in fields) or
+                any(getattr(after, field) != getattr(path_meta, field) for field in fields)):
+            fail("SUPERVISORCTL_CHANGED_DURING_READ")
+    finally:
+        os.close(fd)
+    return {"path": str(path), "device": before.st_dev, "inode": before.st_ino,
+            "mode": stat.S_IMODE(before.st_mode), "nlink": before.st_nlink,
+            "uid": before.st_uid,
+            "gid": before.st_gid, "size": before.st_size,
+            "mtime_ns": before.st_mtime_ns, "ctime_ns": before.st_ctime_ns,
+            "sha256": digest.hexdigest()}
+
+
+def _supervisor_config_snapshot():
+    for parent in (SUPERVISOR_CONFIG.parent, *SUPERVISOR_CONFIG.parent.parents):
+        try:
+            meta = parent.lstat()
+        except OSError:
+            fail("SUPERVISOR_CONFIG_PARENT_UNAVAILABLE")
+        if (stat.S_ISLNK(meta.st_mode) or not stat.S_ISDIR(meta.st_mode) or
+                meta.st_uid != 0 or meta.st_mode & 0o022):
+            fail("SUPERVISOR_CONFIG_PARENT_UNSAFE")
+    try:
+        fd = os.open(SUPERVISOR_CONFIG, os.O_RDONLY | os.O_NOFOLLOW |
+                     os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        fail("SUPERVISOR_CONFIG_UNAVAILABLE")
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != 0 or
+                before.st_mode & 0o022 or before.st_size <= 0 or before.st_size > 262144):
+            fail("SUPERVISOR_CONFIG_UNSAFE")
+        raw = os.read(fd, 262145)
+        after = os.fstat(fd)
+        path_after = SUPERVISOR_CONFIG.lstat()
+        fields = ("st_dev", "st_ino", "st_mode", "st_nlink", "st_uid", "st_gid",
+                  "st_size", "st_mtime_ns", "st_ctime_ns")
+        if (len(raw) != before.st_size or len(raw) > 262144 or
+                any(getattr(before, f) != getattr(after, f) or
+                    getattr(after, f) != getattr(path_after, f) for f in fields)):
+            fail("SUPERVISOR_CONFIG_CHANGED")
+    finally:
+        os.close(fd)
+    return {"path": str(SUPERVISOR_CONFIG), "device": before.st_dev,
+            "inode": before.st_ino, "mode": stat.S_IMODE(before.st_mode),
+            "uid": before.st_uid, "gid": before.st_gid,
+            "size": before.st_size, "mtime_ns": before.st_mtime_ns,
+            "ctime_ns": before.st_ctime_ns, "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def _supervisord_identity(client):
+    try:
+        pid_result = subprocess.run([str(client), "-c", str(SUPERVISOR_CONFIG), "pid"],
+                                    capture_output=True, text=True, shell=False,
+                                    timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        fail("SUPERVISOR_PID_QUERY_UNAVAILABLE")
+    pid_text = pid_result.stdout.strip()
+    if pid_result.returncode != 0 or not re.fullmatch(r"[1-9][0-9]{0,9}", pid_text):
+        fail("SUPERVISOR_PID_QUERY_INVALID")
+    pid = int(pid_text)
+    show = subprocess.run(["systemctl", "show", "supervisor.service",
+                           "--property=MainPID", "--value"], capture_output=True,
+                          text=True, shell=False, timeout=10, check=False)
+    value = show.stdout.strip()
+    if show.returncode != 0 or value != str(pid):
+        fail("SUPERVISOR_PID_SYSTEMD_MISMATCH")
+    proc = Path("/proc") / str(pid)
+    before = _proc_start_ticks(pid)
+    try:
+        exe = os.readlink(proc / "exe")
+        cmdline = _proc_read(pid, "cmdline", 16384, "SUPERVISORD_IDENTITY_UNAVAILABLE")
+    except OSError:
+        fail("SUPERVISORD_IDENTITY_UNAVAILABLE")
+    exe_after = os.readlink(proc / "exe")
+    cmdline_after = _proc_read(pid, "cmdline", 16384,
+                               "SUPERVISORD_IDENTITY_UNAVAILABLE")
+    after = _proc_start_ticks(pid)
+    args = tuple(x.decode("utf-8", "strict") for x in cmdline[:-1].split(b"\0"))
+    config_flags = [i for i, arg in enumerate(args)
+                    if arg in ("-c", "--configuration")]
+    inline_or_ambiguous_config = [arg for arg in args
+                                  if ((arg.startswith("--configuration") and
+                                       arg != "--configuration") or
+                                      (arg.startswith("-c") and arg != "-c"))]
+    if (before != after or exe != exe_after or cmdline != cmdline_after or
+            not cmdline.endswith(b"\0") or not args or len(config_flags) != 1 or
+            inline_or_ambiguous_config):
+        fail("SUPERVISORD_IDENTITY_NOT_ALLOWLISTED")
+    try:
+        idx = config_flags[0]
+        if idx + 1 >= len(args) or args[idx + 1].startswith("-"):
+            raise ValueError
+        configured = args[idx + 1]
+    except (ValueError, IndexError):
+        fail("SUPERVISORD_CONFIG_ARG_INVALID")
+    if configured != str(SUPERVISOR_CONFIG):
+        fail("SUPERVISORD_CONFIG_MISMATCH")
+    script_args = [arg for arg in args if Path(arg).name == "supervisord"]
+    if (len(script_args) != 1 or not script_args[0].startswith("/") or
+            Path(script_args[0]).is_symlink()):
+        fail("SUPERVISORD_SCRIPT_ARG_MISMATCH")
+    script_identity = _supervisorctl_snapshot(Path(script_args[0]))
+    executable_identity = _supervisorctl_snapshot(Path(exe), max_size=64 * 1024**2)
+    confirm = subprocess.run(["systemctl", "show", "supervisor.service",
+                              "--property=MainPID", "--value"], capture_output=True,
+                             text=True, shell=False, timeout=10, check=False)
+    if confirm.returncode != 0 or confirm.stdout.strip() != str(pid):
+        fail("SUPERVISORD_MAINPID_CHANGED")
+    try:
+        exe_final = os.readlink(proc / "exe")
+        cmdline_final = _proc_read(pid, "cmdline", 16384,
+                                   "SUPERVISORD_IDENTITY_REREAD_UNAVAILABLE")
+    except OSError:
+        fail("SUPERVISORD_IDENTITY_REREAD_UNAVAILABLE")
+    if (_proc_start_ticks(pid) != before or exe_final != exe or
+            cmdline_final != cmdline or
+            _supervisorctl_snapshot(Path(exe), max_size=64 * 1024**2) != executable_identity or
+            _supervisorctl_snapshot(Path(script_args[0])) != script_identity):
+        fail("SUPERVISORD_PROCESS_CHANGED_AFTER_QUERY")
+    return {"pid": pid, "start_ticks": before, "exe": exe,
+            "argv_sha256": hashlib.sha256(cmdline).hexdigest(),
+            "executable": executable_identity, "script": script_identity,
+            "config": str(SUPERVISOR_CONFIG)}
+
+
+def _probe_supervisorctl(path):
+    config = _supervisor_config_snapshot()
+    daemon = _supervisord_identity(path)
+    try:
+        model = subprocess.run([str(path), "-c", str(SUPERVISOR_CONFIG),
+                                "status", MODEL_SERVICE], capture_output=True,
+                               text=True, shell=False, timeout=10, check=False)
+        result = subprocess.run([str(path), "-c", str(SUPERVISOR_CONFIG),
+                                 "status", LEGACY_GUARD], capture_output=True,
+                                text=True, shell=False, timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    lines = result.stdout.strip().splitlines()
+    match = re.fullmatch(r"nox-lifeline-guard\s+RUNNING\s+pid\s+([1-9][0-9]{0,9})(?:,.*)?",
+                         lines[0]) if result.returncode == 0 and len(lines) == 1 else None
+    model_lines = model.stdout.strip().splitlines()
+    model_match = (re.fullmatch(
+        r"nox-ds41-8098\s+(?:RUNNING\s+pid\s+[1-9][0-9]{0,9}|"
+        r"(?:STOPPED|EXITED|FATAL|BACKOFF|UNKNOWN)(?:,.*)?)",
+        model_lines[0]) if model.returncode in (0, 3) and len(model_lines) == 1 else None)
+    if not match or model_match is None:
+        return None
+    pid = int(match.group(1))
+    # Bind the status endpoint to the known guard process command, not merely
+    # a service name returned by an arbitrary Supervisor endpoint.
+    try:
+        cmd = _proc_read(pid, "cmdline", 16384, "LEGACY_GUARD_IDENTITY_UNAVAILABLE")
+        exe = os.readlink(Path("/proc") / str(pid) / "exe")
+    except OSError:
+        return None
+    if (not cmd.endswith(b"\0") or tuple(x.decode("utf-8", "strict")
+            for x in cmd[:-1].split(b"\0")) != LEGACY_EXPECTED_ARGV or
+            exe != os.path.realpath("/usr/bin/python3")):
+        return None
+    if _supervisord_identity(path) != daemon or _supervisor_config_snapshot() != config:
+        fail("SUPERVISOR_ENDPOINT_CHANGED_DURING_PROBE")
+    return {"config": config, "daemon": daemon, "legacy_pid": pid,
+            "model_service": MODEL_SERVICE, "legacy_service": LEGACY_GUARD}
+
+
+def resolve_supervisorctl():
+    global SUPERVISORCTL_CANDIDATE_OUTCOMES
+    valid = []
+    outcomes = []
+    for candidate in SUPERVISORCTL_CANDIDATES:
+        try:
+            candidate.lstat()
+        except FileNotFoundError:
+            outcomes.append({"path": str(candidate), "state": "ABSENT"})
+            continue
+        except OSError:
+            outcomes.append({"path": str(candidate), "state": "UNUSABLE"})
+            continue
+        try:
+            snapshot = _supervisorctl_snapshot(candidate)
+        except Hold as exc:
+            if "PARENT_UNSAFE" in str(exc) or "FILE_UNSAFE" in str(exc) or "OPEN_FAILED" in str(exc):
+                outcomes.append({"path": str(candidate), "state": "UNUSABLE"})
+                continue
+            raise
+        endpoint = _probe_supervisorctl(candidate)
+        if endpoint is None:
+            outcomes.append({"path": str(candidate), "state": "NO_MATCH"})
+            continue
+        valid.append({**snapshot, **endpoint})
+        outcomes.append({"path": str(candidate), "state": "MATCH"})
+    if len(valid) != 1:
+        SUPERVISORCTL_CANDIDATE_OUTCOMES = outcomes
+        fail("SUPERVISORCTL_CLIENT_NOT_UNIQUE")
+    valid[0]["candidate_outcomes"] = outcomes
+    SUPERVISORCTL_CANDIDATE_OUTCOMES = outcomes
+    return valid[0]
+
+
+def verify_supervisorctl_pin():
+    if not isinstance(SUPERVISORCTL_PIN, dict):
+        fail("SUPERVISORCTL_PIN_UNAVAILABLE")
+    current = resolve_supervisorctl()
+    if current != SUPERVISORCTL_PIN:
+        fail("SUPERVISORCTL_PIN_CHANGED")
+    return current
+
+
+def run(args, timeout=20):
+    argv = list(args)
+    if argv and argv[0] == "supervisorctl":
+        verify_supervisorctl_pin()
+        argv = [SUPERVISORCTL_PIN["path"], "-c", str(SUPERVISOR_CONFIG), *argv[1:]]
+    try:
+        return subprocess.run(argv, capture_output=True, text=True, shell=False,
                               timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired):
         fail("COMMAND_UNAVAILABLE")
+
+
+def _cgroup_scalar(path: Path):
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0))
+    except OSError:
+        fail("CGROUP_MEMORY_UNAVAILABLE")
+    try:
+        meta = os.fstat(fd)
+        if not stat.S_ISREG(meta.st_mode):
+            fail("CGROUP_MEMORY_UNSAFE")
+        raw = os.read(fd, 65)
+        if len(raw) > 64:
+            fail("CGROUP_MEMORY_LIMIT")
+    finally:
+        os.close(fd)
+    value = raw.strip()
+    if not re.fullmatch(rb"(?:0|[1-9][0-9]{0,19})", value):
+        fail("CGROUP_MEMORY_VALUE")
+    return int(value)
+
+
+def _proc_file(path: Path, limit, error_code):
+    try:
+        with path.open("rb") as stream:
+            raw = stream.read(limit + 1)
+    except OSError:
+        fail(error_code)
+    if len(raw) > limit:
+        fail(error_code)
+    return raw
+
+
+def _proc_read(pid, name, limit, error_code):
+    return _proc_file(Path("/proc") / str(pid) / name, limit, error_code)
+
+
+def _proc_start_ticks(pid):
+    raw = _proc_read(pid, "stat", 8192, "CGROUP_PROCESS_IDENTITY_UNAVAILABLE")
+    if not raw.startswith(str(pid).encode() + b" ("):
+        fail("CGROUP_PROCESS_STAT_INVALID")
+    boundary = raw.rfind(b") ")
+    try:
+        value = raw[boundary + 2:].split()[19]
+        if not value.isdigit():
+            raise ValueError
+        return int(value)
+    except (ValueError, IndexError):
+        fail("CGROUP_PROCESS_STAT_INVALID")
+
+
+def _proc_start_epoch_ns(pid, ticks):
+    raw = _proc_file(Path("/proc/stat"), 65536, "PROCESS_BOOT_TIME_UNAVAILABLE")
+    rows = [line.split()[1] for line in raw.splitlines()
+            if line.startswith(b"btime ") and len(line.split()) == 2]
+    try:
+        hz = os.sysconf("SC_CLK_TCK")
+        if len(rows) != 1 or not rows[0].isdigit() or type(hz) is not int or hz <= 0:
+            raise ValueError
+        boot_epoch = int(rows[0])
+        return boot_epoch * 1_000_000_000 + ticks * 1_000_000_000 // hz
+    except (OSError, ValueError, TypeError):
+        fail("PROCESS_BOOT_TIME_INVALID")
+
+
+def process_cgroup_info(pid):
+    before = _proc_start_ticks(pid)
+    raw_before = _proc_read(pid, "cgroup", 8192, "CGROUP_PROCESS_PATH_UNAVAILABLE")
+    rows = [line.split(b":", 2)[2] for line in raw_before.splitlines()
+            if line.startswith(b"0::") and len(line.split(b":", 2)) == 3]
+    if len(rows) != 1:
+        fail("CGROUP_V2_PATH_AMBIGUOUS")
+    try:
+        relative = rows[0].decode("utf-8", "strict")
+        components = relative.split("/")
+        if not relative.startswith("/") or any(item in (".", "..") for item in components):
+            raise ValueError
+        root = CGROUP_ROOT.resolve(strict=True)
+        target = (root / relative.lstrip("/")).resolve(strict=True)
+        if os.path.commonpath((str(root), str(target))) != str(root):
+            raise ValueError
+        raw_after = _proc_read(pid, "cgroup", 8192, "CGROUP_PROCESS_PATH_UNAVAILABLE")
+    except (OSError, UnicodeError, ValueError):
+        fail("CGROUP_PROCESS_PATH_UNSAFE")
+    after = _proc_start_ticks(pid)
+    if before != after or raw_before != raw_after:
+        fail("CGROUP_PROCESS_IDENTITY_CHANGED")
+    return {"pid": pid, "start_ticks": before, "cgroup_path": str(target)}
+
+
+def resolve_cgroup_target(legacy_snapshot):
+    self_info = process_cgroup_info(os.getpid())
+    if (self_info["start_ticks"] != _proc_start_ticks(os.getpid()) or
+            self_info["cgroup_path"] != str(CGROUP_ROOT.resolve(strict=True))):
+        fail("SELF_CGROUP_NOT_SHARED_MEMORY_TARGET")
+    legacy = legacy_snapshot.get("process", {})
+    legacy_info = process_cgroup_info(legacy.get("pid"))
+    if (legacy_info["start_ticks"] != legacy.get("start_ticks") or
+            legacy_info["cgroup_path"] != self_info["cgroup_path"]):
+        fail("LEGACY_CGROUP_TARGET_MISMATCH")
+    status = run(["supervisorctl", "status", MODEL_SERVICE], timeout=10)
+    lines = status.stdout.strip().splitlines()
+    match = re.fullmatch(r"nox-ds41-8098\s+RUNNING\s+pid\s+([1-9][0-9]{0,9})(?:,.*)?",
+                         lines[0]) if status.returncode == 0 and len(lines) == 1 else None
+    if match is None:
+        fail("MODEL_SERVICE_NOT_EXACTLY_RUNNING")
+    model_info = process_cgroup_info(int(match.group(1)))
+    model_status_after = run(["supervisorctl", "status", MODEL_SERVICE], timeout=10)
+    after_lines = model_status_after.stdout.strip().splitlines()
+    after_match = re.fullmatch(
+        r"nox-ds41-8098\s+RUNNING\s+pid\s+([1-9][0-9]{0,9})(?:,.*)?",
+        after_lines[0]) if model_status_after.returncode == 0 and len(after_lines) == 1 else None
+    if (after_match is None or int(after_match.group(1)) != model_info["pid"] or
+            model_info["cgroup_path"] != self_info["cgroup_path"]):
+        fail("MODEL_CGROUP_TARGET_MISMATCH")
+    return {"target": self_info["cgroup_path"], "self": self_info,
+            "legacy_guard": legacy_info, "model": model_info,
+            "mapping": "proc_0_unified_to_sys_fs_cgroup_verified"}
+
+
+def cgroup_memory_snapshot(target_path):
+    target = Path(target_path)
+    root = CGROUP_ROOT.resolve(strict=True)
+    try:
+        resolved = target.resolve(strict=True)
+        if (resolved != target or os.path.commonpath((str(root), str(resolved))) != str(root)):
+            raise ValueError
+    except (OSError, ValueError):
+        fail("CGROUP_TARGET_PATH_CHANGED")
+    current_first = _cgroup_scalar(resolved / "memory.current")
+    maximum = _cgroup_scalar(resolved / "memory.max")
+    current_last = _cgroup_scalar(resolved / "memory.current")
+    # Use the higher of two immediate reads so concurrent allocation cannot
+    # make the admission estimate optimistic.
+    current = max(current_first, current_last)
+    headroom = maximum - current
+    return {"cgroup_path": str(resolved),
+            "memory.current": current, "memory.max": maximum,
+            "memory.current_samples": [current_first, current_last],
+            "raw_headroom_bytes": headroom,
+            "sampled_at": time.time(), "status": "OK" if headroom >= 0 else "INCONSISTENT"}
+
+
+def require_memory_headroom(snapshot, minimum, code):
+    if (not isinstance(snapshot, dict) or
+            type(snapshot.get("raw_headroom_bytes")) is not int or
+            snapshot.get("status") != "OK" or
+            snapshot["raw_headroom_bytes"] < minimum):
+        fail(code)
+
+
+def _unique_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("DUPLICATE_KEY")
+        result[key] = value
+    return result
+
+
+def _reject_constant(_value):
+    raise ValueError("NONFINITE")
+
+
+def legacy_policy_snapshot():
+    raw, identity = bounded_read(LEGACY_POLICY, 8192)
+    try:
+        policy = json.loads(raw.decode("utf-8", "strict"),
+                            object_pairs_hook=_unique_pairs,
+                            parse_constant=_reject_constant)
+    except (ValueError, UnicodeError, TypeError):
+        fail("LEGACY_POLICY_INVALID")
+    if (not isinstance(policy, dict) or policy.get("schema") != "NOX_LIFELINE_V2" or
+            policy.get("enabled") is not False or
+            not isinstance(policy.get("services"), list) or
+            len(policy["services"]) != len(LEGACY_SERVICES)):
+        fail("LEGACY_POLICY_NOT_DISABLED")
+    seen = set()
+    for row in policy["services"]:
+        if (not isinstance(row, dict) or set(row) != {"name", "restart"} or
+                row.get("name") not in LEGACY_SERVICES or
+                row.get("name") in seen or row.get("restart") is not False):
+            fail("LEGACY_POLICY_NOT_DISABLED")
+        seen.add(row["name"])
+    if seen != LEGACY_SERVICES:
+        fail("LEGACY_POLICY_SERVICES_INCOMPLETE")
+    return {"sha256": hashlib.sha256(raw).hexdigest(),
+            "device": identity[0], "inode": identity[1],
+            "services": sorted(seen), "enabled": False,
+            "all_restart_flags_false": True}
+
+
+def legacy_config_snapshot():
+    raw, identity = bounded_read(LEGACY_CONFIG, 8192)
+    config_sha = hashlib.sha256(raw).hexdigest()
+    if config_sha != LEGACY_CONFIG_SHA256:
+        fail("LEGACY_CONFIG_SHA_MISMATCH")
+    try:
+        text = raw.decode("utf-8", "strict")
+    except UnicodeError:
+        fail("LEGACY_CONFIG_INVALID")
+    section = None
+    sections = 0
+    fields = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1]
+            if section == "program:" + LEGACY_GUARD:
+                sections += 1
+            continue
+        if section == "program:" + LEGACY_GUARD and "=" in line:
+            key, value = (part.strip() for part in line.split("=", 1))
+            if key in ("autostart", "autorestart", "command"):
+                if key in fields:
+                    fail("LEGACY_CONFIG_DUPLICATE_FIELD")
+                fields[key] = value if key == "command" else value.lower()
+    if (sections != 1 or fields.get("autostart") != "false" or
+            fields.get("autorestart") not in ("true", "false") or
+            not isinstance(fields.get("command"), str) or "%(" in fields["command"]):
+        fail("LEGACY_CONFIG_UNSAFE")
+    try:
+        command_argv = tuple(shlex.split(fields["command"], posix=True))
+    except ValueError:
+        fail("LEGACY_CONFIG_COMMAND_INVALID")
+    if command_argv != LEGACY_EXPECTED_ARGV:
+        fail("LEGACY_CONFIG_COMMAND_NOT_ALLOWLISTED")
+    return {"sha256": config_sha,
+            "device": identity[0], "inode": identity[1],
+            "autostart": False,
+            "autorestart": fields["autorestart"] == "true",
+            "command_matches_expected_argv": True}
+
+
+def legacy_script_snapshot():
+    raw, identity = bounded_read(LEGACY_SCRIPT, 32768)
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != LEGACY_SCRIPT_SHA256:
+        fail("LEGACY_SCRIPT_SHA_MISMATCH")
+    return {"sha256": digest, "device": identity[0], "inode": identity[1],
+            "mode": stat.S_IMODE(identity[2]), "nlink": identity[3],
+            "uid": identity[4], "gid": identity[5], "size": identity[6],
+            "mtime_ns": identity[7], "ctime_ns": identity[8]}
+
+
+def legacy_state_worker_starts():
+    raw, identity = bounded_read(LEGACY_STATE, 262144)
+    try:
+        state = json.loads(raw.decode("utf-8", "strict"),
+                           object_pairs_hook=_unique_pairs,
+                           parse_constant=_reject_constant)
+    except (ValueError, UnicodeError, TypeError):
+        fail("LEGACY_STATE_INVALID")
+    services = state.get("services") if isinstance(state, dict) else None
+    if not isinstance(services, dict) or set(services) != LEGACY_SERVICES:
+        fail("LEGACY_STATE_INCOMPLETE")
+    starts = 0
+    for name in LEGACY_SERVICES:
+        row = services.get(name)
+        attempts = row.get("attempts") if isinstance(row, dict) else None
+        if not isinstance(attempts, list):
+            fail("LEGACY_STATE_ATTEMPTS_INVALID")
+        for item in attempts:
+            if type(item) is int:
+                valid = item >= 0
+            elif type(item) is float:
+                valid = math.isfinite(item) and item >= 0
+            else:
+                valid = False
+            if not valid:
+                fail("LEGACY_STATE_ATTEMPTS_INVALID")
+        starts += len(attempts)
+    # Older NOX state stores start counts as per-service attempt ledgers rather
+    # than a scalar. If a scalar is present, it must agree with those ledgers.
+    scalar = state.get("worker_starts")
+    if scalar is not None and (type(scalar) is not int or scalar != starts):
+        fail("LEGACY_STATE_WORKER_STARTS_MISMATCH")
+    if starts != 0:
+        fail("LEGACY_STATE_WORKER_STARTS_NONZERO")
+    return {"worker_starts": starts, "count_source": "empty_service_attempt_ledgers",
+            "device": identity[0], "inode": identity[1]}
+
+
+def legacy_guard_process():
+    status = run(["supervisorctl", "status", LEGACY_GUARD], timeout=10)
+    lines = status.stdout.strip().splitlines()
+    match = re.fullmatch(r"nox-lifeline-guard\s+RUNNING\s+pid\s+([1-9][0-9]{0,9})(?:,.*)?",
+                         lines[0]) if status.returncode == 0 and len(lines) == 1 else None
+    if match is None:
+        fail("LEGACY_GUARD_NOT_EXACTLY_RUNNING")
+    pid = int(match.group(1))
+    proc = Path("/proc") / str(pid)
+
+    def stat_ticks():
+        raw = _proc_read(pid, "stat", 4096, "LEGACY_GUARD_IDENTITY_UNAVAILABLE")
+        if not raw.startswith(str(pid).encode() + b" ("):
+            fail("LEGACY_GUARD_STAT_INVALID")
+        boundary = raw.rfind(b") ")
+        try:
+            ticks = raw[boundary + 2:].split()[19]
+            if not ticks.isdigit():
+                raise ValueError
+            return int(ticks)
+        except (ValueError, IndexError):
+            fail("LEGACY_GUARD_STAT_INVALID")
+
+    first_ticks = stat_ticks()
+    try:
+        exe_before = os.readlink(proc / "exe")
+        argv_before = _proc_read(pid, "cmdline", 16384,
+                                 "LEGACY_GUARD_IDENTITY_UNAVAILABLE")
+    except OSError:
+        fail("LEGACY_GUARD_IDENTITY_UNAVAILABLE")
+    if not argv_before or len(argv_before) > 16384 or not argv_before.endswith(b"\0"):
+        fail("LEGACY_GUARD_ARGV_INVALID")
+    try:
+        argv = tuple(item.decode("utf-8", "strict")
+                     for item in argv_before[:-1].split(b"\0"))
+    except UnicodeError:
+        fail("LEGACY_GUARD_ARGV_INVALID")
+    if argv != LEGACY_EXPECTED_ARGV or exe_before != os.path.realpath("/usr/bin/python3"):
+        fail("LEGACY_GUARD_COMMAND_NOT_ALLOWLISTED")
+    second_ticks = stat_ticks()
+    try:
+        exe_after = os.readlink(proc / "exe")
+        argv_after = _proc_read(pid, "cmdline", 16384,
+                                "LEGACY_GUARD_IDENTITY_UNAVAILABLE")
+    except OSError:
+        fail("LEGACY_GUARD_IDENTITY_UNAVAILABLE")
+    if (len(os.fsencode(exe_before)) > 4096 or first_ticks != second_ticks or exe_before != exe_after or
+            argv_before != argv_after or stat_ticks() != first_ticks):
+        fail("LEGACY_GUARD_IDENTITY_CHANGED")
+    final_status = run(["supervisorctl", "status", LEGACY_GUARD], timeout=10)
+    final_lines = final_status.stdout.strip().splitlines()
+    final_match = re.fullmatch(
+        r"nox-lifeline-guard\s+RUNNING\s+pid\s+([1-9][0-9]{0,9})(?:,.*)?",
+        final_lines[0]) if final_status.returncode == 0 and len(final_lines) == 1 else None
+    if final_match is None or int(final_match.group(1)) != pid:
+        fail("LEGACY_GUARD_STATUS_CHANGED")
+    return {"pid": pid, "start_ticks": first_ticks, "exe": exe_before,
+            "argv_sha256": hashlib.sha256(argv_before).hexdigest(),
+            "process_start_epoch_ns": _proc_start_epoch_ns(pid, first_ticks),
+            "script_sha256": LEGACY_SCRIPT_SHA256}
+
+
+def legacy_guard_snapshot():
+    policy = legacy_policy_snapshot()
+    config = legacy_config_snapshot()
+    script = legacy_script_snapshot()
+    state = legacy_state_worker_starts()
+    process = legacy_guard_process()
+    # /proc stat start time has jiffy precision and btime is second precision;
+    # the 1.5 s margin makes this a conservative proof the pinned script file
+    # predated process start, rather than a later replacement at the same path.
+    if script["ctime_ns"] > process["process_start_epoch_ns"] - 1_500_000_000:
+        fail("LEGACY_SCRIPT_NOT_PREEXISTING_AT_PROCESS_START")
+    return {"policy": policy, "config": config, "script": script, "state": state,
+            "process": process,
+            "script_preexisting_at_process_start": True,
+            "script_binding_margin_ns": 1_500_000_000}
+
+
+def recheck_legacy_guard(expected):
+    current = legacy_guard_snapshot()
+    if current != expected:
+        fail("LEGACY_GUARD_CHANGED_DURING_INSTALL")
+    return current
 
 
 def bounded_read(path: Path, limit: int, *, allow_absent=False):
@@ -144,7 +800,10 @@ def validate_unit(raw):
         if key == "After" and any(token == "supervisor.service" or token.startswith("nox-")
                                    for token in value.split()):
             fail("UNIT_WORKLOAD_ORDERING_FORBIDDEN")
-    if ("Restart=always" not in lines or "StartLimitIntervalSec=0" not in lines or
+    required = ("Restart=always", "RestartSec=15s", "MemoryMax=256M",
+                "MemoryHigh=192M", "CPUQuota=10%", "TasksMax=32", "Nice=10",
+                "StartLimitIntervalSec=0", "WantedBy=multi-user.target")
+    if (any(lines.count(item) != 1 for item in required) or
             "WantedBy=multi-user.target" not in lines or
             "--observer-only" not in exec_line):
         fail("UNIT_OBSERVER_POLICY_INVALID")
@@ -534,6 +1193,11 @@ def restore_exact_preimages():
 
 def main():
     global UNIT_ENABLED_BEFORE, UNIT_ACTIVE_BEFORE, REQUEST_ID, SOURCE_SHA_VALUE
+    global MEMORY_PREFLIGHT, MEMORY_PRE_ENABLE, MEMORY_POST_ENABLE
+    global LEGACY_GUARD_PREIMAGE, LEGACY_GUARD_PRE_ENABLE, LEGACY_GUARD_POSTCHECK
+    global CGROUP_TARGET_EVIDENCE, CGROUP_TARGET_PRE_ENABLE, CGROUP_TARGET_POST_ENABLE
+    global SUPERVISORCTL_PIN, SUPERVISORCTL_PRE_ENABLE, SUPERVISORCTL_POST_ENABLE
+    global LEGACY_CORE_SOURCE_SHA256
     source_sha = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
     SOURCE_SHA_VALUE = source_sha if SOURCE_SHA.fullmatch(source_sha) else None
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
@@ -555,6 +1219,17 @@ def main():
         fail("OBSERVER_ALREADY_ACTIVE")
 
     bundle = {name: checked_bundle(name) for name in MAX_BYTES}
+    SUPERVISORCTL_PIN = resolve_supervisorctl()
+    core_source = bundle["nox_native_lifeline.py"]
+    LEGACY_CORE_SOURCE_SHA256 = hashlib.sha256(core_source).hexdigest()
+    token = b"__NOX_SUPERVISORCTL_PATH__"
+    config_token = b"__NOX_SUPERVISORCTL_CONFIG__"
+    if core_source.count(token) != 1 or core_source.count(config_token) != 1:
+        fail("SUPERVISORCTL_SOURCE_TOKEN_MISMATCH")
+    bundle["nox_native_lifeline.py"] = core_source.replace(
+        token, json.dumps(SUPERVISORCTL_PIN["path"]).encode("ascii"), 1)
+    bundle["nox_native_lifeline.py"] = bundle["nox_native_lifeline.py"].replace(
+        config_token, json.dumps(str(SUPERVISOR_CONFIG)).encode("ascii"), 1)
     policy = json.loads(bundle["lifeline-observer.json"])
     if (policy.get("enabled") is not False or not isinstance(policy.get("services"), list) or
             any(item.get("restart") is not False for item in policy["services"])):
@@ -562,6 +1237,15 @@ def main():
     validate_unit(bundle["nox-lifeline-observer.service"])
     reject_external_unit_overrides()
     compile(bundle["nox_native_lifeline.py"], str(SCRIPT), "exec")
+
+    # Require headroom for the 2 GiB operating floor plus a 512 MiB startup
+    # reserve before any backups, file writes, daemon reload, or service start.
+    LEGACY_GUARD_PREIMAGE = legacy_guard_snapshot()
+    CGROUP_TARGET_EVIDENCE = resolve_cgroup_target(LEGACY_GUARD_PREIMAGE)
+    MEMORY_PREFLIGHT = cgroup_memory_snapshot(CGROUP_TARGET_EVIDENCE["target"])
+    require_memory_headroom(MEMORY_PREFLIGHT,
+                            MEMORY_FLOOR_BYTES + MEMORY_RESERVE_BYTES,
+                            "MEMORY_PREFLIGHT_BELOW_FLOOR_PLUS_RESERVE")
 
     preimage_receipts = {}
     for name, path in FILES.items():
@@ -597,6 +1281,15 @@ def main():
     installed_unit, _ = bounded_read(UNIT, MAX_BYTES["nox-lifeline-observer.service"])
     if installed_unit != bundle["nox-lifeline-observer.service"]:
         fail("UNIT_BLOB_CHANGED_BEFORE_ENABLE")
+    LEGACY_GUARD_PRE_ENABLE = recheck_legacy_guard(LEGACY_GUARD_PREIMAGE)
+    CGROUP_TARGET_PRE_ENABLE = resolve_cgroup_target(LEGACY_GUARD_PRE_ENABLE)
+    if CGROUP_TARGET_PRE_ENABLE != CGROUP_TARGET_EVIDENCE:
+        fail("CGROUP_TARGET_CHANGED_BEFORE_ENABLE")
+    SUPERVISORCTL_PRE_ENABLE = verify_supervisorctl_pin()
+    MEMORY_PRE_ENABLE = cgroup_memory_snapshot(CGROUP_TARGET_EVIDENCE["target"])
+    require_memory_headroom(MEMORY_PRE_ENABLE,
+                            MEMORY_FLOOR_BYTES + MEMORY_RESERVE_BYTES,
+                            "MEMORY_PRE_ENABLE_BELOW_FLOOR_PLUS_RESERVE")
     enabled = run(["systemctl", "enable", "--now", SERVICE], timeout=35)
     if enabled.returncode:
         fail("OBSERVER_ENABLE_START")
@@ -613,6 +1306,14 @@ def main():
         fail("OBSERVER_MAINPID")
     identity = process_identity(pid)
     report = fresh_receipt(started_at)
+    LEGACY_GUARD_POSTCHECK = recheck_legacy_guard(LEGACY_GUARD_PREIMAGE)
+    CGROUP_TARGET_POST_ENABLE = resolve_cgroup_target(LEGACY_GUARD_POSTCHECK)
+    if CGROUP_TARGET_POST_ENABLE != CGROUP_TARGET_EVIDENCE:
+        fail("CGROUP_TARGET_CHANGED_AFTER_ENABLE")
+    SUPERVISORCTL_POST_ENABLE = verify_supervisorctl_pin()
+    MEMORY_POST_ENABLE = cgroup_memory_snapshot(CGROUP_TARGET_EVIDENCE["target"])
+    require_memory_headroom(MEMORY_POST_ENABLE, MEMORY_FLOOR_BYTES,
+                            "MEMORY_POST_ENABLE_BELOW_2GIB")
     final_state = unit_state(SERVICE)
     final_show = run(["systemctl", "show", SERVICE, "--property=MainPID", "--value"], timeout=10)
     if final_show.returncode != 0:
@@ -639,11 +1340,26 @@ def main():
           "start_ticks": identity["start_ticks"], "argv_sha256": hashlib.sha256(
               b"\0".join(x.encode() for x in identity["argv"])).hexdigest(),
           "script_sha256": hashlib.sha256(bundle["nox_native_lifeline.py"]).hexdigest(),
+          "script_source_sha256": LEGACY_CORE_SOURCE_SHA256,
           "policy_sha256": hashlib.sha256(bundle["lifeline-observer.json"]).hexdigest(),
           "unit_sha256": hashlib.sha256(bundle["nox-lifeline-observer.service"]).hexdigest(),
           "observer_only_enforced": True, "worker_starts_permitted": False,
           "global_supervisor_before": before_supervisor,
           "global_supervisor_after": after_supervisor,
+          "memory_preflight": MEMORY_PREFLIGHT,
+          "memory_pre_enable": MEMORY_PRE_ENABLE,
+          "memory_post_enable": MEMORY_POST_ENABLE,
+          "memory_startup_reserve_bytes": MEMORY_RESERVE_BYTES,
+          "cgroup_target_before": CGROUP_TARGET_EVIDENCE,
+          "cgroup_target_pre_enable": CGROUP_TARGET_PRE_ENABLE,
+          "cgroup_target_after": CGROUP_TARGET_POST_ENABLE,
+          "legacy_guard_before": LEGACY_GUARD_PREIMAGE,
+          "legacy_guard_pre_enable": LEGACY_GUARD_PRE_ENABLE,
+          "legacy_guard_after": LEGACY_GUARD_POSTCHECK,
+          "supervisorctl_client": SUPERVISORCTL_PIN,
+          "supervisorctl_candidate_outcomes": SUPERVISORCTL_CANDIDATE_OUTCOMES,
+          "supervisorctl_pre_enable": SUPERVISORCTL_PRE_ENABLE,
+          "supervisorctl_post_enable": SUPERVISORCTL_POST_ENABLE,
           "cgroup_memory": memory, "cgroup_memory_at": report["at"],
           "memory_floor_bytes": 2 * 1024**3,
           "preimages_backed_up": True,
@@ -695,6 +1411,9 @@ if __name__ == "__main__":
                             restored_state["enabled"] != UNIT_ENABLED_BEFORE):
                         fail("ROLLBACK_SERVICE_STATE_MISMATCH")
                 restore_state_artifacts()
+                if CGROUP_TARGET_EVIDENCE is not None:
+                    MEMORY_POST_ROLLBACK = cgroup_memory_snapshot(
+                        CGROUP_TARGET_EVIDENCE["target"])
                 rollback = "PREIMAGE_CONTENT_MODE_OWNER_RESTORED;FILE_INODES_NOT_RESTORABLE"
             except BaseException as rollback_exc:
                 reason = type(rollback_exc).__name__.upper()
@@ -705,6 +1424,23 @@ if __name__ == "__main__":
             code = "HOLD_LIFELINE_OBSERVER_" + type(exc).__name__.upper()
         emit({"state": "HOLD", "reason": code, "rollback": rollback,
               "source_sha": SOURCE_SHA_VALUE, "request_id": REQUEST_ID,
+              "memory_preflight": MEMORY_PREFLIGHT,
+              "memory_pre_enable": MEMORY_PRE_ENABLE,
+              "memory_post_enable": MEMORY_POST_ENABLE,
+              "memory_post_rollback": MEMORY_POST_ROLLBACK,
+              "memory_floor_bytes": MEMORY_FLOOR_BYTES,
+              "memory_startup_reserve_bytes": MEMORY_RESERVE_BYTES,
+              "cgroup_target_before": CGROUP_TARGET_EVIDENCE,
+              "cgroup_target_pre_enable": CGROUP_TARGET_PRE_ENABLE,
+              "cgroup_target_after": CGROUP_TARGET_POST_ENABLE,
+              "legacy_guard_before": LEGACY_GUARD_PREIMAGE,
+              "legacy_guard_pre_enable": LEGACY_GUARD_PRE_ENABLE,
+              "legacy_guard_after": LEGACY_GUARD_POSTCHECK,
+              "supervisorctl_client": SUPERVISORCTL_PIN,
+              "supervisorctl_candidate_outcomes": SUPERVISORCTL_CANDIDATE_OUTCOMES,
+              "supervisorctl_pre_enable": SUPERVISORCTL_PRE_ENABLE,
+              "supervisorctl_post_enable": SUPERVISORCTL_POST_ENABLE,
+              "legacy_core_source_sha256": LEGACY_CORE_SOURCE_SHA256,
               "state_directory_preimage": STATE_DIR_PREIMAGE,
               "state_artifact_preimages": {key: value for key, value in
                                             STATE_ARTIFACT_PREIMAGES.items()
