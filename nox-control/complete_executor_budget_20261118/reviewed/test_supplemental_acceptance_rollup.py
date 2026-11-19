@@ -77,7 +77,7 @@ class SupplementalAcceptanceRollupTests(unittest.TestCase):
         self.assertEqual(item['owner_authorization_id'], 7012555110)
         self.assertEqual(item['workflow_conclusion'], 'failure')
         self.assertEqual(item['evidence_result'], 'HOLD_AUDIT_CENSUS_INCOMPLETE')
-        self.assertIn('background processes', item['title'])
+        self.assertEqual(item['title'], 'Проверить реальный набор фоновых процессов.')
 
     def test_legacy_unbound_snapshot_sidecar_is_excluded_with_reason(self):
         temporary, directory = self.fixture([LEGACY_ADDENDUM])
@@ -92,13 +92,11 @@ class SupplementalAcceptanceRollupTests(unittest.TestCase):
                             row['reason'] == 'FROZEN_MANIFEST_BINDING_MISMATCH'
                             for row in excluded))
 
-    def test_wrong_spec_or_unresolved_pointer_does_not_increment(self):
+    def test_wrong_spec_sha_does_not_increment(self):
         temporary, directory = self.fixture([GPU_ADDENDUM])
         self.addCleanup(temporary.cleanup)
         sidecar_path = directory.parent/'complete_executor_20261118/evidence/addenda'/Path(GPU_ADDENDUM).name
         document = json.loads(sidecar_path.read_text(encoding='utf-8'))
-        document['scope']['criteria']['2V14-12']['acceptance_binding']['evidence_pointer'] = (
-            '#/additional_evidence_records/99')
         document['scope']['criteria']['2V14-12']['spec_sha256'] = '0' * 64
         sidecar_path.write_text(json.dumps(document, ensure_ascii=False), encoding='utf-8')
         summary = work_progress.summarize(directory)
@@ -107,6 +105,21 @@ class SupplementalAcceptanceRollupTests(unittest.TestCase):
         self.assertEqual(summary['existing_receipt_count'], summary['total']['completed'])
         reasons = {row['reason'] for row in summary['supplemental_acceptance']['excluded']}
         self.assertIn('CRITERION_SPEC_SHA_MISMATCH', reasons)
+
+    def test_unresolved_evidence_pointer_does_not_increment(self):
+        temporary, directory = self.fixture([GPU_ADDENDUM])
+        self.addCleanup(temporary.cleanup)
+        sidecar_path = directory.parent/'complete_executor_20261118/evidence/addenda'/Path(GPU_ADDENDUM).name
+        document = json.loads(sidecar_path.read_text(encoding='utf-8'))
+        document['scope']['criteria']['2V14-12']['acceptance_binding']['evidence_pointer'] = (
+            '#/additional_evidence_records/99')
+        sidecar_path.write_text(json.dumps(document, ensure_ascii=False), encoding='utf-8')
+        summary = work_progress.summarize(directory)
+        self.assertEqual(summary['frozen_295_count'], 295)
+        self.assertEqual(summary['supplemental_accepted_count'], 0)
+        self.assertEqual(summary['existing_receipt_count'], summary['total']['completed'])
+        reasons = {row['reason'] for row in summary['supplemental_acceptance']['excluded']}
+        self.assertIn('POINTER_TARGET_MISSING', reasons)
 
 
 if __name__ == '__main__':
