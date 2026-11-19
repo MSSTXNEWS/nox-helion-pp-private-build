@@ -769,12 +769,25 @@ class V112Tests(unittest.TestCase):
         self.assertFalse(any(frame.get('saved') for frame in frames))
 
     def test_dialog_revision_and_archive(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _save_exchange
         created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
           json={'title':'Вопрос','confirmed':True}).json()
+        self.assertTrue(_save_exchange(created['dialog_id'],'RU первый ход',
+                                       'ES respuesta íntegra','archive-fixture-exchange'))
+        def read():
+            return self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
+                                   params={'dialog_id':created['dialog_id']})
+        before=read()
+        self.assertEqual(before.status_code,200,before.text)
+        self.assertEqual([m['content'] for m in before.json()['messages']],
+                         ['RU первый ход','ES respuesta íntegra'])
         changed=self.client.post('/api/ui/memory/dialogs/update',cookies=self.cookie,
           json={'dialog_id':created['dialog_id'],'revision':created['revision'],
                 'archived':True,'confirmed':True})
         self.assertTrue(changed.json()['archived'])
+        after=read()
+        self.assertEqual(after.status_code,409,after.text)
+        self.assertEqual(after.json()['reason'],'HOLD_DIALOG_ARCHIVED')
         duplicate=self.client.post('/api/ui/memory/dialogs/update',cookies=self.cookie,
           json={'dialog_id':created['dialog_id'],'revision':created['revision'],
                 'archived':False,'confirmed':True})
