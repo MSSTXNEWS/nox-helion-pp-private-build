@@ -1840,13 +1840,21 @@ class Native:
         if task.get('handler') != HANDLER or not isinstance(evidence, dict):
             return None
         receipt = evidence.get('receipt')
-        if (not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
+        if (not isinstance(receipt, dict) or evidence.get('verified') is not True
+                or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
                 or receipt.get('phase') != 'NATIVE_REVIEW_COMPLETED_CANDIDATE_NOT_APPLIED'
                 or receipt.get('claim') != task.get('owner_claim')
                 or receipt.get('source_sha256') != self.source
                 or digest(encoded(receipt)) != evidence.get('receipt_sha256')):
             return None
-        proof = s03_readback(receipt)
+        # The final verifier must not downgrade the earlier STOP/chat/claim
+        # fence to a standalone S03 existence check after run_one resumes.
+        try:
+            settled = self._durable_completion_fence(task, receipt, evidence.get('s03'))
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error, GateError):
+            return None
+        proof = settled.get('s03') if isinstance(settled, dict) else None
         if proof:
             return {'kind': 'bounded_native_component_check', 'task_id': task['id'],
                     'scope': 'NATIVE_REVIEW_AND_S03_RECEIPT', 'receipt_sha256': proof['receipt_sha256'],
@@ -1858,7 +1866,9 @@ class Native:
         if not isinstance(evidence, dict):
             return None
         receipt = evidence.get('receipt')
-        if (not isinstance(receipt, dict) or receipt.get('task_id') != task.get('id')
+        if (not isinstance(receipt, dict) or evidence.get('verified') is not True
+                or receipt.get('task_id') != task.get('id')
+                or receipt.get('job_id') != (task.get('params') or {}).get('job_id')
                 or receipt.get('phase') != 'NATIVE_LEAF_COMPLETED_ORIGINAL_NOT_ACCEPTED'
                 or receipt.get('claim') != task.get('owner_claim')
                 or receipt.get('parent_task_id') != task.get('parent_task_id')
@@ -1867,7 +1877,11 @@ class Native:
                 or not self.receipt_source_allowed(task, receipt)
                 or digest(encoded(receipt)) != evidence.get('receipt_sha256')):
             return None
-        proof = s03_readback(receipt)
+        try:
+            settled = self._durable_completion_fence(task, receipt, evidence.get('s03'))
+        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error, GateError):
+            return None
+        proof = settled.get('s03') if isinstance(settled, dict) else None
         if proof:
             return {'kind':'bounded_native_component_check', 'task_id':task['id'],
                     'parent_task_id':task['parent_task_id'],
