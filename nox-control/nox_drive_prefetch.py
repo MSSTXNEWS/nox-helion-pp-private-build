@@ -99,7 +99,8 @@ def cgroup_raw_free(root="/sys/fs/cgroup"):
     try:
         maximum = (Path(root) / "memory.max").read_text().strip()
         if maximum == "max":
-            return None
+            # Unbounded/unknown cgroup budget is not evidence of safe RAM headroom.
+            return 0
         return max(0, int(maximum) - int((Path(root) / "memory.current").read_text().strip()))
     except (OSError, ValueError):
         return 0
@@ -111,8 +112,8 @@ def requires_space(dest, size, *, ram, raw_free=None):
     if ram:
         # Inactive file cache is not counted as free RAM: never force reclaim to stage.
         raw_free = cgroup_raw_free() if raw_free is None else raw_free
-        if raw_free is not None:
-            check(raw_free >= size + 4 * GiB, "CGROUP_RAM")
+        # Never skip RAM admission when the cgroup limit is unknown or malformed.
+        check(type(raw_free) is int and raw_free >= size + 4 * GiB, "CGROUP_RAM")
     return free
 
 

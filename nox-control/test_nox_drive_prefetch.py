@@ -90,6 +90,25 @@ class DrivePrefetchTests(unittest.TestCase):
             with self.assertRaisesRegex(mod.Hold, "CGROUP_RAM"):
                 mod.requires_space(self.dest, len(self.contents), ram=True)
 
+    def test_unbounded_or_unknown_cgroup_ram_is_held(self):
+        cgroup = self.root / "cgroup"
+        cgroup.mkdir(mode=0o700)
+        (cgroup / "memory.max").write_text("max\\n")
+        (cgroup / "memory.current").write_text("1\\n")
+        self.assertEqual(mod.cgroup_raw_free(cgroup), 0)
+
+        class Usage:
+            free = 16 * mod.GiB
+
+        with patch.object(mod.shutil, "disk_usage", return_value=Usage()):
+            for bad in (None, True, float("inf"), "999"):
+                with patch.object(mod, "cgroup_raw_free", return_value=bad):
+                    with self.subTest(raw_free=bad):
+                        with self.assertRaisesRegex(mod.Hold, "CGROUP_RAM"):
+                            mod.requires_space(self.dest, 128, ram=True)
+            self.assertEqual(mod.requires_space(self.dest, 128, ram=True,
+                                                raw_free=8 * mod.GiB), Usage.free)
+
     def test_stop_halts_before_copy(self):
         with patch.object(mod, "stopped", return_value=True):
             with self.assertRaisesRegex(mod.Hold, "STOP"):
