@@ -430,7 +430,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         for payload_frame in invalid:
             with self.subTest(payload=payload_frame):
                 chunks=Chunks([frame('partial'),
-                               ('data: '+json.dumps(payload_frame)+'\\n\\n').encode(),
+                               ('data: '+json.dumps(payload_frame)+'\n\n').encode(),
                                b'data: [DONE]\\n\\n'])
                 _,factory=self.transport([chunks])
                 native=self.native()
