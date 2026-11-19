@@ -1,4 +1,5 @@
 import hashlib
+from datetime import datetime, timedelta, timezone
 import importlib.util
 import json
 from pathlib import Path
@@ -72,6 +73,37 @@ class GatewayTests(unittest.TestCase):
         with patch.object(g,'stop_active',REAL_STOP_ACTIVE):
             self.assertFalse(g.stop_active())
 
+    def test_owner_maintenance_flag_blocks_s03_index(self):
+        # Native owner preflight treats this flag as a hard maintenance STOP.
+        # A regular flag, dangling symlink, or unreadable flag must all
+        # forbid a background S03/BGE model call before any SQLite writes.
+        flag = self.root/'state'/'OWNER_MAINTENANCE.flag'
+        flag.parent.mkdir(parents=True, exist_ok=True)
+        real_lstat = g.os.lstat
+        for kind in ('regular', 'dangling_symlink', 'unreadable'):
+            with self.subTest(kind=kind):
+                if kind == 'regular':
+                    flag.write_text('OWNER_MAINTENANCE\\n', encoding='utf8')
+                elif kind == 'dangling_symlink':
+                    flag.symlink_to(self.root/'nonexistent-maintenance')
+                def protected_lstat(path, *args, **kwargs):
+                    if kind == 'unreadable' and Path(path) == flag:
+                        raise PermissionError('maintenance flag denied')
+                    return real_lstat(path, *args, **kwargs)
+                try:
+                    with patch.object(g, 'stop_active', REAL_STOP_ACTIVE), \
+                         patch.object(g.os, 'lstat', side_effect=protected_lstat):
+                        self.assertTrue(g.stop_active())
+                        with self.assertRaisesRegex(g.MemoryHold, 'HOLD_S03_OWNER_STOP'):
+                            g.index_batch(self.db, identity_fn=lambda: 'a'*64,
+                                          embedder=lambda *args, **kwargs:
+                                          self.fail('embedding must not run'))
+                finally:
+                    if flag.is_symlink() or flag.exists():
+                        flag.unlink()
+        with patch.object(g, 'stop_active', REAL_STOP_ACTIVE):
+            self.assertFalse(g.stop_active())
+
     def test_unreadable_owner_stop_cannot_admit_index(self):
         # EACCES/ELOOP on an owner STOP alias must not look like owner consent.
         flag=self.root/'state/STOP.flag'
@@ -96,6 +128,226 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(sum(row['how']=='pin' for row in rows),2)
         self.assertEqual(sum(row['how']=='fts' for row in rows),8)
         self.assertTrue(all(row['retrieval_kind']=='LEXICAL_BOUNDED_PINS' for row in rows))
+
+    def test_recent_current_event_beats_late_ingested_old_history(self):
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current', 'current owner preference', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-16T22:00:00Z', 'current'))
+            item(c, 'older_import', 'unverified old history', 'M1')
+            c.execute('UPDATE s03_items SET ts=?,meta=? WHERE id=?',
+                      ('2024-01-01', '{"history_import":true,"training_verified":false}', 'older_import'))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        answer = g.recall('nomatchtoken', db=self.db,
+                          identity_fn=lambda: (_ for _ in ()).throw(OSError('offline')))
+        self.assertEqual([row['id'] for row in answer[:2]], ['current', 'older_import'])
+        self.assertTrue(answer[1]['historical_unverified'])
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_current_session_recall_survives_over_256_later_history_imports(self):
+        # A current owner M1 fact must not disappear simply because later
+        # migrations inserted more than the bounded recent-rowid window.
+        with g.connection(self.db,write=True) as c:
+            item(c,'current_session','owner current session decision','M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-17T18:00:00Z','current_session'))
+            for i in range(300):
+                key='old_import_'+str(i)
+                item(c,key,'unverified historical note '+str(i),'M1')
+                c.execute('UPDATE s03_items SET ts=?,meta=? WHERE id=?',
+                          ('2024-01-01','{"history_import":true}',key))
+            item(c,'malformed_meta','untrusted malformed legacy metadata','M1')
+            c.execute('UPDATE s03_items SET meta=? WHERE id=?',
+                      ('{invalid JSON','malformed_meta'))
+        before=hashlib.sha256(self.db.read_bytes()).hexdigest()
+        result=g.recall('nomatchtoken',db=self.db,
+                        identity_fn=lambda: (_ for _ in ()).throw(OSError('offline')))
+        self.assertEqual(result[0]['id'],'current_session')
+        self.assertEqual(result[0]['how'],'recent')
+        self.assertNotIn('HOLD_S03_',str(result))
+        self.assertEqual(before,hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_malformed_metadata_cannot_starve_current_owner_recall(self):
+        # A corrupt old import is not evidence of a current owner decision.
+        # The SQL candidate LIMIT must distinguish both malformed JSON and
+        # valid but non-object JSON before it truncates the rowid window.
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current', 'most recent verified owner decision', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-17T20:00:00Z', 'current'))
+            for i in range(300):
+                key = 'bad_json_' + str(i)
+                item(c, key, 'legacy malformed fact ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET meta=?,ts=? WHERE id=?',
+                          ('{invalid JSON', '2024-01-01', key))
+            for i in range(300):
+                key = 'non_object_' + str(i)
+                item(c, key, 'legacy JSON scalar ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET meta=?,ts=? WHERE id=?',
+                          ('[]', '2024-01-01', key))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with g.connection(self.db) as c:
+            candidates = g.recent_rows(c)
+        self.assertEqual(candidates[0]['id'], 'current')
+        self.assertEqual(g._recent_provenance_rank(candidates[0]), 2)
+        self.assertEqual(g._recent_provenance_rank({'meta': '{bad'}), 0)
+        self.assertEqual(g._recent_provenance_rank({'meta': '[]'}), 0)
+        self.assertEqual(g._recent_provenance_rank({'meta': '{"history_import":true}'}), 1)
+        answer = g.recall('nomatchtoken', db=self.db,
+                          identity_fn=lambda: (_ for _ in ()).throw(OSError('offline')))
+        self.assertEqual(answer[0]['id'], 'current')
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_non_boolean_history_import_cannot_evict_verified_recent_memory(self):
+        # Invalid provenance may still be syntactically valid JSON. The
+        # 256-row SQL limit must not admit 300 numeric or string impostors
+        # as current memory before Python has a chance to reject them.
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current', 'actual owner decision', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-17T21:00:00Z', 'current'))
+            for i in range(300):
+                key = 'bad_marker_' + str(i)
+                item(c, key, 'unsupported imported memory ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET meta=?,ts=? WHERE id=?',
+                          ('{"history_import":1}', '2024-01-01', key))
+            for kind, raw in [('string', '{"history_import":"true"}'),
+                              ('null', '{"history_import":null}')]:
+                item(c, kind, 'untrusted provenance ' + kind, 'M1')
+                c.execute('UPDATE s03_items SET meta=? WHERE id=?', (raw, kind))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with g.connection(self.db) as c:
+            rows = g.recent_rows(c)
+        self.assertEqual(rows[0]['id'], 'current')
+        for raw in ('{"history_import":1}', '{"history_import":"true"}',
+                    '{"history_import":null}'):
+            self.assertEqual(g._recent_provenance_rank({'meta':raw}), 0)
+        self.assertEqual(g._recent_provenance_rank({'meta':'{"history_import":true}'}), 1)
+        self.assertEqual(g._recent_provenance_rank({'meta':'{"history_import":false}'}), 2)
+        answer = g.recall('unmatchedfreshquery', db=self.db,
+                          identity_fn=lambda: (_ for _ in ()).throw(OSError('BGE offline')))
+        self.assertEqual(answer[0]['id'], 'current')
+        unverified = [r for r in answer if r['id'].startswith('bad_marker_')]
+        self.assertTrue(unverified)
+        self.assertTrue(all(r['historical_unverified'] and not r['training_verified']
+                            for r in unverified))
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_recent_rejects_near_future_event_before_owner_recency(self):
+        # Regression: +1 hour is within the old +24 hour tolerance, but
+        # must not outrank the genuine owner M1 decision.
+        fixed = datetime(2026, 11, 18, 0, 0, tzinfo=timezone.utc)
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current', 'verified owner decision', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ((fixed - timedelta(seconds=3)).isoformat(), 'current'))
+            item(c, 'future_hour', 'unverified future-dated event', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ((fixed + timedelta(hours=1)).isoformat(), 'future_hour'))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with patch.object(g.time, 'time', return_value=fixed.timestamp()):
+            self.assertEqual(g._recent_event_timestamp({
+                'ts': (fixed + timedelta(hours=1)).isoformat()}), 0.0)
+            self.assertGreater(g._recent_event_timestamp({
+                'ts': (fixed + timedelta(seconds=1)).isoformat()}), 0.0)
+            with g.connection(self.db) as c:
+                self.assertEqual(g.recent_rows(c)[0]['id'], 'current')
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_current_m1_survives_many_late_inserted_old_canonical_rows(self):
+        # Previously a 256-row SQL rowid cut dropped a recent decision before
+        # Python could rank it, even though all later rows were older events.
+        now = datetime.now(timezone.utc)
+        with g.connection(self.db, write=True) as c:
+            item(c, 'owner_today', 'owner decision from this session', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ((now - timedelta(seconds=20)).isoformat(), 'owner_today'))
+            for i in range(300):
+                key = 'late_old_canonical_' + str(i)
+                item(c, key, 'old valid event ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                          ('2022-01-01T00:00:00Z', key))
+            for i in range(20):
+                key = 'late_future_' + str(i)
+                item(c, key, 'future unverified event ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                          ((now + timedelta(days=1)).isoformat(), key))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        with g.connection(self.db) as c:
+            rows = g.recent_rows(c)
+        self.assertEqual(rows[0]['id'], 'owner_today')
+        self.assertEqual(g._recent_provenance_rank(rows[0]), 2)
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_duplicate_history_import_keys_cannot_evict_current_m1(self):
+        # SQLite JSON1 resolves the first duplicate key, whereas Python's
+        # json.loads resolves the last. The two trust ranks must agree before
+        # the 256-row candidate cutoff, including a larger late import.
+        now = datetime.now(timezone.utc)
+        deceptive = '{"history_import":false,"history_import":true}'
+        reversed_marker = '{"history_import":true,"history_import":false}'
+        with g.connection(self.db, write=True) as c:
+            item(c, 'current_owner', 'actual owner decision', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ((now - timedelta(seconds=20)).isoformat(), 'current_owner'))
+            for i in range(300):
+                key = 'duplicated_marker_' + str(i)
+                item(c, key, 'duplicate marker import ' + str(i), 'M1')
+                c.execute('UPDATE s03_items SET ts=?,meta=? WHERE id=?',
+                          ((now - timedelta(seconds=1)).isoformat(), deceptive, key))
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        self.assertEqual(g._recent_provenance_rank({'meta': deceptive}), 0)
+        self.assertEqual(g._recent_provenance_rank({'meta': reversed_marker}), 0)
+        with g.connection(self.db) as c:
+            self.assertEqual(g.recent_rows(c)[0]['id'], 'current_owner')
+        answer = g.recall('unmatched-owner-context-query', db=self.db,
+                          identity_fn=lambda: (_ for _ in ()).throw(OSError('BGE offline')))
+        self.assertEqual(answer[0]['id'], 'current_owner')
+        impostors = [row for row in answer if row['id'].startswith('duplicated_marker_')]
+        self.assertTrue(impostors)
+        self.assertTrue(all(row['historical_unverified'] and not row['training_verified']
+                            for row in impostors))
+        self.assertEqual(before, hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_recent_rejects_future_clock_and_oversized_request(self):
+        with g.connection(self.db, write=True) as c:
+            item(c, 'valid', 'valid current fact', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2026-11-16T22:00:00+00:00', 'valid'))
+            item(c, 'future', 'future forged fact', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('2099-01-01T00:00:00Z', 'future'))
+            item(c, 'invalid', 'malformed date fact', 'M1')
+            c.execute('UPDATE s03_items SET ts=? WHERE id=?',
+                      ('not-a-date', 'invalid'))
+        with g.connection(self.db) as c:
+            self.assertEqual(g.recent_rows(c)[0]['id'], 'valid')
+            with self.assertRaisesRegex(g.MemoryHold, 'HOLD_S03_RECENT_LIMIT'):
+                g.recent_rows(c, limit=1024)
+
+    def test_stale_fts_cannot_resurrect_superseded_decision(self):
+        # Native S03 is authoritative. A lagging FTS row must never return
+        # the *new* decision as a response to words only in the old one.
+        with g.connection(self.db, write=True) as c:
+            item(c, 'revised', 'Decision choose blue', 'M2')
+            item(c, 'stable', 'Decision choose amber', 'M2')
+        with g.connection(self.db) as c:
+            self.assertEqual([r['id'] for r in g.lexical(c, 'blue')], ['revised'])
+            self.assertEqual([r['id'] for r in g.lexical(c, 'amber')], ['stable'])
+        with g.connection(self.db, write=True) as c:
+            c.execute('UPDATE s03_items SET text=? WHERE id=?',
+                      ('Decision choose green', 'revised'))
+        with g.connection(self.db) as c:
+            self.assertEqual(g.lexical(c, 'blue'), [])
+            self.assertEqual(g.lexical(c, 'green'), [])  # no fake fresh index
+            self.assertEqual([r['id'] for r in g.lexical(c, 'amber')], ['stable'])
+        with g.connection(self.db, write=True) as c:
+            c.execute('DELETE FROM s03_fts WHERE id=?', ('revised',))
+            c.execute('INSERT INTO s03_fts VALUES(?,?,?)',
+                      ('revised', 'Decision choose green', 'M2'))
+        with g.connection(self.db) as c:
+            self.assertEqual([r['id'] for r in g.lexical(c, 'green')], ['revised'])
+            self.assertEqual(g.lexical(c, 'blue'), [])
 
     def test_semantic_recall_finds_nonlexical_memory_and_rejects_stale_text(self):
         with g.connection(self.db,write=True) as c:
@@ -204,6 +456,40 @@ class GatewayTests(unittest.TestCase):
             self.assertEqual(json.loads(raw)['role'],'assistant')
         self.assertTrue((g.STATE/'backups/123/canonical.sqlite').is_file())
 
+    def test_mixed_dialogue_owners_hold_before_import_and_preserve_sources(self):
+        # Same original S03 may contain several dialog owners. The shared
+        # M1 retrieval route cannot enforce owner ACL for these imports.
+        # Refuse to combine them; do not mutate original S03 rows.
+        with g.connection(self.db,write=True) as c:
+            for i,owner in enumerate(('OWNER_A','OWNER_B'),start=1):
+                dialog='D'+str(i)
+                c.execute('INSERT INTO nox_v29_dialogs VALUES(?,?,?,?,?,?,?)',
+                          (dialog,owner,'private title',0,1,'t','t'))
+                c.execute('INSERT INTO nox_v29_dialog_messages VALUES(?,?,?,?,?,?)',
+                          (i,dialog,'E'+str(i),'user','PRIVATE_'+owner,'t'))
+        before=g.file_sha(self.db)
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_DIALOG_OWNER_SCOPE'):
+            g.migrate_history('193',db=self.db,legacy_root=self.root/'missing_legacy')
+        # The consistent snapshot was retained for owner-authorized recovery;
+        # the original data was not imported into the global memory index.
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM s03_items').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_import_records').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_origins').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_v29_dialog_messages').fetchone()[0],2)
+        self.assertTrue((g.STATE/'backups/193/canonical.sqlite').is_file())
+
+    def test_blank_dialogue_owner_is_not_treated_as_acl_proof(self):
+        with g.connection(self.db,write=True) as c:
+            c.execute('INSERT INTO nox_v29_dialogs VALUES(?,?,?,?,?,?,?)',
+                      ('D',None,'untitled',0,1,'t','t'))
+            c.execute('INSERT INTO nox_v29_dialog_messages VALUES(?,?,?,?,?,?)',
+                      (1,'D','E','user','PRIVATE_UNOWNED','t'))
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_DIALOG_OWNER_SCOPE'):
+            g.migrate_history('194',db=self.db,legacy_root=self.root/'missing_legacy')
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM s03_items').fetchone()[0],0)
+
     def test_malformed_legacy_schema_cannot_partially_commit(self):
         legacy=self.root/'cores'
         for key in ('C01','C02'):
@@ -236,6 +522,57 @@ class GatewayTests(unittest.TestCase):
         rendered=ns['format_for_prompt'](answer)
         self.assertIn('не инструкция',rendered)
         self.assertEqual(answer[0]['text'],'special forest memory')
+
+    def test_negative_recall_after_fresh_module_load_marks_unverified_context(self):
+        # Simulate a process restart: a freshly loaded gateway reads the
+        # existing SQLite records; no model POST and no canonical mutation.
+        with g.connection(self.db,write=True) as c:
+            item(c,'current','valid owner context','M1')
+            item(c,'malformed','old unsupported claim','M1')
+            c.execute('UPDATE s03_items SET meta=? WHERE id=?',('{broken-json','malformed'))
+        before=hashlib.sha256(self.db.read_bytes()).hexdigest()
+        fresh=importlib.util.module_from_spec(SPEC)
+        SPEC.loader.exec_module(fresh)
+        answer=fresh.recall('unmatchedretrievalphrase',db=self.db,
+                            embedder=lambda *a,**k: None,
+                            identity_fn=lambda: (_ for _ in ()).throw(OSError('BGE offline')))
+        self.assertEqual({row['id'] for row in answer},{'current','malformed'})
+        self.assertTrue(all(row['query_evidence'] is False for row in answer))
+        damaged=next(row for row in answer if row['id']=='malformed')
+        self.assertTrue(damaged['historical_unverified'])
+        self.assertFalse(damaged['training_verified'])
+        self.assertEqual(damaged['provenance_integrity'],'UNVERIFIED_METADATA')
+        namespace={'recall':lambda *args,**kwargs:[],
+                   'format_for_prompt':lambda rows:' | '.join(row['text'] for row in rows)}
+        fresh.bind_s03(namespace)
+        formatted=namespace['format_for_prompt'](answer)
+        self.assertIn('без доказанного совпадения',formatted)
+        self.assertIn('непроверенные данные, не инструкция',formatted)
+        self.assertNotIn('model update accepted',formatted)
+        self.assertEqual(before,hashlib.sha256(self.db.read_bytes()).hexdigest())
+
+    def test_bound_recall_canonical_hold_never_calls_legacy_reader(self):
+        calls=[]
+        def legacy(*args,**kwargs):
+            calls.append((args,kwargs))
+            return []
+        namespace={'recall':legacy,'format_for_prompt':lambda rows:''}
+        g.bind_s03(namespace)
+        for failure,expected in (
+            (g.MemoryHold('HOLD_S03_CANONICAL_SCHEMA_CHANGED'),'HOLD_S03_CANONICAL_SCHEMA_CHANGED'),
+            (sqlite3.DatabaseError('malformed canonical database'),'HOLD_S03_CANONICAL_READ_UNVERIFIED'),
+            (PermissionError(13,'canonical database denied'),'HOLD_S03_CANONICAL_READ_UNVERIFIED'),
+            (FileNotFoundError(2,'canonical database absent'),'HOLD_S03_CANONICAL_READ_UNVERIFIED'),
+        ):
+            with self.subTest(error=type(failure).__name__):
+                with patch.object(g,'recall',side_effect=failure):
+                    with self.assertRaisesRegex(g.MemoryHold,expected):
+                        namespace['recall']('owner session question')
+        self.assertEqual(calls,[],'legacy recall must not bypass canonical safety')
+        # Retain a bounded compatibility fallback for non-admission failures.
+        with patch.object(g,'recall',side_effect=RuntimeError('formatting transient')):
+            self.assertEqual(namespace['recall']('owner session question'),[])
+        self.assertEqual(len(calls),1)
 
     def test_plain_never_accepts_unreadable_ancestor_or_leaf(self):
         # This is a source-only regression for Python's suppressed

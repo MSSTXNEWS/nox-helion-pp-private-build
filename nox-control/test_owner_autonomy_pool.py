@@ -18,6 +18,15 @@ class PoolTests(unittest.TestCase):
                  'priority':'P0' if i%3==0 else 'P2','resource':'CPU_LIGHT',
                  'source_sha256':'a'*64,'estimated_cost':1+i%9} for i in range(n)]
 
+    def resource_snapshot(self, **overrides):
+        snapshot = {'native_verified':True,'instance_id':60509551,'stop_active':False,
+            'source_sha_verified':True,'owner_scope_verified':True,'task_status':{},
+            'cgroup_memory_ratio':.4,'cpu_pressure':0,'gpu_available':False,
+            'resource_admission_allowed':True,'resource_admission_observed_at':time.time()}
+        snapshot.update(overrides)
+        snapshot['resource_admission_snapshot_sha256'] = pool.fingerprint(snapshot)
+        return snapshot
+
     def test_any_count_in_one_command(self):
         rows=self.make_rows(1500)
         result=pool.validate_submission({'schema':pool.SCHEMA,'tasks':rows},allowed_handlers={'owner_component'})
@@ -37,9 +46,7 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(pool.tick_existing_dispatcher({}, {}, mode='NORMAL')['state'],'HOLD_NATIVE_POOL_CALLBACKS')
         n=Mock()
         n.read_reviewed_catalog.return_value={'schema':pool.SCHEMA,'tasks':self.make_rows(4)}
-        n.read_resource_snapshot.return_value={'native_verified':True,'instance_id':60509551,
-            'stop_active':False,'source_sha_verified':True,'owner_scope_verified':True,
-            'task_status':{},'cgroup_memory_ratio':.4,'cpu_pressure':0,'gpu_available':False}
+        n.read_resource_snapshot.return_value=self.resource_snapshot(cgroup_memory_ratio=.4)
         n.allowed_handlers.return_value={'owner_component'}
         n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True;n.native_duplicate_check.return_value=False
@@ -52,6 +59,30 @@ class PoolTests(unittest.TestCase):
         r=pool.tick_existing_dispatcher({'_nox_owner_autonomy_native':n},{},mode='NORMAL')
         self.assertEqual(r['jobs_started'],3)
         self.assertEqual(r['active_subexecutor_processes'],3)
+
+    def test_resource_admission_receipt_fails_closed_before_dispatch(self):
+        missing = self.resource_snapshot()
+        missing.pop('resource_admission_allowed')
+        denied = self.resource_snapshot(resource_admission_allowed=False)
+        stale = self.resource_snapshot(resource_admission_observed_at=
+            time.time()-pool.RESOURCE_ADMISSION_MAX_AGE_SECONDS-1)
+        tampered = self.resource_snapshot()
+        tampered['cgroup_memory_ratio'] = .8
+        wrong_instance = self.resource_snapshot(instance_id=7)
+        cases = (missing, denied, stale, tampered, wrong_instance)
+        for snapshot in cases:
+            with self.subTest(snapshot=snapshot):
+                n = Mock()
+                n.read_reviewed_catalog.return_value = {
+                    'schema':pool.SCHEMA,'tasks':self.make_rows(1)}
+                n.read_resource_snapshot.return_value = snapshot
+                n.allowed_handlers.return_value = {'owner_component'}
+                result = pool.tick_existing_dispatcher(
+                    {'_nox_owner_autonomy_native':n}, {}, mode='NORMAL')
+                self.assertEqual(result['jobs_started'], 0)
+                self.assertTrue(result['state'].startswith('HOLD'))
+                n.ensure_processes.assert_not_called()
+                n.native_queue_claim.assert_not_called()
 
     def test_30_jobs_one_command(self):
         rows=self.make_rows(30)
@@ -88,6 +119,27 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'running','job.00001':'running'},mode='NORMAL',memory_ratio=.4)),1)
         self.assertEqual(len(pool.choose_ready(rows,status={'job.00000':'done'},mode='NORMAL',memory_ratio=.4)),3)
 
+    def test_verified_success_aliases_unlock_only_successful_dependents(self):
+        # Native terminal states are independently read from the original
+        # dispatcher; an upstream failed/cancelled/unknown claim is not READY.
+        rows=pool.validate_page({'schema':pool.SCHEMA,'tasks':[
+            {'id':'job.parent','handler':'owner_component','deps':[],
+             'resource':'CPU_LIGHT','priority':'P0','source_sha256':'a'*64},
+            {'id':'job.child','handler':'owner_component','deps':['job.parent'],
+             'resource':'CPU_LIGHT','priority':'P0','source_sha256':'b'*64}
+        ]},allowed_handlers={'owner_component'})
+        for terminal in ('done','DONE','Done','completed','COMPLETED','Completed'):
+            with self.subTest(terminal=terminal):
+                ready=pool.choose_ready(rows,status={'job.parent':terminal},
+                    mode='NORMAL',memory_ratio=.4)
+                self.assertEqual([x['id'] for x in ready],['job.child'])
+        for not_success in ('failed','FAILED','cancelled','CANCELED','running',
+                            'done ',None,{'state':'done'},0):
+            with self.subTest(not_success=not_success):
+                ready=pool.choose_ready(rows,status={'job.parent':not_success},
+                    mode='NORMAL',memory_ratio=.4)
+                self.assertEqual(ready,[])
+
     def test_no_thread_alias_as_os_process(self):
         bad=[{'pid':777,'process_starttime':1,'native_pid_verified':True,'state':'RUNNING','instance_id':60509551,'origin':'existing_onehost',
             'native_heartbeat_verified':True,'heartbeat_age_seconds':1}]*3
@@ -120,9 +172,7 @@ class PoolTests(unittest.TestCase):
 
     def test_empty_queue_still_keeps_default_pool(self):
         n=Mock();n.read_reviewed_catalog.return_value={'schema':pool.SCHEMA,'tasks':[]}
-        n.read_resource_snapshot.return_value={'native_verified':True,'instance_id':60509551,
-            'stop_active':False,'source_sha_verified':True,'owner_scope_verified':True,
-            'task_status':{},'cgroup_memory_ratio':.5,'cpu_pressure':0,'gpu_available':False}
+        n.read_resource_snapshot.return_value=self.resource_snapshot(cgroup_memory_ratio=.5)
         n.allowed_handlers.return_value={'owner_component'}
         n.owner_allowed.return_value=True;n.stop_active.return_value=False;n.writer_lease.return_value=True
         n.ensure_processes.return_value=True

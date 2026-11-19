@@ -50,9 +50,20 @@ def _executor_status_reply(user_text,path=None):
     unknown=('Сейчас не могу подтвердить число и занятость исполнителей: '
              'свежий корректный статус диспетчера недоступен. '
              'NOX — отдельный координатор и чат; неподтверждённые цифры не привожу.')
+    # Reuse the fail-closed owner maintenance gate before reading any counts.
+    try:
+        from owner_chat_ui import owner_maintenance_gate
+        maintenance=owner_maintenance_gate()
+    except Exception:
+        return unknown
+    if maintenance!='ABSENT':
+        return ('Сейчас выполняется MODEL_UPDATE; статус исполнителей временно недоступен.'
+                if maintenance=='PRESENT' else unknown)
     target=Path(path) if path is not None else EXECUTOR_STATUS
     try:
-        fd=os.open(target,os.O_RDONLY|os.O_NOFOLLOW)
+        # O_NOFOLLOW rejects symlinks; O_NONBLOCK prevents a FIFO from
+        # wedging chat admission before fstat can reject nonregular files.
+        fd=os.open(target,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
         with os.fdopen(fd,'rb') as source:
             meta=os.fstat(source.fileno())
             if not stat.S_ISREG(meta.st_mode) or not 0<meta.st_size<=750000:return unknown
@@ -76,6 +87,8 @@ def _executor_status_reply(user_text,path=None):
                 if task is not None:return unknown
             else:return unknown
             ids.append(name)
+        # A maintenance transition during read invalidates an otherwise valid snapshot.
+        if owner_maintenance_gate()!='ABSENT':return unknown
         observed=datetime.fromtimestamp(meta.st_mtime,timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         return (f'Сейчас у диспетчера настроено {n} исполнителей: занято {busy}, свободно {n-busy}. '
                 f'NOX — отдельный координатор и чат (1). Схема: {n} исполнителей + NOX.\n'
@@ -93,6 +106,17 @@ async def _model_events(client, url, payload):
             raise StreamFailure('HOLD_MODEL_HTTP')
         async for line in response.aiter_lines():
             if not line or line.startswith(':'):
+                continue
+            # SSE permits bounded metadata before the data field. Common
+            # OpenAI-compatible proxies emit event: message and id: per chunk.
+            # Other event types (including error) fail closed, not as tokens.
+            if line.startswith('event:'):
+                if line[6:].strip()!='message':
+                    raise StreamFailure('HOLD_MODEL_SSE_EVENT')
+                continue
+            if line.startswith('id:'):
+                if len(line)>256 or '\x00' in line:
+                    raise StreamFailure('HOLD_MODEL_SSE_FRAME')
                 continue
             if not line.startswith('data:'):
                 raise StreamFailure('HOLD_MODEL_SSE_FRAME')
@@ -151,6 +175,10 @@ async def _model_events(client, url, payload):
                         if value is not None:
                             if not isinstance(value,str):raise ValueError(field)
                             call[field]+=value
+                            # Model-supplied SSE identifiers are untrusted. A long ID
+                            # must never reach the native tool dispatcher or S03.
+                            if len(call[field])>160:
+                                raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
                     function=fragment.get('function') or {}
                     if not isinstance(function,dict):raise ValueError('function')
                     for field in ('name','arguments'):
@@ -193,7 +221,11 @@ def _normal_calls(rows,step):
             try:args=json.loads(args)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
         if not isinstance(args,dict):raise StreamFailure('HOLD_TOOL_ARGUMENTS')
-        result.append({'id':row.get('id') or f'owner_call_{step}_{index}',
+        # Native parser / deterministic routes share the same bounded ID rule.
+        call_id=row.get('id')
+        if call_id is not None and (not isinstance(call_id,str) or not 1<=len(call_id)<=160):
+            raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
+        result.append({'id':call_id or f'owner_call_{step}_{index}',
                        'name':row['name'],'arguments':args})
     return result
 
@@ -210,6 +242,12 @@ async def _run(native,url,payload,user_text):
     if executor_reply is not None:
         yield 'token',executor_reply
         return
+    # Fail closed on multiple direct-admin intents before payload preparation,
+    # routing, model creation, or dispatch can begin.
+    calls=native['_direct_admin_calls'](user_text or '') or []
+    if len(calls)>1:
+        raise StreamFailure('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS')
+    direct=bool(calls)
     turn={}
     intent=_current.explicit_media_request(user_text)
     status_id=_current.media_status_query(user_text)
@@ -244,9 +282,6 @@ async def _run(native,url,payload,user_text):
     steps=0
     # Resolve existing deterministic routes before any model text is shown.
     # Never reinterpret already-streamed prose as an executable command.
-    calls=native['_direct_admin_calls'](user_text or '') or []
-    direct=bool(calls)
-    if direct:calls=calls[:1]
     if not calls and native.get('_POOL'):
         deterministic=native['try_deterministic'](user_text or '')
         if deterministic and deterministic.get('name')=='clock' and deterministic.get('text'):
@@ -287,8 +322,12 @@ async def _run(native,url,payload,user_text):
                         if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
                         yield 'token',text
                         return
+                    # Preserve full tool evidence; above the bounded envelope,
+                    # stop instead of presenting a clipped prefix as complete.
+                    if len(text)>2000000:
+                        raise StreamFailure('HOLD_TOOL_RESULT_FULL_CONTEXT')
                     messages.append({'role':'tool','tool_call_id':call['id'],
-                                     'name':call['name'],'content':text[:8000]})
+                                     'name':call['name'],'content':text})
             calls=[]
             model_request=dict(req,messages=messages,cache_prompt=True)
             if steps>=int(native.get('MAX_STEPS',8)):

@@ -24,7 +24,7 @@ except NameError:BUNDLE={}
 
 ROOT=Path('/root/nox');STATE=ROOT/'state/owner_s03'
 SCHEMA='NOX_OWNER_S03_CONTENT_REINDEX_V1'
-GATEWAY_SHA='cb7f373cf2d3c4f01d47ed4ef0c48b0a89af7a05eb92a06530752c40453fdf20'
+GATEWAY_SHA='20b9f6b4ad504671eaee24c3a27a44d3a9dd74e6279af463779421da2ee16f0b'
 INSTALLED_GATEWAY_SHA='40caff3109111d971ff2d37cb81c0c2050ead08ae42d1f631a245778dd1a7a4d'
 S03_SHA='82c592ea5a59281fb5fc1061d133ac4e149b8e95a6d0947a254882715cba7f91'
 PREPARE_REQUEST='6904379098'
@@ -136,12 +136,50 @@ def public_recall(gateway):
             'elapsed_ms':round((time.monotonic()-started)*1000,3),'private_text_exported':False}
 
 
+def _valid_restore_proof(value,manifest_sha256):
+    return (isinstance(value,dict) and value.get('state')=='STAGING_RESTORE_VERIFIED'
+            and value.get('source_key')=='CANONICAL'
+            and value.get('manifest_sha256')==manifest_sha256
+            and isinstance(value.get('snapshot_sha256'),str)
+            and re.fullmatch('[a-f0-9]{64}',value['snapshot_sha256'])
+            and value.get('restored_sha256')==value.get('snapshot_sha256')
+            and type(value.get('restored_bytes')) is int and 0<value['restored_bytes']<=512*1024*1024
+            and value.get('quick_check')=='ok' and type(value.get('canonical_items')) is int
+            and value['canonical_items']>=0 and value.get('staging_removed') is True
+            and value.get('source_retained') is True
+            and value.get('live_database_mutated_by_restore') is False)
+
+
+def staging_restore_proof(prepare,gateway):
+    history=prepare.get('history_import')
+    if (not isinstance(history,dict) or history.get('state')!='HISTORICAL_RECORDS_IMPORTED'
+            or history.get('source_databases_retained') is not True
+            or history.get('training_examples_accepted')!=0
+            or history.get('private_text_exported') is not False):
+        fail('HOLD_S03_REINDEX_HISTORY_SNAPSHOT')
+    manifest_sha=history.get('snapshot_manifest_sha256')
+    if not isinstance(manifest_sha,str) or not re.fullmatch('[a-f0-9]{64}',manifest_sha):
+        fail('HOLD_S03_REINDEX_MANIFEST_PIN')
+    proof=history.get('canonical_staging_restore')
+    if proof is not None:
+        if not _valid_restore_proof(proof,manifest_sha):fail('HOLD_S03_REINDEX_STAGED_RESTORE_RECEIPT')
+        return proof
+    proof=gateway.verify_snapshot_restore_staging(
+        STATE/'backups'/PREPARE_REQUEST/'manifest.json',manifest_sha,PREPARE_REQUEST)
+    if not _valid_restore_proof(proof,manifest_sha):fail('HOLD_S03_REINDEX_STAGED_RESTORE')
+    return proof
+
+
 def validate_record(value,request,source,gateway):
     status=value.get('status',{});identity=value.get('content_identity',{})
     recall=value.get('public_recall',{});methods=recall.get('methods',{})
     before=value.get('before_index',{});process=value.get('bge_process_before',{})
+    restore=value.get('canonical_staging_restore',{})
+    manifest_sha=value.get('snapshot_manifest_sha256')
     if (value.get('schema')!=SCHEMA or value.get('request')!=request or value.get('source_sha')!=source
             or value.get('state')!=SUCCESS or value.get('gateway_sha256')!=GATEWAY_SHA
+            or not isinstance(manifest_sha,str) or not re.fullmatch('[a-f0-9]{64}',manifest_sha)
+            or not _valid_restore_proof(restore,manifest_sha)
             or value.get('prepare_request')!=PREPARE_REQUEST or value.get('prepare_source_sha')!=PREPARE_SOURCE
             or value.get('prepare_receipt_sha256')!=PREPARE_SHA
             or identity.get('content_sha256')!=MODEL_SHA or identity.get('identity')!=gateway.content_identity()
@@ -185,10 +223,13 @@ def main():
             or prepare.get('source_sha')!=PREPARE_SOURCE or prepare.get('state')!='HISTORY_AND_INDEX_PREPARED'
             or prepare.get('gateway_sha256')!=INSTALLED_GATEWAY_SHA or prepare.get('s03_before_sha256')!=S03_SHA):
         fail('HOLD_S03_REINDEX_PREPARE_NOT_VERIFIED')
+    restore=staging_restore_proof(prepare,gateway)
     before_sources=sources_and_flags();gateway.resource_admission()
     record={'schema':SCHEMA,'request':request,'source_sha':source,'state':'REEMBEDDING',
             'gateway_sha256':GATEWAY_SHA,'prepare_request':PREPARE_REQUEST,'prepare_source_sha':PREPARE_SOURCE,
-            'prepare_receipt_sha256':PREPARE_SHA,'started_at':time.time(),
+            'prepare_receipt_sha256':PREPARE_SHA,
+            'snapshot_manifest_sha256':restore['manifest_sha256'],
+            'canonical_staging_restore':restore,'started_at':time.time(),
             'live_sources_changed':False,'services_restarted':[],'private_text_exported':False,
             'training_examples_accepted':0,'legacy_vectors_relabelled':False,
             'historical_model_content_sha_known':False,'indexed_in_action':0,

@@ -76,6 +76,31 @@ class V130Tests(unittest.TestCase):
         self.assertEqual(second.json()['event_id'],r['event_id'])
         self.assertEqual(self.calls,1)
 
+    def test_quarantined_or_wrong_source_metadata_is_not_confirmed_readback(self):
+        self.assertEqual(self.post().status_code,200)
+        with sqlite3.connect(self.db) as db:
+            raw=db.execute('SELECT meta FROM s03_items').fetchone()[0]
+        original=json.loads(raw)
+        for key,value in (('schema','NOX_QUARANTINED_CANDIDATE_V1'),
+                          ('source_ref','UNRELATED-SOURCE')):
+            with self.subTest(key=key):
+                with sqlite3.connect(self.db) as db:
+                    db.execute('UPDATE s03_items SET meta=?',
+                               (json.dumps({**original,key:value}),))
+                self.assertEqual(api._matching(self.payload),[])
+                with sqlite3.connect(self.db) as db:
+                    db.execute('UPDATE s03_items SET meta=?',(raw,))
+        self.assertEqual(self.calls,1)
+
+    def test_stop_during_readback_scan_blocks_native_write(self):
+        def stopped_after_scan(data):
+            self.stop.write_text('STOP')
+            return []
+        with patch.object(api,'_matching',side_effect=stopped_after_scan):
+            response=self.post()
+        self.assertEqual(response.json()['reason'],'HOLD_NATIVE_STOP')
+        self.assertEqual(self.calls,0)
+
     def test_hash_mismatch_no_memory_write(self):
         record={**self.payload,'content':'Изменённый текст'}
         response=self.post(record)
@@ -181,5 +206,14 @@ class V130Tests(unittest.TestCase):
         r=self.post()
         self.assertEqual(r.status_code,503)
         self.assertEqual(self.calls,0)
+
+
+
+class CanonicalStopTests(unittest.TestCase):
+    def test_existing_state_stop_marker_blocks(self):
+        def exists(path):
+            return str(path)=='/root/nox/state/STOP.flag'
+        with patch.object(api.Path,'exists',exists), patch.object(api.Path,'is_symlink',return_value=False):
+            self.assertTrue(api._stopped())
 
 if __name__=='__main__':unittest.main()

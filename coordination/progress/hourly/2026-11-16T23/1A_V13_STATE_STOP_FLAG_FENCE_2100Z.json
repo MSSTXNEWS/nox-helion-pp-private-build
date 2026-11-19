@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_V13_SOURCE_SLOT_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "slot": "AUTO_1A",
+  "created_at_utc": "2026-11-16T21:02:58.906Z",
+  "created_at_msk": "2026-11-17T00:02:58.906+03:00",
+  "model_release": "V13",
+  "host": "Vast.ai #60509551",
+  "scope": "Existing OneHost PREP source only; no native writes",
+  "classification": "SOURCE_PATCH_READBACK_CI_PENDING_NATIVE_HOLD",
+  "source": {
+    "path": "nox-control/owner_native_audit.py",
+    "preimage_blob": "d285b205612509c4bdc50d4ab9a7fcff013f4494",
+    "postimage_blob": "08a8a09e6b2c5bd5e2a54b2d05c61af5c25b4c27",
+    "commit": "c59e091b5d6cbec8753dfc21a030fb29350a7f94",
+    "change": "Read-only owner marker inventory also probes /root/nox/state/STOP.flag independently of /root/nox/state/STOP"
+  },
+  "test": {
+    "path": "nox-control/test_owner_native_audit_mount_inventory.py",
+    "preimage_blob": "1742e9c806619bc7247512089f8ee407f68c190a",
+    "postimage_blob": "222f9a35806dbe87c464736e446cd29ab5430c07",
+    "commit": "6081abd704b51286f25aca6ea49c4473bb1e2a8b",
+    "change": "11 marker probes, present and unreadable state/STOP.flag fixture coverage",
+    "test_run": "CI_QUEUED_AT_RECORDING",
+    "ci_run": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43955596433",
+    "ci_result": "NOT_YET_VERIFIED",
+    "source_git_readback": "MATCHED_EXACT_CONTENT"
+  },
+  "root_cause": {
+    "signature": "NOX-V13-1A-OWNER-STATE-STOP-FLAG-OMITTED-20261116",
+    "proof": "Original v13_owner_fence_metadata omitted /root/nox/state/STOP.flag although previous owner inspector protects this marker; a sole marker would be classified NOT_OBSERVED_NOT_AUTHORIZED",
+    "risk": "Incomplete owner STOP presence reporting; read-only result is not start permission",
+    "rollback": "Revert exact source/test blobs with Git CAS; no native rollback required"
+  },
+  "outcomes": [
+    {
+      "task_id": "V13-01",
+      "status": "SOURCE_PATCH_READBACK_NATIVE_HOLD",
+      "evidence": "source + regression blob readback; no fresh native writer lease/PID sweeps"
+    },
+    {
+      "task_id": "V13-02",
+      "status": "HOLD",
+      "reason": "No independent S03 WAL/Genesis/skills and checkpoint+optimizer/scaler/RNG restore receipt"
+    },
+    {
+      "task_id": "V13-03",
+      "status": "PRIOR_SOURCE_METADATA_ONLY",
+      "reason": "Existing 4 starter parts and 39 CP311/cu126 wheel parts metadata already checked; no new payload SHA"
+    },
+    {
+      "task_id": "V13-04",
+      "status": "HOLD",
+      "reason": "Python3.12/CUDA12.4 V100 GPU0/GPU1 isolated FP16/ABI smoke not proven"
+    },
+    {
+      "task_id": "V13-05",
+      "status": "HOLD",
+      "reason": "No authenticated seekable persistent 248834257920B plus reserve mount / owner lease"
+    }
+  ],
+  "prior_native": {
+    "at_utc": "2026-11-16T20:09:37Z",
+    "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43939988374",
+    "status": "HISTORICAL_READ_ONLY_NOT_CURRENT_ADMISSION",
+    "owner_stop": "PRESENT",
+    "maintenance": "PRESENT",
+    "main_supervisors": "FIVE_STOPPED",
+    "port_8081": "NO_LISTENER",
+    "gpu_vram_mib": [
+      0,
+      0
+    ],
+    "root_free_bytes": 43158585344,
+    "writer_lease": "UNKNOWN"
+  },
+  "native_side_effects": {
+    "installed": false,
+    "bytes_downloaded": 0,
+    "bytes_deleted": 0,
+    "restarts": 0,
+    "optimizer_updates_verified": 0,
+    "s03_recall_verified": 0,
+    "stop_changed": false,
+    "schedules_changed": false
+  },
+  "next_ready": "Collect current owner-auth read-only status and independent restore + writer lease; seekable 248.83GB+reserve; then pinned DeepSeek SHA and isolated two-V100 Maya before any CUTOVER"
+}

@@ -233,7 +233,7 @@ def _save_exchange(dialog_id,question,answer,exchange_id):
         return False
 
 def _validated_history(data):
-    history=data.get('history') or []
+    history=data['history'] if 'history' in data else []
     if not isinstance(history,list) or len(history)>24:
         raise ValueError('HOLD_HISTORY_LIMIT')
     clean=[];size=0
@@ -250,35 +250,66 @@ def _validated_history(data):
     return clean
 
 def _dialog_context(dialog_id):
-    """Load only the authenticated owner's committed pairs from the existing S03.
+    """Load complete authorized committed pairs or HOLD; never clip dialog memory.
 
-    The Resonance client deliberately sends history=[] and a dialog_id. Its
-    displayed history is not an inference payload. Use the durable thread as
-    the authority, with the same 24-message/121 KB context limits as the
-    legacy client path. Incomplete pairs cannot enter model context.
+    The legacy context budget is 24 messages / 121 KB / 8,000 characters per
+    message. If the stored thread exceeds it, return HOLD before inference
+    instead of silently selecting recent turns or truncating message text.
     """
     with _db() as db:
+        db.execute('BEGIN')
         found=_get_dialog(db,dialog_id)
         if found is None:
             return 'HOLD_DIALOG_SCOPE_NOT_BOUND',[]
         if bool(found['archived']):
             return 'HOLD_DIALOG_ARCHIVED',[]
+        if db.execute(\
+            "SELECT 1 FROM sqlite_master WHERE type='index' AND name='nox_v29_messages_order'"
+        ).fetchone() is None:
+            return 'HOLD_HISTORY_INDEX_UNAVAILABLE',[]
+        message_count=db.execute(
+            'SELECT COUNT(*) FROM ('
+            'SELECT row_id FROM nox_v29_dialog_messages WHERE dialog_id=? '
+            'ORDER BY row_id LIMIT 25)',(dialog_id,)).fetchone()[0]
+        if message_count>24:
+            return 'HOLD_HISTORY_LIMIT',[]
+        encoding=db.execute('PRAGMA encoding').fetchone()[0]
+        if not isinstance(encoding,str) or encoding.upper()!='UTF-8':
+            return 'HOLD_HISTORY_ENCODING_UNSUPPORTED',[]
+        try:
+            total_bytes=db.execute(
+                'SELECT COALESCE(SUM(octet_length(content)),0) '
+                'FROM nox_v29_dialog_messages WHERE dialog_id=?',
+                (dialog_id,)).fetchone()[0]
+        except sqlite3.OperationalError:
+            return 'HOLD_HISTORY_BYTE_LENGTH_UNAVAILABLE',[]
+        if total_bytes>121000:
+            return 'HOLD_HISTORY_SIZE',[]
+        invalid_pair=db.execute(
+            'SELECT 1 FROM nox_v29_dialog_messages WHERE dialog_id=? '
+            'GROUP BY exchange_id HAVING COUNT(*)!=2 OR '
+            'SUM(CASE WHEN role=\'user\' THEN 1 ELSE 0 END)!=1 OR '
+            'SUM(CASE WHEN role=\'assistant\' THEN 1 ELSE 0 END)!=1 LIMIT 1',
+            (dialog_id,)).fetchone()
+        if invalid_pair is not None:
+            return 'HOLD_HISTORY_PAIR_INCOMPLETE',[]
         rows=db.execute(
-            'SELECT substr(u.content,1,8000) AS question, '
-            'substr(a.content,1,8000) AS answer '
+            'SELECT u.content AS question, a.content AS answer '
             'FROM nox_v29_dialog_messages AS a '
             'JOIN nox_v29_dialog_messages AS u '
             'ON u.dialog_id=a.dialog_id AND u.exchange_id=a.exchange_id '
             "AND u.role='user' WHERE a.dialog_id=? AND a.role='assistant' "
-            'ORDER BY a.row_id DESC LIMIT 12',(dialog_id,)).fetchall()
+            'ORDER BY a.row_id DESC',(dialog_id,)).fetchall()
     pairs=[];size=0
     for row in rows:
         question,answer=row['question'],row['answer']
         if not isinstance(question,str) or not isinstance(answer,str):
             raise RuntimeError('HOLD_S03_DIALOG_CONTEXT_CONTENT')
+        if len(question)>8000 or len(answer)>8000:
+            return 'HOLD_HISTORY_CONTENT',[]
         pair_size=len(question.encode('utf-8'))+len(answer.encode('utf-8'))
         if size+pair_size>121000:
-            break
+            return 'HOLD_HISTORY_SIZE',[]
         size+=pair_size
         pairs.append([{'role':'user','content':question},
                       {'role':'assistant','content':answer}])
@@ -628,6 +659,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         try:history=_validated_history(data)
         except ValueError as ex:return JSONResponse({'error':str(ex)},status_code=422)
         dialog_id=data.get('dialog_id')
+        if not isinstance(dialog_id,str) or not ID_PATTERN.fullmatch(dialog_id):
+            return JSONResponse({'error':'HOLD_DIALOG_SCOPE_NOT_BOUND'},status_code=409)
         if dialog_id:
             if not _schema_ready():
                 return JSONResponse({'error':'HOLD_S03_DIALOG_SCHEMA'},status_code=503)
@@ -637,8 +670,6 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                     return JSONResponse({'error':issue},status_code=409)
             except (OSError,RuntimeError,sqlite3.Error):
                 return JSONResponse({'error':'HOLD_DIALOG_SCOPE_NOT_VERIFIED'},status_code=503)
-        elif dialog_id is not None and not isinstance(dialog_id,str):
-            return JSONResponse({'error':'INVALID_DIALOG_ID'},status_code=422)
         key=scope(request)
         if key is None:
             return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
@@ -654,6 +685,12 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             wire=None;buffer='';answer='';complete=False
             try:
                 yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM'})
+                if cancel.is_set():
+                    yield _jsonl({'type':'error','error':'STREAM_STOP_REQUESTED'})
+                    return
+                if not check(request):
+                    yield _jsonl({'type':'error','error':'HOLD_OWNER_SESSION_REVOKED'})
+                    return
                 wire=await trusted['_proxy_completion'](payload)
                 if not hasattr(wire,'body_iterator'):
                     yield _jsonl({'type':'error','error':'HOLD_NATIVE_STREAM_MISSING'})

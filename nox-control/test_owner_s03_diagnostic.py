@@ -90,6 +90,48 @@ class S03DiagnosticTests(unittest.TestCase):
         with self.assertRaises(diagnostic.DiagnosticHold):
             diagnostic.local_json('https://outside.example')
 
+    def test_dotdot_path_and_unreadable_ancestor_fail_closed(self):
+        with self.assertRaisesRegex(diagnostic.DiagnosticHold, 'HOLD_S03_PATH_SCOPE'):
+            diagnostic.plain(self.root / '..' / 'outside.sqlite')
+        with self.assertRaisesRegex(diagnostic.DiagnosticHold, 'HOLD_S03_PATH_SCOPE'):
+            diagnostic.bounded(self.root / '..' / 'outside.sqlite')
+        actual_lstat = os.lstat
+        def forbidden(path):
+            if Path(path) == self.root / 'kb':
+                raise PermissionError(13, 'permission denied')
+            return actual_lstat(path)
+        with patch.object(diagnostic.os, 'lstat', side_effect=forbidden):
+            with self.assertRaisesRegex(diagnostic.DiagnosticHold, 'HOLD_S03_PATH_UNREADABLE'):
+                diagnostic.plain(self.db)
+        def looped(path):
+            if Path(path) == self.root / 'kb':
+                raise OSError(40, 'too many symlinks')
+            return actual_lstat(path)
+        with patch.object(diagnostic.os, 'lstat', side_effect=looped):
+            with self.assertRaisesRegex(diagnostic.DiagnosticHold, 'HOLD_S03_PATH_UNREADABLE'):
+                diagnostic.plain(self.db)
+
+    def test_embedding_http_failures_cannot_claim_verified_vectors(self):
+        valid = [
+            (200, {'status': 'ok'}),
+            (200, {'data': [{'id': 'bge-m3'}]}),
+            (200, {'data': [{'embedding': [1.0] * 32} for _ in range(2)]}),
+        ]
+        for stage in range(3):
+            with self.subTest(stage=stage):
+                responses = list(valid)
+                responses[stage] = (503, valid[stage][1])
+                with patch.object(diagnostic, 'local_json', side_effect=responses):
+                    result = diagnostic.embedding_probe()
+                self.assertEqual(result['state'], 'EMBEDDING_PROBE_UNAVAILABLE')
+                self.assertNotIn('dimensions', result)
+        for stage in (1, 2):
+            responses = list(valid)
+            responses[stage] = (200, None)
+            with patch.object(diagnostic, 'local_json', side_effect=responses):
+                result = diagnostic.embedding_probe()
+            self.assertEqual(result['state'], 'EMBEDDING_PROBE_UNAVAILABLE')
+
     def test_run_does_not_export_faiss_ids_or_claim_indexing(self):
         self.create_database()
         (self.root / 'kb/faiss.index').write_bytes(b'fixture')

@@ -135,11 +135,191 @@ class TestRealSubagentProcesses(unittest.TestCase):
                           authorize=lambda: True, lease_current=lease)
         self.assertEqual(leases, [])
 
+    def test_inflight_deadline_cannot_be_extended_by_other_worker_results(self):
+        # Pure in-memory regression: a fast result cannot mask a stale job.
+        from types import SimpleNamespace
+        from queue import Queue
+        from unittest.mock import patch
+        import owner_subagent_processes as module
+
+        class Clock:
+            t = 0.0
+            def monotonic(self):
+                return self.t
+
+        clock = Clock()
+
+        class ScriptedOutbox:
+            calls = 0
+            def get(self, timeout):
+                self.calls += 1
+                if self.calls == 1:
+                    clock.t = 5.0
+                    return {'kind': 'RESULT', 'role': 'infra', 'pid': 810,
+                            'id': 'job-0', 'state': 'CANDIDATE_NOT_APPLIED',
+                            'elapsed_ms': 5000, 'answer': 'candidate'}
+                clock.t = 8.0
+                return {'kind': 'RESULT', 'role': 'brain', 'pid': 811,
+                        'id': 'job-1', 'state': 'CANDIDATE_NOT_APPLIED',
+                        'elapsed_ms': 8000, 'answer': 'candidate'}
+
+        candidate = Subagents.__new__(Subagents)
+        candidate.roles = ['infra', 'brain', 'web']
+        candidate.timeout = 1
+        candidate.inboxes = {role: Queue() for role in candidate.roles}
+        candidate.outbox = ScriptedOutbox()
+        candidate.processes = {role: SimpleNamespace(pid=810+i)
+                               for i, role in enumerate(candidate.roles)}
+        with patch.object(module.time, 'monotonic', clock.monotonic):
+            with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TIMEOUT'):
+                candidate.run(batch(2), stop_active=lambda: False,
+                              authorize=lambda: True, lease_current=lambda: True)
+
+    def test_worker_result_cannot_forge_live_or_done(self):
+        # IPC is not a production receipt. These are pure in-memory tests,
+        # with no native OneHost worker or second model invocation.
+        from types import SimpleNamespace
+        from queue import Queue
+
+        base = {'kind': 'RESULT', 'role': 'infra', 'pid': 920,
+                'id': 'job-0', 'elapsed_ms': 1,
+                'state': 'CANDIDATE_NOT_APPLIED', 'answer': 'candidate'}
+        forged = [
+            {**base, 'state': 'LIVE_VERIFIED'},
+            {**base, 'state': 'DONE'},
+            {k: v for k, v in base.items() if k != 'answer'},
+            {**base, 'live_onehost_deployed': True},
+            {**base, 'elapsed_ms': -1},
+            {**base, 'state': 'HOLD_MODEL_UNAVAILABLE'},
+        ]
+        for event in [base, *forged]:
+            with self.subTest(event=event):
+                pool = Subagents.__new__(Subagents)
+                pool.roles = ['infra', 'brain', 'web']
+                pool.timeout = 1
+                pool.inboxes = {role: Queue() for role in pool.roles}
+                pool.outbox = Queue()
+                pool.processes = {role: SimpleNamespace(pid=920 + i)
+                                  for i, role in enumerate(pool.roles)}
+                pool.outbox.put(event)
+                if event is base:
+                    result = pool.run(batch(1), stop_active=lambda: False,
+                                      authorize=lambda: True,
+                                      lease_current=lambda: True)
+                    self.assertEqual(result['results']['job-0']['state'],
+                                     'CANDIDATE_NOT_APPLIED')
+                    self.assertFalse(result['live_onehost_deployed'])
+                else:
+                    with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_RESULT_SCHEMA'):
+                        pool.run(batch(1), stop_active=lambda: False,
+                                 authorize=lambda: True,
+                                 lease_current=lambda: True)
+
+    def test_failed_long_batch_cannot_replay_stale_result_on_same_pool(self):
+        # A revoked owner STOP can leave an old worker RESULT in the outbox.
+        # Even a matching PID + role + TaskID must never be reused for a new
+        # request. Pure in-memory check; no new NOX model/process is launched.
+        from types import SimpleNamespace
+        from queue import Queue
+        pool = Subagents.__new__(Subagents)
+        pool.roles = ['infra', 'brain', 'web']
+        pool.timeout = 1
+        pool.inboxes = {role: Queue() for role in pool.roles}
+        pool.outbox = Queue()
+        pool.processes = {role: SimpleNamespace(pid=930 + i)
+                          for i, role in enumerate(pool.roles)}
+        observed = iter([False, False, True])
+        with self.assertRaisesRegex(GateError, 'HOLD_OWNER_GATE_CHANGED'):
+            pool.run(batch(1), stop_active=lambda: next(observed, True),
+                     authorize=lambda: True, lease_current=lambda: True)
+        self.assertTrue(pool._batch_used)
+        self.assertEqual(pool.inboxes['infra'].qsize(), 1)
+        # This stale worker result would otherwise look valid on the next
+        # run if TaskID, role and PID were reused in the same pool.
+        pool.outbox.put({'kind': 'RESULT', 'role': 'infra', 'pid': 930,
+                         'id': 'job-0', 'elapsed_ms': 1,
+                         'state': 'CANDIDATE_NOT_APPLIED', 'answer': 'STALE'})
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_POOL_REUSE'):
+            pool.run(batch(1), stop_active=lambda: False,
+                     authorize=lambda: True, lease_current=lambda: True)
+        self.assertEqual(pool.inboxes['infra'].qsize(), 1)
+        self.assertEqual(pool.outbox.qsize(), 1)
+
     def test_external_model_url_rejected(self):
         from owner_subagent_processes import _model_reply
         with self.assertRaisesRegex(GateError, 'HOLD_NONLOCAL'):
             _model_reply({'task': 'x'}, 'https://example.com/v1/chat/completions', 1)
 
+    def test_dispatcher_submit_poll_is_task_bound_and_never_replays(self):
+        # Exercise only the new persistent ABI with in-memory IPC; no model or
+        # child process is started by this focused contract check.
+        from collections import deque
+        from queue import Queue
+        from types import SimpleNamespace
+        import time
+
+        def worker_input(item):
+            raise AssertionError('worker_prepare belongs in the child')
+        worker_input.__module__ = 'owner_subagent_dispatcher'
+        claim = 'a' * 24
+        policy_sha = 'b' * 64
+        pid = 940
+        process = SimpleNamespace(pid=pid, alive=True)
+        process.is_alive = lambda: process.alive
+        pool = Subagents.__new__(Subagents)
+        pool.roles = ['runtime']
+        pool.timeout = 1
+        pool.worker_prepare = worker_input
+        pool._persistent = True
+        pool._abi_lock = threading.RLock()
+        pool.active = {}
+        pool.heartbeats = {}
+        pool._active_started = {}
+        pool._active_context = {}
+        pool._submitted_ids = set()
+        pool._terminal_ids = set()
+        pool._pending_events = deque()
+        pool.inboxes = {'runtime': Queue()}
+        pool.outbox = Queue()
+        pool.processes = {'runtime': process}
+        task = {'id': 'native-1', 'subagent': 'runtime', 'task': 'review',
+                'depends_on': [],
+                '_native_context': {'policy': {'path': '/owner/policy.md',
+                                               'sha256': policy_sha},
+                                    'operation': 'runtime', 'claim': claim}}
+        self.assertTrue(pool.submit(task))
+        self.assertEqual(pool.active, {'runtime': 'native-1'})
+        self.assertEqual(pool.inboxes['runtime'].get_nowait()['id'], 'native-1')
+        pool.outbox.put({'kind': 'HEARTBEAT', 'role': 'runtime', 'pid': pid,
+                         'at': time.time()})
+        observation = {'claim': claim,
+                       'policy_ack': {'sha256': policy_sha, 'full_file_read': True},
+                       'worker': {'pid': pid}}
+        pool.outbox.put({'kind': 'RESULT', 'role': 'runtime', 'pid': pid,
+                         'id': 'native-1', 'elapsed_ms': 4,
+                         'state': 'CANDIDATE_NOT_APPLIED', 'answer': 'candidate',
+                         'native_observation': observation})
+        event = pool.poll(timeout=0)
+        self.assertEqual(event['id'], 'native-1')
+        self.assertEqual(event['native_observation'], observation)
+        self.assertEqual(pool.active, {})
+        self.assertGreater(pool.heartbeats['runtime'], 0)
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TASK_REUSE'):
+            pool.submit(task)
+
+        task2 = {**task, 'id': 'native-2'}
+        self.assertTrue(pool.submit(task2))
+        self.assertEqual(pool.active, {'runtime': 'native-2'})
+        process.alive = False
+        failed = pool.poll(timeout=0)
+        self.assertEqual((failed['id'], failed['state']),
+                         ('native-2', 'HOLD_SUBAGENT_PROCESS_EXIT'))
+        self.assertEqual(pool.active, {})
+        self.assertIsNone(pool.poll(timeout=0))
+        with self.assertRaisesRegex(GateError, 'HOLD_SUBAGENT_TASK_REUSE'):
+            pool.submit(task2)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+

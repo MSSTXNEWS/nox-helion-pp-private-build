@@ -252,8 +252,10 @@ class V112Tests(unittest.TestCase):
     def test_one_oversized_sse_frame_is_still_rejected(self):
         self.bulk_sse='oversized'
         self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'SSE size limit','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-            json={'message':'oversized single frame'})
+            json={'message':'oversized single frame','dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
         self.assertFalse(any(f.get('saved') for f in frames))
@@ -429,33 +431,67 @@ class V112Tests(unittest.TestCase):
             {'role':'user','content':'Как он называется?'}])
         self.assertEqual(json.loads(response.text.splitlines()[-1])['type'],'done')
 
-    def test_dialog_context_is_recent_bounded_complete_pairs(self):
+    def test_dialog_context_holds_when_over_24_messages(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
+            _dialog_context,_save_exchange,
+        )
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Переполнение контекста','confirmed':True}).json()['dialog_id']
+        for index in range(13):
+            self.assertTrue(_save_exchange(dialog,f'Вопрос {index}',f'Ответ {index}',
+                                          f'overflow-{index}'))
+        issue,history=_dialog_context(dialog)
+        self.assertEqual(issue,'HOLD_HISTORY_LIMIT')
+        self.assertEqual(history,[])
+
+    def test_dialog_context_preserves_complete_pair_order_within_limit(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
+            _dialog_context,_save_exchange,
+        )
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Контекст в лимите','confirmed':True}).json()['dialog_id']
+        for index in range(12):
+            self.assertTrue(_save_exchange(dialog,f'Вопрос {index}',f'Ответ {index}',
+                                          f'within-limit-{index}'))
+        issue,history=_dialog_context(dialog)
+        self.assertIsNone(issue)
+        self.assertEqual(len(history),24)
+        self.assertEqual(history[0],{'role':'user','content':'Вопрос 0'})
+        self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 11'})
+        self.assertEqual(
+            [row['content'] for row in history],
+            [text for index in range(12)
+             for text in (f'Вопрос {index}',f'Ответ {index}')])
+
+    def test_dialog_context_holds_incomplete_pair_within_message_limit(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
             _db,_dialog_context,_save_exchange,
         )
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
-            json={'title':'Ограниченный контекст','confirmed':True}).json()['dialog_id']
-        for index in range(14):
+            json={'title':'Неполная пара','confirmed':True}).json()['dialog_id']
+        for index in range(11):
             self.assertTrue(_save_exchange(dialog,f'Вопрос {index}',f'Ответ {index}',
-                                          f'bounded-{index}'))
+                                          f'complete-{index}'))
         with _db(True) as db:
             db.execute('INSERT INTO nox_v29_dialog_messages '
                        '(dialog_id,exchange_id,role,content,ts) VALUES(?,?,?,?,?)',
                        (dialog,'orphan','assistant','Незавершённая пара','2026-11-15'))
         issue,history=_dialog_context(dialog)
-        self.assertIsNone(issue)
-        self.assertEqual(len(history),24)
-        self.assertEqual(history[0],{'role':'user','content':'Вопрос 2'})
-        self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 13'})
-        self.assertTrue(all(row['content']!='Незавершённая пара' for row in history))
-        for index in range(4):
-            self.assertTrue(_save_exchange(dialog,'😀'*8000,'😀'*9000,
+        self.assertEqual(issue,'HOLD_HISTORY_PAIR_INCOMPLETE')
+        self.assertEqual(history,[])
+
+    def test_dialog_context_holds_over_byte_budget(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
+            _dialog_context,_save_exchange,
+        )
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Байтовый лимит','confirmed':True}).json()['dialog_id']
+        for index in range(2):
+            self.assertTrue(_save_exchange(dialog,'😀'*8000,'Ответ '+('😀'*8000),
                                           f'large-{index}'))
         issue,history=_dialog_context(dialog)
-        self.assertIsNone(issue)
-        self.assertEqual(len(history),2)
-        self.assertLessEqual(sum(len(row['content'].encode('utf-8')) for row in history),121000)
-        self.assertTrue(all(len(row['content'])<=8000 for row in history))
+        self.assertEqual(issue,'HOLD_HISTORY_SIZE')
+        self.assertEqual(history,[])
 
     def test_dialog_context_keeps_owner_and_archive_guards(self):
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db
@@ -478,8 +514,10 @@ class V112Tests(unittest.TestCase):
 
     def test_no_fresh_s03_row_means_no_fake_done(self):
         self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Missing S03 receipt','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-          json={'message':'Другой уникальный вопрос'})
+          json={'message':'Другой уникальный вопрос','dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1]['type'],'error')
         self.assertEqual(frames[-1]['error'],'HOLD_S03_COMMIT_NOT_VERIFIED')

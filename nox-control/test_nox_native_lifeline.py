@@ -21,6 +21,34 @@ def policy(*, enabled=True, restart=True):
     })
 
 class LifelineTests(unittest.TestCase):
+    def test_policy_json_duplicate_keys_and_nonfinite_are_rejected(self):
+        import json
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "owner-policy.json"
+            original = json.dumps(policy(enabled=False, restart=False))
+            path.write_text(original, encoding="utf-8")
+            self.assertFalse(lifeline.policy_load(path)["enabled"])
+            for bad in (
+                original.replace('"enabled": false',
+                                 '"enabled": false, "enabled": true', 1),
+                original.replace('"restart": false',
+                                 '"restart": false, "restart": true', 1),
+                original.replace('"daily_limit": 2',
+                                 '"daily_limit": 2, "daily_limit": 0', 1),
+                original.replace('"poll_seconds": 60',
+                                 '"poll_seconds": NaN', 1),
+                original.replace('"poll_seconds": 60',
+                                 '"poll_seconds": Infinity', 1),
+                original.replace('"poll_seconds": 60',
+                                 '"poll_seconds": 1e309', 1),
+            ):
+                with self.subTest(bad=bad):
+                    self.assertNotEqual(bad, original)
+                    path.write_text(bad, encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "HOLD_POLICY_CORRUPT"):
+                        lifeline.policy_load(path)
+                    self.assertEqual(path.read_text(encoding="utf-8"), bad)
+
     def state(self, directory):
         return {"_path": Path(directory) / "state.json", "services": {}}
 
@@ -226,6 +254,30 @@ class LifelineTests(unittest.TestCase):
             self.assertEqual(commands, ["status", "status"])
             self.assertFalse(Path(d, "state.json").exists())
 
+
+    def test_supervisor_rc3_exact_stop_is_observed_but_never_automatically_started_when_disabled(self):
+        with patch.object(lifeline.subprocess, "run") as cmd:
+            cmd.return_value.returncode = 3
+            cmd.return_value.stdout = "nox-dispatcher-t855u STOPPED Not started\\n"
+            self.assertEqual(lifeline.supervise("nox-dispatcher-t855u"),
+                             {"state":"STOPPED","pid":None,"rc":3})
+        with tempfile.TemporaryDirectory() as d:
+            state = self.state(d)
+            calls = []
+            def observe(name, command="status"):
+                calls.append(command)
+                return {"state":"STOPPED","pid":None,"rc":3}
+            for i in range(3):
+                lifeline.tick(policy(enabled=False, restart=False), state, now=100+i,
+                              status_fn=observe, stop_fn=lambda:True)
+            self.assertNotIn("start", calls)
+
+    def test_supervisor_rc3_cannot_admit_running_or_fatal(self):
+        for row in ("RUNNING pid 123, uptime 0:01", "FATAL", "STOPPED pid 987"):
+            with self.subTest(row=row), patch.object(lifeline.subprocess, "run") as cmd:
+                cmd.return_value.returncode = 3
+                cmd.return_value.stdout = "nox-dispatcher-t855u " + row + "\\n"
+                self.assertEqual(lifeline.supervise("nox-dispatcher-t855u")["state"], "UNKNOWN")
 
     def test_nonzero_supervisorctl_status_cannot_start_any_service(self):
         with tempfile.TemporaryDirectory() as d:

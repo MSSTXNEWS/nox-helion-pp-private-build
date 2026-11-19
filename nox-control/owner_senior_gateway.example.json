@@ -1,6 +1,6 @@
 {
   "schema": "NOX_OWNER_SENIOR_CONFIG_V1",
-  "enabled": true,
+  "enabled": false,
   "providers": ["openai", "anthropic", "google"],
   "minimum_verified_providers": 1,
   "allowed_handlers": [

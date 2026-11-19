@@ -108,6 +108,93 @@ class InstallerTests(unittest.TestCase):
                 self.assertEqual(n.info("nox-dispatcher-t855u"),
                                  {"state": "UNKNOWN", "pid": None})
 
+    def test_idempotent_lifeline_requires_exact_complete_existing_bundle(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            expected = tuple((root / name, content) for name, content in
+                             (("guard.py", b"read-only"), ("policy.json", b"disabled"),
+                              ("guard.conf", b"supervisor")))
+            self.assertFalse(n.check_existing_installation(expected))
+            expected[0][0].write_bytes(expected[0][1])
+            with self.assertRaisesRegex(RuntimeError, "PARTIAL_INSTALL"):
+                n.check_existing_installation(expected)
+            for path, data in expected[1:]:
+                path.write_bytes(data)
+            self.assertTrue(n.check_existing_installation(expected))
+            expected[2][0].write_bytes(b"other-owner-policy")
+            with self.assertRaisesRegex(RuntimeError, "EXISTING_INSTALL_SOURCE_MISMATCH"):
+                n.check_existing_installation(expected)
+            self.assertEqual(expected[2][0].read_bytes(), b"other-owner-policy")
+
+    def test_existing_mismatch_reports_hashes_not_private_contents(self):
+        with tempfile.TemporaryDirectory() as d:
+            files = [(Path(d) / n, b"expected") for n in ("script.py", "policy.json", "guard.conf")]
+            for path, raw in files:
+                path.write_bytes(raw)
+            files[1][0].write_bytes(b"very-private-different-policy")
+            with patch.object(n, "emit") as emit:
+                with self.assertRaisesRegex(RuntimeError, "EXISTING_INSTALL_SOURCE_MISMATCH"):
+                    n.check_existing_installation(files)
+                report = emit.call_args.args[0]
+                self.assertEqual(report["state"], "HOLD_EXISTING_LIFELINE_DIFF")
+                self.assertTrue(report["changes_not_applied"])
+                self.assertEqual([x["name"] for x in report["existing_source_fingerprints_only"]],
+                                 ["policy.json"])
+                self.assertNotIn("very-private", str(report))
+                self.assertEqual(files[1][0].read_bytes(), b"very-private-different-policy")
+
+    def test_exact_legacy_script_upgrade_preserves_prior_file_until_backup(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"nox_native_lifeline.py"
+            old=b"known-old-source"
+            new=b"reviewed-new-source"
+            p.write_bytes(old)
+            with self.assertRaisesRegex(RuntimeError,"HOLD_LIFELINE_LEGACY_SCRIPT_CHANGED"):
+                n.replace_script_exact(p,b"not-old",new)
+            self.assertEqual(p.read_bytes(),old)
+            self.assertTrue(n.replace_script_exact(p,old,new))
+            self.assertEqual(p.read_bytes(),new)
+            self.assertEqual(p.stat().st_mode & 0o777,0o644)
+
+    def test_failed_migration_rolls_back_only_with_stopped_guard(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"nox_native_lifeline.py"
+            b=Path(d)/"backup.py"
+            old=b"known-owned-baseline"
+            new=b"verified-new-source"
+            p.write_bytes(new)
+            b.write_bytes(old)
+            with patch.object(n,"SCRIPT",p), patch.object(n,"MIGRATED_SCRIPT_BACKUP",b), \
+                 patch.object(n,"MIGRATED_SCRIPT_NEW_SHA",hashlib.sha256(new).hexdigest()), \
+                 patch.object(n,"LEGACY_LIFELINE_SHA256",hashlib.sha256(old).hexdigest()), \
+                 patch.object(n,"info",return_value={"state":"STOPPED","pid":None}), patch.object(n,"emit") as emit:
+                n.recover_legacy_script()
+                self.assertEqual(p.read_bytes(),old)
+                self.assertTrue(emit.called)
+            p.write_bytes(new)
+            with patch.object(n,"SCRIPT",p), patch.object(n,"MIGRATED_SCRIPT_BACKUP",b), \
+                 patch.object(n,"MIGRATED_SCRIPT_NEW_SHA",hashlib.sha256(new).hexdigest()), \
+                 patch.object(n,"LEGACY_LIFELINE_SHA256",hashlib.sha256(old).hexdigest()), \
+                 patch.object(n,"info",return_value={"state":"RUNNING","pid":22}):
+                with self.assertRaisesRegex(RuntimeError,"HOLD_LIFELINE_LEGACY_ROLLBACK_GUARD_ACTIVE"):
+                    n.recover_legacy_script()
+                self.assertEqual(p.read_bytes(),new)
+
+    def test_supervisor_rc3_exact_stopped_row_is_native_valid(self):
+        for state in ("STOPPED", "EXITED"):
+            with self.subTest(state=state), patch.object(n, "call", return_value=SimpleNamespace(
+                stdout=f"nox-dispatcher-t855u {state} Not started\\n", returncode=3)):
+                self.assertEqual(n.info("nox-dispatcher-t855u"),
+                                 {"state": state, "pid": None})
+
+    def test_supervisor_rc3_never_admits_running_error_or_pid(self):
+        for row in ("RUNNING pid 999", "FATAL", "STOPPED pid 99",
+                    "EXITED pid 10", "STOPPED Not started\\nevil RUNNING pid 12"):
+            with self.subTest(row=row), patch.object(n, "call", return_value=SimpleNamespace(
+                    stdout="nox-dispatcher-t855u " + row + "\\n", returncode=3)):
+                self.assertEqual(n.info("nox-dispatcher-t855u"),
+                                 {"state": "UNKNOWN", "pid": None})
+
     def test_supervisor_valid_rows_preserved(self):
         for state, tail, expected_pid in (
             ("RUNNING", "pid 321", 321),

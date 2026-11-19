@@ -110,11 +110,18 @@ def _stop_callback(TrainerCallback,stop_file:Path):
     class _NOXStopCallback(TrainerCallback):
         def __init__(self):
             self._last_save_at=time.monotonic()
+            self._first_update_pending=True
+            self._start_global_step=0
         def _check(self):
             if _stop_active(stop_file):
                 raise RuntimeError('HOLD_STOP_DURING_TRAINING')
         def on_train_begin(self,args,state,control,**kwargs):
-            self._check();self._last_save_at=time.monotonic();return control
+            self._check()
+            start=getattr(state,'global_step',None)
+            self._start_global_step=start if type(start) is int and start>=0 else 0
+            self._first_update_pending=True
+            self._last_save_at=time.monotonic()
+            return control
         def on_epoch_begin(self,args,state,control,**kwargs):
             self._check();return control
         def on_step_begin(self,args,state,control,**kwargs):
@@ -125,8 +132,12 @@ def _stop_callback(TrainerCallback,stop_file:Path):
             self._check()
             step=getattr(state,'global_step',None)
             total=getattr(state,'max_steps',None)
+            first_update=(type(step) is int and step>0 and self._first_update_pending
+                          and (step>self._start_global_step or step==1))
+            if first_update:
+                self._first_update_pending=False
             if type(step) is int and step>0 and (
-                step==1 or (type(total) is int and step>=total)
+                first_update or step==1 or (type(total) is int and step>=total)
                 or time.monotonic()-self._last_save_at>=300
             ):
                 control.should_save=True
@@ -139,6 +150,65 @@ def _stop_callback(TrainerCallback,stop_file:Path):
             self._check();self._last_save_at=time.monotonic();return control
     return _NOXStopCallback()
 
+
+def _claim_resume_submit(output:Path,resumed:dict,native:dict)->str:
+    """Persist an exclusive claim before training from one verified checkpoint.
+
+    A retried queue item cannot apply optimizer updates twice from the same
+    checkpoint. A partial or stale claim intentionally blocks automatic retry;
+    only a newly verified checkpoint can be resumed.
+    """
+    if output.is_symlink() or not output.is_dir():
+        raise RuntimeError('HOLD_RESUME_SUBMIT_OUTPUT')
+    if (not isinstance(resumed,dict) or
+        resumed.get('state')!='VERIFIED_SIGNED_FULL_OPTIMIZER_RESUME'):
+        raise RuntimeError('HOLD_RESUME_SUBMIT_UNVERIFIED')
+    checkpoint_value=resumed.get('checkpoint')
+    checkpoint_sha=resumed.get('checkpoint_sha256')
+    step=resumed.get('start_step')
+    if (not isinstance(checkpoint_value,str) or type(step) is not int or step<1
+            or not _SHA.fullmatch(str(checkpoint_sha))):
+        raise RuntimeError('HOLD_RESUME_SUBMIT_IDENTITY')
+    checkpoint=Path(checkpoint_value)
+    if (checkpoint.is_symlink() or checkpoint.parent!=output
+            or checkpoint.name!=f'checkpoint-{step}'):
+        raise RuntimeError('HOLD_RESUME_SUBMIT_SCOPE')
+    for key in ('student_base_sha256','train_dataset_sha256','holdout_dataset_sha256'):
+        if not _SHA.fullmatch(str(native.get(key))):
+            raise RuntimeError('HOLD_RESUME_SUBMIT_NATIVE_IDENTITY')
+    claim_path=output/f'NOX_V135_RESUME_CLAIM_{checkpoint_sha}.json'
+    payload={
+        'schema':'NOX_V135_RESUME_SUBMIT_CLAIM_V1',
+        'state':'CLAIMED_ONCE_BEFORE_TRAIN',
+        'checkpoint_path':str(checkpoint),
+        'checkpoint_sha256':checkpoint_sha,
+        'start_step':step,
+        'student_base_sha256':native['student_base_sha256'],
+        'train_dataset_sha256':native['train_dataset_sha256'],
+        'holdout_dataset_sha256':native['holdout_dataset_sha256'],
+        'claimed_at_unix':int(time.time()),
+    }
+    flags=os.O_WRONLY|os.O_CREAT|os.O_EXCL
+    flags|=getattr(os,'O_CLOEXEC',0)|getattr(os,'O_NOFOLLOW',0)
+    try:
+        fd=os.open(str(claim_path),flags,0o600)
+    except FileExistsError as ex:
+        raise RuntimeError('HOLD_DUPLICATE_RESUME_SUBMIT') from ex
+    try:
+        with os.fdopen(fd,'w',encoding='utf8') as file:
+            json.dump(payload,file,sort_keys=True,separators=(',',':'))
+            file.write('\n')
+            file.flush()
+            os.fsync(file.fileno())
+        dir_fd=os.open(str(output),os.O_RDONLY|getattr(os,'O_DIRECTORY',0))
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except Exception as ex:
+        # Keep any uncertain/partial claim: fail closed on automatic resubmit.
+        raise RuntimeError('HOLD_RESUME_SUBMIT_CLAIM_UNCERTAIN') from ex
+    return _file_sha(claim_path)
 
 def make_dataset(file:Path,tokenizer,max_len:int):
     from torch.utils.data import Dataset
@@ -303,13 +373,19 @@ def run(args)->dict:
     trainer.add_callback(_HoldoutBaselineCallback())
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_BEFORE_TRAIN')
+    resume_submit_claim_sha256=None
+    if resumed:
+        resume_submit_claim_sha256=_claim_resume_submit(out,resumed,native)
     result=trainer.train(resume_from_checkpoint=resumed['checkpoint'] if resumed else None)
     if not before:
         raise RuntimeError('HOLD_HOLDOUT_BASELINE_NOT_CAPTURED')
     if _stop_active(Path(args.stop_file)):
         raise RuntimeError('HOLD_STOP_AFTER_TRAIN')
     steps=trainer.state.global_step
-    if type(steps) is not int or steps<1 or (resumed and steps<=resumed['start_step']):
+    result_steps=getattr(result,'global_step',None)
+    optimizer_steps=(steps-expected_start_step if type(steps) is int else -1)
+    if (type(steps) is not int or type(result_steps) is not int
+            or result_steps!=steps or optimizer_steps<1):
         raise RuntimeError('HOLD_REAL_OPTIMIZER_STEP')
     after=trainer.evaluate(metric_key_prefix='holdout_after')
     if _stop_active(Path(args.stop_file)):
@@ -327,10 +403,16 @@ def run(args)->dict:
         'student_original_sha256':native['student_base_sha256'],
         'train_sha256':manifest['train_sha256'],
         'holdout_sha256':manifest['holdout_sha256'],
-        'optimizer_steps_actual':steps,'trainer_global_step':result.global_step,
+        'optimizer_steps_actual':optimizer_steps,
+        'trainer_global_step_before':expected_start_step,
+        'trainer_global_step_after':steps,
+        'trainer_result_global_step':result_steps,
+        'optimizer_step_delta_verified':True,
         'resumed_from_checkpoint':resumed['checkpoint'] if resumed else None,
         'resume_original_step':resumed['start_step'] if resumed else None,
         'resume_tree_sha256':resumed['checkpoint_sha256'] if resumed else None,
+        'resume_submit_claim_sha256':resume_submit_claim_sha256,
+        'resume_submit_policy':'ONE_CLAIM_PER_CHECKPOINT_TREE',
         'all_base_requires_grad':True,'uses_adapters':False,
         'deepspeed_zero3_cpu_offload':True,'gpu0_chat_untouched':True,
         'p0_existing_runtime_compat':p0_runtime,
@@ -348,7 +430,7 @@ def run(args)->dict:
     with record.open('x',encoding='utf8') as file:
         os.chmod(record,0o600);json.dump(receipt,file,sort_keys=True,indent=2);file.write('\n')
     return {'state':'LOCAL_OPTIMIZER_STEPS_NEED_OFFSITE_RESTORE',
-            'optimizer_steps_actual':steps,'active_model_changed':False,
+            'optimizer_steps_actual':optimizer_steps,'active_model_changed':False,
             'receipt_sha256':_file_sha(record)}
 
 def main():

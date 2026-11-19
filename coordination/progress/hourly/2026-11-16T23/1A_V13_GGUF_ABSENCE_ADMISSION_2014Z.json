@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_V13_1A_PREP_RECEIPT_V1",
+  "instructions_version": "0.0.6",
+  "at_utc": "2026-11-16T20:14:53.701Z",
+  "slot": "AUTO_1A",
+  "source_commit": "8865ed2d734ffbfac586bf561dcfe1a3fd82b41a",
+  "test_commit": "959a59350670f2dd967e1caf13109149c02177a8",
+  "manifest_commit": "f0d424a5b55219d390fb5681f1fc2c002a9f9545",
+  "source_blob": "7318a107fca0535f7f317a2bbc85d2da73f07f9e",
+  "test_blob": "003b583da9f029ffe820dbdee5ed1f34427d7dce",
+  "ci_source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43946595401",
+  "tests_passed": "36/36 source-only",
+  "bug": "Pinned DeepSeek inventory returned OK with all six files absent; now HOLD_MODEL_FILES_MISSING with no readback claims of payload SHA.",
+  "task_outcomes": [
+    {
+      "id": "V13-05",
+      "status": "SOURCE_TESTED_NATIVE_HOLD"
+    },
+    {
+      "id": "V13-10",
+      "status": "SOURCE_MANIFEST_UPDATED"
+    },
+    {
+      "id": "V13-01",
+      "status": "PRIOR_NATIVE_READ_ONLY_FRESH_LEASE_HOLD"
+    },
+    {
+      "id": "V13-02",
+      "status": "HOLD_INDEPENDENT_RESTORE"
+    },
+    {
+      "id": "V13-06",
+      "status": "HOLD_TP2_INFERENCE"
+    }
+  ],
+  "last_native_proof": {
+    "job_id": 133554647274,
+    "at_utc": "2026-11-16T19:31:00Z",
+    "owner_STOP": "PRESENT",
+    "primary_supervisors": "5 STOPPED",
+    "gpu_vram_mib": [
+      0,
+      0
+    ],
+    "root_total_bytes": 183609851904,
+    "root_free_bytes": 43158650880,
+    "writer_lease": "UNKNOWN"
+  },
+  "production": {
+    "installed": false,
+    "model_switched": false,
+    "native_downloaded_bytes": 0,
+    "native_deleted_bytes": 0,
+    "optimizer_updates": 0,
+    "s03_recalls": 0,
+    "restarts": 0,
+    "stop_changed": false,
+    "schedules_changed": false
+  },
+  "next": "Owner-authorized native lease and independently restored S03/Genesis/checkpoint/optimizer/scaler/RNG; verified persistent seekable space >=248834257920 B plus reserve; SHA download and isolated Maya TP2 sm70 GPU proof before production."
+}

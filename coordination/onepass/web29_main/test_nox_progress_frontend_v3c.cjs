@@ -27,6 +27,21 @@ const stale=normalize({...data,generated_at:'2020-01-01T00:00:00Z',metrics:{ttft
 assert.equal(stale.liveFresh,false);assert.equal(stale.metrics.ttft_ms,null);
 assert.equal(nativeFresh({...data,generated_at:liveStamp},Date.parse(liveStamp)+121000),false);
 
+// V14-5-10: native RUNNING is only a live task indication while the owner feed is fresh.
+// A stale snapshot or a lost API refresh must fail closed without rewriting historical PASS.
+const nativeActive={id:'task-running',kind:'self_improvement',state:'active',
+ evidence:'native',at:liveStamp,title:'Task in flight',summary:'owner readback pending'};
+const liveActive=normalize({...data,generated_at:liveStamp,events:[nativeActive]});
+assert.equal(liveActive.events[0].state,'active','fresh native in-flight state remains visible');
+const staleActive=normalize({...data,generated_at:'2020-01-01T00:00:00Z',events:[nativeActive]});
+assert.equal(staleActive.events[0].state,'unknown','stale native task must not display RUNNING');
+const offlineActive=expireNative(liveActive);
+assert.equal(offlineActive.liveFresh,false);
+assert.equal(offlineActive.events[0].state,'unknown','lost owner feed clears RUNNING appearance');
+assert.equal(liveActive.events[0].state,'active','expiration must not mutate earlier readback');
+assert.match(content,/state\.data=expireNative\(state\.data\);renderMetrics\(\);renderEvents\(\);renderHours\(\)/,
+ 'offline fallback must re-render task and hour cards, not just GPU metrics');
+
 const weightProof={receipt_sha256:A,step_before:3,step_after:6,successful_optimizer_updates:2,tensor_before:'b'.repeat(64),tensor_after:'c'.repeat(64),checkpoint_sha256:'d'.repeat(64)};
 const verifiedWeights=normalize({...data,generated_at:liveStamp,metrics:{ttft_ms:300,gpu0_percent:40},
  events:[{id:'native-weight',kind:'weights',state:'verified',evidence:'native',at:liveStamp,title:'Checkpoint',proof:weightProof}],
@@ -53,6 +68,8 @@ assert.equal(disconnected.metrics.ttft_ms,null);
 assert.equal(disconnected.metrics.gpu0_percent,null);
 assert.equal(nativeGroupValue(disconnected,'weights'),null);
 assert.equal(verifiedWeights.metrics.ttft_ms,300); // historical object never modified
+assert.equal(expireNative(verifiedWeights).events[0].state,'verified',
+ 'historical SHA-gated PASS must survive transient disconnect');
 assert.match(content,/if\(e\.status===401\|\|e\.status===403\).*detailBody.*replaceChildren/); // revoke owner details
 
 const forgedAggregate=normalize({...data,generated_at:liveStamp,events:verifiedWeights.events,
@@ -93,3 +110,72 @@ assert.match(content,/выборка неполная/); // explicit user-facing
 assert.match(content,/Событий больше 5000/);
 
 console.log('PASS source regressions: bounded 5000-event window, S03 HOLD, aggregate truthfulness and owner isolation');
+
+
+// NOX_V14_DELAYED_CHAT_DOCK: original chat can mount after DOMContentLoaded.
+const dockCode=fs.readFileSync(__dirname+'/site/nox-evolution-dock.js','utf8');
+function dockFixture(late=false,foreignOrigin=false){
+ const elements=[],observers=[],listeners={},scheduled=[];
+ let composer=null;
+ function element(tag){
+   const node={tag,id:null,hidden:false,dataset:{},style:{},children:[],attributes:{},
+     classList:{add(){}},append(...items){this.children.push(...items);},
+     setAttribute(k,v){this.attributes[k]=v;},addEventListener(){},querySelector(){return null;},
+     focus(){},remove(){},getBoundingClientRect(){return {top:50,bottom:100}}};
+   elements.push(node);return node;
+ }
+ const region=element('main');
+ function attachComposer(){
+   composer=element('form');composer.id='chatForm';composer.parentElement=region;
+   composer.insertAdjacentElement=()=>{};
+ }
+ if(!late)attachComposer();
+ const doc={
+   currentScript:{src:'https://nox.test/nox-web-v29/nox-evolution-dock.js'},
+   head:{append(){}},body:{dataset:{page:'chat'}},readyState:'complete',
+   activeElement:{focus(){}},createElement:element,
+   getElementById(id){return elements.find(node=>node.id===id)||null;},
+   querySelector(selector){return selector.startsWith('.v24-main')?region:null;}
+ };
+ class ScopedObserver{
+   constructor(callback){this.callback=callback;this.disconnected=false;observers.push(this);}
+   observe(){}disconnect(){this.disconnected=true;}
+ }
+ const win={addEventListener(type,callback){
+   (listeners[type]??=[]).push(callback);
+ }};
+ vm.runInNewContext(dockCode,{
+   window:win,document:doc,URL,MutationObserver:ScopedObserver,
+   location:{origin:foreignOrigin?'https://foreign.test':'https://nox.test'},
+   setTimeout(callback,ms){scheduled.push({callback,ms});}
+ },{filename:'nox-evolution-dock.js'});
+ function count(){return elements.filter(node=>node.id==='nox-evolution-dock').length;}
+ function mutation(){for(const observer of observers)if(!observer.disconnected)observer.callback();}
+ return {win,doc,observers,listeners,scheduled,count,mutation,attachComposer};
+}
+const earlyDock=dockFixture();
+assert.equal(earlyDock.count(),1,'synchronous original composer must remain supported');
+assert.equal(earlyDock.observers.length,0,'no background observer after early attach');
+const lateDock=dockFixture(true);
+assert.equal(lateDock.count(),0,'must not create a second chat UI while composer absent');
+assert.equal(lateDock.observers.length,1,'exactly one bounded observer while pending');
+lateDock.attachComposer();lateDock.mutation();
+assert.equal(lateDock.count(),1,'original progress dock attaches to late composer');
+assert.equal(lateDock.observers[0].disconnected,true,'observer must stop after attach');
+lateDock.mutation();
+assert.equal(lateDock.count(),1,'no duplicated dock on later DOM mutations');
+assert.equal(lateDock.win.NoxEvolutionDock.diagnostics().modelCalls,0,'no model call');
+assert.equal(lateDock.scheduled.length,1);
+assert.equal(lateDock.scheduled[0].ms,12000,'bounded 12-second observation');
+const timeoutDock=dockFixture(true);
+timeoutDock.scheduled[0].callback();
+assert.equal(timeoutDock.observers[0].disconnected,true,'no endless observer');
+timeoutDock.attachComposer();timeoutDock.mutation();
+assert.equal(timeoutDock.count(),0,'timeout does not silently create a new UI');
+const leaveDock=dockFixture(true);
+for(const callback of leaveDock.listeners.pagehide||[])callback();
+assert.equal(leaveDock.observers[0].disconnected,true,'navigation releases observer');
+const wrongOriginDock=dockFixture(true,true);
+assert.equal(wrongOriginDock.observers.length,0,'cross-origin asset is never bound');
+assert.equal(wrongOriginDock.count(),0);
+console.log('PASS NOX_V14_DELAYED_CHAT_DOCK: late/early composer, idempotence, bounded lifecycle, origin');

@@ -21,10 +21,45 @@ def module(name):
     return value
 
 mentor = module('owner_dispatcher_mentor')
+autonomy = module('owner_autonomy_pool')
 FIXTURE = Path('/tmp/nox_native_sources/nox_dispatcher_t855u.py')
 
 
 class MentorTests(unittest.TestCase):
+    def setUp(self):
+        class NativeGate:
+            def __init__(self):
+                self.read_calls = 0
+                self.ns = {}
+
+            def read_resource_snapshot(self):
+                self.read_calls += 1
+                snapshot = {
+                    'native_verified': True, 'instance_id': 60509551,
+                    'stop_active': False, 'source_sha_verified': True,
+                    'owner_scope_verified': True, 'task_status': {},
+                    'cgroup_memory_ratio': 0.1,
+                    'cgroup_memory_working_set_bytes': 1024,
+                    'cgroup_memory_inactive_file_bytes': 0,
+                    'cpu_pressure': 0.0, 'io_pressure': 0.0,
+                    'disk_free_ratio': 0.5, 'disk_free_bytes': 2 * 1024**3,
+                    'gpu_available': False, 'resource_admission_allowed': True,
+                    'resource_admission_observed_at': time.time(),
+                }
+                snapshot['resource_admission_snapshot_sha256'] = autonomy.fingerprint(snapshot)
+                return snapshot
+
+        native = NativeGate()
+        native.ns.update({'_nox_owner_autonomy_native': native,
+                          '_owner_lifecycle_bound': True})
+        dispatcher = type('BoundDispatcher', (), {})()
+        dispatcher._BOUND = native
+        dispatcher.autonomy = autonomy
+        self.advisor_native = native
+        self._advisor_binding = patch.dict(
+            sys.modules, {'owner_subagent_dispatcher': dispatcher})
+        self._advisor_binding.start()
+        self.addCleanup(self._advisor_binding.stop)
     def test_stop_active_fails_closed_on_state_aliases_and_dangling_flags(self):
         """Mirror canonical owner state STOP aliases; a broken symlink is still STOP."""
         with tempfile.TemporaryDirectory() as directory, patch.object(mentor, 'ROOT', Path(directory)):
@@ -119,14 +154,232 @@ class MentorTests(unittest.TestCase):
             self.assertTrue(mentor.reserve_incident(incident))
             self.assertFalse(mentor.reserve_incident(incident))
 
+    def test_failure_consultation_survives_restart_and_logs_are_bounded(self):
+        config = {'model': 'senior', 'config_sha256': 'a' * 64}
+        advice = {'action': 'retry_task', 'reason_code': 'timeout', 'service': None}
+        class Response:
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self, size):
+                return json.dumps({'choices': [{'message': {'content': json.dumps(advice)}}]}).encode()
+        class Opener:
+            def open(self, request, timeout):
+                self.request = request
+                return Response()
+        opener = Opener()
+        with patch.object(mentor.urllib.request, 'build_opener', return_value=opener):
+            mentor.consult({'model': 'senior', 'endpoint': 'http://127.0.0.1:9000/v1/chat/completions'},
+                           {'allowed_services': []}, idempotency_key='b' * 64)
+        self.assertEqual(opener.request.get_header('Idempotency-key'), 'b' * 64)
+        self.assertEqual(self.advisor_native.read_calls, 1)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            task = {'id': 'durable-advisor', 'handler': 'verify_q4',
+                    'retries': 1, 'max_retries': 3}
+            with patch.object(mentor, 'ROOT', root), patch.object(mentor, 'stop_active', return_value=False), \
+                    patch.object(mentor, 'discover_senior', return_value=config), \
+                    patch.object(mentor, 'consult', return_value=advice) as first_consult:
+                first = mentor.on_failure(task, 'timeout')
+                self.assertEqual(first['state'], 'READ_ONLY_RETRY_SCHEDULED')
+                first_consult.assert_called_once()
+                self.assertEqual(self.advisor_native.read_calls, 2)
+            restarted = module('owner_dispatcher_mentor')
+            repeated_task = {'id': 'durable-advisor', 'handler': 'verify_q4',
+                             'retries': 1, 'max_retries': 3}
+            with patch.object(restarted, 'ROOT', root), patch.object(restarted, 'stop_active', return_value=False), \
+                    patch.object(restarted, 'discover_senior', return_value=config), \
+                    patch.object(restarted, 'consult') as repeated_consult:
+                repeated = restarted.on_failure(repeated_task, 'timeout')
+                self.assertEqual(repeated['state'], 'BLOCKED_DUPLICATE_CONSULTATION')
+                self.assertTrue(repeated['consultation_reused'])
+                repeated_consult.assert_not_called()
+                incident = repeated['incident']
+                stored = json.loads((root / 'memory/dispatcher_mentor/incidents' / (incident + '.json')).read_text())
+                self.assertEqual(stored['completed']['advice'], advice)
+
+    def test_advisor_consult_holds_without_bound_native_resource_gate(self):
+        config = {'model': 'senior', 'config_sha256': 'a' * 64}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(mentor, 'ROOT', Path(directory)), \
+                    patch.object(mentor, 'stop_active', return_value=False), \
+                    patch.object(mentor, 'discover_senior', return_value=config), \
+                    patch.object(mentor, 'consult') as consult, \
+                    patch.object(mentor, 'reserve_incident') as reserve, \
+                    patch.dict(sys.modules, {'owner_subagent_dispatcher': None}):
+                task = {'id': 'unbound-resource-gate', 'handler': 'verify_q4',
+                        'retries': 0, 'max_retries': 3}
+                result = mentor.on_failure(task, 'timeout')
+                self.assertEqual(result['state'], 'BLOCKED_RESOURCE_ADMISSION')
+                self.assertEqual(result['resource_admission_hold'],
+                                 'HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+                self.assertEqual(task['status'], 'blocked')
+                reserve.assert_not_called()
+                consult.assert_not_called()
+
+    def test_senior_remote_and_credentialed_endpoints_hold_before_network(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(mentor, 'ROOT', Path(directory)), \
+                patch.dict(os.environ, {}, clear=True):
+            root = Path(directory)
+            config_path = root / 'config/senior_model.json'
+            config_path.parent.mkdir(parents=True)
+            remote = {'enabled': True, 'role': 'senior', 'base_url': 'https://api.example.invalid/v1',
+                      'model': 'remote-senior', 'api_key_env': 'NOX_TEST_PROVIDER_KEY'}
+            config_path.write_text(json.dumps(remote))
+            self.assertIsNone(mentor.discover_senior())
+            with patch.object(mentor.urllib.request, 'build_opener') as opener:
+                with self.assertRaisesRegex(RuntimeError, 'BLOCKED_SENIOR_ENDPOINT'):
+                    mentor.consult({'endpoint': 'https://api.example.invalid/v1/chat/completions',
+                                    'model': 'remote-senior', '_key': None},
+                                   {'allowed_services': []}, idempotency_key='c' * 64)
+                opener.assert_not_called()
+
+            local_with_credential = dict(remote, base_url='http://127.0.0.1:9000/v1',
+                                          api_key_env='NOX_TEST_PROVIDER_KEY')
+            config_path.write_text(json.dumps(local_with_credential))
+            self.assertIsNone(mentor.discover_senior())
+
+            local = {'enabled': True, 'role': 'senior', 'base_url': 'http://127.0.0.1:9000/v1',
+                     'model': 'local-senior'}
+            config_path.write_text(json.dumps(local))
+            discovered = mentor.discover_senior()
+            self.assertIsNotNone(discovered)
+            self.assertIsNone(discovered['_key'])
+            with patch.dict(sys.modules, {'owner_subagent_dispatcher': None}), \
+                    patch.object(mentor.urllib.request, 'build_opener') as opener:
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_ADVISOR_RESOURCE_GATE_UNBOUND'):
+                    mentor.consult(discovered, {'allowed_services': []}, idempotency_key='d' * 64)
+                opener.assert_not_called()
+
+    def test_event_log_hard_cap_holds_without_valid_cursor_and_quarantine_compacts(self):
+        for cursor_state in ('missing', 'malformed'):
+            with self.subTest(cursor_state=cursor_state), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                event_path = root / 'memory/dispatcher_mentor/events.jsonl'
+                event_path.parent.mkdir(parents=True)
+                prior = json.dumps({'schema': 'NOX_DISPATCHER_MENTOR_V1', 'kind': 'retained',
+                                    'payload': 'x' * 700}, sort_keys=True) + '\n'
+                event_path.write_text(prior)
+                cursor_path = root / 'state/owner_events/journal_cursor.json'
+                if cursor_state == 'malformed':
+                    cursor_path.parent.mkdir(parents=True)
+                    cursor_path.write_text('{broken')
+                before = event_path.read_bytes()
+                with patch.object(mentor, 'ROOT', root), patch.object(mentor, 'EVENT_LOG_MAX_BYTES', 1024):
+                    with self.assertRaisesRegex(RuntimeError, 'HOLD_JOURNAL_RETENTION_PENDING'):
+                        mentor.journal('new_event', payload='y' * 300)
+                    self.assertEqual(event_path.read_bytes(), before)
+                    quarantine = root / 'memory/dispatcher_mentor/quarantine.jsonl'
+                    for index in range(80):
+                        mentor.append_bounded_json(quarantine, {'kind': 'bounded_probe', 'index': index,
+                                                               'payload': 'y' * 40}, 1024)
+                    self.assertLessEqual(quarantine.stat().st_size, 1024)
+                    self.assertIn('"index": 79', quarantine.read_text())
+
     def test_no_senior_config_means_explicit_block_and_no_fake_consult(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'consult') as call:
             task = {'id': 'fixture', 'handler': 'verify_q4', 'retries': 1, 'max_retries': 3}
             result = mentor.on_failure(task, 'file missing')
-            self.assertEqual(result['state'], 'BLOCKED_SENIOR_NOT_CONFIGURED')
+            self.assertEqual(result['state'], 'BLOCKED_SENIOR_NOT_CONFIGURED_OR_UNSAFE')
             self.assertEqual(task['status'], 'blocked')
+            self.assertTrue(result['needs_owner_input'])
+            self.assertEqual(result['owner_question_code'], 'missing_file')
+            self.assertTrue(result['owner_question'])
             call.assert_not_called()
             self.assertTrue((Path(root) / 'memory/dispatcher_mentor/events.jsonl').exists())
+
+    def test_native_rc3_stopped_is_valid_negative_service_evidence(self):
+        from types import SimpleNamespace
+        for state in ("STOPPED", "EXITED"):
+            with self.subTest(state=state), patch.object(mentor.subprocess, "run",
+                 return_value=SimpleNamespace(returncode=3,
+                     stdout=f"nox-priority-scheduler {state} Not started\\n")):
+                self.assertEqual(mentor.service_state("nox-priority-scheduler"),
+                                 {"state":state,"pid":None})
+        for bad in ("RUNNING pid 42", "STOPPED pid 23", "FATAL", "STOPPED pid wrong"):
+            with self.subTest(bad=bad), patch.object(mentor.subprocess, "run",
+                 return_value=SimpleNamespace(returncode=3,
+                     stdout=f"nox-priority-scheduler {bad}\\n")):
+                self.assertEqual(mentor.service_state("nox-priority-scheduler")["state"], "UNKNOWN")
+
+    def test_holdout_regression_is_a_separate_nonretryable_owner_hold(self):
+        self.assertEqual(mentor.error_category("HOLDOUT_REGRESSION: two evaluations worse"), "training_regression")
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
+            with patch.object(mentor, 'stop_active', return_value=False), patch.object(mentor, 'discover_senior', return_value=None):
+                task={'id':'training-regression','handler':'holdout_gate','retries':0}
+                result=mentor.on_failure(task,'HOLDOUT_REGRESSION')
+                self.assertEqual(task['status'],'blocked')
+                self.assertEqual(result['owner_question_code'],'training_regression')
+                self.assertFalse(result.get('auto_retry',False))
+                self.assertIn('checkpoint',result['owner_question'])
+
+    def test_no_senior_transient_readonly_is_retried_once_with_durable_budget(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
+            with patch.object(mentor, 'stop_active', return_value=False), patch.object(mentor, 'discover_senior', return_value=None):
+                task = {'id': 'read-only-status', 'handler': 'verify_q4', 'retries': 0, 'max_retries': 3}
+                first = mentor.on_failure(task, 'connection timed out')
+                self.assertEqual(first['state'], 'BOUNDED_READ_ONLY_RETRY_NO_SENIOR')
+                self.assertEqual(task['status'], 'pending')
+                self.assertGreater(task['next_try'], time.time())
+                second = mentor.on_failure(task, 'connection timed out')
+                self.assertEqual(second['state'], 'BLOCKED_SENIOR_NOT_CONFIGURED_OR_UNSAFE')
+                self.assertEqual(task['status'], 'blocked')
+                ledger = list((Path(root) / 'memory/dispatcher_mentor/incidents').glob('*.json'))
+                self.assertEqual(len(ledger), 1)
+                self.assertEqual(json.loads(ledger[0].read_text())['attempts'], 1)
+
+    def test_no_senior_never_autoretries_mutating_work_or_active_stop(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'discover_senior', return_value=None):
+            for handler, stopping in (('exec_plan', False), ('start_qlora', False), ('new_gguf', False), ('verify_q4', True)):
+                with self.subTest(handler=handler, stop=stopping), patch.object(mentor, 'stop_active', return_value=stopping):
+                    task = {'id': 'unsafe-' + handler, 'handler': handler, 'retries': 0}
+                    result = mentor.on_failure(task, 'connection timed out')
+                    self.assertEqual(task['status'], 'blocked')
+                    self.assertFalse(result.get('auto_retry', False))
+
+    def test_existing_dispatcher_periodic_reciprocal_task_never_duplicates_or_replays_hold(self):
+        import inspect
+        import threading
+        from types import SimpleNamespace
+        transform = ast.parse(inspect.getsource(mentor.transform_dispatcher))
+        replacements = [n for n in ast.walk(transform) if isinstance(n, ast.Call)
+                        and isinstance(n.func, ast.Name) and n.func.id == 'replace_function'
+                        and len(n.args) >= 3 and isinstance(n.args[1], ast.Constant)
+                        and n.args[1].value == 'ensure_watchdog_task']
+        self.assertEqual(len(replacements), 1)
+        source = replacements[0].args[2].value
+        compile(source, '<owner-periodic-watchdog>', 'exec')
+        clock = [1000.0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'scripts').mkdir()
+            (root / 'scripts/owner_dispatcher_reciprocal_health.py').write_text('# approved native fixture')
+            namespace = {'owner_mentor': SimpleNamespace(ROOT=root, service_state=lambda name: {'state':'RUNNING'}),
+                         '_qlock': threading.RLock(), 'time': SimpleNamespace(time=lambda: clock[0])}
+            exec(compile(source, '<owner-periodic-watchdog>', 'exec'), namespace)
+            tasks = {'tasks': {}}
+            namespace['ensure_watchdog_task'](tasks)
+            rid = 'owner.dispatcher_reciprocal_health'
+            self.assertEqual(tasks['tasks'][rid]['status'], 'pending')
+            self.assertEqual(tasks['tasks'][rid]['handler'], 'owner_component_validate')
+            self.assertEqual(tasks['tasks'][rid]['params']['component'], 'dispatcher_reciprocal_health')
+            tasks['tasks'][rid]['status'] = 'done'
+            clock[0] += 299
+            namespace['ensure_watchdog_task'](tasks)
+            self.assertEqual(tasks['tasks'][rid]['status'], 'done')
+            clock[0] += 2
+            namespace['ensure_watchdog_task'](tasks)
+            self.assertEqual(tasks['tasks'][rid]['status'], 'pending')
+            tasks['tasks'][rid]['status'] = 'blocked'
+            clock[0] += 600
+            namespace['ensure_watchdog_task'](tasks)
+            self.assertEqual(tasks['tasks'][rid]['status'], 'blocked')
+            tasks['tasks'][rid].update(status='done', last_rearm_epoch='bad')
+            namespace['ensure_watchdog_task'](tasks)
+            self.assertEqual(tasks['tasks'][rid]['status'], 'blocked')
+            self.assertEqual(tasks['tasks'][rid]['note'], 'HOLD_RECIPROCAL_REARM_EPOCH_INVALID')
+            self.assertEqual(sum(tid == rid for tid in tasks['tasks']), 1)
 
     def test_nox_chat_is_never_substituted_for_senior(self):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)):
@@ -139,7 +392,7 @@ class MentorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root, patch.object(mentor, 'ROOT', Path(root)), patch.object(mentor, 'discover_senior', return_value={'model': 'configured-senior', 'config_sha256': 'a' * 64}), patch.object(mentor, 'consult', return_value={'action': 'retry_task', 'reason_code': 'transient', 'service': None}) as call:
             task = {'id': 'fixture', 'handler': 'exec_plan', 'retries': 1, 'max_retries': 3}
             self.assertEqual(mentor.on_failure(task, 'timeout')['state'], 'BLOCKED_ESCALATED')
-            self.assertEqual(mentor.on_failure(task, 'timeout')['state'], 'BLOCKED_DUPLICATE_OR_CONSULT_BUDGET')
+            self.assertEqual(mentor.on_failure(task, 'timeout')['state'], 'BLOCKED_DUPLICATE_CONSULTATION')
             self.assertEqual(call.call_count, 1)
             context = call.call_args.args[1]
             self.assertNotIn('error_text', context)
@@ -212,6 +465,162 @@ class MentorTests(unittest.TestCase):
         self.assertNotIn('example-secret-value', output)
         self.assertNotIn('abcdef123456', output)
         self.assertNotIn('hf_abcdefghijklmnop', output)
+
+
+class VerifiedJournalRecallV14Tests(unittest.TestCase):
+    def test_reusable_repair_requires_exact_task_accepted_native_receipt(self):
+        lifecycle = module('owner_task_lifecycle')
+        schema = 'NOX_DISPATCHER_MENTOR_V1'
+        verified = {'kind': 'native_supervisor_running', 'service': 'nox-priority-scheduler'}
+        def event(kind, **fields):
+            return {'schema': schema, 'kind': kind, **fields}
+        with tempfile.TemporaryDirectory() as directory, patch.object(lifecycle, 'ROOT', Path(directory)):
+            path = Path(directory) / 'memory/dispatcher_mentor/events.jsonl'
+            path.parent.mkdir(parents=True)
+            rows = [
+                event('experience_verified', task_id='current', partition='train',
+                      accepted=True, verification=verified, dedup_sha256='a' * 64),
+                event('experience_verified', task_id='current', partition='holdout',
+                      accepted=False, verification=verified, dedup_sha256='b' * 64),
+                event('experience_verified', task_id='current', partition='train',
+                      accepted=False, verification=verified, dedup_sha256='c' * 64),
+                event('experience_verified', task_id='other', handler='shared',
+                      partition='train', accepted=True, verification=verified,
+                      dedup_sha256='d' * 64),
+                event('experience_verified', task_id='current', partition='train',
+                      accepted=True, verification={'kind': 'model_claim'},
+                      dedup_sha256='e' * 64),
+                event('experience_verified', task_id='current', partition='train',
+                      accepted=True, verification=verified, dedup_sha256='invalid'),
+                event('error_observed', task_id='other', handler='shared',
+                      category='timeout', accepted=False),
+                event('experience_quarantined', task_id='current', accepted=False),
+            ]
+            path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+            result = lifecycle.journal_recall({'id': 'current', 'handler': 'shared'})
+            self.assertEqual(result['state'], 'JOURNAL_RECALLED')
+            self.assertEqual(result['verified'], 1)
+            self.assertEqual(result['errors'], 1)
+            self.assertEqual(result['quarantined'], 1)
+            self.assertEqual(result['error_categories'], ['timeout'])
+            self.assertEqual(len(result['references_sha256']), 3)
+
+
+class SkillJournalReplayB49Tests(unittest.TestCase):
+    def test_replayed_success_does_not_inflate_skill_repetition_rank(self):
+        lifecycle = module('owner_task_lifecycle')
+        success = {'schema': 'NOX_DISPATCHER_MENTOR_V1',
+                   'kind': 'experience_verified', 'task_id': 'current',
+                   'partition': 'train', 'accepted': True,
+                   'verification': {'kind': 'native_supervisor_running',
+                                    'service': 'nox-priority-scheduler'},
+                   'dedup_sha256': 'a' * 64}
+        rows = [success, dict(success), {**success, 'timestamp': 'later'},
+                {**success, 'dedup_sha256': 'b' * 64}]
+        with tempfile.TemporaryDirectory() as directory, patch.object(lifecycle, 'ROOT', Path(directory)):
+            path = Path(directory) / 'memory/dispatcher_mentor/events.jsonl'
+            path.parent.mkdir(parents=True)
+            path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+            result = lifecycle.journal_recall({'id': 'current', 'handler': 'shared'})
+        self.assertEqual(result['verified'], 2)
+        self.assertEqual(len(result['references_sha256']), 2)
+        self.assertEqual(len(set(result['references_sha256'])), 2)
+
+    def test_rejected_copy_cannot_hide_later_verified_evidence(self):
+        lifecycle = module('owner_task_lifecycle')
+        valid = {'schema': 'NOX_DISPATCHER_MENTOR_V1',
+                 'kind': 'experience_verified', 'task_id': 'current',
+                 'partition': 'train', 'accepted': True,
+                 'verification': {'kind': 'native_gguf_header'},
+                 'dedup_sha256': 'c' * 64}
+        rows = [{**valid, 'accepted': False}, {**valid, 'partition': 'holdout'}, valid]
+        with tempfile.TemporaryDirectory() as directory, patch.object(lifecycle, 'ROOT', Path(directory)):
+            path = Path(directory) / 'memory/dispatcher_mentor/events.jsonl'
+            path.parent.mkdir(parents=True)
+            path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+            result = lifecycle.journal_recall({'id': 'current', 'handler': 'shared'})
+        self.assertEqual(result['verified'], 1)
+        self.assertEqual(len(result['references_sha256']), 1)
+
+
+class SharedOptimizationCacheV14Tests(unittest.TestCase):
+    def test_sibling_context_cache_respects_handler_params_and_failure(self):
+        """A parent claim cannot lend its optimization advice to a different task."""
+        lifecycle = module('owner_task_lifecycle')
+
+        class Gateway:
+            def __init__(self):
+                self.calls = []
+
+            def consult_plan(self, technical, deadline_seconds=2.0):
+                self.calls.append(technical.copy())
+                return {'state': 'CONSULTED', 'models_consulted': 1}
+
+        local = {'verified': 0, 'errors': 0, 'error_categories': []}
+        plan = {'mode': 'NORMAL'}
+        base = {'id': 'child-a', 'owner_parent_id': 'parent-123',
+                'owner_plan_id': 'plan-123', 'handler': 'verify_q4',
+                'params': {'operation': 'worker_verify'}, 'note': ''}
+        gateway = Gateway()
+        autonomy = module('owner_autonomy_pool')
+
+        class NativeGate:
+            def read_resource_snapshot(self):
+                snapshot = {
+                    'native_verified': True, 'instance_id': 60509551,
+                    'stop_active': False, 'source_sha_verified': True,
+                    'owner_scope_verified': True, 'task_status': {},
+                    'cgroup_memory_ratio': 0.1,
+                    'cgroup_memory_working_set_bytes': 1024,
+                    'cgroup_memory_inactive_file_bytes': 0,
+                    'cpu_pressure': 0.0, 'io_pressure': 0.0,
+                    'disk_free_ratio': 0.5, 'disk_free_bytes': 2 * 1024**3,
+                    'gpu_available': False,
+                    'resource_admission_allowed': True,
+                    'resource_admission_observed_at': time.time(),
+                }
+                snapshot['resource_admission_snapshot_sha256'] = autonomy.fingerprint(snapshot)
+                return snapshot
+        native = NativeGate()
+        dispatcher = type('BoundDispatcher', (), {})()
+        dispatcher.autonomy = autonomy
+        dispatcher._BOUND = native
+        resource_namespace = {
+            'owner_subagent_dispatcher': dispatcher,
+            '_nox_owner_autonomy_native': native,
+        }
+        with patch.object(lifecycle, 'semantic_recall', return_value={'state': 'HOLD_NATIVE'}), \
+             patch.object(lifecycle, 'technical_details',
+                          side_effect=lambda task, *_: {
+                              'task_intent': task['handler'],
+                              'operation': task['params']['operation'],
+                              'error_note': task.get('note', '')}):
+            lifecycle._CACHE.clear()
+            try:
+                first = lifecycle.shared_context(base, local, plan, gateway, resource_namespace)
+                sibling = {**base, 'id': 'child-b'}
+                repeated = lifecycle.shared_context(sibling, local, plan, gateway, resource_namespace)
+                self.assertTrue(repeated['cache_reused'])
+                self.assertEqual(first['context_sha256'], repeated['context_sha256'])
+                self.assertEqual(len(gateway.calls), 1)
+
+                variations = [
+                    {**base, 'handler': 'ensure_downloads'},
+                    {**base, 'params': {'operation': 'component:memory'}},
+                    {**base, 'note': 'CUDA out of memory'},
+                ]
+                for task in variations:
+                    result = lifecycle.shared_context(task, local, plan, gateway, resource_namespace)
+                    self.assertFalse(result['cache_reused'])
+                    self.assertNotEqual(result['context_sha256'], first['context_sha256'])
+                    self.assertEqual(result['technical_context']['task_intent'], task['handler'])
+                    self.assertEqual(result['technical_context']['operation'],
+                                     task['params']['operation'])
+                    self.assertEqual(result['technical_context']['error_note'],
+                                     task.get('note', ''))
+                self.assertEqual(len(gateway.calls), 4)
+            finally:
+                lifecycle._CACHE.clear()
 
 
 @unittest.skipUnless(FIXTURE.exists(), 'Requires retrieved pinned native dispatcher fixture')

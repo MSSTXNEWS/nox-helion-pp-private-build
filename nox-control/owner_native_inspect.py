@@ -64,6 +64,43 @@ def text(path, limit=20000):
         f.seek(max(0, p.stat().st_size-limit))
         return f.read(limit).decode(errors='replace')
 
+def storage_mount_metadata(mountinfo=None, statvfs=None):
+    """Bounded, read-only mount inventory; not a seek/write/owner-lease proof."""
+    if statvfs is None:
+        statvfs = os.statvfs
+    if mountinfo is None:
+        try:
+            mountinfo = Path('/proc/self/mountinfo').read_text(encoding='utf-8')[:500000]
+        except OSError:
+            return {'status':'UNKNOWN_MOUNTINFO','scope':'ALLOWLISTED_ONLY','mounts':[]}
+    roots = ('/', '/data', '/workspace', '/mnt', '/models', '/root/nox')
+    candidates = []
+    for line in mountinfo.splitlines()[:1024]:
+        if ' - ' not in line:
+            continue
+        left, right = line.split(' - ', 1)
+        fields, suffix = left.split(), right.split()
+        if len(fields) < 5 or not suffix:
+            continue
+        mount = re.sub(r'\\([0-7]{3})', lambda m:chr(int(m.group(1),8)), fields[4])
+        if mount not in roots and not any(mount.startswith(root + '/') for root in roots[1:]):
+            continue
+        fstype = suffix[0]
+        if fstype in ('proc','sysfs','tmpfs','devtmpfs','devpts','cgroup','cgroup2','mqueue','securityfs'):
+            continue
+        try:
+            v = statvfs(mount)
+            if v.f_blocks <= 0:
+                continue
+            candidates.append({'path':mount,'filesystem':fstype,'total_bytes':v.f_blocks*v.f_frsize,
+                               'free_bytes':v.f_bavail*v.f_frsize})
+        except (OSError, ValueError):
+            candidates.append({'path':mount,'filesystem':fstype,'status':'UNKNOWN_STATVFS'})
+        if len(candidates) >= 24:
+            break
+    return {'status':'READ_ONLY_MOUNT_METADATA','scope':'ALLOWLISTED_ONLY_NOT_EXHAUSTIVE',
+            'seekability':'NOT_TESTED','write_access':'NOT_TESTED','mounts':candidates}
+
 def hardware():
     out = {}
     for label, query in (('gpu','index,uuid,name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu'),('apps','pid,gpu_uuid,used_gpu_memory')):
@@ -72,6 +109,7 @@ def hardware():
         out[label] = {'rc':rc, 'rows':s.splitlines()[:40]}
     out['cgroup'] = {n:text('/sys/fs/cgroup/'+n, 6000) for n in ('memory.max','memory.high','memory.current','memory.stat','memory.events','cpu.max','cpu.stat')}
     out['disk'] = {p:dict(zip(('total','used','free'),shutil.disk_usage(p))) for p in ('/root/nox','/dev/shm') if Path(p).exists()}
+    out['mounts'] = storage_mount_metadata()
     out['cpu_affinity'] = len(os.sched_getaffinity(0))
     return out
 
@@ -87,9 +125,19 @@ def processes():
         try:
             argv=(p/'cmdline').read_bytes().decode(errors='replace').strip('\0').split('\0')
             if not argv or not argv[0]: continue
-            stat=(p/'stat').read_text().rsplit(') ',1)[1].split()
+            stat_raw=(p/'stat').read_text()
+            stat=stat_raw.rsplit(') ',1)[1].split()
+            if stat_raw.split(' (',1)[0] != p.name or not stat[19].isdigit():
+                continue
             env=dict(x.split('=',1) for x in (p/'environ').read_bytes().decode(errors='replace').split('\0') if '=' in x)
             status=(p/'status').read_text()
+            # /proc can recycle a PID between the first stat sample and the
+            # slower environ/status read. Never attribute a prior nvidia-smi
+            # VRAM row to a replacement process (or a disappearing task).
+            post_raw=(p/'stat').read_text()
+            post_stat=post_raw.rsplit(') ',1)[1].split()
+            if post_raw.split(' (',1)[0] != p.name or post_stat[19] != stat[19]:
+                continue
             row={'pid':int(p.name),'ppid':int(stat[1]),'state':stat[0],'starttime':stat[19], 'exe':os.path.basename(argv[0]),
                  'cuda':redact(env.get('CUDA_VISIBLE_DEVICES',''))[:150],
                  'proc_name':redact(env.get('PROC_NAME',''))[:150],
@@ -404,18 +452,68 @@ def parse_sftconfig_signature_probe(rc, output):
     return result
 
 
+def pinned_python_path_status(py, venv_root=Path('/root/venv_volta'),
+                              trusted_uid=0,
+                              system_dirs=(Path('/usr/bin'), Path('/usr/local/bin'))):
+    """Validate a pinned venv Python, including normal root-owned venv symlinks.
+
+    Only the known venv path and root-controlled executable targets are allowed.
+    Do not run a path that escaped into a writable directory. This is a
+    read-only metadata gate, not a writer lease or a CUDA/ABI acceptance.
+    """
+    if py != venv_root / 'bin' / 'python':
+        return 'HOLD_PINNED_NATIVE_PYTHON_PATH'
+    try:
+        for directory in (venv_root, venv_root / 'bin'):
+            metadata = directory.lstat()
+            if (not stat.S_ISDIR(metadata.st_mode) or
+                    metadata.st_uid != trusted_uid or metadata.st_mode & 0o022):
+                return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
+        config = venv_root / 'pyvenv.cfg'
+        config_stat = config.lstat()
+        if (not stat.S_ISREG(config_stat.st_mode) or
+                config_stat.st_uid != trusted_uid or
+                config_stat.st_mode & 0o022 or
+                config_stat.st_size > 65536):
+            return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
+        entry_stat = py.lstat()
+        if (entry_stat.st_uid != trusted_uid or
+                not (stat.S_ISLNK(entry_stat.st_mode) or
+                     stat.S_ISREG(entry_stat.st_mode))):
+            return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
+        resolved = py.resolve(strict=True)
+        target_stat = resolved.stat()
+        approved_local = (
+            resolved.parent == venv_root / 'bin' and
+            re.fullmatch(r'python(?:3(?:\.[0-9]{1,2})?)?', resolved.name) is not None)
+        approved_system = (
+            resolved.parent in system_dirs and
+            re.fullmatch(r'python3(?:\.[0-9]{1,2})?', resolved.name) is not None)
+        if (not (approved_local or approved_system) or
+                not stat.S_ISREG(target_stat.st_mode) or
+                not target_stat.st_mode & 0o111 or
+                target_stat.st_uid != trusted_uid or
+                target_stat.st_mode & 0o022):
+            return 'HOLD_PINNED_NATIVE_PYTHON_UNTRUSTED'
+    except (OSError, RuntimeError):
+        return 'HOLD_PINNED_NATIVE_PYTHON_MISSING'
+    return 'PINNED_NATIVE_PYTHON_TRUSTED'
+
+
 def pinned_sftconfig_signature_probe(py):
-    """Inspect original pinned Python without any model/optimizer construction."""
-    if (str(py) != '/root/venv_volta/bin/python' or
-            py.is_symlink() or not py.is_file()):
+    """Inspect the vetted venv interpreter, not its symlink spelling."""
+    admission = pinned_python_path_status(py)
+    if admission != 'PINNED_NATIVE_PYTHON_TRUSTED':
         return {'record': 'pinned_trl_sftconfig_signature',
                 'scope': 'READ_ONLY_SIGNATURE_NO_TRAINER',
-                'status': 'HOLD_PINNED_NATIVE_PYTHON_MISSING',
+                'status': admission,
                 'constructor_executed': False, 'optimizer_updates': 0}
     # Constructing SFTConfig() may initialise devices; inspect only its real
     # installed signature. A passed signature is not a live training test.
     code = """
-import inspect, importlib.metadata, json
+import inspect, importlib.metadata, json, os, sys
+if sys.version_info[:2] != (3, 12) or os.path.realpath(sys.prefix) != '/root/venv_volta':
+    raise RuntimeError('PINNED_VENV_INTERPRETER_IDENTITY_HOLD')
 from trl import SFTConfig
 required = %r
 parameters = inspect.signature(SFTConfig).parameters
@@ -433,10 +531,60 @@ print('NOX_SFTCONFIG_SIGNATURE=' + json.dumps({
     return parse_sftconfig_signature_probe(rc, output)
 
 
+
+def installed_package_versions_readback(py):
+    """Inspect metadata only in a trusted, isolated pinned venv; never import torch."""
+    status = pinned_python_path_status(py)
+    result = {'record': 'installed_package_versions', 'python': str(py),
+              'status': status, 'rc': None, 'versions': {},
+              'cuda_context_created': False, 'trainer_started': False}
+    if status != 'PINNED_NATIVE_PYTHON_TRUSTED':
+        return result
+    # The child checks actual version and sys.prefix, not only symlink ownership.
+    code = """
+import importlib.metadata as m, json, os, sys
+if sys.version_info[:2] != (3, 12) or os.path.realpath(sys.prefix) != '/root/venv_volta':
+    raise SystemExit('HOLD_PINNED_VENV_RUNTIME_IDENTITY')
+names = ['torch','transformers','accelerate','datasets','safetensors','peft',
+         'bitsandbytes','trl','deepspeed','psutil','nvidia-ml-py','sqlite-vec',
+         'playwright','pytest','ruff']
+versions = {}
+for name in names:
+    try:
+        versions[name] = m.version(name)
+    except m.PackageNotFoundError:
+        versions[name] = None
+print(json.dumps(versions, separators=(',', ':')))
+"""
+    rc, output = run([str(py), '-I', '-c', code], timeout=20)
+    result['rc'] = rc
+    if rc != 0 or len(output) > 16384:
+        result['status'] = 'HOLD_PACKAGE_METADATA_PROBE_FAILED'
+        return result
+    try:
+        versions = json.loads(output)
+    except (TypeError, ValueError):
+        result['status'] = 'HOLD_PACKAGE_METADATA_INVALID'
+        return result
+    names = ('torch','transformers','accelerate','datasets','safetensors',
+             'peft','bitsandbytes','trl','deepspeed','psutil','nvidia-ml-py',
+             'sqlite-vec','playwright','pytest','ruff')
+    if (not isinstance(versions, dict) or set(versions) != set(names) or
+            any(v is not None and
+                (not isinstance(v, str) or len(v) > 128 or
+                 not re.fullmatch(r'[0-9A-Za-z.+_!\\-]+', v))
+                for v in versions.values())):
+        result['status'] = 'HOLD_PACKAGE_METADATA_INVALID'
+        return result
+    result['status'] = 'READ_ONLY_VERSION_METADATA'
+    result['versions'] = versions
+    return result
+
+
 def controls():
     configs=supervisor_config()
     names=['train_qlora_35b_t866u.py','run_train_volta_t866u.sh',
-           'nox_autoscale_t877u.py','nox_dispatcher_t855u.py',
+           'nox_autoscale_t877u.py','owner_dispatcher_mentor.py','nox_dispatcher_t855u.py',
            'teacher_serve_t811u.sh','vram_guard_t829u.py','gpu_hang_watchdog_t865u.py']
     # Only exact training-service script references inside the known scripts root.
     for config in configs:
@@ -475,15 +623,11 @@ def controls():
         body=p.read_bytes();source=body.decode(errors='replace');safe=redact(source)
         rows.append({'record':'extension_source','path':str(p),'sha256':hashlib.sha256(body).hexdigest(),
                      'bytes':len(body),'source_redacted':safe!=source,'source':safe})
-    # Inventory package metadata without importing Torch or creating a CUDA context.
+    # Inventory package metadata only through the pinned interpreter fence.
+    # A symlink's is_file() is NOT authorization to execute it.
     py=Path('/root/venv_volta/bin/python')
-    if py.is_file():
-        code="import importlib.metadata as m,json; names=['torch','transformers','accelerate','datasets','safetensors','peft','bitsandbytes','trl','deepspeed','psutil','nvidia-ml-py','sqlite-vec','playwright','pytest','ruff']; d={};\nfor n in names:\n try:d[n]=m.version(n)\n except m.PackageNotFoundError:d[n]=None\nprint(json.dumps(d))"
-        rc,output=run([str(py),'-c',code],20)
-        try:versions=json.loads(output) if rc==0 else {}
-        except ValueError:versions={}
-        rows.append({'record':'installed_package_versions','python':str(py),'rc':rc,'versions':versions})
-        rows.append(pinned_sftconfig_signature_probe(py))
+    rows.append(installed_package_versions_readback(py))
+    rows.append(pinned_sftconfig_signature_probe(py))
     # Only filenames and selected nonsecret routing fields, never credentials.
     routes=[]
     for p in sorted((ROOT/'config').glob('*.json'))[:120]:

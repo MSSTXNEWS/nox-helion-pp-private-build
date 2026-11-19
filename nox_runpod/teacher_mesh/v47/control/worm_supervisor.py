@@ -256,6 +256,74 @@ def audit_native_queue(matrix, observations, *, now_unix: int, heartbeat_s: int=
     return result
 
 
+
+# Owner's newest rule: the 60 V46/R60 tasks are background obligations,
+# NOT 60 daemons and NEVER a reason to delay conversation or direct commands.
+# This is a pure admission decision. It starts/stops NOTHING and modifies
+# neither the canonical queue nor its STOP/lease/worker owner.
+BACKGROUND_POLICY = "NOX_CHAT_FIRST_BACKGROUND_V18"
+
+def recommend_background_admission(observations:Mapping)->dict:
+    """Propose a capacity ceiling for existing native queue workers.
+
+    On an active chat/direct request, reduce or suspend NEW background claims;
+    cooperative release of already running work remains the original OneHost's
+    responsibility. New optimizer jobs need an accepted replacement model,
+    exact resource lease, restorable checkpoint and no quality hold.
+    Missing evidence is a HOLD, not an invitation to silently resume Qwen.
+    """
+    base={"schema":BACKGROUND_POLICY, "native_mutations":0,
+          "new_worm_cpu_claims_max":0, "new_worm_gpu_claims_max":0,
+          "background_training_allowed":False, "chat_priority":"P0",
+          "direct_tasks_priority":"P0", "worm_priority":"P2",
+          "new_training_priority":"P3", "gpu0_reserved_for_chat":True,
+          "existing_jobs_killed":0, "stop_overridden":False}
+    if not isinstance(observations,Mapping):
+        return {**base,"state":"HOLD_BACKGROUND_NATIVE_OBSERVATIONS"}
+    if (observations.get("native_verified") is not True
+        or observations.get("s03_native_verified") is not True
+        or observations.get("stop_active") is not False
+        or observations.get("student_serving") is not True):
+        return {**base,"state":"HOLD_BACKGROUND_STOP_OR_MODEL_NOT_SERVING"}
+    chat=observations.get("chat_state")
+    recent=observations.get("chat_recent")
+    direct=observations.get("direct_tasks_pending",False)
+    if (chat not in ("idle","generating","streaming","thinking","connecting",
+                     "error","offline")
+        or type(recent) is not bool or type(direct) is not bool):
+        return {**base,"state":"HOLD_BACKGROUND_CHAT_OR_DIRECT_STATE"}
+    if direct:
+        return {**base,"state":"DIRECT_TASKS_FIRST","yield_background":True}
+    if chat!="idle":
+        # One very light pre-existing CPU monitor may continue; no new media
+        # or GPU work while the owner talks with NOX.
+        return {**base,"state":"CHAT_ACTIVE_LIGHT_BACKGROUND",
+                "new_worm_cpu_claims_max":1,"yield_background":True}
+    if recent:
+        return {**base,"state":"CHAT_RECENT_LOW_BACKGROUND",
+                "new_worm_cpu_claims_max":2,"yield_background":True}
+    # Chat is idle. Background knowledge/research can continue; user can
+    # interrupt. Explicit new-model release evidence gates weight training.
+    accepted=observations.get("new_model_release_verified") is True
+    learning=(accepted
+              and observations.get("quality_hold_active") is False
+              and observations.get("checkpoint_restorable") is True
+              and observations.get("gpu1_owner_lease") is True
+              and observations.get("gpu1_peak_verified") is True
+              and observations.get("gpu1_teacher_active") is False
+              and observations.get("gpu1_trainer_active") is False)
+    sleep=observations.get("owner_sleep_mode") is True
+    return {**base,
+       "state":("SLEEP_BACKGROUND_ADMITTED" if sleep else "IDLE_BACKGROUND_ADMITTED")
+               if accepted else "HOLD_NEW_MODEL_TRAINING_BACKGROUND_CPU_ONLY",
+       "new_worm_cpu_claims_max":6 if sleep else 4,
+       "new_worm_gpu_claims_max":1 if learning else 0,
+       "background_training_allowed":bool(learning),
+       "gpu_training_utilization_ceiling_percent":85 if learning else 0,
+       "yield_background":False,
+       "reason":"new_main_model_accepted" if accepted else "NEW_MAIN_NOT_ACCEPTED"}
+
+
 def release_evidence(*,old_source_sha:str,new_source_sha:str,
                      native_web_e2e:bool,quality_holdout_improved:bool,
                      backup_restorable:bool)->dict:

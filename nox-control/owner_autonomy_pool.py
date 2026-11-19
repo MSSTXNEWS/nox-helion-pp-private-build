@@ -13,6 +13,7 @@ import heapq
 import json
 import math
 import re
+import time
 from collections import deque
 from collections.abc import Mapping
 
@@ -23,6 +24,8 @@ ID = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
 SHA = re.compile(r'^[a-f0-9]{64}$')
 MAX_PAGE = 256
 MAX_PAGE_BYTES = 256 * 1024
+RESOURCE_ADMISSION_MAX_AGE_SECONDS = 5.0
+RESOURCE_ADMISSION_FUTURE_SKEW_SECONDS = 1.0
 
 
 class AutoHold(ValueError):
@@ -32,6 +35,40 @@ class AutoHold(ValueError):
 def fingerprint(obj):
     return sha256(json.dumps(obj, sort_keys=True, ensure_ascii=False,
                              separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+
+
+def verify_resource_admission(snapshot, *, now=None):
+    """Verify the native gate decision is fresh and bound to this exact snapshot."""
+    if not isinstance(snapshot, Mapping) or snapshot.get('resource_admission_allowed') is not True:
+        raise AutoHold('HOLD_RESOURCE_ADMISSION')
+    if (snapshot.get('native_verified') is not True
+            or snapshot.get('instance_id') != 60509551
+            or snapshot.get('stop_active') is not False
+            or snapshot.get('source_sha_verified') is not True
+            or snapshot.get('owner_scope_verified') is not True):
+        raise AutoHold('HOLD_RESOURCE_ADMISSION_IDENTITY')
+    observed_at = snapshot.get('resource_admission_observed_at')
+    if type(observed_at) not in (int, float) or not math.isfinite(observed_at):
+        raise AutoHold('HOLD_RESOURCE_ADMISSION_TIMESTAMP')
+    current_time = time.time() if now is None else now
+    if type(current_time) not in (int, float) or not math.isfinite(current_time):
+        raise AutoHold('HOLD_RESOURCE_ADMISSION_CLOCK')
+    age = current_time - observed_at
+    if (age > RESOURCE_ADMISSION_MAX_AGE_SECONDS
+            or age < -RESOURCE_ADMISSION_FUTURE_SKEW_SECONDS):
+        raise AutoHold('HOLD_RESOURCE_ADMISSION_STALE')
+    expected = snapshot.get('resource_admission_snapshot_sha256')
+    if not isinstance(expected, str) or SHA.fullmatch(expected) is None:
+        raise AutoHold('HOLD_RESOURCE_ADMISSION_SNAPSHOT')
+    payload = dict(snapshot)
+    payload.pop('resource_admission_snapshot_sha256', None)
+    try:
+        actual = fingerprint(payload)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise AutoHold('HOLD_RESOURCE_ADMISSION_SNAPSHOT') from exc
+    if actual != expected:
+        raise AutoHold('HOLD_RESOURCE_ADMISSION_SNAPSHOT')
+    return expected
 
 
 def _task(row, allowed_handlers):
@@ -184,6 +221,10 @@ def tick_existing_dispatcher(namespace, state, *, mode):
             or runtime.get('source_sha_verified') is not True
             or runtime.get('owner_scope_verified') is not True):
             return {'state':'HOLD_AUTONOMY_NATIVE_SNAPSHOT','jobs_started':0}
+        try:
+            verify_resource_admission(runtime)
+        except AutoHold as exc:
+            return {'state':str(exc),'jobs_started':0}
         tasks=([] if isinstance(catalog,Mapping) and catalog.get('schema')==SCHEMA
                and catalog.get('tasks')==[] else
                validate_submission(catalog,allowed_handlers=native.allowed_handlers())['ordered'])
@@ -232,7 +273,10 @@ def choose_ready(tasks, *, status, mode, memory_ratio, cpu_pressure=0.0,
         # Presence is authoritative even when an uncertain native claim has
         # status None. Distinguish absent from unresolved before any replay.
         if tid in status:continue   # never reenqueue known/unknown/running/done jobs
-        if any(status.get(d)!='done' for d in task['deps']): continue
+        # The verified native snapshot may use DONE or COMPLETED case variants.
+        # Only explicit successful terminals release DAG dependents; failures,
+        # cancellations and unresolved claims must never unlock new work.
+        if any(not (isinstance(status.get(d), str) and status[d].casefold() in ('done', 'completed')) for d in task['deps']): continue
         if task['resource']=='GPU_EXCLUSIVE' and not gpu_available: continue
         heapq.heappush(ranked,(PRIORITIES[task['priority']],task['estimated_cost'],tid,task))
     selected=[];gpu_used=False

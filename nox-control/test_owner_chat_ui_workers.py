@@ -100,6 +100,54 @@ class ExistingExecutorClaimsTests(unittest.TestCase):
         self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
         self.assertEqual(result["workers"], [])
 
+    def test_missing_state_directory_does_not_clear_owner_maintenance(self):
+        # Previously FileNotFoundError from parent.lstat() incorrectly meant ABSENT.
+        (self.root / "state").rmdir()
+        result = self.snapshot([{"id": "nox-agent-01", "status": "idle"}])
+        self.assertEqual(result["owner_maintenance"], "UNKNOWN")
+        self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
+        self.assertEqual(result["workers"], [])
+
+    def test_symlinked_state_directory_cannot_admit_stale_workers(self):
+        (self.root / "state").rmdir()
+        alternate = self.root / "alternate_state"
+        alternate.mkdir()
+        (self.root / "state").symlink_to(alternate, target_is_directory=True)
+        result = self.snapshot([{"id": "nox-agent-01", "status": "idle"}])
+        self.assertEqual(result["owner_maintenance"], "UNKNOWN")
+        self.assertEqual(result["state"], "HOLD_MAINTENANCE_UNKNOWN")
+        self.assertEqual(result["workers"], [])
+
+    def test_symlinked_status_directory_is_not_a_trusted_snapshot(self):
+        rows = [{"id": "nox-agent-01", "status": "idle"}]
+        self.snapshot(rows)
+        original = self.root / "status"
+        relocated = self.root / "moved_status"
+        original.rename(relocated)
+        original.symlink_to(relocated, target_is_directory=True)
+        result = ui.workers()
+        self.assertEqual(result["state"], "UNAVAILABLE")
+        self.assertEqual(result["workers"], [])
+
+    def test_fifo_snapshot_is_rejected_without_waiting_for_writer(self):
+        import os
+        os.mkfifo(self.root / "status/agents_t856u.json")
+        result = ui.workers()
+        self.assertEqual(result["state"], "UNAVAILABLE")
+        self.assertEqual(result["workers"], [])
+
+    def test_maintenance_transition_during_snapshot_cannot_admit_workers(self):
+        rows = [{"id": "nox-agent-01", "status": "idle"}]
+        (self.root / "status/agents_t856u.json").write_text(
+            json.dumps({"n": 1, "workers": rows}), encoding="utf-8"
+        )
+        with patch.object(ui, "owner_maintenance_gate", side_effect=["ABSENT", "PRESENT"]):
+            result = ui.workers()
+        self.assertEqual(result["state"], "MODEL_UPDATE")
+        self.assertEqual(result["owner_maintenance"], "PRESENT")
+        self.assertEqual(result["workers"], [])
+        self.assertIsNone(result["observed_at"])
+
     def test_owner_scripts_present_maintenance_without_claims(self):
         script = Path(__file__).with_name("owner-chat-ui.js").read_text()
         presence = Path(__file__).with_name("owner-presence.js").read_text()
@@ -108,6 +156,129 @@ class ExistingExecutorClaimsTests(unittest.TestCase):
         self.assertIn("state==='MODEL_UPDATE'", presence)
         self.assertIn("set('updating')", presence)
 
+
+
+
+class ExistingOwnerBridgePartialHtmlTests(unittest.TestCase):
+    def test_partial_existing_marked_script_still_loads_all_four_handlers(self):
+        raw = ('<html><head><script defer src="/nox-web-v29/owner-presence.js" '
+               'data-nox-live-owner="1"></script></head><body></body></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        for name in ('nox-v135-resonance-owner-bridge.js',
+                     'nox-v137-owner-self-status.js', 'owner-chat-ui.js',
+                     'owner-presence.js'):
+            self.assertEqual(result.count('src="/nox-web-v29/'+name+'"'), 1)
+
+    def test_unmarked_existing_live_script_is_not_duplicated(self):
+        raw = ('<html><head><script src="/nox-web-v29/owner-chat-ui.js">'
+               '</script></head><body></body></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_commented_live_script_does_not_hide_required_handler(self):
+        raw = ('<html><head><!-- disabled <script src="/nox-web-v29/owner-chat-ui.js">'
+               '</script> --></head><body></body></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        expected = ('<script defer src="/nox-web-v29/owner-chat-ui.js" '
+                    'data-nox-live-owner="1"></script>')
+        self.assertIn(expected, result)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_commented_meta_does_not_hide_current_live_build(self):
+        raw = ('<html><head><!-- <meta name="nox-live-build" content="old"> -->'
+               '</head><body></body></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<meta name="nox-live-build" content="' + ui.BUILD + '">', result)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_template_scripts_and_meta_are_inert(self):
+        raw = ('<html><head><template><script src="/nox-web-v29/owner-chat-ui.js">'
+               '</script><meta name="nox-live-build" content="old"></template>'
+               '</head></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/owner-chat-ui.js" '
+                      'data-nox-live-owner="1"></script>', result)
+        self.assertIn('<meta name="nox-live-build" content="' + ui.BUILD + '">', result)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_nested_template_cannot_hide_live_script(self):
+        raw = ('<html><head><template><template></template>'
+               '<script src="/nox-web-v29/owner-presence.js"></script>'
+               '</template></head></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/owner-presence.js" '
+                      'data-nox-live-owner="1"></script>', result)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_noscript_cannot_hide_live_script(self):
+        raw = ('<html><head><noscript>'
+               '<script src="/nox-web-v29/nox-v135-resonance-owner-bridge.js">'
+               '</script></noscript></head></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/nox-v135-resonance-owner-bridge.js" '
+                      'data-nox-live-owner="1"></script>', result)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_inline_script_string_cannot_fake_loaded_handler(self):
+        raw = """<html><head><script>var x = '<script src="/nox-web-v29/owner-chat-ui.js">';</script></head></html>"""
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/owner-chat-ui.js" '
+                      'data-nox-live-owner="1"></script>', result)
+        self.assertEqual(ui.decorate_html(result, "pc/resonance.html"), result)
+
+    def test_json_data_script_cannot_fake_executable_owner_handler(self):
+        raw = ('<html><head><script type="application/json" '
+               'src="/nox-web-v29/owner-chat-ui.js"></script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/owner-chat-ui.js" '
+                      'data-nox-live-owner="1"></script>', out)
+        self.assertEqual(ui.decorate_html(out, "pc/resonance.html"), out)
+
+    def test_importmap_data_script_cannot_hide_owner_presence(self):
+        raw = ('<html><head><script type="importmap" '
+               'src="/nox-web-v29/owner-presence.js"></script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/owner-presence.js" '
+                      'data-nox-live-owner="1"></script>', out)
+
+    def test_nomodule_legacy_script_does_not_suppress_modern_handler(self):
+        raw = ('<html><head><script nomodule '
+               'src="/nox-web-v29/nox-v137-owner-self-status.js">'
+               '</script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertIn('<script defer src="/nox-web-v29/nox-v137-owner-self-status.js" '
+                      'data-nox-live-owner="1"></script>', out)
+
+    def test_executable_javascript_type_not_duplicated(self):
+        raw = ('<html><head><script type="text/javascript" '
+               'src="/nox-web-v29/owner-chat-ui.js"></script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertEqual(out.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
+
+    def test_executable_module_type_not_duplicated(self):
+        raw = ('<html><head><script type="module" '
+               'src="/nox-web-v29/owner-chat-ui.js"></script></head></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertEqual(out.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
+
+    def test_unrelated_marked_script_cannot_suppress_live_owner_bridge(self):
+        raw = ('<html><head><script data-nox-live-owner="1" '
+               'src="/nox-web-v29/unrelated.js"></script></head></html>')
+        result = ui.decorate_html(raw, "pc/resonance.html")
+        self.assertEqual(result.count('src="/nox-web-v29/nox-v135-resonance-owner-bridge.js"'), 1)
+        self.assertEqual(result.count('src="/nox-web-v29/owner-chat-ui.js"'), 1)
+
+
+    def test_case_mismatched_script_url_does_not_hide_live_owner_handler(self):
+        # Linux-mounted /nox-web-v29 paths are case sensitive, unlike HTML tag names.
+        raw = ('<html><head><script src="/NOX-web-v29/Owner-Chat-UI.js">'
+               '</script></head><body></body></html>')
+        out = ui.decorate_html(raw, "pc/resonance.html")
+        expected = ('<script defer src="/nox-web-v29/owner-chat-ui.js" '
+                    'data-nox-live-owner="1"></script>')
+        self.assertIn(expected, out)
+        self.assertEqual(ui.decorate_html(out, "pc/resonance.html"), out)
 
 
 if __name__ == "__main__":

@@ -176,6 +176,40 @@ class DeepSeekP0Offline(unittest.TestCase):
         self.assertFalse(rows[0]['verified'])
         self.assertEqual(rows[0]['verification_scope'],'SHA_UNCHECKED')
 
+    def test_full_model_capacity_blocks_a_partial_download_before_network(self):
+        # Current shard fits (16 B < 35 B), but other pinned shards cannot.
+        # Per-shard admission alone could strand the model on an undersized disk.
+        from types import SimpleNamespace
+        other = 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf'
+        tiny = {self.name: (len(self.content), self.row['sha256']),
+                other: (25, 'a' * 64)}
+        vfs = SimpleNamespace(f_bavail=35, f_frsize=1, f_blocks=120)
+        with patch.object(m, 'PINNED_FILE_FACTS', tiny), \
+             patch.object(m, 'MIN_MODEL_VOLUME_BYTES', 50), \
+             patch.object(m, 'RESERVE', 0), \
+             patch.object(m.os, 'statvfs', return_value=vfs):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_STORAGE_INSUFFICIENT_FOR_COMPLETE_MODEL'):
+                self.do(opener=lambda *a, **k: self.fail('network must not start'))
+        self.assertFalse((self.dst / (self.name + '.part')).exists())
+
+    def test_full_model_capacity_allows_already_allocated_partial_resume(self):
+        from types import SimpleNamespace
+        other = 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf'
+        tiny = {self.name: (len(self.content), self.row['sha256']),
+                other: (25, 'a' * 64)}
+        part = self.dst / (self.name + '.part')
+        part.write_bytes(self.content[:8])
+        # 8 existing bytes are allocated, leaving 8+25 = 33 B of growth.
+        vfs = SimpleNamespace(f_bavail=35, f_frsize=1, f_blocks=120)
+        with patch.object(m, 'PINNED_FILE_FACTS', tiny), \
+             patch.object(m, 'MIN_MODEL_VOLUME_BYTES', 50), \
+             patch.object(m, 'RESERVE', 0), \
+             patch.object(m.os, 'statvfs', return_value=vfs):
+            result = self.do(limit=8)
+        self.assertEqual(result['state'], 'VERIFIED_FINAL')
+        self.assertEqual(result['new_bytes'], 8)
+        self.assertEqual((self.dst / self.name).read_bytes(), self.content)
+
     def test_owner_stop_prevents_transfer(self):
         (self.root/'STOP').touch()
         with self.assertRaisesRegex(m.Hold,'OWNER_STOP'):self.do()
@@ -757,5 +791,85 @@ class DeepSeekP0Offline(unittest.TestCase):
             with self.assertRaisesRegex(m.Hold, 'OWNER_STOP'):
                 m._write_checked(sink, b'abc', self.root, self.lease, self.request)
         self.assertEqual(bytes(sink.data), b'a')
+
+
+    def test_short_write_rechecks_original_lock_before_every_continuation(self):
+        """A replaced owner lock must stop additional bytes on short writes."""
+        class OneByteSink:
+            def __init__(self):
+                self.data=bytearray()
+            def write(self,view):
+                self.data.extend(view[:1])
+                return 1
+        sink=OneByteSink()
+        checks={'count':0}
+        def owner_lock_guard():
+            checks['count']+=1
+            if checks['count']==3:
+                raise m.Hold('HOLD_DOWNLOAD_LOCK_REPLACED')
+        with patch.object(m,'stop'),patch.object(m,'lease'):
+            with self.assertRaisesRegex(m.Hold,'HOLD_DOWNLOAD_LOCK_REPLACED'):
+                m._write_checked(sink,b'abcd',self.root,self.lease,self.request,owner_lock_guard)
+        self.assertEqual(bytes(sink.data),b'ab')
+        self.assertEqual(checks['count'],3)
+
+
+    def test_cli_manifest_bounded_read_uses_pinned_six_file_identities(self):
+        manifest = {
+            'schema': 'NOX_MODEL_DOWNLOAD_MANIFEST_V1',
+            'repository': m.REPO, 'revision': m.REVISION,
+            'total_unique_gguf_bytes': 248834257920,
+            'files': [
+                {'path': name, 'bytes': size, 'sha256': sha,
+                 'url': f'https://huggingface.co/{m.REPO}/resolve/{m.REVISION}/{name}'}
+                for name, (size, sha) in m.PINNED_FILE_FACTS.items()
+            ],
+            'alias': {'path': 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf',
+                      'target': 'DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf',
+                      'duplicate_bytes': False}
+        }
+        manifest_path = self.root / 'pinned-manifest.json'
+        manifest_path.write_text(json.dumps(manifest))
+        rows = m.load_manifest_from_path(manifest_path)
+        self.assertEqual(set(rows), set(m.PINNED_FILE_FACTS))
+        self.assertFalse(any((self.root / name).exists() for name in rows))
+
+    def test_cli_manifest_oversize_fails_before_any_read(self):
+        path = self.root / 'oversize-manifest.json'
+        path.write_bytes(b'{' + b' ' * m.MAX_MANIFEST_BYTES)
+        with patch.object(m.os, 'read', side_effect=AssertionError('unbounded read')):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_MANIFEST_LIMIT'):
+                m.load_manifest_from_path(path)
+
+    def test_cli_manifest_symlink_and_fifo_fail_without_follow_or_block(self):
+        import os
+        original = self.root / 'original.json'
+        original.write_bytes(b'{}')
+        alias = self.root / 'manifest-link.json'
+        alias.symlink_to(original)
+        with self.assertRaisesRegex(m.Hold, 'HOLD_SYMLINK_PATH'):
+            m.load_manifest_from_path(alias)
+        fifo = self.root / 'manifest-fifo.json'
+        os.mkfifo(fifo)
+        with self.assertRaisesRegex(m.Hold, 'HOLD_NONREGULAR_OR_UNOWNED_FILE'):
+            m.load_manifest_from_path(fifo)
+
+    def test_cli_manifest_inode_swap_between_stat_and_open_is_rejected(self):
+        import os
+        original = self.root / 'manifest.json'
+        replacement = self.root / 'replacement.json'
+        original.write_bytes(b'{}')
+        replacement.write_bytes(b'{}')
+        real_open = os.open
+        switched = [False]
+        def open_after_swap(path, flags, *args, **kwargs):
+            if Path(path) == original and not switched[0]:
+                switched[0] = True
+                os.replace(replacement, original)
+            return real_open(path, flags, *args, **kwargs)
+        with patch.object(m.os, 'open', side_effect=open_after_swap):
+            with self.assertRaisesRegex(m.Hold, 'HOLD_MANIFEST_CHANGED'):
+                m.load_manifest_from_path(original)
+        self.assertTrue(switched[0])
 
 if __name__=='__main__':unittest.main()

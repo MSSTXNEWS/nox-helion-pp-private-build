@@ -9,6 +9,8 @@ import ast
 import hashlib
 import json
 import os
+import re
+import stat
 from pathlib import Path
 import shutil
 import subprocess
@@ -68,15 +70,145 @@ def training_stack():
             'scope':'INSTALLED_STACK_AND_SYNTAX_ONLY',
             'blockers':['REAL_OPTIMIZER_ACCEPTANCE_AND_HOLDOUT_REQUIRED']}
 
+# V14-6-09: two samples from the ORIGINAL dispatcher, never PID-only progress.
+# Local observations are NOT native/optimizer receipts and authorize no restart.
+_PROGRESS_METRICS = {'optimizer_steps','global_step','completed_items','verified_bytes','completed_units'}
+_HEX24 = re.compile(r'^[0-9a-f]{24}$')
+_HEX64 = re.compile(r'^[0-9a-f]{64}$')
+
+
+def _unique_object(pairs):
+    row={}
+    for key,value in pairs:
+        if key in row: raise ValueError('HOLD_DUPLICATE_JSON_PROPERTY')
+        row[key]=value
+    return row
+
+
+def _strict_progress_json(path,limit=1024*1024):
+    fd=os.open(path,os.O_RDONLY | getattr(os,'O_NOFOLLOW',0))
+    with os.fdopen(fd,'rb') as f:
+        st=os.fstat(f.fileno())
+        if not stat.S_ISREG(st.st_mode) or st.st_size>limit:raise ValueError('HOLD_PROGRESS_FILE_BOUNDS')
+        content=f.read(limit+1)
+    if len(content)>limit:raise ValueError('HOLD_PROGRESS_FILE_LIMIT')
+    return json.loads(content.decode('utf-8'),object_pairs_hook=_unique_object,
+                      parse_constant=lambda _: (_ for _ in ()).throw(ValueError('HOLD_NONFINITE_PROGRESS')))
+
+
+def _pid_start_ticks(pid,proc_root=Path('/proc')):
+    if type(pid) is not int or not 1<pid<2**31:return None
+    try:
+        tail=(Path(proc_root)/str(pid)/'stat').read_text().rsplit(') ',1)[1].split()
+        start=int(tail[19])
+        return start if start>0 else None
+    except (OSError,ValueError,IndexError):return None
+
+
+def _progress_snapshot(state,proc_root=Path('/proc'),observed_at=None):
+    now=time.time() if observed_at is None else observed_at
+    if not isinstance(state,dict) or not isinstance(state.get('tasks'),dict):
+        return {'observed_at':now,'tasks':{},'status':'HOLD_DISPATCHER_STATE_SCHEMA'}
+    tasks=state['tasks']
+    if len(tasks)>4096:return {'observed_at':now,'tasks':{},'status':'HOLD_DISPATCHER_TASK_CAP'}
+    samples={}
+    for tid,task in list(tasks.items())[:512]:
+        if (not isinstance(tid,str) or len(tid)>128 or not isinstance(task,dict)
+                or task.get('status')!='running'):continue
+        claim=task.get('owner_claim')
+        if not isinstance(claim,dict):continue
+        nonce,pid=claim.get('nonce'),claim.get('pid')
+        if not isinstance(nonce,str) or not _HEX24.fullmatch(nonce):continue
+        ticks=_pid_start_ticks(pid,proc_root)
+        if ticks is None:continue
+        info=task.get('progress')
+        if not isinstance(info,dict):info={}
+        metric,current,receipt=info.get('metric'),info.get('current'),info.get('source_receipt_sha256')
+        valid=(metric in _PROGRESS_METRICS and type(current) is int and 0<=current<=10**12
+               and isinstance(receipt,str) and _HEX64.fullmatch(receipt) is not None)
+        samples[tid]={'nonce':nonce,'pid':pid,'start_ticks':ticks,
+                      'metric':metric if valid else None,'current':current if valid else None,
+                      'source_receipt_sha256':receipt if valid else None}
+    return {'observed_at':now,'tasks':samples,'status':'LOCAL_SNAPSHOT_NOT_NATIVE_ATTESTATION'}
+
+
+def _compare_progress(previous,current,now=None):
+    now=time.time() if now is None else now
+    new=current.get('tasks') if isinstance(current,dict) else None
+    old=previous.get('tasks') if isinstance(previous,dict) else None
+    ts=previous.get('observed_at') if isinstance(previous,dict) else None
+    if not isinstance(new,dict):return {'state':'HOLD_NO_CURRENT_TASK_SNAPSHOT','advancing':0,'possible_stalled':0}
+    if type(ts) not in (int,float) or not isinstance(old,dict) or not 0<now-ts<=86400:
+        return {'state':'HOLD_NO_COMPARABLE_PRIOR_SAMPLE','advancing':0,'possible_stalled':0}
+    advancing,stalled,changed,unknown=0,0,0,0
+    for tid,item in new.items():
+        prior=old.get(tid)
+        if not isinstance(prior,dict):unknown+=1;continue
+        if (any(item.get(k)!=prior.get(k) for k in ('nonce','pid','start_ticks','metric'))
+                or item.get('start_ticks') is None):
+            changed+=1;continue
+        a,b=prior.get('current'),item.get('current')
+        if type(a) is not int or type(b) is not int or a<0 or b<0:unknown+=1;continue
+        if b>a:advancing+=1
+        elif b==a and now-ts>=180:stalled+=1
+        else:unknown+=1
+    state=('OBSERVED_LOCAL_COUNTER_ADVANCE_UNATTESTED' if advancing else
+           'POSSIBLE_STALL_NO_RESTART_AUTHORITY' if stalled else
+           'HOLD_NO_MEANINGFUL_PROGRESS_DELTA')
+    return {'state':state,'advancing':advancing,'possible_stalled':stalled,
+            'new_claim_or_process':changed,'insufficient_evidence':unknown,
+            'scope':'LOCAL_COUNTERS_NOT_NATIVE_OR_OPTIMIZER_PROOF'}
+
+
+def _dispatcher_progress_observation(root=ROOT,proc_root=Path('/proc'),now=None):
+    now=time.time() if now is None else now
+    stop_paths=(root/'STOP',root/'STOP.flag',root/'state/STOP',
+                root/'state/STOP.flag',root/'state/stop.flag',Path('/workspace/NOX_STOP'))
+    stop_present=any(p.exists() or p.is_symlink() for p in stop_paths)
+    try:
+        snapshot=_progress_snapshot(_strict_progress_json(root/'state/dispatcher/state.json'),proc_root,now)
+    except (OSError,ValueError,UnicodeError,TypeError):
+        snapshot={'observed_at':now,'tasks':{},'status':'HOLD_NATIVE_DISPATCHER_STATE_UNREADABLE'}
+    previous=None
+    try:
+        receipt=_strict_progress_json(root/'state/owner_components/owner.dispatcher.json',262144)
+        if isinstance(receipt,dict) and receipt.get('schema')=='NOX_OWNER_COMPONENT_V1':
+            evidence=receipt.get('evidence')
+            if isinstance(evidence,dict):
+                progress=evidence.get('progress_observation')
+                if isinstance(progress,dict):previous=progress.get('snapshot')
+    except (OSError,ValueError,UnicodeError,TypeError):pass
+    assessment=_compare_progress(previous,snapshot,now)
+    state=assessment['state']
+    if snapshot['status']!='LOCAL_SNAPSHOT_NOT_NATIVE_ATTESTATION':state=snapshot['status']
+    if stop_present:state='HOLD_OWNER_STOP_PRESERVE'
+    return {'state':state,'assessment':assessment,'snapshot':snapshot,
+            'owner_stop_observed':stop_present,'writer_lease':'UNKNOWN_NOT_OBTAINED',
+            'live_progress_verified':False,'restart_authorized':False}
+
+
 def dispatcher():
     config=read_json(ROOT/'config/dispatcher_agents_t868u.json')
-    workers=int(config.get('workers',0))
+    if not isinstance(config,dict):
+        raise ValueError('HOLD_DISPATCHER_CONFIG_SCHEMA')
+    declared=config.get('workers',0)
+    workers=declared if type(declared) is int and 0<=declared<=1024 else None
     script=ROOT/'scripts/nox_dispatcher_t855u.py'
     ast.parse(script.read_text())
-    return {'verified':workers==6,'workers':workers,'min_workers':config.get('min_workers'),
-            'max_workers':config.get('max_workers'),'dispatcher_sha256':digest(script),
-            'scope':'CONFIGURED_EXECUTORS_NOT_MEASURED_CAPACITY',
-            'blockers':['CAPACITY_BENCHMARK_REQUIRED']}
+    progress=_dispatcher_progress_observation()
+    # V14-6-03: a configured worker count is NEVER an attested native
+    # worker count. Only owner-auth PID/start_ticks + TaskID/claim readback
+    # can establish live executor identity (not a config/heartbeat/CI result).
+    return {'verified':False,'configuration_verified':workers==6,
+            'workers':workers,'native_worker_count':None,
+            'native_worker_count_verified':False,'worker_claims_verified':False,
+            'min_workers':config.get('min_workers'),'max_workers':config.get('max_workers'),
+            'dispatcher_sha256':digest(script),
+            'progress_observation':progress,'live_progress_verified':False,
+            'scope':'CONFIGURED_EXECUTORS_ONLY_NATIVE_WORKER_COUNT_HOLD',
+            'blockers':['NATIVE_SIX_WORKER_PID_START_TICKS_TASKID_CLAIMS_REQUIRED',
+                        'CAPACITY_BENCHMARK_REQUIRED',
+                        'NATIVE_PID_START_TICKS_OWNER_LEASE_AND_PROGRESS_READBACK_REQUIRED']}
 
 def chat():
     measurements={}

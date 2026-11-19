@@ -3,7 +3,7 @@
 No push/PR activation, no secret export, no blind retry of native mutations.
 """
 from __future__ import annotations
-import argparse, base64, contextlib, ipaddress, json, os, re, socket, subprocess, sys, time
+import argparse, base64, contextlib, hashlib, ipaddress, json, os, re, socket, subprocess, sys, time
 from pathlib import Path
 REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
@@ -11,6 +11,7 @@ INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit':'nox-control/owner_native_audit.py','inspect':'nox-control/owner_native_inspect.py',
        'stage':'nox-control/owner_native_stage.py','repair':'nox-control/owner_qwen_held_media_smoke_entry.py',
+       'subagent':'nox-control/owner_subagent_fresh_install_entry.py',
        'lifeline':'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
@@ -18,6 +19,10 @@ SCOPED_REPAIR_BUNDLES={
     'nox-control/owner_qwen_held_media_smoke_entry.py':(
         'owner_qwen_held_media_smoke.py','owner_media_acceptance_entry.py',
         'owner_qwen_revision_install.py','owner_native_repair.py','owner_download_status_entry.py'),
+    'nox-control/owner_subagent_fresh_install_entry.py':(
+        'owner_subagent_hash_recovery_entry.py','owner_subagent_install_entry.py',
+        'owner_subagent_dispatcher_fresh.py','owner_autonomy_pool.py','owner_subagent_processes.py',
+        'owner_dispatcher_mentor.py','owner_task_lifecycle.py','owner_senior_gateway.py'),
     'nox-control/owner_qwen_transport_install_entry.py':(
         'owner_qwen_revision_install.py','qwen_student_training_entry_revision.py',
         'owner_qwen_transport_revision_install.py','qwen_student_training_entry_transport_candidate.py',
@@ -31,9 +36,29 @@ SCOPED_REPAIR_EXTRA_PATHS={
         'nox-control/owner_qwen_transport_revision_install.py',
         'nox-control/qwen_student_training_entry_transport_candidate.py'),
 }
+SUBAGENT_BUNDLE_PATHS = (
+    'nox-control/owner_subagent_hash_recovery_entry.py',
+    'nox-control/owner_subagent_install_entry.py',
+    'nox-control/owner_subagent_dispatcher_fresh.py',
+    'nox-control/owner_autonomy_pool.py',
+    'nox-control/owner_subagent_processes.py',
+    'nox-control/owner_dispatcher_mentor.py',
+    'nox-control/owner_task_lifecycle.py',
+    'nox-control/owner_senior_gateway.py',
+)
+SUBAGENT_BUNDLE_PINS = {
+    'owner_subagent_hash_recovery_entry.py': 'de2371d0f5c92063c122b65ff08d15c43015ca599cff8299f9dcb7886bc95659',
+    'owner_subagent_install_entry.py': 'a210182012d8872390b27a1f0fa8a5668016f06cd94d5557aad2b242d67eb806',
+    'owner_subagent_dispatcher_fresh.py': '93d082fe8f6180754ace4c0505a6dfb5c99ea0ed9a0cf10c494da5355f37d05a',
+    'owner_autonomy_pool.py': 'c4f0a178d22f47c1e1b2575f6b9c3280165eb0cf13920053c7b427ada3d8f8a9',
+    'owner_subagent_processes.py': '8805da8d99c7d5fe38db6c9a100fb86cc052e1c795418fd78284a5cb7a84d276',
+    'owner_dispatcher_mentor.py': 'ed135563c70acb24ce508bbd9f0d53616b5810bd113b1818f677766f751de82a',
+    'owner_task_lifecycle.py': '75d0718bf9986f1a2cdbfa4f42f4fea9a8dad4558f1273c460c62dadb816f2a0',
+    'owner_senior_gateway.py': '40cbaec2e32e43f2aa78a1078ed296d4957c620256081695111b81136d2d3751',
+}
 
 def repair_bundle_paths(action,entrypoint,paths):
-    if action!='repair' or entrypoint not in SCOPED_REPAIR_BUNDLES:return paths
+    if action not in ('repair', 'subagent') or entrypoint not in SCOPED_REPAIR_BUNDLES:return paths
     selected=SCOPED_REPAIR_BUNDLES[entrypoint]
     if len(set(selected))!=len(selected):raise RuntimeError('HOLD_SCOPED_BUNDLE_DUPLICATE_ALLOWLIST')
     found={}
@@ -46,6 +71,21 @@ def repair_bundle_paths(action,entrypoint,paths):
     result=tuple(found[name] for name in selected)
     if any(not Path(path).is_file() for path in result):raise RuntimeError('HOLD_SCOPED_BUNDLE_MISSING_FILE')
     return result
+
+def subagent_bundle_assets(paths):
+    selected = repair_bundle_paths('subagent', FILES['subagent'], paths)
+    if {Path(path).name for path in selected} != set(SUBAGENT_BUNDLE_PINS):
+        raise RuntimeError('HOLD_SUBAGENT_BUNDLE_SCOPE')
+    assets = {}
+    for path in selected:
+        source = Path(path)
+        raw = source.read_bytes()
+        name = source.name
+        if (not raw or len(raw) > 400000
+                or hashlib.sha256(raw).hexdigest() != SUBAGENT_BUNDLE_PINS[name]):
+            raise RuntimeError('HOLD_SUBAGENT_BUNDLE_SOURCE_PIN')
+        assets[name] = base64.b64encode(raw).decode('ascii')
+    return assets
 
 def authorize_event(action):
     e=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
@@ -130,7 +170,10 @@ def run_native(action,request_id):
     if check.returncode:raise RuntimeError('HOLD_SSH_MASTER_NOT_ALIVE')
     print('NOX_MAINT_AUTHENTICATED_INSTANCE=60509551',flush=True)
     payload=Path(FILES[action]).read_text()
-    if action == 'lifeline':
+    if action == 'subagent':
+        assets=subagent_bundle_assets(SUBAGENT_BUNDLE_PATHS)
+        payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
+    elif action == 'lifeline':
         assets={}
         for path in ('nox-control/nox_native_lifeline.py',
                      'nox-control/lifeline.example.json',

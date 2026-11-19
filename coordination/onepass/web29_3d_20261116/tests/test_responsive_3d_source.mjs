@@ -20,10 +20,10 @@ test('preserve earlier reduced-motion and original D02 source locks',()=>{
  for(const sha of ['124a5d341059eb1070adcf58640657aa471ea4888e4409101503ecaa9337f952',
  '3aced1774354b6212b665ef40514e78fb7660a3319fd346c4b12bbf277a39d38'])assert.ok(stage.includes(sha));
 });
-test('stage asset pin tracks the exact reviewed CSS source',()=>{
+test('stage asset pin tracks the CURRENT Git-reviewed CSS and refuses stale responsive source',()=>{
  const bytes=Buffer.from(css);
  const blob=createHash('sha1').update('blob '+bytes.length+'\0').update(bytes).digest('hex');
- assert.equal(blob,'3a4514e05948cf2f886d9dcd27027ad67d154c35');
+ assert.equal(blob,'3c60c6f4499cb0095291297f3e5fb628de6e1fc8');
  assert.ok(stage.includes(blob));
 });
 
@@ -37,8 +37,8 @@ test('short desktop keeps all three original panels and a scrollable conversatio
  assert.match(css,/@media \(min-width:1200px\) and \(max-height:600px\)/);
  assert.match(css,/height:max\(260px,calc\(100dvh - 175px\)\)!important/);
  assert.match(css,/grid-template-rows:minmax\(0,1fr\)!important/);
- assert.match(css,/\.chat-layout > \.chat-conversation\{grid-column:2!important;grid-row:1!important;\}/);
- assert.match(css,/\.chat-layout > \.chat-telemetry-panel\{grid-column:3!important;grid-row:1!important;\}/);
+ assert.match(css,/\.chat-layout > \.chat-conversation\s*\{\s*grid-column:2!important;grid-row:1!important;/);
+ assert.match(css,/\.chat-layout > \.chat-telemetry-panel\s*\{\s*grid-column:3!important;grid-row:1!important;/);
  assert.match(css,/flex:1 1 0!important;min-height:0!important;overflow:auto!important/);
 });
 
@@ -63,5 +63,5 @@ test('short 400px landscape tablet keeps all panels and command area on screen',
 test('1200-1399px compact desktop removes remaining 5-40px overflow',()=>{
  assert.ok(css.includes('@media (min-width:1200px) and (max-width:1399px) and (min-height:400px) and (max-height:600px)'));
  assert.ok(css.includes('height:max(200px,calc(100dvh - 180px))!important'));
- assert.ok(stage.includes('3a4514e05948cf2f886d9dcd27027ad67d154c35'));
+ assert.ok(stage.includes('3c60c6f4499cb0095291297f3e5fb628de6e1fc8'));
 });

@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 _ROUTE='/api/nox/memory/facts'
 _OWNER='nox-single-owner'
 _HEX=re.compile(r'^[a-f0-9]{64}$')
-_STOP=('/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
+_STOP=('/root/nox/state/STOP.flag','/root/nox/STOP','/root/nox/STOP.flag','/root/nox/stop.flag',
        '/root/nox/.stop','/workspace/NOX_STOP','/root/nox/program/STOP')
 
 def _hold(reason, code=503):
@@ -135,6 +135,8 @@ def _matching(data):
                 except (ValueError,TypeError):
                     continue
                 if (isinstance(meta,dict) and meta.get('owner_scope')==_OWNER
+                    and meta.get('schema')=='NOX_OWNER_CONFIRMED_FACT_V1'
+                    and meta.get('source_ref')==data['source_ref']
                     and meta.get('fact_key')==data['fact_key']
                     and meta.get('source_sha256')==data['source_sha256']
                     and meta.get('valid_from')==data['valid_from']
@@ -167,6 +169,9 @@ def _persist(data):
     meta={'schema':'NOX_OWNER_CONFIRMED_FACT_V1','owner_scope':_OWNER,
           'fact_key':data['fact_key'],'source_ref':data['source_ref'],
           'source_sha256':data['source_sha256'],'valid_from':data['valid_from']}
+    # The bounded readback scan may outlive a new owner STOP request.
+    if _stopped():
+        raise RuntimeError('HOLD_NATIVE_STOP')
     # Existing S03 writer handles SQLite transaction, IDs and its own ledger.
     s03_memory.remember(text=data['content'],segment='M2',
       provenance='OWNER-CONFIRMED:'+data['source_ref'],salience=0.85,meta=meta)

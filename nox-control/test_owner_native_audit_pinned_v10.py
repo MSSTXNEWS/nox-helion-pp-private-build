@@ -23,10 +23,41 @@ class PinnedModelInventoryAdmissionTest(unittest.TestCase):
 
     def test_missing_files_are_not_claimed_verified(self):
         row = audit.pinned_model_paths(str(self.root))
-        self.assertEqual(row["status"], "OK")  # Metadata-only, not installed.
+        self.assertEqual(row["status"], "HOLD_MODEL_FILES_MISSING")  # No files: not admitted.
         self.assertEqual(len(row["files"]), len(audit.PINNED_MODEL_FILES))
         self.assertTrue(all(f["sha_status"] == "NOT_CHECKED" for f in row["files"]))
         self.assertTrue(all(f["type"] == "missing" for f in row["files"]))
+
+    def test_all_expected_sizes_are_not_a_verified_model_without_sha(self):
+        # Simulate six matching size metadata rows without allocating 248GB.
+        # Lstat is intentionally metadata-only; no payload content is hashed.
+        import stat
+        from types import SimpleNamespace
+
+        sizes = {
+            str(self.root / name): size
+            for name, size, _ in audit.PINNED_MODEL_FILES
+        }
+
+        def matching_size_lstat(path):
+            path = str(path)
+            if path in sizes:
+                return SimpleNamespace(st_mode=stat.S_IFREG | 0o600, st_size=sizes[path])
+            return os.lstat(path)
+
+        row = audit.pinned_model_paths(str(self.root), lstat=matching_size_lstat)
+        self.assertEqual(row["status"], "HOLD_MODEL_SHA_UNVERIFIED")
+        self.assertEqual(len(row["files"]), 6)
+        self.assertTrue(all(f["size_status"] == "MATCH" for f in row["files"]))
+        self.assertTrue(all(f["sha_status"] == "NOT_CHECKED" for f in row["files"]))
+
+    def test_nonexistent_model_root_is_not_reported_ok(self):
+        absent = self.root / "not_created"
+        row = audit.pinned_model_paths(str(absent))
+        self.assertEqual(row["status"], "HOLD_MODEL_FILES_MISSING")
+        self.assertEqual(len(row["files"]), len(audit.PINNED_MODEL_FILES))
+        self.assertTrue(all(f["type"] == "missing" for f in row["files"]))
+        self.assertTrue(all(f["sha_status"] == "NOT_CHECKED" for f in row["files"]))
 
     def test_permission_denied_target_fails_closed(self):
         denied = str(self.root / audit.PINNED_MODEL_FILES[1][0])

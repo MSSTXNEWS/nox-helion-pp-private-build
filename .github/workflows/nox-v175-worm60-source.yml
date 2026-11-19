@@ -11,6 +11,8 @@ on:
       - 'nox-control/owner_autonomy_pool.py'
       - 'nox-control/test_owner_autonomy_pool.py'
       - 'nox-control/owner_subagent_processes.py'
+      - 'nox-control/owner_six_lane_review_v14.py'
+      - 'nox-control/test_owner_six_lane_review_v14.py'
       - 'nox-control/test_owner_subagent_processes.py'
       - 'coordination/NOX_V175_WORM60*'
       - '.github/workflows/nox-v175-worm60-source.yml'
@@ -29,8 +31,8 @@ jobs:
           set -euo pipefail
           python3 -m py_compile nox_runpod/teacher_mesh/v47/control/dispatcher.py nox_runpod/teacher_mesh/v47/control/worm_supervisor.py nox_runpod/teacher_mesh/v47/control/test_native_registration.py nox_runpod/teacher_mesh/v47/control/native_registration_recovery.py
           python3 -m unittest -v nox_runpod.teacher_mesh.v47.control.test_v94_priority nox_runpod.teacher_mesh.v47.control.test_native_registration nox_runpod.teacher_mesh.v47.control.test_worm_supervisor_malformed_receipts
-          python3 -m py_compile nox-control/owner_autonomy_pool.py nox-control/owner_subagent_processes.py nox-control/test_owner_subagent_processes.py
-          PYTHONPATH=nox-control python3 -m unittest -v test_owner_autonomy_pool test_owner_subagent_processes
+          python3 -m py_compile nox-control/owner_autonomy_pool.py nox-control/owner_subagent_processes.py nox-control/test_owner_subagent_processes.py nox-control/owner_six_lane_review_v14.py nox-control/test_owner_six_lane_review_v14.py
+          PYTHONPATH=nox-control python3 -m unittest -v test_owner_autonomy_pool test_owner_subagent_processes test_owner_six_lane_review_v14
           python3 - <<'PY'
           import json,pathlib
           p=json.loads(pathlib.Path('coordination/NOX_V175_WORM60_OWNER_POLICY.json').read_text())

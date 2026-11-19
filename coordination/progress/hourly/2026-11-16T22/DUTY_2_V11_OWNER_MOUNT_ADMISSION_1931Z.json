@@ -1,0 +1,144 @@
+{
+  "schema": "NOX_MODEL_WEB_RELEASE_V11_NATIVE_STORAGE_HANDOFF_V1",
+  "instructions_version": "0.0.6",
+  "slot": "DUTY_2",
+  "observed_at_utc": "2026-11-16T19:31:00Z",
+  "observed_at_msk": "2026-11-16T22:31:00+03:00",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "feature/nox-v38-synaptic-brain-20261114",
+  "owner_native": {
+    "instance_id": 60509551,
+    "mode": "owner_authorized_read_only_inspect",
+    "run_id": 43939988374,
+    "job_id": 133554647274,
+    "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43939988374",
+    "owner_command_comment_id": 6926858889,
+    "comment_source_pin": "0f02647074ea2e38d19ae42637ef503ca75487ba",
+    "workflow_conclusion": "success",
+    "guest_inspect_complete": true,
+    "guest_process_or_model_deployed_by_this_action": false,
+    "temp_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
+  },
+  "source_patch": {
+    "file": "nox-control/owner_native_inspect.py",
+    "prior_blob": "7b69acaab914c446bc35c4760573c67114b2d6de",
+    "new_blob": "cb19b6e1720ffd708a4afa85eb6b7ed0c1154317",
+    "commit": "bdb9cb58ea54e23d3774009cc586d57890377d5b",
+    "test_file": "nox-control/test_owner_native_mounts.py",
+    "test_blob": "4e3b9afadafb94bd83547f88e5b91c5d1f8fbbec",
+    "test_commit": "0f02647074ea2e38d19ae42637ef503ca75487ba",
+    "source_tests": "4 isolated fixture regressions PASS, exact current full CI unverified",
+    "actual_live_use": "ephemeral original owner inspect action on OneHost; not persisted as a server service"
+  },
+  "storage": {
+    "root_filesystem": "overlay",
+    "inspected_mount_scopes": [
+      "/",
+      "/data",
+      "/workspace",
+      "/mnt",
+      "/models",
+      "/root/nox"
+    ],
+    "observed_mounts": [
+      {
+        "path": "/",
+        "filesystem": "overlay",
+        "total_bytes": 183609851904,
+        "free_bytes": 43158650880
+      }
+    ],
+    "mount_inventory_scope": "ALLOWLISTED_ONLY_NOT_EXHAUSTIVE",
+    "external_mount_detected_in_scanned_paths": false,
+    "seekability": "NOT_TESTED",
+    "write_permission": "NOT_TESTED",
+    "full_deepseek_unique_bytes": 248834257920,
+    "missing_deepseek_payload_bytes": 248828477216,
+    "deficit_to_current_free_bytes": 205675607040,
+    "deficit_to_entire_empty_root_disk_bytes": 65224406016,
+    "required_reserve_bytes": "UNKNOWN_POSITIVE",
+    "rclone_remotes": [],
+    "drive_oauth_on_onehost": "NOT_CONFIRMED",
+    "independent_offsite_restore": "NOT_VERIFIED"
+  },
+  "current_native": {
+    "owner_manual_STOP": "PRESENT",
+    "owner_maintenance": "PRESENT",
+    "TRAIN_HOLD": "PRESENT",
+    "TRAIN_PAUSE_REQUEST": "PRESENT",
+    "owner_single_writer_lease": "UNKNOWN_NO_OWNER_CAS_READBACK",
+    "primary_supervisor_states": {
+      "nox-chat-8081": "STOPPED",
+      "nox-dispatcher-t855u": "STOPPED",
+      "nox-priority-scheduler": "STOPPED",
+      "nox-selfheal": "STOPPED",
+      "nox-gpu-watchdog-t865u": "STOPPED"
+    },
+    "tcp_8081_listener_inodes": 0,
+    "http_8080_8081_8082": "URLError; actual UI not identified",
+    "gpu_models": [
+      "Tesla V100-SXM2-32GB",
+      "Tesla V100-SXM2-32GB"
+    ],
+    "gpu_vram_allocated_mib": [
+      0,
+      0
+    ],
+    "cgroup_cpu_quota_cores": 19.2,
+    "cgroup_memory_current_bytes": 60390211584,
+    "cgroup_memory_limit_bytes": 194065203200,
+    "shm_free_bytes": 3366711296,
+    "independent_native_worker_pid_startticks": "NOT_VERIFIED",
+    "s03_knowledge_sqlite_size_bytes": 49037312,
+    "s03_recall": "NOT_TESTED",
+    "maya_elf_size_bytes": 71289520,
+    "maya_elf_sha256": "3783980bb65861de36fe4d93b8e6bbd6b6a631207677bcabf330bf7830c21b20",
+    "maya_cuda_inference": "NOT_TESTED",
+    "new_deepseek_serving": "NOT_VERIFIED",
+    "new_chat_model_identity": "UNKNOWN_WHILE_STOPPED"
+  },
+  "task_outcomes": [
+    {
+      "task_id": "R01",
+      "status": "LIVE_VERIFIED_READ_ONLY_PARTIAL",
+      "proof": "Owner STOP/5 Supervisor/8081/GPU readback; owner writer lease unknown"
+    },
+    {
+      "task_id": "R04",
+      "status": "LIVE_VERIFIED_READ_ONLY_HOLD_SEEKABLE_STORAGE",
+      "proof": "Root only overlay in allowlisted native mount inventory; total capacity shortfall; storage seek/write untested"
+    },
+    {
+      "task_id": "R05",
+      "status": "HOLD_FULL_GGUF_NOT_DEPLOYED",
+      "proof": "No full GGUF file-by-file SHA or model serving; no permitted capacity for five missing payloads"
+    },
+    {
+      "task_id": "R06",
+      "status": "LIVE_VERIFIED_ELF_SHA_ONLY",
+      "proof": "Maya exact ELF SHA but no CUDA kernel/model pack/generated tokens"
+    },
+    {
+      "task_id": "R07",
+      "status": "HOLD_ACTUAL_WEB_SSE_S03",
+      "proof": "No live HTTP endpoints; S03 metadata only; no RU/ES SSE/STOP/ACL E2E"
+    }
+  ],
+  "outcome_groups": {
+    "self_improvement": "Existing native inspector source patched and used in authentic read-only guest action; no installed new service",
+    "knowledge": "No new verified S03 write/readback/recall",
+    "weights": "No new optimizer updates or DeepSeek inference"
+  },
+  "changes_this_run": {
+    "new_native_download_bytes": 0,
+    "native_deleted_bytes": 0,
+    "native_process_restarts": 0,
+    "model_promotion": false,
+    "manual_stop_reset": false,
+    "new_optimizer_updates_verified": 0,
+    "cleanup_state": "HOLD_NEW_MODEL_NOT_DEPLOYED"
+  },
+  "rollback": "No guest mutation; original owner STOP and files unchanged. If necessary, source-only rollback via exact Git blob CAS after fresh HEAD and dependent changes reconciliation.",
+  "first_ready": "Owner-authorized independently restorable backup and persistent seekable storage >=248834257920 bytes plus reserve actually mountable on original OneHost; verify write/read/seek/SHA and native single-writer lease before Range download.",
+  "evidence_quality": "GitHub workflow success is successful INSPECT only, not successful deployment"
+}

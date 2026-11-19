@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import threading
 import time
 import types
 import unittest
@@ -16,6 +17,7 @@ import httpx
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT))
 import owner_chat_stream as stream
+import owner_chat_ui as ui
 import owner_chat_source_patch as transforms
 
 
@@ -66,6 +68,38 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_bounded_sse_metadata_preserves_real_tokens_and_terminal(self):
+        # Some upstream SSE servers prepend standard event/id fields to data.
+        chunks=Chunks([b': heartbeat\n\n',b'event: message\nid: reply-7\n',
+                       frame('Hola'),frame(finish='stop'),b'data: [DONE]\n\n'])
+        _,factory=self.transport([chunks])
+        native=self.native();payload={'messages':[{'role':'user','content':'Hola'}]}
+        with factory:
+            response=await native['owner_completion']('http://native/model',payload,'Hola',True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertIn('Hola',wire)
+        self.assertNotIn('reply-7',wire)
+        self.assertIn('[DONE]',wire)
+        self.assertEqual(payload['_agent_final'],'Hola')
+        self.assertTrue(chunks.closed)
+
+    async def test_untrusted_sse_event_or_id_metadata_fails_closed(self):
+        cases=((b'event: error\n\n','HOLD_MODEL_SSE_EVENT'),
+               (b'id: '+b'x'*257+b'\n\n','HOLD_MODEL_SSE_FRAME'))
+        for metadata,code in cases:
+            with self.subTest(code=code):
+                chunks=Chunks([frame('partial'),metadata,frame(finish='stop'),
+                               b'data: [DONE]\n\n'])
+                _,factory=self.transport([chunks])
+                native=self.native();payload={'messages':[{'role':'user','content':'Hola'}]}
+                with factory:
+                    response=await native['owner_completion']('http://native/model',payload,'Hola',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn(code,wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertTrue(chunks.closed)
+
     async def test_first_model_content_arrives_before_completion_and_sets_final_before_done(self):
         gate=asyncio.Event()
         chunks=Chunks([frame('323'),frame('',finish='stop'),b'data: [DONE]\n\n'],gate)
@@ -107,6 +141,145 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[1]['messages'][-1]['tool_call_id'],'call_fixture')
         self.assertEqual(requests[1]['messages'][-2]['tool_calls'][0]['id'],'call_fixture')
         self.assertEqual(payload['_agent_final'],'323')
+
+    async def test_complete_tool_observation_is_not_silently_clipped(self):
+        observation='RU начало:'+'я'*8050+'\nES final: contexto completo 🦊'
+        call=Chunks([
+            frame(calls=[{'index':0,'id':'full_context_call','type':'function',
+                          'function':{'name':'calculate','arguments':'{}'}}]),
+            frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+        answer=Chunks([frame('Respuesta completa'),frame(finish='stop'),
+                       b'data: [DONE]\n\n'])
+        requests,factory=self.transport([call,answer])
+        native=self.native(result={'ok':True,'text':observation})
+        payload={'messages':[{'role':'user','content':'Usa el resultado completo'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Usa el resultado completo',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertEqual(requests[1]['messages'][-1]['content'],observation)
+        self.assertEqual(payload['_agent_final'],'Respuesta completa')
+        self.assertNotIn(observation,wire)
+        self.assertTrue(call.closed)
+        self.assertTrue(answer.closed)
+
+        too_large='x'*2000001
+        upstream=Chunks([
+            frame(calls=[{'index':0,'id':'oversized_tool','type':'function',
+                          'function':{'name':'calculate','arguments':'{}'}}]),
+            frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+        requests,factory=self.transport([upstream])
+        native=self.native(result={'ok':True,'text':too_large})
+        payload={'messages':[{'role':'user','content':'Preserva todo'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Preserva todo',True)
+            wire=''.join([piece async for piece in response.body_iterator])
+        self.assertIn('HOLD_TOOL_RESULT_FULL_CONTEXT',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertEqual(len(requests),1)
+        self.assertTrue(upstream.closed)
+
+    async def test_direct_admin_multiple_actions_holds_before_pool_or_dispatch(self):
+        native=self.native()
+        calls={'prepare':0,'deterministic':0,'heuristic':0,'dispatch':0}
+        native['_POOL']=True
+        native['_direct_admin_calls']=lambda text:[
+            {'name':'run_admin','arguments':{'action':'pause'}},
+            {'name':'run_admin','arguments':{'action':'resume'}},
+        ]
+        def prepare(req,cache=False):
+            calls['prepare']+=1
+            return req
+        def deterministic(text):
+            calls['deterministic']+=1
+            return None
+        def heuristic(text):
+            calls['heuristic']+=1
+            return []
+        def dispatch(name,args):
+            calls['dispatch']+=1
+            self.dispatched.append((name,args))
+            return {'ok':True,'text':'unexpected dispatch'}
+        native['prepare_payload']=prepare
+        native['try_deterministic']=deterministic
+        native['heuristic_tools']=heuristic
+        native['dispatch']=dispatch
+        payload={'messages':[
+            {'role':'system','content':'Keep all input intact.'},
+            {'role':'user','content':'Пауза и возобновление: проверь оба действия.'},
+            {'role':'assistant','content':'История 🧠','tool_calls':[
+                {'id':'prior_call','type':'function','function':{
+                    'name':'calculate','arguments':'{"tail":"полный"}'}}]},
+        ]}
+        original_messages=json.loads(json.dumps(payload['messages'],ensure_ascii=False))
+        evidence_dispatch=patch.object(
+            stream._current,'dispatch',
+            side_effect=AssertionError('no evidence dispatch'))
+        model_client=patch.object(
+            stream.httpx,'AsyncClient',
+            side_effect=AssertionError('no model request'))
+        with evidence_dispatch as evidence, model_client as model:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Пауза и возобновление',True)
+            wire=''.join([chunk async for chunk in response.body_iterator])
+        self.assertIn('HOLD_DIRECT_ADMIN_MULTIPLE_ACTIONS',wire)
+        self.assertEqual(calls,{'prepare':0,'deterministic':0,'heuristic':0,'dispatch':0})
+        evidence.assert_not_called()
+        model.assert_not_called()
+        self.assertEqual(self.dispatched,[])
+        self.assertEqual(payload,{'messages':original_messages})
+        self.assertNotIn('_agent_final',payload)
+
+    async def test_untrusted_model_tool_id_overflow_never_dispatches_or_saves(self):
+        # A tool-call ID may be streamed incrementally by Maya/llama.cpp.
+        # The limit is cumulative, not a per-frame cap.
+        cases=(
+            [frame(calls=[{'index':0,'id':'x'*161,'type':'function',
+                           'function':{'name':'calculate','arguments':'{}'}}])],
+            [frame(calls=[{'index':0,'id':'x'*100,'type':'function',
+                           'function':{'name':'calculate','arguments':'{}'}}]),
+             frame(calls=[{'index':0,'id':'y'*61}])],
+        )
+        for fragments in cases:
+            with self.subTest(frames=len(fragments)):
+                chunks=Chunks([*fragments,frame(finish='tool_calls'),
+                               b'data: [DONE]\n\n'])
+                _,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Compute'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Compute',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertIn('HOLD_TOOL_CALL_ID_SIZE',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
+    async def test_model_tool_call_id_at_limit_preserves_native_roundtrip(self):
+        valid_id='c'*160
+        first=Chunks([frame(calls=[{'index':0,'id':valid_id,
+                                   'type':'function','function':{
+                                       'name':'calculate','arguments':'{}'}}]),
+                      frame(finish='tool_calls'),b'data: [DONE]\n\n'])
+        second=Chunks([frame('ok'),frame(finish='stop'),
+                       b'data: [DONE]\n\n'])
+        requests,factory=self.transport([first,second])
+        native=self.native()
+        payload={'messages':[{'role':'user','content':'Compute'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Compute',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertIn('[DONE]',wire)
+        self.assertEqual(self.dispatched,[('calculate',{})])
+        self.assertEqual(requests[1]['messages'][-1]['tool_call_id'],valid_id)
+        self.assertEqual(payload['_agent_final'],'ok')
+        self.assertTrue(first.closed)
+        self.assertTrue(second.closed)
 
     async def test_confirmation_stops_before_model_and_preserves_real_marker(self):
         native=self.native([{'name':'run_admin','arguments':{'action':'pause'}}],
@@ -196,6 +369,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_current_executor_count_is_actual_snapshot_without_model_or_action(self):
         with tempfile.TemporaryDirectory() as folder:
+            (Path(folder)/'state').mkdir()
             path=Path(folder)/'agents.json'
             doc={'n':6,'workers':[{'id':f'nox-agent-{i:02d}','status':'idle','current_task':None}
                                   for i in range(1,7)]}
@@ -203,7 +377,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             path.write_text(json.dumps(doc))
             native=self.native();payload={'messages':[{'role':'user','content':'Сколько сейчас исполнителей и агентов?'}]}
             native['_direct_admin_calls']=lambda text:(_ for _ in ()).throw(AssertionError('no actions'))
-            with patch.object(stream,'EXECUTOR_STATUS',path),patch.object(stream.httpx,'AsyncClient',side_effect=AssertionError('no model')):
+            with patch.object(stream,'EXECUTOR_STATUS',path),patch.object(stream.httpx,'AsyncClient',side_effect=AssertionError('no model')),patch.object(ui,'ROOT',Path(folder)):
                 response=await native['owner_completion']('http://native/model',payload,payload['messages'][0]['content'],True)
                 wire=''.join([chunk async for chunk in response.body_iterator])
             self.assertIn('настроено 6',wire)
@@ -212,6 +386,50 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn('nox-agent-06',wire)
             self.assertEqual(self.dispatched,[])
             self.assertIn('настроено 6',payload['_agent_final'])
+
+    def test_executor_reply_respects_owner_maintenance_and_read_transition(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            (root/'state').mkdir()
+            path=root/'agents.json'
+            path.write_text(json.dumps({
+                'n':1,'workers':[{'id':'nox-agent-01','status':'idle','current_task':None}]
+            }))
+            question='Сколько сейчас агентов?'
+            with patch.object(ui,'ROOT',root):
+                self.assertIn('настроено 1',stream._executor_status_reply(question,path))
+                (root/'state'/'OWNER_MAINTENANCE.flag').touch()
+                blocked=stream._executor_status_reply(question,path)
+                self.assertIn('MODEL_UPDATE',blocked)
+                self.assertNotIn('настроено',blocked)
+                (root/'state').rename(root/'detached')
+                self.assertIn('не могу подтвердить',stream._executor_status_reply(question,path))
+                (root/'detached').rename(root/'state')
+                (root/'state'/'OWNER_MAINTENANCE.flag').unlink()
+                with patch.object(ui,'owner_maintenance_gate',side_effect=['ABSENT','PRESENT']):
+                    transition=stream._executor_status_reply(question,path)
+                self.assertIn('не могу подтвердить',transition)
+                self.assertNotIn('настроено',transition)
+
+    @unittest.skipUnless(hasattr(os,'mkfifo') and hasattr(os,'O_NONBLOCK'),
+                         'POSIX FIFO nonblocking admission regression')
+    def test_executor_fifo_status_path_cannot_block_chat(self):
+        # A FIFO at this path must be rejected *before* an open() waits for a
+        # writer. Previous O_NOFOLLOW-only logic blocked before the fstat gate.
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'agents.json'
+            os.mkfifo(path)
+            answers=[]
+            worker=threading.Thread(
+                target=lambda:answers.append(stream._executor_status_reply(
+                    'Сколько агентов сейчас?',path)),daemon=True)
+            worker.start()
+            worker.join(0.75)
+            self.assertFalse(worker.is_alive(),
+                             'nonregular status FIFO blocked immediate chat admission')
+            self.assertEqual(len(answers),1)
+            self.assertIn('не могу подтвердить',answers[0])
+            self.assertNotIn('настроено',answers[0])
 
     def test_executor_unknown_on_stale_corrupt_duplicate_or_inconsistent_snapshot(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -231,6 +449,18 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn('не могу подтвердить',stream._executor_status_reply('Статус исполнителей',path))
             path.unlink();path.symlink_to(Path(folder)/'absent')
             self.assertIn('не могу подтвердить',stream._executor_status_reply('Сколько агентов?',path))
+
+    def test_normalized_tool_ids_are_bounded_for_native_and_heuristic_routes(self):
+        for value in ('z'*161, 12, [], ''):
+            with self.subTest(value_type=type(value).__name__,size=len(value) if hasattr(value,'__len__') else 0):
+                with self.assertRaisesRegex(stream.StreamFailure,'HOLD_TOOL_CALL_ID_SIZE'):
+                    stream._normal_calls([{'id':value,'name':'calculate',
+                                           'arguments':{}}],0)
+        allowed=stream._normal_calls([{'id':'z'*160,'name':'calculate',
+                                       'arguments':{}}],0)
+        self.assertEqual(allowed[0]['id'],'z'*160)
+        fallback=stream._normal_calls([{'name':'calculate','arguments':{}}],1)
+        self.assertEqual(fallback[0]['id'],'owner_call_1_0')
 
     def test_executor_route_does_not_capture_actions_plans_or_history(self):
         for question in ('Включи 6 агентов','Сколько агентов нужно запустить?',

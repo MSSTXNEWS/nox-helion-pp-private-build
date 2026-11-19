@@ -148,6 +148,45 @@ class MediaAuthTests(unittest.TestCase):
             self.assertEqual(response.status_code, 403)
             create.assert_not_called()
 
+    def test_export_rejects_same_size_replacement_of_verified_asset(self):
+        from fastapi.testclient import TestClient
+        with tempfile.TemporaryDirectory() as root, patch.object(media, 'ROOT', Path(root)):
+            job = fixture_job(); job.update(state='COMPLETED', generation_verified=True)
+            out = Path(root) / 'outputs'; own = out / 'nox' / job['id']; own.mkdir(parents=True)
+            original = b'\x89PNG\r\n\x1a\nverified-image-payload'
+            target = own / 'image.png'; target.write_bytes(original)
+            job['outputs'] = [{'filename': target.name, 'subfolder': 'nox/' + job['id'],
+                               'type': 'output', 'bytes': len(original),
+                               'sha256': hashlib.sha256(original).hexdigest(), 'media_type': 'image/png'}]
+            media.atomic(media.job_path(job['id']), job)
+            route = '/api/ui/media/jobs/' + job['id'] + '/outputs/0'
+            with patch.object(media, 'configuration', return_value={'output_root': str(out)}), TestClient(self.application(True)) as client:
+                before = client.get(route)
+                self.assertEqual(before.status_code, 200)
+                self.assertEqual(before.content, original)
+                self.assertEqual(before.headers['content-type'], 'image/png')
+                target.write_bytes(b'x' * len(original))
+                after = client.get(route)
+            self.assertEqual(after.status_code, 503)
+            self.assertEqual(after.json()['reason'], 'HOLD_OUTPUT_CHANGED')
+
+    def test_export_requires_verified_hash_and_kind_bound_mime(self):
+        from fastapi.testclient import TestClient
+        with tempfile.TemporaryDirectory() as root, patch.object(media, 'ROOT', Path(root)):
+            job = fixture_job(); job.update(state='COMPLETED', generation_verified=True)
+            out = Path(root) / 'outputs'; own = out / 'nox' / job['id']; own.mkdir(parents=True)
+            raw = b'original'; target = own / 'image.png'; target.write_bytes(raw)
+            item = {'filename': target.name, 'subfolder': 'nox/' + job['id'], 'type': 'output',
+                    'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest(), 'media_type': 'image/png'}
+            with patch.object(media, 'configuration', return_value={'output_root': str(out)}), TestClient(self.application(True)) as client:
+                for change in ({'media_type': 'text/html'}, {'sha256': None}, {'sha256': 'invalid'}):
+                    with self.subTest(change=change):
+                        job['outputs'] = [{**item, **change}]
+                        media.atomic(media.job_path(job['id']), job)
+                        response = client.get('/api/ui/media/jobs/' + job['id'] + '/outputs/0')
+                        self.assertEqual(response.status_code, 503)
+                        self.assertEqual(response.json()['reason'], 'HOLD_OUTPUT_VERIFICATION_MISSING')
+
 
 if __name__ == '__main__':
     unittest.main()

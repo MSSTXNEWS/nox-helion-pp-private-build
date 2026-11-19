@@ -74,6 +74,35 @@ class CognitionTests(unittest.TestCase):
         try:self.assertEqual(b.pulse(self.s,'remember')['cores']['C02']['hit_count'],0)
         finally:b.close()
 
+    def test_s03_memory_text_and_source_are_not_truncated(self):
+        memory='воспоминание' * 80
+        source='s03://memory/' + 'a' * 300
+        record={'verified':True,'tenant':'nox','principal':'owner','chat_id':'resonance',
+                'segment':'M2','content':memory,'source_uri':source}
+        b=SynapticBrain(self.native(s03_recall=lambda s,p,l:[record]),
+            PulseConfig(fast_deadline_ms=300,deep_deadline_ms=400,max_workers=8))
+        try:
+            result=b.pulse(self.s,'Вспомни подтверждённый факт')
+            self.assertEqual(result['state'],'READY_FOR_ONE_NOX_MODEL')
+            hit=result['cores']['C02']['hits'][0]
+            self.assertEqual(hit['text'],memory)
+            self.assertEqual(hit['source'],source)
+        finally:b.close()
+
+    def test_oversized_memory_holds_before_model_call_without_trimming(self):
+        memory='полный контекст ' * 120
+        record={'verified':True,'tenant':'nox','principal':'owner','chat_id':'resonance',
+                'segment':'M1','content':memory,'source_uri':'s03://memory/full'}
+        called=[]
+        b=SynapticBrain(self.native(s03_recall=lambda s,p,l:[record]),
+            PulseConfig(fast_deadline_ms=300,deep_deadline_ms=400,max_workers=8,
+                        max_context_chars=1000))
+        try:
+            events=list(b.stream(self.s,'Что ты помнишь?',lambda p,m:called.append((p,m)) or iter(['не должен появиться'])))
+            self.assertEqual(events[-1],{'type':'hold','state':'HOLD_CONTEXT_TOO_LARGE'})
+            self.assertEqual(called,[])
+        finally:b.close()
+
     def test_genesis_birth_requires_strict_native_true(self):
         seed={'native_verified':True,'kind':'verified_birth','verified_sha256':'a'*64,
               'occurred_at':'2026-11-15T00:00:00Z'}
@@ -111,26 +140,110 @@ class BindingTests(unittest.TestCase):
     def test_callback_requirement(self):
         with self.assertRaises(TypeError):AttachedNOX(HostBindings(*[None]*6))
     def test_persistent_stream_one_model(self):
-        s=Session(tenant='nox',principal='owner',chat_id='chat')
-        events=[];calls=[];rev=['v1']
+        sessions=[
+            Session(tenant='nox',principal='owner',chat_id='chat-ru-kv',
+                    language='ru',persona_enabled=True,persona_id='KV'),
+            Session(tenant='nox',principal='owner',chat_id='chat-es-am',
+                    language='es',persona_enabled=True,persona_id='AM'),
+        ]
+        receipts={
+            'chat-ru-kv':'a'*64,
+            'chat-es-am':'b'*64,
+        }
+        memories=[
+            {'tenant':'nox','principal':'owner','chat_id':'chat-ru-kv',
+             'persona_id':'KV','segment':'M2','content':'private memory KV RU',
+             'source_uri':'s03://chat-ru-kv/kv-memory','verified':True},
+            {'tenant':'nox','principal':'owner','chat_id':'chat-es-am',
+             'persona_id':'AM','segment':'M2','content':'memoria privada AM ES',
+             'source_uri':'s03://chat-es-am/am-memory','verified':True},
+        ]
+        events=[];calls=[];callback_sessions={'self':[],'affect':[],'preferences':[],
+                                                'memory_scope':[],'recall':[]}
         def save(session,payload):
-            events.append(payload)
-            return {'verified':True,'durable':True,'event_id':f"s03-event-{payload['seq']}"}
-        def llm(prompt,context):
-            calls.append((prompt,context))
-            for part in ('Я NOX, ', 'отвечаю ', 'из ядра.'):
-                yield part
-        host=HostBindings(authorize=lambda _:True,stop=lambda:False,
-             s03_recall=lambda s,p,l:[],s03_revision=lambda _:rev[0],
-             s03_append=save,model_stream=llm)
+            event={'chat_id':session.chat_id,**payload}
+            events.append(event)
+            return {'verified':True,'durable':True,
+                    'event_id':f"s03-{session.chat_id}-{payload['seq']}"}
+        def indexed_recall(session,plan,limit):
+            callback_sessions['recall'].append((session.chat_id,plan,limit))
+            return memories
+        def self_receipts(session):
+            callback_sessions['self'].append(session.chat_id)
+            return [{'kind':'checkpoint','native_verified':True,
+                     'verified_sha256':receipts[session.chat_id]}]
+        def affect(session,prompt):
+            callback_sessions['affect'].append((session.chat_id,prompt))
+            return {'tone':'calm' if session.language=='ru' else 'cordial',
+                    'language':session.language}
+        def preferences(session):
+            callback_sessions['preferences'].append(session.chat_id)
+            return {'reply_language':session.language,'concise':True}
+        def memory_scope_authorize(session,record):
+            callback_sessions['memory_scope'].append((session.chat_id,record['chat_id']))
+            return True
+        def llm(prompt,metadata):
+            calls.append((prompt,metadata))
+            yield 'Ответ NOX.' if prompt.startswith('RU:') else 'Respuesta NOX.'
+        host=HostBindings(
+            authorize=lambda _:True,stop=lambda:False,
+            s03_recall=lambda s,p,l:[],s03_revision=lambda _:'v1',
+            s03_append=save,model_stream=llm,
+            self_receipts=self_receipts,affect=affect,preferences=preferences,
+            memory_scope_authorize=memory_scope_authorize,
+            s03_indexed_recall=indexed_recall)
         agent=AttachedNOX(host)
         try:
-            result=list(agent.stream(s,'Привет','turn-000001'))
-            self.assertEqual(len(calls),1)
-            self.assertEqual(result[-1]['type'],'done')
-            self.assertEqual(result[-1]['state'],'S03_DURABLE_TURN')
-            self.assertEqual(events[0]['kind'],'user_message')
-            self.assertEqual(events[-1]['kind'],'assistant_final')
+            results=[
+                list(agent.stream(sessions[0],'RU: ответь кратко','turn-ru-0001')),
+                list(agent.stream(sessions[1],'ES: responde breve','turn-es-0001')),
+            ]
+            self.assertEqual(len(calls),2)
+            self.assertEqual([x[0] for x in calls],
+                             ['RU: ответь кратко','ES: responde breve'])
+            for session,result in zip(sessions,results):
+                done=result[-1]
+                self.assertEqual((done['type'],done['state']),
+                                 ('done','S03_DURABLE_TURN'))
+                final=[e for e in events if e['chat_id']==session.chat_id
+                       and e['kind']=='assistant_final']
+                self.assertEqual(len(final),1)
+                self.assertEqual(done['receipt'],
+                                 f"s03-{session.chat_id}-{final[0]['seq']}")
+            for session,(_,metadata) in zip(sessions,calls):
+                context=json.loads(metadata['cognitive_context'])
+                self.assertEqual(metadata['core_schema'],'NOX_V38_SYNAPTIC')
+                self.assertEqual(metadata['response_contract']['language'],session.language)
+                c02=context['C02']['signals']
+                visible=' '.join(hit['text'] for hit in c02['hits'])
+                own='private memory KV RU' if session.persona_id=='KV' else 'memoria privada AM ES'
+                foreign='memoria privada AM ES' if session.persona_id=='KV' else 'private memory KV RU'
+                self.assertIn(own,visible)
+                self.assertNotIn(foreign,visible)
+                c03=context['C03']['signals']
+                self.assertEqual(c03['state'],'OBSERVED')
+                self.assertEqual(c03['consciousness_claim'],'NOT_ESTABLISHED')
+                self.assertIn(receipts[session.chat_id],
+                              [event['sha256'] for event in c03['events']])
+                c04=context['C04']['signals']
+                self.assertEqual(c04['user_tone']['data']['language'],session.language)
+                self.assertEqual(c04['preferences']['data']['reply_language'],session.language)
+                c05=context['C05']['signals']
+                self.assertTrue(c05['master_persona_switch'])
+                self.assertEqual(c05['persona_id'],session.persona_id)
+            self.assertEqual(callback_sessions['self'],['chat-ru-kv','chat-es-am'])
+            self.assertEqual([x[0] for x in callback_sessions['affect']],
+                             ['chat-ru-kv','chat-es-am'])
+            self.assertEqual(callback_sessions['preferences'],['chat-ru-kv','chat-es-am'])
+            self.assertEqual([x[0] for x in callback_sessions['recall']],
+                             ['chat-ru-kv','chat-es-am'])
+            self.assertEqual(
+                {scope for _,scope in callback_sessions['memory_scope']},
+                {'chat-ru-kv','chat-es-am'})
+            finals=[e for e in events if e['kind']=='assistant_final']
+            self.assertEqual({e['chat_id'] for e in finals},
+                             {'chat-ru-kv','chat-es-am'})
+            self.assertTrue(all(e['body']['sha256'] for e in finals))
         finally:agent.close()
     def test_no_proof_no_draft_display(self):
         s=Session(tenant='nox',principal='owner',chat_id='chat')

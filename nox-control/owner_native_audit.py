@@ -69,11 +69,59 @@ def process_rows(proc_root=Path('/proc')):
         except (OSError,ValueError):continue
     return rows[:100]
 
+def v13_owner_fence_metadata(root=Path('/root/nox'), workspace_stop=Path('/workspace/NOX_STOP'), lstat=os.lstat):
+    """READ-ONLY marker presence, not authorization to start, stop, or write.
+
+    Preserve unreadable markers as UNKNOWN; missing flags at one instant are
+    never evidence of an owner lease, safe release, or completed shutdown.
+    Do not open, follow, hash or export marker contents.
+    """
+    paths = {
+        'STOP': root / 'STOP',
+        'STOP_FLAG': root / 'STOP.flag',
+        'LOWER_STOP_FLAG': root / 'stop.flag',
+        'DOT_STOP': root / '.stop',
+        'PROGRAM_STOP': root / 'program/STOP',
+        'STATE_STOP': root / 'state/STOP',
+        'STATE_STOP_FLAG': root / 'state/STOP.flag',
+        'MEDIA_STOP': root / 'state/MEDIA_STOP.flag',
+        'OWNER_MAINTENANCE': root / 'state/OWNER_MAINTENANCE.flag',
+        'WORKSPACE_STOP': workspace_stop,
+        'TRAIN_HOLD': root / 'state/TRAIN_HOLD.flag',
+    }
+    rows = {}
+    for name, path in paths.items():
+        try:
+            lstat(path)
+            rows[name] = 'PRESENT'
+        except FileNotFoundError:
+            rows[name] = 'NOT_FOUND_AT_SNAPSHOT'
+        except OSError:
+            rows[name] = 'UNKNOWN_UNREADABLE'
+    owner_names = tuple(name for name in rows if name != 'TRAIN_HOLD')
+    owner_observed = [rows[name] for name in owner_names]
+    status = ('PRESENT' if 'PRESENT' in owner_observed else
+              'UNKNOWN' if 'UNKNOWN_UNREADABLE' in owner_observed else
+              'NOT_OBSERVED_NOT_AUTHORIZED')
+    return {
+        'scope': 'READ_ONLY_MARKER_METADATA',
+        'owner_stop_state': status,
+        'train_hold_state': rows['TRAIN_HOLD'],
+        'markers': rows,
+        'owner_lease_state': 'NOT_CHECKED',
+        'may_clear_stop': False,
+        'may_start_nox': False,
+        'may_write_native': False,
+        'pid_starttime_verified': False,
+    }
+
+
 def supervisor():
+    fence=v13_owner_fence_metadata()
     binary=shutil.which('supervisorctl')
     if not binary:
         binary=next((x for x in ('/opt/venv/bin/supervisorctl','/usr/local/bin/supervisorctl') if Path(x).is_file()),None)
-    if not binary:return {'available':False}
+    if not binary:return {'available':False,'owner_fence_readonly':fence}
     candidates=[None]+[x for x in ('/etc/supervisor/supervisord.conf','/etc/supervisord.conf','/root/nox/supervisord.conf') if Path(x).is_file()]
     results=[]
     for c in candidates:
@@ -87,15 +135,48 @@ def supervisor():
                 rows.append({'name':m.group(1),'state':m.group(2),'pid':int(pid[1]) if pid else None})
         results.append({'config':c,'rc':rc,'services':rows})
         if rows:break
-    return {'available':True,'results':results}
+    return {'available':True,'results':results,'owner_fence_readonly':fence}
+
+def v13_wheelhouse_admission(record):
+    """Metadata-only ABI gate for the Drive CP311/cu126 wheelhouse, never an installer.
+
+    A matching wheel tag is not a GPU smoke, driver test, license approval, or
+    native installation receipt. Incompatible installed Python environments
+    must not be modified to make a source check pass.
+    """
+    if not isinstance(record, dict) or not isinstance(record.get('_runtime'), dict):
+        return 'HOLD_WHEELHOUSE_RUNTIME_ABI_UNKNOWN'
+    runtime = record['_runtime']
+    if runtime.get('python_abi') != 'cpython-311':
+        return 'HOLD_WHEELHOUSE_CP311_PYTHON_ABI_MISMATCH'
+    if runtime.get('platform') != 'linux-x86_64':
+        return 'HOLD_WHEELHOUSE_LINUX_X86_64_PLATFORM_MISMATCH'
+    # A CP311 cache tag alone is not enough: it can disagree with the
+    # interpreter's actual version. Reject contradictory or missing evidence
+    # rather than labelling a potentially CP312 process a candidate.
+    python_version = runtime.get('python_version')
+    if not isinstance(python_version, str) or re.fullmatch(r'3\.11\.\d+', python_version) is None:
+        return 'HOLD_WHEELHOUSE_CP311_VERSION_MISMATCH'
+    version = record.get('torch')
+    if not isinstance(version, str) or not version:
+        return 'HOLD_WHEELHOUSE_TORCH_BUILD_UNKNOWN'
+    # A forged package label such as "unknown+cu126" is not a PyTorch build.
+    if re.fullmatch(r'[1-9]\d*\.\d+\.\d+\+cu126', version) is None:
+        return 'HOLD_WHEELHOUSE_CU126_TORCH_BUILD_MISMATCH'
+    return 'SOURCE_ONLY_WHEELHOUSE_ABI_CANDIDATE_NATIVE_SM70_HOLD'
+
 
 def packages():
-    code="import importlib.metadata as m,json; names=['torch','transformers','accelerate','datasets','deepspeed','safetensors','peft','bitsandbytes','trl','psutil','nvidia-ml-py']; d={};\nfor n in names:\n try:d[n]=m.version(n)\n except m.PackageNotFoundError:d[n]=None\nprint(json.dumps(d))"
+    code="import importlib.metadata as m,json,sys,sysconfig; names=['torch','transformers','accelerate','datasets','deepspeed','safetensors','peft','bitsandbytes','trl','psutil','nvidia-ml-py','diffusers','opencv-python','imageio-ffmpeg']; d={'_runtime':{'python_abi':sys.implementation.cache_tag,'python_version':'.'.join(map(str,sys.version_info[:3])),'platform':sysconfig.get_platform()}};\nfor n in names:\n try:d[n]=m.version(n)\n except m.PackageNotFoundError:d[n]=None\nprint(json.dumps(d))"
     found={}
-    for p in ('/opt/venv/bin/python','/root/nox/.venv/bin/python','/usr/bin/python3'):
+    for p in ('/root/venv_volta/bin/python','/opt/venv/bin/python','/root/nox/.venv/bin/python','/usr/bin/python3'):
         if Path(p).is_file():
             rc,out=run([p,'-c',code])
-            try:found[p]=json.loads(out) if rc==0 else {'status':'IMPORT_FAILED'}
+            try:
+                row=json.loads(out) if rc==0 else {'status':'IMPORT_FAILED'}
+                if isinstance(row,dict) and rc==0:
+                    row['_wheelhouse_candidate']=v13_wheelhouse_admission(row)
+                found[p]=row
             except ValueError:found[p]={'status':'INVALID_OUTPUT'}
     return found
 
@@ -186,8 +267,12 @@ def pinned_model_paths(root=MODEL_ROOT,lstat=os.lstat):
         status='HOLD_MODEL_TARGET_TYPE'
     elif any(r.get('size_status')=='MISMATCH' for r in results):
         status='HOLD_MODEL_FILE_SIZE_MISMATCH'
+    elif any(r['type']=='missing' for r in results):
+        # Missing GGUF files are not an admitted model, even if every readable
+        # pathname was safe. In particular, never report OK for an empty root.
+        status='HOLD_MODEL_FILES_MISSING'
     else:
-        status='OK'  # Metadata was readable; NOT a claim of full weights or SHA verification.
+        status='HOLD_MODEL_SHA_UNVERIFIED'  # File sizes match, but full GGUF SHA was NOT checked.
     return {'status':status,'root':str(root_path),'manifest_revision':MODEL_MANIFEST_REVISION,
             'files':results}
 

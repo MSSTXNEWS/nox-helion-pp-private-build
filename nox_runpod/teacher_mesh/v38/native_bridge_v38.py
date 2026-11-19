@@ -19,7 +19,7 @@ class HostBindings:
     authorize: Callable[[Session], bool]
     stop: Callable[[], bool]
     s03_recall: Callable[[Session, str, int], list[dict]]
-    s03_revision: Callable[[Session], str]
+    s03_revision: Callable[[Session], str] | None
     s03_append: Callable[[Session, dict], Mapping[str, Any]]
     model_stream: Callable[[str, dict], Iterator[str]]
     sensors: Callable[[Session], Mapping[str, Any]] | None = None
@@ -58,7 +58,7 @@ class AttachedNOX:
     """
     def __init__(self, host: HostBindings, config: PulseConfig | None = None,
                  *, cache_bytes: int = 8 * 1024 * 1024, cache_ttl_s: float = 45.0):
-        required=('authorize','stop','s03_recall','s03_revision','s03_append','model_stream')
+        required=('authorize','stop','s03_recall','s03_append','model_stream')
         if any(not callable(getattr(host,n,None)) for n in required):
             raise TypeError('EXISTING_ONEHOST_CALLBACKS_REQUIRED')
         self.host=host

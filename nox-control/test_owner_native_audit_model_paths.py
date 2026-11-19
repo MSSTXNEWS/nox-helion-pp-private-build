@@ -109,6 +109,61 @@ class ProcessIdentityTests(unittest.TestCase):
             self.assertNotIn('stat',rows[0])
             self.assertNotIn('raw_stat',rows[0])
 
+class V13WheelhouseAdmissionTests(unittest.TestCase):
+    def test_live_python312_cu124_never_accepts_cp311_wheels(self):
+        got = audit.v13_wheelhouse_admission({
+            '_runtime': {'python_abi': 'cpython-312', 'platform': 'linux-x86_64'},
+            'torch': '2.6.0+cu124'})
+        self.assertEqual(got, 'HOLD_WHEELHOUSE_CP311_PYTHON_ABI_MISMATCH')
+
+    def test_python311_but_cuda124_still_blocks(self):
+        got = audit.v13_wheelhouse_admission({
+            '_runtime': {'python_abi': 'cpython-311', 'platform': 'linux-x86_64', 'python_version': '3.11.10'},
+            'torch': '2.6.0+cu124'})
+        self.assertEqual(got, 'HOLD_WHEELHOUSE_CU126_TORCH_BUILD_MISMATCH')
+
+    def test_unknown_runtime_or_torch_cannot_be_reported_installed(self):
+        self.assertEqual(audit.v13_wheelhouse_admission({}),
+                         'HOLD_WHEELHOUSE_RUNTIME_ABI_UNKNOWN')
+        self.assertEqual(audit.v13_wheelhouse_admission({
+            '_runtime': {'python_abi': 'cpython-311', 'platform': 'linux-x86_64', 'python_version': '3.11.10'},
+            'torch': None}), 'HOLD_WHEELHOUSE_TORCH_BUILD_UNKNOWN')
+
+    def test_matching_metadata_still_requires_native_sm70_smoke(self):
+        got = audit.v13_wheelhouse_admission({
+            '_runtime': {'python_abi': 'cpython-311', 'platform': 'linux-x86_64', 'python_version': '3.11.10'},
+            'torch': '2.9.0+cu126'})
+        self.assertEqual(got, 'SOURCE_ONLY_WHEELHOUSE_ABI_CANDIDATE_NATIVE_SM70_HOLD')
+        self.assertNotIn('INSTALLED', got)
+
+    def test_cp311_cache_tag_cannot_hide_different_or_missing_interpreter_version(self):
+        for observed in ('3.12.4', '3.11', '3.11.9+unexpected', None, 311):
+            with self.subTest(observed=observed):
+                got = audit.v13_wheelhouse_admission({
+                    '_runtime': {'python_abi': 'cpython-311',
+                                 'python_version': observed, 'platform': 'linux-x86_64'},
+                    'torch': '2.9.0+cu126'})
+                self.assertEqual(got, 'HOLD_WHEELHOUSE_CP311_VERSION_MISMATCH')
+
+    def test_cu126_suffix_without_valid_torch_release_is_not_admitted(self):
+        for label in ('unknown+cu126', '2.9+cu126', '2.9.0+cu126+fake',
+                      '2.9.0+cu126\\n', '2.9.0+cu124'):
+            with self.subTest(label=label):
+                got = audit.v13_wheelhouse_admission({
+                    '_runtime': {'python_abi': 'cpython-311',
+                                 'python_version': '3.11.10',
+                                 'platform': 'linux-x86_64'},
+                    'torch': label})
+                self.assertEqual(got, 'HOLD_WHEELHOUSE_CU126_TORCH_BUILD_MISMATCH')
+
+    def test_native_inventory_includes_original_volta_python(self):
+        import inspect
+        source = inspect.getsource(audit.packages)
+        self.assertIn('/root/venv_volta/bin/python', source)
+        self.assertIn('sys.implementation.cache_tag', source)
+        self.assertIn('_wheelhouse_candidate', source)
+
+
 from test_owner_native_audit_pinned_v10 import PinnedModelInventoryAdmissionTest
 
 if __name__=='__main__':

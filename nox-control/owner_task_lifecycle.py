@@ -79,6 +79,7 @@ def journal_recall(task):
                 stream.readline(65537)
             lines = stream.read(65536).splitlines()
         categories = set()
+        verified_receipts = set()
         for line in lines[-100:]:
             try:
                 row = json.loads(line)
@@ -90,6 +91,27 @@ def journal_recall(task):
                 continue
             kind = row.get('kind')
             if kind == 'experience_verified':
+                # A verified holdout is not an accepted reusable repair.
+                # Native mentor receipts record the handler only in the
+                # underlying experience row, so bind reusable success to
+                # this exact TaskID rather than another task's handler.
+                proof = row.get('verification')
+                if (row.get('task_id') != task.get('id')
+                        or row.get('accepted') is not True
+                        or row.get('partition') != 'train'
+                        or not isinstance(proof, dict)
+                        or proof.get('kind') not in (
+                            'bounded_native_component_check',
+                            'native_supervisor_running',
+                            'native_gguf_header')
+                        or not isinstance(row.get('dedup_sha256'), str)
+                        or not SHA.fullmatch(row['dedup_sha256'])):
+                    continue
+                # Journal replay or repeated reporting of the same native
+                # evidence is not another successful skill application.
+                if row['dedup_sha256'] in verified_receipts:
+                    continue
+                verified_receipts.add(row['dedup_sha256'])
                 result['verified'] += 1
             elif kind == 'error_observed':
                 result['errors'] += 1
@@ -327,19 +349,43 @@ def technical_details(task, local_recall, plan, memory):
             'public_error_codes': sorted(codes)}
 
 
-def shared_context(task, local_recall, plan, gateway=None):
+def _verify_advisor_resource_admission(namespace):
+    """Reuse the bound native chat/resource gate before any senior request."""
+    if not isinstance(namespace, dict):
+        raise LifecycleHold('HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+    dispatcher = namespace.get('owner_subagent_dispatcher')
+    native = namespace.get('_nox_owner_autonomy_native')
+    autonomy = getattr(dispatcher, 'autonomy', None)
+    verify = getattr(autonomy, 'verify_resource_admission', None)
+    if (dispatcher is None or native is None
+            or getattr(dispatcher, '_BOUND', None) is not native
+            or not callable(getattr(native, 'read_resource_snapshot', None))
+            or not callable(verify)):
+        raise LifecycleHold('HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+    snapshot = native.read_resource_snapshot()
+    verify(snapshot)
+
+
+def shared_context(task, local_recall, plan, gateway=None, resource_namespace=None):
     parent = task.get('owner_parent_id')
     group = {'parent': parent, 'plan': task.get('owner_plan_id')} if parent else {
         'task': task.get('id'), 'handler': task.get('handler'), 'params_sha256': outbox.digest(task.get('params') or {})}
     # A new observed failure invalidates earlier advice for this plan. Sibling
     # checks still share their initial context instead of consulting per thread.
+    # Siblings may reuse advice only for the SAME technical question. A shared
+    # parent/plan alone previously leaked a sibling's handler, parameters or
+    # failure note into another task's optimisation candidate.
+    group['handler'] = outbox.safe_id(task.get('handler'))
+    group['params_sha256'] = outbox.digest(task.get('params') or {})
+    group['plan_intent'] = outbox.safe_code(task.get('owner_plan_intent'), 'NONE')
+    group['note_sha256'] = hashlib.sha256(str(task.get('note') or '')[:2000].encode('utf-8')).hexdigest()
     group['retries'] = task.get('retries') if type(task.get('retries')) is int else 0
     group['incident'] = task.get('mentor_incident') if SHA.fullmatch(str(task.get('mentor_incident', ''))) else None
     key = outbox.digest(group)
     now = time.time()
     with _CACHE_LOCK:
         cached = _CACHE.get(key)
-        transient = {'PENDING', 'RATE_LIMITED', 'SENIOR_CONSULTATION_UNAVAILABLE'}
+        transient = {'PENDING', 'RATE_LIMITED', 'SENIOR_CONSULTATION_UNAVAILABLE', 'RESOURCE_ADMISSION_HOLD'}
         missing = {'MISSING_SENIOR_GATEWAY', 'MISSING_CREDENTIALS', 'UNVERIFIED_ACCESS', 'DISABLED'}
         senior_state = cached['value']['senior'].get('state') if cached else None
         ttl = 2 if senior_state in transient else (15 if senior_state in missing else CACHE_SECONDS)
@@ -349,27 +395,43 @@ def shared_context(task, local_recall, plan, gateway=None):
         return {'memory': {'state': 'S03_RECALL_BUSY'}, 'senior': {'state': 'SENIOR_CONTEXT_BUSY',
                 'research_state': 'INTERNET_RESEARCH_NOT_VERIFIED'}, 'cache_reused': False, 'context_sha256': key}
     try:
-        memory = semantic_recall(task)
-        details = technical_details(task, local_recall, plan, memory)
-        technical = {'schema': 'NOX_TASK_TECHNICAL_CONTEXT_V2',
-                     'handler': outbox.safe_id(task.get('handler')),
-                     'task_evidence_sha256': key,
-                     'prior_verified_count': local_recall['verified'], 'prior_error_count': local_recall['errors'],
-                     'error_categories': local_recall['error_categories'],
-                     'mode': plan.get('mode', 'UNKNOWN'), 'global_worker_cap': 6,
-                     'plan_policy': 'EXISTING_AUTHORIZED_NATIVE_HANDLER_WITH_RESOURCE_LOCKS',
-                     'memory_text_included': False, **details}
-        if cached and senior_state == 'PENDING' and isinstance(cached.get('technical'), dict):
-            # Poll the same distinct provider work, not a new context made by
-            # normal memory-usage changes during a two-second pending interval.
-            technical = cached['technical']
-        if gateway is None:
-            senior = {'state': 'MISSING_SENIOR_GATEWAY', 'research_state': 'MISSING_INTERNET_RESEARCH_GATEWAY', 'models_consulted': 0}
-        else:
+        admission_blocked = False
+        if gateway is not None:
             try:
-                senior = _gateway_result(gateway.consult_plan(technical, deadline_seconds=2.0))
+                if resource_namespace is None:
+                    raise LifecycleHold('HOLD_ADVISOR_RESOURCE_GATE_UNBOUND')
+                _verify_advisor_resource_admission(resource_namespace)
             except Exception:
-                senior = {'state': 'SENIOR_CONSULTATION_UNAVAILABLE', 'research_state': 'INTERNET_RESEARCH_NOT_VERIFIED', 'models_consulted': 0}
+                admission_blocked = True
+        if admission_blocked:
+            memory = {'state': 'NOT_CALLED_RESOURCE_ADMISSION'}
+            senior = {'state': 'RESOURCE_ADMISSION_HOLD',
+                      'research_state': 'NOT_STARTED_RESOURCE_ADMISSION', 'models_consulted': 0}
+            technical = None
+        else:
+            memory = semantic_recall(task)
+            details = technical_details(task, local_recall, plan, memory)
+            technical = {'schema': 'NOX_TASK_TECHNICAL_CONTEXT_V2',
+                         'handler': outbox.safe_id(task.get('handler')),
+                         # Stable across restarts for identical task/attempt; gateway persists this context digest.
+                         'task_evidence_sha256': key,
+                         'prior_verified_count': local_recall['verified'], 'prior_error_count': local_recall['errors'],
+                         'error_categories': local_recall['error_categories'],
+                         'mode': plan.get('mode', 'UNKNOWN'), 'global_worker_cap': 6,
+                         'plan_policy': 'EXISTING_AUTHORIZED_NATIVE_HANDLER_WITH_RESOURCE_LOCKS',
+                         'memory_text_included': False, **details}
+            if cached and senior_state == 'PENDING' and isinstance(cached.get('technical'), dict):
+                # Poll the same distinct provider work, not a new context made by
+                # normal memory-usage changes during a two-second pending interval.
+                technical = cached['technical']
+            if gateway is None:
+                senior = {'state': 'MISSING_SENIOR_GATEWAY', 'research_state': 'MISSING_INTERNET_RESEARCH_GATEWAY', 'models_consulted': 0}
+            else:
+                try:
+                    # Gateway persists dedup on context, config and provider bindings across restarts.
+                    senior = _gateway_result(gateway.consult_plan(technical, deadline_seconds=2.0))
+                except Exception:
+                    senior = {'state': 'SENIOR_CONSULTATION_UNAVAILABLE', 'research_state': 'INTERNET_RESEARCH_NOT_VERIFIED', 'models_consulted': 0}
         value = {'memory': memory, 'senior': senior, 'cache_reused': False, 'context_sha256': key,
                  'context_observed_at': now, 'technical_context': technical}
         with _CACHE_LOCK:
@@ -407,13 +469,13 @@ def _plan_projection(value):
     return result
 
 
-def preflight(task, state, mentor, plans=None, gateway=None):
+def preflight(task, state, mentor, plans=None, gateway=None, resource_namespace=None):
     stopped = mentor.stop_active()
     plan = _plan_projection(plans.plan_metadata(task, state) if plans is not None else default_plan_metadata(task, state))
     local = journal_recall(task)
     context = ({'memory': {'state': 'NOT_CALLED_OWNER_STOP'}, 'senior': {'state': 'NOT_CALLED_OWNER_STOP',
                 'research_state': 'NOT_CALLED_OWNER_STOP'}, 'cache_reused': False} if stopped else
-               shared_context(task, local, plan, gateway))
+               shared_context(task, local, plan, gateway, resource_namespace))
     return {'schema': LIFECYCLE_SCHEMA, 'phase': 'PREFLIGHT', 'task_id': outbox.safe_id(task.get('id')),
             'handler': outbox.safe_id(task.get('handler')), 'claim': (task.get('owner_claim') or {}).get('nonce'),
             'at': time.time(), 'execution': 'BLOCKED_OWNER_STOP' if stopped else 'EXISTING_ADMISSION_REQUIRED',
@@ -550,7 +612,7 @@ class Coordinator:
             with self.namespace['_qlock']:
                 snapshot = {'tasks': {key: copy.deepcopy({name: value for name, value in row.items() if not name.startswith('_')})
                                       for key, row in (state.get('tasks') or {}).items()}}
-            pre = preflight(task, snapshot, self.mentor, self.plans, self.gateway)
+            pre = preflight(task, snapshot, self.mentor, self.plans, self.gateway, self.namespace)
             self.mentor.journal('owner_task_preflight', lifecycle=pre, task_id=pre['task_id'],
                                 handler=pre['handler'], accepted=False)
         except Exception:
@@ -785,23 +847,63 @@ def patch_dispatcher(source, expected_sha256, source_pins):
         raise LifecycleHold('HOLD_LIFECYCLE_ASSET_PINS')
     if not {'owner_mentor', 'owner_event_outbox'} <= set(source_pins):
         raise LifecycleHold('HOLD_LIFECYCLE_REQUIRED_PINS')
-    if PATCH_MARKER in source:
-        calls = [node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Call)
-                 and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
-                 and node.func.value.id == 'owner_task_lifecycle' and node.func.attr == 'bind_dispatcher']
-        if len(calls) != 1 or len(calls[0].args) != 2 or ast.literal_eval(calls[0].args[1]) != source_pins:
-            raise LifecycleHold('HOLD_LIFECYCLE_BOUND_PINS_CHANGED')
-        compile(source, '<dispatcher-owner-lifecycle>', 'exec')
-        return source
     tree = ast.parse(source)
+    parents = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
+             and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
+             and node.func.value.id == 'owner_task_lifecycle' and node.func.attr == 'bind_dispatcher']
     functions = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
     if not {'run_one', 'write_status', 'owner_claim_ready', '_nox_owner_task_admitted'} <= functions:
         raise LifecycleHold('HOLD_LIFECYCLE_NATIVE_CONTRACT')
     anchor = 'if __name__ == "__main__":'
     if source.count(anchor) != 1:
         raise LifecycleHold('HOLD_LIFECYCLE_MAIN_ANCHOR')
-    addition = ('# ' + PATCH_MARKER + '\nimport owner_task_lifecycle\n'
-                'owner_task_lifecycle.bind_dispatcher(globals(), ' + repr(source_pins) + ')\n\n')
-    updated = source.replace(anchor, addition + anchor, 1)
+    if PATCH_MARKER in source:
+        if source.count(PATCH_MARKER) != 1 or len(calls) != 1:
+            raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_COUNT')
+        call = calls[0]
+        if (not isinstance(parents.get(call), ast.Expr) or len(call.args) != 2 or call.keywords
+                or not isinstance(call.args[0], ast.Call)
+                or not isinstance(call.args[0].func, ast.Name) or call.args[0].func.id != 'globals'
+                or call.args[0].args or call.args[0].keywords):
+            raise LifecycleHold('HOLD_LIFECYCLE_BOUND_PINS_CHANGED')
+        try:
+            bound_pins = ast.literal_eval(call.args[1])
+        except (ValueError, TypeError, SyntaxError):
+            raise LifecycleHold('HOLD_LIFECYCLE_BOUND_PINS_CHANGED')
+        lines = source.splitlines()
+        if (bound_pins != source_pins or call.lineno < 2
+                or lines[call.lineno - 2].strip() != '# ' + PATCH_MARKER):
+            raise LifecycleHold('HOLD_LIFECYCLE_BOUND_PINS_CHANGED')
+        compile(source, '<dispatcher-owner-lifecycle>', 'exec')
+        return source
+    if len(calls) != 1:
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_COUNT')
+    call = calls[0]
+    if (not isinstance(parents.get(call), ast.Expr) or call.args or call.keywords
+            or call.lineno != call.end_lineno):
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_SHAPE')
+    source_lines = source.splitlines(keepends=True)
+    raw_line = source_lines[call.lineno - 1].encode('utf-8')
+    start_col, end_col = call.col_offset, call.end_col_offset
+    try:
+        call_source = raw_line[start_col:end_col].decode('utf-8')
+    except UnicodeError:
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_SHAPE')
+    if call_source != ast.get_source_segment(source, call) or raw_line[:start_col].strip():
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_SHAPE')
+    suffix = raw_line[end_col:].decode('utf-8').rstrip('\r\n').strip()
+    if suffix and not suffix.startswith('#'):
+        raise LifecycleHold('HOLD_LIFECYCLE_BIND_CALL_SHAPE')
+    indent = raw_line[:start_col]
+    newline = b'\r\n' if raw_line.endswith(b'\r\n') else b'\n' if raw_line.endswith(b'\n') else b''
+    marker = indent + b'# ' + PATCH_MARKER.encode('ascii') + newline
+    replacement = ('owner_task_lifecycle.bind_dispatcher(globals(), ' + repr(source_pins) + ')').encode('utf-8')
+    source_lines[call.lineno - 1] = (raw_line[:start_col] + replacement + raw_line[end_col:]).decode('utf-8')
+    source_lines.insert(call.lineno - 1, marker.decode('utf-8'))
+    updated = ''.join(source_lines)
     compile(updated, '<dispatcher-owner-lifecycle>', 'exec')
     return updated

@@ -54,13 +54,20 @@ def info(name):
     # A nonzero supervisorctl rc invalidates stdout even when it resembles a
     # plausible RUNNING/STOPPED row. Never admit a service from a failed probe.
     p = call(["supervisorctl", "status", name])
-    if p.returncode != 0 or not isinstance(p.stdout, str):
+    # Supervisorctl uses rc=3 for an explicitly stopped process on this host.
+    # Admit rc=3 ONLY with a single exact STOPPED/EXITED row and no PID.
+    if p.returncode not in (0, 3) or not isinstance(p.stdout, str):
         return {"state": "UNKNOWN", "pid": None}
     lines = p.stdout.strip().splitlines()
     m = SUPERVISOR_OUTPUT.match(lines[0]) if len(lines) == 1 else None
     if m is None or m[1] != name:
         return {"state": "UNKNOWN", "pid": None}
     state, pid = m[2], int(m[3]) if m[3] else None
+    if p.returncode == 3 and state not in ("STOPPED", "EXITED"):
+        return {"state": "UNKNOWN", "pid": None}
+    # A stray or malformed PID token after the matched prefix is contradictory.
+    if pid is None and re.search(r"\bpid\b", lines[0][m.end():], re.IGNORECASE):
+        return {"state": "UNKNOWN", "pid": None}
     if not ((state == "RUNNING" and pid is not None and pid > 0) or
             (state in ("STOPPED", "EXITED") and pid is None)):
         return {"state": "UNKNOWN", "pid": None}
@@ -182,8 +189,99 @@ def validate_baseline(baseline):
     return baseline
 
 
+def check_existing_installation(expected):
+    """Only complete byte-identical existing installations may be reused."""
+    for path, _ in expected:
+        protect_path(path)
+    present = [path for path, _ in expected if path.exists() or path.is_symlink()]
+    if not present:
+        return False
+    if len(present) != len(expected):
+        fail("PARTIAL_INSTALL_REQUIRES_OWNER_RECONCILIATION")
+    mismatches = []
+    for path, raw in expected:
+        if not path.is_file() or path.is_symlink():
+            fail("EXISTING_INSTALL_SOURCE_MISMATCH")
+        current = path.read_bytes()
+        if current != raw:
+            # Only bounded fingerprints leave the host, never policy contents.
+            mismatches.append({"name": path.name,
+                               "actual_sha256": hashlib.sha256(current).hexdigest(),
+                               "expected_sha256": hashlib.sha256(raw).hexdigest(),
+                               "actual_bytes": len(current)})
+    if mismatches:
+        emit({"state": "HOLD_EXISTING_LIFELINE_DIFF",
+              "changes_not_applied": True,
+              "existing_source_fingerprints_only": mismatches})
+        fail("EXISTING_INSTALL_SOURCE_MISMATCH")
+    return True
+
+
+LEGACY_LIFELINE_SHA256 = "c04f66ea3bc9cf3fe753aded140d197411104501d8dd52a3cb2cffd8d753446a"
+MIGRATED_SCRIPT_BACKUP = None
+MIGRATED_SCRIPT_NEW_SHA = None
+
+def replace_script_exact(path, expected_old, replacement):
+    """Atomic, owner-locked exact-script swap. No other config or services."""
+    protect_path(path)
+    def identity(info):
+        # Reading a source may legitimately update atime on relatime mounts.
+        return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+                info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    before_stat = path.lstat()
+    before = identity(before_stat)
+    if not stat.S_ISREG(before_stat.st_mode) or before_stat.st_nlink != 1:
+        fail("LEGACY_SCRIPT_UNSAFE")
+    if path.read_bytes() != expected_old:
+        fail("LEGACY_SCRIPT_CHANGED")
+    if identity(path.lstat()) != before:
+        fail("LEGACY_SCRIPT_RACE")
+    fd, temp = tempfile.mkstemp(prefix=".nox-lifeline-upgrade-", dir=path.parent)
+    try:
+        os.fchmod(fd, 0o644)
+        with os.fdopen(fd, "wb") as w:
+            w.write(replacement)
+            w.flush()
+            os.fsync(w.fileno())
+        if identity(path.lstat()) != before or path.read_bytes() != expected_old:
+            fail("LEGACY_SCRIPT_RACE")
+        os.replace(temp, path)
+        fd_dir = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(fd_dir)
+        finally:
+            os.close(fd_dir)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+    if path.read_bytes() != replacement:
+        fail("LEGACY_SCRIPT_READBACK")
+    return True
+
+
+def recover_legacy_script():
+    """Best-effort rollback without touching a live guard, original services or STOP."""
+    global MIGRATED_SCRIPT_BACKUP, MIGRATED_SCRIPT_NEW_SHA
+    if MIGRATED_SCRIPT_BACKUP is None:
+        return
+    path = MIGRATED_SCRIPT_BACKUP
+    old = path.read_bytes()
+    if hashlib.sha256(old).hexdigest() != LEGACY_LIFELINE_SHA256:
+        fail("LEGACY_BACKUP_CORRUPT")
+    current = info(GUARD)
+    if current["state"] not in ("STOPPED", "EXITED") or current["pid"] is not None:
+        fail("LEGACY_ROLLBACK_GUARD_ACTIVE")
+    if hashlib.sha256(SCRIPT.read_bytes()).hexdigest() != MIGRATED_SCRIPT_NEW_SHA:
+        fail("LEGACY_ROLLBACK_SOURCE_CHANGED")
+    replace_script_exact(SCRIPT, SCRIPT.read_bytes(), old)
+    emit({"state": "LEGACY_SCRIPT_ROLLBACK_VERIFIED",
+          "restored_sha256": LEGACY_LIFELINE_SHA256,
+          "owner_stop_preserved": True})
+    MIGRATED_SCRIPT_BACKUP = None
+
+
 def main():
-    global OWNER_LOCK_FD
+    global OWNER_LOCK_FD, MIGRATED_SCRIPT_BACKUP, MIGRATED_SCRIPT_NEW_SHA
     sha = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
     if not AUDIT_SHA.fullmatch(sha) or not request.isdigit():
@@ -214,12 +312,38 @@ def main():
     # Never overwrite an existing differing file / old policy / owner configuration.
     for path in (SCRIPT, POLICY, CONFIG):
         protect_path(path)
-    existing = [p for p in (SCRIPT, POLICY, CONFIG) if p.exists()]
-    if any(p == CONFIG for p in existing):
-        # An existing running guard is owned by an earlier install. Leave untouched.
-        fail("GUARD_CONFIG_ALREADY_EXISTS")
-    if POLICY.exists() or SCRIPT.exists():
-        fail("PARTIAL_INSTALL_REQUIRES_OWNER_RECONCILIATION")
+    # This EXACT previously installed legacy byte fingerprint was observed
+    # by authenticated owner SSH. Never broaden it to an unknown version.
+    previous = None
+    if (SCRIPT.is_file() and not SCRIPT.is_symlink()
+        and POLICY.is_file() and not POLICY.is_symlink()
+        and CONFIG.is_file() and not CONFIG.is_symlink()):
+        previous = SCRIPT.read_bytes()
+        if (hashlib.sha256(previous).hexdigest() == LEGACY_LIFELINE_SHA256
+            and POLICY.read_bytes() == policy and CONFIG.read_bytes() == config):
+            original_guard = info(GUARD)
+            if original_guard["state"] not in ("STOPPED", "EXITED") or original_guard["pid"] is not None:
+                fail("LEGACY_GUARD_MUST_BE_STOPPED")
+            backup = ROOT / "backup/owner_maintenance" / request / "nox_native_lifeline_preupgrade.py"
+            if backup.exists() or backup.is_symlink():
+                # No clobber: exact same old bytes already backed up is okay.
+                if backup.is_symlink() or not backup.is_file() or backup.read_bytes() != previous:
+                    fail("LEGACY_BACKUP_CONFLICT")
+            else:
+                preserve_or_write(backup, previous, 0o600)
+            if backup.read_bytes() != previous:
+                fail("LEGACY_BACKUP_READBACK")
+            compile(script, str(SCRIPT), "exec")
+            replace_script_exact(SCRIPT, previous, script)
+            MIGRATED_SCRIPT_BACKUP = backup
+            MIGRATED_SCRIPT_NEW_SHA = hashlib.sha256(script).hexdigest()
+            emit({"state": "LEGACY_SCRIPT_EXACT_UPGRADE",
+                  "old_sha256": LEGACY_LIFELINE_SHA256,
+                  "new_sha256": MIGRATED_SCRIPT_NEW_SHA,
+                  "backup_sha256_verified": True,
+                  "original_services_untouched": True})
+    existing = check_existing_installation(
+        ((SCRIPT, script), (POLICY, policy), (CONFIG, config)))
     compile(script, str(SCRIPT), "exec")
     guard_state = ROOT / "state/lifeline"
     protect_path(guard_state)
@@ -235,11 +359,21 @@ def main():
     if p.returncode or "NOX_LIFELINE_RESULT=" not in p.stdout:
         fail("READ_ONLY_SELF_TEST")
     reread = call(["supervisorctl", "reread"], timeout=15)
-    if reread.returncode or GUARD not in reread.stdout:
+    if reread.returncode or (not existing and GUARD not in reread.stdout):
         fail("SUPERVISOR_REREAD")
-    update = call(["supervisorctl", "update", GUARD], timeout=18)
-    if update.returncode:
-        fail("SUPERVISOR_UPDATE")
+    if existing:
+        guard_before = info(GUARD)
+        if guard_before["state"] in ("STOPPED", "EXITED") and guard_before["pid"] is None:
+            # Starts only this independent, disabled/read-only observer.
+            started = call(["supervisorctl", "start", GUARD], timeout=18)
+            if started.returncode:
+                fail("EXISTING_GUARD_START")
+        elif guard_before["state"] != "RUNNING" or not guard_before["pid"]:
+            fail("EXISTING_GUARD_UNSAFE")
+    else:
+        update = call(["supervisorctl", "update", GUARD], timeout=18)
+        if update.returncode:
+            fail("SUPERVISOR_UPDATE")
     active = {"state": "UNKNOWN", "pid": None}
     for _ in range(8):
         active = info(GUARD)
@@ -276,6 +410,14 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as exc:
+        if MIGRATED_SCRIPT_BACKUP is not None:
+            try:
+                recover_legacy_script()
+            except Exception as rollback_exc:
+                emit({"state": "HOLD_LEGACY_ROLLBACK",
+                      "reason": type(rollback_exc).__name__,
+                      "backup_preserved": True,
+                      "original_services_untouched": True})
         code = str(exc)
         if not re.fullmatch(r"HOLD_LIFELINE_[A-Z0-9_]+", code):
             code = "HOLD_LIFELINE_" + type(exc).__name__.upper()

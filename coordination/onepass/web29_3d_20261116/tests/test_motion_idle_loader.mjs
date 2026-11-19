@@ -227,3 +227,23 @@ test('STOP suppresses trailing aborted inactivity and duplicate active events', 
   h.flush();
   assert.equal(h.injected.length,2);
 });
+
+
+test('BFCache resume cannot clear a prior chat STOP or fetch Motion during the aborted generation', () => {
+  const h = harness({nativeOwner: true});
+  h.window.emit('nox-runtime-observed', {known: true, busy: false});
+  h.window.emit('nox-stop-requested');
+  h.window.dispatchEvent({type: 'pagehide', persisted: true});
+  h.window.dispatchEvent({type: 'pageshow', persisted: true});
+  h.flush();
+  assert.equal(h.diag().stopped, true, 'return from BFCache is not owner permission to clear STOP');
+  assert.equal(h.injected.length, 0, 'no decorative network request after STOP');
+  h.window.emit('nox-chat-activity', {active: false}); // delayed old stream completion
+  h.flush();
+  assert.equal(h.injected.length, 0);
+  h.window.emit('nox-chat-activity', {active: true}); // genuinely new stream
+  h.window.emit('nox-chat-activity', {active: false});
+  h.flush();
+  assert.equal(h.injected.length, 1, 'new user request may safely resume optional visuals');
+  assert.equal(h.diag().stopped, false);
+});

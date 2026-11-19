@@ -75,6 +75,25 @@ class OutboxTests(unittest.TestCase):
         self.assertEqual(outbox.events_after(0)['latest_cursor'], 1)
         self.assertEqual(len(list((root / 'events').glob('*.json'))), 1)
 
+    def test_reconnect_recovers_durable_event_without_another_publish(self):
+        original = outbox.atomic_json
+
+        def crash_before_dedup(path, value):
+            if path.parent.name == 'dedup':
+                raise OSError('fixture crash after durable event')
+            return original(path, value)
+
+        with patch.object(outbox, 'atomic_json', side_effect=crash_before_dedup):
+            with self.assertRaises(OSError):
+                outbox.publish(report(), now=1000)
+        # No second task execution or publish is available to repair the cursor.
+        replay = outbox.events_after(0)
+        self.assertEqual([row['sequence'] for row in replay['events']], [1])
+        self.assertEqual(replay['latest_cursor'], 1)
+        self.assertEqual(outbox.events_after(replay['next_cursor'])['events'], [])
+        self.assertEqual(outbox.publish(report(), now=1001)['state'], 'DUPLICATE')
+        self.assertEqual(len(list((self.root / 'state/owner_events/events').glob('*.json'))), 1)
+
     def test_success_requires_scoped_proof_and_does_not_export_raw_private_fields(self):
         row = report()
         row.update(prompt='private user prompt', token='hf_SUPERPRIVATE123456789', raw_error='password=private')

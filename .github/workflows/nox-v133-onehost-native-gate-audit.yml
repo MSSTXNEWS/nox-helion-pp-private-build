@@ -6,6 +6,8 @@ on:
       - '.github/workflows/nox-v133-onehost-native-gate-audit.yml'
       - 'coordination/onepass/native_job_gate_audit.py'
       - 'coordination/onepass/test_native_job_gate_audit.py'
+      - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_inspect_pinned_python_v13.py'
       - '.github/workflows/**'
   workflow_dispatch:
 permissions:
@@ -28,6 +30,13 @@ jobs:
           set -euo pipefail
           python -m py_compile coordination/onepass/native_job_gate_audit.py
           python -m unittest -v coordination.onepass.test_native_job_gate_audit
+      - name: V14-2-08 pinned venv audit (source-only, no CUDA or OneHost)
+        run: |
+          set -euo pipefail
+          python -m py_compile nox-control/owner_native_inspect.py nox-control/test_owner_native_inspect_pinned_python_v13.py
+          PYTHONPATH=nox-control python -m unittest -v test_owner_native_inspect_pinned_python_v13
+          echo 'V14_2_08_SOURCE_ONLY=true'
+          echo 'NOX_NATIVE_COMMAND_EXECUTED=false'
       - name: Enumerate all sensitive NOX2 native jobs and accidental push triggers
         run: |
           set -euo pipefail

@@ -19,6 +19,7 @@ MAX_RANGE = 256 * 1024**2
 CHUNK = 1024**2
 STOP_NAMES = ("STOP", "STOP.flag", "stop.flag", ".stop", "program/STOP", "state/STOP", "state/STOP.flag", "state/OWNER_MAINTENANCE.flag")
 SHA = re.compile(r"[a-f0-9]{64}\Z")
+MAX_MANIFEST_BYTES = 131072
 FILE = re.compile(r"(?:DeepSeek-V4\.1-Flash-1017-GSQ-RCO-IQ2_XXS-0000[1-5]-of-00006|DeepSeek-V4\.1-Flash-Engram-IQ4_NL)\.gguf\Z")
 
 # Immutable owner-reviewed LFS identities, pinned independently of input manifest.
@@ -111,7 +112,7 @@ def _reject_lease_nonfinite(value):
 
 
 def load_manifest(raw):
-    require(isinstance(raw, (str, bytes, bytearray)) and len(raw) <= 131072,
+    require(isinstance(raw, (str, bytes, bytearray)) and len(raw) <= MAX_MANIFEST_BYTES,
             'HOLD_MANIFEST_LIMIT')
     try:
         m = json.loads(raw, object_pairs_hook=_strict_manifest_pairs,
@@ -142,6 +143,39 @@ def load_manifest(raw):
             a.get('target')=='DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf' and
             a.get('duplicate_bytes') is False,'HOLD_SHARED_ENGRAM_ALIAS')
     return by
+
+def load_manifest_from_path(path):
+    """Bounded, no-follow manifest read before parsing any untrusted CLI file.
+
+    Loading Path.read_bytes() before load_manifest()'s 128KiB gate could allocate
+    arbitrarily large memory or follow a raced symlink/FIFO. Bind validation to
+    the opened regular owner-owned inode, then recheck pathname identity.
+    This is read-only source admission, not a native writer lease.
+    """
+    path = Path(path)
+    observed = regular(path)
+    require(observed.st_size <= MAX_MANIFEST_BYTES, 'HOLD_MANIFEST_LIMIT')
+    fd = None
+    identity = lambda st: (st.st_dev, st.st_ino, st.st_size, st.st_uid,
+                           st.st_nlink, st.st_mtime_ns, st.st_ctime_ns)
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+        opened = os.fstat(fd)
+        require(stat.S_ISREG(opened.st_mode) and opened.st_uid == os.geteuid()
+                and opened.st_nlink == 1 and identity(opened) == identity(observed),
+                'HOLD_MANIFEST_CHANGED')
+        raw = os.read(fd, MAX_MANIFEST_BYTES + 1)
+        require(len(raw) == opened.st_size and len(raw) <= MAX_MANIFEST_BYTES
+                and identity(os.fstat(fd)) == identity(opened)
+                and identity(regular(path)) == identity(opened),
+                'HOLD_MANIFEST_CHANGED')
+    except OSError as exc:
+        raise Hold('HOLD_MANIFEST_UNREADABLE') from exc
+    finally:
+        if fd is not None:
+            os.close(fd)
+    return load_manifest(raw)
+
 
 def stop(root):
     """Fail closed when an owner STOP flag is present OR unreadable.
@@ -321,6 +355,31 @@ def verify_existing_receipt(path, row):
     return doc
 
 
+def remaining_model_storage_bytes(destination):
+    """Conservative *capacity admission*, not SHA validation of existing GGUF.
+
+    A volume may fit one Range/shard but not the complete immutable model.
+    Count missing files and unallocated portions of existing .part files before
+    admitting another byte. Sparse .part holes are not paid-for storage.
+    Existing finals still require independent SHA verification before reuse.
+    """
+    needed = 0
+    for name, (total, _sha) in PINNED_FILE_FACTS.items():
+        final = regular(destination / name, True)
+        part = regular(destination / (name + '.part'), True)
+        require(not (final and part), 'HOLD_STORAGE_DUPLICATE_FILE_STATE')
+        if final is not None:
+            require(final.st_size == total, 'HOLD_STORAGE_EXISTING_FINAL_SIZE')
+            continue
+        if part is not None:
+            require(part.st_size <= total, 'HOLD_STORAGE_PARTIAL_OVERSIZE')
+            allocated = min(part.st_size, part.st_blocks * 512)
+            needed += total - allocated
+        else:
+            needed += total
+    return needed
+
+
 def inventory(manifest,target):
     """Metadata-only, STOP-safe inventory: never scan hundreds of GiB without a lease.
 
@@ -390,7 +449,7 @@ def finalize_complete_partial(row, partial, final, destination, root, lease_file
     atomic_receipt(destination/(row['path']+'.verified.json'),receipt)
     return {'state':'VERIFIED_FINAL','file':row['path'],'new_bytes':new_bytes,'sha256':actual}
 
-def _write_checked(output, chunk, root, lease_file, request):
+def _write_checked(output, chunk, root, lease_file, request, lock_guard=None):
     """Drain short regular-file writes without overstating verified bytes.
 
     FileIO.write may return fewer bytes than requested. Recheck the original
@@ -401,6 +460,9 @@ def _write_checked(output, chunk, root, lease_file, request):
     while pos < len(view):
         stop(root)
         lease(lease_file, request, time.time(), root)
+        # A short write can yield between chunks; re-fence the owner flock
+        # pathname before EACH continuation, not only the first write.
+        if lock_guard is not None: lock_guard()
         count = output.write(view[pos:])
         require(type(count) is int and 0 < count <= len(view) - pos,
                 'HOLD_PARTIAL_WRITE_NO_PROGRESS')
@@ -487,6 +549,12 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
         # This is a necessary source gate, NOT owner quota/lease admission.
         require(vfs.f_blocks*vfs.f_frsize>=MIN_MODEL_VOLUME_BYTES+RESERVE,
                 'HOLD_STORAGE_TOTAL_CAPACITY')
+        # Do not consume 39 GiB of scarce SSD if other missing GGUF objects
+        # cannot also fit. The owner must still independently verify quota,
+        # seekability and each SHA before any inference promotion.
+        if MIN_MODEL_VOLUME_BYTES:
+            require(free >= remaining_model_storage_bytes(destination) + RESERVE,
+                    'HOLD_STORAGE_INSUFFICIENT_FOR_COMPLETE_MODEL')
         if offset==row['bytes']:
             check_download_lock()
             # Fully downloaded .part from a prior crash: validate and publish
@@ -532,7 +600,8 @@ def download_one(row,destination,root,lease_file,request,limit=MAX_RANGE,opener=
                     # revocation. Do not append a chunk after either occurs.
                     stop(root);lease(lease_file,request,time.time(),root)
                     check_download_lock()
-                    wrote += _write_checked(output, chunk, root, lease_file, request)
+                    wrote += _write_checked(output, chunk, root, lease_file, request,
+                                            check_download_lock)
                 output.flush();os.fsync(output.fileno())
         # Never acknowledge a partial Range after owner STOP, lease expiry or inode swap.
         stop(root);lease(lease_file,request,time.time(),root)
@@ -558,7 +627,7 @@ def main():
     ap.add_argument('--request',default='')
     ap.add_argument('--max-range-mib',type=int,default=256)
     a=ap.parse_args()
-    by=load_manifest(a.manifest.read_bytes())
+    by=load_manifest_from_path(a.manifest)
     if a.inventory:
         print(json.dumps({'status':'READ_ONLY','files':inventory(by,a.destination)},ensure_ascii=False));return
     require(a.download in by,'HOLD_FILE_NOT_IN_MANIFEST')
