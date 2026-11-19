@@ -198,7 +198,8 @@ def _outcomes(tasks):
         row = {'task_id':task_id,'mission_id':binding['mission_id'],
                'mission_revision':binding.get('mission_revision'),
                'input_sha256':binding.get('input_sha256'),
-               'status':task.get('status') if task.get('status') in ACTIVE|TERMINAL else 'unknown',
+               'status':(task.get('status') if type(task.get('status')) is str
+                         and task['status'] in ACTIVE|TERMINAL else 'unknown'),
                'evidence_scope':'QUEUE_STATE_REQUIRES_RECEIPT_AND_POSTIMAGE_READBACK',
                'original_task_accepted':False}
         # Preserve only recognized scalar evidence. A result body can contain private text.
@@ -414,7 +415,7 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
             states['pending'] += 1
         elif status == 'running':
             states['running'] += 1
-        elif status in TERMINAL:
+        elif type(status) is str and status in TERMINAL:
             states['terminal'] += 1
             if status in ('failed','blocked','cancelled'):
                 states['blocked'] += 1
@@ -544,7 +545,8 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
     # existing work and withhold new missions until the owner reconciles it.
     unknown_native = any(isinstance(task, dict)
         and task.get('handler') in NATIVE_HANDLERS
-        and task.get('status') not in ACTIVE | TERMINAL
+        and (type(task.get('status')) is not str
+             or task['status'] not in ACTIVE | TERMINAL)
         for task in state_snapshot.values())
     reserved = set()
     external_reservations = capacity.get('reserved_sources',[])
@@ -618,7 +620,12 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
             'required_next_step':'GROUNDED_PROPOSAL_TO_PINNED_TASKPACK_TO_EXISTING_FENCED_MANIFEST_CAS',
             'max_next_missions':3,'original_task_accepted':False,
             'evidence_scope':'REFILL_REQUEST_ONLY_NOT_NATIVE_OR_BENCHMARK_ACCEPTANCE'}
-    reflex = _reflex_cycle(manifest, state_snapshot, source_pins, capacity, rejected, rows)
+    # The manifest SHA has an allowed deterministic fallback. Give the
+    # monitor that resolved pin; omitting the optional caller field must not
+    # crash the publisher after queue validation.
+    reflex = _reflex_cycle(manifest, state_snapshot, source_pins,
+                           {**capacity, 'manifest_sha256': manifest_sha},
+                           rejected, rows)
     return {'rows':rows,'contracts':contracts,'bindings':bindings,'state':state,
             'fingerprint':fingerprint,'refill_request':request,'outcomes':outcomes,
             'deferred':rejected,'original_acceptance_added':0,
