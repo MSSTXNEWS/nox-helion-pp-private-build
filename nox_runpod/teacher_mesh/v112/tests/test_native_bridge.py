@@ -226,6 +226,7 @@ class V112Tests(unittest.TestCase):
         self.assertEqual([x['type'] for x in frames],['preparing','start','delta','delta','done'])
         self.assertTrue(frames[-1]['saved'])
         # Legacy wire field remains for UI compatibility; only these dialog fields prove persistence.
+        self.assertFalse(frames[-1]['s03_integrated'])
         self.assertTrue(frames[-1]['owner_dialog_saved'])
         self.assertFalse(frames[-1]['canonical_s03_write_verified'])
         self.assertEqual(frames[-1]['dialog_id'],d)
@@ -236,6 +237,8 @@ class V112Tests(unittest.TestCase):
         self.assertTrue(self.calls[-1]['_owner'])
         hist=self.client.get('/api/ui/memory/dialogs/history',
              cookies=self.cookie,params={'dialog_id':d}).json()
+        self.assertEqual(hist['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+        self.assertFalse(hist['canonical_s03_readback_verified'])
         self.assertEqual([x['role'] for x in hist['messages']],['user','assistant'])
         self.assertEqual(hist['messages'][0]['content'],'Привет NOX')
         self.assertEqual(hist['messages'][1]['content'],'Готов. Это проверенный ответ.')
@@ -276,7 +279,10 @@ class V112Tests(unittest.TestCase):
             receipts.append(done)
             expected.extend(messages)
             history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
-                params={'dialog_id':dialog,'limit':6}).json()['messages']
+                params={'dialog_id':dialog,'limit':6}).json()
+            self.assertEqual(history['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+            self.assertFalse(history['canonical_s03_readback_verified'])
+            history=history['messages']
             self.assertEqual([(row['role'],row['content']) for row in history],
                 [(row['role'],row['content']) for row in expected])
         for key in ('turn_id','receipt_id','exchange_id'):
@@ -330,6 +336,7 @@ class V112Tests(unittest.TestCase):
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual([f['type'] for f in frames],['preparing','start','delta','done'])
         self.assertRegex(frames[-1]['exchange_id'],r'^[a-f0-9]{32}$')
+        self.assertFalse(frames[-1]['s03_integrated'])
         self.assertTrue(frames[-1]['owner_dialog_saved'])
         self.assertFalse(frames[-1]['canonical_s03_write_verified'])
         self.assertEqual(''.join(f['text'] for f in frames if f['type']=='delta'),

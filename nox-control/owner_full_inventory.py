@@ -928,13 +928,16 @@ def acceptance_receipts():
         doc=optional_json(path,4*SMALL)
         if not isinstance(doc,dict):continue
         summary=selected(doc,('schema','request','source_sha','state','started','finished','chat_restarted',
-                              'model_restarted','performance_targets_passed','rollback_verified'))
+                              'model_restarted','performance_targets_passed','rollback_verified',
+                              'canonical_s03_readback_verified','onehost_1a01_acceptance_state'))
         tests=[]
         for item in doc.get('acceptance',[])[:30]:
             if not isinstance(item,dict) or item.get('kind') not in ('chat_synthetic_latency','chat_history_followup',
                                                                   'chat_before_probe','chat_executor_question'):continue
             data=item.get('data') or {}
-            tests.append({'kind':item['kind'],'evidence':selected(data,('saved_verified','arithmetic_pass','history_model_pass',
+            tests.append({'kind':item['kind'],'evidence':selected(data,('owner_dialog_saved_verified',
+                'owner_dialog_history_model_pass','owner_dialog_store_scope','canonical_s03_readback_verified',
+                'onehost_1a01_acceptance_state','arithmetic_pass',
                 'nonloopback_peer','owner_status_bound','owner_executors_access','verified_six_plus_nox',
                 'performance_target_pass','total_ms','stream_total_ms'))})
         rows.append({'path':str(path),'summary':summary,'acceptance_booleans_and_timing':tests,

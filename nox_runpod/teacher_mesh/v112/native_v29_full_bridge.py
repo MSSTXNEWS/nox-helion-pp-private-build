@@ -687,7 +687,7 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         try:limit=max(1,min(int(request.query_params.get('limit','100')),100))
         except ValueError:return JSONResponse({'error':'INVALID_LIMIT'},status_code=422)
         if not _schema_ready():
-            return JSONResponse({'status':'HOLD','reason':'S03_DIALOG_SCHEMA_MISSING'},status_code=503)
+            return JSONResponse({'status':'HOLD','reason':'OWNER_DIALOG_SCHEMA_MISSING'},status_code=503)
         try:
             with _db() as db:
                 row=_get_dialog(db,id)
@@ -698,10 +698,12 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                    'WHERE dialog_id=? ORDER BY row_id DESC LIMIT ?',
                    (id,limit)).fetchall()
             return {'status':'READY','dialog_id':id,'revision':row['revision'],
+                    'store_scope':'OWNER_DIALOG_TABLES_ONLY',
+                    'canonical_s03_readback_verified':False,
                     'messages':[{'role':x['role'],'content':x['content'],'ts':x['ts'],
                                  'exchange_id':x['exchange_id']} for x in reversed(msgs)]}
         except (OSError,RuntimeError,sqlite3.Error):
-            return JSONResponse({'status':'HOLD','reason':'S03_DIALOG_HISTORY_FAILED'},status_code=503)
+            return JSONResponse({'status':'HOLD','reason':'OWNER_DIALOG_HISTORY_FAILED'},status_code=503)
 
     @app.post('/api/ui/memory/dialogs/exchange-readback')
     async def dialogs_exchange_readback(request:Request):
@@ -908,7 +910,7 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
                               # Compatibility alias for the existing WEB wire contract only;
                               # it is not canonical s03_items evidence.
-                              's03_integrated':True,'owner_dialog_saved':True,
+                              's03_integrated':False,'owner_dialog_saved':True,
                               'canonical_s03_write_verified':False,'dialog_id':dialog_id,
                               'writer':'V112_OWNER_DIALOG_WRITER',
                               'turn_id':turn_id,'receipt_id':receipt_id,

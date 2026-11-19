@@ -752,9 +752,13 @@ async def browser_run(report, directory, available):
             await page.wait_for_timeout(350)
             initial=await json_response(await context.request.get(
                 base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
-            if initial.get('messages')!=[]:
+            if (initial.get('status')!='READY' or initial.get('dialog_id')!=did
+                    or initial.get('store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+                    or initial.get('canonical_s03_readback_verified') is not False
+                    or initial.get('messages')!=[]):
                 raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_EMPTY')
-            report['empty_dialog_history_verified']=True
+            report['empty_owner_dialog_history_verified']=True
+            report['canonical_s03_readback_verified']=False
             report['browser_stage']='QA_EMPTY_SCREENSHOT'
             masks=[page.locator(selector) for selector in (*SENSITIVE_MASKS,'#messages')]
             await capture_private_screenshot(page,report,directory,'empty',masks,
@@ -826,11 +830,14 @@ async def browser_run(report, directory, available):
                     base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
                     max_redirects=0,timeout=6000))
                 rows=history.get('messages')
-                if (not isinstance(rows,list) or len(rows)!=len(history_expected)
+                if (history.get('status')!='READY' or history.get('dialog_id')!=did
+                        or history.get('store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+                        or history.get('canonical_s03_readback_verified') is not False
+                        or not isinstance(rows,list) or len(rows)!=len(history_expected)
                         or any(not isinstance(row,dict) or row.get('role')!=expected['role']
                                or row.get('content')!=expected['content']
                                for row,expected in zip(rows,history_expected))):
-                    raise RuntimeError('HOLD_ORDERED_TWO_TURN_HISTORY_READBACK')
+                    raise RuntimeError('HOLD_ORDERED_OWNER_DIALOG_HISTORY_READBACK')
                 public=public_numeric_answer(answer)
                 if public!=EXPECTED:
                     raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
@@ -851,6 +858,7 @@ async def browser_run(report, directory, available):
                     'receipt_sha256':done['receipt_sha256'],
                     'prompt_sha256':digest(prompt.encode()),'answer_sha256':digest(answer.encode()),
                     'answer_characters':len(answer),'owner_dialog_readback_verified':True,
+                    'owner_dialog_history_readback_verified':True,
                     'canonical_s03_readback_verified':False,
                     'stream_verified':True,'progressive_stream_render_verified':turn_progressive,
                     'stop_visible_during_generation':stop_visible,
@@ -867,6 +875,8 @@ async def browser_run(report, directory, available):
             dialog_readback=all(item['owner_dialog_readback_verified'] for item in verified_turns)
             report.update(stream=final,turns=verified_turns,
                 sequential_two_turns_verified=True,owner_dialog_readback_verified=dialog_readback,
+                owner_dialog_history_readback_verified=all(
+                    item['owner_dialog_history_readback_verified'] for item in verified_turns),
                 canonical_s03_readback_verified=False,
                 onehost_1a01_acceptance_state='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
                 actual_native_model_stream_verified=bool(len(verified_turns)==2 and accepted_submits==list(prompts)),

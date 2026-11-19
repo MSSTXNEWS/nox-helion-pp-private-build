@@ -17,7 +17,7 @@ import stat
 import time
 import urllib.parse
 
-BASE_SHA='b76198d8117c3912fb7e1a1ef19c01abc41aa3ac87f4ad919612342edf593587'
+BASE_SHA='96671d865167bc71ba9966e245cecb30d355813bf6b0180b2b94a566cd66bfc1'
 # Includes both exact PROXY_CHANGES from installed training binding91df0894.
 PROXY_FUNCTION_SHA='f849432d675eb3732076634b359ebbb6e516c3361ddba441def7f6dc7e355daf'
 STREAM_SHA='5b7bafde0c25fa26d6b8f98dfbb4958f0faa42ee77292da561834a63097a2e8e'
@@ -257,8 +257,8 @@ def install(core,raw):
     body=replace_once(body,'        page=None\n','        page=None;wire_timing=None;route_evidence=None\n')
     body=replace_once(body,'            page=await context.new_page()\n',
         '            page=await context.new_page()\n            wire_timing=await _nox_wire_start(context,page,origin)\n')
-    body=replace_once(body,'            started=time.monotonic()\n',
-        '            route_evidence=_nox_route_evidence(chat_proxy,prompt)\n            started=time.monotonic()\n')
+    body=replace_once(body,'                started=time.monotonic()\n',
+        '                route_evidence=_nox_route_evidence(chat_proxy,prompt)\n                started=time.monotonic()\n')
     body=replace_once(body,'actual_native_model_stream_verified=bool(',
                       'authenticated_native_endpoint_stream_verified=bool(')
     body=replace_once(body,"            report['browser_stage']='QA_COMPLETED_SCREENSHOT'\n",
@@ -275,19 +275,19 @@ def install(core,raw):
     observer=core.OBSERVER_JS
     observer=replace_once(observer,'nativeDeltas:0,nativeBytes:0,answer:',
         'nativeDeltas:0,nativeBytes:0,nativeResponseAt:null,nativeReadEvents:[],nativeReadCount:0,nativeLastDelta:null,answer:')
-    observer=replace_once(observer,'       q.nativeBytes+=part.value.length;',
+    observer=replace_once(observer,'       t.nativeBytes+=part.value.length;',
         '       const readEvent={at_ms:performance.now()-q.started,bytes:part.value.length,delta_frames:0,contains_done:false};\n'
         '       q.nativeReadCount++;q.nativeBytes+=part.value.length;')
-    observer=replace_once(observer,'           q.answer+=frame.text;q.nativeDeltas++;',
+    observer=replace_once(observer,'           t.answer+=frame.text;t.nativeDeltas++;',
         '           q.answer+=frame.text;q.nativeDeltas++;readEvent.delta_frames++;q.nativeLastDelta=performance.now()-q.started;')
-    observer=replace_once(observer,'           q.nativeDone=performance.now()-q.started;',
+    observer=replace_once(observer,'           t.nativeDone=performance.now()-t.started;',
         '           q.nativeDone=performance.now()-q.started;readEvent.contains_done=true;')
-    observer=replace_once(observer,"         }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}\n       }\n",
-        "         }else if(frame.type==='error'){q.error='HOLD_NATIVE_STREAM_ERROR';}\n       }\n"
+    observer=replace_once(observer,"         }else if(frame.type==='error'){t.error='HOLD_NATIVE_STREAM_ERROR';}\n       }\n",
+        "         }else if(frame.type==='error'){t.error='HOLD_NATIVE_STREAM_ERROR';}\n       }\n"
         '       if(q.nativeReadEvents.length<96)q.nativeReadEvents.push(readEvent);\n')
-    observer=replace_once(observer,'   if(own){void observe(response.clone());}',
+    observer=replace_once(observer,'   if(own){void observe(response.clone(),t);}',
         '   if(own){q.nativeResponseAt=performance.now()-q.started;void observe(response.clone());}')
-    snapshot=replace_once(core.SNAPSHOT_JS,' return {native_first_ms:q.nativeFirst,',
+    snapshot=replace_once(core.SNAPSHOT_JS,' return {native_first_ms:t?.nativeFirst??null,',
         ' return {response_headers_ms:q.nativeResponseAt,native_read_events:q.nativeReadEvents,\n'
         '   native_read_count:q.nativeReadCount,native_last_delta_ms:q.nativeLastDelta,native_first_ms:q.nativeFirst,')
     async def initial_layout(page,report):

@@ -17,6 +17,21 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(probe.meaningful_delta('323'))
         self.assertTrue(probe.meaningful_delta('0'))
 
+    def test_probe_accepts_only_explicit_owner_dialog_scope(self):
+        did='d'*32
+        done={'saved':True,'owner_dialog_saved':True,'s03_integrated':False,
+              'canonical_s03_write_verified':False,'writer':'V112_OWNER_DIALOG_WRITER',
+              'dialog_id':did,'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32,
+              'exchange_id':'4'*32,'receipt_sha256':'a'*64}
+        history={'status':'READY','dialog_id':did,'store_scope':'OWNER_DIALOG_TABLES_ONLY',
+                 'canonical_s03_readback_verified':False,'messages':[]}
+        self.assertTrue(probe.owner_dialog_completion(done,did))
+        self.assertEqual(probe.owner_dialog_history(history,did),[])
+        self.assertFalse(probe.owner_dialog_completion({**done,'s03_integrated':True},did))
+        self.assertFalse(probe.owner_dialog_completion({**done,'canonical_s03_write_verified':True},did))
+        self.assertIsNone(probe.owner_dialog_history({**history,'store_scope':'S03'},did))
+        self.assertIsNone(probe.owner_dialog_history({**history,'canonical_s03_readback_verified':True},did))
+
     def test_raw_nonnumeric_model_memory_is_never_exported(self):
         self.assertEqual(probe.numeric_public_answer(' **323**\n'), '323')
         self.assertEqual(probe.numeric_public_answer('323. Потом секрет: token=private'), '[NONNUMERIC_RESPONSE_WITHHELD]')
@@ -32,7 +47,8 @@ class ProbeTests(unittest.TestCase):
                 for at, frame in [(0.05, {'type':'preparing'}), (0.1, {'type':'start'}),
                                   (0.2, {'type':'delta','text':'…\n'}),
                                   (3.2, {'type':'delta','text':'323'}),
-                                  (3.3, {'type':'done','saved':True,'s03_integrated':True})]:
+                                  (3.3, {'type':'done','saved':True,'s03_integrated':False,
+                                      'owner_dialog_saved':True,'canonical_s03_write_verified':False})]:
                     clock[0] = at
                     yield json.dumps(frame).encode()+b'\n'
         response = Response()
