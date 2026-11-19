@@ -229,6 +229,12 @@ def compare_paired(baseline, candidate):
                                        and old[task]["model_finish_reason"] == "stop"
                                        and (not new[task]["sse_terminal_seen"] or
                                             new[task]["model_finish_reason"] != "stop")]
+    # Dropping durable S03 writes or background work can make TTFT/completion
+    # appear faster without any inference gain. Compare those side effects by ID.
+    durability_changed = [task for task in baseline["declared_task_ids"]
+                          if old[task]["history_saved"] != new[task]["history_saved"]]
+    background_changed = [task for task in baseline["declared_task_ids"]
+                          if old[task]["background_completed"] != new[task]["background_completed"]]
     output_tokens_changed = [task for task in baseline["declared_task_ids"]
                              if old[task]["output_tokens"] != new[task]["output_tokens"]]
     status_changed = [task for task in baseline["declared_task_ids"]
@@ -260,7 +266,8 @@ def compare_paired(baseline, candidate):
     # completion size, terminal status, text coverage, or KV prefill differs.
     # Matching these witnesses still cannot prove identical hidden compute.
     same_observed_work = (not cache_changed and not sse_finality_changed
-                          and not output_tokens_changed
+                          and not output_tokens_changed and not durability_changed
+                          and not background_changed
                           and not status_changed and old_seen == new_seen)
     return {**answer, "comparable": True, "state": "DESCRIPTIVE_ONLY",
             "reason": None, "baseline": before, "candidate": after,
@@ -281,6 +288,9 @@ def compare_paired(baseline, candidate):
             "cache_reuse_lost_task_ids": cache_reuse_lost,
             "prompt_prefill_regressed_task_ids": prefill_regressed,
             "latency_cache_state_confounder": bool(cache_changed),
+            "history_durability_changed_task_ids": durability_changed,
+            "background_completion_changed_task_ids": background_changed,
+            "latency_side_effects_confounder": bool(durability_changed or background_changed),
             "output_tokens_changed_task_ids": output_tokens_changed,
             "outcome_status_changed_task_ids": status_changed,
             "latency_observed_workload_confounder": not same_observed_work,
