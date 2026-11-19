@@ -188,6 +188,7 @@ class PoolLifecycleTests(unittest.TestCase):
         with patch.object(binding, 'process_identity',
                           side_effect=lambda pid: identities.get(pid)), \
              patch.object(binding.os, 'getpid', return_value=999), \
+             patch.object(binding, 'chat_priority_active', return_value=False), \
              patch.object(binding, 'Subagents') as ctor:
             self.assertFalse(native.ensure_processes(3))
             pool._replace_idle_dead_pool.assert_not_called()
