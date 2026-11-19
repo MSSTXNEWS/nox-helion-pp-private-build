@@ -66,6 +66,13 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(result['state'],'PRESSURE_CRITICAL')
         self.assertFalse(result['native_bounded_cpu_eligible'])
         self.assertFalse(result['auto_reclaim'])
+        # Contradictory upstream eligible=True must not override red PSI/RAM.
+        contradictory = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget,
+             'bounded_cpu_decision': {**decision, 'eligible': True}})
+        self.assertEqual(contradictory['state'], 'PRESSURE_CRITICAL')
+        self.assertFalse(contradictory['native_bounded_cpu_eligible'])
+        self.assertEqual(contradictory['next_action'], 'RESPECT_EXISTING_RESOURCE_HOLD')
         self.assertEqual(refill.memory_governor_projection({})['state'],
                          'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE')
 
