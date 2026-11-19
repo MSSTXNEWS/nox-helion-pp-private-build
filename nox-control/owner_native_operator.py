@@ -25,10 +25,10 @@ FILES['repair'] = 'nox-control/owner_memory_cleanup_entry.py'
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_memory_governor.py', 'owner_storage_reclaim.py')
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor.py',)
 FILES['repair'] = 'nox-control/owner_service_sizing_entry.py'
-# One exact owner-approved cache service and warm-hook transaction.
+# Read-only cold startup and native Drive fact collection.
 FILES['repair'] = 'nox-control/owner_native_repair.py'
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = tuple(["nox_cache_maintenance.py","owner_memory_cleanup_entry.py","owner_memory_governor.py","owner_storage_reclaim.py","nox-cache-maintenance.conf","atomic_engram_stage.py","owner_supervisor_background_release.py","owner_cache_maintenance_activation.py"])
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = tuple(["nox-control/cache-maintenance/nox_cache_maintenance.py","nox-control/cache-maintenance/owner_memory_cleanup_entry.py","nox-control/cache-maintenance/owner_memory_governor.py","nox-control/cache-maintenance/owner_storage_reclaim.py","nox-control/cache-maintenance/nox-cache-maintenance.conf","nox-control/cache-maintenance/atomic_engram_stage.py","nox-control/cache-maintenance/owner_supervisor_background_release.py","nox-control/cache-maintenance/owner_cache_maintenance_activation.py"])
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
@@ -191,7 +191,7 @@ def run_native(action,request_id):
                      'nox-control/owner_event_outbox.py','nox-control/owner_chat_browser_qa.py',
                      'nox-control/owner_task_plans.py','nox-control/owner_task_lifecycle.py',
                      'nox-control/owner_task_lifecycle.json','nox-control/owner_senior_gateway.py',
-                     'nox-control/owner_browser_diagnostic.py',
+                     'nox-control/owner_storage_reclaim.py','nox-control/owner_browser_diagnostic.py',
                      'nox-control/owner_storage_remaining_audit.py',
                      'nox-control/owner_s03_diagnostic.py','nox-control/owner_ram_duplicate_reclaim.py',
                      'nox-control/owner_browser_qa_entry.py',
