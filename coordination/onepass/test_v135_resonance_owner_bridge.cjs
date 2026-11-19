@@ -1658,3 +1658,14 @@ test('V191 one Intl.Segmenter object reused across sequential streaming requests
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,2,
     'one native POST per explicit browser request');
 });
+
+test('V192 queued native history fetch does not start after scoped STOP',async()=>{
+  const f=fake(),abort=new AbortController();
+  const pending=f.fetch('/api/nox/history?dialog_id='+id,{signal:abort.signal});
+  abort.abort(); // after scheduling the native operation, before its microtask
+  const r=await pending;
+  assert.equal(r.status,503,'STOP is a HOLD, never a persisted success');
+  assert.match((await r.json()).error,/STREAM_STOP_REQUESTED/);
+  assert.equal(f.calls.filter(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')).length,0,
+    'an aborted queued native fetch must not execute a stale network request');
+});
