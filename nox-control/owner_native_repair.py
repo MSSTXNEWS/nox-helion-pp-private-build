@@ -177,9 +177,10 @@ def startup_facts(raw, pinned):
 
 def unit(raw, service):
     parsed = config(raw)
-    if parsed is None or parsed.sections() != ["program:" + service]:
+    section = "program:" + service
+    if parsed is None or not parsed.has_section(section):
         return None
-    entry = parsed["program:" + service]
+    entry = parsed[section]
     try:
         return {"autostart": entry.getboolean("autostart", fallback=True),
                 "priority": entry.getint("priority", fallback=999),
@@ -206,10 +207,14 @@ def project(read):
     holder = unit(evidence.get(HOLDER, b""), "nox-engram-cold-holder")
     model = unit(evidence.get(MODEL, b""), "nox-ds41-8098")
     dispatcher = unit(evidence.get(DISPATCHER, b""), DISPATCHER_SERVICE)
-    holder_auto = bool(holder and holder["autostart"] and holder["command"] ==
-                       ["/usr/bin/python3", "-I", "-B", HOLDER_SOURCE] and HOLDER_SOURCE in evidence)
-    model_auto = bool(model and model["autostart"] and model["command"] == ["/bin/bash", MODEL_GUARD]
-                      and MODEL_GUARD in evidence and MODEL_LAUNCHER in evidence)
+    holder_command_matches = (holder["command"] == ["/usr/bin/python3", "-I", "-B", HOLDER_SOURCE]
+                              if holder else None)
+    model_command_matches = model["command"] == ["/bin/bash", MODEL_GUARD] if model else None
+    holder_auto = holder["autostart"] if holder else None
+    model_auto = model["autostart"] if model else None
+    holder_start_pinned = bool(holder_auto and holder_command_matches and HOLDER_SOURCE in evidence)
+    model_start_pinned = bool(model_auto and model_command_matches
+                              and MODEL_GUARD in evidence and MODEL_LAUNCHER in evidence)
     dispatcher_auto = dispatcher["autostart"] if dispatcher else None
     dispatcher_reference = "DISPATCHER_START_REFERENCE" in categories
     supervisor_reference = bool(categories & {"SUPERVISOR_STARTS_EXACT_MAIN", "SUPERVISOR_EXEC_EXACT_MAIN"})
@@ -224,10 +229,13 @@ def project(read):
             "literal_config_references_preserve_pinned_units": literal_configs_preserved,
             "supervisor_exec_may_replace_onstart": "SUPERVISOR_EXEC_EXACT_MAIN" in categories,
             "holder_autostart_configured": holder_auto, "model_autostart_configured": model_auto,
+            "holder_command_matches_expected": holder_command_matches,
+            "model_command_matches_expected": model_command_matches,
+            "holder_start_route_pinned": holder_start_pinned, "model_start_route_pinned": model_start_pinned,
             "holder_priority": holder["priority"] if holder else None,
             "model_priority": model["priority"] if model else None,
             "holder_precedes_model_by_priority": bool(
-                holder_auto and model_auto and holder["priority"] < model["priority"]),
+                holder_start_pinned and model_start_pinned and holder["priority"] < model["priority"]),
             "dispatcher_autostart_configured": dispatcher_auto,
             "dispatcher_onstart_reference": dispatcher_reference,
             "dispatcher_start_route_missing": dispatcher_auto is False and not dispatcher_reference,

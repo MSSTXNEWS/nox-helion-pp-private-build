@@ -17,9 +17,9 @@ SAFE = (b"#!/bin/bash\nSUP=/etc/supervisor/supervisord.conf\n"
 
 
 class ColdStartup(unittest.TestCase):
-    def project(self, script=SAFE, dispatcher=DISPATCHER):
-        files = {target.STARTUP: script, target.MAIN: MAIN, target.HOLDER: HOLDER,
-                 target.MODEL: MODEL, target.DISPATCHER: dispatcher,
+    def project(self, script=SAFE, dispatcher=DISPATCHER, model=MODEL, holder=HOLDER):
+        files = {target.STARTUP: script, target.MAIN: MAIN, target.HOLDER: holder,
+                 target.MODEL: model, target.DISPATCHER: dispatcher,
                  target.MODEL_GUARD: b"guard", target.MODEL_LAUNCHER: b"launcher",
                  target.HOLDER_SOURCE: b"holder"}
         with patch.object(target, "STARTUP_PINS", {k: target.sha(v) for k, v in files.items()}):
@@ -40,6 +40,29 @@ class ColdStartup(unittest.TestCase):
         self.assertTrue(r["dispatcher_onstart_reference"])
         self.assertFalse(r["dispatcher_start_route_missing"])
         self.assertFalse(r["runtime_startup_verified"])
+
+    def test_reports_autostart_separately_from_pinned_start_command(self):
+        model = MODEL.replace(b"/bin/bash ", b"/usr/bin/env bash ")
+        holder = HOLDER.replace(b"autostart=true", b"autostart=false")
+        r = self.project(model=model, holder=holder)
+        self.assertIs(r["model_autostart_configured"], True)
+        self.assertIs(r["model_command_matches_expected"], False)
+        self.assertFalse(r["model_start_route_pinned"])
+        self.assertIs(r["holder_autostart_configured"], False)
+        self.assertIs(r["holder_command_matches_expected"], True)
+        self.assertFalse(r["holder_start_route_pinned"])
+        self.assertFalse(r["holder_precedes_model_by_priority"])
+        self.assertNotIn("/usr/bin/env", json.dumps(r))
+
+    def test_matches_only_the_exact_owning_stanza_in_a_multi_unit_file(self):
+        other = b"[program:unrelated]\nautostart=true\ncommand=/usr/bin/true\n"
+        r = self.project(dispatcher=other + DISPATCHER)
+        self.assertIs(r["dispatcher_autostart_configured"], False)
+        self.assertTrue(r["dispatcher_start_route_missing"])
+        for unverified in (other, DISPATCHER + DISPATCHER):
+            r = self.project(dispatcher=unverified)
+            self.assertIsNone(r["dispatcher_autostart_configured"])
+            self.assertFalse(r["dispatcher_start_route_missing"])
 
     def test_root_startup_preserves_exact_main_template_but_not_changed_bytes(self):
         main = b"cat >/etc/supervisor/supervisord.conf <<'NOXCONF'\n"
