@@ -482,6 +482,26 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
             path.unlink();path.symlink_to(Path(folder)/'absent')
             self.assertIn('не могу подтвердить',stream._executor_status_reply('Сколько агентов?',path))
 
+    def test_executor_status_rejects_ambiguous_or_undecodable_json(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'agents.json'
+            ambiguous=(
+                '{"n":2,"n":1,"workers":[{"id":"nox-agent-01","status":"idle","current_task":null}]}',
+                '{"n":1,"workers":[{"id":"nox-agent-01","status":"busy","status":"idle","current_task":null}]}',
+            )
+            for raw in ambiguous:
+                path.write_text(raw,encoding='utf-8')
+                answer=stream._executor_status_reply('Сколько агентов сейчас?',path)
+                self.assertIn('не могу подтвердить',answer)
+                self.assertNotIn('настроено',answer)
+            path.write_bytes(b'{"n":1,"workers":[]}' + bytes([255]))
+            self.assertIn('не могу подтвердить',
+                          stream._executor_status_reply('Сколько агентов?',path))
+            path.write_text(json.dumps({'n':1,'workers':[
+                {'id':'nox-agent-01','status':'idle','current_task':None}]}))
+            self.assertIn('настроено 1',
+                          stream._executor_status_reply('Сколько агентов?',path))
+
     def test_falsy_tool_arguments_fail_closed_without_rewriting_model_evidence(self):
         # Explicit malformed model/tool arguments are never equivalent to
         # an omitted object. Dispatch must not silently replace them with {}.

@@ -87,7 +87,8 @@ def _executor_status_reply(user_text,path=None):
             if not 0<=age<=45:return unknown
             raw=source.read(750001)
             if len(raw)>750000:return unknown
-        doc=json.loads(raw)
+        # Duplicate owner evidence keys must not silently rewrite worker facts.
+        doc=_strict_json(raw)
         if not isinstance(doc,dict):return unknown
         rows=doc.get('workers');n=doc.get('n')
         if type(n) is not int or not 1<=n<=64 or not isinstance(rows,list) or len(rows)!=n:return unknown
@@ -107,7 +108,7 @@ def _executor_status_reply(user_text,path=None):
         return (f'Сейчас у диспетчера настроено {n} исполнителей: занято {busy}, свободно {n-busy}. '
                 f'NOX — отдельный координатор и чат (1). Схема: {n} исполнителей + NOX.\n'
                 f'Исполнители: {", ".join(ids)}.\nИсточник: свежий статус диспетчера, {observed}.')
-    except (OSError,ValueError,TypeError,OverflowError):
+    except (OSError,UnicodeError,ValueError,TypeError,OverflowError):
         return unknown
 
 
