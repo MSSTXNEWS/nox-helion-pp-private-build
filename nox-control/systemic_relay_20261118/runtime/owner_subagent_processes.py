@@ -186,6 +186,8 @@ def _worker(role, inbox, outbox, local_model_url, timeout, cancellation):
     outbox.put({'kind':'READY','role':role,'pid':os.getpid()})
     last_heartbeat = time.monotonic()
     while True:
+        if cancellation.is_set():
+            return  # Cooperative idle shutdown; no signal/kill fallback.
         if os.getppid() != parent:
             return  # Never leave orphan model clients after director death.
         try:
@@ -577,6 +579,41 @@ class Subagents:
         return {'schema': 'NOX_SUBAGENT_SOURCE_CANDIDATES_V1', 'processes': {r:p.pid for r,p in self.processes.items()},
                 'task_count': len(tasks), 'results': outcomes, 'live_onehost_deployed': False,
                 'queue_committed': False, 'model_weights_changed': False}
+
+    def close_idle(self, *, timeout=2.0):
+        """Cooperatively stop a verified idle generation; never terminate/kill."""
+        if (self.active or self.started or type(timeout) not in (int, float)
+                or not math.isfinite(timeout) or not 0.1 <= timeout <= 5):
+            raise GateError('HOLD_SUBAGENT_IDLE_CLOSE_STATE')
+        # A queued item without an active/started record is unknown work.
+        # Queue.empty() is only a conservative veto, never proof of idleness.
+        try:
+            if any(not inbox.empty() for inbox in self.inboxes.values()):
+                raise GateError('HOLD_SUBAGENT_IDLE_QUEUE_NOT_EMPTY')
+        except (OSError, ValueError, AttributeError):
+            raise GateError('HOLD_SUBAGENT_IDLE_QUEUE_UNKNOWN') from None
+        for event in self.cancellations.values():
+            event.set()
+        deadline = time.monotonic()+timeout
+        for process in self.processes.values():
+            process.join(timeout=max(0, deadline-time.monotonic()))
+        if any(process.is_alive() or process.exitcode is None
+               for process in self.processes.values()):
+            # Preserve every object/queue/reservation for owner recovery. No
+            # terminate(), kill(), or channel close on an unknown lifetime.
+            raise GateError('HOLD_SUBAGENT_GRACEFUL_SHUTDOWN_UNKNOWN')
+        for inbox in self.inboxes.values():
+            inbox.cancel_join_thread()
+            inbox.close()
+        for pipe in [*self.outboxes.values(),
+                     *(item.connection for item in self.senders.values())]:
+            pipe.close()
+        self.active.clear()
+        self.started.clear()
+        self.deadlines.clear()
+        return {'state':'IDLE_POOL_GRACEFULLY_STOPPED',
+                'worker_pids':sorted(process.pid for process in self.processes.values()),
+                'forced_signals':0}
 
     def __exit__(self,*_):
         for event in self.cancellations.values():

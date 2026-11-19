@@ -58,6 +58,36 @@ MARKER = 'NOX_NATIVE_SUBAGENTS_BIND_V1'
 SHA = re.compile(r'^[a-f0-9]{64}$')
 CLAIM = re.compile(r'^[a-f0-9]{24}$')
 POLICY_ID = 'NOX_WEB_WEIGHTS_V06'
+RESOURCE_PRESSURE_REASONS = frozenset({
+    'HOLD_BOUNDED_CPU_HEADROOM', 'HOLD_BOUNDED_CPU_MEMORY_PRESSURE'
+})
+RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS = 3
+RESOURCE_RECOVERY_INTERVAL_SEC = 5.0
+
+
+def idle_pool_release_gate(snapshot, reason, *, owner_authorized, stop_clear,
+                           writer_lease, maintenance_shared, pool_present,
+                           active, started, completed, interrupted,
+                           recovery_uncertain, worker_identity_valid,
+                           claims_settled):
+    """Fail-closed gate for retiring only an owned, fully idle dispatcher pool."""
+    if (reason not in RESOURCE_PRESSURE_REASONS or not isinstance(snapshot, dict)
+            or snapshot.get('native_verified') is not True
+            or snapshot.get('instance_id') != 60509551
+            or snapshot.get('stop_active') is not False
+            or snapshot.get('owner_scope_verified') is not True
+            or snapshot.get('source_sha_verified') is not True):
+        return False
+    checks = (owner_authorized, stop_clear, writer_lease, maintenance_shared,
+              pool_present, worker_identity_valid, claims_settled)
+    if any(value is not True for value in checks):
+        return False
+    if any(value is not False for value in
+           (active, started, completed, interrupted, recovery_uncertain)):
+        return False
+    return True
+
+
 MAX_POLICY = 65536
 _BOUND = None
 
@@ -453,6 +483,10 @@ class Native:
         self._pool_workers = []
         self._pool_recovery = None
         self._pool_recovery_uncertain = False
+        self._resource_pressure_paused = False
+        self._resource_recovery_samples = 0
+        self._resource_recovery_last_at = 0.0
+        self._resource_pressure_release = None
         self._role_restart_attempts = {role:[] for role in ROLES}
         self._cold_start_attempts = []
         self._role_lifecycle = {}
@@ -998,11 +1032,186 @@ class Native:
                 raise GateError('HOLD_NATIVE_WORKER_RECOVERY_SOURCE')
         return True
 
+
+    def _native_claims_settled(self):
+        """Unknown or unsettled queue claims prevent idle-pool retirement."""
+        terminal = {'done', 'completed', 'blocked', 'failed', 'cancelled', 'verified'}
+        known_handlers = self.allowed_handlers()
+        with self.ns['_qlock']:
+            tasks = (self.state or {}).get('tasks', {})
+            if not isinstance(tasks, dict):
+                return False
+            for row in tasks.values():
+                if not isinstance(row, dict):
+                    return False
+                if row.get('handler') not in known_handlers:
+                    continue
+                if row.get('_held_locks'):
+                    return False
+                status = row.get('status')
+                if status not in {'pending', 'running', *terminal}:
+                    return False
+                claim = row.get('owner_claim')
+                if claim is not None and status not in terminal:
+                    return False
+                lease = row.get('native_worker_lease')
+                if lease is not None and (
+                        not isinstance(lease, dict) or lease.get('phase') != 'SETTLED'):
+                    return False
+                if row.get('native_pool_recovery') is not None:
+                    return False
+        return True
+
+    def _owned_idle_pool_identity_valid(self):
+        pool = self.pool
+        if pool is None or set(getattr(pool, 'processes', {})) != set(ROLES):
+            return False
+        workers = self._pool_workers
+        if not isinstance(workers, list) or len(workers) != len(ROLES):
+            return False
+        by_role = {row.get('role'): row for row in workers if isinstance(row, dict)}
+        if set(by_role) != set(ROLES):
+            return False
+        identities = getattr(pool, 'identities', {})
+        if set(identities) != set(ROLES):
+            return False
+        for role in ROLES:
+            child = pool.processes[role]
+            expected = {key:by_role[role].get(key)
+                        for key in ('pid', 'ppid', 'process_starttime')}
+            if (not child.is_alive() or child.pid != expected['pid']
+                    or identities[role] != expected
+                    or process_identity(child.pid) != expected):
+                return False
+        return True
+
+    def _retire_idle_pool_for_pressure(self, snapshot, reason):
+        """Release only our idle workers; never terminate or kill on pressure."""
+        pool = self.pool
+        fd = None
+        shutdown_started = False
+        try:
+            path = plain(ROOT/'state/owner_maintenance.lock')
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            gate = idle_pool_release_gate(snapshot, reason,
+                owner_authorized=self.owner_allowed(),
+                stop_clear=self.stop_active() is False,
+                writer_lease=self.writer_lease(),
+                maintenance_shared=True,
+                pool_present=pool is not None,
+                active=bool(getattr(pool, 'active', {})) if pool else True,
+                started=bool(getattr(pool, 'started', {})) if pool else True,
+                completed=bool(self.completed), interrupted=bool(self.interrupted),
+                recovery_uncertain=self._pool_recovery_uncertain,
+                worker_identity_valid=self._owned_idle_pool_identity_valid(),
+                claims_settled=self._native_claims_settled())
+            if (not gate or resource_wait_reason(snapshot) != reason
+                    or not callable(getattr(pool, 'close_idle', None))):
+                return False
+            shutdown_started = True
+            try:
+                pool.close_idle(timeout=2.0)
+            except GateError as exc:
+                # These validations run before cancellation; a veto leaves the
+                # owned pool untouched and can be reconsidered on a later tick.
+                if str(exc) in ('HOLD_SUBAGENT_IDLE_CLOSE_STATE',
+                                'HOLD_SUBAGENT_IDLE_QUEUE_NOT_EMPTY',
+                                'HOLD_SUBAGENT_IDLE_QUEUE_UNKNOWN'):
+                    return False
+                raise
+            # close_idle returns only after every owned child exited normally.
+            self.pool = None
+            self._pool_workers = []
+            self.last_pool_closed_at = time.time()
+            self.last_pool_close_reason = 'RESOURCE_PRESSURE_IDLE_POOL_RELEASE'
+            self._resource_pressure_release = {
+                'state':'IDLE_POOL_RELEASED', 'reason':reason,
+                'workers_released':len(ROLES), 'observed_at':snapshot.get('observed_at'),
+                'chat_model_proxy_web_training_s03_touched':False}
+            return True
+        except (OSError, ValueError, KeyError, GateError, AttributeError):
+            if not shutdown_started:
+                return False
+            # Cancellation began but child exit was not proved. Retain every
+            # object and prohibit respawn/retry; never fall back to signals.
+            self._pool_recovery_uncertain = True
+            self._resource_pressure_release = {
+                'state':'HOLD_GRACEFUL_POOL_SHUTDOWN_UNKNOWN',
+                'chat_model_proxy_web_training_s03_touched':False}
+            return False
+        finally:
+            if fd is not None:
+                os.close(fd)
+
+    def _resource_recovery_observation(self, snapshot, reason):
+        """Require three distinct fresh clean snapshots before one pool restart."""
+        if not self._resource_pressure_paused:
+            return True
+        if reason is not None or not isinstance(snapshot, dict):
+            self._resource_recovery_samples = 0
+            self._resource_recovery_last_at = 0.0
+            self._resource_pressure_release = {
+                'state':'WAIT_RESOURCE_RECOVERY', 'reason':reason,
+                'healthy_snapshots':0}
+            return False
+        observed = snapshot.get('observed_at')
+        now = time.time()
+        if (type(observed) not in (int, float) or not math.isfinite(observed)
+                or not 0 <= now-observed <= 5):
+            self._resource_recovery_samples = 0
+            self._resource_recovery_last_at = 0.0
+            self._resource_pressure_release = {
+                'state':'WAIT_RESOURCE_RECOVERY', 'reason':'HOLD_STALE_RESOURCE_SNAPSHOT',
+                'healthy_snapshots':0}
+            return False
+        if (self._resource_recovery_last_at == 0.0
+                or observed-self._resource_recovery_last_at >= RESOURCE_RECOVERY_INTERVAL_SEC):
+            self._resource_recovery_samples += 1
+            self._resource_recovery_last_at = observed
+        if self._resource_recovery_samples < RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS:
+            self._resource_pressure_release = {
+                'state':'WAIT_RESOURCE_RECOVERY',
+                'healthy_snapshots':self._resource_recovery_samples,
+                'required_snapshots':RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS,
+                'last_observed_at':observed}
+            return False
+        self._resource_pressure_paused = False
+        self._resource_recovery_samples = 0
+        self._resource_recovery_last_at = 0.0
+        self._resource_pressure_release = {
+            'state':'RESOURCE_RECOVERY_STABLE',
+            'healthy_snapshots':RESOURCE_RECOVERY_REQUIRED_SNAPSHOTS,
+            'observed_at':observed}
+        return True
+
     def maintain_worker_pool(self):
-        """Wake work in place; replace only a failed, unreserved role."""
+        """Wake work in place; retire only an idle owned pool on memory pressure."""
         if self.config.get('systemic_relay') is None:
             return
         with self.lock:
+            if self._pool_recovery_uncertain:
+                raise GateError('HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN')
+            try:
+                snapshot = self.read_resource_snapshot(leaf_only=True)
+                reason = resource_wait_reason(snapshot)
+            except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold):
+                snapshot, reason = None, 'HOLD_RESOURCE_SNAPSHOT_UNKNOWN'
+            if reason in RESOURCE_PRESSURE_REASONS:
+                self._resource_pressure_paused = True
+                self._resource_recovery_samples = 0
+                self._resource_recovery_last_at = 0.0
+                released = self._retire_idle_pool_for_pressure(snapshot, reason) if self.pool is not None else False
+                self._resource_pressure_release = {
+                    **(self._resource_pressure_release or {}),
+                    'state':('IDLE_POOL_RELEASED' if released else 'RESOURCE_PRESSURE_PAUSED'),
+                    'reason':reason, 'observed_at':snapshot.get('observed_at') if snapshot else None,
+                    'healthy_snapshots':0,
+                    'chat_model_proxy_web_training_s03_touched':False}
+                return
+            if self._resource_pressure_paused:
+                if not self._resource_recovery_observation(snapshot, reason):
+                    return
             if self.pool is None:
                 # An owner-enabled continuous pool remains three processes
                 # even while a new reviewed manifest is being produced.
@@ -1412,6 +1621,14 @@ class Native:
             return False, 'HOLD_SUBAGENT_NATIVE_CLAIM'
         if self.stop_active() or not self.writer_lease():
             return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
+        if self._resource_pressure_paused:
+            try:
+                snapshot = self.read_resource_snapshot(leaf_only=True)
+                reason = resource_wait_reason(snapshot)
+            except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold):
+                return 'wait', 'HOLD_RESOURCE_RECOVERY_SNAPSHOT'
+            if not self._resource_recovery_observation(snapshot, reason):
+                return 'wait', 'WAIT_RESOURCE_RECOVERY_STABILITY'
         if self.pool is None:
             try:
                 reason = self._fresh_admission_reason()
@@ -1498,6 +1715,14 @@ class Native:
         try:
             if self.stop_active() or not self.writer_lease() or not self.owner_allowed():
                 return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
+            if self._resource_pressure_paused:
+                try:
+                    snapshot = self.read_resource_snapshot(leaf_only=True)
+                    reason = resource_wait_reason(snapshot)
+                except (OSError, ValueError, TypeError, KeyError, GateError, autonomy.AutoHold):
+                    return 'wait', 'HOLD_RESOURCE_RECOVERY_SNAPSHOT'
+                if not self._resource_recovery_observation(snapshot, reason):
+                    return 'wait', 'WAIT_RESOURCE_RECOVERY_STABILITY'
             with self.lock:
                 reason = self._fresh_admission_reason(leaf_only=True)
                 if reason:
