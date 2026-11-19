@@ -239,13 +239,28 @@ def _chat_edges(tree):
                 if symbol and alias:
                     imported_symbols[alias] = symbol
                     imports.append({'kind': 'symbol', 'symbol': symbol, 'alias': alias})
-        elif isinstance(node, ast.Call):
-            name = _dotted(node.func)
-            call_name = name.rsplit('.', 1)[-1] if name else None
-            dynamic_target = any(isinstance(part, ast.Constant) and part.value == 's03_memory'
-                                 for arg in node.args for part in ast.walk(arg))
-            dynamic = dynamic or call_name in ('__import__', 'import_module', 'getattr',
-                                               'eval', 'exec') or dynamic_target
+    # Scan calls after collecting imports. A generic getattr(config, "x")
+    # is not a dynamic S03 writer link; all actual S03 aliases remain fenced.
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        dotted = _dotted(node.func)
+        call_name = dotted.rsplit('.', 1)[-1] if dotted else None
+        dynamic_target = any(
+            isinstance(part, ast.Constant) and part.value == 's03_memory'
+            for arg in node.args for part in ast.walk(arg)
+        )
+        first = _dotted(node.args[0]) if node.args else None
+        attr = node.args[1].value if (len(node.args) > 1 and
+            isinstance(node.args[1], ast.Constant) and
+            type(node.args[1].value) is str) else None
+        dynamic_s03_getattr = (call_name == 'getattr' and (
+            (first is not None and first.split('.')[0] in module_aliases)
+            or first in imported_symbols
+            or attr in ('remember', 'persist_turn', 'ledger_append')
+        ))
+        dynamic = (dynamic or dynamic_target or dynamic_s03_getattr
+                   or call_name in ('__import__', 'import_module', 'eval', 'exec'))
     if len(imports) > MAX_IMPORTS:
         return {'imports': imports[:MAX_IMPORTS], 'imports_truncated': True,
                 'call_sites': [], 'call_sites_truncated': False,
