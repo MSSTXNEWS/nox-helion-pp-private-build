@@ -417,7 +417,7 @@ def stop_proxy(expected):
     require(remaining is None or remaining['start_ticks'] != expected['start_ticks'], 'OLD_PROXY_STILL_ALIVE')
 
 
-def start_proxy(expected_executable, on_started=None):
+def start_proxy(expected_executable, on_started=None, min_start_ticks=0):
     """Accept no stale or half-started proxy after the source exchange.
 
     Supervisor may auto-restart the service while the owner controls the lock.
@@ -437,11 +437,18 @@ def start_proxy(expected_executable, on_started=None):
     require(row['state'] in ('STOPPED', 'EXITED', 'FATAL'), 'PROXY_NOT_QUIESCENT')
     gate()
     code, _ = command(['supervisorctl', 'start', 'nox-proxy'], timeout=35)
-    require(code == 0, 'PROXY_START_COMMAND')
+    # The supervisor may start an already STOPPED unit concurrently.
+    # A nonzero "already running" is not itself a failure if a new, healthy
+    # process is proven to have started after the last atomic file exchange.
+    if code != 0:
+        competing = service('nox-proxy')
+        require(competing['state'] in ('RUNNING', 'STARTING'), 'PROXY_START_COMMAND')
     deadline = time.monotonic() + 25
     while time.monotonic() < deadline:
         gate(); row = service('nox-proxy')
         if row.get('state') == 'RUNNING':
+            require(row['identity']['start_ticks'] >= min_start_ticks,
+                    'PROXY_NOT_RELOADED_AFTER_SWAP')
             require(row.get('executable') == expected_executable, 'PROXY_INTERPRETER_CHANGED')
             if on_started is not None:
                 on_started(row['identity'])
@@ -689,8 +696,14 @@ def main():
                     require(pair(row) == 'INSTALLED', 'SOURCE_POSTIMAGE')
                     record['source_changed'].append(row['label']); save()
                 gate(); assert_services(expected, include_proxy=False)
+                # CLOCK_BOOTTIME tracks the same boot epoch as /proc/<pid>/stat.
+                # Never accept a Python worker launched before the new sources.
+                post_swap_tick_floor = int(time.clock_gettime(time.CLOCK_BOOTTIME) *
+                                           os.sysconf('SC_CLK_TCK')) - 1
+                record['proxy_post_swap_tick_floor'] = post_swap_tick_floor
                 record['proxy_start_attempted'] = True; save()
-                new_proxy = start_proxy(original_executable, remember_proxy)
+                new_proxy = start_proxy(original_executable, remember_proxy,
+                                        min_start_ticks=post_swap_tick_floor)
                 record.update(proxy_restarted=True, proxy_after=new_proxy); save()
                 require(all(pair(row) == 'INSTALLED' for row in rows), 'FINAL_POSTIMAGES')
                 require(preserved() == before, 'FINAL_PRESERVED_CHANGED')
