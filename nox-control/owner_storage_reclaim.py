@@ -441,6 +441,20 @@ def filesystem_budget():
     return result
 
 
+def verified_cgroup_budget(budget):
+    if not isinstance(budget, dict):
+        return False
+    cgroup = budget.get('cgroup')
+    if not isinstance(cgroup, dict) or cgroup.get('state') != 'VERIFIED':
+        return False
+    limit = cgroup.get('limit_bytes')
+    current = cgroup.get('current_bytes')
+    headroom = cgroup.get('headroom_bytes')
+    return (type(limit) is int and type(current) is int and type(headroom) is int
+            and limit > 0 and current >= 0 and 0 <= headroom <= limit
+            and headroom == max(0, limit - current))
+
+
 def placement(budget, categories):
     ram_budget = max(0, min(budget['tmpfs']['free_bytes'] - 3 * GIB,
                             budget['cgroup']['headroom_bytes'] - 32 * GIB))
@@ -716,6 +730,8 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
     if digest_bytes(raw) != expected_sha:
         raise StorageHold('HOLD_STORAGE_AUDIT_SHA_CHANGED')
     previous = json.loads(raw)
+    if not verified_cgroup_budget(previous.get('budget')):
+        raise StorageHold('HOLD_PAGE_CACHE_AUDIT_RESOURCE_UNVERIFIED')
     if (previous.get('schema') != SCHEMA or previous.get('action') != 'AUDIT'
             or previous.get('instance_id') != INSTANCE
             or previous.get('request') != audit_request
@@ -737,8 +753,7 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
         cgroup = before.get('cgroup', {})
         headroom = cgroup.get('headroom_bytes')
         limit = cgroup.get('limit_bytes')
-        if (cgroup.get('state') != 'VERIFIED' or type(headroom) is not int
-                or type(limit) is not int or limit <= 0 or headroom < 0 or headroom > limit):
+        if not verified_cgroup_budget(before):
             raise StorageHold('HOLD_PAGE_CACHE_HEADROOM_UNVERIFIED')
         output = receipt_directory() / ('page_cache_' + request + '.json')
         receipt = {'schema': SCHEMA, 'instance_id': INSTANCE,
@@ -821,11 +836,7 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
                 latest_budget = filesystem_budget()
                 latest_cgroup = latest_budget.get('cgroup', {})
                 latest_headroom = latest_cgroup.get('headroom_bytes')
-                latest_limit = latest_cgroup.get('limit_bytes')
-                if (latest_cgroup.get('state') != 'VERIFIED'
-                        or type(latest_headroom) is not int or type(latest_limit) is not int
-                        or latest_limit <= 0 or latest_headroom < 0
-                        or latest_headroom > latest_limit):
+                if not verified_cgroup_budget(latest_budget):
                     receipt['headroom_recheck_state'] = 'UNVERIFIED_STOPPED'
                     receipt['stop_reason'] = 'HEADROOM_RECHECK_UNVERIFIED'
                     receipt['after'] = latest_budget
@@ -856,10 +867,7 @@ def reclaim_page_cache(request, source, audit_request, expected_sha):
         receipt['after'] = filesystem_budget()
         after_cgroup = receipt['after'].get('cgroup', {})
         after_headroom = after_cgroup.get('headroom_bytes')
-        after_limit = after_cgroup.get('limit_bytes')
-        if (after_cgroup.get('state') != 'VERIFIED'
-                or type(after_headroom) is not int or type(after_limit) is not int
-                or after_limit <= 0 or after_headroom < 0 or after_headroom > after_limit):
+        if not verified_cgroup_budget(receipt['after']):
             receipt['headroom_recheck_state'] = 'UNVERIFIED_STOPPED'
             receipt['stop_reason'] = 'FINAL_HEADROOM_UNVERIFIED'
             receipt['headroom_after_bytes'] = None
