@@ -223,39 +223,77 @@ def prepare_schema(conn):
 
 
 def snapshot_database(source,destination,seconds=12):
-    """A consistent SQLite byte artifact including committed WAL content."""
+    """A consistent SQLite artifact, published only after validation succeeds."""
     source = plain(source);destination = plain(destination)
     regular(source)
     if destination.exists():hold('HOLD_S03_SNAPSHOT_ALREADY_EXISTS')
     destination.parent.mkdir(parents=True,mode=0o700,exist_ok=True)
     deadline = time.monotonic()+seconds
-    with connection(source,seconds=seconds) as src:
-        # Establish the read snapshot before sizing it: page_count includes
-        # committed WAL pages that are absent from the main-file st_size.
-        src.execute('BEGIN')
-        src.execute('SELECT count(*) FROM sqlite_master').fetchone()
-        pages=src.execute('PRAGMA page_count').fetchone()[0]
-        page_size=src.execute('PRAGMA page_size').fetchone()[0]
-        logical_bytes=pages*page_size
-        if not 0<logical_bytes<=512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
-        if shutil.disk_usage(destination.parent).free<6*1024**3+logical_bytes:
-            hold('HOLD_S03_BACKUP_DISK_RESERVE')
-        fd=os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600);os.close(fd)
-        def progress(status,remaining,total):
-            if time.monotonic()>deadline:hold('HOLD_S03_BACKUP_BUDGET')
-            if total*page_size>512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
-            if shutil.disk_usage(destination.parent).free<6*1024**3+remaining*page_size:
+    # A failed/aborted SQLite backup must never leave a destination that looks
+    # like a completed backup or prevents a safe retry. Work in a private file
+    # on the same filesystem, then publish with a no-overwrite hard link.
+    temporary = None
+    published = False
+    verified = False
+    published_inode = None
+    try:
+        with connection(source,seconds=seconds) as src:
+            src.execute('BEGIN')
+            src.execute('SELECT count(*) FROM sqlite_master').fetchone()
+            pages=src.execute('PRAGMA page_count').fetchone()[0]
+            page_size=src.execute('PRAGMA page_size').fetchone()[0]
+            logical_bytes=pages*page_size
+            if not 0<logical_bytes<=512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
+            if shutil.disk_usage(destination.parent).free<6*1024**3+logical_bytes:
                 hold('HOLD_S03_BACKUP_DISK_RESERVE')
-        with sqlite3.connect(destination) as dst:
-            src.backup(dst,pages=128,progress=progress,sleep=.01)
-            if dst.execute('PRAGMA quick_check').fetchone()[0]!='ok':hold('HOLD_S03_BACKUP_INTEGRITY')
-    fd = os.open(destination,os.O_RDONLY|os.O_NOFOLLOW)
-    try:os.fsync(fd)
-    finally:os.close(fd)
-    value = file_sha(destination)
-    if file_sha(destination)!=value:hold('HOLD_S03_BACKUP_READBACK')
-    return {'path':str(destination),'sha256':value,'bytes':destination.stat().st_size,
-            'kind':'CONSISTENT_SQLITE_SNAPSHOT','original_retained':True}
+            fd,temporary=tempfile.mkstemp(prefix='.s03-backup-',suffix='.partial',dir=destination.parent)
+            os.fchmod(fd,0o600)
+            os.close(fd)
+            def progress(status,remaining,total):
+                if time.monotonic()>deadline:hold('HOLD_S03_BACKUP_BUDGET')
+                if total*page_size>512*1024*1024:hold('HOLD_S03_BACKUP_SIZE')
+                if shutil.disk_usage(destination.parent).free<6*1024**3+remaining*page_size:
+                    hold('HOLD_S03_BACKUP_DISK_RESERVE')
+            with sqlite3.connect(temporary) as dst:
+                src.backup(dst,pages=128,progress=progress,sleep=.01)
+                if dst.execute('PRAGMA quick_check').fetchone()[0]!='ok':hold('HOLD_S03_BACKUP_INTEGRITY')
+        fd=os.open(temporary,os.O_RDONLY|os.O_NOFOLLOW)
+        try:os.fsync(fd)
+        finally:os.close(fd)
+        value=file_sha(temporary)
+        if file_sha(temporary)!=value:hold('HOLD_S03_BACKUP_READBACK')
+        # Preserve the identity of the only inode this operation may clean up.
+        # Other owners' destinations are never eligible for rollback.
+        info=os.stat(temporary,follow_symlinks=False)
+        published_inode=(info.st_dev,info.st_ino)
+        # link() fails rather than overwriting a backup concurrently published
+        # by another owner. It exposes only a fully verified inode.
+        os.link(temporary,destination,follow_symlinks=False)
+        published=True
+        directory=os.open(destination.parent,os.O_RDONLY|os.O_DIRECTORY)
+        try:os.fsync(directory)
+        finally:os.close(directory)
+        if file_sha(destination)!=value:hold('HOLD_S03_BACKUP_PUBLISHED_READBACK')
+        verified=True
+        return {'path':str(destination),'sha256':value,'bytes':destination.stat().st_size,
+                'kind':'CONSISTENT_SQLITE_SNAPSHOT','original_retained':True}
+    finally:
+        # If fsync/readback failed after link(), do not leave an unverified
+        # destination that a later restore could mistake for a verified backup.
+        # Compare inode identity: never remove someone else's replacement.
+        if published and not verified:
+            try:
+                info=os.stat(destination,follow_symlinks=False)
+            except FileNotFoundError:
+                pass
+            else:
+                if (info.st_dev,info.st_ino)==published_inode:
+                    os.unlink(destination)
+                    directory=os.open(destination.parent,os.O_RDONLY|os.O_DIRECTORY)
+                    try:os.fsync(directory)
+                    finally:os.close(directory)
+        if temporary is not None:
+            os.unlink(temporary)
 
 
 def _request_json(path,payload=None,timeout=.7,maximum=1024*1024):
@@ -382,10 +420,12 @@ def embed(texts,timeout=.7):
 
 
 def embedding_text(text):
-    # UTF-8 bytes are a conservative tokenizer budget for the observed8192
-    # context. The original complete record stays in S03/FTS and the snapshot.
-    raw=text.encode('utf-8')
-    return raw[:6000].decode('utf-8','ignore')
+    # Never turn a full-content hash into evidence for a truncated vector.
+    # Until separately reviewed multi-vector support exists, oversized input
+    # must HOLD instead of silently losing its ending.
+    if not isinstance(text,str):hold('HOLD_S03_EMBEDDING_TEXT_TYPE')
+    if len(text.encode('utf-8'))>6000:hold('HOLD_S03_EMBEDDING_TEXT_TOO_LONG')
+    return text
 
 
 def text_sha(text):
@@ -481,7 +521,10 @@ def chunks(text):
     # Overlap keeps a fact straddling a chunk boundary available to retrieval.
     if not isinstance(text,str) or len(text.encode('utf-8'))>MAX_IMPORT_TEXT:hold('HOLD_S03_IMPORT_RECORD_SIZE')
     if not text.strip():return []
-    return [text[start:start+1800] for start in range(0,len(text),1640)]
+    # Embedding input has a strict 6000-byte UTF-8 ceiling; 1800 Unicode
+    # codepoints can require 7200 bytes and strand imported memories.
+    # Preserve all characters and the original 160-character overlap.
+    return [text[start:start+1500] for start in range(0,len(text),1340)]
 
 
 def import_records(conn,records,source_key,snapshot_sha):
@@ -593,7 +636,7 @@ def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identit
             size=len(embedding_text(text).encode('utf-8'))
             if len(pending)<limit and pending_bytes+size<=6500:
                 pending.append((row['id'],text,sha));pending_bytes+=size
-    if not pending:return {'state':'INDEX_CURRENT','indexed':0,'stale_remaining':0,'model_identity':identity,'dimensions':DIMENSIONS}
+    if not pending:return {'state':'INDEX_CURRENT' if stale==0 else 'INDEX_INCOMPLETE','indexed':0,'stale_remaining':stale,'model_identity':identity,'dimensions':DIMENSIONS}
     vectors=embedder([embedding_text(row[1]) for row in pending],timeout=4.0)
     if not isinstance(vectors,list) or len(vectors)!=len(pending):hold('HOLD_S03_INDEX_BATCH_RESULT')
     if identity_fn()!=identity:hold('HOLD_S03_MODEL_CHANGED_DURING_EMBEDDING')
@@ -618,24 +661,53 @@ def index_batch(db=DB,limit=INDEX_BATCH,embedder=embed,identity_fn=model_identit
         # Roll back the entire uncommitted vector batch if owner STOP was
         # asserted while SQLite work was in progress. No partial index PASS.
         if stop_active():hold('HOLD_S03_OWNER_STOP')
-    return {'state':'INDEX_BATCH_VERIFIED','indexed':written,'stale_remaining':max(0,stale-written),
+        remaining=max(0,stale-written)
+        if remaining==0:
+            # The embedding request ran outside the writer transaction. A chat
+            # writer may have added or edited S03 rows in that interval.
+            # Verify current text hashes and model identity under the writer
+            # lock before accepting any INDEX_CURRENT/verified completion.
+            remaining=sum(1 for row in conn.execute(
+                'SELECT s.text,v.content_sha256,v.model_identity FROM s03_items s '
+                'LEFT JOIN nox_s03_vectors v ON v.item_id=s.id')
+                if isinstance(row['text'],str) and row['text'].strip() and (
+                    row['content_sha256']!=text_sha(row['text']) or row['model_identity']!=identity))
+            if stop_active():hold('HOLD_S03_OWNER_STOP')
+    return {'state':'INDEX_BATCH_VERIFIED','indexed':written,'stale_remaining':remaining,
             'model_identity':identity,'dimensions':DIMENSIONS}
 
 
 def lexical(conn,query,limit=48):
-    terms=list(dict.fromkeys(re.findall(r'[^\W_]{2,}',query.casefold(),re.UNICODE)))[:16]
+    # Every distinct query term must be considered. A former [:16] silently
+    # discarded the end of long owner questions even when S03 held the answer.
+    terms=list(dict.fromkeys(re.findall(r'[^\W_]{2,}',query.casefold(),re.UNICODE)))
+    if len(terms)>64:hold('HOLD_S03_LEXICAL_QUERY_BUDGET')
     if not terms:return []
-    expression=' OR '.join('"'+term+'"' for term in terms)
+    groups=[terms[index:index+16] for index in range(0,len(terms),16)]
     try:
-        # Reject stale FTS hits after a canonical item was corrected. The FTS
-        # table is an index, never an authority for current decision text.
-        return [dict(row) for row in conn.execute('SELECT s.*,bm25(s03_fts) AS lexical_rank FROM s03_fts JOIN s03_items s ON s.id=s03_fts.id AND s.text=s03_fts.text AND s.segment=s03_fts.segment WHERE s03_fts MATCH ? ORDER BY bm25(s03_fts) LIMIT ?', (expression,limit))]
+        pages=[]
+        for group in groups:
+            expression=' OR '.join('"'+term+'"' for term in group)
+            pages.append([dict(row) for row in conn.execute(
+                'SELECT s.*,bm25(s03_fts) AS lexical_rank FROM s03_fts JOIN s03_items s ON s.id=s03_fts.id AND s.text=s03_fts.text AND s.segment=s03_fts.segment WHERE s03_fts MATCH ? ORDER BY bm25(s03_fts) LIMIT ?',
+                (expression,limit))])
+        # Round robin, rather than concatenating: later query terms get
+        # candidate slots even when the earliest group has many matches.
+        found=[];seen=set()
+        for rank in range(limit):
+            for page in pages:
+                if rank>=len(page):continue
+                row=page[rank]
+                if row['id'] in seen:continue
+                seen.add(row['id']);found.append(row)
+                if len(found)>=limit:return found
+        return found
     except sqlite3.OperationalError:
-        # LIKE is parameterized and bounded; no FTS control operators from text.
-        escaped=[term.replace('\\','\\\\').replace('%','\\%').replace('_','\\_') for term in terms[:8]]
+        # The bounded LIKE recovery route covers ALL terms, not only the
+        # first eight. SQLite's existing progress deadline remains in force.
+        escaped=[term.replace('\\','\\\\').replace('%','\\%').replace('_','\\_') for term in terms]
         query_sql='SELECT * FROM s03_items WHERE '+ ' OR '.join("text LIKE ? ESCAPE '\\'" for _ in escaped)+' ORDER BY salience DESC LIMIT ?'
         return [dict(row) for row in conn.execute(query_sql,tuple('%'+term+'%' for term in escaped)+(limit,))]
-
 
 def select_results(lexical_rows,semantic_rows,pin_rows,recent_rows,k=6,semantic_available=False):
     k=max(1,min(16,int(k)));total=max(k+4,8)
@@ -678,7 +750,9 @@ def select_results(lexical_rows,semantic_rows,pin_rows,recent_rows,k=6,semantic_
 
 def recall(query,k=6,db=DB,embedder=embed,identity_fn=model_identity):
     if not isinstance(query,str) or not query.strip():return []
-    query=query[:8000];semantic_rows=[];semantic_available=False;identity=None;query_vector=None
+    # Lexical fallback must receive the full query, including its ending.
+    # The optional embedding budget is enforced independently.
+    semantic_rows=[];semantic_available=False;identity=None;query_vector=None
     try:
         identity=identity_fn();query_vector=embedder([embedding_text(query)],timeout=.65)[0]
     except Exception:
@@ -717,7 +791,9 @@ def bind_s03(namespace):
     if not callable(original) or not callable(formatter):hold('HOLD_S03_BIND_FUNCTIONS')
     def bounded_recall(query,k=6,db=None):
         target=Path(db) if db is not None else DB
-        if target.absolute()!=DB.absolute():return original(query,k=k,db=target)
+        if target.absolute()!=DB.absolute():
+            # A caller-controlled DB override must never bypass canonical S03.
+            hold('HOLD_S03_UNAUTHORIZED_DATABASE')
         try:return recall(query,k=k,db=target)
         except MemoryHold:
             # A canonical S03 safety HOLD must never be downgraded to an
@@ -727,14 +803,11 @@ def bind_s03(namespace):
             # Missing/denied/corrupt canonical SQLite is not an embedding
             # outage. The original reader cannot validate the same scope.
             raise MemoryHold('HOLD_S03_CANONICAL_READ_UNVERIFIED') from exc
-        except Exception:
-            # The original may prepend up to14 pins. Rerank its wider fallback
-            # through the same fixed pin budget instead of returning those pins.
-            rows=original(query,k=max(16,min(32,int(k)+12)),db=target)
-            if not isinstance(rows,list):return []
-            return select_results([row for row in rows if row.get('how') in ('fts','like')],[],
-                                  [row for row in rows if row.get('how')=='pin'],
-                                  [row for row in rows if row.get('how') not in ('pin','fts','like')],k)
+        except Exception as exc:
+            # Embedding outages already degrade to lexical recall in recall().
+            # Unexpected canonical errors are NOT permission to invoke a
+            # different reader that may lose provenance, ACLs or owner scope.
+            raise MemoryHold('HOLD_S03_CANONICAL_READ_UNVERIFIED') from exc
     def history_format(items):
         prepared=[]
         for row in items:
@@ -773,6 +846,11 @@ def sync(task=None,db=DB,seconds=25):
             resource_admission()
             result=index_batch(db);count+=result['indexed']
             if result['stale_remaining']==0:break
+    # A time-bounded run may index only some rows. Durable partial vectors are
+    # resumable, but never a verified completed S03 memory index.
+    if (not isinstance(result,dict) or type(result.get('stale_remaining')) is not int
+            or result['stale_remaining'] != 0):
+        hold('HOLD_S03_INDEX_INCOMPLETE')
     identity=(task or {}).get('owner_claim',{}).get('nonce')
     task_id=(task or {}).get('id','owner.memory.index')
     if not isinstance(identity,str) or not re.fullmatch('[A-Za-z0-9_-]{1,128}',identity):identity='manual_'+str(int(started))
@@ -814,6 +892,7 @@ def verify_success(task,evidence):
                 or value.get('scope')!='BOUNDED_S03_VECTOR_INDEX' or value.get('verified') is not True
                 or value.get('source_sha256')!=file_sha(__file__)
                 or any(type(value.get(key)) is not int or value[key]<0 for key in ('indexed','stale_remaining'))
+                or value.get('stale_remaining')!=0
                 or value.get('training_examples_accepted')!=0 or value.get('private_text_exported') is not False):return None
         return {'kind':'bounded_native_s03_index','receipt_sha256':file_sha(path),'source_sha256':value['source_sha256'],
                 'scope':value['scope'],'indexed':value['indexed'],'stale_remaining':value['stale_remaining'],

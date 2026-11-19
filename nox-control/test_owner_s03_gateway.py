@@ -312,6 +312,28 @@ class GatewayTests(unittest.TestCase):
         with self.assertRaisesRegex(g.MemoryHold,'MODEL_CHANGED'):
             g.index_batch(self.db,embedder=lambda *a,**k:[vector(0)],identity_fn=iter(['a'*64,'b'*64]).__next__)
 
+    def test_concurrent_memory_write_does_not_verify_incomplete_index(self):
+        # A different S03 writer commits after the read snapshot but before
+        # the vector transaction. The newly committed item must remain pending.
+        with g.connection(self.db,write=True) as c:item(c,'first','first memory')
+        def embedding_with_writer(texts,timeout):
+            with g.connection(self.db,write=True) as c:item(c,'late','new chat memory')
+            return [vector(0)]
+        result=g.index_batch(self.db,embedder=embedding_with_writer,identity_fn=lambda:'a'*64)
+        self.assertEqual(result['indexed'],1)
+        self.assertEqual(result['stale_remaining'],1)
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT count(*) FROM s03_items').fetchone()[0],2)
+            self.assertIsNone(c.execute('SELECT item_id FROM nox_s03_vectors WHERE item_id=?',('late',)).fetchone())
+        task={'id':'owner.memory.index.concurrent','handler':'owner_memory_sync',
+              'owner_claim':{'nonce':'concurrent_a3'}}
+        with (patch.object(g,'resource_admission'),
+              patch.object(g,'index_batch',return_value=result),
+              patch.object(g.time,'monotonic',side_effect=[0.,.25,1.25])):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_INDEX_INCOMPLETE'):
+                g.sync(task,db=self.db,seconds=1.)
+        self.assertFalse((g.STATE/'receipts'/'index_concurrent_a3.json').exists())
+
     def test_owner_stop_arriving_during_embedding_aborts_without_s03_write(self):
         # The owner may enter MODEL_UPDATE after initial admission.
         with g.connection(self.db,write=True) as c:item(c,'mid','memory before STOP')
@@ -367,6 +389,25 @@ class GatewayTests(unittest.TestCase):
         reconstructed=pieces[0]+''.join(part[160:] for part in pieces[1:])
         self.assertEqual(reconstructed,text)
 
+    def test_utf8_multibyte_history_chunks_remain_indexable_without_loss(self):
+        original='🙂'*4200+'TAIL_PRESERVED'
+        with g.connection(self.db,write=True) as conn:
+            result=g.import_records(conn,[{'id':42,'text':original}],'C08','f'*64)
+        # Repeated emoji chunks deduplicate intentionally; every origin remains.
+        self.assertGreater(result['origin_links'],2)
+        with g.connection(self.db) as conn:
+            pieces=[row[0] for row in conn.execute(
+                'SELECT s.text FROM nox_s03_origins o JOIN s03_items s ON s.id=o.item_id '
+                'ORDER BY o.chunk_index')]
+            stored=json.loads(conn.execute(
+                'SELECT payload_json FROM nox_s03_import_records').fetchone()[0])
+        self.assertEqual(stored['text'],original)
+        self.assertEqual(pieces[0]+''.join(part[160:] for part in pieces[1:]),original)
+        self.assertTrue(all(len(g.embedding_text(part).encode('utf-8'))<=6000 for part in pieces))
+        proof=g.index_batch(self.db,embedder=lambda texts,timeout:[vector(0) for _ in texts],
+                            identity_fn=lambda:'a'*64)
+        self.assertGreater(proof['indexed'],0)
+
     def test_snapshot_includes_committed_wal_and_has_private_mode(self):
         c=sqlite3.connect(self.db);c.execute('PRAGMA journal_mode=WAL')
         item(c,'wal','PRIVATE_WAL_RECORD');c.commit()
@@ -375,6 +416,48 @@ class GatewayTests(unittest.TestCase):
         with sqlite3.connect(result['path']) as backup:
             self.assertEqual(backup.execute('SELECT text FROM s03_items WHERE id=?',('wal',)).fetchone()[0],'PRIVATE_WAL_RECORD')
         self.assertNotIn('PRIVATE_WAL_RECORD',json.dumps(result));c.close()
+
+    def test_failed_snapshot_readback_is_not_published_and_can_retry(self):
+        destination=self.root/'retry-after-failed-backup.sqlite'
+        source_before=g.file_sha(self.db)
+        # The failure occurs after SQLite has already written the private
+        # backup, but before its SHA can be verified and published.
+        with patch.object(g,'file_sha',side_effect=RuntimeError('READBACK_FAULT')):
+            with self.assertRaisesRegex(RuntimeError,'READBACK_FAULT'):
+                g.snapshot_database(self.db,destination)
+        self.assertFalse(destination.exists())
+        self.assertEqual(list(self.root.glob('.s03-backup-*.partial')),[])
+        self.assertEqual(g.file_sha(self.db),source_before)
+        result=g.snapshot_database(self.db,destination)
+        self.assertEqual(result['sha256'],g.file_sha(destination))
+        with sqlite3.connect(destination) as restored:
+            self.assertEqual(restored.execute('PRAGMA quick_check').fetchone()[0],'ok')
+
+    def test_failed_published_snapshot_readback_cleans_only_own_link(self):
+        destination=self.root/'postpublish-failed.sqlite'
+        source_before=g.file_sha(self.db)
+        original_sha=g.file_sha
+        calls=[]
+        def corrupt_published_readback(path):
+            calls.append(Path(path))
+            if Path(path)==destination:
+                return '0'*64
+            return original_sha(path)
+        # The two private-file SHA checks pass. After link publication,
+        # the final destination readback fails and must not leave a restorable
+        # but unverified destination or private partial files behind.
+        with patch.object(g,'file_sha',side_effect=corrupt_published_readback):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_BACKUP_PUBLISHED_READBACK'):
+                g.snapshot_database(self.db,destination)
+        self.assertEqual(len(calls),3)
+        self.assertFalse(destination.exists())
+        self.assertEqual(list(self.root.glob('.s03-backup-*.partial')),[])
+        self.assertEqual(g.file_sha(self.db),source_before)
+        # The exact same path can be used after the failed publication.
+        retry=g.snapshot_database(self.db,destination)
+        self.assertEqual(retry['sha256'],g.file_sha(destination))
+        with sqlite3.connect(destination) as restored:
+            self.assertEqual(restored.execute('PRAGMA quick_check').fetchone()[0],'ok')
 
     def test_migration_keeps_sources_byte_identical_and_dialog_provenance(self):
         legacy=self.root/'cores';(legacy/'C01').mkdir(parents=True)
@@ -508,10 +591,16 @@ class GatewayTests(unittest.TestCase):
                     with self.assertRaisesRegex(g.MemoryHold,expected):
                         namespace['recall']('owner session question')
         self.assertEqual(calls,[],'legacy recall must not bypass canonical safety')
-        # Retain a bounded compatibility fallback for non-admission failures.
+        # An unexpected error must also fail closed, rather than substituting
+        # an unscoped legacy reader that cannot verify owner provenance.
         with patch.object(g,'recall',side_effect=RuntimeError('formatting transient')):
-            self.assertEqual(namespace['recall']('owner session question'),[])
-        self.assertEqual(len(calls),1)
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_CANONICAL_READ_UNVERIFIED'):
+                namespace['recall']('owner session question')
+        # A database override is not an alternative authentication route.
+        with patch.object(g,'recall',side_effect=AssertionError('canonical call forbidden')):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_UNAUTHORIZED_DATABASE'):
+                namespace['recall']('owner session question',db=self.root/'other.sqlite')
+        self.assertEqual(calls,[],'no fallback may bypass canonical S03')
 
     def test_plain_never_accepts_unreadable_ancestor_or_leaf(self):
         # This is a source-only regression for Python's suppressed
@@ -546,8 +635,49 @@ class GatewayTests(unittest.TestCase):
         self.assertLess(result.index(g.MARKER),result.index('if __name__'))
         with self.assertRaises(g.MemoryHold):g.patch_s03(source,'a'*64)
 
+    def test_oversize_embedding_holds_instead_of_silently_losing_tail(self):
+        original='🙂'*1800+'TAIL_MARKER'
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_EMBEDDING_TEXT_TOO_LONG'):
+            g.embedding_text(original)
+        with g.connection(self.db,write=True) as c:
+            item(c,'oversized',original)
+        with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_EMBEDDING_TEXT_TOO_LONG'):
+            g.index_batch(self.db,identity_fn=lambda:'a'*64,
+                          embedder=lambda *args,**kwargs:self.fail('no lossy embedding request'))
+        with g.connection(self.db) as c:
+            self.assertEqual(c.execute('SELECT text FROM s03_items WHERE id=?',
+                                       ('oversized',)).fetchone()[0],original)
+            self.assertEqual(c.execute('SELECT count(*) FROM nox_s03_vectors').fetchone()[0],0)
+
+    def test_lexical_recall_covers_tail_after_sixteen_unique_terms(self):
+        # The first term can produce more hits than the answer budget. A tail
+        # term past the old [:16] cutoff must still retrieve its exact fact.
+        with g.connection(self.db,write=True) as c:
+            for number in range(14):
+                item(c,'early_'+str(number),'earlyquery memory '+str(number))
+            item(c,'tail','safetytailmarker')
+        query=' '.join(['earlyquery']+['absentword'+str(i) for i in range(18)]
+                       +['safetytailmarker'])
+        answer=g.recall(query,db=self.db,
+                        identity_fn=lambda:(_ for _ in ()).throw(OSError('offline')))
+        self.assertIn('tail',[row['id'] for row in answer])
+        self.assertTrue(next(row for row in answer if row['id']=='tail')['query_evidence'])
+        # An extreme question is a visible HOLD, never silent suffix loss.
+        with g.connection(self.db) as c:
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_LEXICAL_QUERY_BUDGET'):
+                g.lexical(c,' '.join('term'+str(i) for i in range(65)))
+
+    def test_long_recall_query_preserves_keyword_after_old_cutoff(self):
+        with g.connection(self.db,write=True) as c:
+            item(c,'tail_fact','safetytailmarker')
+        query='?'*8001+' safetytailmarker'
+        found=g.recall(query,db=self.db,
+                       identity_fn=lambda:(_ for _ in ()).throw(OSError('offline')))
+        self.assertEqual(found[0]['id'],'tail_fact')
+        self.assertTrue(found[0]['query_evidence'])
+
     def test_index_obeys_joint_utf8_batch_budget_without_erasing_original(self):
-        text='🙂'*1800
+        text='🙂'*1200
         with g.connection(self.db,write=True) as c:
             item(c,'a',text);item(c,'b',text+'different')
         observed=[]
@@ -583,6 +713,27 @@ class GatewayTests(unittest.TestCase):
         self.assertIsNone(g.verify_success(other,result))
         Path(result['receipt_path']).write_text('{}')
         self.assertIsNone(g.verify_success(task,result))
+
+    def test_partial_index_cannot_claim_completed_s03(self):
+        task={'id':'owner.memory.index.partial','handler':'owner_memory_sync',
+              'owner_claim':{'nonce':'partial_a3'}}
+        partial={'indexed':1,'stale_remaining':1,'model_identity':'b'*64}
+        with (patch.object(g,'resource_admission'),
+              patch.object(g,'index_batch',return_value=partial),
+              patch.object(g.time,'monotonic',side_effect=[0., .5, 1.5])):
+            with self.assertRaisesRegex(g.MemoryHold,'HOLD_S03_INDEX_INCOMPLETE'):
+                g.sync(task,db=self.db,seconds=1.)
+        receipt=g.STATE/'receipts'/'index_partial_a3.json'
+        self.assertFalse(receipt.exists())
+        # Even a legacy source-signed hash of a partial receipt is not DONE.
+        g.atomic_json(receipt,{'schema':g.SCHEMA,'task_id':task['id'],
+            'claim_nonce':'partial_a3','scope':'BOUNDED_S03_VECTOR_INDEX',
+            'verified':True,'source_sha256':g.file_sha(g.__file__),
+            'indexed':1,'stale_remaining':1,'training_examples_accepted':0,
+            'private_text_exported':False})
+        evidence={'schema':g.SCHEMA,'verified':True,'receipt_path':str(receipt),
+                  'receipt_sha256':g.file_sha(receipt)}
+        self.assertIsNone(g.verify_success(task,evidence))
 
     def test_low_disk_prevents_backup_and_mutation(self):
         with patch.object(g.shutil,'disk_usage',return_value=SimpleNamespace(free=5*1024**3)):
