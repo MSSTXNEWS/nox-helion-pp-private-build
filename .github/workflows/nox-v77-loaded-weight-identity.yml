@@ -1,0 +1,67 @@
+name: NOX V77 loaded weight identity source and owner gate
+on:
+  pull_request:
+    branches: [feature/nox-v38-synaptic-brain-20261114]
+    paths:
+      - 'nox_runpod/teacher_mesh/v77/loaded_weight_identity_audit.py'
+      - 'nox_runpod/teacher_mesh/v77/test_loaded_weight_identity_audit.py'
+      - '.github/workflows/nox-v77-loaded-weight-identity.yml'
+  workflow_dispatch:
+    inputs:
+      allow_native:
+        description: 'Manual owner-approved read-only hash of exact mapped model file; may read up to 16 GiB'
+        type: choice
+        required: true
+        options: ['NO', 'YES']
+        default: 'NO'
+      source_sha:
+        description: 'Exact checked-out source SHA for this read-only probe'
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: nox-v77-loaded-weight-identity-60509551
+  cancel-in-progress: false
+jobs:
+  source-tests:
+    if: "${{ github.event_name == 'pull_request' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and run offline fixtures only
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v77/loaded_weight_identity_audit.py nox_runpod/teacher_mesh/v77/test_loaded_weight_identity_audit.py
+          python3 -m unittest nox_runpod.teacher_mesh.v77.test_loaded_weight_identity_audit -v
+
+  native-read-only:
+    if: "${{ github.event_name == 'workflow_dispatch' && inputs.allow_native == 'YES' && github.actor == 'MSSTXNEWS' && inputs.source_sha == github.sha }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "${{ inputs.source_sha }}"
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate exact manually approved source pin
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_sha }}"
+          python3 -m py_compile nox_runpod/teacher_mesh/v77/loaded_weight_identity_audit.py
+      - name: Read-only mapped file hash on original OneHost only
+        env:
+          NOX2: "${{ secrets.NOX2 }}"
+        run: python3 -m nox_runpod.teacher_mesh.v77.loaded_weight_identity_audit
+      - name: Detach only this workflow run temporary key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
