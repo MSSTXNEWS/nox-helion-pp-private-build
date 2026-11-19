@@ -1,0 +1,27 @@
+name: NOX B1 stream terminal disconnect fence
+on:
+  push:
+    branches:
+      - b1/stream-tail-cancel-fence-20261119
+  pull_request:
+    paths:
+      - 'nox-control/owner_chat_stream.py'
+      - 'nox-control/test_b1_stream_tail_cancel.py'
+      - '.github/workflows/nox-b1-stream-tail-cancel.yml'
+permissions:
+  contents: read
+jobs:
+  b1-tail-cancel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: One focused cancellation and no-replay check
+        run: |
+          python3 -m venv .b1-ci
+          . .b1-ci/bin/activate
+          python -m pip install --disable-pip-version-check httpx==0.28.1 fastapi==0.116.1
+          python -m py_compile nox-control/owner_chat_stream.py nox-control/test_b1_stream_tail_cancel.py
+          PYTHONPATH=nox-control python -m unittest -v test_b1_stream_tail_cancel.B1TerminalCancellationTest

@@ -413,6 +413,9 @@ def install(native):
 
         async def generate():
             answer=[]
+            # Never leave a final eligible for S03 if the SSE iterator is
+            # closed or cancelled before normal exhaustion.
+            exhausted=False
             try:
                 async with aclosing(_run(native,url,payload,user_text)) as run:
                     async for kind,text in run:
@@ -426,12 +429,18 @@ def install(native):
                 payload['_agent_final']=final
                 yield native['_sse']('',finish='stop')
                 yield 'data: [DONE]\n\n'
+                exhausted=True
             except asyncio.CancelledError:
                 raise
             except Exception as error:
                 payload.pop('_agent_final',None)
                 code=str(error) if isinstance(error,StreamFailure) else 'HOLD_OWNER_STREAM_RUNTIME'
                 yield 'data: '+json.dumps({'error':{'code':code}})+'\n\n'
+            finally:
+                if not exhausted:
+                    # GeneratorExit from disconnect/aclose skips except
+                    # Exception. No terminal certification on early close.
+                    payload.pop('_agent_final',None)
 
         if stream:
             return StreamingResponse(generate(),media_type='text/event-stream',headers={
