@@ -2,6 +2,7 @@ import importlib.util
 import configparser
 from pathlib import Path
 import struct
+import subprocess
 import unittest
 from unittest import mock
 import xmlrpc.client
@@ -166,6 +167,32 @@ class UnixSupervisorRpcTests(unittest.TestCase):
                                    side_effect=RuntimeError(
                                        "HOLD_EMERGENCY_STOP_TEST_DEFAULTS_REJECTED")):
                 OWNER._reject_config_defaults(parser, "TEST_DEFAULTS_REJECTED")
+
+    def test_systemctl_identity_is_pinned_across_two_queries(self):
+        identity = {"path": "/usr/bin/systemctl", "sha256": "b" * 64,
+                    "dev": 1, "ino": 2}
+        prior_identity = OWNER.SYSTEMCTL_IDENTITY
+        prior_diagnostic = OWNER.DIAGNOSTICS.get("systemctl_executable")
+        OWNER.SYSTEMCTL_IDENTITY = None
+        responses = [
+            subprocess.CompletedProcess([], 0, "active\n", ""),
+            subprocess.CompletedProcess([], 0, "4242\n", ""),
+        ]
+        try:
+            with (mock.patch.object(OWNER, "verify_root_executable_path",
+                                    return_value=identity) as verify,
+                  mock.patch.object(OWNER.subprocess, "run",
+                                    side_effect=responses) as run):
+                self.assertEqual(OWNER._supervisor_systemd_mainpid(), 4242)
+            self.assertEqual(run.call_count, 2)
+            self.assertEqual(verify.call_count, 4)
+            self.assertEqual(OWNER.SYSTEMCTL_IDENTITY, identity)
+        finally:
+            OWNER.SYSTEMCTL_IDENTITY = prior_identity
+            if prior_diagnostic is None:
+                OWNER.DIAGNOSTICS.pop("systemctl_executable", None)
+            else:
+                OWNER.DIAGNOSTICS["systemctl_executable"] = prior_diagnostic
 
     def test_holder_second_stage_is_not_available(self):
         self.assertFalse(hasattr(OWNER, "stop_holder_only_if_model_stop_is_insufficient"))

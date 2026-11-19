@@ -336,6 +336,7 @@ def _supervisor_systemd_mainpid() -> int:
     global SYSTEMCTL_IDENTITY
 
     def checked_call(args):
+        global SYSTEMCTL_IDENTITY
         identity = verify_root_executable_path(str(SYSTEMCTL_BIN), "SYSTEMCTL_EXECUTABLE")
         if SYSTEMCTL_IDENTITY is None:
             SYSTEMCTL_IDENTITY = identity
