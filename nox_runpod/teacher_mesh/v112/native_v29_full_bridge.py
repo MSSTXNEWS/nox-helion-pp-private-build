@@ -406,7 +406,8 @@ def _dialog_context(dialog_id):
         if (not isinstance(row['question_chars'],int) or not isinstance(row['answer_chars'],int)
                 or row['question_chars']>max_message_chars
                 or row['answer_chars']>max_message_chars
-                or not isinstance(question,str) or not isinstance(answer,str)):
+                or not isinstance(question,str) or not isinstance(answer,str)
+                or len(question)>max_message_chars or len(answer)>max_message_chars):
             return 'HOLD_DIALOG_CONTEXT_MESSAGE_LIMIT',[]
         question_bytes,answer_bytes=row['question_bytes'],row['answer_bytes']
         if (not isinstance(question_bytes,int) or not isinstance(answer_bytes,int)
