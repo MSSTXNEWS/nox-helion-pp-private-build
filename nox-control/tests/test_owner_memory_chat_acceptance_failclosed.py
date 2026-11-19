@@ -48,4 +48,30 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                 self.assertEqual(emitted[1][0],'memory_chat_batch')
                 self.assertEqual(emitted[1][1]['failed'],[emitted[0][1]])
 
+
+    def test_stop_during_final_stage_cannot_claim_success(self):
+        spec=importlib.util.spec_from_file_location('a3_stop_acceptance', SOURCE)
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as t:
+            name='owner_s03_recover_activate.py'
+            raw=(
+                b'from pathlib import Path\n'
+                b'def main():\n'
+                + f'    (Path({t!r}) / "STOP").touch()\n'.encode()
+                + b'    return 0\n'
+            )
+            module.STAGES=((name,hashlib.sha256(raw).hexdigest()),)
+            module.BUNDLE={name:base64.b64encode(raw).decode()}
+            emitted=[]
+            module.emit=lambda kind,data:emitted.append((kind,data))
+            with patch.object(module,'Path',lambda _:pathlib.Path(t)):
+                result=module.main()
+        self.assertEqual(result,2)
+        self.assertEqual(emitted,[
+            ('memory_chat_component_hold',{'component':name,'reason':'HOLD_OWNER_STOP'}),
+            ('memory_chat_batch',{
+                'failed':[{'component':name,'reason':'HOLD_OWNER_STOP'}],
+                'training_started':False,'private_content_exported':False}),
+        ])
+
 if __name__=='__main__':unittest.main()
