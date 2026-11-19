@@ -271,13 +271,12 @@ def tick_existing_dispatcher(namespace, state, *, mode):
         budget = runtime.get('bounded_cpu_budget')
         if not isinstance(budget, Mapping):
             return {'state':'HOLD_BOUNDED_CPU_BUDGET_SCHEMA','jobs_started':0}
-        if budget is not None:
-            decision = bounded_cpu_decision(budget,
-                memory_ratio=runtime.get('cgroup_memory_ratio'),
-                cpu_pressure=runtime.get('cpu_pressure', 0))
-            if decision['reason'] is not None:
-                return {'state':decision['reason'], 'jobs_started':0,
-                        'resource_admission':decision}
+        decision = bounded_cpu_decision(budget,
+            memory_ratio=runtime.get('cgroup_memory_ratio'),
+            cpu_pressure=runtime.get('cpu_pressure', 0))
+        if decision['reason'] is not None:
+            return {'state':decision['reason'], 'jobs_started':0,
+                    'resource_admission':decision}
         tasks=([] if isinstance(catalog,Mapping) and catalog.get('schema')==SCHEMA
                and catalog.get('tasks')==[] else
                validate_submission(catalog,allowed_handlers=native.allowed_handlers())['ordered'])
