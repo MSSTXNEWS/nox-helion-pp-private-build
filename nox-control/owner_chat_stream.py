@@ -141,6 +141,12 @@ def _reject_nonfinite_json_constant(value):
     raise ValueError('non-finite JSON constant')
 
 
+def _reject_lone_surrogates(value):
+    """Reject non-scalar Unicode before publishing an SSE token or tool call."""
+    if any(0xD800 <= ord(char) <= 0xDFFF for char in value):
+        raise ValueError('unpaired UTF-16 surrogate')
+
+
 async def _model_events(client, url, payload):
     """Forward content immediately; assemble function-call arguments privately."""
     request=dict(payload,model='maya',stream=True,cache_prompt=True)
@@ -243,6 +249,7 @@ async def _model_events(client, url, payload):
                 part=delta.get('content')
                 if part is not None and not isinstance(part,str):
                     raise ValueError('content')
+                if part is not None:_reject_lone_surrogates(part)
                 fragments=delta.get('tool_calls')
                 if fragments is None:fragments=[]
                 if not isinstance(fragments,list):
@@ -267,6 +274,7 @@ async def _model_events(client, url, payload):
                         value=fragment.get(field)
                         if value is not None:
                             if not isinstance(value,str):raise ValueError(field)
+                            _reject_lone_surrogates(value)
                             call[field]+=value
                             # Model-supplied SSE identifiers are untrusted. A long ID
                             # must never reach the native tool dispatcher or S03.
@@ -281,6 +289,7 @@ async def _model_events(client, url, payload):
                         value=function.get(field)
                         if value is not None:
                             if not isinstance(value,str):raise ValueError(field)
+                            _reject_lone_surrogates(value)
                             call['function'][field]+=value
                     if len(call['function']['arguments'])>100000 or len(call['function']['name'])>200:
                         raise StreamFailure('HOLD_TOOL_CALL_SIZE')
