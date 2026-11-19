@@ -7,7 +7,7 @@ permissions remain unchanged. The wrapper performs no I/O for any model turn.
 import hashlib
 from pathlib import Path
 
-CALLBACK_SHA = '0193c511168489637b6df041bee2daf79bd42bd338c4ff5f9a6b129652dc4a13'
+CALLBACK_SHA = 'eac3ce9e2d8c862d1a7917ec447ea72e84454b7775a4260ad1e72e59de96fe11'
 CALLBACK_PATH = Path('/root/nox/scripts/owner_subagent_dispatcher.py')
 OLD = ('Новая главная модель — DeepSeek; Qwen3.5-9B — отдельный помощник. '
        'Старые35B шаги не являются обучением новых весов. ')
