@@ -488,7 +488,7 @@ jobs:
           event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
           body=event.get('comment',{}).get('body','')
           match=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) page_cache_reclaim',body)
-          if not match or match[1] != '683b0ae1f37820b6bd38067026d8e472ad8b2265':
+          if not match or match[1] != 'e6023b7537e780fa52eb35246f7cc9d1437cea05':
               raise SystemExit('HOLD_PAGE_CACHE_APPROVED_SOURCE')
           if (event.get('comment',{}).get('user',{}).get('id') != 340718567
                   or event.get('comment',{}).get('author_association') != 'OWNER'
@@ -511,7 +511,7 @@ jobs:
           python3 - <<'PY'
           import hashlib, os, subprocess
           from pathlib import Path
-          source='683b0ae1f37820b6bd38067026d8e472ad8b2265'
+          source='e6023b7537e780fa52eb35246f7cc9d1437cea05'
           helper_commit='5fb2c3d91b3c9a241c8b20168d3f674ae13727eb'
           helper_blob='08ada5def3e96761498a3840445459ee3d672742'
           if os.environ.get('NOX_PINNED_SOURCE_SHA') != source:
