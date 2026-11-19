@@ -664,16 +664,23 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         def digest(value):
             return hashlib.sha256(value).hexdigest()
         committed = {"value": False}
+        canonical_db = Path("/isolated/B1-durable-S03.sqlite")
+        def canonical_proof(candidate):
+            return {"native_verified": True,
+                    "task_id": candidate["task_id"],
+                    "job_id": candidate["job_id"],
+                    "phase": candidate["phase"],
+                    "receipt_sha256": digest(encoded(candidate)),
+                    "s03_item_id": 9, "database": str(canonical_db)}
         scope = {
             "document": lambda path, limit: json.loads(Path(path).read_text()),
             "encoded": encoded, "digest": digest, "GateError": RuntimeError,
-            "sqlite3": sqlite3,
+            "sqlite3": sqlite3, "DB": canonical_db,
             "HANDLER": "owner_native_subagent_review",
             "LEAF_HANDLER": "owner_native_typed_leaf",
             "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
             "s03_readback": lambda receipt:
-                {"receipt_sha256": digest(encoded(receipt))}
-                if committed["value"] else None,
+                canonical_proof(receipt) if committed["value"] else None,
         }
         exec(compile(ast.fix_missing_locations(
             ast.Module(body=methods, type_ignores=[])), str(SOURCE), "exec"), scope)
@@ -725,6 +732,35 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                 self.assertEqual(restored["receipt"], receipt)
                 self.assertEqual(restored["s03"]["receipt_sha256"],
                                  evidence["receipt_sha256"])
+                # A digest-only or wrong-scope result cannot become a terminal
+                # acceptance after STOP/reconnect. Verify exact source behavior
+                # against missing/falsy metadata and cross-job/DB substitutions.
+                trusted_reader = scope["s03_readback"]
+                try:
+                    scope["s03_readback"] = lambda _: {
+                        "receipt_sha256": evidence["receipt_sha256"]}
+                    self.assertIsNone(scope["_durable_terminal_s03_readback"](
+                        restarted, task["id"]), "digest-only proof")
+                    for field, wrong in (
+                            ("native_verified", False),
+                            ("native_verified", 1),
+                            ("task_id", "foreign-task"),
+                            ("job_id", "foreign-job"),
+                            ("phase", "foreign-phase"),
+                            ("s03_item_id", 0),
+                            ("s03_item_id", True),
+                            ("s03_item_id", "9"),
+                            ("database", "/foreign/S03.sqlite"),
+                            ("receipt_sha256", "0" * 64)):
+                        with self.subTest(handler=handler, invalid_field=field,
+                                          invalid_value=wrong):
+                            bad = {**canonical_proof(receipt), field: wrong}
+                            scope["s03_readback"] = lambda _, value=bad: value
+                            self.assertIsNone(
+                                scope["_durable_terminal_s03_readback"](
+                                    restarted, task["id"]))
+                finally:
+                    scope["s03_readback"] = trusted_reader
                 # The owner claim can change while a canonical S03 read is in
                 # flight. A valid S03 digest of the old receipt must not settle
                 # the newly persisted queue row. No actual worker/S03 POST.
@@ -737,7 +773,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                         changed = json.loads(path.read_text())
                         changed["tasks"][task["id"]]["owner_claim"]["pid"] = 98765
                         save(changed)
-                        return {"receipt_sha256": digest(encoded(candidate))}
+                        return canonical_proof(candidate)
                     scope["s03_readback"] = claim_change_during_s03
                     self.assertIsNone(scope["_durable_terminal_s03_readback"](
                         restarted, task["id"]))
