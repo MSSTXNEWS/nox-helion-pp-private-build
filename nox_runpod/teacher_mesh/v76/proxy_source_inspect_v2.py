@@ -118,20 +118,20 @@ def _request_model_selector(route_node, payload_defs):
         return _unknown_model_selector()
     caller_arg = calls[0].args[0].id
     payload_param = params[0].arg
-    selectors = set()
+    selectors = []
     for child in _walk_scope(builder.body):
         if isinstance(child, ast.Subscript) and isinstance(child.value, ast.Name):
             key = child.slice
             if (child.value.id == payload_param and isinstance(key, ast.Constant)
                     and isinstance(key.value, str) and key.value in MODEL_SELECTOR_FIELDS):
-                selectors.add((child.value.id, "subscript"))
+                selectors.append((child.value.id, "subscript"))
         elif (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)
               and child.func.attr == "get" and isinstance(child.func.value, ast.Name)
               and child.func.value.id == payload_param and len(child.args) == 1
               and not child.keywords and isinstance(child.args[0], ast.Constant)
               and isinstance(child.args[0].value, str)
               and child.args[0].value in MODEL_SELECTOR_FIELDS):
-            selectors.add((child.func.value.id, "get"))
+            selectors.append((child.func.value.id, "get"))
     if len(selectors) != 1:
         return _unknown_model_selector()
     _, access = next(iter(selectors))
