@@ -84,7 +84,7 @@
         progressBody.replaceChildren();
         progressBody.append(E('p','Зафиксированная база: 295 требований.'));
         progressBody.append(E('p','Подтверждено квитанциями: '+value.receipt_done_count+' / 295.'));
-        progressBody.append(E('p','Дополнительные supplemental-подтверждения, отдельно от квитанций: '
+        progressBody.append(E('p','Дополнительные подтверждённые критерии, отдельно от квитанций: '
           +value.supplemental_accepted_count+(ids.length?' · '+ids.join(', '):' · нет')));
         progressBody.append(E('p','Эти данные не подтверждают установку на сервере или live-приёмку.'));
         const stamp=new Date(Number(value.observed_at)*1000);
