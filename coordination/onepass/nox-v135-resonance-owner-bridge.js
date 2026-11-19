@@ -217,7 +217,7 @@
                     if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
                     resolve();
                   };
-                  if(typeof document!=='undefined')document.addEventListener?.('visibilitychange',visibility);
+                  if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
                   if(typeof requestAnimationFrame==='function'){
                     frameId=requestAnimationFrame(finish);
                     if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
