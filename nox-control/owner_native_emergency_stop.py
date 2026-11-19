@@ -87,6 +87,8 @@ MAX_STAT_BYTES = 8_192
 MAX_CMDLINE_BYTES = 16 * 1024
 MAX_PROC_PATH_BYTES = 4_096
 MAX_SUPERVISOR_CONFIG_BYTES = 250_000
+MAX_INCLUDE_SECTION_DIAGNOSTIC_HEADERS = 256
+MAX_INCLUDE_SECTION_HEADER_CHARS = 256
 MAX_EXECUTABLE_BYTES = 256 * 1024 * 1024
 MAX_PROCESS_TABLE_ENTRIES = 8_192
 MAX_CGROUP_RUNTIME_PROCESSES = 512
@@ -345,6 +347,66 @@ def _reject_config_defaults(parser, label: str) -> None:
         fail(label)
 
 
+def _validate_supervisor_include_sections(included, filename: str) -> list[tuple[str, str]]:
+    """Accept only documented process/group section kinds in include files."""
+    allowed_types = {"program", "eventlistener", "fcgi-program", "group"}
+    target_matches = []
+    for section in included.sections():
+        kind, sep, name = section.partition(":")
+        if (not sep or kind not in allowed_types or
+                not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", name)):
+            fail("UNIX_RPC_INCLUDED_SECTION_UNSUPPORTED")
+        if name == SUPERVISOR_SERVICE:
+            target_matches.append((kind, filename))
+        if kind == "group":
+            programs_text = included.get(section, "programs", fallback="").strip()
+            programs = [entry.strip() for entry in programs_text.split(",")]
+            if (not programs_text or any(
+                    not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", entry)
+                    for entry in programs)):
+                fail("UNIX_RPC_INCLUDED_GROUP_PROGRAMS_INVALID")
+            if SUPERVISOR_SERVICE in programs:
+                fail("UNIX_RPC_TARGET_PROGRAM_GROUPED")
+    return target_matches
+
+
+def _require_unique_target_stanza(target_matches: list[tuple[str, str]]) -> str:
+    if len(target_matches) != 1 or target_matches[0][0] != "program":
+        fail("UNIX_RPC_TARGET_STANZA_NOT_UNIQUE")
+    return target_matches[0][1]
+
+
+def _record_include_section_headers(file_sections: list[tuple[str, list[str]]]) -> None:
+    recognized_types = {"program", "eventlistener", "fcgi-program", "group"}
+    safe_name = re.compile(r"[A-Za-z0-9_.-]{1,128}")
+    rows = []
+    total_headers = 0
+    truncated = False
+    for basename, sections in sorted(file_sections, key=lambda row: row[0]):
+        safe_headers = []
+        unknown_count = 0
+        for section in sorted(sections):
+            total_headers += 1
+            if total_headers > MAX_INCLUDE_SECTION_DIAGNOSTIC_HEADERS:
+                truncated = True
+                break
+            kind, sep, name = section.partition(":")
+            if (sep and kind in recognized_types and safe_name.fullmatch(name) and
+                    len(section) <= MAX_INCLUDE_SECTION_HEADER_CHARS):
+                safe_headers.append(kind + ":" + name)
+            else:
+                unknown_count += 1
+        rows.append({"basename": basename,
+                     "section_headers": safe_headers,
+                     "unknown": unknown_count > 0,
+                     "unknown_section_count": unknown_count})
+        if total_headers > MAX_INCLUDE_SECTION_DIAGNOSTIC_HEADERS:
+            break
+    DIAGNOSTICS["supervisor_include_section_headers"] = {
+        "files": rows, "truncated": truncated,
+        "values_included": False}
+
+
 def _read_effective_supervisor_config(daemon_identity: dict | None):
     config_bytes, config_ctime_ns = read_root_regular(
         SUPERVISOR_CLIENT_CONFIG, MAX_SUPERVISOR_CONFIG_BYTES,
@@ -398,6 +460,7 @@ def _read_effective_supervisor_config(daemon_identity: dict | None):
                "sha256": hashlib.sha256(config_bytes).hexdigest(),
                "ctime_ns": config_ctime_ns}]
     target_stanzas = []
+    parsed_includes = []
     for name in sorted(names):
         raw, ctime_ns = read_root_regular(SUPERVISOR_CONFIG_DIR / name,
                                           MAX_SUPERVISOR_CONFIG_BYTES,
@@ -412,11 +475,11 @@ def _read_effective_supervisor_config(daemon_identity: dict | None):
                                     "UNIX_RPC_INCLUDED_CONFIG_DEFAULTS_UNSUPPORTED")
         except (configparser.Error, UnicodeError):
             fail("UNIX_RPC_INCLUDED_CONFIG_PARSE_FAILED")
-        for section in included.sections():
-            if not section.startswith("program:"):
-                fail("UNIX_RPC_INCLUDED_SECTION_UNSUPPORTED")
-            if section == "program:" + SUPERVISOR_SERVICE:
-                target_stanzas.append(name)
+        parsed_includes.append((name, included))
+    _record_include_section_headers([
+        (name, included.sections()) for name, included in parsed_includes])
+    for name, included in parsed_includes:
+        target_stanzas.extend(_validate_supervisor_include_sections(included, name))
     supervisor_dir_after = root_directory(Path("/etc/supervisor"))
     include_dir_after = root_directory(SUPERVISOR_CONFIG_DIR)
     dir_fields = ("st_dev", "st_ino", "st_mtime_ns", "st_ctime_ns")
@@ -432,15 +495,14 @@ def _read_effective_supervisor_config(daemon_identity: dict | None):
             any(row["ctime_ns"] > daemon_identity["start_lower_bound_ns"]
                 for row in inputs)):
         fail("UNIX_RPC_CONFIG_NEWER_THAN_DAEMON")
-    if len(target_stanzas) != 1:
-        fail("UNIX_RPC_TARGET_STANZA_NOT_UNIQUE")
+    target_stanza_file = _require_unique_target_stanza(target_stanzas)
     effective_sha = hashlib.sha256(json.dumps(
         inputs, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     config_identity = {"main_sha256": hashlib.sha256(config_bytes).hexdigest(),
                        "main_ctime_ns": config_ctime_ns,
                        "include_glob": include_parts[0], "inputs": inputs,
                        "effective_config_sha256": effective_sha,
-                       "target_stanza_file": target_stanzas[0],
+                       "target_stanza_file": target_stanza_file,
                        "socket_file": socket_file, "serverurl": serverurl,
                        "rpc_factory": rpc_factory,
                        "configured_mode": configured_mode,

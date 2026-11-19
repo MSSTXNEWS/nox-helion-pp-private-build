@@ -355,6 +355,87 @@ class UnixSupervisorRpcTests(unittest.TestCase):
                                        "HOLD_EMERGENCY_STOP_TEST_DEFAULTS_REJECTED")):
                 OWNER._reject_config_defaults(parser, "TEST_DEFAULTS_REJECTED")
 
+    def test_known_supervisor_include_section_types_are_accepted(self):
+        parser = configparser.ConfigParser(interpolation=None, strict=True)
+        parser.read_string(
+            "[program:nox-ds41-8098]\ncommand=/opt/nox\n"
+            "[eventlistener:audit]\ncommand=/opt/audit\nevents=PROCESS_STATE\n"
+            "[fcgi-program:fastcgi]\ncommand=/opt/fcgi\nsocket=unix:///run/fcgi.sock\n"
+            "[group:workers]\nprograms=worker-a,worker-b\n"
+        )
+        matches = OWNER._validate_supervisor_include_sections(parser, "known.conf")
+        self.assertEqual(matches, [("program", "known.conf")])
+        self.assertEqual(OWNER._require_unique_target_stanza(matches), "known.conf")
+
+    def test_unknown_supervisor_include_section_is_rejected(self):
+        parser = configparser.ConfigParser(interpolation=None, strict=True)
+        parser.read_string("[mystery:token_SECRET_abc123]\ncommand=/opt/unknown\n")
+        previous = OWNER.DIAGNOSTICS.get("supervisor_include_section_headers")
+        OWNER._record_include_section_headers([
+            ("unknown.conf", parser.sections())])
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_INCLUDED_SECTION_UNSUPPORTED"):
+            OWNER._validate_supervisor_include_sections(parser, "unknown.conf")
+        rendered = str(OWNER.DIAGNOSTICS["supervisor_include_section_headers"])
+        self.assertNotIn("token_SECRET_abc123", rendered)
+        self.assertNotIn("/opt/unknown", rendered)
+        if previous is None:
+            OWNER.DIAGNOSTICS.pop("supervisor_include_section_headers", None)
+        else:
+            OWNER.DIAGNOSTICS["supervisor_include_section_headers"] = previous
+
+    def test_malformed_secret_like_section_header_is_redacted(self):
+        secret_header = "program:secret TOKEN=abc123"
+        previous = OWNER.DIAGNOSTICS.get("supervisor_include_section_headers")
+        try:
+            OWNER._record_include_section_headers([
+                ("malformed.conf", [secret_header])])
+            rendered = str(OWNER.DIAGNOSTICS["supervisor_include_section_headers"])
+            self.assertNotIn(secret_header, rendered)
+            self.assertIn("'unknown': True", rendered)
+            self.assertIn("'unknown_section_count': 1", rendered)
+        finally:
+            if previous is None:
+                OWNER.DIAGNOSTICS.pop("supervisor_include_section_headers", None)
+            else:
+                OWNER.DIAGNOSTICS["supervisor_include_section_headers"] = previous
+
+    def test_include_section_diagnostic_is_sorted_and_omits_values(self):
+        previous = OWNER.DIAGNOSTICS.get("supervisor_include_section_headers")
+        try:
+            OWNER._record_include_section_headers([
+                ("z.conf", ["program:z", "mystery:hidden"]),
+                ("a.conf", ["eventlistener:a"]),
+            ])
+            record = OWNER.DIAGNOSTICS["supervisor_include_section_headers"]
+            self.assertEqual([row["basename"] for row in record["files"]],
+                             ["a.conf", "z.conf"])
+            self.assertEqual(record["files"][1]["section_headers"], ["program:z"])
+            self.assertTrue(record["files"][1]["unknown"])
+            self.assertEqual(record["files"][1]["unknown_section_count"], 1)
+            self.assertFalse(record["values_included"])
+            self.assertNotIn("mystery:hidden", str(record))
+            self.assertNotIn("/opt/unknown", str(record))
+        finally:
+            if previous is None:
+                OWNER.DIAGNOSTICS.pop("supervisor_include_section_headers", None)
+            else:
+                OWNER.DIAGNOSTICS["supervisor_include_section_headers"] = previous
+
+    def test_duplicate_target_sections_across_include_files_hold(self):
+        target = "nox-ds41-8098"
+        matches = [("program", "a.conf"), ("program", "b.conf")]
+        self.assertEqual(target, OWNER.SUPERVISOR_SERVICE)
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_TARGET_STANZA_NOT_UNIQUE"):
+            OWNER._require_unique_target_stanza(matches)
+
+    def test_target_name_collision_with_other_known_section_type_holds(self):
+        matches = [("eventlistener", "audit.conf")]
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_TARGET_STANZA_NOT_UNIQUE"):
+            OWNER._require_unique_target_stanza(matches)
+
     def test_holder_second_stage_is_not_available(self):
         self.assertFalse(hasattr(OWNER, "stop_holder_only_if_model_stop_is_insufficient"))
         self.assertFalse(hasattr(OWNER, "signal"))
