@@ -1126,7 +1126,6 @@ def supplemental_acceptance(directory, existing_receipt_count, existing_receipts
         manifest_rows = {}
         manifest_titles = {}
         manifest_records = {}
-        manifest_records = {}
         for row in manifest['tasks']:
             if not isinstance(row, dict):
                 raise ValueError('FROZEN_295_TASK_ROW_INVALID')
@@ -1206,20 +1205,6 @@ def supplemental_acceptance(directory, existing_receipt_count, existing_receipts
             source_hash = hashlib.sha256(raw).hexdigest()
             if document.get('append_only') is not True:
                 raise ValueError('ADDENDUM_NOT_APPEND_ONLY')
-            if document.get('schema') == I49_POST_MERGE_SCHEMA:
-                source_task = document.get('task')
-                source_task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
-                try:
-                    if source_path != I49_POST_MERGE_PATH:
-                        raise ValueError('I49_POST_MERGE_PATH_MISMATCH')
-                    item = _validate_i49_post_merge_receipt(
-                        document, manifest_rows, manifest_titles, manifest_records,
-                        directory.parent, source_path, source_hash, git_blob_sha(raw)
-                    )
-                    items.append(item)
-                except (OSError, KeyError, TypeError, ValueError, AttributeError) as exc:
-                    excluded.append({'path': source_path, 'task_id': source_task_id, 'reason': str(exc)})
-                continue
             if document.get('schema') == I49_POST_MERGE_SCHEMA:
                 source_task = document.get('task')
                 source_task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
