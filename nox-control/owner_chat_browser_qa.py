@@ -237,7 +237,10 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     # cannot satisfy native acceptance without actual trusted S03 I/O.
     writer_history_sha = writer_receipt.get('full_transcript_sha256')
     readback_history_sha = independent_readback.get('full_transcript_sha256')
-    if writer_history_sha is not None or readback_history_sha is not None:
+    # A present-but-null digest is malformed, not a legacy omitted pin.
+    # Compatibility applies only when BOTH witness fields are absent.
+    if ('full_transcript_sha256' in writer_receipt
+            or 'full_transcript_sha256' in independent_readback):
         if writer_history_sha != transcript_sha or readback_history_sha != transcript_sha:
             return False
     event_id = writer_receipt.get('event_id')

@@ -153,6 +153,32 @@ class OwnerRuEsContinuity(unittest.TestCase):
         self.assertFalse(canonical_s03_proof_valid(
             writer, forged_readback, DIALOG, forged))
 
+    def test_s03_explicit_null_history_pin_cannot_downgrade_to_legacy(self):
+        # Missing BOTH digests is the pre-fingerprint legacy contract;
+        # an explicit null must not silently opt into that compatibility path.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        old_writer = {k: v for k, v in writer.items()
+                      if k != "full_transcript_sha256"}
+        old_readback = {k: v for k, v in readback.items()
+                        if k != "full_transcript_sha256"}
+        self.assertTrue(canonical_s03_proof_valid(
+            old_writer, old_readback, DIALOG, transcript))
+        for bad_writer, bad_readback in (
+            (dict(old_writer, full_transcript_sha256=None), old_readback),
+            (old_writer, dict(old_readback, full_transcript_sha256=None)),
+            (dict(old_writer, full_transcript_sha256=None),
+             dict(old_readback, full_transcript_sha256=None)),
+            (dict(writer, full_transcript_sha256=None), readback),
+            (writer, dict(readback, full_transcript_sha256=None)),
+            (dict(old_writer, full_transcript_sha256=""),
+             dict(old_readback, full_transcript_sha256="")),
+        ):
+            with self.subTest(writer_pin=repr(bad_writer.get("full_transcript_sha256")),
+                              readback_pin=repr(bad_readback.get("full_transcript_sha256"))):
+                self.assertFalse(canonical_s03_proof_valid(
+                    bad_writer, bad_readback, DIALOG, transcript))
+
     def test_s03_optional_writer_answer_digest_must_agree_with_fourth_turn(self):
         # A writer may optionally expose its own final-answer digest. If it
         # disagrees with the independently verified fourth message, HOLD.
