@@ -98,8 +98,14 @@ def _p95(values):
 
 
 def _within_budget_pass(event, max_task_ms):
-    """An asserted PASS that exceeded the task budget is not a scored PASS."""
-    return event["status"] == "PASS" and event["latency_ms"] <= max_task_ms
+    """Chat success requires a visible, durable answer within the exact budget.
+
+    A server status of PASS alone is not proof: reasoning-only/empty streams
+    and missing S03 history must remain in the failure denominator.
+    """
+    return (event["status"] == "PASS" and event["latency_ms"] <= max_task_ms
+            and event["first_text_ms"] is not None
+            and event["output_tokens"] > 0 and event["history_saved"])
 
 
 def _metrics(events, max_task_ms):
@@ -117,6 +123,9 @@ def _metrics(events, max_task_ms):
                                       for row in rows),
         "over_budget_reported_passes": sum(row["status"] == "PASS" and row["latency_ms"] > max_task_ms
                                           for row in rows),
+        "reported_pass_without_usable_chat": sum(
+            row["status"] == "PASS" and row["latency_ms"] <= max_task_ms
+            and not _within_budget_pass(row, max_task_ms) for row in rows),
         "over_budget_walltime": sum(row["latency_ms"] > max_task_ms for row in rows),
         "history_saved": sum(row["history_saved"] for row in rows),
         "background_completed": sum(row["background_completed"] for row in rows),
@@ -155,6 +164,12 @@ def compare_paired(baseline, candidate):
         return {**answer, "state": "HOLD", "reason": str(err)}
     before, after = (_metrics(old, baseline["max_task_ms"]),
                      _metrics(new, candidate["max_task_ms"]))
+    # Report upstream PASS labels that conceal reasoning-only/blank streams,
+    # zero observed output tokens, or absent durable history.
+    unusable_reported = [task for task in baseline["declared_task_ids"]
+                         if new[task]["status"] == "PASS"
+                         and new[task]["latency_ms"] <= candidate["max_task_ms"]
+                         and not _within_budget_pass(new[task], candidate["max_task_ms"])]
     fixed = [task for task in baseline["declared_task_ids"]
              if not _within_budget_pass(old[task], baseline["max_task_ms"])
              and _within_budget_pass(new[task], candidate["max_task_ms"])]
@@ -210,6 +225,7 @@ def compare_paired(baseline, candidate):
     return {**answer, "comparable": True, "state": "DESCRIPTIVE_ONLY",
             "reason": None, "baseline": before, "candidate": after,
             "fixed_task_ids": fixed, "regressed_task_ids": regressed,
+            "candidate_reported_pass_without_usable_chat_task_ids": unusable_reported,
             "latency_regressed_task_ids": latency_regressed,
             "peak_rss_regressed_task_ids": rss_regressed,
             "cache_state_changed_task_ids": cache_changed,

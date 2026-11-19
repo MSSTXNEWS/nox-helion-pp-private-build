@@ -24,6 +24,7 @@ def example():
 class PairedReceiptTests(unittest.TestCase):
     def test_all_outcomes_in_denominator_and_latency(self):
         b = example(); c = copy.deepcopy(b); c["outcomes"][2]["status"] = "PASS"
+        c["outcomes"][2]["first_text_ms"] = 10  # a real visible reply
         result = compare_paired(b, c)
         self.assertTrue(result["comparable"])
         self.assertEqual(result["baseline"]["passed"], 1)
@@ -32,6 +33,24 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(result["pass_rate_delta"], 1/3)
         self.assertEqual(result["fixed_task_ids"], ["t3"])
         self.assertFalse(result["promotion_authorized"])
+    def test_empty_reasoning_only_or_unsaved_pass_is_not_chat_success(self):
+        b = example()
+        for field, value in (("first_text_ms", None),
+                             ("output_tokens", 0),
+                             ("history_saved", False)):
+            with self.subTest(field=field):
+                c = copy.deepcopy(b)
+                c["outcomes"][0][field] = value
+                out = compare_paired(b, c)
+                self.assertTrue(out["comparable"])
+                self.assertEqual(out["baseline"]["passed"], 1)
+                self.assertEqual(out["candidate"]["passed"], 0)
+                self.assertEqual(out["candidate"]["reported_pass_without_usable_chat"], 1)
+                self.assertEqual(out["candidate_reported_pass_without_usable_chat_task_ids"], ["t1"])
+                self.assertEqual(out["regressed_task_ids"], ["t1"])
+                self.assertTrue(out["quality_or_history_regression"])
+                self.assertFalse(out["promotion_authorized"])
+
     def test_missing_task_holds(self):
         b=example(); c=example();c["outcomes"].pop()
         self.assertEqual(compare_paired(b,c)["reason"],"OUTCOME_COUNT")
