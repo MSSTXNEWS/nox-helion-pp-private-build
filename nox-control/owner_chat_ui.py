@@ -147,7 +147,7 @@ def work_progress_snapshot():
                  'frozen_295_count':295,'receipt_done_count':None,
                  'supplemental_accepted_count':None,'supplemental_accepted_task_ids':[],
                  'supplemental_state':'UNAVAILABLE','original_acceptance_added':0,
-                 'source_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
+                 'evidence_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
                  'observed_at':time.time()}
     try:
         spec=importlib.util.spec_from_file_location(
@@ -182,7 +182,7 @@ def work_progress_snapshot():
                 'supplemental_accepted_task_ids':ids,
                 'supplemental_state':supplemental.get('state','UNKNOWN'),
                 'original_acceptance_added':0,
-                'source_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
+                'evidence_scope':'RECEIPTS_AND_APPEND_ONLY_SUPPLEMENTAL_EVIDENCE',
                 'observed_at':time.time()}
     except Exception:
         return unavailable
