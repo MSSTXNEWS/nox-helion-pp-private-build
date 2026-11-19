@@ -666,6 +666,175 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
     }
 
 
+def _control_file_path(control_root, repository_path):
+    prefix = 'nox-control/'
+    if not isinstance(repository_path, str) or not repository_path.startswith(prefix):
+        raise ValueError('SOURCE_PATH_OUTSIDE_NOX_CONTROL')
+    relative = Path(repository_path[len(prefix):])
+    if relative.is_absolute() or '..' in relative.parts:
+        raise ValueError('SOURCE_PATH_TRAVERSAL')
+    return Path(control_root) / relative
+
+
+def _safe_regular_size(path):
+    path = Path(path)
+    if any(parent.is_symlink() for parent in path.parents):
+        raise ValueError('SOURCE_ASSET_UNSAFE_PARENT')
+    fd = _open_registry_no_follow(
+        path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+    )
+    try:
+        before = os.fstat(fd)
+        after = path.lstat()
+        if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+                or _file_identity(before) != _file_identity(after)):
+            raise ValueError('SOURCE_ASSET_UNSAFE_FILE')
+        return before.st_size
+    finally:
+        os.close(fd)
+
+
+def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_root,
+                             source_path, source_hash, source_blob):
+    task = document.get('task')
+    if not isinstance(task, dict):
+        raise ValueError('SOURCE_TASK_BINDING_MISSING')
+    task_id = task.get('task_id')
+    if task_id != '4A01' or task_id not in manifest_rows:
+        raise ValueError('SOURCE_TASK_ID_UNSUPPORTED')
+    spec_sha = manifest_rows[task_id]
+    if task.get('spec_sha256') != spec_sha:
+        raise ValueError('SOURCE_TASK_SPEC_SHA_MISMATCH')
+    if task.get('title') != manifest_titles.get(task_id) or task.get('required_evidence') != 'source':
+        raise ValueError('SOURCE_TASK_TITLE_OR_EVIDENCE_MISMATCH')
+    if (document.get('state') != 'SOURCE_CRITERION_COMPLETE'
+            or document.get('accepted_source_criterion') is not True):
+        raise ValueError('SOURCE_CRITERION_NOT_ACCEPTED')
+    if document.get('original_295_acceptance_increment') != 1:
+        raise ValueError('SOURCE_SUPPLEMENTAL_INCREMENT_CLAIM_INVALID')
+    if (document.get('frozen_registry_mutation') is not False
+            or document.get('work_receipts_mutation') is not False
+            or document.get('live_training_or_weight_update') is not False
+            or document.get('training_admission') != 'HOLD'):
+        raise ValueError('SOURCE_MUTATION_OR_ADMISSION_BOUNDARY_INVALID')
+
+    frozen = document.get('frozen_inputs')
+    if not isinstance(frozen, dict):
+        raise ValueError('SOURCE_FROZEN_INPUTS_MISSING')
+    expected_inputs = {
+        'all295_execution_disposition': (
+            'nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json',
+            FROZEN_295_MANIFEST_BLOB),
+        'work_tasks': (
+            'nox-control/four_queue_20261118/work_tasks.json',
+            FROZEN_WORK_TASKS_BLOB),
+        'work_receipts': (
+            'nox-control/four_queue_20261118/work_receipts.json',
+            FROZEN_WORK_RECEIPTS_BLOB),
+    }
+    for key, (expected_path, expected_blob) in expected_inputs.items():
+        row = frozen.get(key)
+        if (not isinstance(row, dict) or row.get('path') != expected_path
+                or row.get('git_blob_sha') != expected_blob or row.get('mutated') is not False):
+            raise ValueError('SOURCE_FROZEN_INPUT_BINDING_MISMATCH_'+key)
+
+    if document.get('exact_manifest_path') != SOURCE_MANIFEST_PATH:
+        raise ValueError('SOURCE_EXACT_MANIFEST_PATH_MISMATCH')
+    source_manifest_raw, source_manifest = read_json_with_raw(
+        _control_file_path(control_root, SOURCE_MANIFEST_PATH)
+    )
+    acceptance = source_manifest.get('acceptance')
+    tokenizer = source_manifest.get('tokenizer')
+    target = source_manifest.get('canonical_target')
+    if (source_manifest.get('schema') != 'NOX_MODEL_SOURCE_MANIFEST_V1'
+            or source_manifest.get('task_id') != task_id
+            or source_manifest.get('task_spec_sha256') != spec_sha
+            or source_manifest.get('source_status') != 'SOURCE_CRITERION_COMPLETE'
+            or source_manifest.get('training_admission') != 'HOLD'
+            or not isinstance(acceptance, dict)
+            or acceptance.get('accepted_source_criterion') is not True
+            or not isinstance(tokenizer, dict)
+            or not isinstance(target, dict)):
+        raise ValueError('SOURCE_MODEL_MANIFEST_BINDING_MISMATCH')
+
+    tokenizer_manifest_path = document.get('tokenizer_asset_manifest_path')
+    if tokenizer_manifest_path != TOKENIZER_MANIFEST_PATH:
+        raise ValueError('TOKENIZER_MANIFEST_PATH_MISMATCH')
+    tokenizer_manifest_raw, tokenizer_manifest = read_json_with_raw(
+        _control_file_path(control_root, tokenizer_manifest_path)
+    )
+    if (tokenizer_manifest.get('schema') != 'NOX_TOKENIZER_ASSET_MANIFEST_V1'
+            or tokenizer_manifest.get('task_id') != task_id
+            or tokenizer_manifest.get('model_revision') != target.get('model_revision')
+            or tokenizer_manifest.get('tokenizer_revision') != tokenizer.get('source_revision')
+            or tokenizer_manifest.get('path') != tokenizer.get('source_path')
+            or tokenizer_manifest.get('local_path') != tokenizer.get('local_path')
+            or tokenizer_manifest.get('sha256') != tokenizer.get('sha256')
+            or tokenizer_manifest.get('source_git_blob_sha1') != tokenizer.get('source_git_blob_sha1')
+            or tokenizer_manifest.get('size_bytes') != tokenizer.get('size_bytes')):
+        raise ValueError('TOKENIZER_ASSET_MANIFEST_BINDING_MISMATCH')
+    asset_path = tokenizer.get('local_path')
+    if asset_path != 'nox-control/model_manifests/evidence/assets/deepseek_v41_1017/tokenizer.json':
+        raise ValueError('TOKENIZER_ASSET_PATH_MISMATCH')
+    if (_safe_regular_size(_control_file_path(control_root, asset_path)) != tokenizer.get('size_bytes')
+            or not _hex_digest(tokenizer.get('sha256'))
+            or not _hex_digest(tokenizer.get('source_git_blob_sha1'), 40)):
+        raise ValueError('TOKENIZER_ASSET_FILE_BINDING_MISMATCH')
+
+    gguf_path = document.get('gguf_inference_route_manifest_path')
+    if (gguf_path != GGUF_MANIFEST_PATH
+            or source_manifest.get('gguf_inference_route_manifest_path') != GGUF_MANIFEST_PATH):
+        raise ValueError('GGUF_MANIFEST_PATH_MISMATCH')
+    gguf_raw, gguf_manifest = read_json_with_raw(_control_file_path(control_root, gguf_path))
+    sidecar_gguf = document.get('gguf_inference_boundary')
+    if (gguf_manifest.get('schema') != 'NOX_GGUF_INFERENCE_ROUTE_MANIFEST_V1'
+            or gguf_manifest.get('task_id') != task_id
+            or gguf_manifest.get('task_spec_sha256') != spec_sha
+            or not isinstance(sidecar_gguf, dict)
+            or sidecar_gguf.get('schema') != 'NOX_GGUF_INFERENCE_ROUTE_MANIFEST_V1'
+            or sidecar_gguf.get('task_id') != task_id
+            or sidecar_gguf.get('task_spec_sha256') != spec_sha
+            or sidecar_gguf.get('status') != gguf_manifest.get('status')
+            or gguf_manifest.get('status') != 'SOURCE_PINNED_INFERENCE_ONLY_WEIGHTS_NOT_DOWNLOADED_RUNTIME_UNVERIFIED'):
+        raise ValueError('GGUF_INFERENCE_BOUNDARY_MISMATCH')
+    sources = document.get('sources')
+    if not isinstance(sources, list) or len(sources) < 3 or any(not isinstance(row, dict) for row in sources):
+        raise ValueError('SOURCE_REFERENCE_LIST_INVALID')
+
+    return {
+        'task_id': task_id,
+        'title': task.get('title'),
+        'result': 'ACCEPTED',
+        'evidence_kind': 'SOURCE_CRITERION',
+        'acceptance_scope': 'Source criterion complete; training admission and runtime remain on HOLD.',
+        'acceptance_pointer': '#/accepted_source_criterion',
+        'evidence_pointer': '#/exact_manifest_path',
+        'source_references_pointer': '#/sources',
+        'run_binding_pointer': None,
+        'workflow_run_id': None,
+        'job_id': None,
+        'owner_authorization_id': None,
+        'workflow_conclusion': None,
+        'evidence_result': document.get('state'),
+        'spec_sha256': spec_sha,
+        'record_number': document.get('receipt_id'),
+        'source_path': source_path,
+        'source_url': REPOSITORY_URL + '/blob/' + REPOSITORY_REF + '/' + source_path,
+        'source_sha256': source_hash,
+        'source_git_blob_sha': source_blob,
+        'source_manifest_path': SOURCE_MANIFEST_PATH,
+        'source_manifest_git_blob_sha': git_blob_sha(source_manifest_raw),
+        'tokenizer_manifest_path': tokenizer_manifest_path,
+        'tokenizer_manifest_git_blob_sha': git_blob_sha(tokenizer_manifest_raw),
+        'gguf_manifest_path': gguf_path,
+        'gguf_manifest_git_blob_sha': git_blob_sha(gguf_raw),
+        'source_claimed_original_295_acceptance_increment': document['original_295_acceptance_increment'],
+        'original_acceptance_added': 0,
+        'training_admission': document.get('training_admission'),
+        'live_training_or_weight_update': document.get('live_training_or_weight_update'),
+    }
+
+
 def supplemental_acceptance(directory, existing_receipt_count):
     """Read append-only sidecars; never mutate or add them to original receipts."""
     directory = Path(directory)
@@ -684,6 +853,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
                 or len(manifest['tasks']) != 295):
             raise ValueError('FROZEN_295_MANIFEST_MISMATCH')
         manifest_rows = {}
+        manifest_titles = {}
         for row in manifest['tasks']:
             if not isinstance(row, dict):
                 raise ValueError('FROZEN_295_TASK_ROW_INVALID')
@@ -695,6 +865,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
                     or row['spec'].get('id') != task_id):
                 raise ValueError('FROZEN_295_TASK_ID_OR_SPEC_INVALID')
             manifest_rows[task_id] = spec_sha
+            manifest_titles[task_id] = row['spec'].get('title')
         if len(manifest_rows) != 295:
             raise ValueError('FROZEN_295_TASK_IDS_INVALID')
     except (OSError, KeyError, ValueError, TypeError, AttributeError) as exc:
@@ -757,15 +928,19 @@ def supplemental_acceptance(directory, existing_receipt_count):
             source_hash = hashlib.sha256(raw).hexdigest()
             if document.get('append_only') is not True:
                 raise ValueError('ADDENDUM_NOT_APPEND_ONLY')
+            if document.get('schema') == SOURCE_ADDENDUM_SCHEMA:
+                source_task = document.get('task')
+                source_task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
+                try:
+                    item = _validate_source_sidecar(
+                        document, manifest_rows, manifest_titles, directory.parent,
+                        source_path, source_hash, git_blob_sha(raw)
+                    )
+                    items.append(item)
+                except (OSError, KeyError, TypeError, ValueError, AttributeError) as exc:
+                    excluded.append({'path': source_path, 'task_id': source_task_id, 'reason': str(exc)})
+                continue
             if document.get('schema') != SIDECAR_SCHEMA:
-                if document.get('schema') == 'NOX_SOURCE_EVIDENCE_ADDENDUM_V1':
-                    source_task = document.get('task')
-                    task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
-                    increment = document.get('original_295_acceptance_increment')
-                    reason = ('SOURCE_ADDENDUM_CLAIMS_ORIGINAL_ACCEPTANCE_INCREMENT'
-                              if increment != 0 else 'SOURCE_ADDENDUM_RUN_BINDING_UNSUPPORTED')
-                    excluded.append({'path': source_path, 'task_id': task_id, 'reason': reason})
-                    continue
                 raise ValueError('UNSUPPORTED_ADDENDUM_SCHEMA')
             declared = document.get('scope', {}).get('task_ids') if isinstance(document.get('scope'), dict) else None
             if not isinstance(declared, list) or not declared:
