@@ -493,16 +493,31 @@ class ProjectBinding:
                 if (task.get('params') or {}).get('source_sha256') != native.source:
                     continue  # Historical source records are read-only, never a recovery/replay grant.
                 if task.get('native_project_terminal'):
-                    # The generic mentor may propose retry; this adapter needs
-                    # a new reviewed plan for a proved failed implementation.
+                    # Do not convert a pending/retry task into a terminal blocker
+                    # on a truthy S03 reply for another job or a forged receipt.
+                    # Reconciliation is as strict as terminal_for_capacity().
                     info = task['native_project_terminal']
-                    receipt = info.get('receipt') or {}
-                    if (receipt.get('phase') == 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED'
+                    receipt = info.get('receipt') if isinstance(info, dict) else None
+                    params = task.get('params') or {}
+                    if (isinstance(receipt, dict)
+                            and receipt.get('phase') == 'PROJECT_WORK_BLOCKED_ORIGINAL_NOT_ACCEPTED'
+                            and receipt.get('original_task_accepted') is False
+                            and receipt.get('task_id') == task.get('id')
+                            and receipt.get('job_id') == params.get('job_id')
+                            and receipt.get('claim') == task.get('owner_claim')
+                            and native.receipt_source_allowed(task, receipt)
+                            and info.get('receipt_sha256') == binding.digest(binding.encoded(receipt))
                             and task.get('status') in ('pending', 'retry', 'wait')
-                            and (not native.pool or task['id'] not in native.pool.active.values())
-                            and binding.s03_readback(receipt)):
-                        task.update(status='blocked', note='PROJECT_ATTEMPT_TERMINAL_REPAIR_PLAN_REQUIRED')
-                        native.ns['save_state'](native.state)
+                            and (not native.pool or task['id'] not in native.pool.active.values())):
+                        proof = binding.s03_readback(receipt)
+                        if (isinstance(proof, dict) and proof.get('native_verified') is True
+                                and proof.get('task_id') == task['id']
+                                and proof.get('job_id') == receipt['job_id']
+                                and proof.get('receipt_sha256') == info['receipt_sha256']
+                                and isinstance(proof.get('s03_item_id'), str)
+                                and proof['s03_item_id']):
+                            task.update(status='blocked', note='PROJECT_ATTEMPT_TERMINAL_REPAIR_PLAN_REQUIRED')
+                            native.ns['save_state'](native.state)
                     continue
                 prior = task.get('native_project_attempt')
                 owner = task.get('owner_claim') or {}
