@@ -114,6 +114,7 @@ def _within_budget_pass(event, max_task_ms):
     return (event["status"] == "PASS" and event["latency_ms"] <= max_task_ms
             and event["first_text_ms"] is not None
             and event["output_tokens"] > 0 and event["history_saved"]
+            and event["background_completed"]
             and event["sse_terminal_seen"] and event["model_finish_reason"] == "stop")
 
 
