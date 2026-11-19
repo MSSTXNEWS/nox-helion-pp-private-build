@@ -126,7 +126,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         # WHATWG treats a bare `data` as `data:` (an empty data value).
         # The resulting leading LF is JSON whitespace, not a second event.
         chunks=Chunks([b'data\r\n',frame('Hola sin pérdida'),
-                       frame(finish='stop'),b'data: [DONE]\\n\\n'])
+                       frame(finish='stop'),b'data: [DONE]\n\n'])
         requests,factory=self.transport([chunks])
         native=self.native()
         payload={'messages':[{'role':'user','content':'Hola'}]}
