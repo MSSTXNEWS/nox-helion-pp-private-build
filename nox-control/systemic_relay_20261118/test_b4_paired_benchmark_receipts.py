@@ -510,4 +510,32 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(with_text["visible_text_sha256"],
                          hashlib.sha256(" \n\tready".encode()).hexdigest())
 
+    def test_sse_wire_explicit_error_event_never_forges_terminal(self):
+        # OpenAI-compatible stream payloads are default/message SSE events.
+        # event: error is an error signal, even if payload impersonates
+        # a valid-looking [DONE] or a successful model chunk.
+        visible = b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\n\n'
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b'data: [DONE]\n\n'
+        valid = [(3, b"event: message\n" + visible), (5, stop), (7, done)]
+        measured = measure_openai_sse_wire(valid)
+        self.assertTrue(measured["wire_completed_normally"])
+        self.assertEqual(measured["first_text_ms"], 3)
+        self.assertEqual(measured["completion_ms"], 7)
+        self.assertEqual(measured["raw_wire_sha256"],
+                         hashlib.sha256(b"".join(chunk for _, chunk in valid)).hexdigest())
+
+        for error_line in (b"event: error\n", b"event:error\n"):
+            with self.subTest(error_line=error_line):
+                with self.assertRaisesRegex(ReceiptHold, "SSE_ERROR_EVENT"):
+                    measure_openai_sse_wire([
+                        (3, visible), (5, stop),
+                        (7, error_line + done)])
+                # An error event without data is still a failure, never a
+                # harmless heartbeat that a later [DONE] could supersede.
+                with self.assertRaisesRegex(ReceiptHold, "SSE_ERROR_EVENT"):
+                    measure_openai_sse_wire([
+                        (3, visible), (5, stop),
+                        (6, error_line), (7, done)])
+
 if __name__ == '__main__': unittest.main()
