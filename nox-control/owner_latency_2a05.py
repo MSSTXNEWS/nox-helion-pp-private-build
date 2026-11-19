@@ -13,7 +13,10 @@ import re
 from pathlib import Path
 
 SCHEMA = 'NOX_2A05_LATENCY_BASELINE_V1'
-SHA = re.compile(r'[0-9a-f]{64}\Z')
+SHA256 = re.compile(r'[0-9a-f]{64}\Z')
+GIT_COMMIT = re.compile(r'[0-9a-f]{40}\Z')
+OWNER_REQUEST_ID = re.compile(r'[0-9]{1,24}\Z')
+OWNER_AUTH_STATUSES = {'anonymous_status': 401, 'login_status': 200, 'session_status': 200}
 MIN_RUNS = 20
 FIELDS = ('ttft_ms', 'ui_first_ms', 'first_turn_ms', 'second_turn_ms')
 
@@ -39,7 +42,7 @@ def pct(values: list[float], percentage: float) -> float:
 
 
 def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str) -> dict:
-    require(bool(SHA.fullmatch(model_sha256)) and bool(SHA.fullmatch(route_sha256)),
+    require(bool(SHA256.fullmatch(model_sha256)) and bool(SHA256.fullmatch(route_sha256)),
             'PIN_REQUIRED')
     require(type(receipts) is list and len(receipts) <= 1000, 'RECEIPT_COUNT')
     seen: set[str] = set()
@@ -55,6 +58,9 @@ def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str) -> 
                 and row.get('authenticated_s03_history_readback_verified') is True
                 and row.get('first_turn_terminal_sse_verified') is True,
                 'NONTERMINAL_SAMPLE')
+        require(row.get('owner_auth_verified') == OWNER_AUTH_STATUSES
+                and row.get('authenticated_native_endpoint_stream_verified') is True,
+                'OWNER_AUTH_EVIDENCE')
         # External model pin must be verified by the owner separately. Never
         # infer model identity from the QA tool SHA or served JS asset SHA.
         require(row.get('verified_model_sha256') == model_sha256
@@ -63,10 +69,12 @@ def summarize(receipts: list[dict], *, model_sha256: str, route_sha256: str) -> 
         sid = row.get('request')
         src = row.get('source_sha')
         asset = row.get('served_asset_sha256')
-        require(type(sid) is str and 1 <= len(sid) <= 64 and sid not in seen,
+        require(type(sid) is str and bool(OWNER_REQUEST_ID.fullmatch(sid)) and sid not in seen,
                 'REPLAYED_OR_MISSING_REQUEST')
-        require(type(src) is str and bool(SHA.fullmatch(src))
-                and type(asset) is str and bool(SHA.fullmatch(asset)), 'SOURCE_PIN')
+        require(type(src) is str and bool(GIT_COMMIT.fullmatch(src))
+                and type(asset) is str and bool(SHA256.fullmatch(asset)), 'SOURCE_PIN')
+        require(row.get('served_asset_sha256_before_second_post') == asset,
+                'SERVED_ASSET_CHANGED_BETWEEN_TURNS')
         require((source_sha is None or source_sha == src)
                 and (asset_sha is None or asset_sha == asset), 'MIXED_QA_BUILD')
         source_sha, asset_sha = src, asset
