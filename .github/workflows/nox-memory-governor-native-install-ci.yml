@@ -1,0 +1,50 @@
+name: NOX memory governor owner install source gate
+on:
+  push:
+    branches: [repair/nox-memory-governor-live-install-20261119]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  source-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Test original native handler accounting and memory projection
+        run: |
+          python -m unittest discover -s nox-control/systemic_relay_20261118 -p test_owner_reflex_cycle.py -v
+          python -m unittest discover -s nox-control -p test_owner_memory_governor.py -v
+      - name: Check exact owner transport and rollback entry
+        run: |
+          python - <<'PY'
+          import base64,importlib.util
+          from pathlib import Path
+          root=Path('nox-control')
+          def load(path,name):
+              s=importlib.util.spec_from_file_location(name,path)
+              x=importlib.util.module_from_spec(s);s.loader.exec_module(x);return x
+          op=load(root/'owner_native_operator.py','op')
+          name='nox-control/owner_memory_governor_install_entry.py'
+          assert op.FILES['repair']==name
+          assert op.SCOPED_REPAIR_BUNDLES[name]==('owner_systemic_refill.py','continuous_transaction_helpers.py')
+          paths=op.repair_bundle_paths('repair',name,())
+          assert {p.name for p in map(Path,paths)}=={'owner_systemic_refill.py','continuous_transaction_helpers.py'}
+          inst=load(Path(name),'inst')
+          inst.BUNDLE={Path(p).name:base64.b64encode(Path(p).read_bytes()).decode('ascii') for p in paths}
+          helper,scripts=inst.decode()
+          assert set(scripts)=={inst.REFILL}
+          assert inst.CURRENT_DIRECTOR_SHA=='eac3ce9e2d8c862d1a7917ec447ea72e84454b7775a4260ad1e72e59de96fe11'
+          assert 'CONFIG' not in scripts
+          assert inst.OLD[inst.CONFIG]=='7a4458e5200e892b5b39a1265a60b7a6ad58ae23127a8895d12389444c2fca79'
+          assert b"native_records_observed" in scripts[inst.REFILL]
+          assert b"memory_governor_projection" in scripts[inst.REFILL]
+          assert b"global_cache_eviction" in scripts[inst.REFILL]
+          assert 'rollback_verified' in Path(name).read_text()
+          assert 'NATIVE_MEMORY_GOVERNOR_TELEMETRY_VERIFIED' in Path(name).read_text()
+          print('MEMORY_GOVERNOR_OWNER_INSTALL_SOURCE_PASS')
+          PY
