@@ -92,75 +92,7 @@ class ProbeTests(unittest.TestCase):
     def test_multiturn_required_before_new_dialog_post(self):
         for setting in (None, '', '0', 'true', 'yes'):
             with self.subTest(setting=setting):
-                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_MULTITURN_NOT_REQUESTED
-        self.assertIsNone(probe.require_executor_turn_budget(0))
-        self.assertIsNone(probe.require_executor_turn_budget(209.999))
-        for elapsed in (210, 210.001, 999):
-            with self.subTest(elapsed=elapsed):
-                with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_EXECUTOR_TURN_BUDGET_EXHAUSTED'):
-                    probe.require_executor_turn_budget(elapsed)
-
-    def test_stream_terminal_done_must_bind_to_requested_dialog(self):
-        class Response:
-            status = 200
-            def __init__(self, rows): self.rows = rows; self.closed = False
-            def close(self): self.closed = True
-            def __iter__(self):
-                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
-        for terminal_id in (None, '2'*32):
-            response = Response([{'type':'delta','text':'323'},
-                                 {'type':'done','dialog_id':terminal_id,'saved':True,'s03_integrated':True}])
-            with self.subTest(terminal_id=terminal_id), patch.object(probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'):
-                    probe.consume_turn(object(), 'synthetic', '1'*32)
-            self.assertTrue(response.closed)
-        response = Response([{'type':'delta','text':'323'},
-                             {'type':'done','dialog_id':'1'*32,'saved':True,'s03_integrated':True}])
-        with patch.object(probe, 'request', return_value=response):
-            result = probe.consume_turn(object(), 'synthetic', '1'*32)
-        self.assertEqual(result['done']['dialog_id'], '1'*32)
-        self.assertTrue(response.closed)
-
-    def test_oversize_final_delta_is_rejected_before_done(self):
-        class Response:
-            status = 200
-            def __init__(self, amount): self.amount = amount; self.closed = False
-            def close(self): self.closed = True
-            def __iter__(self):
-                rows = ({'type':'delta','text':'x' * self.amount},
-                        {'type':'done','dialog_id':'1'*32,'saved':True,'s03_integrated':True})
-                return iter(json.dumps(row).encode()+b'\n' for row in rows)
-        invalid = Response(10001)
-        with patch.object(probe, 'request', return_value=invalid):
-            with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_TEXT_LIMIT'):
-                probe.consume_turn(object(), 'synthetic', '1'*32)
-        self.assertTrue(invalid.closed)
-        boundary = Response(10000)
-        with patch.object(probe, 'request', return_value=boundary):
-            result = probe.consume_turn(object(), 'synthetic', '1'*32)
-        self.assertEqual(len(result['answer']), 10000)
-        self.assertTrue(boundary.closed)
-
-    def test_truncated_or_error_stream_cannot_pass(self):
-        class Response:
-            status = 200
-            def __init__(self, rows): self.rows = rows; self.closed = False
-            def close(self): self.closed = True
-            def __iter__(self):
-                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
-        for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
-            response = Response(rows)
-            with patch.object(probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, code):
-                    probe.consume_turn(object(), 'synthetic', '1'*32)
-            self.assertTrue(response.closed)
-
-
-if __name__ == '__main__':
-    unittest.main()
-):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_MULTITURN_NOT_REQUESTED$'):
                     probe.require_multiturn_requested(setting)
         self.assertIsNone(probe.require_multiturn_requested('1'))
         source = path.read_text()
