@@ -141,7 +141,21 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
                 or not re.fullmatch('[0-9a-f]{64}', expected_sha256)
                 or hashlib.sha256(raw).hexdigest() != expected_sha256):
             raise RuntimeError('HOLD_PAUSED_CHECKPOINT_HASH')
-    value = json.loads(raw)
+    # Refuse ambiguous or nonstandard JSON even when its byte hash is valid.
+    # Different parsers can otherwise disagree about an optimizer step.
+    def unique_object(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise RuntimeError('HOLD_DUPLICATE_STATE_KEY')
+            value[key] = item
+        return value
+
+    def finite_json_constant(token):
+        raise RuntimeError('HOLD_NONFINITE_STATE_JSON')
+
+    value = json.loads(raw, object_pairs_hook=unique_object,
+                       parse_constant=finite_json_constant)
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
     return value
