@@ -50,6 +50,36 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
                 self.assertEqual(emitted[1][1]['failed'],[emitted[0][1]])
 
 
+    def test_program_stop_blocks_s03_and_all_dependent_stages(self):
+        """Program-level STOP is a native STOP location; never enter S03."""
+        spec=importlib.util.spec_from_file_location('a3_program_stop', SOURCE)
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        name='owner_s03_recover_activate.py'
+        raw=(b'BUNDLE=__NOX_BUNDLE_JSON__\\n'
+             b'def main():\\n'
+             b'    BUNDLE["s03_stage_executed"]=True\\n'
+             b'    return 0\\n')
+        # Deliberately fail if the S03 stage is entered at all.
+        module.STAGES=((name,hashlib.sha256(raw).hexdigest()),)
+        module.BUNDLE={name:base64.b64encode(raw).decode()}
+        emitted=[]
+        module.emit=lambda kind,data:emitted.append((kind,data))
+        with tempfile.TemporaryDirectory() as t:
+            flag=pathlib.Path(t)/'program/STOP'
+            flag.parent.mkdir()
+            flag.touch()
+            with patch.object(module,'Path',lambda _:pathlib.Path(t)):
+                with redirect_stdout(io.StringIO()) as output:
+                    result=module.main()
+        self.assertEqual(result,2)
+        self.assertNotIn('s03_stage_executed',module.BUNDLE)
+        self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true',output.getvalue())
+        self.assertEqual(emitted,[
+            ('memory_chat_batch',{
+                'failed':[{'component':name,'reason':'HOLD_OWNER_STOP'}],
+                'training_started':False,'private_content_exported':False}),
+        ])
+
     def test_stop_during_final_stage_cannot_claim_success(self):
         spec=importlib.util.spec_from_file_location('a3_stop_acceptance', SOURCE)
         module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
