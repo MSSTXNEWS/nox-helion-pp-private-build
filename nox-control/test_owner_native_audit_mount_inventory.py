@@ -1,4 +1,6 @@
 import importlib.util
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 import unittest
 SOURCE=Path(__file__).with_name('owner_native_audit.py')
@@ -84,8 +86,43 @@ class MountInventoryTests(unittest.TestCase):
             audit.mount_inventory=original
         self.assertEqual(row['section'],'mount_inventory')
         self.assertEqual(row['result']['mountinfo_readable'],True)
-        source=SOURCE.read_text()
-        self.assertIn('pool.map(worker,range(7))',source)
+
+    def test_main_dispatches_seven_workers_with_census_and_keeps_mount_worker(self):
+        original={name:getattr(audit,name) for name in (
+            'ProcessPoolExecutor','gpu_process_census','hardware','process_rows',
+            'supervisor','packages','models','storage','mount_inventory')}
+        dispatched=[]
+        class FakePool:
+            def __init__(self, max_workers):
+                self.max_workers=max_workers
+            def __enter__(self): return self
+            def __exit__(self,*args): return False
+            def map(self, function, tasks):
+                items=list(tasks)
+                dispatched.extend(items)
+                return [function(item) for item in items]
+        try:
+            audit.ProcessPoolExecutor=FakePool
+            audit.gpu_process_census=lambda:{'gpu_consumer_identities':[]}
+            audit.hardware=lambda census:{'scope':'fixture'}
+            audit.process_rows=lambda **kwargs:{'rows':[]}
+            audit.supervisor=lambda:{'scope':'fixture'}
+            audit.packages=lambda:{'scope':'fixture'}
+            audit.models=lambda:{'scope':'fixture'}
+            audit.storage=lambda:{'scope':'fixture'}
+            audit.mount_inventory=lambda:{'mountinfo_readable':True,'mounts':[]}
+            audit.mount_inventory.__name__='mount_inventory'
+            output=StringIO()
+            with redirect_stdout(output):
+                audit.main()
+        finally:
+            for name,value in original.items():
+                setattr(audit,name,value)
+        self.assertEqual(len(dispatched),7)
+        self.assertEqual([item[0] for item in dispatched],list(range(7)))
+        self.assertTrue(all(isinstance(item,tuple) and len(item)==2 for item in dispatched))
+        self.assertIn('"section":"mount_inventory"',output.getvalue())
+        self.assertIn('NOX_MAINT_AUDIT_COMPLETE=true',output.getvalue())
     def test_source_is_safe_read_only_probe(self):
         names=audit.mount_inventory.__code__.co_names
         self.assertFalse(any(word in names for word in ('unlink','remove','Popen')))
@@ -152,8 +189,6 @@ class V13OwnerFenceMetadataTests(unittest.TestCase):
         self.assertIs(got['available'],False)
         self.assertEqual(got['owner_fence_readonly']['owner_stop_state'],'UNKNOWN')
         check.assert_called_once()
-        source=SOURCE.read_text()
-        self.assertIn('pool.map(worker,range(7))',source)
 
 
 if __name__=='__main__':unittest.main()

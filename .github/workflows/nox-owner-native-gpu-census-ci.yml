@@ -1,0 +1,35 @@
+name: NOX owner native GPU census source CI
+on:
+  push:
+    branches: [agent/gpu-proc-identity-census-20261119]
+    paths:
+      - 'nox-control/owner_native_audit.py'
+      - 'nox-control/test_owner_native_audit_gpu_census.py'
+      - 'nox-control/test_owner_native_audit_mount_inventory.py'
+      - '.github/workflows/nox-owner-native-gpu-census-ci.yml'
+  pull_request:
+    paths:
+      - 'nox-control/owner_native_audit.py'
+      - 'nox-control/test_owner_native_audit_gpu_census.py'
+      - 'nox-control/test_owner_native_audit_mount_inventory.py'
+      - '.github/workflows/nox-owner-native-gpu-census-ci.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  source-census-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Syntax and deterministic census tests
+        run: |
+          set -euo pipefail
+          python -B -m py_compile nox-control/owner_native_audit.py nox-control/test_owner_native_audit_gpu_census.py nox-control/test_owner_native_audit_mount_inventory.py
+          python -B -m unittest discover -s nox-control -p 'test_owner_native_audit_*.py' -v
+      - name: Explicit scope
+        run: |
+          echo "SOURCE_TESTED only; no native host access"
+          echo "GPU_CENSUS=READ_ONLY_SOURCE_FIXTURES"
