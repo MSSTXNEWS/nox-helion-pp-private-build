@@ -149,6 +149,26 @@ def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, sec
                for row, (role, content) in zip(rows, expected))
 
 
+def multiturn_transcript_sha256(rows):
+    """Fingerprint all four full UTF-8 browser-history messages, not S03 proof.
+
+    Canonical writer provenance still requires a separate trusted receipt
+    and independent readback. Never truncate or normalize message content.
+    """
+    roles = ('user', 'assistant', 'user', 'assistant')
+    if not isinstance(rows, list) or len(rows) != len(roles):
+        return None
+    if any(not isinstance(row, dict) or row.get('role') != role
+           or not isinstance(row.get('content'), str) or not row['content'].strip()
+           for row, role in zip(rows, roles)):
+        return None
+    transcript = [{'role': role, 'content': row['content']}
+                  for row, role in zip(rows, roles)]
+    raw = json.dumps(transcript, ensure_ascii=False, sort_keys=True,
+                     separators=(',', ':'), allow_nan=False).encode('utf-8')
+    return digest(raw)
+
+
 def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages):
     """Fail closed unless a trusted canonical writer receipt matches exact independent S03 readback."""
     # A single native chat exchange is not a two-turn continuity witness.
@@ -961,6 +981,10 @@ async def browser_run(report, directory, available):
                     '(value)=>window.__NOX_BROWSER_QA.answer===value',second_answer)
                 second_saved=multiturn_history_valid(
                     second_rows,prompt,answer,second_prompt,second_answer)
+                # Preserve a full four-turn browser-history fingerprint for
+                # future independent S03 comparison, without false acceptance.
+                browser_transcript_sha = (multiturn_transcript_sha256(second_rows)
+                                          if second_saved else None)
                 # This endpoint is dialog-history, not the canonical S03 writer/readback.
                 # No trusted S03 receipt provider is wired in this source version.
                 canonical_s03_verified=False
@@ -970,7 +994,9 @@ async def browser_run(report, directory, available):
                 second_stop=bool(second_final.get('stop_samples',0)>0
                     and second_final.get('stop_samples')==second_final.get('stop_visible_samples')
                     and second_final.get('stop_occluded_samples')==0)
-                report.update(multiturn_dialog_history_verified=second_saved,
+                report.update(multiturn_browser_history_sha256=browser_transcript_sha,
+                              multiturn_browser_history_messages=4 if browser_transcript_sha else 0,
+                              multiturn_dialog_history_verified=second_saved,
                               multiturn_canonical_s03_verified=canonical_s03_verified,
                               multiturn_s03_hold_reason='CANONICAL_S03_WRITER_AND_INDEPENDENT_READBACK_NOT_WIRED',
                               multiturn_second_native_equal=second_native_equal,

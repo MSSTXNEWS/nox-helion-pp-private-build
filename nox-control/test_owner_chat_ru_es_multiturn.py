@@ -4,6 +4,7 @@ No browser, native POST, live S03 or production host mutation. The historical
 multiturn canonical-S03 HOLD remains mandatory until real writer/readback wiring.
 """
 import hashlib
+import json
 import unittest
 
 from owner_chat_browser_qa import (
@@ -14,6 +15,7 @@ from owner_chat_browser_qa import (
     ru_es_unleaked_first_prompt,
     ru_es_unleaked_first_answer_valid,
     multiturn_history_valid,
+    multiturn_transcript_sha256,
 )
 
 TOKEN = "gmnop"
@@ -48,6 +50,29 @@ def s03_proof(transcript):
 
 
 class OwnerRuEsContinuity(unittest.TestCase):
+    def test_four_turn_fingerprint_binds_entire_untrimmed_ru_es_utf8_history(self):
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        transcript = rows(spanish)
+        transcript[0]['content'] += ' Привет'
+        expected = hashlib.sha256(json.dumps(
+            [{'role': item['role'], 'content': item['content']} for item in transcript],
+            ensure_ascii=False, sort_keys=True, separators=(',', ':'),
+            allow_nan=False).encode('utf-8')).hexdigest()
+        self.assertEqual(multiturn_transcript_sha256(transcript), expected)
+        self.assertEqual(len(expected), 64)
+        for turn in range(4):
+            altered = [dict(item) for item in transcript]
+            altered[turn]['content'] += 'ñ' if turn == 2 else 'я'
+            self.assertNotEqual(multiturn_transcript_sha256(altered), expected)
+            invalid = [dict(item) for item in transcript]
+            invalid[turn]['content'] = '  '
+            self.assertIsNone(multiturn_transcript_sha256(invalid))
+        self.assertIsNone(multiturn_transcript_sha256(transcript[:2]))
+        self.assertIsNone(multiturn_transcript_sha256([*transcript[:3], None]))
+        invalid_roles = [dict(item) for item in transcript]
+        invalid_roles[2]['role'] = 'assistant'
+        self.assertIsNone(multiturn_transcript_sha256(invalid_roles))
+
     def test_s03_two_turn_receipt_requires_second_sequence_and_distinct_readback(self):
         # One first-turn writer receipt cannot prove a two-turn S03 persist.
         transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
