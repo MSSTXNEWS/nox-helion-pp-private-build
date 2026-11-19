@@ -88,7 +88,7 @@
     "method": "CPU-only Safetensors header validation and bounded 1 MiB hashing for explicitly supplied payload ranges; no tensor arrays or full model loaded."
   },
   "assessment": {
-    "addendum_assessment": "ACCEPTED_SOURCE_CRITERION",
+    "addendum_assessment": "PENDING_PR_MERGE",
     "accepted_scope": "Only the frozen I-49 source criterion to compare the currently authorized exact pair and exact name set by bounded CPU byte hashes without loading the full model.",
     "does_not_assert": [
       "Elementwise numeric delta magnitudes",
@@ -98,13 +98,13 @@
       "Model quality or benchmark improvement"
     ],
     "technical_integrity_review": "PASS",
-    "acceptance_reviewer_signoff": "PASS_ON_REVIEWED_HEAD_62f80c2078c195b82027861185f54538ed1ed21c",
-    "effective_state": "PASS_ON_REVIEWED_HEAD_PENDING_QUICK_REVIEW_OF_UPDATED_HEAD_AND_PR_MERGE",
+    "acceptance_reviewer_signoff": "PASS_ON_REVIEWED_HEAD_31cb766a1e4268bf0d10f7d0ef5f9144ac4b3c6d",
+    "effective_state": "PENDING_PR_MERGE",
     "supersedes_prior_hold": {
       "path": "nox-control/complete_executor_20261118/evidence/addenda/source_evidence_erratum_20261119_i49.json",
       "git_blob_sha": "e283948b2df1b037f2f2dd918de0cee7c7f49da6",
       "prior_assessment": "HOLD_UNRESOLVED_AUTHORIZATION_BINDING",
-      "scope_of_supersession": "The prior HOLD is superseded only for this current user-authorized, bounded source comparison after correcting the comparator digest. It is not a historical authorization claim."
+      "scope_of_supersession": "The prior HOLD remains preserved in its original erratum. This sidecar records an independent PASS for the exact bounded current scope; the source-criterion acceptance becomes effective only after the updated head is re-reviewed and PR #486 is merged. No historical authorization is inferred."
     },
     "prior_acceptance_record": {
       "path": "nox-control/complete_executor_20261118/evidence/addenda/source_acceptance_addendum_20261119_4a01_i49.json",
@@ -115,13 +115,23 @@
     "acceptance_claim_for_immutable_295_snapshot": false,
     "independent_review": {
       "result": "PASS",
-      "reviewed_head_sha": "62f80c2078c195b82027861185f54538ed1ed21c",
+      "reviewed_head_sha": "31cb766a1e4268bf0d10f7d0ef5f9144ac4b3c6d",
       "review_source": "Independent reviewer PASS communicated by the task owner; no GitHub review submission was attached to the reviewed head.",
       "review_timestamp_utc": null,
       "scope": "Exact I-49 frozen source criterion, current instruction binding, pair/name-set fingerprints, corrected comparator SHA, data minimization, and frozen-ledger boundaries."
     },
-    "review_binding_recorded_at_utc": "2026-11-19T11:22:09Z",
-    "quick_review_required_for_updated_head": true
+    "review_binding_recorded_at_utc": "2026-11-19T11:25:56Z",
+    "quick_review_required_for_updated_head": true,
+    "target_assessment_after_merge": "ACCEPTED_SOURCE_CRITERION",
+    "merge_boundary": {
+      "current_pr_number": 486,
+      "current_pr_state": "OPEN_DRAFT",
+      "reviewed_head_sha": "31cb766a1e4268bf0d10f7d0ef5f9144ac4b3c6d",
+      "updated_head_requires_quick_review": true,
+      "target_assessment_activates_only_on_merge": true,
+      "acceptance_must_not_be_reported_before_merge": true,
+      "immutable_295_snapshot_changed": false
+    }
   },
   "mutation_boundary": {
     "all295_changed": false,
