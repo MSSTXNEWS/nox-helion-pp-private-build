@@ -154,7 +154,7 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     # A single native chat exchange is not a two-turn continuity witness.
     # Reject malformed transcript structure before evaluating receipt metadata:
     # a matching final-answer hash alone does not establish four ordered turns.
-    if (not isinstance(dialog_id, str) or not dialog_id
+    if (not isinstance(dialog_id, str) or not dialog_id.strip()
             or not isinstance(expected_messages, list) or len(expected_messages) != 4):
         return False
     if any(not isinstance(row, dict) or row.get('role') != role
@@ -171,9 +171,9 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     if (writer_receipt.get('source') != 'canonical_s03'
             or writer_receipt.get('verified') is not True
             or writer_receipt.get('durable') is not True
-            or not isinstance(event_id, str) or not event_id
-            or not isinstance(turn_id, str) or not turn_id
-            or isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 2
+            or not isinstance(event_id, str) or not event_id.strip()
+            or not isinstance(turn_id, str) or not turn_id.strip()
+            or type(sequence) is not int or sequence != 2
             or writer_receipt.get('dialog_id') != dialog_id):
         return False
     if (independent_readback.get('source') != 'canonical_s03'
@@ -185,7 +185,8 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or independent_readback.get('messages') != expected_messages):
         return False
     answer = expected_messages[-1].get('content') if expected_messages else None
-    expected_hash = digest(answer.encode('utf-8')) if isinstance(answer, str) else None
+    expected_hash = (digest(answer.encode('utf-8'))
+                     if isinstance(answer, str) and answer.strip() else None
     return bool(expected_hash and independent_readback.get('full_answer_sha256') == expected_hash)
 
 
