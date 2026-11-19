@@ -1,0 +1,78 @@
+name: NOX native reflex live task census
+on:
+  push:
+    branches: [repair/nox-reflex-bootfix-20261119]
+    paths: ['.github/workflows/nox-reflex-task-census.yml']
+permissions: {contents: read}
+concurrency:
+  group: nox-native-reflex-current-census-60509551
+  cancel-in-progress: false
+jobs:
+  native-census:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Read native reflex and catalog evidence, without server writes
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+          ssh.REMOTE=r"""
+          set -euo pipefail
+          python3 - <<'PYREMOTE'
+          import json,hashlib,collections,time,re
+          from pathlib import Path
+          root=Path('/root/nox')
+          print('NOX_NATIVE_V51_SSH_EXECUTED=true')
+          try:
+              doc=json.loads((root/'status/agents_t856u.json').read_text())
+              native=doc.get('native_subexecutors') or {}
+              relay=native.get('systemic_relay') or {}
+              mon=relay.get('self_monitor') or {}
+              print('NATIVE_REFLEX_LIVE='+json.dumps({
+                  'state':relay.get('state'),
+                  'manifest':relay.get('manifest_sha256'),
+                  'slots_available':relay.get('slots_available'),
+                  'eligible_proposals':relay.get('eligible_proposals'),
+                  'refill_request':bool(relay.get('refill_request')),
+                  'self_monitor':mon.get('state'),
+                  'staged':mon.get('staged_count'),
+                  'new_native_jobs':mon.get('new_native_jobs'),
+                  'task_counts':mon.get('observed_task_counts'),
+                  'unindexed_original':mon.get('unindexed_original_count'),
+                  'worker_count':len(native.get('workers') or []),
+                  'director_pid':(native.get('director') or {}).get('pid'),
+              },sort_keys=True,separators=(',',':')))
+              for i,c in enumerate((mon.get('staged_research_candidates') or [])[:3]):
+                  allowed=('parent_task_id','mission_id','hypothesis','queue_id','required_next_step','authority','fingerprint')
+                  print('NATIVE_REFLEX_CANDIDATE_'+str(i)+'='+json.dumps({
+                      k:c.get(k) for k in allowed
+                  },sort_keys=True,separators=(',',':')))
+          except Exception as e: print('NATIVE_REFLEX_STATUS_ERR='+type(e).__name__)
+          try:
+              state=json.loads((root/'state/dispatcher/state.json').read_text())
+              tasks=state.get('tasks',{})
+              counts=collections.Counter(
+                  str(row.get('status')) for row in tasks.values() if isinstance(row,dict))
+              print('NATIVE_REFLEX_NATIVE_QUEUE_COUNTS='+json.dumps(dict(counts),sort_keys=True))
+              for k,row in tasks.items():
+                  if isinstance(row,dict) and row.get('status') in ('pending','wait','retry','admitted','prepared','running'):
+                      if isinstance(k,str) and len(k)<=128:
+                          print('NATIVE_REFLEX_PENDING='+json.dumps({'id':k,'handler':row.get('handler'),'status':row.get('status')})[:500])
+          except Exception as e: print('NATIVE_REFLEX_QUEUE_ERR='+type(e).__name__)
+          print('NATIVE_READ_ONLY_COMPLETE=true')
+          PYREMOTE
+          """
+          try:
+              assert ssh.probe()
+          finally:
+              assert ssh.cleanup()
+          PY
+      - name: Always remove ephemeral SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
