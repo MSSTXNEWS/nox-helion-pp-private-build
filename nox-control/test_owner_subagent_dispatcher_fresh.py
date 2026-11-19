@@ -199,9 +199,10 @@ class PoolLifecycleTests(unittest.TestCase):
             ctor.assert_not_called()
         pool._replace_idle_dead_pool.assert_called_once()
         callback = pool._replace_idle_dead_pool.call_args.kwargs['allow_replacement']
-        self.assertTrue(callback())
-        native.stop_active.return_value = True
-        self.assertFalse(callback())
+        with patch.object(binding, 'chat_priority_active', return_value=False):
+            self.assertTrue(callback())
+            native.stop_active.return_value = True
+            self.assertFalse(callback())
         native.close_pool.assert_not_called()
         self.assertIs(children['runtime'], replacement)
         self.assertIs(children['memory'], old_memory)
