@@ -134,6 +134,11 @@ def numeric_public_answer(text):
     value=text.strip().strip('`*_ .!\n\r\t')
     return value if re.fullmatch(r'-?\d{1,6}',value or '') else '[NONNUMERIC_RESPONSE_WITHHELD]'
 
+def reject_nonfinite_json_constant(_value):
+    """Strict NDJSON: Python's default json.loads incorrectly accepts NaN/Infinity."""
+    raise RuntimeError('HOLD_STREAM_NONFINITE_JSON')
+
+
 def consume_turn(client,prompt,dialog_id,timeout=95):
     started=time.monotonic()
     response=request(client,'/api/nox/chat/stream','POST',
@@ -145,7 +150,7 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
         for index,line in enumerate(response):
             if index>2000 or len(line)>100000 or time.monotonic()-started>timeout+5:
                 raise RuntimeError('HOLD_BOUNDED_STREAM')
-            frame=json.loads(line)
+            frame=json.loads(line, parse_constant=reject_nonfinite_json_constant)
             if not isinstance(frame,dict):raise RuntimeError('HOLD_STREAM_FRAME_SCHEMA')
             kind=frame.get('type');elapsed=round((time.monotonic()-started)*1000)
             if kind not in ('preparing','start','started','delta','done','error','status','meta'):
