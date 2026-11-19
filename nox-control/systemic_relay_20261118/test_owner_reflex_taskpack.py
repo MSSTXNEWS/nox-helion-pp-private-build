@@ -146,5 +146,44 @@ class TaskpackTests(unittest.TestCase):
             module.propose_successor(m, o, p)
 
 
+    def test_research_first_does_not_starve_later_source_drift(self):
+        from copy import deepcopy
+        m, o, p = fixture()
+        real = deepcopy(o["staged_research_candidates"][0])
+        unrelated = []
+        for i in range(3):
+            candidate = deepcopy(real)
+            candidate["fingerprint"] = format(i + 1, "064x")
+            candidate["hypothesis"] = "ANALYZE_FAILED_TERMINAL_RECEIPT"
+            unrelated.append(candidate)
+        o["staged_research_candidates"] = unrelated + [real]
+        result = module.propose_successor(m, o, p)
+        self.assertEqual(len(result["draft_missions"]), 1)
+        self.assertEqual([r["state"] for r in result["decisions"]],
+                         ["NEEDS_INVESTIGATION"] * 3 + ["DRAFT_REQUIRES_OWNER_REVIEW"])
+        self.assertFalse(result["automatic_owner_approval"])
+
+    def test_duplicate_mission_fingerprints_create_one_draft(self):
+        from copy import deepcopy
+        m, o, p = fixture()
+        duplicated = deepcopy(o["staged_research_candidates"][0])
+        duplicated["fingerprint"] = "c" * 64
+        o["staged_research_candidates"].append(duplicated)
+        result = module.propose_successor(m, o, p)
+        self.assertEqual(len(result["draft_missions"]), 1)
+        self.assertEqual(result["decisions"][-1]["state"],
+                         "HOLD_DUPLICATE_MISSION_CANDIDATE")
+        self.assertEqual(result["native_jobs_created"], 0)
+
+    def test_oversized_candidate_batch_is_explicit_hold(self):
+        from copy import deepcopy
+        m, o, p = fixture()
+        o["staged_research_candidates"] = [
+            deepcopy(o["staged_research_candidates"][0])
+            for _ in range(module.MAX_OBSERVED + 1)]
+        with self.assertRaisesRegex(ValueError, "HOLD_REFLEX_CANDIDATE_BOUND"):
+            module.propose_successor(m, o, p)
+
+
 if __name__ == "__main__":
     unittest.main()
