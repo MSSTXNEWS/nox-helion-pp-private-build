@@ -1,0 +1,426 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Append one owner-authenticated inspect evidence record for the exact 2V14-02 process identity, scoped STOP flag, and kernel-lock observation. The inspect temporarily attached and then detached an SSH public key; cleanup was verified. Keep historical records and frozen task/receipt ledgers unchanged.",
+  "scope": {
+    "task_ids": [
+      "2V14-02"
+    ],
+    "task_registry": {
+      "path": "nox-control/four_queue_20261118/work_tasks.json",
+      "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+    },
+    "immutable_295_manifest": {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb"
+    },
+    "receipts": {
+      "path": "nox-control/four_queue_20261118/work_receipts.json",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338"
+    },
+    "criteria": {
+      "2V14-02": {
+        "title": "Установить владельца процессов и действующие STOP/maintenance locks.",
+        "required_evidence": "native",
+        "spec_sha256": "f353440a6056d219deeafbd1f9554497383cb5367b77447e75e3d603fd7a47c7",
+        "prior_addendum_record": {
+          "path": "nox-control/complete_executor_20261118/evidence/addenda/native_snapshot_addendum_20261119_2v14-12_6v14-02.json",
+          "git_blob_sha": "2cc60b0d840c33c6a1e46259432273eead878608",
+          "record_number": 3,
+          "result": "PARTIAL"
+        },
+        "addendum_assessment": "ACCEPTED_FOR_EXACT_POINT_IN_TIME_SCOPE",
+        "acceptance_binding": {
+          "evidence_pointer": "#/additional_evidence_records/0",
+          "workflow_run_id": 44492203531,
+          "job_id": 135450409598,
+          "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44492203531",
+          "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44492203531/job/135450409598",
+          "captured_at_utc": "2026-11-19T08:59:33.106Z",
+          "pinned_source_sha": "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8",
+          "inspector_file_blob_sha": "81f75ee0c22fe254071e05dd318b45722b337de0",
+          "criterion_satisfied": "Two authenticated snapshots bind the seven explicitly selected Supervisor rows and their scoped STOP/maintenance flag observations to a stable host boot/clock chain; repeated /proc/locks readbacks identify both scoped FLOCK records and revalidate the holder PID/start_ticks.",
+          "scope_limit": "Point-in-time observation of only the explicitly listed services, STOP/maintenance flags, and two scoped lock paths. This does not claim the complete Supervisor inventory, all-process census, all services healthy, owner lease acquisition, or state after the snapshot."
+        }
+      }
+    },
+    "mutation_boundary": "Evidence-only sidecar. The frozen all295 manifest and work_receipts.json remain unchanged. During inspect, one temporary SSH public key was attached and then detached with cleanup verified; no instance state change or NOX service start/stop/restart was performed. This record does not rewrite either ledger or authorize later mutation."
+  },
+  "evidence": {
+    "kind": "owner_authenticated_native_inspect_with_temporary_ssh_key_cleanup",
+    "workflow_run_id": 44492203531,
+    "job_id": 135450409598,
+    "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44492203531",
+    "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44492203531/job/135450409598",
+    "job_conclusion": "success",
+    "workflow_head_sha": "30878bab0553aedb65556c096d5d3db12d91b7be",
+    "workflow_file_blob_sha": "4b1defae6cd34c0c5b6f9e1453717df2b36dcc41",
+    "comment_guard_blob_sha": "024916b750caaee453f101f259303fb5fe8221da",
+    "pinned_source_sha": "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8",
+    "active_inspector_blob_sha": "81f75ee0c22fe254071e05dd318b45722b337de0",
+    "operator_blob_sha": "d172387bfd5ab756bfe6a257670a9685f70b5127",
+    "observer_helper_blob_sha": "c61c652ac6295c4f34f51930245004dbfc5304b4",
+    "owner_authorization_comment_id": 7004485291,
+    "authenticated_instance_id": 60509551,
+    "host_pin": "VERIFIED",
+    "read_only_provider_lookup": true,
+    "provider_mutations": 2,
+    "command_scope": "inspect",
+    "workflow_markers": {
+      "source_auth": "PASS",
+      "host_pin": "VERIFIED",
+      "snapshot_a_complete": true,
+      "snapshot_b_complete": true,
+      "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
+    },
+    "supervisor_health": {
+      "command_rc": 3,
+      "selected_service_rows": 7,
+      "selected_rows_only": true,
+      "complete_supervisor_inventory_claimed": false,
+      "stopped_rows": [
+        "nox-agent-architect-t859u",
+        "nox-agent-integrator-t859u",
+        "nox-agent-tuner-t858u"
+      ],
+      "running_rows": [
+        "nox-dispatcher-t855u",
+        "nox-ds41-8098",
+        "nox-proxy",
+        "nox-web29-18775"
+      ],
+      "interpretation": "The status command returned 3 and three explicitly selected rows were STOPPED. Record the return code and health state; do not infer that services should be started or that the full Supervisor inventory succeeded."
+    },
+    "snapshots": [
+      {
+        "label": "NOX_MAINT_SCOPE_SNAPSHOT_A",
+        "captured_at_utc": "2026-11-19T08:59:26.692Z",
+        "time_unix": 1795078766.6917996,
+        "snapshot_complete": true,
+        "host_clock_snapshot_status": "STABLE",
+        "host_clock_snapshot_sha256": "fa0a9dcd077f731d271b65cf05fa24b7475c0ddba60dce542f1f853268578108",
+        "host_boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+        "uptime_seconds": 1871495.42,
+        "sc_clk_tck": 100,
+        "supervisor_rc": 3,
+        "services": [
+          {
+            "name": "nox-agent-architect-t859u",
+            "state": "STOPPED",
+            "pid": null,
+            "start_ticks": null
+          },
+          {
+            "name": "nox-agent-integrator-t859u",
+            "state": "STOPPED",
+            "pid": null,
+            "start_ticks": null
+          },
+          {
+            "name": "nox-agent-tuner-t858u",
+            "state": "STOPPED",
+            "pid": null,
+            "start_ticks": null
+          },
+          {
+            "name": "nox-dispatcher-t855u",
+            "state": "RUNNING",
+            "pid": 359172,
+            "start_ticks": 184639742,
+            "host_clock_binding_status": "VERIFIED"
+          },
+          {
+            "name": "nox-ds41-8098",
+            "state": "RUNNING",
+            "pid": 3266857,
+            "start_ticks": 172046662,
+            "host_clock_binding_status": "VERIFIED"
+          },
+          {
+            "name": "nox-proxy",
+            "state": "RUNNING",
+            "pid": 356544,
+            "start_ticks": 184602380,
+            "host_clock_binding_status": "VERIFIED"
+          },
+          {
+            "name": "nox-web29-18775",
+            "state": "RUNNING",
+            "pid": 356735,
+            "start_ticks": 184603716,
+            "host_clock_binding_status": "VERIFIED"
+          }
+        ],
+        "stop_and_maintenance_flags": {
+          "/root/nox/STOP": "ABSENT",
+          "/root/nox/STOP.flag": "ABSENT",
+          "/root/nox/stop.flag": "ABSENT",
+          "/root/nox/.stop": "ABSENT",
+          "/root/nox/program/STOP": "ABSENT",
+          "/root/nox/state/STOP": "ABSENT",
+          "/root/nox/state/STOP.flag": "ABSENT",
+          "/workspace/NOX_STOP": "ABSENT",
+          "/root/nox/state/OWNER_MAINTENANCE.flag": "ABSENT",
+          "/root/nox/state/TRAIN_HOLD.flag": "ABSENT",
+          "/root/nox/state/TRAIN_PAUSE_REQUEST.flag": "ABSENT"
+        }
+      },
+      {
+        "label": "NOX_MAINT_SCOPE_SNAPSHOT_B",
+        "captured_at_utc": "2026-11-19T08:59:33.106Z",
+        "time_unix": 1795078773.1060874,
+        "snapshot_complete": true,
+        "host_clock_snapshot_status": "STABLE",
+        "host_clock_snapshot_sha256": "52a906d57fcc3189fa029ed59c92a194aea34657c642ba481523a8ce060029fd",
+        "host_boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+        "uptime_seconds": 1871501.84,
+        "sc_clk_tck": 100,
+        "supervisor_rc": 3,
+        "services": [
+          {
+            "name": "nox-agent-architect-t859u",
+            "state": "STOPPED",
+            "pid": null,
+            "start_ticks": null
+          },
+          {
+            "name": "nox-agent-integrator-t859u",
+            "state": "STOPPED",
+            "pid": null,
+            "start_ticks": null
+          },
+          {
+            "name": "nox-agent-tuner-t858u",
+            "state": "STOPPED",
+            "pid": null,
+            "start_ticks": null
+          },
+          {
+            "name": "nox-dispatcher-t855u",
+            "state": "RUNNING",
+            "pid": 359172,
+            "start_ticks": 184639742,
+            "host_clock_binding_status": "VERIFIED"
+          },
+          {
+            "name": "nox-ds41-8098",
+            "state": "RUNNING",
+            "pid": 3266857,
+            "start_ticks": 172046662,
+            "host_clock_binding_status": "VERIFIED"
+          },
+          {
+            "name": "nox-proxy",
+            "state": "RUNNING",
+            "pid": 356544,
+            "start_ticks": 184602380,
+            "host_clock_binding_status": "VERIFIED"
+          },
+          {
+            "name": "nox-web29-18775",
+            "state": "RUNNING",
+            "pid": 356735,
+            "start_ticks": 184603716,
+            "host_clock_binding_status": "VERIFIED"
+          }
+        ],
+        "stop_and_maintenance_flags": {
+          "/root/nox/STOP": "ABSENT",
+          "/root/nox/STOP.flag": "ABSENT",
+          "/root/nox/stop.flag": "ABSENT",
+          "/root/nox/.stop": "ABSENT",
+          "/root/nox/program/STOP": "ABSENT",
+          "/root/nox/state/STOP": "ABSENT",
+          "/root/nox/state/STOP.flag": "ABSENT",
+          "/workspace/NOX_STOP": "ABSENT",
+          "/root/nox/state/OWNER_MAINTENANCE.flag": "ABSENT",
+          "/root/nox/state/TRAIN_HOLD.flag": "ABSENT",
+          "/root/nox/state/TRAIN_PAUSE_REQUEST.flag": "ABSENT"
+        }
+      }
+    ],
+    "observed_workers": {
+      "snapshot_label": "NOX_MAINT_SCOPE_POST_WORKERS",
+      "observed_at_unix": 1795078765.7256386,
+      "director": {
+        "pid": 359172,
+        "start_ticks": 184639742,
+        "verified_against_claim": true
+      },
+      "workers": [
+        {
+          "role": "runtime",
+          "pid": 359266,
+          "start_ticks": 184640911,
+          "state": "RUNNING",
+          "verified": true
+        },
+        {
+          "role": "memory",
+          "pid": 359267,
+          "start_ticks": 184640911,
+          "state": "RUNNING",
+          "verified": true
+        },
+        {
+          "role": "weights",
+          "pid": 359268,
+          "start_ticks": 184640911,
+          "state": "RUNNING",
+          "verified": true
+        }
+      ],
+      "scope_limit": "These worker identities are a bounded post-worker snapshot; not a complete process inventory."
+    },
+    "locks": [
+      {
+        "path": "/root/nox/state/owner_maintenance.lock",
+        "scope": "PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION",
+        "present": true,
+        "inode": 59886214,
+        "device_major": 0,
+        "device_minor": 36,
+        "type_regular": true,
+        "path_identity_status": "STABLE",
+        "proc_locks_read_status": "READ_OK",
+        "kernel_lock": "13: FLOCK  ADVISORY  READ 359172 00:24:59886214 0 EOF",
+        "lock_pid": 359172,
+        "lock_kind": "FLOCK",
+        "access": "READ",
+        "matching_lock_count": 1,
+        "lock_observation_complete": true,
+        "matching_lock_records_truncated": false,
+        "unparsed_matching_lock_count": 0,
+        "proc_locks_stability": "STABLE",
+        "proc_locks_recheck_status": "READ_OK",
+        "proc_locks_sha256": "2bd57d4e58e80f95c67cd59e5da78e3f060c15a8b5cc29321073f6cd82349229",
+        "proc_locks_recheck_sha256": "2bd57d4e58e80f95c67cd59e5da78e3f060c15a8b5cc29321073f6cd82349229",
+        "holder_identity_recheck": "STABLE",
+        "holder": {
+          "pid": 359172,
+          "start_ticks": 184639742,
+          "command": "python3.12 nox_dispatcher_t855u.py",
+          "boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03"
+        }
+      },
+      {
+        "path": "/root/nox/state/dispatcher/native_subagents.lock",
+        "scope": "PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION",
+        "present": true,
+        "inode": 3326582169,
+        "device_major": 0,
+        "device_minor": 36,
+        "type_regular": true,
+        "path_identity_status": "STABLE",
+        "proc_locks_read_status": "READ_OK",
+        "kernel_lock": "30: FLOCK  ADVISORY  WRITE 359172 00:24:3326582169 0 EOF",
+        "lock_pid": 359172,
+        "lock_kind": "FLOCK",
+        "access": "WRITE",
+        "matching_lock_count": 1,
+        "lock_observation_complete": true,
+        "matching_lock_records_truncated": false,
+        "unparsed_matching_lock_count": 0,
+        "proc_locks_stability": "STABLE",
+        "proc_locks_recheck_status": "READ_OK",
+        "proc_locks_sha256": "6e600051ca13c1a51dcc248b3c405efa78b07ccfbd50f6fd93902ded289bc72b",
+        "proc_locks_recheck_sha256": "6e600051ca13c1a51dcc248b3c405efa78b07ccfbd50f6fd93902ded289bc72b",
+        "holder_identity_recheck": "STABLE",
+        "holder": {
+          "pid": 359172,
+          "start_ticks": 184639742,
+          "command": "python3.12 nox_dispatcher_t855u.py",
+          "boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03"
+        }
+      }
+    ],
+    "host_clock_chain": {
+      "status": "STABLE",
+      "boot_ids": [
+        "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+        "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+        "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+        "9c0ecc02-85c1-452b-b8ae-521e9a11fd03"
+      ],
+      "snapshot_sha256": [
+        "fa0a9dcd077f731d271b65cf05fa24b7475c0ddba60dce542f1f853268578108",
+        "b9da756f4ac412ed013deeb035e95b0589b4fb08c80f33343a423b1f0dc1d095",
+        "b9da756f4ac412ed013deeb035e95b0589b4fb08c80f33343a423b1f0dc1d095",
+        "52a906d57fcc3189fa029ed59c92a194aea34657c642ba481523a8ce060029fd"
+      ],
+      "final_guard": {
+        "status": "VERIFIED",
+        "boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+        "uptime_seconds": 1871501.84,
+        "sc_clk_tck": 100,
+        "observed_at_unix": 1795078773.106326,
+        "boot_epoch_unix_estimate": 1793207271.2663262,
+        "snapshot_sha256": "f3362f497781ce0db876fa443b7535343ad82dd31108812d5c22aee0510bc31f"
+      }
+    },
+    "audit_scope": "Remote inspect commands were observational. Provider-side access setup temporarily attached and removed one SSH public key; cleanup was verified. No instance state change or NOX service start/stop/restart, training, or queue mutation was performed.",
+    "instance_state_mutations": 0,
+    "provider_mutation_breakdown": {
+      "temporary_ssh_public_key_attach": 1,
+      "temporary_ssh_public_key_detach": 1
+    },
+    "temporary_ssh_key": {
+      "attached_for_inspect": true,
+      "detached": true,
+      "cleanup_marker": "TEMP_SSH_CLEANUP=DETACHED_AND_VERIFIED",
+      "key_material_recorded": false
+    }
+  },
+  "acceptance_review": {
+    "2V14-02": {
+      "result": "ACCEPTED_FOR_EXACT_POINT_IN_TIME_PROCESS_STOP_KERNEL_LOCK_SCOPE",
+      "basis": "The two owner-authenticated snapshots have a stable host boot/clock binding; all four selected RUNNING service identities have stable PID/start_ticks in both snapshots; the dispatcher identity matches the verified holder of both scoped FLOCK records; the named STOP/maintenance flags are absent in both snapshots; both /proc/locks observations are complete and stable on recheck.",
+      "caveats": [
+        "supervisor_rc=3 and three selected agent services are STOPPED. This record preserves that health state and does not claim a successful full Supervisor inventory.",
+        "Only the seven named service rows and the listed marker/lock paths are in scope; this is not a full process census.",
+        "The observation is point-in-time and does not establish future state or a restart event.",
+        "Lock observation is not lease acquisition or authorization to start, stop, clear, or write."
+      ]
+    }
+  },
+  "additional_evidence_records": [
+    {
+      "record_number": 4,
+      "task_id": "2V14-02",
+      "title": "Установить владельца процессов и действующие STOP/maintenance locks.",
+      "result": "ACCEPTED",
+      "evidence_classification": "OWNER_AUTHENTICATED_NATIVE_INSPECT_WITH_TEMPORARY_SSH_KEY_CLEANUP",
+      "workflow": {
+        "run_id": 44492203531,
+        "job_id": 135450409598,
+        "conclusion": "success",
+        "pinned_source_sha": "215abe9bfe6a9f969899cb2a5be2ddacc071f4c8",
+        "active_inspector_blob_sha": "81f75ee0c22fe254071e05dd318b45722b337de0",
+        "authenticated_instance_id": 60509551,
+        "host_pin": "VERIFIED",
+        "owner_authorization_comment_id": 7004485291,
+        "provider_mutations": 2,
+        "command_scope": "inspect",
+        "instance_state_mutations": 0,
+        "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
+      },
+      "criterion": {
+        "registry_path": "nox-control/four_queue_20261118/work_tasks.json",
+        "registry_git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "exact_title": "Установить владельца процессов и действующие STOP/maintenance locks.",
+        "spec_sha256": "f353440a6056d219deeafbd1f9554497383cb5367b77447e75e3d603fd7a47c7",
+        "acceptance_scope": "Point-in-time identity of explicitly selected NOX service/worker processes plus scoped STOP/maintenance markers and kernel locks."
+      },
+      "evidence_pointer": "#/evidence"
+    }
+  ],
+  "source_limits": [
+    "This sidecar adds no status to the immutable 295-task ledger and does not modify work_receipts.json.",
+    "ACCEPTED applies only to the exact process identity, marker, and kernel-lock scope above.",
+    "The command rc=3 and three STOPPED rows remain reported; no service was started to change that result.",
+    "This inspect did not claim a complete Supervisor inventory or an exhaustive process census.",
+    "The two FLOCK observations are not an acquired owner lease.",
+    "The inspect temporarily attached and then removed one SSH public key for access; TEMP_SSH_CLEANUP=DETACHED_AND_VERIFIED is present in the run log. No instance state mutation or NOX service mutation is claimed."
+  ]
+}
