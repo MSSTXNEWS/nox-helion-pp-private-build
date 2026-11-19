@@ -458,4 +458,29 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(accepted["visible_utf8_bytes"], 5)
         self.assertEqual(accepted["completion_ms"], 10)
 
+    def test_sse_wire_whitespace_does_not_forge_usable_first_text(self):
+        # All bytes still contribute to the original text digest, but a
+        # blank-only stream is not a successful user-visible chat answer.
+        blank = ('data: ' + json.dumps(
+            {"choices": [{"delta": {"content": " \n\t"}, "finish_reason": None}]})
+            + '\n\n').encode()
+        actual = b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\n\n'
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b'data: [DONE]\n\n'
+        only_blank = measure_openai_sse_wire([
+            (2, blank), (6, stop), (9, done)])
+        self.assertTrue(only_blank["sse_terminal_seen"])
+        self.assertEqual(only_blank["model_finish_reason"], "stop")
+        self.assertIsNone(only_blank["first_text_ms"])
+        self.assertFalse(only_blank["wire_completed_normally"])
+        self.assertEqual(only_blank["visible_utf8_bytes"], len(" \n\t".encode()))
+        self.assertEqual(only_blank["visible_text_sha256"],
+                         hashlib.sha256(" \n\t".encode()).hexdigest())
+        with_text = measure_openai_sse_wire([
+            (2, blank), (5, actual), (6, stop), (9, done)])
+        self.assertEqual(with_text["first_text_ms"], 5)
+        self.assertTrue(with_text["wire_completed_normally"])
+        self.assertEqual(with_text["visible_text_sha256"],
+                         hashlib.sha256(" \n\tready".encode()).hexdigest())
+
 if __name__ == '__main__': unittest.main()
