@@ -404,7 +404,7 @@ def _sidecar_refs(document, task_id, spec_sha256):
     return scope
 
 
-def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source_hash):
+def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source_hash, source_blob):
     criteria = document.get('criteria')
     criterion = criteria.get(task_id) if isinstance(criteria, dict) else None
     if not isinstance(criterion, dict):
@@ -413,6 +413,8 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
         raise ValueError('CRITERION_SPEC_SHA_MISMATCH')
     if criterion.get('addendum_assessment') != 'ACCEPTED':
         raise ValueError('CRITERION_NOT_ACCEPTED')
+    if criterion.get('result') not in (None, 'ACCEPTED'):
+        raise ValueError('CRITERION_RESULT_NOT_ACCEPTED')
     binding = criterion.get('acceptance_binding')
     if not isinstance(binding, dict):
         raise ValueError('ACCEPTANCE_BINDING_MISSING')
@@ -426,141 +428,198 @@ def _validate_record_sidecar(document, task_id, spec_sha256, source_path, source
     if record.get('task_id') != task_id or record.get('result') != 'ACCEPTED':
         raise ValueError('ACCEPTANCE_RECORD_TASK_OR_RESULT_MISMATCH')
     record_criterion = record.get('criterion')
-    if not isinstance(record_criterion, dict) or record_criterion.get('spec_sha256') != spec_sha256:
+    record_spec = record.get('criterion_spec_sha256')
+    if isinstance(record_criterion, dict):
+        if record_spec is not None and record_spec != record_criterion.get('spec_sha256'):
+            raise ValueError('RECORD_SPEC_FIELDS_DISAGREE')
+        record_spec = record_criterion.get('spec_sha256')
+    if record_spec != spec_sha256:
         raise ValueError('RECORD_SPEC_SHA_MISMATCH')
+    scope = criterion.get('acceptance_scope')
+    if scope is None:
+        scope = record.get('acceptance_scope')
+    if not isinstance(scope, str) or not scope.strip():
+        raise ValueError('ACCEPTANCE_SCOPE_MISSING')
+    if (criterion.get('acceptance_scope') is not None
+            and record.get('acceptance_scope') is not None
+            and criterion['acceptance_scope'] != record['acceptance_scope']):
+        raise ValueError('ACCEPTANCE_SCOPE_MISMATCH')
     evidence_pointer = record.get('evidence_pointer')
+    if criterion.get('evidence_pointer') is not None and criterion.get('evidence_pointer') != evidence_pointer:
+        raise ValueError('CRITERION_EVIDENCE_POINTER_MISMATCH')
     evidence = _pointer_value(document, evidence_pointer)
     if not isinstance(evidence, dict) or not evidence:
         raise ValueError('EVIDENCE_POINTER_NOT_OBJECT')
-    workflow = record.get('workflow')
-    if not isinstance(workflow, dict):
-        raise ValueError('WORKFLOW_BINDING_MISSING')
-    run_id = binding.get('workflow_run_id')
-    job_id = binding.get('job_id')
-    owner_comment_id = binding.get('owner_comment_id', binding.get('request_id'))
-    if not all(_positive_int(value) for value in (run_id, job_id, owner_comment_id)):
+
+    audit = document.get('audit_binding')
+    if audit is not None and not isinstance(audit, dict):
+        raise ValueError('AUDIT_BINDING_INVALID')
+    audit = audit if isinstance(audit, dict) else {}
+    audit_workflow = audit.get('workflow') if isinstance(audit.get('workflow'), dict) else {}
+    audit_request = audit.get('request') if isinstance(audit.get('request'), dict) else {}
+    record_workflow = record.get('workflow') if isinstance(record.get('workflow'), dict) else {}
+
+    run_id = binding.get('workflow_run_id', binding.get('run_id'))
+    job_id = binding.get('workflow_job_id', binding.get('job_id'))
+    owner_id = binding.get('owner_authorization_id',
+               binding.get('owner_comment_id', binding.get('request_id')))
+    if not all(_positive_int(value) for value in (run_id, job_id, owner_id)):
         raise ValueError('WORKFLOW_IDS_INVALID')
-    if (workflow.get('run_id') != run_id or workflow.get('job_id') != job_id
-            or workflow.get('owner_authorization_comment_id', workflow.get('request_id')) != owner_comment_id):
-        raise ValueError('WORKFLOW_BINDING_MISMATCH')
-    if evidence.get('workflow_run_id') != run_id or evidence.get('job_id') != job_id:
-        raise ValueError('EVIDENCE_RUN_BINDING_MISMATCH')
-    if evidence.get('owner_authorization_comment_id', evidence.get('owner_comment_id')) != owner_comment_id:
-        raise ValueError('EVIDENCE_OWNER_BINDING_MISMATCH')
-    if evidence.get('source_auth') != 'PASS' or evidence.get('workflow_run_conclusion') != 'success':
-        raise ValueError('EVIDENCE_AUTH_OR_RUN_NOT_SUCCESS')
+    record_run = record_workflow.get('run_id', record.get('workflow_run_id'))
+    record_job = record_workflow.get('job_id', record.get('workflow_job_id'))
+    record_owner = record_workflow.get(
+        'owner_authorization_id',
+        record_workflow.get('owner_authorization_comment_id',
+        record_workflow.get('request_id',
+        record.get('owner_authorization_id', record.get('owner_comment_id')))))
+    evidence_run = evidence.get('workflow_run_id')
+    evidence_job = evidence.get('workflow_job_id', evidence.get('job_id'))
+    evidence_owner = evidence.get(
+        'owner_authorization_id',
+        evidence.get('owner_authorization_comment_id', evidence.get('owner_comment_id')))
+    if (record_run != run_id or record_job != job_id or record_owner != owner_id
+            or evidence_run != run_id or evidence_job != job_id or evidence_owner != owner_id):
+        raise ValueError('WORKFLOW_EVIDENCE_BINDING_MISMATCH')
+
+    audit_run = audit_workflow.get('run_id')
+    audit_job = audit_workflow.get('job_id')
+    request_owner = audit_request.get('owner_authorization_id',
+                    audit_request.get('github_issue_comment_id'))
+    if audit_workflow or audit_request:
+        if audit_run != run_id or audit_job != job_id or request_owner != owner_id:
+            raise ValueError('AUDIT_BINDING_RUN_OR_OWNER_MISMATCH')
     run_url = 'https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/%d' % run_id
     job_url = run_url + '/job/' + str(job_id)
-    if binding.get('run_url') != run_url or binding.get('job_url') != job_url:
-        raise ValueError('WORKFLOW_URL_BINDING_MISMATCH')
+    for row in (binding, record_workflow, record, evidence, audit_workflow):
+        if row.get('run_url') is not None and row.get('run_url') != run_url:
+            raise ValueError('WORKFLOW_RUN_URL_MISMATCH')
+        if row.get('job_url') is not None and row.get('job_url') != job_url:
+            raise ValueError('WORKFLOW_JOB_URL_MISMATCH')
+
+    source_blobs = record.get('source_artifact_blobs')
+    if source_blobs is not None:
+        if not isinstance(source_blobs, dict):
+            raise ValueError('SOURCE_ARTIFACT_BLOBS_INVALID')
+        evidence_blobs = evidence.get('source_artifact_blobs')
+        audit_evidence = _pointer_value(document, '#/audit_evidence/point_in_time_census')
+        audit_blobs = audit_evidence.get('source_artifact_blobs') if isinstance(audit_evidence, dict) else None
+        if (source_blobs.get('task_registry') != FROZEN_WORK_TASKS_BLOB
+                or source_blobs.get('all295_manifest') != FROZEN_295_MANIFEST_BLOB
+                or source_blobs.get('work_receipts') != FROZEN_WORK_RECEIPTS_BLOB
+                or not isinstance(evidence_blobs, dict) or source_blobs != evidence_blobs
+                or not isinstance(audit_blobs, dict) or source_blobs != audit_blobs):
+            raise ValueError('SOURCE_ARTIFACT_BLOB_BINDING_MISMATCH')
+        pinned = audit.get('pinned_audit_source')
+        host = audit.get('host')
+        remote = audit.get('remote_execution')
+        transfer = audit.get('transfer_bundle')
+        if not all(isinstance(row, dict) for row in (pinned, host, remote, transfer)):
+            raise ValueError('AUDIT_PROVENANCE_BINDING_MISSING')
+        if (record.get('audit_pin_commit_sha') != pinned.get('audit_pin_commit_sha')
+                or record.get('source_head_sha') != audit_workflow.get('run_head_sha')
+                or source_blobs.get('workflow') != audit_workflow.get('workflow_file_blob_sha')
+                or source_blobs.get('owner_guard') != pinned.get('owner_guard_blob_sha')
+                or source_blobs.get('operator_source') != pinned.get('operator_source_blob_sha')
+                or source_blobs.get('audit_source') != pinned.get('audit_source_blob_sha')
+                or source_blobs.get('transfer_bundle') != transfer.get('sha256')
+                or source_blobs.get('process_rows') != _pointer_value(document, '#/process_census').get('process_rows_sha256')
+                or not host.get('host_pin_verified')
+                or not transfer.get('request_and_source_binding_verified')
+                or not transfer.get('reassembly_verified')
+                or remote.get('remote_exit_code') != 0):
+            raise ValueError('AUDIT_PROVENANCE_MISMATCH')
+        if not _hex_digest(source_blobs.get('workflow'), 40):
+            raise ValueError('WORKFLOW_SOURCE_BLOB_INVALID')
+        if evidence.get('overall_audit') != document.get('overall_audit'):
+            raise ValueError('AUDIT_RESULT_BINDING_MISMATCH')
+
+    if task_id == '2V14-12':
+        inventory = evidence.get('inventory')
+        if (evidence.get('source_auth') != 'PASS'
+                or evidence.get('workflow_run_conclusion') != 'success'
+                or evidence.get('inventory_complete') is not True
+                or evidence.get('temporary_ssh_key_cleanup') != 'DETACHED_AND_VERIFIED'
+                or not isinstance(inventory, dict)
+                or inventory.get('schema') != 'NOX_GPU_INVENTORY_V1'
+                or inventory.get('identity_stable') is not True):
+            raise ValueError('GPU_INVENTORY_ACCEPTANCE_EVIDENCE_INVALID')
+        snapshots = inventory.get('snapshots')
+        if not isinstance(snapshots, list) or len(snapshots) < 2:
+            raise ValueError('GPU_INVENTORY_SNAPSHOTS_MISSING')
+        reference = None
+        for snapshot in snapshots:
+            rows = snapshot.get('rows') if isinstance(snapshot, dict) else None
+            if (snapshot.get('nvidia_smi_rc') != 0 or not isinstance(rows, list) or len(rows) != 2):
+                raise ValueError('GPU_INVENTORY_SNAPSHOT_INVALID')
+            identity = []
+            for gpu in rows:
+                if (not isinstance(gpu, dict) or gpu.get('model') != 'Tesla V100-SXM2-32GB'
+                        or not isinstance(gpu.get('uuid'), str)
+                        or type(gpu.get('memory_free_mib')) is not int
+                        or gpu.get('memory_free_mib') <= 0):
+                    raise ValueError('GPU_INVENTORY_DEVICE_INVALID')
+                identity.append((gpu['uuid'], gpu['model']))
+            if len({row[0] for row in identity}) != 2:
+                raise ValueError('GPU_UUIDS_NOT_DISTINCT')
+            if reference is not None and identity != reference:
+                raise ValueError('GPU_IDENTITIES_NOT_STABLE')
+            reference = identity
+        if (not inventory.get('computed_checks', {}).get('distinct_uuid_count') == 2
+                or inventory.get('computed_checks', {}).get('stable_uuids_across_snapshots') is not True
+                or not _hex_digest(evidence.get('inventory_sha256'))):
+            raise ValueError('GPU_INVENTORY_CHECKS_INVALID')
+    elif task_id == '6V14-02':
+        if scope != 'POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY':
+            raise ValueError('PROCESS_CENSUS_SCOPE_UNSUPPORTED')
+        census = evidence.get('process_census')
+        if not isinstance(census, dict):
+            raise ValueError('PROCESS_CENSUS_EVIDENCE_MISSING')
+        count = census.get('observed_row_count')
+        if (census.get('scope') != 'ALL_NUMERIC_PROC_PIDS_MINIMAL_IDENTITY'
+                or census.get('numeric_pid_enumeration_complete') is not True
+                or census.get('truncated') is not False
+                or census.get('enumeration_error_count') != 0
+                or census.get('unique_pid_row_count') != count
+                or census.get('duplicate_pid_row_count') != 0
+                or census.get('core_identity_complete') is not True
+                or census.get('core_identity_complete_row_count') != count
+                or not _positive_int(count)
+                or not _hex_digest(census.get('process_rows_sha256'))):
+            raise ValueError('PROCESS_CENSUS_CORE_CRITERION_NOT_MET')
+        if (evidence.get('overall_audit') != 'HOLD'
+                or document.get('overall_audit') != 'HOLD'
+                or audit.get('remote_execution', {}).get('workflow_result') != 'HOLD_AUDIT_CENSUS_INCOMPLETE'):
+            raise ValueError('PROCESS_CENSUS_OVERALL_STATUS_MISMATCH')
+        if evidence.get('process_census_pointer') != '#/process_census':
+            raise ValueError('PROCESS_CENSUS_POINTER_MISMATCH')
+    else:
+        raise ValueError('TASK_ACCEPTANCE_VARIANT_UNSUPPORTED')
+
+    conclusion = record_workflow.get('conclusion', audit_workflow.get('job_conclusion'))
+    result_status = evidence.get('workflow_run_conclusion', audit.get('remote_execution', {}).get('workflow_result'))
+    if task_id == '2V14-12' and (conclusion != 'success' or result_status != 'success'):
+        raise ValueError('GPU_WORKFLOW_STATUS_NOT_SUCCESS')
+    if task_id == '6V14-02' and not (conclusion == 'failure' and result_status == 'HOLD_AUDIT_CENSUS_INCOMPLETE'):
+        raise ValueError('PROCESS_CENSUS_WORKFLOW_STATUS_MISMATCH')
     return {
         'task_id': task_id,
-        'title': criterion.get('title') or record.get('title'),
+        'title': criterion.get('title') or record.get('title') or scope.get('task_criterion', {}).get('task_title'),
         'result': 'ACCEPTED',
+        'acceptance_scope': scope,
         'acceptance_pointer': pointer,
         'evidence_pointer': evidence_pointer,
         'run_binding_pointer': '#/criteria/%s/acceptance_binding' % task_id,
         'workflow_run_id': run_id,
         'job_id': job_id,
-        'owner_authorization_comment_id': owner_comment_id,
-        'workflow_result': workflow.get('conclusion'),
-        'evidence_result': evidence.get('workflow_run_conclusion'),
+        'owner_authorization_id': owner_id,
+        'workflow_conclusion': conclusion,
+        'evidence_result': result_status,
         'spec_sha256': spec_sha256,
         'record_number': record.get('record_number'),
         'source_path': source_path,
         'source_url': REPOSITORY_URL + '/blob/' + REPOSITORY_REF + '/' + source_path,
         'source_sha256': source_hash,
-    }
-
-
-def _validate_criterion_assessment_sidecar(document, task_id, spec_sha256, source_path, source_hash):
-    assessment = document.get('criterion_assessment')
-    if not isinstance(assessment, dict):
-        raise ValueError('SUPPORTED_ACCEPTANCE_BINDING_MISSING')
-    if task_id != '6V14-02':
-        raise ValueError('CRITERION_ASSESSMENT_VARIANT_UNSUPPORTED_TASK')
-    if (assessment.get('accepted') is not True
-            or assessment.get('criterion_confirmed_for_point_in_time_process_census') is not True):
-        raise ValueError('CRITERION_ASSESSMENT_NOT_ACCEPTED')
-    if (assessment.get('acceptance_increment') != 0
-            or assessment.get('original_all295_ledger_updated') is not False):
-        raise ValueError('ORIGINAL_LEDGER_MUTATION_CLAIM')
-    if assessment.get('acceptance_scope') != 'POINT_IN_TIME_PROCESS_SET_ENUMERATION_AND_CORE_IDENTITY_ONLY':
-        raise ValueError('CRITERION_SCOPE_UNSUPPORTED')
-    census = _pointer_value(document, '#/process_census')
-    if not isinstance(census, dict):
-        raise ValueError('CENSUS_POINTER_NOT_OBJECT')
-    count = census.get('observed_row_count')
-    if (census.get('scope') != 'ALL_NUMERIC_PROC_PIDS_MINIMAL_IDENTITY'
-            or census.get('numeric_pid_enumeration_complete') is not True
-            or census.get('truncated') is not False
-            or census.get('enumeration_error_count') != 0
-            or census.get('unique_pid_row_count') != count
-            or census.get('duplicate_pid_row_count') != 0
-            or census.get('core_identity_complete') is not True
-            or census.get('core_identity_complete_row_count') != count
-            or not _positive_int(count)
-            or not _hex_digest(census.get('process_rows_sha256'))):
-        raise ValueError('CENSUS_CORE_CRITERION_NOT_MET')
-    audit = document.get('audit_binding')
-    if not isinstance(audit, dict):
-        raise ValueError('AUDIT_BINDING_MISSING')
-    request = audit.get('request')
-    workflow = _pointer_value(document, '#/audit_binding/workflow')
-    remote = audit.get('remote_execution')
-    transfer = audit.get('transfer_bundle')
-    host = audit.get('host')
-    pinned = audit.get('pinned_audit_source')
-    if not all(isinstance(x, dict) for x in (request, workflow, remote, transfer, host, pinned)):
-        raise ValueError('AUDIT_BINDING_COMPONENT_MISSING')
-    run_id, job_id = workflow.get('run_id'), workflow.get('job_id')
-    comment_id = request.get('github_issue_comment_id')
-    if not all(_positive_int(value) for value in (run_id, job_id, comment_id)):
-        raise ValueError('AUDIT_RUN_IDS_INVALID')
-    if (request.get('request_kind') != 'owner-authenticated explicit read-only audit'
-            or not isinstance(request.get('command'), str)
-            or not request['command'].startswith('/nox-maintain ')
-            or not request['command'].endswith(' audit')):
-        raise ValueError('OWNER_AUDIT_REQUEST_BINDING_INVALID')
-    if (not _hex_digest(workflow.get('run_head_sha'), 40)
-            or not _hex_digest(pinned.get('audit_pin_commit_sha'), 40)
-            or not _hex_digest(pinned.get('audit_source_blob_sha'), 40)
-            or host.get('host_pin_verified') is not True
-            or not _positive_int(host.get('instance_id'))
-            or transfer.get('request_and_source_binding_verified') is not True
-            or transfer.get('reassembly_verified') is not True
-            or not _hex_digest(transfer.get('sha256'))
-            or not _positive_int(transfer.get('byte_count'))
-            or not _positive_int(transfer.get('chunk_count'))
-            or remote.get('remote_exit_code') != 0):
-        raise ValueError('AUDIT_SOURCE_OR_TRANSFER_BINDING_INVALID')
-    conclusion = workflow.get('job_conclusion')
-    workflow_result = remote.get('workflow_result')
-    if conclusion != 'success' and not (conclusion == 'failure' and
-            isinstance(workflow_result, str) and workflow_result.startswith('HOLD_')):
-        raise ValueError('AUDIT_WORKFLOW_STATUS_INVALID')
-    audit_hashes = (pinned.get('owner_guard_blob_sha'),
-                    pinned.get('operator_source_blob_sha'),
-                    pinned.get('audit_source_blob_sha'))
-    if not all(_hex_digest(value, 40) for value in audit_hashes):
-        raise ValueError('AUDIT_SOURCE_HASH_INVALID')
-    return {
-        'task_id': task_id,
-        'title': _pointer_value(document, '#/scope/task_criterion').get('task_title'),
-        'result': 'ACCEPTED',
-        'acceptance_pointer': '#/criterion_assessment',
-        'evidence_pointer': '#/process_census',
-        'run_binding_pointer': '#/audit_binding/workflow',
-        'workflow_run_id': run_id,
-        'job_id': job_id,
-        'owner_authorization_comment_id': comment_id,
-        'workflow_result': workflow_result,
-        'evidence_result': 'criterion_confirmed_for_point_in_time_process_census',
-        'spec_sha256': spec_sha256,
-        'record_number': None,
-        'source_path': source_path,
-        'source_url': REPOSITORY_URL + '/blob/' + REPOSITORY_REF + '/' + source_path,
-        'source_sha256': source_hash,
+        'source_git_blob_sha': source_blob,
     }
 
 
@@ -625,8 +684,11 @@ def supplemental_acceptance(directory, existing_receipt_count):
         dir_fd = _open_registry_no_follow(
             addenda_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
         )
-        with os.scandir(dir_fd) as entries:
-            names = sorted(entry.name for entry in entries if entry.name.endswith('.json'))
+        try:
+            with os.scandir(dir_fd) as entries:
+                names = sorted(entry.name for entry in entries if entry.name.endswith('.json'))
+        finally:
+            os.close(dir_fd)
         if len(names) > SUPPLEMENTAL_MAX_FILES:
             raise ValueError('ADDENDA_FILE_COUNT_LIMIT')
     except (OSError, ValueError) as exc:
@@ -673,7 +735,7 @@ def supplemental_acceptance(directory, existing_receipt_count):
                     spec_sha = manifest_rows[task_id]
                     _sidecar_refs(document, task_id, spec_sha)
                     if isinstance(criteria, dict) and task_id in criteria:
-                        item = _validate_record_sidecar(document, task_id, spec_sha, source_path, source_hash)
+                        item = _validate_record_sidecar(document, task_id, spec_sha, source_path, source_hash, git_blob_sha(raw))
                     else:
                         item = _validate_criterion_assessment_sidecar(
                             document, task_id, spec_sha, source_path, source_hash
