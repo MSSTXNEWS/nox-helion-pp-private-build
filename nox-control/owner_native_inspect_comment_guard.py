@@ -25,7 +25,7 @@ APPROVED_SOURCE_BY_ACTION = {
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
     "refill_snapshot": "c4683943fe17368ab2086f6ae7ff27ad21732ef7",
     "source_export": "845c76d44676d56157125e729db81b45e006cf92",  # exact pinned encrypted-only #415 source export
-    "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
+    "emergency_stop": "101e4ddb258bc48e490e66624a1f0a85401f1e06",  # exact drained emergency-stop source commit
     "emergency_stop_preflight": "26d20a37c0ec1c9ca1addd373d89baec29ebb632",  # bounded read-only endpoint facts
 }
 # An additional read-only inspect pin preserves existing callers at the prior SHA.
