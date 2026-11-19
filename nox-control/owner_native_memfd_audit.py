@@ -33,6 +33,7 @@ MAX_MAPS_BYTES_PER_PID = 1024 * 1024
 MAX_MAPS_BYTES_TOTAL = 8 * 1024 * 1024
 MAX_MAPS_LINES_TOTAL = 65536
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
+SAFE_EXECUTABLE_BASENAME = re.compile(r"^[A-Za-z0-9._+-]{1,64}$")
 IDENTITY_HOLD_ALLOWLIST = {
     "HOLD_PROC_STAT_IDENTITY", "HOLD_PROC_STAT_FIELDS", "HOLD_READ_LIMIT",
     "HOLD_HOLDER_SCRIPT_SHAPE", "HOLD_HOLDER_PATH_IDENTITY",
@@ -65,6 +66,13 @@ def sanitized_identity_failure(exc: BaseException) -> str:
     if isinstance(exc, Hold) and str(exc) in IDENTITY_HOLD_ALLOWLIST:
         return str(exc)
     return "HOLD_HOLDER_IDENTITY_UNREADABLE"
+
+
+def safe_executable_basename(value: object) -> str | None:
+    if (not isinstance(value, str) or value in {".", ".."} or
+            not SAFE_EXECUTABLE_BASENAME.fullmatch(value)):
+        return None
+    return value
 
 
 def _read(path: Path, limit: int) -> bytes:
@@ -116,7 +124,9 @@ def proc_identity(proc_root: Path, pid: int) -> dict:
     exe_name = Path(os.fsdecode(exe).removesuffix(" (deleted)")).name
     if exe_name not in {
             "python", "python3", "python3.11", "python3.12", "python3.13"}:
-        raise Hold("HOLD_HOLDER_EXECUTABLE_SHAPE")
+        safe_name = safe_executable_basename(exe_name)
+        diagnostics = {"executable_basename": safe_name} if safe_name else {}
+        raise Hold("HOLD_HOLDER_EXECUTABLE_SHAPE", diagnostics)
     try:
         cgroup = _read(base / "cgroup", MAX_CGROUP_BYTES)
     except (OSError, Hold) as exc:
@@ -495,6 +505,12 @@ def run_audit(proc_root: Path = Path("/proc")) -> dict:
                 owner["identity"] = identity
             except Exception as exc:
                 failure = {"pid": pid, "failure_code": sanitized_identity_failure(exc)}
+                if (failure["failure_code"] == "HOLD_HOLDER_EXECUTABLE_SHAPE" and
+                        isinstance(exc, Hold)):
+                    safe_name = safe_executable_basename(
+                        exc.diagnostics.get("executable_basename"))
+                    if safe_name is not None:
+                        failure["executable_basename"] = safe_name
                 if before_ticks is not None and before_ticks == after_ticks:
                     failure["start_ticks"] = before_ticks
                 if (fd_result.get("status") == "OK" and
@@ -605,20 +621,4 @@ def main() -> int:
     started = time.time()
     try:
         result = run_audit()
-        result.update(request_id=int(request), source_sha=source_sha,
-                      started_at=started, finished_at=time.time())
-        print("NOX_MAINT_MEMFD_AUDIT=" + json.dumps(result, separators=(",", ":")), flush=True)
-        print("NOX_MAINT_MEMFD_AUDIT_COMPLETE=true", flush=True)
-        return 0
-    except Hold as exc:
-        print("NOX_MAINT_MEMFD_AUDIT=" + json.dumps({
-            "schema": SCHEMA, "request_id": int(request), "source_sha": source_sha,
-            "state": str(exc), "complete": False, "partial": True,
-            "scan_counters": LAST_SCAN, "diagnostics": exc.diagnostics,
-            "host_mutations": False, "signals_sent": False, "supervisor_rpc": False,
-            "finished_at": time.time()}, separators=(",", ":")), flush=True)
-        return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+        result.update(request_id=int(request), source

@@ -70,6 +70,29 @@ class MemfdAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(audit.Hold, "HOLD_HOLDER_EXECUTABLE_SHAPE"):
                 audit.proc_identity(root, 777011)
 
+    def test_safe_executable_basename_is_bounded_and_rejects_paths_or_unsafe_text(self):
+        self.assertEqual(audit.safe_executable_basename("custom-runtime"), "custom-runtime")
+        self.assertIsNone(audit.safe_executable_basename("/opt/bin/custom-runtime"))
+        self.assertIsNone(audit.safe_executable_basename("bad name\nsecret"))
+        self.assertIsNone(audit.safe_executable_basename("x" * 65))
+
+    def test_executable_shape_receipt_contains_only_safe_basename(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "proc"
+            root.mkdir()
+            memfd = make_memfd_fixture(Path(temp))
+            write_proc(root, 777012, argv=holder_argv(), memfd=memfd,
+                       exe_path="/private/path/custom-runtime")
+            with self.assertRaisesRegex(
+                    audit.Hold, "HOLD_MEMFD_OWNER_SCRIPT_IDENTITY_UNVERIFIED") as raised:
+                audit.run_audit(root)
+        failure = raised.exception.diagnostics["candidate_identity_failures"][0]
+        self.assertEqual(failure["failure_code"], "HOLD_HOLDER_EXECUTABLE_SHAPE")
+        self.assertEqual(failure["executable_basename"], "custom-runtime")
+        encoded = json.dumps(raised.exception.diagnostics, sort_keys=True)
+        self.assertNotIn("/private/path", encoded)
+        self.assertNotIn("custom-runtime\n", encoded)
+
     def test_holder_path_is_matched_by_basename(self):
         self.assertEqual(audit._script_path_token(holder_argv()),
                          b"/moved/location/engram_memfd_holder.py")
@@ -264,30 +287,4 @@ class MemfdAuditTests(unittest.TestCase):
             b"x" * 4097, None, None)
         self.assertTrue(truncated)
 
-    def test_owner_operator_dispatches_exact_owner_action(self):
-        self.assertEqual(operator.FILES["memfd_audit"],
-                         "nox-control/owner_native_memfd_audit.py")
-
-    def test_start_tick_parser_handles_parenthesis_in_comm(self):
-        fields = ["S", "7", "8"] + ["0"] * 16 + ["456"]
-        raw = ("123 (worker ) nested) " + " ".join(fields) + "\n").encode()
-        self.assertEqual(audit._parse_start_ticks(raw, 123), 456)
-
-    def test_source_has_no_remote_mutation_or_raw_path_export(self):
-        tree = ast.parse(Path(audit.__file__).read_text())
-        imported = {alias.name.split(".")[0]
-                    for node in ast.walk(tree)
-                    if isinstance(node, (ast.Import, ast.ImportFrom))
-                    for alias in node.names}
-        self.assertFalse(imported & {"subprocess", "socket", "xmlrpc"})
-        calls = [node.func.attr if isinstance(node.func, ast.Attribute)
-                 else node.func.id if isinstance(node.func, ast.Name) else ""
-                 for node in ast.walk(tree) if isinstance(node, ast.Call)]
-        self.assertFalse({"kill", "unlink", "write_text", "write_bytes", "system"} & set(calls))
-        source = Path(audit.__file__).read_text().lower()
-        self.assertNotIn("supervisorctl", source)
-        self.assertNotIn("sigterm", source)
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def t
