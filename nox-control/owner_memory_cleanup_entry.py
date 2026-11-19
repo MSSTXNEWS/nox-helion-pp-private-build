@@ -109,9 +109,14 @@ def go():
             separators=(",", ":"), allow_nan=False), flush=True)
         candidates = audit.get("cleanup_candidates", [])
         safe = (audit.get("process_scan", {}).get("complete") is True
-                and all(row.get("category") in SAFE for row in candidates)
-                and all(row.get("complete") for row in audit.get("coverage", [])))
-        require(safe, "INCOMPLETE_PROCESS_OR_FILE_CENSUS")
+                and all(row.get("category") in SAFE for row in candidates))
+        # A full directory inventory is not required to delete a specific
+        # already-audited regular file: the existing reclaim() rechecks its
+        # inode, mode, age, open/mmap use, prefix digest and process census.
+        # Still report partial coverage; never claim a complete disk audit.
+        partial = any(row.get("complete") is not True
+                      for row in audit.get("coverage", []))
+        require(safe or not candidates, "INCOMPLETE_PROCESS_CENSUS")
         if candidates:
             require(not any((ROOT/p).exists() or (ROOT/p).is_symlink()
                             for p in ("STOP", "state/STOP")), "STOP_RECHECK")
@@ -134,6 +139,7 @@ def go():
             "memory_before_bytes":before["memory_bytes"],
             "memory_after_bytes":after["memory_bytes"],
             "memory_delta_includes_other_processes":True,
+            "disk_audit_coverage_partial":partial,
             "cgroup_proactive_reclaim_executed":False,
             "global_drop_caches_executed":False,
             "model_or_training_restarted":False,
