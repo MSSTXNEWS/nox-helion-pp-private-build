@@ -1428,6 +1428,7 @@ class Native:
                     return 'wait', 'HOLD_SUBAGENT_POOL_NOT_READY'
             except (OSError, ValueError, autonomy.AutoHold):
                 return 'wait', 'HOLD_NATIVE_SUBAGENT_ADMISSION'
+        worker_submit_attempted = False
         try:
             with self.lock:
                 if self.pool is None:
@@ -1440,6 +1441,7 @@ class Native:
                     return 'wait', reason
                 if task['id'] in self.interrupted:
                     return 'wait', 'HOLD_NATIVE_INTERRUPTED_UNSETTLED'
+                worker_submit_attempted = True  # IPC delivery is ambiguous on submit failure.
                 self.pool.submit({'id': task['id'], 'subagent': role, 'task': task['title'], 'depends_on': [],
                     '_native_context': {'policy': self.policy, 'operation': role,
                                         'claim': task['owner_claim']['nonce']}})
@@ -1499,6 +1501,11 @@ class Native:
                           'receipt': result, 's03': proof, 'receipt_sha256': digest(encoded(result)),
                           'candidate_applied': False}
         except (OSError, ValueError, sqlite3.Error, GateError) as exc:
+            if worker_submit_attempted:
+                # S03 write/readback may have committed before raising. A second
+                # worker call would duplicate an unresolved owner claim.
+                with self.lock:
+                    self.interrupted.setdefault(task['id'], 'HOLD_NATIVE_REVIEW_ERROR_UNSETTLED')
             return False, str(exc) if isinstance(exc, GateError) else 'HOLD_SUBAGENT_NATIVE_IO'
 
     def _handle_leaf(self, task):
@@ -1511,6 +1518,7 @@ class Native:
                 or task.get('queue_id') != approved['queue_id']
                 or not self._claim_current(task, durable=True)):
             return False, 'HOLD_NATIVE_LEAF_CLAIM'
+        worker_submit_attempted = False
         try:
             if self.stop_active() or not self.writer_lease() or not self.owner_allowed():
                 return 'wait', 'HOLD_OWNER_STOP_OR_WRITER_LEASE'
@@ -1537,6 +1545,7 @@ class Native:
                 reason = self._fresh_admission_reason(leaf_only=True)
                 if reason:
                     return 'wait', reason
+                worker_submit_attempted = True  # IPC delivery is ambiguous on submit failure.
                 self.pool.submit({'id':task['id'], 'subagent':role, 'task':task['title'], 'depends_on':[],
                     '_native_leaf_context':{'operation':params['operation'],
                         'parent_task_id':params['parent_task_id'], 'queue_id':task['queue_id'],
@@ -1617,6 +1626,10 @@ class Native:
                 's03':proof, 'receipt_sha256':digest(encoded(result)),
                 'original_task_accepted':False, 'check_passed':leaf['check_passed']}
         except (OSError, ValueError, sqlite3.Error, GateError) as exc:
+            if worker_submit_attempted:
+                # Fail closed on uncertain S03 commit or worker result proof.
+                with self.lock:
+                    self.interrupted.setdefault(task['id'], 'HOLD_NATIVE_LEAF_ERROR_UNSETTLED')
             return False, str(exc) if isinstance(exc, GateError) else 'HOLD_NATIVE_LEAF_IO'
 
     def verify(self, task, evidence):
