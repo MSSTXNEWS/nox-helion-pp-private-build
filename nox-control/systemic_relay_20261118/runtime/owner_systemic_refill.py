@@ -577,8 +577,11 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
             reason = 'NATIVE_TASK_STATUS_UNKNOWN_HOLD'
         elif task_id in state_snapshot or (name,mission['revision']) in admitted_missions:
             reason = 'ALREADY_ADMITTED_NO_REPLAY'
-        elif any(state_snapshot.get(task_id,{}).get('status') not in ('done','verified')
-                 for task_id in mission.get('dependencies',[])):
+        # A malformed/missing dependency row cannot prove that it finished.
+        # Fail closed without crashing the existing refill observation loop.
+        elif any(not isinstance(state_snapshot.get(dep), dict)
+                 or state_snapshot[dep].get('status') not in ('done', 'verified')
+                 for dep in mission.get('dependencies', [])):
             reason = 'DEPENDENCY_NOT_VERIFIED'
         elif any(source_pins.get(mission['root_id'],{}).get(row['path']) != row['sha256']
                  for row in mission['context']):
