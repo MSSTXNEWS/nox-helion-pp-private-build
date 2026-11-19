@@ -299,6 +299,9 @@ def main():
                 'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
                 'answer_sha256':digest(text.encode()),'raw_answer_exported':False})
             require_executor_witness(end,third_history,expected_three,count,phrase)
+            # Third inference and durable-history readback also consume the 210 s budget.
+            # A passed pre-POST gate alone must never authorize final COMPLETE.
+            require_executor_turn_budget(time.monotonic()-probe_started)
         emit('chat_recent_timing_after',metrics())
     finally:
         try:request(client,'/chat/logout','POST',{}).close()
