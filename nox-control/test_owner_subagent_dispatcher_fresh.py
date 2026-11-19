@@ -180,7 +180,8 @@ class PoolLifecycleTests(unittest.TestCase):
                         'process_starttime': child.pid + 1}
             for child in (*children.values(), replacement)
         }
-        def replace_dead_only():
+        def replace_dead_only(*, allow_replacement):
+            self.assertTrue(allow_replacement())
             children['runtime'] = replacement
             pool.heartbeats['runtime'] = time.time()
         pool._replace_idle_dead_pool.side_effect = replace_dead_only
