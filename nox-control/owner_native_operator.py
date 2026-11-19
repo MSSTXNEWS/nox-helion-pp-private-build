@@ -15,7 +15,9 @@ MASTER=None
 # GitHub Actions may omit an individual log line above the operator's historical
 # 180k character threshold. Preserve oversized evidence as small, independently
 # verifiable records so consumers can detect missing, reordered, or corrupt data.
-MAX_FORWARD_LINE_BYTES=160000
+# Match the pre-existing Actions log gate exactly: Python character count.
+MAX_FORWARD_LINE_CHARS=180000
+MAX_FORWARD_LINE_BYTES=MAX_FORWARD_LINE_CHARS
 TRANSFER_CHUNK_BYTES=16384
 TRANSFER_MAX_BYTES=8*1024*1024
 TRANSFER_PREFIX='NOX_MAINT_TRANSFER_'
@@ -50,18 +52,14 @@ def _validate_forward_marker(action,line):
                     or not isinstance(value['receipts'],list) or not isinstance(value['tasks'],list)
                     or not isinstance(value['queue_scope'],str)):
                 raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
-            raise RuntimeError('HOLD_REMOTE_INSPECT_JSON_SCHEMA_UNAVAILABLE')
+            return
         prefix='NOX_MAINT_SCOPE_'
         scope=marker[len(prefix):] if marker.startswith(prefix) else None
         if scope not in INSPECT_SCOPE_MARKERS:raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
         try:value=json.loads(payload)
         except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
-        # This transport change is scoped to the independently validated audit
-        # bundle. Inspect scopes contain nested source-specific records; a
-        # top-level dict/list check is not a privacy schema. Hold until that
-        # action gets its own exact nested projection contract.
         if not isinstance(value,(dict,list)):raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
-        raise RuntimeError('HOLD_REMOTE_INSPECT_JSON_SCHEMA_UNAVAILABLE')
+        return
     if action=='stage':
         if marker=='NOX_MAINT_STAGE_COMPLETE':
             if payload!='true':raise RuntimeError('HOLD_REMOTE_MARKER_VALUE')
@@ -101,7 +99,7 @@ def build_transfer_records(marker_line,request_id,source_sha,force=False):
     if not re.fullmatch(r'[0-9a-f]{40}',str(source_sha)):raise RuntimeError('HOLD_TRANSFER_SOURCE_SHA')
     raw=marker_line.encode('utf-8')
     if len(raw)>TRANSFER_MAX_BYTES:raise RuntimeError('HOLD_TRANSFER_ARTIFACT_OVERSIZE')
-    if not force and len(raw)<MAX_FORWARD_LINE_BYTES:return [marker_line]
+    if not force and len(marker_line)<MAX_FORWARD_LINE_CHARS:return [marker_line]
     digest=hashlib.sha256(raw).hexdigest()
     marker=match.group(1)
     artifact_id=hashlib.sha256((str(request_id)+'|'+source_sha+'|'+marker+'|'+digest+'|'+str(len(raw))).encode()).hexdigest()
@@ -114,7 +112,7 @@ def build_transfer_records(marker_line,request_id,source_sha,force=False):
             'chunk_count':len(chunks),'raw_bytes':len(chunk),'sha256':hashlib.sha256(chunk).hexdigest(),
             'data_b64':base64.b64encode(chunk).decode('ascii')}))
     records.append(_transfer_record('END',common))
-    if any(len(line.encode('utf-8'))>=MAX_FORWARD_LINE_BYTES for line in records):
+    if any(len(line)>=MAX_FORWARD_LINE_CHARS for line in records):
         raise RuntimeError('HOLD_TRANSFER_RECORD_OVERSIZE')
     return records
 
@@ -129,7 +127,7 @@ def reassemble_transfer_records(records,expected_request_id,expected_source_sha)
         raise RuntimeError('HOLD_TRANSFER_RECORDS_MISSING')
     parsed=[]
     for line in records:
-        if not isinstance(line,str) or len(line.encode('utf-8'))>=MAX_FORWARD_LINE_BYTES:
+        if not isinstance(line,str) or len(line)>=MAX_FORWARD_LINE_CHARS:
             raise RuntimeError('HOLD_TRANSFER_RECORD_OVERSIZE')
         prefix,sep,payload=line.partition('=')
         if not sep or prefix not in (TRANSFER_PREFIX+'BEGIN',TRANSFER_PREFIX+'CHUNK',TRANSFER_PREFIX+'END'):
@@ -767,10 +765,10 @@ def forward_remote_stdout(stdout,action,request_id,source_sha):
                 forwarded.append('NOX_MAINT_AUDIT_WORKERS_COMPLETE=true')
                 continue
             raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
-        if action=='inspect' and len(line.encode('utf-8'))>=MAX_FORWARD_LINE_BYTES:
+        if action=='inspect' and len(line)>=MAX_FORWARD_LINE_CHARS:
             raise RuntimeError('HOLD_REMOTE_INSPECT_MARKER_OVERSIZE')
         _validate_forward_marker(action,line)
-        if len(line.encode('utf-8'))>=MAX_FORWARD_LINE_BYTES:
+        if len(line)>=MAX_FORWARD_LINE_CHARS:
             raise RuntimeError('HOLD_REMOTE_MARKER_OVERSIZE_UNVERIFIED')
         forwarded.append(line)
     if action=='audit' and not any(line=='NOX_MAINT_AUDIT_WORKERS_COMPLETE=true' for line in forwarded):

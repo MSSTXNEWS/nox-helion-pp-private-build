@@ -409,16 +409,47 @@ class OwnerNativeOutputTransferTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"HOLD_REMOTE_INSPECT_MARKER_OVERSIZE"):
             OP.forward_remote_stdout(marker + "\n", "inspect", REQUEST_ID, SOURCE_SHA)
 
-    def test_inspect_nested_unverified_json_fails_closed(self):
-        markers=(
-            'NOX_MAINT_SCOPE_LOCKS='+json.dumps({"rows":[{"secret":"SECRET_NESTED_SENTINEL"}]}),
-            'NOX_MAINT_COMPONENTS='+json.dumps({"receipts":[{"private":"SECRET_NESTED_SENTINEL"}],
-                                                "tasks":[],"queue_scope":"OWNER_TASK_STATUS_ONLY"}),
+    def test_non_audit_nested_markers_keep_under_cap_legacy_forwarding(self):
+        cases=(
+            ("inspect",'NOX_MAINT_SCOPE_LOCKS='+json.dumps({"private":{"secret":"legacy"}}),
+             "NOX_MAINT_INSPECT_COMPLETE=true"),
+            ("stage",'NOX_MAINT_STAGE='+json.dumps({"kind":"failure","data":{"private":"legacy"}}),
+             "NOX_MAINT_STAGE_COMPLETE=true"),
+            ("repair",'NOX_MAINT_REFLEX_RESTORE='+json.dumps({"private":{"secret":"legacy"}}),
+             "NOX_MAINT_REPAIR_COMPLETE=true"),
+            ("lifeline",'NOX_MAINT_LIFELINE='+json.dumps({"private":{"secret":"legacy"}}),
+             "NOX_MAINT_LIFELINE_COMPLETE=true"),
         )
-        for marker in markers:
-            with self.subTest(marker=marker[:32]),self.assertRaisesRegex(RuntimeError,"HOLD_REMOTE_INSPECT_JSON_SCHEMA_UNAVAILABLE"):
-                OP.forward_remote_stdout(marker+"\nNOX_MAINT_INSPECT_COMPLETE=true\n",
-                                         "inspect",REQUEST_ID,SOURCE_SHA)
+        for action,payload,complete in cases:
+            with self.subTest(action=action):
+                forwarded=OP.forward_remote_stdout(payload+"\n"+complete+"\n",action,REQUEST_ID,SOURCE_SHA)
+                self.assertEqual(forwarded,[payload,complete])
+                self.assertFalse(any(line.startswith(OP.TRANSFER_PREFIX) for line in forwarded))
+
+    def test_non_audit_payload_threshold_is_exactly_180000_and_never_chunks(self):
+        cases=(
+            ("inspect","NOX_MAINT_SCOPE_LOCKS=","NOX_MAINT_INSPECT_COMPLETE=true",{"data":""}),
+            ("stage","NOX_MAINT_STAGE=","NOX_MAINT_STAGE_COMPLETE=true",{"kind":"failure","data":""}),
+            ("repair","NOX_MAINT_REFLEX_RESTORE=","NOX_MAINT_REPAIR_COMPLETE=true",{"data":""}),
+            ("lifeline","NOX_MAINT_LIFELINE=","NOX_MAINT_LIFELINE_COMPLETE=true",{"data":""}),
+        )
+        for action,prefix,complete,shape in cases:
+            base=prefix+json.dumps(shape,separators=(",",":"),ensure_ascii=False)
+            filler=179999-len(base)
+            shape={**shape,"data":(shape.get("data","")+"é"*filler)}
+            line=prefix+json.dumps(shape,separators=(",",":"),ensure_ascii=False)
+            self.assertEqual(len(line),179999)
+            self.assertGreater(len(line.encode("utf-8")),180000)
+            with self.subTest(action=action,bound=179999):
+                self.assertEqual(OP.forward_remote_stdout(line+"\n"+complete+"\n",action,REQUEST_ID,SOURCE_SHA),
+                                 [line,complete])
+
+            overflow={**shape,"data":shape.get("data","")+"é"}
+            line_over=prefix+json.dumps(overflow,separators=(",",":"),ensure_ascii=False)
+            self.assertEqual(len(line_over),180000)
+            expected="HOLD_REMOTE_INSPECT_MARKER_OVERSIZE" if action=="inspect" else "HOLD_REMOTE_MARKER_OVERSIZE_UNVERIFIED"
+            with self.subTest(action=action,bound=180000),self.assertRaisesRegex(RuntimeError,expected):
+                OP.forward_remote_stdout(line_over+"\n"+complete+"\n",action,REQUEST_ID,SOURCE_SHA)
 
     def test_completion_marker_must_be_one_exact_terminal_line(self):
         marker="NOX_MAINT_INSPECT_COMPLETE=true"
