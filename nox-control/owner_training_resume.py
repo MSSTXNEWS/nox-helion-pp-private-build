@@ -762,6 +762,10 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
             or type(step) is not int or not 1 <= step <= max_step
             or type(result.get('successful_optimizer_steps')) is not int
             or not 1 <= result['successful_optimizer_steps'] <= step
+            # During the initial bounded 1..5 step run, each global step must
+            # correspond to an independently reported optimizer update. A
+            # resumed 1000-step lineage may carry a per-run delta instead.
+            or (not allow_completed and result['successful_optimizer_steps'] != step)
             or result.get('adapter_delta_verified') is not True
             or type(result.get('loss')) not in (int, float) or not math.isfinite(result['loss'])):
         raise RuntimeError('HOLD_PAUSED_OPTIMIZER_RECEIPT')
