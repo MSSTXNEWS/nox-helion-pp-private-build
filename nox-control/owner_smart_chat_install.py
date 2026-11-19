@@ -38,7 +38,7 @@ ROOT = Path('/root/nox')
 STATE = ROOT / 'state'
 SCRIPTS = ROOT / 'scripts'
 SITE = ROOT / 'incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site'
-AREA = ROOT / 'backup/owner_smart_chat'
+AREA = STATE / 'owner_smart_chat_backups'
 TARGETS = {
     'stream': SCRIPTS / 'owner_chat_stream.py',
     'bridge': SCRIPTS / 'nox_v29_chat_bridge.py',
