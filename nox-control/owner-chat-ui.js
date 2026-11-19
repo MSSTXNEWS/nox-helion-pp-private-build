@@ -230,7 +230,7 @@
     async function refreshEvents(){
       if(eventsBusy||document.hidden)return;eventsBusy=true;
       try{
-        const value=await api('/api/ui/events?limit=20'+(eventCursor===null?'':'&cursor='+eventCursor));
+        const value=await api('/api/ui/events/snapshot?limit=20'+(eventCursor===null?'':'&cursor='+eventCursor));
         if(value.schema!=='NOX_OWNER_EVENTS_V1'||!Array.isArray(value.events)||!Number.isSafeInteger(value.next_cursor))return;
         for(const event of value.events){
           if(!Number.isSafeInteger(event.sequence)||typeof event.title!=='string'||typeof event.message!=='string')continue;
@@ -245,7 +245,7 @@
         eventCursor=value.next_cursor;try{localStorage.setItem('nox.owner.events.cursor',String(eventCursor));}catch{}
         const nextTitle=eventCount?'Отчёты NOX · '+eventCount:'Отчёты NOX · ожидаю события';
         if(reportTitle.textContent!==nextTitle)reportTitle.textContent=nextTitle;
-      }catch{if(!eventCount)reportTitle.textContent='Отчёты NOX · подключение';}
+      }catch{reportTitle.textContent='Отчёты NOX · снимок недоступен';}
       finally{eventsBusy=false;}
     }
     void refreshEvents();setInterval(()=>void refreshEvents(),5000);
