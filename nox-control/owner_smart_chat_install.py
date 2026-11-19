@@ -418,7 +418,24 @@ def stop_proxy(expected):
 
 
 def start_proxy(expected_executable, on_started=None):
-    gate(); require(service('nox-proxy')['state'] in ('STOPPED', 'EXITED', 'FATAL'), 'PROXY_START_STATE')
+    """Accept no stale or half-started proxy after the source exchange.
+
+    Supervisor may auto-restart the service while the owner controls the lock.
+    Quiesce that exact managed proxy, then do one explicit clean reload.
+    """
+    gate()
+    row = service('nox-proxy')
+    if row['state'] in ('STARTING', 'BACKOFF', 'STOPPING'):
+        command(['supervisorctl', 'stop', 'nox-proxy'], timeout=35)
+        row = service('nox-proxy')
+    if row['state'] == 'RUNNING':
+        require(row['executable'] == expected_executable, 'UNEXPECTED_PROXY_EXECUTABLE')
+        require(slots_idle(), 'AUTORESTART_MODEL_BUSY')
+        proxy_group_alone(row['identity'])
+        stop_proxy(row['identity'])
+        row = service('nox-proxy')
+    require(row['state'] in ('STOPPED', 'EXITED', 'FATAL'), 'PROXY_NOT_QUIESCENT')
+    gate()
     code, _ = command(['supervisorctl', 'start', 'nox-proxy'], timeout=35)
     require(code == 0, 'PROXY_START_COMMAND')
     deadline = time.monotonic() + 25
@@ -692,11 +709,20 @@ def main():
                     try:
                         signal.setitimer(signal.ITIMER_REAL, 95)
                         current = service('nox-proxy')
+                        if current['state'] in ('STARTING', 'BACKOFF', 'STOPPING'):
+                            command(['supervisorctl', 'stop', 'nox-proxy'], timeout=35)
+                            current = service('nox-proxy')
                         if current['state'] == 'RUNNING':
-                            own = new_proxy or expected['nox-proxy']
-                            require(current.get('identity') == own, 'ROLLBACK_FOREIGN_PROXY')
+                            # Another process may have been autorestarted by Supervisor;
+                            # never assume its PID, recheck exact managed script,
+                            # model inactivity and exclusive process group before stop.
+                            now = current['identity']
+                            require(now['pid'] != expected['nox-proxy']['pid'] and
+                                    now['start_ticks'] > expected['nox-proxy']['start_ticks'],
+                                    'ROLLBACK_FOREIGN_PROXY')
+                            require(current['executable'] == original_executable, 'ROLLBACK_PROXY_EXECUTABLE')
                             if any(pair(row) == 'INSTALLED' for row in rows):
-                                stop_proxy(own)
+                                stop_proxy(now)
                         require(service('nox-proxy')['state'] in ('STOPPED', 'EXITED', 'FATAL', 'RUNNING'), 'ROLLBACK_SERVICE_STATE')
                         for row in reversed(rows):
                             if pair(row) == 'INSTALLED':
