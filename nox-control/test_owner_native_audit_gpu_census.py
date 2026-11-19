@@ -551,8 +551,8 @@ class GpuConsumerCensusTests(unittest.TestCase):
             if argv[0] == 'nvidia-smi':
                 return 0, app_text(101)
             if argv == ['supervisorctl', 'status']:
-                return 3, ('nox-worker RUNNING pid 200, uptime 0:00:01\\n'
-                           'idle STOPPED\\n')
+                return 3, ('nox-worker RUNNING pid 200, uptime 0:00:01\n'
+                           'idle STOPPED\n')
             return 0, ''
         census = MOD.gpu_process_census(self.proc, run_fn=runner, clock=self.clock())
         services = census['supervisor_services']
