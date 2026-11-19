@@ -137,7 +137,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
             "params": {"operation": "source_read", "parent_task_id": "6V14-03",
                        "source_sha256": "sha-pinned", "job_id": "job-1"},
         }
-        owner = SimpleNamespace(
+        owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            
             catalog={"tasks": [task]}, source="sha-pinned", pool=None,
             lock=threading.Lock(), interrupted={},
             _claim_current=lambda *a, **k: True,
@@ -184,7 +185,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                        "source_sha256": "sha-pinned", "job_id": "job-1"},
         }
         marker = "WAIT_OWNER_STOP_OR_CHAT_PRIORITY"
-        owner = SimpleNamespace(
+        owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            
             catalog={"tasks": [task]}, source="sha-pinned", pool=None,
             lock=threading.Lock(), interrupted={task["id"]: marker},
             _claim_current=lambda *a, **k: True,
@@ -224,7 +226,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
             "params": {"role": "runtime", "policy_sha256": "policy-sha", "job_id": "job-1"},
         }
         marker = "WAIT_OWNER_STOP_OR_CHAT_PRIORITY"
-        owner = SimpleNamespace(
+        owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            
             projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
             lock=threading.RLock(), interrupted={task["id"]: marker}, pool=None,
             _claim_current=lambda *a, **k: True,
@@ -270,7 +273,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                      "policy_ack": {"sha256": "policy-sha", "full_file_read": True},
                      "worker": {"pid": 17}}}
         submissions = []
-        owner = SimpleNamespace(
+        owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            
             projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
             source="source-sha", lock=threading.RLock(), interrupted={},
             completed={}, _claim_current=lambda *a, **kw: True,
@@ -334,7 +338,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         def lease():
             leases.append(True)
             return len(leases) != 3
-        owner = SimpleNamespace(
+        owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            
             catalog={"tasks": [task]}, source="source-sha",
             config={"leaf_source_pins": pins}, lock=threading.RLock(),
             interrupted={}, completed={}, pool=None,
@@ -402,7 +407,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                         "source_sha256": "source-sha", "source_pins": pins}
                 event = {"state": "NATIVE_LEAF_COMPLETED", "pid": 17,
                          "leaf_evidence": leaf, "leaf_evidence_sha256": digest(encoded(leaf))}
-                owner = SimpleNamespace(
+                owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            
                     catalog={"tasks": [task]}, source="source-sha",
                     config={"leaf_source_pins": pins}, lock=threading.RLock(),
                     interrupted={}, completed={}, pool=None,
@@ -468,7 +474,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                      "policy_ack": {"sha256": "policy-sha", "full_file_read": True},
                      "worker": {"pid": 17}}}
         submits = []
-        owner = SimpleNamespace(
+        owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            
             projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
             source="source-sha", lock=threading.RLock(), interrupted={},
             completed={}, _claim_current=lambda *a, **kw: True,
@@ -526,7 +533,8 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         event = {"state": "NATIVE_LEAF_COMPLETED", "pid": 17,
                  "leaf_evidence": leaf, "leaf_evidence_sha256": digest(encoded(leaf))}
         submits = []
-        owner = SimpleNamespace(
+        owner = SimpleNamespace(_durable_submit_fence=lambda task: None,
+            
             catalog={"tasks": [task]}, source="source-sha",
             config={"leaf_source_pins": pins}, lock=threading.RLock(),
             interrupted={}, completed={}, pool=None,
@@ -548,6 +556,86 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         self.assertEqual(scope["_handle_leaf"](owner, task),
                          ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
         self.assertEqual(len(submits), 1)
+
+    def test_durable_presubmit_intent_survives_restart_and_blocks_replay(self):
+        # Real AST-extracted source method, real JSON on disk, two fresh owner
+        # objects. No host imports, native workers or model/queue mutation.
+        import json
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                      and n.name == "Native")
+        methods = [n for n in native.body if isinstance(n, ast.FunctionDef)
+                   and n.name == "_durable_submit_fence"]
+        self.assertEqual(len(methods), 1)
+        scope = {
+            "document": lambda path, limit: json.loads(Path(path).read_text()),
+            "GateError": RuntimeError, "time": time,
+        }
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=methods, type_ignores=[])), str(SOURCE), "exec"), scope)
+        self.assertEqual(SOURCE.read_text().count("self._durable_submit_fence(task)"), 2)
+        for handler in ("owner_native_subagent_review", "owner_native_typed_leaf"):
+            with self.subTest(handler=handler), tempfile.TemporaryDirectory() as temp:
+                path = Path(temp) / "state.json"
+                task = {"id": "B1-RESTART-INTENT", "handler": handler,
+                        "status": "running",
+                        "owner_claim": {"nonce": "1234567890ab1234567890ab", "pid": 123},
+                        "params": {"job_id": "stable-job"}}
+                original = {"tasks": {task["id"]: dict(task)}}
+                path.write_text(json.dumps(original))
+                def saved(state):
+                    path.write_text(json.dumps(state))
+                first = SimpleNamespace(
+                    state=original, source="exact-source", _pool_recovery_uncertain=False,
+                    ns={"_qlock": threading.RLock(), "STATE": path, "save_state": saved})
+                result = scope["_durable_submit_fence"](first, task)
+                self.assertEqual(result["task_id"], task["id"])
+                self.assertEqual(result["owner_claim"], task["owner_claim"])
+                self.assertEqual(json.loads(path.read_text())["tasks"][task["id"]]
+                                 ["native_worker_submit_intent"], result)
+                # Crash/disconnect before worker reply. Reinitialize from saved
+                # state with an empty in-memory interrupted/completed map.
+                second_state = json.loads(path.read_text())
+                restarted = SimpleNamespace(
+                    state=second_state, source="exact-source",
+                    interrupted={}, completed={}, _pool_recovery_uncertain=False,
+                    ns={"_qlock": threading.RLock(), "STATE": path, "save_state": saved})
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_NATIVE_SUBMIT_INTENT_UNSETTLED"):
+                    scope["_durable_submit_fence"](restarted, second_state["tasks"][task["id"]])
+                self.assertEqual(second_state["tasks"][task["id"]]
+                                 ["native_worker_submit_intent"], result)
+
+    def test_durable_presubmit_unknown_readback_never_allows_ipc(self):
+        import json
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                      and n.name == "Native")
+        method = next(n for n in native.body if isinstance(n, ast.FunctionDef)
+                      and n.name == "_durable_submit_fence")
+        scope = {"document": lambda path, limit: json.loads(Path(path).read_text()),
+                 "GateError": RuntimeError, "time": time}
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=[method], type_ignores=[])), str(SOURCE), "exec"), scope)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "state.json"
+            task = {"id": "B1-UNKNOWN-DURABLE", "handler": "owner_native_typed_leaf",
+                    "status": "running", "owner_claim": {"nonce": "1234567890ab1234567890ab"},
+                    "params": {"job_id": "job"}}
+            state = {"tasks": {task["id"]: dict(task)}}
+            path.write_text(json.dumps(state))
+            # Simulate an ambiguous persistence layer: writer reports an error.
+            def uncertain(_):
+                raise OSError("unknown fsync outcome")
+            owner = SimpleNamespace(state=state, source="source",
+                _pool_recovery_uncertain=False,
+                ns={"_qlock": threading.RLock(), "STATE": path, "save_state": uncertain})
+            with self.assertRaisesRegex(RuntimeError,
+                                        "HOLD_NATIVE_SUBMIT_INTENT_READBACK"):
+                scope["_durable_submit_fence"](owner, task)
+            self.assertTrue(owner._pool_recovery_uncertain)
 
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
