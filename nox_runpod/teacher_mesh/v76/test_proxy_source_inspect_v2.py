@@ -22,6 +22,11 @@ def _trim_ctx(messages):
     return messages[-16:]
 def _build_messages(body):
     prompt = body["prompt"][:8000]
+    dialog_id = body.get("dialog_id")
+    messages = body.get("messages", [])
+    history = body.get("history", [])
+    message = body.get("message")
+    prior = load_dialog_history(dialog_id)
     return prompt
 def prepare_payload(messages):
     return messages
@@ -33,15 +38,41 @@ def route(body):
         self.assertEqual(report["source_bytes"], len(raw))
         self.assertEqual(report["functions"]["_trim_ctx"][0]["constant_slice_bounds"][0]["lower"], -16)
         self.assertEqual(report["functions"]["_build_messages"][0]["constant_slice_bounds"][0]["upper"], 8000)
-        self.assertEqual(report["functions"]["prepare_payload"][0]["line"], 8)
+        self.assertEqual(report["functions"]["prepare_payload"][0]["line"], 13)
         self.assertTrue(report["callsites"]["prepare_payload"])
         self.assertEqual(report["chat_routes"][0]["method"], "POST")
         self.assertEqual(report["chat_routes"][0]["path"], "/api/nox/chat")
         self.assertIn("prepare_payload", report["chat_routes"][0]["context_calls"])
+        self.assertEqual(
+            report["chat_routes"][0]["body_key_reads"],
+            [],
+        )
+        context = report["functions"]["_build_messages"][0]
+        self.assertEqual(
+            context["body_key_reads"],
+            ["dialog_id", "history", "message", "messages", "prompt"],
+        )
+        self.assertTrue(context["hydration_call_presence"]["history"])
+        self.assertTrue(context["hydration_call_presence"]["dialog"])
+        self.assertTrue(context["hydration_call_presence"]["storage"])
+        self.assertTrue(report["chat_routes"][0]["hydration_call_presence"]["s03"] == [])
         encoded = json.dumps(report, ensure_ascii=False)
         self.assertNotIn("DO_NOT_PRINT_THIS_SECRET", encoded)
-        self.assertNotIn("prompt", encoded)
         self.assertIn("AST-only", report["analysis_note"])
+
+    def test_reports_stream_route_and_s03_call_presence_without_values(self):
+        raw = b'''\ndef _build_messages(payload):\n    dialog_id = payload.get("dialog_id")\n    return load_s03_history(dialog_id)\n@app.post("/api/nox/chat/stream")\nasync def route(request):\n    body = await request.json()\n    return _build_messages(body)\n'''
+        report = analyzer()(raw)
+        route = report["chat_routes"][0]
+        self.assertEqual(route["path"], "/api/nox/chat/stream")
+        self.assertEqual(route["body_key_reads"], [])
+        context = report["functions"]["_build_messages"][0]
+        self.assertEqual(context["body_key_reads"], ["dialog_id"])
+        self.assertTrue(context["hydration_call_presence"]["s03"])
+        self.assertTrue(context["hydration_call_presence"]["history"])
+        encoded = json.dumps(report)
+        self.assertNotIn("load_s03_history", encoded)
+        self.assertNotIn("dialog_id)", encoded)
 
     def test_missing_context_functions_are_explicitly_reported(self):
         report = analyzer()(b"def health():\n    return True\n")
@@ -74,3 +105,4 @@ def route(body):
 
 if __name__ == "__main__":
     unittest.main()
+
