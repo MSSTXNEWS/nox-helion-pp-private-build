@@ -309,6 +309,34 @@ class NativeReflexTests(unittest.TestCase):
                 self.assertEqual(guarded['rows'], [])
                 self.assertIsNone(guarded['refill_request'])
 
+        # Malformed dependency records must not crash the refill producer or
+        # turn a prior terminal claim into a new ready mission.
+        dependent_reviewed = {**reviewed, 'missions': [
+            {**reviewed['missions'][0], 'dependencies': ['native-dependency']}]}
+        for dependency_snapshot in (
+                {}, {'native-dependency': None},
+                {'native-dependency': 'done'},
+                {'native-dependency': ['done']},
+                {'native-dependency': {'status': 'running'}}):
+            with self.subTest(dependency_snapshot=dependency_snapshot):
+                result = refill.select_next(
+                    dependent_reviewed, dependency_snapshot,
+                    {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+                    {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+                self.assertEqual(result['state'], 'WAIT_EXISTING_WORK')
+                self.assertEqual(result['rows'], [])
+                self.assertIsNone(result['refill_request'])
+                self.assertEqual(result['deferred'][0]['reason'],
+                                 'DEPENDENCY_NOT_VERIFIED')
+        # A genuinely completed dict row still permits the normal reviewed
+        # admission path; this fix must not silently lock the queue forever.
+        done = refill.select_next(
+            dependent_reviewed, {'native-dependency': {'status': 'done'}},
+            {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+            {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+        self.assertEqual(done['state'], 'REVIEWED_BATCH_READY')
+        self.assertEqual(len(done['rows']), 1)
+
     def test_active_jobs_do_not_report_idle(self):
         state={'a': {'handler':'owner_native_project_work','status':'running'},
                'b': {'handler':'owner_native_typed_leaf','status':'pending'}}
