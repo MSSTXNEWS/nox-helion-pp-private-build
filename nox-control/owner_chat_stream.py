@@ -211,7 +211,8 @@ async def _model_events(client, url, payload):
                 if not isinstance(choices,list) or len(choices)!=1:
                     raise ValueError('choices')
                 choice=choices[0]
-                delta=choice.get('delta') or {}
+                delta=choice.get('delta')
+                if delta is None:delta={}
                 if not isinstance(delta,dict):
                     raise ValueError('delta')
                 # A valid terminal choice closes the model's content/tool delta.
@@ -226,7 +227,8 @@ async def _model_events(client, url, payload):
                 part=delta.get('content')
                 if part is not None and not isinstance(part,str):
                     raise ValueError('content')
-                fragments=delta.get('tool_calls') or []
+                fragments=delta.get('tool_calls')
+                if fragments is None:fragments=[]
                 if not isinstance(fragments,list):
                     raise ValueError('calls')
                 if already_finished and (reason is not None or part or fragments):
