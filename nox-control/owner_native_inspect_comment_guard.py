@@ -23,7 +23,7 @@ APPROVED_SOURCE_BY_ACTION = {
     "source_attest": "3e399979e5b2e5ac16c1504542bd5cace989ddd3",  # updated chat/S03 static scope #520
     "gpu_inventory": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",  # exact-head source tests green
     "browser_qa": "eaa4b0d64d3d97a8c2b2680e8eb20137934d76b9",  # PR #543 helper source commit; preserve this pin with a merge commit
-    "source_export": "7e0df12af5d60895f141a01eda84b3e2ffdf9a74",  # exact pinned secret-only #415 source export
+    "source_export": "37ddb48407aa7f52aeb8b18c9e88436b6060154d",  # exact pinned secret-only #415 source export
     "emergency_stop": "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23",  # exact drained emergency-stop source commit
 }
 COMMAND = re.compile(
