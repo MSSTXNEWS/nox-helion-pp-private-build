@@ -29,6 +29,8 @@ PAGES = ("site/pc/resonance.html", "site/pc/v22/resonance.template.html")
 ROLLBACK = "rollback/v135/"
 SCRIPT_URL = "/nox-web-v29/nox-v135-resonance-owner-bridge.js"
 SCRIPT_TAG = '<script defer src="' + SCRIPT_URL + '" data-nox-owner-v135="1"></script>'
+# Hard cap is inherited from the original V135 staging contract.
+MAX_OWNER_BRIDGE_BYTES = 20000
 OBS_SCRIPT_URL = "/nox-web-v29/nox-v137-owner-self-status.js"
 OBS_SCRIPT_TAG = '<script defer src="' + OBS_SCRIPT_URL + '" data-nox-owner-v137="1"></script>'
 
@@ -71,7 +73,7 @@ def build(source: Path, frozen: Path, js_file: Path, output: Path,
     if output.exists() or output.resolve() in (source.resolve(), frozen.resolve()):
         raise ValueError("HOLD_OUTPUT_OVERWRITE")
     script = js_file.read_bytes()
-    if len(script) < 5000 or len(script) > 20000:
+    if len(script) < 5000 or len(script) > MAX_OWNER_BRIDGE_BYTES:
         raise ValueError("HOLD_OWNER_BRIDGE_BOUNDS")
     if b"window.NOX_NATIVE_OWNER===true" not in script or b"/api/nox/chat/stream" not in script:
         raise ValueError("HOLD_OWNER_BRIDGE_CONTRACT")

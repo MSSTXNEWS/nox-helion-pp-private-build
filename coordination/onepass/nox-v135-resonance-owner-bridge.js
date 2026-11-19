@@ -168,7 +168,7 @@
   }
   function sseChat(data,signal) {
     let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
-    let stopOutcome='not_requested';
+    let state='not_requested';
     const started=performance.now();let firstVisibleMs=null;
     const upstreamAbort=new AbortController();
     const stopThenAbort=()=>{
@@ -179,19 +179,19 @@
           const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
           try{
             const r=await nativePost('/api/nox/stop',{},c.signal);
-            if(!r.ok)stopOutcome='rejected';
+            if(!r.ok)state='rejected';
             else{
               const x=await nativeBodyJSON(r,c.signal);
-              stopOutcome=x?.status==='STOP_REQUESTED'&&x?.stream_cancellation_signalled===true
+              state=x?.status==='STOP_REQUESTED'&&x?.stream_cancellation_signalled===true
                 ?'signal_accepted':'unconfirmed';
             }
-          }catch{stopOutcome=c.signal.aborted?'timeout':'unknown';}
+          }catch{state=c.signal.aborted?'timeout':'unknown';}
           finally{if(typeof clearTimeout==='function')clearTimeout(t);}
         }
         upstreamAbort.abort();
         if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
           window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
-            transport_outcome:stopOutcome,gpu_stop_verified:false
+            transport_outcome:state,gpu_stop_verified:false
           }}));
       })());
     };
@@ -267,10 +267,11 @@
             first_visible_token_ms:firstVisibleMs,
             seconds:+((performance.now()-started)/1000).toFixed(2)});
         }catch(e){
+          if(modelStarted&&!streamDone)await stopThenAbort();
           event({type:'error',
             error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
             gpu_stop_verified:false,
-            stop_transport_outcome:stopOutcome});
+            stop_transport_outcome:state});
         }finally{
           finished=true;
           signal?.removeEventListener?.('abort',onAbort);
