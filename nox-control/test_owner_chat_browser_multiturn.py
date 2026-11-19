@@ -93,5 +93,28 @@ class SameDialogFourMessageContract(unittest.TestCase):
         self.assertFalse(progressive_stream_valid(proof))
 
 
+    def test_long_context_is_compared_without_silent_truncation(self):
+        long_first = 'P' * (256 * 1024)
+        long_first_answer = 'A' * (256 * 1024)
+        long_second = 'Q' * (256 * 1024)
+        long_second_answer = 'B' * (256 * 1024)
+        expected = [
+            {'role':'user','content':long_first},
+            {'role':'assistant','content':long_first_answer},
+            {'role':'user','content':long_second},
+            {'role':'assistant','content':long_second_answer},
+        ]
+        self.assertTrue(multiturn_history_valid(
+            expected, long_first, long_first_answer, long_second, long_second_answer))
+        expected[1]['content'] = expected[1]['content'][:-1]
+        self.assertFalse(multiturn_history_valid(
+            expected, long_first, long_first_answer, long_second, long_second_answer))
+
+    def test_tool_result_role_cannot_be_counted_as_chat_context(self):
+        values = rows()
+        values[1] = {'role':'tool','content':'large tool output'}
+        self.assertFalse(self.check(values))
+
+
 if __name__=='__main__':
     unittest.main()
