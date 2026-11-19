@@ -26,6 +26,7 @@ SOURCE_ATTEST_SHA = APPROVED_SOURCE_BY_ACTION["source_attest"]
 GPU_INVENTORY_SHA = APPROVED_SOURCE_BY_ACTION["gpu_inventory"]
 BROWSER_QA_SHA = APPROVED_SOURCE_BY_ACTION["browser_qa"]
 STALE_BROWSER_QA_SHA = "9ddb3730f8db1b7b598eaf58ab0aa5973485f6c6"  # helper missing at old pin
+SOURCE_EXPORT_SHA = APPROVED_SOURCE_BY_ACTION["source_export"]
 OLD_UNAPPROVED_SHA = "80fc87881036462cfbe0aa27bb02b69daf8bfe6a"  # prior #437
 STALE_AUDIT_SHA = "22efccc957bc72d54899a701e6d09e5ef69b20c2"  # pre-fix #475
 UNAPPROVED_SHA = "a" * 40
@@ -229,6 +230,43 @@ class OwnerCommentGuardTests(unittest.TestCase):
                 self.assertEqual(main(), 2)
             self.assertEqual(output_path.read_text(encoding="utf-8"), "")
 
+    def test_source_export_is_exact_sha_bounded_and_owner_only(self) -> None:
+        key = "AbC_012-def"
+        body = f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}"
+        self.assertEqual(SOURCE_EXPORT_SHA,
+                         "1fe739fa49141805701e8f969b77b536a4e49a4b")
+        self.assertEqual(authorize_event(event_for(body), REPOSITORY, "issue_comment"),
+                         ("source_export", SOURCE_EXPORT_SHA))
+        for invalid in (
+            f"/nox-maintain 60509551 {'b' * 40} source_export {key}",
+            f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}=",
+            f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key} extra",
+            f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export " + "a" * 12001,
+        ):
+            with self.subTest(body=invalid[:90]), self.assertRaisesRegex(
+                    RuntimeError, "HOLD_EXACT_OWNER_COMMAND"):
+                authorize_event(event_for(invalid), REPOSITORY, "issue_comment")
+        altered = event_for(body)
+        altered["sender"]["id"] = OWNER_ID + 1
+        with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_COMMAND_IDENTITY"):
+            authorize_event(altered, REPOSITORY, "issue_comment")
+
+        with tempfile.TemporaryDirectory() as temp:
+            event_path = Path(temp) / "event.json"
+            output_path = Path(temp) / "output"
+            event_path.write_text(json.dumps(event_for(body)), encoding="utf-8")
+            env = {"GITHUB_EVENT_PATH": str(event_path), "GITHUB_OUTPUT": str(output_path),
+                   "GITHUB_REPOSITORY": REPOSITORY, "GITHUB_EVENT_NAME": "issue_comment"}
+            stdout = io.StringIO()
+            with mock.patch.dict(os.environ, env, clear=False), \
+                    contextlib.redirect_stdout(stdout):
+                self.assertEqual(main(), 0)
+            self.assertEqual(output_path.read_text(encoding="utf-8"),
+                             f"action=source_export\nsource_sha={SOURCE_EXPORT_SHA}\n"
+                             f"export_key_b64={key}\n")
+            self.assertNotIn(key, stdout.getvalue())
+
+            output_path.write_text("", encoding="utf-8")
             event_path.write_text(json.dumps(event_for("not a command")),
                                   encoding="utf-8")
             with mock.patch.dict(os.environ, env, clear=False), \
@@ -248,6 +286,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("endsWith(github.event.comment.body, ' source_attest')", condition)
         self.assertIn("endsWith(github.event.comment.body, ' gpu_inventory')", condition)
         self.assertIn("endsWith(github.event.comment.body, ' browser_qa')", condition)
+        self.assertIn("contains(github.event.comment.body, ' source_export ')", condition)
         self.assertLess(condition.index("endsWith(github.event.comment.body, ' inspect')"),
                         owner_job.index("steps:"))
         self.assertLess(condition.index("endsWith(github.event.comment.body, ' audit')"),
@@ -258,8 +297,10 @@ class WorkflowScopeTests(unittest.TestCase):
                         owner_job.index("steps:"))
         self.assertLess(condition.index("endsWith(github.event.comment.body, ' browser_qa')"),
                         owner_job.index("steps:"))
+        self.assertLess(condition.index("contains(github.event.comment.body, ' source_export ')"),
+                        owner_job.index("steps:"))
 
-    def test_workflow_runs_only_five_fixed_owner_actions(self) -> None:
+    def test_workflow_runs_only_fixed_owner_actions(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
         self.assertIn("issue_comment:", workflow)
@@ -281,6 +322,8 @@ class WorkflowScopeTests(unittest.TestCase):
                       workflow)
         self.assertIn("python -B nox-control/owner_native_operator.py browser_qa",
                       workflow)
+        self.assertIn("python -B nox-control/owner_native_operator.py source_export",
+                      workflow)
         self.assertNotIn("owner_native_operator.py $", workflow)
         self.assertNotIn("inputs.action", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
@@ -289,7 +332,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertNotIn("actions: write", workflow)
         self.assertNotIn("github-script", workflow)
         self.assertEqual(workflow.count("persist-credentials: false"), 3)
-        self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 5)
+        self.assertEqual(workflow.count("NOX2: ${{ secrets.NOX2 }}"), 6)
         self.assertLess(workflow.index("owner_native_inspect_comment_guard.py"),
                         workflow.index("Run the fixed read-only inspect action"))
         self.assertLess(workflow.index("Run the fixed read-only inspect action"),
@@ -299,6 +342,7 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("steps.owner-command.outputs.action == 'source_attest'", workflow)
         self.assertIn("steps.owner-command.outputs.action == 'gpu_inventory'", workflow)
         self.assertIn("steps.owner-command.outputs.action == 'browser_qa'", workflow)
+        self.assertIn("steps.owner-command.outputs.action == 'source_export'", workflow)
         self.assertLess(
             workflow.index("Recheck pinned GPU inventory command without credentials"),
             workflow.index("Run the fixed read-only GPU inventory action"),
@@ -315,6 +359,29 @@ class WorkflowScopeTests(unittest.TestCase):
             workflow.index("Run the fixed read-only source-attest action"),
             workflow.rindex("NOX2: ${{ secrets.NOX2 }}"),
         )
+        self.assertLess(
+            workflow.index("Recheck exact pinned #415 source-export command before credentials"),
+            workflow.index("Run the exact pinned #415 encrypted source-export action"),
+        )
+        self.assertLess(
+            workflow.index("Compile and test exact pinned #415 encrypted export source before credentials"),
+            workflow.index("Run the exact pinned #415 encrypted source-export action"),
+        )
+        self.assertLess(
+            workflow.index("Run the exact pinned #415 encrypted source-export action"),
+            workflow.index("Upload only the encrypted S03 source-export artifact"),
+        )
+
+    def test_source_export_route_rechecks_key_and_uploads_ciphertext_only(self) -> None:
+        workflow = (Path(__file__).parents[1] / ".github" / "workflows"
+                    / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
+        legacy = (Path(__file__).parents[1] / ".github" / "workflows"
+                  / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
+        self.assertIn("steps.owner-command.outputs.export_key_b64", workflow)
+        self.assertIn("path: source/artifacts/nox-s03-source-export.enc", workflow)
+        self.assertNotIn("path: artifacts/", workflow.replace(
+            "path: source/artifacts/nox-s03-source-export.enc", ""))
+        self.assertIn("!contains(github.event.comment.body, ' source_export ')", legacy)
 
 
     def test_legacy_workflow_excludes_canonical_actions_before_secrets(self) -> None:
@@ -328,6 +395,7 @@ class WorkflowScopeTests(unittest.TestCase):
             "!contains(github.event.comment.body, ' source_attest')",
             "!contains(github.event.comment.body, ' gpu_inventory')",
             "!contains(github.event.comment.body, ' browser_qa')",
+            "!contains(github.event.comment.body, ' source_export ')",
         )
         for exclusion in exclusions:
             with self.subTest(exclusion=exclusion):
