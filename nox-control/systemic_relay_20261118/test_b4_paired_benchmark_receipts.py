@@ -247,4 +247,40 @@ class PairedReceiptTests(unittest.TestCase):
                     c["outcomes"][0]["sse_terminal_seen"] = value
                 self.assertEqual(compare_paired(b, c)["reason"], "SSE_TERMINAL_PROOF")
 
+
+    def test_failed_task_losing_sse_terminal_is_not_hidden_by_pass_rate(self):
+        b = example()
+        # A failed chat turn initially received a normal terminal marker.
+        # After a network interruption it remains FAIL, so PASS totals cannot
+        # expose that its streaming reliability deteriorated.
+        b["outcomes"][2]["sse_terminal_seen"] = True
+        b["outcomes"][2]["model_finish_reason"] = "stop"
+        c = copy.deepcopy(b)
+        c["outcomes"][2]["sse_terminal_seen"] = False
+        c["outcomes"][2]["model_finish_reason"] = "error"
+        out = compare_paired(b, c)
+        self.assertEqual(out["baseline"]["passed"], out["candidate"]["passed"])
+        self.assertEqual(out["baseline"]["sse_terminal_seen"], 2)
+        self.assertEqual(out["candidate"]["sse_terminal_seen"], 1)
+        self.assertEqual(out["candidate"]["sse_terminal_missing"], 2)
+        self.assertEqual(out["sse_terminal_lost_task_ids"], ["t3"])
+        self.assertEqual(out["sse_normal_completion_regressed_task_ids"], ["t3"])
+        self.assertEqual(out["sse_terminal_coverage_delta"], -1 / 3)
+        self.assertTrue(out["sse_reliability_regression"])
+        self.assertTrue(out["quality_or_history_regression"])
+        self.assertIsNone(out["p95_latency_delta_ms_same_observed_work"])
+
+    def test_failed_task_terminal_recovery_exposed_without_false_pass(self):
+        b = example()
+        c = copy.deepcopy(b)
+        c["outcomes"][2]["sse_terminal_seen"] = True
+        c["outcomes"][2]["model_finish_reason"] = "stop"
+        out = compare_paired(b, c)
+        self.assertEqual(out["baseline"]["passed"], out["candidate"]["passed"])
+        self.assertEqual(out["sse_terminal_restored_task_ids"], ["t3"])
+        self.assertEqual(out["sse_terminal_coverage_delta"], 1 / 3)
+        self.assertEqual(out["candidate"]["sse_normal_completion"], 2)
+        self.assertFalse(out["sse_reliability_regression"])
+        self.assertFalse(out["promotion_authorized"])
+
 if __name__ == '__main__': unittest.main()
