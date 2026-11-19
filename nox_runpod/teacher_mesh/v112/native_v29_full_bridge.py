@@ -1065,9 +1065,6 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             code=409 if claim.get('status') in ('BUSY','DUPLICATE','COLLISION') else 503
             return JSONResponse({'error':reason},status_code=code)
         chat_lease=claim['lease']
-        if key in active:
-            await asyncio.to_thread(lease_store.finish,chat_lease,'FAILED')
-            return JSONResponse({'error':'HOLD_ACTIVE_SESSION_STREAM'},status_code=409)
         cancel=asyncio.Event()
         active[key]=cancel
         turn_id=uuid.uuid4().hex
