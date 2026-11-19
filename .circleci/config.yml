@@ -15,13 +15,16 @@ jobs:
             python -B -m py_compile \
               nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py \
               nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py \
-              nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py
+              nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py \
+              nox-control/owner_memory_governor.py \
+              nox-control/test_owner_memory_governor.py
       - run:
           name: Verify Reflex self-observation and non-replay invariants
           command: |
             set -eu
             python -B nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py
             python -B nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py
+            python -B -m unittest discover -s nox-control -p test_owner_memory_governor.py -v
 workflows:
   native-source-verification:
     jobs:
