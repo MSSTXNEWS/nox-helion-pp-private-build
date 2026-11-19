@@ -1,157 +1,113 @@
-"""Install only the authorized NOX cache maintenance group."""
+"""Observe and, if fully qualified, stage the exact cold Engram service."""
 
+from argparse import Namespace
 import base64
-
 import hashlib
-
+import http.client
 import json
-
 import os
-
 from pathlib import Path
-
 import re
-
 import stat
-
 import sys
-
 import time
-
 import types
 
+
 BUNDLE = __NOX_BUNDLE_JSON__
+PINS = {"engram_cold_holder.py":"3ec79df376490c37300eb7ec78b5feb59463bc5abd976093331e5c305d4c62de","verify_ds41_backbone.py":"bfbdcda80899664e95a69b4669b51c5411796ecf977a9eee9cd15c9924c4a29e","owner_cold_stage_preflight.py":"c2e7e6887276166f9a692c90d586608f3e87c2a1320a4017ca500af4497cb412","atomic_engram_stage.py":"79b71a91f82b60e0761c5ed5bfe14723923ae69c9b70cebba048f338223e8e26","nox-engram-cold-holder.conf":"cc7a0c2ddb579005bf9a6cdd6ccac9e33f1010039f6b2fe984f1059655b036df"}
 
-PINS = {"nox_cache_maintenance.py":"5113e633d66026b5821394a3d9e87433ddc14711fe59df1f09ff0dd6974a593c","owner_memory_cleanup_entry.py":"a308933a6df312ad6601bebae4e39ef8f0cd9794cea0f9c4ebc325ea45aac403","owner_memory_governor.py":"9cdcc97d333a4b2ea07f3003930f260d567a2b6a7cdebb1adcd36220befe617b","owner_storage_reclaim.py":"085403de23d817f1f1307df757901b914115c4745a78dea7ddda53a7fca350f8","nox-cache-maintenance.conf":"9c3eb4d108fa640936a05e178c3ec4f63cc3083c3c4aa7d0a1ac8074d79c09ad","atomic_engram_stage.py":"79b71a91f82b60e0761c5ed5bfe14723923ae69c9b70cebba048f338223e8e26","owner_supervisor_background_release.py":"1928cc0b4ab308f65f329a992376963769b1870984562a9fc12a213a2578b43a","owner_cache_maintenance_activation.py":"ad8d1f56aa87fad08e8965b011bf977ce5e0f9be43f76f2cc48f6dd850c374ef"}
 
-BOOT = '9c0ecc02-85c1-452b-b8ae-521e9a11fd03'
-
-PID1 = 167790899
-
-SUPERVISOR = (114, 167791115)
-
-MAIN = 'fcead12b4dcb7f56b31d223f1cfa89792bd6e8008f78708a831b41fab9ece25d'
-
-CACHE_LOG = Path('/root/nox/logs/nox-cache-maintenance.log')
-
-def need(condition, reason):
-    if not condition:
-        raise RuntimeError('HOLD_CACHE_ENTRY_' + reason)
-
-def sources():
-    need(isinstance(BUNDLE, dict) and set(BUNDLE) == set(PINS), 'ASSET_SCOPE')
-    data = {}
-    for name, content in BUNDLE.items():
-        raw = base64.b64decode(content, validate=True)
-        need(0 < len(raw) < 256 * 1024 and hashlib.sha256(raw).hexdigest() == PINS[name], 'ASSET_SHA')
-        data[name] = raw
+def assets():
+    if set(BUNDLE) != set(PINS):
+        raise RuntimeError('HOLD_COLD_ENGRAM_ASSETS')
+    data = {name: base64.b64decode(raw, validate=True) for name, raw in BUNDLE.items()}
+    if any(not len(raw) <= 128 * 1024 or hashlib.sha256(raw).hexdigest() != PINS[name]
+           for name, raw in data.items()):
+        raise RuntimeError('HOLD_COLD_ENGRAM_ASSET_SHA')
     return data
 
-def module(name, data):
-    loaded = types.ModuleType(name)
-    sys.modules[name] = loaded
-    exec(compile(data[name + '.py'], name + '.py', 'exec'), loaded.__dict__)
-    return loaded
 
-def service_receipt(activated_at):
-    deadline = time.monotonic() + 32
-    while time.monotonic() < deadline:
-        try:
-            flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
-            with os.fdopen(os.open(CACHE_LOG, flags), 'rb') as stream:
-                info = os.fstat(stream.fileno())
-                if (stat.S_ISREG(info.st_mode) and info.st_uid == 0
-                        and info.st_size <= 1024 ** 2 + 16384 and info.st_mtime >= activated_at):
-                    raw = stream.read(1024 ** 2 + 16385)
-                    prefix = b'NOX_CACHE_MAINTENANCE='
-                    for line in reversed(raw.splitlines()):
-                        if line.startswith(prefix) and len(line) < 16384:
-                            report = json.loads(line[len(prefix):])
-                            if isinstance(report, dict) and isinstance(report.get('state'), str):
-                                return report
-        except (OSError, ValueError):
-            pass
-        time.sleep(1)
-    return {'state': 'FIRST_CYCLE_NOT_OBSERVED'}
+def load(path, data):
+    name = path.removesuffix('.py')
+    module = types.ModuleType(name)
+    sys.modules[name] = module
+    exec(compile(data[path], path, 'exec'), module.__dict__)
+    return module
 
-def record_hold(phase, error):
-    code = str(error)
-    print('NOX_MAINT_' + phase + '_HOLD=' + (
-        code if re.fullmatch(r'[A-Z][A-Z0-9_]{2,80}', code)
-        else type(error).__name__ + ('_' + str(error.errno) if isinstance(error, OSError) else '')),
-          flush=True)
 
-def socket_scope(native, main):
-    conf = native.config_parse(main)
-    path = native.plain_socket_path(conf['unix_http_server']['file'], Path('/etc/supervisor'))
-    if path.is_relative_to('/var/run') and Path('/var/run').is_symlink():
-        if os.readlink('/var/run') in ('/run', '../run'):
-            path = Path('/run') / path.relative_to('/var/run')
-    device = []
-    for item in (path, *path.parents):
-        try:
-            info = item.lstat()
-            device.append({'path': str(item), 'mode': oct(stat.S_IMODE(info.st_mode)),
-                           'uid': info.st_uid, 'gid': info.st_gid,
-                           'type': 'socket' if stat.S_ISSOCK(info.st_mode) else 'directory'
-                                   if stat.S_ISDIR(info.st_mode) else 'other'})
-        except OSError as error:
-            device.append({'path': str(item), 'errno': error.errno})
-    print('NOX_MAINT_CACHE_SOCKET_SCOPE=' + json.dumps(device, separators=(',', ':')), flush=True)
-
-def install_cache(source, request, data):
-    module('atomic_engram_stage', data)
-    native = module('owner_supervisor_background_release', data)
-    activate = module('owner_cache_maintenance_activation', data)
-    main = native.read(activate.MAIN, 256 << 10, rooted=True)
-    need(hashlib.sha256(main).hexdigest() == MAIN, 'SUPERVISOR_MAIN_CHANGED')
-    daemon = native.process(SUPERVISOR[0])
-    need(native.process(1)[:2] == (PID1, 0) and daemon[:2] == (SUPERVISOR[1], 1), 'SUPERVISOR_EPOCH')
-    parsed = native.config_parse(main)
-    socket_scope(native, main)
-    endpoint = native.resolve_socket(native.plain_socket_path(parsed['unix_http_server']['file'], activate.MAIN.parent))
-    files = sorted(path for path in activate.INCLUDES.iterdir()
-                   if path.name.endswith('.conf') and path.name != activate.UNIT_NAME)
-    need(len(files) <= 96, 'SUPERVISOR_INCLUDE_CENSUS')
-    include = tuple((path.name, hashlib.sha256(native.read(path, 256 << 10, rooted=True)).hexdigest())
-                    for path in files)
-    now = time.time()
-    boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
-    need(boot == BOOT, 'SUPERVISOR_BOOT_CHANGED')
-    argv = native.read(Path(f'/proc/{SUPERVISOR[0]}/cmdline'), 16 << 10)
-    pin = activate.OwnerPin(request, source, now, now + 150, BOOT, PID1, *SUPERVISOR,
-                            hashlib.sha256(argv).hexdigest(), MAIN, str(endpoint), include,
-                            PINS[activate.UNIT_NAME], tuple((name, PINS[name]) for name in activate.WORKERS))
-
-    def owner(passed, scope):
-        return (passed == pin and scope in ('activate', 'parse', 'add', 'rollback_stop', 'rollback_remove')
-                and time.time() < pin.expires_at
-                and os.environ.get('NOX_OWNER_SOURCE_SHA') == source
-                and os.environ.get('NOX_OWNER_REQUEST_ID') == request)
-
-    until = time.monotonic() + 46
-    while True:
-        try:
-            result = activate.activate_cache_maintenance(
-                pin, workers={name: data[name] for name in activate.WORKERS},
-                unit=data[activate.UNIT_NAME], authorize=owner,
-            )
-            return result, now
-        except activate.Hold as error:
-            if str(error) != 'HOLD_CACHE_ACTIVATION_OWNER_BUSY' or time.monotonic() >= until:
-                raise
-            time.sleep(0.25)
+def cache_chat_gate_facts():
+    marker = Path('/root/nox/state/chat_active')
+    result = {}
+    try:
+        info = marker.lstat()
+        result['chat_marker_regular_root'] = stat.S_ISREG(info.st_mode) and info.st_uid == 0
+        result['chat_marker_recent_or_future'] = time.time() - info.st_mtime < 3
+    except FileNotFoundError:
+        result['chat_marker_present'] = False
+    except OSError:
+        result['chat_marker_unverified'] = True
+    connection = http.client.HTTPConnection('127.0.0.1', 8098, timeout=2)
+    try:
+        connection.request('GET', '/slots', headers={'Connection': 'close'})
+        response = connection.getresponse()
+        result['slots_http_status'] = response.status
+        raw = response.read(100001)
+        if response.status == 200 and len(raw) <= 100000:
+            slots = json.loads(raw)
+            if isinstance(slots, list) and 1 <= len(slots) <= 64:
+                flags = [[row[key] for key in ('is_processing', 'processing') if key in row]
+                         for row in slots if isinstance(row, dict)]
+                if len(flags) == len(slots) and all(row and all(type(x) is bool for x in row)
+                                                     and len(set(row)) == 1 for row in flags):
+                    result['slots'] = len(flags)
+                    result['busy_slots'] = sum(row[0] for row in flags)
+    except (OSError, ValueError, http.client.HTTPException):
+        result['slots_unverified'] = True
+    finally:
+        connection.close()
+    return result
 
 
 def main():
-    source = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
     request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
-    need(os.geteuid() == os.getegid() == 0 and re.fullmatch(r'[a-f0-9]{40}', source)
-         and re.fullmatch(r'[1-9][0-9]{0,19}', request), 'OWNER_REQUEST')
-    result, now = install_cache(source, request, sources())
-    print('NOX_MAINT_CACHE_ACTIVATION=' + json.dumps(result, separators=(',', ':')), flush=True)
-    if result['added']:
-        print('NOX_MAINT_CACHE_FIRST_CYCLE=' + json.dumps(service_receipt(now), separators=(',', ':')), flush=True)
+    source = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
+    if (os.geteuid() != 0 or not re.fullmatch('[1-9][0-9]{0,19}', request)
+            or not re.fullmatch('[a-f0-9]{40}', source)):
+        raise RuntimeError('HOLD_COLD_ENGRAM_OWNER')
+    data = assets()
+    print('NOX_MAINT_CACHE_CHAT_GATE=' + json.dumps(cache_chat_gate_facts(), separators=(',', ':')), flush=True)
+    holder_name = 'engram_cold_holder.py'
+    config_name = 'nox-engram-cold-holder.conf'
+    load(holder_name, data)
+    load('verify_ds41_backbone.py', data)
+    observer = load('owner_cold_stage_preflight.py', data)
+    installer = load('atomic_engram_stage.py', data)
+    request_scope = Namespace(
+        instance_id=60509551, request_id=request, source_sha=source,
+        onstart_sha256='b36b916aadc8bb6047108823bf7b86f00448deafd9f79a824a9f4924c1190507',
+        guard_sha256='b280bc46218d37a1480680a3d842c9b53d71a3d567c07606a1fb54878188d777',
+        launcher_sha256='50a4e198bcfed2e7965220e897c349db50eb17dd9560243827c9a085923e6638',
+        holder_sha256=PINS[holder_name], config_sha256=PINS[config_name],
+    )
+    report = observer.collect(request_scope, container_label=os.environ.get('VAST_CONTAINERLABEL'),
+                              container_id=os.environ.get('CONTAINER_ID'))
+    print('NOX_MAINT_ENGRAM_COLD_PREFLIGHT=' + json.dumps(report, separators=(',', ':')), flush=True)
+    if report['stage_eligible']:
+        deadline = time.monotonic() + 25
+        while True:
+            try:
+                receipt = installer.stage_cold_holder(
+                    source_sha=source, request_id=request, preflight=report,
+                    holder=data[holder_name], holder_sha256=PINS[holder_name],
+                    config=data[config_name], config_sha256=PINS[config_name],
+                )
+                break
+            except installer.StageHold as error:
+                if str(error) != 'HOLD_COLD_STAGE_OWNER_LEASE_BUSY' or time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.25)
+        print('NOX_MAINT_ENGRAM_COLD_STAGE=' + json.dumps(receipt, separators=(',', ':')), flush=True)
     print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
 
 
@@ -159,5 +115,7 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as error:
-        record_hold('CACHE_ACTIVATION', error)
+        code = str(error)
+        print('NOX_MAINT_ENGRAM_COLD_HOLD=' + (code if re.fullmatch(r'[A-Z][A-Z0-9_]{2,80}', code)
+                                               else type(error).__name__), flush=True)
         raise SystemExit(2) from None
