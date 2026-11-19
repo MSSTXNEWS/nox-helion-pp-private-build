@@ -41,6 +41,17 @@ FROZEN_BROWSER_DEPENDENCIES={
 FROZEN_BROWSER_ENTRIES=('nox-control/owner_browser_normal_motion_entry.py',
                         'nox-control/owner_browser_asset_identity_entry.py')
 
+SMART_CHAT_ASSETS = (
+    'owner_drive_proxy_activation.py', 'owner_refresh_cognition_c04.py',
+    'owner_drive_chat_route.py', 'nox_dialog_followup.py', 'owner_drive_chat_health.py',
+)
+SCOPED_REPAIR_BUNDLES['nox-control/owner_native_repair.py'] = (*SMART_CHAT_ASSETS, 'owner_native_drive_probe.py')
+SCOPED_REPAIR_EXTRA_PATHS['nox-control/owner_native_repair.py'] = (
+    *(f'nox-control/smart_chat_drive/{name}' for name in SMART_CHAT_ASSETS),
+    'nox-control/owner_native_drive_probe.py',
+)
+
+
 def repair_bundle_paths(action,entrypoint,paths):
     if action not in ('repair','browser_qa') or entrypoint not in SCOPED_REPAIR_BUNDLES:return paths
     selected=SCOPED_REPAIR_BUNDLES[entrypoint]
