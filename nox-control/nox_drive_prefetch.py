@@ -461,6 +461,9 @@ def publish_set_receipt(dest, assets, manifest_sha):
                 os.link(temporary, target, follow_symlinks=False)
             except FileExistsError:
                 check(not target.is_symlink() and target.is_file(), "SET_RECEIPT_SCOPE")
+                info = target.stat()
+                check(info.st_uid == os.geteuid() and info.st_nlink == 1
+                      and not info.st_mode & 0o077, "SET_RECEIPT_SCOPE")
                 check(json.loads(target.read_text(encoding="utf-8")) == payload,
                       "SET_RECEIPT_CONFLICT")
             directory_fd = os.open(dest, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
