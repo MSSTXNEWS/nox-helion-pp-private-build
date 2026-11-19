@@ -16,6 +16,10 @@ import sys
 
 INPUT_SCHEMA = "nox.training.source-manifest.v1"
 OUTPUT_SCHEMA = "nox.training.split-plan.v1"
+SOURCE_TASK_ID = "4A02"
+SOURCE_TASK_SPEC_SHA256 = "dcec8628dab49be9b85c52864df224f5a012fd6fda82b4ade0822ba2a525d463"
+SOURCE_TASK_ID = "4A02"
+SOURCE_TASK_SPEC_SHA256 = "dcec8628dab49be9b85c52864df224f5a012fd6fda82b4ade0822ba2a525d463"
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 MAX_ROWS = 100_000
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
@@ -214,7 +218,9 @@ def build_plan(manifest: dict, manifest_sha256: str) -> dict:
               for split in ("train", "dev", "holdout")}
     return {
         "schema": OUTPUT_SCHEMA,
-        "state": "SPLIT_PLAN_READY" if not holds else "HOLD_SPLIT_COVERAGE",
+        "source_task_id": SOURCE_TASK_ID,
+        "source_task_spec_sha256": SOURCE_TASK_SPEC_SHA256,
+        "state": "SOURCE_PLAN_READY" if not holds else "HOLD_SPLIT_COVERAGE",
         "input_manifest_sha256": manifest_sha256,
         "split_seed": manifest["split_seed"],
         "ratios_percent": {"train": 80, "dev": 10, "holdout": 10},
@@ -247,7 +253,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(json.dumps(result, ensure_ascii=True, sort_keys=True,
                      separators=(",", ":")))
-    return 0 if result["state"] == "SPLIT_PLAN_READY" else 3
+    return 0 if result["state"] == "SOURCE_PLAN_READY" else 3
 
 
 if __name__ == "__main__":
