@@ -139,98 +139,155 @@ def _ssh_key_rows(value):
     return rows
 
 
+def _instance_ssh_key_identities(key: str):
+    """Read the entire fixed-instance key list and validate every row's identity."""
+    value = api("GET", f"/instances/{INSTANCE_ID}/ssh", key)
+    identities = []
+    for row in _ssh_key_rows(value):
+        if not isinstance(row, dict):
+            raise RuntimeError("HOLD_PROVIDER_SSH_RESPONSE")
+        ident = row.get("id")
+        if type(ident) is int and ident > 0:
+            ident = int(ident)
+        elif isinstance(ident, str) and _ID_RE.fullmatch(ident) and int(ident) > 0:
+            ident = int(ident)
+        else:
+            raise RuntimeError("HOLD_PROVIDER_SSH_RESPONSE")
+        public = row.get("public_key")
+        if (not isinstance(public, str) or not public or len(public) > 4096
+                or "\r" in public or "\n" in public):
+            raise RuntimeError("HOLD_PROVIDER_SSH_RESPONSE")
+        identities.append((ident, public))
+    return identities
+
+
 def match(key: str, public: str):
     """Return IDs only for keys whose public-key bytes exactly match."""
     if not _valid_public_key(public):
         raise RuntimeError("HOLD_PUBLIC_KEY_FORMAT")
-    value = api("GET", f"/instances/{INSTANCE_ID}/ssh", key)
-    ids = []
-    for row in _ssh_key_rows(value):
-        if not isinstance(row, dict) or row.get("public_key") != public:
-            continue
-        ident = row.get("id")
-        if type(ident) is int and ident > 0:
-            ids.append(ident)
-        elif isinstance(ident, str) and _ID_RE.fullmatch(ident) and int(ident) > 0:
-            ids.append(int(ident))
-        else:
-            raise RuntimeError("HOLD_PROVIDER_SSH_RESPONSE")
-    return ids
+    return [ident for ident, row_public in _instance_ssh_key_identities(key)
+            if row_public == public]
 
 
 def _remove_local_files():
-    if RUNNER.is_symlink():
-        return False
-    if RUNNER.exists() and not RUNNER.is_dir():
-        return False
+    """Remove only this runner's temporary files and verify key absence."""
+    if RUNNER.is_symlink() or (RUNNER.exists() and not RUNNER.is_dir()):
+        return False, "HOLD_UNLINK"
+    key_existed = KEY.exists()
     paths = (KEY, KEY.with_suffix(".pub"), RUNNER / "known_hosts",
              RUNNER / "owner-ssh.sock", TRACK)
     try:
         for path in paths:
-            if path.parent != RUNNER or path.is_dir():
-                return False
-            if path.exists() or path.is_symlink():
+            if path.parent != RUNNER or path.is_symlink() or path.is_dir():
+                return False, "HOLD_UNLINK"
+            if path.exists():
                 path.unlink()
+        if any(path.exists() or path.is_symlink() for path in paths):
+            return False, "HOLD_UNLINK"
+        if KEY.exists() or KEY.is_symlink():
+            return False, "HOLD_UNLINK"
         try:
             RUNNER.rmdir()
         except FileNotFoundError:
             pass
         except OSError:
             pass
+        return True, "REMOVED_AND_VERIFIED" if key_existed else "ABSENT_AND_VERIFIED"
     except OSError:
-        return False
-    return True
+        return False, "HOLD_UNLINK"
 
 
-def cleanup():
-    """Detach only the tracked temporary key, verify removal, then wipe local files."""
+def cleanup_with_receipt():
+    """Detach only the exact tracked remote key, then verify local cleanup separately."""
     if RUNNER.is_symlink() or (RUNNER.exists() and not RUNNER.is_dir()):
-        return False
+        return False, "HOLD", "HOLD_UNLINK"
     if not TRACK.exists() and not TRACK.is_symlink():
-        return _remove_local_files()
+        _local_ok, local_status = _remove_local_files()
+        # Local cleanup cannot prove which remote key, if any, belongs to this run.
+        return False, "NO_TRACKED_REMOTE_KEY", local_status
     if TRACK.is_symlink() or not TRACK.is_file():
-        return False
+        return False, "HOLD", "HOLD_UNLINK"
     try:
         if TRACK.stat().st_size > 8192:
-            return False
+            return False, "HOLD", "HOLD_UNLINK"
         record = json.loads(TRACK.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return False
+        return False, "HOLD", "HOLD_UNLINK"
     if not isinstance(record, dict) or not _valid_public_key(record.get("public")):
-        return False
+        return False, "HOLD", "HOLD_UNLINK"
     public = record["public"]
     tracked = record.get("key_id")
     if tracked is not None and (type(tracked) is not int or tracked <= 0):
-        return False
+        return False, "HOLD", "HOLD_UNLINK"
 
     token = os.environ.get("NOX2", "")
     if not token:
-        return False
+        return False, "HOLD", "HOLD_UNLINK"
+    remote_status = "HOLD"
     try:
-        found = match(token, public)
-        if len(found) > 1:
-            return False
+        identities = _instance_ssh_key_identities(token)
+        exact_ids = [ident for ident, row_public in identities if row_public == public]
+        if len(exact_ids) > 1:
+            return False, "HOLD", "HOLD_UNLINK"
+
         if tracked is None:
-            target = found[0] if found else None
+            target = exact_ids[0] if exact_ids else None
         else:
-            if found and found != [tracked]:
-                return False
-            target = tracked if found else None
-        if target is not None:
+            tracked_rows = [(ident, row_public) for ident, row_public in identities
+                            if ident == tracked]
+            if len(tracked_rows) > 1:
+                return False, "HOLD", "HOLD_UNLINK"
+            if tracked_rows:
+                # An ID is deletable only when the current fixed-instance row
+                # still holds the exact public-key bytes from this run.
+                if tracked_rows != [(tracked, public)] or exact_ids != [tracked]:
+                    return False, "HOLD", "HOLD_UNLINK"
+                target = tracked
+            else:
+                # If the same key has moved to another ID, or the tracked ID
+                # still exists under another key, the record is ambiguous.
+                if exact_ids:
+                    return False, "HOLD", "HOLD_UNLINK"
+                target = None
+
+        if target is None:
+            remote_status = "ALREADY_ABSENT_VERIFIED"
+        else:
+            target_rows = [(ident, row_public) for ident, row_public in identities
+                           if ident == target]
+            if target_rows != [(target, public)]:
+                return False, "HOLD", "HOLD_UNLINK"
             result = api("DELETE", f"/instances/{INSTANCE_ID}/ssh/{target}", token)
             if isinstance(result, dict) and result and result.get("success") is not True:
-                return False
-            if match(token, public):
-                return False
+                return False, "HOLD", "HOLD_UNLINK"
+            after = _instance_ssh_key_identities(token)
+            if (any(ident == target or row_public == public
+                    for ident, row_public in after)):
+                return False, "HOLD", "HOLD_UNLINK"
+            remote_status = "DETACHED_AND_VERIFIED"
     except RuntimeError:
-        return False
-    return _remove_local_files()
+        return False, "HOLD", "HOLD_UNLINK"
+
+    local_ok, local_status = _remove_local_files()
+    complete = local_ok and remote_status in (
+        "DETACHED_AND_VERIFIED", "ALREADY_ABSENT_VERIFIED")
+    return complete, remote_status, local_status
+
+
+def cleanup():
+    """Compatibility wrapper; inspect cleanup_with_receipt for separate outcomes."""
+    ok, _remote_status, _local_status = cleanup_with_receipt()
+    return ok
 
 
 def _main(argv):
     if argv != ["cleanup"]:
         return 2
-    ok = cleanup()
+    ok, remote_status, local_status = cleanup_with_receipt()
+    print("TEMP_SSH_REMOTE_KEY=" + remote_status, flush=True)
+    print("TEMP_SSH_LOCAL_KEY=" + (
+        local_status
+    ), flush=True)
     print("NOX_MAINT_CLEANUP=" + ("COMPLETE" if ok else "HOLD"), flush=True)
     return 0 if ok else 2
 

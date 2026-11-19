@@ -325,12 +325,29 @@ def main():
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
     finally:
         if MASTER:
-            with contextlib.suppress(Exception):_safe_subprocess_run(MASTER,capture_output=True,timeout=8)
+            try:
+                master_exit=_safe_subprocess_run(MASTER,capture_output=True,timeout=8)
+                if master_exit.returncode==0:
+                    print('TEMP_SSH_CONTROL_SOCKET=EXIT_ACCEPTED',flush=True)
+                else:
+                    print('TEMP_SSH_CONTROL_SOCKET=HOLD_EXIT_FAILED',flush=True);good=False
+            except Exception:
+                print('TEMP_SSH_CONTROL_SOCKET=HOLD_EXIT_ERROR',flush=True);good=False
+        else:
+            print('TEMP_SSH_CONTROL_SOCKET=NOT_OPENED',flush=True)
+            if good:good=False
         sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
         from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
         try:
-            if not s.cleanup():good=False
-        except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
-        with contextlib.suppress(OSError):s.KEY.unlink()
+            cleanup_ok,remote_status,local_status=s.cleanup_with_receipt()
+            print('TEMP_SSH_REMOTE_KEY='+remote_status,flush=True)
+            print('TEMP_SSH_LOCAL_KEY='+local_status,flush=True)
+            if not cleanup_ok or remote_status not in (
+                    'DETACHED_AND_VERIFIED','ALREADY_ABSENT_VERIFIED'):
+                good=False
+        except Exception:
+            print('TEMP_SSH_REMOTE_KEY=HOLD_UNEXPECTED_FAILURE',flush=True)
+            print('TEMP_SSH_LOCAL_KEY=HOLD_UNLINK',flush=True)
+            good=False
     return 0 if good else 2
 if __name__=='__main__':raise SystemExit(main())

@@ -126,8 +126,7 @@ jobs:
       - name: Always detach only this run temporary public key
         if: >-
           always() &&
-          (steps.execute.outcome == 'success' ||
-           steps.execute.outcome == 'failure' ||
+          (steps.execute.outcome == 'failure' ||
            steps.execute.outcome == 'cancelled')
         env:
           NOX2: ${{ secrets.NOX2 }}
@@ -377,3 +376,93 @@ jobs:
           compression-level: 0
           retention-days: 7
           if-no-files-found: error
+  owner-browser-qa:
+    # This route accepts exactly one owner-approved action; all other commands fail closed.
+    if: >-
+      github.repository == 'MSSTXNEWS/nox-helion-pp-private-build' &&
+      github.actor == 'MSSTXNEWS' &&
+      github.event.sender.id == 340718567 &&
+      github.event.comment.user.id == 340718567 &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.issue.number == 256 &&
+      startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
+      endsWith(github.event.comment.body, ' browser_qa')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate exact browser_qa owner request before credentials
+        id: request
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
+          body=event.get('comment',{}).get('body','')
+          match=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) browser_qa',body)
+          assert match, 'Invalid exact browser_qa owner command'
+          assert event.get('comment',{}).get('user',{}).get('id')==340718567
+          assert event.get('comment',{}).get('author_association')=='OWNER'
+          assert event.get('sender',{}).get('id')==340718567
+          assert event.get('repository',{}).get('owner',{}).get('id')==340718567
+          assert event.get('repository',{}).get('full_name')=='MSSTXNEWS/nox-helion-pp-private-build'
+          assert event.get('issue',{}).get('number')==256
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('sha='+match[1]+'\naction=browser_qa\n')
+          PY
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.request.outputs.sha }}
+          persist-credentials: false
+      - name: Validate exact owner-approved checkout SHA
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess
+          sha=os.environ['NOX_PINNED_SOURCE_SHA']
+          if not re.fullmatch(r'[0-9a-f]{40}',sha):
+              raise SystemExit('HOLD_SOURCE_PIN')
+          if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:
+              raise SystemExit('HOLD_CHECKOUT_MISMATCH')
+          PY
+      - name: Validate only the browser_qa source bundle before credentials
+        run: |
+          python3 - <<'PY'
+          import ast, hashlib
+          from pathlib import Path
+          sources={
+              'owner_chat_browser_qa.py':'nox-control/owner_chat_browser_qa.py',
+              'owner_chat_browser_transport_qa.py':'nox-control/owner_chat_browser_transport_qa.py',
+              'owner_chat_browser_release_qa.py':'nox-control/owner_chat_browser_release_qa.py',
+              'owner_chat_stream_only_qa.py':'nox-control/owner_chat_stream_only_qa.py',
+          }
+          entry=Path('nox-control/owner_browser_stream_only_entry.py')
+          tree=ast.parse(entry.read_text(encoding='utf-8'),filename=str(entry))
+          node=next(n.value for n in tree.body
+                    if isinstance(n,ast.Assign)
+                    and any(isinstance(target,ast.Name) and target.id=='PINS' for target in n.targets))
+          pins=ast.literal_eval(node)
+          if set(pins)!=set(sources):
+              raise SystemExit('HOLD_BROWSER_BUNDLE_SCOPE')
+          for name,path in sources.items():
+              raw=Path(path).read_bytes()
+              compile(raw,path,'exec')
+              if not isinstance(pins.get(name),str) or hashlib.sha256(raw).hexdigest()!=pins[name]:
+                  raise SystemExit('HOLD_BROWSER_BUNDLE_PIN')
+          compile(Path('nox-control/owner_native_operator.py').read_bytes(),
+                  'nox-control/owner_native_operator.py','exec')
+          PY
+      - name: Execute only browser_qa for this owner request
+        id: execute
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        run: python3 nox-control/owner_native_operator.py browser_qa
+      - name: Always detach only this run temporary public key
+        if: >-
+          always() &&
+          (steps.execute.outcome == 'success' ||
+           steps.execute.outcome == 'failure' ||
+           steps.execute.outcome == 'cancelled')
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
