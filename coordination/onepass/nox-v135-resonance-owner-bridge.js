@@ -8,6 +8,7 @@
   const nativeFetch=window.fetch.bind(window);
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
+  const ATTEMPT_ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
   function livePieces(text) {
     const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
@@ -74,6 +75,16 @@
     }
     if(typeof data.dialog_id!=='string'||!ID.test(data.dialog_id))throw Error('HOLD_INVALID_DIALOG_SCOPE');
     return data.dialog_id;
+  }
+  function createAttemptId() {
+    const source=window.crypto||globalThis.crypto;
+    if(!source||typeof source.getRandomValues!=='function')
+      throw Error('HOLD_STOP_ATTEMPT_ID_RANDOM_UNAVAILABLE');
+    const bytes=new Uint8Array(16);
+    source.getRandomValues(bytes);
+    const id=Array.from(bytes,value=>value.toString(16).padStart(2,'0')).join('');
+    if(!ATTEMPT_ID.test(id))throw Error('HOLD_STOP_ATTEMPT_ID_INVALID');
+    return id;
   }
   async function checkHistory(id,prompt,answer,exchangeId,signal) {
     const data=await nativeJSON('/api/ui/memory/dialogs/history?dialog_id='+id+'&limit=100',{signal});
@@ -167,6 +178,9 @@
     }
   }
   function sseChat(data,signal) {
+    let attemptId;
+    try{attemptId=createAttemptId();}
+    catch(e){return errorResponse(String(e.message||'HOLD_STOP_ATTEMPT_ID_UNAVAILABLE').slice(0,150));}
     let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
     let state='not_requested';
     const started=performance.now();let firstVisibleMs=null;
@@ -178,11 +192,12 @@
         if(modelStarted&&!streamDone){
           const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
           try{
-            const r=await nativePost('/api/nox/stop',{},c.signal);
+            const r=await nativePost('/api/nox/stop',{attempt_id:attemptId},c.signal);
             if(!r.ok)state='rejected';
             else{
               const x=await nativeBodyJSON(r,c.signal);
-              state=x?.status==='STOP_REQUESTED'&&x?.stream_cancellation_signalled===true
+              state=x?.status==='STOP_REQUESTED'&&x?.attempt_id===attemptId&&
+                x?.stream_cancellation_signalled===true
                 ?'signal_accepted':'unconfirmed';
             }
           }catch{state=c.signal.aborted?'timeout':'unknown';}
@@ -191,7 +206,7 @@
         upstreamAbort.abort();
         if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
           window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
-            transport_outcome:state,gpu_stop_verified:false
+            attempt_id:attemptId,transport_outcome:state,gpu_stop_verified:false
           }}));
       })());
     };
@@ -218,7 +233,7 @@
             answer_source:'NATIVE_PENDING',model_identity_verified:false});
           modelStarted=true;
           const upstream=await nativePost('/api/nox/chat/stream',{
-            message:data.message,dialog_id:id,task:'general',history:[]
+            message:data.message,dialog_id:id,task:'general',history:[],attempt_id:attemptId
           },nativeSignal);
           const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
           const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
@@ -270,6 +285,7 @@
           if(modelStarted&&!streamDone)await stopThenAbort();
           event({type:'error',
             error:canceling?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+            attempt_id:attemptId,
             gpu_stop_verified:false,
             stop_transport_outcome:state});
         }finally{
@@ -294,9 +310,10 @@
   }});
   async function jsonChat(data,signal) {
     try{
+      const attemptId=createAttemptId();
       const id=await dialogId(data,signal);
       const upstream=await nativePost('/api/nox/chat/stream',{
-        message:data.message,dialog_id:id,history:[],task:'general'
+        message:data.message,dialog_id:id,history:[],task:'general',attempt_id:attemptId
       },signal);
       const {answer,receipt,nativeModel}=await consume(upstream,()=>{},signal);
       if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');

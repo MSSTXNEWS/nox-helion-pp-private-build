@@ -3,16 +3,20 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const crypto=require('node:crypto');
+const webcrypto={getRandomValues:bytes=>crypto.randomFillSync(bytes)};
 const fs=require('node:fs');
 const file='coordination/onepass/nox-v135-resonance-owner-bridge.js';
 const JS=fs.readFileSync(file,'utf8');
 const V112=fs.readFileSync('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py','utf8');
+const stopAck=body=>Response.json({status:'STOP_REQUESTED',
+  attempt_id:JSON.parse(body||'{}').attempt_id,
+  stream_cancellation_signalled:true,gpu_stop_verified:false});
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
 test('V135 staged owner bridge remains within byte bounds',()=>{
   const n=Buffer.byteLength(JS,'utf8');
-  assert(n>=5000&&n<=20000, 'staging bridge byte bound');
+  assert(n>=5000&&n<=22000, 'staging bridge byte bound');
 });
 function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,onStop,onModel){
   const calls=[];
@@ -45,7 +49,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       assert.equal(opts.method,'POST');
       assert.equal(opts.credentials,'same-origin');
       const response=onStop?.(calls);
-      return response||Response.json({status:'STOP_REQUESTED',stream_cancellation_signalled:true,gpu_stop_verified:false});
+      return response||stopAck(opts.body);
     }
     if(u.pathname==='/api/nox/chat/stream'){
       const b=JSON.parse(opts.body);
@@ -75,7 +79,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   const window={NOX_NATIVE_OWNER:owner,fetch:old,dispatchEvent:event=>{uiEvents.push(event);return true;}};
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
   function CustomEvent(type,init){this.type=type;this.detail=init?.detail||{};}
-  const context={window,location,URL,Request,Response,ReadableStream,CustomEvent,
+  const context={crypto:webcrypto,window,location,URL,Request,Response,ReadableStream,CustomEvent,
     TextDecoder,TextEncoder,AbortController,performance,console,setTimeout,clearTimeout,
     requestAnimationFrame:raf};
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
@@ -199,6 +203,9 @@ test('V135 SSE cancel signals same-session STOP before aborting the same native 
   const stops=f.calls.filter(c=>c.path==='/api/nox/stop');
   assert.equal(stops.length,1,'Abort and stream cancel must share one STOP request');
   assert(f.calls.indexOf(stops[0])>f.calls.indexOf(calls[0]));
+  assert.match(JSON.parse(calls[0].body).attempt_id,/^[a-f0-9]{32}$/);
+  assert.equal(JSON.parse(stops[0].body).attempt_id,JSON.parse(calls[0].body).attempt_id,
+    'chat and STOP must carry the same client-minted attempt ID');
   assert(sawLiveModelSignal,'scoped STOP must reach V112 before the stream is aborted');
   assert.notEqual(JSON.parse(stops[0].body).gpu_stop_verified,true);
   const outcome=f.uiEvents.find(e=>e.type==='nox:native-stop-result')?.detail;
@@ -472,7 +479,7 @@ test('V156 coalesced native NDJSON keeps valid short frames and rejects one over
     const win={NOX_NATIVE_OWNER:true,fetch:upstream};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',
       href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
-    vm.runInNewContext(JS,{window:win,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:win,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,
       requestAnimationFrame:cb=>cb(performance.now())});
     const response=await win.fetch('/api/nox/chat',{method:'POST',
@@ -516,7 +523,7 @@ test('V157 native done is terminal: reject trailing control frame before S03 REA
     const w={NOX_NATIVE_OWNER:true,fetch:original};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',
       href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,
       requestAnimationFrame:cb=>cb(performance.now())});
     const r=await w.fetch('/api/nox/chat',{method:'POST',
@@ -564,7 +571,7 @@ test('V158 unknown or missing native event before done cannot report persisted S
     const w={NOX_NATIVE_OWNER:true,fetch:original};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',
       href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
     const r=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify({message:p})});
     return {status:r.status,result:await r.json(),calls};
@@ -612,7 +619,7 @@ test('V159 require real native start before delta/done and reject duplicate star
     const w={NOX_NATIVE_OWNER:true,fetch:original};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',
       href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
     const r=await w.fetch('/api/nox/chat',{method:'POST',
       body:JSON.stringify({message:p})});
@@ -667,7 +674,7 @@ test('V160 preparing is unique and precedes native start; reject before S03 read
     const w={NOX_NATIVE_OWNER:true,fetch:original};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',
       href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
     const r=await w.fetch('/api/nox/chat',{method:'POST',
       body:JSON.stringify({message:prompt})});
@@ -722,7 +729,7 @@ test('V161 missing native preparing cannot become persisted S03 success',async()
     const w={NOX_NATIVE_OWNER:true,fetch:old};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',
       href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
     const response=await w.fetch('/api/nox/chat',{method:'POST',
       body:JSON.stringify({message:p})});
@@ -771,7 +778,7 @@ test('V162 original native preparing mode must match V112 before S03 acceptance'
     const w={NOX_NATIVE_OWNER:true,fetch:native};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',
       href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
     const r=await w.fetch('/api/nox/chat',{method:'POST',
       body:JSON.stringify({message:question})});
@@ -903,7 +910,7 @@ test('V165 abort dislodges stalled native stream and never reports S03 done',asy
   const window={NOX_NATIVE_OWNER:true,fetch:old};
   const location={pathname:'/nox-web-v29/pc/resonance.html',
     href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
-  vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+  vm.runInNewContext(JS,{crypto:webcrypto,window,location,URL,Request,Response,ReadableStream,
     TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
   const controller=new AbortController();
   const response=await window.fetch('/api/nox/chat',{method:'POST',
@@ -1007,7 +1014,7 @@ test('V167 done on an open native keepalive completes JSON and SSE with S03 proo
     const w={NOX_NATIVE_OWNER:true,fetch:native};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
       href:'https://nox.local/nox-web-v29/pc/resonance.html'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
     const data={message:q,...(streamed?{dialog_id:id,request_id:'v167'}:{})};
     const res=await Promise.race([w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(data)}),
@@ -1049,7 +1056,7 @@ test('V167 same-chunk native frames after done remain fail-closed',async()=>{
   const w={NOX_NATIVE_OWNER:true,fetch:native};
   const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
     href:'https://nox.local/nox-web-v29/pc/resonance.html'};
-  vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+  vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
     TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
   const r=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify({message:'V167'})});
   assert.equal(r.status,503);
@@ -1070,7 +1077,7 @@ test('V168 pending native POST must unblock after scoped STOP even if transport 
     const w={NOX_NATIVE_OWNER:true,fetch:native};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
       href:'https://nox.local/nox-web-v29/pc/resonance.html'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,clearTimeout});
     const data={message:question,...(streamed?{dialog_id:id,request_id:'v168-stop'}:{})};
     const pending=w.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,body:JSON.stringify(data)});
@@ -1183,7 +1190,7 @@ test('V172 aborts stalled non-2xx owner error bodies on create, model and S03',a
     const w={NOX_NATIVE_OWNER:true,fetch:native};
     const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
       href:'https://nox.local/nox-web-v29/pc/resonance.html'};
-    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+    vm.runInNewContext(JS,{crypto:webcrypto,window:w,location:loc,URL,Request,Response,ReadableStream,
       TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,clearTimeout});
     const data={message:prompt,dialog_id:stage==='create'?null:id,request_id:'v172-'+stage};
     const response=await w.fetch('/api/nox/chat',{method:'POST',signal:abort.signal,
@@ -1266,7 +1273,7 @@ test('V174 abort before model headers cancels the same POST and keeps GPU stop u
   const window={NOX_NATIVE_OWNER:true,fetch:native};
   const pathname='/nox-web-v29/pc/resonance.html';
   const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
-  vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+  vm.runInNewContext(JS,{crypto:webcrypto,window,location,URL,Request,Response,ReadableStream,
     TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout,clearTimeout});
   const response=await window.fetch('/api/nox/chat',{method:'POST',signal:caller.signal,
     body:JSON.stringify({message:'Отмени до HTTP headers',dialog_id:id,request_id:'v174-stop-before-headers'})});
@@ -1310,11 +1317,11 @@ test('V174 abort before model headers cancels the same POST and keeps GPU stop u
 test('V179 STOP UI outcome distinguishes rejection, timeout and accepted transport',async()=>{
   for(const expected of ['rejected','timeout','signal_accepted']){
     const caller=new AbortController();
-    const onStop=()=>expected==='rejected'
+    const onStop=calls=>expected==='rejected'
       ?Response.json({status:'HOLD',reason:'NO_ACTIVE_SESSION_STREAM'},{status:409})
       :expected==='timeout'
         ?new Promise(()=>{})
-        :Response.json({status:'STOP_REQUESTED',stream_cancellation_signalled:true,gpu_stop_verified:false});
+        :stopAck(calls.findLast(x=>x.path==='/api/nox/stop')?.body);
     const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
       undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,onStop,()=>new Promise(()=>{}));
     const response=await f.fetch('/api/nox/chat',{method:'POST',signal:caller.signal,
@@ -1354,9 +1361,10 @@ test('V178 V135 cancellation uses only V112 authenticated cookie-scoped STOP',()
   assert(route.includes('if not check(request):'));
   assert(route.includes('key=scope(request)'));
   assert(route.includes('if key is None or key not in active:'));
-  assert(route.includes('active[key].set()'));
+  assert(route.includes("stream.get('attempt_id')!=attempt_id"));
+  assert(route.includes("stream['cancel'].set()"));
   assert(route.includes("'gpu_stop_verified':False"));
-  const request=JS.indexOf("nativePost('/api/nox/stop',{},c.signal)");
+  const request=JS.indexOf("nativePost('/api/nox/stop',{attempt_id:attemptId},c.signal)");
   const abort=JS.indexOf('upstreamAbort.abort()',request);
   assert(request>=0&&abort>request,'signal same-session STOP before aborting the stream');
   assert(JS.includes("credentials:'same-origin',cache:'no-store',signal"));
@@ -1375,21 +1383,25 @@ test('V180 concurrent cookie-scoped sessions: cancelling A leaves B active',asyn
   assert(scopeSource.includes('sorted(request.cookies.items())'));
   assert(scopeSource.includes("separators=(',',':')"));
   assert(scopeSource.includes("hashlib.sha256(raw.encode()).hexdigest()"));
-  assert(V112.includes('active[key].set()'),'existing STOP sets only the scoped active event');
+  assert(V112.includes("stream['cancel'].set()"),'STOP sets only the exact active attempt event');
 
   const active=new Map(),stopCounts=new Map();
   function makeSession(cookie){
     const key=scope(cookie),caller=new AbortController();
-    const onStop=()=>{
+    const onStop=calls=>{
       stopCounts.set(cookie,(stopCounts.get(cookie)||0)+1);
       const stream=active.get(key);
       if(!stream)return Response.json({status:'HOLD',reason:'NO_ACTIVE_SESSION_STREAM'},{status:409});
+      const stop=JSON.parse(calls.findLast(x=>x.path==='/api/nox/stop').body||'{}');
+      if(stop.attempt_id!==stream.attemptId)
+        return Response.json({status:'HOLD',reason:'HOLD_STOP_ATTEMPT_MISMATCH',gpu_stop_verified:false},{status:409});
       stream.stopSignalled=true;
-      return Response.json({status:'STOP_REQUESTED',stream_cancellation_signalled:true,
+      return Response.json({status:'STOP_REQUESTED',attempt_id:stop.attempt_id,stream_cancellation_signalled:true,
         gpu_stop_verified:false});
     };
     const onModel=(_calls,opts)=>{
-      const stream={signal:opts.signal,stopSignalled:false};
+      const modelPayload=JSON.parse(opts.body||'{}');
+      const stream={signal:opts.signal,attemptId:modelPayload.attempt_id,stopSignalled:false};
       active.set(key,stream);
       const frames=[
         {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
@@ -1447,6 +1459,8 @@ test('V180 concurrent cookie-scoped sessions: cancelling A leaves B active',asyn
   assert(stopA,'session A sent exactly one scoped STOP');
   assert.equal(a.f.calls.filter(x=>x.path==='/api/nox/stop').length,1);
   assert.equal(stopA.credentials,'same-origin');
+  assert.equal(JSON.parse(stopA.body).attempt_id,active.get(keyA).attemptId,
+    'session STOP must match the active request ID');
   assert.equal(b.f.calls.filter(x=>x.path==='/api/nox/stop').length,0);
 
   b.caller.abort();
