@@ -3,8 +3,7 @@ from __future__ import annotations
 import contextlib, io, json, time
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
 
-REMOTE=r''REMOTE=r'''
-set -euo pipefail
+REMOTE=r'''set -euo pipefail
 cd /root/nox/scripts
 /root/nox/venv/bin/python - <<'PYREMOTE'
 import ast,hashlib,json,os,stat,sqlite3
@@ -72,33 +71,25 @@ def _read_allowlisted_source(path,allowed_paths,root,max_bytes):
         os.close(fd)
 
 def _safe_type(node):
-    if node is None:
-        return 'UNANNOTATED'
-    if isinstance(node,ast.Name):
-        return node.id
+    if node is None:return 'UNANNOTATED'
+    if isinstance(node,ast.Name):return node.id
     if isinstance(node,ast.Attribute):
         base=_safe_type(node.value)
-        if base.startswith('UNSAFE_') or not node.attr.isidentifier():
-            return 'UNSAFE_ANNOTATION'
+        if base.startswith('UNSAFE_') or not node.attr.isidentifier():return 'UNSAFE_ANNOTATION'
         return base+'.'+node.attr
     if isinstance(node,ast.Subscript):
-        base=_safe_type(node.value)
-        item=_safe_type(node.slice)
-        if base.startswith('UNSAFE_') or item.startswith('UNSAFE_'):
-            return 'UNSAFE_ANNOTATION'
+        base=_safe_type(node.value);item=_safe_type(node.slice)
+        if base.startswith('UNSAFE_') or item.startswith('UNSAFE_'):return 'UNSAFE_ANNOTATION'
         return base+'['+item+']'
     if isinstance(node,ast.BinOp) and isinstance(node.op,ast.BitOr):
         left=_safe_type(node.left);right=_safe_type(node.right)
-        if left.startswith('UNSAFE_') or right.startswith('UNSAFE_'):
-            return 'UNSAFE_ANNOTATION'
+        if left.startswith('UNSAFE_') or right.startswith('UNSAFE_'):return 'UNSAFE_ANNOTATION'
         return left+' | '+right
     if isinstance(node,ast.Tuple):
         items=[_safe_type(x) for x in node.elts]
         return 'UNSAFE_ANNOTATION' if any(x.startswith('UNSAFE_') for x in items) else ', '.join(items)
-    if isinstance(node,ast.Constant) and node.value is None:
-        return 'None'
-    if isinstance(node,ast.Constant) and isinstance(node.value,str):
-        return 'FORWARD_REF'
+    if isinstance(node,ast.Constant) and node.value is None:return 'None'
+    if isinstance(node,ast.Constant) and isinstance(node.value,str):return 'FORWARD_REF'
     return 'UNSAFE_ANNOTATION'
 
 def _writer_contract(raw):
@@ -109,30 +100,24 @@ def _writer_contract(raw):
             continue
         args=node.args
         params=[x.arg for x in args.posonlyargs+args.args+args.kwonlyargs]
-        if args.vararg:
-            params.append('*'+args.vararg.arg)
-        if args.kwarg:
-            params.append('**'+args.kwarg.arg)
-        if any(not x.isidentifier() for x in params if not x.startswith('*')):
-            _hold('HOLD_S03_SIGNATURE')
+        if args.vararg:params.append('*'+args.vararg.arg)
+        if args.kwarg:params.append('**'+args.kwarg.arg)
+        if any(not x.lstrip('*').isidentifier() for x in params):_hold('HOLD_S03_SIGNATURE')
         contract.append({'name':node.name,'async':isinstance(node,ast.AsyncFunctionDef),
             'parameters':params[:32],'defaults':len(args.defaults)+sum(x is not None for x in args.kw_defaults),
             'return_type':_safe_type(node.returns)})
     return {'functions':contract,'private_source_exported':False}
 
 def _eval_path_expr(node,env):
-    if isinstance(node,ast.Constant) and isinstance(node.value,str):
-        return Path(node.value)
-    if isinstance(node,ast.Name) and node.id in env:
-        return Path(env[node.id])
+    if isinstance(node,ast.Constant) and isinstance(node.value,str):return Path(node.value)
+    if isinstance(node,ast.Name) and node.id in env:return Path(env[node.id])
     if isinstance(node,ast.Attribute) and node.attr=='parent':
         base=_eval_path_expr(node.value,env)
         return base.parent if base is not None else None
     if isinstance(node,ast.BinOp) and isinstance(node.op,ast.Div):
         base=_eval_path_expr(node.left,env)
         if base is None:return None
-        if isinstance(node.right,ast.Constant) and isinstance(node.right.value,str):
-            return base/node.right.value
+        if isinstance(node.right,ast.Constant) and isinstance(node.right.value,str):return base/node.right.value
         return None
     if isinstance(node,ast.Call) and isinstance(node.func,ast.Name) and node.func.id in ('Path','PurePath'):
         if len(node.args)!=1 or node.keywords:return None
@@ -149,11 +134,9 @@ def _database_path(raw,module_path,root):
     env={'__file__':Path(module_path)}
     database=None
     for node in tree.body:
-        targets=[]
-        value=None
+        targets=[];value=None
         if isinstance(node,ast.Assign):
-            targets=[x.id for x in node.targets if isinstance(x,ast.Name)]
-            value=node.value
+            targets=[x.id for x in node.targets if isinstance(x,ast.Name)];value=node.value
         elif isinstance(node,ast.AnnAssign) and isinstance(node.target,ast.Name):
             targets=[node.target.id];value=node.value
         if not targets or value is None:continue
@@ -162,33 +145,25 @@ def _database_path(raw,module_path,root):
             for target in targets:
                 env[target]=resolved
                 if target=='DB':database=resolved
-    if database is None:
-        _hold('HOLD_S03_DB_PATH_EXPRESSION')
+    if database is None:_hold('HOLD_S03_DB_PATH_EXPRESSION')
     database=_path_no_symlinks(database,root)
-    try:
-        mode=os.lstat(database).st_mode
-    except FileNotFoundError:
-        _hold('HOLD_S03_DB_MISSING')
-    if not stat.S_ISREG(mode):
-        _hold('HOLD_S03_DB_NOT_REGULAR')
+    try:mode=os.lstat(database).st_mode
+    except FileNotFoundError:_hold('HOLD_S03_DB_MISSING')
+    if not stat.S_ISREG(mode):_hold('HOLD_S03_DB_NOT_REGULAR')
     return database
 
 def _schema_snapshot(db_path,root,table_names):
     db_path=_path_no_symlinks(db_path,root)
     try:
-        if not stat.S_ISREG(os.lstat(db_path).st_mode):
-            _hold('HOLD_S03_DB_NOT_REGULAR')
+        if not stat.S_ISREG(os.lstat(db_path).st_mode):_hold('HOLD_S03_DB_NOT_REGULAR')
         con=sqlite3.connect(db_path.as_uri()+'?mode=ro',uri=True,timeout=4)
-    except RuntimeError:
-        raise
-    except (OSError,sqlite3.Error,ValueError):
-        _hold('HOLD_S03_DB_READONLY_OPEN')
+    except RuntimeError:raise
+    except (OSError,sqlite3.Error,ValueError):_hold('HOLD_S03_DB_READONLY_OPEN')
     result={'tables':[],'private_rows_exported':False,'read_only':True}
     try:
         con.execute('PRAGMA query_only=ON')
         for name in table_names:
-            if not isinstance(name,str) or not name.isidentifier():
-                _hold('HOLD_S03_TABLE_ALLOWLIST')
+            if not isinstance(name,str) or not name.isidentifier():_hold('HOLD_S03_TABLE_ALLOWLIST')
             found=con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(name,)).fetchone()
             if found is None:continue
             quoted='"'+name.replace('"','""')+'"'
@@ -198,19 +173,15 @@ def _schema_snapshot(db_path,root,table_names):
                                 'notnull':bool(row[3]),'primary_key':bool(row[5])})
             indexes=[]
             for row in con.execute('PRAGMA index_list('+quoted+')'):
-                idx=str(row[1])
-                idxq='"'+idx.replace('"','""')+'"'
+                idx=str(row[1]);idxq='"'+idx.replace('"','""')+'"'
                 idxcols=[str(x[2]) for x in con.execute('PRAGMA index_info('+idxq+')') if x[2] is not None]
                 indexes.append({'name':idx,'unique':bool(row[2]),'columns':idxcols[:32]})
             result['tables'].append({'name':name,'columns':columns[:32],'indexes':indexes[:32]})
         return result
-    except (OSError,sqlite3.Error,ValueError):
-        _hold('HOLD_S03_SCHEMA_READ')
-    finally:
-        con.close()
+    except (OSError,sqlite3.Error,ValueError):_hold('HOLD_S03_SCHEMA_READ')
+    finally:con.close()
 
 raw=_read_allowlisted_source(MODULE_PATH,MODULE_ALLOWLIST,MODULE_ROOT,MAX_SOURCE_BYTES)
-tree=ast.parse(raw)
 module_sha=hashlib.sha256(raw).hexdigest()
 contract=_writer_contract(raw)
 db=_database_path(raw,MODULE_PATH,MODULE_ROOT)
@@ -219,13 +190,12 @@ def emit(label,value):
     text=json.dumps(value,separators=(',',':'),sort_keys=True)
     if len(text)>6000:_hold('HOLD_S03_AUDIT_OUTPUT_SIZE')
     print('NATIVE_V129_'+label+'='+text)
-emit('SOURCE',{'module_path':str(MODULE_PATH),'sha256':module_sha,
-               'bytes':len(raw),'allowlist_match':True,'safe_ast_only':True})
+emit('SOURCE',{'module_path':str(MODULE_PATH),'sha256':module_sha,'bytes':len(raw),
+               'allowlist_match':True,'safe_ast_only':True})
 emit('WRITER_CONTRACT',contract)
 emit('SCHEMA',schema)
 print('NATIVE_READ_ONLY_COMPLETE=true')
-PYREMOTE
-'''
+PYREMOTE'''
 def main():
     ssh.REMOTE=REMOTE
     old=ssh.api
@@ -251,9 +221,11 @@ def main():
         except Exception:clean=False
     lines=stream.getvalue().splitlines()
     for line in lines:
-        if line.startswith(('NATIVE_V129_','TEMP_SSH_CLEANUP=')) and len(line)<800:print(line)
+        if line.startswith(('NATIVE_V129_','TEMP_SSH_CLEANUP=')) and len(line)<7000:print(line)
     accepted=bool(transport and clean and
-      any(x.startswith('NATIVE_V129_INTEGRITY=') and '"quick_check_ok":true' in x for x in lines)
+      any(x.startswith('NATIVE_V129_SOURCE=') for x in lines)
+      and any(x.startswith('NATIVE_V129_WRITER_CONTRACT=') for x in lines)
+      and any(x.startswith('NATIVE_V129_SCHEMA=') for x in lines)
       and 'NATIVE_READ_ONLY_COMPLETE=true' in lines)
     print('NOX_V129_S03_SOURCE_READ_ACCEPTED='+str(accepted).lower())
     return 0 if accepted else 2
