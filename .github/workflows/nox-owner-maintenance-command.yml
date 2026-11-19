@@ -18,7 +18,8 @@ jobs:
       github.event.comment.author_association == 'OWNER' &&
       github.event.issue.number == 256 &&
       startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
-      !contains(github.event.comment.body, ' inspect') &&
+      (contains(github.event.comment.body, ' paired_chat_deploy inspect') ||
+       !contains(github.event.comment.body, ' inspect')) &&
       !contains(github.event.comment.body, ' audit') &&
       !contains(github.event.comment.body, ' source_attest') &&
       !contains(github.event.comment.body, ' gpu_inventory') &&
@@ -33,12 +34,19 @@ jobs:
           python3 - <<'PY'
           import json,os,re
           e=json.load(open(os.environ['GITHUB_EVENT_PATH']))
-          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop|deploy|backup|memfd_audit)',e['comment']['body'])
-          assert m, 'Invalid bounded maintenance command'
+          body=e['comment']['body']
+          m=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) (audit|inspect|stage|repair|lifeline|emergency_stop|deploy|backup|memfd_audit)',body)
+          paired=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) paired_chat_deploy (inspect|apply)(?: ([A-Za-z0-9_-]{80,700}) ([A-Za-z0-9_-]{80,700}))?',body)
+          assert bool(m) != bool(paired), 'Invalid bounded maintenance command'
           assert e['comment']['user']['id']==340718567 and e['sender']['id']==340718567
           assert e['repository']['owner']['id']==340718567 and e['issue']['number']==256
+          if paired:
+              action='paired_chat_deploy'; sha=paired[1]; mode=paired[2]; js=paired[3] or ''; py=paired[4] or ''
+              assert (mode=='inspect' and not js and not py) or (mode=='apply' and js and py), 'Paired deploy requires both exact preimage tokens'
+          else:
+              sha=m[1]; action=m[2]; mode=js=py=''
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:
-              f.write('sha='+m[1]+'\naction='+m[2]+'\n')
+              f.write('sha='+sha+'\naction='+action+'\nmode='+mode+'\njs_token='+js+'\npy_token='+py+'\n')
           PY
       - name: Checkout main owner approval guard
         if: steps.request.outputs.action == 'emergency_stop'
@@ -67,6 +75,14 @@ jobs:
           if os.environ['APPROVED_SHA'] != os.environ['REQUEST_SHA']:
               raise SystemExit('HOLD_APPROVED_SOURCE_MISMATCH')
           PY
+      - name: Mask preimage CAS tokens
+        if: steps.request.outputs.action == 'paired_chat_deploy' && steps.request.outputs.mode == 'apply'
+        env:
+          NOX_JS_TOKEN: ${{ steps.request.outputs.js_token }}
+          NOX_PY_TOKEN: ${{ steps.request.outputs.py_token }}
+        run: |
+          echo "::add-mask::$NOX_JS_TOKEN"
+          echo "::add-mask::$NOX_PY_TOKEN"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ steps.request.outputs.sha }}
@@ -90,9 +106,11 @@ jobs:
           import os,py_compile
           from pathlib import Path
           a=os.environ['NOX_ACTION']
-          assert a in ('audit','inspect','stage','repair','lifeline','emergency_stop','deploy','backup','memfd_audit')
+          assert a == 'paired_chat_deploy' or a in ('audit','inspect','stage','repair','lifeline','emergency_stop','deploy','backup','memfd_audit')
           py_compile.compile('nox-control/owner_native_operator.py',doraise=True)
-          if a=='backup':
+          if a=='paired_chat_deploy':
+              py_compile.compile('nox-control/owner_paired_chat_deploy.py',doraise=True)
+          elif a=='backup':
               for name in ('owner_cp55_cipher','owner_cp55_scope','owner_cp55_native','owner_cp55_runner','auth_prefix_reuse'):
                   py_compile.compile('nox-control/'+name+'.py',doraise=True)
           elif a=='memfd_audit':
@@ -101,6 +119,30 @@ jobs:
               source=('nox-control/owner_native_lifeline_observer.py' if a=='lifeline'
                       else 'nox-control/owner_native_'+a+'.py')
               py_compile.compile(source,doraise=True)
+          PY
+      - name: Validate pinned paired chat source blobs before credentials
+        if: steps.request.outputs.action == 'paired_chat_deploy'
+        env:
+          NOX_PAIRED_SOURCE_COMMIT: daf5077bf8f0573ca3a991e7ade9ab733e8195f5
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$NOX_PAIRED_SOURCE_COMMIT"
+          python3 - <<'PY'
+          import hashlib, os, subprocess
+          commit=os.environ['NOX_PAIRED_SOURCE_COMMIT']
+          assert subprocess.check_output(['git','rev-parse',commit],text=True).strip()==commit
+          pins=(
+              ('coordination/onepass/nox-v135-resonance-owner-bridge.js',
+               'c4b3c870b9b2a8ee6c17c06bdb5866f4967a9ba7',
+               '21a2a9eb1d61358021811ab98a8f03932be1c16a0967566cb1e4b5b6d05dc122',22000),
+              ('nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py',
+               '4976fead0517e9d22ead636b2179f3d9436c0b50',
+               '28d3bece361499c9d04425f068833800094346204b9930192c3ad5ce6b2e8e3c',60000),
+          )
+          for path, blob_pin, sha_pin, limit in pins:
+              raw=subprocess.check_output(['git','show',f'{commit}:{path}'])
+              blob=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
+              assert 0 < len(raw) <= limit and blob==blob_pin and hashlib.sha256(raw).hexdigest()==sha_pin
           PY
       - name: Validate encrypted backup dependency before credentials
         if: steps.request.outputs.action == 'backup'
@@ -116,12 +158,23 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
           NOX_ACTION: ${{ steps.request.outputs.action }}
+          NOX_PAIRED_CHAT_MODE: ${{ steps.request.outputs.mode }}
+          NOX_EXPECTED_V135_TOKEN: ${{ steps.request.outputs.js_token }}
+          NOX_EXPECTED_V112_TOKEN: ${{ steps.request.outputs.py_token }}
         run: |
           if [ "$NOX_ACTION" = "backup" ]; then
             /usr/bin/python3 nox-control/owner_cp55_runner.py
           else
             python3 nox-control/owner_native_operator.py "$NOX_ACTION"
           fi
+      - name: Upload redacted paired preimage receipt for owner
+        if: success() && steps.request.outputs.action == 'paired_chat_deploy' && steps.request.outputs.mode == 'inspect'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_PAIRED_CHAT_PREIMAGE_${{ github.run_id }}
+          path: artifacts/paired-chat-deploy/preimage.json
+          retention-days: 1
+          if-no-files-found: error
       - name: Always detach only this run temporary public key
         if: >-
           always() &&
