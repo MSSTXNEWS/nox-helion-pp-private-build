@@ -131,6 +131,17 @@ def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, sec
 
 def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, expected_messages):
     """Fail closed unless a trusted canonical writer receipt matches exact independent S03 readback."""
+    # A single native chat exchange is not a two-turn continuity witness.
+    # Reject malformed transcript structure before evaluating receipt metadata:
+    # a matching final-answer hash alone does not establish four ordered turns.
+    if (not isinstance(dialog_id, str) or not dialog_id
+            or not isinstance(expected_messages, list) or len(expected_messages) != 4):
+        return False
+    if any(not isinstance(row, dict) or row.get('role') != role
+           or not isinstance(row.get('content'), str)
+           for row, role in zip(expected_messages,
+                                ('user', 'assistant', 'user', 'assistant'))):
+        return False
     if not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict):
         return False
     event_id = writer_receipt.get('event_id')
