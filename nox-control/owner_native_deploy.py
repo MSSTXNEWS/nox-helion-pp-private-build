@@ -41,7 +41,7 @@ TARGETS = {
 ASSET_SHA256 = {
     'owner_subagent_dispatcher.py': 'c3351a89323109bc6f20a02baefa7418ab8d247262190a0f3fd26c1ef24c03b3',
     'owner_subagent_processes.py': 'b6a8980a96fddeb433bd87179aab1817e3e2d1f3315a0c737c738050c7087a9d',
-    'owner_subagent_instruction_truth.py': 'e676acb50c4322847806851c704c97d5abc457c44d480931b3d09cef5ba8d9cb',
+    'owner_subagent_instruction_truth.py': '889783af0e0c9b8e7ea0482a7146aea14dada8cac32e49b813d3ff837d9c23e4',
 }
 STOP_PATHS = ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP',
               'state/STOP', 'state/STOP.flag', 'state/OWNER_MAINTENANCE.flag')
