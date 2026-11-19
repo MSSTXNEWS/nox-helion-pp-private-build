@@ -396,6 +396,9 @@ def _dialog_context(dialog_id):
     max_field_utf8_bytes=max_message_chars*4
     max_history_utf8_bytes=121000
     with _db() as db:
+        # Archive/owner gate and exact receipt-backed history must come from
+        # one SQLite snapshot; separate autocommit SELECTs can observe drift.
+        db.execute('BEGIN')
         found=_get_dialog(db,dialog_id)
         if found is None:
             return 'HOLD_DIALOG_SCOPE_NOT_BOUND',[]
