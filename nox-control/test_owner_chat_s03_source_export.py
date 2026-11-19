@@ -222,6 +222,20 @@ class SourceExportTests(unittest.TestCase):
             with mock.patch.dict(os.environ, {"NOX_OWNER_EXPORT_KEY_B64": "not-a-key"}, clear=True):
                 with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_EXPORT_KEY"):
                     operator.preflight_source_export_key()
+            malformed_pem_info = dict(
+                self.key_info,
+                created_at=current,
+                expires_at=current + 1800,
+                public_key_pem=("-----BEGIN PUBLIC KEY-----\n"
+                                "not-a-valid-rsa-key\n"
+                                "-----END PUBLIC KEY-----\n"),
+            )
+            malformed_pem_key = base64.urlsafe_b64encode(
+                helper.canonical(malformed_pem_info)).decode().rstrip("=")
+            with mock.patch.dict(os.environ, {
+                    "NOX_OWNER_EXPORT_KEY_B64": malformed_pem_key}, clear=True):
+                with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_EXPORT_KEY"):
+                    operator.preflight_source_export_key()
             with mock.patch.dict(os.environ, {"NOX_OWNER_EXPORT_KEY_B64": fresh_key}, clear=True):
                 self.assertEqual(operator.preflight_source_export_key(), fresh_key)
         run.assert_not_called()
