@@ -12,7 +12,7 @@ const answer='Живой поток NOX';
 const prompt='Привет, NOX';
 test('V135 staged owner bridge remains within byte bounds',()=>{
   const n=Buffer.byteLength(JS,'utf8');
-  assert(n>=5000&&n<=20000, 'staging bridge byte bound');
+  assert(n>=5000&&n<=22000, 'staging bridge byte bound');
 });
 function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,onStop,onModel){
   const calls=[];
@@ -1129,6 +1129,8 @@ test('V168 pending native POST must unblock after scoped STOP even if transport 
       assert.equal(next.done,false);
       const error=JSON.parse(dec.decode(next.value).slice(6).trim());
       assert.equal(error.type,'error');assert.equal(error.error,'STREAM_STOP_REQUESTED');
+      assert.equal(error.stop_admission_outcome,'HEADER_TIMEOUT_TRANSPORT_AMBIGUOUS');
+      assert.equal(error.cookie_stop_may_have_targeted_older_stream,true);
       assert.equal((await reader.read()).done,true);
     }else{
       await new Promise(ok=>setTimeout(ok,5));abort.abort();
@@ -1321,7 +1323,7 @@ test('V174 abort before model headers cancels the same POST and keeps GPU stop u
   for(let i=0;i<40&&!modelSignal;i++)await new Promise(resolve=>setTimeout(resolve,0));
   assert(modelSignal,'the original native stream request must be pending before abort');
   caller.abort();
-  for(let i=0;i<40&&!stopEntered;i++)await new Promise(resolve=>setTimeout(resolve,0));
+  for(let i=0;i<80&&!stopEntered;i++)await new Promise(resolve=>setTimeout(resolve,10));
   assert(stopEntered,'the same-session V112 STOP endpoint must be signalled');
   assert.equal(stopSawLiveModel,true,'STOP request must start before aborting the pending model POST');
   assert.equal(modelSignal.aborted,false,'model request stays connected until STOP responds');

@@ -9,6 +9,7 @@
   const enc=new TextEncoder();
   const ID=/^[a-f0-9]{32}$/;
   const MAX=200000;
+const ADMISSION_WAIT_MS=250;
   function livePieces(text) {
     const glyphs=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function'
       ? Array.from(new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text),part=>part.segment)
@@ -170,6 +171,20 @@ function sseChat(data,signal) {
 	let closed=false,finished=false,canceling=false,modelStarted=false,streamDone=false,stopJob=null;
 	let state='not_requested';
 	let stopAdmission=true;
+	let stopAdmissionOutcome='NOT_STARTED';
+	let admissionResponseClass='NO_RESPONSE_YET';
+	let preAdmissionRejected=false;
+	let resolveAdmission;
+	let admissionResolved=false;
+	let admissionTimer=null;
+	let stopAttempted=false;
+	const resolveStopAdmission=(allowStop,outcome)=>{
+		if(admissionResolved)return;
+		admissionResolved=true;
+		stopAdmissionOutcome=outcome;
+		if(admissionTimer!==null&&typeof clearTimeout==='function')clearTimeout(admissionTimer);
+		resolveAdmission(allowStop);
+	};
 	const started=performance.now();let firstVisibleMs=null;
 	const upstreamAbort=new AbortController();
 	const stopThenAbort=()=>{
@@ -177,6 +192,7 @@ function sseChat(data,signal) {
 		canceling=true;
 		return stopJob||(stopJob=(async()=>{
 			if(modelStarted&&!streamDone&&await stopAdmission){
+				stopAttempted=true;
 				const c=new AbortController(),t=setTimeout(()=>c.abort(),1000);
 				try{
 					const r=await nativePost('/api/nox/stop',{},c.signal);
@@ -192,7 +208,12 @@ function sseChat(data,signal) {
 			upstreamAbort.abort();
 			if(typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
 				window.dispatchEvent(new CustomEvent('nox:native-stop-result',{detail:{
-					transport_outcome:state,gpu_stop_verified:false
+					transport_outcome:state,
+					stop_admission_outcome:stopAdmissionOutcome,
+					admission_response_class:admissionResponseClass,
+					cookie_stop_may_have_targeted_older_stream:
+						stopAttempted&&stopAdmissionOutcome.includes('AMBIGUOUS'),
+					gpu_stop_verified:false
 				}}));
 		})());
 	};
@@ -218,19 +239,40 @@ function sseChat(data,signal) {
 				event({type:'meta',dialog_id:id,model_label:'UNKNOWN',
 					answer_source:'NATIVE_PENDING',model_identity_verified:false});
 				modelStarted=true;
-				let resolved;stopAdmission=new Promise(r=>resolved=r);
+				stopAdmission=new Promise(resolve=>{
+					resolveAdmission=resolve;
+					admissionTimer=setTimeout(()=>{
+						admissionResponseClass='NO_HEADERS_TIMEOUT';
+						resolveStopAdmission(true,'HEADER_TIMEOUT_TRANSPORT_AMBIGUOUS');
+					},ADMISSION_WAIT_MS);
+				});
 				let upstream;
 				try{
 					upstream=await nativePost('/api/nox/chat/stream',{
 						message:data.message,dialog_id:id,task:'general',history:[]
 					},nativeSignal);
-					resolved(upstream.status===200);
-				}catch(e){resolved(true);throw e;}
+					admissionResponseClass='HTTP_'+upstream.status;
+					preAdmissionRejected=upstream.status===409;
+					resolveStopAdmission(!preAdmissionRejected,preAdmissionRejected
+						?'HTTP_409_PRE_ADMISSION'
+						:upstream.status===200?'HTTP_200_ADMITTED'
+						:'NON_409_HTTP_STATUS_BEST_EFFORT');
+				}catch(e){
+					if(!admissionResolved){
+						admissionResponseClass='NO_HTTP_RESPONSE_TRANSPORT_FAILURE';
+						resolveStopAdmission(true,'TRANSPORT_NO_RESPONSE_AMBIGUOUS');
+					}
+					throw e;
+				}
 				if(upstream.status===409){
 					let reader,timed=false,timer;const detail=await Promise.race([(async()=>{reader=upstream.clone().body.getReader();let n=0,s='',d=new TextDecoder();for(;;){const c=await reader.read();if(c.done)return JSON.parse(s+d.decode());if((n+=c.value.byteLength)>512){reader.cancel().catch(()=>{});return null;}s+=d.decode(c.value,{stream:true});}})().catch(()=>null),new Promise(resolve=>{timer=setTimeout(()=>{timed=true;reader?.cancel().catch(()=>{});resolve(null);},1000);})]);clearTimeout(timer);
 					if(detail?.error==='HOLD_ACTIVE_SESSION_STREAM')throw Error('HOLD_NATIVE_STREAM_HOLD_ACTIVE_SESSION_STREAM');
 					if(timed)throw Error('HOLD_409');
 					throw Error('HOLD_409_REJECTED');
+				}
+				if(upstream.status!==200){
+					await stopThenAbort();
+					throw Error('HOLD_NATIVE_STREAM_HTTP_'+upstream.status);
 				}
 				const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
 				const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
@@ -279,11 +321,23 @@ function sseChat(data,signal) {
 					first_visible_token_ms:firstVisibleMs,
 					seconds:+((performance.now()-started)/1000).toFixed(2)});
 			}catch(e){
-				if(modelStarted&&!streamDone)await stopThenAbort();
+				if(modelStarted&&!streamDone){
+					if(preAdmissionRejected){
+						if(stopJob)await stopJob;
+						upstreamAbort.abort();
+					}else{
+						await stopThenAbort();
+					}
+				}
 				event({type:'error',
-					error:(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
+					error:preAdmissionRejected?String(e.message||'HOLD_409_REJECTED').slice(0,150):
+						(nativeSignal.aborted||canceling)?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
 					gpu_stop_verified:false,
-					stop_transport_outcome:state});
+					stop_transport_outcome:state,
+					stop_admission_outcome:stopAdmissionOutcome,
+					admission_response_class:admissionResponseClass,
+					cookie_stop_may_have_targeted_older_stream:
+						stopAttempted&&stopAdmissionOutcome.includes('AMBIGUOUS')});
 			}finally{
 				finished=true;
 				signal?.removeEventListener?.('abort',onAbort);
