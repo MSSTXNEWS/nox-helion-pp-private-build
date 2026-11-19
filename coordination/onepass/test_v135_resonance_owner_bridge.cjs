@@ -1627,3 +1627,67 @@ test('V189 paint budget short-circuits repeated matchMedia lookups after two wai
   assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
   assert(f.calls.some(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
+
+
+test('V190 late native chunk after done must fail closed before S03 readback',async()=>{
+  // Critical: a terminal frame in one network chunk must NOT suppress validation
+  // of a later chunk. A forged delta after done cannot receive a saved receipt.
+  const question='V190 second-turn native terminal protocol audit';
+  const answer='Проверенный ответ NOX 🇪🇸';
+  const exchange='v190-native-receipt-01';
+  const first=[
+    {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+    {type:'start',model:'NOX HELION'},
+    {type:'delta',text:answer},
+    {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:exchange}
+  ].map(x=>JSON.stringify(x)+'\n').join('');
+  const late=JSON.stringify({type:'delta',text:'FORGED LATE TOKEN'})+'\n';
+  async function attempt(later,sse){
+    const calls=[];
+    const native=async path=>{
+      const u=new URL(String(path),'https://nox.local');calls.push(u.pathname);
+      if(u.pathname==='/api/ui/memory/dialogs/create')
+        return Response.json({dialog_id:id,title:'V190'});
+      if(u.pathname==='/api/ui/memory/dialogs/history')
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',exchange_id:exchange,content:question},
+          {role:'assistant',exchange_id:exchange,content:answer}]});
+      if(u.pathname==='/api/nox/chat/stream')
+        return new Response(new ReadableStream({start(c){
+          const utf8=new TextEncoder();
+          c.enqueue(utf8.encode(first));
+          queueMicrotask(()=>{c.enqueue(utf8.encode(later));c.close();});
+        }}),{headers:{'content-type':'application/x-ndjson'}});
+      return new Response('NO_ROUTE',{status:404});
+    };
+    const w={NOX_NATIVE_OWNER:true,fetch:native};
+    const loc={pathname:'/nox-web-v29/pc/resonance.html',
+      href:'https://nox.local/nox-web-v29/pc/resonance.html',origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+    const input=sse?{message:question,dialog_id:id,request_id:'v190-tail'}:
+      {message:question};
+    const response=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(input)});
+    return {status:response.status,calls,
+      result:sse?await events(response):await response.json()};
+  }
+  for(const sse of [false,true]){
+    const clean=await attempt('\n',sse);
+    assert(clean.calls.includes('/api/ui/memory/dialogs/history'));
+    if(sse)assert.equal(clean.result.filter(x=>x.type==='done').length,1);
+    else{assert.equal(clean.status,200);assert.equal(clean.result.answer,answer);}
+    const poisoned=await attempt(late,sse);
+    assert.equal(poisoned.calls.filter(x=>x==='/api/nox/chat/stream').length,1);
+    assert(!poisoned.calls.includes('/api/ui/memory/dialogs/history'),
+      'no S03 acceptance may follow an illegal late native chunk');
+    if(sse){
+      assert.equal(poisoned.result.filter(x=>x.type==='done').length,0);
+      assert(poisoned.result.some(x=>x.type==='error'&&
+        /HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/.test(x.error)));
+    }else{
+      assert.equal(poisoned.status,503);
+      assert.equal(poisoned.result.history_persisted,false);
+      assert.match(poisoned.result.error,/HOLD_NATIVE_TRAILING_FRAME_AFTER_DONE/);
+    }
+  }
+});
