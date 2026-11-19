@@ -36,6 +36,20 @@ def complete_rows():
             for name in PLAN.EXPECTED_FILES]
 
 
+def synthetic_tensor_roles():
+    # GGUF-order dimensions; synthetic metadata only, never weight bytes.
+    rows = [{"name": "token_embd.weight", "dtype": "Q5_K", "dims": [5120, 32000]}]
+    for layer in range(40):
+        rows.extend([
+            {"name": f"blk.{layer}.ffn_gate_inp.weight", "dtype": "Q8_0", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.exp_probs_b.bias", "dtype": "F32", "dims": [384]},
+            {"name": f"blk.{layer}.ffn_gate_exps.weight", "dtype": "IQ2_XXS", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.ffn_up_exps.weight", "dtype": "IQ2_XXS", "dims": [5120, 384]},
+            {"name": f"blk.{layer}.ffn_down_exps.weight", "dtype": "IQ2_XXS", "dims": [384, 5120]},
+        ])
+    rows.append({"name": "blk.2.engram_embd.weight", "dtype": "IQ4_NL", "dims": [512, 1000]})
+    return rows
+
 class MayaLinkageReadOnlyTests(unittest.TestCase):
     def test_readelf_reports_dynamic_needs_without_running_maya(self):
         output = """Dynamic section at offset 0x1000 contains 4 entries:
@@ -115,6 +129,50 @@ class MayaLinkageReadOnlyTests(unittest.TestCase):
 
 
 class MayaLaunchPlanTests(unittest.TestCase):
+
+    def test_iq2_xxs_embedding_and_router_are_rejected(self):
+        roles = synthetic_tensor_roles()
+        next(row for row in roles if row["name"] == "token_embd.weight")["dtype"] = "IQ2_XXS"
+        self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
+                         "HOLD_UNSUPPORTED_ROLE_DTYPE")
+        roles = synthetic_tensor_roles()
+        next(row for row in roles if row["name"] == "blk.0.ffn_gate_inp.weight")["dtype"] = "IQ2_XXS"
+        got = PLAN.validate_tensor_role_inventory(roles)
+        self.assertEqual(got["state"], "HOLD_UNSUPPORTED_ROLE_DTYPE")
+        self.assertEqual(got["role"], "router")
+
+    def test_iq2_xxs_expert_gate_up_down_and_iq4_nl_engram_are_allowed(self):
+        got = PLAN.validate_tensor_role_inventory(synthetic_tensor_roles())
+        self.assertEqual(got["state"], "ROLE_DTYPE_METADATA_PASS")
+        self.assertEqual(got["roles_checked"]["routed_expert_layers"], 40)
+        self.assertEqual(got["roles_checked"]["engram_tables"], 1)
+
+    def test_expert_and_engram_roles_fail_closed_on_mismatch_or_bad_blocks(self):
+        roles = synthetic_tensor_roles()
+        next(row for row in roles if row["name"] == "blk.0.ffn_gate_exps.weight")["dtype"] = "IQ3_XXS"
+        self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
+                         "HOLD_UNSUPPORTED_ROLE_DTYPE")
+        roles = synthetic_tensor_roles()
+        roles[-1]["dims"][0] = 510
+        self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
+                         "HOLD_ENGRAM_IQ4_NL_BLOCK_ALIGNMENT")
+        roles = synthetic_tensor_roles()
+        roles[-1]["dtype"] = "IQ2_XXS"
+        self.assertEqual(PLAN.validate_tensor_role_inventory(roles)["state"],
+                         "HOLD_UNSUPPORTED_ROLE_DTYPE")
+
+    def test_successful_source_plan_requires_role_metadata(self):
+        with patch.object(PLAN, "observe_packer_output", return_value={
+                "state": "PACKER_OUTPUT_ABSENT_VERIFIED",
+                "model_dir": "/synthetic/model", "output_dir": "/synthetic/model/maya-ds4"}):
+            got = PLAN.evaluate_source_plan(
+                stop_present=False, gpu_ids=(0, 1), tp=2, max_context=4096,
+                reserve_mib=1024, verified_files=complete_rows(),
+                tensor_types=("BF16", "IQ2_XXS", "IQ4_NL"),
+                model_file_paths=["synthetic"] * 6)
+        self.assertEqual(got["state"], "HOLD_TENSOR_ROLE_INVENTORY_REQUIRED")
+        self.assertFalse(got["launchable"])
+
     def test_stop_blocks_launch_even_with_complete_inputs(self):
         got = PLAN.evaluate_source_plan(
             stop_present=True, gpu_ids=(0, 1), tp=2, max_context=65536,
@@ -132,6 +190,7 @@ class MayaLaunchPlanTests(unittest.TestCase):
                 stop_present=False, gpu_ids=(0, 1), tp=2, max_context=65536,
                 reserve_mib=1024, verified_files=complete_rows(),
                 tensor_types=("BF16", "Q5_K", "Q6_K", "Q8_0", "IQ2_XXS", "IQ4_NL"),
+                tensor_role_inventory=synthetic_tensor_roles(),
                 model_file_paths=["synthetic"] * 6)
         self.assertEqual(got["state"], "SOURCE_ONLY_PLAN_READY_NOT_LAUNCHABLE")
         self.assertFalse(got["launchable"])
@@ -142,7 +201,8 @@ class MayaLaunchPlanTests(unittest.TestCase):
         self.assertEqual(got["packer_output_dir"], "/synthetic/model/maya-ds4")
         self.assertTrue(got["packer_non_clobber_precondition"])
         self.assertEqual(got["model_content_sha256"], "VERIFIED_AGAINST_PINNED_FACTS")
-        self.assertEqual(got["model_tensor_inventory"], "NOT_TESTED_BY_SOURCE_PREFLIGHT")
+        self.assertEqual(got["model_tensor_inventory"], "ROLE_DTYPE_CHECKED_FOR_SUPPLIED_METADATA_ONLY")
+        self.assertEqual(got["role_dtype_gate"]["state"], "ROLE_DTYPE_METADATA_PASS")
         self.assertEqual(got["runtime_abi"], "NOT_TESTED")
         self.assertEqual(got["sm70_execution"], "NOT_TESTED")
         self.assertEqual(got["runtime_compatibility"], "NOT_TESTED")
