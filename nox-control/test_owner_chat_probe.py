@@ -185,7 +185,7 @@ class ProbeTests(unittest.TestCase):
             def __init__(self, rows): self.rows = rows; self.closed = False
             def close(self): self.closed = True
             def __iter__(self):
-                return iter(json.dumps(row).encode()+b'\\n' for row in self.rows)
+                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
         for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
                            ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
                            ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
