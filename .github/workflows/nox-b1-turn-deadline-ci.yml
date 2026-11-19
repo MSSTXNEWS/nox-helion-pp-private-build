@@ -1,0 +1,27 @@
+name: NOX B1 bounded turn deadline
+on:
+  push:
+    branches:
+      - b1/turn-timeout-fence-20261119-2310
+  pull_request:
+    paths:
+      - 'nox-control/owner_chat_stream.py'
+      - 'nox-control/test_b1_turn_deadline.py'
+      - '.github/workflows/nox-b1-turn-deadline-ci.yml'
+permissions:
+  contents: read
+jobs:
+  b1-deadline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: One focused owner timeout test
+        run: |
+          python3 -m venv .b1-deadline-ci
+          . .b1-deadline-ci/bin/activate
+          python -m pip install --disable-pip-version-check httpx==0.28.1 fastapi==0.116.1
+          python -m py_compile nox-control/owner_chat_stream.py nox-control/test_b1_turn_deadline.py
+          PYTHONPATH=nox-control python -m unittest -v test_b1_turn_deadline.B1TurnDeadlineTest

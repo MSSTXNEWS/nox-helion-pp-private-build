@@ -24,6 +24,12 @@ class StreamFailure(RuntimeError):
     pass
 
 
+# A read-idle timeout is not a whole-turn deadline: model/tool loops may
+# remain active indefinitely by producing periodic chunks.  Keep a separate
+# aggregate completion budget; timed-out answers are never S03-eligible.
+OWNER_TURN_DEADLINE_SECONDS = 240.0
+
+
 def _reject_duplicate_keys(pairs):
     """Never reassign an upstream evidence key (including nested objects)."""
     result={}
@@ -417,11 +423,12 @@ def install(native):
             # closed or cancelled before normal exhaustion.
             exhausted=False
             try:
-                async with aclosing(_run(native,url,payload,user_text)) as run:
-                    async for kind,text in run:
-                        if kind=='token' and text:
-                            answer.append(text)
-                            yield native['_sse'](text)
+                async with asyncio.timeout(OWNER_TURN_DEADLINE_SECONDS):
+                    async with aclosing(_run(native,url,payload,user_text)) as run:
+                        async for kind,text in run:
+                            if kind=='token' and text:
+                                answer.append(text)
+                                yield native['_sse'](text)
                 final=''.join(answer)
                 if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')
                 # S03 postflight reads this only after normal exhaustion. Set it
@@ -434,7 +441,9 @@ def install(native):
                 raise
             except Exception as error:
                 payload.pop('_agent_final',None)
-                code=str(error) if isinstance(error,StreamFailure) else 'HOLD_OWNER_STREAM_RUNTIME'
+                code=('HOLD_OWNER_TURN_TIMEOUT' if isinstance(error,TimeoutError) else
+                      str(error) if isinstance(error,StreamFailure) else
+                      'HOLD_OWNER_STREAM_RUNTIME')
                 yield 'data: '+json.dumps({'error':{'code':code}})+'\n\n'
             finally:
                 if not exhausted:
@@ -447,15 +456,18 @@ def install(native):
                 'Cache-Control':'no-cache, no-store','X-Accel-Buffering':'no'})
         try:
             answer=[]
-            async with aclosing(_run(native,url,payload,user_text)) as run:
-                async for kind,text in run:
-                    if kind=='token':answer.append(text)
+            async with asyncio.timeout(OWNER_TURN_DEADLINE_SECONDS):
+                async with aclosing(_run(native,url,payload,user_text)) as run:
+                    async for kind,text in run:
+                        if kind=='token':answer.append(text)
             final=''.join(answer)
             if not final.strip():raise StreamFailure('HOLD_MODEL_EMPTY')
             payload['_agent_final']=final
             return JSONResponse(native['_final_json'](final))
-        except Exception:
+        except Exception as error:
             payload.pop('_agent_final',None)
-            return JSONResponse({'error':{'code':'HOLD_OWNER_STREAM_RUNTIME'}},status_code=502)
+            code=('HOLD_OWNER_TURN_TIMEOUT' if isinstance(error,TimeoutError)
+                  else 'HOLD_OWNER_STREAM_RUNTIME')
+            return JSONResponse({'error':{'code':code}},status_code=502)
 
     native['owner_completion']=owner_completion
