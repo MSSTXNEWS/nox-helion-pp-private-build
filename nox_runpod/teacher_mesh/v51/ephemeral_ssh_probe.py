@@ -1,8 +1,9 @@
 """Pinned, minimal Vast SSH-key transport for the NOX owner runner.
 
-This implements only instance listing, per-instance SSH-key attach/list/detach.
-It uses a fixed HTTPS origin, fixed instance scope, Bearer auth, no redirects,
-bounded responses, and identity verification before and after detach.
+This implements exact owner-scoped instance lookup and per-instance SSH-key
+attach/list/detach. It uses a fixed HTTPS origin, fixed instance scope, Bearer
+auth, no redirects, bounded responses, and identity verification before and
+after detach.
 """
 from __future__ import annotations
 
@@ -18,6 +19,8 @@ import urllib.error
 import urllib.request
 
 API_BASE = "https://console.vast.ai/api/v0"
+# Exact current official Vast CLI source for show_instance() owner-scoped GET.
+VAST_CLI_REFERENCE_SHA = "b0eab2968b832d62b55fd07b29e26449e3408d7e"
 INSTANCE_ID = 60509551
 MAX_RESPONSE_BYTES = 1024 * 1024
 REQUEST_TIMEOUT_SECONDS = 20
@@ -28,7 +31,7 @@ TRACK = RUNNER / "ssh-key-track.json"
 _PUBLIC_KEY_RE = re.compile(r"^ssh-ed25519 ([A-Za-z0-9+/]+={0,2})(?: ([^\r\n]{0,100}))?$")
 _ID_RE = re.compile(r"^[0-9]{1,20}$")
 _ALLOWED_PATHS = (
-    re.compile(r"^/instances/$"),
+    re.compile(r"^/instances/60509551/?$"),
     re.compile(r"^/instances/60509551/ssh/?$"),
     re.compile(r"^/instances/60509551/ssh/[0-9]{1,20}/?$"),
 )
@@ -58,8 +61,6 @@ def _valid_public_key(value: object) -> bool:
 def _canonical_path(path: object) -> str:
     if not isinstance(path, str) or not any(pattern.fullmatch(path) for pattern in _ALLOWED_PATHS):
         raise RuntimeError("HOLD_PROVIDER_REQUEST_SCOPE")
-    if path == "/instances/":
-        return path
     return path.rstrip("/")
 
 
@@ -75,7 +76,7 @@ def api(method: str, path: str, key: str, body=None):
     path = _canonical_path(path)
     if not isinstance(key, str) or not key or len(key) > 4096 or "\r" in key or "\n" in key:
         raise RuntimeError("HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE")
-    if path == "/instances/":
+    if path == f"/instances/{INSTANCE_ID}":
         allowed = method == "GET" and body is None
     elif path == f"/instances/{INSTANCE_ID}/ssh":
         allowed = (
@@ -92,8 +93,10 @@ def api(method: str, path: str, key: str, body=None):
         raise RuntimeError("HOLD_PROVIDER_REQUEST_SCOPE")
 
     data = json.dumps(body, separators=(",", ":")).encode("utf-8") if body is not None else None
+    url = (API_BASE + path + "/?owner=me"
+           if path == f"/instances/{INSTANCE_ID}" else API_BASE + path + "/")
     request = urllib.request.Request(
-        API_BASE + path,
+        url,
         data=data,
         method=method,
         headers={

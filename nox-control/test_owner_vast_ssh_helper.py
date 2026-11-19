@@ -47,12 +47,12 @@ class OwnerVastHelperTests(unittest.TestCase):
             seen["url"] = request.full_url
             seen["method"] = request.get_method()
             seen["authorization"] = request.get_header("Authorization")
-            return _Response(b'{"instances":[]}')
+            return _Response(b'{"instances":{"id":60509551}}')
 
         with mock.patch.object(probe, "_open", side_effect=fake_open):
-            self.assertEqual(probe.api("GET", "/instances/", TOKEN), {"instances": []})
+            self.assertEqual(probe.api("GET", "/instances/60509551/", TOKEN), {"instances": {"id": 60509551}})
         self.assertEqual(seen, {
-            "url": "https://console.vast.ai/api/v0/instances/",
+            "url": "https://console.vast.ai/api/v0/instances/60509551/?owner=me",
             "method": "GET",
             "authorization": "Bearer " + TOKEN,
         })
@@ -82,7 +82,7 @@ class OwnerVastHelperTests(unittest.TestCase):
         with mock.patch.object(probe, "_open", side_effect=fake_open):
             self.assertEqual(probe.api("DELETE", "/instances/60509551/ssh/23", TOKEN), {})
         self.assertEqual(seen, {
-            "url": "https://console.vast.ai/api/v0/instances/60509551/ssh/23",
+            "url": "https://console.vast.ai/api/v0/instances/60509551/ssh/23/",
             "method": "DELETE",
         })
 
@@ -97,7 +97,7 @@ class OwnerVastHelperTests(unittest.TestCase):
         with mock.patch.object(probe, "_open", side_effect=fake_open):
             result = probe.api("POST", "/instances/60509551/ssh/", TOKEN, {"ssh_key": PUBLIC})
         self.assertEqual(result, {"success": True})
-        self.assertEqual(seen["url"], "https://console.vast.ai/api/v0/instances/60509551/ssh")
+        self.assertEqual(seen["url"], "https://console.vast.ai/api/v0/instances/60509551/ssh/")
         self.assertEqual(json.loads(seen["body"]), {"ssh_key": PUBLIC})
 
     def test_cleanup_detaches_only_the_recorded_key_and_verifies_absence(self):
