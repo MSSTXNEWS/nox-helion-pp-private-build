@@ -28,6 +28,10 @@ FLAGS = (
 LOCK_PATHS = (ROOT/'state/owner_maintenance.lock', ROOT/'state/dispatcher/native_subagents.lock')
 IDENTIFIER = re.compile(r'^[A-Za-z0-9_.:/@ -]{1,250}$')
 SHA = re.compile(r'^[0-9a-f]{40,64}$')
+CGROUP_ROOT = Path('/sys/fs/cgroup')
+CGROUP_MAX_READ = 65536
+CGROUP_MAX_MEMBERS = 128
+CGROUP_MAX_CHILD_ENTRIES = 4096
 
 def emit(name, value):
     print('NOX_MAINT_SCOPE_' + name + '=' + json.dumps(value, ensure_ascii=True,
@@ -95,13 +99,263 @@ def scalar_projection(data, names):
             result[name] = redact_source(value)
     return result
 
-def process(pid):
+class CgroupPinHold(ValueError):
+    pass
+
+
+def _cgroup_hold_state(code):
+    if code.startswith('CGROUP_'):
+        code = code[len('CGROUP_'):]
+    return 'HOLD_CGROUP_' + code
+
+
+def _read_at(fd, name, limit, code):
+    if name not in ('stat', 'status', 'environ', 'cgroup', 'cgroup.controllers',
+                    'cgroup.type', 'cgroup.procs', 'memory.reclaim'):
+        raise CgroupPinHold('FILE_NAME')
     try:
-        p = Path('/proc')/str(int(pid))
+        child = os.open(name, os.O_RDONLY | os.O_NONBLOCK |
+                        getattr(os, 'O_NOFOLLOW', 0) |
+                        getattr(os, 'O_CLOEXEC', 0), dir_fd=fd)
+    except OSError:
+        raise CgroupPinHold(code) from None
+    try:
+        if not stat.S_ISREG(os.fstat(child).st_mode):
+            raise CgroupPinHold(code)
+        raw = bytearray()
+        while len(raw) <= limit:
+            chunk = os.read(child, min(8192, limit + 1 - len(raw)))
+            if not chunk:
+                break
+            raw.extend(chunk)
+    except OSError:
+        raise CgroupPinHold(code) from None
+    finally:
+        os.close(child)
+    if len(raw) > limit:
+        raise CgroupPinHold(code)
+    return bytes(raw)
+
+
+def _parse_cgroup_procs(raw):
+    try:
+        lines = raw.decode('ascii').splitlines()
+    except UnicodeDecodeError:
+        raise CgroupPinHold('CGROUP_PROCS_ENCODING') from None
+    if any(not line.isdecimal() for line in lines):
+        raise CgroupPinHold('CGROUP_PROCS_FORMAT')
+    pids = [int(line) for line in lines]
+    if any(pid <= 1 for pid in pids) or len(pids) != len(set(pids)):
+        raise CgroupPinHold('CGROUP_PROCS_FORMAT')
+    return sorted(pids)
+
+
+def _proc_identity(proc_root, pid):
+    if type(pid) is not int or pid <= 1:
+        raise CgroupPinHold('PID')
+    try:
+        proc_fd = os.open(Path(proc_root) / str(pid), os.O_RDONLY |
+                          getattr(os, 'O_DIRECTORY', 0) |
+                          getattr(os, 'O_NOFOLLOW', 0) |
+                          getattr(os, 'O_CLOEXEC', 0))
+    except OSError:
+        raise CgroupPinHold('PROC_DIRECTORY') from None
+    try:
+        raw_stat = _read_at(proc_fd, 'stat', 8192, 'PROC_STAT')
+        close = raw_stat.rfind(b')')
+        if close < 0:
+            raise CgroupPinHold('PROC_STAT_FORMAT')
+        fields = raw_stat[close + 2:].split()
+        if len(fields) <= 19 or not fields[0]:
+            raise CgroupPinHold('PROC_STAT_FORMAT')
+        if not fields[19].isdigit() or len(fields[19]) > 24:
+            raise CgroupPinHold('PROC_STAT_START')
+        start_ticks = int(fields[19])
+        raw_cgroup = _read_at(proc_fd, 'cgroup', 8192, 'PROC_CGROUP')
+        try:
+            rows = raw_cgroup.decode('ascii').splitlines()
+        except UnicodeDecodeError:
+            raise CgroupPinHold('PROC_CGROUP_ENCODING') from None
+        unified = [row[3:] for row in rows if row.startswith('0::')]
+        if len(unified) != 1:
+            raise CgroupPinHold('PROC_CGROUP_UNIFIED')
+        relative = unified[0]
+        if (not relative.startswith('/') or len(relative.encode()) > 4096 or
+                any(ord(ch) < 32 or ord(ch) == 127 for ch in relative)):
+            raise CgroupPinHold('PROC_CGROUP_PATH')
+        components = relative[1:].split('/') if relative != '/' else ()
+        if any(not part or part in ('.', '..') for part in components):
+            raise CgroupPinHold('PROC_CGROUP_PATH')
+        return start_ticks, relative
+    finally:
+        os.close(proc_fd)
+
+
+def _open_cgroup(root, relative):
+    try:
+        root_fd = os.open(Path(root), os.O_RDONLY |
+                          getattr(os, 'O_DIRECTORY', 0) |
+                          getattr(os, 'O_NOFOLLOW', 0) |
+                          getattr(os, 'O_CLOEXEC', 0))
+    except OSError:
+        raise CgroupPinHold('CGROUP_ROOT') from None
+    current = root_fd
+    try:
+        components = relative[1:].split('/') if relative != '/' else ()
+        for part in components:
+            try:
+                child = os.open(part, os.O_RDONLY |
+                                getattr(os, 'O_DIRECTORY', 0) |
+                                getattr(os, 'O_NOFOLLOW', 0) |
+                                getattr(os, 'O_CLOEXEC', 0), dir_fd=current)
+            except OSError:
+                raise CgroupPinHold('CGROUP_PATH') from None
+            if current != root_fd:
+                os.close(current)
+            current = child
+        root_controllers = set(_read_at(root_fd, 'cgroup.controllers', 8192,
+                                        'CGROUP_CONTROLLERS').decode('ascii').split())
+        if 'memory' not in root_controllers:
+            raise CgroupPinHold('MEMORY_CONTROLLER')
+        info = os.fstat(current)
+        if info.st_dev <= 0 or info.st_ino <= 0:
+            raise CgroupPinHold('CGROUP_INODE')
+        if current != root_fd:
+            os.close(root_fd)
+        return current, {'device': info.st_dev, 'inode': info.st_ino}
+    except BaseException:
+        if current != root_fd:
+            os.close(current)
+        os.close(root_fd)
+        raise
+    # The caller owns the target FD; the root FD is only an anchor.
+    # For a root target, current == root_fd and remains owned by the caller.
+
+
+def cgroup_process_pin(pid, expected_start_ticks, *, proc_root=None, cgroup_root=None):
+    """Return a bounded read-only target pin compatible with the reclaim helper."""
+    proc_root = PROC if proc_root is None else Path(proc_root)
+    cgroup_root = CGROUP_ROOT if cgroup_root is None else Path(cgroup_root)
+    row = {'schema': 'NOX_PROCESS_CGROUP_PIN_V1', 'state': 'HOLD_NOT_VERIFIED',
+           'process_pid': pid if type(pid) is int else None,
+           'process_start_ticks': expected_start_ticks
+               if type(expected_start_ticks) is int else None,
+           'cgroup_path': None, 'device': None, 'inode': None,
+           'cgroup_type': None, 'member_count': None, 'members': [],
+           'members_complete': False, 'child_count': None,
+           'children_complete': False, 'leaf_cgroup': None,
+           'memory_reclaim_present': False, 'pin_sha256': None,
+           'read_only': True}
+    target_fd = None
+    try:
+        if (type(pid) is not int or pid <= 1 or
+                type(expected_start_ticks) is not int or expected_start_ticks < 0):
+            raise CgroupPinHold('PIN_INPUT')
+        before_ticks, relative = _proc_identity(proc_root, pid)
+        if before_ticks != expected_start_ticks:
+            raise CgroupPinHold('PROCESS_IDENTITY_CHANGED')
+        target_fd, identity = _open_cgroup(cgroup_root, relative)
+        row.update({'cgroup_path': relative, **identity})
+        cgroup_type = _read_at(target_fd, 'cgroup.type', 128,
+                               'CGROUP_TYPE').decode('ascii').strip()
+        if cgroup_type not in ('domain', 'domain threaded', 'threaded', 'domain invalid'):
+            raise CgroupPinHold('CGROUP_TYPE')
+        row['cgroup_type'] = cgroup_type
+        raw_procs = _read_at(target_fd, 'cgroup.procs', CGROUP_MAX_READ,
+                             'CGROUP_PROCS')
+        pids = _parse_cgroup_procs(raw_procs)
+        row['member_count'] = len(pids)
+        if not pids:
+            raise CgroupPinHold('CGROUP_MEMBERS_EMPTY')
+        if len(pids) > CGROUP_MAX_MEMBERS:
+            raise CgroupPinHold('CGROUP_MEMBER_LIMIT')
+        members = []
+        for member_pid in sorted(pids):
+            first_ticks, member_path = _proc_identity(proc_root, member_pid)
+            if member_path != relative:
+                raise CgroupPinHold('MEMBER_PATH_CHANGED')
+            second_ticks, second_path = _proc_identity(proc_root, member_pid)
+            if first_ticks != second_ticks or second_path != relative:
+                raise CgroupPinHold('MEMBER_IDENTITY_CHANGED')
+            members.append({'pid': member_pid, 'start_ticks': first_ticks})
+        row['members'] = members
+        raw_procs_after = _read_at(target_fd, 'cgroup.procs', CGROUP_MAX_READ,
+                                   'CGROUP_PROCS_REREAD')
+        if _parse_cgroup_procs(raw_procs_after) != pids:
+            raise CgroupPinHold('CGROUP_MEMBERS_CHANGED')
+        row['members_complete'] = pid in pids
+        if not row['members_complete']:
+            raise CgroupPinHold('PROCESS_NOT_MEMBER')
+        names = os.listdir(target_fd)
+        if len(names) > CGROUP_MAX_CHILD_ENTRIES:
+            raise CgroupPinHold('CGROUP_CHILD_ENTRY_LIMIT')
+        children = 0
+        for name in names:
+            try:
+                info = os.stat(name, dir_fd=target_fd, follow_symlinks=False)
+            except OSError:
+                raise CgroupPinHold('CGROUP_CHILD_SCAN') from None
+            if stat.S_ISLNK(info.st_mode):
+                raise CgroupPinHold('CGROUP_CHILD_SYMLINK')
+            if stat.S_ISDIR(info.st_mode):
+                children += 1
+        row['child_count'] = children
+        row['children_complete'] = True
+        row['leaf_cgroup'] = children == 0
+        try:
+            reclaim_info = os.stat('memory.reclaim', dir_fd=target_fd,
+                                   follow_symlinks=False)
+            row['memory_reclaim_present'] = stat.S_ISREG(reclaim_info.st_mode)
+        except OSError:
+            row['memory_reclaim_present'] = False
+        after_ticks, after_path = _proc_identity(proc_root, pid)
+        if after_ticks != expected_start_ticks or after_path != relative:
+            raise CgroupPinHold('PROCESS_CHANGED_DURING_SNAPSHOT')
+        if relative == '/':
+            raise CgroupPinHold('ROOT_NOT_TARGETABLE')
+        if cgroup_type != 'domain':
+            raise CgroupPinHold('CGROUP_NOT_DOMAIN')
+        if children:
+            raise CgroupPinHold('CGROUP_NOT_LEAF')
+        if not row['memory_reclaim_present']:
+            raise CgroupPinHold('MEMORY_RECLAIM_ABSENT')
+        pin = {'cgroup_path': relative, 'device': row['device'],
+               'inode': row['inode'], 'members': members}
+        pin_raw = json.dumps(pin, sort_keys=True, separators=(',', ':')).encode()
+        row['pin_sha256'] = hashlib.sha256(pin_raw).hexdigest()
+        row['state'] = 'PINNED_READ_ONLY'
+    except CgroupPinHold as exc:
+        row['state'] = _cgroup_hold_state(str(exc))
+        if not row['members_complete']:
+            row['members'] = []
+    except (OSError, ValueError, UnicodeError, TypeError):
+        row['state'] = 'HOLD_CGROUP_READ_ERROR'
+        if not row['members_complete']:
+            row['members'] = []
+    finally:
+        if target_fd is not None:
+            os.close(target_fd)
+    return row
+
+
+def process(pid, *, include_cgroup=False, expected_start_ticks=None,
+            expected_ppid=None):
+    try:
+        if (expected_start_ticks is not None and
+                (type(expected_start_ticks) is not int or expected_start_ticks < 0)):
+            raise ValueError('PID_CLAIM_FORMAT')
+        if expected_ppid is not None and (type(expected_ppid) is not int or expected_ppid <= 0):
+            raise ValueError('PPID_CLAIM_FORMAT')
+        p = PROC/str(int(pid))
         raw = (p/'stat').read_text()
         fields = raw.rsplit(') ', 1)[1].split()
         result = {'pid':int(pid), 'ppid':int(fields[1]), 'pgrp':int(fields[2]),
                   'start_ticks':int(fields[19]), 'state':fields[0]}
+        if (expected_start_ticks is not None and
+                result['start_ticks'] != expected_start_ticks):
+            raise ValueError('PID_CLAIM_CHANGED')
+        if expected_ppid is not None and result['ppid'] != expected_ppid:
+            raise ValueError('PPID_CLAIM_CHANGED')
         ns = re.search(r'^NSpid:\s*(.*)$', (p/'status').read_text(), re.M)
         result['namespace_pids'] = [int(x) for x in ns[1].split()] if ns else []
         # Export two non-secret dispatcher controls, never an environment dump.
@@ -115,6 +369,9 @@ def process(pid):
         again = (p/'stat').read_text().rsplit(') ', 1)[1].split()
         if int(again[19]) != result['start_ticks']:
             raise ValueError('PID_CHANGED')
+        if include_cgroup:
+            result['cgroup_pin'] = cgroup_process_pin(
+                result['pid'], result['start_ticks'])
         return result
     except (OSError, ValueError, IndexError):
         return {'pid':pid, 'status':'UNKNOWN_OR_CHANGED'}
@@ -129,7 +386,7 @@ def runtime_snapshot():
         m = re.match(r'^([A-Za-z0-9_.:-]+)\s+([A-Z]+)(?:\s+pid\s+(\d+))?', line)
         if m and m[1] in keep:
             rows.append({'service':m[1], 'state':m[2],
-                         'identity':process(int(m[3])) if m[3] else None})
+                         'identity':process(int(m[3]), include_cgroup=True) if m[3] else None})
     flags = {}
     for path in FLAGS:
         try:
@@ -292,7 +549,8 @@ def worker_status_sample():
         emit('POST_WORKERS', {'state':'NO_NATIVE_STATUS'})
         return
     director=native.get('director') or {}
-    observed_director=process(director.get('pid')) if type(director.get('pid')) is int else None
+    observed_director=process(director.get('pid'),include_cgroup=True,
+                              expected_start_ticks=director.get('process_starttime')) if type(director.get('pid')) is int else None
     row={'time_unix':time.time(), 'observed_at':native.get('observed_at'),
          'claimed_director':scalar_projection(director,('pid','ppid','process_starttime')),
          'observed_director':observed_director,'workers':[]}
@@ -300,7 +558,9 @@ def worker_status_sample():
         if not isinstance(worker,dict):
             continue
         claimed=scalar_projection(worker,('pid','ppid','process_starttime','role','state','heartbeat_at','current_task','native_pid_verified'))
-        identity=process(worker['pid']) if type(worker.get('pid')) is int else None
+        identity=process(worker['pid'],include_cgroup=True,
+                         expected_start_ticks=worker.get('process_starttime'),
+                         expected_ppid=director.get('pid')) if type(worker.get('pid')) is int else None
         verified=(isinstance(identity,dict) and identity.get('state') in ('R','S','D','I')
                   and identity.get('start_ticks')==worker.get('process_starttime')
                   and identity.get('ppid')==director.get('pid')
