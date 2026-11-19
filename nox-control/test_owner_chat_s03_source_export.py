@@ -190,10 +190,10 @@ class SourceExportTests(unittest.TestCase):
                     mock.patch("builtins.print"),
                 ):
                     result = operator.main()
+                    self.assertNotIn("NOX2", os.environ)
 
                 self.assertEqual(result, 2)
                 load_credential.assert_not_called()
-                self.assertNotIn("NOX2", safe_env)
                 self.assertEqual(
                     attempted_provider_imports,
                     ["nox_runpod.teacher_mesh.v51"] if failure == "provider_import" else [],
