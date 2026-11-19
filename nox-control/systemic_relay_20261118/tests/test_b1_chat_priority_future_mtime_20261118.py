@@ -649,6 +649,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         # AST-extracted methods, real queue JSON, no worker or live S03 POST.
         import hashlib
         import json
+        import sqlite3
         import threading
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
         native = next(n for n in tree.body if isinstance(n, ast.ClassDef)
@@ -666,6 +667,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         scope = {
             "document": lambda path, limit: json.loads(Path(path).read_text()),
             "encoded": encoded, "digest": digest, "GateError": RuntimeError,
+            "sqlite3": sqlite3,
             "HANDLER": "owner_native_subagent_review",
             "LEAF_HANDLER": "owner_native_typed_leaf",
             "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
