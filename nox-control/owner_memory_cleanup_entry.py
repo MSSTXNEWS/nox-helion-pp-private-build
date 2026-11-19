@@ -163,6 +163,7 @@ def go():
         candidates = audit.get("cleanup_candidates", [])
         safe = (audit.get("process_scan", {}).get("complete") is True
                 and all(row.get("category") in SAFE for row in candidates))
+        page_cache_result = None
         # A full directory inventory is not required to delete a specific
         # already-audited regular file: the existing reclaim() rechecks its
         # inode, mode, age, open/mmap use, prefix digest and process census.
@@ -173,12 +174,31 @@ def go():
         if candidates:
             require(not any((ROOT/p).exists() or (ROOT/p).is_symlink()
                             for p in ("STOP", "state/STOP")), "STOP_RECHECK")
-            # Existing tool checks inode identity, age, open/mapped status,
-            # second process census, SHA receipt, lease and every candidate.
-            result = storage.reclaim(request, commit, request, audit_sha)
-            print("NOX_MAINT_MEMORY_DISK_RECLAIM=" + json.dumps(
-                storage.public_summary(result), separators=(",", ":"),
-                allow_nan=False), flush=True)
+            limit = before.get("limit_bytes")
+            memory = before.get("memory_bytes")
+            headroom = (max(0, limit - memory)
+                        if type(limit) is int and type(memory) is int else None)
+            if headroom is not None and headroom < 4 * 1024**3:
+                # Below the browser runtime 4 GiB memory prerequisite, evict only
+                # clean cache hints from the exact cold, non-model candidates.
+                # Keep those files intact; no unlink, kill, model unload or restart.
+                page_cache_result = storage.reclaim_page_cache(
+                    request, commit, request, audit_sha)
+                print("NOX_MAINT_MEMORY_PAGE_CACHE=" + json.dumps(
+                    storage.public_summary(page_cache_result),
+                    separators=(",", ":"), allow_nan=False), flush=True)
+                print("NOX_MAINT_MEMORY_DISK_RECLAIM=" + json.dumps({
+                    "state":"SKIPPED_BELOW_4_GIB_BROWSER_MEMORY_PREREQUISITE",
+                    "files_deleted":0,"weight_bytes_deleted":0,
+                    "checkpoint_bytes_deleted":0,
+                    "source_memory_credentials_bytes_deleted":0}), flush=True)
+            else:
+                # Existing tool checks exact inode identity, age, open/mapped
+                # status, second process census, SHA receipt, lease and candidates.
+                result = storage.reclaim(request, commit, request, audit_sha)
+                print("NOX_MAINT_MEMORY_DISK_RECLAIM=" + json.dumps(
+                    storage.public_summary(result), separators=(",", ":"),
+                    allow_nan=False), flush=True)
         else:
             print("NOX_MAINT_MEMORY_DISK_RECLAIM=" + json.dumps({
                 "state":"NO_ELIGIBLE_EPHEMERAL_FILES", "files_deleted":0,
@@ -194,6 +214,15 @@ def go():
             "memory_delta_includes_other_processes":True,
             "disk_audit_coverage_partial":partial,
             "cgroup_proactive_reclaim_executed":False,
+            "exact_file_page_cache_advice_executed":bool(page_cache_result and
+                page_cache_result.get("advised_files")),
+            "page_cache_reclaimed_bytes_claimed":0,
+            "native_admission_floor_bytes":2 * 1024**3,
+            "native_job_admitted":False,
+            "browser_runtime_memory_floor_bytes":4 * 1024**3,
+            "browser_runtime_disk_floor_bytes":7 * 1024**3,
+            "browser_runtime_admitted":False,
+            "browser_disk_prerequisite_checked":False,
             "global_drop_caches_executed":False,
             "model_or_training_restarted":False,
             "weights_or_S03_modified_by_action":False,

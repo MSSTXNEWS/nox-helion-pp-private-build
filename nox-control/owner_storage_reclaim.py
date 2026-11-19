@@ -33,6 +33,12 @@ MAX_ENTRIES = 160000
 MAX_DIRS = 20000
 MAX_CANDIDATES = 128
 MAX_DELETIONS = 32
+MAX_PAGE_CACHE_FILES = 32
+MAX_PAGE_CACHE_ADVISE_BYTES = 4 * GIB
+MAX_PAGE_CACHE_BYTES_PER_FILE = 512 * 1024 * 1024
+MIN_NATIVE_ADMISSION_HEADROOM = 2 * GIB
+BROWSER_RUNTIME_HEADROOM = 4 * GIB
+BROWSER_RUNTIME_DISK_HEADROOM = 7 * GIB
 AUDIT_SECONDS = 24
 RECLAIM_SECONDS = 35
 AUDIT_TTL = 900
@@ -48,6 +54,10 @@ SAFE_TEACHER_STORAGE_HOLD_CODES = frozenset({
     'HOLD_STORAGE_SYMLINK',
     'HOLD_STORAGE_FILE_SCOPE',
     'HOLD_NOT_REGULAR_EPHEMERAL_FILE',
+})
+PAGE_CACHE_SAFE_CATEGORIES = frozenset({
+    'PIP_DOWNLOAD_CACHE', 'PIP_WHEEL_CACHE',
+    'OLD_DEBUG_LOG_ROTATION', 'INACTIVE_ELF_CORE',
 })
 PARTIAL = re.compile(r'(?i)(?:\.part(?:ial)?|\.incomplete|\.download|\.tmp|\.lock)(?:[.-]|$)')
 WEIGHT_SUFFIX = {'.gguf', '.safetensors', '.pt', '.pth', '.bin', '.ckpt', '.onnx', '.h5', '.npz'}
@@ -610,6 +620,198 @@ def reclaim_candidate(candidate, deadline):
         os.close(parent_fd)
 
 
+def reclaim_page_cache_candidate(candidate, deadline, maximum_bytes):
+    """Issue DONTNEED only for one exact, unused ephemeral file range."""
+    path = Path(candidate.get('path', ''))
+    category = candidate.get('category')
+    if (category not in PAGE_CACHE_SAFE_CATEGORIES or deletion_kind(path) is None
+            or not hasattr(os, 'posix_fadvise')
+            or not hasattr(os, 'POSIX_FADV_DONTNEED')):
+        raise StorageHold('HOLD_PAGE_CACHE_CANDIDATE_SCOPE')
+    parent_fd = open_parent(path)
+    fd = None
+    try:
+        info = os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
+        if identity(info) != candidate.get('identity'):
+            raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
+        fd = os.open(path.name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=parent_fd)
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        info = os.fstat(fd)
+        if identity(info) != candidate.get('identity'):
+            raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
+        head = os.pread(fd, 32, 0)
+        if digest_bytes(head) != candidate.get('prefix_sha256'):
+            raise StorageHold('HOLD_STORAGE_PREFIX_CHANGED')
+        usage = process_usage(min(deadline, time.monotonic() + 4),
+                              ignore_fd=(os.getpid(), str(fd)))
+        fresh, reason = qualify(path, info, time.time(), usage)
+        if (fresh is None or fresh['identity'] != candidate['identity']
+                or fresh['category'] != category):
+            raise StorageHold('HOLD_STORAGE_' + str(reason or 'CANDIDATE_CHANGED'))
+        if time.monotonic() > deadline:
+            raise StorageHold('HOLD_STORAGE_TIME_BUDGET')
+        if identity(os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)) != candidate['identity']:
+            raise StorageHold('HOLD_STORAGE_IDENTITY_CHANGED')
+        advised = min(max(0, info.st_size), max(0, maximum_bytes),
+                      MAX_PAGE_CACHE_BYTES_PER_FILE)
+        if advised <= 0:
+            raise StorageHold('HOLD_PAGE_CACHE_EMPTY_RANGE')
+        # POSIX_FADV_DONTNEED is a best-effort hint for clean page-cache pages.
+        # It neither writes file contents nor guarantees reclaim; dirty pages
+        # may remain cached. The open/mmap census above protects warm users.
+        os.posix_fadvise(fd, 0, advised, os.POSIX_FADV_DONTNEED)
+        return {'path_id': candidate['path_id'], 'category': category,
+                'logical_bytes_advised': advised,
+                'allocated_bytes_observed': candidate['allocated_bytes'],
+                'state': 'DONTNEED_HINT_ACCEPTED',
+                'actual_reclaimed_bytes_confirmed': 0,
+                'reclaim_amount_unverified': True}
+    finally:
+        if fd is not None:
+            os.close(fd)
+        os.close(parent_fd)
+
+
+def reclaim_page_cache(request, source, audit_request, expected_sha):
+    """Advise exact cold ephemeral cache pages while browser memory headroom is below 4 GiB."""
+    if (not audit_request.isdigit()
+            or not re.fullmatch(r'[0-9a-f]{64}', expected_sha)):
+        raise StorageHold('HOLD_EXACT_STORAGE_AUDIT_PIN_REQUIRED')
+    audit_path = receipt_directory() / ('audit_' + audit_request + '.json')
+    raw = bounded_bytes(audit_path, 2 * 1024 * 1024)
+    if digest_bytes(raw) != expected_sha:
+        raise StorageHold('HOLD_STORAGE_AUDIT_SHA_CHANGED')
+    previous = json.loads(raw)
+    if (previous.get('schema') != SCHEMA or previous.get('action') != 'AUDIT'
+            or previous.get('instance_id') != INSTANCE
+            or previous.get('request') != audit_request
+            or previous.get('source_sha') != source
+            or previous.get('helper_sha256') != digest_bytes(bounded_bytes(__file__, 2 * 1024 * 1024))
+            or type(previous.get('finished_at')) not in (int, float)
+            or not 0 <= time.time() - previous['finished_at'] <= AUDIT_TTL
+            or previous.get('process_scan', {}).get('complete') is not True
+            or not isinstance(previous.get('cleanup_candidates'), list)
+            or len(previous['cleanup_candidates']) > MAX_CANDIDATES):
+        raise StorageHold('HOLD_STORAGE_AUDIT_IDENTITY_OR_FRESHNESS')
+    if any(row.get('category') not in PAGE_CACHE_SAFE_CATEGORIES
+           for row in previous['cleanup_candidates']):
+        raise StorageHold('HOLD_PAGE_CACHE_CANDIDATE_SCOPE')
+    with reclaim_locks():
+        started = time.time()
+        end = time.monotonic() + RECLAIM_SECONDS
+        before = filesystem_budget()
+        cgroup = before.get('cgroup', {})
+        headroom = cgroup.get('headroom_bytes')
+        limit = cgroup.get('limit_bytes')
+        if type(headroom) is not int or type(limit) is not int:
+            raise StorageHold('HOLD_PAGE_CACHE_HEADROOM_UNVERIFIED')
+        receipt = {'schema': SCHEMA, 'instance_id': INSTANCE,
+                   'action': 'PAGE_CACHE_RECLAIM', 'request': request,
+                   'source_sha': source, 'audit_request': audit_request,
+                   'audit_sha256': expected_sha, 'started_at': started,
+                   'before': before,
+                   'native_admission_threshold_bytes': MIN_NATIVE_ADMISSION_HEADROOM,
+                   'browser_runtime_memory_threshold_bytes': BROWSER_RUNTIME_HEADROOM,
+                   'browser_runtime_disk_threshold_bytes': BROWSER_RUNTIME_DISK_HEADROOM,
+                   'browser_runtime_disk_threshold_checked': False,
+                   'page_cache_advice_budget_bytes': MAX_PAGE_CACHE_ADVISE_BYTES,
+                   'page_cache_max_files': MAX_PAGE_CACHE_FILES,
+                   'page_cache_max_bytes_per_file': MAX_PAGE_CACHE_BYTES_PER_FILE,
+                   'browser_runtime_admitted': False,
+                   'headroom_at_start_bytes': headroom, 'advised_files': [],
+                   'browser_memory_threshold_observed_during_pass': False,
+                   'advice_budget_exhausted': False, 'file_budget_exhausted': False,
+                   'logical_bytes_advised': 0,
+                   'actual_reclaimed_bytes_confirmed': 0,
+                   'reclaim_amount_unverified': True,
+                   'model_files_touched': False, 'files_unlinked': 0,
+                   'processes_killed': 0, 'services_restarted': 0,
+                   'weights_or_S03_modified': False}
+        output = receipt_directory() / ('page_cache_' + request + '.json')
+        if headroom >= BROWSER_RUNTIME_HEADROOM:
+            receipt['state'] = 'SKIPPED_HEADROOM_AT_OR_ABOVE_4_GIB'
+        else:
+            for candidate in previous['cleanup_candidates'][:MAX_PAGE_CACHE_FILES]:
+                if time.monotonic() > end:
+                    receipt['budget_exhausted'] = True
+                    receipt['stop_reason'] = '35_SECOND_TIME_BUDGET'
+                    break
+                remaining = MAX_PAGE_CACHE_ADVISE_BYTES - receipt['logical_bytes_advised']
+                if remaining <= 0:
+                    receipt['advice_budget_exhausted'] = True
+                    receipt['stop_reason'] = '4_GIB_ADVICE_BUDGET'
+                    break
+                receipt['inflight'] = {'path_id': candidate.get('path_id'),
+                    'category': candidate.get('category'),
+                    'identity': candidate.get('identity'),
+                    'state': 'EXACT_FILE_CENSUS_AND_RECHECK_REQUIRED'}
+                write_receipt(output, receipt, replace=output.exists())
+                try:
+                    row = reclaim_page_cache_candidate(candidate, end, remaining)
+                    receipt['advised_files'].append(row)
+                    receipt['logical_bytes_advised'] += row['logical_bytes_advised']
+                except (OSError, StorageHold) as exc:
+                    code = str(exc)
+                    receipt.setdefault('skipped', []).append({
+                        'path_id': candidate.get('path_id'),
+                        'reason': code if re.fullmatch(r'HOLD_[A-Z_]+', code)
+                                  else 'HOLD_PAGE_CACHE_OS_OPERATION'})
+                receipt['inflight'] = None
+                write_receipt(output, receipt, replace=output.exists())
+                latest_cgroup = filesystem_budget().get('cgroup', {})
+                latest_headroom = latest_cgroup.get('headroom_bytes')
+                if type(latest_headroom) is not int:
+                    receipt['headroom_recheck_state'] = 'UNVERIFIED_STOPPED'
+                    receipt['stop_reason'] = 'HEADROOM_RECHECK_UNVERIFIED'
+                    break
+                if latest_headroom >= BROWSER_RUNTIME_HEADROOM:
+                    receipt['browser_memory_threshold_observed_during_pass'] = True
+                    receipt['stop_reason'] = '4_GIB_OBSERVED_DURING_PASS'
+                    break
+            else:
+                if len(previous['cleanup_candidates']) > MAX_PAGE_CACHE_FILES:
+                    receipt['file_budget_exhausted'] = True
+                    receipt['stop_reason'] = '32_FILE_LIMIT'
+                else:
+                    receipt['stop_reason'] = 'SAFE_CANDIDATES_EXHAUSTED'
+        receipt['finished_at'] = time.time()
+        receipt['after'] = filesystem_budget()
+        after_cgroup = receipt['after'].get('cgroup', {})
+        after_headroom = after_cgroup.get('headroom_bytes')
+        receipt['headroom_after_bytes'] = after_headroom
+        receipt['two_gib_admission_memory_threshold_met_after'] = (
+            type(after_headroom) is int
+            and after_headroom >= MIN_NATIVE_ADMISSION_HEADROOM)
+        receipt['browser_memory_prerequisite_met_after'] = (
+            type(after_headroom) is int
+            and after_headroom >= BROWSER_RUNTIME_HEADROOM)
+        receipt['browser_disk_prerequisite_checked'] = False
+        receipt['browser_runtime_admitted'] = False
+        receipt['headroom_delta_includes_other_processes'] = True
+        if receipt.get('state') == 'SKIPPED_HEADROOM_AT_OR_ABOVE_4_GIB':
+            if not receipt['browser_memory_prerequisite_met_after']:
+                receipt['state'] = 'HEADROOM_FELL_BELOW_4_GIB_AFTER_SKIPPED_START'
+        elif receipt['browser_memory_prerequisite_met_after']:
+            receipt['state'] = 'BROWSER_MEMORY_PREREQUISITE_MET_AFTER_ACTION'
+        elif receipt.get('budget_exhausted'):
+            receipt['state'] = 'TIME_BUDGET_EXHAUSTED_BELOW_4_GIB'
+        elif receipt.get('advice_budget_exhausted'):
+            receipt['state'] = '4_GIB_ADVICE_BUDGET_EXHAUSTED_BELOW_4_GIB'
+        elif receipt.get('file_budget_exhausted'):
+            receipt['state'] = '32_FILE_LIMIT_REACHED_BELOW_4_GIB'
+        elif receipt.get('stop_reason') == '4_GIB_OBSERVED_DURING_PASS':
+            receipt['state'] = 'HEADROOM_FELL_BELOW_4_GIB_AFTER_PASS'
+        elif receipt.get('headroom_recheck_state') == 'UNVERIFIED_STOPPED':
+            receipt['state'] = 'HEADROOM_UNVERIFIED_AFTER_PASS'
+        else:
+            receipt['state'] = 'SAFE_CANDIDATES_EXHAUSTED_BELOW_4_GIB'
+        receipt['one_shot_no_retry'] = True
+        receipt['page_cache_reclaimed_bytes_claimed'] = 0
+        receipt['native_job_admitted'] = False
+        write_receipt(output, receipt, replace=output.exists())
+        return receipt
+
+
 def reclaim(request, source, audit_request, expected_sha):
     if not audit_request.isdigit() or not re.fullmatch(r'[0-9a-f]{64}', expected_sha):
         raise StorageHold('HOLD_EXACT_STORAGE_AUDIT_PIN_REQUIRED')
@@ -666,6 +868,16 @@ def public_summary(receipt):
             'process_scan', 'cleanup_refusals', 'eligible_allocated_bytes', 'reclaim_batch_limit',
             'budget', 'placement', 'pc_registration_present', 'pc_connectivity_verified_by_this_audit',
             'weight_eviction', 'files_deleted', 'allocated_bytes_unlinked', 'weight_bytes_deleted',
+            'native_admission_threshold_bytes', 'browser_runtime_memory_threshold_bytes',
+            'browser_runtime_disk_threshold_bytes', 'browser_runtime_disk_threshold_checked',
+            'page_cache_advice_budget_bytes', 'page_cache_max_files',
+            'page_cache_max_bytes_per_file', 'stop_reason', 'one_shot_no_retry',
+            'advice_budget_exhausted', 'file_budget_exhausted', 'browser_runtime_admitted', 'browser_memory_prerequisite_met_after',
+            'browser_memory_threshold_observed_during_pass', 'browser_disk_prerequisite_checked',
+            'headroom_at_start_bytes', 'headroom_after_bytes',
+            'logical_bytes_advised', 'actual_reclaimed_bytes_confirmed',
+            'reclaim_amount_unverified', 'page_cache_reclaimed_bytes_claimed',
+            'two_gib_admission_memory_threshold_met_after', 'native_job_admitted',
             'checkpoint_bytes_deleted', 'source_memory_credentials_bytes_deleted', 'observed_ssd_free_bytes_delta',
             'free_delta_may_include_concurrent_activity', 'weight_eviction_blockers', 'before', 'after')
     value = {key: receipt[key] for key in keys if key in receipt}
@@ -677,6 +889,15 @@ def public_summary(receipt):
         value['eligible_by_category'] = dict(totals)
     if 'skipped' in receipt:
         value['skip_reasons'] = dict(Counter(row['reason'] for row in receipt['skipped']))
+    if 'advised_files' in receipt:
+        advised = Counter()
+        for row in receipt['advised_files']:
+            advised[row['category']] += row['logical_bytes_advised']
+        value['page_cache_files_advised'] = len(receipt['advised_files'])
+        value['page_cache_bytes_advised_by_category'] = dict(advised)
+    if 'skipped' in receipt and receipt.get('action') == 'PAGE_CACHE_RECLAIM':
+        value['page_cache_skip_reasons'] = dict(
+            Counter(row['reason'] for row in receipt['skipped']))
     return value
 
 
@@ -698,6 +919,12 @@ def main():
     elif action == 'RECLAIM':
         receipt = reclaim(request, source, os.environ.get('NOX_STORAGE_AUDIT_REQUEST', ''), os.environ.get('NOX_STORAGE_AUDIT_SHA256', ''))
         path = receipt_directory() / ('reclaim_' + request + '.json')
+        sha = digest_bytes(bounded_bytes(path, 2 * 1024 * 1024))
+    elif action == 'PAGE_CACHE_RECLAIM':
+        receipt = reclaim_page_cache(request, source,
+            os.environ.get('NOX_STORAGE_AUDIT_REQUEST', ''),
+            os.environ.get('NOX_STORAGE_AUDIT_SHA256', ''))
+        path = receipt_directory() / ('page_cache_' + request + '.json')
         sha = digest_bytes(bounded_bytes(path, 2 * 1024 * 1024))
     else:
         raise StorageHold('HOLD_STORAGE_ACTION')
