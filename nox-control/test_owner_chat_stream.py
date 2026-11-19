@@ -610,6 +610,29 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         fallback=stream._normal_calls([{'name':'calculate','arguments':{}}],1)
         self.assertEqual(fallback[0]['id'],'owner_call_1_0')
 
+    async def test_falsey_non_object_tool_arguments_hold_before_model_and_dispatch(self):
+        # The native/heuristic route previously turned []/false/0 into {}.
+        # Fail closed instead of invoking a tool with an invented empty object.
+        for invalid in ([], False, 0, 0.0):
+            with self.subTest(invalid=repr(invalid)):
+                native=self.native(heuristic=[{'id':'bad_args','name':'calculate',
+                                               'arguments':invalid}])
+                payload={'messages':[{'role':'user','content':'Calculate 2+2'}]}
+                with patch.object(stream.httpx,'AsyncClient',
+                                  side_effect=AssertionError('model POST forbidden')):
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Calculate 2+2',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn('HOLD_TOOL_ARGUMENTS',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+        # Preserve the legitimate no-argument native-tool contract.
+        for row in ({'name':'calculate'}, {'name':'calculate','arguments':None},
+                    {'name':'calculate','arguments':''},
+                    {'name':'calculate','arguments':'{}'}):
+            self.assertEqual(stream._normal_calls([row],0)[0]['arguments'],{})
+
     def test_executor_route_does_not_capture_actions_plans_or_history(self):
         for question in ('Включи 6 агентов','Сколько агентов нужно запустить?',
                          'Сколько агентов работало вчера?','Добавь активных исполнителей',
