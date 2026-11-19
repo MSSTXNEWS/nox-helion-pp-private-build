@@ -63,6 +63,12 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
             refill_request.get('request_id'),proposal.get('request_id'),False,
             'proposal.request_id matching the validated 64-hex REFILL_REQUIRED ID'))
 
+    missions = proposal.get('missions') if isinstance(proposal, dict) else None
+    reviewed_ids_expected = None
+    if isinstance(missions, list) and all(
+            isinstance(m, dict) and type(m.get('mission_id')) is str for m in missions):
+        reviewed_ids_expected = sorted(m['mission_id'] for m in missions)
+
     review_checks = [
         _check('review_origin','OWNER_REVIEWED',review.get('review_origin'),
                review.get('review_origin') == 'OWNER_REVIEWED','owner review of exact proposal/census/request bytes'),
@@ -84,11 +90,12 @@ def build_report(previous, previous_sha, refill_request, refill_sha, proposal,
                type(review.get('native_readback_sha256')) is str
                and SHA.fullmatch(review['native_readback_sha256']),
                'fresh owner-authenticated native readback SHA'),
-        _check('reviewed_mission_ids',sorted(m.get('mission_id') for m in proposal.get('missions',[])
-               if isinstance(m,dict)),review.get('reviewed_mission_ids'),
-               review.get('reviewed_mission_ids') == sorted(m.get('mission_id')
-               for m in proposal.get('missions',[]) if isinstance(m,dict)),
-               'reviewed_mission_ids exactly matching proposed missions'),
+        _check('reviewed_mission_ids',reviewed_ids_expected,
+               review.get('reviewed_mission_ids'),
+               reviewed_ids_expected is not None
+               and type(review.get('reviewed_mission_ids')) is list
+               and review.get('reviewed_mission_ids') == reviewed_ids_expected,
+               'reviewed_mission_ids must match sorted string mission IDs exactly'),
     ]
     try:
         existing_verifier = immutable_verifier_sha256(proposal.get('missions',[]),
