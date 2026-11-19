@@ -1,0 +1,28 @@
+name: NOX Drive reconnect targeted checks
+on:
+  push:
+    branches: [feature/nox-drive-auto-reconnect-20261119, main]
+    paths:
+      - 'nox-control/nox_drive_reconnect.py'
+      - 'nox-control/test_nox_drive_reconnect.py'
+      - 'nox-control/systemd/nox-drive-reconnect.*'
+      - 'nox-control/supervisor/nox-drive-reconnect.conf'
+      - '.github/workflows/nox-drive-reconnect-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify reconnect logic without credentials or host access
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_drive_reconnect.py nox-control/test_nox_drive_reconnect.py
+          python3 -m unittest discover -s nox-control -p test_nox_drive_reconnect.py -v
+      - name: Source is not host authorization
+        run: echo 'PASS verifies source only; actual Google OAuth and server installation separate'
