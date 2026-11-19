@@ -225,15 +225,7 @@ function sseChat(data,signal) {
 				if(upstream.status===409){
 					let resolveAdmission,reader,timed=false,timer;
 					stopAdmission=new Promise(resolve=>{resolveAdmission=resolve;});
-					const body=upstream.clone().body;
-					const detail=await Promise.race([
-						(async()=>{reader=body.getReader();let n=0,s='',d=new TextDecoder();for(;;){
-							const c=await reader.read();if(c.done)return JSON.parse(s+d.decode());
-							if((n+=c.value.byteLength)>512){reader.cancel().catch(()=>{});return null;}
-							s+=d.decode(c.value,{stream:true});
-						}})().catch(()=>null),
-						new Promise(resolve=>{timer=setTimeout(()=>{timed=true;reader?.cancel().catch(()=>{});resolve(null);},1000);})
-					]);
+					const detail=await Promise.race([(async()=>{reader=upstream.clone().body.getReader();let n=0,s='',d=new TextDecoder();for(;;){const c=await reader.read();if(c.done)return JSON.parse(s+d.decode());if((n+=c.value.byteLength)>512){reader.cancel().catch(()=>{});return null;}s+=d.decode(c.value,{stream:true});}})().catch(()=>null),new Promise(resolve=>{timer=setTimeout(()=>{timed=true;reader?.cancel().catch(()=>{});resolve(null);},1000);})]);
 					clearTimeout(timer);
 					const activeConflict=detail?.error==='HOLD_ACTIVE_SESSION_STREAM';
 					resolveAdmission(!activeConflict&&!timed);
