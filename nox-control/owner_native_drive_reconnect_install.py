@@ -16,7 +16,7 @@ import subprocess
 import sys
 
 SCHEMA = 'NOX_OWNER_DRIVE_RECONNECT_INSTALL_V1'
-EXPECTED = {'nox_drive_reconnect.py','nox_drive_reconnect_loop.sh','nox-drive-reconnect.conf'}
+EXPECTED = {'nox_drive_reconnect.py','nox_drive_reconnect_loop.sh','nox_drive_first.py','nox-drive-reconnect.conf'}
 BUNDLE = __NOX_BUNDLE_JSON__
 ROOT = Path('/root/nox')
 SCRIPTS = ROOT / 'ops/drive-auth'
@@ -54,6 +54,7 @@ def decode_bundle(bundle):
         require(0 < len(raw) <= 65536 and hashlib.sha256(raw).hexdigest()==row['sha256'], 'BUNDLE_HASH')
         files[name]=raw
     require(files['nox_drive_reconnect.py'].startswith(b'#!/usr/bin/env python3'), 'PY_SOURCE')
+    require(files['nox_drive_first.py'].startswith(b'#!/usr/bin/env python3'), 'DRIVE_FIRST_SOURCE')
     require(files['nox_drive_reconnect_loop.sh'].startswith(b'#!/bin/sh'), 'SHELL_SOURCE')
     require(b'[program:nox-drive-reconnect]' in files['nox-drive-reconnect.conf'], 'SUPERVISOR_SOURCE')
     return files
@@ -99,7 +100,7 @@ def install():
     private_dir(SCRIPTS,create=True)
     private_dir(STATE,create=True)
     stages={}
-    for name in ('nox_drive_reconnect.py','nox_drive_reconnect_loop.sh'):
+    for name in ('nox_drive_reconnect.py','nox_drive_reconnect_loop.sh','nox_drive_first.py'):
         stages[name]=atomic_install(SCRIPTS/name,assets[name])
     monitor='MONITOR_NOT_CONFIGURED'
     if SUPERVISOR_DIR.is_dir() and shutil.which('supervisorctl'):
@@ -119,7 +120,8 @@ def install():
     result={'schema':SCHEMA,'instance_id':60509551,'state':'SOURCE_INSTALLED_MONITOR_'+monitor,
             'monitor':monitor,'source_sha256':os.environ['NOX_OWNER_SOURCE_SHA'],
             'script_sha256':hashlib.sha256(assets['nox_drive_reconnect.py']).hexdigest(),
-            'stages':stages,'google_oauth_ready':False,'google_read_connected':False,
+            'stages':stages,'drive_first_source_installed':True,
+            'google_oauth_ready':False,'google_read_connected':False,
             'google_write_tested':False,'active_model_restarted':False,
             'other_services_restarted':False,'s03_modified':False,'weights_modified':False}
     # Do not infer Google OAuth from source or monitor status.
