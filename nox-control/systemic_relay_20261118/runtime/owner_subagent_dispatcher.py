@@ -561,6 +561,22 @@ class Native:
             raise GateError('HOLD_RELAY_CONFIG_REMOVED')
         return self.catalog
 
+    def publish_reviewed_manifest(self, expected_previous_sha,
+                                  canonical_manifest_bytes, owner_review_receipt_sha):
+        """Owner-only source-manifest CAS; never submits queue work."""
+        self._relay_module()
+        for name in ('owner_systemic_manifest_publisher.py',
+                     'owner_systemic_manifest_backend.py'):
+            pin = self.config.get('module_pins', {}).get(name)
+            path = Path(__file__).parent/name
+            if not isinstance(pin, str) or not SHA.fullmatch(pin) or digest(read(path)) != pin:
+                raise GateError('HOLD_RELAY_PUBLISHER_MODULE_PIN')
+        from owner_systemic_manifest_backend import DispatcherManifestBackend
+        from owner_systemic_manifest_publisher import publish_reviewed_manifest
+        backend = DispatcherManifestBackend(self)
+        return publish_reviewed_manifest(expected_previous_sha,
+            canonical_manifest_bytes, owner_review_receipt_sha, backend=backend)
+
     def _relay_module(self):
         name = 'owner_systemic_refill.py'
         if digest(read(Path(__file__).parent/name)) != self.config['module_pins'].get(name):
