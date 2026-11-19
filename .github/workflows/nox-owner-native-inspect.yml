@@ -147,6 +147,7 @@ jobs:
        endsWith(github.event.comment.body, ' audit') ||
        endsWith(github.event.comment.body, ' source_attest') ||
        endsWith(github.event.comment.body, ' gpu_inventory') ||
+       endsWith(github.event.comment.body, ' audit_gpu_inventory') ||
        endsWith(github.event.comment.body, ' browser_qa') ||
        contains(github.event.comment.body, ' refill_snapshot ') ||
        contains(github.event.comment.body, ' source_export '))
@@ -231,6 +232,18 @@ jobs:
           authorize_event('gpu_inventory')
           print('NOX_OWNER_GPU_INVENTORY_SOURCE_AUTH=PASS')
           PY
+      - name: Recheck pinned composite audit and GPU inventory command without credentials
+        if: success() && steps.owner-command.outputs.action == 'audit_gpu_inventory'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('audit_gpu_inventory')
+          print('NOX_OWNER_AUDIT_GPU_INVENTORY_SOURCE_AUTH=PASS')
+          PY
       - name: Run the fixed read-only source-attest action
         if: success() && steps.owner-command.outputs.action == 'source_attest'
         working-directory: source
@@ -246,6 +259,13 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
         run: python -B nox-control/owner_native_operator.py gpu_inventory
+      - name: Run the pinned audit then GPU inventory action
+        if: success() && steps.owner-command.outputs.action == 'audit_gpu_inventory'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py audit_gpu_inventory
       - name: Recheck pinned one-stream browser QA command without credentials
         if: success() && steps.owner-command.outputs.action == 'browser_qa'
         working-directory: source
