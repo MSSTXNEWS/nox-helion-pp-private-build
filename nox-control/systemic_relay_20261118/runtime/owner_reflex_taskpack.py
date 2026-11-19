@@ -145,3 +145,36 @@ def propose_successor(manifest, monitor, source_pins):
             "draft_missions": selected,
             "decisions": decisions,
             "required_next_step": "INDEPENDENT_REVIEW_AND_OWNER_PINNED_MANIFEST_CAS"}
+
+def finalize_after_owner_review(taskpack, reviewed_draft_sha256, validate_manifest):
+    """Owner-authenticated CAS transport alone may call this with its pinned SHA.
+
+    Never call with a model-generated approval. This is a pure conversion,
+    not an attestation/signature, file write or live queue admission.
+    """
+    if not isinstance(taskpack, dict) or taskpack.get("authority") != "PROPOSAL_ONLY":
+        raise ValueError("HOLD_REFLEX_OWNER_REVIEW")
+    proposal = taskpack.get("draft_manifest")
+    if not isinstance(proposal, dict) or not taskpack.get("draft_missions"):
+        raise ValueError("HOLD_REFLEX_EMPTY_REVIEW")
+    candidate_pin = taskpack.get("draft_manifest_sha256")
+    if (not isinstance(reviewed_draft_sha256, str)
+            or not SHA.fullmatch(reviewed_draft_sha256)
+            or candidate_pin != reviewed_draft_sha256
+            or _digest(proposal) != reviewed_draft_sha256):
+        raise ValueError("HOLD_REFLEX_REVIEWED_DRAFT_PIN")
+    if (proposal.get("review_origin") != "UNREVIEWED_REFLEX_DRAFT"
+            or proposal.get("acceptance_scope") != "DRAFT_ONLY"
+            or proposal.get("original_task_accepted") is not False
+            or proposal.get("previous_manifest_sha256") != taskpack.get("base_manifest_sha256")):
+        raise ValueError("HOLD_REFLEX_REVIEWED_SCOPE")
+    reviewed = deepcopy(proposal)
+    reviewed["review_origin"] = "OWNER_REVIEWED"
+    reviewed["acceptance_scope"] = "SOURCE_PATCH_TESTED"
+    validate_manifest(reviewed)
+    return {"schema": "NOX_NATIVE_REFLEX_REVIEWED_SUCCESSOR_V1",
+            "reviewed_source_draft_sha256": reviewed_draft_sha256,
+            "reviewed_manifest_sha256": _digest(reviewed),
+            "manifest": reviewed,
+            "original_task_accepted": False,
+            "persistence": "REQUIRES_EXISTING_OWNER_PINNED_MANIFEST_CAS"}
