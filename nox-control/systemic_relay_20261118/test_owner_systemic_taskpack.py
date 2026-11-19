@@ -1,19 +1,34 @@
 """Fail-closed source-only tests for REFILL_REQUIRED diagnostics and compilation."""
 import copy
+import contextlib
+import fcntl
+import io
+import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "runtime"))
 import owner_systemic_taskpack as producer
+import owner_systemic_relay_publish as publisher
 from owner_systemic_refill_eligibility import (
     strict_parent_registry, eligibility_ledger, proposal_predicate_diff,
     special_candidate_gaps,
 )
 from owner_systemic_refill import acceptance_mapping_valid
+import owner_systemic_refill as refill
+
+OPERATOR_SPEC = importlib.util.spec_from_file_location(
+    "owner_native_operator_marker_check", ROOT.parent / "owner_native_operator.py")
+OPERATOR = importlib.util.module_from_spec(OPERATOR_SPEC)
+assert OPERATOR_SPEC.loader is not None
+OPERATOR_SPEC.loader.exec_module(OPERATOR)
 
 PACK = ROOT / "next_pack_44368502183"
 SOURCES = ROOT.parent / "four_queue_20261118"
@@ -43,6 +58,368 @@ def exact_registry():
 
 
 class RefillEligibilityTests(unittest.TestCase):
+    def test_owner_snapshot_is_recent_exactly_bound_and_claim_free(self):
+        now = 1800000000
+        snapshot = {'schema':producer.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-60,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        self.assertEqual(producer.validate_owner_snapshot(snapshot,now=now,
+            expected_previous_sha='b'*64,expected_refill_request='e'*64,
+            expected_registry_sha='c'*64,expected_source_sha='d'*64,
+            expected_native_readback_sha='2'*64),snapshot)
+        for changed,reason in (({**snapshot,'observed_at':now-601},'OWNER_SNAPSHOT_STALE'),
+            ({**snapshot,'active_claim_count':1},'OWNER_SNAPSHOT_ACTIVE_CLAIMS'),
+            ({**snapshot,'previous_manifest_sha256':'9'*64},'OWNER_SNAPSHOT_BINDING'),
+            ({**snapshot,'extra':'ignored'},'OWNER_SNAPSHOT_SHAPE')):
+            with self.subTest(reason=reason),self.assertRaisesRegex(ValueError,reason):
+                producer.validate_owner_snapshot(changed,now=now,
+                    expected_previous_sha='b'*64,expected_refill_request='e'*64,
+                    expected_registry_sha='c'*64,expected_source_sha='d'*64,
+                    expected_native_readback_sha='2'*64)
+        with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
+            publisher.validate_owner_snapshot(snapshot,now=now+601)
+
+    def test_live_cgroup_budget_holds_below_two_gib_headroom(self):
+        now=1800000000
+        sample={'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+            'instance_id':60509551,'observed_at':now-1,
+            'current_bytes':10*1024**3,'max_bytes':10*1024**3+27*1024**2,
+            'minimum_headroom_bytes':2*1024**3}
+        with self.assertRaisesRegex(RuntimeError,
+                'HOLD_SYSTEMIC_PUBLISH_RESOURCE_HEADROOM_BELOW_MINIMUM'):
+            publisher.require_budget_headroom(sample,now=now)
+        stale={**sample,'observed_at':now-6,
+               'max_bytes':sample['current_bytes']+3*1024**3}
+        with self.assertRaisesRegex(RuntimeError,
+                'HOLD_SYSTEMIC_PUBLISH_RESOURCE_SNAPSHOT_FIELDS_OR_STALE'):
+            publisher.require_budget_headroom(stale,now=now)
+        sample['max_bytes']=sample['current_bytes']+3*1024**3
+        self.assertEqual(publisher.require_budget_headroom(sample,now=now)['headroom_bytes'],
+                         3*1024**3)
+
+    def test_package_write_reads_fresh_budget_immediately_before_atomic_write(self):
+        class RecordingHelper:
+            def __init__(self, headroom):
+                self.events=[]; self.headroom=headroom; self.replace_lock=False
+                self.lock=None; self.directory=None
+            def read_budget_snapshot(self, config):
+                self.events.append('budget')
+                if self.replace_lock:
+                    replacement=Path(self.directory)/'replacement'
+                    replacement.write_bytes(b'other-owner')
+                    replacement.chmod(0o600)
+                    os.replace(replacement,self.lock)
+                now=time.time()
+                return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+                    'instance_id':60509551,'observed_at':now,
+                    'current_bytes':10*1024**3,'max_bytes':10*1024**3+self.headroom,
+                    'minimum_headroom_bytes':2*1024**3}
+            def atomic(self, path, raw): self.events.append('atomic')
+        now=time.time()
+        snapshot={'schema':publisher.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-1,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        snapshot_sha=publisher.sha(publisher.encoded(snapshot))
+        original_root=publisher.ROOT
+        with tempfile.TemporaryDirectory() as directory:
+            publisher.ROOT=Path(directory)
+            state=Path(directory)/'state'; state.mkdir(mode=0o700)
+            lock=state/'owner_maintenance.lock'; lock.write_bytes(b'lock')
+            lock.chmod(0o600)
+            state_dir_fd=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            fd=os.open(lock.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=state_dir_fd)
+            try:
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                healthy=RecordingHelper(3*1024**3)
+                gate=publisher.write_package_with_budget_gate(
+                    healthy,'pkg',b'bytes',{},snapshot,snapshot_sha,fd,lock,state_dir_fd)
+                self.assertEqual(gate['state'],'PASS')
+                self.assertEqual(healthy.events,['budget','atomic'])
+
+                low=RecordingHelper(27*1024**2)
+                with self.assertRaisesRegex(RuntimeError,'RESOURCE_HEADROOM_BELOW_MINIMUM'):
+                    publisher.write_package_with_budget_gate(
+                        low,'pkg',b'bytes',{},snapshot,snapshot_sha,fd,lock,state_dir_fd)
+                self.assertEqual(low.events,['budget'])
+
+                stale={**snapshot,'observed_at':time.time()-601}
+                stale_sha=publisher.sha(publisher.encoded(stale))
+                old=RecordingHelper(3*1024**3)
+                with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
+                    publisher.write_package_with_budget_gate(
+                        old,'pkg',b'bytes',{},stale,stale_sha,fd,lock,state_dir_fd)
+                self.assertEqual(old.events,['budget'])
+
+                replaced=RecordingHelper(3*1024**3)
+                replaced.replace_lock=True; replaced.lock=lock; replaced.directory=directory
+                with self.assertRaisesRegex(RuntimeError,'LEASE_IDENTITY'):
+                    publisher.write_package_with_budget_gate(
+                        replaced,'pkg',b'bytes',{},snapshot,snapshot_sha,fd,lock,state_dir_fd)
+                self.assertEqual(replaced.events,['budget'])
+            finally:
+                os.close(fd)
+                os.close(state_dir_fd)
+                publisher.ROOT=original_root
+
+    def test_publish_cas_rechecks_budget_then_snapshot_age_and_lock_identity(self):
+        class BudgetReader:
+            def __init__(self): self.calls=0
+            def read_budget_snapshot(self, config):
+                self.calls+=1; now=time.time()
+                return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+                    'instance_id':60509551,'observed_at':now,
+                    'current_bytes':10*1024**3,'max_bytes':13*1024**3,
+                    'minimum_headroom_bytes':2*1024**3}
+        now=time.time()
+        snapshot={'schema':producer.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-1,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        original_root=publisher.ROOT
+        with tempfile.TemporaryDirectory() as directory:
+            publisher.ROOT=Path(directory)
+            state=Path(directory)/'state'; state.mkdir(mode=0o700)
+            lock=state/'owner_maintenance.lock'; lock.write_bytes(b'lock')
+            lock.chmod(0o600)
+            state_dir_fd=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            fd=os.open(lock.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=state_dir_fd)
+            try:
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                helper=BudgetReader()
+                result=publisher.verify_publish_cas_preconditions(
+                    helper,{},snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(result['state'],'PASS')
+                self.assertEqual(helper.calls,1)
+                stale={**snapshot,'observed_at':time.time()-601}
+                with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
+                    publisher.verify_publish_cas_preconditions(
+                        helper,{},stale,fd,lock,state_dir_fd)
+                self.assertEqual(helper.calls,2)
+
+                moved=Path(directory)/'replacement'; moved.write_bytes(b'foreign')
+                moved.chmod(0o600); os.replace(moved,lock)
+                with self.assertRaisesRegex(RuntimeError,'LEASE_IDENTITY'):
+                    publisher.verify_publish_cas_preconditions(
+                        helper,{},snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(helper.calls,3)
+            finally:
+                os.close(fd)
+                os.close(state_dir_fd)
+                publisher.ROOT=original_root
+
+    def test_config_cas_rechecks_lease_after_staging_and_uses_anchored_dirfd(self):
+        class BudgetReader:
+            def read_budget_snapshot(self, config):
+                now=time.time()
+                return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+                    'instance_id':60509551,'observed_at':now,
+                    'current_bytes':10*1024**3,'max_bytes':13*1024**3,
+                    'minimum_headroom_bytes':2*1024**3}
+        now=time.time()
+        snapshot={'schema':publisher.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-1,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        original_root,original_config=publisher.ROOT,publisher.CONFIG
+        with tempfile.TemporaryDirectory() as directory:
+            publisher.ROOT=Path(directory)
+            config_dir=Path(directory)/'config'; config_dir.mkdir(mode=0o700)
+            state=Path(directory)/'state'; state.mkdir(mode=0o700)
+            publisher.CONFIG=config_dir/'owner_native_subagents.json'
+            old=b'{"before":true}'
+            new=b'{"after":true}'
+            publisher.CONFIG.write_bytes(old); publisher.CONFIG.chmod(0o600)
+            lock=state/'owner_maintenance.lock'; lock.write_bytes(b'lock')
+            lock.chmod(0o600)
+            state_dir_fd=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            fd=os.open(lock.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=state_dir_fd)
+            try:
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                budget=publisher.atomic_owner_config(
+                    BudgetReader(),new,old,snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(budget['state'],'PASS')
+                self.assertEqual(publisher.CONFIG.read_bytes(),new)
+
+                publisher.CONFIG.write_bytes(old)
+                def replace_lease_between_early_check_and_cas():
+                    replacement=Path(directory)/'replacement'
+                    replacement.write_bytes(b'other-owner')
+                    replacement.chmod(0o600)
+                    os.replace(replacement,lock)
+                with self.assertRaisesRegex(RuntimeError,'LEASE_IDENTITY'):
+                    publisher.atomic_owner_config(
+                        BudgetReader(),new,old,snapshot,fd,lock,state_dir_fd,
+                        before_final_gate=replace_lease_between_early_check_and_cas)
+                self.assertEqual(publisher.CONFIG.read_bytes(),old)
+            finally:
+                os.close(fd)
+                os.close(state_dir_fd)
+                publisher.ROOT, publisher.CONFIG=original_root,original_config
+
+    def test_backup_gate_and_exact_retry_survive_precommit_hold(self):
+        class BackupHelper:
+            def __init__(self):
+                self.budget_calls=0; self.atomic_calls=0; self.headroom=3*1024**3
+            def read_budget_snapshot(self, config):
+                self.budget_calls+=1; now=time.time()
+                return {'schema':'NOX_BOUNDED_CPU_BUDGET_V1','source':'cgroup_v2',
+                    'instance_id':60509551,'observed_at':now,
+                    'current_bytes':10*1024**3,
+                    'max_bytes':10*1024**3+self.headroom,
+                    'minimum_headroom_bytes':2*1024**3}
+            def atomic(self, path, raw):
+                self.atomic_calls+=1; path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_bytes(raw); path.chmod(0o600)
+            def read_regular(self, path, maximum):
+                raw=Path(path).read_bytes()
+                if len(raw)>maximum: raise RuntimeError('oversized')
+                return raw
+        now=time.time()
+        snapshot={'schema':publisher.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-1,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        original_root=publisher.ROOT
+        with tempfile.TemporaryDirectory() as directory:
+            publisher.ROOT=Path(directory)
+            state=Path(directory)/'state'; state.mkdir(mode=0o700)
+            lock=state/'owner_maintenance.lock'; lock.write_bytes(b'lock')
+            lock.chmod(0o600)
+            state_dir_fd=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            fd=os.open(lock.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=state_dir_fd)
+            helper=BackupHelper(); backup=state/'dispatcher'/'rollback'/'request-123'
+            try:
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                helper.headroom=27*1024**2
+                with self.assertRaisesRegex(RuntimeError,'RESOURCE_HEADROOM_BELOW_MINIMUM'):
+                    publisher.ensure_exact_backup(
+                        helper,backup,b'old-config',{},snapshot,fd,lock,state_dir_fd)
+                self.assertFalse(backup.exists())
+                self.assertEqual(helper.atomic_calls,0)
+                helper.headroom=3*1024**3
+                first=publisher.ensure_exact_backup(
+                    helper,backup,b'old-config',{},snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(first['state'],'WRITTEN')
+                self.assertEqual(first['resource_gate']['state'],'PASS')
+                self.assertEqual(helper.budget_calls,2)
+                self.assertEqual(helper.atomic_calls,1)
+                helper.headroom=27*1024**2
+                with self.assertRaisesRegex(RuntimeError,'RESOURCE_HEADROOM_BELOW_MINIMUM'):
+                    publisher.verify_publish_cas_preconditions(
+                        helper,{},snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(backup.joinpath('config.json').read_bytes(),b'old-config')
+                helper.headroom=3*1024**3
+                # A pre-CAS HOLD leaves an exact backup which a retry may reuse.
+                second=publisher.ensure_exact_backup(
+                    helper,backup,b'old-config',{},snapshot,fd,lock,state_dir_fd)
+                self.assertEqual(second,{'state':'REUSED_EXACT','resource_gate':None})
+                self.assertEqual(helper.budget_calls,3)
+                self.assertEqual(helper.atomic_calls,1)
+                (backup/'config.json').write_bytes(b'foreign-config')
+                with self.assertRaisesRegex(RuntimeError,'BACKUP_CONTENT_CHANGED'):
+                    publisher.ensure_exact_backup(
+                        helper,backup,b'old-config',{},snapshot,fd,lock,state_dir_fd)
+            finally:
+                os.close(fd)
+                os.close(state_dir_fd)
+                publisher.ROOT=original_root
+
+    def test_persist_receipt_rejects_hostile_hold_suffix(self):
+        class ReceiptSink:
+            def __init__(self): self.raw=None
+            def atomic(self,path,raw): self.raw=raw
+        sink=ReceiptSink();output=io.StringIO()
+        receipt={'state':'HOLD_SYSTEMIC_PUBLISH_OWNER_STOP:injected-suffix',
+                 'manifest_sha256':'3'*64}
+        with contextlib.redirect_stdout(output):
+            publisher.persist_receipt(sink,'42',receipt)
+        stored=json.loads(sink.raw)
+        self.assertEqual(stored['state'],'HOLD_SYSTEMIC_PUBLISH_INTERNAL')
+        self.assertIn('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=',output.getvalue())
+
+    def test_hold_receipt_is_emitted_for_stale_candidate(self):
+        class ReceiptSink:
+            def __init__(self): self.raw=None
+            def atomic(self,path,raw): self.raw=raw
+        now=1800000000
+        snapshot={'schema':producer.OWNER_SNAPSHOT_SCHEMA,'owner_id':60509551,
+            'observed_at':now-601,'config_sha256':'a'*64,
+            'previous_manifest_sha256':'b'*64,'registry_sha256':'c'*64,
+            'source_files_sha256':'d'*64,'refill_request_id':'e'*64,
+            'original_task_states_sha256':'f'*64,'process_identity_sha256':'1'*64,
+            'native_readback_sha256':'2'*64,'active_claim_count':0}
+        receipt={'state':'PREFLIGHT','manifest_sha256':'3'*64}
+        sink=ReceiptSink();output=io.StringIO()
+        with self.assertRaisesRegex(RuntimeError,'OWNER_SNAPSHOT_STALE_OR_IDENTITY'):
+            try:
+                publisher.validate_owner_snapshot(snapshot,now=now)
+            except BaseException as exc:
+                receipt['state']='HOLD_SYSTEMIC_PUBLISH_' + str(exc).removeprefix('HOLD_SYSTEMIC_PUBLISH_')
+                with contextlib.redirect_stdout(output):
+                    publisher.persist_receipt(sink,'42',receipt)
+                raise
+        self.assertEqual(json.loads(sink.raw)['state'],'HOLD_SYSTEMIC_PUBLISH_OWNER_SNAPSHOT_STALE_OR_IDENTITY')
+        self.assertIn('NOX_MAINT_SYSTEMIC_RELAY_PUBLISH=',output.getvalue())
+
+    def test_publish_completion_marker_matches_reflex_action_only(self):
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output):
+            publisher.emit_publish_complete_marker()
+        stdout=output.getvalue()
+        expected='NOX_MAINT_REFLEX_PUBLISH_COMPLETE=true'
+        repair='NOX_MAINT_REPAIR_COMPLETE=true'
+        self.assertTrue(OPERATOR._has_exact_terminal_completion_marker(stdout,expected))
+        self.assertFalse(OPERATOR._has_exact_terminal_completion_marker(stdout,repair))
+        self.assertFalse(OPERATOR._has_exact_terminal_completion_marker(repair+'\n',expected))
+
+    def test_successor_route_rejects_zero_or_multiple_parent_missions(self):
+        for proposals in ([],[{},{}]):
+            with self.subTest(count=len(proposals)),self.assertRaisesRegex(
+                    ValueError,'EXACTLY_ONE_SUCCESSOR_REQUIRED'):
+                producer.bind_missions(proposals,{}, {'parents':{}},{})
+        with self.assertRaisesRegex(RuntimeError,'EXACTLY_ONE_SUCCESSOR_REQUIRED'):
+            publisher.require_exactly_one_successor({'missions':[]})
+        with self.assertRaisesRegex(RuntimeError,'EXACTLY_ONE_SUCCESSOR_REQUIRED'):
+            publisher.require_exactly_one_successor({'missions':[{},{}]})
+
+    def test_native_receipt_contract_binds_original_source_and_test_shas(self):
+        mission={'parent_task_id':'I-39','mission_id':'minhash_guard','revision':1,
+            'root_id':'NOX_PROJECT_SOURCE','context':[
+                {'path':'forge_split_guard.py','sha256':'a'*64},
+                {'path':'test_forge_split_guard.py','sha256':'b'*64}],
+            'editable_paths':['forge_split_guard.py'],
+            'instruction':'Add the grounded MinHash leakage check.',
+            'verification':{'modules':['test_forge_split_guard'],'min_tests':1},
+            'registered_acceptance':'MinHash split without leakage',
+            'parent_spec_sha256':'c'*64}
+        contract=producer.native_receipt_contract(mission,manifest_revision=4,
+            previous_sha='d'*64,registry_sha='e'*64,review_sha='f'*64)
+        self.assertEqual(contract['original_task_id'],'I-39')
+        self.assertEqual(contract['successor_task_id'].split('.relay.')[0],'I-39')
+        self.assertEqual(contract['source_sha256'],producer.digest(contract['source_pins']))
+        self.assertEqual(contract['test_sha256'],producer.digest(contract['test_pins']))
+        self.assertEqual(contract['test_pins'][0]['sha256'],'b'*64)
+        self.assertFalse(contract['acceptance_recorded'])
+        self.assertFalse(contract['required_receipt']['original_task_accepted'])
+        self.assertTrue(contract['required_receipt']['s03']['native_verified'])
+        self.assertTrue(contract['required_receipt']['receipt'][
+            'worker_result.project_evidence.tests.passed'])
+        native=publisher.native_receipt_contract(mission,manifest_revision=4,
+            previous_sha='d'*64,registry_sha='e'*64,review_sha='f'*64,refill=refill)
+        self.assertEqual(native,contract)
+
     def test_reconstructs_exact_295_original_specs_and_acceptance(self):
         disposition,docs,raw_sha,registry = exact_registry()
         self.assertEqual(registry["total_original_ids"],295)
