@@ -205,7 +205,9 @@ def _normal_calls(rows,step):
     for index,row in enumerate(rows):
         if not isinstance(row,dict) or not isinstance(row.get('name'),str):
             raise StreamFailure('HOLD_TOOL_CALL_SHAPE')
-        args=row.get('arguments') or {}
+        # A present argument value is evidence, not a default. Never turn an
+        # explicit falsy value ([], null, false, empty string) into {}.
+        args=row['arguments'] if 'arguments' in row else {}
         if isinstance(args,str):
             try:args=json.loads(args)
             except ValueError:raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
