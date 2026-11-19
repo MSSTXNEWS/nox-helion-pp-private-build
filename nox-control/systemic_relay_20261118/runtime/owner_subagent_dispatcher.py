@@ -853,6 +853,10 @@ class Native:
         if self._pool_recovery_uncertain:
             return 'HOLD_NATIVE_POOL_RECOVERY_UNCERTAIN'
         try:
+            # Re-check immediately before every native submit, including CPU
+            # leaf/project work: the owner chat may start after queue admission.
+            if chat_priority_active():
+                return 'HOLD_NATIVE_CHAT_PRIORITY'
             return resource_wait_reason(self.read_resource_snapshot(leaf_only=leaf_only))
         except (OSError, ValueError, TypeError, KeyError, GateError):
             return 'HOLD_NATIVE_SUBAGENT_ADMISSION'

@@ -58,6 +58,35 @@ def load_bound_admission(*, chat_active=False, stop=False, project_allowed=True)
     exec(compile(isolated, str(SOURCE), "exec"), namespace)
     return namespace["admission"]
 
+def load_fresh_native_gate(*, chat_active=False):
+    """Extract the actual last-moment gate; no dispatcher import or host I/O."""
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    native = [node for node in tree.body
+              if isinstance(node, ast.ClassDef) and node.name == "Native"]
+    if len(native) != 1:
+        raise AssertionError("HOLD_NATIVE_SOURCE_SHAPE")
+    methods = [node for node in native[0].body
+               if isinstance(node, ast.FunctionDef)
+               and node.name == "_fresh_admission_reason"]
+    if len(methods) != 1:
+        raise AssertionError("HOLD_FRESH_ADMISSION_SOURCE_SHAPE")
+    isolated = ast.fix_missing_locations(ast.Module(body=methods, type_ignores=[]))
+    namespace = {
+        "chat_priority_active": lambda: chat_active,
+        "resource_wait_reason": lambda snapshot: snapshot["reason"],
+        "autonomy": SimpleNamespace(AutoHold=RuntimeError),
+        "GateError": RuntimeError,
+    }
+    exec(compile(isolated, str(SOURCE), "exec"), namespace)
+    calls = []
+    native_state = SimpleNamespace(
+        _pool_recovery_uncertain=False,
+        read_resource_snapshot=lambda leaf_only=False:
+            (calls.append(leaf_only) or {"reason": None}),
+    )
+    return namespace["_fresh_admission_reason"], native_state, calls
+
+
 class ChatPriorityFutureMtimeTests(unittest.TestCase):
     def test_chat_priority_blocks_all_native_handlers_at_admission(self):
         # Old code blocked only "review"; "leaf" and "project" were admitted.
@@ -75,6 +104,17 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         self.assertFalse(load_bound_admission(stop=True)({"handler": "review"}))
         self.assertFalse(load_bound_admission(stop=True)({"handler": "project"}))
         self.assertFalse(load_bound_admission(project_allowed=False)({"handler": "project"}))
+
+    def test_chat_started_after_admission_blocks_final_cpu_submit(self):
+        # A chat starting between scheduler admission and worker submit must
+        # block CPU-only leaf/project work without touching resource/IPC state.
+        blocked, owner, calls = load_fresh_native_gate(chat_active=True)
+        self.assertEqual(blocked(owner, leaf_only=True), "HOLD_NATIVE_CHAT_PRIORITY")
+        self.assertEqual(blocked(owner, leaf_only=False), "HOLD_NATIVE_CHAT_PRIORITY")
+        self.assertEqual(calls, [], "no worker resource snapshot during chat")
+        allowed, owner, calls = load_fresh_native_gate(chat_active=False)
+        self.assertIsNone(allowed(owner, leaf_only=True))
+        self.assertEqual(calls, [True])
 
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
