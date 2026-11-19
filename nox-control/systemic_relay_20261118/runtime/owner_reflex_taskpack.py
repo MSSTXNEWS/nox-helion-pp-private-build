@@ -108,6 +108,17 @@ def propose_successor(manifest, monitor, source_pins):
         proposal = deepcopy(mission)
         proposal["revision"] = next_revision + 1
         proposal["context"] = new_context
+        defect = proposal.get("defect")
+        if isinstance(defect, dict):
+            prior = defect.get("observed_source_sha256")
+            match = [row["path"] for row in old_rows
+                     if row["sha256"] == prior and row["path"] in editable]
+            if len(match) != 1:
+                decisions.append({"fingerprint": fingerprint, "state": "HOLD_DEFECT_SOURCE_NOT_EDITABLE"})
+                continue
+            next_pin = next(row["sha256"] for row in new_context
+                           if row["path"] == match[0])
+            defect["observed_source_sha256"] = next_pin
         selected.append(proposal)
         decisions.append({"fingerprint": fingerprint, "state": "DRAFT_REQUIRES_OWNER_REVIEW",
                           "mission_id": mission["mission_id"],
