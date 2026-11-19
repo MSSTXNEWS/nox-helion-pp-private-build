@@ -24,8 +24,10 @@ def require(ok: bool, reason: str) -> None:
 
 
 def milliseconds(value: object) -> float:
-    require(type(value) in (int, float) and math.isfinite(value)
-            and 0 <= value <= 300_000, 'BAD_LATENCY')
+    # Bound the number before float conversion: a 401-digit JSON integer
+    # raises OverflowError in math.isfinite rather than the intended HOLD.
+    require(type(value) in (int, float) and 0 <= value <= 300_000
+            and math.isfinite(value), 'BAD_LATENCY')
     return float(value)
 
 
