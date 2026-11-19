@@ -75,8 +75,9 @@ def service(name='nox-proxy'):
     if match: pid=int(match.group(1))
     if state=='RUNNING':
         require(run.returncode==0 and pid is not None, 'SERVICE_RUNNING_PID')
-        args=(Path('/proc')/str(pid)/'cmdline').read_bytes().split(b'\0')
-        require(b'/root/nox/scripts/chat_proxy.py' in args, 'FOREIGN_PROXY_PROCESS')
+        if name=='nox-proxy':
+            args=(Path('/proc')/str(pid)/'cmdline').read_bytes().split(b'\0')
+            require(b'/root/nox/scripts/chat_proxy.py' in args, 'FOREIGN_PROXY_PROCESS')
     return {'state':state,'pid':pid}
 
 
