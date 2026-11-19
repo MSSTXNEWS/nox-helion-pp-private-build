@@ -107,8 +107,15 @@ def read_proc_identity(proc_root, pid):
         executable = os.path.basename(os.readlink(proc_dir / 'exe'))[:256]
         if not SAFE.fullmatch(executable):
             executable = '[REDACTED]'
+            executable_state = 'REDACTED'
+        else:
+            executable_state = 'AVAILABLE'
+    except FileNotFoundError:
+        executable, executable_state = None, 'MISSING'
+    except PermissionError:
+        executable, executable_state = None, 'UNREADABLE'
     except OSError:
-        executable = None
+        executable, executable_state = None, 'UNAVAILABLE'
     namespaces = {name: _ns_link(proc_dir, name) for name in ('pid', 'mnt', 'cgroup')}
     last = _proc_stat(proc_dir, pid)
     if first['start_ticks'] != last['start_ticks'] or first['ppid'] != last['ppid']:
@@ -119,6 +126,7 @@ def read_proc_identity(proc_root, pid):
             'nspid': status['nspid'], 'nspid_available': status['nspid_available'],
             'pid_namespace': namespaces['pid'], 'mnt_namespace': namespaces['mnt'],
             'cgroup_namespace': namespaces['cgroup'],
+            'executable_state': executable_state,
             'cgroups': cgroups, 'cgroup_state': cgroup_state,
             'identity_state': 'VERIFIED'}
 
@@ -218,22 +226,23 @@ def _capture_services(proc_root, run_fn, clock):
                      and not duplicate_names and identities_complete)
     status_consistent = ((type(rc) is int and rc == 0 and all_running)
                          or (type(rc) is int and rc == 3 and any_not_running))
+    inventory_complete = rows_complete and status_consistent
     command_success = type(rc) is int and rc == 0
     health = ('UNKNOWN' if not services else
-              'PARTIAL' if not rows_complete else
+              'PARTIAL' if not inventory_complete else
               'HEALTHY' if all_running else 'DEGRADED')
     return {'return_code': rc, 'command_rc': rc, 'command_success': command_success,
             'started_unix_ns': started, 'finished_unix_ns': finished, 'services': services,
             'truncated': truncated, 'rejected_lines': rejected_lines,
             'duplicate_service_names': duplicate_names,
             'identity_complete': identities_complete,
-            'inventory_complete': rows_complete,
+            'rows_complete': rows_complete, 'inventory_complete': inventory_complete,
             'status_consistent': status_consistent,
             'service_health': {'state': health, 'counts': state_counts,
                                'running': state_counts.get('RUNNING', 0),
                                'not_running': sum(count for state, count in state_counts.items()
                                                   if state != 'RUNNING')},
-            'complete': command_success and rows_complete and all_running and status_consistent,
+            'complete': command_success and inventory_complete and all_running,
             'scope': 'SUPERVISOR_STATUS_PLUS_PROC_IDENTITY'}
 
 
@@ -371,8 +380,8 @@ def _link_gpu_apps(before_inventory, after_inventory, before_proc, after_proc):
                              and after_inventory.get('complete') is True
                              and before_proc.get('complete') is True
                              and after_proc.get('complete') is True
-                             and before_proc.get('supervisor_complete') is True
-                             and after_proc.get('supervisor_complete') is True)
+                             and before_proc.get('supervisor_inventory_complete') is True
+                             and after_proc.get('supervisor_inventory_complete') is True)
         if not evidence_complete:
             state = 'NOT_VISIBLE'
         elif presence == 'BEFORE_ONLY' or (presence == 'BOTH' and pre_sig != post_sig):
@@ -505,11 +514,13 @@ def gpu_process_census(proc_root=Path('/proc'), run_fn=run, clock=time.time_ns):
     before_pids = {row['gpu_pid'] for row in before['apps']}
     before_proc = _capture_proc_targets(proc_root, before_pids, services)
     before_proc['supervisor_complete'] = services.get('complete') is True
+    before_proc['supervisor_inventory_complete'] = services.get('inventory_complete') is True
     after = _capture_gpu_apps(run_fn, clock)
     process_inventory = _capture_process_identity_inventory(proc_root, clock)
     after_pids = {row['gpu_pid'] for row in after['apps']}
     after_proc = _capture_proc_targets(proc_root, after_pids, services)
     after_proc['supervisor_complete'] = services.get('complete') is True
+    after_proc['supervisor_inventory_complete'] = services.get('inventory_complete') is True
     links = _link_gpu_apps(before, after, before_proc, after_proc)
     visible = sorted({target['local_pid']
                       for snapshot in (before_proc, after_proc)
@@ -635,12 +646,17 @@ def _capture_process_identity_inventory(proc_root=Path('/proc'), clock=time.time
                 if not isinstance(identity.get('comm'), str) or not identity['comm']:
                     missing.append('comm')
                 exe = identity.get('executable')
-                if not isinstance(exe, str) or not exe or exe == '[REDACTED]':
+                exe_state = identity.get('executable_state', 'UNAVAILABLE')
+                if exe_state not in ('AVAILABLE', 'MISSING'):
+                    missing.append('exe_read')
+                if exe_state == 'AVAILABLE' and (
+                        not isinstance(exe, str) or not exe or exe == '[REDACTED]'):
                     missing.append('exe')
                 row = {'pid': pid, 'ppid': identity.get('ppid'),
                        'uid': identity.get('uid'), 'start_ticks': identity.get('start_ticks'),
                        'nspid': nspid if isinstance(nspid, list) else None,
                        'namespaces': namespaces, 'comm': identity.get('comm'), 'exe': exe,
+                       'exe_state': exe_state,
                        'identity_state': 'VERIFIED' if not missing else 'IDENTITY_INCOMPLETE'}
                 if missing:
                     row['missing_fields'] = sorted(set(missing))
@@ -662,7 +678,7 @@ def _capture_process_identity_inventory(proc_root=Path('/proc'), clock=time.time
             'enumeration_error': enumeration_error, 'read_failure_count': read_failures,
             'read_failure_pids': failure_pids, 'complete': complete,
             'fields': ['pid', 'ppid', 'uid', 'start_ticks', 'nspid',
-                       'namespaces.pid', 'namespaces.mnt', 'namespaces.cgroup', 'comm', 'exe'],
+                       'namespaces.pid', 'namespaces.mnt', 'namespaces.cgroup', 'comm', 'exe', 'exe_state'],
             'omitted_fields': ['argv', 'cmdline', 'environ', 'cgroup_paths'],
             'rows_sha256': hashlib.sha256(encoded_rows).hexdigest(), 'rows': rows}
 
