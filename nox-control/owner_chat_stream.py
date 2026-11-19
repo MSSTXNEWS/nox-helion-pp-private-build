@@ -394,8 +394,10 @@ async def _run(native,url,payload,user_text):
             yield 'token',str(deterministic['text'])
             return
         if deterministic and deterministic.get('tool'):
+            # Preserve raw provider arguments for _normal_calls validation.
+            # Falsey non-dicts must HOLD, never be reinterpreted as {}.
             calls=[{'name':deterministic['tool'],
-                    'arguments':deterministic.get('arguments') or {}}]
+                    'arguments':deterministic.get('arguments')}]
             direct=True
     if not calls:
         calls=native['heuristic_tools'](user_text or '') or []
