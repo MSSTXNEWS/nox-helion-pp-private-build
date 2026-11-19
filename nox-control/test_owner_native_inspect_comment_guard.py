@@ -74,7 +74,6 @@ class OwnerCommentGuardTests(unittest.TestCase):
             f"/nox-maintain 6050955 {INSPECT_SHA} inspect",
             f"/nox-maintain 60509551 {INSPECT_SHA[:-1]} inspect",
             f"/nox-maintain 60509551 {AUDIT_SHA} repair",
-            f"/nox-maintain 60509551 {SOURCE_ATTEST_SHA} inspect",
             f"/nox-maintain 60509551 {SOURCE_ATTEST_SHA} source_attest extra",
         )
         for body in bodies:
@@ -242,6 +241,14 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertIn("steps.owner-command.outputs.action == 'inspect'", workflow)
         self.assertIn("steps.owner-command.outputs.action == 'audit'", workflow)
         self.assertIn("steps.owner-command.outputs.action == 'source_attest'", workflow)
+        self.assertLess(
+            workflow.index("Recheck pinned source-attest command without credentials"),
+            workflow.index("Run the fixed read-only source-attest action"),
+        )
+        self.assertLess(
+            workflow.index("Run the fixed read-only source-attest action"),
+            workflow.rindex("NOX2: ${{ secrets.NOX2 }}"),
+        )
 
 
 if __name__ == "__main__":
