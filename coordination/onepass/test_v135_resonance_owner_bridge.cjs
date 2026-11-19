@@ -1743,7 +1743,7 @@ test('V196 mismatched native model receipt label fails closed for SSE and JSON',
   assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
   const g=fake(...args);
   const r=await g.fetch('/api/nox/chat',{method:'POST',
-    body:JSON.stringify({message:prompt,dialog_id:id})});
+    body:JSON.stringify({message:prompt})});
   assert.equal(r.status,503);
   assert.match((await r.json()).error,/HOLD_MODEL_LABEL_CONFLICT/);
 });
