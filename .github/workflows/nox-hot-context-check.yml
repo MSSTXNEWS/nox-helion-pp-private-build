@@ -1,0 +1,20 @@
+name: NOX hot context check
+on:
+  push:
+    branches: [feat/nox-chat-latency-scope-20261119]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Targeted offline check
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/nox_hot_context.py nox-control/test_nox_hot_context.py
+          python3 -m unittest discover -s nox-control -p test_nox_hot_context.py -v
