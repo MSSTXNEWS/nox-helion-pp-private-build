@@ -3,7 +3,7 @@
 from __future__ import annotations
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-import json, os, re, shutil, subprocess, sys, time
+import json, os, re, shutil, subprocess, sys, time, stat
 
 SAFE=re.compile(r'^[A-Za-z0-9_./+@:= -]{1,300}$')
 ROOTS=('/root/nox','/root/nox_learn','/workspace')
