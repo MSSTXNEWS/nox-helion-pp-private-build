@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -28,6 +29,8 @@ FLAGS = (
 LOCK_PATHS = (ROOT/'state/owner_maintenance.lock', ROOT/'state/dispatcher/native_subagents.lock')
 IDENTIFIER = re.compile(r'^[A-Za-z0-9_.:/@ -]{1,250}$')
 SHA = re.compile(r'^[0-9a-f]{40,64}$')
+MAX_PROC_LOCKS_BYTES = 1024 * 1024
+MAX_LOCK_RECORDS_PER_PATH = 64
 PLANNER_MEMORY_TRACE_SHAS = frozenset((
     'fecce4cc6345b6d686f3053753645f97d57f22f68e5de405c66027c19712e15c',
     'aa0dd1c8266106b599ce83b64b7af77c7a4f32377fc09cd545e1f9697bda4420',
@@ -153,6 +156,7 @@ def process(pid):
         return {'pid':pid, 'status':'UNKNOWN_OR_CHANGED'}
 
 def runtime_snapshot():
+    host_clock_initial = _host_boot_clock_snapshot()
     rows = []
     cp = subprocess.run(['supervisorctl', 'status'], capture_output=True, text=True,
                         timeout=10, check=False)
@@ -179,32 +183,398 @@ def runtime_snapshot():
             resources[name] = (Path('/sys/fs/cgroup')/name).read_text()[:10000]
         except OSError:
             resources[name] = None
-    return {'time_unix':time.time(), 'supervisor_rc':cp.returncode, 'services':rows,
+    host_clock_final = _host_boot_clock_snapshot()
+    host_clock = _host_clock_pair(host_clock_initial, host_clock_final)
+    for row in rows:
+        if isinstance(row.get('identity'), dict):
+            row['identity'] = _attach_pid_start_epoch(row['identity'], host_clock)
+    return {'time_unix':host_clock_final.get('observed_at_unix', time.time()),
+            'host_clock_snapshot':host_clock,
+            'host_clock_snapshot_status':host_clock['status'],
+            'host_clock_snapshot_sha256':host_clock_final.get('snapshot_sha256'),
+            'snapshot_complete':host_clock['status'] == 'STABLE',
+            'supervisor_rc':cp.returncode, 'services':rows,
             'flags':flags, 'resources':resources}
 
-def locks():
+def _proc_stat_identity(pid, raw):
+    """Extract identity fields without splitting a process comm on its ')' chars."""
+    prefix = str(pid) + ' ('
+    if not raw.startswith(prefix) or ') ' not in raw:
+        raise ValueError('PID_STAT_MISMATCH')
+    fields = raw.rsplit(') ', 1)[1].split()
+    if len(fields) < 20 or not fields[19].isdigit() or not fields[1].isdigit():
+        raise ValueError('PID_STAT_SHAPE')
+    return {'pid':pid, 'ppid':int(fields[1]), 'state':fields[0],
+            'start_ticks':int(fields[19])}
+
+
+def process_identity(pid, proc_root=Path('/proc')):
+    """Resolve a lock PID to one stable PID/start-tick/command observation."""
+    if type(pid) is not int or pid < 2:
+        return {'pid':pid, 'resolution':'PID_NOT_RESOLVABLE'}
+    proc = Path(proc_root) / str(pid)
     try:
-        lines = Path('/proc/locks').read_text().splitlines()
-    except OSError:
-        lines = []
-    rows = []
-    for path in LOCK_PATHS:
-        row = {'path':str(path), 'scope':'PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION'}
+        first = _proc_stat_identity(pid, (proc/'stat').read_text())
+        comm = (proc/'comm').read_text().strip()[:128]
+        argv = (proc/'cmdline').read_bytes()[:4096].decode('utf-8', 'replace').strip('\0').split('\0')
+        exe = None
         try:
-            s = path.lstat()
-            row.update({'present':True, 'inode':s.st_ino, 'device_major':os.major(s.st_dev),
-                        'device_minor':os.minor(s.st_dev), 'type_regular':stat.S_ISREG(s.st_mode)})
-            matches = []
-            for line in lines:
-                m = re.search(r'\b([0-9a-f]+):([0-9a-f]+):(\d+)\b', line)
-                if m and (int(m[1],16),int(m[2],16),int(m[3])) == (os.major(s.st_dev),os.minor(s.st_dev),s.st_ino):
-                    matches.append(line[:250])
-            row['matching_kernel_locks'] = matches[:10]
-        except FileNotFoundError:
-            row['present'] = False
+            exe = os.path.basename(os.readlink(proc/'exe'))[:128]
         except OSError:
-            row['status'] = 'UNKNOWN'
+            pass
+        status_text = (proc/'status').read_text()
+        uid_match = re.search(r'^Uid:\s+(\d+)', status_text, re.M)
+        argv0 = os.path.basename(argv[0])[:128] if argv and argv[0] else None
+        script = next((os.path.basename(value)[:128] for value in argv[1:5]
+                       if value.endswith(('.py', '.sh')) and '\n' not in value), None)
+        command = ' '.join(value for value in (exe or argv0 or comm, script) if value)
+        # The command projection intentionally omits all argument values.
+        command = redact_source(command)[:260]
+        last = _proc_stat_identity(pid, (proc/'stat').read_text())
+        if last['start_ticks'] != first['start_ticks'] or last['ppid'] != first['ppid']:
+            raise ValueError('PID_CHANGED_DURING_IDENTITY_READ')
+        return {**first, 'comm':redact_source(comm)[:128], 'executable':exe or argv0,
+                'script':script, 'command':command,
+                'uid':int(uid_match[1]) if uid_match else None,
+                'resolution':'VERIFIED_PID_START_TICKS_AND_COMMAND'}
+    except (OSError, ValueError, IndexError) as exc:
+        return {'pid':pid, 'resolution':'UNKNOWN_OR_CHANGED',
+                'reason':type(exc).__name__}
+
+
+def _host_boot_clock_snapshot(proc_root=Path('/proc')):
+    """Capture read-only boot identity and clock basis for PID start ticks."""
+    proc_root = Path(proc_root)
+    try:
+        boot_id = (proc_root/'sys/kernel/random/boot_id').read_text().strip().lower()
+        if not re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+                            boot_id):
+            raise ValueError('BOOT_ID_SHAPE')
+        uptime_fields = (proc_root/'uptime').read_text().split()
+        uptime_seconds = float(uptime_fields[0])
+        if not math.isfinite(uptime_seconds) or uptime_seconds < 0:
+            raise ValueError('UPTIME_SHAPE')
+        sc_clk_tck = os.sysconf('SC_CLK_TCK')
+        if (type(sc_clk_tck) is not int or sc_clk_tck <= 0):
+            raise ValueError('SC_CLK_TCK_SHAPE')
+        observed_at_unix = time.time()
+        if not math.isfinite(observed_at_unix):
+            raise ValueError('WALL_CLOCK_SHAPE')
+        record = {'boot_id':boot_id, 'uptime_seconds':uptime_seconds,
+                  'sc_clk_tck':sc_clk_tck, 'observed_at_unix':observed_at_unix,
+                  'boot_epoch_unix_estimate':observed_at_unix-uptime_seconds}
+        digest = hashlib.sha256(json.dumps(record, sort_keys=True, separators=(',', ':'),
+                                             allow_nan=False).encode('utf-8')).hexdigest()
+        return {'status':'VERIFIED', **record, 'snapshot_sha256':digest}
+    except (OSError, ValueError, TypeError, IndexError, OverflowError) as exc:
+        return {'status':'UNAVAILABLE', 'reason':type(exc).__name__}
+
+
+def _host_boot_clock_pair_status(initial, final):
+    if initial.get('status') != 'VERIFIED' or final.get('status') != 'VERIFIED':
+        return 'UNAVAILABLE'
+    if initial['boot_id'] != final['boot_id']:
+        return 'BOOT_ID_CHANGED'
+    if initial['sc_clk_tck'] != final['sc_clk_tck']:
+        return 'SC_CLK_TCK_CHANGED'
+    if final['uptime_seconds'] < initial['uptime_seconds']:
+        return 'UPTIME_DECREASED'
+    return 'STABLE'
+
+
+def _host_clock_pair(initial, final):
+    return {'status':_host_boot_clock_pair_status(initial, final),
+            'initial':initial, 'final':final}
+
+
+def _pid_start_epoch_binding(pid, start_ticks, host_clock):
+    if host_clock.get('status') != 'STABLE':
+        return {'host_clock_binding_status':host_clock.get('status', 'UNAVAILABLE')}
+    if type(pid) is not int or pid < 1 or type(start_ticks) is not int or start_ticks < 0:
+        return {'host_clock_binding_status':'PID_START_TICKS_UNAVAILABLE'}
+    final = host_clock.get('final') or {}
+    clock_ticks = final.get('sc_clk_tck')
+    boot_epoch = final.get('boot_epoch_unix_estimate')
+    if (type(clock_ticks) is not int or clock_ticks <= 0
+            or not isinstance(boot_epoch, (int, float)) or not math.isfinite(boot_epoch)):
+        return {'host_clock_binding_status':'HOST_CLOCK_BASIS_UNAVAILABLE'}
+    return {'host_clock_binding_status':'VERIFIED',
+            'host_boot_id':final['boot_id'],
+            'host_clock_snapshot_sha256':final['snapshot_sha256'],
+            'process_start_epoch_unix_estimate':boot_epoch + start_ticks / clock_ticks,
+            'process_start_epoch_method':(
+                'snapshot_wall_time_minus_proc_uptime_plus_start_ticks_over_SC_CLK_TCK')}
+
+
+def _attach_pid_start_epoch(identity, host_clock):
+    if not isinstance(identity, dict):
+        return identity
+    result = dict(identity)
+    result.update(_pid_start_epoch_binding(identity.get('pid'), identity.get('start_ticks'),
+                                           host_clock))
+    return result
+
+
+def _host_clock_chain_status(snapshots):
+    pairs = list(snapshots)
+    for snapshot in pairs:
+        if not isinstance(snapshot, dict) or snapshot.get('status') != 'STABLE':
+            return snapshot.get('status', 'UNAVAILABLE') if isinstance(snapshot, dict) else 'UNAVAILABLE'
+    finals = [snapshot['final'] for snapshot in pairs]
+    for earlier, later in zip(finals, finals[1:]):
+        status = _host_boot_clock_pair_status(earlier, later)
+        if status != 'STABLE':
+            return status
+    return 'STABLE'
+
+
+def _parse_proc_lock(line):
+    """Parse a Linux /proc/locks record, including blocked waiter records."""
+    fields = line.split()
+    if len(fields) < 7:
+        return None
+    blocked = len(fields) > 1 and fields[1] == '->'
+    if blocked:
+        fields = [fields[0], *fields[2:]]
+    if len(fields) < 7 or not fields[0].endswith(':'):
+        return None
+    key = re.fullmatch(r'([0-9a-fA-F]+):([0-9a-fA-F]+):(\d+)', fields[5])
+    if not key:
+        return None
+    try:
+        lock_pid = int(fields[4])
+    except ValueError:
+        return None
+    return {'lock_id':fields[0][:-1], 'lock_kind':fields[1],
+            'lock_scope':fields[2], 'access':fields[3],
+            'lock_pid':lock_pid if lock_pid >= 0 else None,
+            'pid_kind':'PID' if lock_pid >= 0 else 'OPEN_FILE_DESCRIPTION_OR_UNKNOWN',
+            'device_major':int(key[1],16), 'device_minor':int(key[2],16),
+            'inode':int(key[3]), 'record_role':'BLOCKED_WAITER' if blocked else 'HELD',
+            'raw':line[:250]}
+
+
+def _kernel_lock_lines_for_identity(lines, identity):
+    if identity is None:
+        return ()
+    expected = (os.major(identity[0]), os.minor(identity[0]), identity[1])
+    matched = []
+    for line in lines:
+        key = re.search(r'\b([0-9a-fA-F]+):([0-9a-fA-F]+):(\d+)\b', line)
+        if key and (int(key[1],16), int(key[2],16), int(key[3])) == expected:
+            matched.append(line[:250])
+    return tuple(sorted(matched))
+
+
+def _read_proc_locks(path):
+    try:
+        with open(path, 'r', encoding='ascii', errors='replace') as stream:
+            raw = stream.read(MAX_PROC_LOCKS_BYTES + 1)
+        truncated = len(raw) > MAX_PROC_LOCKS_BYTES
+        raw = raw[:MAX_PROC_LOCKS_BYTES]
+        return {'status':'READ_TRUNCATED' if truncated else 'READ_OK',
+                'raw':raw, 'lines':raw.splitlines(), 'truncated':truncated,
+                'error':None}
+    except OSError as exc:
+        return {'status':'UNAVAILABLE', 'raw':'', 'lines':[], 'truncated':False,
+                'error':type(exc).__name__}
+
+
+def locks(proc_locks_path=Path('/proc/locks'), lock_paths=None, proc_root=Path('/proc')):
+    """Read lock-file inodes and kernel lock holders with explicit completeness.
+
+    This is observation only: it neither acquires nor releases any lease.
+    Every PID in a matching proc-lock record is resolved with start_ticks and a
+    command projection; PID reuse or unsupported OFD ownership fails closed.
+    """
+    paths = tuple(LOCK_PATHS if lock_paths is None else lock_paths)
+    observed_at = time.time()
+    host_clock_initial = _host_boot_clock_snapshot(proc_root)
+    before = {}
+    rows = []
+    for path in paths:
+        row = {'path':str(path), 'scope':'PROC_LOCKS_OBSERVATION_NOT_LEASE_ACQUISITION',
+               'observation_time_unix':observed_at}
+        try:
+            info = Path(path).lstat()
+            regular = stat.S_ISREG(info.st_mode)
+            before[str(path)] = (info.st_dev, info.st_ino, info.st_mode)
+            row.update({'present':True, 'inode':info.st_ino,
+                'device_major':os.major(info.st_dev), 'device_minor':os.minor(info.st_dev),
+                'type_regular':regular,
+                'path_identity_status':'STABLE_CANDIDATE' if regular else 'UNSAFE_PATH_TYPE'})
+        except FileNotFoundError:
+            row.update({'present':False, 'path_identity_status':'NOT_PRESENT'})
+        except OSError as exc:
+            row.update({'present':None, 'path_identity_status':'UNKNOWN',
+                        'path_error':type(exc).__name__})
         rows.append(row)
+
+    first_snapshot = _read_proc_locks(proc_locks_path)
+    lines = first_snapshot['lines']
+    proc_status = first_snapshot['status']
+    proc_error = first_snapshot['error']
+
+    parsed = [_parse_proc_lock(line) for line in lines]
+    holder_cache = {}
+    holder_pids_by_path = {}
+    for row in rows:
+        if not row.get('type_regular'):
+            row.update({'proc_locks_read_status':proc_status,
+                        'proc_locks_error':proc_error,
+                        'matching_kernel_locks':[], 'matching_lock_records':[],
+                        'lock_observation_complete':False})
+            continue
+        identity = before.get(row['path'])
+        if identity is None:
+            row.update({'proc_locks_read_status':proc_status,
+                        'proc_locks_error':proc_error,
+                        'matching_kernel_locks':[], 'matching_lock_records':[],
+                        'lock_observation_complete':False})
+            continue
+        matching = []
+        holder_pids_by_path[row['path']] = set()
+        unparsed_matches = 0
+        for line, record in zip(lines, parsed):
+            if record is None:
+                inode_match = re.search(r'\b([0-9a-fA-F]+):([0-9a-fA-F]+):(\d+)\b', line)
+                if inode_match and (int(inode_match[1],16), int(inode_match[2],16),
+                                    int(inode_match[3])) == (os.major(identity[0]),
+                                    os.minor(identity[0]), identity[1]):
+                    unparsed_matches += 1
+                continue
+            if (record['device_major'], record['device_minor'], record['inode']) != (
+                    os.major(identity[0]), os.minor(identity[0]), identity[1]):
+                continue
+            item = dict(record)
+            if item['lock_pid'] is None:
+                item['holder_identity'] = {'resolution':'PID_NOT_EXPOSED_BY_PROC_LOCKS'}
+            else:
+                holder_pids_by_path[row['path']].add(item['lock_pid'])
+                if item['lock_pid'] not in holder_cache:
+                    holder_cache[item['lock_pid']] = process_identity(item['lock_pid'], proc_root)
+                item['holder_identity'] = holder_cache[item['lock_pid']]
+            matching.append(item)
+        try:
+            after = Path(row['path']).lstat()
+            stable = (after.st_dev, after.st_ino, after.st_mode) == identity
+        except OSError:
+            stable = False
+        unresolved = any(item['holder_identity'].get('resolution') !=
+                         'VERIFIED_PID_START_TICKS_AND_COMMAND' for item in matching)
+        records_truncated = len(matching) > MAX_LOCK_RECORDS_PER_PATH
+        row.update({'path_identity_status':'STABLE' if stable else 'CHANGED_DURING_READ',
+            'proc_locks_read_status':proc_status, 'proc_locks_error':proc_error,
+            'proc_locks_line_count':len(lines),
+            'matching_kernel_locks':[item['raw'] for item in matching[:10]],
+            'matching_lock_count':len(matching),
+            'matching_lock_records':matching[:MAX_LOCK_RECORDS_PER_PATH],
+            'unparsed_matching_lock_count':unparsed_matches,
+            'matching_lock_records_truncated':records_truncated,
+            'lock_observation_complete':False})
+
+    # Re-read after PID resolution. If a target inode's lock lines or either
+    # read status changed during mapping, preserve records but fail closed.
+    second_snapshot = (_read_proc_locks(proc_locks_path) if proc_status == 'READ_OK'
+                       else {'status':'NOT_ATTEMPTED', 'raw':'', 'lines':[],
+                             'truncated':False, 'error':None})
+    # Re-resolve every distinct PID observed in matching records only after the
+    # final /proc/locks read. Compare the stable identity projection, not the
+    # transient process state, so PID reuse or an exec/comm change fails closed.
+    identity_fields = ('pid', 'start_ticks', 'comm', 'command')
+    def identity_projection(identity):
+        if (not isinstance(identity, dict) or identity.get('resolution') !=
+                'VERIFIED_PID_START_TICKS_AND_COMMAND'):
+            return {'pid':identity.get('pid') if isinstance(identity, dict) else None,
+                    'resolution':identity.get('resolution') if isinstance(identity, dict)
+                    else 'UNKNOWN_OR_CHANGED'}
+        return {key:identity.get(key) for key in identity_fields}
+
+    holder_rechecks = {}
+    observed_holder_pids = sorted({pid for values in holder_pids_by_path.values()
+                                   for pid in values})
+    for pid in observed_holder_pids:
+        before_identity = holder_cache.get(pid, {'pid':pid, 'resolution':'UNKNOWN_OR_CHANGED'})
+        after_identity = process_identity(pid, proc_root)
+        before_projection = identity_projection(before_identity)
+        after_projection = identity_projection(after_identity)
+        stable = (before_identity.get('resolution') ==
+                  'VERIFIED_PID_START_TICKS_AND_COMMAND'
+                  and after_identity.get('resolution') ==
+                  'VERIFIED_PID_START_TICKS_AND_COMMAND'
+                  and all(before_projection.get(key) == after_projection.get(key)
+                          for key in identity_fields))
+        holder_rechecks[pid] = {'pid':pid, 'status':'STABLE' if stable
+                                else 'CHANGED_OR_UNAVAILABLE',
+                                'before':before_projection, 'after':after_projection}
+
+    # Read again only after lock and holder identity observations. This binds
+    # all reported process start epochs to one verified host boot/clock snapshot.
+    host_clock_final = _host_boot_clock_snapshot(proc_root)
+    host_clock_snapshot = _host_clock_pair(host_clock_initial, host_clock_final)
+    host_clock_status = host_clock_snapshot['status']
+    if host_clock_status != 'STABLE':
+        for check in holder_rechecks.values():
+            check['status'] = 'CHANGED_OR_UNAVAILABLE'
+            check['host_clock_status'] = host_clock_status
+    else:
+        for pid, check in holder_rechecks.items():
+            identity = check['after']
+            start_ticks = identity.get('start_ticks')
+            binding = _pid_start_epoch_binding(pid, start_ticks, host_clock_snapshot)
+            check.update(binding)
+            check['host_clock_status'] = host_clock_status
+            if binding.get('host_clock_binding_status') != 'VERIFIED':
+                check['status'] = 'CHANGED_OR_UNAVAILABLE'
+
+    for row in rows:
+        row.update({'host_clock_snapshot':host_clock_snapshot,
+                    'host_clock_snapshot_status':host_clock_status,
+                    'host_clock_snapshot_sha256':host_clock_final.get('snapshot_sha256')})
+        if not row.get('type_regular') or row.get('path_identity_status') in (
+                'NOT_PRESENT', 'UNKNOWN'):
+            continue
+        identity = before.get(row['path'])
+        first_matches = _kernel_lock_lines_for_identity(first_snapshot['lines'], identity)
+        second_matches = _kernel_lock_lines_for_identity(second_snapshot['lines'], identity)
+        proc_stability = ('STABLE' if second_snapshot['status'] == 'READ_OK'
+                          and second_matches == first_matches else 'CHANGED_OR_UNAVAILABLE')
+        first_sha = hashlib.sha256('\n'.join(first_matches).encode('ascii', 'replace')).hexdigest()
+        second_sha = hashlib.sha256('\n'.join(second_matches).encode('ascii', 'replace')).hexdigest()
+        records = row.get('matching_lock_records', [])
+        row_holder_rechecks = [holder_rechecks[pid] for pid in
+                               sorted(holder_pids_by_path.get(row['path'], ()))
+                               if pid in holder_rechecks]
+        holder_recheck_truncated = len(row_holder_rechecks) > MAX_LOCK_RECORDS_PER_PATH
+        for item in records:
+            if item.get('lock_pid') is not None:
+                check = holder_rechecks.get(item['lock_pid'])
+                item['holder_identity_recheck'] = (check['status'] if check else
+                                                   'NOT_OBSERVED')
+                if (check and check.get('status') == 'STABLE'
+                        and check.get('host_clock_binding_status') == 'VERIFIED'):
+                    item['holder_identity'].update(_pid_start_epoch_binding(
+                        item['lock_pid'], check['after'].get('start_ticks'), host_clock_snapshot))
+        holder_recheck_stability = (
+            'STABLE' if all(item['status'] == 'STABLE' for item in row_holder_rechecks)
+            else 'CHANGED_OR_UNAVAILABLE')
+        unresolved = any(item['holder_identity'].get('resolution') !=
+                         'VERIFIED_PID_START_TICKS_AND_COMMAND' for item in records)
+        complete = (proc_status == 'READ_OK' and proc_stability == 'STABLE'
+                    and row.get('path_identity_status') == 'STABLE'
+                    and not row.get('matching_lock_records_truncated')
+                    and not row.get('unparsed_matching_lock_count') and not unresolved
+                    and holder_recheck_stability == 'STABLE'
+                    and host_clock_status == 'STABLE'
+                    and not holder_recheck_truncated)
+        row.update({'proc_locks_stability':proc_stability,
+                    'proc_locks_recheck_status':second_snapshot['status'],
+                    'proc_locks_sha256':first_sha,
+                    'proc_locks_recheck_sha256':second_sha,
+                    'holder_identity_recheck_status':holder_recheck_stability,
+                    'holder_identity_rechecks':row_holder_rechecks[:MAX_LOCK_RECORDS_PER_PATH],
+                    'holder_identity_rechecks_truncated':holder_recheck_truncated,
+                    'lock_observation_complete':complete})
     return rows
 
 
@@ -319,10 +689,15 @@ def leaf_queue_summary():
         emit('POST_TASK',row)
 
 def worker_status_sample():
+    host_clock_initial = _host_boot_clock_snapshot()
     data,raw,_=obj(ROOT/'status/agents_t856u.json',2*1024*1024)
     native=data.get('native_subexecutors')
     if not isinstance(native,dict):
-        emit('POST_WORKERS', {'state':'NO_NATIVE_STATUS'})
+        host_clock = _host_clock_pair(host_clock_initial,
+                                      _host_boot_clock_snapshot())
+        emit('POST_WORKERS', {'state':'NO_NATIVE_STATUS',
+            'host_clock_snapshot':host_clock,
+            'host_clock_snapshot_status':host_clock['status']})
         return
     director=native.get('director') or {}
     observed_director=process(director.get('pid')) if type(director.get('pid')) is int else None
@@ -367,6 +742,42 @@ def worker_status_sample():
     roles=(native.get('pool_lifecycle') or {}).get('roles')
     if isinstance(roles,dict) and len(encoded(roles)) <= 10000:
         row['pool_lifecycle']['roles']=roles
+    host_clock_final = _host_boot_clock_snapshot()
+    host_clock = _host_clock_pair(host_clock_initial, host_clock_final)
+    row.update({'time_unix':host_clock_final.get('observed_at_unix', time.time()),
+        'host_clock_snapshot':host_clock,
+        'host_clock_snapshot_status':host_clock['status'],
+        'host_clock_snapshot_sha256':host_clock_final.get('snapshot_sha256')})
+    if isinstance(row.get('observed_director'), dict):
+        row['observed_director'] = _attach_pid_start_epoch(row['observed_director'], host_clock)
+    claimed_director = row.get('claimed_director') or {}
+    observed_director = row.get('observed_director') or {}
+    claimed_director_ticks = claimed_director.get('process_starttime')
+    if (host_clock['status'] == 'STABLE' and isinstance(observed_director, dict)
+            and observed_director.get('start_ticks') == claimed_director_ticks):
+        claimed_director['start_ticks'] = claimed_director_ticks
+        claimed_director.update(_pid_start_epoch_binding(
+            claimed_director.get('pid'), claimed_director_ticks, host_clock))
+    else:
+        claimed_director['host_clock_binding_status'] = (
+            host_clock['status'] if host_clock['status'] != 'STABLE'
+            else 'CLAIM_IDENTITY_MISMATCH')
+    for worker_row in row['workers']:
+        if isinstance(worker_row.get('observed'), dict):
+            worker_row['observed'] = _attach_pid_start_epoch(worker_row['observed'], host_clock)
+        claimed = worker_row.get('claimed') or {}
+        observed = worker_row.get('observed') or {}
+        claimed_ticks = claimed.get('process_starttime')
+        if (host_clock['status'] == 'STABLE' and isinstance(observed, dict)
+                and observed.get('start_ticks') == claimed_ticks):
+            claimed['start_ticks'] = claimed_ticks
+            claimed.update(_pid_start_epoch_binding(claimed.get('pid'), claimed_ticks,
+                                                    host_clock))
+        else:
+            claimed['host_clock_binding_status'] = (
+                host_clock['status'] if host_clock['status'] != 'STABLE'
+                else 'CLAIM_IDENTITY_MISMATCH')
+        worker_row['verified'] = worker_row['verified'] and host_clock['status'] == 'STABLE'
     emit('POST_WORKERS',row)
 
 
@@ -780,8 +1191,10 @@ def project_install_preservation():
 
 
 def director_child_census():
+    host_clock_initial = _host_boot_clock_snapshot()
     data,_,_=obj(ROOT/'status/agents_t856u.json')
     native=data.get('native_subexecutors') or {};pid=(native.get('director') or {}).get('pid')
+    director_identity=process(pid) if type(pid) is int else None
     result=[]
     if type(pid) is int:
         for child in Path('/proc').iterdir():
@@ -794,7 +1207,14 @@ def director_child_census():
                     'MP_RESOURCE_TRACKER' if b'resource_tracker' in raw else 'OTHER_CHILD')
             except OSError:kind='UNKNOWN'
             result.append({**observed,'kind':kind})
-    emit('PROJECT_DIRECTOR_CHILDREN',{'director_pid':pid,'children':result,
+    host_clock_final = _host_boot_clock_snapshot()
+    host_clock = _host_clock_pair(host_clock_initial, host_clock_final)
+    if isinstance(director_identity, dict):
+        director_identity = _attach_pid_start_epoch(director_identity, host_clock)
+    result=[_attach_pid_start_epoch(child, host_clock) for child in result]
+    emit('PROJECT_DIRECTOR_CHILDREN',{'director_pid':pid,'director_identity':director_identity,
+        'host_clock_snapshot':host_clock,'host_clock_snapshot_status':host_clock['status'],
+        'host_clock_snapshot_sha256':host_clock_final.get('snapshot_sha256'),'children':result,
         'native_fields':sorted(native),'last_admission':native.get('last_admission'),
         'close_reason':native.get('close_reason'),'state':native.get('state')})
 
@@ -915,7 +1335,8 @@ def systemic_relay_readback():
 
 
 def main():
-    emit('SNAPSHOT_A',runtime_snapshot())
+    snapshot_a = runtime_snapshot()
+    emit('SNAPSHOT_A',snapshot_a)
     worker_status_sample()
     director_child_census()
     project_summary()
@@ -925,11 +1346,43 @@ def main():
     proofs=project_execution_readback()
     project_workspace_census(proofs)
     project_active_progress()
-    emit('LOCKS',locks())
+    lock_rows = locks()
     time.sleep(6)
     worker_status_sample()
     director_child_census()
-    emit('SNAPSHOT_B',runtime_snapshot())
+    snapshot_b = runtime_snapshot()
+    final_guard = _host_boot_clock_snapshot()
+    snapshot_b['host_clock_final_guard'] = final_guard
+    clock_chain = [snapshot_a.get('host_clock_snapshot'),
+                   *[row.get('host_clock_snapshot') for row in lock_rows[:1]],
+                   snapshot_b.get('host_clock_snapshot'),
+                   _host_clock_pair(snapshot_b.get('host_clock_snapshot', {}).get('final', {}),
+                                    final_guard)]
+    chain_status = _host_clock_chain_status(clock_chain)
+    snapshot_b['host_boot_identity_chain_status'] = chain_status
+    snapshot_b['snapshot_complete'] = (snapshot_b.get('snapshot_complete') is True
+                                      and chain_status == 'STABLE')
+    if chain_status != 'STABLE':
+        snapshot_b['host_clock_snapshot_status'] = chain_status
+        for service in snapshot_b.get('services', []):
+            identity = service.get('identity') if isinstance(service, dict) else None
+            if isinstance(identity, dict):
+                identity['host_clock_binding_status'] = chain_status
+    for row in lock_rows:
+        row['host_boot_identity_chain_status'] = chain_status
+        if chain_status != 'STABLE':
+            row['host_clock_snapshot_status'] = chain_status
+            row['lock_observation_complete'] = False
+            row['holder_identity_recheck_status'] = 'CHANGED_OR_UNAVAILABLE'
+            for check in row.get('holder_identity_rechecks', []):
+                check['status'] = 'CHANGED_OR_UNAVAILABLE'
+                check['host_clock_binding_status'] = chain_status
+            for record in row.get('matching_lock_records', []):
+                record['holder_identity_recheck'] = 'CHANGED_OR_UNAVAILABLE'
+                if isinstance(record.get('holder_identity'), dict):
+                    record['holder_identity']['host_clock_binding_status'] = chain_status
+    emit('LOCKS',lock_rows)
+    emit('SNAPSHOT_B',snapshot_b)
     print('NOX_MAINT_INSPECT_COMPLETE=true',flush=True)
 
 if __name__=='__main__':main()
