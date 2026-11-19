@@ -184,7 +184,7 @@ def run():
         deadline = time.monotonic()+25
         while time.monotonic() < deadline:
             try:
-                status = json.loads(h.read_regular(ROOT/'state/dispatcher/agents_status.json',2*1024*1024))
+                status = json.loads(h.read_regular(ROOT/'status/agents_t856u.json',2*1024*1024))
                 native_status = status.get('native_subexecutors',{})
                 reflex = (native_status.get('systemic_relay') or {}).get('self_monitor')
                 if (isinstance(reflex,dict)
