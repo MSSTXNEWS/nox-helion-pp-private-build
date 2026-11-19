@@ -101,7 +101,7 @@ def _fixture(process_count: int = 8, *, process_complete: bool = True,
         "service_match": {"service": "nox-model", "pid": GPU_PID, "state": "RUNNING",
                            "relation": "DIRECT_PID", "start_ticks": gpu_identity["start_ticks"]},
         "parent_chain": [{"pid": GPU_PID, "ppid": 1, "start_ticks": gpu_identity["start_ticks"],
-                          "comm": "fixture-worker", "pid_namespace": NS["pid"],
+                          "comm": "SECRET_PARENT_COMM_SHOULD_NOT_FORWARD", "pid_namespace": NS["pid"],
                           "cgroups": ["/secret/cgroup/path"]}],
         "before_alias_scan_complete": True, "after_alias_scan_complete": True,
         "scope": "READ_ONLY_GPU_PID_TO_PROC_SERVICE",
@@ -180,7 +180,8 @@ class OwnerNativeOutputTransferTests(unittest.TestCase):
         self.assertEqual(status["supervisor_service_health"], "DEGRADED")
         self.assertEqual(status["gpu_pid_reconciliation"][0]["gpu_pid"], GPU_PID)
         self.assertEqual(status["gpu_pid_reconciliation"][0]["classification"], "MATCHED")
-        for forbidden in ("SECRET_INLINE_CODE_SHOULD_NOT_FORWARD", "/secret/storage", "/secret/config", "/secret/cgroup"):
+        for forbidden in ("SECRET_INLINE_CODE_SHOULD_NOT_FORWARD", "SECRET_PARENT_COMM_SHOULD_NOT_FORWARD",
+                          "/secret/storage", "/secret/config", "/secret/cgroup"):
             self.assertNotIn(forbidden, restored)
         process_summary = bundle["process_rows"]["filtered_summary"]
         self.assertEqual(process_summary["gpu_consumer_pids"], [GPU_PID])
