@@ -89,6 +89,17 @@ class CheckpointStepProvenance(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "HOLD_PAUSED_CHECKPOINT_SCOPE"):
                 check(helper, wrong_shape)
 
+            # Rehashes can match while an ancestor symlink silently redirects
+            # the checkpoint to a different, unpinned storage namespace.
+            state.write_text('{"global_step": 1}', encoding="utf-8")
+            alias = out / "redirected-output"
+            alias.symlink_to(out, target_is_directory=True)
+            redirected = copy.deepcopy(receipt)
+            redirected["checkpoint"]["path"] = str(alias / "checkpoint-1")
+            redirected_check = load_pinned_verifier(alias)["verify_paused_result"]
+            with self.assertRaisesRegex(RuntimeError, "HOLD_PAUSED_CHECKPOINT_SCOPE"):
+                redirected_check(helper, redirected)
+
 
 if __name__ == "__main__":
     unittest.main()
