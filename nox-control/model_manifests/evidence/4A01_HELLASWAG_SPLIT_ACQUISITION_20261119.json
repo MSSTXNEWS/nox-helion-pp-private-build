@@ -67,9 +67,33 @@
   ],
   "licensing": {
     "canonical_manifest_claim": "MIT",
-    "review_note": "The current dataset card displays MIT, while the legacy dataset_infos metadata blob reports an empty license field; retain the canonical claim only after the owner confirms the intended license source/provenance.",
+    "review_note": "MIT is stated in the README at the pinned Hugging Face dataset snapshot and links to the original dataset LICENSE. The linked LICENSE file text/blob could not be independently verified (GitHub API returned HTTP 451 on 2026-11-19); record this as dataset-card-stated, not direct license-text verified.",
     "dataset_card_url": "https://huggingface.co/datasets/Rowan/hellaswag",
-    "legacy_metadata_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/f47cd9941619738721e299cf3a72a47d1b01744e/dataset_infos.json"
+    "legacy_metadata_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/f47cd9941619738721e299cf3a72a47d1b01744e/dataset_infos.json",
+    "dataset_card_snapshot": {
+      "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+      "readme_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/218ec52e09a7e7462a5400043bb9a69a41d06b76/README.md",
+      "section": "Additional Information > Licensing Information",
+      "statement": "MIT https://github.com/rowanz/hellaswag/blob/master/LICENSE"
+    },
+    "original_license_source": {
+      "url": "https://github.com/rowanz/hellaswag/blob/master/LICENSE",
+      "verification_status": "NOT_VERIFIED",
+      "access_result": "GitHub API returned HTTP 451 (DMCA block) on 2026-11-19; no license-file content, immutable revision, or blob hash was verified."
+    },
+    "pinned_snapshot_metadata": {
+      "frontmatter_license_field": "not present",
+      "legacy_dataset_infos_license": "",
+      "legacy_metadata_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/f47cd9941619738721e299cf3a72a47d1b01744e/dataset_infos.json",
+      "interpretation": "The pinned README body explicitly states MIT; absent/empty metadata fields are missing metadata, not a conflicting license statement."
+    },
+    "later_frontmatter_update": {
+      "commit": "5b6decb72989c6bf5a488fc22d553fe1302804ef",
+      "parent_revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+      "change": "Adds `license: mit` to README frontmatter.",
+      "ref": "refs/pr/8",
+      "qualification": "This change was on Hugging Face PR #8 and was not merged into main as checked 2026-11-19; it is not relied on for the pinned snapshot."
+    }
   },
   "boundaries": {
     "downloaded_bytes": 0,
