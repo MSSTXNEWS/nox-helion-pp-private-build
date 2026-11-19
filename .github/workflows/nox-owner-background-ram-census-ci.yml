@@ -1,0 +1,27 @@
+name: NOX owner background RAM census source gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/nox-owner-background-ram-census-ci.yml'
+      - 'nox-control/owner_native_repair.py'
+      - 'nox-control/owner_supervisor_background_probe.py'
+      - 'nox-control/test_owner_memory_background_census.py'
+
+permissions:
+  contents: read
+
+jobs:
+  census-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Compile the exact native census and pinned operator
+        run: python3 -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_repair.py nox-control/owner_supervisor_background_probe.py
+      - name: Verify read-only RPC, exact bundle, and operator compatibility
+        run: |
+          python3 -B -m unittest discover -s nox-control -p 'test_owner_memory_background_census.py'
+          python3 -B -m unittest discover -s nox-control -p 'test_owner_native_operator_*.py'
