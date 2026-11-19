@@ -245,10 +245,20 @@ class PredicateAndSourceTests(unittest.TestCase):
         old_tree, new_tree = ast.parse(base), ast.parse(newer)
         old_defs = {node.name: node for node in old_tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         new_defs = {node.name: node for node in new_tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        # The routed variant intentionally retains the installed model field
+        # rather than forcing the historical hardcoded 'maya'. Apart from that
+        # one request keyword, its SSE parser must preserve frozen safeguards.
+        frozen_request = "request=dict(payload,model='maya',stream=True,cache_prompt=True)"
+        routed_request = "request=dict(payload,stream=True,cache_prompt=True)"
+        self.assertEqual(base.decode().count(frozen_request), 1)
+        self.assertEqual(newer.decode().count(routed_request), 1)
+        normalized_tree = ast.parse(base.decode().replace(frozen_request, routed_request))
+        normalized_defs = {node.name: node for node in normalized_tree.body
+                           if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
         allowed = {'owner_request_query', 'executor_status_query', '_run'}
         for name, node in old_defs.items():
             if name not in allowed:
-                self.assertEqual(ast.dump(node), ast.dump(new_defs[name]), name)
+                self.assertEqual(ast.dump(normalized_defs[name]), ast.dump(new_defs[name]), name)
         self.assertEqual(candidate._READONLY_STATUS_ACTIONS, frozenset({'status', 'queue_status'}))
         self.assertNotIn('confirmed=True', newer.decode())
         self.assertNotIn('confirmed = True', newer.decode())
