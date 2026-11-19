@@ -148,7 +148,6 @@
         const chunk=await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
         buf+=decoder.decode(chunk.value,{stream:true});
-        // Cap unfinished NDJSON frames, not combined chunks.
         let j;while((j=buf.indexOf('\n'))>=0){
           if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
           await line(buf.slice(0,j).trim());buf=buf.slice(j+1);
@@ -212,11 +211,13 @@
                     if(settled)return;
                     settled=true;
                     if(typeof document!=='undefined')document.removeEventListener?.('visibilitychange',visibility);
+                    nativeSignal.removeEventListener('abort',finish);
                     if(frameId!==undefined&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
                     if(timerId!==undefined&&typeof clearTimeout==='function')clearTimeout(timerId);
                     resolve();
                   };
                   if(typeof document!=='undefined'){document.addEventListener?.('visibilitychange',visibility);visibility();}
+                  if(!settled){nativeSignal.addEventListener('abort',finish,{once:true});if(nativeSignal.aborted)finish();}
                   if(typeof requestAnimationFrame==='function'){
                     frameId=requestAnimationFrame(finish);
                     if(settled&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(frameId);
@@ -258,7 +259,6 @@
         }catch(e){
           event({type:'error',
             error:nativeSignal.aborted?'STREAM_STOP_REQUESTED':String(e.message||'HOLD_NATIVE_STREAM').slice(0,150),
-            // HTTP cancellation is confirmed; GPU/native execution is not.
             gpu_stop_verified:false});
         }finally{
           signal?.removeEventListener?.('abort',onAbort);
