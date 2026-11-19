@@ -252,8 +252,10 @@ class V112Tests(unittest.TestCase):
     def test_one_oversized_sse_frame_is_still_rejected(self):
         self.bulk_sse='oversized'
         self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'SSE size limit','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-            json={'message':'oversized single frame'})
+            json={'message':'oversized single frame','dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
         self.assertFalse(any(f.get('saved') for f in frames))
@@ -512,8 +514,10 @@ class V112Tests(unittest.TestCase):
 
     def test_no_fresh_s03_row_means_no_fake_done(self):
         self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Missing S03 receipt','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-          json={'message':'Другой уникальный вопрос'})
+          json={'message':'Другой уникальный вопрос','dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1]['type'],'error')
         self.assertEqual(frames[-1]['error'],'HOLD_S03_COMMIT_NOT_VERIFIED')
