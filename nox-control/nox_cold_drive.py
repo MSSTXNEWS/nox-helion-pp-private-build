@@ -83,7 +83,8 @@ def upload(a):
     dest = remote + "/" + src.name
     digest = sha256(src)
     size = src.stat().st_size
-    command(["rclone", "copyto", "--retries", "3", "--checkers", "4", str(src), dest])
+    command(["rclone", "copyto", "--immutable", "--checksum", "--retries", "3", "--checkers", "4",
+             str(src), dest])
     # Stream remote readback without another model-sized SSD copy.
     verify_remote_stream(dest, digest, size)
     receipt = {"source": str(src), "destination": dest, "size": size,
@@ -200,7 +201,7 @@ def main():
     l.add_argument("--sha256", required=True)
     l.add_argument("--reserve-gib", type=int, default=12)
     args = p.parse_args()
-    if getattr(args, "reserve_gib", 0) < 1:
+    if args.action == "load" and args.reserve_gib < 1:
         p.error("RAM reserve must be positive")
     try:
         (upload if args.action == "upload" else load)(args)

@@ -246,6 +246,10 @@ def run(args):
     source = check_directory(args.ssd) if args.ssd else None
     if source:
         check(source != dest, "SAME_SOURCE_DEST")
+    if not args.execute:
+        return {"schema": SCHEMA, "state": "PLAN_ONLY",
+                "assets": [a["name"] for a in m["assets"]],
+                "destination": str(dest), "mode": args.mode}
     lock_path = dest / ".nox-drive-prefetch.lock"
     fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
@@ -256,10 +260,6 @@ def run(args):
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise Hold("HOLD_DRIVE_BUSY")
-        if not args.execute:
-            return {"schema": SCHEMA, "state": "PLAN_ONLY",
-                    "assets": [a["name"] for a in m["assets"]],
-                    "destination": str(dest), "mode": args.mode}
         output = []
         for a in m["assets"]:
             output.append(stage_one(m, a, args.manifest_sha, dest,

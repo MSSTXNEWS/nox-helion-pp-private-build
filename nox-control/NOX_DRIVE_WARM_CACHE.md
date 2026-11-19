@@ -20,11 +20,24 @@ Status: SOURCE ONLY, NOT installed or OAuth-authorized on Vast.ai.
 
 Use real model filenames, exact bytes and SHA-256 from verified manifests. Never include S03/checkpoints/training/optimizer/database data.
 
+## Verified copy of an inactive model
+
+Use the owner-authorized Drive profile and an existing private receipt directory. Copy only an approved, inactive model to its approved project subfolder. The command refuses to replace differing remote content and independently streams the remote object to check byte length and SHA-256. It leaves the local file in place.
+
+```sh
+python3 -B nox-control/nox_cold_drive.py upload \
+  --file /absolute/path/to/approved-model.gguf \
+  --remote noxdrive:NOX_COLD \
+  --receipt-dir /root/nox/private/cold-receipts
+```
+
+The upload receipt proves a model copy only. Verify S03 and optimizer/checkpoint backups independently through the owner-encrypted restore path before accepting them as recoverable.
+
 ## Staging
 Precreate private 0700 directories and exact manifest in owner-only location.
 Disk command: python3 nox-control/nox_drive_prefetch.py --manifest /root/nox/private/allowlist.json --manifest-sha EXPECTED_SHA256 --destination /root/nox/cache/warm-ssd --mode disk --execute
 RAM command: python3 nox-control/nox_drive_prefetch.py --manifest /root/nox/private/allowlist.json --manifest-sha EXPECTED_SHA256 --destination /dev/shm/nox_models --ssd /root/nox/cache/warm-ssd --mode ram --execute
-Without --execute, no model transfer occurs.
+Without `--execute`, the plan reads the manifest and destination directory metadata without transferring a model or creating a lock file.
 
 ## Native gates
 The new source deliberately DOES NOT replace already pinned owner_drive_ram_bridge.py, owner_native_drive.py or existing dispatcher. It cannot grant OAuth or load a model onto GPU. Only native owner/CAS, STOP, cgroup, S03 and source-hash gated installation may integrate these components.
