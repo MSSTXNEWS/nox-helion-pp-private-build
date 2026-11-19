@@ -1122,6 +1122,11 @@ def main():
             return 0
         print("usage: owner_native_audit.py [--lifeline-only --phase pre|post]", file=sys.stderr)
         return 2
+    if os.environ.get("NOX_LIFELINE_AUDIT_PHASE") == "auto":
+        result = lifeline_only("auto")
+        print("NOX_MAINT_AUDIT=" + json.dumps(result, separators=(",", ":")), flush=True)
+        print("NOX_MAINT_AUDIT_COMPLETE=true", flush=True)
+        return 0
     with ProcessPoolExecutor(max_workers=7) as pool:
         for row in pool.map(worker,range(7)):
             # One JSON record per bounded result item; never dump env/config secrets.
