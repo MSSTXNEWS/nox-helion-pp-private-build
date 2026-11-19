@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
       - name: Compile the exact native census and pinned operator
         run: python3 -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_repair.py nox-control/owner_supervisor_background_probe.py
-      - name: Verify read-only RPC, exact bundle, and operator compatibility
+      - name: Verify fixed Supervisor status, exact bundle, and operator compatibility
         run: |
           python3 -B -m unittest discover -s nox-control -p 'test_owner_memory_background_census.py'
           python3 -B -m unittest discover -s nox-control -p 'test_owner_native_operator_*.py'

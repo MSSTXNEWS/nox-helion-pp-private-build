@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 import owner_native_operator as operator
 
@@ -25,46 +26,36 @@ class BackgroundCensusTests(unittest.TestCase):
     def setUp(self):
         self.entry = entry_module()
 
-    def test_bundle_cannot_signal_or_mutate_a_service(self):
+    def test_bundle_uses_only_fixed_status_for_named_services(self):
         control = self.entry.native_control()
         self.assertIsNone(control.STOP_TARGET)
-        for method, params in [('stopProcess', ('nox-fill-idle-t166u',)),
-                               ('startProcess', ('nox-fill-idle-t166u',)),
-                               ('getProcessInfo', ('outside-source-scope',))]:
-            with self.subTest(method=method), self.assertRaisesRegex(
-                    RuntimeError, 'RPC_METHOD_OUT_OF_SCOPE'):
-                control.rpc(None, method, params)
+        with self.assertRaisesRegex(RuntimeError, 'SUPERVISOR_STATUS_OUT_OF_SCOPE'):
+            control.status('stopProcess')
+        with patch.object(control.subprocess, 'run', return_value=SimpleNamespace(
+                stdout='nox-fill-idle-t166u RUNNING pid 52, uptime 2 days, 01:03:04\n',
+                stderr='', returncode=0)) as run:
+            self.assertEqual(control.status('nox-fill-idle-t166u'),
+                             {'statename': 'RUNNING', 'pid': 52})
+        self.assertEqual(run.call_args.args[0], ['supervisorctl', 'status', 'nox-fill-idle-t166u'])
 
-    def test_resolves_inline_comments_and_keeps_private_socket_mode(self):
+    def test_nonzero_exit_cannot_attest_a_running_pid(self):
         control = self.entry.native_control()
-        config = b'''[unix_http_server]
-file=/tmp/supervisor.sock ; socket endpoint
-chmod=0600 ; access limited to root
-chown=root:root ; owner
-[supervisorctl]
-serverurl=unix:///tmp/supervisor.sock ; fixed transport
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface
-[include]
-files=/etc/supervisor/conf.d/*.conf
-'''
-        expected = Path('/tmp/supervisor.sock')
-        self.assertEqual(control.endpoint_config(config, Path('/etc/supervisor')),
-                         (expected, expected, 0o600))
-        with self.assertRaisesRegex(RuntimeError, 'SOCKET_MODE_CONFIG'):
-            control.endpoint_config(config.replace(b'0600', b'0660'), Path('/etc/supervisor'))
+        with patch.object(control.subprocess, 'run', return_value=SimpleNamespace(
+                stdout='nox-ds41-8098 RUNNING pid 52, uptime 01:03:04\n',
+                stderr='', returncode=3)), self.assertRaisesRegex(
+                    RuntimeError, 'SUPERVISOR_RUNNING_STATUS'):
+            control.status('nox-ds41-8098')
 
     def test_reads_exact_pss_and_private_facts_without_summing_overlap(self):
         name = 'nox-fill-idle-t166u'
         values = b'Pss_Anon: 2048 kB\nPss_File: 10 kB\nPss_Shmem: 2 kB\nPrivate_Clean: 3 kB\nPrivate_Dirty: 1024 kB\n'
         control = SimpleNamespace(
             SUPERVISOR=(114, 12), PROC=Path('/proc'),
-            rpc=lambda endpoint, method, args: {'group': name, 'name': name,
-                                                 'statename': 'RUNNING', 'pid': 222},
+            status=lambda group: {'statename': 'RUNNING', 'pid': 222},
             process=lambda pid: (55, 114, 222, b'S'), cgroup=lambda pid: b'0::/',
             need=self.entry.native_control().need, read=lambda path, limit: values,
         )
-        result = self.entry.profile(control, None, name)
+        result = self.entry.profile(control, name)
         self.assertEqual(result['memory_bytes']['Pss_Anon'], 2048 * 1024)
         self.assertEqual(result['memory_bytes']['Private_Dirty'], 1024 * 1024)
 

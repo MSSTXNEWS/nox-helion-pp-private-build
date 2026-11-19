@@ -10,7 +10,7 @@ from types import ModuleType
 
 BUNDLE = __NOX_BUNDLE_JSON__
 SUPERVISOR = 'owner_supervisor_background_probe.py'
-PIN = 'bc485bda590b509e0b2e64f00e31f53860a28ba393d962f46e56e4a6b01734b3'
+PIN = '42cf5e308dad69823e16eef91d2d31561c9bf05b6374903bccc5dd239ddf8981'
 GROUPS = (
     'nox-dialog-miner', 'nox-kb-eventlistener', 'nox-lifeline-guard', 'nox-selfheal',
     'nox-cache-maintenance', 'nox-dispatcher', 'nox-dispatcher-t855u',
@@ -33,10 +33,8 @@ def native_control():
     return control
 
 
-def profile(control, endpoint, name):
-    row = control.rpc(endpoint, 'getProcessInfo', (name,))
-    if not isinstance(row, dict) or (row.get('group'), row.get('name')) != (name, name):
-        return {'state': 'UNVERIFIED'}
+def profile(control, name):
+    row = control.status(name)
     result = {'state': row['statename']}
     pid = row.get('pid')
     if row['statename'] != 'RUNNING' or type(pid) is not int or pid <= 1:
@@ -63,21 +61,15 @@ def main():
                  and re.fullmatch(r'[a-f0-9]{40}', os.environ.get('NOX_OWNER_SOURCE_SHA', ''))
                  and control.read(control.PROC / 'sys/kernel/random/boot_id', 128).decode().strip() == control.BOOT,
                  'OWNER_CONTEXT')
-    endpoint = control.endpoint()
-    control.need(control.rpc(endpoint, 'getPID') == control.SUPERVISOR[0]
-                 and control.rpc(endpoint, 'getState') ==
-                 {'statecode': 1, 'statename': 'RUNNING'}, 'SUPERVISOR_RPC_IDENTITY')
-    control.protect_model(endpoint)
+    control.protect_model()
     before = control.memory()
     groups = {}
     for name in GROUPS:
         try:
-            groups[name] = profile(control, endpoint, name)
-        except control.xmlrpc.client.Fault as error:
-            groups[name] = {'state': 'NOT_REGISTERED' if error.faultCode == 10 else 'UNVERIFIED'}
-        except (OSError, RuntimeError, ValueError, KeyError):
+            groups[name] = profile(control, name)
+        except (OSError, RuntimeError, ValueError, KeyError, control.subprocess.TimeoutExpired):
             groups[name] = {'state': 'UNVERIFIED'}
-    control.protect_model(endpoint)
+    control.protect_model()
     after = control.memory()
     for item in (before, after):
         item['raw_headroom'] = item['limit'] - item['current']

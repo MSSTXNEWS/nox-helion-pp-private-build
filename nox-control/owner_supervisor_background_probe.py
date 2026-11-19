@@ -1,24 +1,11 @@
-#!/usr/bin/env python3
-"""Pinned read-only queries on the live Supervisor UNIX socket."""
+"""Bounded fixed Supervisor status and process memory reads."""
 
-import configparser
-import contextlib
-import hashlib
-import http.client
-import json
 import os
 import re
-import select
-import socket
 import stat
-import struct
-import xmlrpc.client
+import subprocess
 from pathlib import Path
-from urllib.parse import urlsplit
 
-
-CONFIG = Path("/etc/supervisor/supervisord.conf")
-INCLUDES = CONFIG.parent / "conf.d"
 PROC = Path("/proc")
 CGROUP = Path("/sys/fs/cgroup")
 BOOT = "9c0ecc02-85c1-452b-b8ae-521e9a11fd03"
@@ -26,7 +13,6 @@ SUPERVISOR = 114, 167791115
 MODEL = "nox-ds41-8098", 3266857, 172046662
 TARGETS = ()
 STOP_TARGET = None
-HTTP_LIMIT = 32 * 1024
 
 
 class Hold(RuntimeError):
@@ -83,141 +69,41 @@ def cgroup(pid):
     return read(root / "cgroup", 8192), os.readlink(root / "ns/cgroup")
 
 
-def config_parse(data):
-    # Match Supervisor's space-prefixed semicolon comment handling, while
-    # deliberately retaining strict duplicate-key/section rejection.
-    parser = configparser.ConfigParser(interpolation=None, strict=True,
-                                       inline_comment_prefixes=(";",))
-    parser.read_string(data.decode())
-    need(not parser.defaults(), "CONFIG_DEFAULTS_UNSUPPORTED")
-    return parser
+def status(name):
+    need(name in (*TARGETS, MODEL[0]), "SUPERVISOR_STATUS_OUT_OF_SCOPE")
+    result = subprocess.run(["supervisorctl", "status", name], capture_output=True,
+                            text=True, timeout=8, check=False)
+    need(len(result.stdout) + len(result.stderr) <= 4096, "SUPERVISOR_STATUS_SIZE")
+    combined = (result.stdout + result.stderr).strip()
+    if result.returncode in (1, 3, 4) and re.fullmatch(
+            rf"{re.escape(name)}\s+ERROR\s+\(no such process\)", combined):
+        return {"statename": "NOT_REGISTERED"}
+    parsed = re.fullmatch(
+        rf"{re.escape(name)}\s+(RUNNING|STOPPED|STARTING|STOPPING|EXITED|FATAL|BACKOFF|UNKNOWN)"
+        rf"(?:\s+([^\r\n]*))?", result.stdout.strip())
+    need(parsed is not None, "SUPERVISOR_STATUS_FORMAT")
+    state, details = parsed.groups()
+    need(not result.stderr.strip() and result.returncode in (0, 3), "SUPERVISOR_STATUS_EXIT")
+    if state != "RUNNING":
+        return {"statename": state}
+    pid = re.fullmatch(r"pid ([1-9][0-9]{0,9}), uptime [0-9:]+(?: day[s]?, [0-9:]+)?",
+                       details or "")
+    need(result.returncode == 0 and pid is not None, "SUPERVISOR_RUNNING_STATUS")
+    return {"statename": state, "pid": int(pid[1])}
 
 
-def plain_socket_path(value, here):
-    expanded = value.replace("%(here)s", str(here))
-    path = Path(expanded)
-    need(re.fullmatch(r"/[A-Za-z0-9_./-]+", expanded)
-         and ".." not in path.parts and str(path) == expanded, "SOCKET_PATH_SHAPE")
-    return path
-
-
-def resolve_socket(path):
-    if path.is_relative_to("/var/run") and Path("/var/run").is_symlink():
-        alias = Path("/var/run")
-        link = alias.lstat()
-        need(link.st_uid == link.st_gid == 0 and
-             os.readlink(alias) in ("/run", "../run"), "VAR_RUN_ALIAS")
-        trusted_parents(alias)
-        path = Path("/run") / path.relative_to(alias)
-    trusted_parents(path)
-    return path
-
-
-def endpoint_config(data, here):
-    parser = config_parse(data)
-    server = parser["unix_http_server"]
-    client = parser["supervisorctl"]
-    need(set(server) <= {"file", "chmod", "chown"} and set(client) == {"serverurl"},
-         "ENDPOINT_CONFIG_AUTH_UNSUPPORTED")
-    need(parser["rpcinterface:supervisor"]["supervisor.rpcinterface_factory"] ==
-         "supervisor.rpcinterface:make_main_rpcinterface", "RPC_FACTORY")
-    need(parser["include"]["files"] == str(INCLUDES / "*.conf"), "INCLUDE_SCOPE")
-    mode = server.get("chmod", "0700")
-    need(re.fullmatch(r"0?[0-7]{3}", mode) and int(mode, 8) & 0o200
-         and not int(mode, 8) & 0o077 and
-         server.get("chown", "root:root") in ("root:root", "0:0"), "SOCKET_MODE_CONFIG")
-    path = plain_socket_path(server["file"], here)
-    uri = urlsplit(client["serverurl"].replace("%(here)s", str(here)))
-    need(uri.scheme == "unix" and not (uri.netloc or uri.query or uri.fragment),
-         "CLIENT_ENDPOINT_SCHEME")
-    client_path = plain_socket_path(uri.path, here)
-    return path, client_path, int(mode, 8)
-
-
-def endpoint():
-    main = read(CONFIG, 256 * 1024, rooted=True)
-    main_sha = hashlib.sha256(main).hexdigest()
-    need(main_sha == "fcead12b4dcb7f56b31d223f1cfa89792bd6e8008f78708a831b41fab9ece25d",
-         "SUPERVISOR_CONFIG_CHANGED")
-    server, client, mode = endpoint_config(main, CONFIG.parent)
-    resolved = resolve_socket(server)
-    need(resolve_socket(client) == resolved, "SERVER_CLIENT_ENDPOINT_DIFFER")
-    need(len(os.fsencode(resolved)) <= 103, "SOCKET_PATH_LIMIT")
-    info = resolved.lstat()
-    need(stat.S_ISSOCK(info.st_mode) and info.st_uid == info.st_gid == 0
-         and info.st_nlink == 1 and stat.S_IMODE(info.st_mode) == mode, "SOCKET_MODE_LIVE")
-    pid, start_ticks = SUPERVISOR
-    expected = process(pid)
-    need(expected[:2] == (start_ticks, 1) and expected[3] != b"Z" and
-         cgroup(pid) == cgroup("self"), "SUPERVISOR_PROCESS_GENERATION")
-    argv_raw = read(PROC / str(pid) / "cmdline", 16384)
-    argv = argv_raw.split(b"\0")[:-1] if argv_raw.endswith(b"\0") else []
-    scripts = [index for index, arg in enumerate(argv) if
-               arg.startswith(b"/") and arg.endswith(b"/supervisord")]
-    need(len(scripts) == 1 and argv[scripts[0] + 1:] in
-         ([b"-c", os.fsencode(CONFIG)], [b"--configuration", os.fsencode(CONFIG)]),
-         "SUPERVISOR_CONFIG_ARGV")
-    exe = (PROC / str(pid) / "exe").stat()
-    need(stat.S_ISREG(exe.st_mode) and exe.st_uid == exe.st_gid == 0
-         and not exe.st_mode & 0o022, "SUPERVISOR_EXECUTABLE_IDENTITY")
-    rows = []
-    known_names = {str(server), str(client), str(resolved)}
-    for line in read(PROC / "net/unix", 2 * 1024 * 1024).decode().splitlines()[1:]:
-        parts = line.split(maxsplit=7)
-        if len(parts) == 8 and parts[7] in known_names and parts[4:6] == ["0001", "01"]:
-            if int(parts[3], 16) & 0x10000:
-                rows.append(parts[6])
-    need(len(rows) == 1 and rows[0].isdecimal(), "SOCKET_LISTENER_UNPROVEN")
-    matches = []
-    for fd in (PROC / str(pid) / "fd").iterdir():
-        try:
-            if os.readlink(fd) == f"socket:[{rows[0]}]":
-                matches.append(fd.name)
-        except FileNotFoundError:
-            continue
-    need(len(matches) == 1 and process(pid)[:3] == expected[:3] and
-         stamp(resolved.lstat()) == stamp(info), "SOCKET_PEER_FD_UNPROVEN")
-    return resolved, stamp(info), main_sha, rows[0], matches[0], argv_raw
-
-
-def rpc(pin, method, params=()):
-    allowed = (method in ("getPID", "getState") and not params) or (
-        method == "getProcessInfo" and len(params) == 1 and params[0] in (*TARGETS, MODEL[0]))
-    need(allowed, "RPC_METHOD_OUT_OF_SCOPE")
-    http = http.client.HTTPConnection("localhost", timeout=25)
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as channel, contextlib.closing(http):
-        channel.settimeout(25)
-        channel.connect(str(pin[0]))
-        creds = struct.unpack("3i", channel.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
-        need(creds == (SUPERVISOR[0], 0, 0), "SOCKET_PEERCRED")
-        pidfd = os.pidfd_open(creds[0])
-        try:
-            poll = select.poll()
-            poll.register(pidfd, select.POLLIN)
-            need(not poll.poll(0) and endpoint() == pin, "SUPERVISOR_CHANGED")
-            http.sock = channel
-            body = xmlrpc.client.dumps(params, methodname=f"supervisor.{method}").encode()
-            http.request("POST", "/RPC2", body,
-                         {"Content-Type": "text/xml", "Connection": "close"})
-            reply = http.getresponse()
-            need(reply.status == 200 and not reply.chunked and
-                 reply.length is not None and 0 < reply.length <= HTTP_LIMIT, "RPC_HTTP_REPLY")
-            payload = reply.read()
-            need(b"<!DOCTYPE" not in payload.upper() and b"<!ENTITY" not in payload.upper(),
-                 "RPC_XML_DECLARATION")
-            (value,), _ = xmlrpc.client.loads(payload)
-            need(not poll.poll(0) and endpoint() == pin, "SUPERVISOR_CHANGED_AFTER_RPC")
-            return value
-        finally:
-            os.close(pidfd)
-
-
-def protect_model(pin):
+def protect_model():
+    supervisor_pid, supervisor_ticks = SUPERVISOR
     name, pid, ticks = MODEL
-    state = rpc(pin, "getProcessInfo", (name,))
-    need((state["name"], state["group"], state["statename"], state["pid"]) ==
-         (name, name, "RUNNING", pid) and process(pid)[0] == ticks,
-         "MODEL_GENERATION_CHANGED")
+    parent = process(supervisor_pid)
+    observed = process(pid)
+    need(parent[:2] == (supervisor_ticks, 1)
+         and parent[3] not in (b"Z", b"X")
+         and cgroup(supervisor_pid) == cgroup("self"), "SUPERVISOR_PROCESS_GENERATION")
+    need(status(name) == {"statename": "RUNNING", "pid": pid}
+         and observed[:3] == (ticks, supervisor_pid, pid)
+         and observed[3] not in (b"Z", b"X")
+         and cgroup(pid) == cgroup("self"), "MODEL_GENERATION_CHANGED")
 
 
 def memory():
