@@ -383,7 +383,9 @@ def main():
         result = {'decision': 'HOLD_DURABLE_BOOT_' + str(error)}
     except (OSError, ValueError, IndexError, subprocess.SubprocessError):
         result = {'decision': 'HOLD_DURABLE_BOOT_DEPENDENCY_UNAVAILABLE'}
-    print(json.dumps({**result, 'source_sha': source, 'request_id': request}, sort_keys=True))
+    print('NOX_MAINT_COLD_BOOT_RECEIPT=' + json.dumps(
+        {**result, 'source_sha': source, 'request_id': request}, sort_keys=True), flush=True)
+    print('NOX_MAINT_REPAIR_COMPLETE=true', flush=True)
 
 
 if __name__ == '__main__':
