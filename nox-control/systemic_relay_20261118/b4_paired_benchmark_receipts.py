@@ -345,6 +345,15 @@ def measure_openai_sse_wire(timed_chunks):
     usage_seen = False
     event_count = 0
 
+    def _unique_json_object(pairs):
+        # JSON permits repeated field names and otherwise silently retains the
+        # last value. Ambiguous choices/delta/finish_reason are not wire proof.
+        obj = {}
+        for key, value in pairs:
+            _require(key not in obj, "SSE_DUPLICATE_JSON_FIELD")
+            obj[key] = value
+        return obj
+
     def dispatch(at_ms):
         nonlocal data_lines, visible_bytes, first_text_ms
         nonlocal terminal_ms, finish_reason, terminal_seen, event_count, usage_seen
@@ -358,7 +367,9 @@ def measure_openai_sse_wire(timed_chunks):
             terminal_ms = at_ms
             return
         try:
-            obj = json.loads(payload)
+            obj = json.loads(payload, object_pairs_hook=_unique_json_object)
+        except ReceiptHold:
+            raise
         except (ValueError, TypeError) as exc:
             raise ReceiptHold("SSE_INVALID_JSON") from exc
         _require(isinstance(obj, dict) and isinstance(obj.get("choices"), list),
