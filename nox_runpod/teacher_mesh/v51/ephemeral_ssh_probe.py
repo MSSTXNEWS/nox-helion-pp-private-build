@@ -7,6 +7,8 @@ Run only in ephemeral GitHub Actions environment; never embed NOX2 in code.
 """
 from __future__ import annotations
 import json
+import base64
+import binascii
 import ipaddress
 import socket
 import os
@@ -25,6 +27,50 @@ RUNNER = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / "nox-v51-ephemeral"
 KEY = RUNNER / "identity"
 TRACK = RUNNER / "cleanup.json"
 HOST_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9.-]{1,253}$")
+
+PIN = "SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc"
+DEFAULT_COMPLETION_MARKERS = ("NOX_NATIVE_V51_SSH_EXECUTED=true", "NATIVE_READ_ONLY_COMPLETE=true")
+
+
+def remote_output_complete(returncode: int, stdout: str, required_markers=None) -> bool:
+    """Require exact complete marker lines for the selected remote contract."""
+    markers = DEFAULT_COMPLETION_MARKERS if required_markers is None else required_markers
+    if (type(returncode) is not int or returncode != 0 or not isinstance(stdout, str)
+            or not isinstance(markers, (tuple, list)) or not markers):
+        return False
+    lines = set(stdout.splitlines())
+    return all(isinstance(marker, str) and 1 <= len(marker) <= 128 and marker in lines
+               for marker in markers)
+
+
+def exact_host_key_pin(scan_stdout: str, fingerprint_stdout: str,
+                       expected_host: str, expected_port: int, expected_pin: str) -> bool:
+    """Accept only one scanned Ed25519 key for this endpoint and its exact fingerprint."""
+    if (not isinstance(scan_stdout, str) or not isinstance(fingerprint_stdout, str)
+            or not isinstance(expected_host, str) or not expected_host
+            or type(expected_port) is not int or not 1 <= expected_port <= 65535
+            or not re.fullmatch(r"SHA256:[A-Za-z0-9+/]{43}", str(expected_pin))):
+        return False
+    key_rows = [line.strip() for line in scan_stdout.splitlines()
+                if line.strip() and not line.lstrip().startswith("#")]
+    if len(key_rows) != 1:
+        return False
+    fields = key_rows[0].split()
+    host_token = expected_host if expected_port == 22 else f"[{expected_host}]:{expected_port}"
+    if len(fields) != 3 or fields[0] != host_token or fields[1] != "ssh-ed25519":
+        return False
+    try:
+        key_bytes = base64.b64decode(fields[2], validate=True)
+    except (ValueError, binascii.Error):
+        return False
+    if not key_bytes:
+        return False
+    fp_rows = [line.strip() for line in fingerprint_stdout.splitlines() if line.strip()]
+    if len(fp_rows) != 1:
+        return False
+    fp_tokens = re.findall(r"(?<!\\S)SHA256:[A-Za-z0-9+/]{43}(?=\\s|$)", fp_rows[0])
+    return len(fp_tokens) == 1 and fp_tokens[0] == expected_pin
+
 
 # Trust-boundary: data returned by the native command is heavily bounded,
 # independently of what untrusted code might be present on the remote host.
@@ -437,7 +483,16 @@ def cleanup() -> bool:
     return False
 
 
-def probe() -> bool:
+def probe(required_completion_markers=None, max_output_line_chars: int = 800) -> bool:
+    if required_completion_markers is None:
+        required_completion_markers = DEFAULT_COMPLETION_MARKERS
+    if (not isinstance(required_completion_markers, (tuple, list))
+            or not required_completion_markers
+            or any(not isinstance(value, str) or not value or len(value) > 128
+                   for value in required_completion_markers)
+            or type(max_output_line_chars) is not int
+            or not 1 <= max_output_line_chars <= 7000):
+        raise RuntimeError("HOLD_REMOTE_COMPLETION_CONTRACT")
     key = os.environ.get("NOX2", "")
     d = api("GET", "/instances/", key)
     d = d.get("instances", d) if isinstance(d, dict) else None
@@ -499,8 +554,7 @@ def probe() -> bool:
     except (OSError, subprocess.TimeoutExpired):
         raise RuntimeError("HOLD_UNVERIFIED_REMOTE_HOST_KEY") from None
     if (scanned.returncode != 0 or fingerprint.returncode != 0
-            or "SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc"
-            not in fingerprint.stdout):
+            or not exact_host_key_pin(scanned.stdout, fingerprint.stdout, host, port, PIN)):
         raise RuntimeError("HOLD_UNVERIFIED_REMOTE_HOST_KEY")
     print("SSH_HOST_FINGERPRINT=OWNER_PIN_MATCH_BEFORE_ATTACH")
     subprocess.run(
@@ -545,9 +599,9 @@ def probe() -> bool:
         except subprocess.TimeoutExpired:
             print("SSH_ATTEMPT_"+str(attempt+1)+"=TIMEOUT")
             continue
-        if result.returncode == 0 and "NATIVE_READ_ONLY_COMPLETE=true" in result.stdout and "NOX_NATIVE_V51_SSH_EXECUTED=true" in result.stdout:
+        if remote_output_complete(result.returncode, result.stdout, required_completion_markers):
             for line in result.stdout.splitlines():
-                if len(line)<800 and line.startswith(("NOX_NATIVE_","NATIVE_")):
+                if len(line)<max_output_line_chars and line.startswith(("NOX_NATIVE_","NATIVE_")):
                     print(line)
             print("SSH_READONLY_REMOTE_EXIT_CODE=0")
             print("SSH_HOST_IDENTITY_POLICY=OWNER_PINNED_ED25519_READ_ONLY")
