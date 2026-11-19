@@ -316,15 +316,24 @@ def memory_governor_projection(capacity):
         return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
                 'state': 'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE',
                 'auto_reclaim': False}
+    # The file counter MUST be validated with the other cgroup counters.
+    # A corrupted, string-valued or contradictory file/shmem estimate used
+    # to raise TypeError here and could interrupt the dispatcher monitor.
     fields = (budget.get('current_bytes'), budget.get('max_bytes'),
-              budget.get('inactive_file_bytes'), budget.get('shmem_bytes'),
-              decision.get('projected_memory_ratio'),
+              budget.get('file_bytes'), budget.get('inactive_file_bytes'),
+              budget.get('shmem_bytes'), decision.get('projected_memory_ratio'),
               budget.get('memory_psi_some_avg10'),
               budget.get('memory_psi_full_avg10'))
     if (any(type(v) not in (int, float) or not math.isfinite(v) or v < 0
             for v in fields)
             or not 0 < budget['max_bytes']
-            or budget['shmem_bytes'] > budget.get('file_bytes', -1)):
+            or budget['current_bytes'] > budget['max_bytes']
+            or budget['file_bytes'] > budget['current_bytes']
+            or budget['shmem_bytes'] > budget['file_bytes']
+            or budget['inactive_file_bytes'] > budget['file_bytes']
+            or decision['projected_memory_ratio'] > 1
+            or budget['memory_psi_some_avg10'] > 100
+            or budget['memory_psi_full_avg10'] > 100):
         return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
                 'state': 'RESOURCE_METADATA_HOLD',
                 'auto_reclaim': False}
@@ -337,8 +346,19 @@ def memory_governor_projection(capacity):
         condition = 'PRESSURE_ELEVATED'
     else:
         condition = 'CACHE_HEALTHY'
+    # Host RAM and a high cgroup raw ratio alone cannot prove a leak.
+    # These are estimates, NOT a resource lease or permission to drop caches.
+    reclaimable = min(budget['inactive_file_bytes'],
+                      budget['file_bytes'] - budget['shmem_bytes'],
+                      budget['current_bytes'])
+    raw_free = budget['max_bytes'] - budget['current_bytes']
+    estimated_free = raw_free + reclaimable
     return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
             'state': condition,
+            'raw_headroom_bytes': raw_free,
+            'reclaimable_file_estimate_bytes': reclaimable,
+            'effective_headroom_estimate_bytes': estimated_free,
+            'reclaimable_estimate_is_not_a_guaranteed_allocation': True,
             'raw_cgroup_memory_ratio': raw_ratio,
             'projected_memory_ratio': decision['projected_memory_ratio'],
             'memory_psi_some_avg10': psi_some, 'memory_psi_full_avg10': psi_full,
