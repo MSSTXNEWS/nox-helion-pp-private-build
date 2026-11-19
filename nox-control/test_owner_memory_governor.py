@@ -137,6 +137,31 @@ class GovernorTests(unittest.TestCase):
             self.assertIsNone(result["raw_ratio"])
             self.assertIsNone(result["effective_ratio_estimate"])
 
+    def test_existing_storage_audit_prioritizes_ephemeral_roots(self):
+        storage_path = Path(__file__).parent / "owner_storage_reclaim.py"
+        spec = importlib.util.spec_from_file_location("owner_storage_review", storage_path)
+        storage = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(storage)
+        kinds = [x[0] for x in storage.root_specs()]
+        self.assertEqual(kinds[:4],
+                         ["PIP_CACHE","NOX_LOGS","NOX_TMP","SUPERVISOR_LOGS"])
+        self.assertLess(kinds.index("NOX_LOGS"), kinds.index("NOX"))
+        self.assertLess(kinds.index("NOX"), kinds.index("VOLTA_ENVIRONMENT"))
+
+    def test_existing_storage_reclaim_never_targets_model_or_s03(self):
+        storage_path = Path(__file__).parent / "owner_storage_reclaim.py"
+        spec = importlib.util.spec_from_file_location("owner_storage_scope", storage_path)
+        storage = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(storage)
+        for path in (
+            "/root/nox/models/current.gguf",
+            "/root/nox/kb/knowledge.sqlite",
+            "/root/nox/ckpt/model.safetensors",
+            "/dev/shm/nox_t802u/Hermes-3-Llama-3.1-8B.Q4_K_M.gguf",
+            "/root/nox/state/dispatcher/owner_native.lock",
+            "/root/nox/models/teachers/foo.gguf"):
+            self.assertIsNone(storage.deletion_kind(Path(path)), path)
+
     def test_counter_reset_is_hold(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
