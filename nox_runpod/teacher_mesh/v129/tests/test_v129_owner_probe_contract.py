@@ -13,8 +13,8 @@ PUBLIC_KEY = base64.b64encode(b"offline ed25519 fixture").decode("ascii")
 
 class V129OwnerProbeContractTests(unittest.TestCase):
     def test_v51_default_and_v129_explicit_completion_contracts_are_distinct(self):
-        v129_output = ("NATIVE_V129_SOURCE={}\\nNATIVE_V129_WRITER_CONTRACT={}\\n"
-                       "NATIVE_V129_SCHEMA={}\\nNATIVE_READ_ONLY_COMPLETE=true")
+        v129_output = ("NATIVE_V129_SOURCE={}\nNATIVE_V129_WRITER_CONTRACT={}\n"
+                       "NATIVE_V129_SCHEMA={}\nNATIVE_READ_ONLY_COMPLETE=true")
         self.assertFalse(ssh.remote_output_complete(0, v129_output))
         self.assertTrue(ssh.remote_output_complete(0, v129_output, v129.V129_COMPLETION_MARKERS))
         self.assertFalse(ssh.remote_output_complete(2, v129_output, v129.V129_COMPLETION_MARKERS))
@@ -29,15 +29,15 @@ class V129OwnerProbeContractTests(unittest.TestCase):
         self.assertFalse(v129.source_read_accepted(False, True, lines))
 
     def test_host_key_pin_accepts_only_one_exact_endpoint_key_and_fingerprint(self):
-        scan = f"[{HOST}]:{PORT} ssh-ed25519 {PUBLIC_KEY}\\n"
-        fingerprint = f"256 {PIN} owner-host (ED25519)\\n"
+        scan = f"[{HOST}]:{PORT} ssh-ed25519 {PUBLIC_KEY}\n"
+        fingerprint = f"256 {PIN} owner-host (ED25519)\n"
         self.assertTrue(ssh.exact_host_key_pin(scan, fingerprint, HOST, PORT, PIN))
-        extra = scan + f"[{HOST}]:{PORT} ssh-ed25519 {PUBLIC_KEY}\\n"
+        extra = scan + f"[{HOST}]:{PORT} ssh-ed25519 {PUBLIC_KEY}\n"
         self.assertFalse(ssh.exact_host_key_pin(extra, fingerprint, HOST, PORT, PIN))
         self.assertFalse(ssh.exact_host_key_pin(scan, fingerprint, "203.0.113.9", PORT, PIN))
-        self.assertFalse(ssh.exact_host_key_pin(scan, f"256 {PIN}suffix owner (ED25519)\\n",
+        self.assertFalse(ssh.exact_host_key_pin(scan, f"256 {PIN}suffix owner (ED25519)\n",
                                                 HOST, PORT, PIN))
-        self.assertFalse(ssh.exact_host_key_pin(scan, fingerprint + f"256 {PIN} owner2 (ED25519)\\n",
+        self.assertFalse(ssh.exact_host_key_pin(scan, fingerprint + f"256 {PIN} owner2 (ED25519)\n",
                                                 HOST, PORT, PIN))
 
     def test_workflow_is_source_only_and_pins_ref_sha_and_actions(self):
