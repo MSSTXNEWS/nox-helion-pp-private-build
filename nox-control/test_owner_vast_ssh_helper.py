@@ -63,6 +63,28 @@ class OwnerVastHelperTests(unittest.TestCase):
                 probe.api("GET", "/instances/60509552/ssh", TOKEN)
         request.assert_not_called()
 
+    def test_api_allows_only_read_attach_and_detach_method_pairs(self):
+        with mock.patch.object(probe, "_open") as request:
+            with self.assertRaisesRegex(RuntimeError, "HOLD_PROVIDER_REQUEST_SCOPE"):
+                probe.api("POST", "/instances/60509551/ssh", TOKEN, {"unexpected": "value"})
+            with self.assertRaisesRegex(RuntimeError, "HOLD_PROVIDER_REQUEST_SCOPE"):
+                probe.api("DELETE", "/instances/60509551/ssh/23", TOKEN)
+        request.assert_not_called()
+
+    def test_attach_body_is_restricted_to_one_valid_public_key(self):
+        seen = {}
+
+        def fake_open(request):
+            seen["url"] = request.full_url
+            seen["body"] = request.data
+            return _Response(b'{"success":true}')
+
+        with mock.patch.object(probe, "_open", side_effect=fake_open):
+            result = probe.api("POST", "/instances/60509551/ssh/", TOKEN, {"ssh_key": PUBLIC})
+        self.assertEqual(result, {"success": True})
+        self.assertEqual(seen["url"], "https://console.vast.ai/api/v0/instances/60509551/ssh")
+        self.assertEqual(json.loads(seen["body"]), {"ssh_key": PUBLIC})
+
     def test_cleanup_detaches_only_the_recorded_key_and_verifies_absence(self):
         with tempfile.TemporaryDirectory() as directory:
             runner = Path(directory) / "runner"

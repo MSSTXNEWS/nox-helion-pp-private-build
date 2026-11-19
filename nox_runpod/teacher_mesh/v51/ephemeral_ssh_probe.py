@@ -75,11 +75,20 @@ def api(method: str, path: str, key: str, body=None):
     path = _canonical_path(path)
     if not isinstance(key, str) or not key or len(key) > 4096 or "\r" in key or "\n" in key:
         raise RuntimeError("HOLD_OWNER_API_CREDENTIAL_UNAVAILABLE")
-    if method == "GET" and body is not None:
-        raise RuntimeError("HOLD_PROVIDER_REQUEST_SCOPE")
-    if method == "DELETE" and body is not None:
-        raise RuntimeError("HOLD_PROVIDER_REQUEST_SCOPE")
-    if body is not None and not isinstance(body, dict):
+    if path == "/instances/":
+        allowed = method == "GET" and body is None
+    elif path == f"/instances/{INSTANCE_ID}/ssh":
+        allowed = (
+            (method == "GET" and body is None)
+            or (method == "POST" and isinstance(body, dict)
+                and set(body) == {"ssh_key"} and _valid_public_key(body.get("ssh_key")))
+        )
+    else:
+        allowed = (
+            method == "DELETE" and body is None
+            and bool(re.fullmatch(rf"/instances/{INSTANCE_ID}/ssh/[0-9]{1,20}", path))
+        )
+    if not allowed:
         raise RuntimeError("HOLD_PROVIDER_REQUEST_SCOPE")
 
     data = json.dumps(body, separators=(",", ":")).encode("utf-8") if body is not None else None
