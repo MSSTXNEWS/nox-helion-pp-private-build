@@ -123,7 +123,7 @@
       if(e.type==='error')throw Error('HOLD_NATIVE_'+String(e.error||'ERROR').slice(0,90));
       if(e.type==='delta'){
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
-        if(doneSeen||typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
+        if(typeof e.text!=='string'||answer.length+e.text.length>MAX)throw Error('HOLD_NATIVE_DELTA');
         answer+=e.text;await emit(e.text);
       } else if(e.type==='done') {
         if(!startSeen)throw Error('HOLD_NATIVE_START_REQUIRED');
@@ -181,7 +181,7 @@
           if(closed)return;
           if(payload.type==='token'&&firstVisibleMs===null&&typeof payload.t==='string'&&payload.t.trim())
             firstVisibleMs=Math.round(performance.now()-started);
-          const p={meta:'waiting',token:'speaking',done:'idle',error:'error'}[payload.type];
+          const p={meta:'waiting',token:'speaking',done:'idle',error:signal?.aborted?'stopped':'error'}[payload.type];
           if(p&&p!==phase&&(phase=p)&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
             window.dispatchEvent(new CustomEvent('nox:native-phase',{detail:{phase:p}}));
           if(!closed)controller.enqueue(enc.encode('data: '+JSON.stringify(payload)+'\n\n'));
