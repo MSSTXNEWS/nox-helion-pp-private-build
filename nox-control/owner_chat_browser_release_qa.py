@@ -12,8 +12,8 @@ import hashlib
 import math
 import time
 
-BASE_SHA = 'b76198d8117c3912fb7e1a1ef19c01abc41aa3ac87f4ad919612342edf593587'
-TRANSPORT_SHA = 'e8d256f4ab4de1d53859c1da74237622871354b5d84442bdff1171631f9f05f0'
+BASE_SHA = '8ff983e96951ad6828ab72433a52a4be1249493861d96c8e091ebdb6deb503be'
+TRANSPORT_SHA = 'e072858b427eb78dcd890117ae4fb044e96e8b3110debb546502d95d7991ba68'
 CONTROL_STATE_JS = r"""() => {
  const controls=document.querySelectorAll('#chatForm [type=submit]');
  const node=controls.length===1?controls[0]:null;
@@ -111,7 +111,11 @@ def two_parts_observed(value):
     return bool(type(value.get('native_calls')) is int and value['native_calls'] == 1 and value.get('ui_before_native_done') is True
         and value.get('ui_measurement_kind') == 'CUMULATIVE_VISIBLE_ASSISTANT_BODY'
         and value.get('ui_body_visible') is True and value.get('dom_answer_matches_native') is True
-        and isinstance(completed, dict) and all(completed.get(k) is True for k in ('saved','s03_integrated','dialog_matches'))
+        and isinstance(completed, dict)
+        and all(completed.get(k) is True for k in ('saved','owner_dialog_saved','dialog_matches'))
+        and completed.get('s03_integrated') is False
+        and completed.get('canonical_s03_write_verified') is False
+        and completed.get('writer')=='V112_OWNER_DIALOG_WRITER'
         and type(count) is int and 3 <= count <= 4096 and isinstance(prefixes, list) and 1 <= len(prefixes) <= 80
         and all(type(n) is int and 3 <= n < count for n in prefixes)
         and all(a < b for a, b in zip(prefixes, prefixes[1:]))
@@ -121,10 +125,10 @@ def two_parts_observed(value):
 
 def rewrite_browser(body):
     body = replace_once(body,
-        "            report['browser_stage']='QA_SEND_RELEASE'\n"
-        "            await page.wait_for_function(\"!document.querySelector('#chatForm [type=submit]').disabled\",timeout=10000)\n",
-        "            report['browser_stage']='QA_SEND_RELEASE'\n"
-        "            await _nox_wait_send_release(page,report)\n")
+        "                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_SEND_RELEASE'\n"
+        "                await page.wait_for_function(\"!document.querySelector('#chatForm [type=submit]').disabled\",timeout=10000)\n",
+        "                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_SEND_RELEASE'\n"
+        "                await _nox_wait_send_release(page,report)\n")
     body = replace_once(body,
         "                    report['stream_final']=await page.evaluate(SNAPSHOT_JS)\n",
         "                    report['stream_final']=await page.evaluate(SNAPSHOT_JS)\n"

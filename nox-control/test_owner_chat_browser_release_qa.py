@@ -86,10 +86,18 @@ class OverlayTests(unittest.TestCase):
         core,original=installed()
         value={'native_calls':1,'native_delta_count':149,'ui_before_native_done':True,
             'ui_measurement_kind':'CUMULATIVE_VISIBLE_ASSISTANT_BODY','ui_body_visible':True,
-            'dom_answer_matches_native':True,'done':{'saved':True,'s03_integrated':True,'dialog_matches':True},
+            'dom_answer_matches_native':True,'done':{'saved':True,'owner_dialog_saved':True,
+                's03_integrated':False,'canonical_s03_write_verified':False,
+                'writer':'V112_OWNER_DIALOG_WRITER','dialog_matches':True},
             'answer_characters':149,'ui_prefix_lengths_before_done':[66],
             'ui_first_ms':5751.5,'native_done_ms':5971.1}
         self.assertTrue(release.two_parts_observed(value))
+        value['done']['s03_integrated']=True
+        self.assertFalse(release.two_parts_observed(value))
+        value['done']['s03_integrated']=False
+        value['done']['canonical_s03_write_verified']=True
+        self.assertFalse(release.two_parts_observed(value))
+        value['done']['canonical_s03_write_verified']=False
         self.assertIs(core.progressive_stream_valid,original)
         self.assertFalse(core.progressive_stream_valid(value))
         value['ui_first_ms']=6000

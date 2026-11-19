@@ -15,7 +15,7 @@ except NameError:
 
 STAGES = (
     ('owner_training_failure_probe.py', '56876b13f16729c7c6b706d10f354352a643521f7e598a0fa70fbf82a2846b3c'),
-    ('owner_chat_evidence_entry.py', 'f97ba189dcadc5e951f317fb9603259a8cbf3756ea4e139540edbf2f53e4882c'),
+    ('owner_chat_evidence_entry.py', '39b397bd07ca870a8b0ebb433c2eea7ee91738c99dcdd296f334340ec7dd660a'),
     ('owner_browser_qa_entry.py', 'f31450ec85f7285784d8394e6a233bff4518d4ccb67d13457556032fb0507f28'),
 )
 

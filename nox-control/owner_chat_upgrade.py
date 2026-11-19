@@ -151,18 +151,31 @@ def main():
         history=[x['data'] for x in evidence if x.get('kind')=='chat_history_followup']
         routing=[x['data'] for x in evidence if x.get('kind')=='chat_before_probe']
         executors=[x['data'] for x in evidence if x.get('kind')=='chat_executor_question']
-        if (result.returncode or len(answers)!=1 or not answers[0].get('saved_verified') or not answers[0].get('arithmetic_pass')
-                or len(history)!=1 or not history[0].get('history_model_pass') or not routing
+        if (result.returncode or len(answers)!=1 or not answers[0].get('owner_dialog_saved_verified')
+                or answers[0].get('owner_dialog_store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+                or answers[0].get('canonical_s03_readback_verified') is not False
+                or answers[0].get('onehost_1a01_acceptance_state')!='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND'
+                or not answers[0].get('arithmetic_pass')
+                or len(history)!=1 or not history[0].get('owner_dialog_history_model_pass')
+                or history[0].get('owner_dialog_store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+                or history[0].get('canonical_s03_readback_verified') is not False
+                or not routing
                 or routing[0].get('nonloopback_peer') is not True or routing[0].get('owner_status_bound') is not True
                 or routing[0].get('owner_executors_access') is not True
                 or not routing[0].get('assets') or any(x.get('status')!=200 for x in routing[0]['assets'])
                 or set(routing[0].get('anonymous_http',{}).values())!={401}
                 or len(executors)!=1 or executors[0].get('verified_six_plus_nox') is not True
+                or executors[0].get('owner_dialog_saved') is not True
+                or executors[0].get('owner_dialog_store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+                or executors[0].get('canonical_s03_readback_verified') is not False
                 or any(x['final_path']!='/nox-web-v29/pc/resonance.html' for x in routing[0]['paths'] if x['path'] in ('/','/chat'))):
             raise RuntimeError('HOLD_CHAT_NATIVE_ACCEPTANCE')
         record['performance_targets_passed']=bool(answers[0].get('performance_target_pass') is True and history[0].get('performance_target_pass') is True)
-        record['state']=('LIVE_RESONANCE_REAL_STREAM_S03_HISTORY_ACCEPTED' if record['performance_targets_passed']
-                         else 'LIVE_RESONANCE_FUNCTIONAL_PERFORMANCE_PENDING')
+        record['state']=('LIVE_RESONANCE_OWNER_DIALOG_HISTORY_ACCEPTED_CANONICAL_S03_HOLD'
+                         if record['performance_targets_passed']
+                         else 'LIVE_RESONANCE_OWNER_DIALOG_FUNCTIONAL_PERFORMANCE_PENDING_CANONICAL_S03_HOLD')
+        record['canonical_s03_readback_verified']=False
+        record['onehost_1a01_acceptance_state']='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND'
         okay=True
     except Exception as exc:
         reason=str(exc);record['state']='HOLD_CHAT_UPGRADE';record['error']=reason if re.fullmatch('HOLD_[A-Z0-9_]+',reason) else type(exc).__name__
@@ -181,7 +194,10 @@ def main():
     finally:
         record.update(finished=time.time(),health_after=helper.health(),proxy_after=helper.service_state('nox-proxy'))
         save();emit('chat_upgrade_receipt',record);os.close(fd)
-    if okay:print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
+    if okay:
+        print('NOX_OWNER_DIALOG_REPAIR_COMPLETE=true',flush=True)
+        print('NOX_1A01_CANONICAL_S03_ACCEPTED=false',flush=True)
+        print('NOX_1A01_HOLD=HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',flush=True)
     return 0 if okay else 2
 
 if __name__=='__main__':

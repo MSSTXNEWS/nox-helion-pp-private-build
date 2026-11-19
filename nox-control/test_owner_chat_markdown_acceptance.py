@@ -145,17 +145,21 @@ class MarkdownScope(unittest.TestCase):
 
     def test_s03_same_pair_and_model_fixture_are_independent(self):
         answer=m.FIXTURE;exchange='public-exchange'
-        history={'status':'READY','dialog_id':self.did,'messages':[
+        history={'status':'READY','dialog_id':self.did,'store_scope':'OWNER_DIALOG_TABLES_ONLY',
+                 'canonical_s03_readback_verified':False,'messages':[
             {'role':'user','content':self.prompt,'exchange_id':exchange},
             {'role':'assistant','content':answer,'exchange_id':exchange}]}
-        self.assertTrue(m.s03_pair_valid(history,self.did,self.prompt,answer,exchange))
+        # A dialog-table pair is not canonical S03, even with exact exchange IDs.
+        self.assertFalse(m.s03_pair_valid(history,self.did,self.prompt,answer,exchange))
         self.assertTrue(m.public_answer_valid(answer+'\n',m.FIXTURE))
-        for path in ('dialog','exchange','answer','extra'):
+        for path in ('dialog','exchange','answer','extra','scope','canonical'):
             row=copy.deepcopy(history)
             if path=='dialog':row['dialog_id']='b'*32
             if path=='exchange':row['messages'][1]['exchange_id']='different'
             if path=='answer':row['messages'][1]['content']='not the actual native answer'
             if path=='extra':row['messages'].append(dict(row['messages'][1]))
+            if path=='scope':row['store_scope']='S03_ITEMS'
+            if path=='canonical':row['canonical_s03_readback_verified']=True
             self.assertFalse(m.s03_pair_valid(row,self.did,self.prompt,answer,exchange))
         self.assertFalse(m.public_answer_valid('```\n'+answer+'\n```',m.FIXTURE))
         self.assertFalse(m.public_answer_valid(answer.replace('sample','other'),m.FIXTURE))
@@ -280,11 +284,15 @@ class MarkdownScope(unittest.TestCase):
     def test_scope_does_not_promote_no_post_or_partial_proof(self):
         value={'schema':m.SCHEMA,'request':'123','source_sha':'b'*40,'state':'REAL_MARKDOWN_END_TO_END_VERIFIED',
             'dialog_posts_attempted':1,'native_posts_admitted':1,'dialogs_created':1,'maximum_native_posts':1,'maximum_new_dialogs':1,
-            'markdown_end_to_end_verified':True,'public_fixture_model_output_verified':True,'s03_readback_verified':True,'final_dom':{'all_checks':True}}
+            'markdown_end_to_end_verified':True,'public_fixture_model_output_verified':True,'s03_readback_verified':True,
+            'canonical_s03_scope':'S03_ITEMS','canonical_s03_write_verified':True,
+            'canonical_s03_readback_verified':True,'final_dom':{'all_checks':True}}
         for k in ('production_changes','private_content_exported','raw_model_answer_exported','assistant_dom_injected',
                   'screenshots_exported','full_browser_qa_evaluated','full_browser_qa_promoted','upstream_model_inference_verified','upstream_model_request_bound'):value[k]=False
         self.assertTrue(m.scope_valid(value,'123','b'*40))
-        for k,v in [('native_posts_admitted',0),('s03_readback_verified',False),('dialogs_created',None),('maximum_native_posts',True),('assistant_dom_injected',True)]:
+        for k,v in [('native_posts_admitted',0),('s03_readback_verified',False),('canonical_s03_scope','OWNER_DIALOG_TABLES_ONLY'),
+                    ('canonical_s03_write_verified',False),('canonical_s03_readback_verified',False),
+                    ('dialogs_created',None),('maximum_native_posts',True),('assistant_dom_injected',True)]:
             self.assertFalse(m.scope_valid(value|{k:v},'123','b'*40),(k,v))
         held=value|{'state':'HOLD','markdown_end_to_end_verified':False,'native_posts_admitted':0,'dialogs_created':0,'dialog_posts_attempted':0}
         self.assertTrue(m.scope_valid(held,'123','b'*40))
@@ -397,10 +405,14 @@ async function run(frames,mode){
 (async()=>{
  const prep={type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},start={type:'start'},delta={type:'delta',text:input.fixture},
    done={type:'done',saved:true,s03_integrated:true,dialog_id:'a'.repeat(32),exchange_id:'public-exchange'};
- let q=await run([prep,start,delta,done]);assert.equal(q.eof,true);assert.equal(q.answer,input.fixture);assert.equal(q.nativeCalls,1);assert.equal(q.error,null);
- q=await run([prep,start,delta,done,{type:'delta',text:'SECRET trailing'}]);assert.equal(q.eof,false);assert.equal(q.error,'HOLD_MARKDOWN_NATIVE_FRAME_ORDER');
- q=await run([delta,done]);assert.equal(q.eof,false);assert.equal(q.error,'HOLD_MARKDOWN_NATIVE_DELTA');
- q=await run([prep,start,delta,JSON.stringify(done)]);assert.equal(q.eof,false);assert.equal(q.error,'HOLD_MARKDOWN_NATIVE_INCOMPLETE');
+ let q=await run([prep,start,delta,done]);assert.equal(q.eof,false);assert.equal(q.error,'HOLD_MARKDOWN_CANONICAL_S03_WRITE_UNBOUND');
+ const dialogOnly={...done,owner_dialog_saved:true,store_scope:'OWNER_DIALOG_TABLES_ONLY',canonical_s03_write_verified:false};
+ q=await run([prep,start,delta,dialogOnly]);assert.equal(q.eof,false);assert.equal(q.error,'HOLD_MARKDOWN_CANONICAL_S03_WRITE_UNBOUND');
+ const proven={...done,store_scope:'S03_ITEMS',canonical_s03_write_verified:true};
+ q=await run([prep,start,delta,proven]);assert.equal(q.eof,true);assert.equal(q.answer,input.fixture);assert.equal(q.nativeCalls,1);assert.equal(q.error,null);
+ q=await run([prep,start,delta,proven,{type:'delta',text:'SECRET trailing'}]);assert.equal(q.eof,false);assert.equal(q.error,'HOLD_MARKDOWN_NATIVE_FRAME_ORDER');
+ q=await run([delta,proven]);assert.equal(q.eof,false);assert.equal(q.error,'HOLD_MARKDOWN_NATIVE_DELTA');
+ q=await run([prep,start,delta,JSON.stringify(proven)]);assert.equal(q.eof,false);assert.equal(q.error,'HOLD_MARKDOWN_NATIVE_INCOMPLETE');
  q=await run([], 'pending');assert.equal(q.error,'HOLD_MARKDOWN_NATIVE_OBSERVER');assert.equal(q.eof,false);
  console.log('real split streams, terminal ordering, incomplete line, scoped abort and sanitized failure PASS');
 })().catch(e=>{console.error(e);process.exitCode=1;});

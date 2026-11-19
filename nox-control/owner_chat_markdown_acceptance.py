@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""One real public model answer: native NDJSON -> S03 -> final Markdown DOM.
+"""One real public model answer with canonical S03 proof required for acceptance.
 
-No assistant DOM is injected. No production source, permission, service, model,
+Dialog-only receipts remain HOLD because they do not prove writes to s03_items. No assistant DOM is injected. No production source, permission, service, model,
 settings or training state changes. Existing auth/runtime are source-pinned;
 only a single public test dialog and one native generation POST are admitted.
 """
@@ -31,7 +31,7 @@ except NameError:
 ENTRY='owner_browser_stream_only_entry.py'
 CORE='owner_chat_browser_qa.py'
 PINS={ENTRY:'2ec4dde5563dd5307b9c2136b97fe3079709253f7b9617ad1037efd7f260d999',
-      CORE:'b76198d8117c3912fb7e1a1ef19c01abc41aa3ac87f4ad919612342edf593587'}
+      CORE:'8ff983e96951ad6828ab72433a52a4be1249493861d96c8e091ebdb6deb503be'}
 PROXY=Path('/root/nox/scripts/chat_proxy.py')
 PROXY_SHA='a427aa68ed7760380880c5d1c9ddb0714bef367ee5162a20602dbe43b6722d90'
 SCHEMA='NOX_OWNER_REAL_MARKDOWN_ACCEPTANCE_V1'
@@ -140,8 +140,9 @@ def public_answer_valid(answer, fixture):
 
 def s03_pair_valid(history,did,prompt,answer,exchange):
     if (not isinstance(history,dict) or history.get('status')!='READY'
-            or history.get('dialog_id')!=did or not isinstance(exchange,str)
-            or not 6<=len(exchange)<=160):return False
+            or history.get('dialog_id')!=did or history.get('store_scope')!='S03_ITEMS'
+            or history.get('canonical_s03_readback_verified') is not True
+            or not isinstance(exchange,str) or not 6<=len(exchange)<=160):return False
     rows=history.get('messages')
     return (isinstance(rows,list) and len(rows)==2
         and all(isinstance(row,dict) for row in rows)
@@ -208,9 +209,11 @@ OBSERVE_JS=r'''(() => {
        if(q.first===null&&f.text.trim())q.first=performance.now()-q.started;
      }else if(f.type==='done'){
        if(!start||f.saved!==true||f.s03_integrated!==true||f.dialog_id!==cfg.did||
+          f.store_scope!=='S03_ITEMS'||f.canonical_s03_write_verified!==true||
           typeof f.exchange_id!=='string'||f.exchange_id.length<6||f.exchange_id.length>160)
-         fail('HOLD_MARKDOWN_NATIVE_DONE');
-       done=true;q.done={exchange_id:f.exchange_id,saved:true,s03_integrated:true,dialog_matches:true};
+         fail('HOLD_MARKDOWN_CANONICAL_S03_WRITE_UNBOUND');
+       done=true;q.done={exchange_id:f.exchange_id,saved:true,s03_integrated:true,
+          canonical_s03_write_verified:true,store_scope:f.store_scope,dialog_matches:true};
        q.doneAt=performance.now()-q.started;
      }else fail('HOLD_MARKDOWN_NATIVE_FRAME');
    };
@@ -224,7 +227,7 @@ OBSERVE_JS=r'''(() => {
      }
      buffer+=decoder.decode();if(buffer.trim()||!done||!q.answer.trim())fail('HOLD_MARKDOWN_NATIVE_INCOMPLETE');
      q.eof=true;
-   }catch(e){q.error=/^HOLD_[A-Z_]+$/.test(e.message)?e.message:'HOLD_MARKDOWN_NATIVE_OBSERVER';}
+   }catch(e){q.error=/^HOLD_[A-Z0-9_]+$/.test(e.message)?e.message:'HOLD_MARKDOWN_NATIVE_OBSERVER';}
    finally{try{void reader.cancel().catch(()=>{});}catch{}}
  }
  window.fetch=async function(input,init){
@@ -258,7 +261,9 @@ SNAPSHOT_JS=r'''() => {
  const q=window.__NOX_MARKDOWN_QA;if(!q)return null;
  return {native_calls:q.nativeCalls,native_status:q.status,native_first_ms:q.first,
    native_done_ms:q.doneAt,native_delta_count:q.deltas,native_bytes:q.bytes,native_eof:q.eof,
-   native_done_verified:!!q.done&&q.done.saved&&q.done.s03_integrated&&q.done.dialog_matches,
+   native_done_verified:!!q.done&&q.done.saved&&q.done.s03_integrated&&
+   q.done.canonical_s03_write_verified===true&&q.done.store_scope==='S03_ITEMS'&&q.done.dialog_matches,
+   canonical_s03_write_verified:q.done?.canonical_s03_write_verified===true,
    answer_characters:q.answer.length,error:q.error,token_span_peak:q.tokenSpanPeak,
    literal_markdown_during_stream:q.literalMarkdownDuringStream,
    assistant_body_bound:!!q.uiBody&&document.getElementById('messages')?.contains(q.uiBody),
@@ -627,6 +632,9 @@ PAGE_TAIL=r'''
             # Only this newly created public test dialog is read. No raw answer
             # or exchange/dialog identifier is included in the public report.
             wire=await page.evaluate("()=>({answer:window.__NOX_MARKDOWN_QA.answer,exchange:window.__NOX_MARKDOWN_QA.done?.exchange_id})")
+            report['canonical_s03_scope']=history.get('store_scope')
+            report['canonical_s03_write_verified']=report['native_stream'].get('canonical_s03_write_verified') is True
+            report['canonical_s03_readback_verified']=history.get('canonical_s03_readback_verified') is True
             report['s03_readback_verified']=s03_pair_valid(history,did,prompt,wire.get('answer'),wire.get('exchange'))
             answer=wire.get('answer');report['public_fixture_model_output_verified']=public_answer_valid(answer,_md_fixture)
             if isinstance(answer,str):report.update(answer_sha256=digest(answer.encode()),answer_characters=len(answer))
@@ -688,8 +696,8 @@ def browser_source(raw):
     require(body.count(marker)==1,'AUTH_SEAM');prefix=body[:body.index(marker)]
     changes={
       "    title='NOX Browser QA '+token":"    title='NOX Markdown QA '+token",
-      "    prompt='[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.'":"    prompt='[NOX public Markdown QA '+token+']\\n'+_md_instruction+_md_fixture",
-      "    report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))":"    report.update(nonloopback_auth=True,resources=_md_budget(),synthetic_prompt_sha256=digest(prompt.encode()),browser_stage='AUTH_AND_BROWSER_PREFIX')",
+      "    prompts=(\n        '[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.',\n        '[NOX UI QA '+token+'] Повтори дословно последовательность цифр из предыдущего ответа, без других слов.',\n    )":"    prompt='[NOX public Markdown QA '+token+']\\n'+_md_instruction+_md_fixture",
+      "    report.update(nonloopback_auth=True,resources=budget(),\n                  synthetic_prompt_sha256=digest(prompts[0].encode()),\n                  synthetic_prompt_sha256s=[digest(item.encode()) for item in prompts])":"    report.update(nonloopback_auth=True,resources=_md_budget(),synthetic_prompt_sha256=digest(prompt.encode()),browser_stage='AUTH_AND_BROWSER_PREFIX')",
       "                                         base_url=base,service_workers='block',accept_downloads=False)":"                                         base_url=base,service_workers='block',accept_downloads=False,reduced_motion='no-preference')",
     }
     for old,new in changes.items():require(prefix.count(old)==1,'PREFIX_SEAM');prefix=prefix.replace(old,new)
@@ -705,6 +713,7 @@ def child_program(blobs,request,source,directory):
     report={'schema':SCHEMA,'state':'RUNNING','scope':'ONE_PUBLIC_NATIVE_MODEL_ANSWER_S03_AND_FINAL_MARKDOWN_DOM',
         'request':request,'source_sha':source,'markdown_end_to_end_verified':False,
         'public_fixture_model_output_verified':False,'s03_readback_verified':False,
+        'canonical_s03_scope':None,'canonical_s03_write_verified':False,'canonical_s03_readback_verified':False,
         'maximum_new_dialogs':1,'maximum_native_posts':1,'dialog_posts_attempted':0,
         'dialogs_created':0,'dialog_creation_state':'NOT_REQUESTED','native_posts_admitted':0,
         'production_changes':False,'private_content_exported':False,'raw_model_answer_exported':False,
@@ -772,7 +781,9 @@ def scope_valid(value,request,source):
     if any(type(value.get(k)) is not int or value[k]!=1 for k in ('maximum_native_posts','maximum_new_dialogs')):return False
     if value.get('state')=='REAL_MARKDOWN_END_TO_END_VERIFIED':
         return (value.get('dialogs_created')==value.get('dialog_posts_attempted')==value.get('native_posts_admitted')==1
-            and all(value.get(k) is True for k in ('markdown_end_to_end_verified','public_fixture_model_output_verified','s03_readback_verified'))
+            and all(value.get(k) is True for k in ('markdown_end_to_end_verified','public_fixture_model_output_verified',
+                's03_readback_verified','canonical_s03_write_verified','canonical_s03_readback_verified'))
+            and value.get('canonical_s03_scope')=='S03_ITEMS'
             and value.get('final_dom',{}).get('all_checks') is True)
     return value.get('state')=='HOLD' and value.get('markdown_end_to_end_verified') is False
 

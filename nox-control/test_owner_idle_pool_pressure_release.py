@@ -2,6 +2,7 @@
 from pathlib import Path
 import importlib.util
 import tempfile
+import inspect
 import re
 import sys
 import threading
@@ -554,6 +555,188 @@ class ReleaseGateTests(unittest.TestCase):
             native.maintain_worker_pool()
         self.assertEqual(native._resource_pressure_release['state'],
                          'HOLD_GRACEFUL_POOL_SHUTDOWN_UNKNOWN')
+
+
+class MemoryTelemetryTests(unittest.TestCase):
+    PSI = ("some avg10=0.1 avg60=0.2 avg300=0.3 total=10\n"
+           "full avg10=0.0 avg60=0.0 avg300=0.0 total=0\n")
+    EVENTS = "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\n"
+
+    def test_parser_reports_absolute_counters_and_pairs_only_monotonic_reads(self):
+        dispatcher = load_dispatcher()
+        first = dispatcher.parse_memory_telemetry(self.PSI, self.EVENTS, observed_at=100.0)
+        self.assertEqual(first['memory_event_delta_state'], 'BASELINE_REQUIRED')
+        self.assertIsNone(first['memory_event_deltas'])
+        self.assertEqual(first['memory_events']['oom_kill'], 0)
+
+        previous = first['memory_events']
+        current = self.EVENTS.replace('high 0', 'high 2').replace('oom_kill 0', 'oom_kill 1')
+        paired = dispatcher.parse_memory_telemetry(
+            self.PSI, current, previous, previous_observed_at=100.0, observed_at=103.0)
+        self.assertEqual(paired['memory_event_delta_state'], 'MONOTONIC')
+        self.assertEqual(paired['memory_event_delta_interval_seconds'], 3.0)
+        self.assertEqual(paired['memory_telemetry_scope'], 'CGROUP_V2_NON_ATOMIC_READ_WINDOW')
+        self.assertEqual(paired['memory_event_deltas']['high'], 2)
+        self.assertEqual(paired['memory_event_deltas']['oom_kill'], 1)
+
+        jittered = dispatcher.parse_memory_telemetry(
+            self.PSI, current, previous, previous_observed_at=100.0, observed_at=105.1)
+        self.assertEqual(jittered['memory_event_delta_state'], 'MONOTONIC')
+        self.assertAlmostEqual(jittered['memory_event_delta_interval_seconds'], 5.1)
+
+        full_recovery_window = dispatcher.parse_memory_telemetry(
+            self.PSI, current, previous, previous_observed_at=100.0, observed_at=115.0)
+        self.assertEqual(full_recovery_window['memory_event_delta_state'], 'MONOTONIC')
+        self.assertEqual(full_recovery_window['memory_event_delta_interval_seconds'], 15.0)
+
+    def test_counter_reset_never_emits_negative_delta(self):
+        dispatcher = load_dispatcher()
+        previous = {'low': 4, 'high': 2, 'max': 1, 'oom': 0, 'oom_kill': 0}
+        reset = dispatcher.parse_memory_telemetry(
+            self.PSI, self.EVENTS, previous, previous_observed_at=98.0, observed_at=100.0)
+        self.assertEqual(reset['memory_event_delta_state'], 'COUNTER_RESET')
+        self.assertIsNone(reset['memory_event_deltas'])
+
+    def test_stale_previous_counter_sample_has_no_delta(self):
+        dispatcher = load_dispatcher()
+        previous = {'low': 0, 'high': 0, 'max': 0, 'oom': 0, 'oom_kill': 0}
+        stale = dispatcher.parse_memory_telemetry(
+            self.PSI, self.EVENTS, previous, previous_observed_at=100.0, observed_at=115.1)
+        self.assertEqual(stale['memory_event_delta_state'], 'BASELINE_STALE')
+        self.assertIsNone(stale['memory_event_deltas'])
+
+    def test_missing_or_malformed_psi_or_events_fails_closed(self):
+        dispatcher = load_dispatcher()
+        with self.assertRaisesRegex(processes.GateError, 'HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN'):
+            dispatcher.parse_memory_telemetry("some avg10=1.0\n", self.EVENTS)
+        malformed = self.EVENTS.replace("oom_kill 0\n", "")
+        with self.assertRaisesRegex(processes.GateError, 'HOLD_NATIVE_MEMORY_TELEMETRY_UNKNOWN'):
+            dispatcher.parse_memory_telemetry(self.PSI, malformed)
+
+    def test_file_estimate_excludes_shmem_and_preserves_anon(self):
+        dispatcher = load_dispatcher()
+        estimate = dispatcher.parse_memory_accounting(
+            "file 100\nshmem 20\ninactive_file 80\nanon 40\n", 150)
+        self.assertEqual(estimate['reclaimable_file_estimate_bytes'], 60)
+        self.assertEqual(estimate['effective_memory_bytes_estimate'], 90)
+        self.assertEqual(estimate['memory_anon_bytes'], 40)
+        self.assertEqual(estimate['memory_shmem_bytes'], 20)
+        shmem_only_inactive = dispatcher.parse_memory_accounting(
+            "file 100\nshmem 20\ninactive_file 20\nanon 40\n", 150)
+        self.assertEqual(shmem_only_inactive['reclaimable_file_estimate_bytes'], 0)
+
+    def test_telemetry_pressure_reasons_survive_latch_roundtrip_and_restart(self):
+        dispatcher = load_dispatcher()
+        telemetry_reasons = {
+            'HOLD_NATIVE_MEMORY_PRESSURE_CRITICAL',
+            'HOLD_NATIVE_MEMORY_PRESSURE_ELEVATED',
+            'HOLD_NATIVE_MEMORY_OOM_EVENT',
+            'HOLD_NATIVE_MEMORY_LIMIT_EVENT',
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            for index, reason in enumerate(sorted(telemetry_reasons)):
+                path = Path(directory)/f'latch-{index}.json'
+                value = {'schema':dispatcher.RESOURCE_PRESSURE_LATCH_SCHEMA,
+                    'instance_id':60509551, 'state':'PAUSED', 'generation':1,
+                    'reason':reason, 'source_sha256':'a'*64,
+                    'policy_sha256':'b'*64, 'owner_request':'request-1',
+                    'updated_at':100.0, 'healthy_snapshots':0}
+                dispatcher.write_resource_pressure_latch(path, value, None)
+                native = dispatcher.Native.__new__(dispatcher.Native)
+                native.source = 'a'*64
+                native.policy = {'sha256':'b'*64}
+                native.config = {'owner_request':'request-1'}
+                native._resource_pressure_paused = False
+                native._resource_pressure_latch_uncertain = False
+                native._resource_pressure_release = None
+                native._resource_pressure_latch_generation = 0
+                native._resource_pressure_latch_state = None
+                native._resource_pressure_latch_reason = None
+                native._resource_pressure_latch_sha256 = None
+                with patch.object(dispatcher, 'RESOURCE_PRESSURE_LATCH', path):
+                    native._load_resource_pressure_latch()
+                self.assertTrue(native._resource_pressure_paused)
+                self.assertFalse(native._resource_pressure_latch_uncertain)
+                self.assertEqual(native._resource_pressure_latch_reason, reason)
+
+    def test_every_admission_class_samples_memory_telemetry_before_leaf_branch(self):
+        dispatcher = load_dispatcher()
+        source = inspect.getsource(dispatcher.Native.read_resource_snapshot)
+        self.assertLess(source.index('memory_telemetry_from_cgroup'),
+                        source.index('if leaf_only:'))
+
+    def test_resource_reason_uses_fresh_delta_and_governor_thresholds(self):
+        dispatcher = load_dispatcher()
+        event_names = ('low', 'high', 'max', 'oom', 'oom_kill')
+        snapshot = {
+            'native_verified': True, 'instance_id': 60509551, 'stop_active': False,
+            'owner_scope_verified': True, 'source_sha_verified': True,
+            'observed_at': 100.0, 'cgroup_memory_ratio': .4, 'cpu_pressure': 0.0,
+            'effective_cgroup_memory_ratio': .5,
+            'memory_file_bytes': 100, 'memory_shmem_bytes': 20,
+            'memory_inactive_file_bytes': 80, 'memory_anon_bytes': 40,
+            'reclaimable_file_estimate_bytes': 60,
+            'effective_memory_bytes_estimate': 90,
+            'memory_psi_some_avg10': .1, 'memory_psi_full_avg10': 0.0,
+            'memory_events': dict.fromkeys(event_names, 0),
+            'memory_event_deltas': dict.fromkeys(event_names, 0),
+            'memory_event_delta_state': 'MONOTONIC',
+            'memory_event_delta_interval_seconds': 1.0,
+        }
+        with patch.object(dispatcher.time, 'time', return_value=100.0):
+            self.assertIsNone(dispatcher.resource_wait_reason(snapshot))
+            elevated = {**snapshot, 'memory_psi_some_avg10': 2.0}
+            self.assertEqual(dispatcher.resource_wait_reason(elevated),
+                             'HOLD_NATIVE_MEMORY_PRESSURE_ELEVATED')
+            critical = {**snapshot, 'memory_psi_full_avg10': 2.0}
+            self.assertEqual(dispatcher.resource_wait_reason(critical),
+                             'HOLD_NATIVE_MEMORY_PRESSURE_CRITICAL')
+            oom = {**snapshot, 'memory_event_deltas': {**snapshot['memory_event_deltas'], 'oom_kill': 1}}
+            self.assertEqual(dispatcher.resource_wait_reason(oom),
+                             'HOLD_NATIVE_MEMORY_OOM_EVENT')
+            high = {**snapshot, 'memory_event_deltas': {**snapshot['memory_event_deltas'], 'high': 1}}
+            self.assertEqual(dispatcher.resource_wait_reason(high),
+                             'HOLD_NATIVE_MEMORY_LIMIT_EVENT')
+            baseline = {**snapshot, 'memory_event_delta_state': 'BASELINE_REQUIRED',
+                        'memory_event_deltas': None}
+            self.assertEqual(dispatcher.resource_wait_reason(baseline),
+                             'HOLD_NATIVE_MEMORY_EVENTS_BASELINE')
+            reset = {**snapshot, 'memory_event_delta_state': 'COUNTER_RESET',
+                     'memory_event_deltas': None}
+            self.assertEqual(dispatcher.resource_wait_reason(reset),
+                             'HOLD_NATIVE_MEMORY_EVENT_COUNTER_RESET')
+            invalid_baseline = {**snapshot, 'memory_event_delta_state': 'BASELINE_INVALID',
+                                'memory_event_deltas': None}
+            self.assertEqual(dispatcher.resource_wait_reason(invalid_baseline),
+                             'HOLD_NATIVE_MEMORY_EVENT_BASELINE_INVALID')
+            absolute_only = {**snapshot,
+                'memory_events': {**snapshot['memory_events'], 'high': 900}}
+            self.assertIsNone(dispatcher.resource_wait_reason(absolute_only))
+            max_event = {**snapshot, 'memory_event_deltas': {**snapshot['memory_event_deltas'], 'max': 1}}
+            self.assertEqual(dispatcher.resource_wait_reason(max_event),
+                             'HOLD_NATIVE_MEMORY_LIMIT_EVENT')
+            group_oom = {**snapshot, 'memory_event_deltas': {
+                **snapshot['memory_event_deltas'], 'oom_group_kill': 1},
+                'memory_events': {**snapshot['memory_events'], 'oom_group_kill': 1}}
+            group_oom['memory_event_delta_state'] = 'MONOTONIC'
+            group_oom['memory_event_deltas']['oom_group_kill'] = 1
+            self.assertEqual(dispatcher.resource_wait_reason(group_oom),
+                             'HOLD_NATIVE_MEMORY_OOM_EVENT')
+            elevated_ratio = {**snapshot, 'effective_cgroup_memory_ratio': .85}
+            self.assertEqual(dispatcher.resource_wait_reason(elevated_ratio),
+                             'HOLD_NATIVE_MEMORY_PRESSURE_ELEVATED')
+            critical_ratio = {**snapshot, 'effective_cgroup_memory_ratio': .94}
+            self.assertEqual(dispatcher.resource_wait_reason(critical_ratio),
+                             'HOLD_NATIVE_MEMORY_PRESSURE_CRITICAL')
+            stale_baseline = {**snapshot, 'memory_event_delta_state':'BASELINE_STALE',
+                              'memory_event_deltas':None}
+            self.assertEqual(dispatcher.resource_wait_reason(stale_baseline),
+                             'HOLD_NATIVE_MEMORY_EVENTS_STALE_BASELINE')
+            stale = {**snapshot, 'observed_at': 94.0}
+            self.assertEqual(dispatcher.resource_wait_reason(stale),
+                             'HOLD_NATIVE_MEMORY_SNAPSHOT_STALE')
+
+
 
 
 if __name__ == '__main__':

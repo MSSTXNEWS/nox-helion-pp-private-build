@@ -83,6 +83,29 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
             'placeholder_delta_count':placeholders,'delta_count':delta_count,
             'stream_total_ms':round((time.monotonic()-started)*1000)}
 
+def owner_dialog_completion(value,dialog_id):
+    if not isinstance(value,dict):return False
+    return (value.get('saved') is True and value.get('owner_dialog_saved') is True
+            and value.get('s03_integrated') is False
+            and value.get('canonical_s03_write_verified') is False
+            and value.get('writer')=='V112_OWNER_DIALOG_WRITER'
+            and value.get('dialog_id')==dialog_id
+            and all(isinstance(value.get(key),str) and re.fullmatch(r'[a-f0-9]{32}',value[key])
+                    for key in ('turn_id','receipt_id','lease_epoch'))
+            and isinstance(value.get('exchange_id'),str)
+            and 6<=len(value['exchange_id'])<=160
+            and isinstance(value.get('receipt_sha256'),str)
+            and re.fullmatch(r'[a-f0-9]{64}',value['receipt_sha256']))
+
+def owner_dialog_history(value,dialog_id):
+    if (not isinstance(value,dict) or value.get('status')!='READY'
+            or value.get('dialog_id')!=dialog_id
+            or value.get('store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+            or value.get('canonical_s03_readback_verified') is not False
+            or not isinstance(value.get('messages'),list)):
+        return None
+    return value['messages']
+
 def sources():
     for rel in ('scripts/agent_loop.py','scripts/slim_chat_t885u.py','scripts/understanding/hook.py','scripts/understanding_hook.py'):
         path=ROOT/rel
@@ -176,22 +199,36 @@ def main():
         if not isinstance(did,str) or not re.fullmatch('[a-f0-9]{32}',did):raise RuntimeError('HOLD_DIALOG_CREATE')
         turn=consume_turn(client,prompt,did);answer=turn['answer'];receipt=turn['done']
         history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
-        pair=history.get('messages',[])[-2:]
-        saved=bool(receipt and receipt.get('saved') is True and receipt.get('s03_integrated') is True and len(pair)==2 and pair[0].get('content')==prompt and pair[1].get('content')==answer)
+        rows=owner_dialog_history(history,did)
+        pair=rows[-2:] if isinstance(rows,list) else []
+        saved=bool(owner_dialog_completion(receipt,did) and len(pair)==2
+                   and pair[0].get('role')=='user' and pair[0].get('content')==prompt
+                   and pair[1].get('role')=='assistant' and pair[1].get('content')==answer)
+        if not saved:raise RuntimeError('HOLD_OWNER_DIALOG_HISTORY_SCOPE_OR_RECEIPT')
         first=turn['first_meaningful_delta_ms']
         emit('chat_synthetic_latency',{'events':turn['events'],'total_ms':turn['stream_total_ms'],
             'first_meaningful_delta_ms':first,'placeholder_delta_count':turn['placeholder_delta_count'],
             'delta_count':turn['delta_count'],'answer_public_synthetic':numeric_public_answer(answer),
-            'answer_sha256':digest(answer.encode()),'saved_verified':saved,
+            'answer_sha256':digest(answer.encode()),
+            'owner_dialog_saved_verified':saved,'owner_dialog_store_scope':'OWNER_DIALOG_TABLES_ONLY',
+            'canonical_s03_readback_verified':False,
+            'onehost_1a01_acceptance_state':'HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
             'arithmetic_pass':numeric_public_answer(answer)=='323',
             'performance_target_pass':first<=8000 and turn['stream_total_ms']<=25000})
         if os.environ.get('NOX_PROBE_SECOND_TURN')=='1':
             followup='Какое число ты только что получил? Ответь только этим числом.'
             follow=consume_turn(client,followup,did);answer2=follow['answer'];done=follow['done']
-            stored=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6')).get('messages',[])
-            passed=bool(done and done.get('saved') and done.get('s03_integrated') and numeric_public_answer(answer2)=='323'
-                        and len(stored)>=4 and stored[-2].get('content')==followup and stored[-1].get('content')==answer2)
-            emit('chat_history_followup',{'history_model_pass':passed,'client_history_empty':True,
+            history2=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6'))
+            stored=owner_dialog_history(history2,did)
+            passed=bool(owner_dialog_completion(done,did) and numeric_public_answer(answer2)=='323'
+                        and isinstance(stored,list) and len(stored)>=4
+                        and stored[-2].get('role')=='user' and stored[-2].get('content')==followup
+                        and stored[-1].get('role')=='assistant' and stored[-1].get('content')==answer2)
+            emit('chat_history_followup',{'owner_dialog_history_model_pass':passed,
+                'owner_dialog_store_scope':'OWNER_DIALOG_TABLES_ONLY',
+                'canonical_s03_readback_verified':False,
+                'onehost_1a01_acceptance_state':'HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
+                'client_history_empty':True,
                 'first_delta_ms':follow['first_meaningful_delta_ms'],'first_meaningful_delta_ms':follow['first_meaningful_delta_ms'],
                 'total_ms':follow['stream_total_ms'],'answer_public_synthetic':numeric_public_answer(answer2),
                 'answer_sha256':digest(answer2.encode()),
@@ -208,7 +245,10 @@ def main():
                             and re.search(r'6\s+исполнителей\s*\+\s*NOX',text))
                 emit('chat_executor_question',{'verified_six_plus_nox':count and phrase,
                     'live_api_fresh':count,'native_answer_matches_six_plus_nox':phrase,
-                    'saved':end.get('saved') is True,'s03_integrated':end.get('s03_integrated') is True,
+                    'owner_dialog_saved':owner_dialog_completion(end,did),
+                    'owner_dialog_store_scope':'OWNER_DIALOG_TABLES_ONLY',
+                    'canonical_s03_readback_verified':False,
+                    'onehost_1a01_acceptance_state':'HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
                     'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
                     'answer_sha256':digest(text.encode()),'raw_answer_exported':False})
             else:
@@ -223,7 +263,9 @@ def main():
     finally:
         try:request(client,'/chat/logout','POST',{}).close()
         except Exception:pass
-    print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
+    print('NOX_OWNER_DIALOG_PROBE_COMPLETE=true',flush=True)
+    print('NOX_1A01_CANONICAL_S03_ACCEPTED=false',flush=True)
+    print('NOX_1A01_HOLD=HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',flush=True)
 
 if __name__=='__main__':
     try:main()

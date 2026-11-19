@@ -226,11 +226,22 @@ with open(os.devnull,'w') as sink,contextlib.redirect_stdout(sink),contextlib.re
    elif kind=='done':done=row;break
  total=round((time.monotonic()-started)*1000)
  if (answer!=expected or '4/4' not in answer or '3/3' not in answer or first is None or not isinstance(done,dict)
-     or done.get('saved') is not True or done.get('s03_integrated') is not True):raise RuntimeError('HOLD_LIVE_FACTS_OR_S03')
+     or done.get('saved') is not True or done.get('owner_dialog_saved') is not True
+     or done.get('s03_integrated') is not False or done.get('canonical_s03_write_verified') is not False
+     or done.get('writer')!='V112_OWNER_DIALOG_WRITER' or done.get('dialog_id')!=dialog
+     or any(not isinstance(done.get(k),str) or not re.fullmatch(r'[a-f0-9]{32}',done[k])
+            for k in ('turn_id','receipt_id','lease_epoch'))
+     or not isinstance(done.get('exchange_id'),str) or not 6<=len(done['exchange_id'])<=160
+     or not isinstance(done.get('receipt_sha256'),str)
+     or not re.fullmatch(r'[a-f0-9]{64}',done['receipt_sha256'])):
+  raise RuntimeError('HOLD_LIVE_OWNER_DIALOG_RECEIPT')
  history_code,raw=request(client,'/api/ui/memory/dialogs/history?dialog_id='+dialog+'&limit=4')
- pair=json.loads(raw).get('messages',[])
- if history_code!=200 or len(pair)!=2 or [(row.get('role'),row.get('content')) for row in pair]!=[('user',prompt),('assistant',answer)]:
-  raise RuntimeError('HOLD_LIVE_SYNTHETIC_HISTORY_READBACK')
+ history=json.loads(raw);pair=history.get('messages',[])
+ if (history_code!=200 or history.get('status')!='READY' or history.get('dialog_id')!=dialog
+     or history.get('store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+     or history.get('canonical_s03_readback_verified') is not False
+     or len(pair)!=2 or [(row.get('role'),row.get('content')) for row in pair]!=[('user',prompt),('assistant',answer)]):
+  raise RuntimeError('HOLD_LIVE_OWNER_DIALOG_HISTORY_READBACK')
  runtime=facts._module('owner_media_runtime')
  binding=(runtime is media and callable(runtime.create_job) and callable(runtime.load_job)
   and agent_loop.owner_completion.__module__=='owner_chat_stream'
@@ -245,7 +256,9 @@ with open(os.devnull,'w') as sink,contextlib.redirect_stdout(sink),contextlib.re
   'drive_verified_files':3,'drive_verified_bytes':projected['drive_adapters']['verified_bytes'],
   'generation_tests_verified':projected['media']['generation_test_verified'],
   'inventory_answer_sha256':hashlib.sha256(answer.encode()).hexdigest(),'inventory_answer_bytes':len(answer.encode()),
-  'first_actual_delta_ms':first,'total_ms':total,'synthetic_s03_and_dialog_readback':True,
+  'first_actual_delta_ms':first,'total_ms':total,'synthetic_owner_dialog_history_readback':True,
+  'owner_dialog_store_scope':'OWNER_DIALOG_TABLES_ONLY','canonical_s03_readback_verified':False,
+  'onehost_1a01_acceptance_state':'HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
   'self_observation_shared_evidence':True,'model_prompt_evidence_hook_installed':True,
   'existing_media_queue_binding_verified':binding,'media_queue_proof_scope':'SOURCE_AND_IMPORTED_RUNTIME_BINDING_NO_NEW_JOB',
   'media_generation_requested':False,'training_or_gpu_control_performed':False,'private_content_exported':False}
@@ -257,7 +270,10 @@ def live_probe(deploy, request):
     proof = child_json(deploy, HTTP_PROBE, [request], timeout=75)
     if (proof.get('schema') != 'NOX_OWNER_CHAT_EVIDENCE_ACCEPTANCE_V1'
             or proof.get('nonloopback_peer') is not True or proof.get('private_content_exported') is not False
-            or proof.get('synthetic_s03_and_dialog_readback') is not True
+            or proof.get('synthetic_owner_dialog_history_readback') is not True
+            or proof.get('owner_dialog_store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+            or proof.get('canonical_s03_readback_verified') is not False
+            or proof.get('onehost_1a01_acceptance_state')!='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND'
             or proof.get('media_generation_requested') is not False
             or proof.get('existing_media_queue_binding_verified') is not True
             or proof.get('media_verified_files') != 4 or proof.get('drive_verified_files') != 3):
