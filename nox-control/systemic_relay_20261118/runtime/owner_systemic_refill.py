@@ -299,6 +299,130 @@ def validate_binding(manifest, binding, row, contract):
     return True
 
 
+
+def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_rows):
+    """Continuous *read-only* NOX self-observation and task discovery.
+
+    Can never mint OWNER_REVIEWED, a native job or an executable contract.
+    Every suggestion is anchored to the existing original registry, a real
+    pinned path and an observed queue fact. Recomputing the same snapshot is
+    deterministic; changing a receipt/source SHA creates a new observation.
+    """
+    outcomes = _outcomes(tasks)
+    outcome_by_mission = {}
+    for outcome in outcomes:
+        key = outcome.get('mission_id')
+        if isinstance(key, str):
+            outcome_by_mission.setdefault(key, []).append(outcome)
+    blocked = {item['mission_id']:item['reason'] for item in deferred}
+    parents = manifest['registry']['parents']
+    states = {'not_seen':0, 'ready':len(admitted_rows), 'pending':0,
+              'running':0, 'terminal':0, 'blocked':0, 'unknown':0}
+    for row in tasks.values():
+        if not isinstance(row, dict):
+            continue
+        status = row.get('status')
+        if status in ('pending','admitted','prepared','retry','wait'):
+            states['pending'] += 1
+        elif status == 'running':
+            states['running'] += 1
+        elif status in TERMINAL:
+            states['terminal'] += 1
+            if status in ('failed','blocked','cancelled'):
+                states['blocked'] += 1
+        else:
+            states['unknown'] += 1
+
+    suggestions = []
+    seen = set()
+    for mission in sorted(manifest['missions'], key=lambda m:
+                          (m['priority'],m['parent_task_id'],m['mission_id'])):
+        source = source_pins.get(mission['root_id'], {})
+        evidence = outcome_by_mission.get(mission['mission_id'], [])
+        last = evidence[-1] if evidence else {}
+        reason = blocked.get(mission['mission_id'])
+        if last.get('status') in ('failed','blocked','cancelled'):
+            hypothesis = 'ANALYZE_FAILED_TERMINAL_RECEIPT'
+        elif reason == 'SOURCE_PIN_DRIFT_REVIEW_REQUIRED':
+            hypothesis = 'REBASE_AGAINST_OBSERVED_SOURCE_DRIFT'
+        elif reason == 'ALREADY_ADMITTED_NO_REPLAY':
+            continue
+        elif reason == 'DEPENDENCY_NOT_VERIFIED':
+            hypothesis = 'INSPECT_BLOCKING_DEPENDENCY'
+        elif reason in ('SOURCE_ALREADY_RESERVED','CAPACITY_WAIT'):
+            continue
+        else:
+            continue
+        pinned = [{'path':row['path'], 'observed_sha256':source.get(row['path'])}
+                  for row in mission['context'] if source.get(row['path'])]
+        if not pinned:
+            continue
+        identity = {'parent_task_id':mission['parent_task_id'],
+                    'mission_id':mission['mission_id'],
+                    'hypothesis':hypothesis, 'source':pinned,
+                    'receipt_sha256':last.get('receipt_sha256'),
+                    'planner_receipt_sha256':last.get('planner_receipt_sha256')}
+        signature = digest(identity)
+        if signature in seen:
+            continue
+        seen.add(signature)
+        suggestions.append({'schema':'NOX_NATIVE_REFLEX_CANDIDATE_V1',
+            'fingerprint':signature,'queue_id':mission['queue_id'],
+            'parent_task_id':mission['parent_task_id'],
+            'root_id':mission['root_id'], 'mission_id':mission['mission_id'],
+            'hypothesis':hypothesis,'observed_sources':pinned[:8],
+            'receipt_sha256':last.get('receipt_sha256'),
+            'required_next_step':'SOURCE_INSPECTION_THEN_INDEPENDENT_REVIEW',
+            'authority':'RESEARCH_PROPOSAL_ONLY',
+            'new_native_job_created':False})
+        if len(suggestions) == 3:
+            break
+
+    if len(suggestions) < 3:
+        represented = {m['parent_task_id'] for m in manifest['missions']}
+        for topic in manifest.get('research_topics', []):
+            parent = topic['parent_task_id']
+            if parent in represented:
+                continue
+            identity = {'parent_task_id':parent,
+                        'objective':topic['objective'],
+                        'manifest_sha256':capacity['manifest_sha256']}
+            signature = digest(identity)
+            if signature in seen:
+                continue
+            seen.add(signature)
+            suggestions.append({'schema':'NOX_NATIVE_REFLEX_CANDIDATE_V1',
+                'fingerprint':signature,
+                'queue_id':parents[parent]['queue_id'],
+                'parent_task_id':parent,'hypothesis':'RESEARCH_UNBOUND_REQUIREMENT',
+                'objective':topic['objective'],
+                'required_next_step':'OBSERVE_ACTUAL_ALLOWED_SOURCE_AND_PIN_VERIFIER',
+                'authority':'RESEARCH_PROPOSAL_ONLY',
+                'new_native_job_created':False})
+            if len(suggestions) == 3:
+                break
+
+    exhausted = (states['pending'] + states['running'] + states['ready'] == 0)
+    context = {'manifest_sha256':capacity['manifest_sha256'],
+               'source_pins':source_pins,
+               'task_outcomes':outcomes[-32:], 'deferred':deferred}
+    return {'schema':'NOX_NATIVE_REFLEX_MONITOR_V1',
+        'observation_sha256':digest(context),
+        'state':('REFILL_REQUIRED' if exhausted else 'EXECUTION_OR_ADMISSION_IN_PROGRESS'),
+        'worker_cap':3,'available_slots':capacity['slots_available'],
+        'observed_task_counts':states,
+        'registry_original_total':manifest['registry']['total_original_ids'],
+        'registry_parents_indexed':len(parents),
+        'unindexed_original_count':manifest['registry']['total_original_ids']-len(parents),
+        'staged_research_candidates':suggestions,
+        'staged_count':len(suggestions),
+        'repeated_snapshot_idempotent':True,
+        'automatic_owner_approval':False,
+        'new_native_jobs':len(admitted_rows),
+        'next_action':('RUN_ADMITTED_VERIFIED_MISSIONS' if admitted_rows else
+            'VERIFY_AND_PUBLISH_NEW_GROUNDED_TASKPACK'),
+        'performance_or_training_success_claimed':False}
+
 def select_next(manifest, state_snapshot, source_pins, capacity):
     """Produce a bounded deterministic batch; never reset/reclaim an existing task."""
     validate_manifest(manifest)
@@ -389,6 +513,8 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
             'required_next_step':'GROUNDED_PROPOSAL_TO_PINNED_TASKPACK_TO_EXISTING_FENCED_MANIFEST_CAS',
             'max_next_missions':3,'original_task_accepted':False,
             'evidence_scope':'REFILL_REQUEST_ONLY_NOT_NATIVE_OR_BENCHMARK_ACCEPTANCE'}
+    reflex = _reflex_cycle(manifest, state_snapshot, source_pins, capacity, rejected, rows)
     return {'rows':rows,'contracts':contracts,'bindings':bindings,'state':state,
             'fingerprint':fingerprint,'refill_request':request,'outcomes':outcomes,
-            'deferred':rejected,'original_acceptance_added':0}
+            'deferred':rejected,'original_acceptance_added':0,
+            'self_monitor':reflex}
