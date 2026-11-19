@@ -37,13 +37,17 @@ class LoadedWeightIdentityTests(unittest.TestCase):
         self.cwd = self.root / "service-cwd"
         self.cwd.mkdir()
         (self.proc_pid / "cwd").symlink_to(self.cwd, target_is_directory=True)
-        self.weight = self.cwd / "private_weight_name_DO_NOT_EXPORT.gguf"
+        self.weight_dir = self.cwd / "deepseek_v41_flash_iq2xxs"
+        self.weight_dir.mkdir()
+        self.weight = self.weight_dir / "model-00001-of-00004.gguf"
         self.payload = b"fixture-weight-bytes-for-hash"
         self.weight.write_bytes(self.payload)
-        self.write_process_facts()
+        self.write_process_facts(
+            candidate="deepseek_v41_flash_iq2xxs/model-00001-of-00004.gguf"
+        )
         self.write_maps(self.weight)
 
-    def write_process_facts(self, candidate="private_weight_name_DO_NOT_EXPORT.gguf"):
+    def write_process_facts(self, candidate="deepseek_v41_flash_iq2xxs/model-00001-of-00004.gguf"):
         (self.proc_pid / "stat").write_bytes(make_stat(self.pid, self.start_ticks))
         (self.proc_pid / "cmdline").write_bytes(
             b"/usr/bin/python3\0model_server.py\0--model\0"
@@ -69,15 +73,18 @@ class LoadedWeightIdentityTests(unittest.TestCase):
 
     def test_hashes_only_file_proven_in_process_maps_and_redacts_path(self):
         receipt = self.inspect()
-        self.assertEqual(receipt["state"], "VERIFIED_MAPPED_WEIGHT_SHA256")
+        self.assertEqual(receipt["state"], "VERIFIED_MAPPED_WEIGHT_FILE_SHA256")
         self.assertEqual(receipt["weight_sha256"], hashlib.sha256(self.payload).hexdigest())
         self.assertEqual(receipt["weight_size_bytes"], len(self.payload))
         self.assertEqual(receipt["weight_identity"]["inode"], self.weight.stat().st_ino)
         self.assertEqual(receipt["pid"], self.pid)
         self.assertEqual(receipt["start_ticks"], self.start_ticks)
         self.assertEqual(receipt["callback_registry"]["state"], "UNKNOWN")
+        self.assertEqual(receipt["model_identity"]["state"], "UNKNOWN")
+        self.assertEqual(receipt["manifest_relation"]["state"], "UNKNOWN")
         encoded = json.dumps(receipt)
-        self.assertNotIn("private_weight_name_DO_NOT_EXPORT.gguf", encoded)
+        self.assertNotIn("model-00001-of-00004.gguf", encoded)
+        self.assertNotIn("deepseek_v41_flash_iq2xxs", encoded)
         self.assertNotIn(str(self.cwd), encoded)
         self.assertNotIn("--model", encoded)
 
@@ -130,8 +137,28 @@ class LoadedWeightIdentityTests(unittest.TestCase):
         self.assertEqual(receipt["state"], "UNKNOWN")
         self.assertEqual(receipt["reason"], "HOLD_WEIGHT_OPEN")
         self.assertIsNone(receipt["weight_sha256"])
+        self.assertEqual(receipt["manifest_relation"]["state"], "UNKNOWN")
         self.assertNotIn(missing, json.dumps(receipt))
         self.assertNotIn(str(self.cwd), json.dumps(receipt))
+
+    def test_manifest_case_variant_is_never_used_as_fallback(self):
+        # The process-selected lower-case file exists and is mapped. A
+        # capitalized manifest-like candidate is absent and is never consulted.
+        receipt = self.inspect()
+        self.assertEqual(receipt["state"], "VERIFIED_MAPPED_WEIGHT_FILE_SHA256")
+        self.assertEqual(receipt["weight_sha256"], hashlib.sha256(self.payload).hexdigest())
+        self.assertEqual(
+            receipt["manifest_relation"],
+            {"state": "UNKNOWN", "reason": "PINNED_MANIFEST_NOT_READ_OR_USED"},
+        )
+
+    def test_missing_manifest_case_variant_does_not_hash_another_mapped_file(self):
+        self.write_process_facts(candidate="DeepSeek/manifest-pinned.gguf")
+        receipt = self.inspect()
+        self.assertEqual(receipt["state"], "UNKNOWN")
+        self.assertEqual(receipt["reason"], "HOLD_WEIGHT_OPEN")
+        self.assertIsNone(receipt["weight_sha256"])
+        self.assertNotIn("manifest-pinned.gguf", json.dumps(receipt))
 
     def test_unmapped_file_does_not_claim_loaded_identity(self):
         other = self.cwd / "unmapped.gguf"
