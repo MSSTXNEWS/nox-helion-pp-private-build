@@ -742,6 +742,42 @@ class Native:
                 raise GateError('HOLD_SUBAGENT_SUBMIT_INTENT_UNVERIFIED')
         return intent
 
+    def _valid_admission_snapshot(self, admission, task_id, claim, *, current_owner):
+        """Validate the exact submitted resource snapshot and its writer lease."""
+        if not isinstance(admission, dict) or not isinstance(claim, dict):
+            return False
+        lease = admission.get('writer_lease')
+        observed = admission.get('resource_admission_observed_at')
+        body = dict(admission)
+        expected = body.pop('resource_admission_snapshot_sha256', None)
+        try:
+            if (admission.get('resource_admission_allowed') is not True
+                    or type(observed) not in (int, float)
+                    or not math.isfinite(observed)
+                    or not isinstance(expected, str)
+                    or SHA.fullmatch(expected) is None
+                    or autonomy.fingerprint(body) != expected
+                    or resource_wait_reason(admission) is not None
+                    or not isinstance(lease, dict)
+                    or lease.get('task_id') != task_id
+                    or lease.get('claim_nonce') != claim.get('nonce')
+                    or lease.get('source_sha256') != self.source):
+                return False
+            owner = lease.get('owner')
+            if current_owner:
+                return owner == process_identity(os.getpid())
+            if (type(claim.get('pid')) is not int
+                    or not isinstance(owner, dict)
+                    or owner.get('pid') != claim.get('pid')
+                    or type(owner.get('process_starttime')) is not int
+                    or owner.get('process_starttime') <= 0
+                    or ('process_starttime' in claim
+                        and claim.get('process_starttime') != owner.get('process_starttime'))):
+                return False
+            return True
+        except (TypeError, ValueError, OverflowError, GateError):
+            return False
+
     def _checkpoint_pending_result(self, event):
         """Persist one adapter-validated event before IPC can be closed."""
         if not isinstance(event, dict):
@@ -793,23 +829,10 @@ class Native:
                     return existing
                 raise GateError('HOLD_SUBAGENT_RESULT_CHECKPOINT')
             admission = intent.get('resource_admission')
-            admission_lease = (admission.get('writer_lease')
-                               if isinstance(admission, dict) else None)
-            admission_body = dict(admission) if isinstance(admission, dict) else {}
-            admission_sha = admission_body.pop('resource_admission_snapshot_sha256', None)
             if (set(intent) != set(base_keys) | {'state', 'resource_admission'}
                     or intent.get('state') != 'UNCERTAIN'
-                    or not isinstance(admission, dict)
-                    or admission.get('resource_admission_allowed') is not True
-                    or not isinstance(admission_sha, str)
-                    or SHA.fullmatch(admission_sha) is None
-                    or autonomy.fingerprint(admission_body) != admission_sha
-                    or resource_wait_reason(admission) is not None
-                    or not isinstance(admission_lease, dict)
-                    or admission_lease.get('task_id') != task_id
-                    or admission_lease.get('claim_nonce') != claim.get('nonce')
-                    or admission_lease.get('source_sha256') != self.source
-                    or admission_lease.get('owner') != process_identity(os.getpid())
+                    or not self._valid_admission_snapshot(
+                        admission, task_id, claim, current_owner=True)
                     or intent.get('task_id') != task_id
                     or intent.get('claim_nonce') != claim.get('nonce')
                     or intent.get('role') != clean_event.get('role')
@@ -954,13 +977,24 @@ class Native:
         base_required = {'task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id', 'state'}
         verified_required = base_required | {'result_sha256', 's03_receipt_sha256'}
         intent_state = intent.get('state') if isinstance(intent, dict) else None
-        required = verified_required if intent_state == 'S03_VERIFIED' else base_required
+        if intent_state == 'S03_VERIFIED':
+            intent_shape_valid = isinstance(intent, dict) and set(intent) == verified_required
+        elif intent_state == 'UNCERTAIN':
+            intent_shape_valid = (isinstance(intent, dict)
+                and set(intent) in (base_required, base_required | {'resource_admission'}))
+            if (intent_shape_valid and 'resource_admission' in intent
+                    and not self._valid_admission_snapshot(
+                        intent.get('resource_admission'), task.get('id'), claim,
+                        current_owner=False)):
+                intent_shape_valid = False
+        else:
+            intent_shape_valid = False
         hashes_present = (
             intent_state != 'S03_VERIFIED'
             or (isinstance(intent, dict)
                 and SHA.fullmatch(str(intent.get('result_sha256', ''))) is not None
                 and SHA.fullmatch(str(intent.get('s03_receipt_sha256', ''))) is not None))
-        if (not isinstance(intent, dict) or set(intent) != required
+        if (not isinstance(intent, dict) or not intent_shape_valid
                 or intent_state not in ('UNCERTAIN', 'S03_VERIFIED')
                 or task.get('handler') != HANDLER
                 or not isinstance(claim, dict)
@@ -1255,9 +1289,11 @@ class Native:
                     # A crash may occur after the exact S03 write but before
                     # the queue intent is promoted. Promote only the unique,
                     # fully bound receipt already reconstructed above.
-                    promoted = {**intent, 'state': 'S03_VERIFIED',
-                                'result_sha256': evidence['receipt_sha256'],
-                                's03_receipt_sha256': evidence['s03']['receipt_sha256']}
+                    promoted = {key: intent[key] for key in
+                                ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id')}
+                    promoted.update(state='S03_VERIFIED',
+                                    result_sha256=evidence['receipt_sha256'],
+                                    s03_receipt_sha256=evidence['s03']['receipt_sha256'])
                     with self.ns['_qlock']:
                         durable = document(self.ns['STATE'], 16*1024*1024)
                         persisted = durable.get('tasks', {}).get(task_id, {})

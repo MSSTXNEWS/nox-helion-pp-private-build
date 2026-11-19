@@ -39,24 +39,38 @@ with patch.dict('sys.modules', {'owner_autonomy_pool': autonomy,
     spec.loader.exec_module(binding)
 
 
-def snapshot(**changes):
+def snapshot(*, task_id='review.runtime', claim_nonce='a' * 24,
+             source_sha256='c' * 64, lease_owner=None, **changes):
     value = {'native_verified': True, 'instance_id': 60509551, 'stop_active': False,
              'source_sha_verified': True, 'owner_scope_verified': True,
-             'cgroup_memory_ratio': .50, 'cpu_pressure': 1.0, 'io_pressure': 1.0,
+             'task_status': {task_id: 'running'},
+             'cgroup_memory_ratio': .50,
+             'cgroup_memory_working_set_bytes': 512 * 1024**2,
+             'cgroup_memory_inactive_file_bytes': 128 * 1024**2,
+             'cpu_pressure': 1.0, 'io_pressure': 1.0,
              'disk_free_ratio': .25, 'disk_free_bytes': 16 * 1024**3,
-             'disk_total_bytes': 64 * 1024**3,
+             'disk_total_bytes': 64 * 1024**3, 'gpu_available': False,
              'writer_lease': {'schema': 'NOX_SUBAGENT_WRITER_LEASE_V1',
                  'acquired': True, 'scope': 'EXCLUSIVE_NATIVE_SUBAGENT_WRITER',
                  'lock_path': '/root/nox/state/dispatcher/native_subagents.lock',
-                 'device': 1, 'inode': 2, 'task_id': 'review.runtime',
-                 'claim_nonce': 'a' * 24, 'lease_id': 'd' * 64,
-                 'owner': binding.process_identity(os.getpid()),
-                 'acquired_at': time.time(), 'source_sha256': 'c' * 64},
+                 'device': 1, 'inode': 2, 'task_id': task_id,
+                 'claim_nonce': claim_nonce, 'lease_id': 'd' * 64,
+                 'owner': lease_owner if lease_owner is not None
+                     else binding.process_identity(os.getpid()),
+                 'acquired_at': time.time(), 'source_sha256': source_sha256},
              **changes}
     value['resource_admission_allowed'] = True
     value['resource_admission_observed_at'] = time.time()
     value['resource_admission_snapshot_sha256'] = autonomy.fingerprint(value)
     return value
+
+
+def admitted_intent(task_id, claim_nonce, role, policy_sha, job_id, *,
+                    source_sha256='c' * 64, lease_owner=None):
+    return {'task_id': task_id, 'claim_nonce': claim_nonce, 'role': role,
+            'policy_sha': policy_sha, 'job_id': job_id, 'state': 'UNCERTAIN',
+            'resource_admission': snapshot(task_id=task_id, claim_nonce=claim_nonce,
+                source_sha256=source_sha256, lease_owner=lease_owner)}
 
 
 def native_with_pool():
@@ -109,13 +123,14 @@ class PoolLifecycleTests(unittest.TestCase):
         claim = {'nonce': 'a' * 24, 'pid': 999}
         params = {'role': 'runtime', 'policy_sha256': 'a' * 64,
                   'job_id': JOB_ID}
-        intent = {'task_id': 'kept', 'claim_nonce': claim['nonce'], 'role': 'runtime',
-                  'policy_sha': params['policy_sha256'], 'job_id': params['job_id'],
-                  'state': 'UNCERTAIN'}
-        row = {'id': 'kept', 'handler': binding.HANDLER, 'status': 'running',
-               'owner_claim': claim, 'params': params, 'native_submit_intent': intent}
         value.policy = {'sha256': 'a' * 64}
         value.source = 'c' * 64
+        parent_owner = {'pid': 999, 'ppid': 1, 'process_starttime': 999}
+        intent = admitted_intent('kept', claim['nonce'], 'runtime',
+            params['policy_sha256'], params['job_id'], source_sha256=value.source,
+            lease_owner=parent_owner)
+        row = {'id': 'kept', 'handler': binding.HANDLER, 'status': 'running',
+               'owner_claim': claim, 'params': params, 'native_submit_intent': intent}
         value.state = {'tasks': {'kept': row}}
         value._test_tmpdir = tempfile.TemporaryDirectory()
         state_path = Path(value._test_tmpdir.name) / 'state.json'
@@ -372,10 +387,8 @@ class FreshSubmissionTests(unittest.TestCase):
         task.update(handler=binding.HANDLER, owner_claim=claim)
         row = native.state['tasks'][task['id']]
         row['owner_claim'] = claim
-        intent = {'task_id': task['id'], 'claim_nonce': claim['nonce'],
-                  'role': 'runtime', 'policy_sha': 'a' * 64,
-                  'job_id': job_id, 'state': 'UNCERTAIN',
-                  'resource_admission': snapshot()}
+        intent = admitted_intent(task['id'], claim['nonce'], 'runtime',
+            'a' * 64, job_id, source_sha256=native.source)
         task['native_submit_intent'] = intent
         row['native_submit_intent'] = intent
         native.ns['save_state'](native.state)
@@ -400,10 +413,8 @@ class FreshSubmissionTests(unittest.TestCase):
         job_id = 'nox-native-' + 'd' * 24
         task.update(handler=binding.HANDLER, owner_claim=claim)
         task['params']['job_id'] = job_id
-        intent = {'task_id': task['id'], 'claim_nonce': claim['nonce'],
-                  'role': 'runtime', 'policy_sha': 'a' * 64,
-                  'job_id': job_id, 'state': 'UNCERTAIN',
-                  'resource_admission': snapshot()}
+        intent = admitted_intent(task['id'], claim['nonce'], 'runtime',
+            'a' * 64, job_id, source_sha256=native.source)
         task['native_submit_intent'] = intent
         native.state['tasks'][task['id']] = task
         native.ns['save_state'](native.state)
@@ -474,9 +485,9 @@ class FreshSubmissionTests(unittest.TestCase):
         claim = {'nonce': 'a' * 24, 'pid': 4242}
         task.update(handler=binding.HANDLER, owner_claim=claim)
         task['params']['job_id'] = job_id
-        intent = {'task_id': task['id'], 'claim_nonce': claim['nonce'],
-                  'role': 'runtime', 'policy_sha': 'a' * 64,
-                  'job_id': job_id, 'state': 'UNCERTAIN'}
+        intent = admitted_intent(task['id'], claim['nonce'], 'runtime',
+            'a' * 64, job_id, source_sha256=native.source,
+            lease_owner={'pid': 4242, 'ppid': 1, 'process_starttime': 4243})
         task['native_submit_intent'] = intent
         native.state['tasks'][task['id']] = task
         native.ns['save_state'](native.state)
@@ -522,18 +533,22 @@ class FreshSubmissionTests(unittest.TestCase):
         lock_path = state_root / 'state' / 'owner_maintenance.lock'
         lock_path.parent.mkdir(parents=True)
         lock_path.touch()
+        legacy_intent = {key: value for key, value in intent.items()
+                         if key != 'resource_admission'}
         with patch.object(binding, 'ROOT', state_root):
             with patch.object(binding, 's03_connection', return_value=ConnectionContext()):
                 with patch.object(binding, 'chat_priority_active', return_value=False):
+                    self.assertIsNotNone(native._s03_verified_evidence(task, legacy_intent))
                     recovered = native._reconcile_s03_verified_queue(native.state)
 
         self.assertEqual(recovered, 1)
         row = native.state['tasks'][task['id']]
         self.assertEqual(row['status'], 'done')
-        self.assertEqual(row['native_submit_intent'],
-                         {**intent, 'state': 'S03_VERIFIED',
-                          'result_sha256': receipt_sha,
-                          's03_receipt_sha256': receipt_sha})
+        expected_verified = {key: intent[key] for key in
+                             ('task_id', 'claim_nonce', 'role', 'policy_sha', 'job_id')}
+        expected_verified.update(state='S03_VERIFIED', result_sha256=receipt_sha,
+                                 s03_receipt_sha256=receipt_sha)
+        self.assertEqual(row['native_submit_intent'], expected_verified)
         self.assertEqual(row['note'], 'S03_VERIFIED_RECOVERED')
         native.pool.submit.assert_not_called()
         persisted = json.loads(native.ns['STATE'].read_text())
@@ -546,10 +561,8 @@ class FreshSubmissionTests(unittest.TestCase):
         task.update(handler=binding.HANDLER, owner_claim=claim)
         row = native.state['tasks'][task['id']]
         row['owner_claim'] = claim
-        intent = {'task_id': task['id'], 'claim_nonce': claim['nonce'],
-                  'role': 'runtime', 'policy_sha': 'a' * 64,
-                  'job_id': JOB_ID, 'state': 'UNCERTAIN',
-                  'resource_admission': snapshot()}
+        intent = admitted_intent(task['id'], claim['nonce'], 'runtime',
+            'a' * 64, JOB_ID, source_sha256=native.source)
         task['native_submit_intent'] = intent
         row['native_submit_intent'] = intent
         native.ns['save_state'](native.state)
