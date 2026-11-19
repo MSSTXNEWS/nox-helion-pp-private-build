@@ -182,11 +182,36 @@ class NativeReflexLeaseHandoffTests(unittest.TestCase):
         self.assertFalse(check({'state': 'BACKOFF', 'pid': 678}))
         self.assertFalse(check(None))
 
+    def test_backoff_is_settled_before_restoring_original(self):
+        class SupervisorStub:
+            state = 'BACKOFF'
+            calls = 0
+            def supervisor(self, command):
+                assert command == 'status'
+                return {'state': self.state, 'pid': None}
+            def stop_checked(self):
+                self.calls += 1
+                self.state = 'STOPPED'
+        stub = SupervisorStub()
+        self.entry._settle_supervisor_before_restore(stub)
+        self.assertEqual(stub.calls, 1)
+        self.assertEqual(stub.state, 'STOPPED')
+
+    def test_rollback_rejects_unsettled_supervisor(self):
+        class SupervisorStub:
+            def supervisor(self, command):
+                return {'state': 'RUNNING', 'pid': 555}
+            def stop_checked(self):
+                raise AssertionError('must not stop foreign live director')
+        with self.assertRaisesRegex(RuntimeError, 'RESTORE_DIRECTOR_NOT_QUIESCENT'):
+            self.entry._settle_supervisor_before_restore(SupervisorStub())
+
     def test_upgrade_and_rollback_both_use_unlocked_start(self):
         body = inspect.getsource(self.entry.run)
         self.assertIn('started = _start_after_lease_release(fd, h)', body)
         self.assertIn("receipt['restored_director'] = _start_after_lease_release(fd, h)", body)
         self.assertIn("require(_supervisor_is_quiescent(present), 'UNKNOWN_DIRECTOR_NO_ROLLBACK')", body)
+        self.assertIn('_settle_supervisor_before_restore(h)', body)
 
 
 if __name__ == '__main__':
