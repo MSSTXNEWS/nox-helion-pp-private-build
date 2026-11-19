@@ -240,6 +240,8 @@ def run():
                     h.atomic(ROOT/rel, current[rel], 0o600 if rel == CONFIG else 0o644)
                 receipt['rollback_verified'] = all(h.read_regular(ROOT/rel) == raw for rel,raw in current.items())
             if stopped and h.supervisor('status')['state'] in ('STOPPED','FATAL','EXITED') and receipt.get('rollback_verified',True):
+                h.wait_previous_descendants_stopped(children, timeout=10)
+                require(h.stop_clear(ROOT), 'RESTORE_OWNER_STOP')
                 receipt['restored_director'] = h.start_checked(ROOT, require_native_status=True)
         except BaseException as failure:
             receipt['recovery'] = str(failure) if str(failure).startswith('HOLD_') else 'HOLD_NATIVE_REFLEX_RECOVERY_'+type(failure).__name__
