@@ -71,7 +71,7 @@ def snapshot(path: Path, limit=262144):
         pins = {tag for tag, sha in PINS[path.name].items() if sha == value}
         row = {"state": "KNOWN" if pins else "UNRECOGNIZED",
                "version": next(iter(pins)) if pins else None,
-               "sha256": value, "bytes": len(raw)}
+               "sha256": value, "bytes": len(raw), "mtime_ns": before.st_mtime_ns}
         if path.name == "chat_state.json":
             try:
                 item = json.loads(raw)
@@ -112,6 +112,66 @@ def service(name):
     except (OSError, subprocess.TimeoutExpired):
         return {"state": "UNAVAILABLE"}
 
+def current_service_identity(name):
+    """Read only the supervisor-owned current PID, never use historical PID as liveness."""
+    if name not in SERVICES:
+        return {"state": "UNSUPPORTED_SERVICE"}
+    try:
+        cmd = subprocess.run(["supervisorctl", "status", name], capture_output=True,
+                             timeout=6, text=True)
+        if cmd.returncode or len(cmd.stdout) > 2048:
+            return {"state": "STATUS_UNAVAILABLE"}
+        match = re.fullmatch(re.escape(name) + r"\s+RUNNING\s+pid\s+(\d+),[^\n]*\n?", cmd.stdout)
+        if not match:
+            return {"state": "NOT_RUNNING"}
+        pid = int(match[1])
+        if pid < 2 or pid >= 2**31:
+            return {"state": "PID_OUT_OF_RANGE"}
+        raw = Path("/proc/%d/stat" % pid).read_bytes()
+        if len(raw) > 8192:
+            return {"state": "STAT_TOO_LARGE"}
+        fields = raw.rsplit(b") ", 1)[1].split()
+        start = int(fields[19])
+        status = fields[0].decode("ascii")
+        if status in ("Z", "X"):
+            return {"state": "NOT_LIVE"}
+        return {"state": "RUNNING", "pid": pid, "start_ticks": start,
+                "ppid": int(fields[1]), "pgrp": int(fields[2])}
+    except (OSError, ValueError, IndexError, subprocess.TimeoutExpired):
+        return {"state": "IDENTITY_UNAVAILABLE"}
+
+
+def startup_order_evidence(data):
+    """Evidence of source-file presence before proxy startup, not behavioral acceptance."""
+    current = data.get("current_services", {}).get("nox-proxy", {})
+    if current.get("state") != "RUNNING":
+        return {"state": "PROXY_UNKNOWN"}
+    try:
+        boot_raw = Path("/proc/stat").read_bytes()
+        if len(boot_raw) > 1024 * 1024:
+            return {"state": "BOOT_FILE_BOUND"}
+        lines = [row for row in boot_raw.splitlines() if row.startswith(b"btime ")]
+        if len(lines) != 1:
+            return {"state": "BOOT_TIME_UNAVAILABLE"}
+        boot = int(lines[0].split()[1])
+        ticks = int(os.sysconf("SC_CLK_TCK"))
+        if ticks <= 0:
+            return {"state": "TICK_RATE_UNAVAILABLE"}
+        started_ns = boot * 1_000_000_000 + current["start_ticks"] * 1_000_000_000 // ticks
+        names = ("slim_chat_t885u.py", "common.py", "chat_proxy.py")
+        files = [data["files"][name] for name in names]
+        if any(row.get("version") != "candidate" or type(row.get("mtime_ns")) is not int for row in files):
+            return {"state": "SOURCE_CANDIDATE_MISSING"}
+        latest_ns = max(row["mtime_ns"] for row in files)
+        # Be conservative about tick rounding; no inference if margin < 2 seconds.
+        return {"state": "SOURCE_BEFORE_PROXY_START" if started_ns >= latest_ns + 2_000_000_000
+                else "TIMELINE_UNRESOLVED",
+                "source_before_proxy": started_ns >= latest_ns + 2_000_000_000,
+                "proxy_pid": current["pid"], "proxy_start_ticks": current["start_ticks"]}
+    except (OSError, ValueError, KeyError, IndexError):
+        return {"state": "TIMELINE_UNAVAILABLE"}
+
+
 def main():
     result = {"schema": "NOX_OWNER_CHAT_RECOVERY_INCIDENT_INSPECT_V1",
               "read_only": True, "writes": 0, "service_restarts": 0,
@@ -125,6 +185,8 @@ def main():
         result["processes"][name] = process(pid, ticks)
     for name in SERVICES:
         result["services"][name] = service(name)
+    result["current_services"] = {name: current_service_identity(name) for name in SERVICES}
+    result["source_startup_order"] = startup_order_evidence(result)
     try:
         import http.client
         connection = http.client.HTTPConnection("127.0.0.1", 8080, timeout=3)
