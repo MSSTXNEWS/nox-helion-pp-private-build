@@ -259,6 +259,14 @@ class ProbeTests(unittest.TestCase):
             with self.subTest(history=history):
                 self.assertFalse(probe.scoped_history_matches_turns(history, turns, did))
                 with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED
+                    probe.require_executor_witness(
+                        {'saved': True, 's03_integrated': True}, history, turns, True, True, did)
+        self.assertIsNone(probe.require_executor_witness(
+            {'saved': True, 's03_integrated': True}, good, turns, True, True, did))
+
+
+if __name__ == '__main__':
+    unittest.main()
 ):
                     probe.require_executor_witness(
                         {'saved': True, 's03_integrated': True}, history, turns, True, True, did)
