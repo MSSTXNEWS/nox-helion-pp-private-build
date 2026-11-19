@@ -135,5 +135,44 @@ class OwnerGpuInventoryOperatorTests(unittest.TestCase):
                                            "gpu_inventory", REQUEST, SHA)
 
 
+    def test_forward_rejects_instance_model_nearmatch_and_under_sum_memory(self):
+        bad_top_instance = receipt()
+        bad_top_instance["instance_id"] = 60509552
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GPU_INVENTORY_RECEIPT_SCHEMA"):
+            operator.forward_remote_stdout(marker_lines(bad_top_instance),
+                                           "gpu_inventory", REQUEST, SHA)
+
+        bad_nested_instance = receipt()
+        bad_nested_instance["inventory"]["instance_id"] = 60509552
+        bad_nested_instance["inventory_sha256"] = gpu.inventory_digest(
+            bad_nested_instance["inventory"]
+        )
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GPU_INVENTORY_RECEIPT_SCHEMA"):
+            operator.forward_remote_stdout(marker_lines(bad_nested_instance),
+                                           "gpu_inventory", REQUEST, SHA)
+
+        near_match_model = receipt()
+        near_match_model["inventory"]["snapshots"][0]["rows"][0]["model"] = (
+            "Tesla V100-SXM2-32GB (rev A)"
+        )
+        near_match_model["inventory_sha256"] = gpu.inventory_digest(
+            near_match_model["inventory"]
+        )
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GPU_INVENTORY_RECEIPT_SCHEMA"):
+            operator.forward_remote_stdout(marker_lines(near_match_model),
+                                           "gpu_inventory", REQUEST, SHA)
+
+        under_sum_memory = receipt()
+        under_sum_memory["inventory"]["snapshots"][0]["rows"][0][
+            "memory_free_mib"
+        ] = 16000
+        under_sum_memory["inventory_sha256"] = gpu.inventory_digest(
+            under_sum_memory["inventory"]
+        )
+        with self.assertRaisesRegex(RuntimeError, "HOLD_GPU_INVENTORY_RECEIPT_SCHEMA"):
+            operator.forward_remote_stdout(marker_lines(under_sum_memory),
+                                           "gpu_inventory", REQUEST, SHA)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
