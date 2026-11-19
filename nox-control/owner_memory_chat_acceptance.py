@@ -25,6 +25,36 @@ def emit(kind, data):
     print('NOX_MAINT_REPAIR=' + json.dumps({'kind': kind, 'data': data}, separators=(',', ':')), flush=True)
 
 
+def verify_browser_receipt():
+    """Require native stream and durable S03 proof, not just a zero exit code."""
+    request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
+    source = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
+    if not re.fullmatch(r'[0-9]{1,24}', request) or not re.fullmatch(r'[a-f0-9]{40}', source):
+        raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_CONTEXT')
+    path = Path('/root/nox') / 'state/owner_browser_qa' / request / 'receipt.json'
+    if any(item.is_symlink() for item in (path, *path.parents)):
+        raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_PATH')
+    try:
+        with path.open('rb') as stream:
+            raw = stream.read(262145)
+    except OSError:
+        raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_MISSING') from None
+    if len(raw) > 262144:
+        raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_SIZE')
+    try:
+        proof = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_FORMAT') from None
+    if (not isinstance(proof, dict) or proof.get('schema') != 'NOX_OWNER_NATIVE_BROWSER_QA_V1'
+            or proof.get('request') != request or proof.get('source_sha') != source
+            or proof.get('state') != 'PASSED'
+            or any(proof.get(key) is not True for key in (
+                'functional_acceptance_verified', 'actual_native_model_stream_verified',
+                's03_readback_verified', 'screenshot_capture_verified'))
+            or proof.get('synthetic_backend_used') is not False
+            or proof.get('private_text_or_credentials_exported') is not False):
+        raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_INCOMPLETE')
+
 def main():
     failed = []
     for name, expected in STAGES:
@@ -52,6 +82,10 @@ def main():
             conventional_main = name == 'owner_browser_qa_entry.py' and result is None
             if not conventional_main and (type(result) is not int or result != 0):
                 raise RuntimeError('HOLD_ACCEPTANCE_COMPONENT_RESULT')
+            # Browser entry returns None even after a subprocess exit. A real
+            # native/S03 acceptance receipt for this exact owner request is mandatory.
+            if name == 'owner_browser_qa_entry.py':
+                verify_browser_receipt()
             # A STOP raised while the final stage ran must not produce success.
             if any((Path('/root/nox') / flag).exists() for flag in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'state/STOP')):
                 raise RuntimeError('HOLD_OWNER_STOP')
