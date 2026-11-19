@@ -141,6 +141,38 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[1]['messages'][-2]['tool_calls'][0]['id'],'call_fixture')
         self.assertEqual(payload['_agent_final'],'323')
 
+    async def test_model_tool_parser_cannot_rewrite_name_or_typed_arguments(self):
+        # IDs alone are insufficient: a parser could change the action
+        # or even convert numeric 1 to boolean true with the same call ID.
+        variants=(
+            ('run_admin','{"value":1}'),
+            ('calculate','{"value":2}'),
+            ('calculate','{"value":true}'),
+        )
+        for name,args in variants:
+            with self.subTest(name=name,args=args):
+                chunks=Chunks([
+                    frame(calls=[{'index':0,'id':'call_integrity',
+                                  'type':'function','function':{
+                                      'name':'calculate',
+                                      'arguments':'{"value":1}'}}]),
+                    frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+                native=self.native()
+                native['parse_tool_calls']=lambda message,content:[
+                    {'id':'call_integrity','name':name,'arguments':args}]
+                payload={'messages':[{'role':'user','content':'Verify tool evidence'}]}
+                requests,factory=self.transport([chunks])
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Verify tool evidence',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(len(requests),1)
+                self.assertEqual(self.dispatched,[])
+                self.assertIn('HOLD_TOOL_CALL_ARGUMENT_FIDELITY',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertTrue(chunks.closed)
+
     async def test_full_unicode_tool_evidence_survives_model_followup(self):
         # A long result must remain exact in the next model request, not only
         # in a receipt; multi-turn S03 acceptance needs the complete evidence.

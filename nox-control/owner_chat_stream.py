@@ -401,6 +401,24 @@ async def _run(native,url,payload,user_text):
             by_id={call['id']:call for call in calls}
             if len(by_id)!=len(calls) or set(by_id)!={call['id'] for call in message['tool_calls']}:
                 raise StreamFailure('HOLD_TOOL_CALL_ID')
+            # A parser may normalize JSON syntax but must not change what
+            # the model actually requested while retaining its tool_call_id.
+            # Compare typed JSON values (bool != int) before native dispatch.
+            def canonical_args(value):
+                return json.dumps(value,ensure_ascii=False,sort_keys=True,
+                                  separators=(',',':'),allow_nan=False)
+            for row in message['tool_calls']:
+                original=row['function']
+                try:
+                    source_args=_strict_json(original['arguments'])
+                    if not isinstance(source_args,dict):
+                        raise ValueError('arguments')
+                    unchanged=(canonical_args(source_args)==
+                               canonical_args(by_id[row['id']]['arguments']))
+                except (ValueError,TypeError,KeyError):
+                    raise StreamFailure('HOLD_TOOL_ARGUMENTS') from None
+                if (by_id[row['id']]['name']!=original['name'] or not unchanged):
+                    raise StreamFailure('HOLD_TOOL_CALL_ARGUMENT_FIDELITY')
             calls=[by_id[row['id']] for row in message['tool_calls']]
             if native.get('_POOL'):
                 # Dedup may optimize execution only if it preserves every
