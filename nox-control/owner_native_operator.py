@@ -1573,7 +1573,16 @@ def main():
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
     finally:
         if MASTER:
-            with contextlib.suppress(Exception):subprocess.run(MASTER,capture_output=True,timeout=8)
+            try:
+                master_exit=subprocess.run(MASTER,capture_output=True,timeout=8)
+                if master_exit.returncode==0:
+                    print('TEMP_SSH_CONTROL_SOCKET=EXIT_ACCEPTED',flush=True)
+                else:
+                    print('TEMP_SSH_CONTROL_SOCKET=HOLD_EXIT_FAILED',flush=True);good=False
+            except Exception:
+                print('TEMP_SSH_CONTROL_SOCKET=HOLD_EXIT_ERROR',flush=True);good=False
+        else:
+            print('TEMP_SSH_CONTROL_SOCKET=NOT_OPENED',flush=True)
         sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
         from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
         try:
