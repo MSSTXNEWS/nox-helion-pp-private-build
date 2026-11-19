@@ -78,6 +78,16 @@ def public_numeric_answer(value):
     return re.sub(r'\s+','',value)
 
 
+def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer):
+    """Require four exact ordered messages from one already-scoped dialog."""
+    if not isinstance(rows, list) or len(rows) != 4 or not all(isinstance(row, dict) for row in rows):
+        return False
+    expected = (('user', first_prompt), ('assistant', first_answer),
+                ('user', second_prompt), ('assistant', second_answer))
+    return all(row.get('role') == role and row.get('content') == content
+               for row, (role, content) in zip(rows, expected))
+
+
 def progressive_stream_valid(value):
     """Require growing visible prefixes while the real native stream is open."""
     if not isinstance(value, dict):
@@ -252,7 +262,7 @@ OBSERVER_JS = r"""
    const mount=document.getElementById('messages');if(!mount)return;
    const form=document.getElementById('chatForm'),stop=form?.querySelector('[data-action=stop]');
    if(form&&stop){sampleStop=()=>{
-     if(q.nativeCalls!==1||stop.disabled||q.stopSamples>=100)return;
+     if((q.nativeCalls!==1&&q.nativeCalls!==2)||stop.disabled||q.stopSamples>=100)return;
      const b=stop.getBoundingClientRect(),x=b.x+b.width/2,y=b.y+b.height/2;
      const visible=b.width>0&&b.height>0&&b.top>=0&&b.bottom<=innerHeight&&b.left>=0&&b.right<=innerWidth;
      const hit=visible?document.elementFromPoint(x,y):null;
@@ -261,7 +271,7 @@ OBSERVER_JS = r"""
    };new MutationObserver(sampleStop).observe(form,{subtree:true,attributes:true,attributeFilter:['disabled','style','class']});}
    sampleUi=()=>{
      q.uiVisible=visibleBody(q.uiBody,mount);
-     if(q.started===null||q.nativeCalls!==1||!q.answer||!q.uiVisible)return;
+     if(q.started===null||(q.nativeCalls!==1&&q.nativeCalls!==2)||!q.answer||!q.uiVisible)return;
      // V24 appends each real token as a separate span.tok. Measure the
      // cumulative rendered body, never one text node or an earlier answer.
      const text=q.uiBody.innerText;
@@ -320,9 +330,18 @@ OBSERVER_JS = r"""
    let url;try{url=new URL(input instanceof Request?input.url:String(input),location.href);}catch{}
    const own=url&&url.origin===location.origin&&url.pathname==='/api/nox/chat/stream';
    if(own){
-     q.nativeCalls++;q.started=performance.now();
+     q.nativeCalls++;
+     if(q.nativeCalls===2){
+       // Independent second POST measurement without clearing cumulative calls.
+       q.nativeFirst=null;q.nativeDone=null;q.nativeDeltas=0;q.nativeBytes=0;
+       q.answer='';q.done=null;q.error=null;q.uiFirst=null;q.uiBeforeDone=false;
+       q.uiLengths=[];q.uiPrefixLengthsBeforeDone=[];q.uiBody=null;
+       q.uiVisible=false;q.uiMaxTokenSpans=0;q.stopSamples=0;
+       q.stopVisibleSamples=0;q.stopOccludedSamples=0;
+     }
+     q.started=performance.now();
      const pending=document.querySelectorAll('#messages .v24-msg.nox.streaming .body');
-     q.uiBody=q.nativeCalls===1&&pending.length===1?pending[0]:null;
+     q.uiBody=q.nativeCalls<=2&&pending.length===1?pending[0]:null;
      requestAnimationFrame(sampleStop);
    }
    const response=await fetch0(input,init);
@@ -480,7 +499,7 @@ async def check_report_layout(page,report):
         raise RuntimeError('HOLD_QA_REPORTS_SCROLL')
 
 
-async def click_send(page, report):
+async def click_send(page, report, expected_before=0):
     """Physical send, with the same fresh hit gate as the dialog selection."""
     target=page.locator('#chatForm [type=submit]')
     detail={'before':await target.evaluate(CONTROL_JS)}
@@ -491,14 +510,14 @@ async def click_send(page, report):
         detail['click_wait']=click_error_projection(exc)
         snapshot=await page.evaluate(SNAPSHOT_JS)
         calls=snapshot.get('native_calls') if isinstance(snapshot,dict) else None
-        if calls==1:
+        if calls==expected_before+1:
             # A timed-out post-click wait may follow an already delivered click.
             # Observe that real request; never submit a duplicate generation.
             detail['native_request_already_started']=True
             return
         control=await target.evaluate(CONTROL_JS)
         detail['after_wait']=control
-        if calls!=0 or not await target.is_enabled() or not control['in_view'] or not control['pointer_hit_own_button']:
+        if calls!=expected_before or not await target.is_enabled() or not control['in_view'] or not control['pointer_hit_own_button']:
             raise RuntimeError('HOLD_QA_SEND_POINTER_OR_STATE') from None
         await page.mouse.click(control['x'],control['y'])
         detail['physical_pointer_click']=True
@@ -563,6 +582,9 @@ async def browser_run(report, directory, available):
     token=secrets.token_hex(6).translate(str.maketrans('0123456789','ghijklmnop'))
     title='NOX Browser QA '+token
     prompt='[NOX UI QA '+token+'] Напиши числа от одного до десяти через запятую. Без пояснений и без других слов.'
+    second_prompt=('[NOX UI QA '+token+'] Используя предыдущий ответ, перечисли '
+                   'те же числа в обратном порядке через запятую. Без пояснений.')
+    second_permitted=False
     report.update(nonloopback_auth=True,resources=budget(),synthetic_prompt_sha256=digest(prompt.encode()))
     network=[];console=collections.Counter();page_errors=[];blocked=collections.Counter();did=None
     sys.path.insert(0,str(ROOT/'scripts'))
@@ -624,7 +646,9 @@ async def browser_run(report, directory, available):
                 if url.path=='/api/nox/chat/stream':
                     try:
                         body=request.post_data_json
-                        own=isinstance(body,dict) and body.get('message')==prompt and body.get('dialog_id')==did
+                        own=(request.method=='POST' and isinstance(body,dict)
+                             and body.get('message')==(second_prompt if second_permitted else prompt)
+                             and body.get('dialog_id')==did)
                     except Exception:
                         own=False
                     if not own:
@@ -781,6 +805,65 @@ async def browser_run(report, directory, available):
                 raise RuntimeError('HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED')
             if public!=EXPECTED:
                 raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')
+            if report.get('two_turn_mode') is True:
+                # The owner-scoped second request is allowed only after a full
+                # first-turn browser/S03 proof. Never replay an ambiguous POST.
+                report['browser_stage']='QA_SECOND_TURN_PREP'
+                second_permitted=True
+                if stop_present():
+                    raise RuntimeError('HOLD_OWNER_STOP')
+                idle_slots()
+                await page.locator('#prompt').fill(second_prompt)
+                await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+                report['browser_stage']='QA_SECOND_TURN_SEND'
+                second_started=time.monotonic()
+                await click_send(page,report,expected_before=1)
+                report['browser_stage']='QA_SECOND_TURN_VISIBLE_STREAM'
+                second_final=None
+                while time.monotonic()-second_started<85:
+                    if stop_present():
+                        raise RuntimeError('HOLD_OWNER_STOP')
+                    second_final=await page.evaluate(SNAPSHOT_JS)
+                    if second_final and second_final.get('error'):
+                        raise RuntimeError(second_final['error'])
+                    if (second_final and second_final.get('native_calls')==2
+                            and second_final.get('done') and second_final.get('dom_answer_matches_native')):
+                        break
+                    await page.wait_for_timeout(120)
+                if (not second_final or second_final.get('native_calls')!=2
+                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')):
+                    raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')
+                await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
+                second_history=await json_response(await context.request.get(
+                    base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',
+                    max_redirects=0,timeout=6000))
+                second_rows=second_history.get('messages')
+                second_answer=(second_rows[3].get('content') if isinstance(second_rows,list)
+                               and len(second_rows)==4 and isinstance(second_rows[3],dict) else '')
+                second_native_equal=await page.evaluate(
+                    '(value)=>window.__NOX_BROWSER_QA.answer===value',second_answer)
+                second_saved=multiturn_history_valid(
+                    second_rows,prompt,answer,second_prompt,second_answer)
+                second_public=public_numeric_answer(second_answer)
+                second_progressive=progressive_stream_valid(second_final)
+                second_done=all(second_final['done'].values())
+                second_stop=bool(second_final.get('stop_samples',0)>0
+                    and second_final.get('stop_samples')==second_final.get('stop_visible_samples')
+                    and second_final.get('stop_occluded_samples')==0)
+                report.update(multiturn_same_dialog_s03_verified=second_saved,
+                              multiturn_second_native_equal=second_native_equal,
+                              multiturn_second_terminal_saved=second_done,
+                              multiturn_second_visible_progressive=second_progressive,
+                              multiturn_second_stop_visible=second_stop,
+                              multiturn_second_answer_sha256=digest(second_answer.encode()),
+                              multiturn_second_numeric_pass=second_public=='10,9,8,7,6,5,4,3,2,1',
+                              multiturn_native_post_count=second_final['native_calls'],
+                              multiturn_second_elapsed_ms=round((time.monotonic()-second_started)*1000))
+                if not (second_saved and second_native_equal and second_done
+                        and second_progressive and second_stop
+                        and second_public=='10,9,8,7,6,5,4,3,2,1'):
+                    raise RuntimeError('HOLD_MULTITURN_BROWSER_OR_S03')
+                report['multiturn_browser_acceptance_verified']=True
         finally:
             report['network']=network
             report['console_counts']=dict(console)
@@ -838,11 +921,12 @@ def main():
             'started_at':time.time(),'state':'RUNNING','artifacts':[],
             'actual_native_backend':False,'actual_native_model_stream_verified':False,'synthetic_backend_used':False,
             'functional_acceptance_verified':False,'screenshot_capture_verified':False,
+            'two_turn_mode':os.environ.get('NOX_BROWSER_QA_MODE')=='multiturn',
             'screenshots_exported':False,'private_text_or_credentials_exported':False,
             'rendering_mode':'CPU_SWIFTSHADER_FUNCTIONAL_QA_NOT_CLIENT_GPU_BENCHMARK',
             'training_or_service_configuration_changed':False,'diagnostics_content':'COUNTS_PATHS_AND_PUBLIC_SYNTHETIC_NUMBERS_ONLY'}
     try:
-        asyncio.run(asyncio.wait_for(browser_run(report,directory,available),timeout=140))
+        asyncio.run(asyncio.wait_for(browser_run(report,directory,available),timeout=230 if report['two_turn_mode'] else 140))
         report['state']='PASSED'
     except BaseException as exc:
         report['state']='HOLD'
