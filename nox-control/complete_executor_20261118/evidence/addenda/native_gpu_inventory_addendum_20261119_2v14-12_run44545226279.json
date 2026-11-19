@@ -1,0 +1,231 @@
+{
+  "schema": "NOX_NATIVE_EVIDENCE_ADDENDUM_V1",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "purpose": "Append the later owner-authenticated GPU inventory for original task 2V14-12. The prior failed refresh is preserved as superseded by this later successful observation. This file does not modify the frozen all295 manifest or work receipts.",
+  "scope": {
+    "task_ids": [
+      "2V14-12"
+    ],
+    "task_registry": {
+      "path": "nox-control/four_queue_20261118/work_tasks.json",
+      "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f"
+    },
+    "immutable_295_manifest": {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+      "task_record_key": "2V14-12",
+      "spec_sha256": "b3f3a9e9120c7d777f594f93a2ed93402e91ce2989c312cf8ce6f2c079c4d2ed",
+      "recorded_status": "HISTORICAL_VERIFIED",
+      "native_binding_before_addendum": "UNBOUND_PENDING_NATIVE_CATALOG",
+      "original_acceptance_added": false
+    },
+    "receipts": {
+      "path": "nox-control/four_queue_20261118/work_receipts.json",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+      "entries": {
+        "2V14-12": {
+          "state": "verified",
+          "scope": "native",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/43928948952/job/133677694991",
+          "updated_at": "2026-11-16T23:02:39.457454+00:00",
+          "original_entry_preserved": true
+        }
+      }
+    },
+    "criteria": {
+      "2V14-12": {
+        "title": "Проверить доступность обеих NVIDIA V100.",
+        "required_evidence": "native",
+        "spec_sha256": "b3f3a9e9120c7d777f594f93a2ed93402e91ce2989c312cf8ce6f2c079c4d2ed",
+        "prior_addendum": {
+          "path": "nox-control/complete_executor_20261118/evidence/addenda/native_snapshot_addendum_20261119_2v14-12_6v14-02.json",
+          "merged_commit_sha": "89ae4dd7d870758bcdd74942a6581d5631371efd",
+          "prior_run_id": 44460035858,
+          "prior_job_id": 135344296278,
+          "prior_assessment": "CRITERION_CONFIRMED_FOR_READ_ONLY_AVAILABILITY_CHECK"
+        },
+        "superseded_failed_refresh": {
+          "run_id": 44543459689,
+          "job_id": 135627628362,
+          "owner_comment_id": 7011907304,
+          "pinned_source_sha": "8eb8de72a3355d3d6c954af60fbeb8f31c58d459",
+          "conclusion": "failure",
+          "result": "HOLD_GPU_INVENTORY_MEMORY",
+          "accepted_inventory": false,
+          "disposition": "Superseded for point-in-time availability by the later successful run bound below."
+        },
+        "native_binding_before_addendum": "UNBOUND_PENDING_NATIVE_CATALOG",
+        "addendum_assessment": "ACCEPTED",
+        "acceptance_binding": {
+          "evidence_pointer": "#/additional_evidence_records/0",
+          "workflow_run_id": 44545226279,
+          "job_id": 135633879980,
+          "owner_comment_id": 7012187265,
+          "request_id": 7012187265,
+          "pinned_source_sha": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",
+          "captured_at_utc": "2026-11-19T14:35:23.5321795Z",
+          "criterion_satisfied": "Owner-authorized read-only inventory completed successfully and observed two stable Tesla V100-SXM2-32GB devices, each with a distinct UUID and positive nvidia-smi free memory in both snapshots.",
+          "scope_limit": "Acceptance applies only to point-in-time device availability/visibility at the two recorded snapshots. It does not establish capacity or admission for a particular training, inference, or installation workload."
+        }
+      }
+    },
+    "mutation_boundary": "This addendum is append-only. It does not modify work_tasks.json, all295_execution_disposition.json, or work_receipts.json. original_acceptance_added=false and acceptance_increment=0; the frozen 295-task baseline is unchanged."
+  },
+  "evidence": {
+    "kind": "owner_authenticated_native_read_only_gpu_inventory",
+    "workflow_run_id": 44545226279,
+    "job_id": 135633879980,
+    "run_attempt": 1,
+    "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44545226279",
+    "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44545226279/job/135633879980",
+    "workflow_name": "NOX owner-authenticated native inspect, audit, source attestation, and GPU inventory",
+    "workflow_event": "issue_comment",
+    "workflow_run_conclusion": "success",
+    "workflow_created_at": "2026-11-19T14:34:32Z",
+    "workflow_head_sha": "9b52736047f46bc1873f1b3f9dbf3822d9e0753b",
+    "owner_authorization": "AUTHORIZED",
+    "owner_authorization_comment_id": 7012187265,
+    "source_auth": "PASS",
+    "pinned_source_sha": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",
+    "authenticated_instance_id": 60509551,
+    "inventory_complete": true,
+    "inventory_logged_at_utc": "2026-11-19T14:35:23.5321795Z",
+    "inventory_sha256": "c0612ec31065fe26ba787c9ea690bac2e4b9d76d4baeefd73dcaf89581f9f46e",
+    "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED",
+    "inventory": {
+      "schema": "NOX_GPU_INVENTORY_V1",
+      "action": "gpu_inventory",
+      "instance_id": 60509551,
+      "boot_id": "9c0ecc02-85c1-452b-b8ae-521e9a11fd03",
+      "identity_stable": true,
+      "memory_semantics": "nvidia-smi MiB; 0<=total-used-free<=1024 reserved",
+      "uptime_scope": "two monotonic host snapshots; point-in-time only",
+      "snapshots": [
+        {
+          "monotonic_started_ns": 1891651688594832,
+          "monotonic_finished_ns": 1891651718626262,
+          "nvidia_smi_rc": 0,
+          "rows": [
+            {
+              "index": 0,
+              "model": "Tesla V100-SXM2-32GB",
+              "uuid": "GPU-58f4970e-117b-ea29-9c68-b65c5ca88fd0",
+              "memory_total_mib": 32768,
+              "memory_used_mib": 16462,
+              "memory_free_mib": 16033,
+              "memory_residual_mib_derived": 273
+            },
+            {
+              "index": 1,
+              "model": "Tesla V100-SXM2-32GB",
+              "uuid": "GPU-db9e6c65-6c6a-83c2-8304-e8605c5188bc",
+              "memory_total_mib": 32768,
+              "memory_used_mib": 27738,
+              "memory_free_mib": 4757,
+              "memory_residual_mib_derived": 273
+            }
+          ]
+        },
+        {
+          "monotonic_started_ns": 1891652220397006,
+          "monotonic_finished_ns": 1891652250903701,
+          "nvidia_smi_rc": 0,
+          "rows": [
+            {
+              "index": 0,
+              "model": "Tesla V100-SXM2-32GB",
+              "uuid": "GPU-58f4970e-117b-ea29-9c68-b65c5ca88fd0",
+              "memory_total_mib": 32768,
+              "memory_used_mib": 16462,
+              "memory_free_mib": 16033,
+              "memory_residual_mib_derived": 273
+            },
+            {
+              "index": 1,
+              "model": "Tesla V100-SXM2-32GB",
+              "uuid": "GPU-db9e6c65-6c6a-83c2-8304-e8605c5188bc",
+              "memory_total_mib": 32768,
+              "memory_used_mib": 27738,
+              "memory_free_mib": 4757,
+              "memory_residual_mib_derived": 273
+            }
+          ]
+        }
+      ],
+      "computed_checks": {
+        "distinct_uuid_count": 2,
+        "stable_uuids_across_snapshots": true,
+        "all_nvidia_smi_calls_successful": true,
+        "positive_free_memory_both_devices": true,
+        "residual_within_reserved_bound": true
+      }
+    },
+    "prior_attempts": [
+      {
+        "workflow_run_id": 44543459689,
+        "job_id": 135627628362,
+        "owner_comment_id": 7011907304,
+        "pinned_source_sha": "8eb8de72a3355d3d6c954af60fbeb8f31c58d459",
+        "conclusion": "failure",
+        "result": "HOLD_GPU_INVENTORY_MEMORY",
+        "accepted_inventory": false,
+        "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED",
+        "superseded_by_workflow_run_id": 44545226279
+      }
+    ],
+    "request_id": 7012187265
+  },
+  "acceptance_review": {
+    "2V14-12": {
+      "result": "CRITERION_CONFIRMED_FOR_READ_ONLY_AVAILABILITY_CHECK",
+      "basis": "The original criterion asks to check availability of both NVIDIA V100. The later owner-authorized inventory completed with source authentication and two successful monotonic nvidia-smi snapshots. Both snapshots show the same two Tesla V100-SXM2-32GB identities with distinct UUIDs and nonzero free VRAM.",
+      "caveats": [
+        "This is a point-in-time availability and visibility result, not current continuous state.",
+        "The inventory reports free VRAM of 16,033 MiB and 4,757 MiB at the recorded snapshots; this is not a workload capacity or admission guarantee.",
+        "The preceding refresh #44543459689 failed with HOLD_GPU_INVENTORY_MEMORY and is recorded as superseded by this later successful observation.",
+        "The runner emits inventory_complete=true but no accepted field; this addendum records the criterion review without changing the frozen original receipt or 295-task manifest."
+      ]
+    }
+  },
+  "additional_evidence_records": [
+    {
+      "record_number": 6,
+      "task_id": "2V14-12",
+      "title": "Проверить доступность обеих NVIDIA V100.",
+      "result": "ACCEPTED",
+      "evidence_classification": "OWNER_AUTHENTICATED_NATIVE_READ_ONLY_GPU_INVENTORY",
+      "workflow": {
+        "run_id": 44545226279,
+        "job_id": 135633879980,
+        "conclusion": "success",
+        "head_sha": "9b52736047f46bc1873f1b3f9dbf3822d9e0753b",
+        "pinned_source_sha": "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e",
+        "owner_authorization_comment_id": 7012187265,
+        "request_id": 7012187265,
+        "authenticated_instance_id": 60509551,
+        "source_auth": "PASS",
+        "inventory_complete": true,
+        "inventory_sha256": "c0612ec31065fe26ba787c9ea690bac2e4b9d76d4baeefd73dcaf89581f9f46e",
+        "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED",
+        "superseded_failed_refresh_run_id": 44543459689
+      },
+      "criterion": {
+        "registry_path": "nox-control/four_queue_20261118/work_tasks.json",
+        "registry_git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+        "exact_title": "Проверить доступность обеих NVIDIA V100.",
+        "evidence_required": "native",
+        "spec_sha256": "b3f3a9e9120c7d777f594f93a2ed93402e91ce2989c312cf8ce6f2c079c4d2ed",
+        "acceptance_scope": "Point-in-time read-only visibility of both requested V100 devices with stable distinct identities and nonzero free VRAM."
+      },
+      "evidence_pointer": "#/evidence/inventory"
+    }
+  ],
+  "source_limits": [
+    "This sidecar is append-only evidence and does not mutate the frozen 295-task manifest or work_receipts.json.",
+    "ACCEPTED applies only to the original point-in-time availability criterion at the two recorded snapshots; later device state can differ.",
+    "No workload capacity, training, inference, model-install admission, or stable reservation is asserted.",
+    "The preceding owner refresh #44543459689 is a failed HOLD observation with no accepted inventory; the later #44545226279 success supersedes it for this bounded availability criterion.",
+    "The frozen 2V14-12 entry remains original_acceptance_added=false and UNBOUND_PENDING_NATIVE_CATALOG until a separate ledger/catalog revision is created."
+  ]
+}
