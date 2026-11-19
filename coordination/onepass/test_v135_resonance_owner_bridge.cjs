@@ -203,6 +203,38 @@ test('V135 SSE cancel signals same-session STOP before aborting the same native 
   assert.equal(f.uiEvents.some(e=>e.type==='nox:native-phase'&&e.detail.phase==='stopped'),false,
     'browser cancellation is not proof that model/GPU stopped');
 });
+test('V135 upstream transport failure requests scoped STOP before closing the failed stream',async()=>{
+  let stopSawLiveModel=false;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,calls=>{
+      const model=calls.find(c=>c.path==='/api/nox/chat/stream');
+      stopSawLiveModel=Boolean(model&&!model.signal.aborted);
+    },(calls,opts)=>{
+      const bytes=new TextEncoder();
+      const body=new ReadableStream({start(control){
+        control.enqueue(bytes.encode(JSON.stringify({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'})+'\\n'));
+        control.enqueue(bytes.encode(JSON.stringify({type:'start',model:'NOX HELION'})+'\\n'));
+        control.enqueue(bytes.encode(JSON.stringify({type:'delta',text:'partial'})+'\\n'));
+        control.error(new TypeError('upstream connection lost'));
+      }});
+      return new Response(body,{headers:{'content-type':'application/x-ndjson'}});
+    });
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'network-drop-01'})});
+  const frames=await events(response);
+  const model=f.calls.find(c=>c.path==='/api/nox/chat/stream');
+  const stops=f.calls.filter(c=>c.path==='/api/nox/stop');
+  assert(model,'native stream must have started');
+  assert.equal(stops.length,1,'a failed live stream must send one scoped STOP');
+  assert(stopSawLiveModel,'STOP must reach the active session before aborting its stream');
+  assert.equal(model.signal.aborted,true,'the failed upstream fetch must be aborted after STOP');
+  assert.equal(frames.filter(e=>e.type==='done').length,0,'a dropped stream cannot be accepted');
+  assert(frames.some(e=>e.type==='error'),'the caller must receive a terminal error');
+  assert(!f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')),
+    'a failed stream cannot certify S03 history');
+  assert.equal(JSON.parse(stops[0].body).gpu_stop_verified,true,false);
+});
+
 test('V135 already-aborted caller never starts a native inference',async()=>{
   const f=fake(),abort=new AbortController();
   abort.abort();
