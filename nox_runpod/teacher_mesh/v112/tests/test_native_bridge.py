@@ -1,4 +1,5 @@
 """V112 regression against fixture SQLite and synthetic SSE. Never a live NOX receipt."""
+import asyncio
 import hashlib
 import json
 import sqlite3
@@ -14,8 +15,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.testclient import TestClient
 
 from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-    OwnerChatRequestLease, _sse_delta, _timestamp, ensure_dialog_schema,
-    register_native_v29_chat,
+    OwnerChatRequestLease, _sse_delta, _timestamp, _watch_chat_request_lease,
+    ensure_dialog_schema, register_native_v29_chat,
 )
 
 class V112Tests(unittest.TestCase):
@@ -923,6 +924,24 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(retry.status_code,409,retry.text)
         self.assertEqual(retry.json()['error'],'HOLD_DUPLICATE_REQUEST_ID')
         self.assertEqual(len(self.calls),count)
+
+    def test_cross_worker_stop_wakes_stream_lease_watcher(self):
+        owner_worker=OwnerChatRequestLease()
+        stop_worker=OwnerChatRequestLease()
+        session='e'*64
+        lease=owner_worker.acquire('c'*32,session,None)['lease']
+        cancel=asyncio.Event()
+        async def scenario():
+            watcher=asyncio.create_task(
+                _watch_chat_request_lease(lease,cancel,owner_worker))
+            await asyncio.sleep(0.05)
+            self.assertIsNotNone(await asyncio.to_thread(stop_worker.stop_session,session))
+            await asyncio.wait_for(cancel.wait(),timeout=2.0)
+            watcher.cancel()
+            await asyncio.gather(watcher,return_exceptions=True)
+        asyncio.run(scenario())
+        self.assertTrue(cancel.is_set())
+        self.assertFalse(owner_worker.is_current(lease))
 
     def test_stop_endpoint_invalidates_a_lease_created_by_another_worker(self):
         cookies=sorted(self.cookie.items())
