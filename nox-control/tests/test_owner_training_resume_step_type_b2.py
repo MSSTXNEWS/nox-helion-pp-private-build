@@ -280,6 +280,56 @@ class CheckpointStepProvenance(unittest.TestCase):
                         with self.assertRaisesRegex(RuntimeError, "HOLD_CGROUP_CPU_QUOTA"):
                             verifier(helper)
 
+    def test_resource_admission_cgroup_memory_max_fails_closed(self):
+        # Linux cgroup v2 reports no memory ceiling as "max". Neither
+        # unbounded nor corrupt usage may be admitted as measured RAM.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            verify = load_pinned_verifier(root)["resource_admission"]
+            maximum = 194065203200
+            sources = {
+                "/sys/fs/cgroup/cpu.max": "400000 100000",
+                "/sys/fs/cgroup/memory.max": str(maximum),
+                "/sys/fs/cgroup/memory.current": "188662734848",
+                str(root / "train_cpu_max.env"): "TRAIN_CPU_MAX=64GiB\n",
+            }
+            admitted_budgets = []
+
+            def fake_read_text(path, *args, **kwargs):
+                return sources[str(path)]
+
+            def budget(limit, current, quota, affinity):
+                admitted_budgets.append((limit, current, quota, affinity))
+                return {"train_cpu_gib": 64}
+
+            helper = types.SimpleNamespace(
+                service_state=lambda: {"state": "STOPPED"},
+                gpu=lambda: {"gpus": [{"index": 1, "free_mib": 30000}]},
+                resource_budget=budget,
+                health=lambda: {"8080": 200},
+            )
+            with (mock.patch.object(Path, "read_text", autospec=True,
+                                    side_effect=fake_read_text),
+                  mock.patch("os.sched_getaffinity", return_value={0, 1, 2, 3})):
+                self.assertEqual(verify(helper)["budget"]["configured_train_cpu_gib"], 64)
+                self.assertEqual(admitted_budgets, [
+                    (maximum, 188662734848, 4, 4)])
+                for memory_max in ("max", "0", "-1", "broken", ""):
+                    with self.subTest(memory_max=memory_max):
+                        sources["/sys/fs/cgroup/memory.max"] = memory_max
+                        with self.assertRaisesRegex(RuntimeError, "HOLD_CGROUP_MEMORY_LIMIT"):
+                            verify(helper)
+                sources["/sys/fs/cgroup/memory.max"] = str(maximum)
+                for memory_current in ("max", "broken", str(maximum + 1)):
+                    with self.subTest(memory_current=memory_current):
+                        sources["/sys/fs/cgroup/memory.current"] = memory_current
+                        with self.assertRaisesRegex(RuntimeError, "HOLD_CGROUP_MEMORY_LIMIT"):
+                            verify(helper)
+                # No invalid cgroup snapshot reaches the native resource
+                # budget calculator; proxy/model/weights are untouched.
+                self.assertEqual(len(admitted_budgets), 1)
+
+
     def test_checkpoint_hash_rejects_regular_file_growth_during_read(self):
         # The old EOF-loop silently hashed appended bytes, making an unstable
         # checkpoint appear to be a valid signed snapshot.
