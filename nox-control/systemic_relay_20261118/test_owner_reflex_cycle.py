@@ -94,6 +94,28 @@ class NativeReflexTests(unittest.TestCase):
                 self.assertFalse(result['auto_reclaim'])
                 self.assertNotIn('native_bounded_cpu_eligible', result)
 
+    def test_raw_chat_buffer_below_512mib_never_reports_cache_healthy(self):
+        mib = 1024 ** 2
+        budget = {'current_bytes': 194*1024**3 - 16*mib,
+                  'max_bytes': 194*1024**3,
+                  'file_bytes': 188*1024**3,
+                  'inactive_file_bytes': 105*1024**3,
+                  'shmem_bytes': 75*1024**3,
+                  'memory_psi_some_avg10': 0,
+                  'memory_psi_full_avg10': 0}
+        decision = {'projected_memory_ratio': .462, 'eligible': True}
+        result = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+        self.assertEqual(result['state'], 'RAW_CGROUP_CHAT_BUFFER_HOLD')
+        self.assertFalse(result['native_bounded_cpu_eligible'])
+        self.assertEqual(result['next_action'], 'RESPECT_EXISTING_RESOURCE_HOLD')
+        self.assertFalse(result['auto_reclaim'])
+        budget['current_bytes'] = budget['max_bytes'] - 512*mib
+        boundary = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+        self.assertEqual(boundary['state'], 'CACHE_HEALTHY')
+        self.assertTrue(boundary['native_bounded_cpu_eligible'])
+
     def test_exhaustion_is_not_fake_job_or_approval(self):
         result = tick()
         self.assertEqual(result['state'], 'REFILL_REQUIRED')

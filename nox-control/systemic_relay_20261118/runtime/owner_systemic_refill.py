@@ -332,9 +332,15 @@ def memory_governor_projection(capacity):
                 'state': 'RESOURCE_METADATA_HOLD',
                 'auto_reclaim': False}
     raw_ratio = budget['current_bytes'] / budget['max_bytes']
+    raw_headroom = budget['max_bytes'] - budget['current_bytes']
+    # A reclaim-aware estimate can look healthy with almost no free cgroup RAM.
+    # Observation only: actual work still requires the existing owner admission.
+    chat_buffer_available = raw_headroom >= 512 * 1024 ** 2
     psi_some = budget['memory_psi_some_avg10']
     psi_full = budget['memory_psi_full_avg10']
-    if psi_full >= 2 or psi_some >= 10 or decision['projected_memory_ratio'] >= .94:
+    if not chat_buffer_available:
+        condition = 'RAW_CGROUP_CHAT_BUFFER_HOLD'
+    elif psi_full >= 2 or psi_some >= 10 or decision['projected_memory_ratio'] >= .94:
         condition = 'PRESSURE_CRITICAL'
     elif psi_full >= .2 or psi_some >= 2 or decision['projected_memory_ratio'] >= .85:
         condition = 'PRESSURE_ELEVATED'
@@ -347,8 +353,10 @@ def memory_governor_projection(capacity):
             'memory_psi_some_avg10': psi_some, 'memory_psi_full_avg10': psi_full,
             'inactive_file_bytes': budget['inactive_file_bytes'],
             'shmem_protected_bytes': budget['shmem_bytes'],
-            'native_bounded_cpu_eligible': decision.get('eligible') is True,
-            'next_action': ('REUSE_EXISTING_OWNER_ADMISSION' if decision.get('eligible') is True
+            'native_bounded_cpu_eligible': decision.get('eligible') is True
+                                           and chat_buffer_available,
+            'next_action': ('REUSE_EXISTING_OWNER_ADMISSION'
+                            if decision.get('eligible') is True and chat_buffer_available
                             else 'RESPECT_EXISTING_RESOURCE_HOLD'),
             'safe_disk_cleanup': 'OWNER_SHA_PINNED_AUDIT_AND_EXACT_EPHEMERAL_RECLAIM',
             'auto_reclaim': False, 'global_cache_eviction': False,
