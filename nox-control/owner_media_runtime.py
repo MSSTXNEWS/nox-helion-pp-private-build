@@ -8,6 +8,7 @@ kill processes. GPU1 shares the hybrid trainer's actual flock lease.
 from __future__ import annotations
 import asyncio
 from contextlib import contextmanager
+from owner_media_idempotency import create_or_resume, repair_queued_inbox, IdempotencyHold
 import fcntl
 import hashlib
 import json
@@ -103,7 +104,11 @@ def update_job(job, **fields):
     fd = os.open(lockpath, os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        current = read_json(job_path(job['id'])) or job
+        # Never reconstruct a missing/corrupt durable job from stale worker RAM.
+        # The prior `or job` fallback silently replaced S03 evidence on errors.
+        current = read_json(job_path(job['id']))
+        if not isinstance(current, dict) or current.get('id') != job['id']:
+            raise MediaHold('HOLD_MEDIA_JOB_STATE_UNREADABLE')
         current.update(fields, updated_at=now())
         if job.get('cancel_requested'):
             current['cancel_requested'] = True
@@ -154,14 +159,22 @@ def media_stop():
 
 
 @contextmanager
-def exclusive(path):
+def exclusive(path, *, wait_seconds=0):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise MediaHold('WAIT_RESOURCE_LEASE') from None
+        # The default is unchanged: nonblocking for other exclusive leases.
+        # Media jobs alone may wait briefly for another request's short commit.
+        deadline = time.monotonic() + wait_seconds
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise MediaHold('WAIT_RESOURCE_LEASE') from None
+                time.sleep(min(0.02, remaining))
         yield fd
     finally:
         os.close(fd)
@@ -671,7 +684,7 @@ def public_job(job):
 
 def capabilities():
     result = {'schema': 'NOX_OWNER_MEDIA_V1', 'image': False, 'video': False, 'generation_verified': {},
-              'queue_limit': 3, 'concurrent_gpu_jobs': 1, 'backend': 'EXISTING_NOX_DISPATCHER_COMFYUI'}
+              'queue_limit': 3, 'concurrent_gpu_jobs': 1, 'idempotency_v1': True, 'backend': 'EXISTING_NOX_DISPATCHER_COMFYUI'}
     try:
         config = configuration()
         engine_identity(config)
@@ -690,35 +703,123 @@ def capabilities():
     return result
 
 
-def create_job(data, owner='native-owner'):
+
+@contextmanager
+def _media_jobs_lock():
+    # Reuse the only existing inter-process media.jobs lock, never a second ledger.
+    with _LOCK, exclusive(ROOT / 'state/media/jobs.lock', wait_seconds=0.25):
+        yield
+
+
+def _new_media_record(request, owner):
+    # Invoked only inside _media_jobs_lock by keyed or legacy create.
+    # Commit-time STOP fence: a service can enter STOP after remote preflight.
+    # Recovery/replay of an already-durable keyed job remains read-only and allowed.
+    if media_stop():
+        raise MediaHold('HOLD_MEDIA_STOP')
+    jobs = [read_json(path) for path in (ROOT / 'state/media/jobs').glob('*.json')]
+    if any(not isinstance(value, dict) for value in jobs):
+        raise MediaHold('HOLD_MEDIA_JOB_INDEX_UNREADABLE')
+    if sum(value.get('state') in ACTIVE for value in jobs) >= 3:
+        raise MediaHold('WAIT_MEDIA_QUEUE_FULL')
+    if len(jobs) >= 200:
+        raise MediaHold('HOLD_MEDIA_JOB_HISTORY_QUOTA')
+    total = sum(item.get('bytes', 0) for value in jobs
+                for item in value.get('outputs', []) if isinstance(item, dict))
+    if total >= 2 * 1024 ** 3:
+        raise MediaHold('HOLD_MEDIA_OUTPUT_QUOTA')
+    return {'schema': 'NOX_OWNER_MEDIA_JOB_V1', 'id': secrets.token_hex(16),
+            'owner': owner, 'request': request, 'state': 'QUEUED',
+            'created_at': now(), 'updated_at': now(),
+            'generation_verified': False, 'outputs': []}
+
+
+def _media_preflight(data):
     request = validate_request(data)
     status = capabilities()
     if not status.get(request['kind']):
-        raise MediaHold(status.get(request['kind'] + '_reason', status.get('reason', 'HOLD_MEDIA_NOT_READY')))
-    with _LOCK, exclusive(ROOT / 'state/media/jobs.lock'):
-        jobs = [read_json(path) for path in (ROOT / 'state/media/jobs').glob('*.json')]
-        if sum(isinstance(value, dict) and value.get('state') in ACTIVE for value in jobs) >= 3:
-            raise MediaHold('WAIT_MEDIA_QUEUE_FULL')
-        if len(jobs) >= 200:
-            raise MediaHold('HOLD_MEDIA_JOB_HISTORY_QUOTA')
-        total = sum(item.get('bytes', 0) for value in jobs if isinstance(value, dict) for item in value.get('outputs', []) if isinstance(item, dict))
-        if total >= 2 * 1024 ** 3:
-            raise MediaHold('HOLD_MEDIA_OUTPUT_QUOTA')
-        job = {'schema': 'NOX_OWNER_MEDIA_JOB_V1', 'id': secrets.token_hex(16), 'owner': owner,
-               'request': request, 'state': 'QUEUED', 'created_at': now(), 'updated_at': now(), 'generation_verified': False, 'outputs': []}
-        atomic(job_path(job['id']), job)
-        atomic(ROOT / 'state/media/inbox' / (job['id'] + '.json'), {'job_id': job['id']})
-        return public_job(job)
+        raise MediaHold(status.get(request['kind'] + '_reason',
+                                   status.get('reason', 'HOLD_MEDIA_NOT_READY')))
+    return request
+
+
+def create_job(data, owner='native-owner'):
+    if not isinstance(data, dict):
+        raise MediaHold('INVALID_MEDIA_REQUEST')
+    if 'client_request_id' in data:
+        # The submitted payload is pinned before validate_request creates a random seed.
+        try:
+            record = create_or_resume(
+                data, owner, lock=_media_jobs_lock,
+                jobs_dir=ROOT / 'state/media/jobs',
+                inbox_dir=ROOT / 'state/media/inbox', read_json=read_json,
+                atomic=atomic, preflight=_media_preflight,
+                new_job=lambda payload: _new_media_record(validate_request(payload), owner))
+        except IdempotencyHold as exc:
+            raise MediaHold(str(exc)) from None
+        return public_job(record)
+
+    # Preserve the legacy unkeyed caller until the same-origin browser is upgraded.
+    request = _media_preflight(data)
+    with _media_jobs_lock():
+        record = _new_media_record(request, owner)
+        atomic(job_path(record['id']), record)
+        atomic(ROOT / 'state/media/inbox' / (record['id'] + '.json'), {'job_id': record['id']})
+        return public_job(record)
+
+
+def lookup_media_request(owner, client_request_id):
+    if (type(client_request_id) is not str or not JOB_ID.fullmatch(client_request_id)
+            or type(owner) is not str or not owner or len(owner) > 256):
+        raise MediaHold('INVALID_MEDIA_CLIENT_REQUEST_ID')
+    with _media_jobs_lock():
+        found = None
+        for path in sorted((ROOT / 'state/media/jobs').glob('*.json')):
+            item = read_json(path)
+            if (path.is_symlink() or not isinstance(item, dict) or
+                    item.get('id') != path.stem or not JOB_ID.fullmatch(path.stem)):
+                raise MediaHold('HOLD_MEDIA_JOB_INDEX_UNREADABLE')
+            if item.get('owner') == owner and item.get('client_request_id') == client_request_id:
+                if found is not None:
+                    raise MediaHold('HOLD_MEDIA_DUPLICATE_REQUEST_ID')
+                found = item
+        if found is None:
+            raise MediaHold('MEDIA_JOB_NOT_FOUND')
+        if found.get('state') == 'QUEUED':
+            try:
+                repair_queued_inbox(ROOT / 'state/media/inbox', found['id'],
+                                    read_json, atomic)
+            except IdempotencyHold as exc:
+                raise MediaHold(str(exc)) from None
+        return public_job(found)
 
 
 def ingest_media_tasks(state):
     count = 0
-    for path in sorted((ROOT / 'state/media/inbox').glob('*.json'))[:3]:
+    # Scan past durable inbox receipts for already-ingested or terminal jobs.
+    # Cap only NEW admissions; limiting the candidate scan to three starves
+    # later requests after three older inbox records survive in S03.
+    for path in sorted((ROOT / 'state/media/inbox').glob('*.json')):
+        if count >= 3:
+            break
         value = read_json(path)
         job_id = value.get('job_id') if isinstance(value, dict) else None
         if not isinstance(job_id, str) or not JOB_ID.fullmatch(job_id) or path.stem != job_id:
             continue
-        job = load_job(job_id)
+        try:
+            job = load_job(job_id)
+        except MediaHold as exc:
+            if str(exc) != 'MEDIA_JOB_NOT_FOUND':
+                raise
+            # An orphan inbox receipt cannot be executed, but must not
+            # starve unrelated queued jobs. Preserve it for reconciliation.
+            # Only a genuinely absent job file is skippable: corrupted or
+            # symlinked state must retain the existing fail-closed behavior.
+            try:
+                os.lstat(job_path(job_id))
+            except FileNotFoundError:
+                continue
+            raise
         task_id = 'owner.media.' + job_id
         if task_id in state.setdefault('tasks', {}) or job.get('state') != 'QUEUED':
             continue
@@ -816,7 +917,7 @@ def register_media(app, trusted):
         return job
     def error(exc):
         code = str(exc)
-        status = 404 if code == 'MEDIA_JOB_NOT_FOUND' else (422 if code.startswith('INVALID_') else 503)
+        status = (404 if code == 'MEDIA_JOB_NOT_FOUND' else 409 if code == 'HOLD_MEDIA_IDEMPOTENCY_CONFLICT' else 422 if code.startswith('INVALID_') else 503)
         return JSONResponse({'state': 'BLOCKED', 'reason': code}, status_code=status, headers={'Cache-Control': 'no-store'})
     @app.get('/api/ui/media')
     async def media_status(request: Request):
@@ -841,6 +942,14 @@ def register_media(app, trusted):
             return JSONResponse(await asyncio.to_thread(create_job, data, owner(request)), status_code=202)
         except (ValueError, UnicodeError):
             return JSONResponse({'error': 'INVALID_JSON'}, status_code=400)
+        except MediaHold as exc:
+            return error(exc)
+    @app.get('/api/ui/media/requests/{client_request_id}')
+    async def media_request_status(request: Request, client_request_id: str):
+        if not authorized(request):
+            return trusted['_unauthorized']()
+        try:
+            return await asyncio.to_thread(lookup_media_request, owner(request), client_request_id)
         except MediaHold as exc:
             return error(exc)
     @app.get('/api/ui/media/jobs/{job_id}')
