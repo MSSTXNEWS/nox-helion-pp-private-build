@@ -368,11 +368,17 @@ def model_environment_identity(pid: int, expected_ticks: int) -> dict:
         fail("MODEL_ENVIRONMENT_SOURCE_OVERRIDE")
     if any(env.get(name, b"") for name in MODEL_CONTEXT_ENV_KEYS):
         fail("MODEL_ENVIRONMENT_CONTEXT_OVERRIDE")
+    relevant_map = b"".join(
+        name.encode("ascii") + b"=" + env[name] + b"\0"
+        for name in sorted(env)
+    )
     return {
         "model_env_present": "LLAMA_ARG_MODEL" in env,
         "ctx_env_present": "LLAMA_ARG_CTX_SIZE" in env,
         "model_source_env_present": any(name in env for name in MODEL_SOURCE_ENV_KEYS),
         "context_pool_env_present": any(name in env for name in MODEL_CONTEXT_ENV_KEYS),
+        # Hash only: relevant environment values are never included in receipts.
+        "environment_map_sha256": hashlib.sha256(relevant_map).hexdigest(),
     }
 
 
@@ -413,16 +419,21 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
         reject_model_context_selectors(model_args)
         environment_overrides = model_environment_identity(pid, expected_ticks)
     elif role == "HOLDER":
-        if HOLDER_SCRIPT not in argv:
-            try:
-                cwd = os.readlink(proc / "cwd")
-            except OSError:
-                fail("HOLDER_CWD_UNAVAILABLE")
-            if HOLDER_SCRIPT_NAME not in argv or cwd != HOLDER_CWD:
-                fail("HOLDER_ARGV_OR_CWD_MISMATCH")
+        try:
+            cwd = os.readlink(proc / "cwd")
+        except OSError:
+            fail("HOLDER_CWD_UNAVAILABLE")
+        if argv.count(HOLDER_SCRIPT) != 1 or cwd != HOLDER_CWD:
+            fail("HOLDER_ARGV_OR_CWD_MISMATCH")
     else:
         fail("UNKNOWN_PROCESS_ROLE")
     group = cgroup_path(pid)
+    if role == "MODEL":
+        environment_after_cgroup = model_environment_identity(pid, expected_ticks)
+        if (environment_after_cgroup["environment_map_sha256"] !=
+                environment_overrides["environment_map_sha256"]):
+            fail("MODEL_ENVIRONMENT_CHANGED_DURING_READ")
+        environment_overrides = environment_after_cgroup
     try:
         exe_after = os.readlink(proc / "exe")
         with (proc / "cmdline").open("rb") as stream:
@@ -489,12 +500,17 @@ def fd_memfd_identity(pid: int, expected_ticks: int = HOLDER_START_TICKS) -> dic
             "fd_count": len(matches), "entries_scanned": entries_scanned}
 
 
-def model_maps_memfd(pid: int, memfd_device: int) -> bool:
+def model_maps_memfd(
+    pid: int, memfd_device: int, expected_ticks: int = MODEL_START_TICKS
+) -> bool:
+    before = stable_start_ticks(pid, expected_ticks)
     rows = read_maps_bounded(pid)
     if rows is None:
         fail("MODEL_MAPS_UNAVAILABLE_OR_OVER_LIMIT")
     if not mapped_inode(rows, memfd_device, MEMFD_INODE):
         fail("MODEL_MEMFD_MAPPING_NOT_PRESENT")
+    if stable_start_ticks(pid, expected_ticks) != before:
+        fail("MODEL_MAPS_PROCESS_CHANGED")
     return True
 
 
@@ -569,7 +585,11 @@ def run_action(request_id: int, source_sha: str) -> dict:
 
     # Revalidate exact identities and headroom immediately before stopping.
     status = require_model_running()
-    process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
+    latest_model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
+    if (latest_model["cgroup"] != model["cgroup"] or
+            latest_model["environment_overrides"]["environment_map_sha256"] !=
+            model["environment_overrides"]["environment_map_sha256"]):
+        fail("MODEL_IDENTITY_OR_ENVIRONMENT_CHANGED_BEFORE_STOP")
     latest_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
     if latest_holder["cgroup"] != holder["cgroup"]:
         fail("HOLDER_CGROUP_CHANGED_BEFORE_STOP")
@@ -582,6 +602,14 @@ def run_action(request_id: int, source_sha: str) -> dict:
     pre_stop = memory_headroom(Path(model["cgroup"]))
     if pre_stop["headroom"] >= MIN_HEADROOM:
         fail("HEADROOM_RECOVERED_BEFORE_STOP")
+    # Re-read relevant environment after the cgroup check; only a digest is retained.
+    final_model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
+    if (final_model["cgroup"] != model["cgroup"] or
+            final_model["environment_overrides"]["environment_map_sha256"] !=
+            model["environment_overrides"]["environment_map_sha256"]):
+        fail("MODEL_IDENTITY_OR_ENVIRONMENT_CHANGED_IMMEDIATELY_BEFORE_STOP")
+    # Recheck the attested memfd mapping at the last point before Supervisor stop.
+    model_maps_memfd(MODEL_PID, memfd["device"], MODEL_START_TICKS)
 
     PHASE["model_stop_requested"] = True
     stopped = command(["supervisorctl", "stop", SUPERVISOR_SERVICE], timeout=35)
