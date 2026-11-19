@@ -37,10 +37,11 @@ jobs:
           spec=importlib.util.spec_from_file_location('operator_under_test',p)
           m=importlib.util.module_from_spec(spec)
           spec.loader.exec_module(m)
-          assert m.FILES['repair']=='nox-control/owner_memory_cleanup_entry.py'
-          assert m.SCOPED_REPAIR_BUNDLES[m.FILES['repair']]==('owner_storage_reclaim.py','owner_memory_governor.py')
-          paths=m.repair_bundle_paths('repair',m.FILES['repair'],('nox-control/owner_storage_reclaim.py',))
-          assert sorted(Path(p).name for p in paths)==['owner_memory_governor.py','owner_storage_reclaim.py']
+          # One-shot owner-pinned memory cleanup was executed from a specific
+          # historical checkout. The default repair route must be restored.
+          assert m.FILES['repair']=='nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py'
+          assert m.SCOPED_REPAIR_BUNDLES[m.FILES['repair']]==()
+          assert m.SCOPED_REPAIR_EXTRA_PATHS[m.FILES['repair']]==()
           text=Path(m.FILES['repair']).read_text()
           assert text.count('__NOX_BUNDLE_JSON__')==1
           assert 'NOX_MAINT_REPAIR_COMPLETE=true' in text
