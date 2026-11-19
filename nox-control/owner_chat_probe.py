@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Bounded owner-authenticated latency/UI probe; exports synthetic text only."""
-import fcntl, hashlib, http.cookiejar, ipaddress, json, os, re, secrets, socket, struct, sys, time, urllib.error, urllib.parse, urllib.request
+import fcntl, hashlib, http.cookiejar, ipaddress, json, os, re, secrets, socket, struct, sys, time, unicodedata, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 ROOT=Path('/root/nox')
@@ -59,7 +59,11 @@ def page_snapshot(response, limit=200000):
 
 
 def meaningful_delta(text):
-    return isinstance(text,str) and re.search(r'[^\s.…]',text) is not None
+    """Only visible glyphs may start meaningful-stream TTFT; ignore invisible format/mark/control placeholders."""
+    return isinstance(text, str) and any(
+        ch not in '.…' and unicodedata.category(ch)[0] not in ('C', 'M', 'Z')
+        for ch in text
+    )
 
 def history_matches_turns(messages, turns, dialog_id=None):
     """Verify ordered roles/content and any present row-level dialog identity."""
