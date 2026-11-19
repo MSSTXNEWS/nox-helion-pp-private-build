@@ -201,6 +201,44 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
             self.assertEqual(owner.interrupted[task["id"]], marker,
                              "interruption evidence survives repeated admission")
 
+    def test_interrupted_review_claim_fails_closed_without_resubmit(self):
+        # A STOP/chat interrupt can arrive after a review worker produced a
+        # result. Neither retry nor admission may erase its unsettled marker.
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(node for node in tree.body
+                      if isinstance(node, ast.ClassDef) and node.name == "Native")
+        methods = [node for node in native.body
+                   if isinstance(node, ast.FunctionDef) and node.name == "_handle"]
+        self.assertEqual(len(methods), 1)
+        module = ast.fix_missing_locations(ast.Module(body=methods, type_ignores=[]))
+        scope = {"HANDLER": "review", "LEAF_HANDLER": "leaf",
+                 "PROJECT_HANDLER": "project",
+                 "ROLES": ("runtime", "memory", "weights"),
+                 "time": time, "sqlite3": sqlite3, "GateError": RuntimeError}
+        exec(compile(module, str(SOURCE), "exec"), scope)
+        task = {
+            "id": "B1-INTERRUPTED-REVIEW", "handler": "review",
+            "owner_claim": {"nonce": "original-claim"},
+            "params": {"role": "runtime", "policy_sha256": "policy-sha", "job_id": "job-1"},
+        }
+        marker = "WAIT_OWNER_STOP_OR_CHAT_PRIORITY"
+        owner = SimpleNamespace(
+            projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
+            lock=threading.RLock(), interrupted={task["id"]: marker}, pool=None,
+            _claim_current=lambda *a, **k: True,
+            stop_active=lambda: False, writer_lease=lambda: True,
+        )
+        def forbidden_admission(*args, **kwargs):
+            self.fail("review claim must be reconciled before worker admission")
+        owner._fresh_admission_reason = forbidden_admission
+        for _ in range(2):
+            self.assertEqual(scope["_handle"](owner, task),
+                             ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
+            self.assertIsNone(owner.pool)
+            self.assertEqual(owner.interrupted[task["id"]], marker)
+
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
