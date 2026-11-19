@@ -5,6 +5,7 @@ No browser install, GPU allocation, app reload, credentials export or destructiv
 change. A uniquely labelled synthetic test dialog is the only persistent write.
 """
 from __future__ import annotations
+import ast
 import fcntl
 import hashlib
 import http.cookiejar
@@ -119,6 +120,66 @@ def snapshots():
             'oom_kill': events.get('oom_kill', -1)}
 
 
+
+def owner_password_without_proxy_import():
+    """Read only the literal owner password path in the pinned native source.
+
+    Never execute chat_proxy.py and never log or export the password bytes.
+    """
+    proxy = SCRIPTS / 'chat_proxy.py'
+    meta = proxy.lstat()
+    if (not stat.S_ISREG(meta.st_mode) or meta.st_nlink != 1 or
+            meta.st_uid != os.geteuid() or meta.st_size > 1048576):
+        fail('PROXY_SOURCE_SCOPE')
+    raw = proxy.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != 'cc1437ce8c3bfbbc4259ffdbe299bf3b8721d4b1bb09c88565ccb6cb9fdb95eb':
+        fail('PROXY_SOURCE_CAS')
+    tree = ast.parse(raw)
+    definitions = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            definitions[node.targets[0].id] = node.value
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            definitions[node.target.id] = node.value
+
+    def literal_path(expr, seen=()):
+        if len(seen) >= 8:
+            fail('CREDENTIAL_PATH_DEPTH')
+        if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
+            return Path(expr.value)
+        if (isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name)
+                and expr.func.id == 'Path' and len(expr.args) == 1 and not expr.keywords):
+            return literal_path(expr.args[0], seen)
+        if isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Div):
+            left, right = literal_path(expr.left, seen), literal_path(expr.right, seen)
+            if right.is_absolute():
+                fail('CREDENTIAL_PATH_ESCAPE')
+            return left / right
+        if isinstance(expr, ast.Name) and expr.id not in seen and expr.id in definitions:
+            return literal_path(definitions[expr.id], seen + (expr.id,))
+        fail('CREDENTIAL_PATH_NOT_STATIC')
+
+    if 'CHAT_PASSWORD_PATH' not in definitions:
+        fail('CREDENTIAL_PATH_NOT_DECLARED')
+    path = literal_path(definitions['CHAT_PASSWORD_PATH'])
+    if not path.is_absolute() or '..' in path.parts or path.parts[:3] != ('/', 'root', 'nox'):
+        fail('CREDENTIAL_PATH_NOT_OWNER_SCOPED')
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        meta = os.fstat(descriptor)
+        if (not stat.S_ISREG(meta.st_mode) or meta.st_uid != os.geteuid() or
+                meta.st_nlink != 1 or (meta.st_mode & 0o077) != 0 or
+                not 1 <= meta.st_size <= 4096):
+            fail('CREDENTIAL_FILE_SCOPE')
+        raw_password = os.read(descriptor, 4097)
+        if len(raw_password) != meta.st_size:
+            fail('CREDENTIAL_FILE_CHANGED')
+        return raw_password.decode('utf-8').strip()
+    finally:
+        os.close(descriptor)
+
+
+
 def main():
     request_id = os.environ.get('NOX_OWNER_REQUEST_ID', '')
     sha = os.environ.get('NOX_OWNER_SOURCE_SHA', '')
@@ -156,9 +217,7 @@ def main():
         except urllib.error.HTTPError as error:
             if error.code != 401:
                 fail('ANONYMOUS_SCOPE_UNVERIFIED')
-        sys.path.insert(0, str(SCRIPTS))
-        import chat_proxy
-        password = chat_proxy._read_chat_password()
+        password = owner_password_without_proxy_import()
         if not isinstance(password, str) or not 6 <= len(password) <= 4096:
             fail('NATIVE_OWNER_CREDENTIAL')
         login = http_request(opener, base + '/chat/login', 'POST', {'password': password}, timeout=9)
