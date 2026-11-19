@@ -340,6 +340,41 @@ class GatewayTests(unittest.TestCase):
                     gateway.advice_candidate(candidate)
         self.assertEqual(gateway.advice_candidate(ADVICE)['assessment'], 'HOLD_FOR_REVIEW')
 
+    def test_numeric_exponent_overflow_fails_closed_without_losing_valid_floats(self):
+        # json.loads(parse_constant=...) alone misses 1e999, which float() maps
+        # to infinity. Check untrusted provider bytes and private JSON receipts.
+        import httpx
+        config = self.configure()
+        original = httpx.AsyncClient
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant',
+                             'content': [{'type': 'output_text', 'text': ADVICE}]}]}
+        base = json.dumps(value)
+        for numeric in ('1e999', '-1e999'):
+            with self.subTest(numeric=numeric):
+                wire = (base[:-1] + ', "usage": {"input_tokens": ' + numeric + '}}').encode()
+                async def mock_response(request):
+                    return httpx.Response(200, stream=httpx.ByteStream(wire))
+                with patch.object(httpx, 'AsyncClient',
+                                  lambda **kwargs: original(transport=httpx.MockTransport(mock_response), **kwargs)):
+                    rejected = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+                self.assertEqual(rejected, {'state': 'MODEL_RESPONSE_NONFINITE_JSON'})
+                advice = ('{"assessment":"HOLD_FOR_REVIEW","check_categories":[],'
+                          '"rationale":"safe","usage":{"count":' + numeric + '}}')
+                with self.assertRaisesRegex(gateway.GatewayHold, 'MODEL_RESPONSE_NONFINITE_JSON'):
+                    gateway.advice_candidate(advice)
+
+        private = self.root / 'state/owner_senior/access.json'
+        private.parent.mkdir(parents=True, exist_ok=True)
+        private.write_text('{"providers":{"openai":{"verified_at":1e999}}}')
+        private.chmod(0o600)
+        with self.assertRaisesRegex(gateway.GatewayHold, 'PRIVATE_JSON_INVALID'):
+            gateway._read('state/owner_senior/access.json')
+        private.write_text('{"providers":{"openai":{"verified_at":1e3}}}')
+        self.assertEqual(gateway._read('state/owner_senior/access.json')
+                         ['providers']['openai']['verified_at'], 1000.0)
+        self.assertEqual(gateway.advice_candidate(ADVICE)['assessment'], 'HOLD_FOR_REVIEW')
+
     def test_wire_byte_digest_and_unexpected_compression_hold(self):
         # Mock provider transport only: no paid request or credentials leave the test.
         import gzip
