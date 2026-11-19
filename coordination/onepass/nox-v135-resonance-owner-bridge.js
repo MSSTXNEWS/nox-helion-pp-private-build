@@ -106,7 +106,11 @@
   }
   async function consume(response,emit,signal) {
     if(!response.ok||!response.body)throw Error('HOLD_NATIVE_STREAM_'+await reason(response,signal));
-    const reader=response.body.getReader(),decoder=new TextDecoder();
+    const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
+    const decode=(bytes,options)=>{
+      try{return decoder.decode(bytes,options);}
+      catch{throw Error('HOLD_NATIVE_FRAME_UTF8');}
+    };
     let buf='',answer='',done=null,doneSeen=false,startSeen=false,preparingSeen=false;
     let nativeModel='UNKNOWN';
     const line=async str=>{
@@ -148,7 +152,7 @@
         if(signal?.aborted)throw Error('STREAM_STOP_REQUESTED');
         const chunk=await readNativeOrAbort(reader,signal);
         if(chunk.done)break;
-        buf+=decoder.decode(chunk.value,{stream:true});
+        buf+=decode(chunk.value,{stream:true});
         // Cap unfinished NDJSON frames, not combined chunks.
         let j;while((j=buf.indexOf('\n'))>=0){
           if(j>300000)throw Error('HOLD_NATIVE_FRAME_TOO_LARGE');
@@ -160,7 +164,7 @@
           break;
         }
       }
-      buf+=decoder.decode();
+      buf+=decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
       return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};

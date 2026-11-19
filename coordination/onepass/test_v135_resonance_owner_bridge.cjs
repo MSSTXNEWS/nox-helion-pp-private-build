@@ -95,6 +95,56 @@ test('native V24 main Resonance streams tokens, only after S03 readback reports 
   assert(f.calls.some(e=>e.path==='/api/nox/chat/stream'));
   assert(f.calls.some(e=>e.path.includes('/api/ui/memory/dialogs/history')));
 });
+
+test('owner bridge preserves UTF-8 split across chunks and rejects corrupted native text',async()=>{
+  const text='Sí, Ж🙂';
+  const exchange='verified-utf8-exchange';
+  const frame=data=>Buffer.from(JSON.stringify(data)+'\n');
+  const beginning=[frame({type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'}),frame({type:'start'})];
+  const done=frame({type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:exchange});
+  async function run(chunks){
+    let historyReads=0;
+    const window={NOX_NATIVE_OWNER:true,fetch:async path=>{
+      if(path==='/api/nox/chat/stream')return new Response(new ReadableStream({start(controller){
+        for(const chunk of chunks)controller.enqueue(chunk);
+        controller.close();
+      }}));
+      if(path.startsWith('/api/ui/memory/dialogs/history?')){
+        historyReads++;
+        return Response.json({status:'READY',dialog_id:id,messages:[
+          {role:'user',exchange_id:exchange,content:prompt},
+          {role:'assistant',exchange_id:exchange,content:text}
+        ]});
+      }
+      assert.fail(`unexpected owner route ${path}`);
+    }};
+    const pathname='/nox-web-v29/pc/resonance.html';
+    const location={pathname,href:'https://nox.local'+pathname,origin:'https://nox.local'};
+    vm.runInNewContext(JS,{window,location,URL,Request,Response,ReadableStream,
+      TextDecoder,TextEncoder,AbortController,performance,Intl,setTimeout});
+    const response=await window.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'utf8-regression'})});
+    const seen=await events(response);
+    return {seen,historyReads};
+  }
+
+  const delta=frame({type:'delta',text});
+  const emojiOffset=delta.indexOf(Buffer.from('🙂'));
+  assert(emojiOffset>0);
+  const good=await run([...beginning,delta.subarray(0,emojiOffset+2),delta.subarray(emojiOffset+2),done]);
+  assert.equal(good.seen.filter(row=>row.type==='token').map(row=>row.t).join(''),text);
+  assert.equal(good.seen.filter(row=>row.type==='done').length,1);
+  assert.equal(good.historyReads,1);
+
+  const corrupted=Buffer.from(delta);
+  corrupted[emojiOffset+1]=0xff;
+  for(const chunks of [[corrupted,done],[delta.subarray(0,emojiOffset+2)]]){
+    const rejected=await run([...beginning,...chunks]);
+    assert.equal(rejected.seen.find(row=>row.type==='error')?.error,'HOLD_NATIVE_FRAME_UTF8');
+    assert(!rejected.seen.some(row=>row.type==='token'||row.type==='done'));
+    assert.equal(rejected.historyReads,0);
+  }
+});
 test('native V24 fails closed on unverified S03 receipt, no false done',async()=>{
   const f=fake(true,'/nox-web-v29/pc/resonance.html',true);
   const r=await f.fetch('/api/nox/chat',{method:'POST',
