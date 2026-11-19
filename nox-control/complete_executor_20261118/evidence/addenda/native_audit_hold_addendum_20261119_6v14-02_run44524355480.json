@@ -46,9 +46,7 @@
       "conclusion": "failure"
     },
     "authorization": {
-      "owner_comment_id": 7009138431,
       "owner_author_association": "OWNER",
-      "authenticated_instance_id": 60509551,
       "source_auth": "PASS",
       "host_pin": "VERIFIED",
       "command_scope": "audit",
