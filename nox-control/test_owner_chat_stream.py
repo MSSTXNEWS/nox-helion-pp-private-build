@@ -591,7 +591,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 native=self.native()
                 payload={'messages':[{'role':'user','content':'Say ready'}]}
                 if selected is not None:payload['model']=selected
-                chunks=Chunks([frame('ready'),frame(finish='stop'),b'data: [DONE]\\n\\n'])
+                chunks=Chunks([frame('ready'),frame(finish='stop'),b'data: [DONE]\n\n'])
                 requests,factory=self.transport([chunks])
                 with factory:
                     response=await native['owner_completion'](
