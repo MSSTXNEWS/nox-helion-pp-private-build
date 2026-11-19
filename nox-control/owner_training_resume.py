@@ -635,7 +635,8 @@ def verify_paused_result(helper, result, max_step=5, allow_completed=False):
     if (result.get('state') not in allowed_states or result.get('native_sha256') != NATIVE_SHA
             or type(step) is not int or not 1 <= step <= max_step
             or type(result.get('successful_optimizer_steps')) is not int
-            or result['successful_optimizer_steps'] < 1 or result.get('adapter_delta_verified') is not True
+            or not 1 <= result['successful_optimizer_steps'] <= step
+            or result.get('adapter_delta_verified') is not True
             or type(result.get('loss')) not in (int, float) or not math.isfinite(result['loss'])):
         raise RuntimeError('HOLD_PAUSED_OPTIMIZER_RECEIPT')
     before, after = result.get('before_tensor_sha256'), result.get('after_tensor_sha256')

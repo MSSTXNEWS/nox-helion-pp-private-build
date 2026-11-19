@@ -62,6 +62,12 @@ class CheckpointStepProvenance(unittest.TestCase):
             check = verifier["verify_paused_result"]
             self.assertTrue(check(helper, receipt))
 
+            # A single optimizer step cannot honestly claim two successful steps.
+            impossible_count = copy.deepcopy(receipt)
+            impossible_count["successful_optimizer_steps"] = 2
+            with self.assertRaisesRegex(RuntimeError, "HOLD_PAUSED_OPTIMIZER_RECEIPT"):
+                check(helper, impossible_count)
+
             # Python bool is an int subclass: True == 1 must not verify a step.
             wrong_receipt = copy.deepcopy(receipt)
             wrong_receipt["checkpoint"]["global_step"] = True
