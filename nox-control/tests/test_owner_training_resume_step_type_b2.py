@@ -130,6 +130,19 @@ class CheckpointStepProvenance(unittest.TestCase):
             safe.write_text('{"global_step": 1}', encoding="utf-8")
             self.assertEqual(read_json(safe, limit=64), {"global_step": 1})
 
+            # Byte-for-byte matching SHA is insufficient if JSON is ambiguous.
+            duplicate = root / "duplicate-step.json"
+            duplicate.write_text('{"global_step": 0, "global_step": 1}', encoding="utf-8")
+            duplicate_sha = hashlib.sha256(duplicate.read_bytes()).hexdigest()
+            with self.assertRaisesRegex(RuntimeError, "HOLD_DUPLICATE_STATE_KEY"):
+                read_json(duplicate, limit=128, expected_sha256=duplicate_sha)
+
+            nonfinite = root / "nonfinite-step.json"
+            nonfinite.write_text('{"global_step": 1, "loss": NaN}', encoding="utf-8")
+            nonfinite_sha = hashlib.sha256(nonfinite.read_bytes()).hexdigest()
+            with self.assertRaisesRegex(RuntimeError, "HOLD_NONFINITE_STATE_JSON"):
+                read_json(nonfinite, limit=128, expected_sha256=nonfinite_sha)
+
             oversized = root / "oversized.json"
             oversized.write_text('{"note":"' + "x" * 128 + '"}', encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "HOLD_BOUNDED_STATE_READ"):
