@@ -105,6 +105,21 @@ class MediaTests(unittest.TestCase):
             task['locks'] = ['gpu0']
             self.assertFalse(media.media_task_admitted(task))
 
+    def test_client_request_retries_reuse_job_and_recover_missing_inbox(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(media, 'ROOT', Path(root)):
+            request = {'kind': 'image', 'prompt': 'Fixture', 'client_request_id': 'a' * 32}
+            with patch.object(media, 'capabilities', return_value={'image': True}) as engine:
+                first = media.create_job(request, 'owner-a')
+                inbox = Path(root) / 'state/media/inbox' / (first['id'] + '.json')
+                inbox.unlink()
+                self.assertEqual(media.create_job(request, 'owner-a'), first)
+                self.assertTrue(inbox.is_file())
+                engine.assert_called_once()
+                with self.assertRaisesRegex(media.MediaHold, 'MEDIA_CLIENT_REQUEST_CONFLICT'):
+                    media.create_job(dict(request, prompt='Different'), 'owner-a')
+                with self.assertRaisesRegex(media.MediaHold, 'MEDIA_JOB_NOT_FOUND'):
+                    media.job_for_client_request(request['client_request_id'], 'owner-b', media.media_jobs())
+
     def test_owner_training_hold_is_never_removed(self):
         with tempfile.TemporaryDirectory() as root, patch.object(media, 'ROOT', Path(root)), patch.object(media, 'service_state', return_value={'state': 'STOPPED'}):
             hold = Path(root) / 'state/TRAIN_HOLD.flag'; hold.parent.mkdir(parents=True); hold.write_text('OWNER_MANUAL_HOLD')
@@ -137,6 +152,7 @@ class MediaAuthTests(unittest.TestCase):
             self.assertEqual(client.get('/api/ui/media').status_code, 401)
             self.assertEqual(client.post('/api/ui/media/jobs', json={'kind': 'image', 'prompt': 'x'}).status_code, 401)
             self.assertEqual(client.get('/api/ui/media/jobs/' + 'a' * 32).status_code, 401)
+            self.assertEqual(client.get('/api/ui/media/requests/' + 'a' * 32).status_code, 401)
             self.assertEqual(client.get('/api/ui/media/jobs/' + 'a' * 32 + '/outputs/0').status_code, 401)
             self.assertEqual(client.post('/api/ui/media/jobs/' + 'a' * 32 + '/cancel').status_code, 401)
             engine.assert_not_called()

@@ -671,7 +671,8 @@ def public_job(job):
 
 def capabilities():
     result = {'schema': 'NOX_OWNER_MEDIA_V1', 'image': False, 'video': False, 'generation_verified': {},
-              'queue_limit': 3, 'concurrent_gpu_jobs': 1, 'backend': 'EXISTING_NOX_DISPATCHER_COMFYUI'}
+              'queue_limit': 3, 'concurrent_gpu_jobs': 1, 'idempotency_v1': True,
+              'backend': 'EXISTING_NOX_DISPATCHER_COMFYUI'}
     try:
         config = configuration()
         engine_identity(config)
@@ -690,13 +691,73 @@ def capabilities():
     return result
 
 
+def media_jobs():
+    return [read_json(path) for path in (ROOT / 'state/media/jobs').glob('*.json')]
+
+
+def job_for_client_request(request_id, owner, jobs):
+    if not isinstance(request_id, str) or not JOB_ID.fullmatch(request_id):
+        raise MediaHold('INVALID_MEDIA_CLIENT_REQUEST_ID')
+    matches = [job for job in jobs if isinstance(job, dict) and job.get('owner') == owner
+               and job.get('client_request_id') == request_id]
+    if not matches:
+        raise MediaHold('MEDIA_JOB_NOT_FOUND')
+    if len(matches) != 1 or not JOB_ID.fullmatch(str(matches[0].get('id'))):
+        raise MediaHold('HOLD_MEDIA_CLIENT_REQUEST_INCONSISTENT')
+    return matches[0]
+
+
+def enqueue_job(job):
+    path = ROOT / 'state/media/inbox' / (job['id'] + '.json')
+    if not os.path.lexists(path):
+        atomic(path, {'job_id': job['id']})
+    elif read_json(path) != {'job_id': job['id']}:
+        raise MediaHold('HOLD_MEDIA_INBOX_IDENTITY')
+
+
+def existing_client_job(request_id, request_sha, owner, jobs):
+    try:
+        job = job_for_client_request(request_id, owner, jobs)
+    except MediaHold as exc:
+        if str(exc) == 'MEDIA_JOB_NOT_FOUND':
+            return None
+        raise
+    if job.get('client_request_sha256') != request_sha:
+        raise MediaHold('MEDIA_CLIENT_REQUEST_CONFLICT')
+    if job.get('state') == 'QUEUED':
+        enqueue_job(job)
+    return public_job(job)
+
+
 def create_job(data, owner='native-owner'):
+    if not isinstance(data, dict):
+        raise MediaHold('INVALID_MEDIA_REQUEST')
+    data = dict(data)
+    requested_idempotency = 'client_request_id' in data
+    client_id = data.pop('client_request_id', None)
     request = validate_request(data)
+    request_sha = None
+    if requested_idempotency:
+        if not isinstance(client_id, str) or not JOB_ID.fullmatch(client_id):
+            raise MediaHold('INVALID_MEDIA_CLIENT_REQUEST_ID')
+        fingerprint = dict(request)
+        if 'seed' not in data:
+            fingerprint.pop('seed')
+        request_sha = hashlib.sha256(json.dumps(fingerprint, sort_keys=True, ensure_ascii=False,
+                                                separators=(',', ':')).encode()).hexdigest()
+        with _LOCK, exclusive(ROOT / 'state/media/jobs.lock'):
+            existing = existing_client_job(client_id, request_sha, owner, media_jobs())
+            if existing is not None:
+                return existing
     status = capabilities()
     if not status.get(request['kind']):
         raise MediaHold(status.get(request['kind'] + '_reason', status.get('reason', 'HOLD_MEDIA_NOT_READY')))
     with _LOCK, exclusive(ROOT / 'state/media/jobs.lock'):
-        jobs = [read_json(path) for path in (ROOT / 'state/media/jobs').glob('*.json')]
+        jobs = media_jobs()
+        if client_id is not None:
+            existing = existing_client_job(client_id, request_sha, owner, jobs)
+            if existing is not None:
+                return existing
         if sum(isinstance(value, dict) and value.get('state') in ACTIVE for value in jobs) >= 3:
             raise MediaHold('WAIT_MEDIA_QUEUE_FULL')
         if len(jobs) >= 200:
@@ -706,8 +767,10 @@ def create_job(data, owner='native-owner'):
             raise MediaHold('HOLD_MEDIA_OUTPUT_QUOTA')
         job = {'schema': 'NOX_OWNER_MEDIA_JOB_V1', 'id': secrets.token_hex(16), 'owner': owner,
                'request': request, 'state': 'QUEUED', 'created_at': now(), 'updated_at': now(), 'generation_verified': False, 'outputs': []}
+        if client_id is not None:
+            job.update(client_request_id=client_id, client_request_sha256=request_sha)
         atomic(job_path(job['id']), job)
-        atomic(ROOT / 'state/media/inbox' / (job['id'] + '.json'), {'job_id': job['id']})
+        enqueue_job(job)
         return public_job(job)
 
 
@@ -797,7 +860,9 @@ def register_media(app, trusted):
         return job
     def error(exc):
         code = str(exc)
-        status = 404 if code == 'MEDIA_JOB_NOT_FOUND' else (422 if code.startswith('INVALID_') else 503)
+        status = {'MEDIA_JOB_NOT_FOUND': 404, 'MEDIA_CLIENT_REQUEST_CONFLICT': 409}.get(code)
+        if status is None:
+            status = 422 if code.startswith('INVALID_') else 503
         return JSONResponse({'state': 'BLOCKED', 'reason': code}, status_code=status, headers={'Cache-Control': 'no-store'})
     @app.get('/api/ui/media')
     async def media_status(request: Request):
@@ -830,6 +895,16 @@ def register_media(app, trusted):
             return trusted['_unauthorized']()
         try:
             return public_job(await asyncio.to_thread(scoped, request, job_id))
+        except MediaHold as exc:
+            return error(exc)
+    @app.get('/api/ui/media/requests/{request_id}')
+    async def media_request(request: Request, request_id: str):
+        if not authorized(request):
+            return trusted['_unauthorized']()
+        try:
+            def find_owned_job():
+                return public_job(job_for_client_request(request_id, owner(request), media_jobs()))
+            return JSONResponse(await asyncio.to_thread(find_owned_job), headers={'Cache-Control': 'no-store'})
         except MediaHold as exc:
             return error(exc)
     @app.post('/api/ui/media/jobs/{job_id}/cancel')

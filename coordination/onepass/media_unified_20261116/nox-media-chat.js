@@ -8,6 +8,7 @@
   if (window.__NOX_MEDIA_CHAT_V1) return;
   window.__NOX_MEDIA_CHAT_V1 = true;
   const API = '/api/ui/media';
+  const PENDING = 'nox-resonance-media-pending-v1';
   const ID = /^[0-9a-f]{32}$/;
   const OUTPUT = /^(\/api\/ui\/media\/jobs\/)([0-9a-f]{32})(\/outputs\/)(\d+)$/;
   const CATEGORIES = { image: 'Изображение', video: 'Видео' };
@@ -21,6 +22,18 @@
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  function pendingMedia(value) {
+    try {
+      if (value === null) sessionStorage.removeItem(PENDING);
+      else if (value) sessionStorage.setItem(PENDING, JSON.stringify(value));
+      else return JSON.parse(sessionStorage.getItem(PENDING));
+    } catch { return null; }
+    return null;
+  }
+  function mediaRequestId() {
+    return Array.from(crypto.getRandomValues(new Uint8Array(16)),
+      byte => byte.toString(16).padStart(2,'0')).join('');
+  }
   async function request(url, options = {}) {
     if (!url.startsWith(API) || new URL(url, location.href).origin !== location.origin) throw Error('HOLD_INVALID_MEDIA_ROUTE');
     const timeout = new AbortController();
@@ -32,7 +45,11 @@
         signal: timeout.signal, headers: {...(options.headers || {}), 'Accept':'application/json'}});
       let value = null;
       try { value = await response.json(); } catch { throw Error('HOLD_MEDIA_NON_JSON_' + response.status); }
-      if (!response.ok) throw Error(plain(value?.reason || value?.error || 'HOLD_HTTP_' + response.status));
+      if (!response.ok) {
+        const failure=Error(plain(value?.reason || value?.error || 'HOLD_HTTP_' + response.status));
+        failure.status=response.status;
+        throw failure;
+      }
       return value;
     } catch(e) {
       if (e.name === 'AbortError') throw Error('HOLD_MEDIA_REQUEST_TIMEOUT');
@@ -55,6 +72,9 @@
     if (!form || !input || !stream || document.getElementById('noxMediaToolbar')) return;
     let mode = null;
     let active = null;
+    let pending = pendingMedia();
+    let pendingBody = null;
+    if (!pending || typeof pending.requestId !== 'string' || !ID.test(pending.requestId) || !Object.hasOwn(MODES,pending.kind)) pending=null;
     const bar = make('div','nox-media-toolbar');bar.id='noxMediaToolbar';
     bar.setAttribute('aria-label','Создание фото и видео через Резонанс');
     const label=make('span','nox-media-brand','NOX · STUDIO');
@@ -111,27 +131,57 @@
       });
       let pause=1800;let last='';
       const until=Date.now()+36*60*1000;
-      while(Date.now()<until){
-        if(document.visibilityState==='hidden')pause=Math.min(8000,pause*1.2);
-        const snapshot=await request(`${API}/jobs/${job.id}`);
-        if(snapshot.id!==job.id||snapshot.kind!==job.kind)throw Error('HOLD_MEDIA_JOB_SCOPE');
-        const message=description(snapshot.state)+' · '+plain(snapshot.reason||'');
-        if(message!==last){slot.info.textContent=message;last=message;}
-        if(TERMINAL.has(snapshot.state)){
-          cancel.remove();
-          if(snapshot.state==='COMPLETED'){
-            if(snapshot.generation_verified!==true || !Array.isArray(snapshot.outputs) || !snapshot.outputs.length)
-              throw Error('HOLD_MEDIA_OUTPUT_NOT_VERIFIED');
-            snapshot.outputs.forEach((entry,index)=>addOutput(slot,snapshot,entry,index));
-            slot.info.textContent='✓ Проверенный результат · '+snapshot.outputs.length+' файл(ов)';
+      try {
+        while(Date.now()<until){
+          if(document.visibilityState==='hidden')pause=Math.min(8000,pause*1.2);
+          const snapshot=await request(`${API}/jobs/${job.id}`);
+          if(snapshot.id!==job.id||snapshot.kind!==job.kind)throw Error('HOLD_MEDIA_JOB_SCOPE');
+          const message=description(snapshot.state)+' · '+plain(snapshot.reason||'');
+          if(message!==last){slot.info.textContent=message;last=message;}
+          if(TERMINAL.has(snapshot.state)){
+            if(snapshot.state==='COMPLETED'){
+              if(snapshot.generation_verified!==true || !Array.isArray(snapshot.outputs) || !snapshot.outputs.length)
+                throw Error('HOLD_MEDIA_OUTPUT_NOT_VERIFIED');
+              snapshot.outputs.forEach((entry,index)=>addOutput(slot,snapshot,entry,index));
+              slot.info.textContent='✓ Проверенный результат · '+snapshot.outputs.length+' файл(ов)';
+            }
+            pending=null;
+            pendingBody=null;
+            pendingMedia(null);
+            return;
           }
-          return;
+          await sleep(pause);
+          pause=Math.min(5000,pause*1.07);
         }
-        await sleep(pause);
-        pause=Math.min(5000,pause*1.07);
+        throw Error('HOLD_MEDIA_POLL_TIMEOUT_CHECK_JOB');
+      } finally { cancel.remove(); }
+    }
+    const postMedia = body => request(API+'/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body});
+    async function reconnect(receipt, slot) {
+      let job;
+      try { job=await request(`${API}/requests/${receipt.requestId}`); }
+      catch(error){
+        if(error.message!=='MEDIA_JOB_NOT_FOUND'||!pendingBody)throw error;
+        job=await postMedia(pendingBody);
       }
-      cancel.remove();
-      throw Error('HOLD_MEDIA_POLL_TIMEOUT_CHECK_JOB');
+      if(!job || !ID.test(job.id) || job.kind!==receipt.kind) throw Error('HOLD_MEDIA_RECEIPT');
+      await watch(job,slot);
+    }
+    function reconnectAction(slot) {
+      const retry=make('button','nox-media-reset','Восстановить задачу');retry.type='button';
+      slot.actions.append(retry);
+      retry.addEventListener('click',async()=>{
+        if(active || !pending)return;
+        active=true;retry.disabled=true;
+        try{await reconnect(pending,slot);retry.remove();}
+        catch(error){
+          slot.info.textContent=error.message==='MEDIA_JOB_NOT_FOUND'
+            ? 'Сервер пока не подтвердил получение запроса.'
+            : 'Связь с задачей не восстановлена · '+plain(error.message);
+        }
+        finally{active=false;retry.disabled=false;}
+      });
+      return retry;
     }
     function parseInput(raw) {
       let text=raw.trim(),kind=mode;
@@ -154,23 +204,42 @@
       e.preventDefault();e.stopImmediatePropagation();
       if(!data.prompt){state.textContent='Опиши, что создать';return;}
       if(data.prompt.length>2000){state.textContent='Сократи описание до 2000 символов';return;}
-      if(active){state.textContent='Дождись завершения текущей медиазадачи';return;}
+      if(active||pending){state.textContent='Заверши или восстанови текущую медиазадачу';return;}
       const slot=bubble(data.kind,data.prompt);
       active=true;
       try{
         const cap=await request(API);
         if(cap[data.kind]!==true)throw Error(cap[data.kind+'_reason']||cap.reason||'HOLD_MEDIA_ENGINE_NOT_READY');
+        if(cap.idempotency_v1!==true)throw Error('HOLD_MEDIA_RECONNECT_NOT_SUPPORTED');
         slot.info.textContent='Создаю задачу…';
-        const payload={kind:data.kind,prompt:data.prompt};
+        const requestId=mediaRequestId();
+        const payload={kind:data.kind,prompt:data.prompt,client_request_id:requestId};
         if(data.kind==='image'){payload.width=1024;payload.height=1024;}
         else{payload.width=512;payload.height=320;payload.frames=17;payload.fps=8;}
-        const job=await request(API+'/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        pending={requestId,kind:data.kind};pendingMedia(pending);
+        pendingBody=JSON.stringify(payload);
+        let job;
+        try { job=await postMedia(pendingBody); }
+        catch(error){
+          if([400,401,403,409,415,422].includes(error.status)){
+            pending=null;pendingBody=null;pendingMedia(null);
+          }
+          throw error;
+        }
         if(!job||!ID.test(job.id)||job.kind!==data.kind)throw Error('HOLD_MEDIA_RECEIPT');
         input.value='';state.textContent='Задача '+job.id.slice(0,8);
         await watch(job,slot);
-      }catch(error){slot.info.textContent='HOLD · '+plain(error.message || 'MEDIA_UNKNOWN');state.textContent='Медиадвижок не подтвердил результат';}
+      }catch(error){
+        slot.info.textContent='HOLD · '+plain(error.message || 'MEDIA_UNKNOWN');
+        state.textContent='Медиадвижок не подтвердил результат';
+        if(pending)reconnectAction(slot);
+      }
       finally{active=false;}
     },true);
+    if(pending){
+      const slot=bubble(pending.kind,'Восстановление медиазадачи');
+      reconnectAction(slot).click();
+    }
     request(API).then(cap=>{
       const ok=Object.entries(MODES).filter(([kind])=>cap[kind]===true).map(([,name])=>name);
       state.textContent=ok.length?'Доступно: '+ok.join(' · '):'Медиадвижки: ожидание установки';
