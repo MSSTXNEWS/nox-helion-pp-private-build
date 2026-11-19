@@ -1,7 +1,9 @@
 """V112 regression against fixture SQLite and synthetic SSE. Never a live NOX receipt."""
+import asyncio
 import hashlib
 import json
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import types
@@ -13,7 +15,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.testclient import TestClient
 
 from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import (
-    _sse_delta, _timestamp, ensure_dialog_schema, register_native_v29_chat,
+    OwnerChatRequestLease, _sse_delta, _timestamp, _watch_chat_request_lease,
+    ensure_dialog_schema, register_native_v29_chat,
 )
 
 class V112Tests(unittest.TestCase):
@@ -833,6 +836,126 @@ class V112Tests(unittest.TestCase):
         self.assertEqual(frames[-1]['type'],'done')
         self.assertFalse(any(row.get('role')=='system'
                              for row in self.calls[-1]['messages']))
+
+
+    def test_shared_chat_lease_blocks_independent_worker_and_request_retry(self):
+        first_worker=OwnerChatRequestLease()
+        second_worker=OwnerChatRequestLease()
+        session='a'*64
+        request='1'*32
+        claim=first_worker.acquire(request,session,None)
+        self.assertEqual(claim['status'],'ACQUIRED')
+        lease=claim['lease']
+        # A second worker with a separate store/connection sees the durable
+        # reservation and cannot start another inference for this session.
+        self.assertEqual(second_worker.acquire('2'*32,session,None)['status'],'BUSY')
+        # Exact request retry is denied while active and after completion.
+        self.assertEqual(second_worker.acquire(request,session,None)['status'],'DUPLICATE')
+        self.assertTrue(second_worker.is_current(lease))
+        self.assertTrue(first_worker.finish(lease,'SUCCEEDED'))
+        self.assertEqual(second_worker.acquire(request,session,None)['status'],'DUPLICATE')
+        next_claim=second_worker.acquire('3'*32,session,None)
+        self.assertEqual(next_claim['status'],'ACQUIRED')
+        self.assertGreater(next_claim['lease']['owner_epoch'],lease['owner_epoch'])
+
+    def test_shared_chat_lease_is_visible_across_process_boundary(self):
+        owner_worker=OwnerChatRequestLease()
+        session='c'*64
+        claim=owner_worker.acquire('8'*32,session,None)
+        self.assertEqual(claim['status'],'ACQUIRED')
+        script=(
+            "import json,sys,types;from pathlib import Path;"
+            "m=types.ModuleType('s03_memory');m.DB=Path(sys.argv[1]);"
+            "sys.modules['s03_memory']=m;"
+            "from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import OwnerChatRequestLease;"
+            "print(json.dumps(OwnerChatRequestLease().acquire(sys.argv[2],sys.argv[3],None)))"
+        )
+        child=subprocess.run([sys.executable,'-c',script,str(self.db),'9'*32,session],
+                             capture_output=True,text=True,check=True)
+        self.assertEqual(json.loads(child.stdout)['status'],'BUSY',child.stderr)
+
+    def test_shared_stop_fences_lease_and_holds_slot_until_owner_finishes(self):
+        first_worker=OwnerChatRequestLease()
+        stop_worker=OwnerChatRequestLease()
+        session='b'*64
+        lease=first_worker.acquire('4'*32,session,None)['lease']
+        invalidated=stop_worker.stop_session(session)
+        self.assertEqual(invalidated['request_id'],'4'*32)
+        self.assertFalse(first_worker.is_current(lease))
+        self.assertFalse(first_worker.renew(lease))
+        self.assertEqual(stop_worker.acquire('5'*32,session,None)['status'],'BUSY')
+        self.assertTrue(first_worker.finish(lease,'SUCCEEDED'))
+        with sqlite3.connect(self.db) as db:
+            row=db.execute('SELECT state,owner_epoch,fence_epoch,stop_requested '
+                           'FROM nox_v112_chat_request_leases WHERE request_id=?',
+                           ('4'*32,)).fetchone()
+        self.assertEqual(row,('STOPPED',lease['owner_epoch'],lease['owner_epoch']+1,1))
+        next_claim=stop_worker.acquire('5'*32,session,None)
+        self.assertEqual(next_claim['status'],'ACQUIRED')
+        self.assertGreater(next_claim['lease']['owner_epoch'],lease['owner_epoch'])
+
+    def test_invalidated_chat_lease_cannot_commit_dialog_exchange(self):
+        from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db, _save_exchange
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Fenced STOP write','confirmed':True}).json()['dialog_id']
+        store=OwnerChatRequestLease()
+        lease=store.acquire('a'*32,'d'*64,dialog)['lease']
+        self.assertIsNotNone(store.stop_session('d'*64))
+        saved=_save_exchange(dialog,'stopped question','stopped answer','e'*32,
+            turn_id='f'*32,receipt_id='b'*32,lease_epoch='c'*32,chat_lease=lease)
+        self.assertFalse(saved)
+        with _db() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM nox_v29_dialog_messages '
+                                        'WHERE dialog_id=?',(dialog,)).fetchone()[0],0)
+
+    def test_chat_retry_with_same_request_id_never_calls_model_twice(self):
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Idempotent request','confirmed':True}).json()['dialog_id']
+        request_id='6'*32
+        payload={'dialog_id':dialog,'message':'same request replay','history':[],
+                 'request_id':request_id}
+        first=self.client.post('/api/nox/chat/stream',cookies=self.cookie,json=payload)
+        self.assertEqual(first.status_code,200,first.text)
+        frames=[json.loads(row) for row in first.text.splitlines() if row.strip()]
+        self.assertEqual(frames[-1]['type'],'done')
+        self.assertEqual(frames[0]['request_id'],request_id)
+        count=len(self.calls)
+        retry=self.client.post('/api/nox/chat/stream',cookies=self.cookie,json=payload)
+        self.assertEqual(retry.status_code,409,retry.text)
+        self.assertEqual(retry.json()['error'],'HOLD_DUPLICATE_REQUEST_ID')
+        self.assertEqual(len(self.calls),count)
+
+    def test_cross_worker_stop_wakes_stream_lease_watcher(self):
+        owner_worker=OwnerChatRequestLease()
+        stop_worker=OwnerChatRequestLease()
+        session='e'*64
+        lease=owner_worker.acquire('c'*32,session,None)['lease']
+        cancel=asyncio.Event()
+        async def scenario():
+            watcher=asyncio.create_task(
+                _watch_chat_request_lease(lease,cancel,owner_worker))
+            await asyncio.sleep(0.05)
+            self.assertIsNotNone(await asyncio.to_thread(stop_worker.stop_session,session))
+            await asyncio.wait_for(cancel.wait(),timeout=2.0)
+            watcher.cancel()
+            await asyncio.gather(watcher,return_exceptions=True)
+        asyncio.run(scenario())
+        self.assertTrue(cancel.is_set())
+        self.assertFalse(owner_worker.is_current(lease))
+
+    def test_stop_endpoint_invalidates_a_lease_created_by_another_worker(self):
+        cookies=sorted(self.cookie.items())
+        raw=json.dumps(cookies,separators=(',',':'))
+        session=hashlib.sha256(raw.encode()).hexdigest()
+        worker=OwnerChatRequestLease()
+        lease=worker.acquire('7'*32,session,None)['lease']
+        response=self.client.post('/api/nox/stop',cookies=self.cookie,json={})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertTrue(response.json()['shared_lease_invalidated'])
+        self.assertFalse(response.json()['stream_cancellation_signalled'])
+        self.assertFalse(response.json()['gpu_stop_verified'])
+        self.assertFalse(worker.is_current(lease))
+
 
 
 if __name__=='__main__':
