@@ -1,4 +1,4 @@
-name: NOX owner-authenticated native inspect, audit and source attestation
+name: NOX owner-authenticated native inspect, audit, source attestation, and GPU inventory
 
 on:
   pull_request:
@@ -58,7 +58,8 @@ jobs:
       startsWith(github.event.comment.body, '/nox-maintain 60509551 ') &&
       (endsWith(github.event.comment.body, ' inspect') ||
        endsWith(github.event.comment.body, ' audit') ||
-       endsWith(github.event.comment.body, ' source_attest'))
+       endsWith(github.event.comment.body, ' source_attest') ||
+       endsWith(github.event.comment.body, ' gpu_inventory'))
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -128,6 +129,18 @@ jobs:
           authorize_event('source_attest')
           print('NOX_OWNER_SOURCE_ATTEST_SOURCE_AUTH=PASS')
           PY
+      - name: Recheck pinned GPU inventory command without credentials
+        if: success() && steps.owner-command.outputs.action == 'gpu_inventory'
+        working-directory: source
+        env:
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+          PYTHONPATH: nox-control
+        run: |
+          python -B - <<'PY'
+          from owner_native_operator import authorize_event
+          authorize_event('gpu_inventory')
+          print('NOX_OWNER_GPU_INVENTORY_SOURCE_AUTH=PASS')
+          PY
       - name: Run the fixed read-only source-attest action
         if: success() && steps.owner-command.outputs.action == 'source_attest'
         working-directory: source
@@ -135,3 +148,11 @@ jobs:
           NOX2: ${{ secrets.NOX2 }}
           NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
         run: python -B nox-control/owner_native_operator.py source_attest
+
+      - name: Run the fixed read-only GPU inventory action
+        if: success() && steps.owner-command.outputs.action == 'gpu_inventory'
+        working-directory: source
+        env:
+          NOX2: ${{ secrets.NOX2 }}
+          NOX_PINNED_SOURCE_SHA: ${{ steps.owner-command.outputs.source_sha }}
+        run: python -B nox-control/owner_native_operator.py gpu_inventory
