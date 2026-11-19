@@ -11,6 +11,7 @@ import ast
 import base64
 from contextlib import contextmanager
 import ctypes
+import errno
 import fcntl
 import hashlib
 from http.client import HTTPConnection, HTTPException
@@ -417,17 +418,125 @@ def contract():
     return value
 
 
-def reload_resource_admission():
-    """Fail closed on a depleted raw cgroup margin before any proxy reload."""
+def _cgroup_read(name, maximum=16384):
+    path = '/sys/fs/cgroup/' + name
+    descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
     try:
-        maximum = (Path('/sys/fs/cgroup/memory.max').read_text().strip())
-        current = (Path('/sys/fs/cgroup/memory.current').read_text().strip())
-        require(maximum.isdigit() and current.isdigit(), 'CGROUP_MEMORY_UNMEASURED')
-        margin = int(maximum) - int(current)
-        require(margin >= 1024 * 1024 * 1024, 'CGROUP_RAW_HEADROOM_BELOW_1GIB')
-        return {'raw_margin_bytes': margin, 'minimum_raw_margin_bytes': 1024 * 1024 * 1024}
-    except OSError:
-        raise Hold('HOLD_SMART_CHAT_CGROUP_MEMORY_UNAVAILABLE') from None
+        contents = os.read(descriptor, maximum + 1)
+        require(len(contents) <= maximum, 'CGROUP_READ_BOUND')
+        return contents.decode('ascii')
+    finally:
+        os.close(descriptor)
+
+
+def _cgroup_numbers(name, keys):
+    result = {}
+    for line in _cgroup_read(name).splitlines():
+        pair = line.split()
+        if len(pair) == 2 and pair[0] in keys and pair[1].isdigit():
+            result[pair[0]] = int(pair[1])
+    require(all(key in result for key in keys), 'CGROUP_COUNTER_MISSING')
+    return result
+
+
+def _cgroup_snapshot():
+    maximum, current = _cgroup_read('memory.max').strip(), _cgroup_read('memory.current').strip()
+    require(maximum.isdigit() and current.isdigit(), 'CGROUP_MEMORY_UNMEASURED')
+    stat = _cgroup_numbers('memory.stat', ('file', 'shmem', 'inactive_file', 'file_dirty', 'file_writeback'))
+    events = _cgroup_numbers('memory.events', ('max', 'oom', 'oom_kill'))
+    raw = _cgroup_read('memory.pressure', 4096)
+    pressure = {}
+    for line in raw.splitlines():
+        fields = line.split()
+        if fields and fields[0] in ('some', 'full'):
+            for item in fields[1:]:
+                if item.startswith('avg10='):
+                    pressure[fields[0]] = float(item.split('=', 1)[1])
+    require(set(pressure) == {'some', 'full'}, 'CGROUP_PSI_UNAVAILABLE')
+    potential = max(0, min(stat['inactive_file'],
+        stat['file'] - stat['shmem'] - stat['file_dirty'] - stat['file_writeback']))
+    return {'max': int(maximum), 'current': int(current), 'raw_margin': int(maximum) - int(current),
+        'potential_inactive_file': potential, 'oom': events['oom'], 'oom_kill': events['oom_kill'],
+        'max_events': events['max'], 'psi_some_avg10': pressure['some'], 'psi_full_avg10': pressure['full']}
+
+
+def reload_resource_admission(expected, protected_before, record):
+    """Bounded swappiness=0 file-cache reclaim; no RAM-limit removal or blind restart."""
+    reserve = 1024 * 1024 * 1024
+    step_bytes = 256 * 1024 * 1024
+    maximum_steps = 8
+    gate(); assert_services(expected)
+    first = _cgroup_snapshot()
+    history = {'method': 'CGROUP_V2_FILE_CACHE_RECLAIM_ONLY', 'initial': first,
+               'required_raw_margin': reserve, 'max_reclaim_requests': maximum_steps,
+               'request_bytes_each': step_bytes, 'swappiness': 0, 'attempts': [],
+               'model_or_training_restarted': False, 'stop_flags_changed': False}
+    record['cache_reclaim'] = history
+    require(first['max'] > reserve and first['raw_margin'] >= 0, 'CGROUP_LIMIT')
+    if first['raw_margin'] >= reserve:
+        history['status'] = 'RAW_ADMITTED_NO_RECLAIM'
+        return history
+    # The exposed inactive_file value is only a candidate. The kernel determines
+    # what actually gets reclaimed; the resulting raw margin is the sole admission.
+    require(first['potential_inactive_file'] >= 8 * 1024**3, 'CGROUP_INACTIVE_FILE_INSUFFICIENT')
+    require(first['oom'] == 0 and first['oom_kill'] == 0 and
+            first['psi_some_avg10'] < 1.0 and first['psi_full_avg10'] < 0.2,
+            'CGROUP_PREEXISTING_OOM_OR_PRESSURE')
+    require(preserved() == protected_before, 'RESOURCE_PRESERVED_CHANGED')
+    http(8080, '/health'); http(8098, '/health')
+    for _ in range(3):
+        require(slots_idle(), 'RESOURCE_MODEL_ACTIVE')
+        time.sleep(.3)
+    # Do not touch global drop_caches, swap or the model memory map. Each
+    # reclamation is capped at 256 MiB and must restore an actual raw margin.
+    path = '/sys/fs/cgroup/memory.reclaim'
+    previous = first
+    for index in range(maximum_steps):
+        gate(); assert_services(expected)
+        require(preserved() == protected_before, 'RESOURCE_PRESERVED_CHANGED')
+        require(slots_idle(), 'RESOURCE_MODEL_ACTIVE')
+        current = _cgroup_snapshot()
+        require(current['max'] == first['max'] and current['oom'] == first['oom'] and
+                current['oom_kill'] == first['oom_kill'] and
+                current['max_events'] - first['max_events'] <= 5,
+                'CGROUP_RESOURCE_EVENT_CHANGED')
+        require(current['psi_some_avg10'] < 1.0 and current['psi_full_avg10'] < 0.2,
+                'CGROUP_PRESSURE_RISING')
+        if current['raw_margin'] >= reserve:
+            history.update(status='RECLAIMED_AND_RAW_ADMITTED', final=current)
+            return history
+        try:
+            descriptor = os.open(path, os.O_WRONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+            try:
+                # Kernel may legitimately return EAGAIN after partial reclaim.
+                os.write(descriptor, b'256M swappiness=0')
+                outcome = 'RECLAIM_REQUEST_ACCEPTED'
+            finally:
+                os.close(descriptor)
+        except OSError as error:
+            if error.errno == errno.EAGAIN:
+                outcome = 'RECLAIM_PARTIAL_EAGAIN'
+            else:
+                history['status'] = 'RECLAIM_UNAVAILABLE'
+                history['error_class'] = type(error).__name__
+                history['errno'] = error.errno
+                raise Hold('HOLD_SMART_CHAT_CGROUP_RECLAIM_UNAVAILABLE') from None
+        time.sleep(.6)
+        measured = _cgroup_snapshot()
+        history['attempts'].append({'index': index + 1, 'result': outcome,
+            'raw_margin_after': measured['raw_margin'], 'current_after': measured['current'],
+            'oom_after': measured['oom'], 'oom_kill_after': measured['oom_kill']})
+        require(measured['oom'] == first['oom'] and measured['oom_kill'] == first['oom_kill'],
+                'CGROUP_RECLAIM_OOM_EVENT')
+        previous = measured
+        if measured['raw_margin'] >= reserve:
+            gate(); assert_services(expected)
+            require(slots_idle(), 'RESOURCE_MODEL_BECAME_ACTIVE')
+            history.update(status='RECLAIMED_AND_RAW_ADMITTED', final=measured)
+            return history
+    history.update(status='RECLAIM_INSUFFICIENT', final=previous)
+    raise Hold('HOLD_SMART_CHAT_CGROUP_RECLAIM_INSUFFICIENT')
+
 
 
 def candidate(label, raw, spec, executable):
@@ -517,7 +626,7 @@ def main():
                     except Exception as transform_error:
                         record['transform_preflight'].append({'label': label, 'state': 'HELD', 'reason': safe(transform_error)})
                 require(len(rows) == len(TARGETS), 'TRANSFORM_PREFLIGHT')
-                record['reload_resource_admission'] = reload_resource_admission()
+                record['reload_resource_admission'] = reload_resource_admission(expected, before, record)
                 private_directory(AREA); journal = AREA / request
                 require(not os.path.lexists(journal), 'REQUEST_REUSED'); private_directory(journal)
                 for row in rows:
