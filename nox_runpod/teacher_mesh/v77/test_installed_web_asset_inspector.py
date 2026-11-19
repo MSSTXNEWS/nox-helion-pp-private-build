@@ -104,6 +104,14 @@ class InspectorTests(unittest.TestCase):
         with self.assertRaises(Hold):
             self.run_inspect()
 
+    def test_allowlisted_asset_symlink_holds(self):
+        (self.root / "assets" / "escape.js").symlink_to(self.root / "assets" / "chat.js")
+        manifest = json.dumps({"assets": ["assets/escape.js"]}, separators=(",", ":")).encode()
+        (self.root / "asset-manifest.json").write_bytes(manifest)
+        self._write_receipt(allowlist=["assets/escape.js"])
+        with self.assertRaisesRegex(Hold, "symlink"):
+            self.run_inspect()
+
     def test_loopback_served_bytes_must_match_disk(self):
         with self.assertRaisesRegex(Hold, "hash differs"):
             self.run_inspect(lambda *_: b"different served bytes")
