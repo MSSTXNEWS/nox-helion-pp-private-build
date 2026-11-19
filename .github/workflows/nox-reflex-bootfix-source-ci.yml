@@ -35,6 +35,7 @@ jobs:
       - name: Owner chat broad-action completion contract
         run: |
           set -euo pipefail
+          python -m pip install httpx
           python -B -m py_compile nox-control/owner_chat_stream_action_routing.py
           python -B -m unittest nox-control/test_owner_chat_stream_action_routing.py -v
       - name: Independently validate source-pin identity and owner bundle
