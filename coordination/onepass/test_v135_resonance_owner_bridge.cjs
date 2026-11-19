@@ -51,7 +51,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       const b=JSON.parse(opts.body);
       assert.equal(b.message,expectedQuestion);
       assert.equal(b.dialog_id,id);
-      assert.deepEqual(b.history,[]);
+      assert.equal(b.history,undefined, 'native route must load history from S03, not browser payload');
       assert.equal(opts.credentials,'same-origin');
       const intercepted=onModel?.(calls,opts);
       if(intercepted)return intercepted;
