@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 import time
 import types
@@ -36,9 +37,15 @@ def verify_browser_receipt(browser_started_ns):
     if any(item.is_symlink() for item in (path, *path.parents)):
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_PATH')
     try:
-        with path.open('rb') as stream:
+        # A FIFO or device at this path must never hang owner acceptance.
+        # Open nonblocking/no-follow, then inspect the very inode being read.
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC)
+        with os.fdopen(fd, 'rb') as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_TYPE')
             raw = stream.read(262145)
-            receipt_mtime_ns = os.fstat(stream.fileno()).st_mtime_ns
+            receipt_mtime_ns = info.st_mtime_ns
     except OSError:
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_MISSING') from None
     # A prior successful run must not satisfy a new browser/S03 acceptance.
