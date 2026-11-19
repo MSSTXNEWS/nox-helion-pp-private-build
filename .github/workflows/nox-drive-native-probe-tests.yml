@@ -1,0 +1,34 @@
+name: NOX owner Drive probe source tests
+on:
+  push:
+    branches: [feature/nox-drive-native-probe-20261119]
+    paths:
+      - 'nox-control/owner_native_drive_probe.py'
+      - 'nox-control/test_owner_native_drive_probe.py'
+      - 'nox-control/owner_native_operator.py'
+      - '.github/workflows/nox-owner-maintenance-command.yml'
+      - '.github/workflows/nox-drive-native-probe-tests.yml'
+  pull_request:
+    paths:
+      - 'nox-control/owner_native_drive_probe.py'
+      - 'nox-control/test_owner_native_drive_probe.py'
+      - 'nox-control/owner_native_operator.py'
+      - '.github/workflows/nox-owner-maintenance-command.yml'
+      - '.github/workflows/nox-drive-native-probe-tests.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and run exact offline probe tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile nox-control/owner_native_operator.py nox-control/owner_native_drive_probe.py nox-control/test_owner_native_drive_probe.py
+          python3 -m unittest discover -s nox-control -p test_owner_native_drive_probe.py -v
+      - name: Parse owner maintenance workflow
+        run: ruby -e 'require "yaml"; YAML.parse_file(".github/workflows/nox-owner-maintenance-command.yml")'
