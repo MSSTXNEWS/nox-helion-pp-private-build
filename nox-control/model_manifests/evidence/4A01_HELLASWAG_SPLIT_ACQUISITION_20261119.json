@@ -36,7 +36,7 @@
     "dataset_repo": "Rowan/hellaswag",
     "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
     "revision_url": "https://huggingface.co/datasets/Rowan/hellaswag/commit/218ec52e09a7e7462a5400043bb9a69a41d06b76",
-    "revision_qualification": "Candidate source metadata only. No local bytes were downloaded or checked. Owner must confirm this snapshot is the intended dataset revision before updating the canonical training manifest.",
+    "revision_qualification": "Metadata candidate only. Both immutable split files were temporarily downloaded and matched the pinned commit's LFS SHA-256 and byte-size metadata; temporary files were removed after verification. No payload is retained and owner confirmation is still required before promoting this snapshot into the canonical training manifest.",
     "files": [
       {
         "split": "train",
@@ -56,7 +56,40 @@
       }
     ],
     "total_expected_bytes": 30681475,
-    "metadata_proof": "Pinned commit diff (not the mutable main branch) lists both added Parquet Git-LFS pointers with SHA-256 and byte sizes."
+    "metadata_proof": "Pinned commit diff (not the mutable main branch) lists both added Parquet Git-LFS pointers with SHA-256 and byte sizes.",
+    "local_byte_verification": {
+      "checked_at_utc": "2026-11-19T20:20:28Z",
+      "source_method": "HTTP GET from the immutable Hugging Face resolve URLs below; measured local byte count and SHA-256 of each temporary file.",
+      "source_commit": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+      "metadata_evidence_url": "https://huggingface.co/datasets/Rowan/hellaswag/commit/218ec52e09a7e7462a5400043bb9a69a41d06b76",
+      "files": [
+        {
+          "split": "train",
+          "source_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/train-00000-of-00001.parquet",
+          "path": "data/train-00000-of-00001.parquet",
+          "lfs_oid_sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+          "expected_size_bytes": 24365524,
+          "measured_sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+          "measured_size_bytes": 24365524,
+          "sha256_matches_lfs_oid": true,
+          "size_matches_lfs_pointer": true
+        },
+        {
+          "split": "validation",
+          "source_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/validation-00000-of-00001.parquet",
+          "path": "data/validation-00000-of-00001.parquet",
+          "lfs_oid_sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+          "expected_size_bytes": 6315951,
+          "measured_sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+          "measured_size_bytes": 6315951,
+          "sha256_matches_lfs_oid": true,
+          "size_matches_lfs_pointer": true
+        }
+      ],
+      "total_measured_size_bytes": 30681475,
+      "result": "BYTE_HASH_AND_SIZE_MATCH",
+      "boundary": "Confirms only that the downloaded bytes match the pinned Git-LFS SHA-256 OIDs and sizes. Parquet content/schema, split semantics, sample order/seed, and training suitability were not inspected. Temporary files were deleted; no dataset payload is retained."
+    }
   },
   "acquisition_steps": [
     "Owner confirms the pinned dataset snapshot and training/validation selection semantics.",
@@ -96,11 +129,13 @@
     }
   },
   "boundaries": {
-    "downloaded_bytes": 0,
+    "downloaded_bytes": 30681475,
     "weights_touched": false,
     "training_started": false,
     "canonical_manifest_mutated": false,
     "validator_hold_cleared": false,
-    "task_status_changed": false
+    "task_status_changed": false,
+    "temporary_files_removed": true,
+    "retained_payload_bytes": 0
   }
 }
