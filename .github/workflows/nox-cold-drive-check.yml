@@ -1,7 +1,7 @@
 name: NOX cold storage module check
 on:
   push:
-    branches: [main, fix/nox-2a02-cold-transfer-bounds-20261119]
+    branches: [main, fix/nox-2a02-cold-transfer-bounds-20261119, fix/nox-2a02-atomic-tmpfs-publish-20261120]
     paths:
       - 'nox-control/nox_cold_drive.py'
       - '.github/workflows/nox-cold-drive-check.yml'
