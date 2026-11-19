@@ -60,8 +60,10 @@ _STATUS_EXPLANATION = re.compile(
 
 
 def _routing_text(text):
-    if not isinstance(text, str) or not 1 <= len(text) <= 8000:
+    if not isinstance(text, str) or not text:
         return ''
+    # Classification observes the whole instruction, including >8K turns.
+    # It never changes the original messages passed to the model.
     # Quoted examples and code are data, not action instructions.
     return re.sub(r'```.*?```|`[^`\n]*`|«[^»]*»|“[^”]*”|"[^"\n]*"', ' ', text, flags=re.S).strip()
 
