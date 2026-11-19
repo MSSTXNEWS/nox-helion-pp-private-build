@@ -20,6 +20,14 @@ FROZEN_BROWSER_PAGE_DEPENDENCIES={
 }
 SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
 SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
+# Single SHA-pinned owner maintenance request, never a persistent route change.
+FILES['repair'] = 'nox-control/owner_memory_governor_install_entry.py'
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = (
+    'owner_systemic_refill.py', 'continuous_transaction_helpers.py')
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = (
+    'nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py',
+    'nox-control/continuous_executor_20261118/assets/continuous_transaction_helpers.py')
+
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
