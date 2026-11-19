@@ -10,6 +10,8 @@ import hashlib
 
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as conn
 
+MAX_SOURCE_BYTES = 1_000_000
+
 ANALYZER = r"""
 import ast
 
