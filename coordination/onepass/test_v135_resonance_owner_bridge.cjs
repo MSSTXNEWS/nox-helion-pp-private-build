@@ -69,7 +69,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   }
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
   if(customIntl)context.Intl=customIntl;
-  if(presentation){context.document={visibilityState:presentation.hidden?'hidden':'visible'};
+  if(presentation){context.document=presentation.document||{visibilityState:presentation.hidden?'hidden':'visible'};
     window.matchMedia=()=>({matches:!!presentation.reduced});}
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
@@ -1394,4 +1394,38 @@ test('V179 browser multi-exchange history preserves exact S03 exchange IDs',asyn
   assert.equal(data.messages[3].content,'Respuesta persistida');
   assert.equal(f.calls.filter(c=>c.path.startsWith('/api/ui/memory/dialogs/history?')).length,1);
   assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,0);
+});
+
+test('V180 tab hiding during pacing frees queued callbacks and still verifies S03',async()=>{
+  const rafPending=new Map(),timerPending=new Map(),listeners=new Set();
+  let serial=0;
+  const doc={visibilityState:'visible',
+    addEventListener(type,handler){if(type==='visibilitychange')listeners.add(handler);},
+    removeEventListener(type,handler){if(type==='visibilitychange')listeners.delete(handler);}};
+  const scheduler={
+    requestAnimationFrame(cb){let n=++serial;rafPending.set(n,cb);return n;},
+    cancelAnimationFrame(n){rafPending.delete(n);},
+    setTimeout(cb){let n=++serial;timerPending.set(n,cb);return n;},
+    clearTimeout(n){timerPending.delete(n);}
+  };
+  const reply='NOX🧠'.repeat(130);
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    scheduler,false,200,undefined,'verified-exchange-01',[],false,false,prompt,undefined,
+    {document:doc,reduced:false});
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v180-visibility-change'})});
+  for(let i=0;i<100&&!rafPending.size;i++)await new Promise(ok=>setTimeout(ok,1));
+  assert(rafPending.size>0,'first visible token must enter browser pacing');
+  doc.visibilityState='hidden';
+  for(const callback of Array.from(listeners))callback();
+  const output=await Promise.race([events(response),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('HOLD_V180_VISIBILITY_STALL')),900))]);
+  assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+  assert.equal(output.filter(x=>x.type==='done').length,1);
+  assert.equal(output.filter(x=>x.type==='error').length,0);
+  assert.equal(rafPending.size,0);
+  assert.equal(timerPending.size,0);
+  assert.equal(listeners.size,0,'visibility listeners must be cleared');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+  assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
