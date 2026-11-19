@@ -116,9 +116,6 @@ def main():
         def already_locked():
             yield checkpoint
 
-        database = (ROOT / backup.DATABASE).lstat()
-        queue = backup.hash_file(ROOT / backup.QUEUE, backup.MAX_QUEUE, checkpoint)['sha256']
-        journal = backup.hash_file(ROOT / backup.JOURNAL, backup.MAX_JOURNAL, checkpoint)['sha256']
         with tempfile.TemporaryDirectory(prefix='.backup-attest-', dir=TARGET) as path:
             key, public, digest_file, signature_file = (Path(path) / f for f in ('key.pem', 'public.pem', 'sha', 'sig'))
             run_openssl('genpkey', '-algorithm', 'ED25519', '-out', key)
@@ -136,9 +133,24 @@ def main():
                             '-in', digest_file, '-sigfile', signature_file)
                 return True
 
-            result = backup.backup(backup.BackupRequest(request, database.st_dev, database.st_ino, queue, journal),
-                                   TARGET, native_lease=already_locked, assert_durable=durable,
-                                   sign_digest=sign, verify_signature=verify)
+            for attempt in range(4):
+                try:
+                    journal = backup.hash_file(ROOT / backup.JOURNAL, backup.MAX_JOURNAL, checkpoint)['sha256']
+                    queue = backup.hash_file(ROOT / backup.QUEUE, backup.MAX_QUEUE, checkpoint)['sha256']
+                    database = (ROOT / backup.DATABASE).lstat()
+                    result = backup.backup(
+                        backup.BackupRequest(request, database.st_dev, database.st_ino, queue, journal),
+                        TARGET, native_lease=already_locked, assert_durable=durable,
+                        sign_digest=sign, verify_signature=verify,
+                    )
+                    break
+                except backup.BackupHold as error:
+                    transient = ('HOLD_S03_QUEUE_BACKUP_QUEUE_OR_JOURNAL_PIN',
+                                 'HOLD_S03_QUEUE_BACKUP_BACKUP_FILE_CHANGED',
+                                 'HOLD_S03_QUEUE_BACKUP_FINAL_BINDING')
+                    if str(error) not in transient or attempt == 3 or not checkpoint():
+                        raise
+                    time.sleep(0.08)
             public_key = public.read_bytes()
             key_path = TARGET / ('backup-' + request) / 'verification-key.pem'
             key_fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
