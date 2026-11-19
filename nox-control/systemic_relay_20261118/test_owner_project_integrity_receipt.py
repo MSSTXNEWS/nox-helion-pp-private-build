@@ -134,6 +134,21 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                     with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_INTEGRATION_PROOF'):
                         subject._finish(task, invalid_event, 'pinned-claim')
 
+            # Clean/sanitize is an untrusted transformation: it may shorten
+            # presentation fields but cannot rewrite the signed verdict.
+            for changed in ({'state': 'BLOCKED'},
+                            {'project_source_changed': False},
+                            {'original_task_accepted': True},
+                            {'tests': {'passed': False}}):
+                with self.subTest(sanitized_change=changed):
+                    before = worker_result(worker)
+                    after = {**before, 'project_evidence': {**worker, **changed}}
+                    fake = types.SimpleNamespace(ns={
+                        'owner_mentor': types.SimpleNamespace(clean=lambda _value: after)})
+                    subject.native = fake
+                    with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_SANITIZED_EVIDENCE'):
+                        subject._finish(task, before, 'pinned-claim')
+
 
 if __name__ == '__main__':
     unittest.main()
