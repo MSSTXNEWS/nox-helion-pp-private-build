@@ -2,7 +2,6 @@ import importlib.util
 import configparser
 from pathlib import Path
 import struct
-import subprocess
 import unittest
 from unittest import mock
 import xmlrpc.client
@@ -152,11 +151,199 @@ class UnixSupervisorRpcTests(unittest.TestCase):
         fake = FakeSocket()
         with (mock.patch.object(OWNER, "_supervisor_unix_endpoint_snapshot",
                                 return_value=self.endpoint),
+              mock.patch.object(OWNER, "_verify_unix_rpc_peer"),
+              mock.patch.object(OWNER.os, "pidfd_open", return_value=123),
+              mock.patch.object(OWNER.os, "close"),
               mock.patch.object(OWNER.socket, "socket", return_value=fake)):
             value = OWNER._supervisor_unix_rpc(self.endpoint, "supervisor.getPID", ())
         self.assertEqual(value, 42)
         self.assertIn(b"POST /RPC2 HTTP/1.0", fake.request)
         self.assertFalse(OWNER.SUPERVISOR_RPC_STOP_DISPATCHED)
+
+    def test_peer_credentials_reject_wrong_pid_uid_and_gid(self):
+        endpoint = {"daemon": {"pid": 42}}
+
+        class CredSocket:
+            def __init__(self, credential):
+                self.credential = credential
+
+            def getsockopt(self, *_args):
+                return struct.pack("3i", *self.credential)
+
+        for credential in ((99, 0, 0), (42, 1000, 0), (42, 0, 1000)):
+            with self.subTest(credential=credential):
+                with self.assertRaisesRegex(RuntimeError,
+                                            "HOLD_EMERGENCY_STOP_UNIX_RPC_PEERCRED_MISMATCH"):
+                    OWNER._verify_unix_rpc_peer(CredSocket(credential), endpoint)
+
+    def _peer_endpoint_for_validation(self):
+        daemon = {"pid": 42, "start_ticks": 77, "config_path": str(
+            OWNER.SUPERVISOR_CLIENT_CONFIG), "argv_sha256": "c" * 64}
+        socket_identity = {"resolved_path": "/run/test.sock", "inode": 11,
+                           "device": 1}
+        config_identity = {"effective_config_sha256": "d" * 64}
+        linkage = {"filesystem_socket_inode": 11,
+                   "filesystem_socket_device": 1,
+                   "kernel_listener_inode": 123,
+                   "peer_fd_numbers": ["4"],
+                   "peer_start_ticks": 77, "net_unix_path_rows": [
+                       {"kernel_inode": 123, "path": "/run/test.sock",
+                        "type": "0001", "state": "01"}]}
+        return {"daemon": daemon, "socket": socket_identity,
+                "config_identity": config_identity,
+                "socket_linkage": linkage}
+
+    def test_path_inode_is_distinct_from_kernel_listener_inode(self):
+        net = ("Num RefCount Protocol Flags Type St Inode Path\n"
+               "0000000000000000: 00000002 00000000 00010000 0001 01 123 /run/test.sock\n")
+        rows = OWNER._parse_unix_socket_listener_rows(net, "/run/test.sock")
+        self.assertEqual(rows[0]["kernel_inode"], 123)
+        endpoint = self._peer_endpoint_for_validation()
+        self.assertEqual(endpoint["socket"]["inode"], 11)
+        self.assertNotEqual(endpoint["socket"]["inode"], rows[0]["kernel_inode"])
+
+    def test_duplicate_missing_and_non_listener_rows_hold(self):
+        header = "Num RefCount Protocol Flags Type St Inode Path\n"
+        good = "0000000000000000: 00000002 00000000 00010000 0001 01 123 /run/test.sock\n"
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_SOCKET_LISTENER_INODE_UNPROVEN"):
+            OWNER._require_unique_unix_listener(header, "/run/test.sock")
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_SOCKET_LISTENER_INODE_UNPROVEN"):
+            OWNER._require_unique_unix_listener(header + good + good, "/run/test.sock")
+        bad_state = good.replace(" 0001 01 ", " 0001 02 ")
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_SOCKET_ROW_NOT_STREAM_LISTENER"):
+            OWNER._require_unique_unix_listener(header + bad_state, "/run/test.sock")
+        bad_type = good.replace(" 0001 01 ", " 0002 01 ")
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_SOCKET_ROW_NOT_STREAM_LISTENER"):
+            OWNER._require_unique_unix_listener(header + bad_type, "/run/test.sock")
+        bad_flags = good.replace("00010000", "00000000")
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_SOCKET_LISTENER_FLAG_MISSING"):
+            OWNER._require_unique_unix_listener(header + bad_flags, "/run/test.sock")
+        accepted_peer = good.replace(" 0001 01 ", " 0001 03 ").replace(" 123 /", " 124 /")
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_SOCKET_LISTENER_INODE_UNPROVEN"):
+            OWNER._require_unique_unix_listener(header + accepted_peer + good,
+                                                "/run/test.sock")
+
+    def test_missing_or_changing_peer_socket_fd_holds(self):
+        identity = {"pid": 42, "start_ticks": 77}
+        listener = {"kernel_inode": 123, "path": "/run/test.sock",
+                    "type": "0001", "state": "01"}
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_PEER_SOCKET_FD_UNPROVEN"):
+            OWNER._require_stable_peer_listener(identity, identity, [], [],
+                                                listener, listener)
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_PEER_SOCKET_FD_UNPROVEN"):
+            OWNER._require_stable_peer_listener(identity, identity, ["4"], ["5"],
+                                                listener, listener)
+        changed = {**listener, "kernel_inode": 124}
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_PEER_SOCKET_FD_UNPROVEN"):
+            OWNER._require_stable_peer_listener(identity, identity, ["4"], ["4"],
+                                                listener, changed)
+
+    def test_peer_identity_change_is_rejected(self):
+        endpoint = self._peer_endpoint_for_validation()
+        changed = {**endpoint["daemon"], "start_ticks": 78}
+
+        class CredSocket:
+            calls = 0
+
+            def getsockopt(self, *_args):
+                return struct.pack("3i", 42, 0, 0)
+
+        with (mock.patch.object(OWNER, "probe_supervisor_daemon_identity",
+                                side_effect=[endpoint["daemon"], changed]),
+              mock.patch.object(OWNER, "_process_effective_credentials",
+                                return_value=(0, 0)),
+              mock.patch.object(OWNER, "_read_effective_supervisor_config",
+                                return_value=(None, endpoint["config_identity"])),
+              mock.patch.object(OWNER, "_unix_socket_snapshot",
+                                return_value=endpoint["socket"]),
+              mock.patch.object(OWNER, "_unix_socket_peer_linkage",
+                                return_value=endpoint["socket_linkage"]),
+              mock.patch.object(OWNER.os, "pidfd_open", return_value=123),
+              mock.patch.object(OWNER.os, "close")):
+            with self.assertRaisesRegex(RuntimeError,
+                                        "HOLD_EMERGENCY_STOP_UNIX_RPC_PEER_PROCESS_CHANGED"):
+                OWNER._verify_unix_rpc_peer(CredSocket(), endpoint)
+
+    def test_socket_inode_change_is_rejected(self):
+        endpoint = self._peer_endpoint_for_validation()
+
+        class CredSocket:
+            def getsockopt(self, *_args):
+                return struct.pack("3i", 42, 0, 0)
+
+        changed_socket = {**endpoint["socket"], "inode": 124}
+        with (mock.patch.object(OWNER, "probe_supervisor_daemon_identity",
+                                return_value=endpoint["daemon"]),
+              mock.patch.object(OWNER, "_process_effective_credentials",
+                                return_value=(0, 0)),
+              mock.patch.object(OWNER, "_read_effective_supervisor_config",
+                                return_value=(None, endpoint["config_identity"])),
+              mock.patch.object(OWNER, "_unix_socket_snapshot",
+                                return_value=changed_socket),
+              mock.patch.object(OWNER.os, "pidfd_open", return_value=123),
+              mock.patch.object(OWNER.os, "close")):
+            with self.assertRaisesRegex(RuntimeError,
+                                        "HOLD_EMERGENCY_STOP_UNIX_RPC_SOCKET_INODE_CHANGED"):
+                OWNER._verify_unix_rpc_peer(CredSocket(), endpoint)
+
+    def test_rpc_probe_rejects_getpid_mismatch(self):
+        endpoint = self._peer_endpoint_for_validation()
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_UNIX_RPC_TARGET_PREFLIGHT_MISMATCH"):
+            OWNER._validate_unix_rpc_probe(
+                endpoint, 99,
+                {"statecode": 1, "statename": "RUNNING"},
+                {"name": OWNER.SUPERVISOR_SERVICE, "statename": "RUNNING",
+                 "pid": OWNER.MODEL_PID})
+
+    def test_lost_uds_reply_dispatches_once_without_retry(self):
+        body = xmlrpc.client.dumps((True,), methodresponse=True).encode("utf-8")
+
+        class LostReplySocket:
+            send_calls = 0
+
+            def settimeout(self, _seconds):
+                pass
+
+            def connect(self, _path):
+                pass
+
+            def getsockopt(self, *_args):
+                return struct.pack("3i", 42, 0, 0)
+
+            def sendall(self, _request):
+                self.send_calls += 1
+                raise OSError("reply path uncertain")
+
+            def close(self):
+                pass
+
+        fake = LostReplySocket()
+        OWNER.STOP_REQUEST_DISPATCHED = False
+        OWNER.SUPERVISOR_RPC_STOP_DISPATCHED = False
+        with (mock.patch.object(OWNER, "_supervisor_unix_endpoint_snapshot",
+                                return_value=self.endpoint),
+              mock.patch.object(OWNER, "_verify_unix_rpc_peer"),
+              mock.patch.object(OWNER.os, "pidfd_open", return_value=123),
+              mock.patch.object(OWNER.os, "close"),
+              mock.patch.object(OWNER.socket, "socket", return_value=fake)):
+            with self.assertRaisesRegex(RuntimeError,
+                                        "HOLD_EMERGENCY_STOP_UNIX_RPC_CALL_FAILED"):
+                OWNER._supervisor_unix_rpc(
+                    self.endpoint, "supervisor.stopProcess",
+                    (OWNER.SUPERVISOR_SERVICE, True))
+        self.assertEqual(fake.send_calls, 1)
+        self.assertTrue(OWNER.STOP_REQUEST_DISPATCHED)
+        self.assertTrue(OWNER.SUPERVISOR_RPC_STOP_DISPATCHED)
 
     def test_config_parser_defaults_are_rejected(self):
         parser = configparser.ConfigParser(interpolation=None, strict=True)
@@ -167,32 +354,6 @@ class UnixSupervisorRpcTests(unittest.TestCase):
                                    side_effect=RuntimeError(
                                        "HOLD_EMERGENCY_STOP_TEST_DEFAULTS_REJECTED")):
                 OWNER._reject_config_defaults(parser, "TEST_DEFAULTS_REJECTED")
-
-    def test_systemctl_identity_is_pinned_across_two_queries(self):
-        identity = {"path": "/usr/bin/systemctl", "sha256": "b" * 64,
-                    "dev": 1, "ino": 2}
-        prior_identity = OWNER.SYSTEMCTL_IDENTITY
-        prior_diagnostic = OWNER.DIAGNOSTICS.get("systemctl_executable")
-        OWNER.SYSTEMCTL_IDENTITY = None
-        responses = [
-            subprocess.CompletedProcess([], 0, "active\n", ""),
-            subprocess.CompletedProcess([], 0, "4242\n", ""),
-        ]
-        try:
-            with (mock.patch.object(OWNER, "verify_root_executable_path",
-                                    return_value=identity) as verify,
-                  mock.patch.object(OWNER.subprocess, "run",
-                                    side_effect=responses) as run):
-                self.assertEqual(OWNER._supervisor_systemd_mainpid(), 4242)
-            self.assertEqual(run.call_count, 2)
-            self.assertEqual(verify.call_count, 4)
-            self.assertEqual(OWNER.SYSTEMCTL_IDENTITY, identity)
-        finally:
-            OWNER.SYSTEMCTL_IDENTITY = prior_identity
-            if prior_diagnostic is None:
-                OWNER.DIAGNOSTICS.pop("systemctl_executable", None)
-            else:
-                OWNER.DIAGNOSTICS["systemctl_executable"] = prior_diagnostic
 
     def test_holder_second_stage_is_not_available(self):
         self.assertFalse(hasattr(OWNER, "stop_holder_only_if_model_stop_is_insufficient"))

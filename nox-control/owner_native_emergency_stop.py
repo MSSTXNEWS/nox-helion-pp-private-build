@@ -41,8 +41,6 @@ SUPERVISORCTL_TRANSPORT = "supervisorctl"
 SUPERVISOR_UNIX_ENDPOINT: dict | None = None
 SUPERVISOR_RPC_STOP_DISPATCHED = False
 STOP_REQUEST_DISPATCHED = False
-SYSTEMCTL_BIN = Path("/usr/bin/systemctl")
-SYSTEMCTL_IDENTITY: dict | None = None
 MAX_SUPERVISOR_RPC_BYTES = 65_536
 SUPERVISOR_CONFIG_MAX_FILES = 128
 STOP = ROOT / "STOP"
@@ -289,21 +287,11 @@ def probe_supervisor_daemon_identity(pid: int) -> dict:
     if len(script_indexes) != 1 or not Path(argv[script_indexes[0]]).is_absolute():
         fail("SUPERVISOR_PROCESS_ARGV_MISMATCH")
     script_path = argv[script_indexes[0]]
-    configs = []
-    index = 1
-    while index < len(argv):
-        token = argv[index]
-        if token in ("-c", "--configuration"):
-            if index + 1 >= len(argv):
-                fail("SUPERVISOR_CONFIG_PATH_MISSING")
-            configs.append(argv[index + 1])
-            index += 2
-            continue
-        if token.startswith("--configuration="):
-            configs.append(token.partition("=")[2])
-        index += 1
-    if len(configs) != 1 or configs[0] != str(SUPERVISOR_CLIENT_CONFIG):
+    script_index = script_indexes[0]
+    if argv[script_index + 1:] != ["-c", str(SUPERVISOR_CLIENT_CONFIG)]:
         fail("SUPERVISOR_CONFIG_PATH_MISMATCH")
+    configs = [str(SUPERVISOR_CLIENT_CONFIG)]
+    cgroup_before = cgroup_path(pid)
     exe_identity = verify_root_executable_path(
         exe.removesuffix(" (deleted)"), "SUPERVISOR_DAEMON_EXECUTABLE")
     script_identity = verify_root_executable_path(
@@ -315,7 +303,9 @@ def probe_supervisor_daemon_identity(pid: int) -> dict:
     except OSError:
         fail("SUPERVISOR_PROCESS_IDENTITY_REREAD_UNAVAILABLE")
     after = proc_stat_identity(pid)
-    if (before != after or exe_after != exe or cmdline_after != raw_cmdline):
+    cgroup_after = cgroup_path(pid)
+    if (before != after or exe_after != exe or cmdline_after != raw_cmdline or
+            cgroup_after != cgroup_before):
         fail("SUPERVISOR_PROCESS_IDENTITY_CHANGED")
     if (verify_root_executable_path(
             exe.removesuffix(" (deleted)"), "SUPERVISOR_DAEMON_EXECUTABLE_REREAD") !=
@@ -326,43 +316,11 @@ def probe_supervisor_daemon_identity(pid: int) -> dict:
         "pid": pid, "start_ticks": before["start_ticks"],
         "exe": exe_identity, "script": script_identity,
         "argv_sha256": hashlib.sha256(raw_cmdline).hexdigest(),
+        "cgroup": str(cgroup_before),
         "config_path": configs[0],
         "start_lower_bound_ns": supervisor_start_lower_bound_ns(
             before["start_ticks"]),
     }
-
-
-def _supervisor_systemd_mainpid() -> int:
-    global SYSTEMCTL_IDENTITY
-
-    def checked_call(args):
-        global SYSTEMCTL_IDENTITY
-        identity = verify_root_executable_path(str(SYSTEMCTL_BIN), "SYSTEMCTL_EXECUTABLE")
-        if SYSTEMCTL_IDENTITY is None:
-            SYSTEMCTL_IDENTITY = identity
-        elif identity != SYSTEMCTL_IDENTITY:
-            fail("SYSTEMCTL_EXECUTABLE_CHANGED")
-        try:
-            result = subprocess.run([str(SYSTEMCTL_BIN), *args], capture_output=True,
-                                    text=True, shell=False, timeout=10, check=False,
-                                    env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
-                                         "LANG": "C", "LC_ALL": "C", "HOME": "/root"})
-        except (OSError, subprocess.TimeoutExpired):
-            fail("SYSTEMCTL_COMMAND_UNAVAILABLE")
-        reread = verify_root_executable_path(str(SYSTEMCTL_BIN),
-                                             "SYSTEMCTL_EXECUTABLE_REREAD")
-        if reread != identity or reread != SYSTEMCTL_IDENTITY:
-            fail("SYSTEMCTL_EXECUTABLE_CHANGED_DURING_CALL")
-        DIAGNOSTICS["systemctl_executable"] = identity
-        return result
-
-    active = checked_call(["is-active", "supervisor.service"])
-    result = checked_call(["show", "supervisor.service", "--property=MainPID", "--value"])
-    value = result.stdout.strip()
-    if (active.returncode != 0 or active.stdout.strip() != "active" or
-            result.returncode != 0 or not re.fullmatch(r"[1-9][0-9]{0,9}", value)):
-        fail("UNIX_RPC_SUPERVISOR_SYSTEMD_IDENTITY_UNAVAILABLE")
-    return int(value)
 
 
 def _process_effective_credentials(pid: int) -> tuple[int, int]:
@@ -387,7 +345,7 @@ def _reject_config_defaults(parser, label: str) -> None:
         fail(label)
 
 
-def _read_effective_supervisor_config(daemon_identity: dict):
+def _read_effective_supervisor_config(daemon_identity: dict | None):
     config_bytes, config_ctime_ns = read_root_regular(
         SUPERVISOR_CLIENT_CONFIG, MAX_SUPERVISOR_CONFIG_BYTES,
         "UNIX_RPC_SUPERVISOR_CONFIG", include_ctime=True)
@@ -467,10 +425,12 @@ def _read_effective_supervisor_config(daemon_identity: dict):
             any(getattr(include_dir, key) != getattr(include_dir_after, key)
                 for key in dir_fields)):
         fail("UNIX_RPC_CONFIG_DIRECTORY_CHANGED")
-    if (config_ctime_ns > daemon_identity["start_lower_bound_ns"] or
+    if daemon_identity is not None and (
+            config_ctime_ns > daemon_identity["start_lower_bound_ns"] or
             supervisor_dir.st_ctime_ns > daemon_identity["start_lower_bound_ns"] or
             include_dir.st_ctime_ns > daemon_identity["start_lower_bound_ns"] or
-            any(row["ctime_ns"] > daemon_identity["start_lower_bound_ns"] for row in inputs)):
+            any(row["ctime_ns"] > daemon_identity["start_lower_bound_ns"]
+                for row in inputs)):
         fail("UNIX_RPC_CONFIG_NEWER_THAN_DAEMON")
     if len(target_stanzas) != 1:
         fail("UNIX_RPC_TARGET_STANZA_NOT_UNIQUE")
@@ -488,10 +448,7 @@ def _read_effective_supervisor_config(daemon_identity: dict):
     return parser, config_identity
 
 
-def _supervisor_unix_endpoint_snapshot() -> dict:
-    daemon_pid = _supervisor_systemd_mainpid()
-    daemon_identity = probe_supervisor_daemon_identity(daemon_pid)
-    parser, config_identity = _read_effective_supervisor_config(daemon_identity)
+def _unix_socket_snapshot(config_identity: dict) -> dict:
     socket_file = config_identity["socket_file"].replace(
         "%(here)s", str(SUPERVISOR_CLIENT_CONFIG.parent))
     serverurl = config_identity["serverurl"]
@@ -535,20 +492,244 @@ def _supervisor_unix_endpoint_snapshot() -> dict:
                        "uid": socket_stat.st_uid, "gid": socket_stat.st_gid,
                        "nlink": socket_stat.st_nlink,
                        "ctime_ns": socket_stat.st_ctime_ns}
-    if (daemon_identity["pid"] != daemon_pid or
-            daemon_identity["config_path"] != str(SUPERVISOR_CLIENT_CONFIG) or
-            config_identity["main_ctime_ns"] > daemon_identity["start_lower_bound_ns"]):
-        fail("UNIX_RPC_CONFIG_NOT_BOUND_TO_LIVE_DAEMON")
-    euid, egid = _process_effective_credentials(daemon_pid)
-    if euid != 0 or egid != 0:
-        fail("UNIX_RPC_DAEMON_NOT_ROOT")
-    return {"transport": "supervisor_unix_xmlrpc", "config_path": str(SUPERVISOR_CLIENT_CONFIG),
-            "config_sha256": config_identity["main_sha256"],
-            "config_ctime_ns": config_identity["main_ctime_ns"],
-            "effective_config_sha256": config_identity["effective_config_sha256"],
-            "config_inputs": config_identity["inputs"], "serverurl": serverurl,
-            "rpc_factory": rpc_factory, "socket": socket_identity,
-            "daemon": daemon_identity, "peer_uid": euid, "peer_gid": egid}
+    return socket_identity
+
+
+def _parse_unix_socket_listener_rows(net_raw: str, expected_path: str) -> list[dict]:
+    matches = []
+    for line in net_raw.splitlines()[1:]:
+        fields = line.split(maxsplit=7)
+        if len(fields) < 7 or not fields[6].isdecimal():
+            fail("UNIX_RPC_NET_UNIX_ROW_INVALID")
+        inode = int(fields[6])
+        path = fields[7] if len(fields) == 8 else ""
+        if path == expected_path:
+            matches.append({"kernel_inode": inode, "path": path,
+                            "flags": fields[3] if len(fields) > 3 else None,
+                            "type": fields[4] if len(fields) > 4 else None,
+                            "state": fields[5] if len(fields) > 5 else None})
+    return matches
+
+
+def _require_unique_unix_listener(net_raw: str, expected_path: str) -> dict:
+    rows = _parse_unix_socket_listener_rows(net_raw, expected_path)
+    if len(rows) != 1:
+        fail("UNIX_RPC_SOCKET_LISTENER_INODE_UNPROVEN")
+    listener = rows[0]
+    if listener["type"] != "0001" or listener["state"] != "01":
+        fail("UNIX_RPC_SOCKET_ROW_NOT_STREAM_LISTENER")
+    try:
+        flags = int(listener["flags"], 16)
+    except (TypeError, ValueError):
+        fail("UNIX_RPC_SOCKET_LISTENER_FLAGS_INVALID")
+    if flags & 0x10000 != 0x10000:
+        fail("UNIX_RPC_SOCKET_LISTENER_FLAG_MISSING")
+    return listener
+
+
+def _require_stable_peer_listener(identity_before: dict, identity_after: dict,
+                                  fds_first: list[str], fds_second: list[str],
+                                  listener_first: dict, listener_after: dict) -> None:
+    if (identity_before != identity_after or fds_first != fds_second or
+            listener_after != listener_first or not fds_first):
+        fail("UNIX_RPC_PEER_SOCKET_FD_UNPROVEN")
+
+
+def _unix_socket_peer_linkage(pid: int, socket_identity: dict) -> dict:
+    """Prove the configured socket path resolves to one listener held by peer."""
+    net_path = Path("/proc/net/unix")
+    try:
+        with net_path.open("rb") as stream:
+            net_bytes = stream.read(2_000_001)
+    except OSError:
+        fail("UNIX_RPC_NET_UNIX_UNAVAILABLE")
+    if len(net_bytes) > 2_000_000:
+        fail("UNIX_RPC_NET_UNIX_OVER_LIMIT")
+    try:
+        net_raw = net_bytes.decode("ascii", "strict")
+    except UnicodeError:
+        fail("UNIX_RPC_NET_UNIX_ENCODING_INVALID")
+    listener = _require_unique_unix_listener(net_raw, socket_identity["resolved_path"])
+    kernel_inode = listener["kernel_inode"]
+
+    identity_before = probe_supervisor_daemon_identity(pid)
+    fd_dir = Path("/proc") / str(pid) / "fd"
+    def scan_fds():
+        found = []
+        scanned = 0
+        try:
+            with os.scandir(fd_dir) as entries:
+                for entry in entries:
+                    scanned += 1
+                    if scanned > MAX_FD_ENTRIES_PER_PID:
+                        fail("UNIX_RPC_PEER_FD_CENSUS_LIMIT")
+                    try:
+                        link = os.readlink(entry.path)
+                    except OSError:
+                        fail("UNIX_RPC_PEER_FD_CENSUS_UNAVAILABLE")
+                    match = re.fullmatch(r"socket:\[([0-9]+)\]", link)
+                    if match and int(match.group(1)) == kernel_inode:
+                        found.append(entry.name)
+        except OSError:
+            fail("UNIX_RPC_PEER_FD_CENSUS_UNAVAILABLE")
+        return sorted(found), scanned
+    fds_first, scanned_first = scan_fds()
+    fds_second, scanned_second = scan_fds()
+    try:
+        with net_path.open("rb") as stream:
+            net_after_bytes = stream.read(2_000_001)
+        if len(net_after_bytes) > 2_000_000:
+            fail("UNIX_RPC_NET_UNIX_OVER_LIMIT")
+        listener_after = _require_unique_unix_listener(
+            net_after_bytes.decode("ascii", "strict"),
+            socket_identity["resolved_path"])
+    except (OSError, UnicodeError):
+        fail("UNIX_RPC_NET_UNIX_REREAD_UNAVAILABLE")
+    identity_after = probe_supervisor_daemon_identity(pid)
+    _require_stable_peer_listener(identity_before, identity_after,
+                                  fds_first, fds_second, listener, listener_after)
+    return {"filesystem_socket_device": socket_identity["device"],
+            "filesystem_socket_inode": socket_identity["inode"],
+            "kernel_listener_inode": kernel_inode,
+            "net_unix_path_rows": [listener],
+            "peer_fd_numbers": fds_first,
+            "fd_entries_scanned": [scanned_first, scanned_second],
+            "peer_start_ticks": identity_before["start_ticks"],
+            "peer_argv_sha256": identity_before["argv_sha256"],
+            "peer_cgroup": identity_before["cgroup"]}
+
+
+def _verify_unix_rpc_peer(sock, endpoint: dict, peer_pidfd: int | None = None) -> dict:
+    if peer_pidfd is None:
+        try:
+            raw = sock.getsockopt(socket.SOL_SOCKET,
+                                  getattr(socket, "SO_PEERCRED", 17),
+                                  struct.calcsize("3i"))
+            pid, uid, gid = struct.unpack("3i", raw)
+        except (OSError, struct.error):
+            fail("UNIX_RPC_PEERCRED_UNAVAILABLE")
+        if pid <= 1 or uid != 0 or gid != 0 or pid != endpoint["daemon"]["pid"]:
+            fail("UNIX_RPC_PEERCRED_MISMATCH")
+        if not hasattr(os, "pidfd_open"):
+            fail("UNIX_RPC_PEER_PIDFD_UNAVAILABLE")
+        try:
+            peer_pidfd = os.pidfd_open(pid, 0)
+        except OSError:
+            fail("UNIX_RPC_PEER_PIDFD_OPEN_FAILED")
+        try:
+            return _verify_unix_rpc_peer_pinned(sock, endpoint, peer_pidfd)
+        finally:
+            with contextlib.suppress(OSError):
+                os.close(peer_pidfd)
+    return _verify_unix_rpc_peer_pinned(sock, endpoint, peer_pidfd)
+
+
+def _verify_unix_rpc_peer_pinned(sock, endpoint: dict, peer_pidfd: int) -> dict:
+    try:
+        raw = sock.getsockopt(socket.SOL_SOCKET, getattr(socket, "SO_PEERCRED", 17),
+                              struct.calcsize("3i"))
+        pid, uid, gid = struct.unpack("3i", raw)
+    except (OSError, struct.error):
+        fail("UNIX_RPC_PEERCRED_UNAVAILABLE")
+    if pid <= 1 or uid != 0 or gid != 0 or pid != endpoint["daemon"]["pid"]:
+        fail("UNIX_RPC_PEERCRED_MISMATCH")
+    if peer_pidfd is None:
+        fail("UNIX_RPC_PEER_PIDFD_UNAVAILABLE")
+    identity_before = probe_supervisor_daemon_identity(pid)
+    euid, egid = _process_effective_credentials(pid)
+    if euid != 0 or egid != 0 or identity_before != endpoint["daemon"]:
+        fail("UNIX_RPC_PEER_PROCESS_IDENTITY_MISMATCH")
+    if _read_effective_supervisor_config(identity_before)[1] != endpoint["config_identity"]:
+        fail("UNIX_RPC_PEER_CONFIG_CHANGED")
+    socket_now = _unix_socket_snapshot(endpoint["config_identity"])
+    if socket_now != endpoint["socket"]:
+        fail("UNIX_RPC_SOCKET_INODE_CHANGED")
+    linkage = _unix_socket_peer_linkage(pid, socket_now)
+    if linkage != endpoint["socket_linkage"]:
+        fail("UNIX_RPC_SOCKET_PEER_LINKAGE_CHANGED")
+    if _unix_socket_snapshot(endpoint["config_identity"]) != endpoint["socket"]:
+        fail("UNIX_RPC_SOCKET_CHANGED_AFTER_LINKAGE")
+    identity_after = probe_supervisor_daemon_identity(pid)
+    euid_after, egid_after = _process_effective_credentials(pid)
+    if (identity_after != identity_before or euid_after != euid or
+            egid_after != egid):
+        fail("UNIX_RPC_PEER_PROCESS_CHANGED_DURING_CHECK")
+    if _read_effective_supervisor_config(identity_after)[1] != endpoint["config_identity"]:
+        fail("UNIX_RPC_PEER_CONFIG_CHANGED_DURING_CHECK")
+    raw_after = sock.getsockopt(socket.SOL_SOCKET, getattr(socket, "SO_PEERCRED", 17),
+                                struct.calcsize("3i"))
+    if struct.unpack("3i", raw_after) != (pid, uid, gid):
+        fail("UNIX_RPC_PEERCRED_CHANGED")
+    return {"pid": pid, "uid": uid, "gid": gid,
+            "start_ticks": identity_after["start_ticks"]}
+
+
+def _supervisor_unix_endpoint_snapshot() -> dict:
+    # Parse the canonical config first to locate its single permitted UDS.
+    _parser, provisional_config = _read_effective_supervisor_config(None)
+    provisional_socket = _unix_socket_snapshot(provisional_config)
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.settimeout(10)
+    peer_pidfd = None
+    try:
+        sock.connect(provisional_socket["resolved_path"])
+        try:
+            raw_cred = sock.getsockopt(socket.SOL_SOCKET,
+                                       getattr(socket, "SO_PEERCRED", 17),
+                                       struct.calcsize("3i"))
+            peer_pid, peer_uid, peer_gid = struct.unpack("3i", raw_cred)
+        except (OSError, struct.error):
+            fail("UNIX_RPC_PEERCRED_UNAVAILABLE")
+        if peer_pid <= 1 or peer_uid != 0 or peer_gid != 0:
+            fail("UNIX_RPC_PEERCRED_NOT_ROOT")
+        if not hasattr(os, "pidfd_open"):
+            fail("UNIX_RPC_PEER_PIDFD_UNAVAILABLE")
+        try:
+            peer_pidfd = os.pidfd_open(peer_pid, 0)
+        except OSError:
+            fail("UNIX_RPC_PEER_PIDFD_OPEN_FAILED")
+        daemon_identity = probe_supervisor_daemon_identity(peer_pid)
+        if daemon_identity["config_path"] != str(SUPERVISOR_CLIENT_CONFIG):
+            fail("UNIX_RPC_CONFIG_PATH_NOT_BOUND_TO_PEER")
+        euid, egid = _process_effective_credentials(peer_pid)
+        if euid != 0 or egid != 0:
+            fail("UNIX_RPC_DAEMON_NOT_ROOT")
+        _parser, config_identity = _read_effective_supervisor_config(daemon_identity)
+        if config_identity != provisional_config:
+            fail("UNIX_RPC_CONFIG_CHANGED_DURING_PEER_BIND")
+        socket_identity = _unix_socket_snapshot(config_identity)
+        if socket_identity != provisional_socket:
+            fail("UNIX_RPC_SOCKET_CHANGED_DURING_PEER_BIND")
+        endpoint = {"transport": "supervisor_unix_xmlrpc",
+                    "config_path": str(SUPERVISOR_CLIENT_CONFIG),
+                    "config_sha256": config_identity["main_sha256"],
+                    "config_ctime_ns": config_identity["main_ctime_ns"],
+                    "effective_config_sha256": config_identity["effective_config_sha256"],
+                    "config_inputs": config_identity["inputs"],
+                    "config_identity": config_identity,
+                    "serverurl": config_identity["serverurl"],
+                    "rpc_factory": config_identity["rpc_factory"],
+                    "socket": socket_identity, "daemon": daemon_identity,
+                    "peer_uid": peer_uid, "peer_gid": peer_gid}
+        endpoint["socket_linkage"] = _unix_socket_peer_linkage(peer_pid,
+                                                                  socket_identity)
+        _verify_unix_rpc_peer(sock, endpoint, peer_pidfd)
+    except (OSError, socket.timeout):
+        fail("UNIX_RPC_ENDPOINT_PROBE_FAILED")
+    finally:
+        if peer_pidfd is not None:
+            with contextlib.suppress(OSError):
+                os.close(peer_pidfd)
+        sock.close()
+    # Re-read effective config and peer identity after probe; do not accept a
+    # stale endpoint snapshot even if the first SO_PEERCRED was valid.
+    if _read_effective_supervisor_config(daemon_identity)[1] != config_identity:
+        fail("UNIX_RPC_CONFIG_CHANGED_AFTER_PEER_BIND")
+    if probe_supervisor_daemon_identity(peer_pid) != daemon_identity:
+        fail("UNIX_RPC_PEER_CHANGED_AFTER_PROBE")
+    if _unix_socket_snapshot(config_identity) != socket_identity:
+        fail("UNIX_RPC_SOCKET_CHANGED_AFTER_PROBE")
+    return endpoint
 
 
 def _supervisor_unix_rpc(endpoint: dict, method: str, params: tuple,
@@ -568,14 +749,16 @@ def _supervisor_unix_rpc(endpoint: dict, method: str, params: tuple,
     path = endpoint["socket"]["resolved_path"]
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.settimeout(min(max(timeout, 1), 40))
+    peer_pidfd = None
     try:
         sock.connect(path)
-        peer_raw = sock.getsockopt(socket.SOL_SOCKET,
-                                   getattr(socket, "SO_PEERCRED", 17),
-                                   struct.calcsize("3i"))
-        peer_pid, peer_uid, peer_gid = struct.unpack("3i", peer_raw)
-        if (peer_pid != endpoint["daemon"]["pid"] or peer_uid != 0 or peer_gid != 0):
-            fail("UNIX_RPC_PEERCRED_MISMATCH")
+        if not hasattr(os, "pidfd_open"):
+            fail("UNIX_RPC_PEER_PIDFD_UNAVAILABLE")
+        try:
+            peer_pidfd = os.pidfd_open(endpoint["daemon"]["pid"], 0)
+        except OSError:
+            fail("UNIX_RPC_PEER_PIDFD_OPEN_FAILED")
+        _verify_unix_rpc_peer(sock, endpoint, peer_pidfd)
         body = xmlrpc.client.dumps(params, methodname=method,
                                    allow_none=False).encode("utf-8")
         if len(body) > 4096:
@@ -624,14 +807,13 @@ def _supervisor_unix_rpc(endpoint: dict, method: str, params: tuple,
         declared = int(content_lengths[0])
         if (declared > MAX_SUPERVISOR_RPC_BYTES or len(response_body) != declared):
             fail("UNIX_RPC_RESPONSE_LENGTH_INVALID")
-        peer_after = struct.unpack("3i", sock.getsockopt(
-            socket.SOL_SOCKET, getattr(socket, "SO_PEERCRED", 17),
-            struct.calcsize("3i")))
-        if peer_after != (peer_pid, peer_uid, peer_gid):
-            fail("UNIX_RPC_PEERCRED_CHANGED")
+        _verify_unix_rpc_peer(sock, endpoint, peer_pidfd)
     except (OSError, socket.timeout, xmlrpc.client.Fault, ValueError):
         fail("UNIX_RPC_CALL_FAILED")
     finally:
+        if peer_pidfd is not None:
+            with contextlib.suppress(OSError):
+                os.close(peer_pidfd)
         sock.close()
     if _supervisor_unix_endpoint_snapshot() != endpoint:
         fail("UNIX_RPC_ENDPOINT_CHANGED_AFTER_CALL")
@@ -669,15 +851,21 @@ def _select_unix_supervisor_fallback(outcomes: list[dict],
     state = _supervisor_unix_rpc(endpoint, "supervisor.getState", ())
     process = _supervisor_unix_rpc(endpoint, "supervisor.getProcessInfo",
                                    (SUPERVISOR_SERVICE,))
+    _validate_unix_rpc_probe(endpoint, reported_pid, state, process)
+    if stable_start_ticks(MODEL_PID, MODEL_START_TICKS) != MODEL_START_TICKS:
+        fail("UNIX_RPC_TARGET_PREFLIGHT_MISMATCH")
+    return endpoint
+
+
+def _validate_unix_rpc_probe(endpoint: dict, reported_pid, state, process) -> None:
+    daemon_pid = endpoint["daemon"]["pid"]
     if (type(reported_pid) is not int or reported_pid != daemon_pid or
             not isinstance(state, dict) or state.get("statecode") != 1 or
             state.get("statename") != "RUNNING" or not isinstance(process, dict) or
             process.get("name") != SUPERVISOR_SERVICE or
             process.get("statename") != "RUNNING" or
-            process.get("pid") != MODEL_PID or
-            stable_start_ticks(MODEL_PID, MODEL_START_TICKS) != MODEL_START_TICKS):
+            type(process.get("pid")) is not int or process["pid"] != MODEL_PID):
         fail("UNIX_RPC_TARGET_PREFLIGHT_MISMATCH")
-    return endpoint
 
 
 def _verify_selected_unix_endpoint() -> dict:
