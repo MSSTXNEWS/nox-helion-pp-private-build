@@ -9,7 +9,7 @@ REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'page_cache_reclaim': 'nox-control/owner_page_cache_reclaim_entry.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
+FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'page_cache_reclaim': 'nox-control/owner_page_cache_reclaim_entry.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/owner_v135_static_utf8_apply_oneshot.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
 GPU_INVENTORY_BLOB_SHA='3a3ff33e7709539d5ff6ab6b8614d694a9d2becb'
 PAGE_CACHE_RECLAIM_HELPER_SOURCE_COMMIT='e35f194fc62fc3b91ea573dfc0149f8bb8c84258'
 PAGE_CACHE_RECLAIM_HELPER_PATH='nox-control/owner_storage_reclaim.py'
@@ -1334,8 +1334,8 @@ SCOPED_REPAIR_EXTRA_PATHS={'nox-control/owner_continuous_executor_install.py': (
 FROZEN_BROWSER_PAGE_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
 }
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_media_acceptance_entry.py', 'nox-v135-resonance-owner-bridge.js')
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('coordination/onepass/nox-v135-resonance-owner-bridge.js',)
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
