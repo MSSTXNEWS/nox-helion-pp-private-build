@@ -6,6 +6,8 @@ on:
     paths:
       - 'nox-control/owner_native_inspect_comment_guard.py'
       - 'nox-control/test_owner_native_inspect_comment_guard.py'
+      - 'nox-control/owner_secret_staging.py'
+      - 'nox-control/test_owner_secret_staging.py'
       - 'nox-control/owner_native_operator.py'
       - 'nox-control/owner_native_emergency_stop.py'
       - 'nox-control/test_owner_native_emergency_stop_fence.py'
@@ -54,6 +56,8 @@ jobs:
           python -B -m py_compile \
             nox-control/owner_native_inspect_comment_guard.py \
             nox-control/test_owner_native_inspect_comment_guard.py \
+            nox-control/owner_secret_staging.py \
+            nox-control/test_owner_secret_staging.py \
             nox-control/owner_native_operator.py \
             nox-control/owner_native_emergency_stop.py \
             nox-control/test_owner_native_emergency_stop_fence.py \
@@ -64,6 +68,10 @@ jobs:
           python -B -m unittest discover \
             -s nox-control \
             -p test_owner_native_inspect_comment_guard.py \
+            -v
+          python -B -m unittest discover \
+            -s nox-control \
+            -p test_owner_secret_staging.py \
             -v
           python -B -m unittest discover \
             -s nox-control \
@@ -261,26 +269,8 @@ jobs:
         if: success() && steps.owner-command.outputs.action == 'source_export'
         env:
           NOX2: ${{ secrets.NOX2 }}
-        run: |
-          set -eu
-          if [ -z "$NOX2" ]; then
-            echo "NOX_OWNER_CREDENTIAL=HOLD_MISSING"
-            exit 2
-          fi
-          umask 077
-          credential_file="${RUNNER_TEMP}/nox2-s03-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          if [ -e "$credential_file" ] || [ -L "$credential_file" ]; then
-            unset NOX2
-            echo "NOX_OWNER_CREDENTIAL=HOLD_FILE_EXISTS"
-            exit 2
-          fi
-          if ! printf '%s' "$NOX2" > "$credential_file"; then
-            unset NOX2
-            echo "NOX_OWNER_CREDENTIAL=HOLD_STAGE"
-            exit 2
-          fi
-          unset NOX2
-          echo "NOX_OWNER_CREDENTIAL=STAGED"
+          NOX2_FILE: ${{ runner.temp }}/nox2-s03-${{ github.run_id }}-${{ github.run_attempt }}
+        run: python -B nox-control/owner_secret_staging.py
       - name: Run the exact pinned #415 encrypted source-export action
         if: success() && steps.owner-command.outputs.action == 'source_export'
         working-directory: source
