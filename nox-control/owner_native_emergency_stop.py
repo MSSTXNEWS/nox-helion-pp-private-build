@@ -29,10 +29,7 @@ MODEL_PID = 3266857
 MODEL_START_TICKS = 172046662
 MODEL_PATH = "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf"
 HOLDER_PID = 498569
-HOLDER_SCRIPT_NAME = "engram_memfd_holder.py"
-HOLDER_CWD = "/root/nox/engram_ram"
 HOLDER_START_TICKS = 168416044
-HOLDER_SCRIPT = "/root/nox/engram_ram/engram_memfd_holder.py"
 MEMFD_INODE = 131095
 MEMFD_SIZE = 75_266_239_716
 MIN_HEADROOM = 2_147_483_648
@@ -60,6 +57,7 @@ MODEL_ENV_KEYS = MODEL_SOURCE_ENV_KEYS | MODEL_CONTEXT_ENV_KEYS | {
 }
 MAX_STAT_BYTES = 8_192
 MAX_CMDLINE_BYTES = 16 * 1024
+MAX_PROC_PATH_BYTES = 4_096
 MAX_ENV_BYTES = 256 * 1024
 MAX_FD_ENTRIES_PER_PID = 16_384
 MAX_HOLDER_FD_BYTES = 1 * 1024 * 1024
@@ -331,6 +329,14 @@ def _selector_preflight_hold(reason: str, options: list[str]) -> None:
     fail(reason)
 
 
+def _reject_selector_like_operand(option: str, operand: str, allow_parallel_auto: bool = False) -> None:
+    if operand == "":
+        _selector_preflight_hold("MODEL_OPTION_OPERAND_EMPTY", [option])
+    if operand.startswith("-") and not (allow_parallel_auto and operand == "-1"):
+        _selector_preflight_hold("MODEL_OPTION_OPERAND_AMBIGUOUS",
+                                 [option, _selector_option(operand)])
+
+
 def reject_model_context_selectors(args: list[str]) -> None:
     """Reject direct model/context overrides; shard/parallel operands stay opaque."""
     short_selectors = {
@@ -371,6 +377,18 @@ def reject_model_context_selectors(args: list[str]) -> None:
         "--no-cache-prompt", "--swa-full",
     }
     opaque_options = {"--shard", "--ple", "-np", "--parallel"}
+    opaque_families = {"--shard": "shard", "--ple": "shard",
+                       "-np": "parallel", "--parallel": "parallel"}
+    opaque_seen = {"shard": [], "parallel": []}
+    for token in args:
+        option = _canonical_long_option(_selector_option(token))
+        family = opaque_families.get(option)
+        if family is not None:
+            opaque_seen[family].append(_selector_option(token))
+    for options in opaque_seen.values():
+        if len(options) > 1:
+            _selector_preflight_hold("MODEL_OPAQUE_SELECTOR_DUPLICATE", options)
+
     index = 0
     while index < len(args):
         token = args[index]
@@ -390,7 +408,19 @@ def reject_model_context_selectors(args: list[str]) -> None:
                 _selector_preflight_hold("MODEL_ARGUMENT_ARITY_AMBIGUOUS",
                                          [_selector_option(previous), raw_option])
         if option in opaque_options:
-            index += 1 if inline_value is not None or index + 1 >= len(args) else 2
+            if inline_value is not None:
+                _reject_selector_like_operand(
+                    raw_option, inline_value,
+                    allow_parallel_auto=option in ("-np", "--parallel"))
+                index += 1
+            elif index + 1 < len(args):
+                operand = args[index + 1]
+                _reject_selector_like_operand(
+                    raw_option, operand,
+                    allow_parallel_auto=option in ("-np", "--parallel"))
+                index += 2
+            else:
+                _selector_preflight_hold("MODEL_OPTION_VALUE_MISSING", [raw_option])
             continue
         if option in ("-m", "-c") and inline_value is None:
             if index + 1 >= len(args):
@@ -403,9 +433,14 @@ def reject_model_context_selectors(args: list[str]) -> None:
                    option.startswith(long_prefixes) or option.startswith(preset_prefixes))
         if blocked:
             _selector_preflight_hold("MODEL_OR_CONTEXT_SELECTOR_ALIAS", [raw_option])
-        if option in value_options and inline_value is None:
+        if option in value_options:
+            if inline_value is not None:
+                _reject_selector_like_operand(raw_option, inline_value)
+                index += 1
+                continue
             if index + 1 >= len(args):
                 _selector_preflight_hold("MODEL_OPTION_VALUE_MISSING", [raw_option])
+            _reject_selector_like_operand(raw_option, args[index + 1])
             index += 2
             continue
         index += 1
@@ -478,7 +513,8 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
             raw_cmdline = stream.read(MAX_CMDLINE_BYTES + 1)
     except OSError:
         fail(role + "_IDENTITY_UNAVAILABLE")
-    if len(raw_cmdline) > MAX_CMDLINE_BYTES or not raw_cmdline.endswith(b"\0"):
+    if (len(os.fsencode(exe)) > MAX_PROC_PATH_BYTES or
+            len(raw_cmdline) > MAX_CMDLINE_BYTES or not raw_cmdline.endswith(b"\0")):
         fail(role + "_CMDLINE_INVALID_OR_OVER_LIMIT")
     raw_argv = raw_cmdline[:-1].split(b"\0")
     if not raw_argv or any(not token for token in raw_argv):
@@ -510,8 +546,8 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
             cwd = os.readlink(proc / "cwd")
         except OSError:
             fail("HOLDER_CWD_UNAVAILABLE")
-        if argv.count(HOLDER_SCRIPT) != 1 or cwd != HOLDER_CWD:
-            fail("HOLDER_ARGV_OR_CWD_MISMATCH")
+        if len(os.fsencode(cwd)) > MAX_PROC_PATH_BYTES:
+            fail("HOLDER_CWD_OVER_LIMIT")
     else:
         fail("UNKNOWN_PROCESS_ROLE")
     group = cgroup_path(pid)
@@ -530,6 +566,8 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
         fail(role + "_IDENTITY_REREAD_UNAVAILABLE")
     stat_after = proc_stat_identity(pid)
     if (len(raw_cmdline_after) > MAX_CMDLINE_BYTES or
+            len(os.fsencode(exe_after)) > MAX_PROC_PATH_BYTES or
+            (role == "HOLDER" and len(os.fsencode(cwd_after)) > MAX_PROC_PATH_BYTES) or
             not raw_cmdline_after.endswith(b"\0") or
             exe_after != exe or
             (role == "HOLDER" and cwd_after != cwd) or
@@ -548,7 +586,11 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
         stat_final = proc_stat_identity(pid)
         if stat_final != stat_before:
             fail("MODEL_PROCESS_GROUP_CHANGED_DURING_ENVIRONMENT_READ")
-    return {"pid": pid, "start_ticks": ticks, "exe": exe_name,
+    return {"pid": pid, "start_ticks": ticks,
+            "exe": (exe_name if role == "MODEL" else None),
+            "exe_path_sha256": hashlib.sha256(os.fsencode(exe)).hexdigest(),
+            "cwd_sha256": (hashlib.sha256(os.fsencode(cwd)).hexdigest()
+                           if role == "HOLDER" else None),
             "ppid": stat_before["ppid"], "pgrp": stat_before["pgrp"],
             "argv_sha256": hashlib.sha256(b"\0".join(raw_argv)).hexdigest(),
             "environment_overrides": environment_overrides if role == "MODEL" else None,
@@ -804,6 +846,8 @@ def run_action(request_id: int, source_sha: str) -> dict:
     # must gather fresh evidence before considering any holder signal.
     latest_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
     latest_memfd = fd_memfd_identity(HOLDER_PID)
+    require_same_process_identity(holder, latest_holder, "HOLDER_AFTER_MODEL_STOP")
+    require_holder_outside_model_group(model, latest_holder)
     if (latest_holder["cgroup"] != holder["cgroup"] or
             latest_memfd["device"] != memfd["device"] or
             latest_memfd["inode"] != memfd["inode"] or
@@ -819,7 +863,17 @@ def run_action(request_id: int, source_sha: str) -> dict:
                                "holder_separate_from_model": True,
                                "model_group_contains_only_model_pid": True},
             "before": before, "pre_stop": pre_stop, "final_headroom": final_headroom,
-            "after_model": after_model, "minimum_headroom": MIN_HEADROOM,
+            "after_model": after_model,
+            "model_after": {"supervisor": after_status,
+                            "pinned_pid_state": model_pid_state,
+                            "headroom": after_model},
+            "holder_after": latest_holder, "memfd_after": latest_memfd,
+            "holder_identity_basis": [
+                "pinned_pid_and_start_ticks", "stable_pgrp_and_cgroup",
+                "stable_executable_path_sha256", "stable_full_argv_sha256",
+                "stable_cwd_sha256", "exact_memfd_device_inode_size_label",
+            ],
+            "minimum_headroom": MIN_HEADROOM,
             "model_pid_state": model_pid_state,
             "supervisor_immediately_before_stop": final_status,
             "markers": fence,
