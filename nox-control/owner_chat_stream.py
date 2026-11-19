@@ -298,11 +298,12 @@ async def _run(native,url,payload,user_text):
         # The pool may optimize caching, but cannot silently substitute the
         # request's explicitly selected model before the actual OneHost POST.
         # Missing model remains a legacy server/pool selection, unchanged.
-        selected=req['model'] if 'model' in req else None
+        explicit_model='model' in req
+        selected=req['model'] if explicit_model else None
         prepared=native['prepare_payload'](req,cache=True)
         if not isinstance(prepared,dict):
             raise StreamFailure('HOLD_MODEL_IDENTITY')
-        if 'model' in req and (type(selected) is not str or
+        if explicit_model and (type(selected) is not str or
                                not 0<len(selected.strip())<=200 or
                                type(prepared.get('model')) is not str or
                                prepared['model']!=selected):
