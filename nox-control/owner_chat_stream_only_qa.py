@@ -47,7 +47,23 @@ def pre_post_admission(*, owner_authenticated, lease_held, stop_clear, resources
             'served_asset_sha256': served_asset_sha256}
 
 
-async def served_bridge_sha256(page):
+async def final_route_post_gate(stop_check, report, blocked):
+    """Recheck STOP at the last network boundary before forwarding the one POST."""
+    try:
+        stopped = stop_check()
+    except Exception:
+        stopped = None
+    if stopped is not False:
+        reason = 'HOLD_OWNER_STOP' if stopped is True else 'HOLD_OWNER_STOP_UNAVAILABLE'
+        report['native_post_route_gate'] = {
+            'state': 'HOLD', 'reason': reason, 'request_forwarded': False}
+        blocked['owner_stop_before_native_post'] += 1
+        return False
+    report['native_post_route_gate'] = {'state': 'CLEAR', 'stop_clear': True}
+    return True
+
+
+def served_bridge_sha256(page):
     rows = await page.evaluate("""() => Array.from(document.scripts)
       .map(script => script.src ? new URL(script.src, location.href) : null)
       .filter(url => url && url.origin === location.origin
@@ -180,7 +196,19 @@ def rewrite_browser(body):
         "                    if not own:\n                        blocked['non_qa_generation']+=1\n                        return await route.abort()\n"
         "                    if native_admitted>=1:\n                        blocked['duplicate_qa_generation']+=1\n                        return await route.abort()\n"
         "                    native_admitted+=1\n")
-    body = replace_once(body, "            report['actual_native_backend']=True\n",
+    body = replace_once(body,
+        "                    # Consume admission before any uncertain network delivery:\n"
+        "                    # never retry or double-submit an ambiguous native POST.\n"
+        "                    stream_admitted+=1\n"
+        "                return await route.continue_()\n",
+        "                    # Consume admission before any uncertain network delivery:\n"
+        "                    # never retry or double-submit an ambiguous native POST.\n"
+        "                    stream_admitted+=1\n"
+        "                    if not _nox_final_route_post_gate(report, blocked):\n"
+        "                        return await route.abort()\n"
+        "                    return await route.continue_()\n"
+        "                return await route.continue_()\n")
+    body = replace_once(body, "            report['actual_native_backend']=True\\n",
         "            report['actual_native_backend']=True\n"
         "            report['owner_auth_verified']={'anonymous_status':401,'login_status':200,'session_status':200}\n")
     # In the stream-only QA, Playwright locator auto-wait could stall before any
@@ -271,6 +299,7 @@ def install(core, raw, transport, transport_raw, release, release_raw):
     core.stop_present = lambda: stop_present(core.ROOT)
     core._nox_stream_only_viewport = lambda page, report: fixed_viewport(core, transport, page, report)
     core._nox_pre_post_admission = pre_post_admission
+    core._nox_final_route_post_gate = lambda report, blocked: final_route_post_gate(core.stop_present, report, blocked)
     core._nox_served_bridge_sha256 = served_bridge_sha256
     core._nox_proper_prefixes = proper_prefixes
     core._nox_two_parts_observed = lambda value: two_parts_observed(release, value)
@@ -329,8 +358,13 @@ def main(core):
             require(report.get('stream_only_acceptance_verified') is True, 'ACCEPTANCE_MISSING')
             report['state'] = 'STREAM_ONLY_ACCEPTED'
         except BaseException as exc:
-            report.update(state='HOLD', reason='HOLD_STREAM_ONLY_TOTAL_TIMEOUT'
-                          if isinstance(exc, TimeoutError) else core.safe_error(exc))
+            route_gate = report.get('native_post_route_gate')
+            route_hold = (route_gate.get('reason') if isinstance(route_gate, dict)
+                          and route_gate.get('state') == 'HOLD'
+                          and route_gate.get('reason') in ('HOLD_OWNER_STOP', 'HOLD_OWNER_STOP_UNAVAILABLE')
+                          and route_gate.get('request_forwarded') is False else None)
+            report.update(state='HOLD', reason=route_hold or (
+                'HOLD_STREAM_ONLY_TOTAL_TIMEOUT' if isinstance(exc, TimeoutError) else core.safe_error(exc)))
         finally:
             report['finished_at'] = time.time()
             raw = json.dumps(report, separators=(',', ':'), allow_nan=False).encode()

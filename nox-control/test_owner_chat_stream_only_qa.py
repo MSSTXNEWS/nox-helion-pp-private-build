@@ -1,6 +1,7 @@
 """Concrete stream-only regressions. No native browser, service or model calls."""
 import asyncio
 import base64
+from collections import Counter
 import hashlib
 import json
 import os
@@ -67,6 +68,23 @@ class ScopeTests(unittest.TestCase):
                     submit_once()
                 self.assertEqual(model_posts, [])
 
+    def test_route_boundary_rechecks_stop_after_prepost_and_blocks_forwarding(self):
+        observed = {'owner_authenticated': True, 'lease_held': True, 'stop_clear': True,
+            'resources': {'disk_free_bytes': 8 * 1024 ** 3, 'cgroup_headroom_bytes': 5 * 1024 ** 3},
+            'served_asset_sha256': scope.SERVED_BRIDGE_SHA256}
+        scope.pre_post_admission(**observed)
+        stop = {'present': False}
+        report = {}
+        blocked = Counter()
+        forwarded = []
+        stop['present'] = True  # STOP appears after pre-post admission, before route forwarding.
+        if scope.final_route_post_gate(lambda: stop['present'], report, blocked):
+            forwarded.append('POST')
+        self.assertEqual(forwarded, [])
+        self.assertEqual(report['native_post_route_gate'], {
+            'state': 'HOLD', 'reason': 'HOLD_OWNER_STOP', 'request_forwarded': False})
+        self.assertEqual(blocked['owner_stop_before_native_post'], 1)
+
     def test_prepost_gate_is_compiled_before_single_send_click(self):
         core, _, _, _ = installed()
         constants = core.browser_run.__code__.co_consts
@@ -99,6 +117,9 @@ class ScopeTests(unittest.TestCase):
         # PR415 introduced a second turn to the general harness; stream-only must
         # remain one admitted POST even when the core supports multiturn.
         self.assertIn('allowed_qa_request', guard.co_names)
+        self.assertIn('_nox_final_route_post_gate', guard.co_names)
+        self.assertIn('continue_', guard.co_names)
+        self.assertIn('abort', guard.co_names)
         self.assertIn(False, guard.co_consts)
         self.assertIn('duplicate_qa_generation', guard.co_consts)
         self.assertIn('answer_normalized_characters:normalize(q.answer).length', core.SNAPSHOT_JS)
