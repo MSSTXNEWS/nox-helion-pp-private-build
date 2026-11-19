@@ -31,6 +31,18 @@ def main():
                 found.append({'name':name,'shape':shape(n.value)})
         if isinstance(n,ast.AnnAssign) and isinstance(n.target,ast.Name) and n.target.id=='CHAT_PASSWORD_PATH':
             found.append({'name':'CHAT_PASSWORD_PATH','shape':shape(n.value)})
+    bindings=[]
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == 'SECRETS' for t in n.targets):
+            bindings.append({'binding':'Assign','line':n.lineno,'shape':shape(n.value)})
+        elif isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name) and n.target.id=='SECRETS':
+            bindings.append({'binding':'AnnAssign','line':n.lineno,'shape':shape(n.value)})
+        elif isinstance(n, ast.ImportFrom) and any(a.name=='SECRETS' or a.asname=='SECRETS' for a in n.names):
+            bindings.append({'binding':'ImportFrom','module':(n.module or '')[:100]})
+        elif isinstance(n, ast.Import) and any(a.asname=='SECRETS' for a in n.names):
+            bindings.append({'binding':'Import'})
+    found.append({'name':'SECRETS_BINDINGS','shapes':bindings[:12]})
     print('NOX_MAINT_REPAIR='+json.dumps({'kind':'owner_password_path_ast','data':{'request':req,'source_sha':sha,
        'no_password_read':True,'no_secrets_exported':True,'assignments':found[:16]}},separators=(',',':')),flush=True)
     print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
