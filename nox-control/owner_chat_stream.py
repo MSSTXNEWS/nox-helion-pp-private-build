@@ -149,7 +149,7 @@ async def _model_events(client, url, payload):
                 if not isinstance(choices,list) or len(choices)!=1:
                     raise ValueError('choices')
                 choice=choices[0]
-                delta=choice.get('delta') or {}
+                delta=choice['delta'] if 'delta' in choice else {}
                 if not isinstance(delta,dict):
                     raise ValueError('delta')
                 # A valid terminal choice closes the model's content/tool delta.
@@ -164,7 +164,7 @@ async def _model_events(client, url, payload):
                 part=delta.get('content')
                 if part is not None and not isinstance(part,str):
                     raise ValueError('content')
-                fragments=delta.get('tool_calls') or []
+                fragments=delta['tool_calls'] if 'tool_calls' in delta else []
                 if not isinstance(fragments,list):
                     raise ValueError('calls')
                 if already_finished and (reason is not None or part or fragments):
@@ -192,7 +192,7 @@ async def _model_events(client, url, payload):
                             # must never reach the native tool dispatcher or S03.
                             if len(call[field])>160:
                                 raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
-                    function=fragment.get('function') or {}
+                    function=fragment['function'] if 'function' in fragment else {}
                     if not isinstance(function,dict):raise ValueError('function')
                     for field in ('name','arguments'):
                         value=function.get(field)
