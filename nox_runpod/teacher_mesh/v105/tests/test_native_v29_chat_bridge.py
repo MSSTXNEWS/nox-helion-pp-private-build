@@ -98,5 +98,52 @@ class NativeV29BridgeTests(unittest.TestCase):
         self.assertNotIn('gpu_stop_verified',r.json())
 
 
+    def test_dialog_receipt_is_bound_to_authenticated_owner(self):
+        app2 = FastAPI()
+        # Reuse only the test completion, not the live OneHost.
+        # Bridge's original completion is available through the shared test
+        # fixture's closure; use a fresh deterministic mock for the second app.
+        async def model(body):
+            self.calls.append(body.copy())
+            question = body['messages'][-1]['content']
+            answer = 'Проверенный ответ NOX.'
+            async def wire():
+                yield 'data: ' + json.dumps({'choices':[{'delta':{'content':answer}}]},ensure_ascii=False) + '\n\n'
+                with sqlite3.connect(self.db) as db:
+                    db.execute('INSERT INTO s03_items VALUES(?,?,?,?)',
+                        ('receipt-dialog',hashlib.sha256((question+answer).encode()).hexdigest(),
+                         'U:'+question+' A:'+answer,'2026-11-15T00:00:00Z'))
+                yield 'data: [DONE]\n\n'
+            return StreamingResponse(wire(), media_type='text/event-stream')
+        def verify(req, dialog):
+            return req.cookies.get('nox_owner')=='yes' and dialog=='owned-dialog'
+        def receipt(req, dialog, question, answer):
+            if not verify(req,dialog):
+                return None
+            with sqlite3.connect(self.db) as db:
+                row=db.execute('SELECT id FROM s03_items WHERE instr(text, ?) > 0 AND instr(text, ?) > 0',
+                               (question, answer)).fetchone()
+            return {'record_id':row[0],'dialog_id':dialog} if row else None
+        register_native_v29_chat(app2,{
+            '_session_ok':lambda req:req.cookies.get('nox_owner')=='yes',
+            '_unauthorized':lambda:JSONResponse({'error':'AUTH'},status_code=401),
+            '_proxy_completion':model,
+            '_verify_dialog_scope':verify,
+            '_readback_dialog_receipt':receipt,
+        })
+        with TestClient(app2) as client:
+            bad=client.post('/api/nox/chat/stream',cookies={'nox_owner':'yes'},
+                            json={'message':'Привет NOX','dialog_id':'another-owner-dialog'})
+            self.assertEqual(bad.status_code,409)
+            good=client.post('/api/nox/chat/stream',cookies={'nox_owner':'yes'},
+                             json={'message':'Привет NOX','dialog_id':'owned-dialog'})
+            self.assertEqual(good.status_code,200)
+            frames=[json.loads(line) for line in good.text.splitlines() if line.strip()]
+            self.assertEqual(frames[-1]['type'],'done')
+            self.assertEqual(frames[-1]['dialog_id'],'owned-dialog')
+            self.assertEqual(frames[-1]['exchange_id'],'receipt-dialog')
+            self.assertEqual(self.calls[-1]['dialog_id'],'owned-dialog')
+
+
 if __name__=='__main__':
     unittest.main()
