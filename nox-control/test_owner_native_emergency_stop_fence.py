@@ -1,6 +1,7 @@
 """Source-only regressions for the emergency STOP drain and request fence."""
 from __future__ import annotations
 
+import configparser
 import fcntl
 import importlib.util
 import json
@@ -139,6 +140,35 @@ class EmergencyStopFenceTests(unittest.TestCase):
             E.remove_request_fence_after_success(501, "a" * 40, fence,
                                                  verified_success=True)
         self.assertEqual(E.STOP.read_text(), "foreign owner request\n")
+
+    def test_main_supervisor_config_inline_semicolon_comment_contract(self):
+        # PR #580 aligned this exact parser with Supervisor's ';' inline-comment
+        # syntax after the read-only owner route rejected the configured socket.
+        source = SOURCE.read_text()
+        self.assertIn(
+            'inline_comment_prefixes=(";",)',
+            source,
+        )
+        parser = configparser.ConfigParser(
+            interpolation=None, strict=True, inline_comment_prefixes=(";",))
+        parser.read_string(
+            "[unix_http_server]\n"
+            "file=/run/supervisor.sock ; unix RPC socket\n"
+            "chmod=0600 ; private mode\n"
+            "[rpcinterface:supervisor]\n"
+            "supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface ; fixed RPC factory\n"
+            "[supervisorctl]\n"
+            "serverurl=unix:///run/supervisor.sock ; matching endpoint\n"
+            "[include]\n"
+            "files=/etc/supervisor/conf.d/*.conf ; pinned include glob\n"
+        )
+        self.assertEqual(parser.get("unix_http_server", "file"),
+                         "/run/supervisor.sock")
+        self.assertEqual(parser.get("unix_http_server", "chmod"), "0600")
+        self.assertEqual(parser.get("supervisorctl", "serverurl"),
+                         "unix:///run/supervisor.sock")
+        self.assertEqual(parser.get("include", "files"),
+                         "/etc/supervisor/conf.d/*.conf")
 
     def test_owner_route_points_to_the_exact_reviewed_emergency_source(self):
         operator = (REPO / "nox-control/owner_native_operator.py").read_text()

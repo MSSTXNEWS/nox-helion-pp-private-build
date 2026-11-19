@@ -299,7 +299,15 @@ class EntryTests(unittest.TestCase):
         value = {'schema': scope.SCHEMA, 'request': '123', 'source_sha': 'a' * 40,
             'state': 'HOLD', 'reason': 'HOLD_PROGRESSIVE_STREAM_NOT_OBSERVED',
             'stream_only_acceptance_verified': False, 'full_browser_qa_promoted': False,
-            'upstream_model_inference_verified': False}
+            'upstream_model_inference_verified': False, 'two_turn_mode': True,
+            'maximum_new_dialogs': 1, 'maximum_native_posts': 2,
+            'first_turn_terminal_sse_verified': False,
+            'authenticated_s03_history_readback_verified': False,
+            'canonical_s03_receipt_verified': False,
+            'canonical_s03_receipt_provider_present': False,
+            'owner_authenticated_history_readback_gets': 0, 'native_posts_admitted': 0,
+            'both_terminal_sse_done_records_saved_s03_integrated': False,
+            'same_dialog_id': False, 'native_terminal_done_records': []}
         def launch(argv, **kwargs):
             kwargs['stdout'].write((entry.PREFIX + json.dumps({'kind': 'browser_stream_only_receipt', 'data': value}) + '\n').encode())
             kwargs['stderr'].write(b'private cookie and password')
