@@ -28,6 +28,11 @@ class DirectStreamSmokeTests(unittest.TestCase):
         self.assertIn('"HOLD_LIVE_SMOKE_MODEL_BUSY"',inner)
         self.assertIn('"canonical_s03_write_verified"',inner)
         self.assertIn("=False  # not proven by owner-dialog history",inner)
+        self.assertIn('"model_claimed_s03_integrated_unverified"',inner)
+        self.assertIn('"canonical_s03_integration_accepted"',inner)
+        self.assertIn('"s03_integration_status"',inner)
+        self.assertIn('"UNVERIFIED"',inner)
+        self.assertNotIn('"done_claims_s03_integrated"',inner)
         self.assertIn('LIVE_STREAM_OWNER_DIALOG_VERIFIED',inner)
         self.assertNotIn('LIVE_SMOKE_S03_VERIFIED',inner)
         self.assertEqual(sum(isinstance(n,ast.FunctionDef) and n.name=='main'
