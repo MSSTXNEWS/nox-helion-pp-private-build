@@ -89,7 +89,7 @@ def main():
         slots=no_model_request_running()
         health_before={
             "model":web_get("http://127.0.0.1:8098/health"),
-            "proxy":web_get("http://127.0.0.1:8081/health"),
+            "proxy":web_get("http://127.0.0.1:8080/health"),
             "web":web_get("http://127.0.0.1:18775/nox-web-v29/chat.html"),
         }
         emit("preflight",{"request":request,"slots_idle":slots,"pids":{k:v["pid"] for k,v in before.items()},"http":health_before})
@@ -117,7 +117,7 @@ def main():
             raise RuntimeError("HOLD_CORE_CHANGED_AFTER_RESTART")
         health_after={
             "model":web_get("http://127.0.0.1:8098/health"),
-            "proxy":web_get("http://127.0.0.1:8081/health"),
+            "proxy":web_get("http://127.0.0.1:8080/health"),
             "web":web_get("http://127.0.0.1:18775/nox-web-v29/chat.html"),
         }
         result={"request":request,"restarted":completed,"model_pid_preserved":True,
