@@ -1,0 +1,24 @@
+name: NOX native lease readback contract
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_lease_readback.py'
+      - '.github/workflows/nox-native-lease-readback-ci.yml'
+  push:
+    paths:
+      - 'nox-control/owner_native_inspect.py'
+      - 'nox-control/test_owner_native_lease_readback.py'
+      - '.github/workflows/nox-native-lease-readback-ci.yml'
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m py_compile owner_native_inspect.py test_owner_native_lease_readback.py
+        working-directory: nox-control
+      - run: python -m unittest -v test_owner_native_lease_readback.py
+        working-directory: nox-control
