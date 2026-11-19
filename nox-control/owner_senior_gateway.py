@@ -60,6 +60,10 @@ CHECKS = {'resource_admission', 'identity', 'checkpoint_lineage', 'result_verifi
           'existing_authorization', 'rollback', 'privacy', 'dependency_readiness',
           'duplicate_execution', 'insufficient_evidence'}
 ASSESSMENTS = {'PROCEED_WITH_EXISTING_GUARDS', 'HOLD_FOR_REVIEW', 'INSUFFICIENT_EVIDENCE'}
+## This built-in provider list is metered. Owner policy: no paid API calls.
+## Re-enable only through a separately reviewed source change; no env/key bypass.
+PAID_PROVIDER_EGRESS_ALLOWED = False
+
 DEFAULT_CONFIG = {
     'schema': SCHEMA, 'enabled': True, 'providers': list(PROVIDERS),
     'minimum_verified_providers': 1, 'allowed_handlers': HANDLERS,
@@ -157,6 +161,29 @@ def _private_stat(value):
         raise GatewayHold('UNSAFE_PRIVATE_FILE')
 
 
+def _private_json_object(pairs):
+    """Never normalize duplicate fields in private config, access or evidence receipts."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise GatewayHold('PRIVATE_JSON_INVALID')
+        result[key] = value
+    return result
+
+
+def _private_json_constant(_):
+    # Python's default JSON parser accepts NaN/Infinity; receipts must not.
+    raise GatewayHold('PRIVATE_JSON_INVALID')
+
+
+def _private_json_float(raw):
+    # A syntactically valid exponent like 1e999 overflows float() to infinity.
+    value = float(raw)
+    if not math.isfinite(value):
+        raise GatewayHold('PRIVATE_JSON_INVALID')
+    return value
+
+
 def _read(relative, maximum=65536, missing=None):
     path = _path(relative)
     try:
@@ -172,7 +199,8 @@ def _read(relative, maximum=65536, missing=None):
         if len(data) > maximum:
             raise GatewayHold('PRIVATE_FILE_TOO_LARGE')
     try:
-        value = json.loads(data, parse_constant=lambda _: None)
+        value = json.loads(data, object_pairs_hook=_private_json_object,
+                           parse_constant=_private_json_constant, parse_float=_private_json_float)
     except (ValueError, UnicodeError):
         raise GatewayHold('PRIVATE_JSON_INVALID') from None
     if not isinstance(value, dict):
@@ -332,6 +360,8 @@ def status():
     """Read-only, secret-free status. Configured does not mean callable."""
     base = {'schema': CONTRACT, 'models_consulted': 0, 'research_state': 'INTERNET_RESEARCH_NOT_PERFORMED',
             'private_content_export_enabled': False, 'advice_execution_enabled': False}
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {**base, 'state': 'NO_PAID_API_POLICY', 'providers': {}}
     try:
         config = _config()
         if config is None:
@@ -407,7 +437,8 @@ def request_contract(provider, credential, prompt, config, verification=False):
     spec = PROVIDERS[provider]
     limit = max(1024, config['max_output_tokens']) if verification else config['max_output_tokens']
     system = 'Return the exact public verification token requested, with no other text.' if verification else SYSTEM
-    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json',
+               'Accept-Encoding': 'identity'}
     if provider == 'openai':
         headers['Authorization'] = 'Bearer ' + credential
         body = {'model': spec['model'], 'instructions': system, 'input': prompt,
@@ -468,15 +499,41 @@ def response_text(provider, value):
                 parts.append(content.get('text'))
     if not parts or any(not isinstance(p, str) for p in parts):
         raise GatewayHold('MODEL_RESPONSE_EMPTY')
-    text = '\n'.join(parts).strip()
-    if not text or len(text) > 16000:
+    # Text chunks are consecutive fragments, not lines: do not inject a separator
+    # or strip provider whitespace. Preserve exact decoded adviser text.
+    text = ''.join(parts)
+    if not text.strip() or len(text) > 16000:
         raise GatewayHold('MODEL_RESPONSE_SIZE')
     return text
 
 
+def _unique_json_object(pairs):
+    """Reject ambiguous duplicate keys in every untrusted JSON object, including nested ones."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise GatewayHold('MODEL_RESPONSE_DUPLICATE_JSON_KEY')
+        result[key] = value
+    return result
+
+
+def _reject_model_nonfinite(_value):
+    """Do not silently accept NaN/Infinity in provider envelopes or advice."""
+    raise GatewayHold('MODEL_RESPONSE_NONFINITE_JSON')
+
+
+def _model_json_float(raw):
+    # parse_constant does not catch JSON exponent overflow (e.g. 1e999).
+    value = float(raw)
+    if not math.isfinite(value):
+        raise GatewayHold('MODEL_RESPONSE_NONFINITE_JSON')
+    return value
+
+
 def advice_candidate(text):
     try:
-        value = json.loads(text)
+        value = json.loads(text, object_pairs_hook=_unique_json_object,
+                           parse_constant=_reject_model_nonfinite, parse_float=_model_json_float)
     except ValueError:
         raise GatewayHold('ADVICE_SCHEMA_INVALID') from None
     required = {'assessment', 'check_categories', 'rationale'}
@@ -500,6 +557,8 @@ def advice_candidate(text):
 
 async def _request(provider, credential, prompt, config, verification=False):
     """One request, no retries or redirects; total deadline bounds all I/O."""
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {'state': 'NO_PAID_API_POLICY'}
     async def perform():
         import httpx
         url, headers, body = request_contract(provider, credential, prompt, config, verification)
@@ -513,12 +572,17 @@ async def _request(provider, credential, prompt, config, verification=False):
                             'MODEL_OR_REQUEST_UNAVAILABLE' if response.status_code in (400, 404) else
                             'REDIRECT_REJECTED' if 300 <= response.status_code < 400 else 'PROVIDER_UNAVAILABLE')
                     return {'state': code}
+                # The persisted digest must identify bytes received over HTTP,
+                # never silently decompressed or transformed response bytes.
+                if response.headers.get('content-encoding', 'identity').strip().lower() != 'identity':
+                    raise GatewayHold('MODEL_RESPONSE_CONTENT_ENCODING')
                 data = bytearray()
-                async for block in response.aiter_bytes():
+                async for block in response.aiter_raw():
                     data.extend(block)
                     if len(data) > 262144:
                         raise GatewayHold('MODEL_RESPONSE_SIZE')
-                value = json.loads(data)
+                value = json.loads(data, object_pairs_hook=_unique_json_object,
+                                   parse_constant=_reject_model_nonfinite, parse_float=_model_json_float)
                 return {'state': 'RECEIVED', 'text': response_text(provider, value),
                         'response_sha256': hashlib.sha256(data).hexdigest()}
     try:
@@ -726,6 +790,8 @@ def consult_plan(context, deadline_seconds=2.0):
 
 def initialize():
     """Create only this module's nonsecret configuration, preserving an existing one."""
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {'state': 'NO_PAID_API_POLICY', 'models_consulted': 0}
     fd = _lock()
     if fd is None:
         return {'state': 'PENDING', 'models_consulted': 0}
@@ -738,6 +804,8 @@ def initialize():
 
 
 def set_credential(provider, value):
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {'state': 'NO_PAID_API_POLICY', 'access_verified': False}
     if provider not in PROVIDERS or not _valid_key(value):
         raise GatewayHold('CREDENTIAL_INPUT_INVALID')
     fd = _lock()
@@ -757,6 +825,8 @@ def set_credential(provider, value):
 
 def verify_access(provider=None):
     """Explicit paid, synthetic API check. No host context or user text is sent."""
+    if not PAID_PROVIDER_EGRESS_ALLOWED:
+        return {'state': 'NO_PAID_API_POLICY', 'models_verified': 0}
     config = _config()
     if config is None or not config['enabled']:
         return {'state': 'DISABLED', 'models_verified': 0}
@@ -813,15 +883,22 @@ def main(argv=None):
         elif args.command == 'init-config':
             result = initialize()
         elif args.command == 'set-key':
-            if not sys.stdin.isatty():
+            if not PAID_PROVIDER_EGRESS_ALLOWED:
+                result = {'state': 'NO_PAID_API_POLICY', 'access_verified': False}
+            elif not sys.stdin.isatty():
                 raise GatewayHold('PRIVATE_TERMINAL_REQUIRED')
-            result = set_credential(args.provider, getpass.getpass('Provider API key (hidden): '))
+            else:
+                result = set_credential(args.provider, getpass.getpass('Provider API key (hidden): '))
         else:
             result = verify_access(args.provider)
     except (GatewayHold, OSError, ValueError, TypeError):
         result = {'state': 'CONFIGURATION_OR_ACCESS_CHECK_FAILED'}
     print(json.dumps(result, sort_keys=True))
-    return 0 if result.get('state') not in ('CONFIGURATION_OR_ACCESS_CHECK_FAILED', 'CONFIGURATION_ERROR') else 2
+    if result.get('state') in ('CONFIGURATION_OR_ACCESS_CHECK_FAILED', 'CONFIGURATION_ERROR'):
+        return 2
+    if result.get('state') == 'NO_PAID_API_POLICY' and args.command != 'status':
+        return 2
+    return 0
 
 
 if __name__ == '__main__':

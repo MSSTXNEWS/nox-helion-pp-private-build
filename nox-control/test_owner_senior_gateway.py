@@ -32,6 +32,10 @@ class GatewayTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.root_patch = patch.object(gateway, 'ROOT', self.root)
         self.root_patch.start()
+        # Existing protocol tests use mocked network replies, never real paid requests.
+        self.policy_patch = patch.object(gateway, 'PAID_PROVIDER_EGRESS_ALLOWED', True)
+        self.policy_patch.start()
+        self.addCleanup(self.policy_patch.stop)
         self.env_patch = patch.dict(os.environ, {}, clear=True)
         self.env_patch.start()
         self.addCleanup(self.env_patch.stop)
@@ -60,6 +64,51 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(result['models_verified'], 3)
         self.assertEqual(gateway.status()['state'], 'READY')
         return config
+
+    def test_no_paid_policy_blocks_status_consult_verify_and_direct_http(self):
+        # Use the actual module default: patching False would hide a future unsafe default.
+        self.policy_patch.stop()
+        self.assertIs(gateway.PAID_PROVIDER_EGRESS_ALLOWED, False)
+        # No config, credential file, terminal prompt or network setup on a denied policy.
+        self.assertEqual(gateway.initialize()['state'], 'NO_PAID_API_POLICY')
+        self.assertEqual(gateway.set_credential('openai', 'unit-test-credential-value')['state'],
+                         'NO_PAID_API_POLICY')
+        with patch.object(gateway.getpass, 'getpass', side_effect=AssertionError('secret prompt')) as secret_prompt:
+            with patch('builtins.print') as printed:
+                self.assertEqual(gateway.main(['set-key', 'openai']), 2)
+                self.assertIn('NO_PAID_API_POLICY', printed.call_args[0][0])
+                self.assertEqual(gateway.main(['init-config']), 2)
+                self.assertEqual(gateway.main(['verify-access']), 2)
+                self.assertEqual(gateway.main(['status']), 0)
+            secret_prompt.assert_not_called()
+        self.assertEqual(list(self.root.iterdir()), [])
+
+        # Even pre-existing valid configuration and keys cannot reopen paid egress.
+        self.configure()
+        gateway._write('config/owner_senior_credentials.json', {
+            'schema': 'NOX_OWNER_SENIOR_CREDENTIALS_V1',
+            'keys': {name: 'unit-test-credential-value-' + name for name in gateway.PROVIDERS}})
+        with patch.object(gateway, 'request_contract') as request_contract:
+            self.assertEqual(gateway.status()['state'], 'NO_PAID_API_POLICY')
+            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'NO_PAID_API_POLICY')
+            self.assertEqual(gateway.verify_access()['state'], 'NO_PAID_API_POLICY')
+            result = asyncio.run(gateway._request('openai', 'private-key', '{}', gateway.DEFAULT_CONFIG))
+            self.assertEqual(result['state'], 'NO_PAID_API_POLICY')
+            request_contract.assert_not_called()
+        self.assertFalse((self.root / 'state/owner_senior/access.json').exists())
+        self.assertFalse((self.root / 'state/owner_senior/budget.json').exists())
+
+    def test_model_text_fragments_are_not_rewritten(self):
+        # Provider text fragments may split inside JSON strings. No added newline
+        # or stripped final newline is permitted before evaluating the answer.
+        raw = '{"assessment":"HOLD_FOR_REVIEW","check_categories":[],"rationale":"split"}' + chr(10)
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant', 'content': [
+                     {'type': 'output_text', 'text': raw[:28]},
+                     {'type': 'output_text', 'text': raw[28:]}]}]}
+        result = gateway.response_text('openai', value)
+        self.assertEqual(result, raw)
+        self.assertEqual(gateway.advice_candidate(result)['assessment'], 'HOLD_FOR_REVIEW')
 
     def test_absent_and_missing_credentials_are_read_only_and_never_call_provider(self):
         self.assertEqual(gateway.status()['state'], 'MISSING_SENIOR_GATEWAY')
@@ -178,7 +227,14 @@ class GatewayTests(unittest.TestCase):
         with patch.object(gateway, '_request', delayed):
             with ThreadPoolExecutor(max_workers=6) as pool:
                 values = list(pool.map(lambda _: gateway.consult_plan(CONTEXT, 0.5), range(6)))
-            result = gateway.consult_plan(CONTEXT, 0.5)
+            # Completion is asynchronous: wait for the durable cache, not for an arbitrary wall-clock delay.
+            deadline = time.monotonic() + 2.0
+            while True:
+                result = gateway.consult_plan(CONTEXT, 0.05)
+                if result['state'] == 'CONSULTED' or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+        self.assertEqual(result['state'], 'CONSULTED')
         self.assertEqual(len(seen), 3)
         self.assertEqual({p for p, _ in seen}, set(gateway.PROVIDERS))
         self.assertTrue(all(context == CONTEXT for _, context in seen))
@@ -203,8 +259,14 @@ class GatewayTests(unittest.TestCase):
             self.assertLess(time.monotonic() - start, 0.15)
             self.assertEqual(result['state'], 'PENDING')
             self.assertIsNone(gateway._lock())
-            time.sleep(0.25)
-            self.assertEqual(gateway.consult_plan(CONTEXT)['state'], 'CONSULTED')
+            # The background thread has a bounded deadline but no guaranteed 250-ms scheduling slot.
+            deadline = time.monotonic() + 2.0
+            while True:
+                final = gateway.consult_plan(CONTEXT, 0.05)
+                if final['state'] == 'CONSULTED' or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+            self.assertEqual(final['state'], 'CONSULTED')
         fd = gateway._lock()
         self.assertIsNotNone(fd)
         gateway._unlock(fd)
@@ -225,6 +287,127 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(len(calls), 3)
         self.assertEqual(len(gateway._read('state/owner_senior/budget.json')['events']), 6)
 
+    def test_duplicate_provider_json_keys_fail_closed_without_normalizing_advice(self):
+        # A duplicated object key is ambiguous evidence, even if both values
+        # happen to be equal. Preserve no normalized adviser recommendation.
+        import httpx
+        config = self.configure()
+        original = httpx.AsyncClient
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant',
+                             'content': [{'type': 'output_text', 'text': ADVICE}]}]}
+        wire = json.dumps(value).replace('"status": "completed"',
+                                         '"status": "completed", "status": "completed"', 1).encode()
+        async def duplicate_reply(request):
+            return httpx.Response(200, stream=httpx.ByteStream(wire))
+        with patch.object(httpx, 'AsyncClient',
+                          lambda **kwargs: original(transport=httpx.MockTransport(duplicate_reply), **kwargs)):
+            rejected = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+        self.assertEqual(rejected, {'state': 'MODEL_RESPONSE_DUPLICATE_JSON_KEY'})
+        for ambiguous in (
+                '{"assessment":"HOLD_FOR_REVIEW","assessment":"PROCEED_WITH_EXISTING_GUARDS",'
+                '"check_categories":[],"rationale":"test"}',
+                '{"assessment":"HOLD_FOR_REVIEW","check_categories":[],"rationale":"test",'
+                '"recommendations":[{"area":"verification","area":"chat_latency","change":"a",'
+                '"expected_effect":"b","evaluation":"c","rollback":"d"}]}'):
+            with self.subTest(ambiguous=ambiguous):
+                with self.assertRaisesRegex(gateway.GatewayHold, 'MODEL_RESPONSE_DUPLICATE_JSON_KEY'):
+                    gateway.advice_candidate(ambiguous)
+        self.assertEqual(gateway.advice_candidate(ADVICE)['assessment'], 'HOLD_FOR_REVIEW')
+
+    def test_nonfinite_provider_envelope_and_advice_are_not_normalized(self):
+        # Raw JSON that Python normally accepts as NaN/Infinity is ambiguous
+        # evidence. No decoded candidate or receipt may be accepted from it.
+        import httpx
+        config = self.configure()
+        original = httpx.AsyncClient
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant',
+                             'content': [{'type': 'output_text', 'text': ADVICE}]}]}
+        base = json.dumps(value)
+        for constant in ('NaN', 'Infinity', '-Infinity'):
+            with self.subTest(constant=constant):
+                wire = (base[:-1] + ', "usage": {"input_tokens": ' + constant + '}}').encode()
+                async def mock_response(request):
+                    return httpx.Response(200, stream=httpx.ByteStream(wire))
+                with patch.object(httpx, 'AsyncClient',
+                                  lambda **kwargs: original(transport=httpx.MockTransport(mock_response), **kwargs)):
+                    rejected = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+                self.assertEqual(rejected, {'state': 'MODEL_RESPONSE_NONFINITE_JSON'})
+                candidate = ('{"assessment":"HOLD_FOR_REVIEW","check_categories":[],'
+                             '"rationale":' + constant + '}')
+                with self.assertRaisesRegex(gateway.GatewayHold, 'MODEL_RESPONSE_NONFINITE_JSON'):
+                    gateway.advice_candidate(candidate)
+        self.assertEqual(gateway.advice_candidate(ADVICE)['assessment'], 'HOLD_FOR_REVIEW')
+
+    def test_numeric_exponent_overflow_fails_closed_without_losing_valid_floats(self):
+        # json.loads(parse_constant=...) alone misses 1e999, which float() maps
+        # to infinity. Check untrusted provider bytes and private JSON receipts.
+        import httpx
+        config = self.configure()
+        original = httpx.AsyncClient
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant',
+                             'content': [{'type': 'output_text', 'text': ADVICE}]}]}
+        base = json.dumps(value)
+        for numeric in ('1e999', '-1e999'):
+            with self.subTest(numeric=numeric):
+                wire = (base[:-1] + ', "usage": {"input_tokens": ' + numeric + '}}').encode()
+                async def mock_response(request):
+                    return httpx.Response(200, stream=httpx.ByteStream(wire))
+                with patch.object(httpx, 'AsyncClient',
+                                  lambda **kwargs: original(transport=httpx.MockTransport(mock_response), **kwargs)):
+                    rejected = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+                self.assertEqual(rejected, {'state': 'MODEL_RESPONSE_NONFINITE_JSON'})
+                advice = ('{"assessment":"HOLD_FOR_REVIEW","check_categories":[],'
+                          '"rationale":"safe","usage":{"count":' + numeric + '}}')
+                with self.assertRaisesRegex(gateway.GatewayHold, 'MODEL_RESPONSE_NONFINITE_JSON'):
+                    gateway.advice_candidate(advice)
+
+        private = self.root / 'state/owner_senior/access.json'
+        private.parent.mkdir(parents=True, exist_ok=True)
+        private.write_text('{"providers":{"openai":{"verified_at":1e999}}}')
+        private.chmod(0o600)
+        with self.assertRaisesRegex(gateway.GatewayHold, 'PRIVATE_JSON_INVALID'):
+            gateway._read('state/owner_senior/access.json')
+        private.write_text('{"providers":{"openai":{"verified_at":1e3}}}')
+        self.assertEqual(gateway._read('state/owner_senior/access.json')
+                         ['providers']['openai']['verified_at'], 1000.0)
+        self.assertEqual(gateway.advice_candidate(ADVICE)['assessment'], 'HOLD_FOR_REVIEW')
+
+    def test_wire_byte_digest_and_unexpected_compression_hold(self):
+        # Mock provider transport only: no paid request or credentials leave the test.
+        import gzip
+        import httpx
+        config = self.configure()
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant',
+                             'content': [{'type': 'output_text', 'text': ADVICE}]}]}
+        wire = json.dumps(value, separators=(',', ':')).encode('utf-8')
+        original = httpx.AsyncClient
+        accepted_encodings = []
+
+        async def plain(request):
+            accepted_encodings.append(request.headers.get('accept-encoding'))
+            return httpx.Response(200, stream=httpx.ByteStream(wire))
+
+        with patch.object(httpx, 'AsyncClient',
+                          lambda **kwargs: original(transport=httpx.MockTransport(plain), **kwargs)):
+            result = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+        self.assertEqual(result['state'], 'RECEIVED')
+        self.assertEqual(result['text'], ADVICE)
+        self.assertEqual(result['response_sha256'], gateway.hashlib.sha256(wire).hexdigest())
+        self.assertEqual(accepted_encodings, ['identity'])
+
+        async def compressed(request):
+            return httpx.Response(200, headers={'content-encoding': 'gzip'},
+                                  stream=httpx.ByteStream(gzip.compress(wire)))
+
+        with patch.object(httpx, 'AsyncClient',
+                          lambda **kwargs: original(transport=httpx.MockTransport(compressed), **kwargs)):
+            held = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+        self.assertEqual(held['state'], 'MODEL_RESPONSE_CONTENT_ENCODING')
+
     def test_http_redirect_is_not_followed_and_body_limit_is_enforced(self):
         import httpx
         config = self.configure()
@@ -244,7 +427,7 @@ class GatewayTests(unittest.TestCase):
         self.assertFalse(options[0]['trust_env'])
         self.assertFalse(options[0]['follow_redirects'])
         async def huge(request):
-            return httpx.Response(200, content=b' ' * 262145)
+            return httpx.Response(200, stream=httpx.ByteStream(b' ' * 262145))
         with patch.object(httpx, 'AsyncClient', lambda **kwargs: original(transport=httpx.MockTransport(huge), **kwargs)):
             result = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
         self.assertEqual(result['state'], 'MODEL_RESPONSE_SIZE')
@@ -267,6 +450,27 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(result['state'], 'PROVIDER_TIMEOUT')
         self.assertLess(time.monotonic() - begin, 0.25)
         self.assertEqual(cancelled, [True])
+
+    def test_private_adviser_receipts_reject_duplicate_and_nonfinite_json(self):
+        # Local JSON evidence must never silently choose a duplicate key or
+        # normalize non-finite numeric fields before its SHA/claim is reviewed.
+        path = self.root / 'state/owner_senior/consultations.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        invalid = (
+            '{"entries":{},"entries":{"forged":true}}',
+            '{"entries":{"record":{"state":"PENDING","state":"CONSULTED"}}}',
+            '{"entries":{"record":{"at":NaN}}}',
+            '{"entries":{"record":{"at":Infinity}}}',
+            '{"entries":{"record":{"at":-Infinity}}}',
+        )
+        for raw in invalid:
+            with self.subTest(receipt=raw):
+                path.write_text(raw, encoding='utf-8')
+                path.chmod(0o600)
+                with self.assertRaisesRegex(gateway.GatewayHold, 'PRIVATE_JSON_INVALID'):
+                    gateway._cache()
+        gateway._write('state/owner_senior/consultations.json', {'entries': {}})
+        self.assertEqual(gateway._cache(), {})
 
     def test_secret_file_symlink_fifo_and_broad_permissions_are_rejected(self):
         self.configure()

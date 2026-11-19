@@ -1,0 +1,23 @@
+name: NOX A2 paid adviser source gate
+on:
+  pull_request:
+    paths:
+      - 'nox-control/owner_senior_gateway.py'
+      - 'nox-control/test_owner_senior_gateway.py'
+      - '.github/workflows/nox-a2-paid-adviser-source-ci.yml'
+permissions:
+  contents: read
+jobs:
+  a2-source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Run focused offline adviser policy and transport regressions
+        run: |
+          python3 -m venv .a2-ci
+          . .a2-ci/bin/activate
+          python -m pip install --disable-pip-version-check httpx==0.28.1
+          python -m unittest discover -s nox-control -p 'test_owner_senior_gateway.py' -v
