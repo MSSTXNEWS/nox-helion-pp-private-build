@@ -8,7 +8,7 @@ const JS=fs.readFileSync(file,'utf8');
 const id='abcd1234abcd1234abcd1234abcd1234';
 const answer='Живой поток NOX';
 const prompt='Привет, NOX';
-function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,customIntl){
+function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt=false,reply=answer,revision=3,raf,legacyIntl=false,firstDeltaAt=5,onHistory,historyExchangeId='verified-exchange-01',historyTail=[],stallHistoryBody=false,stallCreateBody=false,expectedQuestion=prompt,customIntl,presentation){
   const calls=[];
   let old=async (path,opts={})=>{
     const u=new URL(String(path),'https://nox.local');
@@ -69,6 +69,8 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
   }
   if(legacyIntl)context.Intl={}; // emulate old browsers with no Intl.Segmenter
   if(customIntl)context.Intl=customIntl;
+  if(presentation){context.document={visibilityState:presentation.hidden?'hidden':'visible'};
+    window.matchMedia=()=>({matches:!!presentation.reduced});}
   vm.runInNewContext(JS,context,{filename:file});
   return {fetch:(...args)=>window.fetch(...args),calls,window};
 }
@@ -1349,4 +1351,28 @@ test('V177 native chunks reuse already segmented glyphs during browser pacing',a
   assert.equal(segments,3,'two native chunks and final tail should each segment once');
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
   assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+});
+
+test('V178 hidden and reduced-motion SSE skip visual timers but preserve native S03 result',async()=>{
+  const reply='NOX 🧠 español русский '.repeat(25);
+  for(const view of [{hidden:true},{reduced:true},{hidden:false,reduced:false}]){
+    let raf=0,timers=0;
+    const scheduler={
+      requestAnimationFrame(cb){raf++;queueMicrotask(()=>cb(performance.now()));return raf;},
+      cancelAnimationFrame(){},
+      setTimeout(cb){timers++;queueMicrotask(cb);return timers;},
+      clearTimeout(){}
+    };
+    const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+      scheduler,false,5,undefined,'verified-exchange-01',[],false,false,prompt,undefined,view);
+    const output=await events(await f.fetch('/api/nox/chat',{method:'POST',
+      body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v178-visibility'})}));
+    assert.equal(output.filter(x=>x.type==='token').map(x=>x.t).join(''),reply);
+    assert.equal(output.filter(x=>x.type==='done').length,1);
+    assert.equal(output.filter(x=>x.type==='error').length,0);
+    assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+    assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
+    if(view.hidden||view.reduced)assert.equal(raf+timers,0,'no visual pacing work while suppressed');
+    else assert(raf+timers>0,'visible motion retains browser pacing');
+  }
 });
