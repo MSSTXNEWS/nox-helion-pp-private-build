@@ -82,8 +82,7 @@
     if(data.status!=='READY'||data.dialog_id!==id||!Array.isArray(data.messages))throw Error('HOLD_DIALOG_HISTORY_CONTRACT');
     const pair=data.messages.filter(m=>m&&m.exchange_id===exchangeId);
     if(pair.length!==2||pair[0].role!=='user'||pair[1].role!=='assistant'||
-       pair[0].content!==prompt||pair[1].content!==answer||
-       pair[0].exchange_id!==exchangeId||pair[1].exchange_id!==exchangeId)
+       pair[0].content!==prompt||pair[1].content!==answer)
       throw Error('HOLD_DIALOG_HISTORY_READBACK');
   }
   function accepted(done,id) {
@@ -163,6 +162,7 @@
       buf+=decoder.decode();
       if(buf.trim())throw Error('HOLD_INCOMPLETE_NATIVE_FRAME');
       if(!done||!answer.trim())throw Error('HOLD_INCOMPLETE_NATIVE_RESPONSE');
+      if(done.native_model_label&&done.native_model_label!==nativeModel)throw Error('HOLD_MODEL_LABEL_CONFLICT');
       return {answer,receipt:Object.assign(done,{native_model_label:nativeModel}),nativeModel};
     }finally{
       try{Promise.resolve(reader.cancel('STREAM_CLOSED')).catch(()=>{});}catch{}
@@ -275,7 +275,7 @@
     });
     return responseJSONStream(body);
   }
-  const responseJSONStream=body=>new Response(body,{status:200,headers:{
+  const responseJSONStream=body=>new Response(body,{headers:{
     'Content-Type':'text/event-stream','Cache-Control':'no-store','X-Accel-Buffering':'no'
   }});
   async function jsonChat(data,signal) {
