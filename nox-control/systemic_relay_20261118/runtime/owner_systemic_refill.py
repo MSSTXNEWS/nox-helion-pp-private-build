@@ -19,7 +19,9 @@ SHA = re.compile(r'[0-9a-f]{64}\Z')
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z')
 MISSION = re.compile(r'[a-z][a-z0-9_]{0,39}\Z')
 QUEUES = {'Q1_RUNTIME_CHAT','Q2_MEMORY_KNOWLEDGE','Q3_TRAINING_WEIGHTS','Q4_INTEGRATION_ACCEPTANCE'}
-ACTIVE = {'pending','running','wait','retry','admitted','prepared'}
+ACTIVE = {'pending','running','wait','retry','admitted','prepared','ready'}
+NATIVE_HANDLERS = {'owner_native_subagent_review', 'owner_native_typed_leaf',
+                   'owner_native_project_work'}
 TERMINAL = {'done','verified','blocked','failed','cancelled'}
 PUBLIC_REASONS = {'MODEL_SLOT_BUSY','PLANNER_REPEATED_ACTION_NO_PROGRESS',
     'PLANNER_NO_CHANGES','PLANNER_BUDGET_EXHAUSTED','HOLD_PROJECT_SOURCE_DRIFT',
@@ -400,15 +402,15 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
               'running':0, 'terminal':0, 'blocked':0, 'unknown':0}
     # The outer NOX dispatcher also tracks many legacy catalog/track entries.
     # Only these three native execution handlers count as native workload.
-    native_handlers = {'owner_native_subagent_review',
-                       'owner_native_typed_leaf', 'owner_native_project_work'}
     native_observed = 0
     for row in tasks.values():
-        if not isinstance(row, dict) or row.get('handler') not in native_handlers:
+        if not isinstance(row, dict) or row.get('handler') not in NATIVE_HANDLERS:
             continue
         native_observed += 1
         status = row.get('status')
-        if status in ('pending','admitted','prepared','retry','wait'):
+        if status == 'ready':
+            states['ready'] += 1
+        elif status in ('pending','admitted','prepared','retry','wait'):
             states['pending'] += 1
         elif status == 'running':
             states['running'] += 1
@@ -488,13 +490,16 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
             if len(suggestions) == 3:
                 break
 
-    exhausted = (states['pending'] + states['running'] + states['ready'] == 0)
+    unknown_native = states['unknown'] != 0
+    exhausted = (states['pending'] + states['running'] + states['ready'] == 0
+                 and not unknown_native)
     context = {'manifest_sha256':capacity['manifest_sha256'],
                'source_pins':source_pins,
                'task_outcomes':outcomes[-32:], 'deferred':deferred}
     return {'schema':'NOX_NATIVE_REFLEX_MONITOR_V1',
         'observation_sha256':digest(context),
-        'state':('REFILL_REQUIRED' if exhausted else 'EXECUTION_OR_ADMISSION_IN_PROGRESS'),
+        'state':('NATIVE_TASK_STATUS_UNKNOWN_HOLD' if unknown_native else
+                  'REFILL_REQUIRED' if exhausted else 'EXECUTION_OR_ADMISSION_IN_PROGRESS'),
         'worker_cap':3,'available_slots':capacity['slots_available'],
         'observed_task_counts':states,
         'native_records_observed':native_observed,
@@ -507,8 +512,10 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
         'repeated_snapshot_idempotent':True,
         'automatic_owner_approval':False,
         'new_native_jobs':len(admitted_rows),
-        'next_action':('RUN_ADMITTED_VERIFIED_MISSIONS' if admitted_rows else
-            'VERIFY_AND_PUBLISH_NEW_GROUNDED_TASKPACK'),
+        'next_action':('INSPECT_UNKNOWN_NATIVE_TASK_STATUS' if unknown_native else
+                       'RUN_ADMITTED_VERIFIED_MISSIONS' if admitted_rows else
+                       'WAIT_EXISTING_NATIVE_WORK' if not exhausted else
+                       'VERIFY_AND_PUBLISH_NEW_GROUNDED_TASKPACK'),
         'performance_or_training_success_claimed':False,
         'memory_governor':memory_governor_projection(capacity)}
 
@@ -533,6 +540,12 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
     manifest_sha = capacity.get('manifest_sha256',digest(manifest))
     require(type(manifest_sha) is str and SHA.fullmatch(manifest_sha), 'MANIFEST_PIN')
     rows, contracts, bindings, rejected = [], {}, {}, []
+    # Unknown native states cannot be interpreted as an empty queue. Preserve
+    # existing work and withhold new missions until the owner reconciles it.
+    unknown_native = any(isinstance(task, dict)
+        and task.get('handler') in NATIVE_HANDLERS
+        and task.get('status') not in ACTIVE | TERMINAL
+        for task in state_snapshot.values())
     reserved = set()
     external_reservations = capacity.get('reserved_sources',[])
     require(isinstance(external_reservations,list) and len(external_reservations) <= 512,
@@ -558,7 +571,9 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
         name = mission['mission_id']; input_sha = _input(mission)
         task_id = mission['parent_task_id'] + '.relay.' + name + '.' + input_sha[:16]
         reason = None
-        if task_id in state_snapshot or (name,mission['revision']) in admitted_missions:
+        if unknown_native:
+            reason = 'NATIVE_TASK_STATUS_UNKNOWN_HOLD'
+        elif task_id in state_snapshot or (name,mission['revision']) in admitted_missions:
             reason = 'ALREADY_ADMITTED_NO_REPLAY'
         elif any(state_snapshot.get(task_id,{}).get('status') not in ('done','verified')
                  for task_id in mission.get('dependencies',[])):
@@ -591,7 +606,8 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
     fingerprint = digest({'manifest_sha256':manifest_sha,'source_pins':source_pins,'outcomes':outcomes})
     waits = {'CAPACITY_WAIT','SOURCE_ALREADY_RESERVED','DEPENDENCY_NOT_VERIFIED'}
     waiting = any(row['reason'] in waits for row in rejected)
-    state = 'REVIEWED_BATCH_READY' if rows else 'WAIT_EXISTING_WORK' if waiting else 'REFILL_REQUIRED'
+    state = ('REVIEWED_BATCH_READY' if rows else 'WAIT_EXISTING_WORK'
+             if waiting or unknown_native else 'REFILL_REQUIRED')
     request = None
     if state == 'REFILL_REQUIRED':
         request = {'schema':'NOX_SYSTEMIC_REFILL_REQUEST_V1','request_id':fingerprint,
