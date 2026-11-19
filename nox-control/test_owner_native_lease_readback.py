@@ -76,6 +76,13 @@ class NativeLeaseReadbackTests(unittest.TestCase):
         self.assertEqual(self.readback(starttime_reader=lambda _pid: next(sequence))["state"],
                          "HOLD_IDENTITY_CHANGED")
 
+    def test_lease_or_supervisor_change_between_reads_fails_closed(self):
+        self.assertEqual(self.readback(proc_locks_text_after="")["state"],
+                         "HOLD_LOCK_CHANGED")
+        self.assertEqual(self.readback(supervisor_result_after=(
+            0, "nox-dispatcher-t855u RUNNING pid 9999, uptime 0:01:00"
+        ))["state"], "HOLD_SUPERVISOR_CHANGED")
+
     def test_lock_symlink_is_rejected(self):
         replacement = self.root / "other"
         replacement.touch()
