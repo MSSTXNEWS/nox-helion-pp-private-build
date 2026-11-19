@@ -713,6 +713,10 @@ def _media_jobs_lock():
 
 def _new_media_record(request, owner):
     # Invoked only inside _media_jobs_lock by keyed or legacy create.
+    # Commit-time STOP fence: a service can enter STOP after remote preflight.
+    # Recovery/replay of an already-durable keyed job remains read-only and allowed.
+    if media_stop():
+        raise MediaHold('HOLD_MEDIA_STOP')
     jobs = [read_json(path) for path in (ROOT / 'state/media/jobs').glob('*.json')]
     if any(not isinstance(value, dict) for value in jobs):
         raise MediaHold('HOLD_MEDIA_JOB_INDEX_UNREADABLE')
