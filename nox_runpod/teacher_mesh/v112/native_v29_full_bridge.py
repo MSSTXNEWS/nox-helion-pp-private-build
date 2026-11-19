@@ -250,12 +250,11 @@ def _validated_history(data):
     return clean
 
 def _dialog_context(dialog_id):
-    """Load only the authenticated owner's committed pairs from the existing S03.
+    """Load complete authorized committed pairs or HOLD; never clip dialog memory.
 
-    The Resonance client deliberately sends history=[] and a dialog_id. Its
-    displayed history is not an inference payload. Use the durable thread as
-    the authority, with the same 24-message/121 KB context limits as the
-    legacy client path. Incomplete pairs cannot enter model context.
+    The legacy context budget is 24 messages / 121 KB / 8,000 characters per
+    message. If the stored thread exceeds it, return HOLD before inference
+    instead of silently selecting recent turns or truncating message text.
     """
     with _db() as db:
         found=_get_dialog(db,dialog_id)
@@ -264,21 +263,24 @@ def _dialog_context(dialog_id):
         if bool(found['archived']):
             return 'HOLD_DIALOG_ARCHIVED',[]
         rows=db.execute(
-            'SELECT substr(u.content,1,8000) AS question, '
-            'substr(a.content,1,8000) AS answer '
+            'SELECT u.content AS question, a.content AS answer '
             'FROM nox_v29_dialog_messages AS a '
             'JOIN nox_v29_dialog_messages AS u '
             'ON u.dialog_id=a.dialog_id AND u.exchange_id=a.exchange_id '
             "AND u.role='user' WHERE a.dialog_id=? AND a.role='assistant' "
-            'ORDER BY a.row_id DESC LIMIT 12',(dialog_id,)).fetchall()
+            'ORDER BY a.row_id DESC LIMIT 13',(dialog_id,)).fetchall()
+    if len(rows)>12:
+        return 'HOLD_HISTORY_LIMIT',[]
     pairs=[];size=0
     for row in rows:
         question,answer=row['question'],row['answer']
         if not isinstance(question,str) or not isinstance(answer,str):
             raise RuntimeError('HOLD_S03_DIALOG_CONTEXT_CONTENT')
+        if len(question)>8000 or len(answer)>8000:
+            return 'HOLD_HISTORY_CONTENT',[]
         pair_size=len(question.encode('utf-8'))+len(answer.encode('utf-8'))
         if size+pair_size>121000:
-            break
+            return 'HOLD_HISTORY_SIZE',[]
         size+=pair_size
         pairs.append([{'role':'user','content':question},
                       {'role':'assistant','content':answer}])
