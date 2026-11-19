@@ -247,6 +247,8 @@ def unknown(reason, pid=None, start_ticks=None):
     return {
         "schema": "NOX_V77_LOADED_WEIGHT_IDENTITY_V1",
         "state": "UNKNOWN",
+        "model_identity": {"state": "UNKNOWN", "reason": "MODEL_COMPOSITE_NOT_PROVEN"},
+        "manifest_relation": {"state": "UNKNOWN", "reason": "PINNED_MANIFEST_NOT_READ_OR_USED"},
         "reason": reason if reason in REASON_CODES else "HOLD_INTERNAL",
         "service": SERVICE,
         "pid": pid,
@@ -298,8 +300,10 @@ def inspect_loaded_weight(supervisor_reader=supervisor_pid, proc_root=Path("/pro
             raise ProbeHold("HOLD_SUPERVISOR_PID_CHANGED")
         return {
             "schema": "NOX_V77_LOADED_WEIGHT_IDENTITY_V1",
-            "state": "VERIFIED_MAPPED_WEIGHT_SHA256",
+            "state": "VERIFIED_MAPPED_WEIGHT_FILE_SHA256",
             "reason": None,
+            "model_identity": {"state": "UNKNOWN", "reason": "MODEL_COMPOSITE_NOT_PROVEN"},
+            "manifest_relation": {"state": "UNKNOWN", "reason": "PINNED_MANIFEST_NOT_READ_OR_USED"},
             "service": SERVICE,
             "pid": pid,
             "start_ticks": start,
