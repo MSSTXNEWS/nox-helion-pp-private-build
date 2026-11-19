@@ -263,6 +263,10 @@ def _dialog_context(dialog_id):
             return 'HOLD_DIALOG_SCOPE_NOT_BOUND',[]
         if bool(found['archived']):
             return 'HOLD_DIALOG_ARCHIVED',[]
+        if db.execute(\
+            "SELECT 1 FROM sqlite_master WHERE type='index' AND name='nox_v29_messages_order'"
+        ).fetchone() is None:
+            return 'HOLD_HISTORY_INDEX_UNAVAILABLE',[]
         message_count=db.execute(
             'SELECT COUNT(*) FROM ('
             'SELECT row_id FROM nox_v29_dialog_messages WHERE dialog_id=? '
