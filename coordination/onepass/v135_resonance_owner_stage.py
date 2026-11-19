@@ -29,8 +29,8 @@ PAGES = ("site/pc/resonance.html", "site/pc/v22/resonance.template.html")
 ROLLBACK = "rollback/v135/"
 SCRIPT_URL = "/nox-web-v29/nox-v135-resonance-owner-bridge.js"
 SCRIPT_TAG = '<script defer src="' + SCRIPT_URL + '" data-nox-owner-v135="1"></script>'
-# Current verified V135 bridge is 20,041 UTF-8 bytes; keep a tight bounded ceiling.
-MAX_OWNER_BRIDGE_BYTES = 20256
+# Hard cap is inherited from the original V135 staging contract.
+MAX_OWNER_BRIDGE_BYTES = 20000
 OBS_SCRIPT_URL = "/nox-web-v29/nox-v137-owner-self-status.js"
 OBS_SCRIPT_TAG = '<script defer src="' + OBS_SCRIPT_URL + '" data-nox-owner-v137="1"></script>'
 
