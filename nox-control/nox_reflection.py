@@ -4,9 +4,9 @@
 This module validates explicit evidence supplied by a caller; it does not
 generate hypotheses, execute commands, inspect a worktree, run checks, publish
 to S03, or claim task acceptance. It stores only short public summaries and
-immutable references. The schema rejects extra fields, including private
-reasoning/scratchpad fields. A PASS record must bind verification to the exact
-source commit and artifact before it can produce a fact/skill summary.
+sanitized references. The schema rejects extra fields, including private
+reasoning/scratchpad fields. Caller-reported checks can produce only a proposed
+fact/skill outcome; their receipt bytes and authenticity are never verified.
 """
 from __future__ import annotations
 
@@ -34,6 +34,11 @@ GIT_SHA = re.compile(r"[0-9a-f]{40}\Z")
 RECORD_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,79}\Z")
 BRANCH = re.compile(r"(?:codex|work|repair|feature|task)/[A-Za-z0-9][A-Za-z0-9._/-]{0,119}\Z")
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+SECRET_PATTERN = re.compile(
+    r"(?i)(?:\bbearer\s+\S{8,}|\b(?:token|access[_-]?token|api[_-]?key|client[_-]?secret|secret|password|authorization)\s*[:=]\s*\S+|"
+    r"[?&](?:token|access[_-]?token|api[_-]?key|client[_-]?secret|signature)=\S+|"
+    r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|AIza[A-Za-z0-9_-]{30,})\b)"
+)
 MAX_INPUT_BYTES = 65536
 MAX_RECEIPT_FILE_BYTES = 8 * 1024 * 1024
 MAX_SOURCE_FILES = 40
@@ -58,6 +63,13 @@ def _text(value: Any, field: str, max_length: int, *, min_length: int = 1) -> st
     clean = " ".join(value.split())
     if not min_length <= len(clean) <= max_length or CONTROL.search(clean):
         raise ReflectionError(f"{field} must contain {min_length}-{max_length} safe characters")
+    return clean
+
+
+def _summary(value: Any, field: str, max_length: int) -> str:
+    clean = _text(value, field, max_length)
+    if SECRET_PATTERN.search(clean):
+        raise ReflectionError(f"{field} resembles a credential or token")
     return clean
 
 
@@ -113,7 +125,7 @@ def _https_reference(value: Any, field: str) -> str:
         ip = None
     if ip is not None and not ip.is_global:
         raise ReflectionError(f"{field} may not point to a non-public IP")
-    return urlunsplit(("https", host, parts.path or "/", parts.query, ""))
+    return urlunsplit(("https", host, parts.path or "/", "", ""))
 
 
 def _source_path(value: Any) -> str:
@@ -150,15 +162,15 @@ def validate_record(data: Any) -> dict[str, Any]:
     failure = _exact_keys(top["failure"], {"observed_at", "summary", "evidence_url", "evidence_sha256"})
     failure_receipt = {
         "observed_at": _timestamp(failure["observed_at"], "failure.observed_at"),
-        "summary": _text(failure["summary"], "failure.summary", 280),
+        "summary": _summary(failure["summary"], "failure.summary", 280),
         "evidence_url": _https_reference(failure["evidence_url"], "failure.evidence_url"),
         "evidence_sha256": _digest(failure["evidence_sha256"], "failure.evidence_sha256"),
     }
 
     hypothesis = _exact_keys(top["hypothesis"], {"statement", "observable"})
     hypothesis_receipt = {
-        "statement": _text(hypothesis["statement"], "hypothesis.statement", 280),
-        "observable": _text(hypothesis["observable"], "hypothesis.observable", 280),
+        "statement": _summary(hypothesis["statement"], "hypothesis.statement", 280),
+        "observable": _summary(hypothesis["observable"], "hypothesis.observable", 280),
     }
 
     change = _exact_keys(
@@ -190,11 +202,11 @@ def validate_record(data: Any) -> dict[str, Any]:
     if not isinstance(status, str) or status not in {"PASS", "FAIL"}:
         raise ReflectionError("verification.status must be PASS or FAIL")
     verification_receipt = {
-        "status": status,
-        "verified_at": _timestamp(verification["verified_at"], "verification.verified_at"),
+        "reported_status": status,
+        "reported_at": _timestamp(verification["verified_at"], "verification.verified_at"),
         "target_commit_sha": _git_sha(verification["target_commit_sha"], "verification.target_commit_sha"),
-        "receipt_url": _https_reference(verification["receipt_url"], "verification.receipt_url"),
-        "artifact_sha256": _digest(verification["artifact_sha256"], "verification.artifact_sha256"),
+        "receipt_reference": _https_reference(verification["receipt_url"], "verification.receipt_url"),
+        "claimed_artifact_sha256": _digest(verification["artifact_sha256"], "verification.artifact_sha256"),
     }
     if verification_receipt["target_commit_sha"] != change_receipt["commit_sha"]:
         raise ReflectionError("verification must target the exact source-change commit")
@@ -207,6 +219,13 @@ def validate_record(data: Any) -> dict[str, Any]:
         "hypothesis": hypothesis_receipt,
         "change": change_receipt,
         "verification": verification_receipt,
+        "evidence_scope": {
+            "input_structure_validated": True,
+            "external_receipt_bytes_verified": False,
+            "claim_authenticity_verified": False,
+            "owner_permission_verified": False,
+            "outcome_published": False,
+        },
         "original_task_accepted": False,
     }
     if status == "PASS":
@@ -219,20 +238,20 @@ def validate_record(data: Any) -> dict[str, Any]:
         if not isinstance(outcome["kind"], str) or outcome["kind"] not in {"fact", "skill"}:
             raise ReflectionError("outcome.kind must be fact or skill")
         basis_sha = _digest(outcome["basis_sha256"], "outcome.basis_sha256")
-        if basis_sha != verification_receipt["artifact_sha256"]:
-            raise ReflectionError("outcome evidence must match the verified artifact SHA")
-        receipt["outcome"] = {
+        if basis_sha != verification_receipt["claimed_artifact_sha256"]:
+            raise ReflectionError("proposed outcome SHA must match the caller-reported artifact SHA")
+        receipt["proposed_outcome"] = {
             "kind": outcome["kind"],
-            "summary": _text(outcome["summary"], "outcome.summary", 500),
-            "basis_url": _https_reference(outcome["basis_url"], "outcome.basis_url"),
+            "summary": _summary(outcome["summary"], "outcome.summary", 500),
+            "basis_reference": _https_reference(outcome["basis_url"], "outcome.basis_url"),
             "basis_date": _date(outcome["basis_date"], "outcome.basis_date"),
-            "basis_sha256": basis_sha,
+            "claimed_basis_sha256": basis_sha,
         }
-        receipt["status"] = "VERIFIED_SOURCE_CYCLE"
+        receipt["status"] = "SOURCE_CYCLE_INPUT_VALIDATED_WITH_PROPOSED_OUTCOME"
     else:
         if "outcome" in top:
             raise ReflectionError("a failed check cannot publish a fact or skill")
-        receipt["status"] = "SOURCE_CHANGE_FAILED_VERIFICATION"
+        receipt["status"] = "SOURCE_CYCLE_INPUT_VALIDATED_WITH_REPORTED_FAIL"
 
     unsigned = json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     receipt["receipt_sha256"] = hashlib.sha256(unsigned).hexdigest()
@@ -240,15 +259,28 @@ def validate_record(data: Any) -> dict[str, Any]:
 
 
 def append_receipt(path: str | os.PathLike[str], receipt: dict[str, Any]) -> None:
-    """Append one validated receipt to a private local JSONL ledger."""
+    """Append one schema-validated receipt to a private local JSONL ledger."""
     target = Path(path)
+    parent = target.parent.absolute()
+    cursor = parent
+    while cursor != cursor.parent:
+        if cursor.is_symlink():
+            raise ReflectionError("receipt ledger parent path may not contain symlinks")
+        cursor = cursor.parent
+    try:
+        parent_info = parent.stat(follow_symlinks=False)
+    except OSError as exc:
+        raise ReflectionError("receipt ledger parent must already exist") from exc
+    if not stat.S_ISDIR(parent_info.st_mode) or parent_info.st_uid != os.geteuid() or parent_info.st_mode & 0o077:
+        raise ReflectionError("receipt ledger parent must be owner-owned and private (no group/world access)")
     flags = os.O_RDWR | os.O_APPEND | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(target, flags, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
         info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o022:
-            raise ReflectionError("receipt ledger must be an owner-owned, non-writable-by-others regular file")
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+                or info.st_mode & 0o077 or info.st_nlink != 1):
+            raise ReflectionError("receipt ledger must be owner-owned, private, single-link regular file")
         if info.st_size > MAX_RECEIPT_FILE_BYTES:
             raise ReflectionError("receipt ledger exceeds the 8 MiB bound")
         os.lseek(fd, 0, os.SEEK_SET)
