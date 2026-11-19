@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_SOURCE_EVIDENCE_ADDENDUM_V1",
+  "receipt_id": "NOX-4A01-DEEPSEEK-SOURCE-COMPLETE-20261119",
+  "instructions_version": "0.0.6",
+  "created_at_utc": "2026-11-19",
+  "append_only": true,
+  "task": {
+    "task_id": "4A01",
+    "title": "Прочитать точные манифесты модели: обучаемая ревизия, tokenizer, dtype, target modules, лицензия, размер тренировки и дефицит. GGUF имеет отдельный маршрут inference.",
+    "required_evidence": "source",
+    "spec_sha256": "c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486"
+  },
+  "state": "SOURCE_CRITERION_COMPLETE",
+  "accepted_source_criterion": true,
+  "original_295_acceptance_increment": 1,
+  "training_admission": "HOLD",
+  "live_training_or_weight_update": false,
+  "exact_manifest_path": "nox-control/model_manifests/4A01_DEEPSEEK_V41_1017_TRAINING_SOURCE_20261119.json",
+  "tokenizer_asset_manifest_path": "nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_TOKENIZER_MANIFEST_20261119.json",
+  "frozen_inputs": {
+    "all295_execution_disposition": {
+      "path": "nox-control/complete_executor_20261118/evidence/all295_execution_disposition.json",
+      "git_blob_sha": "f5c45dc8919b1b800e89a421676a3627e75fb3bb",
+      "mutated": false
+    },
+    "work_tasks": {
+      "path": "nox-control/four_queue_20261118/work_tasks.json",
+      "git_blob_sha": "ca8f24491de0fa5fcfec12fead78fd22999f521f",
+      "mutated": false
+    },
+    "work_receipts": {
+      "path": "nox-control/four_queue_20261118/work_receipts.json",
+      "git_blob_sha": "6a9c71393735dbc4b5c1577272f22cef38ab6338",
+      "mutated": false
+    }
+  },
+  "sources": [
+    {
+      "name": "Pinned DeepSeek V4.1 tokenizer file",
+      "repo": "deepseek-ai/deepseek-recipe",
+      "revision": "935817c66f5d6e64838f419692545f06787e485f",
+      "path": "static/tokenizers/v41/tokenizer.json",
+      "git_blob_sha1": "3abdf13e3488acc65e11e6a57f073f6673175c3a",
+      "size_bytes": 6367247,
+      "sha256": "81f64d1248a68ce3663e07ab3ee48b851e5df0e32d27cb98e4c9a268151e8d99"
+    },
+    {
+      "name": "DeepSeek tokenizer README and license",
+      "repo": "deepseek-ai/deepseek-recipe",
+      "revision": "935817c66f5d6e64838f419692545f06787e485f",
+      "license": "MIT / Copyright (c) 2023 DeepSeek"
+    },
+    {
+      "name": "Model revision compatibility statement",
+      "repo": "vllm-project/recipes",
+      "commit": "475d03e40c206c2288092d0e53951a8869fcd676",
+      "file": "models/deepseek-ai/DeepSeek-V4.1-Flash.yaml",
+      "git_blob_sha1": "7ef64b3f78451788efa6c7225d090f8aa92f2af5"
+    },
+    {
+      "name": "NVIDIA DeepSeek V4.1 H100 LoRA training recipe",
+      "repo": "NVIDIA-NeMo/Automodel",
+      "commit": "384f6b2ae5e6d9678b8dc6594844d666bee2928f",
+      "file": "examples/llm_finetune/deepseek_v41/deepseek_v41_flash_hellaswag_lora_h100_8nodes.yaml",
+      "git_blob_sha1": "a8e386bacbd06530c7c49238073d0b631871fd93",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "Pinned 1017 prompt-format reference",
+      "repo": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "revision": "08c8657f02291e11b6f6b63e0e16014f8e748518",
+      "files": [
+        "encoding/README.md",
+        "encoding/encoding.py"
+      ],
+      "tokenizer_json_present": false,
+      "tokenizer_config_json_present": false,
+      "qualification": "Model repo pin has prompt-format source but no tokenizer files; the local tokenizer asset is the separately pinned modified deepseek-recipe copy."
+    }
+  ],
+  "source_limits": [
+    "The HellaSwag recipe points to mutable rowan/hellaswag and provides sample caps but no dataset commit or split-file SHA-256; no dataset bytes were copied.",
+    "The H100 recipe is a source-adapted recipe for 1017 based on the official vLLM same-config/tokenizer/prompt-encoding statement; no 1017 run is claimed.",
+    "The NOX two-V100 inventory and storage record are prior point-in-time snapshots, not fresh training admission evidence.",
+    "The pinned 1017 HF model tree omits tokenizer.json and tokenizer_config.json. The bundled deepseek-recipe tokenizer is a pinned modified V4.1 copy; its upstream README says the original import revision was not recorded, so the addendum makes no byte-identity claim to a 1017 repository tokenizer file."
+  ],
+  "frozen_registry_mutation": false,
+  "work_receipts_mutation": false
+}
