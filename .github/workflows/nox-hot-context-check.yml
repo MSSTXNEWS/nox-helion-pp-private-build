@@ -1,7 +1,7 @@
 name: NOX hot context check
 on:
   push:
-    branches: [feat/nox-chat-latency-scope-20261119]
+    branches: [feat/nox-chat-latency-scope-20261119, a4/3b03-s03-id-provenance-20261120]
   workflow_dispatch:
 permissions:
   contents: read
