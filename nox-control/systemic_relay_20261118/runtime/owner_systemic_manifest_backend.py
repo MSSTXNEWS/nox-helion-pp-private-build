@@ -7,6 +7,7 @@ This backend never submits native tasks.
 """
 from __future__ import annotations
 
+import contextlib
 import fcntl
 import json
 import os
@@ -60,6 +61,7 @@ class DispatcherManifestBackend:
     def writer_lease(self):
         return self.native.writer_lease()
 
+    @contextlib.contextmanager
     def owner_publish_lease(self):
         path = dispatcher.plain(dispatcher.ROOT / "state/owner_maintenance.lock")
         try:
@@ -145,12 +147,11 @@ class DispatcherManifestBackend:
         return raw
 
     def live_source_registry_pins(self):
-        pins = {}
-        for key, path in dispatcher.PROJECT_FILES.items():
-            registry_key = key.removesuffix("_sha256")
-            pins[registry_key] = dispatcher.digest(dispatcher.read(path, 16 * 1024 * 1024))
-        if set(pins) != {"tasks", "ideas", "routing"}:
-            self._hold("REGISTRY_PATHS")
+        keys = {"work_tasks_sha256": "tasks", "work_ideas_sha256": "ideas",
+                "routing_sha256": "routing"}
+        pins = {target: dispatcher.digest(dispatcher.read(
+                    dispatcher.PROJECT_FILES[name], 16 * 1024 * 1024))
+                for name, target in keys.items()}
         receipt_path = dispatcher.ROOT / "state/dispatcher/project_work_receipts_source.json"
         pins["receipts"] = dispatcher.digest(dispatcher.read(receipt_path, 16 * 1024 * 1024))
         return pins
@@ -184,6 +185,7 @@ class DispatcherManifestBackend:
 
     def compare_and_swap_systemic_relay(self, expected_sha, reference, receipt_sha):
         self._guard()
+        self.verify_owner_review_receipt(receipt_sha)
         raw, latest = self._config()
         if raw != self._initial_config_raw:
             self._hold("CONFIG_CAS_PREIMAGE")
