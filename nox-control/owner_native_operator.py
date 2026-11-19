@@ -10,7 +10,7 @@ OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
 FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'gpu_inventory': 'nox-control/owner_native_gpu_inventory.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
-GPU_INVENTORY_BLOB_SHA='feb29e951a9aa4c18d1805f191499671fd5c9154'
+GPU_INVENTORY_BLOB_SHA='cccdd726fc8de79f8ebe449bac537aba07a3cbcf'
 GPU_INVENTORY_MARKER='NOX_MAINT_GPU_INVENTORY='
 GPU_INVENTORY_COMPLETE='NOX_MAINT_GPU_INVENTORY_COMPLETE=true'
 GPU_INVENTORY_UUID_RE=re.compile(r'^GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
@@ -53,9 +53,10 @@ def _validate_gpu_inventory_receipt(line,request_id,source_sha):
     except (TypeError,ValueError):
         _gpu_inventory_hold()
     if (not isinstance(receipt,dict)
-            or set(receipt)!={'schema','action','source_sha','request_id','inventory_sha256','inventory'}
+            or set(receipt)!={'schema','action','instance_id','source_sha','request_id','inventory_sha256','inventory'}
             or receipt.get('schema')!='NOX_GPU_INVENTORY_V1'
             or receipt.get('action')!='gpu_inventory'
+            or type(receipt.get('instance_id')) is not int or receipt.get('instance_id')!=60509551
             or receipt.get('source_sha')!=source_sha
             or type(receipt.get('request_id')) is not int
             or receipt.get('request_id')!=request_id
@@ -64,10 +65,12 @@ def _validate_gpu_inventory_receipt(line,request_id,source_sha):
         _gpu_inventory_hold()
     inventory=receipt.get('inventory')
     if (not isinstance(inventory,dict)
-            or set(inventory)!={'schema','action','boot_id','uptime_scope','identity_stable','snapshots'}
+            or set(inventory)!={'schema','action','instance_id','boot_id','uptime_scope','memory_semantics','identity_stable','snapshots'}
             or inventory.get('schema')!='NOX_GPU_INVENTORY_V1'
             or inventory.get('action')!='gpu_inventory'
+            or type(inventory.get('instance_id')) is not int or inventory.get('instance_id')!=60509551
             or inventory.get('uptime_scope')!='two monotonic host snapshots; point-in-time only'
+            or inventory.get('memory_semantics')!='nvidia-smi MiB counters; memory.total=memory.used+memory.free'
             or inventory.get('identity_stable') is not True
             or not isinstance(inventory.get('boot_id'),str)
             or not GPU_INVENTORY_BOOT_RE.fullmatch(inventory['boot_id'])
@@ -100,7 +103,7 @@ def _validate_gpu_inventory_receipt(line,request_id,source_sha):
                     or type(row.get('index')) is not int or not 0<=row['index']<=31
                     or not isinstance(row.get('model'),str) or not 1<=len(row['model'])<=96
                     or any(ord(ch)<32 or ord(ch)==127 for ch in row['model'])
-                    or 'v100' not in row['model'].casefold()
+                    or row['model']!='Tesla V100-SXM2-32GB'
                     or not isinstance(row.get('uuid'),str)
                     or not GPU_INVENTORY_UUID_RE.fullmatch(row['uuid'])):
                 _gpu_inventory_hold()
@@ -111,7 +114,7 @@ def _validate_gpu_inventory_receipt(line,request_id,source_sha):
             if (row['memory_total_mib']<=0
                     or row['memory_used_mib']>row['memory_total_mib']
                     or row['memory_free_mib']>row['memory_total_mib']
-                    or row['memory_used_mib']+row['memory_free_mib']>row['memory_total_mib']):
+                    or row['memory_used_mib']+row['memory_free_mib']!=row['memory_total_mib']):
                 _gpu_inventory_hold()
             if row['index'] in indices or row['uuid'] in uuids:
                 _gpu_inventory_hold()
@@ -1395,7 +1398,7 @@ def run_native(action,request_id):
             if p.is_file():assets[p.name]=base64.b64encode(p.read_bytes()).decode('ascii')
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
-    script=f"set -euo pipefail\nNOX_OWNER_ACTION={action} NOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
+    script=f"set -euo pipefail\nNOX_OWNER_ACTION={action} NOX_OWNER_INSTANCE_ID={INSTANCE} NOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
     timeout=150 if action in ('audit','inspect','source_attest','gpu_inventory') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.

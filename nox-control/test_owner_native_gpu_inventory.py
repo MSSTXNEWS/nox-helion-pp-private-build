@@ -87,18 +87,20 @@ class GpuInventoryTests(unittest.TestCase):
 
     def test_source_request_and_action_pins_are_required(self):
         base = {"NOX_OWNER_SOURCE_SHA": "a" * 40, "NOX_OWNER_REQUEST_ID": "7000000000",
-                "NOX_OWNER_ACTION": "gpu_inventory"}
+                "NOX_OWNER_ACTION": "gpu_inventory", "NOX_OWNER_INSTANCE_ID": "60509551"}
         runner = FakeRunner([output(), output()])
         receipt = gpu.run_action(env=base, run=runner, read_text=ClockReader(),
                                  monotonic_ns=iter([1, 2, 3, 4]).__next__, sleep=lambda _: None)
         self.assertEqual(receipt["source_sha"], "a" * 40)
         self.assertEqual(receipt["request_id"], 7000000000)
+        self.assertEqual(receipt["instance_id"], 60509551)
         self.assertEqual(receipt["schema"], "NOX_GPU_INVENTORY_V1")
         self.assertEqual(len(receipt["inventory"]["snapshots"]), 2)
         self.assertRegex(receipt["inventory_sha256"], r"^[0-9a-f]{64}$")
         for key, value in (("NOX_OWNER_ACTION", "audit"),
                            ("NOX_OWNER_SOURCE_SHA", "bad"),
-                           ("NOX_OWNER_REQUEST_ID", "0")):
+                           ("NOX_OWNER_REQUEST_ID", "0"),
+                           ("NOX_OWNER_INSTANCE_ID", "60509552")):
             with self.subTest(key=key):
                 invalid = dict(base, **{key: value})
                 with self.assertRaisesRegex(RuntimeError, "^HOLD_GPU_INVENTORY_"):
@@ -121,6 +123,8 @@ class GpuInventoryTests(unittest.TestCase):
     def test_rejects_memory_inconsistency_and_malformed_rows(self):
         with self.assertRaisesRegex(RuntimeError, "MEMORY"):
             gpu.parse_gpu_rows(output(used_a=20000, free_a=20000))
+        with self.assertRaisesRegex(RuntimeError, "MEMORY"):
+            gpu.parse_gpu_rows(output(used_a=100, free_a=32000))
         with self.assertRaisesRegex(RuntimeError, "ROW_SHAPE"):
             gpu.parse_gpu_rows("0, Tesla V100, " + GPU_A + ", 32768, 100\n")
         with self.assertRaisesRegex(RuntimeError, "MEMORY"):

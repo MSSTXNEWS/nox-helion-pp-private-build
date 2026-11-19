@@ -32,8 +32,10 @@ def receipt():
     inv = {
         "schema": "NOX_GPU_INVENTORY_V1",
         "action": "gpu_inventory",
+        "instance_id": 60509551,
         "boot_id": BOOT,
         "uptime_scope": "two monotonic host snapshots; point-in-time only",
+        "memory_semantics": "nvidia-smi MiB counters; memory.total=memory.used+memory.free",
         "identity_stable": True,
         "snapshots": [
             {"boot_id": BOOT, "uptime_seconds": 100.1, "monotonic_started_ns": 10,
@@ -45,6 +47,7 @@ def receipt():
     return {
         "schema": "NOX_GPU_INVENTORY_V1",
         "action": "gpu_inventory",
+        "instance_id": 60509551,
         "source_sha": SHA,
         "request_id": REQUEST,
         "inventory_sha256": gpu.inventory_digest(inv),

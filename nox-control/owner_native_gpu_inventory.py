@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 ACTION = "gpu_inventory"
+INSTANCE_ID = 60509551
 SCHEMA = "NOX_GPU_INVENTORY_V1"
 NVIDIA_SMI = "/usr/bin/nvidia-smi"
 QUERY = (
@@ -70,13 +71,13 @@ def parse_gpu_rows(output: str):
         name = " ".join(name.split())
         if not name or len(name) > 96 or any(ord(c) < 32 or ord(c) == 127 for c in name):
             raise _hold("HOLD_GPU_INVENTORY_MODEL")
-        if "v100" not in name.casefold() or not UUID_RE.fullmatch(uuid):
+        if name != "Tesla V100-SXM2-32GB" or not UUID_RE.fullmatch(uuid):
             raise _hold("HOLD_GPU_INVENTORY_IDENTITY")
         numbers = (total_text, used_text, free_text)
         if any(not re.fullmatch(r"[0-9]{1,7}", value) for value in numbers):
             raise _hold("HOLD_GPU_INVENTORY_MEMORY")
         total, used, free = (int(value) for value in numbers)
-        if total <= 0 or used < 0 or free < 0 or used > total or free > total or used + free > total:
+        if total <= 0 or used < 0 or free < 0 or used > total or free > total or used + free != total:
             raise _hold("HOLD_GPU_INVENTORY_MEMORY")
         rows.append({
             "index": index,
@@ -152,8 +153,10 @@ def build_inventory(run=subprocess.run, read_text=None, monotonic_ns=time.monoto
     return {
         "schema": SCHEMA,
         "action": ACTION,
+        "instance_id": INSTANCE_ID,
         "boot_id": before["boot_id"],
         "uptime_scope": "two monotonic host snapshots; point-in-time only",
+        "memory_semantics": "nvidia-smi MiB counters; memory.total=memory.used+memory.free",
         "identity_stable": True,
         "snapshots": [before, after],
     }
@@ -169,8 +172,11 @@ def run_action(env=None, run=subprocess.run, read_text=None, monotonic_ns=time.m
     source_sha = env.get("NOX_OWNER_SOURCE_SHA", "")
     request_text = env.get("NOX_OWNER_REQUEST_ID", "")
     action = env.get("NOX_OWNER_ACTION", "")
+    instance_id = env.get("NOX_OWNER_INSTANCE_ID", "")
     if action != ACTION:
         raise _hold("HOLD_GPU_INVENTORY_ACTION_PIN")
+    if instance_id != str(INSTANCE_ID):
+        raise _hold("HOLD_GPU_INVENTORY_INSTANCE_PIN")
     if not SOURCE_RE.fullmatch(source_sha):
         raise _hold("HOLD_GPU_INVENTORY_SOURCE_PIN")
     if not re.fullmatch(r"[1-9][0-9]{0,19}", request_text):
@@ -180,6 +186,7 @@ def run_action(env=None, run=subprocess.run, read_text=None, monotonic_ns=time.m
     receipt = {
         "schema": SCHEMA,
         "action": ACTION,
+        "instance_id": INSTANCE_ID,
         "source_sha": source_sha,
         "request_id": request_id,
         "inventory_sha256": inventory_digest(inventory),
