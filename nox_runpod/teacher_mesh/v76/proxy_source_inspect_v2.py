@@ -18,7 +18,10 @@ import ast
 MAX_SOURCE_BYTES = 1_000_000
 TARGETS = ("_trim_ctx", "_build_messages", "prepare_payload")
 MAX_KEYS_PER_SCOPE = 32
+MAX_DIRECT_CALLS = 32
 KEY_PATTERN = __import__("re").compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
+CALL_SYMBOL_PATTERN = __import__("re").compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}(?:\\.[A-Za-z_][A-Za-z0-9_]{0,63}){0,5}$")
+CALLBACK_CODES = tuple("C%02d" % n for n in range(1, 9))
 HYDRATION_TERMS = {
     "s03": ("s03",),
     "history": ("history", "messages"),
@@ -53,6 +56,37 @@ def _literal_body_keys(node):
         if isinstance(value, str) and KEY_PATTERN.fullmatch(value):
             keys.add(value)
     return sorted(keys)[:MAX_KEYS_PER_SCOPE]
+
+def _call_symbol(node):
+    # Retain only an explicit Name/Attribute chain; never resolve aliases,
+    # descriptors, imports, dynamic getattr, or runtime values.
+    parts = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if not isinstance(node, ast.Name):
+        return None
+    parts.append(node.id)
+    symbol = ".".join(reversed(parts))
+    return symbol if CALL_SYMBOL_PATTERN.fullmatch(symbol) else None
+
+def _direct_call_symbols(node):
+    symbols = set()
+    for child in ast.walk(node):
+        if isinstance(child, ast.Call):
+            symbol = _call_symbol(child.func)
+            if symbol:
+                symbols.add(symbol)
+    return sorted(symbols)[:MAX_DIRECT_CALLS]
+
+def _unknown_serving_bindings():
+    return {
+        "evidence_scope": "PROXY_SOURCE_AST_ONLY",
+        "bridge_identity": "UNKNOWN",
+        "model_identity": "UNKNOWN",
+        "callbacks": {code: "UNKNOWN" for code in CALLBACK_CODES},
+        "reason": "PROXY_SOURCE_DOES_NOT_PROVE_RUNTIME_OBJECT_OR_LOADED_MODEL_IDENTITY",
+    }
 
 def _hydration_presence(node):
     # Static name-presence signals only; these do not prove data flow.
@@ -130,8 +164,11 @@ def analyze_source(raw):
                     routes.append({
                         "method": method.upper(),
                         "path": path.value,
+                        "handler": node.name[:64],
                         "handler_line": node.lineno,
                         "context_calls": route_calls[:3],
+                        "direct_call_symbols": _direct_call_symbols(node),
+                        "serving_bindings": _unknown_serving_bindings(),
                         "body_key_reads": _literal_body_keys(node),
                         "hydration_call_presence": _hydration_presence(node),
                     })
@@ -147,7 +184,7 @@ def analyze_source(raw):
         "functions": {name: rows for name, rows in definitions.items()},
         "callsites": {name: rows for name, rows in calls.items()},
         "chat_routes": routes,
-        "analysis_note": "AST-only; body keys are literal identifier names; hydration fields are call-name presence, not proof of data flow; no source text emitted",
+        "analysis_note": "AST-only; direct calls are explicit Name/Attribute symbols, not resolved bindings; bridge/model identity and C01-C08 callbacks remain UNKNOWN without a trusted runtime registry; no source text emitted",
     }
 """
 
