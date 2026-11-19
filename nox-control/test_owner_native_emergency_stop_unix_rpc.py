@@ -2,6 +2,7 @@ import importlib.util
 import configparser
 from pathlib import Path
 import struct
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 import xmlrpc.client
@@ -419,6 +420,66 @@ class UnixSupervisorRpcTests(unittest.TestCase):
                 OWNER.DIAGNOSTICS.pop("unix_socket_config_checks", None)
             else:
                 OWNER.DIAGNOSTICS["unix_socket_config_checks"] = prior
+
+    def test_unix_socket_accepts_canonical_url_path_and_missing_mode(self):
+        path = Path("/run/supervisor.sock")
+        config = {
+            "socket_file": str(path),
+            "serverurl": "unix://" + str(path).replace(".", "%2e"),
+            "rpc_factory": "supervisor.rpcinterface:make_main_rpcinterface",
+            "configured_mode": None,
+            "configured_mode_present": False,
+            "configured_owner": "root:root",
+        }
+        socket_stat = SimpleNamespace(st_mode=OWNER.stat.S_IFSOCK | 0o700,
+                                      st_uid=0, st_gid=0, st_nlink=1,
+                                      st_dev=1, st_ino=2, st_ctime_ns=3)
+        directory_stat = SimpleNamespace(st_dev=1, st_ino=1, st_mtime_ns=1,
+                                         st_ctime_ns=1, st_uid=0, st_mode=0o40700)
+        with (mock.patch.object(Path, "resolve", return_value=path),
+              mock.patch.object(Path, "is_symlink", return_value=False),
+              mock.patch.object(Path, "lstat", return_value=socket_stat),
+              mock.patch.object(OWNER, "root_directory", return_value=directory_stat)):
+            result = OWNER._unix_socket_snapshot(config)
+        self.assertEqual(result["resolved_path"], str(path))
+        self.assertEqual(result["mode"], 0o700)
+        report = OWNER.DIAGNOSTICS["unix_socket_config_checks"]
+        self.assertTrue(report["url_path_percent_encoding_valid"])
+        self.assertFalse(report["configured_mode_present"])
+
+    def test_unix_endpoint_rejects_traversal_bad_escape_and_mode_mismatch(self):
+        base = {
+            "socket_file": "/run/supervisor.sock",
+            "serverurl": "unix:///run/supervisor.sock",
+            "rpc_factory": "supervisor.rpcinterface:make_main_rpcinterface",
+            "configured_mode": None,
+            "configured_mode_present": False,
+            "configured_owner": "root:root",
+        }
+        for update in ({"serverurl": "unix:///run/%2e%2e/secret.sock"},
+                       {"serverurl": "unix:///run/supervisor%2.sock"},
+                       {"serverurl": "unix:///run/other.sock"}):
+            with self.subTest(update=tuple(update)):
+                with self.assertRaisesRegex(RuntimeError,
+                        "HOLD_EMERGENCY_STOP_UNIX_RPC_CONFIG_ENDPOINT_NOT_ALLOWLISTED"):
+                    OWNER._unix_socket_snapshot({**base, **update})
+        path = Path("/run/supervisor.sock")
+        config = {**base, "socket_file": str(path),
+                  "serverurl": "unix://" + str(path),
+                  "configured_mode": "0600",
+                  "configured_mode_present": True}
+        socket_stat = SimpleNamespace(st_mode=OWNER.stat.S_IFSOCK | 0o700,
+                                      st_uid=0, st_gid=0, st_nlink=1,
+                                      st_dev=1, st_ino=2, st_ctime_ns=3)
+        directory_stat = SimpleNamespace(st_dev=1, st_ino=1, st_mtime_ns=1,
+                                         st_ctime_ns=1, st_uid=0, st_mode=0o40700)
+        with (mock.patch.object(Path, "resolve", return_value=path),
+              mock.patch.object(Path, "is_symlink", return_value=False),
+              mock.patch.object(Path, "lstat", return_value=socket_stat),
+              mock.patch.object(OWNER, "root_directory", return_value=directory_stat),
+              self.assertRaisesRegex(RuntimeError,
+                        "HOLD_EMERGENCY_STOP_UNIX_RPC_SOCKET_METADATA_MISMATCH")):
+            OWNER._unix_socket_snapshot(config)
 
     def test_public_client_daemon_and_stanza_views_hide_raw_identity(self):
         secrets = ["secret-unix.sock", "secret-server-url", "secret-rpc-factory",

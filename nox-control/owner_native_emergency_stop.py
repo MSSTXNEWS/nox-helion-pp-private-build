@@ -15,6 +15,7 @@ import fcntl
 import hashlib
 import json
 import os
+import posixpath
 from pathlib import Path
 import re
 import shlex
@@ -24,7 +25,7 @@ import struct
 import subprocess
 import time
 import xmlrpc.client
-from urllib.parse import urlsplit
+from urllib.parse import unquote_to_bytes, urlsplit
 
 ROOT = Path("/root/nox")
 SUPERVISOR_CONFIG_DIR = Path("/etc/supervisor/conf.d")
@@ -431,7 +432,9 @@ def _read_effective_supervisor_config(daemon_identity: dict | None):
         serverurl = parser.get("supervisorctl", "serverurl")
         rpc_factory = parser.get("rpcinterface:supervisor",
                                  "supervisor.rpcinterface_factory")
-        configured_mode = parser.get("unix_http_server", "chmod", fallback="0700")
+        configured_mode_present = parser.has_option("unix_http_server", "chmod")
+        configured_mode = (parser.get("unix_http_server", "chmod")
+                           if configured_mode_present else None)
         configured_owner = parser.get("unix_http_server", "chown", fallback="root:root")
         include_text = parser.get("include", "files")
     except (configparser.Error, UnicodeError, ValueError):
@@ -506,50 +509,87 @@ def _read_effective_supervisor_config(daemon_identity: dict | None):
                        "socket_file": socket_file, "serverurl": serverurl,
                        "rpc_factory": rpc_factory,
                        "configured_mode": configured_mode,
+                       "configured_mode_present": configured_mode_present,
                        "configured_owner": configured_owner}
     return parser, config_identity
 
 
 def _unix_socket_snapshot(config_identity: dict) -> dict:
-    socket_file = config_identity["socket_file"].replace(
-        "%(here)s", str(SUPERVISOR_CLIENT_CONFIG.parent))
+    raw_socket_file = config_identity["socket_file"]
+    here = str(SUPERVISOR_CLIENT_CONFIG.parent)
+    interpolation_ok = ("\x00" not in raw_socket_file and
+                        raw_socket_file.count("%(here)s") <= 1 and
+                        not re.search(r"%\([^)]+\)s", raw_socket_file.replace(
+                            "%(here)s", "")))
+    socket_file = raw_socket_file.replace("%(here)s", here)
     serverurl = config_identity["serverurl"]
     rpc_factory = config_identity["rpc_factory"]
     configured_mode = config_identity["configured_mode"]
     configured_owner = config_identity["configured_owner"]
-    parsed_url = urlsplit(serverurl)
-    mode_ok = bool(re.fullmatch(r"0?[0-7]{3,4}", configured_mode))
     try:
-        mode = int(configured_mode, 8) if mode_ok else None
+        parsed_url = urlsplit(serverurl)
+        url_path_bytes = unquote_to_bytes(parsed_url.path)
+        url_path = url_path_bytes.decode("utf-8", "strict")
+        percent_ok = not re.search(r"%(?![0-9A-Fa-f]{2})", parsed_url.path)
+    except (ValueError, UnicodeError):
+        parsed_url = urlsplit("invalid://")
+        url_path = ""
+        percent_ok = False
+    def canonical_path(value: str) -> str | None:
+        if "\x00" in value or not value.startswith("/"):
+            return None
+        parts = value.split("/")
+        if ".." in parts:
+            return None
+        return posixpath.normpath(value)
+    socket_canonical = canonical_path(socket_file) if interpolation_ok else None
+    url_canonical = canonical_path(url_path) if percent_ok else None
+    configured_mode_present = config_identity.get(
+        "configured_mode_present", configured_mode is not None)
+    mode_ok = bool(not configured_mode_present or
+                   (isinstance(configured_mode, str) and
+                    re.fullmatch(r"0?[0-7]{3,4}", configured_mode)))
+    try:
+        mode = int(configured_mode, 8) if mode_ok and configured_mode_present else None
     except ValueError:
         mode = None
         mode_ok = False
+    mode_policy_ok = bool(not configured_mode_present or
+                          (mode is not None and not mode & 0o022 and mode & 0o200))
     checks = {
-        "socket_path_absolute": socket_file.startswith("/"),
-        "socket_path_no_parent_segment": ".." not in Path(socket_file).parts,
+        "socket_path_absolute": socket_canonical is not None,
+        "socket_path_no_parent_segment": socket_canonical is not None,
+        "socket_path_interpolation_allowlisted": interpolation_ok,
         "url_scheme_unix": parsed_url.scheme == "unix",
         "url_netloc_empty": parsed_url.netloc == "",
         "url_query_empty": parsed_url.query == "",
         "url_fragment_empty": parsed_url.fragment == "",
-        "url_path_absolute": parsed_url.path.startswith("/"),
-        "url_path_matches_socket_path": parsed_url.path == socket_file,
+        "url_path_absolute": url_canonical is not None,
+        "url_path_percent_encoding_valid": percent_ok,
+        "url_path_matches_socket_path": (url_canonical is not None and
+                                         url_canonical == socket_canonical),
         "rpc_factory_allowlisted":
             rpc_factory == "supervisor.rpcinterface:make_main_rpcinterface",
         "socket_owner_root_root": configured_owner == "root:root",
+        "configured_mode_present": bool(configured_mode_present),
         "configured_mode_valid_octal": mode_ok,
         "configured_mode_octal": format(mode, "04o") if mode is not None else None,
         "mode_private_no_group_world_write":
-            bool(mode is not None and not mode & 0o022),
-        "mode_owner_write_enabled": bool(mode is not None and mode & 0o200),
+            bool(not configured_mode_present or
+                 (mode is not None and not mode & 0o022)),
+        "mode_owner_write_enabled": bool(not configured_mode_present or
+                                         (mode is not None and mode & 0o200)),
+        "mode_policy_valid_if_configured": mode_policy_ok,
     }
     DIAGNOSTICS["unix_socket_config_checks"] = checks
     if not all(checks[key] for key in (
             "socket_path_absolute", "socket_path_no_parent_segment",
             "url_scheme_unix", "url_netloc_empty", "url_query_empty",
-            "url_fragment_empty", "url_path_absolute", "url_path_matches_socket_path",
+            "url_fragment_empty", "url_path_absolute", "url_path_percent_encoding_valid",
+            "socket_path_interpolation_allowlisted", "url_path_matches_socket_path",
             "rpc_factory_allowlisted", "socket_owner_root_root",
             "configured_mode_valid_octal", "mode_private_no_group_world_write",
-            "mode_owner_write_enabled")):
+            "mode_owner_write_enabled", "mode_policy_valid_if_configured")):
         fail("UNIX_RPC_CONFIG_ENDPOINT_NOT_ALLOWLISTED")
     socket_path = Path(socket_file)
     try:
@@ -561,9 +601,12 @@ def _unix_socket_snapshot(config_identity: dict) -> dict:
         socket_stat = resolved_socket.lstat()
     except OSError:
         fail("UNIX_RPC_SOCKET_UNAVAILABLE")
+    actual_mode = stat.S_IMODE(socket_stat.st_mode)
+    actual_mode_ok = bool(not actual_mode & 0o022 and actual_mode & 0o200)
     if (not stat.S_ISSOCK(socket_stat.st_mode) or socket_stat.st_uid != 0 or
             socket_stat.st_gid != 0 or socket_stat.st_nlink != 1 or
-            stat.S_IMODE(socket_stat.st_mode) != mode):
+            not actual_mode_ok or
+            (configured_mode_present and actual_mode != mode)):
         fail("UNIX_RPC_SOCKET_METADATA_MISMATCH")
     socket_identity = {"configured_path": socket_file,
                        "resolved_path": str(resolved_socket),
