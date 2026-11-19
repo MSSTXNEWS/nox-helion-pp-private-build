@@ -89,6 +89,84 @@ def verify_registry(manifest, helper):
         spec = by_id.get(task_id)
         require(spec is not None and hashlib.sha256(encoded(spec)).hexdigest() == parent['spec_sha256']
                 and routing[task_id] == parent['queue_id'] and spec.get('evidence') == parent['required_evidence'], 'REGISTRY_NATIVE_PARENT')
+        if 'acceptance' in spec:
+            acceptance = spec.get('acceptance')
+            require(type(acceptance) is str and parent.get('registered_acceptance') == acceptance
+                    and parent.get('registered_acceptance_sha256') == sha(acceptance.encode('utf-8')),
+                    'REGISTRY_NATIVE_ACCEPTANCE')
+        else:
+            require('registered_acceptance' not in parent
+                    and 'registered_acceptance_sha256' not in parent,
+                    'REGISTRY_NATIVE_UNREGISTERED_ACCEPTANCE')
+
+
+def verify_acceptance_anchors(contract, source_files):
+    """Confirm each reviewed criterion anchor exists in its pinned test module."""
+    acceptance = contract.get('registered_acceptance')
+    mapping = contract.get('acceptance_mapping')
+    if acceptance is None:
+        require(mapping is None, 'UNREGISTERED_ACCEPTANCE_MAPPING')
+        return True
+    require(type(acceptance) is str and isinstance(mapping, dict)
+            and isinstance(mapping.get('criteria'), list), 'ACCEPTANCE_MAPPING')
+    for criterion in mapping['criteria']:
+        module_name = criterion.get('verifier_module') if isinstance(criterion, dict) else None
+        anchor = criterion.get('verifier_anchor') if isinstance(criterion, dict) else None
+        require(type(module_name) is str and re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.]*',module_name)
+                and type(anchor) is str and anchor, 'ACCEPTANCE_VERIFIER_BINDING')
+        verifier_path = module_name.replace('.','/') + '.py'
+        raw = source_files.get(verifier_path)
+        require(isinstance(raw, bytes) and anchor.encode('utf-8') in raw,
+                'ACCEPTANCE_VERIFIER_ANCHOR')
+    return True
+
+
+def verify_refill_request_state(manifest, queue_state, refill):
+    """Bind the reviewed refill request to a fresh native original-ID snapshot."""
+    evidence = manifest.get('producer_evidence', {})
+    binding = evidence.get('refill_request_binding') if isinstance(evidence, dict) else None
+    require(isinstance(binding, dict), 'REFILL_REQUEST_BINDING_MISSING')
+    states = binding.get('original_task_states')
+    require(isinstance(states, list) and len(states) <= 8192
+            and binding.get('original_task_states_sha256') == refill.digest(states)
+            and evidence.get('refill_request_sha256') is not None
+            and re.fullmatch(r'[a-f0-9]{64}', str(evidence['refill_request_sha256'])),
+            'REFILL_REQUEST_STATE_PIN')
+    expected_id = refill.digest({'manifest_sha256':manifest.get('previous_manifest_sha256'),
+        'source_pins':binding.get('source_pins'),'outcomes':binding.get('outcomes'),
+        'original_task_states':states})
+    require(binding.get('request_id') == expected_id
+            and evidence.get('refill_request_id') == expected_id,
+            'REFILL_REQUEST_ID')
+    expected = {row['task_id']:row['status'] for row in states}
+    require(len(expected) == len(states), 'REFILL_REQUEST_STATE_DUPLICATE')
+    parents = manifest['registry']['parents']
+    for outcome in binding.get('outcomes',[]):
+        require(isinstance(outcome,dict) and type(outcome.get('task_id')) is str
+                and type(outcome.get('status')) is str, 'REFILL_REQUEST_OUTCOME')
+        task_id = outcome['task_id']
+        if task_id.split('.',1)[0] in parents:
+            require(task_id not in expected or expected[task_id] == outcome['status'],
+                    'REFILL_REQUEST_OUTCOME_STATE_MISMATCH')
+            expected[task_id] = outcome['status']
+    live_tasks = queue_state.get('tasks') if isinstance(queue_state, dict) else None
+    require(isinstance(live_tasks, dict), 'QUEUE_STATE_SHAPE')
+    current = []
+    for task_id in sorted(live_tasks):
+        if type(task_id) is not str or task_id.split('.',1)[0] not in parents:
+            continue
+        row = live_tasks[task_id]
+        status = row.get('status') if isinstance(row, dict) else None
+        current.append({'task_id':task_id,
+            'status':status if status in refill.ACTIVE|refill.TERMINAL else 'unknown'})
+    require(current == states, 'ORIGINAL_QUEUE_STATE_CHANGED')
+    require(all(not any(task_id.split('.',1)[0] == mission['parent_task_id']
+                        for task_id in expected)
+                and not any(type(task_id) is str and
+                            task_id.split('.',1)[0] == mission['parent_task_id']
+                            for task_id in live_tasks)
+                for mission in manifest['missions']), 'ORIGINAL_PARENT_ALREADY_PRESENT')
+    return True
 
 
 def mission_contracts(manifest, refill):
@@ -184,6 +262,7 @@ def run(bundle, spec):
         planner = module('_nox_publish_planner', runtime['owner_project_planner.py'])
         refill.validate_manifest(manifest)
         verify_registry(manifest, h)
+        verify_refill_request_state(manifest, baseline, refill)
         expected_contracts, expected_task_ids = mission_contracts(manifest, refill)
         bundled = {path.stem: raw for path, raw in payloads.items() if path.parent.name == 'contracts'}
         require(bundled == expected_contracts, 'MANIFEST_CONTRACT_SET')
@@ -214,8 +293,10 @@ def run(bundle, spec):
                     and contract.get('acceptance_scope') == 'SOURCE_PATCH_TESTED'
                     and contract.get('original_task_accepted') is False
                     and set(row['path'] for row in contract['context']).issubset(root['allowed_paths']), 'CONTRACT_SCOPE')
-            planner.validate_contract(contract, {row['path']: h.read_regular(Path(root['path']) / h.relpath(row['path']))
-                                                 for row in contract['context']})
+            source_files = {row['path']: h.read_regular(Path(root['path']) / h.relpath(row['path']))
+                            for row in contract['context']}
+            planner.validate_contract(contract, source_files)
+            verify_acceptance_anchors(contract, source_files)
         source_pins = {'NOX_PROJECT_SOURCE': {path: fact['sha256'] for path, fact in snapshot['files'].items()}}
         proposed = refill.select_next(manifest, baseline['tasks'], source_pins,
             {'slots_available': 3, 'callback_sha256': old['module_pins']['owner_subagent_dispatcher.py'],
@@ -240,6 +321,7 @@ def run(bundle, spec):
                 and h.source_snapshot(ROOT, old) == snapshot, 'FINAL_CAS_CHANGED')
         state, active = h.queue_idle(ROOT)
         require(not active and h.preserve_terminal_history(baseline, state)['verified'], 'QUEUE_CHANGED')
+        verify_refill_request_state(manifest, state, refill)
         # Existing queues, source roots, model and module pins remain byte-for-byte
         # equivalent. Only the next reviewed immutable manifest pointer changes.
         backup = ROOT / 'state/dispatcher/systemic_relay_publish_rollback' / request
