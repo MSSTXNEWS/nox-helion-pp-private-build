@@ -99,6 +99,8 @@ class ProjectBinding:
                 or evidence.get('parent_task_id') != task['parent_task_id']
                 or evidence.get('queue_id') != task['queue_id']
                 or evidence.get('original_task_accepted') is not False
+                or not isinstance(execution_claim, str) or not execution_claim
+                or evidence.get('claim') != execution_claim
                 or event.get('project_evidence_sha256') != binding.digest(binding.encoded(evidence))):
             raise GateError('HOLD_PROJECT_FINAL_EVIDENCE')
         integrated = evidence.get('state') == 'INTEGRATED'
@@ -583,6 +585,9 @@ class ProjectBinding:
         result = receipt.get('worker_result')
         worker = result.get('project_evidence') if isinstance(result, dict) else None
         if (not isinstance(worker, dict)
+                or not isinstance(receipt.get('execution_claim'), str)
+                or not receipt['execution_claim']
+                or worker.get('claim') != receipt['execution_claim']
                 or result.get('project_evidence_sha256') != binding.digest(binding.encoded(worker))):
             return None
         if (receipt.get('project_source_changed') is not True
