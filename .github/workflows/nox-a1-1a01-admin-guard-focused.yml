@@ -4,6 +4,8 @@ on:
     paths:
       - 'nox-control/owner_chat_stream.py'
       - 'nox-control/test_owner_chat_stream.py'
+      - 'coordination/onepass/nox-v135-resonance-owner-bridge.js'
+      - 'coordination/onepass/test_v135_resonance_owner_bridge.cjs'
       - '.github/workflows/nox-a1-1a01-admin-guard-focused.yml'
 permissions: {contents: read}
 jobs:
@@ -33,3 +35,11 @@ jobs:
             test_owner_chat_stream.StreamTests.test_deterministic_falsey_arguments_never_bypass_call_guard
           echo 'NOX_A1_SOURCE_ONLY=true'
           echo 'NOX_A1_NATIVE_ACCEPTANCE=false'
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: V175 strict browser NDJSON Unicode receipt gate
+        run: |
+          set -euo pipefail
+          node --test --test-name-pattern='V175 JSON-escaped lone UTF-16' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+          echo 'NOX_A1_V175_SOURCE_ONLY=true'
+          echo 'NOX_A1_V175_NATIVE_ACCEPTANCE=false'
