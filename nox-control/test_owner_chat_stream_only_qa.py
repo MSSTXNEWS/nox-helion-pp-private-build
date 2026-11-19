@@ -140,6 +140,14 @@ class ScopeTests(unittest.TestCase):
                     self.assertRaisesRegex(RuntimeError, 'BUNDLE_PIN'):
                 entry.sources()
 
+    def test_unrecognized_reviewed_pr415_admission_anchor_holds(self):
+        body=(HERE/'owner_chat_browser_qa.py').read_text(encoding='utf-8')
+        old="                        own=(request.method=='POST' and allowed_qa_request(\n"
+        self.assertEqual(body.count(old), 1)
+        changed=body.replace(old, "                        own=(request.method=='GET' and allowed_qa_request(\n", 1)
+        with self.assertRaisesRegex(RuntimeError, 'SOURCE_ANCHOR'):
+            scope.rewrite_browser(changed)
+
     def test_dangling_stop_is_not_treated_as_absent(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
