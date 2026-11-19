@@ -47,7 +47,7 @@ def safe_ast_shape(expr, max_nodes=64, max_depth=12):
             truncated = True
             continue
         children = list(ast.iter_child_nodes(node))
-        rows.append({'type': type(node).__name__, 'depth': depth, 'children': len(children)})
+        rows.append({'type': type(node).__name__, 'depth': depth, 'children': min(len(children), max_nodes)})
         deepest = max(deepest, depth)
         for child in reversed(children):
             stack.append((child, depth + 1))
