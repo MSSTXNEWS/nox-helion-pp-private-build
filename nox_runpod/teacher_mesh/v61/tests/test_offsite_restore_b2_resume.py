@@ -183,6 +183,32 @@ class V61PublishedArtifactPreservation(unittest.TestCase):
             self.assertEqual(receipt_path.read_text(),'{"old":true}')
             self.assertEqual(candidate.read_bytes(),b"new-candidate")
 
+    def test_interleaved_publisher_cannot_replace_prior_ciphertext(self):
+        # Simulate a rival publisher creating the destination after the
+        # initial exists() check, immediately before the atomic link.
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            final=root/"checkpoint.age"
+            receipt_path=root/"receipt.json"
+            candidate=root/"checkpoint.age.pending"
+            candidate.write_bytes(b"new-candidate")
+            original_link=os.link
+
+            def rival_wins(source,destination,*args,**kwargs):
+                if Path(destination)==final:
+                    final.write_bytes(b"rival-published-ciphertext")
+                return original_link(source,destination,*args,**kwargs)
+
+            with patch("nox_runpod.teacher_mesh.v61.checkpoint_backup.os.link",
+                       side_effect=rival_wins):
+                with self.assertRaisesRegex(RuntimeError,"HOLD_V61_PUBLISH_RACE"):
+                    publish_verified_backup(candidate,final,receipt_path,{"new":True})
+            self.assertEqual(final.read_bytes(),b"rival-published-ciphertext")
+            self.assertFalse(receipt_path.exists())
+            self.assertTrue(candidate.exists())
+            self.assertFalse(list(root.glob("receipt.json.pending.*")))
+
     def test_verified_candidate_publishes_with_corresponding_receipt(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
