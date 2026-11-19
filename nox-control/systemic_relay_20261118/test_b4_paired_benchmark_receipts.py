@@ -510,6 +510,36 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(with_text["visible_text_sha256"],
                          hashlib.sha256(" \n\tready".encode()).hexdigest())
 
+    def test_sse_wire_zero_width_and_control_only_are_not_first_visible_text(self):
+        # The stream may finish normally while emitting zero visible glyphs.
+        # Zero-width format characters/control codes must not forge TTFT.
+        invisible = "\u200b\u200d\u2060\x00 \n\t"
+        visible = "¡Hola, Привет 😀"
+        def frame(value, reason=None):
+            return ("data: " + json.dumps(
+                {"choices": [{"delta": {"content": value},
+                              "finish_reason": reason}]}) + "\n\n").encode("utf-8")
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b"data: [DONE]\n\n"
+        blank_only = measure_openai_sse_wire([
+            (2, frame(invisible)), (7, stop), (9, done)])
+        self.assertIsNone(blank_only["first_text_ms"])
+        self.assertFalse(blank_only["wire_completed_normally"])
+        self.assertTrue(blank_only["sse_terminal_seen"])
+        self.assertEqual(blank_only["completion_ms"], 9)
+        self.assertEqual(blank_only["visible_utf8_bytes"],
+                         len(invisible.encode("utf-8")))
+        self.assertEqual(blank_only["visible_text_sha256"],
+                         hashlib.sha256(invisible.encode("utf-8")).hexdigest())
+        resumed = measure_openai_sse_wire([
+            (2, frame(invisible)), (5, frame(visible)),
+            (7, stop), (9, done)])
+        self.assertEqual(resumed["first_text_ms"], 5)
+        self.assertEqual(resumed["completion_ms"], 9)
+        self.assertTrue(resumed["wire_completed_normally"])
+        self.assertEqual(resumed["visible_text_sha256"],
+                         hashlib.sha256((invisible + visible).encode("utf-8")).hexdigest())
+
     def test_sse_wire_choice_index_must_be_zero_when_present(self):
         # A one-choice response with index=1 belongs to a different choice;
         # bool/float/string indices must not pass integer equality for zero.
