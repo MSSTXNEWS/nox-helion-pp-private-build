@@ -4,6 +4,7 @@ from __future__ import annotations
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 import hashlib, json, os, re, shutil, subprocess, sys, time, stat
+import datetime as dt
 
 SAFE=re.compile(r'^[A-Za-z0-9_./+@:= -]{1,300}$')
 ROOTS=('/root/nox','/root/nox_learn','/workspace')
@@ -389,6 +390,11 @@ LIFELINE_EXPECTED_ARGV = [
     "--policy", "/etc/nox/lifeline.json",
     "--state", "/root/nox/state/lifeline/state.json",
 ]
+LIFELINE_EXPECTED_EXE = os.path.realpath("/usr/bin/python3")
+LIFELINE_MEMORY_FLOOR = 2 * 1024 ** 3
+LIFELINE_REPORT_MAX_AGE_SECONDS = 180
+LIFELINE_POLICY_SHA256 = "e06d45654fd664f9d15a057fbb5290dd862c4087dba383764283dbaab51edc5b"
+LIFELINE_RECONCILED_CONFIG_SHA256 = "a7f3da89d408f9c9b1f261b0b5c58d55d0a7a095e36a2a22d6e378370b9c6bdf"
 LIFELINE_FILES = {
     "script": ("/root/nox/scripts/nox_native_lifeline.py", 32768),
     "policy": ("/etc/nox/lifeline.json", 32768),
@@ -533,6 +539,7 @@ def _lifeline_supervisor_service(binary, config):
                     "start_ticks": before["start_ticks"]}
         raw_argv = [arg.decode("utf-8", errors="replace")
                     for arg in cmdline.rstrip(b"\0").split(b"\0")]
+        executable = os.readlink(proc / "exe")
         after = _proc_stat_identity(proc, pid)
         if before["start_ticks"] != after["start_ticks"]:
             return {**result, "status": "PID_CHANGED_DURING_READ",
@@ -544,7 +551,12 @@ def _lifeline_supervisor_service(binary, config):
                        "argv_status": ("EXACT_ALLOWLISTED_COMMAND"
                                        if raw_argv == LIFELINE_EXPECTED_ARGV
                                        else "MISMATCH_REDACTED"),
+                       "exe_status": ("EXACT_REVIEWED_PYTHON3"
+                                      if executable == LIFELINE_EXPECTED_EXE
+                                      else "MISMATCH_REDACTED"),
                        "identity_stable_during_read": True})
+        if executable != LIFELINE_EXPECTED_EXE:
+            result["status"] = "PROCESS_EXE_MISMATCH"
         return result
     except (OSError, ValueError, UnicodeError):
         return {**result, "status": "PROCESS_IDENTITY_UNREADABLE"}
@@ -591,12 +603,120 @@ def _lifeline_supervisor_config_fields(raw):
                            else "CONFIG_FIELDS_PARTIAL")
     return out
 
+def _lifeline_cgroup_memory_snapshot():
+    """Read only the two fixed cgroup-v2 scalars with a strict byte bound."""
+    def scalar(path, allow_max=False):
+        flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
+                 getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+        try:
+            fd = os.open(path, flags)
+        except OSError:
+            return None
+        try:
+            before = os.fstat(fd)
+            if not stat.S_ISREG(before.st_mode):
+                return None
+            raw = os.read(fd, 65)
+            after = os.fstat(fd)
+            signature_before = (before.st_dev, before.st_ino, before.st_size,
+                                before.st_mtime_ns, before.st_ctime_ns)
+            signature_after = (after.st_dev, after.st_ino, after.st_size,
+                               after.st_mtime_ns, after.st_ctime_ns)
+            if (signature_before != signature_after or not raw or len(raw) > 64):
+                return None
+            raw = raw.removesuffix(b"\n")
+            if allow_max and raw == b"max":
+                return "max"
+            return int(raw) if re.fullmatch(rb"(?:0|[1-9][0-9]{0,19})", raw) else None
+        except (OSError, ValueError):
+            return None
+        finally:
+            os.close(fd)
+
+    current = scalar("/sys/fs/cgroup/memory.current")
+    maximum = scalar("/sys/fs/cgroup/memory.max", allow_max=True)
+    if type(current) is int and type(maximum) is int:
+        headroom = maximum - current
+        status = "OK" if headroom >= 0 else "INCONSISTENT"
+        below = headroom < LIFELINE_MEMORY_FLOOR
+    else:
+        headroom = None
+        status = "UNKNOWN"
+        below = True
+    return {"memory.current": current, "memory.max": maximum,
+            "raw_headroom_bytes": headroom, "below_2GiB": below,
+            "status": status}
+
+def _lifeline_state_memory(raw, now=None):
+    """Summarize persisted monitor telemetry without exporting state contents."""
+    result = {"status": "UNKNOWN", "report_at": None, "age_seconds": None,
+              "report_epoch": None,
+              "memory.current": None, "memory.max": None,
+              "raw_headroom_bytes": None, "below_2GiB": True}
+    if raw is None:
+        return result
+    try:
+        state = json.loads(raw.decode("utf-8", errors="strict"),
+                           object_pairs_hook=_lifeline_unique_pairs,
+                           parse_constant=_lifeline_reject_constant)
+        report = state.get("last_report") if isinstance(state, dict) else None
+        if (not isinstance(report, dict) or report.get("schema") != "NOX_LIFELINE_V2"
+                or report.get("observer_only") is not True
+                or not isinstance(report.get("at"), str)):
+            return result
+        timestamp = dt.datetime.fromisoformat(report["at"].replace("Z", "+00:00"))
+        if timestamp.tzinfo is None:
+            return result
+        now = time.time() if now is None else now
+        report_epoch = timestamp.timestamp()
+        age = now - report_epoch
+        memory = report.get("cgroup_memory")
+        if not isinstance(memory, dict):
+            return {**result, "report_at": report["at"], "report_epoch": report_epoch,
+                    "age_seconds": round(age, 3),
+                    "status": "UNKNOWN"}
+        current, maximum = memory.get("memory.current"), memory.get("memory.max")
+        headroom, below, status = (memory.get("raw_headroom_bytes"),
+                                   memory.get("below_2GiB"), memory.get("status"))
+        summary = {"report_at": report["at"], "report_epoch": report_epoch,
+                   "age_seconds": round(age, 3),
+                   "memory.current": current, "memory.max": maximum,
+                   "raw_headroom_bytes": headroom, "below_2GiB": below}
+        if (type(current) is int and type(maximum) is int and type(headroom) is int
+                and type(below) is bool):
+            expected = maximum - current
+            expected_status = "OK" if expected >= 0 else "INCONSISTENT"
+            if headroom != expected or below != (expected < LIFELINE_MEMORY_FLOOR) or status != expected_status:
+                return {**summary, "status": "INCONSISTENT"}
+            if age < -5:
+                return {**summary, "status": "FUTURE_TIMESTAMP"}
+            if age > LIFELINE_REPORT_MAX_AGE_SECONDS:
+                return {**summary, "status": "STALE"}
+            return {**summary, "status": "OK"}
+        if (status == "UNKNOWN" and headroom is None and below is True
+                and (type(current) is int or current is None)
+                and (type(maximum) is int or maximum is None or maximum == "max")):
+            if age < -5:
+                return {**summary, "status": "FUTURE_TIMESTAMP"}
+            if age > LIFELINE_REPORT_MAX_AGE_SECONDS:
+                return {**summary, "status": "STALE"}
+            return {**summary, "status": "UNKNOWN"}
+        return {**summary, "status": "INCONSISTENT"}
+    except (AttributeError, TypeError, ValueError, UnicodeError):
+        return result
+
 def lifeline_evidence(binary=None, config=None):
     """Narrow read-only status + path hashes; never expose policy/state contents."""
     file_rows = {}
     raw_files = {}
     for label in ("script", "policy", "supervisor_config", "state"):
         file_rows[label], raw_files[label] = _lifeline_read_allowlisted_file(label)
+    systemd = {}
+    for field, args in (("active", ["systemctl", "is-active", "supervisor.service"]),
+                        ("enabled", ["systemctl", "is-enabled", "supervisor.service"])):
+        rc, output = run(args, seconds=10)
+        systemd[field] = output.strip()[:40]
+        systemd[field + "_rc"] = rc
     return {
         "schema": "NOX_LIFELINE_EVIDENCE_V1",
         "read_only": True,
@@ -604,8 +724,67 @@ def lifeline_evidence(binary=None, config=None):
         "files": file_rows,
         "policy": _lifeline_policy_fields(raw_files.get("policy")),
         "supervisor_config": _lifeline_supervisor_config_fields(raw_files.get("supervisor_config")),
+        "state_memory": _lifeline_state_memory(raw_files.get("state")),
+        "cgroup_memory_now": _lifeline_cgroup_memory_snapshot(),
+        "supervisor_systemd": systemd,
         "service": _lifeline_supervisor_service(binary, config),
     }
+
+def lifeline_only(phase):
+    """Low-overhead independent read-only pre/post Lifeline evidence mode."""
+    if phase not in ("pre", "post"):
+        raise ValueError("--lifeline-only requires --phase pre|post")
+    binary = shutil.which("supervisorctl")
+    if not binary:
+        binary = next((x for x in ("/opt/venv/bin/supervisorctl",
+                                   "/usr/local/bin/supervisorctl") if Path(x).is_file()), None)
+    candidates = [None] + [x for x in ("/etc/supervisor/supervisord.conf",
+                                        "/etc/supervisord.conf",
+                                        "/root/nox/supervisord.conf") if Path(x).is_file()]
+    config = None
+    if binary:
+        for candidate in candidates:
+            rc, output = run([binary] + (["-c", candidate] if candidate else []) + ["status"])
+            if rc in (0, 3) and any(
+                    re.match(r"^nox-lifeline-guard\s+", line)
+                    for line in output.splitlines()):
+                config = candidate
+                break
+    evidence = lifeline_evidence(binary, config)
+    status = "PRECHANGE_SNAPSHOT"
+    if phase == "post":
+        service = evidence["service"]
+        memory = evidence["state_memory"]
+        if (service.get("state") == "RUNNING" and
+                service.get("argv_status") == "EXACT_ALLOWLISTED_COMMAND" and
+                service.get("exe_status") == "EXACT_REVIEWED_PYTHON3" and
+                service.get("identity_stable_during_read") is True and
+                evidence["supervisor_config"].get("autostart") is True and
+                evidence["supervisor_config"].get("autorestart") is True and
+                evidence["supervisor_config"].get("command_matches_allowlist") is True and
+                evidence["policy"].get("enabled") is False and
+                evidence["policy"].get("poll_seconds") == 60 and
+                bool(evidence["policy"].get("restart_flags")) and
+                all(flag is False for flag in evidence["policy"].get("restart_flags", {}).values()) and
+                evidence["files"].get("policy", {}).get("sha256") == LIFELINE_POLICY_SHA256 and
+                evidence["files"].get("supervisor_config", {}).get("sha256") ==
+                LIFELINE_RECONCILED_CONFIG_SHA256 and
+                evidence["supervisor_systemd"].get("active") == "active" and
+                evidence["supervisor_systemd"].get("active_rc") == 0 and
+                evidence["supervisor_systemd"].get("enabled") == "enabled" and
+                evidence["supervisor_systemd"].get("enabled_rc") == 0 and
+                evidence["files"].get("script", {}).get("sha256") ==
+                "d10b12461cdf08a309ea7ac08c81a6d465d254f95b78b1d3b441e7f59f01e69f" and
+                memory.get("status") == "OK"):
+            status = "MONITOR_ACTIVE_LOW_MEMORY" if memory.get("below_2GiB") else "MONITOR_ACTIVE"
+        else:
+            status = "POSTCHECK_HOLD"
+    return {"schema": "NOX_LIFELINE_INDEPENDENT_AUDIT_V1",
+            "read_only": True, "phase": phase,
+            "observed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "host_mutations": 0, "processes_started": 0,
+            "workers_started": 0, "status": status,
+            "evidence": evidence}
 
 def supervisor():
     fence=v13_owner_fence_metadata()
@@ -859,10 +1038,18 @@ def worker(i):
     except Exception as e:return {'section':str(i),'worker_pid':os.getpid(),'error':type(e).__name__}
 
 def main():
+    if sys.argv[1:]:
+        if len(sys.argv) == 4 and sys.argv[1] == "--lifeline-only" and sys.argv[2] == "--phase":
+            result = lifeline_only(sys.argv[3])
+            print("NOX_MAINT_AUDIT=" + json.dumps(result, separators=(",", ":")), flush=True)
+            print("NOX_MAINT_AUDIT_COMPLETE=true", flush=True)
+            return 0
+        print("usage: owner_native_audit.py [--lifeline-only --phase pre|post]", file=sys.stderr)
+        return 2
     with ProcessPoolExecutor(max_workers=7) as pool:
         for row in pool.map(worker,range(7)):
             # One JSON record per bounded result item; never dump env/config secrets.
             print('NOX_MAINT_AUDIT='+json.dumps(row,separators=(',',':')),flush=True)
     print('NOX_MAINT_AUDIT_COMPLETE=true',flush=True)
-if __name__=='__main__':main()
+if __name__=='__main__':raise SystemExit(main())
 
