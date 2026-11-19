@@ -1,0 +1,38 @@
+name: NOX ZIP terminal fallback exact owner CAS source safety
+on:
+  pull_request:
+    paths:
+      - 'nox-control/systemic_relay_20261118/next_zip_reviewed/**'
+      - 'nox-control/owner_native_operator.py'
+      - '.github/workflows/nox-zip-reviewed-terminal-cas-ci.yml'
+permissions:
+  contents: read
+jobs:
+  reviewed-zip-fallback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Review scoped fallback entry, independent ZIP tests, negative CAS cases
+        run: |
+          python -m py_compile nox-control/owner_native_operator.py nox-control/systemic_relay_20261118/next_zip_reviewed/owner_zip_reviewed_fallback_entry.py
+          python -m unittest discover -s nox-control/systemic_relay_20261118/next_zip_reviewed -p 'test_*.py' -v
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          op=Path('nox-control/owner_native_operator.py')
+          spec=importlib.util.spec_from_file_location('nox_zip_operator',op)
+          m=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          assert m.FILES['repair']=='nox-control/systemic_relay_20261118/next_zip_reviewed/owner_zip_reviewed_fallback_entry.py'
+          selected=m.repair_bundle_paths('repair',m.FILES['repair'],())
+          assert {Path(x).name for x in selected}=={
+            'owner_systemic_reviewed_publish.py',
+            'continuous_transaction_helpers.py','merge_web_source.py'}
+          print('OWNER_BUNDLE_DEDUPLICATED')
+          PY
