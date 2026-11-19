@@ -14,10 +14,13 @@ from owner_native_inspect_comment_guard import (
     APPROVED_SOURCE_BY_ACTION,
     ISSUE_NUMBER,
     OWNER_ID,
+    REFLEX_PUBLISH_COMPLETE_MARKER,
+    REFLEX_PUBLISH_MANIFEST_SHA,
     REPOSITORY,
     authorize_event,
     main,
 )
+import owner_native_inspect_comment_guard as guard
 
 
 INSPECT_SHA = APPROVED_SOURCE_BY_ACTION["inspect"]
@@ -28,6 +31,7 @@ GPU_INVENTORY_SHA = APPROVED_SOURCE_BY_ACTION["gpu_inventory"]
 BROWSER_QA_SHA = APPROVED_SOURCE_BY_ACTION["browser_qa"]
 STALE_BROWSER_QA_SHA = "9ddb3730f8db1b7b598eaf58ab0aa5973485f6c6"  # helper missing at old pin
 SOURCE_EXPORT_SHA = APPROVED_SOURCE_BY_ACTION["source_export"]
+REFLEX_PUBLISH_SHA = APPROVED_SOURCE_BY_ACTION["reflex_publish"]
 OLD_UNAPPROVED_SHA = "80fc87881036462cfbe0aa27bb02b69daf8bfe6a"  # prior #437
 STALE_AUDIT_SHA = "22efccc957bc72d54899a701e6d09e5ef69b20c2"  # pre-fix #475
 UNAPPROVED_SHA = "a" * 40
@@ -50,6 +54,49 @@ def event_for(body: str = f"/nox-maintain 60509551 {INSPECT_SHA} inspect") -> di
 
 
 class OwnerCommentGuardTests(unittest.TestCase):
+    def test_reflex_publish_requires_exact_candidate_pin_and_is_disabled_now(self) -> None:
+        self.assertEqual(REFLEX_PUBLISH_SHA,
+                         "74785030650d15225c62ae50b2e763eaef2cd5cc")
+        self.assertEqual(REFLEX_PUBLISH_COMPLETE_MARKER,
+                         "NOX_MAINT_REFLEX_PUBLISH_COMPLETE=true")
+        self.assertIsNone(REFLEX_PUBLISH_MANIFEST_SHA)
+        manifest_sha = "d" * 64
+        body = (f"/nox-maintain 60509551 {REFLEX_PUBLISH_SHA} "
+                f"reflex_publish {manifest_sha}")
+        with self.assertRaisesRegex(
+                RuntimeError, "HOLD_REFLEX_PUBLISH_CANDIDATE_NOT_PINNED"):
+            authorize_event(event_for(body), REPOSITORY, "issue_comment")
+
+        wrong_source = f"/nox-maintain 60509551 {'e' * 40} reflex_publish {manifest_sha}"
+        with self.assertRaisesRegex(RuntimeError, "HOLD_SOURCE_ACTION_NOT_APPROVED"):
+            authorize_event(event_for(wrong_source), REPOSITORY, "issue_comment")
+        malformed = f"/nox-maintain 60509551 {REFLEX_PUBLISH_SHA} reflex_publish {'d' * 63}"
+        with self.assertRaisesRegex(RuntimeError, "HOLD_EXACT_OWNER_COMMAND"):
+            authorize_event(event_for(malformed), REPOSITORY, "issue_comment")
+
+        with mock.patch.object(guard, "REFLEX_PUBLISH_MANIFEST_SHA", manifest_sha):
+            self.assertEqual(authorize_event(
+                event_for(body), REPOSITORY, "issue_comment"),
+                ("reflex_publish", REFLEX_PUBLISH_SHA))
+            mismatch = f"/nox-maintain 60509551 {REFLEX_PUBLISH_SHA} reflex_publish {'f' * 64}"
+            with self.assertRaisesRegex(
+                    RuntimeError, "HOLD_REFLEX_PUBLISH_MANIFEST_MISMATCH"):
+                authorize_event(event_for(mismatch), REPOSITORY, "issue_comment")
+
+            with tempfile.TemporaryDirectory() as temp:
+                event_path = Path(temp) / "event.json"
+                output_path = Path(temp) / "output"
+                event_path.write_text(json.dumps(event_for(body)), encoding="utf-8")
+                env = {"GITHUB_EVENT_PATH": str(event_path),
+                       "GITHUB_OUTPUT": str(output_path),
+                       "GITHUB_REPOSITORY": REPOSITORY,
+                       "GITHUB_EVENT_NAME": "issue_comment"}
+                with mock.patch.dict(os.environ, env, clear=False):
+                    self.assertEqual(main(), 0)
+                self.assertEqual(output_path.read_text(encoding="utf-8"),
+                    f"action=reflex_publish\nsource_sha={REFLEX_PUBLISH_SHA}\n"
+                    f"manifest_sha256={manifest_sha}\n")
+
     def test_exact_inspect_audit_and_attestation_commands_return_pinned_pairs(self) -> None:
         self.assertEqual(INSPECT_SHA,
                          "1d76f3fbce0b9e9258f77cdc181b038acc4d69c9")
@@ -301,6 +348,28 @@ class OwnerCommentGuardTests(unittest.TestCase):
 
 
 class WorkflowScopeTests(unittest.TestCase):
+    def test_reflex_publish_remains_disabled_before_credentials_until_entry_pin(self) -> None:
+        workflow = (Path(__file__).parents[1] / ".github" / "workflows"
+                    / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
+        self.assertIn("reflex_publish ([0-9a-f]{64})", workflow)
+        self.assertIn("REFLEX_PUBLISH_MANIFEST_SHA: str | None = None",
+                      (Path(__file__).with_name(
+                          "owner_native_inspect_comment_guard.py")).read_text(
+                              encoding="utf-8"))
+        self.assertIn(REFLEX_PUBLISH_COMPLETE_MARKER,
+                      (Path(__file__).with_name(
+                          "owner_native_inspect_comment_guard.py")).read_text(
+                              encoding="utf-8"))
+        hold_at = workflow.index("Hold until a receipted candidate entry is pinned")
+        source_checkout_at = workflow.index("ref: ${{ steps.request.outputs.sha }}")
+        credential_at = workflow.index("NOX2: ${{ secrets.NOX2 }}")
+        self.assertLess(hold_at, source_checkout_at)
+        self.assertLess(hold_at, credential_at)
+        self.assertIn("HOLD_REFLEX_PUBLISH_CANDIDATE_NOT_PINNED",
+                      (Path(__file__).with_name(
+                          "owner_native_inspect_comment_guard.py")).read_text(
+                              encoding="utf-8"))
+
     def test_owner_job_prefilter_only_starts_for_fixed_action_suffixes(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-native-inspect.yml").read_text(encoding="utf-8")
