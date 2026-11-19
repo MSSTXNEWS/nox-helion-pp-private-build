@@ -710,6 +710,22 @@ def run_action(request_id: int, source_sha: str) -> dict:
     require_same_process_identity(holder, last_holder, "HOLDER_AFTER_FINAL_MAPS")
     require_holder_outside_model_group(last_model, last_holder)
     require_exclusive_model_process_group(last_model)
+    # The /proc census costs time; close that admission window with fresh checks.
+    final_status = require_model_running()
+    final_model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
+    final_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
+    require_same_process_identity(model, final_model, "MODEL_AFTER_FINAL_CENSUS")
+    require_same_process_identity(holder, final_holder, "HOLDER_AFTER_FINAL_CENSUS")
+    require_holder_outside_model_group(final_model, final_holder)
+    final_memfd = fd_memfd_identity(HOLDER_PID)
+    if (final_memfd["device"] != memfd["device"] or
+            final_memfd["inode"] != memfd["inode"] or
+            final_memfd["size"] != memfd["size"] or
+            final_memfd["label"] != MEMFD_LABEL):
+        fail("HOLDER_MEMFD_CHANGED_AFTER_FINAL_CENSUS")
+    final_headroom = memory_headroom(Path(model["cgroup"]))
+    if final_headroom["headroom"] >= MIN_HEADROOM:
+        fail("HEADROOM_RECOVERED_AFTER_FINAL_CENSUS")
 
     PHASE["model_stop_requested"] = True
     stopped = command(["supervisorctl", "stop", SUPERVISOR_SERVICE], timeout=35)
@@ -736,9 +752,11 @@ def run_action(request_id: int, source_sha: str) -> dict:
             "process_groups": {"model": model["pgrp"], "holder": holder["pgrp"],
                                "holder_separate_from_model": True,
                                "model_group_contains_only_model_pid": True},
-            "before": before, "pre_stop": pre_stop,
+            "before": before, "pre_stop": pre_stop, "final_headroom": final_headroom,
             "after_model": after_model, "minimum_headroom": MIN_HEADROOM,
-            "model_pid_state": model_pid_state, "markers": fence,
+            "model_pid_state": model_pid_state,
+            "supervisor_immediately_before_stop": final_status,
+            "markers": fence,
             "supervisor_after": after_status, "holder_signal": "NONE"}
 
 
