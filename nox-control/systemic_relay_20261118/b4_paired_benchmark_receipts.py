@@ -7,6 +7,9 @@ Streaming first-text coverage and llama.cpp KV-cache timings must be accounted f
 otherwise a fast aggregate can hide a no-text response or a cold-cache regression.
 """
 from __future__ import annotations
+import codecs
+import hashlib
+import json
 import math
 import re
 
@@ -316,3 +319,141 @@ def compare_paired(baseline, candidate):
                 (old[task]["history_saved"] and not new[task]["history_saved"]) or
                 (old[task]["background_completed"] and not new[task]["background_completed"])
                 for task in baseline["declared_task_ids"]))}
+
+
+def measure_openai_sse_wire(timed_chunks):
+    """Produce a read-only wire witness; never POST or infer S03 durability.
+
+    Each item is (monotonic elapsed_ms, raw HTTP body bytes) from an independently
+    authenticated OpenAI-compatible chat/completions SSE reader. Elapsed times
+    are at completed SSE event dispatch (not estimated generation-token times).
+    The parser keeps full byte/text hashes without retaining or truncating text.
+    A different server/proxy event contract requires a separate reviewed parser.
+    No field returned here alone proves native verification or task success.
+    """
+    decoder = codecs.getincrementaldecoder("utf-8-sig")("strict")
+    raw_hash, timed_hash, visible_hash = (hashlib.sha256() for _ in range(3))
+    line, data_lines = "", []
+    last_cr = False
+    last_ms = -1
+    raw_bytes = 0
+    visible_bytes = 0
+    first_text_ms = None
+    terminal_ms = None
+    finish_reason = None
+    terminal_seen = False
+    event_count = 0
+
+    def dispatch(at_ms):
+        nonlocal data_lines, visible_bytes, first_text_ms
+        nonlocal terminal_ms, finish_reason, terminal_seen, event_count
+        if not data_lines:
+            return
+        payload = "\n".join(data_lines)
+        data_lines = []
+        _require(not terminal_seen, "SSE_AFTER_TERMINAL")
+        if payload == "[DONE]":
+            terminal_seen = True
+            terminal_ms = at_ms
+            return
+        try:
+            obj = json.loads(payload)
+        except (ValueError, TypeError) as exc:
+            raise ReceiptHold("SSE_INVALID_JSON") from exc
+        _require(isinstance(obj, dict) and isinstance(obj.get("choices"), list)
+                 and len(obj["choices"]) == 1 and isinstance(obj["choices"][0], dict),
+                 "SSE_CHOICE_SCHEMA")
+        choice = obj["choices"][0]
+        delta = choice.get("delta")
+        _require(isinstance(delta, dict), "SSE_DELTA_SCHEMA")
+        content = delta.get("content")
+        _require(content is None or isinstance(content, str), "SSE_CONTENT_SCHEMA")
+        if content:
+            if first_text_ms is None:
+                first_text_ms = at_ms
+            encoded = content.encode("utf-8")
+            visible_hash.update(encoded)
+            visible_bytes += len(encoded)
+        reason = choice.get("finish_reason")
+        _require(reason is None or reason in
+                 ("stop", "length", "tool_calls", "content_filter",
+                  "cancelled", "error", "unknown"), "SSE_FINISH_SCHEMA")
+        if reason is not None:
+            _require(finish_reason is None or finish_reason == reason,
+                     "SSE_CONFLICTING_FINISH")
+            finish_reason = reason
+        event_count += 1
+
+    def accept_line(value, at_ms):
+        nonlocal data_lines
+        if not value:
+            dispatch(at_ms)
+            return
+        if value.startswith(":"):
+            return  # heartbeat/comment is not visible text or completion
+        field, sep, data = value.partition(":")
+        if field == "data":
+            if sep and data.startswith(" "):
+                data = data[1:]
+            data_lines.append(data)
+
+    def accept_text(text, at_ms):
+        nonlocal line, last_cr
+        for ch in text:
+            if ch == "\n" and last_cr:
+                last_cr = False
+                continue
+            if ch in ("\r", "\n"):
+                accept_line(line, at_ms)
+                line = ""
+                last_cr = ch == "\r"
+            else:
+                last_cr = False
+                line += ch
+                _require(len(line) <= 262144, "SSE_FRAME_OVER_LIMIT")
+
+    for item in timed_chunks:
+        _require(isinstance(item, (tuple, list)) and len(item) == 2,
+                 "SSE_CHUNK_SCHEMA")
+        at_ms, chunk = item
+        _require(_integer(at_ms, 86400000) and at_ms >= last_ms
+                 and isinstance(chunk, bytes), "SSE_CHUNK_SCHEMA")
+        last_ms = at_ms
+        raw_bytes += len(chunk)
+        _require(raw_bytes <= 8388608, "SSE_WIRE_OVER_LIMIT")
+        raw_hash.update(chunk)
+        timed_hash.update(at_ms.to_bytes(8, "big"))
+        timed_hash.update(len(chunk).to_bytes(8, "big"))
+        timed_hash.update(chunk)
+        try:
+            accept_text(decoder.decode(chunk), at_ms)
+        except UnicodeDecodeError as exc:
+            raise ReceiptHold("SSE_INVALID_UTF8") from exc
+    try:
+        accept_text(decoder.decode(b"", final=True), max(last_ms, 0))
+    except UnicodeDecodeError as exc:
+        raise ReceiptHold("SSE_INVALID_UTF8") from exc
+    if last_cr:
+        accept_line(line, max(last_ms, 0))
+        line = ""
+    # EventSource semantics: a final data frame without a blank line is
+    # incomplete, not an event. Never synthesize [DONE] from socket EOF.
+    return {
+        "protocol": "OPENAI_CHAT_COMPLETIONS_SSE_V1",
+        "raw_wire_sha256": raw_hash.hexdigest(),
+        "timed_trace_sha256": timed_hash.hexdigest(),
+        "visible_text_sha256": visible_hash.hexdigest(),
+        "raw_wire_bytes": raw_bytes,
+        "visible_utf8_bytes": visible_bytes,
+        "parsed_events": event_count,
+        "first_text_ms": first_text_ms,
+        "completion_ms": terminal_ms,
+        "last_byte_ms": None if last_ms < 0 else last_ms,
+        "sse_terminal_seen": terminal_seen,
+        "model_finish_reason": finish_reason or "unknown",
+        "partial_frame_at_eof": bool(line or data_lines),
+        "wire_completed_normally": bool(terminal_seen and finish_reason == "stop"
+                                         and visible_bytes and not (line or data_lines)),
+        "native_verified": False,
+        "s03_durable_verified": False,
+    }
