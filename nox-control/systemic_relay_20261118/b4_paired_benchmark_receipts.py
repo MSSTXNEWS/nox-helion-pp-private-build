@@ -280,7 +280,7 @@ def compare_paired(baseline, candidate):
             "sse_normal_completion_regressed_task_ids": sse_normal_completion_regressed,
             "sse_terminal_coverage_delta": (after["sse_terminal_seen"] -
                                              before["sse_terminal_seen"]) / before["denominator"],
-            "sse_reliability_regression": bool(sse_normal_completion_regressed),
+            "sse_reliability_regression": bool(sse_terminal_lost or sse_normal_completion_regressed),
             "latency_regressed_task_ids": latency_regressed,
             "peak_rss_regressed_task_ids": rss_regressed,
             "cache_state_changed_task_ids": cache_changed,
@@ -310,6 +310,7 @@ def compare_paired(baseline, candidate):
             "p95_latency_delta_ms": (after["p95_latency_ms_all_tasks"]
                                      - before["p95_latency_ms_all_tasks"]),
             "quality_or_history_regression": bool(regressed or first_text_lost or
+                                                  sse_terminal_lost or
                                                   sse_normal_completion_regressed or any(
                 (old[task]["history_saved"] and not new[task]["history_saved"]) or
                 (old[task]["background_completed"] and not new[task]["background_completed"])
