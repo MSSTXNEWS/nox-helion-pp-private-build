@@ -39,14 +39,40 @@ class RequiredMemory(unittest.TestCase):
         self.assertEqual(events[-1]['state'],'HOLD_MEMORY_NOT_READY')
         self.assertEqual(calls,[])
 
-    def test_memory_kept_under_context_pressure(self):
-        b=self._p(lambda s,p,l:[record(text='Реальное воспоминание с источником '+('ж'*200)) for i in range(8)])
+    def test_all_memory_records_are_preserved_when_context_fits(self):
+        rows = [
+            dict(record(text='Воспоминание ' + 'ж' * 390 + f' конец-{i}'),
+                 segment=f'M{i}', source_uri='https://example.invalid/' + 'a' * 260 + f'/source-{i}')
+            for i in range(8)
+        ]
+        b=SynapticBrain(NativePorts(authorize=lambda s:True,stop=lambda:False,
+                       s03_recall=lambda s,p,l:rows),
+                       PulseConfig(fast_deadline_ms=100,deep_deadline_ms=180,
+                           memory_deadline_ms=180,max_workers=8,max_context_chars=8200))
+        self.addCleanup(b.close)
         result=b.pulse(S,'Вспомни дату',deep=True)
         self.assertEqual(result['state'],'READY_FOR_ONE_NOX_MODEL')
         data=json.loads(result['context_json'])
-        self.assertEqual(data['C02']['signals']['state'],'OBSERVED')
-        self.assertGreater(data['C02']['signals']['hit_count'],0)
-        self.assertIn('s03://owner/memory/verified',result['context_json'])
+        hits=data['C02']['signals']['hits']
+        self.assertEqual(len(hits),8)
+        self.assertEqual([hit['segment'] for hit in hits], [f'M{i}' for i in range(8)])
+        self.assertEqual([hit['text'] for hit in hits],[row['content'] for row in rows])
+        self.assertEqual([hit['source'] for hit in hits],[row['source_uri'] for row in rows])
+
+    def test_context_pressure_holds_before_model_without_trimming_memory(self):
+        # Every source record is individually admissible, but the complete
+        # eight-hit context cannot fit in the historical ~3.1k character budget.
+        rows=[record(text='Проверенное воспоминание '+('ж'*360)+f' №{i}') for i in range(8)]
+        b=SynapticBrain(NativePorts(authorize=lambda s:True,stop=lambda:False,
+                       s03_recall=lambda s,p,l:rows),
+                       PulseConfig(fast_deadline_ms=100,deep_deadline_ms=180,
+                           memory_deadline_ms=180,max_workers=8,max_context_chars=3100))
+        self.addCleanup(b.close)
+        calls=[]
+        events=list(b.stream(S,'Вспомни все восемь записей',lambda p,m:
+                             calls.append(True) or iter(['НЕ ДОЛЖЕН ПОЯВИТЬСЯ']),deep=True))
+        self.assertEqual(events[-1],{'type':'hold','state':'HOLD_CONTEXT_TOO_LARGE'})
+        self.assertEqual(calls,[])
 
     def test_cross_chat_requires_trusted_grant(self):
         foreign=[record(chat='other-chat')]

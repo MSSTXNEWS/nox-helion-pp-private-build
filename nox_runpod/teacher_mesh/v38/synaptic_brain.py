@@ -194,8 +194,15 @@ class SynapticBrain:
                 source = x.get("source_uri", "")
                 if not isinstance(source, str) or not source.startswith(("s03://", "https://", "nox-checkpoint://")):
                     continue
-                trusted.append({"segment": x["segment"], "text": str(x.get("content", ""))[:380],
-                                "source": source[:260], "evidence_only": True})
+                content = x.get("content", "")
+                if not isinstance(content, str):
+                    return {"state": "HOLD_S03_INVALID_CONTENT"}
+                if len(content) > self.cfg.max_context_chars:
+                    return {"state": "HOLD_S03_RECORD_TOO_LARGE"}
+                if len(source) > 2048:
+                    return {"state": "HOLD_S03_SOURCE_TOO_LARGE"}
+                trusted.append({"segment": x["segment"], "text": content,
+                                "source": source, "evidence_only": True})
                 if len(trusted) >= self.cfg.memory_hits:
                     break
             return {"state": "OBSERVED", "hits": trusted, "hit_count": len(trusted)}
@@ -319,7 +326,11 @@ class SynapticBrain:
         if not self._gate(session):
             return {"state": "HOLD_SCOPE_REVOKED"}
         if self.cfg.require_memory and results.get("C02", {}).get("state") != "OBSERVED":
-            return {"state": "HOLD_MEMORY_NOT_READY", "memory_state": results.get("C02", {}).get("state"),
+            memory_state = results.get("C02", {}).get("state")
+            hold_state = ("HOLD_CONTEXT_TOO_LARGE" if memory_state in
+                          ("HOLD_S03_RECORD_TOO_LARGE", "HOLD_S03_SOURCE_TOO_LARGE")
+                          else "HOLD_MEMORY_NOT_READY")
+            return {"state": hold_state, "memory_state": memory_state,
                     "elapsed_ms": round((time.perf_counter() - started) * 1000, 3)}
         compact = {k: {"name": CORE_NAMES[k], "signals": results[k]} for k in CORE_NAMES}
         text = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
@@ -331,19 +342,8 @@ class SynapticBrain:
                     break
                 compact[candidate]["signals"] = {"state": "CONTEXT_BUDGET_FALLBACK"}
                 text = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
-            # If needed, shorten long memories but retain actual verified events,
-            # source URIs, M0–M7 labels, and exact per-persona scope.
-            mem = compact["C02"]["signals"]
-            if len(text) > self.cfg.max_context_chars and mem.get("state") == "OBSERVED":
-                hits = mem.get("hits", [])
-                for hit in hits:
-                    hit["text"] = hit["text"][:160]
-                text = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
-                while len(text) > self.cfg.max_context_chars and len(hits) > 1:
-                    hits.pop()
-                    mem["hit_count"] = len(hits)
-                    mem["context_trimmed"] = True
-                    text = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
+            # Keep complete recalled memory and provenance. Existing model
+            # context bounds are enforced below without shortening evidence.
         if len(text) > self.cfg.max_context_chars:
             return {"state": "HOLD_CONTEXT_TOO_LARGE"}
         return {"state": "READY_FOR_ONE_NOX_MODEL", "cores": results,
