@@ -27,8 +27,8 @@ SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor
 FILES['repair'] = 'nox-control/owner_service_sizing_entry.py'
 # One exact owner-approved cache service and warm-hook transaction.
 FILES['repair'] = 'nox-control/owner_native_repair.py'
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = tuple(["engram_cold_holder.py","verify_ds41_backbone.py","owner_cold_stage_preflight.py","atomic_engram_stage.py","nox-engram-cold-holder.conf"])
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = tuple(["nox-control/cold-engram/engram_cold_holder.py","nox-control/cold-engram/verify_ds41_backbone.py","nox-control/cold-engram/owner_cold_stage_preflight.py","nox-control/cold-engram/atomic_engram_stage.py","nox-control/cold-engram/nox-engram-cold-holder.conf"])
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = tuple(["engram_cold_holder.py","verify_ds41_backbone.py","owner_cold_stage_preflight.py","atomic_engram_stage.py","nox-engram-cold-holder.conf","owner_ds41_launcher_diagnostic.py"])
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = tuple(["nox-control/cold-engram/engram_cold_holder.py","nox-control/cold-engram/verify_ds41_backbone.py","nox-control/cold-engram/owner_cold_stage_preflight.py","nox-control/cold-engram/atomic_engram_stage.py","nox-control/cold-engram/nox-engram-cold-holder.conf","nox-control/cold-engram/owner_ds41_launcher_diagnostic.py"])
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
