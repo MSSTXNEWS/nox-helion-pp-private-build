@@ -590,7 +590,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
     async def test_disconnect_after_finish_before_done_clears_final(self):
         # A finish chunk is not the end-to-end [DONE] sentinel. Closing the
         # browser stream here must not leave S03 postflight-ready state.
-        chunks=Chunks([frame('Visible'),frame(finish='stop'),b'data: [DONE]\\n\\n'])
+        chunks=Chunks([frame('Visible'),frame(finish='stop'),b'data: [DONE]\n\n'])
         requests,factory=self.transport([chunks])
         native=self.native()
         payload={'messages':[{'role':'user','content':'Question'}]}
