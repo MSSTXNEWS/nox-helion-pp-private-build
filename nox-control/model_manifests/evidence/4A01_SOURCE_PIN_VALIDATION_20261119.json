@@ -8,8 +8,8 @@
   "source_manifest_git_blob_sha1": "f3e11cfc92bb75fe7ef13589a35fb127a81fceea",
   "source_manifest_sha256": "0abd7f8889aa96c246349d78840e9b55a9a9a789c61ff0149e23ba92a55d3a78",
   "targeted_check": {
-    "command": "python -B nox-control/validate_4a01_source_manifest.py nox-control/model_manifests/4A01_DEEPSEEK_V41_1017_TRAINING_SOURCE_20261119.json",
-    "executed_against": "byte-identical manifest fetched from the repair branch; validator run from a temporary local path",
+    "command": "python /tmp/nox_validate_4a01.py /tmp/nox_4a01_manifest.json",
+    "executed_against": "byte-identical final validator source (SHA-256 recorded above) and manifest fetched from the repair branch",
     "exit_code": 2,
     "state": "HOLD",
     "missing_fields": [
@@ -19,7 +19,8 @@
     "invalid_fields": [],
     "weights_loaded": false,
     "network_used": false,
-    "execution_authorized": false
+    "execution_authorized": false,
+    "validator_source_sha256": "e473fea23b40d53b358ea8e3b97c947be82159ca1bfc1ff881680a46a514443b"
   },
   "pinned_source_values_present": {
     "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
@@ -47,5 +48,6 @@
     "observed_inventory": "2 V100 GPUs; per-device VRAM not captured in the referenced receipt",
     "training_run_or_optimizer_steps_claimed": false
   },
-  "scope": "metadata-only validator and evidence; no downloaded payloads, weights, training, registry status edits, or host changes"
+  "scope": "metadata-only validator and evidence; no downloaded payloads, weights, training, registry status edits, or host changes",
+  "validator_sha256": "e473fea23b40d53b358ea8e3b97c947be82159ca1bfc1ff881680a46a514443b"
 }
