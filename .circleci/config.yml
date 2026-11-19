@@ -1,0 +1,28 @@
+# NOX native repair branch — genuine, offline regression gate.
+# Does not authorize owner/CAS, modify the server, publish queues, or accept a TaskID.
+version: 2.1
+jobs:
+  native-reflex-source:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Compile immutable native reflex selector and tests
+          command: |
+            set -eu
+            python -B -m py_compile \
+              nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py \
+              nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py \
+              nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py
+      - run:
+          name: Verify Reflex self-observation and non-replay invariants
+          command: |
+            set -eu
+            python -B nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py
+            python -B nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py
+workflows:
+  native-source-verification:
+    jobs:
+      - native-reflex-source
