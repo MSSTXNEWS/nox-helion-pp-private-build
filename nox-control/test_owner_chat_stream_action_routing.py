@@ -92,6 +92,21 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
             wire = ''.join([row async for row in response.body_iterator])
         return wire, payload, requests
 
+    async def test_long_tool_result_reaches_model_without_8k_truncation(self):
+        # Public fixture: the old [:8000] dropped the evidence suffix.
+        evidence = 'START|' + ('доказательство-' * 630) + '|END'
+        self.assertGreater(len(evidence), 8000)
+        native = self.native(heuristic=[{'name': 'run_admin', 'arguments': {'action': 'explain_result'}}],
+                             result={'ok': True, 'text': evidence})
+        _, payload, requests = await self.complete(candidate, native,
+            'Explain the evidence from the tool', [answer('GROUNDED_FINAL')])
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(requests[0]['messages'][0]['content'], 'Explain the evidence from the tool')
+        self.assertEqual(requests[0]['messages'][-1]['role'], 'tool')
+        self.assertEqual(requests[0]['messages'][-1]['content'], evidence)
+        self.assertTrue(requests[0]['messages'][-1]['content'].endswith('|END'))
+        self.assertEqual(payload['_agent_final'], 'GROUNDED_FINAL')
+
     async def test_original_bug_and_candidate_action_reaches_model_without_status_substitution(self):
         text = 'Оптимизируй сервер и GPU, скачай все веса'
         native = self.native(frozen, direct=[STATUS], heuristic=[STATUS])
