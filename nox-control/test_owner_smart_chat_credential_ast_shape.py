@@ -43,6 +43,7 @@ class CredentialPathAstShapeTests(unittest.TestCase):
         expr = ast.parse("f(" + ",".join("x" for _ in range(100)) + ")").body[0].value
         shape = QA.safe_ast_shape(expr, max_nodes=8, max_depth=12)
         self.assertEqual(shape["node_count"], 8)
+        self.assertLessEqual(max(row["children"] for row in shape["nodes"]), 8)
         self.assertTrue(shape["truncated"])
 
 
