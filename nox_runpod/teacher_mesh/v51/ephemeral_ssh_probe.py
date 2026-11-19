@@ -155,7 +155,7 @@ def _instance_ssh_key_identities(key: str):
             raise RuntimeError("HOLD_PROVIDER_SSH_RESPONSE")
         public = row.get("public_key")
         if (not isinstance(public, str) or not public or len(public) > 4096
-                or "\\r" in public or "\\n" in public):
+                or "\r" in public or "\n" in public):
             raise RuntimeError("HOLD_PROVIDER_SSH_RESPONSE")
         identities.append((ident, public))
     return identities
