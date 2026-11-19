@@ -95,6 +95,33 @@ class SupervisorConfigReadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'CONFIG_PATH'):
             MOD.supervisor_config_readonly(config_path=wrong, conf_dir=self.directory)
 
+    def test_unsupported_signal_fails_closed(self):
+        self.write(
+            '[program:nox-dispatcher-t855u]\n'
+            'command=/usr/bin/python3 /root/nox/scripts/nox_dispatcher_t855u.py\n'
+            'stopsignal=NO_SUCH_SIGNAL\n')
+        with self.assertRaisesRegex(ValueError, 'HOLD_SUPERVISOR_STOPSIGNAL'):
+            self.query()
+
+    def test_parent_traversal_path_fails_closed(self):
+        unsafe_path = self.directory / '..' / self.directory.name / CONFIG_NAME
+        with self.assertRaisesRegex(ValueError, 'CANONICAL_PATH'):
+            MOD.safe_read(unsafe_path, 250000)
+
+    def test_oversized_config_fails_closed(self):
+        self.path.write_bytes(b'x' * 250001)
+        with self.assertRaisesRegex(ValueError, 'UNSAFE_TYPE_OR_SIZE'):
+            self.query()
+
+    def test_too_many_config_entries_fails_closed(self):
+        self.write(
+            '[program:nox-dispatcher-t855u]\n'
+            'command=/usr/bin/python3 /root/nox/scripts/nox_dispatcher_t855u.py\n')
+        for i in range(128):
+            (self.directory / f'extra-{i:03}.conf').write_text('')
+        with self.assertRaisesRegex(ValueError, 'CONFIG_UNBOUNDED'):
+            self.query()
+
     def test_action_is_wired_as_read_only_owner_route(self):
         operator = (ROOT / 'owner_native_operator.py').read_text()
         self.assertIn("'supervisor_config': 'nox-control/owner_native_inspect.py'", operator)
