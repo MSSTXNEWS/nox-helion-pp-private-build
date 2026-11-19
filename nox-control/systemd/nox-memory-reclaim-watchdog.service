@@ -1,0 +1,29 @@
+[Unit]
+Description=NOX bounded cgroup memory reclaim watchdog
+After=local-fs.target
+StartLimitIntervalSec=3600
+StartLimitBurst=6
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /opt/nox/nox-control/nox_memory_reclaim_watchdog.py --policy /etc/nox/memory-reclaim-policy.json --state /var/lib/nox-memory-reclaim
+Restart=always
+RestartSec=30
+TimeoutStopSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+# The controller requires the kernel's per-cgroup memory.reclaim interface.
+ProtectKernelTunables=false
+ProtectKernelModules=true
+ProtectKernelLogs=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_UNIX
+StateDirectory=nox-memory-reclaim
+StateDirectoryMode=0700
+
+[Install]
+WantedBy=multi-user.target

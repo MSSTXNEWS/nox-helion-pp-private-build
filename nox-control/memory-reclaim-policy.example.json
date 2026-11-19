@@ -1,0 +1,13 @@
+{
+  "schema": "NOX_MEMORY_RECLAIM_POLICY_V1",
+  "enabled": false,
+  "target_unit": "",
+  "expected_control_group": "",
+  "high_watermark_fraction": 0.85,
+  "low_watermark_fraction": 0.80,
+  "max_reclaim_bytes": 134217728,
+  "minimum_reclaim_bytes": 16777216,
+  "daily_budget_bytes": 536870912,
+  "cooldown_seconds": 900,
+  "poll_seconds": 60
+}
