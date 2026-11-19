@@ -288,6 +288,34 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('[DONE]',wire)
                 self.assertNotIn('_agent_final',payload)
 
+    async def test_pool_dedup_does_not_drop_model_tool_call_evidence(self):
+        # Model issued two distinct tool IDs. Pool must not silently drop
+        # one ID and fabricate a single-call assistant history.
+        model_calls=[
+            {'index':0,'id':'call_a','type':'function',
+             'function':{'name':'calculate','arguments':'{}'}},
+            {'index':1,'id':'call_b','type':'function',
+             'function':{'name':'calculate','arguments':'{}'}}]
+        first=Chunks([frame(calls=model_calls),frame(finish='tool_calls'),
+                      b'data: [DONE]\\n\\n'])
+        requests,factory=self.transport([first])
+        native=self.native()
+        native['_POOL']=True
+        native['prepare_payload']=lambda req,cache:dict(req)
+        native['try_deterministic']=lambda user:None
+        native['dedup_calls']=lambda calls:calls[:1]
+        payload={'messages':[{'role':'user','content':'Use both tools'}]}
+        with factory:
+            response=await native['owner_completion'](
+                'http://native/model',payload,'Use both tools',True)
+            wire=''.join([part async for part in response.body_iterator])
+        self.assertEqual(len(requests),1)
+        self.assertEqual(self.dispatched,[])
+        self.assertIn('HOLD_TOOL_CALL_DEDUP_FIDELITY',wire)
+        self.assertNotIn('[DONE]',wire)
+        self.assertNotIn('_agent_final',payload)
+        self.assertTrue(first.closed)
+
     async def test_model_tool_call_id_at_limit_preserves_native_roundtrip(self):
         valid_id='c'*160
         first=Chunks([frame(calls=[{'index':0,'id':valid_id,

@@ -6,6 +6,7 @@ or persistence store is introduced here; chat_proxy retains its S03 postflight.
 from __future__ import annotations
 
 import asyncio
+import copy
 from contextlib import aclosing
 from datetime import datetime,timezone
 import json
@@ -400,7 +401,14 @@ async def _run(native,url,payload,user_text):
             if len(by_id)!=len(calls) or set(by_id)!={call['id'] for call in message['tool_calls']}:
                 raise StreamFailure('HOLD_TOOL_CALL_ID')
             calls=[by_id[row['id']] for row in message['tool_calls']]
-            if native.get('_POOL'):calls=native['dedup_calls'](calls)
+            if native.get('_POOL'):
+                # Dedup may optimize execution only if it preserves every
+                # exact model-returned call. Dropping/reordering an ID would
+                # fabricate the assistant tool_calls context for the next POST.
+                deduped=native['dedup_calls'](copy.deepcopy(calls))
+                if deduped!=calls:
+                    raise StreamFailure('HOLD_TOOL_CALL_DEDUP_FIDELITY')
+                calls=deduped
             if not calls:raise StreamFailure('HOLD_TOOL_PARSE')
             messages.append(_assistant_tools(calls,message['content']))
 
