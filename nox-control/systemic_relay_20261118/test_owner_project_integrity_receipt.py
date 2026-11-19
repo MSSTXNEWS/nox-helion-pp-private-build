@@ -55,6 +55,7 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                   'plan_sha256': task['params']['plan_sha256'],
                   'contract_sha256': task['params']['contract_sha256'],
                   'acceptance_scope': 'SOURCE_PATCH_TESTED',
+                  'claim': 'pinned-claim',
                   'project_source_changed': True, 'integration_verified': True,
                   'original_task_accepted': False, 'tests': {'passed': True}}
         def worker_result(item):
@@ -66,7 +67,8 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                    'job_id': task['params']['job_id'],
                    'plan_sha256': task['params']['plan_sha256'],
                    'phase': 'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED',
-                   'claim': task['owner_claim'], 'original_task_accepted': False,
+                   'claim': task['owner_claim'], 'execution_claim': 'pinned-claim',
+                   'original_task_accepted': False,
                    'source_sha256': 'pinned-source', 'scope': 'SOURCE_PATCH_TESTED',
                    'project_source_changed': True, 'recovery_required': False,
                    'worker_result': worker_result(worker)}
@@ -86,7 +88,10 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                 ('false_source', {'project_source_changed': False}),
                 ('recovering', {'recovery_required': True}),
                 ('wrong_job', {'job_id': 'another-job'}),
+                ('wrong_execution_claim', {'execution_claim': 'foreign-claim'}),
                 ('wrong_plan', {'plan_sha256': 'another-plan'}),
+                ('wrong_worker_claim', {'worker_result': worker_result({**worker, 'claim': 'foreign-claim'})}),
+                ('missing_worker_claim', {'worker_result': worker_result({key:value for key,value in worker.items() if key != 'claim'})}),
                 ('wrong_worker_plan', {'worker_result': worker_result({**worker, 'plan_sha256': 'another-plan'})}),
                 ('wrong_worker_contract', {'worker_result': worker_result({**worker, 'contract_sha256': 'another-contract'})}),
                 ('wrong_worker_scope', {'worker_result': worker_result({**worker, 'acceptance_scope': 'OTHER'})}),
@@ -126,6 +131,10 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                      'project_evidence_sha256': binding.digest(binding.encoded(inconsistent))}
             with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_INTEGRATION_PROOF'):
                 subject._finish(task, event, 'pinned-claim')
+
+            foreign = {**worker, 'claim': 'foreign-claim'}
+            with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_FINAL_EVIDENCE'):
+                subject._finish(task, worker_result(foreign), 'pinned-claim')
 
             for malformed in ([{'passed': True}], 'passed', True):
                 with self.subTest(malformed_tests=repr(malformed)):
