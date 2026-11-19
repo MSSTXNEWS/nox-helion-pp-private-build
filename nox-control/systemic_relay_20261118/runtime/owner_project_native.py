@@ -534,6 +534,9 @@ class ProjectBinding:
         # than manufacturing a positive project_source_changed result.
         result = receipt.get('worker_result')
         worker = result.get('project_evidence') if isinstance(result, dict) else None
+        if (not isinstance(worker, dict)
+                or result.get('project_evidence_sha256') != binding.digest(binding.encoded(worker))):
+            return None
         if (receipt.get('project_source_changed') is not True
                 or receipt.get('recovery_required') is not False
                 or not isinstance(worker, dict)
