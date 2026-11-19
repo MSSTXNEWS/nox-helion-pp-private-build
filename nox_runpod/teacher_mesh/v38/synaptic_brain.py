@@ -192,8 +192,15 @@ class SynapticBrain:
                 source = x.get("source_uri", "")
                 if not isinstance(source, str) or not source.startswith(("s03://", "https://", "nox-checkpoint://")):
                     continue
-                trusted.append({"segment": x["segment"], "text": str(x.get("content", ""))[:380],
-                                "source": source[:260], "evidence_only": True})
+                content = x.get("content", "")
+                if not isinstance(content, str):
+                    return {"state": "HOLD_S03_INVALID_CONTENT"}
+                if len(content) > self.cfg.max_context_chars:
+                    return {"state": "HOLD_S03_RECORD_TOO_LARGE"}
+                if len(source) > 2048:
+                    return {"state": "HOLD_S03_SOURCE_TOO_LARGE"}
+                trusted.append({"segment": x["segment"], "text": content,
+                                "source": source, "evidence_only": True})
                 if len(trusted) >= self.cfg.memory_hits:
                     break
             return {"state": "OBSERVED", "hits": trusted, "hit_count": len(trusted)}
@@ -312,19 +319,9 @@ class SynapticBrain:
                     break
                 compact[candidate]["signals"] = {"state": "CONTEXT_BUDGET_FALLBACK"}
                 text = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
-            # If needed, shorten long memories but retain actual verified events,
-            # source URIs, M0–M7 labels, and exact per-persona scope.
-            mem = compact["C02"]["signals"]
-            if len(text) > self.cfg.max_context_chars and mem.get("state") == "OBSERVED":
-                hits = mem.get("hits", [])
-                for hit in hits:
-                    hit["text"] = hit["text"][:160]
-                text = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
-                while len(text) > self.cfg.max_context_chars and len(hits) > 1:
-                    hits.pop()
-                    mem["hit_count"] = len(hits)
-                    mem["context_trimmed"] = True
-                    text = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
+            # Keep retrieved memory and provenance byte-for-byte. The existing
+            # P02 model context is bounded; if this complete evidence does not fit,
+            # fail closed instead of shortening or dropping a memory hit.
         if len(text) > self.cfg.max_context_chars:
             return {"state": "HOLD_CONTEXT_TOO_LARGE"}
         return {"state": "READY_FOR_ONE_NOX_MODEL", "cores": results,
