@@ -295,7 +295,19 @@ async def _run(native,url,payload,user_text):
     template.setdefault('enable_thinking',False)
     req['chat_template_kwargs']=template
     if native.get('_POOL'):
-        req=native['prepare_payload'](req,cache=True)
+        # The pool may optimize caching, but cannot silently substitute the
+        # request's explicitly selected model before the actual OneHost POST.
+        # Missing model remains a legacy server/pool selection, unchanged.
+        selected=req['model'] if 'model' in req else None
+        prepared=native['prepare_payload'](req,cache=True)
+        if not isinstance(prepared,dict):
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+        if 'model' in req and (type(selected) is not str or
+                               not 0<len(selected.strip())<=200 or
+                               type(prepared.get('model')) is not str or
+                               prepared['model']!=selected):
+            raise StreamFailure('HOLD_MODEL_IDENTITY')
+        req=prepared
         req['tools']=native_tools
     steps=0
     # Resolve existing deterministic routes before any model text is shown.
