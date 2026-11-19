@@ -366,8 +366,10 @@ async def _run(native,url,payload,user_text):
                         if not text.strip():raise StreamFailure('HOLD_TOOL_EMPTY')
                         yield 'token',text
                         return
+                    # Preserve every character of evidence for the next model turn.
+                    # Silently clipping at 8k made follow-up answers ungrounded.
                     messages.append({'role':'tool','tool_call_id':call['id'],
-                                     'name':call['name'],'content':text[:8000]})
+                                     'name':call['name'],'content':text})
             calls=[]
             model_request=dict(req,messages=messages,cache_prompt=True)
             if steps>=int(native.get('MAX_STEPS',8)):
