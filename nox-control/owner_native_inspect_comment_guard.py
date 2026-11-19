@@ -35,7 +35,7 @@ MAPPED_MEMORY_INSPECT_SHA = "ad76f877bb1df29d360b5c885217024e4773725f"
 SOURCE_EXPORT_KEY_MAX_CHARS = 12000
 COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ([0-9a-f]{{40}}) "
-    rf"(inspect|audit|source_attest|gpu_inventory|browser_qa|emergency_stop_preflight|emergency_stop)\Z"
+    rf"(inspect|audit|source_attest|gpu_inventory|audit_gpu_inventory|browser_qa|emergency_stop_preflight|emergency_stop)\Z"
 )
 SOURCE_EXPORT_COMMAND = re.compile(
     rf"/nox-maintain {INSTANCE_ID} ({re.escape(APPROVED_SOURCE_BY_ACTION['source_export'])}) "
