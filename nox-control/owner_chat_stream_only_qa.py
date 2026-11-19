@@ -206,7 +206,7 @@ def rewrite_browser(body):
         "                    stream_admitted+=1\n"
         "                    return await _nox_final_route_post_gate(report, blocked, route)\n"
         "                return await route.continue_()\n")
-    body = replace_once(body, "            report['actual_native_backend']=True\\n",
+    body = replace_once(body, "            report['actual_native_backend']=True\n",
         "            report['actual_native_backend']=True\n"
         "            report['owner_auth_verified']={'anonymous_status':401,'login_status':200,'session_status':200}\n")
     # In the stream-only QA, Playwright locator auto-wait could stall before any
