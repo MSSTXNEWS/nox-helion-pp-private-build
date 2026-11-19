@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - "nox_runpod/teacher_mesh/v38/**"
+      - "nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py"
+      - "nox_runpod/teacher_mesh/v112/tests/test_native_bridge.py"
       - ".github/workflows/nox-v38-1-source-ci.yml"
 permissions:
   contents: read
@@ -28,6 +30,7 @@ jobs:
       - name: Check original owner UI maintenance mode without native writes
         run: |
           python3 -m pip install -q fastapi==0.128.2
+          PYTHONPATH=. python3 -m unittest nox_runpod.teacher_mesh.v112.tests.test_native_bridge.V112Tests.test_source_status_does_not_infer_v38_memory_from_s03_table -v
           python3 -m unittest discover -s nox-control -p 'test_owner_chat_ui_workers.py' -v
           node --check nox-control/owner-chat-ui.js
           node --check nox-control/owner-presence.js
