@@ -96,6 +96,9 @@ class NativeReflexTests(unittest.TestCase):
             {'inactive_file_bytes': 500.5},
             {'max_bytes': 10**400},  # uint64 overflow must HOLD, not throw
             {'memory_psi_some_avg10': 10**400},
+            {'memory_psi_some_avg10': 100.01},  # PSI percentages <= 100
+            {'memory_psi_full_avg10': 100.01},
+            {'memory_psi_full_avg10': 0.05},  # 'full' cannot exceed 'some'=0
         )
         for update in invalid:
             with self.subTest(invalid=update):
