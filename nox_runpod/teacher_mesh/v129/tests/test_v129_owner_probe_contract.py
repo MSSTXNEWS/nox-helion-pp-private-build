@@ -47,7 +47,7 @@ class V129OwnerProbeContractTests(unittest.TestCase):
         self.assertIn("source_sha:", text)
         self.assertIn("rev-parse", text)
         self.assertIn("HEAD", text)
-        self.assertIn("GITHUB_REPOSITORY", text)
+        self.assertIn("github.repository", text)
         self.assertNotIn("native-readonly:", text)
         self.assertNotIn("NOX2:", text)
         self.assertNotIn("secrets.NOX2", text)
