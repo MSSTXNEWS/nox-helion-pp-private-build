@@ -126,8 +126,7 @@ jobs:
       - name: Always detach only this run temporary public key
         if: >-
           always() &&
-          (steps.execute.outcome == 'success' ||
-           steps.execute.outcome == 'failure' ||
+          (steps.execute.outcome == 'failure' ||
            steps.execute.outcome == 'cancelled')
         env:
           NOX2: ${{ secrets.NOX2 }}
