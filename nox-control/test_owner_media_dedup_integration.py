@@ -107,6 +107,36 @@ class MediaCreateDedupIntegration(unittest.TestCase):
             media.ingest_media_tasks({'tasks': {}})
         self.assertEqual(len(list(inbox.glob('*.json'))), 2)
 
+    def test_stop_after_preflight_never_commits_keyed_or_legacy_job(self):
+        # A STOP arriving during the network preflight must block the actual
+        # durable commit, not merely the initial request validation.
+        flag = self.root / 'STOP'
+        preflight = media._media_preflight
+        for keyed in (True, False):
+            with self.subTest(keyed=keyed):
+                def stop_after_check(data):
+                    normalized = preflight(data)
+                    flag.write_text('stop')
+                    return normalized
+                data = self.body() if keyed else {'kind': 'image', 'prompt': 'test image'}
+                with patch.object(media, '_media_preflight', side_effect=stop_after_check):
+                    with self.assertRaisesRegex(media.MediaHold, 'HOLD_MEDIA_STOP'):
+                        media.create_job(data, 'alice')
+                self.assertEqual(list((self.root/'state/media/jobs').glob('*.json')), [])
+                self.assertEqual(list((self.root/'state/media/inbox').glob('*.json')), [])
+                flag.unlink()
+
+        # A previously committed key may still be reconciled without making
+        # another job while STOP is held.
+        original = media.create_job(self.body(), 'alice')
+        flag.write_text('stop')
+        try:
+            replay = media.create_job(self.body(), 'alice')
+            self.assertEqual(replay['id'], original['id'])
+            self.assertEqual(len(list((self.root/'state/media/jobs').glob('*.json'))), 1)
+        finally:
+            flag.unlink()
+
     def test_invalid_id_fails_closed(self):
         with self.assertRaisesRegex(media.MediaHold, 'INVALID_MEDIA_CLIENT_REQUEST_ID'):
             media.create_job(self.body(key='../'), 'alice')
