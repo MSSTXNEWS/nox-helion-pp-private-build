@@ -86,7 +86,12 @@ def guards():
     free=int(maximum)-int(current)
     cold=max(0,min(stats.get('inactive_file',0),
               max(0,stats.get('file',0)-stats.get('shmem',0)))-stats.get('shmem',0))
-    if free<512*1024**2 or cold<4*1024**3:
+    # Reclaimable cold page-cache can safely satisfy a single EXISTING model
+    # POST with no new model/browser/weights. The low-raw profile needs a larger
+    # cold-cache reserve; PSI/OOM and current service/model-slot checks remain.
+    normal = free>=512*1024**2 and cold>=4*1024**3
+    cold_cache_profile = free>=256*1024**2 and cold>=12*1024**3
+    if not (normal or cold_cache_profile):
         raise RuntimeError("HOLD_LIVE_SMOKE_MEMORY")
     if events.get('oom',1)!=0 or events.get('oom_kill',1)!=0:
         raise RuntimeError("HOLD_LIVE_SMOKE_OOM")
@@ -133,6 +138,7 @@ def guards():
         raise RuntimeError("HOLD_LIVE_SMOKE_MODEL_BUSY")
     return {"stable_services":len(identities),"slots":len(slots),
             "slot_port":slot_port,"source_pin":True,
+            "admission_profile":"COLD_CACHE_256M_12G" if not normal else "RAW_512M_4G",
             "raw_headroom_bytes":free,"cold_lower_bound_bytes":cold}
 
 def parse_frame_line(raw):
