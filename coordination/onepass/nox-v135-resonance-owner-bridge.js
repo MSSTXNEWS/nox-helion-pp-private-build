@@ -193,17 +193,16 @@
           const upstream=await nativePost('/api/nox/chat/stream',{
             message:data.message,dialog_id:id,task:'general',history:[]
           },nativeSignal);
-          const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
-          const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
-          let trailing='';
+          const segmenter=typeof Intl!=='undefined'&&typeof Intl.Segmenter==='function'?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
+          let trailing='',paintWaits=0;
           const emitPieces=async t=>{
             const parts=livePieces(t);
             for(let index=0;index<parts.length;index++){
               if(nativeSignal.aborted)throw Error('STREAM_STOP_REQUESTED');
               event({type:'token',t:parts[index]});
-              if(index<Math.min(parts.length-1,2)&&
+              if(index<parts.length-1&&
                  (typeof document==='undefined'||document.visibilityState!=='hidden')&&
-                 !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+                 !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches&&paintWaits++<2){
                 await new Promise(resolve=>{
                   let settled=false,frameId,timerId;
                   const visibility=()=>{if(document.visibilityState==='hidden')finish();};
