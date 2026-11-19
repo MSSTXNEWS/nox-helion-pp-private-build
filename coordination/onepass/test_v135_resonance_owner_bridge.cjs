@@ -1432,7 +1432,7 @@ test('V180 tab hiding during pacing frees queued callbacks and still verifies S0
 
 test('V181 visibility becomes hidden as listener attaches without lost pacing wakeup',async()=>{
   const rafPending=new Map(),timerPending=new Map(),listeners=new Set();
-  let serial=0;
+  let serial=0,rafCalls=0,timerCalls=0;
   const doc={visibilityState:'visible',
     addEventListener(type,callback){
       if(type==='visibilitychange'){
@@ -1447,9 +1447,9 @@ test('V181 visibility becomes hidden as listener attaches without lost pacing wa
     }
   };
   const scheduler={
-    requestAnimationFrame(cb){const n=++serial;rafPending.set(n,cb);return n;},
+    requestAnimationFrame(cb){rafCalls++;const n=++serial;rafPending.set(n,cb);return n;},
     cancelAnimationFrame(n){rafPending.delete(n);},
-    setTimeout(cb){const n=++serial;timerPending.set(n,cb);return n;},
+    setTimeout(cb){timerCalls++;const n=++serial;timerPending.set(n,cb);return n;},
     clearTimeout(n){timerPending.delete(n);}
   };
   const reply='NOX 🧠 español русский '.repeat(35);
@@ -1467,6 +1467,8 @@ test('V181 visibility becomes hidden as listener attaches without lost pacing wa
   assert.equal(rafPending.size,0,'no stale animation frame after registration race');
   assert.equal(timerPending.size,0,'no delayed fallback timeout after registration race');
   assert.equal(listeners.size,0,'registered visibility callback must be removed');
+  assert.equal(rafCalls,0,'V185: settled hidden wait schedules zero animation frames');
+  assert.equal(timerCalls,0,'V185: settled hidden wait schedules zero fallback timers');
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
   assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
