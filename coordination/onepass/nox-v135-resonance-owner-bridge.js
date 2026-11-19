@@ -218,7 +218,7 @@
             answer_source:'NATIVE_PENDING',model_identity_verified:false});
           modelStarted=true;
           const upstream=await nativePost('/api/nox/chat/stream',{
-            message:data.message,dialog_id:id,task:'general',history:[]
+            message:data.message,dialog_id:id,request_id:data.request_id
           },nativeSignal);
           const canSegment=typeof Intl!=='undefined' && typeof Intl.Segmenter==='function';
           const segmenter=canSegment?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;

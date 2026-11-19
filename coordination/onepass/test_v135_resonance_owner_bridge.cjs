@@ -51,7 +51,7 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
       const b=JSON.parse(opts.body);
       assert.equal(b.message,expectedQuestion);
       assert.equal(b.dialog_id,id);
-      assert.deepEqual(b.history,[]);
+      assert.deepEqual(b.history||[],[], 'browser history must not override native S03 context');
       assert.equal(opts.credentials,'same-origin');
       const intercepted=onModel?.(calls,opts);
       if(intercepted)return intercepted;
@@ -238,6 +238,18 @@ test('V135 upstream transport failure requests scoped STOP before closing the fa
     'a failed stream cannot certify S03 history');
   assert.notEqual(JSON.parse(stops[0].body).gpu_stop_verified,true,
     'transport STOP receipt is not proof that GPU execution stopped');
+});
+
+test('V135 forwards the caller request id to the native stream for S03 replay',async()=>{
+  const requestId='request-000000000000000000000000000001';
+  const f=fake();
+  const r=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:requestId})});
+  const frames=await events(r);
+  const model=f.calls.find(c=>c.path==='/api/nox/chat/stream');
+  assert.equal(r.status,200);
+  assert.equal(JSON.parse(model.body).request_id,requestId);
+  assert.equal(frames.at(-1).type,'done');
 });
 
 test('V135 already-aborted caller never starts a native inference',async()=>{

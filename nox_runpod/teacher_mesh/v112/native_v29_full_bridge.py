@@ -27,6 +27,7 @@ from fastapi.staticfiles import StaticFiles
 
 SITE = Path('/root/nox/incoming_t800u/v29_3/NOX_HELION_WEB_V29_3_FROZEN_20261113/site')
 ID_PATTERN = re.compile(r'^[a-f0-9]{32}$')
+REQUEST_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,128}$')
 OWNER = 'nox-single-owner'
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS nox_v29_dialogs (
@@ -231,6 +232,30 @@ def _save_exchange(dialog_id,question,answer,exchange_id):
         return True
     except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError):
         return False
+
+
+def _request_replay(dialog_id,request_id,question):
+    """Read an exact completed exchange from the existing S03 dialog history."""
+    try:
+        with _db() as db:
+            row=_get_dialog(db,dialog_id)
+            if row is None or bool(row['archived']):
+                return 'HOLD_DIALOG_SCOPE_NOT_VERIFIED',None
+            rows=db.execute(
+                'SELECT role,content FROM nox_v29_dialog_messages '
+                'WHERE dialog_id=? AND exchange_id=? ORDER BY row_id',
+                (dialog_id,request_id)).fetchall()
+        if not rows:
+            return None,None
+        observed={r['role']:r['content'] for r in rows}
+        if (len(rows)!=2 or [r['role'] for r in rows]!=['user','assistant']
+                or observed.get('user')!=question
+                or not isinstance(observed.get('assistant'),str)
+                or not observed['assistant'].strip()):
+            return 'HOLD_REQUEST_ID_COLLISION',None
+        return None,observed['assistant']
+    except (OSError,sqlite3.Error,RuntimeError,ImportError,ValueError):
+        return 'HOLD_REQUEST_ID_READBACK',None
 
 def _validated_history(data):
     history=data.get('history') or []
@@ -462,6 +487,7 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
       if not (isinstance(r,APIRoute) and r.path=='/api/nox/status')
     ]
     active={}
+    active_request_ids=set()
 
     def check(request):
         return bool(trusted['_session_ok'](request))
@@ -628,6 +654,12 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         try:history=_validated_history(data)
         except ValueError as ex:return JSONResponse({'error':str(ex)},status_code=422)
         dialog_id=data.get('dialog_id')
+        request_id=data.get('request_id')
+        if request_id is not None and (not isinstance(request_id,str)
+                or not REQUEST_ID_PATTERN.fullmatch(request_id)):
+            return JSONResponse({'error':'INVALID_REQUEST_ID'},status_code=422)
+        if request_id is not None and not dialog_id:
+            return JSONResponse({'error':'HOLD_REQUEST_ID_REQUIRES_DIALOG'},status_code=422)
         if dialog_id:
             if not _schema_ready():
                 return JSONResponse({'error':'HOLD_S03_DIALOG_SCHEMA'},status_code=503)
@@ -639,13 +671,35 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 return JSONResponse({'error':'HOLD_DIALOG_SCOPE_NOT_VERIFIED'},status_code=503)
         elif dialog_id is not None and not isinstance(dialog_id,str):
             return JSONResponse({'error':'INVALID_DIALOG_ID'},status_code=422)
+
+        if request_id is not None:
+            issue,replay_answer=await asyncio.to_thread(
+                _request_replay,dialog_id,request_id,question)
+            if issue:
+                return JSONResponse({'error':issue},status_code=409)
+            if replay_answer is not None:
+                async def replay():
+                    yield _jsonl({'type':'preparing','stream_mode':'NATIVE_TOKEN_STREAM'})
+                    yield _jsonl({'type':'start','model':'NOX HELION','stream_mode':'NATIVE_TOKEN_STREAM'})
+                    yield _jsonl({'type':'delta','text':replay_answer})
+                    yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
+                                  's03_integrated':True,'dialog_id':dialog_id,
+                                  'exchange_id':request_id,'stream_mode':'NATIVE_TOKEN_STREAM',
+                                  'replayed':True})
+                return StreamingResponse(replay(),media_type='application/x-ndjson',
+                    headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})
         key=scope(request)
         if key is None:
             return JSONResponse({'error':'HOLD_SESSION_COOKIE_SCOPE'},status_code=401)
         if key in active:
             return JSONResponse({'error':'HOLD_ACTIVE_SESSION_STREAM'},status_code=409)
+        request_key=(dialog_id,request_id) if request_id is not None else None
+        if request_key is not None and request_key in active_request_ids:
+            return JSONResponse({'error':'HOLD_ACTIVE_REQUEST_ID'},status_code=409)
         cancel=asyncio.Event()
         active[key]=cancel
+        if request_key is not None:
+            active_request_ids.add(request_key)
         payload={'messages':history+[{'role':'user','content':question}],
                  '_owner':True,'stream':True}
         started=time.time()
@@ -736,18 +790,21 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 if proof is None:
                     yield _jsonl({'type':'error','error':'HOLD_S03_COMMIT_NOT_VERIFIED'})
                     return
-                if not await asyncio.to_thread(_save_exchange,dialog_id,question,answer,proof['record_id']):
+                exchange_id=request_id or proof['record_id']
+                if not await asyncio.to_thread(_save_exchange,dialog_id,question,answer,exchange_id):
                     yield _jsonl({'type':'error','error':'HOLD_S03_DIALOG_COMMIT_NOT_VERIFIED'})
                     return
                 yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
                               's03_integrated':True,'dialog_id':dialog_id,
-                              'exchange_id':proof['record_id'],'stream_mode':'NATIVE_TOKEN_STREAM'})
+                              'exchange_id':exchange_id,'source_record_id':proof['record_id'],
+                              'stream_mode':'NATIVE_TOKEN_STREAM'})
             except asyncio.CancelledError:
                 raise
             except Exception:
                 yield _jsonl({'type':'error','error':'HOLD_EXISTING_ONEHOST_RUNTIME'})
             finally:
                 if active.get(key) is cancel:active.pop(key,None)
+                if request_key is not None:active_request_ids.discard(request_key)
                 if wire is not None and hasattr(getattr(wire,'body_iterator',None),'aclose'):
                     try:await wire.body_iterator.aclose()
                     except Exception:pass
