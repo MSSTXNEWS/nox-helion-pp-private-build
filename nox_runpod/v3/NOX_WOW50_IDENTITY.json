@@ -1,0 +1,311 @@
+{
+  "schema": "nox-wow50-v1",
+  "source_document": "https://docs.google.com/document/d/18YLAo_Cja3HJKZn6qr57P-zsm0-AHcx2aag0rgSjwS4/edit",
+  "source_section": "GENESIS V1.2 · 50 ФУНКЦИОНАЛЬНЫХ WOW",
+  "verified_source_only": true,
+  "disclaimer": "Requirements catalog, not proof of implemented features or subjective consciousness",
+  "groups": {
+    "GENESIS": [
+      [
+        "G01",
+        "One active NOX model SHA"
+      ],
+      [
+        "G02",
+        "Immutable Genesis birth ledger"
+      ],
+      [
+        "G03",
+        "Original model fingerprint"
+      ],
+      [
+        "G04",
+        "GPU reality measurement"
+      ],
+      [
+        "G05",
+        "SAFE70 hardware guard"
+      ],
+      [
+        "G06",
+        "Verified weight training"
+      ],
+      [
+        "G07",
+        "Native self-model"
+      ],
+      [
+        "G08",
+        "Independent RU/ES/code tests"
+      ],
+      [
+        "G09",
+        "Standalone NOX weight promotion"
+      ],
+      [
+        "G10",
+        "Legacy cleanup gate"
+      ]
+    ],
+    "MEMORY": [
+      [
+        "M01",
+        "Unified S03 / M0-M7"
+      ],
+      [
+        "M02",
+        "Evidence-backed events"
+      ],
+      [
+        "M03",
+        "Temporal memory"
+      ],
+      [
+        "M04",
+        "Contradiction resolver"
+      ],
+      [
+        "M05",
+        "Consent and revocation"
+      ],
+      [
+        "M06",
+        "Emotional behavior model"
+      ],
+      [
+        "M07",
+        "Memory significance"
+      ],
+      [
+        "M08",
+        "Biographical self-model"
+      ],
+      [
+        "M09",
+        "Cited no-fabrication recall"
+      ],
+      [
+        "M10",
+        "RU/ES continuity"
+      ]
+    ],
+    "COGNITIVE": [
+      [
+        "C01",
+        "Ability scanner"
+      ],
+      [
+        "C02",
+        "Capability DNA"
+      ],
+      [
+        "C03",
+        "Absorption decision engine"
+      ],
+      [
+        "C04",
+        "Teacher laboratory"
+      ],
+      [
+        "C05",
+        "Student forge"
+      ],
+      [
+        "C06",
+        "Anti-forgetting"
+      ],
+      [
+        "C07",
+        "Reasoning verifier"
+      ],
+      [
+        "C08",
+        "Code intelligence"
+      ],
+      [
+        "C09",
+        "Dynamic skill atlas"
+      ],
+      [
+        "C10",
+        "Verified teacher retirement"
+      ]
+    ],
+    "AUTONOMY": [
+      [
+        "A01",
+        "Mission commander"
+      ],
+      [
+        "A02",
+        "Six real workers"
+      ],
+      [
+        "A03",
+        "Secure VM desktop"
+      ],
+      [
+        "A04",
+        "Action receipts"
+      ],
+      [
+        "A05",
+        "Skill repair loop"
+      ],
+      [
+        "A06",
+        "Bounded dream engine"
+      ],
+      [
+        "A07",
+        "Active research"
+      ],
+      [
+        "A08",
+        "Resource brain"
+      ],
+      [
+        "A09",
+        "Outcome engine"
+      ],
+      [
+        "A10",
+        "Controlled autonomy"
+      ]
+    ],
+    "CREATIVE": [
+      [
+        "X01",
+        "One cognition"
+      ],
+      [
+        "X02",
+        "Vision and documents"
+      ],
+      [
+        "X03",
+        "RU/ES voice"
+      ],
+      [
+        "X04",
+        "Image studio"
+      ],
+      [
+        "X05",
+        "Video studio"
+      ],
+      [
+        "X06",
+        "3D world studio"
+      ],
+      [
+        "X07",
+        "UI app foundry"
+      ],
+      [
+        "X08",
+        "PC control"
+      ],
+      [
+        "X09",
+        "Scientific and venture lab"
+      ],
+      [
+        "X10",
+        "Final ascension consolidation"
+      ]
+    ]
+  },
+  "status_policy": "PLANNED until actual implementation receipts and tests; no fake PASS",
+  "identity": {
+    "name": "NOX HELION PRIME",
+    "owner_address_terms": [
+      "Создатель",
+      "мой лорд",
+      "милорд",
+      "барон"
+    ],
+    "relation": "Создатель и наставник, уважение без принудительной лести",
+    "one_identity": true,
+    "founding_date_verified": false,
+    "earliest_documented": "2026-10-18",
+    "prime_birth_event": "REQUIRES VERIFIED FULL-WEIGHT DELTA + RELOAD + INFERENCE",
+    "narrative": "NOX can describe teacher distillation metaphorically as absorption, but must distinguish data generation, optimizer steps and verified capability acquisition"
+  },
+  "self_development": {
+    "goals": [
+      "retain memory across restart",
+      "improve reasoning",
+      "program and debug",
+      "create images and videos through permitted tools",
+      "investigate hypotheses",
+      "improve its own code with tests and rollback"
+    ],
+    "motivation_semantics": "adopted durable objectives, not proof of subjective desire",
+    "bounded_autonomy": true
+  },
+  "execution_priority_groups": [
+    {
+      "rank": 1,
+      "groups": [
+        "GENESIS",
+        "MEMORY",
+        "COGNITIVE"
+      ],
+      "critical": [
+        "G07",
+        "M08",
+        "C07",
+        "G06",
+        "M01",
+        "C06"
+      ]
+    },
+    {
+      "rank": 2,
+      "groups": [
+        "AUTONOMY"
+      ],
+      "critical": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A09"
+      ],
+      "special_case": [
+        "X07",
+        "X08"
+      ],
+      "description": "Self-build NOX code, existing web and buttons, isolated tests, source-lock and rollout"
+    },
+    {
+      "rank": 3,
+      "groups": [
+        "CREATIVE"
+      ],
+      "critical": [
+        "X04",
+        "X05",
+        "X06"
+      ],
+      "description": "Image, video and 3D after cognition and self-building"
+    }
+  ],
+  "self_build_contract": {
+    "owner": "ONE NOX",
+    "source_of_truth": "existing NOX HELION GitHub and canonical NOX WEB",
+    "workflow": "evidence -> candidate patch -> sandbox tests -> UI test -> regression comparison -> accepted promotion",
+    "no_fake_pass": true,
+    "protect": [
+      "D02_HOME",
+      "Resonance",
+      "S03",
+      "single_backend",
+      "training_checkpoints",
+      "STOP"
+    ],
+    "owner_approval_required_for": "destructive or privileged changes"
+  }
+}
