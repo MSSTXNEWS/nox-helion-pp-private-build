@@ -39,6 +39,46 @@ jobs:
           assert d['source_registry_total'] == 295
           assert d['role'].startswith('NON_EXECUTABLE_HANDOFF')
           tasks = d['tasks']
+          # Frozen ordered Relay35 wave from main manifest blob 3b1f24c6d17cb5404cf4d0d0e0cb561a35870f40.
+          expected_task_order = [
+              ('1A03', 1),
+              ('1A01', 2),
+              ('1V14-01', 3),
+              ('6B04', 4),
+              ('6A02', 5),
+              ('0V14-02', 6),
+              ('1A04', 7),
+              ('1A02', 8),
+              ('6A05', 9),
+              ('6V14-01', 10),
+              ('0A03', 11),
+              ('0A01', 12),
+              ('5V14-01', 13),
+              ('0B05', 14),
+              ('1V14-06', 15),
+              ('3A02', 16),
+              ('6V14-04', 17),
+              ('3A05', 18),
+              ('2V14-03', 19),
+              ('2A02', 20),
+              ('2A03', 21),
+              ('3A01', 22),
+              ('3A03', 23),
+              ('6B01', 24),
+              ('6A03', 25),
+              ('6A04', 26),
+              ('2A05', 27),
+              ('2A01', 28),
+              ('3A04', 29),
+              ('3B01', 30),
+              ('4A02', 31),
+              ('3B02', 32),
+              ('3B03', 33),
+              ('4B01', 34),
+              ('4B04', 35),
+          ]
+          assert all(type(task['rank']) is int for task in tasks)
+          assert [(task['task_id'], task['rank']) for task in tasks] == expected_task_order
           assert len(tasks) == 35 and len({t['task_id'] for t in tasks}) == 35
           assert [t['rank'] for t in tasks] == list(range(1, 36))
           lanes = [f'A{i}' for i in range(7)]
