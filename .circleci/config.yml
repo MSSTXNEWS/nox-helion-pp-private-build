@@ -1,0 +1,57 @@
+version: 2.1
+
+jobs:
+  v135-node-source:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: V135 scoped STOP bridge source regression
+          command: |
+            set -euo pipefail
+            node --check coordination/onepass/nox-v135-resonance-owner-bridge.js
+            node --check coordination/onepass/test_v135_resonance_owner_bridge.cjs
+            node --test coordination/onepass/test_v135_resonance_owner_bridge.cjs
+
+  v135-python-source:
+    docker:
+      - image: cimg/python:3.11
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install isolated test dependencies
+          command: python -m pip install -q fastapi==0.128.2 httpx==0.28.1
+      - run:
+          name: V135 source acceptance, no server actions
+          command: |
+            set -euo pipefail
+            python -m py_compile coordination/onepass/v135_resonance_owner_stage.py
+            PYTHONPATH=nox-control python -m unittest -v test_owner_chat_stream_only_qa
+            PYTHONPATH=nox-control python -m unittest -v test_owner_chat_ui_workers
+            PYTHONPATH=nox-control python -m unittest -v test_owner_chat_stream
+            python -m unittest -v coordination.onepass.test_v135_resonance_owner_stage
+            python -m unittest -v coordination.onepass.test_ci_guard_coverage
+            echo 'NOX_V135_SOURCE_ONLY=true'
+            echo 'NOX_V135_LIVE_SERVER_DEPLOYED=false'
+            echo 'NOX_V135_GPU_STOP_VERIFIED=false'
+
+workflows:
+  source-only-v135:
+    jobs:
+      - v135-node-source:
+          filters:
+            branches:
+              only:
+                - feature/nox-v38-synaptic-brain-20261114
+                - codex/nox-05o-v135-scoped-stop-20261116-final
+                - codex/nox-stop-upstream-fault-cancel-20261119
+      - v135-python-source:
+          filters:
+            branches:
+              only:
+                - feature/nox-v38-synaptic-brain-20261114
+                - codex/nox-05o-v135-scoped-stop-20261116-final
+                - codex/nox-stop-upstream-fault-cancel-20261119
