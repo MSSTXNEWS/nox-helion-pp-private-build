@@ -649,6 +649,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         try:history=_validated_history(data)
         except ValueError as ex:return JSONResponse({'error':str(ex)},status_code=422)
         dialog_id=data.get('dialog_id')
+        if not isinstance(dialog_id,str) or not ID_PATTERN.fullmatch(dialog_id):
+            return JSONResponse({'error':'HOLD_DIALOG_SCOPE_NOT_BOUND'},status_code=409)
         if dialog_id:
             if not _schema_ready():
                 return JSONResponse({'error':'HOLD_S03_DIALOG_SCHEMA'},status_code=503)
