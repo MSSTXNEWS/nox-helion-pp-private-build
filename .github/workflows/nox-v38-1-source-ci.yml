@@ -19,6 +19,7 @@ jobs:
         run: |
           python3 -m compileall -q nox_runpod/teacher_mesh/v38
           PYTHONPATH=. python3 -m unittest nox_runpod.teacher_mesh.v38.tests.test_v38_control nox_runpod.teacher_mesh.v38.tests.test_v38_memory_speed -v
+          PYTHONPATH=. python3 -m unittest nox_runpod.teacher_mesh.v38.tests.test_v38_binding_contract_docs -v
           python3 -m unittest discover -s nox-control -p 'test_owner_s03_gateway.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_s03_diagnostic.py' -v
           python3 -m unittest discover -s nox-control -p 'test_owner_native_inspect_pinned_python_v13.py' -v
