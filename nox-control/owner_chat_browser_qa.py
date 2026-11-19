@@ -87,6 +87,14 @@ def admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt):
     return None
 
 
+def allowed_qa_request(count, second_permitted, first_prompt, second_prompt, body, dialog_id):
+    """No missing/null message may satisfy an exhausted one-shot allowance."""
+    expected = admitted_qa_prompt(count, second_permitted, first_prompt, second_prompt)
+    return (expected is not None and isinstance(body, dict)
+            and body.get('message') == expected
+            and body.get('dialog_id') == dialog_id)
+
+
 def multiturn_history_valid(rows, first_prompt, first_answer, second_prompt, second_answer):
     """Require four exact ordered messages from one already-scoped dialog."""
     if not isinstance(rows, list) or len(rows) != 4 or not all(isinstance(row, dict) for row in rows):
@@ -657,10 +665,8 @@ async def browser_run(report, directory, available):
                 if url.path=='/api/nox/chat/stream':
                     try:
                         body=request.post_data_json
-                        own=(request.method=='POST' and isinstance(body,dict)
-                             and body.get('message')==admitted_qa_prompt(
-                                 stream_admitted,second_permitted,prompt,second_prompt)
-                             and body.get('dialog_id')==did)
+                        own=(request.method=='POST' and allowed_qa_request(
+                             stream_admitted,second_permitted,prompt,second_prompt,body,did))
                     except Exception:
                         own=False
                     if not own:
