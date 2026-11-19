@@ -29,4 +29,5 @@ jobs:
           python -B -m unittest -v \
             test_owner_reflex_cycle.NativeReflexTests.test_memory_projection_distinguishes_file_cache_and_shmem \
             test_owner_reflex_cycle.NativeReflexTests.test_memory_governor_pressure_and_missing_metadata_hold \
-            test_owner_reflex_cycle.NativeReflexTests.test_memory_projection_inconsistent_cgroup_counters_fail_closed
+            test_owner_reflex_cycle.NativeReflexTests.test_memory_projection_inconsistent_cgroup_counters_fail_closed \
+            test_owner_reflex_cycle.NativeReflexTests.test_raw_chat_buffer_below_512mib_never_reports_cache_healthy
