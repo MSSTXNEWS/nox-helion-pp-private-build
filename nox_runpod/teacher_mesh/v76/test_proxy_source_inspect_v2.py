@@ -101,12 +101,12 @@ async def chat_route(request):
         self.assertIn("UNKNOWN", report["analysis_note"])
 
     def test_route_direct_call_metadata_is_bounded(self):
-        calls = "\\n".join(f"    f{i}()" for i in range(40))
+        calls = "\n".join(f"    f{i}()" for i in range(40))
         raw = (
-            '@app.post("/api/nox/chat")\\n'
-            'def chat_route():\\n'
+            '@app.post("/api/nox/chat")\n'
+            'def chat_route():\n'
             + calls
-            + "\\n    return None\\n"
+            + "\n    return None\n"
         ).encode()
         route = analyzer()(raw)["chat_routes"][0]
         self.assertEqual(len(route["direct_call_symbols"]), 32)
