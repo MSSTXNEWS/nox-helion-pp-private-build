@@ -27,6 +27,20 @@ def emit(kind, data):
     print('NOX_MAINT_REPAIR=' + json.dumps({'kind': kind, 'data': data}, separators=(',', ':')), flush=True)
 
 
+def _unique_receipt_keys(pairs):
+    """Reject ambiguous receipt evidence instead of Python's last-key-wins JSON."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate receipt evidence field')
+        result[key] = value
+    return result
+
+
+def _reject_receipt_constant(value):
+    raise ValueError('nonfinite receipt JSON constant')
+
+
 def verify_browser_receipt(browser_started_ns):
     """Require native stream and durable S03 proof, not just a zero exit code."""
     request = os.environ.get('NOX_OWNER_REQUEST_ID', '')
@@ -55,7 +69,8 @@ def verify_browser_receipt(browser_started_ns):
     if len(raw) > 262144:
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_SIZE')
     try:
-        proof = json.loads(raw)
+        proof = json.loads(raw, object_pairs_hook=_unique_receipt_keys,
+                           parse_constant=_reject_receipt_constant)
     except (ValueError, UnicodeDecodeError):
         raise RuntimeError('HOLD_BROWSER_QA_RECEIPT_FORMAT') from None
     if (not isinstance(proof, dict) or proof.get('schema') != 'NOX_OWNER_NATIVE_BROWSER_QA_V1'

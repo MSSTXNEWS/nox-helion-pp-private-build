@@ -177,6 +177,60 @@ class FailureDoesNotRunDependentStages(unittest.TestCase):
         ])
 
 
+    def test_receipt_ambiguous_json_evidence_is_rejected(self):
+        """Duplicate booleans and nonstandard numbers cannot certify S03."""
+        spec=importlib.util.spec_from_file_location('a3_strict_receipt', SOURCE)
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        request, source='701', 'e'*40
+        proof={'schema':'NOX_OWNER_NATIVE_BROWSER_QA_V1',
+               'request':request,'source_sha':source,'state':'PASSED',
+               'functional_acceptance_verified':True,
+               'actual_native_model_stream_verified':True,
+               's03_readback_verified':True,'screenshot_capture_verified':True,
+               'actual_native_backend':True,'nonloopback_auth':True,
+               'empty_dialog_history_verified':True,
+               'synthetic_number_sequence_pass':True,
+               'progressive_stream_render_verified':True,
+               'stop_visible_during_generation':True,
+               'synthetic_backend_used':False,
+               'private_text_or_credentials_exported':False}
+        original=json.dumps(proof, separators=(',', ':'))
+        exact='"s03_readback_verified":true'
+        self.assertIn(exact, original)
+        duplicates=original.replace(exact,
+            '"s03_readback_verified":false,"s03_readback_verified":true',1)
+        nonfinite=original[:-1]+',"unexpected_evidence":NaN}'
+        with tempfile.TemporaryDirectory() as t:
+            receipt=pathlib.Path(t)/'state/owner_browser_qa'/request/'receipt.json'
+            receipt.parent.mkdir(parents=True)
+            with patch.dict(os.environ,{'NOX_OWNER_REQUEST_ID':request,
+                                       'NOX_OWNER_SOURCE_SHA':source}), patch.object(module,'Path',lambda _:pathlib.Path(t)):
+                for label, body in (('duplicate-key',duplicates),('nonfinite',nonfinite)):
+                    with self.subTest(label=label):
+                        receipt.write_text(body, encoding='utf-8')
+                        with self.assertRaisesRegex(RuntimeError, r'^HOLD_BROWSER_QA_RECEIPT_FORMAT
+        """The native receipt path must be a regular file, never a FIFO/device."""
+        import time
+        spec=importlib.util.spec_from_file_location('a3_fifo_receipt', SOURCE)
+        module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        request, source='701', 'e'*40
+        with tempfile.TemporaryDirectory() as t:
+            fifo=pathlib.Path(t)/'state/owner_browser_qa'/request/'receipt.json'
+            fifo.parent.mkdir(parents=True)
+            os.mkfifo(fifo)
+            with patch.dict(os.environ,{'NOX_OWNER_REQUEST_ID':request,
+                                       'NOX_OWNER_SOURCE_SHA':source}), patch.object(module,'Path',lambda _:pathlib.Path(t)):
+                started=time.monotonic()
+                with self.assertRaisesRegex(RuntimeError, r'^HOLD_BROWSER_QA_RECEIPT_TYPE$'):
+                    module.verify_browser_receipt(0)
+                self.assertLess(time.monotonic()-started,1.0)
+
+
+if __name__=='__main__':unittest.main()
+):
+                            module.verify_browser_receipt(0)
+
+
     def test_browser_receipt_fifo_never_blocks_acceptance(self):
         """The native receipt path must be a regular file, never a FIFO/device."""
         import time
