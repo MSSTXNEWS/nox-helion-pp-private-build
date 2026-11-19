@@ -160,6 +160,7 @@ test('V175 JSON-escaped lone UTF-16 surrogates never certify browser/S03',async(
         frames.find(x=>x.type===part)[field]=part==='delta'?half:'broken-'+half;
         const upstream=async path=>{
           const u=new URL(String(path),'https://nox.local');
+          if(u.pathname==='/api/ui/memory/dialogs/create')return Response.json({dialog_id:id});
           if(u.pathname==='/api/nox/chat/stream')return new Response(new ReadableStream({
             start(c){
               c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
@@ -177,7 +178,7 @@ test('V175 JSON-escaped lone UTF-16 surrogates never certify browser/S03',async(
           href:'https://nox.local/nox-web-v29/pc/resonance.html'};
         vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
           TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
-        const request={message:prompt,dialog_id:id,...(streamed?{request_id:'v175'}:{})};
+        const request=streamed?{message:prompt,dialog_id:id,request_id:'v175'}:{message:prompt};
         const response=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(request)});
         if(streamed){
           const rows=await events(response);
