@@ -98,28 +98,36 @@ class BrowserQaTests(unittest.TestCase):
         self.assertEqual(QA.safe_error(RuntimeError('password=opaque credential')), 'RuntimeError')
         self.assertEqual(QA.safe_error(RuntimeError('HOLD_OWNER_STOP')), 'HOLD_OWNER_STOP')
 
-    def test_missing_or_unbound_s03_provider_is_never_accepted(self):
-        done={'saved':True,'s03_integrated':True,'dialog_matches':True,'writer':'V112_S03_DIALOG_WRITER',
+    def test_missing_or_unbound_dialog_provider_is_never_accepted_as_s03(self):
+        done={'saved':True,'owner_dialog_saved':True,'canonical_s03_write_verified':False,
+              'dialog_matches':True,'writer':'V112_OWNER_DIALOG_WRITER',
               'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32,
               'exchange_id':'4'*32,'receipt_sha256':'a'*64}
-        self.assertFalse(QA.exact_receipt_readback(None,done,'d'*32,'prompt','answer'))
-        self.assertFalse(QA.exact_receipt_readback({},done,'d'*32,'prompt','answer'))
-        wrong={'status':'READY','durable':True,'verified':True,'writer':'V112_S03_DIALOG_WRITER',
+        self.assertFalse(QA.exact_owner_dialog_readback(None,done,'d'*32,'prompt','answer'))
+        self.assertFalse(QA.exact_owner_dialog_readback({},done,'d'*32,'prompt','answer'))
+        wrong={'status':'READY','durable':True,'verified':True,'store_scope':'OWNER_DIALOG_TABLES_ONLY',
+               'canonical_s03_verified':False,'writer':'V112_OWNER_DIALOG_WRITER',
                'dialog_id':'d'*32,'turn_id':'1'*32,'receipt_id':'2'*32,'lease_epoch':'3'*32,
                'exchange_id':'4'*32,'receipt_sha256':'a'*64,
                'messages':[{'role':'user','content':'prompt','exchange_id':'4'*32},
                            {'role':'assistant','content':'different','exchange_id':'4'*32}]}
-        self.assertFalse(QA.exact_receipt_readback(wrong,done,'d'*32,'prompt','answer'))
+        self.assertFalse(QA.exact_owner_dialog_readback(wrong,done,'d'*32,'prompt','answer'))
         wrong['messages'][1]['content']='answer'
-        self.assertTrue(QA.exact_receipt_readback(wrong,done,'d'*32,'prompt','answer'))
+        self.assertTrue(QA.exact_owner_dialog_readback(wrong,done,'d'*32,'prompt','answer'))
+        self.assertFalse(QA.exact_owner_dialog_readback(
+            {**wrong,'canonical_s03_verified':True},done,'d'*32,'prompt','answer'))
 
     def test_runner_requires_two_distinct_sequential_receipt_readbacks(self):
         source=Path(QA.__file__).read_text()
         self.assertIn('QA_TURN_',source)
-        self.assertIn('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK',source)
+        self.assertIn('HOLD_OWNER_DIALOG_RECEIPT_AND_INDEPENDENT_READBACK',source)
         self.assertIn('len(verified_turns)!=2',source)
         self.assertIn("len({item['receipt_id'] for item in verified_turns})!=2",source)
         self.assertIn('accepted_submits!=list(prompts)',source)
+        self.assertIn("onehost_1a01_acceptance_state='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND'",source)
+        self.assertIn("print('NOX_1A01_CANONICAL_S03_ACCEPTED=false'",source)
+        self.assertNotIn("'s03_readback_verified':True",source)
+        self.assertNotIn('NOX_MAINT_REPAIR_COMPLETE=true',source)
         self.assertNotIn('route.fulfill(',source)
 
     def test_click_diagnostic_exports_only_fixed_boolean_flags(self):

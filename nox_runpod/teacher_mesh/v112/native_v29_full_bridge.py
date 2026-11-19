@@ -1,4 +1,4 @@
-"""V112 native WEB V29.3: owner-authenticated chat, S03 dialogs, and isolated UI.
+"""V112 native WEB V29.3: owner-authenticated chat, owner dialogs, and isolated UI.
 
 Drop-in replacement for existing nox_v29_chat_bridge.py loaded by V108.
 No second LLM, no extra SQLite file, no new scheduler, no mock 'done'.
@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS nox_v29_messages_order
 CREATE TABLE IF NOT EXISTS nox_v29_exchange_receipts (
  receipt_id TEXT PRIMARY KEY, dialog_id TEXT NOT NULL REFERENCES nox_v29_dialogs(dialog_id),
  turn_id TEXT NOT NULL, lease_epoch TEXT NOT NULL, exchange_id TEXT NOT NULL,
- writer TEXT NOT NULL CHECK(writer='V112_S03_DIALOG_WRITER'), committed_at TEXT NOT NULL,
+ writer TEXT NOT NULL CHECK(writer='V112_OWNER_DIALOG_WRITER'), committed_at TEXT NOT NULL,
  user_sha256 TEXT NOT NULL, assistant_sha256 TEXT NOT NULL,
  receipt_sha256 TEXT NOT NULL, verified INTEGER NOT NULL CHECK(verified=1),
  UNIQUE(dialog_id,turn_id), UNIQUE(dialog_id,exchange_id)
@@ -80,7 +80,7 @@ def _db(write=False):
         conn.close()
 
 def ensure_dialog_schema():
-    """Add only two tables and indexes inside preexisting S03 SQLite (no new DB)."""
+    """Add supplemental owner-dialog tables to the existing database, not s03_items."""
     with _db(True) as db:
         if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='s03_items'").fetchone() is None:
             raise RuntimeError('HOLD_ORIGINAL_S03_SCHEMA')
@@ -208,7 +208,7 @@ def _legacy_memory_readback(question,answer,started_at):
 
 def _receipt_payload(dialog_id,turn_id,receipt_id,lease_epoch,exchange_id,
                      committed_at,user_sha256,assistant_sha256):
-    return {'schema':'NOX_V112_S03_EXCHANGE_RECEIPT_V1','writer':'V112_S03_DIALOG_WRITER',
+    return {'schema':'NOX_V112_OWNER_DIALOG_EXCHANGE_RECEIPT_V1','writer':'V112_OWNER_DIALOG_WRITER',
             'dialog_id':dialog_id,
             'turn_id':turn_id,'receipt_id':receipt_id,'lease_epoch':lease_epoch,
             'exchange_id':exchange_id,'committed_at':committed_at,
@@ -219,8 +219,8 @@ def _receipt_sha256(payload):
                    separators=(',',':'),allow_nan=False).encode('utf-8')
     return hashlib.sha256(raw).hexdigest()
 
-class CanonicalS03ExchangeReadback:
-    """Map a writer receipt to the exact committed owner dialog pair."""
+class OwnerDialogExchangeReadback:
+    """Read the exact supplemental owner-dialog pair, not canonical s03_items."""
     _ID = re.compile(r'[a-f0-9]{32}\Z')
 
     def __init__(self,connect,owner=OWNER):
@@ -246,7 +246,7 @@ class CanonicalS03ExchangeReadback:
         record={key:row[key] for key in ('receipt_id','dialog_id','turn_id','lease_epoch',
                  'exchange_id','writer','committed_at','user_sha256','assistant_sha256','receipt_sha256')}
         if (any(not isinstance(record[key],str) for key in record)
-                or record['writer']!='V112_S03_DIALOG_WRITER'
+                or record['writer']!='V112_OWNER_DIALOG_WRITER'
                 or not re.fullmatch('[a-f0-9]{64}',record['user_sha256'])
                 or not re.fullmatch('[a-f0-9]{64}',record['assistant_sha256'])):
             return None
@@ -277,7 +277,8 @@ class CanonicalS03ExchangeReadback:
                 or hashlib.sha256(rows[0]['content'].encode('utf-8')).hexdigest()!=record['user_sha256']
                 or hashlib.sha256(rows[1]['content'].encode('utf-8')).hexdigest()!=record['assistant_sha256']):
             return None
-        return {'status':'READY',**record,
+        return {'status':'READY','store_scope':'OWNER_DIALOG_TABLES_ONLY',
+                'canonical_s03_verified':False,**record,
                 'messages':[{'role':row['role'],'content':row['content'],
                              'exchange_id':row['exchange_id']} for row in rows]}
 
@@ -345,7 +346,7 @@ def _save_exchange(dialog_id,question,answer,exchange_id,*,turn_id=None,
                 'user_sha256,assistant_sha256,receipt_sha256,verified) '
                 'VALUES(?,?,?,?,?,?,?,?,?,?,1)',
                 (receipt_id,dialog_id,turn_id,lease_epoch,exchange_id,
-                 'V112_S03_DIALOG_WRITER',stamp,
+                 'V112_OWNER_DIALOG_WRITER',stamp,
                  user_sha,assistant_sha,receipt_sha))
             db.execute('UPDATE nox_v29_dialogs SET updated_at=?,revision=revision+1 '
                        'WHERE owner=? AND dialog_id=?',(stamp,OWNER,dialog_id))
@@ -631,7 +632,8 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         ready=_schema_ready()
         return {'status':'READY' if ready else 'HOLD',
                 'persistent_threads':ready,
-                'backing_store':'EXISTING_S03_SQLITE' if ready else None}
+                'backing_store':'OWNER_DIALOG_TABLES_ONLY' if ready else None,
+                'canonical_s03_items_written':False}
 
     @app.get('/api/ui/memory/dialogs')
     async def dialogs_list(request:Request):
@@ -711,15 +713,15 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         if not isinstance(data,dict) or set(data)!=set(required):
             return JSONResponse({'error':'INVALID_RECEIPT_SCOPE'},status_code=422)
         if not _schema_ready():
-            return JSONResponse({'status':'HOLD','reason':'S03_RECEIPT_SCHEMA_MISSING'},status_code=503)
+            return JSONResponse({'status':'HOLD','reason':'OWNER_DIALOG_RECEIPT_SCHEMA_MISSING'},status_code=503)
         try:
-            proof=CanonicalS03ExchangeReadback(_db).read(
+            proof=OwnerDialogExchangeReadback(_db).read(
                 dialog_id=data['dialog_id'],turn_id=data['turn_id'],
                 receipt_id=data['receipt_id'],lease_epoch=data['lease_epoch'])
         except (OSError,RuntimeError,sqlite3.Error,ImportError,ValueError):
             proof=None
         if proof is None:
-            return JSONResponse({'status':'HOLD','reason':'S03_EXACT_RECEIPT_READBACK_MISSING'},status_code=409)
+            return JSONResponse({'status':'HOLD','reason':'OWNER_DIALOG_EXACT_READBACK_MISSING'},status_code=409)
         return proof
 
     @app.post('/api/ui/memory/dialogs/update')
@@ -893,19 +895,22 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
                 saved=await asyncio.to_thread(_save_exchange,dialog_id,question,answer,exchange_id,
                     turn_id=turn_id,receipt_id=receipt_id,lease_epoch=lease_epoch)
                 if not saved:
-                    yield _jsonl({'type':'error','error':'HOLD_S03_DIALOG_COMMIT_NOT_VERIFIED'})
+                    yield _jsonl({'type':'error','error':'HOLD_OWNER_DIALOG_COMMIT_NOT_VERIFIED'})
                     return
-                proof=await asyncio.to_thread(CanonicalS03ExchangeReadback(_db).read,
+                proof=await asyncio.to_thread(OwnerDialogExchangeReadback(_db).read,
                     dialog_id=dialog_id,turn_id=turn_id,receipt_id=receipt_id,
                     lease_epoch=lease_epoch,permit=lambda:not cancel.is_set())
                 if (proof is None or proof.get('messages')!=[
                         {'role':'user','content':question,'exchange_id':exchange_id},
                         {'role':'assistant','content':answer,'exchange_id':exchange_id}]):
-                    yield _jsonl({'type':'error','error':'HOLD_S03_EXACT_READBACK_NOT_VERIFIED'})
+                    yield _jsonl({'type':'error','error':'HOLD_OWNER_DIALOG_EXACT_READBACK_NOT_VERIFIED'})
                     return
                 yield _jsonl({'type':'done','model':'NOX HELION','saved':True,
-                              's03_integrated':True,'dialog_id':dialog_id,
-                              'writer':'V112_S03_DIALOG_WRITER',
+                              # Compatibility alias for the existing WEB wire contract only;
+                              # it is not canonical s03_items evidence.
+                              's03_integrated':True,'owner_dialog_saved':True,
+                              'canonical_s03_write_verified':False,'dialog_id':dialog_id,
+                              'writer':'V112_OWNER_DIALOG_WRITER',
                               'turn_id':turn_id,'receipt_id':receipt_id,
                               'lease_epoch':lease_epoch,'exchange_id':exchange_id,
                               'receipt_sha256':proof['receipt_sha256'],

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Bounded native Chromium acceptance of the existing owner's Resonance UI.
+"""Bounded native Chromium QA of the existing owner's Resonance UI.
 
 No browser, package, service, model or training configuration is installed or
 changed here. One synthetic dialog is created through the real owner API. The
-browser submits its real form and observes the real model stream and S03 receipt.
+browser submits its real form and observes the real model stream and exact owner-dialog receipt.
 Screenshots stay in mode-0600 files on NOX; no pixels, credentials, private dialog
 titles, model text, console text, response bodies or cookies go to stdout.
 """
@@ -95,15 +95,19 @@ def progressive_stream_valid(value):
             and 0 <= first < done)
 
 
-def exact_receipt_readback(value, done, dialog_id, prompt, answer):
-    """Accept only a receipt-bound exact pair; missing providers remain HOLD."""
+def exact_owner_dialog_readback(value, done, dialog_id, prompt, answer):
+    """Accept exact supplemental dialog rows; never treat them as canonical S03."""
     if not isinstance(value,dict) or not isinstance(done,dict):
         return False
     ids=('turn_id','receipt_id','lease_epoch','exchange_id')
     if (value.get('status')!='READY' or value.get('durable') is not True
             or value.get('verified') is not True or value.get('dialog_id')!=dialog_id
-            or value.get('writer')!='V112_S03_DIALOG_WRITER'
-            or done.get('writer')!='V112_S03_DIALOG_WRITER'
+            or value.get('store_scope')!='OWNER_DIALOG_TABLES_ONLY'
+            or value.get('canonical_s03_verified') is not False
+            or value.get('writer')!='V112_OWNER_DIALOG_WRITER'
+            or done.get('writer')!='V112_OWNER_DIALOG_WRITER'
+            or done.get('owner_dialog_saved') is not True
+            or done.get('canonical_s03_write_verified') is not False
             or any(not isinstance(done.get(key),str) or not re.fullmatch(r'[a-f0-9]{32}',done[key])
                    for key in ('turn_id','receipt_id','lease_epoch'))
             or not isinstance(done.get('exchange_id'),str)
@@ -326,7 +330,8 @@ OBSERVER_JS = r"""
            // may precede this clone's frame; retry on the next real paint.
            queueUi();
          }else if(frame.type==='done'){
-           t.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,
+           t.done={saved:frame.saved===true,owner_dialog_saved:frame.owner_dialog_saved===true,
+                   canonical_s03_write_verified:frame.canonical_s03_write_verified,
                    dialog_matches:frame.dialog_id===cfg.did,turn_id:frame.turn_id,
                    writer:frame.writer,
                    receipt_id:frame.receipt_id,lease_epoch:frame.lease_epoch,
@@ -796,24 +801,25 @@ async def browser_run(report, directory, available):
                 await page.wait_for_function("!document.querySelector('#chatForm [type=submit]').disabled",timeout=10000)
                 done=final.get('done')
                 if not isinstance(done,dict):
-                    raise RuntimeError('HOLD_CANONICAL_S03_WRITER_RECEIPT_MISSING')
-                if not (done.get('saved') is True and done.get('s03_integrated') is True
+                    raise RuntimeError('HOLD_OWNER_DIALOG_WRITER_RECEIPT_MISSING')
+                if not (done.get('saved') is True and done.get('owner_dialog_saved') is True
+                        and done.get('canonical_s03_write_verified') is False
                         and done.get('dialog_matches') is True):
-                    raise RuntimeError('HOLD_CANONICAL_S03_WRITER_RECEIPT_MISSING')
+                    raise RuntimeError('HOLD_OWNER_DIALOG_WRITER_RECEIPT_MISSING')
                 answer=await page.evaluate('()=>window.__NOX_BROWSER_QA.current?.answer||null')
                 if not isinstance(answer,str) or not answer.strip():
                     raise RuntimeError('HOLD_REAL_STREAM_NOT_RENDERED')
                 receipt_request={key:done.get(key) for key in ('turn_id','receipt_id','lease_epoch')}
                 receipt_request['dialog_id']=did
-                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_CANONICAL_READBACK'
+                report['browser_stage']='QA_TURN_'+str(turn_index+1)+'_OWNER_DIALOG_READBACK'
                 readback_response=await context.request.post(
                     base+'/api/ui/memory/dialogs/exchange-readback',data=receipt_request,
                     max_redirects=0,timeout=6000)
                 if readback_response.status!=200:
-                    raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
+                    raise RuntimeError('HOLD_OWNER_DIALOG_RECEIPT_AND_INDEPENDENT_READBACK')
                 proof=await json_response(readback_response)
-                if not exact_receipt_readback(proof,done,did,prompt,answer):
-                    raise RuntimeError('HOLD_CANONICAL_S03_RECEIPT_AND_INDEPENDENT_READBACK')
+                if not exact_owner_dialog_readback(proof,done,did,prompt,answer):
+                    raise RuntimeError('HOLD_OWNER_DIALOG_RECEIPT_AND_INDEPENDENT_READBACK')
                 history_expected.extend(({'role':'user','content':prompt},
                                          {'role':'assistant','content':answer}))
                 history=await json_response(await context.request.get(
@@ -844,7 +850,8 @@ async def browser_run(report, directory, available):
                     'lease_epoch':done['lease_epoch'],'exchange_id':done['exchange_id'],
                     'receipt_sha256':done['receipt_sha256'],
                     'prompt_sha256':digest(prompt.encode()),'answer_sha256':digest(answer.encode()),
-                    'answer_characters':len(answer),'s03_readback_verified':True,
+                    'answer_characters':len(answer),'owner_dialog_readback_verified':True,
+                    'canonical_s03_readback_verified':False,
                     'stream_verified':True,'progressive_stream_render_verified':turn_progressive,
                     'stop_visible_during_generation':stop_visible,
                     'elapsed_turn_ms':round((time.monotonic()-started)*1000)})
@@ -857,9 +864,11 @@ async def browser_run(report, directory, available):
             answer=history_expected[-1]['content']
             public=public_numeric_answer(answer)
             saved=len(history_expected)==4
-            native_equal=all(item['s03_readback_verified'] for item in verified_turns)
+            dialog_readback=all(item['owner_dialog_readback_verified'] for item in verified_turns)
             report.update(stream=final,turns=verified_turns,
-                sequential_two_turns_verified=True,s03_readback_verified=native_equal,
+                sequential_two_turns_verified=True,owner_dialog_readback_verified=dialog_readback,
+                canonical_s03_readback_verified=False,
+                onehost_1a01_acceptance_state='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
                 actual_native_model_stream_verified=bool(len(verified_turns)==2 and accepted_submits==list(prompts)),
                 answer_sha256=digest(answer.encode()),answer_characters=len(answer),
                 synthetic_number_sequence_pass=public==EXPECTED,
@@ -871,11 +880,11 @@ async def browser_run(report, directory, available):
                 masks.append(page.locator('#messages'))
             report['browser_stage']='QA_COMPLETED_SCREENSHOT'
             await capture_private_screenshot(page,report,directory,'completed',masks,
-                'VERIFIED_PUBLIC_NUMERIC_QA' if public==EXPECTED and saved and native_equal else 'MASKED_QA_MESSAGES',
+                'VERIFIED_PUBLIC_NUMERIC_DIALOG_QA' if public==EXPECTED and saved and dialog_readback else 'MASKED_QA_MESSAGES',
                 (TimeoutError,PlaywrightTimeoutError))
             core=(report['webgl_visible'] and report['canvas_animation_observed']
-                  and all(final['done'].get(key) is True for key in ('saved','s03_integrated','dialog_matches'))
-                  and saved and native_equal and report['sequential_two_turns_verified']
+                  and all(final['done'].get(key) is True for key in ('saved','owner_dialog_saved','dialog_matches'))
+                  and saved and dialog_readback and report['sequential_two_turns_verified']
                   and final['executor_chips']==6 and final['photo_button'] and final['video_button'])
             if not core:
                 raise RuntimeError('HOLD_GRAPHICAL_ACCEPTANCE_INCOMPLETE')
@@ -907,7 +916,7 @@ async def browser_run(report, directory, available):
             await browser.close()
     if page_errors or report['failed_static_resources']:
         raise RuntimeError('HOLD_BROWSER_JAVASCRIPT_OR_RESOURCE_ERRORS')
-    report['functional_acceptance_verified']=True
+    report['dialog_ui_functional_checks_verified']=True
     require_screenshot_captures(report)
 
 
@@ -939,13 +948,17 @@ def main():
     report={'schema':'NOX_OWNER_NATIVE_BROWSER_QA_V1','request':request,'source_sha':source,
             'started_at':time.time(),'state':'RUNNING','artifacts':[],
             'actual_native_backend':False,'actual_native_model_stream_verified':False,'synthetic_backend_used':False,
-            'functional_acceptance_verified':False,'screenshot_capture_verified':False,
+            'dialog_ui_functional_checks_verified':False,
+            'canonical_s03_readback_verified':False,
+            'onehost_1a01_acceptance_state':'HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',
+            'screenshot_capture_verified':False,
             'screenshots_exported':False,'private_text_or_credentials_exported':False,
             'rendering_mode':'CPU_SWIFTSHADER_FUNCTIONAL_QA_NOT_CLIENT_GPU_BENCHMARK',
             'training_or_service_configuration_changed':False,'diagnostics_content':'COUNTS_PATHS_AND_PUBLIC_SYNTHETIC_NUMBERS_ONLY'}
     try:
         asyncio.run(asyncio.wait_for(browser_run(report,directory,available),timeout=140))
-        report['state']='PASSED'
+        report['state']='DIALOG_QA_PASSED_CANONICAL_S03_HOLD'
+        report['onehost_1a01_acceptance_state']='HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND'
     except BaseException as exc:
         report['state']='HOLD'
         report['reason']='HOLD_BROWSER_TOTAL_TIMEOUT' if isinstance(exc,TimeoutError) else safe_error(exc)
@@ -954,8 +967,10 @@ def main():
         write_private(directory/'receipt.json',json.dumps(report,separators=(',',':'),allow_nan=False).encode())
         emit('browser_qa_receipt',report)
         os.close(lock)
-    if report['state']=='PASSED':
-        print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
+    if report['state']=='DIALOG_QA_PASSED_CANONICAL_S03_HOLD':
+        print('NOX_OWNER_DIALOG_QA_COMPLETE=true',flush=True)
+        print('NOX_1A01_CANONICAL_S03_ACCEPTED=false',flush=True)
+        print('NOX_1A01_HOLD=HOLD_CANONICAL_S03_WRITER_AND_READBACK_NOT_BOUND',flush=True)
         return 0
     return 2
 

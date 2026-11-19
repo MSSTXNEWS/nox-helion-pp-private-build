@@ -144,7 +144,7 @@ class V112Tests(unittest.TestCase):
             self.assertIsNone(check.execute('SELECT id FROM s03_items WHERE id=?',
                                             ('v112-db-rollback',)).fetchone())
 
-    def test_s03_exchange_receipt_collision_fails_closed(self):
+    def test_owner_dialog_exchange_receipt_collision_fails_closed(self):
         # The original OneHost dialog must never accept old text as saved=True
         # merely because an S03 exchange_id already has two rows.
         from nox_runpod.teacher_mesh.v112.native_v29_full_bridge import _db, _save_exchange
@@ -213,7 +213,7 @@ class V112Tests(unittest.TestCase):
         self.assertTrue(self.client.get('/api/ui/memory/dialogs/status',cookies=self.cookie)
                         .json()['persistent_threads'])
 
-    def test_stream_s03_and_owner_thread_roundtrip(self):
+    def test_stream_owner_dialog_receipt_and_thread_roundtrip(self):
         create=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
                json={'title':'Привет NOX','confirmed':True})
         self.assertEqual(create.status_code,200,create.text)
@@ -225,11 +225,13 @@ class V112Tests(unittest.TestCase):
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual([x['type'] for x in frames],['preparing','start','delta','delta','done'])
         self.assertTrue(frames[-1]['saved'])
-        self.assertTrue(frames[-1]['s03_integrated'])
+        # Legacy wire field remains for UI compatibility; only these dialog fields prove persistence.
+        self.assertTrue(frames[-1]['owner_dialog_saved'])
+        self.assertFalse(frames[-1]['canonical_s03_write_verified'])
         self.assertEqual(frames[-1]['dialog_id'],d)
         for key in ('turn_id','receipt_id','lease_epoch','exchange_id'):
             self.assertRegex(frames[-1][key],r'^[a-f0-9]{32}$')
-        self.assertEqual(frames[-1]['writer'],'V112_S03_DIALOG_WRITER')
+        self.assertEqual(frames[-1]['writer'],'V112_OWNER_DIALOG_WRITER')
         self.assertRegex(frames[-1]['receipt_sha256'],r'^[a-f0-9]{64}$')
         self.assertTrue(self.calls[-1]['_owner'])
         hist=self.client.get('/api/ui/memory/dialogs/history',
@@ -244,6 +246,8 @@ class V112Tests(unittest.TestCase):
             {'role':'user','content':'Привет NOX','exchange_id':frames[-1]['exchange_id']},
             {'role':'assistant','content':'Готов. Это проверенный ответ.','exchange_id':frames[-1]['exchange_id']}])
         self.assertTrue(proof.json()['durable']);self.assertTrue(proof.json()['verified'])
+        self.assertEqual(proof.json()['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+        self.assertFalse(proof.json()['canonical_s03_verified'])
         listed=self.client.get('/api/ui/memory/dialogs',cookies=self.cookie).json()
         self.assertEqual(listed['dialogs'][0]['dialog_id'],d)
 
@@ -267,6 +271,8 @@ class V112Tests(unittest.TestCase):
             self.assertEqual(messages[0]['content'],prompt)
             self.assertEqual(messages[1]['content'],'Готов. Это проверенный ответ.')
             self.assertTrue(proof.json()['durable']);self.assertTrue(proof.json()['verified'])
+            self.assertEqual(proof.json()['store_scope'],'OWNER_DIALOG_TABLES_ONLY')
+            self.assertFalse(proof.json()['canonical_s03_verified'])
             receipts.append(done)
             expected.extend(messages)
             history=self.client.get('/api/ui/memory/dialogs/history',cookies=self.cookie,
@@ -300,18 +306,21 @@ class V112Tests(unittest.TestCase):
         held=self.client.post('/api/ui/memory/dialogs/exchange-readback',cookies=self.cookie,json=body)
         self.assertEqual(held.status_code,409)
 
-    def test_exact_receipt_provider_excludes_fuzzy_matching(self):
+    def test_owner_dialog_receipt_provider_excludes_fuzzy_matching_and_s03_claims(self):
         source=Path(__file__).parents[1]/'native_v29_full_bridge.py'
         text=source.read_text()
-        provider=text.split('class CanonicalS03ExchangeReadback:',1)[1].split(
+        provider=text.split('class OwnerDialogExchangeReadback:',1)[1].split(
             'def _save_exchange(',1)[0]
         self.assertNotIn('instr(',provider)
+        self.assertNotIn('FROM s03_items',provider)
+        self.assertIn("'canonical_s03_verified':False",provider)
         self.assertIn('def _legacy_memory_readback(',text)
         stream=text.split("@app.post('/api/nox/chat/stream')",1)[1]
         self.assertIn("if not dialog_id:",stream)
-        self.assertIn('CanonicalS03ExchangeReadback(_db).read',stream)
+        self.assertIn('OwnerDialogExchangeReadback(_db).read',stream)
+        self.assertIn("'canonical_s03_write_verified':False",stream)
 
-    def test_coalesced_sse_transport_frames_preserve_native_s03_done(self):
+    def test_coalesced_sse_transport_frames_preserve_owner_dialog_done(self):
         self.bulk_sse='coalesced'
         created=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
             json={'title':'V165 SSE','confirmed':True}).json()
@@ -321,7 +330,8 @@ class V112Tests(unittest.TestCase):
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual([f['type'] for f in frames],['preparing','start','delta','done'])
         self.assertRegex(frames[-1]['exchange_id'],r'^[a-f0-9]{32}$')
-        self.assertTrue(frames[-1]['s03_integrated'])
+        self.assertTrue(frames[-1]['owner_dialog_saved'])
+        self.assertFalse(frames[-1]['canonical_s03_write_verified'])
         self.assertEqual(''.join(f['text'] for f in frames if f['type']=='delta'),
                          'Готов. Это проверенный ответ.')
 
