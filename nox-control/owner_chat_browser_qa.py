@@ -593,6 +593,8 @@ def require_screenshot_captures(report):
 
 
 async def browser_run(report, directory, available):
+    if report.get('two_turn_mode') is True:
+        raise RuntimeError('HOLD_CANONICAL_S03_WRITER_AND_INDEPENDENT_READBACK_NOT_WIRED')
     from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
     base=local_base()
     origin=urllib.parse.urlsplit(base).netloc
