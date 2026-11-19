@@ -1,7 +1,8 @@
 """Compile a grounded, reviewed next batch for the existing fenced NOX publisher.
 
 Usage: owner_systemic_taskpack.py --previous-manifest FILE --previous-sha256 SHA
-  --proposal FILE --source-census FILE --registry FILE --review FILE --output DIR
+  --proposal FILE --source-census FILE --refill-request FILE --registry FILE
+  --review FILE --output DIR
 
 The external producer researches concrete defects, prepares the proposal, and
 independently reviews its exact bytes and source census. This compiler binds
@@ -19,6 +20,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import stat
 import sys
 
@@ -28,6 +30,7 @@ from owner_systemic_refill import (SCHEMA, RefillHold, canonical, digest, requir
 
 PROPOSAL_SCHEMA = 'NOX_SYSTEMIC_GROUNDED_PROPOSALS_V1'
 REVIEW_SCHEMA = 'NOX_SYSTEMIC_TASKPACK_REVIEW_V1'
+REFILL_SCHEMA = 'NOX_SYSTEMIC_REFILL_REQUEST_V1'
 HELPER_SHA = '8470a6720ca69864bbc4e6e630a1f853344839af424d3829dcdf1774442db609'
 
 
@@ -78,6 +81,8 @@ def read_document(path, limit=4*1024*1024):
 def parent_registry(disposition):
     require(isinstance(disposition,dict) and disposition.get('total_original_ids') == 295,
             'REGISTRY_ORIGINAL_COUNT')
+    require(disposition.get('original_acceptance_added') == 0,
+            'REGISTRY_ACCEPTANCE_DELTA')
     tasks = disposition.get('tasks')
     require(isinstance(tasks,list) and len(tasks) == 295,'REGISTRY_ORIGINAL_ROWS')
     parents = {}
@@ -87,13 +92,16 @@ def parent_registry(disposition):
         require(isinstance(spec,dict) and spec.get('id') == row.get('task_id')
                 and hashlib.sha256(canonical(spec)).hexdigest() == row.get('spec_sha256'),
                 'REGISTRY_SPEC_PIN')
+        binding = row.get('execution_binding')
+        require(isinstance(binding,dict) and type(binding.get('state')) is str,
+                'REGISTRY_EXECUTION_STATE')
         parents[row['task_id']] = {'spec_sha256':row['spec_sha256'],'queue_id':row['queue_id'],
             'required_evidence':spec['evidence'],'title':spec['title']}
     return {'total_original_ids':295,'source_registry_sha256':deepcopy(disposition['source_registry_sha256']),
             'parents':parents}
 
 
-def bind_missions(proposals, roots, registry):
+def bind_missions(proposals, roots, registry, execution_states=None):
     require(isinstance(proposals,list) and 1 <= len(proposals) <= 3,'NEXT_BATCH_BOUND')
     missions = []
     for proposal in proposals:
@@ -108,30 +116,128 @@ def bind_missions(proposals, roots, registry):
                 in {root[target] for target in mission.get('editable_paths',[])},'DEFECT_SOURCE_PIN')
         parent = registry['parents'].get(mission.get('parent_task_id'))
         require(parent is not None and mission.get('queue_id') == parent['queue_id'],'ORIGINAL_PARENT')
+        if execution_states is not None:
+            require(execution_states.get(mission['parent_task_id']) ==
+                    'UNBOUND_PENDING_REAL_EXECUTION_PLAN', 'ORIGINAL_PARENT_ALREADY_BOUND')
+        require(mission.get('parent_spec_sha256') == parent['spec_sha256'],
+                'ORIGINAL_SPEC_SHA_PIN')
         missions.append(mission)
     return missions
 
 
+def _validate_refill_request(request, previous, previous_sha):
+    require(isinstance(request,dict) and request.get('schema') == REFILL_SCHEMA
+            and request.get('previous_manifest_sha256') == previous_sha
+            and request.get('manifest_revision') == previous['revision']
+            and request.get('registry_pins') == previous['registry']['source_registry_sha256']
+            and request.get('original_task_accepted') is False
+            and request.get('evidence_scope') == 'REFILL_REQUEST_ONLY_NOT_NATIVE_OR_BENCHMARK_ACCEPTANCE'
+            and request.get('required_next_step') ==
+                'GROUNDED_PROPOSAL_TO_PINNED_TASKPACK_TO_EXISTING_FENCED_MANIFEST_CAS'
+            and type(request.get('max_next_missions')) is int
+            and 1 <= request['max_next_missions'] <= 3,
+            'REFILL_REQUEST_BINDING')
+    source_pins, outcomes = request.get('source_pins'), request.get('outcomes')
+    original_states = request.get('original_task_states')
+    require(isinstance(source_pins,dict) and isinstance(outcomes,list)
+            and isinstance(original_states,list) and len(original_states) <= 295
+            and type(request.get('request_id')) is str and SHA.fullmatch(request['request_id']),
+            'REFILL_REQUEST_SHAPE')
+    require(request.get('original_task_states_sha256') == digest(original_states),
+            'ORIGINAL_TASK_STATE_SNAPSHOT_SHA')
+    fingerprint = digest({'manifest_sha256':previous_sha,'source_pins':source_pins,
+                          'outcomes':outcomes,'original_task_states':original_states})
+    require(fingerprint == request['request_id'], 'REFILL_REQUEST_ID')
+    prior = {}
+    for mission in previous['missions']:
+        task_id = mission['parent_task_id'] + '.relay.' + mission['mission_id'] + '.' + _input(mission)[:16]
+        prior[(mission['mission_id'],mission['revision'])] = (mission,task_id)
+    seen = set()
+    for row in original_states:
+        require(isinstance(row,dict) and set(row) == {'task_id','status'}
+                and type(row.get('task_id')) is str
+                and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}',row['task_id'])
+                and row.get('status') in {'pending','running','wait','retry','admitted',
+                    'prepared','done','verified','blocked','failed','cancelled','unknown'},
+                'ORIGINAL_TASK_STATE_ROW')
+        require(row['task_id'] not in seen, 'ORIGINAL_TASK_STATE_DUPLICATE')
+        seen.add(row['task_id'])
+    for outcome in outcomes:
+        require(isinstance(outcome,dict), 'REFILL_OUTCOME')
+        task_id = outcome.get('task_id')
+        key = (outcome.get('mission_id'),outcome.get('mission_revision'))
+        require(type(task_id) is str and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}',task_id)
+                and type(outcome.get('input_sha256')) is str and SHA.fullmatch(outcome['input_sha256'])
+                and outcome.get('status') in {'pending','running','wait','retry','admitted',
+                    'prepared','done','verified','blocked','failed','cancelled'},
+                'REFILL_OUTCOME_BINDING')
+        if key in prior:
+            mission,expected_task_id = prior[key]
+            require(task_id == expected_task_id
+                    and outcome.get('input_sha256') == _input(mission), 'REFILL_OUTCOME_BINDING')
+        require(task_id not in seen, 'REFILL_OUTCOME_DUPLICATE')
+        seen.add(task_id)
+    return seen
+
+
+def immutable_verifier_sha256(missions, roots):
+    """Hash the exact verifier contract and source bytes pinned for each mission."""
+    rows = []
+    for mission in missions:
+        root = roots[mission['root_id']]
+        modules = mission['verification']['modules']
+        pins = [{'module':module,'path':module.replace('.','/')+'.py',
+                 'sha256':root[module.replace('.','/')+'.py']} for module in modules]
+        rows.append({'parent_task_id':mission['parent_task_id'],
+            'parent_spec_sha256':mission['parent_spec_sha256'],
+            'mission_id':mission['mission_id'],'revision':mission['revision'],
+            'verification':deepcopy(mission['verification']),'tests':pins})
+    return digest(rows)
+
+
 def compile_taskpack(previous, previous_sha, proposal, proposal_sha, census, census_sha,
-                     disposition, review):
+                     refill_request, refill_request_sha, disposition, disposition_sha, review):
     validate_manifest(previous)
+    observed_task_ids = _validate_refill_request(refill_request,previous,previous_sha)
     require(isinstance(proposal,dict) and proposal.get('schema') == PROPOSAL_SCHEMA
-            and proposal.get('previous_manifest_sha256') == previous_sha,'PROPOSAL_PREDECESSOR')
+            and proposal.get('previous_manifest_sha256') == previous_sha
+            and proposal.get('request_id') == refill_request['request_id'], 'PROPOSAL_PREDECESSOR')
     require(isinstance(census,dict) and census.get('schema') == 'NOX_SYSTEMIC_SOURCE_CENSUS_V1'
             and isinstance(census.get('roots'),dict),'SOURCE_CENSUS')
     require(isinstance(review,dict) and review.get('schema') == REVIEW_SCHEMA
             and review.get('review_origin') == 'OWNER_REVIEWED'
             and review.get('proposal_sha256') == proposal_sha
             and review.get('source_census_sha256') == census_sha
+            and review.get('refill_request_sha256') == refill_request_sha
             and review.get('previous_manifest_sha256') == previous_sha
             and review.get('original_task_accepted') is False,'EXACT_REVIEW_RECEIPT')
+    require(review.get('previous_claims_settled') is True
+            and type(review.get('native_readback_sha256')) is str
+            and SHA.fullmatch(review['native_readback_sha256']), 'OWNER_READBACK_RECEIPT')
+    require(review.get('registry_sha256') == disposition_sha
+            and review.get('status') == 'EXACT_SOURCE_AND_PROPOSAL_REVIEWED',
+            'EXACT_REGISTRY_REVIEW')
     registry = parent_registry(disposition)
     require(registry['source_registry_sha256'] == previous['registry']['source_registry_sha256'],
             'REGISTRY_CHANGED_NEEDS_OWNER_REVIEW')
-    missions = bind_missions(proposal.get('missions'),census['roots'],registry)
+    execution_states = {row['task_id']:row['execution_binding']['state']
+                        for row in disposition['tasks']}
+    missions = bind_missions(proposal.get('missions'),census['roots'],registry,execution_states)
+    require(review.get('reviewed_mission_ids') == sorted(row['mission_id'] for row in missions),
+            'REVIEWED_MISSION_SET')
+    prior_parents = {row['parent_task_id'] for row in previous['missions']}
+    proposed_parents = [row['parent_task_id'] for row in missions]
+    require(len(set(proposed_parents)) == len(proposed_parents), 'DUPLICATE_ORIGINAL_TASK')
+    require(not prior_parents.intersection(proposed_parents), 'ORIGINAL_TASK_ALREADY_PLANNED')
+    require(all(parent not in observed_task_ids
+                and not any(task_id.startswith(parent+'.relay.') for task_id in observed_task_ids)
+                for parent in proposed_parents), 'ORIGINAL_TASK_ALREADY_OBSERVED')
     old = {(row['mission_id'],row['revision']) for row in previous['missions']}
     require(not old.intersection((row['mission_id'],row['revision']) for row in missions),
             'MISSION_REVISION_ALREADY_PUBLISHED')
+    verifier_sha = immutable_verifier_sha256(missions,census['roots'])
+    require(review.get('immutable_verifier_sha256') == verifier_sha,
+            'IMMUTABLE_VERIFIER_REVIEW_PIN')
     # Replace the active small batch; pinned ancestry retains previous durable bindings.
     manifest = {'schema':SCHEMA,'revision':previous['revision']+1,
         'previous_manifest_sha256':previous_sha,'review_origin':'OWNER_REVIEWED',
@@ -140,7 +246,11 @@ def compile_taskpack(previous, previous_sha, proposal, proposal_sha, census, cen
         'research_topics':deepcopy(proposal.get('research_topics',previous.get('research_topics',[]))),
         'intent_sources':deepcopy(previous.get('intent_sources',[])),
         'producer_evidence':{'proposal_sha256':proposal_sha,'source_census_sha256':census_sha,
-                             'review_sha256':digest(review),'refill_request_id':proposal.get('request_id')}}
+            'refill_request_sha256':refill_request_sha,'refill_request_id':proposal.get('request_id'),
+            'registry_sha256':disposition_sha,'review_sha256':digest(review),
+            'immutable_verifier_sha256':verifier_sha,
+            'original_task_spec_pins':[{'task_id':row['parent_task_id'],
+                'spec_sha256':row['parent_spec_sha256']} for row in missions]}}
     validate_manifest(manifest)
     return manifest
 
@@ -178,6 +288,10 @@ def write_package(manifest, output, *, previous_sha=None):
         contracts[task_id] = contract_sha
     request = {'schema':'NOX_SYSTEMIC_RELAY_PUBLISH_REQUEST_V1',
         'expected_previous_manifest_sha256':previous_sha,'new_manifest_sha256':manifest_sha,
+        'refill_request_sha256':manifest['producer_evidence']['refill_request_sha256'],
+        'registry_sha256':manifest['producer_evidence']['registry_sha256'],
+        'immutable_verifier_sha256':manifest['producer_evidence']['immutable_verifier_sha256'],
+        'owner_review_sha256':manifest['producer_evidence']['review_sha256'],
         'new_manifest_path':'state/dispatcher/project_executor/package/relay/' + manifest_sha + '.json',
         'contracts':contracts,'scope':'EXISTING_SOURCE_WORKSPACE_ONLY',
         'original_task_accepted':False,'native_write_performed':False,
@@ -267,7 +381,8 @@ def publisher_entry(manifest, package, checkpoint, template_path, helper_path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for option in ('previous-manifest','previous-sha256','proposal','source-census','registry','review','output'):
+    for option in ('previous-manifest','previous-sha256','proposal','source-census',
+                   'refill-request','registry','review','output'):
         parser.add_argument('--'+option,required=True)
     for option in ('publisher-checkpoint','publisher-template','transaction-helper'):
         parser.add_argument('--'+option)
@@ -276,9 +391,11 @@ def main():
     require(previous_sha == args.previous_sha256,'PREVIOUS_MANIFEST_PIN')
     proposal,proposal_sha = read_document(args.proposal)
     census,census_sha = read_document(args.source_census)
-    disposition,_ = read_document(args.registry)
+    refill_request,refill_request_sha = read_document(args.refill_request)
+    disposition,disposition_sha = read_document(args.registry)
     review,_ = read_document(args.review)
-    manifest = compile_taskpack(previous,previous_sha,proposal,proposal_sha,census,census_sha,disposition,review)
+    manifest = compile_taskpack(previous,previous_sha,proposal,proposal_sha,census,census_sha,
+        refill_request,refill_request_sha,disposition,disposition_sha,review)
     result = write_package(manifest,args.output,previous_sha=previous_sha)
     publisher_args = (args.publisher_checkpoint,args.publisher_template,args.transaction_helper)
     require(not any(publisher_args) or all(publisher_args),'PUBLISHER_ARGUMENTS')

@@ -90,6 +90,9 @@ def validate_manifest(manifest):
         seen.add((name,revision))
         parent = parents.get(mission.get('parent_task_id'))
         require(parent is not None and mission.get('queue_id') == parent['queue_id'], 'PARENT_BINDING')
+        parent_spec_sha = mission.get('parent_spec_sha256')
+        require(parent_spec_sha is None or parent_spec_sha == parent['spec_sha256'],
+                'PARENT_SPEC_BINDING')
         require(mission.get('priority') in ('P0','P1','P2','P3')
                 and mission.get('repeat_policy') == 'ONCE_PER_REVIEWED_REVISION', 'MISSION_POLICY')
         require(type(mission.get('root_id')) is str and ID.fullmatch(mission['root_id']), 'ROOT')
@@ -560,7 +563,19 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
             'spec_sha256':manifest['registry']['parents'][mission['parent_task_id']]['spec_sha256']}
         reserved.update((mission['root_id'],target) for target in mission['editable_paths'])
     outcomes = _outcomes(state_snapshot)
-    fingerprint = digest({'manifest_sha256':manifest_sha,'source_pins':source_pins,'outcomes':outcomes})
+    # Retain current status for original IDs already present in the native
+    # state. This compact, pinned view lets the reviewed producer avoid making
+    # a second project mission for an original task that is already queued.
+    original_task_states = []
+    parents = manifest['registry']['parents']
+    for task_id in sorted(set(state_snapshot).intersection(parents)):
+        task = state_snapshot[task_id]
+        status = task.get('status') if isinstance(task,dict) else None
+        original_task_states.append({'task_id':task_id,
+            'status':status if status in ACTIVE|TERMINAL else 'unknown'})
+    original_task_states_sha256 = digest(original_task_states)
+    fingerprint = digest({'manifest_sha256':manifest_sha,'source_pins':source_pins,
+        'outcomes':outcomes,'original_task_states':original_task_states})
     waits = {'CAPACITY_WAIT','SOURCE_ALREADY_RESERVED','DEPENDENCY_NOT_VERIFIED'}
     waiting = any(row['reason'] in waits for row in rejected)
     state = 'REVIEWED_BATCH_READY' if rows else 'WAIT_EXISTING_WORK' if waiting else 'REFILL_REQUIRED'
@@ -569,7 +584,10 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
         request = {'schema':'NOX_SYSTEMIC_REFILL_REQUEST_V1','request_id':fingerprint,
             'previous_manifest_sha256':manifest_sha,'manifest_revision':manifest['revision'],
             'registry_pins':deepcopy(manifest['registry']['source_registry_sha256']),
-            'source_pins':deepcopy(source_pins),'outcomes':outcomes,'blocked_missions':rejected,
+            'source_pins':deepcopy(source_pins),'outcomes':outcomes,
+            'original_task_states':original_task_states,
+            'original_task_states_sha256':original_task_states_sha256,
+            'blocked_missions':rejected,
             'research_topics':deepcopy(manifest.get('research_topics',[])),
             'required_next_step':'GROUNDED_PROPOSAL_TO_PINNED_TASKPACK_TO_EXISTING_FENCED_MANIFEST_CAS',
             'max_next_missions':3,'original_task_accepted':False,
