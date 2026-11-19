@@ -338,15 +338,34 @@ class OwnerNativeOutputTransferTests(unittest.TestCase):
     def test_parent_chain_service_join_binds_pid_start_ticks_and_pid_namespace(self):
         stdout=_fixture(2,parent_chain=True)
         self.assertTrue(OP.require_audit_census_complete(stdout)["gpu_census_complete"])
+        malformed_chain=_replace_section(stdout,"hardware",lambda row:
+            row["result"]["gpu_process_links"][0]["parent_chain"].append(None))
+        with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_GPU_PARENT_CHAIN_ROW"):
+            OP.audit_bundle_line(malformed_chain)
         wrong_namespace=_replace_section(stdout,"hardware",lambda row:
             row["result"]["gpu_process_links"][0]["parent_chain"][1].update(pid_namespace="pid:[4026539999]"))
         self.assertFalse(OP.audit_census_status(wrong_namespace)["gpu_census_complete"])
         with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_CENSUS_INCOMPLETE"):
             OP.require_audit_census_complete(wrong_namespace)
 
+    def test_gpu_link_rejects_malformed_service_match_and_parent_chain_even_with_valid_match(self):
+        malformed_match=_replace_section(_fixture(2,parent_chain=True),"hardware",lambda row:
+            row["result"]["gpu_process_links"][0].update(service_match="not-an-object"))
+        with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_GPU_SERVICE_MATCH"):
+            OP.audit_bundle_line(malformed_match)
+        malformed_chain=_replace_section(_fixture(2,parent_chain=True),"hardware",lambda row:
+            row["result"]["gpu_process_links"][0]["parent_chain"].insert(0,None))
+        with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_GPU_PARENT_CHAIN_ROW"):
+            OP.audit_bundle_line(malformed_chain)
+        malformed_identity=_replace_section(_fixture(2),"hardware",lambda row:
+            row["result"]["gpu_process_links"][0].update(proc_identity="not-an-object"))
+        with self.assertRaisesRegex(RuntimeError,"HOLD_AUDIT_GPU_IDENTITY_ROW"):
+            OP.audit_bundle_line(malformed_identity)
+
     def test_mixed_valid_and_non_dict_gpu_supervisor_rows_hold(self):
         cases=(
             ("hardware",lambda row:row["result"]["gpu_apps_before"]["apps"].append(None),"HOLD_AUDIT_GPU_APP_ROW"),
+            ("hardware",lambda row:row["result"]["gpu_process_links"].append(None),"HOLD_AUDIT_GPU_LINK_ROW"),
             ("hardware",lambda row:row["result"]["supervisor_services"]["services"].append(None),"HOLD_AUDIT_SUPERVISOR_SERVICE_ROW"),
             ("supervisor",lambda row:row["result"]["results"].append(None),"HOLD_AUDIT_SUPERVISOR_ATTEMPT_ROW"),
             ("supervisor",lambda row:row["result"]["results"][0]["services"].append(None),"HOLD_AUDIT_SUPERVISOR_ATTEMPT_SERVICE_ROW"),
@@ -359,14 +378,34 @@ class OwnerNativeOutputTransferTests(unittest.TestCase):
         projected["attempt_count"]+=1
         self.assertFalse(OP._supervisor_attempt_count_matches(projected))
 
-    def test_oversized_non_audit_evidence_is_transferred_instead_of_dropped(self):
+    def test_oversized_unverified_inspect_payload_fails_closed(self):
         marker = "NOX_MAINT_SCOPE_LOCKS=" + json.dumps([
             {"pid":1964117,"start_ticks":1965117,"pid_namespace":"pid:[4026531836]"}
             for _ in range(7000)],separators=(",",":"))
-        forwarded = OP.forward_remote_stdout(marker + "\n", "inspect", REQUEST_ID, SOURCE_SHA)
-        restored = OP.reassemble_transfer_records(forwarded, REQUEST_ID, SOURCE_SHA)
-        self.assertEqual(restored.decode("utf-8"), marker)
-        self.assertTrue(all(len(line.encode("utf-8")) < OP.MAX_FORWARD_LINE_BYTES for line in forwarded))
+        with self.assertRaisesRegex(RuntimeError,"HOLD_REMOTE_INSPECT_MARKER_OVERSIZE"):
+            OP.forward_remote_stdout(marker + "\n", "inspect", REQUEST_ID, SOURCE_SHA)
+
+    def test_inspect_nested_unverified_json_fails_closed(self):
+        markers=(
+            'NOX_MAINT_SCOPE_LOCKS='+json.dumps({"rows":[{"secret":"SECRET_NESTED_SENTINEL"}]}),
+            'NOX_MAINT_COMPONENTS='+json.dumps({"receipts":[{"private":"SECRET_NESTED_SENTINEL"}],
+                                                "tasks":[],"queue_scope":"OWNER_TASK_STATUS_ONLY"}),
+        )
+        for marker in markers:
+            with self.subTest(marker=marker[:32]),self.assertRaisesRegex(RuntimeError,"HOLD_REMOTE_INSPECT_JSON_SCHEMA_UNAVAILABLE"):
+                OP.forward_remote_stdout(marker+"\nNOX_MAINT_INSPECT_COMPLETE=true\n",
+                                         "inspect",REQUEST_ID,SOURCE_SHA)
+
+    def test_completion_marker_must_be_one_exact_terminal_line(self):
+        marker="NOX_MAINT_INSPECT_COMPLETE=true"
+        valid='NOX_MAINT_SCOPE_CONFIG={"status":"OK"}\n'+marker+'\n'
+        spoof='NOX_MAINT_SCOPE_CONFIG={"note":"'+marker+'"}\n'
+        duplicate=valid+marker+'\n'
+        after=marker+'\nNOX_MAINT_SCOPE_CONFIG={}\n'
+        self.assertTrue(OP._has_exact_terminal_completion_marker(valid,marker))
+        self.assertFalse(OP._has_exact_terminal_completion_marker(spoof,marker))
+        self.assertFalse(OP._has_exact_terminal_completion_marker(duplicate,marker))
+        self.assertFalse(OP._has_exact_terminal_completion_marker(after,marker))
 
     def test_unknown_non_audit_markers_do_not_pass_raw_or_chunked(self):
         for action,marker in (("inspect","NOX_MAINT_PRIVATE_SECRET=SECRET_SHOULD_NOT_FORWARD"),

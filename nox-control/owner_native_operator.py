@@ -50,14 +50,18 @@ def _validate_forward_marker(action,line):
                     or not isinstance(value['receipts'],list) or not isinstance(value['tasks'],list)
                     or not isinstance(value['queue_scope'],str)):
                 raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
-            return
+            raise RuntimeError('HOLD_REMOTE_INSPECT_JSON_SCHEMA_UNAVAILABLE')
         prefix='NOX_MAINT_SCOPE_'
         scope=marker[len(prefix):] if marker.startswith(prefix) else None
         if scope not in INSPECT_SCOPE_MARKERS:raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
         try:value=json.loads(payload)
         except (ValueError,TypeError) as exc:raise RuntimeError('HOLD_REMOTE_MARKER_JSON') from exc
+        # This transport change is scoped to the independently validated audit
+        # bundle. Inspect scopes contain nested source-specific records; a
+        # top-level dict/list check is not a privacy schema. Hold until that
+        # action gets its own exact nested projection contract.
         if not isinstance(value,(dict,list)):raise RuntimeError('HOLD_REMOTE_MARKER_SCHEMA')
-        return
+        raise RuntimeError('HOLD_REMOTE_INSPECT_JSON_SCHEMA_UNAVAILABLE')
     if action=='stage':
         if marker=='NOX_MAINT_STAGE_COMPLETE':
             if payload!='true':raise RuntimeError('HOLD_REMOTE_MARKER_VALUE')
@@ -243,21 +247,44 @@ def _project_service_inventory(services):
     return result
 
 def _project_gpu_link(link):
-    if not isinstance(link,dict):return None
+    if not isinstance(link,dict):raise RuntimeError('HOLD_AUDIT_GPU_LINK_ROW')
     fields=('gpu_pid','gpu_uuid','used_gpu_memory_before','used_gpu_memory_after',
             'inventory_presence','identity_stability','classification','evidence_state',
             'visibility','before_alias_scan_complete','after_alias_scan_complete','scope')
     result={key:link[key] for key in fields if key in link}
-    if isinstance(link.get('proc_identity'),dict):result['proc_identity']=_project_identity(link['proc_identity'])
-    if isinstance(link.get('service_match'),dict):
-        match=link['service_match']
-        result['service_match']={key:match[key] for key in ('service','pid','state','relation','start_ticks') if key in match}
+    identity=link.get('proc_identity')
+    if identity is not None and not isinstance(identity,dict):
+        raise RuntimeError('HOLD_AUDIT_GPU_IDENTITY_ROW')
+    if isinstance(identity,dict):result['proc_identity']=_project_identity(identity)
+    match=link.get('service_match')
+    if match is not None:
+        if (not isinstance(match,dict)
+                or set(match)!={'service','pid','state','relation','start_ticks'}
+                or not isinstance(match.get('service'),str)
+                or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}',match['service'])
+                or type(match.get('pid')) is not int or match['pid']<=1
+                or match.get('state') not in ('RUNNING','STARTING')
+                or match.get('relation') not in ('DIRECT_PID','PARENT_CHAIN')
+                or type(match.get('start_ticks')) is not int or match['start_ticks']<=0):
+            raise RuntimeError('HOLD_AUDIT_GPU_SERVICE_MATCH')
+        result['service_match']={key:match[key] for key in ('service','pid','state','relation','start_ticks')}
     else:result['service_match']=None
     chain=link.get('parent_chain')
-    if isinstance(chain,list):
-        result['parent_chain']=[{key:row[key] for key in ('pid','ppid','start_ticks','pid_namespace') if key in row}
-                                for row in chain if isinstance(row,dict)]
-    else:result['parent_chain']=None
+    if not isinstance(chain,list):raise RuntimeError('HOLD_AUDIT_GPU_PARENT_CHAIN_SHAPE')
+    projected_chain=[]
+    for row in chain:
+        if (not isinstance(row,dict)
+                or not {'pid','ppid','start_ticks','pid_namespace'}.issubset(row)
+                or set(row)-{'pid','ppid','start_ticks','pid_namespace','comm','cgroups'}
+                or type(row.get('pid')) is not int or row['pid']<=1
+                or type(row.get('ppid')) is not int or row['ppid']<0
+                or type(row.get('start_ticks')) is not int or row['start_ticks']<=0
+                or (row.get('pid_namespace') is not None
+                    and (not isinstance(row.get('pid_namespace'),str)
+                         or not re.fullmatch(r'pid:\[[0-9]+\]',row['pid_namespace'])))):
+            raise RuntimeError('HOLD_AUDIT_GPU_PARENT_CHAIN_ROW')
+        projected_chain.append({key:row[key] for key in ('pid','ppid','start_ticks','pid_namespace')})
+    result['parent_chain']=projected_chain
     return result
 
 def _project_hardware(result):
@@ -706,6 +733,15 @@ def require_audit_census_complete(stdout):
         raise RuntimeError('HOLD_AUDIT_CENSUS_INCOMPLETE')
     return gate
 
+def _has_exact_terminal_completion_marker(stdout,marker):
+    """Accept one exact completion line only after all remote NOX payload lines."""
+    lines=stdout.splitlines()
+    matches=[index for index,line in enumerate(lines) if line==marker]
+    if len(matches)!=1:return False
+    marker_index=matches[0]
+    return not any(line.startswith('NOX_MAINT_') and index>marker_index
+                   for index,line in enumerate(lines))
+
 def forward_remote_stdout(stdout,action,request_id,source_sha):
     """Return only bounded marker lines; oversized audit records become a verified bundle."""
     lines=stdout.splitlines();forwarded=[];audit_bundle=None
@@ -723,16 +759,12 @@ def forward_remote_stdout(stdout,action,request_id,source_sha):
                 forwarded.append('NOX_MAINT_AUDIT_WORKERS_COMPLETE=true')
                 continue
             raise RuntimeError('HOLD_REMOTE_MARKER_NOT_ALLOWLISTED')
+        if action=='inspect' and len(line.encode('utf-8'))>=MAX_FORWARD_LINE_BYTES:
+            raise RuntimeError('HOLD_REMOTE_INSPECT_MARKER_OVERSIZE')
         _validate_forward_marker(action,line)
-        if len(line.encode('utf-8'))<MAX_FORWARD_LINE_BYTES:
-            forwarded.append(line)
-            continue
-        records=build_transfer_records(line,request_id,source_sha)
-        if len(records)==1:
-            raise RuntimeError('HOLD_REMOTE_MARKER_NOT_CHUNKED')
-        if reassemble_transfer_records(records,request_id,source_sha)!=line.encode('utf-8'):
-            raise RuntimeError('HOLD_REMOTE_MARKER_REASSEMBLY')
-        forwarded.extend(records)
+        if len(line.encode('utf-8'))>=MAX_FORWARD_LINE_BYTES:
+            raise RuntimeError('HOLD_REMOTE_MARKER_OVERSIZE_UNVERIFIED')
+        forwarded.append(line)
     if action=='audit' and not any(line=='NOX_MAINT_AUDIT_WORKERS_COMPLETE=true' for line in forwarded):
         raise RuntimeError('HOLD_AUDIT_WORKERS_COMPLETE_MARKER_MISSING')
     return forwarded
@@ -1024,7 +1056,8 @@ def run_native(action,request_id):
         cls='AUTH' if 'permission denied' in err else 'TIMEOUT' if 'timed out' in err else 'CONNECTION' if 'connect' in err else 'PAYLOAD'
         print('NOX_MAINT_FAILURE_CLASS='+cls,flush=True)
     marker='NOX_MAINT_'+action.upper()+'_COMPLETE=true'
-    if r.returncode or marker not in r.stdout:raise RuntimeError('HOLD_NATIVE_PAYLOAD_INCOMPLETE')
+    if r.returncode or not _has_exact_terminal_completion_marker(r.stdout,marker):
+        raise RuntimeError('HOLD_NATIVE_PAYLOAD_INCOMPLETE')
     if action=='audit':
         gate=audit_census_status(r.stdout)
         print('NOX_MAINT_AUDIT_CENSUS_GATE='+json.dumps(gate,separators=(',',':'),sort_keys=True),flush=True)
