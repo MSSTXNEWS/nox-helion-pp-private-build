@@ -79,11 +79,11 @@ class WitnessTests(unittest.TestCase):
         gguf(model)
         (self.p / 'root').unlink()
         (self.p / 'root').symlink_to(private_root, target_is_directory=True)
-        (self.p / 'cmdline').write_bytes(b'llama-server\\0-m\\0/weights/model.gguf\\0')
+        (self.p / 'cmdline').write_bytes(b'llama-server\0-m\0/weights/model.gguf\0')
         st = model.stat()
         (self.p / 'maps').write_text(
             f'00400000-00500000 r--p 00000000 '
-            f'{os.major(st.st_dev):02x}:{os.minor(st.st_dev):02x} {st.st_ino} {model}\\n'
+            f'{os.major(st.st_dev):02x}:{os.minor(st.st_dev):02x} {st.st_ino} {model}\n'
         )
         out = w.witness(self.pid, self.ticks, proc_root=self.proc)
         self.assertEqual(out['state'], 'MAPPED_GGUF_METADATA_VERIFIED', out.get('reason'))
