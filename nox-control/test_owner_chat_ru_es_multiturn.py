@@ -208,6 +208,20 @@ class OwnerRuEsContinuity(unittest.TestCase):
         self.assertFalse(canonical_s03_proof_valid(aliased, aliased, DIALOG, transcript))
         self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
 
+    def test_canonical_s03_readback_sequence_requires_exact_int(self):
+        # JSON 2.0 compares equal to Python int 2, but is not a valid
+        # canonical integer turn index in an independent S03 readback.
+        transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))
+        writer, readback = s03_proof(transcript)
+        self.assertTrue(canonical_s03_proof_valid(writer, readback, DIALOG, transcript))
+        for bad_sequence in (2.0, True, "2", None, [2], 3):
+            with self.subTest(readback_sequence=repr(bad_sequence)):
+                self.assertFalse(canonical_s03_proof_valid(
+                    writer, dict(readback, sequence=bad_sequence),
+                    DIALOG, transcript))
+        self.assertTrue(canonical_s03_proof_valid(
+            writer, dict(readback, sequence=2), DIALOG, transcript))
+
     def test_canonical_s03_rejects_later_turn_or_blank_receipt_identity(self):
         # An event from a third or later turn cannot certify exactly two turns.
         transcript = rows(multiturn_followup_prompt(TOKEN, "multiturn_ru_es"))

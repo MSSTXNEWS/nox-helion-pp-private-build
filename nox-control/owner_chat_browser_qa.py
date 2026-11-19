@@ -258,7 +258,8 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or independent_readback.get('independent') is not True
             or independent_readback.get('event_id') != event_id
             or independent_readback.get('turn_id') != turn_id
-            or independent_readback.get('sequence') != sequence
+            or type(independent_readback.get('sequence')) is not int
+            or independent_readback['sequence'] != sequence
             or independent_readback.get('dialog_id') != dialog_id
             or independent_readback.get('messages') != expected_messages):
         return False
