@@ -7,6 +7,13 @@ on:
       - nox-control/owner_memory_chat_acceptance.py
       - nox-control/tests/test_owner_memory_chat_acceptance_failclosed.py
       - .github/workflows/nox-a3-3a02-focused-source.yml
+  pull_request:
+    branches:
+      - repair/nox-continuous-execution-20261118
+    paths:
+      - nox-control/owner_memory_chat_acceptance.py
+      - nox-control/tests/test_owner_memory_chat_acceptance_failclosed.py
+      - .github/workflows/nox-a3-3a02-focused-source.yml
 permissions:
   contents: read
 jobs:
