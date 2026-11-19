@@ -323,6 +323,11 @@ SUPPLEMENTAL_MAX_FILES = 512
 REPOSITORY_REF = 'repair/nox-native-reflex-autorefill-20261119'
 REPOSITORY_URL = 'https://github.com/MSSTXNEWS/nox-helion-pp-private-build'
 SOURCE_ADDENDUM_SCHEMA = 'NOX_SOURCE_EVIDENCE_ADDENDUM_V1'
+SOURCE_ADDENDUM_PATH = 'nox-control/complete_executor_20261118/evidence/addenda/source_acceptance_addendum_20261119_4a01_deepseek_final.json'
+SOURCE_ADDENDUM_BLOB = 'e8e3064adaaf8f1f162574f4eae069519e4f598a'
+SOURCE_TASK_SPEC_SHA256 = 'c7d3737748301a132e1bc7df66af486d8fc012839c3301c6b7d72c5cf4900486'
+SOURCE_TASK_TITLE = 'Прочитать точные манифесты модели: обучаемая ревизия, tokenizer, dtype, target modules, лицензия, размер тренировки и дефицит. GGUF имеет отдельный маршрут inference.'
+SOURCE_RECEIPT_EVIDENCE = 'https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/tree/08c8657f02291e11b6f6b63e0e16014f8e748518'
 SOURCE_MANIFEST_PATH = 'nox-control/model_manifests/4A01_DEEPSEEK_V41_1017_TRAINING_SOURCE_20261119.json'
 SOURCE_MANIFEST_BLOB = 'f3e11cfc92bb75fe7ef13589a35fb127a81fceea'
 TOKENIZER_MANIFEST_PATH = 'nox-control/model_manifests/evidence/4A01_DEEPSEEK_V41_TOKENIZER_MANIFEST_20261119.json'
@@ -769,19 +774,45 @@ def _hash_regular_file(path, expected_size, max_size):
         os.close(fd)
 
 
-def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_root,
-                             source_path, source_hash, source_blob):
+def _validate_source_sidecar(document, manifest_rows, manifest_titles, manifest_records,
+                             control_root, existing_receipts, source_path, source_hash, source_blob):
     task = document.get('task')
     if not isinstance(task, dict):
         raise ValueError('SOURCE_TASK_BINDING_MISSING')
     task_id = task.get('task_id')
-    if task_id != '4A01' or task_id not in manifest_rows:
-        raise ValueError('SOURCE_TASK_ID_UNSUPPORTED')
+    if (task_id != '4A01' or task_id not in manifest_rows
+            or source_path != SOURCE_ADDENDUM_PATH
+            or source_blob != SOURCE_ADDENDUM_BLOB):
+        raise ValueError('SOURCE_TASK_OR_SIDECAR_PIN_MISMATCH')
     spec_sha = manifest_rows[task_id]
-    if task.get('spec_sha256') != spec_sha:
+    if (spec_sha != SOURCE_TASK_SPEC_SHA256
+            or task.get('spec_sha256') != spec_sha):
         raise ValueError('SOURCE_TASK_SPEC_SHA_MISMATCH')
-    if task.get('title') != manifest_titles.get(task_id) or task.get('required_evidence') != 'source':
+    if (task.get('title') != SOURCE_TASK_TITLE
+            or task.get('title') != manifest_titles.get(task_id)
+            or task.get('required_evidence') != 'source'):
         raise ValueError('SOURCE_TASK_TITLE_OR_EVIDENCE_MISMATCH')
+    frozen_row = manifest_records.get(task_id) if isinstance(manifest_records, dict) else None
+    routing = frozen_row.get('routing_source') if isinstance(frozen_row, dict) else None
+    if (not isinstance(frozen_row, dict)
+            or frozen_row.get('task_id') != '4A01'
+            or frozen_row.get('spec_sha256') != SOURCE_TASK_SPEC_SHA256
+            or frozen_row.get('spec') != {
+                'id': '4A01',
+                'title': SOURCE_TASK_TITLE,
+                'group': 4,
+                'wave': 'A',
+                'evidence': 'source',
+            }
+            or frozen_row.get('prior_receipt_state') != 'verified'
+            or frozen_row.get('prior_receipt_scope') != 'source'
+            or frozen_row.get('original_acceptance_added') is not False
+            or not isinstance(routing, dict)
+            or routing.get('registry') != 'work_tasks.json'
+            or routing.get('required_evidence') != 'source'
+            or routing.get('snapshot_receipt_state') != 'verified'
+            or routing.get('snapshot_receipt_scope') != 'source'):
+        raise ValueError('SOURCE_FROZEN_4A01_RECEIPT_ROUTING_MISMATCH')
     if (document.get('state') != 'SOURCE_CRITERION_COMPLETE'
             or document.get('accepted_source_criterion') is not True):
         raise ValueError('SOURCE_CRITERION_NOT_ACCEPTED')
@@ -888,6 +919,31 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
     if not isinstance(sources, list) or len(sources) < 3 or any(not isinstance(row, dict) for row in sources):
         raise ValueError('SOURCE_REFERENCE_LIST_INVALID')
 
+    task_registry_raw, task_registry_doc = read_json_with_raw(
+        Path(control_root) / 'four_queue_20261118' / 'work_tasks.json'
+    )
+    task_rows = task_registry_doc.get('tasks') if isinstance(task_registry_doc, dict) else None
+    task_matches = ([row for row in task_rows
+                     if isinstance(row, dict) and row.get('id') == '4A01']
+                    if isinstance(task_rows, list) else [])
+    if (git_blob_sha(task_registry_raw) != FROZEN_WORK_TASKS_BLOB
+            or len(task_matches) != 1
+            or task_matches[0].get('title') != SOURCE_TASK_TITLE
+            or task_matches[0].get('evidence') != 'source'):
+        raise ValueError('SOURCE_4A01_TASK_REGISTRY_PIN_MISMATCH')
+
+    receipt_raw, receipt_doc = read_json_with_raw(
+        Path(control_root) / 'four_queue_20261118' / 'work_receipts.json'
+    )
+    receipt_tasks = receipt_doc.get('tasks') if isinstance(receipt_doc, dict) else None
+    receipt_record = receipt_tasks.get('4A01') if isinstance(receipt_tasks, dict) else None
+    if (git_blob_sha(receipt_raw) != FROZEN_WORK_RECEIPTS_BLOB
+            or not isinstance(existing_receipts, dict)
+            or receipt_record != existing_receipts.get('4A01')
+            or not is_verified({'evidence': 'source'}, receipt_record)
+            or receipt_record.get('evidence') != SOURCE_RECEIPT_EVIDENCE):
+        raise ValueError('SOURCE_4A01_HISTORICAL_RECEIPT_NOT_PRESERVED')
+
     return {
         'task_id': task_id,
         'title': task.get('title'),
@@ -917,6 +973,10 @@ def _validate_source_sidecar(document, manifest_rows, manifest_titles, control_r
         'gguf_manifest_git_blob_sha': git_blob_sha(gguf_raw),
         'source_claimed_original_295_acceptance_increment': document['original_295_acceptance_increment'],
         'original_acceptance_added': 0,
+        'already_in_receipt_count': True,
+        'historical_receipt_preserved': True,
+        'work_tasks_git_blob_sha': git_blob_sha(task_registry_raw),
+        'work_receipts_git_blob_sha': git_blob_sha(receipt_raw),
         'training_admission': document.get('training_admission'),
         'live_training_or_weight_update': document.get('live_training_or_weight_update'),
     }
@@ -1500,6 +1560,47 @@ def _validate_i49_post_merge_receipt(document, manifest_rows, manifest_titles,
 
 
 
+def _route_validated_supplemental_item(item, manifest_records, existing_receipts,
+                                       receipt_snapshot_pinned, items, evidence_refreshes):
+    """Count only tasks not already verified by the exact frozen receipt snapshot."""
+    if receipt_snapshot_pinned is not True:
+        raise ValueError('FROZEN_WORK_RECEIPTS_SNAPSHOT_NOT_PINNED')
+    task_id = item.get('task_id') if isinstance(item, dict) else None
+    frozen_row = manifest_records.get(task_id) if isinstance(manifest_records, dict) else None
+    spec = frozen_row.get('spec') if isinstance(frozen_row, dict) else None
+    if (not isinstance(frozen_row, dict) or not isinstance(spec, dict)
+            or spec.get('id') != task_id or not isinstance(spec.get('evidence'), str)):
+        raise ValueError('SUPPLEMENTAL_FROZEN_TASK_BINDING_MISSING')
+    receipt = existing_receipts.get(task_id) if isinstance(existing_receipts, dict) else None
+    receipt_verified = is_verified(spec, receipt)
+    prior_state = frozen_row.get('prior_receipt_state')
+    prior_scope = frozen_row.get('prior_receipt_scope')
+    if receipt_verified and (
+            (prior_state is not None and prior_state != receipt.get('state'))
+            or (prior_scope is not None and prior_scope != receipt.get('scope'))
+            or frozen_row.get('original_acceptance_added') is not False):
+        raise ValueError('SUPPLEMENTAL_RECEIPT_FROZEN_ROW_MISMATCH')
+    if not receipt_verified and prior_state == 'verified':
+        raise ValueError('SUPPLEMENTAL_PRIOR_VERIFIED_RECEIPT_MISMATCH')
+
+    already_supplemental = any(
+        isinstance(row, dict) and row.get('task_id') == task_id for row in items
+    )
+    item.pop('already_in_receipt_count', None)
+    if receipt_verified or already_supplemental:
+        item['counting_status'] = (
+            'ALREADY_PRESENT_IN_RECEIPT_COUNT'
+            if receipt_verified else 'DUPLICATE_SUPPLEMENTAL_TASK_ID'
+        )
+        item['supplemental_count_increment'] = 0
+        item['historical_receipt_preserved'] = receipt_verified
+        evidence_refreshes.append(item)
+    else:
+        item['counting_status'] = 'SUPPLEMENTAL_295_ACCEPTANCE'
+        item['supplemental_count_increment'] = 1
+        items.append(item)
+
+
 def supplemental_acceptance(directory, existing_receipt_count, existing_receipts=None):
     """Read append-only sidecars; never mutate or add them to original receipts."""
     directory = Path(directory)
@@ -1551,6 +1652,18 @@ def supplemental_acceptance(directory, existing_receipt_count, existing_receipts
             'evidence_refreshes': [],
             'excluded': [{'path': str(manifest_path), 'reason': str(exc)}],
         }
+    receipt_snapshot_pinned = False
+    try:
+        receipt_snapshot_raw, receipt_snapshot = read_json_with_raw(
+            directory / 'work_receipts.json'
+        )
+        receipt_snapshot_pinned = (
+            git_blob_sha(receipt_snapshot_raw) == FROZEN_WORK_RECEIPTS_BLOB
+            and isinstance(receipt_snapshot, dict)
+            and receipt_snapshot.get('tasks') == existing_receipts
+        )
+    except (OSError, KeyError, TypeError, ValueError, AttributeError):
+        receipt_snapshot_pinned = False
     if not _path_entry_exists(addenda_dir):
         return {
             'schema': SUPPLEMENTAL_SCHEMA,
@@ -1606,6 +1719,8 @@ def supplemental_acceptance(directory, existing_receipt_count, existing_receipts
                 try:
                     if source_path != I49_POST_MERGE_PATH:
                         raise ValueError('I49_POST_MERGE_PATH_MISMATCH')
+                    if not receipt_snapshot_pinned:
+                        raise ValueError('FROZEN_WORK_RECEIPTS_SNAPSHOT_NOT_PINNED')
                     item = _validate_i49_post_merge_receipt(
                         document, manifest_rows, manifest_titles, manifest_records,
                         directory.parent, existing_receipts,
@@ -1627,10 +1742,15 @@ def supplemental_acceptance(directory, existing_receipt_count, existing_receipts
                 source_task_id = source_task.get('task_id') if isinstance(source_task, dict) else None
                 try:
                     item = _validate_source_sidecar(
-                        document, manifest_rows, manifest_titles, directory.parent,
+                        document, manifest_rows, manifest_titles, manifest_records,
+                        directory.parent, existing_receipts,
                         source_path, source_hash, git_blob_sha(raw)
                     )
-                    items.append(item)
+                    item['source_claim_not_applied_to_frozen_count'] = True
+                    _route_validated_supplemental_item(
+                        item, manifest_records, existing_receipts,
+                        receipt_snapshot_pinned, items, evidence_refreshes
+                    )
                 except (OSError, KeyError, TypeError, ValueError, AttributeError) as exc:
                     excluded.append({'path': source_path, 'task_id': source_task_id, 'reason': str(exc)})
                 continue
@@ -1672,7 +1792,10 @@ def supplemental_acceptance(directory, existing_receipt_count, existing_receipts
                         )
                         evidence_refreshes.append(item)
                     else:
-                        items.append(item)
+                        _route_validated_supplemental_item(
+                            item, manifest_records, existing_receipts,
+                            receipt_snapshot_pinned, items, evidence_refreshes
+                        )
                 except (KeyError, TypeError, ValueError, AttributeError) as exc:
                     excluded.append({'path': source_path, 'task_id': task_id, 'reason': str(exc)})
         except (OSError, KeyError, TypeError, ValueError, AttributeError) as exc:
