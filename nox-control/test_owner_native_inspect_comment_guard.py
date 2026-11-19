@@ -25,6 +25,7 @@ AUDIT_SHA = APPROVED_SOURCE_BY_ACTION["audit"]
 SOURCE_ATTEST_SHA = APPROVED_SOURCE_BY_ACTION["source_attest"]
 GPU_INVENTORY_SHA = APPROVED_SOURCE_BY_ACTION["gpu_inventory"]
 BROWSER_QA_SHA = APPROVED_SOURCE_BY_ACTION["browser_qa"]
+STALE_BROWSER_QA_SHA = "9ddb3730f8db1b7b598eaf58ab0aa5973485f6c6"  # helper missing at old pin
 OLD_UNAPPROVED_SHA = "80fc87881036462cfbe0aa27bb02b69daf8bfe6a"  # prior #437
 STALE_AUDIT_SHA = "22efccc957bc72d54899a701e6d09e5ef69b20c2"  # pre-fix #475
 UNAPPROVED_SHA = "a" * 40
@@ -55,7 +56,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
                          "3e399979e5b2e5ac16c1504542bd5cace989ddd3")
         self.assertEqual(GPU_INVENTORY_SHA,
                          "a95c7c6e4d52a35db9199e1aa2a5ad01752efc7e")
-        self.assertEqual(BROWSER_QA_SHA, "9ddb3730f8db1b7b598eaf58ab0aa5973485f6c6")
+        self.assertEqual(BROWSER_QA_SHA, "ccc9697a6a30a0e38e22303da822a449d41693a3")
         self.assertEqual(authorize_event(event_for(), REPOSITORY, "issue_comment"),
                          ("inspect", INSPECT_SHA))
         audit_body = f"/nox-maintain 60509551 {AUDIT_SHA} audit"
@@ -117,6 +118,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
             (GPU_INVENTORY_SHA, "source_attest"),
             (SOURCE_ATTEST_SHA, "gpu_inventory"),
             (UNAPPROVED_SHA, "browser_qa"),
+            (STALE_BROWSER_QA_SHA, "browser_qa"),
             (BROWSER_QA_SHA, "inspect"),
             (BROWSER_QA_SHA, "audit"),
             (BROWSER_QA_SHA, "source_attest"),
