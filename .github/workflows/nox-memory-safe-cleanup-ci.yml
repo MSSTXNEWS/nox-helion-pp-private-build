@@ -31,7 +31,15 @@ jobs:
           tree=ast.parse(s)
           assert "FILES['repair'] = 'nox-control/owner_memory_cleanup_entry.py'" in s
           assert "SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('owner_memory_governor.py', 'owner_storage_reclaim.py')" in s
-          assert "SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor.py', 'nox-control/owner_storage_reclaim.py')" in s
+          assert "SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor.py',)" in s
+          import importlib.util
+          spec=importlib.util.spec_from_file_location('nox_owner_operator',root/'owner_native_operator.py')
+          operator=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(operator)
+          bundle=operator.repair_bundle_paths('repair',operator.FILES['repair'],
+              ('nox-control/owner_storage_reclaim.py',))
+          assert len(bundle)==2 and {pathlib.Path(x).name for x in bundle}=={
+              'owner_memory_governor.py','owner_storage_reclaim.py'}
           assert "AUDIT_THEN_EXACT_EPHEMERAL_RECLAIM" in (root/'owner_memory_cleanup_entry.py').read_text()
           assert "NOX_MEMORY_GOVERNOR" in (root/'owner_memory_governor.py').read_text()
           PY
