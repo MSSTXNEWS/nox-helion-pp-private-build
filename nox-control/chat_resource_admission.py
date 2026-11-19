@@ -18,6 +18,7 @@ SHA = re.compile(r'^[a-f0-9]{64}$')
 MAX_CURRENT_AGE_SECONDS = 5
 MAX_BASELINE_AGE_SECONDS = 15
 MAX_CALIBRATION_AGE_SECONDS = 7 * 24 * 60 * 60
+MAX_RESERVATION_TTL_SECONDS = 30
 MIB = 1024 * 1024
 GIB = 1024 * MIB
 
@@ -62,12 +63,15 @@ def _validate_sample(sample, *, model, now: float, baseline: bool) -> dict:
         _hold('BASELINE_STALE' if baseline else 'CURRENT_STALE')
 
     identity = _mapping(sample.get('model'), 'MODEL_IDENTITY')
-    if set(identity) != {'model_id', 'weights_sha256', 'pid', 'start_ticks'}:
+    if set(identity) != {'model_id', 'weights_sha256', 'runtime_sha256', 'pid', 'start_ticks'}:
         _hold('MODEL_IDENTITY')
     if (not isinstance(identity.get('model_id'), str) or not 1 <= len(identity['model_id']) <= 200
             or not isinstance(identity.get('weights_sha256'), str)
             or SHA.fullmatch(identity['weights_sha256']) is None
+            or not isinstance(identity.get('runtime_sha256'), str)
+            or SHA.fullmatch(identity['runtime_sha256']) is None
             or identity.get('weights_sha256') != model.get('weights_sha256')
+            or identity.get('runtime_sha256') != model.get('runtime_sha256')
             or identity.get('model_id') != model.get('model_id')):
         _hold('MODEL_IDENTITY')
     pid = _integer(identity.get('pid'), 'MODEL_PID', minimum=2)
@@ -134,24 +138,51 @@ def evaluate_chat_admission(snapshot, *, policy, now: float) -> dict:
     Raw free bytes remain visible. Inactive file cache is only included in a
     projection; this function never asks the OS to reclaim or drop it. A low
     raw margin can pass only when a fresh, matching calibration plus current
-    PSI and per-process VRAM measurements show the request fits.
+    PSI and per-process VRAM measurements show the request fits. A caller may
+    act on an eligible result only while holding the matching exclusive
+    resource lease across this decision and inference; this pure function
+    validates the lease evidence but cannot acquire or enforce that lock.
     """
     snapshot = _mapping(snapshot, 'SNAPSHOT_MISSING')
-    if set(snapshot) != {'schema', 'instance_id', 'model', 'request', 'baseline', 'current', 'calibration'}:
+    if set(snapshot) != {'schema', 'instance_id', 'model', 'request', 'reservation',
+                         'baseline', 'current', 'calibration'}:
         _hold('SNAPSHOT_FIELDS')
     if snapshot.get('schema') != SCHEMA or snapshot.get('instance_id') != 60509551:
         _hold('SNAPSHOT_SCHEMA')
     now = _finite(now, 'CLOCK')
     model = _mapping(snapshot.get('model'), 'MODEL_IDENTITY')
-    if set(model) != {'model_id', 'weights_sha256'} or not isinstance(model.get('model_id'), str) or SHA.fullmatch(str(model.get('weights_sha256'))) is None:
+    if (set(model) != {'model_id', 'weights_sha256', 'runtime_sha256'}
+            or not isinstance(model.get('model_id'), str)
+            or SHA.fullmatch(str(model.get('weights_sha256'))) is None
+            or SHA.fullmatch(str(model.get('runtime_sha256'))) is None):
         _hold('MODEL_IDENTITY')
     request = _mapping(snapshot.get('request'), 'REQUEST_MISSING')
-    if set(request) != {'input_tokens', 'output_tokens'}:
+    if set(request) != {'input_tokens', 'output_tokens', 'reservation_lease_id'}:
         _hold('REQUEST_FIELDS')
     input_tokens = _integer(request['input_tokens'], 'REQUEST_INPUT_TOKENS', minimum=1)
     output_tokens = _integer(request['output_tokens'], 'REQUEST_OUTPUT_TOKENS', minimum=1)
+    reservation = _mapping(snapshot.get('reservation'), 'RESERVATION_MISSING')
+    if set(reservation) != {'lease_id', 'exclusive', 'acquired_at', 'expires_at', 'active_inferences'}:
+        _hold('RESERVATION_FIELDS')
+    lease_id = reservation.get('lease_id')
+    if not isinstance(lease_id, str) or not 1 <= len(lease_id) <= 128:
+        _hold('RESERVATION_IDENTITY')
+    if request.get('reservation_lease_id') != lease_id:
+        _hold('RESERVATION_IDENTITY')
+    if reservation.get('exclusive') is not True:
+        _hold('RESERVATION_NOT_EXCLUSIVE')
+    if _integer(reservation.get('active_inferences'), 'RESERVATION_ACTIVE_INFERENCES') != 0:
+        _hold('RESERVATION_BUSY')
+    acquired_at = _finite(reservation.get('acquired_at'), 'RESERVATION_TIME')
+    expires_at = _finite(reservation.get('expires_at'), 'RESERVATION_TIME')
+    if (acquired_at > now or expires_at <= now
+            or expires_at <= acquired_at
+            or expires_at - acquired_at > MAX_RESERVATION_TTL_SECONDS):
+        _hold('RESERVATION_EXPIRED_OR_UNBOUNDED')
     baseline = _validate_sample(snapshot.get('baseline'), model=model, now=now, baseline=True)
     current = _validate_sample(snapshot.get('current'), model=model, now=now, baseline=False)
+    if acquired_at > baseline['observed_at'] or current['observed_at'] > expires_at:
+        _hold('RESERVATION_SAMPLE_WINDOW')
     if current['observed_at'] < baseline['observed_at']:
         _hold('SAMPLE_ORDER')
     if current['model'] != baseline['model'] or current['gpus'].keys() != baseline['gpus'].keys():
@@ -160,7 +191,7 @@ def evaluate_chat_admission(snapshot, *, policy, now: float) -> dict:
         _hold('CGROUP_LIMIT_CHANGED')
 
     calibration = _mapping(snapshot.get('calibration'), 'CALIBRATION_MISSING')
-    required = {'schema', 'model_id', 'weights_sha256', 'measured_at', 'sample_count',
+    required = {'schema', 'model_id', 'weights_sha256', 'runtime_sha256', 'measured_at', 'sample_count',
                 'max_input_tokens', 'max_output_tokens', 'peak_cgroup_delta_bytes',
                 'peak_pss_delta_bytes', 'peak_gpu_delta_bytes_by_uuid'}
     if set(calibration) != required or calibration.get('schema') != CALIBRATION_SCHEMA:
@@ -170,6 +201,7 @@ def evaluate_chat_admission(snapshot, *, policy, now: float) -> dict:
         _hold('CALIBRATION_STALE')
     if (calibration.get('model_id') != model['model_id']
             or calibration.get('weights_sha256') != model['weights_sha256']
+            or calibration.get('runtime_sha256') != model['runtime_sha256']
             or type(calibration.get('sample_count')) is not int
             or calibration['sample_count'] < 3):
         _hold('CALIBRATION_IDENTITY_OR_COUNT')
@@ -196,8 +228,8 @@ def evaluate_chat_admission(snapshot, *, policy, now: float) -> dict:
     if set(policy) != {'minimum_projected_headroom_bytes', 'minimum_gpu_free_bytes',
                        'maximum_memory_psi_avg10', 'maximum_cpu_psi_avg10'}:
         _hold('POLICY_FIELDS')
-    projected_floor = _integer(policy['minimum_projected_headroom_bytes'], 'POLICY_HEADROOM')
-    gpu_floor = _integer(policy['minimum_gpu_free_bytes'], 'POLICY_GPU_FREE')
+    projected_floor = _integer(policy['minimum_projected_headroom_bytes'], 'POLICY_HEADROOM', minimum=1)
+    gpu_floor = _integer(policy['minimum_gpu_free_bytes'], 'POLICY_GPU_FREE', minimum=1)
     memory_psi_limit = _finite(policy['maximum_memory_psi_avg10'], 'POLICY_MEMORY_PSI')
     cpu_psi_limit = _finite(policy['maximum_cpu_psi_avg10'], 'POLICY_CPU_PSI')
     if current['cgroup']['memory_psi_some_avg10'] > memory_psi_limit or current['cgroup']['memory_psi_full_avg10'] > memory_psi_limit:
@@ -232,4 +264,5 @@ def evaluate_chat_admission(snapshot, *, policy, now: float) -> dict:
             },
             'memory_psi_some_avg10': cgroup['memory_psi_some_avg10'],
             'memory_psi_full_avg10': cgroup['memory_psi_full_avg10'],
+            'reservation_expires_at': expires_at,
             'gpu': gpu_results, 'memory_reclaim_invoked': False}
