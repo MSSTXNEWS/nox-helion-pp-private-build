@@ -266,7 +266,10 @@ async def _model_events(client, url, payload):
                             # must never reach the native tool dispatcher or S03.
                             if len(call[field])>160:
                                 raise StreamFailure('HOLD_TOOL_CALL_ID_SIZE')
-                    function=fragment.get('function') or {}
+                    function=fragment.get('function')
+                    # Only missing/null is a legal id-only continuation. Reject
+                    # falsey non-objects instead of silently treating them as {}.
+                    if function is None:function={}
                     if not isinstance(function,dict):raise ValueError('function')
                     for field in ('name','arguments'):
                         value=function.get(field)
