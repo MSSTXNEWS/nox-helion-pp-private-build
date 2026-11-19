@@ -1,0 +1,71 @@
+name: NOX Reflex bootfix source-only compatibility gate
+on:
+  push:
+    branches: [repair/nox-reflex-bootfix-20261119]
+    paths:
+      - 'nox-control/systemic_relay_20261118/runtime/**'
+      - 'nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py'
+      - 'nox-control/owner_native_operator.py'
+      - '.github/workflows/nox-reflex-bootfix-source-ci.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Exact source syntax and existing reflex tests
+        run: |
+          set -euo pipefail
+          python -B -m py_compile nox-control/systemic_relay_20261118/runtime/owner_subagent_instruction_truth.py nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py nox-control/owner_native_operator.py
+          python -B -m unittest discover -s nox-control/systemic_relay_20261118 -p test_owner_reflex_cycle.py -v
+      - name: Independently validate source-pin identity and owner bundle
+        run: |
+          set -euo pipefail
+          python -B - <<'PY'
+          import base64, hashlib, importlib.util, pathlib, types
+          root=pathlib.Path('nox-control')
+          directory=root/'systemic_relay_20261118'
+          runtime=directory/'runtime'
+          read=lambda p:p.read_bytes()
+          callback=read(runtime/'owner_subagent_dispatcher.py')
+          digest=lambda data:hashlib.sha256(data).hexdigest()
+          assert digest(callback)=='eac3ce9e2d8c862d1a7917ec447ea72e84454b7775a4260ad1e72e59de96fe11'
+          spec=importlib.util.spec_from_file_location('truth_fixture',runtime/'owner_subagent_instruction_truth.py')
+          truth=importlib.util.module_from_spec(spec);spec.loader.exec_module(truth)
+          assert truth.CALLBACK_SHA==digest(callback)
+          cb=types.ModuleType('owner_subagent_dispatcher')
+          cb.__file__='/root/nox/scripts/owner_subagent_dispatcher.py'
+          exec("def model_instruction(policy,role):\n return ('Новая главная модель — DeepSeek; Qwen3.5-9B — отдельный помощник. '\n         'Старые35B шаги не являются обучением новых весов. '+policy+role)\n",cb.__dict__)
+          truth.bind(cb,lambda _:callback)
+          for role in ('runtime','memory','weights'):
+              msg=cb.model_instruction('1C: runtime\n2B: memory\n2D: weights\n',role)
+              assert truth.NEW in msg and truth.OLD not in msg
+          entry=directory/'owner_native_reflex_successor_entry.py'
+          spec=importlib.util.spec_from_file_location('reflex_entry',entry)
+          inst=importlib.util.module_from_spec(spec);spec.loader.exec_module(inst)
+          assets={
+             'owner_systemic_refill.py':read(runtime/'owner_systemic_refill.py'),
+             'owner_subagent_dispatcher.py':callback,
+             'owner_subagent_instruction_truth.py':read(runtime/'owner_subagent_instruction_truth.py'),
+             'continuous_transaction_helpers.py':read(root/'continuous_executor_20261118/assets/continuous_transaction_helpers.py'),
+          }
+          inst.BUNDLE={name:base64.b64encode(content).decode() for name,content in assets.items()}
+          helper,changes=inst.decode()
+          assert len(changes)==3 and set(changes)=={inst.REFILL,inst.DIRECTOR,inst.TRUTH}
+          assert inst.OLD[inst.CONFIG]=='30effffe3c8a20c0df4dee936beb2f8183347fb2a5fd51d4543dfbde50efb919'
+          assert digest(assets['continuous_transaction_helpers.py'])==inst.HELPER_SHA
+          op_spec=importlib.util.spec_from_file_location('owner_operator',root/'owner_native_operator.py')
+          op=importlib.util.module_from_spec(op_spec);op_spec.loader.exec_module(op)
+          assert op.FILES['repair']==str(entry)
+          paths=op.repair_bundle_paths('repair',str(entry),())
+          assert {p.split('/')[-1] for p in paths}==set(assets)
+          assert 'nox-control/systemic_relay_20261118/runtime/owner_subagent_instruction_truth.py' in paths
+          print('NOX_REFLEX_TRUTH_BIND_FIX=PASS')
+          print('NOX_REFLEX_OWNER_REPAIR_BUNDLE=PASS')
+          print('NOX_REFLEX_SOURCE_ONLY=TRUE')
+          PY
