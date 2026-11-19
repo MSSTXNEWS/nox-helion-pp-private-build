@@ -35,6 +35,12 @@ PLANNER_MEMORY_TRACE_SHAS = frozenset((
 ))
 MAX_SOURCE_FILE = 2 * 1024 * 1024
 MAX_SOURCE_TOTAL = 16 * 1024 * 1024
+MAX_PROJECT_LEDGER_FILE = 16 * 1024 * 1024
+MAX_PROJECT_LEDGER_SECONDS = 12.0
+PROJECT_LEDGER_NAMES = (
+    'project_work_tasks.json', 'project_work_ideas.json',
+    'project_work_receipts_source.json', 'project_routing_4q.json',
+)
 
 
 def approved_relative(value):
@@ -98,6 +104,69 @@ def safe_read(path, limit):
             os.close(fd)
     finally:
         os.close(parent)
+
+def _file_identity(info):
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+def hash_regular_file(path, limit, deadline):
+    """Hash one regular file through a no-follow path walk, exposing metadata only."""
+    path = Path(path)
+    if not path.is_absolute() or path.name in ('', '.', '..'):
+        raise ValueError('HOLD_LEDGER_PATH')
+    parent = os.open('/', os.O_RDONLY | os.O_DIRECTORY)
+    fd = None
+    try:
+        for part in path.parts[1:-1]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+            os.close(parent)
+            parent = child
+        fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size < 0 or before.st_size > limit:
+            raise ValueError('HOLD_LEDGER_TYPE_OR_SIZE')
+        digest = hashlib.sha256()
+        total = 0
+        while True:
+            if time.monotonic() > deadline:
+                raise ValueError('HOLD_LEDGER_TIME_BOUND')
+            chunk = os.read(fd, min(65536, limit + 1 - total))
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > limit:
+                raise ValueError('HOLD_LEDGER_TYPE_OR_SIZE')
+            digest.update(chunk)
+        after = os.fstat(fd)
+        if total != before.st_size or _file_identity(before) != _file_identity(after):
+            raise ValueError('HOLD_LEDGER_CHANGED')
+        return {
+            'sha256': digest.hexdigest(), 'size_bytes': total,
+            'mtime_ns': after.st_mtime_ns, 'device': after.st_dev,
+            'inode': after.st_ino,
+        }
+    finally:
+        if fd is not None:
+            os.close(fd)
+        os.close(parent)
+
+def project_ledger_hash_snapshot(root=ROOT, names=PROJECT_LEDGER_NAMES,
+                                 limit=MAX_PROJECT_LEDGER_FILE,
+                                 max_seconds=MAX_PROJECT_LEDGER_SECONDS):
+    """Return an all-or-HOLD, two-pass hash-only snapshot of canonical ledgers."""
+    if tuple(names) != PROJECT_LEDGER_NAMES or limit <= 0 or max_seconds <= 0:
+        raise ValueError('HOLD_LEDGER_SCOPE')
+    root = Path(root)
+    base = root / 'state/dispatcher'
+    deadline = time.monotonic() + max_seconds
+    first = {}
+    for name in PROJECT_LEDGER_NAMES:
+        first[name] = hash_regular_file(base / name, limit, deadline)
+    second = {}
+    for name in PROJECT_LEDGER_NAMES:
+        second[name] = hash_regular_file(base / name, limit, deadline)
+    if first != second:
+        raise ValueError('HOLD_LEDGER_SNAPSHOT_CHANGED')
+    return second
 
 def obj(path, limit=2000000):
     raw, info = safe_read(path, limit)
@@ -380,34 +449,22 @@ PROJECT_PINS = {
 }
 
 def project_summary():
-    docs={}
-    for name,pin in PROJECT_PINS.items():
-        path=ROOT/'state/dispatcher'/name
-        try:
-            data,raw,_=obj(path,16*1024*1024)
-            docs[name]=data
-            rows=data.get('ideas') if name=='project_work_ideas.json' else data.get('tasks')
-            emit('PROJECT_FILE',{'path':str(path),'bytes':len(raw),
-                'sha256':hashlib.sha256(raw).hexdigest(),'matches_expected_source':hashlib.sha256(raw).hexdigest()==pin,
-                'row_count':len(rows) if isinstance(rows,(dict,list)) else None})
-        except (OSError,ValueError,TypeError) as exc:
-            emit('PROJECT_FILE',{'path':str(path),'state':'UNAVAILABLE','error':type(exc).__name__})
-    if len(docs)==4:
-        try:
-            original=[row['id'] for row in docs['project_work_tasks.json']['tasks']]
-            original += [row['id'] for row in docs['project_work_ideas.json']['ideas']]
-            route=docs['project_routing_4q.json'];routed=[row['task_id'] for row in route['tasks']]
-            queues={}
-            for row in route['tasks']:
-                q=identifier(row.get('queue_id')) or 'UNKNOWN'
-                queues[q]=queues.get(q,0)+1
-            emit('PROJECT_COVERAGE',{'original_count':len(original),'original_unique':len(set(original)),
-                'routed_count':len(routed),'routed_unique':len(set(routed)),
-                'missing_count':len(set(original)-set(routed)), 'extra_count':len(set(routed)-set(original)),
-                'queues':queues,'dispatch_cap':route.get('dispatch_cap'),
-                'source_scope':'MANIFEST_HANDOFF_ONLY_NOT_ORIGINAL_TASK_ACCEPTANCE'})
-        except (ValueError,TypeError,KeyError):
-            emit('PROJECT_COVERAGE',{'state':'UNKNOWN_SCHEMA'})
+    try:
+        snapshot = project_ledger_hash_snapshot()
+        emit('PROJECT_LEDGER_HASH_SNAPSHOT', {
+            'state': 'STABLE',
+            'snapshot_passes': 2,
+            'files': [{
+                'name': name, **snapshot[name],
+                'matches_expected_source': snapshot[name]['sha256'] == PROJECT_PINS[name],
+            } for name in PROJECT_LEDGER_NAMES],
+            'content_included': False,
+        })
+    except (OSError, ValueError, TypeError) as exc:
+        emit('PROJECT_LEDGER_HASH_SNAPSHOT', {
+            'state': 'HOLD', 'reason': str(exc) if str(exc).startswith('HOLD_') else type(exc).__name__,
+            'content_included': False,
+        })
 
 def old_claim_comparison():
     backup=ROOT/'state/dispatcher/four_queue_rollback'/INSTALL_REQUEST
