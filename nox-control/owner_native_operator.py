@@ -931,6 +931,12 @@ def _gpu_inventory_remote_failure(stdout,stderr,remote_exit_code):
         return _gpu_inventory_diagnostic(
             'REMOTE_HELPER','INVALID','REMOTE_EXIT_INVALID',
             'HOLD_GPU_INVENTORY_REMOTE_EXIT_INVALID')
+    if remote_exit_code==255:
+        # OpenSSH reserves 255 for client/transport failures; partial remote
+        # stdout is untrusted and must never override this classification.
+        return _gpu_inventory_diagnostic(
+            'SSH',remote_exit_code,_gpu_inventory_ssh_failure_class(stderr),
+            'HOLD_GPU_INVENTORY_SSH_FAILURE')
     if not isinstance(stdout,str):
         return _gpu_inventory_diagnostic(
             'REMOTE_HELPER',remote_exit_code,'REMOTE_OUTPUT_INVALID',
@@ -963,10 +969,6 @@ def _gpu_inventory_remote_failure(stdout,stderr,remote_exit_code):
             helper_hold=helper_hold)
     if remote_exit_code==0:
         return None
-    if remote_exit_code==255:
-        return _gpu_inventory_diagnostic(
-            'SSH',remote_exit_code,_gpu_inventory_ssh_failure_class(stderr),
-            'HOLD_GPU_INVENTORY_SSH_FAILURE')
     return _gpu_inventory_diagnostic(
         'REMOTE_HELPER',remote_exit_code,'REMOTE_RESULT_MISSING',
         'HOLD_GPU_INVENTORY_RESULT_MISSING')
