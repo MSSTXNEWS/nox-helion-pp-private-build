@@ -8,6 +8,7 @@ on:
       - "nox_runpod/teacher_mesh/v38/**"
       - "nox_runpod/teacher_mesh/v112/native_v29_full_bridge.py"
       - "nox_runpod/teacher_mesh/v112/tests/test_native_bridge.py"
+      - "nox_runpod/teacher_mesh/v112/tests/test_v122_owner_ui_contract.py"
       - ".github/workflows/nox-v38-1-source-ci.yml"
 permissions:
   contents: read
