@@ -43,7 +43,7 @@ def tick(m=None, state=None, deferred=None, source=None, rows=None):
 
 class NativeReflexTests(unittest.TestCase):
     def test_memory_projection_distinguishes_file_cache_and_shmem(self):
-        budget = {'current_bytes': 193*1024**3, 'max_bytes':194*1024**3,
+        budget = {'current_bytes': 191*1024**3, 'max_bytes':194*1024**3,
                   'file_bytes':188*1024**3, 'shmem_bytes':75*1024**3,
                   'inactive_file_bytes':105*1024**3,
                   'memory_psi_some_avg10':0, 'memory_psi_full_avg10':0}
@@ -66,8 +66,100 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(result['state'],'PRESSURE_CRITICAL')
         self.assertFalse(result['native_bounded_cpu_eligible'])
         self.assertFalse(result['auto_reclaim'])
+        # Contradictory upstream eligible=True must not override red PSI/RAM.
+        contradictory = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget,
+             'bounded_cpu_decision': {**decision, 'eligible': True}})
+        self.assertEqual(contradictory['state'], 'PRESSURE_CRITICAL')
+        self.assertFalse(contradictory['native_bounded_cpu_eligible'])
+        self.assertEqual(contradictory['next_action'], 'RESPECT_EXISTING_RESOURCE_HOLD')
+        # Even noncritical elevated pressure must yield to foreground chat.
+        # A contradictory upstream eligible=True cannot be promoted to an
+        # advisory background-work approval.
+        for elevated_budget, elevated_ratio in (
+                ({**budget, 'memory_psi_some_avg10': 3,
+                  'memory_psi_full_avg10': .3}, .5),
+                ({**budget, 'memory_psi_some_avg10': 0,
+                  'memory_psi_full_avg10': 0}, .86)):
+            with self.subTest(elevated_ratio=elevated_ratio):
+                elevated = refill.memory_governor_projection({
+                    'bounded_cpu_budget': elevated_budget,
+                    'bounded_cpu_decision': {
+                        'projected_memory_ratio': elevated_ratio,
+                        'eligible': True}})
+                self.assertEqual(elevated['state'], 'PRESSURE_ELEVATED')
+                self.assertFalse(elevated['native_bounded_cpu_eligible'])
+                self.assertEqual(elevated['next_action'],
+                                 'RESPECT_EXISTING_RESOURCE_HOLD')
         self.assertEqual(refill.memory_governor_projection({})['state'],
                          'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE')
+
+    def test_memory_projection_inconsistent_cgroup_counters_fail_closed(self):
+        # Telemetry may be partial or contradictory; never label it CACHE_HEALTHY.
+        base = {'current_bytes': 1000, 'max_bytes': 2000,
+                'file_bytes': 800, 'inactive_file_bytes': 500,
+                'shmem_bytes': 200, 'memory_psi_some_avg10': 0,
+                'memory_psi_full_avg10': 0}
+        decision = {'projected_memory_ratio': .4, 'eligible': True}
+        invalid = (
+            {'file_bytes': None},
+            {'file_bytes': '800'},
+            {'file_bytes': -1},
+            {'file_bytes': 1001},
+            {'inactive_file_bytes': 801},
+            {'shmem_bytes': 801},
+            {'current_bytes': 2001},
+            {'current_bytes': 1000.5},  # cgroup byte counters are integers
+            {'file_bytes': 800.0},      # even integral floats are untrusted
+            {'inactive_file_bytes': 500.5},
+            {'max_bytes': 10**400},  # uint64 overflow must HOLD, not throw
+            {'memory_psi_some_avg10': 10**400},
+            {'memory_psi_some_avg10': 100.01},  # PSI percentages <= 100
+            {'memory_psi_full_avg10': 100.01},
+            {'memory_psi_full_avg10': 0.05},  # 'full' cannot exceed 'some'=0
+        )
+        for update in invalid:
+            with self.subTest(invalid=update):
+                budget = {**base, **update}
+                result = refill.memory_governor_projection(
+                    {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+                self.assertEqual(result['state'], 'RESOURCE_METADATA_HOLD')
+                self.assertFalse(result['auto_reclaim'])
+                self.assertNotIn('native_bounded_cpu_eligible', result)
+
+    def test_raw_chat_buffer_below_512mib_never_reports_cache_healthy(self):
+        mib = 1024 ** 2
+        budget = {'current_bytes': 194*1024**3 - 16*mib,
+                  'max_bytes': 194*1024**3,
+                  'file_bytes': 188*1024**3,
+                  'inactive_file_bytes': 105*1024**3,
+                  'shmem_bytes': 75*1024**3,
+                  'memory_psi_some_avg10': 0,
+                  'memory_psi_full_avg10': 0}
+        decision = {'projected_memory_ratio': .462, 'eligible': True}
+        result = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+        self.assertEqual(result['state'], 'RAW_CGROUP_CHAT_BUFFER_HOLD')
+        self.assertFalse(result['native_bounded_cpu_eligible'])
+        self.assertEqual(result['next_action'], 'RESPECT_EXISTING_RESOURCE_HOLD')
+        self.assertFalse(result['auto_reclaim'])
+        # 512 MiB protects chat response, not owner 2 GiB task-admission floor.
+        budget['current_bytes'] = budget['max_bytes'] - 512*mib
+        below_owner_floor = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+        self.assertEqual(below_owner_floor['state'], 'RAW_CGROUP_ADMISSION_HEADROOM_HOLD')
+        self.assertFalse(below_owner_floor['native_bounded_cpu_eligible'])
+        self.assertEqual(below_owner_floor['next_action'], 'RESPECT_EXISTING_RESOURCE_HOLD')
+        budget['current_bytes'] = budget['max_bytes'] - 2*1024**3 + 1
+        one_byte_short = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+        self.assertEqual(one_byte_short['state'], 'RAW_CGROUP_ADMISSION_HEADROOM_HOLD')
+        self.assertFalse(one_byte_short['native_bounded_cpu_eligible'])
+        budget['current_bytes'] = budget['max_bytes'] - 2*1024**3
+        boundary = refill.memory_governor_projection(
+            {'bounded_cpu_budget': budget, 'bounded_cpu_decision': decision})
+        self.assertEqual(boundary['state'], 'CACHE_HEALTHY')
+        self.assertTrue(boundary['native_bounded_cpu_eligible'])
 
     def test_exhaustion_is_not_fake_job_or_approval(self):
         result = tick()
@@ -131,6 +223,181 @@ class NativeReflexTests(unittest.TestCase):
         problems=[{'mission_id':x['mission_id'],
                    'reason':'SOURCE_PIN_DRIFT_REVIEW_REQUIRED'} for x in m['missions']]
         self.assertEqual(tick(m=m,deferred=problems)['staged_count'],3)
+
+    def test_native_ready_and_unknown_status_do_not_fake_refill(self):
+        ready = tick(state={'native-ready': {
+            'handler': 'owner_native_project_work', 'status': 'ready'}})
+        self.assertEqual(ready['observed_task_counts']['ready'], 1)
+        self.assertEqual(ready['observed_task_counts']['unknown'], 0)
+        self.assertEqual(ready['state'], 'EXECUTION_OR_ADMISSION_IN_PROGRESS')
+        self.assertEqual(ready['next_action'], 'WAIT_EXISTING_NATIVE_WORK')
+
+        unknown = tick(state={'native-unknown': {
+            'handler': 'owner_native_project_work', 'status': 'unexpected'}})
+        self.assertEqual(unknown['observed_task_counts']['unknown'], 1)
+        self.assertEqual(unknown['state'], 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+        self.assertEqual(unknown['next_action'], 'INSPECT_UNKNOWN_NATIVE_TASK_STATUS')
+        self.assertEqual(unknown['new_native_jobs'], 0)
+
+        # Exercise the actual select_next publisher boundary, not only the
+        # read-only monitor. Unknown native work must not mint a new refill
+        # request even if the supplied capacity advertises a free slot.
+        reviewed = {'schema': refill.SCHEMA, 'revision': 1,
+            'review_origin': 'OWNER_REVIEWED',
+            'acceptance_scope': 'SOURCE_PATCH_TESTED',
+            'original_task_accepted': False, 'previous_manifest_sha256': None,
+            'registry': {'total_original_ids': 295,
+                'source_registry_sha256': {
+                    k: PIN for k in ('tasks', 'ideas', 'receipts', 'routing')},
+                'parents': {PARENT: {
+                    'spec_sha256': PIN, 'queue_id': 'Q1_RUNTIME_CHAT',
+                    'required_evidence': 'source'}}},
+            'missions': [{
+                'mission_id': 'unknown_native_guard', 'revision': 1,
+                'parent_task_id': PARENT, 'root_id': ROOT,
+                'priority': 'P0', 'queue_id': 'Q1_RUNTIME_CHAT',
+                'repeat_policy': 'ONCE_PER_REVIEWED_REVISION',
+                'title': 'Preserve native queue integrity',
+                'instruction': 'Inspect unknown native state before dispatch.',
+                'context': [{'path': 'code/cache.py', 'sha256': PIN},
+                            {'path': 'test_cache.py', 'sha256': PIN}],
+                'editable_paths': ['code/cache.py'],
+                'verification': {'kind': 'python_unittest',
+                                 'modules': ['test_cache'],
+                                 'min_tests': 1, 'timeout_sec': 60},
+                'budget': {'lane': 'model', 'max_model_turns': 24,
+                           'cpu_seconds': 60, 'max_searches': 0,
+                           'max_output_bytes': 8192},
+                'defect': {'observed_source_sha256': PIN,
+                           'finding': 'Unknown native state',
+                           'expected_delta': 'No concurrent refill',
+                           'verification_limit': 'Source regression'}}]}
+        result = refill.select_next(
+            reviewed,
+            {'native-unknown': {
+                'handler': 'owner_native_project_work',
+                'status': 'unexpected'}},
+            {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+            {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+        self.assertEqual(result['state'], 'WAIT_EXISTING_WORK')
+        self.assertEqual(result['rows'], [])
+        self.assertIsNone(result['refill_request'])
+        self.assertEqual(result['self_monitor']['state'],
+                         'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+        self.assertEqual(result['deferred'][0]['reason'],
+                         'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+
+        # Non-string status is untrusted telemetry; even an unhashable dict
+        # must return a HOLD rather than crash the read-only refill cycle.
+        for malformed in ({'bad': 'state'}, ['running'], None):
+            with self.subTest(malformed=malformed):
+                native = {'native-unknown': {
+                    'handler': 'owner_native_project_work',
+                    'status': malformed,
+                    'systemic_relay': {'binding': {
+                        'mission_id': 'unknown_native_guard',
+                        'mission_revision': 1, 'root_id': ROOT,
+                        'editable_paths': ['code/cache.py']}}}}
+                status = tick(state=native)
+                self.assertEqual(status['state'],
+                                 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+                guarded = refill.select_next(
+                    reviewed, native,
+                    {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+                    {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+                self.assertEqual(guarded['state'], 'WAIT_EXISTING_WORK')
+                self.assertEqual(guarded['rows'], [])
+                self.assertIsNone(guarded['refill_request'])
+
+        # A native-bound record with an explicit malformed/unhashable
+        # handler cannot establish that the claimed worker is idle. Legacy
+        # rows without a native binding remain outside native counts.
+        for malformed_handler in ({'bad': 'handler'},
+                                  ['owner_native_project_work'], None):
+            with self.subTest(malformed_handler=malformed_handler):
+                malformed_native = {'native-bad-handler': {
+                    'handler': malformed_handler, 'status': 'ready',
+                    'systemic_relay': {'binding': {
+                        'root_id': ROOT, 'editable_paths': ['code/cache.py']}}}}
+                observed = tick(state=malformed_native)
+                self.assertEqual(observed['state'],
+                                 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+                self.assertEqual(observed['observed_task_counts']['unknown'], 1)
+                self.assertEqual(observed['new_native_jobs'], 0)
+                guarded = refill.select_next(
+                    reviewed, malformed_native,
+                    {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+                    {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+                self.assertEqual(guarded['state'], 'WAIT_EXISTING_WORK')
+                self.assertEqual(guarded['rows'], [])
+                self.assertIsNone(guarded['refill_request'])
+                self.assertEqual(guarded['deferred'][0]['reason'],
+                                 'NATIVE_TASK_STATUS_UNKNOWN_HOLD')
+        # Corrupt legacy catalog rows without a native binding do not become
+        # phantom native work and must not cause a TypeError on set membership.
+        legacy = tick(state={'legacy-bad': {
+            'handler': ['legacy'], 'status': 'running'}})
+        self.assertEqual(legacy['state'], 'REFILL_REQUIRED')
+        self.assertEqual(legacy['native_records_observed'], 0)
+        self.assertEqual(legacy['observed_task_counts']['unknown'], 0)
+
+        # Malformed dependency records must not crash the refill producer or
+        # turn a prior terminal claim into a new ready mission.
+        dependent_reviewed = {**reviewed, 'missions': [
+            {**reviewed['missions'][0], 'dependencies': ['native-dependency']}]}
+        for dependency_snapshot in (
+                {}, {'native-dependency': None},
+                {'native-dependency': 'done'},
+                {'native-dependency': ['done']},
+                {'native-dependency': {'status': 'running'}}):
+            with self.subTest(dependency_snapshot=dependency_snapshot):
+                result = refill.select_next(
+                    dependent_reviewed, dependency_snapshot,
+                    {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+                    {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+                self.assertEqual(result['state'], 'WAIT_EXISTING_WORK')
+                self.assertEqual(result['rows'], [])
+                self.assertIsNone(result['refill_request'])
+                self.assertEqual(result['deferred'][0]['reason'],
+                                 'DEPENDENCY_NOT_VERIFIED')
+        # A genuinely completed dict row still permits the normal reviewed
+        # admission path; this fix must not silently lock the queue forever.
+        done = refill.select_next(
+            dependent_reviewed, {'native-dependency': {'status': 'done'}},
+            {ROOT: {'code/cache.py': PIN, 'test_cache.py': PIN}},
+            {'slots_available': 1, 'callback_sha256': PIN, 'now': 1})
+        self.assertEqual(done['state'], 'REVIEWED_BATCH_READY')
+        self.assertEqual(len(done['rows']), 1)
+
+    def test_legacy_global_running_is_not_native_worker_claim(self):
+        # D3 owner readback #44526232282 observed a legacy global queue
+        # RUNNING transition, while all three physical native workers were
+        # idle. Global rows are not native READY/RUNNING or proof of admission.
+        legacy = {
+            'global-running': {'handler': 'legacy_queue_worker',
+                               'status': 'running'},
+            'global-pending': {'handler': 'legacy_queue_worker',
+                               'status': 'pending'},
+            'global-done': {'handler': 'legacy_queue_worker',
+                            'status': 'done'},
+        }
+        legacy_only = tick(state=legacy)
+        self.assertEqual(legacy_only['state'], 'REFILL_REQUIRED')
+        self.assertEqual(legacy_only['native_records_observed'], 0)
+        self.assertEqual(legacy_only['legacy_or_non_native_records_ignored'], 3)
+        self.assertEqual(legacy_only['observed_task_counts']['running'], 0)
+        self.assertEqual(legacy_only['observed_task_counts']['pending'], 0)
+        self.assertEqual(legacy_only['new_native_jobs'], 0)
+        self.assertFalse(legacy_only['automatic_owner_approval'])
+        # The same global rows must not conceal a real, native READY claim.
+        native = tick(state={**legacy, 'native-ready': {
+            'handler': 'owner_native_project_work', 'status': 'ready'}})
+        self.assertEqual(native['state'], 'EXECUTION_OR_ADMISSION_IN_PROGRESS')
+        self.assertEqual(native['native_records_observed'], 1)
+        self.assertEqual(native['legacy_or_non_native_records_ignored'], 3)
+        self.assertEqual(native['observed_task_counts']['ready'], 1)
+        self.assertEqual(native['next_action'], 'WAIT_EXISTING_NATIVE_WORK')
+        self.assertEqual(native['new_native_jobs'], 0)
 
     def test_active_jobs_do_not_report_idle(self):
         state={'a': {'handler':'owner_native_project_work','status':'running'},

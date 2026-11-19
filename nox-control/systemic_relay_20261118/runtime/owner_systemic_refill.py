@@ -19,7 +19,9 @@ SHA = re.compile(r'[0-9a-f]{64}\Z')
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z')
 MISSION = re.compile(r'[a-z][a-z0-9_]{0,39}\Z')
 QUEUES = {'Q1_RUNTIME_CHAT','Q2_MEMORY_KNOWLEDGE','Q3_TRAINING_WEIGHTS','Q4_INTEGRATION_ACCEPTANCE'}
-ACTIVE = {'pending','running','wait','retry','admitted','prepared'}
+ACTIVE = {'pending','running','wait','retry','admitted','prepared','ready'}
+NATIVE_HANDLERS = {'owner_native_subagent_review', 'owner_native_typed_leaf',
+                   'owner_native_project_work'}
 TERMINAL = {'done','verified','blocked','failed','cancelled'}
 PUBLIC_REASONS = {'MODEL_SLOT_BUSY','PLANNER_REPEATED_ACTION_NO_PROGRESS',
     'PLANNER_NO_CHANGES','PLANNER_BUDGET_EXHAUSTED','HOLD_PROJECT_SOURCE_DRIFT',
@@ -196,7 +198,8 @@ def _outcomes(tasks):
         row = {'task_id':task_id,'mission_id':binding['mission_id'],
                'mission_revision':binding.get('mission_revision'),
                'input_sha256':binding.get('input_sha256'),
-               'status':task.get('status') if task.get('status') in ACTIVE|TERMINAL else 'unknown',
+               'status':(task.get('status') if type(task.get('status')) is str
+                         and task['status'] in ACTIVE|TERMINAL else 'unknown'),
                'evidence_scope':'QUEUE_STATE_REQUIRES_RECEIPT_AND_POSTIMAGE_READBACK',
                'original_task_accepted':False}
         # Preserve only recognized scalar evidence. A result body can contain private text.
@@ -317,26 +320,54 @@ def memory_governor_projection(capacity):
                 'state': 'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE',
                 'auto_reclaim': False}
     fields = (budget.get('current_bytes'), budget.get('max_bytes'),
-              budget.get('inactive_file_bytes'), budget.get('shmem_bytes'),
-              decision.get('projected_memory_ratio'),
+              budget.get('file_bytes'), budget.get('inactive_file_bytes'),
+              budget.get('shmem_bytes'), decision.get('projected_memory_ratio'),
               budget.get('memory_psi_some_avg10'),
               budget.get('memory_psi_full_avg10'))
-    if (any(type(v) not in (int, float) or not math.isfinite(v) or v < 0
+    # cgroup memory.stat and memory.current/max are byte counters, never
+    # floating-point measurements. Fractional/coerced counters are not a
+    # trustworthy basis for a green background-work recommendation.
+    if (any(type(v) is not int for v in fields[:5])
+            or any(type(v) not in (int, float) or v < 0
+            or v > (1 << 63) - 1 or not math.isfinite(v)
             for v in fields)
             or not 0 < budget['max_bytes']
-            or budget['shmem_bytes'] > budget.get('file_bytes', -1)):
+            or budget['current_bytes'] > budget['max_bytes']
+            or budget['file_bytes'] > budget['current_bytes']
+            or budget['inactive_file_bytes'] > budget['file_bytes']
+            or budget['shmem_bytes'] > budget['file_bytes']
+            # PSI avg10 values are percentages; 'full' stalls are a subset
+            # of 'some'. Contradictory metrics cannot support green advice.
+            or any(v > 100 for v in fields[6:])
+            or budget['memory_psi_full_avg10'] > budget['memory_psi_some_avg10']):
         return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
                 'state': 'RESOURCE_METADATA_HOLD',
                 'auto_reclaim': False}
     raw_ratio = budget['current_bytes'] / budget['max_bytes']
+    raw_headroom = budget['max_bytes'] - budget['current_bytes']
+    # Reclaim-aware estimates can look healthy with almost no raw cgroup RAM.
+    # Preserve the 512 MiB chat buffer, but do not recommend background work
+    # below the owner-required 2 GiB raw resource fence. Observation only.
+    chat_buffer_available = raw_headroom >= 512 * 1024 ** 2
+    owner_raw_admission_available = raw_headroom >= 2 * 1024 ** 3
     psi_some = budget['memory_psi_some_avg10']
     psi_full = budget['memory_psi_full_avg10']
-    if psi_full >= 2 or psi_some >= 10 or decision['projected_memory_ratio'] >= .94:
+    if not chat_buffer_available:
+        condition = 'RAW_CGROUP_CHAT_BUFFER_HOLD'
+    elif not owner_raw_admission_available:
+        condition = 'RAW_CGROUP_ADMISSION_HEADROOM_HOLD'
+    elif psi_full >= 2 or psi_some >= 10 or decision['projected_memory_ratio'] >= .94:
         condition = 'PRESSURE_CRITICAL'
     elif psi_full >= .2 or psi_some >= 2 or decision['projected_memory_ratio'] >= .85:
         condition = 'PRESSURE_ELEVATED'
     else:
         condition = 'CACHE_HEALTHY'
+    # This is read-only advice, not a new owner admission. Preserve chat
+    # priority: any elevated PSI or projected-memory pressure means the
+    # upstream eligible flag alone cannot justify background-work advice.
+    observed_eligible = (decision.get('eligible') is True
+                         and chat_buffer_available and owner_raw_admission_available
+                         and condition == 'CACHE_HEALTHY')
     return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
             'state': condition,
             'raw_cgroup_memory_ratio': raw_ratio,
@@ -344,12 +375,30 @@ def memory_governor_projection(capacity):
             'memory_psi_some_avg10': psi_some, 'memory_psi_full_avg10': psi_full,
             'inactive_file_bytes': budget['inactive_file_bytes'],
             'shmem_protected_bytes': budget['shmem_bytes'],
-            'native_bounded_cpu_eligible': decision.get('eligible') is True,
-            'next_action': ('REUSE_EXISTING_OWNER_ADMISSION' if decision.get('eligible') is True
-                            else 'RESPECT_EXISTING_RESOURCE_HOLD'),
+            'native_bounded_cpu_eligible': observed_eligible,
+            'next_action': ('REUSE_EXISTING_OWNER_ADMISSION'
+                            if observed_eligible else 'RESPECT_EXISTING_RESOURCE_HOLD'),
             'safe_disk_cleanup': 'OWNER_SHA_PINNED_AUDIT_AND_EXACT_EPHEMERAL_RECLAIM',
             'auto_reclaim': False, 'global_cache_eviction': False,
             'model_or_s03_mutation': False}
+
+
+def _native_handler_scope(row):
+    """Fail closed for malformed native-marked handlers, ignore legacy noise.
+
+    The global legacy catalog may contain records without a native handler.
+    An explicit malformed handler *with* a native receipt/binding marker is
+    not proof that the native worker has released its job.
+    """
+    if not isinstance(row, dict):
+        return 'legacy'
+    handler = row.get('handler')
+    if type(handler) is str:
+        return 'native' if handler in NATIVE_HANDLERS else 'legacy'
+    if 'handler' in row and (isinstance(row.get('systemic_relay'), dict)
+                             or isinstance(row.get('native_project_terminal'), dict)):
+        return 'unknown'
+    return 'legacy'
 
 
 def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_rows):
@@ -372,19 +421,24 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
               'running':0, 'terminal':0, 'blocked':0, 'unknown':0}
     # The outer NOX dispatcher also tracks many legacy catalog/track entries.
     # Only these three native execution handlers count as native workload.
-    native_handlers = {'owner_native_subagent_review',
-                       'owner_native_typed_leaf', 'owner_native_project_work'}
     native_observed = 0
     for row in tasks.values():
-        if not isinstance(row, dict) or row.get('handler') not in native_handlers:
+        scope = _native_handler_scope(row)
+        if scope == 'unknown':
+            # Malformed native-bound handler metadata cannot prove the queue idle.
+            states['unknown'] += 1
+            continue
+        if scope != 'native':
             continue
         native_observed += 1
         status = row.get('status')
-        if status in ('pending','admitted','prepared','retry','wait'):
+        if status == 'ready':
+            states['ready'] += 1
+        elif status in ('pending','admitted','prepared','retry','wait'):
             states['pending'] += 1
         elif status == 'running':
             states['running'] += 1
-        elif status in TERMINAL:
+        elif type(status) is str and status in TERMINAL:
             states['terminal'] += 1
             if status in ('failed','blocked','cancelled'):
                 states['blocked'] += 1
@@ -460,13 +514,16 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
             if len(suggestions) == 3:
                 break
 
-    exhausted = (states['pending'] + states['running'] + states['ready'] == 0)
+    unknown_native = states['unknown'] != 0
+    exhausted = (states['pending'] + states['running'] + states['ready'] == 0
+                 and not unknown_native)
     context = {'manifest_sha256':capacity['manifest_sha256'],
                'source_pins':source_pins,
                'task_outcomes':outcomes[-32:], 'deferred':deferred}
     return {'schema':'NOX_NATIVE_REFLEX_MONITOR_V1',
         'observation_sha256':digest(context),
-        'state':('REFILL_REQUIRED' if exhausted else 'EXECUTION_OR_ADMISSION_IN_PROGRESS'),
+        'state':('NATIVE_TASK_STATUS_UNKNOWN_HOLD' if unknown_native else
+                  'REFILL_REQUIRED' if exhausted else 'EXECUTION_OR_ADMISSION_IN_PROGRESS'),
         'worker_cap':3,'available_slots':capacity['slots_available'],
         'observed_task_counts':states,
         'native_records_observed':native_observed,
@@ -479,8 +536,10 @@ def _reflex_cycle(manifest, tasks, source_pins, capacity, deferred, admitted_row
         'repeated_snapshot_idempotent':True,
         'automatic_owner_approval':False,
         'new_native_jobs':len(admitted_rows),
-        'next_action':('RUN_ADMITTED_VERIFIED_MISSIONS' if admitted_rows else
-            'VERIFY_AND_PUBLISH_NEW_GROUNDED_TASKPACK'),
+        'next_action':('INSPECT_UNKNOWN_NATIVE_TASK_STATUS' if unknown_native else
+                       'RUN_ADMITTED_VERIFIED_MISSIONS' if admitted_rows else
+                       'WAIT_EXISTING_NATIVE_WORK' if not exhausted else
+                       'VERIFY_AND_PUBLISH_NEW_GROUNDED_TASKPACK'),
         'performance_or_training_success_claimed':False,
         'memory_governor':memory_governor_projection(capacity)}
 
@@ -505,6 +564,16 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
     manifest_sha = capacity.get('manifest_sha256',digest(manifest))
     require(type(manifest_sha) is str and SHA.fullmatch(manifest_sha), 'MANIFEST_PIN')
     rows, contracts, bindings, rejected = [], {}, {}, []
+    # Unknown native states cannot be interpreted as an empty queue. Preserve
+    # existing work and withhold new missions until the owner reconciles it.
+    unknown_native = False
+    for task in state_snapshot.values():
+        scope = _native_handler_scope(task)
+        if scope == 'unknown' or (scope == 'native'
+                and (type(task.get('status')) is not str
+                     or task['status'] not in ACTIVE | TERMINAL)):
+            unknown_native = True
+            break
     reserved = set()
     external_reservations = capacity.get('reserved_sources',[])
     require(isinstance(external_reservations,list) and len(external_reservations) <= 512,
@@ -522,7 +591,7 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
         if not isinstance(binding,dict):
             continue
         admitted_missions.add((binding.get('mission_id'),binding.get('mission_revision')))
-        if task.get('status') not in TERMINAL:
+        if type(task.get('status')) is not str or task['status'] not in TERMINAL:
             for target in binding.get('editable_paths',[]):
                 if type(target) is str:
                     reserved.add((binding.get('root_id'),target))
@@ -530,10 +599,15 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
         name = mission['mission_id']; input_sha = _input(mission)
         task_id = mission['parent_task_id'] + '.relay.' + name + '.' + input_sha[:16]
         reason = None
-        if task_id in state_snapshot or (name,mission['revision']) in admitted_missions:
+        if unknown_native:
+            reason = 'NATIVE_TASK_STATUS_UNKNOWN_HOLD'
+        elif task_id in state_snapshot or (name,mission['revision']) in admitted_missions:
             reason = 'ALREADY_ADMITTED_NO_REPLAY'
-        elif any(state_snapshot.get(task_id,{}).get('status') not in ('done','verified')
-                 for task_id in mission.get('dependencies',[])):
+        # A malformed/missing dependency row cannot prove that it finished.
+        # Fail closed without crashing the existing refill observation loop.
+        elif any(not isinstance(state_snapshot.get(dep), dict)
+                 or state_snapshot[dep].get('status') not in ('done', 'verified')
+                 for dep in mission.get('dependencies', [])):
             reason = 'DEPENDENCY_NOT_VERIFIED'
         elif any(source_pins.get(mission['root_id'],{}).get(row['path']) != row['sha256']
                  for row in mission['context']):
@@ -563,7 +637,8 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
     fingerprint = digest({'manifest_sha256':manifest_sha,'source_pins':source_pins,'outcomes':outcomes})
     waits = {'CAPACITY_WAIT','SOURCE_ALREADY_RESERVED','DEPENDENCY_NOT_VERIFIED'}
     waiting = any(row['reason'] in waits for row in rejected)
-    state = 'REVIEWED_BATCH_READY' if rows else 'WAIT_EXISTING_WORK' if waiting else 'REFILL_REQUIRED'
+    state = ('REVIEWED_BATCH_READY' if rows else 'WAIT_EXISTING_WORK'
+             if waiting or unknown_native else 'REFILL_REQUIRED')
     request = None
     if state == 'REFILL_REQUIRED':
         request = {'schema':'NOX_SYSTEMIC_REFILL_REQUEST_V1','request_id':fingerprint,
@@ -574,7 +649,12 @@ def select_next(manifest, state_snapshot, source_pins, capacity):
             'required_next_step':'GROUNDED_PROPOSAL_TO_PINNED_TASKPACK_TO_EXISTING_FENCED_MANIFEST_CAS',
             'max_next_missions':3,'original_task_accepted':False,
             'evidence_scope':'REFILL_REQUEST_ONLY_NOT_NATIVE_OR_BENCHMARK_ACCEPTANCE'}
-    reflex = _reflex_cycle(manifest, state_snapshot, source_pins, capacity, rejected, rows)
+    # The manifest SHA has an allowed deterministic fallback. Give the
+    # monitor that resolved pin; omitting the optional caller field must not
+    # crash the publisher after queue validation.
+    reflex = _reflex_cycle(manifest, state_snapshot, source_pins,
+                           {**capacity, 'manifest_sha256': manifest_sha},
+                           rejected, rows)
     return {'rows':rows,'contracts':contracts,'bindings':bindings,'state':state,
             'fingerprint':fingerprint,'refill_request':request,'outcomes':outcomes,
             'deferred':rejected,'original_acceptance_added':0,
