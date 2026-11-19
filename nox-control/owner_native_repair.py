@@ -1,7 +1,6 @@
 """Read-only source evidence for the exact NOX cold Supervisor startup chain."""
 
 import configparser
-import base64
 from contextlib import ExitStack
 import hashlib
 import json
@@ -9,7 +8,6 @@ import os
 import re
 import shlex
 import stat
-import subprocess
 from pathlib import Path, PurePosixPath
 
 
@@ -23,8 +21,12 @@ HOLDER_SOURCE = "/root/nox/ops/engram_cold_holder.py"
 MODEL_GUARD = "/root/nox/ops/nox_boot_ds41_8098.sh"
 MODEL_LAUNCHER = "/root/nox/models/deepseek_v41_flash_iq2xxs/launch_ds41_8098_t119u.sh"
 DISPATCHER_SERVICE = "nox-dispatcher-t855u"
+BOOT_BACKUP = "/root/onstart.sh.nox-pre-dispatcher-b36b916aadc8"
+BOOT_CANDIDATE = "e3e79973beb6291f5d33c3e79cff12e7e849ddef2fb1e30b897ace9a3f695115"
+INSTALL_EPOCH = 167790899
 STARTUP_PINS = {
     STARTUP: "b36b916aadc8bb6047108823bf7b86f00448deafd9f79a824a9f4924c1190507",
+    BOOT_BACKUP: "b36b916aadc8bb6047108823bf7b86f00448deafd9f79a824a9f4924c1190507",
     MAIN: "fcead12b4dcb7f56b31d223f1cfa89792bd6e8008f78708a831b41fab9ece25d",
     HOLDER: "cc7a0c2ddb579005bf9a6cdd6ccac9e33f1010039f6b2fe984f1059655b036df",
     MODEL: "07187b45fdeb8e1f8122e4fe47e797317a2db7feafea5e764564af0ad9f6f447",
@@ -322,75 +324,63 @@ def collect():
             "host_writes": 0, "provider_mutations": 0, "service_signals": 0, **facts}
 
 
-EXPORT_PATHS = (STARTUP, DISPATCHER, MODEL)
-EXPORT_LIMIT = 16 << 10
-EXPECTED_PID1_TICKS = 167790899
-CREDENTIALS = re.compile(
-    rb"(?i)(?:[a-z0-9_]*(?:token|secret|password|api_key|private_key|authorization)"
-    rb"[a-z0-9_]*[ \t]*[:=]|-----BEGIN [^\r\n]*PRIVATE KEY-----"
-    rb"|://[^:@\s]+:[^@\s]+@|(?:gh[pousr]_|hf_|sk-)[A-Za-z0-9_-]{16,})"
-)
-RECIPIENT_CERTIFICATE = b'-----BEGIN CERTIFICATE-----\nMIIELTCCApWgAwIBAgIUTWp2oUQWGH1QaK2FPrOcA9bK3lkwDQYJKoZIhvcNAQEL\nBQAwJjEkMCIGA1UEAwwbTk9YLUNPTEQtUFJFSU1BR0UtRVBIRU1FUkFMMB4XDTI2\nMTExOTE4NTYxOFoXDTI2MTEyMDE4NTYxOFowJjEkMCIGA1UEAwwbTk9YLUNPTEQt\nUFJFSU1BR0UtRVBIRU1FUkFMMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKC\nAYEApoA9blQqlNfY3HbHm2YoNBVqXTEYltONGHukIMsaUDF1e+Jl48D7nsmq22ju\n/Nm8NYa7FnDSPlvfwlASpIFp7pDPsSCuK855jW4ddVX0m0emdfGIlZr0L2HTPjlE\ne+CcyqER4lwJ8/ppv2Onut12mhdp87YzXA16qM9c08uSHsJQIszqO35oO+gWnXIi\nAul6SiyUQ6BcyhF1lIgx5//XWtrC7EfSberkWKVREX6Y+w4EpgzdImQvn30mnzwE\nP0zl7NmbYjWYextbkNYs13uoa+PeZMgrs+mM8L2ajHNyNFyQ3tNq5JDJl5PyB48b\nsSwNdFaeIBQrOGewObOt45FDBJ6TsDKVas0EmYckY1CHwWiaTg5uAPRnsbXVofVe\nsOS67bAjyGrrW7AOc3emgcnAzGhl8FpgQ8E9ADeI+fWeiEORXcHbtnF010xw/tqi\nEfwGEioRWtjQ+Iyh9UZrS38jekOeh0ql1HO/JgwytcCzu3XB4b6OXvaleyW9bOm1\nFhSnAgMBAAGjUzBRMB0GA1UdDgQWBBRVAZxBgOhIJzTE8kIEIHjXVZW6DjAfBgNV\nHSMEGDAWgBRVAZxBgOhIJzTE8kIEIHjXVZW6DjAPBgNVHRMBAf8EBTADAQH/MA0G\nCSqGSIb3DQEBCwUAA4IBgQB0/24ujfmdVAs8ovwzCE2tBhvLxH7R7g7DtD0xeqIB\n7UyeLHINEDnYx4IcJC0ji8RO8h6ffrR8GnfuGeH3lmOaz8qIv2pnNxazGT0e/Wb3\ncTApjsFGZW+w+e3mK38mCql+1ZML2NrxW4eygj/kv7/mSfyLc+pxKQEYMfLZsgQW\nXXgQ9nNKtTgiWKBMUlZOAIDFTQk20xnN05+vNHOP4pduyMf3+L5YZjGUArvpEy2y\nlfQ9Zr/gt8VxK5jX1FaioYAmyAkYINpIgw32gQ60G28j8bH8F3uvoTV3oDinNZYG\nwWyghKD4b+tIMcqtoH6Mh61LgBPEO7r0iazRtJRryqI9f0BHHYEtKS/bHKwhlmW8\nFaN+qES7ERY+U3wtU7QJ+qa9gsBQWtm4fb8hb0D484oaeWKF7fQsx1Ej5kuQPO1A\n3SnQEsNAc/6Qxu+2K4j2N3qHYvw29YNijbDbrr0Nx39lxSL/47R+ArZEO1HuqXxz\nkqSAFPljObrveY4j9hSCJH8=\n-----END CERTIFICATE-----\n'
-
-
-def collect_export():
-    before = generation()
-    if before != EXPECTED_PID1_TICKS:
-        raise ValueError("EXPORT_EPOCH")
-    files = {}
-    for path in EXPORT_PATHS:
+def boot_file_stamp(path):
+    try:
         raw = read_pinned_root_file(path)
-        if not 0 < len(raw) <= EXPORT_LIMIT or sha(raw) != STARTUP_PINS[path]:
-            raise ValueError("EXPORT_FILE_PIN")
-        if b"\0" in raw or CREDENTIALS.search(raw):
-            raise ValueError("EXPORT_SENSITIVE_FILE")
-        files[path] = raw
-    if any(read_pinned_root_file(path) != raw for path, raw in files.items()) or generation() != before:
-        raise ValueError("EXPORT_CHANGED")
-    return before, files
+    except FileNotFoundError:
+        return None
+    info = os.stat(path, follow_symlinks=False)
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_gid != 0
+            or info.st_mode & 0o022 or info.st_nlink != 1 or info.st_size != len(raw)):
+        raise ValueError("UNTRUSTED_POSTIMAGE")
+    return sha(raw), file_identity(info), bool(info.st_mode & 0o111)
 
 
-def encrypt_export(payload):
-    if not 0 < len(RECIPIENT_CERTIFICATE) <= 2048 or len(payload) > 70_000:
-        raise ValueError("EXPORT_ENCRYPTION_BOUNDS")
-    with ExitStack() as stack:
-        reader, writer = os.pipe()
-        stack.callback(os.close, reader)
-        with os.fdopen(writer, "wb") as handle:
-            handle.write(RECIPIENT_CERTIFICATE)
-        process = subprocess.run(
-            ["/usr/bin/openssl", "cms", "-encrypt", "-binary", "-aes256", "-outform", "DER",
-             "-recip", f"/proc/self/fd/{reader}", "-keyopt", "rsa_padding_mode:oaep",
-             "-keyopt", "rsa_oaep_md:sha256"],
-            input=payload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            pass_fds=(reader,), env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"}, timeout=12,
-        )
-    if process.returncode or not 128 <= len(process.stdout) <= 100_000:
-        raise ValueError("EXPORT_ENCRYPTION")
-    return process.stdout
+def boot_postimage():
+    epoch = generation()
+    paths = STARTUP, BOOT_BACKUP
+    before = tuple(boot_file_stamp(path) for path in paths)
+    after = tuple(boot_file_stamp(path) for path in paths)
+    if before != after or epoch != generation():
+        raise ValueError("POSTIMAGE_CHANGED")
+    startup, backup = before
+    current_hash = startup[0] if startup is not None else None
+    backup_hash = backup[0] if backup is not None else None
+    original = STARTUP_PINS[STARTUP]
+    blocker = None
+    if current_hash == BOOT_CANDIDATE and backup_hash == original and startup[2] and backup[2]:
+        decision = "PASS_DURABLE_HOOK_ON_DISK"
+    elif current_hash == original and backup_hash is None:
+        decision = "HOLD_ORIGINAL_STARTUP_UNCHANGED"
+        if epoch != INSTALL_EPOCH:
+            blocker = "INSTALL_GENERATION_DIFFERS_AT_READBACK"
+        elif not startup[2]:
+            blocker = "STARTUP_NOT_EXECUTABLE"
+    elif current_hash == original and backup_hash == BOOT_CANDIDATE:
+        decision = "HOLD_STAGED_CANDIDATE_UNEXCHANGED"
+    else:
+        decision = "HOLD_NONCANONICAL_STARTUP_PAIR"
+    return {"decision": decision, "observed_blocker": blocker, "instance_id": 60509551,
+            "pid1_start_ticks": epoch, "prior_cas_request_id": "7019378236",
+            "onstart_sha256": current_hash, "backup_sha256": backup_hash,
+            "onstart_executable": startup[2] if startup is not None else None,
+            "prior_cas_epoch_matches": epoch == INSTALL_EPOCH,
+            "authority": "READ_ONLY", "host_writes": 0, "service_operations": 0,
+            "provider_mutations": 0, "cold_launch_verified": False}
 
 
 def main():
     request = os.environ.get("NOX_OWNER_REQUEST_ID", "")
     source = os.environ.get("NOX_OWNER_SOURCE_SHA", "")
-    labels = {os.environ[name].removeprefix("C.") for name in ("VAST_CONTAINERLABEL", "CONTAINER_ID")
-              if os.environ.get(name)}
-    if (os.geteuid() != 0 or labels != {"60509551"}
-            or not re.fullmatch(r"[1-9][0-9]{0,19}", request)
-            or not re.fullmatch(r"[0-9a-f]{40}", source)):
-        raise ValueError("OWNER_SCOPE")
+    if not re.fullmatch(r"[1-9][0-9]*", request) or not re.fullmatch(r"[0-9a-f]{40}", source):
+        raise SystemExit("HOLD_OWNER_CONTEXT")
     try:
-        ticks, files = collect_export()
-        payload = json.dumps({
-            "schema": "NOX_COLD_PREIMAGES_V1", "instance_id": 60509551,
-            "pid1_start_ticks": ticks, "request_id": request, "source_sha": source,
-            "files": {path: {"sha256": STARTUP_PINS[path], "content_b64": base64.b64encode(raw).decode("ascii")}
-                      for path, raw in files.items()},
-        }, sort_keys=True, separators=(",", ":")).encode("ascii")
-        ciphertext = encrypt_export(payload)
-    except (OSError, ValueError, subprocess.SubprocessError):
-        raise SystemExit("HOLD_COLD_PREIMAGE_EXPORT") from None
-    print("NOX_MAINT_COLD_PREIMAGES_ENCRYPTED=" + base64.b64encode(ciphertext).decode("ascii"), flush=True)
+        receipt = boot_postimage()
+    except (OSError, ValueError, IndexError):
+        receipt = {"decision": "HOLD_POSTIMAGE_UNAVAILABLE", "host_writes": 0,
+                   "service_operations": 0, "provider_mutations": 0}
+    print("NOX_MAINT_COLD_BOOT_RECEIPT=" + json.dumps(
+        {**receipt, "request_id": request, "source_sha": source}, sort_keys=True), flush=True)
     print("NOX_MAINT_REPAIR_COMPLETE=true", flush=True)
 
 
