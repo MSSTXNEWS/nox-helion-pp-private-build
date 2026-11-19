@@ -80,6 +80,28 @@ class MappedMemoryAttributionTests(unittest.TestCase):
         target.write_bytes(self.smaps.replace(self.file_map, self.file_map.replace(b'999', b'997')))
         self.assert_hold(self.run_capture(), 'HOLD_ATTRIBUTION_MAP_LAYOUT_CHANGED')
 
+    def test_anonymous_layout_churn_does_not_invalidate_file_range_proof(self):
+        target = self.proc / '202' / 'smaps'
+        target.write_bytes(self.smaps.replace(self.anon_map, self.anon_map.replace(b'2000-3000', b'5000-6000')))
+        receipt = self.run_capture()
+        self.assertEqual(receipt['state'], 'OBSERVED')
+        self.assertEqual(receipt['layout_scope'], 'INODE_BACKED_RANGES_IN_LARGE_FILE_PSS_MEMBERS')
+        self.assertEqual(receipt['inode_candidates'][0]['pss_lower_kib'], 200000)
+
+    def test_file_layout_change_on_reread_holds_even_for_the_same_inode(self):
+        read = inspect._read_at
+        hits = 0
+        def change(fd, name, limit, code):
+            nonlocal hits
+            value = read(fd, name, limit, code)
+            if name == 'maps':
+                hits += 1
+                if hits == 2:
+                    return value.replace(b'1000-2000', b'7000-8000')
+            return value
+        with patch.object(inspect, '_read_at', side_effect=change):
+            self.assert_hold(self.run_capture(), 'HOLD_ATTRIBUTION_MAP_LAYOUT_CHANGED')
+
     def test_changed_member_set_does_not_publish_partial_aggregates(self):
         initial = iter((True, False))
         def roles():

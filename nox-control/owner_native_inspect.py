@@ -443,7 +443,18 @@ def _attribution_metrics(lines, required):
     return found
 
 
-def _attribution_inode_rows(maps, smaps):
+def _attribution_file_layout(maps):
+    layout = []
+    for line in maps.splitlines():
+        header = ATTRIBUTION_VMA.fullmatch(line)
+        if header is None:
+            raise CgroupPinHold('ATTRIBUTION_MAPS_FORMAT')
+        if int(header[7]):
+            layout.append(header.groups()[:7])
+    return layout
+
+
+def _attribution_inode_rows(file_layout, smaps):
     headers = []
     inode_rows = {}
     current = None
@@ -469,12 +480,13 @@ def _attribution_inode_rows(maps, smaps):
             if current is not None:
                 accumulate(current, fields)
             current, fields = row, []
-            headers.append(line)
+            if int(row[7]):
+                headers.append(row.groups()[:7])
         elif current is not None:
             fields.append(line)
     if current is not None:
         accumulate(current, fields)
-    if headers != maps.splitlines():
+    if headers != file_layout:
         raise CgroupPinHold('ATTRIBUTION_MAP_LAYOUT_CHANGED')
     return inode_rows
 
@@ -517,20 +529,24 @@ def mapped_memory_attribution(*, proc_root=None, cgroup_root=None, read_roles=No
                     for field in ATTRIBUTION_PSS_FIELDS[1:]:
                         row[field.lower() + '_kib'] += pss[field.encode()]
                     if pss[b'Pss_File'] >= ATTRIBUTION_INODE_MIN_FILE_KIB:
+                        # Ignore anonymous VMA churn; only an inode-backed
+                        # address/offset/identity change invalidates this sample.
+                        file_layout = _attribution_file_layout(layout)
                         remaining = ATTRIBUTION_MAX_SMAPS_TOTAL - smaps_bytes
                         raw = _read_at(fd, 'smaps', min(ATTRIBUTION_SMAPS_BYTES, remaining),
                                        'ATTRIBUTION_SMAPS_BOUND')
                         scanned += 1
                         smaps_bytes += len(raw)
-                        for digest, (kib, shmem) in _attribution_inode_rows(layout, raw).items():
+                        if _attribution_file_layout(_read_at(fd, 'maps', ATTRIBUTION_MAX_MAPS,
+                                'ATTRIBUTION_MAPS')) != file_layout:
+                            raise CgroupPinHold('ATTRIBUTION_MAP_LAYOUT_CHANGED')
+                        for digest, (kib, shmem) in _attribution_inode_rows(file_layout, raw).items():
                             item = inodes.setdefault(digest, {'inode_sha256': digest, 'pss_lower_kib': 0,
                                 'shmem_hint': False, 'by_role_pss_lower_kib': {}})
                             item['pss_lower_kib'] += kib
                             item['shmem_hint'] |= shmem
                             by_role = item['by_role_pss_lower_kib']
                             by_role[role] = by_role.get(role, 0) + kib
-                if _read_at(fd, 'maps', ATTRIBUTION_MAX_MAPS, 'ATTRIBUTION_MAPS') != layout:
-                    raise CgroupPinHold('ATTRIBUTION_MAP_LAYOUT_CHANGED')
             finally:
                 os.close(fd)
             if _proc_identity(proc_root, pid) != (ticks, group[0]):
@@ -543,6 +559,7 @@ def mapped_memory_attribution(*, proc_root=None, cgroup_root=None, read_roles=No
             row['shmem_hint'], -row['pss_lower_kib'], row['inode_sha256']))
         receipt.update(state='OBSERVED', verified_members=len(members), by_role=totals,
                        accounting='KERNEL_PROPORTIONAL_PSS_POINT_SAMPLES_NOT_CGROUP_CHARGE',
+                       layout_scope='INODE_BACKED_RANGES_IN_LARGE_FILE_PSS_MEMBERS',
                        inode_scan_minimum_file_pss_kib=ATTRIBUTION_INODE_MIN_FILE_KIB,
                        inode_scanned_members=scanned, inode_candidates=reported[:16],
                        observer_excluded=observer_excluded)
