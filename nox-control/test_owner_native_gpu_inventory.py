@@ -108,15 +108,15 @@ class GpuInventoryTests(unittest.TestCase):
 
     def test_rejects_duplicate_index_and_uuid(self):
         with self.assertRaisesRegex(RuntimeError, "DUPLICATE_INDEX"):
-            gpu.parse_gpu_rows("0, Tesla V100, " + GPU_A + ", 32768, 100, 32668\n"
-                               "0, Tesla V100, " + GPU_B + ", 32768, 100, 32668\n")
+            gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100, 32668\n"
+                               "0, Tesla V100-SXM2-32GB, " + GPU_B + ", 32768, 100, 32668\n")
         with self.assertRaisesRegex(RuntimeError, "DUPLICATE_UUID"):
-            gpu.parse_gpu_rows("0, Tesla V100, " + GPU_A + ", 32768, 100, 32668\n"
-                               "1, Tesla V100, " + GPU_A + ", 32768, 100, 32668\n")
+            gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100, 32668\n"
+                               "1, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100, 32668\n")
 
     def test_rejects_wrong_gpu_count_and_non_v100(self):
         with self.assertRaisesRegex(RuntimeError, "GPU_COUNT"):
-            gpu.parse_gpu_rows("0, Tesla V100, " + GPU_A + ", 32768, 100, 32668\n")
+            gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100, 32668\n")
         with self.assertRaisesRegex(RuntimeError, "IDENTITY"):
             gpu.parse_gpu_rows(output(name_a="NVIDIA A100-SXM4-40GB"))
 
@@ -126,7 +126,7 @@ class GpuInventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "MEMORY"):
             gpu.parse_gpu_rows(output(used_a=100, free_a=32000))
         with self.assertRaisesRegex(RuntimeError, "ROW_SHAPE"):
-            gpu.parse_gpu_rows("0, Tesla V100, " + GPU_A + ", 32768, 100\n")
+            gpu.parse_gpu_rows("0, Tesla V100-SXM2-32GB, " + GPU_A + ", 32768, 100\n")
         with self.assertRaisesRegex(RuntimeError, "MEMORY"):
             gpu.parse_gpu_rows(output(used_a="N/A", free_a=100))
 
