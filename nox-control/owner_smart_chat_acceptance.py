@@ -34,6 +34,68 @@ STOPS = tuple(ROOT / name for name in
 SCHEMA = 'NOX_SMART_CHAT_OWNER_E2E_ACCEPTANCE_V1'
 
 
+
+def safe_ast_shape(expr, max_nodes=64, max_depth=12):
+    """Return bounded AST node kinds/shape only; omit identifiers and literals."""
+    rows = []
+    deepest = 0
+    truncated = False
+    stack = [(expr, 0)]
+    while stack and len(rows) < max_nodes:
+        node, depth = stack.pop()
+        if depth > max_depth:
+            truncated = True
+            continue
+        children = list(ast.iter_child_nodes(node))
+        rows.append({'type': type(node).__name__, 'depth': depth, 'children': min(len(children), max_nodes)})
+        deepest = max(deepest, depth)
+        for child in reversed(children):
+            stack.append((child, depth + 1))
+    return {'node_count': len(rows), 'max_depth': deepest,
+            'truncated': truncated or bool(stack), 'nodes': rows}
+
+
+def safe_name_binding_diagnostic(identifier, seen, definitions, common_defs, scope):
+    """Classify unresolved binding without retaining or returning its name."""
+    if scope == 'proxy':
+        active, alternate = definitions, common_defs
+    elif scope == 'common':
+        active, alternate = common_defs, definitions
+    else:
+        active, alternate = {}, {}
+        scope = 'local'
+    if identifier in seen:
+        state = 'cycle'
+    elif identifier in active:
+        state = 'defined'
+    elif identifier in alternate:
+        state = 'ambiguous'
+    else:
+        state = 'unbound'
+    return {'binding_state': state, 'scope': scope}
+
+
+def credential_path_not_static(expr, name_binding=None):
+    error = RuntimeError('HOLD_SMART_CHAT_QA_CREDENTIAL_PATH_NOT_STATIC')
+    error.safe_ast_shape = safe_ast_shape(expr)
+    if name_binding is not None:
+        error.safe_name_binding = name_binding
+    return error
+
+
+def add_credential_path_ast_shape(status, error):
+    """Attach only the trusted bounded shape for the specific static-path HOLD."""
+    if not isinstance(error, RuntimeError) or str(error) != 'HOLD_SMART_CHAT_QA_CREDENTIAL_PATH_NOT_STATIC':
+        return
+    shape = getattr(error, 'safe_ast_shape', None)
+    if isinstance(shape, dict):
+        status['credential_path_ast_shape'] = shape
+    name_binding = getattr(error, 'safe_name_binding', None)
+    if (isinstance(name_binding, dict) and set(name_binding) == {'binding_state', 'scope'}
+            and name_binding.get('binding_state') in {'defined', 'unbound', 'cycle', 'ambiguous'}
+            and name_binding.get('scope') in {'local', 'common', 'proxy'}):
+        status['credential_path_name_binding'] = name_binding
+
 def fail(code):
     raise RuntimeError('HOLD_SMART_CHAT_QA_' + code)
 
@@ -179,7 +241,10 @@ def owner_password_without_proxy_import():
             return literal_path(defs[expr.id], seen + (expr.id,), scope)
         if isinstance(expr, ast.Name) and expr.id == 'SECRETS' and 'SECRETS' not in seen and scope == 'proxy':
             return literal_path(common_defs['SECRETS'], seen + ('SECRETS',), 'common')
-        fail('CREDENTIAL_PATH_NOT_STATIC')
+        name_binding = (safe_name_binding_diagnostic(
+            expr.id, seen, definitions, common_defs, scope)
+            if isinstance(expr, ast.Name) else None)
+        raise credential_path_not_static(expr, name_binding)
 
     if 'CHAT_PASSWORD_PATH' not in definitions:
         fail('CREDENTIAL_PATH_NOT_DECLARED')
@@ -375,6 +440,7 @@ def main():
             outcome='NATIVE_OWNER_TWO_TURNS_AND_S03_READBACK_PASS')
         success = True
     except Exception as error:
+        add_credential_path_ast_shape(status, error)
         code = str(error)
         status['outcome'] = code if re.fullmatch(r'HOLD_SMART_CHAT_QA_[A-Z0-9_]{1,100}', code) else 'HOLD_SMART_CHAT_QA_' + type(error).__name__.upper()
     emit(status)
