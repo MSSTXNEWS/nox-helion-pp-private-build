@@ -66,8 +66,8 @@
         "run_id": 43989273499,
         "run_attempt": 3,
         "workflow_name": "NOX owner maintenance - explicit command only",
-        "started_at_utc": "2026-11-17T23:35:41Z",
-        "completed_at_utc": "2026-11-17T23:36:44Z",
+        "started_at_utc": "2026-11-17T23:35:46Z",
+        "completed_at_utc": "2026-11-17T23:36:43Z",
         "conclusion": "success"
       },
       "interpretation": "The receipt URL correctly binds job 133745616688 to attempt 2 of run 43989273499. The run's latest attempt is 3 with a different job ID; attempt 3 is a later observation, not a correction to the attempt-2 receipt link."
@@ -101,7 +101,9 @@
       "gpu_unresolved_link_count": 2,
       "gpu_mapping_assessment": "INCOMPLETE_TWO_UNMAPPED_GPU_LINKS",
       "gpu_identity_join_complete": false,
-      "run_attempt": 3
+      "run_attempt": 3,
+      "started_at_utc": "2026-11-17T23:35:46Z",
+      "completed_at_utc": "2026-11-17T23:36:43Z"
     },
     "corrected_status": "HISTORICAL_GPU_PID_MAPPING_CLAIM_NOT_VERIFIED_FROM_ATTEMPT_2_LOGS_AND_SUBSEQUENT_PARTIAL_AUDITS",
     "prior_additional_native_evidence": {
