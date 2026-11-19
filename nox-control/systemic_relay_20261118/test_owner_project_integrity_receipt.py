@@ -149,6 +149,21 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
                     with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_SANITIZED_EVIDENCE'):
                         subject._finish(task, before, 'pinned-claim')
 
+            # The sanitizer can return its input object after mutating it:
+            # comparing post-clean objects to one another is not a proof.
+            for changed in ({'state': 'BLOCKED'},
+                            {'acceptance_scope': 'FORGED'},
+                            {'tests': {'passed': True, 'failed': 2}}):
+                with self.subTest(in_place_sanitized_change=changed):
+                    before = worker_result(copy.deepcopy(worker))
+                    def mutate_same_event(value, delta=changed):
+                        value['project_evidence'].update(delta)
+                        return value
+                    subject.native = types.SimpleNamespace(ns={
+                        'owner_mentor': types.SimpleNamespace(clean=mutate_same_event)})
+                    with self.assertRaisesRegex(GateError, 'HOLD_PROJECT_SANITIZED_EVIDENCE'):
+                        subject._finish(task, before, 'pinned-claim')
+
 
 if __name__ == '__main__':
     unittest.main()
