@@ -165,47 +165,9 @@ class ProbeTests(unittest.TestCase):
             None,
         ):
             with self.subTest(bad=bad):
-                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_FIRST_TURN_LATENCY_TARGET
-        class Response:
-            status = 200
-            def __init__(self, rows): self.rows = rows; self.closed = False
-            def close(self): self.closed = True
-            def __iter__(self):
-                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
-        for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
-            response = Response(rows)
-            with patch.object(probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, code):
-                    probe.consume_turn(object(), 'synthetic', '1'*32)
-            self.assertTrue(response.closed)
-
-
-if __name__ == '__main__':
-    unittest.main()
-):
+                with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_FIRST_TURN_LATENCY_TARGET$'):
                     probe.require_latency_target(bad, 'FIRST_TURN', 8000)
-        with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_SECOND_TURN_LATENCY_TARGET
-        class Response:
-            status = 200
-            def __init__(self, rows): self.rows = rows; self.closed = False
-            def close(self): self.closed = True
-            def __iter__(self):
-                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
-        for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
-            response = Response(rows)
-            with patch.object(probe, 'request', return_value=response):
-                with self.assertRaisesRegex(RuntimeError, code):
-                    probe.consume_turn(object(), 'synthetic', '1'*32)
-            self.assertTrue(response.closed)
-
-
-if __name__ == '__main__':
-    unittest.main()
-):
+        with self.assertRaisesRegex(RuntimeError, '^HOLD_CHAT_PROBE_SECOND_TURN_LATENCY_TARGET$'):
             probe.require_latency_target(
                 {'first_meaningful_delta_ms': 5001, 'stream_total_ms': 10000},
                 'SECOND_TURN', 5000)
@@ -223,7 +185,7 @@ if __name__ == '__main__':
             def __init__(self, rows): self.rows = rows; self.closed = False
             def close(self): self.closed = True
             def __iter__(self):
-                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
+                return iter(json.dumps(row).encode()+b'\\n' for row in self.rows)
         for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
                            ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
                            ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
