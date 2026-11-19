@@ -1,0 +1,73 @@
+name: NOX source taskpack census owner read-only
+on:
+  push:
+    branches: [repair/nox-reflex-bootfix-20261119]
+    paths: ['.github/workflows/nox-reflex-source-taskpack-census.yml']
+permissions: {contents: read}
+jobs:
+  owner-readonly:
+    if: github.repository == 'MSSTXNEWS/nox-helion-pp-private-build'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NOX2: ${{ secrets.NOX2 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Get pinned source census with no native writes
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as ssh
+          ssh.REMOTE=r"""
+          set -euo pipefail
+          python3 - <<'PYREMOTE'
+          import json,hashlib,os,re,stat
+          from pathlib import Path
+          root=Path('/root/nox')
+          print('NOX_NATIVE_V51_SSH_EXECUTED=true')
+          cfg=json.loads((root/'config/owner_native_subagents.json').read_text())
+          scope=cfg['project_executor']['roots']['NOX_PROJECT_SOURCE']
+          base=Path(scope['path'])
+          allowed=scope['allowed_paths']
+          print('NATIVE_REFLEX_ALLOWED_COUNT='+str(len(allowed)))
+          shas={}
+          for name in allowed:
+              if not isinstance(name,str) or len(name)>240 or any(x in ('','.','..') for x in name.split('/')):continue
+              p=base/name
+              try:
+                  fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+                  try:
+                      a=os.fstat(fd)
+                      if not stat.S_ISREG(a.st_mode) or a.st_size>512*1024:continue
+                      raw=os.read(fd,512*1024+1)
+                      b=os.fstat(fd)
+                      if len(raw)>512*1024 or (a.st_ino,a.st_size,a.st_mtime_ns)!=(b.st_ino,b.st_size,b.st_mtime_ns):continue
+                      sha=hashlib.sha256(raw).hexdigest()
+                  finally:os.close(fd)
+                  shas[name]=sha
+                  print('NATIVE_REFLEX_SOURCE='+json.dumps({'path':name,'sha256':sha},separators=(',',':')))
+              except OSError:continue
+          print('NATIVE_REFLEX_SOURCE_READ='+str(len(shas)))
+          try:
+              state=json.loads((root/'state/dispatcher/state.json').read_text())
+              for ident,row in state.get('tasks',{}).items():
+                  if not isinstance(row,dict):continue
+                  params=row.get('params') or {}
+                  if params.get('parent_task_id')=='0V14-14':
+                      print('NATIVE_REFLEX_PARENT_STATUS='+json.dumps({
+                          'id':ident,'status':row.get('status'),'handler':row.get('handler'),
+                          'note':str(row.get('note',''))[:100]
+                      },separators=(',',':')))
+          except Exception: print('NATIVE_REFLEX_PARENT_STATUS=UNAVAILABLE')
+          print('NATIVE_READ_ONLY_COMPLETE=true')
+          PYREMOTE
+          """
+          try:
+              assert ssh.probe()
+          finally:
+              assert ssh.cleanup()
+          PY
+      - name: Always detach temporary owner SSH key
+        if: always()
+        run: python3 -m nox_runpod.teacher_mesh.v51.ephemeral_ssh_probe cleanup
