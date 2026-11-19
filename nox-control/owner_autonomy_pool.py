@@ -302,6 +302,11 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
                ('owner_allowed','stop_active','writer_lease','ensure_processes',
                 'process_readback','native_duplicate_check','native_queue_claim','s03_readback')):
         return {'state':'HOLD_NATIVE_POOL_CALLBACKS','jobs_started':0}
+    # The dispatcher may have just released its pool for a validated pressure
+    # event. Refill must honor that latch before starting workers or claiming IDs.
+    if (getattr(native, '_resource_pressure_paused', False) is not False
+            or getattr(native, '_resource_pressure_latch_uncertain', False) is not False):
+        return {'state':'WAIT_RESOURCE_RECOVERY_STABILITY','jobs_started':0}
     if (native.owner_allowed() is not True or native.stop_active() is not False
         or native.writer_lease() is not True):
         return {'state':'HOLD_OWNER_STOP_OR_WRITER_LEASE','jobs_started':0}
@@ -327,6 +332,10 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
         return {'state':'HOLD_STOP_OR_LEASE_CHANGED','jobs_started':0}
     receipts=[];seen_job_ids=set()
     for task in ready:
+        if (getattr(native, '_resource_pressure_paused', False) is not False
+                or getattr(native, '_resource_pressure_latch_uncertain', False) is not False):
+            return {'state':'WAIT_RESOURCE_RECOVERY_STABILITY',
+                    'jobs_started':len(receipts),'receipts':receipts}
         if (native.owner_allowed() is not True or native.stop_active() is not False or native.writer_lease() is not True):
             return {'state':'HOLD_STOP_OR_LEASE_CHANGED','jobs_started':len(receipts),'receipts':receipts}
         # Keep duplicate lookup errors separate from a possibly committed claim.
@@ -352,7 +361,11 @@ def admit_native_tick(native, *, tasks, status, mode, memory_ratio, cpu_pressure
                     'jobs_started':len(receipts),'receipts':receipts}
         try:
             result=native.native_queue_claim(task,owner_pids=[x['pid'] for x in workers])
-        except Exception:
+        except Exception as exc:
+            if (type(exc).__name__ == 'GateError'
+                    and str(exc) == 'WAIT_RESOURCE_RECOVERY_STABILITY'):
+                return {'state':'WAIT_RESOURCE_RECOVERY_STABILITY',
+                        'jobs_started':len(receipts),'receipts':receipts}
             # The queue may have committed the task before its acknowledgement
             # failed; preserve the exact ID for reconciliation, never retry.
             return {'state':'UNKNOWN_NATIVE_CLAIM',
