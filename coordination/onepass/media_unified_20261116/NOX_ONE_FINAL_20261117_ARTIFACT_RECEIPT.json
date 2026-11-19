@@ -1,0 +1,64 @@
+{
+  "schema": "NOX_ONE_FINAL_COMPLETE_SOURCE_20261117_V2",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-17",
+  "name": "NOX_HELION_WEB_ONE_FINAL_20261117.zip",
+  "bytes": 168341679,
+  "sha256": "e3a4db87aae5f4143c4792b13f147d6258a0705498ef22f0f5bb859b42825e06",
+  "zip_members": 1457,
+  "crc_pass": true,
+  "library_path": "/NOX HELION EXPRESS INTEGRATOR/NOX_HELION_WEB_ONE_FINAL_20261117.zip",
+  "library_file_id": "libfile_9b9a527229d48191acbf8eab6553921b",
+  "google_drive_folder": "https://drive.google.com/drive/folders/1oxJ6urJPM4tkwahlSavSCSxT7Z7-dY5a",
+  "google_drive_transport_parts": 9,
+  "drive_readback_all_parts_sha_pass": true,
+  "additions": [
+    "WOW STUDIO ADDON full source exact SHA",
+    "V6 visual controls",
+    "V7 12 atmosphere scene selector and direct no-dropdown navigation",
+    "18 unique V9 recovery source files",
+    "19 V29.5 RU/ES voice S03 Windows native source files",
+    "motion100 assets",
+    "5-world 6-palettes and original 2K D02 materials",
+    "Resonance media UI"
+  ],
+  "preserved": [
+    "S03 and weights unchanged",
+    "no duplicate backend",
+    "current native OneHost not deployed",
+    "older active site source paths preserved"
+  ],
+  "deliberate_non_adoptions": [
+    "V7 reduced 1K material downgrade",
+    "V7 removed strict S03 done verification",
+    "V7 removed WOW JSON export and motion toggle"
+  ],
+  "cleanup": {
+    "historical_20261116_drive_deletes": 40,
+    "additional_20261117_drive_deletes": 40,
+    "old_transport_folder_removed": true,
+    "library_old_zips_deleted": 3,
+    "unique_native_model_data_preserved": true,
+    "fully_exhaustive_deletion": false
+  },
+  "tests": {
+    "zip_crc": "PASS",
+    "source_sha": "PASS",
+    "google_drive_part_readback": "9/9 PASS",
+    "source_v135_fixture": "11/11 PASS",
+    "source_media_fixture": "2/2 PASS",
+    "native_onehost": "NOT_RUN",
+    "gpu_generation": "NOT_RUN",
+    "windows_e07": "NOT_RUN"
+  },
+  "github_source_pr": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/363",
+  "scope": "archived build and provenance; PR source tree is not complete artifact mirror",
+  "source_verification": "LOCAL_FILE_SHA_AND_FULL_ZIP_CRC_PASS; LIBRARY_READBACK_BYTE_EXACT; DRIVE_9_PART_READBACK_SHA_EXACT",
+  "added_recent": [
+    "Missing Pyodide python_stdlib.zip from V25 pages source",
+    "V25 source QA/recovery scripts with active page versions preserved",
+    "Unique visual evidence deduplicated by SHA",
+    "Latest V135 OneHost stream bridge Git blob 820c31034a1e46c31c89332acac46eb559487ba0",
+    "11/11 offline V135 bridge contract tests and 2/2 media tests"
+  ]
+}
