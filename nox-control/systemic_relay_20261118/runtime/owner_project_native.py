@@ -158,7 +158,9 @@ class ProjectBinding:
                 task['native_worker_lease'] = {**lease, 'phase':'SETTLED',
                     'receipt_sha256':receipt_sha, 'settled_at':time.time()}
             native.ns['save_state'](native.state)
-        self.terminal_cache.add(receipt_sha)
+        # remember() returns a write acknowledgement, not an independent S03
+        # readback. Do not seed terminal_cache until terminal_for_capacity()
+        # has checked an exact durable task/job/receipt witness.
         return (True if integrated else False), info
 
     def _planner_failure(self, task, event, identity, contract, claim):
