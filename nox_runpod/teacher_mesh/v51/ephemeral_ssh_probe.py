@@ -179,8 +179,8 @@ def _remove_local_files():
     return True
 
 
-def cleanup():
-    """Detach only the tracked temporary key, verify removal, then wipe local files."""
+def cleanup(token=None):
+    """Detach the tracked temporary key using an explicit token when supplied."""
     if RUNNER.is_symlink() or (RUNNER.exists() and not RUNNER.is_dir()):
         return False
     if not TRACK.exists() and not TRACK.is_symlink():
@@ -200,7 +200,7 @@ def cleanup():
     if tracked is not None and (type(tracked) is not int or tracked <= 0):
         return False
 
-    token = os.environ.get("NOX2", "")
+    token = token or os.environ.get("NOX2", "")
     if not token:
         return False
     try:
