@@ -69,6 +69,34 @@ class NativeReflexTests(unittest.TestCase):
         self.assertEqual(refill.memory_governor_projection({})['state'],
                          'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE')
 
+    def test_memory_projection_corrupt_or_contradictory_counters_hold_cleanly(self):
+        unit = 1024**3
+        baseline = {'current_bytes': 189*unit, 'max_bytes': 194*unit,
+                    'file_bytes': 183*unit, 'shmem_bytes': 75*unit,
+                    'inactive_file_bytes': 91*unit,
+                    'memory_psi_some_avg10': 0, 'memory_psi_full_avg10': 0}
+        good = refill.memory_governor_projection({
+            'bounded_cpu_budget': baseline,
+            'bounded_cpu_decision': {'projected_memory_ratio': .52, 'eligible': True}})
+        self.assertEqual(good['state'], 'CACHE_HEALTHY')
+        self.assertEqual(good['raw_headroom_bytes'], 5*unit)
+        self.assertEqual(good['reclaimable_file_estimate_bytes'], 91*unit)
+        self.assertEqual(good['effective_headroom_estimate_bytes'], 96*unit)
+        self.assertTrue(good['reclaimable_estimate_is_not_a_guaranteed_allocation'])
+        for changes in ({'file_bytes': '183G'}, {'file_bytes': None},
+                        {'file_bytes': 191*unit}, {'shmem_bytes': 184*unit},
+                        {'inactive_file_bytes': 184*unit},
+                        {'current_bytes': 195*unit}, {'memory_psi_some_avg10': 101},
+                        {'memory_psi_full_avg10': float('nan')}):
+            with self.subTest(changes=changes):
+                row = {**baseline, **changes}
+                got = refill.memory_governor_projection({
+                    'bounded_cpu_budget': row,
+                    'bounded_cpu_decision': {'projected_memory_ratio': .52,
+                                              'eligible': True}})
+                self.assertEqual(got['state'], 'RESOURCE_METADATA_HOLD')
+                self.assertFalse(got['auto_reclaim'])
+
     def test_exhaustion_is_not_fake_job_or_approval(self):
         result = tick()
         self.assertEqual(result['state'], 'REFILL_REQUIRED')
