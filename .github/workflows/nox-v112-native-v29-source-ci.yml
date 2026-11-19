@@ -6,7 +6,7 @@ on:
       - 'nox_runpod/teacher_mesh/v112/**'
       - '.github/workflows/nox-v112-native-v29-source-ci.yml'
   pull_request:
-    branches: [feature/nox-v38-synaptic-brain-20261114]
+    branches: [feature/nox-v38-synaptic-brain-20261114, repair/nox-native-reflex-autorefill-20261119]
     paths:
       - 'nox_runpod/teacher_mesh/v112/**'
       - '.github/workflows/nox-v112-native-v29-source-ci.yml'
