@@ -714,7 +714,9 @@ class RefillEligibilityTests(unittest.TestCase):
                     shape = next(row for row in report['refill_request_predicates']
                                  if row['predicate'] == 'input_document_objects')
                     self.assertFalse(shape['passed'])
-                    self.assertFalse(shape['actual'][key])
+                    name = {'census': 'source_census',
+                            'review': 'owner_review'}.get(key, key)
+                    self.assertFalse(shape['actual'][name])
 
 
 if __name__ == "__main__":
