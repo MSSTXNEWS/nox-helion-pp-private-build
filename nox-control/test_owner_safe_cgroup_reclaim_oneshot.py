@@ -63,6 +63,19 @@ class SafeCgroupReclaimTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError,'HOLD_SAFE_CGROUP_'):
                         reclaim.cgroup_memory()
 
+    def test_unknown_error_reports_only_bounded_reclaim_stage(self):
+        previous = reclaim.STAGE
+        try:
+            reclaim.STAGE = 'RECLAIM_OPEN'
+            error = reclaim.internal_hold(PermissionError('NOX2_PRIVATE_SENTINEL'))
+            self.assertEqual(error, 'HOLD_SAFE_CGROUP_INTERNAL_RECLAIM_OPEN_PERMISSIONERROR')
+            self.assertNotIn('PRIVATE', error)
+            reclaim.STAGE = 'INVALID SECRET'
+            self.assertEqual(reclaim.internal_hold(OSError('hidden path')),
+                             'HOLD_SAFE_CGROUP_INTERNAL_UNKNOWN_OSERROR')
+        finally:
+            reclaim.STAGE = previous
+
     def test_repair_transport_is_narrow_and_not_persistent_default(self):
         self.assertEqual(operator.FILES['repair'],
                          'nox-control/owner_safe_cgroup_reclaim_oneshot.py')
