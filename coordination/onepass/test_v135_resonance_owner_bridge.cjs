@@ -50,7 +50,8 @@ function fake(owner=true,pathname='/nox-web-v29/pc/resonance.html',rejectReceipt
         if(opts.signal?.aborted){ctrl.close();return;}
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'delta',text:reply.slice(firstDeltaAt)})+'\n'));
         ctrl.enqueue(bytes.encode(JSON.stringify({type:'done',saved:!rejectReceipt,
-          s03_integrated:true,dialog_id:id,exchange_id:'verified-exchange-01'})+'\n'));
+          s03_integrated:true,dialog_id:id,exchange_id:'verified-exchange-01',
+          native_model_label:presentation?.receiptModelLabel})+'\n'));
         ctrl.close();
       }});
       return new Response(stream,{headers:{'content-type':'application/x-ndjson'}});
@@ -1725,4 +1726,24 @@ test('V195 Request input.signal survives init.body override for stream and JSON 
   assert.equal(jsonResult.status,503,'JSON STOP is HOLD');
   assert.match((await jsonResult.json()).error,/STREAM_STOP_REQUESTED/);
   assert.equal(g.calls.length,0,'aborted Request never creates dialog or model POST');
+});
+
+test('V196 mismatched native model receipt label fails closed for SSE and JSON',async()=>{
+  let reads=0;
+  const args=[true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,()=>{reads++;},'verified-exchange-01',
+    [],false,false,prompt,undefined,{receiptModelLabel:'DIFFERENT MODEL'}];
+  const f=fake(...args);
+  const out=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v196-label-conflict'})}));
+  assert.equal(out.filter(e=>e.type==='done').length,0);
+  assert.equal(out.filter(e=>e.type==='error').length,1);
+  assert.match(out.find(e=>e.type==='error').error,/HOLD_MODEL_LABEL_CONFLICT/);
+  assert.equal(reads,0,'reject identity conflict before history success');
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/chat/stream').length,1);
+  const g=fake(...args);
+  const r=await g.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id})});
+  assert.equal(r.status,503);
+  assert.match((await r.json()).error,/HOLD_MODEL_LABEL_CONFLICT/);
 });
