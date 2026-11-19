@@ -11,6 +11,8 @@ from owner_chat_browser_qa import (
     canonical_s03_proof_valid,
     multiturn_followup_prompt,
     ru_es_context_challenge,
+    ru_es_unleaked_first_prompt,
+    ru_es_unleaked_first_answer_valid,
     multiturn_history_valid,
 )
 
@@ -105,6 +107,34 @@ class OwnerRuEsContinuity(unittest.TestCase):
         ], 'RU first turn: '+challenge, challenge, spanish, reversed_answer))
         with self.assertRaisesRegex(RuntimeError, 'HOLD_QA_CHALLENGE_TOKEN'):
             ru_es_context_challenge('bad!token')
+
+    def test_ru_es_unleaked_first_answer_drives_dynamic_second_turn(self):
+        first_prompt = ru_es_unleaked_first_prompt(TOKEN)
+        self.assertIn('Выбери самостоятельно', first_prompt)
+        self.assertNotIn('2,7,4,9,1,10,3,8,6,5', first_prompt)
+        first_answer = '2,7,4,9,1,10,3,8,6,5'
+        self.assertTrue(ru_es_unleaked_first_answer_valid(first_answer))
+        self.assertTrue(ru_es_unleaked_first_answer_valid('3,8,1,9,5,10,6,4,2,7'))
+        for invalid in (FIRST, LAST, '1,1,3,4,5,6,7,8,9,10',
+                        '1,2,3,4,5,6,7,8,9', '2,7,4,9,1,10,3,8,6,5,5',
+                        '2,7,4,9,1,10,3,8,6,11', ''):
+            self.assertFalse(ru_es_unleaked_first_answer_valid(invalid))
+        spanish = multiturn_followup_prompt(TOKEN, 'multiturn_ru_es')
+        expected_second = ','.join(reversed(first_answer.split(',')))
+        self.assertNotIn(first_answer, spanish)
+        self.assertNotIn(expected_second, spanish)
+        self.assertTrue(multiturn_history_valid([
+            {'role': 'user', 'content': first_prompt},
+            {'role': 'assistant', 'content': first_answer},
+            {'role': 'user', 'content': spanish},
+            {'role': 'assistant', 'content': expected_second},
+        ], first_prompt, first_answer, spanish, expected_second))
+        self.assertFalse(multiturn_history_valid([
+            {'role': 'user', 'content': first_prompt},
+            {'role': 'assistant', 'content': FIRST},
+            {'role': 'user', 'content': spanish},
+            {'role': 'assistant', 'content': expected_second},
+        ], first_prompt, first_answer, spanish, expected_second))
 
     def test_exact_spanish_followup_keeps_same_dialog_and_one_shot_gate(self):
         es = multiturn_followup_prompt(TOKEN, "multiturn_ru_es")
