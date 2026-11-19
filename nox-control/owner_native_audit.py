@@ -630,7 +630,7 @@ def _capture_process_identity_inventory(proc_root=Path('/proc'), clock=time.time
                 for name, value in namespaces.items():
                     expected = {'pid': 'pid', 'mnt': 'mnt', 'cgroup': 'cgroup'}[name]
                     if not isinstance(value, str) or not re.fullmatch(
-                            rf'{expected}:\\[[0-9]+\\]', value):
+                            rf'{expected}:\[[0-9]+\]', value):
                         missing.append('namespace_' + name)
                 if not isinstance(identity.get('comm'), str) or not identity['comm']:
                     missing.append('comm')
