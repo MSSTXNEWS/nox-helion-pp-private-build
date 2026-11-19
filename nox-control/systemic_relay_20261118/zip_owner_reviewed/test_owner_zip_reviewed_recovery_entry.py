@@ -9,7 +9,7 @@ import os
 import unittest
 
 HERE=Path(__file__).resolve().parent
-REPO=HERE.parents[3]
+REPO=HERE.parents[2]
 ENTRY=HERE/'owner_zip_reviewed_recovery_entry.py'
 OPERATOR=REPO/'nox-control/owner_native_operator.py'
 CANDIDATE=HERE/'merge_web_source.py'
@@ -50,7 +50,7 @@ class ReviewedZipRecovery(unittest.TestCase):
         self.assertEqual(p['files'],[{'path':'merge_web_source.py',
            'before_sha256':op.SOURCE_SHA,'after_sha256':op.REVIEWED_SHA,
            'payload_sha256':op.REVIEWED_SHA}])
-        self.assertEqual(len(op.encoded(p)),len(op.encoded(p)))  # deterministic
+        self.assertEqual(op.encoded(p),op.encoded(p))  # canonical JSON stable
 
     def test_exact_owner_bundle_no_name_or_path_collisions(self):
         own=load(OPERATOR,'owner_zip_reviewed_transport')
