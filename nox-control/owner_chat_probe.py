@@ -36,10 +36,14 @@ def request(client,path,method='GET',data=None,timeout=6,base=None):
     except urllib.error.HTTPError as exc:return exc
 
 def obj(response,limit=100000):
-    if response.status!=200:raise RuntimeError('HOLD_HTTP_'+str(response.status))
-    raw=response.read(limit+1)
-    if len(raw)>limit:raise RuntimeError('HOLD_RESPONSE_LIMIT')
-    return json.loads(raw)
+    """Bounded owner JSON readback; always release its HTTP response/socket."""
+    try:
+        if response.status!=200:raise RuntimeError('HOLD_HTTP_'+str(response.status))
+        raw=response.read(limit+1)
+        if len(raw)>limit:raise RuntimeError('HOLD_RESPONSE_LIMIT')
+        return json.loads(raw)
+    finally:
+        response.close()
 
 def meaningful_delta(text):
     return isinstance(text,str) and re.search(r'[^\s.…]',text) is not None
