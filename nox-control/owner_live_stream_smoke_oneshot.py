@@ -242,7 +242,9 @@ def main():
                    and items[-2].get("content")==SYNTHETIC and items[-1].get("content")==result)
         record["owner_dialog_pair_verified"]=saved
         record["canonical_s03_write_verified"]=False  # not proven by owner-dialog history
-        record["done_claims_s03_integrated"]=done.get("s03_integrated") is True
+        record["model_claimed_s03_integrated_unverified"]=done.get("s03_integrated") is True
+        record["canonical_s03_integration_accepted"]=False
+        record["s03_integration_status"]="UNVERIFIED"
         record["planning_format_pass"]=bool(bullets>=3 and "?" not in result)
         record["status"]="LIVE_STREAM_OWNER_DIALOG_VERIFIED" if saved else "HOLD_OWNER_DIALOG_HISTORY"
         if not saved:raise RuntimeError("HOLD_LIVE_SMOKE_OWNER_DIALOG")
