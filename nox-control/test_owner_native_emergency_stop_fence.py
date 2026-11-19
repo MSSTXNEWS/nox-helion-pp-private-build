@@ -152,15 +152,15 @@ class EmergencyStopFenceTests(unittest.TestCase):
         parser = configparser.ConfigParser(
             interpolation=None, strict=True, inline_comment_prefixes=(";",))
         parser.read_string(
-            "[unix_http_server]\\n"
-            "file=/run/supervisor.sock ; unix RPC socket\\n"
-            "chmod=0600 ; private mode\\n"
-            "[rpcinterface:supervisor]\\n"
-            "supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface ; fixed RPC factory\\n"
-            "[supervisorctl]\\n"
-            "serverurl=unix:///run/supervisor.sock ; matching endpoint\\n"
-            "[include]\\n"
-            "files=/etc/supervisor/conf.d/*.conf ; pinned include glob\\n"
+            "[unix_http_server]\n"
+            "file=/run/supervisor.sock ; unix RPC socket\n"
+            "chmod=0600 ; private mode\n"
+            "[rpcinterface:supervisor]\n"
+            "supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface ; fixed RPC factory\n"
+            "[supervisorctl]\n"
+            "serverurl=unix:///run/supervisor.sock ; matching endpoint\n"
+            "[include]\n"
+            "files=/etc/supervisor/conf.d/*.conf ; pinned include glob\n"
         )
         self.assertEqual(parser.get("unix_http_server", "file"),
                          "/run/supervisor.sock")
