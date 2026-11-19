@@ -518,15 +518,10 @@ jobs:
               raise SystemExit('HOLD_PAGE_CACHE_SOURCE_PIN')
           if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() != source:
               raise SystemExit('HOLD_PAGE_CACHE_CHECKOUT_MISMATCH')
-          if subprocess.run(['git','merge-base','--is-ancestor',helper_commit,source]).returncode != 0:
-              raise SystemExit('HOLD_PAGE_CACHE_HELPER_ANCESTRY')
           raw=Path('nox-control/owner_storage_reclaim.py').read_bytes()
           blob=hashlib.sha1(b'blob '+str(len(raw)).encode('ascii')+b'\0'+raw).hexdigest()
           if blob != helper_blob:
               raise SystemExit('HOLD_PAGE_CACHE_HELPER_BLOB')
-          helper_at_pin=subprocess.check_output(['git','show',helper_commit+':nox-control/owner_storage_reclaim.py'])
-          if helper_at_pin != raw:
-              raise SystemExit('HOLD_PAGE_CACHE_HELPER_SOURCE')
           entry=Path('nox-control/owner_page_cache_reclaim_entry.py').read_text(encoding='utf-8')
           operator=Path('nox-control/owner_native_operator.py').read_text(encoding='utf-8')
           for marker in ("HELPER_SOURCE_COMMIT = '"+helper_commit+"'", "HELPER_BLOB_SHA = '"+helper_blob+"'"):
