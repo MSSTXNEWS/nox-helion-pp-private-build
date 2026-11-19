@@ -161,10 +161,22 @@ class BindingTests(unittest.TestCase):
         events=[];calls=[];callback_sessions={'self':[],'affect':[],'preferences':[],
                                                 'memory_scope':[],'recall':[]}
         def save(session,payload):
-            event={'chat_id':session.chat_id,**payload}
+            event_id=f"s03-{session.chat_id}-{payload['seq']}"
+            event={'event_id':event_id,'chat_id':session.chat_id,**payload}
             events.append(event)
-            return {'verified':True,'durable':True,
-                    'event_id':f"s03-{session.chat_id}-{payload['seq']}"}
+            return {'verified':True,'durable':True,'event_id':event_id}
+        def readback(session,event_id):
+            rows=[e for e in events if e['chat_id']==session.chat_id
+                  and e['event_id']==event_id]
+            if len(rows)!=1:return {'verified':False}
+            event=rows[0]
+            payload={key:event[key] for key in ('turn_id','seq','kind','schema','body')}
+            payload_sha256=hashlib.sha256(json.dumps(
+                payload,ensure_ascii=False,sort_keys=True,separators=(',',':'),
+                allow_nan=False).encode('utf8')).hexdigest()
+            return {'verified':True,'durable':True,'event_id':event_id,
+                    'turn_id':event['turn_id'],'seq':event['seq'],'kind':event['kind'],
+                    'payload_sha256':payload_sha256}
         def indexed_recall(session,plan,limit):
             callback_sessions['recall'].append((session.chat_id,plan,limit))
             return memories
@@ -188,7 +200,7 @@ class BindingTests(unittest.TestCase):
         host=HostBindings(
             authorize=lambda _:True,stop=lambda:False,
             s03_recall=lambda s,p,l:[],s03_revision=lambda _:'v1',
-            s03_append=save,model_stream=llm,
+            s03_append=save,model_stream=llm,s03_readback=readback,
             self_receipts=self_receipts,affect=affect,preferences=preferences,
             memory_scope_authorize=memory_scope_authorize,
             s03_indexed_recall=indexed_recall)
@@ -245,13 +257,18 @@ class BindingTests(unittest.TestCase):
                              {'chat-ru-kv','chat-es-am'})
             self.assertTrue(all(e['body']['sha256'] for e in finals))
         finally:agent.close()
-    def test_no_proof_no_draft_display(self):
+    def test_missing_independent_readback_holds_before_model(self):
         s=Session(tenant='nox',principal='owner',chat_id='chat')
+        model_calls=[]
         host=HostBindings(authorize=lambda _:True,stop=lambda:False,
             s03_recall=lambda s,p,l:[],s03_revision=lambda _:'rev1',
-            s03_append=lambda s,p:{'verified':False},model_stream=lambda p,c:iter(['hello']))
+            s03_append=lambda s,p:{'verified':True,'durable':True,'event_id':'event-1'},
+            model_stream=lambda p,c:model_calls.append(p) or iter(['hello']))
         agent=AttachedNOX(host)
-        try:self.assertEqual(list(agent.stream(s,'hello','turn-1'))[0]['type'],'hold')
+        try:
+            result=list(agent.stream(s,'hello','turn-1'))
+            self.assertEqual(result,[{'type':'hold','state':'HOLD_S03_READBACK_UNBOUND'}])
+            self.assertEqual(model_calls,[])
         finally:agent.close()
 
 if __name__=='__main__':unittest.main()
