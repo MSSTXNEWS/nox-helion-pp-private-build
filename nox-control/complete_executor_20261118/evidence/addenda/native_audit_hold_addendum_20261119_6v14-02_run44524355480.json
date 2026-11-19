@@ -41,7 +41,6 @@
       "job_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/44524355480/job/135560889713",
       "event": "issue_comment",
       "head_sha": "aec4700d510f99edd7d4c7812359cb05f9b4bf8c",
-      "actor_id": 340718567,
       "started_at_utc": "2026-11-19T12:29:30Z",
       "completed_at_utc": "2026-11-19T12:30:20Z",
       "conclusion": "failure"
@@ -49,7 +48,6 @@
     "authorization": {
       "owner_comment_id": 7009138431,
       "owner_author_association": "OWNER",
-      "exact_comment_body": "/nox-maintain 60509551 b1e33d60983885a7ebd1979bda4ec640b7ca7047 audit",
       "authenticated_instance_id": 60509551,
       "source_auth": "PASS",
       "host_pin": "VERIFIED",
@@ -69,8 +67,6 @@
       "transport": "inline_job_log_chunks",
       "marker": "NOX_MAINT_AUDIT_BUNDLE",
       "terminal_marker": "NOX_MAINT_TRANSFER_END",
-      "protocol_artifact_id": "e98ea09a8390f403d46ae1bb451d21b5594f5830817d4b6ab5bae6d185f62981",
-      "request_id": 7009138431,
       "source_sha": "b1e33d60983885a7ebd1979bda4ec640b7ca7047",
       "chunk_count": 2,
       "total_bytes": 32283,
@@ -124,13 +120,14 @@
       "gpu_census": {
         "complete": false,
         "link_count": 2,
-        "unmatched_gpu_pid": 1964117,
         "classification": "NOT_VISIBLE",
         "evidence_state": "INCOMPLETE",
         "identity_stability": "NOT_VISIBLE",
         "visibility": "INCOMPLETE_NSPID_SCAN",
         "before_alias_scan_complete": false,
-        "after_alias_scan_complete": true
+        "after_alias_scan_complete": true,
+        "unmatched_link_count": 2,
+        "identity_join_complete": false
       },
       "supervisor": {
         "inventory_complete": true,
@@ -149,8 +146,6 @@
       },
       "result": "HOLD_AUDIT_CENSUS_INCOMPLETE",
       "remote_exit_code": 0,
-      "temporary_ssh_key_attached": true,
-      "temporary_ssh_key_detached": true,
       "temporary_ssh_key_cleanup": "DETACHED_AND_VERIFIED"
     }
   },
