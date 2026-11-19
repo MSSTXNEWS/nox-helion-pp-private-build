@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_4A01_DATASET_SPLIT_ACQUISITION_CARD_V1",
+  "task_id": "4A01",
+  "status": "ACQUISITION_REQUIRED_OWNER_RECEIPT_PENDING",
+  "purpose": "Acquire only the two HellaSwag split files named by the existing NVIDIA recipe, then record verified local-byte receipts. Do not retrieve weights or the rest of the corpus.",
+  "manifest_reference": "nox-control/model_manifests/4A01_DEEPSEEK_V41_1017_TRAINING_SOURCE_20261119.json",
+  "manifest_current_dataset": {
+    "dataset": "rowan/hellaswag",
+    "train_split": "train",
+    "train_sample_limit": 16384,
+    "validation_split": "validation",
+    "validation_sample_limit": 128,
+    "snapshot_revision": null,
+    "split_file_sha256": null
+  },
+  "local_artifact_search": {
+    "drive_metadata_search_terms": [
+      "HellaSwag",
+      "rowan/hellaswag",
+      "train-00000-of-00001.parquet",
+      "validation-00000-of-00001.parquet",
+      "hellaswag_train.jsonl",
+      "hellaswag_val.jsonl"
+    ],
+    "drive_result": "No matching HellaSwag dataset file metadata returned. The train parquet query returned historical MASTER_CHECKLIST markdown entries; fetched checklist contains a SWE-Gym parquet reference but no HellaSwag split.",
+    "repository_tree": {
+      "branch": "codex/4a01-source-pin-validator-20261119",
+      "head_at_search": "6b0953289c7dad4f04558a070c9590c1ed735dcf",
+      "entries": 2622,
+      "truncated": false,
+      "result": "No HellaSwag parquet/JSONL or split index. The only related named source is the generic nox-control/test_hybrid_training_dataset_reader.py."
+    },
+    "interpretation": "Bounded search did not find an existing local Drive/repository artifact receipt. This is not a claim that every Drive object or inaccessible host was exhaustively audited."
+  },
+  "upstream_metadata_candidate": {
+    "dataset_repo": "Rowan/hellaswag",
+    "revision": "218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "revision_url": "https://huggingface.co/datasets/Rowan/hellaswag/commit/218ec52e09a7e7462a5400043bb9a69a41d06b76",
+    "revision_qualification": "Candidate source metadata only. No local bytes were downloaded or checked. Owner must confirm this snapshot is the intended dataset revision before updating the canonical training manifest.",
+    "files": [
+      {
+        "split": "train",
+        "path": "data/train-00000-of-00001.parquet",
+        "immutable_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/train-00000-of-00001.parquet",
+        "expected_size_bytes": 24365524,
+        "expected_sha256": "cacb12587faa63d7f723a72d61d12bfa94b140446f5a6a0a2e1c6906ab88bf02",
+        "metadata_evidence_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/main/data/train-00000-of-00001.parquet"
+      },
+      {
+        "split": "validation",
+        "path": "data/validation-00000-of-00001.parquet",
+        "immutable_url": "https://huggingface.co/datasets/Rowan/hellaswag/resolve/218ec52e09a7e7462a5400043bb9a69a41d06b76/data/validation-00000-of-00001.parquet",
+        "expected_size_bytes": 6315951,
+        "expected_sha256": "899813071e1e95efafec90f856e1987d2150fa4d020fc005df6962c259f660cd",
+        "metadata_evidence_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/main/data/validation-00000-of-00001.parquet"
+      }
+    ],
+    "total_expected_bytes": 30681475,
+    "metadata_proof": "The official dataset commit page lists both added Parquet Git-LFS pointers with SHA-256 and byte sizes; each pointer hash matches the per-file metadata page."
+  },
+  "acquisition_steps": [
+    "Owner confirms the pinned dataset snapshot and training/validation selection semantics.",
+    "Fetch only the two immutable URLs above; verify exact byte length and SHA-256 locally, and record a receipt containing source revision, source path, local artifact ID/path, measured size/hash, timestamp, and provenance.",
+    "Record that the source files contain full splits; apply the recipe's 16,384/128 sample caps only with an explicit reproducible sampling/shuffle seed and record the resulting sample manifest/hash.",
+    "Update the canonical manifest with per-split snapshot/hash fields or an owner-approved immutable split-index manifest; do not fill the existing singular split_file_sha256 field by guessing how it should represent two files.",
+    "Keep training_admission=HOLD until independent data receipt and separate resource/runtime gates pass."
+  ],
+  "licensing": {
+    "canonical_manifest_claim": "MIT",
+    "review_note": "The current dataset card displays MIT, while the legacy dataset_infos metadata blob reports an empty license field; retain the canonical claim only after the owner confirms the intended license source/provenance.",
+    "dataset_card_url": "https://huggingface.co/datasets/Rowan/hellaswag",
+    "legacy_metadata_url": "https://huggingface.co/datasets/Rowan/hellaswag/blob/f47cd9941619738721e299cf3a72a47d1b01744e/dataset_infos.json"
+  },
+  "boundaries": {
+    "downloaded_bytes": 0,
+    "weights_touched": false,
+    "training_started": false,
+    "canonical_manifest_mutated": false,
+    "validator_hold_cleared": false,
+    "task_status_changed": false
+  }
+}
