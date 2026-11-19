@@ -287,6 +287,39 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(len(calls), 3)
         self.assertEqual(len(gateway._read('state/owner_senior/budget.json')['events']), 6)
 
+    def test_wire_byte_digest_and_unexpected_compression_hold(self):
+        # Mock provider transport only: no paid request or credentials leave the test.
+        import gzip
+        import httpx
+        config = self.configure()
+        value = {'model': gateway.PROVIDERS['openai']['model'], 'status': 'completed',
+                 'output': [{'type': 'message', 'role': 'assistant',
+                             'content': [{'type': 'output_text', 'text': ADVICE}]}]}
+        wire = json.dumps(value, separators=(',', ':')).encode('utf-8')
+        original = httpx.AsyncClient
+        accepted_encodings = []
+
+        async def plain(request):
+            accepted_encodings.append(request.headers.get('accept-encoding'))
+            return httpx.Response(200, content=wire)
+
+        with patch.object(httpx, 'AsyncClient',
+                          lambda **kwargs: original(transport=httpx.MockTransport(plain), **kwargs)):
+            result = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+        self.assertEqual(result['state'], 'RECEIVED')
+        self.assertEqual(result['text'], ADVICE)
+        self.assertEqual(result['response_sha256'], gateway.hashlib.sha256(wire).hexdigest())
+        self.assertEqual(accepted_encodings, ['identity'])
+
+        async def compressed(request):
+            return httpx.Response(200, headers={'content-encoding': 'gzip'},
+                                  content=gzip.compress(wire))
+
+        with patch.object(httpx, 'AsyncClient',
+                          lambda **kwargs: original(transport=httpx.MockTransport(compressed), **kwargs)):
+            held = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
+        self.assertEqual(held['state'], 'MODEL_RESPONSE_CONTENT_ENCODING')
+
     def test_http_redirect_is_not_followed_and_body_limit_is_enforced(self):
         import httpx
         config = self.configure()
