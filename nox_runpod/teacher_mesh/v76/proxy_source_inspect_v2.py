@@ -7,7 +7,6 @@ environment variables, or exception text.
 from __future__ import annotations
 
 import hashlib
-import json
 
 from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as conn
 
@@ -43,6 +42,7 @@ def analyze_source(raw):
 
     definitions = {name: [] for name in TARGETS}
     calls = {name: [] for name in TARGETS}
+    routes = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             if node.name in definitions and len(definitions[node.name]) < 8:
@@ -65,6 +65,32 @@ def analyze_source(raw):
                     ][:24],
                     "constant_slice_bounds": bounds[:24],
                 })
+            for decorator in node.decorator_list:
+                if not isinstance(decorator, ast.Call):
+                    continue
+                func = decorator.func
+                method = (func.attr.lower() if isinstance(func, ast.Attribute)
+                          else None)
+                if method not in ("get", "post", "put", "delete") or not decorator.args:
+                    continue
+                path = decorator.args[0]
+                if (isinstance(path, ast.Constant) and isinstance(path.value, str)
+                        and path.value.startswith("/api/nox/chat")
+                        and len(path.value) <= 120 and len(routes) < 24):
+                    route_calls = []
+                    for child in ast.walk(node):
+                        if isinstance(child, ast.Call):
+                            called = (child.func.id if isinstance(child.func, ast.Name)
+                                      else child.func.attr if isinstance(child.func, ast.Attribute)
+                                      else None)
+                            if called in TARGETS and called not in route_calls:
+                                route_calls.append(called)
+                    routes.append({
+                        "method": method.upper(),
+                        "path": path.value,
+                        "handler_line": node.lineno,
+                        "context_calls": route_calls[:3],
+                    })
         elif isinstance(node, ast.Call):
             func = node.func
             name = (func.id if isinstance(func, ast.Name)
@@ -76,7 +102,8 @@ def analyze_source(raw):
         "source_bytes": len(raw),
         "functions": {name: rows for name, rows in definitions.items()},
         "callsites": {name: rows for name, rows in calls.items()},
-        "analysis_note": "AST-only; numeric constant slice bounds are reported; no source text emitted",
+        "chat_routes": routes,
+        "analysis_note": "AST-only; bounded line/symbol/slice metadata; no source text emitted",
     }
 """
 
@@ -100,7 +127,10 @@ def read_small(path, limit):
         raw=f.read(limit+1)
         after=os.fstat(f.fileno())
         ident=lambda x:(x.st_dev,x.st_ino,x.st_size,x.st_mtime_ns)
-        if len(raw)>limit or ident(st)!=ident(after) or len(raw)!=st.st_size:
+        if len(raw)>limit or ident(st)!=ident(after):
+            raise ValueError('HOLD_FILE_CHANGED')
+        # procfs files report st_size=0 while still returning bounded data.
+        if not path.startswith('/proc/') and len(raw)!=st.st_size:
             raise ValueError('HOLD_FILE_CHANGED')
         return raw,st
 def supervisor_pid():
