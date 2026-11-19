@@ -685,4 +685,30 @@ class PairedReceiptTests(unittest.TestCase):
                         (3, visible), (5, stop),
                         (6, error_line), (7, done)])
 
+    def test_sse_nonspacing_marks_are_not_first_visible_text(self):
+        # Python marks the combining grapheme joiner, variation selector and
+        # other Unicode marks printable, despite no independent visible glyph.
+        marks = "\u034f\ufe0f\u0301\u0488"
+        def frame(text):
+            return ("data: " + json.dumps(
+                {"choices": [{"delta": {"content": text},
+                               "finish_reason": None}]}) + "\n\n").encode("ascii")
+        stop = b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
+        done = b"data: [DONE]\n\n"
+        invisible_only = measure_openai_sse_wire([
+            (2, frame(marks)), (5, stop), (8, done)])
+        self.assertIsNone(invisible_only["first_text_ms"])
+        self.assertFalse(invisible_only["wire_completed_normally"])
+        self.assertEqual(invisible_only["completion_ms"], 8)
+        self.assertEqual(invisible_only["visible_text_sha256"],
+                         hashlib.sha256(marks.encode("utf-8")).hexdigest())
+        visible = measure_openai_sse_wire([
+            (2, frame(marks)), (4, frame("Привет, ¡hola! 😀")),
+            (5, stop), (8, done)])
+        self.assertEqual(visible["first_text_ms"], 4)
+        self.assertEqual(visible["completion_ms"], 8)
+        self.assertTrue(visible["wire_completed_normally"])
+        self.assertEqual(visible["visible_text_sha256"],
+                         hashlib.sha256((marks + "Привет, ¡hola! 😀").encode()).hexdigest())
+
 if __name__ == '__main__': unittest.main()

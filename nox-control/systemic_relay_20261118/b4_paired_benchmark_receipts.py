@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import re
+import unicodedata
 
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 OUTCOMES = frozenset({"PASS", "FAIL", "TIMEOUT", "BUDGET_EXHAUSTED", "ERROR"})
@@ -421,7 +422,9 @@ def measure_openai_sse_wire(timed_chunks):
             # visible first token. Preserve ALL original bytes in text SHA;
             # use a rendering-aware timestamp, not whitespace alone.
             if first_text_ms is None and any(
-                    ch.isprintable() and not ch.isspace() for ch in content):
+                    ch.isprintable() and not ch.isspace()
+                    and unicodedata.category(ch) not in ("Mn", "Me")
+                    for ch in content):
                 first_text_ms = at_ms
             visible_hash.update(encoded)
             visible_bytes += len(encoded)
