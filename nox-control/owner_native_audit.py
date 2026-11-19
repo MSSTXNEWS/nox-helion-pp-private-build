@@ -80,7 +80,7 @@ EXACT_PID_CANDIDATES = (
 PROC_EVIDENCE_LIMITS = {
     "fd_entries": 256, "maps_bytes": 1048576, "maps_lines": 8192,
     "memfd_maps": 8, "fd_rows": 8, "smaps_rollup_bytes": 8192,
-    "total_processes": 18, "total_json_bytes": 90000,
+    "total_processes": 18, "total_json_bytes": 88000,
 }
 MEMFD_LABEL = re.compile(r"^/?memfd:([A-Za-z0-9_.+@=-]{1,96}) \(deleted\)$")
 NVIDIA_FD = re.compile(r"^/dev/(?:nvidiactl|nvidia-uvm(?:-tools)?|nvidia[0-9]+)$")
