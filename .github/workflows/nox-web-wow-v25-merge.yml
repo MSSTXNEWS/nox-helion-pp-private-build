@@ -1,0 +1,59 @@
+name: NOX WEB WOW V25 Source Merger QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths: ['nox_runpod/web_wow_merge/**', '.github/workflows/nox-web-wow-v25-merge.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-source-merge-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and negative NO-LOSS merge tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m compileall -q nox_runpod/web_wow_merge
+          python3 -m unittest discover -s nox_runpod/web_wow_merge/tests -v
+      - name: Exact source artifact with SHA256
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p /tmp/nox-wow-v25/tests
+          cp nox_runpod/web_wow_merge/merge_nox_web_wow.py /tmp/nox-wow-v25/
+          cp nox_runpod/web_wow_merge/merge_physical_web_v25.py /tmp/nox-wow-v25/
+          cp nox_runpod/web_wow_merge/qa_physical_web_v25.py /tmp/nox-wow-v25/
+          cp nox_runpod/web_wow_merge/APPLY_NOX_WEB_WOW_V25.ps1 /tmp/nox-wow-v25/
+          cp nox_runpod/web_wow_merge/MERGE_NOX_WEB_WOW_STAGING.cmd /tmp/nox-wow-v25/
+          cp nox_runpod/web_wow_merge/README_RU.md /tmp/nox-wow-v25/
+          cp nox_runpod/web_wow_merge/tests/test_*.py /tmp/nox-wow-v25/tests/
+          (cd /tmp/nox-wow-v25 && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          test "$(wc -l < /tmp/nox-wow-v25/SHA256SUMS.txt)" -ge 5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_WEB_WOW_V25_UNIFIED_MERGER_VERIFIED_SOURCE
+          path: /tmp/nox-wow-v25/
+          retention-days: 7
+          if-no-files-found: error
+
+  windows-source-syntax-only:
+    runs-on: windows-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse non-destructive Windows no-loss promotion PowerShell
+        shell: pwsh
+        run: |
+          $Path = 'nox_runpod/web_wow_merge/APPLY_NOX_WEB_WOW_V25.ps1'
+          $Tokens = $null
+          $Errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$Tokens, [ref]$Errors)
+          if ($Errors.Count -gt 0) {
+            $Errors | ForEach-Object { Write-Error $_.Message }
+            throw 'NOX_WINDOWS_PS_SYNTAX_FAIL'
+          }
+          if ((Get-Content $Path -Raw) -notmatch 'NOX_DRY_RUN_PASS') { throw 'NOX_DRY_RUN_GUARD_MISSING' }
+          Write-Output 'NOX_WINDOWS_PS_SOURCE_SYNTAX_PASS_NO_ACTUAL_WINDOWS_PROMOTION'

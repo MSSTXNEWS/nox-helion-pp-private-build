@@ -1,0 +1,83 @@
+name: NOX V29.5 Native Windows E07 Readonly Safety QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - '.github/workflows/nox-v295-native-e07-qa.yml'
+      - 'nox_runpod/web_wow_merge/v295/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  windows-native-e07-inspection:
+    runs-on: windows-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows PowerShell parse and guards
+        shell: powershell
+        run: |
+          $p='nox_runpod/web_wow_merge/v295/NOX_E07_PHYSICAL_ACCEPTANCE.ps1'
+          $t=$null; $e=$null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $p).Path,[ref]$t,[ref]$e)
+          if ($e.Count -gt 0) { $e | Out-String | Write-Error; exit 1 }
+          $s=Get-Content -LiteralPath $p -Raw -Encoding UTF8
+          foreach ($term in @('release_accepted=$false','production_modified=$false','NOX_E07_STAGING_ABSENT','BeforeRestart','AfterRestart',
+             'HOLD_NOT_TRIGGERED_TO_PROTECT_HARDWARE','NOX_E07_ORIGINAL_HOME_CHANGED')) {
+            if (-not $s.Contains($term)) { throw "NOX_REQUIRED_FAIL_CLOSED_GUARD_MISSING: $term" }
+          }
+          Write-Output 'NOX_V295_WINDOWS_NATIVE_PARSER_AND_SAFETY_PASS'
+      - uses: actions/download-artifact@v4
+        with:
+          name: NOX_HELION_WEB_V29_3_FULL_VERIFIED_ARCHIVE
+          run-id: 43441048683
+          github-token: ${{ github.token }}
+          path: candidate
+      - name: Isolated stage only with exact source file from real V29.3
+        shell: powershell
+        run: |
+          Add-Type -AssemblyName System.IO.Compression
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $root=Join-Path $env:RUNNER_TEMP 'NOX_V295_DIAG_ISOLATED'
+          $stage=Join-Path $root 'builds\NOX_V29_4_VERIFIED_STAGE'
+          $site=Join-Path $stage 'site'
+          New-Item -ItemType Directory -Force -Path $site | Out-Null
+          $archive=Join-Path $PWD 'candidate\NOX_HELION_WEB_V29_3_FROZEN_20261113.zip'
+          $actual=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($actual -ne '166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0'){throw 'SOURCE_DRIFT'}
+          $z=[System.IO.Compression.ZipFile]::OpenRead($archive)
+          try {
+            foreach($name in @('site/index.html','site/SOURCE_MANIFEST_V29.json')) {
+              $entry=$z.GetEntry($name)
+              if($null -eq $entry){throw "MISSING $name"}
+              $output=Join-Path $site ($name.Substring(5))
+              [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry,$output)
+            }
+          }finally{$z.Dispose()}
+          $receipt=@{web_sha256=$actual;production_modified=$false;release_accepted=$false}
+          $receipt|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $stage 'NOX_V294_STAGE_RECEIPT.json') -Encoding UTF8
+          echo "NOX_V295_ISOLATED_STAGE_READY"
+          echo "NOX_V295_TEST_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding UTF8
+      - name: Execute actual Windows receipt probes without PC or model
+        shell: powershell
+        run: |
+          $p='nox_runpod/web_wow_merge/v295/NOX_E07_PHYSICAL_ACCEPTANCE.ps1'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Root $env:NOX_V295_TEST_ROOT -Port 19776 -Phase Current
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_E07_PROBE_SCRIPT_CRASHED' }
+          $dir=Join-Path $env:NOX_V295_TEST_ROOT 'builds\NOX_V29_4_VERIFIED_STAGE\NOX_E07_NATIVE_ACCEPTANCE'
+          $files=@(Get-ChildItem -LiteralPath $dir -Filter '*.json' -File)
+          if ($files.Count -ne 1) { throw "EXPECTED_ONE_RECEIPT $($files.Count)" }
+          $r=Get-Content -LiteralPath $files[0].FullName -Raw -Encoding UTF8|ConvertFrom-Json
+          if ($r.release_accepted -ne $false -or $r.production_modified -ne $false){throw 'FAKE_RELEASE_PASS'}
+          if ($r.original_source_lock -ne 'PASS_V294_STAGED_1085_SOURCE_LOCK'){throw 'SOURCE_GUARD_MISSING'}
+          if ($r.running_onehost -like 'PASS*' -or $r.s03_restart_continuity -like 'PASS*'){throw 'FAKE_NATIVE_PASS_WITHOUT_PC'}
+          Write-Output 'NOX_V295_WINDOWS_READONLY_RECEIPT_FAIL_CLOSED_PASS'
+      - name: Upload physical Windows diagnostic receipts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_V295_WINDOWS_ISOLATED_E07_RECEIPT
+          path: ${{ runner.temp }}/NOX_V295_DIAG_ISOLATED/builds/NOX_V29_4_VERIFIED_STAGE/NOX_E07_NATIVE_ACCEPTANCE/*.json
+          retention-days: 7
+          if-no-files-found: warn

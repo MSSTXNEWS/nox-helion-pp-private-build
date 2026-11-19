@@ -1,0 +1,3963 @@
+{
+  "schema": "nox-master-catalog-200-final-physical-acquisition-audit-v2",
+  "run_date": "2026-11-12",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "github_pr": 251,
+  "github_branch": "feature/nox-teacher-mycelium-20261112",
+  "drive_folder": "https://drive.google.com/drive/folders/180zabWv3mn0tPI3k7BLgA2frf4zSRRjF",
+  "source_report_file": "NOX_MASTER_CATALOG_200_DOWNLOAD_REPORT.json",
+  "source_parts_index_file": "NOX_MASTER_CATALOG_200_PARTS_INDEX.json",
+  "summary": {
+    "catalog_entries": 200,
+    "physical_files_components": 199,
+    "hosted_api_service_entries": 1,
+    "all_200_entries_have_a_physical_source_or_sdk_reference": true,
+    "by_provenance": {
+      "original_sha_verified": 182,
+      "recoveries": 11,
+      "completed_after_recovery": 6,
+      "hosted_services_with_sdk": 1
+    },
+    "main_archives": 20,
+    "main_archive_parts": 69,
+    "new_source_component_chunks_and_manifests": 52,
+    "rive_js_and_openrouter_sdk_extra_bundle": "NOX_CATALOG_FINAL_OPENROUTER_AND_RIVE_SDK.zip",
+    "verification": "CI_DOWNLOADED_AND_CHECKSUM_VERIFIED; GOOGLE_DRIVE_METADATA_FILENAME_SIZE_MATCH; NOT_ALL_BYTES_REDOWNLOADED_AND_REHASHED_FROM_GOOGLE_DRIVE",
+    "installation_verified": false,
+    "source_full_git_tree_for_every_entry": false,
+    "teacher_models_15_deployed": false
+  },
+  "important_limits": [
+    "OpenRouter is a hosted service, not a downloadable server or model; official Python and TypeScript clients downloaded and checksum-verified.",
+    "Some oversized Git repos were substituted by official PyPI/npm source/package distributions; not full Git tree.",
+    "Model weights inside catalog (32,33,77,78) backed up. The 15 additional teacher-model candidates are not downloaded by this audit.",
+    "Presence of source does not mean NOX integration, installation, license acceptance or run-time test.",
+    "Original 182/200 report is historical; this supplemental audit accounts for recovered sources without modifying the original."
+  ],
+  "source_groups": [
+    {
+      "archive_name": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 8,
+      "archive_bytes": 309802967,
+      "archive_sha256": "27eccbbd1c580ba2b36c214ff3a7fc33738f1324a10a7995a2bfd99248e03f6c",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "da3640caef609aaf03af819efe7957bec26f40a51889de3897aabae23bd7f844",
+          "drive_url": "https://drive.google.com/file/d/1wbkvdfzkh3rUYz3D8SZKGIitSFIX9vEA/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "3bbe0102ac7cda99077cec7529aa4b7e4949a4bbff3c63b76ff64966b8d5da35",
+          "drive_url": "https://drive.google.com/file/d/15JY8-rPvalWOKGmMEMCadrGAWiuMi1Xx/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "4dc3f50349b3ee2a1c4195e7424200c3150df893e89525113e6059571ebaa00c",
+          "drive_url": "https://drive.google.com/file/d/1nlInv-F-zgFDiy-gytHAUW9mZ0ijkBxA/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip.part003",
+          "bytes": 50331648,
+          "sha256": "23f4c8018037d42c75e82d673d8616caf56f1fd05dc68a91155768e974f049f8",
+          "drive_url": "https://drive.google.com/file/d/1Czu7QgnlVLCvTH9x30SF3uoEnwuICDMD/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip.part004",
+          "bytes": 50331648,
+          "sha256": "2bae9d811f48202898811509cbb263e268dd900626f00e5ecd91380dd4a76ab7",
+          "drive_url": "https://drive.google.com/file/d/1DvWrfM5Q73yzrzyGIihtFWNSMJJoQK4K/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip.part005",
+          "bytes": 50331648,
+          "sha256": "5b8406369582b463e4280373e25df6dab3c38635422ea4f8c3b9c6e1ce6e8c29",
+          "drive_url": "https://drive.google.com/file/d/1zWV9v8M9JzVMC7GVlzsCkiZPlpNqE-FY/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip.part006",
+          "bytes": 7813079,
+          "sha256": "f0b64e2811d2269ebce83cea7de67e1f4129151c34c1250927ffc9cc3f56a109",
+          "drive_url": "https://drive.google.com/file/d/1mHii4qFMajL6UPbjBcs6SML6A161rbhw/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 9,
+      "archive_bytes": 139139150,
+      "archive_sha256": "809f674f966c0172b36dbe51c9a631af7eae1f17fa5af2a7984acd346f93b935",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "0d35d3ce37732d32cc38c6652e461e51cea780c7b15859ae20ba6c6dc86d4b84",
+          "drive_url": "https://drive.google.com/file/d/1CeOFa_Qv2lidnEP2F9Jsbq0y7YA2HhXb/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "4c048ed52767093d22c600cb5acb62088185f9c4e3e8e778a5072285b3cb60f6",
+          "drive_url": "https://drive.google.com/file/d/12F_Ggpq4a005a2Ca6jUfEHAHltRlmjTu/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip.part002",
+          "bytes": 38475854,
+          "sha256": "0696ff4b8bf8598642df131a006bd376d2ba53cd47cc07b5632276ce80ca338d",
+          "drive_url": "https://drive.google.com/file/d/1f6vc4MO30eOYhDlDN1gkIeI7YkGSzJgP/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 9,
+      "archive_bytes": 144163000,
+      "archive_sha256": "3efdb61631f41d3a95a5b522b1b7ed795664ebcb4c8f642e4a456cba9c718f56",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "733397c124c5a2ca8fdccecb3b4e0ec6bb842c8dcaf0801fb4c6bd474728c19b",
+          "drive_url": "https://drive.google.com/file/d/1VtlShg5CiKIcG12_wVf3FogR5BJ3XaUH/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "e36edf572566652e4a3512902a65c1237446e48a5657c4e6a8cc67d39f953026",
+          "drive_url": "https://drive.google.com/file/d/12oTdrQFTOSXYEQIRm691eIBXszZE7IbM/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip.part002",
+          "bytes": 43499704,
+          "sha256": "53658677af69a70a378be4c87482dd825cb182654d3acd458acdf705a4447fa4",
+          "drive_url": "https://drive.google.com/file/d/1hMF4sB7JmxxgSyL5yTr_gXueGPsOoia6/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 7,
+      "archive_bytes": 150987091,
+      "archive_sha256": "51fb41ad8f8585633ce3c455c6a23ae3864f51f49d456e23f06920a37ffdbedf",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "c2f079bf66e711463036ee1d54972ccb24927f21975a3928bf519fe672a8ec85",
+          "drive_url": "https://drive.google.com/file/d/1jreKnXhnzan8I92kBIoe_2b1LlEI_6KQ/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "13c14183b9b0c9dbdc94980401034b7ffe7dd3bc588d9fa2e56605e00d95b65e",
+          "drive_url": "https://drive.google.com/file/d/1dBZIaOfTTss8enNwjBomnusrJajbWqup/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip.part002",
+          "bytes": 50323795,
+          "sha256": "417ca967293b9e80937bfa25a4ea35603986add201deb16b9d0ea566a4c8cf0a",
+          "drive_url": "https://drive.google.com/file/d/1NWVwTYql0PC4lpkxk7SXHCid6ryEob-z/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 9,
+      "archive_bytes": 222153492,
+      "archive_sha256": "795773fa30f882119a982360a25f315bb053154d1626d11900ab9b214ebd1e2c",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "824a385b914666f79def0fe31ae7ddb5aa281dd1e4c18de5af46b0fc5dfc1364",
+          "drive_url": "https://drive.google.com/file/d/1--T28_RqpAkhyso8RzRyqxiV1ho2aQ2J/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "b1bee519c35f6dabc861bb8eceb10944f44e8caae7ff0a244c85d03f9fcc8f7e",
+          "drive_url": "https://drive.google.com/file/d/1BHIhuDKT9WtuQwMdf8u0Nej5fo1qrXYc/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "5d3f3d620881e1372f7ef05f4f83c66a90a037b642192f1c07b721e3f5641f72",
+          "drive_url": "https://drive.google.com/file/d/1g9J1OWQXomGtEwsiOU4dLh5beKGAxRL0/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip.part003",
+          "bytes": 50331648,
+          "sha256": "21302dbbca1963c7e46348e8a8533610993855cc03f3e2f14a30574468f921b9",
+          "drive_url": "https://drive.google.com/file/d/1LWPDMIZXpcBWue1Yax8XIpovuxRhc5Ix/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip.part004",
+          "bytes": 20826900,
+          "sha256": "d44a28d7ac16cb099169ca077258502d792a7255e8c89a64be979f6f556f74d3",
+          "drive_url": "https://drive.google.com/file/d/19hvlhex1UJblrSSJ-2rVvjDjG6b5c6Zt/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 9,
+      "archive_bytes": 126597882,
+      "archive_sha256": "428b91e0dcd164c73003117af1cdc88a807885f634637de0f64e04a0a0f32d0a",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "44a7b3adf2228738565a69f901dc0ace71a26d7b896f4c70c80c016a931d6cad",
+          "drive_url": "https://drive.google.com/file/d/1juc0GKTDUS8zxeRin8DQjrkp2yMBpZRo/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "562d8eb7d102d3a95ffb2a87ed285d70f7750d3163f4edc6e5f885e4bbf50a37",
+          "drive_url": "https://drive.google.com/file/d/1BB6aONtl8gdzYb6biauU4mPSVHRXzniq/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip.part002",
+          "bytes": 25934586,
+          "sha256": "def3d3986ceee1241b144ff7aa8f32645e2a1d2b35f397c2635550297ca49102",
+          "drive_url": "https://drive.google.com/file/d/1ce0qxBSMk6crUCEfcY3J66is4j4hfdAP/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 9,
+      "archive_bytes": 222825097,
+      "archive_sha256": "1ba5d032bcd7e264f0a28875ef2eda03693530317deda54e79886e1d57ce4679",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "6ece648d4474d6f38140fa453701d062e5d07c0d3d7e6b16916d6c164e4b8557",
+          "drive_url": "https://drive.google.com/file/d/1BFA-v9daGkISGbyflQ6lCjNNvE_bXwfF/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "11e0072f2af31661c9ea58adea58e1b6e8a4851ff4624ee5b3283248025e2252",
+          "drive_url": "https://drive.google.com/file/d/1ff0QPMh74NG76KOJwqdXhzi3kMFmyQQX/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "e5d3a80bf3a15a7ecbee8c2ea6895c0ff27e4fef4e1c1a59dcb0278b6523853b",
+          "drive_url": "https://drive.google.com/file/d/1uSBNFy2qtnSFlnq7PDHRGe8MrhJ5j5y2/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip.part003",
+          "bytes": 50331648,
+          "sha256": "622db5e057b3371b8bb22a59428ea3f3b39d92a817a1641120dcc08a35de8cc0",
+          "drive_url": "https://drive.google.com/file/d/1YdhWfVawuMhKDNt5aWHo5yMMOVjBbcoo/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip.part004",
+          "bytes": 21498505,
+          "sha256": "8d164962e715e82093b28848758475d32d8d40aeb035e24033fbaaccf7ebfcf3",
+          "drive_url": "https://drive.google.com/file/d/1hP9hsF_z-UeHpVKoQjSs9WTvbMcFBW2-/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 7,
+      "archive_bytes": 188286105,
+      "archive_sha256": "5c512a18b4aab779910a9b62ea8c038b33d3bc113f67f86e9365663fb1fb4ec4",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "12fa548a838bbc64c40cc843c4825797df9b5e1b2952347002e2ae0d459a81e3",
+          "drive_url": "https://drive.google.com/file/d/1MNUlMOkYXBpZ8yXOtPqIGEbgxmjpbgcm/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "79e4895cc957a46591b0b8c9131541cfab3ccc509bd0af4e7afcec0aab5447f0",
+          "drive_url": "https://drive.google.com/file/d/1HdI2qhq_6yj55OeSxrOqyhMbqJoulG66/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "57d51350a10a222d3a07102f5f3503f0bdc814c9b46e1810dee58ecb8482c24c",
+          "drive_url": "https://drive.google.com/file/d/1adl2EYH6JCMXwFk2HRPTQrVI_b6eUXPM/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip.part003",
+          "bytes": 37291161,
+          "sha256": "914d22b92898bd54fc12845d54b54b9da6b49675692d7534cade64ebb5ffdcda",
+          "drive_url": "https://drive.google.com/file/d/1Ady8CoA7kInThnVyEg3VwMd-CbzFz4dB/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_81_83_REAL_SOURCES.zip",
+      "expected": 3,
+      "verified_source_count": 3,
+      "archive_bytes": 35931269,
+      "archive_sha256": "86d0eac2c4a825d7891e6dd7c473027727e0baa204775a06629d4b8b93b30457",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_81_83_REAL_SOURCES.zip",
+          "bytes": 35931269,
+          "sha256": "86d0eac2c4a825d7891e6dd7c473027727e0baa204775a06629d4b8b93b30457",
+          "drive_url": "https://drive.google.com/file/d/1u8lHadFZcbt2BMx9tQSui4-BEyreO8cK/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "expected": 17,
+      "verified_source_count": 17,
+      "archive_bytes": 72354613,
+      "archive_sha256": "ab05ab28698d027ea7b2f82c2dfb4d8aabf76a1cdaba4a63bc00e5cda23779e2",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+          "bytes": 72354613,
+          "sha256": "ab05ab28698d027ea7b2f82c2dfb4d8aabf76a1cdaba4a63bc00e5cda23779e2",
+          "drive_url": "https://drive.google.com/file/d/1gHbMxtlCB4iMcK_xvdkhr3tgswajntTZ/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 7,
+      "archive_bytes": 135410644,
+      "archive_sha256": "6e144dfbcb586e403c1f760dbd69f20289c5cbe9141f8b470f1c1674ab456002",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "01a6efb3d35a1396b6f0aba7ef2646a1258be18e8ba776452b73bcb0fed40538",
+          "drive_url": "https://drive.google.com/file/d/1jMtq4MvUDXJbw-BtVop8e27EqkkRnJPI/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "b2b5645b01bccae5485d7b36622c7464a2174723717d9b66bd93c9b06040278a",
+          "drive_url": "https://drive.google.com/file/d/1DyVtRw7JJYZuExH9rHU8wE77egzlrdtO/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip.part002",
+          "bytes": 34747348,
+          "sha256": "4b2cf6743e97ecc0a037da705bb95cd56b262778e8ff3019e28058ad1fe70c5d",
+          "drive_url": "https://drive.google.com/file/d/1OJdGWDWvS0luUaOsUcvgR7vKR7LPSqEw/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 8,
+      "archive_bytes": 85896206,
+      "archive_sha256": "4263fdeb035694cc27bd329b1dbe4d87ec561b477e041acddfdd48503b4bb4d9",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+          "bytes": 85896206,
+          "sha256": "4263fdeb035694cc27bd329b1dbe4d87ec561b477e041acddfdd48503b4bb4d9",
+          "drive_url": "https://drive.google.com/file/d/1obRCOp4ydpfmqvqz1hNcofDn1II7oiNN/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 10,
+      "archive_bytes": 134860921,
+      "archive_sha256": "d8236f3462dc102bc75b6e1afa54fb7bd5a8025c581f14b2fea110371692c56b",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "5f8824de5fa31149e92248df083c82fa8d54c78a75aabc1d657d49e7d0abe006",
+          "drive_url": "https://drive.google.com/file/d/1bGIukTTnDUHQhx0gTRmGxX7U4slTXOFK/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "74fa9099be20180785edfe95d68c3f54ce82b4ce2ce7d72d654d4d60d79e0115",
+          "drive_url": "https://drive.google.com/file/d/1-S2bkrKWEPmemUcfB3_sUyK6ZFj8jYJe/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip.part002",
+          "bytes": 34197625,
+          "sha256": "147f7b2a65f8510837bdcdda6cec179d30f8b0958a104d81380bb76e3b1e7116",
+          "drive_url": "https://drive.google.com/file/d/16eY6jm6_qIKugF9vFG4D9hAz7kt1q-ae/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 10,
+      "archive_bytes": 50807985,
+      "archive_sha256": "e418638da5debae7adae78bb5b308c94dcceee719bd15341f4caf22963a45b8f",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+          "bytes": 50807985,
+          "sha256": "e418638da5debae7adae78bb5b308c94dcceee719bd15341f4caf22963a45b8f",
+          "drive_url": "https://drive.google.com/file/d/1_kaYHX1XjAO5DyQOM6nwhz6Pl1lbHaEI/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 10,
+      "archive_bytes": 136421795,
+      "archive_sha256": "13f460fe052b9bc1ad49898b4a79cb08299e88afa845e7acbebc250385a59eec",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "622f7988ef65c25d83448b0966b85aac4385de52bb7ab5b817e3299ddc952712",
+          "drive_url": "https://drive.google.com/file/d/1PZe39mPBpyLoq0qAhiP5IYZv7_Z6s6Bw/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "cecc5965fc09067e750e1a8dd731c6b4b96a7ef039029ed99e635ca71c2408e7",
+          "drive_url": "https://drive.google.com/file/d/1F4xORYLUOtiPFnAslGUFwev5mIyorCxx/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip.part002",
+          "bytes": 35758499,
+          "sha256": "ee142f01ee4b0b638b2f56a82fd5faaeabde0af520ba23fcfabc876cc4664735",
+          "drive_url": "https://drive.google.com/file/d/1ff1B2BVnI9xIiXfDeehaA4EXkGbyxqlE/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 10,
+      "archive_bytes": 176381071,
+      "archive_sha256": "8700b9db19628069756d8396ae3f6b3c64a0cac8a427b70f36a9ce49cf6348b8",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "a86b407822538ad4fa248f974cd98a0a767d6d57554d6ca9ace103061e6a27a4",
+          "drive_url": "https://drive.google.com/file/d/1Z0Scpuh77yTw5A2fYbZgJlBWOD8hMlAW/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "762b9aa13d4beed9283052b742ce2d71ce7e01623e3df0af8ab60d7cdff9d04b",
+          "drive_url": "https://drive.google.com/file/d/1SAJ-o0YpdAn0_Z4DF4mop6mgqXhjnNIN/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "b0b9e71b9d10ec4c84c7f09c7616e06cee53814e5e2040b34e6d198683143d7a",
+          "drive_url": "https://drive.google.com/file/d/1QuDQ_KWHsdQ7Ll6qRrJDIXjBLdV9p-ku/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip.part003",
+          "bytes": 25386127,
+          "sha256": "4c6bfa209d7e157a11512445711fccaf8d243ee02df7105d3cf0b01146da6006",
+          "drive_url": "https://drive.google.com/file/d/1QmfQWS1u2rzZ-fFSWTiYLvLtXPcsLewS/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 10,
+      "archive_bytes": 280413113,
+      "archive_sha256": "01edcb20057bca515e26ac1eb00ee0d75aa126a77bff55aa3d0e8913a0e5ccb6",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "8a745c9833ee4eed61da2658f2c8c47dab046d67a11b22a34db601cba11fdcb0",
+          "drive_url": "https://drive.google.com/file/d/1z2brymCJBn7uA9KO4P9yC37wJObMdpwq/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "670be9ecca0875ec02ba42b5c4ea56fd6d91cb158d5b7e31ed727b6424bf41c6",
+          "drive_url": "https://drive.google.com/file/d/17yRfGaw36a6L4ah5NrvaGQb_06nFHGCh/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "e49132e44d799210d5fe3de98e63ed769bc521c399ed103f7021ee61bfec6220",
+          "drive_url": "https://drive.google.com/file/d/19t0dBvYeImqyFTHskVLYzboQO8LJXCHO/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip.part003",
+          "bytes": 50331648,
+          "sha256": "8fa49e6e9db9e3cc8010e03781e0f34b92b99d13f982d3796869727761e11611",
+          "drive_url": "https://drive.google.com/file/d/1xO8dXMeRdS4xs5AZEEHMcVR7K4U0XpTs/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip.part004",
+          "bytes": 50331648,
+          "sha256": "ffa0d1388c2d4d7b450a69d2b3db80bead2bc80014caf721c0d90a059d2a00d4",
+          "drive_url": "https://drive.google.com/file/d/1dpyV-VWffVhwkfSb7iT5znv_FeLECkO6/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip.part005",
+          "bytes": 28754873,
+          "sha256": "2a92cb00b5fa67c68cd3795f269e7c7de991517f040c62815b335fe58be2f71b",
+          "drive_url": "https://drive.google.com/file/d/1y66eBzYF9yy_qM-RkiCO-Dx9DJ7oYqrL/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 10,
+      "archive_bytes": 188923400,
+      "archive_sha256": "205f3962754732222fdd668809b6480545eff4e1e7891f9728232e0b2b7ca28c",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "11c0d8406e90731eecaabf6d56f61ee5a47bc62a1c70e285773216dcc9ecfdd2",
+          "drive_url": "https://drive.google.com/file/d/1caDHo6FBLYK9sHHmlJW6_T-GOWcseUqC/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "bfac90ac28c4d2a015d72ea98fcd4eb8d3fac29b2e9c2487084281728bdd213f",
+          "drive_url": "https://drive.google.com/file/d/1wzG25fs79NJgwLZnWutYszSylZmfcyp7/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "ee343516e2108839500fb0665119d270c314986d892240c45f9f5f106c06693a",
+          "drive_url": "https://drive.google.com/file/d/1aKzlBBUhiURjPSHALKyf6Lq5hSPAMj00/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip.part003",
+          "bytes": 37928456,
+          "sha256": "880c8933f9317ad1fd9fe1d3eddbe145828610d634e7ae00abb2fa52b7372048",
+          "drive_url": "https://drive.google.com/file/d/1AOV7K8WMDZIndI7TeY4vnHtW61m3_d0W/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 10,
+      "archive_bytes": 227508590,
+      "archive_sha256": "61a643278ab18b0ae665a06f27e944db5aead9a8a86ed0e27f10a5551a736ad3",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "4bb92a859a54f767c362d1274fdbb1d08379e3f9e57921e95386069754d84c3c",
+          "drive_url": "https://drive.google.com/file/d/1FICMv2hJcY9caoufusgvTiw_SUFST7bw/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "290f9a6151f846b27d8cf095f7a12f9849ac20b11e0cc9ef6e71da11c6dab663",
+          "drive_url": "https://drive.google.com/file/d/1a8PYvahwgW4xRnzz-K3nE1JIcKVDvfNi/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "a33ee9b6a1114f2b04394cbb03a48c3b37349223184fc66cc8c0d5cbc23c1cac",
+          "drive_url": "https://drive.google.com/file/d/1T0-wCGUv28c8NAUI94hpjhb80lyr20c7/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip.part003",
+          "bytes": 50331648,
+          "sha256": "3cfce6b9cbb70fa5854167ab1a4e874d794d896755f586c96ceb293d9b2ae406",
+          "drive_url": "https://drive.google.com/file/d/1ILwvKvwUwc5kgXpghx1ryQHiKqdu4FC_/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip.part004",
+          "bytes": 26181998,
+          "sha256": "bb3feec708275acb7094d067715e6d814ac1370187450c8f4e00638bd1879b50",
+          "drive_url": "https://drive.google.com/file/d/1MYvNO1PrVIwmqMMNJS44LQ2-nSRYKWhm/view?usp=drivesdk"
+        }
+      ]
+    },
+    {
+      "archive_name": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "expected": 10,
+      "verified_source_count": 10,
+      "archive_bytes": 193055784,
+      "archive_sha256": "233cacdccd55fc67ed8432fcfe016f2d057deda11ed30c85317e2b4fb7ae55c0",
+      "parts": [
+        {
+          "name": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip.part000",
+          "bytes": 50331648,
+          "sha256": "583a072b34a9b425966fbe1dbfe9199295e49437f53af738a2dd2bd0e8136ece",
+          "drive_url": "https://drive.google.com/file/d/1XQKVvAtjyEqXeq4jeFHqPgvUVVK1JATc/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip.part001",
+          "bytes": 50331648,
+          "sha256": "c348c7bfdee483c1e1eb9380dcb88d2e56027bf0a5fd8707e2656d418ffec298",
+          "drive_url": "https://drive.google.com/file/d/1FTKYe1x-fZLAGvqsegKX3OfPPB0Kjn05/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip.part002",
+          "bytes": 50331648,
+          "sha256": "c9304becf3b926586fb5232da62c539cb2c217d9d397b03884b7a92d15161e6b",
+          "drive_url": "https://drive.google.com/file/d/1jKqS-PmINENzUr9-YFbSTBvDIHN5KVN3/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip.part003",
+          "bytes": 42060840,
+          "sha256": "71961b3111914c018190c45a85b9deb3b991f1e10c43bc0929b26be486117926",
+          "drive_url": "https://drive.google.com/file/d/175hyOr69gVBRj4rjtyPVJJ0uS1ZxEBaJ/view?usp=drivesdk"
+        }
+      ]
+    }
+  ],
+  "entry_status": [
+    {
+      "number": 1,
+      "name": "vLLM",
+      "upstream_url": "https://github.com/vllm-project/vllm",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "dac51063cc1295a2a8426998c4c372b19c42a0f9",
+      "verified_source_sha256": "8ea9f60e6d19fd33a10047d4fcf984f1acce8e7ad7c8b9615aaa300077902806",
+      "source_reference": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 2,
+      "name": "SGLang",
+      "upstream_url": "https://github.com/sgl-project/sglang",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "44643740722a1a633f65f058a03c90ee106822b8",
+      "verified_source_sha256": "b2db7fcd8a0bcf2405ce392fbbe05a1dc57b5d6f1fc8b718101924861c9eb78f",
+      "source_reference": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 3,
+      "name": "llama.cpp",
+      "upstream_url": "https://github.com/ggml-org/llama.cpp",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5d4c8eeb24db049acf74bd6f354bed6eaeffc7dc",
+      "verified_source_sha256": "dbe01c11ee4a5097df93874e19abf4aaa7ba216f63aa4bb772e9512e22f4861b",
+      "source_reference": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 4,
+      "name": "Ollama",
+      "upstream_url": "https://github.com/ollama/ollama",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "8a89b76cc7359805e48357ba7e5b99e845a4c211",
+      "verified_source_sha256": "b1e706ef782acc73e788d2825f024aa0f9e4a64e7992734d93d890ceb484657d",
+      "source_reference": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 5,
+      "name": "LiteLLM",
+      "upstream_url": "https://github.com/BerriAI/litellm",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "6a98d0926117478a4ab937f1bad46a120cd4832a",
+      "verified_source_sha256": "be6bc52f5e4159be6936ff33f0821905cbf02de999ca2528ca56bb4f1b44ddac",
+      "source_reference": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 6,
+      "name": "OpenRouter Free",
+      "upstream_url": "https://openrouter.ai/collections/free-models",
+      "source_kind": "HOSTED_API_SERVICE_PLUS_OFFICIAL_PYTHON_TS_SDks",
+      "state": "SERVICE_REFERENCE_AND_OFFICIAL_SDK_ARCHIVED; NOT_DOWNLOADABLE_SERVER",
+      "source_revision": null,
+      "verified_source_sha256": null,
+      "source_reference": [
+        {
+          "name": "NOX_CATALOG_006_OPENROUTER_PUBLIC_REFERENCE.zip",
+          "bytes": 1377008,
+          "drive_url": "https://drive.google.com/file/d/1C1D2b-poNa75QBqAy7wq9FEotrD9obRc/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_FINAL_OPENROUTER_AND_RIVE_SDK.zip",
+          "bytes": 3861252,
+          "drive_url": "https://drive.google.com/file/d/1A-3wm2hwWyFjFZzykOjJcyokUtdOCTms/view?usp=drivesdk"
+        }
+      ],
+      "verification_basis": [
+        "PUBLIC_MODELS_LIST_DOWNLOADED",
+        "OFFICIAL_SDK_PYPI_AND_NPM_REGISTRY_HASHES_VERIFIED",
+        "DRIVE_FILE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 7,
+      "name": "huggingface_hub",
+      "upstream_url": "https://github.com/huggingface/huggingface_hub",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "2c61ae8c11eedb1b79e262dd9eb5e68962cac063",
+      "verified_source_sha256": "556cb6c5e75a81261aa8498e5d1f055573105c9b5b3d55133fdc8a53fb06336c",
+      "source_reference": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 8,
+      "name": "HF Datasets",
+      "upstream_url": "https://github.com/huggingface/datasets",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "efc82474bc990f5872226dca56457536c9a880e9",
+      "verified_source_sha256": "4b0f1344a30f2fb6c924b9d7a5344aa1a2090ec167f167cd6db7d296f611da0e",
+      "source_reference": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 9,
+      "name": "DataTrove",
+      "upstream_url": "https://github.com/huggingface/datatrove",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5484e67ab81daf66c689106054d5133910d731c2",
+      "verified_source_sha256": "3d29d4cfe7cf183bde723e5c50e1bd99e589712ef3e8a2b6673fff6f50574d9e",
+      "source_reference": "NOX_MASTER_CATALOG_1_10_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 10,
+      "name": "Argilla",
+      "upstream_url": "https://github.com/argilla-io/argilla",
+      "source_kind": "PyPI source distribution (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5338519accb13ae422f8bf9c0642651c249c49af",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_10.zip",
+        "bytes": 124805,
+        "drive_url": "https://drive.google.com/file/d/1yY-YVCHSZANY9TflmsdjTjwrsl6c8ctd/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 11,
+      "name": "Transformers",
+      "upstream_url": "https://github.com/huggingface/transformers",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "f210a32fbf2e3213a143dad8c587935216088b38",
+      "verified_source_sha256": "17c36425bba445c2dfa547a55ef9526b9e4657d8e41ece3b1783be5b3d243dff",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 12,
+      "name": "PEFT LoRA / rsLoRA / DoRA",
+      "upstream_url": "https://github.com/huggingface/peft",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "34d342a6156bd77a83f093b5be21fd8396edc451",
+      "verified_source_sha256": "95146cb34b1ee0735b7864603a390196b0c69290599b64af0c31596fee327941",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 13,
+      "name": "TRL",
+      "upstream_url": "https://github.com/huggingface/trl",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "861442d10296f418b19eb976ad0cdb09cc37b1f9",
+      "verified_source_sha256": "dea5fff808a04108948c6b13943770ade0c758f2965d71e66645a66e745524c1",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 14,
+      "name": "Unsloth",
+      "upstream_url": "https://github.com/unslothai/unsloth",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "ea64e5654cc0dbf16d16a0e83c863e61267fd8ce",
+      "verified_source_sha256": "a95ad0cea1c3adf54ea4ca08cbde5a44296cc9bb140ef05227be85403b3dd279",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 15,
+      "name": "Axolotl",
+      "upstream_url": "https://github.com/axolotl-ai-cloud/axolotl",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "75fe8a1c5c52e8d06fdb4df4427559148ad188df",
+      "verified_source_sha256": "d489674ebafc12f505fcd1405e87cdb494c493a2ef6389ee88ef78a80ceb6558",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 16,
+      "name": "Liger Kernel",
+      "upstream_url": "https://github.com/linkedin/Liger-Kernel",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "42dc23c41dcaf1f95d858837aed5301fd4faa27a",
+      "verified_source_sha256": "4ba770ce1ab70c267316dcfc1a4250bde51573fbbcebc32bd0aa2a02265a807f",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 17,
+      "name": "bitsandbytes",
+      "upstream_url": "https://github.com/bitsandbytes-foundation/bitsandbytes",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "a616886cacf86701514f0cb1d6be760f967481c0",
+      "verified_source_sha256": "4f39284fb52294bb95cb114c11b68b27151fbf73455790615b47e5b44a2ba326",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 18,
+      "name": "FlashAttention",
+      "upstream_url": "https://github.com/Dao-AILab/flash-attention",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "f63c472c4dc19237c0635d6a629df065ff64796e",
+      "verified_source_sha256": "f829b0653d1ee3549e28c3791c0a7d5f70475df094bd417c2bbd4249722feaa1",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 19,
+      "name": "Accelerate",
+      "upstream_url": "https://github.com/huggingface/accelerate",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "f47439c1fb24721ea71ab98f9b512726b5a97828",
+      "verified_source_sha256": "e439ce6234a445d27a42449b9077a34e0e0e567e4b062ed90edb980463c14d47",
+      "source_reference": "NOX_MASTER_CATALOG_11_20_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 20,
+      "name": "DeepSpeed",
+      "upstream_url": "https://github.com/deepspeedai/DeepSpeed",
+      "source_kind": "PyPI source distribution (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "c289ad62ac32f1a0e573f1879196ceca4ce203f1",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_20.zip",
+        "bytes": 2046229,
+        "drive_url": "https://drive.google.com/file/d/1rvQQajbqJ19ndx-8aV4tus0e1GZXpxG5/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 21,
+      "name": "lm-evaluation-harness",
+      "upstream_url": "https://github.com/EleutherAI/lm-evaluation-harness",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d6de81643928d653435c431bae19945d41d32520",
+      "verified_source_sha256": "73236ee63eaa77d2c259c3626f5ca47332eb9433a7d7e0cecb29fa466b7627b8",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 22,
+      "name": "LightEval",
+      "upstream_url": "https://github.com/huggingface/lighteval",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "b97a6533bec22c4184b88526366fdf5d73d502c9",
+      "verified_source_sha256": "eefb8094007f9a81fe286f2569850e8027dee51b5d5d19dae22806fd5b60e70a",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 23,
+      "name": "RAGAS",
+      "upstream_url": "https://github.com/explodinggradients/ragas",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "298b68274234c060deacab3cf5fb52aa3a20e885",
+      "verified_source_sha256": "698ce03bac7320c910eb021ad38904052f0620196299a4e9ede48930507f3a77",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 24,
+      "name": "RewardBench",
+      "upstream_url": "https://github.com/allenai/reward-bench",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "59f6ff7005a9f9484727ca27f5383420875e5dbf",
+      "verified_source_sha256": "9feeea6b12f96662cd128ee8e57d4fd616c9b3ddb5f71c2808432a2d9817ceae",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 25,
+      "name": "AlpacaEval",
+      "upstream_url": "https://github.com/tatsu-lab/alpaca_eval",
+      "source_kind": "PyPI source distribution (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "cd543a149df89434d8a54582c0151c0b945c3d20",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_25.zip",
+        "bytes": 392368,
+        "drive_url": "https://drive.google.com/file/d/1jFJPuTnDGwxYmDuD24lzYXwGb7zBUEQt/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 26,
+      "name": "Giskard OSS",
+      "upstream_url": "https://github.com/Giskard-AI/giskard-oss",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "46ef3bea35dedaac7ad78994236ae12c8cc24904",
+      "verified_source_sha256": "1e8e9505813d87863f1be562375b4125f38a13313de0cddf1ae6da100172d54f",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 27,
+      "name": "datasketch",
+      "upstream_url": "https://github.com/ekzhu/datasketch",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "c7eaaeea3f39909f906a9cf8ad4d21a878cb4e07",
+      "verified_source_sha256": "7ec8573de6c8dd0c1e958f1784ce0a93c40b9968ddcdfd94c6ce0845692385ce",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 28,
+      "name": "Outlines",
+      "upstream_url": "https://github.com/dottxt-ai/outlines",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "c52af8472c6fe8a607a733ec11b709476af77a96",
+      "verified_source_sha256": "233647e1913b4be4eed498f9e9ba6799859320605cfcdfddceda40bf4c91f804",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 29,
+      "name": "Instructor",
+      "upstream_url": "https://github.com/567-labs/instructor",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "aeb7e2558166caeec497e541bcfc6b4eaa2cf53b",
+      "verified_source_sha256": "c913a69139817f4cc97e86ceef80693b2f0346ec8a575a4f03a669c0541c0b6f",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 30,
+      "name": "Optuna",
+      "upstream_url": "https://github.com/optuna/optuna",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9e4d3502c85cb58c3e891a48e90ef9afae00acda",
+      "verified_source_sha256": "de520976a0d0b348ea24833419cbe28bf72a03443021e6f62d404b0dc12e7072",
+      "source_reference": "NOX_MASTER_CATALOG_21_30_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 31,
+      "name": "sqlite-vec",
+      "upstream_url": "https://github.com/asg017/sqlite-vec",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "04d28bd21773981e2d266bbf6aa4efbd011eb4f6",
+      "verified_source_sha256": "4995f30180e019a19cafa1af81cf9fabf3edea38e9132343ece0fc8b0f52cfea",
+      "source_reference": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 32,
+      "name": "Qwen3 Embedding 0.6B",
+      "upstream_url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "source_kind": "FULL_HF_MODEL_WEIGHTS",
+      "state": "FULL_SOURCE_OR_MODEL_ARCHIVED_IN_VERIFIED_CHUNKS",
+      "source_revision": null,
+      "verified_source_sha256": null,
+      "source_reference": [
+        {
+          "name": "NOX_CATALOG_032_MANIFEST.zip",
+          "bytes": 2888,
+          "drive_url": "https://drive.google.com/file/d/1ImAXninBFSQmP_pSMPgnJ1nM2fLTi9lF/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_00.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1StdJyvjvrmfs98aPB2Y7e0p30RDfdCoq/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_01.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1kco-m4Q_1DyApH4Q-3XF0FRltdZaGDvI/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_02.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1uKpZsuTuw8zhDJD3s93h0HO3H6st6Yy0/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_03.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1j9kEBirxF4ybWQBH02jsjYLwfGqBiKVJ/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_04.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1B2HnQGmUEUBUQ8qgfeRAcRer6CwyTtMJ/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_05.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1pr3FttIimwXyID3TD-mxlpaLNFPHnFDQ/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_06.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1fp-Y3cs_sJivpleV67b91mt0k0CUDmCA/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_07.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1XZkYZ1fzhLzdgVmcoWpJsF_KdGdf9w0V/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_08.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1aiW7prqUdIDQQbWwGJzs4IqF0a4qfIoH/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_09.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1HtDf1-fnn3JPfpMcKrqjvdVGJO_GDmT9/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_10.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1mryh-kLHbAsGvOkWtw9IqufuqWlPhkRU/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_11.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1JHiAozRmw5NCUvXvb7noCZ0WeszI36-G/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_12.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1PZqQWAZtnaNJ0MoHy3T1SIG4UBgDCRFA/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_13.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1N6yp3d8w_S9ZbQc82bvXwNqBlNmBfy2y/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_032_PART_14.zip",
+          "bytes": 33126528,
+          "drive_url": "https://drive.google.com/file/d/1e0OrZdR5GtIOgPuCqyx62mtTXbN2iCsR/view?usp=drivesdk"
+        }
+      ],
+      "verification_basis": [
+        "GITHUB_RUN_DOWNLOADED_AND_VERIFIED_SHA256",
+        "CHUNK_RUN_VERIFIED_SOURCE_SHA256",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 33,
+      "name": "Qwen3 Reranker 0.6B",
+      "upstream_url": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B",
+      "source_kind": "FULL_HF_MODEL_WEIGHTS",
+      "state": "FULL_SOURCE_OR_MODEL_ARCHIVED_IN_VERIFIED_CHUNKS",
+      "source_revision": null,
+      "verified_source_sha256": null,
+      "source_reference": [
+        {
+          "name": "NOX_CATALOG_033_MANIFEST.zip",
+          "bytes": 2888,
+          "drive_url": "https://drive.google.com/file/d/1pZgTrIaAESe06hmY037A92_TfJtbz-E7/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_00.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1VYRKWtgbrCkUC5F4DNy0EtWBGwJr_qhd/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_01.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/14cggh9LxiwbmkpvxL_lkpHptyyWEkbSf/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_02.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1jG-tTEy39wFT1cLl1PqJzg91NxQwwsLM/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_03.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1fFKedqGUYem2XZawmrs0fJNr-6iSUKFL/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_04.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1ji41BNAIB6XOVaNkhy537DJPEcvexaIM/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_05.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/12Jc4GbVNa8JHZvFmCi1Rg1_9Ff3RpBi4/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_06.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1zz5q8Wcw8_lJ8gLTyefn6VrQBfBq8DCO/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_07.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1Ho945mLGC0T9e44Y7mgURy1bxWdU4FAx/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_08.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1xcgzPwqbfb7C0nrGkjzKT6n2dLod4n2a/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_09.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1kh5s6z7wK7W979cVLWIQaU7T_Rtd6Ndk/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_10.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1P-oLx6yRUc1gu-LRPMuerutmj2WFGYAi/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_11.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1zvtQfAtPKHw1btHAQzU7xIWVMXcJZzdi/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_12.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1tOKTRLFiWAkBK9vq0e5ygOiSeNK1Pev1/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_13.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1RBmN0OX2e5iYwZfDqObm3r9hPa1YQ0iR/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_033_PART_14.zip",
+          "bytes": 33126528,
+          "drive_url": "https://drive.google.com/file/d/1tlDVQNKCsbzC3EWIVwptN_kSbYhAWPs6/view?usp=drivesdk"
+        }
+      ],
+      "verification_basis": [
+        "GITHUB_RUN_DOWNLOADED_AND_VERIFIED_SHA256",
+        "CHUNK_RUN_VERIFIED_SOURCE_SHA256",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 34,
+      "name": "LlamaIndex",
+      "upstream_url": "https://github.com/run-llama/llama_index",
+      "source_kind": "PyPI source distribution (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "baeabbfe26241a6916e13e2a8c8156a02e0602cd",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_34.zip",
+        "bytes": 11592225,
+        "drive_url": "https://drive.google.com/file/d/14crFEJvrZ3kL5bmcpnydJB9l3NU-Hy_3/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 35,
+      "name": "Haystack",
+      "upstream_url": "https://github.com/deepset-ai/haystack",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "bbe4efe50c716d6d05a0637980db3b641236e613",
+      "verified_source_sha256": "52894607c73519d5b1ca4624c44c0d1a3af4d2399a14445b107020250cf67d25",
+      "source_reference": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 36,
+      "name": "LangGraph",
+      "upstream_url": "https://github.com/langchain-ai/langgraph",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "b4cb0f19e3d8984e8a57f85667b8d1bec018f0ab",
+      "verified_source_sha256": "9a236569a45c10422e0fcc7619dcc65742a00f952e62253c8626b9154254c06a",
+      "source_reference": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 37,
+      "name": "smolagents",
+      "upstream_url": "https://github.com/huggingface/smolagents",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "96f33faaf028479119ec8d34507b47694cf14e34",
+      "verified_source_sha256": "f21ecfef4c9cbf1473865981f0a3bb462013b3785dd0a800fa0c6839c1e13b75",
+      "source_reference": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 38,
+      "name": "APScheduler",
+      "upstream_url": "https://github.com/agronholm/apscheduler",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "05b4e2d69f89e3f8d87c6eec5df71ed1dd5705ec",
+      "verified_source_sha256": "11cf3b4a37c53f7fae2bdde6bd7dd4e409e53b71576445f234d81d01d44a71f9",
+      "source_reference": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 39,
+      "name": "Temporal",
+      "upstream_url": "https://github.com/temporalio/temporal",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "03ecd1d228d2b8d9d433da55785afc9aeeead918",
+      "verified_source_sha256": "41d2841f59b270c7d56c25aa12547056e86757cdd8204fb17904fde423c9ea28",
+      "source_reference": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 40,
+      "name": "n8n",
+      "upstream_url": "https://github.com/n8n-io/n8n",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "0ab1817ba41c63f76a949d9b2aab9c33ec1c424a",
+      "verified_source_sha256": "579bbe453f6d062543818c69cb60675cb73b4247535ff73e6f2578ec57ab3939",
+      "source_reference": "NOX_MASTER_CATALOG_31_40_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 41,
+      "name": "OpenHands",
+      "upstream_url": "https://github.com/OpenHands/OpenHands",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "a8aaf6813753803cae5182d050909705b0eb02d0",
+      "verified_source_sha256": "22c0b88cad575fa1ca5476b5f20d3e8c34e3b91fe6120c8cb777d5ba83b0d1df",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 42,
+      "name": "Aider",
+      "upstream_url": "https://github.com/Aider-AI/aider",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5dc9490bb35f9729ef2c95d00a19ccd30c26339c",
+      "verified_source_sha256": "e382662c134547f7bd1e97570a8b9079267422852f30d0fd5feea107f460ba80",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 43,
+      "name": "pytest",
+      "upstream_url": "https://github.com/pytest-dev/pytest",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "fc9a7ef678f64d17f1c03b619f3842ea1d127e74",
+      "verified_source_sha256": "021caef3d02b7ac7d58ff1fcaed210856379082e16ce61cab2959aba19b2252c",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 44,
+      "name": "Playwright",
+      "upstream_url": "https://github.com/microsoft/playwright",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "bac1f9f67e9cff2a8e7ecbac25d56ec3bb1d15c6",
+      "verified_source_sha256": "787c3b6a7ede18e082a3164bfa42d3cf6cc993b495f0e9751458c9a6588de0ba",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 45,
+      "name": "Ruff",
+      "upstream_url": "https://github.com/astral-sh/ruff",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9183650beda4e6b1254d014999df222296cf9236",
+      "verified_source_sha256": "e66cfc8b4af597df4249749b1af5f1a984492ab9b84e8f093a4b95e121c8ebd2",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 46,
+      "name": "Docker Engine",
+      "upstream_url": "https://docs.docker.com/engine/install/",
+      "source_kind": "GitHub moby/moby replacement for Docker docs",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": null,
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_46.zip",
+        "bytes": 32661402,
+        "drive_url": "https://drive.google.com/file/d/1_f8W--CO2XWvcjBiZLFQOLFP2MYQbj-u/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 47,
+      "name": "FastAPI",
+      "upstream_url": "https://github.com/fastapi/fastapi",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5add7a458d629b07311d48261f696b5ac2bb9a5f",
+      "verified_source_sha256": "fc5538d0cc6d73cd67b31c3929096f9d7ff67f4e2d8845309a51e0799c76136d",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 48,
+      "name": "Prometheus",
+      "upstream_url": "https://github.com/prometheus/prometheus",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "49c815a0ea46c7a6a6b723e4b634c4bf36f7022c",
+      "verified_source_sha256": "ed7a99e50205f52f6b13dfcc2b67c4f0e23b7f6ee154ee0e570729f55048d44e",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 49,
+      "name": "faster-whisper",
+      "upstream_url": "https://github.com/SYSTRAN/faster-whisper",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "6b4066b8293f0bd6a745facbce74683b7874e584",
+      "verified_source_sha256": "556ec14ff42fcebbd46affcac56d6baf349674302693f702951cfde420b4f837",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 50,
+      "name": "Piper TTS",
+      "upstream_url": "https://github.com/OHF-Voice/piper1-gpl",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "0e36946d4c54d95bda0c2e766f3ca32a76fc7693",
+      "verified_source_sha256": "690d2ad759c87652750b25b8c8ddf7cbcf94bee699ef2207796ef241e9990de3",
+      "source_reference": "NOX_MASTER_CATALOG_41_50_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 51,
+      "name": "Browser Use",
+      "upstream_url": "https://github.com/browser-use/browser-use",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "7fdd63c03fd342aab4fe44507c77c3221ffd43c6",
+      "verified_source_sha256": "a80d37b847cf600a2bfbce55c837f4a330abd6acdec6176b99c894441aa96fa0",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 52,
+      "name": "Playwright MCP",
+      "upstream_url": "https://github.com/microsoft/playwright-mcp",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "78eca85361efb545a4c0f59b6140aef0721c5412",
+      "verified_source_sha256": "20b24bec059f75593dbf36d99bb686430c1e8aff228fbf87da8eacbcf883a51c",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 53,
+      "name": "Chrome DevTools MCP",
+      "upstream_url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e2f08b4f611b18f7e62e2075f1e1ef0df1146583",
+      "verified_source_sha256": "18b6c7c3c9ec4a10aa0a15dbc78f77e653b25582b1d9d5a929e00ccc46dc4f2b",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 54,
+      "name": "Stagehand",
+      "upstream_url": "https://github.com/browserbase/stagehand",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9bb60e2f126e4c6eff7dc8bb0293785194d15057",
+      "verified_source_sha256": "b2686bc9a546b5050ad4771aee46dac70ec62168acd07c6f44aa036c32f813e3",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 55,
+      "name": "Crawl4AI",
+      "upstream_url": "https://github.com/unclecode/crawl4ai",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "cae74b203a33994f7e13b9052c3b0d5c93daa0e6",
+      "verified_source_sha256": "3624717b85641c6e72554bcb581b2defe91c548359e74730bd50330f4dd79ab2",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 56,
+      "name": "Vite",
+      "upstream_url": "https://github.com/vitejs/vite",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d5470c137ecf5c0196612e8fdf6b627ffa658860",
+      "verified_source_sha256": "769cfef72915105802997a2d66a2de30ccac69102d9d518c1718e61585d78c99",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 57,
+      "name": "Astro",
+      "upstream_url": "https://github.com/withastro/astro",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d68e4f6340409a201df7c5f77d5d322abfe6c377",
+      "verified_source_sha256": "daf880efab7425b03c06f5e51fb0fc47f4029838572107fcf384442888292c64",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 58,
+      "name": "SvelteKit",
+      "upstream_url": "https://github.com/sveltejs/kit",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "03c5f4b807a73c40424eee71e34fc2d4d099079c",
+      "verified_source_sha256": "8a026a03bc4dbb86dafbaf4cec004cb20e2b2bb36981c78e15cb95c8baf6147f",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 59,
+      "name": "Three.js",
+      "upstream_url": "https://github.com/mrdoob/three.js",
+      "source_kind": "npm three distributable (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "6da7f45ef789bfccadd3f7a5afcddac047361c8e",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_59.zip",
+        "bytes": 4796046,
+        "drive_url": "https://drive.google.com/file/d/1kAWBoYnHKWFxAJj2xCOxjYUsa9qvSZ88/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 60,
+      "name": "GSAP",
+      "upstream_url": "https://github.com/greensock/GSAP",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5e6c35ff8eedea12d4f229129def635277d8b0f2",
+      "verified_source_sha256": "c020d251ded1455154b568cbe5eddd29b4e77becc33c61123827ed3a86c4867b",
+      "source_reference": "NOX_MASTER_CATALOG_51_60_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 61,
+      "name": "Apache ECharts",
+      "upstream_url": "https://github.com/apache/echarts",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "34f4d927eafe251f26f63afd3aeefa30f2feba30",
+      "verified_source_sha256": "005a920d6ef13ab5fb25317cf79a9a651ffde6479206cf2c2bc2320b8c4a7af6",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 62,
+      "name": "Storybook",
+      "upstream_url": "https://github.com/storybookjs/storybook",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "885191848790dd99b8ee39a2e1d17f1aa7ede0ba",
+      "verified_source_sha256": "e7d3e0cc6479b80bd1fc07caf46d1e609ef17adc5b9061038437fac9e83b8337",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 63,
+      "name": "Vitest",
+      "upstream_url": "https://github.com/vitest-dev/vitest",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "47c87ebb5025010141cf8aa5dc69c5b57c10d2fa",
+      "verified_source_sha256": "a4b8bf54f24fcc9b14ce5fed5162e0752a4012cb3075fa8bfc603a63db0a6ff4",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 64,
+      "name": "Biome",
+      "upstream_url": "https://github.com/biomejs/biome",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "ca039a13fb60ee7895a7eb2ef6f47170f4844738",
+      "verified_source_sha256": "a03e28adb510d0fc06df59ca6ae3b29d3ab63e0ff1a5ce7e05b2e06c0f5ff494",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 65,
+      "name": "Lit",
+      "upstream_url": "https://github.com/lit/lit",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "b17fb14470c69a68205c10b69451883da07f4dde",
+      "verified_source_sha256": "c4c08839de37284d6b73bc78eaaca6691c20f2e2308e913079095dbef0866164",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 66,
+      "name": "Tailwind CSS",
+      "upstream_url": "https://github.com/tailwindlabs/tailwindcss",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "b08bf83a327271dfb7e3cd485fd793da15013f7c",
+      "verified_source_sha256": "ea8b032b1cfb0f0440f8bb6d777f78a52504fcd974bb0b53dc7e2f7e5b7d478f",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 67,
+      "name": "LangMem",
+      "upstream_url": "https://github.com/langchain-ai/langmem",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "8620b986af5b0c7593e6b7fbece2998690d22d15",
+      "verified_source_sha256": "3ac18706b8384af12dafdcc37c9190d7d3a705c0c01882279b1dfa9096974f50",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 68,
+      "name": "Mem0",
+      "upstream_url": "https://github.com/mem0ai/mem0",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "f1791daa86d469249c9b002f62644d58a1eb96a0",
+      "verified_source_sha256": "8d16b949548872f209001549a4bb4ba761c97946a2071d7cd20d4c5cc1ccb31d",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 69,
+      "name": "Graphiti",
+      "upstream_url": "https://github.com/getzep/graphiti",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "ebef986a0b2360211b65751c111cacb4a7d790eb",
+      "verified_source_sha256": "07d0754b9f025e583d179b2200eaf2312fcba884d7792326bdb2d935eb5a74b1",
+      "source_reference": "NOX_MASTER_CATALOG_61_70_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 70,
+      "name": "Hindsight",
+      "upstream_url": "https://github.com/vectorize-io/hindsight",
+      "source_kind": "FULL_GITHUB_SOURCE_SNAPSHOT",
+      "state": "FULL_SOURCE_OR_MODEL_ARCHIVED_IN_VERIFIED_CHUNKS",
+      "source_revision": "7cec128b8fdb0a696366d888e63be71fe1d52338",
+      "verified_source_sha256": null,
+      "source_reference": [
+        {
+          "name": "NOX_CATALOG_070_MANIFEST.zip",
+          "bytes": 1135,
+          "drive_url": "https://drive.google.com/file/d/1S6Ijb8hleSO26_qL9QNit5N-xgeYZpw8/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_070_PART_00.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1X2fpIHz2HYH3-jEQVJxaQY9Suh9f2b8I/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_070_PART_01.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1JNgf8X9VXrfjxhHRPf2c0xK1Zsy12mET/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_070_PART_02.zip",
+          "bytes": 50811008,
+          "drive_url": "https://drive.google.com/file/d/1zC8FDraTHisYMAQsQklS0ORDddhWjugH/view?usp=drivesdk"
+        }
+      ],
+      "verification_basis": [
+        "GITHUB_RUN_DOWNLOADED_AND_VERIFIED_SHA256",
+        "CHUNK_RUN_VERIFIED_SOURCE_SHA256",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 71,
+      "name": "Letta Code",
+      "upstream_url": "https://github.com/letta-ai/letta-code",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "cba459bb6fb6c48779d1e29eaed866da5d10659b",
+      "verified_source_sha256": "8034c9801c11e4dce2d06f7f6ff877497160c10803a62e7e3efc8599840f104a",
+      "source_reference": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 72,
+      "name": "Cognee",
+      "upstream_url": "https://github.com/topoteretes/cognee",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "8853378eae5366addb064e758e560a456146ae1a",
+      "verified_source_sha256": "490aebd41d87b9636b2f2bbcedb934ac8cf79f6cf0d07e1ba55777cd36c894e6",
+      "source_reference": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 73,
+      "name": "HippoRAG 2",
+      "upstream_url": "https://github.com/OSU-NLP-Group/HippoRAG",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d5c8329422e0a0b834a15874545cb6a74b4f9b26",
+      "verified_source_sha256": "08619ace6b41029dd53b81e7b32d496a559f0cf5de3b977ba43d45ca2c515976",
+      "source_reference": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 74,
+      "name": "Generative Agents",
+      "upstream_url": "https://github.com/joonspk-research/generative_agents",
+      "source_kind": "FULL_GITHUB_SOURCE_SNAPSHOT",
+      "state": "FULL_SOURCE_OR_MODEL_ARCHIVED_IN_VERIFIED_CHUNKS",
+      "source_revision": "fe05a71d3e4ed7d10bf68aa4eda6dd995ec070f4",
+      "verified_source_sha256": null,
+      "source_reference": [
+        {
+          "name": "NOX_CATALOG_074_MANIFEST.zip",
+          "bytes": 1281,
+          "drive_url": "https://drive.google.com/file/d/18hRDIsOo0T3srF09wJmcisT7yv7eEvTD/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_074_PART_00.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1p4a938-W3U5iwmBeC_2klzKRqXjYlsOi/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_074_PART_01.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1JcvNjibTk6TMTpJQa-q_hSrNP2acMDkd/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_074_PART_02.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1xyuAZU8i4kRjky8Vvu2ZvJcOI6a12AJX/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_074_PART_03.zip",
+          "bytes": 28221568,
+          "drive_url": "https://drive.google.com/file/d/1uZeG3SY5R1OGnS7JxjeULHqdSoGVNf4f/view?usp=drivesdk"
+        }
+      ],
+      "verification_basis": [
+        "GITHUB_RUN_DOWNLOADED_AND_VERIFIED_SHA256",
+        "CHUNK_RUN_VERIFIED_SOURCE_SHA256",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 75,
+      "name": "OpenPsi Hyperon",
+      "upstream_url": "https://github.com/iCog-Labs-Dev/hyperon-openpsi",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "3b356c5e51d4490b587351721a8cd4187da5817a",
+      "verified_source_sha256": "f632030e0bd392dd69294a732e572aa00c348b0e57dad163dc7d2e0477d152f8",
+      "source_reference": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 76,
+      "name": "DSPy",
+      "upstream_url": "https://github.com/stanfordnlp/dspy",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "398396012371a95471c8e7be24a70e6660e87aa4",
+      "verified_source_sha256": "beb457086d0b89392c97604661912c484772816da00193579d1cfd204bc4d759",
+      "source_reference": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 77,
+      "name": "ruBERT CEDR Emotion",
+      "upstream_url": "https://huggingface.co/cointegrated/rubert-tiny2-cedr-emotion-detection",
+      "source_kind": "FULL_HF_MODEL_WEIGHTS",
+      "state": "FULL_SOURCE_OR_MODEL_ARCHIVED_IN_VERIFIED_CHUNKS",
+      "source_revision": null,
+      "verified_source_sha256": null,
+      "source_reference": [
+        {
+          "name": "NOX_CATALOG_077_MANIFEST.zip",
+          "bytes": 1135,
+          "drive_url": "https://drive.google.com/file/d/1-OdyZOiKRe2Ircm8Zx3yKHQWiyXGws8p/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_077_PART_00.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1-uCAgIL9pzD7sqBmd8bvmzTtWE0YpxAl/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_077_PART_01.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1lEv4c-cjwtU3eNYGuU3WNUxircoauojA/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_077_PART_02.zip",
+          "bytes": 68864128,
+          "drive_url": "https://drive.google.com/file/d/1Sh9h7ziLtzyHHycd0112w5wTFWRVJj5q/view?usp=drivesdk"
+        }
+      ],
+      "verification_basis": [
+        "GITHUB_RUN_DOWNLOADED_AND_VERIFIED_SHA256",
+        "CHUNK_RUN_VERIFIED_SOURCE_SHA256",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 78,
+      "name": "MarIA Emotion ES",
+      "upstream_url": "https://huggingface.co/UMUTeam/MarIA-emotion-es",
+      "source_kind": "FULL_HF_MODEL_WEIGHTS",
+      "state": "FULL_SOURCE_OR_MODEL_ARCHIVED_IN_VERIFIED_CHUNKS",
+      "source_revision": null,
+      "verified_source_sha256": null,
+      "source_reference": [
+        {
+          "name": "NOX_CATALOG_078_MANIFEST.zip",
+          "bytes": 1573,
+          "drive_url": "https://drive.google.com/file/d/1Ebf3ezKbpEJmMoDQ4nMVtq5XUcR0Hgst/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_078_PART_00.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/10tsbMAiW3upKXNZS_yoH9jPEd5e1yC5n/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_078_PART_01.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1ev5tdE34Es-qBkoZAJTFSLh-DtUefr-e/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_078_PART_02.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1bjm8IuF-nDRxJaYNHGLfh7zeL4kVcOtq/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_078_PART_03.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1RSrHZMHqNtfZvvB1Cp_V9SRjKRrapIL3/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_078_PART_04.zip",
+          "bytes": 83886208,
+          "drive_url": "https://drive.google.com/file/d/1YdNh76JwRuk-oC-i5NiSPqnhr2igq88e/view?usp=drivesdk"
+        },
+        {
+          "name": "NOX_CATALOG_078_PART_05.zip",
+          "bytes": 82851968,
+          "drive_url": "https://drive.google.com/file/d/1vUGnT1j4BTIlkNqTXEwiMvZ8DQWWW_yJ/view?usp=drivesdk"
+        }
+      ],
+      "verification_basis": [
+        "GITHUB_RUN_DOWNLOADED_AND_VERIFIED_SHA256",
+        "CHUNK_RUN_VERIFIED_SOURCE_SHA256",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 79,
+      "name": "MemOS",
+      "upstream_url": "https://github.com/MemTensor/MemOS",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "3a16e5fe3048a209f722806f4123fa2e533588fd",
+      "verified_source_sha256": "50de26e56af3f83a7fd507b30c26c9501e3ed7c334cd86c412261b737f246cfe",
+      "source_reference": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 80,
+      "name": "LightRAG",
+      "upstream_url": "https://github.com/HKUDS/LightRAG",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "b14d991429f22c676802204b0c1342bbe0b58294",
+      "verified_source_sha256": "1a113b1b04834ee832c5c1d3236b38f4185819945d04161fdfd6b011d77d4656",
+      "source_reference": "NOX_MASTER_CATALOG_71_80_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 81,
+      "name": "Memory Agent Benchmarks",
+      "upstream_url": "https://github.com/RonsenbergVI/agent-memory-benchmarks",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9a9bf02608537e9d29f92e83dcebe7b3809da1da",
+      "verified_source_sha256": "b9092a6ea9251b1f63c68b38102edf5f9050ffff8d218e6265dcce382d4169bd",
+      "source_reference": "NOX_MASTER_CATALOG_81_83_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 82,
+      "name": "Aniemore",
+      "upstream_url": "https://github.com/aniemore/Aniemore",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "f672ad7c9baa6ac2785579b3c1fc002d22a36b13",
+      "verified_source_sha256": "2313588bc2ea8fa55ec0821f945ee64b6596157a283778f68b6fee2fffedfd4f",
+      "source_reference": "NOX_MASTER_CATALOG_81_83_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 83,
+      "name": "Microsoft GraphRAG",
+      "upstream_url": "https://github.com/microsoft/graphrag",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "34b2b67ae4601ad0b47bcd179fbe3f2a23aa0857",
+      "verified_source_sha256": "d3c55c3a16977298b5390106ae159f4c5c5df7759dab7d87b234449488f2a40d",
+      "source_reference": "NOX_MASTER_CATALOG_81_83_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 84,
+      "name": "Huey",
+      "upstream_url": "https://github.com/coleifer/huey",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "7ea73730b9b6d413effdd67880970eb3e674974c",
+      "verified_source_sha256": "d71e8ce5193bb569ac75e2b18d1208d323c67e2510fd75449c7963561f38d56b",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 85,
+      "name": "watchdog",
+      "upstream_url": "https://github.com/gorakhargosh/watchdog",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "90d2fdfe6afe55b6f97fa043de5912d49771b667",
+      "verified_source_sha256": "a900b2d3da6473fb4bc022f0fdd5777366686af9010fe9fa9388a8f9d77badc1",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 86,
+      "name": "GitPython",
+      "upstream_url": "https://github.com/gitpython-developers/GitPython",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "23f33efc5bb07cee2b6059e0e4515ac97043ab1e",
+      "verified_source_sha256": "e427f6b65fcd53770e4f3ee54945fcc23bf58ee28525a7c4fbf68f326f1fc863",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 87,
+      "name": "whatthepatch",
+      "upstream_url": "https://github.com/cscorley/whatthepatch",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "07b3e145ccd356cff202ff23d1694d6d4e9e0b2e",
+      "verified_source_sha256": "64e5e1eb602aa04c0240231589d3f0c5850da34565af86c23755b949876e6522",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 88,
+      "name": "RestrictedPython",
+      "upstream_url": "https://github.com/zopefoundation/RestrictedPython",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9d7aeb267e598c3eb270850c223b343ca5a5d2cb",
+      "verified_source_sha256": "c0399e5a9347f91ee5ff368bf7f424d1f7ec257d401a7fd861ab0fa4519c59f1",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 89,
+      "name": "ollama-python",
+      "upstream_url": "https://github.com/ollama/ollama-python",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "35d9667e84ebbd9d792826868d050027f75c1cc1",
+      "verified_source_sha256": "3fa7c03cd456001332b3da6d2d720ae21922388f53159c74c888219e63e5f950",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 90,
+      "name": "json-repair",
+      "upstream_url": "https://github.com/mangiucugna/json_repair",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "36d7a6ed53e777b5a5b9017e33d35ea2af8b7c6e",
+      "verified_source_sha256": "98d74a87f9be4009a7ed285f7e63d8adb22664b081fe931c4c4d900549889af2",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 91,
+      "name": "pydantic",
+      "upstream_url": "https://github.com/pydantic/pydantic",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "560f0f96a37d6913afdfddb2de22030ef08e68c3",
+      "verified_source_sha256": "ee53086d03818add0c7e07f95b121da1b698a98925547ec2f4a3099d4d273539",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 92,
+      "name": "MCP Python SDK",
+      "upstream_url": "https://github.com/modelcontextprotocol/python-sdk",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "77001c96f9507be0f4d009b83210a384a5e08bda",
+      "verified_source_sha256": "2a002a07014187e792c452a447ed65abd89288ffeb7062fa08819a94ed49ab0a",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 93,
+      "name": "trafilatura",
+      "upstream_url": "https://github.com/adbar/trafilatura",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9c27981f4b7034a3249c77c4c06aaaed719fae66",
+      "verified_source_sha256": "a62dfd994fe0c0deafb6e79357412d46d1aec71900878c501933fa0299ade4e2",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 94,
+      "name": "Scrapling",
+      "upstream_url": "https://github.com/D4Vinci/Scrapling",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "bb223f2f5fc8f743772751a5ce283ef7851ca6be",
+      "verified_source_sha256": "7fa8bdf9edcc4443c83c0c4ce515f36f9c80daa76385e50b489d95e94aaec0a5",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 95,
+      "name": "pypdf",
+      "upstream_url": "https://github.com/py-pdf/pypdf",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "3163b84cdbcf20615808ae4179238a657209fb7a",
+      "verified_source_sha256": "cbc55a0525a19bbf1d80a4935017a147ad77010cdaf0da65a1ae85a284af3ccb",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 96,
+      "name": "rank_bm25",
+      "upstream_url": "https://github.com/dorianbrown/rank_bm25",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "47aa3ddf8dc1ebeb7ef4e65f2b4536af44594099",
+      "verified_source_sha256": "aa6ca5fd2e004de3ee6a3b8e6bd296967ae65142c53bed7fbccba556b2319df0",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 97,
+      "name": "FlashRank",
+      "upstream_url": "https://github.com/PrithivirajDamodaran/FlashRank",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "11f7a40d625f2de047c371c81c6f477386c18bb1",
+      "verified_source_sha256": "ac72e717efd0ceac6559a9cc2fa06a12900c9acc333c14eb6c36207612fa0f6a",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 98,
+      "name": "NetworkX",
+      "upstream_url": "https://github.com/networkx/networkx",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5f9d15fb7e40d00f75908760725fb0c7dc1f50d4",
+      "verified_source_sha256": "245e8bfe3606628173892cdc573eba1f7cbafffce8388f4cf53fe60ea437df63",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 99,
+      "name": "psutil",
+      "upstream_url": "https://github.com/giampaolo/psutil",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "940b61bd081bce935f806db65b8f671a0fdf6d49",
+      "verified_source_sha256": "6939cb0f07690f7ff143ec6d4c0f2c708d5be965c467b42c24653b3dec941f84",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 100,
+      "name": "nvidia-ml-py (NVML)",
+      "upstream_url": "https://pypi.org/project/nvidia-ml-py/",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": null,
+      "verified_source_sha256": "bebe4e48f51b1dc75028c0815cb7bfa14a31a5bb80be70c9d980c6036953fc3d",
+      "source_reference": "NOX_MASTER_CATALOG_84_100_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 101,
+      "name": "React Three Fiber",
+      "upstream_url": "https://github.com/pmndrs/react-three-fiber",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d74622ea8ed717f7212d7e19d65ff3e325508389",
+      "verified_source_sha256": "ce98bbb04d81e64048f18505b0d573d1dfb7cbafc044856cb8334082dd5f163e",
+      "source_reference": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 102,
+      "name": "Drei",
+      "upstream_url": "https://github.com/pmndrs/drei",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "bf6f4addf47467d3885de272d94ca5127f6ef68f",
+      "verified_source_sha256": "d4305fde32f9841a0ad36d3d956b45cb6c2c91ed1e82c151f33d7bf831fecd4b",
+      "source_reference": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 103,
+      "name": "React Postprocessing",
+      "upstream_url": "https://github.com/pmndrs/react-postprocessing",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e07ef9a890c8a202a3b20eac0249032cff4e7805",
+      "verified_source_sha256": "b6a4e863de73a3a65595f34a80f80c93fc31762e92ef64f5288d78f590029e8a",
+      "source_reference": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 104,
+      "name": "Postprocessing",
+      "upstream_url": "https://github.com/vanruesc/postprocessing",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "a1f103559d15cf56cbcbb15d4373711b09418f3f",
+      "verified_source_sha256": "618f75b8039f0041a858b6208d0af2572ce09f805b84004c7f1f17e121d30438",
+      "source_reference": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 105,
+      "name": "Motion",
+      "upstream_url": "https://github.com/motiondivision/motion",
+      "source_kind": "npm motion distributable (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "cdced3d0696601ea4b3eb1dc7205be1426f74c13",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_105.zip",
+        "bytes": 257817,
+        "drive_url": "https://drive.google.com/file/d/10q2aDbIUgL_gJtEyACvW0-wpvJatu8dX/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 106,
+      "name": "React Spring",
+      "upstream_url": "https://github.com/pmndrs/react-spring",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "83e476061290532ab517c4d4dfd60de21589e78e",
+      "verified_source_sha256": "95b6d02e722ab4b1bfeaa1ae86b8bdb191ee4de9979542471373c10c81620152",
+      "source_reference": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 107,
+      "name": "Anime.js",
+      "upstream_url": "https://github.com/juliangarnier/anime",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "01b81be1df6843ccfe0a71c0699a746bf740dd77",
+      "verified_source_sha256": "2af45afe01759977332c29b41da4ca0714dbeb6d7574dbad7242ee475252151e",
+      "source_reference": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 108,
+      "name": "tsParticles",
+      "upstream_url": "https://github.com/tsparticles/tsparticles",
+      "source_kind": "npm tsparticles distributable (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "35f7bed4d0d8d6160294a228694f1c7ba4c3b906",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_108.zip",
+        "bytes": 221575,
+        "drive_url": "https://drive.google.com/file/d/1oWZpVooCIJkR9KVYHjMeVzREMFsupupi/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 109,
+      "name": "OGL",
+      "upstream_url": "https://github.com/oframe/ogl",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "385ce65c352c70734a36dc98c787fdd1d30ddb3b",
+      "verified_source_sha256": "f13a6e5bf2e77f20d0ce2b54af47e35d17e705f742826b216037741a38cb7907",
+      "source_reference": "NOX_MASTER_CATALOG_101_110_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 110,
+      "name": "Babylon.js",
+      "upstream_url": "https://github.com/BabylonJS/Babylon.js",
+      "source_kind": "npm @babylonjs/core distributable (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "abe5a159e6d73d8a0bd7fe0ce7e82315ee94f411",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_110.zip",
+        "bytes": 14036667,
+        "drive_url": "https://drive.google.com/file/d/1-ywfGScE5Lf8csQREV73ojL1Ir8l5H97/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 111,
+      "name": "PlayCanvas Engine",
+      "upstream_url": "https://github.com/playcanvas/engine",
+      "source_kind": "npm playcanvas distributable (not full Git tree)",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "fb8a3532f685b66b47ff81702a71acd32eff2401",
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_111.zip",
+        "bytes": 13338277,
+        "drive_url": "https://drive.google.com/file/d/1uBPlhLHl3DrSLzFpFFYDcbj3OPJY1UqH/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 112,
+      "name": "PixiJS",
+      "upstream_url": "https://github.com/pixijs/pixijs",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "1e707686d00a2a8cd6432b047e56034fc7e7a909",
+      "verified_source_sha256": "e41d017aa83401912a3688ca2d6c2aad04e12a0f7f1431149a0c975f015b365a",
+      "source_reference": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 113,
+      "name": "regl",
+      "upstream_url": "https://github.com/regl-project/regl",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "581f8071182a8127d37a0cd1d3b035d7e5fef074",
+      "verified_source_sha256": "1bbb528f913bf74ab612581d1ce873480765dcb6471d0d431ca2aa31f35fc97b",
+      "source_reference": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 114,
+      "name": "gl-matrix",
+      "upstream_url": "https://github.com/toji/gl-matrix",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "6f96d577ee0217b5cfce334e2cad92a6ac3572d2",
+      "verified_source_sha256": "b15b0e589f70f3521987d184096ef5ece6e4a7154abeaa889b5af305120c45ed",
+      "source_reference": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 115,
+      "name": "Rive JS",
+      "upstream_url": "https://github.com/rive-app/rive-wasm",
+      "source_kind": "GitHub rive-wasm source; JS npm runtimes in additional source bundle",
+      "state": "RECOVERY_DISTRIBUTION_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": null,
+      "verified_source_sha256": null,
+      "source_reference": {
+        "name": "NOX_CATALOG_RECOVERY_115.zip",
+        "bytes": 18831222,
+        "drive_url": "https://drive.google.com/file/d/1NKUNQ9xszKhFYNyOOt37aQ_LD0pWJm-J/view?usp=drivesdk"
+      },
+      "verification_basis": [
+        "GITHUB_SOURCE_PACKAGE_RECOVERY",
+        "GOOGLE_DRIVE_NAME_AND_SIZE"
+      ],
+      "legacy_download_report_status": "FAILED"
+    },
+    {
+      "number": 116,
+      "name": "lottie-web",
+      "upstream_url": "https://github.com/airbnb/lottie-web",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "bede03d25d232826e0c9dca1733d542d8a7754fb",
+      "verified_source_sha256": "958bf39abcd26465e6c34cd8944297188c85addf7180cd8e5e7d376872faaa8a",
+      "source_reference": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 117,
+      "name": "Lenis",
+      "upstream_url": "https://github.com/darkroomengineering/lenis",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5fe20e4e2e57bc9643d6c22e1206e32a5ddd251e",
+      "verified_source_sha256": "aad91503bfadbe5e51f966d55b2b448ddc0457a763fff29cda76a77d260a1f02",
+      "source_reference": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 118,
+      "name": "Theatre.js",
+      "upstream_url": "https://github.com/theatre-js/theatre",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "6ea82b938ea49609489f6377ded693ccc6ee8f5b",
+      "verified_source_sha256": "ba5fbf375cd9c0b75e7bdaa017503ed83ffb552775b5dcdec5367e136d2929a3",
+      "source_reference": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 119,
+      "name": "glslify",
+      "upstream_url": "https://github.com/glslify/glslify",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "ba9c52c46e10068215290753e99ac516cc02d0d7",
+      "verified_source_sha256": "a25fe133cfbff9a7a9bba821fd7d25d20b3c0c6683987e9ed5016c55c5f005b3",
+      "source_reference": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 120,
+      "name": "glsl-noise",
+      "upstream_url": "https://github.com/hughsk/glsl-noise",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "7870430c384bd53488ff6fe9a47f8a6f571524c4",
+      "verified_source_sha256": "7627a238ceb59373b39d947244c53890bb08edbcb64328e4e7ba2bd7b5bfb8a7",
+      "source_reference": "NOX_MASTER_CATALOG_111_120_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 121,
+      "name": "Troika Three Text",
+      "upstream_url": "https://github.com/protectwise/troika",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9c89d51f828f94a21e33d6f24b38128d78014d5f",
+      "verified_source_sha256": "f8d2140af5dd59c10d9dd6b67bbeb558600033e9a36c42627bde3b8833253b4e",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 122,
+      "name": "Camera Controls",
+      "upstream_url": "https://github.com/yomotsu/camera-controls",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "c51601107e266097edf6a9caa57bfa9eaa77427c",
+      "verified_source_sha256": "9acd39dadaa306353b8a42af67795fadb0d53b24871528c24e167778688ef45b",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 123,
+      "name": "three-stdlib",
+      "upstream_url": "https://github.com/pmndrs/three-stdlib",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e0e835a267afd01d318c5ea532732af0235872da",
+      "verified_source_sha256": "fa40c9e2a5b6ad57bdc4448c70699778fc23eda5fbb0307bcf1f8f22f9c73bb2",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 124,
+      "name": "Rapier",
+      "upstream_url": "https://github.com/dimforge/rapier",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "475caa3ff4646fd9a796b67d14116256f4962bc7",
+      "verified_source_sha256": "bad54608194e1f5073a63c5080a803023c4de0aa65fcc19bdd613f0c0277db49",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 125,
+      "name": "React Three Rapier",
+      "upstream_url": "https://github.com/pmndrs/react-three-rapier",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "ae5c3fede5ca489fd7eaa8271e9d9c5eabc88e98",
+      "verified_source_sha256": "23490c4cfa426f4b9d1873fa74c0e185d259e93a32cc4a0274078b35bd8b8bd3",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 126,
+      "name": "cannon-es",
+      "upstream_url": "https://github.com/pmndrs/cannon-es",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "dd971c4a604acdbb211955382e7a80de1f31edfb",
+      "verified_source_sha256": "3776278b36fda583c6655d25f3d5efa0b879c5030cda716a2d87e20125e460a0",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 127,
+      "name": "Matter.js",
+      "upstream_url": "https://github.com/liabru/matter-js",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "b8ee71cd7f9b49f53639ddaedd6254f1929bcbe5",
+      "verified_source_sha256": "b460f1978ec3e0c48d8eadfcada2e148d64736d1ec471cc43217d14325141889",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 128,
+      "name": "maath",
+      "upstream_url": "https://github.com/pmndrs/maath",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "eda3d8c0380fd92ef66489d56d7a5ff96518f61c",
+      "verified_source_sha256": "cda4e72a62c2f62e75af462974bfa9749c16ea6aecb58e298e5eb0be43b250ca",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 129,
+      "name": "WebGPU Samples",
+      "upstream_url": "https://github.com/webgpu/webgpu-samples",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e040ec1a20dbbe01afed30c812e825b2639cfe5b",
+      "verified_source_sha256": "c285f0a3e3003b47ae1644675135a4762b72d944cbc9c033932c6dd57d7bf4e1",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 130,
+      "name": "Spector.js",
+      "upstream_url": "https://github.com/BabylonJS/Spector.js",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "ad06b714b0d5fa7354c25d6df9a90ab3a2093f72",
+      "verified_source_sha256": "2eabbcf1074013f19e1b8fc9d56d0a95daa4ff56af98846ce9870d1a6a4bc14b",
+      "source_reference": "NOX_MASTER_CATALOG_121_130_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 131,
+      "name": "D3",
+      "upstream_url": "https://github.com/d3/d3",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "db118c93a429e82b83f091dbaa18fd0a82c06130",
+      "verified_source_sha256": "b8f3770a66be5ee29cc665ca02b84b94fae5ba35a2c6bda6101bf1fadbfb2fcc",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 132,
+      "name": "uPlot",
+      "upstream_url": "https://github.com/leeoniya/uPlot",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "1f916f350bc11e86ee407f55cc5c3a77f723d8d5",
+      "verified_source_sha256": "ee6a5cebf3c4d0ca6233ea1e3c0fa1cd4d9a30383ce76f2e7a8ea8f7604a319c",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 133,
+      "name": "Lightweight Charts",
+      "upstream_url": "https://github.com/tradingview/lightweight-charts",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "186f45823066718407ca154fd09fbc675eee822e",
+      "verified_source_sha256": "4548acde9836d938b706a7b4457d359685706486505eb7b6d9e947a53a16f262",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 134,
+      "name": "Visx",
+      "upstream_url": "https://github.com/airbnb/visx",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "485c0359664ee8e612992defb16e1f035ed40b23",
+      "verified_source_sha256": "a97a68622ef6b8384a805eaa5af3878198fbe839d3862fee1e36cf28da6a43d2",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 135,
+      "name": "Cytoscape.js",
+      "upstream_url": "https://github.com/cytoscape/cytoscape.js",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "b768734100fa49d24f5652361e4f2f3bdbcbce86",
+      "verified_source_sha256": "75912fc633f6dc018fb2cfbc31e2865378d4ce7942471115bebd046efd521efd",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 136,
+      "name": "Sigma.js",
+      "upstream_url": "https://github.com/jacomyal/sigma.js",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e7748c88c861f19cab00be80cb7f836c5fef61e8",
+      "verified_source_sha256": "86b2b9e7bc755e1a0bb7fe1d80d800b97d3417aad2eb004b71c7d18e728e40f3",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 137,
+      "name": "Graphology",
+      "upstream_url": "https://github.com/graphology/graphology",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "01bb37e39c66ff4eddaf3b0beda40903a663e627",
+      "verified_source_sha256": "4d79c87e5e82d3c2546ecaa00b86c166a8e9b354ebff5580a8145ec7e2b964f7",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 138,
+      "name": "ELKjs",
+      "upstream_url": "https://github.com/kieler/elkjs",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "42a52f152a233f84906e5f4516608f657d7b236e",
+      "verified_source_sha256": "218bf16d109a65e818e8ccc634b08b3d34b41fd594c8abc4340de73edd0c6cdc",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 139,
+      "name": "Dagre",
+      "upstream_url": "https://github.com/dagrejs/dagre",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "877ead2bb0d5822daeb44ccb4396be1ebccbc9e4",
+      "verified_source_sha256": "a521ab9ddd2d8be15c0f68f0caeafd2314f21a06bf69ee5db037cbfd70012613",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 140,
+      "name": "React Flow",
+      "upstream_url": "https://github.com/xyflow/xyflow",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "1bc405cd113618c17fd181b931a9fe573bec9fee",
+      "verified_source_sha256": "13b275aecb9628417ecbe25a2cf2cd234093d82146aec70f99dedf42b1aa7f63",
+      "source_reference": "NOX_MASTER_CATALOG_131_140_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 141,
+      "name": "Monaco Editor",
+      "upstream_url": "https://github.com/microsoft/monaco-editor",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "c835521959b07961e12aef761f058db2a3d49e9c",
+      "verified_source_sha256": "b30234e67602a087fccbfc7e0861c93487d1bc03068bb26a1de740141473c37b",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 142,
+      "name": "CodeMirror",
+      "upstream_url": "https://github.com/codemirror/dev",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "c010426d06689a7115aa9df08425126b6d3ead2f",
+      "verified_source_sha256": "5473bd4818b512ec75daa56976ed34cb17c484e8ff946aac5fae3fdb69c80648",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 143,
+      "name": "xterm.js",
+      "upstream_url": "https://github.com/xtermjs/xterm.js",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "f70764dd3da05ebda0390605c6f9adbbea3f0e90",
+      "verified_source_sha256": "645bf4649f60b7eaf03a45425989d688eb93b396efa67d94d52f6192157c4b6c",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 144,
+      "name": "Tiptap",
+      "upstream_url": "https://github.com/ueberdosis/tiptap",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e884048ad46cab7e2679f073c76f612cb8a40ab6",
+      "verified_source_sha256": "626968c65613b9f67d186ce72bd6255fcd4bb400dac3fb9c84abd06c2ef287f5",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 145,
+      "name": "Yjs",
+      "upstream_url": "https://github.com/yjs/yjs",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "52396473094be82868fe098f1f8d01d737478dbb",
+      "verified_source_sha256": "7e6b2246526afa54c339935524f98a74d4441b9d8f00efc2cf7d1f6c662f344e",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 146,
+      "name": "Automerge",
+      "upstream_url": "https://github.com/automerge/automerge",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d09a2ffafb775a2bfabb3fc64f0532d26e38c76b",
+      "verified_source_sha256": "ceaa1fa504c271acfbe766efefb458cdc792ab9fff5653eea80522c453e6d77a",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 147,
+      "name": "Dexie.js",
+      "upstream_url": "https://github.com/dexie/Dexie.js",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "95666bf5370a222a21d7f53130d87b42e9b7bac7",
+      "verified_source_sha256": "5cca6270cfc7f613ea56b15fcc2c5a165c25106a48f0d73cfa71728cfef26127",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 148,
+      "name": "RxDB",
+      "upstream_url": "https://github.com/pubkey/rxdb",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "72952af01f9258fd1575e6441184a65aadb5e7b5",
+      "verified_source_sha256": "58e1c21fc7c50a3c8f2292df4dd5fabb9f3000af9c1bd563974fa2bb0fcc7fb3",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 149,
+      "name": "PouchDB",
+      "upstream_url": "https://github.com/pouchdb/pouchdb",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "0ec5a68736e306814f491081eaf31692211af007",
+      "verified_source_sha256": "467eaac3db57606e1d8fc91a97d257d045c29a9205ceb10f78334c9ec89a198e",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 150,
+      "name": "TanStack Query",
+      "upstream_url": "https://github.com/TanStack/query",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e55c775411ecb510bf881c42ad2dc6cc64207dd6",
+      "verified_source_sha256": "a43740988492c11ce1ad936053d5f1a254ab5a9bed298931df63968642b27c31",
+      "source_reference": "NOX_MASTER_CATALOG_141_150_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 151,
+      "name": "TanStack Virtual",
+      "upstream_url": "https://github.com/TanStack/virtual",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "54a3f7d3cc32b373187b3802d81cb4b24ae08b0b",
+      "verified_source_sha256": "acc5a44f75af8aaee662fe23da923c80a98aae73db678c2cef8dba90eadffcaf",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 152,
+      "name": "TanStack Table",
+      "upstream_url": "https://github.com/TanStack/table",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "c14e0221b1e656c7bb35e7b3d4cdf188719a3599",
+      "verified_source_sha256": "8bcc48dbc583c3989d2e8ca8b849676662ea6833b03f32fd13582103dc1aaa57",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 153,
+      "name": "Zustand",
+      "upstream_url": "https://github.com/pmndrs/zustand",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9fed2eb2f3af672da9f7bf694b996df3831fc207",
+      "verified_source_sha256": "6a7a8682148d1429899d95fa8f80fb51b35563b5ad6c9df90b0089b7204c895d",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 154,
+      "name": "Jotai",
+      "upstream_url": "https://github.com/pmndrs/jotai",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9de9377d10a5ac01388764b89458e2d7091d29d4",
+      "verified_source_sha256": "4c0c1a57174a0b7d59365ccea0d5c2619021d4f77c0cfd8a0554c2251d14a4ac",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 155,
+      "name": "XState",
+      "upstream_url": "https://github.com/statelyai/xstate",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "65afd994b2fa77a7137e3f27e0e831a62b3be426",
+      "verified_source_sha256": "2a317b00943a22be72cf9ed3624b25ef576f0a07227bcc2eda91423946d657ad",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 156,
+      "name": "Radix UI",
+      "upstream_url": "https://github.com/radix-ui/primitives",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "eb3a2b7091293e27df8f9ba906632d8daa3d81a3",
+      "verified_source_sha256": "9db45f44b2ea0bddf509a85ff1ec06faee00a50df3b78bb242017a665226deb7",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 157,
+      "name": "Floating UI",
+      "upstream_url": "https://github.com/floating-ui/floating-ui",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e1e9f88993c19426563decfcc991feb706f1ac66",
+      "verified_source_sha256": "a80e499d7dde51307f5b3515f2c104fad5e3b76505c9859ad11aad357f2cbcb7",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 158,
+      "name": "React Aria",
+      "upstream_url": "https://github.com/adobe/react-spectrum",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "6fc06c8e39770dd5530809b85a6fbdef94d86afc",
+      "verified_source_sha256": "b17070a71db86d939e87159540773044832ce818e4d3d74f61cf6b84b541f850",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 159,
+      "name": "cmdk",
+      "upstream_url": "https://github.com/pacocoursey/cmdk",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "dd2250ed608443e8f32bafc5fa2d1d07a3746aa3",
+      "verified_source_sha256": "6e9a98370c032aed0af7f8351ed6f7b3e5549ebb6687f2a7369e95096c7161d8",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 160,
+      "name": "Sonner",
+      "upstream_url": "https://github.com/emilkowalski/sonner",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "8e4662b39255120b62138312058f5d77c0139a5e",
+      "verified_source_sha256": "19d6c5a9863028e7ca5342689acb4bc0511ccff744d9d72a2070ffa2d930240e",
+      "source_reference": "NOX_MASTER_CATALOG_151_160_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 161,
+      "name": "whisper.cpp",
+      "upstream_url": "https://github.com/ggml-org/whisper.cpp",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d2c6f05a46dacf663e357bcf0ed40f542a72825d",
+      "verified_source_sha256": "b2db7761bbf69b13552334355a52f95812c630a1e94f183bc0e4b63ffbf2ee46",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 162,
+      "name": "sherpa-onnx",
+      "upstream_url": "https://github.com/k2-fsa/sherpa-onnx",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "bec3acea719faafa6c86c7022d98f19663b82a76",
+      "verified_source_sha256": "0d05897771150a147363843bdf158cc2e8e21fe6df9b511c61143da1b21904a7",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 163,
+      "name": "Silero VAD",
+      "upstream_url": "https://github.com/snakers4/silero-vad",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "066409f3d9db45a30d21dfcbf9147826ffdd7052",
+      "verified_source_sha256": "f69bc60cf5e46e18433300a1a614cc7d8f3dc777c1175228c33e2776c927cdaa",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 164,
+      "name": "openWakeWord",
+      "upstream_url": "https://github.com/dscripka/openWakeWord",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "368c03716d1e92591906a84949bc477f3a834455",
+      "verified_source_sha256": "0dd042651cb0e91364e6b70efc02581bc88883f1b27679911da869b148829c09",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 165,
+      "name": "py-webrtcvad",
+      "upstream_url": "https://github.com/wiseman/py-webrtcvad",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e283ca41df3a84b0e87fb1f5cb9b21580a286b09",
+      "verified_source_sha256": "656ba43fa144c6b9af7132efca741aa9bffe64ac040e03b55e6a0d4c9999fc80",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 166,
+      "name": "Coqui TTS",
+      "upstream_url": "https://github.com/coqui-ai/TTS",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "dbf1a08a0d4e47fdad6172e433eeb34bc6b13b4e",
+      "verified_source_sha256": "b0914d4554d9bd0ca18d9ad7ab4def495dae9b585efa5e67b2da43973ff9a944",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 167,
+      "name": "Kokoro-FastAPI",
+      "upstream_url": "https://github.com/remsky/Kokoro-FastAPI",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d4e23882222d0f98898eef01a423f7d7c09cbde1",
+      "verified_source_sha256": "fd03646cebaae0ba53218914c56a7b48c0f3587a9fab6719bd679934988a0c29",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 168,
+      "name": "MeloTTS",
+      "upstream_url": "https://github.com/myshell-ai/MeloTTS",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "209145371cff8fc3bd60d7be902ea69cbdb7965a",
+      "verified_source_sha256": "3edf1b2ab60e777691ab2ec5fba837e278f60761c296bc5d753da5ab8ab5754e",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 169,
+      "name": "StyleTTS2",
+      "upstream_url": "https://github.com/yl4579/StyleTTS2",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5cedc71c333f8d8b8551ca59378bdcc7af4c9529",
+      "verified_source_sha256": "a2fe1c58b074822e6823d01b4c50b1532523fe7da456238807d37336908fffc4",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 170,
+      "name": "OpenVoice",
+      "upstream_url": "https://github.com/myshell-ai/OpenVoice",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "74a1d147b17a8c3092dd5430504bd83ef6c7eb23",
+      "verified_source_sha256": "d08cbc84f4ec7abc76f9dddb5bbb221e906e49cfe5febd37133152bdeacb8be4",
+      "source_reference": "NOX_MASTER_CATALOG_161_170_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 171,
+      "name": "SpeechBrain",
+      "upstream_url": "https://github.com/speechbrain/speechbrain",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "c0241278f93ef02cd5191f03caf4e5f8e1292bf6",
+      "verified_source_sha256": "13a82b65fc35db937de6f7cb57e5884bfcbd0a6606a64909e6c2678e5a504553",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 172,
+      "name": "pyannote.audio",
+      "upstream_url": "https://github.com/pyannote/pyannote-audio",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "0d6f291328af48c7d93bcbb79bc92576af384ed7",
+      "verified_source_sha256": "3896f05e7aee7e62089007e6da3716feedc485af5073ad6eeeaf5c7f268e7413",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 173,
+      "name": "RNNoise",
+      "upstream_url": "https://github.com/xiph/rnnoise",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "70f1d256acd4b34a572f999a05c87bf00b67730d",
+      "verified_source_sha256": "a8aeeb024e08d5884b9b0b2cddb9b0c357c872a3c7149ca7a23375ccdd7e1190",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 174,
+      "name": "DeepFilterNet",
+      "upstream_url": "https://github.com/Rikorose/DeepFilterNet",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "7b14b895fe7fc42cab72b4a4c1e49c982bd6404b",
+      "verified_source_sha256": "0c0f9c962d5e22237d31a35b609a6eb39c604024033317e81b8d9424afcb0152",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 175,
+      "name": "librosa",
+      "upstream_url": "https://github.com/librosa/librosa",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "6c9fe7c18ed8bab8a44637355171b2129cf5c720",
+      "verified_source_sha256": "20684dec8ebb4110deceebcc2ad83e804e4f7a7a50a7a5d44441e1e9efe26eff",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 176,
+      "name": "python-soundfile",
+      "upstream_url": "https://github.com/bastibe/python-soundfile",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "e8293394e6b712240f06aea5d074956481abf33e",
+      "verified_source_sha256": "baa5c4c684b5eda48c6182d679303d1fcf01ca0ad0762f57452c62c6081c619a",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 177,
+      "name": "Vosk",
+      "upstream_url": "https://github.com/alphacep/vosk-api",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "4ab9821510b488efb7740094714a130bd3545e90",
+      "verified_source_sha256": "29a466463ba8f180528ffe094316e5889e8361488c38120d41edf2cb113f50d8",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 178,
+      "name": "ESPnet",
+      "upstream_url": "https://github.com/espnet/espnet",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "45e2b161173dc8b470c6632da702603f7f99949f",
+      "verified_source_sha256": "ec57758cb8237e6db7d03a637a28b6c534b7390ba1f06a66db29e55b656d9a41",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 179,
+      "name": "Parler-TTS",
+      "upstream_url": "https://github.com/huggingface/parler-tts",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "d108732cd57788ec86bc857d99a6cabd66663d68",
+      "verified_source_sha256": "4d1722e4189c1dc9048ea9a0586f6e88e6dbeef5cdec5cc7f42396371f5773bd",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 180,
+      "name": "Fish Speech",
+      "upstream_url": "https://github.com/fishaudio/fish-speech",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "0f8a12e8a651062fdee9c33a894bdccd3a8513f1",
+      "verified_source_sha256": "24487df7d512e991d5834c26bf74ce138ea64bb695eb61285a1136423cead549",
+      "source_reference": "NOX_MASTER_CATALOG_171_180_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 181,
+      "name": "Qdrant",
+      "upstream_url": "https://github.com/qdrant/qdrant",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "222b2e44ab1c3f17e8246396ead6558e45041df7",
+      "verified_source_sha256": "5792d34d21b4bc4e0813f4a0e2de85fe86b457b371e903a205cf0b67912fce77",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 182,
+      "name": "Chroma",
+      "upstream_url": "https://github.com/chroma-core/chroma",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "1a3ac2c7c623adbd03ed2508dc27b98cdf26016d",
+      "verified_source_sha256": "481bd42595af85964b24652fd9e851fff0f2dd978108f57d38b40c0035412364",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 183,
+      "name": "FAISS",
+      "upstream_url": "https://github.com/facebookresearch/faiss",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "7767c6396381c6586aba873fda72eec8d6819b7b",
+      "verified_source_sha256": "9cc52b835391bf4a322eaeb392b0358d0369c175418223c7f3f3217858741ba2",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 184,
+      "name": "LanceDB",
+      "upstream_url": "https://github.com/lancedb/lancedb",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "42f11d13a2755e44b63876b5a5edd93901291150",
+      "verified_source_sha256": "3404292115ae21e2d69cd363e7a38bac353494245897efcc6c84d27fcb6bf4c3",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 185,
+      "name": "pgvector",
+      "upstream_url": "https://github.com/pgvector/pgvector",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "66accb3af6705ea9975a33f6704f1cde50d99447",
+      "verified_source_sha256": "203ad31f17d9322e32046aada613600aef2c8d975d8b3c0a504df949230209ba",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 186,
+      "name": "DuckDB",
+      "upstream_url": "https://github.com/duckdb/duckdb",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "39aeee12ef8fc10c678915b2165c6f25b519746f",
+      "verified_source_sha256": "f2acaae648bf932db8a798d49ef2197a18f5d785d2856c2914ac34a04c973082",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 187,
+      "name": "sqlite-utils",
+      "upstream_url": "https://github.com/simonw/sqlite-utils",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9c66bafa52ae23d40499c74b0db3b635bcddb876",
+      "verified_source_sha256": "ac147774aa94a18088f604694f70fb454426439f7890363b6bd6f1b399b0a0b3",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 188,
+      "name": "Tantivy",
+      "upstream_url": "https://github.com/quickwit-oss/tantivy",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "2ad36b4fd0c00ded047b12295423250d8d4d713b",
+      "verified_source_sha256": "77fee7a4d25cfb4f6a87cafeaa9713bc3b2111f39f7dbb88b0c7a03ad1851ea2",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 189,
+      "name": "Meilisearch",
+      "upstream_url": "https://github.com/meilisearch/meilisearch",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "4ef8a91f27ee6affff3f59bc46a9e07a2a761636",
+      "verified_source_sha256": "2a0a71c12fc491a3b929ebc12c39ee0d98af558a69e27044aa0737eb7da5fe58",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 190,
+      "name": "Typesense",
+      "upstream_url": "https://github.com/typesense/typesense",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "5f40992633a181294a852b88c8f95f49816f1d6b",
+      "verified_source_sha256": "1feebb00c1c78b71fa4b3a73f2991b96744980db5d924f9e292cab790c32b43f",
+      "source_reference": "NOX_MASTER_CATALOG_181_190_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 191,
+      "name": "SWE-agent",
+      "upstream_url": "https://github.com/SWE-agent/SWE-agent",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "3ea751c087f32b16e039a2233dd6eefecef325d5",
+      "verified_source_sha256": "520ce0b29c668c73e09da9aa06a7621b0c61f810e73e891be8fa99c42d25833d",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 192,
+      "name": "Semgrep",
+      "upstream_url": "https://github.com/semgrep/semgrep",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "06d9993409f6698f78f6956cd39d968e7f4d7b6a",
+      "verified_source_sha256": "f4f5a1fb9d2f623b7fa5cd2d13107f7df321da974a2db12e73f693f5c1762edb",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 193,
+      "name": "Bandit",
+      "upstream_url": "https://github.com/PyCQA/bandit",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "2d5467c45c3189f4d7d07e8022276bc73a478abd",
+      "verified_source_sha256": "d575cfed88d1dfdd8506a259740614326c1c97bfe7fa231ac275b21223598a53",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 194,
+      "name": "Trivy",
+      "upstream_url": "https://github.com/aquasecurity/trivy",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "a2a154d75f577508ff4b5f1312bc0f621806e428",
+      "verified_source_sha256": "9eec60ac2592e9d08c592e7a95cdff80016537f5c63e2f9b347785235d72a3c9",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 195,
+      "name": "Syft",
+      "upstream_url": "https://github.com/anchore/syft",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "a0c0d3890a9d79421c403e8fcadec50a2e55bf21",
+      "verified_source_sha256": "26d9f134f108fe7b01b814ca1e05c7462bd92fa48a7140883a98e4100ba86ad4",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 196,
+      "name": "Grype",
+      "upstream_url": "https://github.com/anchore/grype",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "cd1f23eb50dfb52647090158f453c7359172591f",
+      "verified_source_sha256": "c2d4bfd7fbb964f7e46177cb7c3a1f46707cd748b71113a1c172b6a24adecdd1",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 197,
+      "name": "OSV-Scanner",
+      "upstream_url": "https://github.com/google/osv-scanner",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "80fe50567a5d6e0ec408353e2ceacca1561b91be",
+      "verified_source_sha256": "7a3d9a98ea5daa213722dd70fa6f418c11e1f50ffd27bf237a9b0ed0daf15a31",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 198,
+      "name": "Pyright",
+      "upstream_url": "https://github.com/microsoft/pyright",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "227769493b2cd2fce5c82d3be42c769a947e0f70",
+      "verified_source_sha256": "daa1fae650209ae935cb668eb91f1e5a015a118aebefdbc7c24e6845f6745225",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 199,
+      "name": "Hypothesis",
+      "upstream_url": "https://github.com/HypothesisWorks/hypothesis",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "9ab0be61aaaa27396fc1bbf4b34e7925cc68d1e2",
+      "verified_source_sha256": "073514c43ba25e14393ac129b9e5cf0796a5552dc19486be985e608e20748222",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    },
+    {
+      "number": 200,
+      "name": "Locust",
+      "upstream_url": "https://github.com/locustio/locust",
+      "source_kind": "UPSTREAM_GITHUB_OR_PYPI_ARCHIVE",
+      "state": "SOURCE_SNAPSHOT_ARCHIVED_ON_GOOGLE_DRIVE",
+      "source_revision": "3debc468b53f10d00cb7b449c8f6086f2e5c5be1",
+      "verified_source_sha256": "7d8670cdcdb0d841d5750ef65e84a9dbab3e1c4956222d9fb67747a1db52b9d0",
+      "source_reference": "NOX_MASTER_CATALOG_191_200_REAL_SOURCES.zip",
+      "verification_basis": [
+        "CI_UPSTREAM_SOURCE_SHA256_AND_CRC",
+        "DRIVE_PART_NAME_AND_SIZE_MATCH"
+      ],
+      "legacy_download_report_status": "DOWNLOADED_VERIFIED"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+name: NOX Genesis HUNT V27 Source and WEB QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - '.github/workflows/nox-hunt-v27-source-qa.yml'
+      - 'nox_runpod/teacher_mesh/autonomous_hunt_v27.py'
+      - 'nox_runpod/teacher_mesh/tests/test_autonomous_hunt_v27.py'
+      - 'nox_runpod/teacher_mesh/cognitive_overlay.py'
+      - 'nox_runpod/teacher_mesh/tests/test_genesis_recall_contract.py'
+      - 'nox_runpod/teacher_mesh/genesis_verified_status.py'
+      - 'nox_runpod/teacher_mesh/tests/test_genesis_verified_status.py'
+      - 'nox_runpod/teacher_mesh/NOX_GENESIS_HUNT_V27_UNIFIED_RU.md'
+      - 'nox_runpod/web_wow_merge/stage_genesis_web.py'
+      - 'nox_runpod/web_wow_merge/nox_genesis_live_panel.mjs'
+      - 'nox_runpod/web_wow_merge/NOX_ONEPASS_GENESIS_V26_STAGING.cmd'
+      - 'nox_runpod/web_wow_merge/tests/test_genesis_web_stage.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audited-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Python modules
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/autonomous_hunt_v27.py
+          python3 -m py_compile nox_runpod/teacher_mesh/genesis_verified_status.py
+          python3 -m py_compile nox_runpod/teacher_mesh/cognitive_overlay.py
+          python3 -m py_compile nox_runpod/web_wow_merge/stage_genesis_web.py
+      - name: Run real source regression tests using simulated owner callbacks
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_autonomous_hunt_v27.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_genesis_recall_contract.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_genesis_verified_status.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_cognitive_overlay.py' -v
+          python3 -m unittest discover -s nox_runpod/web_wow_merge/tests -p 'test_genesis_web_stage.py' -v
+      - name: JavaScript source syntax and physical merge policy gate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node --check nox_runpod/web_wow_merge/nox_genesis_live_panel.mjs
+          python3 -m unittest discover -s nox_runpod/web_wow_merge/tests -p 'test_real_zip_staging.py' -v
+      - name: Build exact physical source package with checksums
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p dist/nox_runpod/teacher_mesh/tests dist/nox_runpod/web_wow_merge/tests
+          cp nox_runpod/teacher_mesh/autonomous_hunt_v27.py dist/nox_runpod/teacher_mesh/
+          cp nox_runpod/teacher_mesh/genesis_verified_status.py dist/nox_runpod/teacher_mesh/
+          cp nox_runpod/teacher_mesh/cognitive_overlay.py dist/nox_runpod/teacher_mesh/
+          cp nox_runpod/teacher_mesh/NOX_GENESIS_HUNT_V27_UNIFIED_RU.md dist/
+          cp nox_runpod/teacher_mesh/tests/test_autonomous_hunt_v27.py dist/nox_runpod/teacher_mesh/tests/
+          cp nox_runpod/teacher_mesh/tests/test_genesis_recall_contract.py dist/nox_runpod/teacher_mesh/tests/
+          cp nox_runpod/teacher_mesh/tests/test_genesis_verified_status.py dist/nox_runpod/teacher_mesh/tests/
+          cp nox_runpod/web_wow_merge/stage_genesis_web.py dist/nox_runpod/web_wow_merge/
+          cp nox_runpod/web_wow_merge/nox_genesis_live_panel.mjs dist/nox_runpod/web_wow_merge/
+          cp nox_runpod/web_wow_merge/NOX_ONEPASS_GENESIS_V26_STAGING.cmd dist/nox_runpod/web_wow_merge/
+          cp nox_runpod/web_wow_merge/merge_physical_web_v25.py dist/nox_runpod/web_wow_merge/
+          cp nox_runpod/web_wow_merge/merge_nox_web_wow.py dist/nox_runpod/web_wow_merge/
+          cp nox_runpod/web_wow_merge/tests/test_genesis_web_stage.py dist/nox_runpod/web_wow_merge/tests/
+          (cd dist && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          test "$(wc -l < dist/SHA256SUMS.txt)" -ge 13
+          grep -q 'NOX HELION' dist/NOX_GENESIS_HUNT_V27_UNIFIED_RU.md
+          python3 - <<'PY'
+          import pathlib,hashlib
+          root=pathlib.Path("dist")
+          for row in (root/"SHA256SUMS.txt").read_text().splitlines():
+              digest,rel=row.split("  ",1)
+              assert hashlib.sha256((root/rel).read_bytes()).hexdigest()==digest
+          print("NOX_HUNT_V27_SHA256_SOURCE_PACKAGE_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_GENESIS_HUNT_V27_UNIFIED_PROGRAM_AND_REAL_PATCHES
+          path: dist/
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0

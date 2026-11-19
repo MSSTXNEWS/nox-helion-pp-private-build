@@ -1,0 +1,120 @@
+name: NOX Future V28 WOW150 Unified Source QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - '.github/workflows/nox-future-v28-wow150-ci.yml'
+      - 'nox_runpod/teacher_mesh/nox_*v28.py'
+      - 'nox_runpod/teacher_mesh/NOX_*V28*'
+      - 'nox_runpod/teacher_mesh/tests/test_v28*'
+      - 'nox_runpod/teacher_mesh/NOX_GENESIS_FUTURE_V28_ULTIMATE_PROGRAM_RU.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verified-source-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python compilation and modules import
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/nox_neural_matchmaker_v28.py nox_runpod/teacher_mesh/nox_curriculum_dna_v28.py nox_runpod/teacher_mesh/nox_adviser_arena_v28.py nox_runpod/teacher_mesh/nox_speed_lab_v28.py nox_runpod/teacher_mesh/nox_emotional_resonance_v28.py nox_runpod/teacher_mesh/nox_future_cortex_bridge_v28.py
+          python3 -m py_compile nox_runpod/teacher_mesh/autonomous_hunt_v27.py nox_runpod/teacher_mesh/genesis_verified_status.py
+      - name: Source regression, privacy, no-fake metrics and cross-version no-loss tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_v28_future_lab.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_v28_bridge_emotion.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_autonomous_hunt_v27.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_genesis_recall_contract.py' -v
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_genesis_verified_status.py' -v
+          python3 -m unittest discover -s nox_runpod/web_wow_merge/tests -p 'test_genesis_web_stage.py' -v
+      - name: Source-only cinematic WEB preservation tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node --check nox_runpod/web_wow_merge/nox_genesis_live_panel.mjs
+          python3 -m unittest discover -s nox_runpod/web_wow_merge/tests -p 'test_real_zip_staging.py' -v
+      - name: Pack all checked V27 and V28 source patches, program, 150 ideas and 24 templates
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, hashlib, shutil
+          assets=[
+          "nox_runpod/teacher_mesh/NOX_GENESIS_FUTURE_V28_ULTIMATE_PROGRAM_RU.md",
+          "nox_runpod/teacher_mesh/NOX_WOW50_V28_EVAL_AND_ARCHITECTURE.json",
+          "nox_runpod/teacher_mesh/NOX_FUTURE_OWN_WOW50_V28.json",
+          "nox_runpod/teacher_mesh/NOX_V28_FUTURE_SKILL_MODEL_TEMPLATES.json",
+          "nox_runpod/teacher_mesh/nox_neural_matchmaker_v28.py",
+          "nox_runpod/teacher_mesh/nox_curriculum_dna_v28.py",
+          "nox_runpod/teacher_mesh/nox_adviser_arena_v28.py",
+          "nox_runpod/teacher_mesh/nox_speed_lab_v28.py",
+          "nox_runpod/teacher_mesh/nox_emotional_resonance_v28.py",
+          "nox_runpod/teacher_mesh/nox_future_cortex_bridge_v28.py",
+          "nox_runpod/teacher_mesh/tests/test_v28_future_lab.py",
+          "nox_runpod/teacher_mesh/tests/test_v28_bridge_emotion.py",
+          "nox_runpod/teacher_mesh/NOX_GENESIS_HUNT_V27_UNIFIED_RU.md",
+          "nox_runpod/teacher_mesh/autonomous_hunt_v27.py",
+          "nox_runpod/teacher_mesh/genesis_verified_status.py",
+          "nox_runpod/teacher_mesh/cognitive_overlay.py",
+          "nox_runpod/teacher_mesh/s03_callback_adapter.py",
+          "nox_runpod/teacher_mesh/teacher_ensemble.py",
+          "nox_runpod/teacher_mesh/corpus_gate.py",
+          "nox_runpod/teacher_mesh/adapter_recipe.py",
+          "nox_runpod/teacher_mesh/tests/test_autonomous_hunt_v27.py",
+          "nox_runpod/teacher_mesh/tests/test_genesis_recall_contract.py",
+          "nox_runpod/teacher_mesh/tests/test_genesis_verified_status.py",
+          "nox_runpod/web_wow_merge/nox_genesis_live_panel.mjs",
+          "nox_runpod/web_wow_merge/stage_genesis_web.py",
+          "nox_runpod/web_wow_merge/merge_physical_web_v25.py",
+          "nox_runpod/web_wow_merge/merge_nox_web_wow.py",
+          "nox_runpod/web_wow_merge/NOX_ONEPASS_GENESIS_V26_STAGING.cmd",
+          "nox_runpod/web_wow_merge/tests/test_genesis_web_stage.py",
+          ]
+          target=Path("dist")
+          hashes=[]
+          for name in assets:
+              src=Path(name)
+              assert src.is_file(),name
+              data=src.read_bytes()
+              assert data,name
+              dst=target/name
+              dst.parent.mkdir(parents=True,exist_ok=True)
+              shutil.copyfile(src,dst)
+              hashes.append({"path":name,"bytes":len(data),"sha256":hashlib.sha256(data).hexdigest()})
+          base=Path("nox_runpod/teacher_mesh")
+          old=json.loads((base/"NOX_WOW50_V28_EVAL_AND_ARCHITECTURE.json").read_text())
+          new=json.loads((base/"NOX_FUTURE_OWN_WOW50_V28.json").read_text())
+          templates=json.loads((base/"NOX_V28_FUTURE_SKILL_MODEL_TEMPLATES.json").read_text())
+          assert len(old["cognitive_wow50"])==len(old["architecture_50"])==len(new["items"])==50
+          assert len(templates["templates"])==24
+          receipt={
+              "schema":"NOX-V28-SOURCE-VERIFIED-NOT-DEPLOYED-v1",
+              "production_modified":False,"weights_trained":False,
+              "old_D02_overwritten":False,"onehost_live_verified":False,
+              "windows_E07_accepted":False,
+              "existing_and_new_wow_ideas":150,
+              "skill_templates":24,"files":hashes,
+              "integration_boundary":"Native OneHost and S03 callbacks not yet physically validated"
+          }
+          (target/"NOX_V28_SOURCE_ACCEPTANCE.json").write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n")
+          (target/"SHA256SUMS.txt").write_text("".join(
+              x["sha256"]+"  "+x["path"]+"\n" for x in hashes))
+          for item in hashes:
+              assert hashlib.sha256((target/item["path"]).read_bytes()).hexdigest()==item["sha256"]
+          print("NOX_FUTURE_V28_REAL_SOURCE_PACKAGE_PASS",len(hashes),len(new["items"]))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_GENESIS_FUTURE_V28_WOW150_ALL_PATCHES_AND_PROGRAM
+          path: dist/
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0

@@ -1,0 +1,69 @@
+name: NOX V28 Future Cognition Source and Experiment QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v28-future-cognition.yml
+      - nox_runpod/teacher_mesh/NOX_V28_ORIGINAL_WOW40_IDEAS.json
+      - nox_runpod/teacher_mesh/NOX_WOW50_V28_EVAL_AND_ARCHITECTURE.json
+      - nox_runpod/teacher_mesh/NOX_V28_FUTURE_COGNITION_ADDENDUM_RU.md
+      - nox_runpod/teacher_mesh/v28_experiment_gate.py
+      - nox_runpod/teacher_mesh/tests/test_v28_experiment_gate.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python compile and independent contract tests
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile nox_runpod/teacher_mesh/v28_experiment_gate.py
+          python3 -m unittest discover -s nox_runpod/teacher_mesh/tests -p 'test_v28_experiment_gate.py' -v
+      - name: 40 new plus 100 source ideas consistency gate
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          base=pathlib.Path('nox_runpod/teacher_mesh')
+          older=json.loads((base/'NOX_WOW50_V28_EVAL_AND_ARCHITECTURE.json').read_text())
+          newer=json.loads((base/'NOX_V28_ORIGINAL_WOW40_IDEAS.json').read_text())
+          assert len(older['cognitive_wow50'])==50
+          assert len(older['architecture_50'])==50
+          assert len(newer['new_ideas'])==40
+          assert len({x['id'] for x in newer['new_ideas']})==40
+          assert all(x['implementation_status'] for x in newer['new_ideas'])
+          assert all(x['metric'] for x in newer['new_ideas'])
+          assert newer['status']=='PROPOSED_NOT_INSTALLED'
+          assert len((base/'NOX_V28_FUTURE_COGNITION_ADDENDUM_RU.md').read_text())>7000
+          print('NOX_V28_140_WOW_IDEAS_RETAINED_NO_FALSE_CLAIMS_PASS')
+          PY
+      - name: Assemble verified source package without touching existing builds
+        run: |
+          set -Eeuo pipefail
+          mkdir -p dist/tools dist/tests dist/catalog
+          cp nox_runpod/teacher_mesh/NOX_V28_FUTURE_COGNITION_ADDENDUM_RU.md dist/
+          cp nox_runpod/teacher_mesh/NOX_WOW50_V28_EVAL_AND_ARCHITECTURE.json dist/catalog/
+          cp nox_runpod/teacher_mesh/NOX_V28_ORIGINAL_WOW40_IDEAS.json dist/catalog/
+          cp nox_runpod/teacher_mesh/v28_experiment_gate.py dist/tools/
+          cp nox_runpod/teacher_mesh/tests/test_v28_experiment_gate.py dist/tests/
+          printf '%s\n' 'NOX V28 SOURCE CANDIDATE ONLY: original 100 ideas + 40 new, independent eval gate, real tests. Production, S03 and weights unchanged.' > dist/READ_ME_FIRST.txt
+          (cd dist && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          python3 - <<'PY'
+          import hashlib,pathlib
+          root=pathlib.Path('dist')
+          for line in (root/'SHA256SUMS.txt').read_text().splitlines():
+              expected,path=line.split('  ',1)
+              assert hashlib.sha256((root/path).read_bytes()).hexdigest()==expected
+          print('NOX_V28_SOURCE_PACKAGE_SHA256_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V28_FUTURE_COGNITION_140_WOW_PROGRAM_PATCH_TESTS
+          path: dist/
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error

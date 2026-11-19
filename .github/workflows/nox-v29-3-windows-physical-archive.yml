@@ -1,0 +1,64 @@
+name: NOX V29.3 Native Windows Exact 85MB SourceLock QA
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v29-3-windows-physical-archive.yml
+      - nox_runpod/web_wow_merge/v29/NOX_V29_3_WINDOWS_STAGE.ps1
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native-windows-offline-exact-archive:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NOX_HELION_WEB_V29_3_FULL_VERIFIED_ARCHIVE
+          run-id: 43441048683
+          github-token: ${{ github.token }}
+          path: candidate
+      - name: Validate real 85MB NOX archive SHA on Windows
+        shell: powershell
+        run: |
+          $candidate = Join-Path $PWD "candidate\NOX_HELION_WEB_V29_3_FROZEN_20261113.zip"
+          if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { throw 'NOX_FILE_NOT_FOUND' }
+          if ((Get-Item -LiteralPath $candidate).Length -ne 85218272) { throw 'NOX_LENGTH_HOLD' }
+          $h=(Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($h -ne '166becb90fce63e2db3f9a74281d756995844552cddb7b67a0ac4bd67a190aa0') {
+            throw "NOX_SOURCE_SHA_MISMATCH $h"
+          }
+          Write-Output 'NOX_V29_3_NATIVE_WINDOWS_85MB_SHA_PASS'
+      - name: Parse PowerShell on native Windows
+        shell: powershell
+        run: |
+          $p='nox_runpod/web_wow_merge/v29/NOX_V29_3_WINDOWS_STAGE.ps1'
+          $tokens=$null; $errors=$null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $p).Path,[ref]$tokens,[ref]$errors)
+          if ($errors -and $errors.Count -gt 0) { $errors | Out-String | Write-Error; exit 1 }
+          Write-Output 'NOX_V29_3_NATIVE_WINDOWS_PS_PARSER_PASS'
+      - name: Inspect all real ZIP members and internal SHA without live PC
+        shell: powershell
+        run: |
+          $p='nox_runpod/web_wow_merge/v29/NOX_V29_3_WINDOWS_STAGE.ps1'
+          $archive=Join-Path $PWD "candidate\NOX_HELION_WEB_V29_3_FROZEN_20261113.zip"
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Archive $archive -InspectOnly -Root (Join-Path $env:RUNNER_TEMP 'NOX_NATIVE_QA')
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_V29_3_WINDOWS_SOURCE_SHA_FAIL' }
+          Write-Output 'NOX_V29_3_WINDOWS_FULL_1085_SHA_PASS'
+      - name: Actually stage all 1089 files on Windows without production switch
+        shell: powershell
+        run: |
+          $p='nox_runpod/web_wow_merge/v29/NOX_V29_3_WINDOWS_STAGE.ps1'
+          $archive=Join-Path $PWD "candidate\NOX_HELION_WEB_V29_3_FROZEN_20261113.zip"
+          $root=Join-Path $env:RUNNER_TEMP 'NOX_NATIVE_QA'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Archive $archive -Root $root
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_V29_3_WINDOWS_STAGE_FAILURE' }
+          $stage=Join-Path $root 'builds\NOX_WEB_V29_3_VERIFIED_STAGE_166becb90fce'
+          $receipt=Get-Content -LiteralPath (Join-Path $stage 'NOX_V29_3_WINDOWS_STAGE_RECEIPT.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($receipt.files_staged -ne 1089 -or $receipt.production_modified -ne $false -or $receipt.e07_verified -ne $false) {
+            throw 'NOX_V29_3_FALSE_NATIVE_RECEIPT'
+          }
+          Write-Output 'NOX_V29_3_WINDOWS_REAL_ZIP_STAGED_PASS_NO_LIVE_PC'

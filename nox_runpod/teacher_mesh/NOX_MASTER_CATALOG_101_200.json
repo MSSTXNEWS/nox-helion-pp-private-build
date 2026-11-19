@@ -1,0 +1,1829 @@
+{
+  "schema": "nox-helion-wow-extension-101-200-v1",
+  "context": "NOX HELION live source integration; existing frontend/backend only",
+  "base_catalog": "nox_runpod/teacher_mesh/NOX_MASTER_CATALOG_100.json",
+  "total": 100,
+  "entries": [
+    {
+      "number": 101,
+      "group": "CINEMA",
+      "name": "React Three Fiber",
+      "url": "https://github.com/pmndrs/react-three-fiber",
+      "usage": "React-компоненты для живого WebGL-ядра NOX",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 102,
+      "group": "CINEMA",
+      "name": "Drei",
+      "url": "https://github.com/pmndrs/drei",
+      "usage": "Помощники 3D-сцены, камер и материалов без заглушек",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 103,
+      "group": "CINEMA",
+      "name": "React Postprocessing",
+      "url": "https://github.com/pmndrs/react-postprocessing",
+      "usage": "Кинематографический bloom, depth of field, шум",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 104,
+      "group": "CINEMA",
+      "name": "Postprocessing",
+      "url": "https://github.com/vanruesc/postprocessing",
+      "usage": "Реальные GPU-эффекты для WebGL",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 105,
+      "group": "CINEMA",
+      "name": "Motion",
+      "url": "https://github.com/motiondivision/motion",
+      "usage": "Плавные переходы страниц и панелей",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 106,
+      "group": "CINEMA",
+      "name": "React Spring",
+      "url": "https://github.com/pmndrs/react-spring",
+      "usage": "Физически правдоподобное плавное движение",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 107,
+      "group": "CINEMA",
+      "name": "Anime.js",
+      "url": "https://github.com/juliangarnier/anime",
+      "usage": "Сценарии сложной анимации интерфейса",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 108,
+      "group": "CINEMA",
+      "name": "tsParticles",
+      "url": "https://github.com/tsparticles/tsparticles",
+      "usage": "Живые частицы, пепел и пыль",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 109,
+      "group": "CINEMA",
+      "name": "OGL",
+      "url": "https://github.com/oframe/ogl",
+      "usage": "Легковесные шейдерные сцены",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 110,
+      "group": "CINEMA",
+      "name": "Babylon.js",
+      "url": "https://github.com/BabylonJS/Babylon.js",
+      "usage": "3D-движок со светом и PBR-материалами",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 111,
+      "group": "CINEMA",
+      "name": "PlayCanvas Engine",
+      "url": "https://github.com/playcanvas/engine",
+      "usage": "WebGPU/WebGL рендер и сцены",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 112,
+      "group": "CINEMA",
+      "name": "PixiJS",
+      "url": "https://github.com/pixijs/pixijs",
+      "usage": "Ускоренная 2D-графика и HUD",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 113,
+      "group": "CINEMA",
+      "name": "regl",
+      "url": "https://github.com/regl-project/regl",
+      "usage": "Низкоуровневый WebGL для кастомных эффектов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 114,
+      "group": "CINEMA",
+      "name": "gl-matrix",
+      "url": "https://github.com/toji/gl-matrix",
+      "usage": "Быстрая математика векторных анимаций",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 115,
+      "group": "CINEMA",
+      "name": "Rive JS",
+      "url": "https://github.com/rive-app/rive-wasm",
+      "usage": "Интерактивные анимации графических кнопок",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 116,
+      "group": "CINEMA",
+      "name": "lottie-web",
+      "url": "https://github.com/airbnb/lottie-web",
+      "usage": "Векторные анимации кнопок и индикаторов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 117,
+      "group": "CINEMA",
+      "name": "Lenis",
+      "url": "https://github.com/darkroomengineering/lenis",
+      "usage": "Плавный скролл кинематографичных экранов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 118,
+      "group": "CINEMA",
+      "name": "Theatre.js",
+      "url": "https://github.com/theatre-js/theatre",
+      "usage": "Режиссура временных сцен и камеры",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 119,
+      "group": "CINEMA",
+      "name": "glslify",
+      "url": "https://github.com/glslify/glslify",
+      "usage": "Модульные GLSL-шейдеры",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 120,
+      "group": "CINEMA",
+      "name": "glsl-noise",
+      "url": "https://github.com/hughsk/glsl-noise",
+      "usage": "Процедурный шум и естественные материалы",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 121,
+      "group": "CINEMA",
+      "name": "Troika Three Text",
+      "url": "https://github.com/protectwise/troika",
+      "usage": "Четкий текст поверх 3D-сцены",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 122,
+      "group": "CINEMA",
+      "name": "Camera Controls",
+      "url": "https://github.com/yomotsu/camera-controls",
+      "usage": "Благородные движения 3D-камеры",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 123,
+      "group": "CINEMA",
+      "name": "three-stdlib",
+      "url": "https://github.com/pmndrs/three-stdlib",
+      "usage": "Готовые инструменты для Three.js",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 124,
+      "group": "CINEMA",
+      "name": "Rapier",
+      "url": "https://github.com/dimforge/rapier",
+      "usage": "Правдоподобные столкновения и физика орбит",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 125,
+      "group": "CINEMA",
+      "name": "React Three Rapier",
+      "url": "https://github.com/pmndrs/react-three-rapier",
+      "usage": "Физика планет внутри R3F",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 126,
+      "group": "CINEMA",
+      "name": "cannon-es",
+      "url": "https://github.com/pmndrs/cannon-es",
+      "usage": "Физическая динамика легких объектов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 127,
+      "group": "CINEMA",
+      "name": "Matter.js",
+      "url": "https://github.com/liabru/matter-js",
+      "usage": "2D-физика интерфейсных предметов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 128,
+      "group": "CINEMA",
+      "name": "maath",
+      "url": "https://github.com/pmndrs/maath",
+      "usage": "Анимационная математика и упругие траектории",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 129,
+      "group": "CINEMA",
+      "name": "WebGPU Samples",
+      "url": "https://github.com/webgpu/webgpu-samples",
+      "usage": "Эталоны современных GPU-эффектов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 130,
+      "group": "CINEMA",
+      "name": "Spector.js",
+      "url": "https://github.com/BabylonJS/Spector.js",
+      "usage": "Реальная диагностика WebGL-кадров",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 131,
+      "group": "DASHBOARD",
+      "name": "D3",
+      "url": "https://github.com/d3/d3",
+      "usage": "Динамические сложные диаграммы",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 132,
+      "group": "DASHBOARD",
+      "name": "uPlot",
+      "url": "https://github.com/leeoniya/uPlot",
+      "usage": "Быстрые реальные линии GPU/CPU/температуры",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 133,
+      "group": "DASHBOARD",
+      "name": "Lightweight Charts",
+      "url": "https://github.com/tradingview/lightweight-charts",
+      "usage": "Плотные временные графики телеметрии",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 134,
+      "group": "DASHBOARD",
+      "name": "Visx",
+      "url": "https://github.com/airbnb/visx",
+      "usage": "Нестандартные диаграммы для панели NOX",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 135,
+      "group": "DASHBOARD",
+      "name": "Cytoscape.js",
+      "url": "https://github.com/cytoscape/cytoscape.js",
+      "usage": "Интерактивные графы памяти",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 136,
+      "group": "DASHBOARD",
+      "name": "Sigma.js",
+      "url": "https://github.com/jacomyal/sigma.js",
+      "usage": "Большие графы знаний через GPU",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 137,
+      "group": "DASHBOARD",
+      "name": "Graphology",
+      "url": "https://github.com/graphology/graphology",
+      "usage": "Структуры и алгоритмы графа",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 138,
+      "group": "DASHBOARD",
+      "name": "ELKjs",
+      "url": "https://github.com/kieler/elkjs",
+      "usage": "Автоматическое размещение узлов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 139,
+      "group": "DASHBOARD",
+      "name": "Dagre",
+      "url": "https://github.com/dagrejs/dagre",
+      "usage": "Читаемые причинно-следственные схемы",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 140,
+      "group": "DASHBOARD",
+      "name": "React Flow",
+      "url": "https://github.com/xyflow/xyflow",
+      "usage": "Редактор живых маршрутов задач",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 141,
+      "group": "RESONANCE",
+      "name": "Monaco Editor",
+      "url": "https://github.com/microsoft/monaco-editor",
+      "usage": "Полноценный редактор кода внутри NOX",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 142,
+      "group": "RESONANCE",
+      "name": "CodeMirror",
+      "url": "https://github.com/codemirror/dev",
+      "usage": "Легкий доступный редактор подсказок и файлов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 143,
+      "group": "RESONANCE",
+      "name": "xterm.js",
+      "url": "https://github.com/xtermjs/xterm.js",
+      "usage": "Терминал в браузере под подтвержденные действия",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 144,
+      "group": "RESONANCE",
+      "name": "Tiptap",
+      "url": "https://github.com/ueberdosis/tiptap",
+      "usage": "Разметка заметок и длинного контекста",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 145,
+      "group": "RESONANCE",
+      "name": "Yjs",
+      "url": "https://github.com/yjs/yjs",
+      "usage": "Синхронизация совместного редактирования",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 146,
+      "group": "RESONANCE",
+      "name": "Automerge",
+      "url": "https://github.com/automerge/automerge",
+      "usage": "Локальные обратимые изменения данных",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 147,
+      "group": "RESONANCE",
+      "name": "Dexie.js",
+      "url": "https://github.com/dexie/Dexie.js",
+      "usage": "Оффлайн IndexedDB-кэш браузера",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 148,
+      "group": "RESONANCE",
+      "name": "RxDB",
+      "url": "https://github.com/pubkey/rxdb",
+      "usage": "Реактивные локальные данные интерфейса",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 149,
+      "group": "RESONANCE",
+      "name": "PouchDB",
+      "url": "https://github.com/pouchdb/pouchdb",
+      "usage": "Оффлайн-состояние и синхронизация",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 150,
+      "group": "RESONANCE",
+      "name": "TanStack Query",
+      "url": "https://github.com/TanStack/query",
+      "usage": "Правдивая загрузка и обновление данных",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 151,
+      "group": "RESONANCE",
+      "name": "TanStack Virtual",
+      "url": "https://github.com/TanStack/virtual",
+      "usage": "Быстрые длинные чаты и ленты",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 152,
+      "group": "RESONANCE",
+      "name": "TanStack Table",
+      "url": "https://github.com/TanStack/table",
+      "usage": "Сложные таблицы задач без тормозов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 153,
+      "group": "RESONANCE",
+      "name": "Zustand",
+      "url": "https://github.com/pmndrs/zustand",
+      "usage": "Локальное состояние без нового backend",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 154,
+      "group": "RESONANCE",
+      "name": "Jotai",
+      "url": "https://github.com/pmndrs/jotai",
+      "usage": "Гранулярные реактивные данные",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 155,
+      "group": "RESONANCE",
+      "name": "XState",
+      "url": "https://github.com/statelyai/xstate",
+      "usage": "Надежные машины состояний NOX",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 156,
+      "group": "RESONANCE",
+      "name": "Radix UI",
+      "url": "https://github.com/radix-ui/primitives",
+      "usage": "Доступные контролы с графическими кнопками",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 157,
+      "group": "RESONANCE",
+      "name": "Floating UI",
+      "url": "https://github.com/floating-ui/floating-ui",
+      "usage": "Правильное позиционирование подсказок",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 158,
+      "group": "RESONANCE",
+      "name": "React Aria",
+      "url": "https://github.com/adobe/react-spectrum",
+      "usage": "Управление с клавиатуры и a11y",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 159,
+      "group": "RESONANCE",
+      "name": "cmdk",
+      "url": "https://github.com/pacocoursey/cmdk",
+      "usage": "Командная палитра Ctrl+K",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 160,
+      "group": "RESONANCE",
+      "name": "Sonner",
+      "url": "https://github.com/emilkowalski/sonner",
+      "usage": "Точные уведомления об операциях",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 161,
+      "group": "VOICE",
+      "name": "whisper.cpp",
+      "url": "https://github.com/ggml-org/whisper.cpp",
+      "usage": "Локальная речь без удаленного API",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 162,
+      "group": "VOICE",
+      "name": "sherpa-onnx",
+      "url": "https://github.com/k2-fsa/sherpa-onnx",
+      "usage": "Потоковая RU/ES речь и голосовые функции",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 163,
+      "group": "VOICE",
+      "name": "Silero VAD",
+      "url": "https://github.com/snakers4/silero-vad",
+      "usage": "Детектор голосовой активности",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 164,
+      "group": "VOICE",
+      "name": "openWakeWord",
+      "url": "https://github.com/dscripka/openWakeWord",
+      "usage": "Локальное слово активации",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 165,
+      "group": "VOICE",
+      "name": "py-webrtcvad",
+      "url": "https://github.com/wiseman/py-webrtcvad",
+      "usage": "Легкий VAD для голоса",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 166,
+      "group": "VOICE",
+      "name": "Coqui TTS",
+      "url": "https://github.com/coqui-ai/TTS",
+      "usage": "Обучение и воспроизведение локальной речи",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 167,
+      "group": "VOICE",
+      "name": "Kokoro-FastAPI",
+      "url": "https://github.com/remsky/Kokoro-FastAPI",
+      "usage": "Локальный TTS-сервер с проверкой голосов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 168,
+      "group": "VOICE",
+      "name": "MeloTTS",
+      "url": "https://github.com/myshell-ai/MeloTTS",
+      "usage": "Многоязычный TTS",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 169,
+      "group": "VOICE",
+      "name": "StyleTTS2",
+      "url": "https://github.com/yl4579/StyleTTS2",
+      "usage": "Экспрессивная озвучка",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 170,
+      "group": "VOICE",
+      "name": "OpenVoice",
+      "url": "https://github.com/myshell-ai/OpenVoice",
+      "usage": "Перенос голоса только с правами и согласием",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 171,
+      "group": "VOICE",
+      "name": "SpeechBrain",
+      "url": "https://github.com/speechbrain/speechbrain",
+      "usage": "Аудиомодели и голосовые пайплайны",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 172,
+      "group": "VOICE",
+      "name": "pyannote.audio",
+      "url": "https://github.com/pyannote/pyannote-audio",
+      "usage": "Диаризация дикторов в рамках разрешенных данных",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 173,
+      "group": "VOICE",
+      "name": "RNNoise",
+      "url": "https://github.com/xiph/rnnoise",
+      "usage": "Шумоподавление при живом общении",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 174,
+      "group": "VOICE",
+      "name": "DeepFilterNet",
+      "url": "https://github.com/Rikorose/DeepFilterNet",
+      "usage": "Очистка речи на локальном CPU/GPU",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 175,
+      "group": "VOICE",
+      "name": "librosa",
+      "url": "https://github.com/librosa/librosa",
+      "usage": "Аудиоанализ и диагностика",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 176,
+      "group": "VOICE",
+      "name": "python-soundfile",
+      "url": "https://github.com/bastibe/python-soundfile",
+      "usage": "Чтение и запись аудио",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 177,
+      "group": "VOICE",
+      "name": "Vosk",
+      "url": "https://github.com/alphacep/vosk-api",
+      "usage": "Резервное распознавание речи без сети",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 178,
+      "group": "VOICE",
+      "name": "ESPnet",
+      "url": "https://github.com/espnet/espnet",
+      "usage": "Исследовательская система речи",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 179,
+      "group": "VOICE",
+      "name": "Parler-TTS",
+      "url": "https://github.com/huggingface/parler-tts",
+      "usage": "Текстовое управление стилем озвучки",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 180,
+      "group": "VOICE",
+      "name": "Fish Speech",
+      "url": "https://github.com/fishaudio/fish-speech",
+      "usage": "Экспериментальная естественная речь",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 181,
+      "group": "MEMORY",
+      "name": "Qdrant",
+      "url": "https://github.com/qdrant/qdrant",
+      "usage": "Поиск памяти с фильтрами и векторами",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 182,
+      "group": "MEMORY",
+      "name": "Chroma",
+      "url": "https://github.com/chroma-core/chroma",
+      "usage": "Локальные эмбеддинги и индексы",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 183,
+      "group": "MEMORY",
+      "name": "FAISS",
+      "url": "https://github.com/facebookresearch/faiss",
+      "usage": "Высокоскоростной поиск похожих знаний",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 184,
+      "group": "MEMORY",
+      "name": "LanceDB",
+      "url": "https://github.com/lancedb/lancedb",
+      "usage": "Локальная векторная база и мультимодальность",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 185,
+      "group": "MEMORY",
+      "name": "pgvector",
+      "url": "https://github.com/pgvector/pgvector",
+      "usage": "Векторы в PostgreSQL при наличии инфраструктуры",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 186,
+      "group": "MEMORY",
+      "name": "DuckDB",
+      "url": "https://github.com/duckdb/duckdb",
+      "usage": "Локальная аналитика телеметрии и памяти",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 187,
+      "group": "MEMORY",
+      "name": "sqlite-utils",
+      "url": "https://github.com/simonw/sqlite-utils",
+      "usage": "Проверенные миграции и управление SQLite",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 188,
+      "group": "MEMORY",
+      "name": "Tantivy",
+      "url": "https://github.com/quickwit-oss/tantivy",
+      "usage": "Быстрый полнотекстовый поиск",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 189,
+      "group": "MEMORY",
+      "name": "Meilisearch",
+      "url": "https://github.com/meilisearch/meilisearch",
+      "usage": "Мгновенный пользовательский поиск",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 190,
+      "group": "MEMORY",
+      "name": "Typesense",
+      "url": "https://github.com/typesense/typesense",
+      "usage": "Опечаткоустойчивый поиск по знаниям",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 191,
+      "group": "FORGE",
+      "name": "SWE-agent",
+      "url": "https://github.com/SWE-agent/SWE-agent",
+      "usage": "Обратимые предложения исправлений исходников",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 192,
+      "group": "FORGE",
+      "name": "Semgrep",
+      "url": "https://github.com/semgrep/semgrep",
+      "usage": "Поиск небезопасного кода перед патчами",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 193,
+      "group": "FORGE",
+      "name": "Bandit",
+      "url": "https://github.com/PyCQA/bandit",
+      "usage": "Безопасность Python-кода",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 194,
+      "group": "FORGE",
+      "name": "Trivy",
+      "url": "https://github.com/aquasecurity/trivy",
+      "usage": "Сканирование CVE и образов",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 195,
+      "group": "FORGE",
+      "name": "Syft",
+      "url": "https://github.com/anchore/syft",
+      "usage": "Список компонентов и лицензий в сборке",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 196,
+      "group": "FORGE",
+      "name": "Grype",
+      "url": "https://github.com/anchore/grype",
+      "usage": "Аудит уязвимостей зависимостей",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 197,
+      "group": "FORGE",
+      "name": "OSV-Scanner",
+      "url": "https://github.com/google/osv-scanner",
+      "usage": "Проверка известных уязвимостей библиотек",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 198,
+      "group": "FORGE",
+      "name": "Pyright",
+      "url": "https://github.com/microsoft/pyright",
+      "usage": "Статическая проверка типов Python",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 199,
+      "group": "FORGE",
+      "name": "Hypothesis",
+      "url": "https://github.com/HypothesisWorks/hypothesis",
+      "usage": "Генеративные и инвариантные тесты",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    },
+    {
+      "number": 200,
+      "group": "FORGE",
+      "name": "Locust",
+      "url": "https://github.com/locustio/locust",
+      "usage": "Реальная нагрузочная проверка сервиса",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "acquisition_state": "NOT_VERIFIED",
+      "requires_review": [
+        "PIN_COMMIT",
+        "CHECK_LICENSE",
+        "CHECK_OS_VM_FIT",
+        "CHECK_SECURITY",
+        "INTEGRATE_IN_EXISTING_NOX"
+      ],
+      "installation_policy": "NO_AUTO_INSTALL",
+      "source_kind": "github_repo"
+    }
+  ],
+  "by_group": {
+    "CINEMA": 30,
+    "DASHBOARD": 10,
+    "RESONANCE": 20,
+    "VOICE": 20,
+    "MEMORY": 10,
+    "FORGE": 10
+  },
+  "policy": {
+    "one_identity": "NOX",
+    "one_memory": "S03",
+    "one_learner": "NOX own weights and adapter banks",
+    "no_free_compute_claim": true,
+    "no_auto_install": true,
+    "do_not_restart_live_training": true,
+    "stop_fail_closed": true,
+    "provider_quota": true,
+    "source_attribution": true,
+    "no_consciousness_claim": true
+  },
+  "archive_state": "NOT_YET_DOWNLOADED"
+}

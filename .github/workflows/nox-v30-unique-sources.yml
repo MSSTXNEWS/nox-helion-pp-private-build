@@ -1,0 +1,111 @@
+name: NOX V30 Additional Real Source Acquisition
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-v30-unique-sources.yml
+      - nox_runpod/teacher_mesh/stages/download_v30_unique_sources.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  download-pinned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [agent_reinforcement, quality_and_safety]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pinned Git source and verify SHA256+CRC
+        run: |
+          set -Eeuo pipefail
+          python3 nox_runpod/teacher_mesh/stages/download_v30_unique_sources.py --group ${{ matrix.group }} --out sources
+      - name: Split full source bundle into 45MB parts with whole-SHA
+        run: |
+          set -Eeuo pipefail
+          mkdir -p transfer/parts
+          tar -cf transfer/SOURCE_SNAPSHOTS.tar -C sources .
+          split -b 45m -d -a 2 transfer/SOURCE_SNAPSHOTS.tar transfer/parts/piece
+          python3 - <<'PY'
+          import pathlib,hashlib,json
+          b=pathlib.Path('transfer')
+          tar=b/'SOURCE_SNAPSHOTS.tar'
+          src=json.loads(pathlib.Path('sources/NOX_V30_UPSTREAM_PROVENANCE.json').read_text())
+          parts=[{'name':p.name,'bytes':p.stat().st_size,
+                  'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+                  for p in sorted((b/'parts').glob('piece*'))]
+          assert 1<=len(parts)<=8, 'SOURCE_BUNDLE_SIZE_BUDGET_HOLD'
+          out={'schema':'nox-v30-source-transfer-v1','group':src['group'],
+               'archive_name':'SOURCE_SNAPSHOTS.tar','archive_bytes':tar.stat().st_size,
+               'archive_sha256':hashlib.sha256(tar.read_bytes()).hexdigest(),
+               'sources':src,'parts':parts,'production_modified':False}
+          (b/'PARTS_INDEX.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          print('NOX_V30_PINNED_SOURCE_TRANSFER_VERIFIED',src['group'],src['verified'],len(parts))
+          PY
+          rm transfer/SOURCE_SNAPSHOTS.tar
+      - name: Upload source inventory and part hashes
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V30_${{ matrix.group }}_INDEX
+          path: |
+            transfer/PARTS_INDEX.json
+            sources/NOX_V30_UPSTREAM_PROVENANCE.json
+            sources/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload verified pieces 00
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V30_${{ matrix.group }}_PART_00
+          path: transfer/parts/piece00
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload verified pieces 01
+        if: hashFiles('transfer/parts/piece01') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V30_${{ matrix.group }}_PART_01
+          path: transfer/parts/piece01
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload verified pieces 02
+        if: hashFiles('transfer/parts/piece02') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V30_${{ matrix.group }}_PART_02
+          path: transfer/parts/piece02
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload verified pieces 03
+        if: hashFiles('transfer/parts/piece03') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V30_${{ matrix.group }}_PART_03
+          path: transfer/parts/piece03
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload verified pieces 04
+        if: hashFiles('transfer/parts/piece04') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V30_${{ matrix.group }}_PART_04
+          path: transfer/parts/piece04
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload verified pieces 05
+        if: hashFiles('transfer/parts/piece05') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_V30_${{ matrix.group }}_PART_05
+          path: transfer/parts/piece05
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

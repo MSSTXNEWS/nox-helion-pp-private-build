@@ -1,0 +1,82 @@
+{
+  "schema": "NOX-HELION-V27-PHYSICAL-SOURCE-ACCEPTANCE-20261113",
+  "instructions_version": "0.0.6",
+  "as_of": "2026-11-13",
+  "artifact": {
+    "filename": "NOX_HELION_WEB_WOW_V27_UNIFIED_SOURCE_20261113.zip",
+    "bytes": 76403802,
+    "sha256": "17fbee5251626cc6f1310a4dabf551221f3544846e30013dbea715c213334958",
+    "google_drive": "https://drive.google.com/file/d/10E9kzDUT-kDA8uhl1Z9wQvF0fP28SjTV/view",
+    "runtime_installed": false,
+    "release_accepted": false
+  },
+  "verified": {
+    "original_archives_sha256_and_zip_crc": "PASS_4_OF_4",
+    "original_web_to_onepass_sha256": "PASS_292_OF_292",
+    "chat_v25_shared_web_vs_chat_v24": "PASS_743_IDENTICAL",
+    "chat_v24_whisper_extra": "7_FILES_ADDED_NO_V25_OVERWRITE",
+    "site_files_sha256": "PASS_1046_OF_1046",
+    "onepass_qa_sha256": "PASS_10_OF_10",
+    "original_WEB_unmodified": "289_OF_292_BYTES_IDENTICAL",
+    "original_WEB_changed_only": [
+      "chat.html (new native redirect; original preserved)",
+      "memory.html (new native redirect; original preserved)",
+      "training.html (one Genesis module import)"
+    ],
+    "genesis_integrity": "PASS_4_TARGET_PAGES_AND_EXACT_MODULE_SHA256",
+    "static_html_pages": 38,
+    "unresolved_static_html_references": 0,
+    "local_python_http_routes": 17,
+    "local_python_http_200": 17,
+    "runtime_backend_python_source_syntax": "PASS_50_OF_50",
+    "selected_first_party_js_source_syntax": "PASS_6_OF_6",
+    "source_zip_crc": "PASS",
+    "drive_uploaded_and_metadata_readback": "PASS_BYTES_MATCH",
+    "drive_download_readback_sha256": "PASS_17fbee5251626cc6f1310a4dabf551221f3544846e30013dbea715c213334958"
+  },
+  "blocked": {
+    "chromium_playwright": "ERR_BLOCKED_BY_ADMINISTRATOR_IN_THIS_CONTAINER",
+    "native_windows_WPF_WebView2": "NOT_EXECUTED",
+    "ollama_stream_and_stop": "NOT_EXECUTED",
+    "S03_native_restart_persistence": "NOT_EXECUTED",
+    "safe70_GPU_sensor": "NOT_EXECUTED",
+    "RU_ES_voice": "NOT_EXECUTED",
+    "independent_E07_same_EXE_SHA": "NOT_EXECUTED",
+    "production_C_NOX": "UNMODIFIED",
+    "model_student_optimizer_checkpoints": "NOT_TESTED"
+  },
+  "production_policy": {
+    "single_NOX": true,
+    "source_only": true,
+    "old_chat_backend_not_duplicated": true,
+    "onepass_original_qa_not_promoted_to_new_source_lock": true,
+    "stop_preserved": true,
+    "no_checkpoints_removed": true,
+    "no_windows_installation_performed": true
+  },
+  "github": {
+    "canonical_candidates": [
+      "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/162",
+      "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/241",
+      "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/251"
+    ],
+    "release_branch_merged": false
+  },
+  "progress_V16": {
+    "block_1_UI": "N/D (no native acceptance)",
+    "block_2_CHAT": "N/D (no native streaming/STOP verification)",
+    "block_3_MODELS": "N/D (no installed registry/evaluation)",
+    "block_4_TRAINING": "N/D (no student optimizer proof)",
+    "block_5_TELEMETRY": "N/D (no Windows events.v3 runtime)",
+    "stage_6_final_build": "HOLD",
+    "stage_7_independent_QA": "HOLD",
+    "overall_weighted": "N/D"
+  },
+  "reproducibility": {
+    "rebuild_script": "nox_unified_source/tools/build_nox_web_v27.py",
+    "source_lock_in_archive": "NOX_V27_SOURCE_LOCK.json",
+    "native_preflight_in_archive": "qa/NOX_V27_WINDOWS_PREFLIGHT.ps1",
+    "validator_in_archive": "qa/verify_nox_v27.py",
+    "dangerous_actions": "disabled by default; -Apply requires literal archive SHA and existing LiveWeb path"
+  }
+}

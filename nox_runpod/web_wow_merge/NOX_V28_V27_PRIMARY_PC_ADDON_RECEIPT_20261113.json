@@ -1,0 +1,65 @@
+{
+  "schema": "NOX_WEB_V28_V27_PRIMARY_PC_ADDONS_SOURCE_ACCEPTANCE_V1",
+  "instructions_version": "0.0.6",
+  "date": "2026-11-13",
+  "source_of_truth": {
+    "primary": {
+      "pr": 241,
+      "sha": "64053cead613ab646f7dcf05ea68479bab8bf434",
+      "source_zip_sha256": "fe87f199bda3d749c83e239ea622d2f634843c5e9708bdf64e78a4d98a336a58",
+      "position": "PRIMARY"
+    },
+    "addons": {
+      "pr": 251,
+      "sha": "d4380adf1b3d8aa4f7659928bc551dd1fb27c86a",
+      "pc25_sha256": "1f9301d5555135e343143742e4274ec89f2333b17ad53a46fa3d29737c9ffdbc",
+      "pc24_sha256": "c9229f7a4cfbfc2a342310039c9958028e50e33a2b045b57b8473fbe264043bf",
+      "onepass_v2_sha256": "ef1cf8262483879e47eee75d1cd81fab22f1be4e3109a1ea7966f1cc04a6f127",
+      "position": "ADDITIVE_ONLY"
+    }
+  },
+  "artifact": {
+    "name": "NOX_HELION_WEB_V28_V27_PC_GENESIS_UNIFIED_SOURCE_20261113.zip",
+    "url": "https://drive.google.com/file/d/1YBOJYNzvsjnhzg5TAZj7iL2h543NgOe0/view",
+    "bytes": 85149208,
+    "sha256": "def872e6c81d407a57c96f1385438ee010c8cf7df89e0c74e5d61de2f9589905",
+    "zip_members": 1080,
+    "crc": "PASS",
+    "google_drive_raw_readback_sha256": "def872e6c81d407a57c96f1385438ee010c8cf7df89e0c74e5d61de2f9589905"
+  },
+  "integrity": {
+    "main_index_sha256": "f3fc804d238146ffe42c50103d3e04c9736b8b587c6572987f59b61a6112eb17",
+    "d02_sha256": "8066bc0a0f8ef5bb5f0fb1f58ad3f6ee29dc8506385c09d77d38d4235c7e42e9",
+    "pbr14_sha256": "3f27609ea37b96579a711928e4c67778ec71e2ff7b090a3b7bb41e29040f3905",
+    "approved_home_sha256": "3253d26819a70b49259fdb2a56c2eaa2455c6878cb2ccb8d62b225ec6ccdfa22",
+    "primary_v27_files": 297,
+    "primary_v27_changed_only_secondary_html": [
+      "chat.html",
+      "memory.html",
+      "training.html"
+    ],
+    "primary_root_nox_chat_original_unchanged": true,
+    "primary_root_nox_function_catalog_original_unchanged": true,
+    "pc_v25_addon_web_resources": 743,
+    "pc_v24_missing_only": 7,
+    "onepass_qa_files": 10,
+    "prior_v27_browser_evidence_files": 12,
+    "pc_separate_home_redirects_to_primary": true,
+    "pc_original_home_preserved_as_reference": true,
+    "confirmed_old_active_home_discarded": true,
+    "vendor_sanitization_count": 3
+  },
+  "tests": {
+    "source_no_loss": "PASS",
+    "zip_crc": "PASS",
+    "readback": "PASS",
+    "http_get_routes": "15/15 PASS",
+    "isolated_chromium_dom": "8/8 PASS (390px and 1440px; chat/memory/training/primary HOME)",
+    "original_v27_browsers": "GitHub workflow 43309342605, 7/7 viewport and 10/10 page PASS on original primary SHA",
+    "full_new_merged_site_browser": "HOLD_ENVIRONMENT_BLOCKED_BY_ADMINISTRATOR",
+    "native_windows_gpu": "NOT_TESTED",
+    "onehost_s03_stop": "NOT_TESTED",
+    "release_accepted": false
+  },
+  "policy": "Do not delete historical source ZIPs or unique binaries until hardware/OneHost same-artifact QA. Only one current primary D02 and NOX V27 Resonance; PR251 PC resources are additional under /pc/ namespace; no duplicate backend or active secondary HOME."
+}

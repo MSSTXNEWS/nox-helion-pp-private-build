@@ -1,0 +1,32 @@
+name: NOX Catalog Registry Final Complete
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - .github/workflows/nox-catalog-registry-final.yml
+      - nox_runpod/teacher_mesh/download_registry_final.py
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/nox-catalog-registry-final.yml
+      - nox_runpod/teacher_mesh/download_registry_final.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  download-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch official OpenRouter and Rive SDK packages with hashes
+        run: python3 nox_runpod/teacher_mesh/download_registry_final.py
+      - name: Transfer source artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NOX_CATALOG_FINAL_OPENROUTER_AND_RIVE_SDK
+          path: NOX_MASTER_CATALOG_FINAL_REGISTRY_DISTRIBUTIONS/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

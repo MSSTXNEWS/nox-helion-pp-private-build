@@ -1,0 +1,30 @@
+name: NOX WEB V29.2 Real Chromium Component Test
+on:
+  push:
+    branches: [feature/nox-teacher-mycelium-20261112]
+    paths:
+      - 'nox_runpod/web_wow_merge/v29/**'
+      - '.github/workflows/nox-web-v29-2-chromium.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chromium-interactions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install actual Chromium and Playwright Python client
+        run: |
+          python -m pip install --disable-pip-version-check 'playwright>=1.55,<2'
+          python -m playwright install --with-deps chromium
+      - name: Run real Chromium DOM interactions against actual NOX addon sources
+        env:
+          NOX_V29_SITE_DIR: ${{ github.workspace }}/nox_runpod/web_wow_merge/v29
+        run: |
+          python -m unittest discover -s nox_runpod/web_wow_merge/v29 -p 'test_v29_chromium_component.py' -v
+      - name: Report exact QA scope
+        run: echo 'NOX_CHROMIUM_REAL_COMPONENT_PASS_IF_PREVIOUS_SUCCEEDED; NOT_WINDOWS_E07_OR_LIVE_S03'

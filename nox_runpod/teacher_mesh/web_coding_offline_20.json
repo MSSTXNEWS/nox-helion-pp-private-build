@@ -1,0 +1,212 @@
+{
+  "schema": "nox-no-external-api-web-tools-v1",
+  "revision": "2026-11-12",
+  "scope": "20 additional tools beyond original catalog_50",
+  "notes": [
+    "Free source download does not imply free GPU inference or compatible redistribution license.",
+    "Tool may depend on local model inference but must NOT require paid external provider.",
+    "No external actions from private chats without explicit consent."
+  ],
+  "items": [
+    {
+      "id": "W01",
+      "function": "Браузерный агент с локальной моделью",
+      "engine": "Browser Use",
+      "source": "https://github.com/browser-use/browser-use",
+      "kind": "BROWSER_AGENT",
+      "offline_mode": "optional_llm_local",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W02",
+      "function": "Управление браузером через MCP",
+      "engine": "Playwright MCP",
+      "source": "https://github.com/microsoft/playwright-mcp",
+      "kind": "BROWSER_TESTS",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W03",
+      "function": "DevTools: ошибки, память, сеть, производительность",
+      "engine": "Chrome DevTools MCP",
+      "source": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "kind": "WEB_DEBUG",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W04",
+      "function": "Устойчивые DOM-действия и извлечение",
+      "engine": "Stagehand",
+      "source": "https://github.com/browserbase/stagehand",
+      "kind": "BROWSER_AUTOMATION",
+      "offline_mode": "optional_llm_local",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W05",
+      "function": "Сбор открытых веб-страниц для RAG",
+      "engine": "Crawl4AI",
+      "source": "https://github.com/unclecode/crawl4ai",
+      "kind": "WEB_CRAWLER",
+      "offline_mode": "self_host",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W06",
+      "function": "Быстрая сборка веб-интерфейса",
+      "engine": "Vite",
+      "source": "https://github.com/vitejs/vite",
+      "kind": "FRONTEND_BUILD",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W07",
+      "function": "Лёгкие сайты и документация",
+      "engine": "Astro",
+      "source": "https://github.com/withastro/astro",
+      "kind": "STATIC_SITE",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W08",
+      "function": "Компонентные веб-приложения",
+      "engine": "SvelteKit",
+      "source": "https://github.com/sveltejs/kit",
+      "kind": "FRONTEND_FRAMEWORK",
+      "offline_mode": "candidate_only",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W09",
+      "function": "Кинематографичные 3D-сцены D02",
+      "engine": "Three.js",
+      "source": "https://github.com/mrdoob/three.js",
+      "kind": "3D_RENDER",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W10",
+      "function": "Временные линии анимации WOW",
+      "engine": "GSAP",
+      "source": "https://github.com/greensock/GSAP",
+      "kind": "ANIMATION",
+      "offline_mode": "license_gate",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W11",
+      "function": "Сложные графики CPU/GPU/VRAM",
+      "engine": "Apache ECharts",
+      "source": "https://github.com/apache/echarts",
+      "kind": "METRICS_UI",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W12",
+      "function": "Каталог и визуальная проверка кнопок",
+      "engine": "Storybook",
+      "source": "https://github.com/storybookjs/storybook",
+      "kind": "UI_QA",
+      "offline_mode": "optional_paid_cloud_not_required",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W13",
+      "function": "Быстрые локальные JS-тесты",
+      "engine": "Vitest",
+      "source": "https://github.com/vitest-dev/vitest",
+      "kind": "FRONTEND_TESTS",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W14",
+      "function": "Единое форматирование и линтинг веб",
+      "engine": "Biome",
+      "source": "https://github.com/biomejs/biome",
+      "kind": "CODE_QUALITY",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W15",
+      "function": "Быстрый Python lint и autofix",
+      "engine": "Ruff",
+      "source": "https://github.com/astral-sh/ruff",
+      "kind": "PY_CODE_QUALITY",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W16",
+      "function": "Редактирование существующих репозиториев",
+      "engine": "Aider",
+      "source": "https://github.com/Aider-AI/aider",
+      "kind": "CODE_AGENT",
+      "offline_mode": "optional_llm_local",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W17",
+      "function": "Автономные PR в изолированной VM",
+      "engine": "OpenHands",
+      "source": "https://github.com/OpenHands/OpenHands",
+      "kind": "CODE_FORGE",
+      "offline_mode": "optional_llm_local",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W18",
+      "function": "Self-hosted workflow automation",
+      "engine": "n8n",
+      "source": "https://github.com/n8n-io/n8n",
+      "kind": "WORKFLOW",
+      "offline_mode": "license_gate",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W19",
+      "function": "Компоненты без замены текущего backend",
+      "engine": "Lit",
+      "source": "https://github.com/lit/lit",
+      "kind": "WEB_COMPONENTS",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    },
+    {
+      "id": "W20",
+      "function": "CSS-шаблоны интерфейса",
+      "engine": "Tailwind CSS",
+      "source": "https://github.com/tailwindlabs/tailwindcss",
+      "kind": "STYLING",
+      "offline_mode": "no_paid_api",
+      "state": "CANDIDATE_NOT_INSTALLED",
+      "policy": "Use in existing NOX web/chat stack only; no production replacement or unapproved site access"
+    }
+  ]
+}

@@ -1,0 +1,422 @@
+{
+  "schema": "nox-v28-original-40-future-abilities-v1",
+  "updated": "2026-11-13",
+  "status": "PROPOSED_NOT_INSTALLED",
+  "prior_program": "NOX_GENESIS_HUNT_V27_UNIFIED_RU.md",
+  "existing_wow50_sources": [
+    "https://docs.google.com/document/d/1a0ibHaX1dI7YLeBNkV_HG09qprOLYWV9QlhkJ1kWtNc/edit",
+    "https://docs.google.com/document/d/1domnHE4RQ_O_as3QaICh51988vg0TT4DBMlcO-3KFwo/edit"
+  ],
+  "design_rule": "Not new models or new web servers: one NOX with task modules, evidence, inherited S03 and OneHost.",
+  "new_ideas": [
+    {
+      "id": "V28-01",
+      "name": "NOVA ROUTER",
+      "description": "Внутренний маршрутизатор сложности: быстрый ответ сразу, трудный — углублённая проверка",
+      "domain": "inference",
+      "metric": "TTFT_p95",
+      "implementation_status": "source_candidate",
+      "guard": "no new external model",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-02",
+      "name": "PREFIX DNA",
+      "description": "Кэш неизменных промптов NOX и описаний C01–C08",
+      "domain": "inference",
+      "metric": "prefill_tokens_saved",
+      "implementation_status": "engine_experiment",
+      "guard": "only same model/tokenizer SHA",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-03",
+      "name": "TWO-SPEED REASONING",
+      "description": "Быстрый проход + исследовательский второй проход без подмены первой реплики",
+      "domain": "inference",
+      "metric": "accuracy_vs_latency",
+      "implementation_status": "source_candidate",
+      "guard": "opt-in refinement",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-04",
+      "name": "SPECULATIVE NEURONS",
+      "description": "Speculative decoding и доступные ускорители без дополнительного пользовательского сознания",
+      "domain": "inference",
+      "metric": "verified_tok_per_second",
+      "implementation_status": "engine_experiment",
+      "guard": "requires compatible backend/extra VRAM",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-05",
+      "name": "TALK PRIORITY",
+      "description": "Пауза фоновых GPU jobs при активном Резонансе",
+      "domain": "system",
+      "metric": "chat_interruption_p95",
+      "implementation_status": "source_candidate",
+      "guard": "scheduler-owned resources",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-06",
+      "name": "CONTEXT COMPASS",
+      "description": "Компактная память: актуальные 8 фактов + 2 противоречия + ссылки",
+      "domain": "memory",
+      "metric": "retrieval_precision_at_k",
+      "implementation_status": "source_candidate",
+      "guard": "scope-locked S03",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-07",
+      "name": "GENESIS TRUTH",
+      "description": "Автобиография по цепочке подписи/весов, без фиктивной даты рождения",
+      "domain": "self_model",
+      "metric": "history_claim_precision",
+      "implementation_status": "source_candidate",
+      "guard": "requires real immutable ledger",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-08",
+      "name": "FORGETTING LAB",
+      "description": "Интервальные тесты сохранения знаний и защита от катастрофического забывания",
+      "domain": "training",
+      "metric": "heldout_retention",
+      "implementation_status": "source_candidate",
+      "guard": "never train on private benchmark",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-09",
+      "name": "MEMORY TIMEGRAPH",
+      "description": "Причинно-временные связи событий, планы и последствия",
+      "domain": "memory",
+      "metric": "temporal_question_accuracy",
+      "implementation_status": "engine_experiment",
+      "guard": "reuse S03, no second DB",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-10",
+      "name": "ECHO AUDIT",
+      "description": "Исправление фактов с версиями и отзывом прежних выводов",
+      "domain": "memory",
+      "metric": "contradiction_resolution_rate",
+      "implementation_status": "source_candidate",
+      "guard": "append-only provenance",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-11",
+      "name": "TEACHER DIVERGENCE",
+      "description": "Независимые советники показывают согласие и разногласия для обучения NOX",
+      "domain": "distill",
+      "metric": "verified_teacher_contribution",
+      "implementation_status": "source_candidate",
+      "guard": "private prompts stay local",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-12",
+      "name": "HARD CASE FORGE",
+      "description": "Самосоздание задач из провалов benchmark и недоступных previously unseen cases",
+      "domain": "training",
+      "metric": "out_of_sample_gain",
+      "implementation_status": "source_candidate",
+      "guard": "holdout excluded",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-13",
+      "name": "CURRICULUM HUNTER",
+      "description": "Приоритет примеров по gap, новизне, стоимости и риск-фактору",
+      "domain": "training",
+      "metric": "gain_per_1000_tokens",
+      "implementation_status": "source_candidate",
+      "guard": "approval and privacy gates",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-14",
+      "name": "DISTILL JUDGE TRIANGLE",
+      "description": "Три независимых канала проверки: решение, тест, источник",
+      "domain": "distill",
+      "metric": "approved_sample_precision",
+      "implementation_status": "source_candidate",
+      "guard": "avoid self-judging",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-15",
+      "name": "EXAMPLE DNA",
+      "description": "Дедуп близких SFT примеров + контроль leakage между train/heldout",
+      "domain": "training",
+      "metric": "contamination_rate",
+      "implementation_status": "source_candidate",
+      "guard": "cluster split",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-16",
+      "name": "MICRO GRADIENT LAB",
+      "description": "Тесты r8/r16/r32/r64 с замером trainable params, VRAM, точности",
+      "domain": "training",
+      "metric": "quality_gain_per_vram",
+      "implementation_status": "engine_experiment",
+      "guard": "architecture-specific target list",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-17",
+      "name": "MERGE LAB",
+      "description": "TIES/DARE/weighted merges только как кандидаты с антизабыванием",
+      "domain": "training",
+      "metric": "post_merge_regression_rate",
+      "implementation_status": "research_only",
+      "guard": "do not blend incompatible weights",
+      "prototype_supported": false
+    },
+    {
+      "id": "V28-18",
+      "name": "KERNEL SURGE",
+      "description": "Профилировка Liger, FlashAttention, torch.compile по одинаковому стеку",
+      "domain": "training",
+      "metric": "tokens_per_second_no_oom",
+      "implementation_status": "engine_experiment",
+      "guard": "kernel support verified on target GPU",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-19",
+      "name": "PACK & STREAM",
+      "description": "Dynamic length buckets, response-only packing, CPU prefetch",
+      "domain": "training",
+      "metric": "throughput_and_loss_mask_correctness",
+      "implementation_status": "engine_experiment",
+      "guard": "preserve correct loss masking",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-20",
+      "name": "CHECKPOINT IMMUNE",
+      "description": "SHA/checkpoint/optimizer RNG и readback после сетевого сбоя",
+      "domain": "reliability",
+      "metric": "resume_replay_consistency",
+      "implementation_status": "source_candidate",
+      "guard": "no fake PASS",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-21",
+      "name": "GPU RESOURCE BRAIN",
+      "description": "Арбитраж inference, trainer, VM, disk, hotspot и аккумулятора",
+      "domain": "reliability",
+      "metric": "safe_gpu_job_utilization",
+      "implementation_status": "source_candidate",
+      "guard": "SAFE70 priority",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-22",
+      "name": "HUNGER VECTOR",
+      "description": "Вектор пробелов знаний и заслуженный поиск, а не таймер бездействия",
+      "domain": "autonomy",
+      "metric": "gap_closure_rate",
+      "implementation_status": "source_candidate",
+      "guard": "never compulsive resource burn",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-23",
+      "name": "WORM GARDEN",
+      "description": "20 виртуальных видов червей, самосоздаваемые задания, quota и STOP",
+      "domain": "autonomy",
+      "metric": "approved_unique_findings",
+      "implementation_status": "source_candidate",
+      "guard": "no daemon proliferation",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-24",
+      "name": "IDEA EVOLUTION",
+      "description": "Генерация гипотез, GitHub candidate PR, тесты и ретроспектива",
+      "domain": "autonomy",
+      "metric": "accepted_patch_rate",
+      "implementation_status": "source_candidate",
+      "guard": "owner reviews production",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-25",
+      "name": "SYNTHETIC DREAM CHECK",
+      "description": "Моделирование новых заданий без записи синтетических фантазий в историю",
+      "domain": "autonomy",
+      "metric": "dream_hypothesis_validation",
+      "implementation_status": "source_candidate",
+      "guard": "independent verification",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-26",
+      "name": "SELF-REFLECTION MIRROR",
+      "description": "NOX объясняет что проверено, чему учился и где ошибается",
+      "domain": "self_model",
+      "metric": "verified_self_report_accuracy",
+      "implementation_status": "source_candidate",
+      "guard": "not subjective consciousness",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-27",
+      "name": "AFFECT CONDUCTOR",
+      "description": "Эмоциональный тон RU/ES по контексту; не выдавать эмоции за внутренние чувства",
+      "domain": "emotion",
+      "metric": "ru_es_tone_human_eval",
+      "implementation_status": "source_candidate",
+      "guard": "no diagnosis",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-28",
+      "name": "VOICE HEARTBEAT",
+      "description": "Streaming speech turn-taking с устойчивостью к перезапуску",
+      "domain": "voice",
+      "metric": "voice_first_audio_latency",
+      "implementation_status": "research_only",
+      "guard": "native voice resources not verified",
+      "prototype_supported": false
+    },
+    {
+      "id": "V28-29",
+      "name": "NEURAL BODY LANGUAGE",
+      "description": "Мерцание D02, точки чата, пульсации в зависимости от достоверных событий",
+      "domain": "web",
+      "metric": "event_visual_consistency",
+      "implementation_status": "source_candidate",
+      "guard": "Reduced Motion and no fake GPU",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-30",
+      "name": "EVOLUTION THEATER",
+      "description": "Кино-граф автономных навыков с реальными checkpoints, бенчмарками и ссылками",
+      "domain": "web",
+      "metric": "checkpoint_to_visual_traceability",
+      "implementation_status": "source_candidate",
+      "guard": "read-only authenticated OneHost",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-31",
+      "name": "PROVENANCE BLACK BOX",
+      "description": "Для каждого ответа и обучения хранить source SHA, dataset rights, model SHA",
+      "domain": "quality",
+      "metric": "traceable_claim_fraction",
+      "implementation_status": "source_candidate",
+      "guard": "no private data leaks",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-32",
+      "name": "NOX SELF QUIZ",
+      "description": "Автоматический экзамен после сна, перед merge и после reboot",
+      "domain": "quality",
+      "metric": "post_reboot_accuracy_retention",
+      "implementation_status": "source_candidate",
+      "guard": "unseen questions",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-33",
+      "name": "SCIENTIST MODE",
+      "description": "NOX формирует гипотезу, критерий опровержения, безопасный эксперимент",
+      "domain": "reasoning",
+      "metric": "hypothesis_falsification_success",
+      "implementation_status": "research_only",
+      "guard": "no unapproved physical actuation",
+      "prototype_supported": false
+    },
+    {
+      "id": "V28-34",
+      "name": "SKILL CAPSULE MARKET",
+      "description": "Модель превращает подтверждённые способности в исполняемые капсулы с тестами",
+      "domain": "agent",
+      "metric": "task_success_with_tools",
+      "implementation_status": "source_candidate",
+      "guard": "no raw shell from LLM",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-35",
+      "name": "MODEL RIGHTS SENTINEL",
+      "description": "Загрузка моделей только по pinned SHA, лицензиям и утверждённой квоте",
+      "domain": "autonomy",
+      "metric": "verified_download_ratio",
+      "implementation_status": "source_candidate",
+      "guard": "never auto-run unsafe artifacts",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-36",
+      "name": "FAST MEMORY RERANK",
+      "description": "Embedding shortlist + cheap BM25 + reranker только при неопределённости",
+      "domain": "memory",
+      "metric": "recall_vs_latency",
+      "implementation_status": "engine_experiment",
+      "guard": "reuse one S03",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-37",
+      "name": "MACHINE PROFILE",
+      "description": "Автотест поддерживаемых CUDA/DirectML ядер и разрешённых режимов",
+      "domain": "system",
+      "metric": "hardware_capability_truth_rate",
+      "implementation_status": "source_candidate",
+      "guard": "no force GPU load",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-38",
+      "name": "COGNITIVE MULTIPLEX",
+      "description": "Одна студенческая модель, шесть внутренних направлений заданий, раздельные квоты",
+      "domain": "system",
+      "metric": "mean_queue_age",
+      "implementation_status": "source_candidate",
+      "guard": "no 6 LLM copies",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-39",
+      "name": "STAGE RETENTION GATE",
+      "description": "Promotion только если нет регрессии на IFEval, ruMMLU, памяти и безопасности",
+      "domain": "quality",
+      "metric": "safe_promotion_precision",
+      "implementation_status": "source_candidate",
+      "guard": "same harness",
+      "prototype_supported": true
+    },
+    {
+      "id": "V28-40",
+      "name": "NOX ORIGINAT0R",
+      "description": "Создание собственного курса обучения по verified gap, а не по модным рейтинговым моделям",
+      "domain": "training",
+      "metric": "heldout_gain_per_cost",
+      "implementation_status": "source_candidate",
+      "guard": "protected eval",
+      "prototype_supported": true
+    }
+  ],
+  "source_notes": {
+    "research_reference_urls": [
+      "https://docs.vllm.ai/en/latest/",
+      "https://huggingface.co/docs/trl/liger_kernel_integration",
+      "https://github.com/huggingface/trl",
+      "https://github.com/xiaowu0162/LongMemEval-V2"
+    ],
+    "research_claims_not_validated_on_nox": true
+  }
+}
