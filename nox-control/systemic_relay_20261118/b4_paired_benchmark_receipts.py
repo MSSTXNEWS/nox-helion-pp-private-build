@@ -386,11 +386,17 @@ def measure_openai_sse_wire(timed_chunks):
         content = delta.get("content")
         _require(content is None or isinstance(content, str), "SSE_CONTENT_SCHEMA")
         if content:
+            # JSON permits unpaired escaped UTF-16 surrogates, which are not
+            # valid Unicode scalar values. Reject them as structured HOLD,
+            # rather than letting encode() escape our evidence contract.
+            try:
+                encoded = content.encode("utf-8")
+            except UnicodeEncodeError as exc:
+                raise ReceiptHold("SSE_INVALID_UNICODE_SCALAR") from exc
             # Keep every transmitted content byte in the digest; whitespace
             # alone is not usable first text or evidence of a meaningful answer.
             if first_text_ms is None and not content.isspace():
                 first_text_ms = at_ms
-            encoded = content.encode("utf-8")
             visible_hash.update(encoded)
             visible_bytes += len(encoded)
         reason = choice.get("finish_reason")
