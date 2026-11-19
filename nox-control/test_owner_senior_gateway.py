@@ -301,7 +301,7 @@ class GatewayTests(unittest.TestCase):
 
         async def plain(request):
             accepted_encodings.append(request.headers.get('accept-encoding'))
-            return httpx.Response(200, content=wire)
+            return httpx.Response(200, stream=httpx.ByteStream(wire))
 
         with patch.object(httpx, 'AsyncClient',
                           lambda **kwargs: original(transport=httpx.MockTransport(plain), **kwargs)):
@@ -313,7 +313,7 @@ class GatewayTests(unittest.TestCase):
 
         async def compressed(request):
             return httpx.Response(200, headers={'content-encoding': 'gzip'},
-                                  content=gzip.compress(wire))
+                                  stream=httpx.ByteStream(gzip.compress(wire)))
 
         with patch.object(httpx, 'AsyncClient',
                           lambda **kwargs: original(transport=httpx.MockTransport(compressed), **kwargs)):
@@ -339,7 +339,7 @@ class GatewayTests(unittest.TestCase):
         self.assertFalse(options[0]['trust_env'])
         self.assertFalse(options[0]['follow_redirects'])
         async def huge(request):
-            return httpx.Response(200, content=b' ' * 262145)
+            return httpx.Response(200, stream=httpx.ByteStream(b' ' * 262145))
         with patch.object(httpx, 'AsyncClient', lambda **kwargs: original(transport=httpx.MockTransport(huge), **kwargs)):
             result = asyncio.run(gateway._request('openai', 'unit-test-secret', '{}', config))
         self.assertEqual(result['state'], 'MODEL_RESPONSE_SIZE')
