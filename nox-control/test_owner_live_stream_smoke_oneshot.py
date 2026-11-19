@@ -33,6 +33,11 @@ class DirectStreamSmokeTests(unittest.TestCase):
         self.assertEqual(sum(isinstance(n,ast.FunctionDef) and n.name=='main'
                              for n in tree.body),1)
 
+    def test_chat_proxy_pin_matches_fresh_owner_attestation(self):
+        _, inner, _ = embedded_source()
+        self.assertIn('pin="9fedaefbe39f4cac8a47d77bb0dada2ccf09c43ec38a5624869d3a00c0fbe5a3"', inner)
+        self.assertNotIn('cc1437ce8c3bfbbc4259ffdbe299bf3b8721d4b1bb09c88565ccb6cb9fdb95eb', inner)
+
     def test_existing_model_route_and_no_server_mutations(self):
         _,inner,_=embedded_source()
         self.assertIn('"/root/nox/venv/bin/python"', (ROOT/'owner_live_stream_smoke_oneshot.py').read_text())
