@@ -290,15 +290,22 @@ class WorkflowScopeTests(unittest.TestCase):
     def test_legacy_workflow_excludes_gpu_inventory_before_secrets(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github" / "workflows"
                     / "nox-owner-maintenance-command.yml").read_text(encoding="utf-8")
-        owner_job = workflow.split("  owner-maintenance:\\n", 1)[1]
+        owner_job = workflow.split("jobs:", 1)[1]
         condition = owner_job.split("    runs-on:", 1)[0]
-        self.assertIn("!contains(github.event.comment.body, ' gpu_inventory')", condition)
-        self.assertIn("!contains(github.event.comment.body, ' inspect')", condition)
-        self.assertIn("!contains(github.event.comment.body, ' audit')", condition)
-        self.assertIn("!contains(github.event.comment.body, ' source_attest')", condition)
+        exclusions = (
+            "!contains(github.event.comment.body, ' inspect')",
+            "!contains(github.event.comment.body, ' audit')",
+            "!contains(github.event.comment.body, ' source_attest')",
+            "!contains(github.event.comment.body, ' gpu_inventory')",
+        )
+        for exclusion in exclusions:
+            with self.subTest(exclusion=exclusion):
+                self.assertIn(exclusion, condition)
+                self.assertLess(condition.index(exclusion),
+                                owner_job.index("    steps:"))
         self.assertNotIn("memfd_audit')", condition)
-        self.assertLess(condition.index("!contains(github.event.comment.body, ' gpu_inventory')"),
-                        owner_job.index("steps:"))
+        self.assertLess(owner_job.index("    steps:"),
+                        owner_job.index("NOX2:"))
 
 if __name__ == "__main__":
     unittest.main()
