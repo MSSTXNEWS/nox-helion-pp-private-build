@@ -149,9 +149,9 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         first=Chunks([
             frame(calls=[{'index':0,'id':'call_full_context','type':'function',
                           'function':{'name':'calculate','arguments':'{}'}}]),
-            frame(finish='tool_calls'),b'data: [DONE]\\n\\n'])
+            frame(finish='tool_calls'),b'data: [DONE]\n\n'])
         second=Chunks([frame('Принято'),frame(finish='stop'),
-                       b'data: [DONE]\\n\\n'])
+                       b'data: [DONE]\n\n'])
         requests,factory=self.transport([first,second])
         native=self.native(result={'ok':True,'text':evidence})
         original='Используй весь результат инструмента, включая конец.'
