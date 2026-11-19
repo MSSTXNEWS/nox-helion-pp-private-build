@@ -309,13 +309,65 @@ def main():
             messages[-1].get('exchange_id') == done.get('exchange_id'))
         if not matched:
             fail('S03_DIALOG_READBACK_MISMATCH')
+        # Same owner-authenticated, same-dialog continuation. Exactly one more
+        # model request: never repeat the first turn or any external tools.
+        second_question = 'Какое одно слово ты ответил в предыдущем сообщении? Повтори его.'
+        check_stop()
+        status['actual_generation_requests'] = 2
+        second = http_request(opener, base + '/api/nox/chat/stream', 'POST',
+            {'message': second_question, 'dialog_id': dialog_id}, timeout=150, stream=True)
+        second_answer = []; second_done = None; second_error = None; second_bytes = 0
+        with second:
+            if second.status != 200:
+                fail('CONTINUATION_HTTP')
+            while True:
+                line = second.readline(65537)
+                if not line:
+                    break
+                second_bytes += len(line)
+                if len(line) > 65536 or second_bytes > 262144:
+                    fail('CONTINUATION_STREAM_BUDGET')
+                frame = json.loads(line)
+                if not isinstance(frame, dict):
+                    fail('CONTINUATION_FRAME')
+                if frame.get('type') == 'delta' and isinstance(frame.get('text'), str):
+                    second_answer.append(frame['text'])
+                    if sum(len(x) for x in second_answer) > 4000:
+                        fail('CONTINUATION_OUTPUT_BUDGET')
+                elif frame.get('type') == 'error':
+                    second_error = frame.get('error')
+                    break
+                elif frame.get('type') == 'done':
+                    second_done = frame
+                    break
+        resumed = ''.join(second_answer)
+        status['continuation_characters'] = len(resumed)
+        status['continuation_sha256'] = hashlib.sha256(resumed.encode()).hexdigest() if resumed else None
+        status['continuation_done'] = bool(second_done)
+        if second_error or not second_done or not resumed.strip() or resumed.strip() in ('—','-','...'):
+            fail('CONTINUATION_INCOMPLETE')
+        if (second_done.get('saved') is not True or second_done.get('s03_integrated') is not True
+                or second_done.get('dialog_id') != dialog_id):
+            fail('CONTINUATION_S03_RECEIPT')
+        new_history = http_request(opener,
+            base + '/api/ui/memory/dialogs/history?dialog_id=' + dialog_id + '&limit=10', timeout=9)
+        pairs = new_history.get('messages', []) if isinstance(new_history, dict) else []
+        expected_pairs = [('user', question), ('assistant', final),
+                          ('user', second_question), ('assistant', resumed)]
+        if len(pairs) < 4 or [(row.get('role'), row.get('content'))
+                               for row in pairs[-4:]] != expected_pairs:
+            fail('CONTINUATION_S03_HISTORY')
+        if pairs[-1].get('exchange_id') != second_done.get('exchange_id'):
+            fail('CONTINUATION_S03_EXCHANGE_ID')
+        status['continuation_semantic_recall_observed'] = 'готово' in resumed.casefold()
+        status['same_dialog_continuation_and_s03_verified'] = True
         check_stop()
         after = snapshots()
         status['resource_after'] = after
         if after['oom_kill'] != before['oom_kill']:
             fail('OOM_KILL_AFTER_GENERATION')
         status.update(chat_behavior_verified=True, s03_dialog_readback_verified=True,
-            outcome='NATIVE_OWNER_STREAM_AND_S03_READBACK_PASS')
+            outcome='NATIVE_OWNER_TWO_TURNS_AND_S03_READBACK_PASS')
         success = True
     except Exception as error:
         code = str(error)
