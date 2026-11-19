@@ -342,11 +342,12 @@ def measure_openai_sse_wire(timed_chunks):
     terminal_ms = None
     finish_reason = None
     terminal_seen = False
+    usage_seen = False
     event_count = 0
 
     def dispatch(at_ms):
         nonlocal data_lines, visible_bytes, first_text_ms
-        nonlocal terminal_ms, finish_reason, terminal_seen, event_count
+        nonlocal terminal_ms, finish_reason, terminal_seen, event_count, usage_seen
         if not data_lines:
             return
         payload = "\n".join(data_lines)
@@ -365,13 +366,18 @@ def measure_openai_sse_wire(timed_chunks):
         # The last include_usage chunk has choices=[] and no text/finish reason.
         # It is a real SSE event, but only [DONE] closes the wire receipt.
         if not obj["choices"]:
+            _require(not usage_seen, "SSE_DUPLICATE_USAGE")
             usage = obj.get("usage")
             _require(finish_reason is not None and isinstance(usage, dict)
                      and all(_integer(usage.get(key), 10 ** 10) for key in
                              ("prompt_tokens", "completion_tokens", "total_tokens")),
                      "SSE_USAGE_CHUNK_SCHEMA")
+            usage_seen = True
             event_count += 1
             return
+        # Model finality is immutable: only one usage-only event and [DONE]
+        # may follow. Late text or repeated final choices are not valid proof.
+        _require(finish_reason is None, "SSE_POST_FINISH_EVENT")
         _require(len(obj["choices"]) == 1 and isinstance(obj["choices"][0], dict),
                  "SSE_CHOICE_SCHEMA")
         choice = obj["choices"][0]
