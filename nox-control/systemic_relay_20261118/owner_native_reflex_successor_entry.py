@@ -119,10 +119,17 @@ def run():
         print('NOX_MAINT_REFLEX=' + encoding(receipt).decode(), flush=True)
 
     try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise RuntimeError('HOLD_NATIVE_REFLEX_MAINTENANCE_BUSY')
+        # Existing native readers may hold SH briefly on the same owner lock.
+        # Wait boundedly, never steal/clear the lock or retry a failed write.
+        deadline = time.monotonic() + 12
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                require(time.monotonic() < deadline and h.stop_clear(ROOT),
+                    'MAINTENANCE_BUSY')
+                time.sleep(.2)
         info, named = os.fstat(fd), lock.stat()
         require(stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid()
             and info.st_nlink == 1 and not info.st_mode & 0o022
