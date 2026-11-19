@@ -110,7 +110,10 @@ def consume_turn(client,prompt,dialog_id,timeout=95):
                 if meaningful_delta(text):
                     if first is None:first=elapsed
                 else:placeholders+=1
-            elif kind=='done':done=frame;break
+            elif kind=='done':
+                if frame.get('dialog_id') != dialog_id:
+                    raise RuntimeError('HOLD_STREAM_TERMINAL_DIALOG_MISMATCH')
+                done=frame;break
             elif kind=='error':raise RuntimeError('HOLD_STREAM_ERROR')
             if len(answer)>10000:raise RuntimeError('HOLD_STREAM_TEXT_LIMIT')
     finally:response.close()

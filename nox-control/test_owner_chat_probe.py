@@ -32,7 +32,7 @@ class ProbeTests(unittest.TestCase):
                 for at, frame in [(0.05, {'type':'preparing'}), (0.1, {'type':'start'}),
                                   (0.2, {'type':'delta','text':'…\n'}),
                                   (3.2, {'type':'delta','text':'323'}),
-                                  (3.3, {'type':'done','saved':True,'s03_integrated':True})]:
+                                  (3.3, {'type':'done','dialog_id':'1'*32,'saved':True,'s03_integrated':True})]:
                     clock[0] = at
                     yield json.dumps(frame).encode()+b'\n'
         response = Response()
@@ -97,6 +97,27 @@ class ProbeTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'HOLD_CHAT_PROBE_EXECUTOR_TURN_BUDGET_EXHAUSTED'):
                     probe.require_executor_turn_budget(elapsed)
 
+    def test_stream_terminal_done_must_bind_to_requested_dialog(self):
+        class Response:
+            status = 200
+            def __init__(self, rows): self.rows = rows; self.closed = False
+            def close(self): self.closed = True
+            def __iter__(self):
+                return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
+        for terminal_id in (None, '2'*32):
+            response = Response([{'type':'delta','text':'323'},
+                                 {'type':'done','dialog_id':terminal_id,'saved':True,'s03_integrated':True}])
+            with self.subTest(terminal_id=terminal_id), patch.object(probe, 'request', return_value=response):
+                with self.assertRaisesRegex(RuntimeError, 'HOLD_STREAM_TERMINAL_DIALOG_MISMATCH'):
+                    probe.consume_turn(object(), 'synthetic', '1'*32)
+            self.assertTrue(response.closed)
+        response = Response([{'type':'delta','text':'323'},
+                             {'type':'done','dialog_id':'1'*32,'saved':True,'s03_integrated':True}])
+        with patch.object(probe, 'request', return_value=response):
+            result = probe.consume_turn(object(), 'synthetic', '1'*32)
+        self.assertEqual(result['done']['dialog_id'], '1'*32)
+        self.assertTrue(response.closed)
+
     def test_truncated_or_error_stream_cannot_pass(self):
         class Response:
             status = 200
@@ -105,7 +126,7 @@ class ProbeTests(unittest.TestCase):
             def __iter__(self):
                 return iter(json.dumps(row).encode()+b'\n' for row in self.rows)
         for rows, code in [([{'type':'delta','text':'323'}], 'INCOMPLETE_OR_PLACEHOLDER'),
-                           ([{'type':'delta','text':'…'}, {'type':'done'}], 'INCOMPLETE_OR_PLACEHOLDER'),
+                           ([{'type':'delta','text':'…'}, {'type':'done','dialog_id':'1'*32}], 'INCOMPLETE_OR_PLACEHOLDER'),
                            ([{'type':'error','error':'PRIVATE_PROVIDER_TEXT'}], 'HOLD_STREAM_ERROR')]:
             response = Response(rows)
             with patch.object(probe, 'request', return_value=response):
