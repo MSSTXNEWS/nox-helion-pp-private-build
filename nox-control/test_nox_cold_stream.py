@@ -99,6 +99,23 @@ class ColdStreamingTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "STOP"):
                     cold.assert_nox_running()
 
+    def test_atomic_warm_publish_preserves_concurrently_created_destination(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            partial = root / "model.gguf.partial"
+            dest = root / "model.gguf"
+            partial.write_bytes(b"verified new model")
+            dest.write_bytes(b"currently active model")
+            with self.assertRaises(FileExistsError):
+                cold.publish_verified_cache(partial, dest)
+            self.assertEqual(dest.read_bytes(), b"currently active model")
+            self.assertEqual(partial.read_bytes(), b"verified new model")
+            dest.unlink()
+            cold.publish_verified_cache(partial, dest)
+            self.assertEqual(dest.read_bytes(), b"verified new model")
+            partial.unlink()
+            self.assertEqual(dest.read_bytes(), b"verified new model")
+
     def test_verified_upload_preserves_source_by_default(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
