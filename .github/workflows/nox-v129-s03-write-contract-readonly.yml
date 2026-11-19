@@ -1,7 +1,7 @@
 name: NOX V129 S03 source-only contract checks
 on:
   pull_request:
-    branches: [feature/nox-v38-synaptic-brain-20261114]
+    branches: [feature/nox-v38-synaptic-brain-20261114, repair/v129-s03-writer-introspection-v2-20261119]
     paths:
       - 'nox_runpod/teacher_mesh/v51/ephemeral_ssh_probe.py'
       - 'nox_runpod/teacher_mesh/v129/read_native_s03_write_contract.py'
