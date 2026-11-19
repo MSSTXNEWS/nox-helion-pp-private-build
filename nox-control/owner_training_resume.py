@@ -114,10 +114,27 @@ STOPPED = ('STOPPED', 'EXITED', 'FATAL')
 
 
 def read_json(path, limit=4_000_000):
+    """Bounded descriptor read: an untrusted state path cannot be swapped to a symlink."""
     path = Path(path)
-    if path.is_symlink() or not path.is_file() or path.stat().st_size > limit:
+    if type(limit) is not int or limit < 0:
         raise RuntimeError('HOLD_BOUNDED_STATE_READ')
-    value = json.loads(path.read_text())
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    except OSError as exc:
+        raise RuntimeError('HOLD_BOUNDED_STATE_READ') from exc
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
+            raise RuntimeError('HOLD_BOUNDED_STATE_READ')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1
+            raw = stream.read(limit + 1)
+        if len(raw) > limit:
+            raise RuntimeError('HOLD_BOUNDED_STATE_READ')
+    finally:
+        if fd >= 0:
+            os.close(fd)
+    value = json.loads(raw)
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
     return value
