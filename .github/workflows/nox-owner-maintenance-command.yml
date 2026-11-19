@@ -488,7 +488,7 @@ jobs:
           event=json.load(open(os.environ['GITHUB_EVENT_PATH']))
           body=event.get('comment',{}).get('body','')
           match=re.fullmatch(r'/nox-maintain 60509551 ([0-9a-f]{40}) page_cache_reclaim',body)
-          if not match or match[1] != 'b65046883874abd0e46088f2a65c716ddf01608a':
+          if not match or match[1] != '3d8d8db6251710ed4313feea41ad124c375b97c7':
               raise SystemExit('HOLD_PAGE_CACHE_APPROVED_SOURCE')
           if (event.get('comment',{}).get('user',{}).get('id') != 340718567
                   or event.get('comment',{}).get('author_association') != 'OWNER'
@@ -504,16 +504,16 @@ jobs:
         with:
           ref: ${{ steps.request.outputs.sha }}
           persist-credentials: false
-      - name: Verify exact source, helper ancestry, helper blob, and syntax before credentials
+      - name: Verify exact source, helper blob, and syntax before credentials
         env:
           NOX_PINNED_SOURCE_SHA: ${{ steps.request.outputs.sha }}
         run: |
           python3 - <<'PY'
           import hashlib, os, subprocess
           from pathlib import Path
-          source='b65046883874abd0e46088f2a65c716ddf01608a'
-          helper_commit='347a040868cc0191c228c800940695d5af6e9fc2'
-          helper_blob='9ded582e6ee587898146d31ef259e5404450b748'
+          source='3d8d8db6251710ed4313feea41ad124c375b97c7'
+          helper_commit='5db596a9052e9ee3bbaaefc97ab631c75baddcff'
+          helper_blob='a4537b8087509773792f38b619d8c5fe2436702d'
           if os.environ.get('NOX_PINNED_SOURCE_SHA') != source:
               raise SystemExit('HOLD_PAGE_CACHE_SOURCE_PIN')
           if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() != source:
