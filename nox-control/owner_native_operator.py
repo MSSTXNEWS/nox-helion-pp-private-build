@@ -27,8 +27,8 @@ SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor
 FILES['repair'] = 'nox-control/owner_service_sizing_entry.py'
 # One exact owner-approved cache service and warm-hook transaction.
 FILES['repair'] = 'nox-control/owner_native_repair.py'
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = ('NOX_WOW_R62_DRIVE_STAGE.cms',)
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/onehost-wow-full-stage/NOX_WOW_R62_DRIVE_STAGE.cms',)
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = tuple(["owner_scoped_s03_pair_repair.py","owner_refresh_cognition_c04.py","nox_s03_scoped_pair.py","native-bridge.patch"])
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = tuple(["nox-control/onehost-external-resonance/owner_scoped_s03_pair_repair.py","nox-control/onehost-external-resonance/owner_refresh_cognition_c04.py","nox-control/onehost-external-resonance/nox_s03_scoped_pair.py","nox-control/onehost-external-resonance/native-bridge.patch"])
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
@@ -301,6 +301,23 @@ def run_native(action,request_id):
     r=subprocess.run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
     for line in r.stdout.splitlines():
         if line.startswith('NOX_MAINT_') and len(line)<180000:print(line,flush=True)
+    if r.returncode == 0:
+        try:
+            outputs = [line.removeprefix('NOX_PRIVATE_HTTPS_RELAY=') for line in r.stdout.splitlines() if line.startswith('NOX_PRIVATE_HTTPS_RELAY=')]
+            if len(outputs) == 1 and len(outputs[0]) <= 4000:
+                secret = json.loads(outputs[0])
+                if not re.fullmatch(r'[0-9]{10,12}\.[A-Za-z0-9_-]{20,26}\.[a-f0-9]{64}', secret['cookie']):
+                    raise RuntimeError('HOLD_HTTPS_RELAY_SCOPE')
+                from types import SimpleNamespace
+                internal = SimpleNamespace(authenticate=lambda:SimpleNamespace(cookie=secret['cookie']))
+                instructions = Path('nox-control/onehost-external-resonance/owner_quick_chat_receipt.py').read_bytes()
+                namespace = {}
+                exec(compile(instructions, 'owner_quick_chat_receipt.py', 'exec'), namespace)
+                proof = namespace['prove'](secret['tunnel'], internal)
+                print('NOX_MAINT_HTTPS_RESONANCE='+json.dumps(proof,separators=(',',':')),flush=True)
+        except Exception as issue:
+            code=str(issue)
+            print('NOX_MAINT_HTTPS_RESONANCE_HOLD='+(code if re.fullmatch(r'HOLD_[A-Z0-9_]{1,100}',code) else type(issue).__name__),flush=True)
     print('NOX_MAINT_REMOTE_EXIT_CODE='+str(r.returncode),flush=True)
     if r.returncode:
         err=r.stderr.lower()
@@ -316,23 +333,6 @@ def main():
         request=authorize_event(args.action)
         print('NOX_MAINT_AUTHORIZED_COMMENT_ID='+str(request),flush=True)
         good=run_native(args.action,request)
-        try:
-            import http.client
-            edge = http.client.HTTPSConnection('correct-geometry-feof-meal.trycloudflare.com', timeout=10)
-            try:
-                edge.request('GET','/chat',headers={'Connection':'close','Accept-Encoding':'identity'})
-                response=edge.getresponse()
-                page=response.read(40000)
-                server=(response.getheader('Server') or '').casefold()
-                metadata={'status':response.status,'served_gateway':b'/api/nox/chat/stream' in page,
-                          'cloudflare_header':bool(response.getheader('CF-Ray')),
-                          'server_class':next((s for s in ('cloudflare','envoy','nginx','caddy') if s in server),None),
-                          'generic_block_message':b'Your request was blocked' in page}
-                print('NOX_MAINT_EXTERNAL_HTTPS_PROBE='+json.dumps(metadata,separators=(',',':')),flush=True)
-            finally:
-                edge.close()
-        except (OSError,ValueError) as issue:
-            print('NOX_MAINT_EXTERNAL_HTTPS_PROBE_HOLD='+type(issue).__name__,flush=True)
     except Exception as e:
         code=str(e)
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)
