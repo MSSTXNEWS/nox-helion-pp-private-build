@@ -307,5 +307,31 @@ class OwnerGpuInventoryOperatorTests(unittest.TestCase):
         )
 
 
+    def test_ssh_exit_255_wins_over_partial_helper_result_marker(self):
+        partial = (
+            operator.GPU_INVENTORY_RESULT_PREFIX
+            + "HOLD_GPU_INVENTORY_NVIDIA_SMI_RC"
+        )
+        failure = operator._gpu_inventory_remote_failure(
+            partial, "Connection reset by peer; secret sentinel", 255
+        )
+        self.assertEqual(failure["hold"], "HOLD_GPU_INVENTORY_SSH_FAILURE")
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_ORIGIN=SSH",
+            failure["records"],
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_FAILURE_CLASS=SSH_CONNECTION_RESET",
+            failure["records"],
+        )
+        self.assertIn(
+            "NOX_MAINT_GPU_INVENTORY_REMOTE_EXIT_CODE=255",
+            failure["records"],
+        )
+        self.assertNotIn("HELPER_HOLD=", str(failure))
+        self.assertNotIn("NVIDIA_SMI_RC", str(failure))
+        self.assertNotIn("secret sentinel", str(failure))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
