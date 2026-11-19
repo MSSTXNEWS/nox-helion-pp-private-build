@@ -48,7 +48,7 @@ class ProjectReceiptIntegrityTest(unittest.TestCase):
         worker = {'task_id': task['id'], 'parent_task_id': task['parent_task_id'],
                   'queue_id': task['queue_id'], 'state': 'INTEGRATED',
                   'project_source_changed': True, 'integration_verified': True,
-                  'tests': {'passed': True}}
+                  'original_task_accepted': False, 'tests': {'passed': True}}
         receipt = {'task_id': task['id'], 'parent_task_id': task['parent_task_id'],
                    'queue_id': task['queue_id'],
                    'phase': 'PROJECT_WORK_INTEGRATED_ORIGINAL_NOT_ACCEPTED',
