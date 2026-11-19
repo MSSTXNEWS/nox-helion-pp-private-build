@@ -75,6 +75,46 @@ def read_document(path, limit=4*1024*1024):
     return value,hashlib.sha256(raw).hexdigest()
 
 
+
+def validate_publisher_checkpoint(checkpoint, previous_sha, expected_source_sha,
+                                  template_path, helper_path):
+    """Validate publisher preconditions before any local package write."""
+    require(isinstance(checkpoint,dict)
+            and checkpoint.get('schema') == 'NOX_SYSTEMIC_NATIVE_PUBLISH_CHECKPOINT_V1',
+            'PUBLISH_CHECKPOINT')
+    for key in ('expected_config_sha256','previous_manifest_sha256',
+                'expected_source_files_sha256','publisher_template_sha256'):
+        require(type(checkpoint.get(key)) is str and SHA.fullmatch(checkpoint[key]),
+                'CHECKPOINT_PIN')
+    require(checkpoint['previous_manifest_sha256'] == previous_sha, 'PUBLISH_PREDECESSOR')
+    if expected_source_sha is not None:
+        require(checkpoint['expected_source_files_sha256'] == expected_source_sha,
+                'PUBLISH_CENSUS_PIN')
+    director,workers = checkpoint.get('expected_director'),checkpoint.get('expected_workers')
+    def identity(value):
+        return (isinstance(value,dict) and type(value.get('pid')) is int
+                and 1 < value['pid'] <= 2**31 and type(value.get('start_ticks')) is int
+                and 0 < value['start_ticks'] <= 2**63)
+    require(identity(director) and isinstance(workers,list) and len(workers) == 3
+            and all(identity(row) for row in workers)
+            and len({row['pid'] for row in workers}) == 3
+            and director['pid'] not in {row['pid'] for row in workers},
+            'CHECKPOINT_WORKERS')
+    protected = checkpoint.get('protected_processes')
+    require(isinstance(protected,dict) and set(protected) == {'chat','proxy','web'}
+            and all(identity(row) for row in protected.values()),'CHECKPOINT_PROTECTED')
+    template,helper = read_raw(template_path),read_raw(helper_path)
+    require(hashlib.sha256(template).hexdigest() == checkpoint['publisher_template_sha256']
+            and hashlib.sha256(helper).hexdigest() == HELPER_SHA,'PUBLISHER_CODE_PIN')
+    text = template.decode('utf-8')
+    require(text.count('\nSPEC = {}\n') == 1
+            and text.count('    BUNDLE = __NOX_BUNDLE_JSON__\n') == 1,'PUBLISH_TEMPLATE_ANCHORS')
+    syntax = text.replace('\nSPEC = {}\n','\nSPEC = '+repr({})+'\n',1)
+    syntax = syntax.replace('    BUNDLE = __NOX_BUNDLE_JSON__\n',
+                            '    BUNDLE = '+repr({})+'\n',1)
+    compile(syntax,'<publisher-template-preflight>','exec')
+    return template,helper
+
 def parent_registry(disposition):
     require(isinstance(disposition,dict) and disposition.get('total_original_ids') == 295,
             'REGISTRY_ORIGINAL_COUNT')
@@ -190,30 +230,8 @@ def write_package(manifest, output, *, previous_sha=None):
 
 def publisher_entry(manifest, package, checkpoint, template_path, helper_path):
     """Make the exact reviewed native entry locally; never execute or upload it."""
-    require(isinstance(checkpoint,dict)
-            and checkpoint.get('schema') == 'NOX_SYSTEMIC_NATIVE_PUBLISH_CHECKPOINT_V1',
-            'PUBLISH_CHECKPOINT')
-    for key in ('expected_config_sha256','previous_manifest_sha256',
-                'expected_source_files_sha256','publisher_template_sha256'):
-        require(type(checkpoint.get(key)) is str and SHA.fullmatch(checkpoint[key]),
-                'CHECKPOINT_PIN')
-    require(checkpoint['previous_manifest_sha256'] == manifest['previous_manifest_sha256'],
-            'PUBLISH_PREDECESSOR')
-    director,workers = checkpoint.get('expected_director'),checkpoint.get('expected_workers')
-    def identity(value):
-        return (isinstance(value,dict) and type(value.get('pid')) is int
-                and 1 < value['pid'] <= 2**31 and type(value.get('start_ticks')) is int
-                and 0 < value['start_ticks'] <= 2**63)
-    require(identity(director) and isinstance(workers,list) and len(workers) == 3
-            and all(identity(row) for row in workers)
-            and len({row['pid'] for row in workers}) == 3
-            and director['pid'] not in {row['pid'] for row in workers},'CHECKPOINT_WORKERS')
-    protected = checkpoint.get('protected_processes')
-    require(isinstance(protected,dict) and set(protected) == {'chat','proxy','web'}
-            and all(identity(row) for row in protected.values()),'CHECKPOINT_PROTECTED')
-    template,helper = read_raw(template_path),read_raw(helper_path)
-    require(hashlib.sha256(template).hexdigest() == checkpoint['publisher_template_sha256']
-            and hashlib.sha256(helper).hexdigest() == HELPER_SHA,'PUBLISHER_CODE_PIN')
+    template,helper = validate_publisher_checkpoint(checkpoint,
+        manifest['previous_manifest_sha256'],None,template_path,helper_path)
     package = Path(package)
     manifest_sha = digest(manifest)
     assets = {'transaction_helpers.py':helper}
@@ -284,8 +302,8 @@ def main():
     checkpoint = None
     if all(publisher_args):
         checkpoint,_ = read_document(args.publisher_checkpoint)
-        require(checkpoint.get('expected_source_files_sha256') == census.get('observed_files_sha256'),
-                'PUBLISH_CENSUS_PIN')
+        validate_publisher_checkpoint(checkpoint,previous_sha,
+            census.get('observed_files_sha256'),args.publisher_template,args.transaction_helper)
     manifest = compile_taskpack(previous,previous_sha,proposal,proposal_sha,census,census_sha,disposition,review)
     result = write_package(manifest,args.output,previous_sha=previous_sha)
     if checkpoint is not None:
