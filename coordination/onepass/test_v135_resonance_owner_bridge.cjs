@@ -240,6 +240,21 @@ test('V135 upstream transport failure requests scoped STOP before closing the fa
     'transport STOP receipt is not proof that GPU execution stopped');
 });
 
+test('V135 active-session retry conflict never sends session-wide STOP',async()=>{
+  const activeConflict=()=>Response.json({error:'HOLD_ACTIVE_SESSION_STREAM'},{status:409});
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,answer,3,
+    undefined,false,5,undefined,'verified-exchange-01',[],false,false,prompt,undefined,activeConflict);
+  const response=await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'retry-active-01'})});
+  const frames=await events(response);
+  assert.equal(frames.filter(e=>e.type==='done').length,0);
+  assert(frames.some(e=>e.type==='error'&&e.error==='HOLD_NATIVE_STREAM_HOLD_ACTIVE_SESSION_STREAM'),JSON.stringify(frames));
+  assert.equal(f.calls.filter(c=>c.path==='/api/nox/stop').length,0,
+    'the rejected retry did not acquire the session stream and must not stop its active owner');
+  assert(!f.calls.some(c=>c.path.includes('/api/ui/memory/dialogs/history')),
+    'a rejected retry cannot read back or certify another request');
+});
+
 test('V135 already-aborted caller never starts a native inference',async()=>{
   const f=fake(),abort=new AbortController();
   abort.abort();
@@ -1358,7 +1373,7 @@ test('V178 V135 cancellation uses only V112 authenticated cookie-scoped STOP',()
   const abort=JS.indexOf('upstreamAbort.abort()',request);
   assert(request>=0&&abort>request,'signal same-session STOP before aborting the stream');
   assert(JS.includes("credentials:'same-origin',cache:'no-store',signal"));
-  assert(JS.includes('if(modelStarted&&!streamDone)'),
+  assert(JS.includes('if(modelStarted&&!streamDone&&await stopAdmission)'),
     'do not send STOP after normal native stream completion');
 });
 
