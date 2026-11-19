@@ -618,7 +618,7 @@ def _capture_process_identity_inventory(proc_root=Path('/proc'), clock=time.time
                     rows.append({'pid': pid, 'ppid': None, 'uid': None,
                                  'start_ticks': None, 'nspid': None,
                                  'namespaces': {'pid': None, 'mnt': None, 'cgroup': None},
-                                 'comm': None, 'exe': None,
+                                 'comm': None, 'exe': None, 'exe_state': 'UNAVAILABLE',
                                  'identity_state': 'UNAVAILABLE_OR_CHANGED'})
                     continue
                 namespaces = {'pid': identity.get('pid_namespace'),
