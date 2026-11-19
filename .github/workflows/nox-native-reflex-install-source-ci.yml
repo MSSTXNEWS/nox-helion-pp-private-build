@@ -1,0 +1,56 @@
+name: NOX native reflex bounded installation CI
+on:
+  push:
+    branches: [repair/nox-native-reflex-autorefill-20261119]
+    paths:
+      - nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py
+      - nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py
+      - nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py
+      - nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py
+      - nox-control/systemic_relay_20261118/runtime/owner_reflex_taskpack.py
+      - nox-control/systemic_relay_20261118/test_owner_reflex_taskpack_wiring.py
+      - nox-control/owner_native_operator.py
+      - .github/workflows/nox-native-reflex-install-source-ci.yml
+  pull_request:
+    paths:
+      - nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py
+      - nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py
+      - nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py
+      - nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py
+      - nox-control/systemic_relay_20261118/runtime/owner_reflex_taskpack.py
+      - nox-control/systemic_relay_20261118/test_owner_reflex_taskpack_wiring.py
+      - nox-control/owner_native_operator.py
+      - .github/workflows/nox-native-reflex-install-source-ci.yml
+permissions: {contents: read}
+jobs:
+  install-source-guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Recovery entry syntax, original and candidate SHA, scoped owner route
+        run: |
+          set -euo pipefail
+          python -B -m py_compile nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py nox-control/systemic_relay_20261118/runtime/owner_systemic_refill.py nox-control/systemic_relay_20261118/runtime/owner_subagent_dispatcher.py nox-control/systemic_relay_20261118/runtime/owner_reflex_taskpack.py nox-control/owner_native_operator.py
+          python -B -m unittest -v nox-control/systemic_relay_20261118/test_owner_reflex_taskpack.py nox-control/systemic_relay_20261118/test_owner_reflex_cycle.py nox-control/systemic_relay_20261118/test_owner_reflex_taskpack_wiring.py
+          python -B - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          root=Path('nox-control')
+          path=root/'systemic_relay_20261118/owner_native_reflex_restore_entry.py'
+          spec=importlib.util.spec_from_file_location('nox_reflex_restore',path)
+          r=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(r)
+          assert len(r.BEFORE)==len(r.AFTER)==3
+          assert set(r.BEFORE)==set(r.AFTER)
+          assert all(len(pin)==64 and r.BEFORE[k]!=r.AFTER[k] for k,pin in r.BEFORE.items())
+          op=importlib.util.spec_from_file_location('nox_operator',root/'owner_native_operator.py')
+          obj=importlib.util.module_from_spec(op);op.loader.exec_module(obj)
+          assert obj.FILES['repair']==str(path)
+          assert obj.repair_bundle_paths('repair',obj.FILES['repair'],()) == ()
+          print('NOX_EMERGENCY_RESTORE_SOURCE_GATES=PASS')
+          print('NOX_SERVER_RESTORATION_NOT_YET_EXECUTED=true')
+          PY
