@@ -75,6 +75,45 @@ class ProbeTests(unittest.TestCase):
             with patch.object(mod, "check_access", return_value="READ_UNAVAILABLE"):
                 self.assertFalse(mod.probe()["read_access"])
 
+
+    def test_dispatcher_surface_reports_only_public_interface_no_source_text(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as directory:
+            src = Path(directory) / "nox_dispatcher_t855u.py"
+            private_source = (
+                "SECRET_PRIVATE_VALUE = 'never publish this token'\n"
+                "def register_handler(handler_kind, callback):\n"
+                "    return True\n"
+                "def claim_native_job(owner_lease, task_id):\n"
+                "    return owner_lease\n"
+                "HANDLER_REGISTRY = {}\n"
+            )
+            src.write_text(private_source, encoding="utf-8")
+            res = mod.dispatcher_surface(
+                source=src, runner=lambda *a, **kw: SimpleNamespace(
+                    returncode=1, stdout="STOPPED", stderr=""
+                )
+            )
+            self.assertEqual(res["state"], "SOURCE_AST_READ")
+            self.assertEqual(res["source_sha256"], hashlib.sha256(private_source.encode()).hexdigest())
+            self.assertEqual(res["registration_interface"], "DECLARED_FUNCTION")
+            self.assertIn("register_handler(handler_kind,callback)", res["candidate_functions"])
+            self.assertIn("HANDLER_REGISTRY", res["candidate_registries"])
+            self.assertFalse(res["live_process_verified"])
+            self.assertEqual(res["native_handler_registered"], "UNVERIFIED")
+            self.assertNotIn("never publish this token", json.dumps(res))
+
+    def test_dispatcher_surface_rejects_symlink_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original = Path(directory) / "original.py"
+            original.write_text("def register_handler(kind, handler): pass")
+            link = Path(directory) / "nox_dispatcher_t855u.py"
+            link.symlink_to(original)
+            result = mod.dispatcher_surface(source=link)
+            self.assertEqual(result["state"], "HOLD_DISPATCHER_SOURCE")
+            self.assertIsNone(result["source_sha256"])
+
+
     def test_runner_no_file_content_or_credentials(self):
         def runner(args, **kwargs):
             self.assertNotIn("secret", repr(args))
