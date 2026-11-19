@@ -407,7 +407,7 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
                           'name':'calculate','arguments':'{}'}}
                 pieces=sorted((admin,math),key=lambda x:x['index'])
                 chunks=Chunks([frame(calls=pieces),frame(finish='tool_calls'),
-                               b'data: [DONE]\\n\\n'])
+                               b'data: [DONE]\n\n'])
                 requests,factory=self.transport([chunks])
                 native=self.native()
                 payload={'messages':[{'role':'user','content':'Состояние и расчёт'}]}
