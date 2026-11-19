@@ -89,7 +89,7 @@ def verify_browser_receipt(browser_started_ns):
 def main():
     failed = []
     for name, expected in STAGES:
-        if any((Path('/root/nox') / flag).exists() for flag in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'state/STOP')):
+        if any((Path('/root/nox') / flag).exists() for flag in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP', 'state/STOP')):
             failed.append({'component': name, 'reason': 'HOLD_OWNER_STOP'})
             break
         # The nested browser QA accepts inventory mode with exit 0 but no
@@ -119,7 +119,7 @@ def main():
             if name == 'owner_browser_qa_entry.py':
                 verify_browser_receipt(browser_started_ns)
             # A STOP raised while the final stage ran must not produce success.
-            if any((Path('/root/nox') / flag).exists() for flag in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'state/STOP')):
+            if any((Path('/root/nox') / flag).exists() for flag in ('STOP', 'STOP.flag', 'stop.flag', '.stop', 'program/STOP', 'state/STOP')):
                 raise RuntimeError('HOLD_OWNER_STOP')
         except (Exception, SystemExit) as exc:
             # A bundled stage can call sys.exit(0) before any durable S03
