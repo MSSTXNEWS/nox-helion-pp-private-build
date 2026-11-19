@@ -1585,3 +1585,28 @@ test('V187 redundant token UI phases are deduplicated without changing SSE or S0
   assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
   assert(f.calls.some(x=>x.path.startsWith('/api/ui/memory/dialogs/history?')));
 });
+
+test('V188 long single native delta limits browser token enqueue fanout without Unicode loss',async()=>{
+  const reply='Ж'.repeat(4096)+'🧠español';
+  let s03Read=false;
+  const f=fake(true,'/nox-web-v29/pc/resonance.html',false,reply,3,
+    undefined,false,reply.length,()=>{s03Read=true;});
+  const out=await events(await f.fetch('/api/nox/chat',{method:'POST',
+    body:JSON.stringify({message:prompt,dialog_id:id,request_id:'v188-delta-event-budget'})}));
+  const tokens=out.filter(x=>x.type==='token');
+  assert(tokens.length>=2,'must retain progressive browser stream');
+  assert(tokens.length<=17,'one long delta: at most 16 streamed slices and one grapheme tail');
+  assert.equal(tokens.map(x=>x.t).join(''),reply,'no clipping or synthetic token edits');
+  let n=0;const boundaries=new Set();
+  for(const g of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(reply)){
+    n+=g.segment.length;boundaries.add(n);
+  }
+  n=0;for(const tok of tokens){
+    n+=tok.t.length;
+    assert(boundaries.has(n),'token boundaries must preserve Unicode graphemes');
+  }
+  assert.equal(out.filter(x=>x.type==='done').length,1,'terminal only after durable receipt');
+  assert.equal(out.filter(x=>x.type==='error').length,0);
+  assert.equal(s03Read,true,'independent native history fixture readback still required');
+  assert.equal(f.calls.filter(x=>x.path==='/api/nox/chat/stream').length,1);
+});
