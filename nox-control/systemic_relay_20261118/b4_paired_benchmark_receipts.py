@@ -18,7 +18,8 @@ SHA = re.compile(r"[0-9a-f]{64}\Z")
 OUTCOMES = frozenset({"PASS", "FAIL", "TIMEOUT", "BUDGET_EXHAUSTED", "ERROR"})
 CONTRACT = ("benchmark_id", "benchmark_revision", "task_split_sha256",
             "verifier_sha256", "harness_sha256", "budget_policy_sha256",
-            "environment_sha256", "denominator_kind", "max_task_ms")
+            "environment_sha256", "denominator_kind", "max_task_ms",
+            "sse_binding_required")
 PINS = ("task_split_sha256", "verifier_sha256", "harness_sha256",
         "budget_policy_sha256", "environment_sha256", "artifact_sha256",
         "evaluation_receipt_sha256")
@@ -37,8 +38,52 @@ def _integer(value, maximum):
     return type(value) is int and 0 <= value <= maximum
 
 
+
+def _validate_sse_witness_binding(event):
+    """Cross-check SSE wire timing and hashes against a paired outcome.
+
+    Source consistency only: cannot authenticate browser, serving SHA or S03.
+    """
+    witness = event.get("sse_wire_witness")
+    _require(isinstance(witness, dict) and
+             witness.get("protocol") == "OPENAI_CHAT_COMPLETIONS_SSE_V1",
+             "SSE_WITNESS_REQUIRED")
+    for event_key, wire_key in (
+            ("sse_raw_wire_sha256", "raw_wire_sha256"),
+            ("sse_visible_text_sha256", "visible_text_sha256")):
+        pin = event.get(event_key)
+        seen = witness.get(wire_key)
+        _require(type(pin) is str and SHA.fullmatch(pin) and
+                 type(seen) is str and SHA.fullmatch(seen), "SSE_WITNESS_PIN")
+        _require(pin == seen, "SSE_WITNESS_HASH_MISMATCH")
+    timed = witness.get("timed_trace_sha256")
+    _require(type(timed) is str and SHA.fullmatch(timed), "SSE_WITNESS_PIN")
+    _require(event["trace_sha256"] == timed, "SSE_WITNESS_TRACE_MISMATCH")
+    _require(witness.get("first_text_ms") == event["first_text_ms"] and
+             type(witness.get("first_text_ms")) is type(event["first_text_ms"]),
+             "SSE_WITNESS_TTFT_MISMATCH")
+    _require(witness.get("sse_terminal_seen") is event["sse_terminal_seen"] and
+             witness.get("model_finish_reason") == event["model_finish_reason"],
+             "SSE_WITNESS_FINALITY_MISMATCH")
+    end = witness.get("completion_ms")
+    _require((end is None and not event["sse_terminal_seen"]) or
+             (_integer(end, 86_400_000) and event["sse_terminal_seen"]
+              and end <= event["latency_ms"]),
+             "SSE_WITNESS_COMPLETION_MISMATCH")
+    _require(type(witness.get("partial_frame_at_eof")) is bool and
+             type(witness.get("wire_completed_normally")) is bool and
+             witness["wire_completed_normally"] is bool(
+                 event["sse_terminal_seen"] and
+                 event["model_finish_reason"] == "stop" and
+                 event["first_text_ms"] is not None and
+                 not witness["partial_frame_at_eof"]),
+             "SSE_WITNESS_NORMALITY_MISMATCH")
+
+
 def _validated(run):
     _require(isinstance(run, dict), "RUN_SCHEMA")
+    _require(type(run.get("sse_binding_required", False)) is bool,
+             "SSE_BINDING_POLICY")
     _require(run.get("native_verified") is True and run.get("holdout_isolated") is True,
              "INDEPENDENT_VERIFICATION_REQUIRED")
     _require(run.get("all_declared_tasks_accounted") is True,
@@ -99,6 +144,10 @@ def _validated(run):
                  and event["model_finish_reason"] in
                  ("stop", "length", "tool_calls", "content_filter",
                   "cancelled", "error", "unknown"), "SSE_TERMINAL_PROOF")
+        # Historical receipts remain readable; new strict wire provenance
+        # must be complete, and any supplied witness must match its outcome.
+        if run.get("sse_binding_required", False) or "sse_wire_witness" in event:
+            _validate_sse_witness_binding(event)
         mapped[task] = event
     _require(set(mapped) == task_ids, "TASK_SET_MISMATCH")
     return mapped

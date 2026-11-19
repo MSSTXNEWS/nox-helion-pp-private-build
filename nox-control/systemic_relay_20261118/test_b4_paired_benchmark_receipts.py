@@ -732,4 +732,46 @@ class PairedReceiptTests(unittest.TestCase):
         self.assertEqual(visible["visible_text_sha256"],
                          hashlib.sha256((marks + "Привет, ¡hola! 😀").encode()).hexdigest())
 
+
+    def test_strict_sse_witness_binding_prevents_detached_timing_and_finality(self):
+        # Synthetic source-only witness, not authenticated browser/S03 proof.
+        chunks = [
+            (5, b'data: {"choices":[{"delta":{"content":"ready"},"finish_reason":null}]}\n\n'),
+            (8, b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'),
+            (10, b'data: [DONE]\n\n'),
+        ]
+        wire = measure_openai_sse_wire(chunks)
+        b = example()
+        b["declared_task_ids"] = ["t1"]
+        b["outcomes"] = [b["outcomes"][0]]
+        b["sse_binding_required"] = True
+        row = b["outcomes"][0]
+        row.update(first_text_ms=5, trace_sha256=wire["timed_trace_sha256"],
+                   sse_wire_witness=wire,
+                   sse_raw_wire_sha256=wire["raw_wire_sha256"],
+                   sse_visible_text_sha256=wire["visible_text_sha256"])
+        self.assertTrue(compare_paired(b, copy.deepcopy(b))["comparable"])
+        for field, bad, reason in (
+                ("first_text_ms", 6, "SSE_WITNESS_TTFT_MISMATCH"),
+                ("trace_sha256", H, "SSE_WITNESS_TRACE_MISMATCH"),
+                ("sse_raw_wire_sha256", H, "SSE_WITNESS_HASH_MISMATCH"),
+                ("sse_terminal_seen", False, "SSE_WITNESS_FINALITY_MISMATCH"),
+                ("model_finish_reason", "length", "SSE_WITNESS_FINALITY_MISMATCH"),
+                ("latency_ms", 9, "SSE_WITNESS_COMPLETION_MISMATCH")):
+            with self.subTest(field=field):
+                altered = copy.deepcopy(b)
+                altered["outcomes"][0][field] = bad
+                self.assertEqual(compare_paired(b, altered)["reason"], reason)
+        missing = copy.deepcopy(b)
+        del missing["outcomes"][0]["sse_wire_witness"]
+        self.assertEqual(compare_paired(b, missing)["reason"], "SSE_WITNESS_REQUIRED")
+        inconsistent = copy.deepcopy(b)
+        inconsistent["outcomes"][0]["sse_wire_witness"]["wire_completed_normally"] = False
+        self.assertEqual(compare_paired(b, inconsistent)["reason"],
+                         "SSE_WITNESS_NORMALITY_MISMATCH")
+        optional = copy.deepcopy(b)
+        del optional["sse_binding_required"]
+        self.assertEqual(compare_paired(b, optional)["reason"],
+                         "EVALUATION_PROTOCOL_MISMATCH")
+
 if __name__ == '__main__': unittest.main()
