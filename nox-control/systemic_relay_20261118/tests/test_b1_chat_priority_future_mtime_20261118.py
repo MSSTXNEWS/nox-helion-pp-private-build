@@ -438,6 +438,117 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                                  ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
                 self.assertEqual(len(submits), 1)
 
+    def test_review_unknown_s03_commit_never_resubmits_same_claim(self):
+        # The S03 writer may commit the receipt and then report a readback error.
+        # Retrying the worker after that error would perform the claim twice.
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                      and n.name == "Native")
+        method = next(n for n in native.body if isinstance(n, ast.FunctionDef)
+                      and n.name == "_handle")
+        def uncertain(_):
+            raise RuntimeError("HOLD_S03_UNKNOWN_COMMIT")
+        scope = {"PROJECT_HANDLER": "project", "LEAF_HANDLER": "leaf",
+                 "ROLES": ("runtime", "memory", "weights"),
+                 "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+                 "sqlite3": sqlite3, "time": time, "GateError": RuntimeError,
+                 "autonomy": SimpleNamespace(AutoHold=RuntimeError),
+                 "remember": uncertain, "chat_priority_active": lambda: False}
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=[method], type_ignores=[])), str(SOURCE), "exec"), scope)
+        task = {"id": "B1-REVIEW-UNKNOWN-S03", "handler": "review",
+                "owner_claim": {"nonce": "original-claim"},
+                "params": {"role": "runtime", "policy_sha256": "policy-sha",
+                           "job_id": "job-1"}, "title": "review"}
+        event = {"state": "CANDIDATE_NOT_APPLIED", "pid": 17,
+                 "native_observation": {
+                     "claim": "original-claim",
+                     "policy_ack": {"sha256": "policy-sha", "full_file_read": True},
+                     "worker": {"pid": 17}}}
+        submits = []
+        owner = SimpleNamespace(
+            projects=None, catalog={"tasks": [task]}, policy={"sha256": "policy-sha"},
+            source="source-sha", lock=threading.RLock(), interrupted={},
+            completed={}, _claim_current=lambda *a, **kw: True,
+            stop_active=lambda: False, writer_lease=lambda: True,
+            _fresh_admission_reason=lambda: None, _drain=lambda: None,
+            ns={"owner_mentor": SimpleNamespace(clean=lambda x: x)})
+        def submit(payload):
+            submits.append(payload)
+            owner.completed[task["id"]] = event
+        owner.pool = SimpleNamespace(submit=submit)
+        self.assertEqual(scope["_handle"](owner, task),
+                         (False, "HOLD_S03_UNKNOWN_COMMIT"))
+        self.assertEqual(owner.interrupted[task["id"]],
+                         "HOLD_NATIVE_REVIEW_ERROR_UNSETTLED")
+        self.assertEqual(scope["_handle"](owner, task),
+                         ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
+        self.assertEqual(len(submits), 1)
+
+    def test_leaf_unknown_s03_commit_never_resubmits_same_claim(self):
+        import hashlib
+        import json
+        import sqlite3
+        import threading
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        native = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                      and n.name == "Native")
+        method = next(n for n in native.body if isinstance(n, ast.FunctionDef)
+                      and n.name == "_handle_leaf")
+        def encoded(value):
+            return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":"), allow_nan=False).encode()
+        def digest(raw):
+            return hashlib.sha256(raw).hexdigest()
+        def uncertain(_):
+            raise RuntimeError("HOLD_S03_UNKNOWN_COMMIT")
+        scope = {"LEAF_HANDLER": "leaf", "ROLES": ("runtime", "memory", "weights"),
+                 "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
+                 "sqlite3": sqlite3, "time": time, "GateError": RuntimeError,
+                 "encoded": encoded, "digest": digest,
+                 "chat_priority_active": lambda: False, "remember": uncertain}
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=[method], type_ignores=[])), str(SOURCE), "exec"), scope)
+        task = {"id": "B1-LEAF-UNKNOWN-S03", "handler": "leaf",
+                "queue_id": "Q1", "owner_claim": {"nonce": "original-claim"},
+                "title": "cpu",
+                "params": {"operation": "chat_health", "parent_task_id": "6V14-03",
+                           "source_sha256": "source-sha", "job_id": "job-1"}}
+        pins = {"source.py": "pinned-sha"}
+        leaf = {"worker": {"pid": 17, "process_starttime": 999},
+                "check_completed": True, "check_passed": True,
+                "original_task_accepted": False, "model_called": False,
+                "claim": "original-claim", "operation": "chat_health",
+                "parent_task_id": "6V14-03", "queue_id": "Q1",
+                "source_sha256": "source-sha", "source_pins": pins}
+        event = {"state": "NATIVE_LEAF_COMPLETED", "pid": 17,
+                 "leaf_evidence": leaf, "leaf_evidence_sha256": digest(encoded(leaf))}
+        submits = []
+        owner = SimpleNamespace(
+            catalog={"tasks": [task]}, source="source-sha",
+            config={"leaf_source_pins": pins}, lock=threading.RLock(),
+            interrupted={}, completed={}, pool=None,
+            _claim_current=lambda *a, **kw: True,
+            stop_active=lambda: False, writer_lease=lambda: True,
+            owner_allowed=lambda: True, _fresh_admission_reason=lambda **_: None,
+            process_readback=lambda: [{"role": "runtime", "pid": 17,
+                                       "process_starttime": 999}],
+            _drain=lambda: None,
+            ns={"owner_mentor": SimpleNamespace(clean=lambda x: x)})
+        def submit(payload):
+            submits.append(payload)
+            owner.completed[task["id"]] = event
+        owner.pool = SimpleNamespace(active={}, submit=submit)
+        self.assertEqual(scope["_handle_leaf"](owner, task),
+                         (False, "HOLD_S03_UNKNOWN_COMMIT"))
+        self.assertEqual(owner.interrupted[task["id"]],
+                         "HOLD_NATIVE_LEAF_ERROR_UNSETTLED")
+        self.assertEqual(scope["_handle_leaf"](owner, task),
+                         ("wait", "HOLD_NATIVE_INTERRUPTED_UNSETTLED"))
+        self.assertEqual(len(submits), 1)
+
     def test_marker_absent_is_inactive(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
