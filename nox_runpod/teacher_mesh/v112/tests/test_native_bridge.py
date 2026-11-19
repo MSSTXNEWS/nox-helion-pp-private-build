@@ -305,8 +305,10 @@ class V112Tests(unittest.TestCase):
     def test_one_oversized_sse_frame_is_still_rejected(self):
         self.bulk_sse='oversized'
         self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Oversized SSE','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-            json={'message':'oversized single frame'})
+            json={'message':'oversized single frame','dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1],{'type':'error','error':'HOLD_SSE_FRAME_LIMIT'})
         self.assertFalse(any(f.get('saved') for f in frames))
@@ -488,26 +490,35 @@ class V112Tests(unittest.TestCase):
         )
         dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
             json={'title':'Ограниченный контекст','confirmed':True}).json()['dialog_id']
-        for index in range(14):
+        for index in range(12):
             self.assertTrue(_save_exchange(dialog,f'Вопрос {index}',f'Ответ {index}',
                                           f'bounded-{index}'))
-        with _db(True) as db:
-            db.execute('INSERT INTO nox_v29_dialog_messages '
-                       '(dialog_id,exchange_id,role,content,ts) VALUES(?,?,?,?,?)',
-                       (dialog,'orphan','assistant','Незавершённая пара','2026-11-15'))
         issue,history=_dialog_context(dialog)
         self.assertIsNone(issue)
         self.assertEqual(len(history),24)
-        self.assertEqual(history[0],{'role':'user','content':'Вопрос 2'})
-        self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 13'})
-        self.assertTrue(all(row['content']!='Незавершённая пара' for row in history))
-        for index in range(4):
-            self.assertTrue(_save_exchange(dialog,'😀'*8000,'😀'*9000,
-                                          f'large-{index}'))
+        self.assertEqual(history[0],{'role':'user','content':'Вопрос 0'})
+        self.assertEqual(history[-1],{'role':'assistant','content':'Ответ 11'})
+        self.assertTrue(_save_exchange(dialog,'Вопрос 12','Ответ 12','bounded-12'))
         issue,history=_dialog_context(dialog)
-        self.assertIsNone(issue)
-        self.assertEqual(len(history),2)
-        self.assertLessEqual(sum(len(row['content'].encode('utf-8')) for row in history),121000)
+        self.assertEqual(issue,'HOLD_HISTORY_LIMIT')
+        self.assertEqual(history,[])
+
+        partial=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Неполная пара','confirmed':True}).json()['dialog_id']
+        with _db(True) as db:
+            db.execute('INSERT INTO nox_v29_dialog_messages '
+                       '(dialog_id,exchange_id,role,content,ts) VALUES(?,?,?,?,?)',
+                       (partial,'orphan','assistant','Незавершённая пара','2026-11-15'))
+        issue,history=_dialog_context(partial)
+        self.assertEqual(issue,'HOLD_HISTORY_PAIR_INCOMPLETE')
+        self.assertEqual(history,[])
+
+        large=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+            json={'title':'Большое сообщение','confirmed':True}).json()['dialog_id']
+        self.assertTrue(_save_exchange(large,'😀'*8000,'😀'*8001,'large-one'))
+        issue,history=_dialog_context(large)
+        self.assertEqual(issue,'HOLD_HISTORY_CONTENT')
+        self.assertEqual(history,[])
         self.assertTrue(all(len(row['content'])<=8000 for row in history))
 
     def test_dialog_context_keeps_owner_and_archive_guards(self):
@@ -531,8 +542,10 @@ class V112Tests(unittest.TestCase):
 
     def test_no_fresh_s03_row_means_no_fake_done(self):
         self.record=False
+        dialog=self.client.post('/api/ui/memory/dialogs/create',cookies=self.cookie,
+          json={'title':'No canonical S03 receipt','confirmed':True}).json()['dialog_id']
         r=self.client.post('/api/nox/chat/stream',cookies=self.cookie,
-          json={'message':'Другой уникальный вопрос'})
+          json={'message':'Другой уникальный вопрос','dialog_id':dialog})
         frames=[json.loads(x) for x in r.text.splitlines() if x.strip()]
         self.assertEqual(frames[-1]['type'],'error')
         self.assertEqual(frames[-1]['error'],
