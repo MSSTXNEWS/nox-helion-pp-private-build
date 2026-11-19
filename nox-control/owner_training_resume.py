@@ -164,8 +164,17 @@ def read_json(path, limit=4_000_000, expected_sha256=None):
     def finite_json_constant(token):
         raise RuntimeError('HOLD_NONFINITE_STATE_JSON')
 
+    def finite_json_float(token):
+        # parse_constant catches NaN/Infinity literals, but standard JSON
+        # exponents such as 1e999 can still overflow to float infinity.
+        number = float(token)
+        if not math.isfinite(number):
+            raise RuntimeError('HOLD_NONFINITE_STATE_JSON')
+        return number
+
     value = json.loads(raw, object_pairs_hook=unique_object,
-                       parse_constant=finite_json_constant)
+                       parse_constant=finite_json_constant,
+                       parse_float=finite_json_float)
     if not isinstance(value, dict):
         raise RuntimeError('HOLD_STATE_OBJECT_REQUIRED')
     return value
