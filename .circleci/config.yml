@@ -82,6 +82,50 @@ jobs:
           command: |
             set -eu
             node --test --test-name-pattern='^(V177|V178|V179|V180|V181|V182|V186|V184|V187|V188|V189|V191|V192)' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+  b3-native-v24:
+    docker:
+      - image: cimg/node:22.16
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Diagnostic exact source subset b3-native-v24
+          command: |
+            set -eu
+            node --test --test-name-pattern='^(native V24|V24 rename)' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+  b3-legacy-routing:
+    docker:
+      - image: cimg/node:22.16
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Diagnostic exact source subset b3-legacy-routing
+          command: |
+            set -eu
+            node --test --test-name-pattern='^(legacy dialogs|not installed|invalid dialog|SSE bytes)' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+  b3-v135-v137:
+    docker:
+      - image: cimg/node:22.16
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Diagnostic exact source subset b3-v135-v137
+          command: |
+            set -eu
+            node --test --test-name-pattern='^(V135|V136|V137)' coordination/onepass/test_v135_resonance_owner_bridge.cjs
+  b3-v141:
+    docker:
+      - image: cimg/node:22.16
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Diagnostic exact source subset b3-v141
+          command: |
+            set -eu
+            node --test --test-name-pattern='^V141' coordination/onepass/test_v135_resonance_owner_bridge.cjs
 workflows:
   b3-real-source-verification:
     jobs:
@@ -92,3 +136,7 @@ workflows:
       - b3-v153-v166
       - b3-v165-v176
       - b3-v177-v192
+      - b3-native-v24
+      - b3-legacy-routing
+      - b3-v135-v137
+      - b3-v141
