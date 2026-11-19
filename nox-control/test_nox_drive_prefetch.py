@@ -5,6 +5,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -51,6 +52,40 @@ class DrivePrefetchTests(unittest.TestCase):
         with self.assertRaisesRegex(mod.Hold, "ASSET_NAME"):
             mod.read_manifest(self.manifest, check)
 
+    def test_original_engram_parts_require_exact_complete_disk_manifest(self):
+        assets = [dict(name=name, size=size, sha256=digest)
+                  for name, (size, digest) in mod.ENGRAM_PARTS.items()]
+        self.assertEqual(sum(part["size"] for part in assets), 75266239716)
+
+        def manifest_with(parts):
+            self.m["assets"] = parts
+            raw = json.dumps(self.m).encode()
+            self.manifest.write_bytes(raw)
+            return hashlib.sha256(raw).hexdigest()
+
+        for parts, reason in (
+            (assets[:-1], "ENGRAM_PARTS_INCOMPLETE"),
+            ([*assets[:-1], {**assets[-1], "size": 1}], "ENGRAM_PART_PIN"),
+            ([*assets[:-1], {**assets[-1], "sha256": "0" * 64}], "ENGRAM_PART_PIN"),
+            ([*assets, {**assets[-1], "name": "engram.part04"}], "ASSET_NAME"),
+        ):
+            with self.subTest(reason=reason), self.assertRaisesRegex(mod.Hold, reason):
+                mod.read_manifest(self.manifest, manifest_with(parts))
+
+        class Opt:
+            mode = "disk"
+            ssd = None
+            execute = False
+
+        opts = Opt()
+        opts.manifest = self.manifest
+        opts.manifest_sha = manifest_with(assets)
+        opts.destination = self.dest
+        self.assertEqual(mod.run(opts)["assets"], [a["name"] for a in assets])
+        opts.mode = "ram"
+        with self.assertRaisesRegex(mod.Hold, "ENGRAM_PARTS_DISK_ONLY"):
+            mod.run(opts)
+
     def test_plan_only_does_not_create_weight(self):
         class Opt:
             mode = "disk"
@@ -86,7 +121,8 @@ class DrivePrefetchTests(unittest.TestCase):
         self.assertFalse((self.dest / self.asset["name"]).exists())
 
     def test_ram_floor_fails_closed(self):
-        with patch.object(mod, "cgroup_raw_free", return_value=100):
+        with patch.object(mod.shutil, "disk_usage", return_value=SimpleNamespace(free=8 * mod.GiB)), \
+             patch.object(mod, "cgroup_raw_free", return_value=100):
             with self.assertRaisesRegex(mod.Hold, "CGROUP_RAM"):
                 mod.requires_space(self.dest, len(self.contents), ram=True)
 
