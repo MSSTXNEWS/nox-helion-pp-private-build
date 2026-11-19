@@ -16,7 +16,7 @@ sys.path.insert(0, str(HERE))
 import owner_chat_stream as frozen
 import owner_chat_stream_action_routing as candidate
 
-FROZEN_SHA = '1df48966046095005e0859fad85626dac95730e4f7f64ddf1cc50b526bd9357e'
+FROZEN_SHA = 'a08edab647feac09ac0b383744e6537c521f5d015801f5ebf0452ef09dbb288e'
 STATUS = {'id': 'legacy-status', 'name': 'run_admin', 'arguments': {'action': 'status'}}
 QUEUE = {'id': 'legacy-queue', 'name': 'run_admin', 'arguments': {'action': 'queue_status'}}
 
