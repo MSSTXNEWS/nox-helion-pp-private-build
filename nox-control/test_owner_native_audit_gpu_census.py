@@ -439,5 +439,119 @@ class GpuConsumerCensusTests(unittest.TestCase):
         self.assertFalse(unbounded)
 
 
+    def test_rc3_preserves_stopped_rows_and_degraded_health_but_not_command_success(self):
+        def runner(argv, seconds=12):
+            if argv == ['supervisorctl', 'status']:
+                return 3, 'agent-a STOPPED\nagent-b STOPPED\n'
+            return 0, ''
+        result = MOD._capture_services(self.proc, runner, self.clock())
+        self.assertEqual(result['command_rc'], 3)
+        self.assertEqual(result['return_code'], 3)
+        self.assertFalse(result['command_success'])
+        self.assertFalse(result['complete'])
+        self.assertTrue(result['inventory_complete'])
+        self.assertEqual([row['state'] for row in result['services']], ['STOPPED', 'STOPPED'])
+        self.assertEqual(result['service_health']['state'], 'DEGRADED')
+        self.assertEqual(result['service_health']['counts'], {'STOPPED': 2})
+
+    def test_rc3_with_malformed_output_keeps_rows_but_inventory_incomplete(self):
+        def runner(argv, seconds=12):
+            if argv == ['supervisorctl', 'status']:
+                return 3, 'agent-a STOPPED\nmalformed status row\n'
+            return 0, ''
+        result = MOD._capture_services(self.proc, runner, self.clock())
+        self.assertEqual(result['command_rc'], 3)
+        self.assertEqual(len(result['services']), 1)
+        self.assertEqual(result['rejected_lines'], 1)
+        self.assertFalse(result['inventory_complete'])
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['service_health']['state'], 'PARTIAL')
+
+    def test_duplicate_supervisor_names_make_inventory_incomplete(self):
+        add_proc(self.proc, 500, start=500)
+        def runner(argv, seconds=12):
+            if argv == ['supervisorctl', 'status']:
+                row = 'agent RUNNING pid 500, uptime 0:00:01\n'
+                return 0, row + row
+            return 0, ''
+        result = MOD._capture_services(self.proc, runner, self.clock())
+        self.assertTrue(result['duplicate_service_names'])
+        self.assertFalse(result['inventory_complete'])
+        self.assertFalse(result['complete'])
+        self.assertEqual(len(result['services']), 2)
+
+    def test_all_pid_inventory_is_minimal_and_includes_pid_one(self):
+        add_proc(self.proc, 1, ppid=1, start=1)
+        add_proc(self.proc, 101, ppid=1, start=101, argv=b'/secret/argument\0--token\0')
+        result = MOD._capture_process_identity_inventory(self.proc, self.clock())
+        self.assertTrue(result['complete'])
+        self.assertEqual(result['entries_seen'], 2)
+        self.assertEqual(result['row_count'], 2)
+        self.assertEqual([row['pid'] for row in result['rows']], [1, 101])
+        row = result['rows'][1]
+        self.assertEqual(row['identity_state'], 'VERIFIED')
+        self.assertEqual(set(row), {'pid', 'ppid', 'uid', 'start_ticks', 'nspid',
+                                    'namespaces', 'comm', 'exe', 'identity_state'})
+        self.assertNotIn('argv', row)
+        self.assertNotIn('cmdline', row)
+        self.assertNotIn('environ', row)
+        self.assertEqual(result['omitted_fields'], ['argv', 'cmdline', 'environ', 'cgroup_paths'])
+
+    def test_all_pid_inventory_cap_is_explicit_and_incomplete(self):
+        add_proc(self.proc, 111, start=111)
+        add_proc(self.proc, 112, start=112)
+        old_cap = MOD.MAX_PROC_ENTRIES
+        MOD.MAX_PROC_ENTRIES = 1
+        try:
+            result = MOD._capture_process_identity_inventory(self.proc, self.clock())
+        finally:
+            MOD.MAX_PROC_ENTRIES = old_cap
+        self.assertTrue(result['truncated'])
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['row_count'], 1)
+        self.assertEqual(result['cap'], 1)
+
+    def test_all_pid_inventory_read_failure_is_explicit_and_incomplete(self):
+        proc = add_proc(self.proc, 121, start=121)
+        (proc / 'status').unlink()
+        result = MOD._capture_process_identity_inventory(self.proc, self.clock())
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['read_failure_count'], 1)
+        self.assertEqual(result['read_failure_pids'], [121])
+        self.assertEqual(result['rows'][0]['identity_state'], 'UNAVAILABLE_OR_CHANGED')
+
+    def test_all_pid_inventory_pid_reuse_during_identity_read_fails_closed(self):
+        add_proc(self.proc, 131, start=131)
+        original_stat = MOD._proc_stat
+        calls = 0
+        def changing_stat(proc_dir, expected_pid):
+            nonlocal calls
+            if expected_pid == 131:
+                calls += 1
+                if calls == 2:
+                    replace_start(self.proc, 131, start=1131)
+            return original_stat(proc_dir, expected_pid)
+        MOD._proc_stat = changing_stat
+        try:
+            result = MOD._capture_process_identity_inventory(self.proc, self.clock())
+        finally:
+            MOD._proc_stat = original_stat
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['read_failure_count'], 1)
+        self.assertEqual(result['rows'][0]['identity_state'], 'UNAVAILABLE_OR_CHANGED')
+
+    def test_worker_emits_full_identity_inventory_without_argv(self):
+        inventory = {'complete': True, 'rows': [{'pid': 1, 'start_ticks': 10}]}
+        original = MOD.process_rows
+        MOD.process_rows = lambda **kwargs: []
+        try:
+            result = MOD.worker((1, {'gpu_consumer_identities': [],
+                                     'process_identity_inventory': inventory}))
+        finally:
+            MOD.process_rows = original
+        self.assertEqual(result['section'], 'process_rows')
+        self.assertEqual(result['bounded_process_identity_inventory'], inventory)
+
+
 if __name__ == '__main__':
     unittest.main()
