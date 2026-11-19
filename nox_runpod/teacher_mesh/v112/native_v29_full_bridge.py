@@ -262,11 +262,24 @@ def _dialog_context(dialog_id):
             return 'HOLD_DIALOG_SCOPE_NOT_BOUND',[]
         if bool(found['archived']):
             return 'HOLD_DIALOG_ARCHIVED',[]
-        message_count=db.execute(
-            'SELECT COUNT(*) FROM nox_v29_dialog_messages WHERE dialog_id=?',
-            (dialog_id,)).fetchone()[0]
+        stats=db.execute(
+            'SELECT COUNT(*), '
+            'COALESCE(SUM(length(CAST(content AS BLOB))),0), '
+            'COALESCE(MAX(length(content)),0) '
+            'FROM nox_v29_dialog_messages WHERE dialog_id=?',
+            (dialog_id,)).fetchone()
+        message_count,total_bytes,max_chars=stats[0],stats[1],stats[2]
         if message_count>24:
             return 'HOLD_HISTORY_LIMIT',[]
+        if max_chars>8000:
+            return 'HOLD_HISTORY_CONTENT',[]
+        if total_bytes>121000:
+            return 'HOLD_HISTORY_SIZE',[]
+        pair_count=db.execute(
+            'SELECT COUNT(DISTINCT exchange_id) FROM nox_v29_dialog_messages '
+            'WHERE dialog_id=?',(dialog_id,)).fetchone()[0]
+        if message_count!=2*pair_count:
+            return 'HOLD_HISTORY_PAIR_INCOMPLETE',[]
         rows=db.execute(
             'SELECT u.content AS question, a.content AS answer '
             'FROM nox_v29_dialog_messages AS a '
@@ -274,8 +287,6 @@ def _dialog_context(dialog_id):
             'ON u.dialog_id=a.dialog_id AND u.exchange_id=a.exchange_id '
             "AND u.role='user' WHERE a.dialog_id=? AND a.role='assistant' "
             'ORDER BY a.row_id DESC',(dialog_id,)).fetchall()
-        if message_count!=2*len(rows):
-            return 'HOLD_HISTORY_PAIR_INCOMPLETE',[]
     pairs=[];size=0
     for row in rows:
         question,answer=row['question'],row['answer']
