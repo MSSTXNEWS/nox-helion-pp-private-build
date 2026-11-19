@@ -873,6 +873,10 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
             record['cancel'].set()
             return {'status':'STOP_REQUESTED','request_id':request_id,'dialog_id':dialog_id,
                     'stream_cancellation_signalled':True,'gpu_stop_verified':False}
+        # Preserve one bounded tombstone slot per admitted active request.
+        if len(cancelled_attempts)+len(active_request_ids)>=STOP_STATE_LIMIT:
+            return JSONResponse({'status':'HOLD_STOP_STATE_CAPACITY','stream_cancellation_signalled':False,
+                                 'gpu_stop_verified':False},status_code=503)
         if not remember_attempt(cancelled_attempts,attempt):
             return JSONResponse({'status':'HOLD_STOP_STATE_CAPACITY','stream_cancellation_signalled':False,
                                  'gpu_stop_verified':False},status_code=503)
