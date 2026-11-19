@@ -6,6 +6,7 @@ or persistence store is introduced here; chat_proxy retains its S03 postflight.
 from __future__ import annotations
 
 import asyncio
+import codecs
 from contextlib import aclosing
 from datetime import datetime,timezone
 import json
@@ -107,7 +108,15 @@ async def _bounded_sse_lines(response):
     after_cr=False
     # Un-sized chunks preserve immediate first-token delivery. Fixed-size
     # HTTPX text chunking can wait for 8 KiB and stall a live SSE response.
-    async for chunk in response.aiter_text():
+    # HTTPX aiter_text() uses replacement decoding for malformed UTF-8:
+    # that silently turns corrupt model bytes into apparently valid tokens.
+    # Preserve all split-codepoint boundaries, but never certify damaged text.
+    decoder=codecs.getincrementaldecoder('utf-8')('strict')
+    async for raw in response.aiter_bytes():
+        try:
+            chunk=decoder.decode(raw)
+        except UnicodeDecodeError:
+            raise StreamFailure('HOLD_MODEL_SSE_INVALID') from None
         for offset in range(0,len(chunk),8192):
             for part in re.split(r'(\r\n|\r|\n)',chunk[offset:offset+8192]):
                 if part in ('\r\n','\r','\n'):
@@ -122,6 +131,10 @@ async def _bounded_sse_lines(response):
                     pending+=part
                     if len(pending)>300000:
                         raise StreamFailure('HOLD_MODEL_SSE_FRAME')
+    try:
+        decoder.decode(b'',final=True)
+    except UnicodeDecodeError:
+        raise StreamFailure('HOLD_MODEL_SSE_INVALID') from None
     if pending:
         yield pending
 

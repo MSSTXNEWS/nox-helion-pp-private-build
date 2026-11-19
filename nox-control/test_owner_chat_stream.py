@@ -68,6 +68,43 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         factory=lambda **kwargs:real_client(transport=transport,**kwargs)
         return requests,patch.object(stream.httpx,'AsyncClient',side_effect=factory)
 
+    async def test_invalid_utf8_on_wire_cannot_certify_browser_or_s03(self):
+        # HTTPX aiter_text() silently replaces malformed UTF-8 with U+FFFD;
+        # an allegedly finished answer must not certify corrupted model bytes.
+        valid=frame('Привет 🌍 — ¡Hola!')
+        cut=valid.index('🌍'.encode('utf-8'))+2
+        variants=(
+            ('split_valid_astral',
+             [valid[:cut],valid[cut:],frame(finish='stop'),
+              b'data: [DONE]\n\n'],True),
+            ('invalid_byte',
+             [frame('Начало'),frame('Roto').replace(b'Roto',b'Ro\xffto'),
+              frame(finish='stop'),b'data: [DONE]\n\n'],False),
+            ('truncated_codepoint_at_eof',
+             [frame('Начало'),b'data: \xf0\x9f'],False),
+        )
+        for label,parts,valid_case in variants:
+            with self.subTest(label=label):
+                chunks=Chunks(parts)
+                requests,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Unicode'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Unicode',True)
+                    wire=''.join([part async for part in response.body_iterator])
+                self.assertEqual(len(requests),1)
+                self.assertTrue(chunks.closed)
+                self.assertEqual(self.dispatched,[])
+                if valid_case:
+                    self.assertIn('Привет 🌍 — ¡Hola!',wire)
+                    self.assertIn('[DONE]',wire)
+                    self.assertEqual(payload.get('_agent_final'),'Привет 🌍 — ¡Hola!')
+                else:
+                    self.assertIn('HOLD_MODEL_SSE_INVALID',wire)
+                    self.assertNotIn('[DONE]',wire)
+                    self.assertNotIn('_agent_final',payload)
+
     async def test_lone_utf16_surrogate_rejected_before_browser_and_s03(self):
         # Python JSON decoding allows unpaired \uD800/\uDFFF escapes.
         # Such values are not Unicode scalar strings; valid astral
