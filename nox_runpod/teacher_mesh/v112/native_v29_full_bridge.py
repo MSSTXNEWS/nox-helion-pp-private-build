@@ -734,23 +734,59 @@ def register_native_v29_chat(app, trusted:dict, site_dir=None):
         id=request.query_params.get('dialog_id','')
         try:limit=max(1,min(int(request.query_params.get('limit','100')),100))
         except ValueError:return JSONResponse({'error':'INVALID_LIMIT'},status_code=422)
+        # A browser reload must never display half an exchange as complete history.
+        if limit%2:
+            return JSONResponse({'error':'INVALID_LIMIT_PAIR_BOUNDARY'},status_code=422)
         if not _schema_ready():
             return JSONResponse({'status':'HOLD','reason':'OWNER_DIALOG_SCHEMA_MISSING'},status_code=503)
         try:
             with _db() as db:
+                # Keep the message rows, owner and receipts in ONE read snapshot.
+                db.execute('BEGIN')
                 row=_get_dialog(db,id)
                 if row is None:
                     return JSONResponse({'error':'DIALOG_NOT_FOUND'},status_code=404)
                 msgs=db.execute(
-                   'SELECT role,content,ts,exchange_id FROM nox_v29_dialog_messages '
-                   'WHERE dialog_id=? ORDER BY row_id DESC LIMIT ?',
+                   'SELECT m.role, m.content, m.ts, m.exchange_id, '
+                   'r.receipt_id, r.turn_id, r.lease_epoch, r.writer, r.committed_at, '
+                   'r.user_sha256, r.assistant_sha256, r.receipt_sha256, r.verified '
+                   'FROM nox_v29_dialog_messages AS m '
+                   'LEFT JOIN nox_v29_exchange_receipts AS r '
+                   'ON r.dialog_id=m.dialog_id AND r.exchange_id=m.exchange_id '
+                   'WHERE m.dialog_id=? ORDER BY m.row_id DESC LIMIT ?',
                    (id,limit)).fetchall()
+                messages=list(reversed(msgs))
+                if len(messages)%2:
+                    return JSONResponse({'status':'HOLD','reason':
+                        'HOLD_OWNER_DIALOG_HISTORY_RECEIPT_MISMATCH'},status_code=409)
+                fields=('receipt_id','turn_id','lease_epoch','writer','committed_at',
+                        'user_sha256','assistant_sha256','receipt_sha256')
+                for index in range(0,len(messages),2):
+                    user,assistant=messages[index:index+2]
+                    if (user['role']!='user' or assistant['role']!='assistant'
+                            or user['exchange_id']!=assistant['exchange_id']
+                            or any(not isinstance(user[field],str)
+                                   or user[field]!=assistant[field] for field in fields)
+                            or user['writer']!='V112_OWNER_DIALOG_WRITER'
+                            or user['verified']!=1 or assistant['verified']!=1
+                            or not isinstance(user['content'],str)
+                            or not isinstance(assistant['content'],str)
+                            or hashlib.sha256(user['content'].encode('utf-8')).hexdigest()
+                                  !=user['user_sha256']
+                            or hashlib.sha256(assistant['content'].encode('utf-8')).hexdigest()
+                                  !=user['assistant_sha256']
+                            or _receipt_sha256(_receipt_payload(id,user['turn_id'],
+                                user['receipt_id'],user['lease_epoch'],user['exchange_id'],
+                                user['committed_at'],user['user_sha256'],
+                                user['assistant_sha256']))!=user['receipt_sha256']):
+                        return JSONResponse({'status':'HOLD','reason':
+                            'HOLD_OWNER_DIALOG_HISTORY_RECEIPT_MISMATCH'},status_code=409)
             return {'status':'READY','dialog_id':id,'revision':row['revision'],
                     'store_scope':'OWNER_DIALOG_TABLES_ONLY',
                     'canonical_s03_readback_verified':False,
                     'messages':[{'role':x['role'],'content':x['content'],'ts':x['ts'],
-                                 'exchange_id':x['exchange_id']} for x in reversed(msgs)]}
-        except (OSError,RuntimeError,sqlite3.Error):
+                                 'exchange_id':x['exchange_id']} for x in messages]}
+        except (OSError,RuntimeError,sqlite3.Error,UnicodeError,TypeError,ValueError):
             return JSONResponse({'status':'HOLD','reason':'OWNER_DIALOG_HISTORY_FAILED'},status_code=503)
 
     @app.post('/api/ui/memory/dialogs/exchange-readback')
