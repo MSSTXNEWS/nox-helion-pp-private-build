@@ -106,7 +106,7 @@ def process_identity(pid):
     if type(pid) is not int or pid <= 0:
         fail("GUARD_PROCESS_IDENTITY")
     base = Path("/proc") / str(pid)
-    def start_ticks():
+    def stat_identity():
         try:
             stat_fd = os.open(base / "stat", os.O_RDONLY | os.O_NOFOLLOW |
                               os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0))
@@ -124,27 +124,38 @@ def process_identity(pid):
             if int(pid_raw) != pid or close < 0 or not rest.startswith(b"("):
                 raise ValueError
             fields = rest[close + 1:].split()
-            return int(fields[19])
+            if len(fields) < 20:
+                raise ValueError
+            return {"ppid": int(fields[1]), "pgrp": int(fields[2]),
+                    "start_ticks": int(fields[19])}
         except (IndexError, ValueError):
             fail("GUARD_PROCESS_IDENTITY")
-    before_ticks = start_ticks()
-    try:
-        cmd_fd = os.open(base / "cmdline", os.O_RDONLY | os.O_NOFOLLOW |
-                         os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0))
+    def cmdline():
         try:
-            cmd_raw = os.read(cmd_fd, 4097)
-        finally:
-            os.close(cmd_fd)
+            cmd_fd = os.open(base / "cmdline", os.O_RDONLY | os.O_NOFOLLOW |
+                             os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0))
+            try:
+                return os.read(cmd_fd, 4097)
+            finally:
+                os.close(cmd_fd)
+        except OSError:
+            fail("GUARD_PROCESS_IDENTITY")
+    before = stat_identity()
+    try:
+        exe_before = os.readlink(base / "exe")
     except OSError:
         fail("GUARD_PROCESS_IDENTITY")
+    cmd_raw = cmdline()
     try:
-        exe_path = os.readlink(base / "exe")
+        exe_after = os.readlink(base / "exe")
         expected_exe = os.path.realpath(REVIEWED_EXECUTABLE)
     except OSError:
         fail("GUARD_PROCESS_IDENTITY")
-    after_ticks = start_ticks()
-    if (before_ticks != after_ticks or len(cmd_raw) > 4096 or
-        not cmd_raw.endswith(b"\0") or exe_path != expected_exe):
+    cmd_raw_after = cmdline()
+    after = stat_identity()
+    if (before != after or exe_before != exe_after or cmd_raw != cmd_raw_after or
+        len(cmd_raw) > 4096 or not cmd_raw.endswith(b"\0") or
+        exe_before != expected_exe):
         fail("GUARD_PROCESS_IDENTITY")
     try:
         argv = tuple(part.decode("utf-8") for part in cmd_raw[:-1].split(b"\0"))
@@ -152,7 +163,7 @@ def process_identity(pid):
         fail("GUARD_PROCESS_IDENTITY")
     if not argv or any(not part for part in argv):
         fail("GUARD_PROCESS_IDENTITY")
-    return {"pid": pid, "start_ticks": before_ticks, "argv": argv, "exe": exe_path}
+    return {"pid": pid, **before, "argv": argv, "exe": exe_before}
 
 
 def _path_identity(info):
