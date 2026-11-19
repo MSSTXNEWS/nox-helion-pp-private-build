@@ -22,6 +22,18 @@ class SafeCgroupReclaimTests(unittest.TestCase):
         }
         return content
 
+    def test_v611_swappiness_zero_request_is_file_only_and_conservative(self):
+        self.assertTrue(reclaim.supports_reclaim_swappiness('6.11.0'))
+        self.assertTrue(reclaim.supports_reclaim_swappiness('6.11.0-generic'))
+        self.assertFalse(reclaim.supports_reclaim_swappiness('6.10.15'))
+        self.assertFalse(reclaim.supports_reclaim_swappiness('unknown'))
+        self.assertEqual(
+            reclaim.reclaim_payload(2 * reclaim.GIB),
+            f'{2 * reclaim.GIB} swappiness=0'.encode('ascii'))
+        with self.assertRaisesRegex(RuntimeError, 'RECLAIM_REQUEST'):
+            reclaim.reclaim_payload(reclaim.MAX_ONESHOT + 1)
+        self.assertEqual(reclaim.MIN_RAW, 512 * reclaim.MIB)
+
     def test_exact_current_memory_counter_projection(self):
         data=self.sample()
         with patch.object(reclaim,'read_text',side_effect=lambda p,limit=8192:data[p.name]):
@@ -40,6 +52,7 @@ class SafeCgroupReclaimTests(unittest.TestCase):
             reclaim.check(observed)
             for row,reason in [
                 (dict(observed,raw=4), 'MEMORY_ADMISSION'),
+                (dict(observed,raw=39*reclaim.MIB), 'MEMORY_ADMISSION'),
                 (dict(observed,cold_lower_bound=0), 'MEMORY_ADMISSION'),
                 (dict(observed,psi={'some':0.12,'full':0.0}), 'PRESSURE'),
                 (dict(observed,events={'oom':1,'oom_kill':0}), 'OOM'),
