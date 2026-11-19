@@ -58,7 +58,7 @@ jobs:
           inst.BUNDLE={name:base64.b64encode(content).decode() for name,content in assets.items()}
           helper,changes=inst.decode()
           assert len(changes)==3 and set(changes)=={inst.REFILL,inst.DIRECTOR,inst.TRUTH}
-          assert inst.OLD[inst.CONFIG]=='30effffe3c8a20c0df4dee936beb2f8183347fb2a5fd51d4543dfbde50efb919'
+          assert inst.OLD[inst.CONFIG]=='5f842d83cea44d74f1f1d125332888bbe5f999a34e401955e0c428a04e3084c9'
           assert digest(assets['continuous_transaction_helpers.py'])==inst.HELPER_SHA
           op_spec=importlib.util.spec_from_file_location('owner_operator',root/'owner_native_operator.py')
           op=importlib.util.module_from_spec(op_spec);op_spec.loader.exec_module(op)
