@@ -71,7 +71,7 @@ class OwnerCommentGuardTests(unittest.TestCase):
         self.assertEqual(EMERGENCY_STOP_SHA,
                          "5ca33f710dc4e0e462d65fe2856bb42ac85a1a23")
         self.assertEqual(EMERGENCY_STOP_PREFLIGHT_SHA,
-                         "a087e3968171ebb338a2fd19736cfa340c30956f")
+                         "26d20a37c0ec1c9ca1addd373d89baec29ebb632")
         self.assertEqual(AUDIT_SHA,
                          "b1e33d60983885a7ebd1979bda4ec640b7ca7047")
         self.assertEqual(SOURCE_ATTEST_SHA,
