@@ -317,14 +317,17 @@ def memory_governor_projection(capacity):
                 'state': 'BOUNDED_CPU_ACCOUNTING_NOT_AVAILABLE',
                 'auto_reclaim': False}
     fields = (budget.get('current_bytes'), budget.get('max_bytes'),
-              budget.get('inactive_file_bytes'), budget.get('shmem_bytes'),
-              decision.get('projected_memory_ratio'),
+              budget.get('file_bytes'), budget.get('inactive_file_bytes'),
+              budget.get('shmem_bytes'), decision.get('projected_memory_ratio'),
               budget.get('memory_psi_some_avg10'),
               budget.get('memory_psi_full_avg10'))
     if (any(type(v) not in (int, float) or not math.isfinite(v) or v < 0
             for v in fields)
             or not 0 < budget['max_bytes']
-            or budget['shmem_bytes'] > budget.get('file_bytes', -1)):
+            or budget['current_bytes'] > budget['max_bytes']
+            or budget['file_bytes'] > budget['current_bytes']
+            or budget['inactive_file_bytes'] > budget['file_bytes']
+            or budget['shmem_bytes'] > budget['file_bytes']):
         return {'schema': 'NOX_NATIVE_MEMORY_GOVERNOR_PROJECTION_V1',
                 'state': 'RESOURCE_METADATA_HOLD',
                 'auto_reclaim': False}
