@@ -1,8 +1,9 @@
-"""One authenticated browser turn, visible prefixes and exact S03 readback.
+"""Two owner-authenticated browser turns with an independent S03 history readback.
 
 This is a separate acceptance scope. It reuses pinned QA instrumentation without
 the full UI screenshot/layout/resize stages and cannot promote the full UI QA.
-The production UI, proxy, model, training and original QA sources are unchanged.
+It requires terminal saved+s03_integrated records for both turns on one synthetic
+dialog, then verifies the four ordered messages through the owner history route.
 """
 from __future__ import annotations
 
@@ -20,8 +21,8 @@ BASE_SHA = '9530c6e71274bbbca997f0aea07a26c988cfd536ed1aa1ba4067753827ac56f9'
 TRANSPORT_SHA = '360c155642ccdb43f39acf7b493068d3d2ac906bfd761c60d8c5ee51d48507fe'
 RELEASE_SHA = 'eaa8af0e229c9ce0a730b7b472f8b9b8a1018fbd5cf7b8518890342d9d7047cb'
 SERVED_BRIDGE_SHA256 = 'a7f64a536ac82cd5a1339cd31e63dfbb7dcf4feb34375c5128ec32279863af69'
-SCHEMA = 'NOX_OWNER_BROWSER_STREAM_ONLY_QA_V1'
-TOTAL_TIMEOUT = 140
+SCHEMA = 'NOX_OWNER_BROWSER_STREAM_ONLY_QA_V2'
+TOTAL_TIMEOUT = 230
 
 
 def require(ok, code):
@@ -112,6 +113,15 @@ def proper_prefixes(value):
     return [n for n in prefixes if n < size]
 
 
+def terminal_s03_records_valid(value, count):
+    """Require exact terminal SSE done records for the one configured dialog."""
+    records = value.get('done_records') if isinstance(value, dict) else None
+    return (type(count) is int and isinstance(records, list) and len(records) == count
+            and all(isinstance(record, dict) and record.get('saved') is True
+                    and record.get('s03_integrated') is True
+                    and record.get('dialog_matches') is True for record in records))
+
+
 def two_parts_observed(release, value):
     prefixes = proper_prefixes(value)
     if not prefixes:
@@ -190,11 +200,11 @@ def rewrite_browser(body):
         "                        own=(request.method=='POST' and allowed_qa_request(\n"
         "                             stream_admitted,second_permitted,prompt,second_prompt,body,did))\n",
         "                        own=(request.method=='POST' and allowed_qa_request(\n"
-        "                             stream_admitted,False,prompt,second_prompt,body,did))\n")
+        "                             stream_admitted,second_permitted,prompt,second_prompt,body,did))\n")
     body = replace_once(body,
         "                    if not own:\n                        blocked['non_qa_generation']+=1\n                        return await route.abort()\n",
         "                    if not own:\n                        blocked['non_qa_generation']+=1\n                        return await route.abort()\n"
-        "                    if native_admitted>=1:\n                        blocked['duplicate_qa_generation']+=1\n                        return await route.abort()\n"
+        "                    if native_admitted>=2:\n                        blocked['duplicate_qa_generation']+=1\n                        return await route.abort()\n"
         "                    native_admitted+=1\n")
     body = replace_once(body,
         "                    # Consume admission before any uncertain network delivery:\n"
@@ -256,7 +266,11 @@ def rewrite_browser(body):
         "            report['proper_prefix_count_before_done']=len(_nox_proper_prefixes(final))\n"
         "            report['two_proper_prefixes_before_done']=report['proper_prefix_count_before_done']>=2\n"
         "            report['strict_progressive_stream_observed']=progressive_stream_valid(final)\n"
-        "            if not report['authenticated_native_endpoint_stream_verified'] or not report['s03_readback_verified']:\n"
+        "            report['first_turn_terminal_sse_verified']=_nox_terminal_s03_records_valid(final,1)\n"
+        "            report['authenticated_native_endpoint_stream_verified']=(\n"
+        "                report.get('owner_auth_verified') == {'anonymous_status':401,'login_status':200,'session_status':200}\n"
+        "                and report.get('actual_native_backend') is True and final.get('native_calls')==1)\n"
+        "            if not report['authenticated_native_endpoint_stream_verified'] or not report['first_turn_terminal_sse_verified']:\n"
         "                raise RuntimeError('HOLD_STREAM_ONLY_NATIVE_OR_S03')\n")
     body = replace_once(body,
         "            if public!=EXPECTED:\n                raise RuntimeError('HOLD_SYNTHETIC_MODEL_QUALITY')\n",
@@ -277,6 +291,118 @@ def rewrite_browser(body):
     body = replace_once(body, "            report['privacy_guard_counts']=dict(blocked)\n",
         "            report['privacy_guard_counts']=dict(blocked)\n"
         "            report['native_posts_admitted']=native_admitted\n")
+    body = replace_once(body,
+        "   stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0};",
+        "   stopSamples:0,stopVisibleSamples:0,stopOccludedSamples:0,doneRecords:[]};")
+    body = replace_once(body,
+        "           q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,\n"
+        "                   dialog_matches:frame.dialog_id===cfg.did};",
+        "           q.done={saved:frame.saved===true,s03_integrated:frame.s03_integrated===true,\n"
+        "                   dialog_matches:frame.dialog_id===cfg.did};\n"
+        "           q.doneRecords.push({...q.done});")
+    body = replace_once(body,
+        "   native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,error:q.error,",
+        "   native_bytes:q.nativeBytes,native_calls:q.nativeCalls,done:q.done,done_records:q.doneRecords,error:q.error,")
+    body = replace_once(body,
+        """            report['browser_stage']='QA_DIALOG_HISTORY'
+            await page.wait_for_timeout(350)
+            initial=await json_response(await context.request.get(
+                base+'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=6',max_redirects=0,timeout=6000))
+            if initial.get('messages')!=[]:
+                raise RuntimeError('HOLD_SYNTHETIC_DIALOG_NOT_EMPTY')
+            report['empty_dialog_history_verified']=True""",
+        """            report['browser_stage']='QA_DIALOG_HISTORY'
+            report['fresh_synthetic_dialog_preflight']=True""")
+    body = replace_between(body,
+        "            report['browser_stage']='QA_PERSISTED_HISTORY'\n",
+        "            report['stop_visible_during_generation']",
+        """            report['browser_stage']='QA_FIRST_TURN_TERMINAL_SSE'
+            answer=await page.evaluate('window.__NOX_BROWSER_QA.answer')
+            if not isinstance(answer,str) or not 1 <= len(answer) <= 4096:
+                raise RuntimeError('HOLD_FIRST_TURN_ANSWER_BOUND')
+            first_done=final.get('done') if isinstance(final,dict) else None
+            first_terminal=_nox_terminal_s03_records_valid(final,1)
+            native_equal=final.get('dom_answer_matches_native') is True
+            public=public_numeric_answer(answer)
+            report.update(stream=final,first_turn_terminal_sse_verified=first_terminal,
+                          first_turn_sse_saved=isinstance(first_done,dict) and first_done.get('saved') is True,
+                          first_turn_sse_s03_integrated=isinstance(first_done,dict) and first_done.get('s03_integrated') is True,
+                          first_turn_sse_dialog_matches=isinstance(first_done,dict) and first_done.get('dialog_matches') is True,
+                          actual_native_model_stream_verified=bool(final.get('native_calls')==1 and first_terminal),
+                          answer_sha256=digest(answer.encode()),answer_characters=len(answer),
+                          synthetic_number_sequence_pass=public==EXPECTED,
+                          synthetic_public_numeric_answer=public,
+                          progressive_stream_render_verified=progressive_stream_valid(final),
+                          elapsed_turn_ms=round((time.monotonic()-started)*1000))
+            report['s03_readback_verified']=False
+""")
+    body = replace_once(body,
+        """                report['browser_stage']='QA_SECOND_TURN_SEND'
+""",
+        """                report['resources_at_second_submit']=budget()
+                report['served_asset_sha256_before_second_post']=await _nox_served_bridge_sha256(page)
+                report['second_pre_post_admission']=_nox_pre_post_admission(
+                    owner_authenticated=report.get('owner_auth_verified') == {'anonymous_status':401,'login_status':200,'session_status':200},
+                    lease_held=report.get('owner_lease_held') is True,
+                    stop_clear=not stop_present(), resources=report['resources_at_second_submit'],
+                    served_asset_sha256=report['served_asset_sha256_before_second_post'])
+                report['browser_stage']='QA_SECOND_TURN_SEND'
+""")
+    body = replace_once(body,
+        """                if (not second_final or second_final.get('native_calls')!=2
+                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')):
+                    raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')""",
+        """                if (not second_final or second_final.get('native_calls')!=2
+                        or not second_final.get('done') or not second_final.get('dom_answer_matches_native')
+                        or not _nox_terminal_s03_records_valid(second_final,2)):
+                    raise RuntimeError('HOLD_SECOND_TURN_STREAM_NOT_RENDERED')""")
+    body = replace_between(body,
+        "                # This endpoint is dialog-history, not the canonical S03 writer/readback.\n",
+        "                if stream_admitted!=2:\n",
+        """                second_public=public_numeric_answer(second_answer)
+                second_progressive=progressive_stream_valid(second_final)
+                second_done=isinstance(second_final.get('done'),dict) and all(
+                    value is True for value in second_final['done'].values())
+                terminal_pair_verified=_nox_terminal_s03_records_valid(second_final,2)
+                same_dialog_id=terminal_pair_verified
+                second_stop=bool(second_final.get('stop_samples',0)>0
+                    and second_final.get('stop_samples')==second_final.get('stop_visible_samples')
+                    and second_final.get('stop_occluded_samples')==0)
+                history_verified=bool(second_saved and second_native_equal)
+                authenticated_history=bool(
+                    report.get('owner_auth_verified') == {'anonymous_status':401,'login_status':200,'session_status':200}
+                    and history_verified)
+                report.update(multiturn_dialog_history_verified=second_saved,
+                              authenticated_s03_history_readback_verified=authenticated_history,
+                              canonical_s03_receipt_verified=False,
+                              canonical_s03_receipt_provider_present=False,
+                              owner_authenticated_history_readback_gets=1,
+                              both_terminal_sse_done_records_saved_s03_integrated=terminal_pair_verified,
+                              same_dialog_id=same_dialog_id,
+                              native_terminal_done_records=[
+                                  {'saved':row.get('saved') is True,
+                                   's03_integrated':row.get('s03_integrated') is True,
+                                   'dialog_id_matches':row.get('dialog_matches') is True}
+                                  for row in second_final.get('done_records',[])
+                                  if isinstance(row,dict)],
+                              multiturn_canonical_s03_verified=False,
+                              multiturn_second_native_equal=second_native_equal,
+                              multiturn_second_terminal_saved=second_done,
+                              multiturn_second_visible_progressive=second_progressive,
+                              multiturn_second_stop_visible=second_stop,
+                              multiturn_second_answer_sha256=digest(second_answer.encode()),
+                              multiturn_second_numeric_pass=second_public=='10,9,8,7,6,5,4,3,2,1',
+                              multiturn_native_post_count=second_final['native_calls'],
+                              multiturn_second_elapsed_ms=round((time.monotonic()-second_started)*1000))
+                if not (terminal_pair_verified and same_dialog_id):
+                    raise RuntimeError('HOLD_MULTITURN_TERMINAL_S03')
+                if not authenticated_history:
+                    raise RuntimeError('HOLD_AUTHENTICATED_S03_HISTORY_READBACK')
+                if not (second_saved and second_native_equal and second_done
+                        and second_progressive and second_stop
+                        and second_public=='10,9,8,7,6,5,4,3,2,1'):
+                    raise RuntimeError('HOLD_MULTITURN_BROWSER')
+""")
     for forbidden in ('capture_private_screenshot(', 'check_report_layout(', '_nox_responsive_layout(',
                       'require_screenshot_captures(', 'set_viewport_size('):
         require(forbidden not in body, 'EXCLUDED_STAGE_PRESENT')
@@ -301,6 +427,7 @@ def install(core, raw, transport, transport_raw, release, release_raw):
     core._nox_served_bridge_sha256 = served_bridge_sha256
     core._nox_proper_prefixes = proper_prefixes
     core._nox_two_parts_observed = lambda value: two_parts_observed(release, value)
+    core._nox_terminal_s03_records_valid = terminal_s03_records_valid
     return core
 
 
@@ -335,18 +462,20 @@ def main(core):
         affinity = sorted(os.sched_getaffinity(0))
         if len(affinity) > 2:
             os.sched_setaffinity(0, set(affinity[:2]))
-        report = {'schema': SCHEMA, 'scope': 'AUTHENTICATED_NATIVE_ENDPOINT_VISIBLE_PARTIALS_S03_REDUCED_MOTION_ONLY',
+        report = {'schema': SCHEMA, 'scope': 'AUTHENTICATED_TWO_TURN_NATIVE_STREAM_S03_HISTORY_READBACK_REDUCED_MOTION_ONLY',
             'request': request, 'source_sha': source, 'started_at': time.time(), 'state': 'RUNNING',
             'owner_lease_held': True,
             'actual_native_backend': False, 'authenticated_native_endpoint_stream_verified': False,
+            'authenticated_s03_history_readback_verified': False, 'canonical_s03_receipt_verified': False,
+            'owner_authenticated_history_readback_gets': 0,
             'upstream_model_inference_verified': False, 'upstream_model_request_bound': False,
             'synthetic_backend_used': False, 'stream_only_acceptance_verified': False,
             'strict_progressive_gate_unchanged': True, 'two_parts_observed': False,
             'full_browser_qa_evaluated': False, 'full_browser_qa_promoted': False,
             'screenshot_or_layout_matrix_evaluated': False, 'screenshots_exported': False,
             'private_text_or_credentials_exported': False, 'production_configuration_changed': False,
-            'session_stop_requested_for_own_pending_stream': False,
-            'fixture_number_count': 40, 'maximum_new_dialogs': 1, 'maximum_native_posts': 1,
+            'session_stop_requested_for_own_pending_stream': False, 'two_turn_mode': True,
+            'fixture_number_count': 40, 'maximum_new_dialogs': 1, 'maximum_native_posts': 2,
             'browser_endpoint_protocol': 'NDJSON', 'upstream_SSE_binding_verified': False,
             'artifacts': [], 'rendering_mode': 'CPU_SWIFTSHADER_STREAM_ONLY_REDUCED_MOTION',
             'browser_motion_preference': 'reduce', 'normal_animation_evaluated': False,
