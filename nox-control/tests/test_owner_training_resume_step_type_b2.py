@@ -268,6 +268,39 @@ class CheckpointStepProvenance(unittest.TestCase):
                 file_sha(fifo)
 
 
+    def test_final_receipt_uses_live_proxy_8080_not_retired_8081(self):
+        # The final receipt used to check 8081, a retired/closed port, even
+        # when resource admission had verified healthy serving on 8080.
+        # Execute only the actual final If AST: no trainer, service or S03.
+        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "main")
+        health = [
+            node for node in ast.walk(main)
+            if isinstance(node, ast.If)
+            and "result['chat_after'].get(" in ast.unparse(node.test)
+        ]
+        self.assertEqual(len(health), 1)
+        self.assertEqual(ast.unparse(health[0].test),
+                         "result['chat_after'].get('8080') != 200")
+        isolated = ast.Module(body=[copy.deepcopy(health[0])], type_ignores=[])
+        compiled = compile(ast.fix_missing_locations(isolated), str(SOURCE), "exec")
+
+        healthy = {"result": {"chat_after": {"8080": 200,
+                                               "8081": "ConnectionRefusedError"}},
+                   "success": True}
+        exec(compiled, healthy)
+        self.assertTrue(healthy["success"])
+        self.assertNotIn("chat_health_regression", healthy["result"])
+
+        # A healthy 8081 cannot conceal failure of the real chat proxy.
+        degraded = {"result": {"chat_after": {"8080": "ConnectionRefusedError",
+                                                "8081": 200}}, "success": True}
+        exec(compiled, degraded)
+        self.assertFalse(degraded["success"])
+        self.assertIs(degraded["result"]["chat_health_regression"], True)
+
+
     def test_resource_admission_requires_actual_proxy_8080_not_legacy_8081(self):
         # Owner-confirmed 2026-11-19: proxy /health=200 on 8080; 8081 closed.
         # This source-only test never contacts the host or starts training.
