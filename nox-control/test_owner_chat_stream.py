@@ -380,6 +380,51 @@ class StreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stream._normal_calls([{'name':'calculate','arguments':'{}'}],0)[0]['arguments'],{})
         self.assertEqual(stream._normal_calls([{'name':'calculate','arguments':{'value':0}}],0)[0]['arguments'],{'value':0})
 
+    async def test_ambiguous_model_sse_json_holds_without_tool_or_s03_receipt(self):
+        # Duplicate keys and non-finite numbers must not be reinterpreted
+        # by Python's permissive JSON decoder before native tool dispatch.
+        malformed=(
+            '{"choices":[{"delta":{"content":"safe","content":"overwritten"},"finish_reason":null}]}',
+            '{"choices":[{"delta":{"tool_calls":[],"tool_calls":[{"index":0}]},"finish_reason":null}]}',
+            '{"choices":[{"delta":{"content":"answer"},"finish_reason":null}],"meta":NaN}',
+            '{"choices":[{"delta":{"content":"answer"},"finish_reason":null}],"meta":Infinity}',
+            '{"choices":[{"delta":{"content":"answer"},"finish_reason":null}],"meta":1e999}',
+        )
+        for raw in malformed:
+            with self.subTest(raw=raw):
+                chunks=Chunks([('data: '+raw+'\\n\\n').encode(),
+                               frame(finish='stop'),b'data: [DONE]\\n\\n'])
+                _,factory=self.transport([chunks])
+                native=self.native()
+                payload={'messages':[{'role':'user','content':'Complete prior context'}]}
+                with factory:
+                    response=await native['owner_completion'](
+                        'http://native/model',payload,'Complete prior context',True)
+                    wire=''.join([chunk async for chunk in response.body_iterator])
+                self.assertIn('HOLD_MODEL_SSE_INVALID',wire)
+                self.assertNotIn('[DONE]',wire)
+                self.assertNotIn('_agent_final',payload)
+                self.assertEqual(self.dispatched,[])
+                self.assertTrue(chunks.closed)
+
+    def test_ambiguous_tool_argument_json_rejected_without_default_object(self):
+        malformed=(
+            '{"action":"read","action":"write"}',
+            '{"nested":{"id":"first","id":"second"}}',
+            '{"value":NaN}',
+            '{"value":Infinity}',
+            '{"value":-Infinity}',
+            '{"value":1e999}',
+        )
+        for raw in malformed:
+            with self.subTest(raw=raw):
+                with self.assertRaisesRegex(stream.StreamFailure,'HOLD_TOOL_ARGUMENTS'):
+                    stream._normal_calls([{'id':'call-1','name':'calculate','arguments':raw}],0)
+        good='{"unicode":"¿Qué tal?","ratio":1e-5}'
+        self.assertEqual(stream._normal_calls(
+            [{'id':'call-1','name':'calculate','arguments':good}],0
+        )[0]['arguments'],{'unicode':'¿Qué tal?','ratio':1e-5})
+
     def test_normalized_tool_ids_are_bounded_for_native_and_heuristic_routes(self):
         for value in ('z'*161, 12, [], ''):
             with self.subTest(value_type=type(value).__name__,size=len(value) if hasattr(value,'__len__') else 0):
