@@ -1,8 +1,8 @@
 name: NOX B2 4A02 paused checkpoint step-type gate
 on:
-  push:
+  pull_request:
     branches:
-      - b2-4a02-paused-step-type-gate-20261119
+      - repair/nox-native-reflex-autorefill-20261119
     paths:
       - 'nox-control/owner_training_resume.py'
       - 'nox-control/tests/test_owner_training_resume_step_type_b2.py'
