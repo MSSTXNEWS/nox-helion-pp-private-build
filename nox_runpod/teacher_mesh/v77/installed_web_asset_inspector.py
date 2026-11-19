@@ -140,11 +140,45 @@ def _asset_path(root: str, rel: str, *, web_asset: bool = True) -> str:
     return checked
 
 
-def _read_asset(path: str) -> bytes:
-    # Asset files need not be owner-only, but every component is checked above.
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+def _open_dir_absolute(path: str) -> int:
+    """Open an absolute directory by walking each component without following links."""
+    if not os.path.isabs(path):
+        raise Hold("static root must be absolute")
+    fd = os.open("/", os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0))
     try:
-        fd = os.open(path, flags)
+        for part in Path(path).parts[1:]:
+            if part in ("", ".", ".."):
+                raise Hold("static root contains unsafe component")
+            next_fd = os.open(part, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0), dir_fd=fd)
+            os.close(fd)
+            fd = next_fd
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def _open_beneath(root_fd: int, rel: str) -> int:
+    p = PurePosixPath(rel)
+    if p.is_absolute() or not p.parts or any(x in ("", ".", "..") for x in p.parts):
+        raise Hold("file path is not a safe relative path")
+    current = os.dup(root_fd)
+    try:
+        for part in p.parts[:-1]:
+            next_fd = os.open(part, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0), dir_fd=current)
+            os.close(current)
+            current = next_fd
+        return os.open(p.parts[-1], os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0), dir_fd=current)
+    except OSError as exc:
+        raise Hold("file path could not be opened beneath the static root") from exc
+    finally:
+        os.close(current)
+
+
+def _read_asset(root_fd: int, rel: str) -> bytes:
+    # Asset files need not be owner-only, but every component is checked above.
+    try:
+        fd = _open_beneath(root_fd, rel)
     except OSError as exc:
         raise Hold("allowlisted asset cannot be opened safely") from exc
     try:
@@ -263,11 +297,11 @@ def inspect(proc_root: str, receipt_path: str, *, now: int | None = None,
     if not isinstance(r["static_root"], str) or root_arg is None or root_arg != r["static_root"]:
         raise Hold("process does not expose the receipt's explicit static root")
     root = _safe_path_components(r["static_root"], must_exist_dir=True)
-    if not os.path.isabs(r["manifest_rel"]):
-        manifest_path = _asset_path(root, r["manifest_rel"], web_asset=False)
-    else:
+    if os.path.isabs(r["manifest_rel"]):
         raise Hold("manifest must be relative to the static root")
-    manifest = _read_asset_bounded(manifest_path, MAX_MANIFEST)
+    _asset_path(root, r["manifest_rel"], web_asset=False)
+    root_fd = _open_dir_absolute(root)
+    manifest = _read_asset_bounded(root_fd, r["manifest_rel"], MAX_MANIFEST)
     try:
         m = json.loads(manifest)
     except (UnicodeError, json.JSONDecodeError) as exc:
@@ -282,14 +316,16 @@ def inspect(proc_root: str, receipt_path: str, *, now: int | None = None,
     _parse_origin(origin)
     results = []
     for rel in assets:
-        disk = _read_asset(_asset_path(root, rel))
+        _asset_path(root, rel)
+        disk = _read_asset(root_fd, rel)
         served = fetcher(origin, r["route_prefix"], rel, MAX_ASSET_BYTES)
         disk_sha = hashlib.sha256(disk).hexdigest()
         served_sha = hashlib.sha256(served).hexdigest()
         if disk_sha != served_sha:
             raise Hold("served asset hash differs from installed asset hash")
         results.append({"path": rel, "bytes": len(disk), "sha256": disk_sha, "served_sha256": served_sha})
-    if _start_ticks(proc_root, pid) != expected_ticks:
+    os.close(root_fd)
+    if _start_ticks(proc_root, pid) != expected_ticks or _proc_uid(proc_root, pid) != uid:
         raise Hold("PID changed during inspection")
     return {"result": "PASS_READ_ONLY", "pid": pid, "start_ticks": expected_ticks,
             "uid": uid, "entrypoint_basename": os.path.basename(exe),
@@ -297,10 +333,9 @@ def inspect(proc_root: str, receipt_path: str, *, now: int | None = None,
             "manifest_sha256": hashlib.sha256(manifest).hexdigest(), "assets": results}
 
 
-def _read_asset_bounded(path: str, limit: int) -> bytes:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+def _read_asset_bounded(root_fd: int, rel: str, limit: int) -> bytes:
     try:
-        fd = os.open(path, flags)
+        fd = _open_beneath(root_fd, rel)
     except OSError as exc:
         raise Hold("manifest cannot be opened safely") from exc
     try:
