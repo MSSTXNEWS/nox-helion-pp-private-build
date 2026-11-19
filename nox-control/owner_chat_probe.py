@@ -65,6 +65,15 @@ def require_durable_result(saved, answered, phase):
         raise RuntimeError('HOLD_CHAT_PROBE_' + phase + '_NOT_ACCEPTED')
 
 
+def require_executor_witness(done, messages, turns, owner_observed, model_matches):
+    """Fail closed if an issued third chat turn is not persisted or disagrees with live owner state."""
+    durable = (isinstance(done, dict) and done.get('saved') is True
+               and done.get('s03_integrated') is True
+               and history_matches_turns(messages, turns))
+    if not (durable and owner_observed and model_matches):
+        raise RuntimeError('HOLD_CHAT_PROBE_EXECUTOR_TURN_NOT_ACCEPTED')
+
+
 def numeric_public_answer(text):
     # Raw model text can unexpectedly draw on private memory. Export only a
     # bounded numeric answer to this synthetic arithmetic prompt, plus hashes.
@@ -225,15 +234,22 @@ def main():
                 text=turn3['answer'];end=turn3['done']
                 fresh=obj(request(client,'/api/ui/executors'))
                 rows=fresh.get('workers',[])
-                count=bool(fresh.get('state')=='OBSERVED' and fresh.get('configured')==6 and len(rows)==6
+                count=bool(fresh.get('state')=='OBSERVED' and fresh.get('configured')==6 and isinstance(rows,list) and len(rows)==6
                            and len({row.get('id') for row in rows if isinstance(row,dict)})==6)
                 phrase=bool(re.search(r'настроено\s+6\s+исполнител',text,re.I)
                             and re.search(r'6\s+исполнителей\s*\+\s*NOX',text))
-                emit('chat_executor_question',{'verified_six_plus_nox':count and phrase,
+                third_history=obj(request(client,'/api/ui/memory/dialogs/history?dialog_id='+did+'&limit=8')).get('messages',[])
+                expected_three=[(prompt,answer),(followup,answer2),(question,text)]
+                third_durable=(isinstance(end,dict) and end.get('saved') is True
+                               and end.get('s03_integrated') is True
+                               and history_matches_turns(third_history,expected_three))
+                emit('chat_executor_question',{'verified_six_plus_nox':bool(count and phrase and third_durable),
                     'live_api_fresh':count,'native_answer_matches_six_plus_nox':phrase,
                     'saved':end.get('saved') is True,'s03_integrated':end.get('s03_integrated') is True,
+                    'three_turn_history_verified':third_durable,
                     'first_meaningful_delta_ms':turn3['first_meaningful_delta_ms'],
                     'answer_sha256':digest(text.encode()),'raw_answer_exported':False})
+                require_executor_witness(end,third_history,expected_three,count,phrase)
             else:
                 fresh=obj(request(client,'/api/ui/executors',timeout=4))
                 rows=fresh.get('workers',[])
