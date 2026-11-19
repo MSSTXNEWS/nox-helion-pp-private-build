@@ -219,7 +219,15 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     answer = expected_messages[-1].get('content') if expected_messages else None
     expected_hash = (digest(answer.encode('utf-8'))
                      if isinstance(answer, str) and answer.strip() else None)
-    return bool(expected_hash and independent_readback.get('full_answer_sha256') == expected_hash)
+    if not expected_hash or independent_readback.get('full_answer_sha256') != expected_hash:
+        return False
+    # An optional writer-side final-answer hash must corroborate the same
+    # fourth message. A contradictory writer must not be certified just
+    # because independent history/readback happened to match the browser.
+    # Older writer receipts without this field remain source-compatible;
+    # they never replace the required trusted native writer/readback proof.
+    return ('full_answer_sha256' not in writer_receipt
+            or writer_receipt['full_answer_sha256'] == expected_hash)
 
 
 def progressive_stream_valid(value):
