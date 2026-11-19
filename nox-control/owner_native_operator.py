@@ -27,8 +27,8 @@ SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ('nox-control/owner_memory_governor
 FILES['repair'] = 'nox-control/owner_service_sizing_entry.py'
 # One exact owner-approved cache service and warm-hook transaction.
 FILES['repair'] = 'nox-control/owner_native_repair.py'
-SCOPED_REPAIR_BUNDLES[FILES['repair']] = ()
-SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = ()
+SCOPED_REPAIR_BUNDLES[FILES['repair']] = tuple(["owner_refresh_cognition_c04.py","nox_v38_native_context.py","owner_previous_product_dialog.py","owner_stage_native_drive_payload.py"])
+SCOPED_REPAIR_EXTRA_PATHS[FILES['repair']] = tuple(["nox-control/cognition-c04-refresh/owner_refresh_cognition_c04.py","nox-control/cognition-c04-refresh/nox_v38_native_context.py","nox-control/cognition-c04-refresh/owner_previous_product_dialog.py","nox-control/cognition-c04-refresh/owner_stage_native_drive_payload.py"])
 FROZEN_BROWSER_DEPENDENCIES={
     'owner_browser_stream_only_entry.py':'nox-control/pinned/browser_normal_v1/owner_browser_stream_only_entry.py',
     'owner_chat_stream_only_qa.py':'nox-control/pinned/browser_normal_v1/owner_chat_stream_only_qa.py',
