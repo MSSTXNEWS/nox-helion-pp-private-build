@@ -1524,8 +1524,18 @@ class Native:
             # An unavailable/ambiguous S03 reader is not terminal settlement.
             # Preserve the original claim and never authorize a fresh IPC.
             return None
+        # A matching digest alone is not a verified canonical S03 receipt:
+        # bind the independent reader's task, job, phase, row and DB identity.
+        # Missing/falsey/mismatched fields must never settle an interrupted IPC.
         if (not isinstance(proof, dict)
-                or proof.get('receipt_sha256') != terminal['receipt_sha256']):
+                or proof.get('native_verified') is not True
+                or proof.get('receipt_sha256') != terminal['receipt_sha256']
+                or proof.get('task_id') != task_id
+                or proof.get('job_id') != intent['job_id']
+                or proof.get('phase') != phase
+                or type(proof.get('s03_item_id')) is not int
+                or proof['s03_item_id'] <= 0
+                or proof.get('database') != str(DB)):
             return None
         # S03 may have blocked while a lease/claim writer changed the row.
         # Never report a terminal result against an outdated queue snapshot.
