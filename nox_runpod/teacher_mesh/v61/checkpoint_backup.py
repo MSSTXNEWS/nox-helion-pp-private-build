@@ -5,7 +5,7 @@ selects all small checkpoint/optimizer assets from existing /root/nox.
 No plaintext artifacts, no remote service changes, no deletion.
 """
 from __future__ import annotations
-import hashlib,io,json,os
+import hashlib,io,json,os,secrets
 from pathlib import Path
 import subprocess,sys,tarfile,time,shlex
 from nox_runpod.teacher_mesh.v60 import encrypted_backup as v60
@@ -13,8 +13,6 @@ from nox_runpod.teacher_mesh.v60 import encrypted_backup as v60
 RUN=Path(os.environ.get('RUNNER_TEMP','/tmp'))/'nox-v61-checkpoints'
 FINAL=Path('NOX_V61_CHECKPOINT_OPTIMIZER_ENCRYPTED_20261114.tar.age')
 RECEIPT=Path('NOX_V61_CHECKPOINT_OPTIMIZER_RECEIPT.json')
-CANDIDATE=FINAL.with_name(FINAL.name+'.pending')
-RECEIPT_PENDING=RECEIPT.with_name(RECEIPT.name+'.pending')
 ATTACH_ATTEMPTED=False
 
 REMOTE=r"""
@@ -376,10 +374,40 @@ def publish_verified_backup(candidate:Path, final:Path, receipt_path:Path, recei
 
 
 def run():
+    """Acquire an exclusive local export owner before touching shared keys.
+
+    An existing (including stale) owner lock is HOLD for manual reconciliation.
+    """
+    lock=FINAL.with_name(FINAL.name+'.owner.lock')
+    try:
+        fd=os.open(lock,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    except FileExistsError as exc:
+        raise RuntimeError('HOLD_V61_OWNER_LOCK_PRESENT') from exc
+    owned=os.fstat(fd)
+    try:
+        os.write(fd,json.dumps({'schema':'NOX_V61_EXPORT_LOCK_V1',
+                                'pid':os.getpid(),
+                                'created_unix_ns':time.time_ns()}).encode()+b'\n')
+        os.fsync(fd)
+        return _run_locked()
+    finally:
+        os.close(fd)
+        try:
+            current=lock.stat()
+        except FileNotFoundError as exc:
+            raise RuntimeError('HOLD_V61_OWNER_LOCK_LOST') from exc
+        if (current.st_dev,current.st_ino)!=(owned.st_dev,owned.st_ino):
+            raise RuntimeError('HOLD_V61_OWNER_LOCK_REPLACED')
+        lock.unlink()
+
+
+def _run_locked():
     global ATTACH_ATTEMPTED
     # V61 is an owner-reviewed one-shot: never erase a prior published proof.
     if FINAL.exists() or RECEIPT.exists():
         raise RuntimeError('HOLD_V61_EXISTING_PUBLISHED_ARTIFACT')
+    # Separate encrypted candidates by attempt; do not erase previous evidence.
+    candidate=FINAL.with_name(FINAL.name+'.pending.'+secrets.token_hex(12))
     owner,fingerprint=v60.existing_owner_recipient()
     host,port=v60.live_direct_route()
     v60.RUN=RUN
@@ -399,7 +427,7 @@ def run():
     try:
         time.sleep(12)
         for i in range(3):
-            CANDIDATE.unlink(missing_ok=True)
+            candidate.unlink(missing_ok=True)
             command=['ssh','-T','-i',str(v60.conn.KEY),'-p',str(port),
                      '-o','BatchMode=yes','-o','IdentitiesOnly=yes',
                      '-o','ConnectTimeout=10',
@@ -407,7 +435,7 @@ def run():
                      '-o','UserKnownHostsFile='+str(known),
                      'root@'+host,'python3 -c '+shlex.quote(REMOTE)]
             ssh=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-            encrypted=subprocess.Popen(['age','-R',str(recipients),'-o',str(CANDIDATE)],
+            encrypted=subprocess.Popen(['age','-R',str(recipients),'-o',str(candidate)],
                 stdin=ssh.stdout,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             ssh.stdout.close()
             try:
@@ -417,7 +445,7 @@ def run():
                 ssh.kill();encrypted.kill()
                 ssh.communicate();encrypted.communicate()
                 raise RuntimeError('HOLD_CHECKPOINT_STREAM_TIMEOUT')
-            if rc==0 and encrypted.returncode==0 and CANDIDATE.is_file() and CANDIDATE.stat().st_size>1024:
+            if rc==0 and encrypted.returncode==0 and candidate.is_file() and candidate.stat().st_size>1024:
                 break
             emsg=(ssh.stderr.read(10000) if ssh.stderr is not None else b'').lower()
             if rc==1 and b'traceback' in emsg:
@@ -443,18 +471,18 @@ def run():
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_CLASS='+cls)
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_SSH_RC='+str(rc))
             print('NOX_V61_ATTEMPT_'+str(i+1)+'_AGE_RC='+str(encrypted.returncode))
-            print('NOX_V61_ATTEMPT_'+str(i+1)+'_CIPHERTEXT_BYTES='+str(CANDIDATE.stat().st_size if CANDIDATE.exists() else 0))
+            print('NOX_V61_ATTEMPT_'+str(i+1)+'_CIPHERTEXT_BYTES='+str(candidate.stat().st_size if candidate.exists() else 0))
             delay = transport_retry_delay(cls, i)
             if delay is None:
                 raise RuntimeError('HOLD_CHECKPOINT_STREAM_' + cls)
             time.sleep(delay)
 
-        restored=verify(CANDIDATE,identity)
+        restored=verify(candidate,identity)
         receipt={
             'schema':'NOX_V61_ENCRYPTED_CHECKPOINT_RECEIPT_V1',
             'instance_id':60509551,
-            'ciphertext_sha256':v60.sha256_file(CANDIDATE),
-            'ciphertext_bytes':CANDIDATE.stat().st_size,
+            'ciphertext_sha256':v60.sha256_file(candidate),
+            'ciphertext_bytes':candidate.stat().st_size,
             'checkpoint_optimizer_files':restored['count'],
             'original_total_bytes':restored['total_bytes'],
             'restored_plain_sha256':restored['plaintext_sha256'],
@@ -469,7 +497,7 @@ def run():
             'remote_cleanup_performed':False,
             'live_training_restarted':False,
         }
-        publish_verified_backup(CANDIDATE,FINAL,RECEIPT,receipt)
+        publish_verified_backup(candidate,FINAL,RECEIPT,receipt)
         print('NOX_V61_CHECKPOINT_COUNT='+str(restored['count']))
         print('NOX_V61_SOURCE_BYTES='+str(restored['total_bytes']))
         print('NOX_V61_CIPHERTEXT_SHA256='+receipt['ciphertext_sha256'])
@@ -491,7 +519,6 @@ if __name__=='__main__':
         try:
             if ATTACH_ATTEMPTED and v60.conn.TRACK.exists():v60.conn.cleanup()
         except Exception:print('HOLD_V61_KEY_CLEANUP',file=sys.stderr)
-        if ATTACH_ATTEMPTED:
-            CANDIDATE.unlink(missing_ok=True)
-            RECEIPT_PENDING.unlink(missing_ok=True)
+        # Preserve per-attempt encrypted .pending evidence after unknown failure.
+        # No global staging path may be unlinked by another execution.
         raise SystemExit(2)
