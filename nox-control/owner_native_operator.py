@@ -3,13 +3,13 @@
 No push/PR activation, no secret export, no blind retry of native mutations.
 """
 from __future__ import annotations
-import argparse, base64, contextlib, hashlib, ipaddress, json, os, re, socket, subprocess, sys, time
+import argparse, base64, contextlib, hashlib, ipaddress, json, os, re, shlex, socket, stat, subprocess, sys, time
 from pathlib import Path
 REPO='MSSTXNEWS/nox-helion-pp-private-build'
 OWNER_ID=340718567
 INSTANCE=60509551
 PIN='SHA256:G4hmMllaT4uSfx+Gup9vjSySLXJT1cSc/9XePr7XmGc'
-FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'reflex_successor': 'nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
+FILES={'audit': 'nox-control/owner_native_audit.py', 'inspect': 'nox-control/owner_native_inspect.py', 'source_attest': 'nox-control/owner_chat_s03_source_attest.py', 'source_export': 'nox-control/owner_chat_s03_source_export.py', 'stage': 'nox-control/owner_native_stage.py', 'repair': 'nox-control/systemic_relay_20261118/owner_native_reflex_restore_entry.py', 'reflex_successor': 'nox-control/systemic_relay_20261118/owner_native_reflex_successor_entry.py', 'lifeline': 'nox-control/owner_native_lifeline.py'}
 MASTER=None
 
 # GitHub Actions may omit an individual log line above the operator's historical
@@ -1088,7 +1088,121 @@ def repair_bundle_paths(action,entrypoint,paths):
     if any(not Path(path).is_file() for path in result):raise RuntimeError('HOLD_SCOPED_BUNDLE_MISSING_FILE')
     return result
 
-def authorize_event(action):
+
+SOURCE_EXPORT_META='NOX_MAINT_SOURCE_EXPORT_META='
+SOURCE_EXPORT_CHUNK='NOX_MAINT_SOURCE_EXPORT_CHUNK='
+SOURCE_EXPORT_COMPLETE='NOX_MAINT_SOURCE_EXPORT_COMPLETE=true'
+SOURCE_EXPORT_RECEIPT='NOX_MAINT_SOURCE_EXPORT_RECEIPT='
+SOURCE_EXPORT_SCHEMA='NOX_ENCRYPTED_SOURCE_EXPORT_ENVELOPE_V1'
+SOURCE_EXPORT_MAX_BYTES=1024*1024
+SOURCE_EXPORT_MAX_CHUNKS=120
+
+def source_export_key_info(encoded,now=None):
+    if not isinstance(encoded,str) or len(encoded)>12000 or not re.fullmatch('[A-Za-z0-9_-]+',encoded):
+        raise RuntimeError('HOLD_SOURCE_EXPORT_KEY_FORMAT')
+    try:
+        raw=base64.urlsafe_b64decode(encoded+'='*((-len(encoded))%4))
+        value=json.loads(raw)
+        canonical=json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()
+        fields={'schema','scope','key_id','transfer_id','created_at','expires_at','public_key_pem'}
+        if raw!=canonical or not isinstance(value,dict) or set(value)!=fields:raise ValueError()
+        if value.get('schema')!='NOX_OWNER_SOURCE_EXPORT_KEY_V1' or value.get('scope')!='NOX_S03_SOURCE_EXPORT_V1':raise ValueError()
+        if not re.fullmatch('[A-Za-z0-9_.-]{1,80}',value.get('key_id','')):raise ValueError()
+        if not re.fullmatch('[a-f0-9]{32}',value.get('transfer_id','')):raise ValueError()
+        if type(value.get('created_at')) is not int or type(value.get('expires_at')) is not int:raise ValueError()
+        now=int(time.time()) if now is None else now
+        if value['created_at']>now+300 or value['expires_at']<now or value['expires_at']-value['created_at']>3600:raise ValueError()
+        pem=value.get('public_key_pem')
+        if not isinstance(pem,str) or len(pem)>12000 or not pem.startswith('-----BEGIN PUBLIC KEY-----\n') or not pem.rstrip().endswith('-----END PUBLIC KEY-----') or 'PRIVATE KEY' in pem:raise ValueError()
+        return value
+    except Exception:raise RuntimeError('HOLD_SOURCE_EXPORT_KEY_INVALID') from None
+
+def collect_source_export_stdout(stdout,request_id,source_sha):
+    lines=stdout.splitlines();meta=None;chunks={};complete=[]
+    for line in lines:
+        if not line:continue
+        if line.startswith('NOX_MAINT_SOURCE_EXPORT_RESULT='):
+            code=line.split('=',1)[1]
+            raise RuntimeError(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_SOURCE_EXPORT_REMOTE')
+        if line.startswith(SOURCE_EXPORT_META):
+            if meta is not None:raise RuntimeError('HOLD_SOURCE_EXPORT_DUPLICATE_META')
+            try:meta=json.loads(line[len(SOURCE_EXPORT_META):])
+            except Exception:raise RuntimeError('HOLD_SOURCE_EXPORT_META_JSON') from None
+            continue
+        if line.startswith(SOURCE_EXPORT_CHUNK):
+            try:value=json.loads(line[len(SOURCE_EXPORT_CHUNK):])
+            except Exception:raise RuntimeError('HOLD_SOURCE_EXPORT_CHUNK_JSON') from None
+            if not isinstance(value,dict) or set(value)!={'transfer_id','index','data_b64'}:raise RuntimeError('HOLD_SOURCE_EXPORT_CHUNK_SCHEMA')
+            index=value['index'];chunk=value['data_b64']
+            if type(index) is not int or index<0 or index>=SOURCE_EXPORT_MAX_CHUNKS or not isinstance(chunk,str) or len(chunk)>12000 or not re.fullmatch('[A-Za-z0-9+/]*={0,2}',chunk):raise RuntimeError('HOLD_SOURCE_EXPORT_CHUNK_BOUNDS')
+            if index in chunks:raise RuntimeError('HOLD_SOURCE_EXPORT_DUPLICATE_CHUNK')
+            try:data=base64.b64decode(chunk,validate=True)
+            except Exception:raise RuntimeError('HOLD_SOURCE_EXPORT_CHUNK_BASE64') from None
+            if len(data)>9000:raise RuntimeError('HOLD_SOURCE_EXPORT_CHUNK_BOUNDS')
+            chunks[index]=(value['transfer_id'],data)
+            continue
+        if line==SOURCE_EXPORT_COMPLETE:
+            complete.append(line);continue
+        if line.startswith('NOX_MAINT_'):
+            raise RuntimeError('HOLD_SOURCE_EXPORT_UNKNOWN_MARKER')
+        raise RuntimeError('HOLD_SOURCE_EXPORT_UNEXPECTED_STDOUT')
+    if meta is None or len(complete)!=1 or not _has_exact_terminal_completion_marker(stdout,SOURCE_EXPORT_COMPLETE):
+        raise RuntimeError('HOLD_SOURCE_EXPORT_INCOMPLETE')
+    fields={'schema','request_id','source_sha','transfer_id','key_id','total_bytes','total_chunks','envelope_sha256'}
+    if not isinstance(meta,dict) or set(meta)!=fields or meta.get('schema')!='NOX_SOURCE_EXPORT_TRANSFER_V1':raise RuntimeError('HOLD_SOURCE_EXPORT_META_SCHEMA')
+    if type(meta.get('request_id')) is not int or meta['request_id']!=int(request_id) or meta.get('source_sha')!=source_sha:raise RuntimeError('HOLD_SOURCE_EXPORT_REQUEST_BINDING')
+    if not re.fullmatch('[a-f0-9]{32}',str(meta.get('transfer_id',''))) or not re.fullmatch('[A-Za-z0-9_.-]{1,80}',str(meta.get('key_id',''))):raise RuntimeError('HOLD_SOURCE_EXPORT_META_ID')
+    if type(meta.get('total_bytes')) is not int or not 1<=meta['total_bytes']<=SOURCE_EXPORT_MAX_BYTES:raise RuntimeError('HOLD_SOURCE_EXPORT_SIZE')
+    if type(meta.get('total_chunks')) is not int or not 1<=meta['total_chunks']<=SOURCE_EXPORT_MAX_CHUNKS or len(chunks)!=meta['total_chunks']:raise RuntimeError('HOLD_SOURCE_EXPORT_CHUNK_COUNT')
+    if set(chunks)!=set(range(meta['total_chunks'])):raise RuntimeError('HOLD_SOURCE_EXPORT_CHUNK_ORDER')
+    parts=[]
+    for index in range(meta['total_chunks']):
+        tid,data=chunks[index]
+        if tid!=meta['transfer_id']:raise RuntimeError('HOLD_SOURCE_EXPORT_CHUNK_BINDING')
+        parts.append(data)
+    envelope=b''.join(parts)
+    if len(envelope)!=meta['total_bytes'] or hashlib.sha256(envelope).hexdigest()!=meta['envelope_sha256']:raise RuntimeError('HOLD_SOURCE_EXPORT_ENVELOPE_HASH')
+    try:value=json.loads(envelope)
+    except Exception:raise RuntimeError('HOLD_SOURCE_EXPORT_ENVELOPE_JSON') from None
+    required={'schema','request_id','source_sha','transfer_id','key_id','bundle_sha256','aad_b64','wrapped_key_b64','nonce_b64','ciphertext_b64'}
+    if not isinstance(value,dict) or set(value)!=required or value.get('schema')!=SOURCE_EXPORT_SCHEMA:raise RuntimeError('HOLD_SOURCE_EXPORT_ENVELOPE_SCHEMA')
+    for key in ('request_id','source_sha','transfer_id','key_id'):
+        if value.get(key)!=meta.get(key):raise RuntimeError('HOLD_SOURCE_EXPORT_ENVELOPE_BINDING')
+    if not re.fullmatch('[0-9a-f]{64}',str(value.get('bundle_sha256',''))):raise RuntimeError('HOLD_SOURCE_EXPORT_BUNDLE_HASH')
+    try:
+        aad=base64.b64decode(value['aad_b64'],validate=True)
+        wrapped=base64.b64decode(value['wrapped_key_b64'],validate=True)
+        nonce=base64.b64decode(value['nonce_b64'],validate=True)
+        cipher=base64.b64decode(value['ciphertext_b64'],validate=True)
+        aad_value=json.loads(aad)
+    except Exception:raise RuntimeError('HOLD_SOURCE_EXPORT_ENVELOPE_ENCODING') from None
+    expected_aad={'schema':'NOX_S03_SOURCE_EXPORT_V1','request_id':request_id,'source_sha':source_sha,'transfer_id':meta['transfer_id'],'key_id':meta['key_id'],'bundle_sha256':value['bundle_sha256']}
+    if aad!=json.dumps(expected_aad,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode() or aad_value!=expected_aad:raise RuntimeError('HOLD_SOURCE_EXPORT_AAD_BINDING')
+    if len(wrapped)!=512 or len(nonce)!=12 or not 16<=len(cipher)<=SOURCE_EXPORT_MAX_BYTES:raise RuntimeError('HOLD_SOURCE_EXPORT_CRYPTO_BOUNDS')
+    canonical=json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()
+    if canonical!=envelope:raise RuntimeError('HOLD_SOURCE_EXPORT_ENVELOPE_CANONICAL')
+    return meta,envelope
+
+def write_source_export_artifact(envelope):
+    directory=Path('artifacts')
+    try:directory.mkdir(mode=0o700)
+    except FileExistsError:pass
+    st=directory.lstat()
+    if not stat.S_ISDIR(st.st_mode) or stat.S_ISLNK(st.st_mode) or st.st_mode&0o022:raise RuntimeError('HOLD_SOURCE_EXPORT_ARTIFACT_DIR')
+    path=directory/'nox-s03-source-export.enc'
+    fd=os.open(str(path),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    try:
+        view=memoryview(envelope);offset=0
+        while offset<len(view):offset+=os.write(fd,view[offset:])
+        os.fsync(fd)
+    except BaseException:
+        os.close(fd)
+        with contextlib.suppress(OSError):path.unlink()
+        raise
+    else:os.close(fd)
+
+
+def authorize_event(action,export_key_b64=None):
     if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
     e=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
     if os.environ.get('GITHUB_REPOSITORY')!=REPO or os.environ.get('GITHUB_EVENT_NAME')!='issue_comment':raise RuntimeError('HOLD_EVENT_SCOPE')
@@ -1097,12 +1211,19 @@ def authorize_event(action):
             or e.get('issue',{}).get('number')!=256 or e.get('sender',{}).get('id')!=OWNER_ID):raise RuntimeError('HOLD_OWNER_COMMAND_IDENTITY')
     sha=os.environ.get('NOX_PINNED_SOURCE_SHA','')
     if not re.fullmatch('[0-9a-f]{40}',sha):raise RuntimeError('HOLD_SOURCE_PIN')
-    if c.get('body')!=f'/nox-maintain {INSTANCE} {sha} {action}':raise RuntimeError('HOLD_EXACT_OWNER_COMMAND')
+    expected=f'/nox-maintain {INSTANCE} {sha} {action}'
+    if action=='source_export':
+        source_export_key_info(export_key_b64)
+        expected+=' '+export_key_b64
+    elif export_key_b64 is not None:raise RuntimeError('HOLD_UNEXPECTED_EXPORT_KEY')
+    if c.get('body')!=expected:raise RuntimeError('HOLD_EXACT_OWNER_COMMAND')
     if subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()!=sha:raise RuntimeError('HOLD_CHECKOUT_MISMATCH')
     return c['id']
 
-def run_native(action,request_id):
+def run_native(action,request_id,export_key_b64=None):
     if action not in FILES:raise RuntimeError('HOLD_ACTION_NOT_ALLOWLISTED')
+    if action=='source_export':source_export_key_info(export_key_b64)
+    elif export_key_b64 is not None:raise RuntimeError('HOLD_UNEXPECTED_EXPORT_KEY')
     global MASTER
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
@@ -1329,20 +1450,25 @@ def run_native(action,request_id):
             if p.is_file():assets[p.name]=base64.b64encode(p.read_bytes()).decode('ascii')
         payload=payload.replace('__NOX_BUNDLE_JSON__',json.dumps(assets))
     sha=os.environ['NOX_PINNED_SOURCE_SHA']
-    script=f"set -euo pipefail\nNOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD'\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
-    timeout=150 if action in ('audit','inspect','source_attest') else 900
+    export_env=(f'NOX_OWNER_EXPORT_KEY_B64={shlex.quote(export_key_b64)} ' if action=='source_export' else '')
+    script=f"set -euo pipefail\n{export_env}NOX_OWNER_SOURCE_SHA={sha} NOX_OWNER_REQUEST_ID={int(request_id)} python3 - <<'NOX_OWNER_PAYLOAD\n"+payload+"\nNOX_OWNER_PAYLOAD\n"
+    timeout=150 if action in ('audit','inspect','source_attest','source_export') else 900
     # Reuse the authenticated channel. A dead master must not fall back to
     # a fresh, potentially ambiguous TCP connection while starting a mutation.
     r=subprocess.run(common+['-o','ControlMaster=no','-o','ProxyCommand=false',host,'bash','-se'],input=script,capture_output=True,text=True,timeout=timeout)
     source_sha=os.environ.get('NOX_PINNED_SOURCE_SHA','')
-    forwarded=forward_remote_stdout(r.stdout,action,int(request_id),source_sha)
+    if action=='source_export':
+        export_meta,envelope=collect_source_export_stdout(r.stdout,int(request_id),source_sha)
+        write_source_export_artifact(envelope)
+        forwarded=[SOURCE_EXPORT_RECEIPT+json.dumps(export_meta,sort_keys=True,separators=(',',':')),SOURCE_EXPORT_COMPLETE]
+    else:forwarded=forward_remote_stdout(r.stdout,action,int(request_id),source_sha)
     for line in forwarded:print(line,flush=True)
     print('NOX_MAINT_REMOTE_EXIT_CODE='+str(r.returncode),flush=True)
     if r.returncode:
         err=r.stderr.lower()
         cls='AUTH' if 'permission denied' in err else 'TIMEOUT' if 'timed out' in err else 'CONNECTION' if 'connect' in err else 'PAYLOAD'
         print('NOX_MAINT_FAILURE_CLASS='+cls,flush=True)
-    marker=SOURCE_ATTEST_COMPLETE_TRUE if action=='source_attest' else 'NOX_MAINT_'+action.upper()+'_COMPLETE=true'
+    marker=SOURCE_ATTEST_COMPLETE_TRUE if action=='source_attest' else SOURCE_EXPORT_COMPLETE if action=='source_export' else 'NOX_MAINT_'+action.upper()+'_COMPLETE=true'
     if r.returncode or not _has_exact_terminal_completion_marker(r.stdout,marker):
         hold='HOLD_SOURCE_ATTESTATION_INCOMPLETE' if action=='source_attest' else 'HOLD_NATIVE_PAYLOAD_INCOMPLETE'
         raise RuntimeError(hold)
@@ -1353,14 +1479,14 @@ def run_native(action,request_id):
     return True
 
 def operator_argument_parser():
-    parser=argparse.ArgumentParser();parser.add_argument('action',choices=FILES);return parser
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=FILES);parser.add_argument('export_key',nargs='?');return parser
 
 def main():
     args=operator_argument_parser().parse_args();good=False
     try:
-        request=authorize_event(args.action)
+        request=authorize_event(args.action,args.export_key)
         print('NOX_MAINT_AUTHORIZED_COMMENT_ID='+str(request),flush=True)
-        good=run_native(args.action,request)
+        good=run_native(args.action,request,args.export_key)
     except Exception as e:
         code=str(e)
         print('NOX_MAINT_RESULT='+(code if re.fullmatch('HOLD_[A-Z0-9_]+',code) else 'HOLD_'+type(e).__name__.upper()),flush=True)

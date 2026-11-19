@@ -1,0 +1,148 @@
+import base64
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import tempfile
+import unittest
+import zipfile
+from io import BytesIO
+
+try:
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    HAS_CRYPTO = True
+except Exception:
+    HAS_CRYPTO = False
+
+ROOT = Path(__file__).parent
+
+
+def load_module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+helper = load_module("nox415_export_helper", ROOT / "owner_chat_s03_source_export.py")
+operator = load_module("nox415_operator", ROOT / "owner_native_operator.py")
+
+
+@unittest.skipUnless(HAS_CRYPTO, "cryptography unavailable")
+class SourceExportTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.private = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+        cls.pem = cls.private.public_key().public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        ).decode("ascii")
+        cls.now = 1795101600
+        cls.key_info = {
+            "schema": "NOX_OWNER_SOURCE_EXPORT_KEY_V1",
+            "scope": "NOX_S03_SOURCE_EXPORT_V1",
+            "key_id": "unit-test-key",
+            "transfer_id": "f" * 32,
+            "created_at": cls.now,
+            "expires_at": cls.now + 1800,
+            "public_key_pem": cls.pem,
+        }
+        cls.key_encoded = base64.urlsafe_b64encode(helper.canonical(cls.key_info)).decode().rstrip("=")
+
+    def sources(self):
+        values = []
+        for name, raw in (("chat_proxy.py", b"private-source-alpha"), ("s03_memory.py", b"private-source-beta")):
+            values.append((name, raw, hashlib.sha256(raw).hexdigest(), None))
+        return values
+
+    def test_roundtrip_contains_exact_sources_only_after_decrypt(self):
+        source_sha = "a" * 40
+        encoded, receipt = helper.make_envelope(
+            self.key_encoded, 123456, source_sha, self.sources(),
+            schema={"status": "UNRESOLVED_STATIC_DB_PATH"}, now=self.now,
+        )
+        self.assertNotIn(b"private-source-alpha", encoded)
+        self.assertNotIn(b"private-source-beta", encoded)
+        envelope = json.loads(encoded)
+        self.assertEqual(envelope["schema"], "NOX_ENCRYPTED_SOURCE_EXPORT_ENVELOPE_V1")
+        aad = base64.b64decode(envelope["aad_b64"])
+        wrapped = base64.b64decode(envelope["wrapped_key_b64"])
+        aes_key = self.private.decrypt(
+            wrapped,
+            padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+        )
+        plain = AESGCM(aes_key).decrypt(base64.b64decode(envelope["nonce_b64"]),
+                                        base64.b64decode(envelope["ciphertext_b64"]), aad)
+        self.assertEqual(hashlib.sha256(plain).hexdigest(), envelope["bundle_sha256"])
+        with zipfile.ZipFile(BytesIO(plain)) as archive:
+            self.assertEqual(archive.read("chat_proxy.py"), b"private-source-alpha")
+            self.assertEqual(archive.read("s03_memory.py"), b"private-source-beta")
+            manifest = json.loads(archive.read("manifest.json"))
+        self.assertEqual(manifest["request_id"], 123456)
+        self.assertEqual(manifest["source_sha"], source_sha)
+        self.assertEqual(receipt["envelope_sha256"], hashlib.sha256(encoded).hexdigest())
+
+    def test_owner_operator_reassembles_only_bound_ciphertext(self):
+        source_sha = "b" * 40
+        encoded, _ = helper.make_envelope(
+            self.key_encoded, 123457, source_sha, self.sources(),
+            schema={"status": "UNRESOLVED_STATIC_DB_PATH"}, now=self.now,
+        )
+        envelope = json.loads(encoded)
+        total = (len(encoded) + helper.CHUNK_BYTES - 1) // helper.CHUNK_BYTES
+        meta = {"schema": "NOX_SOURCE_EXPORT_TRANSFER_V1", "request_id": 123457,
+                "source_sha": source_sha, "transfer_id": self.key_info["transfer_id"],
+                "key_id": self.key_info["key_id"], "total_bytes": len(encoded),
+                "total_chunks": total, "envelope_sha256": hashlib.sha256(encoded).hexdigest()}
+        lines = [operator.SOURCE_EXPORT_META + json.dumps(meta, sort_keys=True, separators=(",", ":"))]
+        for index in range(total):
+            chunk = encoded[index * helper.CHUNK_BYTES:(index + 1) * helper.CHUNK_BYTES]
+            lines.append(operator.SOURCE_EXPORT_CHUNK + json.dumps({
+                "transfer_id": self.key_info["transfer_id"], "index": index,
+                "data_b64": base64.b64encode(chunk).decode()}, sort_keys=True, separators=(",", ":")))
+        lines.append(operator.SOURCE_EXPORT_COMPLETE)
+        parsed_meta, parsed = operator.collect_source_export_stdout("\n".join(lines), 123457, source_sha)
+        self.assertEqual(parsed, encoded)
+        self.assertEqual(parsed_meta["request_id"], 123457)
+        self.assertNotIn(b"private-source-alpha", parsed)
+        with self.assertRaisesRegex(RuntimeError, "REQUEST_BINDING"):
+            operator.collect_source_export_stdout("\n".join(lines), 999999, source_sha)
+
+    def test_key_expiry_and_private_material_rejected(self):
+        self.assertEqual(operator.source_export_key_info(self.key_encoded, now=self.now)["key_id"], "unit-test-key")
+        with self.assertRaisesRegex(ValueError, "KEY_INVALID"):
+            helper.load_export_key(self.key_encoded, now=self.now + 1801)
+        private_info = dict(self.key_info, public_key_pem=self.private.private_bytes(
+            serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption()).decode("ascii"))
+        encoded = base64.urlsafe_b64encode(helper.canonical(private_info)).decode().rstrip("=")
+        with self.assertRaisesRegex(ValueError, "KEY_INVALID"):
+            helper.load_export_key(encoded, now=self.now)
+
+    def test_sqlite_path_requires_static_source_expression(self):
+        static = b"from pathlib import Path\nDB_PATH = Path('/root/nox/kb') / 'knowledge.sqlite'\nconn = sqlite3.connect(DB_PATH)\n"
+        dynamic = b"import os, sqlite3\nDB_PATH = os.environ['NOX_DB']\nconn = sqlite3.connect(DB_PATH)\n"
+        self.assertEqual(helper.resolve_db_path(static), "/root/nox/kb/knowledge.sqlite")
+        self.assertIsNone(helper.resolve_db_path(dynamic))
+
+    def test_export_artifact_is_exclusive_and_private_mode(self):
+        with tempfile.TemporaryDirectory() as td:
+            old = os.getcwd()
+            os.chdir(td)
+            try:
+                operator.write_source_export_artifact(b"ciphertext-only")
+                path = Path("artifacts/nox-s03-source-export.enc")
+                self.assertEqual(path.read_bytes(), b"ciphertext-only")
+                self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                with self.assertRaises(FileExistsError):
+                    operator.write_source_export_artifact(b"replacement")
+                self.assertEqual(path.read_bytes(), b"ciphertext-only")
+            finally:
+                os.chdir(old)
+
+
+if __name__ == "__main__":
+    unittest.main()
