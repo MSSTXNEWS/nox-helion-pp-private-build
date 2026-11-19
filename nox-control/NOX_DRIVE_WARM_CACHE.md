@@ -28,6 +28,6 @@ Without --execute, no model transfer occurs. Drive reads resume only from a priv
 
 ## Native gates
 The new source deliberately DOES NOT replace already pinned owner_drive_ram_bridge.py, owner_native_drive.py or existing dispatcher. It cannot grant OAuth or load a model onto GPU. Only native owner/CAS, STOP, cgroup, S03 and source-hash gated installation may integrate these components.
-Success criteria: authenticated rclone listing; exact SSD SHA receipt; RAM SHA + resource admission; separate GPU service readback. No PASS without each concrete receipt.
+Success criteria: authenticated rclone listing; exact SSD SHA receipts plus the complete-set marker; RAM SHA + resource admission; separate GPU service readback. No PASS without each concrete receipt.
 
 Official transport documentation: https://rclone.org/drive/ and https://rclone.org/docs/
