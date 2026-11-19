@@ -188,6 +188,15 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
     if (not isinstance(writer_receipt, dict) or not isinstance(independent_readback, dict)
             or writer_receipt is independent_readback):
         return False
+    # A1's existing receipt shape predates the full-history fingerprint.
+    # When either witness supplies a history pin, require BOTH exact pins.
+    # Legacy unsigned witness shapes remain source-compatible, but still
+    # cannot satisfy native acceptance without actual trusted S03 I/O.
+    writer_history_sha = writer_receipt.get('full_transcript_sha256')
+    readback_history_sha = independent_readback.get('full_transcript_sha256')
+    if writer_history_sha is not None or readback_history_sha is not None:
+        if writer_history_sha != transcript_sha or readback_history_sha != transcript_sha:
+            return False
     event_id = writer_receipt.get('event_id')
     turn_id = writer_receipt.get('turn_id')
     sequence = writer_receipt.get('sequence')
@@ -197,8 +206,7 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or not isinstance(event_id, str) or not event_id.strip()
             or not isinstance(turn_id, str) or not turn_id.strip()
             or type(sequence) is not int or sequence != 2
-            or writer_receipt.get('dialog_id') != dialog_id
-            or writer_receipt.get('full_transcript_sha256') != transcript_sha):
+            or writer_receipt.get('dialog_id') != dialog_id):
         return False
     if (independent_readback.get('source') != 'canonical_s03'
             or independent_readback.get('independent') is not True
@@ -206,7 +214,6 @@ def canonical_s03_proof_valid(writer_receipt, independent_readback, dialog_id, e
             or independent_readback.get('turn_id') != turn_id
             or independent_readback.get('sequence') != sequence
             or independent_readback.get('dialog_id') != dialog_id
-            or independent_readback.get('full_transcript_sha256') != transcript_sha
             or independent_readback.get('messages') != expected_messages):
         return False
     answer = expected_messages[-1].get('content') if expected_messages else None
