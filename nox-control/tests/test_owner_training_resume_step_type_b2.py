@@ -126,6 +126,38 @@ class CheckpointStepProvenance(unittest.TestCase):
                 redirected_check(helper, redirected)
 
 
+    def test_initial_checkpoint_rejects_optimizer_step_underreport(self):
+        # A valid checkpoint step=2 with only one claimed optimizer update
+        # cannot prove the first two optimizer steps were actually performed.
+        # All files and SHA-256 receipts are valid in this fixture.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            verifier = load_pinned_verifier(root)
+            checkpoint = root / "checkpoint-2"
+            checkpoint.mkdir()
+            (checkpoint / "adapter_model.safetensors").write_bytes(b"tensor-after-two")
+            (checkpoint / "trainer_state.json").write_text(
+                '{"global_step":2}', encoding="utf-8")
+            names = ("adapter_model.safetensors", "trainer_state.json")
+            hashes = {name: verifier["file_sha"](checkpoint / name) for name in names}
+            receipt = {
+                "global_step": 2, "state": "CHECKPOINTED_OWNER_STOP",
+                "native_sha256": "a" * 64,
+                "successful_optimizer_steps": 2,
+                "adapter_delta_verified": True, "loss": 0.4,
+                "before_tensor_sha256": "b" * 64,
+                "after_tensor_sha256": "c" * 64,
+                "checkpoint": {"path": str(checkpoint),
+                               "global_step": 2, "files_sha256": hashes},
+            }
+            helper = types.SimpleNamespace(CHECKPOINT_NAMES=names)
+            self.assertTrue(verifier["verify_paused_result"](helper, receipt))
+            receipt["successful_optimizer_steps"] = 1
+            with self.assertRaisesRegex(RuntimeError,
+                                        "HOLD_PAUSED_OPTIMIZER_RECEIPT"):
+                verifier["verify_paused_result"](helper, receipt)
+
+
     def test_bounded_json_state_rejects_descriptor_symlink_and_oversize(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
