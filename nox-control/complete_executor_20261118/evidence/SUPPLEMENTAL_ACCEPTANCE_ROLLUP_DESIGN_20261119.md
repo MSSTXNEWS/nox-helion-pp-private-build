@@ -28,19 +28,15 @@ The JSON fields, workflow URLs, run IDs, owner comment IDs, and the word ACCEPTE
 
 ## Required consumer contract
 
-The read-only rollup is implemented alongside the existing receipt-derived counts. Do not modify all295_execution_disposition.json, work_receipts.json, task rows, or original_acceptance_added.
+The read-only rollup is implemented in `work_progress.py` and runs only through the NOX progress command's `summarize()`. It is not wired to the live UI or native dispatcher. It reports the immutable 295 baseline, receipt-derived count, and supplemental evidence count in separate fields. It does not alter `tasks.completed`, `total.completed`, the original final-acceptance result, `all295_execution_disposition.json`, or `work_receipts.json`. Every rollup result exposes `original_acceptance_added: 0`.
 
-For each candidate JSON addendum, count a unique TaskID only when all checks pass:
+Two explicitly different evidence schemas are supported:
 
-1. The addendum has schema NOX_NATIVE_EVIDENCE_ADDENDUM_V1, append_only=true, and references the exact frozen all295 manifest blob.
-2. The TaskID exists exactly once in the frozen manifest; the addendum’s criteria key, scope list, record TaskID, and manifest record key all match.
-3. The manifest’s spec_sha256, criteria spec_sha256, and record criterion spec_sha256 are identical.
-4. criteria[task_id].addendum_assessment and the pointed additional_evidence_records[index].result both equal ACCEPTED; the criteria binding pointer resolves to that exact record.
-5. The record’s own evidence_pointer resolves to a non-empty object in the same addendum; workflow run/job IDs and owner authorization ID match across binding, record, and evidence.
-6. The source artifact is a regular non-symlink JSON file, parsed with duplicate-key rejection, and the rollup reports its repository path, URL, file blob/hash, record number, evidence pointer, run ID, and task spec SHA.
-7. Duplicate accepted records for one TaskID count once. Invalid or unreadable addenda make the scan incomplete/HOLD; they must not be silently skipped while publishing a complete total.
+1. **Native run addendum** (`NOX_NATIVE_EVIDENCE_ADDENDUM_V1`). The sidecar must bind a TaskID and exact frozen spec SHA, the pinned all295/work_tasks/work_receipts blobs, and a criteria acceptance pointer to an exact `additional_evidence_records` entry. That record and its evidence pointer must agree on TaskID, ACCEPTED result, scope, workflow run/job IDs, owner authorization ID, and task-specific evidence checks. The #517 GPU inventory and #523 process census variants use distinct record layouts, each validated against its own pins and narrow point-in-time criterion. A native workflow can contain a broader failure/HOLD while a specifically bounded accepted criterion is counted; the output preserves that limitation.
 
-The result should be exposed under a new field such as supplemental_acceptance, with its own state, accepted_unique_task_count, scan_complete, items[], and original_acceptance_added=0. It must not change the existing tasks.completed, total.completed, or final acceptance result.
+2. **Source criterion addendum** (`NOX_SOURCE_EVIDENCE_ADDENDUM_V1`). This currently supports only task `4A01), whose exact frozen all295 spec/title, task row, `accepted_source_criterion`, and frozen input blob claims are checked. It binds the pinned training-source, tokenizer-asset, and GGUF-route manifest files by exact Git blob SHA. The tokenizer asset itself is opened without following symlinks, bounded to the declared size, read twice, and checked against both its SHA-256 and source Git blob SHA-1. The source variant has no native workflow run/job/owner-comment IDs; the rollup labels it `SOURCE_CRITERION` and counts structural source evidence only. It does not infer training admission, downloaded weights, live runtime, or optimizer activity. The source sidecar's `original_295_acceptance_increment: 1` is retained only as a sidecar claim; rollup-level `original_acceptance_added` stays zero.
+
+For each candidate sidecar, the scanner requires a regular non-symlink JSON file with duplicate-key and nonfinite rejection, exact source path/hash reporting, and strict task/spec/source pointer checks. Duplicate accepted TaskIDs count once. Invalid files are listed with exclusion reasons and make the scan incomplete/HOLD; they are not silently skipped while reporting a complete total. This is structural validation of pinned repository artifacts. It does not independently query or re-authenticate external workflow runs, owner comments, or upstream repositories at report time.
 
 ## Frozen inputs
 
