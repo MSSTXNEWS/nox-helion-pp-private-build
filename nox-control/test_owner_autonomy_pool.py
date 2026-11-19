@@ -18,6 +18,51 @@ class PoolTests(unittest.TestCase):
                  'priority':'P0' if i%3==0 else 'P2','resource':'CPU_LIGHT',
                  'source_sha256':'a'*64,'estimated_cost':1+i%9} for i in range(n)]
 
+    def bounded_budget(self, **changes):
+        current = 5_000 * pool.MIB
+        reserved = 3 * (256*pool.MIB + 128*pool.MIB)
+        return {'schema':pool.BOUNDED_CPU_SCHEMA, 'source':'cgroup_v2',
+                'instance_id':60509551, 'observed_at':time.time(), 'worker_slots':3,
+                'current_bytes':current, 'max_bytes':current+reserved+pool.BOUNDED_CPU_HEADROOM,
+                'inactive_file_bytes':0, 'file_bytes':0, 'shmem_bytes':0,
+                'sandbox_limit_bytes':256*pool.MIB, 'planner_reserve_bytes':128*pool.MIB,
+                'minimum_headroom_bytes':pool.BOUNDED_CPU_HEADROOM,
+                'memory_psi_some_avg10':0.0, 'memory_psi_full_avg10':0.0,
+                'cpu_pressure':0.0, **changes}
+
+    def test_bounded_cpu_admission_requires_two_gib_and_only_estimates_cache(self):
+        budget = self.bounded_budget()
+        decision = pool.bounded_cpu_decision(budget)
+        self.assertTrue(decision['eligible'])
+        self.assertEqual(decision['headroom_bytes'], pool.BOUNDED_CPU_HEADROOM)
+        self.assertEqual(decision['reclaimable_bytes'], 0)
+        self.assertEqual(budget['current_bytes'], 5_000*pool.MIB)  # validator performs no cleanup
+        budget['max_bytes'] -= 1
+        decision = pool.bounded_cpu_decision(budget)
+        self.assertFalse(decision['eligible'])
+        self.assertEqual(decision['reason'], 'HOLD_BOUNDED_CPU_HEADROOM')
+
+    def test_bounded_cpu_budget_fails_closed_on_stale_pressure_and_shmem(self):
+        now = time.time()
+        base = self.bounded_budget(observed_at=now)
+        for changes, reason in (({'observed_at':now-6}, 'HOLD_BOUNDED_CPU_STALE_SNAPSHOT'),
+                                ({'observed_at':now+1}, 'HOLD_BOUNDED_CPU_STALE_SNAPSHOT'),
+                                ({'memory_psi_some_avg10':1.0}, 'HOLD_BOUNDED_CPU_MEMORY_PRESSURE'),
+                                ({'cpu_pressure':50.0}, 'HOLD_BOUNDED_CPU_CPU_PRESSURE')):
+            with self.subTest(changes=changes):
+                self.assertEqual(pool.bounded_cpu_decision({**base, **changes}, now=now)['reason'], reason)
+        with self.assertRaisesRegex(pool.AutoHold, 'BUDGET_BYTES'):
+            pool.bounded_cpu_decision({**base, 'shmem_bytes':1})
+
+    def test_dispatcher_resource_admission_compatibility_symbols(self):
+        self.assertEqual(pool.QUEUE_IDS, ('Q1_RUNTIME_CHAT', 'Q2_MEMORY_KNOWLEDGE',
+                                         'Q3_TRAINING_WEIGHTS', 'Q4_INTEGRATION_ACCEPTANCE'))
+        self.assertTrue(pool.bounded_cpu_task({'handler':'owner_native_typed_leaf'}))
+        self.assertFalse(pool.bounded_cpu_task({'handler':'owner_native_typed_leaf','resource':'GPU_EXCLUSIVE'}))
+        self.assertFalse(pool.bounded_cpu_task({'handler':'owner_native_project_work','resource_demand':{}}))
+        self.assertTrue(pool._in_flight(None))
+        self.assertFalse(pool._in_flight('DONE'))
+
     def test_any_count_in_one_command(self):
         rows=self.make_rows(1500)
         result=pool.validate_submission({'schema':pool.SCHEMA,'tasks':rows},allowed_handlers={'owner_component'})
