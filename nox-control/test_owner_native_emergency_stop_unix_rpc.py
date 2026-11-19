@@ -24,7 +24,8 @@ class UnixSupervisorRpcTests(unittest.TestCase):
         self.endpoint = {"daemon": {"pid": 42},
                          "socket": {"resolved_path": "/run/test-supervisor.sock"}}
         self.identity = {"transport": "supervisor_unix_xmlrpc",
-                         "path": "/run/test-supervisor.sock", "sha256": "a" * 64}
+                         "path_kind": "unix_domain_socket",
+                         "endpoint_fingerprint": "a" * 64}
         OWNER.SUPERVISORCTL_BIN = None
         OWNER.SUPERVISORCTL_SELECTED_IDENTITY = self.identity
         OWNER.SUPERVISORCTL_SELECTED_DAEMON_IDENTITY = self.endpoint["daemon"]
@@ -74,7 +75,8 @@ class UnixSupervisorRpcTests(unittest.TestCase):
             result = OWNER.command(["supervisorctl", "-c",
                                     str(OWNER.SUPERVISOR_CLIENT_CONFIG),
                                     "stop", OWNER.SUPERVISOR_SERVICE],
-                                   verified_client_sha256=self.identity["sha256"])
+                                   verified_client_sha256=self.identity[
+                                       "endpoint_fingerprint"])
         self.assertEqual(result.returncode, 0)
         self.assertEqual(rpc.call_args.args[1:3],
                          ("supervisor.stopProcess",
@@ -96,6 +98,8 @@ class UnixSupervisorRpcTests(unittest.TestCase):
     def test_subprocess_spawn_exception_is_marked_dispatched(self):
         OWNER.SUPERVISORCTL_TRANSPORT = "supervisorctl"
         OWNER.SUPERVISORCTL_BIN = Path("/usr/bin/supervisorctl")
+        OWNER.DIAGNOSTICS["supervisorctl_client"] = \
+            OWNER._public_cli_client_identity(self.identity)
         argv = ["supervisorctl", "-c", str(OWNER.SUPERVISOR_CLIENT_CONFIG),
                 "stop", OWNER.SUPERVISOR_SERVICE]
         with (mock.patch.object(OWNER, "verify_supervisorctl_executable",
@@ -383,6 +387,100 @@ class UnixSupervisorRpcTests(unittest.TestCase):
             OWNER.DIAGNOSTICS.pop("supervisor_include_section_headers", None)
         else:
             OWNER.DIAGNOSTICS["supervisor_include_section_headers"] = previous
+
+    def test_endpoint_hold_reports_safe_structural_checks_only(self):
+        prior = OWNER.DIAGNOSTICS.get("unix_socket_config_checks")
+        config = {
+            "socket_file": "/run/secret_SOCKET_name.sock",
+            "serverurl": "tcp://secret-host.invalid/?token=secret-query",
+            "rpc_factory": "private.secret_rpc_factory",
+            "configured_mode": "0666",
+            "configured_owner": "private-user:private-group",
+        }
+        try:
+            with self.assertRaisesRegex(
+                    RuntimeError,
+                    "HOLD_EMERGENCY_STOP_UNIX_RPC_CONFIG_ENDPOINT_NOT_ALLOWLISTED"):
+                OWNER._unix_socket_snapshot(config)
+            report = OWNER.DIAGNOSTICS["unix_socket_config_checks"]
+            rendered = str(report)
+            for private_value in ("secret_SOCKET_name", "secret-host", "secret-query",
+                                  "private.secret_rpc_factory", "private-user",
+                                  "private-group"):
+                self.assertNotIn(private_value, rendered)
+            self.assertFalse(report["url_scheme_unix"])
+            self.assertFalse(report["rpc_factory_allowlisted"])
+            self.assertFalse(report["socket_owner_root_root"])
+            self.assertEqual(report["configured_mode_octal"], "0666")
+            self.assertFalse(report["mode_private_no_group_world_write"])
+            self.assertTrue(report["mode_owner_write_enabled"])
+        finally:
+            if prior is None:
+                OWNER.DIAGNOSTICS.pop("unix_socket_config_checks", None)
+            else:
+                OWNER.DIAGNOSTICS["unix_socket_config_checks"] = prior
+
+    def test_public_client_daemon_and_stanza_views_hide_raw_identity(self):
+        secrets = ["secret-unix.sock", "secret-server-url", "secret-rpc-factory",
+                   "secret-config-path", "secret-executable", "secret-script",
+                   "secret-cgroup"]
+        endpoint = {
+            "transport": "supervisor_unix_xmlrpc",
+            "socket": {"resolved_path": "/run/secret-unix.sock"},
+            "serverurl": "unix:///run/secret-unix.sock?secret-server-url",
+            "rpc_factory": "secret-rpc-factory",
+            "config_identity": {"path": "/etc/secret-config-path"},
+            "daemon": {"pid": 42, "start_ticks": 77},
+        }
+        public_client = OWNER._public_unix_client_identity(endpoint)
+        self.assertEqual(OWNER._validate_public_client_identity(
+            "unix_xmlrpc", public_client, public_client, endpoint), public_client)
+        altered_public = {**public_client, "path_kind": "/run/secret-unix.sock"}
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_SUPERVISORCTL_CLIENT_IDENTITY_MISSING"):
+            OWNER._validate_public_client_identity(
+                "unix_xmlrpc", altered_public, public_client, endpoint)
+        cli_selected = {"sha256": "a" * 64, "path": "/usr/bin/supervisorctl"}
+        cli_public = OWNER._public_cli_client_identity(cli_selected)
+        self.assertEqual(OWNER._validate_public_client_identity(
+            "supervisorctl", cli_public, cli_selected), cli_public)
+        with self.assertRaisesRegex(RuntimeError,
+                                    "HOLD_EMERGENCY_STOP_SUPERVISORCTL_CLIENT_IDENTITY_MISSING"):
+            OWNER._validate_public_client_identity(
+                "supervisorctl", public_client, cli_selected)
+        daemon = {
+            "pid": 42, "start_ticks": 77, "argv_sha256": "1" * 64,
+            "config_path": "/etc/secret-config-path",
+            "cgroup": "/secret-cgroup",
+            "exe": {"path": "/secret-executable", "path_sha256": "2" * 64,
+                    "sha256": "3" * 64},
+            "script": {"path": "/secret-script", "path_sha256": "4" * 64,
+                       "sha256": "5" * 64},
+        }
+        stanza = OWNER._public_supervisor_stanza(
+            [{"path": "/etc/secret-config-path/conf.d/secret-config-path.conf",
+              "config_sha256": "6" * 64, "command_sha256": "7" * 64,
+              "stopasgroup": "false", "killasgroup": "false",
+              "stopsignal": "TERM", "stopwaitsecs": 10}],
+            daemon, public_client, effective_sha="8" * 64, daemon_pid=42,
+            start_ticks=77, start_lower_bound_ns=99, command_sha256="1" * 64,
+            main_config_sha256="9" * 64,
+            config_inputs=[{"name": "secret-config-path.conf",
+                            "sha256": "6" * 64, "ctime_ns": 99}])
+        receipt = {"diagnostics": {"supervisorctl_client": public_client,
+                                   "supervisorctl_selected": {
+                                       "identity": public_client,
+                                       "daemon_identity": OWNER._public_daemon_identity(daemon)},
+                                   "supervisor_stanza": stanza},
+                   "settings": {"supervisorctl_client": public_client,
+                                "daemon_identity": OWNER._public_daemon_identity(daemon),
+                                "matches": stanza["matches"]}}
+        rendered = str(receipt)
+        for value in secrets:
+            self.assertNotIn(value, rendered)
+        self.assertEqual(set(public_client),
+                         {"transport", "endpoint_fingerprint", "path_kind"})
+        self.assertEqual(public_client["path_kind"], "unix_domain_socket")
 
     def test_malformed_secret_like_section_header_is_redacted(self):
         secret_header = "program:secret TOKEN=abc123"

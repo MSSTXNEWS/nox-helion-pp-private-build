@@ -518,21 +518,39 @@ def _unix_socket_snapshot(config_identity: dict) -> dict:
     configured_mode = config_identity["configured_mode"]
     configured_owner = config_identity["configured_owner"]
     parsed_url = urlsplit(serverurl)
-    if (not socket_file.startswith("/") or ".." in Path(socket_file).parts or
-            parsed_url.scheme != "unix" or parsed_url.netloc or
-            parsed_url.query or parsed_url.fragment or
-            not parsed_url.path.startswith("/") or
-            parsed_url.path != socket_file or
-            rpc_factory != "supervisor.rpcinterface:make_main_rpcinterface" or
-            configured_owner != "root:root" or
-            not re.fullmatch(r"0?[0-7]{3,4}", configured_mode)):
-        fail("UNIX_RPC_CONFIG_ENDPOINT_NOT_ALLOWLISTED")
+    mode_ok = bool(re.fullmatch(r"0?[0-7]{3,4}", configured_mode))
     try:
-        mode = int(configured_mode, 8)
+        mode = int(configured_mode, 8) if mode_ok else None
     except ValueError:
-        fail("UNIX_RPC_CONFIG_MODE_INVALID")
-    if mode & 0o022 or not mode & 0o200:
-        fail("UNIX_RPC_SOCKET_MODE_NOT_PRIVATE")
+        mode = None
+        mode_ok = False
+    checks = {
+        "socket_path_absolute": socket_file.startswith("/"),
+        "socket_path_no_parent_segment": ".." not in Path(socket_file).parts,
+        "url_scheme_unix": parsed_url.scheme == "unix",
+        "url_netloc_empty": parsed_url.netloc == "",
+        "url_query_empty": parsed_url.query == "",
+        "url_fragment_empty": parsed_url.fragment == "",
+        "url_path_absolute": parsed_url.path.startswith("/"),
+        "url_path_matches_socket_path": parsed_url.path == socket_file,
+        "rpc_factory_allowlisted":
+            rpc_factory == "supervisor.rpcinterface:make_main_rpcinterface",
+        "socket_owner_root_root": configured_owner == "root:root",
+        "configured_mode_valid_octal": mode_ok,
+        "configured_mode_octal": format(mode, "04o") if mode is not None else None,
+        "mode_private_no_group_world_write":
+            bool(mode is not None and not mode & 0o022),
+        "mode_owner_write_enabled": bool(mode is not None and mode & 0o200),
+    }
+    DIAGNOSTICS["unix_socket_config_checks"] = checks
+    if not all(checks[key] for key in (
+            "socket_path_absolute", "socket_path_no_parent_segment",
+            "url_scheme_unix", "url_netloc_empty", "url_query_empty",
+            "url_fragment_empty", "url_path_absolute", "url_path_matches_socket_path",
+            "rpc_factory_allowlisted", "socket_owner_root_root",
+            "configured_mode_valid_octal", "mode_private_no_group_world_write",
+            "mode_owner_write_enabled")):
+        fail("UNIX_RPC_CONFIG_ENDPOINT_NOT_ALLOWLISTED")
     socket_path = Path(socket_file)
     try:
         resolved_socket = socket_path.resolve(strict=True)
@@ -794,6 +812,123 @@ def _supervisor_unix_endpoint_snapshot() -> dict:
     return endpoint
 
 
+def _endpoint_fingerprint(endpoint: dict) -> str:
+    return hashlib.sha256(json.dumps(
+        endpoint, sort_keys=True, separators=(",", ":")
+    ).encode()).hexdigest()
+
+
+def _public_unix_client_identity(endpoint: dict) -> dict:
+    return {"transport": "supervisor_unix_xmlrpc",
+            "endpoint_fingerprint": _endpoint_fingerprint(endpoint),
+            "path_kind": "unix_domain_socket"}
+
+
+def _public_cli_client_identity(identity: dict) -> dict:
+    return {"transport": "supervisorctl",
+            "client_fingerprint": identity.get("sha256"),
+            "path_kind": "allowlisted_supervisorctl_executable"}
+
+
+def _public_client_identity(transport: str, identity: dict | None,
+                            endpoint: dict | None = None) -> dict:
+    if transport == "unix_xmlrpc":
+        if endpoint is None:
+            fail("UNIX_RPC_PUBLIC_IDENTITY_ENDPOINT_MISSING")
+        return _public_unix_client_identity(endpoint)
+    if identity is None:
+        fail("SUPERVISORCTL_PUBLIC_IDENTITY_MISSING")
+    return _public_cli_client_identity(identity)
+
+
+def _validate_public_client_identity(transport: str, observed: dict,
+                                     selected_identity: dict,
+                                     endpoint: dict | None = None) -> dict:
+    expected = _public_client_identity(transport, selected_identity, endpoint)
+    if observed != expected:
+        fail("SUPERVISORCTL_CLIENT_IDENTITY_MISSING")
+    return expected
+
+
+def _public_supervisor_stanza(matches: list[dict], daemon_identity: dict,
+                              client_identity: dict, *, effective_sha: str,
+                              daemon_pid: int, start_ticks: int,
+                              start_lower_bound_ns: int, command_sha256: str,
+                              main_config_sha256: str, config_inputs: list[dict]) -> dict:
+    public_matches = [{**{key: value for key, value in row.items()
+                          if key != "path"},
+                       "path_kind": "included_supervisor_config"}
+                      for row in matches]
+    return {
+        "matches": public_matches,
+        "source": "active_daemon_cmdline_and_all_root_owned_conf_d_inputs",
+        "supervisor_identity": _public_daemon_identity(daemon_identity),
+        "supervisor_pid": daemon_pid,
+        "supervisor_start_ticks": start_ticks,
+        "supervisor_start_lower_bound_ns": start_lower_bound_ns,
+        "supervisor_cmdline_sha256": command_sha256,
+        "supervisor_argv_sha256": command_sha256,
+        "supervisor_exe_sha256": daemon_identity["exe"]["sha256"],
+        "supervisor_script_sha256": daemon_identity["script"]["sha256"],
+        "supervisorctl_client": client_identity,
+        "main_config_path_kind": "canonical_supervisor_config",
+        "main_config_sha256": main_config_sha256,
+        "include_kind": "supervisor_conf_d_glob",
+        "config_input_count": len(config_inputs),
+        "config_input_hashes": [row["sha256"] for row in config_inputs],
+        "effective_config_sha256": effective_sha,
+    }
+
+
+def _public_daemon_identity(identity: dict | None) -> dict | None:
+    if identity is None:
+        return None
+    exe = identity.get("exe") or {}
+    script = identity.get("script") or {}
+    config_path = identity.get("config_path", "")
+    cgroup = identity.get("cgroup", "")
+    return {
+        "pid": identity.get("pid"),
+        "start_ticks": identity.get("start_ticks"),
+        "exe_path_sha256": exe.get("path_sha256"),
+        "exe_file_sha256": exe.get("sha256"),
+        "script_path_sha256": script.get("path_sha256"),
+        "script_file_sha256": script.get("sha256"),
+        "argv_sha256": identity.get("argv_sha256"),
+        "config_path_sha256": hashlib.sha256(
+            config_path.encode("utf-8")).hexdigest() if config_path else None,
+        "cgroup_path_sha256": hashlib.sha256(
+            cgroup.encode("utf-8")).hexdigest() if cgroup else None,
+    }
+
+
+def _public_candidate_diagnostics(outcomes: list[dict]) -> list[dict]:
+    rows = []
+    for item in outcomes:
+        row = {"path_kind": "allowlisted_supervisorctl_candidate",
+               "outcome": item.get("outcome"),
+               "fail_code": item.get("fail_code"),
+               "identity_sha256": (item.get("identity") or {}).get("sha256"),
+               "daemon_identity": _public_daemon_identity(item.get("daemon_identity")),
+               "pid": item.get("pid"), "service_state": item.get("service_state"),
+               "service_pid": item.get("service_pid")}
+        metadata = item.get("metadata")
+        if isinstance(metadata, dict):
+            summaries = []
+            for key in ("metadata_before", "metadata_after"):
+                values = metadata.get(key)
+                if isinstance(values, list):
+                    summaries.extend({k: v for k, v in value.items()
+                                      if k in ("file_type", "uid", "gid", "mode",
+                                               "nlink", "size", "exists",
+                                               "symlink")}
+                                     for value in values if isinstance(value, dict))
+            if summaries:
+                row["metadata_summary"] = summaries[:16]
+        rows.append(row)
+    return rows
+
+
 def _supervisor_unix_rpc(endpoint: dict, method: str, params: tuple,
                          timeout: int = 10):
     global SUPERVISOR_RPC_STOP_DISPATCHED, STOP_REQUEST_DISPATCHED
@@ -956,12 +1091,10 @@ def read_supervisor_stop_settings() -> dict:
         DIAGNOSTICS["supervisor_stanza"] = {"state": "SUPERVISOR_PID_UNAVAILABLE"}
         fail("SUPERVISOR_PID_UNAVAILABLE")
     client_identity = dict(DIAGNOSTICS.get("supervisorctl_client", {}))
-    expected_path = (str(SUPERVISORCTL_BIN) if SUPERVISORCTL_TRANSPORT == "supervisorctl"
-                     else SUPERVISOR_UNIX_ENDPOINT["socket"]["resolved_path"]
-                     if SUPERVISOR_UNIX_ENDPOINT else None)
-    if (client_identity.get("path") != expected_path or
-            not re.fullmatch(r"[0-9a-f]{64}", client_identity.get("sha256", ""))):
-        fail("SUPERVISORCTL_CLIENT_IDENTITY_MISSING")
+    _validate_public_client_identity(
+        SUPERVISORCTL_TRANSPORT, client_identity,
+        SUPERVISORCTL_SELECTED_IDENTITY,
+        SUPERVISOR_UNIX_ENDPOINT if SUPERVISORCTL_TRANSPORT == "unix_xmlrpc" else None)
     daemon_pid = int(pid_lines[0])
     daemon_before = proc_stat_identity(daemon_pid)
     # btime is second-resolution and start_ticks is tick-resolution. Subtract
@@ -1039,7 +1172,7 @@ def read_supervisor_stop_settings() -> dict:
     if len(include_parts) != 1 or include_parts[0] not in allowed_globs:
         DIAGNOSTICS["supervisor_stanza"] = {
             "state": "SUPERVISOR_INCLUDE_UNSUPPORTED",
-            "main_config_path": str(main_path),
+            "main_config_path_kind": "canonical_supervisor_config",
             "main_config_sha256": hashlib.sha256(main_raw).hexdigest(),
         }
         fail("SUPERVISOR_INCLUDE_UNSUPPORTED")
@@ -1104,7 +1237,8 @@ def read_supervisor_stop_settings() -> dict:
         DIAGNOSTICS["supervisor_stanza"] = {
             "state": "SUPERVISOR_CONFIG_NEWER_THAN_DAEMON_START",
             "supervisor_start_lower_bound_ns": daemon_start_lower_bound_ns,
-            "config_inputs": inputs,
+            "config_input_count": len(inputs),
+            "config_input_hashes": [item["sha256"] for item in inputs],
             "supervisor_dir_ctime_ns": supervisor_dir.st_ctime_ns,
             "include_dir_ctime_ns": include_dir.st_ctime_ns,
         }
@@ -1145,28 +1279,22 @@ def read_supervisor_stop_settings() -> dict:
             (SUPERVISOR_UNIX_ENDPOINT is None or
              effective_sha != SUPERVISOR_UNIX_ENDPOINT.get("effective_config_sha256"))):
         fail("UNIX_RPC_EFFECTIVE_CONFIG_HASH_MISMATCH")
-    DIAGNOSTICS["supervisor_stanza"] = {
-        "matches": matches,
-        "source": "active_daemon_cmdline_and_all_root_owned_conf_d_inputs",
-        "supervisor_pid": daemon_pid,
-        "supervisor_start_ticks": daemon_before["start_ticks"],
-        "supervisor_start_lower_bound_ns": daemon_start_lower_bound_ns,
-        "supervisor_cmdline_sha256": hashlib.sha256(daemon_cmdline).hexdigest(),
-        "supervisor_argv_sha256": hashlib.sha256(daemon_cmdline).hexdigest(),
-        "supervisor_exe": daemon_exe_identity,
-        "supervisor_script": daemon_script_identity,
-        "supervisorctl_client": client_identity,
-        "main_config_path": str(main_path),
-        "main_config_sha256": hashlib.sha256(main_raw).hexdigest(),
-        "include_glob": include_parts[0], "config_inputs": inputs,
-        "effective_config_sha256": effective_sha,
-    }
+    public_stanza = _public_supervisor_stanza(
+        matches, daemon_identity, client_identity,
+        effective_sha=effective_sha, daemon_pid=daemon_pid,
+        start_ticks=daemon_before["start_ticks"],
+        start_lower_bound_ns=daemon_start_lower_bound_ns,
+        command_sha256=hashlib.sha256(daemon_cmdline).hexdigest(),
+        main_config_sha256=hashlib.sha256(main_raw).hexdigest(),
+        config_inputs=inputs)
+    DIAGNOSTICS["supervisor_stanza"] = public_stanza
     if len(matches) != 1:
         fail("SUPERVISOR_STANZA_NOT_UNIQUE")
-    settings = {**matches[0], "effective_config_sha256": effective_sha,
+    public_match = public_stanza["matches"][0]
+    settings = {**public_match, "effective_config_sha256": effective_sha,
                 "supervisor_pid": daemon_pid,
                 "supervisor_start_ticks": daemon_before["start_ticks"],
-                "daemon_identity": daemon_identity,
+                "daemon_identity": _public_daemon_identity(daemon_identity),
                 "supervisorctl_client": client_identity}
     if (settings["stopasgroup"] not in ("true", "false") or
             settings["killasgroup"] not in ("true", "false") or
@@ -1280,7 +1408,7 @@ def verify_supervisorctl_executable(path: Path,
     identity["root_owned_nonwritable"] = True
     if expected_identity is not None and identity != expected_identity:
         fail("SUPERVISORCTL_SELECTED_IDENTITY_CHANGED")
-    DIAGNOSTICS["supervisorctl_client"] = identity
+    DIAGNOSTICS["supervisorctl_client"] = _public_cli_client_identity(identity)
     return identity
 
 
@@ -1485,16 +1613,10 @@ def select_supervisorctl_candidate() -> None:
                          "daemon_identity": daemon_identity,
                          "pid": daemon_pid, "service_state": "RUNNING",
                          "service_pid": MODEL_PID, "outcome": "MATCH"})
-    DIAGNOSTICS["supervisorctl_candidates"] = outcomes
+    DIAGNOSTICS["supervisorctl_candidates"] = _public_candidate_diagnostics(outcomes)
     if not matches:
         endpoint = _select_unix_supervisor_fallback(outcomes, present_paths)
-        identity = {"transport": "supervisor_unix_xmlrpc",
-                    "path": endpoint["socket"]["resolved_path"],
-                    "sha256": hashlib.sha256(json.dumps(
-                        endpoint, sort_keys=True, separators=(",", ":")
-                    ).encode()).hexdigest(),
-                    "root_owned_nonwritable": True,
-                    "endpoint": endpoint}
+        identity = _public_unix_client_identity(endpoint)
         SUPERVISORCTL_BIN = None
         SUPERVISORCTL_TRANSPORT = "unix_xmlrpc"
         SUPERVISOR_UNIX_ENDPOINT = endpoint
@@ -1503,7 +1625,8 @@ def select_supervisorctl_candidate() -> None:
         DIAGNOSTICS["supervisorctl_client"] = identity
         DIAGNOSTICS["supervisorctl_selected"] = {
             "transport": SUPERVISORCTL_TRANSPORT, "identity": identity,
-            "daemon_identity": SUPERVISORCTL_SELECTED_DAEMON_IDENTITY}
+            "daemon_identity": _public_daemon_identity(
+                SUPERVISORCTL_SELECTED_DAEMON_IDENTITY)}
         DIAGNOSTICS["supervisor_unix_rpc"] = {
             "read_only_preflight": True,
             "methods": ["supervisor.getPID", "supervisor.getState",
@@ -1521,9 +1644,9 @@ def select_supervisorctl_candidate() -> None:
     SUPERVISORCTL_SELECTED_IDENTITY = selected["identity"]
     SUPERVISORCTL_SELECTED_DAEMON_IDENTITY = selected["daemon_identity"]
     DIAGNOSTICS["supervisorctl_selected"] = {
-        "path": str(SUPERVISORCTL_BIN),
-        "identity": SUPERVISORCTL_SELECTED_IDENTITY,
-        "daemon_identity": SUPERVISORCTL_SELECTED_DAEMON_IDENTITY,
+        "path_kind": "allowlisted_supervisorctl_executable",
+        "identity": _public_cli_client_identity(SUPERVISORCTL_SELECTED_IDENTITY),
+        "daemon_identity": _public_daemon_identity(SUPERVISORCTL_SELECTED_DAEMON_IDENTITY),
     }
 
 
@@ -1542,7 +1665,8 @@ def command(argv: list[str], timeout: int = 15,
                 "supervisor_unix_xmlrpc"):
             fail("UNIX_RPC_SELECTED_IDENTITY_UNAVAILABLE")
         if verified_client_sha256 is not None and (
-                verified_client_sha256 != SUPERVISORCTL_SELECTED_IDENTITY.get("sha256")):
+                verified_client_sha256 !=
+                SUPERVISORCTL_SELECTED_IDENTITY.get("endpoint_fingerprint")):
             fail("UNIX_RPC_VERIFICATION_TOKEN_INVALID")
         if (len(argv) not in (4, 5) or argv[1] != "-c" or
                 argv[2] != str(SUPERVISOR_CLIENT_CONFIG)):
@@ -1590,11 +1714,12 @@ def command(argv: list[str], timeout: int = 15,
         verify_supervisorctl_executable(SUPERVISORCTL_BIN,
                                         SUPERVISORCTL_SELECTED_IDENTITY)
     elif (not re.fullmatch(r"[0-9a-f]{64}", verified_client_sha256) or
-          DIAGNOSTICS.get("supervisorctl_client", {}).get("sha256") !=
+          DIAGNOSTICS.get("supervisorctl_client", {}).get("client_fingerprint") !=
           verified_client_sha256 or
           verified_client_sha256 != SUPERVISORCTL_SELECTED_IDENTITY["sha256"]):
         fail("SUPERVISORCTL_VERIFICATION_TOKEN_INVALID")
-    if DIAGNOSTICS.get("supervisorctl_client") != SUPERVISORCTL_SELECTED_IDENTITY:
+    if DIAGNOSTICS.get("supervisorctl_client") != _public_cli_client_identity(
+            SUPERVISORCTL_SELECTED_IDENTITY):
         fail("SUPERVISORCTL_SELECTED_IDENTITY_CHANGED")
     if (len(argv) == 5 and argv[1] == "-c" and
             argv[2] == str(SUPERVISOR_CLIENT_CONFIG) and
@@ -2590,7 +2715,8 @@ def require_same_stop_preflight(before: dict, after: dict, label: str) -> None:
             after["settings"].get("supervisorctl_client") or
             before.get("model_runtime_members") !=
             after.get("model_runtime_members") or
-            before["settings"]["path"] != after["settings"]["path"] or
+            before["settings"].get("path_kind") !=
+            after["settings"].get("path_kind") or
             before["stop_scope"] != after["stop_scope"]):
         fail(label + "_SUPERVISOR_CONFIG_CHANGED")
     before_members = {row["pid"]: row for row in before["members"]}
@@ -2856,7 +2982,9 @@ def run_action(request_id: int, source_sha: str) -> dict:
     else:
         stop_client_identity = verify_supervisorctl_executable(
             SUPERVISORCTL_BIN, SUPERVISORCTL_SELECTED_IDENTITY)
-    stop_client_sha256 = stop_client_identity["sha256"]
+    stop_client_sha256 = (stop_client_identity.get("endpoint_fingerprint")
+                          if SUPERVISORCTL_TRANSPORT == "unix_xmlrpc"
+                          else stop_client_identity["sha256"])
     if DIAGNOSTICS.get("supervisorctl_client") != stop_settings_final.get(
             "supervisorctl_client"):
         fail("SUPERVISORCTL_CLIENT_CHANGED_LAST_PRE_STOP")
