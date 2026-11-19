@@ -2,10 +2,9 @@
 """Owner-only two-step emergency memory relief for one attested NOX model.
 
 This source is inert until called by the pinned owner-maintenance workflow.
-It stops only the exact Supervisor model service first. It considers a
-SIGTERM for the exact memfd holder only if fresh cgroup headroom remains below
-2 GiB after the model service has stopped. It never clears owner markers or
-restarts services.
+It stops only the exact Supervisor model service when fresh cgroup
+headroom is below 2 GiB. This version always preserves the memfd holder and
+never clears owner markers or restarts services.
 """
 from __future__ import annotations
 
@@ -16,7 +15,6 @@ import json
 import os
 from pathlib import Path
 import re
-import signal
 import stat
 import subprocess
 import time
@@ -29,16 +27,27 @@ CGROUP_ROOT = Path("/sys/fs/cgroup")
 SUPERVISOR_SERVICE = "nox-ds41-8098"
 MODEL_PID = 3266857
 MODEL_START_TICKS = 172046662
+MODEL_ARGV_TAIL = (
+    "-m",
+    "/root/nox/models/deepseek_v41_flash_iq2xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+    "-c",
+    "8192",
+)
 HOLDER_PID = 498569
+HOLDER_SCRIPT_NAME = "engram_memfd_holder.py"
+HOLDER_CWD = "/root/nox/engram_ram"
 HOLDER_START_TICKS = 168416044
 HOLDER_SCRIPT = "/root/nox/engram_ram/engram_memfd_holder.py"
 MEMFD_INODE = 131095
 MEMFD_SIZE = 75_266_239_716
 MIN_HEADROOM = 2_147_483_648
+MEMFD_LABEL = "memfd:engram_iq3xxs (deleted)"
 MAX_STAT_BYTES = 8_192
+MAX_CMDLINE_BYTES = 16 * 1024
+MAX_FD_ENTRIES_PER_PID = 16_384
+MAX_HOLDER_FD_BYTES = 1 * 1024 * 1024
+MAX_FD_LINK_BYTES = 4_096
 MAX_MAPS_BYTES = 2 * 1024 * 1024
-MAX_TOTAL_MAPS_BYTES = 64 * 1024 * 1024
-MAX_PROC_SCAN = 4_096
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 STATUS_LINE = re.compile(r"^([A-Za-z0-9_.:-]+)\s+(RUNNING|STOPPED|EXITED)(?:\s+pid\s+([0-9]+))?(?:,.*)?$")
 
@@ -48,7 +57,6 @@ PHASE = {
     "maintenance_marker": False,
     "model_stop_requested": False,
     "model_stopped": False,
-    "holder_term_sent": False,
 }
 MARKERS = {}
 
@@ -271,49 +279,87 @@ def process_identity(pid: int, expected_ticks: int, role: str) -> dict:
     proc = Path("/proc") / str(pid)
     try:
         exe = os.readlink(proc / "exe")
-        argv = [x.decode("utf-8", "replace") for x in
-                (proc / "cmdline").read_bytes().split(b"\0") if x]
+        with (proc / "cmdline").open("rb") as stream:
+            raw_cmdline = stream.read(MAX_CMDLINE_BYTES + 1)
     except OSError:
         fail(role + "_IDENTITY_UNAVAILABLE")
+    if len(raw_cmdline) > MAX_CMDLINE_BYTES or not raw_cmdline.endswith(b"\0"):
+        fail(role + "_CMDLINE_INVALID_OR_OVER_LIMIT")
+    raw_argv = raw_cmdline[:-1].split(b"\0")
+    if not raw_argv or any(not token for token in raw_argv):
+        fail(role + "_CMDLINE_INVALID")
+    try:
+        argv = [token.decode("utf-8", "strict") for token in raw_argv]
+    except UnicodeDecodeError:
+        fail(role + "_CMDLINE_ENCODING_INVALID")
     exe_name = Path(exe.removesuffix(" (deleted)")).name
+    argv0_name = Path(argv[0].removesuffix(" (deleted)")).name
     if role == "MODEL":
-        if exe_name != "llama-server":
-            fail("MODEL_EXECUTABLE_MISMATCH")
+        if (exe_name != "llama-server" or argv0_name != "llama-server" or
+                tuple(argv[1:]) != MODEL_ARGV_TAIL):
+            fail("MODEL_EXECUTABLE_OR_ARGV_MISMATCH")
     elif role == "HOLDER":
         if HOLDER_SCRIPT not in argv:
-            fail("HOLDER_ARGV_MISMATCH")
+            try:
+                cwd = os.readlink(proc / "cwd")
+            except OSError:
+                fail("HOLDER_CWD_UNAVAILABLE")
+            if HOLDER_SCRIPT_NAME not in argv or cwd != HOLDER_CWD:
+                fail("HOLDER_ARGV_OR_CWD_MISMATCH")
+    else:
+        fail("UNKNOWN_PROCESS_ROLE")
     group = cgroup_path(pid)
-    return {"pid": pid, "start_ticks": ticks, "exe": exe_name, "cgroup": str(group)}
+    if stable_start_ticks(pid, expected_ticks) != ticks:
+        fail(role + "_IDENTITY_CHANGED_DURING_READ")
+    return {"pid": pid, "start_ticks": ticks, "exe": exe_name,
+            "argv_sha256": hashlib.sha256(b"\0".join(raw_argv)).hexdigest(),
+            "cgroup": str(group)}
 
 
-def fd_memfd_identity(pid: int) -> dict:
+def fd_memfd_identity(pid: int, expected_ticks: int = HOLDER_START_TICKS) -> dict:
     fd_dir = Path("/proc") / str(pid) / "fd"
     matches = []
+    entries_scanned = 0
+    link_bytes = 0
+    before = stable_start_ticks(pid, expected_ticks)
     try:
-        entries = list(os.scandir(fd_dir))
+        with os.scandir(fd_dir) as entries:
+            for entry in entries:
+                entries_scanned += 1
+                if entries_scanned > MAX_FD_ENTRIES_PER_PID:
+                    fail("HOLDER_FD_ENTRY_LIMIT")
+                try:
+                    link = os.readlink(entry.path)
+                    link_size = len(os.fsencode(link))
+                    if link_size > MAX_FD_LINK_BYTES:
+                        fail("HOLDER_FD_LINK_OVER_LIMIT")
+                    link_bytes += link_size
+                    if link_bytes > MAX_HOLDER_FD_BYTES:
+                        fail("HOLDER_FD_BYTE_LIMIT")
+                    st = os.stat(entry.path)
+                except OSError:
+                    fail("HOLDER_FD_IDENTITY_UNAVAILABLE")
+                label = link.rsplit("/", 1)[-1]
+                candidate = (st.st_ino == MEMFD_INODE or label == MEMFD_LABEL)
+                if candidate and (st.st_ino != MEMFD_INODE or
+                                  st.st_size != MEMFD_SIZE or label != MEMFD_LABEL):
+                    fail("HOLDER_MEMFD_IDENTITY_MISMATCH")
+                if candidate:
+                    matches.append({"fd": entry.name, "device": st.st_dev,
+                                    "inode": st.st_ino, "size": st.st_size,
+                                    "label": label})
     except OSError:
         fail("HOLDER_FD_CENSUS_UNAVAILABLE")
-    for entry in entries:
-        try:
-            st = os.stat(entry.path)
-            link = os.readlink(entry.path)
-        except FileNotFoundError:
-            continue
-        except OSError:
-            fail("HOLDER_FD_IDENTITY_UNAVAILABLE")
-        label = link.rsplit("/", 1)[-1]
-        if (st.st_ino == MEMFD_INODE and st.st_size == MEMFD_SIZE and
-                label == "memfd:engram_iq3xxs (deleted)"):
-            matches.append({"fd": entry.name, "device": st.st_dev,
-                            "inode": st.st_ino, "size": st.st_size,
-                            "label": label})
+    if stable_start_ticks(pid, expected_ticks) != before:
+        fail("HOLDER_FD_PROCESS_CHANGED")
     if not matches:
         fail("HOLDER_MEMFD_NOT_PRESENT")
     devices = {x["device"] for x in matches}
     if len(devices) != 1:
         fail("HOLDER_MEMFD_DEVICE_AMBIGUOUS")
     return {"device": next(iter(devices)), "inode": MEMFD_INODE,
-            "size": MEMFD_SIZE, "fd_count": len(matches)}
+            "size": MEMFD_SIZE, "label": MEMFD_LABEL,
+            "fd_count": len(matches), "entries_scanned": entries_scanned}
 
 
 def model_maps_memfd(pid: int, memfd_device: int) -> bool:
@@ -323,61 +369,6 @@ def model_maps_memfd(pid: int, memfd_device: int) -> bool:
     if not mapped_inode(rows, memfd_device, MEMFD_INODE):
         fail("MODEL_MEMFD_MAPPING_NOT_PRESENT")
     return True
-
-
-def same_inode_mapping_census(device: int) -> dict:
-    """Bounded whole-host map scan; any uncertainty prevents holder TERM."""
-    try:
-        pids = sorted(int(entry.name) for entry in Path("/proc").iterdir()
-                      if entry.name.isdigit())
-    except OSError:
-        return {"complete": False, "mapped_pids": [], "unknown_pids": ["proc-list"]}
-    if len(pids) > MAX_PROC_SCAN:
-        return {"complete": False, "mapped_pids": [], "unknown_pids": ["pid-limit"]}
-    mapped = []
-    unknown = []
-    total_bytes = 0
-    for pid in pids:
-        try:
-            before = proc_start_ticks(pid, missing_ok=True)
-        except RuntimeError:
-            unknown.append(pid)
-            continue
-        if before is None:
-            continue
-        rows = read_maps_bounded(pid)
-        if rows is None:
-            try:
-                after_missing = proc_start_ticks(pid, missing_ok=True)
-            except RuntimeError:
-                unknown.append(pid)
-                continue
-            if after_missing is None:
-                continue
-            unknown.append(pid)
-            continue
-        total_bytes += len(rows.encode("ascii", "replace"))
-        if total_bytes > MAX_TOTAL_MAPS_BYTES:
-            unknown.append("maps-budget")
-            break
-        try:
-            has_mapping = mapped_inode(rows, device, MEMFD_INODE)
-        except RuntimeError:
-            unknown.append(pid)
-            continue
-        try:
-            after = proc_start_ticks(pid, missing_ok=True)
-        except RuntimeError:
-            unknown.append(pid)
-            continue
-        if after != before:
-            unknown.append(pid)
-            continue
-        if has_mapping:
-            mapped.append(pid)
-    return {"complete": not unknown, "mapped_pids": mapped,
-            "unknown_pids": unknown, "bytes_scanned": total_bytes,
-            "processes_scanned": len(pids)}
 
 
 def memory_headroom(group: Path) -> dict:
@@ -401,6 +392,25 @@ def require_model_running() -> dict:
     return status
 
 
+def require_model_identity_gone() -> str:
+    first = proc_start_ticks(MODEL_PID, missing_ok=True)
+    if first == MODEL_START_TICKS:
+        fail("MODEL_PROCESS_STILL_PRESENT")
+    if first is None:
+        second = proc_start_ticks(MODEL_PID, missing_ok=True)
+        if second is None:
+            return "absent"
+        if second == MODEL_START_TICKS:
+            fail("MODEL_PROCESS_REAPPEARED")
+        return "pid-reused"
+    second = stable_start_ticks(MODEL_PID)
+    if second == MODEL_START_TICKS:
+        fail("MODEL_PROCESS_REAPPEARED")
+    if second != first:
+        fail("MODEL_PID_REUSE_UNSTABLE")
+    return "pid-reused"
+
+
 def wait_model_stopped() -> dict:
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
@@ -414,19 +424,8 @@ def wait_model_stopped() -> dict:
     fail("MODEL_GRACEFUL_STOP_NOT_VERIFIED")
 
 
-def wait_holder_exit(pidfd: int) -> None:
-    del pidfd
-    deadline = time.monotonic() + 20
-    while time.monotonic() < deadline:
-        ticks = proc_start_ticks(HOLDER_PID, missing_ok=True)
-        if ticks is None or ticks != HOLDER_START_TICKS:
-            return
-        time.sleep(0.5)
-    fail("HOLDER_TERM_EXIT_NOT_VERIFIED")
-
-
 def run_action(request_id: int, source_sha: str) -> dict:
-    # Fresh, read-only identity and memory preflight happens before any marker.
+    # Fresh read-only identity and memory preflight happens before any marker.
     status = require_model_running()
     model = process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
     holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
@@ -438,96 +437,51 @@ def run_action(request_id: int, source_sha: str) -> dict:
     if before["headroom"] >= MIN_HEADROOM:
         fail("HEADROOM_ALREADY_SAFE")
 
-    # Fence only after a fresh low-headroom preflight; flags are no-clobber
-    # and must bind byte-for-byte to this exact owner request and source SHA.
+    # Create the owner fence only after a fresh low-headroom preflight.
     fence = ensure_owner_fence(request_id, source_sha)
 
-    # Revalidate before issuing the exact Supervisor graceful stop.
+    # Revalidate exact identities and headroom immediately before stopping.
     status = require_model_running()
     process_identity(MODEL_PID, MODEL_START_TICKS, "MODEL")
-    process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
+    latest_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
+    if latest_holder["cgroup"] != holder["cgroup"]:
+        fail("HOLDER_CGROUP_CHANGED_BEFORE_STOP")
     latest_memfd = fd_memfd_identity(HOLDER_PID)
-    if latest_memfd["device"] != memfd["device"]:
+    if (latest_memfd["device"] != memfd["device"] or
+            latest_memfd["inode"] != memfd["inode"] or
+            latest_memfd["size"] != memfd["size"] or
+            latest_memfd["label"] != MEMFD_LABEL):
         fail("HOLDER_MEMFD_CHANGED_BEFORE_STOP")
+    pre_stop = memory_headroom(Path(model["cgroup"]))
+    if pre_stop["headroom"] >= MIN_HEADROOM:
+        fail("HEADROOM_RECOVERED_BEFORE_STOP")
+
     PHASE["model_stop_requested"] = True
     stopped = command(["supervisorctl", "stop", SUPERVISOR_SERVICE], timeout=35)
     if stopped.returncode != 0:
         fail("SUPERVISOR_STOP_COMMAND_FAILED")
     after_status = wait_model_stopped()
+    model_pid_state = require_model_identity_gone()
 
-    process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
-    fd_memfd_identity(HOLDER_PID)
-    after_model = memory_headroom(Path(holder["cgroup"]))
-    if after_model["headroom"] >= MIN_HEADROOM:
-        return {"state": "MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_MET",
-                "model": model, "holder": holder, "memfd": memfd,
-                "before": before, "after_model": after_model,
-                "minimum_headroom": MIN_HEADROOM, "markers": fence,
-                "supervisor_after": after_status, "holder_signal": "NONE"}
-
-    # Holder is eligible only after the model PID/starttime is gone/reused and
-    # a bounded whole-host scan finds no same-inode map and no unknown maps.
-    mappings = same_inode_mapping_census(memfd["device"])
-    if not mappings["complete"] or mappings["mapped_pids"]:
-        return {"state": "MODEL_STOPPED_HOLDER_PRESERVED_MAPPING_REMAINS_OR_UNKNOWN",
-                "model": model, "holder": holder, "memfd": memfd,
-                "before": before, "after_model": after_model,
-                "mapping_census": mappings, "minimum_headroom": MIN_HEADROOM,
-                "markers": fence, "supervisor_after": after_status,
-                "holder_signal": "NONE"}
-    latest_headroom = memory_headroom(Path(holder["cgroup"]))
-    if latest_headroom["headroom"] >= MIN_HEADROOM:
-        return {"state": "MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_MET",
-                "model": model, "holder": holder, "memfd": memfd,
-                "before": before, "after_model": after_model,
-                "after_mapping_census": latest_headroom,
-                "mapping_census": mappings, "minimum_headroom": MIN_HEADROOM,
-                "markers": fence, "supervisor_after": after_status,
-                "holder_signal": "NONE"}
-
-    # Fresh exact PID/starttime/inode check precedes the only direct signal.
-    if supervisor_status()["state"] not in ("STOPPED", "EXITED"):
-        fail("MODEL_NOT_STILL_STOPPED")
+    # This version always preserves the memfd holder. A later owner action
+    # must gather fresh evidence before considering any holder signal.
     latest_holder = process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
     latest_memfd = fd_memfd_identity(HOLDER_PID)
     if (latest_holder["cgroup"] != holder["cgroup"] or
-            latest_memfd["device"] != memfd["device"]):
-        fail("HOLDER_MEMFD_IDENTITY_CHANGED")
-    if not hasattr(os, "pidfd_open") or not hasattr(signal, "pidfd_send_signal"):
-        fail("PIDFD_SIGNAL_UNAVAILABLE")
-    try:
-        pidfd = os.pidfd_open(HOLDER_PID, 0)
-    except OSError:
-        fail("HOLDER_PIDFD_OPEN_FAILED")
-    try:
-        process_identity(HOLDER_PID, HOLDER_START_TICKS, "HOLDER")
-        latest_memfd = fd_memfd_identity(HOLDER_PID)
-        if latest_memfd["device"] != memfd["device"]:
-            fail("HOLDER_MEMFD_CHANGED_BEFORE_SIGNAL")
-        if memory_headroom(Path(holder["cgroup"]))["headroom"] >= MIN_HEADROOM:
-            return {"state": "MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_MET",
-                    "model": model, "holder": holder, "memfd": memfd,
-                    "before": before, "after_model": after_model,
-                    "mapping_census": mappings, "markers": fence,
-                    "supervisor_after": after_status, "holder_signal": "NONE"}
-        signal.pidfd_send_signal(pidfd, signal.SIGTERM, None, 0)
-        PHASE["holder_term_sent"] = True
-        wait_holder_exit(pidfd)
-    except OSError:
-        fail("HOLDER_TERM_FAILED")
-    finally:
-        os.close(pidfd)
-
-    after_holder = memory_headroom(Path(holder["cgroup"]))
-    return {"state": ("HOLDER_TERM_SENT_HEADROOM_MET" if
-                      after_holder["headroom"] >= MIN_HEADROOM else
-                      "HOLDER_TERM_SENT_HEADROOM_STILL_SHORT"),
+            latest_memfd["device"] != memfd["device"] or
+            latest_memfd["inode"] != memfd["inode"] or
+            latest_memfd["size"] != memfd["size"] or
+            latest_memfd["label"] != MEMFD_LABEL):
+        fail("HOLDER_IDENTITY_CHANGED_AFTER_MODEL_STOP")
+    after_model = memory_headroom(Path(holder["cgroup"]))
+    return {"state": ("MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_MET" if
+                      after_model["headroom"] >= MIN_HEADROOM else
+                      "MODEL_STOPPED_HOLDER_PRESERVED_HEADROOM_STILL_SHORT"),
             "model": model, "holder": holder, "memfd": memfd,
-            "before": before, "after_model": after_model,
-            "after_holder": after_holder, "mapping_census": mappings,
-            "minimum_headroom": MIN_HEADROOM, "markers": fence,
-            "supervisor_after": after_status,
-            "holder_signal": "SIGTERM_PIDFD_ONLY"}
+            "before": before, "pre_stop": pre_stop,
+            "after_model": after_model, "minimum_headroom": MIN_HEADROOM,
+            "model_pid_state": model_pid_state, "markers": fence,
+            "supervisor_after": after_status, "holder_signal": "NONE"}
 
 
 def main() -> int:
