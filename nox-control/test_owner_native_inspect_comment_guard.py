@@ -260,10 +260,14 @@ class OwnerCommentGuardTests(unittest.TestCase):
         key = "public-key-payload-must-not-appear"
         body = f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export"
         self.assertEqual(SOURCE_EXPORT_SHA,
-                         "7e0df12af5d60895f141a01eda84b3e2ffdf9a74")
+                         "37ddb48407aa7f52aeb8b18c9e88436b6060154d")
         self.assertEqual(parse_command(body), ("source_export", SOURCE_EXPORT_SHA))
         self.assertEqual(authorize_event(event_for(body), REPOSITORY, "issue_comment"),
                          ("source_export", SOURCE_EXPORT_SHA))
+        altered = event_for(body)
+        altered["sender"]["id"] = OWNER_ID + 1
+        with self.assertRaisesRegex(RuntimeError, "HOLD_OWNER_COMMAND_IDENTITY"):
+            authorize_event(altered, REPOSITORY, "issue_comment")
         for invalid in (
             f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}",
             f"/nox-maintain 60509551 {SOURCE_EXPORT_SHA} source_export {key}=",
@@ -456,16 +460,19 @@ class WorkflowScopeTests(unittest.TestCase):
         self.assertLess(workflow.index("Install crypto dependency before #415 owner credential staging"),
                         workflow.index(stage_name))
         preflight_name = "Validate #415 export key secret before staging NOX2"
+        crypto_install_name = "Install crypto dependency before #415 owner credential staging"
+        self.assertLess(workflow.index(crypto_install_name), workflow.index(preflight_name))
         self.assertLess(workflow.index(preflight_name), workflow.index(stage_name))
         preflight_block = workflow.split(preflight_name, 1)[1].split(
-            "Install crypto dependency before #415 owner credential staging", 1)[0]
+            "Compile and test exact pinned #415 encrypted export source before credentials", 1)[0]
         self.assertIn("NOX_OWNER_EXPORT_KEY_B64: ${{ secrets.NOX_OWNER_EXPORT_KEY_B64 }}", preflight_block)
         self.assertIn("preflight_source_export_key()", preflight_block)
         self.assertNotIn("authorize_event", preflight_block)
         self.assertNotIn("subprocess", preflight_block)
         self.assertNotIn("print(", preflight_block)
-        self.assertLess(workflow.index(preflight_name),
-                        workflow.index("Install crypto dependency before #415 owner credential staging"))
+        install_block = workflow.split(crypto_install_name, 1)[1].split(preflight_name, 1)[0]
+        self.assertNotIn("NOX_OWNER_EXPORT_KEY_B64", install_block)
+        self.assertNotIn("NOX2", install_block)
         self.assertLess(workflow.index(stage_name), workflow.index(run_name))
         self.assertLess(workflow.index(run_name), workflow.index(clean_name))
         self.assertLess(workflow.index(clean_name), workflow.index(upload_name))
