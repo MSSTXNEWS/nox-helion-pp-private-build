@@ -145,6 +145,54 @@ test('owner bridge preserves UTF-8 split across chunks and rejects corrupted nat
     assert.equal(rejected.historyReads,0);
   }
 });
+test('V175 JSON-escaped lone UTF-16 surrogates never certify browser/S03',async()=>{
+  const exchange='v175-scalar-exchange';
+  for(const half of ['\ud800','\udfff']){
+    for(const [part,field] of [['start','model'],['delta','text'],['done','exchange_id']]){
+      for(const streamed of [false,true]){
+        let readbacks=0;
+        const frames=[
+          {type:'preparing',stream_mode:'NATIVE_TOKEN_STREAM'},
+          {type:'start',model:'NOX HELION'},
+          {type:'delta',text:'Ответ'},
+          {type:'done',saved:true,s03_integrated:true,dialog_id:id,exchange_id:exchange}
+        ];
+        frames.find(x=>x.type===part)[field]=part==='delta'?half:'broken-'+half;
+        const upstream=async path=>{
+          const u=new URL(String(path),'https://nox.local');
+          if(u.pathname==='/api/nox/chat/stream')return new Response(new ReadableStream({
+            start(c){
+              c.enqueue(new TextEncoder().encode(frames.map(x=>JSON.stringify(x)+'\n').join('')));
+              c.close();
+            }
+          }));
+          if(u.pathname==='/api/ui/memory/dialogs/history'){
+            readbacks++;
+            return Response.json({status:'READY',dialog_id:id,messages:[]});
+          }
+          assert.fail('unexpected owner route '+u.pathname);
+        };
+        const w={NOX_NATIVE_OWNER:true,fetch:upstream};
+        const loc={pathname:'/nox-web-v29/pc/resonance.html',origin:'https://nox.local',
+          href:'https://nox.local/nox-web-v29/pc/resonance.html'};
+        vm.runInNewContext(JS,{window:w,location:loc,URL,Request,Response,ReadableStream,
+          TextDecoder,TextEncoder,AbortController,performance,console,Intl,setTimeout});
+        const request={message:prompt,dialog_id:id,...(streamed?{request_id:'v175'}:{})};
+        const response=await w.fetch('/api/nox/chat',{method:'POST',body:JSON.stringify(request)});
+        if(streamed){
+          const rows=await events(response);
+          assert.equal(rows.find(x=>x.type==='error')?.error,'HOLD_NATIVE_FRAME_UNICODE');
+          assert.equal(rows.filter(x=>x.type==='done').length,0);
+          if(part==='delta')assert.equal(rows.filter(x=>x.type==='token').length,0);
+        }else{
+          assert.equal(response.status,503);
+          assert.equal((await response.json()).error,'HOLD_NATIVE_FRAME_UNICODE');
+        }
+        assert.equal(readbacks,0,'invalid decoded scalar must not initiate S03 history acceptance');
+      }
+    }
+  }
+});
 test('native V24 fails closed on unverified S03 receipt, no false done',async()=>{
   const f=fake(true,'/nox-web-v29/pc/resonance.html',true);
   const r=await f.fetch('/api/nox/chat',{method:'POST',
