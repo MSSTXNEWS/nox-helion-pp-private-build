@@ -338,13 +338,21 @@ def reject_model_context_selectors(args: list[str]) -> None:
     preset_prefixes = (
         "--embd-", "--fim-", "--gpt-oss-", "--vision-gemma-",
     )
+    matched = []
     for token in args:
         option = token.split("=", 1)[0]
         if (token.startswith("-c=") or token.startswith("-m=") or
                 option in short_selectors or option in long_exact or
                 option.startswith(long_prefixes) or
                 option.startswith(preset_prefixes)):
-            fail("MODEL_OR_CONTEXT_SELECTOR_ALIAS")
+            # Report only the option spelling. Never retain or emit its value.
+            if re.fullmatch(r"-{1,2}[A-Za-z0-9][A-Za-z0-9-]*", option):
+                matched.append(option)
+    if matched:
+        emit({"phase": "preflight_rejected",
+              "reason": "MODEL_OR_CONTEXT_SELECTOR_ALIAS",
+              "matched_selector_options": sorted(set(matched))})
+        fail("MODEL_OR_CONTEXT_SELECTOR_ALIAS")
 
 
 def model_environment_identity(pid: int, expected_ticks: int) -> dict:
