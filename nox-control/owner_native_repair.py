@@ -92,6 +92,22 @@ def socket_scope(native, main):
     print('NOX_MAINT_CACHE_SOCKET_SCOPE=' + json.dumps(device, separators=(',', ':')), flush=True)
 
 
+def stage_directory_facts():
+    paths = ('/', '/etc', '/etc/supervisor', '/etc/supervisor/conf.d', '/root', '/root/nox',
+             '/root/nox/ops', '/root/nox/state', '/root/nox/logs', '/root/nox/models',
+             '/root/nox/models/deepseek_v41_flash_iq2xxs', '/tmp', '/run', '/var/run')
+    facts = []
+    for name in paths:
+        try:
+            info = os.lstat(name)
+            facts.append((name, 'directory' if stat.S_ISDIR(info.st_mode) else 'other',
+                          oct(stat.S_IMODE(info.st_mode)), info.st_uid, info.st_gid,
+                          info.st_dev, info.st_ino))
+        except OSError as error:
+            facts.append((name, 'errno', error.errno))
+    print('NOX_MAINT_STAGE_DIRECTORY_FACTS=' + json.dumps(facts, separators=(',', ':')), flush=True)
+
+
 def remove_warm_hook(warm):
     deadline = time.monotonic() + 32
     root = Path('/root/nox')
@@ -154,6 +170,7 @@ def main():
     need(os.geteuid() == os.getegid() == 0 and re.fullmatch(r'[a-f0-9]{40}', source)
          and re.fullmatch(r'[1-9][0-9]{0,19}', request), 'OWNER_REQUEST')
     data = sources()
+    stage_directory_facts()
     diag = None
     try:
         launch = module('owner_ds41_launcher_diagnostic', data)
