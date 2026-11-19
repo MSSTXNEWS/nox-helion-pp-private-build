@@ -1578,7 +1578,19 @@ def main():
         from nox_runpod.teacher_mesh.v51 import ephemeral_ssh_probe as s
         try:
             if not s.cleanup():good=False
-        except Exception:print('NOX_MAINT_CLEANUP=HOLD');good=False
-        with contextlib.suppress(OSError):s.KEY.unlink()
+        except Exception:print('TEMP_SSH_CLEANUP=HOLD_UNEXPECTED_FAILURE',flush=True);good=False
+        try:
+            if s.KEY.is_symlink():
+                print('TEMP_SSH_LOCAL_KEY=HOLD_UNLINK',flush=True);good=False
+            elif not s.KEY.exists():
+                print('TEMP_SSH_LOCAL_KEY=ABSENT_AND_VERIFIED',flush=True)
+            else:
+                s.KEY.unlink(missing_ok=True)
+                if s.KEY.exists() or s.KEY.is_symlink():
+                    print('TEMP_SSH_LOCAL_KEY=HOLD_UNLINK',flush=True);good=False
+                else:
+                    print('TEMP_SSH_LOCAL_KEY=REMOVED_AND_VERIFIED',flush=True)
+        except OSError:
+            print('TEMP_SSH_LOCAL_KEY=HOLD_UNLINK',flush=True);good=False
     return 0 if good else 2
 if __name__=='__main__':raise SystemExit(main())
