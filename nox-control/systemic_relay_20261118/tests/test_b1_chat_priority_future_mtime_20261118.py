@@ -251,6 +251,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
                       and x.name == "_handle")
         scope = {"PROJECT_HANDLER": "project", "LEAF_HANDLER": "leaf",
                  "ROLES": ("runtime", "memory", "weights"),
+                 "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
                  "sqlite3": sqlite3, "time": time, "GateError": RuntimeError,
                  "autonomy": SimpleNamespace(AutoHold=RuntimeError),
                  "remember": lambda *_: self.fail("unadmitted receipt write")}
@@ -309,6 +310,7 @@ class ChatPriorityFutureMtimeTests(unittest.TestCase):
         def digest(raw):
             return hashlib.sha256(raw).hexdigest()
         scope = {"LEAF_HANDLER": "leaf", "ROLES": ("runtime", "memory", "weights"),
+                 "RECEIPT": "NOX_NATIVE_SUBAGENT_RECEIPT_V1",
                  "sqlite3": sqlite3, "time": time, "GateError": RuntimeError,
                  "encoded": encoded, "digest": digest,
                  "remember": lambda *_: self.fail("lost lease must block S03")}
