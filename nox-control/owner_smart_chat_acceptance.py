@@ -78,6 +78,8 @@ def http_request(opener, url, method='GET', payload=None, timeout=9, stream=Fals
             fail('HTTP_RESPONSE_OVERSIZE')
         if response.status != 200:
             fail('HTTP_STATUS')
+        if urllib.parse.urlsplit(url).path in ('/chat/login', '/chat/session'):
+            return {'http_status': response.status}
         return json.loads(raw)
 
 
