@@ -31,6 +31,23 @@ STOP_FILES=('STOP','STOP.flag','stop.flag','.stop','program/STOP','state/STOP',
 REQ=re.compile(r'[0-9]{1,24}\Z')
 SRC=re.compile(r'[a-f0-9]{40}\Z')
 STAGE = 'INIT'
+MIN_RECLAIM_SWAPPINESS_KERNEL = (6, 11)
+RECLAIM_SWAPPINESS = 0
+
+
+def supports_reclaim_swappiness(release):
+    """Conservatively require upstream v6.11+ memory.reclaim swappiness support."""
+    match = re.match(r'^(\d+)\.(\d+)(?:\.|[-+]|$)', str(release))
+    return bool(match and (int(match.group(1)), int(match.group(2)))
+                >= MIN_RECLAIM_SWAPPINESS_KERNEL)
+
+
+def reclaim_payload(requested_bytes):
+    if (type(requested_bytes) is not int
+            or not 0 < requested_bytes <= MAX_ONESHOT):
+        hold('RECLAIM_REQUEST')
+    # On cgroup reclaim, v6.11's swappiness=0 selects SCAN_FILE (not anon LRU).
+    return f'{requested_bytes} swappiness={RECLAIM_SWAPPINESS}'.encode('ascii')
 
 
 def internal_hold(exc):
@@ -167,6 +184,8 @@ def execute():
                 'data_deleted':False,'source_sha':source},sort_keys=True),flush=True)
             print('NOX_MAINT_REPAIR_COMPLETE=true',flush=True)
             return
+        if not supports_reclaim_swappiness(os.uname().release):
+            hold('RECLAIM_SWAPPINESS_UNSUPPORTED')
         reclaim_bytes=min(MAX_ONESHOT,max(GIB,TARGET_RAW-before['raw']+GIB))
         require_cold=reclaim_bytes+2*GIB
         if before['cold_lower_bound']<require_cold:
@@ -183,7 +202,7 @@ def execute():
         fd=os.open(path,os.O_WRONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
         try:
             STAGE='RECLAIM_WRITE'
-            payload=str(reclaim_bytes).encode('ascii')
+            payload=reclaim_payload(reclaim_bytes)
             if os.write(fd,payload)!=len(payload):
                 hold('RECLAIM_SHORT_WRITE')
         except OSError as exc:
